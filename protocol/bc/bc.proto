@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package bc;
+
+message Hash {
+  fixed64 v0 = 1;
+  fixed64 v1 = 2;
+  fixed64 v2 = 3;
+  fixed64 v3 = 4;
+}
+
+message Program {
+  uint64 vm_version = 1;
+  bytes  code       = 2;
+}
+
+// This message type duplicates Hash, above. One alternative is to
+// embed a Hash inside an AssetID. But it's useful for AssetID to be
+// plain old data (without pointers). Another alternative is use Hash
+// in any protobuf types where an AssetID is called for, but it's
+// preferable to have type safety.
+message AssetID {
+  fixed64 v0 = 1;
+  fixed64 v1 = 2;
+  fixed64 v2 = 3;
+  fixed64 v3 = 4;
+}
+
+message AssetAmount {
+  AssetID asset_id = 1;
+  uint64  amount   = 2;
+}
+
+message AssetDefinition {
+  Hash    initial_block_id = 1;
+  Program issuance_program = 2;
+  Hash    data             = 3;
+}
+
+message ValueSource {
+  Hash        ref      = 1;
+  AssetAmount value    = 2;
+  uint64      position = 3;
+}
+
+message ValueDestination {
+  Hash        ref      = 1;
+  AssetAmount value    = 2;
+  uint64      position = 3;
+}
+
+message BlockHeader {
+  uint64 version                   = 1;
+  uint64 height                    = 2;
+  Hash   previous_block_id         = 3;
+  uint64 timestamp_ms              = 4;
+  Hash   transactions_root         = 5;
+  Hash   assets_root               = 6;
+  bytes  next_consensus_program    = 7;
+  Hash   ext_hash                  = 8;
+
+  repeated bytes witness_arguments = 9;
+}
+
+message TxHeader {
+  uint64        version     = 1;
+  repeated Hash result_ids  = 2;
+  Hash          data        = 3;
+  uint64        min_time_ms = 4;
+  uint64        max_time_ms = 5;
+  Hash          ext_hash    = 6;
+}
+
+message Mux {
+  repeated ValueSource      sources              = 1; // issuances, spends, and muxes
+  Program                   program              = 2;
+  Hash                      ext_hash             = 3;
+  repeated ValueDestination witness_destinations = 4; // outputs, retirements, and muxes
+  repeated bytes            witness_arguments    = 5;
+}
+
+message Nonce {
+  Program        program             = 1;
+  Hash           time_range_id       = 2;
+  Hash           ext_hash            = 3;
+  repeated bytes witness_arguments   = 4;
+  Hash           witness_anchored_id = 5;
+}
+
+message Output {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  Hash        data            = 3;
+  Hash        ext_hash        = 4;
+  uint64      ordinal         = 5;
+}
+
+message Retirement {
+  ValueSource source   = 1;
+  Hash        data     = 2;
+  Hash        ext_hash = 3;
+  uint64      ordinal  = 4;
+}
+
+message TimeRange {
+  uint64    min_time_ms = 1;
+  uint64    max_time_ms = 2;
+  Hash      ext_hash    = 3;
+}
+
+message Issuance {
+  Hash             anchor_id                = 1;
+  AssetAmount      value                    = 2;
+  Hash             data                     = 3;
+  Hash             ext_hash                 = 4;
+  ValueDestination witness_destination      = 5;
+  AssetDefinition  witness_asset_definition = 6;
+  repeated bytes   witness_arguments        = 7;
+  Hash             witness_anchored_id      = 8;
+  uint64           ordinal                  = 9;
+}
+
+message Spend {
+  Hash             spent_output_id     = 1;
+  Hash             data                = 2;
+  Hash             ext_hash            = 3;
+  ValueDestination witness_destination = 4;
+  repeated bytes   witness_arguments   = 5;
+  Hash             witness_anchored_id = 6;
+  uint64           ordinal             = 7;
+}
