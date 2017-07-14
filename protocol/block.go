@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"chain/crypto/ed25519"
-	"chain/errors"
-	"chain/log"
-	"chain/protocol/bc"
-	"chain/protocol/bc/legacy"
-	"chain/protocol/state"
-	"chain/protocol/validation"
-	"chain/protocol/vm/vmutil"
+	"github.com/blockchain/crypto/ed25519"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/log"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/state"
+	"github.com/blockchain/protocol/validation"
+	"github.com/blockchain/protocol/vm/vmutil"
 )
 
 // maxBlockTxs limits the number of transactions

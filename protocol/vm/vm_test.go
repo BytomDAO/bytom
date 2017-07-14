@@ -8,8 +8,8 @@ import (
 	"testing"
 	"testing/quick"
 
-	"chain/errors"
-	"chain/testutil"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/testutil"
 )
 
 type tracebuf struct {

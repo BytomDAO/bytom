@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"chain/protocol/bc"
-	"chain/protocol/bc/bctest"
-	"chain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/bc/bctest"
+	"github.com/blockchain/protocol/bc/legacy"
 )
 
 func TestApplyTxSpend(t *testing.T) {

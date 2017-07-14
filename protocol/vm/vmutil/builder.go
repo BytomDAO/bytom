@@ -3,8 +3,8 @@ package vmutil
 import (
 	"encoding/binary"
 
-	"chain/errors"
-	"chain/protocol/vm"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol/vm"
 )
 
 type Builder struct {

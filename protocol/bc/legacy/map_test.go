@@ -6,7 +6,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"chain/protocol/bc"
+	"github.com/blockchain/protocol/bc"
 )
 
 func TestMapTx(t *testing.T) {

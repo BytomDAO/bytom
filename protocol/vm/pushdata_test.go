@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"chain/testutil"
+	"github.com/blockchain/testutil"
 )
 
 func TestPushdataOps(t *testing.T) {

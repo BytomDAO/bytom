@@ -7,9 +7,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"chain/crypto/sha3pool"
-	"chain/encoding/blockchain"
-	"chain/errors"
+	"github.com/blockchain/crypto/sha3pool"
+	"github.com/blockchain/encoding/blockchain"
+	"github.com/blockchain/errors"
 )
 
 // Entry is the interface implemented by each addressable unit in a

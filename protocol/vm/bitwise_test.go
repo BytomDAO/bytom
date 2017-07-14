@@ -3,7 +3,7 @@ package vm
 import (
 	"testing"
 
-	"chain/testutil"
+	"github.com/blockchain/testutil"
 )
 
 func TestBitwiseOps(t *testing.T) {

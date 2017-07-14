@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"chain/protocol/vm"
+	"github.com/blockchain/protocol/vm"
 )
 
 func TestAddJump(t *testing.T) {

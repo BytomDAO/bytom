@@ -3,10 +3,10 @@ package validation
 import (
 	"bytes"
 
-	"chain/crypto/sha3pool"
-	"chain/errors"
-	"chain/protocol/bc"
-	"chain/protocol/vm"
+	"github.com/blockchain/crypto/sha3pool"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/vm"
 )
 
 func newBlockVMContext(block *bc.Block, prog []byte, args [][]byte) *vm.Context {

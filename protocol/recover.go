@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"chain/errors"
-	"chain/protocol/bc/legacy"
-	"chain/protocol/state"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/state"
 )
 
 // Recover performs crash recovery, restoring the blockchain

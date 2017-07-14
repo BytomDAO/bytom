@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	. "chain/protocol/bc"
-	"chain/protocol/bc/legacy"
-	"chain/protocol/vm"
+	. "github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/vm"
 )
 
 func TestMerkleRoot(t *testing.T) {

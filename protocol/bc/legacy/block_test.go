@@ -9,8 +9,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"chain/protocol/bc"
-	"chain/testutil"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/testutil"
 )
 
 func TestMarshalBlock(t *testing.T) {

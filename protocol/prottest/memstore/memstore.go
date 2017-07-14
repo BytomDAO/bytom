@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"sync"
 
-	"chain/protocol/bc/legacy"
-	"chain/protocol/state"
+	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/state"
 )
 
 // MemStore satisfies the Store interface.

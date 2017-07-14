@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"chain/protocol/bc"
-	"chain/protocol/bc/legacy"
-	"chain/protocol/prottest/memstore"
-	"chain/protocol/state"
-	"chain/testutil"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/prottest/memstore"
+	"github.com/blockchain/protocol/state"
+	"github.com/blockchain/testutil"
 )
 
 func TestGetBlock(t *testing.T) {

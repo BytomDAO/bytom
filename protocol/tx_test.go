@@ -8,13 +8,13 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"chain/crypto/ed25519"
-	"chain/protocol/bc"
-	"chain/protocol/bc/legacy"
-	"chain/protocol/state"
-	"chain/protocol/vm"
-	"chain/protocol/vm/vmutil"
-	"chain/testutil"
+	"github.com/blockchain/crypto/ed25519"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/state"
+	"github.com/blockchain/protocol/vm"
+	"github.com/blockchain/protocol/vm/vmutil"
+	"github.com/blockchain/testutil"
 )
 
 func TestBadMaxIssuanceWindow(t *testing.T) {

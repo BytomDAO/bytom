@@ -3,7 +3,7 @@ package bc
 import (
 	"math"
 
-	"chain/crypto/sha3pool"
+	"github.com/blockchain/crypto/sha3pool"
 )
 
 var (

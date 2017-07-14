@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"io"
 
-	"chain/crypto/sha3pool"
-	"chain/encoding/blockchain"
-	"chain/errors"
-	"chain/protocol/bc"
+	"github.com/blockchain/crypto/sha3pool"
+	"github.com/blockchain/encoding/blockchain"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol/bc"
 )
 
 // SpendInput satisfies the TypedInput interface and represents a spend transaction.

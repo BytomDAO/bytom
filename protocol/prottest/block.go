@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"chain/crypto/ed25519"
-	"chain/protocol"
-	"chain/protocol/bc"
-	"chain/protocol/bc/legacy"
-	"chain/protocol/prottest/memstore"
-	"chain/protocol/state"
-	"chain/testutil"
+	"github.com/blockchain/crypto/ed25519"
+	"github.com/blockchain/protocol"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/prottest/memstore"
+	"github.com/blockchain/protocol/state"
+	"github.com/blockchain/testutil"
 )
 
 var (

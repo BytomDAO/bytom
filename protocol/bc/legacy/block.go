@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 
-	"chain/encoding/blockchain"
-	"chain/encoding/bufpool"
-	"chain/errors"
+	"github.com/blockchain/encoding/blockchain"
+	"github.com/blockchain/encoding/bufpool"
+	"github.com/blockchain/errors"
 )
 
 const (

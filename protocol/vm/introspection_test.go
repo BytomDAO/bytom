@@ -5,8 +5,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"chain/errors"
-	"chain/testutil"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/testutil"
 )
 
 func TestNextProgram(t *testing.T) {

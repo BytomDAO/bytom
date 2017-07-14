@@ -5,9 +5,9 @@ import (
 
 	"github.com/golang/groupcache/lru"
 
-	"chain/errors"
-	"chain/protocol/bc"
-	"chain/protocol/validation"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/validation"
 )
 
 // ErrBadTx is returned for transactions failing validation

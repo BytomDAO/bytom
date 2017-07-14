@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"chain/errors"
+	"github.com/blockchain/errors"
 )
 
 func TestAssemble(t *testing.T) {

@@ -1,8 +1,8 @@
 package bc
 
 import (
-	"chain/crypto/sha3pool"
-	"chain/errors"
+	"github.com/blockchain/crypto/sha3pool"
+	"github.com/blockchain/errors"
 )
 
 // Tx is a wrapper for the entries-based representation of a transaction.

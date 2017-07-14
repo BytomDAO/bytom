@@ -47,11 +47,11 @@ import (
 
 	"github.com/golang/groupcache/lru"
 
-	"chain/errors"
-	"chain/log"
-	"chain/protocol/bc"
-	"chain/protocol/bc/legacy"
-	"chain/protocol/state"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/log"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/state"
 )
 
 // maxCachedValidatedTxs is the max number of validated txs to cache.

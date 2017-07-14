@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"math"
 
-	"chain/errors"
-	"chain/math/checked"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/math/checked"
 )
 
 type Op uint8
