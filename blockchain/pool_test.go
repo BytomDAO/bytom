@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/consensus/types"
+	"github.com/blockchain/types"
 	. "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/log"
 )

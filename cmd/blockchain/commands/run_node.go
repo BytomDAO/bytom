@@ -13,7 +13,7 @@ import (
 )
 
 var runNodeCmd = &cobra.Command{
-	Use:   "node_p2p",
+	Use:   "node",
 	Short: "Run the p2p node",
 	RunE:  runNode,
 }

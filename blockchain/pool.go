@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/consensus/types"
+	"github.com/blockchain/types"
 	. "github.com/tendermint/tmlibs/common"
 	flow "github.com/tendermint/tmlibs/flowrate"
 	"github.com/tendermint/tmlibs/log"
