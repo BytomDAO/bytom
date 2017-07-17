@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"reflect"
-	"time"
 
 	wire "github.com/tendermint/go-wire"
 	"github.com/blockchain/p2p"
@@ -55,11 +54,11 @@ type BlockchainReactor struct {
 }
 
 func NewBlockchainReactor() *BlockchainReactor {
-    requestsCh    make(chan BlockRequest, defeaultChannelCapacity)
-    timeoutsCh    make(chan string, defaultChannelCapacity)
+    requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
+    timeoutsCh    := make(chan string, defaultChannelCapacity)
 
     bcR := &BlockchainReactor {
-        requestsCh:    requestCh,
+        requestsCh:    requestsCh,
         timeoutsCh:    timeoutsCh,
     }
     bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)

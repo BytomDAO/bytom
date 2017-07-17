@@ -12,6 +12,7 @@ import (
 	"github.com/blockchain/version"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/log"
+    bc "github.com/blockchain/blockchain"
 
 	_ "net/http/pprof"
 )
@@ -30,6 +31,7 @@ type Node struct {
 
 	// services
 	evsw             types.EventSwitch           // pub/sub for services
+    bcReactor        *bc.BlockchainReactor
 }
 
 func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
@@ -57,6 +59,10 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 
 	sw := p2p.NewSwitch(config.P2P)
 	sw.SetLogger(p2pLogger)
+
+    bcReactor := bc.NewBlockchainReactor()
+    bcReactor.SetLogger(logger.With("module", "blockchain"))
+    sw.AddReactor("BLOCKCHAIN", bcReactor)
 
 	// Optionally, start the pex reactor
 	var addrBook *p2p.AddrBook
@@ -89,7 +95,8 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 		sw:       sw,
 		addrBook: addrBook,
 
-		evsw:             eventSwitch,
+		evsw:      eventSwitch,
+        bcReactor: bcReactor,
 	}
 	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
 	return node
