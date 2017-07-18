@@ -32,6 +32,7 @@ imports:
   subpackages:
   - proto
   - ptypes/any
+- name: github.com/golang/groupcache
 - name: github.com/golang/snappy
   version: 553a641470496b2327abcac10b36396bd98e45c9
 - name: github.com/gorilla/websocket

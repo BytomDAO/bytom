@@ -9,6 +9,7 @@ import (
 	"github.com/blockchain/p2p"
 	"github.com/blockchain/types"
 	cmn "github.com/tendermint/tmlibs/common"
+    "github.com/blockchain/protocol"
 )
 
 const (
