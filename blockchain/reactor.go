@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"reflect"
+    "time"
 
 	wire "github.com/tendermint/go-wire"
 	"github.com/blockchain/p2p"
 	"github.com/blockchain/types"
 	cmn "github.com/tendermint/tmlibs/common"
-    "github.com/blockchain/protocol"
+ //   "github.com/blockchain/protocol"
 )
 
 const (
@@ -45,7 +46,7 @@ type BlockchainReactor struct {
 //	state        *sm.State
 //	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
 //	store        *BlockStore
-//	pool         *BlockPool
+	pool         *BlockPool
 //	fastSync     bool
 	requestsCh   chan BlockRequest
 	timeoutsCh   chan string
@@ -90,14 +91,14 @@ func (bcR *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
 
 // AddPeer implements Reactor by sending our state to peer.
 func (bcR *BlockchainReactor) AddPeer(peer *p2p.Peer) {
-	/*if !peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.store.Height()}}) {
+	//if !peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.store.Height()}}) {
 		// doing nothing, will try later in `poolRoutine`
-	}*/
+	//}
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
 func (bcR *BlockchainReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
-	//bcR.pool.RemovePeer(peer.Key)
+	bcR.pool.RemovePeer(peer.Key)
 }
 
 // Receive implements Reactor by handling 4 types of messages (look below).
@@ -125,7 +126,7 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		}*/
 	case *bcBlockResponseMessage:
 		// Got a block.
-		//bcR.pool.AddBlock(src.Key, msg.Block, len(msgBytes))
+		bcR.pool.AddBlock(src.Key, msg.Block, len(msgBytes))
 	case *bcStatusRequestMessage:
 		// Send peer our state.
 		/*queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.store.Height()}})
@@ -134,13 +135,13 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		}*/
 	case *bcStatusResponseMessage:
 		// Got a peer status. Unverified.
-		//bcR.pool.SetPeerHeight(src.Key, msg.Height)
+		bcR.pool.SetPeerHeight(src.Key, msg.Height)
 	default:
 		bcR.Logger.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
 	}
 }
 
-/*
+
 // Handle messages from the poolReactor telling the reactor what to do.
 // NOTE: Don't sleep in the FOR_LOOP or otherwise slow it down!
 // (Except for the SYNC_LOOP, which is the primary purpose and must be synchronous.)
@@ -148,7 +149,7 @@ func (bcR *BlockchainReactor) poolRoutine() {
 
 	trySyncTicker := time.NewTicker(trySyncIntervalMS * time.Millisecond)
 	statusUpdateTicker := time.NewTicker(statusUpdateIntervalSeconds * time.Second)
-	switchToConsensusTicker := time.NewTicker(switchToConsensusIntervalSeconds * time.Second)
+	//switchToConsensusTicker := time.NewTicker(switchToConsensusIntervalSeconds * time.Second)
 
 FOR_LOOP:
 	for {
@@ -174,7 +175,7 @@ FOR_LOOP:
 		case _ = <-statusUpdateTicker.C:
 			// ask for status updates
 			go bcR.BroadcastStatusRequest()
-		case _ = <-switchToConsensusTicker.C:
+		/*case _ = <-switchToConsensusTicker.C:
 			height, numPending, _ := bcR.pool.GetStatus()
 			outbound, inbound, _ := bcR.Switch.NumPeers()
 			bcR.Logger.Info("Consensus ticker", "numPending", numPending, "total", len(bcR.pool.requesters),
@@ -187,7 +188,7 @@ FOR_LOOP:
 				conR.SwitchToConsensus(bcR.state)
 
 				break FOR_LOOP
-			}
+			}*/
 		case _ = <-trySyncTicker.C: // chan time
 			// This loop can be slow as long as it's doing syncing work.
 		SYNC_LOOP:
@@ -199,13 +200,13 @@ FOR_LOOP:
 					// We need both to sync the first block.
 					break SYNC_LOOP
 				}
-				firstParts := first.MakePartSet(types.DefaultBlockPartSize)
-				firstPartsHeader := firstParts.Header()
+				//firstParts := first.MakePartSet(types.DefaultBlockPartSize)
+				//firstPartsHeader := firstParts.Header()
 				// Finally, verify the first block using the second's commit
 				// NOTE: we can probably make this more efficient, but note that calling
 				// first.Hash() doesn't verify the tx contents, so MakePartSet() is
 				// currently necessary.
-				err := bcR.state.Validators.VerifyCommit(
+				/*err := bcR.state.Validators.VerifyCommit(
 					bcR.state.ChainID, types.BlockID{first.Hash(), firstPartsHeader}, first.Height, second.LastCommit)
 				if err != nil {
 					bcR.Logger.Info("error in validation", "error", err)
@@ -225,7 +226,7 @@ FOR_LOOP:
 						// TODO This is bad, are we zombie?
 						cmn.PanicQ(cmn.Fmt("Failed to process committed block (%d:%X): %v", first.Height, first.Hash(), err))
 					}
-				}
+				}*/
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:
@@ -236,11 +237,10 @@ FOR_LOOP:
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.
 func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
-	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusRequestMessage{bcR.store.Height()}})
+	//bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusRequestMessage{bcR.store.Height()}})
 	return nil
 }
 
-*/
 
 // SetEventSwitch implements events.Eventable
 func (bcR *BlockchainReactor) SetEventSwitch(evsw types.EventSwitch) {
