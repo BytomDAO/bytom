@@ -45,7 +45,7 @@ type BlockchainReactor struct {
 
 //	state        *sm.State
 //	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
-//	store        *BlockStore
+	store        *BlockStore
 	pool         *BlockPool
 //	fastSync     bool
 	requestsCh   chan BlockRequest
@@ -237,7 +237,7 @@ FOR_LOOP:
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.
 func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
-	//bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusRequestMessage{bcR.store.Height()}})
+	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusRequestMessage{bcR.store.Height()}})
 	return nil
 }
 
