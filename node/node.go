@@ -101,6 +101,7 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 
 		evsw:      eventSwitch,
         bcReactor: bcReactor,
+        blockStore: blockStore,
 	}
 	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
 	return node

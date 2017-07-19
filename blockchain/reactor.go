@@ -91,9 +91,9 @@ func (bcR *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
 
 // AddPeer implements Reactor by sending our state to peer.
 func (bcR *BlockchainReactor) AddPeer(peer *p2p.Peer) {
-	//if !peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.store.Height()}}) {
+	if !peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.store.Height()}}) {
 		// doing nothing, will try later in `poolRoutine`
-	//}
+	}
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
@@ -114,7 +114,7 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 	switch msg := msg.(type) {
 	case *bcBlockRequestMessage:
 		// Got a request for a block. Respond with block if we have it.
-		/*block := bcR.store.LoadBlock(msg.Height)
+		block := bcR.store.LoadBlock(msg.Height)
 		if block != nil {
 			msg := &bcBlockResponseMessage{Block: block}
 			queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
@@ -123,16 +123,16 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 			}
 		} else {
 			// TODO peer is asking for things we don't have.
-		}*/
+		}
 	case *bcBlockResponseMessage:
 		// Got a block.
 		bcR.pool.AddBlock(src.Key, msg.Block, len(msgBytes))
 	case *bcStatusRequestMessage:
 		// Send peer our state.
-		/*queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.store.Height()}})
+		queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.store.Height()}})
 		if !queued {
 			// sorry
-		}*/
+		}
 	case *bcStatusResponseMessage:
 		// Got a peer status. Unverified.
 		bcR.pool.SetPeerHeight(src.Key, msg.Height)
@@ -195,38 +195,15 @@ FOR_LOOP:
 			for i := 0; i < 10; i++ {
 				// See if there are any blocks to sync.
 				first, second := bcR.pool.PeekTwoBlocks()
-				//bcR.Logger.Info("TrySync peeked", "first", first, "second", second)
+				bcR.Logger.Info("TrySync peeked", "first", first, "second", second)
 				if first == nil || second == nil {
 					// We need both to sync the first block.
 					break SYNC_LOOP
 				}
-				//firstParts := first.MakePartSet(types.DefaultBlockPartSize)
+				firstParts := first.MakePartSet(types.DefaultBlockPartSize)
 				//firstPartsHeader := firstParts.Header()
-				// Finally, verify the first block using the second's commit
-				// NOTE: we can probably make this more efficient, but note that calling
-				// first.Hash() doesn't verify the tx contents, so MakePartSet() is
-				// currently necessary.
-				/*err := bcR.state.Validators.VerifyCommit(
-					bcR.state.ChainID, types.BlockID{first.Hash(), firstPartsHeader}, first.Height, second.LastCommit)
-				if err != nil {
-					bcR.Logger.Info("error in validation", "error", err)
-					bcR.pool.RedoRequest(first.Height)
-					break SYNC_LOOP
-				} else {
-					bcR.pool.PopRequest()
-
-					bcR.store.SaveBlock(first, firstParts, second.LastCommit)
-
-					// TODO: should we be firing events? need to fire NewBlock events manually ...
-					// NOTE: we could improve performance if we
-					// didn't make the app commit to disk every block
-					// ... but we would need a way to get the hash without it persisting
-					err := bcR.state.ApplyBlock(bcR.evsw, bcR.proxyAppConn, first, firstPartsHeader, types.MockMempool{})
-					if err != nil {
-						// TODO This is bad, are we zombie?
-						cmn.PanicQ(cmn.Fmt("Failed to process committed block (%d:%X): %v", first.Height, first.Hash(), err))
-					}
-				}*/
+			    bcR.pool.PopRequest()
+                bcR.store.SaveBlock(first, firstParts, second.LastCommit)
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:
