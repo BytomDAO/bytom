@@ -64,7 +64,8 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 	sw := p2p.NewSwitch(config.P2P)
 	sw.SetLogger(p2pLogger)
 
-    bcReactor := bc.NewBlockchainReactor()
+    fastSync := config.FastSync
+    bcReactor := bc.NewBlockchainReactor(blockStore, fastSync)
     bcReactor.SetLogger(logger.With("module", "blockchain"))
     sw.AddReactor("BLOCKCHAIN", bcReactor)
 

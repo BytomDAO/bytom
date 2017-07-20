@@ -47,7 +47,7 @@ type BlockchainReactor struct {
 //	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
 	store        *BlockStore
 	pool         *BlockPool
-//	fastSync     bool
+	fastSync     bool
 	requestsCh   chan BlockRequest
 	timeoutsCh   chan string
 //	lastBlock    *types.Block
@@ -55,13 +55,19 @@ type BlockchainReactor struct {
 	evsw types.EventSwitch
 }
 
-func NewBlockchainReactor() *BlockchainReactor {
+func NewBlockchainReactor(store *BlockStore, fastSync bool) *BlockchainReactor {
     requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
     timeoutsCh    := make(chan string, defaultChannelCapacity)
-
+    pool := NewBlockPool(
+        store.Height()+1,
+        requestsCh,
+        timeoutsCh,
+    )
     bcR := &BlockchainReactor {
+        fastSync:      fastSync,
+        pool:          pool,
         requestsCh:    requestsCh,
-        timeoutsCh:    timeoutsCh,
+        timeoutsCh:   timeoutsCh,
     }
     bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
     return bcR
@@ -70,6 +76,13 @@ func NewBlockchainReactor() *BlockchainReactor {
 // OnStart implements BaseService
 func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
+    if bcR.fastSync {
+        _, err := bcR.pool.Start()
+        if err != nil {
+            return err
+        }
+        go bcR.poolRoutine()
+    }
 	return nil
 }
 
@@ -109,7 +122,7 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		return
 	}
 
-	bcR.Logger.Debug("Receive", "src", src, "chID", chID, "msg", msg)
+	bcR.Logger.Info("Receive", "src", src, "chID", chID, "msg", msg)
 
 	switch msg := msg.(type) {
 	case *bcBlockRequestMessage:
