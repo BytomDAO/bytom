@@ -9,8 +9,8 @@ import (
 	wire "github.com/tendermint/go-wire"
 	"github.com/blockchain/p2p"
 	"github.com/blockchain/types"
+    "github.com/blockchain/protocol/bc/legacy"
 	cmn "github.com/tendermint/tmlibs/common"
- //   "github.com/blockchain/protocol"
 )
 
 const (
@@ -45,7 +45,7 @@ type BlockchainReactor struct {
 
 //	state        *sm.State
 //	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
-	store        *BlockStore
+	store        *MemStore
 	pool         *BlockPool
 	fastSync     bool
 	requestsCh   chan BlockRequest
@@ -55,7 +55,7 @@ type BlockchainReactor struct {
 	evsw types.EventSwitch
 }
 
-func NewBlockchainReactor(store *BlockStore, fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *MemStore, fastSync bool) *BlockchainReactor {
     requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
     timeoutsCh    := make(chan string, defaultChannelCapacity)
     pool := NewBlockPool(
@@ -66,6 +66,7 @@ func NewBlockchainReactor(store *BlockStore, fastSync bool) *BlockchainReactor {
     bcR := &BlockchainReactor {
         fastSync:      fastSync,
         pool:          pool,
+        store:         store,
         requestsCh:    requestsCh,
         timeoutsCh:   timeoutsCh,
     }
@@ -213,10 +214,8 @@ FOR_LOOP:
 					// We need both to sync the first block.
 					break SYNC_LOOP
 				}
-				firstParts := first.MakePartSet(types.DefaultBlockPartSize)
-				//firstPartsHeader := firstParts.Header()
 			    bcR.pool.PopRequest()
-                bcR.store.SaveBlock(first, firstParts, second.LastCommit)
+                bcR.store.SaveBlock(first)
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:
@@ -274,7 +273,7 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 //-------------------------------------
 
 type bcBlockRequestMessage struct {
-	Height int
+	Height uint64
 }
 
 func (m *bcBlockRequestMessage) String() string {
@@ -285,7 +284,7 @@ func (m *bcBlockRequestMessage) String() string {
 
 // NOTE: keep up-to-date with maxBlockchainResponseSize
 type bcBlockResponseMessage struct {
-	Block *types.Block
+	Block *legacy.Block
 }
 
 func (m *bcBlockResponseMessage) String() string {
@@ -295,7 +294,7 @@ func (m *bcBlockResponseMessage) String() string {
 //-------------------------------------
 
 type bcStatusRequestMessage struct {
-	Height int
+	Height uint64
 }
 
 func (m *bcStatusRequestMessage) String() string {
@@ -305,7 +304,7 @@ func (m *bcStatusRequestMessage) String() string {
 //-------------------------------------
 
 type bcStatusResponseMessage struct {
-	Height int
+	Height uint64
 }
 
 func (m *bcStatusResponseMessage) String() string {

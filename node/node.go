@@ -13,7 +13,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/log"
     bc "github.com/blockchain/blockchain"
-    dbm "github.com/tendermint/tmlibs/db"
+    //dbm "github.com/tendermint/tmlibs/db"
 
 	_ "net/http/pprof"
 )
@@ -32,7 +32,7 @@ type Node struct {
 
 	// services
 	evsw             types.EventSwitch           // pub/sub for services
-    blockStore       *bc.BlockStore
+    blockStore       *bc.MemStore
     bcReactor        *bc.BlockchainReactor
 }
 
@@ -44,8 +44,9 @@ func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
 
 func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.Logger) *Node {
 	// Get BlockStore
-    blockStoreDB := dbm.NewDB("blockstore", config.DBBackend, config.DBDir())
-    blockStore := bc.NewBlockStore(blockStoreDB)
+    //blockStoreDB := dbm.NewDB("blockstore", config.DBBackend, config.DBDir())
+    //blockStore := bc.NewBlockStore(blockStoreDB)
+    blockStore := bc.New()
 
 	// Generate node PrivKey
 	privKey := crypto.GenPrivKeyEd25519()
