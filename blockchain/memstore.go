@@ -21,7 +21,7 @@ type MemStore struct {
 }
 
 // New returns a new MemStore
-func New() *MemStore {
+func NewMemStore() *MemStore {
 	return &MemStore{Blocks: make(map[uint64]*legacy.Block)}
 }
 

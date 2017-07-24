@@ -14,6 +14,7 @@ import (
 	"github.com/tendermint/tmlibs/log"
     bc "github.com/blockchain/blockchain"
     //dbm "github.com/tendermint/tmlibs/db"
+    "github.com/blockchain/protocol/bc/legacy"
 
 	_ "net/http/pprof"
 )
@@ -46,7 +47,14 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 	// Get BlockStore
     //blockStoreDB := dbm.NewDB("blockstore", config.DBBackend, config.DBDir())
     //blockStore := bc.NewBlockStore(blockStoreDB)
-    blockStore := bc.New()
+    blockStore := bc.NewMemStore()
+    genesisBlock := legacy.Block {
+        BlockHeader: legacy.BlockHeader {
+            Version: 1,
+            Height: 0,
+        },
+    }
+    blockStore.SaveBlock(&genesisBlock)
 
 	// Generate node PrivKey
 	privKey := crypto.GenPrivKeyEd25519()
