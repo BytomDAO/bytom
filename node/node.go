@@ -3,6 +3,7 @@ package node
 import (
 	"net/http"
 	"strings"
+    "net"
 
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
@@ -15,6 +16,10 @@ import (
     bc "github.com/blockchain/blockchain"
     //dbm "github.com/tendermint/tmlibs/db"
     "github.com/blockchain/protocol/bc/legacy"
+	rpccore "github.com/blockchain/rpc/core"
+	grpccore "github.com/blockchain/rpc/grpc"
+	//rpc "github.com/blockchain/rpc/lib"
+	rpcserver "github.com/blockchain/rpc/lib/server"
 
 	_ "net/http/pprof"
 )
@@ -172,11 +177,61 @@ func (n *Node) AddListener(l p2p.Listener) {
 	n.sw.AddListener(l)
 }
 
+// ConfigureRPC sets all variables in rpccore so they will serve
+// rpc calls from this node
+func (n *Node) ConfigureRPC() {
+	rpccore.SetEventSwitch(n.evsw)
+	//rpccore.SetBlockStore(n.blockStore)
+	//rpccore.SetConsensusState(n.consensusState)
+	//rpccore.SetMempool(n.mempoolReactor.Mempool)
+	rpccore.SetSwitch(n.sw)
+	//rpccore.SetPubKey(n.privValidator.PubKey)
+	//rpccore.SetGenesisDoc(n.genesisDoc)
+	rpccore.SetAddrBook(n.addrBook)
+	//rpccore.SetProxyAppQuery(n.proxyApp.Query())
+	//rpccore.SetTxIndexer(n.txIndexer)
+	rpccore.SetLogger(n.Logger.With("module", "rpc"))
+}
+
+func (n *Node) startRPC() ([]net.Listener, error) {
+	n.ConfigureRPC()
+	listenAddrs := strings.Split(n.config.RPC.ListenAddress, ",")
+
+	//if n.config.RPC.Unsafe {
+	//	rpccore.AddUnsafeRoutes()
+	//}
+
+	// we may expose the rpc over both a unix and tcp socket
+	listeners := make([]net.Listener, len(listenAddrs))
+	for i, listenAddr := range listenAddrs {
+		mux := http.NewServeMux()
+		//wm := rpcserver.NewWebsocketManager(rpccore.Routes, n.evsw)
+		rpcLogger := n.Logger.With("module", "rpc-server")
+		//wm.SetLogger(rpcLogger)
+		//mux.HandleFunc("/websocket", wm.WebsocketHandler)
+		//rpcserver.RegisterRPCFuncs(mux, rpccore.Routes, rpcLogger)
+		listener, err := rpcserver.StartHTTPServer(listenAddr, mux, rpcLogger)
+		if err != nil {
+			return nil, err
+		}
+		listeners[i] = listener
+	}
+
+	// we expose a simplified api over grpc for convenience to app devs
+	grpcListenAddr := n.config.RPC.GRPCListenAddress
+	if grpcListenAddr != "" {
+		listener, err := grpccore.StartGRPCServer(grpcListenAddr)
+		if err != nil {
+			return nil, err
+		}
+		listeners = append(listeners, listener)
+	}
+    return listeners, nil
+}
 
 func (n *Node) Switch() *p2p.Switch {
 	return n.sw
 }
-
 
 func (n *Node) EventSwitch() types.EventSwitch {
 	return n.evsw
