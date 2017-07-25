@@ -40,6 +40,7 @@ type Node struct {
 	evsw             types.EventSwitch           // pub/sub for services
     blockStore       *bc.MemStore
     bcReactor        *bc.BlockchainReactor
+    rpcListeners     []net.Listener              // rpc servers
 }
 
 func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
@@ -144,6 +145,14 @@ func (n *Node) OnStart() error {
 			return err
 		}
 	}
+	// Run the RPC server
+	if n.config.RPC.ListenAddress != "" {
+		listeners, err := n.startRPC()
+		if err != nil {
+			return err
+		}
+		n.rpcListeners = listeners
+	}
 
 	return nil
 }
@@ -154,6 +163,13 @@ func (n *Node) OnStop() {
 	n.Logger.Info("Stopping Node")
 	// TODO: gracefully disconnect from peers.
 	n.sw.Stop()
+
+	for _, l := range n.rpcListeners {
+		n.Logger.Info("Closing rpc listener", "listener", l)
+		if err := l.Close(); err != nil {
+			n.Logger.Error("Error closing listener", "listener", l, "error", err)
+		}
+	}
 }
 
 func (n *Node) RunForever() {
