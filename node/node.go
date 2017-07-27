@@ -213,19 +213,19 @@ func (n *Node) startRPC() ([]net.Listener, error) {
 	n.ConfigureRPC()
 	listenAddrs := strings.Split(n.config.RPC.ListenAddress, ",")
 
-	//if n.config.RPC.Unsafe {
-	//	rpccore.AddUnsafeRoutes()
-	//}
+	if n.config.RPC.Unsafe {
+		rpccore.AddUnsafeRoutes()
+	}
 
 	// we may expose the rpc over both a unix and tcp socket
 	listeners := make([]net.Listener, len(listenAddrs))
 	for i, listenAddr := range listenAddrs {
 		mux := http.NewServeMux()
-		//wm := rpcserver.NewWebsocketManager(rpccore.Routes, n.evsw)
+		wm := rpcserver.NewWebsocketManager(rpccore.Routes, n.evsw)
 		rpcLogger := n.Logger.With("module", "rpc-server")
-		//wm.SetLogger(rpcLogger)
-		//mux.HandleFunc("/websocket", wm.WebsocketHandler)
-		//rpcserver.RegisterRPCFuncs(mux, rpccore.Routes, rpcLogger)
+		wm.SetLogger(rpcLogger)
+		mux.HandleFunc("/websocket", wm.WebsocketHandler)
+		rpcserver.RegisterRPCFuncs(mux, rpccore.Routes, rpcLogger)
 		listener, err := rpcserver.StartHTTPServer(listenAddr, mux, rpcLogger)
 		if err != nil {
 			return nil, err
