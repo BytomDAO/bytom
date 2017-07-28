@@ -8,6 +8,7 @@ import (
 //	"github.com/tendermint/tendermint/state/txindex"
 	"github.com/blockchain/types"
 	"github.com/tendermint/tmlibs/log"
+    bc "github.com/blockchain/blockchain"
 )
 
 //----------------------------------------------
@@ -37,7 +38,7 @@ var (
 //	proxyAppQuery proxy.AppConnQuery
 
 	// interfaces defined in types and above
-	//blockStore     types.BlockStore
+	blockStore     *bc.MemStore
 	//mempool        types.Mempool
 	//consensusState Consensus
 	p2pSwitch      P2P
@@ -55,11 +56,11 @@ func SetEventSwitch(evsw types.EventSwitch) {
 	eventSwitch = evsw
 }
 
-/*
-func SetBlockStore(bs types.BlockStore) {
+func SetBlockStore(bs *bc.MemStore) {
 	blockStore = bs
 }
 
+/*
 func SetMempool(mem types.Mempool) {
 	mempool = mem
 }
