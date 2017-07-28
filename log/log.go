@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"chain/errors"
+	"github.com/blockchain/errors"
 )
 
 const rfc3339NanoFixed = "2006-01-02T15:04:05.000000000Z07:00"
