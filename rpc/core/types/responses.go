@@ -6,10 +6,12 @@ import (
 	abci "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
-
+        "github.com/blockchain/protocol/bc"
 	"github.com/blockchain/p2p"
 	"github.com/blockchain/types"
 )
+
+type BlockNonce [8]byte
 
 type ResultBlockchainInfo struct {
 	LastHeight int                `json:"last_height"`
@@ -57,6 +59,16 @@ type ResultNetInfo struct {
 	Listening bool     `json:"listening"`
 	Listeners []string `json:"listeners"`
 	Peers     []Peer   `json:"peers"`
+}
+
+type ResultBlockHeaderInfo struct {
+        Version uint64   `json:"version"`
+        Height uint64    `json:"height"`
+        MerkleRoot bc.Hash  `json:"merkleroot"`
+        PreviousBlockHash bc.Hash  `json:"prevblockhash"`
+        TimestampMS uint64   `json:"timestamp"`
+        Bits uint64      `json:"bits"`
+        Nonce uint64     `json:"nonce"`
 }
 
 type ResultDialSeeds struct {
