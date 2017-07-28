@@ -197,7 +197,7 @@ func (n *Node) AddListener(l p2p.Listener) {
 // rpc calls from this node
 func (n *Node) ConfigureRPC() {
 	rpccore.SetEventSwitch(n.evsw)
-	//rpccore.SetBlockStore(n.blockStore)
+	rpccore.SetBlockStore(n.blockStore)
 	//rpccore.SetConsensusState(n.consensusState)
 	//rpccore.SetMempool(n.mempoolReactor.Mempool)
 	rpccore.SetSwitch(n.sw)
