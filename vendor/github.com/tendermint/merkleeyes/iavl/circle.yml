@@ -1,0 +1,11 @@
+machine:
+  environment:
+    GO15VENDOREXPERIMENT: 1
+
+dependencies:
+  pre:
+    - make get_deps
+
+test:
+  override:
+    - make test
