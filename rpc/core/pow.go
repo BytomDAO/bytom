@@ -9,6 +9,7 @@ import (
         //"chain/protocol/bc/legacy" 
         //"github.com/consensus/types"
         //. "github.com/tendermint/tmlibs/common"sour	
+        "github.com/blockchain/protocol/bc/legacy"
 )
 
 //for simulate
@@ -19,7 +20,15 @@ func GetWork()(*ctypes.ResultBlockHeaderInfo, error){
 }
 
 
-func SubmitWork(blkheader ctypes.ResultBlockHeaderInfo) (bool,error) {
+//func SubmitWork(blkheader ctypes.ResultBlockHeaderInfo) (bool,error) {
+func SubmitWork(height uint64) (bool,error) {
+    block := legacy.Block{
+                BlockHeader: legacy.BlockHeader{
+                    Version: 1,
+                    Height: height,
+                },
+    }
+    blockStore.SaveBlock(&block)
     return true,nil
 }
 

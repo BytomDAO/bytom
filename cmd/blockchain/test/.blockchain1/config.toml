@@ -8,7 +8,7 @@ db_backend = "leveldb"
 log_level = "state:info,*:info"
 
 [rpc]
-laddr = "tcp://0.0.0.0:46657"
+laddr = "tcp://0.0.0.0:46658"
 
 [p2p]
 laddr = "tcp://127.0.0.1:3333"
