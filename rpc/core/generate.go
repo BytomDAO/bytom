@@ -64,3 +64,11 @@ func solveBlock(header *wire.BlockHeader, targetDifficulty *big.Int) bool {
 
 	return false
 }
+
+func checkProofOfWork(header *wire.BlockHeader, targetDifficulty *big.Int) bool {
+     hash := hdr.BlockHash()
+     if wire.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+             return true
+     }
+}
+
