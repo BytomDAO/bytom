@@ -66,9 +66,9 @@ func solveBlock(header *wire.BlockHeader, targetDifficulty *big.Int) bool {
 }
 
 func checkProofOfWork(header *wire.BlockHeader, targetDifficulty *big.Int) bool {
-     hash := hdr.BlockHash()
+     hash := header.BlockHash()
      if wire.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
              return true
      }
+     return false
 }
-
