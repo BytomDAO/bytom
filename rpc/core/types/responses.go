@@ -2,6 +2,7 @@ package core_types
 
 import (
 	"strings"
+        "time"
 
 	abci "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
@@ -62,11 +63,11 @@ type ResultNetInfo struct {
 }
 
 type ResultBlockHeaderInfo struct {
-        Version uint64   `json:"version"`
-        Height uint64    `json:"height"`
+        Version int32   `json:"version"`
+        //Height uint64    `json:"height"`
         MerkleRoot bc.Hash  `json:"merkleroot"`
         PreviousBlockHash bc.Hash  `json:"prevblockhash"`
-        TimestampMS uint64   `json:"timestamp"`
+        TimestampMS time.Time   `json:"timestamp"`
         Bits uint64      `json:"bits"`
         Nonce uint64     `json:"nonce"`
 }
