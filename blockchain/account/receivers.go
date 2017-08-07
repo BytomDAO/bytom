@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"chain/core/txbuilder"
-	"chain/errors"
+	"github.com/blockchain/blockchain/txbuilder"
+	"github.com/blockchain/errors"
 )
 
 const defaultReceiverExpiry = 30 * 24 * time.Hour // 30 days

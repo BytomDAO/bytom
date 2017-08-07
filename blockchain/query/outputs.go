@@ -8,9 +8,9 @@ import (
 
 	"github.com/lib/pq"
 
-	"chain/core/query/filter"
-	"chain/errors"
-	"chain/protocol/bc"
+	"github.com/blockchain/blockchain/query/filter"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol/bc"
 )
 
 var defaultOutputsAfter = OutputsAfter{

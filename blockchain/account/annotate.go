@@ -7,10 +7,10 @@ import (
 
 	"github.com/lib/pq"
 
-	"chain/core/query"
-	"chain/database/pg"
-	"chain/errors"
-	"chain/protocol/bc"
+	"github.com/blockchain/blockchain/query"
+	"github.com/blockchain/database/pg"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol/bc"
 )
 
 var empty = json.RawMessage(`{}`)

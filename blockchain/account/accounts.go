@@ -11,15 +11,16 @@ import (
 	"github.com/golang/groupcache/lru"
 	"github.com/lib/pq"
 
-	"chain/core/pin"
-	"chain/core/signers"
-	"chain/core/txbuilder"
-	"chain/crypto/ed25519/chainkd"
-	"chain/database/pg"
-	"chain/errors"
-	"chain/log"
-	"chain/protocol"
-	"chain/protocol/vm/vmutil"
+//	"chain/core/pin"
+	"github.com/blockchain/blockchain/signers"
+	"github.com/blockchain/blockchain/txbuilder"
+	"github.com/crypto/ed25519/chainkd"
+//	"chain/database/pg"
+     dbm "github.com/tendermint/tmlibs/db"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/log"
+	"github.com/blockchain/protocol"
+	"github.com/blockchain/protocol/vm/vmutil"
 )
 
 const maxAccountCache = 1000
@@ -29,7 +30,7 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func NewManager(db pg.DB, chain *protocol.Chain, pinStore *pin.Store) *Manager {
+func NewManager(db dbm.DB, chain *protocol.Chain, pinStore *pin.Store) *Manager {
 	return &Manager{
 		db:          db,
 		chain:       chain,
@@ -43,7 +44,7 @@ func NewManager(db pg.DB, chain *protocol.Chain, pinStore *pin.Store) *Manager {
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	db       pg.DB
+	db       dbm.DB
 	chain    *protocol.Chain
 	utxoDB   *reserver
 	indexer  Saver

@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 
-	"chain/core/signers"
-	"chain/core/txbuilder"
-	chainjson "chain/encoding/json"
-	"chain/errors"
-	"chain/log"
-	"chain/protocol/bc"
-	"chain/protocol/bc/legacy"
+	"github.com/blockchain/blockchain/signers"
+	"github.com/blockchain/blockchain/txbuilder"
+	chainjson "github.com/blockchain/encoding/json"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/log"
+	"github.com/blockchain/protocol/bc"
+	"github.com/bockchain/protocol/bc/legacy"
 )
 
 func (m *Manager) NewSpendAction(amt bc.AssetAmount, accountID string, refData chainjson.Map, clientToken *string) txbuilder.Action {

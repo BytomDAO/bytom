@@ -45,7 +45,8 @@ type BlockchainReactor struct {
 
 //	state        *sm.State
 //	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
-	store        *MemStore
+//	store        *MemStore
+	store        *BlockStore
 	pool         *BlockPool
 	fastSync     bool
 	requestsCh   chan BlockRequest
@@ -55,7 +56,7 @@ type BlockchainReactor struct {
 	evsw types.EventSwitch
 }
 
-func NewBlockchainReactor(store *MemStore, fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *BlockStore, fastSync bool) *BlockchainReactor {
     requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
     timeoutsCh    := make(chan string, defaultChannelCapacity)
     pool := NewBlockPool(

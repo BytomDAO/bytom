@@ -8,8 +8,8 @@ import (
 	"math"
 	"strconv"
 
-	"chain/core/query/filter"
-	"chain/errors"
+	"github.com/blockchain/blockchain/query/filter"
+	"github.com/blockchain/errors"
 )
 
 var (

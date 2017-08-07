@@ -5,13 +5,13 @@ import (
 	"context"
 	"encoding/json"
 
-	"chain/crypto/ed25519/chainkd"
-	"chain/crypto/sha3pool"
-	chainjson "chain/encoding/json"
-	"chain/errors"
-	"chain/protocol/bc"
-	"chain/protocol/vm"
-	"chain/protocol/vm/vmutil"
+	"github.com/blockchain/crypto/ed25519/chainkd"
+	"github.com/blockchain/crypto/sha3pool"
+	chainjson "github.com/blockchain/encoding/json"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/vm"
+	"github.com/blockchain/protocol/vm/vmutil"
 )
 
 // SignFunc is the function passed into Sign that produces

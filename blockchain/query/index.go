@@ -7,11 +7,11 @@ import (
 
 	"github.com/lib/pq"
 
-	"chain/core/pin"
-	"chain/database/pg"
-	"chain/errors"
-	"chain/protocol"
-	"chain/protocol/bc/legacy"
+	//"chain/core/pin"
+	"github.com/blockchain/database/pg"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol"
+	"github.com/blockchain/protocol/bc/legacy"
 )
 
 const (

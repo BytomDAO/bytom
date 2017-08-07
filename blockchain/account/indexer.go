@@ -6,13 +6,13 @@ import (
 
 	"github.com/lib/pq"
 
-	"chain/core/query"
-	"chain/core/signers"
-	"chain/database/pg"
-	chainjson "chain/encoding/json"
-	"chain/errors"
-	"chain/protocol/bc"
-	"chain/protocol/bc/legacy"
+	"github.com/blockchain/blockchain/query"
+	"github.com/blockchain/blockchain/signers"
+	"github.com/blockchain/database/pg"
+	chainjson "github.com/blockchain/encoding/json"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/bc/legacy"
 )
 
 const (

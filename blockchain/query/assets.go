@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"chain/core/query/filter"
-	"chain/errors"
+	"github.com/blockchain/blockchain/query/filter"
+	"github.com/blockchain/errors"
 )
 
 // SaveAnnotatedAsset saves an annotated asset to the query indexes.

@@ -1,7 +1,7 @@
 package query
 
 import (
-	"chain/core/query/filter"
+	"github.com/blockchain/core/query/filter"
 )
 
 var (

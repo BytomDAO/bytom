@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 
-	"chain/core/rpc"
-	"chain/errors"
-	"chain/protocol"
-	"chain/protocol/bc/legacy"
-	"chain/protocol/vm"
+//	"github.com/blockchain/blockchain/rpc"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol"
+	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/vm"
 )
 
 var (

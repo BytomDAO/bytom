@@ -10,9 +10,9 @@ import (
 
 	"github.com/lib/pq"
 
-	"chain/crypto/ed25519/chainkd"
-	"chain/database/pg"
-	"chain/errors"
+	"github.com/blockchain/crypto/ed25519/chainkd"
+	"github.com/blockchain/database/pg"
+	"github.com/blockchain/errors"
 )
 
 type keySpace byte

@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"time"
 
-	"chain/crypto/ed25519/chainkd"
-	"chain/database/pg"
-	chainjson "chain/encoding/json"
-	"chain/protocol/bc"
-	"chain/protocol/bc/legacy"
-	"chain/protocol/vm/vmutil"
+	"github.com/blockchain/crypto/ed25519/chainkd"
+	"github.com/blockchain/database/pg"
+	chainjson "github.com/blockchain/encoding/json"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/vm/vmutil"
 )
 
 type AnnotatedTx struct {

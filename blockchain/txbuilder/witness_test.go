@@ -8,11 +8,11 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	chainjson "chain/encoding/json"
-	"chain/protocol/bc"
-	"chain/protocol/bc/legacy"
-	"chain/protocol/vm"
-	"chain/testutil"
+	chainjson "github.com/blockchain/encoding/json"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/vm"
+	"github.com/blockchain/testutil"
 )
 
 func TestInferConstraints(t *testing.T) {

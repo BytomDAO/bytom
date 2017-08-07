@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"time"
 
-	chainjson "chain/encoding/json"
-	"chain/errors"
-	"chain/protocol/bc"
-	"chain/protocol/bc/legacy"
+	chainjson "github.com/blockchain/encoding/json"
+	"github.com/blockchain/errors"
+	"github.com/blockchain/protocol/bc"
+	"github.com/blockchain/protocol/bc/legacy"
 )
 
 // Template represents a partially- or fully-signed transaction.
