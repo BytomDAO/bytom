@@ -38,7 +38,8 @@ var (
 //	proxyAppQuery proxy.AppConnQuery
 
 	// interfaces defined in types and above
-	blockStore     *bc.MemStore
+//	blockStore     *bc.MemStore
+	blockStore     *bc.BlockStore
 	//mempool        types.Mempool
 	//consensusState Consensus
 	p2pSwitch      P2P
@@ -56,7 +57,7 @@ func SetEventSwitch(evsw types.EventSwitch) {
 	eventSwitch = evsw
 }
 
-func SetBlockStore(bs *bc.MemStore) {
+func SetBlockStore(bs *bc.BlockStore) {
 	blockStore = bs
 }
 

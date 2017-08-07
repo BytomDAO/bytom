@@ -14,7 +14,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/log"
     bc "github.com/blockchain/blockchain"
-    //dbm "github.com/tendermint/tmlibs/db"
+    dbm "github.com/tendermint/tmlibs/db"
     "github.com/blockchain/protocol/bc/legacy"
 	rpccore "github.com/blockchain/rpc/core"
 	grpccore "github.com/blockchain/rpc/grpc"
@@ -38,7 +38,8 @@ type Node struct {
 
 	// services
 	evsw             types.EventSwitch           // pub/sub for services
-    blockStore       *bc.MemStore
+//    blockStore       *bc.MemStore
+    blockStore       *bc.BlockStore
     bcReactor        *bc.BlockchainReactor
     rpcListeners     []net.Listener              // rpc servers
 }
@@ -51,9 +52,9 @@ func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
 
 func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.Logger) *Node {
 	// Get BlockStore
-    //blockStoreDB := dbm.NewDB("blockstore", config.DBBackend, config.DBDir())
-    //blockStore := bc.NewBlockStore(blockStoreDB)
-    blockStore := bc.NewMemStore()
+    blockStoreDB := dbm.NewDB("blockstore", config.DBBackend, config.DBDir())
+    blockStore := bc.NewBlockStore(blockStoreDB)
+    //blockStore := bc.NewMemStore()
     genesisBlock := legacy.Block {
         BlockHeader: legacy.BlockHeader {
             Version: 1,

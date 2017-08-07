@@ -44,9 +44,9 @@ func (bs *BlockStore) LoadBlock(height uint64) *legacy.Block {
 
 func (bs *BlockStore) SaveBlock(block *legacy.Block) {
 	height := block.Height
-	if height != bs.Height()+1 {
-		PanicSanity(Fmt("BlockStore can only save contiguous blocks. Wanted %v, got %v", bs.Height()+1, height))
-	}
+//	if height != bs.Height()+1 {
+//		PanicSanity(Fmt("BlockStore can only save contiguous blocks. Wanted %v, got %v", bs.Height()+1, height))
+//	}
 
     binaryBlock, err := block.MarshalText()
     if err != nil {
