@@ -2,8 +2,8 @@
 package account
 
 import (
-	"context"
-	stdsql "database/sql"
+//	"context"
+//	stdsql "database/sql"
 	"encoding/json"
 	"sync"
 	"time"
@@ -30,12 +30,12 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func NewManager(db dbm.DB, chain *protocol.Chain, pinStore *pin.Store) *Manager {
+func NewManager(db dbm.DB, chain *protocol.Chain/*, pinStore *pin.Store*/) *Manager {
 	return &Manager{
 		db:          db,
 		chain:       chain,
-		utxoDB:      newReserver(db, chain, pinStore),
-		pinStore:    pinStore,
+		utxoDB:      newReserver(db, chain/*, pinStore*/),
+//		pinStore:    pinStore,
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
 		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*controlProgram),
@@ -48,7 +48,7 @@ type Manager struct {
 	chain    *protocol.Chain
 	utxoDB   *reserver
 	indexer  Saver
-	pinStore *pin.Store
+//	pinStore *pin.Store
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
@@ -68,17 +68,17 @@ func (m *Manager) IndexAccounts(indexer Saver) {
 
 // ExpireReservations removes reservations that have expired periodically.
 // It blocks until the context is canceled.
-func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) {
+func (m *Manager) ExpireReservations(/*ctx context.Context,*/ period time.Duration) {
 	ticks := time.Tick(period)
 	for {
 		select {
-		case <-ctx.Done():
-			log.Printf(ctx, "Deposed, ExpireReservations exiting")
-			return
+//		case <-ctx.Done():
+//			log.Printf(ctx, "Deposed, ExpireReservations exiting")
+//			return
 		case <-ticks:
-			err := m.utxoDB.ExpireReservations(ctx)
+			err := m.utxoDB.ExpireReservations(/*ctx*/)
 			if err != nil {
-				log.Error(ctx, err)
+				log.Error(/*ctx,*/ err)
 			}
 		}
 	}
@@ -91,8 +91,8 @@ type Account struct {
 }
 
 // Create creates a new Account.
-func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
-	signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
+func (m *Manager) Create(/*ctx context.Context,*/ xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
+	signer, err := signers.Create(/*ctx*/, m.db, "account", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
@@ -102,7 +102,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, err
 	}
 
-	aliasSQL := stdsql.NullString{
+/*	aliasSQL := stdsql.NullString{
 		String: alias,
 		Valid:  alias != "",
 	}
@@ -116,7 +116,13 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.WithDetail(ErrDuplicateAlias, "an account with the provided alias already exists")
 	} else if err != nil {
 		return nil, errors.Wrap(err)
-	}
+	}*/
+    account_alias := []byte(fmt.Sprintf("account_alias:%v", signer.ID))
+    account_tags := []byte(fmt.Sprintf("account_tags:%v", signer.ID))
+    m.db.Set(account_alias, []byte(alias))
+    m.db.Set(accout_tags, []byte(tagsParam))
+    alias_account := []byte(fmt.Sprintf("alias_account:%v", alias))
+    m.db.Set(alias_account, []byte(signer.ID))
 
 	account := &Account{
 		Signer: signer,
@@ -124,7 +130,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		Tags:   tags,
 	}
 
-	err = m.indexAnnotatedAccount(ctx, account)
+	err = m.indexAnnotatedAccount(/*ctx,*/ account)
 	if err != nil {
 		return nil, errors.Wrap(err, "indexing annotated account")
 	}
@@ -134,7 +140,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 // UpdateTags modifies the tags of the specified account. The account may be
 // identified either by ID or Alias, but not both.
-func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
+/*func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
 	if (id == nil) == (alias == nil) {
 		return errors.Wrap(ErrBadIdentifier)
 	}
@@ -191,9 +197,10 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 		Tags:   tags,
 	}), "update account index")
 }
+*/
 
 // FindByAlias retrieves an account's Signer record by its alias
-func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signer, error) {
+func (m *Manager) FindByAlias(/*ctx context.Context,*/ alias string) (*signers.Signer, error) {
 	var accountID string
 
 	m.cacheMu.Lock()
@@ -202,14 +209,16 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 	if ok {
 		accountID = cachedID.(string)
 	} else {
-		const q = `SELECT account_id FROM accounts WHERE alias=$1`
+		/*const q = `SELECT account_id FROM accounts WHERE alias=$1`
 		err := m.db.QueryRowContext(ctx, q, alias).Scan(&accountID)
 		if err == stdsql.ErrNoRows {
 			return nil, errors.WithDetailf(pg.ErrUserInputNotFound, "alias: %s", alias)
 		}
 		if err != nil {
 			return nil, errors.Wrap(err)
-		}
+		}*/
+        bytez := m.db.Get(fmt.Sprintf("alias_account:%v", alias))
+        accountID = string(bytes[:])
 		m.cacheMu.Lock()
 		m.aliasCache.Add(alias, accountID)
 		m.cacheMu.Unlock()
@@ -218,14 +227,14 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 }
 
 // findByID returns an account's Signer record by its ID.
-func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, error) {
+func (m *Manager) findByID(/*ctx context.Context, */id string) (*signers.Signer, error) {
 	m.cacheMu.Lock()
 	cached, ok := m.cache.Get(id)
 	m.cacheMu.Unlock()
 	if ok {
 		return cached.(*signers.Signer), nil
 	}
-	account, err := signers.Find(ctx, m.db, "account", id)
+	account, err := signers.Find(/*ctx, */m.db, "account", id)
 	if err != nil {
 		return nil, err
 	}
@@ -243,13 +252,13 @@ type controlProgram struct {
 	expiresAt      time.Time
 }
 
-func (m *Manager) createControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*controlProgram, error) {
-	account, err := m.findByID(ctx, accountID)
+func (m *Manager) createControlProgram(/*ctx context.Context,*/ accountID string, change bool, expiresAt time.Time) (*controlProgram, error) {
+	account, err := m.findByID(/*ctx,*/ accountID)
 	if err != nil {
 		return nil, err
 	}
 
-	idx, err := m.nextIndex(ctx)
+	idx, err := m.nextIndex(/*ctx*/)
 	if err != nil {
 		return nil, err
 	}
@@ -272,18 +281,19 @@ func (m *Manager) createControlProgram(ctx context.Context, accountID string, ch
 
 // CreateControlProgram creates a control program
 // that is tied to the Account and stores it in the database.
-func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) ([]byte, error) {
-	cp, err := m.createControlProgram(ctx, accountID, change, expiresAt)
+func (m *Manager) CreateControlProgram(/*ctx context.Context,*/ accountID string, change bool, expiresAt time.Time) ([]byte, error) {
+	cp, err := m.createControlProgram(/*ctx,*/ accountID, change, expiresAt)
 	if err != nil {
 		return nil, err
 	}
-	err = m.insertAccountControlProgram(ctx, cp)
+	err = m.insertAccountControlProgram(/*ctx,*/ cp)
 	if err != nil {
 		return nil, err
 	}
 	return cp.controlProgram, nil
 }
 
+/*
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
 	const q = `
 		INSERT INTO account_control_programs (signer_id, key_index, control_program, change, expires_at)
@@ -311,13 +321,14 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 	_, err := m.db.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
 	return errors.Wrap(err)
 }
+*/
 
-func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
+func (m *Manager) nextIndex(/*ctx context.Context*/) (uint64, error) {
 	m.acpMu.Lock()
 	defer m.acpMu.Unlock()
 
 	if m.acpIndexNext >= m.acpIndexCap {
-		var cap uint64
+		/*var cap uint64
 		const incrby = 10000 // account_control_program_seq increments by 10,000
 		const q = `SELECT nextval('account_control_program_seq')`
 		err := m.db.QueryRowContext(ctx, q).Scan(&cap)
@@ -325,7 +336,7 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 			return 0, errors.Wrap(err, "scan")
 		}
 		m.acpIndexCap = cap
-		m.acpIndexNext = cap - incrby
+		m.acpIndexNext = cap - incrby*/
 	}
 
 	n := m.acpIndexNext
