@@ -20,6 +20,7 @@ import (
 	grpccore "github.com/blockchain/rpc/grpc"
 	//rpc "github.com/blockchain/rpc/lib"
 	rpcserver "github.com/blockchain/rpc/lib/server"
+    "github.com/blockchain/blockchain/account"
 
 	_ "net/http/pprof"
 )
@@ -41,6 +42,7 @@ type Node struct {
 //    blockStore       *bc.MemStore
     blockStore       *bc.BlockStore
     bcReactor        *bc.BlockchainReactor
+    accounts         *account.Manager
     rpcListeners     []net.Listener              // rpc servers
 }
 
@@ -107,6 +109,8 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 			logger.Error("Profile server", "error", http.ListenAndServe(profileHost, nil))
 		}()
 	}
+    accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
+    accounts := account.NewManager(db, &bcReactor)
 
 	node := &Node{
 		config:        config,
@@ -119,6 +123,7 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 		evsw:      eventSwitch,
         bcReactor: bcReactor,
         blockStore: blockStore,
+        accounts: accounts,
 	}
 	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
 	return node
