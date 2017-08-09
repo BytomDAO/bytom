@@ -21,6 +21,7 @@ import (
 	//rpc "github.com/blockchain/rpc/lib"
 	rpcserver "github.com/blockchain/rpc/lib/server"
     "github.com/blockchain/blockchain/account"
+    "github.com/blockchain/protocol"
 
 	_ "net/http/pprof"
 )
@@ -83,7 +84,24 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 	sw.SetLogger(p2pLogger)
 
     fastSync := config.FastSync
-    bcReactor := bc.NewBlockchainReactor(blockStore, fastSync)
+    genesisblock, err := protocol.NewInitialBlock()
+    if err != nil {
+      cmn.Exit(cmn.Fmt("initialize genesisblock failed: %v", err))
+    }
+
+    txdb := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
+    store := txdb.NewStore(txdb)
+    chain, err := protocol.NewChain(ctx, genesisblock.Hash(), store, nil)
+    if err != nil {
+      cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err)
+    }
+    err = chain.CommitAppliedBlock(ctx, block, state.Empty())
+    if err != nil {
+      cmn.Exit(cmn.Fmt("commit block failed: %v", err))
+    }
+    chain.MaxIssuanceWindow = bc.MillisDuration(c.MaxIssuanceWindowMs)
+
+    bcReactor := bc.NewBlockchainReactor(blockStore, chain, fastSync)
     bcReactor.SetLogger(logger.With("module", "blockchain"))
     sw.AddReactor("BLOCKCHAIN", bcReactor)
 
