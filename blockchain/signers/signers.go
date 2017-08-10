@@ -8,10 +8,10 @@ import (
 	"encoding/binary"
 	"sort"
 
-	"github.com/lib/pq"
+	//"github.com/lib/pq"
 
 	"github.com/blockchain/crypto/ed25519/chainkd"
-	"github.com/blockchain/database/pg"
+//	"github.com/blockchain/database/pg"
 	"github.com/blockchain/errors"
 )
 

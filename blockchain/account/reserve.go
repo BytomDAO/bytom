@@ -9,11 +9,11 @@ import (
 	"time"
 
 //	"chain/core/pin"
-	"github.com/blockchain/database/pg"
+	//"github.com/blockchain/database/pg"
 	"github.com/blockchain/errors"
 	"github.com/blockchain/protocol"
 	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/sync/idempotency"
+	//"github.com/blockchain/sync/idempotency"
 )
 
 var (

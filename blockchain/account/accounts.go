@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/golang/groupcache/lru"
-	"github.com/lib/pq"
+	//"github.com/lib/pq"
 
 //	"chain/core/pin"
 	"github.com/blockchain/blockchain/signers"
 	"github.com/blockchain/blockchain/txbuilder"
-	"github.com/crypto/ed25519/chainkd"
+	"github.com/blockchain/crypto/ed25519/chainkd"
 //	"chain/database/pg"
      dbm "github.com/tendermint/tmlibs/db"
 	"github.com/blockchain/errors"

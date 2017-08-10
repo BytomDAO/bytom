@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/blockchain/crypto/ed25519/chainkd"
-	"github.com/blockchain/database/pg"
+//	"github.com/blockchain/database/pg"
 	chainjson "github.com/blockchain/encoding/json"
 	"github.com/blockchain/protocol/bc"
 	"github.com/blockchain/protocol/bc/legacy"

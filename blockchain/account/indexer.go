@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/lib/pq"
+//	"github.com/lib/pq"
 
 	"github.com/blockchain/blockchain/query"
 	"github.com/blockchain/blockchain/signers"
-	"github.com/blockchain/database/pg"
+	//"github.com/blockchain/database/pg"
 	chainjson "github.com/blockchain/encoding/json"
 	"github.com/blockchain/errors"
 	"github.com/blockchain/protocol/bc"

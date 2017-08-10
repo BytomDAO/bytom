@@ -10,7 +10,7 @@ import (
 	"github.com/blockchain/errors"
 	"github.com/blockchain/log"
 	"github.com/blockchain/protocol/bc"
-	"github.com/bockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/bc/legacy"
 )
 
 func (m *Manager) NewSpendAction(amt bc.AssetAmount, accountID string, refData chainjson.Map, clientToken *string) txbuilder.Action {

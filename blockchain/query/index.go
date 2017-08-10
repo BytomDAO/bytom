@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 
-	"github.com/lib/pq"
+	//"github.com/lib/pq"
 
 	//"chain/core/pin"
-	"github.com/blockchain/database/pg"
+	//"github.com/blockchain/database/pg"
 	"github.com/blockchain/errors"
 	"github.com/blockchain/protocol"
 	"github.com/blockchain/protocol/bc/legacy"

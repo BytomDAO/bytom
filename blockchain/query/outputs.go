@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/lib/pq"
+	//"github.com/lib/pq"
 
 	"github.com/blockchain/blockchain/query/filter"
 	"github.com/blockchain/errors"
