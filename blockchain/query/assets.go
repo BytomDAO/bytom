@@ -1,5 +1,6 @@
 package query
 
+/*
 import (
 	"bytes"
 	"context"
@@ -7,7 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/blockchain/blockchain/query/filter"
+//	"github.com/blockchain/blockchain/query/filter"
 	"github.com/blockchain/errors"
 )
 
@@ -28,9 +29,10 @@ func (ind *Indexer) SaveAnnotatedAsset(ctx context.Context, asset *AnnotatedAsse
 		keysJSON, asset.Quorum, string(*asset.Definition), string(*asset.Tags), bool(asset.IsLocal))
 	return errors.Wrap(err, "saving annotated asset")
 }
+*/
 
 // Assets queries the blockchain for annotated assets matching the query.
-func (ind *Indexer) Assets(ctx context.Context, filt string, vals []interface{}, after string, limit int) ([]*AnnotatedAsset, string, error) {
+/*func (ind *Indexer) Assets(ctx context.Context, filt string, vals []interface{}, after string, limit int) ([]*AnnotatedAsset, string, error) {
 	p, err := filter.Parse(filt, assetsTable, vals)
 	if err != nil {
 		return nil, "", err
@@ -86,7 +88,9 @@ func (ind *Indexer) Assets(ctx context.Context, filt string, vals []interface{},
 
 	return assets, after, nil
 }
+*/
 
+/*
 func constructAssetsQuery(expr string, vals []interface{}, after string, limit int) (string, []interface{}) {
 	var buf bytes.Buffer
 
@@ -110,3 +114,4 @@ func constructAssetsQuery(expr string, vals []interface{}, after string, limit i
 	buf.WriteString("LIMIT " + strconv.Itoa(limit))
 	return buf.String(), vals
 }
+*/

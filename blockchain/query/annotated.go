@@ -127,10 +127,10 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock ui
 		Inputs:                 make([]*AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*AnnotatedOutput, 0, len(orig.Outputs)),
 	}
-	if pg.IsValidJSONB(orig.ReferenceData) {
+	/*if pg.IsValidJSONB(orig.ReferenceData) {
 		referenceData := json.RawMessage(orig.ReferenceData)
 		tx.ReferenceData = &referenceData
-	}
+	}*/
 	for i := range orig.Inputs {
 		tx.Inputs = append(tx.Inputs, buildAnnotatedInput(orig, uint32(i)))
 	}
@@ -149,10 +149,10 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *AnnotatedInput {
 		AssetTags:       &emptyJSONObject,
 		ReferenceData:   &emptyJSONObject,
 	}
-	if pg.IsValidJSONB(orig.ReferenceData) {
+	/*if pg.IsValidJSONB(orig.ReferenceData) {
 		referenceData := json.RawMessage(orig.ReferenceData)
 		in.ReferenceData = &referenceData
-	}
+	}*/
 
 	id := tx.Tx.InputIDs[i]
 	e := tx.Entries[id]
@@ -182,10 +182,10 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *AnnotatedOutput {
 		ControlProgram:  orig.ControlProgram,
 		ReferenceData:   &emptyJSONObject,
 	}
-	if pg.IsValidJSONB(orig.ReferenceData) {
+	/*if pg.IsValidJSONB(orig.ReferenceData) {
 		referenceData := json.RawMessage(orig.ReferenceData)
 		out.ReferenceData = &referenceData
-	}
+	}*/
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"
 	} else {

@@ -14,6 +14,7 @@ import (
 	"github.com/blockchain/protocol"
 	"github.com/blockchain/protocol/bc"
 	//"github.com/blockchain/sync/idempotency"
+    dbm "github.com/tendermint/tmlibs/db"
 )
 
 var (
@@ -71,11 +72,11 @@ type reservation struct {
 	ClientToken *string
 }
 
-func newReserver(db pg.DB, c *protocol.Chain, pinStore *pin.Store) *reserver {
+func newReserver(db dbm.DB, c *protocol.Chain, /*pinStore *pin.Store*/) *reserver {
 	return &reserver{
 		c:            c,
 		db:           db,
-		pinStore:     pinStore,
+		//pinStore:     pinStore,
 		reservations: make(map[uint64]*reservation),
 		sources:      make(map[source]*sourceReserver),
 	}
@@ -93,10 +94,10 @@ func newReserver(db pg.DB, c *protocol.Chain, pinStore *pin.Store) *reserver {
 // expiration.
 type reserver struct {
 	c                 *protocol.Chain
-	db                pg.DB
-	pinStore          *pin.Store
+	db                dbm.DB
+	//pinStore          *pin.Store
 	nextReservationID uint64
-	idempotency       idempotency.Group
+//	idempotency       idempotency.Group
 
 	reservationsMu sync.Mutex
 	reservations   map[uint64]*reservation
@@ -265,7 +266,7 @@ func (re *reserver) source(src source) *sourceReserver {
 }
 
 type sourceReserver struct {
-	db       pg.DB
+	db       dbm.DB
 	src      source
 	validFn  func(u *utxo) bool
 	heightFn func() uint64

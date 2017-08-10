@@ -4,7 +4,7 @@ package signers
 import (
 	"bytes"
 	"context"
-	"database/sql"
+//	"database/sql"
 	"encoding/binary"
 	"sort"
 
@@ -13,6 +13,7 @@ import (
 	"github.com/blockchain/crypto/ed25519/chainkd"
 //	"github.com/blockchain/database/pg"
 	"github.com/blockchain/errors"
+    dbm "github.com/tendermint/tmlibs/db"
 )
 
 type keySpace byte
@@ -76,7 +77,7 @@ func Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
 }
 
 // Create creates and stores a Signer in the database
-func Create(ctx context.Context, db pg.DB, typ string, xpubs []chainkd.XPub, quorum int, clientToken string) (*Signer, error) {
+func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, quorum int, clientToken string) (*Signer, error) {
 	if len(xpubs) == 0 {
 		return nil, errors.Wrap(ErrNoXPubs)
 	}
@@ -97,6 +98,7 @@ func Create(ctx context.Context, db pg.DB, typ string, xpubs []chainkd.XPub, quo
 		key := key
 		xpubBytes = append(xpubBytes, key[:])
 	}
+    /*
 
 	nullToken := sql.NullString{
 		String: clientToken,
@@ -121,6 +123,11 @@ func Create(ctx context.Context, db pg.DB, typ string, xpubs []chainkd.XPub, quo
 	if err != nil && err != sql.ErrNoRows {
 		return nil, errors.Wrap(err)
 	}
+    */
+	var (
+		id       string
+		keyIndex uint64
+	)
 
 	return &Signer{
 		ID:       id,
@@ -145,6 +152,7 @@ func New(id, typ string, xpubs [][]byte, quorum int, keyIndex uint64) (*Signer, 
 	}, nil
 }
 
+/*
 func findByClientToken(ctx context.Context, db pg.DB, clientToken string) (*Signer, error) {
 	const q = `
 		SELECT id, type, xpubs, quorum, key_index
@@ -250,6 +258,7 @@ func List(ctx context.Context, db pg.DB, typ, prev string, limit int) ([]*Signer
 
 	return signers, last, nil
 }
+*/
 
 func ConvertKeys(xpubs [][]byte) ([]chainkd.XPub, error) {
 	var xkeys []chainkd.XPub

@@ -2,16 +2,17 @@ package query
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
+//	"database/sql"
+//	"encoding/json"
 
 	//"github.com/lib/pq"
 
 	//"chain/core/pin"
 	//"github.com/blockchain/database/pg"
-	"github.com/blockchain/errors"
+//	"github.com/blockchain/errors"
 	"github.com/blockchain/protocol"
-	"github.com/blockchain/protocol/bc/legacy"
+	//"github.com/blockchain/protocol/bc/legacy"
+    dbm "github.com/tendermint/tmlibs/db"
 )
 
 const (
@@ -21,20 +22,20 @@ const (
 )
 
 // NewIndexer constructs a new indexer for indexing transactions.
-func NewIndexer(db pg.DB, c *protocol.Chain, pinStore *pin.Store) *Indexer {
+func NewIndexer(db dbm.DB, c *protocol.Chain/*, pinStore *pin.Store*/) *Indexer {
 	indexer := &Indexer{
 		db:       db,
 		c:        c,
-		pinStore: pinStore,
+	//	pinStore: pinStore,
 	}
 	return indexer
 }
 
 // Indexer creates, updates and queries against indexes.
 type Indexer struct {
-	db         pg.DB
+	db         dbm.DB
 	c          *protocol.Chain
-	pinStore   *pin.Store
+	//pinStore   *pin.Store
 	annotators []Annotator
 }
 
@@ -49,18 +50,19 @@ func (ind *Indexer) RegisterAnnotator(annotator Annotator) {
 }
 
 func (ind *Indexer) ProcessBlocks(ctx context.Context) {
-	if ind.pinStore == nil {
-		return
-	}
-	ind.pinStore.ProcessBlocks(ctx, ind.c, TxPinName, ind.IndexTransactions)
+	//if ind.pinStore == nil {
+	//	return
+	//}
+	//ind.pinStore.ProcessBlocks(ctx, ind.c, TxPinName, ind.IndexTransactions)
 }
 
+/*
 // IndexTransactions is registered as a block callback on the Chain. It
 // saves all annotated transactions to the database.
 func (ind *Indexer) IndexTransactions(ctx context.Context, b *legacy.Block) error {
-	<-ind.pinStore.PinWaiter("asset", b.Height)
-	<-ind.pinStore.PinWaiter("account", b.Height)
-	<-ind.pinStore.PinWaiter(TxPinName, b.Height-1)
+	//<-ind.pinStore.PinWaiter("asset", b.Height)
+	//<-ind.pinStore.PinWaiter("account", b.Height)
+	//<-ind.pinStore.PinWaiter(TxPinName, b.Height-1)
 
 	err := ind.insertBlock(ctx, b)
 	if err != nil {
@@ -300,3 +302,4 @@ func (ind *Indexer) insertAnnotatedOutputs(ctx context.Context, b *legacy.Block,
 	_, err = ind.db.ExecContext(ctx, updateQ, b.TimestampMS, prevoutIDs)
 	return errors.Wrap(err, "updating spent annotated outputs")
 }
+*/

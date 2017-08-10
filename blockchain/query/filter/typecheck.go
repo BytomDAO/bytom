@@ -1,9 +1,9 @@
 package filter
 
 import (
-	"errors"
+	//"errors"
 	"fmt"
-	"strings"
+	//"strings"
 )
 
 func isType(got Type, want Type) bool {
@@ -34,7 +34,7 @@ func valueTypes(vals []interface{}) ([]Type, error) {
 // typeCheck will statically type check expr with vals as the parameters
 // and using tbl to determine available attributes and environments. It
 // returns the inferred types of arbitrary json keys as a map.
-func typeCheck(expr expr, tbl *SQLTable, vals []interface{}) (map[string]Type, error) {
+/*func typeCheck(expr expr, tbl *SQLTable, vals []interface{}) (map[string]Type, error) {
 	valTypes, err := valueTypes(vals)
 	if err != nil {
 		return nil, err
@@ -182,6 +182,7 @@ func typeCheckExpr(expr expr, tbl *SQLTable, valTypes []Type, selectorTypes map[
 		panic(fmt.Errorf("unrecognized expr type %T", expr))
 	}
 }
+*/
 
 func assertType(expr expr, got, want Type, selectorTypes map[string]Type) (bool, error) {
 	if !isType(got, want) { // type does not match
@@ -205,12 +206,12 @@ func setType(expr expr, typ Type, selectorTypes map[string]Type) error {
 		// yet, so the parameters are untyped.
 		return nil
 	case selectorExpr:
-		path := strings.Join(jsonbPath(expr), ".")
+		/*path := strings.Join(jsonbPath(expr), ".")
 		boundTyp, ok := selectorTypes[path]
 		if ok && boundTyp != typ {
 			return fmt.Errorf("%q used as both %s and %s", path, boundTyp, typ)
 		}
-		selectorTypes[path] = typ
+		selectorTypes[path] = typ*/
 		return nil
 	default:
 		// This should be impossible because all other expressions are

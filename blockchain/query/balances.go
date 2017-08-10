@@ -1,5 +1,6 @@
 package query
 
+/*
 import (
 	"bytes"
 	"context"
@@ -107,3 +108,4 @@ func constructBalancesQuery(expr string, vals []interface{}, sumBy []filter.Fiel
 	// TODO(jackson): Support pagination.
 	return buf.String(), vals, nil
 }
+*/

@@ -1,14 +1,14 @@
 package query
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
+//	"bytes"
+//	"context"
+//	"encoding/json"
 	"fmt"
 	"math"
-	"strconv"
+//	"strconv"
 
-	"github.com/blockchain/blockchain/query/filter"
+//	"github.com/blockchain/blockchain/query/filter"
 	"github.com/blockchain/errors"
 )
 
@@ -50,6 +50,7 @@ func DecodeTxAfter(str string) (c TxAfter, err error) {
 	return TxAfter{FromBlockHeight: from, FromPosition: uint32(pos), StopBlockHeight: stop}, nil
 }
 
+/*
 func ValidateTransactionFilter(filt string) error {
 	_, err := filter.Parse(filt, transactionsTable, nil)
 	return err
@@ -202,3 +203,4 @@ func (ind *Indexer) waitForAndFetchTransactions(ctx context.Context, queryStr st
 		return r.txns, r.after, r.err
 	}
 }
+*/

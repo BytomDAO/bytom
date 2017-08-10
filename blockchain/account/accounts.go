@@ -2,11 +2,12 @@
 package account
 
 import (
-//	"context"
+	"context"
 //	stdsql "database/sql"
-	"encoding/json"
+//	"encoding/json"
 	"sync"
 	"time"
+    "fmt"
 
 	"github.com/golang/groupcache/lru"
 	//"github.com/lib/pq"
@@ -68,17 +69,17 @@ func (m *Manager) IndexAccounts(indexer Saver) {
 
 // ExpireReservations removes reservations that have expired periodically.
 // It blocks until the context is canceled.
-func (m *Manager) ExpireReservations(/*ctx context.Context,*/ period time.Duration) {
+func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) {
 	ticks := time.Tick(period)
 	for {
 		select {
-//		case <-ctx.Done():
-//			log.Printf(ctx, "Deposed, ExpireReservations exiting")
-//			return
+		case <-ctx.Done():
+			log.Printf(ctx, "Deposed, ExpireReservations exiting")
+			return
 		case <-ticks:
-			err := m.utxoDB.ExpireReservations(/*ctx*/)
+			err := m.utxoDB.ExpireReservations(ctx)
 			if err != nil {
-				log.Error(/*ctx,*/ err)
+				log.Error(ctx, err)
 			}
 		}
 	}
@@ -91,16 +92,18 @@ type Account struct {
 }
 
 // Create creates a new Account.
-func (m *Manager) Create(/*ctx context.Context,*/ xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
-	signer, err := signers.Create(/*ctx*/, m.db, "account", xpubs, quorum, clientToken)
+func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
+	signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
-	tagsParam, err := tagsToNullString(tags)
+	/*tagsParam, err := tagsToNullString(tags)
 	if err != nil {
 		return nil, err
 	}
+    */
+    var tagsParam []byte
 
 /*	aliasSQL := stdsql.NullString{
 		String: alias,
@@ -120,7 +123,7 @@ func (m *Manager) Create(/*ctx context.Context,*/ xpubs []chainkd.XPub, quorum i
     account_alias := []byte(fmt.Sprintf("account_alias:%v", signer.ID))
     account_tags := []byte(fmt.Sprintf("account_tags:%v", signer.ID))
     m.db.Set(account_alias, []byte(alias))
-    m.db.Set(accout_tags, []byte(tagsParam))
+    m.db.Set(account_tags, []byte(tagsParam))
     alias_account := []byte(fmt.Sprintf("alias_account:%v", alias))
     m.db.Set(alias_account, []byte(signer.ID))
 
@@ -130,7 +133,7 @@ func (m *Manager) Create(/*ctx context.Context,*/ xpubs []chainkd.XPub, quorum i
 		Tags:   tags,
 	}
 
-	err = m.indexAnnotatedAccount(/*ctx,*/ account)
+	err = m.indexAnnotatedAccount(ctx, account)
 	if err != nil {
 		return nil, errors.Wrap(err, "indexing annotated account")
 	}
@@ -217,8 +220,8 @@ func (m *Manager) FindByAlias(/*ctx context.Context,*/ alias string) (*signers.S
 		if err != nil {
 			return nil, errors.Wrap(err)
 		}*/
-        bytez := m.db.Get(fmt.Sprintf("alias_account:%v", alias))
-        accountID = string(bytes[:])
+        bytez := m.db.Get([]byte(fmt.Sprintf("alias_account:%v", alias)))
+        accountID = string(bytez[:])
 		m.cacheMu.Lock()
 		m.aliasCache.Add(alias, accountID)
 		m.cacheMu.Unlock()
@@ -344,6 +347,7 @@ func (m *Manager) nextIndex(/*ctx context.Context*/) (uint64, error) {
 	return n, nil
 }
 
+/*
 func tagsToNullString(tags map[string]interface{}) (*stdsql.NullString, error) {
 	var tagsJSON []byte
 	if len(tags) != 0 {
@@ -355,3 +359,4 @@ func tagsToNullString(tags map[string]interface{}) (*stdsql.NullString, error) {
 	}
 	return &stdsql.NullString{String: string(tagsJSON), Valid: len(tagsJSON) > 0}, nil
 }
+*/

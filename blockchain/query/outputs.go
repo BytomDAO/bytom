@@ -1,16 +1,16 @@
 package query
 
 import (
-	"bytes"
-	"context"
+//	"bytes"
+//	"context"
 	"fmt"
 	"math"
 
 	//"github.com/lib/pq"
 
-	"github.com/blockchain/blockchain/query/filter"
+//	"github.com/blockchain/blockchain/query/filter"
 	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc"
+//	"github.com/blockchain/protocol/bc"
 )
 
 var defaultOutputsAfter = OutputsAfter{
@@ -47,6 +47,7 @@ func DecodeOutputsAfter(str string) (c *OutputsAfter, err error) {
 	}, nil
 }
 
+/*
 func (ind *Indexer) Outputs(ctx context.Context, filt string, vals []interface{}, timestampMS uint64, after *OutputsAfter, limit int) ([]*AnnotatedOutput, *OutputsAfter, error) {
 	p, err := filter.Parse(filt, outputsTable, vals)
 	if err != nil {
@@ -169,3 +170,4 @@ func constructOutputsQuery(where string, vals []interface{}, timestampMS uint64,
 
 	return buf.String(), vals
 }
+*/
