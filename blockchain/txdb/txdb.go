@@ -2,6 +2,7 @@
 // data structures.
 package txdb
 
+/*
 import (
 	"context"
 	"strconv"
@@ -51,3 +52,4 @@ func (s *Store) GetRawBlock(ctx context.Context, height uint64) ([]byte, error) 
 	err := s.db.QueryRowContext(ctx, q, height).Scan(&block)
 	return block, errors.Wrap(err, "querying blocks from the db")
 }
+*/

@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"encoding/json"
+    "fmt"
 
 //	"github.com/lib/pq"
 
@@ -164,8 +165,9 @@ func (m *Manager) indexAccountUTXOs(ctx context.Context, b *legacy.Block) error 
 	if err != nil {
 		return errors.Wrap(err, "loading account info from control programs")
 	}
+    fmt.Printf("accOuts:%v", accOuts);
 
-	err = m.upsertConfirmedAccountOutputs(ctx, accOuts, blockPositions, b)
+	//err = m.upsertConfirmedAccountOutputs(ctx, accOuts, blockPositions, b)
 	return errors.Wrap(err, "upserting confirmed account utxos")
 }
 
@@ -225,6 +227,7 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) ([]*ac
 	return result, nil
 }
 
+/*
 // upsertConfirmedAccountOutputs records the account data for confirmed utxos.
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
@@ -277,3 +280,4 @@ func (m *Manager) upsertConfirmedAccountOutputs(ctx context.Context, outs []*acc
 	)
 	return errors.Wrap(err)
 }
+*/

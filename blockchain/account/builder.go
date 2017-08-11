@@ -232,5 +232,6 @@ func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.
 			return nil
 		}
 	//	return m.insertAccountControlProgram(ctx, acps...)
+        return nil
 	})
 }

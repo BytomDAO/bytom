@@ -1,6 +1,7 @@
 package node
 
 import (
+    "context"
 	"net/http"
 	"strings"
     "net"
@@ -22,6 +23,7 @@ import (
 	rpcserver "github.com/blockchain/rpc/lib/server"
     "github.com/blockchain/blockchain/account"
     "github.com/blockchain/protocol"
+    "github.com/blockchain/blockchain/txdb"
 
 	_ "net/http/pprof"
 )
@@ -89,17 +91,18 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
       cmn.Exit(cmn.Fmt("initialize genesisblock failed: %v", err))
     }
 
-    txdb := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-    store := txdb.NewStore(txdb)
-    chain, err := protocol.NewChain(ctx, genesisblock.Hash(), store, nil)
-    if err != nil {
-      cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err)
+    tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
+    store := txdb.NewStore(tx_db)
+    chain, err := protocol.NewChain(context.Background(), genesisblock.Hash(), store, nil)
+   /* if err != nil {
+      cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
     }
-    err = chain.CommitAppliedBlock(ctx, block, state.Empty())
+    err = chain.CommitAppliedBlock(context.Background(), block, state.Empty())
     if err != nil {
       cmn.Exit(cmn.Fmt("commit block failed: %v", err))
     }
     chain.MaxIssuanceWindow = bc.MillisDuration(c.MaxIssuanceWindowMs)
+    */
 
     bcReactor := bc.NewBlockchainReactor(blockStore, chain, fastSync)
     bcReactor.SetLogger(logger.With("module", "blockchain"))
@@ -128,7 +131,7 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 		}()
 	}
     accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
-    accounts := account.NewManager(db, &bcReactor)
+    accounts := account.NewManager(accounts_db, chain)
 
 	node := &Node{
 		config:        config,

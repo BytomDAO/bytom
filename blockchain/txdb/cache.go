@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"sync"
 
-	"chain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/bc/legacy"
 
 	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"

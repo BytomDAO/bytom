@@ -1,5 +1,6 @@
 package txdb
 
+/*
 import (
 	"context"
 	"database/sql"
@@ -117,3 +118,4 @@ func getRawSnapshot(ctx context.Context, db pg.DB, height uint64) (data []byte, 
 	}
 	return data, err
 }
+*/
