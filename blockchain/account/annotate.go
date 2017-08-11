@@ -2,7 +2,7 @@ package account
 
 import (
 	"context"
-	"database/sql"
+//	"database/sql"
 	"encoding/json"
 
 //	"github.com/lib/pq"
@@ -44,7 +44,7 @@ func (m *Manager) AnnotateTxs(ctx context.Context, txs []*query.AnnotatedTx) err
 
 	// Look up all of the spent and created outputs. If any of them are
 	// account UTXOs add the account annotations to the inputs and outputs.
-	const q = `
+	/*const q = `
 		SELECT o.output_id, o.account_id, a.alias, a.tags, o.change
 		FROM account_utxos o
 		LEFT JOIN accounts a ON o.account_id = a.account_id
@@ -82,6 +82,6 @@ func (m *Manager) AnnotateTxs(ctx context.Context, txs []*query.AnnotatedTx) err
 					out.Purpose = "receive"
 				}
 			}
-		})
-	return errors.Wrap(err, "annotating with account data")
+		}) */
+	return errors.Wrap(nil, "annotating with account data")
 }

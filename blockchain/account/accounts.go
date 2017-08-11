@@ -203,7 +203,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 */
 
 // FindByAlias retrieves an account's Signer record by its alias
-func (m *Manager) FindByAlias(/*ctx context.Context,*/ alias string) (*signers.Signer, error) {
+func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signer, error) {
 	var accountID string
 
 	m.cacheMu.Lock()
@@ -230,14 +230,14 @@ func (m *Manager) FindByAlias(/*ctx context.Context,*/ alias string) (*signers.S
 }
 
 // findByID returns an account's Signer record by its ID.
-func (m *Manager) findByID(/*ctx context.Context, */id string) (*signers.Signer, error) {
+func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, error) {
 	m.cacheMu.Lock()
 	cached, ok := m.cache.Get(id)
 	m.cacheMu.Unlock()
 	if ok {
 		return cached.(*signers.Signer), nil
 	}
-	account, err := signers.Find(/*ctx, */m.db, "account", id)
+	account, err := signers.Find(ctx, m.db, "account", id)
 	if err != nil {
 		return nil, err
 	}
@@ -255,13 +255,13 @@ type controlProgram struct {
 	expiresAt      time.Time
 }
 
-func (m *Manager) createControlProgram(/*ctx context.Context,*/ accountID string, change bool, expiresAt time.Time) (*controlProgram, error) {
-	account, err := m.findByID(/*ctx,*/ accountID)
+func (m *Manager) createControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*controlProgram, error) {
+	account, err := m.findByID(ctx, accountID)
 	if err != nil {
 		return nil, err
 	}
 
-	idx, err := m.nextIndex(/*ctx*/)
+	idx, err := m.nextIndex(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -284,15 +284,15 @@ func (m *Manager) createControlProgram(/*ctx context.Context,*/ accountID string
 
 // CreateControlProgram creates a control program
 // that is tied to the Account and stores it in the database.
-func (m *Manager) CreateControlProgram(/*ctx context.Context,*/ accountID string, change bool, expiresAt time.Time) ([]byte, error) {
-	cp, err := m.createControlProgram(/*ctx,*/ accountID, change, expiresAt)
+func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) ([]byte, error) {
+	cp, err := m.createControlProgram(ctx, accountID, change, expiresAt)
 	if err != nil {
 		return nil, err
 	}
-	err = m.insertAccountControlProgram(/*ctx,*/ cp)
+	/*err = m.insertAccountControlProgram(ctx, cp)
 	if err != nil {
 		return nil, err
-	}
+	}*/
 	return cp.controlProgram, nil
 }
 
@@ -326,7 +326,7 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 }
 */
 
-func (m *Manager) nextIndex(/*ctx context.Context*/) (uint64, error) {
+func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	m.acpMu.Lock()
 	defer m.acpMu.Unlock()
 

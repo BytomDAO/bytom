@@ -99,7 +99,7 @@ type accountOutput struct {
 }
 
 func (m *Manager) ProcessBlocks(ctx context.Context) {
-	if m.pinStore == nil {
+	/*if m.pinStore == nil {
 		return
 	}
 	go m.pinStore.ProcessBlocks(ctx, m.chain, ExpirePinName, func(ctx context.Context, b *legacy.Block) error {
@@ -112,8 +112,10 @@ func (m *Manager) ProcessBlocks(ctx context.Context) {
 		return m.deleteSpentOutputs(ctx, b)
 	})
 	m.pinStore.ProcessBlocks(ctx, m.chain, PinName, m.indexAccountUTXOs)
+    */
 }
 
+/*
 func (m *Manager) expireControlPrograms(ctx context.Context, b *legacy.Block) error {
 	// Delete expired account control programs.
 	const deleteQ = `DELETE FROM account_control_programs WHERE expires_at IS NOT NULL AND expires_at < $1`
@@ -131,6 +133,7 @@ func (m *Manager) deleteSpentOutputs(ctx context.Context, b *legacy.Block) error
 	_, err := m.db.ExecContext(ctx, delQ, delOutputIDs)
 	return errors.Wrap(err, "deleting spent account utxos")
 }
+*/
 
 func (m *Manager) indexAccountUTXOs(ctx context.Context, b *legacy.Block) error {
 	// Upsert any UTXOs belonging to accounts managed by this Core.
@@ -166,6 +169,7 @@ func (m *Manager) indexAccountUTXOs(ctx context.Context, b *legacy.Block) error 
 	return errors.Wrap(err, "upserting confirmed account utxos")
 }
 
+/*
 func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs pq.ByteaArray) {
 	for _, tx := range txs {
 		for _, inpID := range tx.Tx.InputIDs {
@@ -176,6 +180,7 @@ func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs pq.ByteaArray) {
 	}
 	return
 }
+*/
 
 // loadAccountInfo turns a set of output IDs into a set of
 // outputs by adding account annotations.  Outputs that can't be
@@ -187,13 +192,15 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) ([]*ac
 		outsByScript[scriptStr] = append(outsByScript[scriptStr], out)
 	}
 
-	var scripts pq.ByteaArray
+	/*var scripts pq.ByteaArray
 	for s := range outsByScript {
 		scripts = append(scripts, []byte(s))
 	}
+    */
 
 	result := make([]*accountOutput, 0, len(outs))
 
+/*
 	const q = `
 		SELECT signer_id, key_index, control_program, change
 		FROM account_control_programs
@@ -213,6 +220,7 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) ([]*ac
 	if err != nil {
 		return nil, err
 	}
+    */
 
 	return result, nil
 }

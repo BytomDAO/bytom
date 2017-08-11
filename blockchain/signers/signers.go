@@ -178,19 +178,22 @@ func findByClientToken(ctx context.Context, db pg.DB, clientToken string) (*Sign
 
 	return &s, nil
 }
+*/
 
 // Find retrieves a Signer from the database
 // using the type and id.
-func Find(ctx context.Context, db pg.DB, typ, id string) (*Signer, error) {
-	const q = `
+func Find(ctx context.Context, db dbm.DB, typ, id string) (*Signer, error) {
+	/*const q = `
 		SELECT id, type, xpubs, quorum, key_index
 		FROM signers WHERE id=$1
 	`
+    */
 
 	var (
 		s         Signer
 		xpubBytes [][]byte
 	)
+    /*
 	err := db.QueryRowContext(ctx, q, id).Scan(
 		&s.ID,
 		&s.Type,
@@ -207,7 +210,7 @@ func Find(ctx context.Context, db pg.DB, typ, id string) (*Signer, error) {
 
 	if s.Type != typ {
 		return nil, errors.Wrap(ErrBadType)
-	}
+	}*/
 
 	keys, err := ConvertKeys(xpubBytes)
 	if err != nil {
@@ -219,6 +222,7 @@ func Find(ctx context.Context, db pg.DB, typ, id string) (*Signer, error) {
 	return &s, nil
 }
 
+/*
 // List returns a paginated set of Signers, limited to
 // the provided type.
 func List(ctx context.Context, db pg.DB, typ, prev string, limit int) ([]*Signer, string, error) {

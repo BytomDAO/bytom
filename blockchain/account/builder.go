@@ -231,6 +231,6 @@ func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.
 		if len(acps) == 0 {
 			return nil
 		}
-		return m.insertAccountControlProgram(ctx, acps...)
+	//	return m.insertAccountControlProgram(ctx, acps...)
 	})
 }
