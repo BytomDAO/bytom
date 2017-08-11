@@ -48,7 +48,7 @@ import (
 	"github.com/golang/groupcache/lru"
 
 	"github.com/blockchain/errors"
-	"github.com/blockchain/log"
+	//"github.com/blockchain/log"
 	"github.com/blockchain/protocol/bc"
 	"github.com/blockchain/protocol/bc/legacy"
 	"github.com/blockchain/protocol/state"
@@ -73,11 +73,11 @@ var (
 type Store interface {
 	Height(context.Context) (uint64, error)
 	GetBlock(context.Context, uint64) (*legacy.Block, error)
-	LatestSnapshot(context.Context) (*state.Snapshot, uint64, error)
+//	LatestSnapshot(context.Context) (*state.Snapshot, uint64, error)
 
-	SaveBlock(context.Context, *legacy.Block) error
+//	SaveBlock(context.Context, *legacy.Block) error
 	FinalizeBlock(context.Context, uint64) error
-	SaveSnapshot(context.Context, uint64, *state.Snapshot) error
+//	SaveSnapshot(context.Context, uint64, *state.Snapshot) error
 }
 
 // Chain provides a complete, minimal blockchain database. It
@@ -139,11 +139,12 @@ func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, height
 			select {
 			case <-ctx.Done():
 				return
-			case ps := <-c.pendingSnapshots:
-				err = store.SaveSnapshot(ctx, ps.height, ps.snapshot)
+			//case ps := <-c.pendingSnapshots:
+				/*err = store.SaveSnapshot(ctx, ps.height, ps.snapshot)
 				if err != nil {
 					log.Error(ctx, err, "at", "saving snapshot")
 				}
+                */
 			}
 		}
 	}()

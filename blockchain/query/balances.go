@@ -1,12 +1,13 @@
 package query
 
+/*
 import (
 	"bytes"
 	"context"
 	"fmt"
 	"strconv"
 
-	"github.com/lib/pq"
+//	"github.com/lib/pq"
 
 	"github.com/blockchain/blockchain/query/filter"
 	"github.com/blockchain/errors"
@@ -107,3 +108,4 @@ func constructBalancesQuery(expr string, vals []interface{}, sumBy []filter.Fiel
 	// TODO(jackson): Support pagination.
 	return buf.String(), vals, nil
 }
+*/

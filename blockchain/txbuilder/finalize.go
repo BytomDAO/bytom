@@ -120,7 +120,7 @@ func checkTxSighashCommitment(tx *legacy.Tx) error {
 // RemoteGenerator implements the Submitter interface and submits the
 // transaction to a remote generator.
 // TODO(jackson): This implementation maybe belongs elsewhere.
-type RemoteGenerator struct {
+/*type RemoteGenerator struct {
 	Peer *rpc.Client
 }
 
@@ -129,3 +129,4 @@ func (rg *RemoteGenerator) Submit(ctx context.Context, tx *legacy.Tx) error {
 	err = errors.Wrap(err, "generator transaction notice")
 	return err
 }
+*/

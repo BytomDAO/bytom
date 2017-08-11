@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/blockchain/crypto/ed25519"
+//	"github.com/blockchain/crypto/ed25519"
 	"github.com/blockchain/errors"
 	"github.com/blockchain/log"
 	"github.com/blockchain/protocol/bc"
 	"github.com/blockchain/protocol/bc/legacy"
 	"github.com/blockchain/protocol/state"
 	"github.com/blockchain/protocol/validation"
-	"github.com/blockchain/protocol/vm/vmutil"
+//	"github.com/blockchain/protocol/vm/vmutil"
 )
 
 // maxBlockTxs limits the number of transactions
@@ -167,15 +167,15 @@ func (c *Chain) CommitAppliedBlock(ctx context.Context, block *legacy.Block, sna
 	// SaveBlock is the linearization point. Once the block is committed
 	// to persistent storage, the block has been applied and everything
 	// else can be derived from that block.
-	err := c.store.SaveBlock(ctx, block)
+	/*err := c.store.SaveBlock(ctx, block)
 	if err != nil {
 		return errors.Wrap(err, "storing block")
-	}
+	}*/
 	if block.Time().After(c.lastQueuedSnapshot.Add(saveSnapshotFrequency)) {
 		c.queueSnapshot(ctx, block.Height, block.Time(), snapshot)
 	}
 
-	err = c.store.FinalizeBlock(ctx, block.Height)
+	err := c.store.FinalizeBlock(ctx, block.Height)
 	if err != nil {
 		return errors.Wrap(err, "finalizing block")
 	}
@@ -241,11 +241,12 @@ func (c *Chain) ValidateBlockForSig(ctx context.Context, block *legacy.Block) er
 	return errors.Sub(ErrBadBlock, err)
 }
 
-func NewInitialBlock(pubkeys []ed25519.PublicKey, nSigs int, timestamp time.Time) (*legacy.Block, error) {
+func NewInitialBlock(/*pubkeys []ed25519.PublicKey, nSigs int, timestamp time.Time*/) (*legacy.Block, error) {
 	// TODO(kr): move this into a lower-level package (e.g. chain/protocol/bc)
 	// so that other packages (e.g. chain/protocol/validation) unit tests can
 	// call this function.
 
+/*
 	script, err := vmutil.BlockMultiSigProgram(pubkeys, nSigs)
 	if err != nil {
 		return nil, err
@@ -255,16 +256,17 @@ func NewInitialBlock(pubkeys []ed25519.PublicKey, nSigs int, timestamp time.Time
 	if err != nil {
 		return nil, errors.Wrap(err, "calculating zero value of tx merkle root")
 	}
+    */
 
 	b := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
 			Version:     1,
 			Height:      1,
-			TimestampMS: bc.Millis(timestamp),
-			BlockCommitment: legacy.BlockCommitment{
+			//TimestampMS: bc.Millis(timestamp),
+			/*BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: root,
 				ConsensusProgram:       script,
-			},
+			},*/
 		},
 	}
 	return b, nil

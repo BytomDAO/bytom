@@ -10,7 +10,7 @@ import (
 	"github.com/blockchain/errors"
 	"github.com/blockchain/log"
 	"github.com/blockchain/protocol/bc"
-	"github.com/bockchain/protocol/bc/legacy"
+	"github.com/blockchain/protocol/bc/legacy"
 )
 
 func (m *Manager) NewSpendAction(amt bc.AssetAmount, accountID string, refData chainjson.Map, clientToken *string) txbuilder.Action {
@@ -231,6 +231,7 @@ func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.
 		if len(acps) == 0 {
 			return nil
 		}
-		return m.insertAccountControlProgram(ctx, acps...)
+	//	return m.insertAccountControlProgram(ctx, acps...)
+        return nil
 	})
 }

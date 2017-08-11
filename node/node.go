@@ -1,6 +1,7 @@
 package node
 
 import (
+    "context"
 	"net/http"
 	"strings"
     "net"
@@ -20,6 +21,9 @@ import (
 	grpccore "github.com/blockchain/rpc/grpc"
 	//rpc "github.com/blockchain/rpc/lib"
 	rpcserver "github.com/blockchain/rpc/lib/server"
+    "github.com/blockchain/blockchain/account"
+    "github.com/blockchain/protocol"
+    "github.com/blockchain/blockchain/txdb"
 
 	_ "net/http/pprof"
 )
@@ -41,6 +45,7 @@ type Node struct {
 //    blockStore       *bc.MemStore
     blockStore       *bc.BlockStore
     bcReactor        *bc.BlockchainReactor
+    accounts         *account.Manager
     rpcListeners     []net.Listener              // rpc servers
 }
 
@@ -81,7 +86,25 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 	sw.SetLogger(p2pLogger)
 
     fastSync := config.FastSync
-    bcReactor := bc.NewBlockchainReactor(blockStore, fastSync)
+    genesisblock, err := protocol.NewInitialBlock()
+    if err != nil {
+      cmn.Exit(cmn.Fmt("initialize genesisblock failed: %v", err))
+    }
+
+    tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
+    store := txdb.NewStore(tx_db)
+    chain, err := protocol.NewChain(context.Background(), genesisblock.Hash(), store, nil)
+   /* if err != nil {
+      cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
+    }
+    err = chain.CommitAppliedBlock(context.Background(), block, state.Empty())
+    if err != nil {
+      cmn.Exit(cmn.Fmt("commit block failed: %v", err))
+    }
+    chain.MaxIssuanceWindow = bc.MillisDuration(c.MaxIssuanceWindowMs)
+    */
+
+    bcReactor := bc.NewBlockchainReactor(blockStore, chain, fastSync)
     bcReactor.SetLogger(logger.With("module", "blockchain"))
     sw.AddReactor("BLOCKCHAIN", bcReactor)
 
@@ -107,6 +130,8 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 			logger.Error("Profile server", "error", http.ListenAndServe(profileHost, nil))
 		}()
 	}
+    accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
+    accounts := account.NewManager(accounts_db, chain)
 
 	node := &Node{
 		config:        config,
@@ -119,6 +144,7 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 		evsw:      eventSwitch,
         bcReactor: bcReactor,
         blockStore: blockStore,
+        accounts: accounts,
 	}
 	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
 	return node

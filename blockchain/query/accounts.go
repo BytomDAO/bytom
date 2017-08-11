@@ -1,5 +1,6 @@
 package query
 
+    /*
 import (
 	"bytes"
 	"context"
@@ -7,7 +8,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/blockchain/blockchain/query/filter"
+//	"github.com/blockchain/blockchain/query/filter"
 	"github.com/blockchain/errors"
 )
 
@@ -27,9 +28,10 @@ func (ind *Indexer) SaveAnnotatedAccount(ctx context.Context, account *Annotated
 		account.Quorum, string(*account.Tags))
 	return errors.Wrap(err, "saving annotated account")
 }
+*/
 
 // Accounts queries the blockchain for accounts matching the query `q`.
-func (ind *Indexer) Accounts(ctx context.Context, filt string, vals []interface{}, after string, limit int) ([]*AnnotatedAccount, string, error) {
+/*func (ind *Indexer) Accounts(ctx context.Context, filt string, vals []interface{}, after string, limit int) ([]*AnnotatedAccount, string, error) {
 	p, err := filter.Parse(filt, accountsTable, vals)
 	if err != nil {
 		return nil, "", err
@@ -73,8 +75,9 @@ func (ind *Indexer) Accounts(ctx context.Context, filt string, vals []interface{
 		accounts = append(accounts, aa)
 	}
 	return accounts, after, errors.Wrap(rows.Err())
-}
+}*/
 
+/*
 func constructAccountsQuery(expr string, vals []interface{}, after string, limit int) (string, []interface{}) {
 	var buf bytes.Buffer
 
@@ -98,3 +101,4 @@ func constructAccountsQuery(expr string, vals []interface{}, after string, limit
 	buf.WriteString("LIMIT " + strconv.Itoa(limit))
 	return buf.String(), vals
 }
+*/

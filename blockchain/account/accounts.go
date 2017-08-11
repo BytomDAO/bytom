@@ -3,18 +3,19 @@ package account
 
 import (
 	"context"
-	stdsql "database/sql"
-	"encoding/json"
+//	stdsql "database/sql"
+//	"encoding/json"
 	"sync"
 	"time"
+    "fmt"
 
 	"github.com/golang/groupcache/lru"
-	"github.com/lib/pq"
+	//"github.com/lib/pq"
 
 //	"chain/core/pin"
 	"github.com/blockchain/blockchain/signers"
 	"github.com/blockchain/blockchain/txbuilder"
-	"github.com/crypto/ed25519/chainkd"
+	"github.com/blockchain/crypto/ed25519/chainkd"
 //	"chain/database/pg"
      dbm "github.com/tendermint/tmlibs/db"
 	"github.com/blockchain/errors"
@@ -30,12 +31,12 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func NewManager(db dbm.DB, chain *protocol.Chain, pinStore *pin.Store) *Manager {
+func NewManager(db dbm.DB, chain *protocol.Chain/*, pinStore *pin.Store*/) *Manager {
 	return &Manager{
 		db:          db,
 		chain:       chain,
-		utxoDB:      newReserver(db, chain, pinStore),
-		pinStore:    pinStore,
+		utxoDB:      newReserver(db, chain/*, pinStore*/),
+//		pinStore:    pinStore,
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
 		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*controlProgram),
@@ -48,7 +49,7 @@ type Manager struct {
 	chain    *protocol.Chain
 	utxoDB   *reserver
 	indexer  Saver
-	pinStore *pin.Store
+//	pinStore *pin.Store
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
@@ -97,12 +98,14 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err)
 	}
 
-	tagsParam, err := tagsToNullString(tags)
+	/*tagsParam, err := tagsToNullString(tags)
 	if err != nil {
 		return nil, err
 	}
+    */
+    var tagsParam []byte
 
-	aliasSQL := stdsql.NullString{
+/*	aliasSQL := stdsql.NullString{
 		String: alias,
 		Valid:  alias != "",
 	}
@@ -116,7 +119,13 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.WithDetail(ErrDuplicateAlias, "an account with the provided alias already exists")
 	} else if err != nil {
 		return nil, errors.Wrap(err)
-	}
+	}*/
+    account_alias := []byte(fmt.Sprintf("account_alias:%v", signer.ID))
+    account_tags := []byte(fmt.Sprintf("account_tags:%v", signer.ID))
+    m.db.Set(account_alias, []byte(alias))
+    m.db.Set(account_tags, []byte(tagsParam))
+    alias_account := []byte(fmt.Sprintf("alias_account:%v", alias))
+    m.db.Set(alias_account, []byte(signer.ID))
 
 	account := &Account{
 		Signer: signer,
@@ -134,7 +143,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 // UpdateTags modifies the tags of the specified account. The account may be
 // identified either by ID or Alias, but not both.
-func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
+/*func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
 	if (id == nil) == (alias == nil) {
 		return errors.Wrap(ErrBadIdentifier)
 	}
@@ -191,6 +200,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 		Tags:   tags,
 	}), "update account index")
 }
+*/
 
 // FindByAlias retrieves an account's Signer record by its alias
 func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signer, error) {
@@ -202,14 +212,16 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 	if ok {
 		accountID = cachedID.(string)
 	} else {
-		const q = `SELECT account_id FROM accounts WHERE alias=$1`
+		/*const q = `SELECT account_id FROM accounts WHERE alias=$1`
 		err := m.db.QueryRowContext(ctx, q, alias).Scan(&accountID)
 		if err == stdsql.ErrNoRows {
 			return nil, errors.WithDetailf(pg.ErrUserInputNotFound, "alias: %s", alias)
 		}
 		if err != nil {
 			return nil, errors.Wrap(err)
-		}
+		}*/
+        bytez := m.db.Get([]byte(fmt.Sprintf("alias_account:%v", alias)))
+        accountID = string(bytez[:])
 		m.cacheMu.Lock()
 		m.aliasCache.Add(alias, accountID)
 		m.cacheMu.Unlock()
@@ -277,13 +289,14 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 	if err != nil {
 		return nil, err
 	}
-	err = m.insertAccountControlProgram(ctx, cp)
+	/*err = m.insertAccountControlProgram(ctx, cp)
 	if err != nil {
 		return nil, err
-	}
+	}*/
 	return cp.controlProgram, nil
 }
 
+/*
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
 	const q = `
 		INSERT INTO account_control_programs (signer_id, key_index, control_program, change, expires_at)
@@ -311,13 +324,14 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 	_, err := m.db.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
 	return errors.Wrap(err)
 }
+*/
 
 func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	m.acpMu.Lock()
 	defer m.acpMu.Unlock()
 
 	if m.acpIndexNext >= m.acpIndexCap {
-		var cap uint64
+		/*var cap uint64
 		const incrby = 10000 // account_control_program_seq increments by 10,000
 		const q = `SELECT nextval('account_control_program_seq')`
 		err := m.db.QueryRowContext(ctx, q).Scan(&cap)
@@ -325,7 +339,7 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 			return 0, errors.Wrap(err, "scan")
 		}
 		m.acpIndexCap = cap
-		m.acpIndexNext = cap - incrby
+		m.acpIndexNext = cap - incrby*/
 	}
 
 	n := m.acpIndexNext
@@ -333,6 +347,7 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	return n, nil
 }
 
+/*
 func tagsToNullString(tags map[string]interface{}) (*stdsql.NullString, error) {
 	var tagsJSON []byte
 	if len(tags) != 0 {
@@ -344,3 +359,4 @@ func tagsToNullString(tags map[string]interface{}) (*stdsql.NullString, error) {
 	}
 	return &stdsql.NullString{String: string(tagsJSON), Valid: len(tagsJSON) > 0}, nil
 }
+*/
