@@ -29,6 +29,9 @@ type validationState struct {
 
 	// Memoized per-entry validation results
 	cache map[bc.Hash]error
+
+	// gas left for run the BVM
+	gasLimit int64
 }
 
 var (
@@ -98,7 +101,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.Mux:
-		err = vm.Verify(NewTxVMContext(vs.tx, e, e.Program, e.WitnessArguments))
+		vs.gasLimit, err = vm.Verify(NewTxVMContext(vs.tx, e, e.Program, e.WitnessArguments), vs.gasLimit)
 		if err != nil {
 			return errors.Wrap(err, "checking mux program")
 		}
@@ -153,7 +156,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.Nonce:
-		err = vm.Verify(NewTxVMContext(vs.tx, e, e.Program, e.WitnessArguments))
+		vs.gasLimit, err = vm.Verify(NewTxVMContext(vs.tx, e, e.Program, e.WitnessArguments), vs.gasLimit)
 		if err != nil {
 			return errors.Wrap(err, "checking nonce program")
 		}
@@ -226,7 +229,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrapf(bc.ErrMissingEntry, "entry for issuance anchor %x not found", e.AnchorId.Bytes())
 		}
 
-		err = vm.Verify(NewTxVMContext(vs.tx, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments))
+		vs.gasLimit, err = vm.Verify(NewTxVMContext(vs.tx, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), vs.gasLimit)
 		if err != nil {
 			return errors.Wrap(err, "checking issuance program")
 		}
@@ -276,7 +279,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err != nil {
 			return errors.Wrap(err, "getting spend prevout")
 		}
-		err = vm.Verify(NewTxVMContext(vs.tx, e, spentOutput.ControlProgram, e.WitnessArguments))
+		vs.gasLimit, err = vm.Verify(NewTxVMContext(vs.tx, e, spentOutput.ControlProgram, e.WitnessArguments), vs.gasLimit)
 		if err != nil {
 			return errors.Wrap(err, "checking control program")
 		}
@@ -444,13 +447,6 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-// ValidateBlockSig runs the consensus program prog on b.
-func ValidateBlockSig(b *bc.Block, prog []byte) error {
-	vmContext := newBlockVMContext(b, prog, b.WitnessArguments)
-	err := vm.Verify(vmContext)
-	return errors.Wrap(err, "evaluating previous block's next consensus program")
-}
-
 // ValidateBlock validates a block and the transactions within.
 // It does not run the consensus program; for that, see ValidateBlockSig.
 func ValidateBlock(b, prev *bc.Block, initialBlockID bc.Hash, validateTx func(*bc.Tx) error) error {
@@ -516,12 +512,13 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, initialBlockID bc.Hash) error {
+	//TODO: handle the gas limit
 	vs := &validationState{
 		blockchainID: initialBlockID,
 		tx:           tx,
 		entryID:      tx.ID,
-
-		cache: make(map[bc.Hash]error),
+		gasLimit:     10000,
+		cache:        make(map[bc.Hash]error),
 	}
 	return checkValid(vs, tx.TxHeader)
 }

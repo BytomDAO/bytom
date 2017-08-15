@@ -345,6 +345,7 @@ func TestTxValidation(t *testing.T) {
 				blockchainID: fixture.initialBlockID,
 				tx:           tx,
 				entryID:      tx.ID,
+				gasLimit:     10000,
 				cache:        make(map[bc.Hash]error),
 			}
 			out := tx.Entries[*tx.ResultIds[0]].(*bc.Output)
