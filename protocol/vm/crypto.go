@@ -136,14 +136,3 @@ func opTxSigHash(vm *virtualMachine) error {
 	}
 	return vm.push(vm.context.TxSigHash(), false)
 }
-
-func opBlockHash(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
-		return err
-	}
-	if vm.context.BlockHash == nil {
-		return ErrContext
-	}
-	return vm.push(*vm.context.BlockHash, false)
-}

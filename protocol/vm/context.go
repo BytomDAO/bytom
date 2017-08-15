@@ -20,12 +20,6 @@ type Context struct {
 	// (such as spends and issuances).
 	TxVersion *uint64
 
-	// These fields must be present when verifying block headers.
-
-	BlockHash            *[]byte
-	BlockTimeMS          *uint64
-	NextConsensusProgram *[]byte
-
 	// Fields below this point are required by particular opcodes when
 	// verifying transaction components.
 
