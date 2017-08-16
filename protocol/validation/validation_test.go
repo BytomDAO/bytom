@@ -268,14 +268,6 @@ func TestTxValidation(t *testing.T) {
 			err: errWrongBlockchain,
 		},
 		{
-			desc: "issuance asset ID mismatch",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				iss.Value.AssetId = newAssetID(1)
-			},
-			err: errMismatchedAssetID,
-		},
-		{
 			desc: "issuance program failure",
 			f: func() {
 				iss := txIssuance(t, tx, 0)
@@ -345,8 +337,12 @@ func TestTxValidation(t *testing.T) {
 				blockchainID: fixture.initialBlockID,
 				tx:           tx,
 				entryID:      tx.ID,
-				gasLimit:     10000,
-				cache:        make(map[bc.Hash]error),
+				gas: &gasState{
+					gasLeft: uint64(1000),
+					gasUsed: 0,
+					maxGas:  uint64(1000),
+				},
+				cache: make(map[bc.Hash]error),
 			}
 			out := tx.Entries[*tx.ResultIds[0]].(*bc.Output)
 			muxID := out.Source.Ref
@@ -369,7 +365,7 @@ func TestNoncelessIssuance(t *testing.T) {
 		tx.Inputs[0].TypedInput.(*legacy.IssuanceInput).Nonce = nil
 	})
 
-	err := ValidateTx(legacy.MapTx(&tx.TxData), bc.EmptyStringHash)
+	_, err := ValidateTx(legacy.MapTx(&tx.TxData), bc.EmptyStringHash)
 	if errors.Root(err) != bc.ErrMissingEntry {
 		t.Fatalf("got %s, want %s", err, bc.ErrMissingEntry)
 	}

@@ -9,6 +9,39 @@ import (
 	"github.com/blockchain/protocol/vm"
 )
 
+var BTMAssetID = &bc.AssetID{
+	V0: uint64(18446744073709551615),
+	V1: uint64(18446744073709551615),
+	V2: uint64(18446744073709551615),
+	V3: uint64(18446744073709551615),
+}
+
+type gasState struct {
+	gasLeft uint64
+	gasUsed uint64
+	maxGas  uint64
+}
+
+func (g *gasState) setMaxGas(maxGas uint64) {
+	if g.maxGas == 0 {
+		g.maxGas = maxGas
+
+	}
+}
+
+func (g *gasState) updateUsage(gasLeft int64) {
+	g.gasUsed += g.gasLeft - uint64(gasLeft)
+	g.gasLeft = uint64(gasLeft)
+}
+
+func (g *gasState) addGas(gas uint64) {
+	if g.gasLeft+g.gasUsed+gas < g.maxGas {
+		g.gasLeft += gas
+	} else {
+		g.gasLeft = g.maxGas - g.gasUsed
+	}
+}
+
 // validationState contains the context that must propagate through
 // the transaction graph when validating entries.
 type validationState struct {
@@ -30,8 +63,7 @@ type validationState struct {
 	// Memoized per-entry validation results
 	cache map[bc.Hash]error
 
-	// gas left for run the BVM
-	gasLimit int64
+	gas *gasState
 }
 
 var (
@@ -101,28 +133,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.Mux:
-		vs.gasLimit, err = vm.Verify(NewTxVMContext(vs.tx, e, e.Program, e.WitnessArguments), vs.gasLimit)
-		if err != nil {
-			return errors.Wrap(err, "checking mux program")
-		}
-
-		for i, src := range e.Sources {
-			vs2 := *vs
-			vs2.sourcePos = uint64(i)
-			err = checkValidSrc(&vs2, src)
-			if err != nil {
-				return errors.Wrapf(err, "checking mux source %d", i)
-			}
-		}
-		for i, dest := range e.WitnessDestinations {
-			vs2 := *vs
-			vs2.destPos = uint64(i)
-			err = checkValidDest(&vs2, dest)
-			if err != nil {
-				return errors.Wrapf(err, "checking mux destination %d", i)
-			}
-		}
-
 		parity := make(map[bc.AssetID]int64)
 		for i, src := range e.Sources {
 			sum, ok := checked.AddInt64(parity[*src.Value.AssetId], int64(src.Value.Amount))
@@ -146,8 +156,34 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 		for assetID, amount := range parity {
-			if amount != 0 {
+			if assetID == *BTMAssetID {
+				//TODO: handle available gas is 0
+				vs.gas.setMaxGas(uint64(amount))
+			} else if amount != 0 {
 				return errors.WithDetailf(errUnbalanced, "asset %x sources - destinations = %d (should be 0)", assetID.Bytes(), amount)
+			}
+		}
+
+		gasLeft, err := vm.Verify(NewTxVMContext(vs.tx, e, e.Program, e.WitnessArguments), int64(vs.gas.gasLeft))
+		vs.gas.updateUsage(gasLeft)
+		if err != nil {
+			return errors.Wrap(err, "checking mux program")
+		}
+
+		for i, src := range e.Sources {
+			vs2 := *vs
+			vs2.sourcePos = uint64(i)
+			err = checkValidSrc(&vs2, src)
+			if err != nil {
+				return errors.Wrapf(err, "checking mux source %d", i)
+			}
+		}
+		for i, dest := range e.WitnessDestinations {
+			vs2 := *vs
+			vs2.destPos = uint64(i)
+			err = checkValidDest(&vs2, dest)
+			if err != nil {
+				return errors.Wrapf(err, "checking mux destination %d", i)
 			}
 		}
 
@@ -156,7 +192,8 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.Nonce:
-		vs.gasLimit, err = vm.Verify(NewTxVMContext(vs.tx, e, e.Program, e.WitnessArguments), vs.gasLimit)
+		gasLeft, err := vm.Verify(NewTxVMContext(vs.tx, e, e.Program, e.WitnessArguments), int64(vs.gas.gasLeft))
+		vs.gas.updateUsage(gasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking nonce program")
 		}
@@ -229,7 +266,8 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrapf(bc.ErrMissingEntry, "entry for issuance anchor %x not found", e.AnchorId.Bytes())
 		}
 
-		vs.gasLimit, err = vm.Verify(NewTxVMContext(vs.tx, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), vs.gasLimit)
+		gasLeft, err := vm.Verify(NewTxVMContext(vs.tx, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), int64(vs.gas.gasLeft))
+		vs.gas.updateUsage(gasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking issuance program")
 		}
@@ -279,7 +317,8 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err != nil {
 			return errors.Wrap(err, "getting spend prevout")
 		}
-		vs.gasLimit, err = vm.Verify(NewTxVMContext(vs.tx, e, spentOutput.ControlProgram, e.WitnessArguments), vs.gasLimit)
+		gasLeft, err := vm.Verify(NewTxVMContext(vs.tx, e, spentOutput.ControlProgram, e.WitnessArguments), int64(vs.gas.gasLeft))
+		vs.gas.updateUsage(gasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking control program")
 		}
@@ -297,6 +336,10 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 				e.WitnessDestination.Value.Amount,
 				e.WitnessDestination.Value.AssetId.Bytes(),
 			)
+		}
+
+		if spentOutput.Source.Value.AssetId == BTMAssetID {
+			vs.gas.addGas(spentOutput.Source.Value.Amount)
 		}
 
 		vs2 := *vs
@@ -511,14 +554,18 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 }
 
 // ValidateTx validates a transaction.
-func ValidateTx(tx *bc.Tx, initialBlockID bc.Hash) error {
+func ValidateTx(tx *bc.Tx, initialBlockID bc.Hash) (*uint64, error) {
 	//TODO: handle the gas limit
 	vs := &validationState{
 		blockchainID: initialBlockID,
 		tx:           tx,
 		entryID:      tx.ID,
-		gasLimit:     10000,
-		cache:        make(map[bc.Hash]error),
+		gas: &gasState{
+			gasLeft: uint64(1000),
+			gasUsed: 0,
+			maxGas:  0,
+		},
+		cache: make(map[bc.Hash]error),
 	}
-	return checkValid(vs, tx.TxHeader)
+	return &vs.gas.gasUsed, checkValid(vs, tx.TxHeader)
 }
