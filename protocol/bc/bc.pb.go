@@ -482,6 +482,54 @@ func (m *Nonce) GetWitnessAnchoredId() *Hash {
 	return nil
 }
 
+type Coinbase struct {
+	Program           *Program `protobuf:"bytes,1,opt,name=program" json:"program,omitempty"`
+	BlockId           *Hash    `protobuf:"bytes,2,opt,name=block_id,json=blockId" json:"block_id,omitempty"`
+	ExtHash           *Hash    `protobuf:"bytes,3,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
+	WitnessArguments  [][]byte `protobuf:"bytes,4,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
+	WitnessAnchoredId *Hash    `protobuf:"bytes,5,opt,name=witness_anchored_id,json=witnessAnchoredId" json:"witness_anchored_id,omitempty"`
+}
+
+func (m *Coinbase) Reset()                    { *m = Coinbase{} }
+func (m *Coinbase) String() string            { return proto.CompactTextString(m) }
+func (*Coinbase) ProtoMessage()               {}
+func (*Coinbase) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+
+func (m *Coinbase) GetProgram() *Program {
+	if m != nil {
+		return m.Program
+	}
+	return nil
+}
+
+func (m *Coinbase) GetBlockId() *Hash {
+	if m != nil {
+		return m.BlockId
+	}
+	return nil
+}
+
+func (m *Coinbase) GetExtHash() *Hash {
+	if m != nil {
+		return m.ExtHash
+	}
+	return nil
+}
+
+func (m *Coinbase) GetWitnessArguments() [][]byte {
+	if m != nil {
+		return m.WitnessArguments
+	}
+	return nil
+}
+
+func (m *Coinbase) GetWitnessAnchoredId() *Hash {
+	if m != nil {
+		return m.WitnessAnchoredId
+	}
+	return nil
+}
+
 type Output struct {
 	Source         *ValueSource `protobuf:"bytes,1,opt,name=source" json:"source,omitempty"`
 	ControlProgram *Program     `protobuf:"bytes,2,opt,name=control_program,json=controlProgram" json:"control_program,omitempty"`

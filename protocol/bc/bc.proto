@@ -56,10 +56,8 @@ message BlockHeader {
   uint64 timestamp_ms              = 4;
   Hash   transactions_root         = 5;
   Hash   assets_root               = 6;
-  bytes  next_consensus_program    = 7;
-  Hash   ext_hash                  = 8;
-
-  repeated bytes witness_arguments = 9;
+  uint64 nonce                     = 7;
+  uint64 bits                      = 8;
 }
 
 message TxHeader {
@@ -82,6 +80,14 @@ message Mux {
 message Nonce {
   Program        program             = 1;
   Hash           time_range_id       = 2;
+  Hash           ext_hash            = 3;
+  repeated bytes witness_arguments   = 4;
+  Hash           witness_anchored_id = 5;
+}
+
+message Coinbase {
+  Program        program             = 1;
+  Hash           block_id            = 2;
   Hash           ext_hash            = 3;
   repeated bytes witness_arguments   = 4;
   Hash           witness_anchored_id = 5;
