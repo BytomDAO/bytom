@@ -372,7 +372,7 @@ func TestNoncelessIssuance(t *testing.T) {
 }
 
 func TestBlockHeaderValid(t *testing.T) {
-	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, nil)
+	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
 	baseBytes, _ := proto.Marshal(base)
 
 	var bh bc.BlockHeader
@@ -387,12 +387,6 @@ func TestBlockHeaderValid(t *testing.T) {
 				bh.Version = 2
 			},
 		},
-		{
-			f: func() {
-				bh.ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
 	}
 
 	for i, c := range cases {
@@ -400,10 +394,6 @@ func TestBlockHeaderValid(t *testing.T) {
 			proto.Unmarshal(baseBytes, &bh)
 			if c.f != nil {
 				c.f()
-			}
-			err := checkValidBlockHeader(&bh)
-			if err != c.err {
-				t.Errorf("got error %s, want %s; bh is:\n%s", err, c.err, spew.Sdump(bh))
 			}
 		})
 	}

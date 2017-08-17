@@ -13,20 +13,19 @@ func (bh *BlockHeader) writeForHash(w io.Writer) {
 	mustWriteForHash(w, bh.TimestampMs)
 	mustWriteForHash(w, bh.TransactionsRoot)
 	mustWriteForHash(w, bh.AssetsRoot)
-	mustWriteForHash(w, bh.NextConsensusProgram)
-	mustWriteForHash(w, bh.ExtHash)
 }
 
 // NewBlockHeader creates a new BlockHeader and populates
 // its body.
-func NewBlockHeader(version, height uint64, previousBlockID *Hash, timestampMS uint64, transactionsRoot, assetsRoot *Hash, nextConsensusProgram []byte) *BlockHeader {
+func NewBlockHeader(version, height uint64, previousBlockID *Hash, timestampMS uint64, transactionsRoot, assetsRoot *Hash, nonce, bits uint64) *BlockHeader {
 	return &BlockHeader{
-		Version:              version,
-		Height:               height,
-		PreviousBlockId:      previousBlockID,
-		TimestampMs:          timestampMS,
-		TransactionsRoot:     transactionsRoot,
-		AssetsRoot:           assetsRoot,
-		NextConsensusProgram: nextConsensusProgram,
+		Version:          version,
+		Height:           height,
+		PreviousBlockId:  previousBlockID,
+		TimestampMs:      timestampMS,
+		TransactionsRoot: transactionsRoot,
+		AssetsRoot:       assetsRoot,
+		Nonce:            nonce,
+		Bits:             bits,
 	}
 }

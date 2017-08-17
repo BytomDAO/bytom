@@ -360,13 +360,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 	return nil
 }
 
-func checkValidBlockHeader(bh *bc.BlockHeader) error {
-	if bh.Version == 1 && bh.ExtHash != nil && !bh.ExtHash.IsZero() {
-		return errNonemptyExtHash
-	}
-	return nil
-}
-
 func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 	if vs == nil {
 		return errors.Wrap(errMissingField, "empty value source")
@@ -503,11 +496,6 @@ func ValidateBlock(b, prev *bc.Block, initialBlockID bc.Hash, validateTx func(*b
 		}
 	}
 
-	err := checkValidBlockHeader(b.BlockHeader)
-	if err != nil {
-		return errors.Wrap(err, "checking block header")
-	}
-
 	for i, tx := range b.Transactions {
 		if b.Version == 1 && tx.Version != 1 {
 			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)
@@ -519,7 +507,7 @@ func ValidateBlock(b, prev *bc.Block, initialBlockID bc.Hash, validateTx func(*b
 			return errors.WithDetailf(errUntimelyTransaction, "block timestamp %d, transaction time range %d-%d", b.TimestampMs, tx.MinTimeMs, tx.MaxTimeMs)
 		}
 
-		err = validateTx(tx)
+		err := validateTx(tx)
 		if err != nil {
 			return errors.Wrapf(err, "validity of transaction %d of %d", i, len(b.Transactions))
 		}
@@ -544,6 +532,7 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 	if b.Height != prev.Height+1 {
 		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", prev.Height, b.Height)
 	}
+
 	if prev.ID != *b.PreviousBlockId {
 		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", prev.ID.Bytes(), b.PreviousBlockId.Bytes())
 	}

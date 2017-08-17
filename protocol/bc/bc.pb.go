@@ -273,15 +273,14 @@ func (m *ValueDestination) GetPosition() uint64 {
 }
 
 type BlockHeader struct {
-	Version              uint64   `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
-	Height               uint64   `protobuf:"varint,2,opt,name=height" json:"height,omitempty"`
-	PreviousBlockId      *Hash    `protobuf:"bytes,3,opt,name=previous_block_id,json=previousBlockId" json:"previous_block_id,omitempty"`
-	TimestampMs          uint64   `protobuf:"varint,4,opt,name=timestamp_ms,json=timestampMs" json:"timestamp_ms,omitempty"`
-	TransactionsRoot     *Hash    `protobuf:"bytes,5,opt,name=transactions_root,json=transactionsRoot" json:"transactions_root,omitempty"`
-	AssetsRoot           *Hash    `protobuf:"bytes,6,opt,name=assets_root,json=assetsRoot" json:"assets_root,omitempty"`
-	NextConsensusProgram []byte   `protobuf:"bytes,7,opt,name=next_consensus_program,json=nextConsensusProgram,proto3" json:"next_consensus_program,omitempty"`
-	ExtHash              *Hash    `protobuf:"bytes,8,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
-	WitnessArguments     [][]byte `protobuf:"bytes,9,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
+	Version          uint64 `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
+	Height           uint64 `protobuf:"varint,2,opt,name=height" json:"height,omitempty"`
+	PreviousBlockId  *Hash  `protobuf:"bytes,3,opt,name=previous_block_id,json=previousBlockId" json:"previous_block_id,omitempty"`
+	TimestampMs      uint64 `protobuf:"varint,4,opt,name=timestamp_ms,json=timestampMs" json:"timestamp_ms,omitempty"`
+	TransactionsRoot *Hash  `protobuf:"bytes,5,opt,name=transactions_root,json=transactionsRoot" json:"transactions_root,omitempty"`
+	AssetsRoot       *Hash  `protobuf:"bytes,6,opt,name=assets_root,json=assetsRoot" json:"assets_root,omitempty"`
+	Nonce            uint64 `protobuf:"varint,7,opt,name=nonce" json:"nonce,omitempty"`
+	Bits             uint64 `protobuf:"varint,8,opt,name=bits" json:"bits,omitempty"`
 }
 
 func (m *BlockHeader) Reset()                    { *m = BlockHeader{} }
@@ -327,27 +326,6 @@ func (m *BlockHeader) GetTransactionsRoot() *Hash {
 func (m *BlockHeader) GetAssetsRoot() *Hash {
 	if m != nil {
 		return m.AssetsRoot
-	}
-	return nil
-}
-
-func (m *BlockHeader) GetNextConsensusProgram() []byte {
-	if m != nil {
-		return m.NextConsensusProgram
-	}
-	return nil
-}
-
-func (m *BlockHeader) GetExtHash() *Hash {
-	if m != nil {
-		return m.ExtHash
-	}
-	return nil
-}
-
-func (m *BlockHeader) GetWitnessArguments() [][]byte {
-	if m != nil {
-		return m.WitnessArguments
 	}
 	return nil
 }

@@ -32,10 +32,9 @@ type BlockHeader struct {
 	TimestampMS uint64
 
 	BlockCommitment
-	CommitmentSuffix []byte
 
-	BlockWitness
-	WitnessSuffix []byte
+	Nonce uint64
+	Bits  uint64
 }
 
 // Time returns the time represented by the Timestamp in bh.
@@ -128,19 +127,14 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (uint8, error) {
 		return 0, err
 	}
 
-	bh.CommitmentSuffix, err = blockchain.ReadExtensibleString(r, bh.BlockCommitment.readFrom)
+	bh.Nonce, err = blockchain.ReadVarint63(r)
 	if err != nil {
 		return 0, err
 	}
 
-	if serflags[0]&SerBlockWitness == SerBlockWitness {
-		bh.WitnessSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) (err error) {
-			bh.Witness, err = blockchain.ReadVarstrList(r)
-			return err
-		})
-		if err != nil {
-			return 0, err
-		}
+	bh.Bits, err = blockchain.ReadVarint63(r)
+	if err != nil {
+		return 0, err
 	}
 
 	return serflags[0], nil
@@ -174,18 +168,13 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) error {
 	if err != nil {
 		return err
 	}
-
-	_, err = blockchain.WriteExtensibleString(w, bh.CommitmentSuffix, bh.BlockCommitment.writeTo)
+	_, err = blockchain.WriteVarint63(w, bh.Nonce)
 	if err != nil {
 		return err
 	}
-
-	if serflags&SerBlockWitness == SerBlockWitness {
-		_, err = blockchain.WriteExtensibleString(w, bh.WitnessSuffix, bh.BlockWitness.writeTo)
-		if err != nil {
-			return err
-		}
+	_, err = blockchain.WriteVarint63(w, bh.Bits)
+	if err != nil {
+		return err
 	}
-
 	return nil
 }

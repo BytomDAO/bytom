@@ -18,9 +18,7 @@ func generate(tb testing.TB, prev *bc.Block) *bc.Block {
 			Height:            prev.Height + 1,
 			PreviousBlockHash: prev.ID,
 			TimestampMS:       prev.TimestampMs + 1,
-			BlockCommitment: legacy.BlockCommitment{
-				ConsensusProgram: prev.NextConsensusProgram,
-			},
+			BlockCommitment:   legacy.BlockCommitment{},
 		},
 	}
 
