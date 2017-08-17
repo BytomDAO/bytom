@@ -15,7 +15,7 @@ import (
 
 func TestRecoverSnapshotNoAdditionalBlocks(t *testing.T) {
 	store := memstore.New()
-	b, err := NewInitialBlock(nil, 0, time.Now().Add(-time.Minute))
+	b, err := NewInitialBlock(time.Now().Add(-time.Minute))
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -72,7 +72,6 @@ func createEmptyBlock(block *legacy.Block, snapshot *state.Snapshot) *legacy.Blo
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: root,
 				AssetsMerkleRoot:       snapshot.Tree.RootHash(),
-				ConsensusProgram:       block.ConsensusProgram,
 			},
 		},
 	}

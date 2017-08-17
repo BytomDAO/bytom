@@ -182,7 +182,6 @@ func TestGenerateBlock(t *testing.T) {
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: wantTxRoot,
 				AssetsMerkleRoot:       wantAssetsRoot,
-				ConsensusProgram:       b1.ConsensusProgram,
 			},
 		},
 		Transactions: txs,
@@ -194,7 +193,7 @@ func TestGenerateBlock(t *testing.T) {
 }
 
 func TestValidateBlockForSig(t *testing.T) {
-	initialBlock, err := NewInitialBlock(testutil.TestPubs, 1, time.Now())
+	initialBlock, err := NewInitialBlock(time.Now())
 	if err != nil {
 		t.Fatal("unexpected error ", err)
 	}
@@ -219,7 +218,7 @@ func newTestChain(tb testing.TB, ts time.Time) (c *Chain, b1 *legacy.Block) {
 
 	var err error
 
-	b1, err = NewInitialBlock(nil, 0, ts)
+	b1, err = NewInitialBlock(ts)
 	if err != nil {
 		testutil.FatalErr(tb, err)
 	}

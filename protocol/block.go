@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
-//	"github.com/blockchain/crypto/ed25519"
+	//	"github.com/blockchain/crypto/ed25519"
 	"github.com/bytom/errors"
 	"github.com/bytom/log"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
-//	"github.com/blockchain/protocol/vm/vmutil"
+	//	"github.com/blockchain/protocol/vm/vmutil"
 )
 
 // maxBlockTxs limits the number of transactions
@@ -68,9 +68,7 @@ func (c *Chain) GenerateBlock(ctx context.Context, prev *legacy.Block, snapshot 
 			Height:            prev.Height + 1,
 			PreviousBlockHash: prev.Hash(),
 			TimestampMS:       timestampMS,
-			BlockCommitment: legacy.BlockCommitment{
-				ConsensusProgram: prev.ConsensusProgram,
-			},
+			BlockCommitment:   legacy.BlockCommitment{},
 		},
 	}
 
@@ -131,9 +129,6 @@ func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 	err := validation.ValidateBlock(blockEnts, prevEnts, c.InitialBlockHash, c.ValidateTx)
 	if err != nil {
 		return errors.Sub(ErrBadBlock, err)
-	}
-	if block.Height > 1 {
-		err = validation.ValidateBlockSig(blockEnts, prevEnts.NextConsensusProgram)
 	}
 	return errors.Sub(ErrBadBlock, err)
 }
@@ -241,32 +236,23 @@ func (c *Chain) ValidateBlockForSig(ctx context.Context, block *legacy.Block) er
 	return errors.Sub(ErrBadBlock, err)
 }
 
-func NewInitialBlock(/*pubkeys []ed25519.PublicKey, nSigs int, timestamp time.Time*/) (*legacy.Block, error) {
+func NewInitialBlock(timestamp time.Time) (*legacy.Block, error) {
 	// TODO(kr): move this into a lower-level package (e.g. chain/protocol/bc)
 	// so that other packages (e.g. chain/protocol/validation) unit tests can
 	// call this function.
-
-/*
-	script, err := vmutil.BlockMultiSigProgram(pubkeys, nSigs)
-	if err != nil {
-		return nil, err
-	}
-
 	root, err := bc.MerkleRoot(nil) // calculate the zero value of the tx merkle root
 	if err != nil {
 		return nil, errors.Wrap(err, "calculating zero value of tx merkle root")
 	}
-    */
 
 	b := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
 			Version:     1,
 			Height:      1,
-			//TimestampMS: bc.Millis(timestamp),
-			/*BlockCommitment: legacy.BlockCommitment{
+			TimestampMS: bc.Millis(timestamp),
+			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: root,
-				ConsensusProgram:       script,
-			},*/
+			},
 		},
 	}
 	return b, nil
