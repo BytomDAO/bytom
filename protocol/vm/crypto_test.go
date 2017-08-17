@@ -3,7 +3,7 @@ package vm
 import (
 	"testing"
 
-	"github.com/blockchain/testutil"
+	"github.com/bytom/testutil"
 )
 
 var emptyBlockVMContext = &Context{

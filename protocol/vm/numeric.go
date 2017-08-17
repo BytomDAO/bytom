@@ -3,7 +3,7 @@ package vm
 import (
 	"math"
 
-	"github.com/blockchain/math/checked"
+	"github.com/bytom/math/checked"
 )
 
 func op1Add(vm *virtualMachine) error {

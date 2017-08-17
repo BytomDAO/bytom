@@ -3,7 +3,7 @@ package legacy
 import (
 	"io"
 
-	"github.com/blockchain/encoding/blockchain"
+	"github.com/bytom/encoding/blockchain"
 )
 
 type BlockWitness struct {

@@ -10,9 +10,9 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/testutil"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/testutil"
 )
 
 func TestTransactionTrailingGarbage(t *testing.T) {

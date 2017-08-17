@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/blockchain/node"
-	"github.com/blockchain/types"
+	"github.com/bytom/node"
+	"github.com/bytom/types"
 	cmn "github.com/tendermint/tmlibs/common"
 )
 

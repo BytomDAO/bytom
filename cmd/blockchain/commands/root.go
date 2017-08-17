@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	tmflags "github.com/blockchain/cmd/blockchain/commands/flags"
-	cfg "github.com/blockchain/config"
+	tmflags "github.com/bytom/cmd/blockchain/commands/flags"
+	cfg "github.com/bytom/config"
 	"github.com/tendermint/tmlibs/log"
 )
 

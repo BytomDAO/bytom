@@ -7,8 +7,8 @@ import (
 	"hash"
 	"io"
 
-	"github.com/blockchain/crypto/ed25519"
-	"github.com/blockchain/crypto/ed25519/internal/edwards25519"
+	"github.com/bytom/crypto/ed25519"
+	"github.com/bytom/crypto/ed25519/internal/edwards25519"
 )
 
 type (

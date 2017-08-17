@@ -7,7 +7,7 @@ import (
 
 	. "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
-    "github.com/blockchain/protocol/bc/legacy"
+    "github.com/bytom/protocol/bc/legacy"
 )
 
 type BlockStore struct {

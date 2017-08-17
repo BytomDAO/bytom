@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/blockchain/cmd/blockchain/commands"
+	"github.com/bytom/cmd/blockchain/commands"
 	"github.com/tendermint/tmlibs/cli"
 )
 

@@ -7,9 +7,9 @@ import (
 	abci "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
-        "github.com/blockchain/protocol/bc"
-	"github.com/blockchain/p2p"
-	"github.com/blockchain/types"
+        "github.com/bytom/protocol/bc"
+	"github.com/bytom/p2p"
+	"github.com/bytom/types"
 )
 
 type BlockNonce [8]byte

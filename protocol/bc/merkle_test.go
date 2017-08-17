@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/bc/legacy"
-	"github.com/blockchain/protocol/vm"
+	. "github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/vm"
 )
 
 func TestMerkleRoot(t *testing.T) {

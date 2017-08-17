@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/bc/legacy"
-	"github.com/blockchain/protocol/vm"
-	"github.com/blockchain/protocol/vm/vmutil"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/vm"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 func TestValidateBlock1(t *testing.T) {

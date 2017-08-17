@@ -11,8 +11,8 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/testutil"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/testutil"
 )
 
 func BenchmarkInserts(b *testing.B) {

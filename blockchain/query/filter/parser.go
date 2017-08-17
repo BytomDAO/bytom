@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/blockchain/errors"
+	"github.com/bytom/errors"
 )
 
 // ErrBadFilter is returned from Parse when
