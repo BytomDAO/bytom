@@ -9,7 +9,10 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
-const defaultGasLimit = uint64(80000)
+const (
+	defaultGasLimit = uint64(80000)
+	gasRate         = uint64(1000)
+)
 
 var BTMAssetID = &bc.AssetID{
 	V0: uint64(18446744073709551615),
@@ -19,13 +22,16 @@ var BTMAssetID = &bc.AssetID{
 }
 
 type gasState struct {
-	gasLeft uint64
-	gasUsed uint64
+	gasLeft  uint64
+	gasUsed  uint64
+	BTMValue uint64
 }
 
-func (g *gasState) setGas(Gas uint64) {
-	if Gas < defaultGasLimit {
-		g.gasLeft = defaultGasLimit
+func (g *gasState) setGas(BTMValue uint64) {
+	g.BTMValue = BTMValue
+	gasAmount := BTMValue / gasRate
+	if gasAmount < defaultGasLimit {
+		g.gasLeft = gasAmount
 	}
 }
 
@@ -70,6 +76,7 @@ var (
 	errMisorderedBlockHeight = errors.New("misordered block height")
 	errMisorderedBlockTime   = errors.New("misordered block time")
 	errMissingField          = errors.New("missing required field")
+	errNoGas                 = errors.New("no gas input")
 	errNoPrevBlock           = errors.New("no previous block")
 	errNoSource              = errors.New("no source for value")
 	errNonemptyExtHash       = errors.New("non-empty extension hash")
@@ -147,11 +154,15 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			parity[*dest.Value.AssetId] = diff
 		}
 
+		if amount, ok := parity[*BTMAssetID]; ok {
+			vs.gas.setGas(uint64(amount))
+		} else {
+			//TODO: uncommon this code after fix the unit test
+			//return errors.WithDetailf(errNoGas, "transaction should have BTM asset as gas input")
+		}
+
 		for assetID, amount := range parity {
-			if assetID == *BTMAssetID {
-				//TODO: handle available gas is 0
-				vs.gas.setGas(uint64(amount))
-			} else if amount != 0 {
+			if amount != 0 && assetID != *BTMAssetID {
 				return errors.WithDetailf(errUnbalanced, "asset %x sources - destinations = %d (should be 0)", assetID.Bytes(), amount)
 			}
 		}
@@ -539,9 +550,9 @@ func ValidateTx(tx *bc.Tx, initialBlockID bc.Hash) (*uint64, error) {
 		entryID:      tx.ID,
 		gas: &gasState{
 			gasLeft: defaultGasLimit,
-			gasUsed: 0,
 		},
 		cache: make(map[bc.Hash]error),
 	}
-	return &vs.gas.gasUsed, checkValid(vs, tx.TxHeader)
+
+	return &vs.gas.BTMValue, checkValid(vs, tx.TxHeader)
 }
