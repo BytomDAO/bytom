@@ -8,7 +8,7 @@ import (
 //	"github.com/tendermint/tendermint/state/txindex"
 	"github.com/bytom/types"
 	"github.com/tendermint/tmlibs/log"
-    bc "github.com/bytom/blockchain"
+    "github.com/bytom/blockchain/txdb"
 )
 
 //----------------------------------------------
@@ -39,7 +39,7 @@ var (
 
 	// interfaces defined in types and above
 //	blockStore     *bc.MemStore
-	blockStore     *bc.BlockStore
+	blockStore     *txdb.Store
 	//mempool        types.Mempool
 	//consensusState Consensus
 	p2pSwitch      P2P
@@ -57,7 +57,7 @@ func SetEventSwitch(evsw types.EventSwitch) {
 	eventSwitch = evsw
 }
 
-func SetBlockStore(bs *bc.BlockStore) {
+func SetBlockStore(bs *txdb.Store) {
 	blockStore = bs
 }
 

@@ -43,7 +43,7 @@ type Node struct {
 	// services
 	evsw             types.EventSwitch           // pub/sub for services
 //    blockStore       *bc.MemStore
-    blockStore       *bc.BlockStore
+    blockStore       *txdb.Store
     bcReactor        *bc.BlockchainReactor
     accounts         *account.Manager
     rpcListeners     []net.Listener              // rpc servers
@@ -56,17 +56,16 @@ func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
 }
 
 func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.Logger) *Node {
-	// Get BlockStore
-    blockStoreDB := dbm.NewDB("blockstore", config.DBBackend, config.DBDir())
-    blockStore := bc.NewBlockStore(blockStoreDB)
-    //blockStore := bc.NewMemStore()
+	// Get store
+    tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
+    store := txdb.NewStore(tx_db)
     genesisBlock := legacy.Block {
         BlockHeader: legacy.BlockHeader {
             Version: 1,
             Height: 0,
         },
     }
-    blockStore.SaveBlock(&genesisBlock)
+    store.SaveBlock(&genesisBlock)
 
 	// Generate node PrivKey
 	privKey := crypto.GenPrivKeyEd25519()
@@ -91,8 +90,6 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
       cmn.Exit(cmn.Fmt("initialize genesisblock failed: %v", err))
     }
 
-    tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-    store := txdb.NewStore(tx_db)
     chain, err := protocol.NewChain(context.Background(), genesisblock.Hash(), store, nil)
    /* if err != nil {
       cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
@@ -104,7 +101,7 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
     chain.MaxIssuanceWindow = bc.MillisDuration(c.MaxIssuanceWindowMs)
     */
 
-    bcReactor := bc.NewBlockchainReactor(blockStore, chain, fastSync)
+    bcReactor := bc.NewBlockchainReactor(store, chain, fastSync)
     bcReactor.SetLogger(logger.With("module", "blockchain"))
     sw.AddReactor("BLOCKCHAIN", bcReactor)
 
@@ -143,7 +140,7 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 
 		evsw:      eventSwitch,
         bcReactor: bcReactor,
-        blockStore: blockStore,
+        blockStore: store,
         accounts: accounts,
 	}
 	node.BaseService = *cmn.NewBaseService(logger, "Node", node)

@@ -108,6 +108,10 @@ func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, height
 	return c, nil
 }
 
+func (c *Chain) GetStore() *Store {
+	return &(c.store)
+}
+
 // Height returns the current height of the blockchain.
 func (c *Chain) Height() uint64 {
 	c.state.cond.L.Lock()
