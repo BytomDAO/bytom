@@ -8,10 +8,10 @@ import (
 	"io"
 	"time"
 
-	"github.com/blockchain/encoding/blockchain"
-	"github.com/blockchain/encoding/bufpool"
-	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc"
+	"github.com/bytom/encoding/blockchain"
+	"github.com/bytom/encoding/bufpool"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
 )
 
 // BlockHeader describes necessary data of the block.

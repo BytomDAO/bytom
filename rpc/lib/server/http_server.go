@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	types "github.com/blockchain/rpc/lib/types"
+	types "github.com/bytom/rpc/lib/types"
 	"github.com/tendermint/tmlibs/log"
 )
 

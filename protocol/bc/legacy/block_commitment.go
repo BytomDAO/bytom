@@ -3,8 +3,8 @@ package legacy
 import (
 	"io"
 
-	"github.com/blockchain/encoding/blockchain"
-	"github.com/blockchain/protocol/bc"
+	"github.com/bytom/encoding/blockchain"
+	"github.com/bytom/protocol/bc"
 )
 
 type BlockCommitment struct {

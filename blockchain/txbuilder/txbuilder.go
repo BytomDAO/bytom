@@ -6,11 +6,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/blockchain/crypto/ed25519/chainkd"
-	"github.com/blockchain/errors"
-	"github.com/blockchain/math/checked"
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/errors"
+	"github.com/bytom/math/checked"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 var (

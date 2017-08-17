@@ -10,9 +10,9 @@ import (
 
 	//"github.com/lib/pq"
 
-	"github.com/blockchain/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/ed25519/chainkd"
 //	"github.com/blockchain/database/pg"
-	"github.com/blockchain/errors"
+	"github.com/bytom/errors"
     dbm "github.com/tendermint/tmlibs/db"
 )
 

@@ -3,9 +3,9 @@ package legacy
 import (
 	"io"
 
-	"github.com/blockchain/encoding/blockchain"
-	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc"
+	"github.com/bytom/encoding/blockchain"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
 )
 
 // TODO(bobg): Review serialization/deserialization logic for

@@ -5,10 +5,10 @@ import (
 	"context"
 
 //	"github.com/blockchain/blockchain/rpc"
-	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol"
-	"github.com/blockchain/protocol/bc/legacy"
-	"github.com/blockchain/protocol/vm"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/vm"
 )
 
 var (

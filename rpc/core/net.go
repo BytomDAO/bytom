@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 
-	ctypes "github.com/blockchain/rpc/core/types"
+	ctypes "github.com/bytom/rpc/core/types"
 )
 
 //-----------------------------------------------------------------------------

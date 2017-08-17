@@ -7,10 +7,10 @@ import (
     "time"
 
 	wire "github.com/tendermint/go-wire"
-	"github.com/blockchain/p2p"
-	"github.com/blockchain/types"
-    "github.com/blockchain/protocol/bc/legacy"
-    "github.com/blockchain/protocol"
+	"github.com/bytom/p2p"
+	"github.com/bytom/types"
+    "github.com/bytom/protocol/bc/legacy"
+    "github.com/bytom/protocol"
 	cmn "github.com/tendermint/tmlibs/common"
 )
 

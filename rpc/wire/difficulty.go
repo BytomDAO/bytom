@@ -8,7 +8,7 @@ import (
 	"math/big"
 	//"time"
 
-	"github.com/blockchain/rpc/chainhash"
+	"github.com/bytom/rpc/chainhash"
 
 )
 

@@ -3,12 +3,12 @@ package core
 import (
 //	crypto "github.com/blockchain/go-crypto"
 //	"github.com/tendermint/tendermint/consensus"
-	p2p "github.com/blockchain/p2p"
+	p2p "github.com/bytom/p2p"
 //	"github.com/tendermint/tendermint/proxy"
 //	"github.com/tendermint/tendermint/state/txindex"
-	"github.com/blockchain/types"
+	"github.com/bytom/types"
 	"github.com/tendermint/tmlibs/log"
-    bc "github.com/blockchain/blockchain"
+    bc "github.com/bytom/blockchain"
 )
 
 //----------------------------------------------

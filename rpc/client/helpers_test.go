@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/blockchain/rpc/client"
-	"github.com/blockchain/rpc/client/mock"
-	ctypes "github.com/blockchain/rpc/core/types"
+	"github.com/bytom/rpc/client"
+	"github.com/bytom/rpc/client/mock"
+	ctypes "github.com/bytom/rpc/core/types"
 )
 
 func TestWaitForHeight(t *testing.T) {

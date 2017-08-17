@@ -4,12 +4,12 @@ import (
         //"fmt"
         //"context"
         //"github.com/blockchain/protocol/bc"
-        ctypes "github.com/blockchain/rpc/core/types"
+        ctypes "github.com/bytom/rpc/core/types"
         //"github.com/blockchain/protocol"
         //"chain/protocol/bc/legacy" 
         //"github.com/consensus/types"
         //. "github.com/tendermint/tmlibs/common"sour	
-        "github.com/blockchain/protocol/bc/legacy"
+        "github.com/bytom/protocol/bc/legacy"
 )
 
 //for simulate

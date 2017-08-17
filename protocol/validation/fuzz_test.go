@@ -3,8 +3,8 @@ package validation
 import (
 	"testing"
 
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 func TestFuzzAssetIdNilPointer(t *testing.T) {

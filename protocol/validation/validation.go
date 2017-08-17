@@ -3,10 +3,10 @@ package validation
 import (
 	"fmt"
 
-	"github.com/blockchain/errors"
-	"github.com/blockchain/math/checked"
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/vm"
+	"github.com/bytom/errors"
+	"github.com/bytom/math/checked"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/vm"
 )
 
 var BTMAssetID = &bc.AssetID{

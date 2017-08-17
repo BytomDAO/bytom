@@ -9,7 +9,7 @@ import (
 //	"strconv"
 
 //	"github.com/blockchain/blockchain/query/filter"
-	"github.com/blockchain/errors"
+	"github.com/bytom/errors"
 )
 
 var (

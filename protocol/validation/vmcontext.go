@@ -3,10 +3,10 @@ package validation
 import (
 	"bytes"
 
-	"github.com/blockchain/crypto/sha3pool"
-	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/vm"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/vm"
 )
 
 func NewTxVMContext(tx *bc.Tx, entry bc.Entry, prog *bc.Program, args [][]byte) *vm.Context {

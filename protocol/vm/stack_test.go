@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/blockchain/testutil"
+	"github.com/bytom/testutil"
 )
 
 func TestStackOps(t *testing.T) {

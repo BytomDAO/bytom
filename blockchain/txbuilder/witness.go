@@ -5,13 +5,13 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/blockchain/crypto/ed25519/chainkd"
-	"github.com/blockchain/crypto/sha3pool"
-	chainjson "github.com/blockchain/encoding/json"
-	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/vm"
-	"github.com/blockchain/protocol/vm/vmutil"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sha3pool"
+	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/vm"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 // SignFunc is the function passed into Sign that produces

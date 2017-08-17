@@ -21,8 +21,8 @@ package client
 
 import (
 	data "github.com/tendermint/go-wire/data"
-	ctypes "github.com/blockchain/rpc/core/types"
-	"github.com/blockchain/types"
+	ctypes "github.com/bytom/rpc/core/types"
+	"github.com/bytom/types"
 )
 
 // ABCIClient groups together the functionality that principally

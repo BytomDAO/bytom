@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/blockchain/types"
+	"github.com/bytom/types"
 )
 
 type Config struct {
