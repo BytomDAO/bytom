@@ -4,10 +4,10 @@ import (
 	"context"
 	stdjson "encoding/json"
 
-	"github.com/blockchain/encoding/json"
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/bc/legacy"
-	"github.com/blockchain/protocol/vm"
+	"github.com/bytom/encoding/json"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/vm"
 )
 
 var retirementProgram = []byte{byte(vm.OP_FAIL)}

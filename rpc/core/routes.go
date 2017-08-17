@@ -1,7 +1,7 @@
 package core
 
 import (
-	rpc "github.com/blockchain/rpc/lib/server"
+	rpc "github.com/bytom/rpc/lib/server"
 )
 
 // TODO: better system than "unsafe" prefix

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/blockchain/blockchain/txbuilder"
-	"github.com/blockchain/errors"
+	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/errors"
 )
 
 const defaultReceiverExpiry = 30 * 24 * time.Hour // 30 days

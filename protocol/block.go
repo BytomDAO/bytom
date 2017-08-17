@@ -6,12 +6,12 @@ import (
 	"time"
 
 //	"github.com/blockchain/crypto/ed25519"
-	"github.com/blockchain/errors"
-	"github.com/blockchain/log"
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/bc/legacy"
-	"github.com/blockchain/protocol/state"
-	"github.com/blockchain/protocol/validation"
+	"github.com/bytom/errors"
+	"github.com/bytom/log"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/state"
+	"github.com/bytom/protocol/validation"
 //	"github.com/blockchain/protocol/vm/vmutil"
 )
 

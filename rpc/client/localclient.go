@@ -2,10 +2,10 @@ package client
 
 import (
 	data "github.com/tendermint/go-wire/data"
-	nm "github.com/blockchain/node"
-	"github.com/blockchain/rpc/core"
-	ctypes "github.com/blockchain/rpc/core/types"
-	"github.com/blockchain/types"
+	nm "github.com/bytom/node"
+	"github.com/bytom/rpc/core"
+	ctypes "github.com/bytom/rpc/core/types"
+	"github.com/bytom/types"
 )
 
 /*

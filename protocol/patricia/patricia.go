@@ -22,9 +22,9 @@ package patricia
 import (
 	"bytes"
 
-	"github.com/blockchain/crypto/sha3pool"
-	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
 )
 
 var (

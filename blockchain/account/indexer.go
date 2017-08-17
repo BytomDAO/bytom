@@ -7,13 +7,13 @@ import (
 
 //	"github.com/lib/pq"
 
-	"github.com/blockchain/blockchain/query"
-	"github.com/blockchain/blockchain/signers"
+	"github.com/bytom/blockchain/query"
+	"github.com/bytom/blockchain/signers"
 	//"github.com/blockchain/database/pg"
-	chainjson "github.com/blockchain/encoding/json"
-	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/bc/legacy"
+	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 const (

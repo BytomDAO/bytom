@@ -6,9 +6,9 @@ import (
 
 	"github.com/pkg/errors"
 	data "github.com/tendermint/go-wire/data"
-	ctypes "github.com/blockchain/rpc/core/types"
-	"github.com/blockchain/rpc/lib/client"
-	"github.com/blockchain/types"
+	ctypes "github.com/bytom/rpc/core/types"
+	"github.com/bytom/rpc/lib/client"
+	"github.com/bytom/types"
 	events "github.com/tendermint/tmlibs/events"
 )
 

@@ -15,7 +15,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 
-	types "github.com/blockchain/rpc/lib/types"
+	types "github.com/bytom/rpc/lib/types"
 	cmn "github.com/tendermint/tmlibs/common"
 	events "github.com/tendermint/tmlibs/events"
 	"github.com/tendermint/tmlibs/log"

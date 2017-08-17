@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/blockchain/encoding/blockchain"
-	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc"
+	"github.com/bytom/encoding/blockchain"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
 )
 
 type (

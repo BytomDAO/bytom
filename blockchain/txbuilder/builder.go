@@ -5,9 +5,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 func NewBuilder(maxTime time.Time) *TemplateBuilder {

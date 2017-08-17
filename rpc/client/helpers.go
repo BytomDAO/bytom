@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/blockchain/types"
+	"github.com/bytom/types"
 	cmn "github.com/tendermint/tmlibs/common"
 	events "github.com/tendermint/tmlibs/events"
 )

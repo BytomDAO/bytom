@@ -6,7 +6,7 @@ import (
 //	"chain/database/pg"
 //	"github.com/blockchain/errors"
 //	"github.com/blockchain/protocol"
-	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/legacy"
 //	"github.com/blockchain/protocol/state"
     dbm "github.com/tendermint/tmlibs/db"
 

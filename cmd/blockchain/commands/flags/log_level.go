@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	cfg "github.com/blockchain/config"
+	cfg "github.com/bytom/config"
 	"github.com/tendermint/tmlibs/log"
 )
 

@@ -5,8 +5,8 @@ import (
 //	"fmt"
 
 //	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc/legacy"
-	"github.com/blockchain/protocol/state"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/state"
 )
 
 // Recover performs crash recovery, restoring the blockchain

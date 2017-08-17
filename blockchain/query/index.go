@@ -10,7 +10,7 @@ import (
 	//"chain/core/pin"
 	//"github.com/blockchain/database/pg"
 //	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol"
+	"github.com/bytom/protocol"
 	//"github.com/blockchain/protocol/bc/legacy"
     dbm "github.com/tendermint/tmlibs/db"
 )

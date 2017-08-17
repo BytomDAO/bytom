@@ -1,6 +1,6 @@
 package vm
 
-import "github.com/blockchain/math/checked"
+import "github.com/bytom/math/checked"
 
 func opCat(vm *virtualMachine) error {
 	err := vm.applyCost(4)

@@ -5,7 +5,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/blockchain/protocol/bc"
+	"github.com/bytom/protocol/bc"
 )
 
 func serialize(t *testing.T, wt io.WriterTo) []byte {

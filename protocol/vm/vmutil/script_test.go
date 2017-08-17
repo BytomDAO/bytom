@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/blockchain/crypto/ed25519"
+	"github.com/bytom/crypto/ed25519"
 )
 
 // TestIsUnspendable ensures the IsUnspendable function returns the expected

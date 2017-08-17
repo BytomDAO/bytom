@@ -1,10 +1,10 @@
 package legacy
 
 import (
-	"github.com/blockchain/crypto/sha3pool"
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/vm"
-	"github.com/blockchain/protocol/vm/vmutil"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/vm"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 // MapTx converts a legacy TxData object into its entries-based

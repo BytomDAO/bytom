@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/blockchain/version"
+	"github.com/bytom/version"
 )
 
 var versionCmd = &cobra.Command{
