@@ -9,6 +9,8 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
+const defaultGasLimit = uint64(80000)
+
 var BTMAssetID = &bc.AssetID{
 	V0: uint64(18446744073709551615),
 	V1: uint64(18446744073709551615),
@@ -19,27 +21,17 @@ var BTMAssetID = &bc.AssetID{
 type gasState struct {
 	gasLeft uint64
 	gasUsed uint64
-	maxGas  uint64
 }
 
-func (g *gasState) setMaxGas(maxGas uint64) {
-	if g.maxGas == 0 {
-		g.maxGas = maxGas
-
+func (g *gasState) setGas(Gas uint64) {
+	if Gas < defaultGasLimit {
+		g.gasLeft = defaultGasLimit
 	}
 }
 
 func (g *gasState) updateUsage(gasLeft int64) {
 	g.gasUsed += g.gasLeft - uint64(gasLeft)
 	g.gasLeft = uint64(gasLeft)
-}
-
-func (g *gasState) addGas(gas uint64) {
-	if g.gasLeft+g.gasUsed+gas < g.maxGas {
-		g.gasLeft += gas
-	} else {
-		g.gasLeft = g.maxGas - g.gasUsed
-	}
 }
 
 // validationState contains the context that must propagate through
@@ -158,7 +150,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		for assetID, amount := range parity {
 			if assetID == *BTMAssetID {
 				//TODO: handle available gas is 0
-				vs.gas.setMaxGas(uint64(amount))
+				vs.gas.setGas(uint64(amount))
 			} else if amount != 0 {
 				return errors.WithDetailf(errUnbalanced, "asset %x sources - destinations = %d (should be 0)", assetID.Bytes(), amount)
 			}
@@ -336,10 +328,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 				e.WitnessDestination.Value.Amount,
 				e.WitnessDestination.Value.AssetId.Bytes(),
 			)
-		}
-
-		if spentOutput.Source.Value.AssetId == BTMAssetID {
-			vs.gas.addGas(spentOutput.Source.Value.Amount)
 		}
 
 		vs2 := *vs
@@ -550,9 +538,8 @@ func ValidateTx(tx *bc.Tx, initialBlockID bc.Hash) (*uint64, error) {
 		tx:           tx,
 		entryID:      tx.ID,
 		gas: &gasState{
-			gasLeft: uint64(1000),
+			gasLeft: defaultGasLimit,
 			gasUsed: 0,
-			maxGas:  0,
 		},
 		cache: make(map[bc.Hash]error),
 	}

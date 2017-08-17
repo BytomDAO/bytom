@@ -340,7 +340,6 @@ func TestTxValidation(t *testing.T) {
 				gas: &gasState{
 					gasLeft: uint64(1000),
 					gasUsed: 0,
-					maxGas:  uint64(1000),
 				},
 				cache: make(map[bc.Hash]error),
 			}

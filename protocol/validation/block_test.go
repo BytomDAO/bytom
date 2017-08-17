@@ -5,8 +5,6 @@ import (
 
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/vm"
-	"github.com/bytom/protocol/vm/vmutil"
 )
 
 func dummyValidateTx(*bc.Tx) error {
