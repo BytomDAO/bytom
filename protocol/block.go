@@ -39,7 +39,7 @@ var (
 // GetBlock returns the block at the given height, if there is one,
 // otherwise it returns an error.
 func (c *Chain) GetBlock(ctx context.Context, height uint64) (*legacy.Block, error) {
-	return c.store.GetBlock(ctx, height)
+	return c.store.GetBlock(height)
 }
 
 // GenerateBlock generates a valid, but unsigned, candidate block from
