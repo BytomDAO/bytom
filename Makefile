@@ -2,8 +2,8 @@ GOTOOLS = \
 					github.com/mitchellh/gox \
 					github.com/Masterminds/glide
 PACKAGES=$(shell go list ./... | grep -v '/vendor/')
-BUILD_TAGS?=blockchain
-TMHOME = $${TMHOME:-$$HOME/.blockchain}
+BUILD_TAGS?=bytom
+TMHOME = $${TMHOME:-$$HOME/.bytom}
 
 all: install test
 
