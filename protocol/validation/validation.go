@@ -44,7 +44,7 @@ func (g *gasState) updateUsage(gasLeft int64) {
 // the transaction graph when validating entries.
 type validationState struct {
 	// The ID of the blockchain
-	blockchainID bc.Hash
+	block *bc.Block
 
 	// The enclosing transaction object
 	tx *bc.Tx
@@ -255,10 +255,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.Issuance:
-		if *e.WitnessAssetDefinition.InitialBlockId != vs.blockchainID {
-			return errors.WithDetailf(errWrongBlockchain, "current blockchain %x, asset defined on blockchain %x", vs.blockchainID.Bytes(), e.WitnessAssetDefinition.InitialBlockId.Bytes())
-		}
-
 		computedAssetID := e.WitnessAssetDefinition.ComputeAssetID()
 		if computedAssetID != *e.Value.AssetId {
 			return errors.WithDetailf(errMismatchedAssetID, "asset ID is %x, issuance wants %x", computedAssetID.Bytes(), e.Value.AssetId.Bytes())
@@ -542,12 +538,12 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 }
 
 // ValidateTx validates a transaction.
-func ValidateTx(tx *bc.Tx, initialBlockID bc.Hash) (*uint64, error) {
+func ValidateTx(tx *bc.Tx, block *bc.Block) (*uint64, error) {
 	//TODO: handle the gas limit
 	vs := &validationState{
-		blockchainID: initialBlockID,
-		tx:           tx,
-		entryID:      tx.ID,
+		block:   block,
+		tx:      tx,
+		entryID: tx.ID,
 		gas: &gasState{
 			gasLeft: defaultGasLimit,
 		},

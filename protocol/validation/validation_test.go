@@ -261,13 +261,6 @@ func TestTxValidation(t *testing.T) {
 			},
 		},
 		{
-			desc: "wrong blockchain",
-			f: func() {
-				vs.blockchainID = *newHash(2)
-			},
-			err: errWrongBlockchain,
-		},
-		{
 			desc: "issuance program failure",
 			f: func() {
 				iss := txIssuance(t, tx, 0)
@@ -334,9 +327,9 @@ func TestTxValidation(t *testing.T) {
 			fixture = sample(t, nil)
 			tx = legacy.NewTx(*fixture.tx).Tx
 			vs = &validationState{
-				blockchainID: fixture.initialBlockID,
-				tx:           tx,
-				entryID:      tx.ID,
+				block:   nil,
+				tx:      tx,
+				entryID: tx.ID,
 				gas: &gasState{
 					gasLeft: uint64(1000),
 					gasUsed: 0,
@@ -364,7 +357,7 @@ func TestNoncelessIssuance(t *testing.T) {
 		tx.Inputs[0].TypedInput.(*legacy.IssuanceInput).Nonce = nil
 	})
 
-	_, err := ValidateTx(legacy.MapTx(&tx.TxData), bc.EmptyStringHash)
+	_, err := ValidateTx(legacy.MapTx(&tx.TxData), nil)
 	if errors.Root(err) != bc.ErrMissingEntry {
 		t.Fatalf("got %s, want %s", err, bc.ErrMissingEntry)
 	}

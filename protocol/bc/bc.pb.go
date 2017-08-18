@@ -483,11 +483,10 @@ func (m *Nonce) GetWitnessAnchoredId() *Hash {
 }
 
 type Coinbase struct {
-	Program           *Program `protobuf:"bytes,1,opt,name=program" json:"program,omitempty"`
-	BlockId           *Hash    `protobuf:"bytes,2,opt,name=block_id,json=blockId" json:"block_id,omitempty"`
-	ExtHash           *Hash    `protobuf:"bytes,3,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
-	WitnessArguments  [][]byte `protobuf:"bytes,4,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
-	WitnessAnchoredId *Hash    `protobuf:"bytes,5,opt,name=witness_anchored_id,json=witnessAnchoredId" json:"witness_anchored_id,omitempty"`
+	Program          *Program `protobuf:"bytes,1,opt,name=program" json:"program,omitempty"`
+	BlockId          *Hash    `protobuf:"bytes,2,opt,name=block_id,json=blockId" json:"block_id,omitempty"`
+	ExtHash          *Hash    `protobuf:"bytes,3,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
+	WitnessArguments [][]byte `protobuf:"bytes,4,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
 }
 
 func (m *Coinbase) Reset()                    { *m = Coinbase{} }
@@ -519,13 +518,6 @@ func (m *Coinbase) GetExtHash() *Hash {
 func (m *Coinbase) GetWitnessArguments() [][]byte {
 	if m != nil {
 		return m.WitnessArguments
-	}
-	return nil
-}
-
-func (m *Coinbase) GetWitnessAnchoredId() *Hash {
-	if m != nil {
-		return m.WitnessAnchoredId
 	}
 	return nil
 }

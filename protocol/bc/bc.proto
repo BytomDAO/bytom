@@ -90,7 +90,6 @@ message Coinbase {
   Hash           block_id            = 2;
   Hash           ext_hash            = 3;
   repeated bytes witness_arguments   = 4;
-  Hash           witness_anchored_id = 5;
 }
 
 message Output {
