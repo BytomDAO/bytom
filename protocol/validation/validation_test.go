@@ -128,46 +128,6 @@ func TestTxValidation(t *testing.T) {
 			},
 		},
 		{
-			desc: "nonce timerange misordered",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				tr := tx.Entries[*nonce.TimeRangeId].(*bc.TimeRange)
-				tr.MinTimeMs = tr.MaxTimeMs + 1
-			},
-			err: errBadTimeRange,
-		},
-		{
-			desc: "nonce timerange disagrees with tx timerange",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				tr := tx.Entries[*nonce.TimeRangeId].(*bc.TimeRange)
-				tr.MaxTimeMs = tx.MaxTimeMs - 1
-			},
-			err: errBadTimeRange,
-		},
-		{
-			desc: "nonce timerange exthash nonempty",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				tr := tx.Entries[*nonce.TimeRangeId].(*bc.TimeRange)
-				tr.ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
-		{
-			desc: "nonce timerange exthash nonempty, but that's OK",
-			f: func() {
-				tx.Version = 2
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				tr := tx.Entries[*nonce.TimeRangeId].(*bc.TimeRange)
-				tr.ExtHash = newHash(1)
-			},
-		},
-		{
 			desc: "mismatched output source / mux dest position",
 			f: func() {
 				tx.Entries[*tx.ResultIds[0]].(*bc.Output).Source.Position = 1

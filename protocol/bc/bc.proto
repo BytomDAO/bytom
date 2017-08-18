@@ -79,10 +79,9 @@ message Mux {
 
 message Nonce {
   Program        program             = 1;
-  Hash           time_range_id       = 2;
-  Hash           ext_hash            = 3;
-  repeated bytes witness_arguments   = 4;
-  Hash           witness_anchored_id = 5;
+  Hash           ext_hash            = 2;
+  repeated bytes witness_arguments   = 3;
+  Hash           witness_anchored_id = 4;
 }
 
 message Coinbase {

@@ -195,24 +195,11 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.Nonce:
+		//TODO: add block heigh range check on the control program
 		gasLeft, err := vm.Verify(NewTxVMContext(vs.tx, e, e.Program, e.WitnessArguments), int64(vs.gas.gasLeft))
 		vs.gas.updateUsage(gasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking nonce program")
-		}
-		tr, err := vs.tx.TimeRange(*e.TimeRangeId)
-		if err != nil {
-			return errors.Wrap(err, "getting nonce timerange")
-		}
-		vs2 := *vs
-		vs2.entryID = *e.TimeRangeId
-		err = checkValid(&vs2, tr)
-		if err != nil {
-			return errors.Wrap(err, "checking nonce timerange")
-		}
-
-		if tr.MinTimeMs == 0 || tr.MaxTimeMs == 0 {
-			return errZeroTime
 		}
 
 		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
@@ -239,17 +226,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking retirement source")
 		}
 
-		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
-			return errNonemptyExtHash
-		}
-
-	case *bc.TimeRange:
-		if e.MinTimeMs > vs.tx.MinTimeMs {
-			return errBadTimeRange
-		}
-		if e.MaxTimeMs > 0 && e.MaxTimeMs < vs.tx.MaxTimeMs {
-			return errBadTimeRange
-		}
 		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
 			return errNonemptyExtHash
 		}

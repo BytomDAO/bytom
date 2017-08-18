@@ -436,10 +436,9 @@ func (m *Mux) GetWitnessArguments() [][]byte {
 
 type Nonce struct {
 	Program           *Program `protobuf:"bytes,1,opt,name=program" json:"program,omitempty"`
-	TimeRangeId       *Hash    `protobuf:"bytes,2,opt,name=time_range_id,json=timeRangeId" json:"time_range_id,omitempty"`
-	ExtHash           *Hash    `protobuf:"bytes,3,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
-	WitnessArguments  [][]byte `protobuf:"bytes,4,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
-	WitnessAnchoredId *Hash    `protobuf:"bytes,5,opt,name=witness_anchored_id,json=witnessAnchoredId" json:"witness_anchored_id,omitempty"`
+	ExtHash           *Hash    `protobuf:"bytes,2,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
+	WitnessArguments  [][]byte `protobuf:"bytes,3,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
+	WitnessAnchoredId *Hash    `protobuf:"bytes,4,opt,name=witness_anchored_id,json=witnessAnchoredId" json:"witness_anchored_id,omitempty"`
 }
 
 func (m *Nonce) Reset()                    { *m = Nonce{} }
@@ -450,13 +449,6 @@ func (*Nonce) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
 func (m *Nonce) GetProgram() *Program {
 	if m != nil {
 		return m.Program
-	}
-	return nil
-}
-
-func (m *Nonce) GetTimeRangeId() *Hash {
-	if m != nil {
-		return m.TimeRangeId
 	}
 	return nil
 }

@@ -121,8 +121,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			)
 
 			if len(oldIss.Nonce) > 0 {
-				tr := bc.NewTimeRange(tx.MinTime, tx.MaxTime)
-				trID := addEntry(tr)
 				assetID := oldIss.AssetID()
 
 				builder := vmutil.NewBuilder()
@@ -130,7 +128,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				builder.AddOp(vm.OP_ASSET).AddData(assetID.Bytes()).AddOp(vm.OP_EQUAL)
 				prog, _ := builder.Build() // error is impossible
 
-				nonce := bc.NewNonce(&bc.Program{VmVersion: 1, Code: prog}, &trID)
+				nonce := bc.NewNonce(&bc.Program{VmVersion: 1, Code: prog})
 				anchorID = addEntry(nonce)
 				setAnchored = nonce.SetAnchored
 			} else if firstSpend != nil {
