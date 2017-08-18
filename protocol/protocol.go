@@ -35,7 +35,7 @@ type Store interface {
 	GetBlock(uint64) (*legacy.Block, error)
 //	LatestSnapshot(context.Context) (*state.Snapshot, uint64, error)
 
-//	SaveBlock(context.Context, *legacy.Block) error
+	SaveBlock(*legacy.Block) error
 	FinalizeBlock(context.Context, uint64) error
 //	SaveSnapshot(context.Context, uint64, *state.Snapshot) error
 }
