@@ -1,20 +1,22 @@
 package txdb
 
-/*
 import (
 	"context"
-	"database/sql"
+	"fmt"
 
 	"github.com/golang/protobuf/proto"
 
-	"chain/core/txdb/internal/storage"
-	"chain/database/pg"
-	"chain/errors"
-	"chain/protocol/bc"
-	"chain/protocol/patricia"
-	"chain/protocol/state"
+	"github.com/bytom/blockchain/txdb/internal/storage"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol/patricia"
+	"github.com/bytom/protocol/state"
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
+func calcSnapshotKey(height uint64) []byte {
+    return []byte(fmt.Sprintf("S:%v", height))
+}
+/*
 // DecodeSnapshot decodes a snapshot from the Chain Core's binary,
 // protobuf representation of the snapshot.
 func DecodeSnapshot(data []byte) (*state.Snapshot, error) {
@@ -45,8 +47,9 @@ func DecodeSnapshot(data []byte) (*state.Snapshot, error) {
 		Nonces: nonces,
 	}, nil
 }
+*/
 
-func storeStateSnapshot(ctx context.Context, db pg.DB, snapshot *state.Snapshot, blockHeight uint64) error {
+func storeStateSnapshot(ctx context.Context, db dbm.DB, snapshot *state.Snapshot, blockHeight uint64) error {
 	var storedSnapshot storage.Snapshot
 	err := patricia.Walk(snapshot.Tree, func(key []byte) error {
 		n := &storage.Snapshot_StateTreeNode{Key: key}
@@ -71,20 +74,14 @@ func storeStateSnapshot(ctx context.Context, db pg.DB, snapshot *state.Snapshot,
 		return errors.Wrap(err, "marshaling state snapshot")
 	}
 
-	const insertQ = `
-		INSERT INTO snapshots (height, data) VALUES($1, $2)
-		ON CONFLICT (height) DO UPDATE SET data = $2, created_at = NOW()
-	`
-	_, err = db.ExecContext(ctx, insertQ, blockHeight, b)
-	if err != nil {
-		return errors.Wrap(err, "writing state snapshot to database")
-	}
-
-	const deleteQ = `DELETE FROM snapshots WHERE created_at < NOW() - INTERVAL '24 hours'`
-	_, err = db.ExecContext(ctx, deleteQ)
+	// set new snapshot.
+	db.Set(calcSnapshotKey(blockHeight), b)
+	//TO DO: delete old snapshot.
+	db.SetSync(nil, nil)
 	return errors.Wrap(err, "deleting old snapshots")
 }
 
+/*
 func getStateSnapshot(ctx context.Context, db pg.DB) (*state.Snapshot, uint64, error) {
 	const q = `
 		SELECT data, height FROM snapshots ORDER BY height DESC LIMIT 1

@@ -8,7 +8,7 @@ import (
 	"github.com/golang/groupcache/lru"
 
 	"github.com/bytom/errors"
-	//"github.com/blockchain/log"
+	"github.com/bytom/log"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
@@ -37,7 +37,7 @@ type Store interface {
 
 	SaveBlock(*legacy.Block) error
 	FinalizeBlock(context.Context, uint64) error
-//	SaveSnapshot(context.Context, uint64, *state.Snapshot) error
+	SaveSnapshot(context.Context, uint64, *state.Snapshot) error
 }
 
 // Chain provides a complete, minimal blockchain database. It
@@ -95,12 +95,11 @@ func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, height
 			select {
 			case <-ctx.Done():
 				return
-			//case ps := <-c.pendingSnapshots:
-				/*err = store.SaveSnapshot(ctx, ps.height, ps.snapshot)
+			case ps := <-c.pendingSnapshots:
+				err := store.SaveSnapshot(ctx, ps.height, ps.snapshot)
 				if err != nil {
 					log.Error(ctx, err, "at", "saving snapshot")
 				}
-                */
 			}
 		}
 	}()

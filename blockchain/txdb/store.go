@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"encoding/json"
 
-	//"github.com/bytom/errors"
+	"github.com/bytom/errors"
 	//"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
-	//"github.com/bytom/protocol/state"
+	"github.com/bytom/protocol/state"
     dbm "github.com/tendermint/tmlibs/db"
 	. "github.com/tendermint/tmlibs/common"
 
@@ -150,14 +150,12 @@ func (s *Store) SaveBlock(block *legacy.Block) error {
 	return nil
 }
 
-/*
 // SaveSnapshot saves a state snapshot to the database.
 func (s *Store) SaveSnapshot(ctx context.Context, height uint64, snapshot *state.Snapshot) error {
 	err := storeStateSnapshot(ctx, s.db, snapshot, height)
 	return errors.Wrap(err, "saving state tree")
 }
 
-*/
 func (s *Store) FinalizeBlock(ctx context.Context, height uint64) error {
 //	_, err := s.db.ExecContext(ctx, `SELECT pg_notify('newblock', $1)`, height)
 	return nil
