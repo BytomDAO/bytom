@@ -1,6 +1,6 @@
 package errors_test
 
-import "chain/errors"
+import "bytom/errors"
 
 var ErrInvalidKey = errors.New("invalid key")
 

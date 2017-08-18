@@ -1,29 +1,25 @@
 package node
 
 import (
-    "context"
+	"net"
 	"net/http"
 	"strings"
-    "net"
 
-	crypto "github.com/tendermint/go-crypto"
-	wire "github.com/tendermint/go-wire"
+	bc "github.com/blockchain/blockchain"
 	cfg "github.com/blockchain/config"
 	p2p "github.com/blockchain/p2p"
 	"github.com/blockchain/types"
 	"github.com/blockchain/version"
+	crypto "github.com/tendermint/go-crypto"
+	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/log"
-    bc "github.com/blockchain/blockchain"
-    dbm "github.com/tendermint/tmlibs/db"
-    "github.com/blockchain/protocol/bc/legacy"
+	//dbm "github.com/tendermint/tmlibs/db"
+	"github.com/blockchain/protocol/bc/legacy"
 	rpccore "github.com/blockchain/rpc/core"
 	grpccore "github.com/blockchain/rpc/grpc"
 	//rpc "github.com/blockchain/rpc/lib"
 	rpcserver "github.com/blockchain/rpc/lib/server"
-    "github.com/blockchain/blockchain/account"
-    "github.com/blockchain/protocol"
-    "github.com/blockchain/blockchain/txdb"
 
 	_ "net/http/pprof"
 )
@@ -41,12 +37,10 @@ type Node struct {
 	addrBook *p2p.AddrBook         // known peers
 
 	// services
-	evsw             types.EventSwitch           // pub/sub for services
-//    blockStore       *bc.MemStore
-    blockStore       *bc.BlockStore
-    bcReactor        *bc.BlockchainReactor
-    accounts         *account.Manager
-    rpcListeners     []net.Listener              // rpc servers
+	evsw         types.EventSwitch // pub/sub for services
+	blockStore   *bc.MemStore
+	bcReactor    *bc.BlockchainReactor
+	rpcListeners []net.Listener // rpc servers
 }
 
 func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
@@ -57,16 +51,16 @@ func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
 
 func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.Logger) *Node {
 	// Get BlockStore
-    blockStoreDB := dbm.NewDB("blockstore", config.DBBackend, config.DBDir())
-    blockStore := bc.NewBlockStore(blockStoreDB)
-    //blockStore := bc.NewMemStore()
-    genesisBlock := legacy.Block {
-        BlockHeader: legacy.BlockHeader {
-            Version: 1,
-            Height: 0,
-        },
-    }
-    blockStore.SaveBlock(&genesisBlock)
+	//blockStoreDB := dbm.NewDB("blockstore", config.DBBackend, config.DBDir())
+	//blockStore := bc.NewBlockStore(blockStoreDB)
+	blockStore := bc.NewMemStore()
+	genesisBlock := legacy.Block{
+		BlockHeader: legacy.BlockHeader{
+			Version: 1,
+			Height:  0,
+		},
+	}
+	blockStore.SaveBlock(&genesisBlock)
 
 	// Generate node PrivKey
 	privKey := crypto.GenPrivKeyEd25519()
@@ -79,34 +73,15 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
 
-
 	p2pLogger := logger.With("module", "p2p")
 
 	sw := p2p.NewSwitch(config.P2P)
 	sw.SetLogger(p2pLogger)
 
-    fastSync := config.FastSync
-    genesisblock, err := protocol.NewInitialBlock()
-    if err != nil {
-      cmn.Exit(cmn.Fmt("initialize genesisblock failed: %v", err))
-    }
-
-    tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-    store := txdb.NewStore(tx_db)
-    chain, err := protocol.NewChain(context.Background(), genesisblock.Hash(), store, nil)
-   /* if err != nil {
-      cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
-    }
-    err = chain.CommitAppliedBlock(context.Background(), block, state.Empty())
-    if err != nil {
-      cmn.Exit(cmn.Fmt("commit block failed: %v", err))
-    }
-    chain.MaxIssuanceWindow = bc.MillisDuration(c.MaxIssuanceWindowMs)
-    */
-
-    bcReactor := bc.NewBlockchainReactor(blockStore, chain, fastSync)
-    bcReactor.SetLogger(logger.With("module", "blockchain"))
-    sw.AddReactor("BLOCKCHAIN", bcReactor)
+	fastSync := config.FastSync
+	bcReactor := bc.NewBlockchainReactor(blockStore, fastSync)
+	bcReactor.SetLogger(logger.With("module", "blockchain"))
+	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
 	// Optionally, start the pex reactor
 	var addrBook *p2p.AddrBook
@@ -130,8 +105,6 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 			logger.Error("Profile server", "error", http.ListenAndServe(profileHost, nil))
 		}()
 	}
-    accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
-    accounts := account.NewManager(accounts_db, chain)
 
 	node := &Node{
 		config:        config,
@@ -141,10 +114,9 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 		sw:       sw,
 		addrBook: addrBook,
 
-		evsw:      eventSwitch,
-        bcReactor: bcReactor,
-        blockStore: blockStore,
-        accounts: accounts,
+		evsw:       eventSwitch,
+		bcReactor:  bcReactor,
+		blockStore: blockStore,
 	}
 	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
 	return node
@@ -269,7 +241,7 @@ func (n *Node) startRPC() ([]net.Listener, error) {
 		}
 		listeners = append(listeners, listener)
 	}
-    return listeners, nil
+	return listeners, nil
 }
 
 func (n *Node) Switch() *p2p.Switch {

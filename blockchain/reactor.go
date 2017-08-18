@@ -10,7 +10,6 @@ import (
 	"github.com/blockchain/p2p"
 	"github.com/blockchain/types"
     "github.com/blockchain/protocol/bc/legacy"
-    "github.com/blockchain/protocol"
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
@@ -46,9 +45,7 @@ type BlockchainReactor struct {
 
 //	state        *sm.State
 //	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
-//	store        *MemStore
-    chain        *protocol.Chain
-	store        *BlockStore
+	store        *MemStore
 	pool         *BlockPool
 	fastSync     bool
 	requestsCh   chan BlockRequest
@@ -58,7 +55,7 @@ type BlockchainReactor struct {
 	evsw types.EventSwitch
 }
 
-func NewBlockchainReactor(store *BlockStore, chain *protocol.Chain,fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *MemStore, fastSync bool) *BlockchainReactor {
     requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
     timeoutsCh    := make(chan string, defaultChannelCapacity)
     pool := NewBlockPool(
@@ -67,7 +64,6 @@ func NewBlockchainReactor(store *BlockStore, chain *protocol.Chain,fastSync bool
         timeoutsCh,
     )
     bcR := &BlockchainReactor {
-        chain:         chain,
         fastSync:      fastSync,
         pool:          pool,
         store:         store,

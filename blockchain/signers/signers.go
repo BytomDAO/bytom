@@ -4,16 +4,15 @@ package signers
 import (
 	"bytes"
 	"context"
-//	"database/sql"
+	//"database/sql"
 	"encoding/binary"
 	"sort"
 
 	//"github.com/lib/pq"
 
-	"github.com/blockchain/crypto/ed25519/chainkd"
-//	"github.com/blockchain/database/pg"
-	"github.com/blockchain/errors"
-    dbm "github.com/tendermint/tmlibs/db"
+	"bytom/crypto/ed25519/chainkd"
+	//"bytom/database/pg"
+	"bytom/errors"
 )
 
 type keySpace byte
@@ -56,7 +55,7 @@ var (
 // the amount of signatures needed for quorum.
 type Signer struct {
 	ID       string
-	Type     string
+	Type     stringz
 	XPubs    []chainkd.XPub
 	Quorum   int
 	KeyIndex uint64
@@ -77,7 +76,7 @@ func Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
 }
 
 // Create creates and stores a Signer in the database
-func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, quorum int, clientToken string) (*Signer, error) {
+func Create(ctx context.Context, db pg.DB, typ string, xpubs []chainkd.XPub, quorum int, clientToken string) (*Signer, error) {
 	if len(xpubs) == 0 {
 		return nil, errors.Wrap(ErrNoXPubs)
 	}
@@ -98,7 +97,6 @@ func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, qu
 		key := key
 		xpubBytes = append(xpubBytes, key[:])
 	}
-    /*
 
 	nullToken := sql.NullString{
 		String: clientToken,
@@ -106,10 +104,10 @@ func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, qu
 	}
 
 	const q = `
-		INSERT INTO signers (id, type, xpubs, quorum, client_token)
-		VALUES (next_chain_id($1::text), $2, $3, $4, $5)
-		ON CONFLICT (client_token) DO NOTHING
-		RETURNING id, key_index
+        INSERT INTO signers (id, type, xpubs, quorum, client_token)
+        VALUES (next_chain_id($1::text), $2, $3, $4, $5)
+        ON CONFLICT (client_token) DO NOTHING
+        RETURNING id, key_index
   `
 	var (
 		id       string
@@ -123,11 +121,6 @@ func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, qu
 	if err != nil && err != sql.ErrNoRows {
 		return nil, errors.Wrap(err)
 	}
-    */
-	var (
-		id       string
-		keyIndex uint64
-	)
 
 	return &Signer{
 		ID:       id,
@@ -152,12 +145,11 @@ func New(id, typ string, xpubs [][]byte, quorum int, keyIndex uint64) (*Signer, 
 	}, nil
 }
 
-/*
 func findByClientToken(ctx context.Context, db pg.DB, clientToken string) (*Signer, error) {
 	const q = `
-		SELECT id, type, xpubs, quorum, key_index
-		FROM signers WHERE client_token=$1
-	`
+        SELECT id, type, xpubs, quorum, key_index
+        FROM signers WHERE client_token=$1
+    `
 
 	var (
 		s         Signer
@@ -178,22 +170,19 @@ func findByClientToken(ctx context.Context, db pg.DB, clientToken string) (*Sign
 
 	return &s, nil
 }
-*/
 
 // Find retrieves a Signer from the database
 // using the type and id.
-func Find(ctx context.Context, db dbm.DB, typ, id string) (*Signer, error) {
-	/*const q = `
-		SELECT id, type, xpubs, quorum, key_index
-		FROM signers WHERE id=$1
-	`
-    */
+func Find(ctx context.Context, db pg.DB, typ, id string) (*Signer, error) {
+	const q = `
+        SELECT id, type, xpubs, quorum, key_index
+        FROM signers WHERE id=$1
+    `
 
 	var (
 		s         Signer
 		xpubBytes [][]byte
 	)
-    /*
 	err := db.QueryRowContext(ctx, q, id).Scan(
 		&s.ID,
 		&s.Type,
@@ -210,7 +199,7 @@ func Find(ctx context.Context, db dbm.DB, typ, id string) (*Signer, error) {
 
 	if s.Type != typ {
 		return nil, errors.Wrap(ErrBadType)
-	}*/
+	}
 
 	keys, err := ConvertKeys(xpubBytes)
 	if err != nil {
@@ -222,15 +211,14 @@ func Find(ctx context.Context, db dbm.DB, typ, id string) (*Signer, error) {
 	return &s, nil
 }
 
-/*
 // List returns a paginated set of Signers, limited to
 // the provided type.
 func List(ctx context.Context, db pg.DB, typ, prev string, limit int) ([]*Signer, string, error) {
 	const q = `
-		SELECT id, type, xpubs, quorum, key_index
-		FROM signers WHERE type=$1 AND ($2='' OR $2<id)
-		ORDER BY id ASC LIMIT $3
-	`
+        SELECT id, type, xpubs, quorum, key_index
+        FROM signers WHERE type=$1 AND ($2='' OR $2<id)
+        ORDER BY id ASC LIMIT $3
+    `
 
 	var signers []*Signer
 	err := pg.ForQueryRows(ctx, db, q, typ, prev, limit,
@@ -262,7 +250,6 @@ func List(ctx context.Context, db pg.DB, typ, prev string, limit int) ([]*Signer
 
 	return signers, last, nil
 }
-*/
 
 func ConvertKeys(xpubs [][]byte) ([]chainkd.XPub, error) {
 	var xkeys []chainkd.XPub

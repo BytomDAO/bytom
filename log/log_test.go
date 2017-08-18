@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"chain/errors"
+	"bytom/errors"
 )
 
 func TestSetOutput(t *testing.T) {
@@ -156,7 +156,6 @@ func TestPrintkv(t *testing.T) {
 		SetOutput(buf)
 
 		Printkv(context.Background(), ex.keyvals...)
-
 		read, err := ioutil.ReadAll(buf)
 		if err != nil {
 			SetOutput(os.Stdout)
@@ -184,7 +183,6 @@ func TestMessagef(t *testing.T) {
 	defer SetOutput(os.Stdout)
 
 	Printf(context.Background(), "test round %d", 0)
-
 	read, err := ioutil.ReadAll(buf)
 	if err != nil {
 		t.Fatal("read buffer error:", err)
@@ -224,7 +222,7 @@ func TestPrintkvStack(t *testing.T) {
 
 		// stack trace
 		"TestPrintkvStack\n",
-		"/go/",
+		"/bytom/",
 	}
 
 	t.Logf("output:\n%s", got)
@@ -256,7 +254,7 @@ func TestError(t *testing.T) {
 
 		// stack trace
 		"TestError\n",
-		"/go/",
+		"/bytom/",
 	}
 
 	t.Logf("output:\n%s", got)
