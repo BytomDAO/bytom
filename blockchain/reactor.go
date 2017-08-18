@@ -12,6 +12,7 @@ import (
     "github.com/bytom/protocol/bc/legacy"
     "github.com/bytom/protocol"
 	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/bytom/blockchain/txdb"
 )
 
 const (
@@ -48,7 +49,7 @@ type BlockchainReactor struct {
 //	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
 //	store        *MemStore
     chain        *protocol.Chain
-	store        *BlockStore
+	store        *txdb.Store
 	pool         *BlockPool
 	fastSync     bool
 	requestsCh   chan BlockRequest
@@ -58,7 +59,7 @@ type BlockchainReactor struct {
 	evsw types.EventSwitch
 }
 
-func NewBlockchainReactor(store *BlockStore, chain *protocol.Chain,fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, fastSync bool) *BlockchainReactor {
     requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
     timeoutsCh    := make(chan string, defaultChannelCapacity)
     pool := NewBlockPool(
@@ -132,7 +133,7 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 	switch msg := msg.(type) {
 	case *bcBlockRequestMessage:
 		// Got a request for a block. Respond with block if we have it.
-		block := bcR.store.LoadBlock(msg.Height)
+		block, _:= bcR.store.GetBlock(msg.Height)
 		if block != nil {
 			msg := &bcBlockResponseMessage{Block: block}
 			queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
