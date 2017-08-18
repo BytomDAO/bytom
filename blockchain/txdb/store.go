@@ -104,12 +104,9 @@ func (s *Store) GetBlock(height uint64) (*legacy.Block, error) {
 
 // LatestSnapshot returns the most recent state snapshot stored in
 // the database and its corresponding block height.
-/*
 func (s *Store) LatestSnapshot(ctx context.Context) (*state.Snapshot, uint64, error) {
-//	return getStateSnapshot(ctx, s.db)
-//    return nil, 0, nil
+	return getStateSnapshot(ctx, s.db)
 }
-*/
 
 /*
 // LatestSnapshotInfo returns the height and size of the most recent

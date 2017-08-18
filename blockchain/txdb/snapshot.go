@@ -3,6 +3,7 @@ package txdb
 import (
 	"context"
 	"fmt"
+	"encoding/json"
 
 	"github.com/golang/protobuf/proto"
 
@@ -10,13 +11,18 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/patricia"
 	"github.com/bytom/protocol/state"
+	"github.com/bytom/protocol/bc"
 	dbm "github.com/tendermint/tmlibs/db"
+	. "github.com/tendermint/tmlibs/common"
 )
 
 func calcSnapshotKey(height uint64) []byte {
     return []byte(fmt.Sprintf("S:%v", height))
 }
-/*
+
+func calcLatestSnapshotHeight() []byte {
+	return []byte("LatestSnapshotHeight")
+}
 // DecodeSnapshot decodes a snapshot from the Chain Core's binary,
 // protobuf representation of the snapshot.
 func DecodeSnapshot(data []byte) (*state.Snapshot, error) {
@@ -47,7 +53,36 @@ func DecodeSnapshot(data []byte) (*state.Snapshot, error) {
 		Nonces: nonces,
 	}, nil
 }
-*/
+
+var latestSnapshotHeight = []byte("latestSnapshotHeight")
+
+type SnapshotHeightJSON struct {
+    Height uint64
+}
+
+func (bsj SnapshotHeightJSON) Save(db dbm.DB) {
+	bytes, err := json.Marshal(bsj)
+	if err != nil {
+		PanicSanity(Fmt("Could not marshal state bytes: %v", err))
+	}
+	db.SetSync(latestSnapshotHeight, bytes)
+}
+
+func LoadSnapshotHeightJSON(db dbm.DB) SnapshotHeightJSON {
+	bytes := db.Get(latestSnapshotHeight)
+	if bytes == nil {
+		return SnapshotHeightJSON{
+			Height: 0,
+		}
+	}
+	bsj := SnapshotHeightJSON{}
+	err := json.Unmarshal(bytes, &bsj)
+	if err != nil {
+		PanicCrisis(Fmt("Could not unmarshal bytes: %X", bytes))
+	}
+	return bsj
+}
+
 
 func storeStateSnapshot(ctx context.Context, db dbm.DB, snapshot *state.Snapshot, blockHeight uint64) error {
 	var storedSnapshot storage.Snapshot
@@ -76,26 +111,17 @@ func storeStateSnapshot(ctx context.Context, db dbm.DB, snapshot *state.Snapshot
 
 	// set new snapshot.
 	db.Set(calcSnapshotKey(blockHeight), b)
+	SnapshotHeightJSON{Height: blockHeight}.Save(db)
 	//TO DO: delete old snapshot.
 	db.SetSync(nil, nil)
 	return errors.Wrap(err, "deleting old snapshots")
 }
 
-/*
-func getStateSnapshot(ctx context.Context, db pg.DB) (*state.Snapshot, uint64, error) {
-	const q = `
-		SELECT data, height FROM snapshots ORDER BY height DESC LIMIT 1
-	`
-	var (
-		data   []byte
-		height uint64
-	)
-
-	err := db.QueryRowContext(ctx, q).Scan(&data, &height)
-	if err == sql.ErrNoRows {
-		return state.Empty(), 0, nil
-	} else if err != nil {
-		return nil, height, errors.Wrap(err, "retrieving state snapshot blob")
+func getStateSnapshot(ctx context.Context, db dbm.DB) (*state.Snapshot, uint64, error) {
+	height := LoadSnapshotHeightJSON(db).Height
+	data := db.Get(calcSnapshotKey(height))
+	if data == nil {
+		return nil, height, errors.New("no this snapshot.")
 	}
 
 	snapshot, err := DecodeSnapshot(data)
@@ -105,6 +131,7 @@ func getStateSnapshot(ctx context.Context, db pg.DB) (*state.Snapshot, uint64, e
 	return snapshot, height, nil
 }
 
+/*
 // getRawSnapshot returns the raw, protobuf-encoded snapshot data at the
 // provided height.
 func getRawSnapshot(ctx context.Context, db pg.DB, height uint64) (data []byte, err error) {

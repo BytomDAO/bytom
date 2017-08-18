@@ -33,7 +33,7 @@ var (
 type Store interface {
 	Height() uint64
 	GetBlock(uint64) (*legacy.Block, error)
-//	LatestSnapshot(context.Context) (*state.Snapshot, uint64, error)
+	LatestSnapshot(context.Context) (*state.Snapshot, uint64, error)
 
 	SaveBlock(*legacy.Block) error
 	FinalizeBlock(context.Context, uint64) error
