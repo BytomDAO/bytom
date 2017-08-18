@@ -474,9 +474,7 @@ func (m *Nonce) GetWitnessAnchoredId() *Hash {
 }
 
 type Coinbase struct {
-	Program          *Program `protobuf:"bytes,1,opt,name=program" json:"program,omitempty"`
-	ExtHash          *Hash    `protobuf:"bytes,2,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
-	WitnessArguments [][]byte `protobuf:"bytes,3,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
+	WitnessDestination *ValueDestination `protobuf:"bytes,1,opt,name=witness_destination,json=witnessDestination" json:"witness_destination,omitempty"`
 }
 
 func (m *Coinbase) Reset()                    { *m = Coinbase{} }
@@ -484,23 +482,9 @@ func (m *Coinbase) String() string            { return proto.CompactTextString(m
 func (*Coinbase) ProtoMessage()               {}
 func (*Coinbase) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
 
-func (m *Coinbase) GetProgram() *Program {
+func (m *Coinbase) GetWitnessDestination() *ValueDestination {
 	if m != nil {
-		return m.Program
-	}
-	return nil
-}
-
-func (m *Coinbase) GetExtHash() *Hash {
-	if m != nil {
-		return m.ExtHash
-	}
-	return nil
-}
-
-func (m *Coinbase) GetWitnessArguments() [][]byte {
-	if m != nil {
-		return m.WitnessArguments
+		return m.WitnessDestination
 	}
 	return nil
 }

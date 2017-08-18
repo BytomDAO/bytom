@@ -127,6 +127,13 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errWrongCoinbaseTransaction
 		}
 
+		vs2 := *vs
+		vs2.destPos = 0
+		err = checkValidDest(&vs2, e.WitnessDestination)
+		if err != nil {
+			return errors.Wrap(err, "checking coinbase destination")
+		}
+
 	case *bc.Mux:
 		parity := make(map[bc.AssetID]int64)
 		for i, src := range e.Sources {
@@ -351,6 +358,11 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 
 	var dest *bc.ValueDestination
 	switch ref := e.(type) {
+	case *bc.Coinbase:
+		if vs.Position != 0 {
+			return errors.Wrapf(errPosition, "invalid position %d for coinbase source", vs.Position)
+		}
+		dest = ref.WitnessDestination
 	case *bc.Issuance:
 		if vs.Position != 0 {
 			return errors.Wrapf(errPosition, "invalid position %d for issuance source", vs.Position)
@@ -370,7 +382,7 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 		dest = ref.WitnessDestinations[vs.Position]
 
 	default:
-		return errors.Wrapf(bc.ErrEntryType, "value source is %T, should be issuance, spend, or mux", e)
+		return errors.Wrapf(bc.ErrEntryType, "value source is %T, should be coinbase, issuance, spend, or mux", e)
 	}
 
 	if dest.Ref == nil || *dest.Ref != vstate.entryID {
