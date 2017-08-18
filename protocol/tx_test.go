@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -11,13 +10,12 @@ import (
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/testutil"
 )
 
-func TestBadMaxIssuanceWindow(t *testing.T) {
+/*func TestBadMaxIssuanceWindow(t *testing.T) {
 	ctx := context.Background()
 	c, b1 := newTestChain(t, time.Now())
 	c.MaxIssuanceWindow = time.Second
@@ -31,7 +29,7 @@ func TestBadMaxIssuanceWindow(t *testing.T) {
 	if len(got.Transactions) != 0 {
 		t.Error("expected issuance past max issuance window to be rejected")
 	}
-}
+}*/
 
 type testDest struct {
 	privKey ed25519.PrivateKey

@@ -1,19 +1,6 @@
 package protocol
 
-import (
-	"context"
-	"log"
-	"testing"
-	"time"
-
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/prottest/memstore"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/testutil"
-)
-
-func TestRecoverSnapshotNoAdditionalBlocks(t *testing.T) {
+/*func TestRecoverSnapshotNoAdditionalBlocks(t *testing.T) {
 	store := memstore.New()
 	b, err := NewInitialBlock(time.Now().Add(-time.Minute))
 	if err != nil {
@@ -75,4 +62,4 @@ func createEmptyBlock(block *legacy.Block, snapshot *state.Snapshot) *legacy.Blo
 			},
 		},
 	}
-}
+}*/

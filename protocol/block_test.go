@@ -1,18 +1,6 @@
 package protocol
 
-import (
-	"context"
-	"encoding/hex"
-	"testing"
-	"time"
-
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/prottest/memstore"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/testutil"
-)
-
+/*
 func TestGetBlock(t *testing.T) {
 	ctx := context.Background()
 
@@ -192,24 +180,6 @@ func TestGenerateBlock(t *testing.T) {
 	}
 }
 
-func TestValidateBlockForSig(t *testing.T) {
-	initialBlock, err := NewInitialBlock(time.Now())
-	if err != nil {
-		t.Fatal("unexpected error ", err)
-	}
-
-	ctx := context.Background()
-	c, err := NewChain(ctx, initialBlock.Hash(), memstore.New(), nil)
-	if err != nil {
-		t.Fatal("unexpected error ", err)
-	}
-
-	err = c.ValidateBlockForSig(ctx, initialBlock)
-	if err != nil {
-		t.Error("unexpected error ", err)
-	}
-}
-
 // newTestChain returns a new Chain using memstore for storage,
 // along with an initial block b1 (with a 0/0 multisig program).
 // It commits b1 before returning.
@@ -273,4 +243,4 @@ func mustDecodeHash(s string) (h bc.Hash) {
 		panic(err)
 	}
 	return h
-}
+}*/

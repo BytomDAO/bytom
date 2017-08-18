@@ -126,7 +126,7 @@ func (c *Chain) GenerateBlock(ctx context.Context, prev *legacy.Block, snapshot 
 func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 	blockEnts := legacy.MapBlock(block)
 	prevEnts := legacy.MapBlock(prev)
-	err := validation.ValidateBlock(blockEnts, prevEnts, c.InitialBlockHash, c.ValidateTx)
+	err := validation.ValidateBlock(blockEnts, prevEnts)
 	if err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
@@ -216,24 +216,6 @@ func (c *Chain) setHeight(h uint64) {
 	}
 	c.state.height = h
 	c.state.cond.Broadcast()
-}
-
-// ValidateBlockForSig performs validation on an incoming _unsigned_
-// block in preparation for signing it. By definition it does not
-// execute the consensus program.
-func (c *Chain) ValidateBlockForSig(ctx context.Context, block *legacy.Block) error {
-	var prev *legacy.Block
-
-	if block.Height > 1 {
-		var err error
-		prev, err = c.GetBlock(ctx, block.Height-1)
-		if err != nil {
-			return errors.Wrap(err, "getting previous block")
-		}
-	}
-
-	err := validation.ValidateBlock(legacy.MapBlock(block), legacy.MapBlock(prev), c.InitialBlockHash, c.ValidateTx)
-	return errors.Sub(ErrBadBlock, err)
 }
 
 func NewInitialBlock(timestamp time.Time) (*legacy.Block, error) {

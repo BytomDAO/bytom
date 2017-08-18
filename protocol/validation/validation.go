@@ -86,6 +86,7 @@ var (
 	errUntimelyTransaction      = errors.New("block timestamp outside transaction time range")
 	errVersionRegression        = errors.New("version regression")
 	errWrongCoinbaseTransaction = errors.New("wrong coinbase transaction")
+	errWrongCoinbaseAsset       = errors.New("wrong coinbase asset id")
 )
 
 func checkValid(vs *validationState, e bc.Entry) (err error) {
@@ -125,6 +126,10 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 	case *bc.Coinbase:
 		if vs.block == nil || len(vs.block.Transactions) == 0 || vs.block.Transactions[0] != vs.tx {
 			return errWrongCoinbaseTransaction
+		}
+
+		if e.WitnessDestination.Value.AssetId != BTMAssetID {
+			return errWrongCoinbaseAsset
 		}
 
 		vs2 := *vs
@@ -464,7 +469,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 
 // ValidateBlock validates a block and the transactions within.
 // It does not run the consensus program; for that, see ValidateBlockSig.
-func ValidateBlock(b, prev *bc.Block, initialBlockID bc.Hash, validateTx func(*bc.Tx) error) error {
+func ValidateBlock(b, prev *bc.Block) error {
 	if b.Height > 1 {
 		if prev == nil {
 			return errors.WithDetailf(errNoPrevBlock, "height %d", b.Height)
@@ -475,6 +480,7 @@ func ValidateBlock(b, prev *bc.Block, initialBlockID bc.Hash, validateTx func(*b
 		}
 	}
 
+	coinbaseValue := uint64(0)
 	for i, tx := range b.Transactions {
 		if b.Version == 1 && tx.Version != 1 {
 			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)
@@ -486,10 +492,22 @@ func ValidateBlock(b, prev *bc.Block, initialBlockID bc.Hash, validateTx func(*b
 			return errors.WithDetailf(errUntimelyTransaction, "block timestamp %d, transaction time range %d-%d", b.TimestampMs, tx.MinTimeMs, tx.MaxTimeMs)
 		}
 
-		err := validateTx(tx)
+		txBTMValue, err := ValidateTx(tx, b)
 		if err != nil {
 			return errors.Wrapf(err, "validity of transaction %d of %d", i, len(b.Transactions))
 		}
+		coinbaseValue += *txBTMValue
+	}
+
+	// check the coinbase output entry value
+	coinbaseOutput := b.Transactions[0].Entries[b.Transactions[0].SpentOutputIDs[0]]
+	switch coinbaseOutput := coinbaseOutput.(type) {
+	case *bc.Output:
+		if coinbaseOutput.Source.Value.Amount != coinbaseValue {
+			return errWrongCoinbaseTransaction
+		}
+	default:
+		return errWrongCoinbaseTransaction
 	}
 
 	txRoot, err := bc.MerkleRoot(b.Transactions)
