@@ -86,9 +86,8 @@ message Nonce {
 
 message Coinbase {
   Program        program             = 1;
-  Hash           block_id            = 2;
-  Hash           ext_hash            = 3;
-  repeated bytes witness_arguments   = 4;
+  Hash           ext_hash            = 2;
+  repeated bytes witness_arguments   = 3;
 }
 
 message Output {
@@ -104,12 +103,6 @@ message Retirement {
   Hash        data     = 2;
   Hash        ext_hash = 3;
   uint64      ordinal  = 4;
-}
-
-message TimeRange {
-  uint64    min_time_ms = 1;
-  uint64    max_time_ms = 2;
-  Hash      ext_hash    = 3;
 }
 
 message Issuance {

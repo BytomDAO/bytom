@@ -22,7 +22,6 @@ It has these top-level messages:
 	Nonce
 	Output
 	Retirement
-	TimeRange
 	Issuance
 	Spend
 */
@@ -476,9 +475,8 @@ func (m *Nonce) GetWitnessAnchoredId() *Hash {
 
 type Coinbase struct {
 	Program          *Program `protobuf:"bytes,1,opt,name=program" json:"program,omitempty"`
-	BlockId          *Hash    `protobuf:"bytes,2,opt,name=block_id,json=blockId" json:"block_id,omitempty"`
-	ExtHash          *Hash    `protobuf:"bytes,3,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
-	WitnessArguments [][]byte `protobuf:"bytes,4,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
+	ExtHash          *Hash    `protobuf:"bytes,2,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
+	WitnessArguments [][]byte `protobuf:"bytes,3,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
 }
 
 func (m *Coinbase) Reset()                    { *m = Coinbase{} }
@@ -489,13 +487,6 @@ func (*Coinbase) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10
 func (m *Coinbase) GetProgram() *Program {
 	if m != nil {
 		return m.Program
-	}
-	return nil
-}
-
-func (m *Coinbase) GetBlockId() *Hash {
-	if m != nil {
-		return m.BlockId
 	}
 	return nil
 }
@@ -600,38 +591,6 @@ func (m *Retirement) GetOrdinal() uint64 {
 		return m.Ordinal
 	}
 	return 0
-}
-
-type TimeRange struct {
-	MinTimeMs uint64 `protobuf:"varint,1,opt,name=min_time_ms,json=minTimeMs" json:"min_time_ms,omitempty"`
-	MaxTimeMs uint64 `protobuf:"varint,2,opt,name=max_time_ms,json=maxTimeMs" json:"max_time_ms,omitempty"`
-	ExtHash   *Hash  `protobuf:"bytes,3,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
-}
-
-func (m *TimeRange) Reset()                    { *m = TimeRange{} }
-func (m *TimeRange) String() string            { return proto.CompactTextString(m) }
-func (*TimeRange) ProtoMessage()               {}
-func (*TimeRange) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
-
-func (m *TimeRange) GetMinTimeMs() uint64 {
-	if m != nil {
-		return m.MinTimeMs
-	}
-	return 0
-}
-
-func (m *TimeRange) GetMaxTimeMs() uint64 {
-	if m != nil {
-		return m.MaxTimeMs
-	}
-	return 0
-}
-
-func (m *TimeRange) GetExtHash() *Hash {
-	if m != nil {
-		return m.ExtHash
-	}
-	return nil
 }
 
 type Issuance struct {
@@ -792,7 +751,7 @@ func init() {
 	proto.RegisterType((*Nonce)(nil), "bc.Nonce")
 	proto.RegisterType((*Output)(nil), "bc.Output")
 	proto.RegisterType((*Retirement)(nil), "bc.Retirement")
-	proto.RegisterType((*TimeRange)(nil), "bc.TimeRange")
+	proto.RegisterType((*Coinbase)(nil), "bc.Coinbase")
 	proto.RegisterType((*Issuance)(nil), "bc.Issuance")
 	proto.RegisterType((*Spend)(nil), "bc.Spend")
 }

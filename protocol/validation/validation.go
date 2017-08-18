@@ -65,29 +65,27 @@ type validationState struct {
 }
 
 var (
-	errBadTimeRange          = errors.New("bad time range")
-	errEmptyResults          = errors.New("transaction has no results")
-	errMismatchedAssetID     = errors.New("mismatched asset id")
-	errMismatchedBlock       = errors.New("mismatched block")
-	errMismatchedMerkleRoot  = errors.New("mismatched merkle root")
-	errMismatchedPosition    = errors.New("mismatched value source/dest positions")
-	errMismatchedReference   = errors.New("mismatched reference")
-	errMismatchedValue       = errors.New("mismatched value")
-	errMisorderedBlockHeight = errors.New("misordered block height")
-	errMisorderedBlockTime   = errors.New("misordered block time")
-	errMissingField          = errors.New("missing required field")
-	errNoGas                 = errors.New("no gas input")
-	errNoPrevBlock           = errors.New("no previous block")
-	errNoSource              = errors.New("no source for value")
-	errNonemptyExtHash       = errors.New("non-empty extension hash")
-	errOverflow              = errors.New("arithmetic overflow/underflow")
-	errPosition              = errors.New("invalid source or destination position")
-	errTxVersion             = errors.New("invalid transaction version")
-	errUnbalanced            = errors.New("unbalanced")
-	errUntimelyTransaction   = errors.New("block timestamp outside transaction time range")
-	errVersionRegression     = errors.New("version regression")
-	errWrongBlockchain       = errors.New("wrong blockchain")
-	errZeroTime              = errors.New("timerange has one or two bounds set to zero")
+	errEmptyResults             = errors.New("transaction has no results")
+	errMismatchedAssetID        = errors.New("mismatched asset id")
+	errMismatchedBlock          = errors.New("mismatched block")
+	errMismatchedMerkleRoot     = errors.New("mismatched merkle root")
+	errMismatchedPosition       = errors.New("mismatched value source/dest positions")
+	errMismatchedReference      = errors.New("mismatched reference")
+	errMismatchedValue          = errors.New("mismatched value")
+	errMisorderedBlockHeight    = errors.New("misordered block height")
+	errMisorderedBlockTime      = errors.New("misordered block time")
+	errMissingField             = errors.New("missing required field")
+	errNoGas                    = errors.New("no gas input")
+	errNoPrevBlock              = errors.New("no previous block")
+	errNoSource                 = errors.New("no source for value")
+	errNonemptyExtHash          = errors.New("non-empty extension hash")
+	errOverflow                 = errors.New("arithmetic overflow/underflow")
+	errPosition                 = errors.New("invalid source or destination position")
+	errTxVersion                = errors.New("invalid transaction version")
+	errUnbalanced               = errors.New("unbalanced")
+	errUntimelyTransaction      = errors.New("block timestamp outside transaction time range")
+	errVersionRegression        = errors.New("version regression")
+	errWrongCoinbaseTransaction = errors.New("wrong coinbase transaction")
 )
 
 func checkValid(vs *validationState, e bc.Entry) (err error) {
@@ -103,13 +101,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 
 	switch e := e.(type) {
 	case *bc.TxHeader:
-		// This does only part of the work of validating a tx header. The
-		// block-related parts of tx validation are in ValidateBlock.
-		if e.MaxTimeMs > 0 {
-			if e.MaxTimeMs < e.MinTimeMs {
-				return errors.WithDetailf(errBadTimeRange, "min time %d, max time %d", e.MinTimeMs, e.MaxTimeMs)
-			}
-		}
 
 		for i, resID := range e.ResultIds {
 			resultEntry := vs.tx.Entries[*resID]
@@ -129,6 +120,11 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			if e.ExtHash != nil && !e.ExtHash.IsZero() {
 				return errNonemptyExtHash
 			}
+		}
+
+	case *bc.Coinbase:
+		if vs.block == nil || len(vs.block.Transactions) == 0 || vs.block.Transactions[0] != vs.tx {
+			return errWrongCoinbaseTransaction
 		}
 
 	case *bc.Mux:

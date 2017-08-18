@@ -186,13 +186,6 @@ func TestTxValidation(t *testing.T) {
 			},
 		},
 		{
-			desc: "misordered tx time range",
-			f: func() {
-				tx.MinTimeMs = tx.MaxTimeMs + 1
-			},
-			err: errBadTimeRange,
-		},
-		{
 			desc: "empty tx results",
 			f: func() {
 				tx.ResultIds = nil
