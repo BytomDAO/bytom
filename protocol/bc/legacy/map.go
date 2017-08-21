@@ -161,6 +161,17 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		}
 	}
 
+	if len(tx.Inputs) == 0 && len(tx.Outputs) == 1 {
+		cb := bc.NewCoinbase()
+		cbId := addEntry(cb)
+
+		out := tx.Outputs[0]
+		muxSources[0] = &bc.ValueSource{
+			Ref:   &cbId,
+			Value: &out.AssetAmount,
+		}
+	}
+
 	mux := bc.NewMux(muxSources, &bc.Program{VmVersion: 1, Code: []byte{byte(vm.OP_TRUE)}})
 	muxID := addEntry(mux)
 
@@ -170,6 +181,12 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 	for _, iss := range issuances {
 		iss.SetDestination(&muxID, iss.Value, iss.Ordinal)
+	}
+
+	if len(tx.Inputs) == 0 && len(tx.Outputs) == 1 {
+		cbId := muxSources[0].Ref
+		cb := entryMap[*cbId].(*bc.Coinbase)
+		cb.SetDestination(&muxID, muxSources[0].Value, 0)
 	}
 
 	var resultIDs []*bc.Hash
