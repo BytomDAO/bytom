@@ -193,6 +193,7 @@ func (vm *virtualMachine) top() ([]byte, error) {
 // positive cost decreases runlimit, negative cost increases it
 func (vm *virtualMachine) applyCost(n int64) error {
 	if n > vm.runLimit {
+		vm.runLimit = 0
 		return ErrRunLimitExceeded
 	}
 	vm.runLimit -= n

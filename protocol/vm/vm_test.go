@@ -174,6 +174,7 @@ func TestVerifyTxInput(t *testing.T) {
 	cases := []struct {
 		vctx    *Context
 		wantErr error
+		gasLeft int64
 	}{
 		{
 			vctx: &Context{
@@ -181,10 +182,12 @@ func TestVerifyTxInput(t *testing.T) {
 				Code:      []byte{byte(OP_ADD), byte(OP_5), byte(OP_NUMEQUAL)},
 				Arguments: [][]byte{{2}, {3}},
 			},
+			gasLeft: 9986,
 		},
 		{
 			vctx:    &Context{VMVersion: 2},
 			wantErr: ErrUnsupportedVM,
+			gasLeft: 10000,
 		},
 		{
 			vctx: &Context{
@@ -193,13 +196,17 @@ func TestVerifyTxInput(t *testing.T) {
 				Arguments: [][]byte{make([]byte, 50001)},
 			},
 			wantErr: ErrRunLimitExceeded,
+			gasLeft: 0,
 		},
 	}
 
 	for _, c := range cases {
-		_, gotErr := Verify(c.vctx, 10000)
+		gasLeft, gotErr := Verify(c.vctx, 10000)
 		if errors.Root(gotErr) != c.wantErr {
 			t.Errorf("VerifyTxInput(%+v) err = %v want %v", c.vctx, gotErr, c.wantErr)
+		}
+		if gasLeft != c.gasLeft {
+			t.Errorf("VerifyTxInput(%+v) err = gasLeft doesn't match", c.vctx)
 		}
 	}
 }
