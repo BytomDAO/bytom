@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
     "time"
+	"net/http"
 
 	wire "github.com/tendermint/go-wire"
 	"github.com/bytom/p2p"
@@ -13,6 +14,11 @@ import (
     "github.com/bytom/protocol"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/bytom/blockchain/txdb"
+	"github.com/bytom/blockchain/account"
+	//"github.com/bytom/net/http/gzip"
+	//"github.com/bytom/net/http/httpjson"
+	//"github.com/bytom/net/http/limit"
+	//"github.com/bytom/net/http/static"
 )
 
 const (
@@ -50,7 +56,9 @@ type BlockchainReactor struct {
 //	store        *MemStore
     chain        *protocol.Chain
 	store        *txdb.Store
+	accounts	 *account.Manager
 	pool         *BlockPool
+	mux          *http.ServeMux
 	fastSync     bool
 	requestsCh   chan BlockRequest
 	timeoutsCh   chan string
@@ -59,7 +67,7 @@ type BlockchainReactor struct {
 	evsw types.EventSwitch
 }
 
-func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, fastSync bool) *BlockchainReactor {
     requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
     timeoutsCh    := make(chan string, defaultChannelCapacity)
     pool := NewBlockPool(
@@ -69,9 +77,10 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, fastSync boo
     )
     bcR := &BlockchainReactor {
         chain:         chain,
-        fastSync:      fastSync,
-        pool:          pool,
         store:         store,
+		accounts:      accounts,
+        pool:          pool,
+        fastSync:      fastSync,
         requestsCh:    requestsCh,
         timeoutsCh:   timeoutsCh,
     }

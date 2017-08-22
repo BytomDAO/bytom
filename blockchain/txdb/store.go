@@ -11,7 +11,6 @@ import (
 	"github.com/bytom/protocol/state"
     dbm "github.com/tendermint/tmlibs/db"
 	. "github.com/tendermint/tmlibs/common"
-
 )
 
 // A Store encapsulates storage for blockchain validation.
@@ -102,6 +101,14 @@ func (s *Store) GetBlock(height uint64) (*legacy.Block, error) {
 	return s.cache.lookup(height)
 }
 
+func (s *Store) GetRawBlock(height uint64) ([]byte, error) {
+	bytez := s.db.Get(calcBlockKey(height))
+	if bytez == nil {
+		return nil , errors.New("querying blocks from the db null")
+	}
+	return bytez, nil
+}
+
 // LatestSnapshot returns the most recent state snapshot stored in
 // the database and its corresponding block height.
 func (s *Store) LatestSnapshot(ctx context.Context) (*state.Snapshot, uint64, error) {
@@ -118,6 +125,7 @@ func (s *Store) LatestSnapshotInfo(ctx context.Context) (height uint64, size uin
 	err = s.db.QueryRowContext(ctx, q).Scan(&height, &size)
 	return height, size, err
 }
+*/
 
 // GetSnapshot returns the state snapshot stored at the provided height,
 // in Chain Core's binary protobuf representation. If no snapshot exists
@@ -125,7 +133,6 @@ func (s *Store) LatestSnapshotInfo(ctx context.Context) (height uint64, size uin
 func (s *Store) GetSnapshot(ctx context.Context, height uint64) ([]byte, error) {
 	return getRawSnapshot(ctx, s.db, height)
 }
-*/
 
 // SaveBlock persists a new block in the database.
 func (s *Store) SaveBlock(block *legacy.Block) error {

@@ -131,15 +131,12 @@ func getStateSnapshot(ctx context.Context, db dbm.DB) (*state.Snapshot, uint64, 
 	return snapshot, height, nil
 }
 
-/*
 // getRawSnapshot returns the raw, protobuf-encoded snapshot data at the
 // provided height.
-func getRawSnapshot(ctx context.Context, db pg.DB, height uint64) (data []byte, err error) {
-	const q = `SELECT data FROM snapshots WHERE height = $1`
-	err = db.QueryRowContext(ctx, q, height).Scan(&data)
-	if err == sql.ErrNoRows {
-		return nil, pg.ErrUserInputNotFound
+func getRawSnapshot(ctx context.Context, db dbm.DB, height uint64) (data []byte, err error) {
+	bytez := db.Get(calcSnapshotKey(height))
+	if bytez == nil {
+		return nil, errors.New("no this height snapshot.")
 	}
-	return data, err
+	return bytez, nil
 }
-*/

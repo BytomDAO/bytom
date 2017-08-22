@@ -101,7 +101,9 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
     chain.MaxIssuanceWindow = bc.MillisDuration(c.MaxIssuanceWindowMs)
     */
 
-    bcReactor := bc.NewBlockchainReactor(store, chain, fastSync)
+    accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
+    accounts := account.NewManager(accounts_db, chain)
+    bcReactor := bc.NewBlockchainReactor(store, chain, accounts, fastSync)
     bcReactor.SetLogger(logger.With("module", "blockchain"))
     sw.AddReactor("BLOCKCHAIN", bcReactor)
 
@@ -127,8 +129,6 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 			logger.Error("Profile server", "error", http.ListenAndServe(profileHost, nil))
 		}()
 	}
-    accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
-    accounts := account.NewManager(accounts_db, chain)
 
 	node := &Node{
 		config:        config,
