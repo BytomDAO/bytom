@@ -125,6 +125,7 @@ func (s *Store) LatestSnapshotInfo(ctx context.Context) (height uint64, size uin
 	err = s.db.QueryRowContext(ctx, q).Scan(&height, &size)
 	return height, size, err
 }
+*/
 
 // GetSnapshot returns the state snapshot stored at the provided height,
 // in Chain Core's binary protobuf representation. If no snapshot exists
@@ -132,7 +133,6 @@ func (s *Store) LatestSnapshotInfo(ctx context.Context) (height uint64, size uin
 func (s *Store) GetSnapshot(ctx context.Context, height uint64) ([]byte, error) {
 	return getRawSnapshot(ctx, s.db, height)
 }
-*/
 
 // SaveBlock persists a new block in the database.
 func (s *Store) SaveBlock(block *legacy.Block) error {
