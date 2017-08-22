@@ -71,6 +71,49 @@ func TestOutputIDAndNonceOp(t *testing.T) {
 	}
 }
 
+func TestBlockHeigh(t *testing.T) {
+	var blockHeigh uint64 = 6666
+
+	prog, err := Assemble("BLOCKHEIGH 6666 NUMEQUAL")
+	if err != nil {
+		t.Fatal(err)
+	}
+	vm := &virtualMachine{
+		runLimit: 50000,
+		program:  prog,
+		context:  &Context{BlockHeigh: &blockHeigh},
+	}
+	err = vm.run()
+	if err != nil {
+		t.Errorf("got error %s, expected none", err)
+	}
+	if vm.falseResult() {
+		t.Error("result is false, want success")
+	}
+
+	prog, err = Assemble("BLOCKHEIGH 7777 NUMEQUAL")
+	if err != nil {
+		t.Fatal(err)
+	}
+	vm = &virtualMachine{
+		runLimit: 50000,
+		program:  prog,
+		context:  &Context{BlockHeigh: &blockHeigh},
+	}
+	err = vm.run()
+	if err == nil && vm.falseResult() {
+		err = ErrFalseVMResult
+	}
+	switch err {
+	case nil:
+		t.Error("got ok result, expected failure")
+	case ErrFalseVMResult:
+		// ok
+	default:
+		t.Errorf("got error %s, expected ErrFalseVMResult", err)
+	}
+}
+
 func TestIntrospectionOps(t *testing.T) {
 	// arbitrary
 	entryID := mustDecodeHex("2e68d78cdeaa98944c12512cf9c719eb4881e9afb61e4b766df5f369aee6392c")
