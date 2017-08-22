@@ -11,7 +11,6 @@ import (
 	"github.com/bytom/protocol/state"
     dbm "github.com/tendermint/tmlibs/db"
 	. "github.com/tendermint/tmlibs/common"
-
 )
 
 // A Store encapsulates storage for blockchain validation.
@@ -100,6 +99,14 @@ func (s *Store) Height() uint64 {
 
 func (s *Store) GetBlock(height uint64) (*legacy.Block, error) {
 	return s.cache.lookup(height)
+}
+
+func (s *Store) GetRawBlock(height uint64) ([]byte, error) {
+	bytez := s.db.Get(calcBlockKey(height))
+	if bytez == nil {
+		return nil , errors.New("querying blocks from the db null")
+	}
+	return bytez, nil
 }
 
 // LatestSnapshot returns the most recent state snapshot stored in
