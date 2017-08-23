@@ -7,11 +7,11 @@ import (
 )
 
 var skipFunc = map[string]bool{
-	"chain/log.Printkv":            true,
-	"chain/log.Printf":             true,
-	"chain/log.Error":              true,
-	"chain/log.Fatalkv":            true,
-	"chain/log.RecoverAndLogError": true,
+	"bytom/log.Printkv":            true,
+	"bytom/log.Printf":             true,
+	"bytom/log.Error":              true,
+	"bytom/log.Fatalkv":            true,
+	"bytom/log.RecoverAndLogError": true,
 }
 
 // SkipFunc removes the named function from stack traces
