@@ -2,9 +2,13 @@ package node
 
 import (
     "context"
+	"crypto/tls"
 	"net/http"
 	"strings"
     "net"
+	"sync"
+	"os"
+	"time"
 
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
@@ -24,8 +28,20 @@ import (
     "github.com/bytom/blockchain/account"
     "github.com/bytom/protocol"
     "github.com/bytom/blockchain/txdb"
+	"github.com/bytom/net/http/reqid"
+	"github.com/bytom/net/http/static"
+	"github.com/bytom/generated/dashboard"
+	"github.com/bytom/env"
+	"github.com/kr/secureheader"
+	bytomlog "github.com/bytom/log"
+	"github.com/bytom/errors"
 
 	_ "net/http/pprof"
+)
+
+const (
+    httpReadTimeout  = 2 * time.Minute
+	httpWriteTimeout = time.Hour
 )
 
 type Node struct {
@@ -49,10 +65,117 @@ type Node struct {
     rpcListeners     []net.Listener              // rpc servers
 }
 
+var (
+    // config vars
+	rootCAs       = env.String("ROOT_CA_CERTS", "") // file path
+	listenAddr    = env.String("LISTEN", ":1999")
+	splunkAddr    = os.Getenv("SPLUNKADDR")
+	logFile       = os.Getenv("LOGFILE")
+	logSize       = env.Int("LOGSIZE", 5e6) // 5MB
+	logCount      = env.Int("LOGCOUNT", 9)
+	logQueries    = env.Bool("LOG_QUERIES", false)
+	maxDBConns    = env.Int("MAXDBCONNS", 10)           // set to 100 in prod
+	rpsToken      = env.Int("RATELIMIT_TOKEN", 0)       // reqs/sec
+	rpsRemoteAddr = env.Int("RATELIMIT_REMOTE_ADDR", 0) // reqs/sec
+	indexTxs      = env.Bool("INDEX_TRANSACTIONS", true)
+	home          = bc.HomeDirFromEnvironment()
+	bootURL       = env.String("BOOTURL", "")
+	// build vars; initialized by the linker
+	buildTag    = "?"
+	buildCommit = "?"
+	buildDate   = "?"
+	race []interface{} // initialized in race.go
+)
+
+
 func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
 	// Get PrivValidator
 	privValidator := types.LoadOrGenPrivValidator(config.PrivValidatorFile(), logger)
 	return NewNode(config, privValidator, logger)
+}
+
+func RedirectHandler(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	    if req.URL.Path == "/" {
+			http.Redirect(w, req, "/dashboard/", http.StatusFound)
+			return
+		}
+		next.ServeHTTP(w, req)
+	})
+}
+
+func webAssetsHandler(next http.Handler) http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/dashboard/", http.StripPrefix("/dashboard/", static.Handler{
+		Assets:  dashboard.Files,
+		Default: "index.html",
+	}))
+	mux.Handle("/", next)
+	return mux
+}
+
+type waitHandler struct {
+    h  http.Handler
+	wg sync.WaitGroup
+}
+
+func (wh *waitHandler) Set(h http.Handler) {
+    wh.h = h
+	wh.wg.Done()
+}
+
+func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	wh.wg.Wait()
+	wh.h.ServeHTTP(w, req)
+}
+
+func rpcInit() {
+	// We add handlers to our serve mux in two phases. In the first phase, we start
+	// listening on the raft routes (`/raft`). This allows us to do things like
+	// read the config value stored in raft storage. (A new node in a raft cluster
+	// can't read values without kicking off a consensus round, which in turn
+	// requires this node to be listening for raft requests.)
+	//
+	// Once this node is able to read the config value, it can set up the remaining
+	// cored functionality, and add the rest of the core routes to the serve mux.
+	// That is the second phase.
+	//
+	// The waitHandler accepts incoming requests, but blocks until its underlying
+	// handler is set, when the second phase is complete.
+	var coreHandler waitHandler
+	coreHandler.wg.Add(1)
+	mux := http.NewServeMux()
+	mux.Handle("/", &coreHandler)
+
+	var handler http.Handler = mux
+	//handler = core.AuthHandler(handler, raftDB, accessTokens, tlsConfig)
+	handler = RedirectHandler(handler)
+	handler = reqid.Handler(handler)
+
+	secureheader.DefaultConfig.PermitClearLoopback = true
+	secureheader.DefaultConfig.HTTPSRedirect = false
+	secureheader.DefaultConfig.Next = handler
+
+	server := &http.Server{
+		// Note: we should not set TLSConfig here;
+		// we took care of TLS with the listener in maybeUseTLS.
+		Handler:      secureheader.DefaultConfig,
+		ReadTimeout:  httpReadTimeout,
+		WriteTimeout: httpWriteTimeout,
+		// Disable HTTP/2 for now until the Go implementation is more stable.
+		// https://github.com/golang/go/issues/16450
+		// https://github.com/golang/go/issues/17071
+		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
+	}
+	listener, _ := net.Listen("tcp", *listenAddr)
+
+	// The `Serve` call has to happen in its own goroutine because
+	// it's blocking and we need to proceed to the rest of the core setup after
+	// we call it.
+	go func() {
+		err := server.Serve(listener)
+		bytomlog.Fatalkv(context.Background(), bytomlog.KeyError, errors.Wrap(err, "Serve"))
+	}()
 }
 
 func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.Logger) *Node {

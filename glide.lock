@@ -147,6 +147,7 @@ imports:
 - name: github.com/golang/text
 - name: github.com/golang/tools
 - name: github.com/golang/time
+- name: github.com/kr/secureheader
 - name: golang.org/x/sys
   version: e62c3de784db939836898e5c19ffd41bece347da
   subpackages:
