@@ -107,6 +107,11 @@ func (tx *TxData) HasIssuance() bool {
 	return false
 }
 
+// IsCoinbase returns true if this transaction is coinbase transaction.
+func (tx *TxData) IsCoinbase() bool {
+	return len(tx.Inputs) == 0 && len(tx.Outputs) == 1
+}
+
 func (tx *TxData) UnmarshalText(p []byte) error {
 	b := make([]byte, hex.DecodedLen(len(p)))
 	_, err := hex.Decode(b, p)

@@ -127,6 +127,11 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (uint8, error) {
 		return 0, err
 	}
 
+	_, err = blockchain.ReadExtensibleString(r, bh.BlockCommitment.readFrom)
+	if err != nil {
+		return 0, err
+	}
+
 	bh.Nonce, err = blockchain.ReadVarint63(r)
 	if err != nil {
 		return 0, err
@@ -165,6 +170,10 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) error {
 		return err
 	}
 	_, err = blockchain.WriteVarint63(w, bh.TimestampMS)
+	if err != nil {
+		return err
+	}
+	_, err = blockchain.WriteExtensibleString(w, nil, bh.BlockCommitment.writeTo)
 	if err != nil {
 		return err
 	}
