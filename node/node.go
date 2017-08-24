@@ -130,16 +130,6 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func rpcInit() {
-	// We add handlers to our serve mux in two phases. In the first phase, we start
-	// listening on the raft routes (`/raft`). This allows us to do things like
-	// read the config value stored in raft storage. (A new node in a raft cluster
-	// can't read values without kicking off a consensus round, which in turn
-	// requires this node to be listening for raft requests.)
-	//
-	// Once this node is able to read the config value, it can set up the remaining
-	// cored functionality, and add the rest of the core routes to the serve mux.
-	// That is the second phase.
-	//
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
 	var coreHandler waitHandler
@@ -230,6 +220,7 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
     bcReactor.SetLogger(logger.With("module", "blockchain"))
     sw.AddReactor("BLOCKCHAIN", bcReactor)
 
+	rpcInit()
 	// Optionally, start the pex reactor
 	var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
