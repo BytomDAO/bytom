@@ -9,8 +9,8 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/bctest"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/testutil"
 
@@ -280,11 +280,11 @@ func TestTxValidation(t *testing.T) {
 			fixture = sample(t, nil)
 			tx = legacy.NewTx(*fixture.tx).Tx
 			vs = &validationState{
-				block:   nil,
+				block:   mockBlock(),
 				tx:      tx,
 				entryID: tx.ID,
 				gas: &gasState{
-					gasLeft: uint64(1000),
+					gasLeft: int64(80000),
 					gasUsed: 0,
 				},
 				cache: make(map[bc.Hash]error),
@@ -297,22 +297,11 @@ func TestTxValidation(t *testing.T) {
 				c.f()
 			}
 			err := checkValid(vs, tx.TxHeader)
+
 			if rootErr(err) != c.err {
 				t.Errorf("got error %s, want %s; validationState is:\n%s", err, c.err, spew.Sdump(vs))
 			}
 		})
-	}
-}
-
-func TestNoncelessIssuance(t *testing.T) {
-	tx := bctest.NewIssuanceTx(t, bc.EmptyStringHash, func(tx *legacy.Tx) {
-		// Remove the issuance nonce.
-		tx.Inputs[0].TypedInput.(*legacy.IssuanceInput).Nonce = nil
-	})
-
-	_, err := ValidateTx(legacy.MapTx(&tx.TxData), nil)
-	if errors.Root(err) != bc.ErrMissingEntry {
-		t.Fatalf("got %s, want %s", err, bc.ErrMissingEntry)
 	}
 }
 
@@ -430,6 +419,9 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 			legacy.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2, *newHash(9), []byte{10}),
 		}
 	}
+
+	result.txInputs = append(result.txInputs, mockGasTxInput())
+
 	if len(result.txOutputs) == 0 {
 		cp1, err := vm.Assemble("ADD 17 NUMEQUAL")
 		if err != nil {
@@ -465,6 +457,18 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 	}
 
 	return &result
+}
+
+func mockBlock() *bc.Block {
+	return &bc.Block{
+		BlockHeader: &bc.BlockHeader{
+			Height: 666,
+		},
+	}
+}
+
+func mockGasTxInput() *legacy.TxInput {
+	return legacy.NewSpendInput([][]byte{}, *newHash(8), *validation.BTMAssetID, 100000000, 0, []byte{byte(vm.OP_TRUE)}, *newHash(9), []byte{})
 }
 
 // Like errors.Root, but also unwraps vm.Error objects.

@@ -15,6 +15,10 @@ func (bh *BlockHeader) writeForHash(w io.Writer) {
 	mustWriteForHash(w, bh.AssetsRoot)
 }
 
+func (bh *BlockHeader) BlockReward() uint64 {
+	return uint64(5000000000)
+}
+
 // NewBlockHeader creates a new BlockHeader and populates
 // its body.
 func NewBlockHeader(version, height uint64, previousBlockID *Hash, timestampMS uint64, transactionsRoot, assetsRoot *Hash, nonce, bits uint64) *BlockHeader {

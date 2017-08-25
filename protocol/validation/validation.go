@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	defaultGasLimit = uint64(80000)
-	gasRate         = uint64(1000)
+	defaultGasLimit = int64(80000)
+	gasRate         = int64(1000)
 )
 
 var BTMAssetID = &bc.AssetID{
@@ -22,22 +22,38 @@ var BTMAssetID = &bc.AssetID{
 }
 
 type gasState struct {
-	gasLeft  uint64
-	gasUsed  uint64
-	BTMValue uint64
+	gasLeft  int64
+	gasUsed  int64
+	BTMValue int64
 }
 
-func (g *gasState) setGas(BTMValue uint64) {
-	g.BTMValue = BTMValue
-	gasAmount := BTMValue / gasRate
-	if gasAmount < defaultGasLimit {
-		g.gasLeft = gasAmount
+func (g *gasState) setGas(BTMValue int64) error {
+	if BTMValue < 0 {
+		return errGasCalculate
 	}
+	g.BTMValue = BTMValue
+
+	if gasAmount, ok := checked.DivInt64(BTMValue, gasRate); ok {
+		if gasAmount < defaultGasLimit {
+			g.gasLeft = gasAmount
+		}
+	} else {
+		return errGasCalculate
+	}
+	return nil
 }
 
-func (g *gasState) updateUsage(gasLeft int64) {
-	g.gasUsed += g.gasLeft - uint64(gasLeft)
-	g.gasLeft = uint64(gasLeft)
+func (g *gasState) updateUsage(gasLeft int64) error {
+	if gasLeft < 0 {
+		return errGasCalculate
+	}
+	if gasUsed, ok := checked.SubInt64(g.gasLeft, gasLeft); ok {
+		g.gasUsed += gasUsed
+		g.gasLeft = gasLeft
+	} else {
+		return errGasCalculate
+	}
+	return nil
 }
 
 // validationState contains the context that must propagate through
@@ -65,6 +81,7 @@ type validationState struct {
 }
 
 var (
+	errGasCalculate             = errors.New("gas usage calculate got a math error")
 	errEmptyResults             = errors.New("transaction has no results")
 	errMismatchedAssetID        = errors.New("mismatched asset id")
 	errMismatchedBlock          = errors.New("mismatched block")
@@ -163,10 +180,11 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 		if amount, ok := parity[*BTMAssetID]; ok {
-			vs.gas.setGas(uint64(amount))
+			if err = vs.gas.setGas(amount); err != nil {
+				return err
+			}
 		} else {
-			//TODO: uncommon this code after fix the unit test
-			//return errors.WithDetailf(errNoGas, "transaction should have BTM asset as gas input")
+			vs.gas.setGas(0)
 		}
 
 		for assetID, amount := range parity {
@@ -175,10 +193,12 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-		gasLeft, err := vm.Verify(NewTxVMContext(vs.tx, e, e.Program, e.WitnessArguments), int64(vs.gas.gasLeft))
-		vs.gas.updateUsage(gasLeft)
+		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.Program, e.WitnessArguments), vs.gas.gasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking mux program")
+		}
+		if err = vs.gas.updateUsage(gasLeft); err != nil {
+			return err
 		}
 
 		for i, src := range e.Sources {
@@ -204,10 +224,12 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 
 	case *bc.Nonce:
 		//TODO: add block heigh range check on the control program
-		gasLeft, err := vm.Verify(NewTxVMContext(vs.tx, e, e.Program, e.WitnessArguments), int64(vs.gas.gasLeft))
-		vs.gas.updateUsage(gasLeft)
+		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.Program, e.WitnessArguments), vs.gas.gasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking nonce program")
+		}
+		if err = vs.gas.updateUsage(gasLeft); err != nil {
+			return err
 		}
 
 		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
@@ -249,10 +271,12 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrapf(bc.ErrMissingEntry, "entry for issuance anchor %x not found", e.AnchorId.Bytes())
 		}
 
-		gasLeft, err := vm.Verify(NewTxVMContext(vs.tx, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), int64(vs.gas.gasLeft))
-		vs.gas.updateUsage(gasLeft)
+		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), vs.gas.gasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking issuance program")
+		}
+		if err = vs.gas.updateUsage(gasLeft); err != nil {
+			return err
 		}
 
 		var anchored *bc.Hash
@@ -300,10 +324,12 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err != nil {
 			return errors.Wrap(err, "getting spend prevout")
 		}
-		gasLeft, err := vm.Verify(NewTxVMContext(vs.tx, e, spentOutput.ControlProgram, e.WitnessArguments), int64(vs.gas.gasLeft))
-		vs.gas.updateUsage(gasLeft)
+		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, spentOutput.ControlProgram, e.WitnessArguments), vs.gas.gasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking control program")
+		}
+		if err = vs.gas.updateUsage(gasLeft); err != nil {
+			return err
 		}
 
 		eq, err := spentOutput.Source.Value.Equal(e.WitnessDestination.Value)
@@ -480,7 +506,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 		}
 	}
 
-	coinbaseValue := uint64(0)
+	coinbaseValue := b.BlockHeader.BlockReward()
 	for i, tx := range b.Transactions {
 		if b.Version == 1 && tx.Version != 1 {
 			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)
@@ -496,17 +522,17 @@ func ValidateBlock(b, prev *bc.Block) error {
 		if err != nil {
 			return errors.Wrapf(err, "validity of transaction %d of %d", i, len(b.Transactions))
 		}
-		coinbaseValue += *txBTMValue
+		coinbaseValue += uint64(txBTMValue)
 	}
 
 	// check the coinbase output entry value
-	coinbaseOutput := b.Transactions[0].Entries[b.Transactions[0].SpentOutputIDs[0]]
-	switch coinbaseOutput := coinbaseOutput.(type) {
-	case *bc.Output:
-		if coinbaseOutput.Source.Value.Amount != coinbaseValue {
+	cbTx := b.Transactions[0]
+	cbOutput := cbTx.Entries[cbTx.SpentOutputIDs[0]]
+	if cbOutput, ok := cbOutput.(*bc.Output); ok {
+		if cbOutput.Source.Value.Amount != coinbaseValue {
 			return errWrongCoinbaseTransaction
 		}
-	default:
+	} else {
 		return errWrongCoinbaseTransaction
 	}
 
@@ -540,7 +566,7 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 }
 
 // ValidateTx validates a transaction.
-func ValidateTx(tx *bc.Tx, block *bc.Block) (*uint64, error) {
+func ValidateTx(tx *bc.Tx, block *bc.Block) (int64, error) {
 	//TODO: handle the gas limit
 	vs := &validationState{
 		block:   block,
@@ -552,5 +578,6 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*uint64, error) {
 		cache: make(map[bc.Hash]error),
 	}
 
-	return &vs.gas.BTMValue, checkValid(vs, tx.TxHeader)
+	err := checkValid(vs, tx.TxHeader)
+	return vs.gas.BTMValue, err
 }
