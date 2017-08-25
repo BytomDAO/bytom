@@ -20,7 +20,8 @@ import (
 	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	//"github.com/bytom/net/http/limit"
-	//"github.com/bytom/net/http/static"
+	"github.com/bytom/net/http/static"
+	"github.com/bytom/generated/dashboard"
 )
 
 const (
@@ -39,6 +40,7 @@ const (
 	// check if we should switch to consensus reactor
 	switchToConsensusIntervalSeconds = 1
 	maxBlockchainResponseSize        = types.MaxBlockSize + 2
+	crosscoreRPCPrefix = "/rpc/"
 )
 
 /*
@@ -100,10 +102,53 @@ func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{},
 	//}
 }
 
+func webAssetsHandler(next http.Handler) http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/dashboard/", http.StripPrefix("/dashboard/", static.Handler{
+		Assets:  dashboard.Files,
+		Default: "index.html",
+	}))
+	mux.Handle("/", next)
+	return mux
+}
+
+func maxBytes(h http.Handler) http.Handler {
+    const maxReqSize = 1e7 // 10MB
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		// A block can easily be bigger than maxReqSize, but everything
+		// else should be pretty small.
+		if req.URL.Path != crosscoreRPCPrefix+"signer/sign-block" {
+			req.Body = http.MaxBytesReader(w, req.Body, maxReqSize)
+		}
+		h.ServeHTTP(w, req)
+	})
+}
+
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
+
+    latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if l := latency(m, req); l != nil {
+			defer l.RecordSince(time.Now())
+		}
+		m.ServeHTTP(w, req)
+		})
+	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
+	handler = webAssetsHandler(handler)
+/*	handler = healthHandler(handler)
+	for _, l := range a.requestLimits {
+		handler = limit.Handler(handler, alwaysError(errRateLimited), l.perSecond, l.burst, l.key)
+	}
+	handler = gzip.Handler{Handler: handler}
+	handler = coreCounter(handler)
+	handler = timeoutContextHandler(handler)
+	if a.config != nil && a.config.BlockchainId != nil {
+		handler = blockchainIDHandler(handler, a.config.BlockchainId.String())
+	}
+	*/
+	bcr.handler = handler
 }
 
 func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, fastSync bool) *BlockchainReactor {

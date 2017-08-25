@@ -142,6 +142,7 @@ imports:
   - log
   - merkle
   - test
+- name: github.com/codahale/hdrhistogram
 - name: github.com/golang/crypto
 - name: github.com/golang/net
 - name: github.com/golang/text

@@ -29,8 +29,8 @@ import (
     "github.com/bytom/protocol"
     "github.com/bytom/blockchain/txdb"
 	"github.com/bytom/net/http/reqid"
-	"github.com/bytom/net/http/static"
-	"github.com/bytom/generated/dashboard"
+//	"github.com/bytom/net/http/static"
+//	"github.com/bytom/generated/dashboard"
 	"github.com/bytom/env"
 	"github.com/kr/secureheader"
 	bytomlog "github.com/bytom/log"
@@ -104,15 +104,6 @@ func RedirectHandler(next http.Handler) http.Handler {
 	})
 }
 
-func webAssetsHandler(next http.Handler) http.Handler {
-	mux := http.NewServeMux()
-	mux.Handle("/dashboard/", http.StripPrefix("/dashboard/", static.Handler{
-		Assets:  dashboard.Files,
-		Default: "index.html",
-	}))
-	mux.Handle("/", next)
-	return mux
-}
 
 type waitHandler struct {
     h  http.Handler

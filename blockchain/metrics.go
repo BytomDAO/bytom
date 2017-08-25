@@ -1,4 +1,4 @@
-package core
+package blockchain
 
 import (
 	"expvar"
@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"chain/metrics"
-	"chain/net/http/reqid"
+	"github.com/bytom/metrics"
+	"github.com/bytom/net/http/reqid"
 )
 
 var (
