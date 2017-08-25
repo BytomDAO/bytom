@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"reflect"
     "time"
@@ -15,8 +16,9 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/log"
 	//"github.com/bytom/net/http/gzip"
-	//"github.com/bytom/net/http/httpjson"
+	"github.com/bytom/net/http/httpjson"
 	//"github.com/bytom/net/http/limit"
 	//"github.com/bytom/net/http/static"
 )
@@ -59,12 +61,49 @@ type BlockchainReactor struct {
 	accounts	 *account.Manager
 	pool         *BlockPool
 	mux          *http.ServeMux
+	handler      http.Handler
 	fastSync     bool
 	requestsCh   chan BlockRequest
 	timeoutsCh   chan string
 //	lastBlock    *types.Block
 
 	evsw types.EventSwitch
+}
+
+func jsonHandler(f interface{}) http.Handler {
+    h, err := httpjson.Handler(f, errorFormatter.Write)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}
+
+func alwaysError(err error) http.Handler {
+	return jsonHandler(func() error { return err })
+}
+
+func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+    bcr.handler.ServeHTTP(rw, req)
+}
+
+func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
+    //if a.config == nil {
+		// never configured
+	log.Printf(ctx, "-------info-----")
+	return map[string]interface{}{
+		"is_configured": false,
+		"version":       "0.001",
+		"build_commit":  "----",
+		"build_date":    "------",
+		"build_config":  "---------",
+	}, nil
+	//}
+}
+
+func (bcr *BlockchainReactor) BuildHander() {
+	m := bcr.mux
+	m.Handle("/", alwaysError(errors.New("not Found")))
+	m.Handle("/info", jsonHandler(bcr.info))
 }
 
 func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, fastSync bool) *BlockchainReactor {
