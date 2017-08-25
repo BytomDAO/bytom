@@ -102,6 +102,10 @@ func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{},
 	//}
 }
 
+func (bcr *BlockchainReactor) createblockkey(ctx context.Context) {
+	log.Printf(ctx,"creat-block-key")
+}
+
 func webAssetsHandler(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/dashboard/", http.StripPrefix("/dashboard/", static.Handler{
@@ -128,11 +132,11 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
+	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
 
     latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
 			defer l.RecordSince(time.Now())
-		}
 		m.ServeHTTP(w, req)
 		})
 	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
