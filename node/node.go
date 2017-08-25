@@ -129,7 +129,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	wh.h.ServeHTTP(w, req)
 }
 
-func rpcInit() {
+func rpcInit(h *bc.BlockchainReactor) {
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
 	var coreHandler waitHandler
@@ -166,6 +166,7 @@ func rpcInit() {
 		err := server.Serve(listener)
 		bytomlog.Fatalkv(context.Background(), bytomlog.KeyError, errors.Wrap(err, "Serve"))
 	}()
+	coreHandler.Set(h)
 }
 
 func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.Logger) *Node {
@@ -220,7 +221,7 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
     bcReactor.SetLogger(logger.With("module", "blockchain"))
     sw.AddReactor("BLOCKCHAIN", bcReactor)
 
-	rpcInit()
+	rpcInit(bcReactor)
 	// Optionally, start the pex reactor
 	var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {

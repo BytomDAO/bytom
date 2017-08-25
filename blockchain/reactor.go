@@ -119,6 +119,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *ac
         store:         store,
 		accounts:      accounts,
         pool:          pool,
+		mux:           http.NewServeMux(),
         fastSync:      fastSync,
         requestsCh:    requestsCh,
         timeoutsCh:   timeoutsCh,
@@ -130,6 +131,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *ac
 // OnStart implements BaseService
 func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
+	bcR.BuildHander()
     if bcR.fastSync {
         _, err := bcR.pool.Start()
         if err != nil {
