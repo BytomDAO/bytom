@@ -22,6 +22,106 @@ func init() {
 	spew.Config.DisableMethods = true
 }
 
+func TestGasStatus(t *testing.T) {
+	cases := []struct {
+		input  *gasState
+		output *gasState
+		f      func(*gasState) error
+		err    error
+	}{
+		{
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &gasState{
+				gasLeft:  10000 / gasRate,
+				gasUsed:  0,
+				BTMValue: 10000,
+			},
+			f: func(input *gasState) error {
+				return input.setGas(10000)
+			},
+			err: nil,
+		},
+		{
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			f: func(input *gasState) error {
+				return input.setGas(-10000)
+			},
+			err: errGasCalculate,
+		},
+		{
+			input: &gasState{
+				gasLeft:  defaultGasLimit,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &gasState{
+				gasLeft:  defaultGasLimit,
+				gasUsed:  0,
+				BTMValue: 80000000000,
+			},
+			f: func(input *gasState) error {
+				return input.setGas(80000000000)
+			},
+			err: nil,
+		},
+		{
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			f: func(input *gasState) error {
+				return input.updateUsage(-1)
+			},
+			err: errGasCalculate,
+		},
+		{
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &gasState{
+				gasLeft:  9999,
+				gasUsed:  1,
+				BTMValue: 0,
+			},
+			f: func(input *gasState) error {
+				return input.updateUsage(9999)
+			},
+			err: nil,
+		},
+	}
+
+	for _, c := range cases {
+		err := c.f(c.input)
+
+		if err != c.err {
+			t.Errorf("got error %s, want %s", err, c.err)
+		} else if *c.input != *c.output {
+			t.Errorf("got gasStatus %s, want %s;", c.input, c.output)
+		}
+	}
+}
+
 func TestTxValidation(t *testing.T) {
 	var (
 		tx      *bc.Tx
@@ -305,6 +405,104 @@ func TestTxValidation(t *testing.T) {
 	}
 }
 
+func TestValidateBlock(t *testing.T) {
+	cases := []struct {
+		block *bc.Block
+		err   error
+	}{
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 1,
+				},
+				Transactions: []*bc.Tx{mockCoinbaseTx(5000000000)},
+			},
+			err: nil,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 1,
+				},
+				Transactions: []*bc.Tx{mockCoinbaseTx(5000000001)},
+			},
+			err: errWrongCoinbaseTransaction,
+		},
+	}
+
+	for _, c := range cases {
+		txRoot, err := bc.MerkleRoot(c.block.Transactions)
+		if err != nil {
+			t.Errorf("computing transaction merkle root", err)
+			continue
+		}
+		c.block.TransactionsRoot = &txRoot
+		err = ValidateBlock(c.block, nil)
+
+		if rootErr(err) != c.err {
+			t.Errorf("got error %s, want %s", err, c.err)
+		}
+	}
+}
+
+func TestCoinbase(t *testing.T) {
+	CbTx := mockCoinbaseTx(5000000000)
+	errCbTx := legacy.MapTx(&legacy.TxData{
+		Outputs: []*legacy.TxOutput{
+			legacy.NewTxOutput(bc.AssetID{
+				V0: uint64(18446744073709551611),
+				V1: uint64(18446744073709551615),
+				V2: uint64(18446744073709551615),
+				V3: uint64(18446744073709551615),
+			}, 800000000000, []byte{1}, nil),
+		},
+	})
+	cases := []struct {
+		block *bc.Block
+		tx    *bc.Tx
+		err   error
+	}{
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 666,
+				},
+				Transactions: []*bc.Tx{errCbTx},
+			},
+			tx:  CbTx,
+			err: errWrongCoinbaseTransaction,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 666,
+				},
+				Transactions: []*bc.Tx{CbTx},
+			},
+			tx:  CbTx,
+			err: nil,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 666,
+				},
+				Transactions: []*bc.Tx{errCbTx},
+			},
+			tx:  errCbTx,
+			err: errWrongCoinbaseAsset,
+		},
+	}
+
+	for _, c := range cases {
+		_, err := ValidateTx(c.tx, c.block)
+
+		if rootErr(err) != c.err {
+			t.Errorf("got error %s, want %s", err, c.err)
+		}
+	}
+}
+
 func TestBlockHeaderValid(t *testing.T) {
 	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
 	baseBytes, _ := proto.Marshal(base)
@@ -465,6 +663,14 @@ func mockBlock() *bc.Block {
 			Height: 666,
 		},
 	}
+}
+
+func mockCoinbaseTx(amount uint64) *bc.Tx {
+	return legacy.MapTx(&legacy.TxData{
+		Outputs: []*legacy.TxOutput{
+			legacy.NewTxOutput(*BTMAssetID, amount, []byte{1}, nil),
+		},
+	})
 }
 
 func mockGasTxInput() *legacy.TxInput {

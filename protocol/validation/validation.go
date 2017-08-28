@@ -11,6 +11,7 @@ import (
 
 const (
 	defaultGasLimit = int64(80000)
+	muxGasCost      = int64(10)
 	gasRate         = int64(1000)
 )
 
@@ -34,7 +35,9 @@ func (g *gasState) setGas(BTMValue int64) error {
 	g.BTMValue = BTMValue
 
 	if gasAmount, ok := checked.DivInt64(BTMValue, gasRate); ok {
-		if gasAmount < defaultGasLimit {
+		if gasAmount == 0 {
+			g.gasLeft = muxGasCost
+		} else if gasAmount < defaultGasLimit {
 			g.gasLeft = gasAmount
 		}
 	} else {
@@ -145,7 +148,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errWrongCoinbaseTransaction
 		}
 
-		if e.WitnessDestination.Value.AssetId != BTMAssetID {
+		if *e.WitnessDestination.Value.AssetId != *BTMAssetID {
 			return errWrongCoinbaseAsset
 		}
 
@@ -527,7 +530,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 
 	// check the coinbase output entry value
 	cbTx := b.Transactions[0]
-	cbOutput := cbTx.Entries[cbTx.SpentOutputIDs[0]]
+	cbOutput := cbTx.Entries[*cbTx.TxHeader.ResultIds[0]]
 	if cbOutput, ok := cbOutput.(*bc.Output); ok {
 		if cbOutput.Source.Value.Amount != coinbaseValue {
 			return errWrongCoinbaseTransaction
