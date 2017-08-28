@@ -130,6 +130,7 @@ func maxBytes(h http.Handler) http.Handler {
 
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
+	m.Handle("/create-account", jsonHandler(bcr.createAccount))
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
