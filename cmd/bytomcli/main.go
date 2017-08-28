@@ -25,6 +25,7 @@ import (
 	"github.com/bytom/errors"
 //	"github.com/bytom/generated/rev"
 	"github.com/bytom/log"
+	"github.com/bytom/crypto/ed25519/chainkd"
 	//"github.com/bytom/protocol/bc"
 )
 
@@ -62,6 +63,7 @@ var commands = map[string]*command{
 	"grant":                {grant},
 	"revoke":               {revoke},
 	"wait":                 {wait},
+	"create-account":       {createAccount},
 }
 
 func main() {
@@ -475,4 +477,33 @@ func wait(client *rpc.Client, args []string) {
 
 		time.Sleep(500 * time.Millisecond)
 	}
+}
+
+func createAccount(client *rpc.Client, args []string) {
+	if len(args) != 1 {
+		fatalln("error: createAccount takes no args")
+	}
+	xprv, err := chainkd.NewXPrv(nil)
+	if err != nil {
+		fatalln("NewXprv error.")
+	}
+	xpub := xprv.XPub()
+	fmt.Printf("xprv:%v", xprv)
+	fmt.Printf("xpub:%v", xpub)
+	type Ins struct {
+	    RootXPubs []chainkd.XPub `json:"root_xpubs"`
+		Quorum    int
+		Alias     string
+		Tags      map[string]interface{}
+		ClientToken string `json:"client_token"`
+	}
+	var ins Ins
+	ins.RootXPubs[0] = xpub
+	ins.Quorum = 1
+	ins.Alias = "aa"
+	ins.ClientToken = args[0]
+	responses := make([]interface{}, 50)
+	client.Call(context.Background(), "/create-account", &ins, &responses)
+	//dieOnRPCError(err)
+	fmt.Printf("%v", responses)
 }
