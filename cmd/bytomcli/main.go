@@ -488,8 +488,8 @@ func createAccount(client *rpc.Client, args []string) {
 		fatalln("NewXprv error.")
 	}
 	xpub := xprv.XPub()
-	fmt.Printf("xprv:%v", xprv)
-	fmt.Printf("xpub:%v", xpub)
+	fmt.Printf("xprv:%v\n", xprv)
+	fmt.Printf("xpub:%v\n", xpub)
 	type Ins struct {
 	    RootXPubs []chainkd.XPub `json:"root_xpubs"`
 		Quorum    int
@@ -498,12 +498,13 @@ func createAccount(client *rpc.Client, args []string) {
 		ClientToken string `json:"client_token"`
 	}
 	var ins Ins
-	ins.RootXPubs[0] = xpub
+	ins.RootXPubs = []chainkd.XPub{xpub}
 	ins.Quorum = 1
 	ins.Alias = "aa"
+	ins.Tags = map[string]interface{}{"test_tag": "v0",}
 	ins.ClientToken = args[0]
 	responses := make([]interface{}, 50)
-	client.Call(context.Background(), "/create-account", &ins, &responses)
+	client.Call(context.Background(), "/create-account", &[]Ins{ins,}, &responses)
 	//dieOnRPCError(err)
-	fmt.Printf("%v", responses)
+	fmt.Printf("responses:%v\n", responses)
 }
