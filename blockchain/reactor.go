@@ -138,6 +138,7 @@ func (bcr *BlockchainReactor) BuildHander() {
     latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
 			defer l.RecordSince(time.Now())
+		}
 		m.ServeHTTP(w, req)
 		})
 	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
