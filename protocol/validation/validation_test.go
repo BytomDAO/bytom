@@ -428,6 +428,16 @@ func TestValidateBlock(t *testing.T) {
 			},
 			err: errWrongCoinbaseTransaction,
 		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height:         1,
+					SerializedSize: 88888888,
+				},
+				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
+			},
+			err: errWrongBlockSize,
+		},
 	}
 
 	for _, c := range cases {

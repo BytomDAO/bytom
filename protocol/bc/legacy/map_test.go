@@ -23,6 +23,9 @@ func TestMapTx(t *testing.T) {
 	if header.Version != 1 {
 		t.Errorf("header.Version is %d, expected 1", header.Version)
 	}
+	if header.SerializedSize != oldTx.SerializedSize {
+		t.Errorf("header.SerializedSize is %d, expected %d", header.SerializedSize, oldTx.SerializedSize)
+	}
 	if header.MinTimeMs != oldTx.MinTime {
 		t.Errorf("header.MinTimeMs is %d, expected %d", header.MinTimeMs, oldTx.MinTime)
 	}

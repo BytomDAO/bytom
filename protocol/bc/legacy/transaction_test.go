@@ -46,12 +46,13 @@ func TestTransaction(t *testing.T) {
 	}{
 		{
 			tx: NewTx(TxData{
-				Version:       1,
-				Inputs:        nil,
-				Outputs:       nil,
-				MinTime:       0,
-				MaxTime:       0,
-				ReferenceData: nil,
+				Version:        1,
+				SerializedSize: uint64(7),
+				Inputs:         nil,
+				Outputs:        nil,
+				MinTime:        0,
+				MaxTime:        0,
+				ReferenceData:  nil,
 			}),
 			hex: ("07" + // serflags
 				"01" + // transaction version
@@ -66,7 +67,8 @@ func TestTransaction(t *testing.T) {
 		},
 		{
 			tx: NewTx(TxData{
-				Version: 1,
+				Version:        1,
+				SerializedSize: uint64(159),
 				Inputs: []*TxInput{
 					NewIssuanceInput([]byte{10, 9, 8}, 1000000000000, []byte("input"), initialBlockHash, issuanceScript, [][]byte{[]byte{1, 2, 3}}, nil),
 				},
@@ -115,7 +117,8 @@ func TestTransaction(t *testing.T) {
 		},
 		{
 			tx: NewTx(TxData{
-				Version: 1,
+				Version:        1,
+				SerializedSize: uint64(235),
 				Inputs: []*TxInput{
 					NewSpendInput(nil, mustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), bc.AssetID{}, 1000000000000, 1, []byte{1}, bc.Hash{}, []byte("input")),
 				},

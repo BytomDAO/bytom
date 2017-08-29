@@ -13,6 +13,9 @@ const (
 	defaultGasLimit = int64(80000)
 	muxGasCost      = int64(10)
 	gasRate         = int64(1000)
+
+	maxTxSize    = uint64(1024)
+	maxBlockSzie = uint64(16384)
 )
 
 var BTMAssetID = &bc.AssetID{
@@ -105,6 +108,8 @@ var (
 	errUnbalanced               = errors.New("unbalanced")
 	errUntimelyTransaction      = errors.New("block timestamp outside transaction time range")
 	errVersionRegression        = errors.New("version regression")
+	errWrongBlockSize           = errors.New("block size is too big")
+	errWrongTransactionSize     = errors.New("transaction size is too big")
 	errWrongCoinbaseTransaction = errors.New("wrong coinbase transaction")
 	errWrongCoinbaseAsset       = errors.New("wrong coinbase asset id")
 )
@@ -509,6 +514,10 @@ func ValidateBlock(b, prev *bc.Block) error {
 		}
 	}
 
+	if b.BlockHeader.SerializedSize > maxBlockSzie {
+		return errWrongBlockSize
+	}
+
 	coinbaseValue := b.BlockHeader.BlockSubsidy()
 	for i, tx := range b.Transactions {
 		if b.Version == 1 && tx.Version != 1 {
@@ -570,6 +579,10 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block) (int64, error) {
+	if tx.TxHeader.SerializedSize > maxTxSize {
+		return 0, errWrongTransactionSize
+	}
+
 	//TODO: handle the gas limit
 	vs := &validationState{
 		block:   block,

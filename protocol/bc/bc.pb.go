@@ -273,13 +273,14 @@ func (m *ValueDestination) GetPosition() uint64 {
 
 type BlockHeader struct {
 	Version          uint64 `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
-	Height           uint64 `protobuf:"varint,2,opt,name=height" json:"height,omitempty"`
-	PreviousBlockId  *Hash  `protobuf:"bytes,3,opt,name=previous_block_id,json=previousBlockId" json:"previous_block_id,omitempty"`
-	TimestampMs      uint64 `protobuf:"varint,4,opt,name=timestamp_ms,json=timestampMs" json:"timestamp_ms,omitempty"`
-	TransactionsRoot *Hash  `protobuf:"bytes,5,opt,name=transactions_root,json=transactionsRoot" json:"transactions_root,omitempty"`
-	AssetsRoot       *Hash  `protobuf:"bytes,6,opt,name=assets_root,json=assetsRoot" json:"assets_root,omitempty"`
-	Nonce            uint64 `protobuf:"varint,7,opt,name=nonce" json:"nonce,omitempty"`
-	Bits             uint64 `protobuf:"varint,8,opt,name=bits" json:"bits,omitempty"`
+	SerializedSize   uint64 `protobuf:"varint,2,opt,name=serialized_size,json=serializedSize" json:"serialized_size,omitempty"`
+	Height           uint64 `protobuf:"varint,3,opt,name=height" json:"height,omitempty"`
+	PreviousBlockId  *Hash  `protobuf:"bytes,4,opt,name=previous_block_id,json=previousBlockId" json:"previous_block_id,omitempty"`
+	TimestampMs      uint64 `protobuf:"varint,5,opt,name=timestamp_ms,json=timestampMs" json:"timestamp_ms,omitempty"`
+	TransactionsRoot *Hash  `protobuf:"bytes,6,opt,name=transactions_root,json=transactionsRoot" json:"transactions_root,omitempty"`
+	AssetsRoot       *Hash  `protobuf:"bytes,7,opt,name=assets_root,json=assetsRoot" json:"assets_root,omitempty"`
+	Nonce            uint64 `protobuf:"varint,8,opt,name=nonce" json:"nonce,omitempty"`
+	Bits             uint64 `protobuf:"varint,9,opt,name=bits" json:"bits,omitempty"`
 }
 
 func (m *BlockHeader) Reset()                    { *m = BlockHeader{} }
@@ -330,12 +331,13 @@ func (m *BlockHeader) GetAssetsRoot() *Hash {
 }
 
 type TxHeader struct {
-	Version   uint64  `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
-	ResultIds []*Hash `protobuf:"bytes,2,rep,name=result_ids,json=resultIds" json:"result_ids,omitempty"`
-	Data      *Hash   `protobuf:"bytes,3,opt,name=data" json:"data,omitempty"`
-	MinTimeMs uint64  `protobuf:"varint,4,opt,name=min_time_ms,json=minTimeMs" json:"min_time_ms,omitempty"`
-	MaxTimeMs uint64  `protobuf:"varint,5,opt,name=max_time_ms,json=maxTimeMs" json:"max_time_ms,omitempty"`
-	ExtHash   *Hash   `protobuf:"bytes,6,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
+	Version        uint64  `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
+	SerializedSize uint64  `protobuf:"varint,2,opt,name=serialized_size,json=serializedSize" json:"serialized_size,omitempty"`
+	ResultIds      []*Hash `protobuf:"bytes,3,rep,name=result_ids,json=resultIds" json:"result_ids,omitempty"`
+	Data           *Hash   `protobuf:"bytes,4,opt,name=data" json:"data,omitempty"`
+	MinTimeMs      uint64  `protobuf:"varint,5,opt,name=min_time_ms,json=minTimeMs" json:"min_time_ms,omitempty"`
+	MaxTimeMs      uint64  `protobuf:"varint,6,opt,name=max_time_ms,json=maxTimeMs" json:"max_time_ms,omitempty"`
+	ExtHash        *Hash   `protobuf:"bytes,7,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
 }
 
 func (m *TxHeader) Reset()                    { *m = TxHeader{} }

@@ -22,7 +22,8 @@ func TestMarshalBlock(t *testing.T) {
 
 		Transactions: []*Tx{
 			NewTx(TxData{
-				Version: 1,
+				Version:        1,
+				SerializedSize: uint64(46),
 				Outputs: []*TxOutput{
 					NewTxOutput(bc.AssetID{}, 1, nil, nil),
 				},

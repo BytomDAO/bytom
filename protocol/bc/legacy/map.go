@@ -225,7 +225,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	refdatahash := hashData(tx.ReferenceData)
-	h := bc.NewTxHeader(tx.Version, resultIDs, &refdatahash, tx.MinTime, tx.MaxTime)
+	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, resultIDs, &refdatahash, tx.MinTime, tx.MaxTime)
 	headerID = addEntry(h)
 
 	return headerID, h, entryMap
@@ -245,6 +245,7 @@ func MapBlock(old *Block) *bc.Block {
 	b.ID, b.BlockHeader = mapBlockHeader(&old.BlockHeader)
 	for _, oldTx := range old.Transactions {
 		b.Transactions = append(b.Transactions, oldTx.Tx)
+		b.BlockHeader.SerializedSize += oldTx.TxData.SerializedSize
 	}
 	return b
 }
