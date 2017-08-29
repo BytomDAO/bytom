@@ -30,10 +30,6 @@ func init() {
 
 func runNode(cmd *cobra.Command, args []string) error {
 
-	// Wait until the genesis doc becomes available
-	// This is for Mintnet compatibility.
-	// TODO: If Mintnet gets deprecated or genesis_file is
-	// always available, remove.
 	genDocFile := config.GenesisFile()
 	if !cmn.FileExists(genDocFile) {
 		logger.Info(cmn.Fmt("Waiting for genesis file %v...", genDocFile))

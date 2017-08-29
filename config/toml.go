@@ -28,7 +28,6 @@ func EnsureRoot(rootDir string) {
 var defaultConfigTmpl = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 
-proxy_app = "tcp://127.0.0.1:46658"
 moniker = "__MONIKER__"
 fast_sync = true
 db_backend = "leveldb"
@@ -91,7 +90,6 @@ func ResetTestRoot(testName string) *Config {
 var testConfigTmpl = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 
-proxy_app = "dummy"
 moniker = "__MONIKER__"
 fast_sync = false
 db_backend = "memdb"

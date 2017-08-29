@@ -26,7 +26,7 @@ type GenesisValidator struct {
 type GenesisDoc struct {
 	GenesisTime time.Time          `json:"genesis_time"`
 	ChainID     string             `json:"chain_id"`
-	Validators  []GenesisValidator `json:"validators"`
+//	Validators  []GenesisValidator `json:"validators"`
 	AppHash     data.Bytes         `json:"app_hash"`
 }
 

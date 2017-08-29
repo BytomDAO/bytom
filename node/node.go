@@ -49,7 +49,6 @@ type Node struct {
 
 	// config
 	config        *cfg.Config
-	privValidator *types.PrivValidator // local node's validator key
 
 	// network
 	privKey  crypto.PrivKeyEd25519 // local node's p2p key
@@ -89,9 +88,7 @@ var (
 
 
 func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
-	// Get PrivValidator
-	privValidator := types.LoadOrGenPrivValidator(config.PrivValidatorFile(), logger)
-	return NewNode(config, privValidator, logger)
+	return NewNode(config, logger)
 }
 
 func RedirectHandler(next http.Handler) http.Handler {
@@ -160,7 +157,7 @@ func rpcInit(h *bc.BlockchainReactor) {
 	coreHandler.Set(h)
 }
 
-func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.Logger) *Node {
+func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	// Get store
     tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
     store := txdb.NewStore(tx_db)
@@ -238,7 +235,6 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 
 	node := &Node{
 		config:        config,
-		privValidator: privValidator,
 
 		privKey:  privKey,
 		sw:       sw,
@@ -331,7 +327,6 @@ func (n *Node) ConfigureRPC() {
 	//rpccore.SetConsensusState(n.consensusState)
 	//rpccore.SetMempool(n.mempoolReactor.Mempool)
 	rpccore.SetSwitch(n.sw)
-	//rpccore.SetPubKey(n.privValidator.PubKey)
 	//rpccore.SetGenesisDoc(n.genesisDoc)
 	rpccore.SetAddrBook(n.addrBook)
 	//rpccore.SetProxyAppQuery(n.proxyApp.Query())
@@ -381,11 +376,6 @@ func (n *Node) Switch() *p2p.Switch {
 
 func (n *Node) EventSwitch() types.EventSwitch {
 	return n.evsw
-}
-
-// XXX: for convenience
-func (n *Node) PrivValidator() *types.PrivValidator {
-	return n.privValidator
 }
 
 func (n *Node) makeNodeInfo() *p2p.NodeInfo {
