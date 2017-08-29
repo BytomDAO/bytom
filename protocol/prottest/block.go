@@ -70,7 +70,7 @@ func NewChain(tb testing.TB, opts ...Option) *protocol.Chain {
 	}
 
 	ctx := context.Background()
-	b1, err := protocol.NewInitialBlock(conf.pubkeys, conf.quorum, time.Now())
+	b1, err := protocol.NewInitialBlock(time.Now())
 	if err != nil {
 		testutil.FatalErr(tb, err)
 	}

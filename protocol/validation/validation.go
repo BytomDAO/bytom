@@ -509,7 +509,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 		}
 	}
 
-	coinbaseValue := b.BlockHeader.BlockReward()
+	coinbaseValue := b.BlockHeader.BlockSubsidy()
 	for i, tx := range b.Transactions {
 		if b.Version == 1 && tx.Version != 1 {
 			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)
