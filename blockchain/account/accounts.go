@@ -143,22 +143,22 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 // UpdateTags modifies the tags of the specified account. The account may be
 // identified either by ID or Alias, but not both.
-/*func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
+func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
 	if (id == nil) == (alias == nil) {
 		return errors.Wrap(ErrBadIdentifier)
 	}
 
-	tagsParam, err := tagsToNullString(tags)
+/*	tagsParam, err := tagsToNullString(tags)
 	if err != nil {
 		return errors.Wrap(err, "convert tags")
 	}
-
+*/
 	var (
 		signer   *signers.Signer
 		aliasStr string
 	)
 
-	if id != nil {
+/*	if id != nil {
 		signer, err = m.findByID(ctx, *id)
 		if err != nil {
 			return errors.Wrap(err, "get account by ID")
@@ -193,14 +193,14 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	if err != nil {
 		return errors.Wrap(err, "update entry in accounts table")
 	}
-
+*/
 	return errors.Wrap(m.indexAnnotatedAccount(ctx, &Account{
 		Signer: signer,
 		Alias:  aliasStr,
 		Tags:   tags,
 	}), "update account index")
 }
-*/
+
 
 // FindByAlias retrieves an account's Signer record by its alias
 func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signer, error) {

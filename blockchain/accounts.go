@@ -6,7 +6,7 @@ import (
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	//"github.com/bytom/net/http/httpjson"
+	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/log"
 )
@@ -54,11 +54,12 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
 }
 
 // POST /update-account-tags
-/*func (a *BlockchainReactor) updateAccountTags(ctx context.Context, ins []struct {
+func (a *BlockchainReactor) updateAccountTags(ctx context.Context, ins []struct {
 	ID    *string
 	Alias *string
 	Tags  map[string]interface{} `json:"tags"`
 }) interface{} {
+	log.Printf(ctx,"-------update-account-tags---------")
 	responses := make([]interface{}, len(ins))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))
@@ -80,4 +81,4 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
 
 	wg.Wait()
 	return responses
-}*/
+}
