@@ -103,7 +103,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, err
 	}
 */
-    var tagsPar []byte
+    var tagsParam []byte
 
 /*	aliasSQL := stdsql.NullString{
 		String: alias,
@@ -123,7 +123,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
     account_alias := []byte(fmt.Sprintf("account_alias:%v", signer.ID))
     account_tags := []byte(fmt.Sprintf("account_tags:%v", signer.ID))
     m.db.Set(account_alias, []byte(alias))
-    m.db.Set(account_tags, []byte(tagsPar))
+    m.db.Set(account_tags, []byte(tagsParam))
     alias_account := []byte(fmt.Sprintf("alias_account:%v", alias))
     m.db.Set(alias_account, []byte(signer.ID))
 
