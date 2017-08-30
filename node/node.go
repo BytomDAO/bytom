@@ -35,6 +35,7 @@ import (
 	"github.com/kr/secureheader"
 	bytomlog "github.com/bytom/log"
 	"github.com/bytom/errors"
+	"github.com/bytom/crypto/ed25519"
 
 	_ "net/http/pprof"
 )
@@ -157,17 +158,25 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	coreHandler.Set(h)
 }
 
+func setupGenesisBlock(config *cfg.Config) (*legacy.Block, error) {
+	var pubkeys []ed25519.PublicKey
+	var npubkeys int
+	var timestamp time.Time
+	return protocol.NewInitialBlock(pubkeys, npubkeys, timestamp)
+}
+
 func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	// Get store
     tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
     store := txdb.NewStore(tx_db)
-    genesisBlock := legacy.Block {
+    /*genesisBlock := legacy.Block {
         BlockHeader: legacy.BlockHeader {
             Version: 1,
             Height: 0,
         },
     }
     store.SaveBlock(&genesisBlock)
+	*/
 
 	// Generate node PrivKey
 	privKey := crypto.GenPrivKeyEd25519()
@@ -187,12 +196,12 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	sw.SetLogger(p2pLogger)
 
     fastSync := config.FastSync
-    genesisblock, err := protocol.NewInitialBlock()
-    if err != nil {
+    genesisBlock, err := setupGenesisBlock(config)
+	if err != nil {
       cmn.Exit(cmn.Fmt("initialize genesisblock failed: %v", err))
     }
 
-    chain, err := protocol.NewChain(context.Background(), genesisblock.Hash(), store, nil)
+    chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, nil)
    /* if err != nil {
       cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
     }
