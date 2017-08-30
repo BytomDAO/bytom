@@ -67,7 +67,6 @@ type Node struct {
 var (
     // config vars
 	rootCAs       = env.String("ROOT_CA_CERTS", "") // file path
-	listenAddr    = env.String("LISTEN", ":1999")
 	splunkAddr    = os.Getenv("SPLUNKADDR")
 	logFile       = os.Getenv("LOGFILE")
 	logSize       = env.Int("LOGSIZE", 5e6) // 5MB
@@ -117,7 +116,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	wh.h.ServeHTTP(w, req)
 }
 
-func rpcInit(h *bc.BlockchainReactor) {
+func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
 	var coreHandler waitHandler
@@ -145,6 +144,7 @@ func rpcInit(h *bc.BlockchainReactor) {
 		// https://github.com/golang/go/issues/17071
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
+	listenAddr := env.String("LISTEN", config.ApiAddress)
 	listener, _ := net.Listen("tcp", *listenAddr)
 
 	// The `Serve` call has to happen in its own goroutine because
@@ -209,7 +209,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
     bcReactor.SetLogger(logger.With("module", "blockchain"))
     sw.AddReactor("BLOCKCHAIN", bcReactor)
 
-	rpcInit(bcReactor)
+	rpcInit(bcReactor, config)
 	// Optionally, start the pex reactor
 	var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {

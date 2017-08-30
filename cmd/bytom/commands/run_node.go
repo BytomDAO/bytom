@@ -29,7 +29,6 @@ func init() {
 }
 
 func runNode(cmd *cobra.Command, args []string) error {
-
 	genDocFile := config.GenesisFile()
 	if !cmn.FileExists(genDocFile) {
 		logger.Info(cmn.Fmt("Waiting for genesis file %v...", genDocFile))

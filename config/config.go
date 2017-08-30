@@ -82,6 +82,8 @@ type BaseConfig struct {
 
 	// Database directory
 	DBPath string `mapstructure:"db_dir"`
+
+	ApiAddress string `mapstructure:"api_addr"`
 }
 
 func DefaultBaseConfig() BaseConfig {
