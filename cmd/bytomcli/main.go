@@ -64,6 +64,9 @@ var commands = map[string]*command{
 	"revoke":               {revoke},
 	"wait":                 {wait},
 	"create-account":       {createAccount},
+	"update-account-tags":  {updateAccountTags},
+	"create-asset":		{createAsset},
+	"update-asset-tags":	{updateAssetTags},
 }
 
 func main() {
@@ -251,7 +254,8 @@ func configNongenerator(client *rpc.Client, args []string) {
 	flagT := flags.String("t", "", "generator access `token`")
 	flagK := flags.String("k", "", "local `pubkey` for signing blocks")
 	flagHSMURL := flags.String("hsm-url", "", "hsm `url` for signing blocks (mockhsm if empty)")
-	flagHSMToken := flags.String("hsm-token", "", "hsm `access-token` for connecting to hsm")
+	flagHSMToken := flags.String("hsm-token", "", "hsm `acc
+ess-token` for connecting to hsm")
 
 	flags.Usage = func() {
 		fmt.Println(usage)
@@ -507,4 +511,76 @@ func createAccount(client *rpc.Client, args []string) {
 	client.Call(context.Background(), "/create-account", &[]Ins{ins,}, &responses)
 	//dieOnRPCError(err)
 	fmt.Printf("responses:%v\n", responses)
+}
+
+func createAsset(client *rpc.Client, args []string) {
+	if len(args) != 1 {
+		fatalln("error: createAsset takes no args")
+	}
+	xprv, err := chainkd.NewXPrv(nil)
+	if err != nil {
+		fatalln("NewXprv error.")
+	}
+	xpub := xprv.XPub()
+	fmt.Printf("xprv:%v\n", xprv)
+	fmt.Printf("xpub:%v\n", xpub)
+	type Ins struct {
+	    RootXPubs []chainkd.XPub `json:"root_xpubs"`
+		Quorum    int
+		Alias     string
+		Tags      map[string]interface{}
+		Definition  map[string]interface{}
+		ClientToken string `json:"client_token"`
+	}
+	var ins Ins
+	ins.RootXPubs = []chainkd.XPub{xpub}
+	ins.Quorum = 1
+	ins.Alias = "aa"
+	ins.Tags = map[string]interface{}{"test_tag": "v0",}
+	ins.Definition = map[string]interface{}{"test_definition": "v0"}
+	ins.ClientToken = args[0]
+	responses := make([]interface{}, 50)
+	client.Call(context.Background(), "/create-asset", &[]Ins{ins,}, &responses)
+	//dieOnRPCError(err)
+	fmt.Printf("responses:%v\n", responses)
+}
+
+func updateAccountTags(client *rpc.Client,args []string){
+	if len(args) != 0{
+		fatalln("error:updateAccountTags not use args")
+	}
+	type Ins struct {
+	ID    *string
+	Alias *string
+	Tags  map[string]interface{} `json:"tags"`
+}
+	var ins Ins
+	aa := "1234"
+	alias := "asdfg"
+	ins.ID = &aa
+	ins.Alias = &alias
+	ins.Tags = map[string]interface{}{"test_tag": "v0",}
+        responses := make([]interface{}, 50)
+        client.Call(context.Background(), "/update-account-tags", &[]Ins{ins,}, &responses)
+        fmt.Printf("responses:%v\n", responses)
+}
+
+func updateAssetTags(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:updateAccountTags not use args")
+        }
+	type Ins struct {
+	ID    *string
+	Alias *string
+	Tags  map[string]interface{} `json:"tags"`
+}
+	var ins Ins
+	id := "123456"
+	alias := "asdfg"
+	ins.ID = &id
+	ins.Alias = &alias
+        ins.Tags = map[string]interface{}{"test_tag": "v0",}
+        responses := make([]interface{}, 50)
+        client.Call(context.Background(), "/update-asset-tags", &[]Ins{ins,}, &responses)
+        fmt.Printf("responses:%v\n", responses)
 }

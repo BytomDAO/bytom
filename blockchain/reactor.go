@@ -3,10 +3,10 @@ package blockchain
 import (
 	"bytes"
 	"context"
-	"errors"
 	"reflect"
     "time"
 	"net/http"
+	"fmt"
 
 	wire "github.com/tendermint/go-wire"
 	"github.com/bytom/p2p"
@@ -16,12 +16,14 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/log"
 	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	//"github.com/bytom/net/http/limit"
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/generated/dashboard"
+	"github.com/bytom/errors"
 )
 
 const (
@@ -58,9 +60,10 @@ type BlockchainReactor struct {
 //	state        *sm.State
 //	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
 //	store        *MemStore
-    chain        *protocol.Chain
+	chain        *protocol.Chain
 	store        *txdb.Store
 	accounts	 *account.Manager
+	assets	         *asset.Registry
 	pool         *BlockPool
 	mux          *http.ServeMux
 	handler      http.Handler
@@ -70,6 +73,29 @@ type BlockchainReactor struct {
 //	lastBlock    *types.Block
 
 	evsw types.EventSwitch
+}
+
+func batchRecover(ctx context.Context, v *interface{}) {
+	if r := recover(); r != nil {
+		var err error
+		if recoveredErr, ok := r.(error); ok {
+			err = recoveredErr
+		} else {
+			err = fmt.Errorf("panic with %T", r)
+		}
+		err = errors.Wrap(err)
+		*v = err
+	}
+
+	if *v == nil {
+		return
+	}
+	// Convert errors into error responses (including errors
+	// from recovered panics above).
+	if err, ok := (*v).(error); ok {
+		errorFormatter.Log(ctx, err)
+		*v = errorFormatter.Format(err)
+	}
 }
 
 func jsonHandler(f interface{}) http.Handler {
@@ -131,6 +157,9 @@ func maxBytes(h http.Handler) http.Handler {
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
 	m.Handle("/create-account", jsonHandler(bcr.createAccount))
+	m.Handle("/create-asset", jsonHandler(bcr.createAsset))
+	m.Handle("/update-account-tags",jsonHandler(bcr.updateAccountTags))
+	m.Handle("/update-asset-tags",jsonHandler(bcr.updateAssetTags))
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
@@ -376,7 +405,7 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	return
 }
 
-//-------------------------------------
+//-----------------------------------
 
 type bcBlockRequestMessage struct {
 	Height uint64
