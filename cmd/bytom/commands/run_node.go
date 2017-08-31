@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"io/ioutil"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -30,28 +29,23 @@ func init() {
 
 func runNode(cmd *cobra.Command, args []string) error {
 	genDocFile := config.GenesisFile()
-	if !cmn.FileExists(genDocFile) {
-		logger.Info(cmn.Fmt("Waiting for genesis file %v...", genDocFile))
-		for {
-			time.Sleep(time.Second)
-			if !cmn.FileExists(genDocFile) {
-				continue
-			}
-			jsonBlob, err := ioutil.ReadFile(genDocFile)
-			if err != nil {
-				return fmt.Errorf("Couldn't read GenesisDoc file: %v", err)
-			}
-			genDoc, err := types.GenesisDocFromJSON(jsonBlob)
-			if err != nil {
-				return fmt.Errorf("Error reading GenesisDoc: %v", err)
-			}
-			if genDoc.ChainID == "" {
-				return fmt.Errorf("Genesis doc %v must include non-empty chain_id", genDocFile)
-			}
-			config.ChainID = genDoc.ChainID
-			config.PrivateKey = genDoc.PrivateKey
-			config.Time = genDoc.GenesisTime
+	if cmn.FileExists(genDocFile) {
+		jsonBlob, err := ioutil.ReadFile(genDocFile)
+		if err != nil {
+			return fmt.Errorf("Couldn't read GenesisDoc file: %v", err)
 		}
+		genDoc, err := types.GenesisDocFromJSON(jsonBlob)
+		if err != nil {
+			return fmt.Errorf("Error reading GenesisDoc: %v", err)
+		}
+		if genDoc.ChainID == "" {
+			return fmt.Errorf("Genesis doc %v must include non-empty chain_id", genDocFile)
+		}
+		config.ChainID = genDoc.ChainID
+		config.PrivateKey = genDoc.PrivateKey
+		config.Time = genDoc.GenesisTime
+	} else {
+		return fmt.Errorf("not find genesis.json")
 	}
 
 	// Create & start node
