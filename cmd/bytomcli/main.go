@@ -15,6 +15,7 @@ import (
 	//"strconv"
 	"strings"
 	"time"
+	stdjson "encoding/json"
 
 	"github.com/bytom/blockchain"
 //	"chain/core/accesstoken"
@@ -67,6 +68,7 @@ var commands = map[string]*command{
 	"update-account-tags":  {updateAccountTags},
 	"create-asset":		{createAsset},
 	"update-asset-tags":	{updateAssetTags},
+	"create-control-program": {createControlProgram},
 }
 
 func main() {
@@ -582,5 +584,17 @@ func updateAssetTags(client *rpc.Client, args []string){
         ins.Tags = map[string]interface{}{"test_tag": "v0",}
         responses := make([]interface{}, 50)
         client.Call(context.Background(), "/update-asset-tags", &[]Ins{ins,}, &responses)
+        fmt.Printf("responses:%v\n", responses)
+}
+
+func createControlProgram(client *rpc.Client, args []string){
+	type Ins struct {
+	Type   string
+	Params stdjson.RawMessage
+}
+	var ins Ins
+	//TODO:undefined arguments to ins
+	responses := make([]interface{},50)
+        client.Call(context.Background(),"/create-control-program", &[]Ins{ins,}, &responses)
         fmt.Printf("responses:%v\n", responses)
 }

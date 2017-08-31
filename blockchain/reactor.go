@@ -160,6 +160,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/create-asset", jsonHandler(bcr.createAsset))
 	m.Handle("/update-account-tags",jsonHandler(bcr.updateAccountTags))
 	m.Handle("/update-asset-tags",jsonHandler(bcr.updateAssetTags))
+	m.Handle("/create-control-program",jsonHandler(bcr.createControlProgram))
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
