@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
-	//"time"
+	"time"
 
 	//"github.com/bytom/types"
 )
@@ -56,7 +56,7 @@ type BaseConfig struct {
 	Genesis string `mapstructure:"genesis_file"`
 
 	// A JSON file containing the private key to use as a validator in the consensus protocol
-	PrivKey string `mapstructure:"priv_key"`
+	PrivateKey string `mapstructure:"private_key"`
 
 	// A custom human readable name for this node
 	Moniker string `mapstructure:"moniker"`
@@ -84,6 +84,8 @@ type BaseConfig struct {
 	DBPath string `mapstructure:"db_dir"`
 
 	ApiAddress string `mapstructure:"api_addr"`
+
+	Time time.Time
 }
 
 func DefaultBaseConfig() BaseConfig {

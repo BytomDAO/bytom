@@ -49,7 +49,8 @@ func runNode(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("Genesis doc %v must include non-empty chain_id", genDocFile)
 			}
 			config.ChainID = genDoc.ChainID
-			config.PrivKey = genDoc.PrivateKey
+			config.PrivateKey = genDoc.PrivateKey
+			config.Time = genDoc.GenesisTime
 		}
 	}
 

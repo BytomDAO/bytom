@@ -159,9 +159,11 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 }
 
 func setupGenesisBlock(config *cfg.Config) (*legacy.Block, error) {
-	var pubkeys []ed25519.PublicKey
-	var npubkeys int
-	var timestamp time.Time
+	privKey := ed25519.PrivateKey(config.PrivateKey)
+	pubkey := privKey.Public().(ed25519.PublicKey)
+	var pubkeys []ed25519.PublicKey = []ed25519.PublicKey{pubkey,}
+	var npubkeys int = 1
+	var timestamp time.Time = config.Time
 	return protocol.NewInitialBlock(pubkeys, npubkeys, timestamp)
 }
 
