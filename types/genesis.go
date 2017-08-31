@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
 	cmn "github.com/tendermint/tmlibs/common"
 )
@@ -16,17 +15,10 @@ var GenDocKey = []byte("GenDocKey")
 
 //------------------------------------------------------------
 // core types for a genesis definition
-
-type GenesisValidator struct {
-	PubKey crypto.PubKey `json:"pub_key"`
-	Amount int64         `json:"amount"`
-	Name   string        `json:"name"`
-}
-
 type GenesisDoc struct {
 	GenesisTime time.Time          `json:"genesis_time"`
 	ChainID     string             `json:"chain_id"`
-//	Validators  []GenesisValidator `json:"validators"`
+	PrivateKey  string				`json:"private_key"`
 	AppHash     data.Bytes         `json:"app_hash"`
 }
 

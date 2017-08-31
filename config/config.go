@@ -56,7 +56,7 @@ type BaseConfig struct {
 	Genesis string `mapstructure:"genesis_file"`
 
 	// A JSON file containing the private key to use as a validator in the consensus protocol
-	PrivValidator string `mapstructure:"priv_validator_file"`
+	PrivKey string `mapstructure:"priv_key"`
 
 	// A custom human readable name for this node
 	Moniker string `mapstructure:"moniker"`
