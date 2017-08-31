@@ -16,6 +16,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/log"
 	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
@@ -58,9 +59,10 @@ type BlockchainReactor struct {
 //	state        *sm.State
 //	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
 //	store        *MemStore
-    chain        *protocol.Chain
+	chain        *protocol.Chain
 	store        *txdb.Store
 	accounts	 *account.Manager
+	assets	         *asset.Registry
 	pool         *BlockPool
 	mux          *http.ServeMux
 	handler      http.Handler
@@ -131,6 +133,7 @@ func maxBytes(h http.Handler) http.Handler {
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
 	m.Handle("/create-account", jsonHandler(bcr.createAccount))
+	m.Handle("/create-asset", jsonHandler(bcr.createAsset))
 	m.Handle("/update-account-tags",jsonHandler(bcr.updateAccountTags))
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
