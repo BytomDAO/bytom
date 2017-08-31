@@ -10,7 +10,7 @@ import (
     "fmt"
 
 	"github.com/golang/groupcache/lru"
-	//"github.com/lib/pq"
+	"github.com/lib/pq"
 
 //	"chain/core/pin"
 	"github.com/bytom/blockchain/signers"
@@ -97,12 +97,12 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
-
-	/*tagsParam, err := tagsToNullString(tags)
+/*
+	tagsParam , err := tagsToNullString(tags)
 	if err != nil {
 		return nil, err
 	}
-    */
+*/
     var tagsParam []byte
 
 /*	aliasSQL := stdsql.NullString{
@@ -143,22 +143,22 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 // UpdateTags modifies the tags of the specified account. The account may be
 // identified either by ID or Alias, but not both.
-/*func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
+func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
 	if (id == nil) == (alias == nil) {
 		return errors.Wrap(ErrBadIdentifier)
 	}
-
-	tagsParam, err := tagsToNullString(tags)
+/*
+	tagsParam , err := tagsToNullString(tags)
 	if err != nil {
 		return errors.Wrap(err, "convert tags")
 	}
-
+*/
 	var (
 		signer   *signers.Signer
 		aliasStr string
 	)
 
-	if id != nil {
+/*	if id != nil {
 		signer, err = m.findByID(ctx, *id)
 		if err != nil {
 			return errors.Wrap(err, "get account by ID")
@@ -193,14 +193,14 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	if err != nil {
 		return errors.Wrap(err, "update entry in accounts table")
 	}
-
+*/
 	return errors.Wrap(m.indexAnnotatedAccount(ctx, &Account{
 		Signer: signer,
 		Alias:  aliasStr,
 		Tags:   tags,
 	}), "update account index")
 }
-*/
+
 
 // FindByAlias retrieves an account's Signer record by its alias
 func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signer, error) {
@@ -289,14 +289,14 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 	if err != nil {
 		return nil, err
 	}
-	/*err = m.insertAccountControlProgram(ctx, cp)
+	err = m.insertAccountControlProgram(ctx, cp)
 	if err != nil {
 		return nil, err
-	}*/
+	}
 	return cp.controlProgram, nil
 }
 
-/*
+
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
 	const q = `
 		INSERT INTO account_control_programs (signer_id, key_index, control_program, change, expires_at)
@@ -308,23 +308,23 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 		keyIndexes   pq.Int64Array
 		controlProgs pq.ByteaArray
 		change       pq.BoolArray
-		expirations  []stdsql.NullString
+	//	expirations  []stdsql.NullString
 	)
 	for _, p := range progs {
 		accountIDs = append(accountIDs, p.accountID)
 		keyIndexes = append(keyIndexes, int64(p.keyIndex))
 		controlProgs = append(controlProgs, p.controlProgram)
 		change = append(change, p.change)
-		expirations = append(expirations, stdsql.NullString{
+	/*	expirations = append(expirations, stdsql.NullString{
 			String: p.expiresAt.Format(time.RFC3339),
 			Valid:  !p.expiresAt.IsZero(),
-		})
+		})*/
 	}
 
-	_, err := m.db.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
-	return errors.Wrap(err)
+//	_, err := m.dbm.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
+	return errors.Wrap(nil)
 }
-*/
+
 
 func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	m.acpMu.Lock()

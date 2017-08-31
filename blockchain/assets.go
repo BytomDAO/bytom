@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+//	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/net/http/httpjson"
@@ -11,20 +12,20 @@ import (
 	"github.com/bytom/log"
 )
 
-// POST /create-account
-func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
-	RootXPubs []chainkd.XPub `json:"root_xpubs"`
-	Quorum    int
-	Alias     string
-	Tags      map[string]interface{}
+func (a *BlockchainReactor) createAsset(ctx context.Context, ins []struct {
+	Alias      string
+	RootXPubs  []chainkd.XPub `json:"root_xpubs"`
+	Quorum     int
+	Definition map[string]interface{}
+	Tags       map[string]interface{}
 
-	// ClientToken is the application's unique token for the account. Every account
+	// ClientToken is the application's unique token for the asset. Every asset
 	// should have a unique client token. The client token is used to ensure
-	// idempotency of create account requests. Duplicate create account requests
-	// with the same client_token will only create one account.
+	// idempotency of create asset requests. Duplicate create asset requests
+	// with the same client_token will only create one asset.
 	ClientToken string `json:"client_token"`
-}) interface{} {
-	log.Printf(ctx, "-------createAccount-----")
+}) ([]interface{}, error) {
+	log.Printf(ctx,"------createAsset-----")
 	responses := make([]interface{}, len(ins))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))
@@ -49,17 +50,17 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
 		}(i)
 	}
 
-	wg.Wait()
-	return responses
+//	wg.wait()
+	return responses,nil
 }
 
-// POST /update-account-tags
-func (a *BlockchainReactor) updateAccountTags(ctx context.Context, ins []struct {
+// POST /update-asset-tags
+func (a *BlockchainReactor) updateAssetTags(ctx context.Context, ins []struct {
 	ID    *string
 	Alias *string
 	Tags  map[string]interface{} `json:"tags"`
 }) interface{} {
-	log.Printf(ctx,"-------update-account-tags---------")
+	log.Printf(ctx,"-------updateAssetTags------")
 	responses := make([]interface{}, len(ins))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))
@@ -68,9 +69,9 @@ func (a *BlockchainReactor) updateAccountTags(ctx context.Context, ins []struct 
 		go func(i int) {
 			subctx := reqid.NewSubContext(ctx, reqid.New())
 			defer wg.Done()
-			//defer batchRecover(subctx, &responses[i])
+			defer batchRecover(subctx, &responses[i])
 
-			err := a.accounts.UpdateTags(subctx, ins[i].ID, ins[i].Alias, ins[i].Tags)
+			err := a.assets.UpdateTags(subctx, ins[i].ID, ins[i].Alias, ins[i].Tags)
 			if err != nil {
 				responses[i] = err
 			} else {
@@ -79,6 +80,6 @@ func (a *BlockchainReactor) updateAccountTags(ctx context.Context, ins []struct 
 		}(i)
 	}
 
-	wg.Wait()
+//	wg.Wait()
 	return responses
 }
