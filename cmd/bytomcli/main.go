@@ -69,6 +69,7 @@ var commands = map[string]*command{
 	"create-asset":		{createAsset},
 	"update-asset-tags":	{updateAssetTags},
 	"create-control-program": {createControlProgram},
+	"create-account-receiver": {createAccountReceiver},
 }
 
 func main() {
@@ -588,6 +589,9 @@ func updateAssetTags(client *rpc.Client, args []string){
 }
 
 func createControlProgram(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:updateAccountTags not use args")
+        }
 	type Ins struct {
 	Type   string
 	Params stdjson.RawMessage
@@ -596,5 +600,23 @@ func createControlProgram(client *rpc.Client, args []string){
 	//TODO:undefined arguments to ins
 	responses := make([]interface{},50)
         client.Call(context.Background(),"/create-control-program", &[]Ins{ins,}, &responses)
+        fmt.Printf("responses:%v\n", responses)
+}
+
+func createAccountReceiver(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:updateAccountTags not use args")
+        }
+	type Ins struct {
+	AccountID    string    `json:"account_id"`
+	AccountAlias string    `json:"account_alias"`
+	ExpiresAt    time.Time `json:"expires_at"`
+}
+	var ins Ins
+	//TODO:undefined argument to ExpiresAt
+	ins.AccountID = "123456"
+	ins.AccountAlias = "zxcvbn"
+	responses := make([]interface{},50)
+        client.Call(context.Background(),"/create-Account-Receiver", &[]Ins{ins,}, &responses)
         fmt.Printf("responses:%v\n", responses)
 }
