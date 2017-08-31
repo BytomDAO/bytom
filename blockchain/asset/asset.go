@@ -155,7 +155,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 
 // UpdateTags modifies the tags of the specified asset. The asset may be
 // identified either by id or alias, but not both.
-/*
+
 func (reg *Registry) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
 	if (id == nil) == (alias == nil) {
 		return errors.Wrap(ErrBadIdentifier)
@@ -192,7 +192,7 @@ func (reg *Registry) UpdateTags(ctx context.Context, id, alias *string, tags map
 	asset.Tags = tags
 
 	// Perform persistent updates
-
+/*
 	err = insertAssetTags(ctx, reg.db, asset.AssetID, asset.Tags)
 	if err != nil {
 		return errors.Wrap(err, "inserting asset tags")
@@ -202,7 +202,7 @@ func (reg *Registry) UpdateTags(ctx context.Context, id, alias *string, tags map
 	if err != nil {
 		return errors.Wrap(err, "update asset index")
 	}
-
+*/
 	// Revise cache
 
 	reg.cacheMu.Lock()
@@ -212,7 +212,7 @@ func (reg *Registry) UpdateTags(ctx context.Context, id, alias *string, tags map
 	return nil
 
 }
-*/
+
 // findByID retrieves an Asset record along with its signer, given an assetID.
 func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error) {
 	reg.cacheMu.Lock()
@@ -224,7 +224,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 
 	untypedAsset, err := reg.idGroup.Do(id.String(), func() (interface{}, error) {
 //		return assetQuery(ctx, reg.db, "assets.id=$1", id)
-		return nil,nil	
+		return nil,nil
 })
 
 	if err != nil {

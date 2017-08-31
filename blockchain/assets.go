@@ -7,7 +7,7 @@ import (
 //	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/crypto/ed25519/chainkd"
-//	"github.com/bytom/net/http/httpjson"
+	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/log"
 )
@@ -52,4 +52,34 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins []struct {
 
 //	wg.wait()
 	return responses,nil
+}
+
+// POST /update-asset-tags
+func (a *BlockchainReactor) updateAssetTags(ctx context.Context, ins []struct {
+	ID    *string
+	Alias *string
+	Tags  map[string]interface{} `json:"tags"`
+}) interface{} {
+	log.Printf(ctx,"-------updateAssetTags------")
+	responses := make([]interface{}, len(ins))
+	var wg sync.WaitGroup
+	wg.Add(len(responses))
+
+	for i := range responses {
+		go func(i int) {
+			subctx := reqid.NewSubContext(ctx, reqid.New())
+			defer wg.Done()
+			defer batchRecover(subctx, &responses[i])
+
+			err := a.assets.UpdateTags(subctx, ins[i].ID, ins[i].Alias, ins[i].Tags)
+			if err != nil {
+				responses[i] = err
+			} else {
+				responses[i] = httpjson.DefaultResponse
+			}
+		}(i)
+	}
+
+//	wg.Wait()
+	return responses
 }

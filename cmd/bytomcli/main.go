@@ -66,6 +66,7 @@ var commands = map[string]*command{
 	"create-account":       {createAccount},
 	"update-account-tags":  {updateAccountTags},
 	"create-asset":		{createAsset},
+	"update-asset-tags":	{updateAssetTags},
 }
 
 func main() {
@@ -561,5 +562,25 @@ func updateAccountTags(client *rpc.Client,args []string){
 	ins.Tags = map[string]interface{}{"test_tag": "v0",}
         responses := make([]interface{}, 50)
         client.Call(context.Background(), "/update-account-tags", &[]Ins{ins,}, &responses)
+        fmt.Printf("responses:%v\n", responses)
+}
+
+func updateAssetTags(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:updateAccountTags not use args")
+        }
+	type Ins struct {
+	ID    *string
+	Alias *string
+	Tags  map[string]interface{} `json:"tags"`
+}
+	var ins Ins
+	id := "123456"
+	alias := "asdfg"
+	ins.ID = &id
+	ins.Alias = &alias
+        ins.Tags = map[string]interface{}{"test_tag": "v0",}
+        responses := make([]interface{}, 50)
+        client.Call(context.Background(), "/update-asset-tags", &[]Ins{ins,}, &responses)
         fmt.Printf("responses:%v\n", responses)
 }
