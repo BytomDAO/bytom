@@ -1,4 +1,4 @@
-package: github.com/consensus
+package: github.com/bytom
 import:
 - package: github.com/ebuchman/fail-test
 - package: github.com/gogo/protobuf

@@ -2,11 +2,11 @@ package protocol
 
 import (
 	"context"
-	"fmt"
+//	"fmt"
 
-	"github.com/blockchain/errors"
-	"github.com/blockchain/protocol/bc/legacy"
-	"github.com/blockchain/protocol/state"
+//	"github.com/blockchain/errors"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/state"
 )
 
 // Recover performs crash recovery, restoring the blockchain
@@ -16,8 +16,8 @@ import (
 // If the blockchain is empty (missing initial block), this function
 // returns a nil block and an empty snapshot.
 func (c *Chain) Recover(ctx context.Context) (*legacy.Block, *state.Snapshot, error) {
-	snapshot, snapshotHeight, err := c.store.LatestSnapshot(ctx)
-	if err != nil {
+	//snapshot, snapshotHeight, err := c.store.LatestSnapshot(ctx)
+	/*if err != nil {
 		return nil, nil, errors.Wrap(err, "getting latest snapshot")
 	}
 	var b *legacy.Block
@@ -67,4 +67,6 @@ func (c *Chain) Recover(ctx context.Context) (*legacy.Block, *state.Snapshot, er
 		}
 	}
 	return b, snapshot, nil
+    */
+    return nil, nil, nil
 }

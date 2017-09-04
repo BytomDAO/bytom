@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/merkleeyes/iavl"
 	merktest "github.com/tendermint/merkleeyes/testutil"
-	"github.com/blockchain/rpc/client"
-	rpctest "github.com/blockchain/rpc/test"
+	"github.com/bytom/rpc/client"
+	rpctest "github.com/bytom/rpc/test"
 )
 
 func getHTTPClient() *client.HTTP {

@@ -1,8 +1,8 @@
 package legacy
 
 import (
-	"github.com/blockchain/crypto/sha3pool"
-	"github.com/blockchain/protocol/bc"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/protocol/bc"
 )
 
 type IssuanceInput struct {

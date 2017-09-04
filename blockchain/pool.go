@@ -6,7 +6,7 @@ import (
 	"time"
 
 //	"github.com/blockchain/types"
-    "github.com/blockchain/protocol/bc/legacy"
+    "github.com/bytom/protocol/bc/legacy"
 	. "github.com/tendermint/tmlibs/common"
 	flow "github.com/tendermint/tmlibs/flowrate"
 	"github.com/tendermint/tmlibs/log"

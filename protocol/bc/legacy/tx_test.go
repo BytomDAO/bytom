@@ -3,7 +3,7 @@ package legacy
 import (
 	"testing"
 
-	"github.com/blockchain/protocol/bc"
+	"github.com/bytom/protocol/bc"
 
 	"github.com/davecgh/go-spew/spew"
 )

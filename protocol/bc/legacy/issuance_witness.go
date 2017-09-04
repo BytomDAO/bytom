@@ -1,6 +1,6 @@
 package legacy
 
-import "github.com/blockchain/protocol/bc"
+import "github.com/bytom/protocol/bc"
 
 type IssuanceWitness struct {
 	InitialBlock    bc.Hash

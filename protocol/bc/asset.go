@@ -5,8 +5,8 @@ import (
 	"errors"
 	"io"
 
-	"github.com/blockchain/crypto/sha3pool"
-	"github.com/blockchain/encoding/blockchain"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/encoding/blockchain"
 )
 
 // AssetID is the Hash256 of the asset definition.

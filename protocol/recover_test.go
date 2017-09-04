@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/bc/legacy"
-	"github.com/blockchain/protocol/prottest/memstore"
-	"github.com/blockchain/protocol/state"
-	"github.com/blockchain/testutil"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/prottest/memstore"
+	"github.com/bytom/protocol/state"
+	"github.com/bytom/testutil"
 )
 
 func TestRecoverSnapshotNoAdditionalBlocks(t *testing.T) {

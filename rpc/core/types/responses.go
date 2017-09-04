@@ -7,16 +7,16 @@ import (
 	abci "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
-        "github.com/blockchain/protocol/bc"
-	"github.com/blockchain/p2p"
-	"github.com/blockchain/types"
+        "github.com/bytom/protocol/bc"
+	"github.com/bytom/p2p"
+	"github.com/bytom/types"
 )
 
 type BlockNonce [8]byte
 
 type ResultBlockchainInfo struct {
 	LastHeight int                `json:"last_height"`
-	BlockMetas []*types.BlockMeta `json:"block_metas"`
+	//BlockMetas []*types.BlockMeta `json:"block_metas"`
 }
 
 type ResultGenesis struct {
@@ -24,15 +24,17 @@ type ResultGenesis struct {
 }
 
 type ResultBlock struct {
-	BlockMeta *types.BlockMeta `json:"block_meta"`
-	Block     *types.Block     `json:"block"`
+	//BlockMeta *types.BlockMeta `json:"block_meta"`
+	//Block     *types.Block     `json:"block"`
 }
 
+/*
 type ResultCommit struct {
 	Header          *types.Header `json:"header"`
 	Commit          *types.Commit `json:"commit"`
 	CanonicalCommit bool          `json:"canonical"`
 }
+*/
 
 type ResultStatus struct {
 	NodeInfo          *p2p.NodeInfo `json:"node_info"`
@@ -82,10 +84,12 @@ type Peer struct {
 	ConnectionStatus p2p.ConnectionStatus `json:"connection_status"`
 }
 
+/*
 type ResultValidators struct {
 	BlockHeight int                `json:"block_height"`
 	Validators  []*types.Validator `json:"validators"`
 }
+*/
 
 type ResultDumpConsensusState struct {
 	RoundState      string   `json:"round_state"`
@@ -107,6 +111,7 @@ type ResultBroadcastTxCommit struct {
 	Height    int         `json:"height"`
 }
 
+/*
 type ResultTx struct {
 	Height   int           `json:"height"`
 	Index    int           `json:"index"`
@@ -114,11 +119,14 @@ type ResultTx struct {
 	Tx       types.Tx      `json:"tx"`
 	Proof    types.TxProof `json:"proof,omitempty"`
 }
+*/
 
+/*
 type ResultUnconfirmedTxs struct {
 	N   int        `json:"n_txs"`
 	Txs []types.Tx `json:"txs"`
 }
+*/
 
 type ResultABCIInfo struct {
 	Response abci.ResponseInfo `json:"response"`
@@ -136,7 +144,9 @@ type ResultSubscribe struct{}
 
 type ResultUnsubscribe struct{}
 
+/*
 type ResultEvent struct {
 	Name string            `json:"name"`
 	Data types.TMEventData `json:"data"`
 }
+*/

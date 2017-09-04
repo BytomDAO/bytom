@@ -8,7 +8,7 @@ import (
 	//"time"
 
 	 //"github.com/blockchain/rpc/chainhash"
-         "github.com/blockchain/consensus/wire"
+         "github.com/bytom/rpc/wire"
 )
 
 func solveBlock(header *wire.BlockHeader, targetDifficulty *big.Int) bool {

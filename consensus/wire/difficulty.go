@@ -8,8 +8,7 @@ import (
 	"math/big"
 	//"time"
 
-	"github.com/blockchain/consensus/chainhash"
-
+	"github.com/bytom/rpc/chainhash"
 )
 
 var (

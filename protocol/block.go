@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/blockchain/crypto/ed25519"
-	"github.com/blockchain/errors"
-	"github.com/blockchain/log"
-	"github.com/blockchain/protocol/bc"
-	"github.com/blockchain/protocol/bc/legacy"
-	"github.com/blockchain/protocol/state"
-	"github.com/blockchain/protocol/validation"
-	"github.com/blockchain/protocol/vm/vmutil"
+	"github.com/bytom/crypto/ed25519"
+	"github.com/bytom/errors"
+	"github.com/bytom/log"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/state"
+	"github.com/bytom/protocol/validation"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 // maxBlockTxs limits the number of transactions
@@ -39,7 +39,7 @@ var (
 // GetBlock returns the block at the given height, if there is one,
 // otherwise it returns an error.
 func (c *Chain) GetBlock(ctx context.Context, height uint64) (*legacy.Block, error) {
-	return c.store.GetBlock(ctx, height)
+	return c.store.GetBlock(height)
 }
 
 // GenerateBlock generates a valid, but unsigned, candidate block from
@@ -167,15 +167,15 @@ func (c *Chain) CommitAppliedBlock(ctx context.Context, block *legacy.Block, sna
 	// SaveBlock is the linearization point. Once the block is committed
 	// to persistent storage, the block has been applied and everything
 	// else can be derived from that block.
-	err := c.store.SaveBlock(ctx, block)
+	/*err := c.store.SaveBlock(ctx, block)
 	if err != nil {
 		return errors.Wrap(err, "storing block")
-	}
+	}*/
 	if block.Time().After(c.lastQueuedSnapshot.Add(saveSnapshotFrequency)) {
 		c.queueSnapshot(ctx, block.Height, block.Time(), snapshot)
 	}
 
-	err = c.store.FinalizeBlock(ctx, block.Height)
+	err := c.store.FinalizeBlock(ctx, block.Height)
 	if err != nil {
 		return errors.Wrap(err, "finalizing block")
 	}

@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/blockchain/errors"
+	"github.com/bytom/errors"
 )
 
 const initialRunLimit = 10000

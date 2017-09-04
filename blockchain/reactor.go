@@ -2,15 +2,28 @@ package blockchain
 
 import (
 	"bytes"
-	"errors"
+	"context"
 	"reflect"
     "time"
+	"net/http"
+	"fmt"
 
 	wire "github.com/tendermint/go-wire"
-	"github.com/blockchain/p2p"
-	"github.com/blockchain/types"
-    "github.com/blockchain/protocol/bc/legacy"
+	"github.com/bytom/p2p"
+	"github.com/bytom/types"
+    "github.com/bytom/protocol/bc/legacy"
+    "github.com/bytom/protocol"
 	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/bytom/blockchain/txdb"
+	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/log"
+	//"github.com/bytom/net/http/gzip"
+	"github.com/bytom/net/http/httpjson"
+	//"github.com/bytom/net/http/limit"
+	"github.com/bytom/net/http/static"
+	"github.com/bytom/generated/dashboard"
+	"github.com/bytom/errors"
 )
 
 const (
@@ -28,7 +41,8 @@ const (
 	statusUpdateIntervalSeconds = 10
 	// check if we should switch to consensus reactor
 	switchToConsensusIntervalSeconds = 1
-	maxBlockchainResponseSize        = types.MaxBlockSize + 2
+	maxBlockchainResponseSize        = 22020096 + 2
+	crosscoreRPCPrefix = "/rpc/"
 )
 
 /*
@@ -45,8 +59,14 @@ type BlockchainReactor struct {
 
 //	state        *sm.State
 //	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
-	store        *MemStore
+//	store        *MemStore
+	chain        *protocol.Chain
+	store        *txdb.Store
+	accounts	 *account.Manager
+	assets	         *asset.Registry
 	pool         *BlockPool
+	mux          *http.ServeMux
+	handler      http.Handler
 	fastSync     bool
 	requestsCh   chan BlockRequest
 	timeoutsCh   chan string
@@ -55,7 +75,118 @@ type BlockchainReactor struct {
 	evsw types.EventSwitch
 }
 
-func NewBlockchainReactor(store *MemStore, fastSync bool) *BlockchainReactor {
+func batchRecover(ctx context.Context, v *interface{}) {
+	if r := recover(); r != nil {
+		var err error
+		if recoveredErr, ok := r.(error); ok {
+			err = recoveredErr
+		} else {
+			err = fmt.Errorf("panic with %T", r)
+		}
+		err = errors.Wrap(err)
+		*v = err
+	}
+
+	if *v == nil {
+		return
+	}
+	// Convert errors into error responses (including errors
+	// from recovered panics above).
+	if err, ok := (*v).(error); ok {
+		errorFormatter.Log(ctx, err)
+		*v = errorFormatter.Format(err)
+	}
+}
+
+func jsonHandler(f interface{}) http.Handler {
+    h, err := httpjson.Handler(f, errorFormatter.Write)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}
+
+func alwaysError(err error) http.Handler {
+	return jsonHandler(func() error { return err })
+}
+
+func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+    bcr.handler.ServeHTTP(rw, req)
+}
+
+func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
+    //if a.config == nil {
+		// never configured
+	log.Printf(ctx, "-------info-----")
+	return map[string]interface{}{
+		"is_configured": false,
+		"version":       "0.001",
+		"build_commit":  "----",
+		"build_date":    "------",
+		"build_config":  "---------",
+	}, nil
+	//}
+}
+
+func (bcr *BlockchainReactor) createblockkey(ctx context.Context) {
+	log.Printf(ctx,"creat-block-key")
+}
+
+func webAssetsHandler(next http.Handler) http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/dashboard/", http.StripPrefix("/dashboard/", static.Handler{
+		Assets:  dashboard.Files,
+		Default: "index.html",
+	}))
+	mux.Handle("/", next)
+	return mux
+}
+
+func maxBytes(h http.Handler) http.Handler {
+    const maxReqSize = 1e7 // 10MB
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		// A block can easily be bigger than maxReqSize, but everything
+		// else should be pretty small.
+		if req.URL.Path != crosscoreRPCPrefix+"signer/sign-block" {
+			req.Body = http.MaxBytesReader(w, req.Body, maxReqSize)
+		}
+		h.ServeHTTP(w, req)
+	})
+}
+
+func (bcr *BlockchainReactor) BuildHander() {
+	m := bcr.mux
+	m.Handle("/create-account", jsonHandler(bcr.createAccount))
+	m.Handle("/create-asset", jsonHandler(bcr.createAsset))
+	m.Handle("/update-account-tags",jsonHandler(bcr.updateAccountTags))
+	m.Handle("/update-asset-tags",jsonHandler(bcr.updateAssetTags))
+	m.Handle("/", alwaysError(errors.New("not Found")))
+	m.Handle("/info", jsonHandler(bcr.info))
+	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
+
+    latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if l := latency(m, req); l != nil {
+			defer l.RecordSince(time.Now())
+		}
+		m.ServeHTTP(w, req)
+		})
+	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
+	handler = webAssetsHandler(handler)
+/*	handler = healthHandler(handler)
+	for _, l := range a.requestLimits {
+		handler = limit.Handler(handler, alwaysError(errRateLimited), l.perSecond, l.burst, l.key)
+	}
+	handler = gzip.Handler{Handler: handler}
+	handler = coreCounter(handler)
+	handler = timeoutContextHandler(handler)
+	if a.config != nil && a.config.BlockchainId != nil {
+		handler = blockchainIDHandler(handler, a.config.BlockchainId.String())
+	}
+	*/
+	bcr.handler = handler
+}
+
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, fastSync bool) *BlockchainReactor {
     requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
     timeoutsCh    := make(chan string, defaultChannelCapacity)
     pool := NewBlockPool(
@@ -64,9 +195,12 @@ func NewBlockchainReactor(store *MemStore, fastSync bool) *BlockchainReactor {
         timeoutsCh,
     )
     bcR := &BlockchainReactor {
-        fastSync:      fastSync,
-        pool:          pool,
+        chain:         chain,
         store:         store,
+		accounts:      accounts,
+        pool:          pool,
+		mux:           http.NewServeMux(),
+        fastSync:      fastSync,
         requestsCh:    requestsCh,
         timeoutsCh:   timeoutsCh,
     }
@@ -77,6 +211,7 @@ func NewBlockchainReactor(store *MemStore, fastSync bool) *BlockchainReactor {
 // OnStart implements BaseService
 func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
+	bcR.BuildHander()
     if bcR.fastSync {
         _, err := bcR.pool.Start()
         if err != nil {
@@ -128,7 +263,7 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 	switch msg := msg.(type) {
 	case *bcBlockRequestMessage:
 		// Got a request for a block. Respond with block if we have it.
-		block := bcR.store.LoadBlock(msg.Height)
+		block, _:= bcR.store.GetBlock(msg.Height)
 		if block != nil {
 			msg := &bcBlockResponseMessage{Block: block}
 			queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
@@ -231,10 +366,12 @@ func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
 }
 
 
+/*
 // SetEventSwitch implements events.Eventable
 func (bcR *BlockchainReactor) SetEventSwitch(evsw types.EventSwitch) {
 	bcR.evsw = evsw
 }
+*/
 
 //-----------------------------------------------------------------------------
 // Messages
@@ -270,7 +407,7 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	return
 }
 
-//-------------------------------------
+//-----------------------------------
 
 type bcBlockRequestMessage struct {
 	Height uint64

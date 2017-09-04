@@ -3,12 +3,12 @@ package core
 import (
 //	crypto "github.com/blockchain/go-crypto"
 //	"github.com/tendermint/tendermint/consensus"
-	p2p "github.com/blockchain/p2p"
+	p2p "github.com/bytom/p2p"
 //	"github.com/tendermint/tendermint/proxy"
 //	"github.com/tendermint/tendermint/state/txindex"
-	"github.com/blockchain/types"
+	"github.com/bytom/types"
 	"github.com/tendermint/tmlibs/log"
-    bc "github.com/blockchain/blockchain"
+    "github.com/bytom/blockchain/txdb"
 )
 
 //----------------------------------------------
@@ -38,7 +38,8 @@ var (
 //	proxyAppQuery proxy.AppConnQuery
 
 	// interfaces defined in types and above
-	blockStore     *bc.MemStore
+//	blockStore     *bc.MemStore
+	blockStore     *txdb.Store
 	//mempool        types.Mempool
 	//consensusState Consensus
 	p2pSwitch      P2P
@@ -56,7 +57,7 @@ func SetEventSwitch(evsw types.EventSwitch) {
 	eventSwitch = evsw
 }
 
-func SetBlockStore(bs *bc.MemStore) {
+func SetBlockStore(bs *txdb.Store) {
 	blockStore = bs
 }
 

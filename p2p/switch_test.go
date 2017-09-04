@@ -13,7 +13,7 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 
-	cfg "github.com/blockchain/config"
+	cfg "github.com/bytom/config"
 	"github.com/tendermint/tmlibs/log"
 )
 

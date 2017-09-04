@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/blockchain/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/legacy"
 //	"github.com/blockchain/protocol/state"
 )
 
