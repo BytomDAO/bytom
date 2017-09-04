@@ -17,6 +17,7 @@ import (
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/log"
 	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
@@ -64,6 +65,7 @@ type BlockchainReactor struct {
 	store        *txdb.Store
 	accounts	 *account.Manager
 	assets	         *asset.Registry
+	txFeeds		 *txfeed.TxFeed
 	pool         *BlockPool
 	mux          *http.ServeMux
 	handler      http.Handler
@@ -162,6 +164,10 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/update-asset-tags",jsonHandler(bcr.updateAssetTags))
 	m.Handle("/create-control-program",jsonHandler(bcr.createControlProgram))
 	m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
+	m.Handle("/create-transaction-feed", jsonHandler(bcr.createTxFeed))
+	m.Handle("/get-transaction-feed", jsonHandler(bcr.getTxFeed))
+	m.Handle("/update-transaction-feed", jsonHandler(bcr.updateTxFeed))
+	m.Handle("/delete-transaction-feed", jsonHandler(bcr.deleteTxFeed))
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
