@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/types"
     "github.com/bytom/protocol/bc/legacy"
     "github.com/bytom/protocol"
+	"github.com/bytom/encoding/json"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/account"
@@ -192,6 +193,46 @@ func (bcr *BlockchainReactor) BuildHander() {
 	}
 	*/
 	bcr.handler = handler
+}
+
+// Used as a request object for api queries
+type requestQuery struct {
+	Filter       string        `json:"filter,omitempty"`
+	FilterParams []interface{} `json:"filter_params,omitempty"`
+	SumBy        []string      `json:"sum_by,omitempty"`
+	PageSize     int           `json:"page_size"`
+
+	// AscLongPoll and Timeout are used by /list-transactions
+	// to facilitate notifications.
+	AscLongPoll bool          `json:"ascending_with_long_poll,omitempty"`
+	Timeout     json.Duration `json:"timeout"`
+
+	// After is a completely opaque cursor, indicating that only
+	// items in the result set after the one identified by `After`
+	// should be included. It has no relationship to time.
+	After string `json:"after"`
+
+	// These two are used for time-range queries like /list-transactions
+	StartTimeMS uint64 `json:"start_time,omitempty"`
+	EndTimeMS   uint64 `json:"end_time,omitempty"`
+
+	// This is used for point-in-time queries like /list-balances
+	// TODO(bobg): Different request structs for endpoints with different needs
+	TimestampMS uint64 `json:"timestamp,omitempty"`
+
+	// This is used for filtering results from /list-access-tokens
+	// Value must be "client" or "network"
+	Type string `json:"type"`
+
+	// Aliases is used to filter results from /mockshm/list-keys
+	Aliases []string `json:"aliases,omitempty"`
+}
+
+// Used as a response object for api queries
+type page struct {
+	Items    interface{}  `json:"items"`
+	Next     requestQuery `json:"next"`
+	LastPage bool         `json:"last_page"`
 }
 
 func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, fastSync bool) *BlockchainReactor {
