@@ -4,7 +4,7 @@ import (
 	// for registering TMEventData as events.EventData
 	abci "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-wire/data"
-	cmn "github.com/tendermint/tmlibs/common"
+	//cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/events"
 )
 
@@ -16,7 +16,7 @@ func EventStringUnbond() string  { return "Unbond" }
 func EventStringRebond() string  { return "Rebond" }
 func EventStringDupeout() string { return "Dupeout" }
 func EventStringFork() string    { return "Fork" }
-func EventStringTx(tx Tx) string { return cmn.Fmt("Tx:%X", tx.Hash()) }
+//func EventStringTx(tx Tx) string { return cmn.Fmt("Tx:%X", tx.Hash()) }
 
 func EventStringNewBlock() string         { return "NewBlock" }
 func EventStringNewBlockHeader() string   { return "NewBlockHeader" }
@@ -97,18 +97,18 @@ var tmEventDataMapper = data.NewMapper(TMEventData{}).
 // but some (an input to a call tx or a receive) are more exotic
 
 type EventDataNewBlock struct {
-	Block *Block `json:"block"`
+	//Block *Block `json:"block"`
 }
 
 // light weight event for benchmarking
 type EventDataNewBlockHeader struct {
-	Header *Header `json:"header"`
+	//Header *Header `json:"header"`
 }
 
 // All txs fire EventDataTx
 type EventDataTx struct {
 	Height int           `json:"height"`
-	Tx     Tx            `json:"tx"`
+	//Tx     Tx            `json:"tx"`
 	Data   data.Bytes    `json:"data"`
 	Log    string        `json:"log"`
 	Code   abci.CodeType `json:"code"`
@@ -126,7 +126,7 @@ type EventDataRoundState struct {
 }
 
 type EventDataVote struct {
-	Vote *Vote
+	//Vote *Vote
 }
 
 func (_ EventDataNewBlock) AssertIsTMEventData()       {}
@@ -191,9 +191,11 @@ func FireEventVote(fireable events.Fireable, vote EventDataVote) {
 	fireEvent(fireable, EventStringVote(), TMEventData{vote})
 }
 
+/*
 func FireEventTx(fireable events.Fireable, tx EventDataTx) {
 	fireEvent(fireable, EventStringTx(tx.Tx), TMEventData{tx})
 }
+*/
 
 //--- EventDataRoundState events
 

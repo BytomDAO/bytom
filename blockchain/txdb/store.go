@@ -2,14 +2,15 @@ package txdb
 
 import (
 	"context"
+	"fmt"
+	"encoding/json"
 
-//	"chain/database/pg"
-//	"github.com/blockchain/errors"
-//	"github.com/blockchain/protocol"
+	"github.com/bytom/errors"
+	//"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
-//	"github.com/blockchain/protocol/state"
+	"github.com/bytom/protocol/state"
     dbm "github.com/tendermint/tmlibs/db"
-
+	. "github.com/tendermint/tmlibs/common"
 )
 
 // A Store encapsulates storage for blockchain validation.
@@ -21,56 +22,98 @@ type Store struct {
 	cache blockCache
 }
 
+
 //var _ protocol.Store = (*Store)(nil)
+
+func calcBlockHeadKey(height uint64) []byte {
+	return []byte(fmt.Sprintf("H:%v", height))
+}
+
+func calcBlockKey(height uint64) []byte {
+	return []byte(fmt.Sprintf("B:%v", height))
+}
+
+func LoadBlock(db dbm.DB, height uint64) *legacy.Block {
+    var block *legacy.Block
+    bytez := db.Get(calcBlockKey(height))
+    if bytez == nil {
+        return nil
+    }
+    block.UnmarshalText(bytez)
+	return block
+}
+
+var blockStoreKey = []byte("blockStore")
+
+type BlockStoreStateJSON struct {
+	Height uint64
+}
+
+func (bsj BlockStoreStateJSON) Save(db dbm.DB) {
+	bytes, err := json.Marshal(bsj)
+	if err != nil {
+		PanicSanity(Fmt("Could not marshal state bytes: %v", err))
+	}
+	db.SetSync(blockStoreKey, bytes)
+}
+
+func LoadBlockStoreStateJSON(db dbm.DB) BlockStoreStateJSON {
+	bytes := db.Get(blockStoreKey)
+	if bytes == nil {
+		return BlockStoreStateJSON{
+			Height: 0,
+		}
+	}
+	bsj := BlockStoreStateJSON{}
+	err := json.Unmarshal(bytes, &bsj)
+	if err != nil {
+		PanicCrisis(Fmt("Could not unmarshal bytes: %X", bytes))
+	}
+	return bsj
+}
+
 
 // NewStore creates and returns a new Store object.
 //
 // For testing purposes, it is usually much faster
-// and more convenient to use package chain/protocol/memstore
+// and more convenient to use package bytom/protocol/memstore
 // instead.
 func NewStore(db dbm.DB) *Store {
+	cache := newBlockCache(func(height uint64) *legacy.Block {
+			return LoadBlock(db, height)
+		})
 	return &Store{
 		db: db,
-		/*cache: newBlockCache(func(height uint64) (*legacy.Block, error) {
-			//const q = `SELECT data FROM blocks WHERE height = $1`
-			//var b legacy.Block
-			//err := db.QueryRowContext(context.Background(), q, height).Scan(&b)
-			//if err != nil {
-			return nil, errors.Wrap(err, "select query")
-			//}
-			//return &b, nil
+		cache: cache,
 		}
-        ),*/
-	}
 }
 
 // Height returns the height of the blockchain.
-func (s *Store) Height(ctx context.Context) (uint64, error) {
-/*	const q = `SELECT COALESCE(MAX(height), 0) FROM blocks`
-	var height uint64
-	err := s.db.QueryRowContext(ctx, q).Scan(&height)
-	return height, errors.Wrap(err, "max height sql query")
-    */
-    return 0, nil
+func (s *Store) Height() uint64 {
+	heightJson := LoadBlockStoreStateJSON(s.db)
+    return heightJson.Height
 }
 
 // GetBlock looks up the block with the provided block height.
-// If no block is found at that height, it returns an error that
-// wraps sql.ErrNoRows.
+// If no block is found at that height, it returns an error.
 
-func (s *Store) GetBlock(ctx context.Context, height uint64) (*legacy.Block, error) {
-    return nil, nil
-	//return s.cache.lookup(height)
+func (s *Store) GetBlock(height uint64) (*legacy.Block, error) {
+	return s.cache.lookup(height)
+}
+
+func (s *Store) GetRawBlock(height uint64) ([]byte, error) {
+	bytez := s.db.Get(calcBlockKey(height))
+	if bytez == nil {
+		return nil , errors.New("querying blocks from the db null")
+	}
+	return bytez, nil
 }
 
 // LatestSnapshot returns the most recent state snapshot stored in
 // the database and its corresponding block height.
-/*
 func (s *Store) LatestSnapshot(ctx context.Context) (*state.Snapshot, uint64, error) {
-//	return getStateSnapshot(ctx, s.db)
-//    return nil, 0, nil
+	return getStateSnapshot(ctx, s.db)
 }
-*/
 
 /*
 // LatestSnapshotInfo returns the height and size of the most recent
@@ -82,6 +125,7 @@ func (s *Store) LatestSnapshotInfo(ctx context.Context) (height uint64, size uin
 	err = s.db.QueryRowContext(ctx, q).Scan(&height, &size)
 	return height, size, err
 }
+*/
 
 // GetSnapshot returns the state snapshot stored at the provided height,
 // in Chain Core's binary protobuf representation. If no snapshot exists
@@ -91,18 +135,22 @@ func (s *Store) GetSnapshot(ctx context.Context, height uint64) ([]byte, error) 
 }
 
 // SaveBlock persists a new block in the database.
-func (s *Store) SaveBlock(ctx context.Context, block *legacy.Block) error {
-	const q = `
-		INSERT INTO blocks (block_hash, height, data, header)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (block_hash) DO NOTHING
-	`
-	_, err := s.db.ExecContext(ctx, q, block.Hash(), block.Height, block, &block.BlockHeader)
-	if err != nil {
-		return errors.Wrap(err, "insert block")
-	}
-
+func (s *Store) SaveBlock(block *legacy.Block) error {
 	s.cache.add(block)
+	height := block.Height
+
+    binaryBlock, err := block.MarshalText()
+    if err != nil {
+        PanicCrisis(Fmt("Error Marshal block meta: %v", err))
+    }
+    s.db.Set(calcBlockKey(height), binaryBlock)
+
+	// Save new BlockStoreStateJSON descriptor
+	BlockStoreStateJSON{Height: height}.Save(s.db)
+
+	// Flush
+	s.db.SetSync(nil, nil)
+
 	return nil
 }
 
@@ -112,7 +160,6 @@ func (s *Store) SaveSnapshot(ctx context.Context, height uint64, snapshot *state
 	return errors.Wrap(err, "saving state tree")
 }
 
-*/
 func (s *Store) FinalizeBlock(ctx context.Context, height uint64) error {
 //	_, err := s.db.ExecContext(ctx, `SELECT pg_notify('newblock', $1)`, height)
 	return nil

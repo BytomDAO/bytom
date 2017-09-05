@@ -2,8 +2,8 @@ GOTOOLS = \
 					github.com/mitchellh/gox \
 					github.com/Masterminds/glide
 PACKAGES=$(shell go list ./... | grep -v '/vendor/')
-BUILD_TAGS?=blockchain
-TMHOME = $${TMHOME:-$$HOME/.blockchain}
+BUILD_TAGS?=bytom
+TMHOME = $${TMHOME:-$$HOME/.bytom}
 
 all: install test
 
@@ -20,6 +20,7 @@ copy:
 	cp -r vendor/github.com/golang/net vendor/golang.org/x/net
 	cp -r vendor/github.com/golang/text vendor/golang.org/x/text
 	cp -r vendor/github.com/golang/tools vendor/golang.org/x/tools
+	cp -r vendor/github.com/golang/time vendor/golang.org/x/time
 
 # dist builds binaries for all platforms and packages them for distribution
 dist:

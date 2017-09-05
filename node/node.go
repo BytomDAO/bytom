@@ -2,9 +2,13 @@ package node
 
 import (
     "context"
+	"crypto/tls"
 	"net/http"
 	"strings"
     "net"
+	"sync"
+	"os"
+	"time"
 
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
@@ -24,8 +28,21 @@ import (
     "github.com/bytom/blockchain/account"
     "github.com/bytom/protocol"
     "github.com/bytom/blockchain/txdb"
+	"github.com/bytom/net/http/reqid"
+//	"github.com/bytom/net/http/static"
+//	"github.com/bytom/generated/dashboard"
+	"github.com/bytom/env"
+	"github.com/kr/secureheader"
+	bytomlog "github.com/bytom/log"
+	"github.com/bytom/errors"
+	"github.com/bytom/crypto/ed25519"
 
 	_ "net/http/pprof"
+)
+
+const (
+    httpReadTimeout  = 2 * time.Minute
+	httpWriteTimeout = time.Hour
 )
 
 type Node struct {
@@ -33,7 +50,6 @@ type Node struct {
 
 	// config
 	config        *cfg.Config
-	privValidator *types.PrivValidator // local node's validator key
 
 	// network
 	privKey  crypto.PrivKeyEd25519 // local node's p2p key
@@ -43,30 +59,126 @@ type Node struct {
 	// services
 	evsw             types.EventSwitch           // pub/sub for services
 //    blockStore       *bc.MemStore
-    blockStore       *bc.BlockStore
+    blockStore       *txdb.Store
     bcReactor        *bc.BlockchainReactor
     accounts         *account.Manager
     rpcListeners     []net.Listener              // rpc servers
 }
 
+var (
+    // config vars
+	rootCAs       = env.String("ROOT_CA_CERTS", "") // file path
+	splunkAddr    = os.Getenv("SPLUNKADDR")
+	logFile       = os.Getenv("LOGFILE")
+	logSize       = env.Int("LOGSIZE", 5e6) // 5MB
+	logCount      = env.Int("LOGCOUNT", 9)
+	logQueries    = env.Bool("LOG_QUERIES", false)
+	maxDBConns    = env.Int("MAXDBCONNS", 10)           // set to 100 in prod
+	rpsToken      = env.Int("RATELIMIT_TOKEN", 0)       // reqs/sec
+	rpsRemoteAddr = env.Int("RATELIMIT_REMOTE_ADDR", 0) // reqs/sec
+	indexTxs      = env.Bool("INDEX_TRANSACTIONS", true)
+	home          = bc.HomeDirFromEnvironment()
+	bootURL       = env.String("BOOTURL", "")
+	// build vars; initialized by the linker
+	buildTag    = "?"
+	buildCommit = "?"
+	buildDate   = "?"
+	race []interface{} // initialized in race.go
+)
+
+
 func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
-	// Get PrivValidator
-	privValidator := types.LoadOrGenPrivValidator(config.PrivValidatorFile(), logger)
-	return NewNode(config, privValidator, logger)
+	return NewNode(config, logger)
 }
 
-func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.Logger) *Node {
-	// Get BlockStore
-    blockStoreDB := dbm.NewDB("blockstore", config.DBBackend, config.DBDir())
-    blockStore := bc.NewBlockStore(blockStoreDB)
-    //blockStore := bc.NewMemStore()
-    genesisBlock := legacy.Block {
+func RedirectHandler(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	    if req.URL.Path == "/" {
+			http.Redirect(w, req, "/dashboard/", http.StatusFound)
+			return
+		}
+		next.ServeHTTP(w, req)
+	})
+}
+
+
+type waitHandler struct {
+    h  http.Handler
+	wg sync.WaitGroup
+}
+
+func (wh *waitHandler) Set(h http.Handler) {
+    wh.h = h
+	wh.wg.Done()
+}
+
+func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	wh.wg.Wait()
+	wh.h.ServeHTTP(w, req)
+}
+
+func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
+	// The waitHandler accepts incoming requests, but blocks until its underlying
+	// handler is set, when the second phase is complete.
+	var coreHandler waitHandler
+	coreHandler.wg.Add(1)
+	mux := http.NewServeMux()
+	mux.Handle("/", &coreHandler)
+
+	var handler http.Handler = mux
+	//handler = core.AuthHandler(handler, raftDB, accessTokens, tlsConfig)
+	handler = RedirectHandler(handler)
+	handler = reqid.Handler(handler)
+
+	secureheader.DefaultConfig.PermitClearLoopback = true
+	secureheader.DefaultConfig.HTTPSRedirect = false
+	secureheader.DefaultConfig.Next = handler
+
+	server := &http.Server{
+		// Note: we should not set TLSConfig here;
+		// we took care of TLS with the listener in maybeUseTLS.
+		Handler:      secureheader.DefaultConfig,
+		ReadTimeout:  httpReadTimeout,
+		WriteTimeout: httpWriteTimeout,
+		// Disable HTTP/2 for now until the Go implementation is more stable.
+		// https://github.com/golang/go/issues/16450
+		// https://github.com/golang/go/issues/17071
+		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
+	}
+	listenAddr := env.String("LISTEN", config.ApiAddress)
+	listener, _ := net.Listen("tcp", *listenAddr)
+
+	// The `Serve` call has to happen in its own goroutine because
+	// it's blocking and we need to proceed to the rest of the core setup after
+	// we call it.
+	go func() {
+		err := server.Serve(listener)
+		bytomlog.Fatalkv(context.Background(), bytomlog.KeyError, errors.Wrap(err, "Serve"))
+	}()
+	coreHandler.Set(h)
+}
+
+func setupGenesisBlock(config *cfg.Config) (*legacy.Block, error) {
+	privKey := ed25519.PrivateKey(config.PrivateKey)
+	pubkey := privKey.Public().(ed25519.PublicKey)
+	var pubkeys []ed25519.PublicKey = []ed25519.PublicKey{pubkey,}
+	var npubkeys int = 1
+	var timestamp time.Time = config.Time
+	return protocol.NewInitialBlock(pubkeys, npubkeys, timestamp)
+}
+
+func NewNode(config *cfg.Config, logger log.Logger) *Node {
+	// Get store
+    tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
+    store := txdb.NewStore(tx_db)
+    /*genesisBlock := legacy.Block {
         BlockHeader: legacy.BlockHeader {
             Version: 1,
             Height: 0,
         },
     }
-    blockStore.SaveBlock(&genesisBlock)
+    store.SaveBlock(&genesisBlock)
+	*/
 
 	// Generate node PrivKey
 	privKey := crypto.GenPrivKeyEd25519()
@@ -86,14 +198,12 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 	sw.SetLogger(p2pLogger)
 
     fastSync := config.FastSync
-    genesisblock, err := protocol.NewInitialBlock()
-    if err != nil {
+    genesisBlock, err := setupGenesisBlock(config)
+	if err != nil {
       cmn.Exit(cmn.Fmt("initialize genesisblock failed: %v", err))
     }
 
-    tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-    store := txdb.NewStore(tx_db)
-    chain, err := protocol.NewChain(context.Background(), genesisblock.Hash(), store, nil)
+    chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, nil)
    /* if err != nil {
       cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
     }
@@ -104,10 +214,13 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
     chain.MaxIssuanceWindow = bc.MillisDuration(c.MaxIssuanceWindowMs)
     */
 
-    bcReactor := bc.NewBlockchainReactor(blockStore, chain, fastSync)
+    accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
+    accounts := account.NewManager(accounts_db, chain)
+    bcReactor := bc.NewBlockchainReactor(store, chain, accounts, fastSync)
     bcReactor.SetLogger(logger.With("module", "blockchain"))
     sw.AddReactor("BLOCKCHAIN", bcReactor)
 
+	rpcInit(bcReactor, config)
 	// Optionally, start the pex reactor
 	var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
@@ -130,12 +243,9 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 			logger.Error("Profile server", "error", http.ListenAndServe(profileHost, nil))
 		}()
 	}
-    accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
-    accounts := account.NewManager(accounts_db, chain)
 
 	node := &Node{
 		config:        config,
-		privValidator: privValidator,
 
 		privKey:  privKey,
 		sw:       sw,
@@ -143,7 +253,7 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 
 		evsw:      eventSwitch,
         bcReactor: bcReactor,
-        blockStore: blockStore,
+        blockStore: store,
         accounts: accounts,
 	}
 	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
@@ -228,7 +338,6 @@ func (n *Node) ConfigureRPC() {
 	//rpccore.SetConsensusState(n.consensusState)
 	//rpccore.SetMempool(n.mempoolReactor.Mempool)
 	rpccore.SetSwitch(n.sw)
-	//rpccore.SetPubKey(n.privValidator.PubKey)
 	//rpccore.SetGenesisDoc(n.genesisDoc)
 	rpccore.SetAddrBook(n.addrBook)
 	//rpccore.SetProxyAppQuery(n.proxyApp.Query())
@@ -278,11 +387,6 @@ func (n *Node) Switch() *p2p.Switch {
 
 func (n *Node) EventSwitch() types.EventSwitch {
 	return n.evsw
-}
-
-// XXX: for convenience
-func (n *Node) PrivValidator() *types.PrivValidator {
-	return n.privValidator
 }
 
 func (n *Node) makeNodeInfo() *p2p.NodeInfo {

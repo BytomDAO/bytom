@@ -3,6 +3,8 @@ package txdb
 import (
 	"strconv"
 	"sync"
+	"errors"
+	"fmt"
 
 	"github.com/bytom/protocol/bc/legacy"
 
@@ -12,7 +14,7 @@ import (
 
 const maxCachedBlocks = 30
 
-func newBlockCache(fillFn func(height uint64) (*legacy.Block, error)) blockCache {
+func newBlockCache(fillFn func(height uint64) *legacy.Block) blockCache {
 	return blockCache{
 		lru:    lru.New(maxCachedBlocks),
 		fillFn: fillFn,
@@ -23,7 +25,7 @@ type blockCache struct {
 	mu  sync.Mutex
 	lru *lru.Cache
 
-	fillFn func(height uint64) (*legacy.Block, error)
+	fillFn func(height uint64) (*legacy.Block)
 
 	single singleflight.Group // for cache misses
 }
@@ -37,9 +39,9 @@ func (c *blockCache) lookup(height uint64) (*legacy.Block, error) {
 	// Cache miss; fill the block
 	heightStr := strconv.FormatUint(height, 16)
 	block, err := c.single.Do(heightStr, func() (interface{}, error) {
-		b, err := c.fillFn(height)
-		if err != nil {
-			return nil, err
+		b := c.fillFn(height)
+		if b == nil {
+			return nil, errors.New(fmt.Sprintf("There are no block with block height is %v", height))
 		}
 
 		c.add(b)
