@@ -24,6 +24,7 @@ import (
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/generated/dashboard"
 	"github.com/bytom/errors"
+	"github.com/bytom/blockchain/txbuilder"
 )
 
 const (
@@ -63,13 +64,14 @@ type BlockchainReactor struct {
 	chain        *protocol.Chain
 	store        *txdb.Store
 	accounts	 *account.Manager
-	assets	         *asset.Registry
+	assets	     *asset.Registry
 	pool         *BlockPool
 	mux          *http.ServeMux
 	handler      http.Handler
 	fastSync     bool
 	requestsCh   chan BlockRequest
 	timeoutsCh   chan string
+	submitter    txbuilder.Submitter
 //	lastBlock    *types.Block
 
 	evsw types.EventSwitch
