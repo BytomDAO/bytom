@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	stdjson "encoding/json"
 
 	"github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/rpc"
@@ -59,6 +60,12 @@ var commands = map[string]*command{
 	"create-asset":		{createAsset},
 	"update-asset-tags":	{updateAssetTags},
 	"build-transaction": {buildTransaction},
+	"create-control-program": {createControlProgram},
+	"create-account-receiver": {createAccountReceiver},
+	"create-transaction-feed": {createTxFeed},
+	"get-transaction-feed":    {getTxFeed},
+	"update-transaction-feed": {updateTxFeed},
+	"delete-transaction-feed": {deleteTxFeed},
 }
 
 func main() {
@@ -388,4 +395,95 @@ func buildTransaction(client *rpc.Client, args []string) {
 	if len(args) != 0 {
 		fatalln("error:updateAccountTags not use args")
 	}
+}
+
+func createControlProgram(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:createControlProgram not use args")
+        }
+	type Ins struct {
+	Type   string
+	Params stdjson.RawMessage
+}
+	var ins Ins
+	//TODO:undefined arguments to ins
+	responses := make([]interface{},50)
+        client.Call(context.Background(),"/create-control-program", &[]Ins{ins,}, &responses)
+        fmt.Printf("responses:%v\n", responses)
+}
+
+func createAccountReceiver(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:createAccountReceiver not use args")
+        }
+	type Ins struct {
+	AccountID    string    `json:"account_id"`
+	AccountAlias string    `json:"account_alias"`
+	ExpiresAt    time.Time `json:"expires_at"`
+}
+	var ins Ins
+	//TODO:undefined argument to ExpiresAt
+	ins.AccountID = "123456"
+	ins.AccountAlias = "zxcvbn"
+	responses := make([]interface{},50)
+        client.Call(context.Background(),"/create-Account-Receiver", &[]Ins{ins,}, &responses)
+        fmt.Printf("responses:%v\n", responses)
+}
+
+func createTxFeed(client *rpc.Client, args []string){
+        if len(args) != 1{
+                fatalln("error:createTxFeed take no arguments")
+        }
+	type In struct {
+	Alias  string
+	Filter string
+	ClientToken string `json:"client_token"`
+}
+	var in In
+	in.Alias = "asdfgh"
+	in.Filter = "zxcvbn"
+	in.ClientToken = args[0]
+	client.Call(context.Background(),"/create-transaction-feed",&[]In{in,},nil)
+}
+
+func getTxFeed(client *rpc.Client, args []string){
+	if len(args) != 0{
+		fatalln("error:getTxFeed not use args")
+	}
+	type In struct {
+	ID    string `json:"id,omitempty"`
+	Alias string `json:"alias,omitempty"`
+}
+	var in In
+	in.Alias = "qwerty"
+	in.ID = "123456"
+	client.Call(context.Background(),"/get-transaction-feed",&[]In{in,},nil)
+}
+
+func updateTxFeed(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:updateTxFeed not use args")
+        }
+        type In struct {
+	ID    string `json:"id,omitempty"`
+	Alias string `json:"alias,omitempty"`
+}
+	var in In
+	in.ID = "123456"
+	in.Alias = "qwerty"
+	client.Call(context.Background(),"/update-transaction-feed",&[]In{in,},nil)
+}
+
+func deleteTxFeed(client *rpc.Client, args []string){
+	if len(args) != 0{
+		fatalln("error:deleteTxFeed not use args")
+	}
+	type In struct {
+	ID    string `json:"id,omitempty"`
+	Alias string `json:"alias,omitempty"`
+}
+	var in In
+        in.ID = "123456"
+        in.Alias = "qwerty"
+        client.Call(context.Background(),"/delete-transaction-feed",&[]In{in,},nil)
 }

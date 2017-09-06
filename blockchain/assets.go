@@ -4,14 +4,14 @@ import (
 	"context"
 	"sync"
 
-//	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/log"
 )
 
+// POST /create-asset
 func (a *BlockchainReactor) createAsset(ctx context.Context, ins []struct {
 	Alias      string
 	RootXPubs  []chainkd.XPub `json:"root_xpubs"`
@@ -34,14 +34,22 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins []struct {
 		go func(i int) {
 			subctx := reqid.NewSubContext(ctx, reqid.New())
 			defer wg.Done()
-			//defer batchRecover(subctx, &responses[i])
+			defer batchRecover(subctx, &responses[i])
 
-			acc, err := a.accounts.Create(subctx, ins[i].RootXPubs, ins[i].Quorum, ins[i].Alias, ins[i].Tags, ins[i].ClientToken)
+			a, err := a.assets.Define(
+				subctx,
+				ins[i].RootXPubs,
+				ins[i].Quorum,
+				ins[i].Definition,
+				ins[i].Alias,
+				ins[i].Tags,
+				ins[i].ClientToken,
+			)
 			if err != nil {
 				responses[i] = err
 				return
 			}
-			aa, err := account.Annotated(acc)
+			aa, err := asset.Annotated(a)
 			if err != nil {
 				responses[i] = err
 				return
@@ -50,8 +58,8 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins []struct {
 		}(i)
 	}
 
-//	wg.wait()
-	return responses,nil
+	wg.Wait()
+	return responses, nil
 }
 
 // POST /update-asset-tags
@@ -60,7 +68,7 @@ func (a *BlockchainReactor) updateAssetTags(ctx context.Context, ins []struct {
 	Alias *string
 	Tags  map[string]interface{} `json:"tags"`
 }) interface{} {
-	log.Printf(ctx,"-------updateAssetTags------")
+	log.Printf(ctx,"------updateAssetTags-----")
 	responses := make([]interface{}, len(ins))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))
@@ -80,6 +88,7 @@ func (a *BlockchainReactor) updateAssetTags(ctx context.Context, ins []struct {
 		}(i)
 	}
 
-//	wg.Wait()
+	wg.Wait()
 	return responses
 }
+
