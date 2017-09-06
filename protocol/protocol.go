@@ -31,11 +31,11 @@ var (
 // and issuance memory. The Chain type uses Store to load state
 // from storage and persist validated data.
 type Store interface {
-	Height(context.Context) (uint64, error)
-	GetBlock(context.Context, uint64) (*legacy.Block, error)
+	Height() uint64
+	GetBlock(uint64) (*legacy.Block, error)
 	LatestSnapshot(context.Context) (*state.Snapshot, uint64, error)
 
-	SaveBlock(context.Context, *legacy.Block) error
+	SaveBlock(*legacy.Block) error
 	FinalizeBlock(context.Context, uint64) error
 	SaveSnapshot(context.Context, uint64, *state.Snapshot) error
 }
@@ -79,7 +79,7 @@ func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, height
 	}
 	c.state.cond.L = new(sync.Mutex)
 
-	c.state.height, _ = store.Height(ctx)
+	c.state.height = store.Height()
 
 	// Note that c.height.n may still be zero here.
 	if heights != nil {

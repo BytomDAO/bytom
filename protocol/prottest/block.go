@@ -96,8 +96,7 @@ func NewChain(tb testing.TB, opts ...Option) *protocol.Chain {
 
 // Initial returns the provided Chain's initial block.
 func Initial(tb testing.TB, c *protocol.Chain) *legacy.Block {
-	ctx := context.Background()
-	b1, err := c.GetBlock(ctx, 1)
+	b1, err := c.GetBlock(1)
 	if err != nil {
 		testutil.FatalErr(tb, err)
 	}
@@ -121,7 +120,7 @@ func BlockKeyPairs(c *protocol.Chain) ([]ed25519.PublicKey, []ed25519.PrivateKey
 // it makes an empty block.
 func MakeBlock(tb testing.TB, c *protocol.Chain, txs []*legacy.Tx) *legacy.Block {
 	ctx := context.Background()
-	curBlock, err := c.GetBlock(ctx, c.Height())
+	curBlock, err := c.GetBlock(c.Height())
 	if err != nil {
 		testutil.FatalErr(tb, err)
 	}

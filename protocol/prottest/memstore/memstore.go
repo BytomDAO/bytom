@@ -26,14 +26,15 @@ func New() *MemStore {
 	return &MemStore{Blocks: make(map[uint64]*legacy.Block)}
 }
 
-func (m *MemStore) Height(context.Context) (uint64, error) {
+func (m *MemStore) Height() uint64 {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	return uint64(len(m.Blocks)), nil
+	return uint64(len(m.Blocks))
+
 }
 
-func (m *MemStore) SaveBlock(ctx context.Context, b *legacy.Block) error {
+func (m *MemStore) SaveBlock(b *legacy.Block) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -54,7 +55,7 @@ func (m *MemStore) SaveSnapshot(ctx context.Context, height uint64, snapshot *st
 	return nil
 }
 
-func (m *MemStore) GetBlock(ctx context.Context, height uint64) (*legacy.Block, error) {
+func (m *MemStore) GetBlock(height uint64) (*legacy.Block, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	b, ok := m.Blocks[height]
