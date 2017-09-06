@@ -1,4 +1,3 @@
-// Command corectl provides miscellaneous control functions for a Chain Core.
 package main
 
 import (
@@ -22,6 +21,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/log"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/cmd/bytomcli/example"
 )
 
 // config vars
@@ -66,6 +66,7 @@ var commands = map[string]*command{
 	"get-transaction-feed":    {getTxFeed},
 	"update-transaction-feed": {updateTxFeed},
 	"delete-transaction-feed": {deleteTxFeed},
+	"issue-test": {example.IssueTest},
 }
 
 func main() {

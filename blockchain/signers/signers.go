@@ -125,7 +125,7 @@ func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, qu
 	}
     */
 	var (
-		id       string
+		id       string = "alice"
 		keyIndex uint64
 	)
 
