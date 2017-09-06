@@ -24,6 +24,7 @@ import (
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/generated/dashboard"
 	"github.com/bytom/errors"
+	"github.com/bytom/blockchain/txbuilder"
 )
 
 const (
@@ -63,13 +64,14 @@ type BlockchainReactor struct {
 	chain        *protocol.Chain
 	store        *txdb.Store
 	accounts	 *account.Manager
-	assets	         *asset.Registry
+	assets	     *asset.Registry
 	pool         *BlockPool
 	mux          *http.ServeMux
 	handler      http.Handler
 	fastSync     bool
 	requestsCh   chan BlockRequest
 	timeoutsCh   chan string
+	submitter    txbuilder.Submitter
 //	lastBlock    *types.Block
 
 	evsw types.EventSwitch
@@ -160,6 +162,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/create-asset", jsonHandler(bcr.createAsset))
 	m.Handle("/update-account-tags",jsonHandler(bcr.updateAccountTags))
 	m.Handle("/update-asset-tags",jsonHandler(bcr.updateAssetTags))
+	m.Handle("/build-transaction", jsonHandler(bcr.build))
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
