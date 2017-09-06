@@ -43,7 +43,7 @@ const (
 	statusUpdateIntervalSeconds = 10
 	// check if we should switch to consensus reactor
 	switchToConsensusIntervalSeconds = 1
-	maxBlockchainResponseSize        = types.MaxBlockSize + 2
+	maxBlockchainResponseSize        = 22020096 + 2
 	crosscoreRPCPrefix = "/rpc/"
 )
 
@@ -415,10 +415,12 @@ func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
 }
 
 
+/*
 // SetEventSwitch implements events.Eventable
 func (bcR *BlockchainReactor) SetEventSwitch(evsw types.EventSwitch) {
 	bcR.evsw = evsw
 }
+*/
 
 //-----------------------------------------------------------------------------
 // Messages

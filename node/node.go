@@ -35,6 +35,7 @@ import (
 	"github.com/kr/secureheader"
 	bytomlog "github.com/bytom/log"
 	"github.com/bytom/errors"
+	"github.com/bytom/crypto/ed25519"
 
 	_ "net/http/pprof"
 )
@@ -49,7 +50,6 @@ type Node struct {
 
 	// config
 	config        *cfg.Config
-	privValidator *types.PrivValidator // local node's validator key
 
 	// network
 	privKey  crypto.PrivKeyEd25519 // local node's p2p key
@@ -68,7 +68,6 @@ type Node struct {
 var (
     // config vars
 	rootCAs       = env.String("ROOT_CA_CERTS", "") // file path
-	listenAddr    = env.String("LISTEN", ":1999")
 	splunkAddr    = os.Getenv("SPLUNKADDR")
 	logFile       = os.Getenv("LOGFILE")
 	logSize       = env.Int("LOGSIZE", 5e6) // 5MB
@@ -89,9 +88,7 @@ var (
 
 
 func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
-	// Get PrivValidator
-	privValidator := types.LoadOrGenPrivValidator(config.PrivValidatorFile(), logger)
-	return NewNode(config, privValidator, logger)
+	return NewNode(config, logger)
 }
 
 func RedirectHandler(next http.Handler) http.Handler {
@@ -120,7 +117,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	wh.h.ServeHTTP(w, req)
 }
 
-func rpcInit(h *bc.BlockchainReactor) {
+func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
 	var coreHandler waitHandler
@@ -148,6 +145,7 @@ func rpcInit(h *bc.BlockchainReactor) {
 		// https://github.com/golang/go/issues/17071
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
+	listenAddr := env.String("LISTEN", config.ApiAddress)
 	listener, _ := net.Listen("tcp", *listenAddr)
 
 	// The `Serve` call has to happen in its own goroutine because
@@ -160,17 +158,27 @@ func rpcInit(h *bc.BlockchainReactor) {
 	coreHandler.Set(h)
 }
 
-func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.Logger) *Node {
+func setupGenesisBlock(config *cfg.Config) (*legacy.Block, error) {
+	privKey := ed25519.PrivateKey(config.PrivateKey)
+	pubkey := privKey.Public().(ed25519.PublicKey)
+	var pubkeys []ed25519.PublicKey = []ed25519.PublicKey{pubkey,}
+	var npubkeys int = 1
+	var timestamp time.Time = config.Time
+	return protocol.NewInitialBlock(pubkeys, npubkeys, timestamp)
+}
+
+func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	// Get store
     tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
     store := txdb.NewStore(tx_db)
-    genesisBlock := legacy.Block {
+    /*genesisBlock := legacy.Block {
         BlockHeader: legacy.BlockHeader {
             Version: 1,
             Height: 0,
         },
     }
     store.SaveBlock(&genesisBlock)
+	*/
 
 	// Generate node PrivKey
 	privKey := crypto.GenPrivKeyEd25519()
@@ -190,12 +198,12 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 	sw.SetLogger(p2pLogger)
 
     fastSync := config.FastSync
-    genesisblock, err := protocol.NewInitialBlock()
-    if err != nil {
+    genesisBlock, err := setupGenesisBlock(config)
+	if err != nil {
       cmn.Exit(cmn.Fmt("initialize genesisblock failed: %v", err))
     }
 
-    chain, err := protocol.NewChain(context.Background(), genesisblock.Hash(), store, nil)
+    chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, nil)
    /* if err != nil {
       cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
     }
@@ -212,7 +220,7 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
     bcReactor.SetLogger(logger.With("module", "blockchain"))
     sw.AddReactor("BLOCKCHAIN", bcReactor)
 
-	rpcInit(bcReactor)
+	rpcInit(bcReactor, config)
 	// Optionally, start the pex reactor
 	var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
@@ -238,7 +246,6 @@ func NewNode(config *cfg.Config, privValidator *types.PrivValidator, logger log.
 
 	node := &Node{
 		config:        config,
-		privValidator: privValidator,
 
 		privKey:  privKey,
 		sw:       sw,
@@ -331,7 +338,6 @@ func (n *Node) ConfigureRPC() {
 	//rpccore.SetConsensusState(n.consensusState)
 	//rpccore.SetMempool(n.mempoolReactor.Mempool)
 	rpccore.SetSwitch(n.sw)
-	//rpccore.SetPubKey(n.privValidator.PubKey)
 	//rpccore.SetGenesisDoc(n.genesisDoc)
 	rpccore.SetAddrBook(n.addrBook)
 	//rpccore.SetProxyAppQuery(n.proxyApp.Query())
@@ -381,11 +387,6 @@ func (n *Node) Switch() *p2p.Switch {
 
 func (n *Node) EventSwitch() types.EventSwitch {
 	return n.evsw
-}
-
-// XXX: for convenience
-func (n *Node) PrivValidator() *types.PrivValidator {
-	return n.privValidator
 }
 
 func (n *Node) makeNodeInfo() *p2p.NodeInfo {
