@@ -311,7 +311,7 @@ func createAccount(client *rpc.Client, args []string) {
 	var ins Ins
 	ins.RootXPubs = []chainkd.XPub{xpub}
 	ins.Quorum = 1
-	ins.Alias = "aa"
+	ins.Alias = "alice"
 	ins.Tags = map[string]interface{}{"test_tag": "v0",}
 	ins.ClientToken = args[0]
 	responses := make([]interface{}, 50)
@@ -342,7 +342,7 @@ func createAsset(client *rpc.Client, args []string) {
 	var ins Ins
 	ins.RootXPubs = []chainkd.XPub{xpub}
 	ins.Quorum = 1
-	ins.Alias = "aa"
+	ins.Alias = "bob"
 	ins.Tags = map[string]interface{}{"test_tag": "v0",}
 	ins.Definition = map[string]interface{}{"test_definition": "v0"}
 	ins.ClientToken = args[0]

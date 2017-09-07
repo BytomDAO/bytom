@@ -48,21 +48,10 @@ const (
 	crosscoreRPCPrefix = "/rpc/"
 )
 
-/*
-type consensusReactor interface {
-	// for when we switch from blockchain reactor and fast sync to
-	// the consensus machine
-	SwitchToConsensus(*sm.State)
-}
-*/
-
 // BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-//	state        *sm.State
-//	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
-//	store        *MemStore
 	chain        *protocol.Chain
 	store        *txdb.Store
 	accounts	 *account.Manager
@@ -75,7 +64,6 @@ type BlockchainReactor struct {
 	requestsCh   chan BlockRequest
 	timeoutsCh   chan string
 	submitter    txbuilder.Submitter
-//	lastBlock    *types.Block
 
 	evsw types.EventSwitch
 }
@@ -238,7 +226,7 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, assets *asset.Registry, fastSync bool) *BlockchainReactor {
     requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
     timeoutsCh    := make(chan string, defaultChannelCapacity)
     pool := NewBlockPool(
@@ -250,6 +238,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *ac
         chain:         chain,
         store:         store,
 		accounts:      accounts,
+		assets:		   assets,
         pool:          pool,
 		mux:           http.NewServeMux(),
         fastSync:      fastSync,
