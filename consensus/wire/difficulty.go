@@ -9,7 +9,6 @@ import (
 	//"time"
 
 	"github.com/bytom/rpc/chainhash"
-
 )
 
 var (
