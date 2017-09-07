@@ -39,62 +39,11 @@ func TestIsUnspendable(t *testing.T) {
 	}
 }
 
-func Test00Multisig(t *testing.T) {
-	prog, err := BlockMultiSigProgram(nil, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(prog) < 1 {
-		t.Fatal("BlockMultiSigScript(0, 0) = {} want script")
-	}
-}
-
-func Test01Multisig(t *testing.T) {
-	pubkeys := []ed25519.PublicKey{{}}
-	_, err := BlockMultiSigProgram(pubkeys, 0)
-	if err == nil {
-		t.Fatal("BlockMultiSigScript(1, 0) = success want error")
-	}
-}
-
-func TestParse00Multisig(t *testing.T) {
-	prog, err := BlockMultiSigProgram(nil, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	keys, quorum, err := ParseBlockMultiSigProgram(prog)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(keys) != 0 || quorum != 0 {
-		t.Fatalf("ParseBlockMultiSigScript(%x) = (%v, %d) want (nil, 0)", prog, keys, quorum)
-	}
-}
-
 func TestP2SP(t *testing.T) {
 	pub1, _, _ := ed25519.GenerateKey(nil)
 	pub2, _, _ := ed25519.GenerateKey(nil)
 	prog, _ := P2SPMultiSigProgram([]ed25519.PublicKey{pub1, pub2}, 1)
 	pubs, n, err := ParseP2SPMultiSigProgram(prog)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != 1 {
-		t.Errorf("expected nrequired=1, got %d", n)
-	}
-	if !bytes.Equal(pubs[0], pub1) {
-		t.Errorf("expected first pubkey to be %x, got %x", pub1, pubs[0])
-	}
-	if !bytes.Equal(pubs[1], pub2) {
-		t.Errorf("expected second pubkey to be %x, got %x", pub2, pubs[1])
-	}
-}
-
-func TestBlockMultisig(t *testing.T) {
-	pub1, _, _ := ed25519.GenerateKey(nil)
-	pub2, _, _ := ed25519.GenerateKey(nil)
-	prog, _ := BlockMultiSigProgram([]ed25519.PublicKey{pub1, pub2}, 1)
-	pubs, n, err := ParseBlockMultiSigProgram(prog)
 	if err != nil {
 		t.Fatal(err)
 	}

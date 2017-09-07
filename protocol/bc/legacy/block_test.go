@@ -22,7 +22,8 @@ func TestMarshalBlock(t *testing.T) {
 
 		Transactions: []*Tx{
 			NewTx(TxData{
-				Version: 1,
+				Version:        1,
+				SerializedSize: uint64(46),
 				Outputs: []*TxOutput{
 					NewTxOutput(bc.AssetID{}, 1, nil, nil),
 				},
@@ -41,12 +42,12 @@ func TestMarshalBlock(t *testing.T) {
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
 		"00" + // timestamp
-		"41" + // commitment extensible field length
+		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // tx merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
-		"00" + // consensus program
-		"01" + // witness extensible string length
-		"00" + // witness number of witness args
+		"00" + // nonce
+		"00" + // bits
+
 		"01" + // num transactions
 		"07" + // tx 0, serialization flags
 		"01" + // tx 0, tx version
@@ -101,12 +102,11 @@ func TestEmptyBlock(t *testing.T) {
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
 		"00" + // timestamp
-		"41" + // commitment extensible field length
+		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
-		"00" + // consensus program
-		"01" + // witness extensible string length
-		"00" + // witness number of witness args
+		"00" + // nonce
+		"00" + // bits
 		"00") // num transactions
 	want, _ := hex.DecodeString(wantHex)
 	if !bytes.Equal(got, want) {
@@ -119,18 +119,17 @@ func TestEmptyBlock(t *testing.T) {
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
 		"00" + // timestamp
-		"41" + // commitment extensible field length
+		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
-		"00" + // consensus program
-		"01" + // witness extensible string length
-		"00") // witness number of witness args
+		"00" + // nonce
+		"00") // bits
 	want, _ = hex.DecodeString(wantHex)
 	if !bytes.Equal(got, want) {
 		t.Errorf("empty block header bytes = %x want %x", got, want)
 	}
 
-	wantHash := mustDecodeHash("6a73cbca99e33c8403d589664623c74df34dd6d7328ab6e7f27dd3e60d959850")
+	wantHash := mustDecodeHash("f2e8d5be16096e275a51866eb5207b385c9aa02ec570a1540f445efcba05e04d")
 	if h := block.Hash(); h != wantHash {
 		t.Errorf("got block hash %x, want %x", h.Bytes(), wantHash.Bytes())
 	}
@@ -156,12 +155,11 @@ func TestSmallBlock(t *testing.T) {
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
 		"00" + // timestamp
-		"41" + // commitment extensible field length
+		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
-		"00" + // consensus program
-		"01" + // witness extensible string length
-		"00" + // witness num witness args
+		"00" + // nonce
+		"00" + // bits
 		"01" + // num transactions
 		"070102000000000000") // transaction
 	want, _ := hex.DecodeString(wantHex)

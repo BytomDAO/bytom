@@ -27,6 +27,7 @@ import (
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/generated/dashboard"
 	"github.com/bytom/errors"
+	"github.com/bytom/blockchain/txbuilder"
 )
 
 const (
@@ -44,29 +45,18 @@ const (
 	statusUpdateIntervalSeconds = 10
 	// check if we should switch to consensus reactor
 	switchToConsensusIntervalSeconds = 1
-	maxBlockchainResponseSize        = types.MaxBlockSize + 2
+	maxBlockchainResponseSize        = 22020096 + 2
 	crosscoreRPCPrefix = "/rpc/"
 )
-
-/*
-type consensusReactor interface {
-	// for when we switch from blockchain reactor and fast sync to
-	// the consensus machine
-	SwitchToConsensus(*sm.State)
-}
-*/
 
 // BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-//	state        *sm.State
-//	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
-//	store        *MemStore
 	chain        *protocol.Chain
 	store        *txdb.Store
 	accounts	 *account.Manager
-	assets	         *asset.Registry
+	assets	     *asset.Registry
 	txFeeds		 *txfeed.TxFeed
 	indexer         *query.Indexer
 	pool         *BlockPool
@@ -75,7 +65,7 @@ type BlockchainReactor struct {
 	fastSync     bool
 	requestsCh   chan BlockRequest
 	timeoutsCh   chan string
-//	lastBlock    *types.Block
+	submitter    txbuilder.Submitter
 
 	evsw types.EventSwitch
 }
@@ -165,6 +155,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/create-asset", jsonHandler(bcr.createAsset))
 	m.Handle("/update-account-tags",jsonHandler(bcr.updateAccountTags))
 	m.Handle("/update-asset-tags",jsonHandler(bcr.updateAssetTags))
+	m.Handle("/build-transaction", jsonHandler(bcr.build))
 	m.Handle("/create-control-program",jsonHandler(bcr.createControlProgram))
 	m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 	m.Handle("/create-transaction-feed", jsonHandler(bcr.createTxFeed))
@@ -243,7 +234,7 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, assets *asset.Registry, fastSync bool) *BlockchainReactor {
     requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
     timeoutsCh    := make(chan string, defaultChannelCapacity)
     pool := NewBlockPool(
@@ -255,6 +246,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *ac
         chain:         chain,
         store:         store,
 		accounts:      accounts,
+		assets:		   assets,
         pool:          pool,
 		mux:           http.NewServeMux(),
         fastSync:      fastSync,
@@ -423,10 +415,12 @@ func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
 }
 
 
+/*
 // SetEventSwitch implements events.Eventable
 func (bcR *BlockchainReactor) SetEventSwitch(evsw types.EventSwitch) {
 	bcR.evsw = evsw
 }
+*/
 
 //-----------------------------------------------------------------------------
 // Messages

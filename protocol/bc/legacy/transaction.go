@@ -80,9 +80,10 @@ const (
 // Most users will want to use Tx instead;
 // it includes the hash.
 type TxData struct {
-	Version uint64
-	Inputs  []*TxInput
-	Outputs []*TxOutput
+	Version        uint64
+	SerializedSize uint64
+	Inputs         []*TxInput
+	Outputs        []*TxOutput
 
 	// Common fields
 	MinTime uint64
@@ -105,6 +106,11 @@ func (tx *TxData) HasIssuance() bool {
 		}
 	}
 	return false
+}
+
+// IsCoinbase returns true if this transaction is coinbase transaction.
+func (tx *TxData) IsCoinbase() bool {
+	return len(tx.Inputs) == 0 && len(tx.Outputs) == 1
 }
 
 func (tx *TxData) UnmarshalText(p []byte) error {
@@ -139,6 +145,8 @@ func (tx *TxData) readFrom(r *blockchain.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "reading transaction version")
 	}
+
+	tx.SerializedSize = uint64(r.Len())
 
 	// Common fields
 	tx.CommonFieldsSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {

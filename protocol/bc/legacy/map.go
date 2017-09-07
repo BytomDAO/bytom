@@ -121,8 +121,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			)
 
 			if len(oldIss.Nonce) > 0 {
-				tr := bc.NewTimeRange(tx.MinTime, tx.MaxTime)
-				trID := addEntry(tr)
 				assetID := oldIss.AssetID()
 
 				builder := vmutil.NewBuilder()
@@ -130,7 +128,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				builder.AddOp(vm.OP_ASSET).AddData(assetID.Bytes()).AddOp(vm.OP_EQUAL)
 				prog, _ := builder.Build() // error is impossible
 
-				nonce := bc.NewNonce(&bc.Program{VmVersion: 1, Code: prog}, &trID)
+				nonce := bc.NewNonce(&bc.Program{VmVersion: 1, Code: prog})
 				anchorID = addEntry(nonce)
 				setAnchored = nonce.SetAnchored
 			} else if firstSpend != nil {
@@ -163,6 +161,17 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		}
 	}
 
+	if tx.IsCoinbase() {
+		cb := bc.NewCoinbase()
+		cbId := addEntry(cb)
+
+		out := tx.Outputs[0]
+		muxSources = []*bc.ValueSource{{
+			Ref:   &cbId,
+			Value: &out.AssetAmount,
+		}}
+	}
+
 	mux := bc.NewMux(muxSources, &bc.Program{VmVersion: 1, Code: []byte{byte(vm.OP_TRUE)}})
 	muxID := addEntry(mux)
 
@@ -172,6 +181,12 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 	for _, iss := range issuances {
 		iss.SetDestination(&muxID, iss.Value, iss.Ordinal)
+	}
+
+	if tx.IsCoinbase() {
+		muxSource := mux.Sources[0]
+		cb := entryMap[*muxSource.Ref].(*bc.Coinbase)
+		cb.SetDestination(&muxID, muxSource.Value, 0)
 	}
 
 	var resultIDs []*bc.Hash
@@ -210,15 +225,14 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	refdatahash := hashData(tx.ReferenceData)
-	h := bc.NewTxHeader(tx.Version, resultIDs, &refdatahash, tx.MinTime, tx.MaxTime)
+	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, resultIDs, &refdatahash, tx.MinTime, tx.MaxTime)
 	headerID = addEntry(h)
 
 	return headerID, h, entryMap
 }
 
 func mapBlockHeader(old *BlockHeader) (bhID bc.Hash, bh *bc.BlockHeader) {
-	bh = bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.TimestampMS, &old.TransactionsMerkleRoot, &old.AssetsMerkleRoot, old.ConsensusProgram)
-	bh.WitnessArguments = old.Witness
+	bh = bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.TimestampMS, &old.TransactionsMerkleRoot, &old.AssetsMerkleRoot, old.Nonce, old.Bits)
 	bhID = bc.EntryID(bh)
 	return
 }
@@ -231,6 +245,7 @@ func MapBlock(old *Block) *bc.Block {
 	b.ID, b.BlockHeader = mapBlockHeader(&old.BlockHeader)
 	for _, oldTx := range old.Transactions {
 		b.Transactions = append(b.Transactions, oldTx.Tx)
+		b.BlockHeader.SerializedSize += oldTx.TxData.SerializedSize
 	}
 	return b
 }

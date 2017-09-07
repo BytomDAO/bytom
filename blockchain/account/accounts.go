@@ -10,7 +10,7 @@ import (
     "fmt"
 
 	"github.com/golang/groupcache/lru"
-	"github.com/lib/pq"
+	//"github.com/lib/pq"
 
 //	"chain/core/pin"
 	"github.com/bytom/blockchain/signers"
@@ -298,7 +298,7 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
-	const q = `
+	/*const q = `
 		INSERT INTO account_control_programs (signer_id, key_index, control_program, change, expires_at)
 		SELECT unnest($1::text[]), unnest($2::bigint[]), unnest($3::bytea[]), unnest($4::boolean[]),
 			unnest($5::timestamp with time zone[])
@@ -308,18 +308,18 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 		keyIndexes   pq.Int64Array
 		controlProgs pq.ByteaArray
 		change       pq.BoolArray
-	//	expirations  []stdsql.NullString
+		expirations  []stdsql.NullString
 	)
 	for _, p := range progs {
 		accountIDs = append(accountIDs, p.accountID)
 		keyIndexes = append(keyIndexes, int64(p.keyIndex))
 		controlProgs = append(controlProgs, p.controlProgram)
 		change = append(change, p.change)
-	/*	expirations = append(expirations, stdsql.NullString{
+		expirations = append(expirations, stdsql.NullString{
 			String: p.expiresAt.Format(time.RFC3339),
 			Valid:  !p.expiresAt.IsZero(),
-		})*/
-	}
+		})
+	}*/
 
 //	_, err := m.dbm.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
 	return errors.Wrap(nil)

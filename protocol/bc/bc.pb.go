@@ -22,7 +22,6 @@ It has these top-level messages:
 	Nonce
 	Output
 	Retirement
-	TimeRange
 	Issuance
 	Spend
 */
@@ -273,15 +272,15 @@ func (m *ValueDestination) GetPosition() uint64 {
 }
 
 type BlockHeader struct {
-	Version              uint64   `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
-	Height               uint64   `protobuf:"varint,2,opt,name=height" json:"height,omitempty"`
-	PreviousBlockId      *Hash    `protobuf:"bytes,3,opt,name=previous_block_id,json=previousBlockId" json:"previous_block_id,omitempty"`
-	TimestampMs          uint64   `protobuf:"varint,4,opt,name=timestamp_ms,json=timestampMs" json:"timestamp_ms,omitempty"`
-	TransactionsRoot     *Hash    `protobuf:"bytes,5,opt,name=transactions_root,json=transactionsRoot" json:"transactions_root,omitempty"`
-	AssetsRoot           *Hash    `protobuf:"bytes,6,opt,name=assets_root,json=assetsRoot" json:"assets_root,omitempty"`
-	NextConsensusProgram []byte   `protobuf:"bytes,7,opt,name=next_consensus_program,json=nextConsensusProgram,proto3" json:"next_consensus_program,omitempty"`
-	ExtHash              *Hash    `protobuf:"bytes,8,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
-	WitnessArguments     [][]byte `protobuf:"bytes,9,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
+	Version          uint64 `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
+	SerializedSize   uint64 `protobuf:"varint,2,opt,name=serialized_size,json=serializedSize" json:"serialized_size,omitempty"`
+	Height           uint64 `protobuf:"varint,3,opt,name=height" json:"height,omitempty"`
+	PreviousBlockId  *Hash  `protobuf:"bytes,4,opt,name=previous_block_id,json=previousBlockId" json:"previous_block_id,omitempty"`
+	TimestampMs      uint64 `protobuf:"varint,5,opt,name=timestamp_ms,json=timestampMs" json:"timestamp_ms,omitempty"`
+	TransactionsRoot *Hash  `protobuf:"bytes,6,opt,name=transactions_root,json=transactionsRoot" json:"transactions_root,omitempty"`
+	AssetsRoot       *Hash  `protobuf:"bytes,7,opt,name=assets_root,json=assetsRoot" json:"assets_root,omitempty"`
+	Nonce            uint64 `protobuf:"varint,8,opt,name=nonce" json:"nonce,omitempty"`
+	Bits             uint64 `protobuf:"varint,9,opt,name=bits" json:"bits,omitempty"`
 }
 
 func (m *BlockHeader) Reset()                    { *m = BlockHeader{} }
@@ -331,34 +330,14 @@ func (m *BlockHeader) GetAssetsRoot() *Hash {
 	return nil
 }
 
-func (m *BlockHeader) GetNextConsensusProgram() []byte {
-	if m != nil {
-		return m.NextConsensusProgram
-	}
-	return nil
-}
-
-func (m *BlockHeader) GetExtHash() *Hash {
-	if m != nil {
-		return m.ExtHash
-	}
-	return nil
-}
-
-func (m *BlockHeader) GetWitnessArguments() [][]byte {
-	if m != nil {
-		return m.WitnessArguments
-	}
-	return nil
-}
-
 type TxHeader struct {
-	Version   uint64  `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
-	ResultIds []*Hash `protobuf:"bytes,2,rep,name=result_ids,json=resultIds" json:"result_ids,omitempty"`
-	Data      *Hash   `protobuf:"bytes,3,opt,name=data" json:"data,omitempty"`
-	MinTimeMs uint64  `protobuf:"varint,4,opt,name=min_time_ms,json=minTimeMs" json:"min_time_ms,omitempty"`
-	MaxTimeMs uint64  `protobuf:"varint,5,opt,name=max_time_ms,json=maxTimeMs" json:"max_time_ms,omitempty"`
-	ExtHash   *Hash   `protobuf:"bytes,6,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
+	Version        uint64  `protobuf:"varint,1,opt,name=version" json:"version,omitempty"`
+	SerializedSize uint64  `protobuf:"varint,2,opt,name=serialized_size,json=serializedSize" json:"serialized_size,omitempty"`
+	ResultIds      []*Hash `protobuf:"bytes,3,rep,name=result_ids,json=resultIds" json:"result_ids,omitempty"`
+	Data           *Hash   `protobuf:"bytes,4,opt,name=data" json:"data,omitempty"`
+	MinTimeMs      uint64  `protobuf:"varint,5,opt,name=min_time_ms,json=minTimeMs" json:"min_time_ms,omitempty"`
+	MaxTimeMs      uint64  `protobuf:"varint,6,opt,name=max_time_ms,json=maxTimeMs" json:"max_time_ms,omitempty"`
+	ExtHash        *Hash   `protobuf:"bytes,7,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
 }
 
 func (m *TxHeader) Reset()                    { *m = TxHeader{} }
@@ -458,10 +437,9 @@ func (m *Mux) GetWitnessArguments() [][]byte {
 
 type Nonce struct {
 	Program           *Program `protobuf:"bytes,1,opt,name=program" json:"program,omitempty"`
-	TimeRangeId       *Hash    `protobuf:"bytes,2,opt,name=time_range_id,json=timeRangeId" json:"time_range_id,omitempty"`
-	ExtHash           *Hash    `protobuf:"bytes,3,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
-	WitnessArguments  [][]byte `protobuf:"bytes,4,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
-	WitnessAnchoredId *Hash    `protobuf:"bytes,5,opt,name=witness_anchored_id,json=witnessAnchoredId" json:"witness_anchored_id,omitempty"`
+	ExtHash           *Hash    `protobuf:"bytes,2,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
+	WitnessArguments  [][]byte `protobuf:"bytes,3,rep,name=witness_arguments,json=witnessArguments,proto3" json:"witness_arguments,omitempty"`
+	WitnessAnchoredId *Hash    `protobuf:"bytes,4,opt,name=witness_anchored_id,json=witnessAnchoredId" json:"witness_anchored_id,omitempty"`
 }
 
 func (m *Nonce) Reset()                    { *m = Nonce{} }
@@ -472,13 +450,6 @@ func (*Nonce) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
 func (m *Nonce) GetProgram() *Program {
 	if m != nil {
 		return m.Program
-	}
-	return nil
-}
-
-func (m *Nonce) GetTimeRangeId() *Hash {
-	if m != nil {
-		return m.TimeRangeId
 	}
 	return nil
 }
@@ -500,6 +471,22 @@ func (m *Nonce) GetWitnessArguments() [][]byte {
 func (m *Nonce) GetWitnessAnchoredId() *Hash {
 	if m != nil {
 		return m.WitnessAnchoredId
+	}
+	return nil
+}
+
+type Coinbase struct {
+	WitnessDestination *ValueDestination `protobuf:"bytes,1,opt,name=witness_destination,json=witnessDestination" json:"witness_destination,omitempty"`
+}
+
+func (m *Coinbase) Reset()                    { *m = Coinbase{} }
+func (m *Coinbase) String() string            { return proto.CompactTextString(m) }
+func (*Coinbase) ProtoMessage()               {}
+func (*Coinbase) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+
+func (m *Coinbase) GetWitnessDestination() *ValueDestination {
+	if m != nil {
+		return m.WitnessDestination
 	}
 	return nil
 }
@@ -590,38 +577,6 @@ func (m *Retirement) GetOrdinal() uint64 {
 		return m.Ordinal
 	}
 	return 0
-}
-
-type TimeRange struct {
-	MinTimeMs uint64 `protobuf:"varint,1,opt,name=min_time_ms,json=minTimeMs" json:"min_time_ms,omitempty"`
-	MaxTimeMs uint64 `protobuf:"varint,2,opt,name=max_time_ms,json=maxTimeMs" json:"max_time_ms,omitempty"`
-	ExtHash   *Hash  `protobuf:"bytes,3,opt,name=ext_hash,json=extHash" json:"ext_hash,omitempty"`
-}
-
-func (m *TimeRange) Reset()                    { *m = TimeRange{} }
-func (m *TimeRange) String() string            { return proto.CompactTextString(m) }
-func (*TimeRange) ProtoMessage()               {}
-func (*TimeRange) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
-
-func (m *TimeRange) GetMinTimeMs() uint64 {
-	if m != nil {
-		return m.MinTimeMs
-	}
-	return 0
-}
-
-func (m *TimeRange) GetMaxTimeMs() uint64 {
-	if m != nil {
-		return m.MaxTimeMs
-	}
-	return 0
-}
-
-func (m *TimeRange) GetExtHash() *Hash {
-	if m != nil {
-		return m.ExtHash
-	}
-	return nil
 }
 
 type Issuance struct {
@@ -782,7 +737,7 @@ func init() {
 	proto.RegisterType((*Nonce)(nil), "bc.Nonce")
 	proto.RegisterType((*Output)(nil), "bc.Output")
 	proto.RegisterType((*Retirement)(nil), "bc.Retirement")
-	proto.RegisterType((*TimeRange)(nil), "bc.TimeRange")
+	proto.RegisterType((*Coinbase)(nil), "bc.Coinbase")
 	proto.RegisterType((*Issuance)(nil), "bc.Issuance")
 	proto.RegisterType((*Spend)(nil), "bc.Spend")
 }

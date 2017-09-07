@@ -15,25 +15,6 @@ func IsUnspendable(prog []byte) bool {
 	return len(prog) > 0 && prog[0] == byte(vm.OP_FAIL)
 }
 
-// BlockMultiSigProgram returns a valid multisignature consensus
-// program where nrequired of the keys in pubkeys are required to have
-// signed the block for success.  An ErrBadValue will be returned if
-// nrequired is larger than the number of keys provided.  The result
-// is: BLOCKHASH <pubkey>... <nrequired> <npubkeys> CHECKMULTISIG
-func BlockMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, error) {
-	err := checkMultiSigParams(int64(nrequired), int64(len(pubkeys)))
-	if err != nil {
-		return nil, err
-	}
-	builder := NewBuilder()
-	builder.AddOp(vm.OP_BLOCKHASH)
-	for _, key := range pubkeys {
-		builder.AddData(key)
-	}
-	builder.AddInt64(int64(nrequired)).AddInt64(int64(len(pubkeys))).AddOp(vm.OP_CHECKMULTISIG)
-	return builder.Build()
-}
-
 func ParseBlockMultiSigProgram(script []byte) ([]ed25519.PublicKey, int, error) {
 	pops, err := vm.ParseProgram(script)
 	if err != nil {
