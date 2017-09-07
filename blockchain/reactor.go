@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/types"
     "github.com/bytom/protocol/bc/legacy"
     "github.com/bytom/protocol"
+	"github.com/bytom/blockchain/query"
 	"github.com/bytom/encoding/json"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/bytom/blockchain/txdb"
@@ -67,6 +68,7 @@ type BlockchainReactor struct {
 	accounts	 *account.Manager
 	assets	         *asset.Registry
 	txFeeds		 *txfeed.TxFeed
+	indexer         *query.Indexer
 	pool         *BlockPool
 	mux          *http.ServeMux
 	handler      http.Handler
@@ -169,6 +171,12 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/get-transaction-feed", jsonHandler(bcr.getTxFeed))
 	m.Handle("/update-transaction-feed", jsonHandler(bcr.updateTxFeed))
 	m.Handle("/delete-transaction-feed", jsonHandler(bcr.deleteTxFeed))
+	m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
+        m.Handle("/list-assets", jsonHandler(bcr.listAssets))
+        m.Handle("/list-transaction-feeds", jsonHandler(bcr.listTxFeeds))
+        m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
+        m.Handle("/list-balances", jsonHandler(bcr.listBalances))
+        m.Handle("/list-unspent-outputs", jsonHandler(bcr.listUnspentOutputs))
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
