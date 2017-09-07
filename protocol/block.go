@@ -5,14 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/errors"
 	"github.com/bytom/log"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
-	"github.com/bytom/protocol/vm/vmutil"
 )
 
 // maxBlockTxs limits the number of transactions
@@ -38,7 +36,7 @@ var (
 
 // GetBlock returns the block at the given height, if there is one,
 // otherwise it returns an error.
-func (c *Chain) GetBlock(ctx context.Context, height uint64) (*legacy.Block, error) {
+func (c *Chain) GetBlock(height uint64) (*legacy.Block, error) {
 	return c.store.GetBlock(height)
 }
 
@@ -68,9 +66,7 @@ func (c *Chain) GenerateBlock(ctx context.Context, prev *legacy.Block, snapshot 
 			Height:            prev.Height + 1,
 			PreviousBlockHash: prev.Hash(),
 			TimestampMS:       timestampMS,
-			BlockCommitment: legacy.BlockCommitment{
-				ConsensusProgram: prev.ConsensusProgram,
-			},
+			BlockCommitment:   legacy.BlockCommitment{},
 		},
 	}
 
@@ -128,12 +124,9 @@ func (c *Chain) GenerateBlock(ctx context.Context, prev *legacy.Block, snapshot 
 func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 	blockEnts := legacy.MapBlock(block)
 	prevEnts := legacy.MapBlock(prev)
-	err := validation.ValidateBlock(blockEnts, prevEnts, c.InitialBlockHash, c.ValidateTx)
+	err := validation.ValidateBlock(blockEnts, prevEnts)
 	if err != nil {
 		return errors.Sub(ErrBadBlock, err)
-	}
-	if block.Height > 1 {
-		err = validation.ValidateBlockSig(blockEnts, prevEnts.NextConsensusProgram)
 	}
 	return errors.Sub(ErrBadBlock, err)
 }
@@ -223,34 +216,10 @@ func (c *Chain) setHeight(h uint64) {
 	c.state.cond.Broadcast()
 }
 
-// ValidateBlockForSig performs validation on an incoming _unsigned_
-// block in preparation for signing it. By definition it does not
-// execute the consensus program.
-func (c *Chain) ValidateBlockForSig(ctx context.Context, block *legacy.Block) error {
-	var prev *legacy.Block
-
-	if block.Height > 1 {
-		var err error
-		prev, err = c.GetBlock(ctx, block.Height-1)
-		if err != nil {
-			return errors.Wrap(err, "getting previous block")
-		}
-	}
-
-	err := validation.ValidateBlock(legacy.MapBlock(block), legacy.MapBlock(prev), c.InitialBlockHash, c.ValidateTx)
-	return errors.Sub(ErrBadBlock, err)
-}
-
-func NewInitialBlock(pubkeys []ed25519.PublicKey, nSigs int, timestamp time.Time) (*legacy.Block, error) {
+func NewInitialBlock(timestamp time.Time) (*legacy.Block, error) {
 	// TODO(kr): move this into a lower-level package (e.g. chain/protocol/bc)
 	// so that other packages (e.g. chain/protocol/validation) unit tests can
 	// call this function.
-
-	script, err := vmutil.BlockMultiSigProgram(pubkeys, nSigs)
-	if err != nil {
-		return nil, err
-	}
-
 	root, err := bc.MerkleRoot(nil) // calculate the zero value of the tx merkle root
 	if err != nil {
 		return nil, errors.Wrap(err, "calculating zero value of tx merkle root")
@@ -263,7 +232,6 @@ func NewInitialBlock(pubkeys []ed25519.PublicKey, nSigs int, timestamp time.Time
 			TimestampMS: bc.Millis(timestamp),
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: root,
-				ConsensusProgram:       script,
 			},
 		},
 	}

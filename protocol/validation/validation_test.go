@@ -9,8 +9,8 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/bctest"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/testutil"
 
@@ -20,6 +20,106 @@ import (
 
 func init() {
 	spew.Config.DisableMethods = true
+}
+
+func TestGasStatus(t *testing.T) {
+	cases := []struct {
+		input  *gasState
+		output *gasState
+		f      func(*gasState) error
+		err    error
+	}{
+		{
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &gasState{
+				gasLeft:  10000 / gasRate,
+				gasUsed:  0,
+				BTMValue: 10000,
+			},
+			f: func(input *gasState) error {
+				return input.setGas(10000)
+			},
+			err: nil,
+		},
+		{
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			f: func(input *gasState) error {
+				return input.setGas(-10000)
+			},
+			err: errGasCalculate,
+		},
+		{
+			input: &gasState{
+				gasLeft:  defaultGasLimit,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &gasState{
+				gasLeft:  defaultGasLimit,
+				gasUsed:  0,
+				BTMValue: 80000000000,
+			},
+			f: func(input *gasState) error {
+				return input.setGas(80000000000)
+			},
+			err: nil,
+		},
+		{
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			f: func(input *gasState) error {
+				return input.updateUsage(-1)
+			},
+			err: errGasCalculate,
+		},
+		{
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &gasState{
+				gasLeft:  9999,
+				gasUsed:  1,
+				BTMValue: 0,
+			},
+			f: func(input *gasState) error {
+				return input.updateUsage(9999)
+			},
+			err: nil,
+		},
+	}
+
+	for _, c := range cases {
+		err := c.f(c.input)
+
+		if err != c.err {
+			t.Errorf("got error %s, want %s", err, c.err)
+		} else if *c.input != *c.output {
+			t.Errorf("got gasStatus %s, want %s;", c.input, c.output)
+		}
+	}
 }
 
 func TestTxValidation(t *testing.T) {
@@ -128,46 +228,6 @@ func TestTxValidation(t *testing.T) {
 			},
 		},
 		{
-			desc: "nonce timerange misordered",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				tr := tx.Entries[*nonce.TimeRangeId].(*bc.TimeRange)
-				tr.MinTimeMs = tr.MaxTimeMs + 1
-			},
-			err: errBadTimeRange,
-		},
-		{
-			desc: "nonce timerange disagrees with tx timerange",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				tr := tx.Entries[*nonce.TimeRangeId].(*bc.TimeRange)
-				tr.MaxTimeMs = tx.MaxTimeMs - 1
-			},
-			err: errBadTimeRange,
-		},
-		{
-			desc: "nonce timerange exthash nonempty",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				tr := tx.Entries[*nonce.TimeRangeId].(*bc.TimeRange)
-				tr.ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
-		{
-			desc: "nonce timerange exthash nonempty, but that's OK",
-			f: func() {
-				tx.Version = 2
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				tr := tx.Entries[*nonce.TimeRangeId].(*bc.TimeRange)
-				tr.ExtHash = newHash(1)
-			},
-		},
-		{
 			desc: "mismatched output source / mux dest position",
 			f: func() {
 				tx.Entries[*tx.ResultIds[0]].(*bc.Output).Source.Position = 1
@@ -226,13 +286,6 @@ func TestTxValidation(t *testing.T) {
 			},
 		},
 		{
-			desc: "misordered tx time range",
-			f: func() {
-				tx.MinTimeMs = tx.MaxTimeMs + 1
-			},
-			err: errBadTimeRange,
-		},
-		{
 			desc: "empty tx results",
 			f: func() {
 				tx.ResultIds = nil
@@ -259,21 +312,6 @@ func TestTxValidation(t *testing.T) {
 				tx.Version = 2
 				tx.ExtHash = newHash(1)
 			},
-		},
-		{
-			desc: "wrong blockchain",
-			f: func() {
-				vs.blockchainID = *newHash(2)
-			},
-			err: errWrongBlockchain,
-		},
-		{
-			desc: "issuance asset ID mismatch",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				iss.Value.AssetId = newAssetID(1)
-			},
-			err: errMismatchedAssetID,
 		},
 		{
 			desc: "issuance program failure",
@@ -342,10 +380,14 @@ func TestTxValidation(t *testing.T) {
 			fixture = sample(t, nil)
 			tx = legacy.NewTx(*fixture.tx).Tx
 			vs = &validationState{
-				blockchainID: fixture.initialBlockID,
-				tx:           tx,
-				entryID:      tx.ID,
-				cache:        make(map[bc.Hash]error),
+				block:   mockBlock(),
+				tx:      tx,
+				entryID: tx.ID,
+				gas: &gasState{
+					gasLeft: int64(80000),
+					gasUsed: 0,
+				},
+				cache: make(map[bc.Hash]error),
 			}
 			out := tx.Entries[*tx.ResultIds[0]].(*bc.Output)
 			muxID := out.Source.Ref
@@ -355,6 +397,7 @@ func TestTxValidation(t *testing.T) {
 				c.f()
 			}
 			err := checkValid(vs, tx.TxHeader)
+
 			if rootErr(err) != c.err {
 				t.Errorf("got error %s, want %s; validationState is:\n%s", err, c.err, spew.Sdump(vs))
 			}
@@ -362,20 +405,116 @@ func TestTxValidation(t *testing.T) {
 	}
 }
 
-func TestNoncelessIssuance(t *testing.T) {
-	tx := bctest.NewIssuanceTx(t, bc.EmptyStringHash, func(tx *legacy.Tx) {
-		// Remove the issuance nonce.
-		tx.Inputs[0].TypedInput.(*legacy.IssuanceInput).Nonce = nil
-	})
+func TestValidateBlock(t *testing.T) {
+	cases := []struct {
+		block *bc.Block
+		err   error
+	}{
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 1,
+				},
+				Transactions: []*bc.Tx{mockCoinbaseTx(624000000000)},
+			},
+			err: nil,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 1,
+				},
+				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
+			},
+			err: errWrongCoinbaseTransaction,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height:         1,
+					SerializedSize: 88888888,
+				},
+				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
+			},
+			err: errWrongBlockSize,
+		},
+	}
 
-	err := ValidateTx(legacy.MapTx(&tx.TxData), bc.EmptyStringHash)
-	if errors.Root(err) != bc.ErrMissingEntry {
-		t.Fatalf("got %s, want %s", err, bc.ErrMissingEntry)
+	for _, c := range cases {
+		txRoot, err := bc.MerkleRoot(c.block.Transactions)
+		if err != nil {
+			t.Errorf("computing transaction merkle root", err)
+			continue
+		}
+		c.block.TransactionsRoot = &txRoot
+		err = ValidateBlock(c.block, nil)
+
+		if rootErr(err) != c.err {
+			t.Errorf("got error %s, want %s", err, c.err)
+		}
+	}
+}
+
+func TestCoinbase(t *testing.T) {
+	CbTx := mockCoinbaseTx(5000000000)
+	errCbTx := legacy.MapTx(&legacy.TxData{
+		Outputs: []*legacy.TxOutput{
+			legacy.NewTxOutput(bc.AssetID{
+				V0: uint64(18446744073709551611),
+				V1: uint64(18446744073709551615),
+				V2: uint64(18446744073709551615),
+				V3: uint64(18446744073709551615),
+			}, 800000000000, []byte{1}, nil),
+		},
+	})
+	cases := []struct {
+		block *bc.Block
+		tx    *bc.Tx
+		err   error
+	}{
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 666,
+				},
+				Transactions: []*bc.Tx{errCbTx},
+			},
+			tx:  CbTx,
+			err: errWrongCoinbaseTransaction,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 666,
+				},
+				Transactions: []*bc.Tx{CbTx},
+			},
+			tx:  CbTx,
+			err: nil,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 666,
+				},
+				Transactions: []*bc.Tx{errCbTx},
+			},
+			tx:  errCbTx,
+			err: errWrongCoinbaseAsset,
+		},
+	}
+
+	for _, c := range cases {
+		_, err := ValidateTx(c.tx, c.block)
+
+		if rootErr(err) != c.err {
+			t.Errorf("got error %s, want %s", err, c.err)
+		}
 	}
 }
 
 func TestBlockHeaderValid(t *testing.T) {
-	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, nil)
+	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
 	baseBytes, _ := proto.Marshal(base)
 
 	var bh bc.BlockHeader
@@ -390,12 +529,6 @@ func TestBlockHeaderValid(t *testing.T) {
 				bh.Version = 2
 			},
 		},
-		{
-			f: func() {
-				bh.ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
 	}
 
 	for i, c := range cases {
@@ -403,10 +536,6 @@ func TestBlockHeaderValid(t *testing.T) {
 			proto.Unmarshal(baseBytes, &bh)
 			if c.f != nil {
 				c.f()
-			}
-			err := checkValidBlockHeader(&bh)
-			if err != c.err {
-				t.Errorf("got error %s, want %s; bh is:\n%s", err, c.err, spew.Sdump(bh))
 			}
 		})
 	}
@@ -498,6 +627,9 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 			legacy.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2, *newHash(9), []byte{10}),
 		}
 	}
+
+	result.txInputs = append(result.txInputs, mockGasTxInput())
+
 	if len(result.txOutputs) == 0 {
 		cp1, err := vm.Assemble("ADD 17 NUMEQUAL")
 		if err != nil {
@@ -533,6 +665,26 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 	}
 
 	return &result
+}
+
+func mockBlock() *bc.Block {
+	return &bc.Block{
+		BlockHeader: &bc.BlockHeader{
+			Height: 666,
+		},
+	}
+}
+
+func mockCoinbaseTx(amount uint64) *bc.Tx {
+	return legacy.MapTx(&legacy.TxData{
+		Outputs: []*legacy.TxOutput{
+			legacy.NewTxOutput(*BTMAssetID, amount, []byte{1}, nil),
+		},
+	})
+}
+
+func mockGasTxInput() *legacy.TxInput {
+	return legacy.NewSpendInput([][]byte{}, *newHash(8), *validation.BTMAssetID, 100000000, 0, []byte{byte(vm.OP_TRUE)}, *newHash(9), []byte{})
 }
 
 // Like errors.Root, but also unwraps vm.Error objects.

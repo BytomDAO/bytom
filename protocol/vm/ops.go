@@ -199,7 +199,6 @@ const (
 	OP_CHECKSIG      Op = 0xac
 	OP_CHECKMULTISIG Op = 0xad
 	OP_TXSIGHASH     Op = 0xae
-	OP_BLOCKHASH     Op = 0xaf
 
 	OP_CHECKOUTPUT Op = 0xc1
 	OP_ASSET       Op = 0xc2
@@ -213,8 +212,7 @@ const (
 	OP_ENTRYID     Op = 0xca
 	OP_OUTPUTID    Op = 0xcb
 	OP_NONCE       Op = 0xcc
-	OP_NEXTPROGRAM Op = 0xcd
-	OP_BLOCKTIME   Op = 0xce
+	OP_BLOCKHEIGH  Op = 0xcd
 )
 
 type opInfo struct {
@@ -311,7 +309,6 @@ var (
 		OP_CHECKSIG:      {OP_CHECKSIG, "CHECKSIG", opCheckSig},
 		OP_CHECKMULTISIG: {OP_CHECKMULTISIG, "CHECKMULTISIG", opCheckMultiSig},
 		OP_TXSIGHASH:     {OP_TXSIGHASH, "TXSIGHASH", opTxSigHash},
-		OP_BLOCKHASH:     {OP_BLOCKHASH, "BLOCKHASH", opBlockHash},
 
 		OP_CHECKOUTPUT: {OP_CHECKOUTPUT, "CHECKOUTPUT", opCheckOutput},
 		OP_ASSET:       {OP_ASSET, "ASSET", opAsset},
@@ -325,8 +322,7 @@ var (
 		OP_ENTRYID:     {OP_ENTRYID, "ENTRYID", opEntryID},
 		OP_OUTPUTID:    {OP_OUTPUTID, "OUTPUTID", opOutputID},
 		OP_NONCE:       {OP_NONCE, "NONCE", opNonce},
-		OP_NEXTPROGRAM: {OP_NEXTPROGRAM, "NEXTPROGRAM", opNextProgram},
-		OP_BLOCKTIME:   {OP_BLOCKTIME, "BLOCKTIME", opBlockTime},
+		OP_BLOCKHEIGH:  {OP_BLOCKHEIGH, "BLOCKHEIGH", opBlockHeigh},
 	}
 
 	opsByName map[string]opInfo

@@ -184,26 +184,14 @@ func opNonce(vm *virtualMachine) error {
 	return vm.push(*vm.context.AnchorID, true)
 }
 
-func opNextProgram(vm *virtualMachine) error {
+func opBlockHeigh(vm *virtualMachine) error {
 	err := vm.applyCost(1)
 	if err != nil {
 		return err
 	}
 
-	if vm.context.NextConsensusProgram == nil {
+	if vm.context.BlockHeigh == nil {
 		return ErrContext
 	}
-	return vm.push(*vm.context.NextConsensusProgram, true)
-}
-
-func opBlockTime(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
-		return err
-	}
-
-	if vm.context.BlockTimeMS == nil {
-		return ErrContext
-	}
-	return vm.pushInt64(int64(*vm.context.BlockTimeMS), true)
+	return vm.pushInt64(int64(*vm.context.BlockHeigh), true)
 }

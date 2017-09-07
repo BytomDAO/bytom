@@ -7,6 +7,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/validation"
 )
 
 func TestMapTx(t *testing.T) {
@@ -21,6 +22,9 @@ func TestMapTx(t *testing.T) {
 
 	if header.Version != 1 {
 		t.Errorf("header.Version is %d, expected 1", header.Version)
+	}
+	if header.SerializedSize != oldTx.SerializedSize {
+		t.Errorf("header.SerializedSize is %d, expected %d", header.SerializedSize, oldTx.SerializedSize)
 	}
 	if header.MinTimeMs != oldTx.MinTime {
 		t.Errorf("header.MinTimeMs is %d, expected %d", header.MinTimeMs, oldTx.MinTime)
@@ -57,5 +61,61 @@ func TestMapTx(t *testing.T) {
 		} else {
 			t.Errorf("entryMap contains nothing for header.ResultIds[%d] (%x)", i, header.ResultIds[i].Bytes())
 		}
+	}
+}
+
+func TestMapCoinbaseTx(t *testing.T) {
+	oldTx := &TxData{
+		Version: 1,
+		Inputs:  []*TxInput{},
+		Outputs: []*TxOutput{
+			NewTxOutput(*validation.BTMAssetID, 800000000000, []byte{1}, nil),
+		},
+	}
+	oldOut := oldTx.Outputs[0]
+
+	_, header, entryMap := mapTx(oldTx)
+	t.Log(spew.Sdump(entryMap))
+
+	outEntry, ok := entryMap[*header.ResultIds[0]]
+	if !ok {
+		t.Errorf("entryMap contains nothing for output")
+		return
+	}
+	newOut, ok := outEntry.(*bc.Output)
+	if !ok {
+		t.Errorf("header.ResultIds[0] has type %T, expected *Output", outEntry)
+		return
+	}
+	if *newOut.Source.Value != oldOut.AssetAmount {
+		t.Errorf("(*output).Source is %v, expected %v", newOut.Source.Value, oldOut.AssetAmount)
+		return
+	}
+
+	muxEntry, ok := entryMap[*newOut.Source.Ref]
+	if !ok {
+		t.Errorf("entryMap contains nothing for mux")
+		return
+	}
+	mux, ok := muxEntry.(*bc.Mux)
+	if !ok {
+		t.Errorf("muxEntry has type %T, expected *Mux", muxEntry)
+		return
+	}
+	if *mux.WitnessDestinations[0].Value != oldOut.AssetAmount {
+		t.Errorf("(*Mux).Source is %v, expected %v", newOut.Source.Value, oldOut.AssetAmount)
+		return
+	}
+
+	if coinbaseEntry, ok := entryMap[*mux.Sources[0].Ref]; ok {
+		if coinbase, ok := coinbaseEntry.(*bc.Coinbase); ok {
+			if *coinbase.WitnessDestination.Value != oldOut.AssetAmount {
+				t.Errorf("(*Coinbase).Source is %v, expected %v", newOut.Source.Value, oldOut.AssetAmount)
+			}
+		} else {
+			t.Errorf("inputEntry has type %T, expected *Coinbase", coinbaseEntry)
+		}
+	} else {
+		t.Errorf("entryMap contains nothing for input")
 	}
 }

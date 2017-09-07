@@ -153,7 +153,7 @@ func doOKNotOK(t *testing.T, expectOK bool) {
 		TraceOut = trace
 		vm := &virtualMachine{
 			program:   prog,
-			runLimit:  int64(initialRunLimit),
+			runLimit:  int64(10000),
 			dataStack: append([][]byte{}, c.args...),
 		}
 		err = vm.run()
@@ -174,6 +174,7 @@ func TestVerifyTxInput(t *testing.T) {
 	cases := []struct {
 		vctx    *Context
 		wantErr error
+		gasLeft int64
 	}{
 		{
 			vctx: &Context{
@@ -181,10 +182,12 @@ func TestVerifyTxInput(t *testing.T) {
 				Code:      []byte{byte(OP_ADD), byte(OP_5), byte(OP_NUMEQUAL)},
 				Arguments: [][]byte{{2}, {3}},
 			},
+			gasLeft: 9986,
 		},
 		{
 			vctx:    &Context{VMVersion: 2},
 			wantErr: ErrUnsupportedVM,
+			gasLeft: 10000,
 		},
 		{
 			vctx: &Context{
@@ -193,36 +196,18 @@ func TestVerifyTxInput(t *testing.T) {
 				Arguments: [][]byte{make([]byte, 50001)},
 			},
 			wantErr: ErrRunLimitExceeded,
+			gasLeft: 0,
 		},
 	}
 
 	for _, c := range cases {
-		gotErr := Verify(c.vctx)
+		gasLeft, gotErr := Verify(c.vctx, 10000)
 		if errors.Root(gotErr) != c.wantErr {
 			t.Errorf("VerifyTxInput(%+v) err = %v want %v", c.vctx, gotErr, c.wantErr)
 		}
-	}
-}
-
-func TestVerifyBlockHeader(t *testing.T) {
-	consensusProg := []byte{byte(OP_ADD), byte(OP_5), byte(OP_NUMEQUAL)}
-	context := &Context{
-		VMVersion: 1,
-		Code:      consensusProg,
-		Arguments: [][]byte{{2}, {3}},
-	}
-	gotErr := Verify(context)
-	if gotErr != nil {
-		t.Errorf("unexpected error: %v", gotErr)
-	}
-
-	context = &Context{
-		VMVersion: 1,
-		Arguments: [][]byte{make([]byte, 50000)},
-	}
-	gotErr = Verify(context)
-	if errors.Root(gotErr) != ErrRunLimitExceeded {
-		t.Error("expected block to exceed run limit")
+		if gasLeft != c.gasLeft {
+			t.Errorf("VerifyTxInput(%+v) err = gasLeft doesn't match", c.vctx)
+		}
 	}
 }
 
@@ -427,7 +412,7 @@ func TestVerifyTxInputQuickCheck(t *testing.T) {
 			// to a normal unit test.
 			MaxTimeMS: new(uint64),
 		}
-		Verify(vctx)
+		Verify(vctx, 10000)
 
 		return true
 	}
@@ -449,14 +434,11 @@ func TestVerifyBlockHeaderQuickCheck(t *testing.T) {
 			}
 		}()
 		context := &Context{
-			VMVersion:            1,
-			Code:                 program,
-			Arguments:            witnesses,
-			BlockHash:            new([]byte),
-			BlockTimeMS:          new(uint64),
-			NextConsensusProgram: &[]byte{},
+			VMVersion: 1,
+			Code:      program,
+			Arguments: witnesses,
 		}
-		Verify(context)
+		Verify(context, 10000)
 		return true
 	}
 	if err := quick.Check(f, nil); err != nil {

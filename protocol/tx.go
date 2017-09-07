@@ -24,7 +24,8 @@ func (c *Chain) ValidateTx(tx *bc.Tx) error {
 	var ok bool
 	err, ok = c.prevalidated.lookup(tx.ID)
 	if !ok {
-		err = validation.ValidateTx(tx, c.InitialBlockHash)
+		//TODO: fix the cache level things
+		_, err = validation.ValidateTx(tx, nil)
 		c.prevalidated.cache(tx.ID, err)
 	}
 	return errors.Sub(ErrBadTx, err)

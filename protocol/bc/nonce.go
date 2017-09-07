@@ -9,15 +9,13 @@ import "io"
 func (Nonce) typ() string { return "nonce1" }
 func (n *Nonce) writeForHash(w io.Writer) {
 	mustWriteForHash(w, n.Program)
-	mustWriteForHash(w, n.TimeRangeId)
 	mustWriteForHash(w, n.ExtHash)
 }
 
 // NewNonce creates a new Nonce.
-func NewNonce(p *Program, trID *Hash) *Nonce {
+func NewNonce(p *Program) *Nonce {
 	return &Nonce{
-		Program:     p,
-		TimeRangeId: trID,
+		Program: p,
 	}
 }
 

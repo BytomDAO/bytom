@@ -1,47 +1,47 @@
 package node
 
 import (
-    "context"
+	"context"
 	"crypto/tls"
+	"net"
 	"net/http"
-	"strings"
-    "net"
-	"sync"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
-	crypto "github.com/tendermint/go-crypto"
-	wire "github.com/tendermint/go-wire"
+	bc "github.com/bytom/blockchain"
 	cfg "github.com/bytom/config"
 	p2p "github.com/bytom/p2p"
-	"github.com/bytom/types"
-	"github.com/bytom/version"
-	cmn "github.com/tendermint/tmlibs/common"
-	"github.com/tendermint/tmlibs/log"
-    bc "github.com/bytom/blockchain"
-    dbm "github.com/tendermint/tmlibs/db"
-    "github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/legacy"
 	rpccore "github.com/bytom/rpc/core"
 	grpccore "github.com/bytom/rpc/grpc"
+	"github.com/bytom/types"
+	"github.com/bytom/version"
+	crypto "github.com/tendermint/go-crypto"
+	wire "github.com/tendermint/go-wire"
+	cmn "github.com/tendermint/tmlibs/common"
+	dbm "github.com/tendermint/tmlibs/db"
+	"github.com/tendermint/tmlibs/log"
 	//rpc "github.com/blockchain/rpc/lib"
-	rpcserver "github.com/bytom/rpc/lib/server"
-    "github.com/bytom/blockchain/account"
-    "github.com/bytom/protocol"
-    "github.com/bytom/blockchain/txdb"
+	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/net/http/reqid"
-//	"github.com/bytom/net/http/static"
-//	"github.com/bytom/generated/dashboard"
+	"github.com/bytom/protocol"
+	rpcserver "github.com/bytom/rpc/lib/server"
+	//	"github.com/bytom/net/http/static"
+	//	"github.com/bytom/generated/dashboard"
+
 	"github.com/bytom/env"
-	"github.com/kr/secureheader"
-	bytomlog "github.com/bytom/log"
 	"github.com/bytom/errors"
-	"github.com/bytom/crypto/ed25519"
+	bytomlog "github.com/bytom/log"
+	"github.com/kr/secureheader"
 
 	_ "net/http/pprof"
 )
 
 const (
-    httpReadTimeout  = 2 * time.Minute
+	httpReadTimeout  = 2 * time.Minute
 	httpWriteTimeout = time.Hour
 )
 
@@ -49,7 +49,7 @@ type Node struct {
 	cmn.BaseService
 
 	// config
-	config        *cfg.Config
+	config *cfg.Config
 
 	// network
 	privKey  crypto.PrivKeyEd25519 // local node's p2p key
@@ -57,16 +57,16 @@ type Node struct {
 	addrBook *p2p.AddrBook         // known peers
 
 	// services
-	evsw             types.EventSwitch           // pub/sub for services
-//    blockStore       *bc.MemStore
-    blockStore       *txdb.Store
-    bcReactor        *bc.BlockchainReactor
-    accounts         *account.Manager
-    rpcListeners     []net.Listener              // rpc servers
+	evsw types.EventSwitch // pub/sub for services
+	//    blockStore       *bc.MemStore
+	blockStore   *txdb.Store
+	bcReactor    *bc.BlockchainReactor
+	accounts     *account.Manager
+	rpcListeners []net.Listener // rpc servers
 }
 
 var (
-    // config vars
+	// config vars
 	rootCAs       = env.String("ROOT_CA_CERTS", "") // file path
 	splunkAddr    = os.Getenv("SPLUNKADDR")
 	logFile       = os.Getenv("LOGFILE")
@@ -83,17 +83,16 @@ var (
 	buildTag    = "?"
 	buildCommit = "?"
 	buildDate   = "?"
-	race []interface{} // initialized in race.go
+	race        []interface{} // initialized in race.go
 )
-
 
 func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
 	return NewNode(config, logger)
 }
 
 func RedirectHandler(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-	    if req.URL.Path == "/" {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path == "/" {
 			http.Redirect(w, req, "/dashboard/", http.StatusFound)
 			return
 		}
@@ -101,14 +100,13 @@ func RedirectHandler(next http.Handler) http.Handler {
 	})
 }
 
-
 type waitHandler struct {
-    h  http.Handler
+	h  http.Handler
 	wg sync.WaitGroup
 }
 
 func (wh *waitHandler) Set(h http.Handler) {
-    wh.h = h
+	wh.h = h
 	wh.wg.Done()
 }
 
@@ -159,25 +157,21 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 }
 
 func setupGenesisBlock(config *cfg.Config) (*legacy.Block, error) {
-	privKey := ed25519.PrivateKey(config.PrivateKey)
-	pubkey := privKey.Public().(ed25519.PublicKey)
-	var pubkeys []ed25519.PublicKey = []ed25519.PublicKey{pubkey,}
-	var npubkeys int = 1
 	var timestamp time.Time = config.Time
-	return protocol.NewInitialBlock(pubkeys, npubkeys, timestamp)
+	return protocol.NewInitialBlock(timestamp)
 }
 
 func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	// Get store
-    tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-    store := txdb.NewStore(tx_db)
-    /*genesisBlock := legacy.Block {
-        BlockHeader: legacy.BlockHeader {
-            Version: 1,
-            Height: 0,
-        },
-    }
-    store.SaveBlock(&genesisBlock)
+	tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
+	store := txdb.NewStore(tx_db)
+	/*genesisBlock := legacy.Block {
+	      BlockHeader: legacy.BlockHeader {
+	          Version: 1,
+	          Height: 0,
+	      },
+	  }
+	  store.SaveBlock(&genesisBlock)
 	*/
 
 	// Generate node PrivKey
@@ -191,34 +185,33 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
 
-
 	p2pLogger := logger.With("module", "p2p")
 
 	sw := p2p.NewSwitch(config.P2P)
 	sw.SetLogger(p2pLogger)
 
-    fastSync := config.FastSync
-    genesisBlock, err := setupGenesisBlock(config)
+	fastSync := config.FastSync
+	genesisBlock, err := setupGenesisBlock(config)
 	if err != nil {
-      cmn.Exit(cmn.Fmt("initialize genesisblock failed: %v", err))
-    }
+		cmn.Exit(cmn.Fmt("initialize genesisblock failed: %v", err))
+	}
 
-    chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, nil)
-   /* if err != nil {
-      cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
-    }
-    err = chain.CommitAppliedBlock(context.Background(), block, state.Empty())
-    if err != nil {
-      cmn.Exit(cmn.Fmt("commit block failed: %v", err))
-    }
-    chain.MaxIssuanceWindow = bc.MillisDuration(c.MaxIssuanceWindowMs)
-    */
+	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, nil)
+	/* if err != nil {
+	     cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
+	   }
+	   err = chain.CommitAppliedBlock(context.Background(), block, state.Empty())
+	   if err != nil {
+	     cmn.Exit(cmn.Fmt("commit block failed: %v", err))
+	   }
+	   chain.MaxIssuanceWindow = bc.MillisDuration(c.MaxIssuanceWindowMs)
+	*/
 
-    accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
-    accounts := account.NewManager(accounts_db, chain)
-    bcReactor := bc.NewBlockchainReactor(store, chain, accounts, fastSync)
-    bcReactor.SetLogger(logger.With("module", "blockchain"))
-    sw.AddReactor("BLOCKCHAIN", bcReactor)
+	accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
+	accounts := account.NewManager(accounts_db, chain)
+	bcReactor := bc.NewBlockchainReactor(store, chain, accounts, fastSync)
+	bcReactor.SetLogger(logger.With("module", "blockchain"))
+	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
 	rpcInit(bcReactor, config)
 	// Optionally, start the pex reactor
@@ -245,16 +238,16 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	}
 
 	node := &Node{
-		config:        config,
+		config: config,
 
 		privKey:  privKey,
 		sw:       sw,
 		addrBook: addrBook,
 
-		evsw:      eventSwitch,
-        bcReactor: bcReactor,
-        blockStore: store,
-        accounts: accounts,
+		evsw:       eventSwitch,
+		bcReactor:  bcReactor,
+		blockStore: store,
+		accounts:   accounts,
 	}
 	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
 	return node
@@ -378,7 +371,7 @@ func (n *Node) startRPC() ([]net.Listener, error) {
 		}
 		listeners = append(listeners, listener)
 	}
-    return listeners, nil
+	return listeners, nil
 }
 
 func (n *Node) Switch() *p2p.Switch {
