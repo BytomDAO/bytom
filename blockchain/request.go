@@ -14,13 +14,13 @@ var (
 	errBadAction     = errors.New("bad action object")
 )
 
-type buildRequest struct {
+type BuildRequest struct {
 	Tx      *legacy.TxData           `json:"base_transaction"`
 	Actions []map[string]interface{} `json:"actions"`
 	TTL     json.Duration            `json:"ttl"`
 }
 
-func (a *BlockchainReactor) filterAliases(ctx context.Context, br *buildRequest) error {
+func (a *BlockchainReactor) filterAliases(ctx context.Context, br *BuildRequest) error {
 	for i, m := range br.Actions {
 		id, _ := m["assset_id"].(string)
 		alias, _ := m["asset_alias"].(string)

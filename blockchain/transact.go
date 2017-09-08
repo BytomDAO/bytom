@@ -44,7 +44,7 @@ func (a *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilde
 	return decoder, true
 }
 
-func (a *BlockchainReactor) buildSingle(ctx context.Context, req *buildRequest) (*txbuilder.Template, error) {
+func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
 	err := a.filterAliases(ctx, req)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *buildRequest) 
 }
 
 // POST /build-transaction
-func (a *BlockchainReactor) build(ctx context.Context, buildReqs []*buildRequest) (interface{}, error) {
+func (a *BlockchainReactor) build(ctx context.Context, buildReqs []*BuildRequest) (interface{}, error) {
 	responses := make([]interface{}, len(buildReqs))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))

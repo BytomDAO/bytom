@@ -22,6 +22,7 @@ import (
 	"github.com/bytom/log"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/cmd/bytomcli/example"
+	"github.com/bytom/blockchain/query"
 )
 
 // config vars
@@ -314,10 +315,10 @@ func createAccount(client *rpc.Client, args []string) {
 	ins.Alias = "alice"
 	ins.Tags = map[string]interface{}{"test_tag": "v0",}
 	ins.ClientToken = args[0]
-	responses := make([]interface{}, 50)
-	client.Call(context.Background(), "/create-account", &[]Ins{ins,}, &responses)
+	account := make([]query.AnnotatedAccount, 1)
+	client.Call(context.Background(), "/create-account", &[]Ins{ins,}, &account)
 	//dieOnRPCError(err)
-	fmt.Printf("responses:%v\n", responses)
+	fmt.Printf("responses:%v\n", account[0])
 }
 
 func createAsset(client *rpc.Client, args []string) {
@@ -346,10 +347,10 @@ func createAsset(client *rpc.Client, args []string) {
 	ins.Tags = map[string]interface{}{"test_tag": "v0",}
 	ins.Definition = map[string]interface{}{"test_definition": "v0"}
 	ins.ClientToken = args[0]
-	responses := make([]interface{}, 50)
-	client.Call(context.Background(), "/create-asset", &[]Ins{ins,}, &responses)
+	assets := make([]query.AnnotatedAsset, 1)
+	client.Call(context.Background(), "/create-asset", &[]Ins{ins,}, &assets)
 	//dieOnRPCError(err)
-	fmt.Printf("responses:%v\n", responses)
+	fmt.Printf("responses:%v\n", assets)
 }
 
 func updateAccountTags(client *rpc.Client,args []string){
