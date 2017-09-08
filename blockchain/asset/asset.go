@@ -135,6 +135,15 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		asset.Alias = &alias
 	}
 
+	asset_id := []byte(assetSigner.ID)
+	ass, err := json.Marshal(asset)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed marshal asset")
+	}
+	if len(ass) > 0 {
+		reg.db.Set(asset_id,json.RawMessage(ass))
+	}
+
 /*	asset, err = reg.insertAsset(ctx, asset, clientToken)
 	if err != nil {
 		return nil, errors.Wrap(err, "inserting asset")
