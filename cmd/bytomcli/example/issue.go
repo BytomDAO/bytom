@@ -21,6 +21,7 @@ import (
 	//"github.com/bytom/errors"
 	//"github.com/bytom/log"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/blockchain/query"
 )
 
 // TO DO: issue a asset to a account.
@@ -44,7 +45,7 @@ func IssueTest(client *rpc.Client, args []string) {
 	ins.Alias = "alice"
 	ins.Tags = map[string]interface{}{"test_tag": "v0",}
 	ins.ClientToken = "account"
-	account := make([]interface{}, 50)
+	account := make([]query.AnnotatedAccount, 2)
 	client.Call(context.Background(), "/create-account", &[]Ins{ins,}, &account)
 	fmt.Printf("account:%v\n", account)
 
@@ -70,7 +71,16 @@ func IssueTest(client *rpc.Client, args []string) {
 	ins_asset.Tags = map[string]interface{}{"test_tag": "v0",}
 	ins_asset.Definition = map[string]interface{}{"test_definition": "v0"}
 	ins_asset.ClientToken = "asset"
-	asset := make([]interface{}, 50)
+	asset := make([]query.AnnotatedAsset, 1)
 	client.Call(context.Background(), "/create-asset", &[]Ins_asset{ins_asset,}, &asset)
 	fmt.Printf("asset:%v\n", asset)
+
+/*
+	for i := range account {
+		var account_ query.AnnotatedAccount
+		//account_ = account[i].(query.AnnotatedAccount)
+		//stdjson.Unmarshal(account[i].([]byte), &account_)
+		fmt.Printf("account:%v\n", account[i][0])
+	}
+	*/
 }

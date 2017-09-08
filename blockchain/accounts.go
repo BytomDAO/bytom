@@ -24,7 +24,6 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
 	// with the same client_token will only create one account.
 	ClientToken string `json:"client_token"`
 }) interface{} {
-	log.Printf(ctx, "-------createAccount-----")
 	responses := make([]interface{}, len(ins))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))
@@ -41,6 +40,7 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
 				return
 			}
 			aa, err := account.Annotated(acc)
+			log.Printf(ctx, "-------createAccount-----Annotated accout:%v", aa)
 			if err != nil {
 				responses[i] = err
 				return
@@ -48,7 +48,7 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
 			responses[i] = aa
 		}(i)
 	}
-
+	log.Printf(ctx, "-------createAccount-----%v", responses)
 	wg.Wait()
 	return responses
 }
