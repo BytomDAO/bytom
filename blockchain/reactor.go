@@ -3,25 +3,30 @@ package blockchain
 import (
 	"bytes"
 	"context"
-	"errors"
 	"reflect"
     "time"
 	"net/http"
+	"fmt"
 
 	wire "github.com/tendermint/go-wire"
 	"github.com/bytom/p2p"
 	"github.com/bytom/types"
     "github.com/bytom/protocol/bc/legacy"
     "github.com/bytom/protocol"
+	"github.com/bytom/encoding/json"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/log"
 	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	//"github.com/bytom/net/http/limit"
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/generated/dashboard"
+	"github.com/bytom/errors"
+	"github.com/bytom/blockchain/txbuilder"
 )
 
 const (
@@ -39,37 +44,51 @@ const (
 	statusUpdateIntervalSeconds = 10
 	// check if we should switch to consensus reactor
 	switchToConsensusIntervalSeconds = 1
-	maxBlockchainResponseSize        = types.MaxBlockSize + 2
+	maxBlockchainResponseSize        = 22020096 + 2
 	crosscoreRPCPrefix = "/rpc/"
 )
-
-/*
-type consensusReactor interface {
-	// for when we switch from blockchain reactor and fast sync to
-	// the consensus machine
-	SwitchToConsensus(*sm.State)
-}
-*/
 
 // BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-//	state        *sm.State
-//	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
-//	store        *MemStore
-    chain        *protocol.Chain
+	chain        *protocol.Chain
 	store        *txdb.Store
 	accounts	 *account.Manager
+	assets	     *asset.Registry
+	txFeeds		 *txfeed.TxFeed
 	pool         *BlockPool
 	mux          *http.ServeMux
 	handler      http.Handler
 	fastSync     bool
 	requestsCh   chan BlockRequest
 	timeoutsCh   chan string
-//	lastBlock    *types.Block
+	submitter    txbuilder.Submitter
 
 	evsw types.EventSwitch
+}
+
+func batchRecover(ctx context.Context, v *interface{}) {
+	if r := recover(); r != nil {
+		var err error
+		if recoveredErr, ok := r.(error); ok {
+			err = recoveredErr
+		} else {
+			err = fmt.Errorf("panic with %T", r)
+		}
+		err = errors.Wrap(err)
+		*v = err
+	}
+
+	if *v == nil {
+		return
+	}
+	// Convert errors into error responses (including errors
+	// from recovered panics above).
+	if err, ok := (*v).(error); ok {
+		errorFormatter.Log(ctx, err)
+		*v = errorFormatter.Format(err)
+	}
 }
 
 func jsonHandler(f interface{}) http.Handler {
@@ -131,6 +150,16 @@ func maxBytes(h http.Handler) http.Handler {
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
 	m.Handle("/create-account", jsonHandler(bcr.createAccount))
+	m.Handle("/create-asset", jsonHandler(bcr.createAsset))
+	m.Handle("/update-account-tags",jsonHandler(bcr.updateAccountTags))
+	m.Handle("/update-asset-tags",jsonHandler(bcr.updateAssetTags))
+	m.Handle("/build-transaction", jsonHandler(bcr.build))
+	m.Handle("/create-control-program",jsonHandler(bcr.createControlProgram))
+	m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
+	m.Handle("/create-transaction-feed", jsonHandler(bcr.createTxFeed))
+	m.Handle("/get-transaction-feed", jsonHandler(bcr.getTxFeed))
+	m.Handle("/update-transaction-feed", jsonHandler(bcr.updateTxFeed))
+	m.Handle("/delete-transaction-feed", jsonHandler(bcr.deleteTxFeed))
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
@@ -157,7 +186,47 @@ func (bcr *BlockchainReactor) BuildHander() {
 	bcr.handler = handler
 }
 
-func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, fastSync bool) *BlockchainReactor {
+// Used as a request object for api queries
+type requestQuery struct {
+	Filter       string        `json:"filter,omitempty"`
+	FilterParams []interface{} `json:"filter_params,omitempty"`
+	SumBy        []string      `json:"sum_by,omitempty"`
+	PageSize     int           `json:"page_size"`
+
+	// AscLongPoll and Timeout are used by /list-transactions
+	// to facilitate notifications.
+	AscLongPoll bool          `json:"ascending_with_long_poll,omitempty"`
+	Timeout     json.Duration `json:"timeout"`
+
+	// After is a completely opaque cursor, indicating that only
+	// items in the result set after the one identified by `After`
+	// should be included. It has no relationship to time.
+	After string `json:"after"`
+
+	// These two are used for time-range queries like /list-transactions
+	StartTimeMS uint64 `json:"start_time,omitempty"`
+	EndTimeMS   uint64 `json:"end_time,omitempty"`
+
+	// This is used for point-in-time queries like /list-balances
+	// TODO(bobg): Different request structs for endpoints with different needs
+	TimestampMS uint64 `json:"timestamp,omitempty"`
+
+	// This is used for filtering results from /list-access-tokens
+	// Value must be "client" or "network"
+	Type string `json:"type"`
+
+	// Aliases is used to filter results from /mockshm/list-keys
+	Aliases []string `json:"aliases,omitempty"`
+}
+
+// Used as a response object for api queries
+type page struct {
+	Items    interface{}  `json:"items"`
+	Next     requestQuery `json:"next"`
+	LastPage bool         `json:"last_page"`
+}
+
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, assets *asset.Registry, fastSync bool) *BlockchainReactor {
     requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
     timeoutsCh    := make(chan string, defaultChannelCapacity)
     pool := NewBlockPool(
@@ -169,6 +238,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *ac
         chain:         chain,
         store:         store,
 		accounts:      accounts,
+		assets:		   assets,
         pool:          pool,
 		mux:           http.NewServeMux(),
         fastSync:      fastSync,
@@ -337,10 +407,12 @@ func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
 }
 
 
+/*
 // SetEventSwitch implements events.Eventable
 func (bcR *BlockchainReactor) SetEventSwitch(evsw types.EventSwitch) {
 	bcR.evsw = evsw
 }
+*/
 
 //-----------------------------------------------------------------------------
 // Messages
@@ -376,7 +448,7 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	return
 }
 
-//-------------------------------------
+//-----------------------------------
 
 type bcBlockRequestMessage struct {
 	Height uint64

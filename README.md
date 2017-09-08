@@ -14,14 +14,14 @@
 ## p2p & grpc test (两个节点测试)
 ``` console
 1. cd ./cmd/bytom
-2. ./test.sh node1
-3. ./test.sh node2
+2. ./test.sh bytom0
+3. ./test.sh bytom1
 4. curl -X POST --data '{"jsonrpc":"2.0", "method": "net_info", "params":[], "id":"67"}' http://127.0.0.1:46657
 ```
 ## bytomcli & bytom test
 ``` console
 1. cd ./cmd/bytom
-2. ./test.sh node1
+2. ./test.sh bytom0
 3. cd ./cmd/bytomcli
 4. ./bytomcli <command> <opt...>
 ```

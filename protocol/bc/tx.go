@@ -34,18 +34,6 @@ var (
 	ErrMissingEntry = errors.New("missing entry")
 )
 
-func (tx *Tx) TimeRange(id Hash) (*TimeRange, error) {
-	e, ok := tx.Entries[id]
-	if !ok || e == nil {
-		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
-	}
-	tr, ok := e.(*TimeRange)
-	if !ok {
-		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
-	}
-	return tr, nil
-}
-
 func (tx *Tx) Output(id Hash) (*Output, error) {
 	e, ok := tx.Entries[id]
 	if !ok || e == nil {

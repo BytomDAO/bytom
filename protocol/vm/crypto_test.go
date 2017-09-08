@@ -6,10 +6,6 @@ import (
 	"github.com/bytom/testutil"
 )
 
-var emptyBlockVMContext = &Context{
-	BlockHash: &[]uint8{0xf0, 0x85, 0x4f, 0x88, 0xb4, 0x89, 0x0, 0x99, 0x2f, 0xec, 0x40, 0x43, 0xf9, 0x65, 0xfa, 0x2, 0x9d, 0xeb, 0x8a, 0xd6, 0x93, 0xcf, 0x37, 0x11, 0xfe, 0x83, 0x9, 0xb3, 0x90, 0x6a, 0x5a, 0x86},
-}
-
 func TestCheckSig(t *testing.T) {
 	cases := []struct {
 		prog    string
@@ -397,29 +393,6 @@ func TestCryptoOps(t *testing.T) {
 		startVM: &virtualMachine{
 			runLimit: 0,
 			context:  &Context{},
-		},
-		wantErr: ErrRunLimitExceeded,
-	}, {
-		op: OP_BLOCKHASH,
-		startVM: &virtualMachine{
-			runLimit: 50000,
-			context:  emptyBlockVMContext,
-		},
-		wantVM: &virtualMachine{
-			runLimit: 49959,
-			dataStack: [][]byte{{
-				240, 133, 79, 136, 180, 137, 0, 153,
-				47, 236, 64, 67, 249, 101, 250, 2,
-				157, 235, 138, 214, 147, 207, 55, 17,
-				254, 131, 9, 179, 144, 106, 90, 134,
-			}},
-			context: emptyBlockVMContext,
-		},
-	}, {
-		op: OP_BLOCKHASH,
-		startVM: &virtualMachine{
-			runLimit: 0,
-			context:  emptyBlockVMContext,
 		},
 		wantErr: ErrRunLimitExceeded,
 	}}

@@ -9,21 +9,10 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
-func newBlockVMContext(block *bc.Block, prog []byte, args [][]byte) *vm.Context {
-	blockHash := block.ID.Bytes()
-	return &vm.Context{
-		VMVersion: 1,
-		Code:      prog,
-		Arguments: args,
-
-		BlockHash:            &blockHash,
-		BlockTimeMS:          &block.TimestampMs,
-		NextConsensusProgram: &block.NextConsensusProgram,
-	}
-}
-
-func NewTxVMContext(tx *bc.Tx, entry bc.Entry, prog *bc.Program, args [][]byte) *vm.Context {
+func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args [][]byte) *vm.Context {
 	var (
+		tx         = vs.tx
+		blockHeigh = vs.block.BlockHeader.GetHeight()
 		numResults = uint64(len(tx.ResultIds))
 		txData     = tx.Data.Bytes()
 		entryID    = bc.EntryID(entry) // TODO(bobg): pass this in, don't recompute it
@@ -104,7 +93,8 @@ func NewTxVMContext(tx *bc.Tx, entry bc.Entry, prog *bc.Program, args [][]byte) 
 
 		EntryID: entryID.Bytes(),
 
-		TxVersion: &tx.Version,
+		TxVersion:  &tx.Version,
+		BlockHeigh: &blockHeigh,
 
 		TxSigHash:     txSigHashFn,
 		NumResults:    &numResults,

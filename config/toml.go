@@ -28,11 +28,11 @@ func EnsureRoot(rootDir string) {
 var defaultConfigTmpl = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 
-proxy_app = "tcp://127.0.0.1:46658"
 moniker = "__MONIKER__"
 fast_sync = true
 db_backend = "leveldb"
 log_level = "state:info,*:info"
+api_addr = "0.0.0.0:1999"
 
 [rpc]
 laddr = "tcp://0.0.0.0:46657"
@@ -49,16 +49,14 @@ func defaultConfig(moniker string) string {
 /****** these are for test settings ***********/
 
 func ResetTestRoot(testName string) *Config {
-	rootDir := os.ExpandEnv("$HOME/.tendermint_test")
+	rootDir := os.ExpandEnv("$HOME/.test")
 	rootDir = filepath.Join(rootDir, testName)
-	// Remove ~/.tendermint_test_bak
 	if cmn.FileExists(rootDir + "_bak") {
 		err := os.RemoveAll(rootDir + "_bak")
 		if err != nil {
 			cmn.PanicSanity(err.Error())
 		}
 	}
-	// Move ~/.tendermint_test to ~/.tendermint_test_bak
 	if cmn.FileExists(rootDir) {
 		err := os.Rename(rootDir, rootDir+"_bak")
 		if err != nil {
@@ -91,11 +89,11 @@ func ResetTestRoot(testName string) *Config {
 var testConfigTmpl = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 
-proxy_app = "dummy"
 moniker = "__MONIKER__"
 fast_sync = false
 db_backend = "memdb"
 log_level = "info"
+api_addr = "0.0.0.0:1999"
 
 [rpc]
 laddr = "tcp://0.0.0.0:36657"

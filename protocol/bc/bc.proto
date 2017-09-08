@@ -51,24 +51,24 @@ message ValueDestination {
 
 message BlockHeader {
   uint64 version                   = 1;
-  uint64 height                    = 2;
-  Hash   previous_block_id         = 3;
-  uint64 timestamp_ms              = 4;
-  Hash   transactions_root         = 5;
-  Hash   assets_root               = 6;
-  bytes  next_consensus_program    = 7;
-  Hash   ext_hash                  = 8;
-
-  repeated bytes witness_arguments = 9;
+  uint64 serialized_size           = 2;
+  uint64 height                    = 3;
+  Hash   previous_block_id         = 4;
+  uint64 timestamp_ms              = 5;
+  Hash   transactions_root         = 6;
+  Hash   assets_root               = 7;
+  uint64 nonce                     = 8;
+  uint64 bits                      = 9;
 }
 
 message TxHeader {
-  uint64        version     = 1;
-  repeated Hash result_ids  = 2;
-  Hash          data        = 3;
-  uint64        min_time_ms = 4;
-  uint64        max_time_ms = 5;
-  Hash          ext_hash    = 6;
+  uint64        version         = 1;
+  uint64        serialized_size = 2;
+  repeated Hash result_ids      = 3;
+  Hash          data            = 4;
+  uint64        min_time_ms.    = 5;
+  uint64        max_time_ms.    = 6;
+  Hash          ext_hash        = 7;
 }
 
 message Mux {
@@ -81,10 +81,13 @@ message Mux {
 
 message Nonce {
   Program        program             = 1;
-  Hash           time_range_id       = 2;
-  Hash           ext_hash            = 3;
-  repeated bytes witness_arguments   = 4;
-  Hash           witness_anchored_id = 5;
+  Hash           ext_hash            = 2;
+  repeated bytes witness_arguments   = 3;
+  Hash           witness_anchored_id = 4;
+}
+
+message Coinbase {
+  ValueDestination witness_destination = 1;
 }
 
 message Output {
@@ -100,12 +103,6 @@ message Retirement {
   Hash        data     = 2;
   Hash        ext_hash = 3;
   uint64      ordinal  = 4;
-}
-
-message TimeRange {
-  uint64    min_time_ms = 1;
-  uint64    max_time_ms = 2;
-  Hash      ext_hash    = 3;
 }
 
 message Issuance {

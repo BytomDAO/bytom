@@ -9,8 +9,6 @@ import (
 	"github.com/bytom/errors"
 )
 
-const initialRunLimit = 10000
-
 type virtualMachine struct {
 	context *Context
 
@@ -33,14 +31,11 @@ type virtualMachine struct {
 	altStack  [][]byte
 }
 
-// ErrFalseVMResult is one of the ways for a transaction to fail validation
-var ErrFalseVMResult = errors.New("false VM result")
-
 // TraceOut - if non-nil - will receive trace output during
 // execution.
 var TraceOut io.Writer
 
-func Verify(context *Context) (err error) {
+func Verify(context *Context, gasLimit int64) (gasLeft int64, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if rErr, ok := r.(error); ok {
@@ -52,13 +47,13 @@ func Verify(context *Context) (err error) {
 	}()
 
 	if context.VMVersion != 1 {
-		return ErrUnsupportedVM
+		return gasLimit, ErrUnsupportedVM
 	}
 
 	vm := &virtualMachine{
 		expansionReserved: context.TxVersion != nil && *context.TxVersion == 1,
 		program:           context.Code,
-		runLimit:          initialRunLimit,
+		runLimit:          gasLimit,
 		context:           context,
 	}
 
@@ -66,7 +61,7 @@ func Verify(context *Context) (err error) {
 	for i, arg := range args {
 		err = vm.push(arg, false)
 		if err != nil {
-			return errors.Wrapf(err, "pushing initial argument %d", i)
+			return vm.runLimit, errors.Wrapf(err, "pushing initial argument %d", i)
 		}
 	}
 
@@ -75,7 +70,7 @@ func Verify(context *Context) (err error) {
 		err = ErrFalseVMResult
 	}
 
-	return wrapErr(err, vm, args)
+	return vm.runLimit, wrapErr(err, vm, args)
 }
 
 // falseResult returns true iff the stack is empty or the top
@@ -198,6 +193,7 @@ func (vm *virtualMachine) top() ([]byte, error) {
 // positive cost decreases runlimit, negative cost increases it
 func (vm *virtualMachine) applyCost(n int64) error {
 	if n > vm.runLimit {
+		vm.runLimit = 0
 		return ErrRunLimitExceeded
 	}
 	vm.runLimit -= n

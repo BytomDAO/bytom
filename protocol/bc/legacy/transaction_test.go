@@ -46,12 +46,13 @@ func TestTransaction(t *testing.T) {
 	}{
 		{
 			tx: NewTx(TxData{
-				Version:       1,
-				Inputs:        nil,
-				Outputs:       nil,
-				MinTime:       0,
-				MaxTime:       0,
-				ReferenceData: nil,
+				Version:        1,
+				SerializedSize: uint64(7),
+				Inputs:         nil,
+				Outputs:        nil,
+				MinTime:        0,
+				MaxTime:        0,
+				ReferenceData:  nil,
 			}),
 			hex: ("07" + // serflags
 				"01" + // transaction version
@@ -66,7 +67,8 @@ func TestTransaction(t *testing.T) {
 		},
 		{
 			tx: NewTx(TxData{
-				Version: 1,
+				Version:        1,
+				SerializedSize: uint64(159),
 				Inputs: []*TxInput{
 					NewIssuanceInput([]byte{10, 9, 8}, 1000000000000, []byte("input"), initialBlockHash, issuanceScript, [][]byte{[]byte{1, 2, 3}}, nil),
 				},
@@ -111,11 +113,12 @@ func TestTransaction(t *testing.T) {
 				"066f7574707574" + // output 0, reference data
 				"00" + // output 0, output witness
 				"0869737375616e6365"), // reference data
-			hash: mustDecodeHash("cd4669d5363374f8661621273501c23e613fc98b0fab9d5d858f30e16ccd24ce"),
+			hash: mustDecodeHash("515774561625cfe07629e49d4cf938d641aeb62af58e1b3ae2c582fee41dc628"),
 		},
 		{
 			tx: NewTx(TxData{
-				Version: 1,
+				Version:        1,
+				SerializedSize: uint64(235),
 				Inputs: []*TxInput{
 					NewSpendInput(nil, mustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), bc.AssetID{}, 1000000000000, 1, []byte{1}, bc.Hash{}, []byte("input")),
 				},
@@ -274,6 +277,43 @@ func TestHasIssuance(t *testing.T) {
 		got := c.tx.HasIssuance()
 		if got != c.want {
 			t.Errorf("HasIssuance(%+v) = %v want %v", c.tx, got, c.want)
+		}
+	}
+}
+
+func TestIsCoinbase(t *testing.T) {
+	cases := []struct {
+		tx   *TxData
+		want bool
+	}{{
+		tx: &TxData{
+			Inputs: []*TxInput{NewIssuanceInput(nil, 0, nil, bc.Hash{}, nil, nil, nil)},
+		},
+		want: false,
+	}, {
+		tx: &TxData{
+			Inputs: []*TxInput{
+				NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, bc.Hash{}, nil),
+				NewIssuanceInput(nil, 0, nil, bc.Hash{}, nil, nil, nil),
+			},
+			Outputs: []*TxOutput{
+				NewTxOutput(bc.AssetID{}, 0, nil, nil),
+			},
+		},
+		want: false,
+	}, {
+		tx: &TxData{
+			Outputs: []*TxOutput{
+				NewTxOutput(bc.AssetID{}, 0, nil, nil),
+			},
+		},
+		want: true,
+	}}
+
+	for _, c := range cases {
+		got := c.tx.IsCoinbase()
+		if got != c.want {
+			t.Errorf("IsCoinbase(%+v) = %v want %v", c.tx, got, c.want)
 		}
 	}
 }
