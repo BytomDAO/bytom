@@ -231,20 +231,21 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 		return cached.(*Asset), nil
 	}
 
-	untypedAsset, err := reg.idGroup.Do(id.String(), func() (interface{}, error) {
-//		return assetQuery(ctx, reg.db, "assets.id=$1", id)
-		return nil,nil
-})
+	bytes := reg.db.Get(id.Bytes())
+	if bytes == nil {
+		return nil, errors.New("no exit this asset.")
+	}
+	var asset Asset
+	err := json.Unmarshal(bytes, &asset)
 
-	if err != nil {
-		return nil, err
+	if err !=nil {
+		return nil, errors.New("this asset can't be unmarshal.")
 	}
 
-	asset := untypedAsset.(*Asset)
 	reg.cacheMu.Lock()
 	reg.cache.Add(id, asset)
 	reg.cacheMu.Unlock()
-	return asset, nil
+	return &asset, nil
 }
 
 // FindByAlias retrieves an Asset record along with its signer,
