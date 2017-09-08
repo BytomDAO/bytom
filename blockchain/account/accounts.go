@@ -4,7 +4,7 @@ package account
 import (
 	"context"
 //	stdsql "database/sql"
-//	"encoding/json"
+	"encoding/json"
 	"sync"
 	"time"
     "fmt"
@@ -93,7 +93,7 @@ type Account struct {
 
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
-	signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
+	accountSigner, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
@@ -103,7 +103,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, err
 	}
 */
-    var tagsParam []byte
+    //var tagsParam []byte
 
 /*	aliasSQL := stdsql.NullString{
 		String: alias,
@@ -120,18 +120,30 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	} else if err != nil {
 		return nil, errors.Wrap(err)
 	}*/
-    account_alias := []byte(fmt.Sprintf("account_alias:%v", signer.ID))
-    account_tags := []byte(fmt.Sprintf("account_tags:%v", signer.ID))
-    m.db.Set(account_alias, []byte(alias))
-    m.db.Set(account_tags, []byte(tagsParam))
-    alias_account := []byte(fmt.Sprintf("alias_account:%v", alias))
-    m.db.Set(alias_account, []byte(signer.ID))
+/*
+    account_id := []byte(fmt.Sprintf("account_id:%v", account_signer.ID))
+	account_alias := []byte(fmt.Sprintf("account_alias:%v", alias))
+    account_tags := []byte(fmt.Sprintf("account_tags:%v", account_signer.ID))
 
+    m.db.Set(account_id, []byte(alias))
+    m.db.Set(account_alias, []byte(tagsParam))
+    m.db.Set(account_tags, []byte(account_signer.ID))
+*/
+	account_id := []byte(accountSigner.ID)
 	account := &Account{
-		Signer: signer,
+		Signer: accountSigner,
 		Alias:  alias,
 		Tags:   tags,
 	}
+
+	acc, err := json.Marshal(account)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed marshal account")
+	}
+	if len(acc) > 0 {
+		m.db.Set(account_id,json.RawMessage(acc))
+	}
+
 
 	err = m.indexAnnotatedAccount(ctx, account)
 	if err != nil {
