@@ -129,6 +129,8 @@ func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, qu
 		keyIndex uint64
 	)
 
+	id, keyIndex = Idgenerate(typeIDMap[typ])
+
 	return &Signer{
 		ID:       id,
 		Type:     typ,
