@@ -8,10 +8,8 @@ import (
 
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
-	//"chain/database/pg"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/log"
-//	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -41,12 +39,10 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 		return txbuilder.MissingFieldsError("asset_id")
 		return nil
 	}
+	log.Printf(ctx, "AssetId:%v\n", a.AssetId)
 
 	asset, err := a.assets.findByID(ctx, *a.AssetId)
-/*	if errors.Root(err) == pg.ErrUserInputNotFound {
-		err = errors.WithDetailf(err, "missing asset with ID %x", a.AssetId.Bytes())
-	}
-*/	if err != nil {
+	if err != nil {
 		return err
 	}
 

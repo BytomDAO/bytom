@@ -1,25 +1,11 @@
 package example
 
 import (
-	//"bytes"
 	"context"
-//	"flag"
 	"fmt"
-	//"io"
-	//"net"
-	//"net/http"
-	//"os"
-	//"path/filepath"
-	//"strings"
-	//"time"
 	stdjson "encoding/json"
 
-	//"github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/rpc"
-	//"github.com/bytom/crypto/ed25519"
-	//"github.com/bytom/env"
-	//"github.com/bytom/errors"
-	//"github.com/bytom/log"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/txbuilder"
