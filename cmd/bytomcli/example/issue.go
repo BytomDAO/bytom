@@ -95,4 +95,13 @@ func IssueTest(client *rpc.Client, args []string) {
 	tpl := make([]txbuilder.Template, 1)
 	client.Call(context.Background(), "/build-transaction", []*bc.BuildRequest{&buildReq,}, &tpl)
 	fmt.Printf("tpl:%v\n", tpl)
+
+	// sign-transaction
+	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprv_asset.XPub()}, func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte) ([]byte, error) {
+		derived := xprv_asset.Derive(path)
+		return derived.Sign(data[:]), nil
+	})
+	if err != nil {
+		fmt.Printf("sign-transaction error. err:%v\n", err)
+	}
 }
