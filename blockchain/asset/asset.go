@@ -69,7 +69,7 @@ type Asset struct {
 	VMVersion        uint64
 	IssuanceProgram  []byte
 	InitialBlockHash bc.Hash
-	Signer           *signers.Signer
+	*signers.Signer
 	Tags             map[string]interface{}
 	rawDefinition    []byte
 	definition       map[string]interface{}
@@ -135,7 +135,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		asset.Alias = &alias
 	}
 
-	asset_id := []byte(assetSigner.ID)
+	asset_id := []byte(asset.AssetID.String())
 	ass, err := json.Marshal(asset)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal asset")
@@ -231,7 +231,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 		return cached.(*Asset), nil
 	}
 
-	bytes := reg.db.Get(id.Bytes())
+	bytes := reg.db.Get([]byte(id.String()))
 	if bytes == nil {
 		return nil, errors.New("no exit this asset.")
 	}

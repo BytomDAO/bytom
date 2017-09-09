@@ -25,7 +25,6 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins []struct {
 	// with the same client_token will only create one asset.
 	ClientToken string `json:"client_token"`
 }) ([]interface{}, error) {
-	log.Printf(ctx,"------createAsset-----")
 	responses := make([]interface{}, len(ins))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))
@@ -50,6 +49,7 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins []struct {
 				return
 			}
 			aa, err := asset.Annotated(a)
+			log.Printf(ctx, "-------createAsset-----Annotated asset:%v", aa)
 			if err != nil {
 				responses[i] = err
 				return
@@ -59,6 +59,7 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins []struct {
 	}
 
 	wg.Wait()
+	log.Printf(ctx, "-------createAsset-----%v", responses)
 	return responses, nil
 }
 

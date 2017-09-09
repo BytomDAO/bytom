@@ -39,7 +39,6 @@ type issueAction struct {
 func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	if a.AssetId.IsZero() {
 		return txbuilder.MissingFieldsError("asset_id")
-		return nil
 	}
 
 	asset, err := a.assets.findByID(ctx, *a.AssetId)
