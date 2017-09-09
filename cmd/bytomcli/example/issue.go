@@ -90,4 +90,7 @@ func IssueTest(client *rpc.Client, args []string) {
 	if err != nil {
 		fmt.Printf("sign-transaction error. err:%v\n", err)
 	}
+	fmt.Printf("sign tpl:%v\n", tpl[0])
+	fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
+	fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
 }
