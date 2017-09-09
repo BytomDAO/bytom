@@ -37,7 +37,6 @@ type issueAction struct {
 func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
 	if a.AssetId.IsZero() {
 		return txbuilder.MissingFieldsError("asset_id")
-		return nil
 	}
 	log.Printf(ctx, "AssetId:%v\n", a.AssetId)
 

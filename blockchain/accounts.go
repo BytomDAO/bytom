@@ -48,8 +48,9 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
 			responses[i] = aa
 		}(i)
 	}
-	log.Printf(ctx, "-------createAccount-----%v", responses)
+
 	wg.Wait()
+	log.Printf(ctx, "-------createAccount-----%v", responses)
 	return responses
 }
 
