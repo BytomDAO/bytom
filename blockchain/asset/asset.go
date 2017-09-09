@@ -2,23 +2,18 @@ package asset
 
 import (
 	"context"
-	//"database/sql"
 	"encoding/json"
-//	"fmt"
 	"sync"
 
 	"golang.org/x/crypto/sha3"
 
 	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"
-//	"github.com/lib/pq"
 	dbm "github.com/tendermint/tmlibs/db"
 
-//	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
-//	"chain/database/pg"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -32,12 +27,11 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func NewRegistry(db dbm.DB, chain *protocol.Chain/*, pinStore *pin.Store*/) *Registry {
+func NewRegistry(db dbm.DB, chain *protocol.Chain) *Registry {
 	return &Registry{
 		db:               db,
 		chain:            chain,
 		initialBlockHash: chain.InitialBlockHash,
-//		pinStore:         pinStore,
 		cache:            lru.New(maxAssetCache),
 		aliasCache:       lru.New(maxAssetCache),
 	}
@@ -49,7 +43,6 @@ type Registry struct {
 	chain            *protocol.Chain
 	indexer          Saver
 	initialBlockHash bc.Hash
-//	pinStore         *pin.Store
 
 	idGroup    singleflight.Group
 	aliasGroup singleflight.Group

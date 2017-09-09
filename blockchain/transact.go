@@ -78,6 +78,7 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) 
 		ttl = defaultTxTTL
 	}
 	maxTime := time.Now().Add(ttl)
+
 	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime)
 	if errors.Root(err) == txbuilder.ErrAction {
 		// Format each of the inner errors contained in the data.
