@@ -3,6 +3,7 @@ package example
 import (
 	"context"
 	"fmt"
+	"time"
 	stdjson "encoding/json"
 
 	"github.com/bytom/blockchain/rpc"
@@ -10,6 +11,7 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/txbuilder"
 	bc "github.com/bytom/blockchain"
+	"github.com/bytom/encoding/json"
 )
 
 // TO DO: issue a asset to a account.
@@ -90,4 +92,13 @@ func IssueTest(client *rpc.Client, args []string) {
 	if err != nil {
 		fmt.Printf("sign-transaction error. err:%v\n", err)
 	}
+	fmt.Printf("sign tpl:%v\n", tpl[0])
+	fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
+	fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
+
+	// submit-transaction
+	var submitResponse interface{}
+	submitArg := bc.SubmitArg{tpl, json.Duration{time.Duration(1000000)}, "none"}
+	client.Call(context.Background(), "/submit-transaction", submitArg, &submitResponse)
+	fmt.Printf("submit transaction:%v\n", submitResponse)
 }
