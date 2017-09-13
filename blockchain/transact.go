@@ -6,14 +6,11 @@ import (
 	"sync"
 	"time"
 
-	//"github.com/bytom/blockchain/fetch"
 	"github.com/bytom/blockchain/txbuilder"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
-	//"github.com/bytom/log"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/reqid"
-	//"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
 
@@ -78,6 +75,7 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) 
 		ttl = defaultTxTTL
 	}
 	maxTime := time.Now().Add(ttl)
+
 	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime)
 	if errors.Root(err) == txbuilder.ErrAction {
 		// Format each of the inner errors contained in the data.
@@ -281,16 +279,16 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 	}
 }
 
-type submitArg struct {
+type SubmitArg struct {
 	Transactions []txbuilder.Template
-	wait         chainjson.Duration
+	Wait         chainjson.Duration
 	WaitUntil    string `json:"wait_until"` // values none, confirmed, processed. default: processed
 }
 
 // POST /submit-transaction
-func (a *BlockchainReactor) submit(ctx context.Context, x submitArg) (interface{}, error) {
+func (a *BlockchainReactor) submit(ctx context.Context, x SubmitArg) (interface{}, error) {
 	// Setup a timeout for the provided wait duration.
-	timeout := x.wait.Duration
+	timeout := x.Wait.Duration
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}
