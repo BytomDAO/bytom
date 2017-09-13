@@ -56,11 +56,11 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
 
 // POST /update-account-tags
 func (a *BlockchainReactor) updateAccountTags(ctx context.Context, ins []struct {
-	ID    *string
-	Alias *string
+	ID    string
+	Alias string
 	Tags  map[string]interface{} `json:"tags"`
 }) interface{} {
-	log.Printf(ctx,"-------update-account-tags---------")
+	log.Printf(ctx,"-------update-account-tags-----%v####%v--",(ins[0].ID),(ins[0].Alias))
 	responses := make([]interface{}, len(ins))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))

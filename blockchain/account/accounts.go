@@ -3,25 +3,25 @@ package account
 
 import (
 	"context"
-//	stdsql "database/sql"
+	//	stdsql "database/sql"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
-    "fmt"
 
 	"github.com/golang/groupcache/lru"
 	//"github.com/lib/pq"
 
-//	"chain/core/pin"
+	//	"chain/core/pin"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
-//	"chain/database/pg"
-     dbm "github.com/tendermint/tmlibs/db"
+	//	"chain/database/pg"
 	"github.com/bytom/errors"
 	"github.com/bytom/log"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/vm/vmutil"
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const maxAccountCache = 1000
@@ -31,12 +31,12 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func NewManager(db dbm.DB, chain *protocol.Chain/*, pinStore *pin.Store*/) *Manager {
+func NewManager(db dbm.DB, chain *protocol.Chain /*, pinStore *pin.Store*/) *Manager {
 	return &Manager{
-		db:          db,
-		chain:       chain,
-		utxoDB:      newReserver(db, chain/*, pinStore*/),
-//		pinStore:    pinStore,
+		db:     db,
+		chain:  chain,
+		utxoDB: newReserver(db, chain /*, pinStore*/),
+		//		pinStore:    pinStore,
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
 		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*controlProgram),
@@ -45,11 +45,11 @@ func NewManager(db dbm.DB, chain *protocol.Chain/*, pinStore *pin.Store*/) *Mana
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	db       dbm.DB
-	chain    *protocol.Chain
-	utxoDB   *reserver
-	indexer  Saver
-//	pinStore *pin.Store
+	db      dbm.DB
+	chain   *protocol.Chain
+	utxoDB  *reserver
+	indexer Saver
+	//	pinStore *pin.Store
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
@@ -97,38 +97,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
-/*
-	tagsParam , err := tagsToNullString(tags)
-	if err != nil {
-		return nil, err
-	}
-*/
-    //var tagsParam []byte
 
-/*	aliasSQL := stdsql.NullString{
-		String: alias,
-		Valid:  alias != "",
-	}
-
-	const q = `
-		INSERT INTO accounts (account_id, alias, tags) VALUES ($1, $2, $3)
-		ON CONFLICT (account_id) DO UPDATE SET alias = $2, tags = $3
-	`
-	_, err = m.db.ExecContext(ctx, q, signer.ID, aliasSQL, tagsParam)
-	if pg.IsUniqueViolation(err) {
-		return nil, errors.WithDetail(ErrDuplicateAlias, "an account with the provided alias already exists")
-	} else if err != nil {
-		return nil, errors.Wrap(err)
-	}*/
-/*
-    account_id := []byte(fmt.Sprintf("account_id:%v", account_signer.ID))
-	account_alias := []byte(fmt.Sprintf("account_alias:%v", alias))
-    account_tags := []byte(fmt.Sprintf("account_tags:%v", account_signer.ID))
-
-    m.db.Set(account_id, []byte(alias))
-    m.db.Set(account_alias, []byte(tagsParam))
-    m.db.Set(account_tags, []byte(account_signer.ID))
-*/
 	account_id := []byte(accountSigner.ID)
 	account := &Account{
 		Signer: accountSigner,
@@ -141,9 +110,9 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
 	if len(acc) > 0 {
-		m.db.Set(account_id,json.RawMessage(acc))
+		m.db.Set(account_id, json.RawMessage(acc))
+		m.db.Set([]byte(alias), account_id)
 	}
-
 
 	err = m.indexAnnotatedAccount(ctx, account)
 	if err != nil {
@@ -155,64 +124,56 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 // UpdateTags modifies the tags of the specified account. The account may be
 // identified either by ID or Alias, but not both.
-func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
-	if (id == nil) == (alias == nil) {
+func (m *Manager) UpdateTags(ctx context.Context, id, alias string, tags map[string]interface{}) error {
+
+	if (len(id) == 0) == (len(alias) == 0) {
 		return errors.Wrap(ErrBadIdentifier)
 	}
-/*
-	tagsParam , err := tagsToNullString(tags)
+
+	var key_id []byte
+	if len(alias) != 0 {
+		key_id = m.db.Get([]byte(alias))
+	} else {
+		key_id = []byte(id)
+	}
+
+	bytes := m.db.Get(key_id)
+	if bytes == nil {
+		return errors.New("no exit this account.")
+	}
+
+	var account Account
+	err := json.Unmarshal(bytes, &account)
 	if err != nil {
-		return errors.Wrap(err, "convert tags")
-	}
-*/
-	var (
-		signer   *signers.Signer
-		aliasStr string
-	)
-
-/*	if id != nil {
-		signer, err = m.findByID(ctx, *id)
-		if err != nil {
-			return errors.Wrap(err, "get account by ID")
-		}
-
-		// An alias is required by indexAnnotatedAccount. The latter is a somewhat
-		// complex function, so in the interest of not making a near-duplicate,
-		// we'll satisfy its contract and provide an alias.
-		const q = `SELECT alias FROM accounts WHERE account_id = $1`
-		var a stdsql.NullString
-		err := m.db.QueryRowContext(ctx, q, *id).Scan(&a)
-		if err != nil {
-			return errors.Wrap(err, "alias lookup")
-		}
-		if a.Valid {
-			aliasStr = a.String
-		}
-	} else { // alias is guaranteed to be not nil due to bad identifier check
-		aliasStr = *alias
-		signer, err = m.FindByAlias(ctx, aliasStr)
-		if err != nil {
-			return errors.Wrap(err, "get account by alias")
-		}
+		return errors.New("this account can't be unmarshal.")
 	}
 
-	const q = `
-		UPDATE accounts
-		SET tags = $1
-		WHERE account_id = $2
-	`
-	_, err = m.db.ExecContext(ctx, q, tagsParam, signer.ID)
+	for k, v := range tags {
+		switch v {
+		case "":
+			delete(account.Tags, k)
+		default:
+			account.Tags[k] = v
+		}
+
+	}
+
+	acc, err := json.Marshal(account)
 	if err != nil {
-		return errors.Wrap(err, "update entry in accounts table")
+
+		return errors.New("failed marshal account to update tags")
+
+	} else if len(acc) == 0 {
+
+		return errors.New("failed update account tags")
+
+	} else {
+
+		m.db.Set(key_id, json.RawMessage(acc))
+		return nil
 	}
-*/
-	return errors.Wrap(m.indexAnnotatedAccount(ctx, &Account{
-		Signer: signer,
-		Alias:  aliasStr,
-		Tags:   tags,
-	}), "update account index")
+
 }
-
 
 // FindByAlias retrieves an account's Signer record by its alias
 func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signer, error) {
@@ -232,8 +193,8 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 		if err != nil {
 			return nil, errors.Wrap(err)
 		}*/
-        bytez := m.db.Get([]byte(fmt.Sprintf("alias_account:%v", alias)))
-        accountID = string(bytez[:])
+		bytez := m.db.Get([]byte(fmt.Sprintf("alias_account:%v", alias)))
+		accountID = string(bytez[:])
 		m.cacheMu.Lock()
 		m.aliasCache.Add(alias, accountID)
 		m.cacheMu.Unlock()
@@ -308,7 +269,6 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 	return cp.controlProgram, nil
 }
 
-
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
 	/*const q = `
 		INSERT INTO account_control_programs (signer_id, key_index, control_program, change, expires_at)
@@ -333,10 +293,9 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 		})
 	}*/
 
-//	_, err := m.dbm.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
+	//	_, err := m.dbm.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
 	return errors.Wrap(nil)
 }
-
 
 func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	m.acpMu.Lock()
