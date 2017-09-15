@@ -353,23 +353,36 @@ func createAsset(client *rpc.Client, args []string) {
 	fmt.Printf("responses:%v\n", assets)
 }
 
-func updateAccountTags(client *rpc.Client,args []string){
-	if len(args) != 0{
-		fatalln("error:updateAccountTags not use args")
+func updateAccountTags(client *rpc.Client, args []string) {
+	if len(args) != 2 {
+		fatalln("update-account-tags [<ID>|<alias>] [tags_key:<tags_value>]")
 	}
+
 	type Ins struct {
-	ID    *string
-	Alias *string
-	Tags  map[string]interface{} `json:"tags"`
-}
+		ID    *string
+		Alias *string
+		Tags  map[string]interface{} `json:"tags"`
+	}
 	var ins Ins
-	aa := "1234"
-	alias := "asdfg"
-	ins.ID = &aa
-	ins.Alias = &alias
-	ins.Tags = map[string]interface{}{"test_tag": "v0",}
+
+	//TODO:(1)when alias = acc...,how to do;
+	//TODO:(2)support more tags together
+	if "acc" == args[0][:3] {
+		ins.ID = &args[0]
+		ins.Alias = nil
+	} else {
+		ins.Alias = &args[0]
+		ins.ID = nil
+	}
+
+	tags := strings.Split(args[1], ":")
+	if len(tags) != 2 {
+		fatalln("update-account-tags [<ID>|<alias>] [tags_key:<tags_value>]")
+	}
+
+	ins.Tags = map[string]interface{}{tags[0]: tags[1]}
 	responses := make([]interface{}, 50)
-	client.Call(context.Background(), "/update-account-tags", &[]Ins{ins,}, &responses)
+	client.Call(context.Background(), "/update-account-tags", &[]Ins{ins}, &responses)
 	fmt.Printf("responses:%v\n", responses)
 }
 
