@@ -171,6 +171,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
+	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
 
     latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
