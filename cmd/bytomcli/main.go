@@ -15,6 +15,9 @@ import (
 	stdjson "encoding/json"
 
 	"github.com/bytom/blockchain"
+//	"chain/core/accesstoken"
+	//"github.com/bytom/config"
+	"github.com/bytom/encoding/json"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/env"
@@ -66,6 +69,12 @@ var commands = map[string]*command{
 	"create-transaction-feed": {createTxFeed},
 	"get-transaction-feed":    {getTxFeed},
 	"update-transaction-feed": {updateTxFeed},
+        "list-accounts":           {listAccounts},
+        "list-assets":             {listAssets},
+        "list-transaction-feeds":  {listTxFeeds},
+        "list-transactions":       {listTransactions},
+        "list-balances":           {listBalances},
+        "list-unspent-outputs":    {listUnspentOutputs},
 	"delete-transaction-feed": {deleteTxFeed},
 	"issue-test": {example.IssueTest},
 }
@@ -345,7 +354,7 @@ func createAsset(client *rpc.Client, args []string) {
 	ins.Quorum = 1
 	ins.Alias = "bob"
 	ins.Tags = map[string]interface{}{"test_tag": "v0",}
-	ins.Definition = map[string]interface{}{"test_definition": "v0"}
+	ins.Definition = map[string]interface{}{}
 	ins.ClientToken = args[0]
 	assets := make([]query.AnnotatedAsset, 1)
 	client.Call(context.Background(), "/create-asset", &[]Ins{ins,}, &assets)
@@ -501,4 +510,155 @@ func deleteTxFeed(client *rpc.Client, args []string){
         in.ID = "123456"
         in.Alias = "qwerty"
         client.Call(context.Background(),"/delete-transaction-feed",&[]In{in,},nil)
+}
+
+func listAccounts(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:listAccounts not use args")
+        }
+	type requestQuery struct {
+                Filter       string        `json:"filter,omitempty"`
+                FilterParams []interface{} `json:"filter_params,omitempty"`
+                SumBy        []string      `json:"sum_by,omitempty"`
+                PageSize     int           `json:"page_size"`
+                AscLongPoll bool          `json:"ascending_with_long_poll,omitempty"`
+                Timeout     json.Duration `json:"timeout"`
+                After string `json:"after"`
+                StartTimeMS uint64 `json:"start_time,omitempty"`
+                EndTimeMS   uint64 `json:"end_time,omitempty"`
+                TimestampMS uint64 `json:"timestamp,omitempty"`
+                Type string `json:"type"`
+                Aliases []string `json:"aliases,omitempty"`
+}
+	var in requestQuery
+	after := in.After
+	out := in
+	out.After = after
+        client.Call(context.Background(),"/list-accounts",&[]requestQuery{in,},nil)
+}
+
+func listAssets(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:listAssets not use args")
+        }
+	type requestQuery struct {
+                Filter       string        `json:"filter,omitempty"`
+                FilterParams []interface{} `json:"filter_params,omitempty"`
+                SumBy        []string      `json:"sum_by,omitempty"`
+                PageSize     int           `json:"page_size"`
+                AscLongPoll bool          `json:"ascending_with_long_poll,omitempty"`
+                Timeout     json.Duration `json:"timeout"`
+                After string `json:"after"`
+                StartTimeMS uint64 `json:"start_time,omitempty"`
+                EndTimeMS   uint64 `json:"end_time,omitempty"`
+                TimestampMS uint64 `json:"timestamp,omitempty"`
+                Type string `json:"type"`
+                Aliases []string `json:"aliases,omitempty"`
+}
+	var in requestQuery
+	after := in.After
+	out := in
+	out.After = after
+	client.Call(context.Background(),"/list-assets",&[]requestQuery{in,},nil)
+}
+
+func listTxFeeds(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:listTxFeeds not use args")
+        }
+	type requestQuery struct {
+                Filter       string        `json:"filter,omitempty"`
+                FilterParams []interface{} `json:"filter_params,omitempty"`
+                SumBy        []string      `json:"sum_by,omitempty"`
+                PageSize     int           `json:"page_size"`
+                AscLongPoll bool          `json:"ascending_with_long_poll,omitempty"`
+                Timeout     json.Duration `json:"timeout"`
+                After string `json:"after"`
+                StartTimeMS uint64 `json:"start_time,omitempty"`
+                EndTimeMS   uint64 `json:"end_time,omitempty"`
+                TimestampMS uint64 `json:"timestamp,omitempty"`
+                Type string `json:"type"`
+                Aliases []string `json:"aliases,omitempty"`
+}
+	var in requestQuery
+	after := in.After
+	out := in
+	out.After = after
+		client.Call(context.Background(),"/list-transactions-feeds",&[]requestQuery{in,},nil)
+}
+
+func listTransactions(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:listTransactions not use args")
+        }
+	type requestQuery struct {
+                Filter       string        `json:"filter,omitempty"`
+                FilterParams []interface{} `json:"filter_params,omitempty"`
+                SumBy        []string      `json:"sum_by,omitempty"`
+                PageSize     int           `json:"page_size"`
+                AscLongPoll bool          `json:"ascending_with_long_poll,omitempty"`
+                Timeout     json.Duration `json:"timeout"`
+                After string `json:"after"`
+                StartTimeMS uint64 `json:"start_time,omitempty"`
+                EndTimeMS   uint64 `json:"end_time,omitempty"`
+                TimestampMS uint64 `json:"timestamp,omitempty"`
+                Type string `json:"type"`
+                Aliases []string `json:"aliases,omitempty"`
+}
+	var in requestQuery
+	after := in.After
+	out := in
+	out.After = after
+        client.Call(context.Background(),"/list-transactions",&[]requestQuery{in,},nil)
+}
+
+func listBalances(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:listBalances not use args")
+        }
+type requestQuery struct {
+                Filter       string        `json:"filter,omitempty"`
+                FilterParams []interface{} `json:"filter_params,omitempty"`
+                SumBy        []string      `json:"sum_by,omitempty"`
+                PageSize     int           `json:"page_size"`
+                AscLongPoll bool          `json:"ascending_with_long_poll,omitempty"`
+                Timeout     json.Duration `json:"timeout"`
+                After string `json:"after"`
+                StartTimeMS uint64 `json:"start_time,omitempty"`
+                EndTimeMS   uint64 `json:"end_time,omitempty"`
+                TimestampMS uint64 `json:"timestamp,omitempty"`
+                Type string `json:"type"`
+                Aliases []string `json:"aliases,omitempty"`
+}
+
+	var in requestQuery
+	after := in.After
+	out := in
+	out.After = after
+        client.Call(context.Background(),"/list-balance",&[]requestQuery{in,},nil)
+}
+
+func listUnspentOutputs(client *rpc.Client, args []string){
+        if len(args) != 0{
+                fatalln("error:listUnspentOutputs not use args")
+        }
+type requestQuery struct {
+                Filter       string        `json:"filter,omitempty"`
+                FilterParams []interface{} `json:"filter_params,omitempty"`
+                SumBy        []string      `json:"sum_by,omitempty"`
+                PageSize     int           `json:"page_size"`
+                AscLongPoll bool          `json:"ascending_with_long_poll,omitempty"`
+                Timeout     json.Duration `json:"timeout"`
+                After string `json:"after"`
+                StartTimeMS uint64 `json:"start_time,omitempty"`
+                EndTimeMS   uint64 `json:"end_time,omitempty"`
+                TimestampMS uint64 `json:"timestamp,omitempty"`
+                Type string `json:"type"`
+                Aliases []string `json:"aliases,omitempty"`
+}
+	var in requestQuery
+	after := in.After
+	out := in
+	out.After = after
+        client.Call(context.Background(),"/list-unspent-outputs",&[]requestQuery{in,},nil)
 }
