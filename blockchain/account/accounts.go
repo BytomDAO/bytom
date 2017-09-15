@@ -93,42 +93,15 @@ type Account struct {
 
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
+	if ret := m.db.Get([]byte(alias));ret != nil {
+		return nil,errors.New("alias already exists")
+	}
+
 	accountSigner, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
-/*
-	tagsParam , err := tagsToNullString(tags)
-	if err != nil {
-		return nil, err
-	}
-*/
-    //var tagsParam []byte
 
-/*	aliasSQL := stdsql.NullString{
-		String: alias,
-		Valid:  alias != "",
-	}
-
-	const q = `
-		INSERT INTO accounts (account_id, alias, tags) VALUES ($1, $2, $3)
-		ON CONFLICT (account_id) DO UPDATE SET alias = $2, tags = $3
-	`
-	_, err = m.db.ExecContext(ctx, q, signer.ID, aliasSQL, tagsParam)
-	if pg.IsUniqueViolation(err) {
-		return nil, errors.WithDetail(ErrDuplicateAlias, "an account with the provided alias already exists")
-	} else if err != nil {
-		return nil, errors.Wrap(err)
-	}*/
-/*
-    account_id := []byte(fmt.Sprintf("account_id:%v", account_signer.ID))
-	account_alias := []byte(fmt.Sprintf("account_alias:%v", alias))
-    account_tags := []byte(fmt.Sprintf("account_tags:%v", account_signer.ID))
-
-    m.db.Set(account_id, []byte(alias))
-    m.db.Set(account_alias, []byte(tagsParam))
-    m.db.Set(account_tags, []byte(account_signer.ID))
-*/
 	account_id := []byte(accountSigner.ID)
 	account := &Account{
 		Signer: accountSigner,
@@ -141,7 +114,8 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
 	if len(acc) > 0 {
-		m.db.Set(account_id,json.RawMessage(acc))
+		m.db.Set(account_id, json.RawMessage(acc))
+		m.db.Set([]byte(alias), account_id)
 	}
 
 
@@ -156,61 +130,54 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 // UpdateTags modifies the tags of the specified account. The account may be
 // identified either by ID or Alias, but not both.
 func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
+
 	if (id == nil) == (alias == nil) {
 		return errors.Wrap(ErrBadIdentifier)
 	}
-/*
-	tagsParam , err := tagsToNullString(tags)
+
+	var key_id []byte
+	if alias != nil {
+		key_id = m.db.Get([]byte(*alias))
+	} else {
+		key_id = []byte(*id)
+	}
+
+	bytes := m.db.Get(key_id)
+	if bytes == nil {
+		return errors.New("no exit this account.")
+	}
+
+	var account Account
+	err := json.Unmarshal(bytes, &account)
 	if err != nil {
-		return errors.Wrap(err, "convert tags")
-	}
-*/
-	var (
-		signer   *signers.Signer
-		aliasStr string
-	)
-
-/*	if id != nil {
-		signer, err = m.findByID(ctx, *id)
-		if err != nil {
-			return errors.Wrap(err, "get account by ID")
-		}
-
-		// An alias is required by indexAnnotatedAccount. The latter is a somewhat
-		// complex function, so in the interest of not making a near-duplicate,
-		// we'll satisfy its contract and provide an alias.
-		const q = `SELECT alias FROM accounts WHERE account_id = $1`
-		var a stdsql.NullString
-		err := m.db.QueryRowContext(ctx, q, *id).Scan(&a)
-		if err != nil {
-			return errors.Wrap(err, "alias lookup")
-		}
-		if a.Valid {
-			aliasStr = a.String
-		}
-	} else { // alias is guaranteed to be not nil due to bad identifier check
-		aliasStr = *alias
-		signer, err = m.FindByAlias(ctx, aliasStr)
-		if err != nil {
-			return errors.Wrap(err, "get account by alias")
-		}
+		return errors.New("this account can't be unmarshal.")
 	}
 
-	const q = `
-		UPDATE accounts
-		SET tags = $1
-		WHERE account_id = $2
-	`
-	_, err = m.db.ExecContext(ctx, q, tagsParam, signer.ID)
+	for k, v := range tags {
+		switch v {
+		case "":
+			delete(account.Tags, k)
+		default:
+			account.Tags[k] = v
+		}
+
+	}
+
+	acc, err := json.Marshal(account)
 	if err != nil {
-		return errors.Wrap(err, "update entry in accounts table")
+
+		return errors.New("failed marshal account to update tags")
+
+	} else if len(acc) == 0 {
+
+		return errors.New("failed update account tags")
+
+	} else {
+
+		m.db.Set(key_id, json.RawMessage(acc))
+		return nil
 	}
-*/
-	return errors.Wrap(m.indexAnnotatedAccount(ctx, &Account{
-		Signer: signer,
-		Alias:  aliasStr,
-		Tags:   tags,
-	}), "update account index")
+
 }
 
 
