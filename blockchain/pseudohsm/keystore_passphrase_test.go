@@ -1,7 +1,7 @@
 // Copyright 2016 The go-ethereum Authors
 // This file is part of the go-ethereum library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-etherem library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
@@ -21,6 +21,11 @@ import (
 	"testing"
 
 	"bytom/common"
+	"bytom/crypto"
+	"bytom/crypto/ed25519/chainkd"
+
+	"github.com/pborman/uuid"
+
 )
 
 const (
@@ -28,21 +33,24 @@ const (
 	veryLightScryptP = 1
 )
 
+
 // Tests that a json key file can be decrypted and encrypted in multiple rounds.
 func TestKeyEncryptDecrypt(t *testing.T) {
-	keyjson, err := ioutil.ReadFile("testdata/very-light-scrypt.json")
+	keyjson, err := ioutil.ReadFile("testdata/bytom-very-light-scrypt.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	password := ""
-	address := common.HexToAddress("45dea0fb0bba44f4fcf290bba71fd57d7117cbb8")
-
+	password := "bytomtest"
+	address := common.StringToAddress("bm1pcwfm9xnkrf62pg405tcgjzzk7ur670jqhtm3cq")
+	
 	// Do a few rounds of decryption and encryption
 	for i := 0; i < 3; i++ {
 		// Try a bad password first
+		
 		if _, err := DecryptKey(keyjson, password+"bad"); err == nil {
 			t.Errorf("test %d: json key decrypted with bad password", i)
 		}
+	
 		// Decrypt with the correct password
 		key, err := DecryptKey(keyjson, password)
 		if err != nil {
@@ -51,10 +59,32 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 		if key.Address != address {
 			t.Errorf("test %d: key address mismatch: have %x, want %x", i, key.Address, address)
 		}
+		
 		// Recrypt with a new password and start over
-		password += "new data appended"
-		if keyjson, err = EncryptKey(key, password, veryLightScryptN, veryLightScryptP); err != nil {
+		//password += "new data appended"
+		if _, err = EncryptKey(key, password, veryLightScryptN, veryLightScryptP); err != nil {
 			t.Errorf("test %d: failed to recrypt key %v", i, err)
 		}
 	}
+}
+
+
+func TestGenerateFile(t *testing.T) {
+	xprv, xpub, err := chainkd.NewXKeys(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := uuid.NewRandom()
+	key := &XKey{
+		Id: id, 
+		KeyType: "bytom_kd", 
+		Address: crypto.PubkeyToAddress(xpub[:]),
+		XPub: xpub, 
+		XPrv: xprv,
+	}
+	t.Log(key)
+	password := "bytomtest"
+	xkey, err := EncryptKey(key, password, veryLightScryptN, veryLightScryptP)
+	writeKeyFile(keyFileName(key.Address), xkey)
+	//writeKeyFile("zzz", xkey)
 }

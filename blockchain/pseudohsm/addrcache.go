@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"bytom/common"
-	"bytom/log"
+	_"bytom/errors"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does
@@ -37,13 +37,36 @@ import (
 // exist yet, the code will attempt to create a watcher at most this often.
 const minReloadInterval = 2 * time.Second
 
-type KeysByFile []XPub
+type keysByFile []XPub
+func (s keysByFile) Len() int           { return len(s) }
+func (s keysByFile) Less(i, j int) bool { return s[i].File < s[j].File }
+func (s keysByFile) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
+
+// AmbiguousAddrError is returned when attempting to unlock
+// an address for which more than one file exists.
+type AmbiguousAddrError struct {
+	Addr    common.Address
+	Matches []XPub
+}
+
+func (err *AmbiguousAddrError) Error() string {
+	files := ""
+	for i, a := range err.Matches {
+		files += a.File
+		if i < len(err.Matches)-1 {
+			files += ", "
+		}
+	}
+	return fmt.Sprintf("multiple keys match address (%s)", files)
+}
 
 // addrCache is a live index of all keys in the keystore.
 type addrCache struct {
 	keydir   string
+	watcher  *watcher
 	mu       sync.Mutex
-	all      KeysByFile
+	all      keysByFile
 	byAddr   map[common.Address][]XPub
 	throttle *time.Timer
 }
@@ -53,7 +76,15 @@ func newAddrCache(keydir string) *addrCache {
 		keydir: keydir,
 		byAddr: make(map[common.Address][]XPub),
 	}
+	ac.watcher = newWatcher(ac)
 	return ac
+}
+
+func (ac *addrCache) hasAddress(addr common.Address) bool {
+	ac.maybeReload()
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+	return len(ac.byAddr[addr]) > 0
 }
 
 func (ac *addrCache) add(newKey XPub) {
@@ -83,6 +114,10 @@ func (ac *addrCache) keys() []XPub {
 func (ac *addrCache) maybeReload() {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
+	
+	if ac.watcher.running {
+		return // A watcher is running and will keep the cache up-to-date.
+	}
 
 	if ac.throttle == nil {
 		ac.throttle = time.NewTimer(0)
@@ -93,6 +128,7 @@ func (ac *addrCache) maybeReload() {
 			return // The cache was reloaded recently.
 		}
 	}
+	ac.watcher.start()
 	ac.reload()
 	ac.throttle.Reset(minReloadInterval)
 }
@@ -126,14 +162,9 @@ func (ac *addrCache) find(xpub XPub) (XPub, error) {
 	case 0:
 		return XPub{}, ErrNoKey
 	default:
-		files := ""
-		for i, key := range matches {
-			files += key.File
-			if i < len(matches)-1 {
-				files += ", "
-			}
-		}
-		return XPub{}, errors.WithDetailf(ErrInvalidKeySize, ": (%s)", files)
+		err := &AmbiguousAddrError{Addr: xpub.Address, Matches: make([]XPub, len(matches))}
+		copy(err.Matches, matches)
+		return XPub{}, err
 	}
 }
 
@@ -142,7 +173,9 @@ func (ac *addrCache) find(xpub XPub) (XPub, error) {
 func (ac *addrCache) reload() {
 	keys, err := ac.scan()
 	if err != nil {
-		log.Printf("can't load keys: %s", err.Error())
+		//log.Printf("can't load keys: %v", err.Error())
+		fmt.Printf("can't load keys: %v\n", err.Error())
+
 	}
 	ac.all = keys
 	sort.Sort(ac.all)
@@ -152,7 +185,8 @@ func (ac *addrCache) reload() {
 	for _, k := range keys {
 		ac.byAddr[k.Address] = append(ac.byAddr[k.Address], k)
 	}
-	log.Printf("reloaded keys, cache has %d keys", len(ac.all))
+	//log.Printf("reloaded keys, cache has %d keys", len(ac.all))
+	fmt.Printf("reloaded keys, cache has %d keys\n", len(ac.all))
 }
 
 func (ac *addrCache) scan() ([]XPub, error) {
@@ -165,17 +199,20 @@ func (ac *addrCache) scan() ([]XPub, error) {
 		keys    []XPub
 		keyJSON struct {
 			Address common.Address `json:"address"`
+			Alias   string		   `json:"alias"`
 		}
 	)
 	for _, fi := range files {
 		path := filepath.Join(ac.keydir, fi.Name())
 		if skipKeyFile(fi) {
-			log.Printf("ignoring file %s", path)
+			//log.Printf("ignoring file %v", path)
+			//fmt.Printf("ignoring file %v", path)
 			continue
 		}
 		fd, err := os.Open(path)
 		if err != nil {
-			log.Printf(err)
+			//log.Printf(err)
+			fmt.Printf("err")
 			continue
 		}
 		buf.Reset(fd)
@@ -184,11 +221,12 @@ func (ac *addrCache) scan() ([]XPub, error) {
 		err = json.NewDecoder(buf).Decode(&keyJSON)
 		switch {
 		case err != nil:
-			log.Printf("can't decode key %s: %v", path, err)
+			//log.Printf("can't decode key %s: %v", path, err)
+			fmt.Printf("can't decode key %s: %v", path, err)
 		case (keyJSON.Address == common.Address{}):
-			log.Printf("can't decode key %s: missing or zero address", path)
+			fmt.Printf("can't decode key %s: missing or zero address", path)
 		default:
-			keys = append(keys, XPub{Address: keyJSON.Address})
+			keys = append(keys, XPub{Address: keyJSON.Address, Alias: keyJSON.Alias, File: path})
 		}
 		fd.Close()
 	}

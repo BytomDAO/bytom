@@ -17,7 +17,7 @@
 package common
 
 import (
-	"encoding/hex"
+	_"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -29,7 +29,8 @@ import (
 
 const (
 	HashLength    = 32
-	AddressLength = 20
+	AddressLength = 42
+	PubkeyHashLength = 20
 )
 
 var hashJsonLengthErr = errors.New("common: unmarshalJSON failed: hash must be exactly 32 bytes")
@@ -47,6 +48,7 @@ func BytesToHash(b []byte) Hash {
 func StringToHash(s string) Hash { return BytesToHash([]byte(s)) }
 func BigToHash(b *big.Int) Hash  { return BytesToHash(b.Bytes()) }
 func HexToHash(s string) Hash    { return BytesToHash(FromHex(s)) }
+
 
 // Don't use the default 'String' method in case we want to overwrite
 
@@ -170,24 +172,19 @@ func (a *Address) UnmarshalJSON(data []byte) error {
 		data = data[1 : len(data)-1]
 	}
 
-	if len(data) > 2 && data[0] == '0' && data[1] == 'x' {
-		data = data[2:]
+	if len(data) != AddressLength {
+		return fmt.Errorf("Invalid address length, expected %d got %d bytes", AddressLength, len(data))
 	}
 
-	if len(data) != 2*AddressLength {
-		return fmt.Errorf("Invalid address length, expected %d got %d bytes", 2*AddressLength, len(data))
-	}
-
-	n, err := hex.Decode(a[:], data)
+	_, res, err := AddressDecode("bm", string(data))
 	if err != nil {
 		return err
 	}
 
-	if n != AddressLength {
+	if len(res) != PubkeyHashLength {
 		return fmt.Errorf("Invalid address")
 	}
-
-	a.Set(HexToAddress(string(data)))
+	a.Set(BytesToAddress(data))
 	return nil
 }
 

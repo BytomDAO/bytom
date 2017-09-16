@@ -2,15 +2,21 @@
 package pseudohsm
 
 import (
-	"context"
-	"fmt"
+	//"context"
+	_"fmt"
 	"strconv"
+	"path/filepath"
 	"sync"
+	"os"
 
-	"bytom/crypto/ed25519"
 	"bytom/crypto/ed25519/chainkd"
+	"bytom/common"
 	"bytom/errors"
-	"bytom/protocol/bc/legacy"
+	"bytom/crypto"
+	//"bytom/protocol/bc/legacy"
+
+	"bytom/blockchain/config"
+	"github.com/pborman/uuid"
 )
 
 // listKeyMaxAliases limits the alias filter to a sane maximum size.
@@ -22,6 +28,8 @@ var (
 	ErrInvalidKeySize       = errors.New("key invalid size")
 	ErrTooManyAliasesToList = errors.New("requested aliases exceeds limit")
 	ErrAmbiguousAddr		= errors.New("multiple keys match address")
+	ErrDecrypt 				= errors.New("could not decrypt key with given passphrase")
+	ErrInvalidKeyType		= errors.New("key type stored invalid")
 )
 
 type HSM struct {
@@ -38,12 +46,11 @@ type XPub struct {
 	File    string		   `json:"file"`
 }
 
-
-func New(conf *Config.config) *HSM {
-	keydir, _ = filepath.Abs(conf.KeyPath)
+func New(conf *config.Config) *HSM {
+	keydir, _ := filepath.Abs(conf.KeyPath)
 	return &HSM{
-		keyStore:   &keyStorePassphrase{keydir, LightScryptN, LightScryptP}
-		addrCache:	newAddrCache(keydir)
+		keyStore:   &keyStorePassphrase{keydir, LightScryptN, LightScryptP},
+		cache:		newAddrCache(keydir),
 		kdCache:	make(map[chainkd.XPub]chainkd.XPrv),
 	}
 }
@@ -52,8 +59,9 @@ func New(conf *Config.config) *HSM {
 func (h *HSM) XCreate(auth string, alias string) (*XPub, error) {
 	xpub, _, err := h.createChainKDKey(auth, alias, false)
 	if err != nil {
-		h.cache.add(xpub)
+		return nil, err
 	}
+	h.cache.add(*xpub)
 	return xpub, err
 }
 
@@ -66,9 +74,10 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 	key := &XKey{
 		Id: id, 
 		KeyType: "bytom_kd", 
-		Address: crypto.PubkeyToAddress(xpub),
+		Address: crypto.PubkeyToAddress(xpub[:]),
 		XPub: xpub, 
-		XPrv: xprv
+		XPrv: xprv,
+		Alias: alias,
 	}
 	file := h.keyStore.JoinPath(keyFileName(key.Address))
 	if err := h.keyStore.StoreKey(file, key, auth); err != nil {
@@ -78,13 +87,20 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 }
 
 
-// ListKeys returns a list of all xpubs from the db.
-func (h *HSM) ListKeys(aliases []string, after int, limit int) ([]*XPub,  error) {
-	if len(aliases) > listKeyMaxAliases {
-		return nil, "", errors.WithDetailf(ErrTooManyAliasesToList, "max: %d", listKeyMaxAliases)
+// ListKeys returns a list of all xpubs from the store
+func (h *HSM) ListKeys(after int , limit int) ([]XPub, string, error) {
+
+	xpubs := h.cache.keys()
+	start, end := 0, len(xpubs)
+	if len(xpubs) > after {
+		start = after
+	} else {
+		return nil, "", errors.WithDetailf(ErrInvalidAfter, "value: %v", after)
 	}
-	xpubs = h.cache.keys()
-	return xpubs[after:after+limit], nil
+	if len(xpubs) > after+limit {
+		end = after+limit
+	}
+	return xpubs[start:end], strconv.FormatInt(int64(start), 10), nil
 }
 
 // XSign looks up the xprv given the xpub, optionally derives a new
@@ -109,12 +125,12 @@ func (h *HSM) loadChainKDKey(xpub chainkd.XPub, auth string) (xprv chainkd.XPrv,
 		return xprv, nil
 	}
 
-	key, file, err := h.loadDecryptedKey(xpub, auth)
+	xpb, xkey, err := h.loadDecryptedKey(xpub, auth)
 	if err != nil {
-		return nil, ErrNoKey
+		return xprv, ErrNoKey
 	}
-	h.kdCache[xpub] = key.xprv
-	return key.xprv, nil
+	h.kdCache[xpb.XPub] = xkey.XPrv
+	return xkey.XPrv, nil
 }
 
 
@@ -125,22 +141,20 @@ func (h *HSM) XDelete(xpub chainkd.XPub, auth string) error {
 	// it anyway to check the password and zero out the key
 	// immediately afterwards.
 	
-	key, file, err := h.loadDecryptedKey(xpub, auth)
-	if key != nil {
-		zeroKey(key.XPrv)
+	xpb, xkey, err := h.loadDecryptedKey(xpub, auth)
+	if xkey != nil {
+		zeroKey(xkey)
 	}
 	if err != nil {
 		return err
 	}
 
-	file := h.keyStore.JoinPath(file)
-
 	// The order is crucial here. The key is dropped from the
 	// cache after the file is gone so that a reload happening in
 	// between won't insert it into the cache again.
-	err = os.Remove(file)
+	err = os.Remove(xpb.File)
 	if err == nil {
-		h.cache.delete(xpub)
+		h.cache.delete(xpb)
 	}
 	h.cacheMu.Lock()
 	delete(h.kdCache, xpub)
@@ -148,15 +162,35 @@ func (h *HSM) XDelete(xpub chainkd.XPub, auth string) error {
 	return err
 }
 
-func (h *HSM) loadDecryptedKey(xpub chainkd.XPub, auth string) (*XKey, string, error) {
+func (h *HSM) loadDecryptedKey(xpub chainkd.XPub, auth string) (XPub, *XKey, error) {
 	h.cache.maybeReload()
 	h.cache.mu.Lock()
-	key, err := h.cache.find(xpub)
+	xpb, err := h.cache.find(XPub{XPub: xpub, Address: crypto.PubkeyToAddress(xpub[:])})
+
 	h.cache.mu.Unlock()
 	if err != nil {
-		return a, nil, err
+		return xpb, nil, err
 	}
-	xkey, err := h.keyStore.GetKey(key.Address, key.File, auth)
-	return xkey, key.File,  err
+	xkey, err := h.keyStore.GetKey(xpb.Address, xpb.File, auth)
+
+	return xpb, xkey, err
 }
 
+// Update alias  of an existing xpub
+func (h *HSM) UpdateAlias(xpub chainkd.XPub, auth, newAlias string) error {
+	xpb, xkey, err := h.loadDecryptedKey(xpub, auth)
+	if err != nil {
+		return err
+	}
+	xkey.Alias = newAlias
+	return h.keyStore.StoreKey(xpb.File, xkey, auth)
+}
+
+// Update changes the passphrase of an existing xpub
+func (h *HSM) ResetPassword(xpub chainkd.XPub, auth, newAuth string) error {
+	xpb, xkey, err := h.loadDecryptedKey(xpub, auth)
+	if err != nil {
+		return err
+	}
+	return h.keyStore.StoreKey(xpb.File, xkey, newAuth)
+}

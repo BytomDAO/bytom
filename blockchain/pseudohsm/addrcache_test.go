@@ -21,6 +21,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"io/ioutil"
 	"reflect"
 	"sort"
 	"testing"
@@ -31,29 +32,23 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
-type XPub struct {
-	Alias   string         `json:"alias"`
-	Address common.Address `json:"address"`
-	XPub    chainkd.XPub   `json:"xpub"`
-	File    string         `json:"file"`
-}
 
 var (
 	cachetestDir, _   = filepath.Abs(filepath.Join("testdata", "keystore"))
-	cachetestAccounts = []XPub{
+	cachetestKeys = []XPub{
 		{
 			Alias:   "langyu",
-			Address: common.HexToAddress("7ef5a6135f1fd6a02593eedc869c6d41d934aef8"),
-			File:    filepath.Join(cachetestDir, "UTC--2017-08-22T12-57-55.920751759Z--7ef5a6135f1fd6a02593eedc869c6d41d934aef8"),
+			Address: common.StringToAddress("bm1pktmny6q69dlqulja2p2ja28k2vd6wvqpk5r76a"),
+			File:    filepath.Join(cachetestDir, "UTC--2017-09-13T07-11-07.863320100Z--bm1pktmny6q69dlqulja2p2ja28k2vd6wvqpk5r76a"),
 		},
 		{
 			Alias:   "aaatest",
-			Address: common.HexToAddress("f466859ead1932d743d622cb74fc058882e8648a"),
+			Address: common.StringToAddress("bm1p8wuwq0jn706ntcv95pftv8evj48m2x5nmmpdlj"),
 			File:    filepath.Join(cachetestDir, "aaa"),
 		},
 		{
-			Alias:   "zzztest"
-			Address: common.HexToAddress("289d485d9771714cce91d3393d764e1311907acc"),
+			Alias:   "zzztest",
+			Address: common.StringToAddress("bm1pzye4ep30gghfnxe9c7dcch5m87lfrl3hrvegkc"),
 			File:    filepath.Join(cachetestDir, "zzz"),
 		},
 	}
@@ -62,45 +57,44 @@ var (
 func TestWatchNewFile(t *testing.T) {
 	t.Parallel()
 
-	dir, am := tmpManager(t, false)
-	defer os.RemoveAll(dir)
+	dir, ac := tmpManager(t)
+	//defer os.RemoveAll(dir)
 
 	// Ensure the watcher is started before adding any files.
-	am.Accounts()
+	ac.keys()
 	time.Sleep(200 * time.Millisecond)
-
 	// Move in the files.
-	wantAccounts := make([]Account, len(cachetestAccounts))
-	for i := range cachetestAccounts {
-		a := cachetestAccounts[i]
+	wantKeystores:= make([]XPub, len(cachetestKeys))
+	for i := range cachetestKeys {
+		a := cachetestKeys[i]
 		a.File = filepath.Join(dir, filepath.Base(a.File))
-		wantAccounts[i] = a
-		if err := cp.CopyFile(a.File, cachetestAccounts[i].File); err != nil {
+		wantKeystores[i] = a
+		if err := cp.CopyFile(a.File, cachetestKeys[i].File); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	// am should see the accounts.
-	var list []Account
+	// ac should see the accounts.
+	var list []XPub
 	for d := 200 * time.Millisecond; d < 5*time.Second; d *= 2 {
-		list = am.Accounts()
-		if reflect.DeepEqual(list, wantAccounts) {
+		list = ac.keys()
+		if reflect.DeepEqual(list, wantKeystores) {
 			return
 		}
 		time.Sleep(d)
 	}
-	t.Errorf("got %s, want %s", spew.Sdump(list), spew.Sdump(wantAccounts))
+	t.Errorf("got %s, want %s", spew.Sdump(list), spew.Sdump(wantKeystores))
 }
+
 
 func TestWatchNoDir(t *testing.T) {
 	t.Parallel()
 
 	// Create am but not the directory that it watches.
 	rand.Seed(time.Now().UnixNano())
-	dir := filepath.Join(os.TempDir(), fmt.Sprintf("eth-keystore-watch-test-%d-%d", os.Getpid(), rand.Int()))
-	am := NewManager(dir, LightScryptN, LightScryptP)
-
-	list := am.Accounts()
+	dir := filepath.Join(os.TempDir(), fmt.Sprintf("bytom-keystore-watch-test-%d-%d", os.Getpid(), rand.Int()))
+	ac := newAddrCache(dir)
+	list := ac.keys()
 	if len(list) > 0 {
 		t.Error("initial account list not empty:", list)
 	}
@@ -110,174 +104,178 @@ func TestWatchNoDir(t *testing.T) {
 	os.MkdirAll(dir, 0700)
 	defer os.RemoveAll(dir)
 	file := filepath.Join(dir, "aaa")
-	if err := cp.CopyFile(file, cachetestAccounts[0].File); err != nil {
+	if err := cp.CopyFile(file, cachetestKeys[0].File); err != nil {
 		t.Fatal(err)
 	}
 
 	// am should see the account.
-	wantAccounts := []Account{cachetestAccounts[0]}
-	wantAccounts[0].File = file
+	wantKeys := []XPub{cachetestKeys[0]}
+	wantKeys[0].File = file
 	for d := 200 * time.Millisecond; d < 8*time.Second; d *= 2 {
-		list = am.Accounts()
-		if reflect.DeepEqual(list, wantAccounts) {
+		list = ac.keys()
+		if reflect.DeepEqual(list, wantKeys) {
 			return
 		}
 		time.Sleep(d)
 	}
-	t.Errorf("\ngot  %v\nwant %v", list, wantAccounts)
+	t.Errorf("\ngot  %v\nwant %v", list, wantKeys)
 }
 
 func TestCacheInitialReload(t *testing.T) {
 	cache := newAddrCache(cachetestDir)
-	accounts := cache.accounts()
-	if !reflect.DeepEqual(accounts, cachetestAccounts) {
-		t.Fatalf("got initial accounts: %swant %s", spew.Sdump(accounts), spew.Sdump(cachetestAccounts))
+	keys := cache.keys()
+	if !reflect.DeepEqual(keys, cachetestKeys) {
+		t.Fatalf("got initial accounts: %swant %s", spew.Sdump(keys), spew.Sdump(cachetestKeys))
 	}
 }
+
 
 func TestCacheAddDeleteOrder(t *testing.T) {
 	cache := newAddrCache("testdata/no-such-dir")
 	cache.watcher.running = true // prevent unexpected reloads
 
-	accounts := []Account{
+	keys := []XPub{
 		{
-			Address: common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
+			Address: common.StringToAddress("bm1pvheagygs9d72stp79u9vduhmdyjpnvud0y89y7"),
 			File:    "-309830980",
 		},
 		{
-			Address: common.HexToAddress("2cac1adea150210703ba75ed097ddfe24e14f213"),
+			Address: common.StringToAddress("bm1pyk3qny8gzem6p4fx8t5d344tnldguv8lvx2aww"),
 			File:    "ggg",
 		},
 		{
-			Address: common.HexToAddress("8bda78331c916a08481428e4b07c96d3e916d165"),
+			Address: common.StringToAddress("bm1p6s0ckxrudy7hqht4n5fhcs4gp69krv3c84jn9x"),
 			File:    "zzzzzz-the-very-last-one.keyXXX",
 		},
 		{
-			Address: common.HexToAddress("d49ff4eeb0b2686ed89c0fc0f2b6ea533ddbbd5e"),
+			Address: common.StringToAddress("bm1p7xkfhsw50y44t63mk0dfxxkvuyg6t3s0r6xs54"),
 			File:    "SOMETHING.key",
 		},
 		{
-			Address: common.HexToAddress("7ef5a6135f1fd6a02593eedc869c6d41d934aef8"),
-			File:    "UTC--2016-03-22T12-57-55.920751759Z--7ef5a6135f1fd6a02593eedc869c6d41d934aef8",
+			Address: common.StringToAddress("bm1peu9ql7x8c7aeca60j40sg5w4kylpf7l3jmau0g"),
+			File:    "UTC--2016-03-22T12-57-55.920751759Z--bm1peu9ql7x8c7aeca60j40sg5w4kylpf7l3jmau0g",
 		},
 		{
-			Address: common.HexToAddress("f466859ead1932d743d622cb74fc058882e8648a"),
+			Address: common.StringToAddress("bm1p0s68e4ggp0vy5ue2lztsxvl2smpnqp9al8jyvh"),
 			File:    "aaa",
 		},
 		{
-			Address: common.HexToAddress("289d485d9771714cce91d3393d764e1311907acc"),
+			Address: common.StringToAddress("bm1pjq8ttfl7ppqtcc5qqff0s45p7ew9l9pjmlu5xw"),
 			File:    "zzz",
 		},
 	}
-	for _, a := range accounts {
+	for _, a := range keys {
 		cache.add(a)
 	}
 	// Add some of them twice to check that they don't get reinserted.
-	cache.add(accounts[0])
-	cache.add(accounts[2])
+	cache.add(keys[0])
+	cache.add(keys[2])
 
 	// Check that the account list is sorted by filename.
-	wantAccounts := make([]Account, len(accounts))
-	copy(wantAccounts, accounts)
-	sort.Sort(accountsByFile(wantAccounts))
-	list := cache.accounts()
-	if !reflect.DeepEqual(list, wantAccounts) {
-		t.Fatalf("got accounts: %s\nwant %s", spew.Sdump(accounts), spew.Sdump(wantAccounts))
+	wantKeys := make([]XPub, len(keys))
+	copy(wantKeys , keys)
+	sort.Sort(keysByFile(wantKeys))
+	list := cache.keys()
+	
+	if !reflect.DeepEqual(list, wantKeys) {
+		t.Fatalf("got keys: %s\nwant %s", spew.Sdump(keys), spew.Sdump(wantKeys))
 	}
-	for _, a := range accounts {
+	
+	for _, a := range keys {
 		if !cache.hasAddress(a.Address) {
 			t.Errorf("expected hasAccount(%x) to return true", a.Address)
 		}
 	}
-	if cache.hasAddress(common.HexToAddress("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e")) {
-		t.Errorf("expected hasAccount(%x) to return false", common.HexToAddress("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e"))
+	if cache.hasAddress(common.StringToAddress("bm1pug2xpcvpzepdf0paulnndhpxtpjvre8ypd0jtj")) {
+		t.Errorf("expected hasAccount(%x) to return false", common.StringToAddress("bm1pug2xpcvpzepdf0paulnndhpxtpjvre8ypd0jtj"))
 	}
 
 	// Delete a few keys from the cache.
-	for i := 0; i < len(accounts); i += 2 {
-		cache.delete(wantAccounts[i])
+	for i := 0; i < len(keys); i += 2 {
+		cache.delete(wantKeys[i])
 	}
-	cache.delete(Account{Address: common.HexToAddress("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e"), File: "something"})
+	cache.delete(XPub{Address: common.StringToAddress("bm1pug2xpcvpzepdf0paulnndhpxtpjvre8ypd0jtj"), File: "something"})
 
 	// Check content again after deletion.
-	wantAccountsAfterDelete := []Account{
-		wantAccounts[1],
-		wantAccounts[3],
-		wantAccounts[5],
+	wantKeysAfterDelete := []XPub{
+		wantKeys[1],
+		wantKeys[3],
+		wantKeys[5],
 	}
-	list = cache.accounts()
-	if !reflect.DeepEqual(list, wantAccountsAfterDelete) {
-		t.Fatalf("got accounts after delete: %s\nwant %s", spew.Sdump(list), spew.Sdump(wantAccountsAfterDelete))
+	list = cache.keys()
+	if !reflect.DeepEqual(list, wantKeysAfterDelete) {
+		t.Fatalf("got keys after delete: %s\nwant %s", spew.Sdump(list), spew.Sdump(wantKeysAfterDelete))
 	}
-	for _, a := range wantAccountsAfterDelete {
+	for _, a := range wantKeysAfterDelete {
 		if !cache.hasAddress(a.Address) {
 			t.Errorf("expected hasAccount(%x) to return true", a.Address)
 		}
 	}
-	if cache.hasAddress(wantAccounts[0].Address) {
-		t.Errorf("expected hasAccount(%x) to return false", wantAccounts[0].Address)
+	if cache.hasAddress(wantKeys[0].Address) {
+		t.Errorf("expected hasAccount(%x) to return false", wantKeys[0].Address)
 	}
 }
+
 
 func TestCacheFind(t *testing.T) {
 	dir := filepath.Join("testdata", "dir")
 	cache := newAddrCache(dir)
 	cache.watcher.running = true // prevent unexpected reloads
 
-	accounts := []Account{
+	keys := []XPub{
 		{
-			Address: common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
+			Address: common.StringToAddress("bm1pmv9kg68j3edvqrv62lxllev4ugjv0zf6g5pwf6"),
 			File:    filepath.Join(dir, "a.key"),
 		},
 		{
-			Address: common.HexToAddress("2cac1adea150210703ba75ed097ddfe24e14f213"),
+			Address: common.StringToAddress("bm1ptspg4x6kjjp642gdpzan0ynq9zr7z4m34nqpet"),
 			File:    filepath.Join(dir, "b.key"),
 		},
 		{
-			Address: common.HexToAddress("d49ff4eeb0b2686ed89c0fc0f2b6ea533ddbbd5e"),
+			Address: common.StringToAddress("bm1pmlpy0946zsvdg29v80gw0mkq2n0ghkg0fpmhav"),
 			File:    filepath.Join(dir, "c.key"),
 		},
 		{
-			Address: common.HexToAddress("d49ff4eeb0b2686ed89c0fc0f2b6ea533ddbbd5e"),
+			Address: common.StringToAddress("bm1pmlpy0946zsvdg29v80gw0mkq2n0ghkg0fpmhav"),
 			File:    filepath.Join(dir, "c2.key"),
 		},
 	}
-	for _, a := range accounts {
+	for _, a := range keys {
 		cache.add(a)
 	}
 
-	nomatchAccount := Account{
-		Address: common.HexToAddress("f466859ead1932d743d622cb74fc058882e8648a"),
+	nomatchKey := XPub{
+		Address: common.StringToAddress("bm1pu2vmgps4d9e3mrsuzp58w777apky4rjgn5rn9e"),
 		File:    filepath.Join(dir, "something"),
 	}
 	tests := []struct {
-		Query      Account
-		WantResult Account
+		Query      XPub
+		WantResult XPub
 		WantError  error
 	}{
 		// by address
-		{Query: Account{Address: accounts[0].Address}, WantResult: accounts[0]},
+		{Query: XPub{Address: keys[0].Address}, WantResult: keys[0]},
 		// by file
-		{Query: Account{File: accounts[0].File}, WantResult: accounts[0]},
+		{Query: XPub{File: keys[0].File}, WantResult: keys[0]},
 		// by basename
-		{Query: Account{File: filepath.Base(accounts[0].File)}, WantResult: accounts[0]},
+		{Query: XPub{File: filepath.Base(keys[0].File)}, WantResult: keys[0]},
 		// by file and address
-		{Query: accounts[0], WantResult: accounts[0]},
+		{Query: keys[0], WantResult: keys[0]},
 		// ambiguous address, tie resolved by file
-		{Query: accounts[2], WantResult: accounts[2]},
+		{Query: keys[2], WantResult: keys[2]},
 		// ambiguous address error
 		{
-			Query: Account{Address: accounts[2].Address},
+			Query: XPub{Address: keys[2].Address},
 			WantError: &AmbiguousAddrError{
-				Addr:    accounts[2].Address,
-				Matches: []Account{accounts[2], accounts[3]},
+				Addr:    keys[2].Address,
+				Matches: []XPub{keys[2], keys[3]},
 			},
 		},
 		// no match error
-		{Query: nomatchAccount, WantError: ErrNoMatch},
-		{Query: Account{File: nomatchAccount.File}, WantError: ErrNoMatch},
-		{Query: Account{File: filepath.Base(nomatchAccount.File)}, WantError: ErrNoMatch},
-		{Query: Account{Address: nomatchAccount.Address}, WantError: ErrNoMatch},
+		{Query: nomatchKey, WantError: ErrNoKey},
+		{Query: XPub{File: nomatchKey.File}, WantError: ErrNoKey},
+		{Query: XPub{File: filepath.Base(nomatchKey.File)}, WantError: ErrNoKey},
+		{Query: XPub{Address: nomatchKey.Address}, WantError: ErrNoKey},
 	}
 	for i, test := range tests {
 		a, err := cache.find(test.Query)
@@ -290,4 +288,12 @@ func TestCacheFind(t *testing.T) {
 			continue
 		}
 	}
+}
+
+func tmpManager(t *testing.T) (string, *addrCache) {
+	d, err := ioutil.TempDir("", "bytom-keystore-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return d, newAddrCache(d)
 }

@@ -1,30 +1,30 @@
 package pseudohsm
 
 import (
-	"bytes"
-	"crypto/ecdsa"
-	"encoding/hex"
-	"encoding/json"
+	_"encoding/hex"
+	//"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"bytom/common"
-	"bytom/crypto"
+	"bytom/crypto/ed25519/chainkd"
+
 	"github.com/pborman/uuid"
+
 )
 
 const (
 	version = 1
+	keytype = "bytom_kd"
 )
 
 type XKey struct {
-	ID      uuid.UUID
-	KeyType *string
+	Id      uuid.UUID
+	KeyType string
+	Alias	string
 	Address common.Address
 	XPrv    chainkd.XPrv
 	XPub    chainkd.XPub
@@ -32,18 +32,20 @@ type XKey struct {
 
 type keyStore interface {
 	// Loads and decrypts the key from disk.
-	GetKey(addr common.Address, filename string, auth string) (*Key, error)
+	GetKey(addr common.Address, filename string, auth string) (*XKey, error)
 	// Writes and encrypts the key.
-	StoreKey(filename string, k *Key, auth string) error
+	StoreKey(filename string, k *XKey, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
 	JoinPath(filename string) string
 }
 
-type encryptedKeyJSONV1 struct {
+type encryptedKeyJSON struct {
 	Address string     `json:"address"`
 	Crypto  cryptoJSON `json:"crypto"`
 	Id      string     `json:"id"`
+	Type    string 	   `json:"type"`
 	Version int        `json:"version"`
+	Alias   string	   `json:"alias"`
 }
 
 type cryptoJSON struct {
@@ -67,24 +69,27 @@ type scryptParamsJSON struct {
 	Salt  string `json:"salt"`
 }
 
-func (k *Key) MarshalJSON() (j []byte, err error) {
+/*
+func (k *XKey) MarshalJSON() (j []byte, err error) {
 	jStruct := plainKeyJSON{
 		hex.EncodeToString(k.Address[:]),
-		hex.EncodeToString(crypto.FromECDSA(k.PrivateKey)),
+		hex.EncodeToString(k.XPrv[:]),
+		hex.EncodeToString(k.XPub[:]),
 		k.Id.String(),
+		k.KeyType,
 		version,
 	}
 	j, err = json.Marshal(jStruct)
 	return j, err
 }
 
-func (k *Key) UnmarshalJSON(j []byte) (err error) {
+
+func (k *XKey) UnmarshalJSON(j []byte) (err error) {
 	keyJSON := new(plainKeyJSON)
 	err = json.Unmarshal(j, &keyJSON)
 	if err != nil {
 		return err
 	}
-
 	u := new(uuid.UUID)
 	*u = uuid.Parse(keyJSON.Id)
 	k.Id = *u
@@ -98,12 +103,27 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 		return err
 	}
 
-	k.Address = common.BytesToAddress(addr)
-	k.PrivateKey = crypto.ToECDSA(privkey)
+	pubkey, err := hex.DecodeString(keyJSON.PublicKey)
+	if err != nil {
+		return err
+	}
 
+	ktype, err := hex.DecodeString(keyJSON.Type)
+	if err != nil {
+		return err
+	}
+	k.KeyType = hex.EncodeToString(ktype)
+	if k.KeyType != keytype {
+		return ErrInvalidKeyType
+	}
+	
+	k.Address = common.BytesToAddress(addr)
+
+	copy(k.XPrv[:], privkey)
+	copy(k.XPub[:], pubkey)
 	return nil
 }
-
+*/
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.
@@ -127,7 +147,7 @@ func writeKeyFile(file string, content []byte) error {
 }
 
 func zeroKey(k *XKey) {
-	b := k.XPrv.Bits()
+	b := k.XPrv
 	for i := range b {
 		b[i] = 0
 	}
@@ -137,7 +157,7 @@ func zeroKey(k *XKey) {
 // UTC--<created_at UTC ISO8601>-<address hex>
 func keyFileName(keyAddr common.Address) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr[:]))
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), keyAddr.Str())
 }
 
 func toISO8601(t time.Time) string {

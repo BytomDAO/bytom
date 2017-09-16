@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"/errors"
+	"bytom/errors"
 )
 
 var wd, _ = os.Getwd()

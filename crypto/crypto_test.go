@@ -17,36 +17,36 @@
 package crypto
 
 import (
-	"bytes"
-	"crypto/ecdsa"
-	"encoding/hex"
-	"fmt"
-	"io/ioutil"
-	"math/big"
-	"os"
+	_"bytes"
+	_"crypto/ecdsa"
+	_"encoding/hex"
+	_"fmt"
+	_"io/ioutil"
+	_"math/big"
+	_"os"
 	"testing"
-	"time"
+	_"time"
+	_"bytom/common"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
 
 var testAddrHex = "970e8128ab834e8eac17ab8e3812f010678cf791"
 var testPrivHex = "289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
 
+/*
 // These tests are sanity checks.
 // They should ensure that we don't e.g. use Sha3-224 instead of Sha3-256
 // and that the sha3 library uses keccak-f permutation.
 func TestSha3(t *testing.T) {
 	msg := []byte("abc")
 	exp, _ := hex.DecodeString("4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45")
-	checkhash(t, "Sha3-256", func(in []byte) []byte { return Keccak256(in) }, msg, exp)
+	checkhash(t, "Sha3-256", func(in []byte) []byte { return Sha3(in) }, msg, exp)
 }
 
 func TestSha3Hash(t *testing.T) {
 	msg := []byte("abc")
 	exp, _ := hex.DecodeString("4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45")
-	checkhash(t, "Sha3-256-array", func(in []byte) []byte { h := Keccak256Hash(in); return h[:] }, msg, exp)
+	checkhash(t, "Sha3-256-array", func(in []byte) []byte { h := Sha3Hash(in); return h[:] }, msg, exp)
 }
 
 func TestSha256(t *testing.T) {
@@ -71,7 +71,27 @@ func BenchmarkSha3(b *testing.B) {
 
 	fmt.Println(amount, ":", time.Since(start))
 }
+*/
 
+func TestAddressFormat(t *testing.T) {
+	addr := PubkeyToAddress([]byte("289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"))
+	t.Log("address:", addr.Str())
+	//addr = common.StringToAddress("bm1pyjkqc458pWy4W4H53a06fpl298260mvualj97g")
+	ver, data, _  := AddressToPubkey(addr)
+	t.Log("address:", ver, data)
+
+}
+
+/*
+func checkhash(t *testing.T, name string, f func([]byte) []byte, msg, exp []byte) {
+	sum := f(msg)
+	if bytes.Compare(exp, sum) != 0 {
+		t.Fatalf("hash %s mismatch: want: %x have: %x", name, exp, sum)
+	}
+}
+*/
+
+/*
 func Test0Key(t *testing.T) {
 	key := common.Hex2Bytes("0000000000000000000000000000000000000000000000000000000000000000")
 	_, err := secp256k1.GeneratePubKey(key)
@@ -218,12 +238,7 @@ func TestValidateSignatureValues(t *testing.T) {
 	check(false, 27, one, minusOne)
 }
 
-func checkhash(t *testing.T, name string, f func([]byte) []byte, msg, exp []byte) {
-	sum := f(msg)
-	if bytes.Compare(exp, sum) != 0 {
-		t.Fatalf("hash %s mismatch: want: %x have: %x", name, exp, sum)
-	}
-}
+
 
 func checkAddr(t *testing.T, addr0, addr1 common.Address) {
 	if addr0 != addr1 {
@@ -247,3 +262,5 @@ func TestPythonIntegration(t *testing.T) {
 	fmt.Printf("msg: %x, privkey: %x sig: %x\n", msg0, k1, sig0)
 	fmt.Printf("msg: %x, privkey: %x sig: %x\n", msg1, k1, sig1)
 }
+
+*/
