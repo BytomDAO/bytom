@@ -1,4 +1,4 @@
-package blockchain
+package protocol
 
 import (
 	"errors"
@@ -6,9 +6,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang/groupcache/lru"
-
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/golang/groupcache/lru"
 )
 
 var (
@@ -18,9 +18,10 @@ var (
 )
 
 type TxDesc struct {
-	Tx       *bc.Tx
+	Tx       *legacy.Tx
 	Added    time.Time
 	Height   uint64
+	Weight   uint64
 	Fee      uint64
 	FeePerKB uint64
 }
@@ -40,10 +41,11 @@ func NewTxPool() *TxPool {
 	}
 }
 
-func (mp *TxPool) AddTransaction(tx *bc.Tx, height uint64, fee uint64) *TxDesc {
+func (mp *TxPool) AddTransaction(tx *legacy.Tx, weight, height, fee uint64) *TxDesc {
 	txD := &TxDesc{
 		Tx:       tx,
 		Added:    time.Now(),
+		Weight:   weight,
 		Height:   height,
 		Fee:      fee,
 		FeePerKB: fee * 1000 / tx.TxHeader.SerializedSize,
@@ -52,7 +54,7 @@ func (mp *TxPool) AddTransaction(tx *bc.Tx, height uint64, fee uint64) *TxDesc {
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
 
-	mp.pool[tx.ID] = txD
+	mp.pool[tx.Tx.ID] = txD
 	atomic.StoreInt64(&mp.lastUpdated, time.Now().Unix())
 	return txD
 }
@@ -64,7 +66,7 @@ func (mp *TxPool) AddErrCache(txHash *bc.Hash) {
 	mp.errCache.Add(txHash, nil)
 }
 
-func (mp *TxPool) removeTransaction(txHash *bc.Hash) {
+func (mp *TxPool) RemoveTransaction(txHash *bc.Hash) {
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
 

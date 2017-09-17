@@ -197,6 +197,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	}
 
 	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, nil)
+	txPool := protocol.NewTxPool()
 	/* if err != nil {
 	     cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
 	   }
@@ -209,7 +210,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
 	accounts := account.NewManager(accounts_db, chain)
-	bcReactor := bc.NewBlockchainReactor(store, chain, accounts, fastSync)
+	bcReactor := bc.NewBlockchainReactor(store, chain, txPool, accounts, fastSync)
 	bcReactor.SetLogger(logger.With("module", "blockchain"))
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 

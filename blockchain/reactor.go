@@ -1,32 +1,33 @@
 package blockchain
 
 import (
+	"blockchain/mining/cpuminer"
 	"bytes"
 	"context"
-	"reflect"
-    "time"
-	"net/http"
 	"fmt"
+	"net/http"
+	"reflect"
+	"time"
 
-	wire "github.com/tendermint/go-wire"
-	"github.com/bytom/p2p"
-	"github.com/bytom/types"
-    "github.com/bytom/protocol/bc/legacy"
-    "github.com/bytom/protocol"
-	"github.com/bytom/encoding/json"
-	cmn "github.com/tendermint/tmlibs/common"
-	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
+	"github.com/bytom/encoding/json"
 	"github.com/bytom/log"
+	"github.com/bytom/p2p"
+	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/types"
+	wire "github.com/tendermint/go-wire"
+	cmn "github.com/tendermint/tmlibs/common"
 	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	//"github.com/bytom/net/http/limit"
-	"github.com/bytom/net/http/static"
-	"github.com/bytom/generated/dashboard"
-	"github.com/bytom/errors"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/errors"
+	"github.com/bytom/generated/dashboard"
+	"github.com/bytom/net/http/static"
 )
 
 const (
@@ -45,7 +46,7 @@ const (
 	// check if we should switch to consensus reactor
 	switchToConsensusIntervalSeconds = 1
 	maxBlockchainResponseSize        = 22020096 + 2
-	crosscoreRPCPrefix = "/rpc/"
+	crosscoreRPCPrefix               = "/rpc/"
 )
 
 /*
@@ -60,22 +61,24 @@ type consensusReactor interface {
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-//	state        *sm.State
-//	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
-//	store        *MemStore
-	chain        *protocol.Chain
-	store        *txdb.Store
-	accounts	 *account.Manager
-	assets	     *asset.Registry
-	txFeeds		 *txfeed.TxFeed
-	pool         *BlockPool
-	mux          *http.ServeMux
-	handler      http.Handler
-	fastSync     bool
-	requestsCh   chan BlockRequest
-	timeoutsCh   chan string
-	submitter    txbuilder.Submitter
-//	lastBlock    *types.Block
+	//	state        *sm.State
+	//	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
+	//	store        *MemStore
+	chain      *protocol.Chain
+	store      *txdb.Store
+	accounts   *account.Manager
+	assets     *asset.Registry
+	txFeeds    *txfeed.TxFeed
+	pool       *BlockPool
+	txPool     *protocol.TxPool
+	mining     *cpuminer.CPUMiner
+	mux        *http.ServeMux
+	handler    http.Handler
+	fastSync   bool
+	requestsCh chan BlockRequest
+	timeoutsCh chan string
+	submitter  txbuilder.Submitter
+	//	lastBlock    *types.Block
 
 	evsw types.EventSwitch
 }
@@ -104,7 +107,7 @@ func batchRecover(ctx context.Context, v *interface{}) {
 }
 
 func jsonHandler(f interface{}) http.Handler {
-    h, err := httpjson.Handler(f, errorFormatter.Write)
+	h, err := httpjson.Handler(f, errorFormatter.Write)
 	if err != nil {
 		panic(err)
 	}
@@ -116,12 +119,12 @@ func alwaysError(err error) http.Handler {
 }
 
 func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-    bcr.handler.ServeHTTP(rw, req)
+	bcr.handler.ServeHTTP(rw, req)
 }
 
 func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
-    //if a.config == nil {
-		// never configured
+	//if a.config == nil {
+	// never configured
 	log.Printf(ctx, "-------info-----")
 	return map[string]interface{}{
 		"is_configured": false,
@@ -134,7 +137,7 @@ func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{},
 }
 
 func (bcr *BlockchainReactor) createblockkey(ctx context.Context) {
-	log.Printf(ctx,"creat-block-key")
+	log.Printf(ctx, "creat-block-key")
 }
 
 func webAssetsHandler(next http.Handler) http.Handler {
@@ -148,7 +151,7 @@ func webAssetsHandler(next http.Handler) http.Handler {
 }
 
 func maxBytes(h http.Handler) http.Handler {
-    const maxReqSize = 1e7 // 10MB
+	const maxReqSize = 1e7 // 10MB
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// A block can easily be bigger than maxReqSize, but everything
 		// else should be pretty small.
@@ -163,10 +166,10 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
 	m.Handle("/create-account", jsonHandler(bcr.createAccount))
 	m.Handle("/create-asset", jsonHandler(bcr.createAsset))
-	m.Handle("/update-account-tags",jsonHandler(bcr.updateAccountTags))
-	m.Handle("/update-asset-tags",jsonHandler(bcr.updateAssetTags))
+	m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
+	m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
 	m.Handle("/build-transaction", jsonHandler(bcr.build))
-	m.Handle("/create-control-program",jsonHandler(bcr.createControlProgram))
+	m.Handle("/create-control-program", jsonHandler(bcr.createControlProgram))
 	m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 	m.Handle("/create-transaction-feed", jsonHandler(bcr.createTxFeed))
 	m.Handle("/get-transaction-feed", jsonHandler(bcr.getTxFeed))
@@ -176,24 +179,24 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
 
-    latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
 			defer l.RecordSince(time.Now())
 		}
 		m.ServeHTTP(w, req)
-		})
+	})
 	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
-/*	handler = healthHandler(handler)
-	for _, l := range a.requestLimits {
-		handler = limit.Handler(handler, alwaysError(errRateLimited), l.perSecond, l.burst, l.key)
-	}
-	handler = gzip.Handler{Handler: handler}
-	handler = coreCounter(handler)
-	handler = timeoutContextHandler(handler)
-	if a.config != nil && a.config.BlockchainId != nil {
-		handler = blockchainIDHandler(handler, a.config.BlockchainId.String())
-	}
+	/*	handler = healthHandler(handler)
+		for _, l := range a.requestLimits {
+			handler = limit.Handler(handler, alwaysError(errRateLimited), l.perSecond, l.burst, l.key)
+		}
+		handler = gzip.Handler{Handler: handler}
+		handler = coreCounter(handler)
+		handler = timeoutContextHandler(handler)
+		if a.config != nil && a.config.BlockchainId != nil {
+			handler = blockchainIDHandler(handler, a.config.BlockchainId.String())
+		}
 	*/
 	bcr.handler = handler
 }
@@ -238,39 +241,42 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, fastSync bool) *BlockchainReactor {
-    requestsCh    := make(chan BlockRequest, defaultChannelCapacity)
-    timeoutsCh    := make(chan string, defaultChannelCapacity)
-    pool := NewBlockPool(
-        store.Height()+1,
-        requestsCh,
-        timeoutsCh,
-    )
-    bcR := &BlockchainReactor {
-        chain:         chain,
-        store:         store,
-		accounts:      accounts,
-        pool:          pool,
-		mux:           http.NewServeMux(),
-        fastSync:      fastSync,
-        requestsCh:    requestsCh,
-        timeoutsCh:   timeoutsCh,
-    }
-    bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
-    return bcR
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, fastSync bool) *BlockchainReactor {
+	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
+	timeoutsCh := make(chan string, defaultChannelCapacity)
+	pool := NewBlockPool(
+		store.Height()+1,
+		requestsCh,
+		timeoutsCh,
+	)
+	mining := cpuminer.NewCPUMiner(chain, txPool)
+	bcR := &BlockchainReactor{
+		chain:      chain,
+		store:      store,
+		accounts:   accounts,
+		pool:       pool,
+		txPool:     txPool,
+		mining:     mining,
+		mux:        http.NewServeMux(),
+		fastSync:   fastSync,
+		requestsCh: requestsCh,
+		timeoutsCh: timeoutsCh,
+	}
+	bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
+	return bcR
 }
 
 // OnStart implements BaseService
 func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
 	bcR.BuildHander()
-    if bcR.fastSync {
-        _, err := bcR.pool.Start()
-        if err != nil {
-            return err
-        }
-        go bcR.poolRoutine()
-    }
+	if bcR.fastSync {
+		_, err := bcR.pool.Start()
+		if err != nil {
+			return err
+		}
+		go bcR.poolRoutine()
+	}
 	return nil
 }
 
@@ -315,7 +321,7 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 	switch msg := msg.(type) {
 	case *bcBlockRequestMessage:
 		// Got a request for a block. Respond with block if we have it.
-		block, _:= bcR.store.GetBlock(msg.Height)
+		block, _ := bcR.store.GetBlock(msg.Height)
 		if block != nil {
 			msg := &bcBlockResponseMessage{Block: block}
 			queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
@@ -341,7 +347,6 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		bcR.Logger.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
 	}
 }
-
 
 // Handle messages from the poolReactor telling the reactor what to do.
 // NOTE: Don't sleep in the FOR_LOOP or otherwise slow it down!
@@ -377,19 +382,19 @@ FOR_LOOP:
 			// ask for status updates
 			go bcR.BroadcastStatusRequest()
 		/*case _ = <-switchToConsensusTicker.C:
-			height, numPending, _ := bcR.pool.GetStatus()
-			outbound, inbound, _ := bcR.Switch.NumPeers()
-			bcR.Logger.Info("Consensus ticker", "numPending", numPending, "total", len(bcR.pool.requesters),
-				"outbound", outbound, "inbound", inbound)
-			if bcR.pool.IsCaughtUp() {
-				bcR.Logger.Info("Time to switch to consensus reactor!", "height", height)
-				bcR.pool.Stop()
+		height, numPending, _ := bcR.pool.GetStatus()
+		outbound, inbound, _ := bcR.Switch.NumPeers()
+		bcR.Logger.Info("Consensus ticker", "numPending", numPending, "total", len(bcR.pool.requesters),
+			"outbound", outbound, "inbound", inbound)
+		if bcR.pool.IsCaughtUp() {
+			bcR.Logger.Info("Time to switch to consensus reactor!", "height", height)
+			bcR.pool.Stop()
 
-				conR := bcR.Switch.Reactor("CONSENSUS").(consensusReactor)
-				conR.SwitchToConsensus(bcR.state)
+			conR := bcR.Switch.Reactor("CONSENSUS").(consensusReactor)
+			conR.SwitchToConsensus(bcR.state)
 
-				break FOR_LOOP
-			}*/
+			break FOR_LOOP
+		}*/
 		case _ = <-trySyncTicker.C: // chan time
 			// This loop can be slow as long as it's doing syncing work.
 		SYNC_LOOP:
@@ -401,12 +406,15 @@ FOR_LOOP:
 					// We need both to sync the first block.
 					break SYNC_LOOP
 				}
-			    bcR.pool.PopRequest()
-                bcR.store.SaveBlock(first)
+				bcR.pool.PopRequest()
+				bcR.store.SaveBlock(first)
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:
 			break FOR_LOOP
+		}
+		if bcR.pool.IsCaughtUp() && !bcR.mining.IsMining() {
+			bcR.mining.Start()
 		}
 	}
 }
@@ -416,7 +424,6 @@ func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
 	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusRequestMessage{bcR.store.Height()}})
 	return nil
 }
-
 
 /*
 // SetEventSwitch implements events.Eventable

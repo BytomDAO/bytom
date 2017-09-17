@@ -3,6 +3,7 @@ package validation
 import (
 	"fmt"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
@@ -15,7 +16,7 @@ const (
 	gasRate         = int64(1000)
 
 	maxTxSize    = uint64(1024)
-	maxBlockSzie = uint64(16384)
+	MaxBlockSzie = uint64(16384)
 )
 
 var BTMAssetID = &bc.AssetID{
@@ -514,11 +515,11 @@ func ValidateBlock(b, prev *bc.Block) error {
 		}
 	}
 
-	if b.BlockHeader.SerializedSize > maxBlockSzie {
+	if b.BlockHeader.SerializedSize > MaxBlockSzie {
 		return errWrongBlockSize
 	}
 
-	coinbaseValue := b.BlockHeader.BlockSubsidy()
+	coinbaseValue := consensus.BlockSubsidy(b.BlockHeader.Height)
 	for i, tx := range b.Transactions {
 		if b.Version == 1 && tx.Version != 1 {
 			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)

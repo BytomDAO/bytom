@@ -134,11 +134,19 @@ func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 // ApplyValidBlock creates an updated snapshot without validating the
 // block.
 func (c *Chain) ApplyValidBlock(block *legacy.Block) (*state.Snapshot, error) {
-	newSnapshot := state.Copy(c.state.snapshot)
+	//TODO replace with a pre-defined init blo
+	var newSnapshot *state.Snapshot
+	if c.state.snapshot == nil {
+		newSnapshot = state.Empty()
+	} else {
+		newSnapshot = state.Copy(c.state.snapshot)
+	}
+
 	err := newSnapshot.ApplyBlock(legacy.MapBlock(block))
 	if err != nil {
 		return nil, err
 	}
+	//fmt.Printf("want %v, ger %v \n", block.BlockHeader.AssetsMerkleRoot, newSnapshot.Tree.RootHash())
 	if block.AssetsMerkleRoot != newSnapshot.Tree.RootHash() {
 		return nil, ErrBadStateRoot
 	}
