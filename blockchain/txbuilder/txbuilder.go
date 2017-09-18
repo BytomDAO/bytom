@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/log"
 )
 
 var (
@@ -38,6 +39,8 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 	var errs []error
 	for i, action := range actions {
 		err := action.Build(ctx, &builder)
+
+		log.Printf(ctx, "action:%v, err:%v\n", action, err)
 		if err != nil {
 			err = errors.WithData(err, "index", i)
 			errs = append(errs, err)

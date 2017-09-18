@@ -9,6 +9,7 @@ var (
 	ErrDataStackUnderflow = errors.New("data stack underflow")
 	ErrDisallowedOpcode   = errors.New("disallowed opcode")
 	ErrDivZero            = errors.New("division by zero")
+	ErrFalseVMResult      = errors.New("false VM result")
 	ErrLongProgram        = errors.New("program size exceeds maxint32")
 	ErrRange              = errors.New("range error")
 	ErrReturn             = errors.New("RETURN executed")

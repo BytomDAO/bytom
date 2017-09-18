@@ -4,7 +4,7 @@ package account
 import (
 	"context"
 //	stdsql "database/sql"
-//	"encoding/json"
+	"encoding/json"
 	"sync"
 	"time"
     "fmt"
@@ -93,45 +93,31 @@ type Account struct {
 
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
-	signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
+	if ret := m.db.Get([]byte(alias));ret != nil {
+		return nil,errors.New("alias already exists")
+	}
+
+	accountSigner, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
-	/*tagsParam, err := tagsToNullString(tags)
-	if err != nil {
-		return nil, err
-	}
-    */
-    var tagsParam []byte
-
-/*	aliasSQL := stdsql.NullString{
-		String: alias,
-		Valid:  alias != "",
-	}
-
-	const q = `
-		INSERT INTO accounts (account_id, alias, tags) VALUES ($1, $2, $3)
-		ON CONFLICT (account_id) DO UPDATE SET alias = $2, tags = $3
-	`
-	_, err = m.db.ExecContext(ctx, q, signer.ID, aliasSQL, tagsParam)
-	if pg.IsUniqueViolation(err) {
-		return nil, errors.WithDetail(ErrDuplicateAlias, "an account with the provided alias already exists")
-	} else if err != nil {
-		return nil, errors.Wrap(err)
-	}*/
-    account_alias := []byte(fmt.Sprintf("account_alias:%v", signer.ID))
-    account_tags := []byte(fmt.Sprintf("account_tags:%v", signer.ID))
-    m.db.Set(account_alias, []byte(alias))
-    m.db.Set(account_tags, []byte(tagsParam))
-    alias_account := []byte(fmt.Sprintf("alias_account:%v", alias))
-    m.db.Set(alias_account, []byte(signer.ID))
-
+	account_id := []byte(accountSigner.ID)
 	account := &Account{
-		Signer: signer,
+		Signer: accountSigner,
 		Alias:  alias,
 		Tags:   tags,
 	}
+
+	acc, err := json.Marshal(account)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed marshal account")
+	}
+	if len(acc) > 0 {
+		m.db.Set(account_id, json.RawMessage(acc))
+		m.db.Set([]byte(alias), account_id)
+	}
+
 
 	err = m.indexAnnotatedAccount(ctx, account)
 	if err != nil {
@@ -143,64 +129,57 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 // UpdateTags modifies the tags of the specified account. The account may be
 // identified either by ID or Alias, but not both.
-/*func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
+func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
+
 	if (id == nil) == (alias == nil) {
 		return errors.Wrap(ErrBadIdentifier)
 	}
 
-	tagsParam, err := tagsToNullString(tags)
+	var key_id []byte
+	if alias != nil {
+		key_id = m.db.Get([]byte(*alias))
+	} else {
+		key_id = []byte(*id)
+	}
+
+	bytes := m.db.Get(key_id)
+	if bytes == nil {
+		return errors.New("no exit this account.")
+	}
+
+	var account Account
+	err := json.Unmarshal(bytes, &account)
 	if err != nil {
-		return errors.Wrap(err, "convert tags")
+		return errors.New("this account can't be unmarshal.")
 	}
 
-	var (
-		signer   *signers.Signer
-		aliasStr string
-	)
-
-	if id != nil {
-		signer, err = m.findByID(ctx, *id)
-		if err != nil {
-			return errors.Wrap(err, "get account by ID")
+	for k, v := range tags {
+		switch v {
+		case "":
+			delete(account.Tags, k)
+		default:
+			account.Tags[k] = v
 		}
 
-		// An alias is required by indexAnnotatedAccount. The latter is a somewhat
-		// complex function, so in the interest of not making a near-duplicate,
-		// we'll satisfy its contract and provide an alias.
-		const q = `SELECT alias FROM accounts WHERE account_id = $1`
-		var a stdsql.NullString
-		err := m.db.QueryRowContext(ctx, q, *id).Scan(&a)
-		if err != nil {
-			return errors.Wrap(err, "alias lookup")
-		}
-		if a.Valid {
-			aliasStr = a.String
-		}
-	} else { // alias is guaranteed to be not nil due to bad identifier check
-		aliasStr = *alias
-		signer, err = m.FindByAlias(ctx, aliasStr)
-		if err != nil {
-			return errors.Wrap(err, "get account by alias")
-		}
 	}
 
-	const q = `
-		UPDATE accounts
-		SET tags = $1
-		WHERE account_id = $2
-	`
-	_, err = m.db.ExecContext(ctx, q, tagsParam, signer.ID)
+	acc, err := json.Marshal(account)
 	if err != nil {
-		return errors.Wrap(err, "update entry in accounts table")
+
+		return errors.New("failed marshal account to update tags")
+
+	} else if len(acc) == 0 {
+
+		return errors.New("failed update account tags")
+
+	} else {
+
+		m.db.Set(key_id, json.RawMessage(acc))
+		return nil
 	}
 
-	return errors.Wrap(m.indexAnnotatedAccount(ctx, &Account{
-		Signer: signer,
-		Alias:  aliasStr,
-		Tags:   tags,
-	}), "update account index")
 }
-*/
+
 
 // FindByAlias retrieves an account's Signer record by its alias
 func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signer, error) {
@@ -289,16 +268,16 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 	if err != nil {
 		return nil, err
 	}
-	/*err = m.insertAccountControlProgram(ctx, cp)
+	err = m.insertAccountControlProgram(ctx, cp)
 	if err != nil {
 		return nil, err
-	}*/
+	}
 	return cp.controlProgram, nil
 }
 
-/*
+
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
-	const q = `
+	/*const q = `
 		INSERT INTO account_control_programs (signer_id, key_index, control_program, change, expires_at)
 		SELECT unnest($1::text[]), unnest($2::bigint[]), unnest($3::bytea[]), unnest($4::boolean[]),
 			unnest($5::timestamp with time zone[])
@@ -319,12 +298,12 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 			String: p.expiresAt.Format(time.RFC3339),
 			Valid:  !p.expiresAt.IsZero(),
 		})
-	}
+	}*/
 
-	_, err := m.db.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
-	return errors.Wrap(err)
+//	_, err := m.dbm.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
+	return errors.Wrap(nil)
 }
-*/
+
 
 func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	m.acpMu.Lock()

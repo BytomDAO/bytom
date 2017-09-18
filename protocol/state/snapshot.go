@@ -78,16 +78,7 @@ func (s *Snapshot) ApplyTx(tx *bc.Tx) error {
 			return fmt.Errorf("conflicting nonce %x", n.Bytes())
 		}
 
-		nonce, err := tx.Nonce(n)
-		if err != nil {
-			return errors.Wrap(err, "applying nonce")
-		}
-		tr, err := tx.TimeRange(*nonce.TimeRangeId)
-		if err != nil {
-			return errors.Wrap(err, "applying nonce")
-		}
-
-		s.Nonces[n] = tr.MaxTimeMs
+		s.Nonces[n] = tx.TxHeader.MaxTimeMs
 	}
 
 	// Remove spent outputs. Each output must be present.
