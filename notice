@@ -1,0 +1,8 @@
+TEST RUN: 
+errors/*
+log/*
+math/*
+version/*
+crypto/sha3pool, ed25519
+testutil/*
+

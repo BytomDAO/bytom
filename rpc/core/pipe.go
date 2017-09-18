@@ -1,14 +1,14 @@
 package core
 
 import (
-//	crypto "github.com/blockchain/go-crypto"
-//	"github.com/tendermint/tendermint/consensus"
+	//	crypto "github.com/blockchain/go-crypto"
+	//	"github.com/tendermint/tendermint/consensus"
 	p2p "github.com/blockchain/p2p"
-//	"github.com/tendermint/tendermint/proxy"
-//	"github.com/tendermint/tendermint/state/txindex"
+	//	"github.com/tendermint/tendermint/proxy"
+	//	"github.com/tendermint/tendermint/state/txindex"
+	bc "github.com/blockchain/blockchain"
 	"github.com/blockchain/types"
 	"github.com/tendermint/tmlibs/log"
-    bc "github.com/blockchain/blockchain"
 )
 
 //----------------------------------------------
@@ -34,20 +34,19 @@ type P2P interface {
 
 var (
 	// external, thread safe interfaces
-	eventSwitch   types.EventSwitch
-//	proxyAppQuery proxy.AppConnQuery
+	eventSwitch types.EventSwitch
+	//	proxyAppQuery proxy.AppConnQuery
 
 	// interfaces defined in types and above
-//	blockStore     *bc.MemStore
-	blockStore     *bc.BlockStore
+	blockStore *bc.MemStore
 	//mempool        types.Mempool
 	//consensusState Consensus
-	p2pSwitch      P2P
+	p2pSwitch P2P
 
 	// objects
-//	pubKey    crypto.PubKey
-//	genDoc    *types.GenesisDoc // cache the genesis structure
-	addrBook  *p2p.AddrBook
+	//	pubKey    crypto.PubKey
+	//	genDoc    *types.GenesisDoc // cache the genesis structure
+	addrBook *p2p.AddrBook
 	//txIndexer txindex.TxIndexer
 
 	logger log.Logger
@@ -57,7 +56,7 @@ func SetEventSwitch(evsw types.EventSwitch) {
 	eventSwitch = evsw
 }
 
-func SetBlockStore(bs *bc.BlockStore) {
+func SetBlockStore(bs *bc.MemStore) {
 	blockStore = bs
 }
 
