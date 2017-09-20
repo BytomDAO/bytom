@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"blockchain/mining/cpuminer"
 	"bytes"
 	"context"
 	"fmt"
@@ -11,23 +10,22 @@ import (
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/encoding/json"
+	"github.com/bytom/errors"
+	"github.com/bytom/generated/dashboard"
 	"github.com/bytom/log"
+	"github.com/bytom/mining/cpuminer"
+	"github.com/bytom/net/http/httpjson"
+	"github.com/bytom/net/http/static"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/types"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
-	//"github.com/bytom/net/http/gzip"
-	"github.com/bytom/net/http/httpjson"
-	//"github.com/bytom/net/http/limit"
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/errors"
-	"github.com/bytom/generated/dashboard"
-	"github.com/bytom/net/http/static"
 )
 
 const (
@@ -298,7 +296,7 @@ func (bcR *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
 
 // AddPeer implements Reactor by sending our state to peer.
 func (bcR *BlockchainReactor) AddPeer(peer *p2p.Peer) {
-	if !peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.store.Height()}}) {
+	if !peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.chain.Height()}}) {
 		// doing nothing, will try later in `poolRoutine`
 	}
 }
@@ -321,27 +319,31 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 	switch msg := msg.(type) {
 	case *bcBlockRequestMessage:
 		// Got a request for a block. Respond with block if we have it.
-		block, _ := bcR.store.GetBlock(msg.Height)
-		if block != nil {
-			msg := &bcBlockResponseMessage{Block: block}
+		rawBlock, err := bcR.store.GetRawBlock(msg.Height)
+		//fmt.Printf("sent block %v \n", rawBlock)
+		if err == nil {
+			msg := &bcBlockResponseMessage{RawBlock: rawBlock}
 			queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 			if !queued {
 				// queue is full, just ignore.
 			}
 		} else {
+			fmt.Println("skip sent the block response due to block is nil")
 			// TODO peer is asking for things we don't have.
 		}
 	case *bcBlockResponseMessage:
 		// Got a block.
-		bcR.pool.AddBlock(src.Key, msg.Block, len(msgBytes))
+		//fmt.Printf("receive block %v \n", msg.Block)
+		bcR.pool.AddBlock(src.Key, msg.GetBlock(), len(msgBytes))
 	case *bcStatusRequestMessage:
 		// Send peer our state.
-		queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.store.Height()}})
+		queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.chain.Height()}})
 		if !queued {
 			// sorry
 		}
 	case *bcStatusResponseMessage:
 		// Got a peer status. Unverified.
+		//fmt.Printf("reveive peer high is %d \n", msg.Height)
 		bcR.pool.SetPeerHeight(src.Key, msg.Height)
 	default:
 		bcR.Logger.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
@@ -400,20 +402,33 @@ FOR_LOOP:
 		SYNC_LOOP:
 			for i := 0; i < 10; i++ {
 				// See if there are any blocks to sync.
-				first, second := bcR.pool.PeekTwoBlocks()
-				bcR.Logger.Info("TrySync peeked", "first", first, "second", second)
-				if first == nil || second == nil {
-					// We need both to sync the first block.
+				block, _ := bcR.pool.PeekTwoBlocks()
+				//bcR.Logger.Info("TrySync peeked", "first", first, "second", second)
+				if block == nil {
+					//bcR.Logger.Info("skip sync loop, nothing need to be sync")
 					break SYNC_LOOP
 				}
+
+				//bcR.Logger.Info("start to sync block", block)
 				bcR.pool.PopRequest()
-				bcR.store.SaveBlock(first)
+				snap, err := bcR.chain.ApplyValidBlock(block)
+				if err != nil {
+					fmt.Printf("Failed to apply valid block: %v \n", err)
+					break SYNC_LOOP
+				}
+				err = bcR.chain.CommitAppliedBlock(nil, block, snap)
+				if err != nil {
+					fmt.Printf("Failed to commit block: %v \n", err)
+					break SYNC_LOOP
+				}
+				bcR.Logger.Info("finish to sync commit block", block)
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:
 			break FOR_LOOP
 		}
 		if bcR.pool.IsCaughtUp() && !bcR.mining.IsMining() {
+			bcR.Logger.Info("start to mining")
 			bcR.mining.Start()
 		}
 	}
@@ -421,7 +436,7 @@ FOR_LOOP:
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.
 func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
-	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusRequestMessage{bcR.store.Height()}})
+	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusRequestMessage{bcR.chain.Height()}})
 	return nil
 }
 
@@ -480,11 +495,21 @@ func (m *bcBlockRequestMessage) String() string {
 
 // NOTE: keep up-to-date with maxBlockchainResponseSize
 type bcBlockResponseMessage struct {
-	Block *legacy.Block
+	RawBlock []byte
+}
+
+func (m *bcBlockResponseMessage) GetBlock() *legacy.Block {
+	block := &legacy.Block{
+		BlockHeader:  legacy.BlockHeader{},
+		Transactions: []*legacy.Tx{},
+	}
+	block.UnmarshalText(m.RawBlock)
+	return block
 }
 
 func (m *bcBlockResponseMessage) String() string {
-	return cmn.Fmt("[bcBlockResponseMessage %v]", m.Block.Height)
+	block := m.GetBlock()
+	return cmn.Fmt("[bcBlockResponseMessage %v]", block.BlockHeader.Height)
 }
 
 //-------------------------------------

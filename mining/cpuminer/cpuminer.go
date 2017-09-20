@@ -43,7 +43,7 @@ type CPUMiner struct {
 // current timestamp which makes the passed block hash to a value less than the
 // target difficulty.
 func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
-	header := block.BlockHeader
+	header := &block.BlockHeader
 	targetDifficulty := consensus.CompactToBig(header.Bits)
 
 	for i := uint64(0); i <= maxNonce; i++ {
@@ -119,6 +119,15 @@ out:
 				fmt.Printf("Failed to commit block: %v \n", err)
 				continue
 			}
+			/*fmt.Println(block)
+			x, err := m.chain.GetBlock(block.BlockHeader.Height)
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Println(x)
+			fmt.Println(x == block)
+			fmt.Println(block.Transactions)
+			fmt.Println(x.Transactions)*/
 			fmt.Printf("finish commit block heigh %d \n", block.BlockHeader.Height)
 		}
 	}

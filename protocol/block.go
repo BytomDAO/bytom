@@ -168,15 +168,15 @@ func (c *Chain) CommitAppliedBlock(ctx context.Context, block *legacy.Block, sna
 	// SaveBlock is the linearization point. Once the block is committed
 	// to persistent storage, the block has been applied and everything
 	// else can be derived from that block.
-	/*err := c.store.SaveBlock(ctx, block)
+	err := c.store.SaveBlock(block)
 	if err != nil {
 		return errors.Wrap(err, "storing block")
-	}*/
+	}
 	if block.Time().After(c.lastQueuedSnapshot.Add(saveSnapshotFrequency)) {
 		c.queueSnapshot(ctx, block.Height, block.Time(), snapshot)
 	}
 
-	err := c.store.FinalizeBlock(ctx, block.Height)
+	err = c.store.FinalizeBlock(ctx, block.Height)
 	if err != nil {
 		return errors.Wrap(err, "finalizing block")
 	}
@@ -242,6 +242,7 @@ func NewInitialBlock(timestamp time.Time) (*legacy.Block, error) {
 				TransactionsMerkleRoot: root,
 			},
 		},
+		Transactions: []*legacy.Tx{},
 	}
 	return b, nil
 }
