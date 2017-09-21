@@ -25,6 +25,7 @@ import (
 	"github.com/tendermint/tmlibs/log"
 	//rpc "github.com/blockchain/rpc/lib"
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol"
@@ -62,6 +63,7 @@ type Node struct {
 	blockStore   *txdb.Store
 	bcReactor    *bc.BlockchainReactor
 	accounts     *account.Manager
+	assets       *asset.Registry
 	rpcListeners []net.Listener // rpc servers
 }
 
@@ -210,7 +212,10 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
 	accounts := account.NewManager(accounts_db, chain)
-	bcReactor := bc.NewBlockchainReactor(store, chain, txPool, accounts, fastSync)
+	assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+	assets := asset.NewRegistry(assets_db, chain)
+	bcReactor := bc.NewBlockchainReactor(store, chain, txPool, accounts, assets, fastSync)
+
 	bcReactor.SetLogger(logger.With("module", "blockchain"))
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
@@ -249,6 +254,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		bcReactor:  bcReactor,
 		blockStore: store,
 		accounts:   accounts,
+		assets:     assets,
 	}
 	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
 	return node

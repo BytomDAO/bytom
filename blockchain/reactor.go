@@ -48,21 +48,10 @@ const (
 	crosscoreRPCPrefix               = "/rpc/"
 )
 
-/*
-type consensusReactor interface {
-	// for when we switch from blockchain reactor and fast sync to
-	// the consensus machine
-	SwitchToConsensus(*sm.State)
-}
-*/
-
 // BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-	//	state        *sm.State
-	//	proxyAppConn proxy.AppConnConsensus // same as consensus.proxyAppConn
-	//	store        *MemStore
 	chain      *protocol.Chain
 	store      *txdb.Store
 	accounts   *account.Manager
@@ -77,7 +66,6 @@ type BlockchainReactor struct {
 	requestsCh chan BlockRequest
 	timeoutsCh chan string
 	submitter  txbuilder.Submitter
-	//	lastBlock    *types.Block
 
 	evsw types.EventSwitch
 }
@@ -174,9 +162,16 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/get-transaction-feed", jsonHandler(bcr.getTxFeed))
 	m.Handle("/update-transaction-feed", jsonHandler(bcr.updateTxFeed))
 	m.Handle("/delete-transaction-feed", jsonHandler(bcr.deleteTxFeed))
+	m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
+	m.Handle("/list-assets", jsonHandler(bcr.listAssets))
+	m.Handle("/list-transaction-feeds", jsonHandler(bcr.listTxFeeds))
+	m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
+	m.Handle("/list-balances", jsonHandler(bcr.listBalances))
+	m.Handle("/list-unspent-outputs", jsonHandler(bcr.listUnspentOutputs))
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
+	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -240,7 +235,7 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, fastSync bool) *BlockchainReactor {
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
 	pool := NewBlockPool(
@@ -253,6 +248,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *prot
 		chain:      chain,
 		store:      store,
 		accounts:   accounts,
+		assets:     assets,
 		pool:       pool,
 		txPool:     txPool,
 		mining:     mining,

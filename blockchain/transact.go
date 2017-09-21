@@ -6,14 +6,11 @@ import (
 	"sync"
 	"time"
 
-	//"github.com/bytom/blockchain/fetch"
 	"github.com/bytom/blockchain/txbuilder"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
-	//"github.com/bytom/log"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/reqid"
-	//"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
 
@@ -44,7 +41,7 @@ func (a *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilde
 	return decoder, true
 }
 
-func (a *BlockchainReactor) buildSingle(ctx context.Context, req *buildRequest) (*txbuilder.Template, error) {
+func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
 	err := a.filterAliases(ctx, req)
 	if err != nil {
 		return nil, err
@@ -78,6 +75,7 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *buildRequest) 
 		ttl = defaultTxTTL
 	}
 	maxTime := time.Now().Add(ttl)
+
 	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime)
 	if errors.Root(err) == txbuilder.ErrAction {
 		// Format each of the inner errors contained in the data.
@@ -100,7 +98,7 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *buildRequest) 
 }
 
 // POST /build-transaction
-func (a *BlockchainReactor) build(ctx context.Context, buildReqs []*buildRequest) (interface{}, error) {
+func (a *BlockchainReactor) build(ctx context.Context, buildReqs []*BuildRequest) (interface{}, error) {
 	responses := make([]interface{}, len(buildReqs))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))
@@ -281,16 +279,16 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 	}
 }
 
-type submitArg struct {
+type SubmitArg struct {
 	Transactions []txbuilder.Template
-	wait         chainjson.Duration
+	Wait         chainjson.Duration
 	WaitUntil    string `json:"wait_until"` // values none, confirmed, processed. default: processed
 }
 
 // POST /submit-transaction
-func (a *BlockchainReactor) submit(ctx context.Context, x submitArg) (interface{}, error) {
+func (a *BlockchainReactor) submit(ctx context.Context, x SubmitArg) (interface{}, error) {
 	// Setup a timeout for the provided wait duration.
-	timeout := x.wait.Duration
+	timeout := x.Wait.Duration
 	if timeout <= 0 {
 		timeout = 30 * time.Second
 	}

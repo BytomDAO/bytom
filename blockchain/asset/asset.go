@@ -2,23 +2,18 @@ package asset
 
 import (
 	"context"
-	//"database/sql"
 	"encoding/json"
-//	"fmt"
 	"sync"
 
 	"golang.org/x/crypto/sha3"
 
 	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"
-//	"github.com/lib/pq"
 	dbm "github.com/tendermint/tmlibs/db"
 
-//	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
-//	"chain/database/pg"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -32,12 +27,11 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func NewRegistry(db dbm.DB, chain *protocol.Chain/*, pinStore *pin.Store*/) *Registry {
+func NewRegistry(db dbm.DB, chain *protocol.Chain) *Registry {
 	return &Registry{
 		db:               db,
 		chain:            chain,
 		initialBlockHash: chain.InitialBlockHash,
-//		pinStore:         pinStore,
 		cache:            lru.New(maxAssetCache),
 		aliasCache:       lru.New(maxAssetCache),
 	}
@@ -49,7 +43,6 @@ type Registry struct {
 	chain            *protocol.Chain
 	indexer          Saver
 	initialBlockHash bc.Hash
-//	pinStore         *pin.Store
 
 	idGroup    singleflight.Group
 	aliasGroup singleflight.Group
@@ -69,7 +62,7 @@ type Asset struct {
 	VMVersion        uint64
 	IssuanceProgram  []byte
 	InitialBlockHash bc.Hash
-	Signer           *signers.Signer
+	*signers.Signer
 	Tags             map[string]interface{}
 	rawDefinition    []byte
 	definition       map[string]interface{}
@@ -133,6 +126,15 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 	}
 	if alias != "" {
 		asset.Alias = &alias
+	}
+
+	asset_id := []byte(asset.AssetID.String())
+	ass, err := json.Marshal(asset)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed marshal asset")
+	}
+	if len(ass) > 0 {
+		reg.db.Set(asset_id,json.RawMessage(ass))
 	}
 
 /*	asset, err = reg.insertAsset(ctx, asset, clientToken)
@@ -222,20 +224,21 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 		return cached.(*Asset), nil
 	}
 
-	untypedAsset, err := reg.idGroup.Do(id.String(), func() (interface{}, error) {
-//		return assetQuery(ctx, reg.db, "assets.id=$1", id)
-		return nil,nil
-})
+	bytes := reg.db.Get([]byte(id.String()))
+	if bytes == nil {
+		return nil, errors.New("no exit this asset.")
+	}
+	var asset Asset
+	err := json.Unmarshal(bytes, &asset)
 
-	if err != nil {
-		return nil, err
+	if err !=nil {
+		return nil, errors.New("this asset can't be unmarshal.")
 	}
 
-	asset := untypedAsset.(*Asset)
 	reg.cacheMu.Lock()
 	reg.cache.Add(id, asset)
 	reg.cacheMu.Unlock()
-	return asset, nil
+	return &asset, nil
 }
 
 // FindByAlias retrieves an Asset record along with its signer,
