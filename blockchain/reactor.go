@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/bytom/mining/cpuminer"
-	"github.com/bytom/protocol/validation"
 	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
@@ -17,9 +15,11 @@ import (
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/log"
+	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/validation"
 	"github.com/bytom/types"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -55,34 +55,22 @@ const (
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-	chain      *protocol.Chain
-	store      *txdb.Store
-	accounts   *account.Manager
-	assets     *asset.Registry
-	txFeeds    *txfeed.TxFeed
-	pool       *BlockPool
-	txPool     *protocol.TxPool
-	mining     *cpuminer.CPUMiner
-	mux        *http.ServeMux
-	handler    http.Handler
-	fastSync   bool
-	requestsCh chan BlockRequest
-	timeoutsCh chan string
-	submitter  txbuilder.Submitter
 	chain       *protocol.Chain
 	store       *txdb.Store
 	accounts    *account.Manager
 	assets      *asset.Registry
 	txFeeds     *txfeed.TxFeed
 	pool        *BlockPool
+	txPool      *protocol.TxPool
+	mining      *cpuminer.CPUMiner
 	mux         *http.ServeMux
-	accesstoken *accesstoken.Token
 	handler     http.Handler
 	fastSync    bool
 	requestsCh  chan BlockRequest
 	timeoutsCh  chan string
+	accesstoken *accesstoken.Token
 	submitter   txbuilder.Submitter
-	evsw types.EventSwitch
+	evsw        types.EventSwitch
 }
 
 func batchRecover(ctx context.Context, v *interface{}) {
@@ -261,7 +249,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *ac
 		requestsCh,
 		timeoutsCh,
 	)
-	mining := cpuminer.NewCPUMiner(chain, txPool)
+	//	mining := cpuminer.NewCPUMiner(chain, txPool)
 	bcR := &BlockchainReactor{
 		chain:      chain,
 		store:      store,
@@ -333,12 +321,12 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 
 	switch msg := msg.(type) {
 	case *bcBlockRequestMessage:
-/*		// Got a request for a block. Respond with block if we have it.
-		rawBlock, err := bcR.store.GetRawBlock(msg.Height)
-		//fmt.Printf("sent block %v \n", rawBlock)
-		if err == nil {
-			msg := &bcBlockResponseMessage{RawBlock: rawBlock}
-*/		block, _ := bcR.store.GetBlock(msg.Height)
+		/*		// Got a request for a block. Respond with block if we have it.
+				rawBlock, err := bcR.store.GetRawBlock(msg.Height)
+				//fmt.Printf("sent block %v \n", rawBlock)
+				if err == nil {
+					msg := &bcBlockResponseMessage{RawBlock: rawBlock}
+		*/block, _ := bcR.store.GetBlock(msg.Height)
 		if block != nil {
 			msg := &bcBlockResponseMessage{Block: block}
 			queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})

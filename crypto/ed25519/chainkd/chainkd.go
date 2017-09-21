@@ -7,8 +7,8 @@ import (
 	"hash"
 	"io"
 
-	"bytom/crypto/ed25519"
-	"bytom/crypto/ed25519/internal/edwards25519"
+	"github.com/bytom/crypto/ed25519"
+	"github.com/bytom/crypto/ed25519/internal/edwards25519"
 )
 
 type (
@@ -31,7 +31,7 @@ func NewXPrv(r io.Reader) (xprv XPrv, err error) {
 		return xprv, err
 	}
 	hasher := sha512.New()
-	hasher.Write([]byte("Bytom seed"))
+	hasher.Write([]byte("Chain seed"))
 	hasher.Write(entropy[:])
 	hasher.Sum(xprv[:0])
 	modifyScalar(xprv[:32])
