@@ -8,25 +8,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/bytom/blockchain/account"
-	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/blockchain/txdb"
-	"github.com/bytom/blockchain/txfeed"
-	"github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
-	"github.com/bytom/generated/dashboard"
-	"github.com/bytom/log"
 	"github.com/bytom/mining/cpuminer"
-	"github.com/bytom/net/http/httpjson"
-	"github.com/bytom/net/http/static"
-	"github.com/bytom/p2p"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/validation"
-	"github.com/bytom/types"
-	wire "github.com/tendermint/go-wire"
-	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
@@ -270,7 +253,6 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, fastSync bool) *BlockchainReactor {
 func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, assets *asset.Registry, fastSync bool) *BlockchainReactor {
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
@@ -351,12 +333,12 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 
 	switch msg := msg.(type) {
 	case *bcBlockRequestMessage:
-		// Got a request for a block. Respond with block if we have it.
+/*		// Got a request for a block. Respond with block if we have it.
 		rawBlock, err := bcR.store.GetRawBlock(msg.Height)
 		//fmt.Printf("sent block %v \n", rawBlock)
 		if err == nil {
 			msg := &bcBlockResponseMessage{RawBlock: rawBlock}
-		block, _ := bcR.store.GetBlock(msg.Height)
+*/		block, _ := bcR.store.GetBlock(msg.Height)
 		if block != nil {
 			msg := &bcBlockResponseMessage{Block: block}
 			queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
