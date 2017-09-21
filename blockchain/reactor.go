@@ -27,6 +27,26 @@ import (
 	"github.com/bytom/types"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/bytom/blockchain/accesstoken"
+	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/txdb"
+	"github.com/bytom/blockchain/txfeed"
+	"github.com/bytom/encoding/json"
+	"github.com/bytom/log"
+	"github.com/bytom/p2p"
+	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/types"
+	wire "github.com/tendermint/go-wire"
+	cmn "github.com/tendermint/tmlibs/common"
+	//"github.com/bytom/net/http/gzip"
+	"github.com/bytom/net/http/httpjson"
+	//"github.com/bytom/net/http/limit"
+	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/errors"
+	"github.com/bytom/generated/dashboard"
+	"github.com/bytom/net/http/static"
 )
 
 const (
@@ -66,7 +86,19 @@ type BlockchainReactor struct {
 	requestsCh chan BlockRequest
 	timeoutsCh chan string
 	submitter  txbuilder.Submitter
-
+	chain       *protocol.Chain
+	store       *txdb.Store
+	accounts    *account.Manager
+	assets      *asset.Registry
+	txFeeds     *txfeed.TxFeed
+	pool        *BlockPool
+	mux         *http.ServeMux
+	accesstoken *accesstoken.Token
+	handler     http.Handler
+	fastSync    bool
+	requestsCh  chan BlockRequest
+	timeoutsCh  chan string
+	submitter   txbuilder.Submitter
 	evsw types.EventSwitch
 }
 
@@ -172,6 +204,9 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
 	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
+	m.Handle("/create-access-token", jsonHandler(bcr.createAccessToken))
+	m.Handle("/list-access-tokens", jsonHandler(bcr.listAccessTokens))
+	m.Handle("/delete-access-token", jsonHandler(bcr.deleteAccessToken))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -236,6 +271,7 @@ type page struct {
 }
 
 func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, assets *asset.Registry, fastSync bool) *BlockchainReactor {
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
 	pool := NewBlockPool(
@@ -320,6 +356,9 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		//fmt.Printf("sent block %v \n", rawBlock)
 		if err == nil {
 			msg := &bcBlockResponseMessage{RawBlock: rawBlock}
+		block, _ := bcR.store.GetBlock(msg.Height)
+		if block != nil {
+			msg := &bcBlockResponseMessage{Block: block}
 			queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 			if !queued {
 				// queue is full, just ignore.
@@ -432,6 +471,8 @@ FOR_LOOP:
 					break SYNC_LOOP
 				}
 				bcR.Logger.Info("finish to sync commit block", block)
+				bcR.pool.PopRequest()
+				bcR.store.SaveBlock(first)
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:
