@@ -23,6 +23,7 @@ import (
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/validation"
 	"github.com/bytom/types"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -345,6 +346,19 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		// Got a peer status. Unverified.
 		//fmt.Printf("reveive peer high is %d \n", msg.Height)
 		bcR.pool.SetPeerHeight(src.Key, msg.Height)
+	case *bcTransactionMessage:
+		block, _ := bcR.chain.State()
+		tx := msg.GetTransaction()
+		if bcR.txPool.HaveTransaction(&tx.Tx.ID) {
+			return
+		}
+
+		gas, err := validation.ValidateTx(tx.Tx, legacy.MapBlock(block))
+		if err != nil {
+			return
+		}
+		bcR.txPool.AddTransaction(tx, tx.TxData.SerializedSize, block.BlockHeader.Height, uint64(gas))
+		go bcR.BroadcastTransaction(tx)
 	default:
 		bcR.Logger.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
 	}
@@ -440,6 +454,15 @@ func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
 	return nil
 }
 
+func (bcR *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
+	rawTx, err := tx.TxData.MarshalText()
+	if err == nil {
+		return err
+	}
+	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcTransactionMessage{rawTx}})
+	return nil
+}
+
 /*
 // SetEventSwitch implements events.Eventable
 func (bcR *BlockchainReactor) SetEventSwitch(evsw types.EventSwitch) {
@@ -451,10 +474,11 @@ func (bcR *BlockchainReactor) SetEventSwitch(evsw types.EventSwitch) {
 // Messages
 
 const (
-	msgTypeBlockRequest   = byte(0x10)
-	msgTypeBlockResponse  = byte(0x11)
-	msgTypeStatusResponse = byte(0x20)
-	msgTypeStatusRequest  = byte(0x21)
+	msgTypeBlockRequest       = byte(0x10)
+	msgTypeBlockResponse      = byte(0x11)
+	msgTypeStatusResponse     = byte(0x20)
+	msgTypeStatusRequest      = byte(0x21)
+	msgTypeTransactionRequest = byte(0x30)
 )
 
 // BlockchainMessage is a generic message for this reactor.
@@ -466,6 +490,7 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&bcBlockResponseMessage{}, msgTypeBlockResponse},
 	wire.ConcreteType{&bcStatusResponseMessage{}, msgTypeStatusResponse},
 	wire.ConcreteType{&bcStatusRequestMessage{}, msgTypeStatusRequest},
+	wire.ConcreteType{&bcTransactionMessage{}, msgTypeTransactionRequest},
 )
 
 // DecodeMessage decodes BlockchainMessage.
@@ -490,6 +515,20 @@ type bcBlockRequestMessage struct {
 func (m *bcBlockRequestMessage) String() string {
 	return cmn.Fmt("[bcBlockRequestMessage %v]", m.Height)
 }
+
+//-------------------------------------
+
+type bcTransactionMessage struct {
+	RawTx []byte
+}
+
+func (m *bcTransactionMessage) GetTransaction() *legacy.Tx {
+	tx := &legacy.Tx{}
+	tx.UnmarshalText(m.RawTx)
+	return tx
+}
+
+//-------------------------------------
 
 //-------------------------------------
 
