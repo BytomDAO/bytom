@@ -17,39 +17,6 @@ func init() {
 	errorFormatter.Errors[Pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
 
-type requestQuery struct {
-	Filter       string        `json:"filter,omitempty"`
-	FilterParams []interface{} `json:"filter_params,omitempty"`
-	SumBy        []string      `json:"sum_by,omitempty"`
-	PageSize     int           `json:"page_size"`
-
-	// AscLongPoll and Timeout are used by /list-transactions
-	// to facilitate notifications.
-	AscLongPoll bool          `json:"ascending_with_long_poll,omitempty"`
-	Timeout     json.Duration `json:"timeout"`
-
-	// After is a completely opaque cursor, indicating that only
-	// items in the result set after the one identified by `After`
-	// should be included. It has no relationship to time.
-	After string `json:"after"`
-
-	// These two are used for time-range queries like /list-transactions
-	StartTimeMS uint64 `json:"start_time,omitempty"`
-	EndTimeMS   uint64 `json:"end_time,omitempty"`
-
-	// This is used for point-in-time queries like /list-balances
-	// TODO(bobg): Different request structs for endpoints with different needs
-	TimestampMS uint64 `json:"timestamp,omitempty"`
-
-	// This is used for filtering results from /list-access-tokens
-	// Value must be "client" or "network"
-	Type string `json:"type"`
-
-	// Aliases is used to filter results from /mockshm/list-keys
-	Aliases []string `json:"aliases,omitempty"`
-}
-
-
 // PseudoHSM configures the Core to expose the PseudoHSM endpoints. It
 // is only included in non-production builds.
 func PseudoHSM(hsm *Pseudohsm.HSM) RunOption {
@@ -63,22 +30,20 @@ func PseudoHSM(hsm *Pseudohsm.HSM) RunOption {
 		api.mux.Handle("/hsm/sign-transaction", needConfig(h.pseudohsmSignTemplates))
 		api.mux.Handle("/hsm/reset-password", needConfig(h.pseudohsmResetPassword))
 		api.mux.Handle("/hsm/update-alias", needConfig(h.pseudohsmUpdateAlias))
-
-
 	}
 }
-
 
 
 type pseudoHSMHandler struct {
 	PseudoHSM *Pseudohsm.HSM
 }
 
-func (h *PseudoHSMHandler) pseudohsmCreateKey(password string, in struct{ Alias string }) (result *Pseudohsm.XPub, err error) {
+
+func (h *PseudoHSMHandler) pseudohsmCreateKey(ctx context.Context, password string, in struct{ Alias string }) (result *Pseudohsm.XPub, err error) {
 	return h.PseudoHSM.XCreate(password, in.Alias)
 }
 
-func (h *PseudoHSMHandler) pseudohsmListKeys(query requestQuery) (page, error) {
+func (h *PseudoHSMHandler) pseudohsmListKeys(ctx context.Context, query requestQuery) (page, error) {
 	limit := query.PageSize
 	if limit == 0 {
 		limit = defGenericPageSize  // defGenericPageSize = 100
@@ -103,17 +68,17 @@ func (h *PseudoHSMHandler) pseudohsmListKeys(query requestQuery) (page, error) {
 	}, nil
 }
 
-func (h *PseudoHSMHandler) pseudohsmDeleteKey(xpub chainkd.XPub, password string) error {
+func (h *PseudoHSMHandler) pseudohsmDeleteKey(ctx context.Context, xpub chainkd.XPub, password string) error {
 	return h.PseudoHSM.XDelete(xpub, password)
 }
 
-func (h *PseudoHSMHandler) pseudohsmSignTemplates(x struct {
+func (h *PseudoHSMHandler) pseudohsmSignTemplates(ctx context.Context, x struct {
 	Txs   []*txbuilder.Template `json:"transactions"`
 	XPubs []chainkd.XPub        `json:"xpubs"`
 }) []interface{} {
 	resp := make([]interface{}, 0, len(x.Txs))
 	for _, tx := range x.Txs {
-		err := txbuilder.Sign(tx, x.XPubs, h.pseudohsmSignTemplate)
+		err := txbuilder.Sign(ctx, tx, x.XPubs, h.pseudohsmSignTemplate)
 		if err != nil {
 			info := errorFormatter.Format(err)
 			resp = append(resp, info)
@@ -124,8 +89,8 @@ func (h *PseudoHSMHandler) pseudohsmSignTemplates(x struct {
 	return resp
 }
 
-func (h *PseudoHSMHandler) pseudohsmSignTemplate(xpub chainkd.XPub, path [][]byte, data [32]byte) ([]byte, error) {
-	sigBytes, err := h.PseudoHSM.XSign(xpub, path, data[:])
+func (h *PseudoHSMHandler) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte) ([]byte, error) {
+	sigBytes, err := h.PseudoHSM.XSign(ctx, xpub, path, data[:])
 	if err == Pseudohsm.ErrNoKey {
 		return nil, nil
 	}
