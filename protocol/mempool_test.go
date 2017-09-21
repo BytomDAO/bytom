@@ -1,9 +1,8 @@
-package blockchain
+package protocol
 
 import (
 	"testing"
 
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/validation"
 )
@@ -15,7 +14,7 @@ func TestTxPool(t *testing.T) {
 	txB := mockCoinbaseTx(2000, 2324)
 	txC := mockCoinbaseTx(3000, 9322)
 
-	p.AddTransaction(txA, 1000, 5000000000)
+	p.AddTransaction(txA, 1, 1000, 5000000000)
 	if !p.IsTransactionInPool(&txA.ID) {
 		t.Errorf("fail to find added txA in tx pool")
 	} else {
@@ -28,14 +27,15 @@ func TestTxPool(t *testing.T) {
 	if p.IsTransactionInPool(&txB.ID) {
 		t.Errorf("shouldn't find txB in tx pool")
 	}
-	p.AddTransaction(txB, 1000, 5000000000)
+	p.AddTransaction(txB, 1000, 1, 5000000000)
 	if !p.IsTransactionInPool(&txB.ID) {
 		t.Errorf("shouldn find txB in tx pool")
 	}
+
 	if p.Count() != 2 {
 		t.Errorf("get wrong number of tx in the pool")
 	}
-	p.removeTransaction(&txB.ID)
+	p.RemoveTransaction(&txB.ID)
 	if p.IsTransactionInPool(&txB.ID) {
 		t.Errorf("shouldn't find txB in tx pool")
 	}
@@ -49,11 +49,16 @@ func TestTxPool(t *testing.T) {
 	}
 }
 
-func mockCoinbaseTx(serializedSize uint64, amount uint64) *bc.Tx {
-	return legacy.MapTx(&legacy.TxData{
+func mockCoinbaseTx(serializedSize uint64, amount uint64) *legacy.Tx {
+	oldTx := &legacy.TxData{
 		SerializedSize: serializedSize,
 		Outputs: []*legacy.TxOutput{
 			legacy.NewTxOutput(*validation.BTMAssetID, amount, []byte{1}, nil),
 		},
-	})
+	}
+
+	return &legacy.Tx{
+		TxData: *oldTx,
+		Tx:     legacy.MapTx(oldTx),
+	}
 }

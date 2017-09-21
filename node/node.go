@@ -25,10 +25,10 @@ import (
 	"github.com/tendermint/tmlibs/log"
 	//rpc "github.com/blockchain/rpc/lib"
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol"
-	"github.com/bytom/blockchain/asset"
 	rpcserver "github.com/bytom/rpc/lib/server"
 	//	"github.com/bytom/net/http/static"
 	//	"github.com/bytom/generated/dashboard"
@@ -199,6 +199,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	}
 
 	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, nil)
+	txPool := protocol.NewTxPool()
 	/* if err != nil {
 	     cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
 	   }
@@ -213,7 +214,8 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	accounts := account.NewManager(accounts_db, chain)
 	assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 	assets := asset.NewRegistry(assets_db, chain)
-	bcReactor := bc.NewBlockchainReactor(store, chain, accounts, assets, fastSync)
+	bcReactor := bc.NewBlockchainReactor(store, chain, txPool, accounts, assets, fastSync)
+
 	bcReactor.SetLogger(logger.With("module", "blockchain"))
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 

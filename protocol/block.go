@@ -134,11 +134,19 @@ func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 // ApplyValidBlock creates an updated snapshot without validating the
 // block.
 func (c *Chain) ApplyValidBlock(block *legacy.Block) (*state.Snapshot, error) {
-	newSnapshot := state.Copy(c.state.snapshot)
+	//TODO replace with a pre-defined init blo
+	var newSnapshot *state.Snapshot
+	if c.state.snapshot == nil {
+		newSnapshot = state.Empty()
+	} else {
+		newSnapshot = state.Copy(c.state.snapshot)
+	}
+
 	err := newSnapshot.ApplyBlock(legacy.MapBlock(block))
 	if err != nil {
 		return nil, err
 	}
+	//fmt.Printf("want %v, ger %v \n", block.BlockHeader.AssetsMerkleRoot, newSnapshot.Tree.RootHash())
 	if block.AssetsMerkleRoot != newSnapshot.Tree.RootHash() {
 		return nil, ErrBadStateRoot
 	}
@@ -160,15 +168,15 @@ func (c *Chain) CommitAppliedBlock(ctx context.Context, block *legacy.Block, sna
 	// SaveBlock is the linearization point. Once the block is committed
 	// to persistent storage, the block has been applied and everything
 	// else can be derived from that block.
-	/*err := c.store.SaveBlock(ctx, block)
+	err := c.store.SaveBlock(block)
 	if err != nil {
 		return errors.Wrap(err, "storing block")
-	}*/
+	}
 	if block.Time().After(c.lastQueuedSnapshot.Add(saveSnapshotFrequency)) {
 		c.queueSnapshot(ctx, block.Height, block.Time(), snapshot)
 	}
 
-	err := c.store.FinalizeBlock(ctx, block.Height)
+	err = c.store.FinalizeBlock(ctx, block.Height)
 	if err != nil {
 		return errors.Wrap(err, "finalizing block")
 	}
@@ -234,6 +242,7 @@ func NewInitialBlock(timestamp time.Time) (*legacy.Block, error) {
 				TransactionsMerkleRoot: root,
 			},
 		},
+		Transactions: []*legacy.Tx{},
 	}
 	return b, nil
 }
