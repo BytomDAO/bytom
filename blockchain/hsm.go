@@ -11,9 +11,9 @@ import (
 )
 
 func init() {
-	errorFormatter.Errors[Pseudohsm.ErrDuplicateKeyAlias] = httperror.Info{400, "BTM050", "Alias already exists"}
-	errorFormatter.Errors[Pseudohsm.ErrInvalidAfter] = httperror.Info{400, "BTM801", "Invalid `after` in query"}
-	errorFormatter.Errors[Pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
+	errorFormatter.Errors[pseudohsm.ErrDuplicateKeyAlias] = httperror.Info{400, "BTM050", "Alias already exists"}
+	errorFormatter.Errors[pseudohsm.ErrInvalidAfter] = httperror.Info{400, "BTM801", "Invalid `after` in query"}
+	errorFormatter.Errors[pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
 
 /*
@@ -40,7 +40,7 @@ type pseudoHSMHandler struct {
 */
 
 
-func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, password string, in struct{ Alias string }) (result *Pseudohsm.XPub, err error) {
+func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, password string, in struct{ Alias string }) (result *pseudohsm.XPub, err error) {
 	return a.hsm.XCreate(password, in.Alias)
 }
 
@@ -50,7 +50,7 @@ func (a *BlockchainReactor)) pseudohsmListKeys(ctx context.Context, query reques
 		limit = defGenericPageSize  // defGenericPageSize = 100
 	}
 
-	xpubs, after, err := h.PseudoHSM.ListKeys(query.After, limit)
+	xpubs, after, err := a.hsm.ListKeys(query.After, limit)
 	if err != nil {
 		return page{}, err
 	}
@@ -92,7 +92,7 @@ func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct
 
 func (a *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte) ([]byte, error) {
 	sigBytes, err := a.hsm.XSign(ctx, xpub, path, data[:])
-	if err == Pseudohsm.ErrNoKey {
+	if err == pseudohsm.ErrNoKey {
 		return nil, nil
 	}
 	return sigBytes, err

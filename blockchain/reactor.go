@@ -74,7 +74,7 @@ type BlockchainReactor struct {
 	requestsCh chan BlockRequest
 	timeoutsCh chan string
 	submitter  txbuilder.Submitter
-	hsm			hsmSigner
+	hsm		    hsmSigner
 	evsw        types.EventSwitch
 }
 
