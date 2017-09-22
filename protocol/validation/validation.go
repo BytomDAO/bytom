@@ -535,7 +535,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 		if err != nil {
 			return errors.Wrapf(err, "validity of transaction %d of %d", i, len(b.Transactions))
 		}
-		coinbaseValue += uint64(txBTMValue)
+		coinbaseValue += txBTMValue
 	}
 
 	// check the coinbase output entry value
@@ -579,7 +579,7 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 }
 
 // ValidateTx validates a transaction.
-func ValidateTx(tx *bc.Tx, block *bc.Block) (int64, error) {
+func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, error) {
 	if tx.TxHeader.SerializedSize > maxTxSize {
 		return 0, errWrongTransactionSize
 	}
@@ -596,5 +596,5 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (int64, error) {
 	}
 
 	err := checkValid(vs, tx.TxHeader)
-	return vs.gas.BTMValue, err
+	return uint64(vs.gas.BTMValue), err
 }
