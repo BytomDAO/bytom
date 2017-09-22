@@ -393,20 +393,6 @@ FOR_LOOP:
 		case _ = <-statusUpdateTicker.C:
 			// ask for status updates
 			go bcR.BroadcastStatusRequest()
-		/*case _ = <-switchToConsensusTicker.C:
-		height, numPending, _ := bcR.pool.GetStatus()
-		outbound, inbound, _ := bcR.Switch.NumPeers()
-		bcR.Logger.Info("Consensus ticker", "numPending", numPending, "total", len(bcR.pool.requesters),
-			"outbound", outbound, "inbound", inbound)
-		if bcR.pool.IsCaughtUp() {
-			bcR.Logger.Info("Time to switch to consensus reactor!", "height", height)
-			bcR.pool.Stop()
-
-			conR := bcR.Switch.Reactor("CONSENSUS").(consensusReactor)
-			conR.SwitchToConsensus(bcR.state)
-
-			break FOR_LOOP
-		}*/
 		case _ = <-trySyncTicker.C: // chan time
 			// This loop can be slow as long as it's doing syncing work.
 		SYNC_LOOP:
@@ -458,13 +444,6 @@ func (bcR *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
 	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcTransactionMessage{rawTx}})
 	return nil
 }
-
-/*
-// SetEventSwitch implements events.Eventable
-func (bcR *BlockchainReactor) SetEventSwitch(evsw types.EventSwitch) {
-	bcR.evsw = evsw
-}
-*/
 
 //-----------------------------------------------------------------------------
 // Messages

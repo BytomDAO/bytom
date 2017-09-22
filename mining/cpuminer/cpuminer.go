@@ -44,28 +44,22 @@ type CPUMiner struct {
 // target difficulty.
 func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
-	targetDifficulty := consensus.CompactToBig(header.Bits)
 
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
 		case <-quit:
 			return false
-
 		case <-ticker.C:
 			if m.chain.Height() >= header.Height {
 				return false
 			}
 		default:
-			// Non-blocking select to fall through
 		}
 
 		header.Nonce = i
 		hash := header.Hash()
 
-		// The block is solved when the new block hash is less
-		// than the target difficulty.  Yay!
-		//fmt.Printf("hash %v, targe %v \n ", consensus.HashToBig(&hash), targetDifficulty)
-		if consensus.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+		if consensus.CheckProofOfWork(&hash, header.Bits) {
 			return true
 		}
 	}

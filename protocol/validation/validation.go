@@ -95,6 +95,7 @@ var (
 	errNonemptyExtHash          = errors.New("non-empty extension hash")
 	errOverflow                 = errors.New("arithmetic overflow/underflow")
 	errPosition                 = errors.New("invalid source or destination position")
+	errWorkProof                = errors.New("invalid difficulty proof of work")
 	errTxVersion                = errors.New("invalid transaction version")
 	errUnbalanced               = errors.New("unbalanced")
 	errUntimelyTransaction      = errors.New("block timestamp outside transaction time range")
@@ -507,6 +508,10 @@ func ValidateBlock(b, prev *bc.Block) error {
 
 	if b.BlockHeader.SerializedSize > consensus.MaxBlockSzie {
 		return errWrongBlockSize
+	}
+
+	if !consensus.CheckProofOfWork(&b.ID, b.BlockHeader.Bits) {
+		return errWorkProof
 	}
 
 	coinbaseValue := consensus.BlockSubsidy(b.BlockHeader.Height)
