@@ -7,6 +7,11 @@ import (
 )
 
 const (
+	//define the Max transaction size and Max block size
+	MaxTxSize    = uint64(1024)
+	MaxBlockSzie = uint64(16384)
+
+	//config parameter for coinbase reward
 	subsidyReductionInterval = uint64(560640)
 	baseSubsidy              = uint64(624000000000)
 )

@@ -87,7 +87,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (
 	for _, txDesc := range txDescs {
 		tx := txDesc.Tx.Tx
 		blockPlusTxWeight := blockWeight + txDesc.Weight
-		if blockPlusTxWeight > validation.MaxBlockSzie {
+		if blockPlusTxWeight > consensus.MaxBlockSzie {
 			break
 		}
 

@@ -14,9 +14,6 @@ const (
 	defaultGasLimit = int64(80000)
 	muxGasCost      = int64(10)
 	gasRate         = int64(1000)
-
-	maxTxSize    = uint64(1024)
-	MaxBlockSzie = uint64(16384)
 )
 
 var BTMAssetID = &bc.AssetID{
@@ -515,7 +512,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 		}
 	}
 
-	if b.BlockHeader.SerializedSize > MaxBlockSzie {
+	if b.BlockHeader.SerializedSize > consensus.MaxBlockSzie {
 		return errWrongBlockSize
 	}
 
@@ -580,7 +577,7 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, error) {
-	if tx.TxHeader.SerializedSize > maxTxSize {
+	if tx.TxHeader.SerializedSize > consensus.MaxTxSize {
 		return 0, errWrongTransactionSize
 	}
 
