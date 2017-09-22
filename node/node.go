@@ -27,6 +27,7 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/txdb"
+	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol"
 	rpcserver "github.com/bytom/rpc/lib/server"
@@ -214,7 +215,21 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	accounts := account.NewManager(accounts_db, chain)
 	assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 	assets := asset.NewRegistry(assets_db, chain)
-	bcReactor := bc.NewBlockchainReactor(store, chain, txPool, accounts, assets, fastSync)
+
+	//Todo HSM
+	var hsm bc.hsmSigner
+
+	if config.HsmUrl != ""{
+		// todo remoteHSM
+		hsm = nil
+	} else {
+		hsm, err = pseudohsm.New(config.KeysDir())
+		if err != nil {
+			cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
+		}
+	}
+
+	bcReactor := bc.NewBlockchainReactor(store, chain, txPool, accounts, assets, hsm, fastSync)
 
 	bcReactor.SetLogger(logger.With("module", "blockchain"))
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
