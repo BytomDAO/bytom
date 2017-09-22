@@ -9,13 +9,13 @@ import (
 	"sync"
 	"os"
 
-	"bytom/crypto/ed25519/chainkd"
-	"bytom/common"
-	"bytom/errors"
-	"bytom/crypto"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/common"
+	"github.com/bytom/errors"
+	"github.com/bytom/crypto"
 	//"bytom/protocol/bc/legacy"
 
-	"bytom/blockchain/config"
+	//"github.com/bytom/blockchain/config"
 	"github.com/pborman/uuid"
 )
 
@@ -46,8 +46,8 @@ type XPub struct {
 	File    string		   `json:"file"`
 }
 
-func New(conf *config.Config) *HSM {
-	keydir, _ := filepath.Abs(conf.KeyPath)
+func New(/*conf *config.Config*/) *HSM {
+	keydir, _ := filepath.Abs("~/.bytom")
 	return &HSM{
 		keyStore:   &keyStorePassphrase{keydir, LightScryptN, LightScryptP},
 		cache:		newAddrCache(keydir),

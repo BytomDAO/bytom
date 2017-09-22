@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"bytom/common"
+	"github.com/bytom/common"
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
 )

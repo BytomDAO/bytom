@@ -1,14 +1,12 @@
-//+build !no_Pseudohsm
-
-package core
+package blockchain
 
 import (
 	"context"
-	"bytom/core/pseudohsm"
-	"bytom/core/txbuilder"
-	"bytom/crypto/ed25519/chainkd"
-	"bytom/net/http/httperror"
-	"bytom/net/http/httpjson"
+	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/net/http/httperror"
+	"github.com/bytom/net/http/httpjson"
 )
 
 func init() {

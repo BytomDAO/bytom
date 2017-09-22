@@ -20,9 +20,9 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"bytom/common"
-	"bytom/crypto"
-	"bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/common"
+	"github.com/bytom/crypto"
+	"github.com/bytom/crypto/ed25519/chainkd"
 
 	"github.com/pborman/uuid"
 

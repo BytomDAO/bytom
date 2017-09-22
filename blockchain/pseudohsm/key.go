@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"bytom/common"
-	"bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/common"
+	"github.com/bytom/crypto/ed25519/chainkd"
 
 	"github.com/pborman/uuid"
 
