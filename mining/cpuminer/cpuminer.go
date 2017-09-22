@@ -44,28 +44,22 @@ type CPUMiner struct {
 // target difficulty.
 func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
-	targetDifficulty := consensus.CompactToBig(header.Bits)
 
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
 		case <-quit:
 			return false
-
 		case <-ticker.C:
 			if m.chain.Height() >= header.Height {
 				return false
 			}
 		default:
-			// Non-blocking select to fall through
 		}
 
 		header.Nonce = i
 		hash := header.Hash()
 
-		// The block is solved when the new block hash is less
-		// than the target difficulty.  Yay!
-		//fmt.Printf("hash %v, targe %v \n ", consensus.HashToBig(&hash), targetDifficulty)
-		if consensus.HashToBig(&hash).Cmp(targetDifficulty) <= 0 {
+		if consensus.CheckProofOfWork(&hash, header.Bits) {
 			return true
 		}
 	}
@@ -91,24 +85,15 @@ out:
 		default:
 		}
 
-		//TODO: No point in searching for a solution before the chain is synced
-
 		//TODO: get address from the wallet
 		payToAddr := []byte{}
-
-		// Create a new block template using the available transactions
-		// in the memory pool as a source of transactions to potentially
-		// include in the block.
 		block, err := mining.NewBlockTemplate(m.chain, m.txPool, payToAddr)
-		//fmt.Printf("finish to generate block template with heigh %d \n", block.BlockHeader.Height)
 		if err != nil {
 			fmt.Printf("Failed to create new block template: %v \n", err)
 			continue
 		}
 
 		if m.solveBlock(block, ticker, quit) {
-			//fmt.Printf("====================================")
-			//fmt.Println(block.BlockHeader.AssetsMerkleRoot)
 			snap, err := m.chain.ApplyValidBlock(block)
 			if err != nil {
 				fmt.Printf("Failed to apply valid block: %v \n", err)
@@ -119,15 +104,6 @@ out:
 				fmt.Printf("Failed to commit block: %v \n", err)
 				continue
 			}
-			/*fmt.Println(block)
-			x, err := m.chain.GetBlock(block.BlockHeader.Height)
-			if err != nil {
-				fmt.Println(err)
-			}
-			fmt.Println(x)
-			fmt.Println(x == block)
-			fmt.Println(block.Transactions)
-			fmt.Println(x.Transactions)*/
 			fmt.Printf("finish commit block heigh %d \n", block.BlockHeader.Height)
 		}
 	}

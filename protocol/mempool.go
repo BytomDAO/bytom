@@ -41,11 +41,11 @@ func NewTxPool() *TxPool {
 	}
 }
 
-func (mp *TxPool) AddTransaction(tx *legacy.Tx, weight, height, fee uint64) *TxDesc {
+func (mp *TxPool) AddTransaction(tx *legacy.Tx, height, fee uint64) *TxDesc {
 	txD := &TxDesc{
 		Tx:       tx,
 		Added:    time.Now(),
-		Weight:   weight,
+		Weight:   tx.TxData.SerializedSize,
 		Height:   height,
 		Fee:      fee,
 		FeePerKB: fee * 1000 / tx.TxHeader.SerializedSize,

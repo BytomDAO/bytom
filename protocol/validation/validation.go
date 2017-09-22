@@ -14,17 +14,7 @@ const (
 	defaultGasLimit = int64(80000)
 	muxGasCost      = int64(10)
 	gasRate         = int64(1000)
-
-	maxTxSize    = uint64(1024)
-	MaxBlockSzie = uint64(16384)
 )
-
-var BTMAssetID = &bc.AssetID{
-	V0: uint64(18446744073709551615),
-	V1: uint64(18446744073709551615),
-	V2: uint64(18446744073709551615),
-	V3: uint64(18446744073709551615),
-}
 
 type gasState struct {
 	gasLeft  int64
@@ -105,6 +95,7 @@ var (
 	errNonemptyExtHash          = errors.New("non-empty extension hash")
 	errOverflow                 = errors.New("arithmetic overflow/underflow")
 	errPosition                 = errors.New("invalid source or destination position")
+	errWorkProof                = errors.New("invalid difficulty proof of work")
 	errTxVersion                = errors.New("invalid transaction version")
 	errUnbalanced               = errors.New("unbalanced")
 	errUntimelyTransaction      = errors.New("block timestamp outside transaction time range")
@@ -154,7 +145,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errWrongCoinbaseTransaction
 		}
 
-		if *e.WitnessDestination.Value.AssetId != *BTMAssetID {
+		if *e.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
 			return errWrongCoinbaseAsset
 		}
 
@@ -188,7 +179,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			parity[*dest.Value.AssetId] = diff
 		}
 
-		if amount, ok := parity[*BTMAssetID]; ok {
+		if amount, ok := parity[*consensus.BTMAssetID]; ok {
 			if err = vs.gas.setGas(amount); err != nil {
 				return err
 			}
@@ -197,7 +188,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 		for assetID, amount := range parity {
-			if amount != 0 && assetID != *BTMAssetID {
+			if amount != 0 && assetID != *consensus.BTMAssetID {
 				return errors.WithDetailf(errUnbalanced, "asset %x sources - destinations = %d (should be 0)", assetID.Bytes(), amount)
 			}
 		}
@@ -515,8 +506,12 @@ func ValidateBlock(b, prev *bc.Block) error {
 		}
 	}
 
-	if b.BlockHeader.SerializedSize > MaxBlockSzie {
+	if b.BlockHeader.SerializedSize > consensus.MaxBlockSzie {
 		return errWrongBlockSize
+	}
+
+	if !consensus.CheckProofOfWork(&b.ID, b.BlockHeader.Bits) {
+		return errWorkProof
 	}
 
 	coinbaseValue := consensus.BlockSubsidy(b.BlockHeader.Height)
@@ -535,7 +530,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 		if err != nil {
 			return errors.Wrapf(err, "validity of transaction %d of %d", i, len(b.Transactions))
 		}
-		coinbaseValue += uint64(txBTMValue)
+		coinbaseValue += txBTMValue
 	}
 
 	// check the coinbase output entry value
@@ -579,8 +574,8 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 }
 
 // ValidateTx validates a transaction.
-func ValidateTx(tx *bc.Tx, block *bc.Block) (int64, error) {
-	if tx.TxHeader.SerializedSize > maxTxSize {
+func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, error) {
+	if tx.TxHeader.SerializedSize > consensus.MaxTxSize {
 		return 0, errWrongTransactionSize
 	}
 
@@ -596,5 +591,5 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (int64, error) {
 	}
 
 	err := checkValid(vs, tx.TxHeader)
-	return vs.gas.BTMValue, err
+	return uint64(vs.gas.BTMValue), err
 }

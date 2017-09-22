@@ -1,13 +1,13 @@
 package legacy
 
 import (
+	"blockchain/consensus"
 	"bytes"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/validation"
 )
 
 func TestMapTx(t *testing.T) {
@@ -69,7 +69,7 @@ func TestMapCoinbaseTx(t *testing.T) {
 		Version: 1,
 		Inputs:  []*TxInput{},
 		Outputs: []*TxOutput{
-			NewTxOutput(*validation.BTMAssetID, 800000000000, []byte{1}, nil),
+			NewTxOutput(*consensus.BTMAssetID, 800000000000, []byte{1}, nil),
 		},
 	}
 	oldOut := oldTx.Outputs[0]

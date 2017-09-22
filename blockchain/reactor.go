@@ -358,7 +358,7 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		if err != nil {
 			return
 		}
-		bcR.txPool.AddTransaction(tx, tx.TxData.SerializedSize, block.BlockHeader.Height, uint64(gas))
+		bcR.txPool.AddTransaction(tx, block.BlockHeader.Height, gas)
 		go bcR.BroadcastTransaction(tx)
 	default:
 		bcR.Logger.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
@@ -398,33 +398,15 @@ FOR_LOOP:
 		case _ = <-statusUpdateTicker.C:
 			// ask for status updates
 			go bcR.BroadcastStatusRequest()
-		/*case _ = <-switchToConsensusTicker.C:
-		height, numPending, _ := bcR.pool.GetStatus()
-		outbound, inbound, _ := bcR.Switch.NumPeers()
-		bcR.Logger.Info("Consensus ticker", "numPending", numPending, "total", len(bcR.pool.requesters),
-			"outbound", outbound, "inbound", inbound)
-		if bcR.pool.IsCaughtUp() {
-			bcR.Logger.Info("Time to switch to consensus reactor!", "height", height)
-			bcR.pool.Stop()
-
-			conR := bcR.Switch.Reactor("CONSENSUS").(consensusReactor)
-			conR.SwitchToConsensus(bcR.state)
-
-			break FOR_LOOP
-		}*/
 		case _ = <-trySyncTicker.C: // chan time
-			// This loop can be slow as long as it's doing syncing work.
 		SYNC_LOOP:
 			for i := 0; i < 10; i++ {
 				// See if there are any blocks to sync.
 				block, _ := bcR.pool.PeekTwoBlocks()
-				//bcR.Logger.Info("TrySync peeked", "first", first, "second", second)
 				if block == nil {
-					//bcR.Logger.Info("skip sync loop, nothing need to be sync")
 					break SYNC_LOOP
 				}
 
-				//bcR.Logger.Info("start to sync block", block)
 				bcR.pool.PopRequest()
 				snap, err := bcR.chain.ApplyValidBlock(block)
 				if err != nil {
@@ -436,7 +418,7 @@ FOR_LOOP:
 					fmt.Printf("Failed to commit block: %v \n", err)
 					break SYNC_LOOP
 				}
-				bcR.Logger.Info("finish to sync commit block", block)
+				bcR.Logger.Info("finish to sync commit block", block.BlockHeader.Height)
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:
@@ -463,13 +445,6 @@ func (bcR *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
 	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcTransactionMessage{rawTx}})
 	return nil
 }
-
-/*
-// SetEventSwitch implements events.Eventable
-func (bcR *BlockchainReactor) SetEventSwitch(evsw types.EventSwitch) {
-	bcR.evsw = evsw
-}
-*/
 
 //-----------------------------------------------------------------------------
 // Messages

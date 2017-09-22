@@ -40,7 +40,7 @@ func createCoinbaseTx(amount uint64, blockHeight uint64, addr []byte) (*legacy.T
 	}
 
 	builder := txbuilder.NewBuilder(time.Now())
-	builder.AddOutput(legacy.NewTxOutput(*validation.BTMAssetID, amount, cbScript, nil))
+	builder.AddOutput(legacy.NewTxOutput(*consensus.BTMAssetID, amount, cbScript, nil))
 	_, txData, err := builder.Build()
 	tx := &legacy.Tx{
 		TxData: *txData,
@@ -87,7 +87,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (
 	for _, txDesc := range txDescs {
 		tx := txDesc.Tx.Tx
 		blockPlusTxWeight := blockWeight + txDesc.Weight
-		if blockPlusTxWeight > validation.MaxBlockSzie {
+		if blockPlusTxWeight > consensus.MaxBlockSzie {
 			break
 		}
 
