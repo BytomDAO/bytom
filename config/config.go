@@ -83,6 +83,12 @@ type BaseConfig struct {
 	// Database directory
 	DBPath string `mapstructure:"db_dir"`
 
+	// Keystore directory
+	KeysPath string `mapstructure:"keys_dir"`
+
+	// remote HSM url
+	HsmUrl string `mapstructure:"hsm_url"`
+
 	ApiAddress string `mapstructure:"api_addr"`
 
 	Time time.Time
@@ -99,6 +105,8 @@ func DefaultBaseConfig() BaseConfig {
 		TxIndex:           "kv",
 		DBBackend:         "leveldb",
 		DBPath:            "data",
+		KeysPath:		   "keystore",
+		HsmUrl:			   ""
 	}
 }
 
@@ -117,6 +125,11 @@ func (b BaseConfig) GenesisFile() string {
 func (b BaseConfig) DBDir() string {
 	return rootify(b.DBPath, b.RootDir)
 }
+
+func (b BaseConfig) KeysDir() string {
+	return rootify(b.KeysPath, b.RootDir)
+}
+
 
 func DefaultLogLevel() string {
 	return "info"

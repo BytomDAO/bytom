@@ -28,8 +28,8 @@ import (
 	"sync"
 	"time"
 
-	"bytom/common"
-	_"bytom/errors"
+	"github.com/bytom/common"
+	_"github.com/bytom/errors"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does

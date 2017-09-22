@@ -4,11 +4,11 @@ package core
 
 import (
 	"context"
-	"bytom/core/pseudohsm"
-	"bytom/core/txbuilder"
-	"bytom/crypto/ed25519/chainkd"
-	"bytom/net/http/httperror"
-	"bytom/net/http/httpjson"
+	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/net/http/httperror"
+	"github.com/bytom/net/http/httpjson"
 )
 
 func init() {
@@ -19,6 +19,7 @@ func init() {
 
 // PseudoHSM configures the Core to expose the PseudoHSM endpoints. It
 // is only included in non-production builds.
+/*
 func PseudoHSM(hsm *Pseudohsm.HSM) RunOption {
 	return func(api *API) {
 
@@ -37,13 +38,14 @@ func PseudoHSM(hsm *Pseudohsm.HSM) RunOption {
 type pseudoHSMHandler struct {
 	PseudoHSM *Pseudohsm.HSM
 }
+*/
 
 
-func (h *PseudoHSMHandler) pseudohsmCreateKey(ctx context.Context, password string, in struct{ Alias string }) (result *Pseudohsm.XPub, err error) {
-	return h.PseudoHSM.XCreate(password, in.Alias)
+func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, password string, in struct{ Alias string }) (result *Pseudohsm.XPub, err error) {
+	return a.hsm.XCreate(password, in.Alias)
 }
 
-func (h *PseudoHSMHandler) pseudohsmListKeys(ctx context.Context, query requestQuery) (page, error) {
+func (a *BlockchainReactor)) pseudohsmListKeys(ctx context.Context, query requestQuery) (page, error) {
 	limit := query.PageSize
 	if limit == 0 {
 		limit = defGenericPageSize  // defGenericPageSize = 100
@@ -68,20 +70,20 @@ func (h *PseudoHSMHandler) pseudohsmListKeys(ctx context.Context, query requestQ
 	}, nil
 }
 
-func (h *PseudoHSMHandler) pseudohsmDeleteKey(ctx context.Context, xpub chainkd.XPub, password string) error {
-	return h.PseudoHSM.XDelete(xpub, password)
+func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, xpub chainkd.XPub, password string) error {
+	return a.hsm.XDelete(xpub, password)
 }
 
-func (h *PseudoHSMHandler) pseudohsmSignTemplates(ctx context.Context, x struct {
+func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
 	Txs   []*txbuilder.Template `json:"transactions"`
 	XPubs []chainkd.XPub        `json:"xpubs"`
 }) []interface{} {
 	resp := make([]interface{}, 0, len(x.Txs))
 	for _, tx := range x.Txs {
-		err := txbuilder.Sign(ctx, tx, x.XPubs, h.pseudohsmSignTemplate)
+		err := txbuilder.Sign(ctx, tx, x.XPubs, a.hsm.pseudohsmSignTemplate)
 		if err != nil {
 			info := errorFormatter.Format(err)
-			resp = append(resp, info)
+			response = append(resp, info)
 		} else {
 			resp = append(resp, tx)
 		}
@@ -89,8 +91,8 @@ func (h *PseudoHSMHandler) pseudohsmSignTemplates(ctx context.Context, x struct 
 	return resp
 }
 
-func (h *PseudoHSMHandler) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte) ([]byte, error) {
-	sigBytes, err := h.PseudoHSM.XSign(ctx, xpub, path, data[:])
+func (a *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte) ([]byte, error) {
+	sigBytes, err := a.hsm.XSign(ctx, xpub, path, data[:])
 	if err == Pseudohsm.ErrNoKey {
 		return nil, nil
 	}
@@ -98,7 +100,7 @@ func (h *PseudoHSMHandler) pseudohsmSignTemplate(ctx context.Context, xpub chain
 }
 
 // remote hsm used
-
+/*
 func RemoteHSM(hsm *remoteHSM) RunOption {
 	return func(api *API) {
 		h := &retmoteHSMHandler{RemoteHSM: hsm}
@@ -107,7 +109,7 @@ func RemoteHSM(hsm *remoteHSM) RunOption {
 	}
 }
 
-/*
+
 type remoteHSM struct {
 	Client *rpc.Client
 }

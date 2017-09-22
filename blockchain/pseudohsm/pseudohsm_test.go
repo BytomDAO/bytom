@@ -5,8 +5,8 @@ import (
 	"testing"
 	_"github.com/davecgh/go-spew/spew"
 
-	"bytom/blockchain/config"
-	"bytom/errors"
+	"github.com/bytom/blockchain/config"
+	"github.com/bytom/errors"
 	//"bytom/protocol/bc/legacy"
 )
 

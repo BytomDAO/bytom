@@ -9,13 +9,12 @@ import (
 	"sync"
 	"os"
 
-	"bytom/crypto/ed25519/chainkd"
-	"bytom/common"
-	"bytom/errors"
-	"bytom/crypto"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/common"
+	"github.com/bytom/errors"
+	"github.com/bytom/crypto"
 	//"bytom/protocol/bc/legacy"
-
-	"bytom/blockchain/config"
+	"github.com/bytom/blockchain/config"
 	"github.com/pborman/uuid"
 )
 
@@ -46,13 +45,13 @@ type XPub struct {
 	File    string		   `json:"file"`
 }
 
-func New(conf *config.Config) *HSM {
-	keydir, _ := filepath.Abs(conf.KeyPath)
+func New(keypath string) (*HSM, error) {
+	keydir, _ := filepath.Abs(keypath)
 	return &HSM{
 		keyStore:   &keyStorePassphrase{keydir, LightScryptN, LightScryptP},
 		cache:		newAddrCache(keydir),
 		kdCache:	make(map[chainkd.XPub]chainkd.XPrv),
-	}
+	}, nil
 }
 
 // XCreate produces a new random xprv and stores it in the db.

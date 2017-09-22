@@ -23,6 +23,7 @@ import (
 	"github.com/bytom/types"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/bytom/crypto/ed25519/chainkd"
 	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	//"github.com/bytom/net/http/limit"
@@ -51,6 +52,10 @@ const (
 	crosscoreRPCPrefix               = "/rpc/"
 )
 
+type hsmSigner interface {
+	XSign(ctx context.Context, xpub chainkd.XPub, path [][]byte, msg []byte) ([]byte, error)
+}
+
 // BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
@@ -69,6 +74,7 @@ type BlockchainReactor struct {
 	requestsCh chan BlockRequest
 	timeoutsCh chan string
 	submitter  txbuilder.Submitter
+	hsm			hsmSigner
 	chain       *protocol.Chain
 	store       *txdb.Store
 	accounts    *account.Manager
@@ -77,7 +83,7 @@ type BlockchainReactor struct {
 	pool        *BlockPool
 	mux         *http.ServeMux
 	accesstoken *accesstoken.Token
-	handler     http.Handler
+
 	fastSync    bool
 	requestsCh  chan BlockRequest
 	timeoutsCh  chan string
@@ -108,6 +114,8 @@ func batchRecover(ctx context.Context, v *interface{}) {
 	}
 }
 
+
+
 func jsonHandler(f interface{}) http.Handler {
 	h, err := httpjson.Handler(f, errorFormatter.Write)
 	if err != nil {
@@ -119,6 +127,7 @@ func jsonHandler(f interface{}) http.Handler {
 func alwaysError(err error) http.Handler {
 	return jsonHandler(func() error { return err })
 }
+
 
 func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	bcr.handler.ServeHTTP(rw, req)
@@ -191,6 +200,14 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/list-access-tokens", jsonHandler(bcr.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(bcr.deleteAccessToken))
 
+	m.Handle("/hsm/create-key", needConfig(bcr.pseudohsmCreateKey))
+	m.Handle("/hsm/list-keys", needConfig(bcr.pseudohsmListKeys))
+	m.Handle("/hsm/delete-key", needConfig(bcr.pseudohsmDeleteKey))
+	m.Handle("/hsm/sign-transaction", needConfig(bcr.pseudohsmSignTemplates))
+	m.Handle("/hsm/reset-password", needConfig(bcr.pseudohsmResetPassword))
+	m.Handle("/hsm/update-alias", needConfig(bcr.pseudohsmUpdateAlias))
+
+
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
 			defer l.RecordSince(time.Now())
@@ -210,6 +227,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 			handler = blockchainIDHandler(handler, a.config.BlockchainId.String())
 		}
 	*/
+
 	bcr.handler = handler
 }
 
@@ -253,7 +271,7 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, assets *asset.Registry, fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, assets *asset.Registry, hsm hsmSigner, fastSync bool) *BlockchainReactor {
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
 	pool := NewBlockPool(
@@ -271,6 +289,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *ac
 		txPool:     txPool,
 		mining:     mining,
 		mux:        http.NewServeMux(),
+		hsm:		hsm,
 		fastSync:   fastSync,
 		requestsCh: requestsCh,
 		timeoutsCh: timeoutsCh,
