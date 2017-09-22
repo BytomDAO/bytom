@@ -1,5 +1,5 @@
-package core
 package blockchain
+
 
 import (
 	"context"
@@ -15,11 +15,10 @@ func init() {
 	errorFormatter.Errors[Pseudohsm.ErrInvalidAfter] = httperror.Info{400, "BTM801", "Invalid `after` in query"}
 	errorFormatter.Errors[Pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
-*/
 
+/*
 // PseudoHSM configures the Core to expose the PseudoHSM endpoints. It
 // is only included in non-production builds.
-/*
 func PseudoHSM(hsm *Pseudohsm.HSM) RunOption {
 	return func(api *API) {
 
@@ -98,8 +97,6 @@ func (a *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chai
 	}
 	return sigBytes, err
 }
-<<<<<<< HEAD
-=======
 
 // remote hsm used
 /*
@@ -110,8 +107,6 @@ func RemoteHSM(hsm *remoteHSM) RunOption {
 		api.mux.Handle("/hsm/sign-transaction", needConfig(h.Sign))
 	}
 }
-*/
-
 
 type remoteHSM struct {
 	Client *rpc.Client
@@ -163,4 +158,3 @@ func (h *remoteHSM) Sign(ctx context.Context, pk ed25519.PublicKey, date [32]byt
 	return sigBytes
 }
 */
->>>>>>> 46026d4dddb05afe55429617e76a489bde244e0b
