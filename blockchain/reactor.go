@@ -394,18 +394,14 @@ FOR_LOOP:
 			// ask for status updates
 			go bcR.BroadcastStatusRequest()
 		case _ = <-trySyncTicker.C: // chan time
-			// This loop can be slow as long as it's doing syncing work.
 		SYNC_LOOP:
 			for i := 0; i < 10; i++ {
 				// See if there are any blocks to sync.
 				block, _ := bcR.pool.PeekTwoBlocks()
-				//bcR.Logger.Info("TrySync peeked", "first", first, "second", second)
 				if block == nil {
-					//bcR.Logger.Info("skip sync loop, nothing need to be sync")
 					break SYNC_LOOP
 				}
 
-				//bcR.Logger.Info("start to sync block", block)
 				bcR.pool.PopRequest()
 				snap, err := bcR.chain.ApplyValidBlock(block)
 				if err != nil {
@@ -417,7 +413,7 @@ FOR_LOOP:
 					fmt.Printf("Failed to commit block: %v \n", err)
 					break SYNC_LOOP
 				}
-				bcR.Logger.Info("finish to sync commit block", block)
+				bcR.Logger.Info("finish to sync commit block")
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:
