@@ -413,7 +413,7 @@ FOR_LOOP:
 					fmt.Printf("Failed to commit block: %v \n", err)
 					break SYNC_LOOP
 				}
-				bcR.Logger.Info("finish to sync commit block")
+				bcR.Logger.Info("finish to sync commit block", block.BlockHeader.Height)
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:
