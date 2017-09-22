@@ -353,7 +353,7 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		if err != nil {
 			return
 		}
-		bcR.txPool.AddTransaction(tx, tx.TxData.SerializedSize, block.BlockHeader.Height, uint64(gas))
+		bcR.txPool.AddTransaction(tx, block.BlockHeader.Height, uint64(gas))
 		go bcR.BroadcastTransaction(tx)
 	default:
 		bcR.Logger.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
