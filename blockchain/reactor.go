@@ -241,15 +241,15 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *account.Manager, assets *asset.Registry, fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, fastSync bool) *BlockchainReactor {
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
 	pool := NewBlockPool(
-		store.Height()+1,
-		requestsCh,
-		timeoutsCh,
+			store.Height()+1,
+			requestsCh,
+			timeoutsCh,
 	)
-	//	mining := cpuminer.NewCPUMiner(chain, txPool)
+	mining := cpuminer.NewCPUMiner(chain, txPool)
 	bcR := &BlockchainReactor{
 		chain:      chain,
 		store:      store,
@@ -266,6 +266,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, accounts *ac
 	bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
 	return bcR
 }
+
 
 // OnStart implements BaseService
 func (bcR *BlockchainReactor) OnStart() error {
@@ -321,14 +322,9 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 
 	switch msg := msg.(type) {
 	case *bcBlockRequestMessage:
-		/*		// Got a request for a block. Respond with block if we have it.
-				rawBlock, err := bcR.store.GetRawBlock(msg.Height)
-				//fmt.Printf("sent block %v \n", rawBlock)
-				if err == nil {
-					msg := &bcBlockResponseMessage{RawBlock: rawBlock}
-		*/block, _ := bcR.store.GetBlock(msg.Height)
-		if block != nil {
-			msg := &bcBlockResponseMessage{Block: block}
+		rawBlock, err := bcR.store.GetRawBlock(msg.Height)
+		if err == nil {
+			msg := &bcBlockResponseMessage{RawBlock: rawBlock}
 			queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 			if !queued {
 				// queue is full, just ignore.
@@ -441,8 +437,6 @@ FOR_LOOP:
 					break SYNC_LOOP
 				}
 				bcR.Logger.Info("finish to sync commit block", block)
-				bcR.pool.PopRequest()
-				bcR.store.SaveBlock(first)
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:
