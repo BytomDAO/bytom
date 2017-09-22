@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
+	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/log"
 	"github.com/bytom/mining/cpuminer"
@@ -23,7 +24,6 @@ import (
 	"github.com/bytom/types"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
-	"github.com/bytom/crypto/ed25519/chainkd"
 	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	//"github.com/bytom/net/http/limit"
@@ -52,9 +52,6 @@ const (
 	crosscoreRPCPrefix               = "/rpc/"
 )
 
-type hsmSigner interface {
-	XSign(ctx context.Context, xpub chainkd.XPub, path [][]byte, msg []byte) ([]byte, error)
-}
 
 // BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
@@ -64,6 +61,7 @@ type BlockchainReactor struct {
 	store      *txdb.Store
 	accounts   *account.Manager
 	assets     *asset.Registry
+	accesstoken *accesstoken.Token
 	txFeeds    *txfeed.TxFeed
 	pool       *BlockPool
 	txPool     *protocol.TxPool
@@ -74,7 +72,7 @@ type BlockchainReactor struct {
 	requestsCh chan BlockRequest
 	timeoutsCh chan string
 	submitter  txbuilder.Submitter
-	hsm			hsmSigner
+	hsm	   *pseudohsm.HSM
 	evsw        types.EventSwitch
 }
 
@@ -187,12 +185,13 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/list-access-tokens", jsonHandler(bcr.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(bcr.deleteAccessToken))
 
-	m.Handle("/hsm/create-key", needConfig(bcr.pseudohsmCreateKey))
-	m.Handle("/hsm/list-keys", needConfig(bcr.pseudohsmListKeys))
-	m.Handle("/hsm/delete-key", needConfig(bcr.pseudohsmDeleteKey))
-	m.Handle("/hsm/sign-transaction", needConfig(bcr.pseudohsmSignTemplates))
-	m.Handle("/hsm/reset-password", needConfig(bcr.pseudohsmResetPassword))
-	m.Handle("/hsm/update-alias", needConfig(bcr.pseudohsmUpdateAlias))
+	m.Handle("/hsm/create-key", jsonHandler(bcr.pseudohsmCreateKey))
+	m.Handle("/hsm/list-keys", jsonHandler(bcr.pseudohsmListKeys))
+	m.Handle("/hsm/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
+	m.Handle("/hsm/sign-transaction", jsonHandler(bcr.pseudohsmSignTemplates))
+
+	//m.Handle("/hsm/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
+	//m.Handle("/hsm/update-alias", jsonHandler(bcr.pseudohsmUpdateAlias))
 
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -259,7 +258,7 @@ type page struct {
 }
 
 
-func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, hsm hsmSigner, fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, hsm *pseudohsm.HSM, fastSync bool) *BlockchainReactor {
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
 	pool := NewBlockPool(
@@ -277,7 +276,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *prot
 		txPool:     txPool,
 		mining:     mining,
 		mux:        http.NewServeMux(),
-		hsm:		hsm,
+		hsm:	    hsm,
 		fastSync:   fastSync,
 		requestsCh: requestsCh,
 		timeoutsCh: timeoutsCh,

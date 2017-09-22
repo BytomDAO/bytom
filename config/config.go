@@ -105,8 +105,8 @@ func DefaultBaseConfig() BaseConfig {
 		TxIndex:           "kv",
 		DBBackend:         "leveldb",
 		DBPath:            "data",
-		KeysPath:		   "keystore",
-		HsmUrl:			   ""
+		KeysPath:	   "keystore",
+		HsmUrl:		   "",
 	}
 }
 
