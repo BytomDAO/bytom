@@ -40,8 +40,8 @@ type pseudoHSMHandler struct {
 */
 
 
-func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, password string, in struct{ Alias string }) (result *pseudohsm.XPub, err error) {
-	return a.hsm.XCreate(password, in.Alias)
+func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context,  in struct{ Alias, Password string }) (result *pseudohsm.XPub, err error) {
+	return a.hsm.XCreate(in.Password, in.Alias)
 }
 
 
@@ -70,11 +70,15 @@ func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query request
 	}, nil
 }
 
-func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, xpub chainkd.XPub, password string) error {
-	return a.hsm.XDelete(xpub, password)
+func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context,  x struct {
+	Password   string
+	XPub chainkd.XPub        `json:"xpubs"`
+}) error {
+	return a.hsm.XDelete(x.XPub, x.Password)
 }
 
-func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, password string,  x struct {
+func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context,  x struct {
+	Passwords []string
 	Txs   []*txbuilder.Template `json:"transactions"`
 	XPubs []chainkd.XPub        `json:"xpubs"`
 }) []interface{} {

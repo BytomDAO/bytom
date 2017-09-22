@@ -65,14 +65,14 @@ type BlockchainReactor struct {
 	txFeeds    *txfeed.TxFeed
 	pool       *BlockPool
 	txPool     *protocol.TxPool
+	hsm		   *pseudohsm.HSM
 	mining     *cpuminer.CPUMiner
 	mux        *http.ServeMux
-	handler    http.Handler
-	fastSync   bool
-	requestsCh chan BlockRequest
-	timeoutsCh chan string
-	submitter  txbuilder.Submitter
-	hsm	   *pseudohsm.HSM
+	handler    	http.Handler
+	fastSync  	bool
+	requestsCh 	chan BlockRequest
+	timeoutsCh 	chan string
+	submitter  	txbuilder.Submitter
 	evsw        types.EventSwitch
 }
 
@@ -184,7 +184,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/create-access-token", jsonHandler(bcr.createAccessToken))
 	m.Handle("/list-access-tokens", jsonHandler(bcr.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(bcr.deleteAccessToken))
-
+	//hsm api
 	m.Handle("/hsm/create-key", jsonHandler(bcr.pseudohsmCreateKey))
 	m.Handle("/hsm/list-keys", jsonHandler(bcr.pseudohsmListKeys))
 	m.Handle("/hsm/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
