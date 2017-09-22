@@ -14,7 +14,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/crypto"
 	//"bytom/protocol/bc/legacy"
-	"github.com/bytom/blockchain/config"
 	"github.com/pborman/uuid"
 )
 
@@ -44,6 +43,7 @@ type XPub struct {
 	XPub  chainkd.XPub 	   `json:"xpub"`
 	File    string		   `json:"file"`
 }
+
 
 func New(keypath string) (*HSM, error) {
 	keydir, _ := filepath.Abs(keypath)

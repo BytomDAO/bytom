@@ -1,6 +1,5 @@
-//+build !no_Pseudohsm
-
 package core
+package blockchain
 
 import (
 	"context"
@@ -16,6 +15,7 @@ func init() {
 	errorFormatter.Errors[Pseudohsm.ErrInvalidAfter] = httperror.Info{400, "BTM801", "Invalid `after` in query"}
 	errorFormatter.Errors[Pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
+*/
 
 // PseudoHSM configures the Core to expose the PseudoHSM endpoints. It
 // is only included in non-production builds.
@@ -98,3 +98,69 @@ func (a *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chai
 	}
 	return sigBytes, err
 }
+<<<<<<< HEAD
+=======
+
+// remote hsm used
+/*
+func RemoteHSM(hsm *remoteHSM) RunOption {
+	return func(api *API) {
+		h := &retmoteHSMHandler{RemoteHSM: hsm}
+		needConfig := api.needConfig()
+		api.mux.Handle("/hsm/sign-transaction", needConfig(h.Sign))
+	}
+}
+*/
+
+
+type remoteHSM struct {
+	Client *rpc.Client
+}
+
+func remoteHSMHandler struct {
+	RemoteHSM  *remoteHSM
+}
+
+func New(conf *config.Config) *HSM {
+
+	httpClient := new(http.Client)
+	httpClient.Transport = &http.Transport{
+		TLSClientConfig: tlsConfig,
+		// The following fields are default values
+		// copied from DefaultTransport.
+		// (When you change them, be sure to move them
+		// above this line so this comment stays true.)
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+
+	return &remoteHSM{Client: &rpc.Client{
+			BaseURL:      conf.HsmUrl,
+			AccessToken:  conf.HsmAccessToken,
+			Username:     conf.processID,
+			CoreID:       conf.Id,
+			Version:      conf.version,
+			BlockchainID: conf.BlockchainId.String(),
+			Client:       httpClient,
+		}}
+}
+
+
+func (h *remoteHSM) Sign(ctx context.Context, pk ed25519.PublicKey, date [32]byte)([]byte, err error) {
+	body := struct {
+		Block *legacy.TxHeader 	  `json:"txheader"`
+		Pub   json.HexBytes       `json:"pubkey"`
+	}{data, json.HexBytes(pk[:])}
+
+	err = h.Client.Call(ctx, "/sign-transaction", body, &sigBytes)
+	return sigBytes
+}
+*/
+>>>>>>> 46026d4dddb05afe55429617e76a489bde244e0b
