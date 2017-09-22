@@ -2,7 +2,6 @@ package protocol
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/bytom/errors"
@@ -38,84 +37,6 @@ var (
 // otherwise it returns an error.
 func (c *Chain) GetBlock(height uint64) (*legacy.Block, error) {
 	return c.store.GetBlock(height)
-}
-
-// GenerateBlock generates a valid, but unsigned, candidate block from
-// the current pending transaction pool. It returns the new block and
-// a snapshot of what the state snapshot is if the block is applied.
-//
-// After generating the block, the pending transaction pool will be
-// empty.
-func (c *Chain) GenerateBlock(ctx context.Context, prev *legacy.Block, snapshot *state.Snapshot, now time.Time, txs []*legacy.Tx) (*legacy.Block, *state.Snapshot, error) {
-	// TODO(kr): move this into a lower-level package (e.g. chain/protocol/bc)
-	// so that other packages (e.g. chain/protocol/validation) unit tests can
-	// call this function.
-
-	timestampMS := bc.Millis(now)
-	if timestampMS < prev.TimestampMS {
-		return nil, nil, fmt.Errorf("timestamp %d is earlier than prevblock timestamp %d", timestampMS, prev.TimestampMS)
-	}
-
-	// Make a copy of the snapshot that we can apply our changes to.
-	newSnapshot := state.Copy(c.state.snapshot)
-	newSnapshot.PruneNonces(timestampMS)
-
-	b := &legacy.Block{
-		BlockHeader: legacy.BlockHeader{
-			Version:           1,
-			Height:            prev.Height + 1,
-			PreviousBlockHash: prev.Hash(),
-			TimestampMS:       timestampMS,
-			BlockCommitment:   legacy.BlockCommitment{},
-		},
-	}
-
-	var txEntries []*bc.Tx
-
-	for _, tx := range txs {
-		if len(b.Transactions) >= maxBlockTxs {
-			break
-		}
-
-		// Filter out transactions that are not well-formed.
-		err := c.ValidateTx(tx.Tx)
-		if err != nil {
-			// TODO(bobg): log this?
-			continue
-		}
-
-		// Filter out transactions that are not yet valid, or no longer
-		// valid, per the block's timestamp.
-		if tx.Tx.MinTimeMs > 0 && tx.Tx.MinTimeMs > b.TimestampMS {
-			// TODO(bobg): log this?
-			continue
-		}
-		if tx.Tx.MaxTimeMs > 0 && tx.Tx.MaxTimeMs < b.TimestampMS {
-			// TODO(bobg): log this?
-			continue
-		}
-
-		// Filter out double-spends etc.
-		err = newSnapshot.ApplyTx(tx.Tx)
-		if err != nil {
-			// TODO(bobg): log this?
-			continue
-		}
-
-		b.Transactions = append(b.Transactions, tx)
-		txEntries = append(txEntries, tx.Tx)
-	}
-
-	var err error
-
-	b.TransactionsMerkleRoot, err = bc.MerkleRoot(txEntries)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "calculating tx merkle root")
-	}
-
-	b.AssetsMerkleRoot = newSnapshot.Tree.RootHash()
-
-	return b, newSnapshot, nil
 }
 
 // ValidateBlock validates an incoming block in advance of applying it

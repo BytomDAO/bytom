@@ -110,39 +110,3 @@ func BlockKeyPairs(c *protocol.Chain) ([]ed25519.PublicKey, []ed25519.PrivateKey
 	defer mutex.Unlock()
 	return blockPubkeys[c], blockPrivkeys[c]
 }
-
-// MakeBlock makes a new block from txs, commits it, and returns it.
-// It assumes c's consensus program requires 0 signatures.
-// (This is true for chains returned by NewChain.)
-// If c requires more than 0 signatures, MakeBlock will fail.
-// MakeBlock always makes a block;
-// if there are no transactions in txs,
-// it makes an empty block.
-func MakeBlock(tb testing.TB, c *protocol.Chain, txs []*legacy.Tx) *legacy.Block {
-	ctx := context.Background()
-	curBlock, err := c.GetBlock(c.Height())
-	if err != nil {
-		testutil.FatalErr(tb, err)
-	}
-
-	mutex.Lock()
-	curState := states[c]
-	mutex.Unlock()
-	if curState == nil {
-		curState = state.Empty()
-	}
-
-	nextBlock, nextState, err := c.GenerateBlock(ctx, curBlock, curState, time.Now(), txs)
-	if err != nil {
-		testutil.FatalErr(tb, err)
-	}
-	err = c.CommitAppliedBlock(ctx, nextBlock, nextState)
-	if err != nil {
-		testutil.FatalErr(tb, err)
-	}
-
-	mutex.Lock()
-	states[c] = nextState
-	mutex.Unlock()
-	return nextBlock
-}
