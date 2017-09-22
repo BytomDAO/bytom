@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/testutil"
 
@@ -684,7 +683,7 @@ func mockCoinbaseTx(amount uint64) *bc.Tx {
 }
 
 func mockGasTxInput() *legacy.TxInput {
-	return legacy.NewSpendInput([][]byte{}, *newHash(8), *validation.BTMAssetID, 100000000, 0, []byte{byte(vm.OP_TRUE)}, *newHash(9), []byte{})
+	return legacy.NewSpendInput([][]byte{}, *newHash(8), *BTMAssetID, 100000000, 0, []byte{byte(vm.OP_TRUE)}, *newHash(9), []byte{})
 }
 
 // Like errors.Root, but also unwraps vm.Error objects.
