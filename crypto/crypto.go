@@ -26,7 +26,7 @@ import (
 	//"encoding/hex"
 	//"errors"
 
-	"bytom/common"
+	"github.com/bytom/common"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/crypto/ripemd160"
 )
