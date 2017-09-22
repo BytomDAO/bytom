@@ -1,10 +1,10 @@
 package protocol
 
 import (
+	"blockchain/consensus"
 	"testing"
 
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/validation"
 )
 
 func TestTxPool(t *testing.T) {
@@ -53,7 +53,7 @@ func mockCoinbaseTx(serializedSize uint64, amount uint64) *legacy.Tx {
 	oldTx := &legacy.TxData{
 		SerializedSize: serializedSize,
 		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(*validation.BTMAssetID, amount, []byte{1}, nil),
+			legacy.NewTxOutput(*consensus.BTMAssetID, amount, []byte{1}, nil),
 		},
 	}
 

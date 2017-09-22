@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"blockchain/consensus"
 	"fmt"
 	"math"
 	"testing"
@@ -10,7 +11,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/testutil"
 
@@ -678,13 +678,13 @@ func mockBlock() *bc.Block {
 func mockCoinbaseTx(amount uint64) *bc.Tx {
 	return legacy.MapTx(&legacy.TxData{
 		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(*BTMAssetID, amount, []byte{1}, nil),
+			legacy.NewTxOutput(*consensus.BTMAssetID, amount, []byte{1}, nil),
 		},
 	})
 }
 
 func mockGasTxInput() *legacy.TxInput {
-	return legacy.NewSpendInput([][]byte{}, *newHash(8), *validation.BTMAssetID, 100000000, 0, []byte{byte(vm.OP_TRUE)}, *newHash(9), []byte{})
+	return legacy.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, []byte{byte(vm.OP_TRUE)}, *newHash(9), []byte{})
 }
 
 // Like errors.Root, but also unwraps vm.Error objects.

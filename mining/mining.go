@@ -40,7 +40,7 @@ func createCoinbaseTx(amount uint64, blockHeight uint64, addr []byte) (*legacy.T
 	}
 
 	builder := txbuilder.NewBuilder(time.Now())
-	builder.AddOutput(legacy.NewTxOutput(*validation.BTMAssetID, amount, cbScript, nil))
+	builder.AddOutput(legacy.NewTxOutput(*consensus.BTMAssetID, amount, cbScript, nil))
 	_, txData, err := builder.Build()
 	tx := &legacy.Tx{
 		TxData: *txData,

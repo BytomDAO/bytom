@@ -16,13 +16,6 @@ const (
 	gasRate         = int64(1000)
 )
 
-var BTMAssetID = &bc.AssetID{
-	V0: uint64(18446744073709551615),
-	V1: uint64(18446744073709551615),
-	V2: uint64(18446744073709551615),
-	V3: uint64(18446744073709551615),
-}
-
 type gasState struct {
 	gasLeft  int64
 	gasUsed  int64
@@ -151,7 +144,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errWrongCoinbaseTransaction
 		}
 
-		if *e.WitnessDestination.Value.AssetId != *BTMAssetID {
+		if *e.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
 			return errWrongCoinbaseAsset
 		}
 
@@ -185,7 +178,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			parity[*dest.Value.AssetId] = diff
 		}
 
-		if amount, ok := parity[*BTMAssetID]; ok {
+		if amount, ok := parity[*consensus.BTMAssetID]; ok {
 			if err = vs.gas.setGas(amount); err != nil {
 				return err
 			}
@@ -194,7 +187,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 		for assetID, amount := range parity {
-			if amount != 0 && assetID != *BTMAssetID {
+			if amount != 0 && assetID != *consensus.BTMAssetID {
 				return errors.WithDetailf(errUnbalanced, "asset %x sources - destinations = %d (should be 0)", assetID.Bytes(), amount)
 			}
 		}
