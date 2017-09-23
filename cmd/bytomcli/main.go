@@ -84,7 +84,7 @@ var commands = map[string]*command{
 	"create-key":			   {createKey},
 	"list-keys":			   {listKeys},
 	"delete-key":			   {deleteKey},
-	"sign-transaction":        {signTransaction}
+	"sign-transaction":        {signTransaction},
 }
 
 func main() {
