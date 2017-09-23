@@ -18,7 +18,7 @@ import (
 const (
 	maxNonce          = ^uint64(0) // 2^32 - 1
 	defaultNumWorkers = 1
-	hashUpdateSecs    = 15
+	hashUpdateSecs    = 1
 )
 
 // CPUMiner provides facilities for solving blocks (mining) using the CPU in
