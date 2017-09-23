@@ -81,6 +81,10 @@ var commands = map[string]*command{
 	"create-access-token":     {createAccessToken},
 	"list-access-token":       {listAccessTokens},
 	"delete-access-token":     {deleteAccessToken},
+	"create-key":			   {createKey},
+	"list-keys":			   {listKeys},
+	"delete-key":			   {deleteKey},
+	"sign-transaction":        {signTransaction}
 }
 
 func main() {
@@ -717,4 +721,21 @@ func deleteAccessToken(client *rpc.Client, args []string) {
 	token.Token = "token"
 
 	client.Call(context.Background(), "/delete-access-token", &[]Token{token}, nil)
+}
+
+
+func createKey(client *rpc.Client, args []string) {
+	if len(args) != 0 {
+		fatalln("error: createKey not use args")
+	}
+	type  Key  struct {
+		Alias		string  
+		Password 	string 
+	}
+	var key Key
+	key.Alias  = "BytomUser"
+	key.Password = "xixihaha2009"
+
+	client.Call(context.Background(), "/create-key", &key, response)
+	fmt.Printf("responses:%v\n", response)
 }
