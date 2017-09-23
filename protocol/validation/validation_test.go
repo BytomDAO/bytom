@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"blockchain/consensus"
+	"github.com/bytom/consensus"
 	"fmt"
 	"math"
 	"testing"
