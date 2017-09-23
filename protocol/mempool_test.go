@@ -1,9 +1,9 @@
 package protocol
 
 import (
-	"blockchain/consensus"
 	"testing"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/legacy"
 )
 

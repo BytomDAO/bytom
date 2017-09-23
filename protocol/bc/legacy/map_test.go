@@ -1,13 +1,12 @@
 package legacy
 
 import (
-	"blockchain/consensus"
 	"bytes"
 	"testing"
 
-	"github.com/davecgh/go-spew/spew"
-
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestMapTx(t *testing.T) {

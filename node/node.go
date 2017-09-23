@@ -1,7 +1,6 @@
 package node
 
 import (
-	"blockchain/consensus"
 	"context"
 	"crypto/tls"
 	"net"
@@ -13,6 +12,7 @@ import (
 
 	bc "github.com/bytom/blockchain"
 	cfg "github.com/bytom/config"
+	"github.com/bytom/consensus"
 	p2p "github.com/bytom/p2p"
 	"github.com/bytom/protocol/bc/legacy"
 	rpccore "github.com/bytom/rpc/core"
@@ -27,8 +27,8 @@ import (
 	//rpc "github.com/blockchain/rpc/lib"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol"
 	rpcserver "github.com/bytom/rpc/lib/server"
@@ -215,16 +215,16 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	//Todo HSM
 	/*
-	if config.HsmUrl != ""{
-		// todo remoteHSM
-		cmn.Exit(cmn.Fmt("not implement"))
+		if config.HsmUrl != ""{
+			// todo remoteHSM
+			cmn.Exit(cmn.Fmt("not implement"))
 
-	} else {
-		hsm, err = pseudohsm.New(config.KeysDir())
-		if err != nil {
-			cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
-		}
-	}*/
+		} else {
+			hsm, err = pseudohsm.New(config.KeysDir())
+			if err != nil {
+				cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
+			}
+		}*/
 
 	hsm, err := pseudohsm.New(config.KeysDir())
 	if err != nil {
