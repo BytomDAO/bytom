@@ -21,13 +21,14 @@ import (
 const listKeyMaxAliases = 200
 
 var (
+	ErrDuplicateKeyAlias    = errors.New("duplicate key alias")
 	ErrInvalidAfter         = errors.New("invalid after")
 	ErrNoKey                = errors.New("key not found")
 	ErrInvalidKeySize       = errors.New("key invalid size")
 	ErrTooManyAliasesToList = errors.New("requested aliases exceeds limit")
-	ErrAmbiguousAddr		= errors.New("multiple keys match address")
-	ErrDecrypt 				= errors.New("could not decrypt key with given passphrase")
-	ErrInvalidKeyType		= errors.New("key type stored invalid")
+	ErrAmbiguousAddr	= errors.New("multiple keys match address")
+	ErrDecrypt 		= errors.New("could not decrypt key with given passphrase")
+	ErrInvalidKeyType	= errors.New("key type stored invalid")
 )
 
 type HSM struct {
@@ -39,7 +40,7 @@ type HSM struct {
 
 type XPub struct {
 	Alias    string		   `json:"alias"`
-	Address common.Address `json:"address"`
+	Address common.Address 	   `json:"address"`
 	XPub  chainkd.XPub 	   `json:"xpub"`
 	File    string		   `json:"file"`
 }
@@ -87,19 +88,32 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 
 
 // ListKeys returns a list of all xpubs from the store
-func (h *HSM) ListKeys(after int , limit int) ([]XPub, string, error) {
+func (h *HSM) ListKeys(after string , limit int) ([]XPub, string, error) {
 
 	xpubs := h.cache.keys()
 	start, end := 0, len(xpubs)
-	if len(xpubs) > after {
-		start = after
+
+	var (
+		zafter int
+		err    error
+	)
+
+	if after != "" {
+		zafter,err = strconv.Atoi(after)  
+		if err != nil {
+			return nil, "", errors.WithDetailf(ErrInvalidAfter, "value: %q", zafter)
+		}
+	}
+
+	if len(xpubs) > zafter {
+		start = zafter
 	} else {
-		return nil, "", errors.WithDetailf(ErrInvalidAfter, "value: %v", after)
+		return nil, "", errors.WithDetailf(ErrInvalidAfter, "value: %v", zafter)
 	}
-	if len(xpubs) > after+limit {
-		end = after+limit
+	if len(xpubs) > zafter+limit {
+		end = zafter+limit
 	}
-	return xpubs[start:end], strconv.FormatInt(int64(start), 10), nil
+	return xpubs[start:end], strconv.Itoa(start), nil
 }
 
 // XSign looks up the xprv given the xpub, optionally derives a new

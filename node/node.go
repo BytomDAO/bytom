@@ -217,18 +217,22 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	assets := asset.NewRegistry(assets_db, chain)
 
 	//Todo HSM
-	var hsm bc.hsmSigner
-
+	/*
 	if config.HsmUrl != ""{
 		// todo remoteHSM
-		hsm = nil
+		cmn.Exit(cmn.Fmt("not implement"))
+
 	} else {
 		hsm, err = pseudohsm.New(config.KeysDir())
 		if err != nil {
 			cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 		}
-	}
+	}*/
 
+	hsm, err := pseudohsm.New(config.KeysDir())
+	if err != nil {
+		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
+	}
 	bcReactor := bc.NewBlockchainReactor(store, chain, txPool, accounts, assets, hsm, fastSync)
 
 	bcReactor.SetLogger(logger.With("module", "blockchain"))
