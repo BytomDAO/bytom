@@ -736,6 +736,24 @@ func createKey(client *rpc.Client, args []string) {
 	key.Alias  = "BytomUser"
 	key.Password = "xixihaha2009"
 
-	client.Call(context.Background(), "/create-key", &key, response)
-	fmt.Printf("responses:%v\n", response)
+	client.Call(context.Background(), "/create-key", &key, nil)
+	//fmt.Printf("responses:%v\n", response)
+}
+
+func listKeys(client *rpc.Client, args []string) {
+	if len(args) != 0 {
+		fatalln("error: listKeys not use args")
+	}
+}
+
+func deleteKey(client *rpc.Client, args []string) {
+	if len(args) != 0 {
+		fatalln("error: deleteKey not use args")
+	}
+}
+
+func signTransaction(client *rpc.Client, args []string) {
+	if len(args) != 0 {
+		fatalln("error: signTransaction not use args")
+	}
 }
