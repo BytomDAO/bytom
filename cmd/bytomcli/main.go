@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"strconv"
 	stdjson "encoding/json"
 	"flag"
 	"fmt"
@@ -84,7 +85,7 @@ var commands = map[string]*command{
 	"create-key":			   {createKey},
 	"list-keys":			   {listKeys},
 	"delete-key":			   {deleteKey},
-	"sign-transaction":        {signTransaction},
+	"sign-transactions":        {signTransactions},
 }
 
 func main() {
@@ -725,34 +726,71 @@ func deleteAccessToken(client *rpc.Client, args []string) {
 
 
 func createKey(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error: createKey not use args")
+	if len(args) != 2 {
+		fatalln("error: createKey args not vaild")
 	}
-	type  Key  struct {
+	type Key struct {
 		Alias		string  
 		Password 	string 
 	}
 	var key Key
-	key.Alias  = "BytomUser"
-	key.Password = "xixihaha2009"
+	var response interface{}
+	key.Alias  =  args[0]
+	key.Password = args[1]
 
-	client.Call(context.Background(), "/create-key", &key, nil)
-	//fmt.Printf("responses:%v\n", response)
-}
-
-func listKeys(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error: listKeys not use args")
-	}
+	client.Call(context.Background(), "/create-key", &key, &response)
+	fmt.Printf("Key info: %v\n", response)
 }
 
 func deleteKey(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error: deleteKey not use args")
+	if len(args) != 2 {
+		fatalln("error: deleteKey args not vaild")
 	}
+	type Key struct {
+		Password	string
+		XPub		chainkd.XPub `json:"xpubs"`
+	}
+	var key Key
+	xpub := new(chainkd.XPub)
+	data, err := hex.DecodeString(args[1])
+	if err != nil {
+		fatalln("error: deletKey %v", err)
+	}
+	copy(xpub[:], data)
+	key.Password  = args[0]
+	key.XPub= *xpub
+	client.Call(context.Background(), "/delete-key", &key, nil)
 }
 
-func signTransaction(client *rpc.Client, args []string) {
+
+func listKeys(client *rpc.Client, args []string) {
+	if len(args) != 2 {
+		fatalln("error: listKeys args not vaild")
+	}
+
+	type requestQuery struct {
+		Filter       string        `json:"filter,omitempty"`
+		FilterParams []interface{} `json:"filter_params,omitempty"`
+		SumBy        []string      `json:"sum_by,omitempty"`
+		PageSize     int           `json:"page_size"`
+		AscLongPoll  bool          `json:"ascending_with_long_poll,omitempty"`
+		Timeout      json.Duration `json:"timeout"`
+		After        string        `json:"after"`
+		StartTimeMS  uint64        `json:"start_time,omitempty"`
+		EndTimeMS    uint64        `json:"end_time,omitempty"`
+		TimestampMS  uint64        `json:"timestamp,omitempty"`
+		Type         string        `json:"type"`
+		Aliases      []string      `json:"aliases,omitempty"`
+	}
+	var in requestQuery
+	in.After = arg[0]
+	in.PageSize, _ = strconv.Atoi(arg[1])
+	var response interface{}
+	client.Call(context.Background(), "/list-keys", &in, &response)
+	fmt.Printf("responses:%v\n", response)
+}
+
+func signTransactions(client *rpc.Client, args []string) {
 	if len(args) != 0 {
 		fatalln("error: signTransaction not use args")
 	}
