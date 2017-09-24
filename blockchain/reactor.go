@@ -185,10 +185,10 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/list-access-tokens", jsonHandler(bcr.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(bcr.deleteAccessToken))
 	//hsm api
-	m.Handle("/hsm/create-key", jsonHandler(bcr.pseudohsmCreateKey))
-	m.Handle("/hsm/list-keys", jsonHandler(bcr.pseudohsmListKeys))
-	m.Handle("/hsm/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
-	m.Handle("/hsm/sign-transaction", jsonHandler(bcr.pseudohsmSignTemplates))
+	m.Handle("/create-key", jsonHandler(bcr.pseudohsmCreateKey))
+	m.Handle("/list-keys", jsonHandler(bcr.pseudohsmListKeys))
+	m.Handle("/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
+	m.Handle("/sign-transaction", jsonHandler(bcr.pseudohsmSignTemplates))
 
 	//m.Handle("/hsm/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
 	//m.Handle("/hsm/update-alias", jsonHandler(bcr.pseudohsmUpdateAlias))

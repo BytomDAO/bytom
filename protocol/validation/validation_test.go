@@ -1,12 +1,12 @@
 package validation
 
 import (
-	"github.com/bytom/consensus"
 	"fmt"
 	"math"
 	"testing"
 	"time"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"

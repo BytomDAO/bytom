@@ -12,6 +12,7 @@ import (
 
 	bc "github.com/bytom/blockchain"
 	cfg "github.com/bytom/config"
+	"github.com/bytom/consensus"
 	p2p "github.com/bytom/p2p"
 	"github.com/bytom/protocol/bc/legacy"
 	rpccore "github.com/bytom/rpc/core"
@@ -26,8 +27,8 @@ import (
 	//rpc "github.com/blockchain/rpc/lib"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol"
 	rpcserver "github.com/bytom/rpc/lib/server"
@@ -159,25 +160,11 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	coreHandler.Set(h)
 }
 
-func setupGenesisBlock(config *cfg.Config) (*legacy.Block, error) {
-	var timestamp time.Time = config.Time
-	return protocol.NewInitialBlock(timestamp)
-}
-
 func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	// Get store
 	tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
 	store := txdb.NewStore(tx_db)
-	/*genesisBlock := legacy.Block {
-	      BlockHeader: legacy.BlockHeader {
-	          Version: 1,
-	          Height: 0,
-	      },
-	  }
-	  store.SaveBlock(&genesisBlock)
-	*/
 
-	// Generate node PrivKey
 	privKey := crypto.GenPrivKeyEd25519()
 
 	// Make event switch
@@ -194,12 +181,22 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	sw.SetLogger(p2pLogger)
 
 	fastSync := config.FastSync
-	genesisBlock, err := setupGenesisBlock(config)
-	if err != nil {
-		cmn.Exit(cmn.Fmt("initialize genesisblock failed: %v", err))
+
+	genesisBlock := &legacy.Block{
+		BlockHeader:  legacy.BlockHeader{},
+		Transactions: []*legacy.Tx{},
 	}
+	genesisBlock.UnmarshalText(consensus.InitBlock())
 
 	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, nil)
+	genesisSnap, err := chain.ApplyValidBlock(genesisBlock)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("Failed to apply valid block: %v", err))
+	}
+	if err := chain.CommitAppliedBlock(nil, genesisBlock, genesisSnap); err != nil {
+		cmn.Exit(cmn.Fmt("Failed to commit applied block: %v", err))
+	}
+
 	txPool := protocol.NewTxPool()
 	/* if err != nil {
 	     cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
@@ -218,16 +215,16 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	//Todo HSM
 	/*
-	if config.HsmUrl != ""{
-		// todo remoteHSM
-		cmn.Exit(cmn.Fmt("not implement"))
+		if config.HsmUrl != ""{
+			// todo remoteHSM
+			cmn.Exit(cmn.Fmt("not implement"))
 
-	} else {
-		hsm, err = pseudohsm.New(config.KeysDir())
-		if err != nil {
-			cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
-		}
-	}*/
+		} else {
+			hsm, err = pseudohsm.New(config.KeysDir())
+			if err != nil {
+				cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
+			}
+		}*/
 
 	hsm, err := pseudohsm.New(config.KeysDir())
 	if err != nil {
