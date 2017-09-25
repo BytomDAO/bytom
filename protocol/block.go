@@ -6,7 +6,6 @@ import (
 
 	"github.com/bytom/errors"
 	"github.com/bytom/log"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
@@ -143,27 +142,4 @@ func (c *Chain) setHeight(h uint64) {
 	}
 	c.state.height = h
 	c.state.cond.Broadcast()
-}
-
-func NewInitialBlock(timestamp time.Time) (*legacy.Block, error) {
-	// TODO(kr): move this into a lower-level package (e.g. chain/protocol/bc)
-	// so that other packages (e.g. chain/protocol/validation) unit tests can
-	// call this function.
-	root, err := bc.MerkleRoot(nil) // calculate the zero value of the tx merkle root
-	if err != nil {
-		return nil, errors.Wrap(err, "calculating zero value of tx merkle root")
-	}
-
-	b := &legacy.Block{
-		BlockHeader: legacy.BlockHeader{
-			Version:     1,
-			Height:      1,
-			TimestampMS: bc.Millis(timestamp),
-			BlockCommitment: legacy.BlockCommitment{
-				TransactionsMerkleRoot: root,
-			},
-		},
-		Transactions: []*legacy.Tx{},
-	}
-	return b, nil
 }
