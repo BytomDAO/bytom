@@ -1,20 +1,16 @@
 package pseudohsm
 
 import (
-	_"context"
 	"testing"
 	_"github.com/davecgh/go-spew/spew"
-
-	"github.com/bytom/blockchain/config"
 	"github.com/bytom/errors"
-	//"bytom/protocol/bc/legacy"
 )
 
 const dirPath = "testdata/pseudo"
 
 
 func TestPseudoHSMChainKDKeys(t *testing.T) {
-	hsm := New(&config.Config{KeyPath: dirPath})
+	hsm := New(dirPath})
 	xpub, err := hsm.XCreate("password", "")
 	if err != nil {
 		t.Fatal(err)
@@ -73,7 +69,7 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 }
 
 func TestKeyWithEmptyAlias(t *testing.T) {
-	hsm := New(&config.Config{KeyPath: dirPath})
+	hsm := New(dirPath)
 	for i := 0; i < 2; i++ {
 		xpub, err := hsm.XCreate("xx", "")
 		if errors.Root(err) != nil {
@@ -91,7 +87,7 @@ func BenchmarkSign(b *testing.B) {
 	b.StopTimer()
 	auth := "nowpasswd"
 
-	hsm := New(&config.Config{KeyPath: dirPath})
+	hsm := New(dirPath)
 	xpub, err := hsm.XCreate(auth, "")
 	if err != nil {
 		b.Fatal(err)

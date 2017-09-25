@@ -40,7 +40,7 @@ type HSM struct {
 
 type XPub struct {
 	Alias    string		   `json:"alias"`
-	Address common.Address 	   `json:"address"`
+	Address common.Address `json:"address"`
 	XPub  chainkd.XPub 	   `json:"xpub"`
 	File    string		   `json:"file"`
 }
@@ -99,7 +99,7 @@ func (h *HSM) ListKeys(after string , limit int) ([]XPub, string, error) {
 	)
 
 	if after != "" {
-		zafter,err = strconv.Atoi(after)  
+		zafter,err = strconv.Atoi(after)
 		if err != nil {
 			return nil, "", errors.WithDetailf(ErrInvalidAfter, "value: %q", zafter)
 		}
