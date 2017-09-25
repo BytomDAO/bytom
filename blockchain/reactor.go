@@ -363,8 +363,6 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		if err := bcR.chain.ValidateTx(tx); err != nil {
 			return
 		}
-
-		go bcR.BroadcastTransaction(tx)
 	default:
 		bcR.Logger.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
 	}
@@ -377,10 +375,12 @@ func (bcR *BlockchainReactor) poolRoutine() {
 
 	trySyncTicker := time.NewTicker(trySyncIntervalMS * time.Millisecond)
 	statusUpdateTicker := time.NewTicker(statusUpdateIntervalSeconds * time.Second)
+	newTxCh := bcR.txPool.GetNewTxCh()
 	//switchToConsensusTicker := time.NewTicker(switchToConsensusIntervalSeconds * time.Second)
 
 FOR_LOOP:
 	for {
+
 		select {
 		case request := <-bcR.requestsCh: // chan BlockRequest
 			peer := bcR.Switch.Peers().Get(request.PeerID)
@@ -400,6 +400,8 @@ FOR_LOOP:
 			if peer != nil {
 				bcR.Switch.StopPeerForError(peer, errors.New("BlockchainReactor Timeout"))
 			}
+		case newTx := <-newTxCh:
+			go bcR.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
 			// ask for status updates
 			go bcR.BroadcastStatusRequest()
