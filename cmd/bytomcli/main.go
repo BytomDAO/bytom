@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"strconv"
+	"encoding/hex"
 	stdjson "encoding/json"
 	"flag"
 	"fmt"
@@ -783,8 +784,8 @@ func listKeys(client *rpc.Client, args []string) {
 		Aliases      []string      `json:"aliases,omitempty"`
 	}
 	var in requestQuery
-	in.After = arg[0]
-	in.PageSize, _ = strconv.Atoi(arg[1])
+	in.After = args[0]
+	in.PageSize, _ = strconv.Atoi(args[1])
 	var response interface{}
 	client.Call(context.Background(), "/list-keys", &in, &response)
 	fmt.Printf("responses:%v\n", response)
