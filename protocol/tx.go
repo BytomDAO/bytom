@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/validation"
 )
 
@@ -25,7 +26,12 @@ func (c *Chain) ValidateTx(tx *bc.Tx) error {
 	err, ok = c.prevalidated.lookup(tx.ID)
 	if !ok {
 		//TODO: fix the cache level things
-		_, err = validation.ValidateTx(tx, nil)
+		oldBlock, err := c.GetBlock(c.Height())
+		if err != nil {
+			return err
+		}
+		block := legacy.MapBlock(oldBlock)
+		_, err = validation.ValidateTx(tx, block)
 		c.prevalidated.cache(tx.ID, err)
 	}
 	return errors.Sub(ErrBadTx, err)
