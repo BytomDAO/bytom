@@ -26,7 +26,7 @@ import (
 	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	//"github.com/bytom/net/http/limit"
-	"github.com/bytom/blockchain/txbuilder"
+
 	"github.com/bytom/errors"
 	"github.com/bytom/generated/dashboard"
 	"github.com/bytom/net/http/static"
@@ -70,7 +70,6 @@ type BlockchainReactor struct {
 	fastSync    bool
 	requestsCh  chan BlockRequest
 	timeoutsCh  chan string
-	submitter   txbuilder.Submitter
 	evsw        types.EventSwitch
 }
 
