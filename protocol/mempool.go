@@ -59,11 +59,22 @@ func (mp *TxPool) AddTransaction(tx *legacy.Tx, height, fee uint64) *TxDesc {
 	return txD
 }
 
-func (mp *TxPool) AddErrCache(txHash *bc.Hash) {
+func (mp *TxPool) AddErrCache(txHash *bc.Hash, err error) {
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
 
-	mp.errCache.Add(txHash, nil)
+	mp.errCache.Add(txHash, err)
+}
+
+func (mp *TxPool) GetErrCache(txHash *bc.Hash) error {
+	mp.mtx.Lock()
+	defer mp.mtx.Unlock()
+
+	v, ok := mp.errCache.Get(txHash)
+	if ok {
+		return nil
+	}
+	return v.(error)
 }
 
 func (mp *TxPool) RemoveTransaction(txHash *bc.Hash) {

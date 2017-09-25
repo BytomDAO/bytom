@@ -5,8 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/groupcache/lru"
-
 	"github.com/bytom/errors"
 	"github.com/bytom/log"
 	"github.com/bytom/protocol/bc"
@@ -59,7 +57,7 @@ type Chain struct {
 	lastQueuedSnapshot time.Time
 	pendingSnapshots   chan pendingSnapshot
 
-	prevalidated prevalidatedTxsCache
+	txPool *TxPool
 }
 
 type pendingSnapshot struct {
@@ -68,14 +66,12 @@ type pendingSnapshot struct {
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, heights <-chan uint64) (*Chain, error) {
+func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, txPool *TxPool, heights <-chan uint64) (*Chain, error) {
 	c := &Chain{
 		InitialBlockHash: initialBlockHash,
 		store:            store,
 		pendingSnapshots: make(chan pendingSnapshot, 1),
-		prevalidated: prevalidatedTxsCache{
-			lru: lru.New(maxCachedValidatedTxs),
-		},
+		txPool:           txPool,
 	}
 	c.state.cond.L = new(sync.Mutex)
 

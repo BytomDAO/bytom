@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 
-//	"github.com/blockchain/blockchain/rpc"
+	//	"github.com/blockchain/blockchain/rpc"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
@@ -38,7 +38,7 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, s Submitter, tx *legacy.
 	// finalize a tx before the initial block has landed
 	<-c.BlockWaiter(1)
 
-	err = c.ValidateTx(tx.Tx)
+	err = c.ValidateTx(tx)
 	if errors.Root(err) == protocol.ErrBadTx {
 		return errors.Sub(ErrRejected, err)
 	}
