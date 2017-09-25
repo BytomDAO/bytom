@@ -86,7 +86,8 @@ var commands = map[string]*command{
 	"create-key":			   {createKey},
 	"list-keys":			   {listKeys},
 	"delete-key":			   {deleteKey},
-	"sign-transactions":        {signTransactions},
+	"sign-transactions":       {signTransactions},
+	"reset-password":		   {resetPassword},
 }
 
 func main() {
@@ -795,4 +796,26 @@ func signTransactions(client *rpc.Client, args []string) {
 	if len(args) != 0 {
 		fatalln("error: signTransaction not use args")
 	}
+}
+
+func resetPassword(client *rpc.Client, args []string) {
+	if len(args) != 3 {
+		fatalln("error: resetpassword args not vaild")
+	}
+	type Key struct {
+		OldPassword	string
+		NewPassword	string
+		XPub		chainkd.XPub `json:"xpubs"`
+	}
+	var key Key
+	xpub := new(chainkd.XPub)
+	data, err := hex.DecodeString(args[2])
+	if err != nil {
+		fatalln("error: resetPassword %v", err)
+	}
+	copy(xpub[:], data)
+	key.OldPassword  = args[0]
+	key.NewPassword  = args[1]
+	key.XPub= *xpub
+	client.Call(context.Background(), "/reset-password", &key, nil)
 }

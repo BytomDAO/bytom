@@ -103,6 +103,13 @@ func (a *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chai
 	return sigBytes, err
 }
 
+func (a *BlockchainReactor) pseudohsmResetPassword(ctx context.Context,  x struct {
+	OldPassword   string
+	NewPassword   string
+	XPub chainkd.XPub        `json:"xpubs"`
+}) error {
+	return a.hsm.ResetPassword(x.XPub, x.OldPassword, x.NewPassword)
+}
 // remote hsm used
 /*
 func RemoteHSM(hsm *remoteHSM) RunOption {
