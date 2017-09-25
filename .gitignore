@@ -21,6 +21,9 @@ _cgo_export.*
 
 _testmain.go
 
+cmd/bytom/bytom
+cmd/bytomcli/bytomcli
+
 *.exe
 
 # vim
