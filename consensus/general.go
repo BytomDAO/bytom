@@ -17,7 +17,7 @@ const (
 	// config for pow mining
 	powMinBits            = uint64(2161727821138738707)
 	blocksPerRetarget     = uint64(1024)
-	targetSecondsPerBlock = int64(60)
+	targetSecondsPerBlock = uint64(60)
 )
 
 // define the BTM asset id, the soul asset of Bytom

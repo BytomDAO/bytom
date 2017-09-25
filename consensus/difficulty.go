@@ -88,12 +88,22 @@ func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
 	return false
 }
 
-func CalcNextRequiredDifficulty(bh *legacy.BlockHeader) uint64 {
-	if bh == nil {
+func CalcNextRequiredDifficulty(lastBH, prevBH *legacy.BlockHeader) uint64 {
+	return uint64(2161727821138738707)
+
+	//TODO: test it and enable it
+	if lastBH == nil {
 		return powMinBits
-	} else if (bh.Height+1)%blocksPerRetarget != 0 {
-		return bh.Bits
+	} else if (lastBH.Height+1)%blocksPerRetarget != 0 {
+		return lastBH.Bits
 	}
 
-	return uint64(2161727821138738707)
+	actualTimespan := int64(lastBH.Time().Sub(prevBH.Time()).Seconds())
+	oldTarget := CompactToBig(lastBH.Bits)
+	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(actualTimespan))
+	targetTimeSpan := int64(blocksPerRetarget * targetSecondsPerBlock)
+	newTarget.Div(newTarget, big.NewInt(targetTimeSpan))
+	newTargetBits := BigToCompact(newTarget)
+
+	return newTargetBits
 }

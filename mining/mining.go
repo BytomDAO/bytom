@@ -78,7 +78,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (
 			PreviousBlockHash: preBlockHash,
 			TimestampMS:       bc.Millis(time.Now()),
 			BlockCommitment:   legacy.BlockCommitment{},
-			Bits:              consensus.CalcNextRequiredDifficulty(),
+			Bits:              consensus.CalcNextRequiredDifficulty(nil, nil),
 		},
 	}
 	newSnap.PruneNonces(b.BlockHeader.TimestampMS)
