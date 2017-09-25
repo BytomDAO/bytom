@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 // perform math comparisons.
@@ -87,6 +88,12 @@ func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
 	return false
 }
 
-func CalcNextRequiredDifficulty() uint64 {
+func CalcNextRequiredDifficulty(bh *legacy.BlockHeader) uint64 {
+	if bh == nil {
+		return powMinBits
+	} else if (bh.Height+1)%blocksPerRetarget != 0 {
+		return bh.Bits
+	}
+
 	return uint64(2161727821138738707)
 }

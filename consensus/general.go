@@ -13,6 +13,11 @@ const (
 	subsidyReductionInterval = uint64(560640)
 	baseSubsidy              = uint64(624000000000)
 	initialBlockSubsidy      = uint64(1470000000000000000)
+
+	// config for pow mining
+	powMinBits            = uint64(2161727821138738707)
+	blocksPerRetarget     = uint64(1024)
+	targetSecondsPerBlock = int64(60)
 )
 
 // define the BTM asset id, the soul asset of Bytom
