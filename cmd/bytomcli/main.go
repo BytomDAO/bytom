@@ -794,6 +794,7 @@ func listKeys(client *rpc.Client, args []string) {
 	for i, item := range response["items"]{
 		key := item.(map[string]interface{})
 		fmt.Printf("---No.%v Alias:%v Address:%v File:%v\n", i, key["alias"], key["address"], key["file"])
+	}
 }
 
 func signTransactions(client *rpc.Client, args []string) {
