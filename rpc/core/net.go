@@ -45,10 +45,3 @@ func UnsafeDialSeeds(seeds []string) (*ctypes.ResultDialSeeds, error) {
 	}
 	return &ctypes.ResultDialSeeds{"Dialing seeds in progress. See /net_info for details"}, nil
 }
-
-//-----------------------------------------------------------------------------
-
-/*
-func Genesis() (*ctypes.ResultGenesis, error) {
-	return &ctypes.ResultGenesis{genDoc}, nil
-}*/
