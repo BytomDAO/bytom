@@ -1,10 +1,6 @@
 package protocol
 
 import (
-	"sync"
-
-	"github.com/golang/groupcache/lru"
-
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -17,48 +13,29 @@ var ErrBadTx = errors.New("invalid transaction")
 // ValidateTx validates the given transaction. A cache holds
 // per-transaction validation results and is consulted before
 // performing full validation.
-func (c *Chain) ValidateTx(tx *bc.Tx) error {
-	err := c.checkIssuanceWindow(tx)
+func (c *Chain) ValidateTx(tx *legacy.Tx) error {
+	newTx := tx.Tx
+	err := c.checkIssuanceWindow(newTx)
 	if err != nil {
 		return err
 	}
-	var ok bool
-	err, ok = c.prevalidated.lookup(tx.ID)
-	if !ok {
-		//TODO: fix the cache level things
+	if ok := c.txPool.HaveTransaction(&newTx.ID); !ok {
 		oldBlock, err := c.GetBlock(c.Height())
 		if err != nil {
 			return err
 		}
 		block := legacy.MapBlock(oldBlock)
-		_, err = validation.ValidateTx(tx, block)
-		c.prevalidated.cache(tx.ID, err)
+		fee, err := validation.ValidateTx(newTx, block)
+
+		if err == nil {
+			c.txPool.AddTransaction(tx, block.BlockHeader.Height, fee)
+		} else {
+			c.txPool.AddErrCache(&newTx.ID, err)
+		}
+	} else {
+		return c.txPool.GetErrCache(&newTx.ID)
 	}
 	return errors.Sub(ErrBadTx, err)
-}
-
-type prevalidatedTxsCache struct {
-	mu  sync.Mutex
-	lru *lru.Cache
-}
-
-func (c *prevalidatedTxsCache) lookup(txID bc.Hash) (err error, ok bool) {
-	c.mu.Lock()
-	v, ok := c.lru.Get(txID)
-	c.mu.Unlock()
-	if !ok {
-		return err, ok
-	}
-	if v == nil {
-		return nil, ok
-	}
-	return v.(error), ok
-}
-
-func (c *prevalidatedTxsCache) cache(txID bc.Hash, err error) {
-	c.mu.Lock()
-	c.lru.Add(txID, err)
-	c.mu.Unlock()
 }
 
 func (c *Chain) checkIssuanceWindow(tx *bc.Tx) error {

@@ -188,7 +188,8 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	}
 	genesisBlock.UnmarshalText(consensus.InitBlock())
 
-	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, nil)
+	txPool := protocol.NewTxPool()
+	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, txPool, nil)
 	genesisSnap, err := chain.ApplyValidBlock(genesisBlock)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to apply valid block: %v", err))
@@ -197,7 +198,6 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		cmn.Exit(cmn.Fmt("Failed to commit applied block: %v", err))
 	}
 
-	txPool := protocol.NewTxPool()
 	/* if err != nil {
 	     cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
 	   }

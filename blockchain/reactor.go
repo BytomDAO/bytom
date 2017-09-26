@@ -11,23 +11,22 @@ import (
 	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
-	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/log"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/validation"
 	"github.com/bytom/types"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	//"github.com/bytom/net/http/limit"
-	"github.com/bytom/blockchain/txbuilder"
+
 	"github.com/bytom/errors"
 	"github.com/bytom/generated/dashboard"
 	"github.com/bytom/net/http/static"
@@ -52,27 +51,25 @@ const (
 	crosscoreRPCPrefix               = "/rpc/"
 )
 
-
 // BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-	chain      *protocol.Chain
-	store      *txdb.Store
-	accounts   *account.Manager
-	assets     *asset.Registry
+	chain       *protocol.Chain
+	store       *txdb.Store
+	accounts    *account.Manager
+	assets      *asset.Registry
 	accesstoken *accesstoken.Token
-	txFeeds    *txfeed.TxFeed
-	pool       *BlockPool
-	txPool     *protocol.TxPool
-	hsm		   *pseudohsm.HSM
-	mining     *cpuminer.CPUMiner
-	mux        *http.ServeMux
-	handler    	http.Handler
-	fastSync  	bool
-	requestsCh 	chan BlockRequest
-	timeoutsCh 	chan string
-	submitter  	txbuilder.Submitter
+	txFeeds     *txfeed.TxFeed
+	pool        *BlockPool
+	txPool      *protocol.TxPool
+	hsm         *pseudohsm.HSM
+	mining      *cpuminer.CPUMiner
+	mux         *http.ServeMux
+	handler     http.Handler
+	fastSync    bool
+	requestsCh  chan BlockRequest
+	timeoutsCh  chan string
 	evsw        types.EventSwitch
 }
 
@@ -99,8 +96,6 @@ func batchRecover(ctx context.Context, v *interface{}) {
 	}
 }
 
-
-
 func jsonHandler(f interface{}) http.Handler {
 	h, err := httpjson.Handler(f, errorFormatter.Write)
 	if err != nil {
@@ -112,7 +107,6 @@ func jsonHandler(f interface{}) http.Handler {
 func alwaysError(err error) http.Handler {
 	return jsonHandler(func() error { return err })
 }
-
 
 func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	bcr.handler.ServeHTTP(rw, req)
@@ -189,10 +183,8 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/list-keys", jsonHandler(bcr.pseudohsmListKeys))
 	m.Handle("/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
 	m.Handle("/sign-transactions", jsonHandler(bcr.pseudohsmSignTemplates))
-
-	//m.Handle("/hsm/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
-	//m.Handle("/hsm/update-alias", jsonHandler(bcr.pseudohsmUpdateAlias))
-
+	m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
+	m.Handle("/update-alias", jsonHandler(bcr.pseudohsmUpdateAlias))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -257,14 +249,13 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-
 func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, hsm *pseudohsm.HSM, fastSync bool) *BlockchainReactor {
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
 	pool := NewBlockPool(
-			store.Height()+1,
-			requestsCh,
-			timeoutsCh,
+		store.Height()+1,
+		requestsCh,
+		timeoutsCh,
 	)
 	mining := cpuminer.NewCPUMiner(chain, txPool)
 	bcR := &BlockchainReactor{
@@ -276,7 +267,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *prot
 		txPool:     txPool,
 		mining:     mining,
 		mux:        http.NewServeMux(),
-		hsm:	    hsm,
+		hsm:        hsm,
 		fastSync:   fastSync,
 		requestsCh: requestsCh,
 		timeoutsCh: timeoutsCh,
@@ -284,7 +275,6 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *prot
 	bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
 	return bcR
 }
-
 
 // OnStart implements BaseService
 func (bcR *BlockchainReactor) OnStart() error {
@@ -366,18 +356,11 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		//fmt.Printf("reveive peer high is %d \n", msg.Height)
 		bcR.pool.SetPeerHeight(src.Key, msg.Height)
 	case *bcTransactionMessage:
-		block, _ := bcR.chain.State()
 		tx := msg.GetTransaction()
-		if bcR.txPool.HaveTransaction(&tx.Tx.ID) {
-			return
-		}
 
-		gas, err := validation.ValidateTx(tx.Tx, legacy.MapBlock(block))
-		if err != nil {
+		if err := bcR.chain.ValidateTx(tx); err != nil {
 			return
 		}
-		bcR.txPool.AddTransaction(tx, block.BlockHeader.Height, gas)
-		go bcR.BroadcastTransaction(tx)
 	default:
 		bcR.Logger.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
 	}
@@ -390,10 +373,12 @@ func (bcR *BlockchainReactor) poolRoutine() {
 
 	trySyncTicker := time.NewTicker(trySyncIntervalMS * time.Millisecond)
 	statusUpdateTicker := time.NewTicker(statusUpdateIntervalSeconds * time.Second)
+	newTxCh := bcR.txPool.GetNewTxCh()
 	//switchToConsensusTicker := time.NewTicker(switchToConsensusIntervalSeconds * time.Second)
 
 FOR_LOOP:
 	for {
+
 		select {
 		case request := <-bcR.requestsCh: // chan BlockRequest
 			peer := bcR.Switch.Peers().Get(request.PeerID)
@@ -413,6 +398,8 @@ FOR_LOOP:
 			if peer != nil {
 				bcR.Switch.StopPeerForError(peer, errors.New("BlockchainReactor Timeout"))
 			}
+		case newTx := <-newTxCh:
+			go bcR.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
 			// ask for status updates
 			go bcR.BroadcastStatusRequest()

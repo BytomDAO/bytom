@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	maxCachedErrTxs = 1000
-
+	maxCachedErrTxs        = 1000
+	maxNewTxChSize         = 1000
 	ErrTransactionNotExist = errors.New("transaction are not existed in the mempool")
 )
 
@@ -31,6 +31,7 @@ type TxPool struct {
 	mtx         sync.RWMutex
 	pool        map[bc.Hash]*TxDesc
 	errCache    *lru.Cache
+	newTxCh     chan *legacy.Tx
 }
 
 func NewTxPool() *TxPool {
@@ -38,7 +39,12 @@ func NewTxPool() *TxPool {
 		lastUpdated: time.Now().Unix(),
 		pool:        make(map[bc.Hash]*TxDesc),
 		errCache:    lru.New(maxCachedErrTxs),
+		newTxCh:     make(chan *legacy.Tx, maxNewTxChSize),
 	}
+}
+
+func (mp *TxPool) GetNewTxCh() chan *legacy.Tx {
+	return mp.newTxCh
 }
 
 func (mp *TxPool) AddTransaction(tx *legacy.Tx, height, fee uint64) *TxDesc {
@@ -56,14 +62,27 @@ func (mp *TxPool) AddTransaction(tx *legacy.Tx, height, fee uint64) *TxDesc {
 
 	mp.pool[tx.Tx.ID] = txD
 	atomic.StoreInt64(&mp.lastUpdated, time.Now().Unix())
+
+	mp.newTxCh <- tx
 	return txD
 }
 
-func (mp *TxPool) AddErrCache(txHash *bc.Hash) {
+func (mp *TxPool) AddErrCache(txHash *bc.Hash, err error) {
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
 
-	mp.errCache.Add(txHash, nil)
+	mp.errCache.Add(txHash, err)
+}
+
+func (mp *TxPool) GetErrCache(txHash *bc.Hash) error {
+	mp.mtx.Lock()
+	defer mp.mtx.Unlock()
+
+	v, ok := mp.errCache.Get(txHash)
+	if ok {
+		return nil
+	}
+	return v.(error)
 }
 
 func (mp *TxPool) RemoveTransaction(txHash *bc.Hash) {

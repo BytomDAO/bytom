@@ -40,7 +40,7 @@ func TestTxPool(t *testing.T) {
 		t.Errorf("shouldn't find txB in tx pool")
 	}
 
-	p.AddErrCache(&txC.ID)
+	p.AddErrCache(&txC.ID, nil)
 	if !p.IsTransactionInErrCache(&txC.ID) {
 		t.Errorf("shouldn find txC in tx err cache")
 	}

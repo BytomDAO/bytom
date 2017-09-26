@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 // perform math comparisons.
@@ -87,6 +88,22 @@ func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
 	return false
 }
 
-func CalcNextRequiredDifficulty() uint64 {
+func CalcNextRequiredDifficulty(lastBH, prevBH *legacy.BlockHeader) uint64 {
 	return uint64(2161727821138738707)
+
+	//TODO: test it and enable it
+	if lastBH == nil {
+		return powMinBits
+	} else if (lastBH.Height+1)%blocksPerRetarget != 0 {
+		return lastBH.Bits
+	}
+
+	actualTimespan := int64(lastBH.Time().Sub(prevBH.Time()).Seconds())
+	oldTarget := CompactToBig(lastBH.Bits)
+	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(actualTimespan))
+	targetTimeSpan := int64(blocksPerRetarget * targetSecondsPerBlock)
+	newTarget.Div(newTarget, big.NewInt(targetTimeSpan))
+	newTargetBits := BigToCompact(newTarget)
+
+	return newTargetBits
 }
