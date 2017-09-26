@@ -80,6 +80,7 @@ var commands = map[string]*command{
 	"delete-transaction-feed": {deleteTxFeed},
 	"issue-test":              {example.IssueTest},
 	"spend-test":              {example.SpendTest},
+	"wallet-test":              {example.WalletTest},
 	"create-access-token":     {createAccessToken},
 	"list-access-token":       {listAccessTokens},
 	"delete-access-token":     {deleteAccessToken},
@@ -332,7 +333,7 @@ func createAccount(client *rpc.Client, args []string) {
 	var ins Ins
 	ins.RootXPubs = []chainkd.XPub{xpub}
 	ins.Quorum = 1
-	ins.Alias = "alice"
+	ins.Alias = args[0]
 	ins.Tags = map[string]interface{}{"test_tag": "v0"}
 	ins.ClientToken = args[0]
 	account := make([]query.AnnotatedAccount, 1)
@@ -363,7 +364,7 @@ func createAsset(client *rpc.Client, args []string) {
 	var ins Ins
 	ins.RootXPubs = []chainkd.XPub{xpub}
 	ins.Quorum = 1
-	ins.Alias = "bob"
+	ins.Alias = args[0]
 	ins.Tags = map[string]interface{}{"test_tag": "v0"}
 	ins.Definition = map[string]interface{}{}
 	ins.ClientToken = args[0]

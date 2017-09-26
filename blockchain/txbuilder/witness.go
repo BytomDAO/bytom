@@ -16,7 +16,7 @@ import (
 
 // SignFunc is the function passed into Sign that produces
 // a signature for a given xpub, derivation path, and hash.
-type SignFunc func(context.Context, chainkd.XPub, [][]byte, [32]byte) ([]byte, error)
+type SignFunc func(context.Context, chainkd.XPub, [][]byte, [32]byte, string) ([]byte, error)
 
 // materializeWitnesses takes a filled in Template and "materializes"
 // each witness component, turning it into a vector of arguments for
@@ -87,7 +87,7 @@ var ErrEmptyProgram = errors.New("empty signature program")
 //  - the mintime and maxtime of the transaction (if non-zero)
 //  - the outputID and (if non-empty) reference data of the current input
 //  - the assetID, amount, control program, and (if non-empty) reference data of each output.
-func (sw *signatureWitness) sign(ctx context.Context, tpl *Template, index uint32, xpubs []chainkd.XPub, signFn SignFunc) error {
+func (sw *signatureWitness) sign(ctx context.Context, tpl *Template, index uint32, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
 	// Compute the predicate to sign. This is either a
 	// txsighash program if tpl.AllowAdditional is false (i.e., the tx is complete
 	// and no further changes are allowed) or a program enforcing
@@ -120,7 +120,7 @@ func (sw *signatureWitness) sign(ctx context.Context, tpl *Template, index uint3
 		for i, p := range keyID.DerivationPath {
 			path[i] = p
 		}
-		sigBytes, err := signFn(ctx, keyID.XPub, path, h)
+		sigBytes, err := signFn(ctx, keyID.XPub, path, h, auth)
 		if err != nil {
 			return errors.WithDetailf(err, "computing signature %d", i)
 		}

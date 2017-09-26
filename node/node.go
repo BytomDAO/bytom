@@ -11,12 +11,19 @@ import (
 	"time"
 
 	bc "github.com/bytom/blockchain"
+	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/txdb"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
+	"github.com/bytom/net/http/reqid"
 	p2p "github.com/bytom/p2p"
+	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 	rpccore "github.com/bytom/rpc/core"
 	grpccore "github.com/bytom/rpc/grpc"
+	rpcserver "github.com/bytom/rpc/lib/server"
 	"github.com/bytom/types"
 	"github.com/bytom/version"
 	crypto "github.com/tendermint/go-crypto"
@@ -24,16 +31,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/log"
-	//rpc "github.com/blockchain/rpc/lib"
-	"github.com/bytom/blockchain/account"
-	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/txdb"
-	"github.com/bytom/net/http/reqid"
-	"github.com/bytom/protocol"
-	rpcserver "github.com/bytom/rpc/lib/server"
-	//	"github.com/bytom/net/http/static"
-	//	"github.com/bytom/generated/dashboard"
 
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
@@ -190,8 +187,11 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	txPool := protocol.NewTxPool()
 	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, txPool, nil)
-	if err := chain.AddBlock(nil, genesisBlock); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to add genesisBlock to Chain: %v", err))
+
+	if store.Height() < 1 {
+		if err := chain.AddBlock(nil, genesisBlock); err != nil {
+			cmn.Exit(cmn.Fmt("Failed to add genesisBlock to Chain: %v", err))
+		}
 	}
 
 	accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
@@ -337,13 +337,8 @@ func (n *Node) AddListener(l p2p.Listener) {
 func (n *Node) ConfigureRPC() {
 	rpccore.SetEventSwitch(n.evsw)
 	rpccore.SetBlockStore(n.blockStore)
-	//rpccore.SetConsensusState(n.consensusState)
-	//rpccore.SetMempool(n.mempoolReactor.Mempool)
 	rpccore.SetSwitch(n.sw)
-	//rpccore.SetGenesisDoc(n.genesisDoc)
 	rpccore.SetAddrBook(n.addrBook)
-	//rpccore.SetProxyAppQuery(n.proxyApp.Query())
-	//rpccore.SetTxIndexer(n.txIndexer)
 	rpccore.SetLogger(n.Logger.With("module", "rpc"))
 }
 

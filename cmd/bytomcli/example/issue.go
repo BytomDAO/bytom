@@ -85,7 +85,7 @@ func IssueTest(client *rpc.Client, args []string) {
 	fmt.Printf("tpl:%v\n", tpl)
 
 	// sign-transaction
-	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprv_asset.XPub()}, func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte) ([]byte, error) {
+	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprv_asset.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
 		derived := xprv_asset.Derive(path)
 		return derived.Sign(data[:]), nil
 	})
