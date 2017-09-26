@@ -8,7 +8,6 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm"
-	"github.com/bytom/log"
 )
 
 var (
