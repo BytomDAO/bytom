@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm/vmutil"
+	//"github.com/bytom/log"
 )
 
 const maxAssetCache = 1000
@@ -269,6 +270,19 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	reg.cacheMu.Unlock()
 	return a, nil
 
+}
+
+func (reg *Registry) QueryAll(ctx context.Context) (interface{}, error){
+	ret := make([]interface{},0)
+
+	iter := reg.db.Iterator()
+	for iter.Next() {
+		value := string(iter.Value())
+		ret = append(ret,value)
+		//log.Printf(ctx,"%s\t", value)
+	}
+
+	return ret,nil
 }
 
 // insertAsset adds the asset to the database. If the asset has a client token,

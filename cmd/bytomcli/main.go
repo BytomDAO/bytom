@@ -543,10 +543,14 @@ func listAccounts(client *rpc.Client, args []string) {
 		Aliases      []string      `json:"aliases,omitempty"`
 	}
 	var in requestQuery
-	after := in.After
-	out := in
-	out.After = after
-	client.Call(context.Background(), "/list-accounts", &[]requestQuery{in}, nil)
+
+
+	responses := make([]interface{}, 1)
+
+	client.Call(context.Background(), "/list-accounts", in, &responses)
+	for i,item := range responses{
+		fmt.Println(i,"-----",item)
+	}
 }
 
 func listAssets(client *rpc.Client, args []string) {
@@ -568,10 +572,13 @@ func listAssets(client *rpc.Client, args []string) {
 		Aliases      []string      `json:"aliases,omitempty"`
 	}
 	var in requestQuery
-	after := in.After
-	out := in
-	out.After = after
-	client.Call(context.Background(), "/list-assets", &[]requestQuery{in}, nil)
+	responses := make([]interface{}, 1)
+
+	client.Call(context.Background(), "/list-assets", in, &responses)
+	for i,item := range responses{
+		fmt.Println(i,"-----",item)
+	}
+
 }
 
 func listTxFeeds(client *rpc.Client, args []string) {
