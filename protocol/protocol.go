@@ -76,6 +76,7 @@ func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, txPool
 	c.state.cond.L = new(sync.Mutex)
 
 	c.state.height = store.Height()
+	c.state.snapshot = state.Empty()
 
 	// Note that c.height.n may still be zero here.
 	if heights != nil {

@@ -94,17 +94,11 @@ out:
 		}
 
 		if m.solveBlock(block, ticker, quit) {
-			snap, err := m.chain.ApplyValidBlock(block)
-			if err != nil {
-				fmt.Printf("Failed to apply valid block: %v \n", err)
-				continue
+			if err := m.chain.AddBlock(nil, block); err == nil {
+				fmt.Printf("finish commit block heigh %d \n", block.BlockHeader.Height)
+			} else {
+				fmt.Printf("fail commit block heigh %d, err: %v \n", block.BlockHeader.Height, err)
 			}
-			err = m.chain.CommitAppliedBlock(nil, block, snap)
-			if err != nil {
-				fmt.Printf("Failed to commit block: %v \n", err)
-				continue
-			}
-			fmt.Printf("finish commit block heigh %d \n", block.BlockHeader.Height)
 		}
 	}
 

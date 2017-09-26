@@ -190,23 +190,9 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	txPool := protocol.NewTxPool()
 	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, txPool, nil)
-	genesisSnap, err := chain.ApplyValidBlock(genesisBlock)
-	if err != nil {
-		cmn.Exit(cmn.Fmt("Failed to apply valid block: %v", err))
+	if err := chain.AddBlock(nil, genesisBlock); err != nil {
+		cmn.Exit(cmn.Fmt("Failed to add genesisBlock to Chain: %v", err))
 	}
-	if err := chain.CommitAppliedBlock(nil, genesisBlock, genesisSnap); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to commit applied block: %v", err))
-	}
-
-	/* if err != nil {
-	     cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
-	   }
-	   err = chain.CommitAppliedBlock(context.Background(), block, state.Empty())
-	   if err != nil {
-	     cmn.Exit(cmn.Fmt("commit block failed: %v", err))
-	   }
-	   chain.MaxIssuanceWindow = bc.MillisDuration(c.MaxIssuanceWindowMs)
-	*/
 
 	accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
 	accounts := account.NewManager(accounts_db, chain)

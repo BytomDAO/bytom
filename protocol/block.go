@@ -54,14 +54,7 @@ func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 // ApplyValidBlock creates an updated snapshot without validating the
 // block.
 func (c *Chain) ApplyValidBlock(block *legacy.Block) (*state.Snapshot, error) {
-	//TODO replace with a pre-defined init blo
-	var newSnapshot *state.Snapshot
-	if c.state.snapshot == nil {
-		newSnapshot = state.Empty()
-	} else {
-		newSnapshot = state.Copy(c.state.snapshot)
-	}
-
+	newSnapshot := state.Copy(c.state.snapshot)
 	err := newSnapshot.ApplyBlock(legacy.MapBlock(block))
 	if err != nil {
 		return nil, err
@@ -111,6 +104,20 @@ func (c *Chain) CommitAppliedBlock(ctx context.Context, block *legacy.Block, sna
 	// it's not redundant.
 	c.setState(block, snapshot)
 	return nil
+}
+
+func (c *Chain) AddBlock(ctx context.Context, block *legacy.Block) error {
+	currentBlock, _ := c.State()
+	if err := c.ValidateBlock(block, currentBlock); err != nil {
+		return err
+	}
+
+	newSnap, err := c.ApplyValidBlock(block)
+	if err != nil {
+		return err
+	}
+
+	return c.CommitAppliedBlock(ctx, block, newSnap)
 }
 
 func (c *Chain) queueSnapshot(ctx context.Context, height uint64, timestamp time.Time, s *state.Snapshot) {

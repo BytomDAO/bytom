@@ -53,21 +53,13 @@ func createCoinbaseTx(amount uint64, blockHeight uint64, addr []byte) (*legacy.T
 func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (*legacy.Block, error) {
 	// Extend the most recently known best block.
 	var err error
-	newSnap := state.Empty()
-	var blockData *bc.Block
-	nextBlockHeight := uint64(1)
-	preBlockHash := bc.Hash{}
+	preBlock, snap := c.State()
+	newSnap := state.Copy(snap)
 
-	block, snap := c.State()
-	if block != nil {
-		nextBlockHeight = block.BlockHeader.Height + 1
-		preBlockHash = block.Hash()
-		newSnap = state.Copy(snap)
-		blockData = legacy.MapBlock(block)
-	}
-
+	nextBlockHeight := preBlock.BlockHeader.Height + 1
+	preBcBlock := legacy.MapBlock(preBlock)
 	txDescs := txPool.GetTransactions()
-	blockTxns := make([]*legacy.Tx, 0, len(txDescs))
+	txEntries := make([]*bc.Tx, 0, len(txDescs))
 	blockWeight := uint64(0)
 	txFee := uint64(0)
 
@@ -75,46 +67,47 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (
 		BlockHeader: legacy.BlockHeader{
 			Version:           1,
 			Height:            nextBlockHeight,
-			PreviousBlockHash: preBlockHash,
+			PreviousBlockHash: preBlock.Hash(),
 			TimestampMS:       bc.Millis(time.Now()),
 			BlockCommitment:   legacy.BlockCommitment{},
 			Bits:              consensus.CalcNextRequiredDifficulty(nil, nil),
 		},
+		Transactions: make([]*legacy.Tx, 0, len(txDescs)),
 	}
 	newSnap.PruneNonces(b.BlockHeader.TimestampMS)
 
-	var txEntries []*bc.Tx
+	appendTx := func(tx *legacy.Tx, weight, fee uint64) {
+		b.Transactions = append(b.Transactions, tx)
+		txEntries = append(txEntries, tx.Tx)
+		blockWeight += weight
+		txFee += fee
+	}
+
 	for _, txDesc := range txDescs {
 		tx := txDesc.Tx.Tx
-		blockPlusTxWeight := blockWeight + txDesc.Weight
-		if blockPlusTxWeight > consensus.MaxBlockSzie {
+		if blockWeight+txDesc.Weight > consensus.MaxBlockSzie-consensus.MaxTxSize {
 			break
 		}
-
 		if err := newSnap.ApplyTx(tx); err != nil {
 			txPool.RemoveTransaction(&tx.ID)
 			continue
 		}
-
-		if _, err := validation.ValidateTx(tx, blockData); err != nil {
+		if _, err := validation.ValidateTx(tx, preBcBlock); err != nil {
 			txPool.RemoveTransaction(&tx.ID)
 			continue
 		}
 
-		blockTxns = append(blockTxns, txDesc.Tx)
-		txEntries = append(txEntries, tx)
-		blockWeight = blockPlusTxWeight
-		txFee += txDesc.Fee
+		appendTx(txDesc.Tx, txDesc.Weight, txDesc.Fee)
 	}
 
 	cbTx, _ := createCoinbaseTx(txFee, nextBlockHeight, addr)
-	newSnap.ApplyTx(cbTx.Tx)
-	blockTxns = append([]*legacy.Tx{cbTx}, blockTxns...)
+	if err := newSnap.ApplyTx(cbTx.Tx); err != nil {
+		return nil, errors.Wrap(err, "fail on append coinbase transaction to snap")
+	}
+	appendTx(cbTx, 0, 0)
 
-	b.Transactions = blockTxns
-
-	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = bc.MerkleRoot(txEntries)
 	b.BlockHeader.BlockCommitment.AssetsMerkleRoot = newSnap.Tree.RootHash()
+	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = bc.MerkleRoot(txEntries)
 	if err != nil {
 		return nil, errors.Wrap(err, "calculating tx merkle root")
 	}
