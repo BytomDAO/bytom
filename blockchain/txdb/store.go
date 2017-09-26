@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 
 	"github.com/bytom/errors"
-	//"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
     dbm "github.com/tendermint/tmlibs/db"
@@ -34,11 +33,13 @@ func calcBlockKey(height uint64) []byte {
 }
 
 func LoadBlock(db dbm.DB, height uint64) *legacy.Block {
-    var block *legacy.Block
+    var block *legacy.Block = &legacy.Block{}
     bytez := db.Get(calcBlockKey(height))
     if bytez == nil {
         return nil
     }
+
+	fmt.Printf("------LoadBlock height:%v, byte:%v", height, bytez)
     block.UnmarshalText(bytez)
 	return block
 }
@@ -143,6 +144,7 @@ func (s *Store) SaveBlock(block *legacy.Block) error {
     if err != nil {
         PanicCrisis(Fmt("Error Marshal block meta: %v", err))
     }
+	fmt.Printf("------SaveBlock height:%v, byte:%v", height, binaryBlock)
     s.db.Set(calcBlockKey(height), binaryBlock)
 
 	// Save new BlockStoreStateJSON descriptor

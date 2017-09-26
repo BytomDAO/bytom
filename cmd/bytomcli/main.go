@@ -80,6 +80,7 @@ var commands = map[string]*command{
 	"delete-transaction-feed": {deleteTxFeed},
 	"issue-test":              {example.IssueTest},
 	"spend-test":              {example.SpendTest},
+	"wallet-test":              {example.WalletTest},
 	"create-access-token":     {createAccessToken},
 	"list-access-token":       {listAccessTokens},
 	"delete-access-token":     {deleteAccessToken},

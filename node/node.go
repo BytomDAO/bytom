@@ -24,7 +24,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/log"
-	//rpc "github.com/blockchain/rpc/lib"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pseudohsm"
@@ -32,8 +31,6 @@ import (
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol"
 	rpcserver "github.com/bytom/rpc/lib/server"
-	//	"github.com/bytom/net/http/static"
-	//	"github.com/bytom/generated/dashboard"
 
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
@@ -190,12 +187,14 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	txPool := protocol.NewTxPool()
 	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, txPool, nil)
-	genesisSnap, err := chain.ApplyValidBlock(genesisBlock)
-	if err != nil {
-		cmn.Exit(cmn.Fmt("Failed to apply valid block: %v", err))
-	}
-	if err := chain.CommitAppliedBlock(nil, genesisBlock, genesisSnap); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to commit applied block: %v", err))
+	if store.Height() < 1 {
+		genesisSnap, err := chain.ApplyValidBlock(genesisBlock)
+		if err != nil {
+			cmn.Exit(cmn.Fmt("Failed to apply valid block: %v", err))
+		}
+		if err := chain.CommitAppliedBlock(nil, genesisBlock, genesisSnap); err != nil {
+			cmn.Exit(cmn.Fmt("Failed to commit applied block: %v", err))
+		}
 	}
 
 	/* if err != nil {
@@ -351,13 +350,8 @@ func (n *Node) AddListener(l p2p.Listener) {
 func (n *Node) ConfigureRPC() {
 	rpccore.SetEventSwitch(n.evsw)
 	rpccore.SetBlockStore(n.blockStore)
-	//rpccore.SetConsensusState(n.consensusState)
-	//rpccore.SetMempool(n.mempoolReactor.Mempool)
 	rpccore.SetSwitch(n.sw)
-	//rpccore.SetGenesisDoc(n.genesisDoc)
 	rpccore.SetAddrBook(n.addrBook)
-	//rpccore.SetProxyAppQuery(n.proxyApp.Query())
-	//rpccore.SetTxIndexer(n.txIndexer)
 	rpccore.SetLogger(n.Logger.With("module", "rpc"))
 }
 
