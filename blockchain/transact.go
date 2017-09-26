@@ -63,11 +63,11 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) 
 		if err != nil {
 			return nil, err
 		}
-		a, err := decoder(b)
+		action, err := decoder(b)
 		if err != nil {
 			return nil, errors.WithDetailf(errBadAction, "%s on action %d", err.Error(), i)
 		}
-		actions = append(actions, a)
+		actions = append(actions, action)
 	}
 
 	ttl := req.TTL.Duration
