@@ -31,7 +31,7 @@ func NewXPrv(r io.Reader) (xprv XPrv, err error) {
 		return xprv, err
 	}
 	hasher := sha512.New()
-	hasher.Write([]byte("Chain seed"))
+	hasher.Write([]byte("Bytom seed"))
 	hasher.Write(entropy[:])
 	hasher.Sum(xprv[:0])
 	modifyScalar(xprv[:32])

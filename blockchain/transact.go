@@ -216,7 +216,7 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 		return errors.Wrap(err, "saving tx submitted height")
 	}*/
 
-	err := txbuilder.FinalizeTx(ctx, a.chain, a.submitter, txTemplate.Transaction)
+	err := txbuilder.FinalizeTx(ctx, a.chain, txTemplate.Transaction)
 	if err != nil {
 		return err
 	}
@@ -271,7 +271,7 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 			// tell definitively until its max time elapses.
 
 			// Re-insert into the pool in case it was dropped.
-			err = txbuilder.FinalizeTx(ctx, a.chain, a.submitter, tx)
+			err = txbuilder.FinalizeTx(ctx, a.chain, tx)
 			if err != nil {
 				return 0, err
 			}

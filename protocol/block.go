@@ -2,12 +2,10 @@ package protocol
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/log"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
@@ -40,84 +38,6 @@ func (c *Chain) GetBlock(height uint64) (*legacy.Block, error) {
 	return c.store.GetBlock(height)
 }
 
-// GenerateBlock generates a valid, but unsigned, candidate block from
-// the current pending transaction pool. It returns the new block and
-// a snapshot of what the state snapshot is if the block is applied.
-//
-// After generating the block, the pending transaction pool will be
-// empty.
-func (c *Chain) GenerateBlock(ctx context.Context, prev *legacy.Block, snapshot *state.Snapshot, now time.Time, txs []*legacy.Tx) (*legacy.Block, *state.Snapshot, error) {
-	// TODO(kr): move this into a lower-level package (e.g. chain/protocol/bc)
-	// so that other packages (e.g. chain/protocol/validation) unit tests can
-	// call this function.
-
-	timestampMS := bc.Millis(now)
-	if timestampMS < prev.TimestampMS {
-		return nil, nil, fmt.Errorf("timestamp %d is earlier than prevblock timestamp %d", timestampMS, prev.TimestampMS)
-	}
-
-	// Make a copy of the snapshot that we can apply our changes to.
-	newSnapshot := state.Copy(c.state.snapshot)
-	newSnapshot.PruneNonces(timestampMS)
-
-	b := &legacy.Block{
-		BlockHeader: legacy.BlockHeader{
-			Version:           1,
-			Height:            prev.Height + 1,
-			PreviousBlockHash: prev.Hash(),
-			TimestampMS:       timestampMS,
-			BlockCommitment:   legacy.BlockCommitment{},
-		},
-	}
-
-	var txEntries []*bc.Tx
-
-	for _, tx := range txs {
-		if len(b.Transactions) >= maxBlockTxs {
-			break
-		}
-
-		// Filter out transactions that are not well-formed.
-		err := c.ValidateTx(tx.Tx)
-		if err != nil {
-			// TODO(bobg): log this?
-			continue
-		}
-
-		// Filter out transactions that are not yet valid, or no longer
-		// valid, per the block's timestamp.
-		if tx.Tx.MinTimeMs > 0 && tx.Tx.MinTimeMs > b.TimestampMS {
-			// TODO(bobg): log this?
-			continue
-		}
-		if tx.Tx.MaxTimeMs > 0 && tx.Tx.MaxTimeMs < b.TimestampMS {
-			// TODO(bobg): log this?
-			continue
-		}
-
-		// Filter out double-spends etc.
-		err = newSnapshot.ApplyTx(tx.Tx)
-		if err != nil {
-			// TODO(bobg): log this?
-			continue
-		}
-
-		b.Transactions = append(b.Transactions, tx)
-		txEntries = append(txEntries, tx.Tx)
-	}
-
-	var err error
-
-	b.TransactionsMerkleRoot, err = bc.MerkleRoot(txEntries)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "calculating tx merkle root")
-	}
-
-	b.AssetsMerkleRoot = newSnapshot.Tree.RootHash()
-
-	return b, newSnapshot, nil
-}
-
 // ValidateBlock validates an incoming block in advance of applying it
 // to a snapshot (with ApplyValidBlock) and committing it to the
 // blockchain (with CommitAppliedBlock).
@@ -134,11 +54,19 @@ func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 // ApplyValidBlock creates an updated snapshot without validating the
 // block.
 func (c *Chain) ApplyValidBlock(block *legacy.Block) (*state.Snapshot, error) {
-	newSnapshot := state.Copy(c.state.snapshot)
+	//TODO replace with a pre-defined init blo
+	var newSnapshot *state.Snapshot
+	if c.state.snapshot == nil {
+		newSnapshot = state.Empty()
+	} else {
+		newSnapshot = state.Copy(c.state.snapshot)
+	}
+
 	err := newSnapshot.ApplyBlock(legacy.MapBlock(block))
 	if err != nil {
 		return nil, err
 	}
+	//fmt.Printf("want %v, ger %v \n", block.BlockHeader.AssetsMerkleRoot, newSnapshot.Tree.RootHash())
 	if block.AssetsMerkleRoot != newSnapshot.Tree.RootHash() {
 		return nil, ErrBadStateRoot
 	}
@@ -160,15 +88,15 @@ func (c *Chain) CommitAppliedBlock(ctx context.Context, block *legacy.Block, sna
 	// SaveBlock is the linearization point. Once the block is committed
 	// to persistent storage, the block has been applied and everything
 	// else can be derived from that block.
-	/*err := c.store.SaveBlock(ctx, block)
+	err := c.store.SaveBlock(block)
 	if err != nil {
 		return errors.Wrap(err, "storing block")
-	}*/
+	}
 	if block.Time().After(c.lastQueuedSnapshot.Add(saveSnapshotFrequency)) {
 		c.queueSnapshot(ctx, block.Height, block.Time(), snapshot)
 	}
 
-	err := c.store.FinalizeBlock(ctx, block.Height)
+	err = c.store.FinalizeBlock(ctx, block.Height)
 	if err != nil {
 		return errors.Wrap(err, "finalizing block")
 	}
@@ -214,26 +142,4 @@ func (c *Chain) setHeight(h uint64) {
 	}
 	c.state.height = h
 	c.state.cond.Broadcast()
-}
-
-func NewInitialBlock(timestamp time.Time) (*legacy.Block, error) {
-	// TODO(kr): move this into a lower-level package (e.g. chain/protocol/bc)
-	// so that other packages (e.g. chain/protocol/validation) unit tests can
-	// call this function.
-	root, err := bc.MerkleRoot(nil) // calculate the zero value of the tx merkle root
-	if err != nil {
-		return nil, errors.Wrap(err, "calculating zero value of tx merkle root")
-	}
-
-	b := &legacy.Block{
-		BlockHeader: legacy.BlockHeader{
-			Version:     1,
-			Height:      1,
-			TimestampMS: bc.Millis(timestamp),
-			BlockCommitment: legacy.BlockCommitment{
-				TransactionsMerkleRoot: root,
-			},
-		},
-	}
-	return b, nil
 }

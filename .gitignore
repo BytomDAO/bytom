@@ -1,0 +1,40 @@
+# ====> Go
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# Folders
+_obj
+_test
+vendor
+
+# Architecture specific extensions/prefixes
+*.[568vq]
+[568vq].out
+
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+
+_testmain.go
+
+cmd/bytom/bytom
+cmd/bytomcli/bytomcli
+
+*.exe
+
+# vim
+**.swp
+
+*.hex
+*.db
+*.bin
+
+*.idea
+profile.cov
+profile.tmp
+
+.DS_Store
