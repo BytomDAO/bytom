@@ -1,6 +1,8 @@
 Bytom
 =====
 
+[![AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-brightgreen.svg)](./LICENSE)
+
 Table of Contents
 <!-- vim-markdown-toc GFM -->
 
