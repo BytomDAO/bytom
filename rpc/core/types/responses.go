@@ -2,12 +2,12 @@ package core_types
 
 import (
 	"strings"
-        "time"
+    "time"
 
 	abci "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
-        "github.com/bytom/protocol/bc"
+    "github.com/bytom/protocol/bc"
 	"github.com/bytom/p2p"
 	"github.com/bytom/types"
 )
@@ -15,8 +15,7 @@ import (
 type BlockNonce [8]byte
 
 type ResultBlockchainInfo struct {
-	LastHeight int                `json:"last_height"`
-	//BlockMetas []*types.BlockMeta `json:"block_metas"`
+	LastHeight uint64                `json:"last_height"`
 }
 
 type ResultGenesis struct {
@@ -24,17 +23,7 @@ type ResultGenesis struct {
 }
 
 type ResultBlock struct {
-	//BlockMeta *types.BlockMeta `json:"block_meta"`
-	//Block     *types.Block     `json:"block"`
 }
-
-/*
-type ResultCommit struct {
-	Header          *types.Header `json:"header"`
-	Commit          *types.Commit `json:"commit"`
-	CanonicalCommit bool          `json:"canonical"`
-}
-*/
 
 type ResultStatus struct {
 	NodeInfo          *p2p.NodeInfo `json:"node_info"`
@@ -84,13 +73,6 @@ type Peer struct {
 	ConnectionStatus p2p.ConnectionStatus `json:"connection_status"`
 }
 
-/*
-type ResultValidators struct {
-	BlockHeight int                `json:"block_height"`
-	Validators  []*types.Validator `json:"validators"`
-}
-*/
-
 type ResultDumpConsensusState struct {
 	RoundState      string   `json:"round_state"`
 	PeerRoundStates []string `json:"peer_round_states"`
@@ -111,23 +93,6 @@ type ResultBroadcastTxCommit struct {
 	Height    int         `json:"height"`
 }
 
-/*
-type ResultTx struct {
-	Height   int           `json:"height"`
-	Index    int           `json:"index"`
-	TxResult abci.Result   `json:"tx_result"`
-	Tx       types.Tx      `json:"tx"`
-	Proof    types.TxProof `json:"proof,omitempty"`
-}
-*/
-
-/*
-type ResultUnconfirmedTxs struct {
-	N   int        `json:"n_txs"`
-	Txs []types.Tx `json:"txs"`
-}
-*/
-
 type ResultABCIInfo struct {
 	Response abci.ResponseInfo `json:"response"`
 }
@@ -143,10 +108,3 @@ type ResultUnsafeProfile struct{}
 type ResultSubscribe struct{}
 
 type ResultUnsubscribe struct{}
-
-/*
-type ResultEvent struct {
-	Name string            `json:"name"`
-	Data types.TMEventData `json:"data"`
-}
-*/
