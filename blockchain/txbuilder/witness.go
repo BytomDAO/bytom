@@ -120,7 +120,7 @@ func (sw *signatureWitness) sign(ctx context.Context, tpl *Template, index uint3
 		for i, p := range keyID.DerivationPath {
 			path[i] = p
 		}
-		sigBytes, err := signFn(keyID.XPub, path, h, auth)
+		sigBytes, err := signFn(ctx, keyID.XPub, path, h, auth)
 		if err != nil {
 			return errors.WithDetailf(err, "computing signature %d", i)
 		}
