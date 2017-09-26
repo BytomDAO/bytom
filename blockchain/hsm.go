@@ -78,13 +78,13 @@ func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context,  x struct {
 }
 
 func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context,  x struct {
-	Passwords []string
+	auth  string
 	Txs   []*txbuilder.Template `json:"transactions"`
 	XPubs []chainkd.XPub        `json:"xpubs"`
 }) []interface{} {
 	resp := make([]interface{}, 0, len(x.Txs))
 	for _, tx := range x.Txs {
-		err := txbuilder.Sign(ctx, tx, x.XPubs, a.pseudohsmSignTemplate)
+		err := txbuilder.Sign(ctx, tx, x.XPubs, auth, a.pseudohsmSignTemplate)
 		if err != nil {
 			info := errorFormatter.Format(err)
 			resp = append(resp, info)
@@ -95,8 +95,8 @@ func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context,  x struc
 	return resp
 }
 
-func (a *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte) ([]byte, error) {
-	sigBytes, err := a.hsm.XSign(xpub, path, data[:], "nopassword")
+func (a *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
+	sigBytes, err := a.hsm.XSign(xpub, path, data[:], password)
 	if err == pseudohsm.ErrNoKey {
 		return nil, nil
 	}
