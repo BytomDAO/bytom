@@ -738,12 +738,12 @@ func createKey(client *rpc.Client, args []string) {
 		Password 	string 
 	}
 	var key Key
-	var response interface{}
+	var response map[string]interface{}
 	key.Alias  =  args[0]
 	key.Password = args[1]
 
 	client.Call(context.Background(), "/create-key", &key, &response)
-	fmt.Printf("Key info: %v\n", response)
+	fmt.Printf("Address: %v,  XPub: %v\n", response["address"], response["xpub"])
 }
 
 func deleteKey(client *rpc.Client, args []string) {
@@ -789,9 +789,11 @@ func listKeys(client *rpc.Client, args []string) {
 	var in requestQuery
 	in.After = args[0]
 	in.PageSize, _ = strconv.Atoi(args[1])
-	var response interface{}
+	var response map[string][]interface{}
 	client.Call(context.Background(), "/list-keys", &in, &response)
-	fmt.Printf("responses:%v\n", response)
+	for i, item := range response["items"]{
+		key := item.(map[string]interface{})
+		fmt.Printf("---No.%v Alias:%v Address:%v File:%v\n", i, key["alias"], key["address"], key["file"])
 }
 
 func signTransactions(client *rpc.Client, args []string) {

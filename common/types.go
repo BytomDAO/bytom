@@ -163,7 +163,7 @@ func (a *Address) Set(other Address) {
 
 // Serialize given address to JSON
 func (a Address) MarshalJSON() ([]byte, error) {
-	return json.Marshal(a.Hex())
+	return json.Marshal(a.Str())
 }
 
 // Parse address from raw json data
