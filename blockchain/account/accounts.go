@@ -326,16 +326,19 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	return n, nil
 }
 
-/*
-func tagsToNullString(tags map[string]interface{}) (*stdsql.NullString, error) {
-	var tagsJSON []byte
-	if len(tags) != 0 {
-		var err error
-		tagsJSON, err = json.Marshal(tags)
-		if err != nil {
-			return nil, errors.Wrap(err)
+
+func (m *Manager) QueryAll(ctx context.Context) (interface{}, error){
+	ret := make([]interface{},0)
+
+	iter := m.db.Iterator()
+	for iter.Next() {
+		value := string(iter.Value())
+		if value[:3] == "acc"{
+			continue
 		}
+		ret = append(ret,value)
+		//log.Printf(ctx,"%s\t", value)
 	}
-	return &stdsql.NullString{String: string(tagsJSON), Valid: len(tagsJSON) > 0}, nil
+
+	return ret,nil
 }
-*/
