@@ -187,12 +187,14 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	txPool := protocol.NewTxPool()
 	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, txPool, nil)
-	genesisSnap, err := chain.ApplyValidBlock(genesisBlock)
-	if err != nil {
-		cmn.Exit(cmn.Fmt("Failed to apply valid block: %v", err))
-	}
-	if err := chain.CommitAppliedBlock(nil, genesisBlock, genesisSnap); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to commit applied block: %v", err))
+	if store.Height() < 1 {
+		genesisSnap, err := chain.ApplyValidBlock(genesisBlock)
+		if err != nil {
+			cmn.Exit(cmn.Fmt("Failed to apply valid block: %v", err))
+		}
+		if err := chain.CommitAppliedBlock(nil, genesisBlock, genesisSnap); err != nil {
+			cmn.Exit(cmn.Fmt("Failed to commit applied block: %v", err))
+		}
 	}
 
 	/* if err != nil {
