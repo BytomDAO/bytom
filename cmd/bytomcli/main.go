@@ -543,10 +543,14 @@ func listAccounts(client *rpc.Client, args []string) {
 		Aliases      []string      `json:"aliases,omitempty"`
 	}
 	var in requestQuery
-	after := in.After
-	out := in
-	out.After = after
-	client.Call(context.Background(), "/list-accounts", &[]requestQuery{in}, nil)
+
+
+	responses := make([]interface{}, 1)
+
+	client.Call(context.Background(), "/list-accounts", in, &responses)
+	for i,item := range responses{
+		fmt.Println(i,"-----",item)
+	}
 }
 
 func listAssets(client *rpc.Client, args []string) {
@@ -568,10 +572,13 @@ func listAssets(client *rpc.Client, args []string) {
 		Aliases      []string      `json:"aliases,omitempty"`
 	}
 	var in requestQuery
-	after := in.After
-	out := in
-	out.After = after
-	client.Call(context.Background(), "/list-assets", &[]requestQuery{in}, nil)
+	responses := make([]interface{}, 1)
+
+	client.Call(context.Background(), "/list-assets", in, &responses)
+	for i,item := range responses{
+		fmt.Println(i,"-----",item)
+	}
+
 }
 
 func listTxFeeds(client *rpc.Client, args []string) {
@@ -738,12 +745,12 @@ func createKey(client *rpc.Client, args []string) {
 		Password 	string 
 	}
 	var key Key
-	var response interface{}
+	var response map[string]interface{}
 	key.Alias  =  args[0]
 	key.Password = args[1]
 
 	client.Call(context.Background(), "/create-key", &key, &response)
-	fmt.Printf("Key info: %v\n", response)
+	fmt.Printf("Address: %v,  XPub: %v\n", response["address"], response["xpub"])
 }
 
 func deleteKey(client *rpc.Client, args []string) {
@@ -789,9 +796,12 @@ func listKeys(client *rpc.Client, args []string) {
 	var in requestQuery
 	in.After = args[0]
 	in.PageSize, _ = strconv.Atoi(args[1])
-	var response interface{}
+	var response map[string][]interface{}
 	client.Call(context.Background(), "/list-keys", &in, &response)
-	fmt.Printf("responses:%v\n", response)
+	for i, item := range response["items"]{
+		key := item.(map[string]interface{})
+		fmt.Printf("---No.%v Alias:%v Address:%v File:%v\n", i, key["alias"], key["address"], key["file"])
+	}
 }
 
 func signTransactions(client *rpc.Client, args []string) {
