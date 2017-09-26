@@ -2,11 +2,6 @@ package bc
 
 import "io"
 
-const (
-	subsidyReductionInterval = uint64(560640)
-	baseSubsidy              = uint64(624000000000)
-)
-
 // BlockHeader contains the header information for a blockchain
 // block. It satisfies the Entry interface.
 
@@ -18,10 +13,8 @@ func (bh *BlockHeader) writeForHash(w io.Writer) {
 	mustWriteForHash(w, bh.TimestampMs)
 	mustWriteForHash(w, bh.TransactionsRoot)
 	mustWriteForHash(w, bh.AssetsRoot)
-}
-
-func (bh *BlockHeader) BlockSubsidy() uint64 {
-	return baseSubsidy >> uint(bh.Height/subsidyReductionInterval)
+	mustWriteForHash(w, bh.Nonce)
+	mustWriteForHash(w, bh.Bits)
 }
 
 // NewBlockHeader creates a new BlockHeader and populates

@@ -21,8 +21,8 @@ func init() {
 }
 
 var RootCmd = &cobra.Command{
-	Use:   "node_p2p",
-	Short: "node_p2p in Go",
+	Use:   "bytom",
+	Short: "Multiple asset management.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		err := viper.Unmarshal(config)
 		if err != nil {

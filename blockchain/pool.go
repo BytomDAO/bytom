@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-//	"github.com/blockchain/types"
-    "github.com/bytom/protocol/bc/legacy"
+	//	"github.com/blockchain/types"
+	"github.com/bytom/protocol/bc/legacy"
 	. "github.com/tendermint/tmlibs/common"
 	flow "github.com/tendermint/tmlibs/flowrate"
 	"github.com/tendermint/tmlibs/log"
@@ -40,8 +40,8 @@ type BlockPool struct {
 	mtx sync.Mutex
 	// block requests
 	requesters map[uint64]*bpRequester
-	height     uint64   // the lowest key in requesters.
-	numPending int32 // number of requests pending assignment or block response
+	height     uint64 // the lowest key in requesters.
+	numPending int32  // number of requests pending assignment or block response
 	// peers
 	peers map[string]*bpPeer
 
@@ -133,7 +133,7 @@ func (pool *BlockPool) IsCaughtUp() bool {
 	height := pool.height
 
 	// Need at least 1 peer to be considered caught up.
-	if len(pool.peers) == 0 {
+	if len(pool.peers) == 0 && time.Now().Sub(pool.startTime) > 60*time.Second {
 		pool.Logger.Debug("Blockpool has no peers")
 		return false
 	}
@@ -309,8 +309,8 @@ func (pool *BlockPool) debug() string {
 	defer pool.mtx.Unlock()
 
 	str := ""
-    var h uint64
-	for h = pool.height; h < pool.height+ uint64(len(pool.requesters)); h++ {
+	var h uint64
+	for h = pool.height; h < pool.height+uint64(len(pool.requesters)); h++ {
 		if pool.requesters[h] == nil {
 			str += Fmt("H(%v):X ", h)
 		} else {

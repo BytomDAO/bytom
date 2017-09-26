@@ -1,16 +1,13 @@
 package prottest
 
 import (
-	"context"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/prottest/memstore"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/testutil"
 )
@@ -58,42 +55,6 @@ type config struct {
 	quorum       int
 }
 
-// NewChain makes a new Chain. By default it uses a memstore for
-// storage and creates an initial block using a 0/0 multisig program.
-// It commits the initial block before returning the Chain.
-//
-// Its defaults may be overridden by providing Options.
-func NewChain(tb testing.TB, opts ...Option) *protocol.Chain {
-	conf := config{store: memstore.New(), initialState: state.Empty()}
-	for _, opt := range opts {
-		opt(tb, &conf)
-	}
-
-	ctx := context.Background()
-	b1, err := protocol.NewInitialBlock(time.Now())
-	if err != nil {
-		testutil.FatalErr(tb, err)
-	}
-	c, err := protocol.NewChain(ctx, b1.Hash(), conf.store, nil)
-	if err != nil {
-		testutil.FatalErr(tb, err)
-	}
-	c.MaxIssuanceWindow = 48 * time.Hour // TODO(tessr): consider adding MaxIssuanceWindow to NewChain
-
-	err = c.CommitAppliedBlock(ctx, b1, conf.initialState)
-	if err != nil {
-		testutil.FatalErr(tb, err)
-	}
-
-	// save block-signing keys in global state
-	mutex.Lock()
-	blockPubkeys[c] = conf.pubkeys
-	blockPrivkeys[c] = conf.privkeys
-	mutex.Unlock()
-
-	return c
-}
-
 // Initial returns the provided Chain's initial block.
 func Initial(tb testing.TB, c *protocol.Chain) *legacy.Block {
 	b1, err := c.GetBlock(1)
@@ -109,40 +70,4 @@ func BlockKeyPairs(c *protocol.Chain) ([]ed25519.PublicKey, []ed25519.PrivateKey
 	mutex.Lock()
 	defer mutex.Unlock()
 	return blockPubkeys[c], blockPrivkeys[c]
-}
-
-// MakeBlock makes a new block from txs, commits it, and returns it.
-// It assumes c's consensus program requires 0 signatures.
-// (This is true for chains returned by NewChain.)
-// If c requires more than 0 signatures, MakeBlock will fail.
-// MakeBlock always makes a block;
-// if there are no transactions in txs,
-// it makes an empty block.
-func MakeBlock(tb testing.TB, c *protocol.Chain, txs []*legacy.Tx) *legacy.Block {
-	ctx := context.Background()
-	curBlock, err := c.GetBlock(c.Height())
-	if err != nil {
-		testutil.FatalErr(tb, err)
-	}
-
-	mutex.Lock()
-	curState := states[c]
-	mutex.Unlock()
-	if curState == nil {
-		curState = state.Empty()
-	}
-
-	nextBlock, nextState, err := c.GenerateBlock(ctx, curBlock, curState, time.Now(), txs)
-	if err != nil {
-		testutil.FatalErr(tb, err)
-	}
-	err = c.CommitAppliedBlock(ctx, nextBlock, nextState)
-	if err != nil {
-		testutil.FatalErr(tb, err)
-	}
-
-	mutex.Lock()
-	states[c] = nextState
-	mutex.Unlock()
-	return nextBlock
 }

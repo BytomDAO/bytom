@@ -64,14 +64,14 @@ type Asset struct {
 	InitialBlockHash bc.Hash
 	*signers.Signer
 	Tags             map[string]interface{}
-	rawDefinition    []byte
+	RawDefinition1    []byte
 	definition       map[string]interface{}
 	sortID           string
 }
 
 func (asset *Asset) Definition() (map[string]interface{}, error) {
-	if asset.definition == nil && len(asset.rawDefinition) > 0 {
-		err := json.Unmarshal(asset.rawDefinition, &asset.definition)
+	if asset.definition == nil && len(asset.RawDefinition1) > 0 {
+		err := json.Unmarshal(asset.RawDefinition1, &asset.definition)
 		if err != nil {
 			return nil, errors.Wrap(err)
 		}
@@ -80,7 +80,7 @@ func (asset *Asset) Definition() (map[string]interface{}, error) {
 }
 
 func (asset *Asset) RawDefinition() []byte {
-	return asset.rawDefinition
+	return asset.RawDefinition1
 }
 
 func (asset *Asset) SetDefinition(def map[string]interface{}) error {
@@ -89,7 +89,7 @@ func (asset *Asset) SetDefinition(def map[string]interface{}) error {
 		return err
 	}
 	asset.definition = def
-	asset.rawDefinition = rawdef
+	asset.RawDefinition1 = rawdef
 	return nil
 }
 
@@ -116,7 +116,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 	defhash := bc.NewHash(sha3.Sum256(rawDefinition))
 	asset := &Asset{
 		definition:       definition,
-		rawDefinition:    rawDefinition,
+		RawDefinition1:   rawDefinition,
 		VMVersion:        vmver,
 		IssuanceProgram:  issuanceProgram,
 		InitialBlockHash: reg.initialBlockHash,

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 
-//	"github.com/blockchain/blockchain/rpc"
+	//	"github.com/blockchain/blockchain/rpc"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
@@ -19,16 +19,10 @@ var (
 	ErrBadInstructionCount = errors.New("too many signing instructions in template")
 )
 
-// Submitter submits a transaction to the generator so that it may
-// be confirmed in a block.
-type Submitter interface {
-	Submit(ctx context.Context, tx *legacy.Tx) error
-}
-
 // FinalizeTx validates a transaction signature template,
 // assembles a fully signed tx, and stores the effects of
 // its changes on the UTXO set.
-func FinalizeTx(ctx context.Context, c *protocol.Chain, s Submitter, tx *legacy.Tx) error {
+func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *legacy.Tx) error {
 	err := checkTxSighashCommitment(tx)
 	if err != nil {
 		return err
@@ -38,18 +32,17 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, s Submitter, tx *legacy.
 	// finalize a tx before the initial block has landed
 	<-c.BlockWaiter(1)
 
-	err = c.ValidateTx(tx.Tx)
+	if tx.Tx.MaxTimeMs > 0 && tx.Tx.MaxTimeMs < c.TimestampMS() {
+		return errors.Wrap(ErrRejected, "tx expired")
+	}
+	err = c.ValidateTx(tx)
 	if errors.Root(err) == protocol.ErrBadTx {
 		return errors.Sub(ErrRejected, err)
 	}
 	if err != nil {
 		return errors.Wrap(err, "tx rejected")
 	}
-	if tx.Tx.MaxTimeMs > 0 && tx.Tx.MaxTimeMs < c.TimestampMS() {
-		return errors.Wrap(ErrRejected, "tx expired")
-	}
 
-	err = s.Submit(ctx, tx)
 	return errors.Wrap(err)
 }
 
