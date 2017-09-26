@@ -411,19 +411,13 @@ FOR_LOOP:
 				if block == nil {
 					break SYNC_LOOP
 				}
-
 				bcR.pool.PopRequest()
-				snap, err := bcR.chain.ApplyValidBlock(block)
-				if err != nil {
-					fmt.Printf("Failed to apply valid block: %v \n", err)
-					break SYNC_LOOP
+
+				if err := bcR.chain.AddBlock(nil, block); err == nil {
+					bcR.Logger.Info("finish to sync commit block", "blockHeigh", block.BlockHeader.Height)
+				} else {
+					bcR.Logger.Info("fail to sync commit block", "blockHeigh", block.BlockHeader.Height, "error", err)
 				}
-				err = bcR.chain.CommitAppliedBlock(nil, block, snap)
-				if err != nil {
-					fmt.Printf("Failed to commit block: %v \n", err)
-					break SYNC_LOOP
-				}
-				bcR.Logger.Info("finish to sync commit block", block.BlockHeader.Height)
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:

@@ -93,6 +93,7 @@ func (b *Block) Value() (driver.Value, error) {
 }
 
 func (b *Block) readFrom(r *blockchain.Reader) error {
+	fmt.Printf("--------------block:%v", b)
 	serflags, err := b.BlockHeader.readFrom(r)
 	if err != nil {
 		return err

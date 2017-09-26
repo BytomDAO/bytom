@@ -49,8 +49,8 @@ type Chain struct {
 	state struct {
 		cond     sync.Cond // protects height, block, snapshot
 		height   uint64
-		block    *legacy.Block   // current only if leader
-		snapshot *state.Snapshot // current only if leader
+		block    *legacy.Block
+		snapshot *state.Snapshot
 	}
 	store Store
 
@@ -75,7 +75,15 @@ func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, txPool
 	}
 	c.state.cond.L = new(sync.Mutex)
 
+	log.Printf(ctx, "bytom's Height:%v.", store.Height())
 	c.state.height = store.Height()
+
+	if c.state.height < 1 {
+		c.state.snapshot = state.Empty()
+	} else {
+		c.state.block, _ = store.GetBlock(c.state.height)
+		c.state.snapshot, _, _ = store.LatestSnapshot(ctx)
+	}
 
 	// Note that c.height.n may still be zero here.
 	if heights != nil {

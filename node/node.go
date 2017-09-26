@@ -11,12 +11,19 @@ import (
 	"time"
 
 	bc "github.com/bytom/blockchain"
+	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/txdb"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
+	"github.com/bytom/net/http/reqid"
 	p2p "github.com/bytom/p2p"
+	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 	rpccore "github.com/bytom/rpc/core"
 	grpccore "github.com/bytom/rpc/grpc"
+	rpcserver "github.com/bytom/rpc/lib/server"
 	"github.com/bytom/types"
 	"github.com/bytom/version"
 	crypto "github.com/tendermint/go-crypto"
@@ -24,13 +31,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 	"github.com/tendermint/tmlibs/log"
-	"github.com/bytom/blockchain/account"
-	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/txdb"
-	"github.com/bytom/net/http/reqid"
-	"github.com/bytom/protocol"
-	rpcserver "github.com/bytom/rpc/lib/server"
 
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
@@ -187,23 +187,12 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	txPool := protocol.NewTxPool()
 	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, txPool, nil)
-	genesisSnap, err := chain.ApplyValidBlock(genesisBlock)
-	if err != nil {
-		cmn.Exit(cmn.Fmt("Failed to apply valid block: %v", err))
-	}
-	if err := chain.CommitAppliedBlock(nil, genesisBlock, genesisSnap); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to commit applied block: %v", err))
-	}
 
-	/* if err != nil {
-	     cmn.Exit(cmn.Fmt("protocol new chain failed: %v", err))
-	   }
-	   err = chain.CommitAppliedBlock(context.Background(), block, state.Empty())
-	   if err != nil {
-	     cmn.Exit(cmn.Fmt("commit block failed: %v", err))
-	   }
-	   chain.MaxIssuanceWindow = bc.MillisDuration(c.MaxIssuanceWindowMs)
-	*/
+	if store.Height() < 1 {
+		if err := chain.AddBlock(nil, genesisBlock); err != nil {
+			cmn.Exit(cmn.Fmt("Failed to add genesisBlock to Chain: %v", err))
+		}
+	}
 
 	accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
 	accounts := account.NewManager(accounts_db, chain)

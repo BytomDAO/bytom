@@ -38,7 +38,7 @@ func TestNewInitBlock(t *testing.T) {
 				TransactionsMerkleRoot: merkleRoot,
 				AssetsMerkleRoot:       snap.Tree.RootHash(),
 			},
-			Bits:  uint64(21617278211387387),
+			Bits:  uint64(3314649325747331761),
 			Nonce: 0,
 		},
 		Transactions: []*legacy.Tx{coinbaseTx},
