@@ -23,6 +23,7 @@ _testmain.go
 
 cmd/bytom/bytom
 cmd/bytomcli/bytomcli
+cmd/bytom/.bytom
 
 *.exe
 

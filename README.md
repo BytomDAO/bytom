@@ -1,31 +1,101 @@
-# Bytom(support utxo,bvm,p2p,pow,account,asset,grpc,json http.)
+Bytom
+=====
 
-## clone code
-``` bash
-git clone https://github.com/Bytom/bytom $GOPATH/src/github.com
+Table of Contents
+<!-- vim-markdown-toc GFM -->
+
+* [What is Bytom?](#what-is-bytom)
+* [Build from source](#build-from-source)
+  * [Requirements](#requirements)
+  * [Installation](#installation)
+    * [Get the source code](#get-the-source-code)
+    * [Build](#build)
+* [Example](#example)
+  * [Create and launch a single node](#create-and-launch-a-single-node)
+  * [Issue an asset](#issue-an-asset)
+* [Contributing](#contributing)
+* [License](#license)
+
+<!-- vim-markdown-toc -->
+
+## What is Bytom?
+
+Bytom is software designed to operate and connect to highly scalable blockchain networks confirming to the Bytom Blockchain Protocol. Each network allows partipicants to define, issue and transfer digitial assets on a multi-asset shared ledger.
+
+In the current state `bytom` is able to:
+
+- Issue assets
+- Manage account as well as asset
+
+## Build from source
+
+### Requirements
+
+- [Go](https://golang.org/doc/install) version 1.8 or higher, with `$GOPATH` set to your preferred directory
+
+### Installation
+
+Ensure Go with the supported version is installed properly:
+
+```bash
+$ go version
+$ go env GOROOT GOPATH
 ```
-## build bytom
+
+#### Get the source code
+
 ``` bash
-1. make install
-2. cd ./cmd/bytom
-3. go build
+$ git clone https://github.com/Bytom/bytom $GOPATH/src/github.com/bytom
 ```
-## build bytomcli
+
+#### Build
+
+- Bytom
+
 ``` bash
-1. cd ./cmd/bytomcli
-2. go build
+$ cd $GOPATH/src/github.com/bytom
+$ make install
+$ cd ./cmd/bytom
+$ go build
 ```
-## p2p & grpc test (两个节点测试)
+
+- Bytomcli
+
+```go
+$ cd $GOPATH/src/github.com/bytom/cmd/bytomcli
+$ go build
+```
+
+## Example
+
+### Create and launch a single node
+
+When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytom/bytom` and `cmd/bytomcli/bytomcli`, respectively. Then, initialize the node:
+
+```bash
+$ cd ./cmd/bytom
+$ ./bytom init --home ./.bytom
+```
+
+After that, you'll `.bytom` generated in current directory. Launch the single node:
+
 ``` bash
-1. cd ./cmd/bytom
-2. ./test.sh bytom0
-3. ./test.sh bytom1
-4. curl -X POST --data '{"jsonrpc":"2.0", "method": "net_info", "params":[], "id":"67"}' http://127.0.0.1:46657
+$ ./bytom node --home ./.bytom
 ```
-## bytomcli & bytom test
-``` bash
-1. cd ./cmd/bytom
-2. ./test.sh bytom0
-3. cd ./cmd/bytomcli
-4. ./bytomcli <command> <opt...>
+
+### Issue an asset
+
+```bash
+$ cd ./cmd/bytomcli
+$ ./bytomcli <command> <opt...>
 ```
+
+## Contributing
+
+Thank you for considering to help out with the source code! Any contributions are highly appreciated, and we are grateful for even the smallest of fixes!
+
+If you run into an issue, feel free to [file one](https://github.com/Bytom/bytom/issues/) in this repository. We are glad to help!
+
+## License
+
+[AGPL v3](./LICENSE)
