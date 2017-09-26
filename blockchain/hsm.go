@@ -84,7 +84,7 @@ func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context,  x struc
 }) []interface{} {
 	resp := make([]interface{}, 0, len(x.Txs))
 	for _, tx := range x.Txs {
-		err := txbuilder.Sign(ctx, tx, x.XPubs, auth, a.pseudohsmSignTemplate)
+		err := txbuilder.Sign(ctx, tx, x.XPubs, x.auth, a.pseudohsmSignTemplate)
 		if err != nil {
 			info := errorFormatter.Format(err)
 			resp = append(resp, info)

@@ -72,7 +72,7 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
 	for i, sigInst := range tpl.SigningInstructions {
 		for j, sw := range sigInst.SignatureWitnesses {
-			err := sw.sign(ctx, tpl, uint32(i), xpubs, signFn)
+			err := sw.sign(ctx, tpl, uint32(i), xpubs, auth, signFn)
 			if err != nil {
 				return errors.WithDetailf(err, "adding signature(s) to witness component %d of input %d", j, i)
 			}
