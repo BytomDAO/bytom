@@ -14,7 +14,7 @@ Table of Contents
     * [Build](#build)
 * [Example](#example)
   * [Create and launch a single node](#create-and-launch-a-single-node)
-  * [Issue an asset](#issue-an-asset)
+  * [Issue an asset test](#issue-an-asset-test)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -79,17 +79,17 @@ $ cd ./cmd/bytom
 $ ./bytom init --home ./.bytom
 ```
 
-After that, you'll `.bytom` generated in current directory. Launch the single node:
+After that, you'll see `.bytom` generated in current directory, then launch the single node:
 
 ``` bash
 $ ./bytom node --home ./.bytom
 ```
 
-### Issue an asset
+### Issue an asset test
 
 ```bash
 $ cd ./cmd/bytomcli
-$ ./bytomcli <command> <opt...>
+$ ./bytomcli issue-test
 ```
 
 ## Contributing
