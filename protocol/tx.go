@@ -15,26 +15,26 @@ var ErrBadTx = errors.New("invalid transaction")
 // performing full validation.
 func (c *Chain) ValidateTx(tx *legacy.Tx) error {
 	newTx := tx.Tx
-	err := c.checkIssuanceWindow(newTx)
+	if err := c.checkIssuanceWindow(newTx); err != nil {
+		return err
+	}
+	if ok := c.txPool.HaveTransaction(&newTx.ID); ok {
+		return c.txPool.GetErrCache(&newTx.ID)
+	}
+
+	oldBlock, err := c.GetBlock(c.Height())
 	if err != nil {
 		return err
 	}
-	if ok := c.txPool.HaveTransaction(&newTx.ID); !ok {
-		oldBlock, err := c.GetBlock(c.Height())
-		if err != nil {
-			return err
-		}
-		block := legacy.MapBlock(oldBlock)
-		fee, err := validation.ValidateTx(newTx, block)
+	block := legacy.MapBlock(oldBlock)
+	fee, err := validation.ValidateTx(newTx, block)
 
-		if err == nil {
-			c.txPool.AddTransaction(tx, block.BlockHeader.Height, fee)
-		} else {
-			c.txPool.AddErrCache(&newTx.ID, err)
-		}
-	} else {
-		return c.txPool.GetErrCache(&newTx.ID)
+	if err != nil {
+		c.txPool.AddErrCache(&newTx.ID, err)
+		return err
 	}
+
+	c.txPool.AddTransaction(tx, block.BlockHeader.Height, fee)
 	return errors.Sub(ErrBadTx, err)
 }
 

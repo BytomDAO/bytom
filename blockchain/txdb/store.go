@@ -141,7 +141,6 @@ func (s *Store) SaveBlock(block *legacy.Block) error {
 	if err != nil {
 		PanicCrisis(Fmt("Error Marshal block meta: %v", err))
 	}
-	fmt.Printf("------SaveBlock height:%v, byte:%v", height, binaryBlock)
 	s.db.Set(calcBlockKey(height), binaryBlock)
 
 	// Save new BlockStoreStateJSON descriptor
