@@ -8,10 +8,10 @@ import (
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
+	"github.com/bytom/log"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/log"
 )
 
 var (
@@ -60,11 +60,13 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 		return nil, err
 	}
 
+	/*TODO: This part is use for check the balance, but now we are using btm as gas fee
+	the rule need to be rewrite when we have time
 	err = checkBlankCheck(tx)
 	if err != nil {
 		builder.rollback()
 		return nil, err
-	}
+	}*/
 
 	return tpl, nil
 }

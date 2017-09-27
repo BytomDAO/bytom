@@ -95,7 +95,7 @@ out:
 
 		if m.solveBlock(block, ticker, quit) {
 			if err := m.chain.AddBlock(nil, block); err == nil {
-				fmt.Printf("finish commit block heigh %d \n", block.BlockHeader.Height)
+				fmt.Printf("finish commit block heigh %d, # of tx %d \n", block.BlockHeader.Height, len(block.Transactions))
 			} else {
 				fmt.Printf("fail commit block heigh %d, err: %v \n", block.BlockHeader.Height, err)
 			}

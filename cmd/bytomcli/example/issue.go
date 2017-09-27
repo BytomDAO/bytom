@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	bc "github.com/bytom/blockchain"
+	bchain "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/blockchain/txbuilder"
@@ -70,18 +70,48 @@ func IssueTest(client *rpc.Client, args []string) {
 	// Now Issue actions
 	buildReqFmt := `
 		{"actions": [
+			{
+				"type":"spend_account_unspent_output",
+				"receiver":null,
+				"output_id":"73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d",
+				"reference_data":{}
+			},
 			{"type": "issue", "asset_id": "%s", "amount": 100},
 			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"}
 		]}`
 	buildReqStr := fmt.Sprintf(buildReqFmt, asset[0].ID.String(), asset[0].ID.String(), account[0].ID)
-	var buildReq bc.BuildRequest
+	var buildReq bchain.BuildRequest
 	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
 		fmt.Printf("json Unmarshal error.")
 	}
 
+	/*genesisBlock := &legacy.Block{
+		BlockHeader:  legacy.BlockHeader{},
+		Transactions: []*legacy.Tx{},
+	}
+	genesisBlock.UnmarshalText(consensus.InitBlock())
+	cbOutPut := genesisBlock.Transactions[0].TxData.Outputs[0]
+	cbOutHash := bc.Hash{
+		V0: 8345708305356630792,
+		V1: 5734043577792767790,
+		V2: 10417978169190947304,
+		V3: 7322752685124204941,
+	}
+	cbInput := legacy.NewSpendInput(
+		nil,
+		cbOutHash,
+		*cbOutPut.GetAssetId(),
+		cbOutPut.GetAmount(),
+		0,
+		cbOutPut.ControlProgram,
+		bc.Hash{},
+		[]byte{},
+	)*/
+
 	tpl := make([]txbuilder.Template, 1)
-	client.Call(context.Background(), "/build-transaction", []*bc.BuildRequest{&buildReq}, &tpl)
+	client.Call(context.Background(), "/build-transaction", []*bchain.BuildRequest{&buildReq}, &tpl)
+	//tpl[0].Transaction.TxData.Inputs = append(tpl[0].Transaction.TxData.Inputs, cbInput)
 	fmt.Printf("tpl:%v\n", tpl)
 
 	// sign-transaction
@@ -98,7 +128,7 @@ func IssueTest(client *rpc.Client, args []string) {
 
 	// submit-transaction
 	var submitResponse interface{}
-	submitArg := bc.SubmitArg{tpl, json.Duration{time.Duration(1000000)}, "none"}
+	submitArg := bchain.SubmitArg{tpl, json.Duration{time.Duration(1000000)}, "none"}
 	client.Call(context.Background(), "/submit-transaction", submitArg, &submitResponse)
 	fmt.Printf("submit transaction:%v\n", submitResponse)
 
@@ -162,14 +192,14 @@ func SpendTest(client *rpc.Client, args []string) {
 			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"}
 		]}`
 	buildReqStr := fmt.Sprintf(buildReqFmt, asset[0].ID.String(), asset[0].ID.String(), account[0].ID)
-	var buildReq bc.BuildRequest
+	var buildReq bchain.BuildRequest
 	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
 		fmt.Printf("json Unmarshal error.")
 	}
 
 	tpl := make([]txbuilder.Template, 1)
-	client.Call(context.Background(), "/build-transaction", []*bc.BuildRequest{&buildReq}, &tpl)
+	client.Call(context.Background(), "/build-transaction", []*bchain.BuildRequest{&buildReq}, &tpl)
 	fmt.Printf("tpl:%v\n", tpl)
 
 	/*	// sign-transaction
