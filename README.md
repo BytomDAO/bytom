@@ -3,7 +3,7 @@ Bytom
 
 [![AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-brightgreen.svg)](./LICENSE)
 
-Table of Contents
+## Table of Contents
 <!-- vim-markdown-toc GFM -->
 
 * [What is Bytom?](#what-is-bytom)
@@ -75,6 +75,8 @@ $ go build
 Currently, bytom is still in active development and a ton of work needs to be done, but we also provide the following content for these eager to do something with `bytom`.
 
 ### Set up a wallet and manage the key
+
+You can create an account via `create-key password`, which will generate a `keystore` file containing the keys under the project directory.
 
 ```bash
 $ ./bytomcli create-key account_name password   # Create an account named account_name using password
