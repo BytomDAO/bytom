@@ -4,6 +4,7 @@ import (
 	"context"
 	stdjson "encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	bchain "github.com/bytom/blockchain"
@@ -77,9 +78,10 @@ func IssueTest(client *rpc.Client, args []string) {
 				"reference_data":{}
 			},
 			{"type": "issue", "asset_id": "%s", "amount": 100},
-			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"}
+			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"},
+			{"type": "control_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 8888888888, "account_id": "%s"}
 		]}`
-	buildReqStr := fmt.Sprintf(buildReqFmt, asset[0].ID.String(), asset[0].ID.String(), account[0].ID)
+	buildReqStr := fmt.Sprintf(buildReqFmt, asset[0].ID.String(), asset[0].ID.String(), account[0].ID, account[0].ID)
 	var buildReq bchain.BuildRequest
 	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
@@ -88,7 +90,6 @@ func IssueTest(client *rpc.Client, args []string) {
 
 	tpl := make([]txbuilder.Template, 1)
 	client.Call(context.Background(), "/build-transaction", []*bchain.BuildRequest{&buildReq}, &tpl)
-	//tpl[0].Transaction.TxData.Inputs = append(tpl[0].Transaction.TxData.Inputs, cbInput)
 	fmt.Printf("tpl:%v\n", tpl)
 
 	// sign-transaction
@@ -98,7 +99,9 @@ func IssueTest(client *rpc.Client, args []string) {
 	})
 	if err != nil {
 		fmt.Printf("sign-transaction error. err:%v\n", err)
+		os.Exit(0)
 	}
+
 	fmt.Printf("sign tpl:%v\n", tpl[0])
 	fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
 	fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])

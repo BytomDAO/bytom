@@ -436,7 +436,7 @@ func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
 
 func (bcR *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
 	rawTx, err := tx.TxData.MarshalText()
-	if err == nil {
+	if err != nil {
 		return err
 	}
 	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcTransactionMessage{rawTx}})
