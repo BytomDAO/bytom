@@ -76,7 +76,7 @@ Currently, bytom is still in active development and a ton of work needs to be do
 
 ### Set up a wallet and manage the key
 
-You can create an account via `create-key password`, which will generate a `keystore` file containing the keys under the project directory.
+You can create an account via `create-key password`, which will generate a `keystore` directory containing the keys under the project directory.
 
 ```bash
 $ ./bytomcli create-key account_name password   # Create an account named account_name using password
@@ -111,25 +111,25 @@ Create an account named `alice`:
 
 ```bash
 $ ./bytomcli create-account alice
-xprv:<alice account private key>
+xprv:<alice_account_private_key>
 responses:{acc04K9MCFBG0A04 alice [0xc4200966e0] 1 0xc4204be220}
-account id:<alice acoount id>
+account id:<alice_account_id>
 ```
 
 Create an asset named `gold`:
 
 ```bash
 $ ./bytomcli create-asset gold
-xprv:<gold private key>
+xprv:<gold_asset_private_key>
 xpub:[98 55 100 48 102 100 53 101 54 55 55 49 48 52 97 100 50 100 51 51 98 49 56 98 98 100 55 55 50 51 98 53 102 51 101 97 56 55 49 52 48 53 57 54 50 56 55 48 49 97 50 99 97 100 101 51 51 102 100 100 97 53 56 51 49 54 97 50 57 54 101 49 102 100 48 102 53 57 99 55 50 49 53 98 50 54 55 102 50 52 102 52 54 50 48 101 51 48 102 55 99 51 50 56 49 102 97 52 99 55 97 53 102 50 57 97 100 53 51 100 56 100 55 56 50 50 98 98]
 responses:[{{4131000809721133708 15036469059929217352 9712753415038655527 16992088508821480533} gold [118 107 170 32 152 106 231 249 212 15 215 121 94 191 102 23 231 61 38 211 121 176 221 199 48 173 145 207 243 201 82 0 215 2 72 243 81 81 173 105 108 0 192] [0xc420020850] 1 0xc4204c1960 0xc4204c1980 true}]
-asset id:<gold asset id>
+asset id:<gold_asset_id>
 ```
 
 Now we can transafer 10000 gold to `alice` using a single command `sub-create-issue-tx`:
 
 ```bash
-$ ./bytomcli sub-create-issue-tx <alice account id> <gold asset id> <asset private key> 10000
+$ ./bytomcli sub-create-issue-tx <alice_account_id> <gold_asset_id> <asset_private_key> 10000
 To build transaction:
 -----------tpl:{version:1 serialized_size:314 result_ids:<71c3b949750c887e466422007cdd1a6a9f3449e3bacd43307e361e84d76fe37b> data:<130994550772:/* unknown wire type 7 */ 1642:/* unknown wire type 7 */ 10:17681930801800169409 159728:7652 9:4897805654558278394 9:/* unexpected EOF */ >min_time_ms:1506587706078 max_time_ms:1506588006078  [0xc4204c9060 0xc4204c91e0] true false}
 ----------tpl transaction:version:1 serialized_size:314 result_ids:<71c3b949750c887e466422007cdd1a6a9f3449e3bacd43307e361e84d76fe37b> data:<130994550772:/* unknown wire type 7 */ 1642:/* unknown wire type 7 */ 10:17681930801800169409 159728:7652 9:4897805654558278394 9:/* unexpected EOF */ >min_time_ms:1506587706078 max_time_ms:1506588006078 
