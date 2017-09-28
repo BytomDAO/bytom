@@ -460,8 +460,8 @@ func buildTransaction(client *rpc.Client, args []string) {
 }
 
 func submitCreateIssueTransaction(client *rpc.Client, args []string) {
-	if len(args) != 3 {
-		fatalln("error: need args: [account id] [asset id] [asset xprv]")
+	if len(args) != 4 {
+		fatalln("error: need args: [account id] [asset id] [asset xprv] [issue amount]")
 	}
 	// Build Transaction.
 	fmt.Printf("To build transaction:\n")
@@ -474,10 +474,10 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 				"output_id":"73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d",
 				"reference_data":{}
 			},
-			{"type": "issue", "asset_id": "%s", "amount": 100},
-			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"}
+			{"type": "issue", "asset_id": "%s", "amount": %s},
+			{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
 		]}`
-	buildReqStr := fmt.Sprintf(buildReqFmt, args[1], args[1], args[0])
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[1], args[3], args[1], args[3], args[0])
 	var buildReq blockchain.BuildRequest
 	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
@@ -486,7 +486,10 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 
 	tpl := make([]txbuilder.Template, 1)
 	client.Call(context.Background(), "/build-transaction", []*blockchain.BuildRequest{&buildReq}, &tpl)
-	fmt.Printf("tpl:%v\n", tpl[0])
+	fmt.Printf("-----------tpl:%v\n", tpl[0])
+	fmt.Printf("----------tpl transaction:%v\n", tpl[0].Transaction)
+	fmt.Printf("----------btm inputs:%v\n", tpl[0].Transaction.Inputs[0])
+	fmt.Printf("----------issue inputs:%v\n", tpl[0].Transaction.Inputs[1])
 
 	var xprv_asset chainkd.XPrv
 	fmt.Printf("xprv_asset:%v\n", args[2])
@@ -508,7 +511,6 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 	submitArg := blockchain.SubmitArg{tpl, json.Duration{time.Duration(1000000)}, "none"}
 	client.Call(context.Background(), "/submit-transaction", submitArg, &submitResponse)
 	fmt.Printf("submit transaction:%v\n", submitResponse)
-
 }
 
 func createControlProgram(client *rpc.Client, args []string) {
