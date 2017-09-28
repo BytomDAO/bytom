@@ -117,7 +117,14 @@ func (c *Chain) AddBlock(ctx context.Context, block *legacy.Block) error {
 		return err
 	}
 
-	return c.CommitAppliedBlock(ctx, block, newSnap)
+	if err := c.CommitAppliedBlock(ctx, block, newSnap); err != nil {
+		return err
+	}
+
+	for _, tx := range block.Transactions {
+		c.txPool.RemoveTransaction(&tx.Tx.ID)
+	}
+	return nil
 }
 
 func (c *Chain) queueSnapshot(ctx context.Context, height uint64, timestamp time.Time, s *state.Snapshot) {
