@@ -5,7 +5,7 @@ import (
 	"math"
 
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/query/filter"
+	//"github.com/bytom/blockchain/query/filter"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httpjson"
 	//"github.com/bytom/log"
@@ -37,40 +37,15 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, in requestQuery) i
 }
 
 // POST /list-balances
-func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery) (result page, err error) {
-	var sumBy []filter.Field
+func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery) interface{} {
 
-	// Since an empty SumBy yields a meaningless result, we'll provide a
-	// sensible default here.
-	if len(in.SumBy) == 0 {
-		in.SumBy = []string{"asset_alias", "asset_id"}
+	response := bcr.chain.GetAssetsAmount()
+	if len(response) == 0 {
+		return nil
+	}else{
+		return response
 	}
 
-	for _, field := range in.SumBy {
-		f, err := filter.ParseField(field)
-		if err != nil {
-			return result, err
-		}
-		sumBy = append(sumBy, f)
-	}
-
-	timestampMS := in.TimestampMS
-	if timestampMS == 0 {
-		timestampMS = math.MaxInt64
-	} else if timestampMS > math.MaxInt64 {
-		return result, errors.WithDetail(httpjson.ErrBadRequest, "timestamp is too large")
-	}
-
-	// TODO(jackson): paginate this endpoint.
-/*	balances, err := bcr.indexer.Balances(ctx, in.Filter, in.FilterParams, sumBy, timestampMS)
-	if err != nil {
-		return result, err
-	}
-*/
-//	result.Items = httpjson.Array(balances)
-	result.LastPage = true
-	result.Next = in
-	return result, nil
 }
 
 // listTransactions is an http handler for listing transactions matching
