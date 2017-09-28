@@ -79,7 +79,7 @@ func (mp *TxPool) GetErrCache(txHash *bc.Hash) error {
 	defer mp.mtx.Unlock()
 
 	v, ok := mp.errCache.Get(txHash)
-	if ok {
+	if !ok {
 		return nil
 	}
 	return v.(error)
