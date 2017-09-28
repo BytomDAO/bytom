@@ -8,63 +8,32 @@ import (
 	"github.com/bytom/blockchain/query/filter"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httpjson"
+	//"github.com/bytom/log"
 )
 
 const (
 	defGenericPageSize = 100
 )
 
-// listAccounts is an http handler for listing accounts matching
-// an index or an ad-hoc filter.
+
 //
 // POST /list-accounts
-func (bcr *BlockchainReactor) listAccounts(ctx context.Context, in requestQuery) (page, error) {
-	limit := in.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize
-	}
-	after := in.After
-/*
-	// Use the filter engine for querying account tags.
-	accounts, after, err := bcr.indexer.Accounts(ctx, in.Filter, in.FilterParams, after, limit)
-	if err != nil {
-		return page{}, errors.Wrap(err, "running acc query")
-	}
-*/
-	// Pull in the accounts by the IDs
-	out := in
-	out.After = after
-	return page{
-//		Items:    httpjson.Array(accounts),
-//		LastPage: len(accounts) < limit,
-		Next:     out,
-	}, nil
+func (bcr *BlockchainReactor) listAccounts(ctx context.Context, in requestQuery) interface{} {
+
+	response,_ := bcr.accounts.QueryAll(ctx)
+
+	return response
+
 }
 
-// listAssets is an http handler for listing assets matching
-// an index or an ad-hoc filter.
+
 //
 // POST /list-assets
-func (bcr *BlockchainReactor) listAssets(ctx context.Context, in requestQuery) (page, error) {
-	limit := in.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize
-	}
-	after := in.After
+func (bcr *BlockchainReactor) listAssets(ctx context.Context, in requestQuery) interface{} {
 
-/*	// Use the query engine for querying asset tags.
-	assets, after, err := bcr.indexer.Assets(ctx, in.Filter, in.FilterParams, after, limit)
-	if err != nil {
-		return page{}, errors.Wrap(err, "running asset query")
-	}
-*/
-	out := in
-	out.After = after
-	return page{
-//		Items:    httpjson.Array(assets),
-//		LastPage: len(assets) < limit,
-		Next:     out,
-	}, nil
+	response,_ := bcr.assets.QueryAll(ctx)
+
+	return response
 }
 
 // POST /list-balances

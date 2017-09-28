@@ -2,14 +2,14 @@ package txdb
 
 import (
 	"context"
-	"fmt"
 	"encoding/json"
+	"fmt"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
-    dbm "github.com/tendermint/tmlibs/db"
 	. "github.com/tendermint/tmlibs/common"
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
 // A Store encapsulates storage for blockchain validation.
@@ -20,7 +20,6 @@ type Store struct {
 
 	cache blockCache
 }
-
 
 //var _ protocol.Store = (*Store)(nil)
 
@@ -33,14 +32,13 @@ func calcBlockKey(height uint64) []byte {
 }
 
 func LoadBlock(db dbm.DB, height uint64) *legacy.Block {
-    var block *legacy.Block = &legacy.Block{}
-    bytez := db.Get(calcBlockKey(height))
-    if bytez == nil {
-        return nil
-    }
+	var block *legacy.Block = &legacy.Block{}
+	bytez := db.Get(calcBlockKey(height))
+	if bytez == nil {
+		return nil
+	}
 
-	fmt.Printf("------LoadBlock height:%v, byte:%v", height, bytez)
-    block.UnmarshalText(bytez)
+	block.UnmarshalText(bytez)
 	return block
 }
 
@@ -73,7 +71,6 @@ func LoadBlockStoreStateJSON(db dbm.DB) BlockStoreStateJSON {
 	return bsj
 }
 
-
 // NewStore creates and returns a new Store object.
 //
 // For testing purposes, it is usually much faster
@@ -81,18 +78,18 @@ func LoadBlockStoreStateJSON(db dbm.DB) BlockStoreStateJSON {
 // instead.
 func NewStore(db dbm.DB) *Store {
 	cache := newBlockCache(func(height uint64) *legacy.Block {
-			return LoadBlock(db, height)
-		})
+		return LoadBlock(db, height)
+	})
 	return &Store{
-		db: db,
+		db:    db,
 		cache: cache,
-		}
+	}
 }
 
 // Height returns the height of the blockchain.
 func (s *Store) Height() uint64 {
 	heightJson := LoadBlockStoreStateJSON(s.db)
-    return heightJson.Height
+	return heightJson.Height
 }
 
 // GetBlock looks up the block with the provided block height.
@@ -105,7 +102,7 @@ func (s *Store) GetBlock(height uint64) (*legacy.Block, error) {
 func (s *Store) GetRawBlock(height uint64) ([]byte, error) {
 	bytez := s.db.Get(calcBlockKey(height))
 	if bytez == nil {
-		return nil , errors.New("querying blocks from the db null")
+		return nil, errors.New("querying blocks from the db null")
 	}
 	return bytez, nil
 }
@@ -140,12 +137,11 @@ func (s *Store) SaveBlock(block *legacy.Block) error {
 	s.cache.add(block)
 	height := block.Height
 
-    binaryBlock, err := block.MarshalText()
-    if err != nil {
-        PanicCrisis(Fmt("Error Marshal block meta: %v", err))
-    }
-	fmt.Printf("------SaveBlock height:%v, byte:%v", height, binaryBlock)
-    s.db.Set(calcBlockKey(height), binaryBlock)
+	binaryBlock, err := block.MarshalText()
+	if err != nil {
+		PanicCrisis(Fmt("Error Marshal block meta: %v", err))
+	}
+	s.db.Set(calcBlockKey(height), binaryBlock)
 
 	// Save new BlockStoreStateJSON descriptor
 	BlockStoreStateJSON{Height: height}.Save(s.db)
@@ -163,6 +159,6 @@ func (s *Store) SaveSnapshot(ctx context.Context, height uint64, snapshot *state
 }
 
 func (s *Store) FinalizeBlock(ctx context.Context, height uint64) error {
-//	_, err := s.db.ExecContext(ctx, `SELECT pg_notify('newblock', $1)`, height)
+	//	_, err := s.db.ExecContext(ctx, `SELECT pg_notify('newblock', $1)`, height)
 	return nil
 }

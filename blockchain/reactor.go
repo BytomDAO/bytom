@@ -338,12 +338,11 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 				// queue is full, just ignore.
 			}
 		} else {
-			fmt.Println("skip sent the block response due to block is nil")
+			bcR.Logger.Info("skip sent the block response due to block is nil")
 			// TODO peer is asking for things we don't have.
 		}
 	case *bcBlockResponseMessage:
 		// Got a block.
-		//fmt.Printf("receive block %v \n", msg.Block)
 		bcR.pool.AddBlock(src.Key, msg.GetBlock(), len(msgBytes))
 	case *bcStatusRequestMessage:
 		// Send peer our state.
@@ -353,13 +352,12 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		}
 	case *bcStatusResponseMessage:
 		// Got a peer status. Unverified.
-		//fmt.Printf("reveive peer high is %d \n", msg.Height)
 		bcR.pool.SetPeerHeight(src.Key, msg.Height)
 	case *bcTransactionMessage:
 		tx := msg.GetTransaction()
 
 		if err := bcR.chain.ValidateTx(tx); err != nil {
-			return
+			bcR.Logger.Error("fail to sync transaction to txPool", "err", err)
 		}
 	default:
 		bcR.Logger.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
@@ -411,19 +409,13 @@ FOR_LOOP:
 				if block == nil {
 					break SYNC_LOOP
 				}
-
 				bcR.pool.PopRequest()
-				snap, err := bcR.chain.ApplyValidBlock(block)
-				if err != nil {
-					fmt.Printf("Failed to apply valid block: %v \n", err)
-					break SYNC_LOOP
+
+				if err := bcR.chain.AddBlock(nil, block); err == nil {
+					bcR.Logger.Info("finish to sync commit block", "blockHeigh", block.BlockHeader.Height)
+				} else {
+					bcR.Logger.Info("fail to sync commit block", "blockHeigh", block.BlockHeader.Height, "error", err)
 				}
-				err = bcR.chain.CommitAppliedBlock(nil, block, snap)
-				if err != nil {
-					fmt.Printf("Failed to commit block: %v \n", err)
-					break SYNC_LOOP
-				}
-				bcR.Logger.Info("finish to sync commit block", block.BlockHeader.Height)
 			}
 			continue FOR_LOOP
 		case <-bcR.Quit:

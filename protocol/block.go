@@ -54,14 +54,7 @@ func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 // ApplyValidBlock creates an updated snapshot without validating the
 // block.
 func (c *Chain) ApplyValidBlock(block *legacy.Block) (*state.Snapshot, error) {
-	//TODO replace with a pre-defined init blo
-	var newSnapshot *state.Snapshot
-	if c.state.snapshot == nil {
-		newSnapshot = state.Empty()
-	} else {
-		newSnapshot = state.Copy(c.state.snapshot)
-	}
-
+	newSnapshot := state.Copy(c.state.snapshot)
 	err := newSnapshot.ApplyBlock(legacy.MapBlock(block))
 	if err != nil {
 		return nil, err
@@ -110,6 +103,27 @@ func (c *Chain) CommitAppliedBlock(ctx context.Context, block *legacy.Block, sna
 	// harmless; and the following call is required in the cases where
 	// it's not redundant.
 	c.setState(block, snapshot)
+	return nil
+}
+
+func (c *Chain) AddBlock(ctx context.Context, block *legacy.Block) error {
+	currentBlock, _ := c.State()
+	if err := c.ValidateBlock(block, currentBlock); err != nil {
+		return err
+	}
+
+	newSnap, err := c.ApplyValidBlock(block)
+	if err != nil {
+		return err
+	}
+
+	if err := c.CommitAppliedBlock(ctx, block, newSnap); err != nil {
+		return err
+	}
+
+	for _, tx := range block.Transactions {
+		c.txPool.RemoveTransaction(&tx.Tx.ID)
+	}
 	return nil
 }
 

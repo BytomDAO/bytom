@@ -77,8 +77,13 @@ func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, txPool
 
 	log.Printf(ctx, "bytom's Height:%v.", store.Height())
 	c.state.height = store.Height()
-	c.state.block, _ = store.GetBlock(c.state.height)
-	c.state.snapshot, _, _ = store.LatestSnapshot(ctx)
+
+	if c.state.height < 1 {
+		c.state.snapshot = state.Empty()
+	} else {
+		c.state.block, _ = store.GetBlock(c.state.height)
+		c.state.snapshot, _, _ = store.LatestSnapshot(ctx)
+	}
 
 	// Note that c.height.n may still be zero here.
 	if heights != nil {
