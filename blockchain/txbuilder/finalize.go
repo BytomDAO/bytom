@@ -28,10 +28,6 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *legacy.Tx) error {
 		return err
 	}
 
-	// Make sure there is at least one block in case client is trying to
-	// finalize a tx before the initial block has landed
-	<-c.BlockWaiter(1)
-
 	if tx.Tx.MaxTimeMs > 0 && tx.Tx.MaxTimeMs < c.TimestampMS() {
 		return errors.Wrap(ErrRejected, "tx expired")
 	}
@@ -64,6 +60,8 @@ var (
 )
 
 func checkTxSighashCommitment(tx *legacy.Tx) error {
+	// TODO: this is the local sender check rules, we might don't need it due to the rule is difference
+	return nil
 	var lastError error
 
 	for i, inp := range tx.Inputs {

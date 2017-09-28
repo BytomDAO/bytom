@@ -5,6 +5,7 @@
 package mining
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/bytom/blockchain/txbuilder"
@@ -77,8 +78,8 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (
 	newSnap.PruneNonces(b.BlockHeader.TimestampMS)
 
 	appendTx := func(tx *legacy.Tx, weight, fee uint64) {
-		b.Transactions = append(b.Transactions, tx)
-		txEntries = append(txEntries, tx.Tx)
+		b.Transactions = append([]*legacy.Tx{tx}, b.Transactions...)
+		txEntries = append([]*bc.Tx{tx.Tx}, txEntries...)
 		blockWeight += weight
 		txFee += fee
 	}
@@ -89,10 +90,12 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (
 			break
 		}
 		if err := newSnap.ApplyTx(tx); err != nil {
+			fmt.Println("mining block generate skip tx due to %v", err)
 			txPool.RemoveTransaction(&tx.ID)
 			continue
 		}
 		if _, err := validation.ValidateTx(tx, preBcBlock); err != nil {
+			fmt.Println("mining block generate skip tx due to %v", err)
 			txPool.RemoveTransaction(&tx.ID)
 			continue
 		}
