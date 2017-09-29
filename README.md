@@ -59,7 +59,7 @@ $ git clone https://github.com/Bytom/bytom $GOPATH/src/github.com/bytom
 ``` bash
 $ cd $GOPATH/src/github.com/bytom
 $ make install
-$ cd ./cmd/bytom
+$ cd ./cmd/bytomd
 $ go build
 ```
 
@@ -79,14 +79,14 @@ Currently, bytom is still in active development and a ton of work needs to be do
 When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytom/bytom` and `cmd/bytomcli/bytomcli`, respectively. The next step is to initialize the node:
 
 ```bash
-$ cd ./cmd/bytom
-$ ./bytom init --home ./.bytom
+$ cd ./cmd/bytomd
+$ ./bytomd init --home ./.bytom
 ```
 
 After that, you'll see `.bytom` generated in current directory, then launch the single node:
 
 ``` bash
-$ ./bytom node --home ./.bytom
+$ ./bytomd node --home ./.bytom
 ```
 
 #### Asset issuance test
