@@ -13,9 +13,9 @@ Bytom
     * [Get the source code](#get-the-source-code)
     * [Build](#build)
 * [Example](#example)
-  * [Set up a wallet and manage the key](#set-up-a-wallet-and-manage-the-key)
   * [Create and launch a single node](#create-and-launch-a-single-node)
     * [Asset issuance test](#asset-issuance-test)
+  * [Set up a wallet and manage the key](#set-up-a-wallet-and-manage-the-key)
   * [Multiple node](#multiple-node)
 * [Contributing](#contributing)
 * [License](#license)
@@ -74,16 +74,6 @@ $ go build
 
 Currently, bytom is still in active development and a ton of work needs to be done, but we also provide the following content for these eager to do something with `bytom`.
 
-### Set up a wallet and manage the key
-
-You can create an account via `create-key password`, which will generate a `keystore` directory containing the keys under the project directory.
-
-```bash
-$ ./bytomcli create-key account_name password   # Create an account named account_name using password
-$ ./bytomcli delete-key password pubkey         # Delete account pubkey
-$ ./bytomcli reset-password oldpassword newpassword pubkey  # Update password
-```
-
 ### Create and launch a single node
 
 When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytom/bytom` and `cmd/bytomcli/bytomcli`, respectively. The next step is to initialize the node:
@@ -127,7 +117,7 @@ responses:[{{4131000809721133708 15036469059929217352 9712753415038655527 169920
 asset id:<gold_asset_id>
 ```
 
-Now we can transafer 10000 gold to `alice` using a single command `sub-create-issue-tx`:
+Now we can transafer `<gold_asset_amount>` gold to `alice` using a single command `sub-create-issue-tx`:
 
 ```bash
 $ ./bytomcli sub-create-issue-tx <alice_account_id> <gold_asset_id> <asset_private_key> <gold_asset_amount>
@@ -147,6 +137,16 @@ Query the assets on-chain:
 ```bash
 $ ./bytomcli list-balances
 0 ----- map[<gold_asset_id>:<gold_asset_amount>]
+```
+
+### Set up a wallet and manage the key
+
+If you have started a bytom node, then you can create an account via `create-key password`, which will generate a `keystore` directory containing the keys under the project directory.
+
+```bash
+$ ./bytomcli create-key account_name password   # Create an account named account_name using password
+$ ./bytomcli delete-key password pubkey         # Delete account pubkey
+$ ./bytomcli reset-password oldpassword newpassword pubkey  # Update password
 ```
 
 ### Multiple node
