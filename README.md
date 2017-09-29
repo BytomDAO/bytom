@@ -106,6 +106,7 @@ Given the `bytom` node is running, the general workflow is as follows:
 - create an account
 - create an asset
 - create/sign/submit a transaction to transfer an asset
+- query the assets on-chain
 
 Create an account named `alice`:
 
@@ -142,7 +143,7 @@ SigningInstructions's SignatureWitnesses:&{0 [] [32 254 83 225 251 124 27 13 126
 submit transaction:[map[id:cc4313fbae424bb945029adef193154f34de324316036e510bcc751d0013ccb7]]
 ```
 
-Query asset amount on-chain:
+Query the assets on-chain:
 ```bash
 $ ./bytomcli list-balances
 0 ----- map[<gold_asset_id>:<gold_asset_amount>]
