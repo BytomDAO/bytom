@@ -129,7 +129,7 @@ asset id:<gold_asset_id>
 Now we can transafer 10000 gold to `alice` using a single command `sub-create-issue-tx`:
 
 ```bash
-$ ./bytomcli sub-create-issue-tx <alice_account_id> <gold_asset_id> <asset_private_key> 10000
+$ ./bytomcli sub-create-issue-tx <alice_account_id> <gold_asset_id> <asset_private_key> <gold_asset_amount>
 To build transaction:
 -----------tpl:{version:1 serialized_size:314 result_ids:<71c3b949750c887e466422007cdd1a6a9f3449e3bacd43307e361e84d76fe37b> data:<130994550772:/* unknown wire type 7 */ 1642:/* unknown wire type 7 */ 10:17681930801800169409 159728:7652 9:4897805654558278394 9:/* unexpected EOF */ >min_time_ms:1506587706078 max_time_ms:1506588006078  [0xc4204c9060 0xc4204c91e0] true false}
 ----------tpl transaction:version:1 serialized_size:314 result_ids:<71c3b949750c887e466422007cdd1a6a9f3449e3bacd43307e361e84d76fe37b> data:<130994550772:/* unknown wire type 7 */ 1642:/* unknown wire type 7 */ 10:17681930801800169409 159728:7652 9:4897805654558278394 9:/* unexpected EOF */ >min_time_ms:1506587706078 max_time_ms:1506588006078 
@@ -140,6 +140,12 @@ sign tpl:{version:1 serialized_size:314 result_ids:<71c3b949750c887e466422007cdd
 sign tpl's SigningInstructions:&{0 [0xc420010670]}
 SigningInstructions's SignatureWitnesses:&{0 [] [32 254 83 225 251 124 27 13 126 32 0 93 132 151 197 166 125 64 222 168 154 133 219 122 187 130 169 176 160 166 8 49 145 174 135] []}
 submit transaction:[map[id:cc4313fbae424bb945029adef193154f34de324316036e510bcc751d0013ccb7]]
+```
+
+Query asset amount on-chain:
+```bash
+$ ./bytomcli list-balances
+0 ----- map[<gold_asset_id>:<gold_asset_amount>]
 ```
 
 ### Multiple node
