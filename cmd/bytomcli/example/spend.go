@@ -4,8 +4,6 @@ import (
 	"context"
 	stdjson "encoding/json"
 	"fmt"
-	"os"
-	"time"
 
 	bchain "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/query"
@@ -13,11 +11,9 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/encoding/json"
 )
 
-// TO DO: issue a asset to a account.
-func IssueTest(client *rpc.Client, args []string) {
+func SpendTest(client *rpc.Client, args []string) {
 	// Create Account.
 	fmt.Printf("To create Account:\n")
 	xprv, _ := chainkd.NewXPrv(nil)
@@ -68,20 +64,13 @@ func IssueTest(client *rpc.Client, args []string) {
 
 	// Build Transaction.
 	fmt.Printf("To build transaction:\n")
-	// Now Issue actions
+	// Now spend actions
 	buildReqFmt := `
 		{"actions": [
-			{
-				"type":"spend_account_unspent_output",
-				"receiver":null,
-				"output_id":"73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d",
-				"reference_data":{}
-			},
-			{"type": "issue", "asset_id": "%s", "amount": 100},
-			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"},
-			{"type": "control_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 8888888888, "account_id": "%s"}
+			{"type": "spend", "asset_id": "%s", "amount": 100},
+			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"}
 		]}`
-	buildReqStr := fmt.Sprintf(buildReqFmt, asset[0].ID.String(), asset[0].ID.String(), account[0].ID, account[0].ID)
+	buildReqStr := fmt.Sprintf(buildReqFmt, asset[0].ID.String(), asset[0].ID.String(), account[0].ID)
 	var buildReq bchain.BuildRequest
 	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
@@ -92,23 +81,22 @@ func IssueTest(client *rpc.Client, args []string) {
 	client.Call(context.Background(), "/build-transaction", []*bchain.BuildRequest{&buildReq}, &tpl)
 	fmt.Printf("tpl:%v\n", tpl)
 
-	// sign-transaction
-	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprv_asset.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
-		derived := xprv_asset.Derive(path)
-		return derived.Sign(data[:]), nil
-	})
-	if err != nil {
-		fmt.Printf("sign-transaction error. err:%v\n", err)
-		os.Exit(0)
-	}
+	/*	// sign-transaction
+		err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprv_asset.XPub()}, func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte) ([]byte, error) {
+			derived := xprv_asset.Derive(path)
+			return derived.Sign(data[:]), nil
+		})
+		if err != nil {
+			fmt.Printf("sign-transaction error. err:%v\n", err)
+		}
+		fmt.Printf("sign tpl:%v\n", tpl[0])
+		fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
+		fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
 
-	fmt.Printf("sign tpl:%v\n", tpl[0])
-	fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
-	fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
-
-	// submit-transaction
-	var submitResponse interface{}
-	submitArg := bchain.SubmitArg{tpl, json.Duration{time.Duration(1000000)}, "none"}
-	client.Call(context.Background(), "/submit-transaction", submitArg, &submitResponse)
-	fmt.Printf("submit transaction:%v\n", submitResponse)
+		// submit-transaction
+		var submitResponse interface{}
+		submitArg := bc.SubmitArg{tpl, json.Duration{time.Duration(1000000)}, "none"}
+		client.Call(context.Background(), "/submit-transaction", submitArg, &submitResponse)
+		fmt.Printf("submit transaction:%v\n", submitResponse)
+	*/
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 
-	//	"github.com/blockchain/blockchain/rpc"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"

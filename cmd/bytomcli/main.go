@@ -17,14 +17,13 @@ import (
 	"time"
 
 	"github.com/bytom/blockchain"
-	//	"chain/core/accesstoken"
-	//"github.com/bytom/config"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/cmd/bytomcli/example"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
+	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
 	"github.com/bytom/log"
@@ -88,6 +87,7 @@ var commands = map[string]*command{
 	"list-keys":			   {listKeys},
 	"delete-key":			   {deleteKey},
 	"sign-transactions":       {signTransactions},
+	"sub-create-issue-tx":     {submitCreateIssueTransaction},
 	"reset-password":		   {resetPassword},
 	"update-alias":			   {updateAlias},
 }
@@ -106,8 +106,6 @@ func main() {
 			//version = rev.ID
 		}
 		fmt.Printf("bytomcli %s\n", version)
-		fmt.Printf("build-commit: %v\n", buildCommit)
-		fmt.Printf("build-date: %v\n", buildDate)
 		return
 	}
 
@@ -340,6 +338,7 @@ func createAccount(client *rpc.Client, args []string) {
 	client.Call(context.Background(), "/create-account", &[]Ins{ins}, &account)
 	//dieOnRPCError(err)
 	fmt.Printf("responses:%v\n", account[0])
+	fmt.Printf("account id:%v\n", account[0].ID)
 }
 
 func createAsset(client *rpc.Client, args []string) {
@@ -350,9 +349,11 @@ func createAsset(client *rpc.Client, args []string) {
 	if err != nil {
 		fatalln("NewXprv error.")
 	}
+	xprv_, _ := xprv.MarshalText()
 	xpub := xprv.XPub()
-	fmt.Printf("xprv:%v\n", xprv)
-	fmt.Printf("xpub:%v\n", xpub)
+	fmt.Printf("xprv:%v\n", string(xprv_))
+	xpub_, _ := xpub.MarshalText()
+	fmt.Printf("xpub:%v\n", xpub_)
 	type Ins struct {
 		RootXPubs   []chainkd.XPub `json:"root_xpubs"`
 		Quorum      int
@@ -372,6 +373,7 @@ func createAsset(client *rpc.Client, args []string) {
 	client.Call(context.Background(), "/create-asset", &[]Ins{ins}, &assets)
 	//dieOnRPCError(err)
 	fmt.Printf("responses:%v\n", assets)
+	fmt.Printf("asset id:%v\n", assets[0].ID.String())
 }
 
 func updateAccountTags(client *rpc.Client, args []string) {
@@ -428,9 +430,87 @@ func updateAssetTags(client *rpc.Client, args []string) {
 }
 
 func buildTransaction(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error:updateAccountTags not use args")
+	if len(args) != 2 {
+		fatalln("error: need args: [account id] [asset id]")
 	}
+	// Build Transaction.
+	fmt.Printf("To build transaction:\n")
+	// Now Issue actions
+	buildReqFmt := `
+		{"actions": [
+			{
+				"type":"spend_account_unspent_output",
+				"receiver":null,
+				"output_id":"73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d",
+				"reference_data":{}
+			},
+			{"type": "issue", "asset_id": "%s", "amount": 100},
+			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"}
+		]}`
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[1], args[1], args[0])
+	var buildReq blockchain.BuildRequest
+	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
+	if err != nil {
+		fmt.Printf("json Unmarshal error.")
+	}
+
+	tpl := make([]txbuilder.Template, 1)
+	client.Call(context.Background(), "/build-transaction", []*blockchain.BuildRequest{&buildReq}, &tpl)
+	fmt.Printf("tpl:%v\n", tpl[0])
+}
+
+func submitCreateIssueTransaction(client *rpc.Client, args []string) {
+	if len(args) != 4 {
+		fatalln("error: need args: [account id] [asset id] [asset xprv] [issue amount]")
+	}
+	// Build Transaction.
+	fmt.Printf("To build transaction:\n")
+	// Now Issue actions
+	buildReqFmt := `
+		{"actions": [
+			{
+				"type":"spend_account_unspent_output",
+				"receiver":null,
+				"output_id":"73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d",
+				"reference_data":{}
+			},
+			{"type": "issue", "asset_id": "%s", "amount": %s},
+			{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
+		]}`
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[1], args[3], args[1], args[3], args[0])
+	var buildReq blockchain.BuildRequest
+	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
+	if err != nil {
+		fmt.Printf("json Unmarshal error.")
+	}
+
+	tpl := make([]txbuilder.Template, 1)
+	client.Call(context.Background(), "/build-transaction", []*blockchain.BuildRequest{&buildReq}, &tpl)
+	fmt.Printf("-----------tpl:%v\n", tpl[0])
+	fmt.Printf("----------tpl transaction:%v\n", tpl[0].Transaction)
+	fmt.Printf("----------btm inputs:%v\n", tpl[0].Transaction.Inputs[0])
+	fmt.Printf("----------issue inputs:%v\n", tpl[0].Transaction.Inputs[1])
+
+	var xprv_asset chainkd.XPrv
+	fmt.Printf("xprv_asset:%v\n", args[2])
+	xprv_asset.UnmarshalText([]byte(args[2]))
+	// sign-transaction
+	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprv_asset.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
+		derived := xprv_asset.Derive(path)
+		return derived.Sign(data[:]), nil
+	})
+	if err != nil {
+		fmt.Printf("sign-transaction error. err:%v\n", err)
+	}
+	fmt.Printf("sign tpl:%v\n", tpl[0])
+	fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
+	fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
+
+	// submit-transaction
+	var submitResponse interface{}
+	submitArg := blockchain.SubmitArg{tpl, json.Duration{time.Duration(1000000)}, "none"}
+	client.Call(context.Background(), "/submit-transaction", submitArg, &submitResponse)
+	fmt.Printf("submit transaction:%v\n", submitResponse)
 }
 
 func createControlProgram(client *rpc.Client, args []string) {
@@ -812,9 +892,23 @@ func listKeys(client *rpc.Client, args []string) {
 }
 
 func signTransactions(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error: signTransaction not use args")
+	if len(args) != 2 {
+		fatalln("error: signTransaction need args: [tpl] [xPub]")
 	}
+	var tpl txbuilder.Template
+	var xprv_asset chainkd.XPrv
+	xprv_asset.UnmarshalText([]byte(args[1]))
+	// sign-transaction
+	err := txbuilder.Sign(context.Background(), &tpl, []chainkd.XPub{xprv_asset.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
+		derived := xprv_asset.Derive(path)
+		return derived.Sign(data[:]), nil
+	})
+	if err != nil {
+		fmt.Printf("sign-transaction error. err:%v\n", err)
+	}
+	fmt.Printf("sign tpl:%v\n", tpl)
+	fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl.SigningInstructions[0])
+	fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl.SigningInstructions[0].SignatureWitnesses[0])
 }
 
 func resetPassword(client *rpc.Client, args []string) {

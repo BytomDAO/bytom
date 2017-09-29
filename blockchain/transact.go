@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/log"
 )
 
 var defaultTxTTL = 5 * time.Minute
@@ -208,6 +209,7 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 	localHeight := a.chain.Height()
 	generatorHeight := localHeight
 
+	log.Printf(ctx, "localHeight:%v\n", localHeight)
 	// Remember this height in case we retry this submit call.
 	/*height, err := recordSubmittedTx(ctx, a.db, txTemplate.Transaction.ID, generatorHeight)
 	if err != nil {
@@ -242,6 +244,7 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 }
 
 func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx, height uint64) (uint64, error) {
+	log.Printf(ctx, "waitForTxInBlock function.")
 	for {
 		height++
 		select {
@@ -305,6 +308,7 @@ func (a *BlockchainReactor) submit(ctx context.Context, x SubmitArg) (interface{
 			defer batchRecover(subctx, &responses[i])
 
 			tx, err := a.submitSingle(subctx, &x.Transactions[i], x.WaitUntil)
+			log.Printf(ctx, "-----tx:%v\n", tx)
 			if err != nil {
 				responses[i] = err
 			} else {
