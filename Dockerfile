@@ -1,16 +1,18 @@
-# Build Geth in a stock Go builder container
+# Build Bytom in a stock Go builder container
 FROM golang:1.9-alpine as builder
 
-RUN apk add --no-cache make gcc musl-dev linux-headers
+RUN apk add --no-cache make git
 
-ADD . /go-ethereum
-RUN cd /go-ethereum && make geth
+ADD . /go/src/github.com/bytom
+RUN cd /go/src/github.com/bytom && make install && cd ./cmd/bytom && go build && cd ../bytomcli && go build
 
-# Pull Geth into a second stage deploy alpine container
+
+# Pull Bytom into a second stage deploy alpine container
 FROM alpine:latest
 
 RUN apk add --no-cache ca-certificates
-COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/
+COPY --from=builder /go/src/github.com/bytom/cmd/bytom/bytom /usr/local/bin/
+COPY --from=builder /go/src/github.com/bytom/cmd/bytomcli/bytomcli /usr/local/bin/
 
-EXPOSE 8545 8546 30303 30303/udp
-ENTRYPOINT ["geth"]
+EXPOSE 1999 46656 46657
+CMD ["bytom"]
