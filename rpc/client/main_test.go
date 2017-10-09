@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
-	meapp "github.com/tendermint/merkleeyes/app"
 	nm "github.com/bytom/node"
 	rpctest "github.com/bytom/rpc/test"
+	meapp "github.com/tendermint/merkleeyes/app"
 )
 
 var node *nm.Node

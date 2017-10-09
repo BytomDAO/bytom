@@ -9,7 +9,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
-var initFilesCmd = &cobra.Command {
+var initFilesCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Initialize blockchain",
 	Run:   initFiles,
@@ -24,7 +24,7 @@ func initFiles(cmd *cobra.Command, args []string) {
 
 	if _, err := os.Stat(genFile); os.IsNotExist(err) {
 		genDoc := types.GenesisDoc{
-			ChainID: cmn.Fmt("bytom"),
+			ChainID:    cmn.Fmt("bytom"),
 			PrivateKey: "27F82582AEFAE7AB151CFB01C48BB6C1A0DA78F9BDDA979A9F70A84D074EB07D3B3069C422E19688B45CBFAE7BB009FC0FA1B1EA86593519318B7214853803C8",
 		}
 		genDoc.SaveAs(genFile)

@@ -1,7 +1,7 @@
 package pseudohsm
 
 import (
-	_"encoding/hex"
+	_ "encoding/hex"
 	//"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,7 +13,6 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 
 	"github.com/pborman/uuid"
-
 )
 
 const (
@@ -24,7 +23,7 @@ const (
 type XKey struct {
 	Id      uuid.UUID
 	KeyType string
-	Alias	string
+	Alias   string
 	Address common.Address
 	XPrv    chainkd.XPrv
 	XPub    chainkd.XPub
@@ -43,9 +42,9 @@ type encryptedKeyJSON struct {
 	Address string     `json:"address"`
 	Crypto  cryptoJSON `json:"crypto"`
 	Id      string     `json:"id"`
-	Type    string 	   `json:"type"`
+	Type    string     `json:"type"`
 	Version int        `json:"version"`
-	Alias   string	   `json:"alias"`
+	Alias   string     `json:"alias"`
 }
 
 type cryptoJSON struct {
@@ -116,7 +115,7 @@ func (k *XKey) UnmarshalJSON(j []byte) (err error) {
 	if k.KeyType != keytype {
 		return ErrInvalidKeyType
 	}
-	
+
 	k.Address = common.BytesToAddress(addr)
 
 	copy(k.XPrv[:], privkey)

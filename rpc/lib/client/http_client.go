@@ -11,8 +11,8 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/pkg/errors"
 	types "github.com/bytom/rpc/lib/types"
+	"github.com/pkg/errors"
 	cmn "github.com/tendermint/tmlibs/common"
 )
 

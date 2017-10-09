@@ -3,25 +3,25 @@ package account
 
 import (
 	"context"
-//	stdsql "database/sql"
+	//	stdsql "database/sql"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
-    "fmt"
 
 	"github.com/golang/groupcache/lru"
 	//"github.com/lib/pq"
 
-//	"chain/core/pin"
+	//	"chain/core/pin"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
-//	"chain/database/pg"
-     dbm "github.com/tendermint/tmlibs/db"
+	//	"chain/database/pg"
 	"github.com/bytom/errors"
 	"github.com/bytom/log"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/vm/vmutil"
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const maxAccountCache = 1000
@@ -31,12 +31,12 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func NewManager(db dbm.DB, chain *protocol.Chain/*, pinStore *pin.Store*/) *Manager {
+func NewManager(db dbm.DB, chain *protocol.Chain /*, pinStore *pin.Store*/) *Manager {
 	return &Manager{
-		db:          db,
-		chain:       chain,
-		utxoDB:      newReserver(db, chain/*, pinStore*/),
-//		pinStore:    pinStore,
+		db:     db,
+		chain:  chain,
+		utxoDB: newReserver(db, chain /*, pinStore*/),
+		//		pinStore:    pinStore,
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
 		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*controlProgram),
@@ -45,11 +45,11 @@ func NewManager(db dbm.DB, chain *protocol.Chain/*, pinStore *pin.Store*/) *Mana
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	db       dbm.DB
-	chain    *protocol.Chain
-	utxoDB   *reserver
-	indexer  Saver
-//	pinStore *pin.Store
+	db      dbm.DB
+	chain   *protocol.Chain
+	utxoDB  *reserver
+	indexer Saver
+	//	pinStore *pin.Store
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
@@ -94,7 +94,7 @@ type Account struct {
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
 	//if ret := m.db.Get([]byte(alias));ret != nil {
-		//return nil,errors.New("alias already exists")
+	//return nil,errors.New("alias already exists")
 	//}
 
 	accountSigner, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
@@ -117,7 +117,6 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		m.db.Set(account_id, json.RawMessage(acc))
 		m.db.Set([]byte(alias), account_id)
 	}
-
 
 	err = m.indexAnnotatedAccount(ctx, account)
 	if err != nil {
@@ -180,7 +179,6 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 
 }
 
-
 // FindByAlias retrieves an account's Signer record by its alias
 func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signer, error) {
 	var accountID string
@@ -199,8 +197,8 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 		if err != nil {
 			return nil, errors.Wrap(err)
 		}*/
-        bytez := m.db.Get([]byte(fmt.Sprintf("alias_account:%v", alias)))
-        accountID = string(bytez[:])
+		bytez := m.db.Get([]byte(fmt.Sprintf("alias_account:%v", alias)))
+		accountID = string(bytez[:])
 		m.cacheMu.Lock()
 		m.aliasCache.Add(alias, accountID)
 		m.cacheMu.Unlock()
@@ -275,7 +273,6 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 	return cp.controlProgram, nil
 }
 
-
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
 	/*const q = `
 		INSERT INTO account_control_programs (signer_id, key_index, control_program, change, expires_at)
@@ -300,10 +297,9 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 		})
 	}*/
 
-//	_, err := m.dbm.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
+	//	_, err := m.dbm.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
 	return errors.Wrap(nil)
 }
-
 
 func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	m.acpMu.Lock()
@@ -326,19 +322,18 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	return n, nil
 }
 
-
-func (m *Manager) QueryAll(ctx context.Context) (interface{}, error){
-	ret := make([]interface{},0)
+func (m *Manager) QueryAll(ctx context.Context) (interface{}, error) {
+	ret := make([]interface{}, 0)
 
 	iter := m.db.Iterator()
 	for iter.Next() {
 		value := string(iter.Value())
-		if value[:3] == "acc"{
+		if value[:3] == "acc" {
 			continue
 		}
-		ret = append(ret,value)
+		ret = append(ret, value)
 		//log.Printf(ctx,"%s\t", value)
 	}
 
-	return ret,nil
+	return ret, nil
 }
