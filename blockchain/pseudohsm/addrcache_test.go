@@ -18,10 +18,10 @@ package pseudohsm
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
-	"io/ioutil"
 	"reflect"
 	"sort"
 	"testing"
@@ -32,10 +32,9 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
-
 var (
-	cachetestDir, _   = filepath.Abs(filepath.Join("testdata", "keystore"))
-	cachetestKeys = []XPub{
+	cachetestDir, _ = filepath.Abs(filepath.Join("testdata", "keystore"))
+	cachetestKeys   = []XPub{
 		{
 			Alias:   "langyu",
 			Address: common.StringToAddress("bm1pktmny6q69dlqulja2p2ja28k2vd6wvqpk5r76a"),
@@ -64,7 +63,7 @@ func TestWatchNewFile(t *testing.T) {
 	ac.keys()
 	time.Sleep(200 * time.Millisecond)
 	// Move in the files.
-	wantKeystores:= make([]XPub, len(cachetestKeys))
+	wantKeystores := make([]XPub, len(cachetestKeys))
 	for i := range cachetestKeys {
 		a := cachetestKeys[i]
 		a.File = filepath.Join(dir, filepath.Base(a.File))
@@ -85,7 +84,6 @@ func TestWatchNewFile(t *testing.T) {
 	}
 	t.Errorf("got %s, want %s", spew.Sdump(list), spew.Sdump(wantKeystores))
 }
-
 
 func TestWatchNoDir(t *testing.T) {
 	t.Parallel()
@@ -128,7 +126,6 @@ func TestCacheInitialReload(t *testing.T) {
 		t.Fatalf("got initial accounts: %swant %s", spew.Sdump(keys), spew.Sdump(cachetestKeys))
 	}
 }
-
 
 func TestCacheAddDeleteOrder(t *testing.T) {
 	cache := newAddrCache("testdata/no-such-dir")
@@ -173,14 +170,14 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 
 	// Check that the account list is sorted by filename.
 	wantKeys := make([]XPub, len(keys))
-	copy(wantKeys , keys)
+	copy(wantKeys, keys)
 	sort.Sort(keysByFile(wantKeys))
 	list := cache.keys()
-	
+
 	if !reflect.DeepEqual(list, wantKeys) {
 		t.Fatalf("got keys: %s\nwant %s", spew.Sdump(keys), spew.Sdump(wantKeys))
 	}
-	
+
 	for _, a := range keys {
 		if !cache.hasAddress(a.Address) {
 			t.Errorf("expected hasAccount(%x) to return true", a.Address)
@@ -215,7 +212,6 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 		t.Errorf("expected hasAccount(%x) to return false", wantKeys[0].Address)
 	}
 }
-
 
 func TestCacheFind(t *testing.T) {
 	dir := filepath.Join("testdata", "dir")

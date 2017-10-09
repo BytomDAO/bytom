@@ -7,10 +7,10 @@ import (
 // TODO: better system than "unsafe" prefix
 var Routes = map[string]*rpc.RPCFunc{
 	// subscribe/unsubscribe are reserved for websocket events.
-	"net_info":             rpc.NewRPCFunc(NetInfo, ""),
-    "getwork":              rpc.NewRPCFunc(GetWork, ""),
-    "submitwork":           rpc.NewRPCFunc(SubmitWork, "height"),
-	"getBlockHeight":       rpc.NewRPCFunc(BlockHeight, ""),
+	"net_info":       rpc.NewRPCFunc(NetInfo, ""),
+	"getwork":        rpc.NewRPCFunc(GetWork, ""),
+	"submitwork":     rpc.NewRPCFunc(SubmitWork, "height"),
+	"getBlockHeight": rpc.NewRPCFunc(BlockHeight, ""),
 }
 
 func AddUnsafeRoutes() {

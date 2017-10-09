@@ -2,27 +2,28 @@ package txdb
 
 import (
 	"context"
-	"fmt"
 	"encoding/json"
+	"fmt"
 
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bytom/blockchain/txdb/internal/storage"
 	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/patricia"
 	"github.com/bytom/protocol/state"
-	"github.com/bytom/protocol/bc"
-	dbm "github.com/tendermint/tmlibs/db"
 	. "github.com/tendermint/tmlibs/common"
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
 func calcSnapshotKey(height uint64) []byte {
-    return []byte(fmt.Sprintf("S:%v", height))
+	return []byte(fmt.Sprintf("S:%v", height))
 }
 
 func calcLatestSnapshotHeight() []byte {
 	return []byte("LatestSnapshotHeight")
 }
+
 // DecodeSnapshot decodes a snapshot from the Chain Core's binary,
 // protobuf representation of the snapshot.
 func DecodeSnapshot(data []byte) (*state.Snapshot, error) {
@@ -57,7 +58,7 @@ func DecodeSnapshot(data []byte) (*state.Snapshot, error) {
 var latestSnapshotHeight = []byte("latestSnapshotHeight")
 
 type SnapshotHeightJSON struct {
-    Height uint64
+	Height uint64
 }
 
 func (bsj SnapshotHeightJSON) Save(db dbm.DB) {
@@ -82,7 +83,6 @@ func LoadSnapshotHeightJSON(db dbm.DB) SnapshotHeightJSON {
 	}
 	return bsj
 }
-
 
 func storeStateSnapshot(ctx context.Context, db dbm.DB, snapshot *state.Snapshot, blockHeight uint64) error {
 	var storedSnapshot storage.Snapshot

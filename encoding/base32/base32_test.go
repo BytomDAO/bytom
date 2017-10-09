@@ -578,4 +578,3 @@ func TestEncodedDecodedLen(t *testing.T) {
 		})
 	}
 }
-

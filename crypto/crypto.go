@@ -27,10 +27,9 @@ import (
 	//"errors"
 
 	"github.com/bytom/common"
-	"golang.org/x/crypto/sha3"
 	"golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/sha3"
 )
-
 
 func Sha256(data ...[]byte) []byte {
 	d := sha3.New256()
@@ -52,7 +51,6 @@ func Sha256Hash(data ...[]byte) (h common.Hash) {
 func Sha3(data ...[]byte) []byte          { return Sha256(data...) }
 func Sha3Hash(data ...[]byte) common.Hash { return Sha256Hash(data...) }
 
-
 func Ripemd160(data []byte) []byte {
 	ripemd := ripemd160.New()
 	ripemd.Write(data)
@@ -60,7 +58,7 @@ func Ripemd160(data []byte) []byte {
 	return ripemd.Sum(nil)
 }
 
-func PubkeyToAddress(pubBytes []byte) common.Address{
+func PubkeyToAddress(pubBytes []byte) common.Address {
 	address, _ := common.AddressEncode("bm", 1, toInt(Ripemd160(Sha3(pubBytes))))
 	fmt.Printf(address)
 	return common.StringToAddress(address)
@@ -77,7 +75,7 @@ func zeroBytes(bytes []byte) {
 	}
 }
 
-func toInt(bytes []byte) []int{
+func toInt(bytes []byte) []int {
 	ints := make([]int, len(bytes))
 	for i := range bytes {
 		ints[i] = int(bytes[i])
@@ -85,7 +83,7 @@ func toInt(bytes []byte) []int{
 	return ints
 }
 
-func toBytes(ints []int) []byte{
+func toBytes(ints []int) []byte {
 	bytes := make([]byte, len(ints))
 	for i := range ints {
 		bytes[i] = byte(ints[i])

@@ -3,16 +3,16 @@ package pseudohsm
 
 import (
 	//"context"
-	_"fmt"
-	"strconv"
-	"path/filepath"
-	"sync"
+	_ "fmt"
 	"os"
+	"path/filepath"
+	"strconv"
+	"sync"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/common"
-	"github.com/bytom/errors"
 	"github.com/bytom/crypto"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/errors"
 	//"bytom/protocol/bc/legacy"
 	"github.com/pborman/uuid"
 )
@@ -26,9 +26,9 @@ var (
 	ErrNoKey                = errors.New("key not found")
 	ErrInvalidKeySize       = errors.New("key invalid size")
 	ErrTooManyAliasesToList = errors.New("requested aliases exceeds limit")
-	ErrAmbiguousAddr	= errors.New("multiple keys match address")
-	ErrDecrypt 		= errors.New("could not decrypt key with given passphrase")
-	ErrInvalidKeyType	= errors.New("key type stored invalid")
+	ErrAmbiguousAddr        = errors.New("multiple keys match address")
+	ErrDecrypt              = errors.New("could not decrypt key with given passphrase")
+	ErrInvalidKeyType       = errors.New("key type stored invalid")
 )
 
 type HSM struct {
@@ -39,19 +39,18 @@ type HSM struct {
 }
 
 type XPub struct {
-	Alias    string		   `json:"alias"`
+	Alias   string         `json:"alias"`
 	Address common.Address `json:"address"`
-	XPub  chainkd.XPub 	   `json:"xpub"`
-	File    string		   `json:"file"`
+	XPub    chainkd.XPub   `json:"xpub"`
+	File    string         `json:"file"`
 }
-
 
 func New(keypath string) (*HSM, error) {
 	keydir, _ := filepath.Abs(keypath)
 	return &HSM{
-		keyStore:   &keyStorePassphrase{keydir, LightScryptN, LightScryptP},
-		cache:		newAddrCache(keydir),
-		kdCache:	make(map[chainkd.XPub]chainkd.XPrv),
+		keyStore: &keyStorePassphrase{keydir, LightScryptN, LightScryptP},
+		cache:    newAddrCache(keydir),
+		kdCache:  make(map[chainkd.XPub]chainkd.XPrv),
 	}, nil
 }
 
@@ -72,12 +71,12 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 	}
 	id := uuid.NewRandom()
 	key := &XKey{
-		Id: id, 
-		KeyType: "bytom_kd", 
+		Id:      id,
+		KeyType: "bytom_kd",
 		Address: crypto.PubkeyToAddress(xpub[:]),
-		XPub: xpub, 
-		XPrv: xprv,
-		Alias: alias,
+		XPub:    xpub,
+		XPrv:    xprv,
+		Alias:   alias,
 	}
 	file := h.keyStore.JoinPath(keyFileName(key.Address))
 	if err := h.keyStore.StoreKey(file, key, auth); err != nil {
@@ -86,9 +85,8 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 	return &XPub{XPub: xpub, Address: key.Address, Alias: alias, File: file}, true, nil
 }
 
-
 // ListKeys returns a list of all xpubs from the store
-func (h *HSM) ListKeys(after string , limit int) ([]XPub, string, error) {
+func (h *HSM) ListKeys(after string, limit int) ([]XPub, string, error) {
 
 	xpubs := h.cache.keys()
 	start, end := 0, len(xpubs)
@@ -99,7 +97,7 @@ func (h *HSM) ListKeys(after string , limit int) ([]XPub, string, error) {
 	)
 
 	if after != "" {
-		zafter,err = strconv.Atoi(after)
+		zafter, err = strconv.Atoi(after)
 		if err != nil {
 			return nil, "", errors.WithDetailf(ErrInvalidAfter, "value: %q", zafter)
 		}
@@ -111,7 +109,7 @@ func (h *HSM) ListKeys(after string , limit int) ([]XPub, string, error) {
 		return nil, "", errors.WithDetailf(ErrInvalidAfter, "value: %v", zafter)
 	}
 	if len(xpubs) > zafter+limit {
-		end = zafter+limit
+		end = zafter + limit
 	}
 	return xpubs[start:end], strconv.Itoa(start), nil
 }
@@ -146,14 +144,13 @@ func (h *HSM) loadChainKDKey(xpub chainkd.XPub, auth string) (xprv chainkd.XPrv,
 	return xkey.XPrv, nil
 }
 
-
 // XDelete deletes the key matched by xpub if the passphrase is correct.
 // If a contains no filename, the address must match a unique key.
 func (h *HSM) XDelete(xpub chainkd.XPub, auth string) error {
 	// Decrypting the key isn't really necessary, but we do
 	// it anyway to check the password and zero out the key
 	// immediately afterwards.
-	
+
 	xpb, xkey, err := h.loadDecryptedKey(xpub, auth)
 	if xkey != nil {
 		zeroKey(xkey)

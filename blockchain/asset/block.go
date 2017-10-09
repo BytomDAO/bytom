@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 
-//	"github.com/lib/pq"
+	//	"github.com/lib/pq"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
-//	"chain/database/pg"
+	//	"chain/database/pg"
 	chainjson "github.com/bytom/encoding/json"
-//	"github.com/bytom/errors"
-//	"github.com/bytom/protocol/bc"
-//	"github.com/bytom/protocol/bc/legacy"
+	//	"github.com/bytom/errors"
+	//	"github.com/bytom/protocol/bc"
+	//	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
@@ -34,10 +34,10 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 
 	// a.RawDefinition is the asset definition as it appears on the
 	// blockchain, so it's untrusted and may not be valid json.
-/*	if pg.IsValidJSONB(a.RawDefinition()) {
-		jsonDefinition = json.RawMessage(a.RawDefinition())
-	}
-*/
+	/*	if pg.IsValidJSONB(a.RawDefinition()) {
+			jsonDefinition = json.RawMessage(a.RawDefinition())
+		}
+	*/
 	if a.Tags != nil {
 		b, err := json.Marshal(a.Tags)
 		if err != nil {
@@ -96,6 +96,7 @@ func (reg *Registry) indexAnnotatedAsset(ctx context.Context, a *Asset) error {
 	}
 	return reg.indexer.SaveAnnotatedAsset(ctx, aa, a.sortID)
 }
+
 /*
 func (reg *Registry) ProcessBlocks(ctx context.Context) {
 	if reg.pinStore == nil {

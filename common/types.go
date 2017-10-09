@@ -17,7 +17,7 @@
 package common
 
 import (
-	_"encoding/hex"
+	_ "encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,8 +28,8 @@ import (
 )
 
 const (
-	HashLength    = 32
-	AddressLength = 42
+	HashLength       = 32
+	AddressLength    = 42
 	PubkeyHashLength = 20
 )
 
@@ -48,7 +48,6 @@ func BytesToHash(b []byte) Hash {
 func StringToHash(s string) Hash { return BytesToHash([]byte(s)) }
 func BigToHash(b *big.Int) Hash  { return BytesToHash(b.Bytes()) }
 func HexToHash(s string) Hash    { return BytesToHash(FromHex(s)) }
-
 
 // Don't use the default 'String' method in case we want to overwrite
 

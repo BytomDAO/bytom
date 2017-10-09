@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"time"
-
 	//"github.com/bytom/types"
 )
 
@@ -13,8 +12,8 @@ type Config struct {
 	BaseConfig `mapstructure:",squash"`
 
 	// Options for services
-	RPC       *RPCConfig       `mapstructure:"rpc"`
-	P2P       *P2PConfig       `mapstructure:"p2p"`
+	RPC *RPCConfig `mapstructure:"rpc"`
+	P2P *P2PConfig `mapstructure:"p2p"`
 }
 
 func DefaultConfig() *Config {
@@ -105,8 +104,8 @@ func DefaultBaseConfig() BaseConfig {
 		TxIndex:           "kv",
 		DBBackend:         "leveldb",
 		DBPath:            "data",
-		KeysPath:	   "keystore",
-		HsmUrl:		   "",
+		KeysPath:          "keystore",
+		HsmUrl:            "",
 	}
 }
 
@@ -129,7 +128,6 @@ func (b BaseConfig) DBDir() string {
 func (b BaseConfig) KeysDir() string {
 	return rootify(b.KeysPath, b.RootDir)
 }
-
 
 func DefaultLogLevel() string {
 	return "info"

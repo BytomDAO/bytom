@@ -1,6 +1,5 @@
 package blockchain
 
-
 import (
 	"context"
 	"github.com/bytom/blockchain/pseudohsm"
@@ -39,16 +38,14 @@ type pseudoHSMHandler struct {
 }
 */
 
-
-func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context,  in struct{ Alias, Password string }) (result *pseudohsm.XPub, err error) {
+func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ Alias, Password string }) (result *pseudohsm.XPub, err error) {
 	return a.hsm.XCreate(in.Password, in.Alias)
 }
-
 
 func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query requestQuery) (page, error) {
 	limit := query.PageSize
 	if limit == 0 {
-		limit = defGenericPageSize  // defGenericPageSize = 100
+		limit = defGenericPageSize // defGenericPageSize = 100
 	}
 
 	xpubs, after, err := a.hsm.ListKeys(query.After, limit)
@@ -70,14 +67,14 @@ func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query request
 	}, nil
 }
 
-func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context,  x struct {
-	Password   string
-	XPub chainkd.XPub        `json:"xpubs"`
+func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
+	Password string
+	XPub     chainkd.XPub `json:"xpubs"`
 }) error {
 	return a.hsm.XDelete(x.XPub, x.Password)
 }
 
-func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context,  x struct {
+func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
 	Auth  string
 	Txs   []*txbuilder.Template `json:"transactions"`
 	XPubs []chainkd.XPub        `json:"xpubs"`
@@ -103,19 +100,18 @@ func (a *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chai
 	return sigBytes, err
 }
 
-func (a *BlockchainReactor) pseudohsmResetPassword(ctx context.Context,  x struct {
-	OldPassword   string
-	NewPassword   string
-	XPub chainkd.XPub        `json:"xpubs"`
+func (a *BlockchainReactor) pseudohsmResetPassword(ctx context.Context, x struct {
+	OldPassword string
+	NewPassword string
+	XPub        chainkd.XPub `json:"xpubs"`
 }) error {
 	return a.hsm.ResetPassword(x.XPub, x.OldPassword, x.NewPassword)
 }
 
-func (a *BlockchainReactor) pseudohsmUpdateAlias(ctx context.Context,  x struct {
-	Password   string   
-	NewAlias   string
-	XPub chainkd.XPub        `json:"xpubs"`
+func (a *BlockchainReactor) pseudohsmUpdateAlias(ctx context.Context, x struct {
+	Password string
+	NewAlias string
+	XPub     chainkd.XPub `json:"xpubs"`
 }) error {
 	return a.hsm.UpdateAlias(x.XPub, x.Password, x.NewAlias)
 }
-

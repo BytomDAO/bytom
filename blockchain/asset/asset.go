@@ -64,10 +64,10 @@ type Asset struct {
 	IssuanceProgram  []byte
 	InitialBlockHash bc.Hash
 	*signers.Signer
-	Tags             map[string]interface{}
-	RawDefinition1    []byte
-	definition       map[string]interface{}
-	sortID           string
+	Tags           map[string]interface{}
+	RawDefinition1 []byte
+	definition     map[string]interface{}
+	sortID         string
 }
 
 func (asset *Asset) Definition() (map[string]interface{}, error) {
@@ -135,19 +135,19 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		return nil, errors.Wrap(err, "failed marshal asset")
 	}
 	if len(ass) > 0 {
-		reg.db.Set(asset_id,json.RawMessage(ass))
+		reg.db.Set(asset_id, json.RawMessage(ass))
 	}
 
-/*	asset, err = reg.insertAsset(ctx, asset, clientToken)
-	if err != nil {
-		return nil, errors.Wrap(err, "inserting asset")
-	}
+	/*	asset, err = reg.insertAsset(ctx, asset, clientToken)
+		if err != nil {
+			return nil, errors.Wrap(err, "inserting asset")
+		}
 
-	err = insertAssetTags(ctx, reg.db, asset.AssetID, tags)
-	if err != nil {
-		return nil, errors.Wrap(err, "inserting asset tags")
-	}
-*/
+		err = insertAssetTags(ctx, reg.db, asset.AssetID, tags)
+		if err != nil {
+			return nil, errors.Wrap(err, "inserting asset tags")
+		}
+	*/
 	err = reg.indexAnnotatedAsset(ctx, asset)
 	if err != nil {
 		return nil, errors.Wrap(err, "indexing annotated asset")
@@ -195,17 +195,17 @@ func (reg *Registry) UpdateTags(ctx context.Context, id, alias *string, tags map
 	asset.Tags = tags
 
 	// Perform persistent updates
-/*
-	err = insertAssetTags(ctx, reg.db, asset.AssetID, asset.Tags)
-	if err != nil {
-		return errors.Wrap(err, "inserting asset tags")
-	}
+	/*
+		err = insertAssetTags(ctx, reg.db, asset.AssetID, asset.Tags)
+		if err != nil {
+			return errors.Wrap(err, "inserting asset tags")
+		}
 
-	err = reg.indexAnnotatedAsset(ctx, asset)
-	if err != nil {
-		return errors.Wrap(err, "update asset index")
-	}
-*/
+		err = reg.indexAnnotatedAsset(ctx, asset)
+		if err != nil {
+			return errors.Wrap(err, "update asset index")
+		}
+	*/
 	// Revise cache
 
 	reg.cacheMu.Lock()
@@ -232,7 +232,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 	var asset Asset
 	err := json.Unmarshal(bytes, &asset)
 
-	if err !=nil {
+	if err != nil {
 		return nil, errors.New("this asset can't be unmarshal.")
 	}
 
@@ -254,9 +254,9 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	}
 
 	untypedAsset, err := reg.aliasGroup.Do(alias, func() (interface{}, error) {
-//		asset, err := assetQuery(ctx, reg.db, "assets.alias=$1", alias)
-//		return asset, err
-		return nil,nil
+		//		asset, err := assetQuery(ctx, reg.db, "assets.alias=$1", alias)
+		//		return asset, err
+		return nil, nil
 	})
 
 	if err != nil {
@@ -272,17 +272,17 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 
 }
 
-func (reg *Registry) QueryAll(ctx context.Context) (interface{}, error){
-	ret := make([]interface{},0)
+func (reg *Registry) QueryAll(ctx context.Context) (interface{}, error) {
+	ret := make([]interface{}, 0)
 
 	iter := reg.db.Iterator()
 	for iter.Next() {
 		value := string(iter.Value())
-		ret = append(ret,value)
+		ret = append(ret, value)
 		//log.Printf(ctx,"%s\t", value)
 	}
 
-	return ret,nil
+	return ret, nil
 }
 
 // insertAsset adds the asset to the database. If the asset has a client token,
@@ -379,7 +379,7 @@ func assetQuery(ctx context.Context, db pg.DB, pred string, args ...interface{})
 		keyIndex   uint64
 		xpubs      [][]byte
 		tags       []byte
-	) 
+	)
 	err := db.QueryRowContext(ctx, fmt.Sprintf(baseQ, pred), args...).Scan(
 		&a.AssetID,
 		&a.Alias,
@@ -451,6 +451,7 @@ func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int) (progra
 	prog, err := builder.Build()
 	return prog, 1, err
 }
+
 /*
 func mapToNullString(in map[string]interface{}) (*sql.NullString, error) {
 	var mapJSON []byte

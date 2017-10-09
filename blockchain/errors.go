@@ -3,19 +3,19 @@ package blockchain
 import (
 	"context"
 
-//	"github.com/bytom/blockchain/accesstoken"
+	//	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
-//	"github.com/bytom/blockchain/asset"
-//	"github.com/bytom/blockchain/blocksigner"
-//	"github.com/bytom/blockchain/config"
+	//	"github.com/bytom/blockchain/asset"
+	//	"github.com/bytom/blockchain/blocksigner"
+	//	"github.com/bytom/blockchain/config"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/query/filter"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
-//	"github.com/bytom/blockchain/txfeed"
+	//	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/errors"
-//	"github.com/bytom/net/http/authz"
+	//	"github.com/bytom/net/http/authz"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/protocol"
@@ -52,8 +52,8 @@ var errorFormatter = httperror.Formatter{
 	IsTemporary: isTemporary,
 	Errors: map[error]httperror.Info{
 		// General error namespace (0xx)
-		context.DeadlineExceeded:   {408, "CH001", "Request timed out"},
-		httpjson.ErrBadRequest:     {400, "CH003", "Invalid request body"},
+		context.DeadlineExceeded: {408, "CH001", "Request timed out"},
+		httpjson.ErrBadRequest:   {400, "CH003", "Invalid request body"},
 		/*errNotFound:                {404, "CH006", "Not found"},
 		errRateLimited:             {429, "CH007", "Request limit exceeded"},
 		errNotAuthenticated:        {401, "CH009", "Request could not be authenticated"},
@@ -61,9 +61,9 @@ var errorFormatter = httperror.Formatter{
 		txbuilder.ErrMissingFields: {400, "CH010", "One or more fields are missing"},
 		//authz.ErrNotAuthorized:     {403, "CH011", "Request is unauthorized"},
 		//asset.ErrDuplicateAlias:    {400, "CH050", "Alias already exists"},
-		account.ErrDuplicateAlias:  {400, "CH050", "Alias already exists"},
+		account.ErrDuplicateAlias: {400, "CH050", "Alias already exists"},
 		//txfeed.ErrDuplicateAlias:   {400, "CH050", "Alias already exists"},
-		account.ErrBadIdentifier:   {40, "CH051", "Either an ID or alias must be provided, but not both"},
+		account.ErrBadIdentifier: {40, "CH051", "Either an ID or alias must be provided, but not both"},
 		//asset.ErrBadIdentifier:     {40, "CH051", "Either an ID or alias must be provided, but not both"},
 
 		// Core error namespace
@@ -71,8 +71,8 @@ var errorFormatter = httperror.Formatter{
 		//errAlreadyConfigured:           {400, "CH101", "This core has already been configured"},
 		//config.ErrBadGenerator:         {400, "CH102", "Generator URL returned an invalid response"},
 		//errBadBlockPub:                 {400, "CH103", "Provided Block XPub is invalid"},
-		rpc.ErrWrongNetwork:            {502, "CH104", "A peer core is operating on a different blockchain network"},
-		protocol.ErrTheDistantFuture:   {400, "CH105", "Requested height is too far ahead"},
+		rpc.ErrWrongNetwork:          {502, "CH104", "A peer core is operating on a different blockchain network"},
+		protocol.ErrTheDistantFuture: {400, "CH105", "Requested height is too far ahead"},
 		//config.ErrBadSignerURL:         {400, "CH106", "Block signer URL is invalid"},
 		//config.ErrBadSignerPubkey:      {400, "CH107", "Block signer pubkey is invalid"},
 		//config.ErrBadQuorum:            {400, "CH108", "Quorum must be greater than 0 if there are signers"},

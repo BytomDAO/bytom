@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/log"
+	"github.com/bytom/net/http/reqid"
 )
 
 // POST /create-account-receiver
@@ -15,7 +15,7 @@ func (a *BlockchainReactor) createAccountReceiver(ctx context.Context, ins []str
 	AccountAlias string    `json:"account_alias"`
 	ExpiresAt    time.Time `json:"expires_at"`
 }) []interface{} {
-	log.Printf(ctx,"-------create-Account-Receiver-------")
+	log.Printf(ctx, "-------create-Account-Receiver-------")
 	responses := make([]interface{}, len(ins))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))
