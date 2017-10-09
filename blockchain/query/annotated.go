@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
-//	"github.com/blockchain/database/pg"
+	//	"github.com/blockchain/database/pg"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"

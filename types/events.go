@@ -16,6 +16,7 @@ func EventStringUnbond() string  { return "Unbond" }
 func EventStringRebond() string  { return "Rebond" }
 func EventStringDupeout() string { return "Dupeout" }
 func EventStringFork() string    { return "Fork" }
+
 //func EventStringTx(tx Tx) string { return cmn.Fmt("Tx:%X", tx.Hash()) }
 
 func EventStringNewBlock() string         { return "NewBlock" }
@@ -107,12 +108,12 @@ type EventDataNewBlockHeader struct {
 
 // All txs fire EventDataTx
 type EventDataTx struct {
-	Height int           `json:"height"`
+	Height int `json:"height"`
 	//Tx     Tx            `json:"tx"`
-	Data   data.Bytes    `json:"data"`
-	Log    string        `json:"log"`
-	Code   abci.CodeType `json:"code"`
-	Error  string        `json:"error"` // this is redundant information for now
+	Data  data.Bytes    `json:"data"`
+	Log   string        `json:"log"`
+	Code  abci.CodeType `json:"code"`
+	Error string        `json:"error"` // this is redundant information for now
 }
 
 // NOTE: This goes into the replay WAL

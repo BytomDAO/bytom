@@ -7,8 +7,8 @@ import (
 	"net"
 	"time"
 
-	crypto "github.com/tendermint/go-crypto"
 	cfg "github.com/bytom/config"
+	crypto "github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 )
 

@@ -4,12 +4,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytom/rpc/client"
+	rpctest "github.com/bytom/rpc/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tendermint/merkleeyes/iavl"
 	merktest "github.com/tendermint/merkleeyes/testutil"
-	"github.com/bytom/rpc/client"
-	rpctest "github.com/bytom/rpc/test"
 )
 
 func getHTTPClient() *client.HTTP {

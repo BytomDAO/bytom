@@ -57,9 +57,9 @@ type Chain struct {
 	lastQueuedSnapshot time.Time
 	pendingSnapshots   chan pendingSnapshot
 
-	txPool *TxPool
-	assets_utxo struct{
-		cond     sync.Cond
+	txPool      *TxPool
+	assets_utxo struct {
+		cond          sync.Cond
 		assets_amount map[string]uint64
 	}
 }
@@ -79,7 +79,7 @@ func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, txPool
 	}
 	c.state.cond.L = new(sync.Mutex)
 
-	c.assets_utxo.assets_amount = make(map[string]uint64,1024)  //prepared buffer 1024 key-values
+	c.assets_utxo.assets_amount = make(map[string]uint64, 1024) //prepared buffer 1024 key-values
 	c.assets_utxo.cond.L = new(sync.Mutex)
 
 	log.Printf(ctx, "bytom's Height:%v.", store.Height())

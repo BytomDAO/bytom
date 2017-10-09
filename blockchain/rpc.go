@@ -2,12 +2,12 @@ package blockchain
 
 import (
 	"context"
-//	"encoding/json"
-//	"net/http"
+	//	"encoding/json"
+	//	"net/http"
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
-//	"github.com/bytom/net/http/httpjson"
+	//	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/protocol/bc"
 )
 

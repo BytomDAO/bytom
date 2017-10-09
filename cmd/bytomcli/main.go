@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"strconv"
 	"encoding/hex"
 	stdjson "encoding/json"
 	"flag"
@@ -13,17 +12,18 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/rpc"
+	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/cmd/bytomcli/example"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
-	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
 	"github.com/bytom/log"
@@ -79,17 +79,17 @@ var commands = map[string]*command{
 	"delete-transaction-feed": {deleteTxFeed},
 	"issue-test":              {example.IssueTest},
 	"spend-test":              {example.SpendTest},
-	"wallet-test":              {example.WalletTest},
+	"wallet-test":             {example.WalletTest},
 	"create-access-token":     {createAccessToken},
 	"list-access-token":       {listAccessTokens},
 	"delete-access-token":     {deleteAccessToken},
-	"create-key":			   {createKey},
-	"list-keys":			   {listKeys},
-	"delete-key":			   {deleteKey},
+	"create-key":              {createKey},
+	"list-keys":               {listKeys},
+	"delete-key":              {deleteKey},
 	"sign-transactions":       {signTransactions},
 	"sub-create-issue-tx":     {submitCreateIssueTransaction},
-	"reset-password":		   {resetPassword},
-	"update-alias":			   {updateAlias},
+	"reset-password":          {resetPassword},
+	"update-alias":            {updateAlias},
 }
 
 func main() {
@@ -624,13 +624,12 @@ func listAccounts(client *rpc.Client, args []string) {
 	}
 	var in requestQuery
 
-
 	responses := make([]interface{}, 0)
 
 	client.Call(context.Background(), "/list-accounts", in, &responses)
-	if len(responses)>0{
-		for i,item := range responses{
-			fmt.Println(i,"-----",item)
+	if len(responses) > 0 {
+		for i, item := range responses {
+			fmt.Println(i, "-----", item)
 		}
 	}
 }
@@ -657,9 +656,9 @@ func listAssets(client *rpc.Client, args []string) {
 	responses := make([]interface{}, 0)
 
 	client.Call(context.Background(), "/list-assets", in, &responses)
-	if len(responses)>0{
-		for i,item := range responses{
-			fmt.Println(i,"-----",item)
+	if len(responses) > 0 {
+		for i, item := range responses {
+			fmt.Println(i, "-----", item)
 		}
 	}
 }
@@ -737,9 +736,9 @@ func listBalances(client *rpc.Client, args []string) {
 	responses := make([]interface{}, 0)
 
 	client.Call(context.Background(), "/list-balances", in, &responses)
-	if len(responses)>0{
-		for i,item := range responses{
-			fmt.Println(i,"-----",item)
+	if len(responses) > 0 {
+		for i, item := range responses {
+			fmt.Println(i, "-----", item)
 		}
 	}
 }
@@ -822,18 +821,17 @@ func deleteAccessToken(client *rpc.Client, args []string) {
 	client.Call(context.Background(), "/delete-access-token", &[]Token{token}, nil)
 }
 
-
 func createKey(client *rpc.Client, args []string) {
 	if len(args) != 2 {
 		fatalln("error: createKey args not vaild")
 	}
 	type Key struct {
-		Alias		string  
-		Password 	string 
+		Alias    string
+		Password string
 	}
 	var key Key
 	var response map[string]interface{}
-	key.Alias  =  args[0]
+	key.Alias = args[0]
 	key.Password = args[1]
 
 	client.Call(context.Background(), "/create-key", &key, &response)
@@ -845,8 +843,8 @@ func deleteKey(client *rpc.Client, args []string) {
 		fatalln("error: deleteKey args not vaild")
 	}
 	type Key struct {
-		Password	string
-		XPub		chainkd.XPub `json:"xpubs"`
+		Password string
+		XPub     chainkd.XPub `json:"xpubs"`
 	}
 	var key Key
 	xpub := new(chainkd.XPub)
@@ -855,11 +853,10 @@ func deleteKey(client *rpc.Client, args []string) {
 		fatalln("error: deletKey %v", err)
 	}
 	copy(xpub[:], data)
-	key.Password  = args[0]
-	key.XPub= *xpub
+	key.Password = args[0]
+	key.XPub = *xpub
 	client.Call(context.Background(), "/delete-key", &key, nil)
 }
-
 
 func listKeys(client *rpc.Client, args []string) {
 	if len(args) != 2 {
@@ -885,7 +882,7 @@ func listKeys(client *rpc.Client, args []string) {
 	in.PageSize, _ = strconv.Atoi(args[1])
 	var response map[string][]interface{}
 	client.Call(context.Background(), "/list-keys", &in, &response)
-	for i, item := range response["items"]{
+	for i, item := range response["items"] {
 		key := item.(map[string]interface{})
 		fmt.Printf("---No.%v Alias:%v Address:%v File:%v\n", i, key["alias"], key["address"], key["file"])
 	}
@@ -916,9 +913,9 @@ func resetPassword(client *rpc.Client, args []string) {
 		fatalln("error: resetpassword args not vaild")
 	}
 	type Key struct {
-		OldPassword	string
-		NewPassword	string
-		XPub		chainkd.XPub `json:"xpubs"`
+		OldPassword string
+		NewPassword string
+		XPub        chainkd.XPub `json:"xpubs"`
 	}
 	var key Key
 	xpub := new(chainkd.XPub)
@@ -927,9 +924,9 @@ func resetPassword(client *rpc.Client, args []string) {
 		fatalln("error: resetPassword %v", err)
 	}
 	copy(xpub[:], data)
-	key.OldPassword  = args[0]
-	key.NewPassword  = args[1]
-	key.XPub= *xpub
+	key.OldPassword = args[0]
+	key.NewPassword = args[1]
+	key.XPub = *xpub
 	client.Call(context.Background(), "/reset-password", &key, nil)
 }
 
@@ -938,9 +935,9 @@ func updateAlias(client *rpc.Client, args []string) {
 		fatalln("error: resetpassword args not vaild")
 	}
 	type Key struct {
-		Password	string
-		NewAlias	string
-		XPub		chainkd.XPub `json:"xpubs"`
+		Password string
+		NewAlias string
+		XPub     chainkd.XPub `json:"xpubs"`
 	}
 	var key Key
 	xpub := new(chainkd.XPub)
@@ -949,8 +946,8 @@ func updateAlias(client *rpc.Client, args []string) {
 		fatalln("error: resetPassword %v", err)
 	}
 	copy(xpub[:], data)
-	key.Password  = args[0]
-	key.NewAlias  = args[1]
-	key.XPub= *xpub
+	key.Password = args[0]
+	key.NewAlias = args[1]
+	key.XPub = *xpub
 	client.Call(context.Background(), "/update-alias", &key, nil)
 }

@@ -2,9 +2,9 @@ package protocol
 
 import (
 	"context"
-//	"fmt"
+	//	"fmt"
 
-//	"github.com/blockchain/errors"
+	//	"github.com/blockchain/errors"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
 )
@@ -67,6 +67,6 @@ func (c *Chain) Recover(ctx context.Context) (*legacy.Block, *state.Snapshot, er
 		}
 	}
 	return b, snapshot, nil
-    */
-    return nil, nil, nil
+	*/
+	return nil, nil, nil
 }

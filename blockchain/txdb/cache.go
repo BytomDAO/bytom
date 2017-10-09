@@ -1,10 +1,10 @@
 package txdb
 
 import (
-	"strconv"
-	"sync"
 	"errors"
 	"fmt"
+	"strconv"
+	"sync"
 
 	"github.com/bytom/protocol/bc/legacy"
 
@@ -25,7 +25,7 @@ type blockCache struct {
 	mu  sync.Mutex
 	lru *lru.Cache
 
-	fillFn func(height uint64) (*legacy.Block)
+	fillFn func(height uint64) *legacy.Block
 
 	single singleflight.Group // for cache misses
 }

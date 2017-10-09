@@ -1,19 +1,19 @@
 package txfeed
 
 import (
-//	"bytes"
+	//	"bytes"
 	"context"
 	//"database/sql"
 
-//	"github.com/bytom/blockchain/query"
-//	"github.com/bytom/database/pg"
+	//	"github.com/bytom/blockchain/query"
+	//	"github.com/bytom/database/pg"
 	"github.com/bytom/errors"
 )
 
 var ErrDuplicateAlias = errors.New("duplicate feed alias")
 
 type Tracker struct {
-	DB	string
+	DB string
 }
 
 type TxFeed struct {
@@ -25,203 +25,200 @@ type TxFeed struct {
 
 func (t *Tracker) Create(ctx context.Context, alias, fil, after string, clientToken string) (*TxFeed, error) {
 	// Validate the filter.
-/*	err := query.ValidateTransactionFilter(fil)
-	if err != nil {
-		return nil, err
-	}
+	/*	err := query.ValidateTransactionFilter(fil)
+		if err != nil {
+			return nil, err
+		}
 
-	var ptrAlias *string
-	if alias != "" {
-		ptrAlias = &alias
-	}
+		var ptrAlias *string
+		if alias != "" {
+			ptrAlias = &alias
+		}
 
-	feed := &TxFeed{
-		Alias:  ptrAlias,
-		Filter: fil,
-		After:  after,
-	}
-	return insertTxFeed(ctx, t.DB, feed, clientToken)
+		feed := &TxFeed{
+			Alias:  ptrAlias,
+			Filter: fil,
+			After:  after,
+		}
+		return insertTxFeed(ctx, t.DB, feed, clientToken)
 
-*/
-	return nil,nil
+	*/
+	return nil, nil
 }
-
 
 // insertTxFeed adds the txfeed to the database. If the txfeed has a client token,
 // and there already exists a txfeed with that client token, insertTxFeed will
 // lookup and return the existing txfeed instead.
 
-func insertTxFeed(ctx context.Context,/* db pg.DB,*/ feed *TxFeed, clientToken string) (*TxFeed, error) {
-/*	const q = `
-		INSERT INTO txfeeds (alias, filter, after, client_token)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (client_token) DO NOTHING
-		RETURNING id
-	`
+func insertTxFeed(ctx context.Context /* db pg.DB,*/, feed *TxFeed, clientToken string) (*TxFeed, error) {
+	/*	const q = `
+			INSERT INTO txfeeds (alias, filter, after, client_token)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (client_token) DO NOTHING
+			RETURNING id
+		`
 
-	var alias sql.NullString
-	if feed.Alias != nil {
-		alias = sql.NullString{Valid: true, String: *feed.Alias}
-	}
-
-	nullToken := sql.NullString{
-		String: clientToken,
-		Valid:  clientToken != "",
-	}
-
-	err := db.QueryRowContext(
-		ctx, q, alias, feed.Filter, feed.After,
-		nullToken).Scan(&feed.ID)
-
-	if pg.IsUniqueViolation(err) {
-		return nil, errors.WithDetail(ErrDuplicateAlias, "a transaction feed with the provided alias already exists")
-	} else if err == sql.ErrNoRows && clientToken != "" {
-		// There is already a txfeed with the provided client
-		// token. We should return the existing txfeed
-		feed, err = txfeedByClientToken(ctx, db, clientToken)
-		if err != nil {
-			return nil, errors.Wrap(err, "retrieving existing txfeed")
+		var alias sql.NullString
+		if feed.Alias != nil {
+			alias = sql.NullString{Valid: true, String: *feed.Alias}
 		}
-	} else if err != nil {
-		return nil, err
-	}
-*/
-//	return feed, nil
-	return nil,nil
+
+		nullToken := sql.NullString{
+			String: clientToken,
+			Valid:  clientToken != "",
+		}
+
+		err := db.QueryRowContext(
+			ctx, q, alias, feed.Filter, feed.After,
+			nullToken).Scan(&feed.ID)
+
+		if pg.IsUniqueViolation(err) {
+			return nil, errors.WithDetail(ErrDuplicateAlias, "a transaction feed with the provided alias already exists")
+		} else if err == sql.ErrNoRows && clientToken != "" {
+			// There is already a txfeed with the provided client
+			// token. We should return the existing txfeed
+			feed, err = txfeedByClientToken(ctx, db, clientToken)
+			if err != nil {
+				return nil, errors.Wrap(err, "retrieving existing txfeed")
+			}
+		} else if err != nil {
+			return nil, err
+		}
+	*/
+	//	return feed, nil
+	return nil, nil
 }
 
+func txfeedByClientToken(ctx context.Context /* db pg.DB,*/, clientToken string) (*TxFeed, error) {
+	/*	const q = `
+			SELECT id, alias, filter, after
+			FROM txfeeds
+			WHERE client_token=$1
+		`
 
-func txfeedByClientToken(ctx context.Context,/* db pg.DB,*/ clientToken string) (*TxFeed, error) {
-/*	const q = `
-		SELECT id, alias, filter, after
-		FROM txfeeds
-		WHERE client_token=$1
-	`
+		var (
+			feed  TxFeed
+			alias sql.NullString
+		)
+		err := db.QueryRowContext(ctx, q, clientToken).Scan(&feed.ID, &alias, &feed.Filter, &feed.After)
+		if err != nil {
+			return nil, err
+		}
 
-	var (
-		feed  TxFeed
-		alias sql.NullString
-	)
-	err := db.QueryRowContext(ctx, q, clientToken).Scan(&feed.ID, &alias, &feed.Filter, &feed.After)
-	if err != nil {
-		return nil, err
-	}
-
-	if alias.Valid {
-		feed.Alias = &alias.String
-	}
-*/
-//	return &feed, nil
-	return nil,nil
+		if alias.Valid {
+			feed.Alias = &alias.String
+		}
+	*/
+	//	return &feed, nil
+	return nil, nil
 }
 
 func (t *Tracker) Find(ctx context.Context, id, alias string) (*TxFeed, error) {
-/*	var q bytes.Buffer
+	/*	var q bytes.Buffer
 
-	q.WriteString(`
-		SELECT id, alias, filter, after
-		FROM txfeeds
-		WHERE
-	`)
+		q.WriteString(`
+			SELECT id, alias, filter, after
+			FROM txfeeds
+			WHERE
+		`)
 
-	if id != "" {
-		q.WriteString(`id=$1`)
-	} else {
-		q.WriteString(`alias=$1`)
-		id = alias
-	}
+		if id != "" {
+			q.WriteString(`id=$1`)
+		} else {
+			q.WriteString(`alias=$1`)
+			id = alias
+		}
 
-	var (
-		feed     TxFeed
-		sqlAlias sql.NullString
-	)
+		var (
+			feed     TxFeed
+			sqlAlias sql.NullString
+		)
 
-	err := t.DB.QueryRowContext(ctx, q.String(), id).Scan(&feed.ID, &sqlAlias, &feed.Filter, &feed.After)
-	if err == sql.ErrNoRows {
-		err = errors.Sub(pg.ErrUserInputNotFound, err)
-		err = errors.WithDetailf(err, "alias: %s", alias)
-		return nil, err
-	}
-	if err != nil {
-		return nil, err
-	}
+		err := t.DB.QueryRowContext(ctx, q.String(), id).Scan(&feed.ID, &sqlAlias, &feed.Filter, &feed.After)
+		if err == sql.ErrNoRows {
+			err = errors.Sub(pg.ErrUserInputNotFound, err)
+			err = errors.WithDetailf(err, "alias: %s", alias)
+			return nil, err
+		}
+		if err != nil {
+			return nil, err
+		}
 
-	if sqlAlias.Valid {
-		feed.Alias = &sqlAlias.String
-	}
-*/
-//	return &feed, nil
-	return nil,nil
+		if sqlAlias.Valid {
+			feed.Alias = &sqlAlias.String
+		}
+	*/
+	//	return &feed, nil
+	return nil, nil
 }
 
 func (t *Tracker) Delete(ctx context.Context, id, alias string) error {
-/*	var q bytes.Buffer
+	/*	var q bytes.Buffer
 
-	q.WriteString(`DELETE FROM txfeeds WHERE `)
+		q.WriteString(`DELETE FROM txfeeds WHERE `)
 
-	if id != "" {
-		q.WriteString(`id=$1`)
-	} else {
-		q.WriteString(`alias=$1`)
-		id = alias
-	}
+		if id != "" {
+			q.WriteString(`id=$1`)
+		} else {
+			q.WriteString(`alias=$1`)
+			id = alias
+		}
 
-	res, err := t.DB.ExecContext(ctx, q.String(), id)
-	if err != nil {
-		return err
-	}
+		res, err := t.DB.ExecContext(ctx, q.String(), id)
+		if err != nil {
+			return err
+		}
 
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
 
-	if affected == 0 {
-		return errors.WithDetailf(pg.ErrUserInputNotFound, "could not find and delete txfeed with id/alias=%s", id)
-	}
-*/
+		if affected == 0 {
+			return errors.WithDetailf(pg.ErrUserInputNotFound, "could not find and delete txfeed with id/alias=%s", id)
+		}
+	*/
 	return nil
 }
 
 func (t *Tracker) Update(ctx context.Context, id, alias, after, prev string) (*TxFeed, error) {
-/*	var q bytes.Buffer
+	/*	var q bytes.Buffer
 
-	q.WriteString(`UPDATE txfeeds SET after=$1 WHERE `)
+		q.WriteString(`UPDATE txfeeds SET after=$1 WHERE `)
 
-	if id != "" {
-		q.WriteString(`id=$2`)
-	} else {
-		q.WriteString(`alias=$2`)
-		id = alias
-	}
+		if id != "" {
+			q.WriteString(`id=$2`)
+		} else {
+			q.WriteString(`alias=$2`)
+			id = alias
+		}
 
-	q.WriteString(` AND after=$3`)
+		q.WriteString(` AND after=$3`)
 
-	res, err := t.DB.ExecContext(ctx, q.String(), after, id, prev)
-	if err != nil {
-		return nil, err
-	}
+		res, err := t.DB.ExecContext(ctx, q.String(), after, id, prev)
+		if err != nil {
+			return nil, err
+		}
 
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return nil, err
-	}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return nil, err
+		}
 
-	if affected == 0 {
-		return nil, errors.WithDetailf(pg.ErrUserInputNotFound, "could not find txfeed with id/alias=%s and prev=%s", id, prev)
-	}
+		if affected == 0 {
+			return nil, errors.WithDetailf(pg.ErrUserInputNotFound, "could not find txfeed with id/alias=%s and prev=%s", id, prev)
+		}
 
-	return &TxFeed{
-		ID:    id,
-		Alias: &alias,
-		After: after,
-	}, nil
-*/
-/*	return &TxFeed{
-		ID:	nil,
-		Alias	nil,
-		After	nil,
-	}
-*/	return	nil,nil
+		return &TxFeed{
+			ID:    id,
+			Alias: &alias,
+			After: after,
+		}, nil
+	*/
+	/*	return &TxFeed{
+			ID:	nil,
+			Alias	nil,
+			After	nil,
+		}
+	*/return nil, nil
 }
-
