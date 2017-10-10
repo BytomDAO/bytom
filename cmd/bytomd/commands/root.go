@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	tmflags "github.com/bytom/cmd/bytom/commands/flags"
+	tmflags "github.com/bytom/cmd/bytomd/commands/flags"
 	cfg "github.com/bytom/config"
 	"github.com/tendermint/tmlibs/log"
 )
