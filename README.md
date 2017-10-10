@@ -54,7 +54,7 @@ $ git clone https://github.com/Bytom/bytom $GOPATH/src/github.com/bytom
 
 #### Build
 
-- Bytom
+- Bytomd
 
 ``` bash
 $ cd $GOPATH/src/github.com/bytom
@@ -157,12 +157,12 @@ Get the submodule depenency for the two-node test:
 $ git submodule update --init --recursive
 ```
 
-Create the first node `bytom0` and second node `bytom1`:
+Create the first node `bytomd0` and second node `bytomd1`:
 
 ```bash
-$ cd cmd/bytom/2node-test
-$ ./test.sh bytom0  # Start the first node
-$ ./test.sh bytom1  # Start the second node
+$ cd cmd/bytomd/2node-test
+$ ./test.sh bytomd0  # Start the first node
+$ ./test.sh bytomd1  # Start the second node
 ```
 
 Then we have two nodes:
