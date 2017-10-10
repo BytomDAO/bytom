@@ -4,16 +4,16 @@ package signers
 import (
 	"bytes"
 	"context"
-//	"database/sql"
+	//	"database/sql"
 	"encoding/binary"
 	"sort"
 
 	//"github.com/lib/pq"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
-//	"github.com/blockchain/database/pg"
+	//	"github.com/blockchain/database/pg"
 	"github.com/bytom/errors"
-    dbm "github.com/tendermint/tmlibs/db"
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
 type keySpace byte
@@ -98,32 +98,32 @@ func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, qu
 		key := key
 		xpubBytes = append(xpubBytes, key[:])
 	}
-    /*
+	/*
 
-	nullToken := sql.NullString{
-		String: clientToken,
-		Valid:  clientToken != "",
-	}
+		nullToken := sql.NullString{
+			String: clientToken,
+			Valid:  clientToken != "",
+		}
 
-	const q = `
-		INSERT INTO signers (id, type, xpubs, quorum, client_token)
-		VALUES (next_chain_id($1::text), $2, $3, $4, $5)
-		ON CONFLICT (client_token) DO NOTHING
-		RETURNING id, key_index
-  `
-	var (
-		id       string
-		keyIndex uint64
-	)
-	err := db.QueryRowContext(ctx, q, typeIDMap[typ], typ, pq.ByteaArray(xpubBytes), quorum, nullToken).
-		Scan(&id, &keyIndex)
-	if err == sql.ErrNoRows && clientToken != "" {
-		return findByClientToken(ctx, db, clientToken)
-	}
-	if err != nil && err != sql.ErrNoRows {
-		return nil, errors.Wrap(err)
-	}
-    */
+		const q = `
+			INSERT INTO signers (id, type, xpubs, quorum, client_token)
+			VALUES (next_chain_id($1::text), $2, $3, $4, $5)
+			ON CONFLICT (client_token) DO NOTHING
+			RETURNING id, key_index
+	  `
+		var (
+			id       string
+			keyIndex uint64
+		)
+		err := db.QueryRowContext(ctx, q, typeIDMap[typ], typ, pq.ByteaArray(xpubBytes), quorum, nullToken).
+			Scan(&id, &keyIndex)
+		if err == sql.ErrNoRows && clientToken != "" {
+			return findByClientToken(ctx, db, clientToken)
+		}
+		if err != nil && err != sql.ErrNoRows {
+			return nil, errors.Wrap(err)
+		}
+	*/
 	var (
 		id       string
 		keyIndex uint64
@@ -189,30 +189,30 @@ func Find(ctx context.Context, db dbm.DB, typ, id string) (*Signer, error) {
 		SELECT id, type, xpubs, quorum, key_index
 		FROM signers WHERE id=$1
 	`
-    */
+	*/
 
 	var (
 		s         Signer
 		xpubBytes [][]byte
 	)
-    /*
-	err := db.QueryRowContext(ctx, q, id).Scan(
-		&s.ID,
-		&s.Type,
-		(*pq.ByteaArray)(&xpubBytes),
-		&s.Quorum,
-		&s.KeyIndex,
-	)
-	if err == sql.ErrNoRows {
-		return nil, errors.Wrap(pg.ErrUserInputNotFound)
-	}
-	if err != nil {
-		return nil, errors.Wrap(err)
-	}
+	/*
+		err := db.QueryRowContext(ctx, q, id).Scan(
+			&s.ID,
+			&s.Type,
+			(*pq.ByteaArray)(&xpubBytes),
+			&s.Quorum,
+			&s.KeyIndex,
+		)
+		if err == sql.ErrNoRows {
+			return nil, errors.Wrap(pg.ErrUserInputNotFound)
+		}
+		if err != nil {
+			return nil, errors.Wrap(err)
+		}
 
-	if s.Type != typ {
-		return nil, errors.Wrap(ErrBadType)
-	}*/
+		if s.Type != typ {
+			return nil, errors.Wrap(ErrBadType)
+		}*/
 
 	keys, err := ConvertKeys(xpubBytes)
 	if err != nil {

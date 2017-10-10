@@ -17,17 +17,16 @@
 package crypto
 
 import (
-	_"bytes"
-	_"crypto/ecdsa"
-	_"encoding/hex"
-	_"fmt"
-	_"io/ioutil"
-	_"math/big"
-	_"os"
+	_ "bytes"
+	_ "bytom/common"
+	_ "crypto/ecdsa"
+	_ "encoding/hex"
+	_ "fmt"
+	_ "io/ioutil"
+	_ "math/big"
+	_ "os"
 	"testing"
-	_"time"
-	_"bytom/common"
-
+	_ "time"
 )
 
 var testAddrHex = "970e8128ab834e8eac17ab8e3812f010678cf791"
@@ -77,7 +76,7 @@ func TestAddressFormat(t *testing.T) {
 	addr := PubkeyToAddress([]byte("289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"))
 	t.Log("address:", addr.Str())
 	//addr = common.StringToAddress("bm1pyjkqc458pWy4W4H53a06fpl298260mvualj97g")
-	ver, data, _  := AddressToPubkey(addr)
+	ver, data, _ := AddressToPubkey(addr)
 	t.Log("address:", ver, data)
 
 }

@@ -2,17 +2,17 @@ package query
 
 import (
 	"context"
-//	"database/sql"
-//	"encoding/json"
+	//	"database/sql"
+	//	"encoding/json"
 
 	//"github.com/lib/pq"
 
 	//"chain/core/pin"
 	//"github.com/blockchain/database/pg"
-//	"github.com/blockchain/errors"
+	//	"github.com/blockchain/errors"
 	"github.com/bytom/protocol"
 	//"github.com/blockchain/protocol/bc/legacy"
-    dbm "github.com/tendermint/tmlibs/db"
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const (
@@ -22,19 +22,19 @@ const (
 )
 
 // NewIndexer constructs a new indexer for indexing transactions.
-func NewIndexer(db dbm.DB, c *protocol.Chain/*, pinStore *pin.Store*/) *Indexer {
+func NewIndexer(db dbm.DB, c *protocol.Chain /*, pinStore *pin.Store*/) *Indexer {
 	indexer := &Indexer{
-		db:       db,
-		c:        c,
-	//	pinStore: pinStore,
+		db: db,
+		c:  c,
+		//	pinStore: pinStore,
 	}
 	return indexer
 }
 
 // Indexer creates, updates and queries against indexes.
 type Indexer struct {
-	db         dbm.DB
-	c          *protocol.Chain
+	db dbm.DB
+	c  *protocol.Chain
 	//pinStore   *pin.Store
 	annotators []Annotator
 }

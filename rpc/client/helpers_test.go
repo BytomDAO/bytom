@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/bytom/rpc/client"
 	"github.com/bytom/rpc/client/mock"
 	ctypes "github.com/bytom/rpc/core/types"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWaitForHeight(t *testing.T) {

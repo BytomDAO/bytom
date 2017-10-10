@@ -9,15 +9,15 @@ import (
 	"sync"
 
 	"github.com/bytom/protocol/bc/legacy"
-//	"github.com/blockchain/protocol/state"
+	//	"github.com/blockchain/protocol/state"
 )
 
 // MemStore satisfies the Store interface.
 type MemStore struct {
-	mu          sync.Mutex
-	Blocks      map[uint64]*legacy.Block
-//	State       *state.Snapshot
-//	StateHeight uint64
+	mu     sync.Mutex
+	Blocks map[uint64]*legacy.Block
+	//	State       *state.Snapshot
+	//	StateHeight uint64
 }
 
 // New returns a new MemStore

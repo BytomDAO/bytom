@@ -2,20 +2,20 @@ package core_types
 
 import (
 	"strings"
-    "time"
+	"time"
 
+	"github.com/bytom/p2p"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/types"
 	abci "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
-    "github.com/bytom/protocol/bc"
-	"github.com/bytom/p2p"
-	"github.com/bytom/types"
 )
 
 type BlockNonce [8]byte
 
 type ResultBlockchainInfo struct {
-	LastHeight uint64                `json:"last_height"`
+	LastHeight uint64 `json:"last_height"`
 }
 
 type ResultGenesis struct {
@@ -54,13 +54,13 @@ type ResultNetInfo struct {
 }
 
 type ResultBlockHeaderInfo struct {
-        Version int32   `json:"version"`
-        //Height uint64    `json:"height"`
-        MerkleRoot bc.Hash  `json:"merkleroot"`
-        PreviousBlockHash bc.Hash  `json:"prevblockhash"`
-        TimestampMS time.Time   `json:"timestamp"`
-        Bits uint64      `json:"bits"`
-        Nonce uint64     `json:"nonce"`
+	Version int32 `json:"version"`
+	//Height uint64    `json:"height"`
+	MerkleRoot        bc.Hash   `json:"merkleroot"`
+	PreviousBlockHash bc.Hash   `json:"prevblockhash"`
+	TimestampMS       time.Time `json:"timestamp"`
+	Bits              uint64    `json:"bits"`
+	Nonce             uint64    `json:"nonce"`
 }
 
 type ResultDialSeeds struct {

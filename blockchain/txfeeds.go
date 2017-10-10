@@ -2,8 +2,8 @@ package blockchain
 
 import (
 	"context"
-//	"fmt"
-//	"math"
+	//	"fmt"
+	//	"math"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/txfeed"
@@ -23,10 +23,10 @@ func (a *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
 	// with the same client_token will only create one txfeed.
 	ClientToken string `json:"client_token"`
 }) (*txfeed.TxFeed, error) {
-	log.Printf(ctx,"-------createTxFeed-------")
-//	after := fmt.Sprintf("%d:%d-%d", a.chain.Height(), math.MaxInt32, uint64(math.MaxInt64))
-//	return a.txFeeds.Create(ctx, in.Alias, in.Filter, after, in.ClientToken)
-	return nil,nil
+	log.Printf(ctx, "-------createTxFeed-------")
+	//	after := fmt.Sprintf("%d:%d-%d", a.chain.Height(), math.MaxInt32, uint64(math.MaxInt64))
+	//	return a.txFeeds.Create(ctx, in.Alias, in.Filter, after, in.ClientToken)
+	return nil, nil
 }
 
 // POST /get-transaction-feed
@@ -34,9 +34,9 @@ func (a *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
 	ID    string `json:"id,omitempty"`
 	Alias string `json:"alias,omitempty"`
 }) (*txfeed.TxFeed, error) {
-	log.Printf(ctx,"-------getTxFeed-------")
-//	return a.txFeeds.Find(ctx, in.ID, in.Alias)
-	return nil,nil
+	log.Printf(ctx, "-------getTxFeed-------")
+	//	return a.txFeeds.Find(ctx, in.ID, in.Alias)
+	return nil, nil
 }
 
 // POST /delete-transaction-feed
@@ -44,8 +44,8 @@ func (a *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
 	ID    string `json:"id,omitempty"`
 	Alias string `json:"alias,omitempty"`
 }) error {
-	log.Printf(ctx,"-------deleteTxFeed-------")
-//	return a.txFeeds.Delete(ctx, in.ID, in.Alias)
+	log.Printf(ctx, "-------deleteTxFeed-------")
+	//	return a.txFeeds.Delete(ctx, in.ID, in.Alias)
 	return nil
 }
 
@@ -56,7 +56,7 @@ func (a *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
 	Prev  string `json:"previous_after"`
 	After string `json:"after"`
 }) (*txfeed.TxFeed, error) {
-	log.Printf(ctx,"-------updateTxFeed-------")
+	log.Printf(ctx, "-------updateTxFeed-------")
 	// TODO(tessr): Consider moving this function into the txfeed package.
 	// (It's currently outside the txfeed package to avoid a dependecy cycle
 	// between txfeed and query.)
@@ -68,8 +68,8 @@ func (a *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
 	if bad {
 		return nil, errors.WithDetail(httpjson.ErrBadRequest, "new After cannot be before Prev")
 	}
-//	return a.txFeeds.Update(ctx, in.ID, in.Alias, in.After, in.Prev)
-	return nil,nil
+	//	return a.txFeeds.Update(ctx, in.ID, in.Alias, in.After, in.Prev)
+	return nil, nil
 }
 
 // txAfterIsBefore returns true if a is before b. It returns an error if either
@@ -89,4 +89,3 @@ func txAfterIsBefore(a, b string) (bool, error) {
 		(aAfter.FromBlockHeight == bAfter.FromBlockHeight &&
 			aAfter.FromPosition < bAfter.FromPosition), nil
 }
-

@@ -20,9 +20,9 @@ implementation.
 package client
 
 import (
-	data "github.com/tendermint/go-wire/data"
 	ctypes "github.com/bytom/rpc/core/types"
 	"github.com/bytom/types"
+	data "github.com/tendermint/go-wire/data"
 )
 
 // ABCIClient groups together the functionality that principally

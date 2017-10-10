@@ -55,7 +55,6 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 
 	txin := legacy.NewIssuanceInput(nonce[:], a.Amount, a.ReferenceData, asset.InitialBlockHash, asset.IssuanceProgram, nil, assetdef)
 
-
 	tplIn := &txbuilder.SigningInstruction{}
 	path := signers.Path(asset.Signer, signers.AssetKeySpace)
 	tplIn.AddWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
@@ -65,4 +64,3 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 	builder.RestrictMinTime(time.Now())
 	return builder.AddInput(txin, tplIn)
 }
-

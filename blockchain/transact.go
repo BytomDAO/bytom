@@ -9,10 +9,10 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
+	"github.com/bytom/log"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/log"
 )
 
 var defaultTxTTL = 5 * time.Minute

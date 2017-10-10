@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/pkg/errors"
-	data "github.com/tendermint/go-wire/data"
 	ctypes "github.com/bytom/rpc/core/types"
 	"github.com/bytom/rpc/lib/client"
 	"github.com/bytom/types"
+	"github.com/pkg/errors"
+	data "github.com/tendermint/go-wire/data"
 	events "github.com/tendermint/tmlibs/events"
 )
 
