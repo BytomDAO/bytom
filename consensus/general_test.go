@@ -1,18 +1,5 @@
 package consensus
 
-import (
-	"fmt"
-	"math/big"
-	"testing"
-)
-
-func TestCalcNextRequiredDifficulty(t *testing.T) {
-	//fmt.Println(CalcNextRequiredDifficulty())
-	x := big.NewInt(123)
-	y, _ := x.SetString("94847123945178081620347972471576132812524935594538618173381454864040345", 10)
-	fmt.Println(BigToCompact(y))
-}
-
 /*func TestSubsidy(t *testing.T) {
 	cases := []struct {
 		bh      *BlockHeader

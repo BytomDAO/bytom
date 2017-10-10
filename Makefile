@@ -1,6 +1,6 @@
 GOTOOLS  = github.com/mitchellh/gox \
 		   github.com/Masterminds/glide
-PACKAGES = $(shell go list ./... | grep -v '/vendor/')
+PACKAGES = $(shell go list ./... | grep -v '/vendor/' | grep -v '/rpc/')
 
 all: install test
 

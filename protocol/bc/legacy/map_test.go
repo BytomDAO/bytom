@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/davecgh/go-spew/spew"
 )
@@ -64,11 +63,18 @@ func TestMapTx(t *testing.T) {
 }
 
 func TestMapCoinbaseTx(t *testing.T) {
+// define the BTM asset id, the soul asset of Bytom
+    var BTMAssetID = &bc.AssetID{
+         V0: uint64(18446744073709551615),
+         V1: uint64(18446744073709551615),
+         V2: uint64(18446744073709551615),
+         V3: uint64(18446744073709551615),
+	}
 	oldTx := &TxData{
 		Version: 1,
 		Inputs:  []*TxInput{},
 		Outputs: []*TxOutput{
-			NewTxOutput(*consensus.BTMAssetID, 800000000000, []byte{1}, nil),
+			NewTxOutput(*BTMAssetID, 800000000000, []byte{1}, nil),
 		},
 	}
 	oldOut := oldTx.Outputs[0]

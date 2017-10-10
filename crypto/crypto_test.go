@@ -18,7 +18,7 @@ package crypto
 
 import (
 	_ "bytes"
-	_ "bytom/common"
+	_ "github.com/bytom/common"
 	_ "crypto/ecdsa"
 	_ "encoding/hex"
 	_ "fmt"
