@@ -82,26 +82,21 @@ func BigToCompact(n *big.Int) uint64 {
 }
 
 func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
-	if HashToBig(hash).Cmp(CompactToBig(bits)) <= 0 {
-		return true
-	}
-	return false
+	return HashToBig(hash).Cmp(CompactToBig(bits)) <= 0
 }
 
-func CalcNextRequiredDifficulty(lastBH, prevBH *legacy.BlockHeader) uint64 {
-	return uint64(2161727821138738707)
-
-	//TODO: test it and enable it
+func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {
 	if lastBH == nil {
 		return powMinBits
-	} else if (lastBH.Height+1)%blocksPerRetarget != 0 {
+	} else if (lastBH.Height+1)%BlocksPerRetarget != 0 {
 		return lastBH.Bits
 	}
 
-	actualTimespan := int64(lastBH.Time().Sub(prevBH.Time()).Seconds())
+	targetTimeSpan := int64(BlocksPerRetarget * targetSecondsPerBlock)
+	actualTimespan := int64(lastBH.Time().Sub(compareBH.Time()).Seconds())
+
 	oldTarget := CompactToBig(lastBH.Bits)
 	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(actualTimespan))
-	targetTimeSpan := int64(blocksPerRetarget * targetSecondsPerBlock)
 	newTarget.Div(newTarget, big.NewInt(targetTimeSpan))
 	newTargetBits := BigToCompact(newTarget)
 
