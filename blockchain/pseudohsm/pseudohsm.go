@@ -2,7 +2,6 @@
 package pseudohsm
 
 import (
-	//"context"
 	_ "fmt"
 	"os"
 	"path/filepath"
@@ -13,7 +12,6 @@ import (
 	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
-	//"bytom/protocol/bc/legacy"
 	"github.com/pborman/uuid"
 )
 

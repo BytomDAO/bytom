@@ -23,13 +23,9 @@ import (
 	"github.com/bytom/types"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
-	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
-	//"github.com/bytom/net/http/limit"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/generated/dashboard"
-	"github.com/bytom/net/http/static"
 )
 
 const (
@@ -130,15 +126,6 @@ func (bcr *BlockchainReactor) createblockkey(ctx context.Context) {
 	log.Printf(ctx, "creat-block-key")
 }
 
-func webAssetsHandler(next http.Handler) http.Handler {
-	mux := http.NewServeMux()
-	mux.Handle("/dashboard/", http.StripPrefix("/dashboard/", static.Handler{
-		Assets:  dashboard.Files,
-		Default: "index.html",
-	}))
-	mux.Handle("/", next)
-	return mux
-}
 
 func maxBytes(h http.Handler) http.Handler {
 	const maxReqSize = 1e7 // 10MB
@@ -193,18 +180,6 @@ func (bcr *BlockchainReactor) BuildHander() {
 		m.ServeHTTP(w, req)
 	})
 	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
-	handler = webAssetsHandler(handler)
-	/*	handler = healthHandler(handler)
-		for _, l := range a.requestLimits {
-			handler = limit.Handler(handler, alwaysError(errRateLimited), l.perSecond, l.burst, l.key)
-		}
-		handler = gzip.Handler{Handler: handler}
-		handler = coreCounter(handler)
-		handler = timeoutContextHandler(handler)
-		if a.config != nil && a.config.BlockchainId != nil {
-			handler = blockchainIDHandler(handler, a.config.BlockchainId.String())
-		}
-	*/
 
 	bcr.handler = handler
 }

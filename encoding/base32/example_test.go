@@ -17,7 +17,7 @@ func ExampleEncoding_EncodeToString() {
 	str := base32.StdEncoding.EncodeToString(data)
 	fmt.Println(str)
 	// Output:
-	// MFXHSIBLEBXWYZBAEYQGIYLUME
+	// MFXHSIBLEBXWYZBAEYQGIYLUME======
 }
 
 func ExampleEncoding_DecodeString() {
@@ -41,5 +41,5 @@ func ExampleNewEncoder() {
 	// won't be encoded.
 	encoder.Close()
 	// Output:
-	// MZXW6ADCMFZA
+	// MZXW6ADCMFZA====
 }
