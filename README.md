@@ -1,6 +1,6 @@
 Bytom
 =====
-
+[![Build Status](https://travis-ci.org/Bytom/bytom.png)](https://travis-ci.org/Bytom/bytom)
 [![AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-brightgreen.svg)](./LICENSE)
 
 ## Table of Contents
