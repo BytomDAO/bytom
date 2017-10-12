@@ -194,10 +194,14 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		}
 	}
 
-	accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
-	accounts := account.NewManager(accounts_db, chain)
-	assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
-	assets := asset.NewRegistry(assets_db, chain)
+	var accounts *account.Manager = nil
+	var assets *asset.Registry = nil
+	if config.Wallet.Enable {
+		accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
+		assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+		accounts = account.NewManager(accounts_db, chain)
+		assets = asset.NewRegistry(assets_db, chain)
+	}
 
 	//Todo HSM
 	/*

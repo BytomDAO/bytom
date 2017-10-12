@@ -141,19 +141,28 @@ func maxBytes(h http.Handler) http.Handler {
 
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
-	m.Handle("/create-account", jsonHandler(bcr.createAccount))
-	m.Handle("/create-asset", jsonHandler(bcr.createAsset))
-	m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
-	m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
+	if bcr.accounts != nil{
+		m.Handle("/create-account", jsonHandler(bcr.createAccount))
+		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
+		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
+		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
+	} else {
+		log.Printf(context.Background(), "Warning: Please enable wallet")
+	}
+
+	if bcr.assets != nil {
+		m.Handle("/create-asset", jsonHandler(bcr.createAsset))
+		m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
+		m.Handle("/list-assets", jsonHandler(bcr.listAssets))
+	} else {
+		log.Printf(context.Background(), "Warning: Please enable wallet")
+	}
 	m.Handle("/build-transaction", jsonHandler(bcr.build))
 	m.Handle("/create-control-program", jsonHandler(bcr.createControlProgram))
-	m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 	m.Handle("/create-transaction-feed", jsonHandler(bcr.createTxFeed))
 	m.Handle("/get-transaction-feed", jsonHandler(bcr.getTxFeed))
 	m.Handle("/update-transaction-feed", jsonHandler(bcr.updateTxFeed))
 	m.Handle("/delete-transaction-feed", jsonHandler(bcr.deleteTxFeed))
-	m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
-	m.Handle("/list-assets", jsonHandler(bcr.listAssets))
 	m.Handle("/list-transaction-feeds", jsonHandler(bcr.listTxFeeds))
 	m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
 	m.Handle("/list-balances", jsonHandler(bcr.listBalances))
