@@ -80,13 +80,13 @@ When successfully building the project, the `bytom` and `bytomcli` binary should
 
 ```bash
 $ cd ./cmd/bytomd
-$ ./bytomd init --home ./.bytom
+$ ./bytomd init
 ```
 
 After that, you'll see `.bytom` generated in current directory, then launch the single node:
 
 ``` bash
-$ ./bytomd node --home ./.bytom
+$ ./bytomd node --wallet.enable
 ```
 
 #### Asset issuance test
