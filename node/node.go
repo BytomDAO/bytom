@@ -38,6 +38,7 @@ import (
 	"github.com/kr/secureheader"
 
 	_ "net/http/pprof"
+	"github.com/bytom/blockchain/pin"
 )
 
 const (
@@ -158,6 +159,8 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 }
 
 func NewNode(config *cfg.Config, logger log.Logger) *Node {
+	ctx := context.Background()
+
 	// Get store
 	tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
 	store := txdb.NewStore(tx_db)
@@ -186,7 +189,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	genesisBlock.UnmarshalText(consensus.InitBlock())
 
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, txPool, nil)
+	chain, err := protocol.NewChain(ctx, genesisBlock.Hash(), store, txPool, nil)
 
 	if store.Height() < 1 {
 		if err := chain.AddBlock(nil, genesisBlock); err != nil {
@@ -194,14 +197,34 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		}
 	}
 
-	var accounts *account.Manager = nil
-	var assets *asset.Registry = nil
-	if config.Wallet.Enable {
-		accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
-		assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
-		accounts = account.NewManager(accounts_db, chain)
-		assets = asset.NewRegistry(assets_db, chain)
+	accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
+
+	accountutxos_db := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
+	pinStore := pin.NewStore(accountutxos_db)
+	err = pinStore.LoadAll(ctx)
+	if err != nil {
+		bytomlog.Error(ctx,err)
+		return nil
 	}
+
+	pinHeight := store.Height()
+	if pinHeight > 0 {
+		pinHeight = pinHeight - 1
+	}
+
+	pins := []string{account.PinName, account.DeleteSpentsPinName}
+	for _, p := range pins {
+		err = pinStore.CreatePin(ctx, p, pinHeight)
+		if err != nil {
+			bytomlog.Fatalkv(ctx, bytomlog.KeyError, err)
+		}
+	}
+
+	accounts := account.NewManager(accounts_db, chain, pinStore)
+	go accounts.ProcessBlocks(ctx)
+
+	assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+	assets := asset.NewRegistry(assets_db, chain)
 
 	//Todo HSM
 	/*
@@ -220,7 +243,15 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
-	bcReactor := bc.NewBlockchainReactor(store, chain, txPool, accounts, assets, hsm, fastSync)
+	bcReactor := bc.NewBlockchainReactor(
+		store,
+		chain,
+		txPool,
+		accounts,
+		assets,
+		hsm,
+		fastSync,
+		pinStore)
 
 	bcReactor.SetLogger(logger.With("module", "blockchain"))
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
