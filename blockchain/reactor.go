@@ -23,13 +23,9 @@ import (
 	"github.com/bytom/types"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
-	//"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
-	//"github.com/bytom/net/http/limit"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/generated/dashboard"
-	"github.com/bytom/net/http/static"
 )
 
 const (
@@ -130,15 +126,6 @@ func (bcr *BlockchainReactor) createblockkey(ctx context.Context) {
 	log.Printf(ctx, "creat-block-key")
 }
 
-func webAssetsHandler(next http.Handler) http.Handler {
-	mux := http.NewServeMux()
-	mux.Handle("/dashboard/", http.StripPrefix("/dashboard/", static.Handler{
-		Assets:  dashboard.Files,
-		Default: "index.html",
-	}))
-	mux.Handle("/", next)
-	return mux
-}
 
 func maxBytes(h http.Handler) http.Handler {
 	const maxReqSize = 1e7 // 10MB
@@ -154,19 +141,28 @@ func maxBytes(h http.Handler) http.Handler {
 
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
-	m.Handle("/create-account", jsonHandler(bcr.createAccount))
-	m.Handle("/create-asset", jsonHandler(bcr.createAsset))
-	m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
-	m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
+	if bcr.accounts != nil{
+		m.Handle("/create-account", jsonHandler(bcr.createAccount))
+		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
+		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
+		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
+	} else {
+		log.Printf(context.Background(), "Warning: Please enable wallet")
+	}
+
+	if bcr.assets != nil {
+		m.Handle("/create-asset", jsonHandler(bcr.createAsset))
+		m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
+		m.Handle("/list-assets", jsonHandler(bcr.listAssets))
+	} else {
+		log.Printf(context.Background(), "Warning: Please enable wallet")
+	}
 	m.Handle("/build-transaction", jsonHandler(bcr.build))
 	m.Handle("/create-control-program", jsonHandler(bcr.createControlProgram))
-	m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 	m.Handle("/create-transaction-feed", jsonHandler(bcr.createTxFeed))
 	m.Handle("/get-transaction-feed", jsonHandler(bcr.getTxFeed))
 	m.Handle("/update-transaction-feed", jsonHandler(bcr.updateTxFeed))
 	m.Handle("/delete-transaction-feed", jsonHandler(bcr.deleteTxFeed))
-	m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
-	m.Handle("/list-assets", jsonHandler(bcr.listAssets))
 	m.Handle("/list-transaction-feeds", jsonHandler(bcr.listTxFeeds))
 	m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
 	m.Handle("/list-balances", jsonHandler(bcr.listBalances))
@@ -193,18 +189,6 @@ func (bcr *BlockchainReactor) BuildHander() {
 		m.ServeHTTP(w, req)
 	})
 	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
-	handler = webAssetsHandler(handler)
-	/*	handler = healthHandler(handler)
-		for _, l := range a.requestLimits {
-			handler = limit.Handler(handler, alwaysError(errRateLimited), l.perSecond, l.burst, l.key)
-		}
-		handler = gzip.Handler{Handler: handler}
-		handler = coreCounter(handler)
-		handler = timeoutContextHandler(handler)
-		if a.config != nil && a.config.BlockchainId != nil {
-			handler = blockchainIDHandler(handler, a.config.BlockchainId.String())
-		}
-	*/
 
 	bcr.handler = handler
 }

@@ -3,8 +3,8 @@ package client
 import (
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/bytom/types"
+	"github.com/pkg/errors"
 	cmn "github.com/tendermint/tmlibs/common"
 	events "github.com/tendermint/tmlibs/events"
 )

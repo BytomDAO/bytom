@@ -64,6 +64,11 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (
 	blockWeight := uint64(0)
 	txFee := uint64(0)
 
+	var compareDiffBH *legacy.BlockHeader
+	if compareDiffBlock, err := c.GetBlock(nextBlockHeight - consensus.BlocksPerRetarget); err == nil {
+		compareDiffBH = &compareDiffBlock.BlockHeader
+	}
+
 	b := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
 			Version:           1,
@@ -71,7 +76,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (
 			PreviousBlockHash: preBlock.Hash(),
 			TimestampMS:       bc.Millis(time.Now()),
 			BlockCommitment:   legacy.BlockCommitment{},
-			Bits:              consensus.CalcNextRequiredDifficulty(nil, nil),
+			Bits:              consensus.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
 		},
 		Transactions: make([]*legacy.Tx, 0, len(txDescs)),
 	}

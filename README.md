@@ -1,6 +1,6 @@
 Bytom
 =====
-
+[![Build Status](https://travis-ci.org/Bytom/bytom.png)](https://travis-ci.org/Bytom/bytom)
 [![AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-brightgreen.svg)](./LICENSE)
 
 ## Table of Contents
@@ -54,12 +54,12 @@ $ git clone https://github.com/Bytom/bytom $GOPATH/src/github.com/bytom
 
 #### Build
 
-- Bytom
+- Bytomd
 
 ``` bash
 $ cd $GOPATH/src/github.com/bytom
 $ make install
-$ cd ./cmd/bytom
+$ cd ./cmd/bytomd
 $ go build
 ```
 
@@ -79,14 +79,14 @@ Currently, bytom is still in active development and a ton of work needs to be do
 When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytom/bytom` and `cmd/bytomcli/bytomcli`, respectively. The next step is to initialize the node:
 
 ```bash
-$ cd ./cmd/bytom
-$ ./bytom init --home ./.bytom
+$ cd ./cmd/bytomd
+$ ./bytomd init
 ```
 
 After that, you'll see `.bytom` generated in current directory, then launch the single node:
 
 ``` bash
-$ ./bytom node --home ./.bytom
+$ ./bytomd node --wallet.enable
 ```
 
 #### Asset issuance test
@@ -157,12 +157,12 @@ Get the submodule depenency for the two-node test:
 $ git submodule update --init --recursive
 ```
 
-Create the first node `bytom0` and second node `bytom1`:
+Create the first node `bytomd0` and second node `bytomd1`:
 
 ```bash
-$ cd cmd/bytom/2node-test
-$ ./test.sh bytom0  # Start the first node
-$ ./test.sh bytom1  # Start the second node
+$ cd cmd/bytomd/2node-test
+$ ./test.sh bytomd0  # Start the first node
+$ ./test.sh bytomd1  # Start the second node
 ```
 
 Then we have two nodes:

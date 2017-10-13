@@ -1,10 +1,10 @@
 package core
 
 import (
+	"github.com/bytom/blockchain/txdb"
 	p2p "github.com/bytom/p2p"
 	"github.com/bytom/types"
 	"github.com/tendermint/tmlibs/log"
-    "github.com/bytom/blockchain/txdb"
 )
 
 type P2P interface {
@@ -18,11 +18,11 @@ type P2P interface {
 
 var (
 	// external, thread safe interfaces
-	eventSwitch   types.EventSwitch
-	blockStore     *txdb.Store
-	p2pSwitch      P2P
+	eventSwitch types.EventSwitch
+	blockStore  *txdb.Store
+	p2pSwitch   P2P
 
-	addrBook  *p2p.AddrBook
+	addrBook *p2p.AddrBook
 
 	logger log.Logger
 )

@@ -3,9 +3,9 @@ package account
 import (
 	"context"
 	"encoding/json"
-    "fmt"
+	"fmt"
 
-//	"github.com/lib/pq"
+	//	"github.com/lib/pq"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
@@ -113,7 +113,7 @@ func (m *Manager) ProcessBlocks(ctx context.Context) {
 		return m.deleteSpentOutputs(ctx, b)
 	})
 	m.pinStore.ProcessBlocks(ctx, m.chain, PinName, m.indexAccountUTXOs)
-    */
+	*/
 }
 
 /*
@@ -165,7 +165,7 @@ func (m *Manager) indexAccountUTXOs(ctx context.Context, b *legacy.Block) error 
 	if err != nil {
 		return errors.Wrap(err, "loading account info from control programs")
 	}
-    fmt.Printf("accOuts:%v", accOuts);
+	fmt.Printf("accOuts:%v", accOuts)
 
 	//err = m.upsertConfirmedAccountOutputs(ctx, accOuts, blockPositions, b)
 	return errors.Wrap(err, "upserting confirmed account utxos")
@@ -198,31 +198,31 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) ([]*ac
 	for s := range outsByScript {
 		scripts = append(scripts, []byte(s))
 	}
-    */
+	*/
 
 	result := make([]*accountOutput, 0, len(outs))
 
-/*
-	const q = `
-		SELECT signer_id, key_index, control_program, change
-		FROM account_control_programs
-		WHERE control_program IN (SELECT unnest($1::bytea[]))
-	`
-	err := pg.ForQueryRows(ctx, m.db, q, scripts, func(accountID string, keyIndex uint64, program []byte, change bool) {
-		for _, out := range outsByScript[string(program)] {
-			newOut := &accountOutput{
-				rawOutput: *out,
-				AccountID: accountID,
-				keyIndex:  keyIndex,
-				change:    change,
+	/*
+		const q = `
+			SELECT signer_id, key_index, control_program, change
+			FROM account_control_programs
+			WHERE control_program IN (SELECT unnest($1::bytea[]))
+		`
+		err := pg.ForQueryRows(ctx, m.db, q, scripts, func(accountID string, keyIndex uint64, program []byte, change bool) {
+			for _, out := range outsByScript[string(program)] {
+				newOut := &accountOutput{
+					rawOutput: *out,
+					AccountID: accountID,
+					keyIndex:  keyIndex,
+					change:    change,
+				}
+				result = append(result, newOut)
 			}
-			result = append(result, newOut)
+		})
+		if err != nil {
+			return nil, err
 		}
-	})
-	if err != nil {
-		return nil, err
-	}
-    */
+	*/
 
 	return result, nil
 }

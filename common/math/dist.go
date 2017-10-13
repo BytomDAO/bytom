@@ -20,7 +20,7 @@ import (
 	"math/big"
 	"sort"
 
-	"bytom/common"
+	"github.com/bytom/common"
 )
 
 type Summer interface {

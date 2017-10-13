@@ -8,9 +8,9 @@ import (
 
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
+	"github.com/bytom/log"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/reqid"
-	"github.com/bytom/log"
 )
 
 // POST /create-control-program

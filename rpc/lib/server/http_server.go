@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	types "github.com/bytom/rpc/lib/types"
+	"github.com/pkg/errors"
 	"github.com/tendermint/tmlibs/log"
 )
 

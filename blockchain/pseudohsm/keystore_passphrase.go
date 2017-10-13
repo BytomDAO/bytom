@@ -38,8 +38,8 @@ import (
 
 	"github.com/bytom/common"
 	"github.com/bytom/crypto"
-	"github.com/bytom/crypto/randentropy"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/randentropy"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
@@ -170,18 +170,18 @@ func DecryptKey(keyjson []byte, auth string) (*XKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	var  xprv chainkd.XPrv
+	var xprv chainkd.XPrv
 	copy(xprv[:], keyBytes[:])
 	xpub := xprv.XPub()
 
 	//key := crypto.ToECDSA(keyBytes)
 	return &XKey{
-		Id:         uuid.UUID(keyId),
-		Address:    crypto.PubkeyToAddress(xpub[:]),
-		XPrv: 		xprv,
-		XPub:		xpub,
-		KeyType:	k.Type,
-		Alias:		k.Alias,
+		Id:      uuid.UUID(keyId),
+		Address: crypto.PubkeyToAddress(xpub[:]),
+		XPrv:    xprv,
+		XPub:    xpub,
+		KeyType: k.Type,
+		Alias:   k.Alias,
 	}, nil
 }
 
@@ -231,7 +231,6 @@ func decryptKey(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, k
 	}
 	return plainText, keyId, err
 }
-
 
 func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 	authArray := []byte(auth)

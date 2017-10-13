@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-	merktest "github.com/tendermint/merkleeyes/testutil"
 	"github.com/bytom/rpc/client"
 	"github.com/bytom/types"
+	"github.com/stretchr/testify/require"
+	merktest "github.com/tendermint/merkleeyes/testutil"
 )
 
 func TestHeaderEvents(t *testing.T) {

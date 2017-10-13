@@ -1,16 +1,16 @@
 package query
 
 import (
-//	"bytes"
-//	"context"
+	//	"bytes"
+	//	"context"
 	"fmt"
 	"math"
 
 	//"github.com/lib/pq"
 
-//	"github.com/blockchain/blockchain/query/filter"
+	//	"github.com/blockchain/blockchain/query/filter"
 	"github.com/bytom/errors"
-//	"github.com/blockchain/protocol/bc"
+	//	"github.com/blockchain/protocol/bc"
 )
 
 var defaultOutputsAfter = OutputsAfter{

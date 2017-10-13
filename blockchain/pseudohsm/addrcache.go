@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/bytom/common"
-	_"github.com/bytom/errors"
+	_ "github.com/bytom/errors"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does
@@ -38,10 +38,10 @@ import (
 const minReloadInterval = 2 * time.Second
 
 type keysByFile []XPub
+
 func (s keysByFile) Len() int           { return len(s) }
 func (s keysByFile) Less(i, j int) bool { return s[i].File < s[j].File }
 func (s keysByFile) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-
 
 // AmbiguousAddrError is returned when attempting to unlock
 // an address for which more than one file exists.
@@ -114,7 +114,7 @@ func (ac *addrCache) keys() []XPub {
 func (ac *addrCache) maybeReload() {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
-	
+
 	if ac.watcher.running {
 		return // A watcher is running and will keep the cache up-to-date.
 	}
@@ -199,7 +199,7 @@ func (ac *addrCache) scan() ([]XPub, error) {
 		keys    []XPub
 		keyJSON struct {
 			Address common.Address `json:"address"`
-			Alias   string		   `json:"alias"`
+			Alias   string         `json:"alias"`
 		}
 	)
 	for _, fi := range files {
