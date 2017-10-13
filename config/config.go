@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"time"
-	//"github.com/bytom/types"
 )
 
 type Config struct {
@@ -14,6 +13,7 @@ type Config struct {
 	// Options for services
 	RPC *RPCConfig `mapstructure:"rpc"`
 	P2P *P2PConfig `mapstructure:"p2p"`
+	Wallet *WalletConfig `mapstructure:"wallet"`
 }
 
 func DefaultConfig() *Config {
@@ -21,6 +21,7 @@ func DefaultConfig() *Config {
 		BaseConfig: DefaultBaseConfig(),
 		RPC:        DefaultRPCConfig(),
 		P2P:        DefaultP2PConfig(),
+		Wallet:		DefaultWalletConfig(),
 	}
 }
 
@@ -29,6 +30,7 @@ func TestConfig() *Config {
 		BaseConfig: TestBaseConfig(),
 		RPC:        TestRPCConfig(),
 		P2P:        TestP2PConfig(),
+		Wallet:		TestWalletConfig(),
 	}
 }
 
@@ -202,6 +204,24 @@ func TestP2PConfig() *P2PConfig {
 
 func (p *P2PConfig) AddrBookFile() string {
 	return rootify(p.AddrBook, p.RootDir)
+}
+
+//-----------------------------------------------------------------------------
+// WalletConfig
+
+type WalletConfig struct {
+	Enable	bool `mapstructure:"enable"`
+}
+
+func DefaultWalletConfig() *WalletConfig {
+	return &WalletConfig{
+		Enable: false,
+	}
+}
+
+func TestWalletConfig() *WalletConfig {
+	conf := DefaultWalletConfig()
+	return conf
 }
 
 //-----------------------------------------------------------------------------
