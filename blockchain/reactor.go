@@ -26,6 +26,7 @@ import (
 	"github.com/bytom/net/http/httpjson"
 
 	"github.com/bytom/errors"
+	"github.com/bytom/blockchain/pin"
 )
 
 const (
@@ -53,6 +54,7 @@ type BlockchainReactor struct {
 
 	chain       *protocol.Chain
 	store       *txdb.Store
+	pinStore        *pin.Store
 	accounts    *account.Manager
 	assets      *asset.Registry
 	accesstoken *accesstoken.Token
@@ -233,7 +235,14 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, hsm *pseudohsm.HSM, fastSync bool) *BlockchainReactor {
+func NewBlockchainReactor(store *txdb.Store,
+		chain *protocol.Chain,
+		txPool *protocol.TxPool,
+		accounts *account.Manager,
+		assets *asset.Registry,
+		hsm *pseudohsm.HSM,
+		fastSync bool,
+		pinStore *pin.Store) *BlockchainReactor {
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
 	pool := NewBlockPool(
@@ -245,6 +254,7 @@ func NewBlockchainReactor(store *txdb.Store, chain *protocol.Chain, txPool *prot
 	bcR := &BlockchainReactor{
 		chain:      chain,
 		store:      store,
+		pinStore:	pinStore,
 		accounts:   accounts,
 		assets:     assets,
 		pool:       pool,

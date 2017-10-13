@@ -762,10 +762,14 @@ func listUnspentOutputs(client *rpc.Client, args []string) {
 		Aliases      []string      `json:"aliases,omitempty"`
 	}
 	var in requestQuery
-	after := in.After
-	out := in
-	out.After = after
-	client.Call(context.Background(), "/list-unspent-outputs", &[]requestQuery{in}, nil)
+	responses := make([]interface{}, 0)
+
+	client.Call(context.Background(), "/list-unspent-outputs", in, &responses)
+	if len(responses) > 0 {
+		for i, item := range responses {
+			fmt.Println(i, "-----", item)
+		}
+	}
 }
 
 func createAccessToken(client *rpc.Client, args []string) {
