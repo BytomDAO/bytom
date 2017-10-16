@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"math/big"
 	"strings"
 )
@@ -55,7 +55,7 @@ func NumberToBytes(num interface{}, bits int) []byte {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, num)
 	if err != nil {
-		fmt.Println("NumberToBytes failed:", err)
+		log.WithField("err", err).Error("NumberToBytes failed")
 	}
 
 	return buf.Bytes()[buf.Len()-(bits/8):]
@@ -74,7 +74,7 @@ func BytesToNumber(b []byte) uint64 {
 	buf := bytes.NewReader(data)
 	err := binary.Read(buf, binary.BigEndian, &number)
 	if err != nil {
-		fmt.Println("BytesToNumber failed:", err)
+		log.WithField("err", err).Error("BytesToNumber failed")
 	}
 
 	return number

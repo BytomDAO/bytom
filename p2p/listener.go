@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/bytom/p2p/upnp"
+	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
-	"github.com/tendermint/tmlibs/log"
+	tlog "github.com/tendermint/tmlibs/log"
 )
 
 type Listener interface {
@@ -48,7 +49,7 @@ func splitHostPort(addr string) (host string, port int) {
 }
 
 // skipUPNP: If true, does not try getUPNPExternalAddress()
-func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger log.Logger) Listener {
+func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlog.Logger) Listener {
 	// Local listen IP & port
 	lAddrIP, lAddrPort := splitHostPort(lAddr)
 
@@ -68,7 +69,10 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger log
 	}
 	// Actual listener local IP & port
 	listenerIP, listenerPort := splitHostPort(listener.Addr().String())
-	logger.Info("Local listener", "ip", listenerIP, "port", listenerPort)
+	log.WithFields(log.Fields{
+		"ip":   listenerIP,
+		"port": listenerPort,
+	}).Info("Local listener")
 
 	// Determine internal address...
 	var intAddr *NetAddress
@@ -82,7 +86,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger log
 	if !skipUPNP {
 		// If the lAddrIP is INADDR_ANY, try UPnP
 		if lAddrIP == "" || lAddrIP == "0.0.0.0" {
-			extAddr = getUPNPExternalAddress(lAddrPort, listenerPort, logger)
+			extAddr = getUPNPExternalAddress(lAddrPort, listenerPort)
 		}
 	}
 	// Otherwise just use the local address...
@@ -167,17 +171,17 @@ func (l *DefaultListener) String() string {
 /* external address helpers */
 
 // UPNP external address discovery & port mapping
-func getUPNPExternalAddress(externalPort, internalPort int, logger log.Logger) *NetAddress {
-	logger.Info("Getting UPNP external address")
+func getUPNPExternalAddress(externalPort, internalPort int) *NetAddress {
+	log.Info("Getting UPNP external address")
 	nat, err := upnp.Discover()
 	if err != nil {
-		logger.Info("Could not perform UPNP discover", "error", err)
+		log.WithField("error", err).Error("Could not perform UPNP discover")
 		return nil
 	}
 
 	ext, err := nat.GetExternalAddress()
 	if err != nil {
-		logger.Info("Could not get UPNP external address", "error", err)
+		log.WithField("error", err).Error("Could not perform UPNP external address")
 		return nil
 	}
 
@@ -188,11 +192,11 @@ func getUPNPExternalAddress(externalPort, internalPort int, logger log.Logger) *
 
 	externalPort, err = nat.AddPortMapping("tcp", externalPort, internalPort, "tendermint", 0)
 	if err != nil {
-		logger.Info("Could not add UPNP port mapping", "error", err)
+		log.WithField("error", err).Error("Could not add UPNP port mapping")
 		return nil
 	}
 
-	logger.Info("Got UPNP external address", "address", ext)
+	log.WithField("address", ext).Info("Got UPNP external address")
 	return NewNetAddressIPPort(ext, uint16(externalPort))
 }
 
