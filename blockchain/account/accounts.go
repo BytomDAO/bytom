@@ -2,27 +2,24 @@
 package account
 
 import (
-	"context"
-	//	stdsql "database/sql"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
+	"context"
+	"encoding/json"
 
+	"github.com/bytom/log"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol"
+	"github.com/bytom/blockchain/pin"
 	"github.com/golang/groupcache/lru"
-	//"github.com/lib/pq"
-
-	//	"chain/core/pin"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	//	"chain/database/pg"
-	"github.com/bytom/errors"
-	"github.com/bytom/log"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/vm/vmutil"
+
 	dbm "github.com/tendermint/tmlibs/db"
-	"github.com/bytom/blockchain/pin"
 )
 
 const maxAccountCache = 1000
@@ -36,7 +33,7 @@ func NewManager(db dbm.DB, chain *protocol.Chain , pinStore *pin.Store) *Manager
 	return &Manager{
 		db:     db,
 		chain:  chain,
-		utxoDB: newReserver(db, chain/* , pinStore*/),
+		utxoDB: newReserver(db, chain),
 		pinStore:    pinStore,
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
@@ -293,6 +290,7 @@ type ControlProgram struct {
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
 
+	var b32 [32]byte
 	for _, p := range progs {
 
 		acp, err := json.Marshal(&struct{
@@ -311,7 +309,8 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 			return errors.Wrap(err, "failed marshal controlProgram")
 		}
 		if len(acp) > 0 {
-			m.db.Set(json.RawMessage("acp"+string(p.controlProgram)), acp)
+			sha3pool.Sum256(b32[:], p.controlProgram)
+			m.db.Set(json.RawMessage("acp"+string(b32[:])), acp)
 		}
 	}
 
@@ -324,13 +323,13 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 
 	if m.acpIndexNext >= m.acpIndexCap {
 
-		const incrby = 10000 // account_control_program_seq increments by 10,000
-		if(m.acpIndexCap < 10001){
-			m.acpIndexCap = 10001
+		const incrby = 10000 // start 1,increments by 10,000
+		if(m.acpIndexCap <= incrby){
+			m.acpIndexCap = incrby + 1
 		}else{
 			m.acpIndexCap += incrby
 		}
-		m.acpIndexNext = m.acpIndexCap-incrby
+		m.acpIndexNext = m.acpIndexCap - incrby
 	}
 
 	n := m.acpIndexNext

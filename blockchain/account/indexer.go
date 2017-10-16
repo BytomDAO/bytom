@@ -1,19 +1,18 @@
 package account
 
 import (
+	"time"
 	"context"
 	"encoding/json"
 
-	//	"github.com/lib/pq"
-
-	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/signers"
-	//"github.com/blockchain/database/pg"
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/blockchain/query"
 	"github.com/bytom/protocol/bc/legacy"
-	"time"
+	"github.com/bytom/blockchain/signers"
+
+	chainjson "github.com/bytom/encoding/json"
 )
 
 const (
@@ -117,11 +116,7 @@ func (m *Manager) ProcessBlocks(ctx context.Context) {
 	if m.pinStore == nil {
 		return
 	}
-	/*
-	go m.pinStore.ProcessBlocks(ctx, m.chain, ExpirePinName, func(ctx context.Context, b *legacy.Block) error {
-		<-m.pinStore.PinWaiter(PinName, b.Height)
-		return m.expireControlPrograms(ctx, b)
-	})*/
+
 	go m.pinStore.ProcessBlocks(ctx, m.chain, DeleteSpentsPinName, func(ctx context.Context, b *legacy.Block) error {
 		<-m.pinStore.PinWaiter(PinName, b.Height)
 		return m.deleteSpentOutputs(ctx, b)
@@ -129,14 +124,6 @@ func (m *Manager) ProcessBlocks(ctx context.Context) {
 	m.pinStore.ProcessBlocks(ctx, m.chain, PinName, m.indexAccountUTXOs)
 
 }
-
-/*
-func (m *Manager) expireControlPrograms(ctx context.Context, b *legacy.Block) error {
-	// Delete expired account control programs.
-	const deleteQ = `DELETE FROM account_control_programs WHERE expires_at IS NOT NULL AND expires_at < $1`
-	_, err := m.db.ExecContext(ctx, deleteQ, b.Time())
-	return err
-}*/
 
 func (m *Manager) deleteSpentOutputs(ctx context.Context, b *legacy.Block) error {
 	// Delete consumed account UTXOs.
@@ -176,7 +163,6 @@ func (m *Manager) indexAccountUTXOs(ctx context.Context, b *legacy.Block) error 
 	}
 	accOuts := m.loadAccountInfo(ctx, outs)
 
-	//fmt.Printf("accOuts:%v", accOuts)
 	err := m.upsertConfirmedAccountOutputs(ctx, accOuts, blockPositions, b)
 	return errors.Wrap(err, "upserting confirmed account utxos")
 }
@@ -213,8 +199,10 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) ([]*ac
 		ExpiresAt      time.Time
 	}{}
 
+	var b32 [32]byte
 	for s := range outsByScript {
-		bytes := m.db.Get(json.RawMessage("acp"+s))
+		sha3pool.Sum256(b32[:], []byte(s))
+		bytes := m.db.Get(json.RawMessage("acp"+string(b32[:])))
 		if bytes == nil {
 			continue
 		}

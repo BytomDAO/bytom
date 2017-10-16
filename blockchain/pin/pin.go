@@ -1,16 +1,17 @@
 package pin
 
 import (
-	"context"
 	"sort"
 	"sync"
+	"context"
+	"encoding/json"
 
-	dbm "github.com/tendermint/tmlibs/db"
-	"github.com/bytom/errors"
 	"github.com/bytom/log"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
-	"encoding/json"
+
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const processorWorkers = 10

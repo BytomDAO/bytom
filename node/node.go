@@ -197,35 +197,39 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		}
 	}
 
-	accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
+	var accounts *account.Manager = nil
+	var assets *asset.Registry = nil
+	var pinStore *pin.Store = nil
 
-	accountutxos_db := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
-	pinStore := pin.NewStore(accountutxos_db)
-	err = pinStore.LoadAll(ctx)
-	if err != nil {
-		bytomlog.Error(ctx,err)
-		return nil
-	}
-
-	pinHeight := store.Height()
-	if pinHeight > 0 {
-		pinHeight = pinHeight - 1
-	}
-
-	pins := []string{account.PinName, account.DeleteSpentsPinName}
-	for _, p := range pins {
-		err = pinStore.CreatePin(ctx, p, pinHeight)
+	if config.Wallet.Enable {
+		accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
+		accountutxos_db := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
+		pinStore := pin.NewStore(accountutxos_db)
+		err = pinStore.LoadAll(ctx)
 		if err != nil {
-			bytomlog.Fatalkv(ctx, bytomlog.KeyError, err)
+			bytomlog.Error(ctx,err)
+			return nil
 		}
+
+		pinHeight := store.Height()
+		if pinHeight > 0 {
+			pinHeight = pinHeight - 1
+		}
+
+		pins := []string{account.PinName, account.DeleteSpentsPinName}
+		for _, p := range pins {
+			err = pinStore.CreatePin(ctx, p, pinHeight)
+			if err != nil {
+				bytomlog.Fatalkv(ctx, bytomlog.KeyError, err)
+			}
+		}
+
+		accounts = account.NewManager(accounts_db, chain, pinStore)
+		go accounts.ProcessBlocks(ctx)
+
+		assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+		assets = asset.NewRegistry(assets_db, chain)
 	}
-
-	accounts := account.NewManager(accounts_db, chain, pinStore)
-	go accounts.ProcessBlocks(ctx)
-
-	assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
-	assets := asset.NewRegistry(assets_db, chain)
-
 	//Todo HSM
 	/*
 		if config.HsmUrl != ""{
