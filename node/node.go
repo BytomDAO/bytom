@@ -204,7 +204,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	if config.Wallet.Enable {
 		accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
 		accountutxos_db := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
-		pinStore := pin.NewStore(accountutxos_db)
+		pinStore = pin.NewStore(accountutxos_db)
 		err = pinStore.LoadAll(ctx)
 		if err != nil {
 			bytomlog.Error(ctx,err)
