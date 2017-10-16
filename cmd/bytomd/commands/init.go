@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytom/types"
+	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
@@ -30,5 +31,5 @@ func initFiles(cmd *cobra.Command, args []string) {
 		genDoc.SaveAs(genFile)
 	}
 
-	logger.Info("Initialized bytom", "genesis", config.GenesisFile())
+	log.WithField("genesis", config.GenesisFile()).Info("Initialized bytom")
 }
