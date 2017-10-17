@@ -60,9 +60,11 @@ var commands = map[string]*command{
 	"grant":                   {grant},
 	"revoke":                  {revoke},
 	"wait":                    {wait},
-	"create-account":          {createAccount},
+	"create-account":		   {createAccount},
+	"bind-account":			   {bindAccount},
 	"update-account-tags":     {updateAccountTags},
 	"create-asset":            {createAsset},
+	"bind-asset":			   {bindAsset},
 	"update-asset-tags":       {updateAssetTags},
 	"build-transaction":       {buildTransaction},
 	"create-control-program":  {createControlProgram},
@@ -341,6 +343,36 @@ func createAccount(client *rpc.Client, args []string) {
 	fmt.Printf("account id:%v\n", account[0].ID)
 }
 
+func bindAccount(client *rpc.Client, args []string) {
+	if len(args) != 2 {
+		fatalln("error: bindAccount need args [account alias name] [account pub key]")
+	}
+	var xpub chainkd.XPub
+	err := xpub.UnmarshalText([]byte(args[1]))
+	if err == nil {
+		fmt.Printf("xpub:%v\n", xpub)
+	} else {
+		fmt.Printf("xpub unmarshal error:%v\n", xpub)
+	}
+	type Ins struct {
+		RootXPubs   []chainkd.XPub `json:"root_xpubs"`
+		Quorum      int
+		Alias       string
+		Tags        map[string]interface{}
+		ClientToken string `json:"client_token"`
+	}
+	var ins Ins
+	ins.RootXPubs = []chainkd.XPub{xpub}
+	ins.Quorum = 1
+	ins.Alias = args[0]
+	ins.Tags = map[string]interface{}{"test_tag": "v0"}
+	ins.ClientToken = args[0]
+	account := make([]query.AnnotatedAccount, 1)
+	client.Call(context.Background(), "/create-account", &[]Ins{ins}, &account)
+	fmt.Printf("responses:%v\n", account[0])
+	fmt.Printf("account id:%v\n", account[0].ID)
+}
+
 func createAsset(client *rpc.Client, args []string) {
 	if len(args) != 1 {
 		fatalln("error: createAsset takes no args")
@@ -375,6 +407,40 @@ func createAsset(client *rpc.Client, args []string) {
 	fmt.Printf("responses:%v\n", assets)
 	fmt.Printf("asset id:%v\n", assets[0].ID.String())
 }
+
+func bindAsset(client *rpc.Client, args []string) {
+	if len(args) != 2 {
+		fatalln("error: bindAsset need args [asset name] [asset xpub]")
+	}
+	var xpub chainkd.XPub
+	err := xpub.UnmarshalText([]byte(args[1]))
+	if err == nil {
+		fmt.Printf("xpub:%v\n", xpub)
+	} else {
+		fmt.Printf("xpub unmarshal error:%v\n", xpub)
+	}
+	type Ins struct {
+		RootXPubs   []chainkd.XPub `json:"root_xpubs"`
+		Quorum      int
+		Alias       string
+		Tags        map[string]interface{}
+		Definition  map[string]interface{}
+		ClientToken string `json:"client_token"`
+	}
+	var ins Ins
+	ins.RootXPubs = []chainkd.XPub{xpub}
+	ins.Quorum = 1
+	ins.Alias = args[0]
+	ins.Tags = map[string]interface{}{"test_tag": "v0"}
+	ins.Definition = map[string]interface{}{}
+	ins.ClientToken = args[0]
+	assets := make([]query.AnnotatedAsset, 1)
+	client.Call(context.Background(), "/create-asset", &[]Ins{ins}, &assets)
+	//dieOnRPCError(err)
+	fmt.Printf("responses:%v\n", assets)
+	fmt.Printf("asset id:%v\n", assets[0].ID.String())
+}
+
 
 func updateAccountTags(client *rpc.Client, args []string) {
 	if len(args) != 2 {
