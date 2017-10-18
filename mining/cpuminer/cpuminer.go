@@ -5,7 +5,7 @@
 package cpuminer
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
 
@@ -89,15 +89,21 @@ out:
 		payToAddr := []byte{}
 		block, err := mining.NewBlockTemplate(m.chain, m.txPool, payToAddr)
 		if err != nil {
-			fmt.Printf("Failed to create new block template: %v \n", err)
+			log.WithField("error", err).Error("Failed to create new block template")
 			continue
 		}
 
 		if m.solveBlock(block, ticker, quit) {
 			if err := m.chain.AddBlock(nil, block); err == nil {
-				fmt.Printf("finish commit block heigh %d, # of tx %d \n", block.BlockHeader.Height, len(block.Transactions))
+				log.WithFields(log.Fields{
+					"height": block.BlockHeader.Height,
+					"tx":     len(block.Transactions),
+				}).Info("Finish committing block height")
 			} else {
-				fmt.Printf("fail commit block heigh %d, err: %v \n", block.BlockHeader.Height, err)
+				log.WithFields(log.Fields{
+					"height": block.BlockHeader.Height,
+					"error":  err,
+				}).Error("Failed to commit block height")
 			}
 		}
 	}
