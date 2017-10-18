@@ -1,19 +1,18 @@
 package account
 
 import (
+	"time"
 	"context"
 	"encoding/json"
-	"fmt"
 
-	//	"github.com/lib/pq"
-
-	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/signers"
-	//"github.com/blockchain/database/pg"
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/blockchain/query"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/blockchain/signers"
+
+	chainjson "github.com/bytom/encoding/json"
 )
 
 const (
@@ -27,6 +26,20 @@ const (
 	// with the processor that deletes spent account UTXOs.
 	DeleteSpentsPinName = "delete-account-spents"
 )
+
+type AccountUTXOs struct {
+	OutputID  []byte
+	AssetID   []byte
+	Amount    int64
+	AccountID string
+	CpIndex   int64
+	Program   []byte
+	Confirmed int64
+	SourceID  []byte
+	SourcePos int64
+	RefData   []byte
+	Change    bool
+}
 
 var emptyJSONObject = json.RawMessage(`{}`)
 
@@ -100,41 +113,28 @@ type accountOutput struct {
 }
 
 func (m *Manager) ProcessBlocks(ctx context.Context) {
-	/*if m.pinStore == nil {
+	if m.pinStore == nil {
 		return
 	}
-	go m.pinStore.ProcessBlocks(ctx, m.chain, ExpirePinName, func(ctx context.Context, b *legacy.Block) error {
-		<-m.pinStore.PinWaiter(PinName, b.Height)
-		return m.expireControlPrograms(ctx, b)
-	})
+
 	go m.pinStore.ProcessBlocks(ctx, m.chain, DeleteSpentsPinName, func(ctx context.Context, b *legacy.Block) error {
 		<-m.pinStore.PinWaiter(PinName, b.Height)
-		<-m.pinStore.PinWaiter(query.TxPinName, b.Height)
 		return m.deleteSpentOutputs(ctx, b)
 	})
 	m.pinStore.ProcessBlocks(ctx, m.chain, PinName, m.indexAccountUTXOs)
-	*/
-}
 
-/*
-func (m *Manager) expireControlPrograms(ctx context.Context, b *legacy.Block) error {
-	// Delete expired account control programs.
-	const deleteQ = `DELETE FROM account_control_programs WHERE expires_at IS NOT NULL AND expires_at < $1`
-	_, err := m.db.ExecContext(ctx, deleteQ, b.Time())
-	return err
 }
 
 func (m *Manager) deleteSpentOutputs(ctx context.Context, b *legacy.Block) error {
 	// Delete consumed account UTXOs.
 	delOutputIDs := prevoutDBKeys(b.Transactions...)
-	const delQ = `
-		DELETE FROM account_utxos
-		WHERE output_id IN (SELECT unnest($1::bytea[]))
-	`
-	_, err := m.db.ExecContext(ctx, delQ, delOutputIDs)
-	return errors.Wrap(err, "deleting spent account utxos")
+	for _,delOutputID := range delOutputIDs{
+		m.pinStore.DB.Delete(json.RawMessage("acu"+string(delOutputID.Bytes())))
+	}
+
+	return errors.Wrap(nil, "deleting spent account utxos")
 }
-*/
+
 
 func (m *Manager) indexAccountUTXOs(ctx context.Context, b *legacy.Block) error {
 	// Upsert any UTXOs belonging to accounts managed by this Core.
@@ -161,123 +161,105 @@ func (m *Manager) indexAccountUTXOs(ctx context.Context, b *legacy.Block) error 
 			outs = append(outs, out)
 		}
 	}
-	accOuts, err := m.loadAccountInfo(ctx, outs)
-	if err != nil {
-		return errors.Wrap(err, "loading account info from control programs")
-	}
-	fmt.Printf("accOuts:%v", accOuts)
+	accOuts := m.loadAccountInfo(ctx, outs)
 
-	//err = m.upsertConfirmedAccountOutputs(ctx, accOuts, blockPositions, b)
+	err := m.upsertConfirmedAccountOutputs(ctx, accOuts, blockPositions, b)
 	return errors.Wrap(err, "upserting confirmed account utxos")
 }
 
-/*
-func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs pq.ByteaArray) {
+
+func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs []bc.Hash) {
 	for _, tx := range txs {
 		for _, inpID := range tx.Tx.InputIDs {
 			if sp, err := tx.Spend(inpID); err == nil {
-				outputIDs = append(outputIDs, sp.SpentOutputId.Bytes())
+				outputIDs = append(outputIDs, *sp.SpentOutputId)
 			}
 		}
 	}
 	return
 }
-*/
+
 
 // loadAccountInfo turns a set of output IDs into a set of
 // outputs by adding account annotations.  Outputs that can't be
 // annotated are excluded from the result.
-func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) ([]*accountOutput, error) {
+func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) ([]*accountOutput) {
 	outsByScript := make(map[string][]*rawOutput, len(outs))
 	for _, out := range outs {
 		scriptStr := string(out.ControlProgram)
 		outsByScript[scriptStr] = append(outsByScript[scriptStr], out)
 	}
 
-	/*var scripts pq.ByteaArray
-	for s := range outsByScript {
-		scripts = append(scripts, []byte(s))
-	}
-	*/
-
 	result := make([]*accountOutput, 0, len(outs))
+	cp := struct {
+		AccountID      string
+		KeyIndex       uint64
+		ControlProgram []byte
+		Change         bool
+		ExpiresAt      time.Time
+	}{}
 
-	/*
-		const q = `
-			SELECT signer_id, key_index, control_program, change
-			FROM account_control_programs
-			WHERE control_program IN (SELECT unnest($1::bytea[]))
-		`
-		err := pg.ForQueryRows(ctx, m.db, q, scripts, func(accountID string, keyIndex uint64, program []byte, change bool) {
-			for _, out := range outsByScript[string(program)] {
-				newOut := &accountOutput{
-					rawOutput: *out,
-					AccountID: accountID,
-					keyIndex:  keyIndex,
-					change:    change,
-				}
-				result = append(result, newOut)
-			}
-		})
-		if err != nil {
-			return nil, err
+	var b32 [32]byte
+	for s := range outsByScript {
+		sha3pool.Sum256(b32[:], []byte(s))
+		bytes := m.db.Get(json.RawMessage("acp"+string(b32[:])))
+		if bytes == nil {
+			continue
 		}
-	*/
 
-	return result, nil
+		err := json.Unmarshal(bytes, &cp)
+		if err != nil {
+			continue
+		}
+
+		for _, out := range outsByScript[s] {
+			newOut := &accountOutput{
+				rawOutput: *out,
+				AccountID: cp.AccountID,
+				keyIndex:  cp.KeyIndex,
+				change:    cp.Change,
+			}
+			result = append(result, newOut)
+		}
+	}
+
+	return result
 }
 
-/*
+
 // upsertConfirmedAccountOutputs records the account data for confirmed utxos.
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
-func (m *Manager) upsertConfirmedAccountOutputs(ctx context.Context, outs []*accountOutput, pos map[bc.Hash]uint32, block *legacy.Block) error {
-	var (
-		outputID  pq.ByteaArray
-		assetID   pq.ByteaArray
-		amount    pq.Int64Array
-		accountID pq.StringArray
-		cpIndex   pq.Int64Array
-		program   pq.ByteaArray
-		sourceID  pq.ByteaArray
-		sourcePos pq.Int64Array
-		refData   pq.ByteaArray
-		change    pq.BoolArray
-	)
+func (m *Manager) upsertConfirmedAccountOutputs(ctx context.Context,
+	outs []*accountOutput,
+	pos map[bc.Hash]uint32,
+	block *legacy.Block) error {
+
+	var au *AccountUTXOs
 	for _, out := range outs {
-		outputID = append(outputID, out.OutputID.Bytes())
-		assetID = append(assetID, out.AssetId.Bytes())
-		amount = append(amount, int64(out.Amount))
-		accountID = append(accountID, out.AccountID)
-		cpIndex = append(cpIndex, int64(out.keyIndex))
-		program = append(program, out.ControlProgram)
-		sourceID = append(sourceID, out.sourceID.Bytes())
-		sourcePos = append(sourcePos, int64(out.sourcePos))
-		refData = append(refData, out.refData.Bytes())
-		change = append(change, out.change)
+		au = &AccountUTXOs{OutputID:	out.OutputID.Bytes(),
+			AssetID:	out.AssetId.Bytes(),
+			Amount:	int64(out.Amount),
+			AccountID:	out.AccountID,
+			CpIndex:	int64(out.keyIndex),
+			Program:	out.ControlProgram,
+			Confirmed:	int64(block.Height),
+			SourceID:	out.sourceID.Bytes(),
+			SourcePos:	int64(out.sourcePos),
+			RefData:	out.refData.Bytes(),
+			Change:	out.change}
+
+		accountutxo, err := json.Marshal(au)
+		if err != nil {
+			return errors.Wrap(err, "failed marshal accountutxo")
+		}
+
+		if len(accountutxo) > 0 {
+			m.pinStore.DB.Set(json.RawMessage("acu"+string(au.OutputID)), accountutxo)
+		}
+
 	}
 
-	const q = `
-		INSERT INTO account_utxos (output_id, asset_id, amount, account_id, control_program_index,
-			control_program, confirmed_in, source_id, source_pos, ref_data_hash, change)
-		SELECT unnest($1::bytea[]), unnest($2::bytea[]),  unnest($3::bigint[]),
-			   unnest($4::text[]), unnest($5::bigint[]), unnest($6::bytea[]), $7,
-			   unnest($8::bytea[]), unnest($9::bigint[]), unnest($10::bytea[]), unnest($11::boolean[])
-		ON CONFLICT (output_id) DO NOTHING
-	`
-	_, err := m.db.ExecContext(ctx, q,
-		outputID,
-		assetID,
-		amount,
-		accountID,
-		cpIndex,
-		program,
-		block.Height,
-		sourceID,
-		sourcePos,
-		refData,
-		change,
-	)
-	return errors.Wrap(err)
+	return nil
 }
-*/
+

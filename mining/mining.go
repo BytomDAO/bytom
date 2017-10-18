@@ -5,7 +5,7 @@
 package mining
 
 import (
-	"fmt"
+	log "github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/bytom/blockchain/txbuilder"
@@ -95,12 +95,12 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (
 			break
 		}
 		if err := newSnap.ApplyTx(tx); err != nil {
-			fmt.Println("mining block generate skip tx due to %v", err)
+			log.WithField("error", err).Error("mining block generate skip tx due to")
 			txPool.RemoveTransaction(&tx.ID)
 			continue
 		}
 		if _, err := validation.ValidateTx(tx, preBcBlock); err != nil {
-			fmt.Println("mining block generate skip tx due to %v", err)
+			log.WithField("error", err).Error("mining block generate skip tx due to")
 			txPool.RemoveTransaction(&tx.ID)
 			continue
 		}

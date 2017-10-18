@@ -1,3 +1,4 @@
-[submodule "cmd/bytom/2node-test"]
+[submodule "cmd/bytomd/2node-test"]
 	path = cmd/bytomd/2node-test
-	url = https://github.com/Bytom/2node-test.git
+	url = https://github.com/Bytom/2node-test
+	branch = master

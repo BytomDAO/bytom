@@ -322,7 +322,7 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress, persistent bool) (*Peer,
 	sw.Logger.Info("Dialing peer", "address", addr)
 	peer, err := newOutboundPeerWithConfig(addr, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, sw.peerConfig)
 	if err != nil {
-		sw.Logger.Error("Failed to dial peer", "address", addr, "error", err)
+		sw.Logger.Info("Failed to dial peer", "address", addr, "error", err)
 		return nil, err
 	}
 	peer.SetLogger(sw.Logger.With("peer", addr))
@@ -331,7 +331,7 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress, persistent bool) (*Peer,
 	}
 	err = sw.AddPeer(peer)
 	if err != nil {
-		sw.Logger.Error("Failed to add peer", "address", addr, "error", err)
+		sw.Logger.Info("Failed to add peer", "address", addr, "error", err)
 		peer.CloseConn()
 		return nil, err
 	}

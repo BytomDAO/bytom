@@ -224,21 +224,21 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 		return nil
 	}
 
-	_, err = a.waitForTxInBlock(ctx, txTemplate.Transaction, generatorHeight)
+	height, err := a.waitForTxInBlock(ctx, txTemplate.Transaction, generatorHeight)
 	if err != nil {
 		return err
 	}
 	if waitUntil == "confirmed" {
 		return nil
 	}
-	/*
 
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-a.pinStore.AllWaiter(height):
-		}
-	*/
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-a.pinStore.AllWaiter(height):
+	}
+
 
 	return nil
 }

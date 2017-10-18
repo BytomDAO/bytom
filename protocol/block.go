@@ -104,43 +104,7 @@ func (c *Chain) CommitAppliedBlock(ctx context.Context, block *legacy.Block, sna
 	// it's not redundant.
 	c.setState(block, snapshot)
 
-	go c.SetAssetsAmount(block)
-
 	return nil
-}
-
-func (c *Chain) SetAssetsAmount(block *legacy.Block) {
-	assets_amount := c.assets_utxo.assets_amount
-
-	if block.Transactions != nil {
-		c.assets_utxo.cond.L.Lock()
-		for _, item := range block.Transactions[1:] {
-			if item.Outputs != nil {
-				for _, utxo := range item.Outputs {
-					if _, ok := assets_amount[utxo.AssetId.String()]; ok {
-						assets_amount[utxo.AssetId.String()] += utxo.Amount
-					} else {
-						assets_amount[utxo.AssetId.String()] = utxo.Amount
-					}
-
-				}
-			}
-		}
-		c.assets_utxo.cond.L.Unlock()
-	}
-}
-
-func (c *Chain) GetAssetsAmount() []interface{} {
-	var result = make([]interface{}, 0)
-
-	c.assets_utxo.cond.L.Lock()
-	defer c.assets_utxo.cond.L.Unlock()
-
-	if len(c.assets_utxo.assets_amount) > 0 {
-		result = append(result, c.assets_utxo.assets_amount)
-	}
-
-	return result
 }
 
 func (c *Chain) AddBlock(ctx context.Context, block *legacy.Block) error {

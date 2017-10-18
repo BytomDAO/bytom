@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/node"
 	"github.com/bytom/types"
+	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
@@ -54,7 +55,7 @@ func runNode(cmd *cobra.Command, args []string) error {
 	if _, err := n.Start(); err != nil {
 		return fmt.Errorf("Failed to start node: %v", err)
 	} else {
-		logger.Info("Started node", "nodeInfo", n.Switch().NodeInfo())
+		log.WithField("nodeInfo", n.Switch().NodeInfo()).Info("Started node")
 	}
 
 	// Trap signal, run forever.
