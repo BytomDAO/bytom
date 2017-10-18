@@ -17,16 +17,16 @@ import (
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/log"
 	"github.com/bytom/mining/cpuminer"
+	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/types"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
-	"github.com/bytom/net/http/httpjson"
 
-	"github.com/bytom/errors"
 	"github.com/bytom/blockchain/pin"
+	"github.com/bytom/errors"
 )
 
 const (
@@ -54,7 +54,7 @@ type BlockchainReactor struct {
 
 	chain       *protocol.Chain
 	store       *txdb.Store
-	pinStore        *pin.Store
+	pinStore    *pin.Store
 	accounts    *account.Manager
 	assets      *asset.Registry
 	accesstoken *accesstoken.Token
@@ -128,7 +128,6 @@ func (bcr *BlockchainReactor) createblockkey(ctx context.Context) {
 	log.Printf(ctx, "creat-block-key")
 }
 
-
 func maxBytes(h http.Handler) http.Handler {
 	const maxReqSize = 1e7 // 10MB
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -143,7 +142,7 @@ func maxBytes(h http.Handler) http.Handler {
 
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
-	if bcr.accounts != nil{
+	if bcr.accounts != nil {
 		m.Handle("/create-account", jsonHandler(bcr.createAccount))
 		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
 		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
@@ -236,13 +235,13 @@ type page struct {
 }
 
 func NewBlockchainReactor(store *txdb.Store,
-		chain *protocol.Chain,
-		txPool *protocol.TxPool,
-		accounts *account.Manager,
-		assets *asset.Registry,
-		hsm *pseudohsm.HSM,
-		fastSync bool,
-		pinStore *pin.Store) *BlockchainReactor {
+	chain *protocol.Chain,
+	txPool *protocol.TxPool,
+	accounts *account.Manager,
+	assets *asset.Registry,
+	hsm *pseudohsm.HSM,
+	fastSync bool,
+	pinStore *pin.Store) *BlockchainReactor {
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
 	pool := NewBlockPool(
@@ -254,7 +253,7 @@ func NewBlockchainReactor(store *txdb.Store,
 	bcR := &BlockchainReactor{
 		chain:      chain,
 		store:      store,
-		pinStore:	pinStore,
+		pinStore:   pinStore,
 		accounts:   accounts,
 		assets:     assets,
 		pool:       pool,

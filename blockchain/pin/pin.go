@@ -1,13 +1,13 @@
 package pin
 
 import (
-	"sort"
-	"sync"
 	"context"
 	"encoding/json"
+	"sort"
+	"sync"
 
-	"github.com/bytom/log"
 	"github.com/bytom/errors"
+	"github.com/bytom/log"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 
@@ -38,7 +38,7 @@ func (s *Store) ProcessBlocks(ctx context.Context, c *protocol.Chain, pinName st
 	height := p.getHeight()
 	for {
 		select {
-		case <-ctx.Done(): // leader deposed
+		case <-ctx.Done():
 			log.Error(ctx, ctx.Err())
 			return
 		case <-c.BlockWaiter(height + 1):
@@ -61,16 +61,16 @@ func (s *Store) CreatePin(ctx context.Context, name string, height uint64) error
 		return nil
 	}
 
-	block_processor,err := json.Marshal(&struct{
-		Name string
+	block_processor, err := json.Marshal(&struct {
+		Name   string
 		Height uint64
-		}{Name:name,
-		Height:height})
-	if err != nil{
+	}{Name: name,
+		Height: height})
+	if err != nil {
 		return errors.Wrap(err, "failed marshal block_processor")
 	}
 	if len(block_processor) > 0 {
-		s.DB.Set(json.RawMessage("blp"+name),block_processor)
+		s.DB.Set(json.RawMessage("blp"+name), block_processor)
 	}
 
 	s.pins[name] = newPin(s.DB, name, height)
@@ -87,7 +87,10 @@ func (s *Store) LoadAll(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var block_processor = struct{Name string;Height uint64}{}
+	var block_processor = struct {
+		Name   string
+		Height uint64
+	}{}
 	iter := s.DB.Iterator()
 	for iter.Next() {
 		key := string(iter.Key())
@@ -152,7 +155,6 @@ func (s *Store) AllWaiter(height uint64) <-chan struct{} {
 	}()
 	return ch
 }
-
 
 type pin struct {
 	mu        sync.Mutex
@@ -226,12 +228,13 @@ func (p *pin) complete(ctx context.Context, height uint64) error {
 
 	var (
 		block_processor = struct {
-			Name 	string
-			Height 	uint64}{}
+			Name   string
+			Height uint64
+		}{}
 		err error
 	)
 
-	bytes := p.db.Get(json.RawMessage("blp"+p.name))
+	bytes := p.db.Get(json.RawMessage("blp" + p.name))
 	if bytes != nil {
 		err = json.Unmarshal(bytes, &block_processor)
 		if err == nil && block_processor.Height >= max {
@@ -239,27 +242,21 @@ func (p *pin) complete(ctx context.Context, height uint64) error {
 		}
 	}
 
-	block_processor= struct {
-		Name 	string
-		Height 	uint64
+	block_processor = struct {
+		Name   string
+		Height uint64
 	}{
-		Name:	p.name,
-		Height:	max}
+		Name:   p.name,
+		Height: max}
 
 	bytes, err = json.Marshal(&block_processor)
 	if err != nil {
 		goto Noupdate
 	}
 	if len(bytes) > 0 {
-		p.db.Set(json.RawMessage("blp"+p.name),bytes)
+		p.db.Set(json.RawMessage("blp"+p.name), bytes)
 	}
 
-	/*
-	const notifyQ = `SELECT pg_notify($1, $2)`
-	_, err = p.db.ExecContext(ctx, notifyQ, "pin-"+p.name, max)
-	if err != nil {
-		return err
-	}*/
 Noupdate:
 	p.completed = p.completed[i:]
 	p.height = max

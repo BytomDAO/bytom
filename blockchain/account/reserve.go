@@ -74,7 +74,7 @@ type reservation struct {
 	ClientToken *string
 }
 
-func newReserver(db dbm.DB, c *protocol.Chain /*,pinStore *pin.Store*/) *reserver {
+func newReserver(db dbm.DB, c *protocol.Chain /*pinStore *pin.Store*/) *reserver {
 	return &reserver{
 		c:  c,
 		db: db,

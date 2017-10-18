@@ -10,35 +10,34 @@ import (
 	"sync"
 	"time"
 
-	bc "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txdb"
-	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
+	"github.com/bytom/env"
+	"github.com/bytom/errors"
 	"github.com/bytom/net/http/reqid"
-	p2p "github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/types"
+	"github.com/bytom/version"
+	"github.com/kr/secureheader"
+	"github.com/tendermint/tmlibs/log"
+
+	bc "github.com/bytom/blockchain"
+	cfg "github.com/bytom/config"
+	bytomlog "github.com/bytom/log"
+	p2p "github.com/bytom/p2p"
 	rpccore "github.com/bytom/rpc/core"
 	grpccore "github.com/bytom/rpc/grpc"
 	rpcserver "github.com/bytom/rpc/lib/server"
-	"github.com/bytom/types"
-	"github.com/bytom/version"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
-	"github.com/tendermint/tmlibs/log"
-
-	"github.com/bytom/env"
-	"github.com/bytom/errors"
-	bytomlog "github.com/bytom/log"
-	"github.com/kr/secureheader"
-
 	_ "net/http/pprof"
-	"github.com/bytom/blockchain/pin"
 )
 
 const (
@@ -203,11 +202,11 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	if config.Wallet.Enable {
 		accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
-		accountutxos_db := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
-		pinStore = pin.NewStore(accountutxos_db)
+		acc_utxos_db := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
+		pinStore = pin.NewStore(acc_utxos_db)
 		err = pinStore.LoadAll(ctx)
 		if err != nil {
-			bytomlog.Error(ctx,err)
+			bytomlog.Error(ctx, err)
 			return nil
 		}
 

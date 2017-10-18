@@ -2,22 +2,21 @@ package blockchain
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"math"
+	"sort"
 
+	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/query"
-	//"github.com/bytom/blockchain/query/filter"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httpjson"
-	//"github.com/bytom/log"
-	"encoding/json"
-	"github.com/bytom/blockchain/account"
-	"fmt"
-	"sort"
 )
 
 const (
 	defGenericPageSize = 100
 )
+
 var (
 	AccountUTXOFmt = `
 	{
@@ -27,6 +26,7 @@ var (
 		"RefData":"%x","Change":"%t"
 	}`
 )
+
 //
 // POST /list-accounts
 func (bcr *BlockchainReactor) listAccounts(ctx context.Context, in requestQuery) interface{} {
@@ -46,10 +46,10 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, in requestQuery) i
 	return response
 }
 
-func (bcr *BlockchainReactor) GetAccountUTXOs()([]account.AccountUTXOs){
+func (bcr *BlockchainReactor) GetAccountUTXOs() []account.AccountUTXOs {
 
 	var (
-		au = account.AccountUTXOs{}
+		au       = account.AccountUTXOs{}
 		accutoxs = []account.AccountUTXOs{}
 	)
 
@@ -60,7 +60,7 @@ func (bcr *BlockchainReactor) GetAccountUTXOs()([]account.AccountUTXOs){
 			continue
 		}
 
-		err := json.Unmarshal(iter.Value(),&au)
+		err := json.Unmarshal(iter.Value(), &au)
 		if err != nil {
 			continue
 		}
@@ -76,32 +76,32 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery)
 
 	type assetAmount struct {
 		AssetID string
-		Amount int64
+		Amount  int64
 	}
 	var (
-		aa	= assetAmount{}
-		accBalances = make(map[string][]assetAmount,0)
-		accBalancesSort = make(map[string][]assetAmount,0)
-		keys = make([]string,0)
-		response = make([]interface{},0)
+		aa              = assetAmount{}
+		accBalances     = make(map[string][]assetAmount, 0)
+		accBalancesSort = make(map[string][]assetAmount, 0)
+		keys            = make([]string, 0)
+		response        = make([]interface{}, 0)
 	)
 
 	accoutUTXOs := bcr.GetAccountUTXOs()
 
-	for _,res := range accoutUTXOs{
+	for _, res := range accoutUTXOs {
 
-		aa.AssetID = fmt.Sprintf("%x",res.AssetID)
-		aa.Amount  = res.Amount
+		aa.AssetID = fmt.Sprintf("%x", res.AssetID)
+		aa.Amount = res.Amount
 		if _, ok := accBalances[res.AccountID]; ok {
-			for _,amentry := range accBalances[res.AccountID]{
+			for _, amentry := range accBalances[res.AccountID] {
 				if amentry.AssetID == aa.AssetID {
 					amentry.Amount += aa.Amount
-				}else{
-					accBalances[res.AccountID]=append(accBalances[res.AccountID],aa)
+				} else {
+					accBalances[res.AccountID] = append(accBalances[res.AccountID], aa)
 				}
 			}
-		}else{
-			accBalances[res.AccountID]=append(accBalances[res.AccountID],aa)
+		} else {
+			accBalances[res.AccountID] = append(accBalances[res.AccountID], aa)
 		}
 
 	}
@@ -116,8 +116,8 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery)
 		accBalancesSort[k] = accBalances[k]
 	}
 
-	if len(accBalancesSort)!=0 {
-		response = append(response,accBalancesSort)
+	if len(accBalancesSort) != 0 {
+		response = append(response, accBalancesSort)
 	}
 
 	return response
@@ -202,24 +202,24 @@ func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context, in requestQuery) 
 }
 
 // POST /list-unspent-outputs
-func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in requestQuery) interface{}  {
+func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in requestQuery) interface{} {
 
 	var (
-		response = make([]string,0)
+		response = make([]string, 0)
 		restring = ""
 	)
 
 	accoutUTXOs := bcr.GetAccountUTXOs()
 
-	for _,res := range accoutUTXOs{
+	for _, res := range accoutUTXOs {
 
 		restring = fmt.Sprintf(AccountUTXOFmt,
-			res.OutputID,res.AssetID,res.Amount,
-			res.AccountID,res.CpIndex,res.Program,
-			res.Confirmed,res.SourceID,res.SourcePos,
-			res.RefData,res.Change)
+			res.OutputID, res.AssetID, res.Amount,
+			res.AccountID, res.CpIndex, res.Program,
+			res.Confirmed, res.SourceID, res.SourcePos,
+			res.RefData, res.Change)
 
-		response = append(response,restring)
+		response = append(response, restring)
 	}
 
 	return response
