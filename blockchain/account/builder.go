@@ -126,10 +126,17 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	}
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
-	acct, err := a.accounts.findByID(ctx, res.Source.AccountID)
-	if err != nil {
-		return err
+	var acct  *signers.Signer
+	if res.Source.AccountID == ""{
+		//TODO coinbase
+		acct = &signers.Signer{}
+	}else{
+		acct, err = a.accounts.findByID(ctx, res.Source.AccountID)
+		if err != nil {
+			return err
+		}
 	}
+
 	txInput, sigInst, err := utxoToInputs(ctx, acct, res.UTXOs[0], a.ReferenceData)
 	if err != nil {
 		return err
@@ -231,7 +238,6 @@ func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.
 		if len(acps) == 0 {
 			return nil
 		}
-		//	return m.insertAccountControlProgram(ctx, acps...)
-		return nil
+		return m.insertAccountControlProgram(ctx, acps...)
 	})
 }

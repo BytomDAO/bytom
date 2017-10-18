@@ -10,33 +10,33 @@ import (
 	"sync"
 	"time"
 
-	bc "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txdb"
-	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
+	"github.com/bytom/env"
+	"github.com/bytom/errors"
 	"github.com/bytom/net/http/reqid"
-	p2p "github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/types"
+	"github.com/bytom/version"
+	"github.com/kr/secureheader"
+	"github.com/tendermint/tmlibs/log"
+
+	bc "github.com/bytom/blockchain"
+	cfg "github.com/bytom/config"
+	bytomlog "github.com/bytom/log"
+	p2p "github.com/bytom/p2p"
 	rpccore "github.com/bytom/rpc/core"
 	grpccore "github.com/bytom/rpc/grpc"
 	rpcserver "github.com/bytom/rpc/lib/server"
-	"github.com/bytom/types"
-	"github.com/bytom/version"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
-	"github.com/tendermint/tmlibs/log"
-
-	"github.com/bytom/env"
-	"github.com/bytom/errors"
-	bytomlog "github.com/bytom/log"
-	"github.com/kr/secureheader"
-
 	_ "net/http/pprof"
 )
 
@@ -158,6 +158,8 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 }
 
 func NewNode(config *cfg.Config, logger log.Logger) *Node {
+	ctx := context.Background()
+
 	// Get store
 	tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
 	store := txdb.NewStore(tx_db)
@@ -186,7 +188,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	genesisBlock.UnmarshalText(consensus.InitBlock())
 
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(context.Background(), genesisBlock.Hash(), store, txPool, nil)
+	chain, err := protocol.NewChain(ctx, genesisBlock.Hash(), store, txPool, nil)
 
 	if store.Height() < 1 {
 		if err := chain.AddBlock(nil, genesisBlock); err != nil {
@@ -196,13 +198,37 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	var accounts *account.Manager = nil
 	var assets *asset.Registry = nil
+	var pinStore *pin.Store = nil
+
 	if config.Wallet.Enable {
 		accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
+		acc_utxos_db := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
+		pinStore = pin.NewStore(acc_utxos_db)
+		err = pinStore.LoadAll(ctx)
+		if err != nil {
+			bytomlog.Error(ctx, err)
+			return nil
+		}
+
+		pinHeight := store.Height()
+		if pinHeight > 0 {
+			pinHeight = pinHeight - 1
+		}
+
+		pins := []string{account.PinName, account.DeleteSpentsPinName}
+		for _, p := range pins {
+			err = pinStore.CreatePin(ctx, p, pinHeight)
+			if err != nil {
+				bytomlog.Fatalkv(ctx, bytomlog.KeyError, err)
+			}
+		}
+
+		accounts = account.NewManager(accounts_db, chain, pinStore)
+		go accounts.ProcessBlocks(ctx)
+
 		assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
-		accounts = account.NewManager(accounts_db, chain)
 		assets = asset.NewRegistry(assets_db, chain)
 	}
-
 	//Todo HSM
 	/*
 		if config.HsmUrl != ""{
@@ -220,7 +246,15 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
-	bcReactor := bc.NewBlockchainReactor(store, chain, txPool, accounts, assets, hsm, fastSync)
+	bcReactor := bc.NewBlockchainReactor(
+		store,
+		chain,
+		txPool,
+		accounts,
+		assets,
+		hsm,
+		fastSync,
+		pinStore)
 
 	bcReactor.SetLogger(logger.With("module", "blockchain"))
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
