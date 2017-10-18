@@ -17,15 +17,6 @@
 package crypto
 
 import (
-	"fmt"
-	//"io"
-	//"io/ioutil"
-	//"math/big"
-	//"os"
-
-	//"encoding/hex"
-	//"errors"
-
 	"github.com/bytom/common"
 	"golang.org/x/crypto/ripemd160"
 	"golang.org/x/crypto/sha3"
@@ -60,7 +51,6 @@ func Ripemd160(data []byte) []byte {
 
 func PubkeyToAddress(pubBytes []byte) common.Address {
 	address, _ := common.AddressEncode("bm", 1, toInt(Ripemd160(Sha3(pubBytes))))
-	fmt.Printf(address)
 	return common.StringToAddress(address)
 }
 

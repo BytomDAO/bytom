@@ -8,7 +8,7 @@ import (
 	"reflect"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // ErrBadRequest indicates the user supplied malformed JSON input,
@@ -42,7 +42,7 @@ func Write(ctx context.Context, w http.ResponseWriter, status int, v interface{}
 
 	err := json.NewEncoder(w).Encode(Array(v))
 	if err != nil {
-		log.Error(ctx, err)
+		log.WithField("error", err).Error("Error encountered during writing the Content-Type header using status")
 	}
 }
 
