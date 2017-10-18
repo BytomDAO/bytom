@@ -1,15 +1,10 @@
 package httpjson
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
-
-	"github.com/bytom/log"
 )
 
 func TestWriteArray(t *testing.T) {
@@ -29,22 +24,6 @@ func TestWriteArray(t *testing.T) {
 		if got != ex.want {
 			t.Errorf("Write(%v) = %v want %v", ex.in, got, ex.want)
 		}
-	}
-}
-
-func TestWriteErr(t *testing.T) {
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer log.SetOutput(os.Stderr)
-
-	want := "test-error"
-
-	ctx := context.Background()
-	resp := &errResponse{httptest.NewRecorder(), errors.New(want)}
-	Write(ctx, resp, 200, "ok")
-	got := buf.String()
-	if !strings.Contains(got, want) {
-		t.Errorf("log = %v; should contain %q", got, want)
 	}
 }
 
