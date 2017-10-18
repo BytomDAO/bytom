@@ -151,6 +151,7 @@ imports:
 - name: github.com/kr/secureheader
 - name: github.com/pborman/uuid
 - name: github.com/rjeczalik/notify
+- name: github.com/sirupsen/logrus
 - name: golang.org/x/sys
   version: e62c3de784db939836898e5c19ffd41bece347da
   subpackages:
