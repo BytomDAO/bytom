@@ -19,7 +19,7 @@ const (
 	defGenericPageSize = 100
 )
 var (
-	AccountUtxoFmt = `
+	AccountUTXOFmt = `
 	{
 		"OutputID":"%x","AssetID":"%x","Amount":"%d",
 		"AccountID":"%s","CpIndex":"%d","Program":"%x",
@@ -46,11 +46,11 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, in requestQuery) i
 	return response
 }
 
-func (bcr *BlockchainReactor) Getaccountutxos()([]account.AccountUtxos){
+func (bcr *BlockchainReactor) GetAccountUTXOs()([]account.AccountUTXOs){
 
 	var (
-		au = account.AccountUtxos{}
-		accutoxs = []account.AccountUtxos{}
+		au = account.AccountUTXOs{}
+		accutoxs = []account.AccountUTXOs{}
 	)
 
 	iter := bcr.pinStore.DB.Iterator()
@@ -74,50 +74,50 @@ func (bcr *BlockchainReactor) Getaccountutxos()([]account.AccountUtxos){
 // POST /list-balances
 func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery) interface{} {
 
-	type assetmount struct {
+	type assetAmount struct {
 		AssetID string
 		Amount int64
 	}
 	var (
-		am	= assetmount{}
-		accbalances = make(map[string][]assetmount,0)
-		accbalancesSort = make(map[string][]assetmount,0)
+		aa	= assetAmount{}
+		accBalances = make(map[string][]assetAmount,0)
+		accBalancesSort = make(map[string][]assetAmount,0)
 		keys = make([]string,0)
 		response = make([]interface{},0)
 	)
 
-	accoututxos := bcr.Getaccountutxos()
+	accoutUTXOs := bcr.GetAccountUTXOs()
 
-	for _,res := range accoututxos{
+	for _,res := range accoutUTXOs{
 
-		am.AssetID = fmt.Sprintf("%x",res.AssetID)
-		am.Amount  = res.Amount
-		if _, ok := accbalances[res.AccountID]; ok {
-			for _,amentry := range accbalances[res.AccountID]{
-				if amentry.AssetID == am.AssetID {
-					amentry.Amount += am.Amount
+		aa.AssetID = fmt.Sprintf("%x",res.AssetID)
+		aa.Amount  = res.Amount
+		if _, ok := accBalances[res.AccountID]; ok {
+			for _,amentry := range accBalances[res.AccountID]{
+				if amentry.AssetID == aa.AssetID {
+					amentry.Amount += aa.Amount
 				}else{
-					accbalances[res.AccountID]=append(accbalances[res.AccountID],am)
+					accBalances[res.AccountID]=append(accBalances[res.AccountID],aa)
 				}
 			}
 		}else{
-			accbalances[res.AccountID]=append(accbalances[res.AccountID],am)
+			accBalances[res.AccountID]=append(accBalances[res.AccountID],aa)
 		}
 
 	}
 
-	for k := range accbalances {
+	for k := range accBalances {
 		keys = append(keys, k)
 	}
 
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		accbalancesSort[k] = accbalances[k]
+		accBalancesSort[k] = accBalances[k]
 	}
 
-	if len(accbalancesSort)!=0 {
-		response = append(response,accbalancesSort)
+	if len(accBalancesSort)!=0 {
+		response = append(response,accBalancesSort)
 	}
 
 	return response
@@ -209,11 +209,11 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in request
 		restring = ""
 	)
 
-	accoututxos := bcr.Getaccountutxos()
+	accoutUTXOs := bcr.GetAccountUTXOs()
 
-	for _,res := range accoututxos{
+	for _,res := range accoutUTXOs{
 
-		restring = fmt.Sprintf(AccountUtxoFmt,
+		restring = fmt.Sprintf(AccountUTXOFmt,
 			res.OutputID,res.AssetID,res.Amount,
 			res.AccountID,res.CpIndex,res.Program,
 			res.Confirmed,res.SourceID,res.SourcePos,

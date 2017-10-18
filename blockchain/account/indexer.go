@@ -27,7 +27,7 @@ const (
 	DeleteSpentsPinName = "delete-account-spents"
 )
 
-type AccountUtxos struct {
+type AccountUTXOs struct {
 	OutputID  []byte
 	AssetID   []byte
 	Amount    int64
@@ -235,9 +235,9 @@ func (m *Manager) upsertConfirmedAccountOutputs(ctx context.Context,
 	pos map[bc.Hash]uint32,
 	block *legacy.Block) error {
 
-	var au *AccountUtxos
+	var au *AccountUTXOs
 	for _, out := range outs {
-		au = &AccountUtxos{OutputID:	out.OutputID.Bytes(),
+		au = &AccountUTXOs{OutputID:	out.OutputID.Bytes(),
 			AssetID:	out.AssetId.Bytes(),
 			Amount:	int64(out.Amount),
 			AccountID:	out.AccountID,
