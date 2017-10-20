@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 )
@@ -105,7 +106,10 @@ func (r *PEXReactor) AddPeer(p *Peer) {
 		addr, err := NewNetAddressString(p.ListenAddr)
 		if err != nil {
 			// this should never happen
-			r.Logger.Error("Error in AddPeer: invalid peer address", "addr", p.ListenAddr, "error", err)
+			log.WithFields(log.Fields{
+				"addr":  p.ListenAddr,
+				"error": err,
+			}).Error("Error in AddPeer: Invalid peer address")
 			return
 		}
 		r.book.AddAddress(addr, addr)
@@ -125,17 +129,17 @@ func (r *PEXReactor) Receive(chID byte, src *Peer, msgBytes []byte) {
 
 	r.IncrementMsgCountForPeer(srcAddrStr)
 	if r.ReachedMaxMsgCountForPeer(srcAddrStr) {
-		r.Logger.Error("Maximum number of messages reached for peer", "peer", srcAddrStr)
+		log.WithField("peer", srcAddrStr).Error("Maximum number of messages reached for peer")
 		// TODO remove src from peers?
 		return
 	}
 
 	_, msg, err := DecodeMessage(msgBytes)
 	if err != nil {
-		r.Logger.Error("Error decoding message", "error", err)
+		log.WithField("error", err).Error("Error decoding message")
 		return
 	}
-	r.Logger.Info("Received message", "msg", msg)
+	log.WithField("msg", msg).Info("Reveived message")
 
 	switch msg := msg.(type) {
 	case *pexRequestMessage:
@@ -150,7 +154,7 @@ func (r *PEXReactor) Receive(chID byte, src *Peer, msgBytes []byte) {
 			}
 		}
 	default:
-		r.Logger.Error(fmt.Sprintf("Unknown message type %v", reflect.TypeOf(msg)))
+		log.WithField("type", reflect.TypeOf(msg)).Error("Unknown message type")
 	}
 }
 
@@ -230,7 +234,11 @@ func (r *PEXReactor) ensurePeersRoutine() {
 func (r *PEXReactor) ensurePeers() {
 	numOutPeers, _, numDialing := r.Switch.NumPeers()
 	numToDial := minNumOutboundPeers - (numOutPeers + numDialing)
-	r.Logger.Info("Ensure peers", "numOutPeers", numOutPeers, "numDialing", numDialing, "numToDial", numToDial)
+	log.WithFields(log.Fields{
+		"numOutPeers": numOutPeers,
+		"numDialing":  numDialing,
+		"numToDial":   numToDial,
+	}).Info("Ensure peers")
 	if numToDial <= 0 {
 		return
 	}
@@ -257,13 +265,9 @@ func (r *PEXReactor) ensurePeers() {
 			alreadyDialing := r.Switch.IsDialing(try)
 			alreadyConnected := r.Switch.Peers().Has(try.IP.String())
 			if alreadySelected || alreadyDialing || alreadyConnected {
-				// r.Logger.Info("Cannot dial address", "addr", try,
-				// 	"alreadySelected", alreadySelected,
-				// 	"alreadyDialing", alreadyDialing,
-				//  "alreadyConnected", alreadyConnected)
 				continue
 			} else {
-				r.Logger.Info("Will dial address", "addr", try)
+				log.WithField("addr", try).Info("Will dial address")
 				picked = try
 				break
 			}
@@ -289,7 +293,7 @@ func (r *PEXReactor) ensurePeers() {
 		if peers := r.Switch.Peers().List(); len(peers) > 0 {
 			i := rand.Int() % len(peers)
 			peer := peers[i]
-			r.Logger.Info("No addresses to dial. Sending pexRequest to random peer", "peer", peer)
+			log.WithField("peer", peer).Info("No addresses to dial. Sending pexRequest to random peer")
 			r.RequestPEX(peer)
 		}
 	}

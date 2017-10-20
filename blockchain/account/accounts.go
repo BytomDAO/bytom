@@ -2,25 +2,23 @@
 package account
 
 import (
-	"context"
-	//	stdsql "database/sql"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
+	"context"
+	"encoding/json"
 
+	"github.com/bytom/log"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol"
+	"github.com/bytom/blockchain/pin"
 	"github.com/golang/groupcache/lru"
-	//"github.com/lib/pq"
-
-	//	"chain/core/pin"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	//	"chain/database/pg"
-	"github.com/bytom/errors"
-	"github.com/bytom/log"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/vm/vmutil"
+
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
@@ -31,12 +29,12 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func NewManager(db dbm.DB, chain *protocol.Chain /*, pinStore *pin.Store*/) *Manager {
+func NewManager(db dbm.DB, chain *protocol.Chain , pinStore *pin.Store) *Manager {
 	return &Manager{
 		db:     db,
 		chain:  chain,
-		utxoDB: newReserver(db, chain /*, pinStore*/),
-		//		pinStore:    pinStore,
+		utxoDB: newReserver(db, chain),
+		pinStore:    pinStore,
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
 		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*controlProgram),
@@ -49,7 +47,7 @@ type Manager struct {
 	chain   *protocol.Chain
 	utxoDB  *reserver
 	indexer Saver
-	//	pinStore *pin.Store
+	pinStore *pin.Store
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
@@ -102,7 +100,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err)
 	}
 
-	account_id := []byte(accountSigner.ID)
+	account_id := json.RawMessage(accountSigner.ID)
 	account := &Account{
 		Signer: accountSigner,
 		Alias:  alias,
@@ -114,8 +112,8 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
 	if len(acc) > 0 {
-		m.db.Set(account_id, json.RawMessage(acc))
-		m.db.Set([]byte(alias), account_id)
+		m.db.Set(account_id, acc)
+		m.db.Set(json.RawMessage("ali"+alias), account_id)
 	}
 
 	err = m.indexAnnotatedAccount(ctx, account)
@@ -138,7 +136,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 	if alias != nil {
 		key_id = m.db.Get([]byte(*alias))
 	} else {
-		key_id = []byte(*id)
+		key_id = json.RawMessage(*id)
 	}
 
 	bytes := m.db.Get(key_id)
@@ -173,7 +171,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 
 	} else {
 
-		m.db.Set(key_id, json.RawMessage(acc))
+		m.db.Set(key_id, acc)
 		return nil
 	}
 
@@ -214,14 +212,23 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 	if ok {
 		return cached.(*signers.Signer), nil
 	}
-	account, err := signers.Find(ctx, m.db, "account", id)
-	if err != nil {
-		return nil, err
+
+	bytes := m.db.Get(json.RawMessage(id))
+	if bytes == nil {
+		return nil,errors.New("not find this account.")
 	}
+
+	var account Account
+	err := json.Unmarshal(bytes, &account)
+	if err != nil {
+		return nil,errors.New("failed unmarshal this account.")
+	}
+
+
 	m.cacheMu.Lock()
-	m.cache.Add(id, account)
+	m.cache.Add(id, account.Signer)
 	m.cacheMu.Unlock()
-	return account, nil
+	return account.Signer, nil
 }
 
 type controlProgram struct {
@@ -273,31 +280,40 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 	return cp.controlProgram, nil
 }
 
-func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
-	/*const q = `
-		INSERT INTO account_control_programs (signer_id, key_index, control_program, change, expires_at)
-		SELECT unnest($1::text[]), unnest($2::bigint[]), unnest($3::bytea[]), unnest($4::boolean[]),
-			unnest($5::timestamp with time zone[])
-	`
-	var (
-		accountIDs   pq.StringArray
-		keyIndexes   pq.Int64Array
-		controlProgs pq.ByteaArray
-		change       pq.BoolArray
-		expirations  []stdsql.NullString
-	)
-	for _, p := range progs {
-		accountIDs = append(accountIDs, p.accountID)
-		keyIndexes = append(keyIndexes, int64(p.keyIndex))
-		controlProgs = append(controlProgs, p.controlProgram)
-		change = append(change, p.change)
-		expirations = append(expirations, stdsql.NullString{
-			String: p.expiresAt.Format(time.RFC3339),
-			Valid:  !p.expiresAt.IsZero(),
-		})
-	}*/
+type ControlProgram struct {
+	AccountID      string
+	KeyIndex       uint64
+	ControlProgram []byte
+	Change         bool
+	ExpiresAt      time.Time
+}
 
-	//	_, err := m.dbm.ExecContext(ctx, q, accountIDs, keyIndexes, controlProgs, change, pq.Array(expirations))
+func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
+
+	var b32 [32]byte
+	for _, p := range progs {
+
+		acp, err := json.Marshal(&struct{
+			AccountID      string
+			KeyIndex       uint64
+			ControlProgram []byte
+			Change         bool
+			ExpiresAt      time.Time}{
+			AccountID:		p.accountID,
+			KeyIndex:		p.keyIndex,
+			ControlProgram:	p.controlProgram,
+			Change:			p.change,
+			ExpiresAt:		p.expiresAt})
+
+		if err != nil {
+			return errors.Wrap(err, "failed marshal controlProgram")
+		}
+		if len(acp) > 0 {
+			sha3pool.Sum256(b32[:], p.controlProgram)
+			m.db.Set(json.RawMessage("acp"+string(b32[:])), acp)
+		}
+	}
+
 	return errors.Wrap(nil)
 }
 
@@ -306,15 +322,14 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	defer m.acpMu.Unlock()
 
 	if m.acpIndexNext >= m.acpIndexCap {
-		/*var cap uint64
-		const incrby = 10000 // account_control_program_seq increments by 10,000
-		const q = `SELECT nextval('account_control_program_seq')`
-		err := m.db.QueryRowContext(ctx, q).Scan(&cap)
-		if err != nil {
-			return 0, errors.Wrap(err, "scan")
+
+		const incrby = 10000 // start 1,increments by 10,000
+		if(m.acpIndexCap <= incrby){
+			m.acpIndexCap = incrby + 1
+		}else{
+			m.acpIndexCap += incrby
 		}
-		m.acpIndexCap = cap
-		m.acpIndexNext = cap - incrby*/
+		m.acpIndexNext = m.acpIndexCap - incrby
 	}
 
 	n := m.acpIndexNext
@@ -327,12 +342,11 @@ func (m *Manager) QueryAll(ctx context.Context) (interface{}, error) {
 
 	iter := m.db.Iterator()
 	for iter.Next() {
-		value := string(iter.Value())
-		if value[:3] == "acc" {
+		key := string(iter.Key())
+		if key[:3] != "acc" {
 			continue
 		}
-		ret = append(ret, value)
-		//log.Printf(ctx,"%s\t", value)
+		ret = append(ret, string(iter.Value()))
 	}
 
 	return ret, nil

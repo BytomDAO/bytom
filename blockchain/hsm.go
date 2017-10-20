@@ -15,29 +15,6 @@ func init() {
 	errorFormatter.Errors[pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
 
-/*
-// PseudoHSM configures the Core to expose the PseudoHSM endpoints. It
-// is only included in non-production builds.
-func PseudoHSM(hsm *Pseudohsm.HSM) RunOption {
-	return func(api *API) {
-
-		h := &pseudoHSMHandler{PseudoHSM: hsm}
-		needConfig := api.needConfig()
-		api.mux.Handle("/hsm/create-key", needConfig(h.pseudohsmCreateKey))
-		api.mux.Handle("/hsm/list-keys", needConfig(h.pseudohsmListKeys))
-		api.mux.Handle("/hsm/delete-key", needConfig(h.pseudohsmDeleteKey))
-		api.mux.Handle("/hsm/sign-transaction", needConfig(h.pseudohsmSignTemplates))
-		api.mux.Handle("/hsm/reset-password", needConfig(h.pseudohsmResetPassword))
-		api.mux.Handle("/hsm/update-alias", needConfig(h.pseudohsmUpdateAlias))
-	}
-}
-
-
-type pseudoHSMHandler struct {
-	PseudoHSM *Pseudohsm.HSM
-}
-*/
-
 func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ Alias, Password string }) (result *pseudohsm.XPub, err error) {
 	return a.hsm.XCreate(in.Password, in.Alias)
 }

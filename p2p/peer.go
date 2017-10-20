@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -156,7 +157,7 @@ func (p *Peer) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duration) er
 		func() {
 			var n int
 			wire.ReadBinary(peerNodeInfo, p.conn, maxNodeInfoSize, &n, &err2)
-			p.Logger.Info("Peer handshake", "peerNodeInfo", peerNodeInfo)
+			log.WithField("peerNodeInfo", peerNodeInfo).Info("Peer handshake")
 		})
 	if err1 != nil {
 		return errors.Wrap(err1, "Error during handshake/write")
