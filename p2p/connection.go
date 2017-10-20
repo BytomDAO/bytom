@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	flow "github.com/tendermint/tmlibs/flowrate"
@@ -177,10 +178,10 @@ func (c *MConnection) String() string {
 }
 
 func (c *MConnection) flush() {
-	c.Logger.Debug("Flush", "conn", c)
+	log.WithField("conn", c).Debug("Flush")
 	err := c.bufWriter.Flush()
 	if err != nil {
-		c.Logger.Error("MConnection flush failed", "error", err)
+		log.WithField("error", err).Error("MConnection flush failed")
 	}
 }
 
@@ -208,12 +209,16 @@ func (c *MConnection) Send(chID byte, msg interface{}) bool {
 		return false
 	}
 
-	c.Logger.Debug("Send", "channel", chID, "conn", c, "msg", msg) //, "bytes", wire.BinaryBytes(msg))
+	log.WithFields(log.Fields{
+		"chID": chID,
+		"conn": c,
+		"msg":  msg,
+	}).Debug("Send")
 
 	// Send message to channel.
 	channel, ok := c.channelsIdx[chID]
 	if !ok {
-		c.Logger.Error(cmn.Fmt("Cannot send bytes, unknown channel %X", chID))
+		log.WithField("chID", chID).Error(cmn.Fmt("Cannot send bytes, unknown channel"))
 		return false
 	}
 
@@ -225,7 +230,11 @@ func (c *MConnection) Send(chID byte, msg interface{}) bool {
 		default:
 		}
 	} else {
-		c.Logger.Error("Send failed", "channel", chID, "conn", c, "msg", msg)
+		log.WithFields(log.Fields{
+			"chID": chID,
+			"conn": c,
+			"msg":  msg,
+		}).Error("Send failed")
 	}
 	return success
 }
@@ -237,12 +246,16 @@ func (c *MConnection) TrySend(chID byte, msg interface{}) bool {
 		return false
 	}
 
-	c.Logger.Debug("TrySend", "channel", chID, "conn", c, "msg", msg)
+	log.WithFields(log.Fields{
+		"chID": chID,
+		"conn": c,
+		"msg":  msg,
+	}).Debug("TrySend")
 
 	// Send message to channel.
 	channel, ok := c.channelsIdx[chID]
 	if !ok {
-		c.Logger.Error(cmn.Fmt("Cannot send bytes, unknown channel %X", chID))
+		log.WithField("chID", chID).Error(cmn.Fmt("cannot send bytes, unknown channel"))
 		return false
 	}
 
@@ -267,7 +280,7 @@ func (c *MConnection) CanSend(chID byte) bool {
 
 	channel, ok := c.channelsIdx[chID]
 	if !ok {
-		c.Logger.Error(cmn.Fmt("Unknown channel %X", chID))
+		log.WithField("chID", chID).Error(cmn.Fmt("Unknown channel"))
 		return false
 	}
 	return channel.canSend()
@@ -291,12 +304,12 @@ FOR_LOOP:
 				channel.updateStats()
 			}
 		case <-c.pingTimer.Ch:
-			c.Logger.Debug("Send Ping")
+			log.Debug("Send Ping")
 			wire.WriteByte(packetTypePing, c.bufWriter, &n, &err)
 			c.sendMonitor.Update(int(n))
 			c.flush()
 		case <-c.pong:
-			c.Logger.Debug("Send Pong")
+			log.Debug("Send Pong")
 			wire.WriteByte(packetTypePong, c.bufWriter, &n, &err)
 			c.sendMonitor.Update(int(n))
 			c.flush()
@@ -318,7 +331,10 @@ FOR_LOOP:
 			break FOR_LOOP
 		}
 		if err != nil {
-			c.Logger.Error("Connection failed @ sendRoutine", "conn", c, "error", err)
+			log.WithFields(log.Fields{
+				"conn":  c,
+				"error": err,
+			}).Error("Connection failed @ sendRoutine")
 			c.stopForError(err)
 			break FOR_LOOP
 		}
@@ -373,7 +389,7 @@ func (c *MConnection) sendMsgPacket() bool {
 	// Make & send a msgPacket from this channel
 	n, err := leastChannel.writeMsgPacketTo(c.bufWriter)
 	if err != nil {
-		c.Logger.Error("Failed to write msgPacket", "error", err)
+		log.WithField("error", err).Error("Failed to write msgPacket")
 		c.stopForError(err)
 		return true
 	}
@@ -415,7 +431,10 @@ FOR_LOOP:
 		c.recvMonitor.Update(int(n))
 		if err != nil {
 			if c.IsRunning() {
-				c.Logger.Error("Connection failed @ recvRoutine (reading byte)", "conn", c, "error", err)
+				log.WithFields(log.Fields{
+					"conn":  c,
+					"error": err,
+				}).Error("Connection failed @ recvRoutine (reading byte)")
 				c.stopForError(err)
 			}
 			break FOR_LOOP
@@ -425,18 +444,21 @@ FOR_LOOP:
 		switch pktType {
 		case packetTypePing:
 			// TODO: prevent abuse, as they cause flush()'s.
-			c.Logger.Debug("Receive Ping")
+			log.Debug("Receive Ping")
 			c.pong <- struct{}{}
 		case packetTypePong:
 			// do nothing
-			c.Logger.Debug("Receive Pong")
+			log.Debug("Receive Pong")
 		case packetTypeMsg:
 			pkt, n, err := msgPacket{}, int(0), error(nil)
 			wire.ReadBinaryPtr(&pkt, c.bufReader, maxMsgPacketTotalSize, &n, &err)
 			c.recvMonitor.Update(int(n))
 			if err != nil {
 				if c.IsRunning() {
-					c.Logger.Error("Connection failed @ recvRoutine", "conn", c, "error", err)
+					log.WithFields(log.Fields{
+						"conn":  c,
+						"error": err,
+					}).Error("Connection failed @ recvRoutine")
 					c.stopForError(err)
 				}
 				break FOR_LOOP
@@ -448,13 +470,20 @@ FOR_LOOP:
 			msgBytes, err := channel.recvMsgPacket(pkt)
 			if err != nil {
 				if c.IsRunning() {
-					c.Logger.Error("Connection failed @ recvRoutine", "conn", c, "error", err)
+					log.WithFields(log.Fields{
+						"conn":  c,
+						"error": err,
+					}).Error("Connection failed @ recvRoutine")
 					c.stopForError(err)
 				}
 				break FOR_LOOP
 			}
 			if msgBytes != nil {
 				c.Logger.Debug("Received bytes", "chID", pkt.ChannelID, "msgBytes", msgBytes)
+				log.WithFields(log.Fields{
+					"channelID": pkt.ChannelID,
+					"msgBytes":  msgBytes,
+				}).Debug("Received bytes")
 				c.onReceive(pkt.ChannelID, msgBytes)
 			}
 		default:
@@ -626,7 +655,6 @@ func (ch *Channel) nextMsgPacket() msgPacket {
 // Not goroutine-safe
 func (ch *Channel) writeMsgPacketTo(w io.Writer) (n int, err error) {
 	packet := ch.nextMsgPacket()
-	// log.Debug("Write Msg Packet", "conn", ch.conn, "packet", packet)
 	wire.WriteByte(packetTypeMsg, w, &n, &err)
 	wire.WriteBinary(packet, w, &n, &err)
 	if err == nil {
@@ -638,7 +666,6 @@ func (ch *Channel) writeMsgPacketTo(w io.Writer) (n int, err error) {
 // Handles incoming msgPackets. Returns a msg bytes if msg is complete.
 // Not goroutine-safe
 func (ch *Channel) recvMsgPacket(packet msgPacket) ([]byte, error) {
-	// log.Debug("Read Msg Packet", "conn", ch.conn, "packet", packet)
 	if ch.desc.RecvMessageCapacity < len(ch.recving)+len(packet.Bytes) {
 		return nil, wire.ErrBinaryReadOverflow
 	}
