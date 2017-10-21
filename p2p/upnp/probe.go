@@ -6,8 +6,7 @@ import (
 	"net"
 	"time"
 
-	cmn "github.com/tendermint/tmlibs/common"
-	"github.com/tendermint/tmlibs/log"
+	log "github.com/sirupsen/logrus"
 )
 
 type UPNPCapabilities struct {
@@ -15,24 +14,24 @@ type UPNPCapabilities struct {
 	Hairpin     bool
 }
 
-func makeUPNPListener(intPort int, extPort int, logger log.Logger) (NAT, net.Listener, net.IP, error) {
+func makeUPNPListener(intPort int, extPort int) (NAT, net.Listener, net.IP, error) {
 	nat, err := Discover()
 	if err != nil {
 		return nil, nil, nil, errors.New(fmt.Sprintf("NAT upnp could not be discovered: %v", err))
 	}
-	logger.Info(cmn.Fmt("ourIP: %v", nat.(*upnpNAT).ourIP))
+	log.WithField("ourIP", nat.(*upnpNAT).ourIP).Info("outIP:")
 
 	ext, err := nat.GetExternalAddress()
 	if err != nil {
 		return nat, nil, nil, errors.New(fmt.Sprintf("External address error: %v", err))
 	}
-	logger.Info(cmn.Fmt("External address: %v", ext))
+	log.WithField("address", ext).Info("External address")
 
 	port, err := nat.AddPortMapping("tcp", extPort, intPort, "Tendermint UPnP Probe", 0)
 	if err != nil {
 		return nat, nil, ext, errors.New(fmt.Sprintf("Port mapping error: %v", err))
 	}
-	logger.Info(cmn.Fmt("Port mapping mapped: %v", port))
+	log.WithField("port", port).Info("Port mapping mapped")
 
 	// also run the listener, open for all remote addresses.
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%v", intPort))
@@ -42,22 +41,25 @@ func makeUPNPListener(intPort int, extPort int, logger log.Logger) (NAT, net.Lis
 	return nat, listener, ext, nil
 }
 
-func testHairpin(listener net.Listener, extAddr string, logger log.Logger) (supportsHairpin bool) {
+func testHairpin(listener net.Listener, extAddr string) (supportsHairpin bool) {
 	// Listener
 	go func() {
 		inConn, err := listener.Accept()
 		if err != nil {
-			logger.Info(cmn.Fmt("Listener.Accept() error: %v", err))
+			log.WithField("error", err).Error("Listener.Accept() error")
 			return
 		}
-		logger.Info(cmn.Fmt("Accepted incoming connection: %v -> %v", inConn.LocalAddr(), inConn.RemoteAddr()))
+		log.WithFields(log.Fields{
+			"LocalAddr":  inConn.LocalAddr(),
+			"RemoteAddr": inConn.RemoteAddr(),
+		}).Info("Accepted incoming connection")
 		buf := make([]byte, 1024)
 		n, err := inConn.Read(buf)
 		if err != nil {
-			logger.Info(cmn.Fmt("Incoming connection read error: %v", err))
+			log.WithField("error", err).Error("Incoming connection read error")
 			return
 		}
-		logger.Info(cmn.Fmt("Incoming connection read %v bytes: %X", n, buf))
+		log.Infof("Incoming connection read %v bytes: %X", n, buf)
 		if string(buf) == "test data" {
 			supportsHairpin = true
 			return
@@ -67,28 +69,28 @@ func testHairpin(listener net.Listener, extAddr string, logger log.Logger) (supp
 	// Establish outgoing
 	outConn, err := net.Dial("tcp", extAddr)
 	if err != nil {
-		logger.Info(cmn.Fmt("Outgoing connection dial error: %v", err))
+		log.WithField("error", err).Error("Outgoing connection dial error")
 		return
 	}
 
 	n, err := outConn.Write([]byte("test data"))
 	if err != nil {
-		logger.Info(cmn.Fmt("Outgoing connection write error: %v", err))
+		log.WithField("error", err).Error("Outgoing connection write error")
 		return
 	}
-	logger.Info(cmn.Fmt("Outgoing connection wrote %v bytes", n))
+	log.Infof("Outgoing connection wrote %v bytes", n)
 
 	// Wait for data receipt
 	time.Sleep(1 * time.Second)
 	return
 }
 
-func Probe(logger log.Logger) (caps UPNPCapabilities, err error) {
-	logger.Info("Probing for UPnP!")
+func Probe() (caps UPNPCapabilities, err error) {
+	log.Info("Probing for UPnP!")
 
 	intPort, extPort := 8001, 8001
 
-	nat, listener, ext, err := makeUPNPListener(intPort, extPort, logger)
+	nat, listener, ext, err := makeUPNPListener(intPort, extPort)
 	if err != nil {
 		return
 	}
@@ -98,12 +100,12 @@ func Probe(logger log.Logger) (caps UPNPCapabilities, err error) {
 	defer func() {
 		err = nat.DeletePortMapping("tcp", intPort, extPort)
 		if err != nil {
-			logger.Error(cmn.Fmt("Port mapping delete error: %v", err))
+			log.WithField("error", err).Error("Port mapping delete error")
 		}
 		listener.Close()
 	}()
 
-	supportsHairpin := testHairpin(listener, fmt.Sprintf("%v:%v", ext, extPort), logger)
+	supportsHairpin := testHairpin(listener, fmt.Sprintf("%v:%v", ext, extPort))
 	if supportsHairpin {
 		caps.Hairpin = true
 	}

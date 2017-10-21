@@ -479,7 +479,6 @@ FOR_LOOP:
 				break FOR_LOOP
 			}
 			if msgBytes != nil {
-				c.Logger.Debug("Received bytes", "chID", pkt.ChannelID, "msgBytes", msgBytes)
 				log.WithFields(log.Fields{
 					"channelID": pkt.ChannelID,
 					"msgBytes":  msgBytes,
