@@ -61,7 +61,7 @@ func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct
 	resp := make([]interface{}, len(x.Txs))
 	for _, tx := range x.Txs {
 		err := txbuilder.Sign(ctx, tx, x.XPubs, x.Auth, a.pseudohsmSignTemplate)
-		log.WithFields(log.Fields{"tx:": tx, "build err:": err}).Info()
+		log.WithFields(log.Fields{"tx": tx, "build err": err}).Info()
 		if err != nil {
 			info := errorFormatter.Format(err)
 			resp = append(resp, info)
@@ -69,7 +69,7 @@ func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct
 			resp = append(resp, tx)
 		}
 	}
-	log.WithField("resp:", resp).Info("")
+	log.WithField("resp", resp).Info("")
 	return resp
 }
 
