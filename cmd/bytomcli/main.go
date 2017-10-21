@@ -984,8 +984,9 @@ func signTransactions(client *rpc.Client, args []string) {
 	file, _ := os.Open(args[0])
 	tpl_byte := make([]byte, 10000)
 	file.Read(tpl_byte)
-	fmt.Printf("tpl:%v\n", string(tpl_byte))
-	stdjson.Unmarshal(tpl_byte, &tpl)
+	fmt.Printf("tpl_byte:%v\n", string(tpl_byte))
+	err = stdjson.Unmarshal(bytes.Trim(tpl_byte, "\x00"), &tpl)
+	fmt.Printf("tpl:%v, err:%v\n", tpl, err)
 	in.Txs = []*txbuilder.Template{&tpl}
 
 	var response map[string][]interface{}

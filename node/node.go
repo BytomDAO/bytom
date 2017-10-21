@@ -428,7 +428,7 @@ func (n *Node) makeNodeInfo() *p2p.NodeInfo {
 	nodeInfo := &p2p.NodeInfo{
 		PubKey:  n.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
 		Moniker: n.config.Moniker,
-		Network: "chain0",
+		Network: "bytom",
 		Version: version.Version,
 		Other: []string{
 			cmn.Fmt("wire_version=%v", wire.Version),
