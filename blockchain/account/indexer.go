@@ -5,12 +5,12 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/bytom/blockchain/query"
+	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/blockchain/query"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/blockchain/signers"
 
 	chainjson "github.com/bytom/encoding/json"
 )
@@ -128,13 +128,12 @@ func (m *Manager) ProcessBlocks(ctx context.Context) {
 func (m *Manager) deleteSpentOutputs(ctx context.Context, b *legacy.Block) error {
 	// Delete consumed account UTXOs.
 	delOutputIDs := prevoutDBKeys(b.Transactions...)
-	for _,delOutputID := range delOutputIDs{
-		m.pinStore.DB.Delete(json.RawMessage("acu"+string(delOutputID.Bytes())))
+	for _, delOutputID := range delOutputIDs {
+		m.pinStore.DB.Delete(json.RawMessage("acu" + string(delOutputID.Bytes())))
 	}
 
 	return errors.Wrap(nil, "deleting spent account utxos")
 }
-
 
 func (m *Manager) indexAccountUTXOs(ctx context.Context, b *legacy.Block) error {
 	// Upsert any UTXOs belonging to accounts managed by this Core.
@@ -167,7 +166,6 @@ func (m *Manager) indexAccountUTXOs(ctx context.Context, b *legacy.Block) error 
 	return errors.Wrap(err, "upserting confirmed account utxos")
 }
 
-
 func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs []bc.Hash) {
 	for _, tx := range txs {
 		for _, inpID := range tx.Tx.InputIDs {
@@ -179,11 +177,10 @@ func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs []bc.Hash) {
 	return
 }
 
-
 // loadAccountInfo turns a set of output IDs into a set of
 // outputs by adding account annotations.  Outputs that can't be
 // annotated are excluded from the result.
-func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) ([]*accountOutput) {
+func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) []*accountOutput {
 	outsByScript := make(map[string][]*rawOutput, len(outs))
 	for _, out := range outs {
 		scriptStr := string(out.ControlProgram)
@@ -202,13 +199,19 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) ([]*ac
 	var b32 [32]byte
 	for s := range outsByScript {
 		sha3pool.Sum256(b32[:], []byte(s))
-		bytes := m.db.Get(json.RawMessage("acp"+string(b32[:])))
+		bytes := m.db.Get(json.RawMessage("acp" + string(b32[:])))
 		if bytes == nil {
 			continue
 		}
 
 		err := json.Unmarshal(bytes, &cp)
 		if err != nil {
+			continue
+		}
+
+		//filte the accounts which exists in accountdb with wallet enabled
+		isExist := m.db.Get(json.RawMessage(cp.AccountID))
+		if isExist == nil {
 			continue
 		}
 
@@ -226,7 +229,6 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) ([]*ac
 	return result
 }
 
-
 // upsertConfirmedAccountOutputs records the account data for confirmed utxos.
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
@@ -237,17 +239,17 @@ func (m *Manager) upsertConfirmedAccountOutputs(ctx context.Context,
 
 	var au *AccountUTXOs
 	for _, out := range outs {
-		au = &AccountUTXOs{OutputID:	out.OutputID.Bytes(),
-			AssetID:	out.AssetId.Bytes(),
-			Amount:	int64(out.Amount),
-			AccountID:	out.AccountID,
-			CpIndex:	int64(out.keyIndex),
-			Program:	out.ControlProgram,
-			Confirmed:	int64(block.Height),
-			SourceID:	out.sourceID.Bytes(),
-			SourcePos:	int64(out.sourcePos),
-			RefData:	out.refData.Bytes(),
-			Change:	out.change}
+		au = &AccountUTXOs{OutputID: out.OutputID.Bytes(),
+			AssetID:   out.AssetId.Bytes(),
+			Amount:    int64(out.Amount),
+			AccountID: out.AccountID,
+			CpIndex:   int64(out.keyIndex),
+			Program:   out.ControlProgram,
+			Confirmed: int64(block.Height),
+			SourceID:  out.sourceID.Bytes(),
+			SourcePos: int64(out.sourcePos),
+			RefData:   out.refData.Bytes(),
+			Change:    out.change}
 
 		accountutxo, err := json.Marshal(au)
 		if err != nil {
@@ -262,4 +264,3 @@ func (m *Manager) upsertConfirmedAccountOutputs(ctx context.Context,
 
 	return nil
 }
-
