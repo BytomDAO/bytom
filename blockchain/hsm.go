@@ -2,11 +2,13 @@ package blockchain
 
 import (
 	"context"
+
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/httpjson"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -55,10 +57,11 @@ func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct
 	Auth  string
 	Txs   []*txbuilder.Template `json:"transactions"`
 	XPubs []chainkd.XPub        `json:"xpubs"`
-}) []interface{} {
-	resp := make([]interface{}, 0, len(x.Txs))
+}) interface{} {
+	resp := make([]interface{}, len(x.Txs))
 	for _, tx := range x.Txs {
 		err := txbuilder.Sign(ctx, tx, x.XPubs, x.Auth, a.pseudohsmSignTemplate)
+		log.WithFields(log.Fields{"tx": tx, "build err": err}).Info("After sign transaction.")
 		if err != nil {
 			info := errorFormatter.Format(err)
 			resp = append(resp, info)
@@ -66,6 +69,7 @@ func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct
 			resp = append(resp, tx)
 		}
 	}
+	log.WithField("resp", resp).Info("Sign Transaction complete.")
 	return resp
 }
 
