@@ -252,6 +252,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		txPool,
 		accounts,
 		assets,
+		sw,
 		hsm,
 		fastSync,
 		pinStore)
