@@ -26,6 +26,8 @@ import (
 	"github.com/kr/secureheader"
 	"github.com/tendermint/tmlibs/log"
 
+	_ "net/http/pprof"
+
 	bc "github.com/bytom/blockchain"
 	cfg "github.com/bytom/config"
 	bytomlog "github.com/bytom/log"
@@ -37,7 +39,6 @@ import (
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
-	_ "net/http/pprof"
 )
 
 const (
@@ -57,8 +58,7 @@ type Node struct {
 	addrBook *p2p.AddrBook         // known peers
 
 	// services
-	evsw types.EventSwitch // pub/sub for services
-	//    blockStore       *bc.MemStore
+	evsw         types.EventSwitch // pub/sub for services
 	blockStore   *txdb.Store
 	bcReactor    *bc.BlockchainReactor
 	accounts     *account.Manager
@@ -188,10 +188,10 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	genesisBlock.UnmarshalText(consensus.InitBlock())
 
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(ctx, genesisBlock.Hash(), store, txPool, nil)
+	chain, err := protocol.NewChain(ctx, genesisBlock.Hash(), store, txPool)
 
-	if store.Height() < 1 {
-		if err := chain.AddBlock(nil, genesisBlock); err != nil {
+	if chain.Height() < 1 {
+		if _, err := chain.AddBlock(genesisBlock); err != nil {
 			cmn.Exit(cmn.Fmt("Failed to add genesisBlock to Chain: %v", err))
 		}
 	}
@@ -210,7 +210,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 			return nil
 		}
 
-		pinHeight := store.Height()
+		pinHeight := chain.Height()
 		if pinHeight > 0 {
 			pinHeight = pinHeight - 1
 		}

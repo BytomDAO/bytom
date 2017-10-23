@@ -245,7 +245,7 @@ func NewBlockchainReactor(store *txdb.Store,
 	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
 	timeoutsCh := make(chan string, defaultChannelCapacity)
 	pool := NewBlockPool(
-		store.Height()+1,
+		chain.Height()+1,
 		requestsCh,
 		timeoutsCh,
 	)
@@ -323,16 +323,15 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 
 	switch msg := msg.(type) {
 	case *bcBlockRequestMessage:
-		rawBlock, err := bcR.store.GetRawBlock(msg.Height)
+		block, err := bcR.chain.GetBlockByHeight(msg.Height)
+		if err != nil {
+			bcR.Logger.Info("skip sent the block response due to block is nil")
+			return
+		}
+		rawBlock, err := block.MarshalText()
 		if err == nil {
 			msg := &bcBlockResponseMessage{RawBlock: rawBlock}
-			queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-			if !queued {
-				// queue is full, just ignore.
-			}
-		} else {
-			bcR.Logger.Info("skip sent the block response due to block is nil")
-			// TODO peer is asking for things we don't have.
+			src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 		}
 	case *bcBlockResponseMessage:
 		// Got a block.
@@ -398,16 +397,23 @@ FOR_LOOP:
 		SYNC_LOOP:
 			for i := 0; i < 10; i++ {
 				// See if there are any blocks to sync.
-				block, _ := bcR.pool.PeekTwoBlocks()
+				block, peerID := bcR.pool.PeekBlock()
 				if block == nil {
 					break SYNC_LOOP
 				}
 				bcR.pool.PopRequest()
 
-				if err := bcR.chain.AddBlock(nil, block); err == nil {
-					bcR.Logger.Info("finish to sync commit block", "blockHeigh", block.BlockHeader.Height)
-				} else {
+				isOrphan, err := bcR.chain.AddBlock(block)
+				if err != nil {
 					bcR.Logger.Info("fail to sync commit block", "blockHeigh", block.BlockHeader.Height, "error", err)
+				}
+
+				if isOrphan {
+					src := bcR.Switch.Peers().Get(peerID)
+					if src == nil {
+						continue
+					}
+					src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&bcBlockRequestMessage{Height: block.Height - 1}})
 				}
 			}
 			continue FOR_LOOP

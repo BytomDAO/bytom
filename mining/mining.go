@@ -5,8 +5,9 @@
 package mining
 
 import (
-	log "github.com/sirupsen/logrus"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
@@ -65,7 +66,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (
 	txFee := uint64(0)
 
 	var compareDiffBH *legacy.BlockHeader
-	if compareDiffBlock, err := c.GetBlock(nextBlockHeight - consensus.BlocksPerRetarget); err == nil {
+	if compareDiffBlock, err := c.GetBlockByHeight(nextBlockHeight - consensus.BlocksPerRetarget); err == nil {
 		compareDiffBH = &compareDiffBlock.BlockHeader
 	}
 

@@ -5,5 +5,6 @@ import (
 )
 
 func BlockHeight() (*ctypes.ResultBlockchainInfo, error) {
-	return &ctypes.ResultBlockchainInfo{LastHeight: blockStore.Height()}, nil
+	storeStatus := blockStore.GetStoreStatus()
+	return &ctypes.ResultBlockchainInfo{LastHeight: storeStatus.Height}, nil
 }

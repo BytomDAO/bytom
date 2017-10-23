@@ -182,7 +182,7 @@ func (p *pin) getHeight() uint64 {
 func (p *pin) processBlock(ctx context.Context, c *protocol.Chain, height uint64, cb func(context.Context, *legacy.Block) error) {
 	defer func() { <-p.sem }()
 	for {
-		block, err := c.GetBlock(height)
+		block, err := c.GetBlockByHeight(height)
 		if err != nil {
 			log.Error(ctx, err)
 			continue

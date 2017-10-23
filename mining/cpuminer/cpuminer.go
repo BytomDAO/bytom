@@ -5,9 +5,10 @@
 package cpuminer
 
 import (
-	log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/mining"
@@ -94,7 +95,7 @@ out:
 		}
 
 		if m.solveBlock(block, ticker, quit) {
-			if err := m.chain.AddBlock(nil, block); err == nil {
+			if _, err := m.chain.AddBlock(block); err == nil {
 				log.WithFields(log.Fields{
 					"height": block.BlockHeader.Height,
 					"tx":     len(block.Transactions),

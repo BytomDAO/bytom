@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	//	"github.com/blockchain/types"
 	"github.com/bytom/protocol/bc/legacy"
 	. "github.com/tendermint/tmlibs/common"
 	flow "github.com/tendermint/tmlibs/flowrate"
@@ -140,17 +139,14 @@ func (pool *BlockPool) IsCaughtUp() bool {
 // We need to see the second block's Commit to validate the first block.
 // So we peek two blocks at a time.
 // The caller will verify the commit.
-func (pool *BlockPool) PeekTwoBlocks() (first *legacy.Block, second *legacy.Block) {
+func (pool *BlockPool) PeekBlock() (*legacy.Block, string) {
 	pool.mtx.Lock()
 	defer pool.mtx.Unlock()
 
 	if r := pool.requesters[pool.height]; r != nil {
-		first = r.getBlock()
+		return r.getBlock(), r.getPeerID()
 	}
-	if r := pool.requesters[pool.height+1]; r != nil {
-		second = r.getBlock()
-	}
-	return
+	return nil, ""
 }
 
 // Pop the first block at pool.height

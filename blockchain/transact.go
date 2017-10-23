@@ -232,13 +232,11 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 		return nil
 	}
 
-
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-a.pinStore.AllWaiter(height):
 	}
-
 
 	return nil
 }
@@ -252,7 +250,7 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 			return 0, ctx.Err()
 
 		case <-a.chain.BlockWaiter(height):
-			b, err := a.chain.GetBlock(height)
+			b, err := a.chain.GetBlockByHeight(height)
 			if err != nil {
 				return 0, errors.Wrap(err, "getting block that just landed")
 			}
