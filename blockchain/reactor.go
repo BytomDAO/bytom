@@ -183,6 +183,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/sign-transactions", jsonHandler(bcr.pseudohsmSignTemplates))
 	m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
 	m.Handle("/update-alias", jsonHandler(bcr.pseudohsmUpdateAlias))
+	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {

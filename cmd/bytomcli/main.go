@@ -92,6 +92,7 @@ var commands = map[string]*command{
 	"sub-create-issue-tx":     {submitCreateIssueTransaction},
 	"reset-password":          {resetPassword},
 	"update-alias":            {updateAlias},
+	"net-info":				   {netInfo},
 }
 
 func main() {
@@ -1037,3 +1038,10 @@ func updateAlias(client *rpc.Client, args []string) {
 	key.XPub = *xpub
 	client.Call(context.Background(), "/update-alias", &key, nil)
 }
+
+func netInfo(client *rpc.Client, args []string) {
+	var response interface{}
+	client.Call(context.Background(), "/net-info", nil, &response)
+	fmt.Printf("net info:%v\n", response)
+}
+
