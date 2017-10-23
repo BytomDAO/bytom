@@ -32,14 +32,13 @@ type Store interface {
 	BlockExist(*bc.Hash) bool
 
 	GetBlock(*bc.Hash) (*legacy.Block, error)
-	GetMainchain() (map[uint64]*bc.Hash, txdb.MainchainStatusJSON, error)
-	GetRawBlock(*bc.Hash) ([]byte, error)
-	GetSnapshot() (*state.Snapshot, txdb.SnapshotStatusJSON, error)
+	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
+	GetSnapshot(*bc.Hash) (*state.Snapshot, error)
 	GetStoreStatus() txdb.BlockStoreStateJSON
 
 	SaveBlock(*legacy.Block) error
-	SaveMainchain(map[uint64]*bc.Hash, uint64, *bc.Hash) error
-	SaveSnapshot(*state.Snapshot, uint64, *bc.Hash) error
+	SaveMainchain(map[uint64]*bc.Hash, *bc.Hash) error
+	SaveSnapshot(*state.Snapshot, *bc.Hash) error
 	SaveStoreStatus(uint64, *bc.Hash)
 }
 
@@ -151,8 +150,8 @@ func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, txPool
 		//TODO: snapshot, mainChain version check
 		c.state.hash = storeStatus.Hash
 		c.state.block, _ = store.GetBlock(storeStatus.Hash)
-		c.state.snapshot, _, _ = store.GetSnapshot()
-		c.state.mainChain, _, _ = store.GetMainchain()
+		c.state.snapshot, _ = store.GetSnapshot(storeStatus.Hash)
+		c.state.mainChain, _ = store.GetMainchain(storeStatus.Hash)
 	}
 	return c, nil
 }

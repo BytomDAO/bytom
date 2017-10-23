@@ -90,20 +90,12 @@ func (s *Store) GetStoreStatus() BlockStoreStateJSON {
 	return loadBlockStoreStateJSON(s.db)
 }
 
-func (s *Store) GetMainchain() (map[uint64]*bc.Hash, MainchainStatusJSON, error) {
-	return getMainchain(s.db)
+func (s *Store) GetMainchain(hash *bc.Hash) (map[uint64]*bc.Hash, error) {
+	return getMainchain(s.db, hash)
 }
 
-func (s *Store) GetRawBlock(hash *bc.Hash) ([]byte, error) {
-	bytez := s.db.Get(calcBlockKey(hash))
-	if bytez == nil {
-		return nil, errors.New("querying blocks from the db null")
-	}
-	return bytez, nil
-}
-
-func (s *Store) GetSnapshot() (*state.Snapshot, SnapshotStatusJSON, error) {
-	return getSnapshot(s.db)
+func (s *Store) GetSnapshot(hash *bc.Hash) (*state.Snapshot, error) {
+	return getSnapshot(s.db, hash)
 }
 
 // SaveBlock persists a new block in the database.
@@ -119,17 +111,18 @@ func (s *Store) SaveBlock(block *legacy.Block) error {
 	return nil
 }
 
-func (s *Store) SaveMainchain(mainchain map[uint64]*bc.Hash, height uint64, hash *bc.Hash) error {
-	err := saveMainchain(s.db, mainchain, height, hash)
+func (s *Store) SaveMainchain(mainchain map[uint64]*bc.Hash, hash *bc.Hash) error {
+	err := saveMainchain(s.db, mainchain, hash)
 	return errors.Wrap(err, "saving mainchain")
 }
 
 // SaveSnapshot saves a state snapshot to the database.
-func (s *Store) SaveSnapshot(snapshot *state.Snapshot, height uint64, hash *bc.Hash) error {
-	err := saveSnapshot(s.db, snapshot, height, hash)
+func (s *Store) SaveSnapshot(snapshot *state.Snapshot, hash *bc.Hash) error {
+	err := saveSnapshot(s.db, snapshot, hash)
 	return errors.Wrap(err, "saving state tree")
 }
 
 func (s *Store) SaveStoreStatus(height uint64, hash *bc.Hash) {
 	BlockStoreStateJSON{Height: height, Hash: hash}.Save(s.db)
+	//TODO: clean the old snapshot && mainchain
 }

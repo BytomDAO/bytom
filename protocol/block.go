@@ -70,11 +70,11 @@ func (c *Chain) ConnectBlock(block *legacy.Block) error {
 	}
 
 	blockHash := block.Hash()
-	if err := c.store.SaveSnapshot(newSnapshot, block.Height, &blockHash); err != nil {
+	if err := c.store.SaveSnapshot(newSnapshot, &blockHash); err != nil {
 		return err
 	}
 	c.state.mainChain[block.Height] = &blockHash
-	if err := c.store.SaveMainchain(c.state.mainChain, block.Height, &blockHash); err != nil {
+	if err := c.store.SaveMainchain(c.state.mainChain, &blockHash); err != nil {
 		delete(c.state.mainChain, block.Height)
 		return err
 	}
@@ -126,7 +126,7 @@ func (c *Chain) AddOrphan(block *legacy.Block) error {
 	}
 
 	blockHash := block.Hash()
-	if err := c.store.SaveSnapshot(newSnapshot, block.Height, &blockHash); err != nil {
+	if err := c.store.SaveSnapshot(newSnapshot, &blockHash); err != nil {
 		return err
 	}
 	for _, attachBlock := range attachBlocks {
@@ -135,7 +135,7 @@ func (c *Chain) AddOrphan(block *legacy.Block) error {
 		c.orphanManage.Delete(&attachBlockHash)
 	}
 	c.state.mainChain[block.Height] = &blockHash
-	if err := c.store.SaveMainchain(c.state.mainChain, block.Height, &blockHash); err != nil {
+	if err := c.store.SaveMainchain(c.state.mainChain, &blockHash); err != nil {
 		delete(c.state.mainChain, block.Height)
 		return err
 	}
