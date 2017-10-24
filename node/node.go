@@ -24,7 +24,6 @@ import (
 	"github.com/bytom/types"
 	"github.com/bytom/version"
 	"github.com/kr/secureheader"
-	"github.com/tendermint/tmlibs/log"
 
 	bc "github.com/bytom/blockchain"
 	cfg "github.com/bytom/config"
@@ -33,6 +32,7 @@ import (
 	rpccore "github.com/bytom/rpc/core"
 	grpccore "github.com/bytom/rpc/grpc"
 	rpcserver "github.com/bytom/rpc/lib/server"
+	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -87,8 +87,8 @@ var (
 	race        []interface{} // initialized in race.go
 )
 
-func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
-	return NewNode(config, logger)
+func NewNodeDefault(config *cfg.Config) *Node {
+	return NewNode(config)
 }
 
 func RedirectHandler(next http.Handler) http.Handler {
@@ -157,7 +157,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	coreHandler.Set(h)
 }
 
-func NewNode(config *cfg.Config, logger log.Logger) *Node {
+func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 
 	// Get store
@@ -168,16 +168,17 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	// Make event switch
 	eventSwitch := types.NewEventSwitch()
-	eventSwitch.SetLogger(logger.With("module", "types"))
+	// eventSwitch.SetLogger(logger.With("module", "types"))
+
 	_, err := eventSwitch.Start()
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
 
-	p2pLogger := logger.With("module", "p2p")
+	// p2pLogger := logger.With("module", "p2p")
 
 	sw := p2p.NewSwitch(config.P2P)
-	sw.SetLogger(p2pLogger)
+	// sw.SetLogger(p2pLogger)
 
 	fastSync := config.FastSync
 
@@ -206,7 +207,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		pinStore = pin.NewStore(acc_utxos_db)
 		err = pinStore.LoadAll(ctx)
 		if err != nil {
-			bytomlog.Error(ctx, err)
+			log.WithField("error", err).Error("Error")
 			return nil
 		}
 
@@ -219,7 +220,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		for _, p := range pins {
 			err = pinStore.CreatePin(ctx, p, pinHeight)
 			if err != nil {
-				bytomlog.Fatalkv(ctx, bytomlog.KeyError, err)
+				log.WithField("error", err).Fatal("Error")
 			}
 		}
 
@@ -256,7 +257,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		fastSync,
 		pinStore)
 
-	bcReactor.SetLogger(logger.With("module", "blockchain"))
+	// bcReactor.SetLogger(logger.With("module", "blockchain"))
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
 	rpcInit(bcReactor, config)
@@ -264,9 +265,9 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
 		addrBook = p2p.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
-		addrBook.SetLogger(p2pLogger.With("book", config.P2P.AddrBookFile()))
+		// addrBook.SetLogger(p2pLogger.With("book", config.P2P.AddrBookFile()))
 		pexReactor := p2p.NewPEXReactor(addrBook)
-		pexReactor.SetLogger(p2pLogger)
+		// pexReactor.SetLogger(p2pLogger)
 		sw.AddReactor("PEX", pexReactor)
 	}
 
@@ -279,7 +280,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	if profileHost != "" {
 
 		go func() {
-			logger.Error("Profile server", "error", http.ListenAndServe(profileHost, nil))
+			log.WithField("error", http.ListenAndServe(profileHost, nil)).Error("Profile server")
 		}()
 	}
 
@@ -296,7 +297,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		accounts:   accounts,
 		assets:     assets,
 	}
-	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
+	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	return node
 }
 
@@ -337,14 +338,17 @@ func (n *Node) OnStart() error {
 func (n *Node) OnStop() {
 	n.BaseService.OnStop()
 
-	n.Logger.Info("Stopping Node")
+	log.Info("Stoping Node")
 	// TODO: gracefully disconnect from peers.
 	n.sw.Stop()
 
 	for _, l := range n.rpcListeners {
-		n.Logger.Info("Closing rpc listener", "listener", l)
+		log.WithField("listener", l).Info("Closing rpc listener")
 		if err := l.Close(); err != nil {
-			n.Logger.Error("Error closing listener", "listener", l, "error", err)
+			log.WithFields(log.Fields{
+				"listener": l,
+				"error":    err,
+			}).Error("Error closing listener")
 		}
 	}
 }
@@ -377,7 +381,7 @@ func (n *Node) ConfigureRPC() {
 	rpccore.SetBlockStore(n.blockStore)
 	rpccore.SetSwitch(n.sw)
 	rpccore.SetAddrBook(n.addrBook)
-	rpccore.SetLogger(n.Logger.With("module", "rpc"))
+	// rpccore.SetLogger(n.Logger.With("module", "rpc"))
 }
 
 func (n *Node) startRPC() ([]net.Listener, error) {
@@ -394,7 +398,7 @@ func (n *Node) startRPC() ([]net.Listener, error) {
 		mux := http.NewServeMux()
 		wm := rpcserver.NewWebsocketManager(rpccore.Routes, n.evsw)
 		rpcLogger := n.Logger.With("module", "rpc-server")
-		wm.SetLogger(rpcLogger)
+		// wm.SetLogger(rpcLogger)
 		mux.HandleFunc("/websocket", wm.WebsocketHandler)
 		rpcserver.RegisterRPCFuncs(mux, rpccore.Routes, rpcLogger)
 		listener, err := rpcserver.StartHTTPServer(listenAddr, mux, rpcLogger)
