@@ -9,7 +9,7 @@ import (
 type Config struct {
 	// Top level options use an anonymous struct
 	BaseConfig `mapstructure:",squash"`
-
+	ChainConfig 
 	// Options for services
 	RPC *RPCConfig `mapstructure:"rpc"`
 	P2P *P2PConfig `mapstructure:"p2p"`
@@ -49,9 +49,6 @@ type BaseConfig struct {
 	// The root directory for all data.
 	// This should be set in viper so it can unmarshal into this struct
 	RootDir string `mapstructure:"home"`
-
-	// The ID of the chain to join (should be signed with every transaction and vote)
-	ChainID string `mapstructure:"chain_id"`
 
 	// A JSON file containing the initial validator set and other meta data
 	Genesis string `mapstructure:"genesis_file"`
@@ -137,6 +134,26 @@ func DefaultLogLevel() string {
 
 func DefaultPackageLogLevels() string {
 	return fmt.Sprintf("state:info,*:%s", DefaultLogLevel())
+}
+
+
+//-----------------------------------------------------------------------------
+// ChainConfig
+
+type ChainConfig struct {
+	// The ID of the chain to join (should be signed with every transaction and vote)
+	ChainID string `mapstructure:"chain_id"`
+		// Human-readable part for Bech32 encoded segwit addresses, as defined
+	// in BIP 173.
+	Bech32HRPSegwit string `mapstructure:"bech32_hrp"`
+
+}
+
+func DefaultChainConfig() *ChainConfig {
+	return &ChainConfig{
+		ChainID:     "bytom-main",
+		Bech32HRPSegwit: "bm"
+	}
 }
 
 //-----------------------------------------------------------------------------

@@ -114,6 +114,7 @@ func EmptyHash(h Hash) bool {
 }
 
 /////////// Address
+/*
 func BytesToAddress(b []byte) Address {
 	var a Address
 	a.SetBytes(b)
@@ -195,3 +196,4 @@ func PP(value []byte) string {
 
 	return fmt.Sprintf("%x...%x", value[:4], value[len(value)-4])
 }
+*/
