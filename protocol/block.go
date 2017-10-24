@@ -34,7 +34,7 @@ func (c *Chain) GetBlockByHeight(height uint64) (*legacy.Block, error) {
 	hash, ok := c.state.mainChain[height]
 	c.state.cond.L.Unlock()
 	if !ok {
-		return nil, nil
+		return nil, errors.New("can't find block in given hight")
 	}
 	return c.GetBlockByHash(hash)
 }
@@ -53,7 +53,7 @@ func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 
 // ApplyValidBlock creates an updated snapshot without validating the
 // block.
-func (c *Chain) connectBlock(block *legacy.Block) error {
+func (c *Chain) ConnectBlock(block *legacy.Block) error {
 	newSnapshot := state.Copy(c.state.snapshot)
 	if err := newSnapshot.ApplyBlock(legacy.MapBlock(block)); err != nil {
 		return err
@@ -110,14 +110,13 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 }
 
 func (c *Chain) SaveBlock(block *legacy.Block) error {
-	preBlock, err := c.GetBlockByHash(&block.PreviousBlockHash)
-	if err != nil {
-		return err
-	}
+	preBlock, _ := c.GetBlockByHash(&block.PreviousBlockHash)
 	if err := c.ValidateBlock(block, preBlock); err != nil {
 		return err
 	}
-	c.store.SaveBlock(block)
+	if err := c.store.SaveBlock(block); err != nil {
+		return err
+	}
 
 	preorphans, ok := c.orphanManage.preOrphans[block.Hash()]
 	if !ok {
@@ -149,7 +148,7 @@ func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
 	c.state.cond.L.Lock()
 	if c.state.block.Hash() == block.PreviousBlockHash {
 		defer c.state.cond.L.Unlock()
-		return false, c.connectBlock(block)
+		return false, c.ConnectBlock(block)
 	}
 
 	if block.Height > c.state.height && block.Bits >= c.state.block.Bits {

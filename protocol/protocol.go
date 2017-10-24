@@ -140,7 +140,7 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 	storeStatus := store.GetStoreStatus()
 	c.state.height = storeStatus.Height
 
-	if c.state.height < 1 {
+	if c.state.height == 0 {
 		c.state.snapshot = state.Empty()
 		c.state.mainChain = make(map[uint64]*bc.Hash)
 		return c, nil
