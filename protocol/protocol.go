@@ -43,9 +43,17 @@ type Store interface {
 }
 
 type OrphanManage struct {
+	//TODO: add orphan cached block limit
 	orphan     map[bc.Hash]*legacy.Block
 	preOrphans map[bc.Hash][]*bc.Hash
 	mtx        sync.RWMutex
+}
+
+func NewOrphanManage() *OrphanManage {
+	return &OrphanManage{
+		orphan:     make(map[bc.Hash]*legacy.Block),
+		preOrphans: make(map[bc.Hash][]*bc.Hash),
+	}
 }
 
 func (o *OrphanManage) BlockExist(hash *bc.Hash) bool {
@@ -75,10 +83,10 @@ func (o *OrphanManage) Delete(hash *bc.Hash) {
 	if !ok {
 		return
 	}
-
 	delete(o.orphan, *hash)
+
 	preOrphans, ok := o.preOrphans[block.PreviousBlockHash]
-	if len(preOrphans) == 1 {
+	if !ok || len(preOrphans) == 1 {
 		delete(o.preOrphans, block.PreviousBlockHash)
 		return
 	}
@@ -110,54 +118,46 @@ type Chain struct {
 	txPool       *TxPool
 
 	state struct {
-		cond      sync.Cond // protects height, block, snapshot
+		cond      sync.Cond
+		block     *legacy.Block
 		height    uint64
 		hash      *bc.Hash
-		block     *legacy.Block
-		snapshot  *state.Snapshot
 		mainChain map[uint64]*bc.Hash
+		snapshot  *state.Snapshot
 	}
 	store Store
-
-	lastQueuedSnapshot time.Time
-}
-
-type pendingSnapshot struct {
-	height   uint64
-	snapshot *state.Snapshot
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, error) {
+func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, error) {
 	c := &Chain{
 		InitialBlockHash: initialBlockHash,
-		orphanManage: &OrphanManage{
-			orphan:     make(map[bc.Hash]*legacy.Block),
-			preOrphans: make(map[bc.Hash][]*bc.Hash),
-		},
-		store:  store,
-		txPool: txPool,
+		orphanManage:     NewOrphanManage(),
+		store:            store,
+		txPool:           txPool,
 	}
 	c.state.cond.L = new(sync.Mutex)
-
 	storeStatus := store.GetStoreStatus()
 	c.state.height = storeStatus.Height
 
 	if c.state.height < 1 {
 		c.state.snapshot = state.Empty()
 		c.state.mainChain = make(map[uint64]*bc.Hash)
-	} else {
-		//TODO: snapshot, mainChain version check
-		c.state.hash = storeStatus.Hash
-		c.state.block, _ = store.GetBlock(storeStatus.Hash)
-		c.state.snapshot, _ = store.GetSnapshot(storeStatus.Hash)
-		c.state.mainChain, _ = store.GetMainchain(storeStatus.Hash)
+		return c, nil
+	}
+
+	c.state.hash = storeStatus.Hash
+	var err error
+	if c.state.block, err = store.GetBlock(storeStatus.Hash); err != nil {
+		return nil, err
+	}
+	if c.state.snapshot, err = store.GetSnapshot(storeStatus.Hash); err != nil {
+		return nil, err
+	}
+	if c.state.mainChain, err = store.GetMainchain(storeStatus.Hash); err != nil {
+		return nil, err
 	}
 	return c, nil
-}
-
-func (c *Chain) GetStore() *Store {
-	return &(c.store)
 }
 
 // Height returns the current height of the blockchain.
@@ -169,8 +169,8 @@ func (c *Chain) Height() uint64 {
 
 func (c *Chain) InMainchain(block *legacy.Block) bool {
 	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
 	hash, ok := c.state.mainChain[block.Height]
+	c.state.cond.L.Unlock()
 	if !ok {
 		return false
 	}
@@ -196,15 +196,32 @@ func (c *Chain) State() (*legacy.Block, *state.Snapshot) {
 	return c.state.block, c.state.snapshot
 }
 
-func (c *Chain) setState(b *legacy.Block, s *state.Snapshot) {
-	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
-	c.state.block = b
-	c.state.snapshot = s
-	if b != nil && b.Height > c.state.height {
-		c.state.height = b.Height
-		c.state.cond.Broadcast()
+func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*bc.Hash) error {
+	if block.AssetsMerkleRoot != s.Tree.RootHash() {
+		return ErrBadStateRoot
 	}
+
+	c.state.cond.L.Lock()
+	blockHash := block.Hash()
+	c.state.block = block
+	c.state.height = block.Height
+	c.state.hash = &blockHash
+	c.state.snapshot = s
+	for k, v := range m {
+		c.state.mainChain[k] = v
+	}
+	c.state.cond.L.Unlock()
+
+	if err := c.store.SaveSnapshot(c.state.snapshot, &blockHash); err != nil {
+		return err
+	}
+	if err := c.store.SaveMainchain(c.state.mainChain, &blockHash); err != nil {
+		return err
+	}
+	c.store.SaveStoreStatus(block.Height, &blockHash)
+
+	c.state.cond.Broadcast()
+	return nil
 }
 
 // BlockSoonWaiter returns a channel that

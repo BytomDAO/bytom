@@ -22,7 +22,7 @@ func (c *Chain) ValidateTx(tx *legacy.Tx) error {
 		return c.txPool.GetErrCache(&newTx.ID)
 	}
 
-	oldBlock, err := c.GetBlock(c.state.hash)
+	oldBlock, err := c.GetBlockByHash(c.state.hash)
 	if err != nil {
 		return err
 	}

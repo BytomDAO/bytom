@@ -1,22 +1,12 @@
 package protocol
 
 import (
-	"time"
-
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
 )
-
-// maxBlockTxs limits the number of transactions
-// included in each block.
-const maxBlockTxs = 10000
-
-// saveSnapshotFrequency stores how often to save a state
-// snapshot to the Store.
-const saveSnapshotFrequency = time.Hour
 
 var (
 	// ErrBadBlock is returned when a block is invalid.
@@ -31,18 +21,22 @@ var (
 	ErrBadStateRoot = errors.New("invalid state merkle root")
 )
 
-// GetBlock returns the block at the given height, if there is one,
-// otherwise it returns an error.
-func (c *Chain) GetBlock(hash *bc.Hash) (*legacy.Block, error) {
+func (c *Chain) BlockExist(hash *bc.Hash) bool {
+	return c.orphanManage.BlockExist(hash) || c.store.BlockExist(hash)
+}
+
+func (c *Chain) GetBlockByHash(hash *bc.Hash) (*legacy.Block, error) {
 	return c.store.GetBlock(hash)
 }
 
 func (c *Chain) GetBlockByHeight(height uint64) (*legacy.Block, error) {
+	c.state.cond.L.Lock()
 	hash, ok := c.state.mainChain[height]
+	c.state.cond.L.Unlock()
 	if !ok {
 		return nil, nil
 	}
-	return c.GetBlock(hash)
+	return c.GetBlockByHash(hash)
 }
 
 // ValidateBlock validates an incoming block in advance of applying it
@@ -51,35 +45,24 @@ func (c *Chain) GetBlockByHeight(height uint64) (*legacy.Block, error) {
 func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 	blockEnts := legacy.MapBlock(block)
 	prevEnts := legacy.MapBlock(prev)
-	err := validation.ValidateBlock(blockEnts, prevEnts)
-	if err != nil {
+	if err := validation.ValidateBlock(blockEnts, prevEnts); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
-	return errors.Sub(ErrBadBlock, err)
+	return nil
 }
 
 // ApplyValidBlock creates an updated snapshot without validating the
 // block.
-func (c *Chain) ConnectBlock(block *legacy.Block) error {
+func (c *Chain) connectBlock(block *legacy.Block) error {
 	newSnapshot := state.Copy(c.state.snapshot)
 	if err := newSnapshot.ApplyBlock(legacy.MapBlock(block)); err != nil {
 		return err
 	}
-	if block.AssetsMerkleRoot != newSnapshot.Tree.RootHash() {
-		return ErrBadStateRoot
-	}
 
 	blockHash := block.Hash()
-	if err := c.store.SaveSnapshot(newSnapshot, &blockHash); err != nil {
+	if err := c.setState(block, newSnapshot, map[uint64]*bc.Hash{block.Height: &blockHash}); err != nil {
 		return err
 	}
-	c.state.mainChain[block.Height] = &blockHash
-	if err := c.store.SaveMainchain(c.state.mainChain, &blockHash); err != nil {
-		delete(c.state.mainChain, block.Height)
-		return err
-	}
-	c.state.snapshot = newSnapshot
-	c.store.SaveStoreStatus(block.Height, &blockHash)
 
 	for _, tx := range block.Transactions {
 		c.txPool.RemoveTransaction(&tx.Tx.ID)
@@ -90,105 +73,89 @@ func (c *Chain) ConnectBlock(block *legacy.Block) error {
 func (c *Chain) getReorganizeBlocks(block *legacy.Block) ([]*legacy.Block, []*legacy.Block) {
 	attachBlocks := []*legacy.Block{}
 	detachBlocks := []*legacy.Block{}
-
 	ancestor := block
-	for ancestor, ok := c.orphanManage.Get(&ancestor.PreviousBlockHash); ok; {
-		if c.InMainchain(ancestor) {
-			break
-		}
+
+	for !c.InMainchain(ancestor) {
 		attachBlocks = append([]*legacy.Block{ancestor}, attachBlocks...)
+		ancestor, _ = c.GetBlockByHash(&ancestor.PreviousBlockHash)
 	}
 
-	for n := c.state.block; n != nil; n, _ = c.GetBlock(&n.PreviousBlockHash) {
-		if n.Hash() == ancestor.Hash() {
-			break
-		}
-		detachBlocks = append(detachBlocks, n)
+	for d := c.state.block; d.Hash() != ancestor.Hash(); d, _ = c.GetBlockByHash(&d.PreviousBlockHash) {
+		detachBlocks = append(detachBlocks, d)
 	}
 
 	return attachBlocks, detachBlocks
 }
 
-func (c *Chain) AddOrphan(block *legacy.Block) error {
+func (c *Chain) reorganizeChain(block *legacy.Block) error {
 	attachBlocks, detachBlocks := c.getReorganizeBlocks(block)
 	newSnapshot := state.Copy(c.state.snapshot)
+	chainChanges := map[uint64]*bc.Hash{}
 
-	for _, detachBlock := range detachBlocks {
-		if err := newSnapshot.DetachBlock(legacy.MapBlock(detachBlock)); err != nil {
+	for _, d := range detachBlocks {
+		if err := newSnapshot.DetachBlock(legacy.MapBlock(d)); err != nil {
 			return err
 		}
 	}
 
-	for _, attachBlock := range attachBlocks {
-		if err := newSnapshot.ApplyBlock(legacy.MapBlock(attachBlock)); err != nil {
+	for _, a := range attachBlocks {
+		if err := newSnapshot.ApplyBlock(legacy.MapBlock(a)); err != nil {
 			return err
 		}
+		aHash := a.Hash()
+		chainChanges[a.Height] = &aHash
 	}
 
-	blockHash := block.Hash()
-	if err := c.store.SaveSnapshot(newSnapshot, &blockHash); err != nil {
-		return err
-	}
-	for _, attachBlock := range attachBlocks {
-		attachBlockHash := attachBlock.Hash()
-		c.state.mainChain[attachBlock.Height] = &attachBlockHash
-		c.orphanManage.Delete(&attachBlockHash)
-	}
-	c.state.mainChain[block.Height] = &blockHash
-	if err := c.store.SaveMainchain(c.state.mainChain, &blockHash); err != nil {
-		delete(c.state.mainChain, block.Height)
-		return err
-	}
-	c.state.snapshot = newSnapshot
-	c.store.SaveStoreStatus(block.Height, &blockHash)
-	return nil
+	return c.setState(block, newSnapshot, chainChanges)
 }
 
-func (c *Chain) AddBlock(block *legacy.Block) (bool, error) {
-	blockHash := block.Hash()
-	if c.orphanManage.BlockExist(&blockHash) || c.store.BlockExist(&blockHash) {
-		return c.InMainchain(block), nil
-	}
-
-	if !c.store.BlockExist(&block.PreviousBlockHash) {
-		c.orphanManage.Add(block)
-		return true, nil
-	}
-
-	preBlock, err := c.GetBlock(&block.PreviousBlockHash)
+func (c *Chain) SaveBlock(block *legacy.Block) error {
+	preBlock, err := c.GetBlockByHash(&block.PreviousBlockHash)
 	if err != nil {
-		return false, err
+		return err
 	}
-
 	if err := c.ValidateBlock(block, preBlock); err != nil {
-		return false, err
+		return err
 	}
 	c.store.SaveBlock(block)
 
-	if *c.state.mainChain[preBlock.Height] == block.PreviousBlockHash {
-		return false, c.ConnectBlock(block)
+	preorphans, ok := c.orphanManage.preOrphans[block.Hash()]
+	if !ok {
+		return nil
 	}
-
-	if block.Bits > c.state.block.Bits {
-		return true, c.AddOrphan(block)
+	for _, preorphan := range preorphans {
+		orphanBlock, ok := c.orphanManage.Get(preorphan)
+		if !ok {
+			continue
+		}
+		c.SaveBlock(orphanBlock)
+		c.orphanManage.Delete(preorphan)
 	}
-	return true, nil
+	return nil
 }
 
-func (c *Chain) setHeight(h uint64) {
-	// We call setHeight from two places independently:
-	// CommitBlock and the Postgres LISTEN goroutine.
-	// This means we can get here twice for each block,
-	// and any of them might be arbitrarily delayed,
-	// which means h might be from the past.
-	// Detect and discard these duplicate calls.
+func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
+	if blockHash := block.Hash(); c.BlockExist(&blockHash) {
+		return false, nil
+	}
+	if !c.BlockExist(&block.PreviousBlockHash) {
+		c.orphanManage.Add(block)
+		return true, nil
+	}
+	if err := c.SaveBlock(block); err != nil {
+		return false, err
+	}
 
 	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
-
-	if h <= c.state.height {
-		return
+	if c.state.block.Hash() == block.PreviousBlockHash {
+		defer c.state.cond.L.Unlock()
+		return false, c.connectBlock(block)
 	}
-	c.state.height = h
-	c.state.cond.Broadcast()
+
+	if block.Height > c.state.height && block.Bits >= c.state.block.Bits {
+		defer c.state.cond.L.Unlock()
+		return false, c.reorganizeChain(block)
+	}
+	c.state.cond.L.Unlock()
+	return false, nil
 }

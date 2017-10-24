@@ -403,7 +403,7 @@ FOR_LOOP:
 				}
 				bcR.pool.PopRequest()
 
-				isOrphan, err := bcR.chain.AddBlock(block)
+				isOrphan, err := bcR.chain.ProcessBlock(block)
 				if err != nil {
 					bcR.Logger.Info("fail to sync commit block", "blockHeigh", block.BlockHeader.Height, "error", err)
 				}

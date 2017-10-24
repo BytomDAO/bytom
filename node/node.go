@@ -188,10 +188,10 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	genesisBlock.UnmarshalText(consensus.InitBlock())
 
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(ctx, genesisBlock.Hash(), store, txPool)
+	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
 
 	if chain.Height() < 1 {
-		if _, err := chain.AddBlock(genesisBlock); err != nil {
+		if _, err := chain.ProcessBlock(genesisBlock); err != nil {
 			cmn.Exit(cmn.Fmt("Failed to add genesisBlock to Chain: %v", err))
 		}
 	}

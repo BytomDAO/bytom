@@ -95,7 +95,7 @@ out:
 		}
 
 		if m.solveBlock(block, ticker, quit) {
-			if _, err := m.chain.AddBlock(block); err == nil {
+			if _, err := m.chain.ProcessBlock(block); err == nil {
 				log.WithFields(log.Fields{
 					"height": block.BlockHeader.Height,
 					"tx":     len(block.Transactions),
