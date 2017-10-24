@@ -28,7 +28,7 @@ func DecodeMainchain(data []byte) (map[uint64]*bc.Hash, error) {
 		if err := h.UnmarshalJSON(rawHash.Key); err != nil {
 			return nil, errors.Wrap(err, "unmarshaling Mainchain hash")
 		}
-		mainchain[uint64(i)] = h
+		mainchain[uint64(i+1)] = h
 	}
 
 	return mainchain, nil
@@ -36,7 +36,7 @@ func DecodeMainchain(data []byte) (map[uint64]*bc.Hash, error) {
 
 func saveMainchain(db dbm.DB, mainchain map[uint64]*bc.Hash, hash *bc.Hash) error {
 	var mainchainList storage.Mainchain
-	for i := 0; i < len(mainchain); i++ {
+	for i := 1; i <= len(mainchain); i++ {
 		rawHash := &storage.Mainchain_Hash{Key: mainchain[uint64(i)].Bytes()}
 		mainchainList.Hashs = append(mainchainList.Hashs, rawHash)
 	}

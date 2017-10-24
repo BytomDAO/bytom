@@ -190,9 +190,12 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	txPool := protocol.NewTxPool()
 	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
 
-	if chain.Height() < 1 {
-		if _, err := chain.ProcessBlock(genesisBlock); err != nil {
-			cmn.Exit(cmn.Fmt("Failed to add genesisBlock to Chain: %v", err))
+	if chain.Height() == 0 {
+		if err := chain.SaveBlock(genesisBlock); err != nil {
+			cmn.Exit(cmn.Fmt("Failed to save genesisBlock to store: %v", err))
+		}
+		if err := chain.ConnectBlock(genesisBlock); err != nil {
+			cmn.Exit(cmn.Fmt("Failed to connect genesisBlock to chain: %v", err))
 		}
 	}
 
