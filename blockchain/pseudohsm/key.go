@@ -9,9 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/bytom/common"
 	"github.com/bytom/crypto/ed25519/chainkd"
-
 	"github.com/pborman/uuid"
 )
 
@@ -24,14 +22,13 @@ type XKey struct {
 	Id      uuid.UUID
 	KeyType string
 	Alias   string
-	Address common.Address
 	XPrv    chainkd.XPrv
 	XPub    chainkd.XPub
 }
 
 type keyStore interface {
 	// Loads and decrypts the key from disk.
-	GetKey(addr common.Address, filename string, auth string) (*XKey, error)
+	GetKey(alias string, filename string, auth string) (*XKey, error)
 	// Writes and encrypts the key.
 	StoreKey(filename string, k *XKey, auth string) error
 	// Joins filename with the key directory unless it is already absolute.
@@ -39,12 +36,12 @@ type keyStore interface {
 }
 
 type encryptedKeyJSON struct {
-	Address string     `json:"address"`
 	Crypto  cryptoJSON `json:"crypto"`
 	Id      string     `json:"id"`
 	Type    string     `json:"type"`
 	Version int        `json:"version"`
 	Alias   string     `json:"alias"`
+	XPub  	string	   `json:"xpub"`
 }
 
 type cryptoJSON struct {
@@ -154,9 +151,9 @@ func zeroKey(k *XKey) {
 
 // keyFileName implements the naming convention for keyfiles:
 // UTC--<created_at UTC ISO8601>-<address hex>
-func keyFileName(keyAddr common.Address) string {
+func keyFileName(keyAlias string) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), keyAddr.Str())
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), keyAlias)
 }
 
 func toISO8601(t time.Time) string {

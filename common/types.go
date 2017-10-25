@@ -20,7 +20,6 @@ import (
 	_ "encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -37,7 +36,6 @@ var hashJsonLengthErr = errors.New("common: unmarshalJSON failed: hash must be e
 
 type (
 	Hash    [HashLength]byte
-	Address [AddressLength]byte
 )
 
 func BytesToHash(b []byte) Hash {

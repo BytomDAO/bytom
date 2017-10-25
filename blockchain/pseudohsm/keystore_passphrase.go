@@ -36,7 +36,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/bytom/common"
 	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/randentropy"
@@ -66,7 +65,7 @@ type keyStorePassphrase struct {
 	scryptP     int
 }
 
-func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) (*XKey, error) {
+func (ks keyStorePassphrase) GetKey(alias string, filename, auth string) (*XKey, error) {
 	// Load the key from the keystore and decrypt its contents
 	keyjson, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -77,8 +76,8 @@ func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) 
 		return nil, err
 	}
 	// Make sure we're really operating on the requested key (no swap attacks)
-	if key.Address != addr {
-		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
+	if key.Alias != alias {
+		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Alias, alias)
 	}
 	return key, nil
 }
@@ -136,12 +135,12 @@ func EncryptKey(key *XKey, auth string, scryptN, scryptP int) ([]byte, error) {
 		MAC:          hex.EncodeToString(mac),
 	}
 	encryptedKeyJSON := encryptedKeyJSON{
-		key.Address.Str(),
 		cryptoStruct,
 		key.Id.String(),
 		key.KeyType,
 		version,
 		key.Alias,
+		hex.EncodeToString(key.XPub[:]),
 	}
 	return json.Marshal(encryptedKeyJSON)
 }
@@ -162,8 +161,6 @@ func DecryptKey(keyjson []byte, auth string) (*XKey, error) {
 	if err := json.Unmarshal(keyjson, k); err != nil {
 		return nil, err
 	}
-	//fmt.Printf("-----%v-------", k)
-	//fmt.Printf("\n---decrypt %v\n", k)
 
 	keyBytes, keyId, err = decryptKey(k, auth)
 	// Handle any decryption errors and return the key
@@ -177,7 +174,6 @@ func DecryptKey(keyjson []byte, auth string) (*XKey, error) {
 	//key := crypto.ToECDSA(keyBytes)
 	return &XKey{
 		Id:      uuid.UUID(keyId),
-		Address: crypto.PubkeyToAddress(xpub[:]),
 		XPrv:    xprv,
 		XPub:    xpub,
 		KeyType: k.Type,

@@ -18,7 +18,7 @@ func init() {
 }
 
 func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ Alias, Password string }) (result *pseudohsm.XPub, err error) {
-	return a.hsm.XCreate(in.Password, in.Alias)
+	return a.hsm.XCreate(in.Alias, in.Password)
 }
 
 func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query requestQuery) (page, error) {

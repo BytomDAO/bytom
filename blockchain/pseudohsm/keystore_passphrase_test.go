@@ -1,29 +1,10 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-etherem library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package pseudohsm
 
 import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/bytom/common"
-	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519/chainkd"
-
 	"github.com/pborman/uuid"
 )
 
@@ -39,8 +20,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 		t.Fatal(err)
 	}
 	password := "bytomtest"
-	address := common.StringToAddress("bm1pcwfm9xnkrf62pg405tcgjzzk7ur670jqhtm3cq")
-
+	alias := "verylight"
 	// Do a few rounds of decryption and encryption
 	for i := 0; i < 3; i++ {
 		// Try a bad password first
@@ -54,8 +34,8 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 		if err != nil {
 			t.Errorf("test %d: json key failed to decrypt: %v", i, err)
 		}
-		if key.Address != address {
-			t.Errorf("test %d: key address mismatch: have %x, want %x", i, key.Address, address)
+		if key.Alias != alias {
+			t.Errorf("test %d: key address mismatch: have %x, want %x", i, key.Alias, alias)
 		}
 
 		// Recrypt with a new password and start over
@@ -66,6 +46,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 	}
 }
 
+
 func TestGenerateFile(t *testing.T) {
 	xprv, xpub, err := chainkd.NewXKeys(nil)
 	if err != nil {
@@ -75,13 +56,12 @@ func TestGenerateFile(t *testing.T) {
 	key := &XKey{
 		Id:      id,
 		KeyType: "bytom_kd",
-		Address: crypto.PubkeyToAddress(xpub[:]),
 		XPub:    xpub,
 		XPrv:    xprv,
+		Alias:	 "verylight",
 	}
 	t.Log(key)
 	password := "bytomtest"
 	xkey, err := EncryptKey(key, password, veryLightScryptN, veryLightScryptP)
-	writeKeyFile(keyFileName(key.Address), xkey)
-	//writeKeyFile("zzz", xkey)
+	writeKeyFile(keyFileName(key.Id.String()), xkey)
 }
