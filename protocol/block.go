@@ -138,11 +138,11 @@ func (c *Chain) SaveBlock(block *legacy.Block) error {
 func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
-		log.WithFields(log.Fields{"hash": blockHash.String()}).Info("Skip process due to block already been handled")
+		log.WithField("hash", blockHash.String()).Info("Skip process due to block already been handled")
 		return false, nil
 	}
 	if !c.BlockExist(&block.PreviousBlockHash) {
-		log.WithFields(log.Fields{"hash": blockHash.String()}).Info("Add to orphan block setg")
+		log.WithField("hash", blockHash.String()).Info("Add to orphan block setg")
 		c.orphanManage.Add(block)
 		return true, nil
 	}
