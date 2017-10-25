@@ -57,7 +57,7 @@ type Chain struct {
 	lastQueuedSnapshot time.Time
 	pendingSnapshots   chan pendingSnapshot
 
-	txPool      *TxPool
+	txPool *TxPool
 }
 
 type pendingSnapshot struct {

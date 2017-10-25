@@ -30,9 +30,6 @@ import (
 	cfg "github.com/bytom/config"
 	bytomlog "github.com/bytom/log"
 	p2p "github.com/bytom/p2p"
-	rpccore "github.com/bytom/rpc/core"
-	grpccore "github.com/bytom/rpc/grpc"
-	rpcserver "github.com/bytom/rpc/lib/server"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -59,11 +56,10 @@ type Node struct {
 	// services
 	evsw types.EventSwitch // pub/sub for services
 	//    blockStore       *bc.MemStore
-	blockStore   *txdb.Store
-	bcReactor    *bc.BlockchainReactor
-	accounts     *account.Manager
-	assets       *asset.Registry
-	rpcListeners []net.Listener // rpc servers
+	blockStore *txdb.Store
+	bcReactor  *bc.BlockchainReactor
+	accounts   *account.Manager
+	assets     *asset.Registry
 }
 
 var (
@@ -125,7 +121,6 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	mux.Handle("/", &coreHandler)
 
 	var handler http.Handler = mux
-	//handler = core.AuthHandler(handler, raftDB, accessTokens, tlsConfig)
 	handler = RedirectHandler(handler)
 	handler = reqid.Handler(handler)
 
@@ -252,6 +247,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		txPool,
 		accounts,
 		assets,
+		sw,
 		hsm,
 		fastSync,
 		pinStore)
@@ -322,15 +318,6 @@ func (n *Node) OnStart() error {
 			return err
 		}
 	}
-	// Run the RPC server
-	if n.config.RPC.ListenAddress != "" {
-		listeners, err := n.startRPC()
-		if err != nil {
-			return err
-		}
-		n.rpcListeners = listeners
-	}
-
 	return nil
 }
 
@@ -341,12 +328,6 @@ func (n *Node) OnStop() {
 	// TODO: gracefully disconnect from peers.
 	n.sw.Stop()
 
-	for _, l := range n.rpcListeners {
-		n.Logger.Info("Closing rpc listener", "listener", l)
-		if err := l.Close(); err != nil {
-			n.Logger.Error("Error closing listener", "listener", l, "error", err)
-		}
-	}
 }
 
 func (n *Node) RunForever() {
@@ -368,52 +349,6 @@ func SetEventSwitch(evsw types.EventSwitch, eventables ...types.Eventable) {
 // The first listener is the primary listener (in NodeInfo)
 func (n *Node) AddListener(l p2p.Listener) {
 	n.sw.AddListener(l)
-}
-
-// ConfigureRPC sets all variables in rpccore so they will serve
-// rpc calls from this node
-func (n *Node) ConfigureRPC() {
-	rpccore.SetEventSwitch(n.evsw)
-	rpccore.SetBlockStore(n.blockStore)
-	rpccore.SetSwitch(n.sw)
-	rpccore.SetAddrBook(n.addrBook)
-	rpccore.SetLogger(n.Logger.With("module", "rpc"))
-}
-
-func (n *Node) startRPC() ([]net.Listener, error) {
-	n.ConfigureRPC()
-	listenAddrs := strings.Split(n.config.RPC.ListenAddress, ",")
-
-	if n.config.RPC.Unsafe {
-		rpccore.AddUnsafeRoutes()
-	}
-
-	// we may expose the rpc over both a unix and tcp socket
-	listeners := make([]net.Listener, len(listenAddrs))
-	for i, listenAddr := range listenAddrs {
-		mux := http.NewServeMux()
-		wm := rpcserver.NewWebsocketManager(rpccore.Routes, n.evsw)
-		rpcLogger := n.Logger.With("module", "rpc-server")
-		wm.SetLogger(rpcLogger)
-		mux.HandleFunc("/websocket", wm.WebsocketHandler)
-		rpcserver.RegisterRPCFuncs(mux, rpccore.Routes, rpcLogger)
-		listener, err := rpcserver.StartHTTPServer(listenAddr, mux, rpcLogger)
-		if err != nil {
-			return nil, err
-		}
-		listeners[i] = listener
-	}
-
-	// we expose a simplified api over grpc for convenience to app devs
-	grpcListenAddr := n.config.RPC.GRPCListenAddress
-	if grpcListenAddr != "" {
-		listener, err := grpccore.StartGRPCServer(grpcListenAddr)
-		if err != nil {
-			return nil, err
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners, nil
 }
 
 func (n *Node) Switch() *p2p.Switch {
@@ -443,13 +378,13 @@ func (n *Node) makeNodeInfo() *p2p.NodeInfo {
 	p2pListener := n.sw.Listeners()[0]
 	p2pHost := p2pListener.ExternalAddress().IP.String()
 	p2pPort := p2pListener.ExternalAddress().Port
-	rpcListenAddr := n.config.RPC.ListenAddress
+	//rpcListenAddr := n.config.RPC.ListenAddress
 
 	// We assume that the rpcListener has the same ExternalAddress.
 	// This is probably true because both P2P and RPC listeners use UPnP,
 	// except of course if the rpc is only bound to localhost
 	nodeInfo.ListenAddr = cmn.Fmt("%v:%v", p2pHost, p2pPort)
-	nodeInfo.Other = append(nodeInfo.Other, cmn.Fmt("rpc_addr=%v", rpcListenAddr))
+	//nodeInfo.Other = append(nodeInfo.Other, cmn.Fmt("rpc_addr=%v", rpcListenAddr))
 	return nodeInfo
 }
 
