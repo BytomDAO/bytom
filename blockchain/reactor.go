@@ -64,7 +64,7 @@ type BlockchainReactor struct {
 	hsm         *pseudohsm.HSM
 	mining      *cpuminer.CPUMiner
 	mux         *http.ServeMux
-	sw			*p2p.Switch
+	sw          *p2p.Switch
 	handler     http.Handler
 	fastSync    bool
 	requestsCh  chan BlockRequest
@@ -263,7 +263,7 @@ func NewBlockchainReactor(store *txdb.Store,
 		txPool:     txPool,
 		mining:     mining,
 		mux:        http.NewServeMux(),
-		sw:			sw,
+		sw:         sw,
 		hsm:        hsm,
 		fastSync:   fastSync,
 		requestsCh: requestsCh,

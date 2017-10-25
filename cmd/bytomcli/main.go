@@ -60,11 +60,11 @@ var commands = map[string]*command{
 	"grant":                   {grant},
 	"revoke":                  {revoke},
 	"wait":                    {wait},
-	"create-account":		   {createAccount},
-	"bind-account":			   {bindAccount},
+	"create-account":          {createAccount},
+	"bind-account":            {bindAccount},
 	"update-account-tags":     {updateAccountTags},
 	"create-asset":            {createAsset},
-	"bind-asset":			   {bindAsset},
+	"bind-asset":              {bindAsset},
 	"update-asset-tags":       {updateAssetTags},
 	"build-transaction":       {buildTransaction},
 	"create-control-program":  {createControlProgram},
@@ -92,7 +92,7 @@ var commands = map[string]*command{
 	"sub-create-issue-tx":     {submitCreateIssueTransaction},
 	"reset-password":          {resetPassword},
 	"update-alias":            {updateAlias},
-	"net-info":				   {netInfo},
+	"net-info":                {netInfo},
 }
 
 func main() {
@@ -439,7 +439,6 @@ func bindAsset(client *rpc.Client, args []string) {
 	fmt.Printf("responses:%v\n", assets)
 	fmt.Printf("asset id:%v\n", assets[0].ID.String())
 }
-
 
 func updateAccountTags(client *rpc.Client, args []string) {
 	if len(args) != 2 {
@@ -967,7 +966,7 @@ func signTransactions(client *rpc.Client, args []string) {
 	}
 	// sign-transaction
 	type param struct {
-	    Auth  string
+		Auth  string
 		Txs   []*txbuilder.Template `json:"transactions"`
 		XPubs []chainkd.XPub        `json:"xpubs"`
 	}
@@ -1044,4 +1043,3 @@ func netInfo(client *rpc.Client, args []string) {
 	client.Call(context.Background(), "/net-info", nil, &response)
 	fmt.Printf("net info:%v\n", response)
 }
-

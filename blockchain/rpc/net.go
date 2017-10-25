@@ -1,8 +1,8 @@
 package rpc
 
 import (
-	"github.com/bytom/p2p"
 	ctypes "github.com/bytom/blockchain/rpc/types"
+	"github.com/bytom/p2p"
 )
 
 //-----------------------------------------------------------------------------

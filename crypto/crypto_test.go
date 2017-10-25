@@ -18,10 +18,10 @@ package crypto
 
 import (
 	_ "bytes"
-	_ "github.com/bytom/common"
 	_ "crypto/ecdsa"
 	_ "encoding/hex"
 	_ "fmt"
+	_ "github.com/bytom/common"
 	_ "io/ioutil"
 	_ "math/big"
 	_ "os"

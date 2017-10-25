@@ -56,10 +56,10 @@ type Node struct {
 	// services
 	evsw types.EventSwitch // pub/sub for services
 	//    blockStore       *bc.MemStore
-	blockStore   *txdb.Store
-	bcReactor    *bc.BlockchainReactor
-	accounts     *account.Manager
-	assets       *asset.Registry
+	blockStore *txdb.Store
+	bcReactor  *bc.BlockchainReactor
+	accounts   *account.Manager
+	assets     *asset.Registry
 }
 
 var (
