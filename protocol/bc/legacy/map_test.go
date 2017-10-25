@@ -63,12 +63,12 @@ func TestMapTx(t *testing.T) {
 }
 
 func TestMapCoinbaseTx(t *testing.T) {
-// define the BTM asset id, the soul asset of Bytom
-    var BTMAssetID = &bc.AssetID{
-         V0: uint64(18446744073709551615),
-         V1: uint64(18446744073709551615),
-         V2: uint64(18446744073709551615),
-         V3: uint64(18446744073709551615),
+	// define the BTM asset id, the soul asset of Bytom
+	var BTMAssetID = &bc.AssetID{
+		V0: uint64(18446744073709551615),
+		V1: uint64(18446744073709551615),
+		V2: uint64(18446744073709551615),
+		V3: uint64(18446744073709551615),
 	}
 	oldTx := &TxData{
 		Version: 1,

@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
+	log "github.com/sirupsen/logrus"
 )
 
 // maxCachedValidatedTxs is the max number of validated txs to cache.
@@ -57,7 +57,7 @@ type Chain struct {
 	lastQueuedSnapshot time.Time
 	pendingSnapshots   chan pendingSnapshot
 
-	txPool      *TxPool
+	txPool *TxPool
 }
 
 type pendingSnapshot struct {
@@ -75,7 +75,7 @@ func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, txPool
 	}
 	c.state.cond.L = new(sync.Mutex)
 
-	log.Printf(ctx, "bytom's Height:%v.", store.Height())
+	log.WithField("current height", store.Height()).Info("Resume from the database")
 	c.state.height = store.Height()
 
 	if c.state.height < 1 {
@@ -102,7 +102,7 @@ func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, txPool
 			case ps := <-c.pendingSnapshots:
 				err := store.SaveSnapshot(ctx, ps.height, ps.snapshot)
 				if err != nil {
-					log.Error(ctx, err, "at", "saving snapshot")
+					log.WithField("error", err).Error("Error occurs when saving snapshot")
 				}
 			}
 		}

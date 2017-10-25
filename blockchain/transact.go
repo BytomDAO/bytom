@@ -236,13 +236,11 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 		return nil
 	}
 
-
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-a.pinStore.AllWaiter(height):
 	}
-
 
 	return nil
 }

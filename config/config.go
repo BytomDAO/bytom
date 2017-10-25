@@ -11,8 +11,8 @@ type Config struct {
 	BaseConfig `mapstructure:",squash"`
 	ChainConfig 
 	// Options for services
-	RPC *RPCConfig `mapstructure:"rpc"`
-	P2P *P2PConfig `mapstructure:"p2p"`
+	RPC    *RPCConfig    `mapstructure:"rpc"`
+	P2P    *P2PConfig    `mapstructure:"p2p"`
 	Wallet *WalletConfig `mapstructure:"wallet"`
 }
 
@@ -21,7 +21,7 @@ func DefaultConfig() *Config {
 		BaseConfig: DefaultBaseConfig(),
 		RPC:        DefaultRPCConfig(),
 		P2P:        DefaultP2PConfig(),
-		Wallet:		DefaultWalletConfig(),
+		Wallet:     DefaultWalletConfig(),
 	}
 }
 
@@ -30,7 +30,7 @@ func TestConfig() *Config {
 		BaseConfig: TestBaseConfig(),
 		RPC:        TestRPCConfig(),
 		P2P:        TestP2PConfig(),
-		Wallet:		TestWalletConfig(),
+		Wallet:     TestWalletConfig(),
 	}
 }
 
@@ -208,7 +208,7 @@ func DefaultP2PConfig() *P2PConfig {
 		ListenAddress:  "tcp://0.0.0.0:46656",
 		AddrBook:       "addrbook.json",
 		AddrBookStrict: true,
-		SkipUPNP:	false,
+		SkipUPNP:       false,
 		MaxNumPeers:    50,
 	}
 }
@@ -228,7 +228,7 @@ func (p *P2PConfig) AddrBookFile() string {
 // WalletConfig
 
 type WalletConfig struct {
-	Enable	bool `mapstructure:"enable"`
+	Enable bool `mapstructure:"enable"`
 }
 
 func DefaultWalletConfig() *WalletConfig {

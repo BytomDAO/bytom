@@ -2,22 +2,22 @@
 package account
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
-	"context"
-	"encoding/json"
 
-	"github.com/bytom/log"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol"
 	"github.com/bytom/blockchain/pin"
-	"github.com/golang/groupcache/lru"
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/errors"
+	"github.com/bytom/log"
+	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/golang/groupcache/lru"
 
 	dbm "github.com/tendermint/tmlibs/db"
 )
@@ -29,11 +29,11 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func NewManager(db dbm.DB, chain *protocol.Chain , pinStore *pin.Store) *Manager {
+func NewManager(db dbm.DB, chain *protocol.Chain, pinStore *pin.Store) *Manager {
 	return &Manager{
-		db:     db,
-		chain:  chain,
-		utxoDB: newReserver(db, chain),
+		db:          db,
+		chain:       chain,
+		utxoDB:      newReserver(db, chain),
 		pinStore:    pinStore,
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
@@ -43,10 +43,10 @@ func NewManager(db dbm.DB, chain *protocol.Chain , pinStore *pin.Store) *Manager
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	db      dbm.DB
-	chain   *protocol.Chain
-	utxoDB  *reserver
-	indexer Saver
+	db       dbm.DB
+	chain    *protocol.Chain
+	utxoDB   *reserver
+	indexer  Saver
 	pinStore *pin.Store
 
 	cacheMu    sync.Mutex
@@ -216,15 +216,14 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 
 	bytes := m.db.Get(json.RawMessage(id))
 	if bytes == nil {
-		return nil,errors.New("not find this account.")
+		return nil, errors.New("not find this account.")
 	}
 
 	var account Account
 	err := json.Unmarshal(bytes, &account)
 	if err != nil {
-		return nil,errors.New("failed unmarshal this account.")
+		return nil, errors.New("failed unmarshal this account.")
 	}
-
 
 	m.cacheMu.Lock()
 	m.cache.Add(id, account.Signer)
@@ -294,17 +293,18 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 	var b32 [32]byte
 	for _, p := range progs {
 
-		acp, err := json.Marshal(&struct{
+		acp, err := json.Marshal(&struct {
 			AccountID      string
 			KeyIndex       uint64
 			ControlProgram []byte
 			Change         bool
-			ExpiresAt      time.Time}{
-			AccountID:		p.accountID,
-			KeyIndex:		p.keyIndex,
-			ControlProgram:	p.controlProgram,
-			Change:			p.change,
-			ExpiresAt:		p.expiresAt})
+			ExpiresAt      time.Time
+		}{
+			AccountID:      p.accountID,
+			KeyIndex:       p.keyIndex,
+			ControlProgram: p.controlProgram,
+			Change:         p.change,
+			ExpiresAt:      p.expiresAt})
 
 		if err != nil {
 			return errors.Wrap(err, "failed marshal controlProgram")
@@ -325,9 +325,9 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	if m.acpIndexNext >= m.acpIndexCap {
 
 		const incrby = 10000 // start 1,increments by 10,000
-		if(m.acpIndexCap <= incrby){
+		if m.acpIndexCap <= incrby {
 			m.acpIndexCap = incrby + 1
-		}else{
+		} else {
 			m.acpIndexCap += incrby
 		}
 		m.acpIndexNext = m.acpIndexCap - incrby
