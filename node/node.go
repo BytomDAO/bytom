@@ -229,7 +229,6 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		if config.HsmUrl != ""{
 			// todo remoteHSM
 			cmn.Exit(cmn.Fmt("not implement"))
-
 		} else {
 			hsm, err = pseudohsm.New(config.KeysDir())
 			if err != nil {
