@@ -196,12 +196,12 @@ func (c *Chain) State() (*legacy.Block, *state.Snapshot) {
 	return c.state.block, c.state.snapshot
 }
 
+// This function must be called with mu lock in above level
 func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*bc.Hash) error {
 	if block.AssetsMerkleRoot != s.Tree.RootHash() {
 		return ErrBadStateRoot
 	}
 
-	c.state.cond.L.Lock()
 	blockHash := block.Hash()
 	c.state.block = block
 	c.state.height = block.Height
@@ -210,7 +210,6 @@ func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*b
 	for k, v := range m {
 		c.state.mainChain[k] = v
 	}
-	c.state.cond.L.Unlock()
 
 	if err := c.store.SaveSnapshot(c.state.snapshot, &blockHash); err != nil {
 		return err

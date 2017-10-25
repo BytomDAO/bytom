@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -134,10 +136,13 @@ func (c *Chain) SaveBlock(block *legacy.Block) error {
 }
 
 func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
-	if blockHash := block.Hash(); c.BlockExist(&blockHash) {
+	blockHash := block.Hash()
+	if c.BlockExist(&blockHash) {
+		log.WithFields(log.Fields{"hash": blockHash.String()}).Info("Skip process due to block already been handled")
 		return false, nil
 	}
 	if !c.BlockExist(&block.PreviousBlockHash) {
+		log.WithFields(log.Fields{"hash": blockHash.String()}).Info("Add to orphan block setg")
 		c.orphanManage.Add(block)
 		return true, nil
 	}
