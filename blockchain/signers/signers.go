@@ -100,29 +100,29 @@ func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, qu
 	}
 	/*
 
-		nullToken := sql.NullString{
-			String: clientToken,
-			Valid:  clientToken != "",
-		}
+			nullToken := sql.NullString{
+				String: clientToken,
+				Valid:  clientToken != "",
+			}
 
-		const q = `
-			INSERT INTO signers (id, type, xpubs, quorum, client_token)
-			VALUES (next_chain_id($1::text), $2, $3, $4, $5)
-			ON CONFLICT (client_token) DO NOTHING
-			RETURNING id, key_index
-	  `
-		var (
-			id       string
-			keyIndex uint64
-		)
-		err := db.QueryRowContext(ctx, q, typeIDMap[typ], typ, pq.ByteaArray(xpubBytes), quorum, nullToken).
-			Scan(&id, &keyIndex)
-		if err == sql.ErrNoRows && clientToken != "" {
-			return findByClientToken(ctx, db, clientToken)
-		}
-		if err != nil && err != sql.ErrNoRows {
-			return nil, errors.Wrap(err)
-		}
+			const q = `
+				INSERT INTO signers (id, type, xpubs, quorum, client_token)
+				VALUES (next_chain_id($1::text), $2, $3, $4, $5)
+				ON CONFLICT (client_token) DO NOTHING
+				RETURNING id, key_index
+		  `
+			var (
+				id       string
+				keyIndex uint64
+			)
+			err := db.QueryRowContext(ctx, q, typeIDMap[typ], typ, pq.ByteaArray(xpubBytes), quorum, nullToken).
+				Scan(&id, &keyIndex)
+			if err == sql.ErrNoRows && clientToken != "" {
+				return findByClientToken(ctx, db, clientToken)
+			}
+			if err != nil && err != sql.ErrNoRows {
+				return nil, errors.Wrap(err)
+			}
 	*/
 	var (
 		id       string

@@ -64,6 +64,7 @@ type BlockchainReactor struct {
 	hsm         *pseudohsm.HSM
 	mining      *cpuminer.CPUMiner
 	mux         *http.ServeMux
+	sw          *p2p.Switch
 	handler     http.Handler
 	fastSync    bool
 	requestsCh  chan BlockRequest
@@ -182,6 +183,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/sign-transactions", jsonHandler(bcr.pseudohsmSignTemplates))
 	m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
 	m.Handle("/update-alias", jsonHandler(bcr.pseudohsmUpdateAlias))
+	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -239,6 +241,7 @@ func NewBlockchainReactor(store *txdb.Store,
 	txPool *protocol.TxPool,
 	accounts *account.Manager,
 	assets *asset.Registry,
+	sw *p2p.Switch,
 	hsm *pseudohsm.HSM,
 	fastSync bool,
 	pinStore *pin.Store) *BlockchainReactor {
@@ -260,6 +263,7 @@ func NewBlockchainReactor(store *txdb.Store,
 		txPool:     txPool,
 		mining:     mining,
 		mux:        http.NewServeMux(),
+		sw:         sw,
 		hsm:        hsm,
 		fastSync:   fastSync,
 		requestsCh: requestsCh,

@@ -24,7 +24,6 @@ import (
 	"github.com/bytom/types"
 	"github.com/bytom/version"
 	"github.com/kr/secureheader"
-	"github.com/tendermint/tmlibs/log"
 
 	_ "net/http/pprof"
 
@@ -32,9 +31,7 @@ import (
 	cfg "github.com/bytom/config"
 	bytomlog "github.com/bytom/log"
 	p2p "github.com/bytom/p2p"
-	rpccore "github.com/bytom/rpc/core"
-	grpccore "github.com/bytom/rpc/grpc"
-	rpcserver "github.com/bytom/rpc/lib/server"
+	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -57,13 +54,11 @@ type Node struct {
 	sw       *p2p.Switch           // p2p connections
 	addrBook *p2p.AddrBook         // known peers
 
-	// services
-	evsw         types.EventSwitch // pub/sub for services
-	blockStore   *txdb.Store
-	bcReactor    *bc.BlockchainReactor
-	accounts     *account.Manager
-	assets       *asset.Registry
-	rpcListeners []net.Listener // rpc servers
+	evsw       types.EventSwitch // pub/sub for services
+	blockStore *txdb.Store
+	bcReactor  *bc.BlockchainReactor
+	accounts   *account.Manager
+	assets     *asset.Registry
 }
 
 var (
@@ -87,8 +82,8 @@ var (
 	race        []interface{} // initialized in race.go
 )
 
-func NewNodeDefault(config *cfg.Config, logger log.Logger) *Node {
-	return NewNode(config, logger)
+func NewNodeDefault(config *cfg.Config) *Node {
+	return NewNode(config)
 }
 
 func RedirectHandler(next http.Handler) http.Handler {
@@ -125,7 +120,6 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	mux.Handle("/", &coreHandler)
 
 	var handler http.Handler = mux
-	//handler = core.AuthHandler(handler, raftDB, accessTokens, tlsConfig)
 	handler = RedirectHandler(handler)
 	handler = reqid.Handler(handler)
 
@@ -157,7 +151,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	coreHandler.Set(h)
 }
 
-func NewNode(config *cfg.Config, logger log.Logger) *Node {
+func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 
 	// Get store
@@ -168,16 +162,12 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 
 	// Make event switch
 	eventSwitch := types.NewEventSwitch()
-	eventSwitch.SetLogger(logger.With("module", "types"))
 	_, err := eventSwitch.Start()
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
 
-	p2pLogger := logger.With("module", "p2p")
-
 	sw := p2p.NewSwitch(config.P2P)
-	sw.SetLogger(p2pLogger)
 
 	fastSync := config.FastSync
 
@@ -240,7 +230,6 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		if config.HsmUrl != ""{
 			// todo remoteHSM
 			cmn.Exit(cmn.Fmt("not implement"))
-
 		} else {
 			hsm, err = pseudohsm.New(config.KeysDir())
 			if err != nil {
@@ -258,11 +247,11 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		txPool,
 		accounts,
 		assets,
+		sw,
 		hsm,
 		fastSync,
 		pinStore)
 
-	bcReactor.SetLogger(logger.With("module", "blockchain"))
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
 	rpcInit(bcReactor, config)
@@ -270,9 +259,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
 		addrBook = p2p.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
-		addrBook.SetLogger(p2pLogger.With("book", config.P2P.AddrBookFile()))
 		pexReactor := p2p.NewPEXReactor(addrBook)
-		pexReactor.SetLogger(p2pLogger)
 		sw.AddReactor("PEX", pexReactor)
 	}
 
@@ -285,7 +272,7 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 	if profileHost != "" {
 
 		go func() {
-			logger.Error("Profile server", "error", http.ListenAndServe(profileHost, nil))
+			log.WithField("error", http.ListenAndServe(profileHost, nil)).Error("Profile server")
 		}()
 	}
 
@@ -302,14 +289,14 @@ func NewNode(config *cfg.Config, logger log.Logger) *Node {
 		accounts:   accounts,
 		assets:     assets,
 	}
-	node.BaseService = *cmn.NewBaseService(logger, "Node", node)
+	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 	return node
 }
 
 func (n *Node) OnStart() error {
 	// Create & add listener
 	protocol, address := ProtocolAndAddress(n.config.P2P.ListenAddress)
-	l := p2p.NewDefaultListener(protocol, address, n.config.P2P.SkipUPNP, n.Logger.With("module", "p2p"))
+	l := p2p.NewDefaultListener(protocol, address, n.config.P2P.SkipUPNP, nil)
 	n.sw.AddListener(l)
 
 	// Start the switch
@@ -328,31 +315,16 @@ func (n *Node) OnStart() error {
 			return err
 		}
 	}
-	// Run the RPC server
-	if n.config.RPC.ListenAddress != "" {
-		listeners, err := n.startRPC()
-		if err != nil {
-			return err
-		}
-		n.rpcListeners = listeners
-	}
-
 	return nil
 }
 
 func (n *Node) OnStop() {
 	n.BaseService.OnStop()
 
-	n.Logger.Info("Stopping Node")
+	log.Info("Stopping Node")
 	// TODO: gracefully disconnect from peers.
 	n.sw.Stop()
 
-	for _, l := range n.rpcListeners {
-		n.Logger.Info("Closing rpc listener", "listener", l)
-		if err := l.Close(); err != nil {
-			n.Logger.Error("Error closing listener", "listener", l, "error", err)
-		}
-	}
 }
 
 func (n *Node) RunForever() {
@@ -374,52 +346,6 @@ func SetEventSwitch(evsw types.EventSwitch, eventables ...types.Eventable) {
 // The first listener is the primary listener (in NodeInfo)
 func (n *Node) AddListener(l p2p.Listener) {
 	n.sw.AddListener(l)
-}
-
-// ConfigureRPC sets all variables in rpccore so they will serve
-// rpc calls from this node
-func (n *Node) ConfigureRPC() {
-	rpccore.SetEventSwitch(n.evsw)
-	rpccore.SetBlockStore(n.blockStore)
-	rpccore.SetSwitch(n.sw)
-	rpccore.SetAddrBook(n.addrBook)
-	rpccore.SetLogger(n.Logger.With("module", "rpc"))
-}
-
-func (n *Node) startRPC() ([]net.Listener, error) {
-	n.ConfigureRPC()
-	listenAddrs := strings.Split(n.config.RPC.ListenAddress, ",")
-
-	if n.config.RPC.Unsafe {
-		rpccore.AddUnsafeRoutes()
-	}
-
-	// we may expose the rpc over both a unix and tcp socket
-	listeners := make([]net.Listener, len(listenAddrs))
-	for i, listenAddr := range listenAddrs {
-		mux := http.NewServeMux()
-		wm := rpcserver.NewWebsocketManager(rpccore.Routes, n.evsw)
-		rpcLogger := n.Logger.With("module", "rpc-server")
-		wm.SetLogger(rpcLogger)
-		mux.HandleFunc("/websocket", wm.WebsocketHandler)
-		rpcserver.RegisterRPCFuncs(mux, rpccore.Routes, rpcLogger)
-		listener, err := rpcserver.StartHTTPServer(listenAddr, mux, rpcLogger)
-		if err != nil {
-			return nil, err
-		}
-		listeners[i] = listener
-	}
-
-	// we expose a simplified api over grpc for convenience to app devs
-	grpcListenAddr := n.config.RPC.GRPCListenAddress
-	if grpcListenAddr != "" {
-		listener, err := grpccore.StartGRPCServer(grpcListenAddr)
-		if err != nil {
-			return nil, err
-		}
-		listeners = append(listeners, listener)
-	}
-	return listeners, nil
 }
 
 func (n *Node) Switch() *p2p.Switch {
@@ -449,13 +375,13 @@ func (n *Node) makeNodeInfo() *p2p.NodeInfo {
 	p2pListener := n.sw.Listeners()[0]
 	p2pHost := p2pListener.ExternalAddress().IP.String()
 	p2pPort := p2pListener.ExternalAddress().Port
-	rpcListenAddr := n.config.RPC.ListenAddress
+	//rpcListenAddr := n.config.RPC.ListenAddress
 
 	// We assume that the rpcListener has the same ExternalAddress.
 	// This is probably true because both P2P and RPC listeners use UPnP,
 	// except of course if the rpc is only bound to localhost
 	nodeInfo.ListenAddr = cmn.Fmt("%v:%v", p2pHost, p2pPort)
-	nodeInfo.Other = append(nodeInfo.Other, cmn.Fmt("rpc_addr=%v", rpcListenAddr))
+	//nodeInfo.Other = append(nodeInfo.Other, cmn.Fmt("rpc_addr=%v", rpcListenAddr))
 	return nodeInfo
 }
 

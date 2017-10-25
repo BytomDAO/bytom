@@ -1,14 +1,13 @@
-package core
+package rpc
 
 import (
-	"fmt"
-
-	ctypes "github.com/bytom/rpc/core/types"
+	ctypes "github.com/bytom/blockchain/rpc/types"
+	"github.com/bytom/p2p"
 )
 
 //-----------------------------------------------------------------------------
 
-func NetInfo() (*ctypes.ResultNetInfo, error) {
+func NetInfo(p2pSwitch *p2p.Switch) (*ctypes.ResultNetInfo, error) {
 	listening := p2pSwitch.IsListening()
 	listeners := []string{}
 	for _, listener := range p2pSwitch.Listeners() {
@@ -32,7 +31,7 @@ func NetInfo() (*ctypes.ResultNetInfo, error) {
 //-----------------------------------------------------------------------------
 
 // Dial given list of seeds
-func UnsafeDialSeeds(seeds []string) (*ctypes.ResultDialSeeds, error) {
+/*func UnsafeDialSeeds(seeds []string) (*ctypes.ResultDialSeeds, error) {
 
 	if len(seeds) == 0 {
 		return &ctypes.ResultDialSeeds{}, fmt.Errorf("No seeds provided")
@@ -44,4 +43,4 @@ func UnsafeDialSeeds(seeds []string) (*ctypes.ResultDialSeeds, error) {
 		return &ctypes.ResultDialSeeds{}, err
 	}
 	return &ctypes.ResultDialSeeds{"Dialing seeds in progress. See /net_info for details"}, nil
-}
+}*/

@@ -1,16 +1,15 @@
 package pseudohsm
 
 import (
-	"testing"
-	_"github.com/davecgh/go-spew/spew"
 	"github.com/bytom/errors"
+	_ "github.com/davecgh/go-spew/spew"
+	"testing"
 )
 
 const dirPath = "testdata/pseudo"
 
-
 func TestPseudoHSMChainKDKeys(t *testing.T) {
-	hsm , _:= New(dirPath)
+	hsm, _ := New(dirPath)
 	xpub, err := hsm.XCreate("password", "")
 	if err != nil {
 		t.Fatal(err)
@@ -41,13 +40,13 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 	if !xpub2.XPub.Derive(path).Verify(msg, sig) {
 		t.Error("expected verify with derived pubkey of sig from derived privkey to succeed")
 	}
-/*	xpubs, _, err := hsm.ListKeys(0, 100)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(xpubs) != 2 {
-		t.Error("expected 2 entries in the db")
-	}*/
+	/*	xpubs, _, err := hsm.ListKeys(0, 100)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(xpubs) != 2 {
+			t.Error("expected 2 entries in the db")
+		}*/
 	err = hsm.UpdateAlias(xpub.XPub, "password", "updatealias")
 	if err != nil {
 		t.Fatal(err)
@@ -67,7 +66,7 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 }
 
 func TestKeyWithEmptyAlias(t *testing.T) {
-	hsm, _:= New(dirPath)
+	hsm, _ := New(dirPath)
 	for i := 0; i < 2; i++ {
 		xpub, err := hsm.XCreate("xx", "")
 		if errors.Root(err) != nil {
@@ -80,12 +79,11 @@ func TestKeyWithEmptyAlias(t *testing.T) {
 	}
 }
 
-
 func BenchmarkSign(b *testing.B) {
 	b.StopTimer()
 	auth := "nowpasswd"
 
-	hsm, _:= New(dirPath)
+	hsm, _ := New(dirPath)
 	xpub, err := hsm.XCreate(auth, "")
 	if err != nil {
 		b.Fatal(err)

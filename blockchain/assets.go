@@ -6,9 +6,10 @@ import (
 
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/log"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/reqid"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // POST /create-asset
@@ -49,7 +50,7 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins []struct {
 				return
 			}
 			aa, err := asset.Annotated(a)
-			log.Printf(ctx, "-------createAsset-----Annotated asset:%v", aa)
+			log.WithField("asset", aa).Info("Created asset")
 			if err != nil {
 				responses[i] = err
 				return
@@ -59,7 +60,7 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins []struct {
 	}
 
 	wg.Wait()
-	log.Printf(ctx, "-------createAsset-----%v", responses)
+	log.WithField("responses", responses).Info("Responses of created asset")
 	return responses, nil
 }
 
@@ -69,7 +70,7 @@ func (a *BlockchainReactor) updateAssetTags(ctx context.Context, ins []struct {
 	Alias *string
 	Tags  map[string]interface{} `json:"tags"`
 }) interface{} {
-	log.Printf(ctx, "------updateAssetTags-----")
+	log.Info("Update asset tags")
 	responses := make([]interface{}, len(ins))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))
