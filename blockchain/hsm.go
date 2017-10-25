@@ -2,11 +2,13 @@ package blockchain
 
 import (
 	"context"
+
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/httpjson"
+	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -14,29 +16,6 @@ func init() {
 	errorFormatter.Errors[pseudohsm.ErrInvalidAfter] = httperror.Info{400, "BTM801", "Invalid `after` in query"}
 	errorFormatter.Errors[pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
-
-/*
-// PseudoHSM configures the Core to expose the PseudoHSM endpoints. It
-// is only included in non-production builds.
-func PseudoHSM(hsm *Pseudohsm.HSM) RunOption {
-	return func(api *API) {
-
-		h := &pseudoHSMHandler{PseudoHSM: hsm}
-		needConfig := api.needConfig()
-		api.mux.Handle("/hsm/create-key", needConfig(h.pseudohsmCreateKey))
-		api.mux.Handle("/hsm/list-keys", needConfig(h.pseudohsmListKeys))
-		api.mux.Handle("/hsm/delete-key", needConfig(h.pseudohsmDeleteKey))
-		api.mux.Handle("/hsm/sign-transaction", needConfig(h.pseudohsmSignTemplates))
-		api.mux.Handle("/hsm/reset-password", needConfig(h.pseudohsmResetPassword))
-		api.mux.Handle("/hsm/update-alias", needConfig(h.pseudohsmUpdateAlias))
-	}
-}
-
-
-type pseudoHSMHandler struct {
-	PseudoHSM *Pseudohsm.HSM
-}
-*/
 
 func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ Alias, Password string }) (result *pseudohsm.XPub, err error) {
 	return a.hsm.XCreate(in.Password, in.Alias)
@@ -78,10 +57,11 @@ func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct
 	Auth  string
 	Txs   []*txbuilder.Template `json:"transactions"`
 	XPubs []chainkd.XPub        `json:"xpubs"`
-}) []interface{} {
-	resp := make([]interface{}, 0, len(x.Txs))
+}) interface{} {
+	resp := make([]interface{}, len(x.Txs))
 	for _, tx := range x.Txs {
 		err := txbuilder.Sign(ctx, tx, x.XPubs, x.Auth, a.pseudohsmSignTemplate)
+		log.WithFields(log.Fields{"tx": tx, "build err": err}).Info("After sign transaction.")
 		if err != nil {
 			info := errorFormatter.Format(err)
 			resp = append(resp, info)
@@ -89,6 +69,7 @@ func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct
 			resp = append(resp, tx)
 		}
 	}
+	log.WithField("resp", resp).Info("Sign Transaction complete.")
 	return resp
 }
 

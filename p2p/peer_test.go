@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	golog "log"
 	"net"
 	"testing"
 	"time"
@@ -9,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
 )
 
@@ -116,7 +116,7 @@ func (p *remotePeer) PubKey() crypto.PubKeyEd25519 {
 func (p *remotePeer) Start() {
 	l, e := net.Listen("tcp", "127.0.0.1:0") // any available address
 	if e != nil {
-		golog.Fatalf("net.Listen tcp :0: %+v", e)
+		log.Fatalf("net.Listen tcp :0: %+v", e)
 	}
 	p.addr = NewNetAddress(l.Addr())
 	p.quit = make(chan struct{})
@@ -131,11 +131,11 @@ func (p *remotePeer) accept(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			golog.Fatalf("Failed to accept conn: %+v", err)
+			log.Fatalf("Failed to accept conn: %+v", err)
 		}
 		peer, err := newInboundPeerWithConfig(conn, make(map[byte]Reactor), make([]*ChannelDescriptor, 0), func(p *Peer, r interface{}) {}, p.PrivKey, p.Config)
 		if err != nil {
-			golog.Fatalf("Failed to create a peer: %+v", err)
+			log.Fatalf("Failed to create a peer: %+v", err)
 		}
 		err = peer.HandshakeTimeout(&NodeInfo{
 			PubKey:  p.PrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
@@ -144,7 +144,7 @@ func (p *remotePeer) accept(l net.Listener) {
 			Version: "123.123.123",
 		}, 1*time.Second)
 		if err != nil {
-			golog.Fatalf("Failed to perform handshake: %+v", err)
+			log.Fatalf("Failed to perform handshake: %+v", err)
 		}
 		select {
 		case <-p.quit:

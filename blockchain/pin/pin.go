@@ -103,7 +103,7 @@ func (s *Store) LoadAll(ctx context.Context) error {
 		}
 
 		s.pins[block_processor.Name] = newPin(s.DB,
-			block_processor.Name[3:],
+			block_processor.Name,
 			block_processor.Height)
 
 	}
@@ -242,12 +242,8 @@ func (p *pin) complete(ctx context.Context, height uint64) error {
 		}
 	}
 
-	block_processor = struct {
-		Name   string
-		Height uint64
-	}{
-		Name:   p.name,
-		Height: max}
+	block_processor.Name = p.name
+	block_processor.Height = max
 
 	bytes, err = json.Marshal(&block_processor)
 	if err != nil {
