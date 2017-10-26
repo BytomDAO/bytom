@@ -51,7 +51,7 @@ func runNode(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create & start node
-	n := node.NewNodeDefault(config, logger.With("module", "node_p2p"))
+	n := node.NewNodeDefault(config)
 	if _, err := n.Start(); err != nil {
 		return fmt.Errorf("Failed to start node: %v", err)
 	} else {
