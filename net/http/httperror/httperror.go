@@ -88,7 +88,7 @@ func (f Formatter) Log(ctx context.Context, err error) {
 	resp := f.Format(err)
 	keyvals := []interface{}{
 		"status", resp.HTTPStatus,
-		"chaincode", resp.ChainCode,
+		"bytomcode", resp.ChainCode,
 		"path", reqid.PathFromContext(ctx),
 		log.KeyError, errorMessage,
 	}

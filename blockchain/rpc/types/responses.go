@@ -7,7 +7,6 @@ import (
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/types"
-	abci "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
 )
@@ -72,39 +71,3 @@ type Peer struct {
 	IsOutbound       bool                 `json:"is_outbound"`
 	ConnectionStatus p2p.ConnectionStatus `json:"connection_status"`
 }
-
-type ResultDumpConsensusState struct {
-	RoundState      string   `json:"round_state"`
-	PeerRoundStates []string `json:"peer_round_states"`
-}
-
-type ResultBroadcastTx struct {
-	Code abci.CodeType `json:"code"`
-	Data data.Bytes    `json:"data"`
-	Log  string        `json:"log"`
-
-	Hash data.Bytes `json:"hash"`
-}
-
-type ResultBroadcastTxCommit struct {
-	CheckTx   abci.Result `json:"check_tx"`
-	DeliverTx abci.Result `json:"deliver_tx"`
-	Hash      data.Bytes  `json:"hash"`
-	Height    int         `json:"height"`
-}
-
-type ResultABCIInfo struct {
-	Response abci.ResponseInfo `json:"response"`
-}
-
-type ResultABCIQuery struct {
-	*abci.ResultQuery `json:"response"`
-}
-
-type ResultUnsafeFlushMempool struct{}
-
-type ResultUnsafeProfile struct{}
-
-type ResultSubscribe struct{}
-
-type ResultUnsubscribe struct{}

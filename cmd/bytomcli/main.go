@@ -60,11 +60,11 @@ var commands = map[string]*command{
 	"grant":                   {grant},
 	"revoke":                  {revoke},
 	"wait":                    {wait},
-	"create-account":		   {createAccount},
-	"bind-account":			   {bindAccount},
+	"create-account":          {createAccount},
+	"bind-account":            {bindAccount},
 	"update-account-tags":     {updateAccountTags},
 	"create-asset":            {createAsset},
-	"bind-asset":			   {bindAsset},
+	"bind-asset":              {bindAsset},
 	"update-asset-tags":       {updateAssetTags},
 	"build-transaction":       {buildTransaction},
 	"create-control-program":  {createControlProgram},
@@ -92,6 +92,7 @@ var commands = map[string]*command{
 	"sub-create-issue-tx":     {submitCreateIssueTransaction},
 	"reset-password":          {resetPassword},
 	"update-alias":            {updateAlias},
+	"net-info":                {netInfo},
 }
 
 func main() {
@@ -438,7 +439,6 @@ func bindAsset(client *rpc.Client, args []string) {
 	fmt.Printf("responses:%v\n", assets)
 	fmt.Printf("asset id:%v\n", assets[0].ID.String())
 }
-
 
 func updateAccountTags(client *rpc.Client, args []string) {
 	if len(args) != 2 {
@@ -966,7 +966,7 @@ func signTransactions(client *rpc.Client, args []string) {
 	}
 	// sign-transaction
 	type param struct {
-	    Auth  string
+		Auth  string
 		Txs   []*txbuilder.Template `json:"transactions"`
 		XPubs []chainkd.XPub        `json:"xpubs"`
 	}
@@ -984,11 +984,12 @@ func signTransactions(client *rpc.Client, args []string) {
 	file, _ := os.Open(args[0])
 	tpl_byte := make([]byte, 10000)
 	file.Read(tpl_byte)
-	fmt.Printf("tpl:%v\n", string(tpl_byte))
-	stdjson.Unmarshal(tpl_byte, &tpl)
+	fmt.Printf("tpl_byte:%v\n", string(tpl_byte))
+	err = stdjson.Unmarshal(bytes.Trim(tpl_byte, "\x00"), &tpl)
+	fmt.Printf("tpl:%v, err:%v\n", tpl, err)
 	in.Txs = []*txbuilder.Template{&tpl}
 
-	var response map[string][]interface{}
+	var response []interface{} = make([]interface{}, 1)
 	client.Call(context.Background(), "/sign-transactions", &in, &response)
 	fmt.Printf("sign response:%v\n", response)
 }
@@ -1035,4 +1036,10 @@ func updateAlias(client *rpc.Client, args []string) {
 	key.NewAlias = args[1]
 	key.XPub = *xpub
 	client.Call(context.Background(), "/update-alias", &key, nil)
+}
+
+func netInfo(client *rpc.Client, args []string) {
+	var response interface{}
+	client.Call(context.Background(), "/net-info", nil, &response)
+	fmt.Printf("net info:%v\n", response)
 }
