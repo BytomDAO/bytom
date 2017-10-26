@@ -34,7 +34,7 @@ func calcBlockKey(height uint64) []byte {
 func LoadBlock(db dbm.DB, height uint64) *legacy.Block {
 	var block *legacy.Block = &legacy.Block{}
 	bytez := db.Get(calcBlockKey(height))
-	if bytez == nil {
+	if len(bytez) == 0 {
 		return nil
 	}
 
@@ -58,7 +58,7 @@ func (bsj BlockStoreStateJSON) Save(db dbm.DB) {
 
 func LoadBlockStoreStateJSON(db dbm.DB) BlockStoreStateJSON {
 	bytes := db.Get(blockStoreKey)
-	if bytes == nil {
+	if len(bytes) == 0 {
 		return BlockStoreStateJSON{
 			Height: 0,
 		}
@@ -101,7 +101,7 @@ func (s *Store) GetBlock(height uint64) (*legacy.Block, error) {
 
 func (s *Store) GetRawBlock(height uint64) ([]byte, error) {
 	bytez := s.db.Get(calcBlockKey(height))
-	if bytez == nil {
+	if len(bytez) == 0 {
 		return nil, errors.New("querying blocks from the db null")
 	}
 	return bytez, nil

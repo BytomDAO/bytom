@@ -71,7 +71,7 @@ func (bsj SnapshotHeightJSON) Save(db dbm.DB) {
 
 func LoadSnapshotHeightJSON(db dbm.DB) SnapshotHeightJSON {
 	bytes := db.Get(latestSnapshotHeight)
-	if bytes == nil {
+	if len(bytes) == 0 {
 		return SnapshotHeightJSON{
 			Height: 0,
 		}
@@ -120,7 +120,7 @@ func storeStateSnapshot(ctx context.Context, db dbm.DB, snapshot *state.Snapshot
 func getStateSnapshot(ctx context.Context, db dbm.DB) (*state.Snapshot, uint64, error) {
 	height := LoadSnapshotHeightJSON(db).Height
 	data := db.Get(calcSnapshotKey(height))
-	if data == nil {
+	if len(data) == 0 {
 		return nil, height, errors.New("no this snapshot.")
 	}
 
@@ -135,7 +135,7 @@ func getStateSnapshot(ctx context.Context, db dbm.DB) (*state.Snapshot, uint64, 
 // provided height.
 func getRawSnapshot(ctx context.Context, db dbm.DB, height uint64) (data []byte, err error) {
 	bytez := db.Get(calcSnapshotKey(height))
-	if bytez == nil {
+	if len(bytez) == 0 {
 		return nil, errors.New("no this height snapshot.")
 	}
 	return bytez, nil

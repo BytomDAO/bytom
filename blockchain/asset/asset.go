@@ -226,7 +226,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 	}
 
 	bytes := reg.db.Get([]byte(id.String()))
-	if bytes == nil {
+	if len(bytes) == 0 {
 		return nil, errors.New("no exit this asset.")
 	}
 	var asset Asset

@@ -232,13 +232,11 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 		return nil
 	}
 
-
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-a.pinStore.AllWaiter(height):
 	}
-
 
 	return nil
 }
@@ -308,7 +306,7 @@ func (a *BlockchainReactor) submit(ctx context.Context, x SubmitArg) (interface{
 			defer batchRecover(subctx, &responses[i])
 
 			tx, err := a.submitSingle(subctx, &x.Transactions[i], x.WaitUntil)
-			log.Printf(ctx, "-----tx:%v\n", tx)
+			log.Printf(ctx, "err=%v-----tx:%v\n", err, tx)
 			if err != nil {
 				responses[i] = err
 			} else {

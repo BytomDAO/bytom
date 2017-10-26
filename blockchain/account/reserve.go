@@ -1,21 +1,22 @@
 package account
 
 import (
+	"bytes"
 	"context"
-	//	"database/sql"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	//	"chain/core/pin"
-	//"github.com/blockchain/database/pg"
+	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	//"github.com/blockchain/sync/idempotency"
+	"github.com/bytom/sync/idempotency"
+
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
@@ -74,11 +75,11 @@ type reservation struct {
 	ClientToken *string
 }
 
-func newReserver(db dbm.DB, c *protocol.Chain /*pinStore *pin.Store*/) *reserver {
+func newReserver(db dbm.DB, c *protocol.Chain, pinStore *pin.Store) *reserver {
 	return &reserver{
-		c:  c,
-		db: db,
-		//pinStore:     pinStore,
+		c:            c,
+		db:           pinStore.DB,
+		pinStore:     pinStore,
 		reservations: make(map[uint64]*reservation),
 		sources:      make(map[source]*sourceReserver),
 	}
@@ -95,11 +96,11 @@ func newReserver(db dbm.DB, c *protocol.Chain /*pinStore *pin.Store*/) *reserver
 // reserver ensures idempotency of reservations until the reservation
 // expiration.
 type reserver struct {
-	c  *protocol.Chain
-	db dbm.DB
-	//pinStore          *pin.Store
+	c                 *protocol.Chain
+	db                dbm.DB
+	pinStore          *pin.Store
 	nextReservationID uint64
-	//	idempotency       idempotency.Group
+	idempotency       idempotency.Group
 
 	reservationsMu sync.Mutex
 	reservations   map[uint64]*reservation
@@ -111,17 +112,15 @@ type reserver struct {
 // Reserve selects and reserves UTXOs according to the criteria provided
 // in source. The resulting reservation expires at exp.
 func (re *reserver) Reserve(ctx context.Context, src source, amount uint64, clientToken *string, exp time.Time) (*reservation, error) {
-	/*
-		if clientToken == nil {
-			return re.reserve(ctx, src, amount, clientToken, exp)
-		}
 
-		untypedRes, err := re.idempotency.Once(*clientToken, func() (interface{}, error) {
-			return re.reserve(ctx, src, amount, clientToken, exp)
-		})
-		return untypedRes.(*reservation), err
-	*/
-	return re.reserve(ctx, src, amount, clientToken, exp)
+	if clientToken == nil {
+		return re.reserve(ctx, src, amount, clientToken, exp)
+	}
+
+	untypedRes, err := re.idempotency.Once(*clientToken, func() (interface{}, error) {
+		return re.reserve(ctx, src, amount, clientToken, exp)
+	})
+	return untypedRes.(*reservation), err
 }
 
 func (re *reserver) reserve(ctx context.Context, src source, amount uint64, clientToken *string, exp time.Time) (res *reservation, err error) {
@@ -157,17 +156,14 @@ func (re *reserver) reserve(ctx context.Context, src source, amount uint64, clie
 // ReserveUTXO reserves a specific utxo for spending. The resulting
 // reservation expires at exp.
 func (re *reserver) ReserveUTXO(ctx context.Context, out bc.Hash, clientToken *string, exp time.Time) (*reservation, error) {
-	/*
-		if clientToken == nil {
-			return re.reserveUTXO(ctx, out, exp, nil)
-		}
+	if clientToken == nil {
+		return re.reserveUTXO(ctx, out, exp, nil)
+	}
 
-		untypedRes, err := re.idempotency.Once(*clientToken, func() (interface{}, error) {
-			return re.reserveUTXO(ctx, out, exp, clientToken)
-		})
-		return untypedRes.(*reservation), err
-	*/
-	return re.reserveUTXO(ctx, out, exp, nil)
+	untypedRes, err := re.idempotency.Once(*clientToken, func() (interface{}, error) {
+		return re.reserveUTXO(ctx, out, exp, clientToken)
+	})
+	return untypedRes.(*reservation), err
 }
 
 func (re *reserver) reserveUTXO(ctx context.Context, out bc.Hash, exp time.Time, clientToken *string) (*reservation, error) {
@@ -265,8 +261,7 @@ func (re *reserver) source(src source) *sourceReserver {
 		src:     src,
 		validFn: re.checkUTXO,
 		heightFn: func() uint64 {
-			//return re.pinStore.Height(PinName)
-			return 0
+			return re.pinStore.Height(PinName)
 		},
 		cached:   make(map[bc.Hash]*utxo),
 		reserved: make(map[bc.Hash]uint64),
@@ -398,63 +393,87 @@ func (sr *sourceReserver) refillCache(ctx context.Context) error {
 }
 
 func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64) ([]*utxo, error) {
-	/*const q = `
-		SELECT output_id, amount, control_program_index, control_program,
-			source_id, source_pos, ref_data_hash
-		FROM account_utxos
-		WHERE account_id = $1 AND asset_id = $2 AND confirmed_in > $3
-	`*/
+
 	var utxos []*utxo
-	/*err := pg.ForQueryRows(ctx, db, q, src.AccountID, src.AssetID, height,
-		func(oid bc.Hash, amount uint64, cpIndex uint64, controlProg []byte, sourceID bc.Hash, sourcePos uint64, refData bc.Hash) {
+	var au AccountUTXOs
+	var b32 [3][32]byte
+
+	iter := db.Iterator()
+	for iter.Next() {
+		key := string(iter.Key())
+		if key[:3] != "acu" {
+			continue
+		}
+
+		err := json.Unmarshal(iter.Value(), &au)
+		if err != nil {
+			return nil, errors.Wrap(err)
+		}
+
+		if (au.AccountID == src.AccountID) &&
+			(bytes.Equal(au.AssetID, src.AssetID.Bytes())) &&
+			(au.InBlock > height) {
+
+			copy(b32[0][:], au.OutputID)
+			copy(b32[1][:], au.SourceID)
+			copy(b32[2][:], au.RefData)
+
 			utxos = append(utxos, &utxo{
-				OutputID:            oid,
-				SourceID:            sourceID,
+				OutputID:            bc.NewHash(b32[0]),
+				SourceID:            bc.NewHash(b32[1]),
 				AssetID:             src.AssetID,
-				Amount:              amount,
-				SourcePos:           sourcePos,
-				ControlProgram:      controlProg,
-				RefDataHash:         refData,
+				Amount:              au.Amount,
+				SourcePos:           au.SourcePos,
+				ControlProgram:      au.Program,
+				RefDataHash:         bc.NewHash(b32[2]),
 				AccountID:           src.AccountID,
-				ControlProgramIndex: cpIndex,
+				ControlProgramIndex: au.CpIndex,
 			})
-		})
-	if err != nil {
-		return nil, errors.Wrap(err)
-	}*/
+
+		}
+
+	}
+
+	if len(utxos) == 0 {
+		return nil, errors.New("can't match utxo")
+	}
+
 	return utxos, nil
 }
 
 func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, error) {
-	/*const q = `
-		SELECT account_id, asset_id, amount, control_program_index, control_program,
-			source_id, source_pos, ref_data_hash
-		FROM account_utxos
-		WHERE output_id = $1
-	`*/
-	u := new(utxo)
 
-	// TODO(oleg): maybe we need to scan txid:index too from here...
-	/*err := db.QueryRowContext(ctx, q, out).Scan(
-		&u.AccountID,
-		&u.AssetID,
-		&u.Amount,
-		&u.ControlProgramIndex,
-		&u.ControlProgram,
-		&u.SourceID,
-		&u.SourcePos,
-		&u.RefDataHash,
-	)
-	if err == sql.ErrNoRows {
-		return nil, pg.ErrUserInputNotFound
-	} else if err != nil {
-		return nil, errors.Wrap(err)
+	u := new(utxo)
+	au := new(AccountUTXOs)
+	b32 := new([4][32]byte)
+
+	accUTXOValue := db.Get(json.RawMessage("acu" + string(outHash.Bytes())))
+	if len(accUTXOValue) != 0 {
+		err := json.Unmarshal(accUTXOValue, &au)
+		if err != nil {
+			return nil, errors.Wrap(err)
+		}
+
+		copy(b32[0][:], au.OutputID)
+		copy(b32[1][:], au.AssetID)
+		copy(b32[2][:], au.SourceID)
+		copy(b32[3][:], au.RefData)
+
+		u.OutputID = bc.NewHash(b32[0])
+		u.AccountID = au.AccountID
+		u.AssetID = bc.NewAssetID(b32[1])
+		u.Amount = au.Amount
+		u.ControlProgramIndex = au.CpIndex
+		u.ControlProgram = au.Program
+		u.SourceID = bc.NewHash(b32[2])
+		u.SourcePos = au.SourcePos
+		u.RefDataHash = bc.NewHash(b32[3])
+
+		return u, nil
 	}
-	u.OutputID = out
-	*/
 
 	if outHash.String() != "73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d" {
-		return u, nil
+		return u, errors.New(fmt.Sprintf("can't find utxo: %s", outHash.String()))
 	}
 
 	genesisBlock := &legacy.Block{

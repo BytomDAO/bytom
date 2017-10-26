@@ -8,7 +8,7 @@ import (
 )
 
 //1<seq_id ,increase by 1
-var seq_id uint32 = 1
+var seq_id uint32 = 0
 
 func next_seq_id() uint32 {
 

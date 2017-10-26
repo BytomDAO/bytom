@@ -22,7 +22,7 @@ var (
 	{
 		"OutputID":"%x","AssetID":"%x","Amount":"%d",
 		"AccountID":"%s","CpIndex":"%d","Program":"%x",
-		"Confirmed":"%d","SourceID":"%x","SourcePos":"%d",
+		"InBlock":"%d","SourceID":"%x","SourcePos":"%d",
 		"RefData":"%x","Change":"%t"
 	}`
 )
@@ -76,34 +76,44 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery)
 
 	type assetAmount struct {
 		AssetID string
-		Amount  int64
+		Amount  uint64
 	}
+
 	var (
-		aa              = assetAmount{}
-		accBalances     = make(map[string][]assetAmount, 0)
-		accBalancesSort = make(map[string][]assetAmount, 0)
-		keys            = make([]string, 0)
-		response        = make([]interface{}, 0)
+		aaTmp       = assetAmount{}
+		accBalances = make(map[string][]assetAmount)
+		keys        = make([]string, 0)
+		response    = make([]string, 0)
+		exist       = false
+		index       = 0
 	)
 
-	accoutUTXOs := bcr.GetAccountUTXOs()
+	accountUTXOs := bcr.GetAccountUTXOs()
 
-	for _, res := range accoutUTXOs {
+	for _, res := range accountUTXOs {
 
-		aa.AssetID = fmt.Sprintf("%x", res.AssetID)
-		aa.Amount = res.Amount
+		aaTmp.AssetID = fmt.Sprintf("%x", res.AssetID)
+		aaTmp.Amount = res.Amount
 		if _, ok := accBalances[res.AccountID]; ok {
-			for _, amentry := range accBalances[res.AccountID] {
-				if amentry.AssetID == aa.AssetID {
-					amentry.Amount += aa.Amount
-				} else {
-					accBalances[res.AccountID] = append(accBalances[res.AccountID], aa)
+
+			for i, aA := range accBalances[res.AccountID] {
+				if aA.AssetID == aaTmp.AssetID {
+					exist = true
+					index = i
+					break
 				}
 			}
-		} else {
-			accBalances[res.AccountID] = append(accBalances[res.AccountID], aa)
-		}
 
+			if exist {
+				accBalances[res.AccountID][index].Amount += aaTmp.Amount
+				exist = false
+			} else {
+				accBalances[res.AccountID] = append(accBalances[res.AccountID], aaTmp)
+			}
+
+		} else {
+			accBalances[res.AccountID] = append(accBalances[res.AccountID], aaTmp)
+		}
 	}
 
 	for k := range accBalances {
@@ -113,11 +123,9 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery)
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		accBalancesSort[k] = accBalances[k]
-	}
-
-	if len(accBalancesSort) != 0 {
-		response = append(response, accBalancesSort)
+		balanceString, _ := json.Marshal(accBalances[k])
+		accBalancesString := fmt.Sprintf(`{"AccountID":"%s","Balances":"%s"}`, k, balanceString)
+		response = append(response, accBalancesString)
 	}
 
 	return response
@@ -216,7 +224,7 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in request
 		restring = fmt.Sprintf(AccountUTXOFmt,
 			res.OutputID, res.AssetID, res.Amount,
 			res.AccountID, res.CpIndex, res.Program,
-			res.Confirmed, res.SourceID, res.SourcePos,
+			res.InBlock, res.SourceID, res.SourcePos,
 			res.RefData, res.Change)
 
 		response = append(response, restring)

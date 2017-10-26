@@ -235,7 +235,7 @@ func (p *pin) complete(ctx context.Context, height uint64) error {
 	)
 
 	bytes := p.db.Get(json.RawMessage("blp" + p.name))
-	if bytes != nil {
+	if len(bytes) != 0 {
 		err = json.Unmarshal(bytes, &block_processor)
 		if err == nil && block_processor.Height >= max {
 			goto Noupdate

@@ -30,13 +30,13 @@ const (
 type AccountUTXOs struct {
 	OutputID  []byte
 	AssetID   []byte
-	Amount    int64
+	Amount    uint64
 	AccountID string
-	CpIndex   int64
+	CpIndex   uint64
 	Program   []byte
-	Confirmed int64
+	InBlock   uint64
 	SourceID  []byte
-	SourcePos int64
+	SourcePos uint64
 	RefData   []byte
 	Change    bool
 }
@@ -200,7 +200,7 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) []*acc
 	for s := range outsByScript {
 		sha3pool.Sum256(b32[:], []byte(s))
 		bytes := m.db.Get(json.RawMessage("acp" + string(b32[:])))
-		if bytes == nil {
+		if len(bytes) == 0 {
 			continue
 		}
 
@@ -211,7 +211,7 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) []*acc
 
 		//filte the accounts which exists in accountdb with wallet enabled
 		isExist := m.db.Get(json.RawMessage(cp.AccountID))
-		if isExist == nil {
+		if len(isExist) == 0 {
 			continue
 		}
 
@@ -241,13 +241,13 @@ func (m *Manager) upsertConfirmedAccountOutputs(ctx context.Context,
 	for _, out := range outs {
 		au = &AccountUTXOs{OutputID: out.OutputID.Bytes(),
 			AssetID:   out.AssetId.Bytes(),
-			Amount:    int64(out.Amount),
+			Amount:    out.Amount,
 			AccountID: out.AccountID,
-			CpIndex:   int64(out.keyIndex),
+			CpIndex:   out.keyIndex,
 			Program:   out.ControlProgram,
-			Confirmed: int64(block.Height),
+			InBlock:   block.Height,
 			SourceID:  out.sourceID.Bytes(),
-			SourcePos: int64(out.sourcePos),
+			SourcePos: out.sourcePos,
 			RefData:   out.refData.Bytes(),
 			Change:    out.change}
 
