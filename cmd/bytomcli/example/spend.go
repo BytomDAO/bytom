@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/bytom/blockchain/rpc"
@@ -13,7 +14,6 @@ import (
 
 	stdjson "encoding/json"
 	bchain "github.com/bytom/blockchain"
-	"strconv"
 )
 
 type accUTXOShort struct {
