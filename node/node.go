@@ -242,7 +242,6 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
 	bcReactor := bc.NewBlockchainReactor(
-		store,
 		chain,
 		txPool,
 		accounts,

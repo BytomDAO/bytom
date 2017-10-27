@@ -29,7 +29,7 @@ type BlockPool struct {
 	// block requests
 	requesters map[uint64]*bpRequester
 	height     uint64 // the lowest key in requesters.
-	numPending int32  // number of requests pending assignment or block response
+	numPending uint64 // number of requests pending assignment or block response
 	// peers
 	peers map[string]*bpPeer
 
@@ -109,7 +109,7 @@ func (pool *BlockPool) removeTimedoutPeers() {
 	}
 }
 
-func (pool *BlockPool) GetStatus() (height uint64, numPending int32, lenRequesters int) {
+func (pool *BlockPool) GetStatus() (height uint64, numPending uint64, lenRequesters int) {
 	pool.mtx.Lock()
 	defer pool.mtx.Unlock()
 
@@ -294,23 +294,6 @@ func (pool *BlockPool) sendTimeout(peerID string) {
 	pool.timeoutsCh <- peerID
 }
 
-func (pool *BlockPool) debug() string {
-	pool.mtx.Lock() // Lock
-	defer pool.mtx.Unlock()
-
-	str := ""
-	var h uint64
-	for h = pool.height; h < pool.height+uint64(len(pool.requesters)); h++ {
-		if pool.requesters[h] == nil {
-			str += Fmt("H(%v):X ", h)
-		} else {
-			str += Fmt("H(%v):", h)
-			str += Fmt("B?(%v) ", pool.requesters[h].block != nil)
-		}
-	}
-	return str
-}
-
 //-------------------------------------
 
 type bpPeer struct {
@@ -320,7 +303,7 @@ type bpPeer struct {
 
 	mtx        sync.Mutex
 	height     uint64
-	numPending int32
+	numPending uint64
 	timeout    *time.Timer
 	didTimeout bool
 }

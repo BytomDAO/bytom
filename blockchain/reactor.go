@@ -12,7 +12,6 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/log"
@@ -30,22 +29,14 @@ import (
 )
 
 const (
-	// BlockchainChannel is a channel for blocks and status updates (`BlockStore` height)
+	// BlockchainChannel is a channel for blocks and status updates
 	BlockchainChannel = byte(0x40)
 
-	defaultChannelCapacity = 100
-	defaultSleepIntervalMS = 500
-	trySyncIntervalMS      = 100
-	// stop syncing when last block's time is
-	// within this much of the system time.
-	// stopSyncingDurationMinutes = 10
-
-	// ask for best height every 10s
+	defaultChannelCapacity      = 100
+	trySyncIntervalMS           = 100
 	statusUpdateIntervalSeconds = 10
-	// check if we should switch to consensus reactor
-	switchToConsensusIntervalSeconds = 1
-	maxBlockchainResponseSize        = 22020096 + 2
-	crosscoreRPCPrefix               = "/rpc/"
+	maxBlockchainResponseSize   = 22020096 + 2
+	crosscoreRPCPrefix          = "/rpc/"
 )
 
 // BlockchainReactor handles long-term catchup syncing.
@@ -53,7 +44,6 @@ type BlockchainReactor struct {
 	p2p.BaseReactor
 
 	chain       *protocol.Chain
-	store       *txdb.Store
 	pinStore    *pin.Store
 	accounts    *account.Manager
 	assets      *asset.Registry
@@ -236,7 +226,7 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(store *txdb.Store,
+func NewBlockchainReactor(
 	chain *protocol.Chain,
 	txPool *protocol.TxPool,
 	accounts *account.Manager,
@@ -255,7 +245,6 @@ func NewBlockchainReactor(store *txdb.Store,
 	mining := cpuminer.NewCPUMiner(chain, txPool)
 	bcR := &BlockchainReactor{
 		chain:      chain,
-		store:      store,
 		pinStore:   pinStore,
 		accounts:   accounts,
 		assets:     assets,
@@ -338,8 +327,20 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 			src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 		}
 	case *bcBlockResponseMessage:
-		// Got a block.
-		bcR.pool.AddBlock(src.Key, msg.GetBlock(), len(msgBytes))
+		height, numPending, _ := bcR.pool.GetStatus()
+		block := msg.GetBlock()
+		if block.Height > height && block.Height < height+numPending {
+			bcR.pool.AddBlock(src.Key, block, len(msgBytes))
+			return
+		}
+
+		isOrphan, err := bcR.chain.ProcessBlock(block)
+		if err != nil {
+			bcR.Logger.Info("fail to sync commit block", "blockHeigh", block.BlockHeader.Height, "error", err)
+		}
+		if isOrphan {
+			src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&bcBlockRequestMessage{Height: block.Height - 1}})
+		}
 	case *bcStatusRequestMessage:
 		// Send peer our state.
 		queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.chain.Height()}})
@@ -351,7 +352,6 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		bcR.pool.SetPeerHeight(src.Key, msg.Height)
 	case *bcTransactionMessage:
 		tx := msg.GetTransaction()
-
 		if err := bcR.chain.ValidateTx(tx); err != nil {
 			bcR.Logger.Error("fail to sync transaction to txPool", "err", err)
 		}
@@ -368,7 +368,6 @@ func (bcR *BlockchainReactor) poolRoutine() {
 	trySyncTicker := time.NewTicker(trySyncIntervalMS * time.Millisecond)
 	statusUpdateTicker := time.NewTicker(statusUpdateIntervalSeconds * time.Second)
 	newTxCh := bcR.txPool.GetNewTxCh()
-	//switchToConsensusTicker := time.NewTicker(switchToConsensusIntervalSeconds * time.Second)
 
 FOR_LOOP:
 	for {
