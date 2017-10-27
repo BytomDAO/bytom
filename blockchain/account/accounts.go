@@ -100,7 +100,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err)
 	}
 
-	account_id := json.RawMessage(accountSigner.ID)
+	accountID := json.RawMessage(accountSigner.ID)
 	account := &Account{
 		Signer: accountSigner,
 		Alias:  alias,
@@ -112,8 +112,8 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
 	if len(acc) > 0 {
-		m.db.Set(account_id, acc)
-		m.db.Set(json.RawMessage("ali"+alias), account_id)
+		m.db.Set(accountID, acc)
+		m.db.Set(json.RawMessage("ali"+alias), accountID)
 	}
 
 	err = m.indexAnnotatedAccount(ctx, account)
@@ -132,14 +132,14 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 		return errors.Wrap(ErrBadIdentifier)
 	}
 
-	var key_id []byte
+	var keyID []byte
 	if alias != nil {
-		key_id = m.db.Get([]byte("ali" + *alias))
+		keyID = m.db.Get(json.RawMessage("ali" + *alias))
 	} else {
-		key_id = json.RawMessage(*id)
+		keyID = json.RawMessage(*id)
 	}
 
-	bytes := m.db.Get(key_id)
+	bytes := m.db.Get(keyID)
 	if bytes == nil {
 		return errors.New("no exit this account")
 	}
@@ -171,7 +171,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 
 	} else {
 
-		m.db.Set(key_id, acc)
+		m.db.Set(keyID, acc)
 		return nil
 	}
 
@@ -187,14 +187,6 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 	if ok {
 		accountID = cachedID.(string)
 	} else {
-		/*const q = `SELECT account_id FROM accounts WHERE alias=$1`
-		err := m.db.QueryRowContext(ctx, q, alias).Scan(&accountID)
-		if err == stdsql.ErrNoRows {
-			return nil, errors.WithDetailf(pg.ErrUserInputNotFound, "alias: %s", alias)
-		}
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}*/
 		bytez := m.db.Get([]byte("ali" + alias))
 		accountID = string(bytez[:])
 		m.cacheMu.Lock()

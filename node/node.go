@@ -156,8 +156,8 @@ func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 
 	// Get store
-	tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-	store := txdb.NewStore(tx_db)
+	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
+	store := txdb.NewStore(txDB)
 
 	privKey := crypto.GenPrivKeyEd25519()
 
@@ -192,9 +192,9 @@ func NewNode(config *cfg.Config) *Node {
 	var pinStore *pin.Store = nil
 
 	if config.Wallet.Enable {
-		accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
-		acc_utxos_db := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
-		pinStore = pin.NewStore(acc_utxos_db)
+		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
+		accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
+		pinStore = pin.NewStore(accUTXODB)
 		err = pinStore.LoadAll(ctx)
 		if err != nil {
 			bytomlog.Error(ctx, err)
@@ -214,11 +214,11 @@ func NewNode(config *cfg.Config) *Node {
 			}
 		}
 
-		accounts = account.NewManager(accounts_db, chain, pinStore)
+		accounts = account.NewManager(accountsDB, chain, pinStore)
 		go accounts.ProcessBlocks(ctx)
 
-		assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
-		assets = asset.NewRegistry(assets_db, chain)
+		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+		assets = asset.NewRegistry(assetsDB, chain)
 	}
 	//Todo HSM
 	/*

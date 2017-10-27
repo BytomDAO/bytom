@@ -394,9 +394,13 @@ func (sr *sourceReserver) refillCache(ctx context.Context) error {
 
 func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64) ([]*utxo, error) {
 
-	var utxos []*utxo
-	var au AccountUTXOs
-	var b32 [3][32]byte
+	var (
+		utxos       []*utxo
+		au          AccountUTXOs
+		rawOutputID [32]byte
+		rawSourceID [32]byte
+		rawRefData  [32]byte
+	)
 
 	iter := db.Iterator()
 	for iter.Next() {
@@ -414,18 +418,18 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64
 			(bytes.Equal(au.AssetID, src.AssetID.Bytes())) &&
 			(au.InBlock > height) {
 
-			copy(b32[0][:], au.OutputID)
-			copy(b32[1][:], au.SourceID)
-			copy(b32[2][:], au.RefData)
+			copy(rawOutputID[:], au.OutputID)
+			copy(rawSourceID[:], au.SourceID)
+			copy(rawRefData[:], au.RefData)
 
 			utxos = append(utxos, &utxo{
-				OutputID:            bc.NewHash(b32[0]),
-				SourceID:            bc.NewHash(b32[1]),
+				OutputID:            bc.NewHash(rawOutputID),
+				SourceID:            bc.NewHash(rawSourceID),
 				AssetID:             src.AssetID,
 				Amount:              au.Amount,
 				SourcePos:           au.SourcePos,
 				ControlProgram:      au.Program,
-				RefDataHash:         bc.NewHash(b32[2]),
+				RefDataHash:         bc.NewHash(rawRefData),
 				AccountID:           src.AccountID,
 				ControlProgramIndex: au.CpIndex,
 			})
@@ -442,40 +446,49 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64
 }
 
 func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, error) {
-
 	u := new(utxo)
 	au := new(AccountUTXOs)
-	b32 := new([4][32]byte)
 
-	accUTXOValue := db.Get(json.RawMessage("acu" + string(outHash.Bytes())))
-	if accUTXOValue != nil {
-		err := json.Unmarshal(accUTXOValue, &au)
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}
-
-		copy(b32[0][:], au.OutputID)
-		copy(b32[1][:], au.AssetID)
-		copy(b32[2][:], au.SourceID)
-		copy(b32[3][:], au.RefData)
-
-		u.OutputID = bc.NewHash(b32[0])
-		u.AccountID = au.AccountID
-		u.AssetID = bc.NewAssetID(b32[1])
-		u.Amount = au.Amount
-		u.ControlProgramIndex = au.CpIndex
-		u.ControlProgram = au.Program
-		u.SourceID = bc.NewHash(b32[2])
-		u.SourcePos = au.SourcePos
-		u.RefDataHash = bc.NewHash(b32[3])
-
-		return u, nil
+	//temp fix for coinbase UTXO isn't add to accountUTXO db, will be remove later
+	if outHash.String() == "73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d" {
+		return genesisBlockUTXO(), nil
 	}
 
-	if outHash.String() != "73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d" {
+	// make sure accountUTXO existed in the db
+	accUTXOValue := db.Get(json.RawMessage("acu" + string(outHash.Bytes())))
+	if accUTXOValue == nil {
 		return u, errors.New(fmt.Sprintf("can't find utxo: %s", outHash.String()))
 	}
+	if err := json.Unmarshal(accUTXOValue, &au); err != nil {
+		return nil, errors.Wrap(err)
+	}
 
+	rawOutputID := new([32]byte)
+	rawAssetID := new([32]byte)
+	rawSourceID := new([32]byte)
+	rawRefData := new([32]byte)
+
+	copy(rawOutputID[:], au.OutputID)
+	copy(rawAssetID[:], au.AssetID)
+	copy(rawSourceID[:], au.SourceID)
+	copy(rawRefData[:], au.RefData)
+
+	u.OutputID = bc.NewHash(*rawOutputID)
+	u.AccountID = au.AccountID
+	u.AssetID = bc.NewAssetID(*rawAssetID)
+	u.Amount = au.Amount
+	u.ControlProgramIndex = au.CpIndex
+	u.ControlProgram = au.Program
+	u.SourceID = bc.NewHash(*rawSourceID)
+	u.SourcePos = au.SourcePos
+	u.RefDataHash = bc.NewHash(*rawRefData)
+
+	return u, nil
+}
+
+//temp fix for coinbase UTXO isn't add to accountUTXO db, will be remove later
+func genesisBlockUTXO() *utxo {
+	u := new(utxo)
 	genesisBlock := &legacy.Block{
 		BlockHeader:  legacy.BlockHeader{},
 		Transactions: []*legacy.Tx{},
@@ -495,6 +508,5 @@ func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, e
 	u.SourceID = *resOut.Source.Ref
 	u.SourcePos = resOut.Source.Position
 	u.RefDataHash = *resOut.Data
-
-	return u, nil
+	return u
 }
