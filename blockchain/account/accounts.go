@@ -91,7 +91,7 @@ type Account struct {
 
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
-	if ret := m.db.Get(json.RawMessage("ali" + alias)); len(ret) != 0 {
+	if ret := m.db.Get(json.RawMessage("ali" + alias)); ret != nil {
 		return nil, errors.New(fmt.Sprintf("alias:%s already exists", alias))
 	}
 
@@ -140,7 +140,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 	}
 
 	bytes := m.db.Get(key_id)
-	if len(bytes) == 0 {
+	if bytes == nil {
 		return errors.New("no exit this account")
 	}
 
@@ -214,7 +214,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 	}
 
 	bytes := m.db.Get(json.RawMessage(id))
-	if len(bytes) == 0 {
+	if bytes == nil {
 		return nil, errors.New("not find this account.")
 	}
 

@@ -200,7 +200,7 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) []*acc
 	for s := range outsByScript {
 		sha3pool.Sum256(b32[:], []byte(s))
 		bytes := m.db.Get(json.RawMessage("acp" + string(b32[:])))
-		if len(bytes) == 0 {
+		if bytes == nil {
 			continue
 		}
 
@@ -211,7 +211,7 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) []*acc
 
 		//filte the accounts which exists in accountdb with wallet enabled
 		isExist := m.db.Get(json.RawMessage(cp.AccountID))
-		if len(isExist) == 0 {
+		if isExist == nil {
 			continue
 		}
 

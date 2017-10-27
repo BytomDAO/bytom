@@ -448,7 +448,7 @@ func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, e
 	b32 := new([4][32]byte)
 
 	accUTXOValue := db.Get(json.RawMessage("acu" + string(outHash.Bytes())))
-	if len(accUTXOValue) != 0 {
+	if accUTXOValue != nil {
 		err := json.Unmarshal(accUTXOValue, &au)
 		if err != nil {
 			return nil, errors.Wrap(err)
