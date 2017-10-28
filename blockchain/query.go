@@ -21,8 +21,8 @@ var (
 	AccountUTXOFmt = `
 	{
 		"OutputID":"%x","AssetID":"%x","Amount":"%d",
-		"AccountID":"%s","CpIndex":"%d","Program":"%x",
-		"InBlock":"%d","SourceID":"%x","SourcePos":"%d",
+		"AccountID":"%s","ProgramIndex":"%d","Program":"%x",
+		"BlockHeight":"%d","SourceID":"%x","SourcePos":"%d",
 		"RefData":"%x","Change":"%t"
 	}`
 )
@@ -53,12 +53,8 @@ func (bcr *BlockchainReactor) GetAccountUTXOs() []account.AccountUTXOs {
 		accutoxs = []account.AccountUTXOs{}
 	)
 
-	iter := bcr.pinStore.DB.Iterator()
+	iter := bcr.pinStore.DB.IteratorPrefix([]byte("acu"))
 	for iter.Next() {
-		key := string(iter.Key())
-		if key[:3] != "acu" {
-			continue
-		}
 
 		err := json.Unmarshal(iter.Value(), &au)
 		if err != nil {
@@ -223,8 +219,8 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in request
 
 		restring = fmt.Sprintf(AccountUTXOFmt,
 			res.OutputID, res.AssetID, res.Amount,
-			res.AccountID, res.CpIndex, res.Program,
-			res.InBlock, res.SourceID, res.SourcePos,
+			res.AccountID, res.ProgramIndex, res.Program,
+			res.BlockHeight, res.SourceID, res.SourcePos,
 			res.RefData, res.Change)
 
 		response = append(response, restring)

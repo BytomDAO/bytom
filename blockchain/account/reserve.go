@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	dbm "github.com/tendermint/tmlibs/db"
+
 	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
@@ -16,8 +18,6 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/sync/idempotency"
-
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 var (
@@ -402,21 +402,16 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64
 		rawRefData  [32]byte
 	)
 
-	iter := db.Iterator()
+	iter := db.IteratorPrefix([]byte("acu"))
 	for iter.Next() {
-		key := string(iter.Key())
-		if key[:3] != "acu" {
-			continue
-		}
 
-		err := json.Unmarshal(iter.Value(), &au)
-		if err != nil {
+		if err := json.Unmarshal(iter.Value(), &au); err != nil {
 			return nil, errors.Wrap(err)
 		}
 
 		if (au.AccountID == src.AccountID) &&
 			(bytes.Equal(au.AssetID, src.AssetID.Bytes())) &&
-			(au.InBlock > height) {
+			(au.BlockHeight > height) {
 
 			copy(rawOutputID[:], au.OutputID)
 			copy(rawSourceID[:], au.SourceID)
@@ -431,7 +426,7 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64
 				ControlProgram:      au.Program,
 				RefDataHash:         bc.NewHash(rawRefData),
 				AccountID:           src.AccountID,
-				ControlProgramIndex: au.CpIndex,
+				ControlProgramIndex: au.ProgramIndex,
 			})
 
 		}
@@ -477,7 +472,7 @@ func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, e
 	u.AccountID = au.AccountID
 	u.AssetID = bc.NewAssetID(*rawAssetID)
 	u.Amount = au.Amount
-	u.ControlProgramIndex = au.CpIndex
+	u.ControlProgramIndex = au.ProgramIndex
 	u.ControlProgram = au.Program
 	u.SourceID = bc.NewHash(*rawSourceID)
 	u.SourcePos = au.SourcePos

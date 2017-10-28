@@ -8,6 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/groupcache/lru"
+	dbm "github.com/tendermint/tmlibs/db"
+
 	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
@@ -17,9 +20,6 @@ import (
 	"github.com/bytom/log"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/vm/vmutil"
-	"github.com/golang/groupcache/lru"
-
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const maxAccountCache = 1000
@@ -332,12 +332,8 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 func (m *Manager) QueryAll(ctx context.Context) (interface{}, error) {
 	ret := make([]interface{}, 0)
 
-	iter := m.db.Iterator()
+	iter := m.db.IteratorPrefix([]byte("acc"))
 	for iter.Next() {
-		key := string(iter.Key())
-		if key[:3] != "acc" {
-			continue
-		}
 		ret = append(ret, string(iter.Value()))
 	}
 

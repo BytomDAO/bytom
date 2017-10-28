@@ -2,18 +2,17 @@ package example
 
 import (
 	"context"
+	stdjson "encoding/json"
 	"fmt"
 	"os"
 	"strconv"
 	"time"
 
+	bchain "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
-
-	stdjson "encoding/json"
-	bchain "github.com/bytom/blockchain"
 )
 
 type accUTXOShort struct {
