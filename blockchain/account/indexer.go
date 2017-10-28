@@ -8,11 +8,10 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/sha3pool"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-
-	chainjson "github.com/bytom/encoding/json"
 )
 
 const (
@@ -28,17 +27,17 @@ const (
 )
 
 type AccountUTXOs struct {
-	OutputID  []byte
-	AssetID   []byte
-	Amount    int64
-	AccountID string
-	CpIndex   int64
-	Program   []byte
-	Confirmed int64
-	SourceID  []byte
-	SourcePos int64
-	RefData   []byte
-	Change    bool
+	OutputID     []byte
+	AssetID      []byte
+	Amount       uint64
+	AccountID    string
+	ProgramIndex uint64
+	Program      []byte
+	BlockHeight  uint64
+	SourceID     []byte
+	SourcePos    uint64
+	RefData      []byte
+	Change       bool
 }
 
 var emptyJSONObject = json.RawMessage(`{}`)
@@ -240,16 +239,16 @@ func (m *Manager) upsertConfirmedAccountOutputs(ctx context.Context,
 	var au *AccountUTXOs
 	for _, out := range outs {
 		au = &AccountUTXOs{OutputID: out.OutputID.Bytes(),
-			AssetID:   out.AssetId.Bytes(),
-			Amount:    int64(out.Amount),
-			AccountID: out.AccountID,
-			CpIndex:   int64(out.keyIndex),
-			Program:   out.ControlProgram,
-			Confirmed: int64(block.Height),
-			SourceID:  out.sourceID.Bytes(),
-			SourcePos: int64(out.sourcePos),
-			RefData:   out.refData.Bytes(),
-			Change:    out.change}
+			AssetID:      out.AssetId.Bytes(),
+			Amount:       out.Amount,
+			AccountID:    out.AccountID,
+			ProgramIndex: out.keyIndex,
+			Program:      out.ControlProgram,
+			BlockHeight:  block.Height,
+			SourceID:     out.sourceID.Bytes(),
+			SourcePos:    out.sourcePos,
+			RefData:      out.refData.Bytes(),
+			Change:       out.change}
 
 		accountutxo, err := json.Marshal(au)
 		if err != nil {

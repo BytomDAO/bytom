@@ -10,31 +10,31 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bytom/blockchain/account"
-	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/pin"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/txdb"
-	"github.com/bytom/consensus"
-	"github.com/bytom/env"
-	"github.com/bytom/errors"
-	"github.com/bytom/net/http/reqid"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/types"
-	"github.com/bytom/version"
 	"github.com/kr/secureheader"
-
-	bc "github.com/bytom/blockchain"
-	cfg "github.com/bytom/config"
-	bytomlog "github.com/bytom/log"
-	p2p "github.com/bytom/p2p"
 	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 	_ "net/http/pprof"
+
+	bc "github.com/bytom/blockchain"
+	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/pin"
+	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/txdb"
+	cfg "github.com/bytom/config"
+	"github.com/bytom/consensus"
+	"github.com/bytom/env"
+	"github.com/bytom/errors"
+	bytomlog "github.com/bytom/log"
+	"github.com/bytom/net/http/reqid"
+	p2p "github.com/bytom/p2p"
+	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/types"
+	"github.com/bytom/version"
 )
 
 const (
@@ -156,8 +156,8 @@ func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 
 	// Get store
-	tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-	store := txdb.NewStore(tx_db)
+	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
+	store := txdb.NewStore(txDB)
 
 	privKey := crypto.GenPrivKeyEd25519()
 
@@ -192,9 +192,9 @@ func NewNode(config *cfg.Config) *Node {
 	var pinStore *pin.Store = nil
 
 	if config.Wallet.Enable {
-		accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
-		acc_utxos_db := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
-		pinStore = pin.NewStore(acc_utxos_db)
+		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
+		accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
+		pinStore = pin.NewStore(accUTXODB)
 		err = pinStore.LoadAll(ctx)
 		if err != nil {
 			bytomlog.Error(ctx, err)
@@ -214,11 +214,11 @@ func NewNode(config *cfg.Config) *Node {
 			}
 		}
 
-		accounts = account.NewManager(accounts_db, chain, pinStore)
+		accounts = account.NewManager(accountsDB, chain, pinStore)
 		go accounts.ProcessBlocks(ctx)
 
-		assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
-		assets = asset.NewRegistry(assets_db, chain)
+		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+		assets = asset.NewRegistry(assetsDB, chain)
 	}
 	//Todo HSM
 	/*

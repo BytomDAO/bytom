@@ -6,12 +6,12 @@ import (
 	"sort"
 	"sync"
 
+	dbm "github.com/tendermint/tmlibs/db"
+
 	"github.com/bytom/errors"
 	"github.com/bytom/log"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
-
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const processorWorkers = 10
@@ -91,12 +91,10 @@ func (s *Store) LoadAll(ctx context.Context) error {
 		Name   string
 		Height uint64
 	}{}
-	iter := s.DB.Iterator()
+
+	iter := s.DB.IteratorPrefix([]byte("blp"))
 	for iter.Next() {
-		key := string(iter.Key())
-		if key[:3] != "blp" {
-			continue
-		}
+
 		err := json.Unmarshal(iter.Value(), &block_processor)
 		if err != nil {
 			return errors.New("failed unmarshal this block_processor.")
