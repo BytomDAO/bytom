@@ -87,7 +87,6 @@ type Account struct {
 	*signers.Signer
 	Alias string
 	Tags  map[string]interface{}
-	Address  common.Address
 }
 
 // Create creates a new Account.

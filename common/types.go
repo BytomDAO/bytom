@@ -1,4 +1,4 @@
-
+package common
 
 import (
 	_ "encoding/hex"
@@ -19,7 +19,7 @@ const (
 var hashJsonLengthErr = errors.New("common: unmarshalJSON failed: hash must be exactly 32 bytes")
 
 type (
-	Hash    [HashLength]byte
+	Hash [HashLength]byte
 )
 
 func BytesToHash(b []byte) Hash {
