@@ -76,7 +76,7 @@ Currently, bytom is still in active development and a ton of work needs to be do
 
 ### Create and launch a single node
 
-When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytom/bytom` and `cmd/bytomcli/bytomcli`, respectively. The next step is to initialize the node:
+When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytomd` and `cmd/bytomcli`, respectively. The next step is to initialize the node:
 
 ```bash
 $ cd ./cmd/bytomd
