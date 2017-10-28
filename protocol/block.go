@@ -54,7 +54,8 @@ func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 // ApplyValidBlock creates an updated snapshot without validating the
 // block.
 func (c *Chain) ApplyValidBlock(block *legacy.Block) (*state.Snapshot, error) {
-	newSnapshot := state.Copy(c.state.snapshot)
+	_, curSnapshot := c.State()
+	newSnapshot := state.Copy(curSnapshot)
 	err := newSnapshot.ApplyBlock(legacy.MapBlock(block))
 	if err != nil {
 		return nil, err

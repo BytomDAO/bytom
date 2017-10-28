@@ -5,11 +5,12 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
-	log "github.com/sirupsen/logrus"
 )
 
 // maxCachedValidatedTxs is the max number of validated txs to cache.

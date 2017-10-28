@@ -8,6 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/groupcache/lru"
+	dbm "github.com/tendermint/tmlibs/db"
+
 	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
@@ -17,9 +20,6 @@ import (
 	"github.com/bytom/log"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/vm/vmutil"
-	"github.com/golang/groupcache/lru"
-
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const maxAccountCache = 1000
@@ -33,7 +33,7 @@ func NewManager(db dbm.DB, chain *protocol.Chain, pinStore *pin.Store) *Manager 
 	return &Manager{
 		db:          db,
 		chain:       chain,
-		utxoDB:      newReserver(db, chain),
+		utxoDB:      newReserver(db, chain, pinStore),
 		pinStore:    pinStore,
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
@@ -91,16 +91,16 @@ type Account struct {
 
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
-	//if ret := m.db.Get([]byte(alias));ret != nil {
-	//return nil,errors.New("alias already exists")
-	//}
+	if ret := m.db.Get(json.RawMessage("ali" + alias)); ret != nil {
+		return nil, errors.New(fmt.Sprintf("alias:%s already exists", alias))
+	}
 
 	accountSigner, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
-	account_id := json.RawMessage(accountSigner.ID)
+	accountID := json.RawMessage(accountSigner.ID)
 	account := &Account{
 		Signer: accountSigner,
 		Alias:  alias,
@@ -112,8 +112,8 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
 	if len(acc) > 0 {
-		m.db.Set(account_id, acc)
-		m.db.Set(json.RawMessage("ali"+alias), account_id)
+		m.db.Set(accountID, acc)
+		m.db.Set(json.RawMessage("ali"+alias), accountID)
 	}
 
 	err = m.indexAnnotatedAccount(ctx, account)
@@ -132,22 +132,22 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 		return errors.Wrap(ErrBadIdentifier)
 	}
 
-	var key_id []byte
+	var keyID []byte
 	if alias != nil {
-		key_id = m.db.Get([]byte(*alias))
+		keyID = m.db.Get(json.RawMessage("ali" + *alias))
 	} else {
-		key_id = json.RawMessage(*id)
+		keyID = json.RawMessage(*id)
 	}
 
-	bytes := m.db.Get(key_id)
+	bytes := m.db.Get(keyID)
 	if bytes == nil {
-		return errors.New("no exit this account.")
+		return errors.New("no exit this account")
 	}
 
 	var account Account
 	err := json.Unmarshal(bytes, &account)
 	if err != nil {
-		return errors.New("this account can't be unmarshal.")
+		return errors.New("this account can't be unmarshal")
 	}
 
 	for k, v := range tags {
@@ -171,7 +171,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 
 	} else {
 
-		m.db.Set(key_id, acc)
+		m.db.Set(keyID, acc)
 		return nil
 	}
 
@@ -187,15 +187,7 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 	if ok {
 		accountID = cachedID.(string)
 	} else {
-		/*const q = `SELECT account_id FROM accounts WHERE alias=$1`
-		err := m.db.QueryRowContext(ctx, q, alias).Scan(&accountID)
-		if err == stdsql.ErrNoRows {
-			return nil, errors.WithDetailf(pg.ErrUserInputNotFound, "alias: %s", alias)
-		}
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}*/
-		bytez := m.db.Get([]byte(fmt.Sprintf("alias_account:%v", alias)))
+		bytez := m.db.Get([]byte("ali" + alias))
 		accountID = string(bytez[:])
 		m.cacheMu.Lock()
 		m.aliasCache.Add(alias, accountID)
@@ -340,12 +332,8 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 func (m *Manager) QueryAll(ctx context.Context) (interface{}, error) {
 	ret := make([]interface{}, 0)
 
-	iter := m.db.Iterator()
+	iter := m.db.IteratorPrefix([]byte("acc"))
 	for iter.Next() {
-		key := string(iter.Key())
-		if key[:3] != "acc" {
-			continue
-		}
 		ret = append(ret, string(iter.Value()))
 	}
 
