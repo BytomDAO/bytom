@@ -67,60 +67,50 @@ func (bcr *BlockchainReactor) GetAccountUTXOs() []account.AccountUTXOs {
 	return accutoxs
 }
 
-// POST /list-balances
 func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery) interface{} {
-
 	type assetAmount struct {
 		AssetID string
 		Amount  uint64
 	}
 
-	var (
-		aaTmp       = assetAmount{}
-		accBalances = make(map[string][]assetAmount)
-		keys        = make([]string, 0)
-		response    = make([]string, 0)
-		exist       = false
-		index       = 0
-	)
-
 	accountUTXOs := bcr.GetAccountUTXOs()
+	accBalance := make(map[string]map[string]uint64)
+	response := make([]string, 0)
 
-	for _, res := range accountUTXOs {
+	for _, accountUTXO := range accountUTXOs {
 
-		aaTmp.AssetID = fmt.Sprintf("%x", res.AssetID)
-		aaTmp.Amount = res.Amount
-		if _, ok := accBalances[res.AccountID]; ok {
-
-			for i, aA := range accBalances[res.AccountID] {
-				if aA.AssetID == aaTmp.AssetID {
-					exist = true
-					index = i
-					break
-				}
-			}
-
-			if exist {
-				accBalances[res.AccountID][index].Amount += aaTmp.Amount
-				exist = false
+		assetID := fmt.Sprintf("%x", accountUTXO.AssetID)
+		if _, ok := accBalance[accountUTXO.AccountID]; ok {
+			if _, ok := accBalance[accountUTXO.AccountID][assetID]; ok {
+				accBalance[accountUTXO.AccountID][assetID] += accountUTXO.Amount
 			} else {
-				accBalances[res.AccountID] = append(accBalances[res.AccountID], aaTmp)
+				accBalance[accountUTXO.AccountID][assetID] = accountUTXO.Amount
 			}
-
 		} else {
-			accBalances[res.AccountID] = append(accBalances[res.AccountID], aaTmp)
+			accBalance[accountUTXO.AccountID] = map[string]uint64{assetID: accountUTXO.Amount}
 		}
 	}
 
-	for k := range accBalances {
-		keys = append(keys, k)
+	sortedAccount := []string{}
+	for k, _ := range accBalance {
+		sortedAccount = append(sortedAccount, k)
 	}
+	sort.Strings(sortedAccount)
 
-	sort.Strings(keys)
+	for _, account := range sortedAccount {
+		sortedAsset := []string{}
+		for k := range accBalance[account] {
+			sortedAsset = append(sortedAsset, k)
+		}
+		sort.Strings(sortedAsset)
 
-	for _, k := range keys {
-		balanceString, _ := json.Marshal(accBalances[k])
-		accBalancesString := fmt.Sprintf(`{"AccountID":"%s","Balances":"%s"}`, k, balanceString)
+		assetAmounts := []assetAmount{}
+		for _, asset := range sortedAsset {
+			assetAmounts = append(assetAmounts, assetAmount{AssetID: asset, Amount: accBalance[account][asset]})
+		}
+
+		balanceString, _ := json.Marshal(assetAmounts)
+		accBalancesString := fmt.Sprintf(`{"AccountID":"%s","Balances":"%s"}`, account, balanceString)
 		response = append(response, accBalancesString)
 	}
 
