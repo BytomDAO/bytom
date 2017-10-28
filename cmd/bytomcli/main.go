@@ -961,25 +961,46 @@ func listKeys(client *rpc.Client, args []string) {
 }
 
 func signTransactions(client *rpc.Client, args []string) {
-	if len(args) != 3 {
-		fatalln("error: signTransaction need args: [tpl file name] [xPub] [password], 3 args not equal ", len(args))
-	}
+
 	// sign-transaction
 	type param struct {
 		Auth  string
 		Txs   []*txbuilder.Template `json:"transactions"`
-		XPubs []chainkd.XPub        `json:"xpubs"`
+		XPubs chainkd.XPub        `json:"xpubs"`
+		XPrv  chainkd.XPrv        `json:"xprv"`
 	}
+
+
 	var in param
-	in.Auth = args[2]
+	var xprv chainkd.XPrv
 	var xpub chainkd.XPub
-	err := xpub.UnmarshalText([]byte(args[1]))
-	if err == nil {
-		fmt.Printf("xpub:%v\n", xpub)
-	} else {
-		fmt.Printf("xpub unmarshal error:%v\n", xpub)
+	var err error
+
+	if len(args) == 3 {
+		err = xpub.UnmarshalText([]byte(args[1]))
+		if err == nil {
+			fmt.Printf("xpub:%v\n", xpub)
+		} else {
+			fmt.Printf("xpub unmarshal error:%v\n", xpub)
+		}
+		in.XPubs = xpub
+		in.Auth = args[2]
+
+	}else if len(args) == 2{
+		err = xprv.UnmarshalText([]byte(args[1]))
+		if err == nil {
+			fmt.Printf("xprv:%v\n", xprv)
+		} else {
+			fmt.Printf("xprv unmarshal error:%v\n", xprv)
+		}
+		in.XPrv = xprv
+
+	}else{
+		fatalln("error: signTransaction need args: [tpl file name] [xPub] [password], 3 args not equal" +
+			"or [tpl file name] [xPrv], 2 args not equal ", len(args))
 	}
-	in.XPubs = []chainkd.XPub{xpub}
+
+
 	var tpl txbuilder.Template
 	file, _ := os.Open(args[0])
 	tpl_byte := make([]byte, 10000)
