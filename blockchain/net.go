@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"errors"
+	"fmt"
 
 	wire "github.com/tendermint/go-wire"
 
@@ -51,6 +52,14 @@ func (m *BlockRequestMessage) GetHash() *bc.Hash {
 	return &hash
 }
 
+func (m *BlockRequestMessage) String() string {
+	if m.Height > 0 {
+		return fmt.Sprintf("BlockRequestMessage{Height: %d}", m.Height)
+	}
+	hash := m.GetHash()
+	return fmt.Sprintf("BlockRequestMessage{Hash: %s}", hash.String())
+}
+
 type BlockResponseMessage struct {
 	RawBlock []byte
 }
@@ -72,6 +81,10 @@ func (m *BlockResponseMessage) GetBlock() *legacy.Block {
 	return block
 }
 
+func (m *BlockResponseMessage) String() string {
+	return fmt.Sprintf("BlockResponseMessage{Size: %d}", len(m.RawBlock))
+}
+
 type TransactionNotifyMessage struct {
 	RawTx []byte
 }
@@ -90,7 +103,15 @@ func (m *TransactionNotifyMessage) GetTransaction() *legacy.Tx {
 	return tx
 }
 
+func (m *TransactionNotifyMessage) String() string {
+	return fmt.Sprintf("TransactionNotifyMessage{Size: %d}", len(m.RawTx))
+}
+
 type StatusRequestMessage struct{}
+
+func (m *StatusRequestMessage) String() string {
+	return "StatusRequestMessage"
+}
 
 type StatusResponseMessage struct {
 	Height  uint64
@@ -107,4 +128,9 @@ func NewStatusResponseMessage(block *legacy.Block) *StatusResponseMessage {
 func (m *StatusResponseMessage) GetHash() *bc.Hash {
 	hash := bc.NewHash(m.RawHash)
 	return &hash
+}
+
+func (m *StatusResponseMessage) String() string {
+	hash := m.GetHash()
+	return fmt.Sprintf("StatusResponseMessage{Height: %d, Hash: %s}", m.Height, hash.String())
 }

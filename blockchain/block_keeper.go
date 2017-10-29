@@ -44,8 +44,14 @@ type pendingResponse struct {
 	peerID string
 }
 
+//TODO: add retry mechanism
 type blockKeeper struct {
-	mtx              sync.RWMutex
+	mtx           sync.RWMutex
+	chainHeight   uint64
+	maxPeerHeight uint64
+	chainUpdateCh <-chan struct{}
+	peerUpdateCh  chan struct{}
+
 	chain            *protocol.Chain
 	sw               *p2p.Switch
 	peers            map[string]*blockKeeperPeer
@@ -53,12 +59,21 @@ type blockKeeper struct {
 }
 
 func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
-	return &blockKeeper{
+	chainHeight := chain.Height()
+	bk := &blockKeeper{
+		chainHeight:   chainHeight,
+		maxPeerHeight: uint64(0),
+		chainUpdateCh: chain.BlockWaiter(chainHeight + 1),
+		peerUpdateCh:  make(chan struct{}, 1000),
+
 		chain:            chain,
 		sw:               sw,
 		peers:            make(map[string]*blockKeeperPeer),
 		pendingProcessCh: make(chan *pendingResponse),
 	}
+	go bk.blockProcessWorker()
+	go bk.blockRequestWorker()
+	return bk
 }
 
 func (bk *blockKeeper) AddBlock(block *legacy.Block, peerID string) {
@@ -68,32 +83,17 @@ func (bk *blockKeeper) AddBlock(block *legacy.Block, peerID string) {
 func (bk *blockKeeper) IsCaughtUp() bool {
 	bk.mtx.RLock()
 	defer bk.mtx.RUnlock()
-	if len(bk.peers) == 0 {
-		log.Debug("IsCaughtUp: no peer in the blockKeeper")
-		return true
-	}
-
-	selfHeight := bk.chain.Height()
-	maxPeerHeight := uint64(0)
-	for _, peer := range bk.peers {
-		peerHeight, _ := peer.GetStatus()
-		if peerHeight > maxPeerHeight {
-			maxPeerHeight = peerHeight
-		}
-	}
-
-	isCaughtUp := selfHeight >= maxPeerHeight
-	log.WithFields(log.Fields{"height": selfHeight, "maxPeerHeight": maxPeerHeight}).Infof("IsCaughtUp: %v", isCaughtUp)
-	return isCaughtUp
+	return bk.chainHeight >= bk.maxPeerHeight
 }
 
 func (bk *blockKeeper) RemovePeer(peerID string) {
 	bk.mtx.Lock()
-	defer bk.mtx.Unlock()
 	delete(bk.peers, peerID)
+	bk.mtx.Unlock()
+	log.WithField("ID", peerID).Info("Delete peer from blockKeeper")
 }
 
-func (bk *blockKeeper) RequestBlockByHash(peerID string, hash *bc.Hash) error {
+func (bk *blockKeeper) requestBlockByHash(peerID string, hash *bc.Hash) error {
 	peer := bk.sw.Peers().Get(peerID)
 	if peer == nil {
 		return errors.New("can't find peer in peer pool")
@@ -103,7 +103,7 @@ func (bk *blockKeeper) RequestBlockByHash(peerID string, hash *bc.Hash) error {
 	return nil
 }
 
-func (bk *blockKeeper) RequestBlockByHeight(peerID string, height uint64) error {
+func (bk *blockKeeper) requestBlockByHeight(peerID string, height uint64) error {
 	peer := bk.sw.Peers().Get(peerID)
 	if peer == nil {
 		return errors.New("can't find peer in peer pool")
@@ -114,46 +114,78 @@ func (bk *blockKeeper) RequestBlockByHeight(peerID string, height uint64) error 
 }
 
 func (bk *blockKeeper) SetPeerHeight(peerID string, height uint64, hash *bc.Hash) {
+	bk.mtx.Lock()
+	defer bk.mtx.Unlock()
+
+	if height > bk.maxPeerHeight {
+		bk.maxPeerHeight = height
+		bk.peerUpdateCh <- struct{}{}
+	}
+
 	if peer, ok := bk.peers[peerID]; ok {
 		peer.SetStatus(height, hash)
 		return
 	}
-
 	peer := newBlockKeeperPeer(height, hash)
-	bk.mtx.Lock()
 	bk.peers[peerID] = peer
-	bk.mtx.Unlock()
+	log.WithFields(log.Fields{"ID": peerID, "Height": height}).Info("Add new peer to blockKeeper")
 }
 
-func (bk *blockKeeper) blockUpdater() {
+func (bk *blockKeeper) RequestBlockByHeight(height uint64) {
 	bk.mtx.RLock()
 	defer bk.mtx.RUnlock()
-	if len(bk.peers) == 0 {
-		return
-	}
 
-	selfHeight := bk.chain.Height()
 	for peerID, peer := range bk.peers {
-		if peerHeight, _ := peer.GetStatus(); peerHeight < bk.chain.Height() {
-			continue
-		}
-		if err := bk.RequestBlockByHeight(peerID, selfHeight+1); err == nil {
-			return
+		if peerHeight, _ := peer.GetStatus(); peerHeight > bk.chainHeight {
+			bk.requestBlockByHeight(peerID, height)
 		}
 	}
 }
 
-func (bk *blockKeeper) blockProcesser() {
+func (bk *blockKeeper) blockRequestWorker() {
+	for {
+		select {
+		case <-bk.chainUpdateCh:
+			chainHeight := bk.chain.Height()
+			bk.mtx.Lock()
+			if bk.chainHeight < chainHeight {
+				bk.chainHeight = chainHeight
+			}
+			bk.chainUpdateCh = bk.chain.BlockWaiter(bk.chainHeight + 1)
+			bk.mtx.Unlock()
+
+		case <-bk.peerUpdateCh:
+			bk.mtx.RLock()
+			chainHeight := bk.chainHeight
+			maxPeerHeight := bk.maxPeerHeight
+			bk.mtx.RUnlock()
+
+			for i := chainHeight + 1; i <= maxPeerHeight; i++ {
+				bk.RequestBlockByHeight(i)
+				waiter := bk.chain.BlockWaiter(i)
+				<-waiter
+			}
+		}
+	}
+}
+
+func (bk *blockKeeper) blockProcessWorker() {
 	for pendingResponse := range bk.pendingProcessCh {
 		block := pendingResponse.block
+		blockHash := block.Hash()
 		isOrphan, err := bk.chain.ProcessBlock(block)
 		if err != nil {
-			blockHash := block.Hash()
 			log.WithField("hash", blockHash.String()).Errorf("blockKeeper fail process block %v", err)
-		}
-		if !isOrphan {
 			continue
 		}
-		bk.RequestBlockByHash(pendingResponse.peerID, &block.PreviousBlockHash)
+		log.WithFields(log.Fields{
+			"height":   block.Height,
+			"hash":     blockHash.String(),
+			"isOrphan": isOrphan,
+		}).Info("blockKeeper processed block")
+
+		if isOrphan {
+			bk.requestBlockByHash(pendingResponse.peerID, &block.PreviousBlockHash)
+		}
 	}
 }

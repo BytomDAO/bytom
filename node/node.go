@@ -28,7 +28,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/env"
 	"github.com/bytom/net/http/reqid"
-	p2p "github.com/bytom/p2p"
+	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/types"

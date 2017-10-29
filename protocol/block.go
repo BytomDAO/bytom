@@ -54,6 +54,12 @@ func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 }
 
 func (c *Chain) ConnectBlock(block *legacy.Block) error {
+	c.state.cond.L.Lock()
+	defer c.state.cond.L.Unlock()
+	return c.connectBlock(block)
+}
+
+func (c *Chain) connectBlock(block *legacy.Block) error {
 	newSnapshot := state.Copy(c.state.snapshot)
 	if err := newSnapshot.ApplyBlock(legacy.MapBlock(block)); err != nil {
 		return err
@@ -75,7 +81,7 @@ func (c *Chain) getReorganizeBlocks(block *legacy.Block) ([]*legacy.Block, []*le
 	detachBlocks := []*legacy.Block{}
 	ancestor := block
 
-	for !c.InMainchain(ancestor) {
+	for !c.inMainchain(ancestor) {
 		attachBlocks = append([]*legacy.Block{ancestor}, attachBlocks...)
 		ancestor, _ = c.GetBlockByHash(&ancestor.PreviousBlockHash)
 	}
@@ -117,20 +123,40 @@ func (c *Chain) SaveBlock(block *legacy.Block) error {
 	if err := c.store.SaveBlock(block); err != nil {
 		return err
 	}
+	blockHash := block.Hash()
+	log.WithFields(log.Fields{"height": block.Height, "hash": blockHash.String()}).Info("Block saved on disk")
+	return nil
+}
 
-	preorphans, ok := c.orphanManage.preOrphans[block.Hash()]
+func (c *Chain) findBestChainTail(block *legacy.Block) (bestBlock *legacy.Block) {
+	bestBlock = block
+	blockHash := block.Hash()
+	preorphans, ok := c.orphanManage.preOrphans[blockHash]
 	if !ok {
-		return nil
+		return
 	}
+
 	for _, preorphan := range preorphans {
 		orphanBlock, ok := c.orphanManage.Get(preorphan)
 		if !ok {
 			continue
 		}
-		c.SaveBlock(orphanBlock)
-		c.orphanManage.Delete(preorphan)
+
+		if err := c.SaveBlock(orphanBlock); err != nil {
+			log.WithFields(log.Fields{
+				"height": block.Height,
+				"hash":   blockHash.String(),
+			}).Errorf("findBestChainTail fail on save block %v", err)
+			continue
+		}
+
+		if subResult := c.findBestChainTail(orphanBlock); subResult.Height > bestBlock.Height {
+			bestBlock = subResult
+		}
 	}
-	return nil
+
+	c.orphanManage.Delete(&blockHash)
+	return
 }
 
 func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
@@ -139,8 +165,7 @@ func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
 		log.WithField("hash", blockHash.String()).Info("Skip process due to block already been handled")
 		return false, nil
 	}
-	if !c.BlockExist(&block.PreviousBlockHash) {
-		log.WithField("hash", blockHash.String()).Info("Add to orphan block setg")
+	if !c.store.BlockExist(&block.PreviousBlockHash) {
 		c.orphanManage.Add(block)
 		return true, nil
 	}
@@ -148,15 +173,16 @@ func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
 		return false, err
 	}
 
+	bestBlock := c.findBestChainTail(block)
 	c.state.cond.L.Lock()
-	if c.state.block.Hash() == block.PreviousBlockHash {
+	if c.state.block.Hash() == bestBlock.PreviousBlockHash {
 		defer c.state.cond.L.Unlock()
-		return false, c.ConnectBlock(block)
+		return false, c.connectBlock(bestBlock)
 	}
 
-	if block.Height > c.state.height && block.Bits >= c.state.block.Bits {
+	if bestBlock.Height > c.state.height && bestBlock.Bits >= c.state.block.Bits {
 		defer c.state.cond.L.Unlock()
-		return false, c.reorganizeChain(block)
+		return false, c.reorganizeChain(bestBlock)
 	}
 	c.state.cond.L.Unlock()
 	return false, nil

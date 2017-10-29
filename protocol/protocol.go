@@ -167,10 +167,8 @@ func (c *Chain) Height() uint64 {
 	return c.state.height
 }
 
-func (c *Chain) InMainchain(block *legacy.Block) bool {
-	c.state.cond.L.Lock()
+func (c *Chain) inMainchain(block *legacy.Block) bool {
 	hash, ok := c.state.mainChain[block.Height]
-	c.state.cond.L.Unlock()
 	if !ok {
 		return false
 	}
