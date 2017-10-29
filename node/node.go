@@ -5,37 +5,34 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/bytom/blockchain/account"
-	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/pin"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/txdb"
-	"github.com/bytom/consensus"
-	"github.com/bytom/env"
-	"github.com/bytom/errors"
-	"github.com/bytom/net/http/reqid"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/types"
-	"github.com/bytom/version"
 	"github.com/kr/secureheader"
-
-	_ "net/http/pprof"
-
-	bc "github.com/bytom/blockchain"
-	cfg "github.com/bytom/config"
-	bytomlog "github.com/bytom/log"
-	p2p "github.com/bytom/p2p"
 	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
+
+	bc "github.com/bytom/blockchain"
+	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/pin"
+	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/txdb"
+	cfg "github.com/bytom/config"
+	"github.com/bytom/consensus"
+	"github.com/bytom/env"
+	"github.com/bytom/net/http/reqid"
+	p2p "github.com/bytom/p2p"
+	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/types"
+	"github.com/bytom/version"
 )
 
 const (
@@ -145,8 +142,9 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	// it's blocking and we need to proceed to the rest of the core setup after
 	// we call it.
 	go func() {
-		err := server.Serve(listener)
-		bytomlog.Fatalkv(context.Background(), bytomlog.KeyError, errors.Wrap(err, "Serve"))
+		if err := server.Serve(listener); err != nil {
+			log.Fatalf("Fail to init rpc server: %v", err)
+		}
 	}()
 	coreHandler.Set(h)
 }
@@ -155,8 +153,8 @@ func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 
 	// Get store
-	tx_db := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-	store := txdb.NewStore(tx_db)
+	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
+	store := txdb.NewStore(txDB)
 
 	privKey := crypto.GenPrivKeyEd25519()
 
@@ -195,12 +193,11 @@ func NewNode(config *cfg.Config) *Node {
 	var pinStore *pin.Store = nil
 
 	if config.Wallet.Enable {
-		accounts_db := dbm.NewDB("account", config.DBBackend, config.DBDir())
-		acc_utxos_db := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
-		pinStore = pin.NewStore(acc_utxos_db)
-		err = pinStore.LoadAll(ctx)
-		if err != nil {
-			bytomlog.Error(ctx, err)
+		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
+		accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
+		pinStore = pin.NewStore(accUTXODB)
+		if err = pinStore.LoadAll(ctx); err != nil {
+			log.Errorf("Fail on pinStore LoadAll: %v", err)
 			return nil
 		}
 
@@ -211,17 +208,16 @@ func NewNode(config *cfg.Config) *Node {
 
 		pins := []string{account.PinName, account.DeleteSpentsPinName}
 		for _, p := range pins {
-			err = pinStore.CreatePin(ctx, p, pinHeight)
-			if err != nil {
-				bytomlog.Fatalkv(ctx, bytomlog.KeyError, err)
+			if err = pinStore.CreatePin(ctx, p, pinHeight); err != nil {
+				log.Fatalf("Fail on pinStore CreatePin: %v", err)
 			}
 		}
 
-		accounts = account.NewManager(accounts_db, chain, pinStore)
+		accounts = account.NewManager(accountsDB, chain, pinStore)
 		go accounts.ProcessBlocks(ctx)
 
-		assets_db := dbm.NewDB("asset", config.DBBackend, config.DBDir())
-		assets = asset.NewRegistry(assets_db, chain)
+		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+		assets = asset.NewRegistry(assetsDB, chain)
 	}
 	//Todo HSM
 	/*

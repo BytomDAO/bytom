@@ -2,73 +2,85 @@ package example
 
 import (
 	"context"
-	stdjson "encoding/json"
 	"fmt"
 	"os"
 	"time"
 
-	bchain "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/blockchain/txbuilder"
-
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
+
+	stdjson "encoding/json"
+	bchain "github.com/bytom/blockchain"
 )
 
-// TO DO: issue a asset to a account.
-func IssueTest(client *rpc.Client, args []string) {
-	// Create Account.
-	fmt.Printf("To create Account:\n")
+const (
+	Account = "account"
+	Asset   = "asset"
+)
+
+type Ins struct {
+	RootXPubs   []chainkd.XPub `json:"root_xpubs"`
+	Quorum      int
+	Alias       string
+	Tags        map[string]interface{}
+	Definition  map[string]interface{} `json:"omitempty"`
+	ClientToken string                 `json:"client_token"`
+}
+
+func NewInstance(alias, typ string) (Ins, chainkd.XPrv) {
 	xprv, _ := chainkd.NewXPrv(nil)
 	xpub := xprv.XPub()
-	fmt.Printf("xprv_account:%v\n", xprv)
-	fmt.Printf("xpub_account:%v\n", xpub)
-	type Ins struct {
-		RootXPubs   []chainkd.XPub `json:"root_xpubs"`
-		Quorum      int
-		Alias       string
-		Tags        map[string]interface{}
-		ClientToken string `json:"client_token"`
-	}
+	fmt.Printf("type:%s,xprv:%v\n", typ, xprv)
+	fmt.Printf("type:%s,xpub:%v\n", typ, xpub)
+
 	var ins Ins
 	ins.RootXPubs = []chainkd.XPub{xpub}
 	ins.Quorum = 1
-	ins.Alias = "alice"
+	ins.Alias = alias
 	ins.Tags = map[string]interface{}{"test_tag": "v0"}
-	ins.ClientToken = "account"
-	account := make([]query.AnnotatedAccount, 1)
-	client.Call(context.Background(), "/create-account", &[]Ins{ins}, &account)
-	fmt.Printf("account:%v\n", account)
+	if typ == Asset {
+		ins.Definition = map[string]interface{}{"test_definition": "v0"}
+	}
+	ins.ClientToken = typ
+
+	return ins, xprv
+}
+
+func NewAnnotate(client *rpc.Client, typ string, ins ...Ins) ([]query.AnnotatedAccount, []query.AnnotatedAsset) {
+	accounts := make([]query.AnnotatedAccount, 1)
+	assets := make([]query.AnnotatedAsset, 1)
+
+	if typ == Account {
+		client.Call(context.Background(), "/create-account", &ins, &accounts)
+		fmt.Printf("account:%v\n", accounts)
+		return accounts, nil
+	} else if typ == Asset {
+		client.Call(context.Background(), "/create-asset", &ins, &assets)
+		fmt.Printf("assetid=%s\n", assets[0].ID.String())
+		fmt.Printf("asset:%v\n", assets)
+		return nil, assets
+	}
+
+	return nil, nil
+}
+
+func IssueTest(client *rpc.Client, args []string) {
+	// Create Account.
+	fmt.Printf("To create Account:\n")
+	aliceIns, _ := NewInstance("alice", Account)
+	bobIns, _ := NewInstance("bob", Account)
+	accounts, _ := NewAnnotate(client, Account, aliceIns, bobIns)
 
 	// Create Asset.
 	fmt.Printf("To create Asset:\n")
-	xprv_asset, _ := chainkd.NewXPrv(nil)
-	xpub_asset := xprv_asset.XPub()
-	fmt.Printf("xprv_asset:%v\n", xprv_asset)
-	fmt.Printf("xpub_asset:%v\n", xpub_asset)
-	type Ins_asset struct {
-		RootXPubs   []chainkd.XPub `json:"root_xpubs"`
-		Quorum      int
-		Alias       string
-		Tags        map[string]interface{}
-		Definition  map[string]interface{}
-		ClientToken string `json:"client_token"`
-	}
-	var ins_asset Ins_asset
-	ins_asset.RootXPubs = []chainkd.XPub{xpub_asset}
-	ins_asset.Quorum = 1
-	ins_asset.Alias = "gold"
-	ins_asset.Tags = map[string]interface{}{"test_tag": "v0"}
-	ins_asset.Definition = map[string]interface{}{"test_definition": "v0"}
-	ins_asset.ClientToken = "asset"
-	asset := make([]query.AnnotatedAsset, 1)
-	client.Call(context.Background(), "/create-asset", &[]Ins_asset{ins_asset}, &asset)
-	fmt.Printf("asset:%v\n", asset)
+	goldIns, xprvGold := NewInstance("gold", Asset)
+	_, assets := NewAnnotate(client, Asset, goldIns)
 
 	// Build Transaction.
 	fmt.Printf("To build transaction:\n")
-	// Now Issue actions
 	buildReqFmt := `
 		{"actions": [
 			{
@@ -81,11 +93,11 @@ func IssueTest(client *rpc.Client, args []string) {
 			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"},
 			{"type": "control_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 8888888888, "account_id": "%s"}
 		]}`
-	buildReqStr := fmt.Sprintf(buildReqFmt, asset[0].ID.String(), asset[0].ID.String(), account[0].ID, account[0].ID)
+	buildReqStr := fmt.Sprintf(buildReqFmt, assets[0].ID.String(), assets[0].ID.String(), accounts[0].ID, accounts[0].ID)
 	var buildReq bchain.BuildRequest
 	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
-		fmt.Printf("json Unmarshal error.")
+		fmt.Println(err)
 	}
 
 	tpl := make([]txbuilder.Template, 1)
@@ -93,8 +105,8 @@ func IssueTest(client *rpc.Client, args []string) {
 	fmt.Printf("tpl:%v\n", tpl)
 
 	// sign-transaction
-	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprv_asset.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
-		derived := xprv_asset.Derive(path)
+	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprvGold.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
+		derived := xprvGold.Derive(path)
 		return derived.Sign(data[:]), nil
 	})
 	if err != nil {
@@ -108,7 +120,11 @@ func IssueTest(client *rpc.Client, args []string) {
 
 	// submit-transaction
 	var submitResponse interface{}
-	submitArg := bchain.SubmitArg{tpl, json.Duration{time.Duration(1000000)}, "none"}
+	submitArg := bchain.SubmitArg{Transactions: tpl, Wait: json.Duration{Duration: time.Duration(1000000)}, WaitUntil: "none"}
 	client.Call(context.Background(), "/submit-transaction", submitArg, &submitResponse)
 	fmt.Printf("submit transaction:%v\n", submitResponse)
+	fmt.Println("==============test end===============")
+
+	//Issue result:
+	//alice <btm:8888888888,gold:100>
 }
