@@ -1,26 +1,6 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 /*
-
 This key store behaves as KeyStorePlain with the difference that
 the private key is encrypted and on disk uses another JSON encoding.
-
-The crypto is documented at https://github.com/ethereum/wiki/wiki/Web3-Secret-Storage-Definition
-
 */
 
 package pseudohsm
@@ -47,12 +27,14 @@ import (
 const (
 	keyHeaderKDF = "scrypt"
 
-	// n,r,p = 2^18, 8, 1 uses 256MB memory and approx 1s CPU time on a modern CPU.
+	// StandardScryptN n,r,p = 2^18, 8, 1 uses 256MB memory and approx 1s CPU time on a modern CPU.
 	StandardScryptN = 1 << 18
+	// StandardScryptP fit above
 	StandardScryptP = 1
 
-	// n,r,p = 2^12, 8, 6 uses 4MB memory and approx 100ms CPU time on a modern CPU.
+	// LightScryptN n,r,p = 2^12, 8, 6 uses 4MB memory and approx 100ms CPU time on a modern CPU.
 	LightScryptN = 1 << 12
+	//LightScryptP fit above
 	LightScryptP = 6
 
 	scryptR     = 8
@@ -93,9 +75,8 @@ func (ks keyStorePassphrase) StoreKey(filename string, key *XKey, auth string) e
 func (ks keyStorePassphrase) JoinPath(filename string) string {
 	if filepath.IsAbs(filename) {
 		return filename
-	} else {
-		return filepath.Join(ks.keysDirPath, filename)
 	}
+	return filepath.Join(ks.keysDirPath, filename)
 }
 
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
@@ -136,7 +117,7 @@ func EncryptKey(key *XKey, auth string, scryptN, scryptP int) ([]byte, error) {
 	}
 	encryptedKeyJSON := encryptedKeyJSON{
 		cryptoStruct,
-		key.Id.String(),
+		key.ID.String(),
 		key.KeyType,
 		version,
 		key.Alias,
@@ -154,7 +135,7 @@ func DecryptKey(keyjson []byte, auth string) (*XKey, error) {
 	}
 	// Depending on the version try to parse one way or another
 	var (
-		keyBytes, keyId []byte
+		keyBytes, keyID []byte
 		err             error
 	)
 	k := new(encryptedKeyJSON)
@@ -162,7 +143,7 @@ func DecryptKey(keyjson []byte, auth string) (*XKey, error) {
 		return nil, err
 	}
 
-	keyBytes, keyId, err = decryptKey(k, auth)
+	keyBytes, keyID, err = decryptKey(k, auth)
 	// Handle any decryption errors and return the key
 	if err != nil {
 		return nil, err
@@ -173,7 +154,7 @@ func DecryptKey(keyjson []byte, auth string) (*XKey, error) {
 
 	//key := crypto.ToECDSA(keyBytes)
 	return &XKey{
-		Id:      uuid.UUID(keyId),
+		ID:      uuid.UUID(keyID),
 		XPrv:    xprv,
 		XPub:    xpub,
 		KeyType: k.Type,
@@ -181,7 +162,7 @@ func DecryptKey(keyjson []byte, auth string) (*XKey, error) {
 	}, nil
 }
 
-func decryptKey(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, keyId []byte, err error) {
+func decryptKey(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, keyID []byte, err error) {
 	if keyProtected.Version != version {
 		return nil, nil, fmt.Errorf("Version not supported: %v", keyProtected.Version)
 	}
@@ -194,7 +175,7 @@ func decryptKey(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, k
 		return nil, nil, fmt.Errorf("Cipher not supported: %v", keyProtected.Crypto.Cipher)
 	}
 
-	keyId = uuid.Parse(keyProtected.Id)
+	keyID = uuid.Parse(keyProtected.ID)
 	mac, err := hex.DecodeString(keyProtected.Crypto.MAC)
 	if err != nil {
 		return nil, nil, err
@@ -225,7 +206,7 @@ func decryptKey(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, k
 	if err != nil {
 		return nil, nil, err
 	}
-	return plainText, keyId, err
+	return plainText, keyID, err
 }
 
 func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {

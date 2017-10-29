@@ -1,8 +1,6 @@
 package pseudohsm
 
 import (
-	_ "encoding/hex"
-	//"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -18,8 +16,9 @@ const (
 	keytype = "bytom_kd"
 )
 
+// XKey struct type for keystore file
 type XKey struct {
-	Id      uuid.UUID
+	ID      uuid.UUID
 	KeyType string
 	Alias   string
 	XPrv    chainkd.XPrv
@@ -37,11 +36,11 @@ type keyStore interface {
 
 type encryptedKeyJSON struct {
 	Crypto  cryptoJSON `json:"crypto"`
-	Id      string     `json:"id"`
+	ID      string     `json:"id"`
 	Type    string     `json:"type"`
 	Version int        `json:"version"`
 	Alias   string     `json:"alias"`
-	XPub  	string	   `json:"xpub"`
+	XPub    string     `json:"xpub"`
 }
 
 type cryptoJSON struct {
@@ -65,61 +64,6 @@ type scryptParamsJSON struct {
 	Salt  string `json:"salt"`
 }
 
-/*
-func (k *XKey) MarshalJSON() (j []byte, err error) {
-	jStruct := plainKeyJSON{
-		hex.EncodeToString(k.Address[:]),
-		hex.EncodeToString(k.XPrv[:]),
-		hex.EncodeToString(k.XPub[:]),
-		k.Id.String(),
-		k.KeyType,
-		version,
-	}
-	j, err = json.Marshal(jStruct)
-	return j, err
-}
-
-
-func (k *XKey) UnmarshalJSON(j []byte) (err error) {
-	keyJSON := new(plainKeyJSON)
-	err = json.Unmarshal(j, &keyJSON)
-	if err != nil {
-		return err
-	}
-	u := new(uuid.UUID)
-	*u = uuid.Parse(keyJSON.Id)
-	k.Id = *u
-	addr, err := hex.DecodeString(keyJSON.Address)
-	if err != nil {
-		return err
-	}
-
-	privkey, err := hex.DecodeString(keyJSON.PrivateKey)
-	if err != nil {
-		return err
-	}
-
-	pubkey, err := hex.DecodeString(keyJSON.PublicKey)
-	if err != nil {
-		return err
-	}
-
-	ktype, err := hex.DecodeString(keyJSON.Type)
-	if err != nil {
-		return err
-	}
-	k.KeyType = hex.EncodeToString(ktype)
-	if k.KeyType != keytype {
-		return ErrInvalidKeyType
-	}
-
-	k.Address = common.BytesToAddress(addr)
-
-	copy(k.XPrv[:], privkey)
-	copy(k.XPub[:], pubkey)
-	return nil
-}
-*/
 func writeKeyFile(file string, content []byte) error {
 	// Create the keystore directory with appropriate permissions
 	// in case it is not present yet.

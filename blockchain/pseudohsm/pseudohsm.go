@@ -2,7 +2,6 @@
 package pseudohsm
 
 import (
-	_ "fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -22,11 +21,12 @@ var (
 	ErrNoKey                = errors.New("key not found")
 	ErrInvalidKeySize       = errors.New("key invalid size")
 	ErrTooManyAliasesToList = errors.New("requested aliases exceeds limit")
-	ErrAmbiguousAlias        = errors.New("multiple keys match alias")
+	ErrAmbiguousAlias       = errors.New("multiple keys match alias")
 	ErrDecrypt              = errors.New("could not decrypt key with given passphrase")
 	ErrInvalidKeyType       = errors.New("key type stored invalid")
 )
 
+// HSM type for storing pubkey and privatekey
 type HSM struct {
 	cacheMu  sync.Mutex
 	keyStore keyStore
@@ -34,12 +34,14 @@ type HSM struct {
 	kdCache  map[chainkd.XPub]chainkd.XPrv
 }
 
+// XPub type for pubkey for anyone can see
 type XPub struct {
-	Alias   string         `json:"alias"`
-	XPub    chainkd.XPub   `json:"xpub"`
-	File    string         `json:"file"`
+	Alias string       `json:"alias"`
+	XPub  chainkd.XPub `json:"xpub"`
+	File  string       `json:"file"`
 }
 
+// New method for HSM struct
 func New(keypath string) (*HSM, error) {
 	keydir, _ := filepath.Abs(keypath)
 	return &HSM{
@@ -66,13 +68,13 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 	}
 	id := uuid.NewRandom()
 	key := &XKey{
-		Id:      id,
+		ID:      id,
 		KeyType: "bytom_kd",
 		XPub:    xpub,
 		XPrv:    xprv,
 		Alias:   alias,
 	}
-	file := h.keyStore.JoinPath(keyFileName(key.Id.String()))
+	file := h.keyStore.JoinPath(keyFileName(key.ID.String()))
 	if err := h.keyStore.StoreKey(file, key, auth); err != nil {
 		return nil, false, errors.Wrap(err, "storing keys")
 	}
@@ -180,7 +182,7 @@ func (h *HSM) loadDecryptedKey(xpub chainkd.XPub, auth string) (XPub, *XKey, err
 	return xpb, xkey, err
 }
 
-// Update alias  of an existing xpub
+// UpdateAlias of an existing xpub
 func (h *HSM) UpdateAlias(xpub chainkd.XPub, auth, newAlias string) error {
 	xpb, xkey, err := h.loadDecryptedKey(xpub, auth)
 	if err != nil {
@@ -190,7 +192,7 @@ func (h *HSM) UpdateAlias(xpub chainkd.XPub, auth, newAlias string) error {
 	return h.keyStore.StoreKey(xpb.File, xkey, auth)
 }
 
-// Update changes the passphrase of an existing xpub
+// ResetPassword the passphrase of an existing xpub
 func (h *HSM) ResetPassword(xpub chainkd.XPub, auth, newAuth string) error {
 	xpb, xkey, err := h.loadDecryptedKey(xpub, auth)
 	if err != nil {

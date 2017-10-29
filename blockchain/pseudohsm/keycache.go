@@ -2,8 +2,8 @@ package pseudohsm
 
 import (
 	"bufio"
-	"encoding/json"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/bytom/crypto/ed25519/chainkd"
 
+	"github.com/bytom/crypto/ed25519/chainkd"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does
@@ -27,10 +27,10 @@ func (s keysByFile) Len() int           { return len(s) }
 func (s keysByFile) Less(i, j int) bool { return s[i].File < s[j].File }
 func (s keysByFile) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
-// AmbiguousAddrError is returned when attempting to unlock
+// AmbiguousKeyError is returned when attempting to unlock
 // an XPub for which more than one file exists.
 type AmbiguousKeyError struct {
-	Pubkey   string
+	Pubkey  string
 	Matches []XPub
 }
 
@@ -181,8 +181,8 @@ func (kc *keyCache) scan() ([]XPub, error) {
 		buf     = new(bufio.Reader)
 		keys    []XPub
 		keyJSON struct {
-			Alias   string         `json:"alias"`
-			XPub	chainkd.XPub   `json:"xpub"`
+			Alias string       `json:"alias"`
+			XPub  chainkd.XPub `json:"xpub"`
 		}
 	)
 	for _, fi := range files {
