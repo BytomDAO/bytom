@@ -1,31 +1,31 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/http"
 	"reflect"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	cmn "github.com/tendermint/tmlibs/common"
+
 	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/rpc"
+	ctypes "github.com/bytom/blockchain/rpc/types"
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/encoding/json"
-	"github.com/bytom/log"
+	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/types"
-	wire "github.com/tendermint/go-wire"
-	cmn "github.com/tendermint/tmlibs/common"
-
-	"github.com/bytom/blockchain/pin"
-	"github.com/bytom/errors"
 )
 
 const (
@@ -49,16 +49,13 @@ type BlockchainReactor struct {
 	assets      *asset.Registry
 	accesstoken *accesstoken.Token
 	txFeeds     *txfeed.TxFeed
-	pool        *BlockPool
+	blockKeeper *blockKeeper
 	txPool      *protocol.TxPool
 	hsm         *pseudohsm.HSM
 	mining      *cpuminer.CPUMiner
 	mux         *http.ServeMux
 	sw          *p2p.Switch
 	handler     http.Handler
-	fastSync    bool
-	requestsCh  chan BlockRequest
-	timeoutsCh  chan string
 	evsw        types.EventSwitch
 }
 
@@ -102,9 +99,6 @@ func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Reques
 }
 
 func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
-	//if a.config == nil {
-	// never configured
-	log.Printf(ctx, "-------info-----")
 	return map[string]interface{}{
 		"is_configured": false,
 		"version":       "0.001",
@@ -112,11 +106,6 @@ func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{},
 		"build_date":    "------",
 		"build_config":  "---------",
 	}, nil
-	//}
-}
-
-func (bcr *BlockchainReactor) createblockkey(ctx context.Context) {
-	log.Printf(ctx, "creat-block-key")
 }
 
 func maxBytes(h http.Handler) http.Handler {
@@ -139,7 +128,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
 	} else {
-		log.Printf(context.Background(), "Warning: Please enable wallet")
+		log.Printf("Warning: Please enable wallet")
 	}
 
 	if bcr.assets != nil {
@@ -147,7 +136,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 		m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
 		m.Handle("/list-assets", jsonHandler(bcr.listAssets))
 	} else {
-		log.Printf(context.Background(), "Warning: Please enable wallet")
+		log.Printf("Warning: Please enable wallet")
 	}
 	m.Handle("/build-transaction", jsonHandler(bcr.build))
 	m.Handle("/create-control-program", jsonHandler(bcr.createControlProgram))
@@ -161,7 +150,6 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/list-unspent-outputs", jsonHandler(bcr.listUnspentOutputs))
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
-	m.Handle("/create-block-key", jsonHandler(bcr.createblockkey))
 	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
 	m.Handle("/create-access-token", jsonHandler(bcr.createAccessToken))
 	m.Handle("/list-access-tokens", jsonHandler(bcr.listAccessTokens))
@@ -226,37 +214,19 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(
-	chain *protocol.Chain,
-	txPool *protocol.TxPool,
-	accounts *account.Manager,
-	assets *asset.Registry,
-	sw *p2p.Switch,
-	hsm *pseudohsm.HSM,
-	fastSync bool,
-	pinStore *pin.Store) *BlockchainReactor {
-	requestsCh := make(chan BlockRequest, defaultChannelCapacity)
-	timeoutsCh := make(chan string, defaultChannelCapacity)
-	pool := NewBlockPool(
-		chain.Height()+1,
-		requestsCh,
-		timeoutsCh,
-	)
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, pinStore *pin.Store) *BlockchainReactor {
 	mining := cpuminer.NewCPUMiner(chain, txPool)
 	bcR := &BlockchainReactor{
-		chain:      chain,
-		pinStore:   pinStore,
-		accounts:   accounts,
-		assets:     assets,
-		pool:       pool,
-		txPool:     txPool,
-		mining:     mining,
-		mux:        http.NewServeMux(),
-		sw:         sw,
-		hsm:        hsm,
-		fastSync:   fastSync,
-		requestsCh: requestsCh,
-		timeoutsCh: timeoutsCh,
+		chain:       chain,
+		pinStore:    pinStore,
+		accounts:    accounts,
+		assets:      assets,
+		blockKeeper: newBlockKeeper(chain, sw),
+		txPool:      txPool,
+		mining:      mining,
+		mux:         http.NewServeMux(),
+		sw:          sw,
+		hsm:         hsm,
 	}
 	bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
 	return bcR
@@ -266,13 +236,6 @@ func NewBlockchainReactor(
 func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
 	bcR.BuildHander()
-	if bcR.fastSync {
-		_, err := bcR.pool.Start()
-		if err != nil {
-			return err
-		}
-		go bcR.poolRoutine()
-	}
 	return nil
 }
 
@@ -292,68 +255,60 @@ func (bcR *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
 	}
 }
 
+func (bcR *BlockchainReactor) getNetInfo() (*ctypes.ResultNetInfo, error) {
+	return rpc.NetInfo(bcR.sw)
+}
+
 // AddPeer implements Reactor by sending our state to peer.
 func (bcR *BlockchainReactor) AddPeer(peer *p2p.Peer) {
-	if !peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.chain.Height()}}) {
-		// doing nothing, will try later in `poolRoutine`
-	}
+	block, _ := bcR.chain.State()
+	peer.Send(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
 func (bcR *BlockchainReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
-	bcR.pool.RemovePeer(peer.Key)
+	bcR.blockKeeper.RemovePeer(peer.Key)
 }
 
 // Receive implements Reactor by handling 4 types of messages (look below).
 func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	_, msg, err := DecodeMessage(msgBytes)
 	if err != nil {
-		bcR.Logger.Error("Error decoding message", "error", err)
+		log.Errorf("Error decoding messagek %v", err)
 		return
 	}
 
-	bcR.Logger.Info("Receive", "src", src, "chID", chID, "msg", msg)
-
 	switch msg := msg.(type) {
-	case *bcBlockRequestMessage:
-		block, err := bcR.chain.GetBlockByHeight(msg.Height)
+	case *BlockRequestMessage:
+		var block *legacy.Block
+		var err error
+		if msg.Height != 0 {
+			block, err = bcR.chain.GetBlockByHeight(msg.Height)
+		} else {
+			block, err = bcR.chain.GetBlockByHash(msg.GetHash())
+		}
 		if err != nil {
-			bcR.Logger.Info("skip sent the block response due to block is nil")
-			return
-		}
-		rawBlock, err := block.MarshalText()
-		if err == nil {
-			msg := &bcBlockResponseMessage{RawBlock: rawBlock}
-			src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-		}
-	case *bcBlockResponseMessage:
-		height, numPending, _ := bcR.pool.GetStatus()
-		block := msg.GetBlock()
-		if block.Height > height && block.Height < height+numPending {
-			bcR.pool.AddBlock(src.Key, block, len(msgBytes))
+			log.Errorf("fail on BlockRequestMessage get block: %v", err)
 			return
 		}
 
-		isOrphan, err := bcR.chain.ProcessBlock(block)
+		response, err := NewBlockResponseMessage(block)
 		if err != nil {
-			bcR.Logger.Info("fail to sync commit block", "blockHeigh", block.BlockHeader.Height, "error", err)
+			log.Errorf("fail on BlockRequestMessage create resoinse: %v", err)
+			return
 		}
-		if isOrphan {
-			src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&bcBlockRequestMessage{Height: block.Height - 1}})
-		}
-	case *bcStatusRequestMessage:
-		// Send peer our state.
-		queued := src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusResponseMessage{bcR.chain.Height()}})
-		if !queued {
-			// sorry
-		}
-	case *bcStatusResponseMessage:
-		// Got a peer status. Unverified.
-		bcR.pool.SetPeerHeight(src.Key, msg.Height)
-	case *bcTransactionMessage:
+		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{response})
+	case *BlockResponseMessage:
+		bcR.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
+	case *StatusRequestMessage:
+		block, _ := bcR.chain.State()
+		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
+	case *StatusResponseMessage:
+		bcR.blockKeeper.SetPeerHeight(src.Key, msg.Height, msg.GetHash())
+	case *TransactionNotifyMessage:
 		tx := msg.GetTransaction()
 		if err := bcR.chain.ValidateTx(tx); err != nil {
-			bcR.Logger.Error("fail to sync transaction to txPool", "err", err)
+			log.Errorf("TransactionNotifyMessage: %v", err)
 		}
 	default:
 		bcR.Logger.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
@@ -364,8 +319,6 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 // NOTE: Don't sleep in the FOR_LOOP or otherwise slow it down!
 // (Except for the SYNC_LOOP, which is the primary purpose and must be synchronous.)
 func (bcR *BlockchainReactor) poolRoutine() {
-
-	trySyncTicker := time.NewTicker(trySyncIntervalMS * time.Millisecond)
 	statusUpdateTicker := time.NewTicker(statusUpdateIntervalSeconds * time.Second)
 	newTxCh := bcR.txPool.GetNewTxCh()
 
@@ -373,57 +326,15 @@ FOR_LOOP:
 	for {
 
 		select {
-		case request := <-bcR.requestsCh: // chan BlockRequest
-			peer := bcR.Switch.Peers().Get(request.PeerID)
-			if peer == nil {
-				continue FOR_LOOP // Peer has since been disconnected.
-			}
-			msg := &bcBlockRequestMessage{request.Height}
-			queued := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-			if !queued {
-				// We couldn't make the request, send-queue full.
-				// The pool handles timeouts, just let it go.
-				continue FOR_LOOP
-			}
-		case peerID := <-bcR.timeoutsCh: // chan string
-			// Peer timed out.
-			peer := bcR.Switch.Peers().Get(peerID)
-			if peer != nil {
-				bcR.Switch.StopPeerForError(peer, errors.New("BlockchainReactor Timeout"))
-			}
 		case newTx := <-newTxCh:
 			go bcR.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
 			// ask for status updates
 			go bcR.BroadcastStatusRequest()
-		case _ = <-trySyncTicker.C: // chan time
-		SYNC_LOOP:
-			for i := 0; i < 10; i++ {
-				// See if there are any blocks to sync.
-				block, peerID := bcR.pool.PeekBlock()
-				if block == nil {
-					break SYNC_LOOP
-				}
-				bcR.pool.PopRequest()
-
-				isOrphan, err := bcR.chain.ProcessBlock(block)
-				if err != nil {
-					bcR.Logger.Info("fail to sync commit block", "blockHeigh", block.BlockHeader.Height, "error", err)
-				}
-
-				if isOrphan {
-					src := bcR.Switch.Peers().Get(peerID)
-					if src == nil {
-						continue
-					}
-					src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&bcBlockRequestMessage{Height: block.Height - 1}})
-				}
-			}
-			continue FOR_LOOP
 		case <-bcR.Quit:
 			break FOR_LOOP
 		}
-		if bcR.pool.IsCaughtUp() && !bcR.mining.IsMining() {
+		if !bcR.mining.IsMining() && bcR.blockKeeper.IsCaughtUp() {
 			bcR.Logger.Info("start to mining")
 			bcR.mining.Start()
 		}
@@ -432,116 +343,16 @@ FOR_LOOP:
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.
 func (bcR *BlockchainReactor) BroadcastStatusRequest() error {
-	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcStatusRequestMessage{bcR.chain.Height()}})
+	block, _ := bcR.chain.State()
+	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 	return nil
 }
 
 func (bcR *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
-	rawTx, err := tx.TxData.MarshalText()
+	msg, err := NewTransactionNotifyMessage(tx)
 	if err != nil {
 		return err
 	}
-	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{&bcTransactionMessage{rawTx}})
+	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
-}
-
-//-----------------------------------------------------------------------------
-// Messages
-
-const (
-	msgTypeBlockRequest       = byte(0x10)
-	msgTypeBlockResponse      = byte(0x11)
-	msgTypeStatusResponse     = byte(0x20)
-	msgTypeStatusRequest      = byte(0x21)
-	msgTypeTransactionRequest = byte(0x30)
-)
-
-// BlockchainMessage is a generic message for this reactor.
-type BlockchainMessage interface{}
-
-var _ = wire.RegisterInterface(
-	struct{ BlockchainMessage }{},
-	wire.ConcreteType{&bcBlockRequestMessage{}, msgTypeBlockRequest},
-	wire.ConcreteType{&bcBlockResponseMessage{}, msgTypeBlockResponse},
-	wire.ConcreteType{&bcStatusResponseMessage{}, msgTypeStatusResponse},
-	wire.ConcreteType{&bcStatusRequestMessage{}, msgTypeStatusRequest},
-	wire.ConcreteType{&bcTransactionMessage{}, msgTypeTransactionRequest},
-)
-
-// DecodeMessage decodes BlockchainMessage.
-// TODO: ensure that bz is completely read.
-func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
-	msgType = bz[0]
-	n := int(0)
-	r := bytes.NewReader(bz)
-	msg = wire.ReadBinary(struct{ BlockchainMessage }{}, r, maxBlockchainResponseSize, &n, &err).(struct{ BlockchainMessage }).BlockchainMessage
-	if err != nil && n != len(bz) {
-		err = errors.New("DecodeMessage() had bytes left over")
-	}
-	return
-}
-
-//-----------------------------------
-
-type bcBlockRequestMessage struct {
-	Height uint64
-}
-
-func (m *bcBlockRequestMessage) String() string {
-	return cmn.Fmt("[bcBlockRequestMessage %v]", m.Height)
-}
-
-//-------------------------------------
-
-type bcTransactionMessage struct {
-	RawTx []byte
-}
-
-func (m *bcTransactionMessage) GetTransaction() *legacy.Tx {
-	tx := &legacy.Tx{}
-	tx.UnmarshalText(m.RawTx)
-	return tx
-}
-
-//-------------------------------------
-
-//-------------------------------------
-
-// NOTE: keep up-to-date with maxBlockchainResponseSize
-type bcBlockResponseMessage struct {
-	RawBlock []byte
-}
-
-func (m *bcBlockResponseMessage) GetBlock() *legacy.Block {
-	block := &legacy.Block{
-		BlockHeader:  legacy.BlockHeader{},
-		Transactions: []*legacy.Tx{},
-	}
-	block.UnmarshalText(m.RawBlock)
-	return block
-}
-
-func (m *bcBlockResponseMessage) String() string {
-	block := m.GetBlock()
-	return cmn.Fmt("[bcBlockResponseMessage %v]", block.BlockHeader.Height)
-}
-
-//-------------------------------------
-
-type bcStatusRequestMessage struct {
-	Height uint64
-}
-
-func (m *bcStatusRequestMessage) String() string {
-	return cmn.Fmt("[bcStatusRequestMessage %v]", m.Height)
-}
-
-//-------------------------------------
-
-type bcStatusResponseMessage struct {
-	Height uint64
-}
-
-func (m *bcStatusResponseMessage) String() string {
-	return cmn.Fmt("[bcStatusResponseMessage %v]", m.Height)
 }

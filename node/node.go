@@ -169,8 +169,6 @@ func NewNode(config *cfg.Config) *Node {
 
 	sw := p2p.NewSwitch(config.P2P)
 
-	fastSync := config.FastSync
-
 	genesisBlock := &legacy.Block{
 		BlockHeader:  legacy.BlockHeader{},
 		Transactions: []*legacy.Tx{},
@@ -241,15 +239,7 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
-	bcReactor := bc.NewBlockchainReactor(
-		chain,
-		txPool,
-		accounts,
-		assets,
-		sw,
-		hsm,
-		fastSync,
-		pinStore)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, pinStore)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
