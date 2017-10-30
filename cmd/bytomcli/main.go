@@ -251,7 +251,6 @@ func dieOnRPCError(err error, prefixes ...interface{}) {
 		return
 	}
 
-
 	if len(prefixes) > 0 {
 		fmt.Fprintln(os.Stderr, prefixes...)
 	}
@@ -578,12 +577,12 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 
 func submitSpendTransaction(client *rpc.Client, args []string) {
 	if len(args) != 5 {
-		fatalln("error: need args: [account1 id] [account2 id] [account1 xprv] [asset id] [spend amount]")
+		fatalln("error: need args: [account1 id] [account2 id] [asset id] [account1 xprv] [spend amount]")
 	}
 
 	var xprvAccount1 chainkd.XPrv
 
-	err := xprvAccount1.UnmarshalText([]byte(args[2]))
+	err := xprvAccount1.UnmarshalText([]byte(args[3]))
 	if err == nil {
 		fmt.Printf("xprv:%v\n", xprvAccount1)
 	} else {
@@ -598,7 +597,7 @@ func submitSpendTransaction(client *rpc.Client, args []string) {
 			{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
 	]}`
 
-	buildReqStr := fmt.Sprintf(buildReqFmt, args[3], args[4], args[0], args[0], args[3], args[4], args[1])
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[2], args[4], args[0], args[0], args[2], args[4], args[1])
 
 	var buildReq blockchain.BuildRequest
 	err = stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
@@ -1016,8 +1015,8 @@ func signTransactions(client *rpc.Client, args []string) {
 	type param struct {
 		Auth  string
 		Txs   []*txbuilder.Template `json:"transactions"`
-		XPubs chainkd.XPub        `json:"xpubs"`
-		XPrv  chainkd.XPrv        `json:"xprv"`
+		XPubs chainkd.XPub          `json:"xpubs"`
+		XPrv  chainkd.XPrv          `json:"xprv"`
 	}
 
 	var in param
