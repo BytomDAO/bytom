@@ -497,8 +497,6 @@ func (m *bcTransactionMessage) GetTransaction() *legacy.Tx {
 
 //-------------------------------------
 
-//-------------------------------------
-
 // NOTE: keep up-to-date with maxBlockchainResponseSize
 type bcBlockResponseMessage struct {
 	RawBlock []byte

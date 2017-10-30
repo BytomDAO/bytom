@@ -28,7 +28,6 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
-	"github.com/bytom/net/http/reqid"
 	p2p "github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
@@ -121,7 +120,6 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 
 	var handler http.Handler = mux
 	handler = RedirectHandler(handler)
-	handler = reqid.Handler(handler)
 
 	secureheader.DefaultConfig.PermitClearLoopback = true
 	secureheader.DefaultConfig.HTTPSRedirect = false
