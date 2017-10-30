@@ -211,7 +211,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 	}
 
 	reg.cacheMu.Lock()
-	reg.cache.Add(id, asset)
+	reg.cache.Add(id, &asset)
 	reg.cacheMu.Unlock()
 	return &asset, nil
 }

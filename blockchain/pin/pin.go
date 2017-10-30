@@ -6,8 +6,8 @@ import (
 	"sort"
 	"sync"
 
-	dbm "github.com/tendermint/tmlibs/db"
 	log "github.com/sirupsen/logrus"
+	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
