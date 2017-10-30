@@ -7,9 +7,9 @@ import (
 
 	//	"github.com/blockchain/types"
 	"github.com/bytom/protocol/bc/legacy"
+	log "github.com/sirupsen/logrus"
 	. "github.com/tendermint/tmlibs/common"
 	flow "github.com/tendermint/tmlibs/flowrate"
-	"github.com/tendermint/tmlibs/log"
 )
 
 const (
@@ -97,7 +97,10 @@ func (pool *BlockPool) removeTimedoutPeers() {
 			// XXX remove curRate != 0
 			if curRate != 0 && curRate < minRecvRate {
 				pool.sendTimeout(peer.id)
-				pool.Logger.Error("SendTimeout", "peer", peer.id, "reason", "curRate too low")
+				log.WithFields(log.Fields{
+					"peer":   peer.id,
+					"reason": "curRate too low",
+				}).Error("SendTimeout")
 				peer.didTimeout = true
 			}
 		}
@@ -123,7 +126,7 @@ func (pool *BlockPool) IsCaughtUp() bool {
 
 	// Need at least 1 peer to be considered caught up.
 	if len(pool.peers) == 0 && time.Now().Sub(pool.startTime) > 60*time.Second {
-		pool.Logger.Debug("Blockpool has no peers")
+		log.Debug("Blockpool has no peers")
 		return false
 	}
 
@@ -133,7 +136,10 @@ func (pool *BlockPool) IsCaughtUp() bool {
 	}
 
 	isCaughtUp := (height > 0 || time.Now().Sub(pool.startTime) > 5*time.Second) && (maxPeerHeight == 0 || height >= maxPeerHeight)
-	pool.Logger.Info(Fmt("IsCaughtUp: %v", isCaughtUp), "height", height, "maxPeerHeight", maxPeerHeight)
+	log.WithFields(log.Fields{
+		"height":        height,
+		"maxPeerHeight": maxPeerHeight,
+	}).Infof("IsCaughtUp: %v", isCaughtUp)
 	return isCaughtUp
 }
 
@@ -217,7 +223,6 @@ func (pool *BlockPool) SetPeerHeight(peerID string, height uint64) {
 		peer.height = height
 	} else {
 		peer = newBPPeer(pool, peerID, height)
-		peer.setLogger(pool.Logger.With("peer", peerID))
 		pool.peers[peerID] = peer
 	}
 }
@@ -322,8 +327,6 @@ type bpPeer struct {
 	numPending int32
 	timeout    *time.Timer
 	didTimeout bool
-
-	logger log.Logger
 }
 
 func newBPPeer(pool *BlockPool, peerID string, height uint64) *bpPeer {
@@ -332,13 +335,8 @@ func newBPPeer(pool *BlockPool, peerID string, height uint64) *bpPeer {
 		id:         peerID,
 		height:     height,
 		numPending: 0,
-		logger:     log.NewNopLogger(),
 	}
 	return peer
-}
-
-func (peer *bpPeer) setLogger(l log.Logger) {
-	peer.logger = l
 }
 
 func (peer *bpPeer) resetMonitor() {
@@ -378,7 +376,7 @@ func (peer *bpPeer) onTimeout() {
 	defer peer.pool.mtx.Unlock()
 
 	peer.pool.sendTimeout(peer.id)
-	peer.logger.Error("SendTimeout", "reason", "onTimeout")
+	log.WithField("error", "onTimeout").Error("SendTimeout")
 	peer.didTimeout = true
 }
 
@@ -468,7 +466,6 @@ OUTER_LOOP:
 			}
 			peer = bpr.pool.pickIncrAvailablePeer(bpr.height)
 			if peer == nil {
-				//log.Info("No peers available", "height", height)
 				time.Sleep(requestIntervalMS * time.Millisecond)
 				continue PICK_PEER_LOOP
 			}

@@ -6,9 +6,10 @@ import (
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/log"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/reqid"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // POST /create-account
@@ -40,7 +41,7 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
 				return
 			}
 			aa, err := account.Annotated(acc)
-			log.Printf(ctx, "-------createAccount-----Annotated accout:%v", aa)
+			log.WithField("account", aa).Info("Created account")
 			if err != nil {
 				responses[i] = err
 				return
@@ -50,7 +51,7 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
 	}
 
 	wg.Wait()
-	log.Printf(ctx, "-------createAccount-----%v", responses)
+	log.WithField("responses", responses).Info("Responses of created account")
 	return responses
 }
 
@@ -60,7 +61,7 @@ func (a *BlockchainReactor) updateAccountTags(ctx context.Context, ins []struct 
 	Alias *string
 	Tags  map[string]interface{} `json:"tags"`
 }) interface{} {
-	log.Printf(ctx, "-------update-account-tags---------")
+	log.Info("Updating account tags")
 	responses := make([]interface{}, len(ins))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))

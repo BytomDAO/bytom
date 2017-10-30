@@ -126,11 +126,11 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	}
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
-	var acct  *signers.Signer
-	if res.Source.AccountID == ""{
+	var acct *signers.Signer
+	if res.Source.AccountID == "" {
 		//TODO coinbase
 		acct = &signers.Signer{}
-	}else{
+	} else {
 		acct, err = a.accounts.findByID(ctx, res.Source.AccountID)
 		if err != nil {
 			return err
