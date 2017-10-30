@@ -15,7 +15,6 @@ import (
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/encoding/json"
-	"github.com/bytom/log"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/p2p"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -90,7 +90,6 @@ func batchRecover(ctx context.Context, v *interface{}) {
 	// Convert errors into error responses (including errors
 	// from recovered panics above).
 	if err, ok := (*v).(error); ok {
-		errorFormatter.Log(ctx, err)
 		*v = errorFormatter.Format(err)
 	}
 }
@@ -114,7 +113,6 @@ func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Reques
 func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
 	//if a.config == nil {
 	// never configured
-	log.Printf(ctx, "-------info-----")
 	return map[string]interface{}{
 		"is_configured": false,
 		"version":       "0.001",
@@ -126,7 +124,6 @@ func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{},
 }
 
 func (bcr *BlockchainReactor) createblockkey(ctx context.Context) {
-	log.Printf(ctx, "creat-block-key")
 }
 
 func maxBytes(h http.Handler) http.Handler {
@@ -149,7 +146,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
 	} else {
-		log.Printf(context.Background(), "Warning: Please enable wallet")
+		log.Warn("Please enable wallet")
 	}
 
 	if bcr.assets != nil {
@@ -157,7 +154,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 		m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
 		m.Handle("/list-assets", jsonHandler(bcr.listAssets))
 	} else {
-		log.Printf(context.Background(), "Warning: Please enable wallet")
+		log.Warn("Please enable wallet")
 	}
 	m.Handle("/build-transaction", jsonHandler(bcr.build))
 	m.Handle("/create-control-program", jsonHandler(bcr.createControlProgram))
@@ -497,8 +494,6 @@ func (m *bcTransactionMessage) GetTransaction() *legacy.Tx {
 	tx.UnmarshalText(m.RawTx)
 	return tx
 }
-
-//-------------------------------------
 
 //-------------------------------------
 

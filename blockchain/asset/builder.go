@@ -8,10 +8,11 @@ import (
 
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/log"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+
+	log "github.com/sirupsen/logrus"
+	chainjson "github.com/bytom/encoding/json"
 )
 
 func (reg *Registry) NewIssueAction(assetAmount bc.AssetAmount, referenceData chainjson.Map) txbuilder.Action {
@@ -38,7 +39,6 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 	if a.AssetId.IsZero() {
 		return txbuilder.MissingFieldsError("asset_id")
 	}
-	log.Printf(ctx, "AssetId:%v\n", a.AssetId)
 
 	asset, err := a.assets.findByID(ctx, *a.AssetId)
 	if err != nil {
@@ -59,8 +59,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 	path := signers.Path(asset.Signer, signers.AssetKeySpace)
 	tplIn.AddWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
 
-	log.Printf(ctx, "txin:%v\n", txin)
-	log.Printf(ctx, "tplIn:%v\n", tplIn)
+	log.WithFields(log.Fields{"txin": txin, "tplIn": tplIn}).Info("Issue action build")
 	builder.RestrictMinTime(time.Now())
 	return builder.AddInput(txin, tplIn)
 }
