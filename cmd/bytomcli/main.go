@@ -26,7 +26,6 @@ import (
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
 )
 
 // config vars
@@ -39,10 +38,6 @@ var (
 	buildCommit = "?"
 	buildDate   = "?"
 )
-
-// We collect log output in this buffer,
-// and display it only when there's an error.
-var logbuf bytes.Buffer
 
 type command struct {
 	f func(*rpc.Client, []string)
@@ -96,7 +91,6 @@ var commands = map[string]*command{
 }
 
 func main() {
-	log.SetOutput(&logbuf)
 	env.Parse()
 
 	if len(os.Args) >= 2 && os.Args[1] == "-version" {
@@ -247,8 +241,7 @@ func mustRPCClient() *rpc.Client {
 }
 
 func fatalln(v ...interface{}) {
-	io.Copy(os.Stderr, &logbuf)
-	fmt.Fprintln(os.Stderr, v...)
+	fmt.Printf("%v", v)
 	os.Exit(2)
 }
 
@@ -257,7 +250,6 @@ func dieOnRPCError(err error, prefixes ...interface{}) {
 		return
 	}
 
-	io.Copy(os.Stderr, &logbuf)
 
 	if len(prefixes) > 0 {
 		fmt.Fprintln(os.Stderr, prefixes...)

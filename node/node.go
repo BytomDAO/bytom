@@ -28,7 +28,6 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
-	bytomlog "github.com/bytom/log"
 	"github.com/bytom/net/http/reqid"
 	p2p "github.com/bytom/p2p"
 	"github.com/bytom/protocol"
@@ -147,7 +146,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	// we call it.
 	go func() {
 		err := server.Serve(listener)
-		bytomlog.Fatalkv(context.Background(), bytomlog.KeyError, errors.Wrap(err, "Serve"))
+		log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
 	}()
 	coreHandler.Set(h)
 }
@@ -197,7 +196,7 @@ func NewNode(config *cfg.Config) *Node {
 		pinStore = pin.NewStore(accUTXODB)
 		err = pinStore.LoadAll(ctx)
 		if err != nil {
-			bytomlog.Error(ctx, err)
+			log.WithField("error", err).Error("load pin store")
 			return nil
 		}
 
@@ -210,7 +209,7 @@ func NewNode(config *cfg.Config) *Node {
 		for _, p := range pins {
 			err = pinStore.CreatePin(ctx, p, pinHeight)
 			if err != nil {
-				bytomlog.Fatalkv(ctx, bytomlog.KeyError, err)
+				log.WithField("error", err).Error("Create pin")
 			}
 		}
 

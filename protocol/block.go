@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // maxBlockTxs limits the number of transactions
@@ -137,8 +138,7 @@ func (c *Chain) queueSnapshot(ctx context.Context, height uint64, timestamp time
 		c.lastQueuedSnapshot = timestamp
 	default:
 		// Skip it; saving snapshots is taking longer than the snapshotting period.
-		log.Printf(ctx, "snapshot storage is taking too long; last queued at %s",
-			c.lastQueuedSnapshot)
+		log.WithField("last queued", c.lastQueuedSnapshot).Info("snapshot storage is taking too long")
 	}
 }
 

@@ -29,6 +29,8 @@ import (
 	"time"
 
 	"github.com/bytom/common"
+	log "github.com/sirupsen/logrus"
+
 	_ "github.com/bytom/errors"
 )
 
@@ -173,9 +175,7 @@ func (ac *addrCache) find(xpub XPub) (XPub, error) {
 func (ac *addrCache) reload() {
 	keys, err := ac.scan()
 	if err != nil {
-		//log.Printf("can't load keys: %v", err.Error())
-		fmt.Printf("can't load keys: %v\n", err.Error())
-
+		log.WithField("error", err).Error("can't load keys")
 	}
 	ac.all = keys
 	sort.Sort(ac.all)
@@ -185,8 +185,7 @@ func (ac *addrCache) reload() {
 	for _, k := range keys {
 		ac.byAddr[k.Address] = append(ac.byAddr[k.Address], k)
 	}
-	//log.Printf("reloaded keys, cache has %d keys", len(ac.all))
-	fmt.Printf("reloaded keys, cache has %d keys\n", len(ac.all))
+	log.WithField("cache has key", len(ac.all)).Info("reloaded keys")
 }
 
 func (ac *addrCache) scan() ([]XPub, error) {
@@ -205,14 +204,11 @@ func (ac *addrCache) scan() ([]XPub, error) {
 	for _, fi := range files {
 		path := filepath.Join(ac.keydir, fi.Name())
 		if skipKeyFile(fi) {
-			//log.Printf("ignoring file %v", path)
-			//fmt.Printf("ignoring file %v", path)
 			continue
 		}
 		fd, err := os.Open(path)
 		if err != nil {
-			//log.Printf(err)
-			fmt.Printf("err")
+			log.WithField("error", err).Info("Os open file error")
 			continue
 		}
 		buf.Reset(fd)
@@ -221,10 +217,9 @@ func (ac *addrCache) scan() ([]XPub, error) {
 		err = json.NewDecoder(buf).Decode(&keyJSON)
 		switch {
 		case err != nil:
-			//log.Printf("can't decode key %s: %v", path, err)
-			fmt.Printf("can't decode key %s: %v", path, err)
+			log.WithFields(log.Fields{"path": path, "error":err,}).Error("Can't decode key")
 		case (keyJSON.Address == common.Address{}):
-			fmt.Printf("can't decode key %s: missing or zero address", path)
+			log.WithFields(log.Fields{"path": path}).Info("Can't decode key, missing or zero address")
 		default:
 			keys = append(keys, XPub{Address: keyJSON.Address, Alias: keyJSON.Alias, File: path})
 		}
