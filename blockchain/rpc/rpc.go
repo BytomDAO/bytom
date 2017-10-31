@@ -1,4 +1,3 @@
-// Package rpc implements Chain Core's RPC client.
 package rpc
 
 import (
@@ -17,10 +16,10 @@ import (
 	"github.com/bytom/net/http/reqid"
 )
 
-// Chain-specific header fields
+// Bytom-specific header fields
 const (
 	HeaderBlockchainID = "Blockchain-ID"
-	HeaderCoreID       = "Chain-Core-ID"
+	HeaderCoreID       = "Bytom-Core-ID"
 	HeaderTimeout      = "RPC-Timeout"
 )
 
@@ -28,7 +27,7 @@ const (
 // the RPC client's blockchain ID.
 var ErrWrongNetwork = errors.New("connected to a peer on a different network")
 
-// A Client is a Chain RPC client. It performs RPCs over HTTP using JSON
+// A Client is a Bytom RPC client. It performs RPCs over HTTP using JSON
 // request and responses. A Client must be configured with a secret token
 // to authenticate with other Cores on the network.
 type Client struct {
@@ -45,7 +44,7 @@ type Client struct {
 }
 
 func (c Client) userAgent() string {
-	return fmt.Sprintf("Chain; process=%s; buildtag=%s; blockchainID=%s",
+	return fmt.Sprintf("Bytom; process=%s; buildtag=%s; blockchainID=%s",
 		c.Username, c.BuildTag, c.BlockchainID)
 }
 

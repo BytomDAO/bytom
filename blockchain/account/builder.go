@@ -8,9 +8,10 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func (m *Manager) NewSpendAction(amt bc.AssetAmount, accountID string, refData chainjson.Map, clientToken *string) txbuilder.Action {
@@ -126,11 +127,11 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	}
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
-	var acct  *signers.Signer
-	if res.Source.AccountID == ""{
+	var acct *signers.Signer
+	if res.Source.AccountID == "" {
 		//TODO coinbase
 		acct = &signers.Signer{}
-	}else{
+	} else {
 		acct, err = a.accounts.findByID(ctx, res.Source.AccountID)
 		if err != nil {
 			return err
@@ -149,7 +150,7 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 	return func() {
 		err := m.utxoDB.Cancel(ctx, rid)
 		if err != nil {
-			log.Error(ctx, err)
+			log.WithField("error", err).Error("Best-effort cancellation attempt to put in txbuilder.BuildResult.Rollback")
 		}
 	}
 }

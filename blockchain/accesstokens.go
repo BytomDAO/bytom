@@ -6,7 +6,6 @@ import (
 
 	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
 	//	"github.com/bytom/net/http/authz"
 	"github.com/bytom/net/http/httpjson"
 )
@@ -24,7 +23,6 @@ func (bcr *BlockchainReactor) createAccessToken(ctx context.Context, x struct{ I
 		return nil, errors.Wrap(err)
 	}
 
-	log.Printf(ctx, "-------createAccessToken-------")
 
 	if x.Type == "" {
 		return token, nil
@@ -81,7 +79,6 @@ func (bcr *BlockchainReactor) listAccessTokens(ctx context.Context, x requestQue
 		return nil, err
 	}
 
-	log.Printf(ctx, "--------listAccessTokens-------")
 
 	outQuery := x
 	outQuery.After = next
@@ -103,7 +100,6 @@ func (bcr *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct{ I
 		return err
 	}
 
-	log.Printf(ctx, "-------deleteAccessToken-------")
 
 	/*	err = a.sdb.Exec(ctx, a.deleteGrantsByAccessToken(x.ID))
 		if err != nil {

@@ -2,24 +2,24 @@
 package account
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
-	"context"
-	"encoding/json"
 
-	"github.com/bytom/log"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol"
-	"github.com/bytom/blockchain/pin"
 	"github.com/golang/groupcache/lru"
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/protocol/vm/vmutil"
+	log "github.com/sirupsen/logrus"
+	dbm "github.com/tendermint/tmlibs/db"
+
+	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
-
-	dbm "github.com/tendermint/tmlibs/db"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 const maxAccountCache = 1000
@@ -29,11 +29,11 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func NewManager(db dbm.DB, chain *protocol.Chain , pinStore *pin.Store) *Manager {
+func NewManager(db dbm.DB, chain *protocol.Chain, pinStore *pin.Store) *Manager {
 	return &Manager{
-		db:     db,
-		chain:  chain,
-		utxoDB: newReserver(db, chain),
+		db:          db,
+		chain:       chain,
+		utxoDB:      newReserver(db, chain, pinStore),
 		pinStore:    pinStore,
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
@@ -43,10 +43,10 @@ func NewManager(db dbm.DB, chain *protocol.Chain , pinStore *pin.Store) *Manager
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	db      dbm.DB
-	chain   *protocol.Chain
-	utxoDB  *reserver
-	indexer Saver
+	db       dbm.DB
+	chain    *protocol.Chain
+	utxoDB   *reserver
+	indexer  Saver
 	pinStore *pin.Store
 
 	cacheMu    sync.Mutex
@@ -72,12 +72,12 @@ func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf(ctx, "Deposed, ExpireReservations exiting")
+			log.Info("Deposed, ExpireReservations exiting")
 			return
 		case <-ticks:
 			err := m.utxoDB.ExpireReservations(ctx)
 			if err != nil {
-				log.Error(ctx, err)
+				log.WithField("error", err).Error("Expire reservations")
 			}
 		}
 	}
@@ -91,16 +91,16 @@ type Account struct {
 
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
-	//if ret := m.db.Get([]byte(alias));ret != nil {
-	//return nil,errors.New("alias already exists")
-	//}
+	if ret := m.db.Get(json.RawMessage("ali" + alias)); ret != nil {
+		return nil, errors.New(fmt.Sprintf("alias:%s already exists", alias))
+	}
 
 	accountSigner, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
-	account_id := json.RawMessage(accountSigner.ID)
+	accountID := json.RawMessage(accountSigner.ID)
 	account := &Account{
 		Signer: accountSigner,
 		Alias:  alias,
@@ -112,8 +112,8 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
 	if len(acc) > 0 {
-		m.db.Set(account_id, acc)
-		m.db.Set(json.RawMessage("ali"+alias), account_id)
+		m.db.Set(accountID, acc)
+		m.db.Set(json.RawMessage("ali"+alias), accountID)
 	}
 
 	err = m.indexAnnotatedAccount(ctx, account)
@@ -132,22 +132,22 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 		return errors.Wrap(ErrBadIdentifier)
 	}
 
-	var key_id []byte
+	var keyID []byte
 	if alias != nil {
-		key_id = m.db.Get([]byte(*alias))
+		keyID = m.db.Get(json.RawMessage("ali" + *alias))
 	} else {
-		key_id = json.RawMessage(*id)
+		keyID = json.RawMessage(*id)
 	}
 
-	bytes := m.db.Get(key_id)
+	bytes := m.db.Get(keyID)
 	if bytes == nil {
-		return errors.New("no exit this account.")
+		return errors.New("no exit this account")
 	}
 
 	var account Account
 	err := json.Unmarshal(bytes, &account)
 	if err != nil {
-		return errors.New("this account can't be unmarshal.")
+		return errors.New("this account can't be unmarshal")
 	}
 
 	for k, v := range tags {
@@ -171,7 +171,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 
 	} else {
 
-		m.db.Set(key_id, acc)
+		m.db.Set(keyID, acc)
 		return nil
 	}
 
@@ -187,15 +187,7 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 	if ok {
 		accountID = cachedID.(string)
 	} else {
-		/*const q = `SELECT account_id FROM accounts WHERE alias=$1`
-		err := m.db.QueryRowContext(ctx, q, alias).Scan(&accountID)
-		if err == stdsql.ErrNoRows {
-			return nil, errors.WithDetailf(pg.ErrUserInputNotFound, "alias: %s", alias)
-		}
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}*/
-		bytez := m.db.Get([]byte(fmt.Sprintf("alias_account:%v", alias)))
+		bytez := m.db.Get([]byte("ali" + alias))
 		accountID = string(bytez[:])
 		m.cacheMu.Lock()
 		m.aliasCache.Add(alias, accountID)
@@ -215,15 +207,14 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 
 	bytes := m.db.Get(json.RawMessage(id))
 	if bytes == nil {
-		return nil,errors.New("not find this account.")
+		return nil, errors.New("not find this account.")
 	}
 
 	var account Account
 	err := json.Unmarshal(bytes, &account)
 	if err != nil {
-		return nil,errors.New("failed unmarshal this account.")
+		return nil, errors.New("failed unmarshal this account.")
 	}
-
 
 	m.cacheMu.Lock()
 	m.cache.Add(id, account.Signer)
@@ -293,17 +284,18 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 	var b32 [32]byte
 	for _, p := range progs {
 
-		acp, err := json.Marshal(&struct{
+		acp, err := json.Marshal(&struct {
 			AccountID      string
 			KeyIndex       uint64
 			ControlProgram []byte
 			Change         bool
-			ExpiresAt      time.Time}{
-			AccountID:		p.accountID,
-			KeyIndex:		p.keyIndex,
-			ControlProgram:	p.controlProgram,
-			Change:			p.change,
-			ExpiresAt:		p.expiresAt})
+			ExpiresAt      time.Time
+		}{
+			AccountID:      p.accountID,
+			KeyIndex:       p.keyIndex,
+			ControlProgram: p.controlProgram,
+			Change:         p.change,
+			ExpiresAt:      p.expiresAt})
 
 		if err != nil {
 			return errors.Wrap(err, "failed marshal controlProgram")
@@ -324,9 +316,9 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	if m.acpIndexNext >= m.acpIndexCap {
 
 		const incrby = 10000 // start 1,increments by 10,000
-		if(m.acpIndexCap <= incrby){
+		if m.acpIndexCap <= incrby {
 			m.acpIndexCap = incrby + 1
-		}else{
+		} else {
 			m.acpIndexCap += incrby
 		}
 		m.acpIndexNext = m.acpIndexCap - incrby
@@ -340,12 +332,8 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 func (m *Manager) QueryAll(ctx context.Context) (interface{}, error) {
 	ret := make([]interface{}, 0)
 
-	iter := m.db.Iterator()
+	iter := m.db.IteratorPrefix([]byte("acc"))
 	for iter.Next() {
-		key := string(iter.Key())
-		if key[:3] != "acc" {
-			continue
-		}
 		ret = append(ret, string(iter.Value()))
 	}
 

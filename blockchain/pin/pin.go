@@ -6,12 +6,12 @@ import (
 	"sort"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+	dbm "github.com/tendermint/tmlibs/db"
+
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
-
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const processorWorkers = 10
@@ -39,12 +39,12 @@ func (s *Store) ProcessBlocks(ctx context.Context, c *protocol.Chain, pinName st
 	for {
 		select {
 		case <-ctx.Done():
-			log.Error(ctx, ctx.Err())
+			log.WithField("err", ctx.Err()).Error("Process blocks, received done signal")
 			return
 		case <-c.BlockWaiter(height + 1):
 			select {
 			case <-ctx.Done():
-				log.Error(ctx, ctx.Err())
+				log.WithField("err", ctx.Err()).Error("Process blocks, received done signal")
 				return
 			case p.sem <- true:
 				go p.processBlock(ctx, c, height+1, cb)
@@ -91,12 +91,10 @@ func (s *Store) LoadAll(ctx context.Context) error {
 		Name   string
 		Height uint64
 	}{}
-	iter := s.DB.Iterator()
+
+	iter := s.DB.IteratorPrefix([]byte("blp"))
 	for iter.Next() {
-		key := string(iter.Key())
-		if key[:3] != "blp" {
-			continue
-		}
+
 		err := json.Unmarshal(iter.Value(), &block_processor)
 		if err != nil {
 			return errors.New("failed unmarshal this block_processor.")
@@ -184,7 +182,7 @@ func (p *pin) processBlock(ctx context.Context, c *protocol.Chain, height uint64
 	for {
 		block, err := c.GetBlock(height)
 		if err != nil {
-			log.Error(ctx, err)
+			log.WithField("error", err).Error("Process block")
 			continue
 		}
 

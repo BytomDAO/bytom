@@ -21,7 +21,7 @@ _cgo_export.*
 
 _testmain.go
 
-cmd/bytom/bytom
+cmd/bytomd/bytomd
 cmd/bytomcli/bytomcli
 cmd/bytom/.bytom
 

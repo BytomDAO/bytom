@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"sync"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"
 	dbm "github.com/tendermint/tmlibs/db"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519"
@@ -18,7 +17,6 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm/vmutil"
-	//"github.com/bytom/log"
 )
 
 const maxAssetCache = 1000
@@ -138,16 +136,6 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		reg.db.Set(asset_id, json.RawMessage(ass))
 	}
 
-	/*	asset, err = reg.insertAsset(ctx, asset, clientToken)
-		if err != nil {
-			return nil, errors.Wrap(err, "inserting asset")
-		}
-
-		err = insertAssetTags(ctx, reg.db, asset.AssetID, tags)
-		if err != nil {
-			return nil, errors.Wrap(err, "inserting asset tags")
-		}
-	*/
 	err = reg.indexAnnotatedAsset(ctx, asset)
 	if err != nil {
 		return nil, errors.Wrap(err, "indexing annotated asset")
@@ -194,20 +182,6 @@ func (reg *Registry) UpdateTags(ctx context.Context, id, alias *string, tags map
 
 	asset.Tags = tags
 
-	// Perform persistent updates
-	/*
-		err = insertAssetTags(ctx, reg.db, asset.AssetID, asset.Tags)
-		if err != nil {
-			return errors.Wrap(err, "inserting asset tags")
-		}
-
-		err = reg.indexAnnotatedAsset(ctx, asset)
-		if err != nil {
-			return errors.Wrap(err, "update asset index")
-		}
-	*/
-	// Revise cache
-
 	reg.cacheMu.Lock()
 	reg.cache.Add(asset.AssetID, asset)
 	reg.cacheMu.Unlock()
@@ -237,7 +211,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 	}
 
 	reg.cacheMu.Lock()
-	reg.cache.Add(id, asset)
+	reg.cache.Add(id, &asset)
 	reg.cacheMu.Unlock()
 	return &asset, nil
 }
@@ -254,8 +228,6 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	}
 
 	untypedAsset, err := reg.aliasGroup.Do(alias, func() (interface{}, error) {
-		//		asset, err := assetQuery(ctx, reg.db, "assets.alias=$1", alias)
-		//		return asset, err
 		return nil, nil
 	})
 
@@ -285,149 +257,6 @@ func (reg *Registry) QueryAll(ctx context.Context) (interface{}, error) {
 	return ret, nil
 }
 
-// insertAsset adds the asset to the database. If the asset has a client token,
-// and there already exists an asset with that client token, insertAsset will
-// lookup and return the existing asset instead.
-/*
-func (reg *Registry) insertAsset(ctx context.Context, asset *Asset, clientToken string) (*Asset, error) {
-	const q = `
-		INSERT INTO assets
-			(id, alias, signer_id, initial_block_hash, vm_version, issuance_program, definition, client_token)
-		VALUES($1::bytea, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (client_token) DO NOTHING
-		RETURNING sort_id
-  `
-	var signerID sql.NullString
-	if asset.Signer != nil {
-		signerID = sql.NullString{Valid: true, String: asset.Signer.ID}
-	}
-
-	nullToken := sql.NullString{
-		String: clientToken,
-		Valid:  clientToken != "",
-	}
-
-	err := reg.db.QueryRowContext(
-		ctx, q,
-		asset.AssetID, asset.Alias, signerID,
-		asset.InitialBlockHash, asset.VMVersion, asset.IssuanceProgram,
-		asset.rawDefinition, nullToken,
-	).Scan(&asset.sortID)
-
-	if pg.IsUniqueViolation(err) {
-		return nil, errors.WithDetail(ErrDuplicateAlias, "an asset with the provided alias already exists")
-	} else if err == sql.ErrNoRows && clientToken != "" {
-		// There is already an asset with the provided client
-		// token. We should return the existing asset.
-		asset, err = assetByClientToken(ctx, reg.db, clientToken)
-		if err != nil {
-			return nil, errors.Wrap(err, "retrieving existing asset")
-		}
-	} else if err != nil {
-		return nil, errors.Wrap(err)
-	}
-	return asset, nil
-}
-
-// insertAssetTags inserts a set of tags for the given assetID.
-// It must take place inside a database transaction.
-
-func insertAssetTags(ctx context.Context, db pg.DB, assetID bc.AssetID, tags map[string]interface{}) error {
-	tagsParam, err := mapToNullString(tags)
-	if err != nil {
-		return errors.Wrap(err)
-	}
-
-	const q = `
-		INSERT INTO asset_tags (asset_id, tags) VALUES ($1, $2)
-		ON CONFLICT (asset_id) DO UPDATE SET tags = $2
-	`
-	_, err = db.ExecContext(ctx, q, assetID, tagsParam)
-	if err != nil {
-		return errors.Wrap(err)
-	}
-
-	return nil
-}
-
-// assetByClientToken loads an asset from the database using its client token.
-
-func assetByClientToken(ctx context.Context, db pg.DB, clientToken string) (*Asset, error) {
-	return assetQuery(ctx, db, "assets.client_token=$1", clientToken)
-}
-
-func assetQuery(ctx context.Context, db pg.DB, pred string, args ...interface{}) (*Asset, error) {
-	const baseQ = `
-		SELECT assets.id, assets.alias, assets.vm_version, assets.issuance_program, assets.definition,
-			assets.initial_block_hash, assets.sort_id,
-			signers.id, COALESCE(signers.type, ''), COALESCE(signers.xpubs, '{}'),
-			COALESCE(signers.quorum, 0), COALESCE(signers.key_index, 0),
-			asset_tags.tags
-		FROM assets
-		LEFT JOIN signers ON signers.id=assets.signer_id
-		LEFT JOIN asset_tags ON asset_tags.asset_id=assets.id
-		WHERE %s
-		LIMIT 1
-	`
-
-	var (
-		a          Asset
-		alias      sql.NullString
-		signerID   sql.NullString
-		signerType string
-		quorum     int
-		keyIndex   uint64
-		xpubs      [][]byte
-		tags       []byte
-	)
-	err := db.QueryRowContext(ctx, fmt.Sprintf(baseQ, pred), args...).Scan(
-		&a.AssetID,
-		&a.Alias,
-		&a.VMVersion,
-		&a.IssuanceProgram,
-		&a.rawDefinition,
-		&a.InitialBlockHash,
-		&a.sortID,
-		&signerID,
-		&signerType,
-		(*pq.ByteaArray)(&xpubs),
-		&quorum,
-		&keyIndex,
-		&tags,
-	)
-	if err == sql.ErrNoRows {
-		return nil, pg.ErrUserInputNotFound
-	} else if err != nil {
-		return nil, err
-	}
-
-	if signerID.Valid {
-		a.Signer, err = signers.New(signerID.String, signerType, xpubs, quorum, keyIndex)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if alias.Valid {
-		a.Alias = &alias.String
-	}
-
-	if len(tags) > 0 {
-		err := json.Unmarshal(tags, &a.Tags)
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}
-	}
-	if len(a.rawDefinition) > 0 {
-		// ignore errors; non-JSON asset definitions can still end up
-		// on the blockchain from non-Chain Core clients.
-		_ = json.Unmarshal(a.rawDefinition, &a.definition)
-	}
-
-	return &a, nil
-
-}
-*/
 // serializeAssetDef produces a canonical byte representation of an asset
 // definition. Currently, this is implemented using pretty-printed JSON.
 // As is the standard for Go's map[string] serialization, object keys will
@@ -451,17 +280,3 @@ func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int) (progra
 	prog, err := builder.Build()
 	return prog, 1, err
 }
-
-/*
-func mapToNullString(in map[string]interface{}) (*sql.NullString, error) {
-	var mapJSON []byte
-	if len(in) != 0 {
-		var err error
-		mapJSON, err = json.Marshal(in)
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}
-	}
-	return &sql.NullString{String: string(mapJSON), Valid: len(mapJSON) > 0}, nil
-}
-*/

@@ -8,7 +8,6 @@ import (
 
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/reqid"
 )
@@ -18,7 +17,6 @@ func (a *BlockchainReactor) createControlProgram(ctx context.Context, ins []stru
 	Type   string
 	Params stdjson.RawMessage
 }) interface{} {
-	log.Printf(ctx, "-------create-control-program-------")
 	responses := make([]interface{}, len(ins))
 	var wg sync.WaitGroup
 	wg.Add(len(responses))
