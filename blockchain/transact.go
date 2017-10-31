@@ -255,7 +255,7 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 			return 0, ctx.Err()
 
 		case <-a.chain.BlockWaiter(height):
-			b, err := a.chain.GetBlock(height)
+			b, err := a.chain.GetBlockByHeight(height)
 			if err != nil {
 				return 0, errors.Wrap(err, "getting block that just landed")
 			}
@@ -311,7 +311,7 @@ func (a *BlockchainReactor) submit(ctx context.Context, x SubmitArg) (interface{
 			defer batchRecover(subctx, &responses[i])
 
 			tx, err := a.submitSingle(subctx, &x.Transactions[i], x.WaitUntil)
-			log.WithFields(log.Fields{"err": err, "tx": tx}).Error("submitSingle failed")
+			log.WithFields(log.Fields{"err": err, "tx": tx}).Info("submit single tx")
 			if err != nil {
 				responses[i] = err
 			} else {

@@ -6,10 +6,10 @@ import (
 	"sort"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -39,12 +39,12 @@ func (s *Store) ProcessBlocks(ctx context.Context, c *protocol.Chain, pinName st
 	for {
 		select {
 		case <-ctx.Done():
-			log.Error(ctx, ctx.Err())
+			log.WithField("err", ctx.Err()).Error("Process blocks, received done signal")
 			return
 		case <-c.BlockWaiter(height + 1):
 			select {
 			case <-ctx.Done():
-				log.Error(ctx, ctx.Err())
+				log.WithField("err", ctx.Err()).Error("Process blocks, received done signal")
 				return
 			case p.sem <- true:
 				go p.processBlock(ctx, c, height+1, cb)
@@ -180,9 +180,9 @@ func (p *pin) getHeight() uint64 {
 func (p *pin) processBlock(ctx context.Context, c *protocol.Chain, height uint64, cb func(context.Context, *legacy.Block) error) {
 	defer func() { <-p.sem }()
 	for {
-		block, err := c.GetBlock(height)
+		block, err := c.GetBlockByHeight(height)
 		if err != nil {
-			log.Error(ctx, err)
+			log.WithField("error", err).Error("Process block")
 			continue
 		}
 

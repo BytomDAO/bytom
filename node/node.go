@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strings"
 	"sync"
@@ -16,7 +17,6 @@ import (
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
-	_ "net/http/pprof"
 
 	bc "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/account"
@@ -27,14 +27,12 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/env"
-	"github.com/bytom/errors"
-	bytomlog "github.com/bytom/log"
-	"github.com/bytom/net/http/reqid"
-	p2p "github.com/bytom/p2p"
+	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/types"
 	"github.com/bytom/version"
+	"github.com/bytom/errors"
 )
 
 const (
@@ -53,9 +51,7 @@ type Node struct {
 	sw       *p2p.Switch           // p2p connections
 	addrBook *p2p.AddrBook         // known peers
 
-	// services
-	evsw types.EventSwitch // pub/sub for services
-	//    blockStore       *bc.MemStore
+	evsw       types.EventSwitch // pub/sub for services
 	blockStore *txdb.Store
 	bcReactor  *bc.BlockchainReactor
 	accounts   *account.Manager
@@ -122,7 +118,6 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 
 	var handler http.Handler = mux
 	handler = RedirectHandler(handler)
-	handler = reqid.Handler(handler)
 
 	secureheader.DefaultConfig.PermitClearLoopback = true
 	secureheader.DefaultConfig.HTTPSRedirect = false
@@ -146,8 +141,9 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	// it's blocking and we need to proceed to the rest of the core setup after
 	// we call it.
 	go func() {
-		err := server.Serve(listener)
-		bytomlog.Fatalkv(context.Background(), bytomlog.KeyError, errors.Wrap(err, "Serve"))
+		if err := server.Serve(listener); err != nil {
+			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
+		}
 	}()
 	coreHandler.Set(h)
 }
@@ -170,8 +166,6 @@ func NewNode(config *cfg.Config) *Node {
 
 	sw := p2p.NewSwitch(config.P2P)
 
-	fastSync := config.FastSync
-
 	genesisBlock := &legacy.Block{
 		BlockHeader:  legacy.BlockHeader{},
 		Transactions: []*legacy.Tx{},
@@ -179,11 +173,17 @@ func NewNode(config *cfg.Config) *Node {
 	genesisBlock.UnmarshalText(consensus.InitBlock())
 
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(ctx, genesisBlock.Hash(), store, txPool, nil)
+	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
+	}
 
-	if store.Height() < 1 {
-		if err := chain.AddBlock(nil, genesisBlock); err != nil {
-			cmn.Exit(cmn.Fmt("Failed to add genesisBlock to Chain: %v", err))
+	if chain.Height() == 0 {
+		if err := chain.SaveBlock(genesisBlock); err != nil {
+			cmn.Exit(cmn.Fmt("Failed to save genesisBlock to store: %v", err))
+		}
+		if err := chain.ConnectBlock(genesisBlock); err != nil {
+			cmn.Exit(cmn.Fmt("Failed to connect genesisBlock to chain: %v", err))
 		}
 	}
 
@@ -195,22 +195,20 @@ func NewNode(config *cfg.Config) *Node {
 		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
 		accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
 		pinStore = pin.NewStore(accUTXODB)
-		err = pinStore.LoadAll(ctx)
-		if err != nil {
-			bytomlog.Error(ctx, err)
+		if err = pinStore.LoadAll(ctx); err != nil {
+			log.WithField("error", err).Error("load pin store")
 			return nil
 		}
 
-		pinHeight := store.Height()
+		pinHeight := chain.Height()
 		if pinHeight > 0 {
 			pinHeight = pinHeight - 1
 		}
 
 		pins := []string{account.PinName, account.DeleteSpentsPinName}
 		for _, p := range pins {
-			err = pinStore.CreatePin(ctx, p, pinHeight)
-			if err != nil {
-				bytomlog.Fatalkv(ctx, bytomlog.KeyError, err)
+			if err = pinStore.CreatePin(ctx, p, pinHeight); err != nil {
+				log.WithField("error", err).Error("Create pin")
 			}
 		}
 
@@ -236,16 +234,7 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
-	bcReactor := bc.NewBlockchainReactor(
-		store,
-		chain,
-		txPool,
-		accounts,
-		assets,
-		sw,
-		hsm,
-		fastSync,
-		pinStore)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, pinStore)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 

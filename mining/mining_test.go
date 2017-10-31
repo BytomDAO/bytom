@@ -9,13 +9,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
 )
 
 func TestNewInitBlock(t *testing.T) {
-	coinbaseTx, err := createCoinbaseTx(0, 0, []byte{})
+	coinbaseTx, err := createCoinbaseTx(0, 1, []byte{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -31,17 +32,25 @@ func TestNewInitBlock(t *testing.T) {
 	b := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
 			Version:           1,
-			Height:            0,
+			Height:            1,
 			PreviousBlockHash: bc.Hash{},
 			TimestampMS:       bc.Millis(time.Now()),
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 				AssetsMerkleRoot:       snap.Tree.RootHash(),
 			},
-			Bits:  uint64(3314649325747331761),
-			Nonce: 0,
+			Bits: uint64(2161727821138738707),
 		},
 		Transactions: []*legacy.Tx{coinbaseTx},
+	}
+
+	for i := uint64(0); i <= 10000000000000; i++ {
+		b.Nonce = i
+		hash := b.Hash()
+
+		if consensus.CheckProofOfWork(&hash, b.Bits) {
+			break
+		}
 	}
 
 	rawBlock, err := b.MarshalText()

@@ -7,15 +7,8 @@ import (
 	"net/http"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
 	"github.com/bytom/net/http/httpjson"
-	"github.com/bytom/net/http/reqid"
 )
-
-func init() {
-	log.SkipFunc("chain/net/http/httperror.Formatter.Log")
-	log.SkipFunc("chain/net/http/httperror.Formatter.Write")
-}
 
 // Info contains a set of error codes to send to the user.
 type Info struct {
@@ -71,29 +64,6 @@ func (f Formatter) Format(err error) (body Response) {
 //
 // Write may be used as an ErrorWriter in the httpjson package.
 func (f Formatter) Write(ctx context.Context, w http.ResponseWriter, err error) {
-	f.Log(ctx, err)
 	resp := f.Format(err)
 	httpjson.Write(ctx, w, resp.HTTPStatus, resp)
-}
-
-// Log writes a structured log entry to the chain/log logger with
-// information about the error and the HTTP response.
-func (f Formatter) Log(ctx context.Context, err error) {
-	var errorMessage string
-	if err != nil {
-		// strip the stack trace, if there is one
-		errorMessage = err.Error()
-	}
-
-	resp := f.Format(err)
-	keyvals := []interface{}{
-		"status", resp.HTTPStatus,
-		"bytomcode", resp.ChainCode,
-		"path", reqid.PathFromContext(ctx),
-		log.KeyError, errorMessage,
-	}
-	if resp.HTTPStatus == 500 {
-		keyvals = append(keyvals, log.KeyStack, errors.Stack(err))
-	}
-	log.Printkv(ctx, keyvals...)
 }
