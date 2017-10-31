@@ -1,7 +1,6 @@
 package node
 
 import (
-	"chain/errors"
 	"context"
 	"crypto/tls"
 	"net"
@@ -33,6 +32,7 @@ import (
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/types"
 	"github.com/bytom/version"
+	"github.com/bytom/errors"
 )
 
 const (

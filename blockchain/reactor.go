@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"blockchain/blockchain/rpc"
 	"context"
 	"fmt"
 	"net/http"
@@ -16,6 +15,7 @@ import (
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/rpc"
 	ctypes "github.com/bytom/blockchain/rpc/types"
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/encoding/json"
