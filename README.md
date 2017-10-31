@@ -20,6 +20,7 @@ Bytom
     * [Expenditure test](#expenditure-test)
   * [Set up a wallet and manage the key](#set-up-a-wallet-and-manage-the-key)
   * [Multiple node](#multiple-node)
+* [Running Bytom in Docker](#running-bytom-in-docker)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -208,8 +209,16 @@ $ ./test.sh bytomd1  # Start the second node
 Then we have two nodes:
 
 ```bash
-$ ./bycomcli net-info
+$ ./bytomcli net-info
 net-info:map[listening:true listeners:[Listener(@192.168.199.43:3332)] peers:[map[node_info:map[listen_addr:192.168.199.43:3333 version:0.1.2 other:[wire_version=0.6.2 p2p_version=0.5.0] pub_key:D6B76D1B4E9D7E4D81BA5FAAE9359302446488495A29D7E70AF84CDFEA186D66 moniker:anonymous network:bytom remote_addr:127.0.0.1:51036] is_outbound:false connection_status:map[RecvMonitor:map[Start:2017-10-30T13:45:47.18+08:00 Bytes:425130 AvgRate:27010 Progress:0 Active:true Idle:1.04e+09 Samples:42 InstRate:4591 CurRate:3540 PeakRate:114908 BytesRem:0 TimeRem:0 Duration:1.574e+10] Channels:[map[RecentlySent:5332 ID:64 SendQueueCapacity:100 SendQueueSize:0 Priority:5]] SendMonitor:map[Active:true Idle:1.24e+09 Bytes:16240 Samples:41 CurRate:125 AvgRate:1032 Progress:0 Start:2017-10-30T13:45:47.18+08:00 Duration:1.574e+10 InstRate:147 PeakRate:4375 BytesRem:0 TimeRem:0]]]]]
+```
+
+## Running Bytom in Docker
+
+Ensure your [Docker](https://www.docker.com/) version is 17.05 or higher.
+
+```bash
+$ docker build -t bytom .
 ```
 
 ## Contributing
