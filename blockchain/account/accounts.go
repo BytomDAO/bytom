@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/golang/groupcache/lru"
-	dbm "github.com/tendermint/tmlibs/db"
 	log "github.com/sirupsen/logrus"
+	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/signers"

@@ -105,3 +105,38 @@ func (s *Snapshot) ApplyTx(tx *bc.Tx) error {
 	}
 	return nil
 }
+
+func (s *Snapshot) DetachBlock(block *bc.Block) error {
+	for i, tx := range block.Transactions {
+		err := s.DetachTx(tx)
+		if err != nil {
+			return errors.Wrapf(err, "detachTx block transaction %d", i)
+		}
+	}
+	return nil
+}
+
+func (s *Snapshot) DetachTx(tx *bc.Tx) error {
+	for _, n := range tx.NonceIDs {
+		delete(s.Nonces, n)
+	}
+
+	for _, prevout := range tx.SpentOutputIDs {
+		if s.Tree.Contains(prevout.Bytes()) {
+			return fmt.Errorf("invalid prevout %x", prevout.Bytes())
+		}
+		if err := s.Tree.Insert(prevout.Bytes()); err != nil {
+			return err
+		}
+	}
+
+	for _, id := range tx.TxHeader.ResultIds {
+		e := tx.Entries[*id]
+		if _, ok := e.(*bc.Output); !ok {
+			continue
+		}
+
+		s.Tree.Delete(id.Bytes())
+	}
+	return nil
+}

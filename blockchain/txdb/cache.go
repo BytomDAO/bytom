@@ -3,18 +3,18 @@ package txdb
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
-
-	"github.com/bytom/protocol/bc/legacy"
 
 	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"
+
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 const maxCachedBlocks = 30
 
-func newBlockCache(fillFn func(height uint64) *legacy.Block) blockCache {
+func newBlockCache(fillFn func(hash *bc.Hash) *legacy.Block) blockCache {
 	return blockCache{
 		lru:    lru.New(maxCachedBlocks),
 		fillFn: fillFn,
@@ -22,26 +22,21 @@ func newBlockCache(fillFn func(height uint64) *legacy.Block) blockCache {
 }
 
 type blockCache struct {
-	mu  sync.Mutex
-	lru *lru.Cache
-
-	fillFn func(height uint64) *legacy.Block
-
-	single singleflight.Group // for cache misses
+	mu     sync.Mutex
+	lru    *lru.Cache
+	fillFn func(hash *bc.Hash) *legacy.Block
+	single singleflight.Group
 }
 
-func (c *blockCache) lookup(height uint64) (*legacy.Block, error) {
-	b, ok := c.get(height)
-	if ok {
+func (c *blockCache) lookup(hash *bc.Hash) (*legacy.Block, error) {
+	if b, ok := c.get(hash); ok {
 		return b, nil
 	}
 
-	// Cache miss; fill the block
-	heightStr := strconv.FormatUint(height, 16)
-	block, err := c.single.Do(heightStr, func() (interface{}, error) {
-		b := c.fillFn(height)
+	block, err := c.single.Do(hash.String(), func() (interface{}, error) {
+		b := c.fillFn(hash)
 		if b == nil {
-			return nil, errors.New(fmt.Sprintf("There are no block with block height is %v", height))
+			return nil, errors.New(fmt.Sprintf("There are no block with given hash %s", hash.String()))
 		}
 
 		c.add(b)
@@ -53,9 +48,9 @@ func (c *blockCache) lookup(height uint64) (*legacy.Block, error) {
 	return block.(*legacy.Block), nil
 }
 
-func (c *blockCache) get(height uint64) (*legacy.Block, bool) {
+func (c *blockCache) get(hash *bc.Hash) (*legacy.Block, bool) {
 	c.mu.Lock()
-	block, ok := c.lru.Get(height)
+	block, ok := c.lru.Get(hash)
 	c.mu.Unlock()
 	if block == nil {
 		return nil, ok
@@ -65,6 +60,6 @@ func (c *blockCache) get(height uint64) (*legacy.Block, bool) {
 
 func (c *blockCache) add(block *legacy.Block) {
 	c.mu.Lock()
-	c.lru.Add(block.Height, block)
+	c.lru.Add(block.Hash(), block)
 	c.mu.Unlock()
 }

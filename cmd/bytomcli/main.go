@@ -85,6 +85,7 @@ var commands = map[string]*command{
 	"delete-key":              {deleteKey},
 	"sign-transactions":       {signTransactions},
 	"sub-create-issue-tx":     {submitCreateIssueTransaction},
+	"sub-spend-account-tx":    {submitSpendTransaction},
 	"reset-password":          {resetPassword},
 	"update-alias":            {updateAlias},
 	"net-info":                {netInfo},
@@ -249,7 +250,6 @@ func dieOnRPCError(err error, prefixes ...interface{}) {
 	if err == nil {
 		return
 	}
-
 
 	if len(prefixes) > 0 {
 		fmt.Fprintln(os.Stderr, prefixes...)
@@ -520,8 +520,8 @@ func buildTransaction(client *rpc.Client, args []string) {
 }
 
 func submitCreateIssueTransaction(client *rpc.Client, args []string) {
-	if len(args) != 4 {
-		fatalln("error: need args: [account id] [asset id] [asset xprv] [issue amount]")
+	if len(args) != 5 {
+		fatalln("error: need args: [account1 id] [account2 id] [asset id] [asset xprv] [issue amount]")
 	}
 	// Build Transaction.
 	fmt.Printf("To build transaction:\n")
@@ -535,9 +535,11 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 				"reference_data":{}
 			},
 			{"type": "issue", "asset_id": "%s", "amount": %s},
-			{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
+			{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"},
+			{"type": "control_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 8888888888, "account_id": "%s"},
+			{"type": "control_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 8888888888, "account_id": "%s"}
 		]}`
-	buildReqStr := fmt.Sprintf(buildReqFmt, args[1], args[3], args[1], args[3], args[0])
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[2], args[4], args[2], args[4], args[0], args[0], args[1])
 	var buildReq blockchain.BuildRequest
 	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
@@ -552,8 +554,8 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 	fmt.Printf("----------issue inputs:%v\n", tpl[0].Transaction.Inputs[1])
 
 	var xprv_asset chainkd.XPrv
-	fmt.Printf("xprv_asset:%v\n", args[2])
-	xprv_asset.UnmarshalText([]byte(args[2]))
+	fmt.Printf("xprv_asset:%v\n", args[3])
+	xprv_asset.UnmarshalText([]byte(args[3]))
 	// sign-transaction
 	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprv_asset.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
 		derived := xprv_asset.Derive(path)
@@ -569,6 +571,61 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 	// submit-transaction
 	var submitResponse interface{}
 	submitArg := blockchain.SubmitArg{tpl, json.Duration{time.Duration(1000000)}, "none"}
+	client.Call(context.Background(), "/submit-transaction", submitArg, &submitResponse)
+	fmt.Printf("submit transaction:%v\n", submitResponse)
+}
+
+func submitSpendTransaction(client *rpc.Client, args []string) {
+	if len(args) != 5 {
+		fatalln("error: need args: [account1 id] [account2 id] [asset id] [account1 xprv] [spend amount]")
+	}
+
+	var xprvAccount1 chainkd.XPrv
+
+	err := xprvAccount1.UnmarshalText([]byte(args[3]))
+	if err == nil {
+		fmt.Printf("xprv:%v\n", xprvAccount1)
+	} else {
+		fmt.Printf("xprv unmarshal error:%v\n", xprvAccount1)
+	}
+	// Build Transaction-Spend_account
+	fmt.Printf("To build transaction:\n")
+	buildReqFmt := `
+		{"actions": [
+			{"type": "spend_account", "asset_id": "%s", "amount": %s, "account_id": "%s"},
+			{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":20000000, "account_id": "%s"},
+			{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
+	]}`
+
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[2], args[4], args[0], args[0], args[2], args[4], args[1])
+
+	var buildReq blockchain.BuildRequest
+	err = stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	tpl := make([]txbuilder.Template, 1)
+	client.Call(context.Background(), "/build-transaction", []*blockchain.BuildRequest{&buildReq}, &tpl)
+	fmt.Printf("tpl:%v\n", tpl)
+
+	// sign-transaction-Spend_account
+	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprvAccount1.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
+		derived := xprvAccount1.Derive(path)
+		return derived.Sign(data[:]), nil
+	})
+	if err != nil {
+		fmt.Printf("sign-transaction error. err:%v\n", err)
+		os.Exit(0)
+	}
+
+	fmt.Printf("sign tpl:%v\n", tpl[0])
+	fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
+	fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
+
+	// submit-transaction-Spend_account
+	var submitResponse interface{}
+	submitArg := blockchain.SubmitArg{Transactions: tpl, Wait: json.Duration{Duration: time.Duration(1000000)}, WaitUntil: "none"}
 	client.Call(context.Background(), "/submit-transaction", submitArg, &submitResponse)
 	fmt.Printf("submit transaction:%v\n", submitResponse)
 }
@@ -953,25 +1010,44 @@ func listKeys(client *rpc.Client, args []string) {
 }
 
 func signTransactions(client *rpc.Client, args []string) {
-	if len(args) != 3 {
-		fatalln("error: signTransaction need args: [tpl file name] [xPub] [password], 3 args not equal ", len(args))
-	}
+
 	// sign-transaction
 	type param struct {
 		Auth  string
 		Txs   []*txbuilder.Template `json:"transactions"`
-		XPubs []chainkd.XPub        `json:"xpubs"`
+		XPubs chainkd.XPub          `json:"xpubs"`
+		XPrv  chainkd.XPrv          `json:"xprv"`
 	}
+
 	var in param
-	in.Auth = args[2]
+	var xprv chainkd.XPrv
 	var xpub chainkd.XPub
-	err := xpub.UnmarshalText([]byte(args[1]))
-	if err == nil {
-		fmt.Printf("xpub:%v\n", xpub)
+	var err error
+
+	if len(args) == 3 {
+		err = xpub.UnmarshalText([]byte(args[1]))
+		if err == nil {
+			fmt.Printf("xpub:%v\n", xpub)
+		} else {
+			fmt.Printf("xpub unmarshal error:%v\n", xpub)
+		}
+		in.XPubs = xpub
+		in.Auth = args[2]
+
+	} else if len(args) == 2 {
+		err = xprv.UnmarshalText([]byte(args[1]))
+		if err == nil {
+			fmt.Printf("xprv:%v\n", xprv)
+		} else {
+			fmt.Printf("xprv unmarshal error:%v\n", xprv)
+		}
+		in.XPrv = xprv
+
 	} else {
-		fmt.Printf("xpub unmarshal error:%v\n", xpub)
+		fatalln("error: signTransaction need args: [tpl file name] [xPub] [password], 3 args not equal"+
+			"or [tpl file name] [xPrv], 2 args not equal ", len(args))
 	}
-	in.XPubs = []chainkd.XPub{xpub}
+
 	var tpl txbuilder.Template
 	file, _ := os.Open(args[0])
 	tpl_byte := make([]byte, 10000)

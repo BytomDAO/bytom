@@ -6,8 +6,8 @@ import (
 	"sort"
 	"sync"
 
-	dbm "github.com/tendermint/tmlibs/db"
 	log "github.com/sirupsen/logrus"
+	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
@@ -180,7 +180,7 @@ func (p *pin) getHeight() uint64 {
 func (p *pin) processBlock(ctx context.Context, c *protocol.Chain, height uint64, cb func(context.Context, *legacy.Block) error) {
 	defer func() { <-p.sem }()
 	for {
-		block, err := c.GetBlock(height)
+		block, err := c.GetBlockByHeight(height)
 		if err != nil {
 			log.WithField("error", err).Error("Process block")
 			continue
