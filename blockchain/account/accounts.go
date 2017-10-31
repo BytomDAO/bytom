@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang/groupcache/lru"
+	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/pin"
@@ -17,7 +18,6 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/vm/vmutil"
 )
@@ -72,12 +72,12 @@ func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Printf(ctx, "Deposed, ExpireReservations exiting")
+			log.Info("Deposed, ExpireReservations exiting")
 			return
 		case <-ticks:
 			err := m.utxoDB.ExpireReservations(ctx)
 			if err != nil {
-				log.Error(ctx, err)
+				log.WithField("error", err).Error("Expire reservations")
 			}
 		}
 	}

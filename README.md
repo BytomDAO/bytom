@@ -1,6 +1,6 @@
 Bytom
 =====
-[![Build Status](https://travis-ci.org/Bytom/bytom.png)](https://travis-ci.org/Bytom/bytom)
+[![Build Status](https://travis-ci.org/Bytom/bytom.svg)](https://travis-ci.org/Bytom/bytom)
 [![AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-brightgreen.svg)](./LICENSE)
 
 ## Table of Contents
@@ -14,7 +14,10 @@ Bytom
     * [Build](#build)
 * [Example](#example)
   * [Create and launch a single node](#create-and-launch-a-single-node)
+    * [Create an account](#create-an-account)
+    * [Create an asset](#create-an-asset)
     * [Asset issuance test](#asset-issuance-test)
+    * [Expenditure test](#expenditure-test)
   * [Set up a wallet and manage the key](#set-up-a-wallet-and-manage-the-key)
   * [Multiple node](#multiple-node)
 * [Contributing](#contributing)
@@ -30,6 +33,7 @@ In the current state `bytom` is able to:
 
 - Issue assets
 - Manage account as well as asset
+- Spend assets
 
 ## Build from source
 
@@ -76,7 +80,7 @@ Currently, bytom is still in active development and a ton of work needs to be do
 
 ### Create and launch a single node
 
-When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytomd` and `cmd/bytomcli`, respectively. The next step is to initialize the node:
+When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytomd` and `cmd/bytomcli` directory, respectively. The next step is to initialize the node:
 
 ```bash
 $ cd ./cmd/bytomd
@@ -89,8 +93,6 @@ After that, you'll see `.bytom` generated in current directory, then launch the 
 $ ./bytomd node --wallet.enable
 ```
 
-#### Asset issuance test
-
 Given the `bytom` node is running, the general workflow is as follows:
 
 - create an account
@@ -98,45 +100,83 @@ Given the `bytom` node is running, the general workflow is as follows:
 - create/sign/submit a transaction to transfer an asset
 - query the assets on-chain
 
+
+#### Create an account
+
 Create an account named `alice`:
 
 ```bash
 $ ./bytomcli create-account alice
 xprv:<alice_account_private_key>
-responses:{acc04K9MCFBG0A04 alice [0xc4200966e0] 1 0xc4204be220}
+responses:<create-account-responses>
 account id:<alice_account_id>
 ```
+
+Check out the new created account:
+
+```bash
+$ ./bytomcli list-accounts
+```
+
+#### Create an asset
 
 Create an asset named `gold`:
 
 ```bash
 $ ./bytomcli create-asset gold
 xprv:<gold_asset_private_key>
-xpub:[98 55 100 48 102 100 53 101 54 55 55 49 48 52 97 100 50 100 51 51 98 49 56 98 98 100 55 55 50 51 98 53 102 51 101 97 56 55 49 52 48 53 57 54 50 56 55 48 49 97 50 99 97 100 101 51 51 102 100 100 97 53 56 51 49 54 97 50 57 54 101 49 102 100 48 102 53 57 99 55 50 49 53 98 50 54 55 102 50 52 102 52 54 50 48 101 51 48 102 55 99 51 50 56 49 102 97 52 99 55 97 53 102 50 57 97 100 53 51 100 56 100 55 56 50 50 98 98]
-responses:[{{4131000809721133708 15036469059929217352 9712753415038655527 16992088508821480533} gold [118 107 170 32 152 106 231 249 212 15 215 121 94 191 102 23 231 61 38 211 121 176 221 199 48 173 145 207 243 201 82 0 215 2 72 243 81 81 173 105 108 0 192] [0xc420020850] 1 0xc4204c1960 0xc4204c1980 true}]
+xpub:<gold_asset_public_key>
+responses:<create-asset-responses>
 asset id:<gold_asset_id>
 ```
 
-Now we can transafer `<gold_asset_amount>` gold to `alice` using a single command `sub-create-issue-tx`:
+Check out the new created asset:
 
 ```bash
-$ ./bytomcli sub-create-issue-tx <alice_account_id> <gold_asset_id> <asset_private_key> <gold_asset_amount>
-To build transaction:
------------tpl:{version:1 serialized_size:314 result_ids:<71c3b949750c887e466422007cdd1a6a9f3449e3bacd43307e361e84d76fe37b> data:<130994550772:/* unknown wire type 7 */ 1642:/* unknown wire type 7 */ 10:17681930801800169409 159728:7652 9:4897805654558278394 9:/* unexpected EOF */ >min_time_ms:1506587706078 max_time_ms:1506588006078  [0xc4204c9060 0xc4204c91e0] true false}
-----------tpl transaction:version:1 serialized_size:314 result_ids:<71c3b949750c887e466422007cdd1a6a9f3449e3bacd43307e361e84d76fe37b> data:<130994550772:/* unknown wire type 7 */ 1642:/* unknown wire type 7 */ 10:17681930801800169409 159728:7652 9:4897805654558278394 9:/* unexpected EOF */ >min_time_ms:1506587706078 max_time_ms:1506588006078 
-----------btm inputs:&{1 [123 125] asset_id:</* proto: integer overflow */ >amount:1470000000000000000  [] []}
-----------issue inputs:&{1 [] 0xc4204c4120 [] []}
-xprv_asset:a89d5d5fa68af8ca8408d405db180bc5b2652d7f34bca753531861be3c1cbb6216a296e1fd0f59c7215b267f24f4620e30f7c3281fa4c7a5f29ad53d8d7822bb
-sign tpl:{version:1 serialized_size:314 result_ids:<71c3b949750c887e466422007cdd1a6a9f3449e3bacd43307e361e84d76fe37b> data:<130994550772:/* unknown wire type 7 */ 1642:/* unknown wire type 7 */ 10:17681930801800169409 159728:7652 9:4897805654558278394 9:/* unexpected EOF */ >min_time_ms:1506587706078 max_time_ms:1506588006078  [0xc4204c9060 0xc4204c91e0] true false}
-sign tpl's SigningInstructions:&{0 [0xc420010670]}
-SigningInstructions's SignatureWitnesses:&{0 [] [32 254 83 225 251 124 27 13 126 32 0 93 132 151 197 166 125 64 222 168 154 133 219 122 187 130 169 176 160 166 8 49 145 174 135] []}
-submit transaction:[map[id:cc4313fbae424bb945029adef193154f34de324316036e510bcc751d0013ccb7]]
+$ ./bytomcli list-assets
 ```
 
-Query the assets on-chain:
+#### Asset issuance test
+
+Since the account `alice` and the asset `gold` are ready, we need to create another account `bob`, which is also neccessary for the following Expenditure test:
+
 ```bash
+$ ./bytomcli create-account bob
+```
+
+Firstly, Alice issue `<issue_amount>`, e.g., 10000, `gold`:
+
+```bash
+$ ./bytomcli sub-create-issue-tx <alice_account_id> <bob_account_id> <gold_asset_id> <gold_asset_private_key> <issue_amount>
+```
+
+When the transaction above is mined, query the balances:
+
+```bash
+# Alice should have 10000 gold now
 $ ./bytomcli list-balances
-0 ----- map[<gold_asset_id>:<gold_asset_amount>]
+```
+
+#### Expenditure test
+
+- Alice -> Bob
+
+Alice pays Bob `<payment_amount>`, e.g., 1000, `gold`:
+
+```bash
+$ ./bytomcli sub-spend-account-tx <alice_account_id> <bob_account_id> <gold_asset_id> <alice_private_key> <payment_amount>
+# In our case, after Alice pays Bob 1000 gold, the amount of Alice's gold should be 9000, Bob's balances should be 1000
+$ ./bytomcli list-balances
+```
+
+- Bob -> Alice
+
+Bob pays Alice `<payment_amount>`, e.g., 500, `gold`:
+
+```bash
+$ ./bytomcli sub-spend-account-tx <bob_account_id> <alice_account_id> <gold_asset_id> <bob_private_key> <payment_amount>
+# In our case, after Bob pays Alice 500 gold, the amount of Alice's gold should be 9500, Bob's balances should be 500
+$ ./bytomcli list-balances
 ```
 
 ### Set up a wallet and manage the key
@@ -168,36 +208,8 @@ $ ./test.sh bytomd1  # Start the second node
 Then we have two nodes:
 
 ```bash
-$ curl -X POST --data '{"jsonrpc":"2.0", "method": "net_info", "params":[], "id":"67"}' http://127.0.0.1:46657
-```
-
-If everything goes well, we'll see the following response:
-
-```bash
-{
-  "jsonrpc": "2.0",
-  "id": "67",
-  "result": {
-    "listening": true,
-    "listeners": [
-      "Listener(@192.168.199.178:3332)"
-    ],
-    "peers": [
-      {
-        "node_info": {
-          "pub_key": "03571A5CE8B35E95E2357DB2823E9EB76EB42D5CCC5F8E68315388832878C011",
-          "moniker": "anonymous",
-          "network": "chain0",
-          "remote_addr": "127.0.0.1:51058",
-          "listen_addr": "192.168.199.178:3333",
-          "version": "0.1.0",
-          "other": [
-            "wire_version=0.6.2",
-            "p2p_version=0.5.0",
-            "rpc_addr=tcp://0.0.0.0:46658"
-          ]
-        },
-......
+$ ./bycomcli net-info
+net-info:map[listening:true listeners:[Listener(@192.168.199.43:3332)] peers:[map[node_info:map[listen_addr:192.168.199.43:3333 version:0.1.2 other:[wire_version=0.6.2 p2p_version=0.5.0] pub_key:D6B76D1B4E9D7E4D81BA5FAAE9359302446488495A29D7E70AF84CDFEA186D66 moniker:anonymous network:bytom remote_addr:127.0.0.1:51036] is_outbound:false connection_status:map[RecvMonitor:map[Start:2017-10-30T13:45:47.18+08:00 Bytes:425130 AvgRate:27010 Progress:0 Active:true Idle:1.04e+09 Samples:42 InstRate:4591 CurRate:3540 PeakRate:114908 BytesRem:0 TimeRem:0 Duration:1.574e+10] Channels:[map[RecentlySent:5332 ID:64 SendQueueCapacity:100 SendQueueSize:0 Priority:5]] SendMonitor:map[Active:true Idle:1.24e+09 Bytes:16240 Samples:41 CurRate:125 AvgRate:1032 Progress:0 Start:2017-10-30T13:45:47.18+08:00 Duration:1.574e+10 InstRate:147 PeakRate:4375 BytesRem:0 TimeRem:0]]]]]
 ```
 
 ## Contributing

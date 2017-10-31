@@ -56,11 +56,21 @@ func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
 	Auth  string
 	Txs   []*txbuilder.Template `json:"transactions"`
-	XPubs []chainkd.XPub        `json:"xpubs"`
+	XPub chainkd.XPub        `json:"xpubs"`
+	XPrv chainkd.XPrv        `json:"xprv"`
 }) interface{} {
 	resp := make([]interface{}, len(x.Txs))
+	var err error
 	for _, tx := range x.Txs {
-		err := txbuilder.Sign(ctx, tx, x.XPubs, x.Auth, a.pseudohsmSignTemplate)
+		if x.Auth == "" {
+			err = txbuilder.Sign(context.Background(), tx, []chainkd.XPub{x.XPrv.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
+				derived := x.XPrv.Derive(path)
+				return derived.Sign(data[:]), nil
+			})
+		}else{
+			err = txbuilder.Sign(ctx, tx, []chainkd.XPub{x.XPub}, x.Auth, a.pseudohsmSignTemplate)
+		}
+
 		log.WithFields(log.Fields{"tx": tx, "build err": err}).Info("After sign transaction.")
 		if err != nil {
 			info := errorFormatter.Format(err)

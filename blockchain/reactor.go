@@ -77,7 +77,6 @@ func batchRecover(ctx context.Context, v *interface{}) {
 	// Convert errors into error responses (including errors
 	// from recovered panics above).
 	if err, ok := (*v).(error); ok {
-		errorFormatter.Log(ctx, err)
 		*v = errorFormatter.Format(err)
 	}
 }
@@ -128,7 +127,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
 	} else {
-		log.Printf("Warning: Please enable wallet")
+		log.Warn("Please enable wallet")
 	}
 
 	if bcr.assets != nil {
@@ -136,7 +135,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 		m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
 		m.Handle("/list-assets", jsonHandler(bcr.listAssets))
 	} else {
-		log.Printf("Warning: Please enable wallet")
+		log.Warn("Please enable wallet")
 	}
 	m.Handle("/build-transaction", jsonHandler(bcr.build))
 	m.Handle("/create-control-program", jsonHandler(bcr.createControlProgram))

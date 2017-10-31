@@ -8,10 +8,11 @@ import (
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
-	"github.com/bytom/log"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -40,7 +41,7 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 	for i, action := range actions {
 		err := action.Build(ctx, &builder)
 
-		log.Printf(ctx, "action:%v, err:%v\n", action, err)
+		log.WithFields(log.Fields{"action": action, "error": err}).Info("Loop tx's action")
 		if err != nil {
 			err = errors.WithData(err, "index", i)
 			errs = append(errs, err)

@@ -1,6 +1,7 @@
 package node
 
 import (
+	"chain/errors"
 	"context"
 	"crypto/tls"
 	"net"
@@ -27,7 +28,6 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/env"
-	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
@@ -118,7 +118,6 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 
 	var handler http.Handler = mux
 	handler = RedirectHandler(handler)
-	handler = reqid.Handler(handler)
 
 	secureheader.DefaultConfig.PermitClearLoopback = true
 	secureheader.DefaultConfig.HTTPSRedirect = false
@@ -143,7 +142,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	// we call it.
 	go func() {
 		if err := server.Serve(listener); err != nil {
-			log.Fatalf("Fail to init rpc server: %v", err)
+			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
 		}
 	}()
 	coreHandler.Set(h)
@@ -197,7 +196,7 @@ func NewNode(config *cfg.Config) *Node {
 		accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
 		pinStore = pin.NewStore(accUTXODB)
 		if err = pinStore.LoadAll(ctx); err != nil {
-			log.Errorf("Fail on pinStore LoadAll: %v", err)
+			log.WithField("error", err).Error("load pin store")
 			return nil
 		}
 
@@ -209,7 +208,7 @@ func NewNode(config *cfg.Config) *Node {
 		pins := []string{account.PinName, account.DeleteSpentsPinName}
 		for _, p := range pins {
 			if err = pinStore.CreatePin(ctx, p, pinHeight); err != nil {
-				log.Fatalf("Fail on pinStore CreatePin: %v", err)
+				log.WithField("error", err).Error("Create pin")
 			}
 		}
 

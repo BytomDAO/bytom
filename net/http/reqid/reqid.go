@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"net/http"
 
-	"github.com/bytom/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // key is an unexported type for keys defined in this package.
@@ -43,17 +43,16 @@ func New() string {
 	b := make([]byte, l)
 	_, err := rand.Read(b)
 	if err != nil {
-		log.Printf(context.Background(), "error making reqID")
+		log.WithField("error", err).Info("error making reqID")
 	}
 	return hex.EncodeToString(b)
 }
 
 // NewContext returns a new Context that carries reqid.
 // It also adds a log prefix to print the request ID using
-// package chain/log.
+// package bytom/log.
 func NewContext(ctx context.Context, reqid string) context.Context {
 	ctx = context.WithValue(ctx, reqIDKey, reqid)
-	ctx = log.AddPrefixkv(ctx, "reqid", reqid)
 	return ctx
 }
 
@@ -78,12 +77,8 @@ func PathFromContext(ctx context.Context) string {
 	return path
 }
 
-// NewSubContext returns a new Context that carries subreqid
-// It also adds a log prefix to print the sub-request ID using
-// package chain/log.
 func NewSubContext(ctx context.Context, reqid string) context.Context {
 	ctx = context.WithValue(ctx, subReqIDKey, reqid)
-	ctx = log.AddPrefixkv(ctx, "subreqid", reqid)
 	return ctx
 }
 
@@ -96,26 +91,5 @@ func FromSubContext(ctx context.Context) string {
 
 func Handler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		ctx := req.Context()
-		// TODO(kr): take half of request ID from the client
-		id := New()
-		ctx = NewContext(ctx, id)
-		ctx = context.WithValue(ctx, pathKey, req.URL.Path)
-		if coreID := req.Header.Get("Chain-Core-ID"); coreID != "" {
-			ctx = context.WithValue(ctx, coreIDKey, coreID)
-			ctx = log.AddPrefixkv(ctx, "coreid", coreID)
-		}
-
-		defer func() {
-			if err := recover(); err != nil {
-				log.Printkv(ctx,
-					"message", "panic",
-					"remote-addr", req.RemoteAddr,
-					"error", err,
-				)
-			}
-		}()
-		w.Header().Add("Chain-Request-Id", id)
-		handler.ServeHTTP(w, req.WithContext(ctx))
 	})
 }
