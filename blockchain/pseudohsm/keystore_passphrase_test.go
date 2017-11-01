@@ -46,7 +46,6 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 	}
 }
 
-
 func TestGenerateFile(t *testing.T) {
 	xprv, xpub, err := chainkd.NewXKeys(nil)
 	if err != nil {
@@ -54,14 +53,14 @@ func TestGenerateFile(t *testing.T) {
 	}
 	id := uuid.NewRandom()
 	key := &XKey{
-		Id:      id,
+		ID:      id,
 		KeyType: "bytom_kd",
 		XPub:    xpub,
 		XPrv:    xprv,
-		Alias:	 "verylight",
+		Alias:   "verylight",
 	}
 	t.Log(key)
 	password := "bytomtest"
 	xkey, err := EncryptKey(key, password, veryLightScryptN, veryLightScryptP)
-	writeKeyFile(keyFileName(key.Id.String()), xkey)
+	writeKeyFile(keyFileName(key.ID.String()), xkey)
 }
