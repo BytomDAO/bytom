@@ -12,8 +12,11 @@ import (
 )
 
 func init() {
+	//Error code 050 represents alias of key duplicated
 	errorFormatter.Errors[pseudohsm.ErrDuplicateKeyAlias] = httperror.Info{400, "BTM050", "Alias already exists"}
+	//Error code 801 represents query request format error
 	errorFormatter.Errors[pseudohsm.ErrInvalidAfter] = httperror.Info{400, "BTM801", "Invalid `after` in query"}
+	//Error code 802 represents query reponses too many
 	errorFormatter.Errors[pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
 
@@ -54,10 +57,10 @@ func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 }
 
 func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
-	Auth  string
-	Txs   []*txbuilder.Template `json:"transactions"`
-	XPub chainkd.XPub        `json:"xpubs"`
-	XPrv chainkd.XPrv        `json:"xprv"`
+	Auth string
+	Txs  []*txbuilder.Template `json:"transactions"`
+	XPub chainkd.XPub          `json:"xpubs"`
+	XPrv chainkd.XPrv          `json:"xprv"`
 }) interface{} {
 	resp := make([]interface{}, len(x.Txs))
 	var err error
@@ -67,7 +70,7 @@ func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct
 				derived := x.XPrv.Derive(path)
 				return derived.Sign(data[:]), nil
 			})
-		}else{
+		} else {
 			err = txbuilder.Sign(ctx, tx, []chainkd.XPub{x.XPub}, x.Auth, a.pseudohsmSignTemplate)
 		}
 
