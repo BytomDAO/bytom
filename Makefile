@@ -5,9 +5,17 @@ PACKAGES = $(shell go list ./... | grep -v '/vendor/' | grep -v '/rpc/')
 
 all: install test
 
+bytomd:
+	@echo "Building bytomd to cmd/bytomd/bytomd"
+	@go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
+    -o cmd/bytomd/bytomd cmd/bytomd/main.go
+
+bytomcli:
+	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
+	@go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
+    -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
+
 install: get_vendor_deps
-	@go install --ldflags '-extldflags "-static"' \
-		--ldflags "-X github.com/Bytom/blockchain/version.GitCommit=`git rev-parse HEAD`" ./node/
 	@echo "====> Done!"
 
 get_vendor_deps: ensure_tools
