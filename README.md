@@ -64,15 +64,14 @@ $ git clone https://github.com/Bytom/bytom $GOPATH/src/github.com/bytom
 ``` bash
 $ cd $GOPATH/src/github.com/bytom
 $ make install
-$ cd ./cmd/bytomd
-$ go build
+$ make bytomd
 ```
 
 - Bytomcli
 
 ```go
 $ cd $GOPATH/src/github.com/bytom/cmd/bytomcli
-$ go build
+$ make bytomcli
 ```
 
 ## Example
