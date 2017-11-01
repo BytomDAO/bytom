@@ -2,6 +2,3 @@
 	path = cmd/bytomd/2node-test
 	url = https://github.com/Bytom/2node-test
 	branch = master
-[submodule "bytom-vendor"]
-	path = vendor
-	url = https://github.com/Bytom/bytom-vendor.git
