@@ -1,1 +1,0 @@
-# bytom-btmhash
