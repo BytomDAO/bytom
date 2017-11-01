@@ -53,6 +53,9 @@ func New(keypath string) (*HSM, error) {
 
 // XCreate produces a new random xprv and stores it in the db.
 func (h *HSM) XCreate(alias string, auth string) (*XPub, error) {
+	if ok := h.cache.hasAlias(alias); ok {
+		return nil, ErrDuplicateKeyAlias
+	}
 	xpub, _, err := h.createChainKDKey(auth, alias, false)
 	if err != nil {
 		return nil, err

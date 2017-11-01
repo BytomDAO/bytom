@@ -71,6 +71,16 @@ func (kc *keyCache) hasKey(xpub chainkd.XPub) bool {
 	return len(kc.byPubs[xpub]) > 0
 }
 
+func (kc *keyCache) hasAlias(alias string) bool {
+	xpubs := kc.keys()
+	for _, xpub := range xpubs {
+		if xpub.Alias == alias {
+			return true
+		}
+	}
+	return false
+}
+
 func (kc *keyCache) add(newKey XPub) {
 	kc.mu.Lock()
 	defer kc.mu.Unlock()

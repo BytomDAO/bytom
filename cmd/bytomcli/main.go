@@ -956,7 +956,7 @@ func createKey(client *rpc.Client, args []string) {
 	key.Password = args[1]
 
 	client.Call(context.Background(), "/create-key", &key, &response)
-	fmt.Printf("Address: %v,  XPub: %v\n", response["address"], response["xpub"])
+	fmt.Printf("Alias: %v,  XPub: %v, File: %v\n", response["alias"], response["xpub"], response["file"])
 }
 
 func deleteKey(client *rpc.Client, args []string) {
