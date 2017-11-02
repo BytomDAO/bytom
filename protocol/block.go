@@ -23,14 +23,17 @@ var (
 	ErrBadStateRoot = errors.New("invalid state merkle root")
 )
 
+// BlockExist check is a block in chain or orphan
 func (c *Chain) BlockExist(hash *bc.Hash) bool {
 	return c.orphanManage.BlockExist(hash) || c.store.BlockExist(hash)
 }
 
+// GetBlockByHash return a block by given hash
 func (c *Chain) GetBlockByHash(hash *bc.Hash) (*legacy.Block, error) {
 	return c.store.GetBlock(hash)
 }
 
+// GetBlockByHeight return a block by given height
 func (c *Chain) GetBlockByHeight(height uint64) (*legacy.Block, error) {
 	c.state.cond.L.Lock()
 	hash, ok := c.state.mainChain[height]
@@ -53,6 +56,7 @@ func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 	return nil
 }
 
+// ConnectBlock append block to end of chain
 func (c *Chain) ConnectBlock(block *legacy.Block) error {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
@@ -115,6 +119,7 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 	return c.setState(block, newSnapshot, chainChanges)
 }
 
+// SaveBlock will validate and save block into storage
 func (c *Chain) SaveBlock(block *legacy.Block) error {
 	preBlock, _ := c.GetBlockByHash(&block.PreviousBlockHash)
 	if err := c.ValidateBlock(block, preBlock); err != nil {
@@ -159,6 +164,7 @@ func (c *Chain) findBestChainTail(block *legacy.Block) (bestBlock *legacy.Block)
 	return
 }
 
+// ProcessBlock is the entry for handle block insert
 func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
@@ -180,7 +186,7 @@ func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
 		return false, c.connectBlock(bestBlock)
 	}
 
-	if bestBlock.Height > c.state.height && bestBlock.Bits >= c.state.block.Bits {
+	if bestBlock.Height > c.state.block.Height && bestBlock.Bits >= c.state.block.Bits {
 		defer c.state.cond.L.Unlock()
 		return false, c.reorganizeChain(bestBlock)
 	}
