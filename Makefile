@@ -1,6 +1,6 @@
 PACKAGES = $(shell go list ./... | grep -v '/vendor/')
 
-all: test
+all: bytomd bytomcli test
 
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
