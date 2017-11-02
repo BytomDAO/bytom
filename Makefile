@@ -1,4 +1,4 @@
-PACKAGES = $(shell go list ./... | grep -v '/vendor/' | grep -v '/rpc/')
+PACKAGES = $(shell go list ./... | grep -v '/vendor/')
 
 all: test
 
