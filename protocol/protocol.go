@@ -162,9 +162,11 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 
 // Height returns the current height of the blockchain.
 func (c *Chain) Height() uint64 {
-	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
 	return c.state.height
+}
+
+func (c *Chain) CurrentBlockHash() *bc.Hash {
+	return c.state.hash
 }
 
 func (c *Chain) inMainchain(block *legacy.Block) bool {
