@@ -1,6 +1,7 @@
 package pseudohsm
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/bytom/errors"
@@ -50,11 +51,6 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 	if len(xpubs) != 2 {
 		t.Error("expected 2 entries in the db")
 	}
-	/*err = hsm.UpdateAlias(xpub.XPub, "password", "updatealias")
-	err = hsm.UpdateAlias(xpub.XPub, "password", "updatealias")
-	if err != nil {
-		t.Fatal(err)
-	}*/
 	err = hsm.ResetPassword(xpub2.XPub, "nopassword", "1password")
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +68,7 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 func TestKeyWithEmptyAlias(t *testing.T) {
 	hsm, _ := New(dirPath)
 	for i := 0; i < 2; i++ {
-		xpub, err := hsm.XCreate("xxs", "xx")
+		xpub, err := hsm.XCreate(fmt.Sprintf("xx%d", i), "xx")
 		if errors.Root(err) != nil {
 			t.Fatal(err)
 		}

@@ -168,7 +168,6 @@ func (kc *keyCache) reload() {
 	keys, err := kc.scan()
 	if err != nil {
 		fmt.Printf("can't load keys: %v\n", err.Error())
-
 	}
 	kc.all = keys
 	sort.Sort(kc.all)
@@ -178,7 +177,6 @@ func (kc *keyCache) reload() {
 	for _, k := range keys {
 		kc.byPubs[k.XPub] = append(kc.byPubs[k.XPub], k)
 	}
-	//log.Printf("reloaded keys, cache has %d keys", len(ac.all))
 	fmt.Printf("reloaded keys, cache has %d keys\n", len(kc.all))
 }
 
