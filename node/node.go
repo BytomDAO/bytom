@@ -27,12 +27,12 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/env"
+	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/types"
 	"github.com/bytom/version"
-	"github.com/bytom/errors"
 )
 
 const (
@@ -135,7 +135,10 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
 	listenAddr := env.String("LISTEN", config.ApiAddress)
-	listener, _ := net.Listen("tcp", *listenAddr)
+	listener, err := net.Listen("tcp", *listenAddr)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("Failed to register tcp port: %v", err))
+	}
 
 	// The `Serve` call has to happen in its own goroutine because
 	// it's blocking and we need to proceed to the rest of the core setup after
