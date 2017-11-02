@@ -42,6 +42,7 @@ type Store interface {
 	SaveStoreStatus(uint64, *bc.Hash)
 }
 
+// OrphanManage is use to handle all the orphan block
 type OrphanManage struct {
 	//TODO: add orphan cached block limit
 	orphan     map[bc.Hash]*legacy.Block
@@ -49,6 +50,7 @@ type OrphanManage struct {
 	mtx        sync.RWMutex
 }
 
+// NewOrphanManage return a new orphan block
 func NewOrphanManage() *OrphanManage {
 	return &OrphanManage{
 		orphan:     make(map[bc.Hash]*legacy.Block),
@@ -56,6 +58,7 @@ func NewOrphanManage() *OrphanManage {
 	}
 }
 
+// BlockExist check is the block in OrphanManage
 func (o *OrphanManage) BlockExist(hash *bc.Hash) bool {
 	o.mtx.RLock()
 	_, ok := o.orphan[*hash]
@@ -63,6 +66,7 @@ func (o *OrphanManage) BlockExist(hash *bc.Hash) bool {
 	return ok
 }
 
+// Add will add the block to OrphanManage
 func (o *OrphanManage) Add(block *legacy.Block) {
 	blockHash := block.Hash()
 	o.mtx.Lock()
@@ -76,6 +80,7 @@ func (o *OrphanManage) Add(block *legacy.Block) {
 	o.preOrphans[block.PreviousBlockHash] = append(o.preOrphans[block.PreviousBlockHash], &blockHash)
 }
 
+// Delete will delelte the block from OrphanManage
 func (o *OrphanManage) Delete(hash *bc.Hash) {
 	o.mtx.Lock()
 	defer o.mtx.Unlock()
@@ -99,6 +104,7 @@ func (o *OrphanManage) Delete(hash *bc.Hash) {
 	}
 }
 
+// Get return the orphan block by hash
 func (o *OrphanManage) Get(hash *bc.Hash) (*legacy.Block, bool) {
 	o.mtx.RLock()
 	block, ok := o.orphan[*hash]
@@ -120,7 +126,6 @@ type Chain struct {
 	state struct {
 		cond      sync.Cond
 		block     *legacy.Block
-		height    uint64
 		hash      *bc.Hash
 		mainChain map[uint64]*bc.Hash
 		snapshot  *state.Snapshot
@@ -138,9 +143,8 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 	}
 	c.state.cond.L = new(sync.Mutex)
 	storeStatus := store.GetStoreStatus()
-	c.state.height = storeStatus.Height
 
-	if c.state.height == 0 {
+	if storeStatus.Height == 0 {
 		c.state.snapshot = state.Empty()
 		c.state.mainChain = make(map[uint64]*bc.Hash)
 		return c, nil
@@ -164,7 +168,13 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 func (c *Chain) Height() uint64 {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
-	return c.state.height
+	return c.state.block.Height
+}
+
+func (c *Chain) BestBlockHash() *bc.Hash {
+	c.state.cond.L.Lock()
+	defer c.state.cond.L.Unlock()
+	return c.state.hash
 }
 
 func (c *Chain) inMainchain(block *legacy.Block) bool {
@@ -202,7 +212,6 @@ func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*b
 
 	blockHash := block.Hash()
 	c.state.block = block
-	c.state.height = block.Height
 	c.state.hash = &blockHash
 	c.state.snapshot = s
 	for k, v := range m {
@@ -254,7 +263,7 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	go func() {
 		c.state.cond.L.Lock()
 		defer c.state.cond.L.Unlock()
-		for c.state.height < height {
+		for c.state.block.Height < height {
 			c.state.cond.Wait()
 		}
 		ch <- struct{}{}
