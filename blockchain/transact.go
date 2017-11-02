@@ -42,7 +42,11 @@ func (a *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilde
 	}
 	return decoder, true
 }
-
+/*		{"actions": [
+			{"type": "spend", "asset_id": "%s", "amount": 100},
+			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"}
+		]}`
+*/
 func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
 	err := a.filterAliases(ctx, req)
 	if err != nil {
