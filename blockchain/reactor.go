@@ -162,7 +162,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
 	m.Handle("/update-alias", jsonHandler(bcr.pseudohsmUpdateAlias))
 	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
-	m.Handle("/get-current-block-hash", jsonHandler(bcr.getCurrentBlockHash))
+	m.Handle("/get-best-block-hash", jsonHandler(bcr.getBestBlockHash))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -342,8 +342,8 @@ func (bcR *BlockchainReactor) getNetInfo() (*ctypes.ResultNetInfo, error) {
 	return rpc.NetInfo(bcR.sw)
 }
 
-func (bcR *BlockchainReactor) getCurrentBlockHash() *bc.Hash {
-	return bcR.chain.CurrentBlockHash()
+func (bcR *BlockchainReactor) getBestBlockHash() *bc.Hash {
+	return bcR.chain.BestBlockHash()
 }
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.
