@@ -167,6 +167,12 @@ func (c *Chain) Height() uint64 {
 	return c.state.height
 }
 
+func (c *Chain) BestBlockHash() *bc.Hash {
+	c.state.cond.L.Lock()
+	defer c.state.cond.L.Unlock()
+	return c.state.hash
+}
+
 func (c *Chain) inMainchain(block *legacy.Block) bool {
 	hash, ok := c.state.mainChain[block.Height]
 	if !ok {

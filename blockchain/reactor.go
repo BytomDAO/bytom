@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/blockchain/rpc"
 	ctypes "github.com/bytom/blockchain/rpc/types"
 	"github.com/bytom/blockchain/txfeed"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
@@ -161,6 +162,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
 	m.Handle("/update-alias", jsonHandler(bcr.pseudohsmUpdateAlias))
 	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
+	m.Handle("/get-best-block-hash", jsonHandler(bcr.getBestBlockHash))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -338,6 +340,10 @@ func (bcR *BlockchainReactor) syncRoutine() {
 
 func (bcR *BlockchainReactor) getNetInfo() (*ctypes.ResultNetInfo, error) {
 	return rpc.NetInfo(bcR.sw)
+}
+
+func (bcR *BlockchainReactor) getBestBlockHash() *bc.Hash {
+	return bcR.chain.BestBlockHash()
 }
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.

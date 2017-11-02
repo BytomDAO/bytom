@@ -89,6 +89,7 @@ var commands = map[string]*command{
 	"reset-password":          {resetPassword},
 	"update-alias":            {updateAlias},
 	"net-info":                {netInfo},
+	"get-best-block-hash":   {getBestBlockHash},
 }
 
 func main() {
@@ -1110,4 +1111,10 @@ func netInfo(client *rpc.Client, args []string) {
 	var response interface{}
 	client.Call(context.Background(), "/net-info", nil, &response)
 	fmt.Printf("net info:%v\n", response)
+}
+
+func getBestBlockHash(client *rpc.Client, args []string) {
+	var response interface{}
+	client.Call(context.Background(), "/get-best-block-hash", nil, &response)
+	fmt.Printf("best-block-hash:%v\n", response)
 }
