@@ -1,14 +1,8 @@
-// Copyright (c) 2017 The btcsuite developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
-
-package bech32_test
+package bech32
 
 import (
 	"strings"
 	"testing"
-
-	"github.com/btcsuite/btcutil/bech32"
 )
 
 func TestBech32(t *testing.T) {
@@ -32,7 +26,7 @@ func TestBech32(t *testing.T) {
 
 	for _, test := range tests {
 		str := test.str
-		hrp, decoded, err := bech32.Decode(str)
+		hrp, decoded, err := Bech32Decode(str)
 		if !test.valid {
 			// Invalid string decoding should result in error.
 			if err == nil {
@@ -48,7 +42,7 @@ func TestBech32(t *testing.T) {
 		}
 
 		// Check that it encodes to the same string
-		encoded, err := bech32.Encode(hrp, decoded)
+		encoded, err := Bech32Encode(hrp, decoded)
 		if err != nil {
 			t.Errorf("encoding failed: %v", err)
 		}
@@ -61,7 +55,7 @@ func TestBech32(t *testing.T) {
 		// Flip a bit in the string an make sure it is caught.
 		pos := strings.LastIndexAny(str, "1")
 		flipped := str[:pos+1] + string((str[pos+1] ^ 1)) + str[pos+2:]
-		_, _, err = bech32.Decode(flipped)
+		_, _, err = Bech32Decode(flipped)
 		if err == nil {
 			t.Error("expected decoding to fail")
 		}

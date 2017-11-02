@@ -3,6 +3,8 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -26,8 +28,12 @@ const dirPath = "pseudohsm/testdata/pseudo"
 
 func TestHSM(t *testing.T) {
 	ctx := context.Background()
+
+	dir := tmpManager(t)
+	defer os.RemoveAll(dir)
+
 	config := cfg.DefaultConfig()
-	tc := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
+	tc := dbm.NewDB("txdb", config.DBBackend, dir)
 	store := txdb.NewStore(tc)
 
 	var accounts *account.Manager
@@ -55,18 +61,18 @@ func TestHSM(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
+	accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, dir)
 	pinStore = pin.NewStore(accUTXODB)
 
 	err = pinStore.LoadAll(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
+	accountsDB := dbm.NewDB("account", config.DBBackend, dir)
 	accounts = account.NewManager(accountsDB, chain, pinStore)
 	//accounts.IndexAccounts(query.NewIndexer(accountsDB, chain))
 
-	assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+	assetsDB := dbm.NewDB("asset", config.DBBackend, dir)
 	assets = asset.NewRegistry(assetsDB, chain)
 
 	hsm, err := pseudohsm.New(dirPath)
@@ -121,7 +127,16 @@ func TestHSM(t *testing.T) {
 		}
 		return sigBytes, err
 	})
+
 	fmt.Printf("###data: %v#####", *tmpl)
+	err = hsm.XDelete(xpub1.XPub, "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = hsm.XDelete(xpub2.XPub, "password")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	//err = txbuilder.FinalizeTx(ctx, chain, tmpl.Transaction)
 	//if err != nil {
@@ -175,4 +190,12 @@ func TestHSM(t *testing.T) {
 		       t.Fatal(err)
 		   }
 	*/
+}
+
+func tmpManager(t *testing.T) string {
+	d, err := ioutil.TempDir("", "bytom-keystore-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return d
 }

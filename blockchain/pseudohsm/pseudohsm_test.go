@@ -2,6 +2,7 @@ package pseudohsm
 
 import (
 	"testing"
+
 	"github.com/bytom/errors"
 )
 
@@ -9,7 +10,7 @@ const dirPath = "testdata/pseudo"
 
 func TestPseudoHSMChainKDKeys(t *testing.T) {
 
-	hsm , _:= New(dirPath)
+	hsm, _ := New(dirPath)
 	xpub, err := hsm.XCreate("bbs", "password")
 
 	if err != nil {
@@ -48,7 +49,7 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 	}
 	if len(xpubs) != 2 {
 		t.Error("expected 2 entries in the db")
-	}	
+	}
 	/*err = hsm.UpdateAlias(xpub.XPub, "password", "updatealias")
 	err = hsm.UpdateAlias(xpub.XPub, "password", "updatealias")
 	if err != nil {
@@ -67,7 +68,6 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-
 
 func TestKeyWithEmptyAlias(t *testing.T) {
 	hsm, _ := New(dirPath)

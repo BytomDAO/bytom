@@ -2,6 +2,7 @@ package pseudohsm
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -62,5 +63,7 @@ func TestGenerateFile(t *testing.T) {
 	t.Log(key)
 	password := "bytomtest"
 	xkey, err := EncryptKey(key, password, veryLightScryptN, veryLightScryptP)
-	writeKeyFile(keyFileName(key.ID.String()), xkey)
+	file := keyFileName(key.ID.String())
+	writeKeyFile(file, xkey)
+	os.Remove(file)
 }
