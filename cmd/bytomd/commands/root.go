@@ -11,9 +11,6 @@ var (
 	config = cfg.DefaultConfig()
 )
 
-func init() {
-}
-
 var RootCmd = &cobra.Command{
 	Use:   "bytomd",
 	Short: "Multiple asset management.",
