@@ -49,15 +49,6 @@ func Ripemd160(data []byte) []byte {
 	return ripemd.Sum(nil)
 }
 
-func PubkeyToAddress(pubBytes []byte) common.Address {
-	address, _ := common.AddressEncode("bm", 1, toInt(Ripemd160(Sha3(pubBytes))))
-	return common.StringToAddress(address)
-}
-
-func AddressToPubkey(addr common.Address) (int, []byte, error) {
-	ver, data, err := common.AddressDecode("bm", addr.Str())
-	return ver, toBytes(data), err
-}
 
 func zeroBytes(bytes []byte) {
 	for i := range bytes {

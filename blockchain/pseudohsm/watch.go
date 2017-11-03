@@ -25,16 +25,16 @@ import (
 )
 
 type watcher struct {
-	ac       *addrCache
+	kc       *keyCache
 	starting bool
 	running  bool
 	ev       chan notify.EventInfo
 	quit     chan struct{}
 }
 
-func newWatcher(ac *addrCache) *watcher {
+func newWatcher(kc *keyCache) *watcher {
 	return &watcher{
-		ac:   ac,
+		kc:   kc,
 		ev:   make(chan notify.EventInfo, 10),
 		quit: make(chan struct{}),
 	}
@@ -42,7 +42,7 @@ func newWatcher(ac *addrCache) *watcher {
 
 // starts the watcher loop in the background.
 // Start a watcher in the background if that's not already in progress.
-// The caller must hold w.ac.mu.
+// The caller must hold w.kc.mu.
 func (w *watcher) start() {
 	if w.starting || w.running {
 		return
@@ -57,24 +57,24 @@ func (w *watcher) close() {
 
 func (w *watcher) loop() {
 	defer func() {
-		w.ac.mu.Lock()
+		w.kc.mu.Lock()
 		w.running = false
 		w.starting = false
-		w.ac.mu.Unlock()
+		w.kc.mu.Unlock()
 	}()
 
-	err := notify.Watch(w.ac.keydir, w.ev, notify.All)
+	err := notify.Watch(w.kc.keydir, w.ev, notify.All)
 	if err != nil {
-		fmt.Printf("can't watch %s: %v", w.ac.keydir, err)
+		fmt.Printf("can't watch %s: %v", w.kc.keydir, err)
 		return
 	}
 	defer notify.Stop(w.ev)
-	fmt.Printf("now watching %s", w.ac.keydir)
-	defer fmt.Printf("no longer watching %s", w.ac.keydir)
+	fmt.Printf("now watching %s", w.kc.keydir)
+	defer fmt.Printf("no longer watching %s", w.kc.keydir)
 
-	w.ac.mu.Lock()
+	w.kc.mu.Lock()
 	w.running = true
-	w.ac.mu.Unlock()
+	w.kc.mu.Unlock()
 
 	// Wait for file system events and reload.
 	// When an event occurs, the reload call is delayed a bit so that
@@ -97,9 +97,9 @@ func (w *watcher) loop() {
 				hadEvent = true
 			}
 		case <-debounce.C:
-			w.ac.mu.Lock()
-			w.ac.reload()
-			w.ac.mu.Unlock()
+			w.kc.mu.Lock()
+			w.kc.reload()
+			w.kc.mu.Unlock()
 			if hadEvent {
 				debounce.Reset(debounceDuration)
 				inCycle, hadEvent = true, false

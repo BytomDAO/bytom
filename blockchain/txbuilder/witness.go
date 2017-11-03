@@ -196,6 +196,7 @@ func (sw signatureWitness) materialize(tpl *Template, index uint32, args *[][]by
 	// assumes that everything already in the arg list before this call
 	// to Materialize is input to the signature program, so N is
 	// len(*args).
+	// 0 sig1 sig2 ... program  100 sig1 sig2 ... program
 	*args = append(*args, vm.Int64Bytes(int64(len(*args))))
 
 	var nsigs int

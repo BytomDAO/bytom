@@ -1,26 +1,9 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package common
 
 import (
 	_ "encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -36,8 +19,7 @@ const (
 var hashJsonLengthErr = errors.New("common: unmarshalJSON failed: hash must be exactly 32 bytes")
 
 type (
-	Hash    [HashLength]byte
-	Address [AddressLength]byte
+	Hash [HashLength]byte
 )
 
 func BytesToHash(b []byte) Hash {
@@ -111,87 +93,4 @@ func (h Hash) Generate(rand *rand.Rand, size int) reflect.Value {
 
 func EmptyHash(h Hash) bool {
 	return h == Hash{}
-}
-
-/////////// Address
-func BytesToAddress(b []byte) Address {
-	var a Address
-	a.SetBytes(b)
-	return a
-}
-func StringToAddress(s string) Address { return BytesToAddress([]byte(s)) }
-func BigToAddress(b *big.Int) Address  { return BytesToAddress(b.Bytes()) }
-func HexToAddress(s string) Address    { return BytesToAddress(FromHex(s)) }
-
-// IsHexAddress verifies whether a string can represent a valid hex-encoded
-// Ethereum address or not.
-func IsHexAddress(s string) bool {
-	if len(s) == 2+2*AddressLength && IsHex(s) {
-		return true
-	}
-	if len(s) == 2*AddressLength && IsHex("0x"+s) {
-		return true
-	}
-	return false
-}
-
-// Get the string representation of the underlying address
-func (a Address) Str() string   { return string(a[:]) }
-func (a Address) Bytes() []byte { return a[:] }
-func (a Address) Big() *big.Int { return Bytes2Big(a[:]) }
-func (a Address) Hash() Hash    { return BytesToHash(a[:]) }
-
-// Sets the address to the value of b. If b is larger than len(a) it will panic
-func (a *Address) SetBytes(b []byte) {
-	if len(b) > len(a) {
-		b = b[len(b)-AddressLength:]
-	}
-	copy(a[AddressLength-len(b):], b)
-}
-
-// Set string `s` to a. If s is larger than len(a) it will panic
-func (a *Address) SetString(s string) { a.SetBytes([]byte(s)) }
-
-// Sets a to other
-func (a *Address) Set(other Address) {
-	for i, v := range other {
-		a[i] = v
-	}
-}
-
-// Serialize given address to JSON
-func (a Address) MarshalJSON() ([]byte, error) {
-	return json.Marshal(a.Str())
-}
-
-// Parse address from raw json data
-func (a *Address) UnmarshalJSON(data []byte) error {
-	if len(data) > 2 && data[0] == '"' && data[len(data)-1] == '"' {
-		data = data[1 : len(data)-1]
-	}
-
-	if len(data) != AddressLength {
-		return fmt.Errorf("Invalid address length, expected %d got %d bytes", AddressLength, len(data))
-	}
-
-	_, res, err := AddressDecode("bm", string(data))
-	if err != nil {
-		return err
-	}
-
-	if len(res) != PubkeyHashLength {
-		return fmt.Errorf("Invalid address")
-	}
-	a.Set(BytesToAddress(data))
-	return nil
-}
-
-// PP Pretty Prints a byte slice in the following format:
-// 	hex(value[:4])...(hex[len(value)-4:])
-func PP(value []byte) string {
-	if len(value) <= 8 {
-		return Bytes2Hex(value)
-	}
-
-	return fmt.Sprintf("%x...%x", value[:4], value[len(value)-4])
 }
