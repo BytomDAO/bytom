@@ -101,11 +101,3 @@ func (a *BlockchainReactor) pseudohsmResetPassword(ctx context.Context, x struct
 }) error {
 	return a.hsm.ResetPassword(x.XPub, x.OldPassword, x.NewPassword)
 }
-
-func (a *BlockchainReactor) pseudohsmUpdateAlias(ctx context.Context, x struct {
-	Password string
-	NewAlias string
-	XPub     chainkd.XPub `json:"xpubs"`
-}) error {
-	return a.hsm.UpdateAlias(x.XPub, x.Password, x.NewAlias)
-}

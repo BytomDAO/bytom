@@ -18,13 +18,13 @@ import (
 	"github.com/bytom/blockchain/rpc"
 	ctypes "github.com/bytom/blockchain/rpc/types"
 	"github.com/bytom/blockchain/txfeed"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/types"
 )
@@ -160,7 +160,6 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
 	m.Handle("/sign-transactions", jsonHandler(bcr.pseudohsmSignTemplates))
 	m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
-	m.Handle("/update-alias", jsonHandler(bcr.pseudohsmUpdateAlias))
 	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
 	m.Handle("/get-best-block-hash", jsonHandler(bcr.getBestBlockHash))
 
