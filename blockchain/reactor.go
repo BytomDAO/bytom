@@ -1,7 +1,9 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
+	stdjson "encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -162,6 +164,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
 	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
 	m.Handle("/get-best-block-hash", jsonHandler(bcr.getBestBlockHash))
+	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -343,6 +346,21 @@ func (bcR *BlockchainReactor) getNetInfo() (*ctypes.ResultNetInfo, error) {
 
 func (bcR *BlockchainReactor) getBestBlockHash() *bc.Hash {
 	return bcR.chain.BestBlockHash()
+}
+
+func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
+	var buf bytes.Buffer
+	hash := bc.Hash{}
+	hash.UnmarshalText([]byte(strHash))
+	block, err := bcr.chain.GetBlockByHash(&hash)
+	if err != nil {
+		log.WithField("error", err).Error("Fail to get block by hash")
+		return ""
+	}
+	bcBlock := legacy.MapBlock(block)
+	header, _ := stdjson.MarshalIndent(bcBlock.BlockHeader, "", "  ")
+	buf.WriteString(string(header))
+	return buf.String()
 }
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.
