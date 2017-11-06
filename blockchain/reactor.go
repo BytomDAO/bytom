@@ -351,7 +351,9 @@ func (bcR *BlockchainReactor) getBestBlockHash() *bc.Hash {
 func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
 	var buf bytes.Buffer
 	hash := bc.Hash{}
-	hash.UnmarshalText([]byte(strHash))
+	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
+		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
+	}
 	block, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
