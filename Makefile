@@ -1,25 +1,19 @@
-GOTOOLS  = \
-		   github.com/mitchellh/gox \
-		   github.com/Masterminds/glide
-PACKAGES = $(shell go list ./... | grep -v '/vendor/' | grep -v '/rpc/')
+PACKAGES = $(shell go list ./... | grep -v '/vendor/')
 
-all: install test
+all: bytomd bytomcli test
 
-install: get_vendor_deps
-	@go install --ldflags '-extldflags "-static"' \
-		--ldflags "-X github.com/Bytom/blockchain/version.GitCommit=`git rev-parse HEAD`" ./node/
-	@echo "====> Done!"
+bytomd:
+	@echo "Building bytomd to cmd/bytomd/bytomd"
+	@go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
+    -o cmd/bytomd/bytomd cmd/bytomd/main.go
 
-get_vendor_deps: ensure_tools
-	@rm -rf vendor/
-	@echo "====> Running glide install"
-	@glide install
-
-ensure_tools:
-	go get $(GOTOOLS)
+bytomcli:
+	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
+	@go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
+    -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
 
 test:
 	@echo "====> Running go test"
 	@go test $(PACKAGES)
 
-.PHONY: install get_vendor_deps ensure_tools test
+.PHONY: test

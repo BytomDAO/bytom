@@ -5,9 +5,10 @@
 package cpuminer
 
 import (
-	log "github.com/sirupsen/logrus"
 	"sync"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/mining"
@@ -89,21 +90,19 @@ out:
 		payToAddr := []byte{}
 		block, err := mining.NewBlockTemplate(m.chain, m.txPool, payToAddr)
 		if err != nil {
-			log.WithField("error", err).Error("Failed to create new block template")
+			log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
 			continue
 		}
 
 		if m.solveBlock(block, ticker, quit) {
-			if err := m.chain.AddBlock(nil, block); err == nil {
+			if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
 				log.WithFields(log.Fields{
-					"height": block.BlockHeader.Height,
-					"tx":     len(block.Transactions),
-				}).Info("Finish committing block height")
+					"height":   block.BlockHeader.Height,
+					"isOrphan": isOrphan,
+					"tx":       len(block.Transactions),
+				}).Info("Miner processed block")
 			} else {
-				log.WithFields(log.Fields{
-					"height": block.BlockHeader.Height,
-					"error":  err,
-				}).Error("Failed to commit block height")
+				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
 			}
 		}
 	}

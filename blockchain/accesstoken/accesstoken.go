@@ -7,13 +7,11 @@ package accesstoken
 import (
 	"context"
 	"crypto/rand"
-	//	"database/sql"
 	"fmt"
 	"regexp"
 	"time"
 
 	"github.com/bytom/crypto/sha3pool"
-	//	"chain/database/pg"
 	"github.com/bytom/errors"
 )
 

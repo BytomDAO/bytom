@@ -5,8 +5,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
+	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -30,13 +29,87 @@ var (
 // and issuance memory. The Chain type uses Store to load state
 // from storage and persist validated data.
 type Store interface {
-	Height() uint64
-	GetBlock(uint64) (*legacy.Block, error)
-	LatestSnapshot(context.Context) (*state.Snapshot, uint64, error)
+	BlockExist(*bc.Hash) bool
+
+	GetBlock(*bc.Hash) (*legacy.Block, error)
+	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
+	GetSnapshot(*bc.Hash) (*state.Snapshot, error)
+	GetStoreStatus() txdb.BlockStoreStateJSON
 
 	SaveBlock(*legacy.Block) error
-	FinalizeBlock(context.Context, uint64) error
-	SaveSnapshot(context.Context, uint64, *state.Snapshot) error
+	SaveMainchain(map[uint64]*bc.Hash, *bc.Hash) error
+	SaveSnapshot(*state.Snapshot, *bc.Hash) error
+	SaveStoreStatus(uint64, *bc.Hash)
+}
+
+// OrphanManage is use to handle all the orphan block
+type OrphanManage struct {
+	//TODO: add orphan cached block limit
+	orphan     map[bc.Hash]*legacy.Block
+	preOrphans map[bc.Hash][]*bc.Hash
+	mtx        sync.RWMutex
+}
+
+// NewOrphanManage return a new orphan block
+func NewOrphanManage() *OrphanManage {
+	return &OrphanManage{
+		orphan:     make(map[bc.Hash]*legacy.Block),
+		preOrphans: make(map[bc.Hash][]*bc.Hash),
+	}
+}
+
+// BlockExist check is the block in OrphanManage
+func (o *OrphanManage) BlockExist(hash *bc.Hash) bool {
+	o.mtx.RLock()
+	_, ok := o.orphan[*hash]
+	o.mtx.RUnlock()
+	return ok
+}
+
+// Add will add the block to OrphanManage
+func (o *OrphanManage) Add(block *legacy.Block) {
+	blockHash := block.Hash()
+	o.mtx.Lock()
+	defer o.mtx.Unlock()
+
+	if _, ok := o.orphan[blockHash]; ok {
+		return
+	}
+
+	o.orphan[blockHash] = block
+	o.preOrphans[block.PreviousBlockHash] = append(o.preOrphans[block.PreviousBlockHash], &blockHash)
+}
+
+// Delete will delelte the block from OrphanManage
+func (o *OrphanManage) Delete(hash *bc.Hash) {
+	o.mtx.Lock()
+	defer o.mtx.Unlock()
+	block, ok := o.orphan[*hash]
+	if !ok {
+		return
+	}
+	delete(o.orphan, *hash)
+
+	preOrphans, ok := o.preOrphans[block.PreviousBlockHash]
+	if !ok || len(preOrphans) == 1 {
+		delete(o.preOrphans, block.PreviousBlockHash)
+		return
+	}
+
+	for i, preOrphan := range preOrphans {
+		if preOrphan == hash {
+			o.preOrphans[block.PreviousBlockHash] = append(preOrphans[:i], preOrphans[i+1:]...)
+			return
+		}
+	}
+}
+
+// Get return the orphan block by hash
+func (o *OrphanManage) Get(hash *bc.Hash) (*legacy.Block, bool) {
+	o.mtx.RLock()
+	block, ok := o.orphan[*hash]
+	o.mtx.RUnlock()
+	return block, ok
 }
 
 // Chain provides a complete, minimal blockchain database. It
@@ -47,80 +120,72 @@ type Chain struct {
 	InitialBlockHash  bc.Hash
 	MaxIssuanceWindow time.Duration // only used by generators
 
+	orphanManage *OrphanManage
+	txPool       *TxPool
+
 	state struct {
-		cond     sync.Cond // protects height, block, snapshot
-		height   uint64
-		block    *legacy.Block
-		snapshot *state.Snapshot
+		cond      sync.Cond
+		block     *legacy.Block
+		hash      *bc.Hash
+		mainChain map[uint64]*bc.Hash
+		snapshot  *state.Snapshot
 	}
 	store Store
-
-	lastQueuedSnapshot time.Time
-	pendingSnapshots   chan pendingSnapshot
-
-	txPool *TxPool
-}
-
-type pendingSnapshot struct {
-	height   uint64
-	snapshot *state.Snapshot
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(ctx context.Context, initialBlockHash bc.Hash, store Store, txPool *TxPool, heights <-chan uint64) (*Chain, error) {
+func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, error) {
 	c := &Chain{
 		InitialBlockHash: initialBlockHash,
+		orphanManage:     NewOrphanManage(),
 		store:            store,
-		pendingSnapshots: make(chan pendingSnapshot, 1),
 		txPool:           txPool,
 	}
 	c.state.cond.L = new(sync.Mutex)
+	storeStatus := store.GetStoreStatus()
 
-	log.WithField("current height", store.Height()).Info("Resume from the database")
-	c.state.height = store.Height()
-
-	if c.state.height < 1 {
+	if storeStatus.Height == 0 {
 		c.state.snapshot = state.Empty()
-	} else {
-		c.state.block, _ = store.GetBlock(c.state.height)
-		c.state.snapshot, _, _ = store.LatestSnapshot(ctx)
+		c.state.mainChain = make(map[uint64]*bc.Hash)
+		return c, nil
 	}
 
-	// Note that c.height.n may still be zero here.
-	if heights != nil {
-		go func() {
-			for h := range heights {
-				c.setHeight(h)
-			}
-		}()
+	c.state.hash = storeStatus.Hash
+	var err error
+	if c.state.block, err = store.GetBlock(storeStatus.Hash); err != nil {
+		return nil, err
 	}
-
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case ps := <-c.pendingSnapshots:
-				err := store.SaveSnapshot(ctx, ps.height, ps.snapshot)
-				if err != nil {
-					log.WithField("error", err).Error("Error occurs when saving snapshot")
-				}
-			}
-		}
-	}()
-
+	if c.state.snapshot, err = store.GetSnapshot(storeStatus.Hash); err != nil {
+		return nil, err
+	}
+	if c.state.mainChain, err = store.GetMainchain(storeStatus.Hash); err != nil {
+		return nil, err
+	}
 	return c, nil
-}
-
-func (c *Chain) GetStore() *Store {
-	return &(c.store)
 }
 
 // Height returns the current height of the blockchain.
 func (c *Chain) Height() uint64 {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
-	return c.state.height
+	if c.state.block == nil {
+		return 0
+	}
+	return c.state.block.Height
+}
+
+func (c *Chain) BestBlockHash() *bc.Hash {
+	c.state.cond.L.Lock()
+	defer c.state.cond.L.Unlock()
+	return c.state.hash
+}
+
+func (c *Chain) inMainchain(block *legacy.Block) bool {
+	hash, ok := c.state.mainChain[block.Height]
+	if !ok {
+		return false
+	}
+	return *hash == block.Hash()
 }
 
 // TimestampMS returns the latest known block timestamp.
@@ -142,15 +207,30 @@ func (c *Chain) State() (*legacy.Block, *state.Snapshot) {
 	return c.state.block, c.state.snapshot
 }
 
-func (c *Chain) setState(b *legacy.Block, s *state.Snapshot) {
-	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
-	c.state.block = b
-	c.state.snapshot = s
-	if b != nil && b.Height > c.state.height {
-		c.state.height = b.Height
-		c.state.cond.Broadcast()
+// This function must be called with mu lock in above level
+func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*bc.Hash) error {
+	if block.AssetsMerkleRoot != s.Tree.RootHash() {
+		return ErrBadStateRoot
 	}
+
+	blockHash := block.Hash()
+	c.state.block = block
+	c.state.hash = &blockHash
+	c.state.snapshot = s
+	for k, v := range m {
+		c.state.mainChain[k] = v
+	}
+
+	if err := c.store.SaveSnapshot(c.state.snapshot, &blockHash); err != nil {
+		return err
+	}
+	if err := c.store.SaveMainchain(c.state.mainChain, &blockHash); err != nil {
+		return err
+	}
+	c.store.SaveStoreStatus(block.Height, &blockHash)
+
+	c.state.cond.Broadcast()
+	return nil
 }
 
 // BlockSoonWaiter returns a channel that
@@ -186,7 +266,7 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	go func() {
 		c.state.cond.L.Lock()
 		defer c.state.cond.L.Unlock()
-		for c.state.height < height {
+		for c.state.block.Height < height {
 			c.state.cond.Wait()
 		}
 		ch <- struct{}{}

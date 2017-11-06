@@ -42,7 +42,11 @@ func (a *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilde
 	}
 	return decoder, true
 }
-
+/*		{"actions": [
+			{"type": "spend", "asset_id": "%s", "amount": 100},
+			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"}
+		]}`
+*/
 func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
 	err := a.filterAliases(ctx, req)
 	if err != nil {
@@ -251,7 +255,7 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 			return 0, ctx.Err()
 
 		case <-a.chain.BlockWaiter(height):
-			b, err := a.chain.GetBlock(height)
+			b, err := a.chain.GetBlockByHeight(height)
 			if err != nil {
 				return 0, errors.Wrap(err, "getting block that just landed")
 			}

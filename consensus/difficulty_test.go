@@ -14,20 +14,20 @@ func TestCalcNextRequiredDifficulty(t *testing.T) {
 		compareBH *legacy.BlockHeader
 		want      uint64
 	}{
-		{nil, nil, powMinBits},
-		{&legacy.BlockHeader{Height: BlocksPerRetarget, Bits: 87654321}, nil, 87654321},
+		//{nil, nil, powMinBits},
+		//{&legacy.BlockHeader{Height: BlocksPerRetarget, Bits: 87654321}, nil, 87654321},
 		{
-			&legacy.BlockHeader{Height: BlocksPerRetarget - 1, TimestampMS: targetTimeSpan, Bits: BigToCompact(big.NewInt(1000))},
+			&legacy.BlockHeader{Height: BlocksPerRetarget, TimestampMS: targetTimeSpan, Bits: BigToCompact(big.NewInt(1000))},
 			&legacy.BlockHeader{Height: 0, TimestampMS: 0},
 			BigToCompact(big.NewInt(1000)),
 		},
 		{
-			&legacy.BlockHeader{Height: BlocksPerRetarget - 1, TimestampMS: targetTimeSpan * 2, Bits: BigToCompact(big.NewInt(1000))},
+			&legacy.BlockHeader{Height: BlocksPerRetarget, TimestampMS: targetTimeSpan * 2, Bits: BigToCompact(big.NewInt(1000))},
 			&legacy.BlockHeader{Height: 0, TimestampMS: 0},
 			BigToCompact(big.NewInt(2000)),
 		},
 		{
-			&legacy.BlockHeader{Height: BlocksPerRetarget - 1, TimestampMS: targetTimeSpan / 2, Bits: BigToCompact(big.NewInt(1000))},
+			&legacy.BlockHeader{Height: BlocksPerRetarget, TimestampMS: targetTimeSpan / 2, Bits: BigToCompact(big.NewInt(1000))},
 			&legacy.BlockHeader{Height: 0, TimestampMS: 0},
 			BigToCompact(big.NewInt(500)),
 		},
