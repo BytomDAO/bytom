@@ -20,7 +20,11 @@ var RootCmd = &cobra.Command{
 			return err
 		}
 		config.SetRoot(config.RootDir)
-		cfg.EnsureRoot(config.RootDir)
+		if len(args) == 0 {
+			cfg.EnsureRoot(config.RootDir, "mainnet")
+		} else {
+			cfg.EnsureRoot(config.RootDir, args[0])
+		}
 		return nil
 	},
 }
