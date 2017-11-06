@@ -7,7 +7,7 @@ import (
 
 	//"github.com/lib/pq"
 
-	//"chain/core/pin"
+	//"github.com/bytom/blockchain/pin"
 	//"github.com/blockchain/database/pg"
 	//	"github.com/blockchain/errors"
 	"github.com/bytom/protocol"

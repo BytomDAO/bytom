@@ -21,8 +21,13 @@ func (a *BlockchainReactor) getBlockRPC(ctx context.Context, height uint64) (cha
 		return nil, errors.Wrapf(err, "waiting for block at height %d", height)
 	}
 
-	rawBlock, err := a.store.GetRawBlock(height)
+	block, err := a.chain.GetBlockByHeight(height)
 	if err != nil {
+		return nil, err
+	}
+	rawBlock, err := block.MarshalText()
+	if err != nil {
+
 		return nil, err
 	}
 

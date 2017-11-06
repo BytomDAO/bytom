@@ -9,7 +9,6 @@ import (
 type Config struct {
 	// Top level options use an anonymous struct
 	BaseConfig `mapstructure:",squash"`
-
 	// Options for services
 	RPC    *RPCConfig    `mapstructure:"rpc"`
 	P2P    *P2PConfig    `mapstructure:"p2p"`
@@ -50,11 +49,11 @@ type BaseConfig struct {
 	// This should be set in viper so it can unmarshal into this struct
 	RootDir string `mapstructure:"home"`
 
-	// The ID of the chain to join (should be signed with every transaction and vote)
-	ChainID string `mapstructure:"chain_id"`
-
 	// A JSON file containing the initial validator set and other meta data
 	Genesis string `mapstructure:"genesis_file"`
+
+	//The ID of the network to json
+	ChainID string `mapstructure:"chain_id"`
 
 	// A JSON file containing the private key to use as a validator in the consensus protocol
 	PrivateKey string `mapstructure:"private_key"`
@@ -139,7 +138,6 @@ func DefaultPackageLogLevels() string {
 	return fmt.Sprintf("state:info,*:%s", DefaultLogLevel())
 }
 
-//-----------------------------------------------------------------------------
 // RPCConfig
 
 type RPCConfig struct {

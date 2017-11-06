@@ -23,6 +23,6 @@ package pseudohsm
 
 type watcher struct{ running bool }
 
-func newWatcher(*addrCache) *watcher { return new(watcher) }
+func newWatcher(*keyCache) *watcher { return new(watcher) }
 func (*watcher) start()              {}
 func (*watcher) close()              {}
