@@ -91,7 +91,7 @@ var commands = map[string]*command{
 	"net-info":                 {netInfo},
 	"get-best-block-hash":      {getBestBlockHash},
 	"get-block-header-by-hash": {getBlockHeaderByHash},
-	"get-block-entry-by-hash":  {getBlockEntryByHash},
+	"get-block-by-hash":        {getBlockByHash},
 }
 
 func main() {
@@ -1130,11 +1130,11 @@ func getBlockHeaderByHash(client *rpc.Client, args []string) {
 	fmt.Printf("block header: %v\n", response)
 }
 
-func getBlockEntryByHash(client *rpc.Client, args []string) {
+func getBlockByHash(client *rpc.Client, args []string) {
 	if len(args) != 1 {
-		fatalln("error: get-block-entry-by-hash args not valid: get-block-entry-by-hash [hash]")
+		fatalln("error: get-block-by-hash args not valid: get-block-by-hash [hash]")
 	}
 	var response interface{}
-	client.Call(context.Background(), "/get-block-entry-by-hash", args[0], &response)
+	client.Call(context.Background(), "/get-block-by-hash", args[0], &response)
 	fmt.Printf("%v\n", response)
 }

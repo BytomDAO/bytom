@@ -165,7 +165,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
 	m.Handle("/get-best-block-hash", jsonHandler(bcr.getBestBlockHash))
 	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
-	m.Handle("/get-block-entry-by-hash", jsonHandler(bcr.getBlockEntryByHash))
+	m.Handle("/get-block-by-hash", jsonHandler(bcr.getBlockByHash))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -366,48 +366,45 @@ func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
 	return buf.String()
 }
 
-func (bcr *BlockchainReactor) getBlockEntryByHash(strHash string) string {
-	var buf bytes.Buffer
+type GetBlockByHash struct {
+	BlockHeader *bc.BlockHeader `json:"block_header"`
+	Inputs      []bc.Entry      `json:"inputs"`
+	Outputs     []bc.Entry      `json:"outputs"`
+}
+
+func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
 	}
-	block, err := bcr.chain.GetBlockByHash(&hash)
+	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
 		return ""
 	}
-	bcBlock := legacy.MapBlock(block)
-	header, _ := stdjson.MarshalIndent(bcBlock.BlockHeader, "", "  ")
-	// FIXME: smarter pretty-print
-	buf.WriteString("\"block_header\": " + string(header))
+	block := &GetBlockByHash{}
+	bcBlock := legacy.MapBlock(legacyBlock)
+	block.BlockHeader = bcBlock.BlockHeader
 	for _, tx := range bcBlock.Transactions {
-		var inputs, outputs [][]byte
 		for _, e := range tx.Entries {
 			switch e := e.(type) {
 			case *bc.Issuance:
-				issuance, _ := stdjson.MarshalIndent(e, "", "  ")
-				inputs = append(inputs, issuance)
+				block.Inputs = append(block.Inputs, e)
 			case *bc.Spend:
-				spend, _ := stdjson.MarshalIndent(e, "", "  ")
-				inputs = append(inputs, spend)
+				block.Inputs = append(block.Inputs, e)
 			case *bc.Coinbase:
-				coinbase, _ := stdjson.MarshalIndent(e, "", "  ")
-				inputs = append(inputs, coinbase)
+				block.Inputs = append(block.Inputs, e)
 			case *bc.Retirement:
-				retirement, _ := stdjson.MarshalIndent(e, "", "  ")
-				outputs = append(outputs, retirement)
+				block.Outputs = append(block.Outputs, e)
 			case *bc.Output:
-				output, _ := stdjson.MarshalIndent(e, "", "  ")
-				outputs = append(outputs, output)
+				block.Outputs = append(block.Outputs, e)
 			default:
 				continue
 			}
 		}
-		buf.WriteString("\n\"inputs\": " + string(bytes.Join(inputs, []byte(""))))
-		buf.WriteString("\n\"outputs\": " + string(bytes.Join(outputs, []byte(""))))
 	}
-	return buf.String()
+	ret, _ := stdjson.MarshalIndent(block, "", "  ")
+	return string(ret)
 }
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.
