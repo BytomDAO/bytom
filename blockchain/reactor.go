@@ -371,7 +371,7 @@ type TxJSON struct {
 	Outputs []bc.Entry `json:"outputs"`
 }
 
-type GetBlockByHash struct {
+type GetBlockByHashJSON struct {
 	BlockHeader  *bc.BlockHeader `json:"block_header"`
 	Transactions []*TxJSON       `json:"transactions"`
 }
@@ -390,7 +390,7 @@ func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
 	}
 
 	bcBlock := legacy.MapBlock(legacyBlock)
-	res := &GetBlockByHash{BlockHeader: bcBlock.BlockHeader}
+	res := &GetBlockByHashJSON{BlockHeader: bcBlock.BlockHeader}
 	for _, tx := range bcBlock.Transactions {
 		txJSON := &TxJSON{}
 		for _, e := range tx.Entries {
