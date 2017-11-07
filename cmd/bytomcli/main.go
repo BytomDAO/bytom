@@ -50,46 +50,47 @@ type grantReq struct {
 }
 
 var commands = map[string]*command{
-	"create-block-keypair":    {createBlockKeyPair},
-	"reset":                   {reset},
-	"grant":                   {grant},
-	"revoke":                  {revoke},
-	"wait":                    {wait},
-	"create-account":          {createAccount},
-	"bind-account":            {bindAccount},
-	"update-account-tags":     {updateAccountTags},
-	"create-asset":            {createAsset},
-	"bind-asset":              {bindAsset},
-	"update-asset-tags":       {updateAssetTags},
-	"build-transaction":       {buildTransaction},
-	"create-control-program":  {createControlProgram},
-	"create-account-receiver": {createAccountReceiver},
-	"create-transaction-feed": {createTxFeed},
-	"get-transaction-feed":    {getTxFeed},
-	"update-transaction-feed": {updateTxFeed},
-	"list-accounts":           {listAccounts},
-	"list-assets":             {listAssets},
-	"list-transaction-feeds":  {listTxFeeds},
-	"list-transactions":       {listTransactions},
-	"list-balances":           {listBalances},
-	"list-unspent-outputs":    {listUnspentOutputs},
-	"delete-transaction-feed": {deleteTxFeed},
-	"issue-test":              {example.IssueTest},
-	"spend-test":              {example.SpendTest},
-	"wallet-test":             {example.WalletTest},
-	"create-access-token":     {createAccessToken},
-	"list-access-token":       {listAccessTokens},
-	"delete-access-token":     {deleteAccessToken},
-	"create-key":              {createKey},
-	"list-keys":               {listKeys},
-	"delete-key":              {deleteKey},
-	"sign-transactions":       {signTransactions},
-	"sub-create-issue-tx":     {submitCreateIssueTransaction},
-	"sub-spend-account-tx":    {submitSpendTransaction},
-	"reset-password":          {resetPassword},
-	"update-alias":            {updateAlias},
-	"net-info":                {netInfo},
-	"get-best-block-hash":   {getBestBlockHash},
+	"create-block-keypair":     {createBlockKeyPair},
+	"reset":                    {reset},
+	"grant":                    {grant},
+	"revoke":                   {revoke},
+	"wait":                     {wait},
+	"create-account":           {createAccount},
+	"bind-account":             {bindAccount},
+	"update-account-tags":      {updateAccountTags},
+	"create-asset":             {createAsset},
+	"bind-asset":               {bindAsset},
+	"update-asset-tags":        {updateAssetTags},
+	"build-transaction":        {buildTransaction},
+	"create-control-program":   {createControlProgram},
+	"create-account-receiver":  {createAccountReceiver},
+	"create-transaction-feed":  {createTxFeed},
+	"get-transaction-feed":     {getTxFeed},
+	"update-transaction-feed":  {updateTxFeed},
+	"list-accounts":            {listAccounts},
+	"list-assets":              {listAssets},
+	"list-transaction-feeds":   {listTxFeeds},
+	"list-transactions":        {listTransactions},
+	"list-balances":            {listBalances},
+	"list-unspent-outputs":     {listUnspentOutputs},
+	"delete-transaction-feed":  {deleteTxFeed},
+	"issue-test":               {example.IssueTest},
+	"spend-test":               {example.SpendTest},
+	"wallet-test":              {example.WalletTest},
+	"create-access-token":      {createAccessToken},
+	"list-access-token":        {listAccessTokens},
+	"delete-access-token":      {deleteAccessToken},
+	"create-key":               {createKey},
+	"list-keys":                {listKeys},
+	"delete-key":               {deleteKey},
+	"sign-transactions":        {signTransactions},
+	"sub-create-issue-tx":      {submitCreateIssueTransaction},
+	"sub-spend-account-tx":     {submitSpendTransaction},
+	"reset-password":           {resetPassword},
+	"update-alias":             {updateAlias},
+	"net-info":                 {netInfo},
+	"get-best-block-hash":      {getBestBlockHash},
+	"get-block-header-by-hash": {getBlockHeaderByHash},
 }
 
 func main() {
@@ -1117,4 +1118,13 @@ func getBestBlockHash(client *rpc.Client, args []string) {
 	var response interface{}
 	client.Call(context.Background(), "/get-best-block-hash", nil, &response)
 	fmt.Printf("best-block-hash:%v\n", response)
+}
+
+func getBlockHeaderByHash(client *rpc.Client, args []string) {
+	if len(args) != 1 {
+		fatalln("error: get-block-header-by-hash args not valid: get-block-header-by-hash [hash]")
+	}
+	var response interface{}
+	client.Call(context.Background(), "/get-block-header-by-hash", args[0], &response)
+	fmt.Printf("block header: %v\n", response)
 }

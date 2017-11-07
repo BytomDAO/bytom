@@ -27,31 +27,12 @@ func TestEnsureRoot(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// create root dir
-	EnsureRoot(tmpDir)
+	EnsureRoot(tmpDir, "mainnet")
 
 	// make sure config is set properly
 	data, err := ioutil.ReadFile(filepath.Join(tmpDir, "config.toml"))
 	require.Nil(err)
-	assert.Equal([]byte(defaultConfig("anonymous")), data)
+	assert.Equal([]byte(selectNetwork("mainnet")), data)
 
 	ensureFiles(t, tmpDir, "data")
-}
-
-func TestEnsureTestRoot(t *testing.T) {
-	assert, require := assert.New(t), require.New(t)
-
-	testName := "ensureTestRoot"
-
-	// create root dir
-	cfg := ResetTestRoot(testName)
-	rootDir := cfg.RootDir
-
-	// make sure config is set properly
-	data, err := ioutil.ReadFile(filepath.Join(rootDir, "config.toml"))
-	require.Nil(err)
-	assert.Equal([]byte(testConfig("anonymous")), data)
-
-	// TODO: make sure the cfg returned and testconfig are the same!
-
-	ensureFiles(t, rootDir, "data", "genesis.json", "priv_validator.json")
 }

@@ -168,6 +168,9 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 func (c *Chain) Height() uint64 {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
+	if c.state.block == nil {
+		return 0
+	}
 	return c.state.block.Height
 }
 
