@@ -367,43 +367,48 @@ func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
 }
 
 type GetBlockByHash struct {
-	BlockHeader *bc.BlockHeader `json:"block_header"`
-	Inputs      []bc.Entry      `json:"inputs"`
-	Outputs     []bc.Entry      `json:"outputs"`
+	BlockHeader  *bc.BlockHeader `json:"block_header"`
+	Transactions struct {
+		tx      []*bc.Tx
+		Inputs  []bc.Entry `json:"inputs"`
+		Outputs []bc.Entry `json:"outputs"`
+	}
 }
 
 func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
+		return "Error"
 	}
 	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return ""
+		return "Error"
 	}
-	block := &GetBlockByHash{}
+	res := &GetBlockByHash{}
 	bcBlock := legacy.MapBlock(legacyBlock)
-	block.BlockHeader = bcBlock.BlockHeader
+	res.BlockHeader = bcBlock.BlockHeader
 	for _, tx := range bcBlock.Transactions {
+		res.Transactions.tx = append(res.Transactions.tx, tx)
 		for _, e := range tx.Entries {
 			switch e := e.(type) {
 			case *bc.Issuance:
-				block.Inputs = append(block.Inputs, e)
+				res.Transactions.Inputs = append(res.Transactions.Inputs, e)
 			case *bc.Spend:
-				block.Inputs = append(block.Inputs, e)
+				res.Transactions.Inputs = append(res.Transactions.Inputs, e)
 			case *bc.Coinbase:
-				block.Inputs = append(block.Inputs, e)
+				res.Transactions.Inputs = append(res.Transactions.Inputs, e)
 			case *bc.Retirement:
-				block.Outputs = append(block.Outputs, e)
+				res.Transactions.Outputs = append(res.Transactions.Outputs, e)
 			case *bc.Output:
-				block.Outputs = append(block.Outputs, e)
+				res.Transactions.Outputs = append(res.Transactions.Outputs, e)
 			default:
 				continue
 			}
 		}
 	}
-	ret, _ := stdjson.MarshalIndent(block, "", "  ")
+	ret, _ := stdjson.Marshal(res)
 	return string(ret)
 }
 
