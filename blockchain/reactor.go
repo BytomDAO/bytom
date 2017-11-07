@@ -366,49 +366,54 @@ func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
 	return buf.String()
 }
 
+type TxJSON struct {
+	Inputs  []bc.Entry `json:"inputs"`
+	Outputs []bc.Entry `json:"outputs"`
+}
+
 type GetBlockByHash struct {
 	BlockHeader  *bc.BlockHeader `json:"block_header"`
-	Transactions struct {
-		tx      []*bc.Tx
-		Inputs  []bc.Entry `json:"inputs"`
-		Outputs []bc.Entry `json:"outputs"`
-	}
+	Transactions []*TxJSON       `json:"transactions"`
 }
 
 func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return "Error"
+		return err.Error()
 	}
+
 	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return "Error"
+		return err.Error()
 	}
-	res := &GetBlockByHash{}
+
 	bcBlock := legacy.MapBlock(legacyBlock)
-	res.BlockHeader = bcBlock.BlockHeader
+	res := &GetBlockByHash{BlockHeader: bcBlock.BlockHeader}
 	for _, tx := range bcBlock.Transactions {
-		res.Transactions.tx = append(res.Transactions.tx, tx)
+		txJSON := &TxJSON{}
 		for _, e := range tx.Entries {
 			switch e := e.(type) {
 			case *bc.Issuance:
-				res.Transactions.Inputs = append(res.Transactions.Inputs, e)
+				txJSON.Inputs = append(txJSON.Inputs, e)
 			case *bc.Spend:
-				res.Transactions.Inputs = append(res.Transactions.Inputs, e)
-			case *bc.Coinbase:
-				res.Transactions.Inputs = append(res.Transactions.Inputs, e)
+				txJSON.Inputs = append(txJSON.Inputs, e)
 			case *bc.Retirement:
-				res.Transactions.Outputs = append(res.Transactions.Outputs, e)
+				txJSON.Outputs = append(txJSON.Outputs, e)
 			case *bc.Output:
-				res.Transactions.Outputs = append(res.Transactions.Outputs, e)
+				txJSON.Outputs = append(txJSON.Outputs, e)
 			default:
 				continue
 			}
 		}
+		res.Transactions = append(res.Transactions, txJSON)
 	}
-	ret, _ := stdjson.Marshal(res)
+
+	ret, err := stdjson.Marshal(res)
+	if err != nil {
+		return err.Error()
+	}
 	return string(ret)
 }
 
