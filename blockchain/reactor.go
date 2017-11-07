@@ -382,30 +382,30 @@ func (bcr *BlockchainReactor) getBlockEntryByHash(strHash string) string {
 	// FIXME: smarter pretty-print
 	buf.WriteString("\"block_header\": " + string(header))
 	for _, tx := range bcBlock.Transactions {
-		var inputArr, outputArr [][]byte
+		var inputs, outputs [][]byte
 		for _, e := range tx.Entries {
 			switch e := e.(type) {
 			case *bc.Issuance:
 				issuance, _ := stdjson.MarshalIndent(e, "", "  ")
-				inputArr = append(inputArr, issuance)
+				inputs = append(inputs, issuance)
 			case *bc.Spend:
 				spend, _ := stdjson.MarshalIndent(e, "", "  ")
-				inputArr = append(inputArr, spend)
+				inputs = append(inputs, spend)
 			case *bc.Coinbase:
 				coinbase, _ := stdjson.MarshalIndent(e, "", "  ")
-				inputArr = append(inputArr, coinbase)
+				inputs = append(inputs, coinbase)
 			case *bc.Retirement:
 				retirement, _ := stdjson.MarshalIndent(e, "", "  ")
-				outputArr = append(outputArr, retirement)
+				outputs = append(outputs, retirement)
 			case *bc.Output:
 				output, _ := stdjson.MarshalIndent(e, "", "  ")
-				outputArr = append(outputArr, output)
+				outputs = append(outputs, output)
 			default:
 				continue
 			}
 		}
-		buf.WriteString("\n\"inputs\": " + string(bytes.Join(inputArr, []byte(""))))
-		buf.WriteString("\n\"outputs\": " + string(bytes.Join(outputArr, []byte(""))))
+		buf.WriteString("\n\"inputs\": " + string(bytes.Join(inputs, []byte(""))))
+		buf.WriteString("\n\"outputs\": " + string(bytes.Join(outputs, []byte(""))))
 	}
 	return buf.String()
 }
