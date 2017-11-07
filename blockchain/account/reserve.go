@@ -10,6 +10,7 @@ import (
 	"time"
 
 	dbm "github.com/tendermint/tmlibs/db"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/consensus"
@@ -261,7 +262,7 @@ func (re *reserver) source(src source) *sourceReserver {
 		src:     src,
 		validFn: re.checkUTXO,
 		heightFn: func() uint64 {
-			return re.pinStore.Height(PinName)
+			return re.pinStore.Height(InsertUnspentsPinName)
 		},
 		cached:   make(map[bc.Hash]*utxo),
 		reserved: make(map[bc.Hash]uint64),
@@ -402,10 +403,11 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64
 		rawRefData  [32]byte
 	)
 
-	iter := db.IteratorPrefix([]byte("acu"))
-	for iter.Next() {
+	it := db.IteratorPrefix([]byte("acu"))
+	defer it.Release()
+	for it.Next() {
 
-		if err := json.Unmarshal(iter.Value(), &au); err != nil {
+		if err := json.Unmarshal(it.Value(), &au); err != nil {
 			return nil, errors.Wrap(err)
 		}
 
@@ -434,6 +436,7 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64
 	}
 
 	if len(utxos) == 0 {
+		log.WithFields(log.Fields{"AccountID": src.AccountID, "AssetID": src.AssetID.String()}).Error("can't match utxo")
 		return nil, errors.New("can't match utxo")
 	}
 
@@ -452,7 +455,7 @@ func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, e
 	// make sure accountUTXO existed in the db
 	accUTXOValue := db.Get(json.RawMessage("acu" + string(outHash.Bytes())))
 	if accUTXOValue == nil {
-		return u, errors.New(fmt.Sprintf("can't find utxo: %s", outHash.String()))
+		return nil, errors.New(fmt.Sprintf("can't find utxo: %s", outHash.String()))
 	}
 	if err := json.Unmarshal(accUTXOValue, &au); err != nil {
 		return nil, errors.Wrap(err)

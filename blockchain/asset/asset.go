@@ -127,13 +127,13 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		asset.Alias = &alias
 	}
 
-	asset_id := []byte(asset.AssetID.String())
+	assetID := []byte(asset.AssetID.String())
 	ass, err := json.Marshal(asset)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal asset")
 	}
 	if len(ass) > 0 {
-		reg.db.Set(asset_id, json.RawMessage(ass))
+		reg.db.Set(assetID, json.RawMessage(ass))
 	}
 
 	err = reg.indexAnnotatedAsset(ctx, asset)
@@ -248,6 +248,8 @@ func (reg *Registry) QueryAll(ctx context.Context) (interface{}, error) {
 	ret := make([]interface{}, 0)
 
 	iter := reg.db.Iterator()
+	defer iter.Release()
+
 	for iter.Next() {
 		value := string(iter.Value())
 		ret = append(ret, value)

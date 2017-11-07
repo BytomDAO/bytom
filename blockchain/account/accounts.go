@@ -332,9 +332,10 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 func (m *Manager) QueryAll(ctx context.Context) (interface{}, error) {
 	ret := make([]interface{}, 0)
 
-	iter := m.db.IteratorPrefix([]byte("acc"))
-	for iter.Next() {
-		ret = append(ret, string(iter.Value()))
+	it := m.db.IteratorPrefix([]byte("acc"))
+	defer it.Release()
+	for it.Next() {
+		ret = append(ret, string(it.Value()))
 	}
 
 	return ret, nil
