@@ -165,6 +165,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
 	m.Handle("/get-best-block-hash", jsonHandler(bcr.getBestBlockHash))
 	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
+	m.Handle("/get-block-entry-by-hash", jsonHandler(bcr.getBlockEntryByHash))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -362,6 +363,50 @@ func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
 	bcBlock := legacy.MapBlock(block)
 	header, _ := stdjson.MarshalIndent(bcBlock.BlockHeader, "", "  ")
 	buf.WriteString(string(header))
+	return buf.String()
+}
+
+func (bcr *BlockchainReactor) getBlockEntryByHash(strHash string) string {
+	var buf bytes.Buffer
+	hash := bc.Hash{}
+	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
+		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
+	}
+	block, err := bcr.chain.GetBlockByHash(&hash)
+	if err != nil {
+		log.WithField("error", err).Error("Fail to get block by hash")
+		return ""
+	}
+	bcBlock := legacy.MapBlock(block)
+	header, _ := stdjson.MarshalIndent(bcBlock.BlockHeader, "", "  ")
+	// FIXME: smarter pretty-print
+	buf.WriteString("\"block_header\": " + string(header))
+	for _, tx := range bcBlock.Transactions {
+		var inputArr, outputArr [][]byte
+		for _, e := range tx.Entries {
+			switch e := e.(type) {
+			case *bc.Issuance:
+				issuance, _ := stdjson.MarshalIndent(e, "", "  ")
+				inputArr = append(inputArr, issuance)
+			case *bc.Spend:
+				spend, _ := stdjson.MarshalIndent(e, "", "  ")
+				inputArr = append(inputArr, spend)
+			case *bc.Coinbase:
+				coinbase, _ := stdjson.MarshalIndent(e, "", "  ")
+				inputArr = append(inputArr, coinbase)
+			case *bc.Retirement:
+				retirement, _ := stdjson.MarshalIndent(e, "", "  ")
+				outputArr = append(outputArr, retirement)
+			case *bc.Output:
+				output, _ := stdjson.MarshalIndent(e, "", "  ")
+				outputArr = append(outputArr, output)
+			default:
+				continue
+			}
+		}
+		buf.WriteString("\n\"inputs\": " + string(bytes.Join(inputArr, []byte(""))))
+		buf.WriteString("\n\"outputs\": " + string(bytes.Join(outputArr, []byte(""))))
+	}
 	return buf.String()
 }
 
