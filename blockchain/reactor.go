@@ -1,7 +1,9 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
+	stdjson "encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -162,6 +164,8 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
 	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
 	m.Handle("/get-best-block-hash", jsonHandler(bcr.getBestBlockHash))
+	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
+	m.Handle("/get-block-by-hash", jsonHandler(bcr.getBlockByHash))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -343,6 +347,74 @@ func (bcR *BlockchainReactor) getNetInfo() (*ctypes.ResultNetInfo, error) {
 
 func (bcR *BlockchainReactor) getBestBlockHash() *bc.Hash {
 	return bcR.chain.BestBlockHash()
+}
+
+func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
+	var buf bytes.Buffer
+	hash := bc.Hash{}
+	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
+		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
+	}
+	block, err := bcr.chain.GetBlockByHash(&hash)
+	if err != nil {
+		log.WithField("error", err).Error("Fail to get block by hash")
+		return ""
+	}
+	bcBlock := legacy.MapBlock(block)
+	header, _ := stdjson.MarshalIndent(bcBlock.BlockHeader, "", "  ")
+	buf.WriteString(string(header))
+	return buf.String()
+}
+
+type TxJSON struct {
+	Inputs  []bc.Entry `json:"inputs"`
+	Outputs []bc.Entry `json:"outputs"`
+}
+
+type GetBlockByHashJSON struct {
+	BlockHeader  *bc.BlockHeader `json:"block_header"`
+	Transactions []*TxJSON       `json:"transactions"`
+}
+
+func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
+	hash := bc.Hash{}
+	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
+		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
+		return err.Error()
+	}
+
+	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
+	if err != nil {
+		log.WithField("error", err).Error("Fail to get block by hash")
+		return err.Error()
+	}
+
+	bcBlock := legacy.MapBlock(legacyBlock)
+	res := &GetBlockByHashJSON{BlockHeader: bcBlock.BlockHeader}
+	for _, tx := range bcBlock.Transactions {
+		txJSON := &TxJSON{}
+		for _, e := range tx.Entries {
+			switch e := e.(type) {
+			case *bc.Issuance:
+				txJSON.Inputs = append(txJSON.Inputs, e)
+			case *bc.Spend:
+				txJSON.Inputs = append(txJSON.Inputs, e)
+			case *bc.Retirement:
+				txJSON.Outputs = append(txJSON.Outputs, e)
+			case *bc.Output:
+				txJSON.Outputs = append(txJSON.Outputs, e)
+			default:
+				continue
+			}
+		}
+		res.Transactions = append(res.Transactions, txJSON)
+	}
+
+	ret, err := stdjson.Marshal(res)
+	if err != nil {
+		return err.Error()
+	}
+	return string(ret)
 }
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.

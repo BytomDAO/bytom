@@ -15,5 +15,4 @@ branches:
 script:
     - git clone https://github.com/Bytom/bytom.git $GOPATH/src/github.com/bytom
     - cd $GOPATH/src/github.com/bytom
-    - make install
     - make test
