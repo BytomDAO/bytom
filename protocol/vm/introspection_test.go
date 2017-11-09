@@ -71,17 +71,17 @@ func TestOutputIDAndNonceOp(t *testing.T) {
 	}
 }
 
-func TestBlockHeigh(t *testing.T) {
-	var blockHeigh uint64 = 6666
+func TestBlockHeight(t *testing.T) {
+	var blockHeight uint64 = 6666
 
-	prog, err := Assemble("BLOCKHEIGH 6666 NUMEQUAL")
+	prog, err := Assemble("BLOCKHEIGHT 6666 NUMEQUAL")
 	if err != nil {
 		t.Fatal(err)
 	}
 	vm := &virtualMachine{
 		runLimit: 50000,
 		program:  prog,
-		context:  &Context{BlockHeigh: &blockHeigh},
+		context:  &Context{BlockHeight: &blockHeight},
 	}
 	err = vm.run()
 	if err != nil {
@@ -91,14 +91,14 @@ func TestBlockHeigh(t *testing.T) {
 		t.Error("result is false, want success")
 	}
 
-	prog, err = Assemble("BLOCKHEIGH 7777 NUMEQUAL")
+	prog, err = Assemble("BLOCKHEIGHT 7777 NUMEQUAL")
 	if err != nil {
 		t.Fatal(err)
 	}
 	vm = &virtualMachine{
 		runLimit: 50000,
 		program:  prog,
-		context:  &Context{BlockHeigh: &blockHeigh},
+		context:  &Context{BlockHeight: &blockHeight},
 	}
 	err = vm.run()
 	if err == nil && vm.falseResult() {

@@ -18,8 +18,8 @@ type Context struct {
 
 	// TxVersion must be present when verifying transaction components
 	// (such as spends and issuances).
-	TxVersion  *uint64
-	BlockHeigh *uint64
+	TxVersion   *uint64
+	BlockHeight *uint64
 
 	// Fields below this point are required by particular opcodes when
 	// verifying transaction components.

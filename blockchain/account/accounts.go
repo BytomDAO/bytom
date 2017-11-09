@@ -24,11 +24,13 @@ import (
 
 const maxAccountCache = 1000
 
+// pre-define errors for support bytom errorFormatter
 var (
 	ErrDuplicateAlias = errors.New("duplicate account alias")
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
+// NewManager create a new account manager
 func NewManager(db dbm.DB, chain *protocol.Chain, pinStore *pin.Store) *Manager {
 	return &Manager{
 		db:          db,
@@ -61,6 +63,7 @@ type Manager struct {
 	acpIndexCap  uint64 // points to end of block
 }
 
+// IndexAccounts will set Manager.indexer
 func (m *Manager) IndexAccounts(indexer Saver) {
 	m.indexer = indexer
 }
@@ -83,6 +86,7 @@ func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) 
 	}
 }
 
+// Account is structure of Bytom account
 type Account struct {
 	*signers.Signer
 	Alias string
@@ -92,7 +96,7 @@ type Account struct {
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
 	if ret := m.db.Get(json.RawMessage("ali" + alias)); ret != nil {
-		return nil, errors.New(fmt.Sprintf("alias:%s already exists", alias))
+		return nil, fmt.Errorf("alias:%s already exists", alias)
 	}
 
 	accountSigner, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
@@ -207,27 +211,19 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 
 	bytes := m.db.Get(json.RawMessage(id))
 	if bytes == nil {
-		return nil, errors.New("not find this account.")
+		return nil, errors.New("not find this account")
 	}
 
 	var account Account
 	err := json.Unmarshal(bytes, &account)
 	if err != nil {
-		return nil, errors.New("failed unmarshal this account.")
+		return nil, errors.New("failed unmarshal this account")
 	}
 
 	m.cacheMu.Lock()
 	m.cache.Add(id, account.Signer)
 	m.cacheMu.Unlock()
 	return account.Signer, nil
-}
-
-type controlProgram struct {
-	accountID      string
-	keyIndex       uint64
-	controlProgram []byte
-	change         bool
-	expiresAt      time.Time
 }
 
 func (m *Manager) createControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*controlProgram, error) {
@@ -249,11 +245,11 @@ func (m *Manager) createControlProgram(ctx context.Context, accountID string, ch
 		return nil, err
 	}
 	return &controlProgram{
-		accountID:      account.ID,
-		keyIndex:       idx,
-		controlProgram: control,
-		change:         change,
-		expiresAt:      expiresAt,
+		AccountID:      account.ID,
+		KeyIndex:       idx,
+		ControlProgram: control,
+		Change:         change,
+		ExpiresAt:      expiresAt,
 	}, nil
 }
 
@@ -268,10 +264,10 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 	if err != nil {
 		return nil, err
 	}
-	return cp.controlProgram, nil
+	return cp.ControlProgram, nil
 }
 
-type ControlProgram struct {
+type controlProgram struct {
 	AccountID      string
 	KeyIndex       uint64
 	ControlProgram []byte
@@ -283,30 +279,56 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 
 	var b32 [32]byte
 	for _, p := range progs {
-
-		acp, err := json.Marshal(&struct {
-			AccountID      string
-			KeyIndex       uint64
-			ControlProgram []byte
-			Change         bool
-			ExpiresAt      time.Time
-		}{
-			AccountID:      p.accountID,
-			KeyIndex:       p.keyIndex,
-			ControlProgram: p.controlProgram,
-			Change:         p.change,
-			ExpiresAt:      p.expiresAt})
-
-		if err != nil {
+		acp, err := json.Marshal(p)
+		if err != nil || len(acp) == 0 {
 			return errors.Wrap(err, "failed marshal controlProgram")
 		}
-		if len(acp) > 0 {
-			sha3pool.Sum256(b32[:], p.controlProgram)
-			m.db.Set(json.RawMessage("acp"+string(b32[:])), acp)
-		}
+
+		sha3pool.Sum256(b32[:], p.ControlProgram)
+		m.db.Set(json.RawMessage("acp"+string(b32[:])), acp)
+	}
+	return nil
+}
+
+// GetCoinbaseControlProgram will return a coinbase script
+func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
+	signerIterator := m.db.IteratorPrefix([]byte("acc"))
+	if !signerIterator.Next() {
+		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
+		return vmutil.CoinbaseProgram(nil, 0, height)
+	}
+	rawSigner := signerIterator.Value()
+
+	signer := &signers.Signer{}
+	if err := json.Unmarshal(rawSigner, signer); err != nil {
+		log.Errorf("GetCoinbaseControlProgram: fail to unmarshal signer %v", err)
+		return vmutil.CoinbaseProgram(nil, 0, height)
+	}
+	ctx := context.Background()
+	idx, err := m.nextIndex(ctx)
+	if err != nil {
+		log.Errorf("GetCoinbaseControlProgram: fail to get nextIndex %v", err)
+		return vmutil.CoinbaseProgram(nil, 0, height)
+	}
+	path := signers.Path(signer, signers.AccountKeySpace, idx)
+	derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
+	derivedPKs := chainkd.XPubKeys(derivedXPubs)
+
+	script, err := vmutil.CoinbaseProgram(derivedPKs, signer.Quorum, height)
+	if err != nil {
+		return script, err
 	}
 
-	return errors.Wrap(nil)
+	err = m.insertAccountControlProgram(ctx, &controlProgram{
+		AccountID:      signer.ID,
+		KeyIndex:       idx,
+		ControlProgram: script,
+		Change:         false,
+	})
+	if err != nil {
+		log.Errorf("GetCoinbaseControlProgram: fail to insertAccountControlProgram %v", err)
+	}
+	return script, nil
 }
 
 func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
@@ -329,6 +351,7 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	return n, nil
 }
 
+// QueryAll will return all the account in the db
 func (m *Manager) QueryAll(ctx context.Context) (interface{}, error) {
 	ret := make([]interface{}, 0)
 

@@ -184,14 +184,14 @@ func opNonce(vm *virtualMachine) error {
 	return vm.push(*vm.context.AnchorID, true)
 }
 
-func opBlockHeigh(vm *virtualMachine) error {
+func opBlockHeight(vm *virtualMachine) error {
 	err := vm.applyCost(1)
 	if err != nil {
 		return err
 	}
 
-	if vm.context.BlockHeigh == nil {
+	if vm.context.BlockHeight == nil {
 		return ErrContext
 	}
-	return vm.pushInt64(int64(*vm.context.BlockHeigh), true)
+	return vm.pushInt64(int64(*vm.context.BlockHeight), true)
 }

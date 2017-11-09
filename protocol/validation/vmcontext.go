@@ -11,11 +11,11 @@ import (
 
 func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args [][]byte) *vm.Context {
 	var (
-		tx         = vs.tx
-		blockHeigh = vs.block.BlockHeader.GetHeight()
-		numResults = uint64(len(tx.ResultIds))
-		txData     = tx.Data.Bytes()
-		entryID    = bc.EntryID(entry) // TODO(bobg): pass this in, don't recompute it
+		tx          = vs.tx
+		blockHeight = vs.block.BlockHeader.GetHeight()
+		numResults  = uint64(len(tx.ResultIds))
+		txData      = tx.Data.Bytes()
+		entryID     = bc.EntryID(entry) // TODO(bobg): pass this in, don't recompute it
 
 		assetID       *[]byte
 		amount        *uint64
@@ -93,8 +93,8 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 
 		EntryID: entryID.Bytes(),
 
-		TxVersion:  &tx.Version,
-		BlockHeigh: &blockHeigh,
+		TxVersion:   &tx.Version,
+		BlockHeight: &blockHeight,
 
 		TxSigHash:     txSigHashFn,
 		NumResults:    &numResults,

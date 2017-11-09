@@ -76,6 +76,7 @@ var commands = map[string]*command{
 	"delete-transaction-feed":  {deleteTxFeed},
 	"issue-test":               {example.IssueTest},
 	"spend-test":               {example.SpendTest},
+	"spend-coinbase-test":      {example.CoinbaseTest},
 	"wallet-test":              {example.WalletTest},
 	"create-access-token":      {createAccessToken},
 	"list-access-token":        {listAccessTokens},
