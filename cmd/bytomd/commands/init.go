@@ -24,21 +24,19 @@ func init() {
 
 func initFiles(cmd *cobra.Command, args []string) {
 	genFile := config.GenesisFile()
-
-	if _, err := os.Stat(genFile); os.IsNotExist(err) {
-		xprv, errKey := chainkd.NewXPrv(nil)
-		if errKey != nil {
-			log.WithField("error", errKey).Error("Spawn node's key failed.")
-		} else {
-			genDoc := types.GenesisDoc{
-				ChainID:    cmn.Fmt("bytom"),
-				PrivateKey: hex.EncodeToString(xprv.Bytes()),
-			}
-			genDoc.SaveAs(genFile)
-			log.WithField("genesis", config.GenesisFile()).Info("Initialized bytom")
-		}
-	} else {
-			log.WithField("genesis", config.GenesisFile()).Info("Already exits config file.")
+	if _, err := os.Stat(genFile); !os.IsNotExist(err) {
+		log.WithField("genesis", config.GenesisFile()).Info("Already exits config file.")
+		return
 	}
-
+	xprv, err := chainkd.NewXPrv(nil)
+	if err != nil {
+		log.WithField("error", err).Error("Spawn node's key failed.")
+		return
+	}
+	genDoc := types.GenesisDoc{
+		ChainID:    cmn.Fmt("bytom"),
+		PrivateKey: hex.EncodeToString(xprv.Bytes()),
+	}
+	genDoc.SaveAs(genFile)
+	log.WithField("genesis", config.GenesisFile()).Info("Initialized bytom")
 }
