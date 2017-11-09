@@ -2,12 +2,14 @@ package commands
 
 import (
 	"os"
+	"encoding/hex"
 
 	"github.com/spf13/cobra"
-
-	"github.com/bytom/types"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
+
+	"github.com/bytom/types"
+	"github.com/bytom/crypto/ed25519/chainkd"
 )
 
 var initFilesCmd = &cobra.Command{
@@ -22,14 +24,19 @@ func init() {
 
 func initFiles(cmd *cobra.Command, args []string) {
 	genFile := config.GenesisFile()
-
-	if _, err := os.Stat(genFile); os.IsNotExist(err) {
-		genDoc := types.GenesisDoc{
-			ChainID:    cmn.Fmt("bytom"),
-			PrivateKey: "27F82582AEFAE7AB151CFB01C48BB6C1A0DA78F9BDDA979A9F70A84D074EB07D3B3069C422E19688B45CBFAE7BB009FC0FA1B1EA86593519318B7214853803C8",
-		}
-		genDoc.SaveAs(genFile)
+	if _, err := os.Stat(genFile); !os.IsNotExist(err) {
+		log.WithField("genesis", config.GenesisFile()).Info("Already exits config file.")
+		return
 	}
-
+	xprv, err := chainkd.NewXPrv(nil)
+	if err != nil {
+		log.WithField("error", err).Error("Spawn node's key failed.")
+		return
+	}
+	genDoc := types.GenesisDoc{
+		ChainID:    cmn.Fmt("bytom"),
+		PrivateKey: hex.EncodeToString(xprv.Bytes()),
+	}
+	genDoc.SaveAs(genFile)
 	log.WithField("genesis", config.GenesisFile()).Info("Initialized bytom")
 }
