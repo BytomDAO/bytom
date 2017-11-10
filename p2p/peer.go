@@ -11,6 +11,8 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
+
+	cfg "github.com/bytom/config"
 )
 
 // Peer could be marked as persistent, in which case you can use
@@ -49,19 +51,19 @@ type PeerConfig struct {
 }
 
 // DefaultPeerConfig returns the default config.
-func DefaultPeerConfig() *PeerConfig {
+func DefaultPeerConfig(config *cfg.P2PConfig) *PeerConfig {
 	return &PeerConfig{
 		AuthEnc:          true,
-		HandshakeTimeout: 20, // * time.Second,
-		DialTimeout:      3,  // * time.Second,
+		HandshakeTimeout: time.Duration(config.HandshakeTimeout), // * time.Second,
+		DialTimeout:      time.Duration(config.DialTimeout),  // * time.Second,
 		MConfig:          DefaultMConnConfig(),
 		Fuzz:             false,
 		FuzzConfig:       DefaultFuzzConnConfig(),
 	}
 }
 
-func newOutboundPeer(addr *NetAddress, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519) (*Peer, error) {
-	return newOutboundPeerWithConfig(addr, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, DefaultPeerConfig())
+func newOutboundPeer(addr *NetAddress, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *cfg.P2PConfig) (*Peer, error) {
+	return newOutboundPeerWithConfig(addr, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, DefaultPeerConfig(config))
 }
 
 func newOutboundPeerWithConfig(addr *NetAddress, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *PeerConfig) (*Peer, error) {
@@ -78,8 +80,8 @@ func newOutboundPeerWithConfig(addr *NetAddress, reactorsByCh map[byte]Reactor, 
 	return peer, nil
 }
 
-func newInboundPeer(conn net.Conn, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519) (*Peer, error) {
-	return newInboundPeerWithConfig(conn, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, DefaultPeerConfig())
+func newInboundPeer(conn net.Conn, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *cfg.P2PConfig) (*Peer, error) {
+	return newInboundPeerWithConfig(conn, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, DefaultPeerConfig(config))
 }
 
 func newInboundPeerWithConfig(conn net.Conn, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *PeerConfig) (*Peer, error) {
