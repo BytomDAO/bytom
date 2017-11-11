@@ -3,6 +3,7 @@ package txdb
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	. "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -20,12 +21,12 @@ type BlockStoreStateJSON struct {
 	Hash   *bc.Hash
 }
 
-func (bsj BlockStoreStateJSON) Save(db dbm.DB) {
+func (bsj BlockStoreStateJSON) Save(dbbatch *dbm.Batch) {
 	bytes, err := json.Marshal(bsj)
 	if err != nil {
 		PanicSanity(Fmt("Could not marshal state bytes: %v", err))
 	}
-	db.SetSync(blockStoreKey, bytes)
+	(*dbbatch).Set(blockStoreKey, bytes)
 }
 
 func loadBlockStoreStateJSON(db dbm.DB) BlockStoreStateJSON {
@@ -82,6 +83,22 @@ func (s *Store) BlockExist(hash *bc.Hash) bool {
 	return err == nil && block != nil
 }
 
+func (s *Store) DeleteRollBack() {
+	s.db.DeleteSync([]byte("rollback"))
+}
+
+func (s *Store) GetRollBack() (uint64, error) {
+	rawHeight := s.db.Get([]byte("rollback"))
+	if rawHeight == nil {
+		return 0, errors.New("no rollback height")
+	}
+	height, err := strconv.ParseUint(string(rawHeight), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return height, nil
+}
+
 func (s *Store) GetBlock(hash *bc.Hash) (*legacy.Block, error) {
 	return s.cache.lookup(hash)
 }
@@ -111,18 +128,22 @@ func (s *Store) SaveBlock(block *legacy.Block) error {
 	return nil
 }
 
-func (s *Store) SaveMainchain(mainchain map[uint64]*bc.Hash, hash *bc.Hash) error {
-	err := saveMainchain(s.db, mainchain, hash)
+func (s *Store) SaveMainchain(mainchain map[uint64]*bc.Hash, hash *bc.Hash, dbbatch *dbm.Batch) error {
+	err := saveMainchain(dbbatch, mainchain, hash)
 	return errors.Wrap(err, "saving mainchain")
 }
 
 // SaveSnapshot saves a state snapshot to the database.
-func (s *Store) SaveSnapshot(snapshot *state.Snapshot, hash *bc.Hash) error {
-	err := saveSnapshot(s.db, snapshot, hash)
+func (s *Store) SaveSnapshot(snapshot *state.Snapshot, hash *bc.Hash, dbbatch *dbm.Batch) error {
+	err := saveSnapshot(dbbatch, snapshot, hash)
 	return errors.Wrap(err, "saving state tree")
 }
 
-func (s *Store) SaveStoreStatus(height uint64, hash *bc.Hash) {
-	BlockStoreStateJSON{Height: height, Hash: hash}.Save(s.db)
+func (s *Store) SaveStoreStatus(height uint64, hash *bc.Hash, dbbatch *dbm.Batch) {
+	BlockStoreStateJSON{Height: height, Hash: hash}.Save(dbbatch)
 	//TODO: clean the old snapshot && mainchain
+}
+
+func (s *Store) NewBatch() dbm.Batch {
+	return s.db.NewBatch()
 }

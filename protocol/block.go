@@ -14,10 +14,6 @@ var (
 	// ErrBadBlock is returned when a block is invalid.
 	ErrBadBlock = errors.New("invalid block")
 
-	// ErrStaleState is returned when the Chain does not have a current
-	// blockchain state.
-	ErrStaleState = errors.New("stale blockchain state")
-
 	// ErrBadStateRoot is returned when the computed assets merkle root
 	// disagrees with the one declared in a block header.
 	ErrBadStateRoot = errors.New("invalid state merkle root")
@@ -70,7 +66,7 @@ func (c *Chain) connectBlock(block *legacy.Block) error {
 	}
 
 	blockHash := block.Hash()
-	if err := c.setState(block, newSnapshot, map[uint64]*bc.Hash{block.Height: &blockHash}); err != nil {
+	if err := c.setState(block, newSnapshot, map[uint64]*bc.Hash{block.Height: &blockHash}, 0); err != nil {
 		return err
 	}
 
@@ -86,7 +82,7 @@ func (c *Chain) getReorganizeBlocks(block *legacy.Block) ([]*legacy.Block, []*le
 	ancestor := block
 
 	for !c.inMainchain(ancestor) {
-		attachBlocks = append([]*legacy.Block{ancestor}, attachBlocks...)
+		attachBlocks = append(attachBlocks, ancestor)
 		ancestor, _ = c.GetBlockByHash(&ancestor.PreviousBlockHash)
 	}
 
@@ -116,7 +112,13 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 		chainChanges[a.Height] = &aHash
 	}
 
-	return c.setState(block, newSnapshot, chainChanges)
+	if len(detachBlocks) != 0 {
+		//rollback
+		return c.setState(block, newSnapshot, chainChanges, block.Height)
+	} else {
+		return c.setState(block, newSnapshot, chainChanges, 0)
+	}
+
 }
 
 // SaveBlock will validate and save block into storage
@@ -181,15 +183,14 @@ func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
 
 	bestBlock := c.findBestChainTail(block)
 	c.state.cond.L.Lock()
+	defer c.state.cond.L.Unlock()
 	if c.state.block.Hash() == bestBlock.PreviousBlockHash {
-		defer c.state.cond.L.Unlock()
 		return false, c.connectBlock(bestBlock)
 	}
 
 	if bestBlock.Height > c.state.block.Height && bestBlock.Bits >= c.state.block.Bits {
-		defer c.state.cond.L.Unlock()
 		return false, c.reorganizeChain(bestBlock)
 	}
-	c.state.cond.L.Unlock()
+
 	return false, nil
 }
