@@ -6,11 +6,13 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
+// pre-define errors
 var (
 	ErrBadValue       = errors.New("bad value")
 	ErrMultisigFormat = errors.New("bad multisig program format")
 )
 
+// IsUnspendable checks if a contorl program is absolute failed
 func IsUnspendable(prog []byte) bool {
 	return len(prog) > 0 && prog[0] == byte(vm.OP_FAIL)
 }
@@ -33,6 +35,7 @@ func (b *Builder) addP2SPMultiSig(pubkeys []ed25519.PublicKey, nrequired int) er
 	return nil
 }
 
+// CoinbaseProgram generates the script for contorl coinbase output
 func CoinbaseProgram(pubkeys []ed25519.PublicKey, nrequired int, height uint64) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_BLOCKHEIGHT)
@@ -49,6 +52,7 @@ func CoinbaseProgram(pubkeys []ed25519.PublicKey, nrequired int, height uint64) 
 	return builder.Build()
 }
 
+// P2SPMultiSigProgram generates the script for contorl transaction output
 func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, error) {
 	builder := NewBuilder()
 	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
@@ -57,6 +61,7 @@ func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, er
 	return builder.Build()
 }
 
+// ParseP2SPMultiSigProgram is unknow for us yet
 func ParseP2SPMultiSigProgram(program []byte) ([]ed25519.PublicKey, int, error) {
 	pops, err := vm.ParseProgram(program)
 	if err != nil {

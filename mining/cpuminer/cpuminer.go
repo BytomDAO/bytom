@@ -266,7 +266,7 @@ func (m *CPUMiner) NumWorkers() int32 {
 	return int32(m.numWorkers)
 }
 
-// New returns a new instance of a CPU miner for the provided configuration.
+// NewCPUMiner returns a new instance of a CPU miner for the provided configuration.
 // Use Start to begin the mining process.  See the documentation for CPUMiner
 // type for more details.
 func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool) *CPUMiner {

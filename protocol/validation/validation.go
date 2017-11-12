@@ -554,11 +554,11 @@ func validateCoinbase(tx *bc.Tx, value uint64) error {
 	resultEntry := tx.Entries[*tx.TxHeader.ResultIds[0]]
 	output, ok := resultEntry.(*bc.Output)
 	if !ok {
-		return errWrongCoinbaseTransaction
+		return errors.Wrap(errWrongCoinbaseTransaction, "decode output")
 	}
 
 	if output.Source.Value.Amount != value {
-		return errWrongCoinbaseTransaction
+		return errors.Wrap(errWrongCoinbaseTransaction, "dismatch output value")
 	}
 
 	//TODO: require coinbase control program verify

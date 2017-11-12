@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
+// NewTxVMContext generates the vm.Context for BVM
 func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args [][]byte) *vm.Context {
 	var (
 		tx          = vs.tx
