@@ -240,7 +240,6 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
 	bcR.BuildHander()
-
 	bcR.mining.Start()
 	go bcR.syncRoutine()
 	return nil
@@ -337,6 +336,13 @@ func (bcR *BlockchainReactor) syncRoutine() {
 			go bcR.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
 			go bcR.BroadcastStatusResponse()
+
+			// mining if and only if block sync is finished
+			if bcR.blockKeeper.IsCaughtUp() {
+				bcR.mining.Start()
+			} else {
+				bcR.mining.Stop()
+			}
 		case <-bcR.Quit:
 			return
 		}
