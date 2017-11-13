@@ -212,7 +212,7 @@ const (
 	OP_ENTRYID     Op = 0xca
 	OP_OUTPUTID    Op = 0xcb
 	OP_NONCE       Op = 0xcc
-	OP_BLOCKHEIGH  Op = 0xcd
+	OP_BLOCKHEIGHT Op = 0xcd
 )
 
 type opInfo struct {
@@ -322,7 +322,7 @@ var (
 		OP_ENTRYID:     {OP_ENTRYID, "ENTRYID", opEntryID},
 		OP_OUTPUTID:    {OP_OUTPUTID, "OUTPUTID", opOutputID},
 		OP_NONCE:       {OP_NONCE, "NONCE", opNonce},
-		OP_BLOCKHEIGH:  {OP_BLOCKHEIGH, "BLOCKHEIGH", opBlockHeigh},
+		OP_BLOCKHEIGHT: {OP_BLOCKHEIGHT, "BLOCKHEIGHT", opBlockHeight},
 	}
 
 	opsByName map[string]opInfo

@@ -534,14 +534,8 @@ func ValidateBlock(b, prev *bc.Block) error {
 	}
 
 	// check the coinbase output entry value
-	cbTx := b.Transactions[0]
-	cbOutput := cbTx.Entries[*cbTx.TxHeader.ResultIds[0]]
-	if cbOutput, ok := cbOutput.(*bc.Output); ok {
-		if cbOutput.Source.Value.Amount != coinbaseValue {
-			return errWrongCoinbaseTransaction
-		}
-	} else {
-		return errWrongCoinbaseTransaction
+	if err := validateCoinbase(b.Transactions[0], coinbaseValue); err != nil {
+		return err
 	}
 
 	txRoot, err := bc.MerkleRoot(b.Transactions)
@@ -553,6 +547,21 @@ func ValidateBlock(b, prev *bc.Block) error {
 		return errors.WithDetailf(errMismatchedMerkleRoot, "computed %x, current block wants %x", txRoot.Bytes(), b.TransactionsRoot.Bytes())
 	}
 
+	return nil
+}
+
+func validateCoinbase(tx *bc.Tx, value uint64) error {
+	resultEntry := tx.Entries[*tx.TxHeader.ResultIds[0]]
+	output, ok := resultEntry.(*bc.Output)
+	if !ok {
+		return errors.Wrap(errWrongCoinbaseTransaction, "decode output")
+	}
+
+	if output.Source.Value.Amount != value {
+		return errors.Wrap(errWrongCoinbaseTransaction, "dismatch output value")
+	}
+
+	//TODO: require coinbase control program verify
 	return nil
 }
 

@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
@@ -17,42 +18,42 @@ import (
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
-	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 )
-
-// standardCoinbaseScript returns a standard script suitable for use as the
-// signature script of the coinbase transaction of a new block.
-func standardCoinbaseScript(blockHeight uint64) ([]byte, error) {
-	//TODO: add verify conditions, block heigh & sign
-	scriptBuild := vmutil.NewBuilder()
-	scriptBuild.AddOp(vm.OP_TRUE)
-	return scriptBuild.Build()
-}
 
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func createCoinbaseTx(amount uint64, blockHeight uint64, addr []byte) (*legacy.Tx, error) {
-	//TODO: make sure things works
+func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64) (tx *legacy.Tx, err error) {
 	amount += consensus.BlockSubsidy(blockHeight)
-	cbScript, err := standardCoinbaseScript(blockHeight)
+	unlockHeight := blockHeight + consensus.CoinbasePendingBlockNumber
+
+	var script []byte
+	if accountManager == nil {
+		script, err = vmutil.CoinbaseProgram(nil, 0, unlockHeight)
+	} else {
+		script, err = accountManager.GetCoinbaseControlProgram(unlockHeight)
+	}
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	builder := txbuilder.NewBuilder(time.Now())
-	builder.AddOutput(legacy.NewTxOutput(*consensus.BTMAssetID, amount, cbScript, nil))
+	builder.AddOutput(legacy.NewTxOutput(*consensus.BTMAssetID, amount, script, nil))
 	_, txData, err := builder.Build()
-	tx := &legacy.Tx{
+	if err != nil {
+		return
+	}
+
+	tx = &legacy.Tx{
 		TxData: *txData,
 		Tx:     legacy.MapTx(txData),
 	}
-	return tx, err
+	return
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (*legacy.Block, error) {
+func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (*legacy.Block, error) {
 	// Extend the most recently known best block.
 	var err error
 	preBlock, snap := c.State()
@@ -109,7 +110,10 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, addr []byte) (
 		appendTx(txDesc.Tx, txDesc.Weight, txDesc.Fee)
 	}
 
-	cbTx, _ := createCoinbaseTx(txFee, nextBlockHeight, addr)
+	cbTx, err := createCoinbaseTx(accountManager, txFee, nextBlockHeight)
+	if err != nil {
+		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
+	}
 	if err := newSnap.ApplyTx(cbTx.Tx); err != nil {
 		return nil, errors.Wrap(err, "fail on append coinbase transaction to snap")
 	}

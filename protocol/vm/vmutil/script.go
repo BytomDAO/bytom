@@ -6,75 +6,62 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
+// pre-define errors
 var (
 	ErrBadValue       = errors.New("bad value")
 	ErrMultisigFormat = errors.New("bad multisig program format")
 )
 
+// IsUnspendable checks if a contorl program is absolute failed
 func IsUnspendable(prog []byte) bool {
 	return len(prog) > 0 && prog[0] == byte(vm.OP_FAIL)
 }
 
-func ParseBlockMultiSigProgram(script []byte) ([]ed25519.PublicKey, int, error) {
-	pops, err := vm.ParseProgram(script)
-	if err != nil {
-		return nil, 0, err
-	}
-	if len(pops) < 4 {
-		return nil, 0, vm.ErrShortProgram
-	}
-	if pops[len(pops)-1].Op != vm.OP_CHECKMULTISIG {
-		return nil, 0, errors.Wrap(ErrMultisigFormat, "no OP_CHECKMULTISIG")
-	}
-	npubkeys, err := vm.AsInt64(pops[len(pops)-2].Data)
-	if err != nil {
-		return nil, 0, errors.Wrap(ErrMultisigFormat, "parsing npubkeys")
-	}
-	if int(npubkeys) != len(pops)-4 {
-		return nil, 0, vm.ErrShortProgram
-	}
-	nrequired, err := vm.AsInt64(pops[len(pops)-3].Data)
-	if err != nil {
-		return nil, 0, errors.Wrap(ErrMultisigFormat, "parsing nrequired")
-	}
-	err = checkMultiSigParams(nrequired, npubkeys)
-	if err != nil {
-		return nil, 0, err
+func (b *Builder) addP2SPMultiSig(pubkeys []ed25519.PublicKey, nrequired int) error {
+	if err := checkMultiSigParams(int64(nrequired), int64(len(pubkeys))); err != nil {
+		return err
 	}
 
-	firstPubkeyIndex := len(pops) - 3 - int(npubkeys)
-
-	pubkeys := make([]ed25519.PublicKey, 0, npubkeys)
-	for i := firstPubkeyIndex; i < firstPubkeyIndex+int(npubkeys); i++ {
-		if len(pops[i].Data) != ed25519.PublicKeySize {
-			return nil, 0, err
-		}
-		pubkeys = append(pubkeys, ed25519.PublicKey(pops[i].Data))
+	b.AddOp(vm.OP_DUP).AddOp(vm.OP_TOALTSTACK) // stash a copy of the predicate
+	b.AddOp(vm.OP_SHA3)                        // stack is now [... NARGS SIG SIG SIG PREDICATEHASH]
+	for _, p := range pubkeys {
+		b.AddData(p)
 	}
-	return pubkeys, int(nrequired), nil
+	b.AddInt64(int64(nrequired))                     // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M]
+	b.AddInt64(int64(len(pubkeys)))                  // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M N]
+	b.AddOp(vm.OP_CHECKMULTISIG).AddOp(vm.OP_VERIFY) // stack is now [... NARGS]
+	b.AddOp(vm.OP_FROMALTSTACK)                      // stack is now [... NARGS PREDICATE]
+	b.AddInt64(0).AddOp(vm.OP_CHECKPREDICATE)
+	return nil
 }
 
-func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, error) {
-	err := checkMultiSigParams(int64(nrequired), int64(len(pubkeys)))
-	if err != nil {
+// CoinbaseProgram generates the script for contorl coinbase output
+func CoinbaseProgram(pubkeys []ed25519.PublicKey, nrequired int, height uint64) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_BLOCKHEIGHT)
+	builder.AddInt64(int64(height))
+	builder.AddOp(vm.OP_GREATERTHAN)
+	builder.AddOp(vm.OP_VERIFY)
+
+	if nrequired == 0 {
+		return builder.Build()
+	}
+	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
 		return nil, err
 	}
-	builder := NewBuilder()
-	// Expected stack: [... NARGS SIG SIG SIG PREDICATE]
-	// Number of sigs must match nrequired.
-	builder.AddOp(vm.OP_DUP).AddOp(vm.OP_TOALTSTACK) // stash a copy of the predicate
-	builder.AddOp(vm.OP_SHA3)                        // stack is now [... NARGS SIG SIG SIG PREDICATEHASH]
-	for _, p := range pubkeys {
-		builder.AddData(p)
-	}
-	builder.AddInt64(int64(nrequired))                     // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M]
-	builder.AddInt64(int64(len(pubkeys)))                  // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M N]
-	builder.AddOp(vm.OP_CHECKMULTISIG).AddOp(vm.OP_VERIFY) // stack is now [... NARGS]
-	builder.AddOp(vm.OP_FROMALTSTACK)                      // stack is now [... NARGS PREDICATE]
-	builder.AddInt64(0).AddOp(vm.OP_CHECKPREDICATE)
 	return builder.Build()
 }
 
+// P2SPMultiSigProgram generates the script for contorl transaction output
+func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, error) {
+	builder := NewBuilder()
+	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
+		return nil, err
+	}
+	return builder.Build()
+}
+
+// ParseP2SPMultiSigProgram is unknow for us yet
 func ParseP2SPMultiSigProgram(program []byte) ([]ed25519.PublicKey, int, error) {
 	pops, err := vm.ParseProgram(program)
 	if err != nil {

@@ -219,7 +219,7 @@ type page struct {
 }
 
 func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, pinStore *pin.Store) *BlockchainReactor {
-	mining := cpuminer.NewCPUMiner(chain, txPool)
+	mining := cpuminer.NewCPUMiner(chain, accounts, txPool)
 	bcR := &BlockchainReactor{
 		chain:       chain,
 		pinStore:    pinStore,

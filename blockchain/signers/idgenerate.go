@@ -2,9 +2,10 @@ package signers
 
 import (
 	"encoding/binary"
-	"github.com/bytom/encoding/base32"
 	"sync/atomic"
 	"time"
+
+	"github.com/bytom/encoding/base32"
 )
 
 //1<seq_id ,increase by 1
@@ -18,7 +19,7 @@ func next_seq_id() uint32 {
 }
 
 // see the SQL function next_cahin_id in schema.sql on https://github.com/chain/chain
-func Idgenerate(prefix string) (string, uint64) {
+func Idgenerate() (string, uint64) {
 	var our_epoch_ms uint64 = 1496635208000
 	var n uint64
 
@@ -35,6 +36,6 @@ func Idgenerate(prefix string) (string, uint64) {
 	binary.BigEndian.PutUint64(bin, n)
 	encodestring := base32.HexEncoding.WithPadding(base32.NoPadding).EncodeToString(bin)
 
-	return prefix + encodestring, seq_index
+	return encodestring, seq_index
 
 }

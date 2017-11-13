@@ -10,6 +10,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/blockchain/account"
 	"github.com/bytom/consensus"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
@@ -27,6 +28,7 @@ const (
 type CPUMiner struct {
 	sync.Mutex
 	chain             *protocol.Chain
+	accountManager    *account.Manager
 	txPool            *protocol.TxPool
 	numWorkers        uint64
 	started           bool
@@ -86,9 +88,7 @@ out:
 		default:
 		}
 
-		//TODO: get address from the wallet
-		payToAddr := []byte{}
-		block, err := mining.NewBlockTemplate(m.chain, m.txPool, payToAddr)
+		block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
 		if err != nil {
 			log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
 			continue
@@ -266,12 +266,13 @@ func (m *CPUMiner) NumWorkers() int32 {
 	return int32(m.numWorkers)
 }
 
-// New returns a new instance of a CPU miner for the provided configuration.
+// NewCPUMiner returns a new instance of a CPU miner for the provided configuration.
 // Use Start to begin the mining process.  See the documentation for CPUMiner
 // type for more details.
-func NewCPUMiner(c *protocol.Chain, txPool *protocol.TxPool) *CPUMiner {
+func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool) *CPUMiner {
 	return &CPUMiner{
 		chain:             c,
+		accountManager:    accountManager,
 		txPool:            txPool,
 		numWorkers:        defaultNumWorkers,
 		updateNumWorkers:  make(chan struct{}),
