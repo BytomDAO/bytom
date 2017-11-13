@@ -337,6 +337,13 @@ func (bcR *BlockchainReactor) syncRoutine() {
 			go bcR.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
 			go bcR.BroadcastStatusResponse()
+
+			// mining if and only if block sync is finished
+			if bcR.blockKeeper.IsCaughtUp() {
+				bcR.mining.Start()
+			} else {
+				bcR.mining.Stop()
+			}
 		case <-bcR.Quit:
 			return
 		}
