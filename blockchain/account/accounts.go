@@ -24,9 +24,9 @@ import (
 
 const (
 	maxAccountCache = 1000
-	aliasPreFix     = "alias:"
-	accountPreFix   = "account:"
-	accountCPPreFix = "accountCP:"
+	aliasPreFix     = "ALI:"
+	accountPreFix   = "ACC:"
+	accountCPPreFix = "ACP:"
 )
 
 // pre-define errors for supporting bytom errorFormatter
