@@ -189,10 +189,11 @@ func (m *CPUMiner) Start() {
 
 	m.quit = make(chan struct{})
 	m.speedMonitorQuit = make(chan struct{})
-	m.wg.Add(2)
+	m.wg.Add(1)
 	go m.miningWorkerController()
 
 	m.started = true
+	log.Infof("CPU miner started")
 }
 
 // Stop gracefully stops the mining process by signalling all workers, and the
@@ -213,6 +214,7 @@ func (m *CPUMiner) Stop() {
 	close(m.quit)
 	m.wg.Wait()
 	m.started = false
+	log.Info("CPU miner stopped")
 }
 
 // IsMining returns whether or not the CPU miner has been started and is

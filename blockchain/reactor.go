@@ -240,6 +240,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
 	bcR.BuildHander()
+
 	bcR.mining.Start()
 	go bcR.syncRoutine()
 	return nil
@@ -248,6 +249,7 @@ func (bcR *BlockchainReactor) OnStart() error {
 // OnStop implements BaseService
 func (bcR *BlockchainReactor) OnStop() {
 	bcR.BaseReactor.OnStop()
+	bcR.mining.Stop()
 }
 
 // GetChannels implements Reactor
