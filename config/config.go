@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"path/filepath"
 	"time"
 )
@@ -61,9 +60,6 @@ type BaseConfig struct {
 	// A custom human readable name for this node
 	Moniker string `mapstructure:"moniker"`
 
-	// Output level for logging
-	LogLevel string `mapstructure:"log_level"`
-
 	// TCP or UNIX socket address for the profiling server to listen on
 	ProfListenAddress string `mapstructure:"prof_laddr"`
 
@@ -98,7 +94,6 @@ func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
 		Genesis:           "genesis.json",
 		Moniker:           "anonymous",
-		LogLevel:          DefaultPackageLogLevels(),
 		ProfListenAddress: "",
 		FastSync:          true,
 		FilterPeers:       false,
@@ -132,10 +127,6 @@ func (b BaseConfig) KeysDir() string {
 
 func DefaultLogLevel() string {
 	return "info"
-}
-
-func DefaultPackageLogLevels() string {
-	return fmt.Sprintf("state:info,*:%s", DefaultLogLevel())
 }
 
 // RPCConfig
@@ -182,6 +173,8 @@ type P2PConfig struct {
 	AddrBookStrict bool   `mapstructure:"addr_book_strict"`
 	PexReactor     bool   `mapstructure:"pex"`
 	MaxNumPeers    int    `mapstructure:"max_num_peers"`
+	HandshakeTimeout int `mapstructure:"handshake_timeout"`
+	DialTimeout      int `mapstructure:"dial_timeout"`
 }
 
 func DefaultP2PConfig() *P2PConfig {
@@ -191,6 +184,8 @@ func DefaultP2PConfig() *P2PConfig {
 		AddrBookStrict: true,
 		SkipUPNP:       false,
 		MaxNumPeers:    50,
+		HandshakeTimeout: 30,
+		DialTimeout:      3,
 	}
 }
 

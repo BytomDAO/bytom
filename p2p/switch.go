@@ -83,7 +83,7 @@ var (
 func NewSwitch(config *cfg.P2PConfig) *Switch {
 	sw := &Switch{
 		config:       config,
-		peerConfig:   DefaultPeerConfig(),
+		peerConfig:   DefaultPeerConfig(config),
 		reactors:     make(map[string]Reactor),
 		chDescs:      make([]*ChannelDescriptor, 0),
 		reactorsByCh: make(map[byte]Reactor),
@@ -576,7 +576,7 @@ func makeSwitch(cfg *cfg.P2PConfig, i int, network, version string, initSwitch f
 }
 
 func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
-	peer, err := newInboundPeer(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey)
+	peer, err := newInboundPeer(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, sw.config)
 	if err != nil {
 		conn.Close()
 		return err
