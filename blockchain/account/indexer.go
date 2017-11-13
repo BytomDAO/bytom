@@ -202,7 +202,7 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) []*acc
 		}
 
 		//filte the accounts which exists in accountdb with wallet enabled
-		isExist := m.db.Get(json.RawMessage(cp.AccountID))
+		isExist := m.db.Get(accountKey(cp.AccountID))
 		if isExist == nil {
 			continue
 		}
