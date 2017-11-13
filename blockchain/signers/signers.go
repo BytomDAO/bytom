@@ -4,14 +4,10 @@ package signers
 import (
 	"bytes"
 	"context"
-	//	"database/sql"
 	"encoding/binary"
 	"sort"
 
-	//"github.com/lib/pq"
-
 	"github.com/bytom/crypto/ed25519/chainkd"
-	//	"github.com/blockchain/database/pg"
 	"github.com/bytom/errors"
 	dbm "github.com/tendermint/tmlibs/db"
 )
@@ -22,11 +18,6 @@ const (
 	AssetKeySpace   keySpace = 0
 	AccountKeySpace keySpace = 1
 )
-
-var typeIDMap = map[string]string{
-	"account": "acc",
-	"asset":   "asset",
-}
 
 var (
 	// ErrBadQuorum is returned by Create when the quorum
@@ -77,7 +68,7 @@ func Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
 }
 
 // Create creates and stores a Signer in the database
-func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, quorum int, clientToken string) (*Signer, error) {
+func Create(ctx context.Context, db dbm.DB, signerType string, xpubs []chainkd.XPub, quorum int, clientToken string) (*Signer, error) {
 	if len(xpubs) == 0 {
 		return nil, errors.Wrap(ErrNoXPubs)
 	}
@@ -115,7 +106,7 @@ func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, qu
 				id       string
 				keyIndex uint64
 			)
-			err := db.QueryRowContext(ctx, q, typeIDMap[typ], typ, pq.ByteaArray(xpubBytes), quorum, nullToken).
+			err := db.QueryRowContext(ctx, q, signerTypeMap[typ], typ, pq.ByteaArray(xpubBytes), quorum, nullToken).
 				Scan(&id, &keyIndex)
 			if err == sql.ErrNoRows && clientToken != "" {
 				return findByClientToken(ctx, db, clientToken)
@@ -129,11 +120,11 @@ func Create(ctx context.Context, db dbm.DB, typ string, xpubs []chainkd.XPub, qu
 		keyIndex uint64
 	)
 
-	id, keyIndex = Idgenerate(typeIDMap[typ])
+	id, keyIndex = Idgenerate()
 
 	return &Signer{
 		ID:       id,
-		Type:     typ,
+		Type:     signerType,
 		XPubs:    xpubs,
 		Quorum:   quorum,
 		KeyIndex: keyIndex,

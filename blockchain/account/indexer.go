@@ -3,7 +3,6 @@ package account
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
@@ -187,18 +186,12 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) []*acc
 	}
 
 	result := make([]*accountOutput, 0, len(outs))
-	cp := struct {
-		AccountID      string
-		KeyIndex       uint64
-		ControlProgram []byte
-		Change         bool
-		ExpiresAt      time.Time
-	}{}
+	cp := controlProgram{}
 
-	var b32 [32]byte
+	var hash []byte
 	for s := range outsByScript {
-		sha3pool.Sum256(b32[:], []byte(s))
-		bytes := m.db.Get(json.RawMessage("acp" + string(b32[:])))
+		sha3pool.Sum256(hash, []byte(s))
+		bytes := m.db.Get(accountCPKey(string(hash)))
 		if bytes == nil {
 			continue
 		}
@@ -209,7 +202,7 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) []*acc
 		}
 
 		//filte the accounts which exists in accountdb with wallet enabled
-		isExist := m.db.Get(json.RawMessage(cp.AccountID))
+		isExist := m.db.Get(accountKey(cp.AccountID))
 		if isExist == nil {
 			continue
 		}
