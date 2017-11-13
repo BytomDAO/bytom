@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
-
+	"fmt"
+	
 	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -16,7 +17,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/bytom/protocol/vm/vmutil"	
 )
 
 const maxAssetCache = 1000
@@ -201,13 +202,12 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 
 	bytes := reg.db.Get([]byte(id.String()))
 	if bytes == nil {
-		return nil, errors.New("no exit this asset.")
+		return nil, errors.New("no exit this asset")
 	}
 	var asset Asset
-	err := json.Unmarshal(bytes, &asset)
 
-	if err != nil {
-		return nil, errors.New("this asset can't be unmarshal.")
+	if err := json.Unmarshal(bytes, &asset);err != nil {
+		return nil, fmt.Errorf("err:%s,asset signer id:%s",err,id.String())
 	}
 
 	reg.cacheMu.Lock()
@@ -247,13 +247,12 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 func (reg *Registry) QueryAll(ctx context.Context) (interface{}, error) {
 	ret := make([]interface{}, 0)
 
-	iter := reg.db.Iterator()
-	defer iter.Release()
+	assetIter := reg.db.Iterator()
+	defer assetIter.Release()
 
-	for iter.Next() {
-		value := string(iter.Value())
+	for assetIter.Next() {
+		value := string(assetIter.Value())
 		ret = append(ret, value)
-		//log.Printf(ctx,"%s\t", value)
 	}
 
 	return ret, nil

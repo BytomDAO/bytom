@@ -37,6 +37,40 @@ type requestQuery struct {
 	Aliases      []string      `json:"aliases,omitempty"`
 }
 
+func CoinbaseTest(client *rpc.Client, args []string) {
+	if len(args) != 3 {
+		fmt.Println("error: CoinbaseTest need accountID")
+		os.Exit(1)
+	}
+
+	buildReqFmt := `
+	{
+		"actions": [
+            {"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 624000000000, "account_id": "%s"},
+            {"type": "control_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 8888888888, "account_id": "%s"}
+        ]
+    }`
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[0], args[0])
+
+	var buildReq bchain.BuildRequest
+	if err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	tpl := make([]txbuilder.Template, 1)
+	client.Call(context.Background(), "/build-transaction", []*bchain.BuildRequest{&buildReq}, &tpl)
+
+	tx := tpl[0].Transaction
+	for i, input := range tx.Inputs {
+		assetID := input.AssetID()
+		fmt.Printf("Input #%d --- asset: %s, amount: %d\n", i, assetID.String(), input.Amount())
+	}
+	for i, output := range tx.Outputs {
+		fmt.Printf("Output #%d --- asset: %s, amount: %d\n", i, output.AssetId.String(), output.Amount)
+	}
+}
+
 func SpendTest(client *rpc.Client, args []string) {
 	// Create Account.
 	fmt.Printf("To create Account:\n")
@@ -98,7 +132,7 @@ func SpendTest(client *rpc.Client, args []string) {
 	//alice <btm:8888888888,gold:100>
 
 	fmt.Println("===========================wait to buid accountutxos.db===============================================")
-	time.Sleep(time.Second * 8)
+	time.Sleep(time.Second * 2)
 
 	// Build Transaction2-Spend_account
 	fmt.Printf("To build transaction2:\n")
@@ -147,7 +181,7 @@ func SpendTest(client *rpc.Client, args []string) {
 	//fee 10000000-5000000
 
 	fmt.Println("===========================wait to buid accountutxos.db===============================================")
-	time.Sleep(time.Second * 8)
+	time.Sleep(time.Second * 2)
 
 	// Build Transaction3-Spend_account_utxo
 	fmt.Printf("To build transaction3:\n")

@@ -2,55 +2,48 @@ package pin
 
 import (
 	"encoding/json"
-	"fmt"
 	"sort"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/syndtr/goleveldb/leveldb/util"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
 
 const (
 	processorWorkers = 10
-	snapPoint        = 1024
-	snapSum          = 2
-	//copy from package account
-	InsertUnspentsPinName = "insert-account-unspents"
+	blockProcessPreFix = "BLP:"
+	walletPreFix = "WAL:"
 )
 
-var GlobalPinStore *Store = nil
+func blockProcessKey(name string) []byte {
+	return []byte(blockProcessPreFix + name)
+}
+
+func walletKey(name string) []byte {
+	return []byte(walletPreFix + name)
+}
 
 type Processor struct {
 	Name   string
 	Height uint64
 }
 
-//copy from package account
-type AccountUTXOs struct {
-	OutputID     []byte
-	AssetID      []byte
-	Amount       uint64
-	AccountID    string
-	ProgramIndex uint64
-	Program      []byte
-	BlockHeight  uint64
-	SourceID     []byte
-	SourcePos    uint64
-	RefData      []byte
-	Change       bool
+type WalletInfo struct {
+	Height uint64
+	Hash   bc.Hash
 }
 
 type Store struct {
-	DB          dbm.DB
-	mu          sync.Mutex
-	cond        sync.Cond
-	pins        map[string]*pin
-	Rollback    chan uint64
+	DB dbm.DB
+
+	mu   sync.Mutex
+	cond sync.Cond
+	pins map[string]*pin
 	AllContinue chan struct{}
 }
 
@@ -58,11 +51,137 @@ func NewStore(db dbm.DB) *Store {
 	s := &Store{
 		DB:   db,
 		pins: make(map[string]*pin),
-		Rollback:make(chan uint64,1),
 		AllContinue:make(chan struct{},1),
 	}
 	s.cond.L = &s.mu
 	return s
+}
+
+func (s *Store) WalletUpdate(c *protocol.Chain,reverse func (*Store,*dbm.Batch,*legacy.Block)){
+	var wallet WalletInfo
+	var err error
+	var block *legacy.Block
+	var sendStop bool
+
+	storeBatch := s.DB.NewBatch()
+
+	if wallet,err = s.GetWalletInfo();err != nil{
+		log.WithField("",err).Warn("get wallet info")
+		return
+	}
+
+LOOP:
+
+	for !c.InMainChain(wallet.Height, wallet.Hash) {
+		if block,err = c.GetBlockByHash(&wallet.Hash);err != nil {
+			log.WithField("",err).Error("get block by hash")
+			return
+		}
+
+		//have a rollback operation,then send a signal for producer to stop new block process
+		if !sendStop {
+			<-s.AllPinStopper()
+			sendStop = true
+		}
+
+		//Reverse this block
+		reverse(s,&storeBatch,block)
+		log.WithField("Height",wallet.Height).Info("start rollback this block")
+
+		wallet.Height = block.Height - 1
+		wallet.Hash = block.PreviousBlockHash
+
+	}
+
+	//if true ,means rollback
+	if sendStop {
+		var blockProcess Processor
+		var rawBlockProcess []byte
+
+		blockProIter := s.DB.IteratorPrefix([]byte(blockProcessPreFix))
+		for blockProIter.Next() {
+			if err = json.Unmarshal(blockProIter.Value(),&blockProcess);err != nil{
+				log.WithField("",err).Error("get block processor")
+				return
+			}
+
+			if blockProcess.Height > wallet.Height {
+				blockProcess.Height =  wallet.Height
+			}
+
+			if rawBlockProcess,err = json.Marshal(&blockProcess);err != nil {
+				log.WithField("",err).Error("save block processor")
+				return
+			}
+
+			//update block processor to db
+			storeBatch.Set(blockProIter.Key(),rawBlockProcess)
+
+			log.WithFields(log.Fields{"name":blockProcess.Name,
+					"height":blockProcess.Height}).Info("update block processor")
+
+		}
+		//release
+		blockProIter.Release()
+	}
+
+	rawWallet,err := json.Marshal(wallet)
+	if err != nil {
+		log.WithField("",err).Error("save wallet info")
+		return
+	}
+	//update wallet to db
+	storeBatch.Set(walletKey("wallet"),rawWallet)
+
+	//commit to db
+	storeBatch.Write()
+
+	if sendStop {
+		//update block processor to memory
+		for _,pin := range s.pins{
+			pin.setHeight(wallet.Height)
+		}
+
+		//all block processor continue produce new process
+		s.AllContinue <- struct{}{}
+
+		//complete rollback , for next
+		sendStop = false
+		log.WithField("Height",wallet.Height).Info("success rollback to this block")
+	}
+
+	block,_ = c.GetBlockByHeight(wallet.Height +1)
+	//if we already handled the tail of the chain, we wait
+	if block == nil {
+		<-c.BlockWaiter(wallet.Height +1)
+		if block,err = c.GetBlockByHeight(wallet.Height +1);err != nil {
+			log.WithField("",err).Error("wallet get block by height")
+			return
+		}
+	}
+
+	//next loop will save
+	wallet.Height = block.Height
+	wallet.Hash = block.Hash()
+
+	goto LOOP
+
+}
+
+func (s *Store) GetWalletInfo() (WalletInfo,error){
+	var w WalletInfo
+	var rawWallet []byte
+
+	if rawWallet = s.DB.Get(walletKey("wallet"));rawWallet == nil{
+		return w,nil
+	}
+
+	if err := json.Unmarshal(rawWallet,&w);err != nil{
+		return w,err
+	}
+
+	return w,nil
+
 }
 
 func (s *Store) ProcessBlocks(c *protocol.Chain, pinName string, cb func(*legacy.Block) error) {
@@ -70,12 +189,12 @@ func (s *Store) ProcessBlocks(c *protocol.Chain, pinName string, cb func(*legacy
 	height := p.getHeight()
 	for {
 		select {
-		case <-c.PinStop:
+		case <-p.producerStop:
 			log.Warn("Process blocks, received stop signal")
 			return
 		case <-c.BlockWaiter(height + 1):
 			select {
-			case <-c.PinStop:
+			case <-p.producerStop:
 				log.Warn("Process blocks, received stop signal")
 				return
 			case p.sem <- true:
@@ -98,7 +217,7 @@ func (s *Store) CreatePin(name string, height uint64) error {
 		return errors.Wrap(err, "failed marshal blockProcessor")
 	}
 	if len(blockProcessor) > 0 {
-		s.DB.Set(json.RawMessage("blp"+name), blockProcessor)
+		s.DB.Set(blockProcessKey(name), blockProcessor)
 	}
 
 	s.pins[name] = newPin(s.DB, name, height)
@@ -117,11 +236,11 @@ func (s *Store) LoadAll() error {
 
 	var blockProcessor Processor
 
-	it := s.DB.IteratorPrefix([]byte("blp"))
-	defer it.Release()
-	for it.Next() {
+	blockProIter := s.DB.IteratorPrefix([]byte(blockProcessPreFix))
+	defer blockProIter.Release()
+	for blockProIter.Next() {
 
-		err := json.Unmarshal(it.Value(), &blockProcessor)
+		err := json.Unmarshal(blockProIter.Value(), &blockProcessor)
 		if err != nil {
 			return errors.New("failed unmarshal this blockProcessor")
 		}
@@ -176,11 +295,13 @@ func (s *Store) PinStopper(pinName string) <-chan struct{} {
 	return ch
 }
 
-func (s *Store) AllPinStopper(c *protocol.Chain) <-chan struct{} {
+func (s *Store) AllPinStopper() <-chan struct{} {
 	ch := make(chan struct{}, 1)
 
-	//send stop signal
-	c.PinStop <- struct{}{}
+	//send creator stop signal
+	for _,pin := range s.pins {
+		pin.producerStop <- struct{}{}
+	}
 
 	go func() {
 		var pins []string
@@ -225,6 +346,7 @@ type pin struct {
 	mu        sync.Mutex
 	cond      sync.Cond
 	stop      pinStop
+	producerStop chan struct{}
 	height    uint64
 	completed []uint64
 
@@ -237,6 +359,7 @@ func newPin(db dbm.DB, name string, height uint64) *pin {
 	p := &pin{db: db, name: name, height: height, sem: make(chan bool, processorWorkers)}
 	p.cond.L = &p.mu
 	p.stop.cond.L = &p.stop.mu
+	p.producerStop = make(chan struct{},1)
 	return p
 }
 
@@ -244,6 +367,12 @@ func (p *pin) getHeight() uint64 {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.height
+}
+
+func (p *pin) setHeight(height uint64){
+	p.mu.Lock()
+	p.height = height
+	p.mu.Unlock()
 }
 
 func (p *pin) processBlock(c *protocol.Chain, height uint64, cb func(*legacy.Block) error) {
@@ -268,7 +397,7 @@ func (p *pin) processBlock(c *protocol.Chain, height uint64, cb func(*legacy.Blo
 		break
 	}
 
-	// for deal with orphan block rollback
+	// for handle orphan block rollback
 	p.stop.mu.Lock()
 	<-p.sem
 	p.stop.mu.Unlock()
@@ -305,7 +434,7 @@ func (p *pin) complete(height uint64) error {
 		err error
 	)
 
-	bytes := p.db.Get(json.RawMessage("blp" + p.name))
+	bytes := p.db.Get(blockProcessKey(p.name))
 	if bytes != nil {
 		err = json.Unmarshal(bytes, &blockProcessor)
 		if err == nil && blockProcessor.Height >= max {
@@ -321,11 +450,7 @@ func (p *pin) complete(height uint64) error {
 		goto Noupdate
 	}
 	if len(bytes) > 0 {
-		p.db.Set(json.RawMessage("blp"+p.name), bytes)
-	}
-
-	if p.name == InsertUnspentsPinName && max > 0 && max%1024 == 0 {
-		go GlobalPinStore.StoreSnapshot(max)
+		p.db.Set(blockProcessKey(p.name), bytes)
 	}
 
 Noupdate:
@@ -334,134 +459,6 @@ Noupdate:
 	p.cond.Broadcast()
 
 	return nil
-}
-
-func (s *Store) StoreSnapshot(height uint64) {
-	var au = AccountUTXOs{}
-	var blockProcessor = Processor{}
-
-	storeBatch := s.DB.NewBatch()
-	db, _ := s.DB.(*dbm.GoLevelDB)
-
-	goLevelDB := db.DB()
-
-	newSnapshot, err := goLevelDB.GetSnapshot()
-	if err != nil {
-		log.WithField("err", err).Error("saving accountutxos snapshot")
-		return
-	}
-
-	//delete old  snapshot
-	oldSnapPoint := (height / snapPoint) - snapSum
-	if oldSnapPoint > 0 {
-		oldprefix := fmt.Sprintf("snp%d", oldSnapPoint)
-		it1 := newSnapshot.NewIterator(util.BytesPrefix([]byte(oldprefix)), nil)
-		for it1.Next() {
-			storeBatch.Delete(it1.Key())
-		}
-		it1.Release()
-	}
-
-	//save new account unspent outputs snapshot
-	// must not have snp0
-	newPrefix := fmt.Sprintf("snp%d", height/snapPoint)
-	it2 := newSnapshot.NewIterator(util.BytesPrefix([]byte("acu")), nil)
-	for it2.Next() {
-		err = json.Unmarshal(it2.Value(), &au)
-		if err != nil || au.BlockHeight > height {
-			log.WithFields(log.Fields{"err": err, "hash": string(au.OutputID)}).Warn("" +
-				"saving accountutxos snapshot")
-			continue
-		}
-
-		storeBatch.Set([]byte(newPrefix+string(it2.Key())), it2.Value())
-	}
-	it2.Release()
-
-	//save new block processors snapshot
-	it3 := newSnapshot.NewIterator(util.BytesPrefix([]byte("blp")), nil)
-	for it3.Next() {
-		err = json.Unmarshal(it3.Value(), &blockProcessor)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err, "name": blockProcessor.Name}).Warn("" +
-				"saving accountutxos snapshot")
-			continue
-		}
-		storeBatch.Set([]byte(newPrefix+string(it3.Key())), it3.Value())
-	}
-	it3.Release()
-
-	//commit
-	storeBatch.Write()
-
-	newSnapshot.Release()
-}
-
-func (s *Store) StoreRollBack(bestHeight uint64) {
-	log.WithField("rollback height", bestHeight).Info("account unspent outputs start to rollback")
-
-	rollBackPrefix := ""
-	deletePrefix := ""
-	rollBackKey := []byte{}
-	storeBatch := s.DB.NewBatch()
-
-	if (bestHeight/snapPoint) > 0 && (bestHeight%snapPoint) == 0 {
-		rollBackPrefix = fmt.Sprintf("snp%d", (bestHeight/snapPoint)-1)
-		deletePrefix = fmt.Sprintf("snp%d", bestHeight/snapPoint)
-	} else {
-		rollBackPrefix = fmt.Sprintf("snp%d", bestHeight/snapPoint)
-	}
-
-	//delete invalid store snapshot
-	it0 := s.DB.IteratorPrefix([]byte(deletePrefix))
-	for it0.Next() {
-		storeBatch.Delete(it0.Key())
-	}
-	it0.Release()
-
-	// delete old account unspent outputs
-	it1 := s.DB.IteratorPrefix([]byte("acu"))
-	for it1.Next() {
-		storeBatch.Delete(it1.Key())
-	}
-	it1.Release()
-
-	// delete old block processor
-	it2 := s.DB.IteratorPrefix([]byte("blp"))
-	for it2.Next() {
-		storeBatch.Delete(it2.Key())
-	}
-	it2.Release()
-
-	// rollback
-	it3 := s.DB.IteratorPrefix([]byte(rollBackPrefix))
-	for it3.Next() {
-		rollBackKey = it3.Key()
-		storeBatch.Set(rollBackKey[len(rollBackPrefix):], it3.Value())
-	}
-	it3.Release()
-
-	//commit
-	storeBatch.Write()
-
-	//all block processors continue
-	GlobalPinStore.AllContinue <- struct{}{}
-
-	log.Info("account unspent outputs rollback end")
-}
-
-func (s *Store) StoreListener(count int) {
-
-	rollBackHeight := <-s.Rollback
-
-	log.WithField("count", count).Info("start new store rollback lister")
-
-	s.StoreRollBack(rollBackHeight)
-
-	// start one new listen and return this listen
-	go s.StoreListener(count + 1)
-
-	return
 }
 
 type uint64s []uint64

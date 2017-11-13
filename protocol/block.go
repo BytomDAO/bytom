@@ -66,7 +66,7 @@ func (c *Chain) connectBlock(block *legacy.Block) error {
 	}
 
 	blockHash := block.Hash()
-	if err := c.setState(block, newSnapshot, map[uint64]*bc.Hash{block.Height: &blockHash}, 0); err != nil {
+	if err := c.setState(block, newSnapshot, map[uint64]*bc.Hash{block.Height: &blockHash}); err != nil {
 		return err
 	}
 
@@ -82,7 +82,7 @@ func (c *Chain) getReorganizeBlocks(block *legacy.Block) ([]*legacy.Block, []*le
 	ancestor := block
 
 	for !c.inMainchain(ancestor) {
-		attachBlocks = append(attachBlocks, ancestor)
+		attachBlocks = append([]*legacy.Block{ancestor}, attachBlocks...)
 		ancestor, _ = c.GetBlockByHash(&ancestor.PreviousBlockHash)
 	}
 
@@ -112,13 +112,7 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 		chainChanges[a.Height] = &aHash
 	}
 
-	if len(detachBlocks) != 0 {
-		//rollback
-		return c.setState(block, newSnapshot, chainChanges, block.Height)
-	} else {
-		return c.setState(block, newSnapshot, chainChanges, 0)
-	}
-
+	return c.setState(block, newSnapshot, chainChanges)
 }
 
 // SaveBlock will validate and save block into storage

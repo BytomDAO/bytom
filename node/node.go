@@ -151,41 +151,8 @@ func NewNode(config *cfg.Config) *Node {
 	}
 	genesisBlock.UnmarshalText(consensus.InitBlock())
 
-	if config.Wallet.Enable {
-		accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
-		pin.GlobalPinStore = pin.NewStore(accUTXODB)
-	}
-
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool, func(c *protocol.Chain, startup bool, rollbackheight uint64) {
-
-		if pin.GlobalPinStore == nil {
-			return
-		}
-
-		switch startup {
-
-		case true:
-			// wallet enable
-			if rollBackHeight, err := store.GetRollBack(); err == nil {
-				//rollback is necessary continue
-				log.Info("rollback account unspent outputs continue")
-				pin.GlobalPinStore.StoreRollBack(rollBackHeight)
-				//rollback complete once,clear rollback flag
-				store.DeleteRollBack()
-			} else {
-				log.WithField("warn", err).Warn("try rollback")
-			}
-		default:
-			log.Info("prepare rollback account unspent outputs")
-			//send a signal to stop all pin block processors
-			<-pin.GlobalPinStore.AllPinStopper(c)
-			//send a signal to rollback account unspent outputs
-			pin.GlobalPinStore.Rollback <- rollbackheight
-
-		}
-
-	})
+	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
@@ -201,13 +168,14 @@ func NewNode(config *cfg.Config) *Node {
 
 	var assets *asset.Registry
 	var accounts *account.Manager
+	var pinStore *pin.Store
 
 	if config.Wallet.Enable {
 		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
+		accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
+		pinStore = pin.NewStore(accUTXODB)
 
-		go pin.GlobalPinStore.StoreListener(1)
-
-		if err = pin.GlobalPinStore.LoadAll(); err != nil {
+		if err = pinStore.LoadAll(); err != nil {
 			log.WithField("error", err).Error("load pin store")
 			return nil
 		}
@@ -219,14 +187,15 @@ func NewNode(config *cfg.Config) *Node {
 
 		pins := []string{account.InsertUnspentsPinName, account.DeleteSpentsPinName}
 		for _, p := range pins {
-			if err = pin.GlobalPinStore.CreatePin(p, pinHeight); err != nil {
+			if err = pinStore.CreatePin(p, pinHeight); err != nil {
 				log.WithField("error", err).Error("Create pin")
 			}
 		}
 
-		accounts = account.NewManager(accountsDB, chain, pin.GlobalPinStore)
+		accounts = account.NewManager(accountsDB, chain, pinStore)
 		go accounts.ProcessBlocks()
-		pin.GlobalPinStore.AllContinue <- struct{}{}
+		pinStore.AllContinue <- struct{}{}
+		go pinStore.WalletUpdate(chain, account.ReverseAccountUTXOs)
 
 		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 		assets = asset.NewRegistry(assetsDB, chain)
@@ -247,7 +216,7 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
-	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, pin.GlobalPinStore)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, pinStore)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 

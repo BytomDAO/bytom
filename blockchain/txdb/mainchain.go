@@ -33,7 +33,7 @@ func DecodeMainchain(data []byte) (map[uint64]*bc.Hash, error) {
 	return mainchain, nil
 }
 
-func saveMainchain(dbbatch *dbm.Batch, mainchain map[uint64]*bc.Hash, hash *bc.Hash) error {
+func saveMainchain(db dbm.DB, mainchain map[uint64]*bc.Hash, hash *bc.Hash) error {
 	var mainchainList storage.Mainchain
 	for i := 1; i <= len(mainchain); i++ {
 		rawHash := &storage.Mainchain_Hash{Key: mainchain[uint64(i)].Bytes()}
@@ -45,8 +45,8 @@ func saveMainchain(dbbatch *dbm.Batch, mainchain map[uint64]*bc.Hash, hash *bc.H
 		return errors.Wrap(err, "marshaling Mainchain")
 	}
 
-	(*dbbatch).Set(calcMainchainKey(hash), b)
-
+	db.Set(calcMainchainKey(hash), b)
+	db.SetSync(nil, nil)
 	return nil
 }
 

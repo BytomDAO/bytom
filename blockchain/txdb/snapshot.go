@@ -45,7 +45,7 @@ func DecodeSnapshot(data []byte) (*state.Snapshot, error) {
 	}, nil
 }
 
-func saveSnapshot(dbbatch *dbm.Batch, snapshot *state.Snapshot, hash *bc.Hash) error {
+func saveSnapshot(db dbm.DB, snapshot *state.Snapshot, hash *bc.Hash) error {
 	var storedSnapshot storage.Snapshot
 	err := patricia.Walk(snapshot.Tree, func(key []byte) error {
 		n := &storage.Snapshot_StateTreeNode{Key: key}
@@ -69,8 +69,8 @@ func saveSnapshot(dbbatch *dbm.Batch, snapshot *state.Snapshot, hash *bc.Hash) e
 		return errors.Wrap(err, "marshaling state snapshot")
 	}
 
-	(*dbbatch).Set(calcSnapshotKey(hash), b)
-
+	db.Set(calcSnapshotKey(hash), b)
+	db.SetSync(nil, nil)
 	return nil
 }
 

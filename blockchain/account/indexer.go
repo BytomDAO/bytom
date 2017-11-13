@@ -3,7 +3,9 @@ package account
 import (
 	"context"
 	"encoding/json"
-	"time"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
@@ -12,6 +14,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/blockchain/pin"
 )
 
 const (
@@ -21,7 +24,13 @@ const (
 	// DeleteSpentsPinName is used to identify the pin associated
 	// with the processor that deletes spent account UTXOs.
 	DeleteSpentsPinName = "delete-account-spents"
+
+	AccountUTXOPreFix = "ACU:"
 )
+
+func accountUTXOKey(name string) []byte {
+	return []byte(AccountUTXOPreFix + name)
+}
 
 type AccountUTXOs struct {
 	OutputID     []byte
@@ -35,6 +44,7 @@ type AccountUTXOs struct {
 	SourcePos    uint64
 	RefData      []byte
 	Change       bool
+	Spent        bool
 }
 
 var emptyJSONObject = json.RawMessage(`{}`)
@@ -128,12 +138,33 @@ func (m *Manager) ProcessBlocks() {
 
 func (m *Manager) deleteSpentOutputs(b *legacy.Block) error {
 	// Delete consumed account UTXOs.
-
+	var au AccountUTXOs
+	var rawDel []byte
 	storeBatch := m.pinStore.DB.NewBatch()
 
 	delOutputIDs := prevoutDBKeys(b.Transactions...)
 	for _, delOutputID := range delOutputIDs {
-		storeBatch.Delete(json.RawMessage("acu" + string(delOutputID.Bytes())))
+
+		rawDel = m.pinStore.DB.Get(accountUTXOKey(string(delOutputID.Bytes())))
+		if rawDel ==nil {
+			continue
+		}
+
+		err := json.Unmarshal(rawDel, &au)
+		if err != nil {
+			log.WithFields(log.Fields{"delete utxo hash":delOutputID.String(),"error":err}).Error("unmarshal spent utxo fail")
+			continue
+		}
+
+		au.Spent = true
+
+		rawDel, err = json.Marshal(&au)
+		if err != nil {
+			log.WithField("delete utxo hash", delOutputID.String()).Error("marshal spent utxo fail")
+			continue
+		}
+
+		storeBatch.Set(accountUTXOKey(string(delOutputID.Bytes())), rawDel)
 	}
 
 	storeBatch.Write()
@@ -143,9 +174,7 @@ func (m *Manager) deleteSpentOutputs(b *legacy.Block) error {
 func (m *Manager) indexAccountUTXOs(b *legacy.Block) error {
 	// Upsert any UTXOs belonging to accounts managed by this Core.
 	outs := make([]*rawOutput, 0, len(b.Transactions))
-	blockPositions := make(map[bc.Hash]uint32, len(b.Transactions))
-	for i, tx := range b.Transactions {
-		blockPositions[tx.ID] = uint32(i)
+	for _, tx := range b.Transactions {
 		for j, out := range tx.Outputs {
 			resOutID := tx.ResultIds[j]
 			resOut, ok := tx.Entries[*resOutID].(*bc.Output)
@@ -167,8 +196,54 @@ func (m *Manager) indexAccountUTXOs(b *legacy.Block) error {
 	}
 	accOuts := m.loadAccountInfo(outs)
 
-	err := m.upsertConfirmedAccountOutputs(accOuts, blockPositions, b)
+	err := m.upsertConfirmedAccountOutputs(accOuts, b)
 	return errors.Wrap(err, "upserting confirmed account utxos")
+}
+
+func ReverseAccountUTXOs(s *pin.Store,batch *db.Batch,b *legacy.Block) {
+	var au AccountUTXOs
+	var rawDel []byte
+
+	//handle spent UTXOs
+	delOutputIDs := prevoutDBKeys(b.Transactions...)
+	for _, delOutputID := range delOutputIDs {
+
+		rawDel = s.DB.Get(accountUTXOKey(string(delOutputID.Bytes())))
+		if rawDel ==nil {
+			continue
+		}
+
+		err := json.Unmarshal(rawDel, &au)
+		if err != nil {
+			log.WithFields(log.Fields{"reverse utxo hash":delOutputID.String(),"error":err}).Error("unmarshal spent utxo fail")
+			continue
+		}
+		// reverse spent
+		au.Spent = false
+
+		rawDel, err = json.Marshal(&au)
+		if err != nil {
+			log.WithField("reverse utxo hash", delOutputID.String()).Error("marshal spent utxo fail")
+			continue
+		}
+
+		(*batch).Set(accountUTXOKey(string(delOutputID.Bytes())), rawDel)
+	}
+
+	//handle new UTXOs
+	for _, tx := range b.Transactions {
+		for j, _ := range tx.Outputs {
+			resOutID := tx.ResultIds[j]
+			_, ok := tx.Entries[*resOutID].(*bc.Output)
+			if !ok {
+				//retirement
+				continue
+			}
+			//delete new UTXOs
+			(*batch).Delete(accountUTXOKey(string(resOutID.Bytes())))
+		}
+	}
+
 }
 
 func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs []bc.Hash) {
@@ -193,18 +268,12 @@ func (m *Manager) loadAccountInfo(outs []*rawOutput) []*accountOutput {
 	}
 
 	result := make([]*accountOutput, 0, len(outs))
-	cp := struct {
-		AccountID      string
-		KeyIndex       uint64
-		ControlProgram []byte
-		Change         bool
-		ExpiresAt      time.Time
-	}{}
+	cp := controlProgram{}
 
-	var b32 [32]byte
+	var hash []byte
 	for s := range outsByScript {
-		sha3pool.Sum256(b32[:], []byte(s))
-		bytes := m.db.Get(json.RawMessage("acp" + string(b32[:])))
+		sha3pool.Sum256(hash, []byte(s))
+		bytes := m.db.Get(accountCPKey(string(hash)))
 		if bytes == nil {
 			continue
 		}
@@ -215,7 +284,7 @@ func (m *Manager) loadAccountInfo(outs []*rawOutput) []*accountOutput {
 		}
 
 		//filte the accounts which exists in accountdb with wallet enabled
-		isExist := m.db.Get(json.RawMessage(cp.AccountID))
+		isExist := m.db.Get(accountKey(cp.AccountID))
 		if isExist == nil {
 			continue
 		}
@@ -237,11 +306,7 @@ func (m *Manager) loadAccountInfo(outs []*rawOutput) []*accountOutput {
 // upsertConfirmedAccountOutputs records the account data for confirmed utxos.
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
-func (m *Manager) upsertConfirmedAccountOutputs(
-	outs []*accountOutput,
-	pos map[bc.Hash]uint32,
-	block *legacy.Block) error {
-
+func (m *Manager) upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block) error {
 	var au *AccountUTXOs
 	storebatch := m.pinStore.DB.NewBatch()
 
@@ -256,7 +321,8 @@ func (m *Manager) upsertConfirmedAccountOutputs(
 			SourceID:     out.sourceID.Bytes(),
 			SourcePos:    out.sourcePos,
 			RefData:      out.refData.Bytes(),
-			Change:       out.change}
+			Change:       out.change,
+			Spent:      false}
 
 		accountutxo, err := json.Marshal(au)
 		if err != nil {
@@ -264,7 +330,7 @@ func (m *Manager) upsertConfirmedAccountOutputs(
 		}
 
 		if len(accountutxo) > 0 {
-			storebatch.Set(json.RawMessage("acu"+string(au.OutputID)), accountutxo)
+			storebatch.Set(accountUTXOKey(string(au.OutputID)), accountutxo)
 		}
 
 	}

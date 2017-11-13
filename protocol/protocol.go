@@ -2,11 +2,8 @@ package protocol
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
-
-	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/errors"
@@ -33,19 +30,16 @@ var (
 // from storage and persist validated data.
 type Store interface {
 	BlockExist(*bc.Hash) bool
-	NewBatch() db.Batch
 
-	GetRollBack() (uint64, error)
 	GetBlock(*bc.Hash) (*legacy.Block, error)
 	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
 	GetSnapshot(*bc.Hash) (*state.Snapshot, error)
 	GetStoreStatus() txdb.BlockStoreStateJSON
 
-	DeleteRollBack()
 	SaveBlock(*legacy.Block) error
-	SaveMainchain(map[uint64]*bc.Hash, *bc.Hash, *db.Batch) error
-	SaveSnapshot(*state.Snapshot, *bc.Hash, *db.Batch) error
-	SaveStoreStatus(uint64, *bc.Hash, *db.Batch)
+	SaveMainchain(map[uint64]*bc.Hash, *bc.Hash) error
+	SaveSnapshot(*state.Snapshot, *bc.Hash) error
+	SaveStoreStatus(uint64, *bc.Hash)
 }
 
 // OrphanManage is use to handle all the orphan block
@@ -136,20 +130,16 @@ type Chain struct {
 		mainChain map[uint64]*bc.Hash
 		snapshot  *state.Snapshot
 	}
-	store    Store
-	PinStop  chan struct{}
-	RollBack func(*Chain, bool, uint64)
+	store Store
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool, rollback func(*Chain, bool, uint64)) (*Chain, error) {
+func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, error) {
 	c := &Chain{
 		InitialBlockHash: initialBlockHash,
 		orphanManage:     NewOrphanManage(),
 		store:            store,
 		txPool:           txPool,
-		RollBack:         rollback,
-		PinStop:          make(chan struct{}, 1),
 	}
 	c.state.cond.L = new(sync.Mutex)
 	storeStatus := store.GetStoreStatus()
@@ -171,10 +161,6 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool, rollback fu
 	if c.state.mainChain, err = store.GetMainchain(storeStatus.Hash); err != nil {
 		return nil, err
 	}
-
-	//must be synchronous operation
-	c.RollBack(c, true, 0)
-
 	return c, nil
 }
 
@@ -202,6 +188,19 @@ func (c *Chain) inMainchain(block *legacy.Block) bool {
 	return *hash == block.Hash()
 }
 
+func (c *Chain) InMainChain(height uint64, hash bc.Hash) bool {
+	if height == 0 {
+		return true
+	}
+
+	h, ok := c.state.mainChain[height]
+	if !ok {
+		return false
+	}
+
+	return *h == hash
+}
+
 // TimestampMS returns the latest known block timestamp.
 func (c *Chain) TimestampMS() uint64 {
 	c.state.cond.L.Lock()
@@ -222,12 +221,10 @@ func (c *Chain) State() (*legacy.Block, *state.Snapshot) {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*bc.Hash, rollBackHeight uint64) error {
+func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*bc.Hash) error {
 	if block.AssetsMerkleRoot != s.Tree.RootHash() {
 		return ErrBadStateRoot
 	}
-
-	storeBatch := c.store.NewBatch()
 
 	blockHash := block.Hash()
 	c.state.block = block
@@ -237,25 +234,13 @@ func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*b
 		c.state.mainChain[k] = v
 	}
 
-	if err := c.store.SaveSnapshot(c.state.snapshot, &blockHash, &storeBatch); err != nil {
+	if err := c.store.SaveSnapshot(c.state.snapshot, &blockHash); err != nil {
 		return err
 	}
-	if err := c.store.SaveMainchain(c.state.mainChain, &blockHash, &storeBatch); err != nil {
+	if err := c.store.SaveMainchain(c.state.mainChain, &blockHash); err != nil {
 		return err
 	}
-	c.store.SaveStoreStatus(block.Height, &blockHash, &storeBatch)
-
-	if rollBackHeight > 0 {
-		//for account unspent outputs rollback
-		storeBatch.Set([]byte("rollback"), []byte(fmt.Sprintf("%d", rollBackHeight)))
-	}
-
-	//commit
-	storeBatch.Write()
-
-	if rollBackHeight > 0 {
-		c.RollBack(c, false, rollBackHeight)
-	}
+	c.store.SaveStoreStatus(block.Height, &blockHash)
 
 	c.state.cond.Broadcast()
 	return nil
