@@ -7,20 +7,21 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
+
+	cfg "github.com/bytom/config"
 )
 
 func TestPeerBasic(t *testing.T) {
 	assert, require := assert.New(t), require.New(t)
 
 	// simulate remote peer
-	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: DefaultPeerConfig()}
+	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: DefaultPeerConfig(cfg.DefaultP2PConfig())}
 	rp.Start()
 	defer rp.Stop()
 
-	p, err := createOutboundPeerAndPerformHandshake(rp.Addr(), DefaultPeerConfig())
+	p, err := createOutboundPeerAndPerformHandshake(rp.Addr(), DefaultPeerConfig(cfg.DefaultP2PConfig()))
 	require.Nil(err)
 
 	p.Start()
@@ -38,7 +39,7 @@ func TestPeerBasic(t *testing.T) {
 func TestPeerWithoutAuthEnc(t *testing.T) {
 	assert, require := assert.New(t), require.New(t)
 
-	config := DefaultPeerConfig()
+	config := DefaultPeerConfig(cfg.DefaultP2PConfig())
 	config.AuthEnc = false
 
 	// simulate remote peer
@@ -58,7 +59,7 @@ func TestPeerWithoutAuthEnc(t *testing.T) {
 func TestPeerSend(t *testing.T) {
 	assert, require := assert.New(t), require.New(t)
 
-	config := DefaultPeerConfig()
+	config := DefaultPeerConfig(cfg.DefaultP2PConfig())
 	config.AuthEnc = false
 
 	// simulate remote peer
