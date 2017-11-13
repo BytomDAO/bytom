@@ -212,7 +212,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 		return cachedSigner.(*signers.Signer), nil
 	}
 
-	rawAccount := m.db.Get([]byte(id))
+	rawAccount := m.db.Get(accountKey(id))
 	if rawAccount == nil {
 		return nil, errors.New("fail to find account")
 	}

@@ -11,8 +11,6 @@ import (
 //1<seq_id ,increase by 1
 var seq_id uint32 = 0
 
-const signerPreFix = "signer:"
-
 func next_seq_id() uint32 {
 
 	atomic.AddUint32(&seq_id, 1)
@@ -38,6 +36,6 @@ func Idgenerate() (string, uint64) {
 	binary.BigEndian.PutUint64(bin, n)
 	encodestring := base32.HexEncoding.WithPadding(base32.NoPadding).EncodeToString(bin)
 
-	return signerPreFix + encodestring, seq_index
+	return encodestring, seq_index
 
 }
