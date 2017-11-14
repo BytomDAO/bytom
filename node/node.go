@@ -197,7 +197,7 @@ func NewNode(config *cfg.Config) *Node {
 		accounts = account.NewManager(accountsDB, chain, pinStore)
 		go accounts.ProcessBlocks()
 		pinStore.AllContinue <- struct{}{}
-		go pinStore.WalletUpdate(chain, account.ReverseAccountUTXOs)
+		go pinStore.WalletUpdate(chain, accounts, account.ReverseAccountUTXOs)
 
 		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 		assets = asset.NewRegistry(assetsDB, chain)

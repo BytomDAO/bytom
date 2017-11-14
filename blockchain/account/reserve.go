@@ -411,7 +411,7 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64
 			return nil, errors.Wrap(err)
 		}
 
-		if (au.Spent == false) && (au.AccountID == src.AccountID) &&
+		if (au.AccountID == src.AccountID) &&
 			(bytes.Equal(au.AssetID, src.AssetID.Bytes())) &&
 			(au.BlockHeight > height) {
 
@@ -459,9 +459,6 @@ func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, e
 	}
 	if err := json.Unmarshal(accountUTXOValue, &au); err != nil {
 		return nil, errors.Wrap(err)
-	}
-	if au.Spent == true {
-		return nil, fmt.Errorf("can't find unspent utxo: %s", outHash.String())
 	}
 
 	rawOutputID := new([32]byte)

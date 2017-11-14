@@ -53,21 +53,15 @@ func (bcr *BlockchainReactor) GetAccountUTXOs() []account.AccountUTXOs {
 	var (
 		au       = account.AccountUTXOs{}
 		accutoxs = []account.AccountUTXOs{}
-		err      error
-		hashKey  []byte
 	)
 
 	accountUTXOIter := bcr.pinStore.DB.IteratorPrefix([]byte(account.AccountUTXOPreFix))
 	defer accountUTXOIter.Release()
 	for accountUTXOIter.Next() {
 
-		if err = json.Unmarshal(accountUTXOIter.Value(), &au); err != nil {
-			hashKey = accountUTXOIter.Key()[len(account.AccountUTXOPreFix):]
+		if err := json.Unmarshal(accountUTXOIter.Value(), &au); err != nil {
+			hashKey := accountUTXOIter.Key()[len(account.AccountUTXOPreFix):]
 			log.WithField("UTXO hash", string(hashKey)).Warn("get account UTXO")
-			continue
-		}
-
-		if au.Spent == true {
 			continue
 		}
 

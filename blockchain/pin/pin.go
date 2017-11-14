@@ -57,7 +57,7 @@ func NewStore(db dbm.DB) *Store {
 	return s
 }
 
-func (s *Store) WalletUpdate(c *protocol.Chain, reverse func(*Store, *dbm.Batch, *legacy.Block)) {
+func (s *Store) WalletUpdate(c *protocol.Chain, manager interface{}, reverse func(interface{}, *Store, *dbm.Batch, *legacy.Block)) {
 	var wallet WalletInfo
 	var err error
 	var block *legacy.Block
@@ -85,7 +85,7 @@ LOOP:
 		}
 
 		//Reverse this block
-		reverse(s, &storeBatch, block)
+		reverse(manager, s, &storeBatch, block)
 		log.WithField("Height", wallet.Height).Info("start rollback this block")
 
 		wallet.Height = block.Height - 1

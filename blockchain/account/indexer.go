@@ -44,7 +44,6 @@ type AccountUTXOs struct {
 	SourcePos    uint64
 	RefData      []byte
 	Change       bool
-	Spent        bool
 }
 
 var emptyJSONObject = json.RawMessage(`{}`)
@@ -138,33 +137,11 @@ func (m *Manager) ProcessBlocks() {
 
 func (m *Manager) deleteSpentOutputs(b *legacy.Block) error {
 	// Delete consumed account UTXOs.
-	var au AccountUTXOs
-	var rawDel []byte
-	var err error
-
 	storeBatch := m.pinStore.DB.NewBatch()
 
 	delOutputIDs := prevoutDBKeys(b.Transactions...)
 	for _, delOutputID := range delOutputIDs {
-
-		rawDel = m.pinStore.DB.Get(accountUTXOKey(string(delOutputID.Bytes())))
-		if rawDel == nil {
-			continue
-		}
-
-		if err = json.Unmarshal(rawDel, &au); err != nil {
-			log.WithFields(log.Fields{"delete utxo hash": delOutputID.String(), "error": err}).Error("unmarshal spent utxo fail")
-			continue
-		}
-
-		au.Spent = true
-
-		if rawDel, err = json.Marshal(&au); err != nil {
-			log.WithField("delete utxo hash", delOutputID.String()).Error("marshal spent utxo fail")
-			continue
-		}
-
-		storeBatch.Set(accountUTXOKey(string(delOutputID.Bytes())), rawDel)
+		storeBatch.Delete(accountUTXOKey(string(delOutputID.Bytes())))
 	}
 
 	storeBatch.Write()
@@ -174,6 +151,7 @@ func (m *Manager) deleteSpentOutputs(b *legacy.Block) error {
 func (m *Manager) indexAccountUTXOs(b *legacy.Block) error {
 	// Upsert any UTXOs belonging to accounts managed by this Core.
 	outs := make([]*rawOutput, 0, len(b.Transactions))
+	storeBatch := m.db.NewBatch()
 	for _, tx := range b.Transactions {
 		for j, out := range tx.Outputs {
 			resOutID := tx.ResultIds[j]
@@ -196,37 +174,53 @@ func (m *Manager) indexAccountUTXOs(b *legacy.Block) error {
 	}
 	accOuts := m.loadAccountInfo(outs)
 
-	err := m.upsertConfirmedAccountOutputs(accOuts, b)
+	err := m.upsertConfirmedAccountOutputs(accOuts, b, &storeBatch)
+	storeBatch.Write()
 	return errors.Wrap(err, "upserting confirmed account utxos")
 }
 
-func ReverseAccountUTXOs(s *pin.Store, batch *db.Batch, b *legacy.Block) {
-	var au AccountUTXOs
-	var rawDel []byte
+func ReverseAccountUTXOs(manager interface{}, s *pin.Store, batch *db.Batch, b *legacy.Block) {
 	var err error
 
+	//unknow how many spent and retire outputs
+	reverseOuts := make([]*rawOutput, 0)
+
+	m, ok := manager.(*Manager)
+	if !ok {
+		log.Error("reverse handle function error")
+	}
+
 	//handle spent UTXOs
-	delOutputIDs := prevoutDBKeys(b.Transactions...)
-	for _, delOutputID := range delOutputIDs {
+	for _, tx := range b.Transactions {
+		for _, inpID := range tx.Tx.InputIDs {
+			//spend and retire
+			sp, err := tx.Spend(inpID)
+			if err != nil {
+				continue
+			}
 
-		rawDel = s.DB.Get(accountUTXOKey(string(delOutputID.Bytes())))
-		if rawDel == nil {
-			continue
+			resOut, ok := tx.Entries[*sp.SpentOutputId].(*bc.Output)
+			if !ok {
+				continue
+			}
+
+			out := &rawOutput{
+				OutputID:       *sp.SpentOutputId,
+				AssetAmount:    *resOut.Source.Value,
+				ControlProgram: resOut.ControlProgram.Code,
+				txHash:         tx.ID,
+				sourceID:       *resOut.Source.Ref,
+				sourcePos:      resOut.Source.Position,
+				refData:        *resOut.Data,
+			}
+			reverseOuts = append(reverseOuts, out)
 		}
+	}
 
-		if err = json.Unmarshal(rawDel, &au); err != nil {
-			log.WithFields(log.Fields{"reverse utxo hash": delOutputID.String(), "error": err}).Error("unmarshal spent utxo fail")
-			continue
-		}
-		// reverse spent
-		au.Spent = false
-
-		if rawDel, err = json.Marshal(&au); err != nil {
-			log.WithField("reverse utxo hash", delOutputID.String()).Error("marshal spent utxo fail")
-			continue
-		}
-
-		(*batch).Set(accountUTXOKey(string(delOutputID.Bytes())), rawDel)
+	accOuts := m.loadAccountInfo(reverseOuts)
+	if err = m.upsertConfirmedAccountOutputs(accOuts, b, batch); err != nil {
+		log.WithField("err", err).Error("reversing account spent and retire outputs")
+		return
 	}
 
 	//handle new UTXOs
@@ -304,9 +298,8 @@ func (m *Manager) loadAccountInfo(outs []*rawOutput) []*accountOutput {
 // upsertConfirmedAccountOutputs records the account data for confirmed utxos.
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
-func (m *Manager) upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block) error {
+func (m *Manager) upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, batch *db.Batch) error {
 	var au *AccountUTXOs
-	storebatch := m.pinStore.DB.NewBatch()
 
 	for _, out := range outs {
 		au = &AccountUTXOs{OutputID: out.OutputID.Bytes(),
@@ -319,8 +312,7 @@ func (m *Manager) upsertConfirmedAccountOutputs(outs []*accountOutput, block *le
 			SourceID:     out.sourceID.Bytes(),
 			SourcePos:    out.sourcePos,
 			RefData:      out.refData.Bytes(),
-			Change:       out.change,
-			Spent:        false}
+			Change:       out.change}
 
 		accountutxo, err := json.Marshal(au)
 		if err != nil {
@@ -328,11 +320,9 @@ func (m *Manager) upsertConfirmedAccountOutputs(outs []*accountOutput, block *le
 		}
 
 		if len(accountutxo) > 0 {
-			storebatch.Set(accountUTXOKey(string(au.OutputID)), accountutxo)
+			(*batch).Set(accountUTXOKey(string(au.OutputID)), accountutxo)
 		}
 
 	}
-
-	storebatch.Write()
 	return nil
 }
