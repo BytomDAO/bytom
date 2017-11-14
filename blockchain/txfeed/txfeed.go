@@ -319,10 +319,9 @@ var emptyJSONObject = json.RawMessage(`{}`)
 
 func buildAnnotatedTransaction(orig *legacy.Tx) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
-		ID:            orig.ID,
-		ReferenceData: &emptyJSONObject,
-		Inputs:        make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
-		Outputs:       make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
+		ID:      orig.ID,
+		Inputs:  make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
+		Outputs: make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
 	}
 
 	for i := range orig.Inputs {
