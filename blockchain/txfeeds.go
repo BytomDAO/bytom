@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/txfeed"
-	log "github.com/sirupsen/logrus"
 )
 
 // POST /create-txfeed
@@ -115,9 +116,7 @@ func (bcr *BlockchainReactor) getTxFeeds() ([]txfeed.TxFeed, error) {
 }
 
 // listTxFeeds is an http handler for listing txfeeds. It does not take a filter.
-//
 // POST /list-transaction-feeds
-
 func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context, in requestQuery) interface{} {
 	txfeeds, err := bcr.getTxFeeds()
 	if err != nil {

@@ -1,11 +1,9 @@
 package filter
 
 import (
-	//"errors"
 	"fmt"
 
 	"github.com/bytom/errors"
-	//"strings"
 )
 
 type Column struct {

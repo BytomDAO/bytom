@@ -6,14 +6,15 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+	dbm "github.com/tendermint/tmlibs/db"
+
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm/vmutil"
-	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const (
@@ -229,7 +230,6 @@ func deleteTxFeed(db dbm.DB, alias string) error {
 // insertTxFeed adds the txfeed to the database. If the txfeed has a client token,
 // and there already exists a txfeed with that client token, insertTxFeed will
 // lookup and return the existing txfeed instead.
-
 func insertTxFeed(db dbm.DB, feed *TxFeed) error {
 	// var err error
 	key, err := json.Marshal(feed.Alias)
@@ -243,45 +243,6 @@ func insertTxFeed(db dbm.DB, feed *TxFeed) error {
 
 	db.Set(key, value)
 	return nil
-}
-
-func (t *Tracker) Find(ctx context.Context, id, alias string) (*TxFeed, error) {
-	/*	var q bytes.Buffer
-
-		q.WriteString(`
-			SELECT id, alias, filter, after
-			FROM txfeeds
-			WHERE
-		`)
-
-		if id != "" {
-			q.WriteString(`id=$1`)
-		} else {
-			q.WriteString(`alias=$1`)
-			id = alias
-		}
-
-		var (
-			feed     TxFeed
-			sqlAlias sql.NullString
-		)
-
-		err := t.DB.QueryRowContext(ctx, q.String(), id).Scan(&feed.ID, &sqlAlias, &feed.Filter, &feed.After)
-		if err == sql.ErrNoRows {
-			err = errors.Sub(pg.ErrUserInputNotFound, err)
-			err = errors.WithDetailf(err, "alias: %s", alias)
-			return nil, err
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		if sqlAlias.Valid {
-			feed.Alias = &sqlAlias.String
-		}
-	*/
-	//	return &feed, nil
-	return nil, nil
 }
 
 func (t *Tracker) Get(ctx context.Context, alias string) (feed *TxFeed, err error) {
@@ -316,48 +277,6 @@ func (t *Tracker) Delete(ctx context.Context, alias string) error {
 		}
 	}
 	return nil
-}
-
-func (t *Tracker) Update(ctx context.Context, id, alias, after, prev string) (*TxFeed, error) {
-	/*	var q bytes.Buffer
-
-		q.WriteString(`UPDATE txfeeds SET after=$1 WHERE `)
-
-		if id != "" {
-			q.WriteString(`id=$2`)
-		} else {
-			q.WriteString(`alias=$2`)
-			id = alias
-		}
-
-		q.WriteString(` AND after=$3`)
-
-		res, err := t.DB.ExecContext(ctx, q.String(), after, id, prev)
-		if err != nil {
-			return nil, err
-		}
-
-		affected, err := res.RowsAffected()
-		if err != nil {
-			return nil, err
-		}
-
-		if affected == 0 {
-			return nil, errors.WithDetailf(pg.ErrUserInputNotFound, "could not find txfeed with id/alias=%s and prev=%s", id, prev)
-		}
-
-		return &TxFeed{
-			ID:    id,
-			Alias: &alias,
-			After: after,
-		}, nil
-	*/
-	/*	return &TxFeed{
-			ID:	nil,
-			Alias	nil,
-			After	nil,
-		}
-	*/return nil, nil
 }
 
 //TxFilter filter tx from mempool
@@ -404,10 +323,7 @@ func buildAnnotatedTransaction(orig *legacy.Tx) *query.AnnotatedTx {
 		Inputs:        make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:       make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
 	}
-	/*if pg.IsValidJSONB(orig.ReferenceData) {
-		referenceData := json.RawMessage(orig.ReferenceData)
-		tx.ReferenceData = &referenceData
-	}*/
+
 	for i := range orig.Inputs {
 		tx.Inputs = append(tx.Inputs, buildAnnotatedInput(orig, uint32(i)))
 	}
@@ -426,10 +342,6 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 		AssetTags:       &emptyJSONObject,
 		ReferenceData:   &emptyJSONObject,
 	}
-	/*if pg.IsValidJSONB(orig.ReferenceData) {
-		referenceData := json.RawMessage(orig.ReferenceData)
-		in.ReferenceData = &referenceData
-	}*/
 
 	id := tx.Tx.InputIDs[i]
 	e := tx.Entries[id]
@@ -459,10 +371,7 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
 		ControlProgram:  orig.ControlProgram,
 		ReferenceData:   &emptyJSONObject,
 	}
-	/*if pg.IsValidJSONB(orig.ReferenceData) {
-		referenceData := json.RawMessage(orig.ReferenceData)
-		out.ReferenceData = &referenceData
-	}*/
+
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"
 	} else {
