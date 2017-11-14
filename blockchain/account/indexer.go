@@ -140,6 +140,8 @@ func (m *Manager) deleteSpentOutputs(b *legacy.Block) error {
 	// Delete consumed account UTXOs.
 	var au AccountUTXOs
 	var rawDel []byte
+	var err error
+
 	storeBatch := m.pinStore.DB.NewBatch()
 
 	delOutputIDs := prevoutDBKeys(b.Transactions...)
@@ -150,16 +152,14 @@ func (m *Manager) deleteSpentOutputs(b *legacy.Block) error {
 			continue
 		}
 
-		err := json.Unmarshal(rawDel, &au)
-		if err != nil {
+		if err = json.Unmarshal(rawDel, &au); err != nil {
 			log.WithFields(log.Fields{"delete utxo hash": delOutputID.String(), "error": err}).Error("unmarshal spent utxo fail")
 			continue
 		}
 
 		au.Spent = true
 
-		rawDel, err = json.Marshal(&au)
-		if err != nil {
+		if rawDel, err = json.Marshal(&au); err != nil {
 			log.WithField("delete utxo hash", delOutputID.String()).Error("marshal spent utxo fail")
 			continue
 		}
@@ -203,6 +203,7 @@ func (m *Manager) indexAccountUTXOs(b *legacy.Block) error {
 func ReverseAccountUTXOs(s *pin.Store, batch *db.Batch, b *legacy.Block) {
 	var au AccountUTXOs
 	var rawDel []byte
+	var err error
 
 	//handle spent UTXOs
 	delOutputIDs := prevoutDBKeys(b.Transactions...)
@@ -213,16 +214,14 @@ func ReverseAccountUTXOs(s *pin.Store, batch *db.Batch, b *legacy.Block) {
 			continue
 		}
 
-		err := json.Unmarshal(rawDel, &au)
-		if err != nil {
+		if err = json.Unmarshal(rawDel, &au); err != nil {
 			log.WithFields(log.Fields{"reverse utxo hash": delOutputID.String(), "error": err}).Error("unmarshal spent utxo fail")
 			continue
 		}
 		// reverse spent
 		au.Spent = false
 
-		rawDel, err = json.Marshal(&au)
-		if err != nil {
+		if rawDel, err = json.Marshal(&au); err != nil {
 			log.WithField("reverse utxo hash", delOutputID.String()).Error("marshal spent utxo fail")
 			continue
 		}
@@ -234,8 +233,7 @@ func ReverseAccountUTXOs(s *pin.Store, batch *db.Batch, b *legacy.Block) {
 	for _, tx := range b.Transactions {
 		for j, _ := range tx.Outputs {
 			resOutID := tx.ResultIds[j]
-			_, ok := tx.Entries[*resOutID].(*bc.Output)
-			if !ok {
+			if _, ok := tx.Entries[*resOutID].(*bc.Output); !ok {
 				//retirement
 				continue
 			}

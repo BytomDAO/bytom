@@ -193,7 +193,9 @@ func (c *Chain) InMainChain(height uint64, hash bc.Hash) bool {
 		return true
 	}
 
+	c.state.cond.L.Lock()
 	h, ok := c.state.mainChain[height]
+	c.state.cond.L.Unlock()
 	if !ok {
 		return false
 	}

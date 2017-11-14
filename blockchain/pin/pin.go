@@ -17,7 +17,7 @@ import (
 const (
 	processorWorkers   = 10
 	blockProcessPreFix = "BLP:"
-	walletPreFix       = "WAL:"
+	walletStatusInfo   = "WAL:"
 )
 
 func blockProcessKey(name string) []byte {
@@ -25,7 +25,7 @@ func blockProcessKey(name string) []byte {
 }
 
 func walletKey(name string) []byte {
-	return []byte(walletPreFix + name)
+	return []byte(walletStatusInfo + name)
 }
 
 type Processor struct {
