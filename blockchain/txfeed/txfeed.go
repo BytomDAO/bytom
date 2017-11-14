@@ -3,6 +3,7 @@ package txfeed
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -30,7 +31,7 @@ var (
 
 type Tracker struct {
 	DB                dbm.DB
-	TxFeeds           []TxFeed
+	TxFeeds           []*TxFeed
 	BlockTransactions map[bc.Hash]*legacy.Tx
 	chain             *protocol.Chain
 	txfeedCh          chan *legacy.Tx
@@ -66,7 +67,7 @@ type filter struct {
 func NewTracker(db dbm.DB, chain *protocol.Chain) *Tracker {
 	s := &Tracker{
 		DB:                db,
-		TxFeeds:           make([]TxFeed, 0, 10),
+		TxFeeds:           make([]*TxFeed, 0, 10),
 		BlockTransactions: make(map[bc.Hash]*legacy.Tx),
 		chain:             chain,
 		txfeedCh:          make(chan *legacy.Tx, maxNewTxfeedChSize),
@@ -75,15 +76,14 @@ func NewTracker(db dbm.DB, chain *protocol.Chain) *Tracker {
 	return s
 }
 
-func loadTxFeed(db dbm.DB, txFeeds []TxFeed) ([]TxFeed, error) {
-	var txFeed = TxFeed{}
+func loadTxFeed(db dbm.DB, txFeeds []*TxFeed) ([]*TxFeed, error) {
+	var txFeed = &TxFeed{}
 	iter := db.Iterator()
 	for iter.Next() {
-		err := json.Unmarshal(iter.Value(), &txFeed)
-		if err != nil {
+		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
 			return nil, err
 		}
-		filter, err := parseFilter(txFeed.Filter)
+		filter, _ := parseFilter(txFeed.Filter)
 		txFeed.Param = filter
 		txFeeds = append(txFeeds, txFeed)
 	}
@@ -133,8 +133,8 @@ func parseTxfeed(db dbm.DB, filters []filter) error {
 
 	iter := db.Iterator()
 	for iter.Next() {
-		err := json.Unmarshal(iter.Value(), &txFeed)
-		if err != nil {
+
+		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
 			return err
 		}
 
@@ -167,9 +167,8 @@ func parseTxfeed(db dbm.DB, filters []filter) error {
 //Prepare load and parse filters
 func (t *Tracker) Prepare(ctx context.Context) error {
 	var err error
-	t.TxFeeds, err = loadTxFeed(t.DB, t.TxFeeds)
-	log.WithField("prepare", t.TxFeeds).Info("load txfeed")
-	if err != nil {
+
+	if t.TxFeeds, err = loadTxFeed(t.DB, t.TxFeeds); err != nil {
 		return err
 	}
 
@@ -184,8 +183,8 @@ func (t *Tracker) GetTxfeedCh() chan *legacy.Tx {
 //Create create a txfeed filter
 func (t *Tracker) Create(ctx context.Context, alias, fil, after string) error {
 	// Validate the filter.
-	err := query.ValidateTransactionFilter(fil)
-	if err != nil {
+
+	if err := query.ValidateTransactionFilter(fil); err != nil {
 		return err
 	}
 
@@ -203,7 +202,7 @@ func (t *Tracker) Create(ctx context.Context, alias, fil, after string) error {
 		}
 	}
 
-	feed := TxFeed{
+	feed := &TxFeed{
 		Alias:  alias,
 		Filter: fil,
 		After:  after,
@@ -215,7 +214,7 @@ func (t *Tracker) Create(ctx context.Context, alias, fil, after string) error {
 	}
 	feed.Param = filter
 	t.TxFeeds = append(t.TxFeeds, feed)
-	return insertTxFeed(t.DB, &feed)
+	return insertTxFeed(t.DB, feed)
 }
 
 func deleteTxFeed(db dbm.DB, alias string) error {
@@ -252,7 +251,7 @@ func (t *Tracker) Get(ctx context.Context, alias string) (feed *TxFeed, err erro
 
 	for i, v := range t.TxFeeds {
 		if v.Alias == alias {
-			return &t.TxFeeds[i], nil
+			return t.TxFeeds[i], nil
 		}
 	}
 	return nil, nil
@@ -268,8 +267,8 @@ func (t *Tracker) Delete(ctx context.Context, alias string) error {
 	for i, txfeed := range t.TxFeeds {
 		if txfeed.Alias == alias {
 			t.TxFeeds = append(t.TxFeeds[:i], t.TxFeeds[i+1:]...)
-			err := deleteTxFeed(t.DB, alias)
-			if err != nil {
+
+			if err := deleteTxFeed(t.DB, alias); err != nil {
 				return err
 			}
 
@@ -279,35 +278,37 @@ func (t *Tracker) Delete(ctx context.Context, alias string) error {
 	return nil
 }
 
+func outputFilter(txfeed *TxFeed, value *query.AnnotatedOutput) bool {
+	assetidstr := value.AssetID.String()
+
+	if 0 == strings.Compare(txfeed.Param.assetID, assetidstr) || txfeed.Param.assetID == "" {
+		if 0 == strings.Compare(txfeed.Param.transType, value.Type) || txfeed.Param.transType == "" {
+			if txfeed.Param.amountLowerLimit < value.Amount || txfeed.Param.amountLowerLimit == 0 {
+				if txfeed.Param.amountUpperLimit > value.Amount || txfeed.Param.amountUpperLimit == 0 {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 //TxFilter filter tx from mempool
 func (t *Tracker) TxFilter(tx *legacy.Tx) error {
 	var annotatedTx *query.AnnotatedTx
+	fmt.Println("TxFilter...")
 	// Build the fully annotated transaction.
 	annotatedTx = buildAnnotatedTransaction(tx)
-	for _, value := range annotatedTx.Outputs {
-		assetid, _ := json.Marshal(value.AssetID)
-		assetidstr := string(assetid)
-		assetidstr = strings.Replace(assetidstr, "\"", "", -1)
-		for _, txfeed := range t.TxFeeds {
-			if 0 == strings.Compare(txfeed.Param.assetID, assetidstr) || txfeed.Param.assetID == "" {
-				if 0 == strings.Compare(txfeed.Param.transType, value.Type) || txfeed.Param.transType == "" {
-					if txfeed.Param.amountLowerLimit < value.Amount || txfeed.Param.amountLowerLimit == 0 {
-						if txfeed.Param.amountUpperLimit > value.Amount || txfeed.Param.amountUpperLimit == 0 {
-							localAnnotator(annotatedTx)
-							b, err := json.Marshal(annotatedTx)
-							if err != nil {
-								return err
-							}
-							log.WithField("filter", string(b)).Info("find new tx match filter")
-
-							t.txfeedCh <- tx
-							return nil
-						}
-
-					}
-
+	for _, output := range annotatedTx.Outputs {
+		for _, filter := range t.TxFeeds {
+			match := outputFilter(filter, output)
+			if match == true {
+				b, err := json.Marshal(annotatedTx)
+				if err != nil {
+					return err
 				}
-
+				log.WithField("filter", string(b)).Info("find new tx match filter")
+				t.txfeedCh <- tx
 			}
 		}
 	}

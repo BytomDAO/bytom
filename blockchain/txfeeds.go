@@ -17,30 +17,33 @@ func (bcr *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
 	Filter string
 }) error {
 	after := fmt.Sprintf("Height: %d", bcr.chain.Height())
-	err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter, after)
-	if err != nil {
+	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter, after); err != nil {
 		log.WithField("error", err).Error("Add TxFeed Failed")
 		return err
 	}
 	return nil
 }
 
-func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) ([]txfeed.TxFeed, error) {
+func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) ([]*txfeed.TxFeed, error) {
 	var (
-		txFeed  = txfeed.TxFeed{}
-		txFeeds = []txfeed.TxFeed{}
+		txFeed  = &txfeed.TxFeed{}
+		txFeeds = []*txfeed.TxFeed{}
 	)
-	jf, _ := json.Marshal(filter)
+
+	jf, err := json.Marshal(filter)
+	if err != nil {
+		return nil, err
+	}
+
 	value := bcr.txFeedTracker.DB.Get(jf)
 	if value != nil {
-		err := json.Unmarshal(value, &txFeed)
-		if err != nil {
+		if err := json.Unmarshal(value, txFeed); err != nil {
 			return nil, err
 		}
+		txFeeds = append(txFeeds, txFeed)
+		return txFeeds, nil
 	}
-	txFeeds = append(txFeeds, txFeed)
-
-	return txFeeds, nil
+	return nil, nil
 }
 
 // POST /get-transaction-feed
@@ -57,8 +60,7 @@ func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in requestQuery) in
 func (bcr *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) error {
-	err := bcr.txFeedTracker.Delete(ctx, in.Alias)
-	if err != nil {
+	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return err
 	}
 	return nil
@@ -69,13 +71,12 @@ func (bcr *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
 	Alias  string
 	Filter string
 }) error {
-	err := bcr.txFeedTracker.Delete(ctx, in.Alias)
-	if err != nil {
+	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return err
 	}
 	after := fmt.Sprintf("Height: %d", bcr.chain.Height())
-	err = bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter, after)
-	if err != nil {
+
+	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter, after); err != nil {
 		return err
 	}
 	return nil
@@ -99,15 +100,14 @@ func txAfterIsBefore(a, b string) (bool, error) {
 			aAfter.FromPosition < bAfter.FromPosition), nil
 }
 
-func (bcr *BlockchainReactor) getTxFeeds() ([]txfeed.TxFeed, error) {
+func (bcr *BlockchainReactor) getTxFeeds() ([]*txfeed.TxFeed, error) {
 	var (
-		txFeed  = txfeed.TxFeed{}
-		txFeeds = []txfeed.TxFeed{}
+		txFeed  = &txfeed.TxFeed{}
+		txFeeds = []*txfeed.TxFeed{}
 	)
 	iter := bcr.txFeedTracker.DB.Iterator()
 	for iter.Next() {
-		err := json.Unmarshal(iter.Value(), &txFeed)
-		if err != nil {
+		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
 			return nil, err
 		}
 		txFeeds = append(txFeeds, txFeed)

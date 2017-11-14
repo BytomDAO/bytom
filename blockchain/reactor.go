@@ -335,7 +335,7 @@ func (bcR *BlockchainReactor) syncRoutine() {
 	for {
 		select {
 		case newTx := <-newTxCh:
-			go bcR.TxFeedFilter(newTx)
+			bcR.txFeedTracker.TxFilter(newTx)
 			go bcR.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
 			go bcR.BroadcastStatusResponse()
@@ -440,10 +440,5 @@ func (bcR *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
 		return err
 	}
 	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	return nil
-}
-
-func (bcR *BlockchainReactor) TxFeedFilter(tx *legacy.Tx) error {
-	bcR.txFeedTracker.TxFilter(tx)
 	return nil
 }
