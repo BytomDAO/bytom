@@ -668,61 +668,73 @@ func createAccountReceiver(client *rpc.Client, args []string) {
 }
 
 func createTxFeed(client *rpc.Client, args []string) {
-	if len(args) != 1 {
-		fatalln("error:createTxFeed take no arguments")
+	if len(args) != 2 {
+		fatalln("error:createTxFeed need arguments")
 	}
 	type In struct {
-		Alias       string
-		Filter      string
-		ClientToken string `json:"client_token"`
+		Alias  string
+		Filter string
 	}
 	var in In
-	in.Alias = "asdfgh"
-	in.Filter = "zxcvbn"
-	in.ClientToken = args[0]
-	client.Call(context.Background(), "/create-transaction-feed", &[]In{in}, nil)
+	in.Alias = args[0]
+	in.Filter = args[1]
+
+	client.Call(context.Background(), "/create-transaction-feed", in, nil)
 }
 
 func getTxFeed(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error:getTxFeed not use args")
+	if len(args) != 1 {
+		fatalln("error:getTxFeed use args alias")
 	}
-	type In struct {
-		ID    string `json:"id,omitempty"`
-		Alias string `json:"alias,omitempty"`
+	type requestQuery struct {
+		Filter       string        `json:"filter,omitempty"`
+		FilterParams []interface{} `json:"filter_params,omitempty"`
+		SumBy        []string      `json:"sum_by,omitempty"`
+		PageSize     int           `json:"page_size"`
+		AscLongPoll  bool          `json:"ascending_with_long_poll,omitempty"`
+		Timeout      json.Duration `json:"timeout"`
+		After        string        `json:"after"`
+		StartTimeMS  uint64        `json:"start_time,omitempty"`
+		EndTimeMS    uint64        `json:"end_time,omitempty"`
+		TimestampMS  uint64        `json:"timestamp,omitempty"`
+		Type         string        `json:"type"`
+		Aliases      []string      `json:"aliases,omitempty"`
 	}
-	var in In
-	in.Alias = "qwerty"
-	in.ID = "123456"
-	client.Call(context.Background(), "/get-transaction-feed", &[]In{in}, nil)
+	var in requestQuery
+	in.Filter = args[0]
+	responses := make([]interface{}, 0)
+	client.Call(context.Background(), "/get-transaction-feed", in, &responses)
+	if len(responses) > 0 {
+		for i, item := range responses {
+			fmt.Println(i, "-----", item)
+		}
+	}
 }
 
 func updateTxFeed(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error:updateTxFeed not use args")
+	if len(args) != 2 {
+		fatalln("error:createTxFeed need arguments")
 	}
 	type In struct {
-		ID    string `json:"id,omitempty"`
-		Alias string `json:"alias,omitempty"`
+		Alias  string
+		Filter string
 	}
 	var in In
-	in.ID = "123456"
-	in.Alias = "qwerty"
-	client.Call(context.Background(), "/update-transaction-feed", &[]In{in}, nil)
+	in.Alias = args[0]
+	in.Filter = args[1]
+	client.Call(context.Background(), "/update-transaction-feed", in, nil)
 }
 
 func deleteTxFeed(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error:deleteTxFeed not use args")
+	if len(args) != 1 {
+		fatalln("error:deleteTxFeed use args alias")
 	}
 	type In struct {
-		ID    string `json:"id,omitempty"`
 		Alias string `json:"alias,omitempty"`
 	}
 	var in In
-	in.ID = "123456"
-	in.Alias = "qwerty"
-	client.Call(context.Background(), "/delete-transaction-feed", &[]In{in}, nil)
+	in.Alias = args[0]
+	client.Call(context.Background(), "/delete-transaction-feed", in, nil)
 }
 
 func listAccounts(client *rpc.Client, args []string) {
@@ -748,11 +760,11 @@ func listAccounts(client *rpc.Client, args []string) {
 	responses := make([]interface{}, 0)
 
 	client.Call(context.Background(), "/list-accounts", in, &responses)
-	if len(responses) > 0 {
-		for i, item := range responses {
-			fmt.Println(i, "-----", item)
-		}
-	}
+	// if len(responses) > 0 {
+	// 	for i, item := range responses {
+	// 		fmt.Println(i, "-----", item)
+	// 	}
+	// }
 }
 
 func listAssets(client *rpc.Client, args []string) {
@@ -785,6 +797,7 @@ func listAssets(client *rpc.Client, args []string) {
 }
 
 func listTxFeeds(client *rpc.Client, args []string) {
+	fmt.Println("listTxFeeds")
 	if len(args) != 0 {
 		fatalln("error:listTxFeeds not use args")
 	}
@@ -803,10 +816,16 @@ func listTxFeeds(client *rpc.Client, args []string) {
 		Aliases      []string      `json:"aliases,omitempty"`
 	}
 	var in requestQuery
-	after := in.After
-	out := in
-	out.After = after
-	client.Call(context.Background(), "/list-transactions-feeds", &[]requestQuery{in}, nil)
+
+	responses := make([]interface{}, 0)
+
+	client.Call(context.Background(), "/list-transaction-feeds", in, &responses)
+	if len(responses) > 0 {
+		for i, item := range responses {
+			fmt.Println(i, "-----", item)
+		}
+	}
+
 }
 
 func listTransactions(client *rpc.Client, args []string) {

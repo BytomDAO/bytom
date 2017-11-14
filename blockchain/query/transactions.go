@@ -4,13 +4,26 @@ import (
 	//	"bytes"
 	//	"context"
 	//	"encoding/json"
+
 	"fmt"
 	"math"
 	//	"strconv"
 
-	//	"github.com/blockchain/blockchain/query/filter"
+	"github.com/bytom/blockchain/query/filter"
 	"github.com/bytom/errors"
+	// "github.com/chain/core/query/filter"
 )
+
+var filterTable = filter.Table{
+	Name:  "annotated_txs",
+	Alias: "txs",
+	Columns: map[string]*filter.Column{
+		"asset_id":           {Name: "assetid", Type: filter.String},
+		"amount_lower_limit": {Name: "amountlower", Type: filter.Integer},
+		"amount_upper_limit": {Name: "amountupper", Type: filter.Integer},
+		"trans_type":         {Name: "transtype", Type: filter.String},
+	},
+}
 
 var (
 	ErrBadAfter               = errors.New("malformed pagination parameter after")
@@ -50,12 +63,12 @@ func DecodeTxAfter(str string) (c TxAfter, err error) {
 	return TxAfter{FromBlockHeight: from, FromPosition: uint32(pos), StopBlockHeight: stop}, nil
 }
 
-/*
 func ValidateTransactionFilter(filt string) error {
-	_, err := filter.Parse(filt, transactionsTable, nil)
+	_, err := filter.Parse(filt, &filterTable, nil)
 	return err
 }
 
+/*
 // LookupTxAfter looks up the transaction `after` for the provided time range.
 func (ind *Indexer) LookupTxAfter(ctx context.Context, begin, end uint64) (TxAfter, error) {
 	const q = `
