@@ -39,7 +39,6 @@ type AccountUTXOs struct {
 	AccountID    string
 	ProgramIndex uint64
 	Program      []byte
-	BlockHeight  uint64
 	SourceID     []byte
 	SourcePos    uint64
 	RefData      []byte
@@ -308,7 +307,6 @@ func (m *Manager) upsertConfirmedAccountOutputs(outs []*accountOutput, block *le
 			AccountID:    out.AccountID,
 			ProgramIndex: out.keyIndex,
 			Program:      out.ControlProgram,
-			BlockHeight:  block.Height,
 			SourceID:     out.sourceID.Bytes(),
 			SourcePos:    out.sourcePos,
 			RefData:      out.refData.Bytes(),

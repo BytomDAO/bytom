@@ -376,7 +376,7 @@ func (sr *sourceReserver) refillCache(ctx context.Context) error {
 		return nil
 	}
 
-	utxos, err := findMatchingUTXOs(ctx, sr.db, sr.src, lastHeight)
+	utxos, err := findMatchingUTXOs(ctx, sr.db, sr.src)
 	if err != nil {
 		return errors.Wrap(err)
 	}
@@ -393,7 +393,7 @@ func (sr *sourceReserver) refillCache(ctx context.Context) error {
 	return nil
 }
 
-func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64) ([]*utxo, error) {
+func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source) ([]*utxo, error) {
 
 	var (
 		utxos       []*utxo
@@ -412,8 +412,7 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64
 		}
 
 		if (au.AccountID == src.AccountID) &&
-			(bytes.Equal(au.AssetID, src.AssetID.Bytes())) &&
-			(au.BlockHeight > height) {
+			(bytes.Equal(au.AssetID, src.AssetID.Bytes())) {
 
 			copy(rawOutputID[:], au.OutputID)
 			copy(rawSourceID[:], au.SourceID)

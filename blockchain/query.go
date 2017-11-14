@@ -24,8 +24,7 @@ var (
 	{
 		"OutputID":"%x","AssetID":"%x","Amount":"%d",
 		"AccountID":"%s","ProgramIndex":"%d","Program":"%x",
-		"BlockHeight":"%d","SourceID":"%x","SourcePos":"%d",
-		"RefData":"%x","Change":"%t"
+		"SourceID":"%x","SourcePos":"%d","RefData":"%x","Change":"%t"
 	}`
 )
 
@@ -189,8 +188,7 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in request
 		restring = fmt.Sprintf(AccountUTXOFmt,
 			res.OutputID, res.AssetID, res.Amount,
 			res.AccountID, res.ProgramIndex, res.Program,
-			res.BlockHeight, res.SourceID, res.SourcePos,
-			res.RefData, res.Change)
+			res.SourceID, res.SourcePos, res.RefData, res.Change)
 
 		response = append(response, restring)
 	}
