@@ -240,6 +240,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
 	bcR.BuildHander()
+
 	bcR.mining.Start()
 	go bcR.syncRoutine()
 	return nil
