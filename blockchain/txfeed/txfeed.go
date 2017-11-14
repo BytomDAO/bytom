@@ -126,8 +126,7 @@ func parseFilter(ft string) (filter, error) {
 
 //TODO
 func getParam(str, substr string) string {
-	result := strings.Index(str, substr)
-	if result >= 0 {
+	if result := strings.Index(str, substr); result >= 0 {
 		str := strings.Replace(str[result+1:], "'", "", -1)
 		str = strings.Replace(str, " ", "", -1)
 		return str

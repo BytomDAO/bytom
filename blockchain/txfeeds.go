@@ -23,10 +23,8 @@ func (bcr *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
 }
 
 func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) ([]*txfeed.TxFeed, error) {
-	var (
-		txFeed  = &txfeed.TxFeed{}
-		txFeeds = []*txfeed.TxFeed{}
-	)
+	txFeed := &txfeed.TxFeed{}
+	txFeeds := []*txfeed.TxFeed{}
 
 	jf, err := json.Marshal(filter)
 	if err != nil {
@@ -59,8 +57,7 @@ func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in requestQuery) in
 func (bcr *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) error {
-	err := bcr.txFeedTracker.Delete(ctx, in.Alias)
-	return err
+	return bcr.txFeedTracker.Delete(ctx, in.Alias)
 }
 
 // POST /update-transaction-feed
@@ -71,8 +68,7 @@ func (bcr *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
 	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return err
 	}
-	err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter)
-	return err
+	return bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter)
 }
 
 // txAfterIsBefore returns true if a is before b. It returns an error if either
