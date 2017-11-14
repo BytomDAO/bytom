@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/pin"
@@ -75,7 +76,7 @@ type reservation struct {
 	ClientToken *string
 }
 
-func newReserver(db dbm.DB, c *protocol.Chain, pinStore *pin.Store) *reserver {
+func newReserver(c *protocol.Chain, pinStore *pin.Store) *reserver {
 	return &reserver{
 		c:            c,
 		db:           pinStore.DB,
@@ -261,7 +262,7 @@ func (re *reserver) source(src source) *sourceReserver {
 		src:     src,
 		validFn: re.checkUTXO,
 		heightFn: func() uint64 {
-			return re.pinStore.Height(PinName)
+			return re.pinStore.Height(InsertUnspentsPinName)
 		},
 		cached:   make(map[bc.Hash]*utxo),
 		reserved: make(map[bc.Hash]uint64),
@@ -402,14 +403,15 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64
 		rawRefData  [32]byte
 	)
 
-	iter := db.IteratorPrefix([]byte("acu"))
-	for iter.Next() {
+	accountUTXOIter := db.IteratorPrefix([]byte(AccountUTXOPreFix))
+	defer accountUTXOIter.Release()
+	for accountUTXOIter.Next() {
 
-		if err := json.Unmarshal(iter.Value(), &au); err != nil {
+		if err := json.Unmarshal(accountUTXOIter.Value(), &au); err != nil {
 			return nil, errors.Wrap(err)
 		}
 
-		if (au.AccountID == src.AccountID) &&
+		if (au.Spent == false) && (au.AccountID == src.AccountID) &&
 			(bytes.Equal(au.AssetID, src.AssetID.Bytes())) &&
 			(au.BlockHeight > height) {
 
@@ -434,6 +436,7 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source, height uint64
 	}
 
 	if len(utxos) == 0 {
+		log.WithFields(log.Fields{"AccountID": src.AccountID, "AssetID": src.AssetID.String()}).Error("can't match utxo")
 		return nil, errors.New("can't match utxo")
 	}
 
@@ -450,12 +453,15 @@ func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, e
 	}
 
 	// make sure accountUTXO existed in the db
-	accUTXOValue := db.Get(json.RawMessage("acu" + string(outHash.Bytes())))
-	if accUTXOValue == nil {
-		return u, errors.New(fmt.Sprintf("can't find utxo: %s", outHash.String()))
+	accountUTXOValue := db.Get(accountUTXOKey(string(outHash.Bytes())))
+	if accountUTXOValue == nil {
+		return nil, fmt.Errorf("can't find utxo: %s", outHash.String())
 	}
-	if err := json.Unmarshal(accUTXOValue, &au); err != nil {
+	if err := json.Unmarshal(accountUTXOValue, &au); err != nil {
 		return nil, errors.Wrap(err)
+	}
+	if au.Spent == true {
+		return nil, fmt.Errorf("can't find unspent utxo: %s", outHash.String())
 	}
 
 	rawOutputID := new([32]byte)

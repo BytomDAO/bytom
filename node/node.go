@@ -1,12 +1,10 @@
 package node
 
 import (
-	"context"
 	"crypto/tls"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -58,27 +56,6 @@ type Node struct {
 	accounts   *account.Manager
 	assets     *asset.Registry
 }
-
-var (
-	// config vars
-	rootCAs       = env.String("ROOT_CA_CERTS", "") // file path
-	splunkAddr    = os.Getenv("SPLUNKADDR")
-	logFile       = os.Getenv("LOGFILE")
-	logSize       = env.Int("LOGSIZE", 5e6) // 5MB
-	logCount      = env.Int("LOGCOUNT", 9)
-	logQueries    = env.Bool("LOG_QUERIES", false)
-	maxDBConns    = env.Int("MAXDBCONNS", 10)           // set to 100 in prod
-	rpsToken      = env.Int("RATELIMIT_TOKEN", 0)       // reqs/sec
-	rpsRemoteAddr = env.Int("RATELIMIT_REMOTE_ADDR", 0) // reqs/sec
-	indexTxs      = env.Bool("INDEX_TRANSACTIONS", true)
-	home          = bc.HomeDirFromEnvironment()
-	bootURL       = env.String("BOOTURL", "")
-	// build vars; initialized by the linker
-	buildTag    = "?"
-	buildCommit = "?"
-	buildDate   = "?"
-	race        []interface{} // initialized in race.go
-)
 
 func NewNodeDefault(config *cfg.Config) *Node {
 	return NewNode(config)
@@ -153,7 +130,6 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 }
 
 func NewNode(config *cfg.Config) *Node {
-	ctx := context.Background()
 
 	// Get store
 	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
@@ -200,7 +176,8 @@ func NewNode(config *cfg.Config) *Node {
 		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
 		accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
 		pinStore = pin.NewStore(accUTXODB)
-		if err = pinStore.LoadAll(ctx); err != nil {
+
+		if err = pinStore.LoadAll(); err != nil {
 			log.WithField("error", err).Error("load pin store")
 			return nil
 		}
@@ -210,15 +187,17 @@ func NewNode(config *cfg.Config) *Node {
 			pinHeight = pinHeight - 1
 		}
 
-		pins := []string{account.PinName, account.DeleteSpentsPinName}
+		pins := []string{account.InsertUnspentsPinName, account.DeleteSpentsPinName}
 		for _, p := range pins {
-			if err = pinStore.CreatePin(ctx, p, pinHeight); err != nil {
+			if err = pinStore.CreatePin(p, pinHeight); err != nil {
 				log.WithField("error", err).Error("Create pin")
 			}
 		}
 
 		accounts = account.NewManager(accountsDB, chain, pinStore)
-		go accounts.ProcessBlocks(ctx)
+		go accounts.ProcessBlocks()
+		pinStore.AllContinue <- struct{}{}
+		go pinStore.WalletUpdate(chain, account.ReverseAccountUTXOs)
 
 		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 		assets = asset.NewRegistry(assetsDB, chain)

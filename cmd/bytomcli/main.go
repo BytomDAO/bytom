@@ -1080,7 +1080,7 @@ func signTransactions(client *rpc.Client, args []string) {
 	fmt.Printf("tpl:%v, err:%v\n", tpl, err)
 	in.Txs = []*txbuilder.Template{&tpl}
 
-	var response []interface{} = make([]interface{}, 1)
+	var response = make([]interface{}, 1)
 	client.Call(context.Background(), "/sign-transactions", &in, &response)
 	fmt.Printf("sign response:%v\n", response)
 }

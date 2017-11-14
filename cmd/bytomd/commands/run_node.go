@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/node"
 	"github.com/bytom/types"
-	log "github.com/sirupsen/logrus"
-	cmn "github.com/tendermint/tmlibs/common"
 )
 
 var runNodeCmd = &cobra.Command{

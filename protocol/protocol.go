@@ -188,6 +188,19 @@ func (c *Chain) inMainchain(block *legacy.Block) bool {
 	return *hash == block.Hash()
 }
 
+func (c *Chain) InMainChain(height uint64, hash bc.Hash) bool {
+	if height == 0 {
+		return true
+	}
+
+	h, ok := c.state.mainChain[height]
+	if !ok {
+		return false
+	}
+
+	return *h == hash
+}
+
 // TimestampMS returns the latest known block timestamp.
 func (c *Chain) TimestampMS() uint64 {
 	c.state.cond.L.Lock()
