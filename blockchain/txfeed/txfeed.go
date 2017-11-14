@@ -3,7 +3,6 @@ package txfeed
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -19,22 +18,26 @@ import (
 )
 
 const (
+	//FilterNumMax max txfeed filter amount.
 	FilterNumMax = 1024
 )
 
 var (
-	ErrDuplicateAlias  = errors.New("duplicate feed alias")
-	ErrEmptyAlias      = errors.New("empty feed alias")
+	//ErrDuplicateAlias means error of duplicate feed alias.
+	ErrDuplicateAlias = errors.New("duplicate feed alias")
+	//ErrEmptyAlias means error of empty feed alias.
+	ErrEmptyAlias = errors.New("empty feed alias")
+	//ErrNumExceedlimit means txfeed filter number exceeds the limit.
 	ErrNumExceedlimit  = errors.New("txfeed exceed limit")
 	maxNewTxfeedChSize = 1000
 )
 
+//Tracker filter tracker object.
 type Tracker struct {
-	DB                dbm.DB
-	TxFeeds           []*TxFeed
-	BlockTransactions map[bc.Hash]*legacy.Tx
-	chain             *protocol.Chain
-	txfeedCh          chan *legacy.Tx
+	DB       dbm.DB
+	TxFeeds  []*TxFeed
+	chain    *protocol.Chain
+	txfeedCh chan *legacy.Tx
 }
 
 type rawOutput struct {
@@ -48,11 +51,11 @@ type rawOutput struct {
 	refData        bc.Hash
 }
 
+//TxFeed describe a filter
 type TxFeed struct {
 	ID     string `json:"id,omitempty"`
 	Alias  string `json:"alias"`
 	Filter string `json:"filter,omitempty"`
-	After  string `json:"after,omitempty"`
 	Param  filter `json:"param,omitempty"`
 }
 
@@ -63,27 +66,31 @@ type filter struct {
 	transType        string `json:"transtype,omitempty"`
 }
 
-//NewTracker create new txfeed tracker
+//NewTracker create new txfeed tracker.
 func NewTracker(db dbm.DB, chain *protocol.Chain) *Tracker {
 	s := &Tracker{
-		DB:                db,
-		TxFeeds:           make([]*TxFeed, 0, 10),
-		BlockTransactions: make(map[bc.Hash]*legacy.Tx),
-		chain:             chain,
-		txfeedCh:          make(chan *legacy.Tx, maxNewTxfeedChSize),
+		DB:       db,
+		TxFeeds:  make([]*TxFeed, 0, 10),
+		chain:    chain,
+		txfeedCh: make(chan *legacy.Tx, maxNewTxfeedChSize),
 	}
 
 	return s
 }
 
 func loadTxFeed(db dbm.DB, txFeeds []*TxFeed) ([]*TxFeed, error) {
-	var txFeed = &TxFeed{}
 	iter := db.Iterator()
+	defer iter.Release()
+
 	for iter.Next() {
+		txFeed := &TxFeed{}
 		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
 			return nil, err
 		}
-		filter, _ := parseFilter(txFeed.Filter)
+		filter, err := parseFilter(txFeed.Filter)
+		if err != nil {
+			return nil, err
+		}
 		txFeed.Param = filter
 		txFeeds = append(txFeeds, txFeed)
 	}
@@ -117,6 +124,7 @@ func parseFilter(ft string) (filter, error) {
 	return res, nil
 }
 
+//TODO
 func getParam(str, substr string) string {
 	result := strings.Index(str, substr)
 	if result >= 0 {
@@ -132,6 +140,8 @@ func parseTxfeed(db dbm.DB, filters []filter) error {
 	var index int
 
 	iter := db.Iterator()
+	defer iter.Release()
+
 	for iter.Next() {
 
 		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
@@ -164,24 +174,20 @@ func parseTxfeed(db dbm.DB, filters []filter) error {
 	return nil
 }
 
-//Prepare load and parse filters
+//Prepare load and parse filters.
 func (t *Tracker) Prepare(ctx context.Context) error {
 	var err error
-
-	if t.TxFeeds, err = loadTxFeed(t.DB, t.TxFeeds); err != nil {
-		return err
-	}
-
-	return nil
+	t.TxFeeds, err = loadTxFeed(t.DB, t.TxFeeds)
+	return err
 }
 
-// GetTxfeedCh return a txfeed channel
+//GetTxfeedCh return a txfeed channel.
 func (t *Tracker) GetTxfeedCh() chan *legacy.Tx {
 	return t.txfeedCh
 }
 
-//Create create a txfeed filter
-func (t *Tracker) Create(ctx context.Context, alias, fil, after string) error {
+//Create create a txfeed filter.
+func (t *Tracker) Create(ctx context.Context, alias, fil string) error {
 	// Validate the filter.
 
 	if err := query.ValidateTransactionFilter(fil); err != nil {
@@ -205,7 +211,6 @@ func (t *Tracker) Create(ctx context.Context, alias, fil, after string) error {
 	feed := &TxFeed{
 		Alias:  alias,
 		Filter: fil,
-		After:  after,
 	}
 
 	filter, err := parseFilter(feed.Filter)
@@ -244,7 +249,8 @@ func insertTxFeed(db dbm.DB, feed *TxFeed) error {
 	return nil
 }
 
-func (t *Tracker) Get(ctx context.Context, alias string) (feed *TxFeed, err error) {
+//Get get txfeed filter with alias.
+func (t *Tracker) Get(ctx context.Context, alias string) (*TxFeed, error) {
 	if alias == "" {
 		return nil, errors.WithDetail(ErrEmptyAlias, "get transaction feed with empty alias")
 	}
@@ -257,6 +263,7 @@ func (t *Tracker) Get(ctx context.Context, alias string) (feed *TxFeed, err erro
 	return nil, nil
 }
 
+//Delete delete txfeed with alias.
 func (t *Tracker) Delete(ctx context.Context, alias string) error {
 	log.WithField("delete", alias).Info("delete txfeed")
 
@@ -267,12 +274,7 @@ func (t *Tracker) Delete(ctx context.Context, alias string) error {
 	for i, txfeed := range t.TxFeeds {
 		if txfeed.Alias == alias {
 			t.TxFeeds = append(t.TxFeeds[:i], t.TxFeeds[i+1:]...)
-
-			if err := deleteTxFeed(t.DB, alias); err != nil {
-				return err
-			}
-
-			return nil
+			return deleteTxFeed(t.DB, alias)
 		}
 	}
 	return nil
@@ -281,35 +283,38 @@ func (t *Tracker) Delete(ctx context.Context, alias string) error {
 func outputFilter(txfeed *TxFeed, value *query.AnnotatedOutput) bool {
 	assetidstr := value.AssetID.String()
 
-	if 0 == strings.Compare(txfeed.Param.assetID, assetidstr) || txfeed.Param.assetID == "" {
-		if 0 == strings.Compare(txfeed.Param.transType, value.Type) || txfeed.Param.transType == "" {
-			if txfeed.Param.amountLowerLimit < value.Amount || txfeed.Param.amountLowerLimit == 0 {
-				if txfeed.Param.amountUpperLimit > value.Amount || txfeed.Param.amountUpperLimit == 0 {
-					return true
-				}
-			}
-		}
+	if 0 != strings.Compare(txfeed.Param.assetID, assetidstr) && txfeed.Param.assetID != "" {
+		return false
 	}
-	return false
+	if 0 != strings.Compare(txfeed.Param.transType, value.Type) && txfeed.Param.transType != "" {
+		return false
+	}
+	if txfeed.Param.amountLowerLimit > value.Amount && txfeed.Param.amountLowerLimit != 0 {
+		return false
+	}
+	if txfeed.Param.amountUpperLimit < value.Amount && txfeed.Param.amountUpperLimit != 0 {
+		return false
+	}
+
+	return true
 }
 
-//TxFilter filter tx from mempool
+//TxFilter filter tx from mempool.
 func (t *Tracker) TxFilter(tx *legacy.Tx) error {
 	var annotatedTx *query.AnnotatedTx
-	fmt.Println("TxFilter...")
 	// Build the fully annotated transaction.
 	annotatedTx = buildAnnotatedTransaction(tx)
 	for _, output := range annotatedTx.Outputs {
 		for _, filter := range t.TxFeeds {
-			match := outputFilter(filter, output)
-			if match == true {
-				b, err := json.Marshal(annotatedTx)
-				if err != nil {
-					return err
-				}
-				log.WithField("filter", string(b)).Info("find new tx match filter")
-				t.txfeedCh <- tx
+			if match := outputFilter(filter, output); !match {
+				continue
 			}
+			b, err := json.Marshal(annotatedTx)
+			if err != nil {
+				return err
+			}
+			log.WithField("filter", string(b)).Info("find new tx match filter")
+			t.txfeedCh <- tx
 		}
 	}
 	return nil

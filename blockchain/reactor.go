@@ -42,7 +42,7 @@ const (
 	crosscoreRPCPrefix          = "/rpc/"
 )
 
-// BlockchainReactor handles long-term catchup syncing.
+//BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 

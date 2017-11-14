@@ -6,11 +6,13 @@ import (
 	"github.com/bytom/errors"
 )
 
+//Column describe a column
 type Column struct {
 	Name string
 	Type Type
 }
 
+//Table describe a table
 type Table struct {
 	Name        string
 	Alias       string
@@ -18,6 +20,7 @@ type Table struct {
 	ForeignKeys map[string]*ForeignKey
 }
 
+//ForeignKey describe a foreign key
 type ForeignKey struct {
 	Table         *Table
 	LocalColumn   string

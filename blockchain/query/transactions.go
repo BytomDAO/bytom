@@ -20,10 +20,13 @@ var filterTable = filter.Table{
 }
 
 var (
-	ErrBadAfter               = errors.New("malformed pagination parameter after")
+	//ErrBadAfter means malformed pagination parameter.
+	ErrBadAfter = errors.New("malformed pagination parameter after")
+	//ErrParameterCountMismatch means wrong number of parameters to query.
 	ErrParameterCountMismatch = errors.New("wrong number of parameters to query")
 )
 
+//TxAfter means the last query block by a list-transactions query.
 type TxAfter struct {
 	// FromBlockHeight and FromPosition uniquely identify the last transaction returned
 	// by a list-transactions query.
@@ -43,6 +46,7 @@ func (after TxAfter) String() string {
 	return fmt.Sprintf("%d:%d-%d", after.FromBlockHeight, after.FromPosition, after.StopBlockHeight)
 }
 
+//DecodeTxAfter decode tx from the last block.
 func DecodeTxAfter(str string) (c TxAfter, err error) {
 	var from, pos, stop uint64
 	_, err = fmt.Sscanf(str, "%d:%d-%d", &from, &pos, &stop)
@@ -57,6 +61,7 @@ func DecodeTxAfter(str string) (c TxAfter, err error) {
 	return TxAfter{FromBlockHeight: from, FromPosition: uint32(pos), StopBlockHeight: stop}, nil
 }
 
+//ValidateTransactionFilter verify txfeed filter validity.
 func ValidateTransactionFilter(filt string) error {
 	_, err := filter.Parse(filt, &filterTable, nil)
 	return err
