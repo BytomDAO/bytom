@@ -166,6 +166,8 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/get-best-block-hash", jsonHandler(bcr.getBestBlockHash))
 	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
 	m.Handle("/get-block-by-hash", jsonHandler(bcr.getBlockByHash))
+	m.Handle("/net-listening", jsonHandler(bcr.isNetListening))
+	m.Handle("/peer-count", jsonHandler(bcr.peerCount))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -430,4 +432,12 @@ func (bcR *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
 	}
 	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
+}
+
+func (bcr *BlockchainReactor) isNetListening() bool {
+	return bcr.sw.IsListening()
+}
+
+func (bcr *BlockchainReactor) peerCount() int {
+	return len(bcr.sw.Peers().List())
 }

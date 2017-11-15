@@ -90,6 +90,14 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(blockHeaderCmd)
 	BytomcliCmd.AddCommand(blockCmd)
 	BytomcliCmd.AddCommand(netInfoCmd)
+	BytomcliCmd.AddCommand(netListeningCmd)
+	BytomcliCmd.AddCommand(peerCountCmd)
+	BytomcliCmd.AddCommand(createAccountCmd)
+	BytomcliCmd.AddCommand(createAssetCmd)
+	BytomcliCmd.AddCommand(bindAccountCmd)
+	BytomcliCmd.AddCommand(listAccountCmd)
+	BytomcliCmd.AddCommand(listAssetCmd)
+	BytomcliCmd.AddCommand(bindAssetCmd)
 }
 
 func mustRPCClient() *rpc.Client {
@@ -104,7 +112,7 @@ func mustRPCClient() *rpc.Client {
 	if err == blockchain.ErrNoTLS {
 		return &rpc.Client{BaseURL: *coreURL}
 	} else if err != nil {
-		jww.FATAL.Println("loading TLS cert:", err)
+		jww.ERROR.Println("loading TLS cert:", err)
 	}
 
 	t := &http.Transport{
