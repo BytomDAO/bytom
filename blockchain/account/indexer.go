@@ -236,6 +236,61 @@ func ReverseAccountUTXOs(manager interface{}, s *pin.Store, batch *db.Batch, b *
 	}
 
 }
+func BuildAccountUTXOs(manager interface{}, s *pin.Store, batch *db.Batch, b *legacy.Block) {
+	var err error
+
+	m, ok := manager.(*Manager)
+	if !ok {
+		log.Error("build handle function error")
+	}
+
+	//handle spent UTXOs
+	delOutputIDs := prevoutDBKeys(b.Transactions...)
+	for _, delOutputID := range delOutputIDs {
+		(*batch).Delete(accountUTXOKey(string(delOutputID.Bytes())))
+	}
+
+	//handle new UTXOs
+	for _, tx := range b.Transactions {
+		for j, _ := range tx.Outputs {
+			resOutID := tx.ResultIds[j]
+			if _, ok := tx.Entries[*resOutID].(*bc.Output); !ok {
+				//retirement
+				continue
+			}
+			//delete new UTXOs
+			(*batch).Delete(accountUTXOKey(string(resOutID.Bytes())))
+		}
+	}
+
+	outs := make([]*rawOutput, 0, len(b.Transactions))
+	for _, tx := range b.Transactions {
+		for j, out := range tx.Outputs {
+			resOutID := tx.ResultIds[j]
+			resOut, ok := tx.Entries[*resOutID].(*bc.Output)
+			if !ok {
+				continue
+			}
+			out := &rawOutput{
+				OutputID:       *tx.OutputID(j),
+				AssetAmount:    out.AssetAmount,
+				ControlProgram: out.ControlProgram,
+				txHash:         tx.ID,
+				outputIndex:    uint32(j),
+				sourceID:       *resOut.Source.Ref,
+				sourcePos:      resOut.Source.Position,
+				refData:        *resOut.Data,
+			}
+			outs = append(outs, out)
+		}
+	}
+	accOuts := m.loadAccountInfo(outs)
+
+	if err = m.upsertConfirmedAccountOutputs(accOuts, b, batch); err != nil {
+		log.WithField("err", err).Error("building new account outputs")
+		return
+	}
+}
 
 func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs []bc.Hash) {
 	for _, tx := range txs {

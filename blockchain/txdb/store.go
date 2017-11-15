@@ -98,6 +98,14 @@ func (s *Store) GetSnapshot(hash *bc.Hash) (*state.Snapshot, error) {
 	return getSnapshot(s.db, hash)
 }
 
+func (s *Store) GetRollBackMap() (map[string]*bc.Rollback, error) {
+	return getRollBackMap(s.db)
+}
+
+func (s *Store) DelRollBack(rbHash string) {
+	delRollBack(s.db, rbHash)
+}
+
 // SaveBlock persists a new block in the database.
 func (s *Store) SaveBlock(block *legacy.Block) error {
 	binaryBlock, err := block.MarshalText()
@@ -111,8 +119,8 @@ func (s *Store) SaveBlock(block *legacy.Block) error {
 	return nil
 }
 
-func (s *Store) SaveMainchain(mainchain map[uint64]*bc.Hash, hash *bc.Hash) error {
-	err := saveMainchain(s.db, mainchain, hash)
+func (s *Store) SaveMainchain(mainchain map[uint64]*bc.Hash, hash *bc.Hash, rollback *bc.Rollback) error {
+	err := saveMainchain(s.db, mainchain, hash, rollback)
 	return errors.Wrap(err, "saving mainchain")
 }
 

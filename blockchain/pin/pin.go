@@ -57,6 +57,61 @@ func NewStore(db dbm.DB) *Store {
 	return s
 }
 
+func (s *Store) Rollback(c *protocol.Chain, manager interface{}, reverse func(interface{}, *Store, *dbm.Batch, *legacy.Block),
+	build func(interface{}, *Store, *dbm.Batch, *legacy.Block)) {
+
+	//for restart
+	s.hanldeRollBack(c, manager, reverse, build)
+
+	for {
+		select {
+		case <-c.RollBack:
+			s.hanldeRollBack(c, manager, reverse, build)
+		default:
+		}
+	}
+}
+
+func (s *Store) hanldeRollBack(c *protocol.Chain, manager interface{}, reverse func(interface{}, *Store, *dbm.Batch, *legacy.Block),
+	build func(interface{}, *Store, *dbm.Batch, *legacy.Block)) {
+
+	storeBatch := s.DB.NewBatch()
+
+	rollbackMap, err := c.GetRollBackMap()
+	if err != nil {
+		log.WithField("", err).Error("get rollback info")
+		return
+	}
+
+	for rbKey, rollback := range rollbackMap {
+		//detach
+		for _, d := range rollback.Detach {
+			block, err := c.GetBlockByHash(d)
+			if err != nil {
+				log.WithField("", err).Error("rollback:get block by hash")
+				return
+			}
+			reverse(manager, s, &storeBatch, block)
+		}
+
+		//attach
+		for _, a := range rollback.Attach {
+			block, err := c.GetBlockByHash(a)
+			if err != nil {
+				log.WithField("", err).Error("rollback:get block by hash")
+				return
+			}
+			build(manager, s, &storeBatch, block)
+		}
+		//commit
+		storeBatch.Write()
+		log.Info("complete once rollback")
+		//delete used rollback info
+		c.DelRollBack(rbKey)
+	}
+
+}
+
 func (s *Store) WalletUpdate(c *protocol.Chain, manager interface{}, reverse func(interface{}, *Store, *dbm.Batch, *legacy.Block)) {
 	var wallet WalletInfo
 	var err error
@@ -141,7 +196,6 @@ LOOP:
 		for _, pin := range s.pins {
 			pin.setHeight(wallet.Height)
 		}
-
 		//all block processor continue produce new process
 		s.AllContinue <- struct{}{}
 

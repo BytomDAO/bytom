@@ -5,3 +5,8 @@ type Block struct {
 	ID           Hash
 	Transactions []*Tx
 }
+
+type Rollback struct {
+	Detach []*Hash
+	Attach []*Hash
+}

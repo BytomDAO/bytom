@@ -35,11 +35,13 @@ type Store interface {
 	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
 	GetSnapshot(*bc.Hash) (*state.Snapshot, error)
 	GetStoreStatus() txdb.BlockStoreStateJSON
+	GetRollBackMap() (map[string]*bc.Rollback, error)
 
 	SaveBlock(*legacy.Block) error
-	SaveMainchain(map[uint64]*bc.Hash, *bc.Hash) error
+	SaveMainchain(map[uint64]*bc.Hash, *bc.Hash, *bc.Rollback) error
 	SaveSnapshot(*state.Snapshot, *bc.Hash) error
 	SaveStoreStatus(uint64, *bc.Hash)
+	DelRollBack(string)
 }
 
 // OrphanManage is use to handle all the orphan block
@@ -119,6 +121,7 @@ func (o *OrphanManage) Get(hash *bc.Hash) (*legacy.Block, bool) {
 type Chain struct {
 	InitialBlockHash  bc.Hash
 	MaxIssuanceWindow time.Duration // only used by generators
+	RollBack          chan struct{}
 
 	orphanManage *OrphanManage
 	txPool       *TxPool
@@ -140,6 +143,7 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 		orphanManage:     NewOrphanManage(),
 		store:            store,
 		txPool:           txPool,
+		RollBack:         make(chan struct{}, 1),
 	}
 	c.state.cond.L = new(sync.Mutex)
 	storeStatus := store.GetStoreStatus()
@@ -223,7 +227,7 @@ func (c *Chain) State() (*legacy.Block, *state.Snapshot) {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*bc.Hash) error {
+func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*bc.Hash, rollback *bc.Rollback) error {
 	if block.AssetsMerkleRoot != s.Tree.RootHash() {
 		return ErrBadStateRoot
 	}
@@ -239,11 +243,12 @@ func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*b
 	if err := c.store.SaveSnapshot(c.state.snapshot, &blockHash); err != nil {
 		return err
 	}
-	if err := c.store.SaveMainchain(c.state.mainChain, &blockHash); err != nil {
+	if err := c.store.SaveMainchain(c.state.mainChain, &blockHash, rollback); err != nil {
 		return err
 	}
 	c.store.SaveStoreStatus(block.Height, &blockHash)
 
+	c.RollBack <- struct{}{}
 	c.state.cond.Broadcast()
 	return nil
 }
@@ -288,4 +293,25 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	}()
 
 	return ch
+}
+
+func (c *Chain) GetRollBackMap() (map[string]*bc.Rollback, error) {
+	return c.store.GetRollBackMap()
+}
+
+func (c *Chain) DelRollBack(rbHash string) {
+	c.store.DelRollBack(rbHash)
+}
+
+func (c *Chain) HandleRollBack() {
+	for {
+		select {
+		case <-c.RollBack:
+			rollBackMap, _ := c.GetRollBackMap()
+			for rbKey := range rollBackMap {
+				c.DelRollBack(rbKey)
+			}
+		default:
+		}
+	}
 }

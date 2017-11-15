@@ -157,7 +157,6 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
-
 	if chain.Height() == 0 {
 		if err := chain.SaveBlock(genesisBlock); err != nil {
 			cmn.Exit(cmn.Fmt("Failed to save genesisBlock to store: %v", err))
@@ -176,7 +175,6 @@ func NewNode(config *cfg.Config) *Node {
 		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
 		accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
 		pinStore = pin.NewStore(accUTXODB)
-
 		if err = pinStore.LoadAll(); err != nil {
 			log.WithField("error", err).Error("load pin store")
 			return nil
@@ -196,8 +194,8 @@ func NewNode(config *cfg.Config) *Node {
 
 		accounts = account.NewManager(accountsDB, chain, pinStore)
 		go accounts.ProcessBlocks()
-		pinStore.AllContinue <- struct{}{}
-		go pinStore.WalletUpdate(chain, accounts, account.ReverseAccountUTXOs)
+
+		go pinStore.Rollback(chain, accounts, account.ReverseAccountUTXOs, account.BuildAccountUTXOs)
 
 		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 		assets = asset.NewRegistry(assetsDB, chain)
@@ -211,6 +209,7 @@ func NewNode(config *cfg.Config) *Node {
 		}
 
 	}
+
 	//Todo HSM
 	/*
 		if config.HsmUrl != ""{
