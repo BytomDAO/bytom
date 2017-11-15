@@ -1,10 +1,31 @@
 package filter
 
 import (
-	//"errors"
 	"fmt"
-	//"strings"
+
+	"github.com/bytom/errors"
 )
+
+//Column describe a column
+type Column struct {
+	Name string
+	Type Type
+}
+
+//Table describe a table
+type Table struct {
+	Name        string
+	Alias       string
+	Columns     map[string]*Column
+	ForeignKeys map[string]*ForeignKey
+}
+
+//ForeignKey describe a foreign key
+type ForeignKey struct {
+	Table         *Table
+	LocalColumn   string
+	ForeignColumn string
+}
 
 func isType(got Type, want Type) bool {
 	return got == want || got == Any
@@ -34,7 +55,7 @@ func valueTypes(vals []interface{}) ([]Type, error) {
 // typeCheck will statically type check expr with vals as the parameters
 // and using tbl to determine available attributes and environments. It
 // returns the inferred types of arbitrary json keys as a map.
-/*func typeCheck(expr expr, tbl *SQLTable, vals []interface{}) (map[string]Type, error) {
+func typeCheck(expr expr, tbl *Table, vals []interface{}) (map[string]Type, error) {
 	valTypes, err := valueTypes(vals)
 	if err != nil {
 		return nil, err
@@ -54,7 +75,7 @@ func valueTypes(vals []interface{}) ([]Type, error) {
 	return selectorTypes, nil
 }
 
-func typeCheckExpr(expr expr, tbl *SQLTable, valTypes []Type, selectorTypes map[string]Type) (typ Type, err error) {
+func typeCheckExpr(expr expr, tbl *Table, valTypes []Type, selectorTypes map[string]Type) (typ Type, err error) {
 	if expr == nil { // no expr is a valid, bool type
 		return Bool, nil
 	}
@@ -182,7 +203,6 @@ func typeCheckExpr(expr expr, tbl *SQLTable, valTypes []Type, selectorTypes map[
 		panic(fmt.Errorf("unrecognized expr type %T", expr))
 	}
 }
-*/
 
 func assertType(expr expr, got, want Type, selectorTypes map[string]Type) (bool, error) {
 	if !isType(got, want) { // type does not match

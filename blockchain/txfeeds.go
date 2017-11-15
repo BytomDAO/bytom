@@ -2,67 +2,73 @@ package blockchain
 
 import (
 	"context"
+	"encoding/json"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/txfeed"
-	"github.com/bytom/errors"
-	"github.com/bytom/net/http/httpjson"
 )
 
 // POST /create-txfeed
-func (a *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
+func (bcr *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
 	Alias  string
 	Filter string
-
-	// ClientToken is the application's unique token for the txfeed. Every txfeed
-	// should have a unique client token. The client token is used to ensure
-	// idempotency of create txfeed requests. Duplicate create txfeed requests
-	// with the same client_token will only create one txfeed.
-	ClientToken string `json:"client_token"`
-}) (*txfeed.TxFeed, error) {
-	//	after := fmt.Sprintf("%d:%d-%d", a.chain.Height(), math.MaxInt32, uint64(math.MaxInt64))
-	//	return a.txFeeds.Create(ctx, in.Alias, in.Filter, after, in.ClientToken)
-	return nil, nil
-}
-
-// POST /get-transaction-feed
-func (a *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
-	ID    string `json:"id,omitempty"`
-	Alias string `json:"alias,omitempty"`
-}) (*txfeed.TxFeed, error) {
-	//	return a.txFeeds.Find(ctx, in.ID, in.Alias)
-	return nil, nil
-}
-
-// POST /delete-transaction-feed
-func (a *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
-	ID    string `json:"id,omitempty"`
-	Alias string `json:"alias,omitempty"`
 }) error {
-	//	return a.txFeeds.Delete(ctx, in.ID, in.Alias)
+	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
+		log.WithField("error", err).Error("Add TxFeed Failed")
+		return err
+	}
 	return nil
 }
 
-// POST /update-transaction-feed
-func (a *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
-	ID    string `json:"id,omitempty"`
-	Alias string `json:"alias,omitempty"`
-	Prev  string `json:"previous_after"`
-	After string `json:"after"`
-}) (*txfeed.TxFeed, error) {
-	// TODO(tessr): Consider moving this function into the txfeed package.
-	// (It's currently outside the txfeed package to avoid a dependecy cycle
-	// between txfeed and query.)
-	bad, err := txAfterIsBefore(in.After, in.Prev)
+func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) ([]*txfeed.TxFeed, error) {
+	txFeed := &txfeed.TxFeed{}
+	txFeeds := []*txfeed.TxFeed{}
+
+	jf, err := json.Marshal(filter)
 	if err != nil {
 		return nil, err
 	}
 
-	if bad {
-		return nil, errors.WithDetail(httpjson.ErrBadRequest, "new After cannot be before Prev")
+	value := bcr.txFeedTracker.DB.Get(jf)
+	if value == nil {
+		return nil, nil
 	}
-	//	return a.txFeeds.Update(ctx, in.ID, in.Alias, in.After, in.Prev)
-	return nil, nil
+
+	if err := json.Unmarshal(value, txFeed); err != nil {
+		return nil, err
+	}
+	txFeeds = append(txFeeds, txFeed)
+	return txFeeds, nil
+}
+
+// POST /get-transaction-feed
+func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in requestQuery) interface{} {
+	txfeeds, err := bcr.getTxFeedByAlias(ctx, in.Filter)
+	if err != nil {
+		return err
+	}
+	return txfeeds
+
+}
+
+// POST /delete-transaction-feed
+func (bcr *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
+	Alias string `json:"alias,omitempty"`
+}) error {
+	return bcr.txFeedTracker.Delete(ctx, in.Alias)
+}
+
+// POST /update-transaction-feed
+func (bcr *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
+	Alias  string
+	Filter string
+}) error {
+	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
+		return err
+	}
+	return bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter)
 }
 
 // txAfterIsBefore returns true if a is before b. It returns an error if either
@@ -81,4 +87,29 @@ func txAfterIsBefore(a, b string) (bool, error) {
 	return aAfter.FromBlockHeight < bAfter.FromBlockHeight ||
 		(aAfter.FromBlockHeight == bAfter.FromBlockHeight &&
 			aAfter.FromPosition < bAfter.FromPosition), nil
+}
+
+func (bcr *BlockchainReactor) getTxFeeds() ([]*txfeed.TxFeed, error) {
+	txFeeds := make([]*txfeed.TxFeed, 0)
+	iter := bcr.txFeedTracker.DB.Iterator()
+	defer iter.Release()
+
+	for iter.Next() {
+		txFeed := &txfeed.TxFeed{}
+		if err := json.Unmarshal(iter.Value(), txFeed); err != nil {
+			return nil, err
+		}
+		txFeeds = append(txFeeds, txFeed)
+	}
+	return txFeeds, nil
+}
+
+// listTxFeeds is an http handler for listing txfeeds. It does not take a filter.
+// POST /list-transaction-feeds
+func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context, in requestQuery) interface{} {
+	txfeeds, err := bcr.getTxFeeds()
+	if err != nil {
+		return err
+	}
+	return txfeeds
 }
