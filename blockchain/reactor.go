@@ -42,24 +42,24 @@ const (
 	crosscoreRPCPrefix          = "/rpc/"
 )
 
-// BlockchainReactor handles long-term catchup syncing.
+//BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-	chain       *protocol.Chain
-	pinStore    *pin.Store
-	accounts    *account.Manager
-	assets      *asset.Registry
-	accesstoken *accesstoken.Token
-	txFeeds     *txfeed.TxFeed
-	blockKeeper *blockKeeper
-	txPool      *protocol.TxPool
-	hsm         *pseudohsm.HSM
-	mining      *cpuminer.CPUMiner
-	mux         *http.ServeMux
-	sw          *p2p.Switch
-	handler     http.Handler
-	evsw        types.EventSwitch
+	chain         *protocol.Chain
+	pinStore      *pin.Store
+	accounts      *account.Manager
+	assets        *asset.Registry
+	accesstoken   *accesstoken.Token
+	txFeedTracker *txfeed.Tracker
+	blockKeeper   *blockKeeper
+	txPool        *protocol.TxPool
+	hsm           *pseudohsm.HSM
+	mining        *cpuminer.CPUMiner
+	mux           *http.ServeMux
+	sw            *p2p.Switch
+	handler       http.Handler
+	evsw          types.EventSwitch
 }
 
 func batchRecover(ctx context.Context, v *interface{}) {
@@ -218,19 +218,20 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, pinStore *pin.Store) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, pinStore *pin.Store, txfeeds *txfeed.Tracker) *BlockchainReactor {
 	mining := cpuminer.NewCPUMiner(chain, accounts, txPool)
 	bcR := &BlockchainReactor{
-		chain:       chain,
-		pinStore:    pinStore,
-		accounts:    accounts,
-		assets:      assets,
-		blockKeeper: newBlockKeeper(chain, sw),
-		txPool:      txPool,
-		mining:      mining,
-		mux:         http.NewServeMux(),
-		sw:          sw,
-		hsm:         hsm,
+		chain:         chain,
+		pinStore:      pinStore,
+		accounts:      accounts,
+		assets:        assets,
+		blockKeeper:   newBlockKeeper(chain, sw),
+		txPool:        txPool,
+		mining:        mining,
+		mux:           http.NewServeMux(),
+		sw:            sw,
+		hsm:           hsm,
+		txFeedTracker: txfeeds,
 	}
 	bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
 	return bcR
@@ -334,6 +335,7 @@ func (bcR *BlockchainReactor) syncRoutine() {
 	for {
 		select {
 		case newTx := <-newTxCh:
+			bcR.txFeedTracker.TxFilter(newTx)
 			go bcR.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
 			go bcR.BroadcastStatusResponse()

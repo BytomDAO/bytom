@@ -24,6 +24,7 @@ import (
 	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txdb"
+	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/env"
@@ -193,6 +194,7 @@ func NewNode(config *cfg.Config) *Node {
 	var accounts *account.Manager = nil
 	var assets *asset.Registry = nil
 	var pinStore *pin.Store = nil
+	var txFeed *txfeed.Tracker = nil
 
 	if config.Wallet.Enable {
 		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
@@ -220,6 +222,15 @@ func NewNode(config *cfg.Config) *Node {
 
 		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 		assets = asset.NewRegistry(assetsDB, chain)
+
+		txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
+		txFeed = txfeed.NewTracker(txFeedDB, chain)
+
+		if err = txFeed.Prepare(ctx); err != nil {
+			log.WithField("error", err).Error("start txfeed")
+			return nil
+		}
+
 	}
 	//Todo HSM
 	/*
@@ -237,7 +248,7 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
-	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, pinStore)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, pinStore, txFeed)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 

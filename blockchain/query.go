@@ -170,31 +170,6 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, in requestQu
 	}, nil
 }
 
-// listTxFeeds is an http handler for listing txfeeds. It does not take a filter.
-//
-// POST /list-transaction-feeds
-func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context, in requestQuery) (page, error) {
-	limit := in.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize
-	}
-
-	after := in.After
-
-	/*	txfeeds, after, err := bcr.txFeeds.Query(ctx, after, limit)
-		if err != nil {
-			return page{}, errors.Wrap(err, "running txfeed query")
-		}
-	*/
-	out := in
-	out.After = after
-	return page{
-		//		Items:    httpjson.Array(txfeeds),
-		//		LastPage: len(txfeeds) < limit,
-		Next: out,
-	}, nil
-}
-
 // POST /list-unspent-outputs
 func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in requestQuery) interface{} {
 
