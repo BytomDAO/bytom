@@ -43,8 +43,8 @@ func accountKey(name string) []byte {
 	return []byte(accountPreFix + name)
 }
 
-func accountCPKey(name string) []byte {
-	return []byte(accountCPPreFix + name)
+func accountCPKey(hash [32]byte) []byte {
+	return append([]byte(accountCPPreFix), hash[:]...)
 }
 
 // NewManager creates a new account manager
@@ -246,6 +246,7 @@ func (m *Manager) createControlProgram(ctx context.Context, accountID string, ch
 	if err != nil {
 		return nil, err
 	}
+
 	return &controlProgram{
 		AccountID:      account.ID,
 		KeyIndex:       idx,
@@ -278,15 +279,15 @@ type controlProgram struct {
 }
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
-	var hash []byte
+	var hash [32]byte
 	for _, prog := range progs {
 		accountCP, err := json.Marshal(prog)
 		if err != nil {
 			return err
 		}
 
-		sha3pool.Sum256(hash, prog.ControlProgram)
-		m.db.Set(accountCPKey(string(hash)), accountCP)
+		sha3pool.Sum256(hash[:], prog.ControlProgram)
+		m.db.Set(accountCPKey(hash), accountCP)
 	}
 	return nil
 }

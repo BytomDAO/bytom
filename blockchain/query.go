@@ -7,6 +7,8 @@ import (
 	"math"
 	"sort"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/errors"
@@ -30,9 +32,10 @@ var (
 //
 // POST /list-accounts
 func (bcr *BlockchainReactor) listAccounts(ctx context.Context, in requestQuery) interface{} {
-
-	response, _ := bcr.accounts.QueryAll(ctx)
-
+	response, err := bcr.accounts.QueryAll(ctx)
+	if err != nil {
+		log.Errorf("listAccounts: %v", err)
+	}
 	return response
 
 }

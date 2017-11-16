@@ -591,22 +591,24 @@ func submitSpendTransaction(client *rpc.Client, args []string) {
 		fmt.Printf("xprv:%v\n", xprvAccount1)
 	} else {
 		fmt.Printf("xprv unmarshal error:%v\n", xprvAccount1)
+		os.Exit(1)
 	}
 	// Build Transaction-Spend_account
 	fmt.Printf("To build transaction:\n")
 	buildReqFmt := `
 		{"actions": [
+		    {"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":20000000, "account_id": "%s"},
 			{"type": "spend_account", "asset_id": "%s", "amount": %s, "account_id": "%s"},
-			{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":20000000, "account_id": "%s"},
 			{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
 	]}`
 
-	buildReqStr := fmt.Sprintf(buildReqFmt, args[2], args[4], args[0], args[0], args[2], args[4], args[1])
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[0], args[2], args[4], args[0], args[2], args[4], args[1])
 
 	var buildReq blockchain.BuildRequest
 	err = stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	tpl := make([]txbuilder.Template, 1)
@@ -620,12 +622,12 @@ func submitSpendTransaction(client *rpc.Client, args []string) {
 	})
 	if err != nil {
 		fmt.Printf("sign-transaction error. err:%v\n", err)
-		os.Exit(0)
+		os.Exit(1)
 	}
 
 	fmt.Printf("sign tpl:%v\n", tpl[0])
-	fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
-	fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
+	//fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
+	//fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
 
 	// submit-transaction-Spend_account
 	var submitResponse interface{}
