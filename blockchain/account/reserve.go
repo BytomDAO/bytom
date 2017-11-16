@@ -12,7 +12,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
@@ -76,11 +75,11 @@ type reservation struct {
 	ClientToken *string
 }
 
-func newReserver(c *protocol.Chain, pinStore *pin.Store) *reserver {
+func newReserver(c *protocol.Chain, wallet *Wallet) *reserver {
 	return &reserver{
 		c:            c,
-		db:           pinStore.DB,
-		pinStore:     pinStore,
+		db:           wallet.DB,
+		w:            wallet,
 		reservations: make(map[uint64]*reservation),
 		sources:      make(map[source]*sourceReserver),
 	}
@@ -99,7 +98,7 @@ func newReserver(c *protocol.Chain, pinStore *pin.Store) *reserver {
 type reserver struct {
 	c                 *protocol.Chain
 	db                dbm.DB
-	pinStore          *pin.Store
+	w                 *Wallet
 	nextReservationID uint64
 	idempotency       idempotency.Group
 
@@ -262,7 +261,7 @@ func (re *reserver) source(src source) *sourceReserver {
 		src:     src,
 		validFn: re.checkUTXO,
 		heightFn: func() uint64 {
-			return re.pinStore.Height(InsertUnspentsPinName)
+			return re.w.GetWalletHeight()
 		},
 		cached:   make(map[bc.Hash]*utxo),
 		reserved: make(map[bc.Hash]uint64),

@@ -32,14 +32,3 @@ message Mainchain {
     bytes key = 1;
   }
 }
-
-// Rollback contained a detach list and a attach list for orphan block rollback
-message Rollback {
-
-  repeated Hash detach = 1;
-  repeated Hash attach = 2;
-
-  message Hash {
-    bytes key = 1;
-  }
-}

@@ -54,7 +54,7 @@ func (bcr *BlockchainReactor) GetAccountUTXOs() []account.AccountUTXOs {
 		accutoxs = []account.AccountUTXOs{}
 	)
 
-	accountUTXOIter := bcr.pinStore.DB.IteratorPrefix([]byte(account.AccountUTXOPreFix))
+	accountUTXOIter := bcr.wallet.DB.IteratorPrefix([]byte(account.AccountUTXOPreFix))
 	defer accountUTXOIter.Release()
 	for accountUTXOIter.Next() {
 

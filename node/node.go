@@ -19,7 +19,6 @@ import (
 	bc "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
@@ -169,33 +168,18 @@ func NewNode(config *cfg.Config) *Node {
 	var accounts *account.Manager = nil
 	var assets *asset.Registry = nil
 	var pinStore *pin.Store = nil
+	var wallet *account.Wallet = nil
 	var txFeed *txfeed.Tracker = nil
 
 	if config.Wallet.Enable {
 		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
-		accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
-		pinStore = pin.NewStore(accUTXODB)
-		if err = pinStore.LoadAll(); err != nil {
-			log.WithField("error", err).Error("load pin store")
-			return nil
-		}
+		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 
-		pinHeight := chain.Height()
-		if pinHeight > 0 {
-			pinHeight = pinHeight - 1
-		}
+		wallet = account.NewWallet(walletDB)
 
-		pins := []string{account.InsertUnspentsPinName, account.DeleteSpentsPinName}
-		for _, p := range pins {
-			if err = pinStore.CreatePin(p, pinHeight); err != nil {
-				log.WithField("error", err).Error("Create pin")
-			}
-		}
+		accounts = account.NewManager(accountsDB, chain, wallet)
 
-		accounts = account.NewManager(accountsDB, chain, pinStore)
-		go accounts.ProcessBlocks()
-
-		go pinStore.Rollback(chain, accounts, account.ReverseAccountUTXOs, account.BuildAccountUTXOs)
+		go accounts.WalletUpdate(chain)
 
 		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 		assets = asset.NewRegistry(assetsDB, chain)
@@ -226,7 +210,8 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
-	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, pinStore, txFeed)
+
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet,txFeed)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 

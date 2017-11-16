@@ -146,7 +146,7 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 	// Use the current generator height as the lower bound of the block height
 	// that the transaction may appear in.
 	localHeight := a.chain.Height()
-	generatorHeight := localHeight
+	//generatorHeight := localHeight
 
 	log.WithField("localHeight", localHeight).Info("Starting to finalize transaction")
 
@@ -158,18 +158,13 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 		return nil
 	}
 
-	height, err := a.waitForTxInBlock(ctx, txTemplate.Transaction, generatorHeight)
+	//TODO:complete finalizeTxWait
+	//height, err := a.waitForTxInBlock(ctx, txTemplate.Transaction, generatorHeight)
 	if err != nil {
 		return err
 	}
 	if waitUntil == "confirmed" {
 		return nil
-	}
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-a.pinStore.AllWaiter(height):
 	}
 
 	return nil
