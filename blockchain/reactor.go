@@ -165,6 +165,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
 	m.Handle("/get-best-block-hash", jsonHandler(bcr.getBestBlockHash))
 	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
+	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(bcr.getBlockTransactionsCountByHash))
 	m.Handle("/get-block-by-hash", jsonHandler(bcr.getBlockByHash))
 	m.Handle("/net-listening", jsonHandler(bcr.isNetListening))
 	m.Handle("/peer-count", jsonHandler(bcr.peerCount))
@@ -417,6 +418,58 @@ func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
 		return err.Error()
 	}
 	return string(ret)
+}
+
+func (bcr *BlockchainReactor) getBlockByHeight(height uint64) string {
+	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
+	if err != nil {
+		log.WithField("error", err).Error("Fail to get block by hash")
+		return err.Error()
+	}
+
+	log.Infof("%v", legacyBlock)
+	bcBlock := legacy.MapBlock(legacyBlock)
+	res := &GetBlockByHashJSON{BlockHeader: bcBlock.BlockHeader}
+	for _, tx := range bcBlock.Transactions {
+		txJSON := &TxJSON{}
+		for _, e := range tx.Entries {
+			switch e := e.(type) {
+			case *bc.Issuance:
+				txJSON.Inputs = append(txJSON.Inputs, e)
+			case *bc.Spend:
+				txJSON.Inputs = append(txJSON.Inputs, e)
+			case *bc.Retirement:
+				txJSON.Outputs = append(txJSON.Outputs, e)
+			case *bc.Output:
+				txJSON.Outputs = append(txJSON.Outputs, e)
+			default:
+				continue
+			}
+		}
+		res.Transactions = append(res.Transactions, txJSON)
+	}
+
+	ret, err := stdjson.Marshal(res)
+	if err != nil {
+		return err.Error()
+	}
+	return string(ret)
+
+}
+
+func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) (int, error) {
+	hash := bc.Hash{}
+	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
+		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
+		return -1, err
+	}
+
+	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
+	if err != nil {
+		log.WithField("error", err).Error("Fail to get block by hash")
+		return -1, err
+	}
+	return len(legacyBlock.Transactions), nil
 }
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.

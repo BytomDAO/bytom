@@ -85,19 +85,28 @@ func Execute() {
 
 // AddCommands adds child commands to the root command BytomcliCmd.
 func AddCommands() {
-	BytomcliCmd.AddCommand(versionCmd)
+	BytomcliCmd.AddCommand(createAccountCmd)
+	BytomcliCmd.AddCommand(bindAccountCmd)
+	BytomcliCmd.AddCommand(listAccountCmd)
+
+	BytomcliCmd.AddCommand(createAssetCmd)
+	BytomcliCmd.AddCommand(bindAssetCmd)
+	BytomcliCmd.AddCommand(listAssetCmd)
+
+	BytomcliCmd.AddCommand(createKeyCmd)
+	BytomcliCmd.AddCommand(listKeyCmd)
+
 	BytomcliCmd.AddCommand(bestBlockHashCmd)
 	BytomcliCmd.AddCommand(blockHeaderCmd)
+	BytomcliCmd.AddCommand(blockByHeightCmd)
+	BytomcliCmd.AddCommand(blockTransactionsCountCmd)
 	BytomcliCmd.AddCommand(blockCmd)
+
 	BytomcliCmd.AddCommand(netInfoCmd)
 	BytomcliCmd.AddCommand(netListeningCmd)
 	BytomcliCmd.AddCommand(peerCountCmd)
-	BytomcliCmd.AddCommand(createAccountCmd)
-	BytomcliCmd.AddCommand(createAssetCmd)
-	BytomcliCmd.AddCommand(bindAccountCmd)
-	BytomcliCmd.AddCommand(listAccountCmd)
-	BytomcliCmd.AddCommand(listAssetCmd)
-	BytomcliCmd.AddCommand(bindAssetCmd)
+
+	BytomcliCmd.AddCommand(versionCmd)
 }
 
 func mustRPCClient() *rpc.Client {
