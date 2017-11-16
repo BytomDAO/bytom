@@ -188,10 +188,10 @@ func (m *Manager) loadAccountInfo(ctx context.Context, outs []*rawOutput) []*acc
 	result := make([]*accountOutput, 0, len(outs))
 	cp := controlProgram{}
 
-	var hash []byte
+	var hash [32]byte
 	for s := range outsByScript {
-		sha3pool.Sum256(hash, []byte(s))
-		bytes := m.db.Get(accountCPKey(string(hash)))
+		sha3pool.Sum256(hash[:], []byte(s))
+		bytes := m.db.Get(accountCPKey(hash))
 		if bytes == nil {
 			continue
 		}
