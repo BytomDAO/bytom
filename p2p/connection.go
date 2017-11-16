@@ -409,19 +409,19 @@ FOR_LOOP:
 		// Block until .recvMonitor says we can read.
 		c.recvMonitor.Limit(maxMsgPacketTotalSize, atomic.LoadInt64(&c.config.RecvRate), true)
 
-		/*
-			// Peek into bufReader for debugging
-			if numBytes := c.bufReader.Buffered(); numBytes > 0 {
-				log.Info("Peek connection buffer", "numBytes", numBytes, "bytes", log15.Lazy{func() []byte {
-					bytes, err := c.bufReader.Peek(MinInt(numBytes, 100))
-					if err == nil {
-						return bytes
-					} else {
-						log.Warn("Error peeking connection buffer", "error", err)
-						return nil
-					}
-				}})
+/*
+		// Peek into bufReader for debugging
+		if numBytes := c.bufReader.Buffered(); numBytes > 0 {
+			log.Infof("Peek connection buffer numBytes:", numBytes)
+			bytes, err := c.bufReader.Peek(cmn.MinInt(numBytes, 100))
+			if err == nil {
+				log.Infof("bytes:", bytes)
+			} else {
+				log.Warning("Error peeking connection buffer err:", err)
 			}
+		} else {
+			log.Warning("Received bytes number is:", numBytes)
+		}
 		*/
 
 		// Read packet type
@@ -465,7 +465,11 @@ FOR_LOOP:
 			}
 			channel, ok := c.channelsIdx[pkt.ChannelID]
 			if !ok || channel == nil {
-				cmn.PanicQ(cmn.Fmt("Unknown channel %X", pkt.ChannelID))
+				if pkt.ChannelID == PexChannel {
+					continue
+				} else {
+					cmn.PanicQ(cmn.Fmt("Unknown channel %X", pkt.ChannelID))
+				}
 			}
 			msgBytes, err := channel.recvMsgPacket(pkt)
 			if err != nil {
