@@ -223,7 +223,7 @@ func (c *Chain) State() (*legacy.Block, *state.Snapshot) {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*bc.Hash, rollback *bc.Rollback) error {
+func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*bc.Hash) error {
 	if block.AssetsMerkleRoot != s.Tree.RootHash() {
 		return ErrBadStateRoot
 	}

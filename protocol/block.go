@@ -66,7 +66,7 @@ func (c *Chain) connectBlock(block *legacy.Block) error {
 	}
 
 	blockHash := block.Hash()
-	if err := c.setState(block, newSnapshot, map[uint64]*bc.Hash{block.Height: &blockHash}, nil); err != nil {
+	if err := c.setState(block, newSnapshot, map[uint64]*bc.Hash{block.Height: &blockHash}); err != nil {
 		return err
 	}
 
@@ -97,27 +97,22 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 	attachBlocks, detachBlocks := c.getReorganizeBlocks(block)
 	newSnapshot := state.Copy(c.state.snapshot)
 	chainChanges := map[uint64]*bc.Hash{}
-	rbList := bc.Rollback{Detach: make([]*bc.Hash, 0), Attach: make([]*bc.Hash, 0)}
 
 	for _, d := range detachBlocks {
-		b := legacy.MapBlock(d)
-		if err := newSnapshot.DetachBlock(b); err != nil {
+		if err := newSnapshot.DetachBlock(legacy.MapBlock(d)); err != nil {
 			return err
 		}
-		rbList.Detach = append(rbList.Detach, &b.ID)
 	}
 
 	for _, a := range attachBlocks {
-		b := legacy.MapBlock(a)
-		if err := newSnapshot.ApplyBlock(b); err != nil {
+		if err := newSnapshot.ApplyBlock(legacy.MapBlock(a)); err != nil {
 			return err
 		}
 		aHash := a.Hash()
 		chainChanges[a.Height] = &aHash
-		rbList.Attach = append(rbList.Attach, &aHash)
 	}
 
-	return c.setState(block, newSnapshot, chainChanges, &rbList)
+	return c.setState(block, newSnapshot, chainChanges)
 }
 
 // SaveBlock will validate and save block into storage

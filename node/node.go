@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
 	"net/http"
@@ -129,6 +130,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 }
 
 func NewNode(config *cfg.Config) *Node {
+	ctx := context.Background()
 
 	// Get store
 	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
@@ -156,6 +158,7 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
+
 	if chain.Height() == 0 {
 		if err := chain.SaveBlock(genesisBlock); err != nil {
 			cmn.Exit(cmn.Fmt("Failed to save genesisBlock to store: %v", err))
@@ -167,7 +170,6 @@ func NewNode(config *cfg.Config) *Node {
 
 	var accounts *account.Manager = nil
 	var assets *asset.Registry = nil
-	var pinStore *pin.Store = nil
 	var wallet *account.Wallet = nil
 	var txFeed *txfeed.Tracker = nil
 
@@ -193,7 +195,6 @@ func NewNode(config *cfg.Config) *Node {
 		}
 
 	}
-
 	//Todo HSM
 	/*
 		if config.HsmUrl != ""{
@@ -211,7 +212,7 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
 
-	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet,txFeed)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet, txFeed)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 

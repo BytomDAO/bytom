@@ -46,7 +46,7 @@ type BlockchainReactor struct {
 	p2p.BaseReactor
 
 	chain         *protocol.Chain
-	wallet      *account.Wallet
+	wallet        *account.Wallet
 	accounts      *account.Manager
 	assets        *asset.Registry
 	accesstoken   *accesstoken.Token
