@@ -268,10 +268,7 @@ func NewNode(config *cfg.Config) *Node {
 	// run the profile server
 	profileHost := config.ProfListenAddress
 	if profileHost != "" {
-
-		go func() {
-			log.WithField("error", http.ListenAndServe(profileHost, nil)).Error("Profile server")
-		}()
+		// to do: start profile host
 	}
 
 	node := &Node{
