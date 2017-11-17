@@ -81,6 +81,7 @@ var commands = map[string]*command{
 	"create-access-token":      {createAccessToken},
 	"list-access-token":        {listAccessTokens},
 	"delete-access-token":      {deleteAccessToken},
+	"check-access-token":       {checkAccessToken},
 	"create-key":               {createKey},
 	"list-keys":                {listKeys},
 	"delete-key":               {deleteKey},
@@ -915,56 +916,61 @@ func listUnspentOutputs(client *rpc.Client, args []string) {
 }
 
 func createAccessToken(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error:createAccessToken not use args")
+	if len(args) != 1 {
+		fatalln("error:createAccessToken use args id")
 	}
 	type Token struct {
-		ID      string    `json:"id"`
-		Token   string    `json:"token,omitempty"`
-		Type    string    `json:"type,omitempty"` // deprecated in 1.2
-		Created time.Time `json:"created_at"`
-		sortID  string
+		ID   string `json:"id"`
+		Type string `json:"type"`
 	}
 	var token Token
-	token.ID = "Alice"
-	token.Token = "token"
+	token.ID = args[0]
 
-	client.Call(context.Background(), "/create-access-token", &[]Token{token}, nil)
+	var response interface{}
+
+	client.Call(context.Background(), "/create-access-token", &token, &response)
+	fmt.Println(response)
 }
 
 func listAccessTokens(client *rpc.Client, args []string) {
 	if len(args) != 0 {
 		fatalln("error:listAccessTokens not use args")
 	}
-	type Token struct {
-		ID      string    `json:"id"`
-		Token   string    `json:"token,omitempty"`
-		Type    string    `json:"type,omitempty"` // deprecated in 1.2
-		Created time.Time `json:"created_at"`
-		sortID  string
-	}
-	var token Token
-	token.ID = "Alice"
-	token.Token = "token"
-
-	client.Call(context.Background(), "/list-access-token", &[]Token{token}, nil)
+	var response interface{}
+	client.Call(context.Background(), "/list-access-token", nil, &response)
+	fmt.Println(response)
 }
+
 func deleteAccessToken(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error:deleteAccessToken not use args")
+	if len(args) != 1 {
+		fatalln("error:deleteAccessToken use args id")
 	}
 	type Token struct {
-		ID      string    `json:"id"`
-		Token   string    `json:"token,omitempty"`
-		Type    string    `json:"type,omitempty"` // deprecated in 1.2
-		Created time.Time `json:"created_at"`
-		sortID  string
+		ID     string `json:"id"`
+		Secert string `json:"secert,omitempty"`
 	}
 	var token Token
-	token.ID = "Alice"
-	token.Token = "token"
+	token.ID = args[0]
+	var response interface{}
+	client.Call(context.Background(), "/delete-access-token", &token, &response)
+	fmt.Println(response)
+}
 
-	client.Call(context.Background(), "/delete-access-token", &[]Token{token}, nil)
+func checkAccessToken(client *rpc.Client, args []string) {
+	if len(args) != 1 {
+		fatalln("error:deleteAccessToken use args token")
+	}
+	type Token struct {
+		ID     string `json:"id"`
+		Secret string `json:"secret,omitempty"`
+	}
+	var token Token
+	inputs := strings.Split(args[0], ":")
+	token.ID = inputs[0]
+	token.Secret = inputs[1]
+	var response interface{}
+	client.Call(context.Background(), "/check-access-token", &token, &response)
+	fmt.Println(response)
 }
 
 func createKey(client *rpc.Client, args []string) {

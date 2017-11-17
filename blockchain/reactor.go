@@ -49,7 +49,7 @@ type BlockchainReactor struct {
 	wallet        *account.Wallet
 	accounts      *account.Manager
 	assets        *asset.Registry
-	accesstoken   *accesstoken.Token
+	accessTokens  *accesstoken.CredentialStore
 	txFeedTracker *txfeed.Tracker
 	blockKeeper   *blockKeeper
 	txPool        *protocol.TxPool
@@ -153,8 +153,10 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
 	m.Handle("/create-access-token", jsonHandler(bcr.createAccessToken))
-	m.Handle("/list-access-tokens", jsonHandler(bcr.listAccessTokens))
+	m.Handle("/list-access-token", jsonHandler(bcr.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(bcr.deleteAccessToken))
+	m.Handle("/check-access-token", jsonHandler(bcr.checkAccessToken))
+
 	//hsm api
 	m.Handle("/create-key", jsonHandler(bcr.pseudohsmCreateKey))
 	m.Handle("/list-keys", jsonHandler(bcr.pseudohsmListKeys))
@@ -217,7 +219,7 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *account.Wallet, txfeeds *txfeed.Tracker) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *account.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore) *BlockchainReactor {
 	mining := cpuminer.NewCPUMiner(chain, accounts, txPool)
 	bcR := &BlockchainReactor{
 		chain:         chain,
@@ -231,6 +233,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 		sw:            sw,
 		hsm:           hsm,
 		txFeedTracker: txfeeds,
+		accessTokens:  accessTokens,
 	}
 	bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
 	return bcR
