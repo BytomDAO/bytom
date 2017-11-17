@@ -22,7 +22,7 @@ const (
 	UTXOPreFix = "ACU:"
 )
 
-var walletkey = []byte("WAL:")
+var walletkey = []byte("walletInfo")
 
 func accountUTXOKey(name string) []byte {
 	return []byte(UTXOPreFix + name)
