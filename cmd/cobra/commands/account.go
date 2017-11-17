@@ -17,11 +17,13 @@ var createAccountCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
 			jww.ERROR.Println("create-account takes no args")
+			return
 		}
 
 		xprv, err := chainkd.NewXPrv(nil)
 		if err != nil {
 			jww.ERROR.Println("NewXprv error")
+			return
 		}
 
 		xpub := xprv.XPub()
@@ -58,6 +60,7 @@ var bindAccountCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 2 {
 			jww.ERROR.Println("bind-account need args [account alias name] [account pub key]")
+			return
 		}
 
 		var xpub chainkd.XPub
@@ -98,6 +101,7 @@ var listAccountsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 0 {
 			jww.ERROR.Print("list-accounts takes no args")
+			return
 		}
 
 		type requestQuery struct {
