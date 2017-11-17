@@ -106,6 +106,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(netInfoCmd)
 	BytomcliCmd.AddCommand(netListeningCmd)
 	BytomcliCmd.AddCommand(peerCountCmd)
+	BytomcliCmd.AddCommand(netSyncingCmd)
 
 	BytomcliCmd.AddCommand(versionCmd)
 }

@@ -168,6 +168,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(bcr.getBlockTransactionsCountByHash))
 	m.Handle("/get-block-by-hash", jsonHandler(bcr.getBlockByHash))
 	m.Handle("/net-listening", jsonHandler(bcr.isNetListening))
+	m.Handle("/net-syncing", jsonHandler(bcr.isNetSyncing))
 	m.Handle("/peer-count", jsonHandler(bcr.peerCount))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -493,4 +494,8 @@ func (bcr *BlockchainReactor) isNetListening() bool {
 
 func (bcr *BlockchainReactor) peerCount() int {
 	return len(bcr.sw.Peers().List())
+}
+
+func (bcr *BlockchainReactor) isNetSyncing() bool {
+	return bcr.blockKeeper.IsCaughtUp()
 }

@@ -39,3 +39,14 @@ var peerCountCmd = &cobra.Command{
 		jww.FEEDBACK.Printf("peer count: %v\n", response)
 	},
 }
+
+var netSyncingCmd = &cobra.Command{
+	Use:   "net-syncing",
+	Short: "If the network is still syncing",
+	Run: func(cmd *cobra.Command, args []string) {
+		var response interface{}
+		client := mustRPCClient()
+		client.Call(context.Background(), "/net-syncing", nil, &response)
+		jww.FEEDBACK.Printf("net syncing: %v\n", response)
+	},
+}
