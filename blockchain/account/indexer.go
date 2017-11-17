@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	walletStatusInfo  = "WAL:"
+	walletStatusInfo = "WAL:"
+	//AccountUTXOPreFix is account unspent outputs store db by key with this prefix
 	AccountUTXOPreFix = "ACU:"
 )
 
@@ -26,53 +27,61 @@ func accountUTXOKey(name string) []byte {
 	return []byte(AccountUTXOPreFix + name)
 }
 
-func walletKey(name string) []byte {
-	return []byte(walletStatusInfo + name)
+func walletKey() []byte {
+	return []byte(walletStatusInfo)
 }
 
+//WalletInfo is base valid block info to handle orphan block rollback
 type WalletInfo struct {
 	Height uint64
 	Hash   bc.Hash
 }
 
+//Wallet is related to storing account unspent outputs
 type Wallet struct {
 	DB db.DB
 	WalletInfo
 }
 
+//NewWallet return a new wallet instance
 func NewWallet(db db.DB) *Wallet {
 	w := &Wallet{
 		DB: db,
 	}
 
-	if walletInfo, err := w.GetWalletInfo(); err != nil {
-		w.Height = walletInfo.Height
-		w.Hash = walletInfo.Hash
+	walletInfo, err := w.GetWalletInfo()
+	if err != nil {
+		log.WithField("warn", err).Warn("get wallet info")
 	}
-
+	w.Height = walletInfo.Height
+	w.Hash = walletInfo.Hash
 	return w
 }
 
+//GetWalletHeight return wallet on current height
 func (w *Wallet) GetWalletHeight() uint64 {
 	return w.Height
 }
 
+//GetWalletInfo return stored wallet info and nil,if error,
+//return initial wallet info and err
 func (w *Wallet) GetWalletInfo() (WalletInfo, error) {
-	var wallet WalletInfo
+	var info WalletInfo
 	var rawWallet []byte
 
-	if rawWallet = w.DB.Get(walletKey("wallet")); rawWallet == nil {
-		return wallet, nil
+	if rawWallet = w.DB.Get(walletKey()); rawWallet == nil {
+		return info, nil
 	}
 
 	if err := json.Unmarshal(rawWallet, &w); err != nil {
-		return wallet, err
+		return info, err
 	}
 
-	return wallet, nil
+	return info, nil
 
 }
 
+//WalletUpdate process every valid block and reverse every invalid block which need to rollback
 func (m *Manager) WalletUpdate(c *protocol.Chain) {
 	var err error
 	var block *legacy.Block
@@ -83,7 +92,7 @@ LOOP:
 
 	for !c.InMainChain(m.wallet.Height, m.wallet.Hash) {
 		if block, err = c.GetBlockByHash(&m.wallet.Hash); err != nil {
-			log.WithField("", err).Error("get block by hash")
+			log.WithField("err", err).Error("get block by hash")
 			return
 		}
 
@@ -104,7 +113,7 @@ LOOP:
 	if block == nil {
 		<-c.BlockWaiter(m.wallet.Height + 1)
 		if block, err = c.GetBlockByHeight(m.wallet.Height + 1); err != nil {
-			log.WithField("", err).Error("wallet get block by height")
+			log.WithField("err", err).Error("wallet get block by height")
 			return
 		}
 	}
@@ -126,23 +135,24 @@ LOOP:
 }
 
 func (w *Wallet) commitWalletInfo(batch *db.Batch) {
-	var wallet WalletInfo
+	var info WalletInfo
 
-	wallet.Height = wallet.Height
-	wallet.Hash = wallet.Hash
+	info.Height = info.Height
+	info.Hash = info.Hash
 
-	rawWallet, err := json.Marshal(wallet)
+	rawWallet, err := json.Marshal(info)
 	if err != nil {
-		log.WithField("", err).Error("save wallet info")
+		log.WithField("err", err).Error("save wallet info")
 		return
 	}
 	//update wallet to db
-	(*batch).Set(walletKey("wallet"), rawWallet)
+	(*batch).Set(walletKey(), rawWallet)
 	//commit to db
 	(*batch).Write()
 }
 
-type AccountUTXOs struct {
+//UTXO is a structure about account unspent outputs
+type UTXO struct {
 	OutputID     []byte
 	AssetID      []byte
 	Amount       uint64
@@ -165,6 +175,7 @@ type Saver interface {
 	SaveAnnotatedAccount(context.Context, *query.AnnotatedAccount) error
 }
 
+//Annotated init an annotated account object
 func Annotated(a *Account) (*query.AnnotatedAccount, error) {
 	aa := &query.AnnotatedAccount{
 		ID:     a.ID,
@@ -226,6 +237,7 @@ type accountOutput struct {
 	change    bool
 }
 
+//ReverseAccountUTXOs process the invalid blocks when orphan block rollback
 func (m *Manager) ReverseAccountUTXOs(batch *db.Batch, b *legacy.Block) {
 	var err error
 
@@ -267,7 +279,7 @@ func (m *Manager) ReverseAccountUTXOs(batch *db.Batch, b *legacy.Block) {
 
 	//handle new UTXOs
 	for _, tx := range b.Transactions {
-		for j, _ := range tx.Outputs {
+		for j := range tx.Outputs {
 			resOutID := tx.ResultIds[j]
 			if _, ok := tx.Entries[*resOutID].(*bc.Output); !ok {
 				//retirement
@@ -280,6 +292,7 @@ func (m *Manager) ReverseAccountUTXOs(batch *db.Batch, b *legacy.Block) {
 
 }
 
+//BuildAccountUTXOs process valid blocks to build account unspent outputs db
 func (m *Manager) BuildAccountUTXOs(batch *db.Batch, b *legacy.Block) {
 	var err error
 
@@ -291,7 +304,7 @@ func (m *Manager) BuildAccountUTXOs(batch *db.Batch, b *legacy.Block) {
 
 	//handle new UTXOs
 	for _, tx := range b.Transactions {
-		for j, _ := range tx.Outputs {
+		for j := range tx.Outputs {
 			resOutID := tx.ResultIds[j]
 			if _, ok := tx.Entries[*resOutID].(*bc.Output); !ok {
 				//retirement
@@ -393,10 +406,10 @@ func (m *Manager) loadAccountInfo(outs []*rawOutput) []*accountOutput {
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
 func (m *Manager) upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, batch *db.Batch) error {
-	var au *AccountUTXOs
+	var u *UTXO
 
 	for _, out := range outs {
-		au = &AccountUTXOs{OutputID: out.OutputID.Bytes(),
+		u = &UTXO{OutputID: out.OutputID.Bytes(),
 			AssetID:      out.AssetId.Bytes(),
 			Amount:       out.Amount,
 			AccountID:    out.AccountID,
@@ -407,15 +420,12 @@ func (m *Manager) upsertConfirmedAccountOutputs(outs []*accountOutput, block *le
 			RefData:      out.refData.Bytes(),
 			Change:       out.change}
 
-		accountutxo, err := json.Marshal(au)
+		rawUTXO, err := json.Marshal(u)
 		if err != nil {
 			return errors.Wrap(err, "failed marshal accountutxo")
 		}
 
-		if len(accountutxo) > 0 {
-			(*batch).Set(accountUTXOKey(string(au.OutputID)), accountutxo)
-		}
-
+		(*batch).Set(accountUTXOKey(string(u.OutputID)), rawUTXO)
 	}
 	return nil
 }

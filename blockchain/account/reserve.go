@@ -396,7 +396,7 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source) ([]*utxo, err
 
 	var (
 		utxos       []*utxo
-		au          AccountUTXOs
+		accountUTXO UTXO
 		rawOutputID [32]byte
 		rawSourceID [32]byte
 		rawRefData  [32]byte
@@ -406,27 +406,25 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source) ([]*utxo, err
 	defer accountUTXOIter.Release()
 	for accountUTXOIter.Next() {
 
-		if err := json.Unmarshal(accountUTXOIter.Value(), &au); err != nil {
+		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {
 			return nil, errors.Wrap(err)
 		}
 
-		if (au.AccountID == src.AccountID) &&
-			(bytes.Equal(au.AssetID, src.AssetID.Bytes())) {
-
-			copy(rawOutputID[:], au.OutputID)
-			copy(rawSourceID[:], au.SourceID)
-			copy(rawRefData[:], au.RefData)
+		if (accountUTXO.AccountID == src.AccountID) && (bytes.Equal(accountUTXO.AssetID, src.AssetID.Bytes())) {
+			copy(rawOutputID[:], accountUTXO.OutputID)
+			copy(rawSourceID[:], accountUTXO.SourceID)
+			copy(rawRefData[:], accountUTXO.RefData)
 
 			utxos = append(utxos, &utxo{
 				OutputID:            bc.NewHash(rawOutputID),
 				SourceID:            bc.NewHash(rawSourceID),
 				AssetID:             src.AssetID,
-				Amount:              au.Amount,
-				SourcePos:           au.SourcePos,
-				ControlProgram:      au.Program,
+				Amount:              accountUTXO.Amount,
+				SourcePos:           accountUTXO.SourcePos,
+				ControlProgram:      accountUTXO.Program,
 				RefDataHash:         bc.NewHash(rawRefData),
 				AccountID:           src.AccountID,
-				ControlProgramIndex: au.ProgramIndex,
+				ControlProgramIndex: accountUTXO.ProgramIndex,
 			})
 
 		}
@@ -443,7 +441,7 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source) ([]*utxo, err
 
 func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, error) {
 	u := new(utxo)
-	au := new(AccountUTXOs)
+	accountUTXO := new(UTXO)
 
 	//temp fix for coinbase UTXO isn't add to accountUTXO db, will be remove later
 	if outHash.String() == "73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d" {
@@ -455,7 +453,7 @@ func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, e
 	if accountUTXOValue == nil {
 		return nil, fmt.Errorf("can't find utxo: %s", outHash.String())
 	}
-	if err := json.Unmarshal(accountUTXOValue, &au); err != nil {
+	if err := json.Unmarshal(accountUTXOValue, &accountUTXO); err != nil {
 		return nil, errors.Wrap(err)
 	}
 
@@ -464,19 +462,19 @@ func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, e
 	rawSourceID := new([32]byte)
 	rawRefData := new([32]byte)
 
-	copy(rawOutputID[:], au.OutputID)
-	copy(rawAssetID[:], au.AssetID)
-	copy(rawSourceID[:], au.SourceID)
-	copy(rawRefData[:], au.RefData)
+	copy(rawOutputID[:], accountUTXO.OutputID)
+	copy(rawAssetID[:], accountUTXO.AssetID)
+	copy(rawSourceID[:], accountUTXO.SourceID)
+	copy(rawRefData[:], accountUTXO.RefData)
 
 	u.OutputID = bc.NewHash(*rawOutputID)
-	u.AccountID = au.AccountID
+	u.AccountID = accountUTXO.AccountID
 	u.AssetID = bc.NewAssetID(*rawAssetID)
-	u.Amount = au.Amount
-	u.ControlProgramIndex = au.ProgramIndex
-	u.ControlProgram = au.Program
+	u.Amount = accountUTXO.Amount
+	u.ControlProgramIndex = accountUTXO.ProgramIndex
+	u.ControlProgram = accountUTXO.Program
 	u.SourceID = bc.NewHash(*rawSourceID)
-	u.SourcePos = au.SourcePos
+	u.SourcePos = accountUTXO.SourcePos
 	u.RefDataHash = bc.NewHash(*rawRefData)
 
 	return u, nil
