@@ -760,11 +760,11 @@ func listAccounts(client *rpc.Client, args []string) {
 	responses := make([]interface{}, 0)
 
 	client.Call(context.Background(), "/list-accounts", in, &responses)
-	// if len(responses) > 0 {
-	// 	for i, item := range responses {
-	// 		fmt.Println(i, "-----", item)
-	// 	}
-	// }
+	if len(responses) > 0 {
+		for i, item := range responses {
+			fmt.Println(i, "-----", item)
+		}
+	}
 }
 
 func listAssets(client *rpc.Client, args []string) {
