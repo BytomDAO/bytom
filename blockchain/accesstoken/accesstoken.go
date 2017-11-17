@@ -155,9 +155,6 @@ func (cs *CredentialStore) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	if v := cs.DB.Get(k); v == nil {
-		return errors.WithDetailf(ErrNoMatchID, "delete id %q nonexisting", id)
-	}
 	cs.DB.Delete(k)
 
 	return nil

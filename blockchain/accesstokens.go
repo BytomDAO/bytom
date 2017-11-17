@@ -28,8 +28,7 @@ func (a *BlockchainReactor) listAccessTokens(ctx context.Context) interface{} {
 
 func (a *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct{ ID, Token string }) interface{} {
 	//TODO Add delete permission verify.
-	err := a.accessTokens.Delete(ctx, x.ID)
-	if err != nil {
+	if err := a.accessTokens.Delete(ctx, x.ID); err != nil {
 		return err.Error()
 	}
 	return "SUCCESS!"
