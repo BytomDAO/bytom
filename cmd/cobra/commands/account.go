@@ -64,8 +64,7 @@ var bindAccountCmd = &cobra.Command{
 		}
 
 		var xpub chainkd.XPub
-		err := xpub.UnmarshalText([]byte(args[1]))
-		if err != nil {
+		if err := xpub.UnmarshalText([]byte(args[1])); err != nil {
 			jww.FEEDBACK.Printf("xpub unmarshal error: %v\n", xpub)
 		}
 		jww.FEEDBACK.Printf("xpub: %v\n", xpub)
@@ -126,12 +125,12 @@ var listAccountsCmd = &cobra.Command{
 		client := mustRPCClient()
 		client.Call(context.Background(), "/list-accounts", in, &responses)
 
-		if len(responses) > 0 {
-			for idx, item := range responses {
-				jww.FEEDBACK.Println(idx, ": ", item)
-			}
-		} else {
+		if len(responses) == 0 {
 			jww.FEEDBACK.Printf("No accounts")
+		}
+
+		for idx, item := range responses {
+			jww.FEEDBACK.Println(idx, ": ", item)
 		}
 	},
 }

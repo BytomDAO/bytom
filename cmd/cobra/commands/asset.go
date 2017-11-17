@@ -11,15 +11,21 @@ import (
 	"github.com/bytom/encoding/json"
 )
 
+type Ins struct {
+	RootXPubs   []chainkd.XPub `json:"root_xpubs"`
+	Quorum      int
+	Alias       string
+	Tags        map[string]interface{}
+	Definition  map[string]interface{}
+	ClientToken string `json:"client_token"`
+}
+
 var createAssetCmd = &cobra.Command{
 	Use:   "create-asset",
 	Short: "Create an asset",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
-			jww.ERROR.Println(`
-create-asset args invalid
-
-Usage: create-asset [asset]`)
+			jww.ERROR.Println("create-asset args invalid\nUsage: create-asset [asset]")
 			return
 		}
 
@@ -29,20 +35,11 @@ Usage: create-asset [asset]`)
 			return
 		}
 
-		xprv_, _ := xprv.MarshalText()
+		xPrv, _ := xprv.MarshalText()
+		jww.FEEDBACK.Printf("xprv: %v\n", string(xPrv))
 		xpub := xprv.XPub()
-		jww.FEEDBACK.Printf("xprv: %v\n", string(xprv_))
-		xpub_, _ := xpub.MarshalText()
-		jww.FEEDBACK.Printf("xpub: %v\n", xpub_)
-
-		type Ins struct {
-			RootXPubs   []chainkd.XPub `json:"root_xpubs"`
-			Quorum      int
-			Alias       string
-			Tags        map[string]interface{}
-			Definition  map[string]interface{}
-			ClientToken string `json:"client_token"`
-		}
+		xPub, _ := xpub.MarshalText()
+		jww.FEEDBACK.Printf("xpub: %v\n", xPub)
 
 		var ins Ins
 		ins.RootXPubs = []chainkd.XPub{xpub}
@@ -67,28 +64,15 @@ var bindAssetCmd = &cobra.Command{
 	Short: "Bind asset",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 2 {
-			jww.ERROR.Println(`
-bind-asset needs 2 args
-
-Usage: bind-asset [asset name] [asset xpub]`)
+			jww.ERROR.Println("bind-asset needs 2 args\nUsage: bind-asset [asset name] [asset xpub]")
 			return
 		}
 
 		var xpub chainkd.XPub
-		err := xpub.UnmarshalText([]byte(args[1]))
-		if err != nil {
+		if err := xpub.UnmarshalText([]byte(args[1])); err != nil {
 			jww.ERROR.Printf("xpub unmarshal error: %v\n", xpub)
 		}
 		jww.FEEDBACK.Printf("xpub: %v\n", xpub)
-
-		type Ins struct {
-			RootXPubs   []chainkd.XPub `json:"root_xpubs"`
-			Quorum      int
-			Alias       string
-			Tags        map[string]interface{}
-			Definition  map[string]interface{}
-			ClientToken string `json:"client_token"`
-		}
 
 		var ins Ins
 		ins.RootXPubs = []chainkd.XPub{xpub}
@@ -138,12 +122,12 @@ var listAssetsCmd = &cobra.Command{
 		client := mustRPCClient()
 		client.Call(context.Background(), "/list-assets", in, &responses)
 
-		if len(responses) > 0 {
-			for idx, item := range responses {
-				jww.FEEDBACK.Println(idx, ": ", item)
-			}
-		} else {
+		if len(responses) == 0 {
 			jww.FEEDBACK.Println("Empty assets")
+		}
+
+		for idx, item := range responses {
+			jww.FEEDBACK.Println(idx, ": ", item)
 		}
 	},
 }

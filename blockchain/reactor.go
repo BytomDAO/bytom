@@ -456,7 +456,6 @@ func (bcr *BlockchainReactor) getBlockByHeight(height uint64) string {
 		return err.Error()
 	}
 	return string(ret)
-
 }
 
 func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) (int, error) {

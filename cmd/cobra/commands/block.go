@@ -32,10 +32,7 @@ var getBlockByHashCmd = &cobra.Command{
 	Short: "Get a whole block matching the given hash",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
-			jww.ERROR.Println(`
-get-block-by-hash args not valid.
-
-Usage: get-block-by-hash [hash]`)
+			jww.ERROR.Println("get-block-by-hash args not valid\nUsage: get-block-by-hash [hash]")
 			return
 		}
 
@@ -51,10 +48,7 @@ var getBlockHeaderByHashCmd = &cobra.Command{
 	Short: "Get the header of a block matching the given hash",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
-			jww.ERROR.Println(`
-get-block-header-by-hash args not valid.
-
-Usage: get-block-header-by-hash [hash]`)
+			jww.ERROR.Println("get-block-header-by-hash args not valid\nUsage: get-block-header-by-hash [hash]")
 			return
 		}
 
@@ -70,10 +64,7 @@ var getBlockTransactionsCountByHashCmd = &cobra.Command{
 	Short: "Get the transactions count of a block matching the given hash",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
-			jww.ERROR.Println(`
-get-block-header-by-hash args not valid.
-
-Usage: get-block-transactions-count-by-hash [hash]`)
+			jww.ERROR.Println("get-block-header-by-hash args not valid\nUsage: get-block-transactions-count-by-hash [hash]")
 			return
 		}
 
@@ -89,10 +80,7 @@ var getBlockByHeightCmd = &cobra.Command{
 	Short: "Get a whole block matching the given height",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
-			jww.ERROR.Println(`
-get-block-by-height args not valid.
-
-Usage: get-block-by-height [height]`)
+			jww.ERROR.Println("get-block-by-height args not valid\nUsage: get-block-by-height [height]")
 			return
 		}
 		ui64, err := strconv.ParseUint(args[0], 10, 64)

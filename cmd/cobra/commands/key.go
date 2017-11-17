@@ -71,6 +71,21 @@ var deleteKeyCmd = &cobra.Command{
 	},
 }
 
+type requestQuery struct {
+	Filter       string        `json:"filter,omitempty"`
+	FilterParams []interface{} `json:"filter_params,omitempty"`
+	SumBy        []string      `json:"sum_by,omitempty"`
+	PageSize     int           `json:"page_size"`
+	AscLongPoll  bool          `json:"ascending_with_long_poll,omitempty"`
+	Timeout      json.Duration `json:"timeout"`
+	After        string        `json:"after"`
+	StartTimeMS  uint64        `json:"start_time,omitempty"`
+	EndTimeMS    uint64        `json:"end_time,omitempty"`
+	TimestampMS  uint64        `json:"timestamp,omitempty"`
+	Type         string        `json:"type"`
+	Aliases      []string      `json:"aliases,omitempty"`
+}
+
 var listKeysCmd = &cobra.Command{
 	Use:   "list-keys",
 	Short: "List the existing keys",
@@ -78,21 +93,6 @@ var listKeysCmd = &cobra.Command{
 		if len(args) != 2 {
 			jww.ERROR.Println("error: list-keys args not vaild")
 			return
-		}
-
-		type requestQuery struct {
-			Filter       string        `json:"filter,omitempty"`
-			FilterParams []interface{} `json:"filter_params,omitempty"`
-			SumBy        []string      `json:"sum_by,omitempty"`
-			PageSize     int           `json:"page_size"`
-			AscLongPoll  bool          `json:"ascending_with_long_poll,omitempty"`
-			Timeout      json.Duration `json:"timeout"`
-			After        string        `json:"after"`
-			StartTimeMS  uint64        `json:"start_time,omitempty"`
-			EndTimeMS    uint64        `json:"end_time,omitempty"`
-			TimestampMS  uint64        `json:"timestamp,omitempty"`
-			Type         string        `json:"type"`
-			Aliases      []string      `json:"aliases,omitempty"`
 		}
 
 		var in requestQuery
