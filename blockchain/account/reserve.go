@@ -402,7 +402,7 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source) ([]*utxo, err
 		rawRefData  [32]byte
 	)
 
-	accountUTXOIter := db.IteratorPrefix([]byte(AccountUTXOPreFix))
+	accountUTXOIter := db.IteratorPrefix([]byte(UTXOPreFix))
 	defer accountUTXOIter.Release()
 	for accountUTXOIter.Next() {
 

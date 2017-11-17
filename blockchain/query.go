@@ -55,12 +55,12 @@ func (bcr *BlockchainReactor) GetAccountUTXOs() []account.UTXO {
 		accountUTXOs = make([]account.UTXO, 0)
 	)
 
-	accountUTXOIter := bcr.wallet.DB.IteratorPrefix([]byte(account.AccountUTXOPreFix))
+	accountUTXOIter := bcr.wallet.DB.IteratorPrefix([]byte(account.UTXOPreFix))
 	defer accountUTXOIter.Release()
 	for accountUTXOIter.Next() {
 
 		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {
-			hashKey := accountUTXOIter.Key()[len(account.AccountUTXOPreFix):]
+			hashKey := accountUTXOIter.Key()[len(account.UTXOPreFix):]
 			log.WithField("UTXO hash", string(hashKey)).Warn("get account UTXO")
 			continue
 		}

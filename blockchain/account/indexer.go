@@ -18,17 +18,14 @@ import (
 )
 
 const (
-	walletStatusInfo = "WAL:"
-	//AccountUTXOPreFix is account unspent outputs store db by key with this prefix
-	AccountUTXOPreFix = "ACU:"
+	//UTXOPreFix is account unspent outputs store db by key with this prefix
+	UTXOPreFix = "ACU:"
 )
 
-func accountUTXOKey(name string) []byte {
-	return []byte(AccountUTXOPreFix + name)
-}
+var walletkey = []byte("WAL:")
 
-func walletKey() []byte {
-	return []byte(walletStatusInfo)
+func accountUTXOKey(name string) []byte {
+	return []byte(UTXOPreFix + name)
 }
 
 //WalletInfo is base valid block info to handle orphan block rollback
@@ -69,7 +66,7 @@ func (w *Wallet) GetWalletInfo() (WalletInfo, error) {
 	var info WalletInfo
 	var rawWallet []byte
 
-	if rawWallet = w.DB.Get(walletKey()); rawWallet == nil {
+	if rawWallet = w.DB.Get(walletkey); rawWallet == nil {
 		return info, nil
 	}
 
@@ -137,8 +134,8 @@ LOOP:
 func (w *Wallet) commitWalletInfo(batch *db.Batch) {
 	var info WalletInfo
 
-	info.Height = info.Height
-	info.Hash = info.Hash
+	info.Height = w.Height
+	info.Hash = w.Hash
 
 	rawWallet, err := json.Marshal(info)
 	if err != nil {
@@ -146,7 +143,7 @@ func (w *Wallet) commitWalletInfo(batch *db.Batch) {
 		return
 	}
 	//update wallet to db
-	(*batch).Set(walletKey(), rawWallet)
+	(*batch).Set(walletkey, rawWallet)
 	//commit to db
 	(*batch).Write()
 }
@@ -303,18 +300,6 @@ func (m *Manager) BuildAccountUTXOs(batch *db.Batch, b *legacy.Block) {
 	}
 
 	//handle new UTXOs
-	for _, tx := range b.Transactions {
-		for j := range tx.Outputs {
-			resOutID := tx.ResultIds[j]
-			if _, ok := tx.Entries[*resOutID].(*bc.Output); !ok {
-				//retirement
-				continue
-			}
-			//delete new UTXOs
-			(*batch).Delete(accountUTXOKey(string(resOutID.Bytes())))
-		}
-	}
-
 	outs := make([]*rawOutput, 0, len(b.Transactions))
 	for _, tx := range b.Transactions {
 		for j, out := range tx.Outputs {
