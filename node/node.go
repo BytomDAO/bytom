@@ -261,14 +261,14 @@ func NewNode(config *cfg.Config) *Node {
 		sw.AddReactor("PEX", pexReactor)
 	}
 
-	// add the event switch to all services
-	// they should all satisfy events.Eventable
-	//SetEventSwitch(eventSwitch, bcReactor, mempoolReactor, consensusReactor)
-
 	// run the profile server
 	profileHost := config.ProfListenAddress
 	if profileHost != "" {
-		// to do: start profile host
+		// Profiling bytomd programs.see (https://blog.golang.org/profiling-go-programs)
+		// go tool pprof http://profileHose/debug/pprof/heap
+		go func() {
+			http.ListenAndServe(profileHost, nil)
+		} ()
 	}
 
 	node := &Node{
