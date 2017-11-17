@@ -170,6 +170,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/net-listening", jsonHandler(bcr.isNetListening))
 	m.Handle("/net-syncing", jsonHandler(bcr.isNetSyncing))
 	m.Handle("/peer-count", jsonHandler(bcr.peerCount))
+	m.Handle("/get-block-by-height", jsonHandler(bcr.getBlockByHeight))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
