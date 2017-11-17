@@ -16,7 +16,7 @@ var createAccountCmd = &cobra.Command{
 	Short: "Create an account",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
-			jww.ERROR.Println("createAccount takes no args")
+			jww.ERROR.Println("create-account takes no args")
 		}
 
 		xprv, err := chainkd.NewXPrv(nil)
@@ -57,7 +57,7 @@ var bindAccountCmd = &cobra.Command{
 	Short: "Bind an account",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 2 {
-			jww.ERROR.Println("bindAccount need args [account alias name] [account pub key]")
+			jww.ERROR.Println("bind-account need args [account alias name] [account pub key]")
 		}
 
 		var xpub chainkd.XPub
@@ -85,19 +85,19 @@ var bindAccountCmd = &cobra.Command{
 		account := make([]query.AnnotatedAccount, 1)
 
 		client := mustRPCClient()
-		client.Call(context.Background(), "/create-account", &[]Ins{ins}, &account)
+		client.Call(context.Background(), "/bind-account", &[]Ins{ins}, &account)
 
 		jww.FEEDBACK.Printf("responses: %v\n", account[0])
 		jww.FEEDBACK.Printf("account id: %v\n", account[0].ID)
 	},
 }
 
-var listAccountCmd = &cobra.Command{
-	Use:   "list-account",
+var listAccountsCmd = &cobra.Command{
+	Use:   "list-accounts",
 	Short: "List the existing accounts",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 0 {
-			jww.ERROR.Print("list-account takes no args")
+			jww.ERROR.Print("list-accounts takes no args")
 		}
 
 		type requestQuery struct {

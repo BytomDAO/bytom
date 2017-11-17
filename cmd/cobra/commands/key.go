@@ -71,12 +71,12 @@ var deleteKeyCmd = &cobra.Command{
 	},
 }
 
-var listKeyCmd = &cobra.Command{
-	Use:   "list-key",
-	Short: "List the existing key",
+var listKeysCmd = &cobra.Command{
+	Use:   "list-keys",
+	Short: "List the existing keys",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 2 {
-			jww.ERROR.Println("error: listKeys args not vaild")
+			jww.ERROR.Println("error: list-keys args not vaild")
 			return
 		}
 

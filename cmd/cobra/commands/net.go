@@ -31,7 +31,7 @@ var netListeningCmd = &cobra.Command{
 
 var peerCountCmd = &cobra.Command{
 	Use:   "peer-count",
-	Short: "number of peers currently connected to the client",
+	Short: "Number of peers currently connected to the client",
 	Run: func(cmd *cobra.Command, args []string) {
 		var response interface{}
 		client := mustRPCClient()

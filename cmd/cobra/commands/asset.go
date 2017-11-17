@@ -26,6 +26,7 @@ Usage: create-asset [asset]`)
 		xprv, err := chainkd.NewXPrv(nil)
 		if err != nil {
 			jww.ERROR.Println("NewXprv error")
+			return
 		}
 
 		xprv_, _ := xprv.MarshalText()
@@ -58,46 +59,6 @@ Usage: create-asset [asset]`)
 
 		jww.FEEDBACK.Printf("responses: %v\n", assets)
 		jww.FEEDBACK.Printf("asset id: %v\n", assets[0].ID.String())
-	},
-}
-
-var listAssetCmd = &cobra.Command{
-	Use:   "list-asset",
-	Short: "List asset",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 0 {
-			jww.ERROR.Println("list-asset takes no args")
-			return
-		}
-
-		type requestQuery struct {
-			Filter       string        `json:"filter,omitempty"`
-			FilterParams []interface{} `json:"filter_params,omitempty"`
-			SumBy        []string      `json:"sum_by,omitempty"`
-			PageSize     int           `json:"page_size"`
-			AscLongPoll  bool          `json:"ascending_with_long_poll,omitempty"`
-			Timeout      json.Duration `json:"timeout"`
-			After        string        `json:"after"`
-			StartTimeMS  uint64        `json:"start_time,omitempty"`
-			EndTimeMS    uint64        `json:"end_time,omitempty"`
-			TimestampMS  uint64        `json:"timestamp,omitempty"`
-			Type         string        `json:"type"`
-			Aliases      []string      `json:"aliases,omitempty"`
-		}
-		var in requestQuery
-
-		responses := make([]interface{}, 0)
-
-		client := mustRPCClient()
-		client.Call(context.Background(), "/list-assets", in, &responses)
-
-		if len(responses) > 0 {
-			for idx, item := range responses {
-				jww.FEEDBACK.Println(idx, ": ", item)
-			}
-		} else {
-			jww.FEEDBACK.Println("Empty assets")
-		}
 	},
 }
 
@@ -140,9 +101,49 @@ Usage: bind-asset [asset name] [asset xpub]`)
 		assets := make([]query.AnnotatedAsset, 1)
 
 		client := mustRPCClient()
-		client.Call(context.Background(), "/create-asset", &[]Ins{ins}, &assets)
+		client.Call(context.Background(), "/bind-asset", &[]Ins{ins}, &assets)
 
 		jww.FEEDBACK.Printf("responses: %v\n", assets)
 		jww.FEEDBACK.Printf("asset id: %v\n", assets[0].ID.String())
+	},
+}
+
+var listAssetsCmd = &cobra.Command{
+	Use:   "list-assets",
+	Short: "List the existing assets",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 0 {
+			jww.ERROR.Println("list-assets takes no args")
+			return
+		}
+
+		type requestQuery struct {
+			Filter       string        `json:"filter,omitempty"`
+			FilterParams []interface{} `json:"filter_params,omitempty"`
+			SumBy        []string      `json:"sum_by,omitempty"`
+			PageSize     int           `json:"page_size"`
+			AscLongPoll  bool          `json:"ascending_with_long_poll,omitempty"`
+			Timeout      json.Duration `json:"timeout"`
+			After        string        `json:"after"`
+			StartTimeMS  uint64        `json:"start_time,omitempty"`
+			EndTimeMS    uint64        `json:"end_time,omitempty"`
+			TimestampMS  uint64        `json:"timestamp,omitempty"`
+			Type         string        `json:"type"`
+			Aliases      []string      `json:"aliases,omitempty"`
+		}
+		var in requestQuery
+
+		responses := make([]interface{}, 0)
+
+		client := mustRPCClient()
+		client.Call(context.Background(), "/list-assets", in, &responses)
+
+		if len(responses) > 0 {
+			for idx, item := range responses {
+				jww.FEEDBACK.Println(idx, ": ", item)
+			}
+		} else {
+			jww.FEEDBACK.Println("Empty assets")
+		}
 	},
 }

@@ -87,20 +87,21 @@ func Execute() {
 func AddCommands() {
 	BytomcliCmd.AddCommand(createAccountCmd)
 	BytomcliCmd.AddCommand(bindAccountCmd)
-	BytomcliCmd.AddCommand(listAccountCmd)
+	BytomcliCmd.AddCommand(listAccountsCmd)
 
 	BytomcliCmd.AddCommand(createAssetCmd)
 	BytomcliCmd.AddCommand(bindAssetCmd)
-	BytomcliCmd.AddCommand(listAssetCmd)
+	BytomcliCmd.AddCommand(listAssetsCmd)
+
+	BytomcliCmd.AddCommand(getBestBlockHashCmd)
+	BytomcliCmd.AddCommand(getBlockByHashCmd)
+	BytomcliCmd.AddCommand(getBlockHeaderByHashCmd)
+	BytomcliCmd.AddCommand(getBlockTransactionsCountByHashCmd)
+	BytomcliCmd.AddCommand(getBlockByHeightCmd)
 
 	BytomcliCmd.AddCommand(createKeyCmd)
-	BytomcliCmd.AddCommand(listKeyCmd)
-
-	BytomcliCmd.AddCommand(bestBlockHashCmd)
-	BytomcliCmd.AddCommand(blockHeaderCmd)
-	BytomcliCmd.AddCommand(blockByHeightCmd)
-	BytomcliCmd.AddCommand(blockTransactionsCountCmd)
-	BytomcliCmd.AddCommand(blockCmd)
+	BytomcliCmd.AddCommand(deleteKeyCmd)
+	BytomcliCmd.AddCommand(listKeysCmd)
 
 	BytomcliCmd.AddCommand(netInfoCmd)
 	BytomcliCmd.AddCommand(netListeningCmd)

@@ -16,7 +16,7 @@ var (
 	coreURL = env.String("BYTOM_URL", "http://localhost:1999")
 )
 
-var bestBlockHashCmd = &cobra.Command{
+var getBestBlockHashCmd = &cobra.Command{
 	Use:   "get-best-block-hash",
 	Short: "Get the most recent block hash",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -27,7 +27,7 @@ var bestBlockHashCmd = &cobra.Command{
 	},
 }
 
-var blockCmd = &cobra.Command{
+var getBlockByHashCmd = &cobra.Command{
 	Use:   "get-block-by-hash",
 	Short: "Get a whole block matching the given hash",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -46,7 +46,45 @@ Usage: get-block-by-hash [hash]`)
 	},
 }
 
-var blockByHeightCmd = &cobra.Command{
+var getBlockHeaderByHashCmd = &cobra.Command{
+	Use:   "get-block-header-by-hash",
+	Short: "Get the header of a block matching the given hash",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 1 {
+			jww.ERROR.Println(`
+get-block-header-by-hash args not valid.
+
+Usage: get-block-header-by-hash [hash]`)
+			return
+		}
+
+		var response interface{}
+		client := mustRPCClient()
+		client.Call(context.Background(), "/get-block-header-by-hash", args[0], &response)
+		jww.FEEDBACK.Printf("block header: %v\n", response)
+	},
+}
+
+var getBlockTransactionsCountByHashCmd = &cobra.Command{
+	Use:   "get-block-transactions-count-by-hash",
+	Short: "Get the transactions count of a block matching the given hash",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 1 {
+			jww.ERROR.Println(`
+get-block-header-by-hash args not valid.
+
+Usage: get-block-transactions-count-by-hash [hash]`)
+			return
+		}
+
+		var response interface{}
+		client := mustRPCClient()
+		client.Call(context.Background(), "/get-block-transactions-count-by-hash", args[0], &response)
+		jww.FEEDBACK.Printf("transactions count: %v\n", response)
+	},
+}
+
+var getBlockByHeightCmd = &cobra.Command{
 	Use:   "get-block-by-height",
 	Short: "Get a whole block matching the given height",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -66,43 +104,5 @@ Usage: get-block-by-height [height]`)
 		client := mustRPCClient()
 		client.Call(context.Background(), "/get-block-by-height", ui64, &response)
 		jww.FEEDBACK.Printf("%v\n", response)
-	},
-}
-
-var blockHeaderCmd = &cobra.Command{
-	Use:   "get-block-header-by-hash",
-	Short: "Get the header of a block matching the given hash",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println(`
-get-block-header-by-hash args not valid.
-
-Usage: get-block-header-by-hash [hash]`)
-			return
-		}
-
-		var response interface{}
-		client := mustRPCClient()
-		client.Call(context.Background(), "/get-block-header-by-hash", args[0], &response)
-		jww.FEEDBACK.Printf("block header: %v\n", response)
-	},
-}
-
-var blockTransactionsCountCmd = &cobra.Command{
-	Use:   "get-block-transactions-count-by-hash",
-	Short: "Get the transactions count of a block matching the given hash",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println(`
-get-block-header-by-hash args not valid.
-
-Usage: get-block-transactions-count-by-hash [hash]`)
-			return
-		}
-
-		var response interface{}
-		client := mustRPCClient()
-		client.Call(context.Background(), "/get-block-transactions-count-by-hash", args[0], &response)
-		jww.FEEDBACK.Printf("transactions count: %v\n", response)
 	},
 }
