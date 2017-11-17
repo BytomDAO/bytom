@@ -2,8 +2,6 @@
 // credentials.
 package accesstoken
 
-// TODO: merge this package into chain/net/http/authn
-
 import (
 	"context"
 	"crypto/rand"
@@ -30,8 +28,6 @@ var (
 	ErrBadType = errors.New("type must be client or network")
 	// ErrNoMatchID is returned when Delete is called on nonexisting ID.
 	ErrNoMatchID = errors.New("nonexisting access token ID")
-
-	defaultLimit = 100
 
 	// validIDRegexp checks that all characters are alphumeric, _ or -.
 	// It also must have a length of at least 1.
