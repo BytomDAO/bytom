@@ -15,7 +15,6 @@ import (
 	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/rpc"
 	ctypes "github.com/bytom/blockchain/rpc/types"
@@ -47,7 +46,7 @@ type BlockchainReactor struct {
 	p2p.BaseReactor
 
 	chain         *protocol.Chain
-	pinStore      *pin.Store
+	wallet        *account.Wallet
 	accounts      *account.Manager
 	assets        *asset.Registry
 	accesstoken   *accesstoken.Token
@@ -218,11 +217,11 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, pinStore *pin.Store, txfeeds *txfeed.Tracker) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *account.Wallet, txfeeds *txfeed.Tracker) *BlockchainReactor {
 	mining := cpuminer.NewCPUMiner(chain, accounts, txPool)
 	bcR := &BlockchainReactor{
 		chain:         chain,
-		pinStore:      pinStore,
+		wallet:        wallet,
 		accounts:      accounts,
 		assets:        assets,
 		blockKeeper:   newBlockKeeper(chain, sw),

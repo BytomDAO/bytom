@@ -12,7 +12,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -48,12 +47,12 @@ func accountCPKey(hash [32]byte) []byte {
 }
 
 // NewManager creates a new account manager
-func NewManager(db dbm.DB, chain *protocol.Chain, pinStore *pin.Store) *Manager {
+func NewManager(db dbm.DB, chain *protocol.Chain, wallet *Wallet) *Manager {
 	return &Manager{
 		db:          db,
 		chain:       chain,
-		utxoDB:      newReserver(db, chain, pinStore),
-		pinStore:    pinStore,
+		utxoDB:      newReserver(chain, wallet),
+		wallet:      wallet,
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
 		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*controlProgram),
@@ -62,11 +61,11 @@ func NewManager(db dbm.DB, chain *protocol.Chain, pinStore *pin.Store) *Manager 
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	db       dbm.DB
-	chain    *protocol.Chain
-	utxoDB   *reserver
-	indexer  Saver
-	pinStore *pin.Store
+	db      dbm.DB
+	chain   *protocol.Chain
+	utxoDB  *reserver
+	indexer Saver
+	wallet  *Wallet
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache

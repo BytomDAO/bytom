@@ -20,12 +20,11 @@ const (
 )
 
 var (
-	AccountUTXOFmt = `
+	accountUTXOFmt = `
 	{
 		"OutputID":"%x","AssetID":"%x","Amount":"%d",
 		"AccountID":"%s","ProgramIndex":"%d","Program":"%x",
-		"BlockHeight":"%d","SourceID":"%x","SourcePos":"%d",
-		"RefData":"%x","Change":"%t"
+		"SourceID":"%x","SourcePos":"%d","RefData":"%x","Change":"%t"
 	}`
 )
 
@@ -49,25 +48,28 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, in requestQuery) i
 	return response
 }
 
-func (bcr *BlockchainReactor) GetAccountUTXOs() []account.AccountUTXOs {
+//GetAccountUTXOs return all account unspent outputs
+func (bcr *BlockchainReactor) GetAccountUTXOs() []account.UTXO {
 
 	var (
-		au       = account.AccountUTXOs{}
-		accutoxs = []account.AccountUTXOs{}
+		accountUTXO  = account.UTXO{}
+		accountUTXOs = make([]account.UTXO, 0)
 	)
 
-	iter := bcr.pinStore.DB.IteratorPrefix([]byte("acu"))
-	for iter.Next() {
+	accountUTXOIter := bcr.wallet.DB.IteratorPrefix([]byte(account.UTXOPreFix))
+	defer accountUTXOIter.Release()
+	for accountUTXOIter.Next() {
 
-		err := json.Unmarshal(iter.Value(), &au)
-		if err != nil {
+		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {
+			hashKey := accountUTXOIter.Key()[len(account.UTXOPreFix):]
+			log.WithField("UTXO hash", string(hashKey)).Warn("get account UTXO")
 			continue
 		}
 
-		accutoxs = append(accutoxs, au)
+		accountUTXOs = append(accountUTXOs, accountUTXO)
 	}
 
-	return accutoxs
+	return accountUTXOs
 }
 
 func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery) interface{} {
@@ -95,7 +97,7 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery)
 	}
 
 	sortedAccount := []string{}
-	for k, _ := range accBalance {
+	for k := range accBalance {
 		sortedAccount = append(sortedAccount, k)
 	}
 	sort.Strings(sortedAccount)
@@ -185,11 +187,10 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in request
 
 	for _, res := range accoutUTXOs {
 
-		restring = fmt.Sprintf(AccountUTXOFmt,
+		restring = fmt.Sprintf(accountUTXOFmt,
 			res.OutputID, res.AssetID, res.Amount,
 			res.AccountID, res.ProgramIndex, res.Program,
-			res.BlockHeight, res.SourceID, res.SourcePos,
-			res.RefData, res.Change)
+			res.SourceID, res.SourcePos, res.RefData, res.Change)
 
 		response = append(response, restring)
 	}

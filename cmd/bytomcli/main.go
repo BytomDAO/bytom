@@ -762,11 +762,11 @@ func listAccounts(client *rpc.Client, args []string) {
 	responses := make([]interface{}, 0)
 
 	client.Call(context.Background(), "/list-accounts", in, &responses)
-	// if len(responses) > 0 {
-	// 	for i, item := range responses {
-	// 		fmt.Println(i, "-----", item)
-	// 	}
-	// }
+	if len(responses) > 0 {
+		for i, item := range responses {
+			fmt.Println(i, "-----", item)
+		}
+	}
 }
 
 func listAssets(client *rpc.Client, args []string) {
@@ -1082,7 +1082,7 @@ func signTransactions(client *rpc.Client, args []string) {
 	fmt.Printf("tpl:%v, err:%v\n", tpl, err)
 	in.Txs = []*txbuilder.Template{&tpl}
 
-	var response []interface{} = make([]interface{}, 1)
+	var response = make([]interface{}, 1)
 	client.Call(context.Background(), "/sign-transactions", &in, &response)
 	fmt.Printf("sign response:%v\n", response)
 }

@@ -14,10 +14,6 @@ var (
 	// ErrBadBlock is returned when a block is invalid.
 	ErrBadBlock = errors.New("invalid block")
 
-	// ErrStaleState is returned when the Chain does not have a current
-	// blockchain state.
-	ErrStaleState = errors.New("stale blockchain state")
-
 	// ErrBadStateRoot is returned when the computed assets merkle root
 	// disagrees with the one declared in a block header.
 	ErrBadStateRoot = errors.New("invalid state merkle root")
@@ -181,15 +177,14 @@ func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
 
 	bestBlock := c.findBestChainTail(block)
 	c.state.cond.L.Lock()
+	defer c.state.cond.L.Unlock()
 	if c.state.block.Hash() == bestBlock.PreviousBlockHash {
-		defer c.state.cond.L.Unlock()
 		return false, c.connectBlock(bestBlock)
 	}
 
 	if bestBlock.Height > c.state.block.Height && bestBlock.Bits >= c.state.block.Bits {
-		defer c.state.cond.L.Unlock()
 		return false, c.reorganizeChain(bestBlock)
 	}
-	c.state.cond.L.Unlock()
+
 	return false, nil
 }
