@@ -10,13 +10,14 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 )
 
+// AssetIns is used for asset related request.
 type AssetIns struct {
-	RootXPubs   []chainkd.XPub `json:"root_xpubs"`
-	Quorum      int
-	Alias       string
-	Tags        map[string]interface{}
-	Definition  map[string]interface{}
-	ClientToken string `json:"client_token"`
+	RootXPubs   []chainkd.XPub         `json:"root_xpubs"`
+	Quorum      int                    `json:"quorum"`
+	Alias       string                 `json:"alias"`
+	Tags        map[string]interface{} `json:"tags"`
+	Definition  map[string]interface{} `json:"definition"`
+	ClientToken string                 `json:"client_token"`
 }
 
 var createAssetCmd = &cobra.Command{
@@ -34,7 +35,11 @@ var createAssetCmd = &cobra.Command{
 			return
 		}
 
-		xPrv, _ := xprv.MarshalText()
+		xPrv, err := xprv.MarshalText()
+		if err != nil {
+			jww.ERROR.Println("Fail to marshal xPriv")
+			return
+		}
 		jww.FEEDBACK.Printf("xprv: %v\n", string(xPrv))
 		xpub := xprv.XPub()
 		xPub, _ := xpub.MarshalText()

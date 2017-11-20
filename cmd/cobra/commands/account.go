@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/encoding/json"
 )
 
+// Ins is used for account related request.
 type Ins struct {
 	RootXPubs   []chainkd.XPub         `json:"root_xpubs"`
 	Quorum      int                    `json:"quorum"`
@@ -127,6 +128,7 @@ var listAccountsCmd = &cobra.Command{
 
 		if len(responses) == 0 {
 			jww.FEEDBACK.Printf("No accounts")
+			return
 		}
 
 		for idx, item := range responses {

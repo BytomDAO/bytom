@@ -429,7 +429,6 @@ func (bcr *BlockchainReactor) getBlockByHeight(height uint64) string {
 		return err.Error()
 	}
 
-	log.Infof("%v", legacyBlock)
 	bcBlock := legacy.MapBlock(legacyBlock)
 	res := &GetBlockByHashJSON{BlockHeader: bcBlock.BlockHeader}
 	for _, tx := range bcBlock.Transactions {
