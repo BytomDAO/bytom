@@ -108,10 +108,10 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(peerCountCmd)
 	BytomcliCmd.AddCommand(netSyncingCmd)
 
-	BytomcliCmd.AddCommand(accessTokenCreatCmd)
-	BytomcliCmd.AddCommand(accessTokenListCmd)
-	BytomcliCmd.AddCommand(accessTokenDeleteCmd)
-	BytomcliCmd.AddCommand(accessTokenCheckCmd)
+	BytomcliCmd.AddCommand(createAccessTokenCmd)
+	BytomcliCmd.AddCommand(listAccessTokenCmd)
+	BytomcliCmd.AddCommand(deleteAccessTokenCmd)
+	BytomcliCmd.AddCommand(checkAccessTokenCmd)
 
 	BytomcliCmd.AddCommand(versionCmd)
 }

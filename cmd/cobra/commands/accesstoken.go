@@ -9,7 +9,7 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 )
 
-var accessTokenCreatCmd = &cobra.Command{
+var createAccessTokenCmd = &cobra.Command{
 	Use:   "create-access-token",
 	Short: "Create a access token",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -34,7 +34,7 @@ var accessTokenCreatCmd = &cobra.Command{
 	},
 }
 
-var accessTokenListCmd = &cobra.Command{
+var listAccessTokenCmd = &cobra.Command{
 	Use:   "list-access-token",
 	Short: "list access tokens",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -57,7 +57,7 @@ var accessTokenListCmd = &cobra.Command{
 	},
 }
 
-var accessTokenDeleteCmd = &cobra.Command{
+var deleteAccessTokenCmd = &cobra.Command{
 	Use:   "delete-access-token",
 	Short: "delete a access token",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -82,7 +82,7 @@ var accessTokenDeleteCmd = &cobra.Command{
 	},
 }
 
-var accessTokenCheckCmd = &cobra.Command{
+var checkAccessTokenCmd = &cobra.Command{
 	Use:   "check-access-token",
 	Short: "check a access token",
 	Run: func(cmd *cobra.Command, args []string) {
