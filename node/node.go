@@ -18,6 +18,7 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	bc "github.com/bytom/blockchain"
+	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pseudohsm"
@@ -136,6 +137,9 @@ func NewNode(config *cfg.Config) *Node {
 	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
 	store := txdb.NewStore(txDB)
 
+	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
+	accessTokens := accesstoken.NewStore(tokenDB)
+
 	privKey := crypto.GenPrivKeyEd25519()
 
 	// Make event switch
@@ -211,8 +215,7 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
-
-	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet, txFeed)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet, txFeed, accessTokens)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
@@ -232,7 +235,7 @@ func NewNode(config *cfg.Config) *Node {
 		// go tool pprof http://profileHose/debug/pprof/heap
 		go func() {
 			http.ListenAndServe(profileHost, nil)
-		} ()
+		}()
 	}
 
 	node := &Node{
