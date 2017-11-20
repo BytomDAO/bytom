@@ -120,7 +120,7 @@ func Create(ctx context.Context, db dbm.DB, signerType string, xpubs []chainkd.X
 		keyIndex uint64
 	)
 
-	id, keyIndex = Idgenerate()
+	id, keyIndex = IdGenerate()
 
 	return &Signer{
 		ID:       id,

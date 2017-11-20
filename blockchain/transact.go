@@ -6,14 +6,14 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/blockchain/txbuilder"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol/bc/legacy"
-
-	chainjson "github.com/bytom/encoding/json"
-	log "github.com/sirupsen/logrus"
 )
 
 var defaultTxTTL = 5 * time.Minute
@@ -42,11 +42,7 @@ func (a *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilde
 	}
 	return decoder, true
 }
-/*		{"actions": [
-			{"type": "spend", "asset_id": "%s", "amount": 100},
-			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"}
-		]}`
-*/
+
 func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
 	err := a.filterAliases(ctx, req)
 	if err != nil {
@@ -141,68 +137,6 @@ func (a *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Tem
 	return map[string]string{"id": tpl.Transaction.ID.String()}, nil
 }
 
-/*
-// recordSubmittedTx records a lower bound height at which the tx
-// was first submitted to the tx pool. If this request fails for
-// some reason, a retry will know to look for the transaction in
-// blocks starting at this height.
-//
-// If the tx has already been submitted, it returns the existing
-// height.
-func recordSubmittedTx(ctx context.Context, db pg.DB, txHash bc.Hash, currentHeight uint64) (uint64, error) {
-	const insertQ = `
-		INSERT INTO submitted_txs (tx_hash, height) VALUES($1, $2)
-		ON CONFLICT DO NOTHING
-	`
-	res, err := db.Exec(ctx, insertQ, txHash.Bytes(), currentHeight)
-	if err != nil {
-		return 0, err
-	}
-	inserted, err := res.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
-	if inserted == 1 {
-		return currentHeight, nil
-	}
-
-	// The insert didn't affect any rows, meaning there was already an entry
-	// for this transaction hash.
-	const selectQ = `
-		SELECT height FROM submitted_txs WHERE tx_hash = $1
-	`
-	var height uint64
-	err = db.QueryRow(ctx, selectQ, txHash.Bytes()).Scan(&height)
-	return height, err
-}
-*/
-
-/*
-// cleanUpSubmittedTxs will periodically delete records of submitted txs
-// older than a day. This function blocks and only exits when its context
-// is cancelled.
-func cleanUpSubmittedTxs(ctx context.Context, db pg.DB) {
-	ticker := time.NewTicker(15 * time.Minute)
-	for {
-		select {
-		case <-ticker.C:
-			// TODO(jackson): We could avoid expensive bulk deletes by partitioning
-			// the table and DROP-ing tables of expired rows. Partitioning doesn't
-			// play well with ON CONFLICT clauses though, so we would need to rework
-			// how we guarantee uniqueness.
-			const q = `DELETE FROM submitted_txs WHERE submitted_at < now() - interval '1 day'`
-			_, err := db.Exec(ctx, q)
-			if err != nil {
-				log.Error(ctx, err)
-			}
-		case <-ctx.Done():
-			ticker.Stop()
-			return
-		}
-	}
-}
-*/
-
 // finalizeTxWait calls FinalizeTx and then waits for confirmation of
 // the transaction.  A nil error return means the transaction is
 // confirmed on the blockchain.  ErrRejected means a conflicting tx is
@@ -212,14 +146,9 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 	// Use the current generator height as the lower bound of the block height
 	// that the transaction may appear in.
 	localHeight := a.chain.Height()
-	generatorHeight := localHeight
+	//generatorHeight := localHeight
 
 	log.WithField("localHeight", localHeight).Info("Starting to finalize transaction")
-	// Remember this height in case we retry this submit call.
-	/*height, err := recordSubmittedTx(ctx, a.db, txTemplate.Transaction.ID, generatorHeight)
-	if err != nil {
-		return errors.Wrap(err, "saving tx submitted height")
-	}*/
 
 	err := txbuilder.FinalizeTx(ctx, a.chain, txTemplate.Transaction)
 	if err != nil {
@@ -229,18 +158,13 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 		return nil
 	}
 
-	height, err := a.waitForTxInBlock(ctx, txTemplate.Transaction, generatorHeight)
+	//TODO:complete finalizeTxWait
+	//height, err := a.waitForTxInBlock(ctx, txTemplate.Transaction, generatorHeight)
 	if err != nil {
 		return err
 	}
 	if waitUntil == "confirmed" {
 		return nil
-	}
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-a.pinStore.AllWaiter(height):
 	}
 
 	return nil
@@ -272,7 +196,6 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 
 			// might still be in pool or might be rejected; we can't
 			// tell definitively until its max time elapses.
-
 			// Re-insert into the pool in case it was dropped.
 			err = txbuilder.FinalizeTx(ctx, a.chain, tx)
 			if err != nil {

@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -19,11 +18,12 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	bc "github.com/bytom/blockchain"
+	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txdb"
+	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/env"
@@ -57,27 +57,6 @@ type Node struct {
 	accounts   *account.Manager
 	assets     *asset.Registry
 }
-
-var (
-	// config vars
-	rootCAs       = env.String("ROOT_CA_CERTS", "") // file path
-	splunkAddr    = os.Getenv("SPLUNKADDR")
-	logFile       = os.Getenv("LOGFILE")
-	logSize       = env.Int("LOGSIZE", 5e6) // 5MB
-	logCount      = env.Int("LOGCOUNT", 9)
-	logQueries    = env.Bool("LOG_QUERIES", false)
-	maxDBConns    = env.Int("MAXDBCONNS", 10)           // set to 100 in prod
-	rpsToken      = env.Int("RATELIMIT_TOKEN", 0)       // reqs/sec
-	rpsRemoteAddr = env.Int("RATELIMIT_REMOTE_ADDR", 0) // reqs/sec
-	indexTxs      = env.Bool("INDEX_TRANSACTIONS", true)
-	home          = bc.HomeDirFromEnvironment()
-	bootURL       = env.String("BOOTURL", "")
-	// build vars; initialized by the linker
-	buildTag    = "?"
-	buildCommit = "?"
-	buildDate   = "?"
-	race        []interface{} // initialized in race.go
-)
 
 func NewNodeDefault(config *cfg.Config) *Node {
 	return NewNode(config)
@@ -158,6 +137,9 @@ func NewNode(config *cfg.Config) *Node {
 	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
 	store := txdb.NewStore(txDB)
 
+	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
+	accessTokens := accesstoken.NewStore(tokenDB)
+
 	privKey := crypto.GenPrivKeyEd25519()
 
 	// Make event switch
@@ -192,34 +174,30 @@ func NewNode(config *cfg.Config) *Node {
 
 	var accounts *account.Manager = nil
 	var assets *asset.Registry = nil
-	var pinStore *pin.Store = nil
+	var wallet *account.Wallet = nil
+	var txFeed *txfeed.Tracker = nil
 
 	if config.Wallet.Enable {
 		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
-		accUTXODB := dbm.NewDB("accountutxos", config.DBBackend, config.DBDir())
-		pinStore = pin.NewStore(accUTXODB)
-		if err = pinStore.LoadAll(ctx); err != nil {
-			log.WithField("error", err).Error("load pin store")
-			return nil
-		}
+		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 
-		pinHeight := chain.Height()
-		if pinHeight > 0 {
-			pinHeight = pinHeight - 1
-		}
+		wallet = account.NewWallet(walletDB)
 
-		pins := []string{account.PinName, account.DeleteSpentsPinName}
-		for _, p := range pins {
-			if err = pinStore.CreatePin(ctx, p, pinHeight); err != nil {
-				log.WithField("error", err).Error("Create pin")
-			}
-		}
+		accounts = account.NewManager(accountsDB, chain, wallet)
 
-		accounts = account.NewManager(accountsDB, chain, pinStore)
-		go accounts.ProcessBlocks(ctx)
+		go accounts.WalletUpdate(chain)
 
 		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 		assets = asset.NewRegistry(assetsDB, chain)
+
+		txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
+		txFeed = txfeed.NewTracker(txFeedDB, chain)
+
+		if err = txFeed.Prepare(ctx); err != nil {
+			log.WithField("error", err).Error("start txfeed")
+			return nil
+		}
+
 	}
 	//Todo HSM
 	/*
@@ -237,7 +215,7 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
-	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, pinStore)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet, txFeed, accessTokens)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
@@ -250,16 +228,13 @@ func NewNode(config *cfg.Config) *Node {
 		sw.AddReactor("PEX", pexReactor)
 	}
 
-	// add the event switch to all services
-	// they should all satisfy events.Eventable
-	//SetEventSwitch(eventSwitch, bcReactor, mempoolReactor, consensusReactor)
-
 	// run the profile server
 	profileHost := config.ProfListenAddress
 	if profileHost != "" {
-
+		// Profiling bytomd programs.see (https://blog.golang.org/profiling-go-programs)
+		// go tool pprof http://profileHose/debug/pprof/heap
 		go func() {
-			log.WithField("error", http.ListenAndServe(profileHost, nil)).Error("Profile server")
+			http.ListenAndServe(profileHost, nil)
 		}()
 	}
 

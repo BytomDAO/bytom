@@ -15,7 +15,6 @@ import (
 	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/pin"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/rpc"
 	ctypes "github.com/bytom/blockchain/rpc/types"
@@ -42,24 +41,24 @@ const (
 	crosscoreRPCPrefix          = "/rpc/"
 )
 
-// BlockchainReactor handles long-term catchup syncing.
+//BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-	chain       *protocol.Chain
-	pinStore    *pin.Store
-	accounts    *account.Manager
-	assets      *asset.Registry
-	accesstoken *accesstoken.Token
-	txFeeds     *txfeed.TxFeed
-	blockKeeper *blockKeeper
-	txPool      *protocol.TxPool
-	hsm         *pseudohsm.HSM
-	mining      *cpuminer.CPUMiner
-	mux         *http.ServeMux
-	sw          *p2p.Switch
-	handler     http.Handler
-	evsw        types.EventSwitch
+	chain         *protocol.Chain
+	wallet        *account.Wallet
+	accounts      *account.Manager
+	assets        *asset.Registry
+	accessTokens  *accesstoken.CredentialStore
+	txFeedTracker *txfeed.Tracker
+	blockKeeper   *blockKeeper
+	txPool        *protocol.TxPool
+	hsm           *pseudohsm.HSM
+	mining        *cpuminer.CPUMiner
+	mux           *http.ServeMux
+	sw            *p2p.Switch
+	handler       http.Handler
+	evsw          types.EventSwitch
 }
 
 func batchRecover(ctx context.Context, v *interface{}) {
@@ -154,8 +153,10 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
 	m.Handle("/create-access-token", jsonHandler(bcr.createAccessToken))
-	m.Handle("/list-access-tokens", jsonHandler(bcr.listAccessTokens))
+	m.Handle("/list-access-token", jsonHandler(bcr.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(bcr.deleteAccessToken))
+	m.Handle("/check-access-token", jsonHandler(bcr.checkAccessToken))
+
 	//hsm api
 	m.Handle("/create-key", jsonHandler(bcr.pseudohsmCreateKey))
 	m.Handle("/list-keys", jsonHandler(bcr.pseudohsmListKeys))
@@ -218,19 +219,21 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, pinStore *pin.Store) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *account.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore) *BlockchainReactor {
 	mining := cpuminer.NewCPUMiner(chain, accounts, txPool)
 	bcR := &BlockchainReactor{
-		chain:       chain,
-		pinStore:    pinStore,
-		accounts:    accounts,
-		assets:      assets,
-		blockKeeper: newBlockKeeper(chain, sw),
-		txPool:      txPool,
-		mining:      mining,
-		mux:         http.NewServeMux(),
-		sw:          sw,
-		hsm:         hsm,
+		chain:         chain,
+		wallet:        wallet,
+		accounts:      accounts,
+		assets:        assets,
+		blockKeeper:   newBlockKeeper(chain, sw),
+		txPool:        txPool,
+		mining:        mining,
+		mux:           http.NewServeMux(),
+		sw:            sw,
+		hsm:           hsm,
+		txFeedTracker: txfeeds,
+		accessTokens:  accessTokens,
 	}
 	bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
 	return bcR
@@ -240,6 +243,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
 	bcR.BuildHander()
+
 	bcR.mining.Start()
 	go bcR.syncRoutine()
 	return nil
@@ -248,6 +252,7 @@ func (bcR *BlockchainReactor) OnStart() error {
 // OnStop implements BaseService
 func (bcR *BlockchainReactor) OnStop() {
 	bcR.BaseReactor.OnStop()
+	bcR.mining.Stop()
 }
 
 // GetChannels implements Reactor
@@ -332,9 +337,17 @@ func (bcR *BlockchainReactor) syncRoutine() {
 	for {
 		select {
 		case newTx := <-newTxCh:
+			bcR.txFeedTracker.TxFilter(newTx)
 			go bcR.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
 			go bcR.BroadcastStatusResponse()
+
+			// mining if and only if block sync is finished
+			if bcR.blockKeeper.IsCaughtUp() {
+				bcR.mining.Start()
+			} else {
+				bcR.mining.Stop()
+			}
 		case <-bcR.Quit:
 			return
 		}

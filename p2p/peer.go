@@ -293,7 +293,11 @@ func createMConnection(conn net.Conn, p *Peer, reactorsByCh map[byte]Reactor, ch
 	onReceive := func(chID byte, msgBytes []byte) {
 		reactor := reactorsByCh[chID]
 		if reactor == nil {
-			cmn.PanicSanity(cmn.Fmt("Unknown channel %X", chID))
+			if chID == PexChannel {
+				return
+			} else {
+				cmn.PanicSanity(cmn.Fmt("Unknown channel %X", chID))
+			}
 		}
 		reactor.Receive(chID, p, msgBytes)
 	}
