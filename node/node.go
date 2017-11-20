@@ -19,6 +19,7 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	bc "github.com/bytom/blockchain"
+	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pin"
@@ -158,6 +159,9 @@ func NewNode(config *cfg.Config) *Node {
 	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
 	store := txdb.NewStore(txDB)
 
+	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
+	accessTokens := accesstoken.NewStore(tokenDB)
+
 	privKey := crypto.GenPrivKeyEd25519()
 
 	// Make event switch
@@ -237,7 +241,7 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
-	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, pinStore)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, pinStore, accessTokens)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 

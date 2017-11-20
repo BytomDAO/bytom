@@ -46,20 +46,20 @@ const (
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
-	chain       *protocol.Chain
-	pinStore    *pin.Store
-	accounts    *account.Manager
-	assets      *asset.Registry
-	accesstoken *accesstoken.Token
-	txFeeds     *txfeed.TxFeed
-	blockKeeper *blockKeeper
-	txPool      *protocol.TxPool
-	hsm         *pseudohsm.HSM
-	mining      *cpuminer.CPUMiner
-	mux         *http.ServeMux
-	sw          *p2p.Switch
-	handler     http.Handler
-	evsw        types.EventSwitch
+	chain        *protocol.Chain
+	pinStore     *pin.Store
+	accounts     *account.Manager
+	assets       *asset.Registry
+	accessTokens *accesstoken.CredentialStore
+	txFeeds      *txfeed.TxFeed
+	blockKeeper  *blockKeeper
+	txPool       *protocol.TxPool
+	hsm          *pseudohsm.HSM
+	mining       *cpuminer.CPUMiner
+	mux          *http.ServeMux
+	sw           *p2p.Switch
+	handler      http.Handler
+	evsw         types.EventSwitch
 }
 
 func batchRecover(ctx context.Context, v *interface{}) {
@@ -154,8 +154,10 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
 	m.Handle("/create-access-token", jsonHandler(bcr.createAccessToken))
-	m.Handle("/list-access-tokens", jsonHandler(bcr.listAccessTokens))
+	m.Handle("/list-access-token", jsonHandler(bcr.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(bcr.deleteAccessToken))
+	m.Handle("/check-access-token", jsonHandler(bcr.checkAccessToken))
+
 	//hsm api
 	m.Handle("/create-key", jsonHandler(bcr.pseudohsmCreateKey))
 	m.Handle("/list-keys", jsonHandler(bcr.pseudohsmListKeys))
@@ -223,19 +225,20 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, pinStore *pin.Store) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, pinStore *pin.Store, accessTokens *accesstoken.CredentialStore) *BlockchainReactor {
 	mining := cpuminer.NewCPUMiner(chain, txPool)
 	bcR := &BlockchainReactor{
-		chain:       chain,
-		pinStore:    pinStore,
-		accounts:    accounts,
-		assets:      assets,
-		blockKeeper: newBlockKeeper(chain, sw),
-		txPool:      txPool,
-		mining:      mining,
-		mux:         http.NewServeMux(),
-		sw:          sw,
-		hsm:         hsm,
+		chain:        chain,
+		pinStore:     pinStore,
+		accounts:     accounts,
+		assets:       assets,
+		blockKeeper:  newBlockKeeper(chain, sw),
+		txPool:       txPool,
+		mining:       mining,
+		mux:          http.NewServeMux(),
+		sw:           sw,
+		hsm:          hsm,
+		accessTokens: accessTokens,
 	}
 	bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
 	return bcR
