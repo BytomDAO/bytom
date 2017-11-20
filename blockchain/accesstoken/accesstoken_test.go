@@ -2,7 +2,8 @@ package accesstoken
 
 import (
 	"context"
-	//"encoding/hex"
+	"encoding/hex"
+	"os"
 	"strings"
 	"testing"
 
@@ -12,7 +13,8 @@ import (
 )
 
 func TestCreate(t *testing.T) {
-	testDB := dbm.NewDB("testdb1", "leveldb", ".data")
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 	ctx := context.Background()
 
@@ -20,8 +22,8 @@ func TestCreate(t *testing.T) {
 		id, typ string
 		want    error
 	}{
-		//{"a", "client", nil},
-		//{"b", "network", nil},
+		{"a", "client", nil},
+		{"b", "network", nil},
 		{"", "client", ErrBadID},
 		{"bad:id", "client", ErrBadID},
 		{"a", "network", ErrDuplicateID}, // this aborts the transaction, so no tests can follow
@@ -35,13 +37,13 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-/*
 func TestList(t *testing.T) {
 	ctx := context.Background()
-	testDB := dbm.NewDB("testdb2", "leveldb", ".data")
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
-	//mustCreateToken(ctx, t, cs, "ab", "test")
+	mustCreateToken(ctx, t, cs, "ab", "test")
 	mustCreateToken(ctx, t, cs, "bc", "test")
 	mustCreateToken(ctx, t, cs, "cd", "test")
 
@@ -65,7 +67,8 @@ func TestList(t *testing.T) {
 
 func TestCheck(t *testing.T) {
 	ctx := context.Background()
-	testDB := dbm.NewDB("testdb3", "leveldb", ".data")
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
 	token := mustCreateToken(ctx, t, cs, "x", "client")
@@ -92,11 +95,11 @@ func TestCheck(t *testing.T) {
 		t.Fatal("expected bad secret to not be valid")
 	}
 }
-*/
 
 func TestDelete(t *testing.T) {
 	ctx := context.Background()
-	testDB := dbm.NewDB("testdb4", "leveldb", ".data")
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
 	token := mustCreateToken(ctx, t, cs, "Y", "client")
