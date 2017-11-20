@@ -2,12 +2,22 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
+
+//Token describe the access token.
+type Token struct {
+	ID      string    `json:"id"`
+	Token   string    `json:"token,omitempty"`
+	Type    string    `json:"type,omitempty"`
+	Secret  string    `json:"secret,omitempty"`
+	Created time.Time `json:"created_at"`
+}
 
 var createAccessTokenCmd = &cobra.Command{
 	Use:   "create-access-token",
@@ -18,10 +28,6 @@ var createAccessTokenCmd = &cobra.Command{
 			return
 		}
 
-		type Token struct {
-			ID   string `json:"id"`
-			Type string `json:"type"`
-		}
 		var token Token
 		token.ID = args[0]
 
@@ -43,17 +49,19 @@ var listAccessTokenCmd = &cobra.Command{
 			return
 		}
 
-		type Token struct {
-			ID      string    `json:"id"`
-			Token   string    `json:"token,omitempty"`
-			Type    string    `json:"type,omitempty"`
-			Created time.Time `json:"created_at"`
-		}
 		var response interface{}
-
+		var tokens []Token
 		client := mustRPCClient()
 		client.Call(context.Background(), "/list-access-token", nil, &response)
-		jww.FEEDBACK.Printf("%v\n", response)
+
+		if err := json.Unmarshal([]byte(response.(string)), &tokens); err != nil {
+			jww.ERROR.Println("result not json format")
+			return
+		}
+
+		for i, v := range tokens {
+			jww.FEEDBACK.Printf("%d %v\n", i, v)
+		}
 	},
 }
 
@@ -66,10 +74,6 @@ var deleteAccessTokenCmd = &cobra.Command{
 			return
 		}
 
-		type Token struct {
-			ID   string `json:"id"`
-			Type string `json:"type"`
-		}
 		var token Token
 		token.ID = args[0]
 
@@ -91,10 +95,6 @@ var checkAccessTokenCmd = &cobra.Command{
 			return
 		}
 
-		type Token struct {
-			ID     string `json:"id"`
-			Secret string `json:"secret,omitempty"`
-		}
 		var token Token
 		inputs := strings.Split(args[0], ":")
 		token.ID = inputs[0]

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 
 	"github.com/bytom/errors"
 )
@@ -26,12 +25,11 @@ func (a *BlockchainReactor) listAccessTokens(ctx context.Context) interface{} {
 		return err.Error()
 	}
 
-	var result string
-	for i, v := range tokens {
-		value, _ := json.Marshal(v)
-		result += fmt.Sprintf("%d %v\n", i, string(value))
+	result, err := json.Marshal(tokens)
+	if err != nil {
+		return err.Error()
 	}
-	return result
+	return string(result)
 }
 
 func (a *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct{ ID, Token string }) interface{} {
