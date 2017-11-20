@@ -52,6 +52,11 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	return
 }
 
+// This func will become the seed generate algorithm
+func magicOne(preSeed *bc.Hash, blockHashs []*bc.Hash) *bc.Hash {
+	return preSeed
+}
+
 // NewBlockTemplate returns a new block template that is ready to be solved
 func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (*legacy.Block, error) {
 	// Extend the most recently known best block.
@@ -59,8 +64,9 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	preBlock, snap := c.State()
 	newSnap := state.Copy(snap)
 
-	nextBlockHeight := preBlock.BlockHeader.Height + 1
 	preBcBlock := legacy.MapBlock(preBlock)
+	nextBlockHeight := preBlock.BlockHeader.Height + 1
+	nextBlockSeed := magicOne(preBcBlock.Seed, []*bc.Hash{&preBcBlock.ID})
 	txDescs := txPool.GetTransactions()
 	txEntries := make([]*bc.Tx, 0, len(txDescs))
 	blockWeight := uint64(0)
@@ -76,6 +82,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			Version:           1,
 			Height:            nextBlockHeight,
 			PreviousBlockHash: preBlock.Hash(),
+			Seed:              *nextBlockSeed,
 			TimestampMS:       bc.Millis(time.Now()),
 			BlockCommitment:   legacy.BlockCommitment{},
 			Bits:              consensus.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),

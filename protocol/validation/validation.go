@@ -510,6 +510,8 @@ func ValidateBlock(b, prev *bc.Block) error {
 		return errWrongBlockSize
 	}
 
+	//TODO: magicOne validate block's seed when the magic AI mining part is ready
+	//TODO: magicTwo update the CheckProofOfWork logic when the magic AI mining part is ready
 	if !consensus.CheckProofOfWork(&b.ID, b.BlockHeader.Bits) {
 		return errWorkProof
 	}

@@ -10,6 +10,7 @@ func (bh *BlockHeader) writeForHash(w io.Writer) {
 	mustWriteForHash(w, bh.Version)
 	mustWriteForHash(w, bh.Height)
 	mustWriteForHash(w, bh.PreviousBlockId)
+	mustWriteForHash(w, bh.Seed)
 	mustWriteForHash(w, bh.TimestampMs)
 	mustWriteForHash(w, bh.TransactionsRoot)
 	mustWriteForHash(w, bh.AssetsRoot)
@@ -19,11 +20,12 @@ func (bh *BlockHeader) writeForHash(w io.Writer) {
 
 // NewBlockHeader creates a new BlockHeader and populates
 // its body.
-func NewBlockHeader(version, height uint64, previousBlockID *Hash, timestampMS uint64, transactionsRoot, assetsRoot *Hash, nonce, bits uint64) *BlockHeader {
+func NewBlockHeader(version, height uint64, previousBlockID, seed *Hash, timestampMS uint64, transactionsRoot, assetsRoot *Hash, nonce, bits uint64) *BlockHeader {
 	return &BlockHeader{
 		Version:          version,
 		Height:           height,
 		PreviousBlockId:  previousBlockID,
+		Seed:             seed,
 		TimestampMs:      timestampMS,
 		TransactionsRoot: transactionsRoot,
 		AssetsRoot:       assetsRoot,

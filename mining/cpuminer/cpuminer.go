@@ -62,7 +62,7 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 
 		header.Nonce = i
 		headerHash := header.Hash()
-		hash := magic(header, nil, []*bc.Hash{&headerHash})
+		hash := magicTwo(&header.Seed, &headerHash)
 
 		if consensus.CheckProofOfWork(hash, header.Bits) {
 			return true
@@ -72,9 +72,8 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 }
 
 // This func will become the AI mining algorithm
-func magic(header *legacy.BlockHeader, preSeed *bc.Hash, preBlockHashs []*bc.Hash) *bc.Hash {
-	hash := header.Hash()
-	return &hash
+func magicTwo(seed, blockHash *bc.Hash) *bc.Hash {
+	return blockHash
 }
 
 // generateBlocks is a worker that is controlled by the miningWorkerController.

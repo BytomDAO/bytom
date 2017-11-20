@@ -514,7 +514,7 @@ func TestCoinbase(t *testing.T) {
 }
 
 func TestBlockHeaderValid(t *testing.T) {
-	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
+	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
 	baseBytes, _ := proto.Marshal(base)
 
 	var bh bc.BlockHeader
