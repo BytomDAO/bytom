@@ -11,6 +11,14 @@ import (
 	"github.com/bytom/encoding/json"
 )
 
+type Ins struct {
+	RootXPubs   []chainkd.XPub         `json:"root_xpubs"`
+	Quorum      int                    `json:"quorum"`
+	Alias       string                 `json:"alias"`
+	Tags        map[string]interface{} `json:"tags"`
+	ClientToken string                 `json:"client_token"`
+}
+
 var createAccountCmd = &cobra.Command{
 	Use:   "create-account",
 	Short: "Create an account",
@@ -29,14 +37,6 @@ var createAccountCmd = &cobra.Command{
 		xpub := xprv.XPub()
 		jww.FEEDBACK.Printf("xprv: %v\n", xprv)
 		jww.FEEDBACK.Printf("xpub: %v\n", xpub)
-
-		type Ins struct {
-			RootXPubs   []chainkd.XPub `json:"root_xpubs"`
-			Quorum      int
-			Alias       string
-			Tags        map[string]interface{}
-			ClientToken string `json:"client_token"`
-		}
 
 		var ins Ins
 		ins.RootXPubs = []chainkd.XPub{xpub}
@@ -94,6 +94,21 @@ var bindAccountCmd = &cobra.Command{
 	},
 }
 
+type requestQuery struct {
+	Filter       string        `json:"filter,omitempty"`
+	FilterParams []interface{} `json:"filter_params,omitempty"`
+	SumBy        []string      `json:"sum_by,omitempty"`
+	PageSize     int           `json:"page_size"`
+	AscLongPoll  bool          `json:"ascending_with_long_poll,omitempty"`
+	Timeout      json.Duration `json:"timeout"`
+	After        string        `json:"after"`
+	StartTimeMS  uint64        `json:"start_time,omitempty"`
+	EndTimeMS    uint64        `json:"end_time,omitempty"`
+	TimestampMS  uint64        `json:"timestamp,omitempty"`
+	Type         string        `json:"type"`
+	Aliases      []string      `json:"aliases,omitempty"`
+}
+
 var listAccountsCmd = &cobra.Command{
 	Use:   "list-accounts",
 	Short: "List the existing accounts",
@@ -101,21 +116,6 @@ var listAccountsCmd = &cobra.Command{
 		if len(args) != 0 {
 			jww.ERROR.Print("list-accounts takes no args")
 			return
-		}
-
-		type requestQuery struct {
-			Filter       string        `json:"filter,omitempty"`
-			FilterParams []interface{} `json:"filter_params,omitempty"`
-			SumBy        []string      `json:"sum_by,omitempty"`
-			PageSize     int           `json:"page_size"`
-			AscLongPoll  bool          `json:"ascending_with_long_poll,omitempty"`
-			Timeout      json.Duration `json:"timeout"`
-			After        string        `json:"after"`
-			StartTimeMS  uint64        `json:"start_time,omitempty"`
-			EndTimeMS    uint64        `json:"end_time,omitempty"`
-			TimestampMS  uint64        `json:"timestamp,omitempty"`
-			Type         string        `json:"type"`
-			Aliases      []string      `json:"aliases,omitempty"`
 		}
 
 		var in requestQuery

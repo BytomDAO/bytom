@@ -8,10 +8,9 @@ import (
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/encoding/json"
 )
 
-type Ins struct {
+type AssetIns struct {
 	RootXPubs   []chainkd.XPub `json:"root_xpubs"`
 	Quorum      int
 	Alias       string
@@ -41,7 +40,7 @@ var createAssetCmd = &cobra.Command{
 		xPub, _ := xpub.MarshalText()
 		jww.FEEDBACK.Printf("xpub: %v\n", xPub)
 
-		var ins Ins
+		var ins AssetIns
 		ins.RootXPubs = []chainkd.XPub{xpub}
 		ins.Quorum = 1
 		ins.Alias = args[0]
@@ -52,7 +51,7 @@ var createAssetCmd = &cobra.Command{
 		assets := make([]query.AnnotatedAsset, 1)
 
 		client := mustRPCClient()
-		client.Call(context.Background(), "/create-asset", &[]Ins{ins}, &assets)
+		client.Call(context.Background(), "/create-asset", &[]AssetIns{ins}, &assets)
 
 		jww.FEEDBACK.Printf("responses: %v\n", assets)
 		jww.FEEDBACK.Printf("asset id: %v\n", assets[0].ID.String())
@@ -74,7 +73,7 @@ var bindAssetCmd = &cobra.Command{
 		}
 		jww.FEEDBACK.Printf("xpub: %v\n", xpub)
 
-		var ins Ins
+		var ins AssetIns
 		ins.RootXPubs = []chainkd.XPub{xpub}
 		ins.Quorum = 1
 		ins.Alias = args[0]
@@ -85,7 +84,7 @@ var bindAssetCmd = &cobra.Command{
 		assets := make([]query.AnnotatedAsset, 1)
 
 		client := mustRPCClient()
-		client.Call(context.Background(), "/bind-asset", &[]Ins{ins}, &assets)
+		client.Call(context.Background(), "/bind-asset", &[]AssetIns{ins}, &assets)
 
 		jww.FEEDBACK.Printf("responses: %v\n", assets)
 		jww.FEEDBACK.Printf("asset id: %v\n", assets[0].ID.String())
@@ -101,20 +100,6 @@ var listAssetsCmd = &cobra.Command{
 			return
 		}
 
-		type requestQuery struct {
-			Filter       string        `json:"filter,omitempty"`
-			FilterParams []interface{} `json:"filter_params,omitempty"`
-			SumBy        []string      `json:"sum_by,omitempty"`
-			PageSize     int           `json:"page_size"`
-			AscLongPoll  bool          `json:"ascending_with_long_poll,omitempty"`
-			Timeout      json.Duration `json:"timeout"`
-			After        string        `json:"after"`
-			StartTimeMS  uint64        `json:"start_time,omitempty"`
-			EndTimeMS    uint64        `json:"end_time,omitempty"`
-			TimestampMS  uint64        `json:"timestamp,omitempty"`
-			Type         string        `json:"type"`
-			Aliases      []string      `json:"aliases,omitempty"`
-		}
 		var in requestQuery
 
 		responses := make([]interface{}, 0)
