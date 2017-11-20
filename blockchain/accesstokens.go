@@ -3,6 +3,8 @@ package blockchain
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 
 	"github.com/bytom/errors"
 )
@@ -23,7 +25,13 @@ func (a *BlockchainReactor) listAccessTokens(ctx context.Context) interface{} {
 	if err != nil {
 		return err.Error()
 	}
-	return tokens
+
+	var result string
+	for i, v := range tokens {
+		value, _ := json.Marshal(v)
+		result += fmt.Sprintf("%d %v\n", i, string(value))
+	}
+	return result
 }
 
 func (a *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct{ ID, Token string }) interface{} {
@@ -31,7 +39,7 @@ func (a *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct{ ID,
 	if err := a.accessTokens.Delete(ctx, x.ID); err != nil {
 		return err.Error()
 	}
-	return "SUCCESS!"
+	return "success!"
 }
 
 func (a *BlockchainReactor) checkAccessToken(ctx context.Context, x struct{ ID, Secret string }) interface{} {
