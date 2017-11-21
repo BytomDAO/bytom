@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -52,11 +53,6 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	return
 }
 
-// This func will become the seed generate algorithm
-func magicOne(preSeed *bc.Hash, blockHashs []*bc.Hash) *bc.Hash {
-	return preSeed
-}
-
 // NewBlockTemplate returns a new block template that is ready to be solved
 func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (*legacy.Block, error) {
 	// Extend the most recently known best block.
@@ -66,7 +62,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	preBcBlock := legacy.MapBlock(preBlock)
 	nextBlockHeight := preBlock.BlockHeader.Height + 1
-	nextBlockSeed := magicOne(preBcBlock.Seed, []*bc.Hash{&preBcBlock.ID})
+	nextBlockSeed := algorithm.CreateSeed(preBcBlock.Seed, []*bc.Hash{&preBcBlock.ID})
 	txDescs := txPool.GetTransactions()
 	txEntries := make([]*bc.Tx, 0, len(txDescs))
 	blockWeight := uint64(0)

@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/testutil"
 
@@ -440,6 +441,7 @@ func TestValidateBlock(t *testing.T) {
 		},
 	}
 
+	seedCaches := seed.NewSeedCaches()
 	for _, c := range cases {
 		txRoot, err := bc.MerkleRoot(c.block.Transactions)
 		if err != nil {
@@ -447,7 +449,7 @@ func TestValidateBlock(t *testing.T) {
 			continue
 		}
 		c.block.TransactionsRoot = &txRoot
-		err = ValidateBlock(c.block, nil)
+		err = ValidateBlock(c.block, nil, seedCaches)
 
 		if rootErr(err) != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)

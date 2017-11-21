@@ -5,6 +5,7 @@
 package cpuminer
 
 import (
+	"blockchain/consensus/algorithm"
 	"sync"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
 
@@ -48,6 +48,8 @@ type CPUMiner struct {
 // target difficulty.
 func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
+	seedCaches := m.chain.SeedCaches()
+	seedCache := seedCaches.Get(header.Seed)
 
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
@@ -62,18 +64,13 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 
 		header.Nonce = i
 		headerHash := header.Hash()
-		hash := magicTwo(&header.Seed, &headerHash)
+		hash := algorithm.AIHash(header.Height, &headerHash, seedCache)
 
 		if consensus.CheckProofOfWork(hash, header.Bits) {
 			return true
 		}
 	}
 	return false
-}
-
-// This func will become the AI mining algorithm
-func magicTwo(seed, blockHash *bc.Hash) *bc.Hash {
-	return blockHash
 }
 
 // generateBlocks is a worker that is controlled by the miningWorkerController.
