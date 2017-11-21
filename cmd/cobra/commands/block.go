@@ -16,9 +16,9 @@ var (
 	coreURL = env.String("BYTOM_URL", "http://localhost:1999")
 )
 
-var getBestBlockHashCmd = &cobra.Command{
-	Use:   "get-best-block-hash",
-	Short: "Get the most recent block hash",
+var blockHashCmd = &cobra.Command{
+	Use:   "block-hash",
+	Short: "Get the hash of most recent block",
 	Run: func(cmd *cobra.Command, args []string) {
 		var response interface{}
 		client := mustRPCClient()
