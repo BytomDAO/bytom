@@ -32,14 +32,16 @@ GenesisCoinbaseTx := &legacy.Tx{
 		SerializedSize: 60,
 		Inputs: []*legacy.TxInput{},
 		Outputs:[]*legacy.TxOutput{
-			AssetVersion: 1,
-			OutputCommitment: legacy.OutputCommitment{
-				AssetAmount: bc.AssetAmount{
-					AssetId: &consensus.BTMAssetID,
-					Amount:  1470000000000000000,
+			&legacy.TxOutput{
+				AssetVersion: 1,
+				OutputCommitment: legacy.OutputCommitment{
+					AssetAmount: bc.AssetAmount{
+						AssetId: consensus.BTMAssetID,
+						Amount:  1470000000000000000,
+					},
+					VMVersion:      1,
+					ControlProgram: []byte{81},
 				},
-				VMVersion:      1,
-				ControlProgram: []byte{81},
 			},
 		},
 		MinTime: 0,
