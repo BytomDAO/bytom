@@ -113,6 +113,12 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(deleteAccessTokenCmd)
 	BytomcliCmd.AddCommand(checkAccessTokenCmd)
 
+	BytomcliCmd.AddCommand(createTransactionFeedCmd)
+	BytomcliCmd.AddCommand(listTransactionFeedsCmd)
+	BytomcliCmd.AddCommand(deleteTransactionFeedCmd)
+	BytomcliCmd.AddCommand(getTransactionFeedCmd)
+	BytomcliCmd.AddCommand(updateTransactionFeedCmd)
+
 	BytomcliCmd.AddCommand(versionCmd)
 }
 
