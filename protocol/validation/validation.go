@@ -516,7 +516,10 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 	if err != nil {
 		return err
 	}
-	checkHash := algorithm.AIHash(b.Height, &b.ID, seedCache)
+	checkHash, err := algorithm.AIHash(b.Height, &b.ID, seedCache)
+	if err != nil {
+		return err
+	}
 	if !consensus.CheckProofOfWork(checkHash, b.BlockHeader.Bits) {
 		return errWorkProof
 	}
@@ -586,7 +589,7 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 	if b.TimestampMs <= prev.TimestampMs {
 		return errors.WithDetailf(errMisorderedBlockTime, "previous block time %d, current block time %d", prev.TimestampMs, b.TimestampMs)
 	}
-	if b.Seed != algorithm.CreateSeed(prev.Seed, []*bc.Hash{&prev.ID}) {
+	if b.Seed != algorithm.CreateSeed(b.Height, prev.Seed, []*bc.Hash{&prev.ID}) {
 		return errors.New("wrong block seed")
 	}
 	return nil
