@@ -172,6 +172,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/net-syncing", jsonHandler(bcr.isNetSyncing))
 	m.Handle("/peer-count", jsonHandler(bcr.peerCount))
 	m.Handle("/get-block-by-height", jsonHandler(bcr.getBlockByHeight))
+	m.Handle("/get-block-transactions-count-by-height", jsonHandler(bcr.getBlockTransactionsCountByHeight))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -510,4 +511,13 @@ func (bcr *BlockchainReactor) peerCount() int {
 
 func (bcr *BlockchainReactor) isNetSyncing() bool {
 	return bcr.blockKeeper.IsCaughtUp()
+}
+
+func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) (int, error) {
+	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
+	if err != nil {
+		log.WithField("error", err).Error("Fail to get block by hash")
+		return -1, err
+	}
+	return len(legacyBlock.Transactions), nil
 }

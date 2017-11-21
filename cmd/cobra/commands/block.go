@@ -94,3 +94,24 @@ var getBlockByHeightCmd = &cobra.Command{
 		jww.FEEDBACK.Printf("%v\n", response)
 	},
 }
+
+var getBlockTransactionsCountByHeightCmd = &cobra.Command{
+	Use:   "get-block-transactions-count-by-height",
+	Short: "Get the transactions count of a block matching the given height",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) != 1 {
+			jww.ERROR.Println("get-block-header-by-height args not valid\nUsage: get-block-transactions-count-by-height [height]")
+			return
+		}
+
+		ui64, err := strconv.ParseUint(args[0], 10, 64)
+		if err != nil {
+			jww.ERROR.Printf("Invalid height value")
+			return
+		}
+		var response interface{}
+		client := mustRPCClient()
+		client.Call(context.Background(), "/get-block-transactions-count-by-height", ui64, &response)
+		jww.FEEDBACK.Printf("transactions count: %v\n", response)
+	},
+}
