@@ -27,6 +27,17 @@ var getBestBlockHashCmd = &cobra.Command{
 	},
 }
 
+var blockHeightCmd = &cobra.Command{
+	Use:   "block-height",
+	Short: "Get the number of most recent block",
+	Run: func(cmd *cobra.Command, args []string) {
+		var response interface{}
+		client := mustRPCClient()
+		client.Call(context.Background(), "/block-height", nil, &response)
+		jww.FEEDBACK.Printf("block height: %v\n", response)
+	},
+}
+
 var getBlockByHashCmd = &cobra.Command{
 	Use:   "get-block-by-hash",
 	Short: "Get a whole block matching the given hash",

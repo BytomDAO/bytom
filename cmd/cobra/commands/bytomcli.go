@@ -93,6 +93,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(bindAssetCmd)
 	BytomcliCmd.AddCommand(listAssetsCmd)
 
+	BytomcliCmd.AddCommand(blockHeightCmd)
 	BytomcliCmd.AddCommand(getBestBlockHashCmd)
 	BytomcliCmd.AddCommand(getBlockByHashCmd)
 	BytomcliCmd.AddCommand(getBlockHeaderByHashCmd)
