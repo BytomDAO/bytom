@@ -3,6 +3,7 @@ package asset
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/golang/groupcache/lru"
@@ -127,13 +128,13 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		asset.Alias = &alias
 	}
 
-	asset_id := []byte(asset.AssetID.String())
+	assetID := []byte(asset.AssetID.String())
 	ass, err := json.Marshal(asset)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal asset")
 	}
 	if len(ass) > 0 {
-		reg.db.Set(asset_id, json.RawMessage(ass))
+		reg.db.Set(assetID, json.RawMessage(ass))
 	}
 
 	err = reg.indexAnnotatedAsset(ctx, asset)
@@ -201,13 +202,12 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 
 	bytes := reg.db.Get([]byte(id.String()))
 	if bytes == nil {
-		return nil, errors.New("no exit this asset.")
+		return nil, errors.New("no exit this asset")
 	}
 	var asset Asset
-	err := json.Unmarshal(bytes, &asset)
 
-	if err != nil {
-		return nil, errors.New("this asset can't be unmarshal.")
+	if err := json.Unmarshal(bytes, &asset); err != nil {
+		return nil, fmt.Errorf("err:%s,asset signer id:%s", err, id.String())
 	}
 
 	reg.cacheMu.Lock()
@@ -247,11 +247,12 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 func (reg *Registry) QueryAll(ctx context.Context) (interface{}, error) {
 	ret := make([]interface{}, 0)
 
-	iter := reg.db.Iterator()
-	for iter.Next() {
-		value := string(iter.Value())
+	assetIter := reg.db.Iterator()
+	defer assetIter.Release()
+
+	for assetIter.Next() {
+		value := string(assetIter.Value())
 		ret = append(ret, value)
-		//log.Printf(ctx,"%s\t", value)
 	}
 
 	return ret, nil

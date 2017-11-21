@@ -81,6 +81,7 @@ var commands = map[string]*command{
 	"create-access-token":      {createAccessToken},
 	"list-access-token":        {listAccessTokens},
 	"delete-access-token":      {deleteAccessToken},
+	"check-access-token":       {checkAccessToken},
 	"create-key":               {createKey},
 	"list-keys":                {listKeys},
 	"delete-key":               {deleteKey},
@@ -591,22 +592,24 @@ func submitSpendTransaction(client *rpc.Client, args []string) {
 		fmt.Printf("xprv:%v\n", xprvAccount1)
 	} else {
 		fmt.Printf("xprv unmarshal error:%v\n", xprvAccount1)
+		os.Exit(1)
 	}
 	// Build Transaction-Spend_account
 	fmt.Printf("To build transaction:\n")
 	buildReqFmt := `
 		{"actions": [
+		    {"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":20000000, "account_id": "%s"},
 			{"type": "spend_account", "asset_id": "%s", "amount": %s, "account_id": "%s"},
-			{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":20000000, "account_id": "%s"},
 			{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
 	]}`
 
-	buildReqStr := fmt.Sprintf(buildReqFmt, args[2], args[4], args[0], args[0], args[2], args[4], args[1])
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[0], args[2], args[4], args[0], args[2], args[4], args[1])
 
 	var buildReq blockchain.BuildRequest
 	err = stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	tpl := make([]txbuilder.Template, 1)
@@ -620,12 +623,12 @@ func submitSpendTransaction(client *rpc.Client, args []string) {
 	})
 	if err != nil {
 		fmt.Printf("sign-transaction error. err:%v\n", err)
-		os.Exit(0)
+		os.Exit(1)
 	}
 
 	fmt.Printf("sign tpl:%v\n", tpl[0])
-	fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
-	fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
+	//fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
+	//fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
 
 	// submit-transaction-Spend_account
 	var submitResponse interface{}
@@ -760,11 +763,11 @@ func listAccounts(client *rpc.Client, args []string) {
 	responses := make([]interface{}, 0)
 
 	client.Call(context.Background(), "/list-accounts", in, &responses)
-	// if len(responses) > 0 {
-	// 	for i, item := range responses {
-	// 		fmt.Println(i, "-----", item)
-	// 	}
-	// }
+	if len(responses) > 0 {
+		for i, item := range responses {
+			fmt.Println(i, "-----", item)
+		}
+	}
 }
 
 func listAssets(client *rpc.Client, args []string) {
@@ -913,56 +916,61 @@ func listUnspentOutputs(client *rpc.Client, args []string) {
 }
 
 func createAccessToken(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error:createAccessToken not use args")
+	if len(args) != 1 {
+		fatalln("error:createAccessToken use args id")
 	}
 	type Token struct {
-		ID      string    `json:"id"`
-		Token   string    `json:"token,omitempty"`
-		Type    string    `json:"type,omitempty"` // deprecated in 1.2
-		Created time.Time `json:"created_at"`
-		sortID  string
+		ID   string `json:"id"`
+		Type string `json:"type"`
 	}
 	var token Token
-	token.ID = "Alice"
-	token.Token = "token"
+	token.ID = args[0]
 
-	client.Call(context.Background(), "/create-access-token", &[]Token{token}, nil)
+	var response interface{}
+
+	client.Call(context.Background(), "/create-access-token", &token, &response)
+	fmt.Println(response)
 }
 
 func listAccessTokens(client *rpc.Client, args []string) {
 	if len(args) != 0 {
 		fatalln("error:listAccessTokens not use args")
 	}
-	type Token struct {
-		ID      string    `json:"id"`
-		Token   string    `json:"token,omitempty"`
-		Type    string    `json:"type,omitempty"` // deprecated in 1.2
-		Created time.Time `json:"created_at"`
-		sortID  string
-	}
-	var token Token
-	token.ID = "Alice"
-	token.Token = "token"
-
-	client.Call(context.Background(), "/list-access-token", &[]Token{token}, nil)
+	var response interface{}
+	client.Call(context.Background(), "/list-access-token", nil, &response)
+	fmt.Println(response)
 }
+
 func deleteAccessToken(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error:deleteAccessToken not use args")
+	if len(args) != 1 {
+		fatalln("error:deleteAccessToken use args id")
 	}
 	type Token struct {
-		ID      string    `json:"id"`
-		Token   string    `json:"token,omitempty"`
-		Type    string    `json:"type,omitempty"` // deprecated in 1.2
-		Created time.Time `json:"created_at"`
-		sortID  string
+		ID     string `json:"id"`
+		Secert string `json:"secert,omitempty"`
 	}
 	var token Token
-	token.ID = "Alice"
-	token.Token = "token"
+	token.ID = args[0]
+	var response interface{}
+	client.Call(context.Background(), "/delete-access-token", &token, &response)
+	fmt.Println(response)
+}
 
-	client.Call(context.Background(), "/delete-access-token", &[]Token{token}, nil)
+func checkAccessToken(client *rpc.Client, args []string) {
+	if len(args) != 1 {
+		fatalln("error:deleteAccessToken use args token")
+	}
+	type Token struct {
+		ID     string `json:"id"`
+		Secret string `json:"secret,omitempty"`
+	}
+	var token Token
+	inputs := strings.Split(args[0], ":")
+	token.ID = inputs[0]
+	token.Secret = inputs[1]
+	var response interface{}
+	client.Call(context.Background(), "/check-access-token", &token, &response)
+	fmt.Println(response)
 }
 
 func createKey(client *rpc.Client, args []string) {
@@ -1080,7 +1088,7 @@ func signTransactions(client *rpc.Client, args []string) {
 	fmt.Printf("tpl:%v, err:%v\n", tpl, err)
 	in.Txs = []*txbuilder.Template{&tpl}
 
-	var response []interface{} = make([]interface{}, 1)
+	var response = make([]interface{}, 1)
 	client.Call(context.Background(), "/sign-transactions", &in, &response)
 	fmt.Printf("sign response:%v\n", response)
 }

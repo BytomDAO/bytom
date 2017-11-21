@@ -132,7 +132,7 @@ func SpendTest(client *rpc.Client, args []string) {
 	//alice <btm:8888888888,gold:100>
 
 	fmt.Println("===========================wait to buid accountutxos.db===============================================")
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 8)
 
 	// Build Transaction2-Spend_account
 	fmt.Printf("To build transaction2:\n")
@@ -181,7 +181,7 @@ func SpendTest(client *rpc.Client, args []string) {
 	//fee 10000000-5000000
 
 	fmt.Println("===========================wait to buid accountutxos.db===============================================")
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 8)
 
 	// Build Transaction3-Spend_account_utxo
 	fmt.Printf("To build transaction3:\n")
