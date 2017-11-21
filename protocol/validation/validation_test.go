@@ -449,9 +449,8 @@ func TestValidateBlock(t *testing.T) {
 			continue
 		}
 		c.block.TransactionsRoot = &txRoot
-		err = ValidateBlock(c.block, nil, seedCaches)
 
-		if rootErr(err) != c.err {
+		if err = ValidateBlock(c.block, nil, seedCaches); rootErr(err) != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)
 		}
 	}

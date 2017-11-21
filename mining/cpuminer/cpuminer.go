@@ -5,7 +5,6 @@
 package cpuminer
 
 import (
-	"blockchain/consensus/algorithm"
 	"sync"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
@@ -49,7 +49,11 @@ type CPUMiner struct {
 func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
 	seedCaches := m.chain.SeedCaches()
-	seedCache := seedCaches.Get(header.Seed)
+	seedCache, err := seedCaches.Get(&header.Seed)
+	if err != nil {
+		log.Errorf("Mining: failed on get seedCache: %v", err)
+		return false
+	}
 
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
@@ -64,9 +68,13 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 
 		header.Nonce = i
 		headerHash := header.Hash()
-		hash := algorithm.AIHash(header.Height, &headerHash, seedCache)
+		proofHash, err := algorithm.AIHash(header.Height, &headerHash, seedCache)
+		if err != nil {
+			log.Errorf("Mining: failed on AIHash: %v", err)
+			return false
+		}
 
-		if consensus.CheckProofOfWork(hash, header.Bits) {
+		if consensus.CheckProofOfWork(proofHash, header.Bits) {
 			return true
 		}
 	}

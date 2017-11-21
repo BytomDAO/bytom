@@ -516,11 +516,11 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 	if err != nil {
 		return err
 	}
-	checkHash, err := algorithm.AIHash(b.Height, &b.ID, seedCache)
+	proofHash, err := algorithm.AIHash(b.Height, &b.ID, seedCache)
 	if err != nil {
 		return err
 	}
-	if !consensus.CheckProofOfWork(checkHash, b.BlockHeader.Bits) {
+	if !consensus.CheckProofOfWork(proofHash, b.BlockHeader.Bits) {
 		return errWorkProof
 	}
 
