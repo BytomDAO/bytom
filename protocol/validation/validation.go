@@ -15,13 +15,9 @@ import (
 const (
 	defaultGasLimit = int64(80000)
 	muxGasCost      = int64(10)
-	gasRate         = int64(1000)
+	// GasRate indicates the current gas rate
+	GasRate = int64(1000)
 )
-
-// GetGasRate returns current gas rate.
-func GetGasRate() int64 {
-	return gasRate
-}
 
 type gasState struct {
 	gasLeft  int64
@@ -35,7 +31,7 @@ func (g *gasState) setGas(BTMValue int64) error {
 	}
 	g.BTMValue = BTMValue
 
-	if gasAmount, ok := checked.DivInt64(BTMValue, gasRate); ok {
+	if gasAmount, ok := checked.DivInt64(BTMValue, GasRate); ok {
 		if gasAmount == 0 {
 			g.gasLeft = muxGasCost
 		} else if gasAmount < defaultGasLimit {

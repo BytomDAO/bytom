@@ -535,5 +535,5 @@ func (bcr *BlockchainReactor) isMining() bool {
 }
 
 func (bcr *BlockchainReactor) gasRate() int64 {
-	return validation.GetGasRate()
+	return validation.GasRate
 }
