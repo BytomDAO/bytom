@@ -589,7 +589,7 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 	if b.TimestampMs <= prev.TimestampMs {
 		return errors.WithDetailf(errMisorderedBlockTime, "previous block time %d, current block time %d", prev.TimestampMs, b.TimestampMs)
 	}
-	if b.Seed != algorithm.CreateSeed(b.Height, prev.Seed, []*bc.Hash{&prev.ID}) {
+	if *b.Seed != *algorithm.CreateSeed(b.Height, prev.Seed, []*bc.Hash{&prev.ID}) {
 		return errors.New("wrong block seed")
 	}
 	return nil
