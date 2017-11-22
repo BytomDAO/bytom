@@ -31,7 +31,7 @@ func TestNewInitBlock(t *testing.T) {
 	}
 
 	var seed [32]byte
-	sha3pool.Sum256(seed[:], []byte("0"))
+	sha3pool.Sum256(seed[:], make([]byte, 32))
 
 	b := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
