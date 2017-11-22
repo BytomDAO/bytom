@@ -12,9 +12,9 @@ import (
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
 
@@ -48,6 +48,12 @@ type CPUMiner struct {
 // target difficulty.
 func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
+	seedCaches := m.chain.SeedCaches()
+	seedCache, err := seedCaches.Get(&header.Seed)
+	if err != nil {
+		log.Errorf("Mining: failed on get seedCache: %v", err)
+		return false
+	}
 
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
@@ -62,19 +68,17 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 
 		header.Nonce = i
 		headerHash := header.Hash()
-		hash := magic(header, nil, []*bc.Hash{&headerHash})
+		proofHash, err := algorithm.AIHash(header.Height, &headerHash, seedCache)
+		if err != nil {
+			log.Errorf("Mining: failed on AIHash: %v", err)
+			return false
+		}
 
-		if consensus.CheckProofOfWork(hash, header.Bits) {
+		if consensus.CheckProofOfWork(proofHash, header.Bits) {
 			return true
 		}
 	}
 	return false
-}
-
-// This func will become the AI mining algorithm
-func magic(header *legacy.BlockHeader, preSeed *bc.Hash, preBlockHashs []*bc.Hash) *bc.Hash {
-	hash := header.Hash()
-	return &hash
 }
 
 // generateBlocks is a worker that is controlled by the miningWorkerController.

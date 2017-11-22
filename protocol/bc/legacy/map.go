@@ -163,11 +163,11 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 	if tx.IsCoinbase() {
 		cb := bc.NewCoinbase()
-		cbId := addEntry(cb)
+		cbID := addEntry(cb)
 
 		out := tx.Outputs[0]
 		muxSources = []*bc.ValueSource{{
-			Ref:   &cbId,
+			Ref:   &cbID,
 			Value: &out.AssetAmount,
 		}}
 	}
@@ -232,11 +232,12 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 }
 
 func mapBlockHeader(old *BlockHeader) (bhID bc.Hash, bh *bc.BlockHeader) {
-	bh = bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.TimestampMS, &old.TransactionsMerkleRoot, &old.AssetsMerkleRoot, old.Nonce, old.Bits)
+	bh = bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, &old.Seed, old.TimestampMS, &old.TransactionsMerkleRoot, &old.AssetsMerkleRoot, old.Nonce, old.Bits)
 	bhID = bc.EntryID(bh)
 	return
 }
 
+// MapBlock converts a legacy block to bc block
 func MapBlock(old *Block) *bc.Block {
 	if old == nil {
 		return nil // if old is nil, so should new be
