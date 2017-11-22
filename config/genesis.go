@@ -1,9 +1,12 @@
 package config
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/consensus"
+	"github.com/bytom/protocol/state"
 )
 
 /*
@@ -26,8 +29,7 @@ initial_block_hex := (
 func GennerateGenesisBlock() *legacy.Block {
 //want_initial_block_hex := "0301010000000000000000000000000000000000000000000000000000000000000000cecccaebf42b406b03545ed2b38a578e5e6b0796d4ebdd8a6dd72210873fcc026c7319de578ffc492159980684155da19e87de0d1b37b35c1a1123770ec1dcc710aabe77607cced7bb1993fcb680808080801e0107010700cecccaebf42b000001012cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8080ccdee2a69fb314010151000000"
 
-GenesisCoinbaseTx := &legacy.Tx{
-	TxData: legacy.TxData{
+	txData := legacy.TxData{
 		Version: 1,
 		SerializedSize: 60,
 		Inputs: []*legacy.TxInput{},
@@ -46,19 +48,41 @@ GenesisCoinbaseTx := &legacy.Tx{
 		},
 		MinTime: 0,
 		MaxTime: 1508832880206,
-	},
-}
+	}
 
+	genesisCoinbaseTx := legacy.NewTx(txData)
 
-GenesisBlock := &legacy.Block{
-	BlockHeader:  legacy.BlockHeader{
-		Version: 1,
-		Height: 1,
-		TimestampMS: 1508832880206,
-		Nonce: 417239,
-		Bits: 2161727821138738707,
-	},
-	Transactions: []*legacy.Tx{GenesisCoinbaseTx},
-}
-return GenesisBlock
+    merkleRoot, err := bc.MerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
+	if err != nil {
+		log.Errorf("Fatal create merkelRoot")
+	}
+	snap := state.Empty()
+	if err := snap.ApplyTx(genesisCoinbaseTx.Tx); err != nil {
+		log.Errorf("Fatal ApplyTx")
+	}
+
+	genesisBlock := &legacy.Block{
+		BlockHeader:  legacy.BlockHeader{
+			Version: 1,
+			Height: 1,
+			TimestampMS: 1508832880206,
+			BlockCommitment: legacy.BlockCommitment{
+				TransactionsMerkleRoot: merkleRoot,
+				AssetsMerkleRoot:       snap.Tree.RootHash(),
+			},
+			Bits: 2161727821138738707,
+		},
+		Transactions: []*legacy.Tx{genesisCoinbaseTx},
+	}
+	for i := uint64(0); i <= 10000000000000; i++ {
+		genesisBlock.Nonce = i
+		hash := genesisBlock.Hash()
+
+		if consensus.CheckProofOfWork(&hash, genesisBlock.Bits) {
+			break
+		}
+	}
+
+	log.Infof("genesisBlock:%v", genesisBlock)
+	return genesisBlock
 }
