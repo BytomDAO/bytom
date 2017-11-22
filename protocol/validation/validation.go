@@ -18,6 +18,11 @@ const (
 	gasRate         = int64(1000)
 )
 
+// GetGasRate returns current gas rate.
+func GetGasRate() int64 {
+	return gasRate
+}
+
 type gasState struct {
 	gasLeft  int64
 	gasUsed  int64
