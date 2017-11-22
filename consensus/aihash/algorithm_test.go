@@ -1,4 +1,4 @@
-package btmhash
+package aihash
 
 import (
 	//"bytes"

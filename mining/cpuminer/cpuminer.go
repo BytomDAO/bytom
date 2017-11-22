@@ -12,7 +12,7 @@ import (
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/algorithm"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"

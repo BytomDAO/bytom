@@ -1,4 +1,4 @@
-package btmhash
+package aihash
 
 import (
 	"encoding/binary"
@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/common/bitutil"
-	"github.com/bytom/consensus/btmhash/matrix"
+	"github.com/bytom/consensus/aihash/matrix"
 	// "github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 )

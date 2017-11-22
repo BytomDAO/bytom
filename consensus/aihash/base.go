@@ -1,4 +1,4 @@
-package algorithm
+package aihash
 
 import "github.com/bytom/protocol/bc"
 

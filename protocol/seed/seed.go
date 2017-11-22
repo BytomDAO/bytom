@@ -1,7 +1,7 @@
 package seed
 
 import (
-	"github.com/bytom/consensus/algorithm"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/protocol/bc"
 	"github.com/golang/groupcache/lru"
 )

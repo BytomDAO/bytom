@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/algorithm"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
