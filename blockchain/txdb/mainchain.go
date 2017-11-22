@@ -1,7 +1,7 @@
 package txdb
 
 import (
-	"fmt"
+	"bytes"
 
 	"github.com/golang/protobuf/proto"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -11,8 +11,10 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
+const mainchainPreFix = "MC:"
+
 func calcMainchainKey(hash *bc.Hash) []byte {
-	return []byte(fmt.Sprintf("MC:%v", hash.String()))
+	return []byte(mainchainPreFix + hash.String())
 }
 
 // DecodeMainchain decodes a Mainchain from bytes
@@ -53,7 +55,7 @@ func saveMainchain(db dbm.DB, mainchain map[uint64]*bc.Hash, hash *bc.Hash) erro
 func getMainchain(db dbm.DB, hash *bc.Hash) (map[uint64]*bc.Hash, error) {
 	data := db.Get(calcMainchainKey(hash))
 	if data == nil {
-		return nil, errors.New("no this Mainchain.")
+		return nil, errors.New("no this Mainchain")
 	}
 
 	mainchain, err := DecodeMainchain(data)
@@ -61,4 +63,17 @@ func getMainchain(db dbm.DB, hash *bc.Hash) (map[uint64]*bc.Hash, error) {
 		return nil, errors.Wrap(err, "decoding Mainchain")
 	}
 	return mainchain, nil
+}
+
+func cleanMainchainDB(db dbm.DB, hash *bc.Hash) {
+	keepKey := calcMainchainKey(hash)
+
+	iter := db.IteratorPrefix([]byte(mainchainPreFix))
+	defer iter.Release()
+	for iter.Next() {
+		if key := iter.Key(); !bytes.Equal(key, keepKey) {
+			db.Delete(key)
+		}
+	}
+	db.SetSync(nil, nil)
 }
