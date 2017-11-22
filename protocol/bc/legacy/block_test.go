@@ -41,6 +41,7 @@ func TestMarshalBlock(t *testing.T) {
 		"01" + // version
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
+		"0000000000000000000000000000000000000000000000000000000000000000" + // seed hash
 		"00" + // timestamp
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // tx merkle root
@@ -101,6 +102,7 @@ func TestEmptyBlock(t *testing.T) {
 		"01" + // version
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
+		"0000000000000000000000000000000000000000000000000000000000000000" + // seed hash
 		"00" + // timestamp
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
@@ -118,6 +120,7 @@ func TestEmptyBlock(t *testing.T) {
 		"01" + // version
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
+		"0000000000000000000000000000000000000000000000000000000000000000" + // seed hash
 		"00" + // timestamp
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
@@ -129,7 +132,7 @@ func TestEmptyBlock(t *testing.T) {
 		t.Errorf("empty block header bytes = %x want %x", got, want)
 	}
 
-	wantHash := mustDecodeHash("a950a33eb49913c06c0c5c0aa643bb55c5cd898f3b54e91971f07ca2123d7204")
+	wantHash := mustDecodeHash("8c85ed997cfdd22185ab28b4e4942c74646176fb293bd18bd19c973c42cec915")
 	if h := block.Hash(); h != wantHash {
 		t.Errorf("got block hash %x, want %x", h.Bytes(), wantHash.Bytes())
 	}
@@ -154,6 +157,7 @@ func TestSmallBlock(t *testing.T) {
 		"01" + // version
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
+		"0000000000000000000000000000000000000000000000000000000000000000" + // seed hash
 		"00" + // timestamp
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
