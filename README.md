@@ -59,19 +59,10 @@ $ git clone https://github.com/Bytom/bytom $GOPATH/src/github.com/bytom
 
 #### Build
 
-- Bytomd
-
 ``` bash
 $ cd $GOPATH/src/github.com/bytom
-$ make install
-$ make bytomd
-```
-
-- Bytomcli
-
-```go
-$ cd $GOPATH/src/github.com/bytom/cmd/bytomcli
-$ make bytomcli
+$ make bytomd    # build bytomd
+$ make bytomcli  # build bytomcli
 ```
 
 ## Example
