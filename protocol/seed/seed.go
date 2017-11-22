@@ -23,7 +23,7 @@ func (s *SeedCaches) Get(seed *bc.Hash) ([]uint32, error) {
 		return v.([]uint32), nil
 	}
 
-	cache, err := algorithm.CreateCache(seed)
+	cache, err := aihash.CreateCache(seed)
 	if err != nil {
 		return nil, err
 	}
