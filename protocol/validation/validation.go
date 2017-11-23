@@ -516,7 +516,7 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 	if err != nil {
 		return err
 	}
-	proofHash, err := algorithm.AIHash(b.Height, &b.ID, seedCache)
+	proofHash, err := aihash.AIHash(b.Height, &b.ID, seedCache)
 	if err != nil {
 		return err
 	}
