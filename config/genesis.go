@@ -9,29 +9,10 @@ import (
 	"github.com/bytom/protocol/state"
 )
 
-/*
-initial_block_hex := (
-{
-	{1 // version
-	 1 // block height
-	 {0 0 0 0} // prev block hash
-	 1508832880206 // timestamp
-	{
-			{7711099753227061847 10258754681536048093 9974865291001675724 174641040502263804} //  tx merkle root
-			{5269591548479411549 11645895074199058355 6636635844902830556 14344152548198350030} // asset merkle root
-	}
-	417239 // nonce
-	2161727821138738707 // bits
-	} // block header
-}
-)*/
-
-func GennerateGenesisBlock() *legacy.Block {
-//want_initial_block_hex := "0301010000000000000000000000000000000000000000000000000000000000000000cecccaebf42b406b03545ed2b38a578e5e6b0796d4ebdd8a6dd72210873fcc026c7319de578ffc492159980684155da19e87de0d1b37b35c1a1123770ec1dcc710aabe77607cced7bb1993fcb680808080801e0107010700cecccaebf42b000001012cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8080ccdee2a69fb314010151000000"
-
+func GenerateGenesisTx() *legacy.Tx {
 	txData := legacy.TxData{
 		Version: 1,
-		SerializedSize: 60,
+		SerializedSize: 63,
 		Inputs: []*legacy.TxInput{},
 		Outputs:[]*legacy.TxOutput{
 			&legacy.TxOutput{
@@ -47,10 +28,14 @@ func GennerateGenesisBlock() *legacy.Block {
 			},
 		},
 		MinTime: 0,
-		MaxTime: 1508832880206,
+		MaxTime: 1511318565142,
 	}
 
-	genesisCoinbaseTx := legacy.NewTx(txData)
+	return legacy.NewTx(txData)
+}
+
+func GenerateGenesisBlock() *legacy.Block {
+	genesisCoinbaseTx := GenerateGenesisTx()
 
     merkleRoot, err := bc.MerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
 	if err != nil {
@@ -65,7 +50,8 @@ func GennerateGenesisBlock() *legacy.Block {
 		BlockHeader:  legacy.BlockHeader{
 			Version: 1,
 			Height: 1,
-			TimestampMS: 1508832880206,
+			Seed: bc.Hash{},
+			TimestampMS: 1511318565142,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 				AssetsMerkleRoot:       snap.Tree.RootHash(),

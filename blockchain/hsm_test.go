@@ -8,19 +8,17 @@ import (
 	"testing"
 	"time"
 
+	dbm "github.com/tendermint/tmlibs/db"
+
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/blockchain/txdb"
 	cfg "github.com/bytom/config"
-	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
-
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const dirPath = "pseudohsm/testdata/pseudo"
@@ -38,12 +36,7 @@ func TestHSM(t *testing.T) {
 	var accounts *account.Manager
 	var wallet *account.Wallet
 	var assets *asset.Registry
-
-	genesisBlock := &legacy.Block{
-		BlockHeader:  legacy.BlockHeader{},
-		Transactions: []*legacy.Tx{},
-	}
-	genesisBlock.UnmarshalText(consensus.InitBlock())
+	genesisBlock := cfg.GenerateGenesisBlock()
 	// tx pool init
 	txPool := protocol.NewTxPool()
 	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)

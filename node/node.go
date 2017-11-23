@@ -25,12 +25,10 @@ import (
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
-	//"github.com/bytom/consensus"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
-	//"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/types"
 	"github.com/bytom/version"
 )
@@ -151,20 +149,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	sw := p2p.NewSwitch(config.P2P)
 
-	/*genesisBlock := &legacy.Block{
-		BlockHeader:  legacy.BlockHeader{},
-		Transactions: []*legacy.Tx{},
-	}
-	genesisBlock.UnmarshalText(consensus.InitBlock())*/
-	genesisBlock := cfg.GennerateGenesisBlock()
-	log.Infof("genesisBlock:%v", genesisBlock)
-	log.Infof("TxData:%v", genesisBlock.Transactions[0].TxData)
-	log.Infof("Outputs:%v", genesisBlock.Transactions[0].TxData.Outputs[0])
-	log.Infof("AssetVersion:%v", genesisBlock.Transactions[0].TxData.Outputs[0].AssetVersion)
-	log.Infof("OutputCommitment:%v", genesisBlock.Transactions[0].TxData.Outputs[0].OutputCommitment)
-	log.Infof("CommitmentSuffix:%v", genesisBlock.Transactions[0].TxData.Outputs[0].CommitmentSuffix)
-	log.Infof("WitnessSuffix:%v", genesisBlock.Transactions[0].TxData.Outputs[0].WitnessSuffix)
-	log.Infof("ReferenceData:%v", genesisBlock.Transactions[0].TxData.Outputs[0].ReferenceData)
+	genesisBlock := cfg.GenerateGenesisBlock()
 
 	txPool := protocol.NewTxPool()
 	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)

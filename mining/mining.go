@@ -25,7 +25,7 @@ import (
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64) (tx *legacy.Tx, err error) {
+func CreateCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64) (tx *legacy.Tx, err error) {
 	amount += consensus.BlockSubsidy(blockHeight)
 	unlockHeight := blockHeight + consensus.CoinbasePendingBlockNumber
 
@@ -113,7 +113,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		appendTx(txDesc.Tx, txDesc.Weight, txDesc.Fee)
 	}
 
-	cbTx, err := createCoinbaseTx(accountManager, txFee, nextBlockHeight)
+	cbTx, err := CreateCoinbaseTx(accountManager, txFee, nextBlockHeight)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
 	}
