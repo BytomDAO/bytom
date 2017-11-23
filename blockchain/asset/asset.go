@@ -41,7 +41,6 @@ func NewRegistry(db dbm.DB, chain *protocol.Chain) *Registry {
 type Registry struct {
 	db               dbm.DB
 	chain            *protocol.Chain
-	indexer          Saver
 	initialBlockHash bc.Hash
 
 	idGroup    singleflight.Group
@@ -52,10 +51,6 @@ type Registry struct {
 	aliasCache *lru.Cache
 }
 
-func (reg *Registry) IndexAssets(indexer Saver) {
-	reg.indexer = indexer
-}
-
 type Asset struct {
 	AssetID          bc.AssetID
 	Alias            *string
@@ -63,24 +58,24 @@ type Asset struct {
 	IssuanceProgram  []byte
 	InitialBlockHash bc.Hash
 	*signers.Signer
-	Tags           map[string]interface{}
-	RawDefinition1 []byte
-	definition     map[string]interface{}
-	sortID         string
+	Tags              map[string]interface{}
+	RawDefinitionByte []byte
+	DefinitionMap     map[string]interface{}
+	BlockHeight       uint64
 }
 
 func (asset *Asset) Definition() (map[string]interface{}, error) {
-	if asset.definition == nil && len(asset.RawDefinition1) > 0 {
-		err := json.Unmarshal(asset.RawDefinition1, &asset.definition)
+	if asset.DefinitionMap == nil && len(asset.RawDefinitionByte) > 0 {
+		err := json.Unmarshal(asset.RawDefinitionByte, &asset.DefinitionMap)
 		if err != nil {
 			return nil, errors.Wrap(err)
 		}
 	}
-	return asset.definition, nil
+	return asset.DefinitionMap, nil
 }
 
 func (asset *Asset) RawDefinition() []byte {
-	return asset.RawDefinition1
+	return asset.RawDefinitionByte
 }
 
 func (asset *Asset) SetDefinition(def map[string]interface{}) error {
@@ -88,8 +83,8 @@ func (asset *Asset) SetDefinition(def map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	asset.definition = def
-	asset.RawDefinition1 = rawdef
+	asset.DefinitionMap = def
+	asset.RawDefinitionByte = rawdef
 	return nil
 }
 
@@ -115,14 +110,14 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 
 	defhash := bc.NewHash(sha3.Sum256(rawDefinition))
 	asset := &Asset{
-		definition:       definition,
-		RawDefinition1:   rawDefinition,
-		VMVersion:        vmver,
-		IssuanceProgram:  issuanceProgram,
-		InitialBlockHash: reg.initialBlockHash,
-		AssetID:          bc.ComputeAssetID(issuanceProgram, &reg.initialBlockHash, vmver, &defhash),
-		Signer:           assetSigner,
-		Tags:             tags,
+		DefinitionMap:     definition,
+		RawDefinitionByte: rawDefinition,
+		VMVersion:         vmver,
+		IssuanceProgram:   issuanceProgram,
+		InitialBlockHash:  reg.initialBlockHash,
+		AssetID:           bc.ComputeAssetID(issuanceProgram, &reg.initialBlockHash, vmver, &defhash),
+		Signer:            assetSigner,
+		Tags:              tags,
 	}
 	if alias != "" {
 		asset.Alias = &alias
@@ -135,11 +130,6 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 	}
 	if len(ass) > 0 {
 		reg.db.Set(assetID, json.RawMessage(ass))
-	}
-
-	err = reg.indexAnnotatedAsset(ctx, asset)
-	if err != nil {
-		return nil, errors.Wrap(err, "indexing annotated asset")
 	}
 
 	return asset, nil

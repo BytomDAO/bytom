@@ -4,15 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"sort"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/errors"
-	"github.com/bytom/net/http/httpjson"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -122,57 +118,21 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery)
 	return response
 }
 
-// listTransactions is an http handler for listing transactions matching
-// an index or an ad-hoc filter.
+// listTransactions is an http handler for listing transactions
 //
 // POST /list-transactions
-func (bcr *BlockchainReactor) listTransactions(ctx context.Context, in requestQuery) (result page, err error) {
-	var c context.CancelFunc
-	timeout := in.Timeout.Duration
-	if timeout != 0 {
-		ctx, c = context.WithTimeout(ctx, timeout)
-		defer c()
+func (bcr *BlockchainReactor) listTransactions(ctx context.Context, in requestQuery) interface{} {
+
+	response := make([]string, 0)
+
+	txIter := bcr.wallet.DB.IteratorPrefix([]byte(query.TxPreFix))
+	defer txIter.Release()
+
+	for txIter.Next() {
+		response = append(response, string(txIter.Value()))
 	}
 
-	limit := in.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize
-	}
-
-	endTimeMS := in.EndTimeMS
-	if endTimeMS == 0 {
-		endTimeMS = math.MaxInt64
-	} else if endTimeMS > math.MaxInt64 {
-		return result, errors.WithDetail(httpjson.ErrBadRequest, "end timestamp is too large")
-	}
-
-	// Either parse the provided `after` or look one up for the time range.
-	//	var after query.TxAfter
-	if in.After != "" {
-		_, err = query.DecodeTxAfter(in.After)
-		if err != nil {
-			return result, errors.Wrap(err, "decoding `after`")
-		}
-	} else {
-		/*		after, err = bcr.indexer.LookupTxAfter(ctx, in.StartTimeMS, endTimeMS)
-				if err != nil {
-					return result, err
-				}
-		*/
-	}
-
-	/*	txns, nextAfter, err := bcr.indexer.Transactions(ctx, in.Filter, in.FilterParams, after, limit, in.AscLongPoll)
-		if err != nil {
-			return result, errors.Wrap(err, "running tx query")
-		}
-	*/
-	out := in
-	//	out.After = nextAfter.String()
-	return page{
-		//		Items:    httpjson.Array(txns),
-		//		LastPage: len(txns) < limit,
-		Next: out,
-	}, nil
+	return response
 }
 
 // POST /list-unspent-outputs
@@ -183,9 +143,9 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in request
 		restring = ""
 	)
 
-	accoutUTXOs := bcr.GetAccountUTXOs()
+	accountUTXOs := bcr.GetAccountUTXOs()
 
-	for _, res := range accoutUTXOs {
+	for _, res := range accountUTXOs {
 
 		restring = fmt.Sprintf(accountUTXOFmt,
 			res.OutputID, res.AssetID, res.Amount,
