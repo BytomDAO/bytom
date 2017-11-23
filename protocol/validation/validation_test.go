@@ -37,7 +37,7 @@ func TestGasStatus(t *testing.T) {
 				BTMValue: 0,
 			},
 			output: &gasState{
-				gasLeft:  10000 / gasRate,
+				gasLeft:  10000 / GasRate,
 				gasUsed:  0,
 				BTMValue: 10000,
 			},
