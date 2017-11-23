@@ -62,7 +62,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	preBcBlock := legacy.MapBlock(preBlock)
 	nextBlockHeight := preBlock.BlockHeader.Height + 1
-	nextBlockSeed := algorithm.CreateSeed(nextBlockHeight, preBcBlock.Seed, []*bc.Hash{&preBcBlock.ID})
+	nextBlockSeed := aihash.CreateSeed(nextBlockHeight, preBcBlock.Seed, []*bc.Hash{&preBcBlock.ID})
 	txDescs := txPool.GetTransactions()
 	txEntries := make([]*bc.Tx, 0, len(txDescs))
 	blockWeight := uint64(0)

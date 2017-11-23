@@ -68,7 +68,7 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 
 		header.Nonce = i
 		headerHash := header.Hash()
-		proofHash, err := algorithm.AIHash(header.Height, &headerHash, seedCache)
+		proofHash, err := aihash.AIHash(header.Height, &headerHash, seedCache)
 		if err != nil {
 			log.Errorf("Mining: failed on AIHash: %v", err)
 			return false
