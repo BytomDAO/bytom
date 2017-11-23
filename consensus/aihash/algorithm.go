@@ -2,7 +2,7 @@ package aihash
 
 import (
 	"encoding/binary"
-	"fmt"
+	// "fmt"
 	"hash"
 	"reflect"
 	"sync/atomic"
@@ -182,8 +182,6 @@ func fillMatrixList(matList []matrix.Matrix, cache []uint32, height uint64) {
 	header.Cap *= 4
 	cacheInt8 := *(*[]int8)(unsafe.Pointer(&header))
 
-	// fmt.Println("cacheInt8 is:", cacheInt8)
-
 	for i := 0; i < matNum; i++ {
 		startIndex := (matSize*matSize*i + location[locationIndex]) % cacheLength
 		endIndex := (matSize*matSize*(i+1) + location[locationIndex]) % cacheLength
@@ -196,15 +194,6 @@ func fillMatrixList(matList []matrix.Matrix, cache []uint32, height uint64) {
 			matList[i] = matrix.New(matSize, matSize, matrixData)
 		}
 	}
-
-	// fmt.Println("Print the matrix!")
-
-	// for i := 0; i < matNum; i++ {
-	// 	matList[i].Print()
-	// }
-
-	// fmt.Println("locationIndex is:", locationIndex)
-	// fmt.Println("location[block % epochLength] is:", location[(height-1)%epochLength])
 }
 
 func mulMatrix(matList []matrix.Matrix, matIndex []byte) *matrix.Matrix {
@@ -218,21 +207,13 @@ func mulMatrix(matList []matrix.Matrix, matIndex []byte) *matrix.Matrix {
 		}
 	}
 
-	indexnum := make([]uint16, 128)
-
 	for i := 0; i < round; i++ {
 		index = uint8(matIndex[2*i]) % matNum
-		indexnum[index]++
-		fmt.Println("round is:", i, "; index is:", index)
 		ma = *matrix.Multiply(matList[index], mb)
 
 		index = uint8(matIndex[2*i+1]) % matNum
-		indexnum[index]++
-		fmt.Println("round is:", i, "; index is:", index)
 		mb = *matrix.Multiply(ma, matList[index])
 	}
-
-	// mb.Print()
 
 	return &mb
 }

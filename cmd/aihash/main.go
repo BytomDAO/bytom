@@ -5,11 +5,12 @@ import (
 	// "reflect"
 	"time"
 
+	// log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/consensus/aihash"
+	// "github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	// "github.com/bytom/protocol/bc/legacy"
 )
 
 const (
@@ -19,7 +20,8 @@ const (
 func main() {
 	start := time.Now()
 
-	header := bc.NewHash(sha3.Sum256(nil))
+	newbchash := bc.NewHash(sha3.Sum256(nil))
+	header := &newbchash
 
 	var height uint64 = 1
 
@@ -32,9 +34,20 @@ func main() {
 		preEpochBlockHash = append(preEpochBlockHash, &EmptyStringHash)
 	}
 
-	seed := aihash.CreateSeed(preSeed, preEpochBlockHash)
-	cache := aihash.CreateCache(seed)
-	result := aihash.AIHash(cache, height, &header)
+	seed := aihash.CreateSeed(height, preSeed, preEpochBlockHash)
+	// seed = nil
+	cache, err := aihash.CreateCache(seed)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// header = nil
+	result, err := aihash.AIHash(height, header, cache)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	fmt.Println("\nresult is:", (*result).Bytes())
 
@@ -42,5 +55,4 @@ func main() {
 	delta := end.Sub(start)
 	fmt.Println("\n-----------------------------------------------")
 	fmt.Printf("functions took this amount of time: %s\n", delta)
-
 }

@@ -3,10 +3,6 @@ package aihash
 import "github.com/bytom/protocol/bc"
 
 func MockCreateSeed(height uint64, preSeed *bc.Hash, preBlockHashs []*bc.Hash) *bc.Hash {
-	// if height % n != 0 {
-	// 	return preseed
-	// }
-
 	return preBlockHashs[0]
 }
 
