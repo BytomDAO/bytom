@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/protocol/state"
 )
 
+// Generate genesis transaction
 func GenerateGenesisTx() *legacy.Tx {
 	txData := legacy.TxData{
 		Version: 1,
@@ -34,6 +35,7 @@ func GenerateGenesisTx() *legacy.Tx {
 	return legacy.NewTx(txData)
 }
 
+// Generate genesis block
 func GenerateGenesisBlock() *legacy.Block {
 	genesisCoinbaseTx := GenerateGenesisTx()
 
