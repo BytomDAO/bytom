@@ -27,6 +27,7 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/validation"
 	"github.com/bytom/types"
 )
 
@@ -174,6 +175,8 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/get-block-by-height", jsonHandler(bcr.getBlockByHeight))
 	m.Handle("/get-block-transactions-count-by-height", jsonHandler(bcr.getBlockTransactionsCountByHeight))
 	m.Handle("/block-height", jsonHandler(bcr.getBlockHeight))
+	m.Handle("/is-mining", jsonHandler(bcr.isMining))
+	m.Handle("/gas-rate", jsonHandler(bcr.gasRate))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -525,4 +528,12 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) (
 
 func (bcr *BlockchainReactor) getBlockHeight() uint64 {
 	return bcr.chain.Height()
+}
+
+func (bcr *BlockchainReactor) isMining() bool {
+	return bcr.mining.IsMining()
+}
+
+func (bcr *BlockchainReactor) gasRate() int64 {
+	return validation.GasRate
 }

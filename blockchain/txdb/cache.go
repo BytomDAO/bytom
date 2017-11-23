@@ -1,7 +1,6 @@
 package txdb
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 
@@ -36,7 +35,7 @@ func (c *blockCache) lookup(hash *bc.Hash) (*legacy.Block, error) {
 	block, err := c.single.Do(hash.String(), func() (interface{}, error) {
 		b := c.fillFn(hash)
 		if b == nil {
-			return nil, errors.New(fmt.Sprintf("There are no block with given hash %s", hash.String()))
+			return nil, fmt.Errorf("There are no block with given hash %s", hash.String())
 		}
 
 		c.add(b)
