@@ -2,13 +2,13 @@ package aihash
 
 import (
 	"encoding/binary"
-	// "fmt"
+	"fmt"
 	"hash"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"unsafe"
 
-	//log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/common/bitutil"
@@ -234,6 +234,16 @@ func hashMatrix(m *matrix.Matrix) *bc.Hash {
 	}
 	newhash := bc.NewHash(arrHash)
 	return &newhash
+}
+
+func decimalByteSlice2HexString(DecimalSlice []byte) string {
+	var sa = make([]string, 0)
+	for _, v := range DecimalSlice {
+		sa = append(sa, fmt.Sprintf("%02x", v))
+	}
+	ss := strings.Join(sa, "")
+
+	return ss
 }
 
 var location = []int{
