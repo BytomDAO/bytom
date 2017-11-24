@@ -17,7 +17,7 @@ import (
 )
 
 func TestNewInitBlock(t *testing.T) {
-	coinbaseTx, err := CreateCoinbaseTx(nil, 0, 1)
+	coinbaseTx, err := createCoinbaseTx(nil, 0, 1)
 	if err != nil {
 		t.Error(err)
 	}

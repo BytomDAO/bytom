@@ -7,6 +7,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/state"
+	"github.com/bytom/crypto/sha3pool"
 )
 
 // Generate genesis transaction
@@ -38,21 +39,24 @@ func GenerateGenesisTx() *legacy.Tx {
 // Generate genesis block
 func GenerateGenesisBlock() *legacy.Block {
 	genesisCoinbaseTx := GenerateGenesisTx()
-
     merkleRoot, err := bc.MerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
 	if err != nil {
-		log.Errorf("Fatal create merkelRoot")
+		log.Panicf("Fatal create merkelRoot")
 	}
+
 	snap := state.Empty()
 	if err := snap.ApplyTx(genesisCoinbaseTx.Tx); err != nil {
-		log.Errorf("Fatal ApplyTx")
+		log.Panicf("Fatal ApplyTx")
 	}
+
+    var seed [32]byte
+	sha3pool.Sum256(seed[:], make([]byte, 32))
 
 	genesisBlock := &legacy.Block{
 		BlockHeader:  legacy.BlockHeader{
 			Version: 1,
 			Height: 1,
-			Seed: bc.Hash{},
+			Seed: bc.NewHash(seed),
 			TimestampMS: 1511318565142,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
@@ -62,6 +66,7 @@ func GenerateGenesisBlock() *legacy.Block {
 		},
 		Transactions: []*legacy.Tx{genesisCoinbaseTx},
 	}
+
 	for i := uint64(0); i <= 10000000000000; i++ {
 		genesisBlock.Nonce = i
 		hash := genesisBlock.Hash()
