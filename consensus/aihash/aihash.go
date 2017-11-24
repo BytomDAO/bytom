@@ -11,16 +11,22 @@ import (
 // CreateSeed return epoch seed, type is *bc.Hash
 func CreateSeed(height uint64, preSeed *bc.Hash, preEpochBlockHash []*bc.Hash) *bc.Hash {
 	if (height-1)%epochLength != 0 || height <= epochLength {
+		log.WithFields(log.Fields{
+			"height": height,
+			"epoch":  (height - 1) / epochLength,
+			"seed":   preSeed.String(),
+		}).Info("Do not need create new seed.")
 		return preSeed
 	}
 
-	log.Info("Start creating new seed...")
-	seed := createSeed(preSeed, preEpochBlockHash)
-	log.Info("Create seed completely.")
+	seed := bytesToPointerHash(createSeed(preSeed, preEpochBlockHash))
+	log.WithFields(log.Fields{
+		"height": height,
+		"epoch":  (height - 1) / epochLength,
+		"seed":   seed.String(),
+	}).Info("Created new seed.")
 
-	log.Info("New seed is: ", decimalByteSlice2HexString(seed))
-
-	return bytesToPointerHash(seed)
+	return seed
 }
 
 // CreateCache return cache, type is []int32
