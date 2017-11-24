@@ -6,19 +6,18 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/query"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
-
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/query"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 var walletkey = []byte("walletInfo")
 
-//WalletInfo is base valid block info to handle orphan block rollback
-type WalletInfo struct {
+//StatusInfo is base valid block info to handle orphan block rollback
+type StatusInfo struct {
 	Height uint64
 	Hash   bc.Hash
 }
@@ -29,12 +28,13 @@ type Wallet struct {
 	accounts *account.Manager
 	assets   *asset.Registry
 	Ind      *query.Indexer
-	WalletInfo
+	StatusInfo
 }
 
+//GlobalWallet for sourceReserve heightFn
 var GlobalWallet Wallet
 
-//NewWallet return a new wallet instance
+//InitWallet return a new wallet instance
 func InitWallet(walletDB db.DB, accounts *account.Manager, assets *asset.Registry) *Wallet {
 	GlobalWallet.DB = walletDB
 	GlobalWallet.accounts = accounts
@@ -58,8 +58,8 @@ func GetWalletHeight() uint64 {
 
 //GetWalletInfo return stored wallet info and nil,if error,
 //return initial wallet info and err
-func (w *Wallet) GetWalletInfo() (WalletInfo, error) {
-	var info WalletInfo
+func (w *Wallet) GetWalletInfo() (StatusInfo, error) {
+	var info StatusInfo
 	var rawWallet []byte
 
 	if rawWallet = w.DB.Get(walletkey); rawWallet == nil {
@@ -89,10 +89,9 @@ LOOP:
 			return
 		}
 
-		//todo: delete invalid transaction
-
 		//Reverse this block
 		w.accounts.ReverseAccountUTXOs(&storeBatch, block)
+		w.Ind.DeleteTransactions(w.Height, block)
 		log.WithField("Height", w.Height).Info("start rollback this block")
 
 		w.Height = block.Height - 1
@@ -130,11 +129,10 @@ LOOP:
 
 	//goto next loop
 	goto LOOP
-
 }
 
 func (w *Wallet) commitWalletInfo(batch *db.Batch) {
-	var info WalletInfo
+	var info StatusInfo
 
 	info.Height = w.Height
 	info.Hash = w.Hash

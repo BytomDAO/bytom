@@ -49,7 +49,24 @@ func (ind *Indexer) IndexTransactions(b *legacy.Block) {
 }
 
 func calcAnnotatedKey(blockHeight uint64, position uint32) []byte {
-	return []byte(fmt.Sprintf("%s%064x%032x", TxPreFix, blockHeight, position))
+	return []byte(fmt.Sprintf("%s%016x%08x", TxPreFix, blockHeight, position))
+}
+
+func calcDeletePreFix(blockHeight uint64) []byte {
+	return []byte(fmt.Sprintf("%s%016x", TxPreFix, blockHeight))
+}
+
+//DeleteTransaction delete transactions when orphan block rollback
+func (ind *Indexer) DeleteTransactions(height uint64, b *legacy.Block) {
+	txIter := ind.db.IteratorPrefix(calcDeletePreFix(height))
+	storeBatch := ind.db.NewBatch()
+	defer txIter.Release()
+
+	for txIter.Next() {
+		storeBatch.Delete(txIter.Key())
+	}
+	//commit
+	storeBatch.Write()
 }
 
 func (ind *Indexer) insertAnnotatedTxs(b *legacy.Block) error {
@@ -63,8 +80,7 @@ func (ind *Indexer) insertAnnotatedTxs(b *legacy.Block) error {
 	}
 
 	for _, annotator := range ind.annotators {
-		err := annotator(annotatedTxs)
-		if err != nil {
+		if err := annotator(annotatedTxs); err != nil {
 			return errors.Wrap(err, "adding external annotations")
 		}
 	}

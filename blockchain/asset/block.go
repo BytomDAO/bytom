@@ -71,7 +71,7 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 	return aa, nil
 }
 
-// indexAssets is run on every block and indexes all non-local assets.
+// IndexAssets is run on every block and indexes all non-local assets.
 func (reg *Registry) IndexAssets(b *legacy.Block) {
 
 	var err error
@@ -104,15 +104,15 @@ func (reg *Registry) IndexAssets(b *legacy.Block) {
 				asset.BlockHeight = b.Height
 				asset.InitialBlockHash = reg.initialBlockHash
 			} else {
-				err = json.Unmarshal(rawAsset, &asset)
-				if err != nil {
+				if err = json.Unmarshal(rawAsset, &asset); err != nil {
 					log.WithField("AssetID", assetID.String()).Warn("failed unmarshal saved asset")
 					continue
 				}
 				//update block height which created at
-				if asset.BlockHeight == 0 {
-					asset.BlockHeight = b.Height
+				if asset.BlockHeight != 0 {
+					continue
 				}
+				asset.BlockHeight = b.Height
 			}
 
 			rawSaveAsset, err = json.Marshal(&asset)

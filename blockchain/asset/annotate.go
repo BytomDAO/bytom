@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
+// AnnotateTxs adds asset data to transactions
 func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
 
 	assetIDMap := make(map[bc.AssetID]bool)
