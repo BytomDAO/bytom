@@ -131,8 +131,7 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, in requestQu
 	defer txIter.Release()
 
 	for txIter.Next() {
-		err := json.Unmarshal(txIter.Value(), annotatedTx)
-		if err != nil {
+		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
 			response.Status = FAIL
 			response.Msg = err.Error()
 			log.WithField("err", err).Error("failed get annotatedTx")

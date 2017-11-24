@@ -859,12 +859,13 @@ func listTransactions(client *rpc.Client, args []string) {
 		fmt.Println(err)
 	}
 
-	if response.Status == blockchain.SUCCESS {
-		for i, item := range response.Data {
-			fmt.Println(i, "-----", item)
-		}
-	} else {
+	if response.Status != blockchain.SUCCESS {
 		fmt.Println(response.Msg)
+		return
+	}
+
+	for i, item := range response.Data {
+		fmt.Println(i, "-----", item)
 	}
 
 }
