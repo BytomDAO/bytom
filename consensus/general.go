@@ -40,11 +40,6 @@ func BlockSubsidy(height uint64) uint64 {
 	return baseSubsidy >> uint(height/subsidyReductionInterval)
 }
 
-// InitBlock record the byte init block
-func InitBlock() []byte {
-	return []byte("03010100000000000000000000000000000000000000000000000000000000000000009e6291970cb44dd94008c79bcaf9d86f18b4b49ba5b2a04781db7199ed3b9e4e96e2ec8cfe2b4046c8af216f53bf86a30638b13a0b7404c463b9cf8df153a22233ec23886fc5bd12553440d84371701d3d4348099f8abd59a7e7d819befa57b1de50212e5d20e3e1a4fd0193fcb680808080801e010701070096e2ec8cfe2b000001012fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8080ccdee2a69fb3140104cd57a069000000")
-}
-
 // IsBech32SegwitPrefix returns whether the prefix is a known prefix for segwit
 // addresses on any default or registered network.  This is used when decoding
 // an address string into a specific address type.

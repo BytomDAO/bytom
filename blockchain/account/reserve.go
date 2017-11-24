@@ -12,11 +12,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
+	"github.com/bytom/config"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/sync/idempotency"
 )
 
@@ -444,7 +443,7 @@ func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, e
 	accountUTXO := new(UTXO)
 
 	//temp fix for coinbase UTXO isn't add to accountUTXO db, will be remove later
-	if outHash.String() == "73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d" {
+	if outHash == *config.GenerateGenesisTx().ResultIds[0] {
 		return genesisBlockUTXO(), nil
 	}
 
@@ -483,15 +482,12 @@ func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, e
 //temp fix for coinbase UTXO isn't add to accountUTXO db, will be remove later
 func genesisBlockUTXO() *utxo {
 	u := new(utxo)
-	genesisBlock := &legacy.Block{
-		BlockHeader:  legacy.BlockHeader{},
-		Transactions: []*legacy.Tx{},
-	}
-	genesisBlock.UnmarshalText(consensus.InitBlock())
-	tx := genesisBlock.Transactions[0]
+	tx := config.GenerateGenesisTx()
+
 	out := tx.Outputs[0]
 	resOutID := tx.ResultIds[0]
 	resOut, _ := tx.Entries[*resOutID].(*bc.Output)
+	log.Infof("genesis Output:%v", resOut)
 
 	//u.AccountID =
 	u.OutputID = *tx.OutputID(0)

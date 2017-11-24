@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
+	"github.com/bytom/config"
 )
 
 type accUTXOShort struct {
@@ -90,14 +91,14 @@ func SpendTest(client *rpc.Client, args []string) {
 			{
 				"type":"spend_account_unspent_output",
 				"receiver":null,
-				"output_id":"73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d",
+				"output_id":"%v",
 				"reference_data":{}
 			},
 			{"type": "issue", "asset_id": "%s", "amount": 100},
 			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"},
 			{"type": "control_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 8888888888, "account_id": "%s"}
 		]}`
-	buildReqStr := fmt.Sprintf(buildReqFmt, assets[0].ID.String(), assets[0].ID.String(), accounts[0].ID, accounts[0].ID)
+	buildReqStr := fmt.Sprintf(buildReqFmt, config.GenerateGenesisTx().ResultIds[0], assets[0].ID.String(), assets[0].ID.String(), accounts[0].ID, accounts[0].ID)
 	var buildReq bchain.BuildRequest
 	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
