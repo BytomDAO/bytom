@@ -850,14 +850,23 @@ func listTransactions(client *rpc.Client, args []string) {
 		Aliases      []string      `json:"aliases,omitempty"`
 	}
 	var in requestQuery
-	responses := make([]interface{}, 0)
+	var rawResponse []byte
+	var response blockchain.Response
 
-	client.Call(context.Background(), "/list-transactions", in, &responses)
-	if len(responses) > 0 {
-		for i, item := range responses {
+	client.Call(context.Background(), "/list-transactions", in, &rawResponse)
+
+	if err := stdjson.Unmarshal(rawResponse, &response); err != nil {
+		fmt.Println(err)
+	}
+
+	if response.Status == blockchain.SUCCESS {
+		for i, item := range response.Data {
 			fmt.Println(i, "-----", item)
 		}
+	} else {
+		fmt.Println(response.Msg)
 	}
+
 }
 
 func listBalances(client *rpc.Client, args []string) {

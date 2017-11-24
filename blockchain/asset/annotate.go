@@ -25,13 +25,12 @@ func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
 	}
 
 	// Look up all the asset tags for all applicable assets.
-	var (
-		asset            Asset
-		tagsByAssetID    = make(map[bc.AssetID]*json.RawMessage)
-		defsByAssetID    = make(map[bc.AssetID]*json.RawMessage)
-		aliasesByAssetID = make(map[bc.AssetID]string)
-		localByAssetID   = make(map[bc.AssetID]bool)
-	)
+	asset := Asset{}
+	tagsByAssetID := make(map[bc.AssetID]*json.RawMessage)
+	defsByAssetID := make(map[bc.AssetID]*json.RawMessage)
+	aliasesByAssetID := make(map[bc.AssetID]string)
+	localByAssetID := make(map[bc.AssetID]bool)
+
 	for assetID := range assetIDMap {
 		rawAsset := reg.db.Get([]byte(assetID.String()))
 		if rawAsset == nil {
@@ -54,11 +53,7 @@ func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
 			aliasesByAssetID[assetID] = annotatedAsset.Alias
 		}
 
-		if annotatedAsset.IsLocal {
-			localByAssetID[assetID] = true
-		} else {
-			localByAssetID[assetID] = false
-		}
+		localByAssetID[assetID] = annotatedAsset.IsLocal == true
 
 		if annotatedAsset.Tags != nil {
 			tagsByAssetID[assetID] = annotatedAsset.Tags
@@ -79,14 +74,13 @@ func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
 			if localByAssetID[in.AssetID] {
 				in.AssetIsLocal = true
 			}
-			tags := tagsByAssetID[in.AssetID]
-			def := defsByAssetID[in.AssetID]
+
 			in.AssetTags = &empty
 			in.AssetDefinition = &empty
-			if tags != nil {
+			if tags := tagsByAssetID[in.AssetID]; tags != nil {
 				in.AssetTags = tags
 			}
-			if def != nil {
+			if def := defsByAssetID[in.AssetID]; def != nil {
 				in.AssetDefinition = def
 			}
 		}
@@ -98,14 +92,13 @@ func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
 			if localByAssetID[out.AssetID] {
 				out.AssetIsLocal = true
 			}
-			tags := tagsByAssetID[out.AssetID]
-			def := defsByAssetID[out.AssetID]
+
 			out.AssetTags = &empty
 			out.AssetDefinition = &empty
-			if tags != nil {
+			if tags := tagsByAssetID[out.AssetID]; tags != nil {
 				out.AssetTags = tags
 			}
-			if def != nil {
+			if def := defsByAssetID[out.AssetID]; def != nil {
 				out.AssetDefinition = def
 			}
 		}

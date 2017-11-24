@@ -73,13 +73,12 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 
 // indexAssets is run on every block and indexes all non-local assets.
 func (reg *Registry) IndexAssets(b *legacy.Block) {
-	var (
-		asset        Asset
-		rawSaveAsset []byte
-		err          error
-		seen         = make(map[bc.AssetID]bool)
-		storeBatch   = reg.db.NewBatch()
-	)
+
+	var err error
+	asset := Asset{}
+	rawSaveAsset := make([]byte, 0)
+	seen := make(map[bc.AssetID]bool)
+	storeBatch := reg.db.NewBatch()
 
 	for _, tx := range b.Transactions {
 		for _, in := range tx.Inputs {

@@ -12,11 +12,9 @@ import (
 // AnnotateTxs adds account data to transactions
 func (m *Manager) AnnotateTxs(txs []*query.AnnotatedTx) error {
 
-	var (
-		outputIDs [][]byte
-		inputs    = make(map[bc.Hash]*query.AnnotatedInput)
-		outputs   = make(map[bc.Hash]*query.AnnotatedOutput)
-	)
+	outputIDs := make([][]byte, 0)
+	inputs := make(map[bc.Hash]*query.AnnotatedInput)
+	outputs := make(map[bc.Hash]*query.AnnotatedOutput)
 
 	for _, tx := range txs {
 		for _, in := range tx.Inputs {
@@ -37,17 +35,14 @@ func (m *Manager) AnnotateTxs(txs []*query.AnnotatedTx) error {
 		}
 	}
 
-	if len(outputIDs) == 0 {
-		return nil
-	}
 	// Look up all of the spent and created outputs. If any of them are
 	// account UTXOs add the account annotations to the inputs and outputs.
-	var (
-		accountUTXO UTXO
-		account     Account
-		rawOutputID = new([32]byte)
-		outputHash  bc.Hash
-	)
+
+	accountUTXO := UTXO{}
+	account := Account{}
+	rawOutputID := new([32]byte)
+	outputHash := bc.Hash{}
+
 	for _, outputID := range outputIDs {
 
 		accountUTXOValue := m.db.Get(accountUTXOKey(string(outputID)))

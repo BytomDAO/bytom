@@ -43,6 +43,20 @@ const (
 	crosscoreRPCPrefix          = "/rpc/"
 )
 
+const (
+	SUCCESS = "success"
+	FAIL    = "fail"
+	ERROR   = "error"
+)
+
+type Response struct {
+	Status string
+	Msg    string
+	Data   []string
+}
+
+var DefaultRawResponse = []byte(`{"Status":"error","Msg":"Unable to get data","Data":null}`)
+
 //BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor

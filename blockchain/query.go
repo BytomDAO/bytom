@@ -121,18 +121,34 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery)
 // listTransactions is an http handler for listing transactions
 //
 // POST /list-transactions
-func (bcr *BlockchainReactor) listTransactions(ctx context.Context, in requestQuery) interface{} {
+func (bcr *BlockchainReactor) listTransactions(ctx context.Context, in requestQuery) []byte {
 
-	response := make([]string, 0)
+	var response = Response{Status: SUCCESS}
+	annotatedTxs := make([]string, 0)
+	annotatedTx := &query.AnnotatedTx{}
 
 	txIter := bcr.wallet.DB.IteratorPrefix([]byte(query.TxPreFix))
 	defer txIter.Release()
 
 	for txIter.Next() {
-		response = append(response, string(txIter.Value()))
+		err := json.Unmarshal(txIter.Value(), annotatedTx)
+		if err != nil {
+			response.Status = FAIL
+			response.Msg = err.Error()
+			log.WithField("err", err).Error("failed get annotatedTx")
+			break
+		}
+		annotatedTxs = append(annotatedTxs, string(txIter.Value()))
 	}
 
-	return response
+	response.Data = annotatedTxs
+
+	rawResponse, err := json.Marshal(response)
+	if err != nil {
+		return DefaultRawResponse
+	}
+
+	return rawResponse
 }
 
 // POST /list-unspent-outputs
