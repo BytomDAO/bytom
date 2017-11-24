@@ -19,6 +19,7 @@ import (
 	"github.com/bytom/blockchain/rpc"
 	ctypes "github.com/bytom/blockchain/rpc/types"
 	"github.com/bytom/blockchain/txfeed"
+	"github.com/bytom/blockchain/wallet"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
@@ -42,12 +43,26 @@ const (
 	crosscoreRPCPrefix          = "/rpc/"
 )
 
+const (
+	SUCCESS = "success"
+	FAIL    = "fail"
+	ERROR   = "error"
+)
+
+type Response struct {
+	Status string
+	Msg    string
+	Data   []string
+}
+
+var DefaultRawResponse = []byte(`{"Status":"error","Msg":"Unable to get data","Data":null}`)
+
 //BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
 	chain         *protocol.Chain
-	wallet        *account.Wallet
+	wallet        *wallet.Wallet
 	accounts      *account.Manager
 	assets        *asset.Registry
 	accessTokens  *accesstoken.CredentialStore
@@ -124,22 +139,20 @@ func maxBytes(h http.Handler) http.Handler {
 
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
-	if bcr.accounts != nil {
+	if bcr.accounts != nil && bcr.assets != nil {
 		m.Handle("/create-account", jsonHandler(bcr.createAccount))
 		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
 		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
+		m.Handle("/create-asset", jsonHandler(bcr.createAsset))
+		m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
+		m.Handle("/list-assets", jsonHandler(bcr.listAssets))
+		m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
+		m.Handle("/list-balances", jsonHandler(bcr.listBalances))
 	} else {
 		log.Warn("Please enable wallet")
 	}
 
-	if bcr.assets != nil {
-		m.Handle("/create-asset", jsonHandler(bcr.createAsset))
-		m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
-		m.Handle("/list-assets", jsonHandler(bcr.listAssets))
-	} else {
-		log.Warn("Please enable wallet")
-	}
 	m.Handle("/build-transaction", jsonHandler(bcr.build))
 	m.Handle("/create-control-program", jsonHandler(bcr.createControlProgram))
 	m.Handle("/create-transaction-feed", jsonHandler(bcr.createTxFeed))
@@ -147,8 +160,6 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/update-transaction-feed", jsonHandler(bcr.updateTxFeed))
 	m.Handle("/delete-transaction-feed", jsonHandler(bcr.deleteTxFeed))
 	m.Handle("/list-transaction-feeds", jsonHandler(bcr.listTxFeeds))
-	m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
-	m.Handle("/list-balances", jsonHandler(bcr.listBalances))
 	m.Handle("/list-unspent-outputs", jsonHandler(bcr.listUnspentOutputs))
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/info", jsonHandler(bcr.info))
@@ -229,7 +240,7 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *account.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore) *BlockchainReactor {
 	mining := cpuminer.NewCPUMiner(chain, accounts, txPool)
 	bcR := &BlockchainReactor{
 		chain:         chain,

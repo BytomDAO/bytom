@@ -24,6 +24,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
+	w "github.com/bytom/blockchain/wallet"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
@@ -168,21 +169,22 @@ func NewNode(config *cfg.Config) *Node {
 
 	var accounts *account.Manager = nil
 	var assets *asset.Registry = nil
-	var wallet *account.Wallet = nil
+	var wallet *w.Wallet = nil
 	var txFeed *txfeed.Tracker = nil
 
 	if config.Wallet.Enable {
 		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
+		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 
-		wallet = account.NewWallet(walletDB)
-
-		accounts = account.NewManager(accountsDB, chain, wallet)
-
-		go accounts.WalletUpdate(chain)
-
-		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+		accounts = account.NewManager(accountsDB, walletDB, w.GetWalletHeight, chain)
 		assets = asset.NewRegistry(assetsDB, chain)
+
+		wallet = w.InitWallet(walletDB, accounts, assets)
+		wallet.Ind.RegisterAnnotator(accounts.AnnotateTxs)
+		wallet.Ind.RegisterAnnotator(assets.AnnotateTxs)
+
+		go wallet.WalletUpdate(chain)
 
 		txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
 		txFeed = txfeed.NewTracker(txFeedDB, chain)
