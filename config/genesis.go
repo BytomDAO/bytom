@@ -49,7 +49,7 @@ func GenerateGenesisBlock() *legacy.Block {
 		log.Panicf("Fatal ApplyTx")
 	}
 
-    var seed [32]byte
+	var seed [32]byte
 	sha3pool.Sum256(seed[:], make([]byte, 32))
 
 	genesisBlock := &legacy.Block{
