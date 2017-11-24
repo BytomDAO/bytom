@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -60,6 +61,20 @@ type BlockchainReactor struct {
 	sw            *p2p.Switch
 	handler       http.Handler
 	evsw          types.EventSwitch
+}
+
+const (
+	SUCCESS = "success"
+	FAIL    = "fail"
+	ERROR   = "error"
+)
+
+var DefaultRawResponse = []byte(`{"Status":"error","Msg":"Unable to get data","Data":null}`)
+
+type Response struct {
+	Status string   `json:"status"`
+	Msg    string   `json:"msg"`
+	Data   []string `json:"data"`
 }
 
 func batchRecover(ctx context.Context, v *interface{}) {
@@ -534,6 +549,12 @@ func (bcr *BlockchainReactor) isMining() bool {
 	return bcr.mining.IsMining()
 }
 
-func (bcr *BlockchainReactor) gasRate() int64 {
-	return validation.GasRate
+func (bcr *BlockchainReactor) gasRate() []byte {
+	data := []string{strconv.FormatInt(validation.GasRate, 16)}
+	response := Response{Status: SUCCESS, Data: data}
+	rawResponse, err := stdjson.Marshal(response)
+	if err != nil {
+		return DefaultRawResponse
+	}
+	return rawResponse
 }
