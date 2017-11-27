@@ -19,14 +19,14 @@ func CreateSeed(height uint64, preSeed *bc.Hash, preEpochBlockHash []*bc.Hash) *
 		return preSeed
 	}
 
-	seed := bytesToPointerHash(createSeed(preSeed, preEpochBlockHash))
+	seed := bc.BytesToHash(createSeed(preSeed, preEpochBlockHash))
 	log.WithFields(log.Fields{
 		"height": height,
 		"epoch":  (height - 1) / epochLength,
 		"seed":   seed.String(),
 	}).Debug("Created new seed.")
 
-	return seed
+	return &seed
 }
 
 // CreateCache return cache, type is []int32

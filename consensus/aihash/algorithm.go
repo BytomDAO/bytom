@@ -57,23 +57,10 @@ func createSeed(preSeed *bc.Hash, preEpochBlockHash []*bc.Hash) []byte {
 // convert []byte to *bc.Hash, the lenght is 32 bytes.
 func bytesToPointerHash(src []byte) *bc.Hash {
 	var arr [32]byte
-	for i, v := range src {
-		arr[i] = v
-	}
+	copy(arr[:], src)
 	newhash := bc.NewHash(arr)
 
 	return &newhash
-}
-
-// convert []byte to []*bc.Hash
-func bytesToSlicePointerHash(src []byte) []*bc.Hash {
-	var sbh []*bc.Hash
-	for i := 0; i < len(src)/32; i++ {
-		s := src[i*32 : (i+1)*32]
-		sbh = append(sbh, bytesToPointerHash(s))
-	}
-
-	return sbh
 }
 
 // This method places the result into dest in machine byte order.

@@ -1,17 +1,9 @@
 package aihash
 
 import (
-	//"bytes"
-	//"io/ioutil"
-	//"math/big"
-	//"os"
 	"reflect"
-	//"sync"
 	"testing"
 
-	//"golang.org/x/crypto/sha3"
-
-	//"github.com/bytom/common"
 	"github.com/bytom/common/hexutil"
 	"github.com/bytom/protocol/bc"
 )
@@ -19,17 +11,17 @@ import (
 // TestCreateSeed test that seed can be correctly created.
 func TestCreateSeed(t *testing.T) {
 	testSlicePreSeed := []struct {
-		preSeed   *bc.Hash
+		preSeed   bc.Hash
 		blockHash []*bc.Hash
 		seed      []byte
 	}{
 		{
-			preSeed:   bytesToPointerHash(hexutil.MustDecode("0x7f5979fb78f082e8b1c676635db8795c4ac6faba03525fb708cb5fd68fd40c5e")),
+			preSeed:   bc.BytesToHash(hexutil.MustDecode("0x7f5979fb78f082e8b1c676635db8795c4ac6faba03525fb708cb5fd68fd40c5e")),
 			blockHash: bytesToSlicePointerHash(hexutil.MustDecode("0x0eb076dade912e4e2aea455e9225ef5d7c36aa6d5c66440218f408067da9e7ba")),
 			seed:      hexutil.MustDecode("0x01609e244d962cf47f7aefd47f83c93e07318f859b9a2ebcd70000b3c70b1d03"),
 		},
 		{
-			preSeed: bytesToPointerHash(hexutil.MustDecode("0xfe3c889716ee7ff8828dfc64a773c4912e215a9b82f1df38fd0de3a9e6f6c38b")),
+			preSeed: bc.BytesToHash(hexutil.MustDecode("0xfe3c889716ee7ff8828dfc64a773c4912e215a9b82f1df38fd0de3a9e6f6c38b")),
 			blockHash: bytesToSlicePointerHash(hexutil.MustDecode("0x" +
 				"e93187549f97232af825848c2d5b28b58d57576799ada949d8d93c1db27a2e80" +
 				"5f0dc2afa924f7ade0a1dc615113e9824728d360db19ecfdb52dff951189d755" +
@@ -50,7 +42,7 @@ func TestCreateSeed(t *testing.T) {
 			seed: hexutil.MustDecode("0x28240f593b479bb1709278a06351a741e5893c908ace50e711219bddf41f2211"),
 		},
 		{
-			preSeed: bytesToPointerHash(hexutil.MustDecode("0x40aa575363fc90aef55bd1001362f319ea5aa861858f9d81fe3a271ee64497a0")),
+			preSeed: bc.BytesToHash(hexutil.MustDecode("0x40aa575363fc90aef55bd1001362f319ea5aa861858f9d81fe3a271ee64497a0")),
 			blockHash: bytesToSlicePointerHash(hexutil.MustDecode("0x" +
 				"43ff2d59fc3a085ef57df59da93db9126f7715c24779c583d1855e01f39ee526" +
 				"1afb18e671a449f24d77164e4da34d6aa357468ca18ef923540c8561a8414b34" +
@@ -184,7 +176,7 @@ func TestCreateSeed(t *testing.T) {
 		},
 	}
 	for i, tt := range testSlicePreSeed {
-		seed := createSeed(tt.preSeed, tt.blockHash)
+		seed := createSeed(&tt.preSeed, tt.blockHash)
 
 		if !reflect.DeepEqual(seed, tt.seed) {
 			t.Errorf("seed %d: content mismatch: %x, right is: %x", i, seed, tt.seed)
@@ -254,4 +246,16 @@ func TestGenerateCache(t *testing.T) {
 			t.Errorf("cache %d: content mismatch: have %x, want %x", i, cache, want)
 		}
 	}
+}
+
+// convert []byte to []*bc.Hash
+func bytesToSlicePointerHash(src []byte) []*bc.Hash {
+	var sbh []*bc.Hash
+	for i := 0; i < len(src)/32; i++ {
+		s := src[i*32 : (i+1)*32]
+		tmp := bc.BytesToHash(s)
+		sbh = append(sbh, &tmp)
+	}
+
+	return sbh
 }
