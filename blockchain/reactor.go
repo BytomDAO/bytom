@@ -189,7 +189,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/peer-count", jsonHandler(bcr.peerCount))
 	m.Handle("/get-block-by-height", jsonHandler(bcr.getBlockByHeight))
 	m.Handle("/get-block-transactions-count-by-height", jsonHandler(bcr.getBlockTransactionsCountByHeight))
-	m.Handle("/block-height", jsonHandler(bcr.getBlockHeight))
+	m.Handle("/block-height", jsonHandler(bcr.blockHeight))
 	m.Handle("/is-mining", jsonHandler(bcr.isMining))
 	m.Handle("/gas-rate", jsonHandler(bcr.gasRate))
 
@@ -541,12 +541,24 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) (
 	return len(legacyBlock.Transactions), nil
 }
 
-func (bcr *BlockchainReactor) getBlockHeight() uint64 {
-	return bcr.chain.Height()
+func (bcr *BlockchainReactor) blockHeight() []byte {
+	data := []string{strconv.FormatUint(bcr.chain.Height(), 16)}
+	response := Response{Status: SUCCESS, Data: data}
+	rawResponse, err := stdjson.Marshal(response)
+	if err != nil {
+		return DefaultRawResponse
+	}
+	return rawResponse
 }
 
-func (bcr *BlockchainReactor) isMining() bool {
-	return bcr.mining.IsMining()
+func (bcr *BlockchainReactor) isMining() []byte {
+	data := []string{strconv.FormatBool(bcr.mining.IsMining())}
+	response := Response{Status: SUCCESS, Data: data}
+	rawResponse, err := stdjson.Marshal(response)
+	if err != nil {
+		return DefaultRawResponse
+	}
+	return rawResponse
 }
 
 func (bcr *BlockchainReactor) gasRate() []byte {

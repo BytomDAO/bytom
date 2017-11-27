@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -31,10 +32,24 @@ var blockHeightCmd = &cobra.Command{
 	Use:   "block-height",
 	Short: "Get the number of most recent block",
 	Run: func(cmd *cobra.Command, args []string) {
-		var response interface{}
+		var rawResponse []byte
+		var response blockchain.Response
+
 		client := mustRPCClient()
-		client.Call(context.Background(), "/block-height", nil, &response)
-		jww.FEEDBACK.Printf("block height: %v\n", response)
+		client.Call(context.Background(), "/block-height", nil, &rawResponse)
+
+		if err := json.Unmarshal(rawResponse, &response); err != nil {
+			jww.ERROR.Println(err)
+			return
+		}
+
+		if response.Status == blockchain.SUCCESS {
+			data := response.Data
+			height, _ := strconv.ParseInt(data[0], 16, 64)
+			jww.FEEDBACK.Printf("block height: %v\n", height)
+			return
+		}
+		jww.ERROR.Println(response.Msg)
 	},
 }
 
