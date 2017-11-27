@@ -28,7 +28,11 @@ var gasRateCmd = &cobra.Command{
 
 		if response.Status == blockchain.SUCCESS {
 			data := response.Data
-			i, _ := strconv.ParseInt(data[0], 16, 64)
+			i, err := strconv.ParseInt(data[0], 16, 64)
+			if err != nil {
+				jww.ERROR.Println("Fail to parse response data")
+				return
+			}
 			jww.FEEDBACK.Printf("gas rate: %v\n", i)
 			return
 		}

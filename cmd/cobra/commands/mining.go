@@ -27,7 +27,11 @@ var isMiningCmd = &cobra.Command{
 
 		if response.Status == blockchain.SUCCESS {
 			data := response.Data
-			res, _ := strconv.ParseBool(data[0])
+			res, err := strconv.ParseBool(data[0])
+			if err != nil {
+				jww.ERROR.Println("Fail to parse response data")
+				return
+			}
 			jww.FEEDBACK.Printf("is mining: %v\n", res)
 			return
 		}

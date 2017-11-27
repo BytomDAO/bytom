@@ -45,7 +45,11 @@ var blockHeightCmd = &cobra.Command{
 
 		if response.Status == blockchain.SUCCESS {
 			data := response.Data
-			height, _ := strconv.ParseInt(data[0], 16, 64)
+			height, err := strconv.ParseInt(data[0], 16, 64)
+			if err != nil {
+				jww.ERROR.Println("Fail to parse response data")
+				return
+			}
 			jww.FEEDBACK.Printf("block height: %v\n", height)
 			return
 		}
