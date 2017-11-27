@@ -28,6 +28,7 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
+	"github.com/bytom/net/http/authn"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/types"
@@ -86,7 +87,23 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	wh.h.ServeHTTP(w, req)
 }
 
-func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
+func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore) http.Handler {
+
+	authenticator := authn.NewAPI(accessTokens)
+
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		// TODO(tessr): check that this path exists; return early if this path isn't legit
+		req, err := authenticator.Authenticate(req)
+		if err != nil {
+			log.WithField("error", errors.Wrap(err, "Serve")).Error("Authenticate fail")
+
+			return
+		}
+		handler.ServeHTTP(rw, req)
+	})
+}
+
+func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accesstoken.CredentialStore) {
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
 	var coreHandler waitHandler
@@ -95,6 +112,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	mux.Handle("/", &coreHandler)
 
 	var handler http.Handler = mux
+	handler = AuthHandler(handler, accessTokens)
 	handler = RedirectHandler(handler)
 
 	secureheader.DefaultConfig.PermitClearLoopback = true
@@ -215,7 +233,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
-	rpcInit(bcReactor, config)
+	rpcInit(bcReactor, config, accessTokens)
 	// Optionally, start the pex reactor
 	var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
