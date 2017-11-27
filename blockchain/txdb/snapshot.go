@@ -1,7 +1,7 @@
 package txdb
 
 import (
-	"fmt"
+	"bytes"
 
 	"github.com/golang/protobuf/proto"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -13,8 +13,10 @@ import (
 	"github.com/bytom/protocol/state"
 )
 
+const snapshotPreFix = "MC:"
+
 func calcSnapshotKey(hash *bc.Hash) []byte {
-	return []byte(fmt.Sprintf("S:%v", hash.String()))
+	return []byte(snapshotPreFix + hash.String())
 }
 
 // DecodeSnapshot decodes a snapshot from bytes
@@ -77,7 +79,7 @@ func saveSnapshot(db dbm.DB, snapshot *state.Snapshot, hash *bc.Hash) error {
 func getSnapshot(db dbm.DB, hash *bc.Hash) (*state.Snapshot, error) {
 	data := db.Get(calcSnapshotKey(hash))
 	if data == nil {
-		return nil, errors.New("no this snapshot.")
+		return nil, errors.New("no this snapshot")
 	}
 
 	snapshot, err := DecodeSnapshot(data)
@@ -85,4 +87,17 @@ func getSnapshot(db dbm.DB, hash *bc.Hash) (*state.Snapshot, error) {
 		return nil, errors.Wrap(err, "decoding snapshot")
 	}
 	return snapshot, nil
+}
+
+func cleanSnapshotDB(db dbm.DB, hash *bc.Hash) {
+	keepKey := calcSnapshotKey(hash)
+
+	iter := db.IteratorPrefix([]byte(snapshotPreFix))
+	defer iter.Release()
+	for iter.Next() {
+		if key := iter.Key(); !bytes.Equal(key, keepKey) {
+			db.Delete(key)
+		}
+	}
+	db.SetSync(nil, nil)
 }

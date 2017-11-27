@@ -26,6 +26,7 @@ import (
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
+	"github.com/bytom/config"
 )
 
 // config vars
@@ -502,13 +503,13 @@ func buildTransaction(client *rpc.Client, args []string) {
 			{
 				"type":"spend_account_unspent_output",
 				"receiver":null,
-				"output_id":"73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d",
+				"output_id":"%v",
 				"reference_data":{}
 			},
 			{"type": "issue", "asset_id": "%s", "amount": 100},
 			{"type": "control_account", "asset_id": "%s", "amount": 100, "account_id": "%s"}
 		]}`
-	buildReqStr := fmt.Sprintf(buildReqFmt, args[1], args[1], args[0])
+	buildReqStr := fmt.Sprintf(buildReqFmt, config.GenerateGenesisTx().ResultIds[0], args[1], args[1], args[0])
 	var buildReq blockchain.BuildRequest
 	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
@@ -536,7 +537,7 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 			{
 				"type":"spend_account_unspent_output",
 				"receiver":null,
-				"output_id":"73d1e97c7bcf2b084f936a40f4f2a72e909417f2b46699e8659fa4c4feddb98d",
+				"output_id":"%v",
 				"reference_data":{}
 			},
 			{"type": "issue", "asset_id": "%s", "amount": %s},
@@ -544,7 +545,7 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 			{"type": "control_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 8888888888, "account_id": "%s"},
 			{"type": "control_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 8888888888, "account_id": "%s"}
 		]}`
-	buildReqStr := fmt.Sprintf(buildReqFmt, args[2], args[4], args[2], args[4], args[0], args[0], args[1])
+	buildReqStr := fmt.Sprintf(buildReqFmt, config.GenerateGenesisTx().ResultIds[0], args[2], args[4], args[2], args[4], args[0], args[0], args[1])
 	var buildReq blockchain.BuildRequest
 	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
@@ -850,10 +851,24 @@ func listTransactions(client *rpc.Client, args []string) {
 		Aliases      []string      `json:"aliases,omitempty"`
 	}
 	var in requestQuery
-	after := in.After
-	out := in
-	out.After = after
-	client.Call(context.Background(), "/list-transactions", &[]requestQuery{in}, nil)
+	var rawResponse []byte
+	var response blockchain.Response
+
+	client.Call(context.Background(), "/list-transactions", in, &rawResponse)
+
+	if err := stdjson.Unmarshal(rawResponse, &response); err != nil {
+		fmt.Println(err)
+	}
+
+	if response.Status != blockchain.SUCCESS {
+		fmt.Println(response.Msg)
+		return
+	}
+
+	for i, item := range response.Data {
+		fmt.Println(i, "-----", item)
+	}
+
 }
 
 func listBalances(client *rpc.Client, args []string) {

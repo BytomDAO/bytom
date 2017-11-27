@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
@@ -29,6 +30,9 @@ func TestNewInitBlock(t *testing.T) {
 		t.Error(err)
 	}
 
+	var seed [32]byte
+	sha3pool.Sum256(seed[:], make([]byte, 32))
+
 	b := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
 			Version:           1,
@@ -40,6 +44,7 @@ func TestNewInitBlock(t *testing.T) {
 				AssetsMerkleRoot:       snap.Tree.RootHash(),
 			},
 			Bits: uint64(2161727821138738707),
+			Seed: bc.NewHash(seed),
 		},
 		Transactions: []*legacy.Tx{coinbaseTx},
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/testutil"
 
@@ -36,7 +37,7 @@ func TestGasStatus(t *testing.T) {
 				BTMValue: 0,
 			},
 			output: &gasState{
-				gasLeft:  10000 / gasRate,
+				gasLeft:  10000 / GasRate,
 				gasUsed:  0,
 				BTMValue: 10000,
 			},
@@ -440,6 +441,7 @@ func TestValidateBlock(t *testing.T) {
 		},
 	}
 
+	seedCaches := seed.NewSeedCaches()
 	for _, c := range cases {
 		txRoot, err := bc.MerkleRoot(c.block.Transactions)
 		if err != nil {
@@ -447,9 +449,8 @@ func TestValidateBlock(t *testing.T) {
 			continue
 		}
 		c.block.TransactionsRoot = &txRoot
-		err = ValidateBlock(c.block, nil)
 
-		if rootErr(err) != c.err {
+		if err = ValidateBlock(c.block, nil, seedCaches); rootErr(err) != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)
 		}
 	}
@@ -514,7 +515,7 @@ func TestCoinbase(t *testing.T) {
 }
 
 func TestBlockHeaderValid(t *testing.T) {
-	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
+	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
 	baseBytes, _ := proto.Marshal(base)
 
 	var bh bc.BlockHeader

@@ -8,19 +8,18 @@ import (
 	"testing"
 	"time"
 
+	dbm "github.com/tendermint/tmlibs/db"
+
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/blockchain/txdb"
+	w "github.com/bytom/blockchain/wallet"
 	cfg "github.com/bytom/config"
-	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
-
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const dirPath = "pseudohsm/testdata/pseudo"
@@ -36,14 +35,8 @@ func TestHSM(t *testing.T) {
 	store := txdb.NewStore(tc)
 
 	var accounts *account.Manager
-	var wallet *account.Wallet
 	var assets *asset.Registry
-
-	genesisBlock := &legacy.Block{
-		BlockHeader:  legacy.BlockHeader{},
-		Transactions: []*legacy.Tx{},
-	}
-	genesisBlock.UnmarshalText(consensus.InitBlock())
+	genesisBlock := cfg.GenerateGenesisBlock()
 	// tx pool init
 	txPool := protocol.NewTxPool()
 	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
@@ -60,14 +53,11 @@ func TestHSM(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	accountsDB := dbm.NewDB("account", config.DBBackend, dir)
+	assetsDB := dbm.NewDB("asset", config.DBBackend, dir)
 	walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 
-	accountsDB := dbm.NewDB("account", config.DBBackend, dir)
-	wallet = account.NewWallet(walletDB)
-	accounts = account.NewManager(accountsDB, chain, wallet)
-	//accounts.IndexAccounts(query.NewIndexer(accountsDB, chain))
-
-	assetsDB := dbm.NewDB("asset", config.DBBackend, dir)
+	accounts = account.NewManager(accountsDB, walletDB, w.GetWalletHeight, chain)
 	assets = asset.NewRegistry(assetsDB, chain)
 
 	hsm, err := pseudohsm.New(dirPath)

@@ -1,8 +1,6 @@
 package legacy
 
 import (
-	"bytes"
-	"database/sql/driver"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -26,6 +24,8 @@ type BlockHeader struct {
 	// Hash of the previous block in the block chain.
 	PreviousBlockHash bc.Hash
 
+	Seed bc.Hash
+
 	// Time of the block in milliseconds.
 	// Must grow monotonically and can be equal
 	// to the time in the previous block.
@@ -43,6 +43,7 @@ func (bh *BlockHeader) Time() time.Time {
 	return time.Unix(0, int64(tsNano)).UTC()
 }
 
+// Scan validates the input byte slice is a valid block header
 func (bh *BlockHeader) Scan(val interface{}) error {
 	driverBuf, ok := val.([]byte)
 	if !ok {
@@ -52,15 +53,6 @@ func (bh *BlockHeader) Scan(val interface{}) error {
 	copy(buf[:], driverBuf)
 	_, err := bh.readFrom(blockchain.NewReader(buf))
 	return err
-}
-
-func (bh *BlockHeader) Value() (driver.Value, error) {
-	buf := new(bytes.Buffer)
-	_, err := bh.WriteTo(buf)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
 
 // Hash returns complete hash of the block header.
@@ -117,8 +109,11 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (uint8, error) {
 		return 0, err
 	}
 
-	_, err = bh.PreviousBlockHash.ReadFrom(r)
-	if err != nil {
+	if _, err = bh.PreviousBlockHash.ReadFrom(r); err != nil {
+		return 0, err
+	}
+
+	if _, err = bh.Seed.ReadFrom(r); err != nil {
 		return 0, err
 	}
 
@@ -127,8 +122,7 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (uint8, error) {
 		return 0, err
 	}
 
-	_, err = blockchain.ReadExtensibleString(r, bh.BlockCommitment.readFrom)
-	if err != nil {
+	if _, err = blockchain.ReadExtensibleString(r, bh.BlockCommitment.readFrom); err != nil {
 		return 0, err
 	}
 
@@ -145,6 +139,7 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (uint8, error) {
 	return serflags[0], nil
 }
 
+// WriteTo writes the block header to the input io.Writer
 func (bh *BlockHeader) WriteTo(w io.Writer) (int64, error) {
 	ew := errors.NewWriter(w)
 	bh.writeTo(ew, SerBlockHeader)
@@ -152,37 +147,31 @@ func (bh *BlockHeader) WriteTo(w io.Writer) (int64, error) {
 }
 
 // writeTo writes bh to w.
-func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) error {
+func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 	w.Write([]byte{serflags})
 
-	var err error
-
-	_, err = blockchain.WriteVarint63(w, bh.Version)
-	if err != nil {
+	if _, err = blockchain.WriteVarint63(w, bh.Version); err != nil {
 		return err
 	}
-	_, err = blockchain.WriteVarint63(w, bh.Height)
-	if err != nil {
+	if _, err = blockchain.WriteVarint63(w, bh.Height); err != nil {
 		return err
 	}
-	_, err = bh.PreviousBlockHash.WriteTo(w)
-	if err != nil {
+	if _, err = bh.PreviousBlockHash.WriteTo(w); err != nil {
 		return err
 	}
-	_, err = blockchain.WriteVarint63(w, bh.TimestampMS)
-	if err != nil {
+	if _, err = bh.Seed.WriteTo(w); err != nil {
 		return err
 	}
-	_, err = blockchain.WriteExtensibleString(w, nil, bh.BlockCommitment.writeTo)
-	if err != nil {
+	if _, err = blockchain.WriteVarint63(w, bh.TimestampMS); err != nil {
 		return err
 	}
-	_, err = blockchain.WriteVarint63(w, bh.Nonce)
-	if err != nil {
+	if _, err = blockchain.WriteExtensibleString(w, nil, bh.BlockCommitment.writeTo); err != nil {
 		return err
 	}
-	_, err = blockchain.WriteVarint63(w, bh.Bits)
-	if err != nil {
+	if _, err = blockchain.WriteVarint63(w, bh.Nonce); err != nil {
+		return err
+	}
+	if _, err = blockchain.WriteVarint63(w, bh.Bits); err != nil {
 		return err
 	}
 	return nil

@@ -1,27 +1,20 @@
 package account
 
 import (
-	"context"
-	//	"database/sql"
 	"encoding/json"
-
-	//	"github.com/lib/pq"
+	"fmt"
 
 	"github.com/bytom/blockchain/query"
-	//"github.com/blockchain/database/pg"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 )
 
-var empty = json.RawMessage(`{}`)
-
 // AnnotateTxs adds account data to transactions
-func (m *Manager) AnnotateTxs(ctx context.Context, txs []*query.AnnotatedTx) error {
-	var (
-		outputIDs [][]byte
-		inputs    = make(map[bc.Hash]*query.AnnotatedInput)
-		outputs   = make(map[bc.Hash]*query.AnnotatedOutput)
-	)
+func (m *Manager) AnnotateTxs(txs []*query.AnnotatedTx) error {
+
+	outputIDs := make([][]byte, 0)
+	inputs := make(map[bc.Hash]*query.AnnotatedInput)
+	outputs := make(map[bc.Hash]*query.AnnotatedOutput)
 
 	for _, tx := range txs {
 		for _, in := range tx.Inputs {
@@ -44,44 +37,57 @@ func (m *Manager) AnnotateTxs(ctx context.Context, txs []*query.AnnotatedTx) err
 
 	// Look up all of the spent and created outputs. If any of them are
 	// account UTXOs add the account annotations to the inputs and outputs.
-	/*const q = `
-		SELECT o.output_id, o.account_id, a.alias, a.tags, o.change
-		FROM account_utxos o
-		LEFT JOIN accounts a ON o.account_id = a.account_id
-		WHERE o.output_id = ANY($1::bytea[])
-	`
-	err := pg.ForQueryRows(ctx, m.db, q, pq.ByteaArray(outputIDs),
-		func(outputID bc.Hash, accID string, alias sql.NullString, accountTags []byte, change bool) {
-			spendingInput, ok := inputs[outputID]
-			if ok {
-				spendingInput.AccountID = accID
-				if alias.Valid {
-					spendingInput.AccountAlias = alias.String
-				}
-				if len(accountTags) > 0 {
-					spendingInput.AccountTags = (*json.RawMessage)(&accountTags)
-				} else {
-					spendingInput.AccountTags = &empty
-				}
-			}
 
-			out, ok := outputs[outputID]
-			if ok {
-				out.AccountID = accID
-				if alias.Valid {
-					out.AccountAlias = alias.String
-				}
-				if len(accountTags) > 0 {
-					out.AccountTags = (*json.RawMessage)(&accountTags)
-				} else {
-					out.AccountTags = &empty
-				}
-				if change {
-					out.Purpose = "change"
-				} else {
-					out.Purpose = "receive"
-				}
+	accountUTXO := UTXO{}
+	account := Account{}
+	rawOutputID := new([32]byte)
+	outputHash := bc.Hash{}
+
+	for _, outputID := range outputIDs {
+
+		accountUTXOValue := m.db.Get(accountUTXOKey(string(outputID)))
+		if accountUTXOValue == nil {
+			continue
+		}
+		if err := json.Unmarshal(accountUTXOValue, &accountUTXO); err != nil {
+			return errors.Wrap(err)
+		}
+		copy(rawOutputID[:], accountUTXO.OutputID)
+		outputHash = bc.NewHash(*rawOutputID)
+
+		accountValue := m.db.Get(accountKey(accountUTXO.AccountID))
+		if accountValue == nil {
+			return errors.Wrap(fmt.Errorf("failed get account:%s ", accountUTXO.AccountID))
+		}
+		if err := json.Unmarshal(accountValue, &account); err != nil {
+			return errors.Wrap(err)
+		}
+
+		aa, err := Annotated(&account)
+		if err != nil {
+			return errors.Wrap(err)
+		}
+
+		spendingInput, ok := inputs[outputHash]
+		if ok {
+			spendingInput.AccountID = aa.ID
+			spendingInput.AccountAlias = aa.Alias
+			spendingInput.AccountTags = aa.Tags
+		}
+
+		out, ok := outputs[outputHash]
+		if ok {
+			out.AccountID = aa.ID
+			out.AccountAlias = aa.Alias
+			out.AccountTags = aa.Tags
+
+			if accountUTXO.Change {
+				out.Purpose = "change"
+			} else {
+				out.Purpose = "receive"
 			}
-		}) */
-	return errors.Wrap(nil, "annotating with account data")
+		}
+	}
+
+	return nil
 }

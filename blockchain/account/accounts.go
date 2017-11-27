@@ -47,12 +47,11 @@ func accountCPKey(hash [32]byte) []byte {
 }
 
 // NewManager creates a new account manager
-func NewManager(db dbm.DB, chain *protocol.Chain, wallet *Wallet) *Manager {
+func NewManager(db, walletDB dbm.DB, walletHeightFn func() uint64, chain *protocol.Chain) *Manager {
 	return &Manager{
 		db:          db,
 		chain:       chain,
-		utxoDB:      newReserver(chain, wallet),
-		wallet:      wallet,
+		utxoDB:      newReserver(chain, walletDB, walletHeightFn),
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
 		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*controlProgram),
@@ -61,11 +60,9 @@ func NewManager(db dbm.DB, chain *protocol.Chain, wallet *Wallet) *Manager {
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	db      dbm.DB
-	chain   *protocol.Chain
-	utxoDB  *reserver
-	indexer Saver
-	wallet  *Wallet
+	db     dbm.DB
+	chain  *protocol.Chain
+	utxoDB *reserver
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
@@ -77,11 +74,6 @@ type Manager struct {
 	acpMu        sync.Mutex
 	acpIndexNext uint64 // next acp index in our block
 	acpIndexCap  uint64 // points to end of block
-}
-
-// IndexAccounts sets Manager.indexer
-func (m *Manager) IndexAccounts(indexer Saver) {
-	m.indexer = indexer
 }
 
 // ExpireReservations removes reservations that have expired periodically.
@@ -130,9 +122,6 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	m.db.Set(accountID, accountJSON)
 	m.db.Set(alicesKey(alias), accountID)
 
-	if err = m.indexAnnotatedAccount(ctx, account); err != nil {
-		return nil, errors.Wrap(err, "indexing annotated account")
-	}
 	return account, nil
 }
 

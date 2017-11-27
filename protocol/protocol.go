@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/state"
 )
 
@@ -130,7 +131,8 @@ type Chain struct {
 		mainChain map[uint64]*bc.Hash
 		snapshot  *state.Snapshot
 	}
-	store Store
+	store      Store
+	seedCaches *seed.SeedCaches
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -140,6 +142,7 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 		orphanManage:     NewOrphanManage(),
 		store:            store,
 		txPool:           txPool,
+		seedCaches:       seed.NewSeedCaches(),
 	}
 	c.state.cond.L = new(sync.Mutex)
 	storeStatus := store.GetStoreStatus()
@@ -220,6 +223,10 @@ func (c *Chain) State() (*legacy.Block, *state.Snapshot) {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
 	return c.state.block, c.state.snapshot
+}
+
+func (c *Chain) SeedCaches() *seed.SeedCaches {
+	return c.seedCaches
 }
 
 // This function must be called with mu lock in above level

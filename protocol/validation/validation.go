@@ -4,16 +4,19 @@ import (
 	"fmt"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/vm"
 )
 
 const (
 	defaultGasLimit = int64(80000)
 	muxGasCost      = int64(10)
-	gasRate         = int64(1000)
+	// GasRate indicates the current gas rate
+	GasRate = int64(1000)
 )
 
 type gasState struct {
@@ -28,7 +31,7 @@ func (g *gasState) setGas(BTMValue int64) error {
 	}
 	g.BTMValue = BTMValue
 
-	if gasAmount, ok := checked.DivInt64(BTMValue, gasRate); ok {
+	if gasAmount, ok := checked.DivInt64(BTMValue, GasRate); ok {
 		if gasAmount == 0 {
 			g.gasLeft = muxGasCost
 		} else if gasAmount < defaultGasLimit {
@@ -495,7 +498,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 
 // ValidateBlock validates a block and the transactions within.
 // It does not run the consensus program; for that, see ValidateBlockSig.
-func ValidateBlock(b, prev *bc.Block) error {
+func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 	if b.Height > 1 {
 		if prev == nil {
 			return errors.WithDetailf(errNoPrevBlock, "height %d", b.Height)
@@ -510,7 +513,15 @@ func ValidateBlock(b, prev *bc.Block) error {
 		return errWrongBlockSize
 	}
 
-	if !consensus.CheckProofOfWork(&b.ID, b.BlockHeader.Bits) {
+	seedCache, err := seedCaches.Get(b.Seed)
+	if err != nil {
+		return err
+	}
+	proofHash, err := algorithm.AIHash(b.Height, &b.ID, seedCache)
+	if err != nil {
+		return err
+	}
+	if !consensus.CheckProofOfWork(proofHash, b.BlockHeader.Bits) {
 		return errWorkProof
 	}
 
@@ -578,6 +589,9 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 	}
 	if b.TimestampMs <= prev.TimestampMs {
 		return errors.WithDetailf(errMisorderedBlockTime, "previous block time %d, current block time %d", prev.TimestampMs, b.TimestampMs)
+	}
+	if *b.Seed != *algorithm.CreateSeed(b.Height, prev.Seed, []*bc.Hash{&prev.ID}) {
+		return errors.New("wrong block seed")
 	}
 	return nil
 }
