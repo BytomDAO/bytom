@@ -30,8 +30,8 @@ var gasRateCmd = &cobra.Command{
 			data := response.Data
 			i, _ := strconv.ParseInt(data[0], 16, 64)
 			jww.FEEDBACK.Printf("gas rate: %v\n", i)
-		} else {
-			jww.ERROR.Println(response.Msg)
+			return
 		}
+		jww.ERROR.Println(response.Msg)
 	},
 }

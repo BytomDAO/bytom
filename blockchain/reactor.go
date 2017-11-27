@@ -543,26 +543,20 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) (
 
 func (bcr *BlockchainReactor) blockHeight() []byte {
 	data := []string{strconv.FormatUint(bcr.chain.Height(), 16)}
-	response := Response{Status: SUCCESS, Data: data}
-	rawResponse, err := stdjson.Marshal(response)
-	if err != nil {
-		return DefaultRawResponse
-	}
-	return rawResponse
+	return resWrapper(data)
 }
 
 func (bcr *BlockchainReactor) isMining() []byte {
 	data := []string{strconv.FormatBool(bcr.mining.IsMining())}
-	response := Response{Status: SUCCESS, Data: data}
-	rawResponse, err := stdjson.Marshal(response)
-	if err != nil {
-		return DefaultRawResponse
-	}
-	return rawResponse
+	return resWrapper(data)
 }
 
 func (bcr *BlockchainReactor) gasRate() []byte {
 	data := []string{strconv.FormatInt(validation.GasRate, 16)}
+	return resWrapper(data)
+}
+
+func resWrapper(data []string) []byte {
 	response := Response{Status: SUCCESS, Data: data}
 	rawResponse, err := stdjson.Marshal(response)
 	if err != nil {
