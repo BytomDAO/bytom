@@ -15,7 +15,7 @@ func CreateSeed(height uint64, preSeed *bc.Hash, preEpochBlockHash []*bc.Hash) *
 			"height": height,
 			"epoch":  (height - 1) / epochLength,
 			"seed":   preSeed.String(),
-		}).Info("Do not need create new seed.")
+		}).Debug("Do not need create new seed.")
 		return preSeed
 	}
 

@@ -2,10 +2,8 @@ package aihash
 
 import (
 	"encoding/binary"
-	"fmt"
 	"hash"
 	"reflect"
-	"strings"
 	"sync/atomic"
 	"unsafe"
 
@@ -13,25 +11,17 @@ import (
 
 	"github.com/bytom/common/bitutil"
 	"github.com/bytom/consensus/aihash/matrix"
-	// "github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 )
 
 const (
-	epochLength = 128 // Blocks per epoch
-	hashBytes   = 64  // Hash length in bytes
-	cacheRounds = 3   // Number of rounds in cache production
-)
-
-const (
-	matSize     = 1 << 9 // Size of matrix
-	matNum      = 1 << 7 // Number of matrix
-	round       = 10
+	matSize     = 1 << 9                     // Size of matrix
+	matNum      = 1 << 7                     // Number of matrix
+	epochLength = 1 << 7                     // Blocks per epoch
+	hashBytes   = 64                         // Hash length in bytes
 	cacheLength = matSize * matSize * matNum // Bytes of cache production
-)
-
-var (
-	nonce []uint64 = make([]uint64, 4)
+	cacheRounds = 3                          // Number of rounds in cache production
+	mulRounds   = 10                         // Number of rounds in mulmatrix
 )
 
 // hasher is a repetitive hasher allowing the same hash data structures to be
@@ -53,10 +43,10 @@ func makeHasher(h hash.Hash) hasher {
 func createSeed(preSeed *bc.Hash, preEpochBlockHash []*bc.Hash) []byte {
 	seed := make([]byte, 32)
 	var ss []byte
-	ss = append(ss, (*preSeed).Bytes()...)
+	ss = append(ss, preSeed.Bytes()...)
 
 	for _, h := range preEpochBlockHash {
-		ss = append(ss, (*h).Bytes()...)
+		ss = append(ss, h.Bytes()...)
 	}
 	sha256 := makeHasher(sha3.New256())
 	sha256(seed, ss)
@@ -80,13 +70,7 @@ func bytesToSlicePointerHash(src []byte) []*bc.Hash {
 	var sbh []*bc.Hash
 	for i := 0; i < len(src)/32; i++ {
 		s := src[i*32 : (i+1)*32]
-		var arr [32]byte
-
-		for j, v := range s {
-			arr[j] = v
-		}
-		newhash := bc.NewHash(arr)
-		sbh = append(sbh, &newhash)
+		sbh = append(sbh, bytesToPointerHash(s))
 	}
 
 	return sbh
@@ -207,7 +191,7 @@ func mulMatrix(matList []matrix.Matrix, matIndex []byte) *matrix.Matrix {
 		}
 	}
 
-	for i := 0; i < round; i++ {
+	for i := 0; i < mulRounds; i++ {
 		index = uint8(matIndex[2*i]) % matNum
 		ma = *matrix.Multiply(matList[index], mb)
 
@@ -229,21 +213,9 @@ func hashMatrix(m *matrix.Matrix) *bc.Hash {
 	hash := make([]byte, 32)
 	sha256(hash, item)
 	var arrHash [32]byte
-	for i, v := range hash {
-		arrHash[i] = v
-	}
+	copy(arrHash[:], hash)
 	newhash := bc.NewHash(arrHash)
 	return &newhash
-}
-
-func decimalByteSlice2HexString(DecimalSlice []byte) string {
-	var sa = make([]string, 0)
-	for _, v := range DecimalSlice {
-		sa = append(sa, fmt.Sprintf("%02x", v))
-	}
-	ss := strings.Join(sa, "")
-
-	return ss
 }
 
 var location = []int{
