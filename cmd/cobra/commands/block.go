@@ -113,15 +113,32 @@ var getBlockByHeightCmd = &cobra.Command{
 			jww.ERROR.Println("get-block-by-height args not valid\nUsage: get-block-by-height [height]")
 			return
 		}
+
 		ui64, err := strconv.ParseUint(args[0], 10, 64)
 		if err != nil {
 			jww.ERROR.Printf("Invalid height value")
 			return
 		}
-		var response interface{}
+
+		var rawResponse []byte
+		var response blockchain.Response
+
 		client := mustRPCClient()
-		client.Call(context.Background(), "/get-block-by-height", ui64, &response)
-		jww.FEEDBACK.Printf("%v\n", response)
+		client.Call(context.Background(), "/get-block-by-height", ui64, &rawResponse)
+
+		if err := json.Unmarshal(rawResponse, &response); err != nil {
+			jww.ERROR.Println(err)
+			return
+		}
+
+		if response.Status == blockchain.SUCCESS {
+			data := response.Data
+			for idx, d := range data {
+				jww.FEEDBACK.Printf("%d : %v\n", idx, string(d))
+			}
+			return
+		}
+		jww.ERROR.Println(response.Msg)
 	},
 }
 
@@ -139,9 +156,28 @@ var getBlockTransactionsCountByHeightCmd = &cobra.Command{
 			jww.ERROR.Printf("Invalid height value")
 			return
 		}
-		var response interface{}
+
+		var rawResponse []byte
+		var response blockchain.Response
+
 		client := mustRPCClient()
-		client.Call(context.Background(), "/get-block-transactions-count-by-height", ui64, &response)
-		jww.FEEDBACK.Printf("transactions count: %v\n", response)
+		client.Call(context.Background(), "/get-block-transactions-count-by-height", ui64, &rawResponse)
+
+		if err := json.Unmarshal(rawResponse, &response); err != nil {
+			jww.ERROR.Println(err)
+			return
+		}
+
+		if response.Status == blockchain.SUCCESS {
+			data := response.Data
+			cnt, err := strconv.ParseInt(data[0], 16, 64)
+			if err != nil {
+				jww.ERROR.Println("Fail to parse response data")
+				return
+			}
+			jww.FEEDBACK.Printf("transactions count: %v\n", cnt)
+			return
+		}
+		jww.ERROR.Println(response.Msg)
 	},
 }

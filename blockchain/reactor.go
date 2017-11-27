@@ -69,8 +69,10 @@ const (
 	ERROR   = "error"
 )
 
+// DefaultRawResponse is used as the default response when fail to get data
 var DefaultRawResponse = []byte(`{"Status":"error","Msg":"Unable to get data","Data":null}`)
 
+// Response describes the response standard.
 type Response struct {
 	Status string   `json:"status"`
 	Msg    string   `json:"msg"`
@@ -455,11 +457,11 @@ func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
 	return string(ret)
 }
 
-func (bcr *BlockchainReactor) getBlockByHeight(height uint64) string {
+func (bcr *BlockchainReactor) getBlockByHeight(height uint64) []byte {
 	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return err.Error()
+		return DefaultRawResponse
 	}
 
 	bcBlock := legacy.MapBlock(legacyBlock)
@@ -485,9 +487,10 @@ func (bcr *BlockchainReactor) getBlockByHeight(height uint64) string {
 
 	ret, err := stdjson.Marshal(res)
 	if err != nil {
-		return err.Error()
+		return DefaultRawResponse
 	}
-	return string(ret)
+	data := []string{string(ret)}
+	return resWrapper(data)
 }
 
 func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) (int, error) {
@@ -532,13 +535,15 @@ func (bcr *BlockchainReactor) isNetSyncing() bool {
 	return bcr.blockKeeper.IsCaughtUp()
 }
 
-func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) (int, error) {
+func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) []byte {
 	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return -1, err
+		return DefaultRawResponse
 	}
-	return len(legacyBlock.Transactions), nil
+	data := []string{strconv.FormatInt(int64(len(legacyBlock.Transactions)), 16)}
+	log.Infof("%v", data)
+	return resWrapper(data)
 }
 
 func (bcr *BlockchainReactor) blockHeight() []byte {
