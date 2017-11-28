@@ -12,7 +12,7 @@ import (
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/algorithm"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
@@ -68,7 +68,7 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 
 		header.Nonce = i
 		headerHash := header.Hash()
-		proofHash, err := algorithm.AIHash(header.Height, &headerHash, seedCache)
+		proofHash, err := aihash.AIHash(header.Height, &headerHash, seedCache)
 		if err != nil {
 			log.Errorf("Mining: failed on AIHash: %v", err)
 			return false

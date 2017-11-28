@@ -3,20 +3,19 @@ package config
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/consensus"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
-	"github.com/bytom/crypto/sha3pool"
 )
 
 // Generate genesis transaction
 func GenerateGenesisTx() *legacy.Tx {
 	txData := legacy.TxData{
-		Version: 1,
+		Version:        1,
 		SerializedSize: 63,
-		Inputs: []*legacy.TxInput{},
-		Outputs:[]*legacy.TxOutput{
+		Inputs:         []*legacy.TxInput{},
+		Outputs: []*legacy.TxOutput{
 			&legacy.TxOutput{
 				AssetVersion: 1,
 				OutputCommitment: legacy.OutputCommitment{
@@ -49,14 +48,11 @@ func GenerateGenesisBlock() *legacy.Block {
 		log.Panicf("Fatal ApplyTx")
 	}
 
-	var seed [32]byte
-	sha3pool.Sum256(seed[:], make([]byte, 32))
-
 	genesisBlock := &legacy.Block{
-		BlockHeader:  legacy.BlockHeader{
-			Version: 1,
-			Height: 1,
-			Seed: bc.NewHash(seed),
+		BlockHeader: legacy.BlockHeader{
+			Version:     1,
+			Height:      1,
+			Seed:        bc.NewHash([32]byte{}),
 			TimestampMS: 1511318565142,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,

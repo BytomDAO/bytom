@@ -1,7 +1,7 @@
 package seed
 
 import (
-	"github.com/bytom/consensus/algorithm"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/protocol/bc"
 	"github.com/golang/groupcache/lru"
 )
@@ -23,7 +23,7 @@ func (s *SeedCaches) Get(seed *bc.Hash) ([]uint32, error) {
 		return v.([]uint32), nil
 	}
 
-	cache, err := algorithm.CreateCache(seed)
+	cache, err := aihash.CreateCache(seed)
 	if err != nil {
 		return nil, err
 	}
