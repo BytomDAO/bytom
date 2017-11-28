@@ -10,7 +10,7 @@ import (
 
 // CreateSeed return epoch seed, type is *bc.Hash
 func CreateSeed(height uint64, preSeed *bc.Hash, blockHashs []*bc.Hash) *bc.Hash {
-	if (height-1)%epochLength != 0 {
+	if height%epochLength != 1 {
 		log.WithFields(log.Fields{
 			"height": height,
 			"epoch":  (height - 1) / epochLength,

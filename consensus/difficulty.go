@@ -82,8 +82,7 @@ func BigToCompact(n *big.Int) uint64 {
 }
 
 func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
-	return true
-	// return HashToBig(hash).Cmp(CompactToBig(bits)) <= 0
+	return HashToBig(hash).Cmp(CompactToBig(bits)) <= 0
 }
 
 func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {

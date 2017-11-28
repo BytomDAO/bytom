@@ -162,6 +162,7 @@ func dotProduct(a, b []int8) int8 {
 	for i := 0; i < len(a); i++ {
 		total += int32(a[i]) * int32(b[i])
 	}
+
 	totalV0 := total & 0xff
 	totalV1 := (total >> 8) & 0xff
 	totalV2 := (total >> 16) & 0xff
