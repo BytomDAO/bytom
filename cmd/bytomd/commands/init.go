@@ -19,6 +19,8 @@ var initFilesCmd = &cobra.Command{
 }
 
 func init() {
+	initFilesCmd.Flags().String("chain_id", config.ChainID, "set chain id")
+
 	RootCmd.AddCommand(initFilesCmd)
 }
 
@@ -34,7 +36,7 @@ func initFiles(cmd *cobra.Command, args []string) {
 		return
 	}
 	genDoc := types.GenesisDoc{
-		ChainID:    cmn.Fmt("bytom"),
+		ChainID:    cmn.Fmt(config.ChainID),
 		PrivateKey: hex.EncodeToString(xprv.Bytes()),
 	}
 	genDoc.SaveAs(genFile)
