@@ -47,10 +47,9 @@ func ComputeAssetID(prog []byte, initialBlockID *Hash, vmVersion uint64, data *H
 	return def.ComputeAssetID()
 }
 
-func (a *AssetAmount) ReadFrom(r *blockchain.Reader) error {
+func (a *AssetAmount) ReadFrom(r *blockchain.Reader) (err error) {
 	var assetID AssetID
-	_, err := assetID.ReadFrom(r)
-	if err != nil {
+	if _, err = assetID.ReadFrom(r); err != nil {
 		return err
 	}
 	a.AssetId = &assetID

@@ -406,11 +406,6 @@ func TestVerifyTxInputQuickCheck(t *testing.T) {
 			VMVersion: 1,
 			Code:      program,
 			Arguments: witnesses,
-
-			// Leaving this out reduces coverage.
-			// TODO(kr): figure out why and convert that
-			// to a normal unit test.
-			MaxTimeMS: new(uint64),
 		}
 		Verify(vctx, 10000)
 

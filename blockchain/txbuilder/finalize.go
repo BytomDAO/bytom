@@ -27,9 +27,6 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *legacy.Tx) error {
 		return err
 	}
 
-	if tx.Tx.MaxTimeMs > 0 && tx.Tx.MaxTimeMs < c.TimestampMS() {
-		return errors.Wrap(ErrRejected, "tx expired")
-	}
 	err = c.ValidateTx(tx)
 	if errors.Root(err) == protocol.ErrBadTx {
 		return errors.Sub(ErrRejected, err)

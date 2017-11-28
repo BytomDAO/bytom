@@ -530,12 +530,6 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 		if b.Version == 1 && tx.Version != 1 {
 			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)
 		}
-		if tx.MaxTimeMs > 0 && b.TimestampMs > tx.MaxTimeMs {
-			return errors.WithDetailf(errUntimelyTransaction, "block timestamp %d, transaction time range %d-%d", b.TimestampMs, tx.MinTimeMs, tx.MaxTimeMs)
-		}
-		if tx.MinTimeMs > 0 && b.TimestampMs > 0 && b.TimestampMs < tx.MinTimeMs {
-			return errors.WithDetailf(errUntimelyTransaction, "block timestamp %d, transaction time range %d-%d", b.TimestampMs, tx.MinTimeMs, tx.MaxTimeMs)
-		}
 
 		txBTMValue, err := ValidateTx(tx, b)
 		if err != nil {

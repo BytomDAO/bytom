@@ -204,8 +204,6 @@ const (
 	OP_ASSET       Op = 0xc2
 	OP_AMOUNT      Op = 0xc3
 	OP_PROGRAM     Op = 0xc4
-	OP_MINTIME     Op = 0xc5
-	OP_MAXTIME     Op = 0xc6
 	OP_TXDATA      Op = 0xc7
 	OP_ENTRYDATA   Op = 0xc8
 	OP_INDEX       Op = 0xc9
@@ -314,8 +312,6 @@ var (
 		OP_ASSET:       {OP_ASSET, "ASSET", opAsset},
 		OP_AMOUNT:      {OP_AMOUNT, "AMOUNT", opAmount},
 		OP_PROGRAM:     {OP_PROGRAM, "PROGRAM", opProgram},
-		OP_MINTIME:     {OP_MINTIME, "MINTIME", opMinTime},
-		OP_MAXTIME:     {OP_MAXTIME, "MAXTIME", opMaxTime},
 		OP_TXDATA:      {OP_TXDATA, "TXDATA", opTxData},
 		OP_ENTRYDATA:   {OP_ENTRYDATA, "ENTRYDATA", opEntryData},
 		OP_INDEX:       {OP_INDEX, "INDEX", opIndex},

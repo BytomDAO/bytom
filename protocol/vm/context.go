@@ -27,8 +27,6 @@ type Context struct {
 	NumResults    *uint64
 	AssetID       *[]byte
 	Amount        *uint64
-	MinTimeMS     *uint64
-	MaxTimeMS     *uint64
 	EntryData     *[]byte
 	TxData        *[]byte
 	DestPos       *uint64

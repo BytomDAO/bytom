@@ -59,10 +59,8 @@ func Empty() *Snapshot {
 
 // ApplyBlock updates s in place.
 func (s *Snapshot) ApplyBlock(block *bc.Block) error {
-	s.PruneNonces(block.TimestampMs)
 	for i, tx := range block.Transactions {
-		err := s.ApplyTx(tx)
-		if err != nil {
+		if err := s.ApplyTx(tx); err != nil {
 			return errors.Wrapf(err, "applying block transaction %d", i)
 		}
 	}
@@ -78,7 +76,7 @@ func (s *Snapshot) ApplyTx(tx *bc.Tx) error {
 			return fmt.Errorf("conflicting nonce %x", n.Bytes())
 		}
 
-		s.Nonces[n] = tx.TxHeader.MaxTimeMs
+		s.Nonces[n] = 0
 	}
 
 	// Remove spent outputs. Each output must be present.

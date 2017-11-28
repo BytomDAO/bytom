@@ -79,9 +79,7 @@ func TestCopySnapshot(t *testing.T) {
 func TestApplyBlock(t *testing.T) {
 	// Setup a snapshot with a nonce with a known expiry.
 	maxTime := bc.Millis(time.Now().Add(5 * time.Minute))
-	issuance := bctest.NewIssuanceTx(t, bc.EmptyStringHash, func(tx *legacy.Tx) {
-		tx.MaxTime = maxTime
-	})
+	issuance := bctest.NewIssuanceTx(t, bc.EmptyStringHash, func(tx *legacy.Tx) {})
 	snap := Empty()
 	err := snap.ApplyTx(legacy.MapTx(&issuance.TxData))
 	if err != nil {
@@ -101,7 +99,7 @@ func TestApplyBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n := len(snap.Nonces); n != 0 {
-		t.Errorf("got %d nonces, want 0", n)
+	if n := len(snap.Nonces); n != 1 {
+		t.Errorf("got %d nonces, want 1", n)
 	}
 }
