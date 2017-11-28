@@ -2,7 +2,9 @@ package commands
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -12,11 +14,38 @@ import (
 
 //Token describe the access token.
 type Token struct {
-	ID      string    `json:"id"`
+	ID      string    `json:"id,omitempty"`
 	Token   string    `json:"token,omitempty"`
 	Type    string    `json:"type,omitempty"`
 	Secret  string    `json:"secret,omitempty"`
-	Created time.Time `json:"created_at"`
+	Created time.Time `json:"created_at,omitempty"`
+}
+
+type resp struct {
+	Status string `json:"status,omitempty"`
+	Msg    string `json:"msg,omitempty"`
+	Data   string `json:"data,omitempty"`
+}
+
+type respToken struct {
+	Status string   `json:"status,omitempty"`
+	Msg    string   `json:"msg,omitempty"`
+	Data   []*Token `json:"data,omitempty"`
+}
+
+func parseresp(response interface{}, pattern interface{}) error {
+	data, err := base64.StdEncoding.DecodeString(response.(string))
+	if err != nil {
+		jww.ERROR.Println("response format error")
+		return err
+	}
+
+	if err := json.Unmarshal(data, pattern); err != nil {
+		jww.ERROR.Println("result not json format", err)
+		return err
+	}
+
+	return nil
 }
 
 var createAccessTokenCmd = &cobra.Command{
@@ -36,7 +65,21 @@ var createAccessTokenCmd = &cobra.Command{
 		client := mustRPCClient()
 		client.Call(context.Background(), "/create-access-token", &token, &response)
 
-		jww.FEEDBACK.Printf("response: %v\n", response)
+		var rawresp resp
+		if err := parseresp(response, &rawresp); err != nil {
+			jww.ERROR.Println("parse response error")
+			return
+		}
+
+		if rawresp.Status == "success" {
+			jww.FEEDBACK.Printf("%v\n", rawresp.Data)
+			return
+		}
+
+		if rawresp.Status == "error" {
+			jww.ERROR.Println(rawresp.Msg)
+			return
+		}
 	},
 }
 
@@ -50,17 +93,25 @@ var listAccessTokenCmd = &cobra.Command{
 		}
 
 		var response interface{}
-		var tokens []Token
 		client := mustRPCClient()
 		client.Call(context.Background(), "/list-access-token", nil, &response)
 
-		if err := json.Unmarshal([]byte(response.(string)), &tokens); err != nil {
-			jww.ERROR.Println("result not json format")
+		var rawresp respToken
+		if err := parseresp(response, &rawresp); err != nil {
+			jww.ERROR.Println("parse response error")
 			return
 		}
 
-		for i, v := range tokens {
-			jww.FEEDBACK.Printf("%d %v\n", i, v)
+		if rawresp.Status == "success" {
+			for i, v := range rawresp.Data {
+				fmt.Println(i, v.Token)
+			}
+			return
+		}
+
+		if rawresp.Status == "error" {
+			jww.ERROR.Println(rawresp.Msg)
+			return
 		}
 	},
 }
@@ -82,7 +133,22 @@ var deleteAccessTokenCmd = &cobra.Command{
 		client := mustRPCClient()
 		client.Call(context.Background(), "/delete-access-token", &token, &response)
 
-		jww.FEEDBACK.Printf("response: %v\n", response)
+		var rawresp resp
+
+		if err := parseresp(response, &rawresp); err != nil {
+			jww.ERROR.Println("parse response error")
+			return
+		}
+
+		if rawresp.Status == "success" {
+			jww.FEEDBACK.Printf("%v\n", rawresp.Data)
+			return
+		}
+
+		if rawresp.Status == "error" {
+			jww.ERROR.Println(rawresp.Msg)
+			return
+		}
 	},
 }
 
@@ -103,6 +169,21 @@ var checkAccessTokenCmd = &cobra.Command{
 		client := mustRPCClient()
 		client.Call(context.Background(), "/check-access-token", &token, &response)
 
-		jww.FEEDBACK.Printf("response: %v\n", response)
+		var rawresp resp
+
+		if err := parseresp(response, &rawresp); err != nil {
+			jww.ERROR.Println("parse response error")
+			return
+		}
+
+		if rawresp.Status == "success" {
+			jww.FEEDBACK.Printf("%v\n", rawresp.Data)
+			return
+		}
+
+		if rawresp.Status == "error" {
+			jww.ERROR.Println(rawresp.Msg)
+			return
+		}
 	},
 }

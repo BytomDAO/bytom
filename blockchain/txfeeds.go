@@ -17,9 +17,9 @@ func (bcr *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
 }) interface{} {
 	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Add TxFeed Failed")
-		return JSendWrapper(nil, ERROR, err.Error())
+		return jsendWrapper(nil, ERROR, err.Error())
 	}
-	return JSendWrapper("success", SUCCESS, "")
+	return jsendWrapper("success", SUCCESS, "")
 }
 
 func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) (*txfeed.TxFeed, error) {
@@ -47,9 +47,9 @@ func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
 }) interface{} {
 	txfeed, err := bcr.getTxFeedByAlias(ctx, in.Alias)
 	if err != nil {
-		return JSendWrapper(nil, ERROR, err.Error())
+		return jsendWrapper(nil, ERROR, err.Error())
 	}
-	return JSendWrapper(txfeed, SUCCESS, "")
+	return jsendWrapper(txfeed, SUCCESS, "")
 }
 
 // POST /delete-transaction-feed
@@ -57,9 +57,9 @@ func (bcr *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) interface{} {
 	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
-		return JSendWrapper(nil, ERROR, err.Error())
+		return jsendWrapper(nil, ERROR, err.Error())
 	}
-	return JSendWrapper("success", SUCCESS, "")
+	return jsendWrapper("success", SUCCESS, "")
 }
 
 // POST /update-transaction-feed
@@ -68,13 +68,13 @@ func (bcr *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
 	Filter string
 }) interface{} {
 	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
-		return JSendWrapper(nil, ERROR, err.Error())
+		return jsendWrapper(nil, ERROR, err.Error())
 	}
 	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Update TxFeed Failed")
-		return JSendWrapper(nil, ERROR, err.Error())
+		return jsendWrapper(nil, ERROR, err.Error())
 	}
-	return JSendWrapper("success", SUCCESS, "")
+	return jsendWrapper("success", SUCCESS, "")
 }
 
 // txAfterIsBefore returns true if a is before b. It returns an error if either
@@ -115,7 +115,7 @@ func (bcr *BlockchainReactor) getTxFeeds() ([]*txfeed.TxFeed, error) {
 func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context, in requestQuery) interface{} {
 	txfeeds, err := bcr.getTxFeeds()
 	if err != nil {
-		return JSendWrapper(nil, ERROR, err.Error())
+		return jsendWrapper(nil, ERROR, err.Error())
 	}
-	return JSendWrapper(txfeeds, SUCCESS, "")
+	return jsendWrapper(txfeeds, SUCCESS, "")
 }
