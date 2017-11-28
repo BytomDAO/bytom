@@ -526,6 +526,7 @@ func (bcr *BlockchainReactor) isNetListening() []byte {
 }
 
 func (bcr *BlockchainReactor) peerCount() []byte {
+	// TODO: use key-value instead of bare value
 	data := []string{strconv.FormatInt(int64(len(bcr.sw.Peers().List())), 16)}
 	return resWrapper(data)
 }

@@ -36,6 +36,7 @@ var netListeningCmd = &cobra.Command{
 			return
 		}
 
+		// TODO: code reuse
 		if response.Status == blockchain.SUCCESS {
 			data := response.Data
 			res, err := strconv.ParseBool(data[0])
