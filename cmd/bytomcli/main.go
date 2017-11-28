@@ -89,6 +89,7 @@ var commands = map[string]*command{
 	"sign-transactions":        {signTransactions},
 	"sub-create-issue-tx":      {submitCreateIssueTransaction},
 	"sub-spend-account-tx":     {submitSpendTransaction},
+	"sub-control-receiver-tx":  {submitReceiverTransaction},
 	"reset-password":           {resetPassword},
 	"update-alias":             {updateAlias},
 	"net-info":                 {netInfo},
@@ -527,7 +528,8 @@ func buildTransaction(client *rpc.Client, args []string) {
 
 func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 	if len(args) != 5 {
-		fatalln("error: need args: [account1 id] [account2 id] [asset id] [asset xprv] [issue amount]")
+		fmt.Println("error: need args: [account1 id] [account2 id] [asset id] [asset xprv] [issue amount]")
+		return
 	}
 	// Build Transaction.
 	fmt.Printf("To build transaction:\n")
@@ -559,12 +561,12 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 	fmt.Printf("----------btm inputs:%v\n", tpl[0].Transaction.Inputs[0])
 	fmt.Printf("----------issue inputs:%v\n", tpl[0].Transaction.Inputs[1])
 
-	var xprv_asset chainkd.XPrv
+	var xprvAsset chainkd.XPrv
 	fmt.Printf("xprv_asset:%v\n", args[3])
-	xprv_asset.UnmarshalText([]byte(args[3]))
+	xprvAsset.UnmarshalText([]byte(args[3]))
 	// sign-transaction
-	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprv_asset.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
-		derived := xprv_asset.Derive(path)
+	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprvAsset.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
+		derived := xprvAsset.Derive(path)
 		return derived.Sign(data[:]), nil
 	})
 	if err != nil {
@@ -581,9 +583,66 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 	fmt.Printf("submit transaction:%v\n", submitResponse)
 }
 
+func submitReceiverTransaction(client *rpc.Client, args []string) {
+	if len(args) != 5 {
+		fmt.Println("error: need args: [account xprv] [account id] [asset id] [spend amount] [control_program]")
+		return
+	}
+
+	var xprvAccount chainkd.XPrv
+
+	err := xprvAccount.UnmarshalText([]byte(args[0]))
+	if err == nil {
+		fmt.Printf("xprv:%v\n", xprvAccount)
+	} else {
+		fmt.Printf("xprv unmarshal error:%v\n", xprvAccount)
+		os.Exit(1)
+	}
+	// Build Transaction-Spend_account
+	fmt.Printf("To build transaction:\n")
+	buildReqFmt := `
+		{"actions": [
+		    {"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":20000000, "account_id": "%s"},
+			{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
+			{"type": "control_receiver", "asset_id": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
+	]}`
+
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[1], args[2], args[3], args[1], args[2], args[3], args[4])
+
+	var buildReq blockchain.BuildRequest
+	err = stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	tpl := make([]txbuilder.Template, 1)
+	client.Call(context.Background(), "/build-transaction", []*blockchain.BuildRequest{&buildReq}, &tpl)
+	fmt.Printf("tpl:%v\n", tpl)
+
+	// sign-transaction-Spend_account
+	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprvAccount.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
+		derived := xprvAccount.Derive(path)
+		return derived.Sign(data[:]), nil
+	})
+	if err != nil {
+		fmt.Printf("sign-transaction error. err:%v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("sign tpl:%v\n", tpl[0])
+
+	// submit-transaction-Spend_account
+	var submitResponse interface{}
+	submitArg := blockchain.SubmitArg{Transactions: tpl, Wait: json.Duration{Duration: time.Duration(1000000)}, WaitUntil: "none"}
+	client.Call(context.Background(), "/submit-transaction", submitArg, &submitResponse)
+	fmt.Printf("submit transaction:%v\n", submitResponse)
+}
+
 func submitSpendTransaction(client *rpc.Client, args []string) {
 	if len(args) != 5 {
-		fatalln("error: need args: [account1 id] [account2 id] [asset id] [account1 xprv] [spend amount]")
+		fmt.Println("error: need args: [account1 id] [account2 id] [asset id] [account1 xprv] [spend amount]")
+		return
 	}
 
 	var xprvAccount1 chainkd.XPrv
@@ -628,8 +687,6 @@ func submitSpendTransaction(client *rpc.Client, args []string) {
 	}
 
 	fmt.Printf("sign tpl:%v\n", tpl[0])
-	//fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
-	//fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
 
 	// submit-transaction-Spend_account
 	var submitResponse interface{}
@@ -654,21 +711,23 @@ func createControlProgram(client *rpc.Client, args []string) {
 }
 
 func createAccountReceiver(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error:createAccountReceiver not use args")
+	if len(args) != 1 {
+		fmt.Println("error: need args: [account id] or [account alias]")
+		return
 	}
 	type Ins struct {
-		AccountID    string    `json:"account_id"`
-		AccountAlias string    `json:"account_alias"`
-		ExpiresAt    time.Time `json:"expires_at"`
+		AccountInfo string    `json:"account_info"`
+		ExpiresAt   time.Time `json:"expires_at"`
 	}
 	var ins Ins
+	var response interface{}
+
 	//TODO:undefined argument to ExpiresAt
-	ins.AccountID = "123456"
-	ins.AccountAlias = "zxcvbn"
-	responses := make([]interface{}, 50)
-	client.Call(context.Background(), "/create-Account-Receiver", &[]Ins{ins}, &responses)
-	fmt.Printf("responses:%v\n", responses)
+
+	ins.AccountInfo = args[0]
+
+	client.Call(context.Background(), "/create-account-receiver", &ins, &response)
+	fmt.Printf("responses:%v\n", response)
 }
 
 func createTxFeed(client *rpc.Client, args []string) {
@@ -868,7 +927,6 @@ func listTransactions(client *rpc.Client, args []string) {
 	for i, item := range response.Data {
 		fmt.Println(i, "-----", item)
 	}
-
 }
 
 func listBalances(client *rpc.Client, args []string) {

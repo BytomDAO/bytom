@@ -382,8 +382,9 @@ func (bcR *BlockchainReactor) getNetInfo() (*ctypes.ResultNetInfo, error) {
 	return rpc.NetInfo(bcR.sw)
 }
 
-func (bcR *BlockchainReactor) getBestBlockHash() *bc.Hash {
-	return bcR.chain.BestBlockHash()
+func (bcr *BlockchainReactor) getBestBlockHash() []byte {
+	data := []string{bcr.chain.BestBlockHash().String()}
+	return resWrapper(data)
 }
 
 func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
