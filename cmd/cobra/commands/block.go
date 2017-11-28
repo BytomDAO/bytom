@@ -21,10 +21,24 @@ var blockHashCmd = &cobra.Command{
 	Use:   "block-hash",
 	Short: "Get the hash of most recent block",
 	Run: func(cmd *cobra.Command, args []string) {
-		var response interface{}
+		var rawResponse []byte
+		var response blockchain.Response
+
 		client := mustRPCClient()
-		client.Call(context.Background(), "/get-best-block-hash", nil, &response)
-		jww.FEEDBACK.Printf("best block hash: %v\n", response)
+		client.Call(context.Background(), "/get-best-block-hash", nil, &rawResponse)
+
+		if err := json.Unmarshal(rawResponse, &response); err != nil {
+			jww.ERROR.Println(err)
+			return
+		}
+
+		if response.Status == blockchain.SUCCESS {
+			data := response.Data
+			hash := data[0]
+			jww.FEEDBACK.Printf("best block hash: %v\n", hash)
+			return
+		}
+		jww.ERROR.Println(response.Msg)
 	},
 }
 
