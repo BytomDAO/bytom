@@ -190,10 +190,6 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 				}
 			}
 
-			if tx.MaxTime > 0 && tx.MaxTime < b.TimestampMS {
-				return 0, errors.Wrap(txbuilder.ErrRejected, "transaction max time exceeded")
-			}
-
 			// might still be in pool or might be rejected; we can't
 			// tell definitively until its max time elapses.
 			// Re-insert into the pool in case it was dropped.

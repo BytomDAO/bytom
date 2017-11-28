@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"testing"
-	"time"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
@@ -547,17 +546,16 @@ func TestBlockHeaderValid(t *testing.T) {
 // affect the transaction that's built. The components of the
 // transaction are the fields of txFixture.
 type txFixture struct {
-	initialBlockID       bc.Hash
-	issuanceProg         bc.Program
-	issuanceArgs         [][]byte
-	assetDef             []byte
-	assetID              bc.AssetID
-	txVersion            uint64
-	txInputs             []*legacy.TxInput
-	txOutputs            []*legacy.TxOutput
-	txMinTime, txMaxTime uint64
-	txRefData            []byte
-	tx                   *legacy.TxData
+	initialBlockID bc.Hash
+	issuanceProg   bc.Program
+	issuanceArgs   [][]byte
+	assetDef       []byte
+	assetID        bc.AssetID
+	txVersion      uint64
+	txInputs       []*legacy.TxInput
+	txOutputs      []*legacy.TxOutput
+	txRefData      []byte
+	tx             *legacy.TxData
 }
 
 // Produces a sample transaction in a txFixture object (see above). A
@@ -646,12 +644,6 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 			legacy.NewTxOutput(result.assetID, 45, cp2, []byte{12}),
 		}
 	}
-	if result.txMinTime == 0 {
-		result.txMinTime = bc.Millis(time.Now().Add(-time.Minute))
-	}
-	if result.txMaxTime == 0 {
-		result.txMaxTime = bc.Millis(time.Now().Add(time.Minute))
-	}
 	if len(result.txRefData) == 0 {
 		result.txRefData = []byte{13}
 	}
@@ -660,8 +652,6 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		Version:       result.txVersion,
 		Inputs:        result.txInputs,
 		Outputs:       result.txOutputs,
-		MinTime:       result.txMinTime,
-		MaxTime:       result.txMaxTime,
 		ReferenceData: result.txRefData,
 	}
 

@@ -16,7 +16,7 @@ import (
 )
 
 func TestTransactionTrailingGarbage(t *testing.T) {
-	const validTxHex = `07010700d0929893b92b00000101270eac870dfde1e0feaa4fac6693dee38da2afe7f5cc83ce2b024f04a2400fd6e20a0104deadbeef027b7d0000`
+	const validTxHex = `070100000101270eac870dfde1e0feaa4fac6693dee38da2afe7f5cc83ce2b024f04a2400fd6e20a0104deadbeef027b7d0000`
 
 	var validTx Tx
 	err := validTx.UnmarshalText([]byte(validTxHex))
@@ -47,43 +47,33 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(7),
+				SerializedSize: uint64(4),
 				Inputs:         nil,
 				Outputs:        nil,
-				MinTime:        0,
-				MaxTime:        0,
 				ReferenceData:  nil,
 			}),
 			hex: ("07" + // serflags
 				"01" + // transaction version
-				"02" + // common fields extensible string length
-				"00" + // common fields, mintime
-				"00" + // common fields, maxtime
 				"00" + // common witness extensible string length
 				"00" + // inputs count
 				"00" + // outputs count
 				"00"), // reference data
-			hash: mustDecodeHash("7ae6eef6b02fe61d35cc185405aec5f690ccb0ac291ecd6214445a1dff8fc9fd"),
+			hash: mustDecodeHash("3629cd98d6707aab6055e125ea16be6a4e8e8c60aa195126ab7ee0cc246ab430"),
 		},
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(159),
+				SerializedSize: uint64(156),
 				Inputs: []*TxInput{
 					NewIssuanceInput([]byte{10, 9, 8}, 1000000000000, []byte("input"), initialBlockHash, issuanceScript, [][]byte{[]byte{1, 2, 3}}, nil),
 				},
 				Outputs: []*TxOutput{
 					NewTxOutput(bc.AssetID{}, 1000000000000, []byte{1}, []byte("output")),
 				},
-				MinTime:       0,
-				MaxTime:       0,
 				ReferenceData: []byte("issuance"),
 			}),
 			hex: ("07" + // serflags
 				"01" + // transaction version
-				"02" + // common fields extensible string length
-				"00" + // common fields, mintime
-				"00" + // common fields, maxtime
 				"00" + // common witness extensible string length
 				"01" + // inputs count
 				"01" + // input 0, asset version
@@ -113,12 +103,12 @@ func TestTransaction(t *testing.T) {
 				"066f7574707574" + // output 0, reference data
 				"00" + // output 0, output witness
 				"0869737375616e6365"), // reference data
-			hash: mustDecodeHash("515774561625cfe07629e49d4cf938d641aeb62af58e1b3ae2c582fee41dc628"),
+			hash: mustDecodeHash("191646bc995127b369a1459a58759368d8f1b95adfda87c9c858165a49f67659"),
 		},
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(235),
+				SerializedSize: uint64(224),
 				Inputs: []*TxInput{
 					NewSpendInput(nil, mustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), bc.AssetID{}, 1000000000000, 1, []byte{1}, bc.Hash{}, []byte("input")),
 				},
@@ -126,16 +116,10 @@ func TestTransaction(t *testing.T) {
 					NewTxOutput(assetID, 600000000000, []byte{1}, nil),
 					NewTxOutput(assetID, 400000000000, []byte{2}, nil),
 				},
-				MinTime:       1492590000,
-				MaxTime:       1492590591,
 				ReferenceData: []byte("distribution"),
 			}),
 			hex: ("07" + // serflags
 				"01" + // transaction version
-				"0a" + // common fields extensible string length
-
-				"b0bbdcc705" + // common fields, mintime
-				"ffbfdcc705" + // common fields, maxtime
 				"00" + // common witness extensible string length
 				"01" + // inputs count
 				"01" + // input 0, asset version
@@ -170,47 +154,8 @@ func TestTransaction(t *testing.T) {
 				"00" + // output 1, reference data
 				"00" + // output 1, output witness
 				"0c646973747269627574696f6e"), // reference data
-			hash: mustDecodeHash("c328ad4278045b4c50e8af7e7d0df198e7d9436d2b5de35df1339f13a1192331"),
+			hash: mustDecodeHash("52611aef626501b815b0d80312fba172a5055b06458bbe32b980fd5e41ba8f46"),
 		},
-
-		//07
-		//01
-		//0a
-		//b0bbdcc705
-		//ffbfdcc705
-		//00
-		//01
-		//01
-		//4b
-		//01
-		//dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292
-		//29
-		//0000000000000000000000000000000000000000000000000000000000000000
-		//80a094a58d1d
-		//01
-		//0101
-		//05696e707574
-		//01
-		//00
-		//02
-		//01
-		//29
-		//a9b2b6c5394888ab5396f583ae484b8459486b14268e2bef1b637440335eb6c1
-		//80e0a596bb11
-		//01
-		//0101
-		//00
-		//00
-		//01
-		//29
-		//a9b2b6c5394888ab5396f583ae484b8459486b14268e2bef1b637440335eb6c1
-		//80c0ee8ed20b
-		//01
-		//0102
-		//00
-		//00
-		//0c646973747269627574696f6e
-
 	}
 	for i, test := range cases {
 		got := serialize(t, test.tx)
@@ -321,9 +266,6 @@ func TestIsCoinbase(t *testing.T) {
 func TestInvalidIssuance(t *testing.T) {
 	hex := ("07" + // serflags
 		"01" + // transaction version
-		"02" + // common fields extensible string length
-		"00" + // common fields, mintime
-		"00" + // common fields, maxtime
 		"00" + // common witness extensible string length
 		"01" + // inputs count
 		"01" + // input 0, asset version

@@ -72,8 +72,7 @@ var byte32zero [32]byte
 // hash-serialization formats are not specified. It MUST NOT produce
 // errors in other cases.
 func mustWriteForHash(w io.Writer, c interface{}) {
-	err := writeForHash(w, c)
-	if err != nil {
+	if err := writeForHash(w, c); err != nil {
 		panic(err)
 	}
 }
@@ -129,8 +128,7 @@ func writeForHash(w io.Writer, c interface{}) error {
 		return writeForHash(w, elem.Interface())
 	case reflect.Slice:
 		l := v.Len()
-		_, err := blockchain.WriteVarint31(w, uint64(l))
-		if err != nil {
+		if _, err := blockchain.WriteVarint31(w, uint64(l)); err != nil {
 			return errors.Wrapf(err, "writing slice (len %d) for hash", l)
 		}
 		for i := 0; i < l; i++ {
@@ -138,8 +136,7 @@ func writeForHash(w io.Writer, c interface{}) error {
 			if !c.CanInterface() {
 				return errInvalidValue
 			}
-			err := writeForHash(w, c.Interface())
-			if err != nil {
+			if err := writeForHash(w, c.Interface()); err != nil {
 				return errors.Wrapf(err, "writing slice element %d for hash", i)
 			}
 		}
@@ -152,8 +149,7 @@ func writeForHash(w io.Writer, c interface{}) error {
 			if !c.CanInterface() {
 				return errInvalidValue
 			}
-			err := writeForHash(w, c.Interface())
-			if err != nil {
+			if err := writeForHash(w, c.Interface()); err != nil {
 				t := v.Type()
 				f := t.Field(i)
 				return errors.Wrapf(err, "writing struct field %d (%s.%s) for hash", i, t.Name(), f.Name)

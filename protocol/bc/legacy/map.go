@@ -225,7 +225,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	refdatahash := hashData(tx.ReferenceData)
-	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, resultIDs, &refdatahash, tx.MinTime, tx.MaxTime)
+	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, resultIDs, &refdatahash)
 	headerID = addEntry(h)
 
 	return headerID, h, entryMap

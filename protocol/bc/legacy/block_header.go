@@ -67,8 +67,7 @@ func (bh *BlockHeader) Hash() bc.Hash {
 func (bh *BlockHeader) MarshalText() ([]byte, error) {
 	buf := bufpool.Get()
 	defer bufpool.Put(buf)
-	_, err := bh.WriteTo(buf)
-	if err != nil {
+	if _, err := bh.WriteTo(buf); err != nil {
 		return nil, err
 	}
 
@@ -80,63 +79,48 @@ func (bh *BlockHeader) MarshalText() ([]byte, error) {
 // UnmarshalText fulfills the encoding.TextUnmarshaler interface.
 func (bh *BlockHeader) UnmarshalText(text []byte) error {
 	decoded := make([]byte, hex.DecodedLen(len(text)))
-	_, err := hex.Decode(decoded, text)
-	if err != nil {
+	if _, err := hex.Decode(decoded, text); err != nil {
 		return err
 	}
-	_, err = bh.readFrom(blockchain.NewReader(decoded))
+	_, err := bh.readFrom(blockchain.NewReader(decoded))
 	return err
 }
 
-func (bh *BlockHeader) readFrom(r *blockchain.Reader) (uint8, error) {
+func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error) {
 	var serflags [1]byte
 	io.ReadFull(r, serflags[:])
-	switch serflags[0] {
-	case SerBlockSigHash, SerBlockHeader, SerBlockFull:
+	serflag = serflags[0]
+	switch serflag {
+	case SerBlockHeader, SerBlockFull:
 	default:
 		return 0, fmt.Errorf("unsupported serialization flags 0x%x", serflags)
 	}
 
-	var err error
-
-	bh.Version, err = blockchain.ReadVarint63(r)
-	if err != nil {
+	if bh.Version, err = blockchain.ReadVarint63(r); err != nil {
 		return 0, err
 	}
-
-	bh.Height, err = blockchain.ReadVarint63(r)
-	if err != nil {
+	if bh.Height, err = blockchain.ReadVarint63(r); err != nil {
 		return 0, err
 	}
-
 	if _, err = bh.PreviousBlockHash.ReadFrom(r); err != nil {
 		return 0, err
 	}
-
 	if _, err = bh.Seed.ReadFrom(r); err != nil {
 		return 0, err
 	}
-
-	bh.TimestampMS, err = blockchain.ReadVarint63(r)
-	if err != nil {
+	if bh.TimestampMS, err = blockchain.ReadVarint63(r); err != nil {
 		return 0, err
 	}
-
 	if _, err = blockchain.ReadExtensibleString(r, bh.BlockCommitment.readFrom); err != nil {
 		return 0, err
 	}
-
-	bh.Nonce, err = blockchain.ReadVarint63(r)
-	if err != nil {
+	if bh.Nonce, err = blockchain.ReadVarint63(r); err != nil {
 		return 0, err
 	}
-
-	bh.Bits, err = blockchain.ReadVarint63(r)
-	if err != nil {
+	if bh.Bits, err = blockchain.ReadVarint63(r); err != nil {
 		return 0, err
 	}
-
-	return serflags[0], nil
+	return
 }
 
 // WriteTo writes the block header to the input io.Writer

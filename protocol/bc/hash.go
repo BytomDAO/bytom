@@ -64,8 +64,7 @@ func (h *Hash) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 	var s string
-	err := json.Unmarshal(b, &s)
-	if err != nil {
+	if err := json.Unmarshal(b, &s); err != nil {
 		return err
 	}
 	return h.UnmarshalText([]byte(s))

@@ -20,7 +20,7 @@ func TestMerkleRoot(t *testing.T) {
 				[]byte("00000"),
 			},
 		},
-		want: mustDecodeHash("77eae4222f60bfd74c07994d700161d0b831ed723037952b9c7ee98ed8766977"),
+		want: mustDecodeHash("c1b9e0b7f761e15b590834a01fe7a10e602d9ee6a4c674392a2b106242f29e8b"),
 	}, {
 		witnesses: [][][]byte{
 			[][]byte{
@@ -32,7 +32,7 @@ func TestMerkleRoot(t *testing.T) {
 				[]byte("111111"),
 			},
 		},
-		want: mustDecodeHash("526737fcca853f5ad352081c5a7341aca4ee05b09a002c8600e26a06df02aa3b"),
+		want: mustDecodeHash("1719bd4ff9fdf4de4b8e403a9302c30162e61bec1e688c21173c7c2aec4792bb"),
 	}, {
 		witnesses: [][][]byte{
 			[][]byte{
@@ -45,7 +45,7 @@ func TestMerkleRoot(t *testing.T) {
 				[]byte("222222"),
 			},
 		},
-		want: mustDecodeHash("526737fcca853f5ad352081c5a7341aca4ee05b09a002c8600e26a06df02aa3b"),
+		want: mustDecodeHash("1719bd4ff9fdf4de4b8e403a9302c30162e61bec1e688c21173c7c2aec4792bb"),
 	}}
 
 	for _, c := range cases {

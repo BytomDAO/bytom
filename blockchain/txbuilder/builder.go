@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
 
@@ -109,14 +108,6 @@ func (b *TemplateBuilder) Build() (*Template, *legacy.TxData, error) {
 			Version: 1,
 		}
 		tpl.Local = true
-	}
-
-	// Update min & max times.
-	if !b.minTime.IsZero() && bc.Millis(b.minTime) > tx.MinTime {
-		tx.MinTime = bc.Millis(b.minTime)
-	}
-	if tx.MaxTime == 0 || tx.MaxTime > bc.Millis(b.maxTime) {
-		tx.MaxTime = bc.Millis(b.maxTime)
 	}
 
 	// Set transaction reference data if applicable.

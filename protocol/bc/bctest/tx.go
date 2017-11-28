@@ -5,7 +5,6 @@ package bctest
 import (
 	"crypto/rand"
 	"testing"
-	"time"
 
 	"golang.org/x/crypto/sha3"
 
@@ -51,8 +50,6 @@ func NewIssuanceTx(tb testing.TB, initial bc.Hash, opts ...func(*legacy.Tx)) *le
 
 	tx := legacy.NewTx(legacy.TxData{
 		Version: 1,
-		MinTime: bc.Millis(time.Now().Add(-5 * time.Minute)),
-		MaxTime: bc.Millis(time.Now().Add(5 * time.Minute)),
 		Inputs:  []*legacy.TxInput{txin},
 		Outputs: []*legacy.TxOutput{
 			legacy.NewTxOutput(txin.AssetID(), 100, []byte{0xbe, 0xef}, nil),

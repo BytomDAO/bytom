@@ -27,22 +27,18 @@ func (oc *OutputCommitment) writeExtensibleString(w io.Writer, suffix []byte, as
 
 func (oc *OutputCommitment) writeContents(w io.Writer, suffix []byte, assetVersion uint64) (err error) {
 	if assetVersion == 1 {
-		_, err = oc.AssetAmount.WriteTo(w)
-		if err != nil {
+		if _, err = oc.AssetAmount.WriteTo(w); err != nil {
 			return errors.Wrap(err, "writing asset amount")
 		}
-		_, err = blockchain.WriteVarint63(w, oc.VMVersion)
-		if err != nil {
+		if _, err = blockchain.WriteVarint63(w, oc.VMVersion); err != nil {
 			return errors.Wrap(err, "writing vm version")
 		}
-		_, err = blockchain.WriteVarstr31(w, oc.ControlProgram)
-		if err != nil {
+		if _, err = blockchain.WriteVarstr31(w, oc.ControlProgram); err != nil {
 			return errors.Wrap(err, "writing control program")
 		}
 	}
 	if len(suffix) > 0 {
-		_, err = w.Write(suffix)
-		if err != nil {
+		if _, err = w.Write(suffix); err != nil {
 			return errors.Wrap(err, "writing suffix")
 		}
 	}
@@ -52,8 +48,7 @@ func (oc *OutputCommitment) writeContents(w io.Writer, suffix []byte, assetVersi
 func (oc *OutputCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) (suffix []byte, err error) {
 	return blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
 		if assetVersion == 1 {
-			err := oc.AssetAmount.ReadFrom(r)
-			if err != nil {
+			if err := oc.AssetAmount.ReadFrom(r); err != nil {
 				return errors.Wrap(err, "reading asset+amount")
 			}
 			oc.VMVersion, err = blockchain.ReadVarint63(r)
@@ -70,6 +65,7 @@ func (oc *OutputCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) 
 	})
 }
 
+// Hash convert suffix && assetVersion to bc.Hash
 func (oc *OutputCommitment) Hash(suffix []byte, assetVersion uint64) (outputhash bc.Hash) {
 	h := sha3pool.Get256()
 	defer sha3pool.Put256(h)

@@ -56,12 +56,11 @@ func walk(n *node, walkFn WalkFunc) error {
 		return walkFn(n.Key())
 	}
 
-	err := walk(n.children[0], walkFn)
-	if err != nil {
+	if err := walk(n.children[0], walkFn); err != nil {
 		return err
 	}
 
-	err = walk(n.children[1], walkFn)
+	err := walk(n.children[1], walkFn)
 	return err
 }
 
@@ -104,7 +103,7 @@ func lookup(n *node, key []uint8) *node {
 // in t or to contain an element in t as a prefix.
 // If item itself is already in t, Insert does nothing
 // (and this is not an error).
-func (t *Tree) Insert(item []byte) error {
+func (t *Tree) Insert(item []byte) (err error) {
 	key := bitKey(item)
 
 	var hash bc.Hash
@@ -119,7 +118,6 @@ func (t *Tree) Insert(item []byte) error {
 		return nil
 	}
 
-	var err error
 	t.root, err = insert(t.root, key, &hash)
 	return err
 }

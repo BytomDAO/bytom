@@ -60,24 +60,20 @@ func (to *TxOutput) readFrom(r *blockchain.Reader, txVersion uint64) (err error)
 }
 
 func (to *TxOutput) writeTo(w io.Writer, serflags byte) error {
-	_, err := blockchain.WriteVarint63(w, to.AssetVersion)
-	if err != nil {
+	if _, err := blockchain.WriteVarint63(w, to.AssetVersion); err != nil {
 		return errors.Wrap(err, "writing asset version")
 	}
 
-	err = to.WriteCommitment(w)
-	if err != nil {
+	if err := to.WriteCommitment(w); err != nil {
 		return errors.Wrap(err, "writing output commitment")
 	}
 
-	err = writeRefData(w, to.ReferenceData, serflags)
-	if err != nil {
+	if err := writeRefData(w, to.ReferenceData, serflags); err != nil {
 		return errors.Wrap(err, "writing reference data")
 	}
 
 	// write witness (empty in v1)
-	_, err = blockchain.WriteVarstr31(w, nil)
-	if err != nil {
+	if _, err := blockchain.WriteVarstr31(w, nil); err != nil {
 		return errors.Wrap(err, "writing witness")
 	}
 	return nil
