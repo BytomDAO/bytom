@@ -34,7 +34,7 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func alicesKey(name string) []byte {
+func aliasKey(name string) []byte {
 	return []byte(aliasPreFix + name)
 }
 
@@ -103,7 +103,7 @@ type Account struct {
 
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
-	if existed := m.db.Get(alicesKey(alias)); existed != nil {
+	if existed := m.db.Get(aliasKey(alias)); existed != nil {
 		return nil, fmt.Errorf("%s is an existed alias", alias)
 	}
 
@@ -120,7 +120,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 	accountID := accountKey(signer.ID)
 	m.db.Set(accountID, accountJSON)
-	m.db.Set(alicesKey(alias), accountID)
+	m.db.Set(aliasKey(alias), []byte(signer.ID))
 
 	return account, nil
 }
@@ -135,7 +135,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 
 	var accountID []byte
 	if alias != nil {
-		accountID = m.db.Get(alicesKey(*alias))
+		accountID = m.db.Get(aliasKey(*alias))
 	} else {
 		accountID = accountKey(*id)
 	}
@@ -154,10 +154,10 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 		switch v {
 		case "":
 			delete(account.Tags, k)
-			m.db.Delete(alicesKey(k))
+			m.db.Delete(aliasKey(k))
 		default:
 			account.Tags[k] = v
-			m.db.Set(alicesKey(k), accountID)
+			m.db.Set(aliasKey(k), accountID)
 		}
 	}
 
@@ -179,7 +179,7 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 		return m.findByID(ctx, cachedID.(string))
 	}
 
-	rawID := m.db.Get(alicesKey(alias))
+	rawID := m.db.Get(aliasKey(alias))
 	if rawID == nil {
 		return nil, errors.New("fail to find account by alias")
 	}
