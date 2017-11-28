@@ -50,12 +50,14 @@ const (
 	ERROR   = "error"
 )
 
+// Response describes the response standard.
 type Response struct {
 	Status string
 	Msg    string
 	Data   []string
 }
 
+// DefaultRawResponse is used as the default response when fail to get data.
 var DefaultRawResponse = []byte(`{"Status":"error","Msg":"Unable to get data","Data":null}`)
 
 //BlockchainReactor handles long-term catchup syncing.
@@ -76,22 +78,6 @@ type BlockchainReactor struct {
 	sw            *p2p.Switch
 	handler       http.Handler
 	evsw          types.EventSwitch
-}
-
-const (
-	SUCCESS = "success"
-	FAIL    = "fail"
-	ERROR   = "error"
-)
-
-// DefaultRawResponse is used as the default response when fail to get data
-var DefaultRawResponse = []byte(`{"Status":"error","Msg":"Unable to get data","Data":null}`)
-
-// Response describes the response standard.
-type Response struct {
-	Status string   `json:"status"`
-	Msg    string   `json:"msg"`
-	Data   []string `json:"data"`
 }
 
 func batchRecover(ctx context.Context, v *interface{}) {
@@ -534,16 +520,20 @@ func (bcR *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
 	return nil
 }
 
-func (bcr *BlockchainReactor) isNetListening() bool {
-	return bcr.sw.IsListening()
+func (bcr *BlockchainReactor) isNetListening() []byte {
+	data := []string{strconv.FormatBool(bcr.sw.IsListening())}
+	return resWrapper(data)
 }
 
-func (bcr *BlockchainReactor) peerCount() int {
-	return len(bcr.sw.Peers().List())
+func (bcr *BlockchainReactor) peerCount() []byte {
+	// TODO: use key-value instead of bare value
+	data := []string{strconv.FormatInt(int64(len(bcr.sw.Peers().List())), 16)}
+	return resWrapper(data)
 }
 
-func (bcr *BlockchainReactor) isNetSyncing() bool {
-	return bcr.blockKeeper.IsCaughtUp()
+func (bcr *BlockchainReactor) isNetSyncing() []byte {
+	data := []string{strconv.FormatBool(bcr.blockKeeper.IsCaughtUp())}
+	return resWrapper(data)
 }
 
 func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) []byte {
