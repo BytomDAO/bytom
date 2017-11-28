@@ -27,7 +27,6 @@ func (A *Matrix) Get(r, c int) int8 {
 }
 
 // Print converts the matrix into a string and then outputs it to fmt.Printf.
-
 func (A *Matrix) Print() {
 
 	// Find the width (in characters) that each column needs to be.  We hold these
