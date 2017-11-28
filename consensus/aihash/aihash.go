@@ -9,7 +9,7 @@ import (
 )
 
 // CreateSeed return epoch seed, type is *bc.Hash
-func CreateSeed(height uint64, preSeed *bc.Hash, preEpochBlockHash []*bc.Hash) *bc.Hash {
+func CreateSeed(height uint64, preSeed *bc.Hash, blockHashs []*bc.Hash) *bc.Hash {
 	if (height-1)%epochLength != 0 {
 		log.WithFields(log.Fields{
 			"height": height,
@@ -19,7 +19,7 @@ func CreateSeed(height uint64, preSeed *bc.Hash, preEpochBlockHash []*bc.Hash) *
 		return preSeed
 	}
 
-	seed := bc.BytesToHash(createSeed(preSeed, preEpochBlockHash))
+	seed := bc.BytesToHash(createSeed(preSeed, blockHashs))
 	log.WithFields(log.Fields{
 		"height": height,
 		"epoch":  (height - 1) / epochLength,
@@ -35,8 +35,10 @@ func CreateCache(seed *bc.Hash) ([]uint32, error) {
 	if seed == nil {
 		return nil, errors.New("Seed is invalid or not exist!")
 	}
+
+	// convert []byte to []uint32, so length/4
 	cache := make([]uint32, cacheLength/4)
-	generateCache(cache, (*seed).Bytes())
+	generateCache(cache, seed.Bytes())
 
 	return cache, nil
 }
@@ -47,13 +49,14 @@ func AIHash(height uint64, header *bc.Hash, cache []uint32) (*bc.Hash, error) {
 		return nil, errors.New("BlockHeader Hash is invalid or not exist!")
 	}
 
+	// convert []byte to []uint32, so length/4
 	if len(cache) != cacheLength/4 {
 		return nil, errors.New("Cache is invalid!")
 	}
 
 	matList := make([]matrix.Matrix, matNum)
 	fillMatrixList(matList, cache, height)
-	m := mulMatrix(matList, (*header).Bytes())
+	m := mulMatrix(matList, header.Bytes())
 	h := hashMatrix(m)
 
 	return h, nil

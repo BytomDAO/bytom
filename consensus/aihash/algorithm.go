@@ -40,27 +40,17 @@ func makeHasher(h hash.Hash) hasher {
 }
 
 // createSeed is the seed to use for generating a verification cache.
-func createSeed(preSeed *bc.Hash, preEpochBlockHash []*bc.Hash) []byte {
+func createSeed(preSeed *bc.Hash, blockHashs []*bc.Hash) []byte {
 	seed := make([]byte, 32)
-	var ss []byte
-	ss = append(ss, preSeed.Bytes()...)
+	seedSlice := preSeed.Bytes()
 
-	for _, h := range preEpochBlockHash {
-		ss = append(ss, h.Bytes()...)
+	for _, blockHash := range blockHashs {
+		seedSlice = append(seedSlice, blockHash.Bytes()...)
 	}
 	sha256 := makeHasher(sha3.New256())
-	sha256(seed, ss)
+	sha256(seed, seedSlice)
 
 	return seed
-}
-
-// convert []byte to *bc.Hash, the lenght is 32 bytes.
-func bytesToPointerHash(src []byte) *bc.Hash {
-	var arr [32]byte
-	copy(arr[:], src)
-	newhash := bc.NewHash(arr)
-
-	return &newhash
 }
 
 // This method places the result into dest in machine byte order.
@@ -145,7 +135,7 @@ func bytesToUint32(src []byte) []uint32 {
 
 // fill the matrix list
 func fillMatrixList(matList []matrix.Matrix, cache []uint32, height uint64) {
-	var locationIndex uint64 = (height - 1) % epochLength
+	primeIndex := uint64((height - 1) % epochLength)
 
 	// Convert our destination slice to a byte buffer
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&cache))
@@ -154,8 +144,8 @@ func fillMatrixList(matList []matrix.Matrix, cache []uint32, height uint64) {
 	cacheInt8 := *(*[]int8)(unsafe.Pointer(&header))
 
 	for i := 0; i < matNum; i++ {
-		startIndex := (matSize*matSize*i + location[locationIndex]) % cacheLength
-		endIndex := (matSize*matSize*(i+1) + location[locationIndex]) % cacheLength
+		startIndex := (matSize*matSize*i + primes[primeIndex]) % cacheLength
+		endIndex := (matSize*matSize*(i+1) + primes[primeIndex]) % cacheLength
 		if startIndex < endIndex {
 			matList[i] = matrix.New(matSize, matSize, cacheInt8[startIndex:endIndex])
 		} else {
@@ -170,13 +160,7 @@ func fillMatrixList(matList []matrix.Matrix, cache []uint32, height uint64) {
 func mulMatrix(matList []matrix.Matrix, matIndex []byte) *matrix.Matrix {
 	var index uint8
 	ma := matrix.Zeros(matSize, matSize)
-	mb := matrix.Zeros(matSize, matSize)
-
-	for i := 1; i <= matSize; i++ {
-		for j := 1; j <= matSize; j++ {
-			mb.Set(i, j, matList[0].Get(i, j))
-		}
-	}
+	mb := matList[0]
 
 	for i := 0; i < mulRounds; i++ {
 		index = uint8(matIndex[2*i]) % matNum
@@ -190,22 +174,18 @@ func mulMatrix(matList []matrix.Matrix, matIndex []byte) *matrix.Matrix {
 }
 
 func hashMatrix(m *matrix.Matrix) *bc.Hash {
-	sha256 := makeHasher(sha3.New256())
 	var item []byte
 	for i := 1; i <= matSize; i++ {
 		for j := 1; j <= matSize; j++ {
 			item = append(item, byte(m.Get(i, j)))
 		}
 	}
-	hash := make([]byte, 32)
-	sha256(hash, item)
-	var arrHash [32]byte
-	copy(arrHash[:], hash)
-	newhash := bc.NewHash(arrHash)
-	return &newhash
+	h := bc.BytesToHash(item)
+
+	return &h
 }
 
-var location = []int{
+var primes = []int{
 	3, 5, 7, 11, 13, 17, 19, 23,
 	29, 31, 37, 41, 43, 47, 53, 59,
 	61, 67, 71, 73, 79, 83, 89, 97,
@@ -221,4 +201,5 @@ var location = []int{
 	521, 523, 541, 547, 557, 563, 569, 571,
 	577, 587, 593, 599, 601, 607, 613, 617,
 	619, 631, 641, 643, 647, 653, 659, 661,
-	673, 677, 683, 691, 701, 709, 719, 727}
+	673, 677, 683, 691, 701, 709, 719, 727
+}
