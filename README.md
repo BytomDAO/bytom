@@ -16,8 +16,9 @@ Bytom
   * [Create and launch a single node](#create-and-launch-a-single-node)
     * [Create an account](#create-an-account)
     * [Create an asset](#create-an-asset)
-    * [Asset issuance test](#asset-issuance-test)
-    * [Expenditure test](#expenditure-test)
+    * [Issue an asset](#issue-an-asset)
+    * [Transfer an asset](#transfer-an-asset)
+    * [Transfer btm](#transfer-btm)
   * [Set up a wallet and manage the key](#set-up-a-wallet-and-manage-the-key)
   * [Multiple node](#multiple-node)
 * [Running Bytom in Docker](#running-bytom-in-docker)
@@ -127,9 +128,9 @@ Check out the new created asset:
 $ ./bytomcli list-assets
 ```
 
-#### Issue asset
+#### Issue an asset
 
-Since the account `alice` and the asset `gold` are ready, issue `gold` to 'alice':
+Since the account alice and the asset `gold` are ready, issue `gold` to alice:
 
 ```bash
 $ ./bytomcli create-account bob
@@ -138,7 +139,7 @@ $ ./bytomcli create-account bob
 Firstly, Alice issue `<issue_amount>`, e.g., 10000, `gold`:
 
 ```bash
-$ ./bytomcli sub-create-issue-tx <alice_account_id> <gold_asset_id> <issue amount> <gold_asset_private_key> <account_private_key>
+$ ./bytomcli sub-create-issue-tx <alice_account_id> <gold_asset_id> <issue_amount> <gold_asset_private_key> <account_private_key>
 ```
 
 When the transaction is on-chain, query the balances:
@@ -148,17 +149,17 @@ When the transaction is on-chain, query the balances:
 $ ./bytomcli list-balances
 ```
 
-#### Transfer assets(Alice -> Bob)
+#### Transfer an asset(Alice -> Bob)
 
 Alice pays Bob `<payment_amount>`, e.g., 1000, `gold`:
-- Bob create receiver program
+- Bob creates receiver program
 ```bash
 $./bytomcli create-account-receiver bob 
 ```
-- off-chain transfer receiver program to alice
-- Alice build transaction and then make this transacion on-chain
+- off-chain transfers receiver program to alice
+- Alice builds transaction and then makes this transacion on-chain
 ```bash
-$./bytomcli sub-control-receiver-tx <account xprv> <account id> <asset id> <spend amount> <control_program>
+$./bytomcli sub-control-receiver-tx <account_xprv> <account_id> <asset_id> <spend_amount> <control_program>
 ```
 - list balance
 ```bash
