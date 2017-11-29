@@ -75,13 +75,13 @@ When successfully building the project, the `bytom` and `bytomcli` binary should
 
 ```bash
 $ cd ./cmd/bytomd
-$ ./bytomd init
+$ ./bytomd init --chain_id testnet
 ```
 
 After that, you'll see `.bytom` generated in current directory, then launch the single node:
 
 ``` bash
-$ ./bytomd node --wallet.enable
+$ ./bytomd node --wallet.enable --p2p.pex
 ```
 
 Given the `bytom` node is running, the general workflow is as follows:
@@ -127,9 +127,9 @@ Check out the new created asset:
 $ ./bytomcli list-assets
 ```
 
-#### Asset issuance test
+#### Issue asset
 
-Since the account `alice` and the asset `gold` are ready, we need to create another account `bob`, which is also neccessary for the following Expenditure test:
+Since the account `alice` and the asset `gold` are ready, issue `gold` to 'alice':
 
 ```bash
 $ ./bytomcli create-account bob
@@ -138,36 +138,31 @@ $ ./bytomcli create-account bob
 Firstly, Alice issue `<issue_amount>`, e.g., 10000, `gold`:
 
 ```bash
-$ ./bytomcli sub-create-issue-tx <alice_account_id> <bob_account_id> <gold_asset_id> <gold_asset_private_key> <issue_amount>
+$ ./bytomcli sub-create-issue-tx <alice_account_id> <gold_asset_id> <issue amount> <gold_asset_private_key> <account_private_key>
 ```
 
-When the transaction above is mined, query the balances:
+When the transaction is on-chain, query the balances:
 
 ```bash
 # Alice should have 10000 gold now
 $ ./bytomcli list-balances
 ```
 
-#### Expenditure test
-
-- Alice -> Bob
+#### Transfer assets(Alice -> Bob)
 
 Alice pays Bob `<payment_amount>`, e.g., 1000, `gold`:
-
+- Bob create receiver program
 ```bash
-$ ./bytomcli sub-spend-account-tx <alice_account_id> <bob_account_id> <gold_asset_id> <alice_private_key> <payment_amount>
-# In our case, after Alice pays Bob 1000 gold, the amount of Alice's gold should be 9000, Bob's balances should be 1000
-$ ./bytomcli list-balances
+$./bytomcli create-account-receiver bob 
 ```
-
-- Bob -> Alice
-
-Bob pays Alice `<payment_amount>`, e.g., 500, `gold`:
-
+- off-chain transfer receiver program to alice
+- Alice build transaction and then make this transacion on-chain
 ```bash
-$ ./bytomcli sub-spend-account-tx <bob_account_id> <alice_account_id> <gold_asset_id> <bob_private_key> <payment_amount>
-# In our case, after Bob pays Alice 500 gold, the amount of Alice's gold should be 9500, Bob's balances should be 500
-$ ./bytomcli list-balances
+$./bytomcli sub-control-receiver-tx <account xprv> <account id> <asset id> <spend amount> <control_program>
+```
+- list balance
+```bash
+$./bytomcli list-balances
 ```
 
 ### Set up a wallet and manage the key
