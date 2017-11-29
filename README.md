@@ -165,6 +165,9 @@ $./bytomcli sub-control-receiver-tx <account xprv> <account id> <asset id> <spen
 $./bytomcli list-balances
 ```
 
+#### Transfer btm(Alice -> Bob)
+As above, just set the asset id to ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+
 ### Set up a wallet and manage the key
 
 If you have started a bytom node, then you can create an account via `create-key password`, which will generate a `keystore` directory containing the keys under the project directory.
