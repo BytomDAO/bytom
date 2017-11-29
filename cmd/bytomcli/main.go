@@ -528,7 +528,7 @@ func buildTransaction(client *rpc.Client, args []string) {
 
 func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 	if len(args) != 5 {
-		fmt.Println("error: need args: [account1 id] [account2 id] [asset id] [asset xprv] [issue amount]")
+		fmt.Println("error: need args: [account id] [asset id] [issue amount] [asset xprv] [account xprv]")
 		return
 	}
 	// Build Transaction.
@@ -536,22 +536,16 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 	// Now Issue actions
 	buildReqFmt := `
 		{"actions": [
-			{
-				"type":"spend_account_unspent_output",
-				"receiver":null,
-				"output_id":"%v",
-				"reference_data":{}
-			},
+			{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":20000000, "account_id": "%s"},
 			{"type": "issue", "asset_id": "%s", "amount": %s},
-			{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"},
-			{"type": "control_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 8888888888, "account_id": "%s"},
-			{"type": "control_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount": 8888888888, "account_id": "%s"}
+			{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
 		]}`
-	buildReqStr := fmt.Sprintf(buildReqFmt, config.GenerateGenesisTx().ResultIds[0], args[2], args[4], args[2], args[4], args[0], args[0], args[1])
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[0], args[1], args[2], args[1], args[2], args[0])
 	var buildReq blockchain.BuildRequest
 	err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq)
 	if err != nil {
 		fmt.Printf("json Unmarshal error.")
+		os.Exit(1)
 	}
 
 	tpl := make([]txbuilder.Template, 1)
@@ -561,12 +555,29 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 	fmt.Printf("----------btm inputs:%v\n", tpl[0].Transaction.Inputs[0])
 	fmt.Printf("----------issue inputs:%v\n", tpl[0].Transaction.Inputs[1])
 
+	mockWallet := make(map[chainkd.XPub]chainkd.XPrv)
 	var xprvAsset chainkd.XPrv
-	fmt.Printf("xprv_asset:%v\n", args[3])
-	xprvAsset.UnmarshalText([]byte(args[3]))
+	if err := xprvAsset.UnmarshalText([]byte(args[3])); err != nil {
+		fmt.Printf("xprv unmarshal error:%v\n", xprvAsset)
+		os.Exit(1)
+	}
+	mockWallet[xprvAsset.XPub()] = xprvAsset
+
+	var xprvAccount chainkd.XPrv
+	if err := xprvAccount.UnmarshalText([]byte(args[4])); err != nil {
+		fmt.Printf("xprv unmarshal error:%v\n", xprvAccount)
+		os.Exit(1)
+	}
+	mockWallet[xprvAccount.XPub()] = xprvAccount
+
 	// sign-transaction
-	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprvAsset.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
-		derived := xprvAsset.Derive(path)
+	err = txbuilder.Sign(context.Background(), &tpl[0], []chainkd.XPub{xprvAccount.XPub(), xprvAsset.XPub()}, "", func(_ context.Context, pub chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
+		prv, ok := mockWallet[pub]
+		if !ok {
+			fmt.Println("fail to get mockWallet pubkey")
+			os.Exit(1)
+		}
+		derived := prv.Derive(path)
 		return derived.Sign(data[:]), nil
 	})
 	if err != nil {
