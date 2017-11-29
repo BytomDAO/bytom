@@ -536,7 +536,7 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 	// Now Issue actions
 	buildReqFmt := `
 		{"actions": [
-			{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":2000000, "account_id": "%s"},
+			{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":20000000, "account_id": "%s"},
 			{"type": "issue", "asset_id": "%s", "amount": %s},
 			{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
 		]}`
