@@ -15,13 +15,8 @@ import (
 )
 
 const (
-	matSize     = 1 << 9                     // Size of matrix
-	matNum      = 1 << 7                     // Number of matrix
-	epochLength = 1 << 7                     // Blocks per epoch
-	hashBytes   = 64                         // Hash length in bytes
-	cacheLength = matSize * matSize * matNum // Bytes of cache production
-	cacheRounds = 3                          // Number of rounds in cache production
-	mulRounds   = 10                         // Number of rounds in mulmatrix
+	hashBytes   = 64 // Hash length in bytes
+	cacheRounds = 3  // Number of rounds in cache production
 )
 
 // hasher is a repetitive hasher allowing the same hash data structures to be
@@ -134,14 +129,17 @@ func bytesToUint32(src []byte) []uint32 {
 }
 
 // fill the matrix list
-func fillMatrixList(matList []matrix.Matrix, cache []uint32, height uint64) {
-	primeIndex := uint64((height - 1) % epochLength)
+func fillMatrixList(matList []matrix.Matrix, matSize, matNum, epochLength int, cache []uint32, height uint64) {
+	primeIndex := uint64((height - 1) % uint64(epochLength))
 
 	// Convert our destination slice to a byte buffer
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&cache))
 	header.Len *= 4
 	header.Cap *= 4
 	cacheInt8 := *(*[]int8)(unsafe.Pointer(&header))
+
+	// Bytes of cache production
+	cacheLength := matSize * matSize * matNum
 
 	for i := 0; i < matNum; i++ {
 		startIndex := (matSize*matSize*i + primes[primeIndex]) % cacheLength
@@ -157,23 +155,23 @@ func fillMatrixList(matList []matrix.Matrix, cache []uint32, height uint64) {
 	}
 }
 
-func mulMatrix(matList []matrix.Matrix, matIndex []byte) *matrix.Matrix {
+func mulMatrix(matList []matrix.Matrix, matSize, matNum, mulRounds int, matIndex []byte) *matrix.Matrix {
 	var index uint8
 	ma := matrix.Zeros(matSize, matSize)
 	mb := matList[0]
 
 	for i := 0; i < mulRounds; i++ {
-		index = uint8(matIndex[2*i]) % matNum
+		index = uint8(matIndex[2*i]) % uint8(matNum)
 		ma = *matrix.Multiply(matList[index], mb)
 
-		index = uint8(matIndex[2*i+1]) % matNum
+		index = uint8(matIndex[2*i+1]) % uint8(matNum)
 		mb = *matrix.Multiply(ma, matList[index])
 	}
 
 	return &mb
 }
 
-func hashMatrix(m *matrix.Matrix) *bc.Hash {
+func hashMatrix(m *matrix.Matrix, matSize int) *bc.Hash {
 	var item []byte
 	for i := 1; i <= matSize; i++ {
 		for j := 1; j <= matSize; j++ {
