@@ -250,8 +250,7 @@ func TestGenerateCache(t *testing.T) {
 }
 
 // TestFillMatrixList tests the fillmatrixlist.
-// fill the 4X4 matrix list, list length is 4, because the type of matrix item is int8,
-//
+// For example, fill the 4X4 matrix list, list length is 4, the type of matrix item is int8,
 // height is 1,
 // []uint32 cache is:
 // [4120001828 1284125345 1842083017 4159049382 793207475 301782138 3360044670 1280794960 3172000018 2425215484 1805373936 2806275071 2543951302 579156572 565796361 675042686]
@@ -429,6 +428,42 @@ func TestFillMatrixList(t *testing.T) {
 		}
 	}
 }
+
+func TestMulMatrix(t *testing.T) {
+	tests := []struct {
+		matData    []int8
+		matSize    int
+		matNum     int
+		mulRounds  int
+		matIndex   []byte
+		resultData []int8
+	}{
+		{
+			matData:    []int8{},
+			matSize:    0,
+			matNum:     0,
+			mulRounds:  0,
+			matIndex:   0,
+			resultData: []int8{},
+		},
+	}
+
+	for i, tt := range tests {
+		matList := make([]matrix.Matrix, tt.matNum, tt.matNum)
+		for j := 0; j < tt.matNum; j++ {
+			matList[j] = matrix.New(tt.matSize, tt.matSize, tt.matData[j*tt.matSize*tt.matSize:(j+1)*tt.matSize*tt.matSize])
+		}
+
+		result := *mulMatrix(matList, tt.matSize, tt.matNum, tt.mulRounds, tt.matIndex)
+		want := matrix.New(tt.matSize, tt.matSize, tt.resultData)
+
+		if !reflect.DeepEqual(result, want) {
+			t.Errorf("mul matrix result %d: content mismatch: result %x, want %x", i, result, want)
+		}
+	}
+}
+
+// func mulMatrix(matList []matrix.Matrix, matSize, matNum, mulRounds int, matIndex []byte) *matrix.Matrix {
 
 // convert []byte to []*bc.Hash
 func bytesToSlicePointerHash(src []byte) []*bc.Hash {
