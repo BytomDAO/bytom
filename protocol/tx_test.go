@@ -3,7 +3,6 @@ package protocol
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"golang.org/x/crypto/sha3"
 
@@ -92,8 +91,6 @@ func issue(t testing.TB, asset *testAsset, dest *testDest, amount uint64) (*lega
 		Outputs: []*legacy.TxOutput{
 			legacy.NewTxOutput(asset.AssetID, amount, destCP, nil),
 		},
-		MinTime: bc.Millis(time.Now()),
-		MaxTime: bc.Millis(time.Now().Add(time.Hour)),
 	})
 	asset.sign(t, tx, 0)
 

@@ -2,37 +2,22 @@ package blockchain
 
 import (
 	"context"
-	"sync"
 	"time"
-
-	"github.com/bytom/net/http/reqid"
 )
 
 // POST /create-account-receiver
-func (a *BlockchainReactor) createAccountReceiver(ctx context.Context, ins []struct {
-	AccountID    string    `json:"account_id"`
-	AccountAlias string    `json:"account_alias"`
-	ExpiresAt    time.Time `json:"expires_at"`
-}) []interface{} {
-	responses := make([]interface{}, len(ins))
-	var wg sync.WaitGroup
-	wg.Add(len(responses))
+func (a *BlockchainReactor) createAccountReceiver(ctx context.Context, ins struct {
+	AccountInfo string    `json:"account_info"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}) interface{} {
+	var response interface{}
 
-	for i := 0; i < len(responses); i++ {
-		go func(i int) {
-			subctx := reqid.NewSubContext(ctx, reqid.New())
-			defer wg.Done()
-			defer batchRecover(subctx, &responses[i])
-
-			receiver, err := a.accounts.CreateReceiver(subctx, ins[i].AccountID, ins[i].AccountAlias, ins[i].ExpiresAt)
-			if err != nil {
-				responses[i] = err
-			} else {
-				responses[i] = receiver
-			}
-		}(i)
+	receiver, err := a.accounts.CreateReceiver(nil, ins.AccountInfo, ins.ExpiresAt)
+	if err != nil {
+		response = err
+	} else {
+		response = receiver
 	}
 
-	wg.Wait()
-	return responses
+	return response
 }

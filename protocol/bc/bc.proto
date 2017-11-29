@@ -67,9 +67,7 @@ message TxHeader {
   uint64        serialized_size = 2;
   repeated Hash result_ids      = 3;
   Hash          data            = 4;
-  uint64        min_time_ms.    = 5;
-  uint64        max_time_ms.    = 6;
-  Hash          ext_hash        = 7;
+  Hash          ext_hash        = 5;
 }
 
 message Mux {

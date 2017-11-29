@@ -3,7 +3,6 @@ package bc
 import (
 	"reflect"
 	"testing"
-	"time"
 )
 
 func BenchmarkEntryID(b *testing.B) {
@@ -11,7 +10,7 @@ func BenchmarkEntryID(b *testing.B) {
 
 	entries := []Entry{
 		NewIssuance(nil, &AssetAmount{}, &Hash{}, 0),
-		NewTxHeader(1, 1, nil, &Hash{}, uint64(time.Now().Unix()), uint64(time.Now().Unix())),
+		NewTxHeader(1, 1, nil, &Hash{}),
 		m,
 		NewNonce(&Program{Code: []byte{1}, VmVersion: 1}),
 		NewOutput(&ValueSource{}, &Program{Code: []byte{1}, VmVersion: 1}, &Hash{}, 0),

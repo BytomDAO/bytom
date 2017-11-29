@@ -8,7 +8,38 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/state"
 )
+
+func TestProtoSnapshotTree(t *testing.T) {
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
+
+	hashes := []bc.Hash{}
+	insertSnap := state.Empty()
+
+	hash := bc.Hash{}
+	for i := uint64(0); i <= uint64(10); i++ {
+		hash.V0 = i
+		hashes = append(hashes, hash)
+		insertSnap.Tree.Insert(hash.Bytes())
+	}
+
+	if err := saveSnapshot(testDB, insertSnap, &hash); err != nil {
+		t.Errorf(err.Error())
+	}
+
+	popSnap, err := getSnapshot(testDB, &hash)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	for _, h := range hashes {
+		if !popSnap.Tree.Contains(h.Bytes()) {
+			t.Errorf("%s isn't in the snap tree", h.String())
+		}
+	}
+}
 
 func TestCleanSnapshotDB(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")

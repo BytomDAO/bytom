@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -49,12 +50,14 @@ const (
 	ERROR   = "error"
 )
 
+// Response describes the response standard.
 type Response struct {
 	Status string
 	Msg    string
 	Data   []string
 }
 
+// DefaultRawResponse is used as the default response when fail to get data.
 var DefaultRawResponse = []byte(`{"Status":"error","Msg":"Unable to get data","Data":null}`)
 
 //BlockchainReactor handles long-term catchup syncing.
@@ -185,7 +188,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/peer-count", jsonHandler(bcr.peerCount))
 	m.Handle("/get-block-by-height", jsonHandler(bcr.getBlockByHeight))
 	m.Handle("/get-block-transactions-count-by-height", jsonHandler(bcr.getBlockTransactionsCountByHeight))
-	m.Handle("/block-height", jsonHandler(bcr.getBlockHeight))
+	m.Handle("/block-height", jsonHandler(bcr.blockHeight))
 	m.Handle("/is-mining", jsonHandler(bcr.isMining))
 	m.Handle("/gas-rate", jsonHandler(bcr.gasRate))
 
@@ -379,8 +382,9 @@ func (bcR *BlockchainReactor) getNetInfo() (*ctypes.ResultNetInfo, error) {
 	return rpc.NetInfo(bcR.sw)
 }
 
-func (bcR *BlockchainReactor) getBestBlockHash() *bc.Hash {
-	return bcR.chain.BestBlockHash()
+func (bcr *BlockchainReactor) getBestBlockHash() []byte {
+	data := []string{bcr.chain.BestBlockHash().String()}
+	return resWrapper(data)
 }
 
 func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
@@ -451,11 +455,11 @@ func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
 	return string(ret)
 }
 
-func (bcr *BlockchainReactor) getBlockByHeight(height uint64) string {
+func (bcr *BlockchainReactor) getBlockByHeight(height uint64) []byte {
 	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return err.Error()
+		return DefaultRawResponse
 	}
 
 	bcBlock := legacy.MapBlock(legacyBlock)
@@ -481,9 +485,10 @@ func (bcr *BlockchainReactor) getBlockByHeight(height uint64) string {
 
 	ret, err := stdjson.Marshal(res)
 	if err != nil {
-		return err.Error()
+		return DefaultRawResponse
 	}
-	return string(ret)
+	data := []string{string(ret)}
+	return resWrapper(data)
 }
 
 func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) (int, error) {
@@ -516,35 +521,53 @@ func (bcR *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
 	return nil
 }
 
-func (bcr *BlockchainReactor) isNetListening() bool {
-	return bcr.sw.IsListening()
+func (bcr *BlockchainReactor) isNetListening() []byte {
+	data := []string{strconv.FormatBool(bcr.sw.IsListening())}
+	return resWrapper(data)
 }
 
-func (bcr *BlockchainReactor) peerCount() int {
-	return len(bcr.sw.Peers().List())
+func (bcr *BlockchainReactor) peerCount() []byte {
+	// TODO: use key-value instead of bare value
+	data := []string{strconv.FormatInt(int64(len(bcr.sw.Peers().List())), 16)}
+	return resWrapper(data)
 }
 
-func (bcr *BlockchainReactor) isNetSyncing() bool {
-	return bcr.blockKeeper.IsCaughtUp()
+func (bcr *BlockchainReactor) isNetSyncing() []byte {
+	data := []string{strconv.FormatBool(bcr.blockKeeper.IsCaughtUp())}
+	return resWrapper(data)
 }
 
-func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) (int, error) {
+func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) []byte {
 	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return -1, err
+		return DefaultRawResponse
 	}
-	return len(legacyBlock.Transactions), nil
+	data := []string{strconv.FormatInt(int64(len(legacyBlock.Transactions)), 16)}
+	log.Infof("%v", data)
+	return resWrapper(data)
 }
 
-func (bcr *BlockchainReactor) getBlockHeight() uint64 {
-	return bcr.chain.Height()
+func (bcr *BlockchainReactor) blockHeight() []byte {
+	data := []string{strconv.FormatUint(bcr.chain.Height(), 16)}
+	return resWrapper(data)
 }
 
-func (bcr *BlockchainReactor) isMining() bool {
-	return bcr.mining.IsMining()
+func (bcr *BlockchainReactor) isMining() []byte {
+	data := []string{strconv.FormatBool(bcr.mining.IsMining())}
+	return resWrapper(data)
 }
 
-func (bcr *BlockchainReactor) gasRate() int64 {
-	return validation.GasRate
+func (bcr *BlockchainReactor) gasRate() []byte {
+	data := []string{strconv.FormatInt(validation.GasRate, 16)}
+	return resWrapper(data)
+}
+
+func resWrapper(data []string) []byte {
+	response := Response{Status: SUCCESS, Data: data}
+	rawResponse, err := stdjson.Marshal(response)
+	if err != nil {
+		return DefaultRawResponse
+	}
+	return rawResponse
 }
