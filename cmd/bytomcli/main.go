@@ -21,12 +21,11 @@ import (
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/cmd/bytomcli/example"
-	"github.com/bytom/crypto/ed25519"
+	"github.com/bytom/config"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
-	"github.com/bytom/config"
 )
 
 // config vars
@@ -51,7 +50,6 @@ type grantReq struct {
 }
 
 var commands = map[string]*command{
-	"create-block-keypair":     {createBlockKeyPair},
 	"reset":                    {reset},
 	"grant":                    {grant},
 	"revoke":                   {revoke},
@@ -125,18 +123,6 @@ func main() {
 		os.Exit(1)
 	}
 	cmd.f(mustRPCClient(), os.Args[2:])
-}
-
-func createBlockKeyPair(client *rpc.Client, args []string) {
-	if len(args) != 0 {
-		fatalln("error: create-block-keypair takes no args")
-	}
-	pub := struct {
-		Pub ed25519.PublicKey
-	}{}
-	err := client.Call(context.Background(), "/mockhsm/create-block-key", nil, &pub)
-	dieOnRPCError(err)
-	fmt.Printf("%x\n", pub.Pub)
 }
 
 // reset will attempt a reset rpc call on a remote core. If the
@@ -314,15 +300,14 @@ func wait(client *rpc.Client, args []string) {
 
 func createAccount(client *rpc.Client, args []string) {
 	if len(args) != 1 {
-		fatalln("error: createAccount takes no args")
+		fatalln("error: [root pub]")
 	}
-	xprv, err := chainkd.NewXPrv(nil)
-	if err != nil {
-		fatalln("NewXprv error.")
+
+	var xpub chainkd.XPub
+	if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
+		fatalln(err.Error())
 	}
-	xpub := xprv.XPub()
-	fmt.Printf("xprv:%v\n", xprv)
-	fmt.Printf("xpub:%v\n", xpub)
+
 	type Ins struct {
 		RootXPubs   []chainkd.XPub `json:"root_xpubs"`
 		Quorum      int
@@ -338,7 +323,6 @@ func createAccount(client *rpc.Client, args []string) {
 	ins.ClientToken = args[0]
 	account := make([]query.AnnotatedAccount, 1)
 	client.Call(context.Background(), "/create-account", &[]Ins{ins}, &account)
-	fmt.Printf("responses:%v\n", account[0])
 	fmt.Printf("account id:%v\n", account[0].ID)
 }
 
@@ -373,18 +357,15 @@ func bindAccount(client *rpc.Client, args []string) {
 }
 
 func createAsset(client *rpc.Client, args []string) {
-	if len(args) != 1 {
-		fatalln("error: createAsset takes no args")
+	if len(args) != 2 {
+		fatalln("error: need [asset name] [root xpub]")
 	}
-	xprv, err := chainkd.NewXPrv(nil)
-	if err != nil {
-		fatalln("NewXprv error.")
+
+	var xpub chainkd.XPub
+	if err := xpub.UnmarshalText([]byte(args[1])); err != nil {
+		fatalln(err.Error())
 	}
-	xprv_, _ := xprv.MarshalText()
-	xpub := xprv.XPub()
-	fmt.Printf("xprv:%v\n", string(xprv_))
-	xpub_, _ := xpub.MarshalText()
-	fmt.Printf("xpub:%v\n", xpub_)
+
 	type Ins struct {
 		RootXPubs   []chainkd.XPub `json:"root_xpubs"`
 		Quorum      int
@@ -402,7 +383,6 @@ func createAsset(client *rpc.Client, args []string) {
 	ins.ClientToken = args[0]
 	assets := make([]query.AnnotatedAsset, 1)
 	client.Call(context.Background(), "/create-asset", &[]Ins{ins}, &assets)
-	fmt.Printf("responses:%v\n", assets)
 	fmt.Printf("asset id:%v\n", assets[0].ID.String())
 }
 
