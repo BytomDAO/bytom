@@ -82,7 +82,7 @@ $ ./bytomd init --chain_id testnet
 After that, you'll see `.bytom` generated in current directory, then launch the single node:
 
 ``` bash
-$ ./bytomd node --wallet.enable --p2p.pex
+$ ./bytomd node --wallet.enable
 ```
 
 Given the `bytom` node is running, the general workflow is as follows:
@@ -149,7 +149,7 @@ When the transaction is on-chain, query the balances:
 $ ./bytomcli list-balances
 ```
 
-#### Transfer an asset(Alice -> Bob)
+#### Transfer an asset
 
 Alice pays Bob `<payment_amount>`, e.g., 1000, `gold`:
 - Bob creates receiver program
@@ -166,7 +166,7 @@ $./bytomcli sub-control-receiver-tx <account_xprv> <account_id> <asset_id> <spen
 $./bytomcli list-balances
 ```
 
-#### Transfer btm(Alice -> Bob)
+#### Transfer btm
 As above, just set the asset id to ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 
 ### Set up a wallet and manage the key
