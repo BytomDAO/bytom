@@ -156,7 +156,7 @@ Alice pays Bob `<payment_amount>`, e.g., 1000, `gold`:
 ```bash
 $./bytomcli create-account-receiver bob
 ```
-response like this:
+responses like this:
 ```
 responses:map[control_program:766baa207b73a71a9e8a77ace69bdd5d68fdfacc841bfdd5d6e0057a331846c24ac222e35151ad696c00c0 expires_at:2017-12-30T17:10:01.915062361+08:00]
 ```
