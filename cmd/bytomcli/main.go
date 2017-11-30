@@ -32,7 +32,7 @@ import (
 // config vars
 var (
 	home    = blockchain.HomeDirFromEnvironment()
-	coreURL = env.String("BYTOM_URL", "http://localhost:1999")
+	coreURL = env.String("BYTOM_URL", "http://0.0.0.0:9888")
 
 	// build vars; initialized by the linker
 	buildTag    = "?"
