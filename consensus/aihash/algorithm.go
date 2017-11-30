@@ -179,10 +179,7 @@ func hashMatrix(m *matrix.Matrix, matSize int) *bc.Hash {
 		}
 	}
 
-	hash := make([]byte, 32)
-	sha256 := makeHasher(sha3.New256())
-	sha256(hash, item)
-	bch := bc.BytesToHash(hash)
+	bch := bc.NewHash(sha3.Sum256(item))
 
 	return &bch
 }
