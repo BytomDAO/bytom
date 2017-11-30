@@ -190,6 +190,14 @@ func NewNode(config *cfg.Config) *Node {
 	var wallet *w.Wallet = nil
 	var txFeed *txfeed.Tracker = nil
 
+	txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
+	txFeed = txfeed.NewTracker(txFeedDB, chain)
+
+	if err = txFeed.Prepare(ctx); err != nil {
+		log.WithField("error", err).Error("start txfeed")
+		return nil
+	}
+
 	if config.Wallet.Enable {
 		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
 		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
@@ -203,14 +211,6 @@ func NewNode(config *cfg.Config) *Node {
 		wallet.Ind.RegisterAnnotator(assets.AnnotateTxs)
 
 		go wallet.WalletUpdate(chain)
-
-		txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
-		txFeed = txfeed.NewTracker(txFeedDB, chain)
-
-		if err = txFeed.Prepare(ctx); err != nil {
-			log.WithField("error", err).Error("start txfeed")
-			return nil
-		}
 
 	}
 	//Todo HSM
