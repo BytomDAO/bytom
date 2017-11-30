@@ -1041,6 +1041,34 @@ func TestMulMatrix(t *testing.T) {
 	}
 }
 
+//
+func TestHashMatrix(t *testing.T) {
+	tests := []struct {
+		matData  []int8
+		matSize  int
+		hashData [32]byte
+	}{
+		{
+			matData:  []int8{},
+			matSize:  0,
+			hashData: [32]byte{},
+		},
+	}
+
+	for i, tt := range tests {
+		mat := matrix.New(tt.matSize, tt.matSize, tt.matData)
+		result := hashMatrix(&mat, tt.matSize)
+
+		want := bc.NewHash(tt.hashData)
+
+		if !reflect.DeepEqual(*result, want) {
+			t.Errorf("hashMatrix %d: content mismatch: result %x, want %x", i, *result, want)
+		}
+	}
+}
+
+// func hashMatrix(m *matrix.Matrix, matSize int) *bc.Hash {
+
 // convert []byte to []*bc.Hash
 func bytesToSlicePointerHash(src []byte) []*bc.Hash {
 	var sbh []*bc.Hash

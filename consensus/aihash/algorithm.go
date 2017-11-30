@@ -178,9 +178,13 @@ func hashMatrix(m *matrix.Matrix, matSize int) *bc.Hash {
 			item = append(item, byte(m.Get(i, j)))
 		}
 	}
-	h := bc.BytesToHash(item)
 
-	return &h
+	hash := make([]byte, 32)
+	sha256 := makeHasher(sha3.New256())
+	sha256(hash, item)
+	bch := bc.BytesToHash(hash)
+
+	return &bch
 }
 
 var primes = []int{
