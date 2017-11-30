@@ -21,12 +21,12 @@ import (
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/cmd/bytomcli/example"
+	"github.com/bytom/config"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
-	"github.com/bytom/config"
 )
 
 // config vars
@@ -120,7 +120,9 @@ func main() {
 	}
 	cmd := commands[os.Args[1]]
 	if cmd == nil {
-		fmt.Fprintln(os.Stderr, "unknown command:", os.Args[1])
+		if os.Args[1] != "-h" && os.Args[1] != "--h" {
+			fmt.Fprintln(os.Stderr, "unknown command:", os.Args[1])
+		}
 		help(os.Stderr)
 		os.Exit(1)
 	}
@@ -275,13 +277,11 @@ func dieOnRPCError(err error, prefixes ...interface{}) {
 }
 
 func help(w io.Writer) {
-	fmt.Fprintln(w, "usage: corectl [-version] [command] [arguments]")
 	fmt.Fprint(w, "\nThe commands are:\n\n")
 	for name := range commands {
 		fmt.Fprintln(w, "\t", name)
 	}
-	fmt.Fprint(w, "\nFlags:\n")
-	fmt.Fprintln(w, "\t-version   print version information")
+	fmt.Fprint(w, "\nVersion:0.2.0\n")
 	fmt.Fprintln(w)
 }
 
