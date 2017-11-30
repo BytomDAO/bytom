@@ -89,32 +89,7 @@ func Create(ctx context.Context, db dbm.DB, signerType string, xpubs []chainkd.X
 		key := key
 		xpubBytes = append(xpubBytes, key[:])
 	}
-	/*
 
-			nullToken := sql.NullString{
-				String: clientToken,
-				Valid:  clientToken != "",
-			}
-
-			const q = `
-				INSERT INTO signers (id, type, xpubs, quorum, client_token)
-				VALUES (next_chain_id($1::text), $2, $3, $4, $5)
-				ON CONFLICT (client_token) DO NOTHING
-				RETURNING id, key_index
-		  `
-			var (
-				id       string
-				keyIndex uint64
-			)
-			err := db.QueryRowContext(ctx, q, signerTypeMap[typ], typ, pq.ByteaArray(xpubBytes), quorum, nullToken).
-				Scan(&id, &keyIndex)
-			if err == sql.ErrNoRows && clientToken != "" {
-				return findByClientToken(ctx, db, clientToken)
-			}
-			if err != nil && err != sql.ErrNoRows {
-				return nil, errors.Wrap(err)
-			}
-	*/
 	var (
 		id       string
 		keyIndex uint64
@@ -144,34 +119,6 @@ func New(id, typ string, xpubs [][]byte, quorum int, keyIndex uint64) (*Signer, 
 		KeyIndex: keyIndex,
 	}, nil
 }
-
-/*
-func findByClientToken(ctx context.Context, db pg.DB, clientToken string) (*Signer, error) {
-	const q = `
-		SELECT id, type, xpubs, quorum, key_index
-		FROM signers WHERE client_token=$1
-	`
-
-	var (
-		s         Signer
-		xpubBytes [][]byte
-	)
-	err := db.QueryRowContext(ctx, q, clientToken).
-		Scan(&s.ID, &s.Type, (*pq.ByteaArray)(&xpubBytes), &s.Quorum, &s.KeyIndex)
-	if err != nil {
-		return nil, errors.Wrap(err)
-	}
-
-	keys, err := ConvertKeys(xpubBytes)
-	if err != nil {
-		return nil, errors.WithDetail(errors.New("bad xpub in databse"), errors.Detail(err))
-	}
-
-	s.XPubs = keys
-
-	return &s, nil
-}
-*/
 
 // Find retrieves a Signer from the database
 // using the type and id.
@@ -214,48 +161,6 @@ func Find(ctx context.Context, db dbm.DB, typ, id string) (*Signer, error) {
 
 	return &s, nil
 }
-
-/*
-// List returns a paginated set of Signers, limited to
-// the provided type.
-func List(ctx context.Context, db pg.DB, typ, prev string, limit int) ([]*Signer, string, error) {
-	const q = `
-		SELECT id, type, xpubs, quorum, key_index
-		FROM signers WHERE type=$1 AND ($2='' OR $2<id)
-		ORDER BY id ASC LIMIT $3
-	`
-
-	var signers []*Signer
-	err := pg.ForQueryRows(ctx, db, q, typ, prev, limit,
-		func(id, typ string, xpubs pq.ByteaArray, quorum int, keyIndex uint64) error {
-			keys, err := ConvertKeys(xpubs)
-			if err != nil {
-				return errors.WithDetail(errors.New("bad xpub in databse"), errors.Detail(err))
-			}
-
-			signers = append(signers, &Signer{
-				ID:       id,
-				Type:     typ,
-				XPubs:    keys,
-				Quorum:   quorum,
-				KeyIndex: keyIndex,
-			})
-			return nil
-		},
-	)
-
-	if err != nil {
-		return nil, "", errors.Wrap(err)
-	}
-
-	var last string
-	if len(signers) > 0 {
-		last = signers[len(signers)-1].ID
-	}
-
-	return signers, last, nil
-}
-*/
 
 func ConvertKeys(xpubs [][]byte) ([]chainkd.XPub, error) {
 	var xkeys []chainkd.XPub

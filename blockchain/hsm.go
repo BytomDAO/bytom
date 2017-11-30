@@ -58,28 +58,15 @@ func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 
 func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
 	Auth string
-	Txs  []*txbuilder.Template `json:"transactions"`
-	XPub chainkd.XPub          `json:"xpubs"`
-	XPrv chainkd.XPrv          `json:"xprv"`
+	Txs  []txbuilder.Template `json:"transactions"`
 }) interface{} {
 	resp := make([]interface{}, len(x.Txs))
-	var err error
-	for _, tx := range x.Txs {
-		if x.Auth == "" {
-			err = txbuilder.Sign(context.Background(), tx, []chainkd.XPub{x.XPrv.XPub()}, "", func(_ context.Context, _ chainkd.XPub, path [][]byte, data [32]byte, _ string) ([]byte, error) {
-				derived := x.XPrv.Derive(path)
-				return derived.Sign(data[:]), nil
-			})
+	for i, tx := range x.Txs {
+		if err := txbuilder.Sign(ctx, &tx, nil, x.Auth, a.pseudohsmSignTemplate); err != nil {
+			log.WithFields(log.Fields{"tx": tx, "build err": err}).Error("fail on sign transaction.")
+			resp[i] = errorFormatter.Format(err)
 		} else {
-			err = txbuilder.Sign(ctx, tx, []chainkd.XPub{x.XPub}, x.Auth, a.pseudohsmSignTemplate)
-		}
-
-		log.WithFields(log.Fields{"tx": tx, "build err": err}).Info("After sign transaction.")
-		if err != nil {
-			info := errorFormatter.Format(err)
-			resp = append(resp, info)
-		} else {
-			resp = append(resp, tx)
+			resp[i] = tx
 		}
 	}
 	log.WithField("resp", resp).Info("Sign Transaction complete.")

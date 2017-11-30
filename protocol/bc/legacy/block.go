@@ -12,13 +12,12 @@ import (
 	"github.com/bytom/errors"
 )
 
+// serflag variables, start with 1
 const (
-	SerBlockWitness      = 1
-	SerBlockTransactions = 2
-
-	SerBlockSigHash = 0
-	SerBlockHeader  = SerBlockWitness
-	SerBlockFull    = SerBlockWitness | SerBlockTransactions
+	_ = iota
+	SerBlockHeader
+	SerBlockTransactions
+	SerBlockFull
 )
 
 // Block describes a complete block, including its header
@@ -117,6 +116,7 @@ func (b *Block) readFrom(r *blockchain.Reader) error {
 	return nil
 }
 
+// WriteTo will write block to input io.Writer
 func (b *Block) WriteTo(w io.Writer) (int64, error) {
 	ew := errors.NewWriter(w)
 	b.writeTo(ew, SerBlockFull)

@@ -268,26 +268,6 @@ func TestIntrospectionOps(t *testing.T) {
 			dataStack:    [][]byte{[]byte("issueprog")},
 		},
 	}, {
-		op: OP_MINTIME,
-		startVM: &virtualMachine{
-			context: &Context{MinTimeMS: new(uint64)},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49991,
-			deferredCost: 8,
-			dataStack:    [][]byte{[]byte{}},
-		},
-	}, {
-		op: OP_MAXTIME,
-		startVM: &virtualMachine{
-			context: &Context{MaxTimeMS: uint64ptr(20)},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49990,
-			deferredCost: 9,
-			dataStack:    [][]byte{{20}},
-		},
-	}, {
 		op: OP_TXDATA,
 		startVM: &virtualMachine{
 			context: &Context{TxData: &txData},
@@ -331,8 +311,7 @@ func TestIntrospectionOps(t *testing.T) {
 
 	txops := []Op{
 		OP_CHECKOUTPUT, OP_ASSET, OP_AMOUNT, OP_PROGRAM,
-		OP_MINTIME, OP_MAXTIME, OP_TXDATA, OP_ENTRYDATA,
-		OP_INDEX, OP_OUTPUTID,
+		OP_TXDATA, OP_ENTRYDATA, OP_INDEX, OP_OUTPUTID,
 	}
 
 	for _, op := range txops {

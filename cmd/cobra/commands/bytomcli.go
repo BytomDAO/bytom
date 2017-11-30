@@ -105,15 +105,25 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(deleteKeyCmd)
 	BytomcliCmd.AddCommand(listKeysCmd)
 
+	BytomcliCmd.AddCommand(isMiningCmd)
+
 	BytomcliCmd.AddCommand(netInfoCmd)
 	BytomcliCmd.AddCommand(netListeningCmd)
 	BytomcliCmd.AddCommand(peerCountCmd)
 	BytomcliCmd.AddCommand(netSyncingCmd)
 
+	BytomcliCmd.AddCommand(gasRateCmd)
+
 	BytomcliCmd.AddCommand(createAccessTokenCmd)
 	BytomcliCmd.AddCommand(listAccessTokenCmd)
 	BytomcliCmd.AddCommand(deleteAccessTokenCmd)
 	BytomcliCmd.AddCommand(checkAccessTokenCmd)
+
+	BytomcliCmd.AddCommand(createTransactionFeedCmd)
+	BytomcliCmd.AddCommand(listTransactionFeedsCmd)
+	BytomcliCmd.AddCommand(deleteTransactionFeedCmd)
+	BytomcliCmd.AddCommand(getTransactionFeedCmd)
+	BytomcliCmd.AddCommand(updateTransactionFeedCmd)
 
 	BytomcliCmd.AddCommand(versionCmd)
 }

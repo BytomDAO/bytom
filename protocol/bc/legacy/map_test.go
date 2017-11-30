@@ -24,12 +24,6 @@ func TestMapTx(t *testing.T) {
 	if header.SerializedSize != oldTx.SerializedSize {
 		t.Errorf("header.SerializedSize is %d, expected %d", header.SerializedSize, oldTx.SerializedSize)
 	}
-	if header.MinTimeMs != oldTx.MinTime {
-		t.Errorf("header.MinTimeMs is %d, expected %d", header.MinTimeMs, oldTx.MinTime)
-	}
-	if header.MaxTimeMs != oldTx.MaxTime {
-		t.Errorf("header.MaxTimeMs is %d, expected %d", header.MaxTimeMs, oldTx.MaxTime)
-	}
 	if len(header.ResultIds) != len(oldOuts) {
 		t.Errorf("header.ResultIds contains %d item(s), expected %d", len(header.ResultIds), len(oldOuts))
 	}

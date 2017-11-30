@@ -85,10 +85,6 @@ type TxData struct {
 	Inputs         []*TxInput
 	Outputs        []*TxOutput
 
-	// Common fields
-	MinTime uint64
-	MaxTime uint64
-
 	// The unconsumed suffix of the common fields extensible string
 	CommonFieldsSuffix []byte
 
@@ -115,14 +111,12 @@ func (tx *TxData) IsCoinbase() bool {
 
 func (tx *TxData) UnmarshalText(p []byte) error {
 	b := make([]byte, hex.DecodedLen(len(p)))
-	_, err := hex.Decode(b, p)
-	if err != nil {
+	if _, err := hex.Decode(b, p); err != nil {
 		return err
 	}
 
 	r := blockchain.NewReader(b)
-	err = tx.readFrom(r)
-	if err != nil {
+	if err := tx.readFrom(r); err != nil {
 		return err
 	}
 	if trailing := r.Len(); trailing > 0 {
@@ -131,13 +125,12 @@ func (tx *TxData) UnmarshalText(p []byte) error {
 	return nil
 }
 
-func (tx *TxData) readFrom(r *blockchain.Reader) error {
+func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 	var serflags [1]byte
-	_, err := io.ReadFull(r, serflags[:])
-	if err != nil {
+	if _, err = io.ReadFull(r, serflags[:]); err != nil {
 		return errors.Wrap(err, "reading serialization flags")
 	}
-	if err == nil && serflags[0] != serRequired {
+	if serflags[0] != serRequired {
 		return fmt.Errorf("unsupported serflags %#x", serflags[0])
 	}
 
@@ -147,19 +140,6 @@ func (tx *TxData) readFrom(r *blockchain.Reader) error {
 	}
 
 	tx.SerializedSize = uint64(r.Len())
-
-	// Common fields
-	tx.CommonFieldsSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
-		tx.MinTime, err = blockchain.ReadVarint63(r)
-		if err != nil {
-			return errors.Wrap(err, "reading transaction mintime")
-		}
-		tx.MaxTime, err = blockchain.ReadVarint63(r)
-		return errors.Wrap(err, "reading transaction maxtime")
-	})
-	if err != nil {
-		return errors.Wrap(err, "reading transaction common fields")
-	}
 
 	// Common witness
 	tx.CommonWitnessSuffix, err = blockchain.ReadExtensibleString(r, tx.readCommonWitness)
@@ -173,8 +153,7 @@ func (tx *TxData) readFrom(r *blockchain.Reader) error {
 	}
 	for ; n > 0; n-- {
 		ti := new(TxInput)
-		err = ti.readFrom(r)
-		if err != nil {
+		if err = ti.readFrom(r); err != nil {
 			return errors.Wrapf(err, "reading input %d", len(tx.Inputs))
 		}
 		tx.Inputs = append(tx.Inputs, ti)
@@ -186,8 +165,7 @@ func (tx *TxData) readFrom(r *blockchain.Reader) error {
 	}
 	for ; n > 0; n-- {
 		to := new(TxOutput)
-		err = to.readFrom(r, tx.Version)
-		if err != nil {
+		if err = to.readFrom(r, tx.Version); err != nil {
 			return errors.Wrapf(err, "reading output %d", len(tx.Outputs))
 		}
 		tx.Outputs = append(tx.Outputs, to)
@@ -213,61 +191,40 @@ func (tx *TxData) MarshalText() ([]byte, error) {
 // WriteTo writes tx to w.
 func (tx *TxData) WriteTo(w io.Writer) (int64, error) {
 	ew := errors.NewWriter(w)
-	err := tx.writeTo(ew, serRequired)
-	if err != nil {
+	if err := tx.writeTo(ew, serRequired); err != nil {
 		return ew.Written(), ew.Err()
 	}
 	return ew.Written(), ew.Err()
 }
 
 func (tx *TxData) writeTo(w io.Writer, serflags byte) error {
-	_, err := w.Write([]byte{serflags})
-	if err != nil {
+	if _, err := w.Write([]byte{serflags}); err != nil {
 		return errors.Wrap(err, "writing serialization flags")
 	}
 
-	_, err = blockchain.WriteVarint63(w, tx.Version)
-	if err != nil {
+	if _, err := blockchain.WriteVarint63(w, tx.Version); err != nil {
 		return errors.Wrap(err, "writing transaction version")
 	}
 
-	// common fields
-	_, err = blockchain.WriteExtensibleString(w, tx.CommonFieldsSuffix, func(w io.Writer) error {
-		_, err := blockchain.WriteVarint63(w, tx.MinTime)
-		if err != nil {
-			return errors.Wrap(err, "writing transaction min time")
-		}
-		_, err = blockchain.WriteVarint63(w, tx.MaxTime)
-		return errors.Wrap(err, "writing transaction max time")
-	})
-	if err != nil {
-		return errors.Wrap(err, "writing common fields")
-	}
-
 	// common witness
-	_, err = blockchain.WriteExtensibleString(w, tx.CommonWitnessSuffix, tx.writeCommonWitness)
-	if err != nil {
+	if _, err := blockchain.WriteExtensibleString(w, tx.CommonWitnessSuffix, tx.writeCommonWitness); err != nil {
 		return errors.Wrap(err, "writing common witness")
 	}
 
-	_, err = blockchain.WriteVarint31(w, uint64(len(tx.Inputs)))
-	if err != nil {
+	if _, err := blockchain.WriteVarint31(w, uint64(len(tx.Inputs))); err != nil {
 		return errors.Wrap(err, "writing tx input count")
 	}
 	for i, ti := range tx.Inputs {
-		err = ti.writeTo(w, serflags)
-		if err != nil {
+		if err := ti.writeTo(w, serflags); err != nil {
 			return errors.Wrapf(err, "writing tx input %d", i)
 		}
 	}
 
-	_, err = blockchain.WriteVarint31(w, uint64(len(tx.Outputs)))
-	if err != nil {
+	if _, err := blockchain.WriteVarint31(w, uint64(len(tx.Outputs))); err != nil {
 		return errors.Wrap(err, "writing tx output count")
 	}
 	for i, to := range tx.Outputs {
-		err = to.writeTo(w, serflags)
-		if err != nil {
+		if err := to.writeTo(w, serflags); err != nil {
 			return errors.Wrapf(err, "writing tx output %d", i)
 		}
 	}

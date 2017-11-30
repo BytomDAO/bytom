@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/bytom/cmd/bytomd/commands"
-	"github.com/tendermint/tmlibs/cli"
 	"os"
+
+	"github.com/tendermint/tmlibs/cli"
+
+	"github.com/bytom/cmd/bytomd/commands"
 )
 
 func main() {

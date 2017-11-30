@@ -14,16 +14,14 @@ const defaultReceiverExpiry = 30 * 24 * time.Hour // 30 days
 // with the provided expiry. If a zero time is provided for the
 // expiry, a default expiry of 30 days from the current time is
 // used.
-func (m *Manager) CreateReceiver(ctx context.Context, accID, accAlias string, expiresAt time.Time) (*txbuilder.Receiver, error) {
+func (m *Manager) CreateReceiver(ctx context.Context, accInfo string, expiresAt time.Time) (*txbuilder.Receiver, error) {
 	if expiresAt.IsZero() {
 		expiresAt = time.Now().Add(defaultReceiverExpiry)
 	}
 
-	if accAlias != "" {
-		s, err := m.FindByAlias(ctx, accAlias)
-		if err != nil {
-			return nil, err
-		}
+	accID := accInfo
+
+	if s, err := m.FindByAlias(ctx, accInfo); err == nil {
 		accID = s.ID
 	}
 

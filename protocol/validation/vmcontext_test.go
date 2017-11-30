@@ -25,8 +25,6 @@ func TestCheckOutput(t *testing.T) {
 			legacy.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"), nil),
 			legacy.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"), []byte("outref")),
 		},
-		MinTime: 0,
-		MaxTime: 20,
 	})
 
 	txCtx := &entryContext{

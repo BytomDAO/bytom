@@ -15,7 +15,8 @@ import (
 const (
 	defaultGasLimit = int64(80000)
 	muxGasCost      = int64(10)
-	gasRate         = int64(1000)
+	// GasRate indicates the current gas rate
+	GasRate = int64(1000)
 )
 
 type gasState struct {
@@ -30,7 +31,7 @@ func (g *gasState) setGas(BTMValue int64) error {
 	}
 	g.BTMValue = BTMValue
 
-	if gasAmount, ok := checked.DivInt64(BTMValue, gasRate); ok {
+	if gasAmount, ok := checked.DivInt64(BTMValue, GasRate); ok {
 		if gasAmount == 0 {
 			g.gasLeft = muxGasCost
 		} else if gasAmount < defaultGasLimit {
@@ -528,12 +529,6 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 	for i, tx := range b.Transactions {
 		if b.Version == 1 && tx.Version != 1 {
 			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)
-		}
-		if tx.MaxTimeMs > 0 && b.TimestampMs > tx.MaxTimeMs {
-			return errors.WithDetailf(errUntimelyTransaction, "block timestamp %d, transaction time range %d-%d", b.TimestampMs, tx.MinTimeMs, tx.MaxTimeMs)
-		}
-		if tx.MinTimeMs > 0 && b.TimestampMs > 0 && b.TimestampMs < tx.MinTimeMs {
-			return errors.WithDetailf(errUntimelyTransaction, "block timestamp %d, transaction time range %d-%d", b.TimestampMs, tx.MinTimeMs, tx.MaxTimeMs)
 		}
 
 		txBTMValue, err := ValidateTx(tx, b)

@@ -7,6 +7,7 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
+// BlockCommitment store the TransactionsMerkleRoot && AssetsMerkleRoot
 type BlockCommitment struct {
 	// TransactionsMerkleRoot is the root hash of the Merkle binary hash
 	// tree formed by the hashes of all transactions included in the
@@ -20,14 +21,10 @@ type BlockCommitment struct {
 }
 
 func (bc *BlockCommitment) readFrom(r *blockchain.Reader) error {
-	_, err := bc.TransactionsMerkleRoot.ReadFrom(r)
-	if err != nil {
+	if _, err := bc.TransactionsMerkleRoot.ReadFrom(r); err != nil {
 		return err
 	}
-	_, err = bc.AssetsMerkleRoot.ReadFrom(r)
-	if err != nil {
-		return err
-	}
+	_, err := bc.AssetsMerkleRoot.ReadFrom(r)
 	return err
 }
 
