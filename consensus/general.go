@@ -10,7 +10,7 @@ import (
 const (
 	// define the Max transaction size and Max block size
 	MaxTxSize    = uint64(1048576)
-	MaxBlockSzie = uint64(1048576)
+	MaxBlockSzie = uint64(10485760)
 
 	//config parameter for coinbase reward
 	CoinbasePendingBlockNumber = uint64(6)
