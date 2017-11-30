@@ -1,32 +1,17 @@
 package asset
 
 import (
-	"context"
 	"encoding/json"
 
-	//	"github.com/lib/pq"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
-	//	"chain/database/pg"
 	chainjson "github.com/bytom/encoding/json"
-	//	"github.com/bytom/errors"
-	//	"github.com/bytom/protocol/bc"
-	//	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm/vmutil"
 )
-
-// PinName is used to identify the pin
-// associated with the asset block processor.
-const PinName = "asset"
-
-// A Saver is responsible for saving an annotated asset object
-// for indexing and retrieval.
-// If the Core is configured not to provide search services,
-// SaveAnnotatedAsset can be a no-op.
-type Saver interface {
-	SaveAnnotatedAsset(context.Context, *query.AnnotatedAsset, string) error
-}
 
 func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 	jsonTags := json.RawMessage(`{}`)
@@ -34,10 +19,10 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 
 	// a.RawDefinition is the asset definition as it appears on the
 	// blockchain, so it's untrusted and may not be valid json.
-	/*	if pg.IsValidJSONB(a.RawDefinition()) {
-			jsonDefinition = json.RawMessage(a.RawDefinition())
-		}
-	*/
+	if query.IsValidJSON(a.RawDefinition()) {
+		jsonDefinition = json.RawMessage(a.RawDefinition())
+	}
+
 	if a.Tags != nil {
 		b, err := json.Marshal(a.Tags)
 		if err != nil {
@@ -86,35 +71,15 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 	return aa, nil
 }
 
-func (reg *Registry) indexAnnotatedAsset(ctx context.Context, a *Asset) error {
-	if reg.indexer == nil {
-		return nil
-	}
-	aa, err := Annotated(a)
-	if err != nil {
-		return err
-	}
-	return reg.indexer.SaveAnnotatedAsset(ctx, aa, a.sortID)
-}
+// IndexAssets is run on every block and indexes all non-local assets.
+func (reg *Registry) IndexAssets(b *legacy.Block) {
 
-/*
-func (reg *Registry) ProcessBlocks(ctx context.Context) {
-	if reg.pinStore == nil {
-		return
-	}
-	reg.pinStore.ProcessBlocks(ctx, reg.chain, PinName, reg.indexAssets)
-}
-*/
-// indexAssets is run on every block and indexes all non-local assets.
-/*
-func (reg *Registry) indexAssets(ctx context.Context, b *legacy.Block) error {
-	var (
-		assetIDs         pq.ByteaArray
-		definitions      pq.ByteaArray
-		vmVersions       pq.Int64Array
-		issuancePrograms pq.ByteaArray
-		seen             = make(map[bc.AssetID]bool)
-	)
+	var err error
+	asset := Asset{}
+	rawSaveAsset := make([]byte, 0)
+	seen := make(map[bc.AssetID]bool)
+	storeBatch := reg.db.NewBatch()
+
 	for _, tx := range b.Transactions {
 		for _, in := range tx.Inputs {
 			if !in.IsIssuance() {
@@ -124,62 +89,42 @@ func (reg *Registry) indexAssets(ctx context.Context, b *legacy.Block) error {
 			if seen[assetID] {
 				continue
 			}
-			if ii, ok := in.TypedInput.(*legacy.IssuanceInput); ok {
-				definition := ii.AssetDefinition
-				seen[assetID] = true
-				assetIDs = append(assetIDs, assetID.Bytes())
-				definitions = append(definitions, definition)
-				vmVersions = append(vmVersions, int64(ii.VMVersion))
-				issuancePrograms = append(issuancePrograms, in.IssuanceProgram())
+			inputIssue, ok := in.TypedInput.(*legacy.IssuanceInput)
+			if !ok {
+				continue
 			}
+
+			seen[assetID] = true
+
+			if rawAsset := reg.db.Get([]byte(assetID.String())); rawAsset == nil {
+				asset.RawDefinitionByte = inputIssue.AssetDefinition
+				asset.AssetID = assetID
+				asset.VMVersion = inputIssue.VMVersion
+				asset.IssuanceProgram = in.IssuanceProgram()
+				asset.BlockHeight = b.Height
+				asset.InitialBlockHash = reg.initialBlockHash
+			} else {
+				if err = json.Unmarshal(rawAsset, &asset); err != nil {
+					log.WithField("AssetID", assetID.String()).Warn("failed unmarshal saved asset")
+					continue
+				}
+				//update block height which created at
+				if asset.BlockHeight != 0 {
+					continue
+				}
+				asset.BlockHeight = b.Height
+			}
+
+			rawSaveAsset, err = json.Marshal(&asset)
+			if err != nil {
+				log.WithField("AssetID", assetID.String()).Warn("failed marshal to save asset")
+				continue
+			}
+
+			storeBatch.Set([]byte(assetID.String()), rawSaveAsset)
+
 		}
 	}
-	if len(assetIDs) == 0 {
-		return nil
-	}
 
-	// Insert these assets into the database. If the asset already exists, don't
-	// do anything. Return the asset ID of all inserted assets so we know which
-	// ones we have to save to the query indexer.
-	//
-	// For idempotency concerns, we use `first_block_height` to ensure that this
-	// query always returns the full set of new assets at this block. This
-	// protects against a crash after inserting into `assets` but before saving
-	// the annotated asset to the query indexer.
-/*	const q = `
-		WITH new_assets AS (
-			INSERT INTO assets (id, vm_version, issuance_program, definition, created_at, initial_block_hash, first_block_height)
-			VALUES(unnest($1::bytea[]), unnest($2::bigint[]), unnest($3::bytea[]), unnest($4::bytea[]), $5, $6, $7)
-			ON CONFLICT (id) DO UPDATE SET first_block_height = $7 WHERE assets.first_block_height > $7
-			RETURNING id
-		)
-		SELECT id FROM new_assets
-			UNION
-		SELECT id FROM assets WHERE first_block_height = $7
-	`
-	var newAssetIDs []bc.AssetID
-	err := pg.ForQueryRows(ctx, reg.db, q, assetIDs, vmVersions, issuancePrograms, definitions, b.Time(), reg.initialBlockHash, b.Height,
-		func(assetID bc.AssetID) { newAssetIDs = append(newAssetIDs, assetID) })
-	if err != nil {
-		return errors.Wrap(err, "error indexing non-local assets")
-	}
-
-	if reg.indexer == nil {
-		return nil
-	}
-
-	// newAssetIDs now contains only the asset IDs of new, non-local
-	// assets. We need to index them as annotated assets too.
-	for _, assetID := range newAssetIDs {
-		// TODO(jackson): Batch the asset lookups.
-		a, err := reg.findByID(ctx, assetID)
-		if err != nil {
-			return errors.Wrap(err, "looking up new asset")
-		}
-		err = reg.indexAnnotatedAsset(ctx, a)
-		if err != nil {
-			return errors.Wrap(err, "indexing annotated asset")
-		}
-	}
+	storeBatch.Write()
 }
-*/

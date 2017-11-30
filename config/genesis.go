@@ -28,8 +28,6 @@ func GenerateGenesisTx() *legacy.Tx {
 				},
 			},
 		},
-		MinTime: 0,
-		MaxTime: 1511318565142,
 	}
 
 	return legacy.NewTx(txData)
@@ -52,7 +50,11 @@ func GenerateGenesisBlock() *legacy.Block {
 		BlockHeader: legacy.BlockHeader{
 			Version:     1,
 			Height:      1,
+<<<<<<< HEAD
 			Seed:        bc.NewHash([32]byte{}),
+=======
+			Seed:        bc.NewHash(seed),
+>>>>>>> 506af0ac134e72b3845a989e63c95f7747b696c6
 			TimestampMS: 1511318565142,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,

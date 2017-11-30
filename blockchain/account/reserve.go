@@ -74,11 +74,11 @@ type reservation struct {
 	ClientToken *string
 }
 
-func newReserver(c *protocol.Chain, wallet *Wallet) *reserver {
+func newReserver(c *protocol.Chain, walletdb dbm.DB, walletHeightFn func() uint64) *reserver {
 	return &reserver{
 		c:            c,
-		db:           wallet.DB,
-		w:            wallet,
+		db:           walletdb,
+		heightFn:     walletHeightFn,
 		reservations: make(map[uint64]*reservation),
 		sources:      make(map[source]*sourceReserver),
 	}
@@ -97,7 +97,7 @@ func newReserver(c *protocol.Chain, wallet *Wallet) *reserver {
 type reserver struct {
 	c                 *protocol.Chain
 	db                dbm.DB
-	w                 *Wallet
+	heightFn          func() uint64
 	nextReservationID uint64
 	idempotency       idempotency.Group
 
@@ -256,12 +256,10 @@ func (re *reserver) source(src source) *sourceReserver {
 	}
 
 	sr = &sourceReserver{
-		db:      re.db,
-		src:     src,
-		validFn: re.checkUTXO,
-		heightFn: func() uint64 {
-			return re.w.GetWalletHeight()
-		},
+		db:       re.db,
+		src:      src,
+		validFn:  re.checkUTXO,
+		heightFn: re.heightFn,
 		cached:   make(map[bc.Hash]*utxo),
 		reserved: make(map[bc.Hash]uint64),
 	}

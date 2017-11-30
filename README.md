@@ -16,8 +16,9 @@ Bytom
   * [Create and launch a single node](#create-and-launch-a-single-node)
     * [Create an account](#create-an-account)
     * [Create an asset](#create-an-asset)
-    * [Asset issuance test](#asset-issuance-test)
-    * [Expenditure test](#expenditure-test)
+    * [Issue an asset](#issue-an-asset)
+    * [Transfer an asset](#transfer-an-asset)
+    * [Transfer btm](#transfer-btm)
   * [Set up a wallet and manage the key](#set-up-a-wallet-and-manage-the-key)
   * [Multiple node](#multiple-node)
 * [Running Bytom in Docker](#running-bytom-in-docker)
@@ -75,7 +76,7 @@ When successfully building the project, the `bytom` and `bytomcli` binary should
 
 ```bash
 $ cd ./cmd/bytomd
-$ ./bytomd init
+$ ./bytomd init --chain_id testnet
 ```
 
 After that, you'll see `.bytom` generated in current directory, then launch the single node:
@@ -127,9 +128,9 @@ Check out the new created asset:
 $ ./bytomcli list-assets
 ```
 
-#### Asset issuance test
+#### Issue an asset
 
-Since the account `alice` and the asset `gold` are ready, we need to create another account `bob`, which is also neccessary for the following Expenditure test:
+Since the account alice and the asset `gold` are ready, issue `gold` to alice:
 
 ```bash
 $ ./bytomcli create-account bob
@@ -138,38 +139,38 @@ $ ./bytomcli create-account bob
 Firstly, Alice issue `<issue_amount>`, e.g., 10000, `gold`:
 
 ```bash
-$ ./bytomcli sub-create-issue-tx <alice_account_id> <bob_account_id> <gold_asset_id> <gold_asset_private_key> <issue_amount>
+$ ./bytomcli sub-create-issue-tx <alice_account_id> <gold_asset_id> <issue_amount> <gold_asset_private_key> <account_private_key>
 ```
 
-When the transaction above is mined, query the balances:
+When the transaction is on-chain, query the balances:
 
 ```bash
 # Alice should have 10000 gold now
 $ ./bytomcli list-balances
 ```
 
-#### Expenditure test
-
-- Alice -> Bob
+#### Transfer an asset
 
 Alice pays Bob `<payment_amount>`, e.g., 1000, `gold`:
-
+- Bob creates receiver program
 ```bash
-$ ./bytomcli sub-spend-account-tx <alice_account_id> <bob_account_id> <gold_asset_id> <alice_private_key> <payment_amount>
-# In our case, after Alice pays Bob 1000 gold, the amount of Alice's gold should be 9000, Bob's balances should be 1000
-$ ./bytomcli list-balances
+$./bytomcli create-account-receiver bob 
+```
+- off-chain transfers receiver program to alice
+- Alice builds transaction and then makes this transacion on-chain
+```bash
+$./bytomcli sub-control-receiver-tx <account_xprv> <account_id> <asset_id> <spend_amount> <control_program>
+```
+- list balance
+```bash
+$./bytomcli list-balances
 ```
 
-- Bob -> Alice
-
-Bob pays Alice `<payment_amount>`, e.g., 500, `gold`:
-
+#### Transfer btm
+As above, just `btm_asset_id`=ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ```bash
-$ ./bytomcli sub-spend-account-tx <bob_account_id> <alice_account_id> <gold_asset_id> <bob_private_key> <payment_amount>
-# In our case, after Bob pays Alice 500 gold, the amount of Alice's gold should be 9500, Bob's balances should be 500
-$ ./bytomcli list-balances
+$./bytomcli sub-control-receiver-tx <account_xprv> <account_id> <btm_asset_id> <spend_amount> <control_program>
 ```
-
 ### Set up a wallet and manage the key
 
 If you have started a bytom node, then you can create an account via `create-key password`, which will generate a `keystore` directory containing the keys under the project directory.

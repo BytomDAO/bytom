@@ -1,7 +1,6 @@
 package account
 
 import (
-	"context"
 	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
@@ -12,7 +11,6 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
-	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -22,130 +20,8 @@ const (
 	UTXOPreFix = "ACU:"
 )
 
-var walletkey = []byte("walletInfo")
-
 func accountUTXOKey(name string) []byte {
 	return []byte(UTXOPreFix + name)
-}
-
-//WalletInfo is base valid block info to handle orphan block rollback
-type WalletInfo struct {
-	Height uint64
-	Hash   bc.Hash
-}
-
-//Wallet is related to storing account unspent outputs
-type Wallet struct {
-	DB db.DB
-	WalletInfo
-}
-
-//NewWallet return a new wallet instance
-func NewWallet(db db.DB) *Wallet {
-	w := &Wallet{
-		DB: db,
-	}
-
-	walletInfo, err := w.GetWalletInfo()
-	if err != nil {
-		log.WithField("warn", err).Warn("get wallet info")
-	}
-	w.Height = walletInfo.Height
-	w.Hash = walletInfo.Hash
-	return w
-}
-
-//GetWalletHeight return wallet on current height
-func (w *Wallet) GetWalletHeight() uint64 {
-	return w.Height
-}
-
-//GetWalletInfo return stored wallet info and nil,if error,
-//return initial wallet info and err
-func (w *Wallet) GetWalletInfo() (WalletInfo, error) {
-	var info WalletInfo
-	var rawWallet []byte
-
-	if rawWallet = w.DB.Get(walletkey); rawWallet == nil {
-		return info, nil
-	}
-
-	if err := json.Unmarshal(rawWallet, &w); err != nil {
-		return info, err
-	}
-
-	return info, nil
-
-}
-
-//WalletUpdate process every valid block and reverse every invalid block which need to rollback
-func (m *Manager) WalletUpdate(c *protocol.Chain) {
-	var err error
-	var block *legacy.Block
-
-	storeBatch := m.wallet.DB.NewBatch()
-
-LOOP:
-
-	for !c.InMainChain(m.wallet.Height, m.wallet.Hash) {
-		if block, err = c.GetBlockByHash(&m.wallet.Hash); err != nil {
-			log.WithField("err", err).Error("get block by hash")
-			return
-		}
-
-		//Reverse this block
-		m.ReverseAccountUTXOs(&storeBatch, block)
-		log.WithField("Height", m.wallet.Height).Info("start rollback this block")
-
-		m.wallet.Height = block.Height - 1
-		m.wallet.Hash = block.PreviousBlockHash
-
-	}
-
-	//update wallet info and commit batch write
-	m.wallet.commitWalletInfo(&storeBatch)
-
-	block, _ = c.GetBlockByHeight(m.wallet.Height + 1)
-	//if we already handled the tail of the chain, we wait
-	if block == nil {
-		<-c.BlockWaiter(m.wallet.Height + 1)
-		if block, err = c.GetBlockByHeight(m.wallet.Height + 1); err != nil {
-			log.WithField("err", err).Error("wallet get block by height")
-			return
-		}
-	}
-
-	//if false, means that rollback operation is necessary,then goto LOOP
-	if block.PreviousBlockHash == m.wallet.Hash {
-		//next loop will save
-		m.wallet.Height = block.Height
-		m.wallet.Hash = block.Hash()
-		m.BuildAccountUTXOs(&storeBatch, block)
-
-		//update wallet info and commit batch write
-		m.wallet.commitWalletInfo(&storeBatch)
-	}
-
-	//goto next loop
-	goto LOOP
-
-}
-
-func (w *Wallet) commitWalletInfo(batch *db.Batch) {
-	var info WalletInfo
-
-	info.Height = w.Height
-	info.Hash = w.Hash
-
-	rawWallet, err := json.Marshal(info)
-	if err != nil {
-		log.WithField("err", err).Error("save wallet info")
-		return
-	}
-	//update wallet to db
-	(*batch).Set(walletkey, rawWallet)
-	//commit to db
-	(*batch).Write()
 }
 
 //UTXO is a structure about account unspent outputs
@@ -163,14 +39,6 @@ type UTXO struct {
 }
 
 var emptyJSONObject = json.RawMessage(`{}`)
-
-// A Saver is responsible for saving an annotated account object.
-// for indexing and retrieval.
-// If the Core is configured not to provide search services,
-// SaveAnnotatedAccount can be a no-op.
-type Saver interface {
-	SaveAnnotatedAccount(context.Context, *query.AnnotatedAccount) error
-}
 
 //Annotated init an annotated account object
 func Annotated(a *Account) (*query.AnnotatedAccount, error) {
@@ -203,17 +71,6 @@ func Annotated(a *Account) (*query.AnnotatedAccount, error) {
 		})
 	}
 	return aa, nil
-}
-
-func (m *Manager) indexAnnotatedAccount(ctx context.Context, a *Account) error {
-	if m.indexer == nil {
-		return nil
-	}
-	aa, err := Annotated(a)
-	if err != nil {
-		return err
-	}
-	return m.indexer.SaveAnnotatedAccount(ctx, aa)
 }
 
 type rawOutput struct {

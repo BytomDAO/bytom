@@ -13,7 +13,7 @@ import (
 	"github.com/bytom/protocol/state"
 )
 
-const snapshotPreFix = "MC:"
+const snapshotPreFix = "SS:"
 
 func calcSnapshotKey(hash *bc.Hash) []byte {
 	return []byte(snapshotPreFix + hash.String())

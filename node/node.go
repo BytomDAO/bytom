@@ -24,9 +24,11 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
+	w "github.com/bytom/blockchain/wallet"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
+	"github.com/bytom/net/http/authn"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/types"
@@ -85,7 +87,23 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	wh.h.ServeHTTP(w, req)
 }
 
-func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
+func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore) http.Handler {
+
+	authenticator := authn.NewAPI(accessTokens)
+
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		// TODO(tessr): check that this path exists; return early if this path isn't legit
+		req, err := authenticator.Authenticate(req)
+		if err != nil {
+			log.WithField("error", errors.Wrap(err, "Serve")).Error("Authenticate fail")
+
+			return
+		}
+		handler.ServeHTTP(rw, req)
+	})
+}
+
+func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accesstoken.CredentialStore) {
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
 	var coreHandler waitHandler
@@ -94,6 +112,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config) {
 	mux.Handle("/", &coreHandler)
 
 	var handler http.Handler = mux
+	handler = AuthHandler(handler, accessTokens)
 	handler = RedirectHandler(handler)
 
 	secureheader.DefaultConfig.PermitClearLoopback = true
@@ -168,29 +187,30 @@ func NewNode(config *cfg.Config) *Node {
 
 	var accounts *account.Manager = nil
 	var assets *asset.Registry = nil
-	var wallet *account.Wallet = nil
+	var wallet *w.Wallet = nil
 	var txFeed *txfeed.Tracker = nil
+
+	txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
+	txFeed = txfeed.NewTracker(txFeedDB, chain)
+
+	if err = txFeed.Prepare(ctx); err != nil {
+		log.WithField("error", err).Error("start txfeed")
+		return nil
+	}
 
 	if config.Wallet.Enable {
 		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
+		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 
-		wallet = account.NewWallet(walletDB)
-
-		accounts = account.NewManager(accountsDB, chain, wallet)
-
-		go accounts.WalletUpdate(chain)
-
-		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+		accounts = account.NewManager(accountsDB, walletDB, w.GetWalletHeight, chain)
 		assets = asset.NewRegistry(assetsDB, chain)
 
-		txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
-		txFeed = txfeed.NewTracker(txFeedDB, chain)
+		wallet = w.InitWallet(walletDB, accounts, assets)
+		wallet.Ind.RegisterAnnotator(accounts.AnnotateTxs)
+		wallet.Ind.RegisterAnnotator(assets.AnnotateTxs)
 
-		if err = txFeed.Prepare(ctx); err != nil {
-			log.WithField("error", err).Error("start txfeed")
-			return nil
-		}
+		go wallet.WalletUpdate(chain)
 
 	}
 	//Todo HSM
@@ -213,7 +233,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
-	rpcInit(bcReactor, config)
+	rpcInit(bcReactor, config, accessTokens)
 	// Optionally, start the pex reactor
 	var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {

@@ -14,17 +14,16 @@ import (
 func (bcr *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
 	Alias  string
 	Filter string
-}) error {
+}) interface{} {
 	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Add TxFeed Failed")
-		return err
+		return jsendWrapper(nil, ERROR, err.Error())
 	}
-	return nil
+	return jsendWrapper("success", SUCCESS, "")
 }
 
-func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) ([]*txfeed.TxFeed, error) {
+func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) (*txfeed.TxFeed, error) {
 	txFeed := &txfeed.TxFeed{}
-	txFeeds := []*txfeed.TxFeed{}
 
 	jf, err := json.Marshal(filter)
 	if err != nil {
@@ -39,36 +38,43 @@ func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter strin
 	if err := json.Unmarshal(value, txFeed); err != nil {
 		return nil, err
 	}
-	txFeeds = append(txFeeds, txFeed)
-	return txFeeds, nil
+	return txFeed, nil
 }
 
 // POST /get-transaction-feed
-func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in requestQuery) interface{} {
-	txfeeds, err := bcr.getTxFeedByAlias(ctx, in.Filter)
+func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
+	Alias string `json:"alias,omitempty"`
+}) interface{} {
+	txfeed, err := bcr.getTxFeedByAlias(ctx, in.Alias)
 	if err != nil {
-		return err
+		return jsendWrapper(nil, ERROR, err.Error())
 	}
-	return txfeeds
-
+	return jsendWrapper(txfeed, SUCCESS, "")
 }
 
 // POST /delete-transaction-feed
 func (bcr *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
-}) error {
-	return bcr.txFeedTracker.Delete(ctx, in.Alias)
+}) interface{} {
+	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
+		return jsendWrapper(nil, ERROR, err.Error())
+	}
+	return jsendWrapper("success", SUCCESS, "")
 }
 
 // POST /update-transaction-feed
 func (bcr *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
 	Alias  string
 	Filter string
-}) error {
+}) interface{} {
 	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
-		return err
+		return jsendWrapper(nil, ERROR, err.Error())
 	}
-	return bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter)
+	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
+		log.WithField("error", err).Error("Update TxFeed Failed")
+		return jsendWrapper(nil, ERROR, err.Error())
+	}
+	return jsendWrapper("success", SUCCESS, "")
 }
 
 // txAfterIsBefore returns true if a is before b. It returns an error if either
@@ -109,7 +115,7 @@ func (bcr *BlockchainReactor) getTxFeeds() ([]*txfeed.TxFeed, error) {
 func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context, in requestQuery) interface{} {
 	txfeeds, err := bcr.getTxFeeds()
 	if err != nil {
-		return err
+		return jsendWrapper(nil, ERROR, err.Error())
 	}
-	return txfeeds
+	return jsendWrapper(txfeeds, SUCCESS, "")
 }

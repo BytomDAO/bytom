@@ -2,12 +2,10 @@ package query
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"time"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
-	//	"github.com/blockchain/database/pg"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -15,7 +13,7 @@ import (
 )
 
 type AnnotatedTx struct {
-	ID                     bc.Hash            `json:"id"`
+	ID                     bc.Hash            `json:"tx_id"`
 	Timestamp              time.Time          `json:"timestamp"`
 	BlockID                bc.Hash            `json:"block_id"`
 	BlockHeight            uint64             `json:"block_height"`
@@ -115,6 +113,12 @@ func (b *Bool) UnmarshalJSON(raw []byte) error {
 
 var emptyJSONObject = json.RawMessage(`{}`)
 
+func IsValidJSON(b []byte) bool {
+	var v interface{}
+	err := json.Unmarshal(b, &v)
+	return err == nil
+}
+
 func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock uint32) *AnnotatedTx {
 	tx := &AnnotatedTx{
 		ID:                     orig.ID,
@@ -127,10 +131,10 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock ui
 		Inputs:                 make([]*AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*AnnotatedOutput, 0, len(orig.Outputs)),
 	}
-	/*if pg.IsValidJSONB(orig.ReferenceData) {
+	if IsValidJSON(orig.ReferenceData) {
 		referenceData := json.RawMessage(orig.ReferenceData)
 		tx.ReferenceData = &referenceData
-	}*/
+	}
 	for i := range orig.Inputs {
 		tx.Inputs = append(tx.Inputs, buildAnnotatedInput(orig, uint32(i)))
 	}
@@ -149,10 +153,10 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *AnnotatedInput {
 		AssetTags:       &emptyJSONObject,
 		ReferenceData:   &emptyJSONObject,
 	}
-	/*if pg.IsValidJSONB(orig.ReferenceData) {
+	if IsValidJSON(orig.ReferenceData) {
 		referenceData := json.RawMessage(orig.ReferenceData)
 		in.ReferenceData = &referenceData
-	}*/
+	}
 
 	id := tx.Tx.InputIDs[i]
 	e := tx.Entries[id]
@@ -182,10 +186,10 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *AnnotatedOutput {
 		ControlProgram:  orig.ControlProgram,
 		ReferenceData:   &emptyJSONObject,
 	}
-	/*if pg.IsValidJSONB(orig.ReferenceData) {
+	if IsValidJSON(orig.ReferenceData) {
 		referenceData := json.RawMessage(orig.ReferenceData)
 		out.ReferenceData = &referenceData
-	}*/
+	}
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"
 	} else {
@@ -196,7 +200,7 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *AnnotatedOutput {
 
 // localAnnotator depends on the asset and account annotators and
 // must be run after them.
-func localAnnotator(ctx context.Context, txs []*AnnotatedTx) {
+func localAnnotator(txs []*AnnotatedTx) {
 	for _, tx := range txs {
 		for _, in := range tx.Inputs {
 			if in.AccountID != "" {

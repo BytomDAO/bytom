@@ -34,7 +34,7 @@ var (
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
-func alicesKey(name string) []byte {
+func aliasKey(name string) []byte {
 	return []byte(aliasPreFix + name)
 }
 
@@ -47,12 +47,11 @@ func accountCPKey(hash [32]byte) []byte {
 }
 
 // NewManager creates a new account manager
-func NewManager(db dbm.DB, chain *protocol.Chain, wallet *Wallet) *Manager {
+func NewManager(db, walletDB dbm.DB, walletHeightFn func() uint64, chain *protocol.Chain) *Manager {
 	return &Manager{
 		db:          db,
 		chain:       chain,
-		utxoDB:      newReserver(chain, wallet),
-		wallet:      wallet,
+		utxoDB:      newReserver(chain, walletDB, walletHeightFn),
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
 		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*controlProgram),
@@ -61,11 +60,9 @@ func NewManager(db dbm.DB, chain *protocol.Chain, wallet *Wallet) *Manager {
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	db      dbm.DB
-	chain   *protocol.Chain
-	utxoDB  *reserver
-	indexer Saver
-	wallet  *Wallet
+	db     dbm.DB
+	chain  *protocol.Chain
+	utxoDB *reserver
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
@@ -77,11 +74,6 @@ type Manager struct {
 	acpMu        sync.Mutex
 	acpIndexNext uint64 // next acp index in our block
 	acpIndexCap  uint64 // points to end of block
-}
-
-// IndexAccounts sets Manager.indexer
-func (m *Manager) IndexAccounts(indexer Saver) {
-	m.indexer = indexer
 }
 
 // ExpireReservations removes reservations that have expired periodically.
@@ -111,7 +103,7 @@ type Account struct {
 
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
-	if existed := m.db.Get(alicesKey(alias)); existed != nil {
+	if existed := m.db.Get(aliasKey(alias)); existed != nil {
 		return nil, fmt.Errorf("%s is an existed alias", alias)
 	}
 
@@ -128,11 +120,8 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 	accountID := accountKey(signer.ID)
 	m.db.Set(accountID, accountJSON)
-	m.db.Set(alicesKey(alias), accountID)
+	m.db.Set(aliasKey(alias), []byte(signer.ID))
 
-	if err = m.indexAnnotatedAccount(ctx, account); err != nil {
-		return nil, errors.Wrap(err, "indexing annotated account")
-	}
 	return account, nil
 }
 
@@ -146,7 +135,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 
 	var accountID []byte
 	if alias != nil {
-		accountID = m.db.Get(alicesKey(*alias))
+		accountID = m.db.Get(aliasKey(*alias))
 	} else {
 		accountID = accountKey(*id)
 	}
@@ -165,10 +154,10 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 		switch v {
 		case "":
 			delete(account.Tags, k)
-			m.db.Delete(alicesKey(k))
+			m.db.Delete(aliasKey(k))
 		default:
 			account.Tags[k] = v
-			m.db.Set(alicesKey(k), accountID)
+			m.db.Set(aliasKey(k), accountID)
 		}
 	}
 
@@ -190,7 +179,7 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 		return m.findByID(ctx, cachedID.(string))
 	}
 
-	rawID := m.db.Get(alicesKey(alias))
+	rawID := m.db.Get(aliasKey(alias))
 	if rawID == nil {
 		return nil, errors.New("fail to find account by alias")
 	}
