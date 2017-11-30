@@ -439,12 +439,30 @@ func TestMulMatrix(t *testing.T) {
 		resultData []int8
 	}{
 		{
-			matData:    []int8{},
-			matSize:    0,
-			matNum:     0,
-			mulRounds:  0,
-			matIndex:   0,
-			resultData: []int8{},
+			matData: []int8{
+				50, -118, 76, -55, -12, -53, 109, -90, 14, -26, -9, -77, 98, 71, 47, 122,
+				-44, -4, 17, 126, 54, 70, -56, 80, 97, 87, 76, 18, -31, 16, -67, -4,
+				-39, -115, -112, -16, -47, -101, 107, -1, 91, 68, -89, -58, -99, -95, -105, 92,
+				58, -123, 34, 9, 94, -71, 33, 126, 85, 60, 40, 36, 61, -110, -11, -95},
+			matSize:   4,
+			matNum:    4,
+			mulRounds: 10,
+			matIndex:  hexutil.MustDecode("0xc5fa98aca9ec66e1373a5a65d6d9d143b9b77465402fc4cf1bad038d0ca3f5fe"),
+			resultData: []int8{
+				-81, -63, -128, -82, -92, 105, -79, -2, 77, 70, 36, 113, -29, -93, -110, 16},
+		},
+		{
+			matData: []int8{
+				50, -118, 76, -55, -12, -53, 109, -90, 14, -26, -9, -77, 98, 71, 47, 122,
+				-44, -4, 17, 126, 54, 70, -56, 80, 97, 87, 76, 18, -31, 16, -67, -4,
+				-39, -115, -112, -16, -47, -101, 107, -1, 91, 68, -89, -58, -99, -95, -105, 92,
+				58, -123, 34, 9, 94, -71, 33, 126, 85, 60, 40, 36, 61, -110, -11, -95},
+			matSize:   4,
+			matNum:    4,
+			mulRounds: 10,
+			matIndex:  hexutil.MustDecode("0xc5fa98aca9ec66e1373a5a65d6d9d143b9b77465402fc4cf1bad038d0ca3f5fe"),
+			resultData: []int8{
+				-81, -63, -128, -82, -92, 105, -79, -2, 77, 70, 36, 113, -29, -93, -110, 16},
 		},
 	}
 
@@ -462,8 +480,6 @@ func TestMulMatrix(t *testing.T) {
 		}
 	}
 }
-
-// func mulMatrix(matList []matrix.Matrix, matSize, matNum, mulRounds int, matIndex []byte) *matrix.Matrix {
 
 // convert []byte to []*bc.Hash
 func bytesToSlicePointerHash(src []byte) []*bc.Hash {
