@@ -110,7 +110,6 @@ LOOP:
 		w.Height = block.Height
 		w.Hash = block.Hash()
 
-		w.assets.IndexAssets(block)
 		w.accounts.BuildAccountUTXOs(&storeBatch, block)
 
 		//update wallet info and commit batch write
