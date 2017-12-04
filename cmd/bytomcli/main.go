@@ -31,7 +31,7 @@ import (
 // config vars
 var (
 	home    = blockchain.HomeDirFromEnvironment()
-	coreURL = env.String("BYTOM_URL", "http://localhost:1999")
+	coreURL = env.String("BYTOM_URL", "http://0.0.0.0:9888")
 
 	// build vars; initialized by the linker
 	buildTag    = "?"
@@ -118,7 +118,9 @@ func main() {
 	}
 	cmd := commands[os.Args[1]]
 	if cmd == nil {
-		fmt.Fprintln(os.Stderr, "unknown command:", os.Args[1])
+		if os.Args[1] != "-h" && os.Args[1] != "--h" {
+			fmt.Fprintln(os.Stderr, "unknown command:", os.Args[1])
+		}
 		help(os.Stderr)
 		os.Exit(1)
 	}
@@ -261,13 +263,11 @@ func dieOnRPCError(err error, prefixes ...interface{}) {
 }
 
 func help(w io.Writer) {
-	fmt.Fprintln(w, "usage: corectl [-version] [command] [arguments]")
 	fmt.Fprint(w, "\nThe commands are:\n\n")
 	for name := range commands {
 		fmt.Fprintln(w, "\t", name)
 	}
-	fmt.Fprint(w, "\nFlags:\n")
-	fmt.Fprintln(w, "\t-version   print version information")
+	fmt.Fprint(w, "\nVersion:0.2.0\n")
 	fmt.Fprintln(w)
 }
 
