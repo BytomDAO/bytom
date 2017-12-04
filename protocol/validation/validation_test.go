@@ -406,6 +406,7 @@ func TestTxValidation(t *testing.T) {
 }
 
 func TestValidateBlock(t *testing.T) {
+	s := bc.NewHash([32]byte{})
 	cases := []struct {
 		block *bc.Block
 		err   error
@@ -414,6 +415,7 @@ func TestValidateBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height: 1,
+					Seed:   &s,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1470000000000000000)},
 			},
@@ -423,6 +425,7 @@ func TestValidateBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height: 1,
+					Seed:   &s,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
 			},
@@ -432,6 +435,7 @@ func TestValidateBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height:         1,
+					Seed:           &s,
 					SerializedSize: 88888888,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
