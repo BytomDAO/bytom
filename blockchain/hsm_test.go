@@ -15,7 +15,6 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/blockchain/txdb"
-	w "github.com/bytom/blockchain/wallet"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol"
@@ -57,7 +56,7 @@ func TestHSM(t *testing.T) {
 	assetsDB := dbm.NewDB("asset", config.DBBackend, dir)
 	walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 
-	accounts = account.NewManager(accountsDB, walletDB, w.GetWalletHeight, chain)
+	accounts = account.NewManager(accountsDB, walletDB, chain)
 	assets = asset.NewRegistry(assetsDB, chain)
 
 	hsm, err := pseudohsm.New(dirPath)

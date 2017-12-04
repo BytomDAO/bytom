@@ -47,11 +47,11 @@ func accountCPKey(hash [32]byte) []byte {
 }
 
 // NewManager creates a new account manager
-func NewManager(db, walletDB dbm.DB, walletHeightFn func() uint64, chain *protocol.Chain) *Manager {
+func NewManager(db, walletDB dbm.DB, chain *protocol.Chain) *Manager {
 	return &Manager{
 		db:          db,
 		chain:       chain,
-		utxoDB:      newReserver(chain, walletDB, walletHeightFn),
+		utxoDB:      newReserver(chain, walletDB),
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
 		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*controlProgram),
