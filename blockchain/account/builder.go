@@ -59,7 +59,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 		AssetID:   *a.AssetId,
 		AccountID: a.AccountID,
 	}
-	res, err := a.accounts.utxoDB.Reserve(ctx, src, a.Amount, a.ClientToken, b.MaxTime())
+	res, err := a.accounts.utxoDB.Reserve(src, a.Amount, a.ClientToken, b.MaxTime())
 	if err != nil {
 		return errors.Wrap(err, "reserving utxos")
 	}
@@ -68,7 +68,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
 	for _, r := range res.UTXOs {
-		txInput, sigInst, err := utxoToInputs(ctx, acct, r, a.ReferenceData)
+		txInput, sigInst, err := utxoToInputs(acct, r, a.ReferenceData)
 		if err != nil {
 			return errors.Wrap(err, "creating inputs")
 		}
@@ -138,7 +138,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 		}
 	}
 
-	txInput, sigInst, err := utxoToInputs(ctx, acct, res.UTXOs[0], a.ReferenceData)
+	txInput, sigInst, err := utxoToInputs(acct, res.UTXOs[0], a.ReferenceData)
 	if err != nil {
 		return err
 	}
@@ -155,7 +155,7 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 	}
 }
 
-func utxoToInputs(ctx context.Context, account *signers.Signer, u *utxo, refData []byte) (
+func utxoToInputs(account *signers.Signer, u *utxo, refData []byte) (
 	*legacy.TxInput,
 	*txbuilder.SigningInstruction,
 	error,
