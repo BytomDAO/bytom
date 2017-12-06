@@ -8,6 +8,7 @@ import (
 	"github.com/bytom/net/http/httpjson"
 )
 
+// json handler
 func jsonHandler(f interface{}) http.Handler {
 	h, err := httpjson.Handler(f, errorFormatter.Write)
 	if err != nil {
@@ -16,14 +17,17 @@ func jsonHandler(f interface{}) http.Handler {
 	return h
 }
 
+// error handler
 func alwaysError(err error) http.Handler {
 	return jsonHandler(func() error { return err })
 }
 
+// serve http
 func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	bcr.handler.ServeHTTP(rw, req)
 }
 
+// Build json rpc handler
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
 	if bcr.accounts != nil && bcr.assets != nil {
