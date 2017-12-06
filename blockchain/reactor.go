@@ -1,14 +1,11 @@
 package blockchain
 
 import (
-	"bytes"
-	"context"
-	stdjson "encoding/json"
 	"fmt"
-	"net/http"
-	"reflect"
-	"strconv"
 	"time"
+	"context"
+	"reflect"
+	"net/http"
 
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -17,19 +14,14 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/rpc"
-	ctypes "github.com/bytom/blockchain/rpc/types"
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/blockchain/wallet"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
-	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/validation"
 	"github.com/bytom/types"
 )
 
@@ -102,21 +94,6 @@ func batchRecover(ctx context.Context, v *interface{}) {
 	}
 }
 
-func jsonHandler(f interface{}) http.Handler {
-	h, err := httpjson.Handler(f, errorFormatter.Write)
-	if err != nil {
-		panic(err)
-	}
-	return h
-}
-
-func alwaysError(err error) http.Handler {
-	return jsonHandler(func() error { return err })
-}
-
-func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	bcr.handler.ServeHTTP(rw, req)
-}
 
 func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
 	return map[string]interface{}{
@@ -140,68 +117,6 @@ func maxBytes(h http.Handler) http.Handler {
 	})
 }
 
-func (bcr *BlockchainReactor) BuildHander() {
-	m := bcr.mux
-	if bcr.accounts != nil && bcr.assets != nil {
-		m.Handle("/create-account", jsonHandler(bcr.createAccount))
-		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
-		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
-		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
-		m.Handle("/create-asset", jsonHandler(bcr.createAsset))
-		m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
-		m.Handle("/list-assets", jsonHandler(bcr.listAssets))
-		m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
-		m.Handle("/list-balances", jsonHandler(bcr.listBalances))
-	} else {
-		log.Warn("Please enable wallet")
-	}
-
-	m.Handle("/build-transaction", jsonHandler(bcr.build))
-	m.Handle("/create-control-program", jsonHandler(bcr.createControlProgram))
-	m.Handle("/create-transaction-feed", jsonHandler(bcr.createTxFeed))
-	m.Handle("/get-transaction-feed", jsonHandler(bcr.getTxFeed))
-	m.Handle("/update-transaction-feed", jsonHandler(bcr.updateTxFeed))
-	m.Handle("/delete-transaction-feed", jsonHandler(bcr.deleteTxFeed))
-	m.Handle("/list-transaction-feeds", jsonHandler(bcr.listTxFeeds))
-	m.Handle("/list-unspent-outputs", jsonHandler(bcr.listUnspentOutputs))
-	m.Handle("/", alwaysError(errors.New("not Found")))
-	m.Handle("/info", jsonHandler(bcr.info))
-	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
-	m.Handle("/create-access-token", jsonHandler(bcr.createAccessToken))
-	m.Handle("/list-access-token", jsonHandler(bcr.listAccessTokens))
-	m.Handle("/delete-access-token", jsonHandler(bcr.deleteAccessToken))
-	m.Handle("/check-access-token", jsonHandler(bcr.checkAccessToken))
-
-	//hsm api
-	m.Handle("/create-key", jsonHandler(bcr.pseudohsmCreateKey))
-	m.Handle("/list-keys", jsonHandler(bcr.pseudohsmListKeys))
-	m.Handle("/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
-	m.Handle("/sign-transactions", jsonHandler(bcr.pseudohsmSignTemplates))
-	m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
-	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
-	m.Handle("/get-best-block-hash", jsonHandler(bcr.getBestBlockHash))
-	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
-	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(bcr.getBlockTransactionsCountByHash))
-	m.Handle("/get-block-by-hash", jsonHandler(bcr.getBlockByHash))
-	m.Handle("/net-listening", jsonHandler(bcr.isNetListening))
-	m.Handle("/net-syncing", jsonHandler(bcr.isNetSyncing))
-	m.Handle("/peer-count", jsonHandler(bcr.peerCount))
-	m.Handle("/get-block-by-height", jsonHandler(bcr.getBlockByHeight))
-	m.Handle("/get-block-transactions-count-by-height", jsonHandler(bcr.getBlockTransactionsCountByHeight))
-	m.Handle("/block-height", jsonHandler(bcr.blockHeight))
-	m.Handle("/is-mining", jsonHandler(bcr.isMining))
-	m.Handle("/gas-rate", jsonHandler(bcr.gasRate))
-
-	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if l := latency(m, req); l != nil {
-			defer l.RecordSince(time.Now())
-		}
-		m.ServeHTTP(w, req)
-	})
-	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
-
-	bcr.handler = handler
-}
 
 // Used as a request object for api queries
 type requestQuery struct {
@@ -378,133 +293,6 @@ func (bcR *BlockchainReactor) syncRoutine() {
 	}
 }
 
-func (bcR *BlockchainReactor) getNetInfo() (*ctypes.ResultNetInfo, error) {
-	return rpc.NetInfo(bcR.sw)
-}
-
-func (bcr *BlockchainReactor) getBestBlockHash() []byte {
-	data := []string{bcr.chain.BestBlockHash().String()}
-	return resWrapper(data)
-}
-
-func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
-	var buf bytes.Buffer
-	hash := bc.Hash{}
-	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
-		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-	}
-	block, err := bcr.chain.GetBlockByHash(&hash)
-	if err != nil {
-		log.WithField("error", err).Error("Fail to get block by hash")
-		return ""
-	}
-	bcBlock := legacy.MapBlock(block)
-	header, _ := stdjson.MarshalIndent(bcBlock.BlockHeader, "", "  ")
-	buf.WriteString(string(header))
-	return buf.String()
-}
-
-type TxJSON struct {
-	Inputs  []bc.Entry `json:"inputs"`
-	Outputs []bc.Entry `json:"outputs"`
-}
-
-type GetBlockByHashJSON struct {
-	BlockHeader  *bc.BlockHeader `json:"block_header"`
-	Transactions []*TxJSON       `json:"transactions"`
-}
-
-func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
-	hash := bc.Hash{}
-	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
-		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return err.Error()
-	}
-
-	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
-	if err != nil {
-		log.WithField("error", err).Error("Fail to get block by hash")
-		return err.Error()
-	}
-
-	bcBlock := legacy.MapBlock(legacyBlock)
-	res := &GetBlockByHashJSON{BlockHeader: bcBlock.BlockHeader}
-	for _, tx := range bcBlock.Transactions {
-		txJSON := &TxJSON{}
-		for _, e := range tx.Entries {
-			switch e := e.(type) {
-			case *bc.Issuance:
-				txJSON.Inputs = append(txJSON.Inputs, e)
-			case *bc.Spend:
-				txJSON.Inputs = append(txJSON.Inputs, e)
-			case *bc.Retirement:
-				txJSON.Outputs = append(txJSON.Outputs, e)
-			case *bc.Output:
-				txJSON.Outputs = append(txJSON.Outputs, e)
-			default:
-				continue
-			}
-		}
-		res.Transactions = append(res.Transactions, txJSON)
-	}
-
-	ret, err := stdjson.Marshal(res)
-	if err != nil {
-		return err.Error()
-	}
-	return string(ret)
-}
-
-func (bcr *BlockchainReactor) getBlockByHeight(height uint64) []byte {
-	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
-	if err != nil {
-		log.WithField("error", err).Error("Fail to get block by hash")
-		return DefaultRawResponse
-	}
-
-	bcBlock := legacy.MapBlock(legacyBlock)
-	res := &GetBlockByHashJSON{BlockHeader: bcBlock.BlockHeader}
-	for _, tx := range bcBlock.Transactions {
-		txJSON := &TxJSON{}
-		for _, e := range tx.Entries {
-			switch e := e.(type) {
-			case *bc.Issuance:
-				txJSON.Inputs = append(txJSON.Inputs, e)
-			case *bc.Spend:
-				txJSON.Inputs = append(txJSON.Inputs, e)
-			case *bc.Retirement:
-				txJSON.Outputs = append(txJSON.Outputs, e)
-			case *bc.Output:
-				txJSON.Outputs = append(txJSON.Outputs, e)
-			default:
-				continue
-			}
-		}
-		res.Transactions = append(res.Transactions, txJSON)
-	}
-
-	ret, err := stdjson.Marshal(res)
-	if err != nil {
-		return DefaultRawResponse
-	}
-	data := []string{string(ret)}
-	return resWrapper(data)
-}
-
-func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) (int, error) {
-	hash := bc.Hash{}
-	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
-		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return -1, err
-	}
-
-	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
-	if err != nil {
-		log.WithField("error", err).Error("Fail to get block by hash")
-		return -1, err
-	}
-	return len(legacyBlock.Transactions), nil
-}
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.
 func (bcR *BlockchainReactor) BroadcastStatusResponse() {
@@ -519,55 +307,4 @@ func (bcR *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
 	}
 	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
-}
-
-func (bcr *BlockchainReactor) isNetListening() []byte {
-	data := []string{strconv.FormatBool(bcr.sw.IsListening())}
-	return resWrapper(data)
-}
-
-func (bcr *BlockchainReactor) peerCount() []byte {
-	// TODO: use key-value instead of bare value
-	data := []string{strconv.FormatInt(int64(len(bcr.sw.Peers().List())), 16)}
-	return resWrapper(data)
-}
-
-func (bcr *BlockchainReactor) isNetSyncing() []byte {
-	data := []string{strconv.FormatBool(bcr.blockKeeper.IsCaughtUp())}
-	return resWrapper(data)
-}
-
-func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) []byte {
-	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
-	if err != nil {
-		log.WithField("error", err).Error("Fail to get block by hash")
-		return DefaultRawResponse
-	}
-	data := []string{strconv.FormatInt(int64(len(legacyBlock.Transactions)), 16)}
-	log.Infof("%v", data)
-	return resWrapper(data)
-}
-
-func (bcr *BlockchainReactor) blockHeight() []byte {
-	data := []string{strconv.FormatUint(bcr.chain.Height(), 16)}
-	return resWrapper(data)
-}
-
-func (bcr *BlockchainReactor) isMining() []byte {
-	data := []string{strconv.FormatBool(bcr.mining.IsMining())}
-	return resWrapper(data)
-}
-
-func (bcr *BlockchainReactor) gasRate() []byte {
-	data := []string{strconv.FormatInt(validation.GasRate, 16)}
-	return resWrapper(data)
-}
-
-func resWrapper(data []string) []byte {
-	response := Response{Status: SUCCESS, Data: data}
-	rawResponse, err := stdjson.Marshal(response)
-	if err != nil {
-		return DefaultRawResponse
-	}
-	return rawResponse
 }

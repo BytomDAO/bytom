@@ -34,7 +34,7 @@ func initFiles(cmd *cobra.Command, args []string) {
 
 	genFile := config.GenesisFile()
 	if _, err := os.Stat(genFile); !os.IsNotExist(err) {
-		log.WithField("genesis", config.GenesisFile()).Info("Already exits config file.")
+		log.WithField("genesis", config.GenesisFile()).Info("Already exists config file.")
 		return
 	}
 	xprv, err := chainkd.NewXPrv(nil)
