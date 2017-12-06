@@ -14,7 +14,7 @@ import (
 
 var (
 	home    = blockchain.HomeDirFromEnvironment()
-	coreURL = env.String("BYTOM_URL", "http://localhost:1999")
+	coreURL = env.String("BYTOM_URL", "http://localhost:9888")
 )
 
 var blockHashCmd = &cobra.Command{

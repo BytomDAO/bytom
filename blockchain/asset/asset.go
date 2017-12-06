@@ -61,7 +61,6 @@ type Asset struct {
 	Tags              map[string]interface{}
 	RawDefinitionByte []byte
 	DefinitionMap     map[string]interface{}
-	BlockHeight       uint64
 }
 
 func (asset *Asset) Definition() (map[string]interface{}, error) {
