@@ -1,19 +1,22 @@
 package query
 
 import (
+	"bytom/crypto/sha3pool"
 	"encoding/json"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/sirupsen/logrus"
 )
 
 const (
 	//TxPreFix is transactions prefix
-	TxPreFix = "TXS:"
+	TxPreFix          = "TXS:"
+	accountCPPreFix   = "ACP:"
+	accountUTXOPreFix = "ACU:"
 )
 
 // NewIndexer constructs a new indexer for indexing transactions.
@@ -42,8 +45,8 @@ func (ind *Indexer) RegisterAnnotator(annotator Annotator) {
 
 // IndexTransactions is registered as a block callback on the Chain. It
 // saves all annotated transactions to the database.
-func (ind *Indexer) IndexTransactions(b *legacy.Block) {
-	if err := ind.insertAnnotatedTxs(b); err != nil {
+func (ind *Indexer) IndexTransactions(b *legacy.Block, account dbm.DB, wallet dbm.DB) {
+	if err := ind.insertAnnotatedTxs(b, account, wallet); err != nil {
 		logrus.WithField("err", err).Error("indexing transactions")
 	}
 }
@@ -69,23 +72,49 @@ func (ind *Indexer) DeleteTransactions(height uint64, b *legacy.Block) {
 	storeBatch.Write()
 }
 
-func (ind *Indexer) insertAnnotatedTxs(b *legacy.Block) error {
-	var (
-		annotatedTxs = make([]*AnnotatedTx, 0, len(b.Transactions))
-	)
+// filt related and build the fully annotated transactions.
+func filterTX(b *legacy.Block, account, wallet dbm.DB) []*AnnotatedTx {
+	annotatedTxs := make([]*AnnotatedTx, 0, len(b.Transactions))
 
-	// Build the fully annotated transactions.
 	for pos, tx := range b.Transactions {
-		annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, uint32(pos)))
+		local := false
+		for _, v := range tx.Outputs {
+			var hash [32]byte
+			sha3pool.Sum256(hash[:], v.ControlProgram)
+			key := append([]byte(accountCPPreFix), hash[:]...)
+
+			if bytes := account.Get(key); bytes != nil {
+				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, uint32(pos)))
+				local = true
+				break
+			}
+		}
+
+		if local == false {
+			for _, v := range tx.Inputs {
+				outid, err := v.SpentOutputID()
+				if err != nil {
+					continue
+				}
+				key := append([]byte(accountUTXOPreFix), outid.Bytes()...)
+				if bytes := wallet.Get(key); bytes != nil {
+					annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, uint32(pos)))
+					break
+				}
+			}
+		}
 	}
 
+	return annotatedTxs
+}
+
+func (ind *Indexer) insertAnnotatedTxs(b *legacy.Block, account, wallet dbm.DB) error {
+	annotatedTxs := filterTX(b, account, wallet)
 	for _, annotator := range ind.annotators {
 		if err := annotator(annotatedTxs); err != nil {
 			return errors.Wrap(err, "adding external annotations")
 		}
 	}
-
-	localAnnotator(annotatedTxs)
 
 	storeBatch := ind.db.NewBatch()
 	for pos, tx := range annotatedTxs {

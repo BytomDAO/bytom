@@ -5,6 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
+	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
@@ -58,7 +59,7 @@ func (w *Wallet) GetWalletInfo() (StatusInfo, error) {
 		return info, nil
 	}
 
-	if err := json.Unmarshal(rawWallet, &w); err != nil {
+	if err := json.Unmarshal(rawWallet, &info); err != nil {
 		return info, err
 	}
 
@@ -67,7 +68,7 @@ func (w *Wallet) GetWalletInfo() (StatusInfo, error) {
 }
 
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
-func (w *Wallet) WalletUpdate(c *protocol.Chain) {
+func (w *Wallet) WalletUpdate(c *protocol.Chain, account dbm.DB) {
 	var err error
 	var block *legacy.Block
 
@@ -110,12 +111,13 @@ LOOP:
 		w.Height = block.Height
 		w.Hash = block.Hash()
 
+		w.Ind.IndexTransactions(block, account, w.DB)
+
 		w.accounts.BuildAccountUTXOs(&storeBatch, block)
 
 		//update wallet info and commit batch write
 		w.commitWalletInfo(&storeBatch)
 
-		w.Ind.IndexTransactions(block)
 	}
 
 	//goto next loop

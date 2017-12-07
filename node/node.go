@@ -210,7 +210,7 @@ func NewNode(config *cfg.Config) *Node {
 		wallet.Ind.RegisterAnnotator(accounts.AnnotateTxs)
 		wallet.Ind.RegisterAnnotator(assets.AnnotateTxs)
 
-		go wallet.WalletUpdate(chain)
+		go wallet.WalletUpdate(chain, accountsDB)
 
 	}
 	//Todo HSM
