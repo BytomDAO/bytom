@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/json"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -9,9 +10,15 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+)
+
+const (
+	//TxPreFix is transactions prefix
+	TxPreFix = "TXS:"
 )
 
 var walletKey = []byte("walletInfo")
@@ -27,7 +34,6 @@ type Wallet struct {
 	DB       db.DB
 	accounts *account.Manager
 	assets   *asset.Registry
-	Ind      *query.Indexer
 	StatusInfo
 }
 
@@ -37,7 +43,6 @@ func NewWallet(walletDB db.DB, accounts *account.Manager, assets *asset.Registry
 		DB:       walletDB,
 		accounts: accounts,
 		assets:   assets,
-		Ind:      query.NewIndexer(walletDB),
 	}
 	walletInfo, err := w.GetWalletInfo()
 	if err != nil {
@@ -58,7 +63,7 @@ func (w *Wallet) GetWalletInfo() (StatusInfo, error) {
 		return info, nil
 	}
 
-	if err := json.Unmarshal(rawWallet, &w); err != nil {
+	if err := json.Unmarshal(rawWallet, &info); err != nil {
 		return info, err
 	}
 
@@ -83,7 +88,7 @@ LOOP:
 
 		//Reverse this block
 		w.accounts.ReverseAccountUTXOs(&storeBatch, block)
-		w.Ind.DeleteTransactions(w.Height, block)
+		w.deleteTransactions(w.Height, block)
 		log.WithField("Height", w.Height).Info("start rollback this block")
 
 		w.Height = block.Height - 1
@@ -110,12 +115,10 @@ LOOP:
 		w.Height = block.Height
 		w.Hash = block.Hash()
 
+		w.indexTransactions(block)
+
 		w.accounts.BuildAccountUTXOs(&storeBatch, block)
 
-		//update wallet info and commit batch write
-		w.commitWalletInfo(&storeBatch)
-
-		w.Ind.IndexTransactions(block)
 	}
 
 	//goto next loop
@@ -137,4 +140,67 @@ func (w *Wallet) commitWalletInfo(batch *db.Batch) {
 	(*batch).Set(walletKey, rawWallet)
 	//commit to db
 	(*batch).Write()
+}
+
+// indexTransactions is registered as a block callback on the Chain. It
+// saves all annotated transactions to the database.
+func (w *Wallet) indexTransactions(b *legacy.Block) {
+	if err := w.insertAnnotatedTxs(b); err != nil {
+		log.WithField("err", err).Error("indexing transactions")
+	}
+}
+
+func calcAnnotatedKey(blockHeight uint64, position uint32) []byte {
+	return []byte(fmt.Sprintf("%s%016x%08x", TxPreFix, blockHeight, position))
+}
+
+func calcDeletePreFix(blockHeight uint64) []byte {
+	return []byte(fmt.Sprintf("%s%016x", TxPreFix, blockHeight))
+}
+
+//deleteTransaction delete transactions when orphan block rollback
+func (w *Wallet) deleteTransactions(height uint64, b *legacy.Block) {
+	txIter := w.DB.IteratorPrefix(calcDeletePreFix(height))
+	storeBatch := w.DB.NewBatch()
+	defer txIter.Release()
+
+	for txIter.Next() {
+		storeBatch.Delete(txIter.Key())
+	}
+	//commit
+	storeBatch.Write()
+}
+
+func (w *Wallet) insertAnnotatedTxs(b *legacy.Block) error {
+	var (
+		annotatedTxs = make([]*query.AnnotatedTx, 0, len(b.Transactions))
+	)
+
+	// Build the fully annotated transactions.
+	for pos, tx := range b.Transactions {
+		annotatedTxs = append(annotatedTxs, query.BuildAnnotatedTransaction(tx, b, uint32(pos)))
+	}
+
+	if err := w.assets.AnnotateTxs(annotatedTxs); err != nil {
+		return errors.Wrap(err, "adding external annotations")
+	}
+
+	if err := w.accounts.AnnotateTxs(annotatedTxs, w.DB); err != nil {
+		return errors.Wrap(err, "adding external annotations")
+	}
+
+	storeBatch := w.DB.NewBatch()
+	for pos, tx := range annotatedTxs {
+		rawTx, err := json.MarshalIndent(tx, "", "    ")
+		if err != nil {
+			return errors.Wrap(err, "inserting annotated_txs to db")
+		}
+
+		storeBatch.Set(calcAnnotatedKey(b.Height, uint32(pos)), rawTx)
+	}
+
+	//commit the annotated txs to the database.
+	storeBatch.Write()
+
+	return nil
 }

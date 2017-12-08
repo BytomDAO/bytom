@@ -207,8 +207,6 @@ func NewNode(config *cfg.Config) *Node {
 		assets = asset.NewRegistry(assetsDB, chain)
 
 		wallet = w.NewWallet(walletDB, accounts, assets)
-		wallet.Ind.RegisterAnnotator(accounts.AnnotateTxs)
-		wallet.Ind.RegisterAnnotator(assets.AnnotateTxs)
 
 		go wallet.WalletUpdate(chain)
 

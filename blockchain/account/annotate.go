@@ -7,10 +7,11 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
+	"github.com/tendermint/tmlibs/db"
 )
 
 // AnnotateTxs adds account data to transactions
-func (m *Manager) AnnotateTxs(txs []*query.AnnotatedTx) error {
+func (m *Manager) AnnotateTxs(txs []*query.AnnotatedTx, walletDB db.DB) error {
 
 	outputIDs := make([][]byte, 0)
 	inputs := make(map[bc.Hash]*query.AnnotatedInput)
@@ -45,10 +46,11 @@ func (m *Manager) AnnotateTxs(txs []*query.AnnotatedTx) error {
 
 	for _, outputID := range outputIDs {
 
-		accountUTXOValue := m.db.Get(accountUTXOKey(string(outputID)))
+		accountUTXOValue := walletDB.Get(accountUTXOKey(string(outputID)))
 		if accountUTXOValue == nil {
 			continue
 		}
+
 		if err := json.Unmarshal(accountUTXOValue, &accountUTXO); err != nil {
 			return errors.Wrap(err)
 		}

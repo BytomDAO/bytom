@@ -20,7 +20,6 @@ type AnnotatedTx struct {
 	Position               uint32             `json:"position"`
 	BlockTransactionsCount uint32             `json:"block_transactions_count,omitempty"`
 	ReferenceData          *json.RawMessage   `json:"reference_data"`
-	IsLocal                Bool               `json:"is_local"`
 	Inputs                 []*AnnotatedInput  `json:"inputs"`
 	Outputs                []*AnnotatedOutput `json:"outputs"`
 }
@@ -31,7 +30,6 @@ type AnnotatedInput struct {
 	AssetAlias      string             `json:"asset_alias,omitempty"`
 	AssetDefinition *json.RawMessage   `json:"asset_definition"`
 	AssetTags       *json.RawMessage   `json:"asset_tags,omitempty"`
-	AssetIsLocal    Bool               `json:"asset_is_local"`
 	Amount          uint64             `json:"amount"`
 	IssuanceProgram chainjson.HexBytes `json:"issuance_program,omitempty"`
 	ControlProgram  chainjson.HexBytes `json:"-"`
@@ -40,7 +38,6 @@ type AnnotatedInput struct {
 	AccountAlias    string             `json:"account_alias,omitempty"`
 	AccountTags     *json.RawMessage   `json:"account_tags,omitempty"`
 	ReferenceData   *json.RawMessage   `json:"reference_data"`
-	IsLocal         Bool               `json:"is_local"`
 }
 
 type AnnotatedOutput struct {
@@ -53,14 +50,12 @@ type AnnotatedOutput struct {
 	AssetAlias      string             `json:"asset_alias,omitempty"`
 	AssetDefinition *json.RawMessage   `json:"asset_definition"`
 	AssetTags       *json.RawMessage   `json:"asset_tags"`
-	AssetIsLocal    Bool               `json:"asset_is_local"`
 	Amount          uint64             `json:"amount"`
 	AccountID       string             `json:"account_id,omitempty"`
 	AccountAlias    string             `json:"account_alias,omitempty"`
 	AccountTags     *json.RawMessage   `json:"account_tags,omitempty"`
 	ControlProgram  chainjson.HexBytes `json:"control_program"`
 	ReferenceData   *json.RawMessage   `json:"reference_data"`
-	IsLocal         Bool               `json:"is_local"`
 }
 
 type AnnotatedAccount struct {
@@ -85,7 +80,6 @@ type AnnotatedAsset struct {
 	Quorum          int                `json:"quorum"`
 	Definition      *json.RawMessage   `json:"definition"`
 	Tags            *json.RawMessage   `json:"tags"`
-	IsLocal         Bool               `json:"is_local"`
 }
 
 type AssetKey struct {
@@ -119,7 +113,7 @@ func IsValidJSON(b []byte) bool {
 	return err == nil
 }
 
-func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock uint32) *AnnotatedTx {
+func BuildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock uint32) *AnnotatedTx {
 	tx := &AnnotatedTx{
 		ID:                     orig.ID,
 		Timestamp:              b.Time(),
@@ -196,25 +190,4 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *AnnotatedOutput {
 		out.Type = "control"
 	}
 	return out
-}
-
-// localAnnotator depends on the asset and account annotators and
-// must be run after them.
-func localAnnotator(txs []*AnnotatedTx) {
-	for _, tx := range txs {
-		for _, in := range tx.Inputs {
-			if in.AccountID != "" {
-				tx.IsLocal, in.IsLocal = true, true
-			}
-			if in.Type == "issue" && in.AssetIsLocal {
-				tx.IsLocal, in.IsLocal = true, true
-			}
-		}
-
-		for _, out := range tx.Outputs {
-			if out.AccountID != "" {
-				tx.IsLocal, out.IsLocal = true, true
-			}
-		}
-	}
 }

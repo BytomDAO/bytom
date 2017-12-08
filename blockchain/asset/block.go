@@ -51,7 +51,6 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 			})
 		}
 		aa.Quorum = a.Signer.Quorum
-		aa.IsLocal = true
 	} else {
 		pubkeys, quorum, err := vmutil.ParseP2SPMultiSigProgram(a.IssuanceProgram)
 		if err == nil {

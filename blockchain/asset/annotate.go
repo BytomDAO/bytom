@@ -30,7 +30,6 @@ func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
 	tagsByAssetID := make(map[bc.AssetID]*json.RawMessage)
 	defsByAssetID := make(map[bc.AssetID]*json.RawMessage)
 	aliasesByAssetID := make(map[bc.AssetID]string)
-	localByAssetID := make(map[bc.AssetID]bool)
 
 	for assetID := range assetIDMap {
 		rawAsset := reg.db.Get([]byte(assetID.String()))
@@ -54,8 +53,6 @@ func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
 			aliasesByAssetID[assetID] = annotatedAsset.Alias
 		}
 
-		localByAssetID[assetID] = annotatedAsset.IsLocal == true
-
 		if annotatedAsset.Tags != nil {
 			tagsByAssetID[assetID] = annotatedAsset.Tags
 		}
@@ -72,9 +69,6 @@ func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
 			if alias, ok := aliasesByAssetID[in.AssetID]; ok {
 				in.AssetAlias = alias
 			}
-			if localByAssetID[in.AssetID] {
-				in.AssetIsLocal = true
-			}
 
 			in.AssetTags = &empty
 			in.AssetDefinition = &empty
@@ -89,9 +83,6 @@ func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
 		for _, out := range tx.Outputs {
 			if alias, ok := aliasesByAssetID[out.AssetID]; ok {
 				out.AssetAlias = alias
-			}
-			if localByAssetID[out.AssetID] {
-				out.AssetIsLocal = true
 			}
 
 			out.AssetTags = &empty
