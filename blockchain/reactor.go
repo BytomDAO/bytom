@@ -198,6 +198,7 @@ func (bcR *BlockchainReactor) OnStop() {
 	if bcR.miningEnable {
 		bcR.mining.Stop()
 	}
+	bcR.blockKeeper.Stop()
 }
 
 // GetChannels implements Reactor
