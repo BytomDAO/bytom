@@ -219,7 +219,7 @@ func (a *controlAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 // registers callbacks on the TemplateBuilder so that all of the template's
 // account control programs are batch inserted if building the rest of
 // the template is successful.
-func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.TemplateBuilder, acp *controlProgram) {
+func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.TemplateBuilder, acp *CtrlProgram) {
 	m.delayedACPsMu.Lock()
 	m.delayedACPs[b] = append(m.delayedACPs[b], acp)
 	m.delayedACPsMu.Unlock()

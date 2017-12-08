@@ -42,7 +42,6 @@ type AnnotatedInput struct {
 
 type AnnotatedOutput struct {
 	Type            string             `json:"type"`
-	Purpose         string             `json:"purpose,omitempty"`
 	OutputID        bc.Hash            `json:"id"`
 	TransactionID   *bc.Hash           `json:"transaction_id,omitempty"`
 	Position        int                `json:"position"`

@@ -7,10 +7,11 @@ import (
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/protocol/bc"
+	"github.com/tendermint/tmlibs/db"
 )
 
 // AnnotateTxs adds asset data to transactions
-func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
+func AnnotateTxs(txs []*query.AnnotatedTx,walletDB db.DB) error {
 
 	assetIDMap := make(map[bc.AssetID]bool)
 
@@ -32,7 +33,7 @@ func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
 	aliasesByAssetID := make(map[bc.AssetID]string)
 
 	for assetID := range assetIDMap {
-		rawAsset := reg.db.Get([]byte(assetID.String()))
+		rawAsset := walletDB.Get([]byte(assetID.String()))
 		if rawAsset == nil {
 			//local no asset
 			continue

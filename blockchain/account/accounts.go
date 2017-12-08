@@ -38,23 +38,25 @@ func aliasKey(name string) []byte {
 	return []byte(aliasPreFix + name)
 }
 
-func accountKey(name string) []byte {
+//AccountKey
+func AccountKey(name string) []byte {
 	return []byte(accountPreFix + name)
 }
 
-func accountCPKey(hash [32]byte) []byte {
+//
+func AccountCPKey(hash [32]byte) []byte {
 	return append([]byte(accountCPPreFix), hash[:]...)
 }
 
 // NewManager creates a new account manager
-func NewManager(db, walletDB dbm.DB, chain *protocol.Chain) *Manager {
+func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
 	return &Manager{
-		db:          db,
+		db:          walletDB,
 		chain:       chain,
 		utxoDB:      newReserver(chain, walletDB),
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
-		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*controlProgram),
+		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
 	}
 }
 
@@ -69,7 +71,7 @@ type Manager struct {
 	aliasCache *lru.Cache
 
 	delayedACPsMu sync.Mutex
-	delayedACPs   map[*txbuilder.TemplateBuilder][]*controlProgram
+	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
 	acpMu        sync.Mutex
 	acpIndexNext uint64 // next acp index in our block
@@ -118,7 +120,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
 
-	accountID := accountKey(signer.ID)
+	accountID := AccountKey(signer.ID)
 	m.db.Set(accountID, accountJSON)
 	m.db.Set(aliasKey(alias), []byte(signer.ID))
 
@@ -137,7 +139,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 	if alias != nil {
 		accountID = m.db.Get(aliasKey(*alias))
 	} else {
-		accountID = accountKey(*id)
+		accountID = AccountKey(*id)
 	}
 
 	accountJSON := m.db.Get(accountID)
@@ -200,7 +202,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 		return cachedSigner.(*signers.Signer), nil
 	}
 
-	rawAccount := m.db.Get(accountKey(id))
+	rawAccount := m.db.Get(AccountKey(id))
 	if rawAccount == nil {
 		return nil, errors.New("fail to find account")
 	}
@@ -216,7 +218,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 	return account.Signer, nil
 }
 
-func (m *Manager) createControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*controlProgram, error) {
+func (m *Manager) createControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	account, err := m.findByID(ctx, accountID)
 	if err != nil {
 		return nil, err
@@ -235,7 +237,7 @@ func (m *Manager) createControlProgram(ctx context.Context, accountID string, ch
 		return nil, err
 	}
 
-	return &controlProgram{
+	return &CtrlProgram{
 		AccountID:      account.ID,
 		KeyIndex:       idx,
 		ControlProgram: control,
@@ -258,7 +260,7 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 	return cp.ControlProgram, nil
 }
 
-type controlProgram struct {
+type CtrlProgram struct {
 	AccountID      string
 	KeyIndex       uint64
 	ControlProgram []byte
@@ -266,7 +268,7 @@ type controlProgram struct {
 	ExpiresAt      time.Time
 }
 
-func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
+func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*CtrlProgram) error {
 	var hash [32]byte
 	for _, prog := range progs {
 		accountCP, err := json.Marshal(prog)
@@ -275,7 +277,7 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 		}
 
 		sha3pool.Sum256(hash[:], prog.ControlProgram)
-		m.db.Set(accountCPKey(hash), accountCP)
+		m.db.Set(AccountCPKey(hash), accountCP)
 	}
 	return nil
 }
@@ -311,7 +313,7 @@ func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
 		return script, err
 	}
 
-	err = m.insertAccountControlProgram(ctx, &controlProgram{
+	err = m.insertAccountControlProgram(ctx, &CtrlProgram{
 		AccountID:      signer.ID,
 		KeyIndex:       idx,
 		ControlProgram: script,

@@ -20,7 +20,14 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
-const maxAssetCache = 1000
+const (
+	maxAssetCache = 1000
+	assetPreFix   = "ASS:"
+)
+
+func assetKey(name string) []byte {
+	return []byte(assetPreFix + name)
+}
 
 var (
 	ErrDuplicateAlias = errors.New("duplicate asset alias")
@@ -122,13 +129,12 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		asset.Alias = &alias
 	}
 
-	assetID := []byte(asset.AssetID.String())
 	ass, err := json.Marshal(asset)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal asset")
 	}
 	if len(ass) > 0 {
-		reg.db.Set(assetID, json.RawMessage(ass))
+		reg.db.Set(assetKey(asset.AssetID.String()), json.RawMessage(ass))
 	}
 
 	return asset, nil
@@ -189,7 +195,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 		return cached.(*Asset), nil
 	}
 
-	bytes := reg.db.Get([]byte(id.String()))
+	bytes := reg.db.Get(assetKey(id.String()))
 	if bytes == nil {
 		return nil, errors.New("no exit this asset")
 	}
@@ -236,7 +242,7 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 func (reg *Registry) QueryAll(ctx context.Context) (interface{}, error) {
 	ret := make([]interface{}, 0)
 
-	assetIter := reg.db.Iterator()
+	assetIter := reg.db.IteratorPrefix([]byte(assetPreFix))
 	defer assetIter.Release()
 
 	for assetIter.Next() {

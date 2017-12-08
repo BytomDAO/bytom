@@ -7,8 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/account"
-	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
@@ -32,17 +30,14 @@ type StatusInfo struct {
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
 	DB       db.DB
-	accounts *account.Manager
-	assets   *asset.Registry
+	annotators []Annotator
 	StatusInfo
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, accounts *account.Manager, assets *asset.Registry) *Wallet {
+func NewWallet(walletDB db.DB) *Wallet {
 	w := &Wallet{
 		DB:       walletDB,
-		accounts: accounts,
-		assets:   assets,
 	}
 	walletInfo, err := w.GetWalletInfo()
 	if err != nil {
@@ -87,7 +82,7 @@ LOOP:
 		}
 
 		//Reverse this block
-		w.accounts.ReverseAccountUTXOs(&storeBatch, block)
+		w.ReverseAccountUTXOs(&storeBatch, block)
 		w.deleteTransactions(w.Height, block)
 		log.WithField("Height", w.Height).Info("start rollback this block")
 
@@ -116,9 +111,7 @@ LOOP:
 		w.Hash = block.Hash()
 
 		w.indexTransactions(block)
-
-		w.accounts.BuildAccountUTXOs(&storeBatch, block)
-
+		w.BuildAccountUTXOs(&storeBatch, block)
 	}
 
 	//goto next loop
@@ -140,6 +133,16 @@ func (w *Wallet) commitWalletInfo(batch *db.Batch) {
 	(*batch).Set(walletKey, rawWallet)
 	//commit to db
 	(*batch).Write()
+}
+
+// Annotator describes a function capable of adding annotations
+// to transactions, inputs and outputs.
+type Annotator func(txs []*query.AnnotatedTx,walletDB db.DB) error
+
+// RegisterAnnotator adds an additional annotator capable of mutating
+// the annotated transaction object.
+func (w *Wallet) RegisterAnnotator(annotator Annotator) {
+	w.annotators = append(w.annotators, annotator)
 }
 
 // indexTransactions is registered as a block callback on the Chain. It
@@ -172,21 +175,17 @@ func (w *Wallet) deleteTransactions(height uint64, b *legacy.Block) {
 }
 
 func (w *Wallet) insertAnnotatedTxs(b *legacy.Block) error {
-	var (
-		annotatedTxs = make([]*query.AnnotatedTx, 0, len(b.Transactions))
-	)
+	annotatedTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
 
 	// Build the fully annotated transactions.
 	for pos, tx := range b.Transactions {
 		annotatedTxs = append(annotatedTxs, query.BuildAnnotatedTransaction(tx, b, uint32(pos)))
 	}
 
-	if err := w.assets.AnnotateTxs(annotatedTxs); err != nil {
-		return errors.Wrap(err, "adding external annotations")
-	}
-
-	if err := w.accounts.AnnotateTxs(annotatedTxs, w.DB); err != nil {
-		return errors.Wrap(err, "adding external annotations")
+	for _, annotator := range w.annotators {
+		if err := annotator(annotatedTxs,w.DB); err != nil {
+			return errors.Wrap(err, "adding external annotations")
+		}
 	}
 
 	storeBatch := w.DB.NewBatch()

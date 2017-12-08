@@ -199,14 +199,15 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	if config.Wallet.Enable {
-		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
-		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 
-		accounts = account.NewManager(accountsDB, walletDB, chain)
-		assets = asset.NewRegistry(assetsDB, chain)
+		accounts = account.NewManager(walletDB, chain)
+		assets = asset.NewRegistry(walletDB, chain)
 
-		wallet = w.NewWallet(walletDB, accounts, assets)
+		wallet = w.NewWallet(walletDB)
+		wallet.RegisterAnnotator(account.AnnotateTxs)
+		wallet.RegisterAnnotator(asset.AnnotateTxs)
 
 		go wallet.WalletUpdate(chain)
 

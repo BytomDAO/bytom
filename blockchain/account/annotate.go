@@ -8,12 +8,13 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/tendermint/tmlibs/db"
+	"github.com/bytom/crypto/sha3pool"
 )
 
 // AnnotateTxs adds account data to transactions
-func (m *Manager) AnnotateTxs(txs []*query.AnnotatedTx, walletDB db.DB) error {
+func AnnotateTxs(txs []*query.AnnotatedTx,walletDB db.DB) error {
 
-	outputIDs := make([][]byte, 0)
+	outputIDs := make([]bc.Hash, 0)
 	inputs := make(map[bc.Hash]*query.AnnotatedInput)
 	outputs := make(map[bc.Hash]*query.AnnotatedOutput)
 
@@ -24,7 +25,7 @@ func (m *Manager) AnnotateTxs(txs []*query.AnnotatedTx, walletDB db.DB) error {
 			}
 
 			inputs[*in.SpentOutputID] = in
-			outputIDs = append(outputIDs, in.SpentOutputID.Bytes())
+			outputIDs = append(outputIDs, *in.SpentOutputID)
 		}
 		for _, out := range tx.Outputs {
 			if out.Type == "retire" {
@@ -32,64 +33,93 @@ func (m *Manager) AnnotateTxs(txs []*query.AnnotatedTx, walletDB db.DB) error {
 			}
 
 			outputs[out.OutputID] = out
-			outputIDs = append(outputIDs, out.OutputID.Bytes())
+			outputIDs = append(outputIDs, out.OutputID)
 		}
 	}
 
 	// Look up all of the spent and created outputs. If any of them are
 	// account UTXOs add the account annotations to the inputs and outputs.
 
-	accountUTXO := UTXO{}
-	account := Account{}
-	rawOutputID := new([32]byte)
-	outputHash := bc.Hash{}
-
 	for _, outputID := range outputIDs {
+		var account *Account
+		var err error
 
-		accountUTXOValue := walletDB.Get(accountUTXOKey(string(outputID)))
-		if accountUTXOValue == nil {
-			continue
+		if account,err = getAccountFromUTXO(outputID,walletDB);err != nil{
+			if account,err = getAccountFromACP(outputs[outputID].ControlProgram,walletDB);err != nil {
+				return errors.Wrap(err)
+			}
 		}
 
-		if err := json.Unmarshal(accountUTXOValue, &accountUTXO); err != nil {
-			return errors.Wrap(err)
-		}
-		copy(rawOutputID[:], accountUTXO.OutputID)
-		outputHash = bc.NewHash(*rawOutputID)
-
-		accountValue := m.db.Get(accountKey(accountUTXO.AccountID))
-		if accountValue == nil {
-			return errors.Wrap(fmt.Errorf("failed get account:%s ", accountUTXO.AccountID))
-		}
-		if err := json.Unmarshal(accountValue, &account); err != nil {
-			return errors.Wrap(err)
-		}
-
-		aa, err := Annotated(&account)
+		aa, err := Annotated(account)
 		if err != nil {
 			return errors.Wrap(err)
 		}
 
-		spendingInput, ok := inputs[outputHash]
+		spendingInput, ok := inputs[outputID]
 		if ok {
 			spendingInput.AccountID = aa.ID
 			spendingInput.AccountAlias = aa.Alias
 			spendingInput.AccountTags = aa.Tags
 		}
 
-		out, ok := outputs[outputHash]
+		out, ok := outputs[outputID]
 		if ok {
 			out.AccountID = aa.ID
 			out.AccountAlias = aa.Alias
 			out.AccountTags = aa.Tags
-
-			if accountUTXO.Change {
-				out.Purpose = "change"
-			} else {
-				out.Purpose = "receive"
-			}
 		}
 	}
 
 	return nil
+}
+
+func getAccountFromUTXO(outputID bc.Hash,walletDB db.DB) (*Account,error) {
+	accountUTXO := UTXO{}
+	account := Account{}
+
+	accountUTXOValue := walletDB.Get(AccountUTXOKey(string(outputID.Bytes())))
+	if accountUTXOValue == nil {
+		return nil,errors.Wrap(fmt.Errorf("failed get account utxo:%x ", outputID))
+	}
+
+	if err := json.Unmarshal(accountUTXOValue, &accountUTXO); err != nil {
+		return nil,errors.Wrap(err)
+	}
+
+	accountValue := walletDB.Get(AccountKey(accountUTXO.AccountID))
+	if accountValue == nil {
+		return nil,errors.Wrap(fmt.Errorf("failed get account:%s ", accountUTXO.AccountID))
+	}
+	if err := json.Unmarshal(accountValue, &account); err != nil {
+		return nil,errors.Wrap(err)
+	}
+
+	return &account,nil
+}
+
+func getAccountFromACP(program []byte,walletDB db.DB) (*Account,error) {
+	var hash [32]byte
+	accountCP := CtrlProgram{}
+	account := Account{}
+
+	sha3pool.Sum256(hash[:], program)
+
+	rawProgram := walletDB.Get(AccountCPKey(hash))
+	if rawProgram == nil {
+		return nil,errors.Wrap(fmt.Errorf("failed get account control program:%x ", hash))
+	}
+
+	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
+		return nil,errors.Wrap(err)
+	}
+
+	accountValue := walletDB.Get(AccountKey(accountCP.AccountID))
+	if accountValue == nil {
+		return nil,errors.Wrap(fmt.Errorf("failed get account:%s ", accountCP.AccountID))
+	}
+	if err := json.Unmarshal(accountValue, &account); err != nil {
+		return nil,errors.Wrap(err)
+	}
+
+	return &account,nil
 }
