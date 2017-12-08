@@ -63,7 +63,6 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
 	bk := &blockKeeper{
 		chainHeight:   chainHeight,
 		maxPeerHeight: uint64(0),
-		chainUpdateCh: chain.BlockWaiter(chainHeight + 1),
 		peerUpdateCh:  make(chan struct{}, 1000),
 
 		chain:            chain,
@@ -74,6 +73,10 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
 	go bk.blockProcessWorker()
 	go bk.blockRequestWorker()
 	return bk
+}
+
+func (bk *blockKeeper) setChainHeight() {
+	bk.chainUpdateCh = bk.chain.BlockWaiter(bk.chainHeight + 1)
 }
 
 func (bk *blockKeeper) AddBlock(block *legacy.Block, peerID string) {
@@ -129,6 +132,7 @@ func (bk *blockKeeper) SetPeerHeight(peerID string, height uint64, hash *bc.Hash
 	peer := newBlockKeeperPeer(height, hash)
 	bk.peers[peerID] = peer
 	log.WithFields(log.Fields{"ID": peerID, "Height": height}).Info("Add new peer to blockKeeper")
+	bk.setChainHeight()
 }
 
 func (bk *blockKeeper) RequestBlockByHeight(height uint64) {

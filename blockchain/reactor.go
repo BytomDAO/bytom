@@ -70,6 +70,7 @@ type BlockchainReactor struct {
 	sw            *p2p.Switch
 	handler       http.Handler
 	evsw          types.EventSwitch
+	miningEnable  bool
 }
 
 func batchRecover(ctx context.Context, v *interface{}) {
@@ -158,7 +159,7 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *BlockchainReactor {
 	mining := cpuminer.NewCPUMiner(chain, accounts, txPool)
 	bcR := &BlockchainReactor{
 		chain:         chain,
@@ -173,6 +174,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 		hsm:           hsm,
 		txFeedTracker: txfeeds,
 		accessTokens:  accessTokens,
+		miningEnable:  miningEnable,
 	}
 	bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
 	return bcR
@@ -183,7 +185,9 @@ func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
 	bcR.BuildHander()
 
-	bcR.mining.Start()
+	if bcR.miningEnable {
+		bcR.mining.Start()
+	}
 	go bcR.syncRoutine()
 	return nil
 }
@@ -191,7 +195,9 @@ func (bcR *BlockchainReactor) OnStart() error {
 // OnStop implements BaseService
 func (bcR *BlockchainReactor) OnStop() {
 	bcR.BaseReactor.OnStop()
-	bcR.mining.Stop()
+	if bcR.miningEnable {
+		bcR.mining.Stop()
+	}
 }
 
 // GetChannels implements Reactor
@@ -222,7 +228,7 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		log.Errorf("Error decoding messagek %v", err)
 		return
 	}
-	log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Receive request")
+	log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Receive msg")
 
 	switch msg := msg.(type) {
 	case *BlockRequestMessage:
@@ -281,11 +287,13 @@ func (bcR *BlockchainReactor) syncRoutine() {
 		case _ = <-statusUpdateTicker.C:
 			go bcR.BroadcastStatusResponse()
 
-			// mining if and only if block sync is finished
-			if bcR.blockKeeper.IsCaughtUp() {
-				bcR.mining.Start()
-			} else {
-				bcR.mining.Stop()
+			if bcR.miningEnable {
+				// mining if and only if block sync is finished
+				if bcR.blockKeeper.IsCaughtUp() {
+					bcR.mining.Start()
+				} else {
+					bcR.mining.Stop()
+				}
 			}
 		case <-bcR.Quit:
 			return
