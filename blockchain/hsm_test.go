@@ -52,8 +52,7 @@ func TestHSM(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
-
+	walletDB := dbm.NewDB("wallet", config.DBBackend, dir)
 	accounts = account.NewManager(walletDB, chain)
 	assets = asset.NewRegistry(walletDB, chain)
 
