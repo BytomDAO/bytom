@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/state"
 )
 
 var blockStoreKey = []byte("blockStore")
@@ -100,11 +99,6 @@ func (s *Store) GetMainchain(hash *bc.Hash) (map[uint64]*bc.Hash, error) {
 	return getMainchain(s.db, hash)
 }
 
-// GetSnapshot read the snapshot tree from db
-func (s *Store) GetSnapshot(hash *bc.Hash) (*state.Snapshot, error) {
-	return getSnapshot(s.db, hash)
-}
-
 // SaveBlock persists a new block in the database.
 func (s *Store) SaveBlock(block *legacy.Block) error {
 	binaryBlock, err := block.MarshalText()
@@ -124,15 +118,8 @@ func (s *Store) SaveMainchain(mainchain map[uint64]*bc.Hash, hash *bc.Hash) erro
 	return errors.Wrap(err, "saving mainchain")
 }
 
-// SaveSnapshot saves a state snapshot to the database.
-func (s *Store) SaveSnapshot(snapshot *state.Snapshot, hash *bc.Hash) error {
-	err := saveSnapshot(s.db, snapshot, hash)
-	return errors.Wrap(err, "saving state tree")
-}
-
 // SaveStoreStatus save the core's newest status && delete old status
 func (s *Store) SaveStoreStatus(height uint64, hash *bc.Hash) {
 	BlockStoreStateJSON{Height: height, Hash: hash}.save(s.db)
 	cleanMainchainDB(s.db, hash)
-	cleanSnapshotDB(s.db, hash)
 }
