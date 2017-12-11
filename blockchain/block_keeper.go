@@ -51,22 +51,22 @@ type blockKeeper struct {
 	maxPeerHeight uint64
 	chainUpdateCh <-chan struct{}
 	peerUpdateCh  chan struct{}
-	done		  chan bool
+	done          chan bool
 
-	chain            *protocol.Chain
-	sw               *p2p.Switch
-	peers            map[string]*blockKeeperPeer
+	chain         *protocol.Chain
+	sw            *p2p.Switch
+	peers         map[string]*blockKeeperPeer
 	pendingProcessCh chan *pendingResponse
 }
 
 func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
 	chainHeight := chain.Height()
 	bk := &blockKeeper{
-		chainHeight:   chainHeight,
-		maxPeerHeight: uint64(0),
-		chainUpdateCh: chain.BlockWaiter(chainHeight + 1),
-		peerUpdateCh:  make(chan struct{}, 1000),
-		done:		   make(chan bool, 1),
+		chainHeight:      chainHeight,
+		maxPeerHeight:    uint64(0),
+		chainUpdateCh:    chain.BlockWaiter(chainHeight + 1),
+		peerUpdateCh:     make(chan struct{}, 1000),
+		done:             make(chan bool, 1),
 
 		chain:            chain,
 		sw:               sw,

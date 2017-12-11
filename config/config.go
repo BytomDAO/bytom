@@ -99,7 +99,7 @@ func DefaultBaseConfig() BaseConfig {
 		ProfListenAddress: "",
 		FastSync:          true,
 		FilterPeers:       false,
-		Mining:			   false,
+		Mining:            false,
 		TxIndex:           "kv",
 		DBBackend:         "leveldb",
 		DBPath:            "data",
