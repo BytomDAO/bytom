@@ -25,7 +25,7 @@ const (
 	assetPreFix   = "ASS:"
 )
 
-func assetKey(name string) []byte {
+func AssetKey(name string) []byte {
 	return []byte(assetPreFix + name)
 }
 
@@ -134,7 +134,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		return nil, errors.Wrap(err, "failed marshal asset")
 	}
 	if len(ass) > 0 {
-		reg.db.Set(assetKey(asset.AssetID.String()), json.RawMessage(ass))
+		reg.db.Set(AssetKey(asset.AssetID.String()), json.RawMessage(ass))
 	}
 
 	return asset, nil
@@ -195,7 +195,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 		return cached.(*Asset), nil
 	}
 
-	bytes := reg.db.Get(assetKey(id.String()))
+	bytes := reg.db.Get(AssetKey(id.String()))
 	if bytes == nil {
 		return nil, errors.New("no exit this asset")
 	}

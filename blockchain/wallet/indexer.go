@@ -2,15 +2,17 @@ package wallet
 
 import (
 	"encoding/json"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/blockchain/account"
 )
 
 type rawOutput struct {
@@ -31,8 +33,31 @@ type accountOutput struct {
 	change    bool
 }
 
+const (
+	//TxPreFix is wallet database transactions prefix
+	TxPreFix = "TXS:"
+)
+
+func calcAnnotatedKey(blockHeight uint64, position uint32) []byte {
+	return []byte(fmt.Sprintf("%s%016x%08x", TxPreFix, blockHeight, position))
+}
+
+func calcDeletePreFix(blockHeight uint64) []byte {
+	return []byte(fmt.Sprintf("%s%016x", TxPreFix, blockHeight))
+}
+
+//deleteTransaction delete transactions when orphan block rollback
+func deleteTransactions(batch *db.Batch, height uint64, b *legacy.Block, w *Wallet) {
+	txIter := w.DB.IteratorPrefix(calcDeletePreFix(height))
+	defer txIter.Release()
+
+	for txIter.Next() {
+		(*batch).Delete(txIter.Key())
+	}
+}
+
 //ReverseAccountUTXOs process the invalid blocks when orphan block rollback
-func (w *Wallet) ReverseAccountUTXOs(batch *db.Batch, b *legacy.Block) {
+func reverseAccountUTXOs(batch *db.Batch, b *legacy.Block, w *Wallet) {
 	var err error
 
 	//unknow how many spent and retire outputs
@@ -65,8 +90,8 @@ func (w *Wallet) ReverseAccountUTXOs(batch *db.Batch, b *legacy.Block) {
 		}
 	}
 
-	accOuts := w.loadAccountInfo(reverseOuts)
-	if err = w.upsertConfirmedAccountOutputs(accOuts, b, batch); err != nil {
+	accOuts := loadAccountInfo(reverseOuts, w)
+	if err = upsertConfirmedAccountOutputs(accOuts, b, batch, w); err != nil {
 		log.WithField("err", err).Error("reversing account spent and retire outputs")
 		return
 	}
@@ -83,11 +108,28 @@ func (w *Wallet) ReverseAccountUTXOs(batch *db.Batch, b *legacy.Block) {
 			(*batch).Delete(account.AccountUTXOKey(string(resOutID.Bytes())))
 		}
 	}
-
 }
 
-//BuildAccountUTXOs process valid blocks to build account unspent outputs db
-func (w *Wallet) BuildAccountUTXOs(batch *db.Batch, b *legacy.Block) {
+//indexTransactions saves all annotated transactions to the database.
+func indexTransactions(batch *db.Batch, b *legacy.Block, w *Wallet) error {
+	annotatedTxs := filterAccountTxs(b, w)
+	annotateTxsAsset(annotatedTxs, w.DB)
+	annotateTxsAccount(annotatedTxs, w.DB)
+
+	for pos, tx := range annotatedTxs {
+		rawTx, err := json.MarshalIndent(tx, "", "    ")
+		if err != nil {
+			return errors.Wrap(err, "inserting annotated_txs to db")
+		}
+
+		(*batch).Set(calcAnnotatedKey(b.Height, uint32(pos)), rawTx)
+	}
+
+	return nil
+}
+
+//buildAccountUTXOs process valid blocks to build account unspent outputs db
+func buildAccountUTXOs(batch *db.Batch, b *legacy.Block, w *Wallet) {
 	var err error
 
 	//handle spent UTXOs
@@ -118,9 +160,9 @@ func (w *Wallet) BuildAccountUTXOs(batch *db.Batch, b *legacy.Block) {
 			outs = append(outs, out)
 		}
 	}
-	accOuts := w.loadAccountInfo(outs)
+	accOuts := loadAccountInfo(outs, w)
 
-	if err = w.upsertConfirmedAccountOutputs(accOuts, b, batch); err != nil {
+	if err = upsertConfirmedAccountOutputs(accOuts, b, batch, w); err != nil {
 		log.WithField("err", err).Error("building new account outputs")
 		return
 	}
@@ -140,7 +182,7 @@ func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs []bc.Hash) {
 // loadAccountInfo turns a set of output IDs into a set of
 // outputs by adding account annotations.  Outputs that can't be
 // annotated are excluded from the result.
-func (w *Wallet) loadAccountInfo(outs []*rawOutput) []*accountOutput {
+func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 	outsByScript := make(map[string][]*rawOutput, len(outs))
 	for _, out := range outs {
 		scriptStr := string(out.ControlProgram)
@@ -185,7 +227,7 @@ func (w *Wallet) loadAccountInfo(outs []*rawOutput) []*accountOutput {
 // upsertConfirmedAccountOutputs records the account data for confirmed utxos.
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
-func (w *Wallet) upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, batch *db.Batch) error {
+func upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, batch *db.Batch, w *Wallet) error {
 	var u *account.UTXO
 
 	for _, out := range outs {
@@ -210,3 +252,37 @@ func (w *Wallet) upsertConfirmedAccountOutputs(outs []*accountOutput, block *leg
 	return nil
 }
 
+// filt related and build the fully annotated transactions.
+func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
+	annotatedTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
+	for pos, tx := range b.Transactions {
+		local := false
+		for _, v := range tx.Outputs {
+			var hash [32]byte
+
+			sha3pool.Sum256(hash[:], v.ControlProgram)
+			if bytes := w.DB.Get(account.AccountCPKey(hash)); bytes != nil {
+				annotatedTxs = append(annotatedTxs, query.BuildAnnotatedTransaction(tx, b, uint32(pos)))
+				local = true
+				break
+			}
+		}
+
+		if local == true {
+			continue
+		}
+
+		for _, v := range tx.Inputs {
+			outid, err := v.SpentOutputID()
+			if err != nil {
+				continue
+			}
+			if bytes := w.DB.Get(account.AccountUTXOKey(string(outid.Bytes()))); bytes != nil {
+				annotatedTxs = append(annotatedTxs, query.BuildAnnotatedTransaction(tx, b, uint32(pos)))
+				break
+			}
+		}
+	}
+
+	return annotatedTxs
+}
