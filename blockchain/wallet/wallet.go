@@ -14,7 +14,7 @@ import (
 	"github.com/bytom/protocol/bc/legacy"
 )
 
-var walletkey = []byte("walletInfo")
+var walletKey = []byte("walletInfo")
 
 //StatusInfo is base valid block info to handle orphan block rollback
 type StatusInfo struct {
@@ -31,17 +31,14 @@ type Wallet struct {
 	StatusInfo
 }
 
-//GlobalWallet for sourceReserve heightFn
-var GlobalWallet Wallet
-
-//InitWallet return a new wallet instance
-func InitWallet(walletDB db.DB, accounts *account.Manager, assets *asset.Registry) *Wallet {
-	GlobalWallet.DB = walletDB
-	GlobalWallet.accounts = accounts
-	GlobalWallet.assets = assets
-	GlobalWallet.Ind = query.NewIndexer(walletDB)
-
-	w := &GlobalWallet
+//NewWallet return a new wallet instance
+func NewWallet(walletDB db.DB, accounts *account.Manager, assets *asset.Registry) *Wallet {
+	w := &Wallet{
+		DB:       walletDB,
+		accounts: accounts,
+		assets:   assets,
+		Ind:      query.NewIndexer(walletDB),
+	}
 	walletInfo, err := w.GetWalletInfo()
 	if err != nil {
 		log.WithField("warn", err).Warn("get wallet info")
@@ -51,18 +48,13 @@ func InitWallet(walletDB db.DB, accounts *account.Manager, assets *asset.Registr
 	return w
 }
 
-//GetWalletHeight return wallet on current height
-func GetWalletHeight() uint64 {
-	return GlobalWallet.Height
-}
-
 //GetWalletInfo return stored wallet info and nil,if error,
 //return initial wallet info and err
 func (w *Wallet) GetWalletInfo() (StatusInfo, error) {
 	var info StatusInfo
 	var rawWallet []byte
 
-	if rawWallet = w.DB.Get(walletkey); rawWallet == nil {
+	if rawWallet = w.DB.Get(walletKey); rawWallet == nil {
 		return info, nil
 	}
 
@@ -118,7 +110,6 @@ LOOP:
 		w.Height = block.Height
 		w.Hash = block.Hash()
 
-		w.assets.IndexAssets(block)
 		w.accounts.BuildAccountUTXOs(&storeBatch, block)
 
 		//update wallet info and commit batch write
@@ -143,7 +134,7 @@ func (w *Wallet) commitWalletInfo(batch *db.Batch) {
 		return
 	}
 	//update wallet to db
-	(*batch).Set(walletkey, rawWallet)
+	(*batch).Set(walletKey, rawWallet)
 	//commit to db
 	(*batch).Write()
 }

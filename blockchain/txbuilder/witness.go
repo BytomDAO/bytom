@@ -113,7 +113,7 @@ func (sw *signatureWitness) sign(ctx context.Context, tpl *Template, index uint3
 			// Already have a signature for this key
 			continue
 		}
-		if !contains(xpubs, keyID.XPub) {
+		if xpubs != nil && !contains(xpubs, keyID.XPub) {
 			continue
 		}
 		path := make([]([]byte), len(keyID.DerivationPath))

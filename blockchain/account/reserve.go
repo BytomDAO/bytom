@@ -12,8 +12,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/errors"
 	"github.com/bytom/config"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/sync/idempotency"
@@ -74,11 +74,10 @@ type reservation struct {
 	ClientToken *string
 }
 
-func newReserver(c *protocol.Chain, walletdb dbm.DB, walletHeightFn func() uint64) *reserver {
+func newReserver(c *protocol.Chain, walletdb dbm.DB) *reserver {
 	return &reserver{
 		c:            c,
 		db:           walletdb,
-		heightFn:     walletHeightFn,
 		reservations: make(map[uint64]*reservation),
 		sources:      make(map[source]*sourceReserver),
 	}
@@ -97,7 +96,6 @@ func newReserver(c *protocol.Chain, walletdb dbm.DB, walletHeightFn func() uint6
 type reserver struct {
 	c                 *protocol.Chain
 	db                dbm.DB
-	heightFn          func() uint64
 	nextReservationID uint64
 	idempotency       idempotency.Group
 
@@ -110,24 +108,24 @@ type reserver struct {
 
 // Reserve selects and reserves UTXOs according to the criteria provided
 // in source. The resulting reservation expires at exp.
-func (re *reserver) Reserve(ctx context.Context, src source, amount uint64, clientToken *string, exp time.Time) (*reservation, error) {
+func (re *reserver) Reserve(src source, amount uint64, clientToken *string, exp time.Time) (*reservation, error) {
 
 	if clientToken == nil {
-		return re.reserve(ctx, src, amount, clientToken, exp)
+		return re.reserve(src, amount, clientToken, exp)
 	}
 
 	untypedRes, err := re.idempotency.Once(*clientToken, func() (interface{}, error) {
-		return re.reserve(ctx, src, amount, clientToken, exp)
+		return re.reserve(src, amount, clientToken, exp)
 	})
 	return untypedRes.(*reservation), err
 }
 
-func (re *reserver) reserve(ctx context.Context, src source, amount uint64, clientToken *string, exp time.Time) (res *reservation, err error) {
+func (re *reserver) reserve(src source, amount uint64, clientToken *string, exp time.Time) (res *reservation, err error) {
 	sourceReserver := re.source(src)
 
 	// Try to reserve the right amount.
 	rid := atomic.AddUint64(&re.nextReservationID, 1)
-	reserved, total, err := sourceReserver.reserve(ctx, rid, amount)
+	reserved, total, err := sourceReserver.reserve(rid, amount)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +164,7 @@ func (re *reserver) ReserveUTXO(ctx context.Context, out bc.Hash, clientToken *s
 }
 
 func (re *reserver) reserveUTXO(ctx context.Context, out bc.Hash, exp time.Time, clientToken *string) (*reservation, error) {
-	u, err := findSpecificUTXO(ctx, re.db, out)
+	u, err := findSpecificUTXO(re.db, out)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +257,6 @@ func (re *reserver) source(src source) *sourceReserver {
 		db:       re.db,
 		src:      src,
 		validFn:  re.checkUTXO,
-		heightFn: re.heightFn,
 		cached:   make(map[bc.Hash]*utxo),
 		reserved: make(map[bc.Hash]uint64),
 	}
@@ -271,22 +268,19 @@ type sourceReserver struct {
 	db       dbm.DB
 	src      source
 	validFn  func(u *utxo) bool
-	heightFn func() uint64
-
-	mu         sync.Mutex
-	cached     map[bc.Hash]*utxo
-	reserved   map[bc.Hash]uint64
-	lastHeight uint64
+	mu       sync.Mutex
+	cached   map[bc.Hash]*utxo
+	reserved map[bc.Hash]uint64
 }
 
-func (sr *sourceReserver) reserve(ctx context.Context, rid uint64, amount uint64) ([]*utxo, uint64, error) {
+func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*utxo, uint64, error) {
 	reservedUTXOs, reservedAmount, err := sr.reserveFromCache(rid, amount)
 	if err == nil {
 		return reservedUTXOs, reservedAmount, nil
 	}
 
 	// Find the set of UTXOs that match this source.
-	err = sr.refillCache(ctx)
+	err = sr.refillCache()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -362,25 +356,14 @@ func (sr *sourceReserver) cancel(res *reservation) {
 	}
 }
 
-func (sr *sourceReserver) refillCache(ctx context.Context) error {
-	sr.mu.Lock()
-	lastHeight := sr.lastHeight
-	sr.mu.Unlock()
+func (sr *sourceReserver) refillCache() error {
 
-	curHeight := sr.heightFn()
-	if lastHeight >= curHeight {
-		return nil
-	}
-
-	utxos, err := findMatchingUTXOs(ctx, sr.db, sr.src)
+	utxos, err := findMatchingUTXOs(sr.db, sr.src)
 	if err != nil {
 		return errors.Wrap(err)
 	}
 
 	sr.mu.Lock()
-	if curHeight > sr.lastHeight {
-		sr.lastHeight = curHeight
-	}
 	for _, u := range utxos {
 		sr.cached[u.OutputID] = u
 	}
@@ -389,7 +372,7 @@ func (sr *sourceReserver) refillCache(ctx context.Context) error {
 	return nil
 }
 
-func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source) ([]*utxo, error) {
+func findMatchingUTXOs(db dbm.DB, src source) ([]*utxo, error) {
 
 	var (
 		utxos       []*utxo
@@ -436,7 +419,7 @@ func findMatchingUTXOs(ctx context.Context, db dbm.DB, src source) ([]*utxo, err
 	return utxos, nil
 }
 
-func findSpecificUTXO(ctx context.Context, db dbm.DB, outHash bc.Hash) (*utxo, error) {
+func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*utxo, error) {
 	u := new(utxo)
 	accountUTXO := new(UTXO)
 

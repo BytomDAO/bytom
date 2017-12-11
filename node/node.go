@@ -203,10 +203,10 @@ func NewNode(config *cfg.Config) *Node {
 		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 
-		accounts = account.NewManager(accountsDB, walletDB, w.GetWalletHeight, chain)
+		accounts = account.NewManager(accountsDB, walletDB, chain)
 		assets = asset.NewRegistry(assetsDB, chain)
 
-		wallet = w.InitWallet(walletDB, accounts, assets)
+		wallet = w.NewWallet(walletDB, accounts, assets)
 		wallet.Ind.RegisterAnnotator(accounts.AnnotateTxs)
 		wallet.Ind.RegisterAnnotator(assets.AnnotateTxs)
 
