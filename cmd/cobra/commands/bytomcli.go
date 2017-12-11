@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -165,4 +167,29 @@ func mustRPCClient() *rpc.Client {
 		BaseURL: url,
 		Client:  &http.Client{Transport: t},
 	}
+}
+
+func clientCall(path string, req ...interface{}) []string {
+	var rawResponse []byte
+	var response blockchain.Response
+	var request interface{}
+
+	if req != nil {
+		request = req[0]
+	}
+
+	client := mustRPCClient()
+	client.Call(context.Background(), path, request, &rawResponse)
+
+	if err := json.Unmarshal(rawResponse, &response); err != nil {
+		jww.ERROR.Println(err)
+		return nil
+	}
+
+	if response.Status == blockchain.SUCCESS {
+		return response.Data
+	}
+
+	jww.ERROR.Println(response.Msg)
+	return nil
 }
