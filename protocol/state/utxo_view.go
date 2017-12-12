@@ -37,7 +37,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 			continue
 		}
 
-		view.Entries[*id] = storage.NewUtxoEntry(tx.ID == block.Transactions[0].ID, block.Height)
+		view.Entries[*id] = storage.NewUtxoEntry(tx.ID == block.Transactions[0].ID, block.Height, false)
 	}
 	return nil
 }
@@ -59,7 +59,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx) error {
 		}
 
 		if !ok {
-			view.Entries[prevout] = storage.NewUtxoEntry(false, 0)
+			view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false)
 			continue
 		}
 
@@ -72,12 +72,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx) error {
 			continue
 		}
 
-		entry, ok := view.Entries[*id]
-		if !ok {
-			return errors.New("fail to find utxo entry")
-		}
-
-		entry.SpendOutput()
+		view.Entries[*id] = storage.NewUtxoEntry(false, 0, true)
 	}
 	return nil
 }

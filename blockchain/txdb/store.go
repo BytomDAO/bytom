@@ -21,12 +21,12 @@ type BlockStoreStateJSON struct {
 	Hash   *bc.Hash
 }
 
-func (bsj BlockStoreStateJSON) save(db dbm.DB) {
+func (bsj BlockStoreStateJSON) save(batch dbm.Batch) {
 	bytes, err := json.Marshal(bsj)
 	if err != nil {
 		common.PanicSanity(common.Fmt("Could not marshal state bytes: %v", err))
 	}
-	db.SetSync(blockStoreKey, bytes)
+	batch.Set(blockStoreKey, bytes)
 }
 
 func loadBlockStoreStateJSON(db dbm.DB) BlockStoreStateJSON {
@@ -37,8 +37,7 @@ func loadBlockStoreStateJSON(db dbm.DB) BlockStoreStateJSON {
 		}
 	}
 	bsj := BlockStoreStateJSON{}
-	err := json.Unmarshal(bytes, &bsj)
-	if err != nil {
+	if err := json.Unmarshal(bytes, &bsj); err != nil {
 		common.PanicCrisis(common.Fmt("Could not unmarshal bytes: %X", bytes))
 	}
 	return bsj
@@ -134,7 +133,7 @@ func (s *Store) SaveChainStatus(block *legacy.Block, view *state.UtxoViewpoint, 
 		return err
 	}
 
-	BlockStoreStateJSON{Height: block.Height, Hash: &hash}.save(s.db)
+	BlockStoreStateJSON{Height: block.Height, Hash: &hash}.save(batch)
 	batch.Write()
 
 	cleanMainchainDB(s.db, &hash)

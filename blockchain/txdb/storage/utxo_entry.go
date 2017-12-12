@@ -1,10 +1,10 @@
 package storage
 
-func NewUtxoEntry(isCoinBase bool, blockHeight uint64) *UtxoEntry {
+func NewUtxoEntry(isCoinBase bool, blockHeight uint64, spend bool) *UtxoEntry {
 	return &UtxoEntry{
 		IsCoinBase:  isCoinBase,
 		BlockHeight: blockHeight,
-		Spend:       false,
+		Spend:       spend,
 	}
 }
 
