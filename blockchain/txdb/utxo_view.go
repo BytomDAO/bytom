@@ -16,9 +16,9 @@ func calcUtxoKey(hash *bc.Hash) []byte {
 	return []byte(utxoPreFix + hash.String())
 }
 
-func getBlockUtxos(db dbm.DB, view *state.UtxoViewpoint, block *bc.Block) error {
+func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) error {
 	var utxo storage.UtxoEntry
-	for _, tx := range block.Transactions {
+	for _, tx := range txs {
 		for _, prevout := range tx.SpentOutputIDs {
 			data := db.Get(calcUtxoKey(&prevout))
 			if data == nil {
@@ -34,6 +34,18 @@ func getBlockUtxos(db dbm.DB, view *state.UtxoViewpoint, block *bc.Block) error 
 	}
 
 	return nil
+}
+
+func getUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
+	var utxo storage.UtxoEntry
+	data := db.Get(calcUtxoKey(hash))
+	if data == nil {
+		return nil, errors.New("can't find utxo in db")
+	}
+	if err := proto.Unmarshal(data, &utxo); err != nil {
+		return nil, errors.Wrap(err, "unmarshaling utxo entry")
+	}
+	return &utxo, nil
 }
 
 func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {

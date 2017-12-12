@@ -37,8 +37,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 			continue
 		}
 
-		view.Entries[*id] = storage.
-			NewUtxoEntry(tx.ID == block.Transactions[0].ID, block.Height)
+		view.Entries[*id] = storage.NewUtxoEntry(tx.ID == block.Transactions[0].ID, block.Height)
 	}
 	return nil
 }

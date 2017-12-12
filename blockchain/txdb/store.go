@@ -7,6 +7,7 @@ import (
 	"github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
@@ -78,6 +79,10 @@ func NewStore(db dbm.DB) *Store {
 	}
 }
 
+func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
+	return getUtxo(s.db, hash)
+}
+
 // BlockExist check if the block is stored in disk
 func (s *Store) BlockExist(hash *bc.Hash) bool {
 	block, err := s.cache.lookup(hash)
@@ -89,8 +94,8 @@ func (s *Store) GetBlock(hash *bc.Hash) (*legacy.Block, error) {
 	return s.cache.lookup(hash)
 }
 
-func (s *Store) GetBlockUtxos(view *state.UtxoViewpoint, block *bc.Block) error {
-	return getBlockUtxos(s.db, view, block)
+func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
+	return getTransactionsUtxo(s.db, view, txs)
 }
 
 // GetStoreStatus return the BlockStoreStateJSON

@@ -13,7 +13,6 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/state"
 )
 
 func TestNewInitBlock(t *testing.T) {
@@ -23,10 +22,6 @@ func TestNewInitBlock(t *testing.T) {
 	}
 	merkleRoot, err := bc.MerkleRoot([]*bc.Tx{coinbaseTx.Tx})
 	if err != nil {
-		t.Error(err)
-	}
-	snap := state.Empty()
-	if err := snap.ApplyTx(coinbaseTx.Tx); err != nil {
 		t.Error(err)
 	}
 
@@ -41,7 +36,6 @@ func TestNewInitBlock(t *testing.T) {
 			TimestampMS:       bc.Millis(time.Now()),
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
-				AssetsMerkleRoot:       snap.Tree.RootHash(),
 			},
 			Bits: uint64(2161727821138738707),
 			Seed: bc.NewHash(seed),

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bytom/blockchain/txdb"
+	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -35,7 +36,8 @@ type Store interface {
 	GetBlock(*bc.Hash) (*legacy.Block, error)
 	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
 	GetStoreStatus() txdb.BlockStoreStateJSON
-	GetBlockUtxos(*state.UtxoViewpoint, *bc.Block) error
+	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
+	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
 
 	SaveBlock(*legacy.Block) error
 	SaveChainStatus(*legacy.Block, *state.UtxoViewpoint, map[uint64]*bc.Hash) error
@@ -218,6 +220,14 @@ func (c *Chain) BestBlock() *legacy.Block {
 
 func (c *Chain) SeedCaches() *seed.SeedCaches {
 	return c.seedCaches
+}
+
+func (c *Chain) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
+	return c.store.GetUtxo(hash)
+}
+
+func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
+	return c.store.GetTransactionsUtxo(view, txs)
 }
 
 // This function must be called with mu lock in above level

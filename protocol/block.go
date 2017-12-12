@@ -63,7 +63,7 @@ func (c *Chain) connectBlock(block *legacy.Block) error {
 	bcBlock := legacy.MapBlock(block)
 	utxoView := state.NewUtxoViewpoint()
 
-	if err := c.store.GetBlockUtxos(utxoView, bcBlock); err != nil {
+	if err := c.store.GetTransactionsUtxo(utxoView, bcBlock.Transactions); err != nil {
 		return err
 	}
 	if err := utxoView.ApplyBlock(bcBlock); err != nil {
@@ -105,7 +105,7 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 
 	for _, d := range detachBlocks {
 		detachBlock := legacy.MapBlock(d)
-		if err := c.store.GetBlockUtxos(utxoView, detachBlock); err != nil {
+		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
 			return err
 		}
 		if err := utxoView.DetachBlock(detachBlock); err != nil {
@@ -115,7 +115,7 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 
 	for _, a := range attachBlocks {
 		attachBlock := legacy.MapBlock(a)
-		if err := c.store.GetBlockUtxos(utxoView, attachBlock); err != nil {
+		if err := c.store.GetTransactionsUtxo(utxoView, attachBlock.Transactions); err != nil {
 			return err
 		}
 		if err := utxoView.ApplyBlock(attachBlock); err != nil {
