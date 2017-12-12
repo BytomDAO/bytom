@@ -1,11 +1,11 @@
 package blockchain
 
 import (
-	"fmt"
-	"time"
 	"context"
-	"reflect"
+	"fmt"
 	"net/http"
+	"reflect"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -95,7 +95,6 @@ func batchRecover(ctx context.Context, v *interface{}) {
 	}
 }
 
-
 func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"is_configured": false,
@@ -117,7 +116,6 @@ func maxBytes(h http.Handler) http.Handler {
 		h.ServeHTTP(w, req)
 	})
 }
-
 
 // Used as a request object for api queries
 type requestQuery struct {
@@ -301,7 +299,6 @@ func (bcR *BlockchainReactor) syncRoutine() {
 		}
 	}
 }
-
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.
 func (bcR *BlockchainReactor) BroadcastStatusResponse() {

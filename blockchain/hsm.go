@@ -20,8 +20,13 @@ func init() {
 	errorFormatter.Errors[pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
 
-func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ Alias, Password string }) (result *pseudohsm.XPub, err error) {
-	return a.hsm.XCreate(in.Alias, in.Password)
+func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ Alias, Password string }) []byte {
+	xpub, err := a.hsm.XCreate(in.Alias, in.Password)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+	data := []string{xpub.Alias, xpub.XPub.String(), xpub.File}
+	return resWrapper(data)
 }
 
 func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query requestQuery) (page, error) {

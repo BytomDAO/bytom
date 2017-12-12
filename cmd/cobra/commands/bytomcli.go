@@ -19,6 +19,14 @@ import (
 	"github.com/bytom/blockchain/rpc"
 )
 
+const (
+	ErrLocalExe    = 1
+	ErrConnect     = 2
+	ErrLocalUnwrap = 3
+	ErrRemoteWrap  = 4
+	ErrFetchData   = 5
+)
+
 // commandError is an error used to signal different error situations in command handling.
 type commandError struct {
 	s         string
@@ -75,13 +83,8 @@ func Execute() {
 
 	AddCommands()
 
-	if c, err := BytomcliCmd.ExecuteC(); err != nil {
-		if isUserError(err) {
-			c.Println("")
-			c.Println(c.UsageString())
-		}
-
-		os.Exit(-1)
+	if _, err := BytomcliCmd.ExecuteC(); err != nil {
+		os.Exit(ErrLocalExe)
 	}
 }
 
@@ -181,15 +184,26 @@ func clientCall(path string, req ...interface{}) []string {
 	client := mustRPCClient()
 	client.Call(context.Background(), path, request, &rawResponse)
 
+	if rawResponse == nil {
+		jww.ERROR.Println("Unable to connect to the bytomd")
+		os.Exit(ErrConnect)
+	}
+
 	if err := json.Unmarshal(rawResponse, &response); err != nil {
 		jww.ERROR.Println(err)
-		return nil
+		os.Exit(ErrLocalUnwrap)
 	}
 
-	if response.Status == blockchain.SUCCESS {
-		return response.Data
+	switch response.Status {
+	case blockchain.ERROR:
+		jww.ERROR.Println(response.Msg)
+		os.Exit(ErrRemoteWrap)
+
+	case blockchain.FAIL:
+		jww.ERROR.Println(response.Msg)
+		os.Exit(ErrFetchData)
 	}
 
-	jww.ERROR.Println(response.Msg)
-	return nil
+	return response.Data
+
 }
