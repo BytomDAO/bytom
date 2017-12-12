@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/hex"
+	"os"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -21,9 +22,11 @@ var createKeyCmd = &cobra.Command{
 			Password string
 		}{Alias: args[0], Password: args[1]}
 
-		if data := clientCall("/create-key", &key); data != nil {
-			jww.FEEDBACK.Printf("Alias: %v\nXPub: %v\nFile: %v\n", data[0], data[1], data[2])
+		data, exitCode := clientCall("/create-key", &key)
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
+		jww.FEEDBACK.Printf("Alias: %v\nXPub: %v\nFile: %v\n", data[0], data[1], data[2])
 	},
 }
 
