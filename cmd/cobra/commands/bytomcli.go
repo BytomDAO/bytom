@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	Success        = 0
 	ErrLocalExe    = 1
 	ErrConnect     = 2
 	ErrLocalUnwrap = 3
@@ -172,7 +173,7 @@ func mustRPCClient() *rpc.Client {
 	}
 }
 
-func clientCall(path string, req ...interface{}) []string {
+func clientCall(path string, req ...interface{}) ([]string, int) {
 	var rawResponse []byte
 	var response blockchain.Response
 	var request interface{}
@@ -186,24 +187,24 @@ func clientCall(path string, req ...interface{}) []string {
 
 	if rawResponse == nil {
 		jww.ERROR.Println("Unable to connect to the bytomd")
-		os.Exit(ErrConnect)
+		return nil, ErrConnect
 	}
 
 	if err := json.Unmarshal(rawResponse, &response); err != nil {
 		jww.ERROR.Println(err)
-		os.Exit(ErrLocalUnwrap)
+		return nil, ErrLocalUnwrap
 	}
 
 	switch response.Status {
 	case blockchain.ERROR:
 		jww.ERROR.Println(response.Msg)
-		os.Exit(ErrRemoteWrap)
+		return nil, ErrRemoteWrap
 
 	case blockchain.FAIL:
 		jww.ERROR.Println(response.Msg)
-		os.Exit(ErrFetchData)
+		return nil, ErrFetchData
 	}
 
-	return response.Data
+	return response.Data, Success
 
 }

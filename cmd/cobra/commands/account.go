@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"os"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -21,37 +22,39 @@ type Ins struct {
 }
 
 var createAccountCmd = &cobra.Command{
-	Use:   "create-account",
+	Use:   "create-account <alias> <xpub>",
 	Short: "Create an account",
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println("create-account takes no args")
-			return
+		var xpub chainkd.XPub
+		if err := xpub.UnmarshalText([]byte(args[1])); err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalExe)
 		}
 
-		xprv, err := chainkd.NewXPrv(nil)
-		if err != nil {
-			jww.ERROR.Println("NewXprv error")
-			return
+		type Ins struct {
+			RootXPubs   []chainkd.XPub         `json:"root_xpubs"`
+			Quorum      int                    `json:"quorum"`
+			Alias       string                 `json:"alias"`
+			Tags        map[string]interface{} `json:"tags"`
+			ClientToken string                 `json:"client_token"`
 		}
-
-		xpub := xprv.XPub()
-		jww.FEEDBACK.Printf("xprv: %v\n", xprv)
-		jww.FEEDBACK.Printf("xpub: %v\n", xpub)
 
 		var ins Ins
 		ins.RootXPubs = []chainkd.XPub{xpub}
 		ins.Quorum = 1
-		ins.Alias = "alice"
+		ins.Alias = args[0]
 		ins.Tags = map[string]interface{}{"test_tag": "v0"}
-		ins.ClientToken = args[0]
+		ins.ClientToken = "client"
 
-		account := make([]query.AnnotatedAccount, 1)
+		// account := make([]query.AnnotatedAccount, 1)
+		data, exitCode := clientCall("/create-account", &ins)
 
-		client := mustRPCClient()
-		client.Call(context.Background(), "/create-account", &[]Ins{ins}, &account)
+		if exitCode != Success {
+			os.Exit(exitCode)
+		}
 
-		jww.FEEDBACK.Printf("responses: %v\n", account[0])
+		jww.FEEDBACK.Println(data)
 	},
 }
 
