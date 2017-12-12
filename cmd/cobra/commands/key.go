@@ -1,10 +1,8 @@
 package commands
 
 import (
-	"context"
-	"encoding/hex"
+	"encoding/json"
 	"os"
-	"strconv"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -31,58 +29,62 @@ var createKeyCmd = &cobra.Command{
 }
 
 var deleteKeyCmd = &cobra.Command{
-	Use:   "delete-key",
+	Use:   "delete-key <xpub> <password>",
 	Short: "Delete a key",
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
-			jww.ERROR.Println("delete-key needs 2 args")
-			return
+
+		xpub := new(chainkd.XPub)
+		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
+			jww.ERROR.Println("delete-key:", err)
+			os.Exit(ErrLocalExe)
 		}
 
-		type Key struct {
+		var key = struct {
 			Password string
 			XPub     chainkd.XPub `json:"xpubs"`
+		}{XPub: *xpub, Password: args[1]}
+
+		if _, exitCode := clientCall("/delete-key", &key); exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		var key Key
-		xpub := new(chainkd.XPub)
-		data, err := hex.DecodeString(args[1])
-
-		if err != nil {
-			jww.ERROR.Println("delete-key %v", err)
-			return
-		}
-
-		copy(xpub[:], data)
-		key.Password = args[0]
-		key.XPub = *xpub
-
-		client := mustRPCClient()
-		client.Call(context.Background(), "/delete-key", &key, nil)
+		jww.FEEDBACK.Println("Success delete key")
 	},
 }
 
 var listKeysCmd = &cobra.Command{
 	Use:   "list-keys",
 	Short: "List the existing keys",
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
-			jww.ERROR.Println("error: list-keys args not vaild")
-			return
+		var in requestQuery
+		var response = struct {
+			Items []interface{} `json:"items"`
+			Next  requestQuery  `json:"next"`
+			Last  bool          `json:"last_page"`
+		}{}
+
+		idx := 0
+	LOOP:
+		data, exitCode := clientCall("/list-keys", &in)
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
 
-		var in requestQuery
-		in.After = args[0]
-		in.PageSize, _ = strconv.Atoi(args[1])
+		rawPage := []byte(data[0])
+		if err := json.Unmarshal(rawPage, &response); err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
 
-		var response map[string][]interface{}
-
-		client := mustRPCClient()
-		client.Call(context.Background(), "/list-keys", &in, &response)
-
-		for idx, item := range response["items"] {
+		for _, item := range response.Items {
 			key := item.(map[string]interface{})
-			jww.ERROR.Printf("%v: Alias: %v Address: %v File: %v\n", idx, key["alias"], key["address"], key["file"])
+			jww.FEEDBACK.Printf("%v:\nAlias: %v\nXpub: %v\nFile: %v\n", idx, key["alias"], key["xpub"], key["file"])
+			idx++
+		}
+		if response.Last == false {
+			in.After = response.Next.After
+			goto LOOP
 		}
 	},
 }

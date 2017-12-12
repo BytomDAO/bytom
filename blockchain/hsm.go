@@ -2,13 +2,15 @@ package blockchain
 
 import (
 	"context"
+	"encoding/json"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/httpjson"
-	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -29,15 +31,15 @@ func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ A
 	return resWrapper(data)
 }
 
-func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query requestQuery) (page, error) {
+func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query requestQuery) []byte {
 	limit := query.PageSize
 	if limit == 0 {
 		limit = defGenericPageSize // defGenericPageSize = 100
 	}
 
-	xpubs, after, err := a.hsm.ListKeys(query.After, limit)
+	xpubs, after, last, err := a.hsm.ListKeys(query.After, limit)
 	if err != nil {
-		return page{}, err
+		return resWrapper(nil, err)
 	}
 
 	var items []interface{}
@@ -46,19 +48,32 @@ func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query request
 	}
 
 	query.After = after
-
-	return page{
+	if last == false {
+		last = len(xpubs) < limit
+	}
+	page := &page{
 		Items:    httpjson.Array(items),
-		LastPage: len(xpubs) < limit,
-		Next:     query,
-	}, nil
+		LastPage: last,
+		Next:     query}
+
+	rawPage, err := json.MarshalIndent(page, "", " ")
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+
+	data := []string{string(rawPage)}
+	return resWrapper(data)
 }
 
 func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 	Password string
 	XPub     chainkd.XPub `json:"xpubs"`
-}) error {
-	return a.hsm.XDelete(x.XPub, x.Password)
+}) []byte {
+	if err := a.hsm.XDelete(x.XPub, x.Password); err != nil {
+		return resWrapper(nil, err)
+	}
+
+	return resWrapper(nil)
 }
 
 func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {

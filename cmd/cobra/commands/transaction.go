@@ -13,7 +13,7 @@ var gasRateCmd = &cobra.Command{
 	Short: "Print the current gas rate",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/gas-rate", nil)
+		data, exitCode := clientCall("/gas-rate")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
