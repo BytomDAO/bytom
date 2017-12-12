@@ -7,9 +7,9 @@ import (
 	"github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/state"
 )
 
 var blockStoreKey = []byte("blockStore")
@@ -89,6 +89,10 @@ func (s *Store) GetBlock(hash *bc.Hash) (*legacy.Block, error) {
 	return s.cache.lookup(hash)
 }
 
+func (s *Store) GetBlockUtxos(view *state.UtxoViewpoint, block *bc.Block) error {
+	return getBlockUtxos(s.db, view, block)
+}
+
 // GetStoreStatus return the BlockStoreStateJSON
 func (s *Store) GetStoreStatus() BlockStoreStateJSON {
 	return loadBlockStoreStateJSON(s.db)
@@ -112,14 +116,22 @@ func (s *Store) SaveBlock(block *legacy.Block) error {
 	return nil
 }
 
-// SaveMainchain saves the mainchain map to the database.
-func (s *Store) SaveMainchain(mainchain map[uint64]*bc.Hash, hash *bc.Hash) error {
-	err := saveMainchain(s.db, mainchain, hash)
-	return errors.Wrap(err, "saving mainchain")
-}
+// SaveChainStatus(save the core's newest status && delete old status
+func (s *Store) SaveChainStatus(block *legacy.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
+	hash := block.Hash()
+	batch := s.db.NewBatch()
 
-// SaveStoreStatus save the core's newest status && delete old status
-func (s *Store) SaveStoreStatus(height uint64, hash *bc.Hash) {
-	BlockStoreStateJSON{Height: height, Hash: hash}.save(s.db)
-	cleanMainchainDB(s.db, hash)
+	if err := saveMainchain(batch, m, &hash); err != nil {
+		return err
+	}
+
+	if err := saveUtxoView(batch, view); err != nil {
+		return err
+	}
+
+	BlockStoreStateJSON{Height: block.Height, Hash: &hash}.save(s.db)
+	batch.Write()
+
+	cleanMainchainDB(s.db, &hash)
+	return nil
 }

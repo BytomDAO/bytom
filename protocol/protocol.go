@@ -35,10 +35,10 @@ type Store interface {
 	GetBlock(*bc.Hash) (*legacy.Block, error)
 	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
 	GetStoreStatus() txdb.BlockStoreStateJSON
+	GetBlockUtxos(*state.UtxoViewpoint, *bc.Block) error
 
 	SaveBlock(*legacy.Block) error
-	SaveMainchain(map[uint64]*bc.Hash, *bc.Hash) error
-	SaveStoreStatus(uint64, *bc.Hash)
+	SaveChainStatus(*legacy.Block, *state.UtxoViewpoint, map[uint64]*bc.Hash) error
 }
 
 // OrphanManage is use to handle all the orphan block
@@ -209,10 +209,8 @@ func (c *Chain) TimestampMS() uint64 {
 	return c.state.block.TimestampMS
 }
 
-// State returns the most recent state available. It will not be current
-// unless the current process is the leader. Callers should examine the
-// returned block header's height if they need to verify the current state.
-func (c *Chain) State() *legacy.Block {
+// BestBlock returns the chain tail block
+func (c *Chain) BestBlock() *legacy.Block {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
 	return c.state.block
@@ -224,10 +222,6 @@ func (c *Chain) SeedCaches() *seed.SeedCaches {
 
 // This function must be called with mu lock in above level
 func (c *Chain) setState(block *legacy.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
-	if block.AssetsMerkleRoot != s.Tree.RootHash() {
-		return ErrBadStateRoot
-	}
-
 	blockHash := block.Hash()
 	c.state.block = block
 	c.state.hash = &blockHash
@@ -235,7 +229,7 @@ func (c *Chain) setState(block *legacy.Block, view *state.UtxoViewpoint, m map[u
 		c.state.mainChain[k] = v
 	}
 
-	if err := c.store.SaveBlockStatus(block, view, c.state.mainChain); err != nil {
+	if err := c.store.SaveChainStatus(block, view, c.state.mainChain); err != nil {
 		return err
 	}
 
