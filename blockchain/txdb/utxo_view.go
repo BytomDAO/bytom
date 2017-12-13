@@ -17,7 +17,6 @@ func calcUtxoKey(hash *bc.Hash) []byte {
 }
 
 func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) error {
-	var utxo storage.UtxoEntry
 	for _, tx := range txs {
 		for _, prevout := range tx.SpentOutputIDs {
 			if view.HasUtxo(&prevout) {
@@ -29,6 +28,7 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 				return errors.New("can't find utxo in db")
 			}
 
+			var utxo storage.UtxoEntry
 			if err := proto.Unmarshal(data, &utxo); err != nil {
 				return errors.Wrap(err, "unmarshaling utxo entry")
 			}
