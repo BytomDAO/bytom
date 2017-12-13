@@ -9,6 +9,8 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/query"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/net/http/httpjson"
 )
 
 const (
@@ -26,13 +28,36 @@ var (
 
 //
 // POST /list-accounts
-func (bcr *BlockchainReactor) listAccounts(ctx context.Context, in requestQuery) interface{} {
-	response, err := bcr.accounts.QueryAll(ctx)
+func (bcr *BlockchainReactor) listAccounts(ctx context.Context, query requestQuery) []byte {
+	limit := query.PageSize
+	if limit == 0 {
+		limit = defGenericPageSize // defGenericPageSize = 100
+	}
+
+	accounts, after, last, err := bcr.accounts.ListAccounts(query.After, limit)
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
+		return resWrapper(nil, err)
 	}
-	return response
 
+	query.After = after
+
+	if last == false {
+		last = len(accounts) < limit
+	}
+
+	page := &page{
+		Items:    httpjson.Array(accounts),
+		LastPage: last,
+		Next:     query}
+
+	rawPage, err := json.Marshal(page)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+
+	data := []string{string(rawPage)}
+	return resWrapper(data)
 }
 
 //

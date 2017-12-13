@@ -35,7 +35,7 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 		return resWrapper(nil, err)
 	}
 	log.WithField("account", annotatedAccount).Info("Created account")
-	res, err := json.MarshalIndent(annotatedAccount, "", "	")
+	res, err := json.MarshalIndent(annotatedAccount, "", " ")
 	if err != nil {
 		return resWrapper(nil, err)
 	}

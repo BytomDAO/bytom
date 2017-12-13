@@ -56,7 +56,7 @@ func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query request
 		LastPage: last,
 		Next:     query}
 
-	rawPage, err := json.MarshalIndent(page, "", " ")
+	rawPage, err := json.Marshal(page)
 	if err != nil {
 		return resWrapper(nil, err)
 	}

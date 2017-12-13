@@ -92,11 +92,9 @@ func Execute() {
 // AddCommands adds child commands to the root command BytomcliCmd.
 func AddCommands() {
 	BytomcliCmd.AddCommand(createAccountCmd)
-	BytomcliCmd.AddCommand(bindAccountCmd)
 	BytomcliCmd.AddCommand(listAccountsCmd)
 
 	BytomcliCmd.AddCommand(createAssetCmd)
-	BytomcliCmd.AddCommand(bindAssetCmd)
 	BytomcliCmd.AddCommand(listAssetsCmd)
 
 	BytomcliCmd.AddCommand(blockHeightCmd)

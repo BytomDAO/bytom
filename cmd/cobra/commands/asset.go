@@ -10,16 +10,6 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 )
 
-// AssetIns is used for asset related request.
-type AssetIns struct {
-	RootXPubs   []chainkd.XPub         `json:"root_xpubs"`
-	Quorum      int                    `json:"quorum"`
-	Alias       string                 `json:"alias"`
-	Tags        map[string]interface{} `json:"tags"`
-	Definition  map[string]interface{} `json:"definition"`
-	ClientToken string                 `json:"client_token"`
-}
-
 var createAssetCmd = &cobra.Command{
 	Use:   "create-asset",
 	Short: "Create an asset",
@@ -45,51 +35,18 @@ var createAssetCmd = &cobra.Command{
 		xPub, _ := xpub.MarshalText()
 		jww.FEEDBACK.Printf("xpub: %v\n", xPub)
 
-		var ins AssetIns
+		var ins assetIns
 		ins.RootXPubs = []chainkd.XPub{xpub}
 		ins.Quorum = 1
 		ins.Alias = args[0]
 		ins.Tags = map[string]interface{}{"test_tag": "v0"}
 		ins.Definition = map[string]interface{}{}
-		ins.ClientToken = args[0]
+		ins.AccessToken = args[0]
 
 		assets := make([]query.AnnotatedAsset, 1)
 
 		client := mustRPCClient()
-		client.Call(context.Background(), "/create-asset", &[]AssetIns{ins}, &assets)
-
-		jww.FEEDBACK.Printf("responses: %v\n", assets)
-		jww.FEEDBACK.Printf("asset id: %v\n", assets[0].ID.String())
-	},
-}
-
-var bindAssetCmd = &cobra.Command{
-	Use:   "bind-asset",
-	Short: "Bind asset",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
-			jww.ERROR.Println("bind-asset needs 2 args\nUsage: bind-asset [asset name] [asset xpub]")
-			return
-		}
-
-		var xpub chainkd.XPub
-		if err := xpub.UnmarshalText([]byte(args[1])); err != nil {
-			jww.ERROR.Printf("xpub unmarshal error: %v\n", xpub)
-		}
-		jww.FEEDBACK.Printf("xpub: %v\n", xpub)
-
-		var ins AssetIns
-		ins.RootXPubs = []chainkd.XPub{xpub}
-		ins.Quorum = 1
-		ins.Alias = args[0]
-		ins.Tags = map[string]interface{}{"test_tag": "v0"}
-		ins.Definition = map[string]interface{}{}
-		ins.ClientToken = args[0]
-
-		assets := make([]query.AnnotatedAsset, 1)
-
-		client := mustRPCClient()
-		client.Call(context.Background(), "/bind-asset", &[]AssetIns{ins}, &assets)
+		client.Call(context.Background(), "/create-asset", &[]assetIns{ins}, &assets)
 
 		jww.FEEDBACK.Printf("responses: %v\n", assets)
 		jww.FEEDBACK.Printf("asset id: %v\n", assets[0].ID.String())

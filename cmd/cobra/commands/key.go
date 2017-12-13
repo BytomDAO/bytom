@@ -79,7 +79,7 @@ var listKeysCmd = &cobra.Command{
 
 		for _, item := range response.Items {
 			key := item.(map[string]interface{})
-			jww.FEEDBACK.Printf("%v:\nAlias: %v\nXpub: %v\nFile: %v\n", idx, key["alias"], key["xpub"], key["file"])
+			jww.FEEDBACK.Printf("%v:\nAlias: %v\nXpub: %v\nFile: %v\n\n", idx, key["alias"], key["xpub"], key["file"])
 			idx++
 		}
 		if response.Last == false {

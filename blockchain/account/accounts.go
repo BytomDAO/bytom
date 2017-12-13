@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -113,7 +114,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	}
 
 	account := &Account{Signer: signer, Alias: alias, Tags: tags}
-	accountJSON, err := json.Marshal(account)
+	accountJSON, err := json.MarshalIndent(account, "", " ")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
@@ -344,11 +345,39 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 }
 
 // QueryAll will return all the account in the db
-func (m *Manager) QueryAll(ctx context.Context) (interface{}, error) {
-	accounts := make([]interface{}, 0)
+func (m *Manager) ListAccounts(after string, limit int) ([]string, string, bool, error) {
+
+	var (
+		zafter int
+		err    error
+	)
+
+	if after != "" {
+		zafter, err = strconv.Atoi(after)
+		if err != nil {
+			return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
+		}
+	}
+
+	accounts := make([]string, 0)
 	accountIter := m.db.IteratorPrefix([]byte(accountPreFix))
 	for accountIter.Next() {
 		accounts = append(accounts, string(accountIter.Value()))
 	}
-	return accounts, nil
+
+	start, end := 0, len(accounts)
+
+	if len(accounts) == 0 {
+		return nil, "", true, errors.New("No accounts")
+	} else if len(accounts) > zafter {
+		start = zafter
+	} else {
+		return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
+	}
+
+	if len(accounts) > zafter+limit {
+		end = zafter + limit
+	}
+
+	return accounts[start:end], strconv.Itoa(end), end == len(accounts), nil
 }
