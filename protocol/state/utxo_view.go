@@ -59,7 +59,7 @@ func (view *UtxoViewpoint) ApplyBlock(block *bc.Block) error {
 func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx) error {
 	for _, prevout := range tx.SpentOutputIDs {
 		entry, ok := view.Entries[prevout]
-		if ok && !entry.Spend {
+		if !ok || !entry.Spend {
 			return errors.New("try to revert a unspend utxo")
 		}
 

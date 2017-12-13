@@ -172,6 +172,7 @@ func (c *Chain) Height() uint64 {
 	return c.state.block.Height
 }
 
+// BestBlockHash return the hash of the chain tail block
 func (c *Chain) BestBlockHash() *bc.Hash {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
@@ -186,6 +187,7 @@ func (c *Chain) inMainchain(block *legacy.Block) bool {
 	return *hash == block.Hash()
 }
 
+// InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(height uint64, hash bc.Hash) bool {
 	if height == 0 {
 		return true
@@ -218,14 +220,17 @@ func (c *Chain) BestBlock() *legacy.Block {
 	return c.state.block
 }
 
+// SeedCaches return the seedCached manager
 func (c *Chain) SeedCaches() *seed.SeedCaches {
 	return c.seedCaches
 }
 
+// GetUtxo try to find the utxo status in db
 func (c *Chain) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 	return c.store.GetUtxo(hash)
 }
 
+// GetTransactionsUtxo return all the utxos that related to the txs' inputs
 func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
 	return c.store.GetTransactionsUtxo(view, txs)
 }

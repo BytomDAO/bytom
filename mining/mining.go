@@ -92,7 +92,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		blockWeight += weight
 		txFee += fee
 	}
-	bcB := legacy.MapBlock(b)
 
 	for _, txDesc := range txDescs {
 		tx := txDesc.Tx.Tx
@@ -104,7 +103,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			txPool.RemoveTransaction(&tx.ID)
 			continue
 		}
-		if err := view.ApplyTransaction(bcB, tx); err != nil {
+		if err := view.ApplyTransaction(nil, tx); err != nil {
 			log.WithField("error", err).Error("mining block generate skip tx due to")
 			txPool.RemoveTransaction(&tx.ID)
 			continue
