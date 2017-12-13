@@ -19,6 +19,11 @@ func NewUtxoViewpoint() *UtxoViewpoint {
 	}
 }
 
+func (view *UtxoViewpoint) HasUtxo(hash *bc.Hash) bool {
+	_, ok := view.Entries[*hash]
+	return ok
+}
+
 func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 	for _, prevout := range tx.SpentOutputIDs {
 		entry, ok := view.Entries[prevout]

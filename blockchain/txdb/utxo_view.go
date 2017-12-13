@@ -20,6 +20,10 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 	var utxo storage.UtxoEntry
 	for _, tx := range txs {
 		for _, prevout := range tx.SpentOutputIDs {
+			if view.HasUtxo(&prevout) {
+				continue
+			}
+
 			data := db.Get(calcUtxoKey(&prevout))
 			if data == nil {
 				return errors.New("can't find utxo in db")
