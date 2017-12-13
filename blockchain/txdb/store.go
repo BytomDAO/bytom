@@ -78,6 +78,7 @@ func NewStore(db dbm.DB) *Store {
 	}
 }
 
+// GetUtxo will search the utxo in db
 func (s *Store) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 	return getUtxo(s.db, hash)
 }
@@ -93,6 +94,7 @@ func (s *Store) GetBlock(hash *bc.Hash) (*legacy.Block, error) {
 	return s.cache.lookup(hash)
 }
 
+// GetTransactionsUtxo will return all the utxo that related to the input txs
 func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
 	return getTransactionsUtxo(s.db, view, txs)
 }
@@ -120,7 +122,7 @@ func (s *Store) SaveBlock(block *legacy.Block) error {
 	return nil
 }
 
-// SaveChainStatus(save the core's newest status && delete old status
+// SaveChainStatus save the core's newest status && delete old status
 func (s *Store) SaveChainStatus(block *legacy.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
 	hash := block.Hash()
 	batch := s.db.NewBatch()

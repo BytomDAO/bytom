@@ -1,5 +1,6 @@
 package storage
 
+// NewUtxoEntry will creaye a new utxo entry
 func NewUtxoEntry(isCoinBase bool, blockHeight uint64, spend bool) *UtxoEntry {
 	return &UtxoEntry{
 		IsCoinBase:  isCoinBase,
@@ -13,7 +14,7 @@ func (entry *UtxoEntry) SpendOutput() {
 	entry.Spend = true
 }
 
-// Unspend marks the output at the provided index as unspent
+// UnspendOutput marks the output at the provided index as unspent
 func (entry *UtxoEntry) UnspendOutput() {
 	entry.Spend = false
 }
