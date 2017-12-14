@@ -1,7 +1,9 @@
 package blockchain
 
 import (
+	"time"
 	"net/http"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/errors"
@@ -78,4 +80,15 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/get-block-transactions-count-by-height", jsonHandler(bcr.getBlockTransactionsCountByHeight))
 	m.Handle("/block-height", jsonHandler(bcr.blockHeight))
 	m.Handle("/is-mining", jsonHandler(bcr.isMining))
+	m.Handle("/gas-rate", jsonHandler(bcr.gasRate))
+
+	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if l := latency(m, req); l != nil {
+			defer l.RecordSince(time.Now())
+		}
+		m.ServeHTTP(w, req)
+	})
+	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
+
+	bcr.handler = handler
 }
