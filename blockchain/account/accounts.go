@@ -14,6 +14,7 @@ import (
 
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/common"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
@@ -23,9 +24,9 @@ import (
 
 const (
 	maxAccountCache = 1000
-	aliasPreFix     = "ALI:"
-	accountPreFix   = "ACC:"
-	accountCPPreFix = "ACP:"
+	aliasPrefix     = "ALI:"
+	accountPrefix   = "ACC:"
+	accountCPPrefix = "ACP:"
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -35,26 +36,28 @@ var (
 )
 
 func aliasKey(name string) []byte {
-	return []byte(aliasPreFix + name)
+	return []byte(aliasPrefix + name)
 }
 
-func accountKey(name string) []byte {
-	return []byte(accountPreFix + name)
+//Key account store prefix
+func Key(name string) []byte {
+	return []byte(accountPrefix + name)
 }
 
-func accountCPKey(hash [32]byte) []byte {
-	return append([]byte(accountCPPreFix), hash[:]...)
+//CPKey account control promgram store prefix
+func CPKey(hash common.Hash) []byte {
+	return append([]byte(accountCPPrefix), hash[:]...)
 }
 
 // NewManager creates a new account manager
-func NewManager(db, walletDB dbm.DB, chain *protocol.Chain) *Manager {
+func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
 	return &Manager{
-		db:          db,
+		db:          walletDB,
 		chain:       chain,
 		utxoDB:      newReserver(chain, walletDB),
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
-		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*controlProgram),
+		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
 	}
 }
 
@@ -69,7 +72,7 @@ type Manager struct {
 	aliasCache *lru.Cache
 
 	delayedACPsMu sync.Mutex
-	delayedACPs   map[*txbuilder.TemplateBuilder][]*controlProgram
+	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
 	acpMu        sync.Mutex
 	acpIndexNext uint64 // next acp index in our block
@@ -118,7 +121,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
 
-	accountID := accountKey(signer.ID)
+	accountID := Key(signer.ID)
 	m.db.Set(accountID, accountJSON)
 	m.db.Set(aliasKey(alias), []byte(signer.ID))
 
@@ -137,7 +140,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 	if alias != nil {
 		accountID = m.db.Get(aliasKey(*alias))
 	} else {
-		accountID = accountKey(*id)
+		accountID = Key(*id)
 	}
 
 	accountJSON := m.db.Get(accountID)
@@ -200,7 +203,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 		return cachedSigner.(*signers.Signer), nil
 	}
 
-	rawAccount := m.db.Get(accountKey(id))
+	rawAccount := m.db.Get(Key(id))
 	if rawAccount == nil {
 		return nil, errors.New("fail to find account")
 	}
@@ -216,7 +219,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 	return account.Signer, nil
 }
 
-func (m *Manager) createControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*controlProgram, error) {
+func (m *Manager) createControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	account, err := m.findByID(ctx, accountID)
 	if err != nil {
 		return nil, err
@@ -235,7 +238,7 @@ func (m *Manager) createControlProgram(ctx context.Context, accountID string, ch
 		return nil, err
 	}
 
-	return &controlProgram{
+	return &CtrlProgram{
 		AccountID:      account.ID,
 		KeyIndex:       idx,
 		ControlProgram: control,
@@ -258,7 +261,8 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 	return cp.ControlProgram, nil
 }
 
-type controlProgram struct {
+//CtrlProgram is structure of account control program
+type CtrlProgram struct {
 	AccountID      string
 	KeyIndex       uint64
 	ControlProgram []byte
@@ -266,8 +270,8 @@ type controlProgram struct {
 	ExpiresAt      time.Time
 }
 
-func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*controlProgram) error {
-	var hash [32]byte
+func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*CtrlProgram) error {
+	var hash common.Hash
 	for _, prog := range progs {
 		accountCP, err := json.Marshal(prog)
 		if err != nil {
@@ -275,14 +279,14 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*con
 		}
 
 		sha3pool.Sum256(hash[:], prog.ControlProgram)
-		m.db.Set(accountCPKey(hash), accountCP)
+		m.db.Set(CPKey(hash), accountCP)
 	}
 	return nil
 }
 
 // GetCoinbaseControlProgram will return a coinbase script
 func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
-	signerIter := m.db.IteratorPrefix([]byte(accountPreFix))
+	signerIter := m.db.IteratorPrefix([]byte(accountPrefix))
 	if !signerIter.Next() {
 		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
 		return vmutil.CoinbaseProgram(nil, 0, height)
@@ -311,7 +315,7 @@ func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
 		return script, err
 	}
 
-	err = m.insertAccountControlProgram(ctx, &controlProgram{
+	err = m.insertAccountControlProgram(ctx, &CtrlProgram{
 		AccountID:      signer.ID,
 		KeyIndex:       idx,
 		ControlProgram: script,
@@ -346,7 +350,7 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 // QueryAll will return all the account in the db
 func (m *Manager) QueryAll(ctx context.Context) (interface{}, error) {
 	accounts := make([]interface{}, 0)
-	accountIter := m.db.IteratorPrefix([]byte(accountPreFix))
+	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
 	for accountIter.Next() {
 		accounts = append(accounts, string(accountIter.Value()))
 	}

@@ -52,12 +52,9 @@ func TestHSM(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountsDB := dbm.NewDB("account", config.DBBackend, dir)
-	assetsDB := dbm.NewDB("asset", config.DBBackend, dir)
-	walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
-
-	accounts = account.NewManager(accountsDB, walletDB, chain)
-	assets = asset.NewRegistry(assetsDB, chain)
+	walletDB := dbm.NewDB("wallet", config.DBBackend, dir)
+	accounts = account.NewManager(walletDB, chain)
+	assets = asset.NewRegistry(walletDB, chain)
 
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
