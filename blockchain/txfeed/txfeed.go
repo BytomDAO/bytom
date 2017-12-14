@@ -383,22 +383,3 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
 	}
 	return out
 }
-
-// localAnnotator depends on the asset and account annotators and
-// must be run after them.
-func localAnnotator(tx *query.AnnotatedTx) {
-	for _, in := range tx.Inputs {
-		if in.AccountID != "" {
-			tx.IsLocal, in.IsLocal = true, true
-		}
-		if in.Type == "issue" && in.AssetIsLocal {
-			tx.IsLocal, in.IsLocal = true, true
-		}
-	}
-
-	for _, out := range tx.Outputs {
-		if out.AccountID != "" {
-			tx.IsLocal, out.IsLocal = true, true
-		}
-	}
-}
