@@ -42,7 +42,11 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 			continue
 		}
 
-		view.Entries[*id] = storage.NewUtxoEntry(tx.ID == block.Transactions[0].ID, block.Height, false)
+		isCoinbase := false
+		if block != nil && len(block.Transactions) > 0 && block.Transactions[0].ID == tx.ID {
+			isCoinbase = true
+		}
+		view.Entries[*id] = storage.NewUtxoEntry(isCoinbase, block.Height, false)
 	}
 	return nil
 }
