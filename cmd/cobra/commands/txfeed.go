@@ -1,204 +1,118 @@
 package commands
 
 import (
-	"context"
-	"fmt"
+	"encoding/json"
+	"os"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
 
-type txFeed struct {
-	Alias  string `json:"alias"`
-	Filter string `json:"filter,omitempty"`
-}
-
-type respArrayTxFeed struct {
-	Status string    `json:"status,omitempty"`
-	Msg    string    `json:"msg,omitempty"`
-	Data   []*txFeed `json:"data,omitempty"`
-}
-
-type respTxFeed struct {
-	Status string `json:"status,omitempty"`
-	Msg    string `json:"msg,omitempty"`
-	Data   txFeed `json:"data,omitempty"`
-}
-
 var createTransactionFeedCmd = &cobra.Command{
-	Use:   "create-transaction-feed",
+	Use:   "create-transaction-feed <alias> <filter>",
 	Short: "Create a transaction feed filter",
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
-			jww.ERROR.Println("create-transaction-feed needs 2 args")
-			return
-		}
-
 		var in txFeed
 		in.Alias = args[0]
 		in.Filter = args[1]
 
-		var response interface{}
+		_, exitCode := clientCall("/create-transaction-feed", &in)
 
-		client := mustRPCClient()
-		client.Call(context.Background(), "/create-transaction-feed", &in, &response)
-
-		var rawresp resp
-
-		if err := parseresp(response, &rawresp); err != nil {
-			jww.ERROR.Println("parse response error")
-			return
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
 
-		if rawresp.Status == "success" {
-			jww.FEEDBACK.Printf("%v\n", rawresp.Data)
-			return
-		}
-
-		if rawresp.Status == "error" {
-			jww.ERROR.Println(rawresp.Msg)
-			return
-		}
+		jww.FEEDBACK.Println("Successfully created transaction feed")
 	},
 }
 
 var listTransactionFeedsCmd = &cobra.Command{
 	Use:   "list-transaction-feeds",
 	Short: "list all of transaction feeds",
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 0 {
-			jww.ERROR.Println("list-transaction-feeds takes no args")
-			return
-		}
-
 		var in requestQuery
-		var response interface{}
+		var response = struct {
+			Items []interface{} `json:"items"`
+			Next  requestQuery  `json:"next"`
+			Last  bool          `json:"last_page"`
+		}{}
 
-		client := mustRPCClient()
-		client.Call(context.Background(), "/list-transaction-feeds", in, &response)
-
-		var rawresp respArrayTxFeed
-		if err := parseresp(response, &rawresp); err != nil {
-			jww.ERROR.Println("parse response error")
-			return
+		idx := 0
+	LOOP:
+		data, exitCode := clientCall("/list-transaction-feeds", &in)
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
 
-		if rawresp.Status == "success" {
-			for i, v := range rawresp.Data {
-				fmt.Println(i, v.Alias, v.Filter)
-			}
-			return
+		rawPage := []byte(data[0])
+		if err := json.Unmarshal(rawPage, &response); err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
 		}
 
-		if rawresp.Status == "error" {
-			jww.ERROR.Println(rawresp.Msg)
-			return
+		for _, item := range response.Items {
+			key := item.(string)
+			jww.FEEDBACK.Printf("%d:\n%s\n\n", idx, key)
+			idx++
+		}
+		if response.Last == false {
+			in.After = response.Next.After
+			goto LOOP
 		}
 	},
 }
 
 var deleteTransactionFeedCmd = &cobra.Command{
-	Use:   "delete-transaction-feed",
+	Use:   "delete-transaction-feed <alias>",
 	Short: "Delete a transaction feed filter",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println("delete-transaction-feed needs 1 args")
-			return
-		}
-
 		var in txFeed
 		in.Alias = args[0]
 
-		var response interface{}
+		_, exitCode := clientCall("/delete-transaction-feed", &in)
 
-		client := mustRPCClient()
-		client.Call(context.Background(), "/delete-transaction-feed", &in, &response)
-
-		var rawresp resp
-		if err := parseresp(response, &rawresp); err != nil {
-			jww.ERROR.Println("parse response error")
-			return
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
 
-		if rawresp.Status == "success" {
-			jww.FEEDBACK.Printf("%v\n", rawresp.Data)
-			return
-		}
-
-		if rawresp.Status == "error" {
-			jww.ERROR.Println(rawresp.Msg)
-			return
-		}
+		jww.FEEDBACK.Println("Successfully deleted transaction feed")
 	},
 }
 
 var getTransactionFeedCmd = &cobra.Command{
-	Use:   "get-transaction-feed",
+	Use:   "get-transaction-feed <alias>",
 	Short: "get a transaction feed by alias",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println("get-transaction-feed needs 1 args")
-			return
-		}
-
 		var in txFeed
 		in.Alias = args[0]
-		var response interface{}
 
-		client := mustRPCClient()
-		client.Call(context.Background(), "/get-transaction-feed", &in, &response)
+		data, exitCode := clientCall("/get-transaction-feed", &in)
 
-		var rawresp respTxFeed
-
-		if err := parseresp(response, &rawresp); err != nil {
-			jww.ERROR.Println("parse response error")
-			return
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		if rawresp.Status == "success" {
-			fmt.Println(rawresp.Data)
-			return
-		}
-
-		if rawresp.Status == "error" {
-			jww.ERROR.Println(rawresp.Msg)
-			return
-		}
+		jww.FEEDBACK.Println(data[0])
 	},
 }
 
 var updateTransactionFeedCmd = &cobra.Command{
 	Use:   "update-transaction-feed",
 	Short: "Update transaction feed",
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
-			jww.ERROR.Println("update-transaction-feed needs 2 args")
-			return
-		}
-
 		var in txFeed
 		in.Alias = args[0]
 		in.Filter = args[1]
 
-		var response interface{}
+		_, exitCode := clientCall("/update-transaction-feed", &in)
 
-		client := mustRPCClient()
-		client.Call(context.Background(), "/update-transaction-feed", &in, &response)
-
-		var rawresp resp
-		if err := parseresp(response, &rawresp); err != nil {
-			jww.ERROR.Println("parse response error")
-			return
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		if rawresp.Status == "success" {
-			jww.FEEDBACK.Printf("%v\n", rawresp.Data)
-			return
-		}
-
-		if rawresp.Status == "error" {
-			jww.ERROR.Println(rawresp.Msg)
-			return
-		}
+		jww.FEEDBACK.Println("Successfully updated transaction feed")
 	},
 }

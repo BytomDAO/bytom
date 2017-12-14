@@ -38,3 +38,21 @@ type requestQuery struct {
 	Type         string        `json:"type"`
 	Aliases      []string      `json:"aliases,omitempty"`
 }
+
+// txFeed
+type txFeed struct {
+	Alias  string `json:"alias"`
+	Filter string `json:"filter,omitempty"`
+}
+
+type respArrayTxFeed struct {
+	Status string    `json:"status,omitempty"`
+	Msg    string    `json:"msg,omitempty"`
+	Data   []*txFeed `json:"data,omitempty"`
+}
+
+type respTxFeed struct {
+	Status string `json:"status,omitempty"`
+	Msg    string `json:"msg,omitempty"`
+	Data   txFeed `json:"data,omitempty"`
+}

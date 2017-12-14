@@ -22,7 +22,7 @@ var blockHashCmd = &cobra.Command{
 	Short: "Get the hash of most recent block",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("get-best-block-hash")
+		data, exitCode := clientCall("block-hash")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
@@ -50,34 +50,28 @@ var blockHeightCmd = &cobra.Command{
 }
 
 var getBlockByHashCmd = &cobra.Command{
-	Use:   "get-block-by-hash",
+	Use:   "get-block-by-hash <hash>",
 	Short: "Get a whole block matching the given hash",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println("get-block-by-hash args not valid\nUsage: get-block-by-hash [hash]")
-			return
+		data, exitCode := clientCall("/get-block-by-hash", args[0])
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		var response interface{}
-		client := mustRPCClient()
-		client.Call(context.Background(), "/get-block-by-hash", args[0], &response)
-		jww.FEEDBACK.Printf("%v\n", response)
+		jww.FEEDBACK.Printf("%v\n", data)
 	},
 }
 
 var getBlockHeaderByHashCmd = &cobra.Command{
 	Use:   "get-block-header-by-hash",
 	Short: "Get the header of a block matching the given hash",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println("get-block-header-by-hash args not valid\nUsage: get-block-header-by-hash [hash]")
-			return
+		data, exitCode := clientCall("/get-block-header-by-hash", args[0])
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		var response interface{}
-		client := mustRPCClient()
-		client.Call(context.Background(), "/get-block-header-by-hash", args[0], &response)
-		jww.FEEDBACK.Printf("block header: %v\n", response)
+		jww.FEEDBACK.Printf("block header: %v\n", data)
 	},
 }
 

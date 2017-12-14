@@ -1,22 +1,24 @@
 package blockchain
 
 import (
-	"bytes"
 	stdjson "encoding/json"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/rpc"
-	ctypes "github.com/bytom/blockchain/rpc/types"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/validation"
 )
 
 // return network infomation
-func (bcR *BlockchainReactor) getNetInfo() (*ctypes.ResultNetInfo, error) {
-	return rpc.NetInfo(bcR.sw)
+func (bcr *BlockchainReactor) getNetInfo() []byte {
+	net, err := stdjson.Marshal(bcr.sw)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+	data := []string{string(net)}
+	return resWrapper(data)
 }
 
 // return best block hash
@@ -26,21 +28,21 @@ func (bcr *BlockchainReactor) getBestBlockHash() []byte {
 }
 
 // return block header by hash
-func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
-	var buf bytes.Buffer
+func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) []byte {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
+		return resWrapper(nil, err)
 	}
 	block, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return ""
+		return resWrapper(nil, err)
 	}
 	bcBlock := legacy.MapBlock(block)
-	header, _ := stdjson.MarshalIndent(bcBlock.BlockHeader, "", "  ")
-	buf.WriteString(string(header))
-	return buf.String()
+	header, _ := stdjson.Marshal(bcBlock.BlockHeader)
+	data := []string{string(header)}
+	return resWrapper(data)
 }
 
 type TxJSON struct {
@@ -54,17 +56,17 @@ type GetBlockByHashJSON struct {
 }
 
 // return block by hash
-func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
+func (bcr *BlockchainReactor) getBlockByHash(strHash string) []byte {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return err.Error()
+		return resWrapper(nil, err)
 	}
 
 	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return err.Error()
+		return resWrapper(nil, err)
 	}
 
 	bcBlock := legacy.MapBlock(legacyBlock)
@@ -90,9 +92,10 @@ func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
 
 	ret, err := stdjson.Marshal(res)
 	if err != nil {
-		return err.Error()
+		return resWrapper(nil, err)
 	}
-	return string(ret)
+	data := []string{string(ret)}
+	return resWrapper(data)
 }
 
 // return block by height

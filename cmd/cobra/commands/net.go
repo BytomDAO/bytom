@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"os"
 	"strconv"
 
@@ -12,11 +11,14 @@ import (
 var netInfoCmd = &cobra.Command{
 	Use:   "net-info",
 	Short: "Print the summary of network",
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		var response interface{}
-		client := mustRPCClient()
-		client.Call(context.Background(), "/net-info", nil, &response)
-		jww.FEEDBACK.Printf("net info: %v\n", response)
+		data, exitCode := clientCall("/net-info")
+		if exitCode != Success {
+			os.Exit(exitCode)
+		}
+		// !!!
+		jww.FEEDBACK.Printf("net info: %v\n", data)
 	},
 }
 var netListeningCmd = &cobra.Command{

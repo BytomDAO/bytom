@@ -181,7 +181,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 // OnStart implements BaseService
 func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
-	bcR.BuildHander()
+	bcR.BuildHandler()
 
 	if bcR.miningEnable {
 		bcR.mining.Start()
