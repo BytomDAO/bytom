@@ -9,13 +9,20 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+func isValidJSON(b []byte) bool {
+	var v interface{}
+	err := json.Unmarshal(b, &v)
+	return err == nil
+}
+
+//Annotated annotate the asset
 func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 	jsonTags := json.RawMessage(`{}`)
 	jsonDefinition := json.RawMessage(`{}`)
 
 	// a.RawDefinition is the asset definition as it appears on the
 	// blockchain, so it's untrusted and may not be valid json.
-	if query.IsValidJSON(a.RawDefinition()) {
+	if isValidJSON(a.RawDefinition()) {
 		jsonDefinition = json.RawMessage(a.RawDefinition())
 	}
 

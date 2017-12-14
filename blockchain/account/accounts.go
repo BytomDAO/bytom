@@ -14,6 +14,7 @@ import (
 
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/common"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
@@ -23,9 +24,9 @@ import (
 
 const (
 	maxAccountCache = 1000
-	aliasPreFix     = "ALI:"
-	accountPreFix   = "ACC:"
-	accountCPPreFix = "ACP:"
+	aliasPrefix     = "ALI:"
+	accountPrefix   = "ACC:"
+	accountCPPrefix = "ACP:"
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -35,17 +36,17 @@ var (
 )
 
 func aliasKey(name string) []byte {
-	return []byte(aliasPreFix + name)
+	return []byte(aliasPrefix + name)
 }
 
-//AccountKey
-func AccountKey(name string) []byte {
-	return []byte(accountPreFix + name)
+//Key account store prefix
+func Key(name string) []byte {
+	return []byte(accountPrefix + name)
 }
 
-//
-func AccountCPKey(hash [32]byte) []byte {
-	return append([]byte(accountCPPreFix), hash[:]...)
+//CPKey account control promgram store prefix
+func CPKey(hash common.Hash) []byte {
+	return append([]byte(accountCPPrefix), hash[:]...)
 }
 
 // NewManager creates a new account manager
@@ -120,7 +121,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
 
-	accountID := AccountKey(signer.ID)
+	accountID := Key(signer.ID)
 	m.db.Set(accountID, accountJSON)
 	m.db.Set(aliasKey(alias), []byte(signer.ID))
 
@@ -139,7 +140,7 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 	if alias != nil {
 		accountID = m.db.Get(aliasKey(*alias))
 	} else {
-		accountID = AccountKey(*id)
+		accountID = Key(*id)
 	}
 
 	accountJSON := m.db.Get(accountID)
@@ -202,7 +203,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 		return cachedSigner.(*signers.Signer), nil
 	}
 
-	rawAccount := m.db.Get(AccountKey(id))
+	rawAccount := m.db.Get(Key(id))
 	if rawAccount == nil {
 		return nil, errors.New("fail to find account")
 	}
@@ -260,6 +261,7 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 	return cp.ControlProgram, nil
 }
 
+//CtrlProgram is structure of account control program
 type CtrlProgram struct {
 	AccountID      string
 	KeyIndex       uint64
@@ -269,7 +271,7 @@ type CtrlProgram struct {
 }
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*CtrlProgram) error {
-	var hash [32]byte
+	var hash common.Hash
 	for _, prog := range progs {
 		accountCP, err := json.Marshal(prog)
 		if err != nil {
@@ -277,14 +279,14 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*Ctr
 		}
 
 		sha3pool.Sum256(hash[:], prog.ControlProgram)
-		m.db.Set(AccountCPKey(hash), accountCP)
+		m.db.Set(CPKey(hash), accountCP)
 	}
 	return nil
 }
 
 // GetCoinbaseControlProgram will return a coinbase script
 func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
-	signerIter := m.db.IteratorPrefix([]byte(accountPreFix))
+	signerIter := m.db.IteratorPrefix([]byte(accountPrefix))
 	if !signerIter.Next() {
 		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
 		return vmutil.CoinbaseProgram(nil, 0, height)
@@ -348,7 +350,7 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 // QueryAll will return all the account in the db
 func (m *Manager) QueryAll(ctx context.Context) (interface{}, error) {
 	accounts := make([]interface{}, 0)
-	accountIter := m.db.IteratorPrefix([]byte(accountPreFix))
+	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
 	for accountIter.Next() {
 		accounts = append(accounts, string(accountIter.Value()))
 	}

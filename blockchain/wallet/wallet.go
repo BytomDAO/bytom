@@ -57,7 +57,7 @@ func (w *Wallet) GetWalletInfo() (StatusInfo, error) {
 
 }
 
-func (w *Wallet) commitWalletInfo(batch *db.Batch) {
+func (w *Wallet) commitWalletInfo(batch *db.Batch) error {
 	var info StatusInfo
 
 	info.Height = w.status.Height
@@ -66,12 +66,13 @@ func (w *Wallet) commitWalletInfo(batch *db.Batch) {
 	rawWallet, err := json.Marshal(info)
 	if err != nil {
 		log.WithField("err", err).Error("save wallet info")
-		return
+		return err
 	}
 	//update wallet to db
 	(*batch).Set(walletKey, rawWallet)
 	//commit to db
 	(*batch).Write()
+	return nil
 }
 
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
@@ -98,7 +99,9 @@ LOOP:
 		w.status.Hash = block.PreviousBlockHash
 
 		//update wallet info and commit batch write
-		w.commitWalletInfo(&storeBatch)
+		if err := w.commitWalletInfo(&storeBatch); err != nil {
+			return
+		}
 	}
 
 	block, _ = c.GetBlockByHeight(w.status.Height + 1)
@@ -121,7 +124,9 @@ LOOP:
 		buildAccountUTXOs(&storeBatch, block, w)
 
 		//update wallet info and commit batch write
-		w.commitWalletInfo(&storeBatch)
+		if err := w.commitWalletInfo(&storeBatch); err != nil {
+			return
+		}
 	}
 
 	//goto next loop

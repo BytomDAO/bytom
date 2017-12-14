@@ -6,6 +6,7 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/protocol/bc"
 )
 
 const (
@@ -13,8 +14,9 @@ const (
 	UTXOPreFix = "ACU:"
 )
 
-//AccountUTXOKey makes a account unspent outputs key to store
-func AccountUTXOKey(name string) []byte {
+//UTXOKey makes a account unspent outputs key to store
+func UTXOKey(id bc.Hash) []byte {
+	name := string(id.Bytes())
 	return []byte(UTXOPreFix + name)
 }
 

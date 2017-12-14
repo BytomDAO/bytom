@@ -429,7 +429,7 @@ func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*utxo, error) {
 	}
 
 	// make sure accountUTXO existed in the db
-	accountUTXOValue := db.Get(AccountUTXOKey(string(outHash.Bytes())))
+	accountUTXOValue := db.Get(UTXOKey(outHash))
 	if accountUTXOValue == nil {
 		return nil, fmt.Errorf("can't find utxo: %s", outHash.String())
 	}

@@ -25,15 +25,18 @@ const (
 	assetPreFix   = "ASS:"
 )
 
-func AssetKey(name string) []byte {
+//Key asset store prefix
+func Key(id bc.AssetID) []byte {
+	name := id.String()
 	return []byte(assetPreFix + name)
 }
 
+// pre-define errors for supporting bytom errorFormatter
 var (
-	ErrDuplicateAlias = errors.New("duplicate asset alias")
-	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
+	ErrBadIdentifier = errors.New("either ID or alias must be specified, and not both")
 )
 
+//NewRegistry create new registry
 func NewRegistry(db dbm.DB, chain *protocol.Chain) *Registry {
 	return &Registry{
 		db:               db,
@@ -58,6 +61,7 @@ type Registry struct {
 	aliasCache *lru.Cache
 }
 
+//Asset describe asset on bytom chain
 type Asset struct {
 	AssetID          bc.AssetID
 	Alias            *string
@@ -70,28 +74,9 @@ type Asset struct {
 	DefinitionMap     map[string]interface{}
 }
 
-func (asset *Asset) Definition() (map[string]interface{}, error) {
-	if asset.DefinitionMap == nil && len(asset.RawDefinitionByte) > 0 {
-		err := json.Unmarshal(asset.RawDefinitionByte, &asset.DefinitionMap)
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}
-	}
-	return asset.DefinitionMap, nil
-}
-
+//RawDefinition return asset in the raw format
 func (asset *Asset) RawDefinition() []byte {
 	return asset.RawDefinitionByte
-}
-
-func (asset *Asset) SetDefinition(def map[string]interface{}) error {
-	rawdef, err := serializeAssetDef(def)
-	if err != nil {
-		return err
-	}
-	asset.DefinitionMap = def
-	asset.RawDefinitionByte = rawdef
-	return nil
 }
 
 // Define defines a new Asset.
@@ -134,7 +119,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		return nil, errors.Wrap(err, "failed marshal asset")
 	}
 	if len(ass) > 0 {
-		reg.db.Set(AssetKey(asset.AssetID.String()), json.RawMessage(ass))
+		reg.db.Set(Key(asset.AssetID), json.RawMessage(ass))
 	}
 
 	return asset, nil
@@ -142,7 +127,6 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 
 // UpdateTags modifies the tags of the specified asset. The asset may be
 // identified either by id or alias, but not both.
-
 func (reg *Registry) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
 	if (id == nil) == (alias == nil) {
 		return errors.Wrap(ErrBadIdentifier)
@@ -195,7 +179,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 		return cached.(*Asset), nil
 	}
 
-	bytes := reg.db.Get(AssetKey(id.String()))
+	bytes := reg.db.Get(Key(id))
 	if bytes == nil {
 		return nil, errors.New("no exit this asset")
 	}
@@ -213,7 +197,6 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 
 // FindByAlias retrieves an Asset record along with its signer,
 // given an asset alias.
-
 func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, error) {
 	reg.cacheMu.Lock()
 	cachedID, ok := reg.aliasCache.Get(alias)
@@ -239,6 +222,7 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 
 }
 
+//QueryAll query all the assets on bytom chain
 func (reg *Registry) QueryAll(ctx context.Context) (interface{}, error) {
 	ret := make([]interface{}, 0)
 

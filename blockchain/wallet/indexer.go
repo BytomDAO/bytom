@@ -105,7 +105,7 @@ func reverseAccountUTXOs(batch *db.Batch, b *legacy.Block, w *Wallet) {
 				continue
 			}
 			//delete new UTXOs
-			(*batch).Delete(account.AccountUTXOKey(string(resOutID.Bytes())))
+			(*batch).Delete(account.UTXOKey(*resOutID))
 		}
 	}
 }
@@ -135,7 +135,7 @@ func buildAccountUTXOs(batch *db.Batch, b *legacy.Block, w *Wallet) {
 	//handle spent UTXOs
 	delOutputIDs := prevoutDBKeys(b.Transactions...)
 	for _, delOutputID := range delOutputIDs {
-		(*batch).Delete(account.AccountUTXOKey(string(delOutputID.Bytes())))
+		(*batch).Delete(account.UTXOKey(delOutputID))
 	}
 
 	//handle new UTXOs
@@ -195,7 +195,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 	var hash [32]byte
 	for s := range outsByScript {
 		sha3pool.Sum256(hash[:], []byte(s))
-		bytes := w.DB.Get(account.AccountCPKey(hash))
+		bytes := w.DB.Get(account.CPKey(hash))
 		if bytes == nil {
 			continue
 		}
@@ -205,7 +205,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 			continue
 		}
 
-		isExist := w.DB.Get(account.AccountKey(cp.AccountID))
+		isExist := w.DB.Get(account.Key(cp.AccountID))
 		if isExist == nil {
 			continue
 		}
@@ -247,7 +247,7 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, b
 			return errors.Wrap(err, "failed marshal accountutxo")
 		}
 
-		(*batch).Set(account.AccountUTXOKey(string(u.OutputID)), rawUTXO)
+		(*batch).Set(account.UTXOKey(out.OutputID), rawUTXO)
 	}
 	return nil
 }
@@ -261,8 +261,8 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 			var hash [32]byte
 
 			sha3pool.Sum256(hash[:], v.ControlProgram)
-			if bytes := w.DB.Get(account.AccountCPKey(hash)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, query.BuildAnnotatedTransaction(tx, b, uint32(pos)))
+			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
+				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, uint32(pos)))
 				local = true
 				break
 			}
@@ -277,8 +277,8 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 			if err != nil {
 				continue
 			}
-			if bytes := w.DB.Get(account.AccountUTXOKey(string(outid.Bytes()))); bytes != nil {
-				annotatedTxs = append(annotatedTxs, query.BuildAnnotatedTransaction(tx, b, uint32(pos)))
+			if bytes := w.DB.Get(account.UTXOKey(outid)); bytes != nil {
+				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, uint32(pos)))
 				break
 			}
 		}
