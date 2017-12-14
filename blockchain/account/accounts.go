@@ -29,12 +29,6 @@ const (
 	accountCPPreFix = "ACP:"
 )
 
-// pre-define errors for supporting bytom errorFormatter
-var (
-	ErrDuplicateAlias = errors.New("duplicate account alias")
-	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
-)
-
 func aliasKey(name string) []byte {
 	return []byte(aliasPreFix + name)
 }
@@ -99,7 +93,7 @@ func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) 
 type Account struct {
 	*signers.Signer
 	Alias string
-	Tags  map[string]interface{}
+	Tags  map[string]interface{} `json:tags,omitempty`
 }
 
 // Create creates a new Account.
@@ -131,26 +125,19 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 // UpdateTags modifies the tags of the specified account. The account may be
 // identified either by ID or Alias, but not both.
-func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
-	//TODO: use db.batch()
-	if (id == nil) == (alias == nil) {
-		return errors.Wrap(ErrBadIdentifier)
+func (m *Manager) UpdateTags(ctx context.Context, accountInfo string, tags map[string]interface{}) error {
+	var account Account
+
+	accountID := accountInfo
+	if s, err := m.FindByAlias(nil, accountInfo); err == nil {
+		accountID = s.ID
 	}
 
-	var accountID []byte
-	if alias != nil {
-		accountID = m.db.Get(aliasKey(*alias))
-	} else {
-		accountID = accountKey(*id)
-	}
-
-	accountJSON := m.db.Get(accountID)
-	if accountJSON == nil {
+	rawAccount := m.db.Get(accountKey(accountID))
+	if rawAccount == nil {
 		return errors.New("fail to find account")
 	}
-
-	var account Account
-	if err := json.Unmarshal(accountJSON, &account); err != nil {
+	if err := json.Unmarshal(rawAccount, &account); err != nil {
 		return err
 	}
 
@@ -158,19 +145,20 @@ func (m *Manager) UpdateTags(ctx context.Context, id, alias *string, tags map[st
 		switch v {
 		case "":
 			delete(account.Tags, k)
-			m.db.Delete(aliasKey(k))
 		default:
+			if account.Tags == nil {
+				account.Tags = make(map[string]interface{})
+			}
 			account.Tags[k] = v
-			m.db.Set(aliasKey(k), accountID)
 		}
 	}
 
-	accountJSON, err := json.Marshal(account)
+	rawAccount, err := json.MarshalIndent(account, "", " ")
 	if err != nil {
 		return errors.New("failed marshal account to update tags")
 	}
 
-	m.db.Set(accountID, accountJSON)
+	m.db.Set(accountKey(accountID), rawAccount)
 	return nil
 }
 

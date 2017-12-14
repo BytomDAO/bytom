@@ -3,12 +3,9 @@ package blockchain
 import (
 	"context"
 	"encoding/json"
-	"sync"
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/net/http/httpjson"
-	"github.com/bytom/net/http/reqid"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -44,31 +41,15 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 }
 
 // POST /update-account-tags
-func (a *BlockchainReactor) updateAccountTags(ctx context.Context, ins []struct {
-	ID    *string
-	Alias *string
-	Tags  map[string]interface{} `json:"tags"`
-}) interface{} {
-	log.Info("Updating account tags")
-	responses := make([]interface{}, len(ins))
-	var wg sync.WaitGroup
-	wg.Add(len(responses))
+func (a *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag struct {
+	AccountInfo string
+	Tags        map[string]interface{} `json:"tags"`
+}) []byte {
 
-	for i := range responses {
-		go func(i int) {
-			subctx := reqid.NewSubContext(ctx, reqid.New())
-			defer wg.Done()
-			//defer batchRecover(subctx, &responses[i])
-
-			err := a.accounts.UpdateTags(subctx, ins[i].ID, ins[i].Alias, ins[i].Tags)
-			if err != nil {
-				responses[i] = err
-			} else {
-				responses[i] = httpjson.DefaultResponse
-			}
-		}(i)
+	err := a.accounts.UpdateTags(nil, updateTag.AccountInfo, updateTag.Tags)
+	if err != nil {
+		return resWrapper(nil, err)
 	}
 
-	wg.Wait()
-	return responses
+	return resWrapper(nil)
 }

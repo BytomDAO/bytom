@@ -36,7 +36,6 @@ var createAccountCmd = &cobra.Command{
 			jww.ERROR.Println(err)
 			os.Exit(ErrLocalExe)
 		}
-
 		var ins accountIns
 		ins.RootXPubs = []chainkd.XPub{xpub}
 		ins.Quorum = accountQuorum
@@ -51,7 +50,6 @@ var createAccountCmd = &cobra.Command{
 		}
 		ins.AccessToken = accountToken
 
-		// account := make([]query.AnnotatedAccount, 1)
 		data, exitCode := clientCall("/create-account", &ins)
 
 		if exitCode != Success {
@@ -112,14 +110,34 @@ var deleteAccountCmd = &cobra.Command{
 }
 
 var updateAccountTagsCmd = &cobra.Command{
-	Use:   "update-account-tags <accountID|alias>",
-	Short: "Add, update or delete the tags",
-	Long:  "If the tags match the pattern 'key:value', add or update them. If the tags match the pattern 'key', delete them.",
-	Args:  cobra.ExactArgs(1),
+	Use: "update-account-tags <accountID|alias>",
+	Short: "Add, update or delete the tags.\n" +
+		"If the tags match the pattern 'key:value', add or update them. " +
+		"If the tags match the pattern 'key:', delete them.",
+	Args: cobra.ExactArgs(1),
+	PreRun: func(cmd *cobra.Command, args []string) {
+		cmd.MarkFlagRequired("tags")
+	},
 	Run: func(cmd *cobra.Command, args []string) {
-		if _, exitCode := clientCall("/delete-account", args[0]); exitCode != Success {
+		var updateTag = struct {
+			AccountInfo string
+			Tags        map[string]interface{} `json:"tags"`
+		}{}
+
+		if len(accountUpdateTags) != 0 {
+			tags := strings.Split(accountUpdateTags, ":")
+			if len(tags) != 2 {
+				jww.ERROR.Println("Invalid tags")
+				os.Exit(ErrLocalExe)
+			}
+			updateTag.Tags = map[string]interface{}{tags[0]: tags[1]}
+		}
+
+		updateTag.AccountInfo = args[0]
+		if _, exitCode := clientCall("/update-account-tags", &updateTag); exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Println("Successfully delete account")
+
+		jww.FEEDBACK.Println("Successfully update account tags")
 	},
 }
