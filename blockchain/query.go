@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/blockchain/wallet"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -127,7 +128,7 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, in requestQu
 	annotatedTxs := make([]string, 0)
 	annotatedTx := &query.AnnotatedTx{}
 
-	txIter := bcr.wallet.DB.IteratorPrefix([]byte(query.TxPreFix))
+	txIter := bcr.wallet.DB.IteratorPrefix([]byte(wallet.TxPreFix))
 	defer txIter.Release()
 
 	for txIter.Next() {
