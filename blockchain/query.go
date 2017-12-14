@@ -31,20 +31,16 @@ var (
 func (bcr *BlockchainReactor) listAccounts(ctx context.Context, query requestQuery) []byte {
 	limit := query.PageSize
 	if limit == 0 {
-		limit = defGenericPageSize // defGenericPageSize = 100
+		limit = defGenericPageSize
 	}
 
-	accounts, after, last, err := bcr.accounts.ListAccounts(query.After, limit)
+	accounts, after, last, err := bcr.accounts.ListAccounts(query.After, limit, defGenericPageSize)
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
 		return resWrapper(nil, err)
 	}
 
 	query.After = after
-
-	if last == false {
-		last = len(accounts) < limit
-	}
 
 	page := &page{
 		Items:    httpjson.Array(accounts),

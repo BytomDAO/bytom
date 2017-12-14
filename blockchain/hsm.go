@@ -34,10 +34,10 @@ func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ A
 func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query requestQuery) []byte {
 	limit := query.PageSize
 	if limit == 0 {
-		limit = defGenericPageSize // defGenericPageSize = 100
+		limit = defGenericPageSize
 	}
 
-	xpubs, after, last, err := a.hsm.ListKeys(query.After, limit)
+	xpubs, after, last, err := a.hsm.ListKeys(query.After, limit, defGenericPageSize)
 	if err != nil {
 		return resWrapper(nil, err)
 	}
@@ -48,9 +48,6 @@ func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query request
 	}
 
 	query.After = after
-	if last == false {
-		last = len(xpubs) < limit
-	}
 	page := &page{
 		Items:    httpjson.Array(items),
 		LastPage: last,

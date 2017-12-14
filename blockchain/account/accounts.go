@@ -361,11 +361,12 @@ func (m *Manager) DeleteAccount(accountInfo string) error {
 }
 
 // ListAccounts will return the accounts in the db
-func (m *Manager) ListAccounts(after string, limit int) ([]string, string, bool, error) {
+func (m *Manager) ListAccounts(after string, limit, defaultLimit int) ([]string, string, bool, error) {
 
 	var (
 		zafter int
 		err    error
+		last   bool
 	)
 
 	if after != "" {
@@ -397,5 +398,9 @@ func (m *Manager) ListAccounts(after string, limit int) ([]string, string, bool,
 		end = zafter + limit
 	}
 
-	return accounts[start:end], strconv.Itoa(end), end == len(accounts), nil
+	if len(accounts) == end || len(accounts) < defaultLimit {
+		last = true
+	}
+
+	return accounts[start:end], strconv.Itoa(end), last, nil
 }

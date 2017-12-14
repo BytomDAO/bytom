@@ -85,7 +85,7 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 }
 
 // ListKeys returns a list of all xpubs from the store
-func (h *HSM) ListKeys(after string, limit int) ([]XPub, string, bool, error) {
+func (h *HSM) ListKeys(after string, limit, defaultLimit int) ([]XPub, string, bool, error) {
 
 	xpubs := h.cache.keys()
 	start, end := 0, len(xpubs)
@@ -93,6 +93,7 @@ func (h *HSM) ListKeys(after string, limit int) ([]XPub, string, bool, error) {
 	var (
 		zafter int
 		err    error
+		last   bool
 	)
 
 	if after != "" {
@@ -112,7 +113,12 @@ func (h *HSM) ListKeys(after string, limit int) ([]XPub, string, bool, error) {
 	if len(xpubs) > zafter+limit {
 		end = zafter + limit
 	}
-	return xpubs[start:end], strconv.Itoa(end), end == len(xpubs), nil
+
+	if len(xpubs) == end || len(xpubs) < defaultLimit {
+		last = true
+	}
+
+	return xpubs[start:end], strconv.Itoa(end), last, nil
 }
 
 // XSign looks up the xprv given the xpub, optionally derives a new

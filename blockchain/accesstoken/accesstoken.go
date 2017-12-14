@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,7 +18,10 @@ import (
 	"github.com/bytom/errors"
 )
 
-const tokenSize = 32
+const (
+	tokenSize          = 32
+	defGenericPageSize = 100
+)
 
 var (
 	// ErrBadID is returned when Create is called on an invalid id string.
@@ -127,19 +131,46 @@ func (cs *CredentialStore) Check(ctx context.Context, id string, secret []byte) 
 }
 
 // List lists all access tokens.
-func (cs *CredentialStore) List(ctx context.Context) ([]*Token, error) {
-	tokens := make([]*Token, 0)
+func (cs *CredentialStore) List(after string, limit, defaultLimit int) ([]string, string, bool, error) {
+	var (
+		zafter int
+		err    error
+		last   bool
+	)
+
+	if after != "" {
+		zafter, err = strconv.Atoi(after)
+		if err != nil {
+			return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
+		}
+	}
+
+	tokens := make([]string, 0)
 	iter := cs.DB.Iterator()
 	defer iter.Release()
 
 	for iter.Next() {
-		token := &Token{}
-		if err := json.Unmarshal(iter.Value(), token); err != nil {
-			return nil, err
-		}
-		tokens = append(tokens, token)
+		tokens = append(tokens, string(iter.Value()))
 	}
-	return tokens, nil
+
+	start, end := 0, len(tokens)
+
+	if len(tokens) == 0 {
+		return nil, "", true, errors.New("No access token")
+	} else if len(tokens) > zafter {
+		start = zafter
+	} else {
+		return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
+	}
+
+	if len(tokens) > zafter+limit {
+		end = zafter + limit
+	}
+	if len(tokens) == end || len(tokens) < defaultLimit {
+		last = true
+	}
+
+	return tokens[start:end], strconv.Itoa(end), last, nil
 }
 
 // Delete deletes an access token by id.

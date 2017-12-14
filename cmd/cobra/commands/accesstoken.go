@@ -1,11 +1,9 @@
 package commands
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"strings"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -27,12 +25,6 @@ type resp struct {
 	Data   string `json:"data,omitempty"`
 }
 
-type respToken struct {
-	Status string   `json:"status,omitempty"`
-	Msg    string   `json:"msg,omitempty"`
-	Data   []*Token `json:"data,omitempty"`
-}
-
 func parseresp(response interface{}, pattern interface{}) error {
 	data, err := base64.StdEncoding.DecodeString(response.(string))
 	if err != nil {
@@ -50,140 +42,88 @@ func parseresp(response interface{}, pattern interface{}) error {
 
 var createAccessTokenCmd = &cobra.Command{
 	Use:   "create-access-token",
-	Short: "Create a access token",
+	Short: "Create a new access token",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println("create-access-token needs 1 args")
-			return
-		}
-
 		var token Token
 		token.ID = args[0]
 
-		var response interface{}
-
-		client := mustRPCClient()
-		client.Call(context.Background(), "/create-access-token", &token, &response)
-
-		var rawresp resp
-		if err := parseresp(response, &rawresp); err != nil {
-			jww.ERROR.Println("parse response error")
-			return
+		data, exitCode := clientCall("/create-access-token", &token)
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		if rawresp.Status == "success" {
-			jww.FEEDBACK.Printf("%v\n", rawresp.Data)
-			return
-		}
-
-		if rawresp.Status == "error" {
-			jww.ERROR.Println(rawresp.Msg)
-			return
-		}
+		jww.FEEDBACK.Println(data[0])
 	},
 }
 
 var listAccessTokenCmd = &cobra.Command{
-	Use:   "list-access-token",
-	Short: "list access tokens",
+	Use:   "list-access-tokens",
+	Short: "List the existing access tokens",
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 0 {
-			jww.ERROR.Println("list-access-token needs 0 args")
-			return
+		var in requestQuery
+		var response = struct {
+			Items []interface{} `json:"items"`
+			Next  requestQuery  `json:"next"`
+			Last  bool          `json:"last_page"`
+		}{}
+
+		idx := 0
+	LOOP:
+		data, exitCode := clientCall("/list-access-tokens", &in)
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
 
-		var response interface{}
-		client := mustRPCClient()
-		client.Call(context.Background(), "/list-access-token", nil, &response)
-
-		var rawresp respToken
-		if err := parseresp(response, &rawresp); err != nil {
-			jww.ERROR.Println("parse response error")
-			return
+		rawPage := []byte(data[0])
+		if err := json.Unmarshal(rawPage, &response); err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
 		}
 
-		if rawresp.Status == "success" {
-			for i, v := range rawresp.Data {
-				fmt.Println(i, v.Token)
-			}
-			return
+		for _, item := range response.Items {
+			key := item.(string)
+			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, key)
+			idx++
+		}
+		if response.Last == false {
+			in.After = response.Next.After
+			goto LOOP
 		}
 
-		if rawresp.Status == "error" {
-			jww.ERROR.Println(rawresp.Msg)
-			return
-		}
 	},
 }
 
 var deleteAccessTokenCmd = &cobra.Command{
 	Use:   "delete-access-token",
-	Short: "delete a access token",
+	Short: "delete an access token",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println("delete-access-token needs 1 args")
-			return
-		}
-
 		var token Token
 		token.ID = args[0]
 
-		var response interface{}
-
-		client := mustRPCClient()
-		client.Call(context.Background(), "/delete-access-token", &token, &response)
-
-		var rawresp resp
-
-		if err := parseresp(response, &rawresp); err != nil {
-			jww.ERROR.Println("parse response error")
-			return
+		_, exitCode := clientCall("/delete-access-token", &token)
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		if rawresp.Status == "success" {
-			jww.FEEDBACK.Printf("%v\n", rawresp.Data)
-			return
-		}
-
-		if rawresp.Status == "error" {
-			jww.ERROR.Println(rawresp.Msg)
-			return
-		}
+		jww.FEEDBACK.Println("Successfully delete access token")
 	},
 }
 
 var checkAccessTokenCmd = &cobra.Command{
-	Use:   "check-access-token",
-	Short: "check a access token",
+	Use:   "check-access-token <tokenID> <secret>",
+	Short: "check an access token",
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println("check-access-token needs 1 args")
-			return
-		}
-
 		var token Token
-		inputs := strings.Split(args[0], ":")
-		token.ID = inputs[0]
-		token.Secret = inputs[1]
-		var response interface{}
-		client := mustRPCClient()
-		client.Call(context.Background(), "/check-access-token", &token, &response)
+		token.ID = args[0]
+		token.Secret = args[1]
 
-		var rawresp resp
-
-		if err := parseresp(response, &rawresp); err != nil {
-			jww.ERROR.Println("parse response error")
-			return
+		_, exitCode := clientCall("/check-access-token", &token)
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
 
-		if rawresp.Status == "success" {
-			jww.FEEDBACK.Printf("%v\n", rawresp.Data)
-			return
-		}
-
-		if rawresp.Status == "error" {
-			jww.ERROR.Println(rawresp.Msg)
-			return
-		}
+		jww.FEEDBACK.Println("Valid access token")
 	},
 }

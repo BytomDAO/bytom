@@ -59,7 +59,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 	m.Handle("/info", jsonHandler(bcr.info))
 	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
 	m.Handle("/create-access-token", jsonHandler(bcr.createAccessToken))
-	m.Handle("/list-access-token", jsonHandler(bcr.listAccessTokens))
+	m.Handle("/list-access-tokens", jsonHandler(bcr.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(bcr.deleteAccessToken))
 	m.Handle("/check-access-token", jsonHandler(bcr.checkAccessToken))
 
