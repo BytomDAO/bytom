@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"chain/protocol/vmutil"
 	"encoding/json"
 	"fmt"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 // annotateTxs adds asset data to transactions
@@ -57,11 +57,16 @@ func getAliasFromAssetID(assetID bc.AssetID, walletDB db.DB) (*asset.Asset, erro
 func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB db.DB) {
 	for i, tx := range txs {
 		for j, input := range tx.Inputs {
+			//issue asset tx input SpentOutputID is nil
+			if input.SpentOutputID == nil {
+				continue
+			}
 			account, err := getAccountFromUTXO(*input.SpentOutputID, walletDB)
 			if account == nil || err != nil {
 				continue
 			}
 			txs[i].Inputs[j].AccountAlias = account.Alias
+			txs[i].Inputs[j].AccountID = account.ID
 		}
 		for j, output := range tx.Outputs {
 			account, err := getAccountFromACP(output.ControlProgram, walletDB)
@@ -69,6 +74,7 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB db.DB) {
 				continue
 			}
 			txs[i].Outputs[j].AccountAlias = account.Alias
+			txs[i].Outputs[j].AccountID = account.ID
 		}
 	}
 }
