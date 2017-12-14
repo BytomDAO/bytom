@@ -1,8 +1,8 @@
 package blockchain
 
 import (
-	"time"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -37,6 +37,7 @@ func (bcr *BlockchainReactor) BuildHander() {
 		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
 		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
+		m.Handle("/delete-account", jsonHandler(bcr.deleteAccount))
 		m.Handle("/create-asset", jsonHandler(bcr.createAsset))
 		m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
 		m.Handle("/list-assets", jsonHandler(bcr.listAssets))

@@ -12,15 +12,18 @@ import (
 )
 
 func init() {
-	createAccountCmd.PersistentFlags().IntVarP(&quorum, "quorom", "q", 1, "quorum must be greater than 0 and less than or equal to the number of signers")
-	createAccountCmd.PersistentFlags().StringVarP(&token, "access", "a", "", "access token")
-	createAccountCmd.PersistentFlags().StringVarP(&tags, "tags", "t", "", "tags")
+	createAccountCmd.PersistentFlags().IntVarP(&accountQuorum, "quorom", "q", 1, "quorum must be greater than 0 and less than or equal to the number of signers")
+	createAccountCmd.PersistentFlags().StringVarP(&accountToken, "access", "a", "", "access token")
+	createAccountCmd.PersistentFlags().StringVarP(&accountTags, "tags", "t", "", "tags")
+
+	updateAccountTagsCmd.PersistentFlags().StringVarP(&accountUpdateTags, "tags", "t", "", "tags to add, delete or update")
 }
 
 var (
-	quorum = 1
-	token  = ""
-	tags   = ""
+	accountQuorum     = 1
+	accountToken      = ""
+	accountTags       = ""
+	accountUpdateTags = ""
 )
 
 var createAccountCmd = &cobra.Command{
@@ -36,17 +39,17 @@ var createAccountCmd = &cobra.Command{
 
 		var ins accountIns
 		ins.RootXPubs = []chainkd.XPub{xpub}
-		ins.Quorum = quorum
+		ins.Quorum = accountQuorum
 		ins.Alias = args[0]
-		if len(tags) != 0 {
-			ts := strings.Split(tags, ":")
-			if len(ts) != 2 {
+		if len(accountTags) != 0 {
+			tags := strings.Split(accountTags, ":")
+			if len(tags) != 2 {
 				jww.ERROR.Println("Invalid tags")
 				os.Exit(ErrLocalExe)
 			}
-			ins.Tags = map[string]interface{}{ts[0]: ts[1]}
+			ins.Tags = map[string]interface{}{tags[0]: tags[1]}
 		}
-		ins.AccessToken = "client"
+		ins.AccessToken = accountToken
 
 		// account := make([]query.AnnotatedAccount, 1)
 		data, exitCode := clientCall("/create-account", &ins)
@@ -93,5 +96,30 @@ var listAccountsCmd = &cobra.Command{
 			in.After = response.Next.After
 			goto LOOP
 		}
+	},
+}
+
+var deleteAccountCmd = &cobra.Command{
+	Use:   "delete-account <accountID|alias>",
+	Short: "Delete the existing account",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		if _, exitCode := clientCall("/delete-account", args[0]); exitCode != Success {
+			os.Exit(exitCode)
+		}
+		jww.FEEDBACK.Println("Successfully delete account")
+	},
+}
+
+var updateAccountTagsCmd = &cobra.Command{
+	Use:   "update-account-tags <accountID|alias>",
+	Short: "Add, update or delete the tags",
+	Long:  "If the tags match the pattern 'key:value', add or update them. If the tags match the pattern 'key', delete them.",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		if _, exitCode := clientCall("/delete-account", args[0]); exitCode != Success {
+			os.Exit(exitCode)
+		}
+		jww.FEEDBACK.Println("Successfully delete account")
 	},
 }

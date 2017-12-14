@@ -91,7 +91,13 @@ func Execute() {
 
 // AddCommands adds child commands to the root command BytomcliCmd.
 func AddCommands() {
+	BytomcliCmd.AddCommand(createAccessTokenCmd)
+	BytomcliCmd.AddCommand(listAccessTokenCmd)
+	BytomcliCmd.AddCommand(deleteAccessTokenCmd)
+	BytomcliCmd.AddCommand(checkAccessTokenCmd)
+
 	BytomcliCmd.AddCommand(createAccountCmd)
+	BytomcliCmd.AddCommand(deleteAccountCmd)
 	BytomcliCmd.AddCommand(listAccountsCmd)
 
 	BytomcliCmd.AddCommand(createAssetCmd)
@@ -117,11 +123,6 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(netSyncingCmd)
 
 	BytomcliCmd.AddCommand(gasRateCmd)
-
-	BytomcliCmd.AddCommand(createAccessTokenCmd)
-	BytomcliCmd.AddCommand(listAccessTokenCmd)
-	BytomcliCmd.AddCommand(deleteAccessTokenCmd)
-	BytomcliCmd.AddCommand(checkAccessTokenCmd)
 
 	BytomcliCmd.AddCommand(createTransactionFeedCmd)
 	BytomcliCmd.AddCommand(listTransactionFeedsCmd)

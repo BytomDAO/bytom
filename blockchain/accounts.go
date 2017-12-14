@@ -24,9 +24,9 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	// should have a unique client token. The client token is used to ensure
 	// idempotency of create account requests. Duplicate create account requests
 	// with the same client_token will only create one account.
-	ClientToken string `json:"client_token"`
+	AccessToken string `json:"access_token"`
 }) []byte {
-	acc, err := a.accounts.Create(nil, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags, ins.ClientToken)
+	acc, err := a.accounts.Create(nil, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags, ins.AccessToken)
 	if err != nil {
 		return resWrapper(nil, err)
 	}

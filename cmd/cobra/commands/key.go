@@ -48,7 +48,7 @@ var deleteKeyCmd = &cobra.Command{
 		if _, exitCode := clientCall("/delete-key", &key); exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Println("Success delete key")
+		jww.FEEDBACK.Println("Successfully delete key")
 	},
 }
 

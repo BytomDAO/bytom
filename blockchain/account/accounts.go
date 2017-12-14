@@ -103,25 +103,28 @@ type Account struct {
 }
 
 // Create creates a new Account.
-func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, clientToken string) (*Account, error) {
+func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, accessToken string) (*Account, error) {
 	if existed := m.db.Get(aliasKey(alias)); existed != nil {
-		return nil, fmt.Errorf("%s is an existed alias", alias)
+		return nil, fmt.Errorf("%s is an duplicated account alias", alias)
 	}
 
-	signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, clientToken)
+	signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, accessToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
 	account := &Account{Signer: signer, Alias: alias, Tags: tags}
-	accountJSON, err := json.MarshalIndent(account, "", " ")
+	rawAccount, err := json.MarshalIndent(account, "", " ")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
 
+	storeBatch := m.db.NewBatch()
+
 	accountID := accountKey(signer.ID)
-	m.db.Set(accountID, accountJSON)
-	m.db.Set(aliasKey(alias), []byte(signer.ID))
+	storeBatch.Set(accountID, rawAccount)
+	storeBatch.Set(aliasKey(alias), []byte(signer.ID))
+	storeBatch.Write()
 
 	return account, nil
 }
@@ -344,7 +347,32 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	return n, nil
 }
 
-// QueryAll will return all the account in the db
+func (m *Manager) DeleteAccount(accountInfo string) error {
+
+	account := Account{}
+	storeBatch := m.db.NewBatch()
+
+	accountID := accountInfo
+	if s, err := m.FindByAlias(nil, accountInfo); err == nil {
+		accountID = s.ID
+	}
+
+	rawAccount := m.db.Get(accountKey(accountID))
+	if rawAccount == nil {
+		return nil
+	}
+	if err := json.Unmarshal(rawAccount, &account); err != nil {
+		return err
+	}
+
+	storeBatch.Delete(aliasKey(account.Alias))
+	storeBatch.Delete(accountKey(account.ID))
+	storeBatch.Write()
+
+	return nil
+}
+
+// ListAccounts will return the accounts in the db
 func (m *Manager) ListAccounts(after string, limit int) ([]string, string, bool, error) {
 
 	var (
@@ -361,6 +389,8 @@ func (m *Manager) ListAccounts(after string, limit int) ([]string, string, bool,
 
 	accounts := make([]string, 0)
 	accountIter := m.db.IteratorPrefix([]byte(accountPreFix))
+	defer accountIter.Release()
+
 	for accountIter.Next() {
 		accounts = append(accounts, string(accountIter.Value()))
 	}

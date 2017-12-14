@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/golang/groupcache/lru"
@@ -89,6 +90,7 @@ func (asset *Asset) SetDefinition(def map[string]interface{}) error {
 
 // Define defines a new Asset.
 func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}, clientToken string) (*Asset, error) {
+	// TODO: if the alias is duplicated
 	assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, err
@@ -123,12 +125,12 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 	}
 
 	assetID := []byte(asset.AssetID.String())
-	ass, err := json.Marshal(asset)
+	ass, err := json.MarshalIndent(asset, "", " ")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal asset")
 	}
 	if len(ass) > 0 {
-		reg.db.Set(assetID, json.RawMessage(ass))
+		reg.db.Set(assetID, ass)
 	}
 
 	return asset, nil
@@ -233,18 +235,42 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 
 }
 
-func (reg *Registry) QueryAll(ctx context.Context) (interface{}, error) {
-	ret := make([]interface{}, 0)
+func (reg *Registry) ListAssets(after string, limit int) ([]string, string, bool, error) {
+	var (
+		zafter int
+		err    error
+	)
 
+	if after != "" {
+		zafter, err = strconv.Atoi(after)
+		if err != nil {
+			return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
+		}
+	}
+
+	assets := make([]string, 0)
 	assetIter := reg.db.Iterator()
 	defer assetIter.Release()
 
 	for assetIter.Next() {
-		value := string(assetIter.Value())
-		ret = append(ret, value)
+		assets = append(assets, string(assetIter.Value()))
 	}
 
-	return ret, nil
+	start, end := 0, len(assets)
+
+	if len(assets) == 0 {
+		return nil, "", true, errors.New("No accounts")
+	} else if len(assets) > zafter {
+		start = zafter
+	} else {
+		return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
+	}
+
+	if len(assets) > zafter+limit {
+		end = zafter + limit
+	}
+
+	return assets[start:end], strconv.Itoa(end), end == len(assets), nil
 }
 
 // serializeAssetDef produces a canonical byte representation of an asset

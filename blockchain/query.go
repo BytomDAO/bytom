@@ -61,12 +61,48 @@ func (bcr *BlockchainReactor) listAccounts(ctx context.Context, query requestQue
 }
 
 //
+// POST /delete-account
+func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, accountInfo string) []byte {
+
+	if err := bcr.accounts.DeleteAccount(accountInfo); err != nil {
+		return resWrapper(nil, err)
+	}
+	return resWrapper(nil)
+}
+
+//
 // POST /list-assets
-func (bcr *BlockchainReactor) listAssets(ctx context.Context, in requestQuery) interface{} {
+func (bcr *BlockchainReactor) listAssets(ctx context.Context, query requestQuery) interface{} {
 
-	response, _ := bcr.assets.QueryAll(ctx)
+	limit := query.PageSize
+	if limit == 0 {
+		limit = defGenericPageSize // defGenericPageSize = 100
+	}
 
-	return response
+	assets, after, last, err := bcr.assets.ListAssets(query.After, limit)
+	if err != nil {
+		log.Errorf("listAssets: %v", err)
+		return resWrapper(nil, err)
+	}
+
+	query.After = after
+
+	if last == false {
+		last = len(assets) < limit
+	}
+
+	page := &page{
+		Items:    httpjson.Array(assets),
+		LastPage: last,
+		Next:     query}
+
+	rawPage, err := json.Marshal(page)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+
+	data := []string{string(rawPage)}
+	return resWrapper(data)
 }
 
 //GetAccountUTXOs return all account unspent outputs
