@@ -64,7 +64,7 @@ var listAccessTokenCmd = &cobra.Command{
 
 var deleteAccessTokenCmd = &cobra.Command{
 	Use:   "delete-access-token",
-	Short: "delete an access token",
+	Short: "Delete an access token",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var token accessToken
@@ -80,7 +80,7 @@ var deleteAccessTokenCmd = &cobra.Command{
 
 var checkAccessTokenCmd = &cobra.Command{
 	Use:   "check-access-token <tokenID> <secret>",
-	Short: "check an access token",
+	Short: "Check an access token",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		var token accessToken
