@@ -26,15 +26,19 @@ const (
 	assetPrefix   = "ASS:"
 )
 
-func assetKey(name string) []byte {
+//Key asset store prefix
+func Key(id bc.AssetID) []byte {
+	name := id.String()
 	return []byte(assetPrefix + name)
 }
 
+// pre-define errors for supporting bytom errorFormatter
 var (
 	ErrDuplicateAlias = errors.New("duplicate asset alias")
 	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
 )
 
+//NewRegistry create new registry
 func NewRegistry(db dbm.DB, chain *protocol.Chain) *Registry {
 	return &Registry{
 		db:               db,
@@ -59,6 +63,7 @@ type Registry struct {
 	aliasCache *lru.Cache
 }
 
+//Asset describe asset on bytom chain
 type Asset struct {
 	AssetID          bc.AssetID
 	Alias            *string
@@ -71,16 +76,7 @@ type Asset struct {
 	DefinitionMap     map[string]interface{}
 }
 
-func (asset *Asset) Definition() (map[string]interface{}, error) {
-	if asset.DefinitionMap == nil && len(asset.RawDefinitionByte) > 0 {
-		err := json.Unmarshal(asset.RawDefinitionByte, &asset.DefinitionMap)
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}
-	}
-	return asset.DefinitionMap, nil
-}
-
+//RawDefinition return asset in the raw format
 func (asset *Asset) RawDefinition() []byte {
 	return asset.RawDefinitionByte
 }
@@ -137,7 +133,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		return nil, errors.Wrap(err, "failed marshal asset")
 	}
 	if len(ass) > 0 {
-		reg.db.Set(assetKey(asset.AssetID.String()), ass)
+		reg.db.Set(Key(asset.AssetID), ass)
 	}
 
 	return asset, nil
@@ -198,7 +194,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 		return cached.(*Asset), nil
 	}
 
-	bytes := reg.db.Get(assetKey(id.String()))
+	bytes := reg.db.Get(Key(id))
 	if bytes == nil {
 		return nil, errors.New("no exit this asset")
 	}
