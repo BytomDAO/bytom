@@ -38,14 +38,17 @@ func (bcr *BlockchainReactor) BuildHandler() {
 		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
 		m.Handle("/delete-account", jsonHandler(bcr.deleteAccount))
+
 		m.Handle("/create-asset", jsonHandler(bcr.createAsset))
 		m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
 		m.Handle("/list-assets", jsonHandler(bcr.listAssets))
-		m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
-		m.Handle("/list-balances", jsonHandler(bcr.listBalances))
+
 		m.Handle("/create-key", jsonHandler(bcr.pseudohsmCreateKey))
 		m.Handle("/list-keys", jsonHandler(bcr.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
+
+		m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
+		m.Handle("/list-balances", jsonHandler(bcr.listBalances))
 		m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
 		m.Handle("/sign-transactions", jsonHandler(bcr.pseudohsmSignTemplates))
 	} else {

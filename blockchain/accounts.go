@@ -11,7 +11,7 @@ import (
 )
 
 // POST /create-account
-func (a *BlockchainReactor) createAccount(ctx context.Context, ins struct {
+func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	RootXPubs []chainkd.XPub `json:"root_xpubs"`
 	Quorum    int
 	Alias     string
@@ -23,7 +23,7 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	// with the same client_token will only create one account.
 	AccessToken string `json:"access_token"`
 }) []byte {
-	acc, err := a.accounts.Create(nil, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags, ins.AccessToken)
+	acc, err := bcr.accounts.Create(nil, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags, ins.AccessToken)
 	if err != nil {
 		return resWrapper(nil, err)
 	}
@@ -41,12 +41,12 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 }
 
 // POST /update-account-tags
-func (a *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag struct {
+func (bcr *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag struct {
 	AccountInfo string
 	Tags        map[string]interface{} `json:"tags"`
 }) []byte {
 
-	err := a.accounts.UpdateTags(nil, updateTag.AccountInfo, updateTag.Tags)
+	err := bcr.accounts.UpdateTags(nil, updateTag.AccountInfo, updateTag.Tags)
 	if err != nil {
 		return resWrapper(nil, err)
 	}

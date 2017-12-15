@@ -37,9 +37,12 @@ const (
 )
 
 const (
+	// SUCCESS indicates the rpc calling is successful.
 	SUCCESS = "success"
-	FAIL    = "fail"
-	ERROR   = "error"
+	// FAIL indicated the rpc calling is failed.
+	FAIL = "fail"
+	// ERROR indicates error occurs in the rpc calling.
+	ERROR = "error"
 )
 
 // Response describes the response standard.
@@ -157,9 +160,10 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
+// NewBlockchainReactor returns the reactor of whole blockchain.
 func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *BlockchainReactor {
 	mining := cpuminer.NewCPUMiner(chain, accounts, txPool)
-	bcR := &BlockchainReactor{
+	bcr := &BlockchainReactor{
 		chain:         chain,
 		wallet:        wallet,
 		accounts:      accounts,
@@ -174,33 +178,33 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 		accessTokens:  accessTokens,
 		miningEnable:  miningEnable,
 	}
-	bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
-	return bcR
+	bcr.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcr)
+	return bcr
 }
 
 // OnStart implements BaseService
-func (bcR *BlockchainReactor) OnStart() error {
-	bcR.BaseReactor.OnStart()
-	bcR.BuildHandler()
+func (bcr *BlockchainReactor) OnStart() error {
+	bcr.BaseReactor.OnStart()
+	bcr.BuildHandler()
 
-	if bcR.miningEnable {
-		bcR.mining.Start()
+	if bcr.miningEnable {
+		bcr.mining.Start()
 	}
-	go bcR.syncRoutine()
+	go bcr.syncRoutine()
 	return nil
 }
 
 // OnStop implements BaseService
-func (bcR *BlockchainReactor) OnStop() {
-	bcR.BaseReactor.OnStop()
-	if bcR.miningEnable {
-		bcR.mining.Stop()
+func (bcr *BlockchainReactor) OnStop() {
+	bcr.BaseReactor.OnStop()
+	if bcr.miningEnable {
+		bcr.mining.Stop()
 	}
-	bcR.blockKeeper.Stop()
+	bcr.blockKeeper.Stop()
 }
 
 // GetChannels implements Reactor
-func (bcR *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
+func (bcr *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
 	return []*p2p.ChannelDescriptor{
 		&p2p.ChannelDescriptor{
 			ID:                BlockchainChannel,
@@ -211,17 +215,17 @@ func (bcR *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
 }
 
 // AddPeer implements Reactor by sending our state to peer.
-func (bcR *BlockchainReactor) AddPeer(peer *p2p.Peer) {
+func (bcr *BlockchainReactor) AddPeer(peer *p2p.Peer) {
 	peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}})
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
-func (bcR *BlockchainReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
-	bcR.blockKeeper.RemovePeer(peer.Key)
+func (bcr *BlockchainReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
+	bcr.blockKeeper.RemovePeer(peer.Key)
 }
 
 // Receive implements Reactor by handling 4 types of messages (look below).
-func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
+func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	_, msg, err := DecodeMessage(msgBytes)
 	if err != nil {
 		log.Errorf("Error decoding messagek %v", err)
@@ -234,9 +238,9 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		var block *legacy.Block
 		var err error
 		if msg.Height != 0 {
-			block, err = bcR.chain.GetBlockByHeight(msg.Height)
+			block, err = bcr.chain.GetBlockByHeight(msg.Height)
 		} else {
-			block, err = bcR.chain.GetBlockByHash(msg.GetHash())
+			block, err = bcr.chain.GetBlockByHash(msg.GetHash())
 		}
 		if err != nil {
 			log.Errorf("Fail on BlockRequestMessage get block: %v", err)
@@ -251,18 +255,18 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{response})
 
 	case *BlockResponseMessage:
-		bcR.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
+		bcr.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
 
 	case *StatusRequestMessage:
-		block, _ := bcR.chain.State()
+		block, _ := bcr.chain.State()
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 
 	case *StatusResponseMessage:
-		bcR.blockKeeper.SetPeerHeight(src.Key, msg.Height, msg.GetHash())
+		bcr.blockKeeper.SetPeerHeight(src.Key, msg.Height, msg.GetHash())
 
 	case *TransactionNotifyMessage:
 		tx := msg.GetTransaction()
-		if err := bcR.chain.ValidateTx(tx); err != nil {
+		if err := bcr.chain.ValidateTx(tx); err != nil {
 			log.Errorf("TransactionNotifyMessage: %v", err)
 		}
 
@@ -274,43 +278,44 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 // Handle messages from the poolReactor telling the reactor what to do.
 // NOTE: Don't sleep in the FOR_LOOP or otherwise slow it down!
 // (Except for the SYNC_LOOP, which is the primary purpose and must be synchronous.)
-func (bcR *BlockchainReactor) syncRoutine() {
+func (bcr *BlockchainReactor) syncRoutine() {
 	statusUpdateTicker := time.NewTicker(statusUpdateIntervalSeconds * time.Second)
-	newTxCh := bcR.txPool.GetNewTxCh()
+	newTxCh := bcr.txPool.GetNewTxCh()
 
 	for {
 		select {
 		case newTx := <-newTxCh:
-			bcR.txFeedTracker.TxFilter(newTx)
-			go bcR.BroadcastTransaction(newTx)
+			bcr.txFeedTracker.TxFilter(newTx)
+			go bcr.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
-			go bcR.BroadcastStatusResponse()
+			go bcr.BroadcastStatusResponse()
 
-			if bcR.miningEnable {
+			if bcr.miningEnable {
 				// mining if and only if block sync is finished
-				if bcR.blockKeeper.IsCaughtUp() {
-					bcR.mining.Start()
+				if bcr.blockKeeper.IsCaughtUp() {
+					bcr.mining.Start()
 				} else {
-					bcR.mining.Stop()
+					bcr.mining.Stop()
 				}
 			}
-		case <-bcR.Quit:
+		case <-bcr.Quit:
 			return
 		}
 	}
 }
 
-// BroadcastStatusRequest broadcasts `BlockStore` height.
-func (bcR *BlockchainReactor) BroadcastStatusResponse() {
-	block, _ := bcR.chain.State()
-	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
+// BroadcastStatusResponse broadcasts `BlockStore` height.
+func (bcr *BlockchainReactor) BroadcastStatusResponse() {
+	block, _ := bcr.chain.State()
+	bcr.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 }
 
-func (bcR *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
+// BroadcastTransaction broadcats `BlockStore` transaction.
+func (bcr *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
 	msg, err := NewTransactionNotifyMessage(tx)
 	if err != nil {
 		return err
 	}
-	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	bcr.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
 }

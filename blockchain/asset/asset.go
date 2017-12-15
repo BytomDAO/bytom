@@ -24,11 +24,15 @@ import (
 const (
 	maxAssetCache = 1000
 	assetPrefix   = "ASS:"
+	aliasPrefix   = "ALS:"
 )
 
+func aliasKey(name string) []byte {
+	return []byte(aliasPrefix + name)
+}
+
 //Key asset store prefix
-func Key(id bc.AssetID) []byte {
-	name := id.String()
+func Key(name string) []byte {
 	return []byte(assetPrefix + name)
 }
 
@@ -81,6 +85,7 @@ func (asset *Asset) RawDefinition() []byte {
 	return asset.RawDefinitionByte
 }
 
+// SetDefinition sets the serialized asset definition.
 func (asset *Asset) SetDefinition(def map[string]interface{}) error {
 	rawdef, err := serializeAssetDef(def)
 	if err != nil {
@@ -93,7 +98,9 @@ func (asset *Asset) SetDefinition(def map[string]interface{}) error {
 
 // Define defines a new Asset.
 func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}, clientToken string) (*Asset, error) {
-	// TODO: if the alias is duplicated
+	if existed := reg.db.Get(aliasKey(alias)); existed != nil {
+		return nil, fmt.Errorf("%s is a duplicated account alias", alias)
+	}
 
 	assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, clientToken)
 	if err != nil {
@@ -132,8 +139,12 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal asset")
 	}
+
+	storeBatch := reg.db.NewBatch()
 	if len(ass) > 0 {
-		reg.db.Set(Key(asset.AssetID), ass)
+		storeBatch.Set(aliasKey(alias), []byte(asset.AssetID.String()))
+		storeBatch.Set(Key(asset.AssetID.String()), ass)
+		storeBatch.Write()
 	}
 
 	return asset, nil
@@ -141,52 +152,46 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 
 // UpdateTags modifies the tags of the specified asset. The asset may be
 // identified either by id or alias, but not both.
+func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[string]interface{}) error {
+	var asset Asset
 
-func (reg *Registry) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
-	if (id == nil) == (alias == nil) {
-		return errors.Wrap(ErrBadIdentifier)
+	assetID := assetInfo
+	if s, err := reg.FindByAlias(nil, assetInfo); err == nil {
+		assetID = s.AssetID.String()
 	}
 
-	// Fetch the existing asset
+	rawAsset := reg.db.Get(Key(assetID))
 
-	var (
-		asset *Asset
-		err   error
-	)
+	if rawAsset == nil {
+		return errors.New("fail to find asset")
+	}
+	if err := json.Unmarshal(rawAsset, &asset); err != nil {
+		return err
+	}
 
-	if id != nil {
-		var aid bc.AssetID
-		err = aid.UnmarshalText([]byte(*id))
-		if err != nil {
-			return errors.Wrap(err, "deserialize asset ID")
-		}
-
-		asset, err = reg.findByID(ctx, aid)
-		if err != nil {
-			return errors.Wrap(err, "find asset by ID")
-		}
-	} else {
-		return nil
-		asset, err = reg.FindByAlias(ctx, *alias)
-		if err != nil {
-			return errors.Wrap(err, "find asset by alias")
+	for k, v := range tags {
+		switch v {
+		case "":
+			delete(asset.Tags, k)
+		default:
+			if asset.Tags == nil {
+				asset.Tags = make(map[string]interface{})
+			}
+			asset.Tags[k] = v
 		}
 	}
 
-	// Revise tags in-memory
+	rawAsset, err := json.MarshalIndent(asset, "", " ")
+	if err != nil {
+		return errors.New("fail to marshal asset")
+	}
 
-	asset.Tags = tags
-
-	reg.cacheMu.Lock()
-	reg.cache.Add(asset.AssetID, asset)
-	reg.cacheMu.Unlock()
-
+	reg.db.Set(Key(assetID), rawAsset)
 	return nil
-
 }
 
 // findByID retrieves an Asset record along with its signer, given an assetID.
-func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error) {
+func (reg *Registry) findByID(ctx context.Context, id string) (*Asset, error) {
 	reg.cacheMu.Lock()
 	cached, ok := reg.cache.Get(id)
 	reg.cacheMu.Unlock()
@@ -201,7 +206,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 	var asset Asset
 
 	if err := json.Unmarshal(bytes, &asset); err != nil {
-		return nil, fmt.Errorf("err:%s,asset signer id:%s", err, id.String())
+		return nil, fmt.Errorf("err:%s,asset signer id:%s", err, id)
 	}
 
 	reg.cacheMu.Lock()
@@ -212,32 +217,37 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 
 // FindByAlias retrieves an Asset record along with its signer,
 // given an asset alias.
-
 func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, error) {
 	reg.cacheMu.Lock()
 	cachedID, ok := reg.aliasCache.Get(alias)
 	reg.cacheMu.Unlock()
 	if ok {
-		return reg.findByID(ctx, cachedID.(bc.AssetID))
+		return reg.findByID(ctx, cachedID.(string))
 	}
 
-	untypedAsset, err := reg.aliasGroup.Do(alias, func() (interface{}, error) {
-		return nil, nil
-	})
-
-	if err != nil {
-		return nil, err
+	rawID := reg.db.Get(aliasKey(alias))
+	if rawID == nil {
+		return nil, fmt.Errorf("No such asset alias: %s", alias)
 	}
 
-	a := untypedAsset.(*Asset)
+	rawAsset := reg.db.Get(Key(string(rawID)))
+	if rawAsset == nil {
+		return nil, fmt.Errorf("No such asset ID: %x", rawID)
+	}
+	var asset Asset
+
+	if err := json.Unmarshal(rawAsset, &asset); err != nil {
+		return nil, fmt.Errorf("err:%s,asset signer id:%x", err, rawID)
+	}
+
 	reg.cacheMu.Lock()
-	reg.aliasCache.Add(alias, a.AssetID)
-	reg.cache.Add(a.AssetID, a)
+	reg.aliasCache.Add(alias, asset.AssetID.String())
+	reg.cache.Add(asset.AssetID.String(), &asset)
 	reg.cacheMu.Unlock()
-	return a, nil
-
+	return &asset, nil
 }
 
+// ListAssets returns the accounts in the db
 func (reg *Registry) ListAssets(after string, limit int) ([]string, string, bool, error) {
 	var (
 		zafter int
@@ -252,7 +262,7 @@ func (reg *Registry) ListAssets(after string, limit int) ([]string, string, bool
 	}
 
 	assets := make([]string, 0)
-	assetIter := reg.db.Iterator()
+	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix))
 	defer assetIter.Release()
 
 	for assetIter.Next() {
@@ -262,7 +272,7 @@ func (reg *Registry) ListAssets(after string, limit int) ([]string, string, bool
 	start, end := 0, len(assets)
 
 	if len(assets) == 0 {
-		return nil, "", true, errors.New("No accounts")
+		return nil, "", true, errors.New("No assets")
 	} else if len(assets) > zafter {
 		start = zafter
 	} else {

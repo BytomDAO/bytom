@@ -102,7 +102,7 @@ type Account struct {
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, accessToken string) (*Account, error) {
 	if existed := m.db.Get(aliasKey(alias)); existed != nil {
-		return nil, fmt.Errorf("%s is an duplicated account alias", alias)
+		return nil, fmt.Errorf("%s is a duplicated account alias", alias)
 	}
 
 	signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, accessToken)
@@ -339,6 +339,7 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	return n, nil
 }
 
+// DeleteAccount deletes the account's ID or alias matching accountInfo.
 func (m *Manager) DeleteAccount(accountInfo string) error {
 
 	account := Account{}

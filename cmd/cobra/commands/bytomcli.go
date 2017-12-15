@@ -20,12 +20,19 @@ import (
 )
 
 const (
-	Success        = 0
-	ErrLocalExe    = 1
-	ErrConnect     = 2
+	// Success indicates the rpc calling is successful.
+	Success = 0
+	// ErrLocalExe indicates error occurs before the rpc calling.
+	ErrLocalExe = 1
+	// ErrConnect indicates error occurs connecting to the bytomd, e.g.,
+	// bytomd can't parse the received arguments.
+	ErrConnect = 2
+	// ErrLocalUnwrap indicates error occurs locally when parsing the response.
 	ErrLocalUnwrap = 3
-	ErrRemoteWrap  = 4
-	ErrFetchData   = 5
+	// ErrRemoteWrap indicates error occurs when marshal the data in bytomd.
+	ErrRemoteWrap = 4
+	// ErrFetchData indicates error occurs in bytomd.
+	ErrFetchData = 5
 )
 
 // commandError is an error used to signal different error situations in command handling.
@@ -103,6 +110,7 @@ func AddCommands() {
 
 	BytomcliCmd.AddCommand(createAssetCmd)
 	BytomcliCmd.AddCommand(listAssetsCmd)
+	BytomcliCmd.AddCommand(updateAssetTagsCmd)
 
 	BytomcliCmd.AddCommand(blockHeightCmd)
 	BytomcliCmd.AddCommand(blockHashCmd)

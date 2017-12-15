@@ -13,11 +13,20 @@ import (
 
 // return network infomation
 func (bcr *BlockchainReactor) getNetInfo() []byte {
-	net, err := stdjson.Marshal(bcr.sw)
+	type netInfo struct {
+		Listening bool `json:"listening"`
+		Syncing   bool `json:"syncing"`
+		PeerCount int  `json:"peer_count"`
+	}
+	net := &netInfo{}
+	net.Listening = bcr.sw.IsListening()
+	net.Syncing = bcr.blockKeeper.IsCaughtUp()
+	net.PeerCount = len(bcr.sw.Peers().List())
+	ret, err := stdjson.Marshal(net)
 	if err != nil {
 		return resWrapper(nil, err)
 	}
-	data := []string{string(net)}
+	data := []string{string(ret)}
 	return resWrapper(data)
 }
 
@@ -45,11 +54,13 @@ func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) []byte {
 	return resWrapper(data)
 }
 
+// TxJSON is used for getting block by hash.
 type TxJSON struct {
 	Inputs  []bc.Entry `json:"inputs"`
 	Outputs []bc.Entry `json:"outputs"`
 }
 
+// GetBlockByHashJSON is actually a block, include block header and transactions.
 type GetBlockByHashJSON struct {
 	BlockHeader  *bc.BlockHeader `json:"block_header"`
 	Transactions []*TxJSON       `json:"transactions"`
