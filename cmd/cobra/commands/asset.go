@@ -39,6 +39,8 @@ var createAssetCmd = &cobra.Command{
 		ins.RootXPubs = []chainkd.XPub{xpub}
 		ins.Quorum = assetQuorum
 		ins.Alias = args[0]
+		ins.AccessToken = assetToken
+
 		if len(assetTags) != 0 {
 			tags := strings.Split(assetTags, ":")
 			if len(tags) != 2 {
@@ -47,6 +49,7 @@ var createAssetCmd = &cobra.Command{
 			}
 			ins.Tags = map[string]interface{}{tags[0]: tags[1]}
 		}
+
 		if len(assetDefiniton) != 0 {
 			definition := strings.Split(assetDefiniton, ":")
 			if len(definition) != 2 {
@@ -55,7 +58,6 @@ var createAssetCmd = &cobra.Command{
 			}
 			ins.Definition = map[string]interface{}{definition[0]: definition[1]}
 		}
-		ins.AccessToken = assetToken
 
 		data, exitCode := clientCall("/create-asset", &ins)
 
@@ -97,6 +99,7 @@ var listAssetsCmd = &cobra.Command{
 			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, key)
 			idx++
 		}
+
 		if response.Last == false {
 			in.After = response.Next.After
 			goto LOOP

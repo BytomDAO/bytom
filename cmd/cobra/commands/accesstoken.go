@@ -1,51 +1,19 @@
 package commands
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 )
-
-//Token describe the access token.
-type Token struct {
-	ID      string    `json:"id,omitempty"`
-	Token   string    `json:"token,omitempty"`
-	Type    string    `json:"type,omitempty"`
-	Secret  string    `json:"secret,omitempty"`
-	Created time.Time `json:"created_at,omitempty"`
-}
-
-type resp struct {
-	Status string `json:"status,omitempty"`
-	Msg    string `json:"msg,omitempty"`
-	Data   string `json:"data,omitempty"`
-}
-
-func parseresp(response interface{}, pattern interface{}) error {
-	data, err := base64.StdEncoding.DecodeString(response.(string))
-	if err != nil {
-		jww.ERROR.Println("response format error")
-		return err
-	}
-
-	if err := json.Unmarshal(data, pattern); err != nil {
-		jww.ERROR.Println("result not json format", err)
-		return err
-	}
-
-	return nil
-}
 
 var createAccessTokenCmd = &cobra.Command{
 	Use:   "create-access-token",
 	Short: "Create a new access token",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		var token Token
+		var token accessToken
 		token.ID = args[0]
 
 		data, exitCode := clientCall("/create-access-token", &token)
@@ -99,7 +67,7 @@ var deleteAccessTokenCmd = &cobra.Command{
 	Short: "delete an access token",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		var token Token
+		var token accessToken
 		token.ID = args[0]
 
 		_, exitCode := clientCall("/delete-access-token", &token)
@@ -115,7 +83,7 @@ var checkAccessTokenCmd = &cobra.Command{
 	Short: "check an access token",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		var token Token
+		var token accessToken
 		token.ID = args[0]
 		token.Secret = args[1]
 

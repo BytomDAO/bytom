@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"time"
+
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
 )
@@ -55,4 +57,12 @@ type respTxFeed struct {
 	Status string `json:"status,omitempty"`
 	Msg    string `json:"msg,omitempty"`
 	Data   txFeed `json:"data,omitempty"`
+}
+
+type accessToken struct {
+	ID      string    `json:"id,omitempty"`
+	Token   string    `json:"token,omitempty"`
+	Type    string    `json:"type,omitempty"`
+	Secret  string    `json:"secret,omitempty"`
+	Created time.Time `json:"created_at,omitempty"`
 }

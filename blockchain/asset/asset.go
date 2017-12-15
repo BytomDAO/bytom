@@ -21,7 +21,14 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
-const maxAssetCache = 1000
+const (
+	maxAssetCache = 1000
+	assetPrefix   = "ASS:"
+)
+
+func assetKey(name string) []byte {
+	return []byte(assetPrefix + name)
+}
 
 var (
 	ErrDuplicateAlias = errors.New("duplicate asset alias")
@@ -91,6 +98,7 @@ func (asset *Asset) SetDefinition(def map[string]interface{}) error {
 // Define defines a new Asset.
 func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}, clientToken string) (*Asset, error) {
 	// TODO: if the alias is duplicated
+
 	assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, err
@@ -124,13 +132,12 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		asset.Alias = &alias
 	}
 
-	assetID := []byte(asset.AssetID.String())
 	ass, err := json.MarshalIndent(asset, "", " ")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal asset")
 	}
 	if len(ass) > 0 {
-		reg.db.Set(assetID, ass)
+		reg.db.Set(assetKey(asset.AssetID.String()), ass)
 	}
 
 	return asset, nil
@@ -191,7 +198,7 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 		return cached.(*Asset), nil
 	}
 
-	bytes := reg.db.Get([]byte(id.String()))
+	bytes := reg.db.Get(assetKey(id.String()))
 	if bytes == nil {
 		return nil, errors.New("no exit this asset")
 	}
