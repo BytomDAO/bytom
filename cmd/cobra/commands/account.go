@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -139,5 +140,24 @@ var updateAccountTagsCmd = &cobra.Command{
 		}
 
 		jww.FEEDBACK.Println("Successfully update account tags")
+	},
+}
+
+var createAccountReceiverCmd = &cobra.Command{
+	Use:   "create-account-receiver <accountID | alias>",
+	Short: "Create an account receiver control program",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+
+		var ins = struct {
+			AccountInfo string    `json:"account_info"`
+			ExpiresAt   time.Time `json:"expires_at"`
+		}{AccountInfo: args[0]}
+
+		data, exitCode := clientCall("/create-account-receiver", &ins)
+		if exitCode != Success {
+			os.Exit(exitCode)
+		}
+		jww.FEEDBACK.Println(data)
 	},
 }

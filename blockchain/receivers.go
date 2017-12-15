@@ -9,15 +9,12 @@ import (
 func (a *BlockchainReactor) createAccountReceiver(ctx context.Context, ins struct {
 	AccountInfo string    `json:"account_info"`
 	ExpiresAt   time.Time `json:"expires_at"`
-}) interface{} {
-	var response interface{}
-
+}) []byte {
 	receiver, err := a.accounts.CreateReceiver(nil, ins.AccountInfo, ins.ExpiresAt)
 	if err != nil {
-		response = err
-	} else {
-		response = receiver
+		return resWrapper(nil, err)
 	}
 
-	return response
+	data := []string{string(receiver)}
+	return resWrapper(data)
 }
