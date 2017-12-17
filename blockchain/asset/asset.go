@@ -248,10 +248,11 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 }
 
 // ListAssets returns the accounts in the db
-func (reg *Registry) ListAssets(after string, limit int) ([]string, string, bool, error) {
+func (reg *Registry) ListAssets(after string, limit, defaultLimit int) ([]string, string, bool, error) {
 	var (
 		zafter int
 		err    error
+		last   bool
 	)
 
 	if after != "" {
@@ -283,7 +284,10 @@ func (reg *Registry) ListAssets(after string, limit int) ([]string, string, bool
 		end = zafter + limit
 	}
 
-	return assets[start:end], strconv.Itoa(end), end == len(assets), nil
+	if len(assets) == end || len(assets) < defaultLimit {
+		last = true
+	}
+	return assets[start:end], strconv.Itoa(end), last, nil
 }
 
 // serializeAssetDef produces a canonical byte representation of an asset
