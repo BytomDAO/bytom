@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"os"
 
@@ -18,7 +19,6 @@ var createTransactionFeedCmd = &cobra.Command{
 		in.Filter = args[1]
 
 		_, exitCode := clientCall("/create-transaction-feed", &in)
-
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
@@ -46,7 +46,12 @@ var listTransactionFeedsCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		rawPage := []byte(data[0])
+		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
+
 		if err := json.Unmarshal(rawPage, &response); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(ErrLocalUnwrap)
@@ -73,7 +78,6 @@ var deleteTransactionFeedCmd = &cobra.Command{
 		in.Alias = args[0]
 
 		_, exitCode := clientCall("/delete-transaction-feed", &in)
-
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
@@ -91,16 +95,21 @@ var getTransactionFeedCmd = &cobra.Command{
 		in.Alias = args[0]
 
 		data, exitCode := clientCall("/get-transaction-feed", &in)
-
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Println(data[0])
+		rawTxFeed, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
+
+		jww.FEEDBACK.Println(string(rawTxFeed))
 	},
 }
 
 var updateTransactionFeedCmd = &cobra.Command{
-	Use:   "update-transaction-feed",
+	Use:   "update-transaction-feed <alias> <fiter>",
 	Short: "Update transaction feed",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -109,7 +118,6 @@ var updateTransactionFeedCmd = &cobra.Command{
 		in.Filter = args[1]
 
 		_, exitCode := clientCall("/update-transaction-feed", &in)
-
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}

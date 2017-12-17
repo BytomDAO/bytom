@@ -19,8 +19,7 @@ func (br *BlockchainReactor) createAccessToken(ctx context.Context, x struct{ ID
 		return resWrapper(nil, err)
 	}
 
-	data := []string{*token}
-	return resWrapper(data)
+	return resWrapper(*token)
 }
 
 func (br *BlockchainReactor) listAccessTokens(ctx context.Context, query requestQuery) []byte {
@@ -45,8 +44,7 @@ func (br *BlockchainReactor) listAccessTokens(ctx context.Context, query request
 		return resWrapper(nil, err)
 	}
 
-	data := []string{string(rawPage)}
-	return resWrapper(data)
+	return resWrapper(rawPage)
 }
 
 func (br *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct{ ID, Token string }) []byte {

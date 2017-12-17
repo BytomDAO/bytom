@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"os"
 
@@ -24,7 +25,13 @@ var createKeyCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Printf("Alias: %v\nXPub: %v\nFile: %v\n", data[0], data[1], data[2])
+
+		resultMap, ok := data.(map[string]interface{})
+		if ok != true {
+			jww.ERROR.Println("invalid type assertion")
+			os.Exit(ErrLocalUnwrap)
+		}
+		jww.FEEDBACK.Printf("Alias: %v\nXPub: %v\nFile: %v\n", resultMap["alias"], resultMap["xpub"], resultMap["file"])
 	},
 }
 
@@ -71,7 +78,12 @@ var listKeysCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		rawPage := []byte(data[0])
+		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
+
 		if err := json.Unmarshal(rawPage, &response); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(ErrLocalUnwrap)

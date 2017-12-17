@@ -47,9 +47,9 @@ const (
 
 // Response describes the response standard.
 type Response struct {
-	Status string   `json:"status,omitempty"`
-	Msg    string   `json:"msg,omitempty"`
-	Data   []string `json:"data,omitempty"`
+	Status string      `json:"status,omitempty"`
+	Msg    string      `json:"msg,omitempty"`
+	Data   interface{} `json:"data,omitempty"`
 }
 
 // DefaultRawResponse is used as the default response when fail to get data.

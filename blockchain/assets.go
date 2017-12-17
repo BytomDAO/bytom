@@ -48,8 +48,8 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 	if err != nil {
 		return resWrapper(nil, err)
 	}
-	data := []string{string(res)}
-	return resWrapper(data)
+
+	return resWrapper(res)
 }
 
 // POST /update-asset-tags

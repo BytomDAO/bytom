@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"strings"
@@ -34,6 +35,7 @@ var createAssetCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var xpub chainkd.XPub
 		if err := xpub.UnmarshalText([]byte(args[1])); err != nil {
+			jww.ERROR.Println(err)
 			os.Exit(ErrLocalExe)
 		}
 
@@ -62,12 +64,16 @@ var createAssetCmd = &cobra.Command{
 		}
 
 		data, exitCode := clientCall("/create-asset", &ins)
-
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		jww.FEEDBACK.Println(data)
+		rawAsset, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
+		jww.FEEDBACK.Println(string(rawAsset))
 	},
 }
 
@@ -90,7 +96,11 @@ var listAssetsCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		rawPage := []byte(data[0])
+		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
 		if err := json.Unmarshal(rawPage, &response); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(ErrLocalUnwrap)
@@ -110,10 +120,10 @@ var listAssetsCmd = &cobra.Command{
 }
 
 var updateAssetTagsCmd = &cobra.Command{
-	Use: "update-asset-tags <assetID|alias>",
-	Short: "Add, update or delete the tags.\n" +
-		"If the tags match the pattern 'key:value', add or update them. " +
-		"If the tags match the pattern 'key:', delete them.",
+	Use:   "update-asset-tags <assetID|alias>",
+	Short: "Add, update or delete the asset tags",
+	Long: `If the tags match the pattern 'key:value', add or update them.
+If the tags match the pattern 'key:', delete them.`,
 	Args: cobra.ExactArgs(1),
 	PreRun: func(cmd *cobra.Command, args []string) {
 		cmd.MarkFlagRequired("tags")

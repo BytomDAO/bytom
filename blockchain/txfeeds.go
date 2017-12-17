@@ -24,18 +24,18 @@ func (bcr *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
 	return resWrapper(nil)
 }
 
-func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) (string, error) {
+func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) ([]byte, error) {
 	jf, err := json.Marshal(filter)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	value := bcr.txFeedTracker.DB.Get(jf)
 	if value == nil {
-		return "", errors.New("No transaction feed")
+		return nil, errors.New("No transaction feed")
 	}
 
-	return string(value), nil
+	return value, nil
 }
 
 // POST /get-transaction-feed
@@ -46,8 +46,7 @@ func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
 	if err != nil {
 		return resWrapper(nil, err)
 	}
-	data := []string{txfeed}
-	return resWrapper(data)
+	return resWrapper(txfeed)
 }
 
 // POST /delete-transaction-feed
@@ -164,6 +163,5 @@ func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context, query requestQuer
 		return resWrapper(nil, err)
 	}
 
-	data := []string{string(rawPage)}
-	return resWrapper(data)
+	return resWrapper(rawPage)
 }

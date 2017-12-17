@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"strings"
@@ -52,12 +53,17 @@ var createAccountCmd = &cobra.Command{
 		ins.AccessToken = accountToken
 
 		data, exitCode := clientCall("/create-account", &ins)
-
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		jww.FEEDBACK.Println(data)
+		rawAccount, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
+
+		jww.FEEDBACK.Println(string(rawAccount))
 	},
 }
 
@@ -80,7 +86,12 @@ var listAccountsCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		rawPage := []byte(data[0])
+		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
+
 		if err := json.Unmarshal(rawPage, &response); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(ErrLocalUnwrap)
@@ -111,10 +122,10 @@ var deleteAccountCmd = &cobra.Command{
 }
 
 var updateAccountTagsCmd = &cobra.Command{
-	Use: "update-account-tags <accountID|alias>",
-	Short: "Add, update or delete the tags.\n" +
-		"If the tags match the pattern 'key:value', add or update them. " +
-		"If the tags match the pattern 'key:', delete them.",
+	Use:   "update-account-tags <accountID|alias>",
+	Short: "Add, update or delete the account tags",
+	Long: `If the tags match the pattern 'key:value', add or update them.
+If the tags match the pattern 'key:', delete them.`,
 	Args: cobra.ExactArgs(1),
 	PreRun: func(cmd *cobra.Command, args []string) {
 		cmd.MarkFlagRequired("tags")
@@ -158,6 +169,11 @@ var createAccountReceiverCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Println(data)
+		rawReceiver, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
+		jww.FEEDBACK.Println(string(rawReceiver))
 	},
 }

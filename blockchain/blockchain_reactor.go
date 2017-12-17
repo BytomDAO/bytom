@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	stdjson "encoding/json"
-	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
@@ -22,18 +21,13 @@ func (bcr *BlockchainReactor) getNetInfo() []byte {
 	net.Listening = bcr.sw.IsListening()
 	net.Syncing = bcr.blockKeeper.IsCaughtUp()
 	net.PeerCount = len(bcr.sw.Peers().List())
-	ret, err := stdjson.Marshal(net)
-	if err != nil {
-		return resWrapper(nil, err)
-	}
-	data := []string{string(ret)}
-	return resWrapper(data)
+
+	return resWrapper(net)
 }
 
 // return best block hash
 func (bcr *BlockchainReactor) getBestBlockHash() []byte {
-	data := []string{bcr.chain.BestBlockHash().String()}
-	return resWrapper(data)
+	return resWrapper(bcr.chain.BestBlockHash().String())
 }
 
 // return block header by hash
@@ -49,9 +43,11 @@ func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) []byte {
 		return resWrapper(nil, err)
 	}
 	bcBlock := legacy.MapBlock(block)
-	header, _ := stdjson.Marshal(bcBlock.BlockHeader)
-	data := []string{string(header)}
-	return resWrapper(data)
+	header, err := stdjson.MarshalIndent(bcBlock.BlockHeader, "", " ")
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+	return resWrapper(header)
 }
 
 // TxJSON is used for getting block by hash.
@@ -101,12 +97,12 @@ func (bcr *BlockchainReactor) getBlockByHash(strHash string) []byte {
 		res.Transactions = append(res.Transactions, txJSON)
 	}
 
-	ret, err := stdjson.Marshal(res)
+	ret, err := stdjson.MarshalIndent(res, "", " ")
 	if err != nil {
 		return resWrapper(nil, err)
 	}
-	data := []string{string(ret)}
-	return resWrapper(data)
+
+	return resWrapper(ret)
 }
 
 // return block by height
@@ -138,12 +134,12 @@ func (bcr *BlockchainReactor) getBlockByHeight(height uint64) []byte {
 		res.Transactions = append(res.Transactions, txJSON)
 	}
 
-	ret, err := stdjson.Marshal(res)
+	ret, err := stdjson.MarshalIndent(res, "", " ")
 	if err != nil {
 		return DefaultRawResponse
 	}
-	data := []string{string(ret)}
-	return resWrapper(data)
+
+	return resWrapper(ret)
 }
 
 // return block transactions count by hash
@@ -164,21 +160,18 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) (i
 
 // return network  is or not listening
 func (bcr *BlockchainReactor) isNetListening() []byte {
-	data := []string{strconv.FormatBool(bcr.sw.IsListening())}
-	return resWrapper(data)
+	return resWrapper(bcr.sw.IsListening())
 }
 
 // return peer count
 func (bcr *BlockchainReactor) peerCount() []byte {
 	// TODO: use key-value instead of bare value
-	data := []string{strconv.FormatInt(int64(len(bcr.sw.Peers().List())), 16)}
-	return resWrapper(data)
+	return resWrapper(len(bcr.sw.Peers().List()))
 }
 
 // return network syncing information
 func (bcr *BlockchainReactor) isNetSyncing() []byte {
-	data := []string{strconv.FormatBool(bcr.blockKeeper.IsCaughtUp())}
-	return resWrapper(data)
+	return resWrapper(bcr.blockKeeper.IsCaughtUp())
 }
 
 // return block transactions count by height
@@ -188,31 +181,27 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) [
 		log.WithField("error", err).Error("Fail to get block by hash")
 		return DefaultRawResponse
 	}
-	data := []string{strconv.FormatInt(int64(len(legacyBlock.Transactions)), 16)}
-	log.Infof("%v", data)
-	return resWrapper(data)
+
+	return resWrapper(len(legacyBlock.Transactions))
 }
 
 // return block height
 func (bcr *BlockchainReactor) blockHeight() []byte {
-	data := []string{strconv.FormatUint(bcr.chain.Height(), 16)}
-	return resWrapper(data)
+	return resWrapper(bcr.chain.Height())
 }
 
 // return is in mining or not
 func (bcr *BlockchainReactor) isMining() []byte {
-	data := []string{strconv.FormatBool(bcr.mining.IsMining())}
-	return resWrapper(data)
+	return resWrapper(bcr.mining.IsMining())
 }
 
 // return gasRate
 func (bcr *BlockchainReactor) gasRate() []byte {
-	data := []string{strconv.FormatInt(validation.GasRate, 16)}
-	return resWrapper(data)
+	return resWrapper(validation.GasRate)
 }
 
 // wrapper json for response
-func resWrapper(data []string, errWrapper ...error) []byte {
+func resWrapper(data interface{}, errWrapper ...error) []byte {
 	var response Response
 
 	if errWrapper != nil {

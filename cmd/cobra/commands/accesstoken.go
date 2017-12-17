@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"os"
 
@@ -20,7 +21,7 @@ var createAccessTokenCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Println(data[0])
+		jww.FEEDBACK.Println(data)
 	},
 }
 
@@ -43,7 +44,12 @@ var listAccessTokenCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		rawPage := []byte(data[0])
+		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
+
 		if err := json.Unmarshal(rawPage, &response); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(ErrLocalUnwrap)
@@ -80,7 +86,7 @@ var deleteAccessTokenCmd = &cobra.Command{
 
 var checkAccessTokenCmd = &cobra.Command{
 	Use:   "check-access-token <tokenID> <secret>",
-	Short: "check an access token",
+	Short: "Check an access token",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		var token accessToken

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"encoding/base64"
 	"os"
 	"strconv"
 
@@ -26,8 +27,7 @@ var blockHashCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		hash := data[0]
-		jww.FEEDBACK.Printf("best block hash: %v\n", hash)
+		jww.FEEDBACK.Printf("best block hash: %v\n", data)
 	},
 }
 
@@ -40,12 +40,8 @@ var blockHeightCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		height, err := strconv.ParseInt(data[0], 16, 64)
-		if err != nil {
-			jww.ERROR.Println("Fail to parse response data")
-			os.Exit(ErrLocalUnwrap)
-		}
-		jww.FEEDBACK.Printf("block height: %v\n", height)
+
+		jww.FEEDBACK.Printf("block height: %v\n", data)
 	},
 }
 
@@ -58,7 +54,13 @@ var getBlockByHashCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Printf("%v\n", data)
+
+		rawBlock, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
+		jww.FEEDBACK.Printf("%v\n", string(rawBlock))
 	},
 }
 
@@ -71,7 +73,12 @@ var getBlockHeaderByHashCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Printf("block header: %v\n", data)
+		rawHeader, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
+		jww.FEEDBACK.Printf("block header: %v\n", string(rawHeader))
 	},
 }
 
@@ -96,19 +103,22 @@ var getBlockByHeightCmd = &cobra.Command{
 	Short: "Get a whole block matching the given height",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		ui64, err := strconv.ParseUint(args[0], 10, 64)
+		height, err := strconv.ParseUint(args[0], 10, 64)
 		if err != nil {
 			jww.ERROR.Printf("Invalid height value")
 			os.Exit(ErrLocalExe)
 		}
 
-		data, exitCode := clientCall("/get-block-by-height", ui64)
+		data, exitCode := clientCall("/get-block-by-height", height)
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		for idx, d := range data {
-			jww.FEEDBACK.Printf("%d : %v\n", idx, string(d))
+		rawBlock, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
 		}
+		jww.FEEDBACK.Printf("%v\n", string(rawBlock))
 	},
 }
 
@@ -127,11 +137,7 @@ var getBlockTransactionsCountByHeightCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		cnt, err := strconv.ParseInt(data[0], 16, 64)
-		if err != nil {
-			jww.ERROR.Println("Fail to parse response data")
-			os.Exit(ErrLocalUnwrap)
-		}
-		jww.FEEDBACK.Printf("transactions count: %v\n", cnt)
+
+		jww.FEEDBACK.Printf("transactions count: %v\n", data)
 	},
 }

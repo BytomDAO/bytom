@@ -2,7 +2,6 @@ package commands
 
 import (
 	"os"
-	"strconv"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -17,11 +16,6 @@ var gasRateCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		i, err := strconv.ParseInt(data[0], 16, 64)
-		if err != nil {
-			jww.ERROR.Println("Fail to parse response data")
-			os.Exit(ErrLocalUnwrap)
-		}
-		jww.FEEDBACK.Printf("gas rate: %v\n", i)
+		jww.FEEDBACK.Printf("gas rate: %v\n", data)
 	},
 }

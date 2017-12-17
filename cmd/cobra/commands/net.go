@@ -2,7 +2,6 @@ package commands
 
 import (
 	"os"
-	"strconv"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -17,8 +16,14 @@ var netInfoCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		// !!!
-		jww.FEEDBACK.Printf("net info: %v\n", data)
+
+		resultMap, ok := data.(map[string]interface{})
+		if ok != true {
+			jww.ERROR.Println("invalid type assertion")
+			os.Exit(ErrLocalUnwrap)
+		}
+		jww.FEEDBACK.Printf("listening:%v\nsyncing:%v\npeer_count:%v\n",
+			resultMap["listening"], resultMap["syncing"], resultMap["peer_count"])
 	},
 }
 var netListeningCmd = &cobra.Command{
@@ -29,12 +34,8 @@ var netListeningCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		res, err := strconv.ParseBool(data[0])
-		if err != nil {
-			jww.ERROR.Println("Fail to parse response data")
-			os.Exit(ErrLocalUnwrap)
-		}
-		jww.FEEDBACK.Printf("net listening: %v\n", res)
+
+		jww.FEEDBACK.Printf("net listening: %v\n", data)
 	},
 }
 
@@ -47,12 +48,8 @@ var peerCountCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		i, err := strconv.ParseInt(data[0], 16, 64)
-		if err != nil {
-			jww.ERROR.Println("Fail to parse response data")
-			os.Exit(ErrLocalUnwrap)
-		}
-		jww.FEEDBACK.Printf("peer count: %v\n", i)
+
+		jww.FEEDBACK.Printf("peer count: %v\n", data)
 	},
 }
 
@@ -65,11 +62,6 @@ var netSyncingCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		res, err := strconv.ParseBool(data[0])
-		if err != nil {
-			jww.ERROR.Println("Fail to parse response data")
-			os.Exit(ErrLocalUnwrap)
-		}
-		jww.FEEDBACK.Printf("net syncing: %v\n", res)
+		jww.FEEDBACK.Printf("net syncing: %v\n", data)
 	},
 }

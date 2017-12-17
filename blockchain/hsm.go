@@ -27,8 +27,7 @@ func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ A
 	if err != nil {
 		return resWrapper(nil, err)
 	}
-	data := []string{xpub.Alias, xpub.XPub.String(), xpub.File}
-	return resWrapper(data)
+	return resWrapper(xpub)
 }
 
 func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query requestQuery) []byte {
@@ -58,8 +57,7 @@ func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query request
 		return resWrapper(nil, err)
 	}
 
-	data := []string{string(rawPage)}
-	return resWrapper(data)
+	return resWrapper(rawPage)
 }
 
 func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {

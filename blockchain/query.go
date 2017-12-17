@@ -53,18 +53,7 @@ func (bcr *BlockchainReactor) listAccounts(ctx context.Context, query requestQue
 		return resWrapper(nil, err)
 	}
 
-	data := []string{string(rawPage)}
-	return resWrapper(data)
-}
-
-//
-// POST /delete-account
-func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, accountInfo string) []byte {
-
-	if err := bcr.accounts.DeleteAccount(accountInfo); err != nil {
-		return resWrapper(nil, err)
-	}
-	return resWrapper(nil)
+	return resWrapper(rawPage)
 }
 
 //
@@ -98,13 +87,11 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, query requestQuery
 		return resWrapper(nil, err)
 	}
 
-	data := []string{string(rawPage)}
-	return resWrapper(data)
+	return resWrapper(rawPage)
 }
 
 //GetAccountUTXOs return all account unspent outputs
-func (bcr *BlockchainReactor) GetAccountUTXOs() []account.UTXO {
-
+func (bcr *BlockchainReactor) getAccountUTXOs() []account.UTXO {
 	var (
 		accountUTXO  = account.UTXO{}
 		accountUTXOs = make([]account.UTXO, 0)
@@ -132,7 +119,7 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery)
 		Amount  uint64
 	}
 
-	accountUTXOs := bcr.GetAccountUTXOs()
+	accountUTXOs := bcr.getAccountUTXOs()
 	accBalance := make(map[string]map[string]uint64)
 	response := make([]string, 0)
 
@@ -216,7 +203,7 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in request
 		restring = ""
 	)
 
-	accountUTXOs := bcr.GetAccountUTXOs()
+	accountUTXOs := bcr.getAccountUTXOs()
 
 	for _, res := range accountUTXOs {
 

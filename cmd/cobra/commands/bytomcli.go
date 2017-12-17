@@ -182,7 +182,7 @@ func mustRPCClient() *rpc.Client {
 	}
 }
 
-func clientCall(path string, req ...interface{}) ([]string, int) {
+func clientCall(path string, req ...interface{}) (interface{}, int) {
 	var rawResponse []byte
 	var response blockchain.Response
 	var request interface{}

@@ -2,7 +2,6 @@ package commands
 
 import (
 	"os"
-	"strconv"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -17,11 +16,7 @@ var isMiningCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		res, err := strconv.ParseBool(data[0])
-		if err != nil {
-			jww.ERROR.Println("Fail to parse response data")
-			os.Exit(ErrLocalUnwrap)
-		}
-		jww.FEEDBACK.Printf("is mining: %v\n", res)
+
+		jww.FEEDBACK.Printf("is mining: %v\n", data)
 	},
 }

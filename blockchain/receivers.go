@@ -15,6 +15,5 @@ func (a *BlockchainReactor) createAccountReceiver(ctx context.Context, ins struc
 		return resWrapper(nil, err)
 	}
 
-	data := []string{string(receiver)}
-	return resWrapper(data)
+	return resWrapper(receiver)
 }
