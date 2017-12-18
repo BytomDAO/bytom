@@ -19,23 +19,23 @@
 package pseudohsm
 
 import (
-	"fmt"
-	"github.com/rjeczalik/notify"
-	"time"
+	//"fmt"
+	//"github.com/rjeczalik/notify"
+	//"time"
 )
 
 type watcher struct {
 	kc       *keyCache
 	starting bool
 	running  bool
-	ev       chan notify.EventInfo
+	//ev       chan notify.EventInfo
 	quit     chan struct{}
 }
 
 func newWatcher(kc *keyCache) *watcher {
 	return &watcher{
 		kc:   kc,
-		ev:   make(chan notify.EventInfo, 10),
+		//ev:   make(chan notify.EventInfo, 10),
 		quit: make(chan struct{}),
 	}
 }
@@ -63,6 +63,7 @@ func (w *watcher) loop() {
 		w.kc.mu.Unlock()
 	}()
 
+/*
 	err := notify.Watch(w.kc.keydir, w.ev, notify.All)
 	if err != nil {
 		fmt.Printf("can't watch %s: %v", w.kc.keydir, err)
@@ -108,4 +109,5 @@ func (w *watcher) loop() {
 			}
 		}
 	}
+	*/
 }
