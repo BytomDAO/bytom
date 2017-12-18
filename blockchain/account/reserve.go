@@ -240,8 +240,11 @@ func (re *reserver) ExpireReservations(ctx context.Context) error {
 }
 
 func (re *reserver) checkUTXO(u *utxo) bool {
-	_, s := re.c.State()
-	return s.Tree.Contains(u.OutputID.Bytes())
+	utxo, err := re.c.GetUtxo(&u.OutputID)
+	if err != nil {
+		return false
+	}
+	return !utxo.Spend
 }
 
 func (re *reserver) source(src source) *sourceReserver {
