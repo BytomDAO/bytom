@@ -1,13 +1,13 @@
 package txdb
 
 import (
-	"blockchain/testutil"
 	"os"
 	"testing"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/txdb/storage"
+	"github.com/bytom/testutil"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/state"
 )
