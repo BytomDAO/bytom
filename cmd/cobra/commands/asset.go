@@ -29,7 +29,7 @@ var (
 )
 
 var createAssetCmd = &cobra.Command{
-	Use:   "create-asset <asset> <xpub>",
+	Use:   "create-asset <alias> <xpub>",
 	Short: "Create an asset",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {

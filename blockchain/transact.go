@@ -100,28 +100,21 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) 
 }
 
 // POST /build-transaction
-func (a *BlockchainReactor) build(ctx context.Context, buildReqs []*BuildRequest) (interface{}, error) {
-	responses := make([]interface{}, len(buildReqs))
-	var wg sync.WaitGroup
-	wg.Add(len(responses))
+func (a *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) []byte {
 
-	for i := 0; i < len(responses); i++ {
-		go func(i int) {
-			subctx := reqid.NewSubContext(ctx, reqid.New())
-			defer wg.Done()
-			defer batchRecover(subctx, &responses[i])
+	subctx := reqid.NewSubContext(ctx, reqid.New())
 
-			tmpl, err := a.buildSingle(subctx, buildReqs[i])
-			if err != nil {
-				responses[i] = err
-			} else {
-				responses[i] = tmpl
-			}
-		}(i)
+	tmpl, err := a.buildSingle(subctx, buildReqs)
+	if err != nil {
+		return resWrapper(nil, err)
 	}
 
-	wg.Wait()
-	return responses, nil
+	rawTmpl, err := json.Marshal(tmpl)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+
+	return resWrapper(rawTmpl)
 }
 
 func (a *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template, waitUntil string) (interface{}, error) {

@@ -117,6 +117,8 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(listUnspentOutputs)
 	BytomcliCmd.AddCommand(listBalances)
 
+	BytomcliCmd.AddCommand(buildTransaction)
+
 	BytomcliCmd.AddCommand(blockHeightCmd)
 	BytomcliCmd.AddCommand(blockHashCmd)
 	BytomcliCmd.AddCommand(getBlockByHashCmd)

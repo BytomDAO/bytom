@@ -40,9 +40,8 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 	var errs []error
 	for i, action := range actions {
 		err := action.Build(ctx, &builder)
-
-		log.WithFields(log.Fields{"action": action, "error": err}).Info("Loop tx's action")
 		if err != nil {
+			log.WithFields(log.Fields{"action index": i, "error": err}).Error("Loop tx's action")
 			err = errors.WithData(err, "index", i)
 			errs = append(errs, err)
 		}
@@ -71,7 +70,6 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 
 	return tpl, nil
 }
-
 
 func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
 	for i, sigInst := range tpl.SigningInstructions {
