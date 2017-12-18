@@ -3,13 +3,11 @@ package blockchain
 import (
 	"context"
 	"encoding/json"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/txbuilder"
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/reqid"
@@ -117,17 +115,17 @@ func (a *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) 
 	return resWrapper(rawTmpl)
 }
 
-func (a *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template, waitUntil string) (interface{}, error) {
+func (a *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {
 	if tpl.Transaction == nil {
 		return nil, errors.Wrap(txbuilder.ErrMissingRawTx)
 	}
 
-	err := a.finalizeTxWait(ctx, tpl, waitUntil)
+	err := txbuilder.FinalizeTx(ctx, a.chain, tpl.Transaction)
 	if err != nil {
 		return nil, errors.Wrapf(err, "tx %s", tpl.Transaction.ID.String())
 	}
 
-	return map[string]string{"id": tpl.Transaction.ID.String()}, nil
+	return map[string]string{"txid": tpl.Transaction.ID.String()}, nil
 }
 
 // finalizeTxWait calls FinalizeTx and then waits for confirmation of
@@ -197,41 +195,15 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 	}
 }
 
-type SubmitArg struct {
-	Transactions []txbuilder.Template
-	Wait         chainjson.Duration
-	WaitUntil    string `json:"wait_until"` // values none, confirmed, processed. default: processed
-}
-
 // POST /submit-transaction
-func (a *BlockchainReactor) submit(ctx context.Context, x SubmitArg) (interface{}, error) {
-	// Setup a timeout for the provided wait duration.
-	timeout := x.Wait.Duration
-	if timeout <= 0 {
-		timeout = 30 * time.Second
-	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (a *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Template) []byte {
 
-	responses := make([]interface{}, len(x.Transactions))
-	var wg sync.WaitGroup
-	wg.Add(len(responses))
-	for i := range responses {
-		go func(i int) {
-			subctx := reqid.NewSubContext(ctx, reqid.New())
-			defer wg.Done()
-			defer batchRecover(subctx, &responses[i])
-
-			tx, err := a.submitSingle(subctx, &x.Transactions[i], x.WaitUntil)
-			log.WithFields(log.Fields{"err": err, "tx": tx}).Info("submit single tx")
-			if err != nil {
-				responses[i] = err
-			} else {
-				responses[i] = tx
-			}
-		}(i)
+	txid, err := a.submitSingle(nil, tpl)
+	if err != nil {
+		log.WithField("err", err).Error("submit single tx")
+		return resWrapper(nil, err)
 	}
 
-	wg.Wait()
-	return responses, nil
+	log.WithField("txid", txid).Info("submit single tx")
+	return resWrapper(txid)
 }

@@ -73,19 +73,21 @@ func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 
 func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
 	Auth string
-	Txs  []txbuilder.Template `json:"transactions"`
-}) interface{} {
-	resp := make([]interface{}, len(x.Txs))
-	for i, tx := range x.Txs {
-		if err := txbuilder.Sign(ctx, &tx, nil, x.Auth, a.pseudohsmSignTemplate); err != nil {
-			log.WithFields(log.Fields{"tx": tx, "build err": err}).Error("fail on sign transaction.")
-			resp[i] = errorFormatter.Format(err)
-		} else {
-			resp[i] = tx
-		}
+	Txs  txbuilder.Template `json:"transaction"`
+}) []byte {
+	var err error
+	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Auth, a.pseudohsmSignTemplate); err != nil {
+		log.WithField("build err", err).Error("fail on sign transaction.")
+		return resWrapper(nil, err)
 	}
-	log.WithField("resp", resp).Info("Sign Transaction complete.")
-	return resp
+
+	rawSign, err := json.Marshal(x.Txs)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+
+	log.Info("Sign Transaction complete.")
+	return resWrapper(&rawSign)
 }
 
 func (a *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {

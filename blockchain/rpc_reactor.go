@@ -50,7 +50,6 @@ func (bcr *BlockchainReactor) BuildHandler() {
 		m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
 		m.Handle("/list-balances", jsonHandler(bcr.listBalances))
 		m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
-		m.Handle("/sign-transactions", jsonHandler(bcr.pseudohsmSignTemplates))
 	} else {
 		log.Warn("Please enable wallet")
 	}
@@ -58,6 +57,9 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/", alwaysError(errors.New("not Found")))
 
 	m.Handle("/build-transaction", jsonHandler(bcr.build))
+	m.Handle("/sign-transaction", jsonHandler(bcr.pseudohsmSignTemplates))
+	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
+
 	m.Handle("/create-control-program", jsonHandler(bcr.createControlProgram))
 	m.Handle("/create-transaction-feed", jsonHandler(bcr.createTxFeed))
 	m.Handle("/get-transaction-feed", jsonHandler(bcr.getTxFeed))
@@ -66,7 +68,6 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/list-transaction-feeds", jsonHandler(bcr.listTxFeeds))
 	m.Handle("/list-unspent-outputs", jsonHandler(bcr.listUnspentOutputs))
 	m.Handle("/info", jsonHandler(bcr.info))
-	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
 
 	m.Handle("/create-access-token", jsonHandler(bcr.createAccessToken))
 	m.Handle("/list-access-tokens", jsonHandler(bcr.listAccessTokens))

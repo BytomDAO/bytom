@@ -11,10 +11,11 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/bytom/blockchain"
+	"github.com/bytom/blockchain/txbuilder"
 )
 
 //BTMGAS
-const BTMGAS = "2000000"
+const BTMGAS = "20000000"
 
 func init() {
 	buildTransaction.PersistentFlags().StringVarP(&buildType, "type", "t", "",
@@ -23,7 +24,11 @@ func init() {
 		"", "accountID of receiver")
 	buildTransaction.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r",
 		"", "program of receiver")
-	buildTransaction.PersistentFlags().BoolVarP(&pretty, "pretty", "p", false,
+	buildTransaction.PersistentFlags().BoolVar(&pretty, "pretty", false,
+		"pretty print json result")
+	SignTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "",
+		"password of the account which sign these transaction(s)")
+	SignTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false,
 		"pretty print json result")
 }
 
@@ -31,6 +36,7 @@ var (
 	buildType         string
 	receiverAccountID string
 	receiverProgram   string
+	password          string
 	pretty            bool
 )
 
@@ -111,7 +117,79 @@ var buildTransaction = &cobra.Command{
 			jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, prettyJSON.String())
 			return
 		}
-		jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, string(rawTemplate))
+		jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, rawTemplate)
+	},
+}
+
+var SignTransactionCmd = &cobra.Command{
+	Use:   "sign-transaction  <json templates>",
+	Short: "Sign transaction templates with account password",
+	Args:  cobra.ExactArgs(1),
+	PreRun: func(cmd *cobra.Command, args []string) {
+		cmd.MarkFlagRequired("password")
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		template := txbuilder.Template{}
+
+		err := json.Unmarshal([]byte(args[0]), &template)
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalExe)
+		}
+
+		var req = struct {
+			Auth string
+			Txs  txbuilder.Template `json:"transaction"`
+		}{Auth: password, Txs: template}
+
+		jww.FEEDBACK.Printf("\n\n")
+		data, exitCode := clientCall("/sign-transaction", &req)
+		if exitCode != Success {
+			os.Exit(exitCode)
+		}
+
+		rawSign, err := base64.StdEncoding.DecodeString(data.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalUnwrap)
+		}
+
+		if pretty {
+			var prettyJSON bytes.Buffer
+			err := json.Indent(&prettyJSON, rawSign, "", " ")
+			if err != nil {
+				jww.ERROR.Println(err)
+				os.Exit(ErrLocalUnwrap)
+			}
+			jww.FEEDBACK.Printf("\nSign Template:\n%s\n", prettyJSON.String())
+			return
+		}
+
+		jww.FEEDBACK.Printf("\nSign Template:\n%s\n", string(rawSign))
+	},
+}
+
+var SubmitTransactionCmd = &cobra.Command{
+	Use:   "submit-transaction  <signed json template>",
+	Short: "Submit signed transaction template",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		template := txbuilder.Template{}
+
+		err := json.Unmarshal([]byte(args[0]), &template)
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalExe)
+		}
+
+		jww.FEEDBACK.Printf("\n\n")
+		data, exitCode := clientCall("/submit-transaction", &template)
+		if exitCode != Success {
+			os.Exit(exitCode)
+		}
+
+		result := data.(map[string]interface{})
+		jww.FEEDBACK.Printf("\nSubmit txid:%v\n", result["txid"])
 	},
 }
 
