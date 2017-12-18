@@ -20,6 +20,9 @@ var runNodeCmd = &cobra.Command{
 
 func init() {
 	runNodeCmd.Flags().String("prof_laddr", config.ProfListenAddress, "Use http to profile bytomd programs")
+	runNodeCmd.Flags().Bool("mining", config.Mining, "Enable mining")
+
+	runNodeCmd.Flags().Bool("wallet.enable", config.Wallet.Enable, "Enable wallet")
 
 	// p2p flags
 	runNodeCmd.Flags().String("p2p.laddr", config.P2P.ListenAddress, "Node listen address. (0.0.0.0:0 means any interface, any port)")
@@ -29,7 +32,6 @@ func init() {
 	runNodeCmd.Flags().Int("p2p.max_num_peers", config.P2P.MaxNumPeers, "Set max num peers")
 	runNodeCmd.Flags().Int("p2p.handshake_timeout", config.P2P.HandshakeTimeout, "Set handshake timeout")
 	runNodeCmd.Flags().Int("p2p.dial_timeout", config.P2P.DialTimeout, "Set dial timeout")
-	runNodeCmd.Flags().Bool("wallet.enable", config.Wallet.Enable, "Enable wallet")
 
 	RootCmd.AddCommand(runNodeCmd)
 }

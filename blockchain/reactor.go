@@ -1,11 +1,11 @@
 package blockchain
 
 import (
-	"fmt"
-	"time"
 	"context"
-	"reflect"
+	"fmt"
 	"net/http"
+	"reflect"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -70,6 +70,7 @@ type BlockchainReactor struct {
 	sw            *p2p.Switch
 	handler       http.Handler
 	evsw          types.EventSwitch
+	miningEnable  bool
 }
 
 func batchRecover(ctx context.Context, v *interface{}) {
@@ -94,7 +95,6 @@ func batchRecover(ctx context.Context, v *interface{}) {
 	}
 }
 
-
 func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"is_configured": false,
@@ -116,7 +116,6 @@ func maxBytes(h http.Handler) http.Handler {
 		h.ServeHTTP(w, req)
 	})
 }
-
 
 // Used as a request object for api queries
 type requestQuery struct {
@@ -158,7 +157,7 @@ type page struct {
 	LastPage bool         `json:"last_page"`
 }
 
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *BlockchainReactor {
 	mining := cpuminer.NewCPUMiner(chain, accounts, txPool)
 	bcR := &BlockchainReactor{
 		chain:         chain,
@@ -173,6 +172,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 		hsm:           hsm,
 		txFeedTracker: txfeeds,
 		accessTokens:  accessTokens,
+		miningEnable:  miningEnable,
 	}
 	bcR.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcR)
 	return bcR
@@ -183,7 +183,9 @@ func (bcR *BlockchainReactor) OnStart() error {
 	bcR.BaseReactor.OnStart()
 	bcR.BuildHander()
 
-	bcR.mining.Start()
+	if bcR.miningEnable {
+		bcR.mining.Start()
+	}
 	go bcR.syncRoutine()
 	return nil
 }
@@ -191,7 +193,10 @@ func (bcR *BlockchainReactor) OnStart() error {
 // OnStop implements BaseService
 func (bcR *BlockchainReactor) OnStop() {
 	bcR.BaseReactor.OnStop()
-	bcR.mining.Stop()
+	if bcR.miningEnable {
+		bcR.mining.Stop()
+	}
+	bcR.blockKeeper.Stop()
 }
 
 // GetChannels implements Reactor
@@ -249,7 +254,7 @@ func (bcR *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		bcR.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
 
 	case *StatusRequestMessage:
-		block, _ := bcR.chain.State()
+		block := bcR.chain.BestBlock()
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 
 	case *StatusResponseMessage:
@@ -281,11 +286,13 @@ func (bcR *BlockchainReactor) syncRoutine() {
 		case _ = <-statusUpdateTicker.C:
 			go bcR.BroadcastStatusResponse()
 
-			// mining if and only if block sync is finished
-			if bcR.blockKeeper.IsCaughtUp() {
-				bcR.mining.Start()
-			} else {
-				bcR.mining.Stop()
+			if bcR.miningEnable {
+				// mining if and only if block sync is finished
+				if bcR.blockKeeper.IsCaughtUp() {
+					bcR.mining.Start()
+				} else {
+					bcR.mining.Stop()
+				}
 			}
 		case <-bcR.Quit:
 			return
@@ -293,10 +300,9 @@ func (bcR *BlockchainReactor) syncRoutine() {
 	}
 }
 
-
 // BroadcastStatusRequest broadcasts `BlockStore` height.
 func (bcR *BlockchainReactor) BroadcastStatusResponse() {
-	block, _ := bcR.chain.State()
+	block := bcR.chain.BestBlock()
 	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 }
 

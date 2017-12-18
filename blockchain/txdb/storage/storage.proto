@@ -1,0 +1,19 @@
+syntax = "proto3";
+option go_package = "storage";
+package chain.core.txdb.internal.storage;
+
+message UtxoEntry {
+  bool   isCoinBase  = 1;
+  uint64 blockHeight = 2;
+  bool   spend       = 3;
+}
+
+// Mainchain represents a mainchain of the blockchain
+message Mainchain {
+
+  repeated Hash hashs = 1;
+
+  message Hash {
+    bytes key = 1;
+  }
+}

@@ -60,13 +60,18 @@ func (c *Chain) ConnectBlock(block *legacy.Block) error {
 }
 
 func (c *Chain) connectBlock(block *legacy.Block) error {
-	newSnapshot := state.Copy(c.state.snapshot)
-	if err := newSnapshot.ApplyBlock(legacy.MapBlock(block)); err != nil {
+	bcBlock := legacy.MapBlock(block)
+	utxoView := state.NewUtxoViewpoint()
+
+	if err := c.store.GetTransactionsUtxo(utxoView, bcBlock.Transactions); err != nil {
+		return err
+	}
+	if err := utxoView.ApplyBlock(bcBlock); err != nil {
 		return err
 	}
 
 	blockHash := block.Hash()
-	if err := c.setState(block, newSnapshot, map[uint64]*bc.Hash{block.Height: &blockHash}); err != nil {
+	if err := c.setState(block, utxoView, map[uint64]*bc.Hash{block.Height: &blockHash}); err != nil {
 		return err
 	}
 
@@ -95,24 +100,32 @@ func (c *Chain) getReorganizeBlocks(block *legacy.Block) ([]*legacy.Block, []*le
 
 func (c *Chain) reorganizeChain(block *legacy.Block) error {
 	attachBlocks, detachBlocks := c.getReorganizeBlocks(block)
-	newSnapshot := state.Copy(c.state.snapshot)
+	utxoView := state.NewUtxoViewpoint()
 	chainChanges := map[uint64]*bc.Hash{}
 
 	for _, d := range detachBlocks {
-		if err := newSnapshot.DetachBlock(legacy.MapBlock(d)); err != nil {
+		detachBlock := legacy.MapBlock(d)
+		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
+			return err
+		}
+		if err := utxoView.DetachBlock(detachBlock); err != nil {
 			return err
 		}
 	}
 
 	for _, a := range attachBlocks {
-		if err := newSnapshot.ApplyBlock(legacy.MapBlock(a)); err != nil {
+		attachBlock := legacy.MapBlock(a)
+		if err := c.store.GetTransactionsUtxo(utxoView, attachBlock.Transactions); err != nil {
+			return err
+		}
+		if err := utxoView.ApplyBlock(attachBlock); err != nil {
 			return err
 		}
 		aHash := a.Hash()
 		chainChanges[a.Height] = &aHash
 	}
 
-	return c.setState(block, newSnapshot, chainChanges)
+	return c.setState(block, utxoView, chainChanges)
 }
 
 // SaveBlock will validate and save block into storage
