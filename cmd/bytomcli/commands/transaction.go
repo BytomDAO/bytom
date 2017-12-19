@@ -14,16 +14,13 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 )
 
-//BTMGAS
-const BTMGAS = "20000000"
-
 func init() {
 	buildTransaction.PersistentFlags().StringVarP(&buildType, "type", "t", "",
-		"build transaction template type,invalid 'issue','spend','receiver'")
-	buildTransaction.PersistentFlags().StringVarP(&receiverAccountID, "account", "a",
-		"", "accountID of receiver")
+		"transaction type, valid types: 'issue', 'spend'")
 	buildTransaction.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r",
 		"", "program of receiver")
+	buildTransaction.PersistentFlags().StringVarP(&btmGas, "gas", "g",
+		"20000000", "program of receiver")
 	buildTransaction.PersistentFlags().BoolVar(&pretty, "pretty", false,
 		"pretty print json result")
 	SignTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "",
@@ -33,11 +30,11 @@ func init() {
 }
 
 var (
-	buildType         string
-	receiverAccountID string
-	receiverProgram   string
-	password          string
-	pretty            bool
+	buildType       string
+	btmGas          string
+	receiverProgram string
+	password        string
+	pretty          bool
 )
 
 var buildIssueReqFmt = `
@@ -50,13 +47,6 @@ var buildIssueReqFmt = `
 var buildSpendReqFmt = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
-		{"type": "spend_account", "asset_id": "%s", "amount": %s, "account_id": "%s"},
-		{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
-	]}`
-
-var buildReceiverReqFmt = `
-	{"actions": [
-		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
 		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
 		{"type": "control_receiver", "asset_id": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
 	]}`
@@ -67,11 +57,8 @@ var buildTransaction = &cobra.Command{
 	Args:  cobra.RangeArgs(3, 4),
 	PreRun: func(cmd *cobra.Command, args []string) {
 		cmd.MarkFlagRequired("type")
-		switch buildType {
-		case "spend":
-			cmd.MarkFlagRequired("account")
-		case "receiver":
-			cmd.MarkFlagRequired("program")
+		if buildType == "spend" {
+			cmd.MarkFlagRequired("receiver")
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -81,11 +68,9 @@ var buildTransaction = &cobra.Command{
 		amount := args[2]
 		switch buildType {
 		case "issue":
-			buildReqStr = fmt.Sprintf(buildIssueReqFmt, BTMGAS, accountID, assetID, amount, assetID, amount, accountID)
+			buildReqStr = fmt.Sprintf(buildIssueReqFmt, btmGas, accountID, assetID, amount, assetID, amount, accountID)
 		case "spend":
-			buildReqStr = fmt.Sprintf(buildSpendReqFmt, BTMGAS, accountID, assetID, amount, accountID, assetID, amount, receiverAccountID)
-		case "receiver":
-			buildReqStr = fmt.Sprintf(buildReceiverReqFmt, BTMGAS, accountID, assetID, amount, accountID, assetID, amount, receiverProgram)
+			buildReqStr = fmt.Sprintf(buildSpendReqFmt, btmGas, accountID, assetID, amount, accountID, assetID, amount, receiverProgram)
 		default:
 			jww.ERROR.Println("Invalid transaction template type")
 			os.Exit(ErrLocalExe)
