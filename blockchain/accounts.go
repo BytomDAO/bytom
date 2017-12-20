@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/reqid"
@@ -26,6 +27,9 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	// with the same client_token will only create one account.
 	ClientToken string `json:"client_token"`
 }) []byte {
+	type resCreateAccount struct {
+		Account *query.AnnotatedAccount `json:"account"`
+	}
 	acc, err := a.accounts.Create(nil, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags, ins.ClientToken)
 	if err != nil {
 		return resWrapper(nil, err)
@@ -35,7 +39,8 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 		return resWrapper(nil, err)
 	}
 	log.WithField("account", annotatedAccount).Info("Created account")
-	res, err := json.MarshalIndent(annotatedAccount, "", "	")
+	resAccount := &resCreateAccount{annotatedAccount}
+	res, err := json.Marshal(annotatedAccount)
 	if err != nil {
 		return resWrapper(nil, err)
 	}

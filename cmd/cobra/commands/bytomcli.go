@@ -20,12 +20,12 @@ import (
 )
 
 const (
-	Success        = 0
-	ErrLocalExe    = 1
-	ErrConnect     = 2
-	ErrLocalUnwrap = 3
-	ErrRemoteWrap  = 4
-	ErrFetchData   = 5
+	Success = iota
+	ErrLocalExe
+	ErrConnect
+	ErrLocalUnwrap
+	ErrRemoteWrap
+	ErrFetchData
 )
 
 // commandError is an error used to signal different error situations in command handling.
