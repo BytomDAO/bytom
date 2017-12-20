@@ -2,8 +2,8 @@ package blockchain
 
 import (
 	"bytes"
-	"strconv"
 	stdjson "encoding/json"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
@@ -198,11 +198,19 @@ func (bcr *BlockchainReactor) gasRate() []byte {
 }
 
 // wrapper json for response
-func resWrapper(data []string) []byte {
-	response := Response{Status: SUCCESS, Data: data}
+func resWrapper(data []string, errWrapper ...error) []byte {
+	var response Response
+
+	if errWrapper != nil {
+		response = Response{Status: FAIL, Msg: errWrapper[0].Error()}
+	} else {
+		response = Response{Status: SUCCESS, Data: data}
+	}
+
 	rawResponse, err := stdjson.Marshal(response)
 	if err != nil {
 		return DefaultRawResponse
 	}
+
 	return rawResponse
 }

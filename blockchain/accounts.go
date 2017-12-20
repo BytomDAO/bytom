@@ -2,9 +2,11 @@ package blockchain
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/reqid"
@@ -13,7 +15,7 @@ import (
 )
 
 // POST /create-account
-func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
+func (a *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	RootXPubs []chainkd.XPub `json:"root_xpubs"`
 	Quorum    int
 	Alias     string
@@ -24,35 +26,26 @@ func (a *BlockchainReactor) createAccount(ctx context.Context, ins []struct {
 	// idempotency of create account requests. Duplicate create account requests
 	// with the same client_token will only create one account.
 	ClientToken string `json:"client_token"`
-}) interface{} {
-	responses := make([]interface{}, len(ins))
-	var wg sync.WaitGroup
-	wg.Add(len(responses))
-
-	for i := range responses {
-		go func(i int) {
-			subctx := reqid.NewSubContext(ctx, reqid.New())
-			defer wg.Done()
-			//defer batchRecover(subctx, &responses[i])
-
-			acc, err := a.accounts.Create(subctx, ins[i].RootXPubs, ins[i].Quorum, ins[i].Alias, ins[i].Tags, ins[i].ClientToken)
-			if err != nil {
-				responses[i] = err
-				return
-			}
-			aa, err := account.Annotated(acc)
-			log.WithField("account", aa).Info("Created account")
-			if err != nil {
-				responses[i] = err
-				return
-			}
-			responses[i] = aa
-		}(i)
+}) []byte {
+	type resCreateAccount struct {
+		Account *query.AnnotatedAccount `json:"account"`
 	}
-
-	wg.Wait()
-	log.WithField("responses", responses).Info("Responses of created account")
-	return responses
+	acc, err := a.accounts.Create(nil, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags, ins.ClientToken)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+	annotatedAccount, err := account.Annotated(acc)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+	log.WithField("account", annotatedAccount).Info("Created account")
+	resAccount := &resCreateAccount{annotatedAccount}
+	res, err := json.Marshal(annotatedAccount)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+	data := []string{string(res)}
+	return resWrapper(data)
 }
 
 // POST /update-account-tags

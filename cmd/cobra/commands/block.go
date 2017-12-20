@@ -2,7 +2,7 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
+	"os"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -20,54 +20,32 @@ var (
 var blockHashCmd = &cobra.Command{
 	Use:   "block-hash",
 	Short: "Get the hash of most recent block",
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		var rawResponse []byte
-		var response blockchain.Response
-
-		client := mustRPCClient()
-		client.Call(context.Background(), "/get-best-block-hash", nil, &rawResponse)
-
-		if err := json.Unmarshal(rawResponse, &response); err != nil {
-			jww.ERROR.Println(err)
-			return
+		data, exitCode := clientCall("get-best-block-hash")
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		if response.Status == blockchain.SUCCESS {
-			data := response.Data
-			hash := data[0]
-			jww.FEEDBACK.Printf("best block hash: %v\n", hash)
-			return
-		}
-		jww.ERROR.Println(response.Msg)
+		hash := data[0]
+		jww.FEEDBACK.Printf("best block hash: %v\n", hash)
 	},
 }
 
 var blockHeightCmd = &cobra.Command{
 	Use:   "block-height",
 	Short: "Get the number of most recent block",
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		var rawResponse []byte
-		var response blockchain.Response
-
-		client := mustRPCClient()
-		client.Call(context.Background(), "/block-height", nil, &rawResponse)
-
-		if err := json.Unmarshal(rawResponse, &response); err != nil {
-			jww.ERROR.Println(err)
-			return
+		data, exitCode := clientCall("/block-height")
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		if response.Status == blockchain.SUCCESS {
-			data := response.Data
-			height, err := strconv.ParseInt(data[0], 16, 64)
-			if err != nil {
-				jww.ERROR.Println("Fail to parse response data")
-				return
-			}
-			jww.FEEDBACK.Printf("block height: %v\n", height)
-			return
+		height, err := strconv.ParseInt(data[0], 16, 64)
+		if err != nil {
+			jww.ERROR.Println("Fail to parse response data")
+			os.Exit(ErrLocalUnwrap)
 		}
-		jww.ERROR.Println(response.Msg)
+		jww.FEEDBACK.Printf("block height: %v\n", height)
 	},
 }
 
@@ -120,78 +98,46 @@ var getBlockTransactionsCountByHashCmd = &cobra.Command{
 }
 
 var getBlockByHeightCmd = &cobra.Command{
-	Use:   "get-block-by-height",
+	Use:   "get-block-by-height <height>",
 	Short: "Get a whole block matching the given height",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println("get-block-by-height args not valid\nUsage: get-block-by-height [height]")
-			return
-		}
-
 		ui64, err := strconv.ParseUint(args[0], 10, 64)
 		if err != nil {
 			jww.ERROR.Printf("Invalid height value")
-			return
+			os.Exit(ErrLocalExe)
 		}
 
-		var rawResponse []byte
-		var response blockchain.Response
-
-		client := mustRPCClient()
-		client.Call(context.Background(), "/get-block-by-height", ui64, &rawResponse)
-
-		if err := json.Unmarshal(rawResponse, &response); err != nil {
-			jww.ERROR.Println(err)
-			return
+		data, exitCode := clientCall("/get-block-by-height", ui64)
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		if response.Status == blockchain.SUCCESS {
-			data := response.Data
-			for idx, d := range data {
-				jww.FEEDBACK.Printf("%d : %v\n", idx, string(d))
-			}
-			return
+		for idx, d := range data {
+			jww.FEEDBACK.Printf("%d : %v\n", idx, string(d))
 		}
-		jww.ERROR.Println(response.Msg)
 	},
 }
 
 var getBlockTransactionsCountByHeightCmd = &cobra.Command{
 	Use:   "get-block-transactions-count-by-height",
 	Short: "Get the transactions count of a block matching the given height",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println("get-block-header-by-height args not valid\nUsage: get-block-transactions-count-by-height [height]")
-			return
-		}
-
 		ui64, err := strconv.ParseUint(args[0], 10, 64)
 		if err != nil {
 			jww.ERROR.Printf("Invalid height value")
-			return
+			os.Exit(ErrLocalExe)
 		}
 
-		var rawResponse []byte
-		var response blockchain.Response
-
-		client := mustRPCClient()
-		client.Call(context.Background(), "/get-block-transactions-count-by-height", ui64, &rawResponse)
-
-		if err := json.Unmarshal(rawResponse, &response); err != nil {
-			jww.ERROR.Println(err)
-			return
+		data, exitCode := clientCall("/get-block-transactions-count-by-height", ui64)
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		if response.Status == blockchain.SUCCESS {
-			data := response.Data
-			cnt, err := strconv.ParseInt(data[0], 16, 64)
-			if err != nil {
-				jww.ERROR.Println("Fail to parse response data")
-				return
-			}
-			jww.FEEDBACK.Printf("transactions count: %v\n", cnt)
-			return
+		cnt, err := strconv.ParseInt(data[0], 16, 64)
+		if err != nil {
+			jww.ERROR.Println("Fail to parse response data")
+			os.Exit(ErrLocalUnwrap)
 		}
-		jww.ERROR.Println(response.Msg)
+		jww.FEEDBACK.Printf("transactions count: %v\n", cnt)
 	},
 }
