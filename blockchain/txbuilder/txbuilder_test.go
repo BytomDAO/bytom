@@ -54,7 +54,7 @@ func TestBuild(t *testing.T) {
 		&setTxRefDataAction{Data: []byte("xyz")},
 	}
 	expiryTime := time.Now().Add(time.Minute)
-	got, err := Build(ctx, nil, actions, time.Time{}, expiryTime)
+	got, err := Build(ctx, nil, actions, expiryTime)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -86,7 +86,7 @@ func TestBuild(t *testing.T) {
 
 	// setting tx refdata twice should fail
 	actions = append(actions, &setTxRefDataAction{Data: []byte("lmnop")})
-	_, err = Build(ctx, nil, actions, time.Time{}, expiryTime)
+	_, err = Build(ctx, nil, actions, expiryTime)
 	if errors.Root(err) != ErrAction {
 		t.Errorf("got error %#v, want ErrAction", err)
 	}

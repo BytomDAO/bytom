@@ -9,7 +9,7 @@ import (
 
 // SignFunc is the function passed into Sign that produces
 // a signature for a given xpub, derivation path, and hash.
-type SignFunc func(context.Context, chainkd.XPub, [][]byte, [32]byte) ([]byte, error)
+type SignFunc func(context.Context, chainkd.XPub, [][]byte, [32]byte, string) ([]byte, error)
 
 // materializeWitnesses takes a filled in Template and "materializes"
 // each witness component, turning it into a vector of arguments for
@@ -37,7 +37,6 @@ func materializeWitnesses(txTemplate *Template) error {
 				return errors.WithDetailf(err, "error in witness component %d of input %d", j, i)
 			}
 		}
-
 		msg.SetInputArguments(sigInst.Position, witness)
 	}
 

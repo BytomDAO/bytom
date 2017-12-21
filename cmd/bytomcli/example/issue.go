@@ -9,11 +9,12 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/config"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
-	"github.com/bytom/config"
 
 	stdjson "encoding/json"
+
 	bchain "github.com/bytom/blockchain"
 )
 
@@ -118,7 +119,6 @@ func IssueTest(client *rpc.Client, args []string) {
 
 	fmt.Printf("sign tpl:%v\n", tpl[0])
 	fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
-	fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
 
 	// submit-transaction
 	var submitResponse interface{}

@@ -20,7 +20,7 @@ type RawTxSigWitness struct {
 	Sigs   []chainjson.HexBytes `json:"signatures"`
 }
 
-func (sw *RawTxSigWitness) sign(ctx context.Context, tpl *Template, index uint32, xpubs []chainkd.XPub, signFn SignFunc) error {
+func (sw *RawTxSigWitness) sign(ctx context.Context, tpl *Template, index uint32, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
 	if len(sw.Sigs) < len(sw.Keys) {
 		// Each key in sw.Keys may produce a signature in sw.Sigs. Make
 		// sure there are enough slots in sw.Sigs and that we preserve any
@@ -41,14 +41,14 @@ func (sw *RawTxSigWitness) sign(ctx context.Context, tpl *Template, index uint32
 				break
 			}
 		}
-		if !found {
+		if xpubs != nil && !found {
 			continue
 		}
 		path := make([]([]byte), len(keyID.DerivationPath))
 		for i, p := range keyID.DerivationPath {
 			path[i] = p
 		}
-		sigBytes, err := signFn(ctx, keyID.XPub, path, tpl.Hash(index).Byte32())
+		sigBytes, err := signFn(ctx, keyID.XPub, path, tpl.Hash(index).Byte32(), auth)
 		if err != nil {
 			return errors.WithDetailf(err, "computing signature %d", i)
 		}
