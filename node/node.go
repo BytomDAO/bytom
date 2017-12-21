@@ -199,16 +199,13 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	if config.Wallet.Enable {
-		accountsDB := dbm.NewDB("account", config.DBBackend, config.DBDir())
-		assetsDB := dbm.NewDB("asset", config.DBBackend, config.DBDir())
+
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 
-		accounts = account.NewManager(accountsDB, walletDB, chain)
-		assets = asset.NewRegistry(assetsDB, chain)
+		accounts = account.NewManager(walletDB, chain)
+		assets = asset.NewRegistry(walletDB, chain)
 
-		wallet = w.NewWallet(walletDB, accounts, assets)
-		wallet.Ind.RegisterAnnotator(accounts.AnnotateTxs)
-		wallet.Ind.RegisterAnnotator(assets.AnnotateTxs)
+		wallet = w.NewWallet(walletDB)
 
 		go wallet.WalletUpdate(chain)
 
@@ -229,7 +226,7 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
 	}
-	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet, txFeed, accessTokens)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet, txFeed, accessTokens, config.Mining)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 

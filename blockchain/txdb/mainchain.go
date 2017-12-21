@@ -6,7 +6,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/txdb/internal/storage"
+	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 )
@@ -35,7 +35,7 @@ func DecodeMainchain(data []byte) (map[uint64]*bc.Hash, error) {
 	return mainchain, nil
 }
 
-func saveMainchain(db dbm.DB, mainchain map[uint64]*bc.Hash, hash *bc.Hash) error {
+func saveMainchain(batch dbm.Batch, mainchain map[uint64]*bc.Hash, hash *bc.Hash) error {
 	var mainchainList storage.Mainchain
 	for i := 1; i <= len(mainchain); i++ {
 		rawHash := &storage.Mainchain_Hash{Key: mainchain[uint64(i)].Bytes()}
@@ -47,8 +47,7 @@ func saveMainchain(db dbm.DB, mainchain map[uint64]*bc.Hash, hash *bc.Hash) erro
 		return errors.Wrap(err, "marshaling Mainchain")
 	}
 
-	db.Set(calcMainchainKey(hash), b)
-	db.SetSync(nil, nil)
+	batch.Set(calcMainchainKey(hash), b)
 	return nil
 }
 

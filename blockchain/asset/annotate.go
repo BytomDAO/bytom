@@ -3,107 +3,72 @@ package asset
 import (
 	"encoding/json"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/protocol/bc"
+	"github.com/bytom/blockchain/signers"
+	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
-// AnnotateTxs adds asset data to transactions
-func (reg *Registry) AnnotateTxs(txs []*query.AnnotatedTx) error {
+func isValidJSON(b []byte) bool {
+	var v interface{}
+	err := json.Unmarshal(b, &v)
+	return err == nil
+}
 
-	assetIDMap := make(map[bc.AssetID]bool)
+//Annotated annotate the asset
+func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
+	jsonTags := json.RawMessage(`{}`)
+	jsonDefinition := json.RawMessage(`{}`)
 
-	// Collect all of the asset IDs appearing in the entire block. We only
-	// check the outputs because every transaction should balance.
-	for _, tx := range txs {
-		for _, out := range tx.Outputs {
-			assetIDMap[out.AssetID] = true
-		}
+	// a.RawDefinition is the asset definition as it appears on the
+	// blockchain, so it's untrusted and may not be valid json.
+	if isValidJSON(a.RawDefinition()) {
+		jsonDefinition = json.RawMessage(a.RawDefinition())
 	}
-	if len(assetIDMap) == 0 {
-		return nil
-	}
 
-	// Look up all the asset tags for all applicable assets.
-	asset := Asset{}
-	tagsByAssetID := make(map[bc.AssetID]*json.RawMessage)
-	defsByAssetID := make(map[bc.AssetID]*json.RawMessage)
-	aliasesByAssetID := make(map[bc.AssetID]string)
-	localByAssetID := make(map[bc.AssetID]bool)
-
-	for assetID := range assetIDMap {
-		rawAsset := reg.db.Get([]byte(assetID.String()))
-		if rawAsset == nil {
-			//local no asset
-			continue
-		}
-
-		if err := json.Unmarshal(rawAsset, &asset); err != nil {
-			log.WithFields(log.Fields{"warn": err, "asset id": assetID.String()}).Warn("look up asset")
-			continue
-		}
-
-		annotatedAsset, err := Annotated(&asset)
+	if a.Tags != nil {
+		b, err := json.Marshal(a.Tags)
 		if err != nil {
-			log.WithFields(log.Fields{"warn": err, "asset id": assetID.String()}).Warn("annotated asset")
-			continue
+			return nil, err
 		}
-
-		if annotatedAsset.Alias != "" {
-			aliasesByAssetID[assetID] = annotatedAsset.Alias
-		}
-
-		localByAssetID[assetID] = annotatedAsset.IsLocal == true
-
-		if annotatedAsset.Tags != nil {
-			tagsByAssetID[assetID] = annotatedAsset.Tags
-		}
-
-		if annotatedAsset.Definition != nil {
-			defsByAssetID[assetID] = annotatedAsset.Definition
-		}
-
+		jsonTags = b
 	}
 
-	empty := json.RawMessage(`{}`)
-	for _, tx := range txs {
-		for _, in := range tx.Inputs {
-			if alias, ok := aliasesByAssetID[in.AssetID]; ok {
-				in.AssetAlias = alias
-			}
-			if localByAssetID[in.AssetID] {
-				in.AssetIsLocal = true
-			}
-
-			in.AssetTags = &empty
-			in.AssetDefinition = &empty
-			if tags := tagsByAssetID[in.AssetID]; tags != nil {
-				in.AssetTags = tags
-			}
-			if def := defsByAssetID[in.AssetID]; def != nil {
-				in.AssetDefinition = def
-			}
+	aa := &query.AnnotatedAsset{
+		ID:              a.AssetID,
+		Definition:      &jsonDefinition,
+		Tags:            &jsonTags,
+		IssuanceProgram: chainjson.HexBytes(a.IssuanceProgram),
+	}
+	if a.Alias != nil {
+		aa.Alias = *a.Alias
+	}
+	if a.Signer != nil {
+		path := signers.Path(a.Signer, signers.AssetKeySpace)
+		var jsonPath []chainjson.HexBytes
+		for _, p := range path {
+			jsonPath = append(jsonPath, p)
 		}
-
-		for _, out := range tx.Outputs {
-			if alias, ok := aliasesByAssetID[out.AssetID]; ok {
-				out.AssetAlias = alias
+		for _, xpub := range a.Signer.XPubs {
+			derived := xpub.Derive(path)
+			aa.Keys = append(aa.Keys, &query.AssetKey{
+				RootXPub:            xpub,
+				AssetPubkey:         derived[:],
+				AssetDerivationPath: jsonPath,
+			})
+		}
+		aa.Quorum = a.Signer.Quorum
+	} else {
+		pubkeys, quorum, err := vmutil.ParseP2SPMultiSigProgram(a.IssuanceProgram)
+		if err == nil {
+			for _, pubkey := range pubkeys {
+				pubkey := pubkey
+				aa.Keys = append(aa.Keys, &query.AssetKey{
+					AssetPubkey: chainjson.HexBytes(pubkey[:]),
+				})
 			}
-			if localByAssetID[out.AssetID] {
-				out.AssetIsLocal = true
-			}
-
-			out.AssetTags = &empty
-			out.AssetDefinition = &empty
-			if tags := tagsByAssetID[out.AssetID]; tags != nil {
-				out.AssetTags = tags
-			}
-			if def := defsByAssetID[out.AssetID]; def != nil {
-				out.AssetDefinition = def
-			}
+			aa.Quorum = quorum
 		}
 	}
-
-	return nil
+	return aa, nil
 }

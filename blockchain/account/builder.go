@@ -14,16 +14,7 @@ import (
 	"github.com/bytom/protocol/bc/legacy"
 )
 
-func (m *Manager) NewSpendAction(amt bc.AssetAmount, accountID string, refData chainjson.Map, clientToken *string) txbuilder.Action {
-	return &spendAction{
-		accounts:      m,
-		AssetAmount:   amt,
-		AccountID:     accountID,
-		ReferenceData: refData,
-		ClientToken:   clientToken,
-	}
-}
-
+//DecodeSpendAction unmarshal JSON-encoded data of spend action
 func (m *Manager) DecodeSpendAction(data []byte) (txbuilder.Action, error) {
 	a := &spendAction{accounts: m}
 	err := json.Unmarshal(data, a)
@@ -95,13 +86,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	return nil
 }
 
-func (m *Manager) NewSpendUTXOAction(outputID bc.Hash) txbuilder.Action {
-	return &spendUTXOAction{
-		accounts: m,
-		OutputID: &outputID,
-	}
-}
-
+//DecodeSpendUTXOAction unmarshal JSON-encoded data of spend utxo action
 func (m *Manager) DecodeSpendUTXOAction(data []byte) (txbuilder.Action, error) {
 	a := &spendUTXOAction{accounts: m}
 	err := json.Unmarshal(data, a)
@@ -170,6 +155,7 @@ func utxoToInputs(account *signers.Signer, u *utxo, refData []byte) (
 	return txInput, sigInst, nil
 }
 
+//NewControlAction create new control action
 func (m *Manager) NewControlAction(amt bc.AssetAmount, accountID string, refData chainjson.Map) txbuilder.Action {
 	return &controlAction{
 		accounts:      m,
@@ -179,6 +165,7 @@ func (m *Manager) NewControlAction(amt bc.AssetAmount, accountID string, refData
 	}
 }
 
+//DecodeControlAction unmarshal JSON-encoded data of control action
 func (m *Manager) DecodeControlAction(data []byte) (txbuilder.Action, error) {
 	a := &controlAction{accounts: m}
 	err := json.Unmarshal(data, a)
@@ -219,7 +206,7 @@ func (a *controlAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 // registers callbacks on the TemplateBuilder so that all of the template's
 // account control programs are batch inserted if building the rest of
 // the template is successful.
-func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.TemplateBuilder, acp *controlProgram) {
+func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.TemplateBuilder, acp *CtrlProgram) {
 	m.delayedACPsMu.Lock()
 	m.delayedACPs[b] = append(m.delayedACPs[b], acp)
 	m.delayedACPsMu.Unlock()

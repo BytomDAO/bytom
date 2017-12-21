@@ -6,15 +6,16 @@ import (
 	"encoding/json"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-
-	log "github.com/sirupsen/logrus"
-	chainjson "github.com/bytom/encoding/json"
 )
 
+//NewIssueAction create a new asset issue action
 func (reg *Registry) NewIssueAction(assetAmount bc.AssetAmount, referenceData chainjson.Map) txbuilder.Action {
 	return &issueAction{
 		assets:        reg,
@@ -23,6 +24,7 @@ func (reg *Registry) NewIssueAction(assetAmount bc.AssetAmount, referenceData ch
 	}
 }
 
+//DecodeIssueAction unmarshal JSON-encoded data of asset issue action
 func (reg *Registry) DecodeIssueAction(data []byte) (txbuilder.Action, error) {
 	a := &issueAction{assets: reg}
 	err := json.Unmarshal(data, a)

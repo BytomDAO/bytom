@@ -68,6 +68,8 @@ type BaseConfig struct {
 	// and verifying their commits
 	FastSync bool `mapstructure:"fast_sync"`
 
+	Mining bool `mapstructure:"mining"`
+
 	FilterPeers bool `mapstructure:"filter_peers"` // false
 
 	// What indexer to use for transactions
@@ -97,6 +99,7 @@ func DefaultBaseConfig() BaseConfig {
 		ProfListenAddress: "",
 		FastSync:          true,
 		FilterPeers:       false,
+		Mining:            false,
 		TxIndex:           "kv",
 		DBBackend:         "leveldb",
 		DBPath:            "data",

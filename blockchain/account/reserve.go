@@ -240,8 +240,11 @@ func (re *reserver) ExpireReservations(ctx context.Context) error {
 }
 
 func (re *reserver) checkUTXO(u *utxo) bool {
-	_, s := re.c.State()
-	return s.Tree.Contains(u.OutputID.Bytes())
+	utxo, err := re.c.GetUtxo(&u.OutputID)
+	if err != nil {
+		return false
+	}
+	return !utxo.Spend
 }
 
 func (re *reserver) source(src source) *sourceReserver {
@@ -429,7 +432,7 @@ func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*utxo, error) {
 	}
 
 	// make sure accountUTXO existed in the db
-	accountUTXOValue := db.Get(accountUTXOKey(string(outHash.Bytes())))
+	accountUTXOValue := db.Get(UTXOKey(outHash))
 	if accountUTXOValue == nil {
 		return nil, fmt.Errorf("can't find utxo: %s", outHash.String())
 	}
