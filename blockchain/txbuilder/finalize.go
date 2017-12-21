@@ -18,14 +18,27 @@ var (
 	ErrBadInstructionCount = errors.New("too many signing instructions in template")
 )
 
+// Submitter submits a transaction to the generator so that it may
+// be confirmed in a block.
+type Submitter interface {
+	Submit(ctx context.Context, tx *legacy.Tx) error
+}
+
 // FinalizeTx validates a transaction signature template,
 // assembles a fully signed tx, and stores the effects of
 // its changes on the UTXO set.
-func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *legacy.Tx) error {
-	err := checkTxSighashCommitment(tx)
-	if err != nil {
-		return err
+func FinalizeTx(ctx context.Context, c *protocol.Chain, s Submitter, tx *legacy.Tx, includesContract bool) error {
+	var err error
+	if !includesContract {
+		err = checkTxSighashCommitment(tx)
+		if err != nil {
+			return err
+		}
 	}
+
+	// Make sure there is at least one block in case client is trying to
+	// finalize a tx before the initial block has landed
+	<-c.BlockWaiter(1)
 
 	err = c.ValidateTx(tx)
 	if errors.Root(err) == protocol.ErrBadTx {
@@ -35,6 +48,7 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *legacy.Tx) error {
 		return errors.Wrap(err, "tx rejected")
 	}
 
+	err = s.Submit(ctx, tx)
 	return errors.Wrap(err)
 }
 
