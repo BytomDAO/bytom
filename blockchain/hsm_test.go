@@ -15,7 +15,6 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/blockchain/txdb"
-	w "github.com/bytom/blockchain/wallet"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol"
@@ -36,29 +35,16 @@ func TestHSM(t *testing.T) {
 
 	var accounts *account.Manager
 	var assets *asset.Registry
-	genesisBlock := cfg.GenerateGenesisBlock()
 	// tx pool init
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
+	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// add gensis block info
-	if err := chain.SaveBlock(genesisBlock); err != nil {
-		t.Fatal(err)
-	}
-	// parse block and apply
-	if err := chain.ConnectBlock(genesisBlock); err != nil {
-		t.Fatal(err)
-	}
-
-	accountsDB := dbm.NewDB("account", config.DBBackend, dir)
-	assetsDB := dbm.NewDB("asset", config.DBBackend, dir)
-	walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
-
-	accounts = account.NewManager(accountsDB, walletDB, w.GetWalletHeight, chain)
-	assets = asset.NewRegistry(assetsDB, chain)
+	walletDB := dbm.NewDB("wallet", config.DBBackend, dir)
+	accounts = account.NewManager(walletDB, chain)
+	assets = asset.NewRegistry(walletDB, chain)
 
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {

@@ -69,6 +69,7 @@ func (e placeholderExpr) String() string {
 // Type defines the value types in filter expressions.
 type Type int
 
+//defines the value types in filter expressions.
 const (
 	Any Type = iota
 	Bool

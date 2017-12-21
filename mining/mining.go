@@ -57,8 +57,8 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (*legacy.Block, error) {
 	// Extend the most recently known best block.
 	var err error
-	preBlock, snap := c.State()
-	newSnap := state.Copy(snap)
+	preBlock := c.BestBlock()
+	view := state.NewUtxoViewpoint()
 
 	preBcBlock := legacy.MapBlock(preBlock)
 	nextBlockHeight := preBlock.BlockHeader.Height + 1
@@ -85,7 +85,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		},
 		Transactions: make([]*legacy.Tx, 0, len(txDescs)),
 	}
-	newSnap.PruneNonces(b.BlockHeader.TimestampMS)
 
 	appendTx := func(tx *legacy.Tx, weight, fee uint64) {
 		b.Transactions = append([]*legacy.Tx{tx}, b.Transactions...)
@@ -94,12 +93,18 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		txFee += fee
 	}
 
+	bcBlock := legacy.MapBlock(b)
 	for _, txDesc := range txDescs {
 		tx := txDesc.Tx.Tx
 		if blockWeight+txDesc.Weight > consensus.MaxBlockSzie-consensus.MaxTxSize {
 			break
 		}
-		if err := newSnap.ApplyTx(tx); err != nil {
+		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
+			log.WithField("error", err).Error("mining block generate skip tx due to")
+			txPool.RemoveTransaction(&tx.ID)
+			continue
+		}
+		if err := view.ApplyTransaction(bcBlock, tx); err != nil {
 			log.WithField("error", err).Error("mining block generate skip tx due to")
 			txPool.RemoveTransaction(&tx.ID)
 			continue
@@ -117,12 +122,8 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	if err != nil {
 		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
 	}
-	if err := newSnap.ApplyTx(cbTx.Tx); err != nil {
-		return nil, errors.Wrap(err, "fail on append coinbase transaction to snap")
-	}
 	appendTx(cbTx, 0, 0)
 
-	b.BlockHeader.BlockCommitment.AssetsMerkleRoot = newSnap.Tree.RootHash()
 	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = bc.MerkleRoot(txEntries)
 	if err != nil {
 		return nil, errors.Wrap(err, "calculating tx merkle root")
