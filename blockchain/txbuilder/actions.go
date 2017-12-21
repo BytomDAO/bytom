@@ -8,6 +8,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 var retirementProgram = []byte{byte(vm.OP_FAIL)}
@@ -45,6 +46,40 @@ func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) e
 
 	b.RestrictMaxTime(a.Receiver.ExpiresAt)
 	out := legacy.NewTxOutput(*a.AssetId, a.Amount, a.Receiver.ControlProgram, a.ReferenceData)
+	return b.AddOutput(out)
+}
+
+func DecodeControlAddressAction(data []byte) (Action, error) {
+	a := new(controlAddressAction)
+	err := stdjson.Unmarshal(data, a)
+	return a, err
+}
+
+type controlAddressAction struct {
+	bc.AssetAmount
+	Address       string   `json:"address"`
+	ReferenceData json.Map `json:"reference_data"`
+}
+
+func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) error {
+	var missing []string
+	if a.Address == "" {
+		missing = append(missing, "address")
+	}
+	if a.AssetId.IsZero() {
+		missing = append(missing, "asset_id")
+	}
+	if len(missing) > 0 {
+		return MissingFieldsError(missing...)
+	}
+
+	// TODO: call different stand script generate due to address start with 1 or 3
+	program, err := vmutil.P2PKHSigProgram([]byte(a.Address))
+	if err != nil {
+		return err
+	}
+
+	out := legacy.NewTxOutput(*a.AssetId, a.Amount, program, a.ReferenceData)
 	return b.AddOutput(out)
 }
 

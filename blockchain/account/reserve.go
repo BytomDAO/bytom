@@ -50,6 +50,7 @@ type utxo struct {
 	RefDataHash    bc.Hash
 
 	AccountID           string
+	Address             string
 	ControlProgramIndex uint64
 }
 
@@ -452,6 +453,7 @@ func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*utxo, error) {
 
 	u.OutputID = bc.NewHash(*rawOutputID)
 	u.AccountID = accountUTXO.AccountID
+	u.Address = accountUTXO.Address
 	u.AssetID = bc.NewAssetID(*rawAssetID)
 	u.Amount = accountUTXO.Amount
 	u.ControlProgramIndex = accountUTXO.ProgramIndex

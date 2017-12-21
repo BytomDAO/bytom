@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -62,7 +63,7 @@ func GenerateGenesisBlock() *legacy.Block {
 		genesisBlock.Nonce = i
 		hash := genesisBlock.Hash()
 
-		if consensus.CheckProofOfWork(&hash, genesisBlock.Bits) {
+		if difficulty.CheckProofOfWork(&hash, genesisBlock.Bits) {
 			break
 		}
 	}

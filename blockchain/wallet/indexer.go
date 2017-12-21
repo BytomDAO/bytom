@@ -29,6 +29,7 @@ type rawOutput struct {
 type accountOutput struct {
 	rawOutput
 	AccountID string
+	Address   string
 	keyIndex  uint64
 	change    bool
 }
@@ -214,6 +215,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 			newOut := &accountOutput{
 				rawOutput: *out,
 				AccountID: cp.AccountID,
+				Address:   cp.Address,
 				keyIndex:  cp.KeyIndex,
 				change:    cp.Change,
 			}
@@ -231,16 +233,19 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, b
 	var u *account.UTXO
 
 	for _, out := range outs {
-		u = &account.UTXO{OutputID: out.OutputID.Bytes(),
+		u = &account.UTXO{
+			OutputID:     out.OutputID.Bytes(),
 			AssetID:      out.AssetId.Bytes(),
 			Amount:       out.Amount,
 			AccountID:    out.AccountID,
+			Address:      out.Address,
 			ProgramIndex: out.keyIndex,
 			Program:      out.ControlProgram,
 			SourceID:     out.sourceID.Bytes(),
 			SourcePos:    out.sourcePos,
 			RefData:      out.refData.Bytes(),
-			Change:       out.change}
+			Change:       out.change,
+		}
 
 		rawUTXO, err := json.Marshal(u)
 		if err != nil {

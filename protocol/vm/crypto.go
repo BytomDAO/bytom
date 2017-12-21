@@ -1,10 +1,14 @@
 package vm
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"hash"
 
 	"golang.org/x/crypto/sha3"
+
+	"github.com/bytom/common"
+	"github.com/bytom/consensus"
 
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/math/checked"
@@ -135,4 +139,31 @@ func opTxSigHash(vm *virtualMachine) error {
 		return ErrContext
 	}
 	return vm.push(vm.context.TxSigHash(), false)
+}
+
+func opCheckAddress(vm *virtualMachine) error {
+	rawAddress, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+	data, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+
+	cost := int64(len(rawAddress) + len(data))
+	err = vm.applyCost(cost)
+	if err != nil {
+		return err
+	}
+
+	// TODO: pass different params due to config
+	address, err := common.NewAddressWitnessPubKeyHash(data, &consensus.MainNetParams)
+	if err != nil {
+		return err
+	}
+	addressStr := address.EncodeAddress()
+
+	equal := bytes.Equal([]byte(addressStr), rawAddress)
+	return vm.pushBool(equal, true)
 }

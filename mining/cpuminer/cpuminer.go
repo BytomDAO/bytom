@@ -11,8 +11,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/account"
-	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/algorithm"
+	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
@@ -74,7 +74,7 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 			return false
 		}
 
-		if consensus.CheckProofOfWork(proofHash, header.Bits) {
+		if difficulty.CheckProofOfWork(proofHash, header.Bits) {
 			return true
 		}
 	}
