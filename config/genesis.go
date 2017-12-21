@@ -40,15 +40,8 @@ func GenerateGenesisBlock() *legacy.Block {
 		log.Panicf("Fatal create merkelRoot")
 	}
 
-<<<<<<< HEAD
-	snap := state.Empty()
-	if err := snap.ApplyTx(genesisCoinbaseTx.Tx); err != nil {
-		log.Panicf("Fatal ApplyTx")
-	}
-=======
 	var seed [32]byte
 	sha3pool.Sum256(seed[:], make([]byte, 32))
->>>>>>> dev
 
 	genesisBlock := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
