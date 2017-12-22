@@ -9,7 +9,7 @@ import (
 func (a *BlockchainReactor) createAccountReceiver(ctx context.Context, ins struct {
 	AccountInfo string    `json:"account_info"`
 	ExpiresAt   time.Time `json:"expires_at"`
-}) []byte {
+}) Response {
 	receiver, err := a.accounts.CreateReceiver(nil, ins.AccountInfo, ins.ExpiresAt)
 	if err != nil {
 		return resWrapper(nil, err)

@@ -16,7 +16,7 @@ import (
 func (bcr *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
 	Alias  string
 	Filter string
-}) []byte {
+}) Response {
 	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Add TxFeed Failed")
 		return resWrapper(nil, err)
@@ -41,7 +41,7 @@ func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter strin
 // POST /get-transaction-feed
 func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
-}) []byte {
+}) Response {
 	txfeed, err := bcr.getTxFeedByAlias(ctx, in.Alias)
 	if err != nil {
 		return resWrapper(nil, err)
@@ -52,7 +52,7 @@ func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
 // POST /delete-transaction-feed
 func (bcr *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
-}) []byte {
+}) Response {
 	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return resWrapper(nil, err)
 	}
@@ -63,7 +63,7 @@ func (bcr *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
 func (bcr *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
 	Alias  string
 	Filter string
-}) []byte {
+}) Response {
 	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return resWrapper(nil, err)
 	}
@@ -136,7 +136,7 @@ func (bcr *BlockchainReactor) getTxFeeds(after string, limit, defaultLimit int) 
 
 // listTxFeeds is an http handler for listing txfeeds. It does not take a filter.
 // POST /list-transaction-feeds
-func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context, query requestQuery) []byte {
+func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context, query requestQuery) Response {
 	limit := query.PageSize
 	if limit == 0 {
 		limit = defGenericPageSize

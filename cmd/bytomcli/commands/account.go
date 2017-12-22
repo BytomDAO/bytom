@@ -57,7 +57,9 @@ var createAccountCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		rawAccount, err := base64.StdEncoding.DecodeString(data.(string))
+		Account := data.(map[string]interface{})
+
+		rawAccount,err := json.MarshalIndent(Account,""," ")
 		if err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(ErrLocalUnwrap)
@@ -72,12 +74,8 @@ var listAccountsCmd = &cobra.Command{
 	Short: "List the existing accounts",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		var in requestQuery
-		var response = struct {
-			Items []interface{} `json:"items"`
-			Next  requestQuery  `json:"next"`
-			Last  bool          `json:"last_page"`
-		}{}
+
+		in := requestQuery{PageSize:2}
 
 		idx := 0
 	LOOP:
@@ -86,24 +84,21 @@ var listAccountsCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
-		}
-
-		if err := json.Unmarshal(rawPage, &response); err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
-		}
-
-		for _, item := range response.Items {
-			key := item.(string)
-			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, key)
+		response := data.(map[string]interface{})
+		rawList := response["items"].([]interface{})
+		for _, item := range rawList{
+			account,err := json.MarshalIndent(item,""," ")
+			if err != nil {
+				jww.ERROR.Println(err)
+				os.Exit(ErrLocalUnwrap)
+			}
+			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, string(account))
 			idx++
 		}
-		if response.Last == false {
-			in.After = response.Next.After
+
+		if response["last_page"] == false {
+			after := response["after"].(string)
+			in.After = after
 			goto LOOP
 		}
 	},

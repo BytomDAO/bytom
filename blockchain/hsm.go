@@ -22,7 +22,7 @@ func init() {
 	errorFormatter.Errors[pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
 
-func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ Alias, Password string }) []byte {
+func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ Alias, Password string }) Response {
 	xpub, err := a.hsm.XCreate(in.Alias, in.Password)
 	if err != nil {
 		return resWrapper(nil, err)
@@ -30,7 +30,7 @@ func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ A
 	return resWrapper(xpub)
 }
 
-func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query requestQuery) []byte {
+func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query requestQuery) Response {
 	limit := query.PageSize
 	if limit == 0 {
 		limit = defGenericPageSize
@@ -63,7 +63,7 @@ func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query request
 func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 	Password string
 	XPub     chainkd.XPub `json:"xpubs"`
-}) []byte {
+}) Response {
 	if err := a.hsm.XDelete(x.XPub, x.Password); err != nil {
 		return resWrapper(nil, err)
 	}
@@ -74,7 +74,7 @@ func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
 	Auth string
 	Txs  txbuilder.Template `json:"transaction"`
-}) []byte {
+}) Response {
 	var err error
 	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Auth, a.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")

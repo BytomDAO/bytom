@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -28,11 +27,9 @@ const (
 	// bytomd can't parse the received arguments.
 	ErrConnect = 2
 	// ErrLocalUnwrap indicates error occurs locally when parsing the response.
-	ErrLocalUnwrap = 3
-	// ErrRemoteWrap indicates error occurs when marshal the data in bytomd.
-	ErrRemoteWrap = 4
-	// ErrFetchData indicates error occurs in bytomd.
-	ErrFetchData = 5
+	ErrLocalParse = 3
+	// ErrRemote indicates error occurs in bytomd.
+	ErrRemote = 4
 )
 
 // commandError is an error used to signal different error situations in command handling.
@@ -191,8 +188,8 @@ func mustRPCClient() *rpc.Client {
 }
 
 func clientCall(path string, req ...interface{}) (interface{}, int) {
-	var rawResponse []byte
-	var response blockchain.Response
+
+	var response = &blockchain.Response{}
 	var request interface{}
 
 	if req != nil {
@@ -200,26 +197,16 @@ func clientCall(path string, req ...interface{}) (interface{}, int) {
 	}
 
 	client := mustRPCClient()
-	client.Call(context.Background(), path, request, &rawResponse)
+	client.Call(context.Background(), path, request, response)
 
-	if rawResponse == nil {
+	if response == nil {
 		jww.ERROR.Println("Unable to connect to the bytomd")
 		return nil, ErrConnect
 	}
 
-	if err := json.Unmarshal(rawResponse, &response); err != nil {
-		jww.ERROR.Println(err)
-		return nil, ErrLocalUnwrap
-	}
-
-	switch response.Status {
-	case blockchain.ERROR:
+	if response.Status == blockchain.FAIL {
 		jww.ERROR.Println(response.Msg)
-		return nil, ErrRemoteWrap
-
-	case blockchain.FAIL:
-		jww.ERROR.Println(response.Msg)
-		return nil, ErrFetchData
+		return nil, ErrRemote
 	}
 
 	return response.Data, Success

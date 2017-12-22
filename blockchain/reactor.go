@@ -41,8 +41,6 @@ const (
 	SUCCESS = "success"
 	// FAIL indicated the rpc calling is failed.
 	FAIL = "fail"
-	// ERROR indicates error occurs in the rpc calling.
-	ERROR = "error"
 )
 
 // Response describes the response standard.
@@ -51,9 +49,6 @@ type Response struct {
 	Msg    string      `json:"msg,omitempty"`
 	Data   interface{} `json:"data,omitempty"`
 }
-
-// DefaultRawResponse is used as the default response when fail to get data.
-var DefaultRawResponse = []byte(`{"Status":"error","Msg":"Unable to get data","Data":null}`)
 
 //BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
@@ -158,6 +153,7 @@ type page struct {
 	Items    interface{}  `json:"items"`
 	Next     requestQuery `json:"next"`
 	LastPage bool         `json:"last_page"`
+	After    string `json:"after"`
 }
 
 // NewBlockchainReactor returns the reactor of whole blockchain.

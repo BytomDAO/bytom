@@ -98,7 +98,7 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) 
 }
 
 // POST /build-transaction
-func (a *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) []byte {
+func (a *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) Response {
 
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
@@ -196,7 +196,7 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 }
 
 // POST /submit-transaction
-func (a *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Template) []byte {
+func (a *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Template) Response {
 
 	txid, err := a.submitSingle(nil, tpl)
 	if err != nil {

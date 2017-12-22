@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -22,7 +21,7 @@ func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	// idempotency of create account requests. Duplicate create account requests
 	// with the same client_token will only create one account.
 	AccessToken string `json:"access_token"`
-}) []byte {
+}) Response {
 	acc, err := bcr.accounts.Create(nil, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags, ins.AccessToken)
 	if err != nil {
 		return resWrapper(nil, err)
@@ -31,20 +30,17 @@ func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	if err != nil {
 		return resWrapper(nil, err)
 	}
-	log.WithField("account", annotatedAccount).Info("Created account")
-	res, err := json.MarshalIndent(annotatedAccount, "", " ")
-	if err != nil {
-		return resWrapper(nil, err)
-	}
 
-	return resWrapper(res)
+	log.WithField("account ID", annotatedAccount.ID).Info("Created account")
+
+	return resWrapper(annotatedAccount)
 }
 
 // POST /update-account-tags
 func (bcr *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag struct {
 	AccountInfo string
 	Tags        map[string]interface{} `json:"tags"`
-}) []byte {
+}) Response {
 
 	err := bcr.accounts.UpdateTags(nil, updateTag.AccountInfo, updateTag.Tags)
 	if err != nil {
@@ -56,7 +52,7 @@ func (bcr *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag s
 
 //
 // POST /delete-account
-func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, accountInfo string) []byte {
+func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, accountInfo string) Response {
 
 	if err := bcr.accounts.DeleteAccount(accountInfo); err != nil {
 		return resWrapper(nil, err)

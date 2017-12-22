@@ -13,7 +13,7 @@ import (
 
 var errCurrentToken = errors.New("token cannot delete itself")
 
-func (br *BlockchainReactor) createAccessToken(ctx context.Context, x struct{ ID, Type string }) []byte {
+func (br *BlockchainReactor) createAccessToken(ctx context.Context, x struct{ ID, Type string }) Response {
 	token, err := br.accessTokens.Create(ctx, x.ID, x.Type)
 	if err != nil {
 		return resWrapper(nil, err)
@@ -22,7 +22,7 @@ func (br *BlockchainReactor) createAccessToken(ctx context.Context, x struct{ ID
 	return resWrapper(*token)
 }
 
-func (br *BlockchainReactor) listAccessTokens(ctx context.Context, query requestQuery) []byte {
+func (br *BlockchainReactor) listAccessTokens(ctx context.Context, query requestQuery) Response {
 	limit := query.PageSize
 	if limit == 0 {
 		limit = defGenericPageSize
@@ -47,7 +47,7 @@ func (br *BlockchainReactor) listAccessTokens(ctx context.Context, query request
 	return resWrapper(rawPage)
 }
 
-func (br *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct{ ID, Token string }) []byte {
+func (br *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct{ ID, Token string }) Response {
 	//TODO Add delete permission verify.
 	if err := br.accessTokens.Delete(ctx, x.ID); err != nil {
 		return resWrapper(nil, err)
@@ -55,7 +55,7 @@ func (br *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct{ ID
 	return resWrapper(nil)
 }
 
-func (br *BlockchainReactor) checkAccessToken(ctx context.Context, x struct{ ID, Secret string }) []byte {
+func (br *BlockchainReactor) checkAccessToken(ctx context.Context, x struct{ ID, Secret string }) Response {
 	secret, err := hex.DecodeString(x.Secret)
 	if err != nil {
 		return resWrapper(nil, err)

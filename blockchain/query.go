@@ -33,35 +33,29 @@ var accountUTXOFmt = `
 }`
 
 // POST /list-accounts
-func (bcr *BlockchainReactor) listAccounts(ctx context.Context, query requestQuery) []byte {
+func (bcr *BlockchainReactor) listAccounts(ctx context.Context, query requestQuery) Response {
+
 	limit := query.PageSize
 	if limit == 0 {
 		limit = defGenericPageSize
 	}
 
-	accounts, after, last, err := bcr.accounts.ListAccounts(query.After, limit, defGenericPageSize)
+	accounts, after, last, err := bcr.accounts.ListAccounts(query.After, limit)
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
 		return resWrapper(nil, err)
 	}
 
-	query.After = after
-
-	page := &page{
+	page := page{
 		Items:    httpjson.Array(accounts),
 		LastPage: last,
-		Next:     query}
+		After:     after}
 
-	rawPage, err := json.Marshal(page)
-	if err != nil {
-		return resWrapper(nil, err)
-	}
-
-	return resWrapper(rawPage)
+	return resWrapper(page)
 }
 
 // POST /list-assets
-func (bcr *BlockchainReactor) listAssets(ctx context.Context, query requestQuery) []byte {
+func (bcr *BlockchainReactor) listAssets(ctx context.Context, query requestQuery) Response {
 
 	limit := query.PageSize
 	if limit == 0 {
@@ -90,7 +84,7 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, query requestQuery
 }
 
 // POST /listBalances
-func (bcr *BlockchainReactor) listBalances(ctx context.Context, query requestQuery) []byte {
+func (bcr *BlockchainReactor) listBalances(ctx context.Context, query requestQuery) Response {
 
 	limit := query.PageSize
 	if limit == 0 {
@@ -205,7 +199,7 @@ func indexBalances(accountUTXOs []account.UTXO, after string, limit, defaultLimi
 }
 
 // POST /list-transactions
-func (bcr *BlockchainReactor) listTransactions(ctx context.Context, query requestQuery) []byte {
+func (bcr *BlockchainReactor) listTransactions(ctx context.Context, query requestQuery) Response {
 	limit := query.PageSize
 	if limit == 0 {
 		limit = defGenericPageSize
@@ -233,7 +227,7 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, query reques
 }
 
 // POST /list-unspent-outputs
-func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, query requestQuery) []byte {
+func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, query requestQuery) Response {
 	limit := query.PageSize
 	if limit == 0 {
 		limit = defGenericPageSize // defGenericPageSize = 100

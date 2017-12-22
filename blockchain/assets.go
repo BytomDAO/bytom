@@ -24,7 +24,7 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 	// idempotency of create asset requests. Duplicate create asset requests
 	// with the same client_token will only create one asset.
 	AccessToken string `json:"access_token"`
-}) []byte {
+}) Response {
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
 	ass, err := a.assets.Define(
@@ -56,7 +56,7 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 func (a *BlockchainReactor) updateAssetTags(ctx context.Context, updateTag struct {
 	AssetInfo string
 	Tags      map[string]interface{} `json:"tags"`
-}) []byte {
+}) Response {
 
 	log.Info("%v", updateTag)
 	err := a.assets.UpdateTags(nil, updateTag.AssetInfo, updateTag.Tags)

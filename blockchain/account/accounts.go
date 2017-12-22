@@ -115,7 +115,6 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
-
 	storeBatch := m.db.NewBatch()
 
 	accountID := Key(signer.ID)
@@ -366,12 +365,13 @@ func (m *Manager) DeleteAccount(accountInfo string) error {
 }
 
 // ListAccounts will return the accounts in the db
-func (m *Manager) ListAccounts(after string, limit, defaultLimit int) ([]string, string, bool, error) {
+func (m *Manager) ListAccounts(after string, limit int) ([]Account, string, bool, error) {
 
 	var (
 		zafter int
 		err    error
 		last   bool
+		account Account
 	)
 
 	if after != "" {
@@ -381,12 +381,16 @@ func (m *Manager) ListAccounts(after string, limit, defaultLimit int) ([]string,
 		}
 	}
 
-	accounts := make([]string, 0)
+	accounts := make([]Account, 0)
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
 	defer accountIter.Release()
 
 	for accountIter.Next() {
-		accounts = append(accounts, string(accountIter.Value()))
+		err = json.Unmarshal(accountIter.Value(),&account)
+		if err != nil {
+			return nil,"",true,err
+		}
+		accounts = append(accounts, account)
 	}
 
 	start, end := 0, len(accounts)
@@ -403,7 +407,8 @@ func (m *Manager) ListAccounts(after string, limit, defaultLimit int) ([]string,
 		end = zafter + limit
 	}
 
-	if len(accounts) == end || len(accounts) < defaultLimit {
+	if len(accounts) == end || len(accounts) < limit {
+		fmt.Println("zjbtest----------",len(accounts),"@",end,"@",limit)
 		last = true
 	}
 
