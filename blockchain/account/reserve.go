@@ -54,6 +54,10 @@ type utxo struct {
 	ControlProgramIndex uint64
 }
 
+func NewUtxo() *utxo {
+	return &utxo{}
+}
+
 func (u *utxo) source() source {
 	return source{AssetID: u.AssetID, AccountID: u.AccountID}
 }
@@ -408,6 +412,7 @@ func findMatchingUTXOs(db dbm.DB, src source) ([]*utxo, error) {
 				ControlProgram:      accountUTXO.Program,
 				RefDataHash:         bc.NewHash(rawRefData),
 				AccountID:           src.AccountID,
+				Address:             accountUTXO.Address,
 				ControlProgramIndex: accountUTXO.ProgramIndex,
 			})
 

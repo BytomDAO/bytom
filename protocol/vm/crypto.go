@@ -9,7 +9,7 @@ import (
 
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
-
+	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/math/checked"
 )
@@ -146,19 +146,20 @@ func opCheckAddress(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	data, err := vm.pop(true)
+	pubkey, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
 
-	cost := int64(len(rawAddress) + len(data))
+	cost := int64(len(rawAddress) + len(pubkey))
 	err = vm.applyCost(cost)
 	if err != nil {
 		return err
 	}
 
 	// TODO: pass different params due to config
-	address, err := common.NewAddressWitnessPubKeyHash(data, &consensus.MainNetParams)
+	pubHash := crypto.Ripemd160(pubkey)
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.MainNetParams)
 	if err != nil {
 		return err
 	}

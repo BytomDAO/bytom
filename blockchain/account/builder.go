@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
@@ -140,19 +141,26 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 	}
 }
 
-func utxoToInputs(account *signers.Signer, u *utxo, refData []byte) (
-	*legacy.TxInput,
-	*txbuilder.SigningInstruction,
-	error,
-) {
+func utxoToInputs(account *signers.Signer, u *utxo, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
 	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash, refData)
 
+	path := signers.Path(account, signers.AccountKeySpace, u.ControlProgramIndex)
 	sigInst := &txbuilder.SigningInstruction{}
 
-	path := signers.Path(account, signers.AccountKeySpace, u.ControlProgramIndex)
-	sigInst.AddWitnessKeys(account.XPubs, path, account.Quorum)
-
+	//TODO: handle pay to script hash address
+	if u.Address != "" {
+		sigInst.AddRawWitnessKeys(account.XPubs, path, account.Quorum)
+		derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+		derivedPK := derivedXPubs[0].PublicKey()
+		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
+	} else {
+		sigInst.AddWitnessKeys(account.XPubs, path, account.Quorum)
+	}
 	return txInput, sigInst, nil
+}
+
+func UtxoToInputs(account *signers.Signer, u *utxo, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
+	return utxoToInputs(account, u, refData)
 }
 
 //NewControlAction create new control action

@@ -63,6 +63,7 @@ var commands = map[string]*command{
 	"build-transaction":        {buildTransaction},
 	"create-control-program":   {createControlProgram},
 	"create-account-receiver":  {createAccountReceiver},
+	"create-account-address":   {createAccountAddress},
 	"create-transaction-feed":  {createTxFeed},
 	"get-transaction-feed":     {getTxFeed},
 	"update-transaction-feed":  {updateTxFeed},
@@ -87,6 +88,7 @@ var commands = map[string]*command{
 	"sign-transactions":        {signTransactions},
 	"sub-create-issue-tx":      {submitCreateIssueTransaction},
 	"sub-spend-account-tx":     {submitSpendTransaction},
+	"sub-control-address-tx":   {submitAddressTransaction},
 	"sub-control-receiver-tx":  {submitReceiverTransaction},
 	"reset-password":           {resetPassword},
 	"update-alias":             {updateAlias},
@@ -553,6 +555,42 @@ func submitCreateIssueTransaction(client *rpc.Client, args []string) {
 	fmt.Printf("submit transaction:%v\n", submitResponse)
 }
 
+func submitAddressTransaction(client *rpc.Client, args []string) {
+	if len(args) != 5 {
+		fmt.Println("error: need args: [password] [account id] [asset id] [spend amount] [address]")
+		return
+	}
+
+	fmt.Printf("To build transaction:\n")
+	buildReqFmt := `
+		{"actions": [
+		    {"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":20000000, "account_id": "%s"},
+			{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
+			{"type": "control_address", "asset_id": "%s", "amount": %s, "address": "%s"}
+	]}`
+	buildReqStr := fmt.Sprintf(buildReqFmt, args[1], args[2], args[3], args[1], args[2], args[3], args[4])
+
+	var buildReq blockchain.BuildRequest
+	if err := stdjson.Unmarshal([]byte(buildReqStr), &buildReq); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	tpl := make([]txbuilder.Template, 1)
+	client.Call(context.Background(), "/build-transaction", []*blockchain.BuildRequest{&buildReq}, &tpl)
+	fmt.Printf("tpl:%v\n", tpl)
+
+	signResp := sign(client, tpl, args[0])
+
+	fmt.Printf("sign tpl:%v\n", tpl[0])
+
+	// submit-transaction-Spend_account
+	var submitResponse interface{}
+	submitArg := blockchain.SubmitArg{Transactions: signResp, Wait: json.Duration{Duration: time.Duration(1000000)}, WaitUntil: "none"}
+	client.Call(context.Background(), "/submit-transaction", submitArg, &submitResponse)
+	fmt.Printf("submit transaction:%v\n", submitResponse)
+}
+
 func submitReceiverTransaction(client *rpc.Client, args []string) {
 	if len(args) != 5 {
 		fmt.Println("error: need args: [password] [account id] [asset id] [spend amount] [control_program]")
@@ -661,6 +699,26 @@ func createAccountReceiver(client *rpc.Client, args []string) {
 	ins.AccountInfo = args[0]
 
 	client.Call(context.Background(), "/create-account-receiver", &ins, &response)
+	fmt.Printf("responses:%v\n", response)
+}
+
+func createAccountAddress(client *rpc.Client, args []string) {
+	if len(args) != 1 {
+		fmt.Println("error: need args: [account id] or [account alias]")
+		return
+	}
+	type Ins struct {
+		AccountInfo string    `json:"account_info"`
+		ExpiresAt   time.Time `json:"expires_at"`
+	}
+	var ins Ins
+	var response interface{}
+
+	//TODO:undefined argument to ExpiresAt
+
+	ins.AccountInfo = args[0]
+
+	client.Call(context.Background(), "/create-account-address", &ins, &response)
 	fmt.Printf("responses:%v\n", response)
 }
 

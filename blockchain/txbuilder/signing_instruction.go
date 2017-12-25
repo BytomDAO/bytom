@@ -29,6 +29,27 @@ func (si *SigningInstruction) AddWitnessKeys(xpubs []chainkd.XPub, path [][]byte
 	si.WitnessComponents = append(si.WitnessComponents, sw)
 }
 
+// AddWitnessKeys adds a SignatureWitness with the given quorum and
+// list of keys derived by applying the derivation path to each of the
+// xpubs.
+func (si *SigningInstruction) AddRawWitnessKeys(xpubs []chainkd.XPub, path [][]byte, quorum int) {
+	hexPath := make([]chainjson.HexBytes, 0, len(path))
+	for _, p := range path {
+		hexPath = append(hexPath, p)
+	}
+
+	keyIDs := make([]keyID, 0, len(xpubs))
+	for _, xpub := range xpubs {
+		keyIDs = append(keyIDs, keyID{xpub, hexPath})
+	}
+
+	sw := &RawTxSigWitness{
+		Quorum: quorum,
+		Keys:   keyIDs,
+	}
+	si.WitnessComponents = append(si.WitnessComponents, sw)
+}
+
 // SigningInstruction gives directions for signing inputs in a TxTemplate.
 type SigningInstruction struct {
 	Position          uint32             `json:"position"`
@@ -71,7 +92,7 @@ func (si *SigningInstruction) UnmarshalJSON(b []byte) error {
 			if err != nil {
 				return errors.Wrapf(err, "unmarshaling error on witness component %d, type data, input %s", i, wc)
 			}
-			si.WitnessComponents = append(si.WitnessComponents, dataWitness(d.Value))
+			si.WitnessComponents = append(si.WitnessComponents, DataWitness(d.Value))
 
 		case "signature":
 			var s SignatureWitness

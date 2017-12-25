@@ -221,6 +221,18 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 	return account.Signer, nil
 }
 
+func (m *Manager) CreateP2PKH(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+	cp, err := m.createP2PKH(ctx, accountID, change, expiresAt)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = m.insertAccountControlProgram(ctx, cp); err != nil {
+		return nil, err
+	}
+	return cp, nil
+}
+
 func (m *Manager) createP2PKH(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	account, err := m.findByID(ctx, accountID)
 	if err != nil {

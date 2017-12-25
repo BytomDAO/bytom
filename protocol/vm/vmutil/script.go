@@ -57,6 +57,9 @@ func P2PKHSigProgram(address []byte) ([]byte, error) {
 	builder.AddOp(vm.OP_DUP)
 	builder.AddData(address)
 	builder.AddOp(vm.OP_CHECKADDRESS)
+	builder.AddOp(vm.OP_VERIFY)
+	builder.AddOp(vm.OP_TXSIGHASH)
+	builder.AddOp(vm.OP_SWAP)
 	builder.AddOp(vm.OP_CHECKSIG)
 	return builder.Build()
 }
