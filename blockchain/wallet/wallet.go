@@ -2,14 +2,24 @@ package wallet
 
 import (
 	"encoding/json"
+	"time"
 
+	"github.com/btcsuite/btcutil/base58"
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
+
+//SINGLE single sign
+const SINGLE = 1
 
 var walletKey = []byte("walletInfo")
 
@@ -21,14 +31,21 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB     db.DB
-	status StatusInfo
+	DB             db.DB
+	status         StatusInfo
+	AccountMgr     *account.Manager
+	AssetReg       *asset.Registry
+	chain          *protocol.Chain
+	rescanProgress chan bool
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB) *Wallet {
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) *Wallet {
 	w := &Wallet{
-		DB: walletDB,
+		DB:         walletDB,
+		AccountMgr: account,
+		AssetReg:   asset,
+		chain:      chain,
 	}
 	walletInfo, err := w.GetWalletInfo()
 	if err != nil {
@@ -36,6 +53,8 @@ func NewWallet(walletDB db.DB) *Wallet {
 	}
 	w.status.Height = walletInfo.Height
 	w.status.Hash = walletInfo.Hash
+	rescanProgress := make(chan bool)
+	w.rescanProgress = rescanProgress
 	return w
 }
 
@@ -83,7 +102,7 @@ func (w *Wallet) WalletUpdate(c *protocol.Chain) {
 	storeBatch := w.DB.NewBatch()
 
 LOOP:
-
+	getRescanNotification(w)
 	for !c.InMainChain(w.status.Height, w.status.Hash) {
 		if block, err = c.GetBlockByHash(&w.status.Hash); err != nil {
 			log.WithField("err", err).Error("get block by hash")
@@ -119,7 +138,6 @@ LOOP:
 		//next loop will save
 		w.status.Height = block.Height
 		w.status.Hash = block.Hash()
-
 		indexTransactions(&storeBatch, block, w)
 		buildAccountUTXOs(&storeBatch, block, w)
 
@@ -131,4 +149,71 @@ LOOP:
 
 	//goto next loop
 	goto LOOP
+}
+
+func getRescanNotification(w *Wallet) {
+	select {
+	case <-w.rescanProgress:
+		w.status.Height = 1
+		block, _ := w.chain.GetBlockByHeight(w.status.Height)
+		w.status.Hash = block.Hash()
+	default:
+		return
+	}
+}
+
+// ExportAccountPrivKey exports the account private key as a WIF for encoding as a string
+// in the Wallet Import Formt.
+func (w *Wallet) ExportAccountPrivKey(hsm *pseudohsm.HSM, xpub chainkd.XPub, auth string) (*string, error) {
+	xprv, err := hsm.LoadChainKDKey(xpub, auth)
+	if err != nil {
+		return nil, err
+	}
+	var hashed [32]byte
+	sha3pool.Sum256(hashed[:], xprv[:])
+
+	tmp := append(xprv[:], hashed[:4]...)
+	res := base58.Encode(tmp)
+	return &res, nil
+}
+
+// ImportAccountPrivKey imports the account key in the Wallet Import Formt.
+func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, alias, auth string, index uint64) (*pseudohsm.XPub, error) {
+	xpub, _, err := hsm.ImportXPrvKey(auth, alias, xprv)
+	if err != nil {
+		return nil, err
+	}
+	var xpubs []chainkd.XPub
+	xpubs = append(xpubs, xpub.XPub)
+	account, err := w.AccountMgr.Create(nil, xpubs, SINGLE, alias, nil, "")
+	if err != nil {
+		return nil, err
+	}
+	if err := recoveryAccountWalletDB(w, account, &w.DB, xpub, index); err != nil {
+		return nil, err
+	}
+	return xpub, nil
+}
+
+func recoveryAccountWalletDB(w *Wallet, account *account.Account, DB *db.DB, XPub *pseudohsm.XPub, index uint64) error {
+	if err := createProgram(w, account, DB, XPub, index); err != nil {
+		return err
+	}
+	rescanBlocks(w)
+	return nil
+}
+
+func createProgram(w *Wallet, account *account.Account, DB *db.DB, XPub *pseudohsm.XPub, index uint64) error {
+	for i := uint64(0); i < index; i++ {
+		_, err := w.AccountMgr.CreateControlProgram(nil, account.ID, true, time.Now())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//WalletUpdate process every valid block and reverse every invalid block which need to rollback
+func rescanBlocks(w *Wallet) {
+	w.rescanProgress <- true
 }

@@ -104,6 +104,8 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(createKeyCmd)
 	BytomcliCmd.AddCommand(deleteKeyCmd)
 	BytomcliCmd.AddCommand(listKeysCmd)
+	BytomcliCmd.AddCommand(exportPrivateCmd)
+	BytomcliCmd.AddCommand(importPrivateCmd)
 
 	BytomcliCmd.AddCommand(isMiningCmd)
 
