@@ -98,13 +98,7 @@ var getTransactionFeedCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		rawTxFeed, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
-		}
-
-		jww.FEEDBACK.Println(string(rawTxFeed))
+		printJSON(data)
 	},
 }
 

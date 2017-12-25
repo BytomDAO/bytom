@@ -16,8 +16,8 @@ func (br *BlockchainReactor) createAccessToken(ctx context.Context, x struct{ ID
 	if err != nil {
 		return resWrapper(nil, err)
 	}
-
-	return resWrapper(*token)
+	data := map[string]*string{"accessToken": token}
+	return resWrapper(data)
 }
 
 func (br *BlockchainReactor) listAccessTokens(ctx context.Context) Response {
