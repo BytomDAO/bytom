@@ -26,12 +26,7 @@ var createKeyCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		resultMap, ok := data.(map[string]interface{})
-		if ok != true {
-			jww.ERROR.Println("invalid type assertion")
-			os.Exit(ErrLocalParse)
-		}
-		jww.FEEDBACK.Printf("Alias: %v\nXPub: %v\nFile: %v\n", resultMap["alias"], resultMap["xpub"], resultMap["file"])
+		printJSON(data)
 	},
 }
 

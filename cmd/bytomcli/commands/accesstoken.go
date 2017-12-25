@@ -21,7 +21,7 @@ var createAccessTokenCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Println(data)
+		printJSON(data)
 	},
 }
 
