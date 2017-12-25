@@ -42,11 +42,17 @@ func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter strin
 func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) Response {
-	txfeed, err := bcr.getTxFeedByAlias(ctx, in.Alias)
+	var txfeed interface{}
+	rawTxfeed, err := bcr.getTxFeedByAlias(ctx, in.Alias)
 	if err != nil {
 		return resWrapper(nil, err)
 	}
-	return resWrapper(txfeed)
+	err = json.Unmarshal(rawTxfeed, &txfeed)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+	data := map[string]interface{}{"txfeed": txfeed}
+	return resWrapper(data)
 }
 
 // POST /delete-transaction-feed
