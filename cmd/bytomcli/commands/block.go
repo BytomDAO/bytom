@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"context"
-	"encoding/base64"
 	"os"
 	"strconv"
 
@@ -27,7 +25,7 @@ var blockHashCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Printf("best block hash: %v\n", data)
+		printJSON(data)
 	},
 }
 
@@ -53,13 +51,7 @@ var getBlockByHashCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-
-		rawBlock, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
-		}
-		jww.FEEDBACK.Printf("%v\n", string(rawBlock))
+		printJSON(data)
 	},
 }
 
@@ -72,28 +64,20 @@ var getBlockHeaderByHashCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		rawHeader, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
-		}
-		jww.FEEDBACK.Printf("block header: %v\n", string(rawHeader))
+		printJSON(data)
 	},
 }
 
 var getBlockTransactionsCountByHashCmd = &cobra.Command{
 	Use:   "get-block-transactions-count-by-hash",
 	Short: "Get the transactions count of a block matching the given hash",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 1 {
-			jww.ERROR.Println("get-block-header-by-hash args not valid\nUsage: get-block-transactions-count-by-hash [hash]")
-			return
+		data, exitCode := clientCall("/get-block-transactions-count-by-hash", args[0])
+		if exitCode != Success {
+			os.Exit(exitCode)
 		}
-
-		var response interface{}
-		client := mustRPCClient()
-		client.Call(context.Background(), "/get-block-transactions-count-by-hash", args[0], &response)
-		jww.FEEDBACK.Printf("transactions count: %v\n", response)
+		printJSON(data)
 	},
 }
 
@@ -112,12 +96,8 @@ var getBlockByHeightCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		rawBlock, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
-		}
-		jww.FEEDBACK.Printf("%v\n", string(rawBlock))
+
+		printJSON(data)
 	},
 }
 
@@ -137,6 +117,6 @@ var getBlockTransactionsCountByHeightCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		jww.FEEDBACK.Printf("transactions count: %v\n", data)
+		printJSON(data)
 	},
 }
