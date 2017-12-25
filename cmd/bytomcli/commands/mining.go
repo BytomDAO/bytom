@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
 )
 
 var isMiningCmd = &cobra.Command{
@@ -16,7 +15,6 @@ var isMiningCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-
-		jww.FEEDBACK.Printf("is mining: %v\n", data)
+		printJSON(data)
 	},
 }

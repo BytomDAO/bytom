@@ -16,26 +16,20 @@ var netInfoCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-
-		resultMap, ok := data.(map[string]interface{})
-		if ok != true {
-			jww.ERROR.Println("invalid type assertion")
-			os.Exit(ErrLocalParse)
-		}
-		jww.FEEDBACK.Printf("listening:%v\nsyncing:%v\npeer_count:%v\n",
-			resultMap["listening"], resultMap["syncing"], resultMap["peer_count"])
+		printJSON(data)
 	},
 }
 var netListeningCmd = &cobra.Command{
 	Use:   "net-listening",
 	Short: "If client is actively listening for network connections",
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/net-listening")
+		data, exitCode := clientCall("/net-info")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		jww.FEEDBACK.Printf("net listening: %v\n", data)
+		net := data.(map[string]interface{})
+		jww.FEEDBACK.Printf("net listening: %v\n", net["listening"])
 	},
 }
 
@@ -44,12 +38,13 @@ var peerCountCmd = &cobra.Command{
 	Short: "Number of peers currently connected to the client",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/peer-count")
+		data, exitCode := clientCall("/net-info")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		jww.FEEDBACK.Printf("peer count: %v\n", data)
+		net := data.(map[string]interface{})
+		jww.FEEDBACK.Printf("peer count: %v\n", net["peer_count"])
 	},
 }
 
@@ -58,10 +53,12 @@ var netSyncingCmd = &cobra.Command{
 	Short: "If the network is still syncing",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/net-syncing")
+		data, exitCode := clientCall("/net-info")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Printf("net syncing: %v\n", data)
+
+		net := data.(map[string]interface{})
+		jww.FEEDBACK.Printf("net syncing: %v\n", net["syncing"])
 	},
 }

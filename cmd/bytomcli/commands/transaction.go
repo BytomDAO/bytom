@@ -229,6 +229,6 @@ var gasRateCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Printf("gas rate: %v\n", data)
+		printJSON(data)
 	},
 }

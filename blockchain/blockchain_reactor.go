@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/protocol/bc"
@@ -26,7 +25,7 @@ func (bcr *BlockchainReactor) getNetInfo() Response {
 
 // return best block hash
 func (bcr *BlockchainReactor) getBestBlockHash() Response {
-	blockHash := map[string]string{"blockHash":bcr.chain.BestBlockHash().String()}
+	blockHash := map[string]string{"blockHash": bcr.chain.BestBlockHash().String()}
 	return resWrapper(blockHash)
 }
 
@@ -102,7 +101,7 @@ func (bcr *BlockchainReactor) getBlockByHeight(height uint64) Response {
 	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return resWrapper(nil,err)
+		return resWrapper(nil, err)
 	}
 
 	bcBlock := legacy.MapBlock(legacyBlock)
@@ -134,35 +133,17 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) Re
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return resWrapper(nil,err)
+		return resWrapper(nil, err)
 	}
 
 	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return resWrapper(nil,err)
+		return resWrapper(nil, err)
 	}
 
-	count := map[string]int{"count":len(legacyBlock.Transactions)}
+	count := map[string]int{"count": len(legacyBlock.Transactions)}
 	return resWrapper(count)
-}
-
-// return network  is or not listening
-func (bcr *BlockchainReactor) isNetListening() Response {
-	isListening := map[string]bool{"isListening":bcr.sw.IsListening()}
-	return resWrapper(isListening)
-}
-
-// return peer count
-func (bcr *BlockchainReactor) peerCount() Response {
-	peerCount := map[string]int{"peerCount":len(bcr.sw.Peers().List())}
-	return resWrapper(peerCount)
-}
-
-// return network syncing information
-func (bcr *BlockchainReactor) isNetSyncing() Response {
-	isSyncing := map[string]bool{"isSyncing":bcr.blockKeeper.IsCaughtUp()}
-	return resWrapper(isSyncing)
 }
 
 // return block transactions count by height
@@ -170,28 +151,28 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) R
 	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return resWrapper(nil,err)
+		return resWrapper(nil, err)
 	}
 
-	count := map[string]int{"count":len(legacyBlock.Transactions)}
+	count := map[string]int{"count": len(legacyBlock.Transactions)}
 	return resWrapper(count)
 }
 
 // return block height
 func (bcr *BlockchainReactor) blockHeight() Response {
-	blockHeight := map[string]uint64{"blockHeight":bcr.chain.Height()}
+	blockHeight := map[string]uint64{"blockHeight": bcr.chain.Height()}
 	return resWrapper(blockHeight)
 }
 
 // return is in mining or not
 func (bcr *BlockchainReactor) isMining() Response {
-	IsMining := map[string]bool{"isMining":bcr.mining.IsMining()}
+	IsMining := map[string]bool{"isMining": bcr.mining.IsMining()}
 	return resWrapper(IsMining)
 }
 
 // return gasRate
 func (bcr *BlockchainReactor) gasRate() Response {
-	gasrate := map[string]int64{"gasRate":validation.GasRate}
+	gasrate := map[string]int64{"gasRate": validation.GasRate}
 	return resWrapper(gasrate)
 }
 
