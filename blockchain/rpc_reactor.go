@@ -83,9 +83,6 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/get-block-transactions-count-by-height", jsonHandler(bcr.getBlockTransactionsCountByHeight))
 
 	m.Handle("/net-info", jsonHandler(bcr.getNetInfo))
-	m.Handle("/net-listening", jsonHandler(bcr.isNetListening))
-	m.Handle("/net-syncing", jsonHandler(bcr.isNetSyncing))
-	m.Handle("/peer-count", jsonHandler(bcr.peerCount))
 
 	m.Handle("/is-mining", jsonHandler(bcr.isMining))
 	m.Handle("/gas-rate", jsonHandler(bcr.gasRate))

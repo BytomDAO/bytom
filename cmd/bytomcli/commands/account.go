@@ -59,10 +59,10 @@ var createAccountCmd = &cobra.Command{
 
 		Account := data.(map[string]interface{})
 
-		rawAccount,err := json.MarshalIndent(Account,""," ")
+		rawAccount, err := json.MarshalIndent(Account, "", " ")
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		jww.FEEDBACK.Println(string(rawAccount))
@@ -75,7 +75,7 @@ var listAccountsCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		in := requestQuery{PageSize:2}
+		in := requestQuery{PageSize: 2}
 
 		idx := 0
 	LOOP:
@@ -86,11 +86,11 @@ var listAccountsCmd = &cobra.Command{
 
 		response := data.(map[string]interface{})
 		rawList := response["items"].([]interface{})
-		for _, item := range rawList{
-			account,err := json.MarshalIndent(item,""," ")
+		for _, item := range rawList {
+			account, err := json.MarshalIndent(item, "", " ")
 			if err != nil {
 				jww.ERROR.Println(err)
-				os.Exit(ErrLocalUnwrap)
+				os.Exit(ErrLocalParse)
 			}
 			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, string(account))
 			idx++
@@ -167,7 +167,7 @@ var createAccountReceiverCmd = &cobra.Command{
 		rawReceiver, err := base64.StdEncoding.DecodeString(data.(string))
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 		jww.FEEDBACK.Println(string(rawReceiver))
 	},
@@ -195,12 +195,12 @@ var listBalances = &cobra.Command{
 		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		if err := json.Unmarshal(rawPage, &response); err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		for _, item := range response.Items {
@@ -237,12 +237,12 @@ var listUnspentOutputs = &cobra.Command{
 		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		if err := json.Unmarshal(rawPage, &response); err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		for _, item := range response.Items {

@@ -89,7 +89,7 @@ var buildTransaction = &cobra.Command{
 		rawTemplate, err := base64.StdEncoding.DecodeString(data.(string))
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		if pretty {
@@ -97,7 +97,7 @@ var buildTransaction = &cobra.Command{
 			err := json.Indent(&prettyJSON, rawTemplate, "", " ")
 			if err != nil {
 				jww.ERROR.Println(err)
-				os.Exit(ErrLocalUnwrap)
+				os.Exit(ErrLocalParse)
 			}
 			jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, prettyJSON.String())
 			return
@@ -136,7 +136,7 @@ var SignTransactionCmd = &cobra.Command{
 		rawSign, err := base64.StdEncoding.DecodeString(data.(string))
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		if pretty {
@@ -144,7 +144,7 @@ var SignTransactionCmd = &cobra.Command{
 			err := json.Indent(&prettyJSON, rawSign, "", " ")
 			if err != nil {
 				jww.ERROR.Println(err)
-				os.Exit(ErrLocalUnwrap)
+				os.Exit(ErrLocalParse)
 			}
 			jww.FEEDBACK.Printf("\nSign Template:\n%s\n", prettyJSON.String())
 			return
@@ -200,12 +200,12 @@ var listTransactions = &cobra.Command{
 		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		if err := json.Unmarshal(rawPage, &response); err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		for _, item := range response.Items {
@@ -229,6 +229,6 @@ var gasRateCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Printf("gas rate: %v\n", data)
+		printJSON(data)
 	},
 }

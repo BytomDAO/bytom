@@ -1,7 +1,11 @@
 package commands
 
 import (
+	stdjson "encoding/json"
+	"os"
 	"time"
+
+	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
@@ -65,4 +69,12 @@ type accessToken struct {
 	Type    string    `json:"type,omitempty"`
 	Secret  string    `json:"secret,omitempty"`
 	Created time.Time `json:"created_at,omitempty"`
+}
+
+func printJSON(data interface{}) {
+	rawData, err := stdjson.MarshalIndent(data.(map[string]interface{}), "", "  ")
+	if err != nil {
+		os.Exit(ErrLocalParse)
+	}
+	jww.FEEDBACK.Println(string(rawData))
 }

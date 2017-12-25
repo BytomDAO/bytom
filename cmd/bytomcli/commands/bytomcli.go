@@ -20,16 +20,16 @@ import (
 
 const (
 	// Success indicates the rpc calling is successful.
-	Success = 0
+	Success = iota
 	// ErrLocalExe indicates error occurs before the rpc calling.
-	ErrLocalExe = 1
+	ErrLocalExe
 	// ErrConnect indicates error occurs connecting to the bytomd, e.g.,
 	// bytomd can't parse the received arguments.
-	ErrConnect = 2
-	// ErrLocalUnwrap indicates error occurs locally when parsing the response.
-	ErrLocalParse = 3
+	ErrConnect
+	// ErrLocalParse indicates error occurs locally when parsing the response.
+	ErrLocalParse
 	// ErrRemote indicates error occurs in bytomd.
-	ErrRemote = 4
+	ErrRemote
 )
 
 // commandError is an error used to signal different error situations in command handling.

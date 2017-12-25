@@ -47,12 +47,12 @@ var listAccessTokenCmd = &cobra.Command{
 		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		if err := json.Unmarshal(rawPage, &response); err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		for _, item := range response.Items {
