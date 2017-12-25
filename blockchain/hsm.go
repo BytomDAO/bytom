@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/net/http/httperror"
-	"github.com/bytom/net/http/httpjson"
 )
 
 func init() {
@@ -30,34 +29,13 @@ func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ A
 	return resWrapper(xpub)
 }
 
-func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query requestQuery) Response {
-	limit := query.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize
-	}
-
-	xpubs, after, last, err := a.hsm.ListKeys(query.After, limit, defGenericPageSize)
+func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context) Response {
+	xpubs, err := a.hsm.ListKeys()
 	if err != nil {
 		return resWrapper(nil, err)
 	}
 
-	var items []interface{}
-	for _, xpub := range xpubs {
-		items = append(items, xpub)
-	}
-
-	query.After = after
-	page := &page{
-		Items:    httpjson.Array(items),
-		LastPage: last,
-		Next:     query}
-
-	rawPage, err := json.Marshal(page)
-	if err != nil {
-		return resWrapper(nil, err)
-	}
-
-	return resWrapper(rawPage)
+	return resWrapper(xpubs)
 }
 
 func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {

@@ -3,12 +3,10 @@ package blockchain
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/net/http/httpjson"
 )
 
 var errCurrentToken = errors.New("token cannot delete itself")
@@ -22,29 +20,14 @@ func (br *BlockchainReactor) createAccessToken(ctx context.Context, x struct{ ID
 	return resWrapper(*token)
 }
 
-func (br *BlockchainReactor) listAccessTokens(ctx context.Context, query requestQuery) Response {
-	limit := query.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize
-	}
-	tokens, after, last, err := br.accessTokens.List(query.After, limit, defGenericPageSize)
+func (br *BlockchainReactor) listAccessTokens(ctx context.Context) Response {
+	tokens, err := br.accessTokens.List()
 	if err != nil {
 		log.Errorf("listAccessTokens: %v", err)
 		return resWrapper(nil, err)
 	}
 
-	query.After = after
-	page := &page{
-		Items:    httpjson.Array(tokens),
-		LastPage: last,
-		Next:     query}
-
-	rawPage, err := json.Marshal(page)
-	if err != nil {
-		return resWrapper(nil, err)
-	}
-
-	return resWrapper(rawPage)
+	return resWrapper(tokens)
 }
 
 func (br *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct{ ID, Token string }) Response {

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"os"
 
@@ -29,7 +28,7 @@ var createKeyCmd = &cobra.Command{
 		resultMap, ok := data.(map[string]interface{})
 		if ok != true {
 			jww.ERROR.Println("invalid type assertion")
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 		jww.FEEDBACK.Printf("Alias: %v\nXPub: %v\nFile: %v\n", resultMap["alias"], resultMap["xpub"], resultMap["file"])
 	},
@@ -64,39 +63,21 @@ var listKeysCmd = &cobra.Command{
 	Short: "List the existing keys",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		var in requestQuery
-		var response = struct {
-			Items []interface{} `json:"items"`
-			Next  requestQuery  `json:"next"`
-			Last  bool          `json:"last_page"`
-		}{}
 
-		idx := 0
-	LOOP:
-		data, exitCode := clientCall("/list-keys", &in)
+		data, exitCode := clientCall("/list-keys")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
-		}
+		keyList := data.([]interface{})
 
-		if err := json.Unmarshal(rawPage, &response); err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
-		}
-
-		for _, item := range response.Items {
-			key := item.(map[string]interface{})
-			jww.FEEDBACK.Printf("%v:\nAlias: %v\nXpub: %v\nFile: %v\n\n", idx, key["alias"], key["xpub"], key["file"])
-			idx++
-		}
-		if response.Last == false {
-			in.After = response.Next.After
-			goto LOOP
+		for idx, item := range keyList {
+			key, err := json.MarshalIndent(item, "", " ")
+			if err != nil {
+				jww.ERROR.Println(err)
+				os.Exit(ErrLocalParse)
+			}
+			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, string(key))
 		}
 	},
 }

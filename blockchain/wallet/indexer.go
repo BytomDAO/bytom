@@ -3,7 +3,6 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -288,64 +287,30 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 	return annotatedTxs
 }
 
-func (w *Wallet) GetTransactions(after string, limit, defaultLimit int) ([]string, string, bool, error) {
-	var (
-		zafter int
-		err    error
-		last   bool
-	)
-
-	if after != "" {
-		zafter, err = strconv.Atoi(after)
-		if err != nil {
-			return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
-		}
-	}
-
-	annotatedTxs := make([]string, 0)
+func (w *Wallet) GetTransactions() ([]query.AnnotatedTx, error) {
+	annotatedTx := query.AnnotatedTx{}
+	annotatedTxs := make([]query.AnnotatedTx, 0)
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
 	for txIter.Next() {
-		annotatedTxs = append(annotatedTxs, string(txIter.Value()))
+		err := json.Unmarshal(txIter.Value(), &annotatedTx)
+		if err != nil {
+			return nil, err
+		}
+		annotatedTxs = append(annotatedTxs, annotatedTx)
 	}
 
-	start, end := 0, len(annotatedTxs)
 	if len(annotatedTxs) == 0 {
-		return nil, "", true, errors.New("No transactions")
-	} else if len(annotatedTxs) > zafter {
-		start = zafter
-	} else {
-		return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
+		return nil, errors.New("No transactions")
 	}
 
-	if len(annotatedTxs) > zafter+limit {
-		end = zafter + limit
-	}
-
-	if len(annotatedTxs) == end || len(annotatedTxs) < defaultLimit {
-		last = true
-	}
-
-	return annotatedTxs[start:end], strconv.Itoa(end), last, nil
+	return annotatedTxs, nil
 }
 
 //GetAccountUTXOs return all account unspent outputs
-func (w *Wallet) GetAccountUTXOs(after string, limit, defaultLimit int) ([]account.UTXO, string, bool, error) {
-	var (
-		zafter      int
-		err         error
-		last        bool
-		accountUTXO = account.UTXO{}
-	)
-
-	if after != "" {
-		zafter, err = strconv.Atoi(after)
-		if err != nil {
-			return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
-		}
-	}
-
+func (w *Wallet) GetAccountUTXOs() ([]account.UTXO, error) {
+	accountUTXO := account.UTXO{}
 	accountUTXOs := make([]account.UTXO, 0)
 
 	accountUTXOIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix))
@@ -360,25 +325,8 @@ func (w *Wallet) GetAccountUTXOs(after string, limit, defaultLimit int) ([]accou
 		accountUTXOs = append(accountUTXOs, accountUTXO)
 	}
 
-	if defaultLimit == 0 {
-		return accountUTXOs, strconv.Itoa(len(accountUTXOs)), true, nil
-	}
-
-	start, end := 0, len(accountUTXOs)
 	if len(accountUTXOs) == 0 {
-		return nil, "", true, errors.New("No transactions")
-	} else if len(accountUTXOs) > zafter {
-		start = zafter
-	} else {
-		return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
+		return nil, errors.New("No Account UTXOs")
 	}
-
-	if len(accountUTXOs) > zafter+limit {
-		end = zafter + limit
-	}
-
-	if len(accountUTXOs) == end || len(accountUTXOs) < defaultLimit {
-		last = true
-	}
-	return accountUTXOs[start:end], strconv.Itoa(end), last, nil
+	return accountUTXOs, nil
 }

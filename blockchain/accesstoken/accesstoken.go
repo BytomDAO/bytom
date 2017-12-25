@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -131,46 +130,25 @@ func (cs *CredentialStore) Check(ctx context.Context, id string, secret []byte) 
 }
 
 // List lists all access tokens.
-func (cs *CredentialStore) List(after string, limit, defaultLimit int) ([]string, string, bool, error) {
-	var (
-		zafter int
-		err    error
-		last   bool
-	)
+func (cs *CredentialStore) List() ([]Token, error) {
+	token := Token{}
+	tokens := make([]Token, 0)
 
-	if after != "" {
-		zafter, err = strconv.Atoi(after)
-		if err != nil {
-			return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
-		}
-	}
-
-	tokens := make([]string, 0)
 	iter := cs.DB.Iterator()
 	defer iter.Release()
 
 	for iter.Next() {
-		tokens = append(tokens, string(iter.Value()))
+		if err := json.Unmarshal(iter.Value(), &token); err != nil {
+			return nil, err
+		}
+		tokens = append(tokens, token)
 	}
-
-	start, end := 0, len(tokens)
 
 	if len(tokens) == 0 {
-		return nil, "", true, errors.New("No access token")
-	} else if len(tokens) > zafter {
-		start = zafter
-	} else {
-		return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
+		return nil, errors.New("No AccessTokens")
 	}
 
-	if len(tokens) > zafter+limit {
-		end = zafter + limit
-	}
-	if len(tokens) == end || len(tokens) < defaultLimit {
-		last = true
-	}
-
-	return tokens[start:end], strconv.Itoa(end), last, nil
+	return tokens, nil
 }
 
 // Delete deletes an access token by id.

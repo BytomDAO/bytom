@@ -3,13 +3,12 @@ package blockchain
 import (
 	"context"
 	"encoding/json"
-	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/errors"
-	"github.com/bytom/net/http/httpjson"
 )
 
 // POST /create-txfeed
@@ -92,76 +91,34 @@ func txAfterIsBefore(a, b string) (bool, error) {
 			aAfter.FromPosition < bAfter.FromPosition), nil
 }
 
-func (bcr *BlockchainReactor) getTxFeeds(after string, limit, defaultLimit int) ([]string, string, bool, error) {
-	var (
-		zafter int
-		err    error
-		last   bool
-	)
+func (bcr *BlockchainReactor) getTxFeeds() ([]txfeed.TxFeed, error) {
+	txFeed := txfeed.TxFeed{}
+	txFeeds := make([]txfeed.TxFeed, 0)
 
-	if after != "" {
-		zafter, err = strconv.Atoi(after)
-		if err != nil {
-			return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
-		}
-	}
-
-	txFeeds := make([]string, 0)
 	iter := bcr.txFeedTracker.DB.Iterator()
 	defer iter.Release()
 
 	for iter.Next() {
-		txFeeds = append(txFeeds, string(iter.Value()))
+		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
+			return nil, err
+		}
+		txFeeds = append(txFeeds, txFeed)
 	}
-
-	start, end := 0, len(txFeeds)
 
 	if len(txFeeds) == 0 {
-		return nil, "", true, errors.New("No transaction feed")
-	} else if len(txFeeds) > zafter {
-		start = zafter
-	} else {
-		return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %v", zafter)
-	}
-	if len(txFeeds) > zafter+limit {
-		end = zafter + limit
+		return nil, errors.New("No Transaction Feeds")
 	}
 
-	if len(txFeeds) == end || len(txFeeds) < defaultLimit {
-		last = true
-	}
-
-	return txFeeds[start:end], strconv.Itoa(end), last, nil
+	return txFeeds, nil
 }
 
 // listTxFeeds is an http handler for listing txfeeds. It does not take a filter.
 // POST /list-transaction-feeds
-func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context, query requestQuery) Response {
-	limit := query.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize
-	}
-
-	txfeeds, after, last, err := bcr.getTxFeeds(query.After, limit, defGenericPageSize)
+func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context) Response {
+	txFeeds, err := bcr.getTxFeeds()
 	if err != nil {
 		return resWrapper(nil, err)
 	}
 
-	var items []string
-	for _, txfeed := range txfeeds {
-		items = append(items, txfeed)
-	}
-
-	query.After = after
-	page := &page{
-		Items:    httpjson.Array(items),
-		LastPage: last,
-		Next:     query}
-
-	rawPage, err := json.Marshal(page)
-	if err != nil {
-		return resWrapper(nil, err)
-	}
-
-	return resWrapper(rawPage)
+	return resWrapper(txFeeds)
 }

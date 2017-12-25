@@ -58,7 +58,7 @@ var getBlockByHashCmd = &cobra.Command{
 		rawBlock, err := base64.StdEncoding.DecodeString(data.(string))
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 		jww.FEEDBACK.Printf("%v\n", string(rawBlock))
 	},
@@ -76,7 +76,7 @@ var getBlockHeaderByHashCmd = &cobra.Command{
 		rawHeader, err := base64.StdEncoding.DecodeString(data.(string))
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 		jww.FEEDBACK.Printf("block header: %v\n", string(rawHeader))
 	},
@@ -116,7 +116,7 @@ var getBlockByHeightCmd = &cobra.Command{
 		rawBlock, err := base64.StdEncoding.DecodeString(data.(string))
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 		jww.FEEDBACK.Printf("%v\n", string(rawBlock))
 	},

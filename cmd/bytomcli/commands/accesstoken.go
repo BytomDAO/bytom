@@ -30,41 +30,21 @@ var listAccessTokenCmd = &cobra.Command{
 	Short: "List the existing access tokens",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		var in requestQuery
-		var response = struct {
-			Items []interface{} `json:"items"`
-			Next  requestQuery  `json:"next"`
-			Last  bool          `json:"last_page"`
-		}{}
 
-		idx := 0
-	LOOP:
-		data, exitCode := clientCall("/list-access-tokens", &in)
+		data, exitCode := clientCall("/list-access-tokens")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+		tokenList := data.([]interface{})
+		for idx, item := range tokenList {
+			token, err := json.MarshalIndent(item, "", " ")
+			if err != nil {
+				jww.ERROR.Println(err)
+				os.Exit(ErrLocalParse)
+			}
+			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, token)
 		}
-
-		if err := json.Unmarshal(rawPage, &response); err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
-		}
-
-		for _, item := range response.Items {
-			key := item.(string)
-			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, key)
-			idx++
-		}
-		if response.Last == false {
-			in.After = response.Next.After
-			goto LOOP
-		}
-
 	},
 }
 

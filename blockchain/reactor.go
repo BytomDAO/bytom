@@ -153,7 +153,7 @@ type page struct {
 	Items    interface{}  `json:"items"`
 	Next     requestQuery `json:"next"`
 	LastPage bool         `json:"last_page"`
-	After    string `json:"after"`
+	After    string       `json:"after"`
 }
 
 // NewBlockchainReactor returns the reactor of whole blockchain.

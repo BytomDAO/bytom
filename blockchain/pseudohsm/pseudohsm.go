@@ -4,7 +4,6 @@ package pseudohsm
 import (
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -85,40 +84,12 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 }
 
 // ListKeys returns a list of all xpubs from the store
-func (h *HSM) ListKeys(after string, limit, defaultLimit int) ([]XPub, string, bool, error) {
-
+func (h *HSM) ListKeys() ([]XPub, error) {
 	xpubs := h.cache.keys()
-	start, end := 0, len(xpubs)
-
-	var (
-		zafter int
-		err    error
-		last   bool
-	)
-
-	if after != "" {
-		zafter, err = strconv.Atoi(after)
-		if err != nil {
-			return nil, "", false, errors.WithDetailf(ErrInvalidAfter, "value: %q", zafter)
-		}
-	}
-
 	if len(xpubs) == 0 {
-		return nil, "", true, ErrNoKey
-	} else if len(xpubs) > zafter {
-		start = zafter
-	} else {
-		return nil, "", false, errors.WithDetailf(ErrInvalidAfter, "value: %v", zafter)
+		return nil, errors.New("No keys")
 	}
-	if len(xpubs) > zafter+limit {
-		end = zafter + limit
-	}
-
-	if len(xpubs) == end || len(xpubs) < defaultLimit {
-		last = true
-	}
-
-	return xpubs[start:end], strconv.Itoa(end), last, nil
+	return xpubs, nil
 }
 
 // XSign looks up the xprv given the xpub, optionally derives a new

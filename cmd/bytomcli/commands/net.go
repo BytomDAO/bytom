@@ -20,7 +20,7 @@ var netInfoCmd = &cobra.Command{
 		resultMap, ok := data.(map[string]interface{})
 		if ok != true {
 			jww.ERROR.Println("invalid type assertion")
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 		jww.FEEDBACK.Printf("listening:%v\nsyncing:%v\npeer_count:%v\n",
 			resultMap["listening"], resultMap["syncing"], resultMap["peer_count"])

@@ -26,7 +26,7 @@ const (
 	// ErrConnect indicates error occurs connecting to the bytomd, e.g.,
 	// bytomd can't parse the received arguments.
 	ErrConnect = 2
-	// ErrLocalUnwrap indicates error occurs locally when parsing the response.
+	// ErrLocalParse indicates error occurs locally when parsing the response.
 	ErrLocalParse = 3
 	// ErrRemote indicates error occurs in bytomd.
 	ErrRemote = 4
@@ -199,16 +199,14 @@ func clientCall(path string, req ...interface{}) (interface{}, int) {
 	client := mustRPCClient()
 	client.Call(context.Background(), path, request, response)
 
-	if response == nil {
+	switch response.Status {
+	case blockchain.FAIL:
+		jww.ERROR.Println(response.Msg)
+		return nil, ErrRemote
+	case "":
 		jww.ERROR.Println("Unable to connect to the bytomd")
 		return nil, ErrConnect
 	}
 
-	if response.Status == blockchain.FAIL {
-		jww.ERROR.Println(response.Msg)
-		return nil, ErrRemote
-	}
-
 	return response.Data, Success
-
 }

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"os"
 	"strings"
@@ -59,10 +58,10 @@ var createAccountCmd = &cobra.Command{
 
 		Account := data.(map[string]interface{})
 
-		rawAccount,err := json.MarshalIndent(Account,""," ")
+		rawAccount, err := json.MarshalIndent(Account, "", " ")
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 
 		jww.FEEDBACK.Println(string(rawAccount))
@@ -75,31 +74,20 @@ var listAccountsCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		in := requestQuery{PageSize:2}
-
-		idx := 0
-	LOOP:
-		data, exitCode := clientCall("/list-accounts", &in)
+		data, exitCode := clientCall("/list-accounts")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		response := data.(map[string]interface{})
-		rawList := response["items"].([]interface{})
-		for _, item := range rawList{
-			account,err := json.MarshalIndent(item,""," ")
+		accountList := data.([]interface{})
+
+		for idx, item := range accountList {
+			account, err := json.MarshalIndent(item, "", " ")
 			if err != nil {
 				jww.ERROR.Println(err)
-				os.Exit(ErrLocalUnwrap)
+				os.Exit(ErrLocalParse)
 			}
 			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, string(account))
-			idx++
-		}
-
-		if response["last_page"] == false {
-			after := response["after"].(string)
-			in.After = after
-			goto LOOP
 		}
 	},
 }
@@ -109,7 +97,9 @@ var deleteAccountCmd = &cobra.Command{
 	Short: "Delete the existing account",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if _, exitCode := clientCall("/delete-account", args[0]); exitCode != Success {
+		if _, exitCode := clientCall("/delete-account", struct {
+			AccountInfo string `json:"account_info"`
+		}{AccountInfo: args[0]}); exitCode != Success {
 			os.Exit(exitCode)
 		}
 		jww.FEEDBACK.Println("Successfully delete account")
@@ -127,7 +117,7 @@ If the tags match the pattern 'key:', delete them.`,
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var updateTag = struct {
-			AccountInfo string
+			AccountInfo string                 `json:"account_info"`
 			Tags        map[string]interface{} `json:"tags"`
 		}{}
 
@@ -141,6 +131,7 @@ If the tags match the pattern 'key:', delete them.`,
 		}
 
 		updateTag.AccountInfo = args[0]
+
 		if _, exitCode := clientCall("/update-account-tags", &updateTag); exitCode != Success {
 			os.Exit(exitCode)
 		}
@@ -157,17 +148,20 @@ var createAccountReceiverCmd = &cobra.Command{
 
 		var ins = struct {
 			AccountInfo string    `json:"account_info"`
-			ExpiresAt   time.Time `json:"expires_at"`
+			ExpiresAt   time.Time `json:"expires_at,omitempty"`
 		}{AccountInfo: args[0]}
 
 		data, exitCode := clientCall("/create-account-receiver", &ins)
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		rawReceiver, err := base64.StdEncoding.DecodeString(data.(string))
+
+		receiver := data.(map[string]interface{})
+
+		rawReceiver, err := json.MarshalIndent(receiver, "", " ")
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+			os.Exit(ErrLocalParse)
 		}
 		jww.FEEDBACK.Println(string(rawReceiver))
 	},
@@ -178,40 +172,23 @@ var listBalances = &cobra.Command{
 	Short: "List the accounts balances",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		var in requestQuery
-		var response = struct {
-			Items []interface{} `json:"items"`
-			Next  requestQuery  `json:"next"`
-			Last  bool          `json:"last_page"`
-		}{}
 
-		idx := 0
-	LOOP:
-		data, exitCode := clientCall("/list-balances", &in)
+		data, exitCode := clientCall("/list-balances")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+		balanceList := data.([]interface{})
+
+		for idx, item := range balanceList {
+			balance, err := json.MarshalIndent(item, "", " ")
+			if err != nil {
+				jww.ERROR.Println(err)
+				os.Exit(ErrLocalParse)
+			}
+			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, string(balance))
 		}
 
-		if err := json.Unmarshal(rawPage, &response); err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
-		}
-
-		for _, item := range response.Items {
-			key := item.(string)
-			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, key)
-			idx++
-		}
-		if response.Last == false {
-			in.After = response.Next.After
-			goto LOOP
-		}
 	},
 }
 
@@ -220,39 +197,22 @@ var listUnspentOutputs = &cobra.Command{
 	Short: "List the accounts unspent outputs",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		var in requestQuery
-		var response = struct {
-			Items []interface{} `json:"items"`
-			Next  requestQuery  `json:"next"`
-			Last  bool          `json:"last_page"`
-		}{}
 
-		idx := 0
-	LOOP:
-		data, exitCode := clientCall("/list-unspent-outputs", &in)
+		data, exitCode := clientCall("/list-unspent-outputs")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
+		utxoList := data.([]interface{})
+
+		for idx, item := range utxoList {
+			utxo, err := json.MarshalIndent(item, "", " ")
+			if err != nil {
+				jww.ERROR.Println(err)
+				os.Exit(ErrLocalParse)
+			}
+			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, string(utxo))
 		}
 
-		if err := json.Unmarshal(rawPage, &response); err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalUnwrap)
-		}
-
-		for _, item := range response.Items {
-			UTXO := item.(string)
-			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, UTXO)
-			idx++
-		}
-		if response.Last == false {
-			in.After = response.Next.After
-			goto LOOP
-		}
 	},
 }

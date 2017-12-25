@@ -2,7 +2,6 @@ package account
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/bytom/blockchain/txbuilder"
@@ -15,7 +14,7 @@ const defaultReceiverExpiry = 30 * 24 * time.Hour // 30 days
 // with the provided expiry. If a zero time is provided for the
 // expiry, a default expiry of 30 days from the current time is
 // used.
-func (m *Manager) CreateReceiver(ctx context.Context, accountInfo string, expiresAt time.Time) ([]byte, error) {
+func (m *Manager) CreateReceiver(ctx context.Context, accountInfo string, expiresAt time.Time) (*txbuilder.Receiver, error) {
 	if expiresAt.IsZero() {
 		expiresAt = time.Now().Add(defaultReceiverExpiry)
 	}
@@ -36,10 +35,5 @@ func (m *Manager) CreateReceiver(ctx context.Context, accountInfo string, expire
 		ExpiresAt:      expiresAt,
 	}
 
-	rawReceiver, err := json.Marshal(receiver)
-	if err != nil {
-		return nil, errors.Wrap(err)
-	}
-
-	return rawReceiver, nil
+	return receiver, nil
 }

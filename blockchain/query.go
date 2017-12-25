@@ -2,143 +2,62 @@ package blockchain
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
-	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/account"
-	"github.com/bytom/errors"
-	"github.com/bytom/net/http/httpjson"
 )
-
-const (
-	defGenericPageSize = 100
-)
-
-var accountUTXOFmt = `
-{
-	"OutputID":"%x",
-	"AssetID":"%x",
-	"Amount":"%d",
-	"AccountID":"%s",
-	"ProgramIndex":"%d",
-	"Program":"%x",
-	"SourceID":"%x",
-	"SourcePos":"%d",
-	"RefData":"%x",
-	"Change":"%t"
-}`
 
 // POST /list-accounts
-func (bcr *BlockchainReactor) listAccounts(ctx context.Context, query requestQuery) Response {
-
-	limit := query.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize
-	}
-
-	accounts, after, last, err := bcr.accounts.ListAccounts(query.After, limit)
+func (bcr *BlockchainReactor) listAccounts(ctx context.Context) Response {
+	accounts, err := bcr.accounts.ListAccounts()
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
 		return resWrapper(nil, err)
 	}
 
-	page := page{
-		Items:    httpjson.Array(accounts),
-		LastPage: last,
-		After:     after}
-
-	return resWrapper(page)
+	return resWrapper(accounts)
 }
 
 // POST /list-assets
-func (bcr *BlockchainReactor) listAssets(ctx context.Context, query requestQuery) Response {
-
-	limit := query.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize // defGenericPageSize = 100
-	}
-
-	assets, after, last, err := bcr.assets.ListAssets(query.After, limit, defGenericPageSize)
+func (bcr *BlockchainReactor) listAssets(ctx context.Context) Response {
+	assets, err := bcr.assets.ListAssets()
 	if err != nil {
 		log.Errorf("listAssets: %v", err)
 		return resWrapper(nil, err)
 	}
 
-	query.After = after
-
-	page := &page{
-		Items:    httpjson.Array(assets),
-		LastPage: last,
-		Next:     query}
-
-	rawPage, err := json.Marshal(page)
-	if err != nil {
-		return resWrapper(nil, err)
-	}
-
-	return resWrapper(rawPage)
+	return resWrapper(assets)
 }
 
 // POST /listBalances
-func (bcr *BlockchainReactor) listBalances(ctx context.Context, query requestQuery) Response {
-
-	limit := query.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize // defGenericPageSize = 100
-	}
-
-	accountUTXOs, _, _, err := bcr.wallet.GetAccountUTXOs("", 0, 0)
+func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
+	accountUTXOs, err := bcr.wallet.GetAccountUTXOs()
 	if err != nil {
 		log.Errorf("GetAccountUTXOs: %v", err)
 		return resWrapper(nil, err)
 	}
 
-	balances, after, last, err := indexBalances(accountUTXOs, query.After, limit, defGenericPageSize)
-	if err != nil {
-		log.Errorf("listBalances: %v", err)
-		return resWrapper(nil, err)
-	}
-
-	query.After = after
-
-	page := &page{
-		Items:    httpjson.Array(balances),
-		LastPage: last,
-		Next:     query}
-
-	rawPage, err := json.Marshal(page)
-	if err != nil {
-		return resWrapper(nil, err)
-	}
-
-	return resWrapper(rawPage)
+	return resWrapper(bcr.indexBalances(accountUTXOs))
 }
 
-func indexBalances(accountUTXOs []account.UTXO, after string, limit, defaultLimit int) ([]string, string, bool, error) {
-	type assetAmount struct {
-		AssetID string
-		Amount  uint64
-	}
+type assetAmount struct {
+	AssetID string `json:"asset_id"`
+	Amount  uint64 `json:"amount"`
+}
 
-	var (
-		zafter int
-		err    error
-		last   bool
-	)
+type accountBalance struct {
+	AccountID string        `json:"account_id"`
+	Alias     string        `json:"alias,omitempty"`
+	Balances  []assetAmount `json:"balances"`
+}
 
-	if after != "" {
-		zafter, err = strconv.Atoi(after)
-		if err != nil {
-			return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
-		}
-	}
-
+func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accountBalance {
 	accBalance := make(map[string]map[string]uint64)
-	balances := make([]string, 0)
+	balances := make([]accountBalance, 0)
+	tmpBalance := accountBalance{}
 
 	for _, accountUTXO := range accountUTXOs {
 
@@ -172,94 +91,69 @@ func indexBalances(accountUTXOs []account.UTXO, after string, limit, defaultLimi
 			assetAmounts = append(assetAmounts, assetAmount{AssetID: asset, Amount: accBalance[account][asset]})
 		}
 
-		balanceString, _ := json.Marshal(assetAmounts)
-		accBalancesString := fmt.Sprintf(`{"AccountID":"%s","Balances":"%s"}`, account, balanceString)
-		balances = append(balances, accBalancesString)
+		alias := bcr.accounts.GetAliasByID(account)
+
+		tmpBalance.Alias = alias
+		tmpBalance.AccountID = account
+		tmpBalance.Balances = assetAmounts
+
+		balances = append(balances, tmpBalance)
 	}
 
-	start, end := 0, len(balances)
-
-	if len(balances) == 0 {
-		return nil, "", true, errors.New("No account balances")
-	} else if len(balances) > zafter {
-		start = zafter
-	} else {
-		return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
-	}
-
-	if len(balances) > zafter+limit {
-		end = zafter + limit
-	}
-
-	if len(balances) == end || len(balances) < defaultLimit {
-		last = true
-	}
-
-	return balances[start:end], strconv.Itoa(end), last, nil
+	return balances
 }
 
 // POST /list-transactions
-func (bcr *BlockchainReactor) listTransactions(ctx context.Context, query requestQuery) Response {
-	limit := query.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize
-	}
-
-	transactions, after, last, err := bcr.wallet.GetTransactions(query.After, limit, defGenericPageSize)
+func (bcr *BlockchainReactor) listTransactions(ctx context.Context) Response {
+	transactions, err := bcr.wallet.GetTransactions()
 	if err != nil {
 		log.Errorf("listTransactions: %v", err)
 		return resWrapper(nil, err)
 	}
 
-	query.After = after
+	return resWrapper(transactions)
+}
 
-	page := &page{
-		Items:    httpjson.Array(transactions),
-		LastPage: last,
-		Next:     query}
-
-	rawPage, err := json.Marshal(page)
-	if err != nil {
-		return resWrapper(nil, err)
-	}
-
-	return resWrapper(rawPage)
+type annotatedUTXO struct {
+	Alias        string `json:"alias,omitempty"`
+	OutputID     string `json:"output_id"`
+	AssetID      string `json:"asset_id"`
+	Amount       uint64 `json:"amount"`
+	AccountID    string `json:"account_id"`
+	ProgramIndex uint64 `json:"program_index"`
+	Program      string `json:"program"`
+	SourceID     string `json:"source_id"`
+	SourcePos    uint64 `json:"source_pos"`
+	RefData      string `json:"ref_data"`
+	Change       bool   `json:"change"`
 }
 
 // POST /list-unspent-outputs
-func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, query requestQuery) Response {
-	limit := query.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize // defGenericPageSize = 100
-	}
+func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context) Response {
+	tmpUTXO := annotatedUTXO{}
+	UTXOs := make([]annotatedUTXO, 0)
 
-	accountUTXOs, after, last, err := bcr.wallet.GetAccountUTXOs(query.After, limit, defGenericPageSize)
+	accountUTXOs, err := bcr.wallet.GetAccountUTXOs()
 	if err != nil {
 		log.Errorf("list Unspent Outputs: %v", err)
 		return resWrapper(nil, err)
 	}
 
-	formatUTXOs := make([]string, 0)
 	for _, utxo := range accountUTXOs {
-		format := fmt.Sprintf(accountUTXOFmt,
-			utxo.OutputID, utxo.AssetID, utxo.Amount,
-			utxo.AccountID, utxo.ProgramIndex, utxo.Program,
-			utxo.SourceID, utxo.SourcePos, utxo.RefData, utxo.Change)
+		tmpUTXO.Alias = bcr.accounts.GetAliasByID(utxo.AccountID)
+		tmpUTXO.OutputID = fmt.Sprintf("%x", utxo.OutputID)
+		tmpUTXO.AccountID = utxo.AccountID
+		tmpUTXO.AssetID = fmt.Sprintf("%x", utxo.AssetID)
+		tmpUTXO.Amount = utxo.Amount
+		tmpUTXO.Change = utxo.Change
+		tmpUTXO.Program = fmt.Sprintf("%x", utxo.Program)
+		tmpUTXO.ProgramIndex = utxo.ProgramIndex
+		tmpUTXO.RefData = fmt.Sprintf("%x", utxo.RefData)
+		tmpUTXO.SourceID = fmt.Sprintf("%x", utxo.SourceID)
+		tmpUTXO.SourcePos = utxo.SourcePos
 
-		formatUTXOs = append(formatUTXOs, format)
-	}
-	query.After = after
-
-	page := &page{
-		Items:    httpjson.Array(formatUTXOs),
-		LastPage: last,
-		Next:     query}
-
-	rawPage, err := json.Marshal(page)
-	if err != nil {
-		return resWrapper(nil, err)
+		UTXOs = append(UTXOs, tmpUTXO)
 	}
 
-	return resWrapper(rawPage)
-
+	return resWrapper(UTXOs)
 }

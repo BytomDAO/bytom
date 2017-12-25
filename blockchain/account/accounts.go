@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 
@@ -96,7 +95,7 @@ func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) 
 type Account struct {
 	*signers.Signer
 	Alias string
-	Tags  map[string]interface{} `json:tags,omitempty`
+	Tags  map[string]interface{} `json:"tags,omitempty"`
 }
 
 // Create creates a new Account.
@@ -208,6 +207,23 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 	m.cache.Add(id, account.Signer)
 	m.cacheMu.Unlock()
 	return account.Signer, nil
+}
+
+func (m *Manager) GetAliasByID(id string) string {
+	var account Account
+
+	rawAccount := m.db.Get(Key(id))
+	if rawAccount == nil {
+		log.Warn("fail to find account")
+		return ""
+	}
+
+	if err := json.Unmarshal(rawAccount, &account); err != nil {
+		log.Warn(err)
+		return ""
+	}
+
+	return account.Alias
 }
 
 func (m *Manager) createControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
@@ -365,52 +381,23 @@ func (m *Manager) DeleteAccount(accountInfo string) error {
 }
 
 // ListAccounts will return the accounts in the db
-func (m *Manager) ListAccounts(after string, limit int) ([]Account, string, bool, error) {
-
-	var (
-		zafter int
-		err    error
-		last   bool
-		account Account
-	)
-
-	if after != "" {
-		zafter, err = strconv.Atoi(after)
-		if err != nil {
-			return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
-		}
-	}
-
+func (m *Manager) ListAccounts() ([]Account, error) {
+	account := Account{}
 	accounts := make([]Account, 0)
+
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
 	defer accountIter.Release()
 
 	for accountIter.Next() {
-		err = json.Unmarshal(accountIter.Value(),&account)
-		if err != nil {
-			return nil,"",true,err
+		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
+			return nil, err
 		}
 		accounts = append(accounts, account)
 	}
 
-	start, end := 0, len(accounts)
-
 	if len(accounts) == 0 {
-		return nil, "", true, errors.New("No accounts")
-	} else if len(accounts) > zafter {
-		start = zafter
-	} else {
-		return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
+		return nil, errors.New("No accounts")
 	}
 
-	if len(accounts) > zafter+limit {
-		end = zafter + limit
-	}
-
-	if len(accounts) == end || len(accounts) < limit {
-		fmt.Println("zjbtest----------",len(accounts),"@",end,"@",limit)
-		last = true
-	}
-
-	return accounts[start:end], strconv.Itoa(end), last, nil
+	return accounts, nil
 }

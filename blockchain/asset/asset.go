@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"sync"
 
 	"github.com/golang/groupcache/lru"
@@ -248,46 +247,24 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 }
 
 // ListAssets returns the accounts in the db
-func (reg *Registry) ListAssets(after string, limit, defaultLimit int) ([]string, string, bool, error) {
-	var (
-		zafter int
-		err    error
-		last   bool
-	)
+func (reg *Registry) ListAssets() ([]Asset, error) {
+	asset := Asset{}
+	assets := make([]Asset, 0)
 
-	if after != "" {
-		zafter, err = strconv.Atoi(after)
-		if err != nil {
-			return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
-		}
-	}
-
-	assets := make([]string, 0)
 	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix))
 	defer assetIter.Release()
 
 	for assetIter.Next() {
-		assets = append(assets, string(assetIter.Value()))
+		if err := json.Unmarshal(assetIter.Value(), &asset); err != nil {
+			return nil, err
+		}
+		assets = append(assets, asset)
 	}
-
-	start, end := 0, len(assets)
 
 	if len(assets) == 0 {
-		return nil, "", true, errors.New("No assets")
-	} else if len(assets) > zafter {
-		start = zafter
-	} else {
-		return nil, "", false, errors.WithDetailf(errors.New("Invalid after"), "value: %q", zafter)
+		return nil, errors.New("No local assets")
 	}
-
-	if len(assets) > zafter+limit {
-		end = zafter + limit
-	}
-
-	if len(assets) == end || len(assets) < defaultLimit {
-		last = true
-	}
-	return assets[start:end], strconv.Itoa(end), last, nil
+	return assets, nil
 }
 
 // serializeAssetDef produces a canonical byte representation of an asset

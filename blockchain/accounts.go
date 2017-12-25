@@ -11,10 +11,10 @@ import (
 
 // POST /create-account
 func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
-	RootXPubs []chainkd.XPub `json:"root_xpubs"`
-	Quorum    int
-	Alias     string
-	Tags      map[string]interface{}
+	RootXPubs []chainkd.XPub         `json:"root_xpubs"`
+	Quorum    int                    `json:"quorum"`
+	Alias     string                 `json:"alias"`
+	Tags      map[string]interface{} `json:"tags"`
 
 	// ClientToken is the application's unique token for the account. Every account
 	// should have a unique client token. The client token is used to ensure
@@ -52,9 +52,10 @@ func (bcr *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag s
 
 //
 // POST /delete-account
-func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, accountInfo string) Response {
-
-	if err := bcr.accounts.DeleteAccount(accountInfo); err != nil {
+func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, a struct {
+	AccountInfo string `json:"accountInfo"`
+}) Response {
+	if err := bcr.accounts.DeleteAccount(a.AccountInfo); err != nil {
 		return resWrapper(nil, err)
 	}
 	return resWrapper(nil)
