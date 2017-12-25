@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -16,8 +15,8 @@ var createKeyCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		var key = struct {
-			Alias    string
-			Password string
+			Alias    string `json:"alias"`
+			Password string `json:"password"`
 		}{Alias: args[0], Password: args[1]}
 
 		data, exitCode := clientCall("/create-key", &key)
@@ -25,12 +24,7 @@ var createKeyCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		resultMap, ok := data.(map[string]interface{})
-		if ok != true {
-			jww.ERROR.Println("invalid type assertion")
-			os.Exit(ErrLocalParse)
-		}
-		jww.FEEDBACK.Printf("Alias: %v\nXPub: %v\nFile: %v\n", resultMap["alias"], resultMap["xpub"], resultMap["file"])
+		printJSON(data)
 	},
 }
 
@@ -39,7 +33,6 @@ var deleteKeyCmd = &cobra.Command{
 	Short: "Delete a key",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-
 		xpub := new(chainkd.XPub)
 		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
 			jww.ERROR.Println("delete-key:", err)
@@ -63,21 +56,11 @@ var listKeysCmd = &cobra.Command{
 	Short: "List the existing keys",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		data, exitCode := clientCall("/list-keys")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		keyList := data.([]interface{})
-
-		for idx, item := range keyList {
-			key, err := json.MarshalIndent(item, "", " ")
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(ErrLocalParse)
-			}
-			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, string(key))
-		}
+		printJSONList(data)
 	},
 }

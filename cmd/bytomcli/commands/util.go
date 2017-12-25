@@ -72,9 +72,36 @@ type accessToken struct {
 }
 
 func printJSON(data interface{}) {
-	rawData, err := stdjson.MarshalIndent(data.(map[string]interface{}), "", "  ")
-	if err != nil {
+	dataMap, ok := data.(map[string]interface{})
+	if ok != true {
+		jww.ERROR.Println("invalid type assertion")
 		os.Exit(ErrLocalParse)
 	}
+
+	rawData, err := stdjson.MarshalIndent(dataMap, "", "  ")
+	if err != nil {
+		jww.ERROR.Println(err)
+		os.Exit(ErrLocalParse)
+	}
+
 	jww.FEEDBACK.Println(string(rawData))
+}
+
+func printJSONList(data interface{}) {
+	dataList, ok := data.([]interface{})
+	if ok != true {
+		jww.ERROR.Println("invalid type assertion")
+		os.Exit(ErrLocalParse)
+	}
+
+	for idx, item := range dataList {
+		jww.FEEDBACK.Println(idx, ":")
+		rawData, err := stdjson.MarshalIndent(item, "", "  ")
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalParse)
+		}
+
+		jww.FEEDBACK.Println(string(rawData))
+	}
 }

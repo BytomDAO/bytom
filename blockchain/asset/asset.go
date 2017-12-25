@@ -119,14 +119,14 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		return nil, err
 	}
 
-	defhash := bc.NewHash(sha3.Sum256(rawDefinition))
+	defHash := bc.NewHash(sha3.Sum256(rawDefinition))
 	asset := &Asset{
 		DefinitionMap:     definition,
 		RawDefinitionByte: rawDefinition,
 		VMVersion:         vmver,
 		IssuanceProgram:   issuanceProgram,
 		InitialBlockHash:  reg.initialBlockHash,
-		AssetID:           bc.ComputeAssetID(issuanceProgram, &reg.initialBlockHash, vmver, &defhash),
+		AssetID:           bc.ComputeAssetID(issuanceProgram, &reg.initialBlockHash, vmver, &defHash),
 		Signer:            assetSigner,
 		Tags:              tags,
 	}
@@ -134,7 +134,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		asset.Alias = &alias
 	}
 
-	ass, err := json.MarshalIndent(asset, "", " ")
+	ass, err := json.Marshal(asset)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal asset")
 	}
@@ -180,7 +180,7 @@ func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[
 		}
 	}
 
-	rawAsset, err := json.MarshalIndent(asset, "", " ")
+	rawAsset, err := json.Marshal(asset)
 	if err != nil {
 		return errors.New("fail to marshal asset")
 	}

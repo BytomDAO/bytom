@@ -23,9 +23,9 @@ func init() {
 		"20000000", "program of receiver")
 	buildTransaction.PersistentFlags().BoolVar(&pretty, "pretty", false,
 		"pretty print json result")
-	SignTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "",
+	signTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "",
 		"password of the account which sign these transaction(s)")
-	SignTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false,
+	signTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false,
 		"pretty print json result")
 }
 
@@ -106,7 +106,7 @@ var buildTransaction = &cobra.Command{
 	},
 }
 
-var SignTransactionCmd = &cobra.Command{
+var signTransactionCmd = &cobra.Command{
 	Use:   "sign-transaction  <json templates>",
 	Short: "Sign transaction templates with account password",
 	Args:  cobra.ExactArgs(1),
@@ -154,7 +154,7 @@ var SignTransactionCmd = &cobra.Command{
 	},
 }
 
-var SubmitTransactionCmd = &cobra.Command{
+var submitTransactionCmd = &cobra.Command{
 	Use:   "submit-transaction  <signed json template>",
 	Short: "Submit signed transaction template",
 	Args:  cobra.ExactArgs(1),
@@ -183,40 +183,12 @@ var listTransactions = &cobra.Command{
 	Short: "List the transactions",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		var in requestQuery
-		var response = struct {
-			Items []interface{} `json:"items"`
-			Next  requestQuery  `json:"next"`
-			Last  bool          `json:"last_page"`
-		}{}
-
-		idx := 0
-	LOOP:
-		data, exitCode := clientCall("/list-transactions", &in)
+		data, exitCode := clientCall("/list-transactions")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
-		}
-
-		if err := json.Unmarshal(rawPage, &response); err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
-		}
-
-		for _, item := range response.Items {
-			key := item.(string)
-			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, key)
-			idx++
-		}
-		if response.Last == false {
-			in.After = response.Next.After
-			goto LOOP
-		}
+		printJSONList(data)
 	},
 }
 

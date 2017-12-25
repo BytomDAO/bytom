@@ -110,7 +110,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	}
 
 	account := &Account{Signer: signer, Alias: alias, Tags: tags}
-	rawAccount, err := json.MarshalIndent(account, "", " ")
+	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed marshal account")
 	}
@@ -154,7 +154,7 @@ func (m *Manager) UpdateTags(ctx context.Context, accountInfo string, tags map[s
 		}
 	}
 
-	rawAccount, err := json.MarshalIndent(account, "", " ")
+	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return errors.New("failed marshal account to update tags")
 	}
@@ -355,13 +355,15 @@ func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.
-func (m *Manager) DeleteAccount(accountInfo string) error {
+func (m *Manager) DeleteAccount(in struct {
+	AccountInfo string `json:"account_info"`
+}) error {
 
 	account := Account{}
 	storeBatch := m.db.NewBatch()
 
-	accountID := accountInfo
-	if s, err := m.FindByAlias(nil, accountInfo); err == nil {
+	accountID := in.AccountInfo
+	if s, err := m.FindByAlias(nil, in.AccountInfo); err == nil {
 		accountID = s.ID
 	}
 

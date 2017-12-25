@@ -68,12 +68,7 @@ var createAssetCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		rawAsset, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
-		}
-		jww.FEEDBACK.Println(string(rawAsset))
+		printJSON(data)
 	},
 }
 
@@ -82,22 +77,12 @@ var listAssetsCmd = &cobra.Command{
 	Short: "List the existing assets",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		data, exitCode := clientCall("/list-assets")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		assetList := data.([]interface{})
-
-		for idx, item := range assetList {
-			asset, err := json.MarshalIndent(item, "", " ")
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(ErrLocalParse)
-			}
-			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, asset)
-		}
+		printJSONList(data)
 	},
 }
 

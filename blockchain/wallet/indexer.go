@@ -117,7 +117,7 @@ func indexTransactions(batch *db.Batch, b *legacy.Block, w *Wallet) error {
 	annotateTxsAccount(annotatedTxs, w.DB)
 
 	for pos, tx := range annotatedTxs {
-		rawTx, err := json.MarshalIndent(tx, "", "    ")
+		rawTx, err := json.Marshal(tx)
 		if err != nil {
 			return errors.Wrap(err, "inserting annotated_txs to db")
 		}

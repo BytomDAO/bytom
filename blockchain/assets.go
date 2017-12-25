@@ -39,17 +39,15 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 	if err != nil {
 		return resWrapper(nil, err)
 	}
+
 	annotatedAsset, err := asset.Annotated(ass)
 	if err != nil {
 		return resWrapper(nil, err)
 	}
-	log.WithField("asset", annotatedAsset).Info("Created asset")
-	res, err := json.MarshalIndent(annotatedAsset, "", " ")
-	if err != nil {
-		return resWrapper(nil, err)
-	}
 
-	return resWrapper(res)
+	log.WithField("asset", annotatedAsset).Info("Created asset")
+
+	return resWrapper(annotatedAsset)
 }
 
 // POST /update-asset-tags

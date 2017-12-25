@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -21,7 +19,7 @@ var createAccessTokenCmd = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		jww.FEEDBACK.Println(data)
+		printJSON(data)
 	},
 }
 
@@ -30,21 +28,12 @@ var listAccessTokenCmd = &cobra.Command{
 	Short: "List the existing access tokens",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		data, exitCode := clientCall("/list-access-tokens")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		tokenList := data.([]interface{})
-		for idx, item := range tokenList {
-			token, err := json.MarshalIndent(item, "", " ")
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(ErrLocalParse)
-			}
-			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, token)
-		}
+		printJSONList(data)
 	},
 }
 

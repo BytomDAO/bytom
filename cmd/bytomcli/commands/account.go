@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"os"
 	"strings"
 	"time"
@@ -32,12 +31,14 @@ var createAccountCmd = &cobra.Command{
 	Short: "Create an account",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		var xpub chainkd.XPub
+		xpub := chainkd.XPub{}
+		ins := accountIns{}
+
 		if err := xpub.UnmarshalText([]byte(args[1])); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(ErrLocalExe)
 		}
-		var ins accountIns
+
 		ins.RootXPubs = []chainkd.XPub{xpub}
 		ins.Quorum = accountQuorum
 		ins.Alias = args[0]
@@ -49,6 +50,7 @@ var createAccountCmd = &cobra.Command{
 			}
 			ins.Tags = map[string]interface{}{tags[0]: tags[1]}
 		}
+
 		ins.AccessToken = accountToken
 
 		data, exitCode := clientCall("/create-account", &ins)
@@ -56,15 +58,7 @@ var createAccountCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		Account := data.(map[string]interface{})
-
-		rawAccount, err := json.MarshalIndent(Account, "", " ")
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
-		}
-
-		jww.FEEDBACK.Println(string(rawAccount))
+		printJSON(data)
 	},
 }
 
@@ -73,22 +67,12 @@ var listAccountsCmd = &cobra.Command{
 	Short: "List the existing accounts",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		data, exitCode := clientCall("/list-accounts")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		accountList := data.([]interface{})
-
-		for idx, item := range accountList {
-			account, err := json.MarshalIndent(item, "", " ")
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(ErrLocalParse)
-			}
-			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, string(account))
-		}
+		printJSONList(data)
 	},
 }
 
@@ -97,11 +81,14 @@ var deleteAccountCmd = &cobra.Command{
 	Short: "Delete the existing account",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if _, exitCode := clientCall("/delete-account", struct {
+		accountInfo := &struct {
 			AccountInfo string `json:"account_info"`
-		}{AccountInfo: args[0]}); exitCode != Success {
+		}{AccountInfo: args[0]}
+
+		if _, exitCode := clientCall("/delete-account", accountInfo); exitCode != Success {
 			os.Exit(exitCode)
 		}
+
 		jww.FEEDBACK.Println("Successfully delete account")
 	},
 }
@@ -145,7 +132,6 @@ var createAccountReceiverCmd = &cobra.Command{
 	Short: "Create an account receiver control program",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-
 		var ins = struct {
 			AccountInfo string    `json:"account_info"`
 			ExpiresAt   time.Time `json:"expires_at,omitempty"`
@@ -156,14 +142,7 @@ var createAccountReceiverCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		receiver := data.(map[string]interface{})
-
-		rawReceiver, err := json.MarshalIndent(receiver, "", " ")
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
-		}
-		jww.FEEDBACK.Println(string(rawReceiver))
+		printJSON(data)
 	},
 }
 
@@ -172,23 +151,12 @@ var listBalances = &cobra.Command{
 	Short: "List the accounts balances",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		data, exitCode := clientCall("/list-balances")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		balanceList := data.([]interface{})
-
-		for idx, item := range balanceList {
-			balance, err := json.MarshalIndent(item, "", " ")
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(ErrLocalParse)
-			}
-			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, string(balance))
-		}
-
+		printJSONList(data)
 	},
 }
 
@@ -197,22 +165,11 @@ var listUnspentOutputs = &cobra.Command{
 	Short: "List the accounts unspent outputs",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-
 		data, exitCode := clientCall("/list-unspent-outputs")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
 
-		utxoList := data.([]interface{})
-
-		for idx, item := range utxoList {
-			utxo, err := json.MarshalIndent(item, "", " ")
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(ErrLocalParse)
-			}
-			jww.FEEDBACK.Printf("%d:\n%v\n\n", idx, string(utxo))
-		}
-
+		printJSONList(data)
 	},
 }
