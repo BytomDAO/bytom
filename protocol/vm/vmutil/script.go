@@ -52,12 +52,12 @@ func CoinbaseProgram(pubkeys []ed25519.PublicKey, nrequired int, height uint64) 
 	return builder.Build()
 }
 
-func P2PKHSigProgram(address []byte) ([]byte, error) {
+func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_DUP)
-	builder.AddData(address)
-	builder.AddOp(vm.OP_CHECKADDRESS)
-	builder.AddOp(vm.OP_VERIFY)
+	builder.AddOp(vm.OP_HASH160)
+	builder.AddData(pubkeyHash)
+	builder.AddOp(vm.OP_EQUALVERIFY)
 	builder.AddOp(vm.OP_TXSIGHASH)
 	builder.AddOp(vm.OP_SWAP)
 	builder.AddOp(vm.OP_CHECKSIG)

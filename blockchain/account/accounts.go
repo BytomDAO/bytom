@@ -256,16 +256,15 @@ func (m *Manager) createP2PKH(ctx context.Context, accountID string, change bool
 	if err != nil {
 		return nil, err
 	}
-	addressStr := address.EncodeAddress()
 
-	control, err := vmutil.P2PKHSigProgram([]byte(addressStr))
+	control, err := vmutil.P2PKHSigProgram([]byte(pubHash))
 	if err != nil {
 		return nil, err
 	}
 
 	return &CtrlProgram{
 		AccountID:      account.ID,
-		Address:        addressStr,
+		Address:        address.EncodeAddress(),
 		KeyIndex:       idx,
 		ControlProgram: control,
 		Change:         change,
