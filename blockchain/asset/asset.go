@@ -235,10 +235,24 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	return &asset, nil
 }
 
+type annotatedAsset struct {
+	AssetID          string                 `json:"asset_id"`
+	Alias            string                 `json:"alias"`
+	VMVersion        uint64                 `json:"vm_version"`
+	IssuanceProgram  string                 `json:"issue_program"`
+	InitialBlockHash string                 `json:"init_blockhash"`
+	XPubs            []chainkd.XPub         `json:"xpubs"`
+	Quorum           int                    `json:"quorum"`
+	KeyIndex         uint64                 `json:"key_index"`
+	Tags             map[string]interface{} `json:"tags,omitempty"`
+	DefinitionMap    map[string]interface{} `json:"definition,omitempty"`
+}
+
 // ListAssets returns the accounts in the db
-func (reg *Registry) ListAssets() ([]Asset, error) {
+func (reg *Registry) ListAssets() ([]annotatedAsset, error) {
 	asset := Asset{}
-	assets := make([]Asset, 0)
+	tmpAsset := annotatedAsset{}
+	assets := make([]annotatedAsset, 0)
 
 	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix))
 	defer assetIter.Release()
@@ -247,7 +261,19 @@ func (reg *Registry) ListAssets() ([]Asset, error) {
 		if err := json.Unmarshal(assetIter.Value(), &asset); err != nil {
 			return nil, err
 		}
-		assets = append(assets, asset)
+
+		tmpAsset.AssetID = asset.AssetID.String()
+		tmpAsset.Alias = *asset.Alias
+		tmpAsset.VMVersion = asset.VMVersion
+		tmpAsset.InitialBlockHash = asset.InitialBlockHash.String()
+		tmpAsset.IssuanceProgram = fmt.Sprintf("%x", asset.IssuanceProgram)
+		tmpAsset.XPubs = asset.XPubs
+		tmpAsset.Quorum = asset.Quorum
+		tmpAsset.KeyIndex = asset.KeyIndex
+		tmpAsset.Tags = asset.Tags
+		tmpAsset.DefinitionMap = asset.DefinitionMap
+
+		assets = append(assets, tmpAsset)
 	}
 
 	if len(assets) == 0 {
