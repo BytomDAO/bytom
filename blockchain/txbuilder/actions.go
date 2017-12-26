@@ -4,6 +4,8 @@ import (
 	"context"
 	stdjson "encoding/json"
 
+	"github.com/bytom/common"
+	"github.com/bytom/consensus"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -74,7 +76,9 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 	}
 
 	// TODO: call different stand script generate due to address start with 1 or 3
-	program, err := vmutil.P2PKHSigProgram([]byte(a.Address))
+	address, err := common.DecodeAddress(a.Address, &consensus.MainNetParams)
+	pubkeyHash := address.ScriptAddress()
+	program, err := vmutil.P2PKHSigProgram(pubkeyHash)
 	if err != nil {
 		return err
 	}
