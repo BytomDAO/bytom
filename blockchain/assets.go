@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -13,11 +12,11 @@ import (
 
 // POST /create-asset
 func (a *BlockchainReactor) createAsset(ctx context.Context, ins struct {
-	Alias      string
-	RootXPubs  []chainkd.XPub `json:"root_xpubs"`
-	Quorum     int
-	Definition map[string]interface{}
-	Tags       map[string]interface{}
+	Alias      string                 `json:"alias"`
+	RootXPubs  []chainkd.XPub         `json:"root_xpubs"`
+	Quorum     int                    `json:"quorum"`
+	Definition map[string]interface{} `json:"definition"`
+	Tags       map[string]interface{} `json:"tags"`
 
 	// ClientToken is the application's unique token for the asset. Every asset
 	// should have a unique client token. The client token is used to ensure
@@ -52,7 +51,7 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 
 // POST /update-asset-tags
 func (a *BlockchainReactor) updateAssetTags(ctx context.Context, updateTag struct {
-	AssetInfo string
+	AssetInfo string                 `json:"asset_info"`
 	Tags      map[string]interface{} `json:"tags"`
 }) Response {
 

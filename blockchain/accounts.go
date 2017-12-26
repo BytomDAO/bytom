@@ -38,7 +38,7 @@ func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 
 // POST /update-account-tags
 func (bcr *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag struct {
-	AccountInfo string
+	AccountInfo string                 `json:"account_info"`
 	Tags        map[string]interface{} `json:"tags"`
 }) Response {
 
@@ -52,10 +52,10 @@ func (bcr *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag s
 
 //
 // POST /delete-account
-func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, a struct {
-	AccountInfo string `json:"accountInfo"`
+func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, in struct {
+	AccountInfo string `json:"account_info"`
 }) Response {
-	if err := bcr.accounts.DeleteAccount(a.AccountInfo); err != nil {
+	if err := bcr.accounts.DeleteAccount(in); err != nil {
 		return resWrapper(nil, err)
 	}
 	return resWrapper(nil)

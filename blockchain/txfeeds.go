@@ -13,8 +13,8 @@ import (
 
 // POST /create-txfeed
 func (bcr *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
-	Alias  string
-	Filter string
+	Alias  string `json:"alias"`
+	Filter string `json:"filter"`
 }) Response {
 	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Add TxFeed Failed")
@@ -66,8 +66,8 @@ func (bcr *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
 
 // POST /update-transaction-feed
 func (bcr *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
-	Alias  string
-	Filter string
+	Alias  string `json:"alias"`
+	Filter string `json:"filter"`
 }) Response {
 	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return resWrapper(nil, err)

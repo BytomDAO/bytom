@@ -160,7 +160,6 @@ func (h *HSM) loadDecryptedKey(xpub chainkd.XPub, auth string) (XPub, *XKey, err
 		return xpb, nil, err
 	}
 	xkey, err := h.keyStore.GetKey(xpb.Alias, xpb.File, auth)
-
 	return xpb, xkey, err
 }
 

@@ -107,12 +107,7 @@ func (a *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) 
 		return resWrapper(nil, err)
 	}
 
-	rawTmpl, err := json.Marshal(tmpl)
-	if err != nil {
-		return resWrapper(nil, err)
-	}
-
-	return resWrapper(rawTmpl)
+	return resWrapper(tmpl)
 }
 
 func (a *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {

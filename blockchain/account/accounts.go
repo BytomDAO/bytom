@@ -382,10 +382,20 @@ func (m *Manager) DeleteAccount(in struct {
 	return nil
 }
 
+type annotatedAccount struct {
+	Alias    string                 `json:"alias"`
+	ID       string                 `json:"id"`
+	Quorum   int                    `json:"quorum"`
+	KeyIndex uint64                 `json:"key_index"`
+	XPubs    []chainkd.XPub         `json:"xpubs"`
+	Tags     map[string]interface{} `json:"tags,omitempty"`
+}
+
 // ListAccounts will return the accounts in the db
-func (m *Manager) ListAccounts() ([]Account, error) {
+func (m *Manager) ListAccounts() ([]annotatedAccount, error) {
 	account := Account{}
-	accounts := make([]Account, 0)
+	tmpAccount := annotatedAccount{}
+	accounts := make([]annotatedAccount, 0)
 
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
 	defer accountIter.Release()
@@ -394,7 +404,15 @@ func (m *Manager) ListAccounts() ([]Account, error) {
 		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
 			return nil, err
 		}
-		accounts = append(accounts, account)
+
+		tmpAccount.Alias = account.Alias
+		tmpAccount.ID = account.ID
+		tmpAccount.Quorum = account.Quorum
+		tmpAccount.KeyIndex = account.KeyIndex
+		tmpAccount.XPubs = account.XPubs
+		tmpAccount.Tags = account.Tags
+
+		accounts = append(accounts, tmpAccount)
 	}
 
 	if len(accounts) == 0 {

@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -86,23 +84,25 @@ var buildTransaction = &cobra.Command{
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-		rawTemplate, err := base64.StdEncoding.DecodeString(data.(string))
+
+		if pretty {
+			printJSON(data)
+			return
+		}
+
+		dataMap, ok := data.(map[string]interface{})
+		if ok != true {
+			jww.ERROR.Println("invalid type assertion")
+			os.Exit(ErrLocalParse)
+		}
+
+		rawTemplate, err := json.Marshal(dataMap)
 		if err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(ErrLocalParse)
 		}
 
-		if pretty {
-			var prettyJSON bytes.Buffer
-			err := json.Indent(&prettyJSON, rawTemplate, "", " ")
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(ErrLocalParse)
-			}
-			jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, prettyJSON.String())
-			return
-		}
-		jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, rawTemplate)
+		jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, string(rawTemplate))
 	},
 }
 
@@ -133,23 +133,22 @@ var signTransactionCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		rawSign, err := base64.StdEncoding.DecodeString(data.(string))
+		if pretty {
+			printJSON(data)
+			return
+		}
+
+		dataMap, ok := data.(map[string]interface{})
+		if ok != true {
+			jww.ERROR.Println("invalid type assertion")
+			os.Exit(ErrLocalParse)
+		}
+
+		rawSign, err := json.Marshal(dataMap)
 		if err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(ErrLocalParse)
 		}
-
-		if pretty {
-			var prettyJSON bytes.Buffer
-			err := json.Indent(&prettyJSON, rawSign, "", " ")
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(ErrLocalParse)
-			}
-			jww.FEEDBACK.Printf("\nSign Template:\n%s\n", prettyJSON.String())
-			return
-		}
-
 		jww.FEEDBACK.Printf("\nSign Template:\n%s\n", string(rawSign))
 	},
 }
@@ -173,8 +172,7 @@ var submitTransactionCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		result := data.(map[string]interface{})
-		jww.FEEDBACK.Printf("\nSubmit txid:%v\n", result["txid"])
+		printJSON(data)
 	},
 }
 

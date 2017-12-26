@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
 
@@ -21,7 +20,10 @@ func init() {
 	errorFormatter.Errors[pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
 
-func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ Alias, Password string }) Response {
+func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct {
+	Alias    string `json:"alias"`
+	Password string `json:"password"`
+}) Response {
 	xpub, err := a.hsm.XCreate(in.Alias, in.Password)
 	if err != nil {
 		return resWrapper(nil, err)
@@ -39,7 +41,7 @@ func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context) Response {
 }
 
 func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
-	Password string
+	Password string       `json:"password"`
 	XPub     chainkd.XPub `json:"xpubs"`
 }) Response {
 	if err := a.hsm.XDelete(x.XPub, x.Password); err != nil {
@@ -50,7 +52,7 @@ func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 }
 
 func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
-	Auth string
+	Auth string             `json:"auth"`
 	Txs  txbuilder.Template `json:"transaction"`
 }) Response {
 	var err error
@@ -59,21 +61,16 @@ func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct
 		return resWrapper(nil, err)
 	}
 
-	rawSign, err := json.Marshal(x.Txs)
-	if err != nil {
-		return resWrapper(nil, err)
-	}
-
 	log.Info("Sign Transaction complete.")
-	return resWrapper(&rawSign)
+	return resWrapper(&x.Txs)
 }
 
 func (a *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
 	sigBytes, err := a.hsm.XSign(xpub, path, data[:], password)
 	if err == pseudohsm.ErrNoKey {
-		return nil, nil
+		return nil, err
 	}
-	return sigBytes, err
+	return sigBytes, nil
 }
 
 func (a *BlockchainReactor) pseudohsmResetPassword(ctx context.Context, x struct {
