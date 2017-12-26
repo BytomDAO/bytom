@@ -59,6 +59,7 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/build-transaction", jsonHandler(bcr.build))
 	m.Handle("/sign-transaction", jsonHandler(bcr.pseudohsmSignTemplates))
 	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
+	m.Handle("/sign-submit-transaction", jsonHandler(bcr.signSubmit))
 
 	m.Handle("/create-control-program", jsonHandler(bcr.createControlProgram))
 	m.Handle("/create-transaction-feed", jsonHandler(bcr.createTxFeed))

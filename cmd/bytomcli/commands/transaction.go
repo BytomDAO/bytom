@@ -19,6 +19,7 @@ func init() {
 	buildTransaction.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 	signTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
 	signTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
+	signSubTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
 }
 
 var (
@@ -162,6 +163,37 @@ var submitTransactionCmd = &cobra.Command{
 
 		jww.FEEDBACK.Printf("\n\n")
 		data, exitCode := clientCall("/submit-transaction", &template)
+		if exitCode != Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
+var signSubTransactionCmd = &cobra.Command{
+	Use:   "sign-submit-transaction  <json templates>",
+	Short: "Sign and Submit transaction templates with account password",
+	Args:  cobra.ExactArgs(1),
+	PreRun: func(cmd *cobra.Command, args []string) {
+		cmd.MarkFlagRequired("password")
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		template := txbuilder.Template{}
+
+		err := json.Unmarshal([]byte(args[0]), &template)
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalExe)
+		}
+
+		var req = struct {
+			Auth string
+			Txs  txbuilder.Template `json:"transaction"`
+		}{Auth: password, Txs: template}
+
+		jww.FEEDBACK.Printf("\n\n")
+		data, exitCode := clientCall("/sign-submit-transaction", &req)
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}

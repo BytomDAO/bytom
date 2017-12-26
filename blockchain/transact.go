@@ -202,3 +202,27 @@ func (a *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Template)
 	log.WithField("txid", txid).Info("submit single tx")
 	return resWrapper(txid)
 }
+
+// POST /sign-submit-transaction
+func (a *BlockchainReactor) signSubmit(ctx context.Context, x struct {
+	Auth string             `json:"auth"`
+	Txs  txbuilder.Template `json:"transaction"`
+}) Response {
+
+	var err error
+	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Auth, a.pseudohsmSignTemplate); err != nil {
+		log.WithField("build err", err).Error("fail on sign transaction.")
+		return resWrapper(nil, err)
+	}
+
+	log.Info("Sign Transaction complete.")
+
+	txid, err := a.submitSingle(nil, &x.Txs)
+	if err != nil {
+		log.WithField("err", err).Error("submit single tx")
+		return resWrapper(nil, err)
+	}
+
+	log.WithField("txid", txid).Info("submit single tx")
+	return resWrapper(txid)
+}
