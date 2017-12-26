@@ -34,3 +34,15 @@ func (m *Manager) CreateReceiver(ctx context.Context, accInfo string, expiresAt 
 		ExpiresAt:      expiresAt,
 	}, nil
 }
+
+func (m *Manager) CreateAddress(ctx context.Context, accInfo string, expiresAt time.Time) (*txbuilder.Receiver, error) {
+	program, err := m.CreateP2PKH(ctx, accInfo, false, expiresAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &txbuilder.Receiver{
+		Address:   program.Address,
+		ExpiresAt: expiresAt,
+	}, nil
+}

@@ -23,6 +23,8 @@ func (a *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilde
 	switch action {
 	case "control_account":
 		decoder = a.accounts.DecodeControlAction
+	case "control_address":
+		decoder = txbuilder.DecodeControlAddressAction
 	case "control_program":
 		decoder = txbuilder.DecodeControlProgramAction
 	case "control_receiver":

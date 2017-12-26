@@ -1,9 +1,10 @@
-package consensus
+package difficulty
 
 // HashToBig converts a *bc.Hash into a big.Int that can be used to
 import (
 	"math/big"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -87,12 +88,12 @@ func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
 
 func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {
 	if lastBH == nil {
-		return powMinBits
-	} else if (lastBH.Height)%BlocksPerRetarget != 0 {
+		return consensus.PowMinBits
+	} else if (lastBH.Height)%consensus.BlocksPerRetarget != 0 {
 		return lastBH.Bits
 	}
 
-	targetTimeSpan := int64(BlocksPerRetarget * targetSecondsPerBlock)
+	targetTimeSpan := int64(consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock)
 	actualTimeSpan := int64(lastBH.Time().Sub(compareBH.Time()).Seconds())
 
 	oldTarget := CompactToBig(lastBH.Bits)

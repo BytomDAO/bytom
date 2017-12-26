@@ -2,11 +2,9 @@ package txbuilder
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -34,36 +32,6 @@ func (t *Template) Hash(idx uint32) bc.Hash {
 	return t.Transaction.SigHash(idx)
 }
 
-// SigningInstruction gives directions for signing inputs in a TxTemplate.
-type SigningInstruction struct {
-	Position           uint32              `json:"position"`
-	SignatureWitnesses []*signatureWitness `json:"witness_components,omitempty"`
-}
-
-func (si *SigningInstruction) UnmarshalJSON(b []byte) error {
-	var pre struct {
-		Position           uint32 `json:"position"`
-		SignatureWitnesses []struct {
-			Type string
-			signatureWitness
-		} `json:"witness_components"`
-	}
-	err := json.Unmarshal(b, &pre)
-	if err != nil {
-		return err
-	}
-
-	si.Position = pre.Position
-	si.SignatureWitnesses = make([]*signatureWitness, 0, len(pre.SignatureWitnesses))
-	for i, w := range pre.SignatureWitnesses {
-		if w.Type != "signature" {
-			return errors.WithDetailf(ErrBadWitnessComponent, "witness component %d has unknown type '%s'", i, w.Type)
-		}
-		si.SignatureWitnesses = append(si.SignatureWitnesses, &w.signatureWitness)
-	}
-	return nil
-}
-
 type Action interface {
 	Build(context.Context, *TemplateBuilder) error
 }
@@ -71,5 +39,6 @@ type Action interface {
 // Receiver encapsulates information about where to send assets.
 type Receiver struct {
 	ControlProgram chainjson.HexBytes `json:"control_program"`
+	Address        string             `json:"address"`
 	ExpiresAt      time.Time          `json:"expires_at"`
 }

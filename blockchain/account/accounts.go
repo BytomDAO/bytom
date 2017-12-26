@@ -15,6 +15,8 @@ import (
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
+	"github.com/bytom/consensus"
+	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
@@ -219,6 +221,57 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 	return account.Signer, nil
 }
 
+func (m *Manager) CreateP2PKH(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+	cp, err := m.createP2PKH(ctx, accountID, change, expiresAt)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = m.insertAccountControlProgram(ctx, cp); err != nil {
+		return nil, err
+	}
+	return cp, nil
+}
+
+func (m *Manager) createP2PKH(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+	account, err := m.findByID(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	if account.Quorum != 1 {
+		return nil, errors.New("need single key pair account to create standard transaction")
+	}
+
+	idx, err := m.nextIndex(ctx)
+	if err != nil {
+		return nil, err
+	}
+	path := signers.Path(account, signers.AccountKeySpace, idx)
+	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	derivedPK := derivedXPubs[0].PublicKey()
+	pubHash := crypto.Ripemd160(derivedPK)
+
+	// TODO: pass different params due to config
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.MainNetParams)
+	if err != nil {
+		return nil, err
+	}
+
+	control, err := vmutil.P2PKHSigProgram([]byte(pubHash))
+	if err != nil {
+		return nil, err
+	}
+
+	return &CtrlProgram{
+		AccountID:      account.ID,
+		Address:        address.EncodeAddress(),
+		KeyIndex:       idx,
+		ControlProgram: control,
+		Change:         change,
+		ExpiresAt:      expiresAt,
+	}, nil
+}
+
 func (m *Manager) createControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	account, err := m.findByID(ctx, accountID)
 	if err != nil {
@@ -264,6 +317,7 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 //CtrlProgram is structure of account control program
 type CtrlProgram struct {
 	AccountID      string
+	Address        string
 	KeyIndex       uint64
 	ControlProgram []byte
 	Change         bool

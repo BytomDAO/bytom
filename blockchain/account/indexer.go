@@ -26,6 +26,7 @@ type UTXO struct {
 	AssetID      []byte
 	Amount       uint64
 	AccountID    string
+	Address      string
 	ProgramIndex uint64
 	Program      []byte
 	SourceID     []byte

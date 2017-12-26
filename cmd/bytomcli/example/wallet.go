@@ -119,7 +119,6 @@ func WalletTest(client *rpc.Client, args []string) {
 	}
 	fmt.Printf("sign tpl:%v\n", tpl[0])
 	fmt.Printf("sign tpl's SigningInstructions:%v\n", tpl[0].SigningInstructions[0])
-	fmt.Printf("SigningInstructions's SignatureWitnesses:%v\n", tpl[0].SigningInstructions[0].SignatureWitnesses[0])
 
 	// submit-transaction
 	/*
