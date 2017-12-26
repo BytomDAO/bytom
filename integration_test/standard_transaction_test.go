@@ -36,6 +36,7 @@ func TestP2PKH(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	accountManager := account.NewManager(testDB, chain)
 	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
@@ -51,7 +52,11 @@ func TestP2PKH(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	controlProg, err := accountManager.CreateP2PKH(nil, testAccount.Signer.ID, false, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	utxo := account.NewUtxo()
 	utxo.OutputID = bc.Hash{V0: 1}
@@ -63,18 +68,19 @@ func TestP2PKH(t *testing.T) {
 	utxo.AccountID = controlProg.AccountID
 	utxo.Address = controlProg.Address
 	utxo.ControlProgramIndex = controlProg.KeyIndex
-
-	b := txbuilder.NewBuilder(time.Now())
 	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b.AddInput(txInput, sigInst)
 
+	b := txbuilder.NewBuilder(time.Now())
+	b.AddInput(txInput, sigInst)
 	out := legacy.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)}, nil)
 	b.AddOutput(out)
-
 	tpl, tx, err := b.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	err = txbuilder.Sign(nil, tpl, nil, "password", func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
 		sigBytes, err := hsm.XSign(xpub, path, data[:], password)
@@ -83,15 +89,16 @@ func TestP2PKH(t *testing.T) {
 		}
 		return sigBytes, err
 	})
-
-	bcBlock := &bc.Block{
-		BlockHeader: &bc.BlockHeader{Height: 1},
-	}
-	_, err = validation.ValidateTx(legacy.MapTx(tx), bcBlock)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	bcBlock := &bc.Block{
+		BlockHeader: &bc.BlockHeader{Height: 1},
+	}
+	if _, err = validation.ValidateTx(legacy.MapTx(tx), bcBlock); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func mockChain(testDB dbm.DB) (*protocol.Chain, error) {

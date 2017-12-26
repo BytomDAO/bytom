@@ -14,7 +14,7 @@ func TestWitnessJSON(t *testing.T) {
 	si := &SigningInstruction{
 		Position: 17,
 		WitnessComponents: []witnessComponent{
-			dataWitness{1, 2, 3},
+			DataWitness{1, 2, 3},
 			&SignatureWitness{
 				Quorum: 4,
 				Keys: []keyID{{

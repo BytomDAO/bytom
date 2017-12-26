@@ -239,7 +239,7 @@ func (m *Manager) createP2PKH(ctx context.Context, accountID string, change bool
 		return nil, err
 	}
 	if account.Quorum != 1 {
-		return nil, errors.New("need single key pair account to create standard address")
+		return nil, errors.New("need single key pair account to create standard transaction")
 	}
 
 	idx, err := m.nextIndex(ctx)

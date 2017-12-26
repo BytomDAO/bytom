@@ -139,12 +139,12 @@ func opTxSigHash(vm *virtualMachine) error {
 }
 
 func opHash160(vm *virtualMachine) error {
-	data, err := vm.pop(true)
+	data, err := vm.pop(false)
 	if err != nil {
 		return err
 	}
 
-	cost := int64(len(data))
+	cost := int64(len(data) + 64)
 	if err = vm.applyCost(cost); err != nil {
 		return err
 	}

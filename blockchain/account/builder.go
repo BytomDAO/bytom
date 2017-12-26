@@ -60,7 +60,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
 	for _, r := range res.UTXOs {
-		txInput, sigInst, err := utxoToInputs(acct, r, a.ReferenceData)
+		txInput, sigInst, err := UtxoToInputs(acct, r, a.ReferenceData)
 		if err != nil {
 			return errors.Wrap(err, "creating inputs")
 		}
@@ -124,7 +124,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 		}
 	}
 
-	txInput, sigInst, err := utxoToInputs(acct, res.UTXOs[0], a.ReferenceData)
+	txInput, sigInst, err := UtxoToInputs(acct, res.UTXOs[0], a.ReferenceData)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 	}
 }
 
-func utxoToInputs(account *signers.Signer, u *utxo, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
+func UtxoToInputs(account *signers.Signer, u *utxo, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
 	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash, refData)
 
 	path := signers.Path(account, signers.AccountKeySpace, u.ControlProgramIndex)
@@ -157,10 +157,6 @@ func utxoToInputs(account *signers.Signer, u *utxo, refData []byte) (*legacy.TxI
 		sigInst.AddWitnessKeys(account.XPubs, path, account.Quorum)
 	}
 	return txInput, sigInst, nil
-}
-
-func UtxoToInputs(account *signers.Signer, u *utxo, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
-	return utxoToInputs(account, u, refData)
 }
 
 //NewControlAction create new control action
