@@ -84,17 +84,6 @@ func (asset *Asset) RawDefinition() []byte {
 	return asset.RawDefinitionByte
 }
 
-// SetDefinition sets the serialized asset definition.
-func (asset *Asset) SetDefinition(def map[string]interface{}) error {
-	rawdef, err := serializeAssetDef(def)
-	if err != nil {
-		return err
-	}
-	asset.DefinitionMap = def
-	asset.RawDefinitionByte = rawdef
-	return nil
-}
-
 // Define defines a new Asset.
 func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}, clientToken string) (*Asset, error) {
 	if existed := reg.db.Get(aliasKey(alias)); existed != nil {

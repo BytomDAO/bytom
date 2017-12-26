@@ -85,15 +85,9 @@ issue_test() {
   [ $? -eq 0 ] && echo "Issue test passed" || echo "Issue test failed"
 }
 
-create_receiver() {
-  receiver_res=$(bytomcli create-account-receiver $receiver)
-  remove_prefix=${receiver_res#*control_program\":\"}
-  receiver_prog=${remove_prefix%\",\"expires_at*}
-}
-
 spend_test() {
   echo "Spend test:"
-  sign_tmpl=$(bytomcli build-transaction "$sender_account_id" "$asset_id" 1 -t spend -r "$receiver_program" | grep "raw_transaction" | tr -d '\n')
+  sign_tmpl=$(bytomcli build-transaction "$sender_account_id" "$asset_id" "$amount" -t spend -r "$receiver_program" | grep "raw_transaction" | tr -d '\n')
 
   sub_tmpl=$(bytomcli sign-transaction "$(get_data "$sign_tmpl")" -p $password | grep "transaction" | tr -d '\n')
 

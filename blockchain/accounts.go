@@ -26,6 +26,7 @@ func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	if err != nil {
 		return resWrapper(nil, err)
 	}
+
 	annotatedAccount, err := account.Annotated(acc)
 	if err != nil {
 		return resWrapper(nil, err)

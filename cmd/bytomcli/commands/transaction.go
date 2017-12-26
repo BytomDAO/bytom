@@ -13,18 +13,12 @@ import (
 )
 
 func init() {
-	buildTransaction.PersistentFlags().StringVarP(&buildType, "type", "t", "",
-		"transaction type, valid types: 'issue', 'spend'")
-	buildTransaction.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r",
-		"", "program of receiver")
-	buildTransaction.PersistentFlags().StringVarP(&btmGas, "gas", "g",
-		"20000000", "program of receiver")
-	buildTransaction.PersistentFlags().BoolVar(&pretty, "pretty", false,
-		"pretty print json result")
-	signTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "",
-		"password of the account which sign these transaction(s)")
-	signTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false,
-		"pretty print json result")
+	buildTransaction.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend'")
+	buildTransaction.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r", "", "program of receiver")
+	buildTransaction.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "program of receiver")
+	buildTransaction.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
+	signTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
+	signTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 }
 
 var (

@@ -3,7 +3,6 @@ package accesstoken
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -37,13 +36,6 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-func mergeSlice(s1 []string, s2 []string) []string {
-	slice := make([]string, len(s1)+len(s2))
-	copy(slice, s1)
-	copy(slice[len(s1):], s2)
-	return slice
-}
-
 func TestList(t *testing.T) {
 	ctx := context.Background()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
@@ -60,27 +52,13 @@ func TestList(t *testing.T) {
 		want: []string{"ab", "bc", "cd"},
 	}
 
-	got := make([]string, 0)
-	after := ""
-	for {
-		gotonce, tmpAfter, tmpLast, err := cs.List(after, defGenericPageSize, defGenericPageSize)
-		if err != nil {
-			t.Errorf("Failed get tokens")
-		}
-		got = mergeSlice(got, gotonce)
-		after = tmpAfter
-		if tmpLast {
-			break
-		}
+	got, err := cs.List()
+	if err != nil {
+		t.Errorf("List errored: get list error")
 	}
-
-	token := Token{}
 	for i, v := range got {
-		if err := json.Unmarshal([]byte(v), &token); err != nil {
-			t.Errorf("Failed unmarshal token")
-		}
-		if m := strings.Compare(token.ID, cases.want[i]); m != 0 {
-			t.Errorf("List errored: %s %s", token.ID, cases.want[i])
+		if m := strings.Compare(v.ID, cases.want[i]); m != 0 {
+			t.Errorf("List errored: %s %s", v.ID, cases.want[i])
 		}
 		continue
 	}
