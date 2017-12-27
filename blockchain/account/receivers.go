@@ -35,6 +35,7 @@ func (m *Manager) CreateReceiver(ctx context.Context, accInfo string, expiresAt 
 	}, nil
 }
 
+// CreateAddress creates a new address receiver for an account
 func (m *Manager) CreateAddress(ctx context.Context, accInfo string, expiresAt time.Time) (*txbuilder.Receiver, error) {
 	program, err := m.CreateP2PKH(ctx, accInfo, false, expiresAt)
 	if err != nil {

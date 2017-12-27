@@ -9,7 +9,7 @@ import (
 	"github.com/bytom/protocol/bc/legacy"
 )
 
-// perform math comparisons.
+// HashToBig convert bc.Hash to a difficult int
 func HashToBig(hash *bc.Hash) *big.Int {
 	buf := hash.Byte32()
 	blen := len(buf)
@@ -82,10 +82,12 @@ func BigToCompact(n *big.Int) uint64 {
 	return compact
 }
 
+// CheckProofOfWork the hash is vaild for given difficult
 func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
 	return HashToBig(hash).Cmp(CompactToBig(bits)) <= 0
 }
 
+// CalcNextRequiredDifficulty return the difficult for next block
 func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {
 	if lastBH == nil {
 		return consensus.PowMinBits

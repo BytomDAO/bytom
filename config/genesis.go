@@ -10,7 +10,7 @@ import (
 	"github.com/bytom/protocol/bc/legacy"
 )
 
-// Generate genesis transaction
+// GenerateGenesisTx will return genesis transaction
 func GenerateGenesisTx() *legacy.Tx {
 	txData := legacy.TxData{
 		Version:        1,
@@ -34,7 +34,7 @@ func GenerateGenesisTx() *legacy.Tx {
 	return legacy.NewTx(txData)
 }
 
-// Generate genesis block
+// GenerateGenesisBlock will return genesis block
 func GenerateGenesisBlock() *legacy.Block {
 	genesisCoinbaseTx := GenerateGenesisTx()
 	merkleRoot, err := bc.MerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})

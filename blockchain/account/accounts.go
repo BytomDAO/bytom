@@ -221,6 +221,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 	return account.Signer, nil
 }
 
+// CreateP2PKH generate an address for the select account
 func (m *Manager) CreateP2PKH(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	cp, err := m.createP2PKH(ctx, accountID, change, expiresAt)
 	if err != nil {
