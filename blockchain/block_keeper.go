@@ -3,6 +3,7 @@ package blockchain
 import (
 	"errors"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -53,20 +54,20 @@ type blockKeeper struct {
 	peerUpdateCh  chan struct{}
 	done          chan bool
 
-	chain         *protocol.Chain
-	sw            *p2p.Switch
-	peers         map[string]*blockKeeperPeer
+	chain            *protocol.Chain
+	sw               *p2p.Switch
+	peers            map[string]*blockKeeperPeer
 	pendingProcessCh chan *pendingResponse
 }
 
 func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
 	chainHeight := chain.Height()
 	bk := &blockKeeper{
-		chainHeight:      chainHeight,
-		maxPeerHeight:    uint64(0),
-		chainUpdateCh:    chain.BlockWaiter(chainHeight + 1),
-		peerUpdateCh:     make(chan struct{}, 1000),
-		done:             make(chan bool, 1),
+		chainHeight:   chainHeight,
+		maxPeerHeight: uint64(0),
+		chainUpdateCh: chain.BlockWaiter(chainHeight + 1),
+		peerUpdateCh:  make(chan struct{}, 1000),
+		done:          make(chan bool, 1),
 
 		chain:            chain,
 		sw:               sw,
@@ -169,9 +170,20 @@ func (bk *blockKeeper) blockRequestWorker() {
 			for i := chainHeight + 1; i <= maxPeerHeight; i++ {
 				bk.RequestBlockByHeight(i)
 				waiter := bk.chain.BlockWaiter(i)
-				<-waiter
+				retryTicker := time.Tick(15 * time.Second)
+
+			retryLoop:
+				for {
+					select {
+					case <-waiter:
+						break retryLoop
+					case <-retryTicker:
+						bk.RequestBlockByHeight(i)
+					}
+				}
 			}
-		case <- bk.done:
+
+		case <-bk.done:
 			return
 		}
 	}
