@@ -52,6 +52,7 @@ func CoinbaseProgram(pubkeys []ed25519.PublicKey, nrequired int, height uint64) 
 	return builder.Build()
 }
 
+// P2PKHSigProgram generates the script for control with pubkey hash
 func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_DUP)

@@ -206,6 +206,7 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 	}
 }
 
+// SubmitArg is struct for submit transaction to the net
 type SubmitArg struct {
 	Transactions []txbuilder.Template
 	Wait         chainjson.Duration

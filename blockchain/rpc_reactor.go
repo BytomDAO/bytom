@@ -29,7 +29,7 @@ func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Reques
 	bcr.handler.ServeHTTP(rw, req)
 }
 
-// Build json rpc handler
+// BuildHander is json rpc handler
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
 	if bcr.accounts != nil && bcr.assets != nil {
