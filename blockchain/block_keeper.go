@@ -172,10 +172,11 @@ func (bk *blockKeeper) blockRequestWorker() {
 				waiter := bk.chain.BlockWaiter(i)
 				retryTicker := time.Tick(15 * time.Second)
 
+			retryLoop:
 				for {
 					select {
 					case <-waiter:
-						break
+						break retryLoop
 					case <-retryTicker:
 						bk.RequestBlockByHeight(i)
 					}
