@@ -6,24 +6,24 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 )
 
-func (a *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
+func (bcr *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
 	Password string
 	XPub     chainkd.XPub
 }) interface{} {
-	key, err := a.wallet.ExportAccountPrivKey(a.hsm, in.XPub, in.Password)
+	key, err := bcr.wallet.ExportAccountPrivKey(bcr.hsm, in.XPub, in.Password)
 	if err != nil {
 		return err.Error()
 	}
 	return key
 }
 
-func (a *BlockchainReactor) walletImportKey(ctx context.Context, in struct {
+func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in struct {
 	Alias    string
 	Password string
 	XPrv     chainkd.XPrv
 	Index    uint64
 }) interface{} {
-	xpub, err := a.wallet.ImportAccountPrivKey(a.hsm, in.XPrv, in.Alias, in.Password, in.Index)
+	xpub, err := bcr.wallet.ImportAccountPrivKey(bcr.hsm, in.XPrv, in.Alias, in.Password, in.Index)
 	if err != nil {
 		return err.Error()
 	}
