@@ -13,21 +13,26 @@ import (
 )
 
 func init() {
-	buildTransaction.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend'")
-	buildTransaction.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r", "", "program of receiver")
-	buildTransaction.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "program of receiver")
-	buildTransaction.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
+	buildTransactionCmd.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend'")
+	buildTransactionCmd.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r", "", "program of receiver")
+	buildTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "program of receiver")
+	buildTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
+
 	signTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
 	signTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
+
 	signSubTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
+
+	listTransactionsCmd.PersistentFlags().StringVar(&txID, "id", "", "transaction id")
 }
 
 var (
-	buildType       string
-	btmGas          string
-	receiverProgram string
-	password        string
-	pretty          bool
+	buildType       = ""
+	btmGas          = ""
+	receiverProgram = ""
+	password        = ""
+	pretty          = false
+	txID            = ""
 )
 
 var buildIssueReqFmt = `
@@ -44,7 +49,7 @@ var buildSpendReqFmt = `
 		{"type": "control_receiver", "asset_id": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
 	]}`
 
-var buildTransaction = &cobra.Command{
+var buildTransactionCmd = &cobra.Command{
 	Use:   "build-transaction <accountID> <assetID> <amount>",
 	Short: "Build one transaction template",
 	Args:  cobra.RangeArgs(3, 4),
@@ -202,12 +207,16 @@ var signSubTransactionCmd = &cobra.Command{
 	},
 }
 
-var listTransactions = &cobra.Command{
+var listTransactionsCmd = &cobra.Command{
 	Use:   "list-transactions",
 	Short: "List the transactions",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/list-transactions")
+		filter := struct {
+			ID string `json:"id"`
+		}{ID: txID}
+
+		data, exitCode := clientCall("/list-transactions", &filter)
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}

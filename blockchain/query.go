@@ -11,8 +11,10 @@ import (
 )
 
 // POST /list-accounts
-func (bcr *BlockchainReactor) listAccounts(ctx context.Context) Response {
-	accounts, err := bcr.accounts.ListAccounts()
+func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
+	ID string `json:"id"`
+}) Response {
+	accounts, err := bcr.accounts.ListAccounts(filter.ID)
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
 		return resWrapper(nil, err)
@@ -22,8 +24,10 @@ func (bcr *BlockchainReactor) listAccounts(ctx context.Context) Response {
 }
 
 // POST /list-assets
-func (bcr *BlockchainReactor) listAssets(ctx context.Context) Response {
-	assets, err := bcr.assets.ListAssets()
+func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
+	ID string `json:"id"`
+}) Response {
+	assets, err := bcr.assets.ListAssets(filter.ID)
 	if err != nil {
 		log.Errorf("listAssets: %v", err)
 		return resWrapper(nil, err)
@@ -34,7 +38,7 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context) Response {
 
 // POST /listBalances
 func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
-	accountUTXOs, err := bcr.wallet.GetAccountUTXOs()
+	accountUTXOs, err := bcr.wallet.GetAccountUTXOs("")
 	if err != nil {
 		log.Errorf("GetAccountUTXOs: %v", err)
 		return resWrapper(nil, err)
@@ -104,8 +108,10 @@ func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accou
 }
 
 // POST /list-transactions
-func (bcr *BlockchainReactor) listTransactions(ctx context.Context) Response {
-	transactions, err := bcr.wallet.GetTransactions()
+func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struct {
+	ID string `json:"id"`
+}) Response {
+	transactions, err := bcr.wallet.GetTransactions(filter.ID)
 	if err != nil {
 		log.Errorf("listTransactions: %v", err)
 		return resWrapper(nil, err)
@@ -129,11 +135,13 @@ type annotatedUTXO struct {
 }
 
 // POST /list-unspent-outputs
-func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context) Response {
+func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter struct {
+	ID string `json:"id"`
+}) Response {
 	tmpUTXO := annotatedUTXO{}
 	UTXOs := make([]annotatedUTXO, 0)
 
-	accountUTXOs, err := bcr.wallet.GetAccountUTXOs()
+	accountUTXOs, err := bcr.wallet.GetAccountUTXOs(filter.ID)
 	if err != nil {
 		log.Errorf("list Unspent Outputs: %v", err)
 		return resWrapper(nil, err)

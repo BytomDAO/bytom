@@ -392,12 +392,12 @@ type annotatedAccount struct {
 }
 
 // ListAccounts will return the accounts in the db
-func (m *Manager) ListAccounts() ([]annotatedAccount, error) {
+func (m *Manager) ListAccounts(id string) ([]annotatedAccount, error) {
 	account := Account{}
 	tmpAccount := annotatedAccount{}
 	accounts := make([]annotatedAccount, 0)
 
-	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
+	accountIter := m.db.IteratorPrefix([]byte(accountPrefix + id))
 	defer accountIter.Release()
 
 	for accountIter.Next() {

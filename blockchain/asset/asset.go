@@ -249,12 +249,12 @@ type annotatedAsset struct {
 }
 
 // ListAssets returns the accounts in the db
-func (reg *Registry) ListAssets() ([]annotatedAsset, error) {
+func (reg *Registry) ListAssets(id string) ([]annotatedAsset, error) {
 	asset := Asset{}
 	tmpAsset := annotatedAsset{}
 	assets := make([]annotatedAsset, 0)
 
-	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix))
+	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix + id))
 	defer assetIter.Release()
 
 	for assetIter.Next() {

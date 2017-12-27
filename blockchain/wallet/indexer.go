@@ -36,22 +36,38 @@ type accountOutput struct {
 const (
 	//TxPrefix is wallet database transactions prefix
 	TxPrefix = "TXS:"
+	TxIndex  = "TID:"
 )
 
-func calcAnnotatedKey(blockHeight uint64, position uint32) []byte {
-	return []byte(fmt.Sprintf("%s%016x%08x", TxPrefix, blockHeight, position))
+func formatKey(blockHeight uint64, position uint32) string {
+	return fmt.Sprintf("%016x%08x", blockHeight, position)
 }
 
-func calcDeletePrefix(blockHeight uint64) []byte {
+func calcAnnotatedKey(formatKey string) []byte {
+	return []byte(TxPrefix + formatKey)
+}
+
+func calcDeleteKey(blockHeight uint64) []byte {
 	return []byte(fmt.Sprintf("%s%016x", TxPrefix, blockHeight))
+}
+
+func calcTxIndexKey(txID string) []byte {
+	return []byte(TxIndex + txID)
 }
 
 //deleteTransaction delete transactions when orphan block rollback
 func deleteTransactions(batch *db.Batch, height uint64, b *legacy.Block, w *Wallet) {
-	txIter := w.DB.IteratorPrefix(calcDeletePrefix(height))
+	tmpTx := query.AnnotatedTx{}
+
+	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
 
 	for txIter.Next() {
+		if err := json.Unmarshal(txIter.Value(), &tmpTx); err != nil {
+			log.WithField("err", err).Error("delete transactions")
+			continue
+		}
+		(*batch).Delete(calcTxIndexKey(tmpTx.ID.String()))
 		(*batch).Delete(txIter.Key())
 	}
 }
@@ -116,13 +132,14 @@ func indexTransactions(batch *db.Batch, b *legacy.Block, w *Wallet) error {
 	annotateTxsAsset(annotatedTxs, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
-	for pos, tx := range annotatedTxs {
+	for _, tx := range annotatedTxs {
 		rawTx, err := json.Marshal(tx)
 		if err != nil {
 			return errors.Wrap(err, "inserting annotated_txs to db")
 		}
 
-		(*batch).Set(calcAnnotatedKey(b.Height, uint32(pos)), rawTx)
+		(*batch).Set(calcAnnotatedKey(formatKey(b.Height, uint32(tx.Position))), rawTx)
+		(*batch).Set(calcTxIndexKey(tx.ID.String()), []byte(formatKey(b.Height, uint32(tx.Position))))
 	}
 
 	return nil
@@ -287,11 +304,20 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 	return annotatedTxs
 }
 
-func (w *Wallet) GetTransactions() ([]query.AnnotatedTx, error) {
+func (w *Wallet) GetTransactions(id string) ([]query.AnnotatedTx, error) {
 	annotatedTx := query.AnnotatedTx{}
 	annotatedTxs := make([]query.AnnotatedTx, 0)
+	formatKey := ""
 
-	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
+	if id != "" {
+		rawFormatKey := w.DB.Get(calcTxIndexKey(id))
+		if rawFormatKey == nil {
+			return nil, fmt.Errorf("No transaction(txid=%s)", id)
+		}
+		formatKey = string(rawFormatKey)
+	}
+
+	txIter := w.DB.IteratorPrefix([]byte(TxPrefix + formatKey))
 	defer txIter.Release()
 	for txIter.Next() {
 		err := json.Unmarshal(txIter.Value(), &annotatedTx)
@@ -309,11 +335,11 @@ func (w *Wallet) GetTransactions() ([]query.AnnotatedTx, error) {
 }
 
 //GetAccountUTXOs return all account unspent outputs
-func (w *Wallet) GetAccountUTXOs() ([]account.UTXO, error) {
+func (w *Wallet) GetAccountUTXOs(id string) ([]account.UTXO, error) {
 	accountUTXO := account.UTXO{}
 	accountUTXOs := make([]account.UTXO, 0)
 
-	accountUTXOIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix))
+	accountUTXOIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix + id))
 	defer accountUTXOIter.Release()
 	for accountUTXOIter.Next() {
 		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {

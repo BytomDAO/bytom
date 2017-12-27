@@ -17,13 +17,19 @@ func init() {
 	createAccountCmd.PersistentFlags().StringVarP(&accountTags, "tags", "t", "", "tags")
 
 	updateAccountTagsCmd.PersistentFlags().StringVarP(&accountUpdateTags, "tags", "t", "", "tags to add, delete or update")
+
+	listAccountsCmd.PersistentFlags().StringVar(&accountID, "id", "", "ID of account")
+
+	listUnspentOutputsCmd.PersistentFlags().StringVar(&outputID, "id", "", "ID of unspent output")
 }
 
 var (
+	accountID         = ""
 	accountQuorum     = 1
 	accountToken      = ""
 	accountTags       = ""
 	accountUpdateTags = ""
+	outputID          = ""
 )
 
 var createAccountCmd = &cobra.Command{
@@ -67,7 +73,11 @@ var listAccountsCmd = &cobra.Command{
 	Short: "List the existing accounts",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/list-accounts")
+		filter := struct {
+			ID string `json:"id"`
+		}{ID: accountID}
+
+		data, exitCode := clientCall("/list-accounts", &filter)
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
@@ -146,7 +156,7 @@ var createAccountReceiverCmd = &cobra.Command{
 	},
 }
 
-var listBalances = &cobra.Command{
+var listBalancesCmd = &cobra.Command{
 	Use:   "list-balances",
 	Short: "List the accounts balances",
 	Args:  cobra.NoArgs,
@@ -160,12 +170,16 @@ var listBalances = &cobra.Command{
 	},
 }
 
-var listUnspentOutputs = &cobra.Command{
+var listUnspentOutputsCmd = &cobra.Command{
 	Use:   "list-unspent-outputs",
 	Short: "List the accounts unspent outputs",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/list-unspent-outputs")
+		filter := struct {
+			ID string `json:"id"`
+		}{ID: outputID}
+
+		data, exitCode := clientCall("/list-unspent-outputs", &filter)
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}

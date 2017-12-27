@@ -110,11 +110,11 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(listAssetsCmd)
 	BytomcliCmd.AddCommand(updateAssetTagsCmd)
 
-	BytomcliCmd.AddCommand(listTransactions)
-	BytomcliCmd.AddCommand(listUnspentOutputs)
-	BytomcliCmd.AddCommand(listBalances)
+	BytomcliCmd.AddCommand(listTransactionsCmd)
+	BytomcliCmd.AddCommand(listUnspentOutputsCmd)
+	BytomcliCmd.AddCommand(listBalancesCmd)
 
-	BytomcliCmd.AddCommand(buildTransaction)
+	BytomcliCmd.AddCommand(buildTransactionCmd)
 	BytomcliCmd.AddCommand(signTransactionCmd)
 	BytomcliCmd.AddCommand(submitTransactionCmd)
 	BytomcliCmd.AddCommand(signSubTransactionCmd)
