@@ -8,7 +8,7 @@ import (
 )
 
 var createAccessTokenCmd = &cobra.Command{
-	Use:   "create-access-token",
+	Use:   "create-access-token <tokenID>",
 	Short: "Create a new access token",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -38,7 +38,7 @@ var listAccessTokenCmd = &cobra.Command{
 }
 
 var deleteAccessTokenCmd = &cobra.Command{
-	Use:   "delete-access-token",
+	Use:   "delete-access-token <tokenID>",
 	Short: "Delete an access token",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
