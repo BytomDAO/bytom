@@ -29,7 +29,7 @@ func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Reques
 	bcr.handler.ServeHTTP(rw, req)
 }
 
-// BuildHander is json rpc handler
+//BuildHander build json rpc handler
 func (bcr *BlockchainReactor) BuildHander() {
 	m := bcr.mux
 	if bcr.accounts != nil && bcr.assets != nil {
@@ -65,6 +65,8 @@ func (bcr *BlockchainReactor) BuildHander() {
 
 	//hsm api
 	m.Handle("/create-key", jsonHandler(bcr.pseudohsmCreateKey))
+	m.Handle("/export-private-key", jsonHandler(bcr.walletExportKey))
+	m.Handle("/import-private-key", jsonHandler(bcr.walletImportKey))
 	m.Handle("/list-keys", jsonHandler(bcr.pseudohsmListKeys))
 	m.Handle("/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
 	m.Handle("/sign-transactions", jsonHandler(bcr.pseudohsmSignTemplates))

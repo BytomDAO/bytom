@@ -2,14 +2,24 @@ package wallet
 
 import (
 	"encoding/json"
+	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/go-wire/data/base58"
 	"github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
+
+//SINGLE single sign
+const SINGLE = 1
 
 var walletKey = []byte("walletInfo")
 
@@ -21,16 +31,22 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB     db.DB
-	chain  *protocol.Chain
-	status StatusInfo
+	DB             db.DB
+	status         StatusInfo
+	AccountMgr     *account.Manager
+	AssetReg       *asset.Registry
+	chain          *protocol.Chain
+	rescanProgress chan bool
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, chain *protocol.Chain) (*Wallet, error) {
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
-		DB:    walletDB,
-		chain: chain,
+		DB:             walletDB,
+		AccountMgr:     account,
+		AssetReg:       asset,
+		chain:          chain,
+		rescanProgress: make(chan bool),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -97,6 +113,7 @@ func (w *Wallet) detachBlock(block *legacy.Block) error {
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
 func (w *Wallet) walletUpdater() {
 	for {
+		getRescanNotification(w)
 		for !w.chain.InMainChain(w.status.Height, w.status.Hash) {
 			block, err := w.chain.GetBlockByHash(&w.status.Hash)
 			if err != nil {
@@ -121,4 +138,70 @@ func (w *Wallet) walletUpdater() {
 			return
 		}
 	}
+}
+
+func getRescanNotification(w *Wallet) {
+	select {
+	case <-w.rescanProgress:
+		w.status.Height = 1
+		block, _ := w.chain.GetBlockByHeight(w.status.Height)
+		w.status.Hash = block.Hash()
+	default:
+		return
+	}
+}
+
+// ExportAccountPrivKey exports the account private key as a WIF for encoding as a string
+// in the Wallet Import Formt.
+func (w *Wallet) ExportAccountPrivKey(hsm *pseudohsm.HSM, xpub chainkd.XPub, auth string) (*string, error) {
+	xprv, err := hsm.LoadChainKDKey(xpub, auth)
+	if err != nil {
+		return nil, err
+	}
+	var hashed [32]byte
+	sha3pool.Sum256(hashed[:], xprv[:])
+
+	tmp := append(xprv[:], hashed[:4]...)
+	res := base58.Encode(tmp)
+	return &res, nil
+}
+
+// ImportAccountPrivKey imports the account key in the Wallet Import Formt.
+func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, alias, auth string, index uint64) (*pseudohsm.XPub, error) {
+	xpub, _, err := hsm.ImportXPrvKey(auth, alias, xprv)
+	if err != nil {
+		return nil, err
+	}
+	var xpubs []chainkd.XPub
+	xpubs = append(xpubs, xpub.XPub)
+	account, err := w.AccountMgr.Create(nil, xpubs, SINGLE, alias, nil, "")
+	if err != nil {
+		return nil, err
+	}
+	if err := w.recoveryAccountWalletDB(account, xpub, index); err != nil {
+		return nil, err
+	}
+	return xpub, nil
+}
+
+func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
+	if err := w.createProgram(account, XPub, index); err != nil {
+		return err
+	}
+	w.rescanBlocks()
+	return nil
+}
+
+func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
+	for i := uint64(0); i < index; i++ {
+		if _, err := w.AccountMgr.CreateControlProgram(nil, account.ID, true, time.Now()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//WalletUpdate process every valid block and reverse every invalid block which need to rollback
+func (w *Wallet) rescanBlocks() {
+	w.rescanProgress <- true
 }

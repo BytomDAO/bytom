@@ -3,6 +3,7 @@ package account
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -29,6 +30,7 @@ const (
 	aliasPrefix     = "ALI:"
 	accountPrefix   = "ACC:"
 	accountCPPrefix = "ACP:"
+	keyNextIndex    = "NextIndex"
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -53,13 +55,18 @@ func CPKey(hash common.Hash) []byte {
 
 // NewManager creates a new account manager
 func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
+	var nextIndex uint64
+	if index := walletDB.Get([]byte(keyNextIndex)); index != nil {
+		nextIndex = uint64(binary.LittleEndian.Uint64(index))
+	}
 	return &Manager{
-		db:          walletDB,
-		chain:       chain,
-		utxoDB:      newReserver(chain, walletDB),
-		cache:       lru.New(maxAccountCache),
-		aliasCache:  lru.New(maxAccountCache),
-		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
+		db:           walletDB,
+		chain:        chain,
+		utxoDB:       newReserver(chain, walletDB),
+		cache:        lru.New(maxAccountCache),
+		aliasCache:   lru.New(maxAccountCache),
+		delayedACPs:  make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
+		acpIndexNext: nextIndex,
 	}
 }
 
@@ -382,23 +389,19 @@ func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
 	return script, nil
 }
 
+func saveIndex(db dbm.DB, index uint64) {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, index)
+	db.Set([]byte(keyNextIndex), buf)
+}
+
 func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	m.acpMu.Lock()
 	defer m.acpMu.Unlock()
 
-	//TODO: fix this part, really serious security breach
-	if m.acpIndexNext >= m.acpIndexCap {
-		const incrby = 10000 // start 1,increments by 10,000
-		if m.acpIndexCap <= incrby {
-			m.acpIndexCap = incrby + 1
-		} else {
-			m.acpIndexCap += incrby
-		}
-		m.acpIndexNext = m.acpIndexCap - incrby
-	}
-
 	n := m.acpIndexNext
 	m.acpIndexNext++
+	saveIndex(m.db, m.acpIndexNext)
 	return n, nil
 }
 
