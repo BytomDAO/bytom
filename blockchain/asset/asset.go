@@ -236,7 +236,7 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 }
 
 type annotatedAsset struct {
-	AssetID          string                 `json:"asset_id"`
+	AssetID          string                 `json:"id"`
 	Alias            string                 `json:"alias"`
 	VMVersion        uint64                 `json:"vm_version"`
 	IssuanceProgram  string                 `json:"issue_program"`

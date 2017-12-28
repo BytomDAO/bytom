@@ -53,7 +53,7 @@ type assetAmount struct {
 }
 
 type accountBalance struct {
-	AccountID string        `json:"account_id"`
+	AccountID string        `json:"id"`
 	Alias     string        `json:"alias,omitempty"`
 	Balances  []assetAmount `json:"balances"`
 }
@@ -83,22 +83,22 @@ func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accou
 	}
 	sort.Strings(sortedAccount)
 
-	for _, account := range sortedAccount {
+	for _, id := range sortedAccount {
 		sortedAsset := []string{}
-		for k := range accBalance[account] {
+		for k := range accBalance[id] {
 			sortedAsset = append(sortedAsset, k)
 		}
 		sort.Strings(sortedAsset)
 
 		assetAmounts := []assetAmount{}
 		for _, asset := range sortedAsset {
-			assetAmounts = append(assetAmounts, assetAmount{AssetID: asset, Amount: accBalance[account][asset]})
+			assetAmounts = append(assetAmounts, assetAmount{AssetID: asset, Amount: accBalance[id][asset]})
 		}
 
-		alias := bcr.accounts.GetAliasByID(account)
+		alias := bcr.accounts.GetAliasByID(id)
 
 		tmpBalance.Alias = alias
-		tmpBalance.AccountID = account
+		tmpBalance.AccountID = id
 		tmpBalance.Balances = assetAmounts
 
 		balances = append(balances, tmpBalance)
@@ -122,7 +122,7 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struc
 
 type annotatedUTXO struct {
 	Alias        string `json:"alias,omitempty"`
-	OutputID     string `json:"output_id"`
+	OutputID     string `json:"id"`
 	AssetID      string `json:"asset_id"`
 	Amount       uint64 `json:"amount"`
 	AccountID    string `json:"account_id"`

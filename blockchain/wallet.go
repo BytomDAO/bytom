@@ -7,8 +7,8 @@ import (
 )
 
 func (bcr *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
-	Password string
-	XPub     chainkd.XPub
+	Password string       `json:"password"`
+	XPub     chainkd.XPub `json:"xpub"`
 }) Response {
 	type privateKey struct {
 		PrivateKey string `json:"private_key"`
@@ -22,10 +22,10 @@ func (bcr *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
 }
 
 func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in struct {
-	Alias    string
-	Password string
-	XPrv     chainkd.XPrv
-	Index    uint64
+	Alias    string       `json:"alias"`
+	Password string       `json:"password"`
+	XPrv     chainkd.XPrv `json:"xprv"`
+	Index    uint64       `json:"index"`
 }) Response {
 	xpub, err := bcr.wallet.ImportAccountPrivKey(bcr.hsm, in.XPrv, in.Alias, in.Password, in.Index)
 	if err != nil {

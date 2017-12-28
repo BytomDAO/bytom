@@ -100,7 +100,7 @@ var exportPrivateCmd = &cobra.Command{
 }
 
 var importPrivateCmd = &cobra.Command{
-	Use:   "import-private-key <alias> <password> <private key> <index>",
+	Use:   "import-private-key <alias> <private key> <index> <password>",
 	Short: "Import the private key",
 	Args:  cobra.ExactArgs(4),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -111,7 +111,7 @@ var importPrivateCmd = &cobra.Command{
 			Index    uint64
 		}
 
-		privHash, err := base58.Decode(args[2])
+		privHash, err := base58.Decode(args[1])
 		if err != nil {
 			os.Exit(ErrLocalExe)
 		}
@@ -130,8 +130,8 @@ var importPrivateCmd = &cobra.Command{
 
 		var key Key
 		key.Alias = args[0]
-		key.Password = args[1]
-		key.Index, _ = strconv.ParseUint(args[3], 10, 64)
+		key.Password = args[3]
+		key.Index, _ = strconv.ParseUint(args[2], 10, 64)
 		copy(key.XPrv[:], privHash[:64])
 
 		data, exitCode := clientCall("/import-private-key", &key)

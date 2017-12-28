@@ -17,6 +17,7 @@ const listKeyMaxAliases = 200
 // pre-define errors for supporting bytom errorFormatter
 var (
 	ErrDuplicateKeyAlias    = errors.New("duplicate key alias")
+	ErrDuplicateKey         = errors.New("duplicate key")
 	ErrInvalidAfter         = errors.New("invalid after")
 	ErrNoKey                = errors.New("key not found")
 	ErrInvalidKeySize       = errors.New("key invalid size")
@@ -175,6 +176,10 @@ func (h *HSM) ResetPassword(xpub chainkd.XPub, auth, newAuth string) error {
 func (h *HSM) ImportXPrvKey(auth string, alias string, xprv chainkd.XPrv) (*XPub, bool, error) {
 	if ok := h.cache.hasAlias(alias); ok {
 		return nil, false, ErrDuplicateKeyAlias
+	}
+
+	if ok := h.cache.hasKey(xprv.XPub()); ok {
+		return nil, false, ErrDuplicateKey
 	}
 
 	xpub := xprv.XPub()

@@ -53,8 +53,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 	w.status.Height = walletInfo.Height
 	w.status.Hash = walletInfo.Hash
-	rescanProgress := make(chan struct{})
-	w.rescanProgress = rescanProgress
+	w.rescanProgress = make(chan struct{}, 1)
 	return w
 }
 
@@ -185,25 +184,25 @@ func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, ali
 	}
 	var xpubs []chainkd.XPub
 	xpubs = append(xpubs, xpub.XPub)
-	account, err := w.AccountMgr.Create(nil, xpubs, SINGLE, alias, nil, "")
+	newAccount, err := w.AccountMgr.Create(nil, xpubs, SINGLE, alias, nil, "")
 	if err != nil {
 		return nil, err
 	}
-	if err := recoveryAccountWalletDB(w, account, &w.DB, xpub, index); err != nil {
+	if err := recoveryAccountWalletDB(w, newAccount, index); err != nil {
 		return nil, err
 	}
 	return xpub, nil
 }
 
-func recoveryAccountWalletDB(w *Wallet, account *account.Account, DB *db.DB, XPub *pseudohsm.XPub, index uint64) error {
-	if err := createProgram(w, account, DB, XPub, index); err != nil {
+func recoveryAccountWalletDB(w *Wallet, account *account.Account, index uint64) error {
+	if err := createProgram(w, account, index); err != nil {
 		return err
 	}
 	rescanBlocks(w)
 	return nil
 }
 
-func createProgram(w *Wallet, account *account.Account, DB *db.DB, XPub *pseudohsm.XPub, index uint64) error {
+func createProgram(w *Wallet, account *account.Account, index uint64) error {
 	for i := uint64(0); i < index; i++ {
 		_, err := w.AccountMgr.CreateControlProgram(nil, account.ID, true, time.Now())
 		if err != nil {
