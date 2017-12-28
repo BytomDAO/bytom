@@ -50,7 +50,12 @@ type utxo struct {
 	RefDataHash    bc.Hash
 
 	AccountID           string
+	Address             string
 	ControlProgramIndex uint64
+}
+
+func NewUtxo() *utxo {
+	return &utxo{}
 }
 
 func (u *utxo) source() source {
@@ -240,8 +245,11 @@ func (re *reserver) ExpireReservations(ctx context.Context) error {
 }
 
 func (re *reserver) checkUTXO(u *utxo) bool {
-	_, s := re.c.State()
-	return s.Tree.Contains(u.OutputID.Bytes())
+	utxo, err := re.c.GetUtxo(&u.OutputID)
+	if err != nil {
+		return false
+	}
+	return !utxo.Spend
 }
 
 func (re *reserver) source(src source) *sourceReserver {
@@ -404,6 +412,7 @@ func findMatchingUTXOs(db dbm.DB, src source) ([]*utxo, error) {
 				ControlProgram:      accountUTXO.Program,
 				RefDataHash:         bc.NewHash(rawRefData),
 				AccountID:           src.AccountID,
+				Address:             accountUTXO.Address,
 				ControlProgramIndex: accountUTXO.ProgramIndex,
 			})
 
@@ -449,6 +458,7 @@ func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*utxo, error) {
 
 	u.OutputID = bc.NewHash(*rawOutputID)
 	u.AccountID = accountUTXO.AccountID
+	u.Address = accountUTXO.Address
 	u.AssetID = bc.NewAssetID(*rawAssetID)
 	u.Amount = accountUTXO.Amount
 	u.ControlProgramIndex = accountUTXO.ProgramIndex

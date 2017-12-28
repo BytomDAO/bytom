@@ -205,7 +205,7 @@ func NewNode(config *cfg.Config) *Node {
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
 
-		wallet = w.NewWallet(walletDB)
+		wallet = w.NewWallet(walletDB, accounts, assets, chain)
 
 		go wallet.WalletUpdate(chain)
 

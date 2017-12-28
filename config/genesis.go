@@ -4,13 +4,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/state"
 )
 
-// Generate genesis transaction
+// GenerateGenesisTx will return genesis transaction
 func GenerateGenesisTx() *legacy.Tx {
 	txData := legacy.TxData{
 		Version:        1,
@@ -34,17 +34,12 @@ func GenerateGenesisTx() *legacy.Tx {
 	return legacy.NewTx(txData)
 }
 
-// Generate genesis block
+// GenerateGenesisBlock will return genesis block
 func GenerateGenesisBlock() *legacy.Block {
 	genesisCoinbaseTx := GenerateGenesisTx()
 	merkleRoot, err := bc.MerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
 	if err != nil {
 		log.Panicf("Fatal create merkelRoot")
-	}
-
-	snap := state.Empty()
-	if err := snap.ApplyTx(genesisCoinbaseTx.Tx); err != nil {
-		log.Panicf("Fatal ApplyTx")
 	}
 
 	var seed [32]byte
@@ -58,7 +53,6 @@ func GenerateGenesisBlock() *legacy.Block {
 			TimestampMS: 1511318565142,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
-				AssetsMerkleRoot:       snap.Tree.RootHash(),
 			},
 			Bits: 2161727821138738707,
 		},
@@ -69,7 +63,7 @@ func GenerateGenesisBlock() *legacy.Block {
 		genesisBlock.Nonce = i
 		hash := genesisBlock.Hash()
 
-		if consensus.CheckProofOfWork(&hash, genesisBlock.Bits) {
+		if difficulty.CheckProofOfWork(&hash, genesisBlock.Bits) {
 			break
 		}
 	}

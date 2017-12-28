@@ -196,6 +196,7 @@ const (
 
 	OP_SHA256        Op = 0xa8
 	OP_SHA3          Op = 0xaa
+	OP_HASH160       Op = 0xab
 	OP_CHECKSIG      Op = 0xac
 	OP_CHECKMULTISIG Op = 0xad
 	OP_TXSIGHASH     Op = 0xae
@@ -304,6 +305,7 @@ var (
 
 		OP_SHA256:        {OP_SHA256, "SHA256", opSha256},
 		OP_SHA3:          {OP_SHA3, "SHA3", opSha3},
+		OP_HASH160:       {OP_HASH160, "HASH160", opHash160},
 		OP_CHECKSIG:      {OP_CHECKSIG, "CHECKSIG", opCheckSig},
 		OP_CHECKMULTISIG: {OP_CHECKMULTISIG, "CHECKMULTISIG", opCheckMultiSig},
 		OP_TXSIGHASH:     {OP_TXSIGHASH, "TXSIGHASH", opTxSigHash},

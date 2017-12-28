@@ -254,7 +254,7 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		bcr.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
 
 	case *StatusRequestMessage:
-		block, _ := bcr.chain.State()
+		block := bcr.chain.BestBlock()
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 
 	case *StatusResponseMessage:
@@ -300,10 +300,10 @@ func (bcr *BlockchainReactor) syncRoutine() {
 	}
 }
 
-// BroadcastStatusResponse broadcasts `BlockStore` height.
-func (bcr *BlockchainReactor) BroadcastStatusResponse() {
-	block, _ := bcr.chain.State()
-	bcr.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
+// BroadcastStatusRequest broadcasts `BlockStore` height.
+func (bcR *BlockchainReactor) BroadcastStatusResponse() {
+	block := bcR.chain.BestBlock()
+	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 }
 
 // BroadcastTransaction broadcats `BlockStore` transaction.

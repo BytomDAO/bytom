@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bytom/blockchain/txdb"
+	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -34,13 +35,12 @@ type Store interface {
 
 	GetBlock(*bc.Hash) (*legacy.Block, error)
 	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
-	GetSnapshot(*bc.Hash) (*state.Snapshot, error)
 	GetStoreStatus() txdb.BlockStoreStateJSON
+	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
+	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
 
 	SaveBlock(*legacy.Block) error
-	SaveMainchain(map[uint64]*bc.Hash, *bc.Hash) error
-	SaveSnapshot(*state.Snapshot, *bc.Hash) error
-	SaveStoreStatus(uint64, *bc.Hash)
+	SaveChainStatus(*legacy.Block, *state.UtxoViewpoint, map[uint64]*bc.Hash) error
 }
 
 // OrphanManage is use to handle all the orphan block
@@ -129,7 +129,6 @@ type Chain struct {
 		block     *legacy.Block
 		hash      *bc.Hash
 		mainChain map[uint64]*bc.Hash
-		snapshot  *state.Snapshot
 	}
 	store      Store
 	seedCaches *seed.SeedCaches
@@ -148,7 +147,6 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 	storeStatus := store.GetStoreStatus()
 
 	if storeStatus.Height == 0 {
-		c.state.snapshot = state.Empty()
 		c.state.mainChain = make(map[uint64]*bc.Hash)
 		return c, nil
 	}
@@ -156,9 +154,6 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 	c.state.hash = storeStatus.Hash
 	var err error
 	if c.state.block, err = store.GetBlock(storeStatus.Hash); err != nil {
-		return nil, err
-	}
-	if c.state.snapshot, err = store.GetSnapshot(storeStatus.Hash); err != nil {
 		return nil, err
 	}
 	if c.state.mainChain, err = store.GetMainchain(storeStatus.Hash); err != nil {
@@ -177,6 +172,7 @@ func (c *Chain) Height() uint64 {
 	return c.state.block.Height
 }
 
+// BestBlockHash return the hash of the chain tail block
 func (c *Chain) BestBlockHash() *bc.Hash {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
@@ -191,6 +187,7 @@ func (c *Chain) inMainchain(block *legacy.Block) bool {
 	return *hash == block.Hash()
 }
 
+// InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(height uint64, hash bc.Hash) bool {
 	if height == 0 {
 		return true
@@ -216,40 +213,40 @@ func (c *Chain) TimestampMS() uint64 {
 	return c.state.block.TimestampMS
 }
 
-// State returns the most recent state available. It will not be current
-// unless the current process is the leader. Callers should examine the
-// returned block header's height if they need to verify the current state.
-func (c *Chain) State() (*legacy.Block, *state.Snapshot) {
+// BestBlock returns the chain tail block
+func (c *Chain) BestBlock() *legacy.Block {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
-	return c.state.block, c.state.snapshot
+	return c.state.block
 }
 
+// SeedCaches return the seedCached manager
 func (c *Chain) SeedCaches() *seed.SeedCaches {
 	return c.seedCaches
 }
 
-// This function must be called with mu lock in above level
-func (c *Chain) setState(block *legacy.Block, s *state.Snapshot, m map[uint64]*bc.Hash) error {
-	if block.AssetsMerkleRoot != s.Tree.RootHash() {
-		return ErrBadStateRoot
-	}
+// GetUtxo try to find the utxo status in db
+func (c *Chain) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
+	return c.store.GetUtxo(hash)
+}
 
+// GetTransactionsUtxo return all the utxos that related to the txs' inputs
+func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
+	return c.store.GetTransactionsUtxo(view, txs)
+}
+
+// This function must be called with mu lock in above level
+func (c *Chain) setState(block *legacy.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
 	blockHash := block.Hash()
 	c.state.block = block
 	c.state.hash = &blockHash
-	c.state.snapshot = s
 	for k, v := range m {
 		c.state.mainChain[k] = v
 	}
 
-	if err := c.store.SaveSnapshot(c.state.snapshot, &blockHash); err != nil {
+	if err := c.store.SaveChainStatus(block, view, c.state.mainChain); err != nil {
 		return err
 	}
-	if err := c.store.SaveMainchain(c.state.mainChain, &blockHash); err != nil {
-		return err
-	}
-	c.store.SaveStoreStatus(block.Height, &blockHash)
 
 	c.state.cond.Broadcast()
 	return nil

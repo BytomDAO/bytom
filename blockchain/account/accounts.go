@@ -3,6 +3,7 @@ package account
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -15,6 +16,8 @@ import (
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
+	"github.com/bytom/consensus"
+	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
@@ -27,6 +30,7 @@ const (
 	aliasPrefix     = "ALI:"
 	accountPrefix   = "ACC:"
 	accountCPPrefix = "ACP:"
+	keyNextIndex    = "NextIndex"
 )
 
 func aliasKey(name string) []byte {
@@ -45,13 +49,18 @@ func CPKey(hash common.Hash) []byte {
 
 // NewManager creates a new account manager
 func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
+	var nextIndex uint64
+	if index := walletDB.Get([]byte(keyNextIndex)); index != nil {
+		nextIndex = uint64(binary.LittleEndian.Uint64(index))
+	}
 	return &Manager{
-		db:          walletDB,
-		chain:       chain,
-		utxoDB:      newReserver(chain, walletDB),
-		cache:       lru.New(maxAccountCache),
-		aliasCache:  lru.New(maxAccountCache),
-		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
+		db:           walletDB,
+		chain:        chain,
+		utxoDB:       newReserver(chain, walletDB),
+		cache:        lru.New(maxAccountCache),
+		aliasCache:   lru.New(maxAccountCache),
+		delayedACPs:  make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
+		acpIndexNext: nextIndex,
 	}
 }
 
@@ -226,6 +235,58 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
+// CreateP2PKH generate an address for the select account
+func (m *Manager) CreateP2PKH(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+	cp, err := m.createP2PKH(ctx, accountID, change, expiresAt)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = m.insertAccountControlProgram(ctx, cp); err != nil {
+		return nil, err
+	}
+	return cp, nil
+}
+
+func (m *Manager) createP2PKH(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+	account, err := m.findByID(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	if account.Quorum != 1 {
+		return nil, errors.New("need single key pair account to create standard transaction")
+	}
+
+	idx, err := m.nextIndex(ctx)
+	if err != nil {
+		return nil, err
+	}
+	path := signers.Path(account, signers.AccountKeySpace, idx)
+	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	derivedPK := derivedXPubs[0].PublicKey()
+	pubHash := crypto.Ripemd160(derivedPK)
+
+	// TODO: pass different params due to config
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.MainNetParams)
+	if err != nil {
+		return nil, err
+	}
+
+	control, err := vmutil.P2PKHSigProgram([]byte(pubHash))
+	if err != nil {
+		return nil, err
+	}
+
+	return &CtrlProgram{
+		AccountID:      account.ID,
+		Address:        address.EncodeAddress(),
+		KeyIndex:       idx,
+		ControlProgram: control,
+		Change:         change,
+		ExpiresAt:      expiresAt,
+	}, nil
+}
+
 func (m *Manager) createControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	account, err := m.findByID(ctx, accountID)
 	if err != nil {
@@ -271,6 +332,7 @@ func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, ch
 //CtrlProgram is structure of account control program
 type CtrlProgram struct {
 	AccountID      string
+	Address        string
 	KeyIndex       uint64
 	ControlProgram []byte
 	Change         bool
@@ -334,23 +396,19 @@ func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
 	return script, nil
 }
 
+func saveIndex(db dbm.DB, index uint64) {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, index)
+	db.Set([]byte(keyNextIndex), buf)
+}
+
 func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
 	m.acpMu.Lock()
 	defer m.acpMu.Unlock()
 
-	//TODO: fix this part, really serious security breach
-	if m.acpIndexNext >= m.acpIndexCap {
-		const incrby = 10000 // start 1,increments by 10,000
-		if m.acpIndexCap <= incrby {
-			m.acpIndexCap = incrby + 1
-		} else {
-			m.acpIndexCap += incrby
-		}
-		m.acpIndexNext = m.acpIndexCap - incrby
-	}
-
 	n := m.acpIndexNext
 	m.acpIndexNext++
+	saveIndex(m.db, m.acpIndexNext)
 	return n, nil
 }
 

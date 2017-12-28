@@ -36,6 +36,7 @@ func (bcr *BlockchainReactor) BuildHandler() {
 		m.Handle("/create-account", jsonHandler(bcr.createAccount))
 		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
 		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
+		m.Handle("/create-account-address", jsonHandler(bcr.createAccountAddress))
 		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
 		m.Handle("/delete-account", jsonHandler(bcr.deleteAccount))
 
@@ -77,6 +78,10 @@ func (bcr *BlockchainReactor) BuildHandler() {
 
 	m.Handle("/block-hash", jsonHandler(bcr.getBestBlockHash))
 	m.Handle("/block-height", jsonHandler(bcr.blockHeight))
+
+	m.Handle("/export-private-key", jsonHandler(bcr.walletExportKey))
+	m.Handle("/import-private-key", jsonHandler(bcr.walletImportKey))
+
 	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
 	m.Handle("/get-block-by-hash", jsonHandler(bcr.getBlockByHash))
 	m.Handle("/get-block-by-height", jsonHandler(bcr.getBlockByHeight))

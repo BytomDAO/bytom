@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/algorithm"
+	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
@@ -521,7 +522,7 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 	if err != nil {
 		return err
 	}
-	if !consensus.CheckProofOfWork(proofHash, b.BlockHeader.Bits) {
+	if !difficulty.CheckProofOfWork(proofHash, b.BlockHeader.Bits) {
 		return errWorkProof
 	}
 
