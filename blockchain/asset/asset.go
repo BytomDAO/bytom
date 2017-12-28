@@ -276,9 +276,6 @@ func (reg *Registry) ListAssets(id string) ([]annotatedAsset, error) {
 		assets = append(assets, tmpAsset)
 	}
 
-	if len(assets) == 0 {
-		return nil, errors.New("No local assets")
-	}
 	return assets, nil
 }
 

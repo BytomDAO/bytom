@@ -111,10 +111,6 @@ func (bcr *BlockchainReactor) getTxFeeds() ([]txfeed.TxFeed, error) {
 		txFeeds = append(txFeeds, txFeed)
 	}
 
-	if len(txFeeds) == 0 {
-		return nil, errors.New("No Transaction Feeds")
-	}
-
 	return txFeeds, nil
 }
 

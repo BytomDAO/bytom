@@ -327,10 +327,6 @@ func (w *Wallet) GetTransactions(id string) ([]query.AnnotatedTx, error) {
 		annotatedTxs = append(annotatedTxs, annotatedTx)
 	}
 
-	if len(annotatedTxs) == 0 {
-		return nil, errors.New("No transactions")
-	}
-
 	return annotatedTxs, nil
 }
 
@@ -351,8 +347,5 @@ func (w *Wallet) GetAccountUTXOs(id string) ([]account.UTXO, error) {
 		accountUTXOs = append(accountUTXOs, accountUTXO)
 	}
 
-	if len(accountUTXOs) == 0 {
-		return nil, errors.New("No Account UTXOs")
-	}
 	return accountUTXOs, nil
 }

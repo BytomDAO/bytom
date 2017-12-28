@@ -415,9 +415,5 @@ func (m *Manager) ListAccounts(id string) ([]annotatedAccount, error) {
 		accounts = append(accounts, tmpAccount)
 	}
 
-	if len(accounts) == 0 {
-		return nil, errors.New("No accounts")
-	}
-
 	return accounts, nil
 }

@@ -144,10 +144,6 @@ func (cs *CredentialStore) List() ([]Token, error) {
 		tokens = append(tokens, token)
 	}
 
-	if len(tokens) == 0 {
-		return nil, errors.New("No AccessTokens")
-	}
-
 	return tokens, nil
 }
 
