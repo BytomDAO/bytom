@@ -92,7 +92,7 @@ LOOP:
 
 		//Reverse this block
 		reverseAccountUTXOs(&storeBatch, block, w)
-		deleteTransactions(&storeBatch, w.status.Height, block, w)
+		deleteTransactions(&storeBatch, w.status.Height, w)
 		log.WithField("Height", w.status.Height).Info("start rollback this block")
 
 		w.status.Height = block.Height - 1

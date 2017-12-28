@@ -56,18 +56,18 @@ func calcTxIndexKey(txID string) []byte {
 }
 
 //deleteTransaction delete transactions when orphan block rollback
-func deleteTransactions(batch *db.Batch, height uint64, b *legacy.Block, w *Wallet) {
+func deleteTransactions(batch *db.Batch, height uint64, w *Wallet) {
 	tmpTx := query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
 
 	for txIter.Next() {
-		if err := json.Unmarshal(txIter.Value(), &tmpTx); err != nil {
-			log.WithField("err", err).Error("delete transactions")
-			continue
+		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
+			//delete index
+			(*batch).Delete(calcTxIndexKey(tmpTx.ID.String()))
 		}
-		(*batch).Delete(calcTxIndexKey(tmpTx.ID.String()))
+
 		(*batch).Delete(txIter.Key())
 	}
 }
@@ -107,7 +107,7 @@ func reverseAccountUTXOs(batch *db.Batch, b *legacy.Block, w *Wallet) {
 	}
 
 	accOuts := loadAccountInfo(reverseOuts, w)
-	if err = upsertConfirmedAccountOutputs(accOuts, b, batch, w); err != nil {
+	if err = upsertConfirmedAccountOutputs(accOuts, batch); err != nil {
 		log.WithField("err", err).Error("reversing account spent and retire outputs")
 		return
 	}
@@ -179,7 +179,7 @@ func buildAccountUTXOs(batch *db.Batch, b *legacy.Block, w *Wallet) {
 	}
 	accOuts := loadAccountInfo(outs, w)
 
-	if err = upsertConfirmedAccountOutputs(accOuts, b, batch, w); err != nil {
+	if err = upsertConfirmedAccountOutputs(accOuts, batch); err != nil {
 		log.WithField("err", err).Error("building new account outputs")
 		return
 	}
@@ -244,7 +244,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 // upsertConfirmedAccountOutputs records the account data for confirmed utxos.
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
-func upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, batch *db.Batch, w *Wallet) error {
+func upsertConfirmedAccountOutputs(outs []*accountOutput, batch *db.Batch) error {
 	var u *account.UTXO
 
 	for _, out := range outs {
