@@ -89,6 +89,7 @@ func (w *Wallet) commitWalletInfo(batch db.Batch) error {
 func (w *Wallet) attachBlock(block *legacy.Block) error {
 	if block.PreviousBlockHash != w.status.Hash {
 		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
+		return nil
 	}
 
 	storeBatch := w.DB.NewBatch()
@@ -189,6 +190,7 @@ func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudoh
 		return err
 	}
 	w.rescanBlocks()
+
 	return nil
 }
 
