@@ -38,7 +38,10 @@ func Key(name string) []byte {
 // pre-define errors for supporting bytom errorFormatter
 var (
 	ErrDuplicateAlias = errors.New("duplicate asset alias")
-	ErrBadIdentifier  = errors.New("either ID or alias must be specified, and not both")
+	ErrDuplicateAsset = errors.New("duplicate asset id")
+	ErrSerializing    = errors.New("serializing asset definition")
+	ErrMarshalAsset   = errors.New("failed marshal asset")
+	ErrFindAsset      = errors.New("fail to find asset")
 )
 
 //NewRegistry create new registry
@@ -87,7 +90,7 @@ func (asset *Asset) RawDefinition() []byte {
 // Define defines a new Asset.
 func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}, clientToken string) (*Asset, error) {
 	if existed := reg.db.Get(aliasKey(alias)); existed != nil {
-		return nil, fmt.Errorf("%s is a duplicated account alias", alias)
+		return nil, ErrDuplicateAlias
 	}
 
 	assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, clientToken)
@@ -97,7 +100,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 
 	rawDefinition, err := serializeAssetDef(definition)
 	if err != nil {
-		return nil, errors.Wrap(err, "serializing asset definition")
+		return nil, ErrSerializing
 	}
 
 	path := signers.Path(assetSigner, signers.AssetKeySpace)
@@ -119,13 +122,18 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		Signer:            assetSigner,
 		Tags:              tags,
 	}
+
+	if existAsset := reg.db.Get(Key(asset.AssetID.String())); existAsset != nil {
+		return nil, ErrDuplicateAsset
+	}
+
 	if alias != "" {
 		asset.Alias = &alias
 	}
 
 	ass, err := json.Marshal(asset)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed marshal asset")
+		return nil, ErrMarshalAsset
 	}
 
 	storeBatch := reg.db.NewBatch()
@@ -142,16 +150,14 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 // identified either by id or alias, but not both.
 func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[string]interface{}) error {
 	var asset Asset
-
 	assetID := assetInfo
 	if s, err := reg.FindByAlias(nil, assetInfo); err == nil {
 		assetID = s.AssetID.String()
 	}
 
 	rawAsset := reg.db.Get(Key(assetID))
-
 	if rawAsset == nil {
-		return errors.New("fail to find asset")
+		return ErrFindAsset
 	}
 	if err := json.Unmarshal(rawAsset, &asset); err != nil {
 		return err
@@ -171,7 +177,7 @@ func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[
 
 	rawAsset, err := json.Marshal(asset)
 	if err != nil {
-		return errors.New("fail to marshal asset")
+		return ErrMarshalAsset
 	}
 
 	reg.db.Set(Key(assetID), rawAsset)
@@ -189,12 +195,12 @@ func (reg *Registry) findByID(ctx context.Context, id string) (*Asset, error) {
 
 	bytes := reg.db.Get(Key(id))
 	if bytes == nil {
-		return nil, errors.New("no exit this asset")
+		return nil, ErrFindAsset
 	}
 	var asset Asset
 
 	if err := json.Unmarshal(bytes, &asset); err != nil {
-		return nil, fmt.Errorf("err:%s,asset signer id:%s", err, id)
+		return nil, err
 	}
 
 	reg.cacheMu.Lock()
@@ -215,17 +221,17 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 
 	rawID := reg.db.Get(aliasKey(alias))
 	if rawID == nil {
-		return nil, fmt.Errorf("No such asset alias: %s", alias)
+		return nil, errors.Wrapf(ErrFindAsset, "no such asset, alias: %s", alias)
 	}
 
 	rawAsset := reg.db.Get(Key(string(rawID)))
 	if rawAsset == nil {
-		return nil, fmt.Errorf("No such asset ID: %x", rawID)
+		return nil, errors.Wrapf(ErrFindAsset, "no such asset, signer id %s", rawID)
 	}
 	var asset Asset
 
 	if err := json.Unmarshal(rawAsset, &asset); err != nil {
-		return nil, fmt.Errorf("err:%s,asset signer id:%x", err, rawID)
+		return nil, err
 	}
 
 	reg.cacheMu.Lock()
@@ -236,16 +242,16 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 }
 
 type annotatedAsset struct {
-	AssetID          string                 `json:"id"`
-	Alias            string                 `json:"alias"`
-	VMVersion        uint64                 `json:"vm_version"`
-	IssuanceProgram  string                 `json:"issue_program"`
-	InitialBlockHash string                 `json:"init_blockhash"`
-	XPubs            []chainkd.XPub         `json:"xpubs"`
-	Quorum           int                    `json:"quorum"`
-	KeyIndex         uint64                 `json:"key_index"`
-	Tags             map[string]interface{} `json:"tags,omitempty"`
-	DefinitionMap    map[string]interface{} `json:"definition,omitempty"`
+	AssetID          string           `json:"id"`
+	Alias            string           `json:"alias"`
+	VMVersion        uint64           `json:"vm_version"`
+	IssuanceProgram  string           `json:"issue_program"`
+	InitialBlockHash string           `json:"init_blockhash"`
+	XPubs            []chainkd.XPub   `json:"xpubs"`
+	Quorum           int              `json:"quorum"`
+	KeyIndex         uint64           `json:"key_index"`
+	Definition       *json.RawMessage `json:"definition"`
+	Tags             *json.RawMessage `json:"tags"`
 }
 
 // ListAssets returns the accounts in the db
@@ -253,6 +259,8 @@ func (reg *Registry) ListAssets(id string) ([]annotatedAsset, error) {
 	asset := Asset{}
 	tmpAsset := annotatedAsset{}
 	assets := make([]annotatedAsset, 0)
+	jsonTags := json.RawMessage(`{}`)
+	jsonDefinition := json.RawMessage(`{}`)
 
 	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix + id))
 	defer assetIter.Release()
@@ -270,8 +278,21 @@ func (reg *Registry) ListAssets(id string) ([]annotatedAsset, error) {
 		tmpAsset.XPubs = asset.XPubs
 		tmpAsset.Quorum = asset.Quorum
 		tmpAsset.KeyIndex = asset.KeyIndex
-		tmpAsset.Tags = asset.Tags
-		tmpAsset.DefinitionMap = asset.DefinitionMap
+
+		// a.RawDefinition is the asset definition as it appears on the
+		// blockchain, so it's untrusted and may not be valid json.
+		if isValidJSON(asset.RawDefinition()) {
+			jsonDefinition = json.RawMessage(asset.RawDefinition())
+		}
+		tmpAsset.Definition = &jsonDefinition
+		if asset.Tags != nil {
+			t, err := json.Marshal(asset.Tags)
+			if err != nil {
+				return nil, err
+			}
+			jsonTags = t
+		}
+		tmpAsset.Tags = &jsonTags
 
 		assets = append(assets, tmpAsset)
 	}

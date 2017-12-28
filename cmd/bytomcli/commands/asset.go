@@ -103,7 +103,7 @@ If the tags match the pattern 'key:', delete them.`,
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var updateTag = struct {
-			AssetInfo string
+			AssetInfo string                 `json:"asset_info"`
 			Tags      map[string]interface{} `json:"tags"`
 		}{}
 

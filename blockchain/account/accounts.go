@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"sync"
 	"time"
 
@@ -31,6 +30,15 @@ const (
 	accountPrefix   = "ACC:"
 	accountCPPrefix = "ACP:"
 	keyNextIndex    = "NextIndex"
+)
+
+// pre-define errors for supporting bytom errorFormatter
+var (
+	ErrDuplicateAlias = errors.New("duplicate account alias")
+	ErrFindAccount    = errors.New("fail to find account")
+	ErrMarshalAccount = errors.New("failed marshal account")
+	ErrMarshalTags    = errors.New("failed marshal account to update tags")
+	ErrStandardQuorum = errors.New("need single key pair account to create standard transaction")
 )
 
 func aliasKey(name string) []byte {
@@ -110,7 +118,7 @@ type Account struct {
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, accessToken string) (*Account, error) {
 	if existed := m.db.Get(aliasKey(alias)); existed != nil {
-		return nil, fmt.Errorf("%s is a duplicated account alias", alias)
+		return nil, ErrDuplicateAlias
 	}
 
 	signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, accessToken)
@@ -121,7 +129,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	account := &Account{Signer: signer, Alias: alias, Tags: tags}
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed marshal account")
+		return nil, ErrMarshalAccount
 	}
 	storeBatch := m.db.NewBatch()
 
@@ -145,7 +153,7 @@ func (m *Manager) UpdateTags(ctx context.Context, accountInfo string, tags map[s
 
 	rawAccount := m.db.Get(Key(accountID))
 	if rawAccount == nil {
-		return errors.New("fail to find account")
+		return ErrFindAccount
 	}
 	if err := json.Unmarshal(rawAccount, &account); err != nil {
 		return err
@@ -165,7 +173,7 @@ func (m *Manager) UpdateTags(ctx context.Context, accountInfo string, tags map[s
 
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
-		return errors.New("failed marshal account to update tags")
+		return ErrMarshalTags
 	}
 
 	m.db.Set(Key(accountID), rawAccount)
@@ -183,7 +191,7 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 
 	rawID := m.db.Get(aliasKey(alias))
 	if rawID == nil {
-		return nil, errors.New("fail to find account by alias")
+		return nil, ErrFindAccount
 	}
 
 	accountID := string(rawID)
@@ -204,7 +212,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 
 	rawAccount := m.db.Get(Key(id))
 	if rawAccount == nil {
-		return nil, errors.New("fail to find account")
+		return nil, ErrFindAccount
 	}
 
 	var account Account
@@ -254,7 +262,7 @@ func (m *Manager) createP2PKH(ctx context.Context, accountID string, change bool
 		return nil, err
 	}
 	if account.Quorum != 1 {
-		return nil, errors.New("need single key pair account to create standard transaction")
+		return nil, ErrStandardQuorum
 	}
 
 	idx, err := m.nextIndex(ctx)
@@ -441,12 +449,12 @@ func (m *Manager) DeleteAccount(in struct {
 }
 
 type annotatedAccount struct {
-	Alias    string                 `json:"alias"`
-	ID       string                 `json:"id"`
-	Quorum   int                    `json:"quorum"`
-	KeyIndex uint64                 `json:"key_index"`
-	XPubs    []chainkd.XPub         `json:"xpubs"`
-	Tags     map[string]interface{} `json:"tags,omitempty"`
+	Alias    string           `json:"alias"`
+	ID       string           `json:"id"`
+	Quorum   int              `json:"quorum"`
+	KeyIndex uint64           `json:"key_index"`
+	XPubs    []chainkd.XPub   `json:"xpubs"`
+	Tags     *json.RawMessage `json:"tags"`
 }
 
 // ListAccounts will return the accounts in the db
@@ -454,6 +462,7 @@ func (m *Manager) ListAccounts(id string) ([]annotatedAccount, error) {
 	account := Account{}
 	tmpAccount := annotatedAccount{}
 	accounts := make([]annotatedAccount, 0)
+	jsonTags := json.RawMessage(`{}`)
 
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix + id))
 	defer accountIter.Release()
@@ -468,7 +477,14 @@ func (m *Manager) ListAccounts(id string) ([]annotatedAccount, error) {
 		tmpAccount.Quorum = account.Quorum
 		tmpAccount.KeyIndex = account.KeyIndex
 		tmpAccount.XPubs = account.XPubs
-		tmpAccount.Tags = account.Tags
+		if account.Tags != nil {
+			t, err := json.Marshal(account.Tags)
+			if err != nil {
+				return nil, err
+			}
+			jsonTags = t
+		}
+		tmpAccount.Tags = &jsonTags
 
 		accounts = append(accounts, tmpAccount)
 	}

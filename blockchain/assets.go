@@ -44,7 +44,7 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 		return resWrapper(nil, err)
 	}
 
-	log.WithField("asset", annotatedAsset).Info("Created asset")
+	log.WithField("asset ID", annotatedAsset.ID.String()).Info("Created asset")
 
 	return resWrapper(annotatedAsset)
 }
@@ -54,11 +54,9 @@ func (a *BlockchainReactor) updateAssetTags(ctx context.Context, updateTag struc
 	AssetInfo string                 `json:"asset_info"`
 	Tags      map[string]interface{} `json:"tags"`
 }) Response {
-
-	log.Info("%v", updateTag)
 	err := a.assets.UpdateTags(nil, updateTag.AssetInfo, updateTag.Tags)
 	if err != nil {
-		resWrapper(nil, err)
+		return resWrapper(nil, err)
 	}
 
 	return resWrapper(nil)
