@@ -309,15 +309,15 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 	return annotatedTxs
 }
 
-func (w *Wallet) GetTransactions(id string) ([]query.AnnotatedTx, error) {
+func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error) {
 	annotatedTx := query.AnnotatedTx{}
 	annotatedTxs := make([]query.AnnotatedTx, 0)
 	formatKey := ""
 
-	if id != "" {
-		rawFormatKey := w.DB.Get(calcTxIndexKey(id))
+	if txID != "" {
+		rawFormatKey := w.DB.Get(calcTxIndexKey(txID))
 		if rawFormatKey == nil {
-			return nil, fmt.Errorf("No transaction(txid=%s)", id)
+			return nil, fmt.Errorf("No transaction(txid=%s)", txID)
 		}
 		formatKey = string(rawFormatKey)
 	}
@@ -325,11 +325,45 @@ func (w *Wallet) GetTransactions(id string) ([]query.AnnotatedTx, error) {
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix + formatKey))
 	defer txIter.Release()
 	for txIter.Next() {
-		err := json.Unmarshal(txIter.Value(), &annotatedTx)
-		if err != nil {
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}
 		annotatedTxs = append(annotatedTxs, annotatedTx)
+	}
+
+	return annotatedTxs, nil
+}
+
+func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) bool {
+	for _, input := range annotatedTx.Inputs {
+		if input.AccountID == accountID {
+			return true
+		}
+	}
+
+	for _, output := range annotatedTx.Outputs {
+		if output.AccountID == accountID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]query.AnnotatedTx, error) {
+	annotatedTx := query.AnnotatedTx{}
+	annotatedTxs := make([]query.AnnotatedTx, 0)
+
+	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
+	defer txIter.Release()
+	for txIter.Next() {
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+			return nil, err
+		}
+
+		if findTransactionsByAccount(annotatedTx, accountID) {
+			annotatedTxs = append(annotatedTxs, annotatedTx)
+		}
 	}
 
 	return annotatedTxs, nil

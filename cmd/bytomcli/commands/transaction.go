@@ -24,6 +24,7 @@ func init() {
 	signSubTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
 
 	listTransactionsCmd.PersistentFlags().StringVar(&txID, "id", "", "transaction id")
+	listTransactionsCmd.PersistentFlags().StringVar(&account, "account_id", "", "account id")
 }
 
 var (
@@ -33,6 +34,7 @@ var (
 	password        = ""
 	pretty          = false
 	txID            = ""
+	account         = ""
 )
 
 var buildIssueReqFmt = `
@@ -213,8 +215,9 @@ var listTransactionsCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		filter := struct {
-			ID string `json:"id"`
-		}{ID: txID}
+			ID        string `json:"id"`
+			AccountID string `json:"account_id"`
+		}{ID: txID, AccountID: account}
 
 		data, exitCode := clientCall("/list-transactions", &filter)
 		if exitCode != Success {
