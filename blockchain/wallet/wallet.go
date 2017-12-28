@@ -22,113 +22,103 @@ type StatusInfo struct {
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
 	DB     db.DB
+	chain  *protocol.Chain
 	status StatusInfo
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB) *Wallet {
+func NewWallet(walletDB db.DB, chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
-		DB: walletDB,
+		DB:    walletDB,
+		chain: chain,
 	}
-	walletInfo, err := w.GetWalletInfo()
-	if err != nil {
-		log.WithField("warn", err).Warn("get wallet info")
+
+	if err := w.loadWalletInfo(); err != nil {
+		return nil, err
 	}
-	w.status.Height = walletInfo.Height
-	w.status.Hash = walletInfo.Hash
-	return w
+
+	go w.walletUpdater()
+	return w, nil
 }
 
 //GetWalletInfo return stored wallet info and nil,if error,
 //return initial wallet info and err
-func (w *Wallet) GetWalletInfo() (StatusInfo, error) {
-	var info StatusInfo
-	var rawWallet []byte
-
-	if rawWallet = w.DB.Get(walletKey); rawWallet == nil {
-		return info, nil
+func (w *Wallet) loadWalletInfo() error {
+	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
+		return json.Unmarshal(rawWallet, &w.status)
 	}
 
-	if err := json.Unmarshal(rawWallet, &info); err != nil {
-		return info, err
+	block, err := w.chain.GetBlockByHeight(0)
+	if err != nil {
+		return err
 	}
-
-	return info, nil
-
+	if err := w.attachBlock(block); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (w *Wallet) commitWalletInfo(batch *db.Batch) error {
-	var info StatusInfo
-
-	info.Height = w.status.Height
-	info.Hash = w.status.Hash
-
-	rawWallet, err := json.Marshal(info)
+func (w *Wallet) commitWalletInfo(batch db.Batch) error {
+	rawWallet, err := json.Marshal(w.status)
 	if err != nil {
 		log.WithField("err", err).Error("save wallet info")
 		return err
 	}
-	//update wallet to db
-	(*batch).Set(walletKey, rawWallet)
-	//commit to db
-	(*batch).Write()
+
+	batch.Set(walletKey, rawWallet)
+	batch.Write()
 	return nil
 }
 
-//WalletUpdate process every valid block and reverse every invalid block which need to rollback
-func (w *Wallet) WalletUpdate(c *protocol.Chain) {
-	var err error
-	var block *legacy.Block
+func (w *Wallet) attachBlock(block *legacy.Block) error {
+	if block.PreviousBlockHash != w.status.Hash {
+		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
+	}
 
 	storeBatch := w.DB.NewBatch()
+	w.indexTransactions(storeBatch, block)
+	w.buildAccountUTXOs(storeBatch, block)
 
-LOOP:
+	w.status.Height = block.Height
+	w.status.Hash = block.Hash()
+	return w.commitWalletInfo(storeBatch)
+}
 
-	for !c.InMainChain(w.status.Height, w.status.Hash) {
-		if block, err = c.GetBlockByHash(&w.status.Hash); err != nil {
-			log.WithField("err", err).Error("get block by hash")
-			return
+func (w *Wallet) detachBlock(block *legacy.Block) error {
+	storeBatch := w.DB.NewBatch()
+	w.reverseAccountUTXOs(storeBatch, block)
+	w.deleteTransactions(storeBatch, w.status.Height, block)
+
+	w.status.Height = block.Height - 1
+	w.status.Hash = block.PreviousBlockHash
+	return w.commitWalletInfo(storeBatch)
+}
+
+//WalletUpdate process every valid block and reverse every invalid block which need to rollback
+func (w *Wallet) walletUpdater() {
+	for {
+		for !w.chain.InMainChain(w.status.Height, w.status.Hash) {
+			block, err := w.chain.GetBlockByHash(&w.status.Hash)
+			if err != nil {
+				log.WithField("err", err).Error("walletUpdater GetBlockByHash")
+				return
+			}
+
+			if err := w.detachBlock(block); err != nil {
+				log.WithField("err", err).Error("walletUpdater detachBlock")
+				return
+			}
 		}
 
-		//Reverse this block
-		reverseAccountUTXOs(&storeBatch, block, w)
-		deleteTransactions(&storeBatch, w.status.Height, block, w)
-		log.WithField("Height", w.status.Height).Info("start rollback this block")
+		block, _ := w.chain.GetBlockByHeight(w.status.Height + 1)
+		if block == nil {
+			<-w.chain.BlockWaiter(w.status.Height + 1)
+			continue
+		}
 
-		w.status.Height = block.Height - 1
-		w.status.Hash = block.PreviousBlockHash
-
-		//update wallet info and commit batch write
-		if err := w.commitWalletInfo(&storeBatch); err != nil {
+		if err := w.attachBlock(block); err != nil {
+			log.WithField("err", err).Error("walletUpdater stop")
 			return
 		}
 	}
-
-	block, _ = c.GetBlockByHeight(w.status.Height + 1)
-	//if we already handled the tail of the chain, we wait
-	if block == nil {
-		<-c.BlockWaiter(w.status.Height + 1)
-		if block, err = c.GetBlockByHeight(w.status.Height + 1); err != nil {
-			log.WithField("err", err).Error("wallet get block by height")
-			return
-		}
-	}
-
-	//if false, means that rollback operation is necessary,then goto LOOP
-	if block.PreviousBlockHash == w.status.Hash {
-		//next loop will save
-		w.status.Height = block.Height
-		w.status.Hash = block.Hash()
-
-		indexTransactions(&storeBatch, block, w)
-		buildAccountUTXOs(&storeBatch, block, w)
-
-		//update wallet info and commit batch write
-		if err := w.commitWalletInfo(&storeBatch); err != nil {
-			return
-		}
-	}
-
-	//goto next loop
-	goto LOOP
 }

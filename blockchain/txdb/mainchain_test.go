@@ -16,7 +16,7 @@ func TestSaveMainchain(t *testing.T) {
 	defer os.RemoveAll("temp")
 
 	inputMain := make(map[uint64]*bc.Hash)
-	for i := uint64(1); i <= uint64(10); i++ {
+	for i := uint64(0); i <= uint64(10); i++ {
 		inputMain[i] = &bc.Hash{V0: i}
 	}
 

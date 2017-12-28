@@ -48,17 +48,17 @@ func calcDeletePreFix(blockHeight uint64) []byte {
 }
 
 //deleteTransaction delete transactions when orphan block rollback
-func deleteTransactions(batch *db.Batch, height uint64, b *legacy.Block, w *Wallet) {
+func (w *Wallet) deleteTransactions(batch db.Batch, height uint64, b *legacy.Block) {
 	txIter := w.DB.IteratorPrefix(calcDeletePreFix(height))
 	defer txIter.Release()
 
 	for txIter.Next() {
-		(*batch).Delete(txIter.Key())
+		batch.Delete(txIter.Key())
 	}
 }
 
 //ReverseAccountUTXOs process the invalid blocks when orphan block rollback
-func reverseAccountUTXOs(batch *db.Batch, b *legacy.Block, w *Wallet) {
+func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	var err error
 
 	//unknow how many spent and retire outputs
@@ -106,37 +106,36 @@ func reverseAccountUTXOs(batch *db.Batch, b *legacy.Block, w *Wallet) {
 				continue
 			}
 			//delete new UTXOs
-			(*batch).Delete(account.UTXOKey(*resOutID))
+			batch.Delete(account.UTXOKey(*resOutID))
 		}
 	}
 }
 
 //indexTransactions saves all annotated transactions to the database.
-func indexTransactions(batch *db.Batch, b *legacy.Block, w *Wallet) error {
+func (w *Wallet) indexTransactions(batch db.Batch, b *legacy.Block) error {
 	annotatedTxs := filterAccountTxs(b, w)
 	annotateTxsAsset(annotatedTxs, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
 	for pos, tx := range annotatedTxs {
-		rawTx, err := json.MarshalIndent(tx, "", "    ")
+		rawTx, err := json.Marshal(tx)
 		if err != nil {
 			return errors.Wrap(err, "inserting annotated_txs to db")
 		}
 
-		(*batch).Set(calcAnnotatedKey(b.Height, uint32(pos)), rawTx)
+		batch.Set(calcAnnotatedKey(b.Height, uint32(pos)), rawTx)
 	}
-
 	return nil
 }
 
 //buildAccountUTXOs process valid blocks to build account unspent outputs db
-func buildAccountUTXOs(batch *db.Batch, b *legacy.Block, w *Wallet) {
+func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	var err error
 
 	//handle spent UTXOs
 	delOutputIDs := prevoutDBKeys(b.Transactions...)
 	for _, delOutputID := range delOutputIDs {
-		(*batch).Delete(account.UTXOKey(delOutputID))
+		batch.Delete(account.UTXOKey(delOutputID))
 	}
 
 	//handle new UTXOs
@@ -229,7 +228,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 // upsertConfirmedAccountOutputs records the account data for confirmed utxos.
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
-func upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, batch *db.Batch, w *Wallet) error {
+func upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, batch db.Batch, w *Wallet) error {
 	var u *account.UTXO
 
 	for _, out := range outs {
@@ -252,7 +251,7 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, b
 			return errors.Wrap(err, "failed marshal accountutxo")
 		}
 
-		(*batch).Set(account.UTXOKey(out.OutputID), rawUTXO)
+		batch.Set(account.UTXOKey(out.OutputID), rawUTXO)
 	}
 	return nil
 }
