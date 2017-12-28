@@ -16,7 +16,7 @@ const (
 	CoinbasePendingBlockNumber = uint64(6)
 	subsidyReductionInterval   = uint64(560640)
 	baseSubsidy                = uint64(624000000000)
-	initialBlockSubsidy        = uint64(1470000000000000000)
+	InitialBlockSubsidy        = uint64(1470000000000000000)
 
 	// config for pow mining
 	PowMinBits            = uint64(2161727821138738707)
@@ -34,8 +34,8 @@ var BTMAssetID = &bc.AssetID{
 
 // BlockSubsidy calculate the coinbase rewards on given block height
 func BlockSubsidy(height uint64) uint64 {
-	if height == 1 {
-		return initialBlockSubsidy
+	if height == 0 {
+		return InitialBlockSubsidy
 	}
 	return baseSubsidy >> uint(height/subsidyReductionInterval)
 }

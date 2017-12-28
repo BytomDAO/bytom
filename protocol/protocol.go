@@ -146,7 +146,7 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 	c.state.cond.L = new(sync.Mutex)
 	storeStatus := store.GetStoreStatus()
 
-	if storeStatus.Height == 0 {
+	if storeStatus.Hash == nil {
 		c.state.mainChain = make(map[uint64]*bc.Hash)
 		return c, nil
 	}
@@ -189,10 +189,6 @@ func (c *Chain) inMainchain(block *legacy.Block) bool {
 
 // InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(height uint64, hash bc.Hash) bool {
-	if height == 0 {
-		return true
-	}
-
 	c.state.cond.L.Lock()
 	h, ok := c.state.mainChain[height]
 	c.state.cond.L.Unlock()

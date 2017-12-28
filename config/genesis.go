@@ -22,7 +22,7 @@ func GenerateGenesisTx() *legacy.Tx {
 				OutputCommitment: legacy.OutputCommitment{
 					AssetAmount: bc.AssetAmount{
 						AssetId: consensus.BTMAssetID,
-						Amount:  1470000000000000000,
+						Amount:  consensus.InitialBlockSubsidy,
 					},
 					VMVersion:      1,
 					ControlProgram: []byte{81},
@@ -48,7 +48,7 @@ func GenerateGenesisBlock() *legacy.Block {
 	genesisBlock := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
 			Version:     1,
-			Height:      1,
+			Height:      0,
 			Seed:        bc.NewHash(seed),
 			TimestampMS: 1511318565142,
 			BlockCommitment: legacy.BlockCommitment{

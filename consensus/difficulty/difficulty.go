@@ -91,7 +91,7 @@ func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
 func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {
 	if lastBH == nil {
 		return consensus.PowMinBits
-	} else if (lastBH.Height)%consensus.BlocksPerRetarget != 0 {
+	} else if (lastBH.Height)%consensus.BlocksPerRetarget != 0 || lastBH.Height == 0 {
 		return lastBH.Bits
 	}
 

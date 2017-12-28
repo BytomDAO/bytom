@@ -413,7 +413,7 @@ func TestValidateBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height: 1,
+					Height: 0,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1470000000000000000)},
 			},
@@ -422,7 +422,7 @@ func TestValidateBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height: 1,
+					Height: 0,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
 			},
@@ -431,7 +431,7 @@ func TestValidateBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height:         1,
+					Height:         0,
 					SerializedSize: 88888888,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
