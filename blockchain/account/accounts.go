@@ -448,45 +448,18 @@ func (m *Manager) DeleteAccount(in struct {
 	return nil
 }
 
-type annotatedAccount struct {
-	Alias    string           `json:"alias"`
-	ID       string           `json:"id"`
-	Quorum   int              `json:"quorum"`
-	KeyIndex uint64           `json:"key_index"`
-	XPubs    []chainkd.XPub   `json:"xpubs"`
-	Tags     *json.RawMessage `json:"tags"`
-}
-
 // ListAccounts will return the accounts in the db
-func (m *Manager) ListAccounts(id string) ([]annotatedAccount, error) {
-	account := Account{}
-	tmpAccount := annotatedAccount{}
-	accounts := make([]annotatedAccount, 0)
-	jsonTags := json.RawMessage(`{}`)
-
+func (m *Manager) ListAccounts(id string) ([]Account, error) {
+	accounts := make([]Account)
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix + id))
 	defer accountIter.Release()
 
 	for accountIter.Next() {
-		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
+		a := &Account{}
+		if err := json.Unmarshal(accountIter.Value(), a); err != nil {
 			return nil, err
 		}
-
-		tmpAccount.Alias = account.Alias
-		tmpAccount.ID = account.ID
-		tmpAccount.Quorum = account.Quorum
-		tmpAccount.KeyIndex = account.KeyIndex
-		tmpAccount.XPubs = account.XPubs
-		if account.Tags != nil {
-			t, err := json.Marshal(account.Tags)
-			if err != nil {
-				return nil, err
-			}
-			jsonTags = t
-		}
-		tmpAccount.Tags = &jsonTags
-
-		accounts = append(accounts, tmpAccount)
+		accounts = append(accounts, a)
 	}
 
 	return accounts, nil
