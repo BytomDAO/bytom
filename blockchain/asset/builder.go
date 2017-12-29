@@ -42,7 +42,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 		return txbuilder.MissingFieldsError("asset_id")
 	}
 
-	asset, err := a.assets.findByID(ctx, *a.AssetId)
+	asset, err := a.assets.findByID(ctx, a.AssetId.String())
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 	path := signers.Path(asset.Signer, signers.AssetKeySpace)
 	tplIn.AddWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
 
-	log.WithFields(log.Fields{"txin": txin, "tplIn": tplIn}).Info("Issue action build")
+	log.Info("Issue action build")
 	builder.RestrictMinTime(time.Now())
 	return builder.AddInput(txin, tplIn)
 }
