@@ -134,15 +134,14 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 // Best-effort cancellation attempt to put in txbuilder.BuildResult.Rollback.
 func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 	return func() {
-		err := m.utxoDB.Cancel(ctx, rid)
-		if err != nil {
+		if err := m.utxoDB.Cancel(ctx, rid); err != nil {
 			log.WithField("error", err).Error("Best-effort cancellation attempt to put in txbuilder.BuildResult.Rollback")
 		}
 	}
 }
 
 // UtxoToInputs convert an utxo to the txinput
-func UtxoToInputs(account *signers.Signer, u *utxo, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
+func UtxoToInputs(account *signers.Signer, u *UTXO, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
 	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash, refData)
 
 	path := signers.Path(account, signers.AccountKeySpace, u.ControlProgramIndex)

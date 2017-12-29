@@ -153,23 +153,5 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, in requestQu
 
 // POST /list-unspent-outputs
 func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in requestQuery) interface{} {
-
-	var (
-		response = make([]string, 0)
-		restring = ""
-	)
-
-	accountUTXOs := bcr.GetAccountUTXOs()
-
-	for _, res := range accountUTXOs {
-
-		restring = fmt.Sprintf(accountUTXOFmt,
-			res.OutputID, res.AssetID, res.Amount,
-			res.AccountID, res.ProgramIndex, res.Program,
-			res.SourceID, res.SourcePos, res.RefData, res.Change)
-
-		response = append(response, restring)
-	}
-
-	return response
+	return bcr.GetAccountUTXOs()
 }
