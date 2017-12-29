@@ -16,7 +16,7 @@ const (
 
 //UTXOKey makes a account unspent outputs key to store
 func UTXOKey(id bc.Hash) []byte {
-	name := string(id.Bytes())
+	name := id.String()
 	return []byte(UTXOPreFix + name)
 }
 
