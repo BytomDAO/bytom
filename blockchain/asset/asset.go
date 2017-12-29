@@ -8,6 +8,7 @@ import (
 
 	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"
+	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 	"golang.org/x/crypto/sha3"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/bytom/consensus"
 )
 
 const (
@@ -239,6 +241,26 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	reg.cache.Add(asset.AssetID.String(), &asset)
 	reg.cacheMu.Unlock()
 	return &asset, nil
+}
+
+func (reg *Registry) GetAliasByID(id string) string {
+	var asset Asset
+
+	if id == consensus.BTMAssetID.String() {
+		return "btm"
+	}
+	rawAsset := reg.db.Get(Key(id))
+	if rawAsset == nil {
+		log.Warn("fail to find asset")
+		return ""
+	}
+
+	if err := json.Unmarshal(rawAsset, &asset); err != nil {
+		log.Warn(err)
+		return ""
+	}
+
+	return *asset.Alias
 }
 
 type annotatedAsset struct {

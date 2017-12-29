@@ -49,13 +49,14 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
 }
 
 type assetAmount struct {
+	Alias   string `json:"asset_alias"`
 	AssetID string `json:"asset_id"`
 	Amount  uint64 `json:"amount"`
 }
 
 type accountBalance struct {
 	AccountID string        `json:"id"`
-	Alias     string        `json:"alias,omitempty"`
+	Alias     string        `json:"alias"`
 	Balances  []assetAmount `json:"balances"`
 }
 
@@ -92,8 +93,9 @@ func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accou
 		sort.Strings(sortedAsset)
 
 		assetAmounts := []assetAmount{}
-		for _, asset := range sortedAsset {
-			assetAmounts = append(assetAmounts, assetAmount{AssetID: asset, Amount: accBalance[id][asset]})
+		for _, assetID := range sortedAsset {
+			alias := bcr.assets.GetAliasByID(assetID)
+			assetAmounts = append(assetAmounts, assetAmount{Alias: alias, AssetID: assetID, Amount: accBalance[id][assetID]})
 		}
 
 		alias := bcr.accounts.GetAliasByID(id)
