@@ -112,7 +112,10 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accessto
 	mux.Handle("/", &coreHandler)
 
 	var handler http.Handler = mux
-	handler = AuthHandler(handler, accessTokens)
+
+	if config.Auth.Disable == false {
+		handler = AuthHandler(handler, accessTokens)
+	}
 	handler = RedirectHandler(handler)
 
 	secureheader.DefaultConfig.PermitClearLoopback = true
