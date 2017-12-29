@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	tokenSize          = 32
-	defGenericPageSize = 100
+	tokenSize = 32
 )
 
 var (

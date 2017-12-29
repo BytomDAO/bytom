@@ -126,7 +126,7 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struc
 }
 
 type annotatedUTXO struct {
-	Alias               string `json:"alias,omitempty"`
+	Alias               string `json:"account_alias"`
 	OutputID            string `json:"id"`
 	AssetID             string `json:"asset_id"`
 	AssetAlias          string `json:"asset_alias"`
