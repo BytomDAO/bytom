@@ -18,8 +18,7 @@ var createTransactionFeedCmd = &cobra.Command{
 		in.Alias = args[0]
 		in.Filter = args[1]
 
-		_, exitCode := clientCall("/create-transaction-feed", &in)
-		if exitCode != Success {
+		if _, exitCode := clientCall("/create-transaction-feed", &in); exitCode != Success {
 			os.Exit(exitCode)
 		}
 
@@ -77,8 +76,7 @@ var deleteTransactionFeedCmd = &cobra.Command{
 		var in txFeed
 		in.Alias = args[0]
 
-		_, exitCode := clientCall("/delete-transaction-feed", &in)
-		if exitCode != Success {
+		if _, exitCode := clientCall("/delete-transaction-feed", &in); exitCode != Success {
 			os.Exit(exitCode)
 		}
 
@@ -111,8 +109,7 @@ var updateTransactionFeedCmd = &cobra.Command{
 		in.Alias = args[0]
 		in.Filter = args[1]
 
-		_, exitCode := clientCall("/update-transaction-feed", &in)
-		if exitCode != Success {
+		if _, exitCode := clientCall("/update-transaction-feed", &in); exitCode != Success {
 			os.Exit(exitCode)
 		}
 		jww.FEEDBACK.Println("Successfully updated transaction feed")
