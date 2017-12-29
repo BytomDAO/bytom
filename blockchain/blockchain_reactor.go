@@ -2,8 +2,8 @@ package blockchain
 
 import (
 	"bytes"
-	"strconv"
 	stdjson "encoding/json"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
