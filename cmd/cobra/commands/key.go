@@ -6,9 +6,9 @@ import (
 	"encoding/hex"
 	"strconv"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+	"github.com/tendermint/go-wire/data/base58"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
@@ -126,7 +126,11 @@ var exportPrivateCmd = &cobra.Command{
 
 		client := mustRPCClient()
 		client.Call(context.Background(), "/export-private-key", &key, &response)
-		res := base58.Decode(response.(string))
+		res, err := base58.Decode(response.(string))
+		if err != nil {
+			jww.ERROR.Println(err)
+			return
+		}
 		if len(res) != 68 {
 			jww.ERROR.Println("export private error")
 			return
@@ -159,7 +163,11 @@ var importPrivateCmd = &cobra.Command{
 			Index    uint64
 		}
 
-		privhash := base58.Decode(args[2])
+		privhash, err := base58.Decode(args[2])
+		if err != nil {
+			jww.ERROR.Println(err)
+			return
+		}
 		if len(privhash) != 68 {
 			jww.ERROR.Println("wif priv length error")
 			return

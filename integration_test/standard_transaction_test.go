@@ -58,7 +58,7 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	utxo := account.NewUtxo()
+	utxo := &account.UTXO{}
 	utxo.OutputID = bc.Hash{V0: 1}
 	utxo.SourceID = bc.Hash{V0: 2}
 	utxo.AssetID = *consensus.BTMAssetID

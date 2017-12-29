@@ -229,29 +229,26 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
 func upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, batch db.Batch, w *Wallet) error {
-	var u *account.UTXO
-
+	u := &account.UTXO{}
 	for _, out := range outs {
 		u = &account.UTXO{
-			OutputID:     out.OutputID.Bytes(),
-			AssetID:      out.AssetId.Bytes(),
-			Amount:       out.Amount,
-			AccountID:    out.AccountID,
-			Address:      out.Address,
-			ProgramIndex: out.keyIndex,
-			Program:      out.ControlProgram,
-			SourceID:     out.sourceID.Bytes(),
-			SourcePos:    out.sourcePos,
-			RefData:      out.refData.Bytes(),
-			Change:       out.change,
+			OutputID:            out.OutputID,
+			SourceID:            out.sourceID,
+			AssetID:             *out.AssetId,
+			Amount:              out.Amount,
+			SourcePos:           out.sourcePos,
+			ControlProgram:      out.ControlProgram,
+			RefDataHash:         out.refData,
+			ControlProgramIndex: out.keyIndex,
+			AccountID:           out.AccountID,
+			Address:             out.Address,
 		}
 
-		rawUTXO, err := json.Marshal(u)
+		data, err := json.Marshal(u)
 		if err != nil {
 			return errors.Wrap(err, "failed marshal accountutxo")
 		}
-
-		batch.Set(account.UTXOKey(out.OutputID), rawUTXO)
+		batch.Set(account.UTXOKey(out.OutputID), data)
 	}
 	return nil
 }

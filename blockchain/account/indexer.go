@@ -20,21 +20,6 @@ func UTXOKey(id bc.Hash) []byte {
 	return []byte(UTXOPreFix + name)
 }
 
-//UTXO is a structure about account unspent outputs
-type UTXO struct {
-	OutputID     []byte
-	AssetID      []byte
-	Amount       uint64
-	AccountID    string
-	Address      string
-	ProgramIndex uint64
-	Program      []byte
-	SourceID     []byte
-	SourcePos    uint64
-	RefData      []byte
-	Change       bool
-}
-
 var emptyJSONObject = json.RawMessage(`{}`)
 
 //Annotated init an annotated account object
