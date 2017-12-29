@@ -156,6 +156,25 @@ var createAccountReceiverCmd = &cobra.Command{
 	},
 }
 
+var createAccountAddressCmd = &cobra.Command{
+	Use:   "create-account-address <accountID | alias>",
+	Short: "Create an account address",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		var ins = struct {
+			AccountInfo string    `json:"account_info"`
+			ExpiresAt   time.Time `json:"expires_at,omitempty"`
+		}{AccountInfo: args[0]}
+
+		data, exitCode := clientCall("/create-account-address", &ins)
+		if exitCode != Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
 var listBalancesCmd = &cobra.Command{
 	Use:   "list-balances",
 	Short: "List the accounts balances",

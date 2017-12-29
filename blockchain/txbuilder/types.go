@@ -38,7 +38,7 @@ type Action interface {
 
 // Receiver encapsulates information about where to send assets.
 type Receiver struct {
-	ControlProgram chainjson.HexBytes `json:"control_program"`
-	Address        string             `json:"address"`
+	ControlProgram chainjson.HexBytes `json:"control_program,omitempty"`
+	Address        string             `json:"address,omitempty"`
 	ExpiresAt      time.Time          `json:"expires_at"`
 }
