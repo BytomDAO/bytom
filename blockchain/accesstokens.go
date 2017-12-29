@@ -24,7 +24,7 @@ func (br *BlockchainReactor) createAccessToken(ctx context.Context, x struct {
 }
 
 func (br *BlockchainReactor) listAccessTokens(ctx context.Context) Response {
-	tokens, err := br.accessTokens.List()
+	tokens, err := br.accessTokens.List(ctx)
 	if err != nil {
 		log.Errorf("listAccessTokens: %v", err)
 		return resWrapper(nil, err)
