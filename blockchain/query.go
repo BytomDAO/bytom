@@ -48,16 +48,12 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
 	return resWrapper(bcr.indexBalances(accountUTXOs))
 }
 
-type assetAmount struct {
-	Alias   string `json:"asset_alias"`
-	AssetID string `json:"asset_id"`
-	Amount  uint64 `json:"amount"`
-}
-
 type accountBalance struct {
-	AccountID string        `json:"id"`
-	Alias     string        `json:"alias"`
-	Balances  []assetAmount `json:"balances"`
+	AccountID  string `json:"account_id"`
+	Alias      string `json:"account_alias"`
+	AssetAlias string `json:"asset_alias"`
+	AssetID    string `json:"asset_id"`
+	Amount     uint64 `json:"amount"`
 }
 
 func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accountBalance {
@@ -92,19 +88,17 @@ func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accou
 		}
 		sort.Strings(sortedAsset)
 
-		assetAmounts := []assetAmount{}
 		for _, assetID := range sortedAsset {
-			alias := bcr.assets.GetAliasByID(assetID)
-			assetAmounts = append(assetAmounts, assetAmount{Alias: alias, AssetID: assetID, Amount: accBalance[id][assetID]})
+
+			alias := bcr.accounts.GetAliasByID(id)
+			assetAlias := bcr.assets.GetAliasByID(assetID)
+			tmpBalance.Alias = alias
+			tmpBalance.AccountID = id
+			tmpBalance.AssetID = assetID
+			tmpBalance.AssetAlias = assetAlias
+			tmpBalance.Amount = accBalance[id][assetID]
+			balances = append(balances, tmpBalance)
 		}
-
-		alias := bcr.accounts.GetAliasByID(id)
-
-		tmpBalance.Alias = alias
-		tmpBalance.AccountID = id
-		tmpBalance.Balances = assetAmounts
-
-		balances = append(balances, tmpBalance)
 	}
 
 	return balances
@@ -135,6 +129,7 @@ type annotatedUTXO struct {
 	Alias        string `json:"alias,omitempty"`
 	OutputID     string `json:"id"`
 	AssetID      string `json:"asset_id"`
+	AssetAlias   string `json:"asset_alias"`
 	Amount       uint64 `json:"amount"`
 	AccountID    string `json:"account_id"`
 	ProgramIndex uint64 `json:"program_index"`
@@ -170,6 +165,7 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 		tmpUTXO.RefData = fmt.Sprintf("%x", utxo.RefData)
 		tmpUTXO.SourceID = fmt.Sprintf("%x", utxo.SourceID)
 		tmpUTXO.SourcePos = utxo.SourcePos
+		tmpUTXO.AssetAlias = bcr.assets.GetAliasByID(tmpUTXO.AssetID)
 
 		UTXOs = append(UTXOs, tmpUTXO)
 	}
