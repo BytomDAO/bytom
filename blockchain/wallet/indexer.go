@@ -250,25 +250,23 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 
 	for _, out := range outs {
 		u = &account.UTXO{
-			OutputID:     out.OutputID.Bytes(),
-			AssetID:      out.AssetId.Bytes(),
-			Amount:       out.Amount,
-			AccountID:    out.AccountID,
-			Address:      out.Address,
-			ProgramIndex: out.keyIndex,
-			Program:      out.ControlProgram,
-			SourceID:     out.sourceID.Bytes(),
-			SourcePos:    out.sourcePos,
-			RefData:      out.refData.Bytes(),
-			Change:       out.change,
+			OutputID:            out.OutputID,
+			SourceID:            out.sourceID,
+			AssetID:             *out.AssetId,
+			Amount:              out.Amount,
+			SourcePos:           out.sourcePos,
+			ControlProgram:      out.ControlProgram,
+			RefDataHash:         out.refData,
+			ControlProgramIndex: out.keyIndex,
+			AccountID:           out.AccountID,
+			Address:             out.Address,
 		}
 
-		rawUTXO, err := json.Marshal(u)
+		data, err := json.Marshal(u)
 		if err != nil {
 			return errors.Wrap(err, "failed marshal accountutxo")
 		}
-
-		batch.Set(account.UTXOKey(out.OutputID), rawUTXO)
+		batch.Set(account.UTXOKey(out.OutputID), data)
 	}
 	return nil
 }

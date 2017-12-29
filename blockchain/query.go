@@ -63,7 +63,7 @@ func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accou
 
 	for _, accountUTXO := range accountUTXOs {
 
-		assetID := fmt.Sprintf("%x", accountUTXO.AssetID)
+		assetID := accountUTXO.AssetID.String()
 		if _, ok := accBalance[accountUTXO.AccountID]; ok {
 			if _, ok := accBalance[accountUTXO.AccountID][assetID]; ok {
 				accBalance[accountUTXO.AccountID][assetID] += accountUTXO.Amount
@@ -126,18 +126,18 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struc
 }
 
 type annotatedUTXO struct {
-	Alias        string `json:"alias,omitempty"`
-	OutputID     string `json:"id"`
-	AssetID      string `json:"asset_id"`
-	AssetAlias   string `json:"asset_alias"`
-	Amount       uint64 `json:"amount"`
-	AccountID    string `json:"account_id"`
-	ProgramIndex uint64 `json:"program_index"`
-	Program      string `json:"program"`
-	SourceID     string `json:"source_id"`
-	SourcePos    uint64 `json:"source_pos"`
-	RefData      string `json:"ref_data"`
-	Change       bool   `json:"change"`
+	Alias               string `json:"alias,omitempty"`
+	OutputID            string `json:"id"`
+	AssetID             string `json:"asset_id"`
+	AssetAlias          string `json:"asset_alias"`
+	Amount              uint64 `json:"amount"`
+	AccountID           string `json:"account_id"`
+	Address             string `json:"address"`
+	ControlProgramIndex uint64 `json:"control_program_index"`
+	Program             string `json:"program"`
+	SourceID            string `json:"source_id"`
+	SourcePos           uint64 `json:"source_pos"`
+	RefDataHash         string `json:"ref_data"`
 }
 
 // POST /list-unspent-outputs
@@ -154,17 +154,18 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 	}
 
 	for _, utxo := range accountUTXOs {
-		tmpUTXO.Alias = bcr.accounts.GetAliasByID(utxo.AccountID)
-		tmpUTXO.OutputID = fmt.Sprintf("%x", utxo.OutputID)
 		tmpUTXO.AccountID = utxo.AccountID
-		tmpUTXO.AssetID = fmt.Sprintf("%x", utxo.AssetID)
+		tmpUTXO.OutputID = utxo.OutputID.String()
+		tmpUTXO.SourceID = utxo.SourceID.String()
+		tmpUTXO.AssetID = utxo.AssetID.String()
 		tmpUTXO.Amount = utxo.Amount
-		tmpUTXO.Change = utxo.Change
-		tmpUTXO.Program = fmt.Sprintf("%x", utxo.Program)
-		tmpUTXO.ProgramIndex = utxo.ProgramIndex
-		tmpUTXO.RefData = fmt.Sprintf("%x", utxo.RefData)
-		tmpUTXO.SourceID = fmt.Sprintf("%x", utxo.SourceID)
 		tmpUTXO.SourcePos = utxo.SourcePos
+		tmpUTXO.Program = fmt.Sprintf("%x", utxo.ControlProgram)
+		tmpUTXO.RefDataHash = utxo.RefDataHash.String()
+		tmpUTXO.ControlProgramIndex = utxo.ControlProgramIndex
+		tmpUTXO.Address = utxo.Address
+
+		tmpUTXO.Alias = bcr.accounts.GetAliasByID(utxo.AccountID)
 		tmpUTXO.AssetAlias = bcr.assets.GetAliasByID(tmpUTXO.AssetID)
 
 		UTXOs = append(UTXOs, tmpUTXO)
