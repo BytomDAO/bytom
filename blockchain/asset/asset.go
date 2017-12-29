@@ -13,13 +13,13 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm/vmutil"
-	"github.com/bytom/consensus"
 )
 
 const (
@@ -139,11 +139,10 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 	}
 
 	storeBatch := reg.db.NewBatch()
-	if len(ass) > 0 {
-		storeBatch.Set(aliasKey(alias), []byte(asset.AssetID.String()))
-		storeBatch.Set(Key(asset.AssetID.String()), ass)
-		storeBatch.Write()
-	}
+
+	storeBatch.Set(aliasKey(alias), []byte(asset.AssetID.String()))
+	storeBatch.Set(Key(asset.AssetID.String()), ass)
+	storeBatch.Write()
 
 	return asset, nil
 }
