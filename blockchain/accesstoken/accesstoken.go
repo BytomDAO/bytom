@@ -17,7 +17,9 @@ import (
 	"github.com/bytom/errors"
 )
 
-const tokenSize = 32
+const (
+	tokenSize = 32
+)
 
 var (
 	// ErrBadID is returned when Create is called on an invalid id string.
@@ -127,18 +129,20 @@ func (cs *CredentialStore) Check(ctx context.Context, id string, secret []byte) 
 }
 
 // List lists all access tokens.
-func (cs *CredentialStore) List(ctx context.Context) ([]*Token, error) {
-	tokens := make([]*Token, 0)
+func (cs *CredentialStore) List() ([]Token, error) {
+	token := Token{}
+	tokens := make([]Token, 0)
+
 	iter := cs.DB.Iterator()
 	defer iter.Release()
 
 	for iter.Next() {
-		token := &Token{}
-		if err := json.Unmarshal(iter.Value(), token); err != nil {
+		if err := json.Unmarshal(iter.Value(), &token); err != nil {
 			return nil, err
 		}
 		tokens = append(tokens, token)
 	}
+
 	return tokens, nil
 }
 
