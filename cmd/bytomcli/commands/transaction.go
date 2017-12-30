@@ -17,6 +17,7 @@ func init() {
 	buildTransactionCmd.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r", "", "program of receiver")
 	buildTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "program of receiver")
 	buildTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
+	buildTransactionCmd.PersistentFlags().BoolVar(&alias, "alias", false, "use alias build transaction")
 
 	signTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
 	signTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
@@ -33,6 +34,7 @@ var (
 	receiverProgram = ""
 	password        = ""
 	pretty          = false
+	alias           = false
 	txID            = ""
 	account         = ""
 )
@@ -51,9 +53,23 @@ var buildSpendReqFmt = `
 		{"type": "control_receiver", "asset_id": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
 	]}`
 
+var buildIssueReqFmtByAlias = `
+	{"actions": [
+		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_alias": "%s"},
+		{"type": "issue", "asset_alias": "%s", "amount": %s},
+		{"type": "control_account", "asset_alias": "%s", "amount": %s, "account_alias": "%s"}
+	]}`
+
+var buildSpendReqFmtByAlias = `
+	{"actions": [
+		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_alias": "%s"},
+		{"type": "issue", "asset_alias": "%s", "amount": %s},
+		{"type": "control_account", "asset_alias": "%s", "amount": %s, "account_alias": "%s"}
+	]}`
+
 var buildTransactionCmd = &cobra.Command{
-	Use:   "build-transaction <accountID> <assetID> <amount>",
-	Short: "Build one transaction template",
+	Use:   "build-transaction <accountID|alias> <assetID|alias> <amount>",
+	Short: "Build one transaction template,default use account id and asset id",
 	Args:  cobra.RangeArgs(3, 4),
 	PreRun: func(cmd *cobra.Command, args []string) {
 		cmd.MarkFlagRequired("type")
@@ -63,14 +79,22 @@ var buildTransactionCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		var buildReqStr string
-		accountID := args[0]
-		assetID := args[1]
+		accountInfo := args[0]
+		assetInfo := args[1]
 		amount := args[2]
 		switch buildType {
 		case "issue":
-			buildReqStr = fmt.Sprintf(buildIssueReqFmt, btmGas, accountID, assetID, amount, assetID, amount, accountID)
+			if alias {
+				buildReqStr = fmt.Sprintf(buildIssueReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, assetInfo, amount, accountInfo)
+				break
+			}
+			buildReqStr = fmt.Sprintf(buildIssueReqFmt, btmGas, accountInfo, assetInfo, amount, assetInfo, amount, accountInfo)
 		case "spend":
-			buildReqStr = fmt.Sprintf(buildSpendReqFmt, btmGas, accountID, assetID, amount, accountID, assetID, amount, receiverProgram)
+			if alias {
+				buildReqStr = fmt.Sprintf(buildSpendReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, receiverProgram)
+				break
+			}
+			buildReqStr = fmt.Sprintf(buildSpendReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, receiverProgram)
 		default:
 			jww.ERROR.Println("Invalid transaction template type")
 			os.Exit(ErrLocalExe)

@@ -22,14 +22,14 @@ type BuildRequest struct {
 
 func (a *BlockchainReactor) filterAliases(ctx context.Context, br *BuildRequest) error {
 	for i, m := range br.Actions {
-		id, _ := m["assset_id"].(string)
+		id, _ := m["asset_id"].(string)
 		alias, _ := m["asset_alias"].(string)
 		if id == "" && alias != "" {
 			asset, err := a.assets.FindByAlias(ctx, alias)
 			if err != nil {
 				return errors.WithDetailf(err, "invalid asset alias %s on action %d", alias, i)
 			}
-			m["asset_id"] = asset.AssetID
+			m["asset_id"] = asset.AssetID.String()
 		}
 
 		id, _ = m["account_id"].(string)
