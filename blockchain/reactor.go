@@ -301,9 +301,9 @@ func (bcr *BlockchainReactor) syncRoutine() {
 }
 
 // BroadcastStatusRequest broadcasts `BlockStore` height.
-func (bcR *BlockchainReactor) BroadcastStatusResponse() {
-	block := bcR.chain.BestBlock()
-	bcR.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
+func (bcr *BlockchainReactor) BroadcastStatusResponse() {
+	block := bcr.chain.BestBlock()
+	bcr.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 }
 
 // BroadcastTransaction broadcats `BlockStore` transaction.

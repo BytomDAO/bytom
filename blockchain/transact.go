@@ -16,11 +16,11 @@ import (
 
 var defaultTxTTL = 5 * time.Minute
 
-func (a *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
+func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
 	var decoder func([]byte) (txbuilder.Action, error)
 	switch action {
 	case "control_account":
-		decoder = a.accounts.DecodeControlAction
+		decoder = bcr.accounts.DecodeControlAction
 	case "control_address":
 		decoder = txbuilder.DecodeControlAddressAction
 	case "control_program":
@@ -28,13 +28,13 @@ func (a *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilde
 	case "control_receiver":
 		decoder = txbuilder.DecodeControlReceiverAction
 	case "issue":
-		decoder = a.assets.DecodeIssueAction
+		decoder = bcr.assets.DecodeIssueAction
 	case "retire":
 		decoder = txbuilder.DecodeRetireAction
 	case "spend_account":
-		decoder = a.accounts.DecodeSpendAction
+		decoder = bcr.accounts.DecodeSpendAction
 	case "spend_account_unspent_output":
-		decoder = a.accounts.DecodeSpendUTXOAction
+		decoder = bcr.accounts.DecodeSpendUTXOAction
 	case "set_transaction_reference_data":
 		decoder = txbuilder.DecodeSetTxRefDataAction
 	default:
@@ -43,8 +43,8 @@ func (a *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilde
 	return decoder, true
 }
 
-func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
-	err := a.filterAliases(ctx, req)
+func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
+	err := bcr.filterAliases(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) 
 		if !ok {
 			return nil, errors.WithDetailf(errBadActionType, "no action type provided on action %d", i)
 		}
-		decoder, ok := a.actionDecoder(typ)
+		decoder, ok := bcr.actionDecoder(typ)
 		if !ok {
 			return nil, errors.WithDetailf(errBadActionType, "unknown action type %q on action %d", typ, i)
 		}
@@ -100,11 +100,11 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) 
 }
 
 // POST /build-transaction
-func (a *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) Response {
+func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) Response {
 
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
-	tmpl, err := a.buildSingle(subctx, buildReqs)
+	tmpl, err := bcr.buildSingle(subctx, buildReqs)
 	if err != nil {
 		return resWrapper(nil, err)
 	}
@@ -112,12 +112,12 @@ func (a *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) 
 	return resWrapper(tmpl)
 }
 
-func (a *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {
+func (bcr *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {
 	if tpl.Transaction == nil {
 		return nil, errors.Wrap(txbuilder.ErrMissingRawTx)
 	}
 
-	err := txbuilder.FinalizeTx(ctx, a.chain, tpl.Transaction)
+	err := txbuilder.FinalizeTx(ctx, bcr.chain, tpl.Transaction)
 	if err != nil {
 		return nil, errors.Wrapf(err, "tx %s", tpl.Transaction.ID.String())
 	}
@@ -130,15 +130,15 @@ func (a *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Tem
 // confirmed on the blockchain.  ErrRejected means a conflicting tx is
 // on the blockchain.  context.DeadlineExceeded means ctx is an
 // expiring context that timed out.
-func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbuilder.Template, waitUntil string) error {
+func (bcr *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbuilder.Template, waitUntil string) error {
 	// Use the current generator height as the lower bound of the block height
 	// that the transaction may appear in.
-	localHeight := a.chain.Height()
+	localHeight := bcr.chain.Height()
 	//generatorHeight := localHeight
 
 	log.WithField("localHeight", localHeight).Info("Starting to finalize transaction")
 
-	err := txbuilder.FinalizeTx(ctx, a.chain, txTemplate.Transaction)
+	err := txbuilder.FinalizeTx(ctx, bcr.chain, txTemplate.Transaction)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 	return nil
 }
 
-func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx, height uint64) (uint64, error) {
+func (bcr *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx, height uint64) (uint64, error) {
 	log.Printf("waitForTxInBlock function")
 	for {
 		height++
@@ -166,8 +166,8 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 		case <-ctx.Done():
 			return 0, ctx.Err()
 
-		case <-a.chain.BlockWaiter(height):
-			b, err := a.chain.GetBlockByHeight(height)
+		case <-bcr.chain.BlockWaiter(height):
+			b, err := bcr.chain.GetBlockByHeight(height)
 			if err != nil {
 				return 0, errors.Wrap(err, "getting block that just landed")
 			}
@@ -181,7 +181,7 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 			// might still be in pool or might be rejected; we can't
 			// tell definitively until its max time elapses.
 			// Re-insert into the pool in case it was dropped.
-			err = txbuilder.FinalizeTx(ctx, a.chain, tx)
+			err = txbuilder.FinalizeTx(ctx, bcr.chain, tx)
 			if err != nil {
 				return 0, err
 			}
@@ -193,9 +193,9 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 }
 
 // POST /submit-transaction
-func (a *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Template) Response {
+func (bcr *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Template) Response {
 
-	txid, err := a.submitSingle(nil, tpl)
+	txid, err := bcr.submitSingle(nil, tpl)
 	if err != nil {
 		log.WithField("err", err).Error("submit single tx")
 		return resWrapper(nil, err)
@@ -206,20 +206,20 @@ func (a *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Template)
 }
 
 // POST /sign-submit-transaction
-func (a *BlockchainReactor) signSubmit(ctx context.Context, x struct {
+func (bcr *BlockchainReactor) signSubmit(ctx context.Context, x struct {
 	Auth string             `json:"auth"`
 	Txs  txbuilder.Template `json:"transaction"`
 }) Response {
 
 	var err error
-	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Auth, a.pseudohsmSignTemplate); err != nil {
+	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Auth, bcr.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")
 		return resWrapper(nil, err)
 	}
 
 	log.Info("Sign Transaction complete.")
 
-	txid, err := a.submitSingle(nil, &x.Txs)
+	txid, err := bcr.submitSingle(nil, &x.Txs)
 	if err != nil {
 		log.WithField("err", err).Error("submit single tx")
 		return resWrapper(nil, err)

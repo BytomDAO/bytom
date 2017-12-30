@@ -11,11 +11,11 @@ import (
 
 var errCurrentToken = errors.New("token cannot delete itself")
 
-func (br *BlockchainReactor) createAccessToken(ctx context.Context, x struct {
+func (bcr *BlockchainReactor) createAccessToken(ctx context.Context, x struct {
 	ID   string `json:"id"`
 	Type string `json:"type"`
 }) Response {
-	token, err := br.accessTokens.Create(ctx, x.ID, x.Type)
+	token, err := bcr.accessTokens.Create(ctx, x.ID, x.Type)
 	if err != nil {
 		return resWrapper(nil, err)
 	}
@@ -23,8 +23,8 @@ func (br *BlockchainReactor) createAccessToken(ctx context.Context, x struct {
 	return resWrapper(data)
 }
 
-func (br *BlockchainReactor) listAccessTokens(ctx context.Context) Response {
-	tokens, err := br.accessTokens.List(ctx)
+func (bcr *BlockchainReactor) listAccessTokens(ctx context.Context) Response {
+	tokens, err := bcr.accessTokens.List(ctx)
 	if err != nil {
 		log.Errorf("listAccessTokens: %v", err)
 		return resWrapper(nil, err)
@@ -33,18 +33,18 @@ func (br *BlockchainReactor) listAccessTokens(ctx context.Context) Response {
 	return resWrapper(tokens)
 }
 
-func (br *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct {
+func (bcr *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct {
 	ID    string `json:"id"`
 	Token string `json:"token"`
 }) Response {
 	//TODO Add delete permission verify.
-	if err := br.accessTokens.Delete(ctx, x.ID); err != nil {
+	if err := bcr.accessTokens.Delete(ctx, x.ID); err != nil {
 		return resWrapper(nil, err)
 	}
 	return resWrapper(nil)
 }
 
-func (br *BlockchainReactor) checkAccessToken(ctx context.Context, x struct {
+func (bcr *BlockchainReactor) checkAccessToken(ctx context.Context, x struct {
 	ID     string `json:"id"`
 	Secret string `json:"secret"`
 }) Response {
@@ -52,7 +52,7 @@ func (br *BlockchainReactor) checkAccessToken(ctx context.Context, x struct {
 	if err != nil {
 		return resWrapper(nil, err)
 	}
-	_, err = br.accessTokens.Check(ctx, x.ID, secret)
+	_, err = bcr.accessTokens.Check(ctx, x.ID, secret)
 	if err != nil {
 		return resWrapper(nil, err)
 	}

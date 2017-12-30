@@ -12,13 +12,13 @@ import (
 // If successful, it always returns at least one block,
 // waiting if necessary until one is created.
 // It is an error to request blocks very far in the future.
-func (a *BlockchainReactor) getBlockRPC(ctx context.Context, height uint64) (chainjson.HexBytes, error) {
-	err := <-a.chain.BlockSoonWaiter(ctx, height)
+func (bcr *BlockchainReactor) getBlockRPC(ctx context.Context, height uint64) (chainjson.HexBytes, error) {
+	err := <-bcr.chain.BlockSoonWaiter(ctx, height)
 	if err != nil {
 		return nil, errors.Wrapf(err, "waiting for block at height %d", height)
 	}
 
-	block, err := a.chain.GetBlockByHeight(height)
+	block, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		return nil, err
 	}
