@@ -45,8 +45,7 @@ var deleteAccessTokenCmd = &cobra.Command{
 		var token accessToken
 		token.ID = args[0]
 
-		_, exitCode := clientCall("/delete-access-token", &token)
-		if exitCode != Success {
+		if _, exitCode := clientCall("/delete-access-token", &token); exitCode != Success {
 			os.Exit(exitCode)
 		}
 		jww.FEEDBACK.Println("Successfully delete access token")
@@ -62,8 +61,7 @@ var checkAccessTokenCmd = &cobra.Command{
 		token.ID = args[0]
 		token.Secret = args[1]
 
-		_, exitCode := clientCall("/check-access-token", &token)
-		if exitCode != Success {
+		if _, exitCode := clientCall("/check-access-token", &token); exitCode != Success {
 			os.Exit(exitCode)
 		}
 

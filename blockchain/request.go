@@ -20,12 +20,12 @@ type BuildRequest struct {
 	TTL     json.Duration            `json:"ttl"`
 }
 
-func (a *BlockchainReactor) filterAliases(ctx context.Context, br *BuildRequest) error {
+func (bcr *BlockchainReactor) filterAliases(ctx context.Context, br *BuildRequest) error {
 	for i, m := range br.Actions {
 		id, _ := m["asset_id"].(string)
 		alias, _ := m["asset_alias"].(string)
 		if id == "" && alias != "" {
-			asset, err := a.assets.FindByAlias(ctx, alias)
+			asset, err := bcr.assets.FindByAlias(ctx, alias)
 			if err != nil {
 				return errors.WithDetailf(err, "invalid asset alias %s on action %d", alias, i)
 			}
@@ -35,7 +35,7 @@ func (a *BlockchainReactor) filterAliases(ctx context.Context, br *BuildRequest)
 		id, _ = m["account_id"].(string)
 		alias, _ = m["account_alias"].(string)
 		if id == "" && alias != "" {
-			acc, err := a.accounts.FindByAlias(ctx, alias)
+			acc, err := bcr.accounts.FindByAlias(ctx, alias)
 			if err != nil {
 				return errors.WithDetailf(err, "invalid account alias %s on action %d", alias, i)
 			}

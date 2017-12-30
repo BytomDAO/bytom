@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -32,40 +30,11 @@ var listTransactionFeedsCmd = &cobra.Command{
 	Short: "list all of transaction feeds",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		var in requestQuery
-		var response = struct {
-			Items []interface{} `json:"items"`
-			Next  requestQuery  `json:"next"`
-			Last  bool          `json:"last_page"`
-		}{}
-
-		idx := 0
-	LOOP:
-		data, exitCode := clientCall("/list-transaction-feeds", &in)
+		data, exitCode := clientCall("/list-transaction-feeds")
 		if exitCode != Success {
 			os.Exit(exitCode)
 		}
-
-		rawPage, err := base64.StdEncoding.DecodeString(data.(string))
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
-		}
-
-		if err := json.Unmarshal(rawPage, &response); err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
-		}
-
-		for _, item := range response.Items {
-			key := item.(string)
-			jww.FEEDBACK.Printf("%d:\n%s\n\n", idx, key)
-			idx++
-		}
-		if response.Last == false {
-			in.After = response.Next.After
-			goto LOOP
-		}
+		printJSONList(data)
 	},
 }
 
@@ -111,8 +80,7 @@ var updateTransactionFeedCmd = &cobra.Command{
 		in.Alias = args[0]
 		in.Filter = args[1]
 
-		_, exitCode := clientCall("/update-transaction-feed", &in)
-		if exitCode != Success {
+		if _, exitCode := clientCall("/update-transaction-feed", &in); exitCode != Success {
 			os.Exit(exitCode)
 		}
 		jww.FEEDBACK.Println("Successfully updated transaction feed")

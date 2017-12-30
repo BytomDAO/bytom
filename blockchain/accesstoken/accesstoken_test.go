@@ -7,8 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytom/errors"
 	dbm "github.com/tendermint/tmlibs/db"
+
+	"github.com/bytom/errors"
 )
 
 func TestCreate(t *testing.T) {
@@ -52,7 +53,7 @@ func TestList(t *testing.T) {
 		want: []string{"ab", "bc", "cd"},
 	}
 
-	got, err := cs.List()
+	got, err := cs.List(ctx)
 	if err != nil {
 		t.Errorf("List errored: get list error")
 	}

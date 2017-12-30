@@ -11,7 +11,7 @@ import (
 )
 
 // POST /create-asset
-func (a *BlockchainReactor) createAsset(ctx context.Context, ins struct {
+func (bcr *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 	Alias      string                 `json:"alias"`
 	RootXPubs  []chainkd.XPub         `json:"root_xpubs"`
 	Quorum     int                    `json:"quorum"`
@@ -26,7 +26,7 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 }) Response {
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
-	ass, err := a.assets.Define(
+	ass, err := bcr.assets.Define(
 		subctx,
 		ins.RootXPubs,
 		ins.Quorum,
@@ -50,11 +50,11 @@ func (a *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 }
 
 // POST /update-asset-tags
-func (a *BlockchainReactor) updateAssetTags(ctx context.Context, updateTag struct {
+func (bcr *BlockchainReactor) updateAssetTags(ctx context.Context, updateTag struct {
 	AssetInfo string                 `json:"asset_info"`
 	Tags      map[string]interface{} `json:"tags"`
 }) Response {
-	err := a.assets.UpdateTags(nil, updateTag.AssetInfo, updateTag.Tags)
+	err := bcr.assets.UpdateTags(nil, updateTag.AssetInfo, updateTag.Tags)
 	if err != nil {
 		return resWrapper(nil, err)
 	}
