@@ -63,8 +63,8 @@ var buildIssueReqFmtByAlias = `
 var buildSpendReqFmtByAlias = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_alias": "%s"},
-		{"type": "issue", "asset_alias": "%s", "amount": %s},
-		{"type": "control_account", "asset_alias": "%s", "amount": %s, "account_alias": "%s"}
+		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
+		{"type": "control_receiver", "asset_alias": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
 	]}`
 
 var buildTransactionCmd = &cobra.Command{
