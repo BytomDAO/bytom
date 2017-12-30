@@ -68,9 +68,10 @@ func (bcr *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x stru
 func (bcr *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
 	sigBytes, err := bcr.hsm.XSign(xpub, path, data[:], password)
 	if err == pseudohsm.ErrNoKey {
-		return nil, err
+		log.Error(err)
+		return nil, nil
 	}
-	return sigBytes, nil
+	return sigBytes, err
 }
 
 func (bcr *BlockchainReactor) pseudohsmResetPassword(ctx context.Context, x struct {
