@@ -219,12 +219,12 @@ func (bcr *BlockchainReactor) signSubmit(ctx context.Context, x struct {
 
 	log.Info("Sign Transaction complete.")
 
-	txid, err := bcr.submitSingle(nil, &x.Txs)
+	txID, err := bcr.submitSingle(nil, &x.Txs)
 	if err != nil {
 		log.WithField("err", err).Error("submit single tx")
 		return resWrapper(nil, err)
 	}
 
-	log.WithField("txid", txid).Info("submit single tx")
-	return resWrapper(txid)
+	log.WithField("txid", txID["txid"]).Info("submit single tx")
+	return resWrapper(txID)
 }

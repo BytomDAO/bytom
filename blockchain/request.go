@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc/legacy"
@@ -25,11 +26,16 @@ func (bcr *BlockchainReactor) filterAliases(ctx context.Context, br *BuildReques
 		id, _ := m["asset_id"].(string)
 		alias, _ := m["asset_alias"].(string)
 		if id == "" && alias != "" {
-			asset, err := bcr.assets.FindByAlias(ctx, alias)
-			if err != nil {
-				return errors.WithDetailf(err, "invalid asset alias %s on action %d", alias, i)
+			switch alias {
+			case "btm":
+				m["asset_id"] = consensus.BTMAssetID.String()
+			default:
+				asset, err := bcr.assets.FindByAlias(ctx, alias)
+				if err != nil {
+					return errors.WithDetailf(err, "invalid asset alias %s on action %d", alias, i)
+				}
+				m["asset_id"] = asset.AssetID.String()
 			}
-			m["asset_id"] = asset.AssetID.String()
 		}
 
 		id, _ = m["account_id"].(string)

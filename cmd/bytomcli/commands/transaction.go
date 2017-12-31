@@ -46,6 +46,13 @@ var buildIssueReqFmt = `
 		{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
 	]}`
 
+var buildIssueReqFmtByAlias = `
+	{"actions": [
+		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
+		{"type": "issue", "asset_alias": "%s", "amount": %s},
+		{"type": "control_account", "asset_alias": "%s", "amount": %s, "account_alias": "%s"}
+	]}`
+
 var buildSpendReqFmt = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
@@ -53,18 +60,25 @@ var buildSpendReqFmt = `
 		{"type": "control_receiver", "asset_id": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
 	]}`
 
-var buildIssueReqFmtByAlias = `
-	{"actions": [
-		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_alias": "%s"},
-		{"type": "issue", "asset_alias": "%s", "amount": %s},
-		{"type": "control_account", "asset_alias": "%s", "amount": %s, "account_alias": "%s"}
-	]}`
-
 var buildSpendReqFmtByAlias = `
 	{"actions": [
-		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_alias": "%s"},
+		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
 		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
 		{"type": "control_receiver", "asset_alias": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
+	]}`
+
+var buildRetireReqFmt = `
+	{"actions": [
+		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
+		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
+		{"type": "retire", "asset_id": "%s","amount": %s,"account_id": "%s"}
+	]}`
+
+var buildRetireReqFmtByAlias = `
+	{"actions": [
+		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
+		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
+		{"type": "retire", "asset_alias": "%s","amount": %s,"account_alias": "%s"}
 	]}`
 
 var buildTransactionCmd = &cobra.Command{
@@ -95,6 +109,12 @@ var buildTransactionCmd = &cobra.Command{
 				break
 			}
 			buildReqStr = fmt.Sprintf(buildSpendReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, receiverProgram)
+		case "retire":
+			if alias {
+				buildReqStr = fmt.Sprintf(buildRetireReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
+				break
+			}
+			buildReqStr = fmt.Sprintf(buildRetireReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
 		default:
 			jww.ERROR.Println("Invalid transaction template type")
 			os.Exit(ErrLocalExe)
