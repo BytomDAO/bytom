@@ -11,14 +11,20 @@ import (
 // return network infomation
 func (bcr *BlockchainReactor) getNetInfo() Response {
 	type netInfo struct {
-		Listening bool `json:"listening"`
-		Syncing   bool `json:"syncing"`
-		PeerCount int  `json:"peer_count"`
+		Listening    bool   `json:"listening"`
+		Syncing      bool   `json:"syncing"`
+		Mining       bool   `json:"mining"`
+		PeerCount    int    `json:"peer_count"`
+		CurrentBlock uint64 `json:"current_block"`
+		HighestBlock uint64 `json:"highest_block"`
 	}
 	net := &netInfo{}
 	net.Listening = bcr.sw.IsListening()
 	net.Syncing = bcr.blockKeeper.IsCaughtUp()
+	net.Mining = bcr.mining.IsMining()
 	net.PeerCount = len(bcr.sw.Peers().List())
+	net.CurrentBlock = bcr.blockKeeper.chainHeight
+	net.HighestBlock = bcr.blockKeeper.maxPeerHeight
 
 	return resWrapper(net)
 }

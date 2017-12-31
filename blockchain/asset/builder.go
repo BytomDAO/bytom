@@ -53,9 +53,9 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 		return err
 	}
 
-	assetdef := asset.RawDefinition()
+	assetDef := asset.RawDefinition()
 
-	txin := legacy.NewIssuanceInput(nonce[:], a.Amount, a.ReferenceData, asset.InitialBlockHash, asset.IssuanceProgram, nil, assetdef)
+	txin := legacy.NewIssuanceInput(nonce[:], a.Amount, a.ReferenceData, asset.InitialBlockHash, asset.IssuanceProgram, nil, assetDef)
 
 	tplIn := &txbuilder.SigningInstruction{}
 	path := signers.Path(asset.Signer, signers.AssetKeySpace)
