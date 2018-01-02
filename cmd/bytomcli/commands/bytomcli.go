@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,6 +16,20 @@ import (
 
 	"github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/rpc"
+)
+
+const (
+	// Success indicates the rpc calling is successful.
+	Success = iota
+	// ErrLocalExe indicates error occurs before the rpc calling.
+	ErrLocalExe
+	// ErrConnect indicates error occurs connecting to the bytomd, e.g.,
+	// bytomd can't parse the received arguments.
+	ErrConnect
+	// ErrLocalParse indicates error occurs locally when parsing the response.
+	ErrLocalParse
+	// ErrRemote indicates error occurs in bytomd.
+	ErrRemote
 )
 
 // commandError is an error used to signal different error situations in command handling.
@@ -73,25 +88,36 @@ func Execute() {
 
 	AddCommands()
 
-	if c, err := BytomcliCmd.ExecuteC(); err != nil {
-		if isUserError(err) {
-			c.Println("")
-			c.Println(c.UsageString())
-		}
-
-		os.Exit(-1)
+	if _, err := BytomcliCmd.ExecuteC(); err != nil {
+		os.Exit(ErrLocalExe)
 	}
 }
 
 // AddCommands adds child commands to the root command BytomcliCmd.
 func AddCommands() {
+	BytomcliCmd.AddCommand(createAccessTokenCmd)
+	BytomcliCmd.AddCommand(listAccessTokenCmd)
+	BytomcliCmd.AddCommand(deleteAccessTokenCmd)
+	BytomcliCmd.AddCommand(checkAccessTokenCmd)
+
 	BytomcliCmd.AddCommand(createAccountCmd)
-	BytomcliCmd.AddCommand(bindAccountCmd)
+	BytomcliCmd.AddCommand(deleteAccountCmd)
 	BytomcliCmd.AddCommand(listAccountsCmd)
+	BytomcliCmd.AddCommand(updateAccountTagsCmd)
+	BytomcliCmd.AddCommand(createAccountReceiverCmd)
 
 	BytomcliCmd.AddCommand(createAssetCmd)
-	BytomcliCmd.AddCommand(bindAssetCmd)
 	BytomcliCmd.AddCommand(listAssetsCmd)
+	BytomcliCmd.AddCommand(updateAssetTagsCmd)
+
+	BytomcliCmd.AddCommand(listTransactionsCmd)
+	BytomcliCmd.AddCommand(listUnspentOutputsCmd)
+	BytomcliCmd.AddCommand(listBalancesCmd)
+
+	BytomcliCmd.AddCommand(buildTransactionCmd)
+	BytomcliCmd.AddCommand(signTransactionCmd)
+	BytomcliCmd.AddCommand(submitTransactionCmd)
+	BytomcliCmd.AddCommand(signSubTransactionCmd)
 
 	BytomcliCmd.AddCommand(blockHeightCmd)
 	BytomcliCmd.AddCommand(blockHashCmd)
@@ -104,6 +130,8 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(createKeyCmd)
 	BytomcliCmd.AddCommand(deleteKeyCmd)
 	BytomcliCmd.AddCommand(listKeysCmd)
+	BytomcliCmd.AddCommand(exportPrivateCmd)
+	BytomcliCmd.AddCommand(importPrivateCmd)
 
 	BytomcliCmd.AddCommand(isMiningCmd)
 
@@ -113,11 +141,6 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(netSyncingCmd)
 
 	BytomcliCmd.AddCommand(gasRateCmd)
-
-	BytomcliCmd.AddCommand(createAccessTokenCmd)
-	BytomcliCmd.AddCommand(listAccessTokenCmd)
-	BytomcliCmd.AddCommand(deleteAccessTokenCmd)
-	BytomcliCmd.AddCommand(checkAccessTokenCmd)
 
 	BytomcliCmd.AddCommand(createTransactionFeedCmd)
 	BytomcliCmd.AddCommand(listTransactionFeedsCmd)
@@ -165,4 +188,28 @@ func mustRPCClient() *rpc.Client {
 		BaseURL: url,
 		Client:  &http.Client{Transport: t},
 	}
+}
+
+func clientCall(path string, req ...interface{}) (interface{}, int) {
+
+	var response = &blockchain.Response{}
+	var request interface{}
+
+	if req != nil {
+		request = req[0]
+	}
+
+	client := mustRPCClient()
+	client.Call(context.Background(), path, request, response)
+
+	switch response.Status {
+	case blockchain.FAIL:
+		jww.ERROR.Println(response.Msg)
+		return nil, ErrRemote
+	case "":
+		jww.ERROR.Println("Unable to connect to the bytomd")
+		return nil, ErrConnect
+	}
+
+	return response.Data, Success
 }

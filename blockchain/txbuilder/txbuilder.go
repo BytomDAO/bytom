@@ -6,13 +6,13 @@ import (
 	"context"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -40,9 +40,8 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 	var errs []error
 	for i, action := range actions {
 		err := action.Build(ctx, &builder)
-
-		log.WithFields(log.Fields{"action": action, "error": err}).Info("Loop tx's action")
 		if err != nil {
+			log.WithFields(log.Fields{"action index": i, "error": err}).Error("Loop tx's action")
 			err = errors.WithData(err, "index", i)
 			errs = append(errs, err)
 		}
@@ -72,13 +71,20 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 	return tpl, nil
 }
 
-
 func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
 	for i, sigInst := range tpl.SigningInstructions {
-		for j, sw := range sigInst.SignatureWitnesses {
-			err := sw.sign(ctx, tpl, uint32(i), xpubs, auth, signFn)
-			if err != nil {
-				return errors.WithDetailf(err, "adding signature(s) to witness component %d of input %d", j, i)
+		for j, wc := range sigInst.WitnessComponents {
+			switch sw := wc.(type) {
+			case *SignatureWitness:
+				err := sw.sign(ctx, tpl, uint32(i), xpubs, auth, signFn)
+				if err != nil {
+					return errors.WithDetailf(err, "adding signature(s) to signature witness component %d of input %d", j, i)
+				}
+			case *RawTxSigWitness:
+				err := sw.sign(ctx, tpl, uint32(i), xpubs, auth, signFn)
+				if err != nil {
+					return errors.WithDetailf(err, "adding signature(s) to raw-signature witness component %d of input %d", j, i)
+				}
 			}
 		}
 	}

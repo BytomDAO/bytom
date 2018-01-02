@@ -8,23 +8,22 @@ import (
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/txfeed"
+	"github.com/bytom/errors"
 )
 
 // POST /create-txfeed
 func (bcr *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
-	Alias  string
-	Filter string
-}) interface{} {
+	Alias  string `json:"alias"`
+	Filter string `json:"filter"`
+}) Response {
 	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Add TxFeed Failed")
-		return jsendWrapper(nil, ERROR, err.Error())
+		return resWrapper(nil, err)
 	}
-	return jsendWrapper("success", SUCCESS, "")
+	return resWrapper(nil)
 }
 
-func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) (*txfeed.TxFeed, error) {
-	txFeed := &txfeed.TxFeed{}
-
+func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) ([]byte, error) {
 	jf, err := json.Marshal(filter)
 	if err != nil {
 		return nil, err
@@ -32,49 +31,52 @@ func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter strin
 
 	value := bcr.txFeedTracker.DB.Get(jf)
 	if value == nil {
-		return nil, nil
+		return nil, errors.New("No transaction feed")
 	}
 
-	if err := json.Unmarshal(value, txFeed); err != nil {
-		return nil, err
-	}
-	return txFeed, nil
+	return value, nil
 }
 
 // POST /get-transaction-feed
 func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
-}) interface{} {
-	txfeed, err := bcr.getTxFeedByAlias(ctx, in.Alias)
+}) Response {
+	var txfeed interface{}
+	rawTxfeed, err := bcr.getTxFeedByAlias(ctx, in.Alias)
 	if err != nil {
-		return jsendWrapper(nil, ERROR, err.Error())
+		return resWrapper(nil, err)
 	}
-	return jsendWrapper(txfeed, SUCCESS, "")
+	err = json.Unmarshal(rawTxfeed, &txfeed)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+	data := map[string]interface{}{"txfeed": txfeed}
+	return resWrapper(data)
 }
 
 // POST /delete-transaction-feed
 func (bcr *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
-}) interface{} {
+}) Response {
 	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
-		return jsendWrapper(nil, ERROR, err.Error())
+		return resWrapper(nil, err)
 	}
-	return jsendWrapper("success", SUCCESS, "")
+	return resWrapper(nil)
 }
 
 // POST /update-transaction-feed
 func (bcr *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
-	Alias  string
-	Filter string
-}) interface{} {
+	Alias  string `json:"alias"`
+	Filter string `json:"filter"`
+}) Response {
 	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
-		return jsendWrapper(nil, ERROR, err.Error())
+		return resWrapper(nil, err)
 	}
 	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Update TxFeed Failed")
-		return jsendWrapper(nil, ERROR, err.Error())
+		return resWrapper(nil, err)
 	}
-	return jsendWrapper("success", SUCCESS, "")
+	return resWrapper(nil)
 }
 
 // txAfterIsBefore returns true if a is before b. It returns an error if either
@@ -95,27 +97,30 @@ func txAfterIsBefore(a, b string) (bool, error) {
 			aAfter.FromPosition < bAfter.FromPosition), nil
 }
 
-func (bcr *BlockchainReactor) getTxFeeds() ([]*txfeed.TxFeed, error) {
-	txFeeds := make([]*txfeed.TxFeed, 0)
+func (bcr *BlockchainReactor) getTxFeeds() ([]txfeed.TxFeed, error) {
+	txFeed := txfeed.TxFeed{}
+	txFeeds := make([]txfeed.TxFeed, 0)
+
 	iter := bcr.txFeedTracker.DB.Iterator()
 	defer iter.Release()
 
 	for iter.Next() {
-		txFeed := &txfeed.TxFeed{}
-		if err := json.Unmarshal(iter.Value(), txFeed); err != nil {
+		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
 			return nil, err
 		}
 		txFeeds = append(txFeeds, txFeed)
 	}
+
 	return txFeeds, nil
 }
 
 // listTxFeeds is an http handler for listing txfeeds. It does not take a filter.
 // POST /list-transaction-feeds
-func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context, in requestQuery) interface{} {
-	txfeeds, err := bcr.getTxFeeds()
+func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context) Response {
+	txFeeds, err := bcr.getTxFeeds()
 	if err != nil {
-		return jsendWrapper(nil, ERROR, err.Error())
+		return resWrapper(nil, err)
 	}
-	return jsendWrapper(txfeeds, SUCCESS, "")
+
+	return resWrapper(txFeeds)
 }

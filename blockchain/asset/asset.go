@@ -8,10 +8,12 @@ import (
 
 	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"
+	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
@@ -22,18 +24,26 @@ import (
 
 const (
 	maxAssetCache = 1000
-	assetPreFix   = "ASS:"
+	assetPrefix   = "ASS:"
+	aliasPrefix   = "ALS:"
 )
 
+func aliasKey(name string) []byte {
+	return []byte(aliasPrefix + name)
+}
+
 //Key asset store prefix
-func Key(id bc.AssetID) []byte {
-	name := id.String()
-	return []byte(assetPreFix + name)
+func Key(name string) []byte {
+	return []byte(assetPrefix + name)
 }
 
 // pre-define errors for supporting bytom errorFormatter
 var (
-	ErrBadIdentifier = errors.New("either ID or alias must be specified, and not both")
+	ErrDuplicateAlias = errors.New("duplicate asset alias")
+	ErrDuplicateAsset = errors.New("duplicate asset id")
+	ErrSerializing    = errors.New("serializing asset definition")
+	ErrMarshalAsset   = errors.New("failed marshal asset")
+	ErrFindAsset      = errors.New("fail to find asset")
 )
 
 //NewRegistry create new registry
@@ -81,6 +91,10 @@ func (asset *Asset) RawDefinition() []byte {
 
 // Define defines a new Asset.
 func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}, clientToken string) (*Asset, error) {
+	if existed := reg.db.Get(aliasKey(alias)); existed != nil {
+		return nil, ErrDuplicateAlias
+	}
+
 	assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, err
@@ -88,7 +102,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 
 	rawDefinition, err := serializeAssetDef(definition)
 	if err != nil {
-		return nil, errors.Wrap(err, "serializing asset definition")
+		return nil, ErrSerializing
 	}
 
 	path := signers.Path(assetSigner, signers.AssetKeySpace)
@@ -99,79 +113,79 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		return nil, err
 	}
 
-	defhash := bc.NewHash(sha3.Sum256(rawDefinition))
+	defHash := bc.NewHash(sha3.Sum256(rawDefinition))
 	asset := &Asset{
 		DefinitionMap:     definition,
 		RawDefinitionByte: rawDefinition,
 		VMVersion:         vmver,
 		IssuanceProgram:   issuanceProgram,
 		InitialBlockHash:  reg.initialBlockHash,
-		AssetID:           bc.ComputeAssetID(issuanceProgram, &reg.initialBlockHash, vmver, &defhash),
+		AssetID:           bc.ComputeAssetID(issuanceProgram, &reg.initialBlockHash, vmver, &defHash),
 		Signer:            assetSigner,
 		Tags:              tags,
 	}
+
+	if existAsset := reg.db.Get(Key(asset.AssetID.String())); existAsset != nil {
+		return nil, ErrDuplicateAsset
+	}
+
 	if alias != "" {
 		asset.Alias = &alias
 	}
 
 	ass, err := json.Marshal(asset)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed marshal asset")
+		return nil, ErrMarshalAsset
 	}
-	if len(ass) > 0 {
-		reg.db.Set(Key(asset.AssetID), json.RawMessage(ass))
-	}
+
+	storeBatch := reg.db.NewBatch()
+	storeBatch.Set(aliasKey(alias), []byte(asset.AssetID.String()))
+	storeBatch.Set(Key(asset.AssetID.String()), ass)
+	storeBatch.Write()
 
 	return asset, nil
 }
 
 // UpdateTags modifies the tags of the specified asset. The asset may be
 // identified either by id or alias, but not both.
-func (reg *Registry) UpdateTags(ctx context.Context, id, alias *string, tags map[string]interface{}) error {
-	if (id == nil) == (alias == nil) {
-		return errors.Wrap(ErrBadIdentifier)
+func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[string]interface{}) error {
+	var asset Asset
+	assetID := assetInfo
+	if s, err := reg.FindByAlias(nil, assetInfo); err == nil {
+		assetID = s.AssetID.String()
 	}
 
-	// Fetch the existing asset
+	rawAsset := reg.db.Get(Key(assetID))
+	if rawAsset == nil {
+		return ErrFindAsset
+	}
+	if err := json.Unmarshal(rawAsset, &asset); err != nil {
+		return err
+	}
 
-	var (
-		asset *Asset
-		err   error
-	)
-
-	if id != nil {
-		var aid bc.AssetID
-		err = aid.UnmarshalText([]byte(*id))
-		if err != nil {
-			return errors.Wrap(err, "deserialize asset ID")
-		}
-
-		asset, err = reg.findByID(ctx, aid)
-		if err != nil {
-			return errors.Wrap(err, "find asset by ID")
-		}
-	} else {
-		return nil
-		asset, err = reg.FindByAlias(ctx, *alias)
-		if err != nil {
-			return errors.Wrap(err, "find asset by alias")
+	for k, v := range tags {
+		switch v {
+		case "":
+			delete(asset.Tags, k)
+		default:
+			if asset.Tags == nil {
+				asset.Tags = make(map[string]interface{})
+			}
+			asset.Tags[k] = v
 		}
 	}
 
-	// Revise tags in-memory
+	rawAsset, err := json.Marshal(asset)
+	if err != nil {
+		return ErrMarshalAsset
+	}
 
-	asset.Tags = tags
-
-	reg.cacheMu.Lock()
-	reg.cache.Add(asset.AssetID, asset)
-	reg.cacheMu.Unlock()
-
+	reg.db.Set(Key(assetID), rawAsset)
 	return nil
-
 }
 
 // findByID retrieves an Asset record along with its signer, given an assetID.
-func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error) {
+func (reg *Registry) findByID(ctx context.Context, id string) (*Asset, error) {
 	reg.cacheMu.Lock()
 	cached, ok := reg.cache.Get(id)
 	reg.cacheMu.Unlock()
@@ -181,12 +195,12 @@ func (reg *Registry) findByID(ctx context.Context, id bc.AssetID) (*Asset, error
 
 	bytes := reg.db.Get(Key(id))
 	if bytes == nil {
-		return nil, errors.New("no exit this asset")
+		return nil, ErrFindAsset
 	}
 	var asset Asset
 
 	if err := json.Unmarshal(bytes, &asset); err != nil {
-		return nil, fmt.Errorf("err:%s,asset signer id:%s", err, id.String())
+		return nil, err
 	}
 
 	reg.cacheMu.Lock()
@@ -202,39 +216,108 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	cachedID, ok := reg.aliasCache.Get(alias)
 	reg.cacheMu.Unlock()
 	if ok {
-		return reg.findByID(ctx, cachedID.(bc.AssetID))
+		return reg.findByID(ctx, cachedID.(string))
 	}
 
-	untypedAsset, err := reg.aliasGroup.Do(alias, func() (interface{}, error) {
-		return nil, nil
-	})
+	rawID := reg.db.Get(aliasKey(alias))
+	if rawID == nil {
+		return nil, errors.Wrapf(ErrFindAsset, "no such asset, alias: %s", alias)
+	}
 
-	if err != nil {
+	rawAsset := reg.db.Get(Key(string(rawID)))
+	if rawAsset == nil {
+		return nil, errors.Wrapf(ErrFindAsset, "no such asset, signer id %s", rawID)
+	}
+	var asset Asset
+
+	if err := json.Unmarshal(rawAsset, &asset); err != nil {
 		return nil, err
 	}
 
-	a := untypedAsset.(*Asset)
 	reg.cacheMu.Lock()
-	reg.aliasCache.Add(alias, a.AssetID)
-	reg.cache.Add(a.AssetID, a)
+	reg.aliasCache.Add(alias, asset.AssetID.String())
+	reg.cache.Add(asset.AssetID.String(), &asset)
 	reg.cacheMu.Unlock()
-	return a, nil
-
+	return &asset, nil
 }
 
-//QueryAll query all the assets on bytom chain
-func (reg *Registry) QueryAll(ctx context.Context) (interface{}, error) {
-	ret := make([]interface{}, 0)
+func (reg *Registry) GetAliasByID(id string) string {
+	var asset Asset
 
-	assetIter := reg.db.IteratorPrefix([]byte(assetPreFix))
+	if id == consensus.BTMAssetID.String() {
+		return "btm"
+	}
+	rawAsset := reg.db.Get(Key(id))
+	if rawAsset == nil {
+		log.Warn("fail to find asset")
+		return ""
+	}
+
+	if err := json.Unmarshal(rawAsset, &asset); err != nil {
+		log.Warn(err)
+		return ""
+	}
+
+	return *asset.Alias
+}
+
+type annotatedAsset struct {
+	AssetID          string           `json:"id"`
+	Alias            string           `json:"alias"`
+	VMVersion        uint64           `json:"vm_version"`
+	IssuanceProgram  string           `json:"issue_program"`
+	InitialBlockHash string           `json:"init_blockhash"`
+	XPubs            []chainkd.XPub   `json:"xpubs"`
+	Quorum           int              `json:"quorum"`
+	KeyIndex         uint64           `json:"key_index"`
+	Definition       *json.RawMessage `json:"definition"`
+	Tags             *json.RawMessage `json:"tags"`
+}
+
+// ListAssets returns the accounts in the db
+func (reg *Registry) ListAssets(id string) ([]annotatedAsset, error) {
+	asset := Asset{}
+	tmpAsset := annotatedAsset{}
+	assets := make([]annotatedAsset, 0)
+	jsonTags := json.RawMessage(`{}`)
+	jsonDefinition := json.RawMessage(`{}`)
+
+	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix + id))
 	defer assetIter.Release()
 
 	for assetIter.Next() {
-		value := string(assetIter.Value())
-		ret = append(ret, value)
+		if err := json.Unmarshal(assetIter.Value(), &asset); err != nil {
+			return nil, err
+		}
+
+		tmpAsset.AssetID = asset.AssetID.String()
+		tmpAsset.Alias = *asset.Alias
+		tmpAsset.VMVersion = asset.VMVersion
+		tmpAsset.InitialBlockHash = asset.InitialBlockHash.String()
+		tmpAsset.IssuanceProgram = fmt.Sprintf("%x", asset.IssuanceProgram)
+		tmpAsset.XPubs = asset.XPubs
+		tmpAsset.Quorum = asset.Quorum
+		tmpAsset.KeyIndex = asset.KeyIndex
+
+		// a.RawDefinition is the asset definition as it appears on the
+		// blockchain, so it's untrusted and may not be valid json.
+		if isValidJSON(asset.RawDefinition()) {
+			jsonDefinition = json.RawMessage(asset.RawDefinition())
+		}
+		tmpAsset.Definition = &jsonDefinition
+		if asset.Tags != nil {
+			t, err := json.Marshal(asset.Tags)
+			if err != nil {
+				return nil, err
+			}
+			jsonTags = t
+		}
+		tmpAsset.Tags = &jsonTags
+
+		assets = append(assets, tmpAsset)
 	}
 
-	return ret, nil
+	return assets, nil
 }
 
 // serializeAssetDef produces a canonical byte representation of an asset

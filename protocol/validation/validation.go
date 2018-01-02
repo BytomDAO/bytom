@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/algorithm"
+	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
@@ -499,7 +500,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 // ValidateBlock validates a block and the transactions within.
 // It does not run the consensus program; for that, see ValidateBlockSig.
 func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
-	if b.Height > 1 {
+	if b.Height > 0 {
 		if prev == nil {
 			return errors.WithDetailf(errNoPrevBlock, "height %d", b.Height)
 		}
@@ -521,7 +522,7 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 	if err != nil {
 		return err
 	}
-	if !consensus.CheckProofOfWork(proofHash, b.BlockHeader.Bits) {
+	if !difficulty.CheckProofOfWork(proofHash, b.BlockHeader.Bits) {
 		return errWorkProof
 	}
 

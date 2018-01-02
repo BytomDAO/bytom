@@ -40,7 +40,7 @@ func annotateTxsAsset(txs []*query.AnnotatedTx, walletDB db.DB) {
 
 func getAliasFromAssetID(assetID bc.AssetID, walletDB db.DB) (*asset.Asset, error) {
 	var localAsset asset.Asset
-	rawAsset := walletDB.Get(asset.Key(assetID))
+	rawAsset := walletDB.Get(asset.Key(assetID.String()))
 	if rawAsset == nil {
 		return nil, nil
 	}
