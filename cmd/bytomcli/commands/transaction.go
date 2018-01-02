@@ -227,7 +227,7 @@ var signSubTransactionCmd = &cobra.Command{
 	Short: "Sign and Submit transaction templates with account password",
 	Args:  cobra.ExactArgs(1),
 	PreRun: func(cmd *cobra.Command, args []string) {
-		cmd.MarkFlagRequired("password")
+		// cmd.MarkFlagRequired("password")
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		template := txbuilder.Template{}
