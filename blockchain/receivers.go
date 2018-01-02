@@ -26,7 +26,7 @@ func (a *BlockchainReactor) createAccountAddress(ctx context.Context, ins struct
 	AccountInfo string    `json:"account_info"`
 	ExpiresAt   time.Time `json:"expires_at"`
 }) interface{} {
-	receiver, err := a.accounts.CreateAddress(ctx, ins.AccountInfo, ins.ExpiresAt)
+	receiver, err := a.accounts.CreateAddressReceiver(ctx, ins.AccountInfo, ins.ExpiresAt)
 	if err != nil {
 		return err
 	}

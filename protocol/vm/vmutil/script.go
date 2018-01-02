@@ -65,6 +65,19 @@ func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
 	return builder.Build()
 }
 
+func P2SHProgram(scriptHash []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_DUP)
+	builder.AddOp(vm.OP_SHA3)
+	builder.AddData(scriptHash)
+	builder.AddOp(vm.OP_EQUALVERIFY)
+	builder.AddInt64(-1)
+	builder.AddOp(vm.OP_SWAP)
+	builder.AddInt64(0)
+	builder.AddOp(vm.OP_CHECKPREDICATE)
+	return builder.Build()
+}
+
 // P2SPMultiSigProgram generates the script for contorl transaction output
 func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, error) {
 	builder := NewBuilder()

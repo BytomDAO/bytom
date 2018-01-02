@@ -3,6 +3,7 @@ package txbuilder
 import (
 	"context"
 	stdjson "encoding/json"
+	"errors"
 
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
@@ -75,10 +76,21 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 		return MissingFieldsError(missing...)
 	}
 
-	// TODO: call different stand script generate due to address start with 1 or 3
 	address, err := common.DecodeAddress(a.Address, &consensus.MainNetParams)
+	if err != nil {
+		return err
+	}
 	pubkeyHash := address.ScriptAddress()
-	program, err := vmutil.P2PKHSigProgram(pubkeyHash)
+	program := []byte{}
+
+	switch address.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		program, err = vmutil.P2PKHSigProgram(pubkeyHash)
+	case *common.AddressWitnessScriptHash:
+		program, err = vmutil.P2SHProgram(pubkeyHash)
+	default:
+		return errors.New("unsupport address type")
+	}
 	if err != nil {
 		return err
 	}

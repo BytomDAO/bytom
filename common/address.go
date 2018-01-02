@@ -209,8 +209,7 @@ func newAddressWitnessPubKeyHash(hrp string, witnessProg []byte) (*AddressWitnes
 	// Check for valid program length for witness version 0, which is 20
 	// for P2WPKH.
 	if len(witnessProg) != 20 {
-		return nil, errors.New("witness program must be 20 " +
-			"bytes for p2wpkh")
+		return nil, errors.New("witness program must be 20 bytes for p2wpkh")
 	}
 
 	addr := &AddressWitnessPubKeyHash{
@@ -300,8 +299,7 @@ func newAddressWitnessScriptHash(hrp string, witnessProg []byte) (*AddressWitnes
 	// Check for valid program length for witness version 0, which is 32
 	// for P2WSH.
 	if len(witnessProg) != 32 {
-		return nil, errors.New("witness program must be 32 " +
-			"bytes for p2wsh")
+		return nil, errors.New("witness program must be 32 bytes for p2wsh")
 	}
 
 	addr := &AddressWitnessScriptHash{
