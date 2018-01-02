@@ -33,19 +33,21 @@ var (
 )
 
 var createAccountCmd = &cobra.Command{
-	Use:   "create-account <alias> <xpub>",
+	Use:   "create-account <alias> <xpubs>",
 	Short: "Create an account",
-	Args:  cobra.ExactArgs(2),
+	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		xpub := chainkd.XPub{}
 		ins := accountIns{}
 
-		if err := xpub.UnmarshalText([]byte(args[1])); err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(ErrLocalExe)
+		for _, x := range args[1:] {
+			xpub := chainkd.XPub{}
+			if err := xpub.UnmarshalText([]byte(x)); err != nil {
+				jww.ERROR.Println(err)
+				os.Exit(ErrLocalExe)
+			}
+			ins.RootXPubs = append(ins.RootXPubs, xpub)
 		}
 
-		ins.RootXPubs = []chainkd.XPub{xpub}
 		ins.Quorum = accountQuorum
 		ins.Alias = args[0]
 		if len(accountTags) != 0 {
