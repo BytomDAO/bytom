@@ -1,74 +1,85 @@
 package blockchain
 
 import (
-	"bytes"
-	stdjson "encoding/json"
-	"strconv"
-
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/rpc"
-	ctypes "github.com/bytom/blockchain/rpc/types"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/validation"
 )
 
 // return network infomation
-func (bcR *BlockchainReactor) getNetInfo() (*ctypes.ResultNetInfo, error) {
-	return rpc.NetInfo(bcR.sw)
+func (bcr *BlockchainReactor) getNetInfo() Response {
+	type netInfo struct {
+		Listening    bool   `json:"listening"`
+		Syncing      bool   `json:"syncing"`
+		Mining       bool   `json:"mining"`
+		PeerCount    int    `json:"peer_count"`
+		CurrentBlock uint64 `json:"current_block"`
+		HighestBlock uint64 `json:"highest_block"`
+	}
+	net := &netInfo{}
+	net.Listening = bcr.sw.IsListening()
+	net.Syncing = bcr.blockKeeper.IsCaughtUp()
+	net.Mining = bcr.mining.IsMining()
+	net.PeerCount = len(bcr.sw.Peers().List())
+	net.CurrentBlock = bcr.blockKeeper.chainHeight
+	net.HighestBlock = bcr.blockKeeper.maxPeerHeight
+
+	return resWrapper(net)
 }
 
 // return best block hash
-func (bcr *BlockchainReactor) getBestBlockHash() []byte {
-	data := []string{bcr.chain.BestBlockHash().String()}
-	return resWrapper(data)
+func (bcr *BlockchainReactor) getBestBlockHash() Response {
+	blockHash := map[string]string{"blockHash": bcr.chain.BestBlockHash().String()}
+	return resWrapper(blockHash)
 }
 
 // return block header by hash
-func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) string {
-	var buf bytes.Buffer
+func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) Response {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
+		return resWrapper(nil, err)
 	}
 	block, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return ""
+		return resWrapper(nil, err)
 	}
+
 	bcBlock := legacy.MapBlock(block)
-	header, _ := stdjson.MarshalIndent(bcBlock.BlockHeader, "", "  ")
-	buf.WriteString(string(header))
-	return buf.String()
+	return resWrapper(bcBlock.BlockHeader)
 }
 
+// TxJSON is used for getting block by hash.
 type TxJSON struct {
 	Inputs  []bc.Entry `json:"inputs"`
 	Outputs []bc.Entry `json:"outputs"`
 }
 
+// GetBlockByHashJSON is actually a block, include block header and transactions.
 type GetBlockByHashJSON struct {
 	BlockHeader  *bc.BlockHeader `json:"block_header"`
 	Transactions []*TxJSON       `json:"transactions"`
 }
 
 // return block by hash
-func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
+func (bcr *BlockchainReactor) getBlockByHash(strHash string) Response {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return err.Error()
+		return resWrapper(nil, err)
 	}
 
 	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return err.Error()
+		return resWrapper(nil, err)
 	}
 
 	bcBlock := legacy.MapBlock(legacyBlock)
-	res := &GetBlockByHashJSON{BlockHeader: bcBlock.BlockHeader}
+	block := &GetBlockByHashJSON{BlockHeader: bcBlock.BlockHeader}
 	for _, tx := range bcBlock.Transactions {
 		txJSON := &TxJSON{}
 		for _, e := range tx.Entries {
@@ -85,22 +96,18 @@ func (bcr *BlockchainReactor) getBlockByHash(strHash string) string {
 				continue
 			}
 		}
-		res.Transactions = append(res.Transactions, txJSON)
+		block.Transactions = append(block.Transactions, txJSON)
 	}
 
-	ret, err := stdjson.Marshal(res)
-	if err != nil {
-		return err.Error()
-	}
-	return string(ret)
+	return resWrapper(block)
 }
 
 // return block by height
-func (bcr *BlockchainReactor) getBlockByHeight(height uint64) []byte {
+func (bcr *BlockchainReactor) getBlockByHeight(height uint64) Response {
 	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return DefaultRawResponse
+		return resWrapper(nil, err)
 	}
 
 	bcBlock := legacy.MapBlock(legacyBlock)
@@ -124,85 +131,66 @@ func (bcr *BlockchainReactor) getBlockByHeight(height uint64) []byte {
 		res.Transactions = append(res.Transactions, txJSON)
 	}
 
-	ret, err := stdjson.Marshal(res)
-	if err != nil {
-		return DefaultRawResponse
-	}
-	data := []string{string(ret)}
-	return resWrapper(data)
+	return resWrapper(res)
 }
 
 // return block transactions count by hash
-func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) (int, error) {
+func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) Response {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return -1, err
+		return resWrapper(nil, err)
 	}
 
 	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return -1, err
+		return resWrapper(nil, err)
 	}
-	return len(legacyBlock.Transactions), nil
-}
 
-// return network  is or not listening
-func (bcr *BlockchainReactor) isNetListening() []byte {
-	data := []string{strconv.FormatBool(bcr.sw.IsListening())}
-	return resWrapper(data)
-}
-
-// return peer count
-func (bcr *BlockchainReactor) peerCount() []byte {
-	// TODO: use key-value instead of bare value
-	data := []string{strconv.FormatInt(int64(len(bcr.sw.Peers().List())), 16)}
-	return resWrapper(data)
-}
-
-// return network syncing information
-func (bcr *BlockchainReactor) isNetSyncing() []byte {
-	data := []string{strconv.FormatBool(bcr.blockKeeper.IsCaughtUp())}
-	return resWrapper(data)
+	count := map[string]int{"count": len(legacyBlock.Transactions)}
+	return resWrapper(count)
 }
 
 // return block transactions count by height
-func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) []byte {
+func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) Response {
 	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return DefaultRawResponse
+		return resWrapper(nil, err)
 	}
-	data := []string{strconv.FormatInt(int64(len(legacyBlock.Transactions)), 16)}
-	log.Infof("%v", data)
-	return resWrapper(data)
+
+	count := map[string]int{"count": len(legacyBlock.Transactions)}
+	return resWrapper(count)
 }
 
 // return block height
-func (bcr *BlockchainReactor) blockHeight() []byte {
-	data := []string{strconv.FormatUint(bcr.chain.Height(), 16)}
-	return resWrapper(data)
+func (bcr *BlockchainReactor) blockHeight() Response {
+	blockHeight := map[string]uint64{"blockHeight": bcr.chain.Height()}
+	return resWrapper(blockHeight)
 }
 
 // return is in mining or not
-func (bcr *BlockchainReactor) isMining() []byte {
-	data := []string{strconv.FormatBool(bcr.mining.IsMining())}
-	return resWrapper(data)
+func (bcr *BlockchainReactor) isMining() Response {
+	IsMining := map[string]bool{"isMining": bcr.mining.IsMining()}
+	return resWrapper(IsMining)
 }
 
 // return gasRate
-func (bcr *BlockchainReactor) gasRate() []byte {
-	data := []string{strconv.FormatInt(validation.GasRate, 16)}
-	return resWrapper(data)
+func (bcr *BlockchainReactor) gasRate() Response {
+	gasrate := map[string]int64{"gasRate": validation.GasRate}
+	return resWrapper(gasrate)
 }
 
 // wrapper json for response
-func resWrapper(data []string) []byte {
-	response := Response{Status: SUCCESS, Data: data}
-	rawResponse, err := stdjson.Marshal(response)
-	if err != nil {
-		return DefaultRawResponse
+func resWrapper(data interface{}, errWrapper ...error) Response {
+	var response Response
+
+	if errWrapper != nil {
+		response = Response{Status: FAIL, Msg: errWrapper[0].Error()}
+	} else {
+		response = Response{Status: SUCCESS, Data: data}
 	}
-	return rawResponse
+
+	return response
 }

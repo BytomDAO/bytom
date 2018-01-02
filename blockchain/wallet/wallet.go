@@ -36,7 +36,7 @@ type Wallet struct {
 	AccountMgr     *account.Manager
 	AssetReg       *asset.Registry
 	chain          *protocol.Chain
-	rescanProgress chan bool
+	rescanProgress chan struct{}
 }
 
 //NewWallet return a new wallet instance
@@ -46,7 +46,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		AccountMgr:     account,
 		AssetReg:       asset,
 		chain:          chain,
-		rescanProgress: make(chan bool),
+		rescanProgress: make(chan struct{}, 1),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -104,7 +104,7 @@ func (w *Wallet) attachBlock(block *legacy.Block) error {
 func (w *Wallet) detachBlock(block *legacy.Block) error {
 	storeBatch := w.DB.NewBatch()
 	w.reverseAccountUTXOs(storeBatch, block)
-	w.deleteTransactions(storeBatch, w.status.Height, block)
+	w.deleteTransactions(storeBatch, w.status.Height)
 
 	w.status.Height = block.Height - 1
 	w.status.Hash = block.PreviousBlockHash
@@ -173,13 +173,11 @@ func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, ali
 	if err != nil {
 		return nil, err
 	}
-	var xpubs []chainkd.XPub
-	xpubs = append(xpubs, xpub.XPub)
-	account, err := w.AccountMgr.Create(nil, xpubs, SINGLE, alias, nil, "")
+	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, alias, nil, "")
 	if err != nil {
 		return nil, err
 	}
-	if err := w.recoveryAccountWalletDB(account, xpub, index); err != nil {
+	if err := w.recoveryAccountWalletDB(newAccount, xpub, index); err != nil {
 		return nil, err
 	}
 	return xpub, nil
@@ -205,5 +203,5 @@ func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, i
 
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
 func (w *Wallet) rescanBlocks() {
-	w.rescanProgress <- true
+	w.rescanProgress <- struct{}{}
 }

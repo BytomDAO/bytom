@@ -4,48 +4,58 @@ import (
 	"context"
 	"encoding/hex"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/errors"
 )
 
 var errCurrentToken = errors.New("token cannot delete itself")
 
-func (br *BlockchainReactor) createAccessToken(ctx context.Context, x struct{ ID, Type string }) interface{} {
-	token, err := br.accessTokens.Create(ctx, x.ID, x.Type)
+func (bcr *BlockchainReactor) createAccessToken(ctx context.Context, x struct {
+	ID   string `json:"id"`
+	Type string `json:"type"`
+}) Response {
+	token, err := bcr.accessTokens.Create(ctx, x.ID, x.Type)
 	if err != nil {
-		return jsendWrapper(nil, ERROR, err.Error())
+		return resWrapper(nil, err)
 	}
-
-	return jsendWrapper(token, SUCCESS, "")
+	data := map[string]*string{"accessToken": token}
+	return resWrapper(data)
 }
 
-func (br *BlockchainReactor) listAccessTokens(ctx context.Context) interface{} {
-	tokens, err := br.accessTokens.List(ctx)
+func (bcr *BlockchainReactor) listAccessTokens(ctx context.Context) Response {
+	tokens, err := bcr.accessTokens.List(ctx)
 	if err != nil {
-		return jsendWrapper(nil, ERROR, err.Error())
+		log.Errorf("listAccessTokens: %v", err)
+		return resWrapper(nil, err)
 	}
 
-	return jsendWrapper(tokens, SUCCESS, "")
+	return resWrapper(tokens)
 }
 
-func (br *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct{ ID, Token string }) interface{} {
+func (bcr *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct {
+	ID    string `json:"id"`
+	Token string `json:"token"`
+}) Response {
 	//TODO Add delete permission verify.
-	if err := br.accessTokens.Delete(ctx, x.ID); err != nil {
-		return jsendWrapper(nil, ERROR, err.Error())
+	if err := bcr.accessTokens.Delete(ctx, x.ID); err != nil {
+		return resWrapper(nil, err)
 	}
-	return jsendWrapper("success", SUCCESS, "")
+	return resWrapper(nil)
 }
 
-func (br *BlockchainReactor) checkAccessToken(ctx context.Context, x struct{ ID, Secret string }) interface{} {
+func (bcr *BlockchainReactor) checkAccessToken(ctx context.Context, x struct {
+	ID     string `json:"id"`
+	Secret string `json:"secret"`
+}) Response {
 	secret, err := hex.DecodeString(x.Secret)
 	if err != nil {
-		return jsendWrapper(nil, ERROR, err.Error())
+		return resWrapper(nil, err)
 	}
-	result, err := br.accessTokens.Check(ctx, x.ID, secret)
+	_, err = bcr.accessTokens.Check(ctx, x.ID, secret)
 	if err != nil {
-		return jsendWrapper(nil, ERROR, err.Error())
+		return resWrapper(nil, err)
 	}
-	if result == true {
-		return jsendWrapper("success", SUCCESS, "")
-	}
-	return jsendWrapper("fail", SUCCESS, "")
+
+	return resWrapper(nil)
 }

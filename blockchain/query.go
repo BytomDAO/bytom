@@ -2,86 +2,68 @@ package blockchain
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/wallet"
-	log "github.com/sirupsen/logrus"
 )
 
-const (
-	defGenericPageSize = 100
-)
-
-var (
-	accountUTXOFmt = `
-	{
-		"OutputID":"%x","AssetID":"%x","Amount":"%d",
-		"AccountID":"%s","ProgramIndex":"%d","Program":"%x",
-		"SourceID":"%x","SourcePos":"%d","RefData":"%x","Change":"%t"
-	}`
-)
-
-//
 // POST /list-accounts
-func (bcr *BlockchainReactor) listAccounts(ctx context.Context, in requestQuery) interface{} {
-	response, err := bcr.accounts.QueryAll(ctx)
+func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
+	ID string `json:"id"`
+}) Response {
+	accounts, err := bcr.accounts.ListAccounts(filter.ID)
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
+		return resWrapper(nil, err)
 	}
-	return response
 
+	return resWrapper(accounts)
 }
 
-//
 // POST /list-assets
-func (bcr *BlockchainReactor) listAssets(ctx context.Context, in requestQuery) interface{} {
-
-	response, _ := bcr.assets.QueryAll(ctx)
-
-	return response
-}
-
-//GetAccountUTXOs return all account unspent outputs
-func (bcr *BlockchainReactor) GetAccountUTXOs() []account.UTXO {
-
-	var (
-		accountUTXO  = account.UTXO{}
-		accountUTXOs = make([]account.UTXO, 0)
-	)
-
-	accountUTXOIter := bcr.wallet.DB.IteratorPrefix([]byte(account.UTXOPreFix))
-	defer accountUTXOIter.Release()
-	for accountUTXOIter.Next() {
-
-		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {
-			hashKey := accountUTXOIter.Key()[len(account.UTXOPreFix):]
-			log.WithField("UTXO hash", string(hashKey)).Warn("get account UTXO")
-			continue
-		}
-
-		accountUTXOs = append(accountUTXOs, accountUTXO)
+func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
+	ID string `json:"id"`
+}) Response {
+	assets, err := bcr.assets.ListAssets(filter.ID)
+	if err != nil {
+		log.Errorf("listAssets: %v", err)
+		return resWrapper(nil, err)
 	}
 
-	return accountUTXOs
+	return resWrapper(assets)
 }
 
-func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery) interface{} {
-	type assetAmount struct {
-		AssetID string
-		Amount  uint64
+// POST /listBalances
+func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
+	accountUTXOs, err := bcr.wallet.GetAccountUTXOs("")
+	if err != nil {
+		log.Errorf("GetAccountUTXOs: %v", err)
+		return resWrapper(nil, err)
 	}
 
-	accountUTXOs := bcr.GetAccountUTXOs()
+	return resWrapper(bcr.indexBalances(accountUTXOs))
+}
+
+type accountBalance struct {
+	AccountID  string `json:"account_id"`
+	Alias      string `json:"account_alias"`
+	AssetAlias string `json:"asset_alias"`
+	AssetID    string `json:"asset_id"`
+	Amount     uint64 `json:"amount"`
+}
+
+func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accountBalance {
 	accBalance := make(map[string]map[string]uint64)
-	response := make([]string, 0)
+	balances := make([]accountBalance, 0)
+	tmpBalance := accountBalance{}
 
 	for _, accountUTXO := range accountUTXOs {
 
-		assetID := fmt.Sprintf("%x", accountUTXO.AssetID)
+		assetID := accountUTXO.AssetID.String()
 		if _, ok := accBalance[accountUTXO.AccountID]; ok {
 			if _, ok := accBalance[accountUTXO.AccountID][assetID]; ok {
 				accBalance[accountUTXO.AccountID][assetID] += accountUTXO.Amount
@@ -99,59 +81,95 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context, in requestQuery)
 	}
 	sort.Strings(sortedAccount)
 
-	for _, account := range sortedAccount {
+	for _, id := range sortedAccount {
 		sortedAsset := []string{}
-		for k := range accBalance[account] {
+		for k := range accBalance[id] {
 			sortedAsset = append(sortedAsset, k)
 		}
 		sort.Strings(sortedAsset)
 
-		assetAmounts := []assetAmount{}
-		for _, asset := range sortedAsset {
-			assetAmounts = append(assetAmounts, assetAmount{AssetID: asset, Amount: accBalance[account][asset]})
-		}
+		for _, assetID := range sortedAsset {
 
-		balanceString, _ := json.Marshal(assetAmounts)
-		accBalancesString := fmt.Sprintf(`{"AccountID":"%s","Balances":"%s"}`, account, balanceString)
-		response = append(response, accBalancesString)
+			alias := bcr.accounts.GetAliasByID(id)
+			assetAlias := bcr.assets.GetAliasByID(assetID)
+			tmpBalance.Alias = alias
+			tmpBalance.AccountID = id
+			tmpBalance.AssetID = assetID
+			tmpBalance.AssetAlias = assetAlias
+			tmpBalance.Amount = accBalance[id][assetID]
+			balances = append(balances, tmpBalance)
+		}
 	}
 
-	return response
+	return balances
 }
 
-// listTransactions is an http handler for listing transactions
-//
 // POST /list-transactions
-func (bcr *BlockchainReactor) listTransactions(ctx context.Context, in requestQuery) []byte {
+func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struct {
+	ID        string `json:"id"`
+	AccountID string `json:"account_id"`
+}) Response {
+	var transactions []query.AnnotatedTx
+	var err error
 
-	var response = Response{Status: SUCCESS}
-	annotatedTxs := make([]string, 0)
-	annotatedTx := &query.AnnotatedTx{}
-
-	txIter := bcr.wallet.DB.IteratorPrefix([]byte(wallet.TxPreFix))
-	defer txIter.Release()
-
-	for txIter.Next() {
-		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
-			response.Status = FAIL
-			response.Msg = err.Error()
-			log.WithField("err", err).Error("failed get annotatedTx")
-			break
-		}
-		annotatedTxs = append(annotatedTxs, string(txIter.Value()))
+	if filter.AccountID != "" {
+		transactions, err = bcr.wallet.GetTransactionsByAccountID(filter.AccountID)
+	} else {
+		transactions, err = bcr.wallet.GetTransactionsByTxID(filter.ID)
 	}
 
-	response.Data = annotatedTxs
-
-	rawResponse, err := json.Marshal(response)
 	if err != nil {
-		return DefaultRawResponse
+		log.Errorf("listTransactions: %v", err)
+		return resWrapper(nil, err)
 	}
+	return resWrapper(transactions)
+}
 
-	return rawResponse
+type annotatedUTXO struct {
+	Alias               string `json:"account_alias"`
+	OutputID            string `json:"id"`
+	AssetID             string `json:"asset_id"`
+	AssetAlias          string `json:"asset_alias"`
+	Amount              uint64 `json:"amount"`
+	AccountID           string `json:"account_id"`
+	Address             string `json:"address"`
+	ControlProgramIndex uint64 `json:"control_program_index"`
+	Program             string `json:"program"`
+	SourceID            string `json:"source_id"`
+	SourcePos           uint64 `json:"source_pos"`
+	RefDataHash         string `json:"ref_data"`
 }
 
 // POST /list-unspent-outputs
-func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, in requestQuery) interface{} {
-	return bcr.GetAccountUTXOs()
+func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter struct {
+	ID string `json:"id"`
+}) Response {
+	tmpUTXO := annotatedUTXO{}
+	UTXOs := make([]annotatedUTXO, 0)
+
+	accountUTXOs, err := bcr.wallet.GetAccountUTXOs(filter.ID)
+	if err != nil {
+		log.Errorf("list Unspent Outputs: %v", err)
+		return resWrapper(nil, err)
+	}
+
+	for _, utxo := range accountUTXOs {
+		tmpUTXO.AccountID = utxo.AccountID
+		tmpUTXO.OutputID = utxo.OutputID.String()
+		tmpUTXO.SourceID = utxo.SourceID.String()
+		tmpUTXO.AssetID = utxo.AssetID.String()
+		tmpUTXO.Amount = utxo.Amount
+		tmpUTXO.SourcePos = utxo.SourcePos
+		tmpUTXO.Program = fmt.Sprintf("%x", utxo.ControlProgram)
+		tmpUTXO.RefDataHash = utxo.RefDataHash.String()
+		tmpUTXO.ControlProgramIndex = utxo.ControlProgramIndex
+		tmpUTXO.Address = utxo.Address
+
+		tmpUTXO.Alias = bcr.accounts.GetAliasByID(utxo.AccountID)
+		tmpUTXO.AssetAlias = bcr.assets.GetAliasByID(tmpUTXO.AssetID)
+
+		UTXOs = append(UTXOs, tmpUTXO)
+	}
+
+	return resWrapper(UTXOs)
 }
