@@ -33,7 +33,7 @@ var (
 )
 
 var createAccountCmd = &cobra.Command{
-	Use:   "create-account <alias> <xpubs>",
+	Use:   "create-account <alias> <xpub(s)>",
 	Short: "Create an account",
 	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {

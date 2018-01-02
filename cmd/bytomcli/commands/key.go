@@ -22,7 +22,7 @@ var createKeyCmd = &cobra.Command{
 		var key = struct {
 			Alias    string `json:"alias"`
 			Password string `json:"password"`
-		}{Alias: args[0], Password: args[1]}
+		}{Alias: args[0], Password: "123456"}
 
 		data, exitCode := clientCall("/create-key", &key)
 		if exitCode != Success {
@@ -47,7 +47,7 @@ var deleteKeyCmd = &cobra.Command{
 		var key = struct {
 			Password string
 			XPub     chainkd.XPub `json:"xpubs"`
-		}{XPub: *xpub, Password: args[1]}
+		}{XPub: *xpub, Password: "123456"}
 
 		if _, exitCode := clientCall("/delete-key", &key); exitCode != Success {
 			os.Exit(exitCode)
@@ -113,6 +113,7 @@ var importPrivateCmd = &cobra.Command{
 
 		privHash, err := base58.Decode(args[1])
 		if err != nil {
+			jww.ERROR.Println("wif priv decode error")
 			os.Exit(ErrLocalExe)
 		}
 		if len(privHash) != 68 {

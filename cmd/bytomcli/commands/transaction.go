@@ -171,7 +171,7 @@ var signTransactionCmd = &cobra.Command{
 		var req = struct {
 			Auth string
 			Txs  txbuilder.Template `json:"transaction"`
-		}{Auth: password, Txs: template}
+		}{Auth: "123456", Txs: template}
 
 		jww.FEEDBACK.Printf("\n\n")
 		data, exitCode := clientCall("/sign-transaction", &req)
@@ -241,7 +241,7 @@ var signSubTransactionCmd = &cobra.Command{
 		var req = struct {
 			Auth string
 			Txs  txbuilder.Template `json:"transaction"`
-		}{Auth: password, Txs: template}
+		}{Auth: "123456", Txs: template}
 
 		jww.FEEDBACK.Printf("\n\n")
 		data, exitCode := clientCall("/sign-submit-transaction", &req)
