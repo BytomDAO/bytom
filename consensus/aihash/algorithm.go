@@ -1,6 +1,7 @@
 package aihash
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
 	"hash"
 	"reflect"
@@ -48,52 +49,22 @@ func createSeed(preSeed *bc.Hash, blockHashs []*bc.Hash) []byte {
 	return seed
 }
 
-// This method places the result into dest in machine byte order.
+// seed length is 32 bytes, dest is 16MB.
 func generateCache(dest []uint32, seed []byte) {
-	// Convert our destination slice to a byte buffer
-	header := *(*reflect.SliceHeader)(unsafe.Pointer(&dest))
-	header.Len *= 4
-	header.Cap *= 4
-	cache := *(*[]byte)(unsafe.Pointer(&header))
+	extSeed := extendSeed(seed)
+}
 
-	// Calculate the number of thoretical rows (we'll store in one buffer nonetheless)
-	size := uint64(len(cache))
-	rows := int(size) / hashBytes
+// extend seed from 32 byte to 128 byte
+func extendSeed(seed []byte) []byte {
+	extSeed := make([]byte, 128)
+	extSeed[:32] = seed
 
-	// Start a monitoring goroutine to report progress on low end devices
-	var progress uint32
-
-	done := make(chan struct{})
-	defer close(done)
-
-	sha512 := makeHasher(sha3.New512())
-
-	// Sequentially produce the initial dataset
-	sha512(cache, seed)
-	for offset := uint64(hashBytes); offset < size; offset += hashBytes {
-		sha512(cache[offset:], cache[offset-hashBytes:offset])
-		atomic.AddUint32(&progress, 1)
+	for i := 0; i < 3; i++ {
+		h := sha3.Sum256(extSeed[i*32 : (i+1)*32])
+		copy(extSeed[(i+1)*32:(i+2)*32], h[:])
 	}
-	// Use a low-round version of randmemohash
-	temp := make([]byte, hashBytes)
 
-	for i := 0; i < cacheRounds; i++ {
-		for j := 0; j < rows; j++ {
-			var (
-				srcOff = ((j - 1 + rows) % rows) * hashBytes
-				dstOff = j * hashBytes
-				xorOff = (binary.LittleEndian.Uint32(cache[dstOff:]) % uint32(rows)) * hashBytes
-			)
-			bitutil.XORBytes(temp, cache[srcOff:srcOff+hashBytes], cache[xorOff:xorOff+hashBytes])
-			sha512(cache[dstOff:], temp)
-
-			atomic.AddUint32(&progress, 1)
-		}
-	}
-	// Swap the byte order on big endian systems and return
-	if !isLittleEndian() {
-		swap(cache)
-	}
+	return extSeed
 }
 
 // isLittleEndian returns whether the local system is running in little or big
