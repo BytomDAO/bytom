@@ -35,24 +35,40 @@ type accountOutput struct {
 }
 
 const (
-	//TxPreFix is wallet database transactions prefix
-	TxPreFix = "TXS:"
+	//TxPrefix is wallet database transactions prefix
+	TxPrefix = "TXS:"
+	TxIndex  = "TID:"
 )
 
-func calcAnnotatedKey(blockHeight uint64, position uint32) []byte {
-	return []byte(fmt.Sprintf("%s%016x%08x", TxPreFix, blockHeight, position))
+func formatKey(blockHeight uint64, position uint32) string {
+	return fmt.Sprintf("%016x%08x", blockHeight, position)
 }
 
-func calcDeletePreFix(blockHeight uint64) []byte {
-	return []byte(fmt.Sprintf("%s%016x", TxPreFix, blockHeight))
+func calcAnnotatedKey(formatKey string) []byte {
+	return []byte(TxPrefix + formatKey)
+}
+
+func calcDeleteKey(blockHeight uint64) []byte {
+	return []byte(fmt.Sprintf("%s%016x", TxPrefix, blockHeight))
+}
+
+func calcTxIndexKey(txID string) []byte {
+	return []byte(TxIndex + txID)
 }
 
 //deleteTransaction delete transactions when orphan block rollback
-func (w *Wallet) deleteTransactions(batch db.Batch, height uint64, b *legacy.Block) {
-	txIter := w.DB.IteratorPrefix(calcDeletePreFix(height))
+func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
+	tmpTx := query.AnnotatedTx{}
+
+	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
 
 	for txIter.Next() {
+		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
+			//delete index
+			batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
+		}
+
 		batch.Delete(txIter.Key())
 	}
 }
@@ -92,7 +108,7 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	}
 
 	accOuts := loadAccountInfo(reverseOuts, w)
-	if err = upsertConfirmedAccountOutputs(accOuts, b, batch, w); err != nil {
+	if err = upsertConfirmedAccountOutputs(accOuts, batch); err != nil {
 		log.WithField("err", err).Error("reversing account spent and retire outputs")
 		return
 	}
@@ -117,13 +133,14 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *legacy.Block) error {
 	annotateTxsAsset(annotatedTxs, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
-	for pos, tx := range annotatedTxs {
+	for _, tx := range annotatedTxs {
 		rawTx, err := json.Marshal(tx)
 		if err != nil {
 			return errors.Wrap(err, "inserting annotated_txs to db")
 		}
 
-		batch.Set(calcAnnotatedKey(b.Height, uint32(pos)), rawTx)
+		batch.Set(calcAnnotatedKey(formatKey(b.Height, uint32(tx.Position))), rawTx)
+		batch.Set(calcTxIndexKey(tx.ID.String()), []byte(formatKey(b.Height, uint32(tx.Position))))
 	}
 	return nil
 }
@@ -162,7 +179,7 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	}
 	accOuts := loadAccountInfo(outs, w)
 
-	if err = upsertConfirmedAccountOutputs(accOuts, b, batch, w); err != nil {
+	if err = upsertConfirmedAccountOutputs(accOuts, batch); err != nil {
 		log.WithField("err", err).Error("building new account outputs")
 		return
 	}
@@ -228,8 +245,9 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 // upsertConfirmedAccountOutputs records the account data for confirmed utxos.
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
-func upsertConfirmedAccountOutputs(outs []*accountOutput, block *legacy.Block, batch db.Batch, w *Wallet) error {
-	u := &account.UTXO{}
+func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error {
+	var u *account.UTXO
+
 	for _, out := range outs {
 		u = &account.UTXO{
 			OutputID:            out.OutputID,
@@ -286,4 +304,84 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 	}
 
 	return annotatedTxs
+}
+
+func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error) {
+	annotatedTx := query.AnnotatedTx{}
+	annotatedTxs := make([]query.AnnotatedTx, 0)
+	formatKey := ""
+
+	if txID != "" {
+		rawFormatKey := w.DB.Get(calcTxIndexKey(txID))
+		if rawFormatKey == nil {
+			return nil, fmt.Errorf("No transaction(txid=%s)", txID)
+		}
+		formatKey = string(rawFormatKey)
+	}
+
+	txIter := w.DB.IteratorPrefix([]byte(TxPrefix + formatKey))
+	defer txIter.Release()
+	for txIter.Next() {
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+			return nil, err
+		}
+		annotatedTxs = append(annotatedTxs, annotatedTx)
+	}
+
+	return annotatedTxs, nil
+}
+
+func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) bool {
+	for _, input := range annotatedTx.Inputs {
+		if input.AccountID == accountID {
+			return true
+		}
+	}
+
+	for _, output := range annotatedTx.Outputs {
+		if output.AccountID == accountID {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]query.AnnotatedTx, error) {
+	annotatedTx := query.AnnotatedTx{}
+	annotatedTxs := make([]query.AnnotatedTx, 0)
+
+	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
+	defer txIter.Release()
+	for txIter.Next() {
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+			return nil, err
+		}
+
+		if findTransactionsByAccount(annotatedTx, accountID) {
+			annotatedTxs = append(annotatedTxs, annotatedTx)
+		}
+	}
+
+	return annotatedTxs, nil
+}
+
+//GetAccountUTXOs return all account unspent outputs
+func (w *Wallet) GetAccountUTXOs(id string) ([]account.UTXO, error) {
+	accountUTXO := account.UTXO{}
+	accountUTXOs := make([]account.UTXO, 0)
+
+	accountUTXOIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix + id))
+	defer accountUTXOIter.Release()
+	for accountUTXOIter.Next() {
+		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {
+			hashKey := accountUTXOIter.Key()[len(account.UTXOPreFix):]
+			log.WithField("UTXO hash", string(hashKey)).Warn("get account UTXO")
+			continue
+		}
+
+		accountUTXOs = append(accountUTXOs, accountUTXO)
+	}
+
+	return accountUTXOs, nil
 }

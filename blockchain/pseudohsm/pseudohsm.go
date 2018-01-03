@@ -4,7 +4,6 @@ package pseudohsm
 import (
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -18,6 +17,7 @@ const listKeyMaxAliases = 200
 // pre-define errors for supporting bytom errorFormatter
 var (
 	ErrDuplicateKeyAlias    = errors.New("duplicate key alias")
+	ErrDuplicateKey         = errors.New("duplicate key")
 	ErrInvalidAfter         = errors.New("invalid after")
 	ErrNoKey                = errors.New("key not found")
 	ErrInvalidKeySize       = errors.New("key invalid size")
@@ -86,32 +86,9 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 }
 
 // ListKeys returns a list of all xpubs from the store
-func (h *HSM) ListKeys(after string, limit int) ([]XPub, string, error) {
-
+func (h *HSM) ListKeys() ([]XPub, error) {
 	xpubs := h.cache.keys()
-	start, end := 0, len(xpubs)
-
-	var (
-		zafter int
-		err    error
-	)
-
-	if after != "" {
-		zafter, err = strconv.Atoi(after)
-		if err != nil {
-			return nil, "", errors.WithDetailf(ErrInvalidAfter, "value: %q", zafter)
-		}
-	}
-
-	if len(xpubs) > zafter {
-		start = zafter
-	} else {
-		return nil, "", errors.WithDetailf(ErrInvalidAfter, "value: %v", zafter)
-	}
-	if len(xpubs) > zafter+limit {
-		end = zafter + limit
-	}
-	return xpubs[start:end], strconv.Itoa(start), nil
+	return xpubs, nil
 }
 
 // XSign looks up the xprv given the xpub, optionally derives a new
@@ -183,7 +160,6 @@ func (h *HSM) loadDecryptedKey(xpub chainkd.XPub, auth string) (XPub, *XKey, err
 		return xpb, nil, err
 	}
 	xkey, err := h.keyStore.GetKey(xpb.Alias, xpb.File, auth)
-
 	return xpb, xkey, err
 }
 
@@ -200,6 +176,10 @@ func (h *HSM) ResetPassword(xpub chainkd.XPub, auth, newAuth string) error {
 func (h *HSM) ImportXPrvKey(auth string, alias string, xprv chainkd.XPrv) (*XPub, bool, error) {
 	if ok := h.cache.hasAlias(alias); ok {
 		return nil, false, ErrDuplicateKeyAlias
+	}
+
+	if ok := h.cache.hasKey(xprv.XPub()); ok {
+		return nil, false, ErrDuplicateKey
 	}
 
 	xpub := xprv.XPub()

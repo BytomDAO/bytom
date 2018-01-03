@@ -13,7 +13,7 @@ import (
 )
 
 // POST /create-control-program
-func (a *BlockchainReactor) createControlProgram(ctx context.Context, ins []struct {
+func (bcr *BlockchainReactor) createControlProgram(ctx context.Context, ins []struct {
 	Type   string
 	Params stdjson.RawMessage
 }) interface{} {
@@ -33,7 +33,7 @@ func (a *BlockchainReactor) createControlProgram(ctx context.Context, ins []stru
 			)
 			switch ins[i].Type {
 			case "account":
-				prog, err = a.createAccountControlProgram(subctx, ins[i].Params)
+				prog, err = bcr.createAccountControlProgram(subctx, ins[i].Params)
 			default:
 				err = errors.WithDetailf(httpjson.ErrBadRequest, "unknown control program type %q", ins[i].Type)
 			}
@@ -49,7 +49,7 @@ func (a *BlockchainReactor) createControlProgram(ctx context.Context, ins []stru
 	return responses
 }
 
-func (a *BlockchainReactor) createAccountControlProgram(ctx context.Context, input []byte) (interface{}, error) {
+func (bcr *BlockchainReactor) createAccountControlProgram(ctx context.Context, input []byte) (interface{}, error) {
 	var parsed struct {
 		AccountAlias string `json:"account_alias"`
 		AccountID    string `json:"account_id"`
@@ -61,14 +61,14 @@ func (a *BlockchainReactor) createAccountControlProgram(ctx context.Context, inp
 
 	accountID := parsed.AccountID
 	if accountID == "" {
-		acc, err := a.accounts.FindByAlias(ctx, parsed.AccountAlias)
+		acc, err := bcr.accounts.FindByAlias(ctx, parsed.AccountAlias)
 		if err != nil {
 			return nil, err
 		}
 		accountID = acc.ID
 	}
 
-	controlProgram, err := a.accounts.CreateControlProgram(ctx, accountID, false, time.Time{})
+	controlProgram, err := bcr.accounts.CreateControlProgram(ctx, accountID, false, time.Time{})
 	if err != nil {
 		return nil, err
 	}
