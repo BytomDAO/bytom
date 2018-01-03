@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytom/common/bitutil"
 	"github.com/bytom/consensus/aihash/matrix"
+	"github.com/bytom/crypto/scrypt"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -52,6 +53,15 @@ func createSeed(preSeed *bc.Hash, blockHashs []*bc.Hash) []byte {
 // seed length is 32 bytes, dest is 16MB.
 func generateCache(dest []uint32, seed []byte) {
 	extSeed := extendSeed(seed)
+	cache := make([]uint32, 0)
+
+	xy := make([]uint32, 64)
+	v := make([]uint32, 32*1024)
+	for i := 0; i < 128; i++ {
+		scrypt.Smix(extSeed, 1, 1024, v, xy)
+		cache = append(cache, v)
+	}
+
 }
 
 // extend seed from 32 byte to 128 byte
