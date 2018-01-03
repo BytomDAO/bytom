@@ -6,6 +6,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
+	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/math/checked"
 )
@@ -135,4 +136,18 @@ func opTxSigHash(vm *virtualMachine) error {
 		return ErrContext
 	}
 	return vm.push(vm.context.TxSigHash(), false)
+}
+
+func opHash160(vm *virtualMachine) error {
+	data, err := vm.pop(false)
+	if err != nil {
+		return err
+	}
+
+	cost := int64(len(data) + 64)
+	if err = vm.applyCost(cost); err != nil {
+		return err
+	}
+
+	return vm.push(crypto.Ripemd160(data), false)
 }

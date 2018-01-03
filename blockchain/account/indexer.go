@@ -16,22 +16,8 @@ const (
 
 //UTXOKey makes a account unspent outputs key to store
 func UTXOKey(id bc.Hash) []byte {
-	name := string(id.Bytes())
+	name := id.String()
 	return []byte(UTXOPreFix + name)
-}
-
-//UTXO is a structure about account unspent outputs
-type UTXO struct {
-	OutputID     []byte
-	AssetID      []byte
-	Amount       uint64
-	AccountID    string
-	ProgramIndex uint64
-	Program      []byte
-	SourceID     []byte
-	SourcePos    uint64
-	RefData      []byte
-	Change       bool
 }
 
 var emptyJSONObject = json.RawMessage(`{}`)

@@ -52,6 +52,19 @@ func CoinbaseProgram(pubkeys []ed25519.PublicKey, nrequired int, height uint64) 
 	return builder.Build()
 }
 
+// P2PKHSigProgram generates the script for control with pubkey hash
+func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_DUP)
+	builder.AddOp(vm.OP_HASH160)
+	builder.AddData(pubkeyHash)
+	builder.AddOp(vm.OP_EQUALVERIFY)
+	builder.AddOp(vm.OP_TXSIGHASH)
+	builder.AddOp(vm.OP_SWAP)
+	builder.AddOp(vm.OP_CHECKSIG)
+	return builder.Build()
+}
+
 // P2SPMultiSigProgram generates the script for contorl transaction output
 func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, error) {
 	builder := NewBuilder()

@@ -3,13 +3,11 @@ package blockchain
 import (
 	"context"
 	"encoding/json"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/txbuilder"
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/reqid"
@@ -18,23 +16,25 @@ import (
 
 var defaultTxTTL = 5 * time.Minute
 
-func (a *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
+func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
 	var decoder func([]byte) (txbuilder.Action, error)
 	switch action {
 	case "control_account":
-		decoder = a.accounts.DecodeControlAction
+		decoder = bcr.accounts.DecodeControlAction
+	case "control_address":
+		decoder = txbuilder.DecodeControlAddressAction
 	case "control_program":
 		decoder = txbuilder.DecodeControlProgramAction
 	case "control_receiver":
 		decoder = txbuilder.DecodeControlReceiverAction
 	case "issue":
-		decoder = a.assets.DecodeIssueAction
+		decoder = bcr.assets.DecodeIssueAction
 	case "retire":
 		decoder = txbuilder.DecodeRetireAction
 	case "spend_account":
-		decoder = a.accounts.DecodeSpendAction
+		decoder = bcr.accounts.DecodeSpendAction
 	case "spend_account_unspent_output":
-		decoder = a.accounts.DecodeSpendUTXOAction
+		decoder = bcr.accounts.DecodeSpendUTXOAction
 	case "set_transaction_reference_data":
 		decoder = txbuilder.DecodeSetTxRefDataAction
 	default:
@@ -43,8 +43,8 @@ func (a *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilde
 	return decoder, true
 }
 
-func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
-	err := a.filterAliases(ctx, req)
+func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
+	err := bcr.filterAliases(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) 
 		if !ok {
 			return nil, errors.WithDetailf(errBadActionType, "no action type provided on action %d", i)
 		}
-		decoder, ok := a.actionDecoder(typ)
+		decoder, ok := bcr.actionDecoder(typ)
 		if !ok {
 			return nil, errors.WithDetailf(errBadActionType, "unknown action type %q on action %d", typ, i)
 		}
@@ -100,41 +100,29 @@ func (a *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) 
 }
 
 // POST /build-transaction
-func (a *BlockchainReactor) build(ctx context.Context, buildReqs []*BuildRequest) (interface{}, error) {
-	responses := make([]interface{}, len(buildReqs))
-	var wg sync.WaitGroup
-	wg.Add(len(responses))
+func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) Response {
 
-	for i := 0; i < len(responses); i++ {
-		go func(i int) {
-			subctx := reqid.NewSubContext(ctx, reqid.New())
-			defer wg.Done()
-			defer batchRecover(subctx, &responses[i])
+	subctx := reqid.NewSubContext(ctx, reqid.New())
 
-			tmpl, err := a.buildSingle(subctx, buildReqs[i])
-			if err != nil {
-				responses[i] = err
-			} else {
-				responses[i] = tmpl
-			}
-		}(i)
+	tmpl, err := bcr.buildSingle(subctx, buildReqs)
+	if err != nil {
+		return resWrapper(nil, err)
 	}
 
-	wg.Wait()
-	return responses, nil
+	return resWrapper(tmpl)
 }
 
-func (a *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template, waitUntil string) (interface{}, error) {
+func (bcr *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {
 	if tpl.Transaction == nil {
 		return nil, errors.Wrap(txbuilder.ErrMissingRawTx)
 	}
 
-	err := a.finalizeTxWait(ctx, tpl, waitUntil)
+	err := txbuilder.FinalizeTx(ctx, bcr.chain, tpl.Transaction)
 	if err != nil {
 		return nil, errors.Wrapf(err, "tx %s", tpl.Transaction.ID.String())
 	}
 
-	return map[string]string{"id": tpl.Transaction.ID.String()}, nil
+	return map[string]string{"txid": tpl.Transaction.ID.String()}, nil
 }
 
 // finalizeTxWait calls FinalizeTx and then waits for confirmation of
@@ -142,15 +130,15 @@ func (a *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Tem
 // confirmed on the blockchain.  ErrRejected means a conflicting tx is
 // on the blockchain.  context.DeadlineExceeded means ctx is an
 // expiring context that timed out.
-func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbuilder.Template, waitUntil string) error {
+func (bcr *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbuilder.Template, waitUntil string) error {
 	// Use the current generator height as the lower bound of the block height
 	// that the transaction may appear in.
-	localHeight := a.chain.Height()
+	localHeight := bcr.chain.Height()
 	//generatorHeight := localHeight
 
 	log.WithField("localHeight", localHeight).Info("Starting to finalize transaction")
 
-	err := txbuilder.FinalizeTx(ctx, a.chain, txTemplate.Transaction)
+	err := txbuilder.FinalizeTx(ctx, bcr.chain, txTemplate.Transaction)
 	if err != nil {
 		return err
 	}
@@ -170,7 +158,7 @@ func (a *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *txbu
 	return nil
 }
 
-func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx, height uint64) (uint64, error) {
+func (bcr *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx, height uint64) (uint64, error) {
 	log.Printf("waitForTxInBlock function")
 	for {
 		height++
@@ -178,8 +166,8 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 		case <-ctx.Done():
 			return 0, ctx.Err()
 
-		case <-a.chain.BlockWaiter(height):
-			b, err := a.chain.GetBlockByHeight(height)
+		case <-bcr.chain.BlockWaiter(height):
+			b, err := bcr.chain.GetBlockByHeight(height)
 			if err != nil {
 				return 0, errors.Wrap(err, "getting block that just landed")
 			}
@@ -193,7 +181,7 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 			// might still be in pool or might be rejected; we can't
 			// tell definitively until its max time elapses.
 			// Re-insert into the pool in case it was dropped.
-			err = txbuilder.FinalizeTx(ctx, a.chain, tx)
+			err = txbuilder.FinalizeTx(ctx, bcr.chain, tx)
 			if err != nil {
 				return 0, err
 			}
@@ -204,41 +192,39 @@ func (a *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx,
 	}
 }
 
-type SubmitArg struct {
-	Transactions []txbuilder.Template
-	Wait         chainjson.Duration
-	WaitUntil    string `json:"wait_until"` // values none, confirmed, processed. default: processed
+// POST /submit-transaction
+func (bcr *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Template) Response {
+
+	txid, err := bcr.submitSingle(nil, tpl)
+	if err != nil {
+		log.WithField("err", err).Error("submit single tx")
+		return resWrapper(nil, err)
+	}
+
+	log.WithField("txid", txid).Info("submit single tx")
+	return resWrapper(txid)
 }
 
-// POST /submit-transaction
-func (a *BlockchainReactor) submit(ctx context.Context, x SubmitArg) (interface{}, error) {
-	// Setup a timeout for the provided wait duration.
-	timeout := x.Wait.Duration
-	if timeout <= 0 {
-		timeout = 30 * time.Second
-	}
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+// POST /sign-submit-transaction
+func (bcr *BlockchainReactor) signSubmit(ctx context.Context, x struct {
+	Auth string             `json:"auth"`
+	Txs  txbuilder.Template `json:"transaction"`
+}) Response {
 
-	responses := make([]interface{}, len(x.Transactions))
-	var wg sync.WaitGroup
-	wg.Add(len(responses))
-	for i := range responses {
-		go func(i int) {
-			subctx := reqid.NewSubContext(ctx, reqid.New())
-			defer wg.Done()
-			defer batchRecover(subctx, &responses[i])
-
-			tx, err := a.submitSingle(subctx, &x.Transactions[i], x.WaitUntil)
-			log.WithFields(log.Fields{"err": err, "tx": tx}).Info("submit single tx")
-			if err != nil {
-				responses[i] = err
-			} else {
-				responses[i] = tx
-			}
-		}(i)
+	var err error
+	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Auth, bcr.pseudohsmSignTemplate); err != nil {
+		log.WithField("build err", err).Error("fail on sign transaction.")
+		return resWrapper(nil, err)
 	}
 
-	wg.Wait()
-	return responses, nil
+	log.Info("Sign Transaction complete.")
+
+	txID, err := bcr.submitSingle(nil, &x.Txs)
+	if err != nil {
+		log.WithField("err", err).Error("submit single tx")
+		return resWrapper(nil, err)
+	}
+
+	log.WithField("txid", txID["txid"]).Info("submit single tx")
+	return resWrapper(txID)
 }

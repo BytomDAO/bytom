@@ -112,7 +112,10 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accessto
 	mux.Handle("/", &coreHandler)
 
 	var handler http.Handler = mux
-	handler = AuthHandler(handler, accessTokens)
+
+	if config.Auth.Disable == false {
+		handler = AuthHandler(handler, accessTokens)
+	}
 	handler = RedirectHandler(handler)
 
 	secureheader.DefaultConfig.PermitClearLoopback = true
@@ -176,7 +179,7 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
 
-	if chain.Height() == 0 {
+	if chain.BestBlockHash() == nil {
 		if err := chain.SaveBlock(genesisBlock); err != nil {
 			cmn.Exit(cmn.Fmt("Failed to save genesisBlock to store: %v", err))
 		}
@@ -199,28 +202,14 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	if config.Wallet.Enable {
-
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
-
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-
-		wallet = w.NewWallet(walletDB)
-
-		go wallet.WalletUpdate(chain)
-
+		wallet, err = w.NewWallet(walletDB, accounts, assets, chain)
+		if err != nil {
+			log.WithField("error", err).Error("init NewWallet")
+		}
 	}
-	//Todo HSM
-	/*
-		if config.HsmUrl != ""{
-			// todo remoteHSM
-			cmn.Exit(cmn.Fmt("not implement"))
-		} else {
-			hsm, err = pseudohsm.New(config.KeysDir())
-			if err != nil {
-				cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
-			}
-		}*/
 
 	hsm, err := pseudohsm.New(config.KeysDir())
 	if err != nil {

@@ -3,12 +3,12 @@ package blockchain
 import (
 	"context"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/net/http/httperror"
-	"github.com/bytom/net/http/httpjson"
-	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -20,71 +20,64 @@ func init() {
 	errorFormatter.Errors[pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
 
-func (a *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct{ Alias, Password string }) (result *pseudohsm.XPub, err error) {
-	return a.hsm.XCreate(in.Alias, in.Password)
-}
-
-func (a *BlockchainReactor) pseudohsmListKeys(ctx context.Context, query requestQuery) (page, error) {
-	limit := query.PageSize
-	if limit == 0 {
-		limit = defGenericPageSize // defGenericPageSize = 100
-	}
-
-	xpubs, after, err := a.hsm.ListKeys(query.After, limit)
+func (bcr *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct {
+	Alias    string `json:"alias"`
+	Password string `json:"password"`
+}) Response {
+	xpub, err := bcr.hsm.XCreate(in.Alias, in.Password)
 	if err != nil {
-		return page{}, err
+		return resWrapper(nil, err)
 	}
-
-	var items []interface{}
-	for _, xpub := range xpubs {
-		items = append(items, xpub)
-	}
-
-	query.After = after
-
-	return page{
-		Items:    httpjson.Array(items),
-		LastPage: len(xpubs) < limit,
-		Next:     query,
-	}, nil
+	return resWrapper(xpub)
 }
 
-func (a *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
-	Password string
+func (bcr *BlockchainReactor) pseudohsmListKeys(ctx context.Context) Response {
+	xpubs, err := bcr.hsm.ListKeys()
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+
+	return resWrapper(xpubs)
+}
+
+func (bcr *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
+	Password string       `json:"password"`
 	XPub     chainkd.XPub `json:"xpubs"`
-}) error {
-	return a.hsm.XDelete(x.XPub, x.Password)
-}
-
-func (a *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
-	Auth string
-	Txs  []txbuilder.Template `json:"transactions"`
-}) interface{} {
-	resp := make([]interface{}, len(x.Txs))
-	for i, tx := range x.Txs {
-		if err := txbuilder.Sign(ctx, &tx, nil, x.Auth, a.pseudohsmSignTemplate); err != nil {
-			log.WithFields(log.Fields{"tx": tx, "build err": err}).Error("fail on sign transaction.")
-			resp[i] = errorFormatter.Format(err)
-		} else {
-			resp[i] = tx
-		}
+}) Response {
+	if err := bcr.hsm.XDelete(x.XPub, x.Password); err != nil {
+		return resWrapper(nil, err)
 	}
-	log.WithField("resp", resp).Info("Sign Transaction complete.")
-	return resp
+
+	return resWrapper(nil)
 }
 
-func (a *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
-	sigBytes, err := a.hsm.XSign(xpub, path, data[:], password)
+func (bcr *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
+	Auth string             `json:"auth"`
+	Txs  txbuilder.Template `json:"transaction"`
+}) Response {
+	var err error
+	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Auth, bcr.pseudohsmSignTemplate); err != nil {
+		log.WithField("build err", err).Error("fail on sign transaction.")
+		return resWrapper(nil, err)
+	}
+
+	log.Info("Sign Transaction complete.")
+	return resWrapper(&x.Txs)
+}
+
+func (bcr *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
+	sigBytes, err := bcr.hsm.XSign(xpub, path, data[:], password)
 	if err == pseudohsm.ErrNoKey {
+		log.Error(err)
 		return nil, nil
 	}
 	return sigBytes, err
 }
 
-func (a *BlockchainReactor) pseudohsmResetPassword(ctx context.Context, x struct {
+func (bcr *BlockchainReactor) pseudohsmResetPassword(ctx context.Context, x struct {
 	OldPassword string
 	NewPassword string
 	XPub        chainkd.XPub `json:"xpubs"`
 }) error {
-	return a.hsm.ResetPassword(x.XPub, x.OldPassword, x.NewPassword)
+	return bcr.hsm.ResetPassword(x.XPub, x.OldPassword, x.NewPassword)
 }

@@ -2,14 +2,24 @@ package wallet
 
 import (
 	"encoding/json"
+	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/go-wire/data/base58"
 	"github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
+
+//SINGLE single sign
+const SINGLE = 1
 
 var walletKey = []byte("walletInfo")
 
@@ -21,114 +31,177 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB     db.DB
-	status StatusInfo
+	DB             db.DB
+	status         StatusInfo
+	AccountMgr     *account.Manager
+	AssetReg       *asset.Registry
+	chain          *protocol.Chain
+	rescanProgress chan struct{}
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB) *Wallet {
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
-		DB: walletDB,
+		DB:             walletDB,
+		AccountMgr:     account,
+		AssetReg:       asset,
+		chain:          chain,
+		rescanProgress: make(chan struct{}, 1),
 	}
-	walletInfo, err := w.GetWalletInfo()
-	if err != nil {
-		log.WithField("warn", err).Warn("get wallet info")
+
+	if err := w.loadWalletInfo(); err != nil {
+		return nil, err
 	}
-	w.status.Height = walletInfo.Height
-	w.status.Hash = walletInfo.Hash
-	return w
+
+	go w.walletUpdater()
+	return w, nil
 }
 
 //GetWalletInfo return stored wallet info and nil,if error,
 //return initial wallet info and err
-func (w *Wallet) GetWalletInfo() (StatusInfo, error) {
-	var info StatusInfo
-	var rawWallet []byte
-
-	if rawWallet = w.DB.Get(walletKey); rawWallet == nil {
-		return info, nil
+func (w *Wallet) loadWalletInfo() error {
+	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
+		return json.Unmarshal(rawWallet, &w.status)
 	}
 
-	if err := json.Unmarshal(rawWallet, &info); err != nil {
-		return info, err
+	block, err := w.chain.GetBlockByHeight(0)
+	if err != nil {
+		return err
 	}
-
-	return info, nil
-
+	if err := w.attachBlock(block); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (w *Wallet) commitWalletInfo(batch *db.Batch) error {
-	var info StatusInfo
-
-	info.Height = w.status.Height
-	info.Hash = w.status.Hash
-
-	rawWallet, err := json.Marshal(info)
+func (w *Wallet) commitWalletInfo(batch db.Batch) error {
+	rawWallet, err := json.Marshal(w.status)
 	if err != nil {
 		log.WithField("err", err).Error("save wallet info")
 		return err
 	}
-	//update wallet to db
-	(*batch).Set(walletKey, rawWallet)
-	//commit to db
-	(*batch).Write()
+
+	batch.Set(walletKey, rawWallet)
+	batch.Write()
+	return nil
+}
+
+func (w *Wallet) attachBlock(block *legacy.Block) error {
+	if block.PreviousBlockHash != w.status.Hash {
+		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
+		return nil
+	}
+
+	storeBatch := w.DB.NewBatch()
+	w.indexTransactions(storeBatch, block)
+	w.buildAccountUTXOs(storeBatch, block)
+
+	w.status.Height = block.Height
+	w.status.Hash = block.Hash()
+	return w.commitWalletInfo(storeBatch)
+}
+
+func (w *Wallet) detachBlock(block *legacy.Block) error {
+	storeBatch := w.DB.NewBatch()
+	w.reverseAccountUTXOs(storeBatch, block)
+	w.deleteTransactions(storeBatch, w.status.Height)
+
+	w.status.Height = block.Height - 1
+	w.status.Hash = block.PreviousBlockHash
+	return w.commitWalletInfo(storeBatch)
+}
+
+//WalletUpdate process every valid block and reverse every invalid block which need to rollback
+func (w *Wallet) walletUpdater() {
+	for {
+		getRescanNotification(w)
+		for !w.chain.InMainChain(w.status.Height, w.status.Hash) {
+			block, err := w.chain.GetBlockByHash(&w.status.Hash)
+			if err != nil {
+				log.WithField("err", err).Error("walletUpdater GetBlockByHash")
+				return
+			}
+
+			if err := w.detachBlock(block); err != nil {
+				log.WithField("err", err).Error("walletUpdater detachBlock")
+				return
+			}
+		}
+
+		block, _ := w.chain.GetBlockByHeight(w.status.Height + 1)
+		if block == nil {
+			<-w.chain.BlockWaiter(w.status.Height + 1)
+			continue
+		}
+
+		if err := w.attachBlock(block); err != nil {
+			log.WithField("err", err).Error("walletUpdater stop")
+			return
+		}
+	}
+}
+
+func getRescanNotification(w *Wallet) {
+	select {
+	case <-w.rescanProgress:
+		w.status.Height = 1
+		block, _ := w.chain.GetBlockByHeight(w.status.Height)
+		w.status.Hash = block.Hash()
+	default:
+		return
+	}
+}
+
+// ExportAccountPrivKey exports the account private key as a WIF for encoding as a string
+// in the Wallet Import Formt.
+func (w *Wallet) ExportAccountPrivKey(hsm *pseudohsm.HSM, xpub chainkd.XPub, auth string) (*string, error) {
+	xprv, err := hsm.LoadChainKDKey(xpub, auth)
+	if err != nil {
+		return nil, err
+	}
+	var hashed [32]byte
+	sha3pool.Sum256(hashed[:], xprv[:])
+
+	tmp := append(xprv[:], hashed[:4]...)
+	res := base58.Encode(tmp)
+	return &res, nil
+}
+
+// ImportAccountPrivKey imports the account key in the Wallet Import Formt.
+func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, alias, auth string, index uint64) (*pseudohsm.XPub, error) {
+	xpub, _, err := hsm.ImportXPrvKey(auth, alias, xprv)
+	if err != nil {
+		return nil, err
+	}
+	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, alias, nil, "")
+	if err != nil {
+		return nil, err
+	}
+	if err := w.recoveryAccountWalletDB(newAccount, xpub, index); err != nil {
+		return nil, err
+	}
+	return xpub, nil
+}
+
+func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
+	if err := w.createProgram(account, XPub, index); err != nil {
+		return err
+	}
+	w.rescanBlocks()
+
+	return nil
+}
+
+func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
+	for i := uint64(0); i < index; i++ {
+		if _, err := w.AccountMgr.CreateControlProgram(nil, account.ID, true, time.Now()); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
-func (w *Wallet) WalletUpdate(c *protocol.Chain) {
-	var err error
-	var block *legacy.Block
-
-	storeBatch := w.DB.NewBatch()
-
-LOOP:
-
-	for !c.InMainChain(w.status.Height, w.status.Hash) {
-		if block, err = c.GetBlockByHash(&w.status.Hash); err != nil {
-			log.WithField("err", err).Error("get block by hash")
-			return
-		}
-
-		//Reverse this block
-		reverseAccountUTXOs(&storeBatch, block, w)
-		deleteTransactions(&storeBatch, w.status.Height, block, w)
-		log.WithField("Height", w.status.Height).Info("start rollback this block")
-
-		w.status.Height = block.Height - 1
-		w.status.Hash = block.PreviousBlockHash
-
-		//update wallet info and commit batch write
-		if err := w.commitWalletInfo(&storeBatch); err != nil {
-			return
-		}
-	}
-
-	block, _ = c.GetBlockByHeight(w.status.Height + 1)
-	//if we already handled the tail of the chain, we wait
-	if block == nil {
-		<-c.BlockWaiter(w.status.Height + 1)
-		if block, err = c.GetBlockByHeight(w.status.Height + 1); err != nil {
-			log.WithField("err", err).Error("wallet get block by height")
-			return
-		}
-	}
-
-	//if false, means that rollback operation is necessary,then goto LOOP
-	if block.PreviousBlockHash == w.status.Hash {
-		//next loop will save
-		w.status.Height = block.Height
-		w.status.Hash = block.Hash()
-
-		indexTransactions(&storeBatch, block, w)
-		buildAccountUTXOs(&storeBatch, block, w)
-
-		//update wallet info and commit batch write
-		if err := w.commitWalletInfo(&storeBatch); err != nil {
-			return
-		}
-	}
-
-	//goto next loop
-	goto LOOP
+func (w *Wallet) rescanBlocks() {
+	w.rescanProgress <- struct{}{}
 }

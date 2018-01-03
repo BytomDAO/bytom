@@ -11,7 +11,7 @@ import (
 
 //AnnotatedTx means an annotated transaction.
 type AnnotatedTx struct {
-	ID                     bc.Hash            `json:"tx_id"`
+	ID                     bc.Hash            `json:"id"`
 	Timestamp              time.Time          `json:"timestamp"`
 	BlockID                bc.Hash            `json:"block_id"`
 	BlockHeight            uint64             `json:"block_height"`

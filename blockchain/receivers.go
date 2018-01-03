@@ -6,18 +6,25 @@ import (
 )
 
 // POST /create-account-receiver
-func (a *BlockchainReactor) createAccountReceiver(ctx context.Context, ins struct {
+func (bcr *BlockchainReactor) createAccountReceiver(ctx context.Context, ins struct {
 	AccountInfo string    `json:"account_info"`
-	ExpiresAt   time.Time `json:"expires_at"`
-}) interface{} {
-	var response interface{}
-
-	receiver, err := a.accounts.CreateReceiver(nil, ins.AccountInfo, ins.ExpiresAt)
+	ExpiresAt   time.Time `json:"expires_at,omitempty"`
+}) Response {
+	receiver, err := bcr.accounts.CreateReceiver(nil, ins.AccountInfo, ins.ExpiresAt)
 	if err != nil {
-		response = err
-	} else {
-		response = receiver
+		return resWrapper(nil, err)
 	}
 
-	return response
+	return resWrapper(*receiver)
+}
+
+func (bcr *BlockchainReactor) createAccountAddress(ctx context.Context, ins struct {
+	AccountInfo string    `json:"account_info"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}) Response {
+	receiver, err := bcr.accounts.CreateAddress(ctx, ins.AccountInfo, ins.ExpiresAt)
+	if err != nil {
+		return resWrapper(nil, err)
+	}
+	return resWrapper(receiver)
 }
