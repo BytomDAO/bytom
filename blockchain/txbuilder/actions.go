@@ -16,6 +16,7 @@ import (
 
 var retirementProgram = []byte{byte(vm.OP_FAIL)}
 
+// DecodeControlReceiverAction convert input data to action struct
 func DecodeControlReceiverAction(data []byte) (Action, error) {
 	a := new(controlReceiverAction)
 	err := stdjson.Unmarshal(data, a)
@@ -52,6 +53,7 @@ func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) e
 	return b.AddOutput(out)
 }
 
+// DecodeControlAddressAction convert input data to action struct
 func DecodeControlAddressAction(data []byte) (Action, error) {
 	a := new(controlAddressAction)
 	err := stdjson.Unmarshal(data, a)
@@ -99,6 +101,7 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 	return b.AddOutput(out)
 }
 
+// DecodeControlProgramAction convert input data to action struct
 func DecodeControlProgramAction(data []byte) (Action, error) {
 	a := new(controlProgramAction)
 	err := stdjson.Unmarshal(data, a)
@@ -127,6 +130,7 @@ func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) er
 	return b.AddOutput(out)
 }
 
+// DecodeSetTxRefDataAction convert input data to action struct
 func DecodeSetTxRefDataAction(data []byte) (Action, error) {
 	a := new(setTxRefDataAction)
 	err := stdjson.Unmarshal(data, a)
@@ -144,6 +148,7 @@ func (a *setTxRefDataAction) Build(ctx context.Context, b *TemplateBuilder) erro
 	return b.setReferenceData(a.Data)
 }
 
+// DecodeRetireAction convert input data to action struct
 func DecodeRetireAction(data []byte) (Action, error) {
 	a := new(retireAction)
 	err := stdjson.Unmarshal(data, a)

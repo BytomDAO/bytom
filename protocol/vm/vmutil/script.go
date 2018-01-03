@@ -65,6 +65,7 @@ func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
 	return builder.Build()
 }
 
+// P2SHProgram generates the script for control with script hash
 func P2SHProgram(scriptHash []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_DUP)

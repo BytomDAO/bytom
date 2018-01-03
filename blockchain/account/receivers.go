@@ -38,7 +38,7 @@ func (m *Manager) CreateReceiver(ctx context.Context, accountInfo string, expire
 	return receiver, nil
 }
 
-// CreateAddress creates a new address receiver for an account
+// CreateAddressReceiver creates a new address receiver for an account
 func (m *Manager) CreateAddressReceiver(ctx context.Context, accountInfo string, expiresAt time.Time) (*txbuilder.Receiver, error) {
 	if expiresAt.IsZero() {
 		expiresAt = time.Now().Add(defaultReceiverExpiry)

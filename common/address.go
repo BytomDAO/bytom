@@ -361,7 +361,7 @@ func (a *AddressWitnessScriptHash) WitnessProgram() []byte {
 	return a.witnessProgram[:]
 }
 
-// Hash160 returns the witness program of the AddressWitnessPubKeyHash as a
+// Sha256 returns the witness program of the AddressWitnessPubKeyHash as a
 // byte array.
 func (a *AddressWitnessScriptHash) Sha256() *[32]byte {
 	return &a.witnessProgram

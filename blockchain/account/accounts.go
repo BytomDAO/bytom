@@ -226,6 +226,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 	return account.Signer, nil
 }
 
+// GetAliasByID return the account alias by given ID
 func (m *Manager) GetAliasByID(id string) string {
 	var account Account
 
