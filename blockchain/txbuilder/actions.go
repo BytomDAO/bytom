@@ -80,14 +80,14 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 	if err != nil {
 		return err
 	}
-	pubkeyHash := address.ScriptAddress()
+	redeemContract := address.ScriptAddress()
 	program := []byte{}
 
 	switch address.(type) {
 	case *common.AddressWitnessPubKeyHash:
-		program, err = vmutil.P2PKHSigProgram(pubkeyHash)
+		program, err = vmutil.P2PKHSigProgram(redeemContract)
 	case *common.AddressWitnessScriptHash:
-		program, err = vmutil.P2SHProgram(pubkeyHash)
+		program, err = vmutil.P2SHProgram(redeemContract)
 	default:
 		return errors.New("unsupport address type")
 	}
