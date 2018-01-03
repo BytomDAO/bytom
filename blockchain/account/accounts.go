@@ -226,6 +226,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 	return account.Signer, nil
 }
 
+// GetAliasByID return the account alias by given ID
 func (m *Manager) GetAliasByID(id string) string {
 	var account Account
 
@@ -243,9 +244,18 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
-// CreateP2PKH generate an address for the select account
-func (m *Manager) CreateP2PKH(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
-	cp, err := m.createP2PKH(ctx, accountID, change, expiresAt)
+// CreateAddress generate an address for the select account
+func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool, expiresAt time.Time) (cp *CtrlProgram, err error) {
+	account, err := m.findByID(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+
+	if account.Quorum == 1 {
+		cp, err = m.createP2PKH(ctx, account, change, expiresAt)
+	} else {
+		cp, err = m.createP2SH(ctx, account, change, expiresAt)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -256,15 +266,7 @@ func (m *Manager) CreateP2PKH(ctx context.Context, accountID string, change bool
 	return cp, nil
 }
 
-func (m *Manager) createP2PKH(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
-	account, err := m.findByID(ctx, accountID)
-	if err != nil {
-		return nil, err
-	}
-	if account.Quorum != 1 {
-		return nil, ErrStandardQuorum
-	}
-
+func (m *Manager) createP2PKH(ctx context.Context, account *signers.Signer, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	idx, err := m.nextIndex(ctx)
 	if err != nil {
 		return nil, err
@@ -281,6 +283,42 @@ func (m *Manager) createP2PKH(ctx context.Context, accountID string, change bool
 	}
 
 	control, err := vmutil.P2PKHSigProgram([]byte(pubHash))
+	if err != nil {
+		return nil, err
+	}
+
+	return &CtrlProgram{
+		AccountID:      account.ID,
+		Address:        address.EncodeAddress(),
+		KeyIndex:       idx,
+		ControlProgram: control,
+		Change:         change,
+		ExpiresAt:      expiresAt,
+	}, nil
+}
+
+func (m *Manager) createP2SH(ctx context.Context, account *signers.Signer, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+	idx, err := m.nextIndex(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	path := signers.Path(account, signers.AccountKeySpace, idx)
+	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	derivedPKs := chainkd.XPubKeys(derivedXPubs)
+	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
+	if err != nil {
+		return nil, err
+	}
+	scriptHash := crypto.Sha256(signScript)
+
+	// TODO: pass different params due to config
+	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.MainNetParams)
+	if err != nil {
+		return nil, err
+	}
+
+	control, err := vmutil.P2SHProgram(scriptHash)
 	if err != nil {
 		return nil, err
 	}

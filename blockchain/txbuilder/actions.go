@@ -3,6 +3,7 @@ package txbuilder
 import (
 	"context"
 	stdjson "encoding/json"
+	"errors"
 
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
@@ -15,6 +16,7 @@ import (
 
 var retirementProgram = []byte{byte(vm.OP_FAIL)}
 
+// DecodeControlReceiverAction convert input data to action struct
 func DecodeControlReceiverAction(data []byte) (Action, error) {
 	a := new(controlReceiverAction)
 	err := stdjson.Unmarshal(data, a)
@@ -51,6 +53,7 @@ func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) e
 	return b.AddOutput(out)
 }
 
+// DecodeControlAddressAction convert input data to action struct
 func DecodeControlAddressAction(data []byte) (Action, error) {
 	a := new(controlAddressAction)
 	err := stdjson.Unmarshal(data, a)
@@ -75,10 +78,21 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 		return MissingFieldsError(missing...)
 	}
 
-	// TODO: call different stand script generate due to address start with 1 or 3
 	address, err := common.DecodeAddress(a.Address, &consensus.MainNetParams)
-	pubkeyHash := address.ScriptAddress()
-	program, err := vmutil.P2PKHSigProgram(pubkeyHash)
+	if err != nil {
+		return err
+	}
+	redeemContract := address.ScriptAddress()
+	program := []byte{}
+
+	switch address.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		program, err = vmutil.P2PKHSigProgram(redeemContract)
+	case *common.AddressWitnessScriptHash:
+		program, err = vmutil.P2SHProgram(redeemContract)
+	default:
+		return errors.New("unsupport address type")
+	}
 	if err != nil {
 		return err
 	}
@@ -87,6 +101,7 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 	return b.AddOutput(out)
 }
 
+// DecodeControlProgramAction convert input data to action struct
 func DecodeControlProgramAction(data []byte) (Action, error) {
 	a := new(controlProgramAction)
 	err := stdjson.Unmarshal(data, a)
@@ -115,6 +130,7 @@ func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) er
 	return b.AddOutput(out)
 }
 
+// DecodeSetTxRefDataAction convert input data to action struct
 func DecodeSetTxRefDataAction(data []byte) (Action, error) {
 	a := new(setTxRefDataAction)
 	err := stdjson.Unmarshal(data, a)
@@ -132,6 +148,7 @@ func (a *setTxRefDataAction) Build(ctx context.Context, b *TemplateBuilder) erro
 	return b.setReferenceData(a.Data)
 }
 
+// DecodeRetireAction convert input data to action struct
 func DecodeRetireAction(data []byte) (Action, error) {
 	a := new(retireAction)
 	err := stdjson.Unmarshal(data, a)

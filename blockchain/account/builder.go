@@ -8,11 +8,14 @@ import (
 
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/common"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
@@ -143,19 +146,40 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 // UtxoToInputs convert an utxo to the txinput
 func UtxoToInputs(account *signers.Signer, u *UTXO, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
 	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash, refData)
-
 	path := signers.Path(account, signers.AccountKeySpace, u.ControlProgramIndex)
 	sigInst := &txbuilder.SigningInstruction{}
+	if u.Address == "" {
+		sigInst.AddWitnessKeys(account.XPubs, path, account.Quorum)
+		return txInput, sigInst, nil
+	}
 
-	//TODO: handle pay to script hash address
-	if u.Address != "" {
+	address, err := common.DecodeAddress(u.Address, &consensus.MainNetParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	switch address.(type) {
+	case *common.AddressWitnessPubKeyHash:
 		sigInst.AddRawWitnessKeys(account.XPubs, path, account.Quorum)
 		derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 		derivedPK := derivedXPubs[0].PublicKey()
 		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
-	} else {
+
+	case *common.AddressWitnessScriptHash:
 		sigInst.AddWitnessKeys(account.XPubs, path, account.Quorum)
+		path := signers.Path(account, signers.AccountKeySpace, u.ControlProgramIndex)
+		derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+		derivedPKs := chainkd.XPubKeys(derivedXPubs)
+		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
+		if err != nil {
+			return nil, nil, err
+		}
+		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness(script))
+
+	default:
+		return nil, nil, errors.New("unsupport address type")
 	}
+
 	return txInput, sigInst, nil
 }
 

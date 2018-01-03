@@ -53,50 +53,78 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateP2PKH(nil, testAccount.Signer.ID, false, time.Now())
+	controlProg, err := accountManager.CreateAddress(nil, testAccount.Signer.ID, false, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	utxo := &account.UTXO{}
-	utxo.OutputID = bc.Hash{V0: 1}
-	utxo.SourceID = bc.Hash{V0: 2}
-	utxo.AssetID = *consensus.BTMAssetID
-	utxo.Amount = 1000000000
-	utxo.SourcePos = 0
-	utxo.ControlProgram = controlProg.ControlProgram
-	utxo.AccountID = controlProg.AccountID
-	utxo.Address = controlProg.Address
-	utxo.ControlProgramIndex = controlProg.KeyIndex
-	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo, nil)
+	utxo := mockUTXO(controlProg)
+	tpl, tx, err := mockTx(utxo, testAccount)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	b := txbuilder.NewBuilder(time.Now())
-	b.AddInput(txInput, sigInst)
-	out := legacy.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)}, nil)
-	b.AddOutput(out)
-	tpl, tx, err := b.Build()
+	if err := mockSign(tpl, hsm); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = validation.ValidateTx(legacy.MapTx(tx), mockBlock()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestP2SH(t *testing.T) {
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
+
+	chain, err := mockChain(testDB)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = txbuilder.Sign(nil, tpl, nil, "password", func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
-		sigBytes, err := hsm.XSign(xpub, path, data[:], password)
-		if err != nil {
-			return nil, nil
-		}
-		return sigBytes, err
-	})
+	accountManager := account.NewManager(testDB, chain)
+	hsm, err := pseudohsm.New(dirPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	bcBlock := &bc.Block{
-		BlockHeader: &bc.BlockHeader{Height: 1},
+	xpub1, err := hsm.XCreate("test_pub1", "password")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if _, err = validation.ValidateTx(legacy.MapTx(tx), bcBlock); err != nil {
+
+	xpub2, err := hsm.XCreate("test_pub2", "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, "testAccount", nil, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	controlProg, err := accountManager.CreateAddress(nil, testAccount.Signer.ID, false, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utxo := mockUTXO(controlProg)
+	tpl, tx, err := mockTx(utxo, testAccount)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := mockSign(tpl, hsm); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = validation.ValidateTx(legacy.MapTx(tx), mockBlock()); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -109,4 +137,47 @@ func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
 		return nil, err
 	}
 	return chain, nil
+}
+
+func mockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
+	utxo := &account.UTXO{}
+	utxo.OutputID = bc.Hash{V0: 1}
+	utxo.SourceID = bc.Hash{V0: 2}
+	utxo.AssetID = *consensus.BTMAssetID
+	utxo.Amount = 1000000000
+	utxo.SourcePos = 0
+	utxo.ControlProgram = controlProg.ControlProgram
+	utxo.AccountID = controlProg.AccountID
+	utxo.Address = controlProg.Address
+	utxo.ControlProgramIndex = controlProg.KeyIndex
+	return utxo
+}
+
+func mockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *legacy.TxData, error) {
+	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	b := txbuilder.NewBuilder(time.Now())
+	b.AddInput(txInput, sigInst)
+	out := legacy.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)}, nil)
+	b.AddOutput(out)
+	return b.Build()
+}
+
+func mockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM) error {
+	return txbuilder.Sign(nil, tpl, nil, "password", func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
+		sigBytes, err := hsm.XSign(xpub, path, data[:], password)
+		if err != nil {
+			return nil, nil
+		}
+		return sigBytes, err
+	})
+}
+
+func mockBlock() *bc.Block {
+	return &bc.Block{
+		BlockHeader: &bc.BlockHeader{Height: 1},
+	}
 }
