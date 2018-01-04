@@ -15,6 +15,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -76,7 +77,7 @@ type Asset struct {
 	AssetID           bc.AssetID             `json:"id"`
 	Alias             *string                `json:"alias"`
 	VMVersion         uint64                 `json:"vm_version"`
-	IssuanceProgram   []byte                 `json:"issue_program"`
+	IssuanceProgram   chainjson.HexBytes     `json:"issue_program"`
 	InitialBlockHash  bc.Hash                `json:"init_blockhash"`
 	Tags              map[string]interface{} `json:"tags"`
 	RawDefinitionByte []byte                 `json:"raw_definition_byte"`
