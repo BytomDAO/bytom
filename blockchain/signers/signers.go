@@ -46,11 +46,11 @@ var (
 // which is composed of a set of keys as well as
 // the amount of signatures needed for quorum.
 type Signer struct {
-	ID       string
-	Type     string
-	XPubs    []chainkd.XPub
-	Quorum   int
-	KeyIndex uint64
+	ID       string         `json:"id"`
+	Type     string         `json:"type"`
+	XPubs    []chainkd.XPub `json:"xpubs"`
+	Quorum   int            `json:"quorum"`
+	KeyIndex uint64         `json:"key_index"`
 }
 
 // Path returns the complete path for derived keys

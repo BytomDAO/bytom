@@ -111,8 +111,8 @@ func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) 
 // Account is structure of Bytom account
 type Account struct {
 	*signers.Signer
-	Alias string
-	Tags  map[string]interface{} `json:"tags,omitempty"`
+	Alias string                 `json:"alias"`
+	Tags  map[string]interface{} `json:"tags"`
 }
 
 // Create creates a new Account.
@@ -251,7 +251,7 @@ func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bo
 		return nil, err
 	}
 
-	if account.Quorum == 1 {
+	if len(account.XPubs) == 1 {
 		cp, err = m.createP2PKH(ctx, account, change, expiresAt)
 	} else {
 		cp, err = m.createP2SH(ctx, account, change, expiresAt)
@@ -486,45 +486,18 @@ func (m *Manager) DeleteAccount(in struct {
 	return nil
 }
 
-type annotatedAccount struct {
-	Alias    string           `json:"alias"`
-	ID       string           `json:"id"`
-	Quorum   int              `json:"quorum"`
-	KeyIndex uint64           `json:"key_index"`
-	XPubs    []chainkd.XPub   `json:"xpubs"`
-	Tags     *json.RawMessage `json:"tags"`
-}
-
 // ListAccounts will return the accounts in the db
-func (m *Manager) ListAccounts(id string) ([]annotatedAccount, error) {
-	account := Account{}
-	tmpAccount := annotatedAccount{}
-	accounts := make([]annotatedAccount, 0)
-	jsonTags := json.RawMessage(`{}`)
-
+func (m *Manager) ListAccounts(id string) ([]*Account, error) {
+	accounts := []*Account{}
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix + id))
 	defer accountIter.Release()
 
 	for accountIter.Next() {
+		account := &Account{}
 		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
 			return nil, err
 		}
-
-		tmpAccount.Alias = account.Alias
-		tmpAccount.ID = account.ID
-		tmpAccount.Quorum = account.Quorum
-		tmpAccount.KeyIndex = account.KeyIndex
-		tmpAccount.XPubs = account.XPubs
-		if account.Tags != nil {
-			t, err := json.Marshal(account.Tags)
-			if err != nil {
-				return nil, err
-			}
-			jsonTags = t
-		}
-		tmpAccount.Tags = &jsonTags
-
-		accounts = append(accounts, tmpAccount)
+		accounts = append(accounts, account)
 	}
 
 	return accounts, nil
