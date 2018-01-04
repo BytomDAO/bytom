@@ -111,6 +111,7 @@ func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) 
 // Account is structure of Bytom account
 type Account struct {
 	*signers.Signer
+	ID    string                 `json:"id"`
 	Alias string                 `json:"alias"`
 	Tags  map[string]interface{} `json:"tags"`
 }
@@ -121,21 +122,21 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, ErrDuplicateAlias
 	}
 
-	signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, accessToken)
+	id, signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, accessToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
-	account := &Account{Signer: signer, Alias: alias, Tags: tags}
+	account := &Account{Signer: signer, ID: id, Alias: alias, Tags: tags}
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return nil, ErrMarshalAccount
 	}
 	storeBatch := m.db.NewBatch()
 
-	accountID := Key(signer.ID)
+	accountID := Key(id)
 	storeBatch.Set(accountID, rawAccount)
-	storeBatch.Set(aliasKey(alias), []byte(signer.ID))
+	storeBatch.Set(aliasKey(alias), []byte(id))
 	storeBatch.Write()
 
 	return account, nil
@@ -181,7 +182,7 @@ func (m *Manager) UpdateTags(ctx context.Context, accountInfo string, tags map[s
 }
 
 // FindByAlias retrieves an account's Signer record by its alias
-func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signer, error) {
+func (m *Manager) FindByAlias(ctx context.Context, alias string) (*Account, error) {
 	m.cacheMu.Lock()
 	cachedID, ok := m.aliasCache.Get(alias)
 	m.cacheMu.Unlock()
@@ -202,12 +203,12 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 }
 
 // findByID returns an account's Signer record by its ID.
-func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, error) {
+func (m *Manager) findByID(ctx context.Context, id string) (*Account, error) {
 	m.cacheMu.Lock()
-	cachedSigner, ok := m.cache.Get(id)
+	cachedAccount, ok := m.cache.Get(id)
 	m.cacheMu.Unlock()
 	if ok {
-		return cachedSigner.(*signers.Signer), nil
+		return cachedAccount.(*Account), nil
 	}
 
 	rawAccount := m.db.Get(Key(id))
@@ -215,15 +216,15 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 		return nil, ErrFindAccount
 	}
 
-	var account Account
-	if err := json.Unmarshal(rawAccount, &account); err != nil {
+	account := &Account{}
+	if err := json.Unmarshal(rawAccount, account); err != nil {
 		return nil, err
 	}
 
 	m.cacheMu.Lock()
-	m.cache.Add(id, account.Signer)
+	m.cache.Add(id, account)
 	m.cacheMu.Unlock()
-	return account.Signer, nil
+	return account, nil
 }
 
 // GetAliasByID return the account alias by given ID
@@ -266,12 +267,12 @@ func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bo
 	return cp, nil
 }
 
-func (m *Manager) createP2PKH(ctx context.Context, account *signers.Signer, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	idx, err := m.nextIndex(ctx)
 	if err != nil {
 		return nil, err
 	}
-	path := signers.Path(account, signers.AccountKeySpace, idx)
+	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
@@ -297,13 +298,13 @@ func (m *Manager) createP2PKH(ctx context.Context, account *signers.Signer, chan
 	}, nil
 }
 
-func (m *Manager) createP2SH(ctx context.Context, account *signers.Signer, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	idx, err := m.nextIndex(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	path := signers.Path(account, signers.AccountKeySpace, idx)
+	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
@@ -344,7 +345,7 @@ func (m *Manager) createControlProgram(ctx context.Context, accountID string, ch
 		return nil, err
 	}
 
-	path := signers.Path(account, signers.AccountKeySpace, idx)
+	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	control, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
@@ -401,17 +402,17 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*Ctr
 
 // GetCoinbaseControlProgram will return a coinbase script
 func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
-	signerIter := m.db.IteratorPrefix([]byte(accountPrefix))
-	if !signerIter.Next() {
+	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
+	defer accountIter.Release()
+	if !accountIter.Next() {
 		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
 		return vmutil.CoinbaseProgram(nil, 0, height)
 	}
-	rawSigner := signerIter.Value()
-	signerIter.Release()
+	rawAccount := accountIter.Value()
 
-	signer := &signers.Signer{}
-	if err := json.Unmarshal(rawSigner, signer); err != nil {
-		log.Errorf("GetCoinbaseControlProgram: fail to unmarshal signer %v", err)
+	account := &Account{}
+	if err := json.Unmarshal(rawAccount, account); err != nil {
+		log.Errorf("GetCoinbaseControlProgram: fail to unmarshal account %v", err)
 		return vmutil.CoinbaseProgram(nil, 0, height)
 	}
 
@@ -421,17 +422,17 @@ func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
 		log.Errorf("GetCoinbaseControlProgram: fail to get nextIndex %v", err)
 		return vmutil.CoinbaseProgram(nil, 0, height)
 	}
-	path := signers.Path(signer, signers.AccountKeySpace, idx)
-	derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
+	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 
-	script, err := vmutil.CoinbaseProgram(derivedPKs, signer.Quorum, height)
+	script, err := vmutil.CoinbaseProgram(derivedPKs, account.Quorum, height)
 	if err != nil {
 		return script, err
 	}
 
 	err = m.insertAccountControlProgram(ctx, &CtrlProgram{
-		AccountID:      signer.ID,
+		AccountID:      account.ID,
 		KeyIndex:       idx,
 		ControlProgram: script,
 		Change:         false,

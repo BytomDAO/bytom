@@ -53,7 +53,7 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.Signer.ID, false, time.Now())
+	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +109,7 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.Signer.ID, false, time.Now())
+	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -72,8 +72,8 @@ type Registry struct {
 
 //Asset describe asset on bytom chain
 type Asset struct {
-	AssetID bc.AssetID
 	*signers.Signer
+	AssetID           bc.AssetID             `json:"id"`
 	Alias             *string                `json:"alias"`
 	VMVersion         uint64                 `json:"vm_version"`
 	IssuanceProgram   []byte                 `json:"issue_program"`
@@ -94,7 +94,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		return nil, ErrDuplicateAlias
 	}
 
-	assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, clientToken)
+	_, assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, err
 	}
