@@ -93,8 +93,8 @@ var buildControlAddressReqFmt = `
 var buildControlAddressReqFmtByAlias = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_alias": "%s"},
-		{"type": "spend_account", "asset_id": "%s","amount": %s, "account_alias": "%s"},
-		{"type": "control_address", "asset_id": "%s", "amount": %s,"address": "%s"}
+		{"type": "spend_account", "asset_alias": "%s","amount": %s, "account_alias": "%s"},
+		{"type": "control_address", "asset_alias": "%s", "amount": %s,"address": "%s"}
 	]}`
 
 var buildTransactionCmd = &cobra.Command{
