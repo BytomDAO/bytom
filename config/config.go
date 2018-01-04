@@ -152,7 +152,7 @@ type RPCConfig struct {
 
 func DefaultRPCConfig() *RPCConfig {
 	return &RPCConfig{
-		ListenAddress:     "tcp://0.0.0.0:46657",
+		ListenAddress:     "tcp://0.0.0.0:9888",
 		GRPCListenAddress: "",
 		Unsafe:            false,
 	}
