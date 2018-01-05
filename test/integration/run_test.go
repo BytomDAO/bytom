@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -42,6 +41,7 @@ func mockConfig() *cfg.Config {
 	var config = cfg.DefaultConfig()
 	config.Wallet.Enable = true
 	config.Mining = true
+	config.ApiAddress = "127.0.0.1:9888"
 	return config
 }
 
@@ -50,8 +50,11 @@ func testNet() bool {
 	if exitCode != Success {
 		return false
 	}
-	fmt.Println("net res:%v", data)
-	return true
+	dataMap, ok := data.(map[string]interface{})
+	if ok && dataMap["listening"].(bool) && dataMap["syncing"].(bool) && dataMap["mining"].(bool) {
+		return true
+	}
+	return false
 }
 
 func TestRunNode(t *testing.T) {
@@ -63,7 +66,7 @@ func TestRunNode(t *testing.T) {
 	}
 
 	go func() {
-		time.Sleep(5000 * time.Millisecond)
+		time.Sleep(3000 * time.Millisecond)
 		if testNet() {
 			os.Exit(0)
 		} else {
