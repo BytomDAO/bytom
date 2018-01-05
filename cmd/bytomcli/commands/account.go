@@ -107,10 +107,8 @@ var deleteAccountCmd = &cobra.Command{
 
 var updateAccountTagsCmd = &cobra.Command{
 	Use:   "update-account-tags <accountID|alias>",
-	Short: "Add, update or delete the account tags",
-	Long: `If the tags match the pattern 'key:value', add or update them.
-If the tags match the pattern 'key:', delete them.`,
-	Args: cobra.ExactArgs(1),
+	Short: "Update the account tags",
+	Args:  cobra.ExactArgs(1),
 	PreRun: func(cmd *cobra.Command, args []string) {
 		cmd.MarkFlagRequired("tags")
 	},
