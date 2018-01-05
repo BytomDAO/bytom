@@ -3,7 +3,6 @@ package asset
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 
 	"github.com/golang/groupcache/lru"
@@ -16,6 +15,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -73,15 +73,15 @@ type Registry struct {
 
 //Asset describe asset on bytom chain
 type Asset struct {
-	AssetID          bc.AssetID
-	Alias            *string
-	VMVersion        uint64
-	IssuanceProgram  []byte
-	InitialBlockHash bc.Hash
 	*signers.Signer
-	Tags              map[string]interface{}
-	RawDefinitionByte []byte
-	DefinitionMap     map[string]interface{}
+	AssetID           bc.AssetID             `json:"id"`
+	Alias             *string                `json:"alias"`
+	VMVersion         uint64                 `json:"vm_version"`
+	IssuanceProgram   chainjson.HexBytes     `json:"issue_program"`
+	InitialBlockHash  bc.Hash                `json:"init_blockhash"`
+	Tags              map[string]interface{} `json:"tags"`
+	RawDefinitionByte []byte                 `json:"raw_definition_byte"`
+	DefinitionMap     map[string]interface{} `json:"definition"`
 }
 
 //RawDefinition return asset in the raw format
@@ -95,7 +95,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		return nil, ErrDuplicateAlias
 	}
 
-	assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, clientToken)
+	_, assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, clientToken)
 	if err != nil {
 		return nil, err
 	}
@@ -261,62 +261,19 @@ func (reg *Registry) GetAliasByID(id string) string {
 	return *asset.Alias
 }
 
-type annotatedAsset struct {
-	AssetID          string           `json:"id"`
-	Alias            string           `json:"alias"`
-	VMVersion        uint64           `json:"vm_version"`
-	IssuanceProgram  string           `json:"issue_program"`
-	InitialBlockHash string           `json:"init_blockhash"`
-	XPubs            []chainkd.XPub   `json:"xpubs"`
-	Quorum           int              `json:"quorum"`
-	KeyIndex         uint64           `json:"key_index"`
-	Definition       *json.RawMessage `json:"definition"`
-	Tags             *json.RawMessage `json:"tags"`
-}
-
 // ListAssets returns the accounts in the db
-func (reg *Registry) ListAssets(id string) ([]annotatedAsset, error) {
-	asset := Asset{}
-	tmpAsset := annotatedAsset{}
-	assets := make([]annotatedAsset, 0)
-	jsonTags := json.RawMessage(`{}`)
-	jsonDefinition := json.RawMessage(`{}`)
-
+func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
+	assets := []*Asset{}
 	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix + id))
 	defer assetIter.Release()
 
 	for assetIter.Next() {
-		if err := json.Unmarshal(assetIter.Value(), &asset); err != nil {
+		asset := &Asset{}
+		if err := json.Unmarshal(assetIter.Value(), asset); err != nil {
 			return nil, err
 		}
-
-		tmpAsset.AssetID = asset.AssetID.String()
-		tmpAsset.Alias = *asset.Alias
-		tmpAsset.VMVersion = asset.VMVersion
-		tmpAsset.InitialBlockHash = asset.InitialBlockHash.String()
-		tmpAsset.IssuanceProgram = fmt.Sprintf("%x", asset.IssuanceProgram)
-		tmpAsset.XPubs = asset.XPubs
-		tmpAsset.Quorum = asset.Quorum
-		tmpAsset.KeyIndex = asset.KeyIndex
-
-		// a.RawDefinition is the asset definition as it appears on the
-		// blockchain, so it's untrusted and may not be valid json.
-		if isValidJSON(asset.RawDefinition()) {
-			jsonDefinition = json.RawMessage(asset.RawDefinition())
-		}
-		tmpAsset.Definition = &jsonDefinition
-		if asset.Tags != nil {
-			t, err := json.Marshal(asset.Tags)
-			if err != nil {
-				return nil, err
-			}
-			jsonTags = t
-		}
-		tmpAsset.Tags = &jsonTags
-
-		assets = append(assets, tmpAsset)
+		assets = append(assets, asset)
 	}
-
 	return assets, nil
 }
 

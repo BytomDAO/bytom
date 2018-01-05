@@ -63,7 +63,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
 	for _, r := range res.UTXOs {
-		txInput, sigInst, err := UtxoToInputs(acct, r, a.ReferenceData)
+		txInput, sigInst, err := UtxoToInputs(acct.Signer, r, a.ReferenceData)
 		if err != nil {
 			return errors.Wrap(err, "creating inputs")
 		}
@@ -116,18 +116,12 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	}
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
-	var acct *signers.Signer
-	if res.Source.AccountID == "" {
-		//TODO coinbase
-		acct = &signers.Signer{}
-	} else {
-		acct, err = a.accounts.findByID(ctx, res.Source.AccountID)
-		if err != nil {
-			return err
-		}
+	account, err := a.accounts.findByID(ctx, res.Source.AccountID)
+	if err != nil {
+		return err
 	}
 
-	txInput, sigInst, err := UtxoToInputs(acct, res.UTXOs[0], a.ReferenceData)
+	txInput, sigInst, err := UtxoToInputs(account.Signer, res.UTXOs[0], a.ReferenceData)
 	if err != nil {
 		return err
 	}
@@ -144,12 +138,12 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 }
 
 // UtxoToInputs convert an utxo to the txinput
-func UtxoToInputs(account *signers.Signer, u *UTXO, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
+func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
 	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash, refData)
-	path := signers.Path(account, signers.AccountKeySpace, u.ControlProgramIndex)
+	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
 	sigInst := &txbuilder.SigningInstruction{}
 	if u.Address == "" {
-		sigInst.AddWitnessKeys(account.XPubs, path, account.Quorum)
+		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
 		return txInput, sigInst, nil
 	}
 
@@ -160,17 +154,17 @@ func UtxoToInputs(account *signers.Signer, u *UTXO, refData []byte) (*legacy.TxI
 
 	switch address.(type) {
 	case *common.AddressWitnessPubKeyHash:
-		sigInst.AddRawWitnessKeys(account.XPubs, path, account.Quorum)
-		derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
+		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
 		derivedPK := derivedXPubs[0].PublicKey()
 		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
 
 	case *common.AddressWitnessScriptHash:
-		sigInst.AddWitnessKeys(account.XPubs, path, account.Quorum)
-		path := signers.Path(account, signers.AccountKeySpace, u.ControlProgramIndex)
-		derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
+		path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
+		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
-		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
+		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)
 		if err != nil {
 			return nil, nil, err
 		}
