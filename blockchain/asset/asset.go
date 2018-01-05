@@ -7,7 +7,6 @@ import (
 
 	"github.com/golang/groupcache/lru"
 	"github.com/golang/groupcache/singleflight"
-	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 	"golang.org/x/crypto/sha3"
 
@@ -149,44 +148,35 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 
 // UpdateTags modifies the tags of the specified asset. The asset may be
 // identified either by id or alias, but not both.
-func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[string]interface{}) error {
-	assetID := &bc.AssetID{}
-	if s, err := reg.FindByAlias(nil, assetInfo); err == nil {
-		assetID = &s.AssetID
-	}
-
+func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[string]interface{}) (err error) {
 	asset := &Asset{}
-	rawAsset := reg.db.Get(Key(assetID))
-	if rawAsset == nil {
-		return ErrFindAsset
-	}
-	if err := json.Unmarshal(rawAsset, asset); err != nil {
-		return err
-	}
-
-	for k, v := range tags {
-		switch v {
-		case "":
-			delete(asset.Tags, k)
-		default:
-			if asset.Tags == nil {
-				asset.Tags = make(map[string]interface{})
-			}
-			asset.Tags[k] = v
+	if s, err := reg.FindByAlias(ctx, assetInfo); err == nil {
+		asset = s
+	} else {
+		assetID := &bc.AssetID{}
+		if err := assetID.UnmarshalText([]byte(assetInfo)); err != nil {
+			return err
+		}
+		if asset, err = reg.findByID(ctx, assetID); err != nil {
+			return err
 		}
 	}
 
+	asset.Tags = tags
 	rawAsset, err := json.Marshal(asset)
 	if err != nil {
 		return ErrMarshalAsset
 	}
 
-	reg.db.Set(Key(assetID), rawAsset)
+	reg.db.Set(Key(&asset.AssetID), rawAsset)
+	reg.cacheMu.Lock()
+	reg.cache.Add(asset.AssetID, asset)
+	reg.cacheMu.Unlock()
 	return nil
 }
 
 // findByID retrieves an Asset record along with its signer, given an assetID.
-func (reg *Registry) findByID(ctx context.Context, id string) (*Asset, error) {
+func (reg *Registry) findByID(ctx context.Context, id *bc.AssetID) (*Asset, error) {
 	reg.cacheMu.Lock()
 	cached, ok := reg.cache.Get(id)
 	reg.cacheMu.Unlock()
@@ -198,16 +188,16 @@ func (reg *Registry) findByID(ctx context.Context, id string) (*Asset, error) {
 	if bytes == nil {
 		return nil, ErrFindAsset
 	}
-	var asset Asset
 
-	if err := json.Unmarshal(bytes, &asset); err != nil {
+	asset := &Asset{}
+	if err := json.Unmarshal(bytes, asset); err != nil {
 		return nil, err
 	}
 
 	reg.cacheMu.Lock()
-	reg.cache.Add(id, &asset)
+	reg.cache.Add(id, asset)
 	reg.cacheMu.Unlock()
-	return &asset, nil
+	return asset, nil
 }
 
 // FindByAlias retrieves an Asset record along with its signer,
@@ -217,7 +207,7 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	cachedID, ok := reg.aliasCache.Get(alias)
 	reg.cacheMu.Unlock()
 	if ok {
-		return reg.findByID(ctx, cachedID.(string))
+		return reg.findByID(ctx, cachedID.(*bc.AssetID))
 	}
 
 	rawID := reg.db.Get(aliasKey(alias))
@@ -225,40 +215,35 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 		return nil, errors.Wrapf(ErrFindAsset, "no such asset, alias: %s", alias)
 	}
 
-	rawAsset := reg.db.Get(Key(string(rawID)))
-	if rawAsset == nil {
-		return nil, errors.Wrapf(ErrFindAsset, "no such asset, signer id %s", rawID)
+	assetID := &bc.AssetID{}
+	if err := assetID.UnmarshalText(rawID); err != nil {
+		return nil, err
 	}
-	var asset Asset
 
-	if err := json.Unmarshal(rawAsset, &asset); err != nil {
+	asset, err := reg.findByID(ctx, assetID)
+	if err != nil {
 		return nil, err
 	}
 
 	reg.cacheMu.Lock()
-	reg.aliasCache.Add(alias, asset.AssetID.String())
-	reg.cache.Add(asset.AssetID.String(), &asset)
+	reg.aliasCache.Add(alias, asset.AssetID)
+	reg.cache.Add(asset.AssetID, asset)
 	reg.cacheMu.Unlock()
-	return &asset, nil
+	return asset, nil
 }
 
 func (reg *Registry) GetAliasByID(id string) string {
-	var asset Asset
-
 	if id == consensus.BTMAssetID.String() {
 		return "btm"
 	}
-	rawAsset := reg.db.Get(Key(id))
-	if rawAsset == nil {
-		log.Warn("fail to find asset")
+	assetID := &bc.AssetID{}
+	if err := assetID.UnmarshalText([]byte(id)); err != nil {
 		return ""
 	}
-
-	if err := json.Unmarshal(rawAsset, &asset); err != nil {
-		log.Warn(err)
+	asset, err := reg.findByID(nil, assetID)
+	if err != nil {
 		return ""
 	}
-
 	return *asset.Alias
 }
 
