@@ -92,7 +92,7 @@ func extendHash(hash []byte) []byte {
 	return extHash
 }
 
-func mulMatrix(cache []uint32, headerhash []byte) {
+func mulMatrix(cache []uint32, headerhash []byte) []byte {
 	// Convert our destination slice to a byte buffer
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&cache))
 	header.Len *= 4
@@ -124,6 +124,15 @@ func mulMatrix(cache []uint32, headerhash []byte) {
 
 		mb = mc
 	}
+
+	result := make([]byte, 0)
+	for i := 0; i < matSize; i++ {
+		for j := 0; j < matSize; j++ {
+			result = append(result, byte(mc.At(i, j)))
+		}
+	}
+
+	return result
 }
 
 // isLittleEndian returns whether the local system is running in little or big
