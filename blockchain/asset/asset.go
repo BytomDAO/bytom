@@ -150,9 +150,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 // identified either by id or alias, but not both.
 func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[string]interface{}) (err error) {
 	asset := &Asset{}
-	if s, err := reg.FindByAlias(ctx, assetInfo); err == nil {
-		asset = s
-	} else {
+	if asset, err = reg.FindByAlias(ctx, assetInfo); err != nil {
 		assetID := &bc.AssetID{}
 		if err := assetID.UnmarshalText([]byte(assetInfo)); err != nil {
 			return err
