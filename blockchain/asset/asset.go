@@ -33,7 +33,8 @@ func aliasKey(name string) []byte {
 }
 
 //Key asset store prefix
-func Key(name string) []byte {
+func Key(id *bc.AssetID) []byte {
+	name := id.String()
 	return []byte(assetPrefix + name)
 }
 
@@ -125,7 +126,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		Tags:              tags,
 	}
 
-	if existAsset := reg.db.Get(Key(asset.AssetID.String())); existAsset != nil {
+	if existAsset := reg.db.Get(Key(&asset.AssetID)); existAsset != nil {
 		return nil, ErrDuplicateAsset
 	}
 
@@ -140,7 +141,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 
 	storeBatch := reg.db.NewBatch()
 	storeBatch.Set(aliasKey(alias), []byte(asset.AssetID.String()))
-	storeBatch.Set(Key(asset.AssetID.String()), ass)
+	storeBatch.Set(Key(&asset.AssetID), ass)
 	storeBatch.Write()
 
 	return asset, nil
@@ -149,17 +150,17 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 // UpdateTags modifies the tags of the specified asset. The asset may be
 // identified either by id or alias, but not both.
 func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[string]interface{}) error {
-	var asset Asset
-	assetID := assetInfo
+	assetID := &bc.AssetID{}
 	if s, err := reg.FindByAlias(nil, assetInfo); err == nil {
-		assetID = s.AssetID.String()
+		assetID = &s.AssetID
 	}
 
+	asset := &Asset{}
 	rawAsset := reg.db.Get(Key(assetID))
 	if rawAsset == nil {
 		return ErrFindAsset
 	}
-	if err := json.Unmarshal(rawAsset, &asset); err != nil {
+	if err := json.Unmarshal(rawAsset, asset); err != nil {
 		return err
 	}
 
