@@ -59,8 +59,12 @@ func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*string,
 	if !validIDRegexp.MatchString(id) {
 		return nil, errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
-	k, err := json.Marshal(id)
-	if v := cs.DB.Get(k); v != nil {
+	key, err := json.Marshal(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if v := cs.DB.Get(key); v != nil {
 		return nil, errors.WithDetailf(ErrDuplicateID, "id %q already in use", id)
 	}
 	var secret [tokenSize]byte
@@ -80,10 +84,6 @@ func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*string,
 		Created: created,
 	}
 
-	key, err := json.Marshal(id)
-	if err != nil {
-		return nil, err
-	}
 	value, err := json.Marshal(token)
 	if err != nil {
 		return nil, err
