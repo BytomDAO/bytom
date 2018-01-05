@@ -1,21 +1,23 @@
 package integration
 
 import (
+	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
-	"strings"
-	"context"
 
 	"github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/rpc"
 	cfg "github.com/bytom/config"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/env"
 	"github.com/bytom/node"
 	jww "github.com/spf13/jwalterweatherman"
-	"github.com/bytom/env"
 )
 
 const (
@@ -57,6 +59,45 @@ func testNet() bool {
 	return false
 }
 
+// test create-key delete-key list-key api and function.
+func testKey() bool {
+	var key = struct {
+		Alias    string `json:"alias"`
+		Password string `json:"password"`
+	}{Alias: "alice", Password: "123456"}
+
+	data, exitCode := clientCall("/create-key", &key)
+	if exitCode != Success {
+		return false
+	}
+	dataMap, ok := data.(map[string]interface{})
+	if (ok && dataMap["alias"].(string) == "alice") == false {
+		return false
+	}
+
+	_, exitCode1 := clientCall("/list-keys")
+	if exitCode1 != Success {
+		return false
+	}
+
+	fmt.Println("dataMap", dataMap)
+	xpub := new(chainkd.XPub)
+	if err := xpub.UnmarshalText([]byte(dataMap["xpub"].(string))); err != nil {
+		return false
+	}
+
+	var key1 = struct {
+		Password string
+		XPub     chainkd.XPub `json:"xpubs"`
+	}{XPub: *xpub, Password: "123456"}
+
+	if _, exitCode := clientCall("/delete-key", &key1); exitCode != Success {
+		return false
+	}
+
+	return true
+}
+
 func TestRunNode(t *testing.T) {
 	// Create & start node
 	config := mockConfig()
@@ -67,9 +108,13 @@ func TestRunNode(t *testing.T) {
 
 	go func() {
 		time.Sleep(3000 * time.Millisecond)
-		if testNet() {
+		if testNet() && testKey() {
+			os.RemoveAll("./data")
+			os.RemoveAll("./keystore")
 			os.Exit(0)
 		} else {
+			os.RemoveAll("./data")
+			os.RemoveAll("./keystore")
 			os.Exit(1)
 		}
 	}()
@@ -77,9 +122,11 @@ func TestRunNode(t *testing.T) {
 	n.RunForever()
 }
 
+/*
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
+*/
 
 func mustRPCClient() *rpc.Client {
 	// TODO(kr): refactor some of this cert-loading logic into bytom/blockchain
