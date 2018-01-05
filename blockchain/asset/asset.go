@@ -44,6 +44,7 @@ var (
 	ErrSerializing    = errors.New("serializing asset definition")
 	ErrMarshalAsset   = errors.New("failed marshal asset")
 	ErrFindAsset      = errors.New("fail to find asset")
+	ErrInternalAsset  = errors.New("btm has been defined as the internal asset")
 )
 
 //NewRegistry create new registry
@@ -91,6 +92,10 @@ func (asset *Asset) RawDefinition() []byte {
 
 // Define defines a new Asset.
 func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}, clientToken string) (*Asset, error) {
+	if alias == "btm" {
+		return nil, ErrInternalAsset
+	}
+
 	if existed := reg.db.Get(aliasKey(alias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}

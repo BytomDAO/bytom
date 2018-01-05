@@ -98,10 +98,8 @@ var listAssetsCmd = &cobra.Command{
 
 var updateAssetTagsCmd = &cobra.Command{
 	Use:   "update-asset-tags <assetID|alias>",
-	Short: "Add, update or delete the asset tags",
-	Long: `If the tags match the pattern 'key:value', add or update them.
-If the tags match the pattern 'key:', delete them.`,
-	Args: cobra.ExactArgs(1),
+	Short: "Update the asset tags",
+	Args:  cobra.ExactArgs(1),
 	PreRun: func(cmd *cobra.Command, args []string) {
 		cmd.MarkFlagRequired("tags")
 	},
