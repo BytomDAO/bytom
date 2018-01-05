@@ -9,6 +9,7 @@ import (
 	"unsafe"
 
 	"golang.org/x/crypto/sha3"
+	"gonum.org/v1/gonum/mat"
 
 	"github.com/bytom/common/bitutil"
 	"github.com/bytom/consensus/aihash/matrix"
@@ -50,6 +51,19 @@ func createSeed(preSeed *bc.Hash, blockHashs []*bc.Hash) []byte {
 	return seed
 }
 
+// extend seed from 32 byte to 128 byte
+func extendSeed(seed []byte) []byte {
+	extSeed := make([]byte, 128)
+	extSeed[:32] = seed
+
+	for i := 0; i < 3; i++ {
+		h := sha3.Sum256(extSeed[i*32 : (i+1)*32])
+		copy(extSeed[(i+1)*32:(i+2)*32], h[:])
+	}
+
+	return extSeed
+}
+
 // seed length is 32 bytes, cache is 16MB.
 func generateCache(seed []byte) []uint32 {
 	extSeed := extendSeed(seed)
@@ -65,17 +79,51 @@ func generateCache(seed []byte) []uint32 {
 	return cache
 }
 
-// extend seed from 32 byte to 128 byte
-func extendSeed(seed []byte) []byte {
-	extSeed := make([]byte, 128)
-	extSeed[:32] = seed
+// extendHash extend 32 Bytes hash to 256 Bytes.
+func extendHash(hash []byte) []byte {
+	extHash := make([]byte, 256)
+	copy(extHash[:32], hash)
 
-	for i := 0; i < 3; i++ {
-		h := sha3.Sum256(extSeed[i*32 : (i+1)*32])
-		copy(extSeed[(i+1)*32:(i+2)*32], h[:])
+	for i := 1; i < 8; i++ {
+		h := sha256.Sum256(extHash[(i-1)*32 : i*32])
+		copy(extHash[i*32:(i+1)*32], h[:])
 	}
 
-	return extSeed
+	return extHash
+}
+
+func mulMatrix(cache []uint32, headerhash []byte) {
+	// Convert our destination slice to a byte buffer
+	header := *(*reflect.SliceHeader)(unsafe.Pointer(&cache))
+	header.Len *= 4
+	header.Cap *= 4
+	cacheInt8 := *(*[]int8)(unsafe.Pointer(&header))
+
+	data := make([]float64, matNum*matSize*matSize)
+	for i := 0; i < len(cacheInt8); i++ {
+		data[i] = float64(cacheInt8[i])
+	}
+
+	exthash := extendHash(headerhash)
+
+	mb := mat.NewDense(matSize, matSize, data[:matSize*matSize])
+	mc := mat.NewDense(matSize, matSize, make([]float64, matSize*matSize))
+	for i := 0; i < 256; i++ {
+		index := int(exthash[i])
+		ma := mat.NewDense(matSize, matSize, data[index*matSize*matSize:(index+1)*matSize*matSize])
+		mc.Mul(ma, mb)
+
+		for j := 0; j < matSize; j++ {
+			for k := 0; k < matSize; k++ {
+				i32v := int32(mc.At(j, k))
+				i8v := int8((i32v & 0xff) +
+					((i32v >> 8) & 0xff))
+				mc.Set(j, k, float64(i8v))
+			}
+		}
+
+		mb = mc
+	}
 }
 
 // isLittleEndian returns whether the local system is running in little or big
@@ -108,49 +156,6 @@ func bytesToUint32(src []byte) []uint32 {
 	}
 
 	return dest
-}
-
-// fill the matrix list
-func fillMatrixList(matList []matrix.Matrix, matSize, matNum, epochLength int, cache []uint32, height uint64) {
-	primeIndex := uint64((height - 1) % uint64(epochLength))
-
-	// Convert our destination slice to a byte buffer
-	header := *(*reflect.SliceHeader)(unsafe.Pointer(&cache))
-	header.Len *= 4
-	header.Cap *= 4
-	cacheInt8 := *(*[]int8)(unsafe.Pointer(&header))
-
-	// Bytes of cache production
-	cacheLength := matSize * matSize * matNum
-
-	for i := 0; i < matNum; i++ {
-		startIndex := (matSize*matSize*i + primes[primeIndex]) % cacheLength
-		endIndex := (matSize*matSize*(i+1) + primes[primeIndex]) % cacheLength
-		if startIndex < endIndex {
-			matList[i] = matrix.New(matSize, matSize, cacheInt8[startIndex:endIndex])
-		} else {
-			matrixData := make([]int8, matSize*matSize)
-			copy(matrixData, cacheInt8[startIndex:])
-			copy(matrixData[cacheLength-startIndex:], cacheInt8[:endIndex+1])
-			matList[i] = matrix.New(matSize, matSize, matrixData)
-		}
-	}
-}
-
-func mulMatrix(matList []matrix.Matrix, matSize, matNum, mulRounds int, matIndex []byte) *matrix.Matrix {
-	var index uint8
-	ma := matrix.Zeros(matSize, matSize)
-	mb := matList[0]
-
-	for i := 0; i < mulRounds; i++ {
-		index = uint8(matIndex[2*i]) % uint8(matNum)
-		ma = *matrix.Multiply(matList[index], mb)
-
-		index = uint8(matIndex[2*i+1]) % uint8(matNum)
-		mb = *matrix.Multiply(ma, matList[index])
-	}
-
-	return &mb
 }
 
 func hashMatrix(m *matrix.Matrix, matSize int) *bc.Hash {
