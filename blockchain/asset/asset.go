@@ -218,16 +218,10 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 		return nil, err
 	}
 
-	asset, err := reg.findByID(ctx, assetID)
-	if err != nil {
-		return nil, err
-	}
-
 	reg.cacheMu.Lock()
-	reg.aliasCache.Add(alias, &asset.AssetID)
-	reg.cache.Add(asset.AssetID, asset)
+	reg.aliasCache.Add(alias, assetID)
 	reg.cacheMu.Unlock()
-	return asset, nil
+	return reg.findByID(ctx, assetID)
 }
 
 func (reg *Registry) GetAliasByID(id string) string {
