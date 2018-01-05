@@ -144,40 +144,24 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 // UpdateTags modifies the tags of the specified account. The account may be
 // identified either by ID or Alias, but not both.
-func (m *Manager) UpdateTags(ctx context.Context, accountInfo string, tags map[string]interface{}) error {
-	var account Account
-
-	accountID := accountInfo
-	if s, err := m.FindByAlias(nil, accountInfo); err == nil {
-		accountID = s.ID
-	}
-
-	rawAccount := m.db.Get(Key(accountID))
-	if rawAccount == nil {
-		return ErrFindAccount
-	}
-	if err := json.Unmarshal(rawAccount, &account); err != nil {
-		return err
-	}
-
-	for k, v := range tags {
-		switch v {
-		case "":
-			delete(account.Tags, k)
-		default:
-			if account.Tags == nil {
-				account.Tags = make(map[string]interface{})
-			}
-			account.Tags[k] = v
+func (m *Manager) UpdateTags(ctx context.Context, accountInfo string, tags map[string]interface{}) (err error) {
+	account := &Account{}
+	if account, err = m.FindByAlias(nil, accountInfo); err != nil {
+		if account, err = m.findByID(ctx, accountInfo); err != nil {
+			return err
 		}
 	}
 
+	account.Tags = tags
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return ErrMarshalTags
 	}
 
-	m.db.Set(Key(accountID), rawAccount)
+	m.db.Set(Key(account.ID), rawAccount)
+	m.cacheMu.Lock()
+	m.cache.Add(account.ID, account)
+	m.cacheMu.Unlock()
 	return nil
 }
 
@@ -229,7 +213,7 @@ func (m *Manager) findByID(ctx context.Context, id string) (*Account, error) {
 
 // GetAliasByID return the account alias by given ID
 func (m *Manager) GetAliasByID(id string) string {
-	var account Account
+	account := &Account{}
 
 	rawAccount := m.db.Get(Key(id))
 	if rawAccount == nil {
@@ -237,11 +221,10 @@ func (m *Manager) GetAliasByID(id string) string {
 		return ""
 	}
 
-	if err := json.Unmarshal(rawAccount, &account); err != nil {
+	if err := json.Unmarshal(rawAccount, account); err != nil {
 		log.Warn(err)
 		return ""
 	}
-
 	return account.Alias
 }
 
