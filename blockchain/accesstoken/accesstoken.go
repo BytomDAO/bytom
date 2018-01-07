@@ -105,12 +105,9 @@ func (cs *CredentialStore) Check(ctx context.Context, id string, secret []byte) 
 
 	var value []byte
 	token := &Token{}
-	k, err := json.Marshal(id)
-	if err != nil {
-		return false, err
-	}
 
-	if value = cs.DB.Get(k); value == nil {
+	key := []byte(id)
+	if value = cs.DB.Get(key); value == nil {
 		return false, errors.WithDetailf(ErrNoMatchID, "check id %q nonexisting", id)
 	}
 	if err := json.Unmarshal(value, token); err != nil {
