@@ -55,26 +55,24 @@ func NewStore(db dbm.DB) *CredentialStore {
 }
 
 // Create generates a new access token with the given ID.
-func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*string, error) {
+func (cs *CredentialStore) Create(ctx context.Context, id string, typ string) (*string, error) {
 	if !validIDRegexp.MatchString(id) {
 		return nil, errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
-	key, err := json.Marshal(id)
+
+	key := []byte(id)
+	if cs.DB.Get(key) != nil {
+		return nil, errors.WithDetailf(ErrDuplicateID, "id %q already in use", id)
+	}
+
+	secret := make([]byte, tokenSize)
+	_, err := rand.Read(secret)
 	if err != nil {
 		return nil, err
 	}
 
-	if v := cs.DB.Get(key); v != nil {
-		return nil, errors.WithDetailf(ErrDuplicateID, "id %q already in use", id)
-	}
-	var secret [tokenSize]byte
-	v, err := rand.Read(secret[:])
-	if err != nil || v != tokenSize {
-		return nil, err
-	}
-
-	var hashedSecret [tokenSize]byte
-	sha3pool.Sum256(hashedSecret[:], secret[:])
+	hashedSecret := make([]byte, tokenSize)
+	sha3pool.Sum256(hashedSecret, secret)
 	created := time.Now()
 
 	token := &Token{
