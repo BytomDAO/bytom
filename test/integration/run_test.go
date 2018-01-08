@@ -39,6 +39,7 @@ var (
 	coreURL = env.String("BYTOM_URL", "http://localhost:9888")
 )
 
+// Mock config.
 func mockConfig() *cfg.Config {
 	var config = cfg.DefaultConfig()
 	config.Wallet.Enable = true
@@ -47,6 +48,7 @@ func mockConfig() *cfg.Config {
 	return config
 }
 
+// Test net-info call api.
 func testNet() bool {
 	data, exitCode := clientCall("/net-info")
 	if exitCode != Success {
@@ -59,7 +61,7 @@ func testNet() bool {
 	return false
 }
 
-// test create-key delete-key list-key api and function.
+// Test create-key delete-key list-key api and function.
 func testKey() bool {
 	var key = struct {
 		Alias    string `json:"alias"`
@@ -98,6 +100,7 @@ func testKey() bool {
 	return true
 }
 
+// Test node running.
 func TestRunNode(t *testing.T) {
 	// Create & start node
 	config := mockConfig()
@@ -128,6 +131,7 @@ func TestMain(m *testing.M) {
 }
 */
 
+// Wraper rpc's client
 func mustRPCClient() *rpc.Client {
 	// TODO(kr): refactor some of this cert-loading logic into bytom/blockchain
 	// and use it from cored as well.
@@ -167,6 +171,7 @@ func mustRPCClient() *rpc.Client {
 	}
 }
 
+// Wrapper rpc call api.
 func clientCall(path string, req ...interface{}) (interface{}, int) {
 
 	var response = &blockchain.Response{}
