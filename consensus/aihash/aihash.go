@@ -2,6 +2,7 @@ package aihash
 
 import (
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/consensus/aihash/matrix"
 	"github.com/bytom/errors"
@@ -16,24 +17,23 @@ const (
 )
 
 // CreateSeed return epoch seed, type is *bc.Hash
-func CreateSeed(height uint64, preSeed *bc.Hash, blockHashs []*bc.Hash) *bc.Hash {
-	if height%epochLength != 1 {
-		log.WithFields(log.Fields{
-			"height": height,
-			"epoch":  (height - 1) / epochLength,
-			"seed":   preSeed.String(),
-		}).Debug("Do not need create new seed.")
-		return preSeed
+func CreateSeed(height uint64, blockHashs []*bc.Hash) *bc.Hash {
+	if height < 128 {
+		sha256 := makeHasher(sha3.New256())
+		seed := make([]byte, 32)
+		sha256(seed, seed)
+		seedHash := bc.BytesToHash(seed)
+	} else {
+		seed := createSeed(blockHashs)
+		seedHash := bc.BytesToHash(seed)
 	}
 
-	seed := bc.BytesToHash(createSeed(preSeed, blockHashs))
 	log.WithFields(log.Fields{
 		"height": height,
-		"epoch":  (height - 1) / epochLength,
-		"seed":   seed.String(),
+		"seed":   seedHash.String(),
 	}).Debug("Created new seed.")
 
-	return &seed
+	return &seedHash
 }
 
 // CreateCache return cache, type is []int32

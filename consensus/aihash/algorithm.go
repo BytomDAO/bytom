@@ -38,9 +38,9 @@ func makeHasher(h hash.Hash) hasher {
 }
 
 // createSeed is the seed to use for generating a verification cache.
-func createSeed(preSeed *bc.Hash, blockHashs []*bc.Hash) []byte {
+func createSeed(blockHashs []*bc.Hash) []byte {
 	seed := make([]byte, 32)
-	seedSlice := preSeed.Bytes()
+	seedSlice := make([]byte, 0)
 
 	for _, blockHash := range blockHashs {
 		seedSlice = append(seedSlice, blockHash.Bytes()...)
