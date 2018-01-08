@@ -91,7 +91,7 @@ func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*string,
 }
 
 // Check returns whether or not an id-secret pair is a valid access token.
-func (cs *CredentialStore) Check(ctx context.Context, id, secret []byte) (bool, error) {
+func (cs *CredentialStore) Check(ctx context.Context, id string, secret []byte) (bool, error) {
 	if !validIDRegexp.MatchString(id) {
 		return false, errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
