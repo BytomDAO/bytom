@@ -255,19 +255,18 @@ func NewNode(config *cfg.Config) *Node {
 	}
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
-	if !config.Web.Closed {
-		go func() {
-			// Wait a moment just to make sure the http interface is up
-			time.Sleep(time.Millisecond * 1000)
-
-			log.Info("Launching System Browser with :", webAddress)
-			if err := browser.Open(webAddress); err != nil {
-				log.Error(err.Error())
-				return
-			}
-		}()
-	}
 	return node
+}
+
+// Lanch web broser or not
+func lanchWebBroser(lanch bool) {
+	if lanch {
+		log.Info("Launching System Browser with :", webAddress)
+		if err := browser.Open(webAddress); err != nil {
+			log.Error(err.Error())
+			return
+		}
+	}
 }
 
 func (n *Node) OnStart() error {
@@ -292,6 +291,7 @@ func (n *Node) OnStart() error {
 			return err
 		}
 	}
+	lanchWebBroser(!n.config.Web.Closed)
 	return nil
 }
 
