@@ -37,18 +37,13 @@ func CreateSeed(height uint64, blockHashs []*bc.Hash) *bc.Hash {
 }
 
 // CreateCache return cache, type is []int32
-func CreateCache(seed *bc.Hash) ([]uint32, error) {
+func CreateCache(seed []byte) ([]uint32, error) {
 	log.Debug("Start creating cache...")
 	if seed == nil {
 		return nil, errors.New("Seed is invalid or not exist!")
 	}
 
-	// Bytes of cache production
-	cacheLength := matSize * matSize * matNum
-
-	// convert []byte to []uint32, so length/4
-	cache := make([]uint32, cacheLength/4)
-	generateCache(cache, seed.Bytes())
+	cache := generateCache(seed)
 
 	return cache, nil
 }
