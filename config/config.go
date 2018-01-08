@@ -205,7 +205,7 @@ func (p *P2PConfig) AddrBookFile() string {
 
 //-----------------------------------------------------------------------------
 type WalletConfig struct {
-	Enable bool `mapstructure:"enable"`
+	Disable bool `mapstructure:"disable"`
 }
 
 type RPCAuthConfig struct {
@@ -233,7 +233,7 @@ func DefaultWebConfig() *WebConfig {
 // Default configurable wallet parameters.
 func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
-		Enable: false,
+		Disable: false,
 	}
 }
 

@@ -24,7 +24,7 @@ func init() {
 
 	runNodeCmd.Flags().Bool("auth.disable", config.Auth.Disable, "Disable rpc access authenticate")
 
-	runNodeCmd.Flags().Bool("wallet.enable", config.Wallet.Enable, "Enable wallet")
+	runNodeCmd.Flags().Bool("wallet.disable", config.Wallet.Disable, "Disable wallet")
 
 	runNodeCmd.Flags().Bool("web.closed", config.Web.Closed, "Lanch web browser or not")
 
