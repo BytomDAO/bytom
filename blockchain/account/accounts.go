@@ -435,6 +435,7 @@ func (m *Manager) DeleteAccount(in struct {
 	}
 
 	storeBatch := m.db.NewBatch()
+	m.aliasCache.Remove(account.Alias)
 	storeBatch.Delete(aliasKey(account.Alias))
 	storeBatch.Delete(Key(account.ID))
 	storeBatch.Write()
