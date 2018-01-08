@@ -258,7 +258,7 @@ func NewNode(config *cfg.Config) *Node {
 	if !config.Web.Closed {
 		go func() {
 			// Wait a moment just to make sure the http interface is up
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * 1000)
 
 			log.Info("Launching System Browser with :", webAddress)
 			if err := browser.Open(webAddress); err != nil {
