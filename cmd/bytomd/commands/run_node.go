@@ -26,6 +26,8 @@ func init() {
 
 	runNodeCmd.Flags().Bool("wallet.enable", config.Wallet.Enable, "Enable wallet")
 
+	runNodeCmd.Flags().Bool("web.closed", config.Web.Closed, "Lanch web browser or not")
+
 	// p2p flags
 	runNodeCmd.Flags().String("p2p.laddr", config.P2P.ListenAddress, "Node listen address. (0.0.0.0:0 means any interface, any port)")
 	runNodeCmd.Flags().String("p2p.seeds", config.P2P.Seeds, "Comma delimited host:port seed nodes")
