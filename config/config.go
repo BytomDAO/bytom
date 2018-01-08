@@ -13,7 +13,7 @@ type Config struct {
 	P2P    *P2PConfig     `mapstructure:"p2p"`
 	Wallet *WalletConfig  `mapstructure:"wallet"`
 	Auth   *RPCAuthConfig `mapstructure:"auth"`
-	Web	   *WebConfig `mapstructure:"web"`
+	Web    *WebConfig     `mapstructure:"web"`
 }
 
 // Default configurable parameters.
@@ -24,7 +24,7 @@ func DefaultConfig() *Config {
 		P2P:        DefaultP2PConfig(),
 		Wallet:     DefaultWalletConfig(),
 		Auth:       DefaultRPCAuthConfig(),
-		Web:		DefaultWebConfig(),
+		Web:        DefaultWebConfig(),
 	}
 }
 
@@ -133,11 +133,6 @@ func (b BaseConfig) KeysDir() string {
 	return rootify(b.KeysPath, b.RootDir)
 }
 
-func DefaultLogLevel() string {
-	return "info"
-}
-
-// Default configurable rpc parameters.
 type RPCConfig struct {
 	RootDir string `mapstructure:"home"`
 
@@ -152,6 +147,7 @@ type RPCConfig struct {
 	Unsafe bool `mapstructure:"unsafe"`
 }
 
+// Default configurable rpc parameters.
 func DefaultRPCConfig() *RPCConfig {
 	return &RPCConfig{
 		ListenAddress:     "tcp://0.0.0.0:46657",
