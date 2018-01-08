@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/consensus"
 )
 
 func init() {
@@ -41,6 +42,13 @@ var (
 	account         = ""
 )
 
+var spendActionReqFmt = `
+		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
+`
+var spendActionReqFmtByAlias = `
+		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
+`
+
 var buildIssueReqFmt = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
@@ -58,42 +66,42 @@ var buildIssueReqFmtByAlias = `
 var buildSpendReqFmt = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
-		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
+		%s
 		{"type": "control_receiver", "asset_id": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
 	]}`
 
 var buildSpendReqFmtByAlias = `
 	{"actions": [
 		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
-		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
+		%s
 		{"type": "control_receiver", "asset_alias": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
 	]}`
 
 var buildRetireReqFmt = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
-		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
+		%s
 		{"type": "retire", "asset_id": "%s","amount": %s,"account_id": "%s"}
 	]}`
 
 var buildRetireReqFmtByAlias = `
 	{"actions": [
 		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
-		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
+		%s
 		{"type": "retire", "asset_alias": "%s","amount": %s,"account_alias": "%s"}
 	]}`
 
 var buildControlAddressReqFmt = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
-		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
+		%s
 		{"type": "control_address", "asset_id": "%s", "amount": %s,"address": "%s"}
 	]}`
 
 var buildControlAddressReqFmtByAlias = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_alias": "%s"},
-		{"type": "spend_account", "asset_alias": "%s","amount": %s, "account_alias": "%s"},
+		%s
 		{"type": "control_address", "asset_alias": "%s", "amount": %s,"address": "%s"}
 	]}`
 
@@ -112,6 +120,14 @@ var buildTransactionCmd = &cobra.Command{
 		accountInfo := args[0]
 		assetInfo := args[1]
 		amount := args[2]
+
+		spendAction := fmt.Sprintf(spendActionReqFmt, assetInfo, amount, accountInfo)
+		if assetInfo == "btm" || assetInfo == consensus.BTMAssetID.String() {
+			spendAction = ""
+		} else if alias {
+			spendAction = fmt.Sprintf(spendActionReqFmtByAlias, assetInfo, amount, accountInfo)
+		}
+
 		switch buildType {
 		case "issue":
 			if alias {
@@ -121,22 +137,22 @@ var buildTransactionCmd = &cobra.Command{
 			buildReqStr = fmt.Sprintf(buildIssueReqFmt, btmGas, accountInfo, assetInfo, amount, assetInfo, amount, accountInfo)
 		case "spend":
 			if alias {
-				buildReqStr = fmt.Sprintf(buildSpendReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, receiverProgram)
+				buildReqStr = fmt.Sprintf(buildSpendReqFmtByAlias, btmGas, accountInfo, spendAction, assetInfo, amount, receiverProgram)
 				break
 			}
-			buildReqStr = fmt.Sprintf(buildSpendReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, receiverProgram)
+			buildReqStr = fmt.Sprintf(buildSpendReqFmt, btmGas, accountInfo, spendAction, assetInfo, amount, receiverProgram)
 		case "retire":
 			if alias {
-				buildReqStr = fmt.Sprintf(buildRetireReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
+				buildReqStr = fmt.Sprintf(buildRetireReqFmtByAlias, btmGas, accountInfo, spendAction, assetInfo, amount, accountInfo)
 				break
 			}
-			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
+			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, spendAction, assetInfo, amount, accountInfo)
 		case "address":
 			if alias {
-				buildReqStr = fmt.Sprintf(buildControlAddressReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
+				buildReqStr = fmt.Sprintf(buildControlAddressReqFmtByAlias, btmGas, accountInfo, spendAction, assetInfo, amount, address)
 				break
 			}
-			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
+			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, spendAction, assetInfo, amount, address)
 		default:
 			jww.ERROR.Println("Invalid transaction template type")
 			os.Exit(ErrLocalExe)
@@ -150,6 +166,7 @@ var buildTransactionCmd = &cobra.Command{
 
 		data, exitCode := clientCall("/build-transaction", &buildReq)
 		if exitCode != Success {
+			jww.FEEDBACK.Printf("buildReqStr:%s\n", buildReqStr)
 			os.Exit(exitCode)
 		}
 
