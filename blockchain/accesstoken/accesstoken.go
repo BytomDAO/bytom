@@ -142,11 +142,7 @@ func (cs *CredentialStore) Delete(ctx context.Context, id string) error {
 	if !validIDRegexp.MatchString(id) {
 		return errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
-	k, err := json.Marshal(id)
-	if err != nil {
-		return err
-	}
-	cs.DB.Delete(k)
 
+	cs.DB.Delete([]byte(id))
 	return nil
 }
