@@ -45,9 +45,9 @@ var errorFormatter = httperror.Formatter{
 	IsTemporary: isTemporary,
 	Errors: map[error]httperror.Info{
 		// General error namespace (0xx)
-		context.DeadlineExceeded: {408, "BTM001", "Request timed out"},
-		httpjson.ErrBadRequest:   {400, "BTM003", "Invalid request body"},
-		txbuilder.ErrMissingFields: {400, "BTM010", "One or more fields are missing"},
+		context.DeadlineExceeded:     {408, "BTM001", "Request timed out"},
+		httpjson.ErrBadRequest:       {400, "BTM003", "Invalid request body"},
+		txbuilder.ErrMissingFields:   {400, "BTM010", "One or more fields are missing"},
 		rpc.ErrWrongNetwork:          {502, "BTM104", "A peer core is operating on a different blockchain network"},
 		protocol.ErrTheDistantFuture: {400, "BTM105", "Requested height is too far ahead"},
 
@@ -84,5 +84,7 @@ var errorFormatter = httperror.Formatter{
 		account.ErrInsufficient: {400, "BTM760", "Insufficient funds for tx"},
 		account.ErrReserved:     {400, "BTM761", "Some outputs are reserved; try again"},
 
+		//accesstoken authz err namespace (86x)
+		errNotAuthenticated: {401, "BTM860", "Request could not be authenticated"},
 	},
 }

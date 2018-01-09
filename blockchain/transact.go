@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -43,13 +44,41 @@ func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuil
 	return decoder, true
 }
 
+func MergeActions(req *BuildRequest) []map[string]interface{} {
+	actions := make([]map[string]interface{}, 0)
+	actionMap := make(map[string]map[string]interface{})
+
+	for _, m := range req.Actions {
+		if actionType := m["type"].(string); actionType != "spend_account" {
+			actions = append(actions, m)
+			continue
+		}
+
+		actionKey := m["asset_id"].(string) + m["account_id"].(string)
+		amountNumber := m["amount"].(json.Number)
+		amount, _ := amountNumber.Int64()
+
+		if tmpM, ok := actionMap[actionKey]; ok {
+			tmpNumber, _ := tmpM["amount"].(json.Number)
+			tmpAmount, _ := tmpNumber.Int64()
+			tmpM["amount"] = json.Number(fmt.Sprintf("%v", tmpAmount+amount))
+		} else {
+			actionMap[actionKey] = m
+			actions = append(actions, m)
+		}
+	}
+
+	return actions
+}
+
 func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
 	err := bcr.filterAliases(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	actions := make([]txbuilder.Action, 0, len(req.Actions))
-	for i, act := range req.Actions {
+	reqActions := MergeActions(req)
+	actions := make([]txbuilder.Action, 0, len(reqActions))
+	for i, act := range reqActions {
 		typ, ok := act["type"].(string)
 		if !ok {
 			return nil, errors.WithDetailf(errBadActionType, "no action type provided on action %d", i)
@@ -207,12 +236,12 @@ func (bcr *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Templat
 
 // POST /sign-submit-transaction
 func (bcr *BlockchainReactor) signSubmit(ctx context.Context, x struct {
-	Auth string             `json:"auth"`
+	Password []string             `json:"password"`
 	Txs  txbuilder.Template `json:"transaction"`
 }) Response {
 
 	var err error
-	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Auth, bcr.pseudohsmSignTemplate); err != nil {
+	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Password, bcr.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")
 		return resWrapper(nil, err)
 	}
