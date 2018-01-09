@@ -43,6 +43,18 @@ func TestMergeActions(t *testing.T) {
 			100,
 			500,
 		},
+		{
+			`{"actions": [
+			{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":100, "account_id": "123"},
+				{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","amount": 200,"account_id": "123"},
+				{"type": "spend_account", "asset_id": "43c6946d092b2959c1a82e90b282c68fca63e66de289048f6acd6cea9383c79c","amount": 200,"account_id": "123"},
+				{"type": "spend_account", "asset_id": "43c6946d092b2959c1a82e90b282c68fca63e66de289048f6acd6cea9383c79c","amount": 300,"account_id": "123"},
+				{"type": "control_receiver", "asset_id": "43c6946d092b2959c1a82e90b282c68fca63e66de289048f6acd6cea9383c79c", "amount": 500, "receiver":{"control_program": "program","expires_at":"2017"}}
+			]}`,
+			3,
+			300,
+			500,
+		},
 	}
 
 	for i, c := range cases {

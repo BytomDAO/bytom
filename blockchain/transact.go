@@ -49,23 +49,21 @@ func MergeActions(req *BuildRequest) []map[string]interface{} {
 	actionMap := make(map[string]map[string]interface{})
 
 	for _, m := range req.Actions {
-		actionType := m["type"].(string)
-		if actionType != "spend_account" {
+		if actionType := m["type"].(string); actionType != "spend_account" {
 			actions = append(actions, m)
 			continue
 		}
 
-		assetID, _ := m["asset_id"].(string)
-		accountID, _ := m["account_id"].(string)
+		actionKey := m["asset_id"].(string) + m["account_id"].(string)
 		amountNumber := m["amount"].(json.Number)
 		amount, _ := amountNumber.Int64()
 
-		if tmpM, ok := actionMap[assetID+accountID]; ok {
+		if tmpM, ok := actionMap[actionKey]; ok {
 			tmpNumber, _ := tmpM["amount"].(json.Number)
 			tmpAmount, _ := tmpNumber.Int64()
 			tmpM["amount"] = json.Number(fmt.Sprintf("%v", tmpAmount+amount))
 		} else {
-			actionMap[assetID+accountID] = m
+			actionMap[actionKey] = m
 			actions = append(actions, m)
 		}
 	}
