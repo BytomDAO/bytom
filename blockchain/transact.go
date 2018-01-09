@@ -3,6 +3,7 @@ package blockchain
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -43,13 +44,58 @@ func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuil
 	return decoder, true
 }
 
+func mergeActions(req *BuildRequest) []map[string]interface{} {
+	actions := make([]map[string]interface{}, 0)
+	actionMap := make(map[string]map[string]interface{})
+
+	//for debug
+	if os.Getenv("BYTOM_DEBUG") != "" {
+		a, _ := json.MarshalIndent(req.Actions, "", " ")
+		log.Debug(string(a))
+	}
+
+	for _, m := range req.Actions {
+		actionType := m["type"].(string)
+		if actionType != "spend_account" {
+			actions = append(actions, m)
+			continue
+		}
+
+		assetID, _ := m["asset_id"].(string)
+		accountID, _ := m["account_id"].(string)
+		amountNumber, _ := m["amount"].(json.Number)
+		amount, _ := amountNumber.Int64()
+
+		if tmpM, ok := actionMap[assetID+accountID]; ok {
+			tmpNumber, _ := tmpM["amount"].(json.Number)
+			tmpAmount, _ := tmpNumber.Int64()
+			tmpM["amount"] = tmpAmount + amount
+		} else {
+			actionMap[assetID+accountID] = m
+		}
+	}
+
+	for _, v := range actionMap {
+		actions = append(actions, v)
+	}
+
+	//for debug
+	if os.Getenv("BYTOM_DEBUG") != "" {
+		b, _ := json.MarshalIndent(actions, "", " ")
+		log.Debug(string(b))
+	}
+
+	return actions
+}
+
 func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
 	err := bcr.filterAliases(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	actions := make([]txbuilder.Action, 0, len(req.Actions))
-	for i, act := range req.Actions {
+	reqActions := mergeActions(req)
+	actions := make([]txbuilder.Action, 0, len(reqActions))
+	for i, act := range reqActions {
 		typ, ok := act["type"].(string)
 		if !ok {
 			return nil, errors.WithDetailf(errBadActionType, "no action type provided on action %d", i)
