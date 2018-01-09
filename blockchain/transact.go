@@ -66,11 +66,8 @@ func MergeActions(req *BuildRequest) []map[string]interface{} {
 			tmpM["amount"] = json.Number(fmt.Sprintf("%v", tmpAmount+amount))
 		} else {
 			actionMap[assetID+accountID] = m
+			actions = append(actions, m)
 		}
-	}
-
-	for _, v := range actionMap {
-		actions = append(actions, v)
 	}
 
 	return actions
