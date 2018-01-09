@@ -47,6 +47,7 @@ func (bcr *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 	if err := bcr.hsm.XDelete(x.XPub, x.Password); err != nil {
 		return resWrapper(nil, err)
 	}
+
 	return resWrapper(nil)
 }
 
