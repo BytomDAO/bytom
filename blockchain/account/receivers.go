@@ -55,7 +55,8 @@ func (m *Manager) CreateAddressReceiver(ctx context.Context, accountInfo string,
 	}
 
 	return &txbuilder.Receiver{
-		Address:   program.Address,
-		ExpiresAt: expiresAt,
+		ControlProgram: program.ControlProgram,
+		Address:        program.Address,
+		ExpiresAt:      expiresAt,
 	}, nil
 }
