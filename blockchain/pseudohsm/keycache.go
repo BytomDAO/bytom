@@ -156,7 +156,7 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 	case 0:
 		return XPub{}, ErrNoKey
 	default:
-		err := &AmbiguousKeyError{Pubkey: hex.EncodeToString(xpub.XPub[:]), Matches: make([]XPub, len(matches))}
+		err := &AmbiguousKeyError{Pubkey: hex.EncodeToString(xpub.XPub.Bytes()), Matches: make([]XPub, len(matches))}
 		copy(err.Matches, matches)
 		return XPub{}, err
 	}

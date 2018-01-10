@@ -89,8 +89,7 @@ func EncryptKey(key *XKey, auth string, scryptN, scryptP int) ([]byte, error) {
 		return nil, err
 	}
 	encryptKey := derivedKey[:16]
-	keyBytes := key.XPrv[:]
-
+	keyBytes := key.XPrv.Bytes()
 	iv := randentropy.GetEntropyCSPRNG(aes.BlockSize) // 16
 	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
 	if err != nil {
@@ -121,7 +120,7 @@ func EncryptKey(key *XKey, auth string, scryptN, scryptP int) ([]byte, error) {
 		key.KeyType,
 		version,
 		key.Alias,
-		hex.EncodeToString(key.XPub[:]),
+		hex.EncodeToString(key.XPub.Bytes()),
 	}
 	return json.Marshal(encryptedKeyJSON)
 }
@@ -149,9 +148,8 @@ func DecryptKey(keyjson []byte, auth string) (*XKey, error) {
 		return nil, err
 	}
 	var xprv chainkd.XPrv
-	copy(xprv[:], keyBytes[:])
+	xprv.SetBytes(keyBytes[:])
 	xpub := xprv.XPub()
-
 	//key := crypto.ToECDSA(keyBytes)
 	return &XKey{
 		ID:      uuid.UUID(keyID),

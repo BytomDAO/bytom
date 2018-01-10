@@ -85,8 +85,7 @@ var exportPrivateCmd = &cobra.Command{
 		if err != nil {
 			jww.ERROR.Println("error: export-private-key args not vaild", err)
 		}
-		copy(xpub[:], rawPub)
-
+		xpub.SetBytes(rawPub)
 		key.XPub = *xpub
 		key.Password = args[1]
 
@@ -133,8 +132,7 @@ var importPrivateCmd = &cobra.Command{
 		key.Alias = args[0]
 		key.Password = args[3]
 		key.Index, _ = strconv.ParseUint(args[2], 10, 64)
-		copy(key.XPrv[:], privHash[:64])
-
+		key.XPrv.SetBytes(privHash[:64])
 		data, exitCode := clientCall("/import-private-key", &key)
 		if exitCode != Success {
 			os.Exit(exitCode)

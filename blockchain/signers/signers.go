@@ -12,13 +12,6 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 )
 
-type keySpace byte
-
-const (
-	AssetKeySpace   keySpace = 0
-	AccountKeySpace keySpace = 1
-)
-
 var (
 	// ErrBadQuorum is returned by Create when the quorum
 	// provided is less than 1 or greater than the number
@@ -49,15 +42,21 @@ type Signer struct {
 	Type     string         `json:"type"`
 	XPubs    []chainkd.XPub `json:"xpubs"`
 	Quorum   int            `json:"quorum"`
-	KeyIndex uint64         `json:"key_index"`
+	KeyIndex uint32         `json:"key_index"`
 }
 
 // Path returns the complete path for derived keys
-func Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
+// path format /change/index
+func Path(change bool, itemIndexes ...uint64) [][]byte {
 	var path [][]byte
-	signerPath := [9]byte{byte(ks)}
-	binary.LittleEndian.PutUint64(signerPath[1:], s.KeyIndex)
-	path = append(path, signerPath[:])
+	changePath := make([]byte, 1)
+	if change == true {
+		changePath[0] = 1
+	} else {
+		changePath[0] = 0
+	}
+	path = append(path, changePath[:])
+
 	for _, idx := range itemIndexes {
 		var idxBytes [8]byte
 		binary.LittleEndian.PutUint64(idxBytes[:], idx)
@@ -67,14 +66,14 @@ func Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
 }
 
 // Create creates and stores a Signer in the database
-func Create(ctx context.Context, db dbm.DB, signerType string, xpubs []chainkd.XPub, quorum int, clientToken string) (string, *Signer, error) {
+func Create(ctx context.Context, db dbm.DB, signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint32, clientToken string) (string, *Signer, error) {
 	if len(xpubs) == 0 {
 		return "", nil, errors.Wrap(ErrNoXPubs)
 	}
 
 	sort.Sort(sortKeys(xpubs)) // this transforms the input slice
 	for i := 1; i < len(xpubs); i++ {
-		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
+		if bytes.Equal(xpubs[i].Bytes(), xpubs[i-1].Bytes()) {
 			return "", nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpubs[i])
 		}
 	}
@@ -86,10 +85,10 @@ func Create(ctx context.Context, db dbm.DB, signerType string, xpubs []chainkd.X
 	var xpubBytes [][]byte
 	for _, key := range xpubs {
 		key := key
-		xpubBytes = append(xpubBytes, key[:])
+		xpubBytes = append(xpubBytes, key.Bytes())
 	}
 
-	id, keyIndex := IdGenerate()
+	id := IDGenerate()
 	return id, &Signer{
 		Type:     signerType,
 		XPubs:    xpubs,
@@ -98,63 +97,8 @@ func Create(ctx context.Context, db dbm.DB, signerType string, xpubs []chainkd.X
 	}, nil
 }
 
-// Find retrieves a Signer from the database
-// using the type and id.
-func Find(ctx context.Context, db dbm.DB, typ, id string) (*Signer, error) {
-	/*const q = `
-		SELECT id, type, xpubs, quorum, key_index
-		FROM signers WHERE id=$1
-	`
-	*/
-
-	var (
-		s         Signer
-		xpubBytes [][]byte
-	)
-	/*
-		err := db.QueryRowContext(ctx, q, id).Scan(
-			&s.ID,
-			&s.Type,
-			(*pq.ByteaArray)(&xpubBytes),
-			&s.Quorum,
-			&s.KeyIndex,
-		)
-		if err == sql.ErrNoRows {
-			return nil, errors.Wrap(pg.ErrUserInputNotFound)
-		}
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}
-
-		if s.Type != typ {
-			return nil, errors.Wrap(ErrBadType)
-		}*/
-
-	keys, err := ConvertKeys(xpubBytes)
-	if err != nil {
-		return nil, errors.WithDetail(errors.New("bad xpub in databse"), errors.Detail(err))
-	}
-
-	s.XPubs = keys
-
-	return &s, nil
-}
-
-func ConvertKeys(xpubs [][]byte) ([]chainkd.XPub, error) {
-	var xkeys []chainkd.XPub
-	for i, xpub := range xpubs {
-		var xkey chainkd.XPub
-		if len(xpub) != len(xkey) {
-			return nil, errors.WithDetailf(ErrBadXPub, "key %d: xpub is not valid", i)
-		}
-		copy(xkey[:], xpub)
-		xkeys = append(xkeys, xkey)
-	}
-	return xkeys, nil
-}
-
 type sortKeys []chainkd.XPub
 
 func (s sortKeys) Len() int           { return len(s) }
-func (s sortKeys) Less(i, j int) bool { return bytes.Compare(s[i][:], s[j][:]) < 0 }
+func (s sortKeys) Less(i, j int) bool { return bytes.Compare(s[i].Bytes(), s[j].Bytes()) < 0 }
 func (s sortKeys) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }

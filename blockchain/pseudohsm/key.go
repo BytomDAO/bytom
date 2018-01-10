@@ -87,7 +87,7 @@ func writeKeyFile(file string, content []byte) error {
 }
 
 func zeroKey(k *XKey) {
-	b := k.XPrv
+	b := k.XPrv.Bytes()
 	for i := range b {
 		b[i] = 0
 	}

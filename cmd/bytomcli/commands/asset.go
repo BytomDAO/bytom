@@ -31,25 +31,24 @@ var (
 )
 
 var createAssetCmd = &cobra.Command{
-	Use:   "create-asset <alias> <xpub(s)>",
+	Use:   "create-asset <alias> <xpub(s)> <auth>",
 	Short: "Create an asset",
-	Args:  cobra.MinimumNArgs(2),
+	Args:  cobra.MinimumNArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 
 		var ins assetIns
 
-		for _, x := range args[1:] {
-			xpub := chainkd.XPub{}
-			if err := xpub.UnmarshalText([]byte(x)); err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(ErrLocalExe)
-			}
-			ins.RootXPubs = append(ins.RootXPubs, xpub)
+		xpub := chainkd.XPub{}
+		if err := xpub.UnmarshalText([]byte(args[1])); err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(ErrLocalExe)
 		}
+		ins.RootXPubs = append(ins.RootXPubs, xpub)
 
 		ins.Quorum = assetQuorum
 		ins.Alias = args[0]
 		ins.AccessToken = assetToken
+		ins.Auth = args[2]
 
 		if len(assetTags) != 0 {
 			tags := strings.Split(assetTags, ":")

@@ -85,6 +85,24 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 	return &XPub{XPub: xpub, Alias: alias, File: file}, true, nil
 }
 
+//StoreAccountKey store account encryption key
+func (h *HSM) StoreAccountKey(xpub chainkd.XPub, xprv chainkd.XPrv, alias, auth string) (*XPub, bool, error) {
+	id := uuid.NewRandom()
+
+	key := &XKey{
+		ID:      id,
+		KeyType: "bytom_kd",
+		XPub:    xpub,
+		XPrv:    xprv,
+		Alias:   alias,
+	}
+	file := h.keyStore.JoinPath(keyFileName(key.ID.String()))
+	if err := h.keyStore.StoreKey(file, key, auth); err != nil {
+		return nil, false, errors.Wrap(err, "storing keys")
+	}
+	return &XPub{XPub: xpub, Alias: alias, File: file}, true, nil
+}
+
 // ListKeys returns a list of all xpubs from the store
 func (h *HSM) ListKeys() ([]XPub, error) {
 	xpubs := h.cache.keys()
@@ -100,7 +118,7 @@ func (h *HSM) XSign(xpub chainkd.XPub, path [][]byte, msg []byte, auth string) (
 		return nil, err
 	}
 	if len(path) > 0 {
-		xprv = xprv.Derive(path)
+		xprv = xprv.Derive(path, false)
 	}
 	return xprv.Sign(msg), nil
 }
@@ -109,7 +127,6 @@ func (h *HSM) XSign(xpub chainkd.XPub, path [][]byte, msg []byte, auth string) (
 func (h *HSM) LoadChainKDKey(xpub chainkd.XPub, auth string) (xprv chainkd.XPrv, err error) {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
-
 	if xprv, ok := h.kdCache[xpub]; ok {
 		return xprv, nil
 	}
