@@ -229,12 +229,13 @@ func (m *Manager) GetAliasByID(id string) string {
 }
 
 // CreateAddress generate an address for the select account
-func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool, expiresAt time.Time) (cp *CtrlProgram, err error) {
+func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool) (cp *CtrlProgram, err error) {
 	account, err := m.findByID(ctx, accountID)
 	if err != nil {
 		return nil, err
 	}
 
+	expiresAt := time.Now().Add(defaultReceiverExpiry)
 	if len(account.XPubs) == 1 {
 		cp, err = m.createP2PKH(ctx, account, change, expiresAt)
 	} else {
