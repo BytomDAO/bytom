@@ -39,17 +39,13 @@ func (m *Manager) CreateReceiver(ctx context.Context, accountInfo string, expire
 }
 
 // CreateAddressReceiver creates a new address receiver for an account
-func (m *Manager) CreateAddressReceiver(ctx context.Context, accountInfo string, expiresAt time.Time) (*txbuilder.Receiver, error) {
-	if expiresAt.IsZero() {
-		expiresAt = time.Now().Add(defaultReceiverExpiry)
-	}
-
+func (m *Manager) CreateAddressReceiver(ctx context.Context, accountInfo string) (*txbuilder.Receiver, error) {
 	accountID := accountInfo
 	if s, err := m.FindByAlias(ctx, accountInfo); err == nil {
 		accountID = s.ID
 	}
 
-	program, err := m.CreateAddress(ctx, accountID, false, expiresAt)
+	program, err := m.CreateAddress(ctx, accountID, false)
 	if err != nil {
 		return nil, err
 	}
@@ -57,6 +53,6 @@ func (m *Manager) CreateAddressReceiver(ctx context.Context, accountInfo string,
 	return &txbuilder.Receiver{
 		ControlProgram: program.ControlProgram,
 		Address:        program.Address,
-		ExpiresAt:      expiresAt,
+		ExpiresAt:      program.ExpiresAt,
 	}, nil
 }
