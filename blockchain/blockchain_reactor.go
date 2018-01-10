@@ -26,13 +26,13 @@ func (bcr *BlockchainReactor) getNetInfo() Response {
 	net.CurrentBlock = bcr.blockKeeper.chainHeight
 	net.HighestBlock = bcr.blockKeeper.maxPeerHeight
 
-	return resWrapper(net)
+	return NewSuccessResponse(net)
 }
 
 // return best block hash
 func (bcr *BlockchainReactor) getBestBlockHash() Response {
 	blockHash := map[string]string{"blockHash": bcr.chain.BestBlockHash().String()}
-	return resWrapper(blockHash)
+	return NewSuccessResponse(blockHash)
 }
 
 // return block header by hash
@@ -40,16 +40,16 @@ func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) Response {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 	block, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	bcBlock := legacy.MapBlock(block)
-	return resWrapper(bcBlock.BlockHeader)
+	return NewSuccessResponse(bcBlock.BlockHeader)
 }
 
 // TxJSON is used for getting block by hash.
@@ -69,13 +69,13 @@ func (bcr *BlockchainReactor) getBlockByHash(strHash string) Response {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	bcBlock := legacy.MapBlock(legacyBlock)
@@ -99,7 +99,7 @@ func (bcr *BlockchainReactor) getBlockByHash(strHash string) Response {
 		block.Transactions = append(block.Transactions, txJSON)
 	}
 
-	return resWrapper(block)
+	return NewSuccessResponse(block)
 }
 
 // return block by height
@@ -107,7 +107,7 @@ func (bcr *BlockchainReactor) getBlockByHeight(height uint64) Response {
 	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	bcBlock := legacy.MapBlock(legacyBlock)
@@ -131,7 +131,7 @@ func (bcr *BlockchainReactor) getBlockByHeight(height uint64) Response {
 		res.Transactions = append(res.Transactions, txJSON)
 	}
 
-	return resWrapper(res)
+	return NewSuccessResponse(res)
 }
 
 // return block transactions count by hash
@@ -139,17 +139,17 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) Re
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	count := map[string]int{"count": len(legacyBlock.Transactions)}
-	return resWrapper(count)
+	return NewSuccessResponse(count)
 }
 
 // return block transactions count by height
@@ -157,32 +157,33 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) R
 	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	count := map[string]int{"count": len(legacyBlock.Transactions)}
-	return resWrapper(count)
+	return NewSuccessResponse(count)
 }
 
 // return block height
 func (bcr *BlockchainReactor) blockHeight() Response {
 	blockHeight := map[string]uint64{"blockHeight": bcr.chain.Height()}
-	return resWrapper(blockHeight)
+	return NewSuccessResponse(blockHeight)
 }
 
 // return is in mining or not
 func (bcr *BlockchainReactor) isMining() Response {
 	IsMining := map[string]bool{"isMining": bcr.mining.IsMining()}
-	return resWrapper(IsMining)
+	return NewSuccessResponse(IsMining)
 }
 
 // return gasRate
 func (bcr *BlockchainReactor) gasRate() Response {
 	gasrate := map[string]int64{"gasRate": validation.GasRate}
-	return resWrapper(gasrate)
+	return NewSuccessResponse(gasrate)
 }
 
 // wrapper json for response
+// Deprecated: We should use Response factor to create response
 func resWrapper(data interface{}, errWrapper ...error) Response {
 	var response Response
 

@@ -20,11 +20,10 @@ func (bcr *BlockchainReactor) createAccountReceiver(ctx context.Context, ins str
 
 func (bcr *BlockchainReactor) createAccountAddress(ctx context.Context, ins struct {
 	AccountInfo string    `json:"account_info"`
-	ExpiresAt   time.Time `json:"expires_at"`
 }) Response {
-	receiver, err := bcr.accounts.CreateAddressReceiver(ctx, ins.AccountInfo, ins.ExpiresAt)
+	receiver, err := bcr.accounts.CreateAddressReceiver(ctx, ins.AccountInfo)
 	if err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
-	return resWrapper(receiver)
+	return NewSuccessResponse(receiver)
 }
