@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/signers"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/vm/vmutil"
 )
@@ -44,7 +43,7 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 		aa.Alias = *a.Alias
 	}
 	if a.Signer != nil {
-		path := signers.Path(a.Signer, signers.AssetKeySpace)
+		path := path(a.KeyIndex)
 		var jsonPath []chainjson.HexBytes
 		for _, p := range path {
 			jsonPath = append(jsonPath, p)
@@ -53,7 +52,7 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 			derived := xpub.Derive(path)
 			aa.Keys = append(aa.Keys, &query.AssetKey{
 				RootXPub:            xpub,
-				AssetPubkey:         derived[:],
+				AssetPubkey:         derived.Bytes(),
 				AssetDerivationPath: jsonPath,
 			})
 		}

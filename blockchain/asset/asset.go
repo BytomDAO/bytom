@@ -2,6 +2,7 @@ package asset
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"sync"
 
@@ -10,6 +11,7 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 	"golang.org/x/crypto/sha3"
 
+	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519"
@@ -25,6 +27,9 @@ const (
 	maxAssetCache = 1000
 	assetPrefix   = "ASS:"
 	aliasPrefix   = "ALS:"
+	indexPrefix   = "ASSIDX:"
+	purpose       = 0x8000002C
+	assetIndex    = 0x90000000
 )
 
 func aliasKey(name string) []byte {
@@ -35,6 +40,10 @@ func aliasKey(name string) []byte {
 func Key(id *bc.AssetID) []byte {
 	name := id.String()
 	return []byte(assetPrefix + name)
+}
+
+func indexKey(xpub chainkd.XPub) []byte {
+	return []byte(indexPrefix + xpub.String())
 }
 
 // pre-define errors for supporting bytom errorFormatter
@@ -90,8 +99,54 @@ func (asset *Asset) RawDefinition() []byte {
 	return asset.RawDefinitionByte
 }
 
+func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint32, error) {
+	var nextIndex uint32
+
+	if len(xpubs) != 1 {
+		return nil, errors.New("create asset need only one xpub")
+	}
+
+	if rawIndex := reg.db.Get(indexKey(xpubs[0])); rawIndex == nil {
+		nextIndex = 1
+	} else {
+		nextIndex = uint32(binary.LittleEndian.Uint32(rawIndex)) + 1
+	}
+
+	buf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(buf, nextIndex)
+	reg.db.Set(indexKey(xpubs[0]), buf)
+
+	return &nextIndex, nil
+}
+
+func assetPath() [][]byte {
+	var path [][]byte
+
+	indexPath := make([]byte, 4)
+	binary.LittleEndian.PutUint32(indexPath[:], 0x01)
+	path = append(path, indexPath[:])
+
+	return path
+}
+
+// path returns the complete path for hardened derived keys for new asset
+// asset path format /Purpose'/index'
+func path(index uint32) [][]byte {
+	var path [][]byte
+
+	purposePath := make([]byte, 4)
+	binary.LittleEndian.PutUint32(purposePath[:], purpose)
+	path = append(path, purposePath[:])
+
+	assetPath := make([]byte, 4)
+	binary.LittleEndian.PutUint32(assetPath[:], assetIndex+index)
+	path = append(path, assetPath)
+
+	return path
+}
+
 // Define defines a new Asset.
-func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}, clientToken string) (*Asset, error) {
+func (reg *Registry) Define(ctx context.Context, hsm *pseudohsm.HSM, xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}, clientToken, auth string) (*Asset, error) {
 	if alias == "btm" {
 		return nil, ErrInternalAsset
 	}
@@ -100,9 +155,9 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		return nil, ErrDuplicateAlias
 	}
 
-	_, assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, clientToken)
+	nextAssetIndex, err := reg.getNextAssetIndex(xpubs)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get asset index error")
 	}
 
 	rawDefinition, err := serializeAssetDef(definition)
@@ -110,9 +165,27 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		return nil, ErrSerializing
 	}
 
-	path := signers.Path(assetSigner, signers.AssetKeySpace)
-	derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
-	derivedPKs := chainkd.XPubKeys(derivedXPubs)
+	//derived asset hardened private key and store
+	xpriv, err := hsm.LoadChainKDKey(xpubs[0], auth)
+	if err != nil {
+		return nil, err
+	}
+	path := path(*nextAssetIndex)
+	assetRootXPriv := xpriv.Derive(path, true)
+	assetRootXPub := assetRootXPriv.XPub()
+	hsm.StoreAccountKey(assetRootXPub, assetRootXPriv, alias, auth)
+
+	assetRootXPubs := []chainkd.XPub{assetRootXPub}
+	_, assetSigner, err := signers.Create(ctx, reg.db, "asset", assetRootXPubs, quorum, 0x01, clientToken)
+	if err != nil {
+		return nil, err
+	}
+
+	assetPath := assetPath()
+	assetXPub := assetRootXPub.Derive(assetPath)
+	assetXPubs := []chainkd.XPub{assetXPub}
+	derivedPKs := chainkd.XPubKeys(assetXPubs)
+
 	issuanceProgram, vmver, err := multisigIssuanceProgram(derivedPKs, assetSigner.Quorum)
 	if err != nil {
 		return nil, err
@@ -229,6 +302,7 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	return reg.findByID(ctx, assetID)
 }
 
+//GetAliasByID get asset alias form asset id
 func (reg *Registry) GetAliasByID(id string) string {
 	if id == consensus.BTMAssetID.String() {
 		return "btm"

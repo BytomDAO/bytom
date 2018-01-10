@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/signers"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 )
@@ -39,16 +38,17 @@ func Annotated(a *Account) (*query.AnnotatedAccount, error) {
 		rawTags := json.RawMessage(tags)
 		aa.Tags = &rawTags
 	}
-
-	path := signers.Path(a.Signer, signers.AccountKeySpace)
+	path := path(a.KeyIndex)
+	if err != nil {
+		return nil, err
+	}
 	var jsonPath []chainjson.HexBytes
 	for _, p := range path {
 		jsonPath = append(jsonPath, p)
 	}
 	for _, xpub := range a.XPubs {
 		aa.Keys = append(aa.Keys, &query.AccountKey{
-			RootXPub:              xpub,
-			AccountXPub:           xpub.Derive(path),
+			AccountXPub:           xpub,
 			AccountDerivationPath: jsonPath,
 		})
 	}

@@ -18,6 +18,7 @@ type accountIns struct {
 	Alias       string                 `json:"alias"`
 	Tags        map[string]interface{} `json:"tags"`
 	AccessToken string                 `json:"access_token"`
+	Auth        string                 `json:"auth"`
 }
 
 // assetIns is used for asset related request.
@@ -28,6 +29,7 @@ type assetIns struct {
 	Tags        map[string]interface{} `json:"tags"`
 	Definition  map[string]interface{} `json:"definition"`
 	AccessToken string                 `json:"access_token"`
+	Auth        string                 `json:"auth"`
 }
 
 type requestQuery struct {

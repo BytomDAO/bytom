@@ -23,17 +23,20 @@ func (bcr *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 	// idempotency of create asset requests. Duplicate create asset requests
 	// with the same client_token will only create one asset.
 	AccessToken string `json:"access_token"`
+	Auth        string `json:"auth"`
 }) Response {
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
 	ass, err := bcr.assets.Define(
 		subctx,
+		bcr.hsm,
 		ins.RootXPubs,
 		ins.Quorum,
 		ins.Definition,
 		ins.Alias,
 		ins.Tags,
 		ins.AccessToken,
+		ins.Auth,
 	)
 	if err != nil {
 		return resWrapper(nil, err)

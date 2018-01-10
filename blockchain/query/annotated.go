@@ -68,7 +68,6 @@ type AnnotatedAccount struct {
 
 //AccountKey means an account key.
 type AccountKey struct {
-	RootXPub              chainkd.XPub         `json:"root_xpub"`
 	AccountXPub           chainkd.XPub         `json:"account_xpub"`
 	AccountDerivationPath []chainjson.HexBytes `json:"account_derivation_path"`
 }

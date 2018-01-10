@@ -8,7 +8,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
@@ -58,7 +57,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 	txin := legacy.NewIssuanceInput(nonce[:], a.Amount, a.ReferenceData, asset.InitialBlockHash, asset.IssuanceProgram, nil, assetDef)
 
 	tplIn := &txbuilder.SigningInstruction{}
-	path := signers.Path(asset.Signer, signers.AssetKeySpace)
+	path := assetPath()
 	tplIn.AddWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
 
 	log.Info("Issue action build")

@@ -21,8 +21,9 @@ func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	// idempotency of create account requests. Duplicate create account requests
 	// with the same client_token will only create one account.
 	AccessToken string `json:"access_token"`
+	Auth        string `json:"auth"`
 }) Response {
-	acc, err := bcr.accounts.Create(nil, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags, ins.AccessToken)
+	acc, err := bcr.accounts.Create(nil, bcr.hsm, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags, ins.AccessToken, ins.Auth)
 	if err != nil {
 		return resWrapper(nil, err)
 	}

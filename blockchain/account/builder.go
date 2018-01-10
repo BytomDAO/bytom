@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sha3pool"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
@@ -31,6 +32,24 @@ type spendAction struct {
 	AccountID     string        `json:"account_id"`
 	ReferenceData chainjson.Map `json:"reference_data"`
 	ClientToken   *string       `json:"client_token"`
+}
+
+//changeCheck check whether utxo is change
+func (a *spendAction) changeCheck(u *UTXO) (bool, error) {
+	var hash common.Hash
+
+	sha3pool.Sum256(hash[:], u.ControlProgram)
+	rawProgram := a.accounts.db.Get(CPKey(hash))
+	if rawProgram == nil {
+		return false, errors.New("failed get account control program")
+	}
+
+	accountCP := CtrlProgram{}
+	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
+		return false, err
+	}
+
+	return accountCP.Change, nil
 }
 
 func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
@@ -63,7 +82,11 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
 	for _, r := range res.UTXOs {
-		txInput, sigInst, err := UtxoToInputs(acct.Signer, r, a.ReferenceData)
+		change, err := a.changeCheck(r)
+		if err != nil {
+			return errors.Wrap(err, "utxo change check error")
+		}
+		txInput, sigInst, err := UtxoToInputs(acct.Signer, r, a.ReferenceData, change)
 		if err != nil {
 			return errors.Wrap(err, "creating inputs")
 		}
@@ -105,6 +128,24 @@ type spendUTXOAction struct {
 	ClientToken   *string       `json:"client_token"`
 }
 
+func (a *spendUTXOAction) changeCheck(u *UTXO) (bool, error) {
+	var hash common.Hash
+	accountCP := CtrlProgram{}
+
+	sha3pool.Sum256(hash[:], u.ControlProgram)
+
+	rawProgram := a.accounts.db.Get(CPKey(hash))
+	if rawProgram == nil {
+		return false, errors.New("failed get account control program:%x ")
+	}
+
+	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
+		return false, err
+	}
+
+	return accountCP.Change, nil
+}
+
 func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
 	if a.OutputID == nil {
 		return txbuilder.MissingFieldsError("output_id")
@@ -120,8 +161,12 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	if err != nil {
 		return err
 	}
+	change, err := a.changeCheck(res.UTXOs[0])
+	if err != nil {
+		return errors.Wrap(err, "check change error")
+	}
 
-	txInput, sigInst, err := UtxoToInputs(account.Signer, res.UTXOs[0], a.ReferenceData)
+	txInput, sigInst, err := UtxoToInputs(account.Signer, res.UTXOs[0], a.ReferenceData, change)
 	if err != nil {
 		return err
 	}
@@ -138,9 +183,9 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 }
 
 // UtxoToInputs convert an utxo to the txinput
-func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
+func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte, change bool) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
 	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash, refData)
-	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
+	path := signers.Path(change, u.ControlProgramIndex)
 	sigInst := &txbuilder.SigningInstruction{}
 	if u.Address == "" {
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
@@ -161,7 +206,6 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte) (*legacy.TxIn
 
 	case *common.AddressWitnessScriptHash:
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
-		path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
 		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
 		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)

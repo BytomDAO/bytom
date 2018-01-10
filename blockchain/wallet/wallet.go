@@ -68,10 +68,7 @@ func (w *Wallet) loadWalletInfo() error {
 	if err != nil {
 		return err
 	}
-	if err := w.attachBlock(block); err != nil {
-		return err
-	}
-	return nil
+	return w.attachBlock(block)
 }
 
 func (w *Wallet) commitWalletInfo(batch db.Batch) error {
@@ -160,9 +157,8 @@ func (w *Wallet) ExportAccountPrivKey(hsm *pseudohsm.HSM, xpub chainkd.XPub, aut
 		return nil, err
 	}
 	var hashed [32]byte
-	sha3pool.Sum256(hashed[:], xprv[:])
-
-	tmp := append(xprv[:], hashed[:4]...)
+	sha3pool.Sum256(hashed[:], xprv.Bytes())
+	tmp := append(xprv.Bytes(), hashed[:4]...)
 	res := base58.Encode(tmp)
 	return &res, nil
 }
@@ -173,7 +169,7 @@ func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, ali
 	if err != nil {
 		return nil, err
 	}
-	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, alias, nil, "")
+	newAccount, err := w.AccountMgr.Create(nil, hsm, []chainkd.XPub{xpub.XPub}, SINGLE, alias, nil, "", auth)
 	if err != nil {
 		return nil, err
 	}

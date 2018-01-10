@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
@@ -30,6 +31,9 @@ const (
 	accountPrefix   = "ACC:"
 	accountCPPrefix = "ACP:"
 	keyNextIndex    = "NextIndex"
+	indexPrefix     = "ACIDX:"
+	purpose         = 0x8000002C
+	harden          = 0x80000000
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -43,6 +47,10 @@ var (
 
 func aliasKey(name string) []byte {
 	return []byte(aliasPrefix + name)
+}
+
+func indexKey(xpub chainkd.XPub) []byte {
+	return []byte(indexPrefix + xpub.String())
 }
 
 //Key account store prefix
@@ -116,13 +124,65 @@ type Account struct {
 	Tags  map[string]interface{} `json:"tags"`
 }
 
+func (m *Manager) getNextAccountIndex(xpubs []chainkd.XPub) (*uint32, error) {
+	var nextIndex uint32
+
+	if len(xpubs) != 1 {
+		return nil, errors.New("create account need only one xpub")
+	}
+
+	if rawIndex := m.db.Get(indexKey(xpubs[0])); rawIndex == nil {
+		nextIndex = 1
+	} else {
+		nextIndex = uint32(binary.LittleEndian.Uint32(rawIndex)) + 1
+	}
+
+	buf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(buf, nextIndex)
+	m.db.Set(indexKey(xpubs[0]), buf)
+
+	return &nextIndex, nil
+}
+
+// path returns the complete path for hardened derived keys for new account
+// account path format /Purpose'/index'
+func path(index uint32) [][]byte {
+	var path [][]byte
+
+	purposePath := make([]byte, 4)
+	binary.LittleEndian.PutUint32(purposePath[:], purpose)
+	path = append(path, purposePath[:])
+	indexPath := make([]byte, 4)
+	binary.LittleEndian.PutUint32(indexPath[:], harden+index)
+	path = append(path, indexPath)
+
+	return path
+}
+
 // Create creates a new Account.
-func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, accessToken string) (*Account, error) {
+func (m *Manager) Create(ctx context.Context, hsm *pseudohsm.HSM, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, accessToken, auth string) (*Account, error) {
 	if existed := m.db.Get(aliasKey(alias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
 
-	id, signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, accessToken)
+	nextAccountIndex, err := m.getNextAccountIndex(xpubs)
+	if err != nil {
+		return nil, errors.Wrap(err, "get account index error")
+	}
+
+	path := path(*nextAccountIndex)
+	xpriv, err := hsm.LoadChainKDKey(xpubs[0], auth)
+	if err != nil {
+		return nil, err
+	}
+
+	//derived account hardened private key and store
+	accountXPriv := xpriv.Derive(path, true)
+	accountXPub := accountXPriv.XPub()
+	hsm.StoreAccountKey(accountXPub, accountXPriv, alias, auth)
+
+	accountXPubs := []chainkd.XPub{accountXPub}
+	id, signer, err := signers.Create(ctx, m.db, "account", accountXPubs, quorum, *nextAccountIndex, accessToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
@@ -132,8 +192,8 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	if err != nil {
 		return nil, ErrMarshalAccount
 	}
-	storeBatch := m.db.NewBatch()
 
+	storeBatch := m.db.NewBatch()
 	accountID := Key(id)
 	storeBatch.Set(accountID, rawAccount)
 	storeBatch.Set(aliasKey(alias), []byte(id))
@@ -252,8 +312,8 @@ func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bo
 }
 
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool, expiresAt time.Time) (*CtrlProgram, error) {
-	idx := m.nextIndex()
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	idx, err := m.nextCPIndex(m.db, account.KeyIndex, change)
+	path := signers.Path(change, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
@@ -281,7 +341,7 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 
 func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	idx := m.nextIndex()
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	path := signers.Path(change, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
@@ -317,15 +377,18 @@ func (m *Manager) createControlProgram(ctx context.Context, accountID string, ch
 		return nil, err
 	}
 
-	idx := m.nextIndex()
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	idx, err := m.nextCPIndex(m.db, account.KeyIndex, change)
+	if err != nil {
+		return nil, err
+	}
+
+	path := signers.Path(change, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	control, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
 	if err != nil {
 		return nil, err
 	}
-
 	return &CtrlProgram{
 		AccountID:      account.ID,
 		KeyIndex:       idx,
@@ -382,25 +445,27 @@ func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
 		return vmutil.CoinbaseProgram(nil, 0, height)
 	}
 	rawAccount := accountIter.Value()
-
 	account := &Account{}
 	if err := json.Unmarshal(rawAccount, account); err != nil {
 		log.Errorf("GetCoinbaseControlProgram: fail to unmarshal account %v", err)
 		return vmutil.CoinbaseProgram(nil, 0, height)
 	}
 
-	ctx := context.Background()
-	idx := m.nextIndex()
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	idx, err := m.nextCoinbaseIndex(nil, account.Signer.KeyIndex, false)
+	if err != nil {
+		log.Errorf("GetCoinbaseControlProgram: fail to get nextIndex %v", err)
+		return vmutil.CoinbaseProgram(nil, 0, height)
+	}
+
+	path := signers.Path(false, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
-
 	script, err := vmutil.CoinbaseProgram(derivedPKs, account.Quorum, height)
 	if err != nil {
 		return script, err
 	}
 
-	err = m.insertAccountControlProgram(ctx, &CtrlProgram{
+	err = m.insertAccountControlProgram(nil, &CtrlProgram{
 		AccountID:      account.ID,
 		KeyIndex:       idx,
 		ControlProgram: script,
@@ -422,6 +487,77 @@ func (m *Manager) nextIndex() uint64 {
 	binary.LittleEndian.PutUint64(buf, m.acpIndexNext)
 	m.db.Set([]byte(keyNextIndex), buf)
 	return n
+}
+
+func (m *Manager) nextCPIndex(db dbm.DB, accountIndex uint32, change bool) (uint64, error) {
+	m.acpMu.Lock()
+	defer m.acpMu.Unlock()
+
+	key := make([]byte, 0)
+
+	accountIndexPath := make([]byte, 4)
+	binary.LittleEndian.PutUint32(accountIndexPath[:], accountIndex)
+	key = append(key, accountIndexPath[:]...)
+
+	changePath := make([]byte, 2)
+	if change {
+		binary.LittleEndian.PutUint16(changePath[:], 0x01)
+	} else {
+		binary.LittleEndian.PutUint16(changePath[:], 0x00)
+	}
+	key = append(key, changePath[:]...)
+
+	var nextIndex uint64
+	if rawIndex := db.Get(key); rawIndex == nil {
+		nextIndex = 1
+	} else {
+		nextIndex = uint64(binary.LittleEndian.Uint64(rawIndex)) + 1
+	}
+
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, nextIndex)
+	db.Set(key, buf)
+
+	return nextIndex, nil
+}
+
+func (m *Manager) getNextCoinbaseIndex(db dbm.DB, accountIndex uint32, change bool) (uint64, error) {
+	m.acpMu.Lock()
+	defer m.acpMu.Unlock()
+
+	key := make([]byte, 0)
+	accountIndexPath := make([]byte, 4)
+	binary.LittleEndian.PutUint32(accountIndexPath[:], accountIndex)
+	key = append(key, accountIndexPath[:]...)
+
+	changePath := make([]byte, 2)
+	if change {
+		binary.LittleEndian.PutUint16(changePath[:], 0x01)
+	} else {
+		binary.LittleEndian.PutUint16(changePath[:], 0x00)
+	}
+	key = append(key, changePath[:]...)
+
+	var nextIndex uint64
+	if rawIndex := db.Get(key); rawIndex == nil {
+		nextIndex = 1
+	} else {
+		nextIndex = uint64(binary.LittleEndian.Uint64(rawIndex)) + 1
+	}
+
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, nextIndex)
+	db.Set(key, buf)
+
+	return nextIndex, nil
+}
+
+func (m *Manager) nextCoinbaseIndex(ctx context.Context, accountIndex uint32, change bool) (uint64, error) {
+	n, err := m.getNextCoinbaseIndex(m.db, accountIndex, change)
+	if err != nil {
+		return 0, err
+	}
+	return n, nil
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.
