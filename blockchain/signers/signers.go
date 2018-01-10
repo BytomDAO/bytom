@@ -46,11 +46,10 @@ var (
 // which is composed of a set of keys as well as
 // the amount of signatures needed for quorum.
 type Signer struct {
-	ID       string
-	Type     string
-	XPubs    []chainkd.XPub
-	Quorum   int
-	KeyIndex uint64
+	Type     string         `json:"type"`
+	XPubs    []chainkd.XPub `json:"xpubs"`
+	Quorum   int            `json:"quorum"`
+	KeyIndex uint64         `json:"key_index"`
 }
 
 // Path returns the complete path for derived keys
@@ -68,20 +67,20 @@ func Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
 }
 
 // Create creates and stores a Signer in the database
-func Create(ctx context.Context, db dbm.DB, signerType string, xpubs []chainkd.XPub, quorum int, clientToken string) (*Signer, error) {
+func Create(ctx context.Context, db dbm.DB, signerType string, xpubs []chainkd.XPub, quorum int, clientToken string) (string, *Signer, error) {
 	if len(xpubs) == 0 {
-		return nil, errors.Wrap(ErrNoXPubs)
+		return "", nil, errors.Wrap(ErrNoXPubs)
 	}
 
 	sort.Sort(sortKeys(xpubs)) // this transforms the input slice
 	for i := 1; i < len(xpubs); i++ {
 		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
-			return nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpubs[i])
+			return "", nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpubs[i])
 		}
 	}
 
 	if quorum == 0 || quorum > len(xpubs) {
-		return nil, errors.Wrap(ErrBadQuorum)
+		return "", nil, errors.Wrap(ErrBadQuorum)
 	}
 
 	var xpubBytes [][]byte
@@ -90,31 +89,10 @@ func Create(ctx context.Context, db dbm.DB, signerType string, xpubs []chainkd.X
 		xpubBytes = append(xpubBytes, key[:])
 	}
 
-	var (
-		id       string
-		keyIndex uint64
-	)
-
-	id, keyIndex = IdGenerate()
-
-	return &Signer{
-		ID:       id,
+	id, keyIndex := IdGenerate()
+	return id, &Signer{
 		Type:     signerType,
 		XPubs:    xpubs,
-		Quorum:   quorum,
-		KeyIndex: keyIndex,
-	}, nil
-}
-
-func New(id, typ string, xpubs [][]byte, quorum int, keyIndex uint64) (*Signer, error) {
-	keys, err := ConvertKeys(xpubs)
-	if err != nil {
-		return nil, errors.WithDetail(errors.New("bad xpub in databse"), errors.Detail(err))
-	}
-	return &Signer{
-		ID:       id,
-		Type:     typ,
-		XPubs:    keys,
 		Quorum:   quorum,
 		KeyIndex: keyIndex,
 	}, nil

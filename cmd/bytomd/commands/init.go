@@ -1,16 +1,16 @@
 package commands
 
 import (
-	"os"
 	"encoding/hex"
+	"os"
 
-	"github.com/spf13/cobra"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	"github.com/bytom/types"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/types"
 )
 
 var initFilesCmd = &cobra.Command{

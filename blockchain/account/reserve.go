@@ -1,7 +1,6 @@
 package account
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,10 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/config"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -35,8 +32,8 @@ var (
 	ErrReserved = errors.New("reservation found outputs already reserved")
 )
 
-// utxo describes an individual account utxo.
-type utxo struct {
+// UTXO describes an individual account utxo.
+type UTXO struct {
 	OutputID bc.Hash
 	SourceID bc.Hash
 
@@ -50,10 +47,11 @@ type utxo struct {
 	RefDataHash    bc.Hash
 
 	AccountID           string
+	Address             string
 	ControlProgramIndex uint64
 }
 
-func (u *utxo) source() source {
+func (u *UTXO) source() source {
 	return source{AssetID: u.AssetID, AccountID: u.AccountID}
 }
 
@@ -68,7 +66,7 @@ type source struct {
 type reservation struct {
 	ID          uint64
 	Source      source
-	UTXOs       []*utxo
+	UTXOs       []*UTXO
 	Change      uint64
 	Expiry      time.Time
 	ClientToken *string
@@ -182,7 +180,7 @@ func (re *reserver) reserveUTXO(ctx context.Context, out bc.Hash, exp time.Time,
 	res := &reservation{
 		ID:          rid,
 		Source:      u.source(),
-		UTXOs:       []*utxo{u},
+		UTXOs:       []*UTXO{u},
 		Expiry:      exp,
 		ClientToken: clientToken,
 	}
@@ -239,7 +237,7 @@ func (re *reserver) ExpireReservations(ctx context.Context) error {
 	return nil
 }
 
-func (re *reserver) checkUTXO(u *utxo) bool {
+func (re *reserver) checkUTXO(u *UTXO) bool {
 	utxo, err := re.c.GetUtxo(&u.OutputID)
 	if err != nil {
 		return false
@@ -260,7 +258,7 @@ func (re *reserver) source(src source) *sourceReserver {
 		db:       re.db,
 		src:      src,
 		validFn:  re.checkUTXO,
-		cached:   make(map[bc.Hash]*utxo),
+		cached:   make(map[bc.Hash]*UTXO),
 		reserved: make(map[bc.Hash]uint64),
 	}
 	re.sources[src] = sr
@@ -270,13 +268,13 @@ func (re *reserver) source(src source) *sourceReserver {
 type sourceReserver struct {
 	db       dbm.DB
 	src      source
-	validFn  func(u *utxo) bool
+	validFn  func(u *UTXO) bool
 	mu       sync.Mutex
-	cached   map[bc.Hash]*utxo
+	cached   map[bc.Hash]*UTXO
 	reserved map[bc.Hash]uint64
 }
 
-func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*utxo, uint64, error) {
+func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, error) {
 	reservedUTXOs, reservedAmount, err := sr.reserveFromCache(rid, amount)
 	if err == nil {
 		return reservedUTXOs, reservedAmount, nil
@@ -291,10 +289,10 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*utxo, uint64, e
 	return sr.reserveFromCache(rid, amount)
 }
 
-func (sr *sourceReserver) reserveFromCache(rid uint64, amount uint64) ([]*utxo, uint64, error) {
+func (sr *sourceReserver) reserveFromCache(rid uint64, amount uint64) ([]*UTXO, uint64, error) {
 	var (
 		reserved, unavailable uint64
-		reservedUTXOs         []*utxo
+		reservedUTXOs         []*UTXO
 	)
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
@@ -338,7 +336,7 @@ func (sr *sourceReserver) reserveFromCache(rid uint64, amount uint64) ([]*utxo, 
 	return reservedUTXOs, reserved, nil
 }
 
-func (sr *sourceReserver) reserveUTXO(rid uint64, utxo *utxo) error {
+func (sr *sourceReserver) reserveUTXO(rid uint64, utxo *UTXO) error {
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
 
@@ -375,112 +373,33 @@ func (sr *sourceReserver) refillCache() error {
 	return nil
 }
 
-func findMatchingUTXOs(db dbm.DB, src source) ([]*utxo, error) {
+func findMatchingUTXOs(db dbm.DB, src source) ([]*UTXO, error) {
+	utxos := []*UTXO{}
+	utxoIter := db.IteratorPrefix([]byte(UTXOPreFix))
+	defer utxoIter.Release()
 
-	var (
-		utxos       []*utxo
-		accountUTXO UTXO
-		rawOutputID [32]byte
-		rawSourceID [32]byte
-		rawRefData  [32]byte
-	)
-
-	accountUTXOIter := db.IteratorPrefix([]byte(UTXOPreFix))
-	defer accountUTXOIter.Release()
-	for accountUTXOIter.Next() {
-
-		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {
+	for utxoIter.Next() {
+		u := &UTXO{}
+		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
 			return nil, errors.Wrap(err)
 		}
 
-		if (accountUTXO.AccountID == src.AccountID) && (bytes.Equal(accountUTXO.AssetID, src.AssetID.Bytes())) {
-			copy(rawOutputID[:], accountUTXO.OutputID)
-			copy(rawSourceID[:], accountUTXO.SourceID)
-			copy(rawRefData[:], accountUTXO.RefData)
-
-			utxos = append(utxos, &utxo{
-				OutputID:            bc.NewHash(rawOutputID),
-				SourceID:            bc.NewHash(rawSourceID),
-				AssetID:             src.AssetID,
-				Amount:              accountUTXO.Amount,
-				SourcePos:           accountUTXO.SourcePos,
-				ControlProgram:      accountUTXO.Program,
-				RefDataHash:         bc.NewHash(rawRefData),
-				AccountID:           src.AccountID,
-				ControlProgramIndex: accountUTXO.ProgramIndex,
-			})
-
+		if u.AccountID == src.AccountID && u.AssetID == src.AssetID {
+			utxos = append(utxos, u)
 		}
-
 	}
 
 	if len(utxos) == 0 {
-		log.WithFields(log.Fields{"AccountID": src.AccountID, "AssetID": src.AssetID.String()}).Error("can't match utxo")
 		return nil, errors.New("can't match utxo")
 	}
-
 	return utxos, nil
 }
 
-func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*utxo, error) {
-	u := new(utxo)
-	accountUTXO := new(UTXO)
-
-	//temp fix for coinbase UTXO isn't add to accountUTXO db, will be remove later
-	if outHash == *config.GenerateGenesisTx().ResultIds[0] {
-		return genesisBlockUTXO(), nil
-	}
-
-	// make sure accountUTXO existed in the db
-	accountUTXOValue := db.Get(UTXOKey(outHash))
-	if accountUTXOValue == nil {
+func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*UTXO, error) {
+	u := &UTXO{}
+	data := db.Get(UTXOKey(outHash))
+	if data == nil {
 		return nil, fmt.Errorf("can't find utxo: %s", outHash.String())
 	}
-	if err := json.Unmarshal(accountUTXOValue, &accountUTXO); err != nil {
-		return nil, errors.Wrap(err)
-	}
-
-	rawOutputID := new([32]byte)
-	rawAssetID := new([32]byte)
-	rawSourceID := new([32]byte)
-	rawRefData := new([32]byte)
-
-	copy(rawOutputID[:], accountUTXO.OutputID)
-	copy(rawAssetID[:], accountUTXO.AssetID)
-	copy(rawSourceID[:], accountUTXO.SourceID)
-	copy(rawRefData[:], accountUTXO.RefData)
-
-	u.OutputID = bc.NewHash(*rawOutputID)
-	u.AccountID = accountUTXO.AccountID
-	u.AssetID = bc.NewAssetID(*rawAssetID)
-	u.Amount = accountUTXO.Amount
-	u.ControlProgramIndex = accountUTXO.ProgramIndex
-	u.ControlProgram = accountUTXO.Program
-	u.SourceID = bc.NewHash(*rawSourceID)
-	u.SourcePos = accountUTXO.SourcePos
-	u.RefDataHash = bc.NewHash(*rawRefData)
-
-	return u, nil
-}
-
-//temp fix for coinbase UTXO isn't add to accountUTXO db, will be remove later
-func genesisBlockUTXO() *utxo {
-	u := new(utxo)
-	tx := config.GenerateGenesisTx()
-
-	out := tx.Outputs[0]
-	resOutID := tx.ResultIds[0]
-	resOut, _ := tx.Entries[*resOutID].(*bc.Output)
-	log.Infof("genesis Output:%v", resOut)
-
-	//u.AccountID =
-	u.OutputID = *tx.OutputID(0)
-	u.AssetID = *out.AssetId
-	u.Amount = out.Amount
-	u.ControlProgramIndex = 0
-	u.ControlProgram = out.ControlProgram
-	u.SourceID = *resOut.Source.Ref
-	u.SourcePos = resOut.Source.Position
-	u.RefDataHash = *resOut.Data
-	return u
+	return u, json.Unmarshal(data, u)
 }

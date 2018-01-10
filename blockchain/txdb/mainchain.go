@@ -29,7 +29,7 @@ func DecodeMainchain(data []byte) (map[uint64]*bc.Hash, error) {
 		var b32 [32]byte
 		copy(b32[:], rawHash.Key)
 		hash := bc.NewHash(b32)
-		mainchain[uint64(i+1)] = &hash
+		mainchain[uint64(i)] = &hash
 	}
 
 	return mainchain, nil
@@ -37,7 +37,7 @@ func DecodeMainchain(data []byte) (map[uint64]*bc.Hash, error) {
 
 func saveMainchain(batch dbm.Batch, mainchain map[uint64]*bc.Hash, hash *bc.Hash) error {
 	var mainchainList storage.Mainchain
-	for i := 1; i <= len(mainchain); i++ {
+	for i := 0; i < len(mainchain); i++ {
 		rawHash := &storage.Mainchain_Hash{Key: mainchain[uint64(i)].Bytes()}
 		mainchainList.Hashs = append(mainchainList.Hashs, rawHash)
 	}

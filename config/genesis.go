@@ -4,12 +4,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
 
-// Generate genesis transaction
+// GenerateGenesisTx will return genesis transaction
 func GenerateGenesisTx() *legacy.Tx {
 	txData := legacy.TxData{
 		Version:        1,
@@ -21,7 +22,7 @@ func GenerateGenesisTx() *legacy.Tx {
 				OutputCommitment: legacy.OutputCommitment{
 					AssetAmount: bc.AssetAmount{
 						AssetId: consensus.BTMAssetID,
-						Amount:  1470000000000000000,
+						Amount:  consensus.InitialBlockSubsidy,
 					},
 					VMVersion:      1,
 					ControlProgram: []byte{81},
@@ -33,7 +34,7 @@ func GenerateGenesisTx() *legacy.Tx {
 	return legacy.NewTx(txData)
 }
 
-// Generate genesis block
+// GenerateGenesisBlock will return genesis block
 func GenerateGenesisBlock() *legacy.Block {
 	genesisCoinbaseTx := GenerateGenesisTx()
 	merkleRoot, err := bc.MerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
@@ -44,11 +45,12 @@ func GenerateGenesisBlock() *legacy.Block {
 	var seed [32]byte
 	sha3pool.Sum256(seed[:], make([]byte, 32))
 
-	genesisBlock := &legacy.Block{
+	block := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
 			Version:     1,
-			Height:      1,
-			Seed:        bc.NewHash([32]byte{}),
+			Height:      0,
+			Nonce:       1267808,
+			Seed:        bc.NewHash(seed),
 			TimestampMS: 1511318565142,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
@@ -58,15 +60,13 @@ func GenerateGenesisBlock() *legacy.Block {
 		Transactions: []*legacy.Tx{genesisCoinbaseTx},
 	}
 
-	for i := uint64(0); i <= 10000000000000; i++ {
-		genesisBlock.Nonce = i
-		hash := genesisBlock.Hash()
-
-		if consensus.CheckProofOfWork(&hash, genesisBlock.Bits) {
+	for {
+		hash := block.Hash()
+		if difficulty.CheckProofOfWork(&hash, block.Bits) {
+			log.Info(block.Nonce)
 			break
 		}
+		block.Nonce++
 	}
-
-	log.Infof("genesisBlock:%v", genesisBlock)
-	return genesisBlock
+	return block
 }
