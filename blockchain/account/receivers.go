@@ -14,10 +14,8 @@ const defaultReceiverExpiry = 30 * 24 * time.Hour // 30 days
 // with the provided expiry. If a zero time is provided for the
 // expiry, a default expiry of 30 days from the current time is
 // used.
-func (m *Manager) CreateReceiver(ctx context.Context, accountInfo string, expiresAt time.Time) (*txbuilder.Receiver, error) {
-	if expiresAt.IsZero() {
-		expiresAt = time.Now().Add(defaultReceiverExpiry)
-	}
+func (m *Manager) CreateReceiver(ctx context.Context, accountInfo string) (*txbuilder.Receiver, error) {
+	expiresAt := time.Now().Add(defaultReceiverExpiry)
 
 	accountID := accountInfo
 
