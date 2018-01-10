@@ -50,6 +50,14 @@ type Response struct {
 	Data   interface{} `json:"data,omitempty"`
 }
 
+func NewSuccessResponse(data interface{}) Response {
+	return Response{Status: SUCCESS, Data: data}
+}
+
+func NewErrorResponse(err error) Response {
+	return Response{Status: FAIL, Msg: err.Error()}
+}
+
 //BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor

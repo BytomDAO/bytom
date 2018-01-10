@@ -49,6 +49,9 @@ func opCheckPredicate(vm *virtualMachine) error {
 		return ErrBadValue
 	}
 	l := int64(len(vm.dataStack))
+	if n < 0 {
+		n = l
+	}
 	if n > l {
 		return ErrDataStackUnderflow
 	}

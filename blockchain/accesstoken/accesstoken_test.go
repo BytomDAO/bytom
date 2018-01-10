@@ -102,13 +102,29 @@ func TestDelete(t *testing.T) {
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
-	token := mustCreateToken(ctx, t, cs, "Y", "client")
-	tokenParts := strings.Split(*token, ":")
-	tokenID := tokenParts[0]
+	const id = "Y"
+	mustCreateToken(ctx, t, cs, id, "client")
 
-	err := cs.Delete(ctx, tokenID)
+	err := cs.Delete(ctx, id)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	value := cs.DB.Get([]byte(id))
+	if len(value) > 0 {
+		t.Fatal("delete fail")
+	}
+}
+
+func TestDeleteWithInvalidId(t *testing.T) {
+	ctx := context.Background()
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
+	cs := NewStore(testDB)
+
+	err := cs.Delete(ctx, "@")
+	if errors.Root(err) != ErrBadID {
+		t.Errorf("Deletion with invalid id success, while it should not")
 	}
 }
 

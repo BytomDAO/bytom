@@ -13,8 +13,10 @@ type Config struct {
 	P2P    *P2PConfig     `mapstructure:"p2p"`
 	Wallet *WalletConfig  `mapstructure:"wallet"`
 	Auth   *RPCAuthConfig `mapstructure:"auth"`
+	Web    *WebConfig     `mapstructure:"web"`
 }
 
+// Default configurable parameters.
 func DefaultConfig() *Config {
 	return &Config{
 		BaseConfig: DefaultBaseConfig(),
@@ -22,6 +24,7 @@ func DefaultConfig() *Config {
 		P2P:        DefaultP2PConfig(),
 		Wallet:     DefaultWalletConfig(),
 		Auth:       DefaultRPCAuthConfig(),
+		Web:        DefaultWebConfig(),
 	}
 }
 
@@ -44,7 +47,6 @@ func (cfg *Config) SetRoot(root string) *Config {
 
 //-----------------------------------------------------------------------------
 // BaseConfig
-
 type BaseConfig struct {
 	// The root directory for all data.
 	// This should be set in viper so it can unmarshal into this struct
@@ -94,6 +96,7 @@ type BaseConfig struct {
 	Time time.Time
 }
 
+// Default configurable base parameters.
 func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
 		Genesis:           "genesis.json",
@@ -130,12 +133,6 @@ func (b BaseConfig) KeysDir() string {
 	return rootify(b.KeysPath, b.RootDir)
 }
 
-func DefaultLogLevel() string {
-	return "info"
-}
-
-// RPCConfig
-
 type RPCConfig struct {
 	RootDir string `mapstructure:"home"`
 
@@ -150,6 +147,7 @@ type RPCConfig struct {
 	Unsafe bool `mapstructure:"unsafe"`
 }
 
+// Default configurable rpc parameters.
 func DefaultRPCConfig() *RPCConfig {
 	return &RPCConfig{
 		ListenAddress:     "tcp://0.0.0.0:46657",
@@ -168,7 +166,6 @@ func TestRPCConfig() *RPCConfig {
 
 //-----------------------------------------------------------------------------
 // P2PConfig
-
 type P2PConfig struct {
 	RootDir          string `mapstructure:"home"`
 	ListenAddress    string `mapstructure:"laddr"`
@@ -182,6 +179,7 @@ type P2PConfig struct {
 	DialTimeout      int    `mapstructure:"dial_timeout"`
 }
 
+// Default configurable p2p parameters.
 func DefaultP2PConfig() *P2PConfig {
 	return &P2PConfig{
 		ListenAddress:    "tcp://0.0.0.0:46656",
@@ -206,25 +204,36 @@ func (p *P2PConfig) AddrBookFile() string {
 }
 
 //-----------------------------------------------------------------------------
-// WalletConfig
-
 type WalletConfig struct {
-	Enable bool `mapstructure:"enable"`
+	Disable bool `mapstructure:"disable"`
 }
 
 type RPCAuthConfig struct {
 	Disable bool `mapstructure:"disable"`
 }
 
+type WebConfig struct {
+	Closed bool `mapstructure:"closed"`
+}
+
+// Default configurable rpc's auth parameters.
 func DefaultRPCAuthConfig() *RPCAuthConfig {
 	return &RPCAuthConfig{
 		Disable: false,
 	}
 }
 
+// Default configurable web parameters.
+func DefaultWebConfig() *WebConfig {
+	return &WebConfig{
+		Closed: false,
+	}
+}
+
+// Default configurable wallet parameters.
 func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
-		Enable: false,
+		Disable: false,
 	}
 }
 
