@@ -72,7 +72,7 @@ func getAliasDefinition(assetID bc.AssetID, walletDB db.DB) (string, json.RawMes
 		}
 
 		alias := *localAsset.Alias
-		definition := localAsset.RawDefinitionByte
+		definition := []byte(localAsset.RawDefinitionByte)
 		return alias, definition, nil
 	}
 
