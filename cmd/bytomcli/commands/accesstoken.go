@@ -5,6 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+
+	"github.com/bytom/util"
 )
 
 var createAccessTokenCmd = &cobra.Command{
@@ -15,8 +17,8 @@ var createAccessTokenCmd = &cobra.Command{
 		var token accessToken
 		token.ID = args[0]
 
-		data, exitCode := clientCall("/create-access-token", &token)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/create-access-token", &token)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		printJSON(data)
@@ -28,8 +30,8 @@ var listAccessTokenCmd = &cobra.Command{
 	Short: "List the existing access tokens",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/list-access-tokens")
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/list-access-tokens")
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -45,7 +47,7 @@ var deleteAccessTokenCmd = &cobra.Command{
 		var token accessToken
 		token.ID = args[0]
 
-		if _, exitCode := clientCall("/delete-access-token", &token); exitCode != Success {
+		if _, exitCode := util.ClientCall("/delete-access-token", &token); exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		jww.FEEDBACK.Println("Successfully delete access token")
@@ -61,7 +63,7 @@ var checkAccessTokenCmd = &cobra.Command{
 		token.ID = args[0]
 		token.Secret = args[1]
 
-		if _, exitCode := clientCall("/check-access-token", &token); exitCode != Success {
+		if _, exitCode := util.ClientCall("/check-access-token", &token); exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 

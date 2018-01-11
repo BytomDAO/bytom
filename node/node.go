@@ -119,6 +119,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accessto
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
 	listenAddr := env.String("LISTEN", config.ApiAddress)
+	log.WithField("api address:", config.ApiAddress).Info("Rpc listen")
 	listener, err := net.Listen("tcp", *listenAddr)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to register tcp port: %v", err))
