@@ -12,7 +12,6 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/bc/legacy"
-
 	"github.com/bytom/test"
 )
 

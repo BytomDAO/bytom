@@ -10,6 +10,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/blockchain/txdb"
+	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol"
@@ -18,11 +19,16 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
+// Mock transaction pool
+func MockTxPool() *protocol.TxPool {
+	return protocol.NewTxPool()
+}
 
 func MockChain(testDB dbm.DB) (*protocol.Chain, error) {
 	store := txdb.NewStore(testDB)
-	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)
+	txPool := MockTxPool()
+	genesisBlock := cfg.GenerateGenesisBlock()
+	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +72,7 @@ func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM) error {
 	})
 }
 
+// Mock block
 func MockBlock() *bc.Block {
 	return &bc.Block{
 		BlockHeader: &bc.BlockHeader{Height: 1},
