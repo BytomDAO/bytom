@@ -55,12 +55,35 @@ func getAliasDefinition(assetID bc.AssetID, walletDB db.DB) (string, json.RawMes
 			return "", nil, err
 		}
 
-		if a, ok := definitionMap["alias"]; ok {
-			alias := fmt.Sprintf("%v", a)
+		var alias string
+		if a, ok := definitionMap["name"]; ok {
+			alias = fmt.Sprintf("%v", a)
+			if alias != "" {
+				index := 0
+				find := alias
+				aliasIter := walletDB.IteratorPrefix([]byte(asset.AliasPrefix + find))
+				defer aliasIter.Release()
+				for aliasIter.Next() {
+					index++
+				}
+				if index > 0 {
+					alias = fmt.Sprintf("%s-%d", find, index)
+				}
+			}
+			walletDB.Set(asset.AliasKey(alias), []byte(assetID.String()))
 			return alias, definitionByte, nil
 		}
 
-		return "", definitionByte, nil
+		index := 0
+		aliasIter := walletDB.IteratorPrefix([]byte(asset.AliasPrefix + "external-asset"))
+		defer aliasIter.Release()
+		for aliasIter.Next() {
+			index++
+		}
+		alias = fmt.Sprintf("external-asset-%d", index)
+
+		walletDB.Set(asset.AliasKey(alias), []byte(assetID.String()))
+		return alias, definitionByte, nil
 	}
 
 	//local asset
