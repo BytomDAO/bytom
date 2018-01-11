@@ -5,6 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+
+	"github.com/bytom/util"
 )
 
 var netInfoCmd = &cobra.Command{
@@ -12,8 +14,8 @@ var netInfoCmd = &cobra.Command{
 	Short: "Print the summary of network",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/net-info")
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/net-info")
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		printJSON(data)
@@ -23,8 +25,8 @@ var netListeningCmd = &cobra.Command{
 	Use:   "net-listening",
 	Short: "If client is actively listening for network connections",
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/net-info")
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/net-info")
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -38,8 +40,8 @@ var peerCountCmd = &cobra.Command{
 	Short: "Number of peers currently connected to the client",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/net-info")
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/net-info")
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -53,8 +55,8 @@ var netSyncingCmd = &cobra.Command{
 	Short: "If the network is still syncing",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/net-info")
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/net-info")
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 

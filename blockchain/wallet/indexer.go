@@ -37,7 +37,8 @@ type accountOutput struct {
 const (
 	//TxPrefix is wallet database transactions prefix
 	TxPrefix = "TXS:"
-	TxIndex  = "TID:"
+	//TxIndex is wallet database tx index prefix
+	TxIndex = "TID:"
 )
 
 func formatKey(blockHeight uint64, position uint32) string {
@@ -306,6 +307,7 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 	return annotatedTxs
 }
 
+//GetTransactionsByTxID get account txs by account tx ID
 func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error) {
 	annotatedTx := query.AnnotatedTx{}
 	annotatedTxs := make([]query.AnnotatedTx, 0)
@@ -347,13 +349,14 @@ func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) 
 	return false
 }
 
+//GetTransactionsByAccountID get account txs by account ID
 func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]query.AnnotatedTx, error) {
-	annotatedTx := query.AnnotatedTx{}
 	annotatedTxs := make([]query.AnnotatedTx, 0)
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
 	for txIter.Next() {
+		annotatedTx := query.AnnotatedTx{}
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}

@@ -5,6 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+
+	"github.com/bytom/util"
 )
 
 var createTransactionFeedCmd = &cobra.Command{
@@ -16,8 +18,8 @@ var createTransactionFeedCmd = &cobra.Command{
 		in.Alias = args[0]
 		in.Filter = args[1]
 
-		_, exitCode := clientCall("/create-transaction-feed", &in)
-		if exitCode != Success {
+		_, exitCode := util.ClientCall("/create-transaction-feed", &in)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -30,8 +32,8 @@ var listTransactionFeedsCmd = &cobra.Command{
 	Short: "list all of transaction feeds",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/list-transaction-feeds")
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/list-transaction-feeds")
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		printJSONList(data)
@@ -46,8 +48,8 @@ var deleteTransactionFeedCmd = &cobra.Command{
 		var in txFeed
 		in.Alias = args[0]
 
-		_, exitCode := clientCall("/delete-transaction-feed", &in)
-		if exitCode != Success {
+		_, exitCode := util.ClientCall("/delete-transaction-feed", &in)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -63,8 +65,8 @@ var getTransactionFeedCmd = &cobra.Command{
 		var in txFeed
 		in.Alias = args[0]
 
-		data, exitCode := clientCall("/get-transaction-feed", &in)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/get-transaction-feed", &in)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		printJSON(data)
@@ -80,7 +82,7 @@ var updateTransactionFeedCmd = &cobra.Command{
 		in.Alias = args[0]
 		in.Filter = args[1]
 
-		if _, exitCode := clientCall("/update-transaction-feed", &in); exitCode != Success {
+		if _, exitCode := util.ClientCall("/update-transaction-feed", &in); exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		jww.FEEDBACK.Println("Successfully updated transaction feed")

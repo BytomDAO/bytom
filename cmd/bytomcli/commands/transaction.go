@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/util"
 )
 
 func init() {
@@ -139,17 +140,17 @@ var buildTransactionCmd = &cobra.Command{
 			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
 		default:
 			jww.ERROR.Println("Invalid transaction template type")
-			os.Exit(ErrLocalExe)
+			os.Exit(util.ErrLocalExe)
 		}
 
 		var buildReq blockchain.BuildRequest
 		if err := json.Unmarshal([]byte(buildReqStr), &buildReq); err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalExe)
+			os.Exit(util.ErrLocalExe)
 		}
 
-		data, exitCode := clientCall("/build-transaction", &buildReq)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/build-transaction", &buildReq)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -161,13 +162,13 @@ var buildTransactionCmd = &cobra.Command{
 		dataMap, ok := data.(map[string]interface{})
 		if ok != true {
 			jww.ERROR.Println("invalid type assertion")
-			os.Exit(ErrLocalParse)
+			os.Exit(util.ErrLocalParse)
 		}
 
 		rawTemplate, err := json.Marshal(dataMap)
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
+			os.Exit(util.ErrLocalParse)
 		}
 
 		jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, string(rawTemplate))
@@ -187,7 +188,7 @@ var signTransactionCmd = &cobra.Command{
 		err := json.Unmarshal([]byte(args[0]), &template)
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalExe)
+			os.Exit(util.ErrLocalExe)
 		}
 
 		var req = struct {
@@ -196,8 +197,8 @@ var signTransactionCmd = &cobra.Command{
 		}{Auth: "123456", Txs: template}
 
 		jww.FEEDBACK.Printf("\n\n")
-		data, exitCode := clientCall("/sign-transaction", &req)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/sign-transaction", &req)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -209,13 +210,13 @@ var signTransactionCmd = &cobra.Command{
 		dataMap, ok := data.(map[string]interface{})
 		if ok != true {
 			jww.ERROR.Println("invalid type assertion")
-			os.Exit(ErrLocalParse)
+			os.Exit(util.ErrLocalParse)
 		}
 
 		rawSign, err := json.Marshal(dataMap)
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
+			os.Exit(util.ErrLocalParse)
 		}
 		jww.FEEDBACK.Printf("\nSign Template:\n%s\n", string(rawSign))
 	},
@@ -231,12 +232,12 @@ var submitTransactionCmd = &cobra.Command{
 		err := json.Unmarshal([]byte(args[0]), &template)
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalExe)
+			os.Exit(util.ErrLocalExe)
 		}
 
 		jww.FEEDBACK.Printf("\n\n")
-		data, exitCode := clientCall("/submit-transaction", &template)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/submit-transaction", &template)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -257,7 +258,7 @@ var signSubTransactionCmd = &cobra.Command{
 		err := json.Unmarshal([]byte(args[0]), &template)
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalExe)
+			os.Exit(util.ErrLocalExe)
 		}
 
 		var req = struct {
@@ -266,8 +267,8 @@ var signSubTransactionCmd = &cobra.Command{
 		}{Auth: "123456", Txs: template}
 
 		jww.FEEDBACK.Printf("\n\n")
-		data, exitCode := clientCall("/sign-submit-transaction", &req)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/sign-submit-transaction", &req)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -285,8 +286,8 @@ var listTransactionsCmd = &cobra.Command{
 			AccountID string `json:"account_id"`
 		}{ID: txID, AccountID: account}
 
-		data, exitCode := clientCall("/list-transactions", &filter)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/list-transactions", &filter)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -299,8 +300,8 @@ var gasRateCmd = &cobra.Command{
 	Short: "Print the current gas rate",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/gas-rate")
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/gas-rate")
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		printJSON(data)
