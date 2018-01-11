@@ -8,6 +8,7 @@ import (
 	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
@@ -37,8 +38,8 @@ type accountOutput struct {
 const (
 	//TxPrefix is wallet database transactions prefix
 	TxPrefix = "TXS:"
-	//TxIndex is wallet database tx index prefix
-	TxIndex = "TID:"
+	//TxIndexPrefix is wallet database tx index prefix
+	TxIndexPrefix = "TID:"
 )
 
 func formatKey(blockHeight uint64, position uint32) string {
@@ -54,7 +55,7 @@ func calcDeleteKey(blockHeight uint64) []byte {
 }
 
 func calcTxIndexKey(txID string) []byte {
-	return []byte(TxIndex + txID)
+	return []byte(TxIndexPrefix + txID)
 }
 
 //deleteTransaction delete transactions when orphan block rollback
@@ -128,9 +129,27 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	}
 }
 
+//save external assets definition
+func saveExternalAssetDefinition(b *legacy.Block, walletDB db.DB) {
+	storeBatch := walletDB.NewBatch()
+	defer storeBatch.Write()
+
+	for _, tx := range b.Transactions {
+		for _, orig := range tx.Inputs {
+			if ii, ok := orig.TypedInput.(*legacy.IssuanceInput); ok {
+				if isValidJSON(ii.AssetDefinition) {
+					assetID := ii.AssetID()
+					storeBatch.Set(asset.CalcExtAssetKey(&assetID), ii.AssetDefinition)
+				}
+			}
+		}
+	}
+}
+
 //indexTransactions saves all annotated transactions to the database.
 func (w *Wallet) indexTransactions(batch db.Batch, b *legacy.Block) error {
 	annotatedTxs := filterAccountTxs(b, w)
+	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAsset(annotatedTxs, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
