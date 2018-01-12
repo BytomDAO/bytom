@@ -139,6 +139,9 @@ func saveExternalAssetDefinition(b *legacy.Block, walletDB db.DB) {
 			if ii, ok := orig.TypedInput.(*legacy.IssuanceInput); ok {
 				if isValidJSON(ii.AssetDefinition) {
 					assetID := ii.AssetID()
+					if assetExist := walletDB.Get(asset.Key(&assetID)); assetExist != nil {
+						continue
+					}
 					storeBatch.Set(asset.CalcExtAssetKey(&assetID), ii.AssetDefinition)
 				}
 			}
