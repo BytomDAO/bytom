@@ -1,4 +1,4 @@
-package transaction
+package segwit
 
 import (
 	"github.com/bytom/consensus"

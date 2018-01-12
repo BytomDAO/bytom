@@ -3,7 +3,7 @@ package validation
 import (
 	"bytes"
 
-	segwit "github.com/bytom/consensus/segwit"
+	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
