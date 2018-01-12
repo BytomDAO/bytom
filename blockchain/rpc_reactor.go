@@ -37,16 +37,6 @@ func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Reques
 	bcr.handler.ServeHTTP(rw, req)
 }
 
-func RedirectHandler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path == "/" {
-			http.Redirect(w, req, "/dashboard/", http.StatusFound)
-			return
-		}
-		next.ServeHTTP(w, req)
-	})
-}
-
 func webAssetsHandler(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/dashboard/", http.StripPrefix("/dashboard/", static.Handler{
@@ -130,7 +120,6 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	})
 	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
-	handler = RedirectHandler(handler)
 
 	bcr.handler = handler
 }
