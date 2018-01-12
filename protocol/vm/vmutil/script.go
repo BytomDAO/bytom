@@ -52,12 +52,19 @@ func CoinbaseProgram(pubkeys []ed25519.PublicKey, nrequired int, height uint64) 
 	return builder.Build()
 }
 
+// P2AddressProgram return the segwit pay to address program
+func P2AddressProgram(hash []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddData(hash)
+	return builder.Build()
+}
+
 // P2PKHSigProgram generates the script for control with pubkey hash
 func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_DUP)
 	builder.AddOp(vm.OP_HASH160)
-	builder.AddData(pubkeyHash)
+	builder.AddRawBytes(pubkeyHash)
 	builder.AddOp(vm.OP_EQUALVERIFY)
 	builder.AddOp(vm.OP_TXSIGHASH)
 	builder.AddOp(vm.OP_SWAP)
@@ -70,7 +77,7 @@ func P2SHProgram(scriptHash []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_DUP)
 	builder.AddOp(vm.OP_SHA3)
-	builder.AddData(scriptHash)
+	builder.AddRawBytes(scriptHash)
 	builder.AddOp(vm.OP_EQUALVERIFY)
 	builder.AddInt64(-1)
 	builder.AddOp(vm.OP_SWAP)

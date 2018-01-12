@@ -3,10 +3,12 @@ package validation
 import (
 	"bytes"
 
+	segwit "github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 // NewTxVMContext generates the vm.Context for BVM
@@ -89,7 +91,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 
 	result := &vm.Context{
 		VMVersion: prog.VmVersion,
-		Code:      prog.Code,
+		Code:      witnessProgram(prog.Code),
 		Arguments: args,
 
 		EntryID: entryID.Bytes(),
@@ -110,6 +112,19 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 	}
 
 	return result
+}
+
+func witnessProgram(prog []byte) []byte {
+	if segwit.IsP2WPKHScript(prog) {
+		if witnessProg, err := vmutil.P2PKHSigProgram([]byte(prog)); err == nil {
+			return witnessProg
+		}
+	} else if segwit.IsP2WSHScript(prog) {
+		if witnessProg, err := vmutil.P2SHProgram([]byte(prog)); err == nil {
+			return witnessProg
+		}
+	}
+	return prog
 }
 
 type entryContext struct {
