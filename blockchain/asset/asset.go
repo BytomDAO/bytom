@@ -33,7 +33,7 @@ const (
 	indexPrefix   = "ASSIDX:"
 )
 
-func getBTMAsset() *Asset {
+func getNativeAsset() *Asset {
 	genesisBlock := cfg.GenerateGenesisBlock()
 	signer := &signers.Signer{Type: "internal"}
 	alias := "btm"
@@ -321,7 +321,7 @@ func (reg *Registry) GetAliasByID(id string) string {
 
 // ListAssets returns the accounts in the db
 func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
-	assets := []*Asset{getBTMAsset()}
+	assets := []*Asset{getNativeAsset()}
 	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix + id))
 	defer assetIter.Release()
 

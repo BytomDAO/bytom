@@ -58,7 +58,7 @@ func getAliasDefinition(assetID bc.AssetID, walletDB db.DB) (string, json.RawMes
 		var alias string
 		if a, ok := definitionMap["name"]; ok {
 			alias = fmt.Sprintf("%v", a)
-			if alias != "" {
+			if alias != "" && alias != "btm" {
 				index := 0
 				find := alias
 				aliasIter := walletDB.IteratorPrefix([]byte(asset.AliasPrefix + find))
