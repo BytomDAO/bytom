@@ -8,7 +8,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm"
-	"github.com/bytom/protocol/vm/vmutil"
 )
 
 // NewTxVMContext generates the vm.Context for BVM
@@ -116,11 +115,11 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 
 func witnessProgram(prog []byte) []byte {
 	if segwit.IsP2WPKHScript(prog) {
-		if witnessProg, err := vmutil.P2PKHSigProgram([]byte(prog)); err == nil {
+		if witnessProg, err := segwit.ConvertP2PKHSigProgram([]byte(prog)); err == nil {
 			return witnessProg
 		}
 	} else if segwit.IsP2WSHScript(prog) {
-		if witnessProg, err := vmutil.P2SHProgram([]byte(prog)); err == nil {
+		if witnessProg, err := segwit.ConvertP2SHProgram([]byte(prog)); err == nil {
 			return witnessProg
 		}
 	}

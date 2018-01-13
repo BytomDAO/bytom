@@ -52,9 +52,18 @@ func CoinbaseProgram(pubkeys []ed25519.PublicKey, nrequired int, height uint64) 
 	return builder.Build()
 }
 
-// P2AddressProgram return the segwit pay to address program
-func P2AddressProgram(hash []byte) ([]byte, error) {
+// P2WPKHProgram return the segwit pay to public key hash
+func P2WPKHProgram(hash []byte) ([]byte, error) {
 	builder := NewBuilder()
+	builder.AddInt64(0)
+	builder.AddData(hash)
+	return builder.Build()
+}
+
+// P2WSHProgram return the segwit pay to script hash
+func P2WSHProgram(hash []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddInt64(0)
 	builder.AddData(hash)
 	return builder.Build()
 }
@@ -64,7 +73,7 @@ func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_DUP)
 	builder.AddOp(vm.OP_HASH160)
-	builder.AddRawBytes(pubkeyHash)
+	builder.AddData(pubkeyHash)
 	builder.AddOp(vm.OP_EQUALVERIFY)
 	builder.AddOp(vm.OP_TXSIGHASH)
 	builder.AddOp(vm.OP_SWAP)
@@ -77,7 +86,7 @@ func P2SHProgram(scriptHash []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_DUP)
 	builder.AddOp(vm.OP_SHA3)
-	builder.AddRawBytes(scriptHash)
+	builder.AddData(scriptHash)
 	builder.AddOp(vm.OP_EQUALVERIFY)
 	builder.AddInt64(-1)
 	builder.AddOp(vm.OP_SWAP)
