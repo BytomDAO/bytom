@@ -2,7 +2,6 @@ package accesstoken
 
 import (
 	"context"
-	"encoding/hex"
 	"os"
 	"strings"
 	"testing"
@@ -73,13 +72,8 @@ func TestCheck(t *testing.T) {
 
 	token := mustCreateToken(ctx, t, cs, "x", "client")
 	tokenParts := strings.Split(*token, ":")
-	tokenID := tokenParts[0]
-	tokenSecret, err := hex.DecodeString(tokenParts[1])
-	if err != nil {
-		t.Fatal("bad token secret")
-	}
 
-	valid, err := cs.Check(ctx, tokenID, tokenSecret)
+	valid, err := cs.Check(ctx, tokenParts[0], tokenParts[1])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +81,7 @@ func TestCheck(t *testing.T) {
 		t.Fatal("expected token and secret to be valid")
 	}
 
-	valid, err = cs.Check(ctx, "x", []byte("badsecret"))
+	valid, err = cs.Check(ctx, "x", "badsecret")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -128,26 +128,18 @@ func (a *API) tokenAuthn(req *http.Request) (string, error) {
 	return user, a.cachedTokenAuthnCheck(req.Context(), user, pw)
 }
 
-func (a *API) tokenAuthnCheck(ctx context.Context, user, pw string) (bool, error) {
-	pwBytes, err := hex.DecodeString(pw)
-	if err != nil {
-		return false, nil
-	}
-	return a.tokens.Check(ctx, user, pwBytes)
-}
-
 func (a *API) cachedTokenAuthnCheck(ctx context.Context, user, pw string) error {
 	a.tokenMu.Lock()
-	res, ok := a.tokenMap[user+pw]
+	res, ok := a.tokenMap[user + pw]
 	a.tokenMu.Unlock()
 	if !ok || time.Now().After(res.lastLookup.Add(tokenExpiry)) {
-		valid, err := a.tokenAuthnCheck(ctx, user, pw)
+		valid, err := a.tokens.Check(ctx, user, pw)
 		if err != nil {
 			return errors.Wrap(err)
 		}
 		res = tokenResult{valid: valid, lastLookup: time.Now()}
 		a.tokenMu.Lock()
-		a.tokenMap[user+pw] = res
+		a.tokenMap[user + pw] = res
 		a.tokenMu.Unlock()
 	}
 	if !res.valid {

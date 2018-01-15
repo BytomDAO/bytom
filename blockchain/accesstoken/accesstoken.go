@@ -72,13 +72,12 @@ func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*string,
 
 	hashedSecret := make([]byte, tokenSize)
 	sha3pool.Sum256(hashedSecret, secret)
-	created := time.Now()
 
 	token := &Token{
 		ID:      id,
 		Token:   fmt.Sprintf("%s:%x", id, hashedSecret),
 		Type:    typ,
-		Created: created,
+		Created: time.Now(),
 	}
 
 	value, err := json.Marshal(token)
@@ -86,34 +85,27 @@ func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*string,
 		return nil, err
 	}
 	cs.DB.Set(key, value)
-	hexsec := fmt.Sprintf("%s:%x", id, secret)
-	return &hexsec, nil
+
+	return &token.Token, nil
 }
 
 // Check returns whether or not an id-secret pair is a valid access token.
-func (cs *CredentialStore) Check(ctx context.Context, id string, secret []byte) (bool, error) {
+func (cs *CredentialStore) Check(ctx context.Context, id string, secret string) (bool, error) {
 	if !validIDRegexp.MatchString(id) {
 		return false, errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
 
-	var toHash [tokenSize]byte
-	var hashed [tokenSize]byte
-	copy(toHash[:], secret)
-	sha3pool.Sum256(hashed[:], toHash[:])
-	inToken := fmt.Sprintf("%s:%x", id, hashed[:])
-
 	var value []byte
 	token := &Token{}
 
-	key := []byte(id)
-	if value = cs.DB.Get(key); value == nil {
+	if value = cs.DB.Get([]byte(id)); value == nil {
 		return false, errors.WithDetailf(ErrNoMatchID, "check id %q nonexisting", id)
 	}
 	if err := json.Unmarshal(value, token); err != nil {
 		return false, err
 	}
 
-	if strings.Compare(token.Token, inToken) == 0 {
+	if strings.Compare(strings.Split(token.Token, ":")[1], secret) == 0 {
 		return true, nil
 	}
 
