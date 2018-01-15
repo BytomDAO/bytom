@@ -3,7 +3,6 @@ package authn
 import (
 	"context"
 	"crypto/x509"
-	"encoding/hex"
 	"net"
 	"net/http"
 	"strings"

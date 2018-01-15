@@ -42,7 +42,7 @@ func TestList(t *testing.T) {
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
-	tokenMap := make(map[string]*string)
+	tokenMap := make(map[string]*Token)
 	tokenMap["ab"] = mustCreateToken(ctx, t, cs, "ab", "test")
 	tokenMap["bc"] = mustCreateToken(ctx, t, cs, "bc", "test")
 	tokenMap["cd"] = mustCreateToken(ctx, t, cs, "cd", "test")
@@ -56,7 +56,7 @@ func TestList(t *testing.T) {
 		t.Error("List errored: get invalid length")
 	}
 	for _, v := range got {
-		if m := strings.Compare(v.Token, *tokenMap[v.ID]); m != 0 {
+		if m := strings.Compare(v.Token, tokenMap[v.ID].Token); m != 0 {
 			t.Errorf("List error: ID: %s, expected token: %s, DB token: %s", v.ID, *tokenMap[v.ID], v.Token)
 		}
 		continue
@@ -70,7 +70,7 @@ func TestCheck(t *testing.T) {
 	cs := NewStore(testDB)
 
 	token := mustCreateToken(ctx, t, cs, "x", "client")
-	tokenParts := strings.Split(*token, ":")
+	tokenParts := strings.Split(token.Token, ":")
 
 	valid, err := cs.Check(ctx, tokenParts[0], tokenParts[1])
 	if err != nil {
@@ -121,7 +121,7 @@ func TestDeleteWithInvalidId(t *testing.T) {
 	}
 }
 
-func mustCreateToken(ctx context.Context, t *testing.T, cs *CredentialStore, id, typ string) *string {
+func mustCreateToken(ctx context.Context, t *testing.T, cs *CredentialStore, id, typ string) *Token {
 	token, err := cs.Create(ctx, id, typ)
 	if err != nil {
 		t.Fatal(err)

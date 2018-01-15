@@ -55,7 +55,7 @@ func NewStore(db dbm.DB) *CredentialStore {
 }
 
 // Create generates a new access token with the given ID.
-func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*string, error) {
+func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*Token, error) {
 	if !validIDRegexp.MatchString(id) {
 		return nil, errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
@@ -86,7 +86,7 @@ func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*string,
 	}
 	cs.DB.Set(key, value)
 
-	return &token.Token, nil
+	return token, nil
 }
 
 // Check returns whether or not an id-secret pair is a valid access token.
