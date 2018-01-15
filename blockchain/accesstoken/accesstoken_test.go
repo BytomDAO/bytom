@@ -42,23 +42,22 @@ func TestList(t *testing.T) {
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
-	mustCreateToken(ctx, t, cs, "ab", "test")
-	mustCreateToken(ctx, t, cs, "bc", "test")
-	mustCreateToken(ctx, t, cs, "cd", "test")
-
-	cases := struct {
-		want []string
-	}{
-		want: []string{"ab", "bc", "cd"},
-	}
+	tokenMap := make(map[string]*string)
+	tokenMap["ab"] = mustCreateToken(ctx, t, cs, "ab", "test")
+	tokenMap["bc"] = mustCreateToken(ctx, t, cs, "bc", "test")
+	tokenMap["cd"] = mustCreateToken(ctx, t, cs, "cd", "test")
 
 	got, err := cs.List(ctx)
 	if err != nil {
 		t.Errorf("List errored: get list error")
 	}
-	for i, v := range got {
-		if m := strings.Compare(v.ID, cases.want[i]); m != 0 {
-			t.Errorf("List errored: %s %s", v.ID, cases.want[i])
+
+	if len(got) != len(tokenMap) {
+		t.Error("List errored: get invalid length")
+	}
+	for _, v := range got {
+		if m := strings.Compare(v.Token, *tokenMap[v.ID]); m != 0 {
+			t.Errorf("List error: ID: %s, expected token: %s, DB token: %s", v.ID, *tokenMap[v.ID], v.Token)
 		}
 		continue
 	}
