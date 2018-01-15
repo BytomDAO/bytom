@@ -16,11 +16,10 @@ import (
 func TestAuthenticate(t *testing.T) {
 	ctx := context.Background()
 
-	var token *string
 	tokenDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
-	accessTokens := accesstoken.NewStore(tokenDB)
-	token, err := accessTokens.Create(ctx, "alice", "test")
+	tokenStore := accesstoken.NewStore(tokenDB)
+	token, err := tokenStore.Create(ctx, "alice", "test")
 	if err != nil {
 		t.Errorf("create token error")
 	}
@@ -29,11 +28,11 @@ func TestAuthenticate(t *testing.T) {
 		id, tok string
 		want    error
 	}{
-		{"alice", *token, nil},
+		{"alice", token.Token, nil},
 		{"alice", "alice:abcsdsdfassdfsefsfsfesfesfefsefa", ErrInvalidToken},
 	}
 
-	api := NewAPI(accessTokens)
+	api := NewAPI(tokenStore)
 
 	for _, c := range cases {
 		var username, password string
