@@ -45,10 +45,11 @@ func GenerateGenesisBlock() *legacy.Block {
 	var seed [32]byte
 	sha3pool.Sum256(seed[:], make([]byte, 32))
 
-	genesisBlock := &legacy.Block{
+	block := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
 			Version:     1,
 			Height:      0,
+			Nonce:       1267808,
 			Seed:        bc.NewHash(seed),
 			TimestampMS: 1511318565142,
 			BlockCommitment: legacy.BlockCommitment{
@@ -59,15 +60,13 @@ func GenerateGenesisBlock() *legacy.Block {
 		Transactions: []*legacy.Tx{genesisCoinbaseTx},
 	}
 
-	for i := uint64(0); i <= 10000000000000; i++ {
-		genesisBlock.Nonce = i
-		hash := genesisBlock.Hash()
-
-		if difficulty.CheckProofOfWork(&hash, genesisBlock.Bits) {
+	for {
+		hash := block.Hash()
+		if difficulty.CheckProofOfWork(&hash, block.Bits) {
+			log.Info(block.Nonce)
 			break
 		}
+		block.Nonce++
 	}
-
-	log.Infof("genesisBlock:%v", genesisBlock)
-	return genesisBlock
+	return block
 }

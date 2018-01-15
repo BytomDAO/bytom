@@ -9,6 +9,7 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/util"
 )
 
 func init() {
@@ -43,7 +44,7 @@ var createAccountCmd = &cobra.Command{
 			xpub := chainkd.XPub{}
 			if err := xpub.UnmarshalText([]byte(x)); err != nil {
 				jww.ERROR.Println(err)
-				os.Exit(ErrLocalExe)
+				os.Exit(util.ErrLocalExe)
 			}
 			ins.RootXPubs = append(ins.RootXPubs, xpub)
 		}
@@ -54,15 +55,15 @@ var createAccountCmd = &cobra.Command{
 			tags := strings.Split(accountTags, ":")
 			if len(tags) != 2 {
 				jww.ERROR.Println("Invalid tags")
-				os.Exit(ErrLocalExe)
+				os.Exit(util.ErrLocalExe)
 			}
 			ins.Tags = map[string]interface{}{tags[0]: tags[1]}
 		}
 
 		ins.AccessToken = accountToken
 
-		data, exitCode := clientCall("/create-account", &ins)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/create-account", &ins)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -79,8 +80,8 @@ var listAccountsCmd = &cobra.Command{
 			ID string `json:"id"`
 		}{ID: accountID}
 
-		data, exitCode := clientCall("/list-accounts", &filter)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/list-accounts", &filter)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -97,7 +98,7 @@ var deleteAccountCmd = &cobra.Command{
 			AccountInfo string `json:"account_info"`
 		}{AccountInfo: args[0]}
 
-		if _, exitCode := clientCall("/delete-account", accountInfo); exitCode != Success {
+		if _, exitCode := util.ClientCall("/delete-account", accountInfo); exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -107,10 +108,8 @@ var deleteAccountCmd = &cobra.Command{
 
 var updateAccountTagsCmd = &cobra.Command{
 	Use:   "update-account-tags <accountID|alias>",
-	Short: "Add, update or delete the account tags",
-	Long: `If the tags match the pattern 'key:value', add or update them.
-If the tags match the pattern 'key:', delete them.`,
-	Args: cobra.ExactArgs(1),
+	Short: "Update the account tags",
+	Args:  cobra.ExactArgs(1),
 	PreRun: func(cmd *cobra.Command, args []string) {
 		cmd.MarkFlagRequired("tags")
 	},
@@ -124,14 +123,14 @@ If the tags match the pattern 'key:', delete them.`,
 			tags := strings.Split(accountUpdateTags, ":")
 			if len(tags) != 2 {
 				jww.ERROR.Println("Invalid tags")
-				os.Exit(ErrLocalExe)
+				os.Exit(util.ErrLocalExe)
 			}
 			updateTag.Tags = map[string]interface{}{tags[0]: tags[1]}
 		}
 
 		updateTag.AccountInfo = args[0]
 
-		if _, exitCode := clientCall("/update-account-tags", &updateTag); exitCode != Success {
+		if _, exitCode := util.ClientCall("/update-account-tags", &updateTag); exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -149,8 +148,8 @@ var createAccountReceiverCmd = &cobra.Command{
 			ExpiresAt   time.Time `json:"expires_at,omitempty"`
 		}{AccountInfo: args[0]}
 
-		data, exitCode := clientCall("/create-account-receiver", &ins)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/create-account-receiver", &ins)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -168,8 +167,8 @@ var createAccountAddressCmd = &cobra.Command{
 			ExpiresAt   time.Time `json:"expires_at,omitempty"`
 		}{AccountInfo: args[0]}
 
-		data, exitCode := clientCall("/create-account-address", &ins)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/create-account-address", &ins)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -182,8 +181,8 @@ var listBalancesCmd = &cobra.Command{
 	Short: "List the accounts balances",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/list-balances")
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/list-balances")
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -200,8 +199,8 @@ var listUnspentOutputsCmd = &cobra.Command{
 			ID string `json:"id"`
 		}{ID: outputID}
 
-		data, exitCode := clientCall("/list-unspent-outputs", &filter)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/list-unspent-outputs", &filter)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 

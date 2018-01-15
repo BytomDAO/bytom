@@ -111,8 +111,9 @@ func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) 
 // Account is structure of Bytom account
 type Account struct {
 	*signers.Signer
-	Alias string
-	Tags  map[string]interface{} `json:"tags,omitempty"`
+	ID    string                 `json:"id"`
+	Alias string                 `json:"alias"`
+	Tags  map[string]interface{} `json:"tags"`
 }
 
 // Create creates a new Account.
@@ -121,21 +122,21 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, ErrDuplicateAlias
 	}
 
-	signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, accessToken)
+	id, signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, accessToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
-	account := &Account{Signer: signer, Alias: alias, Tags: tags}
+	account := &Account{Signer: signer, ID: id, Alias: alias, Tags: tags}
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return nil, ErrMarshalAccount
 	}
 	storeBatch := m.db.NewBatch()
 
-	accountID := Key(signer.ID)
+	accountID := Key(id)
 	storeBatch.Set(accountID, rawAccount)
-	storeBatch.Set(aliasKey(alias), []byte(signer.ID))
+	storeBatch.Set(aliasKey(alias), []byte(id))
 	storeBatch.Write()
 
 	return account, nil
@@ -143,45 +144,29 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 // UpdateTags modifies the tags of the specified account. The account may be
 // identified either by ID or Alias, but not both.
-func (m *Manager) UpdateTags(ctx context.Context, accountInfo string, tags map[string]interface{}) error {
-	var account Account
-
-	accountID := accountInfo
-	if s, err := m.FindByAlias(nil, accountInfo); err == nil {
-		accountID = s.ID
-	}
-
-	rawAccount := m.db.Get(Key(accountID))
-	if rawAccount == nil {
-		return ErrFindAccount
-	}
-	if err := json.Unmarshal(rawAccount, &account); err != nil {
-		return err
-	}
-
-	for k, v := range tags {
-		switch v {
-		case "":
-			delete(account.Tags, k)
-		default:
-			if account.Tags == nil {
-				account.Tags = make(map[string]interface{})
-			}
-			account.Tags[k] = v
+func (m *Manager) UpdateTags(ctx context.Context, accountInfo string, tags map[string]interface{}) (err error) {
+	account := &Account{}
+	if account, err = m.FindByAlias(nil, accountInfo); err != nil {
+		if account, err = m.findByID(ctx, accountInfo); err != nil {
+			return err
 		}
 	}
 
+	account.Tags = tags
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return ErrMarshalTags
 	}
 
-	m.db.Set(Key(accountID), rawAccount)
+	m.db.Set(Key(account.ID), rawAccount)
+	m.cacheMu.Lock()
+	m.cache.Add(account.ID, account)
+	m.cacheMu.Unlock()
 	return nil
 }
 
 // FindByAlias retrieves an account's Signer record by its alias
-func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signer, error) {
+func (m *Manager) FindByAlias(ctx context.Context, alias string) (*Account, error) {
 	m.cacheMu.Lock()
 	cachedID, ok := m.aliasCache.Get(alias)
 	m.cacheMu.Unlock()
@@ -202,12 +187,12 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*signers.Signe
 }
 
 // findByID returns an account's Signer record by its ID.
-func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, error) {
+func (m *Manager) findByID(ctx context.Context, id string) (*Account, error) {
 	m.cacheMu.Lock()
-	cachedSigner, ok := m.cache.Get(id)
+	cachedAccount, ok := m.cache.Get(id)
 	m.cacheMu.Unlock()
 	if ok {
-		return cachedSigner.(*signers.Signer), nil
+		return cachedAccount.(*Account), nil
 	}
 
 	rawAccount := m.db.Get(Key(id))
@@ -215,19 +200,20 @@ func (m *Manager) findByID(ctx context.Context, id string) (*signers.Signer, err
 		return nil, ErrFindAccount
 	}
 
-	var account Account
-	if err := json.Unmarshal(rawAccount, &account); err != nil {
+	account := &Account{}
+	if err := json.Unmarshal(rawAccount, account); err != nil {
 		return nil, err
 	}
 
 	m.cacheMu.Lock()
-	m.cache.Add(id, account.Signer)
+	m.cache.Add(id, account)
 	m.cacheMu.Unlock()
-	return account.Signer, nil
+	return account, nil
 }
 
+// GetAliasByID return the account alias by given ID
 func (m *Manager) GetAliasByID(id string) string {
-	var account Account
+	account := &Account{}
 
 	rawAccount := m.db.Get(Key(id))
 	if rawAccount == nil {
@@ -235,17 +221,26 @@ func (m *Manager) GetAliasByID(id string) string {
 		return ""
 	}
 
-	if err := json.Unmarshal(rawAccount, &account); err != nil {
+	if err := json.Unmarshal(rawAccount, account); err != nil {
 		log.Warn(err)
 		return ""
 	}
-
 	return account.Alias
 }
 
-// CreateP2PKH generate an address for the select account
-func (m *Manager) CreateP2PKH(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
-	cp, err := m.createP2PKH(ctx, accountID, change, expiresAt)
+// CreateAddress generate an address for the select account
+func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool) (cp *CtrlProgram, err error) {
+	account, err := m.findByID(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+
+	expiresAt := time.Now().Add(defaultReceiverExpiry)
+	if len(account.XPubs) == 1 {
+		cp, err = m.createP2PKH(ctx, account, change, expiresAt)
+	} else {
+		cp, err = m.createP2SH(ctx, account, change, expiresAt)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -256,20 +251,9 @@ func (m *Manager) CreateP2PKH(ctx context.Context, accountID string, change bool
 	return cp, nil
 }
 
-func (m *Manager) createP2PKH(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
-	account, err := m.findByID(ctx, accountID)
-	if err != nil {
-		return nil, err
-	}
-	if account.Quorum != 1 {
-		return nil, ErrStandardQuorum
-	}
-
-	idx, err := m.nextIndex(ctx)
-	if err != nil {
-		return nil, err
-	}
-	path := signers.Path(account, signers.AccountKeySpace, idx)
+func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+	idx := m.nextIndex()
+	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
@@ -280,7 +264,39 @@ func (m *Manager) createP2PKH(ctx context.Context, accountID string, change bool
 		return nil, err
 	}
 
-	control, err := vmutil.P2PKHSigProgram([]byte(pubHash))
+	control, err := vmutil.P2WPKHProgram([]byte(pubHash))
+	if err != nil {
+		return nil, err
+	}
+
+	return &CtrlProgram{
+		AccountID:      account.ID,
+		Address:        address.EncodeAddress(),
+		KeyIndex:       idx,
+		ControlProgram: control,
+		Change:         change,
+		ExpiresAt:      expiresAt,
+	}, nil
+}
+
+func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+	idx := m.nextIndex()
+	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	derivedPKs := chainkd.XPubKeys(derivedXPubs)
+	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
+	if err != nil {
+		return nil, err
+	}
+	scriptHash := crypto.Sha256(signScript)
+
+	// TODO: pass different params due to config
+	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.MainNetParams)
+	if err != nil {
+		return nil, err
+	}
+
+	control, err := vmutil.P2WSHProgram(scriptHash)
 	if err != nil {
 		return nil, err
 	}
@@ -301,12 +317,8 @@ func (m *Manager) createControlProgram(ctx context.Context, accountID string, ch
 		return nil, err
 	}
 
-	idx, err := m.nextIndex(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	path := signers.Path(account, signers.AccountKeySpace, idx)
+	idx := m.nextIndex()
+	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	control, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
@@ -363,37 +375,33 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*Ctr
 
 // GetCoinbaseControlProgram will return a coinbase script
 func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
-	signerIter := m.db.IteratorPrefix([]byte(accountPrefix))
-	if !signerIter.Next() {
+	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
+	defer accountIter.Release()
+	if !accountIter.Next() {
 		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
 		return vmutil.CoinbaseProgram(nil, 0, height)
 	}
-	rawSigner := signerIter.Value()
-	signerIter.Release()
+	rawAccount := accountIter.Value()
 
-	signer := &signers.Signer{}
-	if err := json.Unmarshal(rawSigner, signer); err != nil {
-		log.Errorf("GetCoinbaseControlProgram: fail to unmarshal signer %v", err)
+	account := &Account{}
+	if err := json.Unmarshal(rawAccount, account); err != nil {
+		log.Errorf("GetCoinbaseControlProgram: fail to unmarshal account %v", err)
 		return vmutil.CoinbaseProgram(nil, 0, height)
 	}
 
 	ctx := context.Background()
-	idx, err := m.nextIndex(ctx)
-	if err != nil {
-		log.Errorf("GetCoinbaseControlProgram: fail to get nextIndex %v", err)
-		return vmutil.CoinbaseProgram(nil, 0, height)
-	}
-	path := signers.Path(signer, signers.AccountKeySpace, idx)
-	derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
+	idx := m.nextIndex()
+	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 
-	script, err := vmutil.CoinbaseProgram(derivedPKs, signer.Quorum, height)
+	script, err := vmutil.CoinbaseProgram(derivedPKs, account.Quorum, height)
 	if err != nil {
 		return script, err
 	}
 
 	err = m.insertAccountControlProgram(ctx, &CtrlProgram{
-		AccountID:      signer.ID,
+		AccountID:      account.ID,
 		KeyIndex:       idx,
 		ControlProgram: script,
 		Change:         false,
@@ -404,89 +412,49 @@ func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
 	return script, nil
 }
 
-func saveIndex(db dbm.DB, index uint64) {
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, index)
-	db.Set([]byte(keyNextIndex), buf)
-}
-
-func (m *Manager) nextIndex(ctx context.Context) (uint64, error) {
+func (m *Manager) nextIndex() uint64 {
 	m.acpMu.Lock()
 	defer m.acpMu.Unlock()
 
 	n := m.acpIndexNext
 	m.acpIndexNext++
-	saveIndex(m.db, m.acpIndexNext)
-	return n, nil
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, m.acpIndexNext)
+	m.db.Set([]byte(keyNextIndex), buf)
+	return n
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.
 func (m *Manager) DeleteAccount(in struct {
 	AccountInfo string `json:"account_info"`
-}) error {
+}) (err error) {
+	account := &Account{}
+	if account, err = m.FindByAlias(nil, in.AccountInfo); err != nil {
+		if account, err = m.findByID(nil, in.AccountInfo); err != nil {
+			return err
+		}
+	}
 
-	account := Account{}
 	storeBatch := m.db.NewBatch()
-
-	accountID := in.AccountInfo
-	if s, err := m.FindByAlias(nil, in.AccountInfo); err == nil {
-		accountID = s.ID
-	}
-
-	rawAccount := m.db.Get(Key(accountID))
-	if rawAccount == nil {
-		return nil
-	}
-	if err := json.Unmarshal(rawAccount, &account); err != nil {
-		return err
-	}
-
+	m.aliasCache.Remove(account.Alias)
 	storeBatch.Delete(aliasKey(account.Alias))
 	storeBatch.Delete(Key(account.ID))
 	storeBatch.Write()
-
 	return nil
 }
 
-type annotatedAccount struct {
-	Alias    string           `json:"alias"`
-	ID       string           `json:"id"`
-	Quorum   int              `json:"quorum"`
-	KeyIndex uint64           `json:"key_index"`
-	XPubs    []chainkd.XPub   `json:"xpubs"`
-	Tags     *json.RawMessage `json:"tags"`
-}
-
 // ListAccounts will return the accounts in the db
-func (m *Manager) ListAccounts(id string) ([]annotatedAccount, error) {
-	account := Account{}
-	tmpAccount := annotatedAccount{}
-	accounts := make([]annotatedAccount, 0)
-	jsonTags := json.RawMessage(`{}`)
-
+func (m *Manager) ListAccounts(id string) ([]*Account, error) {
+	accounts := []*Account{}
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix + id))
 	defer accountIter.Release()
 
 	for accountIter.Next() {
+		account := &Account{}
 		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
 			return nil, err
 		}
-
-		tmpAccount.Alias = account.Alias
-		tmpAccount.ID = account.ID
-		tmpAccount.Quorum = account.Quorum
-		tmpAccount.KeyIndex = account.KeyIndex
-		tmpAccount.XPubs = account.XPubs
-		if account.Tags != nil {
-			t, err := json.Marshal(account.Tags)
-			if err != nil {
-				return nil, err
-			}
-			jsonTags = t
-		}
-		tmpAccount.Tags = &jsonTags
-
-		accounts = append(accounts, tmpAccount)
+		accounts = append(accounts, account)
 	}
 
 	return accounts, nil

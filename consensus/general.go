@@ -22,6 +22,9 @@ const (
 	PowMinBits            = uint64(2161727821138738707)
 	BlocksPerRetarget     = uint64(1024)
 	TargetSecondsPerBlock = uint64(60)
+
+	PayToWitnessPubKeyHashDataSize = 20
+	PayToWitnessScriptHashDataSize = 32
 )
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom

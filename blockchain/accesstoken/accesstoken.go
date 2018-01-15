@@ -59,18 +59,19 @@ func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*string,
 	if !validIDRegexp.MatchString(id) {
 		return nil, errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
-	k, err := json.Marshal(id)
-	if v := cs.DB.Get(k); v != nil {
+
+	key := []byte(id)
+	if cs.DB.Get(key) != nil {
 		return nil, errors.WithDetailf(ErrDuplicateID, "id %q already in use", id)
 	}
-	var secret [tokenSize]byte
-	v, err := rand.Read(secret[:])
-	if err != nil || v != tokenSize {
+
+	secret := make([]byte, tokenSize)
+	if _, err := rand.Read(secret); err != nil {
 		return nil, err
 	}
 
-	var hashedSecret [tokenSize]byte
-	sha3pool.Sum256(hashedSecret[:], secret[:])
+	hashedSecret := make([]byte, tokenSize)
+	sha3pool.Sum256(hashedSecret, secret)
 	created := time.Now()
 
 	token := &Token{
@@ -80,10 +81,6 @@ func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*string,
 		Created: created,
 	}
 
-	key, err := json.Marshal(id)
-	if err != nil {
-		return nil, err
-	}
 	value, err := json.Marshal(token)
 	if err != nil {
 		return nil, err
@@ -107,12 +104,9 @@ func (cs *CredentialStore) Check(ctx context.Context, id string, secret []byte) 
 
 	var value []byte
 	token := &Token{}
-	k, err := json.Marshal(id)
-	if err != nil {
-		return false, err
-	}
 
-	if value = cs.DB.Get(k); value == nil {
+	key := []byte(id)
+	if value = cs.DB.Get(key); value == nil {
 		return false, errors.WithDetailf(ErrNoMatchID, "check id %q nonexisting", id)
 	}
 	if err := json.Unmarshal(value, token); err != nil {
@@ -147,11 +141,7 @@ func (cs *CredentialStore) Delete(ctx context.Context, id string) error {
 	if !validIDRegexp.MatchString(id) {
 		return errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
-	k, err := json.Marshal(id)
-	if err != nil {
-		return err
-	}
-	cs.DB.Delete(k)
 
+	cs.DB.Delete([]byte(id))
 	return nil
 }

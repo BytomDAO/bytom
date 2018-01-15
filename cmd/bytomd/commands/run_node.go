@@ -24,7 +24,9 @@ func init() {
 
 	runNodeCmd.Flags().Bool("auth.disable", config.Auth.Disable, "Disable rpc access authenticate")
 
-	runNodeCmd.Flags().Bool("wallet.enable", config.Wallet.Enable, "Enable wallet")
+	runNodeCmd.Flags().Bool("wallet.disable", config.Wallet.Disable, "Disable wallet")
+
+	runNodeCmd.Flags().Bool("web.closed", config.Web.Closed, "Lanch web browser or not")
 
 	// p2p flags
 	runNodeCmd.Flags().String("p2p.laddr", config.P2P.ListenAddress, "Node listen address. (0.0.0.0:0 means any interface, any port)")

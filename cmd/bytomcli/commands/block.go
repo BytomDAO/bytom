@@ -6,14 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
-
-	"github.com/bytom/blockchain"
-	"github.com/bytom/env"
-)
-
-var (
-	home    = blockchain.HomeDirFromEnvironment()
-	coreURL = env.String("BYTOM_URL", "http://localhost:9888")
+	"github.com/bytom/util"
 )
 
 var blockHashCmd = &cobra.Command{
@@ -21,8 +14,8 @@ var blockHashCmd = &cobra.Command{
 	Short: "Get the hash of most recent block",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("block-hash")
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("block-hash")
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		printJSON(data)
@@ -34,8 +27,8 @@ var blockHeightCmd = &cobra.Command{
 	Short: "Get the number of most recent block",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/block-height")
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/block-height")
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		printJSON(data)
@@ -47,8 +40,8 @@ var getBlockByHashCmd = &cobra.Command{
 	Short: "Get a whole block matching the given hash",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/get-block-by-hash", args[0])
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/get-block-by-hash", args[0])
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		printJSON(data)
@@ -60,8 +53,8 @@ var getBlockHeaderByHashCmd = &cobra.Command{
 	Short: "Get the header of a block matching the given hash",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/get-block-header-by-hash", args[0])
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/get-block-header-by-hash", args[0])
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		printJSON(data)
@@ -73,8 +66,8 @@ var getBlockTransactionsCountByHashCmd = &cobra.Command{
 	Short: "Get the transactions count of a block matching the given hash",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/get-block-transactions-count-by-hash", args[0])
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/get-block-transactions-count-by-hash", args[0])
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		printJSON(data)
@@ -89,11 +82,11 @@ var getBlockByHeightCmd = &cobra.Command{
 		height, err := strconv.ParseUint(args[0], 10, 64)
 		if err != nil {
 			jww.ERROR.Printf("Invalid height value")
-			os.Exit(ErrLocalExe)
+			os.Exit(util.ErrLocalExe)
 		}
 
-		data, exitCode := clientCall("/get-block-by-height", height)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/get-block-by-height", height)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -109,11 +102,11 @@ var getBlockTransactionsCountByHeightCmd = &cobra.Command{
 		ui64, err := strconv.ParseUint(args[0], 10, 64)
 		if err != nil {
 			jww.ERROR.Printf("Invalid height value")
-			os.Exit(ErrLocalExe)
+			os.Exit(util.ErrLocalExe)
 		}
 
-		data, exitCode := clientCall("/get-block-transactions-count-by-height", ui64)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/get-block-transactions-count-by-height", ui64)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 

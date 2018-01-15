@@ -6,10 +6,16 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/dashboard"
 	"github.com/bytom/errors"
+	"github.com/bytom/net/http/authn"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
+)
+
+var (
+	errNotAuthenticated = errors.New("not authenticated")
 )
 
 // json handler
@@ -29,16 +35,6 @@ func alwaysError(err error) http.Handler {
 // serve http
 func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	bcr.handler.ServeHTTP(rw, req)
-}
-
-func RedirectHandler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path == "/" {
-			http.Redirect(w, req, "/dashboard/", http.StatusFound)
-			return
-		}
-		next.ServeHTTP(w, req)
-	})
 }
 
 func webAssetsHandler(next http.Handler) http.Handler {
@@ -124,7 +120,23 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	})
 	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
-	handler = RedirectHandler(handler)
 
 	bcr.handler = handler
+}
+
+func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore) http.Handler {
+
+	authenticator := authn.NewAPI(accessTokens)
+
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		// TODO(tessr): check that this path exists; return early if this path isn't legit
+		req, err := authenticator.Authenticate(req)
+		if err != nil {
+			log.WithField("error", errors.Wrap(err, "Serve")).Error("Authenticate fail")
+			err = errors.Sub(errNotAuthenticated, err)
+			errorFormatter.Write(req.Context(), rw, err)
+			return
+		}
+		handler.ServeHTTP(rw, req)
+	})
 }

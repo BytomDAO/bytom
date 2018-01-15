@@ -28,16 +28,17 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
-	"github.com/bytom/net/http/authn"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/types"
+	"github.com/bytom/util/browser"
 	"github.com/bytom/version"
 )
 
 const (
 	httpReadTimeout  = 2 * time.Minute
 	httpWriteTimeout = time.Hour
+	webAddress       = "http://127.0.0.1:9888"
 )
 
 type Node struct {
@@ -87,22 +88,6 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	wh.h.ServeHTTP(w, req)
 }
 
-func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore) http.Handler {
-
-	authenticator := authn.NewAPI(accessTokens)
-
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		// TODO(tessr): check that this path exists; return early if this path isn't legit
-		req, err := authenticator.Authenticate(req)
-		if err != nil {
-			log.WithField("error", errors.Wrap(err, "Serve")).Error("Authenticate fail")
-
-			return
-		}
-		handler.ServeHTTP(rw, req)
-	})
-}
-
 func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accesstoken.CredentialStore) {
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
@@ -114,7 +99,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accessto
 	var handler http.Handler = mux
 
 	if config.Auth.Disable == false {
-		handler = AuthHandler(handler, accessTokens)
+		handler = bc.AuthHandler(handler, accessTokens)
 	}
 	handler = RedirectHandler(handler)
 
@@ -134,6 +119,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accessto
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
 	listenAddr := env.String("LISTEN", config.ApiAddress)
+	log.WithField("api address:", config.ApiAddress).Info("Rpc listen")
 	listener, err := net.Listen("tcp", *listenAddr)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to register tcp port: %v", err))
@@ -201,7 +187,7 @@ func NewNode(config *cfg.Config) *Node {
 		return nil
 	}
 
-	if config.Wallet.Enable {
+	if !config.Wallet.Disable {
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
@@ -252,13 +238,25 @@ func NewNode(config *cfg.Config) *Node {
 		assets:     assets,
 	}
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
+
 	return node
+}
+
+// Lanch web broser or not
+func lanchWebBroser(lanch bool) {
+	if lanch {
+		log.Info("Launching System Browser with :", webAddress)
+		if err := browser.Open(webAddress); err != nil {
+			log.Error(err.Error())
+			return
+		}
+	}
 }
 
 func (n *Node) OnStart() error {
 	// Create & add listener
-	protocol, address := ProtocolAndAddress(n.config.P2P.ListenAddress)
-	l := p2p.NewDefaultListener(protocol, address, n.config.P2P.SkipUPNP, nil)
+	p, address := ProtocolAndAddress(n.config.P2P.ListenAddress)
+	l := p2p.NewDefaultListener(p, address, n.config.P2P.SkipUPNP, nil)
 	n.sw.AddListener(l)
 
 	// Start the switch
@@ -277,6 +275,7 @@ func (n *Node) OnStart() error {
 			return err
 		}
 	}
+	lanchWebBroser(!n.config.Web.Closed)
 	return nil
 }
 
@@ -294,13 +293,6 @@ func (n *Node) RunForever() {
 	cmn.TrapSignal(func() {
 		n.Stop()
 	})
-}
-
-// Add the event switch to reactors, mempool, etc.
-func SetEventSwitch(evsw types.EventSwitch, eventables ...types.Eventable) {
-	for _, e := range eventables {
-		e.SetEventSwitch(evsw)
-	}
 }
 
 // Add a Listener to accept inbound peer connections.
@@ -359,12 +351,12 @@ func (n *Node) DialSeeds(seeds []string) error {
 
 // Defaults to tcp
 func ProtocolAndAddress(listenAddr string) (string, string) {
-	protocol, address := "tcp", listenAddr
+	p, address := "tcp", listenAddr
 	parts := strings.SplitN(address, "://", 2)
 	if len(parts) == 2 {
-		protocol, address = parts[0], parts[1]
+		p, address = parts[0], parts[1]
 	}
-	return protocol, address
+	return p, address
 }
 
 //------------------------------------------------------------------------------

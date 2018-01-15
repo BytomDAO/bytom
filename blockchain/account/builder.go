@@ -8,11 +8,14 @@ import (
 
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/common"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
@@ -60,7 +63,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
 	for _, r := range res.UTXOs {
-		txInput, sigInst, err := UtxoToInputs(acct, r, a.ReferenceData)
+		txInput, sigInst, err := UtxoToInputs(acct.Signer, r, a.ReferenceData)
 		if err != nil {
 			return errors.Wrap(err, "creating inputs")
 		}
@@ -113,18 +116,12 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	}
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
-	var acct *signers.Signer
-	if res.Source.AccountID == "" {
-		//TODO coinbase
-		acct = &signers.Signer{}
-	} else {
-		acct, err = a.accounts.findByID(ctx, res.Source.AccountID)
-		if err != nil {
-			return err
-		}
+	account, err := a.accounts.findByID(ctx, res.Source.AccountID)
+	if err != nil {
+		return err
 	}
 
-	txInput, sigInst, err := UtxoToInputs(acct, res.UTXOs[0], a.ReferenceData)
+	txInput, sigInst, err := UtxoToInputs(account.Signer, res.UTXOs[0], a.ReferenceData)
 	if err != nil {
 		return err
 	}
@@ -141,21 +138,42 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 }
 
 // UtxoToInputs convert an utxo to the txinput
-func UtxoToInputs(account *signers.Signer, u *UTXO, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
+func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
 	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash, refData)
-
-	path := signers.Path(account, signers.AccountKeySpace, u.ControlProgramIndex)
+	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
 	sigInst := &txbuilder.SigningInstruction{}
+	if u.Address == "" {
+		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
+		return txInput, sigInst, nil
+	}
 
-	//TODO: handle pay to script hash address
-	if u.Address != "" {
-		sigInst.AddRawWitnessKeys(account.XPubs, path, account.Quorum)
-		derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	address, err := common.DecodeAddress(u.Address, &consensus.MainNetParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	switch address.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
+		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
 		derivedPK := derivedXPubs[0].PublicKey()
 		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
-	} else {
-		sigInst.AddWitnessKeys(account.XPubs, path, account.Quorum)
+
+	case *common.AddressWitnessScriptHash:
+		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
+		path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
+		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
+		derivedPKs := chainkd.XPubKeys(derivedXPubs)
+		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)
+		if err != nil {
+			return nil, nil, err
+		}
+		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness(script))
+
+	default:
+		return nil, nil, errors.New("unsupport address type")
 	}
+
 	return txInput, sigInst, nil
 }
 
