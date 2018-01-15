@@ -85,11 +85,16 @@ func doverify(t *testing.T, xpub XPub, msg, sig []byte, xpubdesc, xprvdesc strin
 	}
 
 	for i := 0; i < 32; i++ {
-		xpub[i] ^= 0xff
+		tmp := xpub.Bytes()
+		tmp[i] ^= 0xff
+		if err := xpub.SetBytes(tmp); err != nil {
+			continue
+		}
 		if xpub.Verify(msg, sig) {
 			t.Fatalf("altered %s should not verify signature from %s", xpubdesc, xprvdesc)
 		}
-		xpub[i] ^= 0xff
+		tmp[i] ^= 0xff
+		xpub.SetBytes(tmp)
 	}
 
 	for i := 0; i < len(msg); i++ {

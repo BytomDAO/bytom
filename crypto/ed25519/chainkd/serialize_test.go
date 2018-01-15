@@ -32,7 +32,7 @@ func TestMarshalingFuncs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(xprv[:], secXprv[:]) {
+	if !bytes.Equal(xprv.Bytes(), secXprv.Bytes()) {
 		t.Errorf("unmarshaling error: want = %+v, got = %+v", xprv, secXprv)
 	}
 }
