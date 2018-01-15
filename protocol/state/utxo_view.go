@@ -64,7 +64,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx) error {
 	for _, prevout := range tx.SpentOutputIDs {
 		entry, ok := view.Entries[prevout]
 		if !ok || !entry.Spent {
-			return errors.New("try to revert a unspend utxo")
+			return errors.New("try to revert an unspent utxo")
 		}
 
 		if !ok {
