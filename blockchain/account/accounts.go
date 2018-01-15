@@ -264,7 +264,7 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 		return nil, err
 	}
 
-	control, err := vmutil.P2PKHSigProgram([]byte(pubHash))
+	control, err := vmutil.P2WPKHProgram([]byte(pubHash))
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool,
 		return nil, err
 	}
 
-	control, err := vmutil.P2SHProgram(scriptHash)
+	control, err := vmutil.P2WSHProgram(scriptHash)
 	if err != nil {
 		return nil, err
 	}

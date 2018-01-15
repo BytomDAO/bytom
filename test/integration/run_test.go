@@ -2,13 +2,9 @@ package integration
 
 import (
 	"fmt"
-	"testing"
-	"time"
-	"os"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/node"
 	"github.com/bytom/util"
 )
 
@@ -74,7 +70,7 @@ func testKey() bool {
 }
 
 // Test node running.
-func TestRunNode(t *testing.T) {
+/*func TestRunNode(t *testing.T) {
 	// Create & start node
 	config := mockConfig()
 	n := node.NewNodeDefault(config)
@@ -96,4 +92,4 @@ func TestRunNode(t *testing.T) {
 	}()
 	// Trap signal, run forever.
 	n.RunForever()
-}
+}*/
