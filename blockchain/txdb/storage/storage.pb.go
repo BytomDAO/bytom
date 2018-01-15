@@ -31,7 +31,7 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 type UtxoEntry struct {
 	IsCoinBase  bool   `protobuf:"varint,1,opt,name=isCoinBase" json:"isCoinBase,omitempty"`
 	BlockHeight uint64 `protobuf:"varint,2,opt,name=blockHeight" json:"blockHeight,omitempty"`
-	Spend       bool   `protobuf:"varint,3,opt,name=spend" json:"spend,omitempty"`
+	Spent       bool   `protobuf:"varint,3,opt,name=spent" json:"spent,omitempty"`
 }
 
 func (m *UtxoEntry) Reset()                    { *m = UtxoEntry{} }
@@ -53,9 +53,9 @@ func (m *UtxoEntry) GetBlockHeight() uint64 {
 	return 0
 }
 
-func (m *UtxoEntry) GetSpend() bool {
+func (m *UtxoEntry) GetSpent() bool {
 	if m != nil {
-		return m.Spend
+		return m.Spent
 	}
 	return false
 }
