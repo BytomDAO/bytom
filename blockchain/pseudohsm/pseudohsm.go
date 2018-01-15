@@ -6,9 +6,10 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/pborman/uuid"
+
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
-	"github.com/pborman/uuid"
 )
 
 // listKeyMaxAliases limits the alias filter to a sane maximum size.
@@ -117,9 +118,13 @@ func (h *HSM) XSign(xpub chainkd.XPub, path [][]byte, msg []byte, auth string) (
 	if err != nil {
 		return nil, err
 	}
-	if len(path) > 0 {
-		xprv = xprv.Derive(path, false)
+	if len(path) != 4 {
+		return nil, errors.New("path length error")
 	}
+	accountPath := path[:2]
+	cpPath := path[2:]
+	accountXPrv := xprv.Derive(accountPath, true)
+	xprv = accountXPrv.Derive(cpPath, false)
 	return xprv.Sign(msg), nil
 }
 

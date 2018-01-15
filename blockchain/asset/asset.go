@@ -92,6 +92,7 @@ type Asset struct {
 	Tags              map[string]interface{} `json:"tags"`
 	RawDefinitionByte []byte                 `json:"raw_definition_byte"`
 	DefinitionMap     map[string]interface{} `json:"definition"`
+	AssetXPubs        []chainkd.XPub         `json:"asset_xpubs"`
 }
 
 //RawDefinition return asset in the raw format
@@ -100,15 +101,13 @@ func (asset *Asset) RawDefinition() []byte {
 }
 
 func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint32, error) {
-	var nextIndex uint32
+	var nextIndex uint32 = 1
 
 	if len(xpubs) != 1 {
 		return nil, errors.New("create asset need only one xpub")
 	}
 
-	if rawIndex := reg.db.Get(indexKey(xpubs[0])); rawIndex == nil {
-		nextIndex = 1
-	} else {
+	if rawIndex := reg.db.Get(indexKey(xpubs[0])); rawIndex != nil {
 		nextIndex = uint32(binary.LittleEndian.Uint32(rawIndex)) + 1
 	}
 
@@ -119,8 +118,14 @@ func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint32, error) {
 	return &nextIndex, nil
 }
 
-func assetPath() [][]byte {
+// path returns the complete path for non-hardened derived keys for new asset
+// asset path format /change/index default is /0x0/0x01
+func assetDerivePath() [][]byte {
 	var path [][]byte
+
+	changePath := make([]byte, 2)
+	binary.LittleEndian.PutUint16(changePath[:], 0x00)
+	path = append(path, changePath[:])
 
 	indexPath := make([]byte, 4)
 	binary.LittleEndian.PutUint32(indexPath[:], 0x01)
@@ -129,9 +134,9 @@ func assetPath() [][]byte {
 	return path
 }
 
-// path returns the complete path for hardened derived keys for new asset
+// path returns the path for hardened derived keys for new asset
 // asset path format /Purpose'/index'
-func path(index uint32) [][]byte {
+func assetHardenPath(index uint32) [][]byte {
 	var path [][]byte
 
 	purposePath := make([]byte, 4)
@@ -141,6 +146,30 @@ func path(index uint32) [][]byte {
 	assetPath := make([]byte, 4)
 	binary.LittleEndian.PutUint32(assetPath[:], assetIndex+index)
 	path = append(path, assetPath)
+
+	return path
+}
+
+// path returns the path for full derived keys for new asset
+// asset path format /Purpose'/index'/change/index
+func assetFullPath(index uint32) [][]byte {
+	var path [][]byte
+
+	purposePath := make([]byte, 4)
+	binary.LittleEndian.PutUint32(purposePath[:], purpose)
+	path = append(path, purposePath[:])
+
+	assetPath := make([]byte, 4)
+	binary.LittleEndian.PutUint32(assetPath[:], assetIndex+index)
+	path = append(path, assetPath)
+
+	changePath := make([]byte, 2)
+	binary.LittleEndian.PutUint16(changePath[:], 0x00)
+	path = append(path, changePath[:])
+
+	indexPath := make([]byte, 4)
+	binary.LittleEndian.PutUint32(indexPath[:], 0x01)
+	path = append(path, indexPath[:])
 
 	return path
 }
@@ -170,18 +199,17 @@ func (reg *Registry) Define(ctx context.Context, hsm *pseudohsm.HSM, xpubs []cha
 	if err != nil {
 		return nil, err
 	}
-	path := path(*nextAssetIndex)
+	path := assetHardenPath(*nextAssetIndex)
 	assetRootXPriv := xpriv.Derive(path, true)
 	assetRootXPub := assetRootXPriv.XPub()
-	hsm.StoreAccountKey(assetRootXPub, assetRootXPriv, alias, auth)
-
 	assetRootXPubs := []chainkd.XPub{assetRootXPub}
-	_, assetSigner, err := signers.Create(ctx, reg.db, "asset", assetRootXPubs, quorum, 0x01, clientToken)
+
+	_, assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, *nextAssetIndex, clientToken)
 	if err != nil {
 		return nil, err
 	}
 
-	assetPath := assetPath()
+	assetPath := assetDerivePath()
 	assetXPub := assetRootXPub.Derive(assetPath)
 	assetXPubs := []chainkd.XPub{assetXPub}
 	derivedPKs := chainkd.XPubKeys(assetXPubs)
@@ -201,6 +229,7 @@ func (reg *Registry) Define(ctx context.Context, hsm *pseudohsm.HSM, xpubs []cha
 		AssetID:           bc.ComputeAssetID(issuanceProgram, &reg.initialBlockHash, vmver, &defHash),
 		Signer:            assetSigner,
 		Tags:              tags,
+		AssetXPubs:        assetRootXPubs,
 	}
 
 	if existAsset := reg.db.Get(Key(&asset.AssetID)); existAsset != nil {

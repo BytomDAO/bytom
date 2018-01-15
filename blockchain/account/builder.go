@@ -6,12 +6,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/crypto/sha3pool"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
@@ -32,24 +30,6 @@ type spendAction struct {
 	AccountID     string        `json:"account_id"`
 	ReferenceData chainjson.Map `json:"reference_data"`
 	ClientToken   *string       `json:"client_token"`
-}
-
-//changeCheck check whether utxo is change
-func (a *spendAction) changeCheck(u *UTXO) (bool, error) {
-	var hash common.Hash
-
-	sha3pool.Sum256(hash[:], u.ControlProgram)
-	rawProgram := a.accounts.db.Get(CPKey(hash))
-	if rawProgram == nil {
-		return false, errors.New("failed get account control program")
-	}
-
-	accountCP := CtrlProgram{}
-	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
-		return false, err
-	}
-
-	return accountCP.Change, nil
 }
 
 func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
@@ -80,13 +60,8 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 
 	// Cancel the reservation if the build gets rolled back.
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
-
 	for _, r := range res.UTXOs {
-		change, err := a.changeCheck(r)
-		if err != nil {
-			return errors.Wrap(err, "utxo change check error")
-		}
-		txInput, sigInst, err := UtxoToInputs(acct.Signer, r, a.ReferenceData, change)
+		txInput, sigInst, err := UtxoToInputs(acct, r, a.ReferenceData)
 		if err != nil {
 			return errors.Wrap(err, "creating inputs")
 		}
@@ -128,24 +103,6 @@ type spendUTXOAction struct {
 	ClientToken   *string       `json:"client_token"`
 }
 
-func (a *spendUTXOAction) changeCheck(u *UTXO) (bool, error) {
-	var hash common.Hash
-	accountCP := CtrlProgram{}
-
-	sha3pool.Sum256(hash[:], u.ControlProgram)
-
-	rawProgram := a.accounts.db.Get(CPKey(hash))
-	if rawProgram == nil {
-		return false, errors.New("failed get account control program:%x ")
-	}
-
-	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
-		return false, err
-	}
-
-	return accountCP.Change, nil
-}
-
 func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
 	if a.OutputID == nil {
 		return txbuilder.MissingFieldsError("output_id")
@@ -161,12 +118,8 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	if err != nil {
 		return err
 	}
-	change, err := a.changeCheck(res.UTXOs[0])
-	if err != nil {
-		return errors.Wrap(err, "check change error")
-	}
 
-	txInput, sigInst, err := UtxoToInputs(account.Signer, res.UTXOs[0], a.ReferenceData, change)
+	txInput, sigInst, err := UtxoToInputs(account, res.UTXOs[0], a.ReferenceData)
 	if err != nil {
 		return err
 	}
@@ -183,12 +136,12 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 }
 
 // UtxoToInputs convert an utxo to the txinput
-func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte, change bool) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
+func UtxoToInputs(account *Account, u *UTXO, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
 	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash, refData)
-	path := signers.Path(change, u.ControlProgramIndex)
+	path := path(account.Signer.KeyIndex, u.Change, u.ControlProgramIndex)
 	sigInst := &txbuilder.SigningInstruction{}
 	if u.Address == "" {
-		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
+		sigInst.AddWitnessKeys(account.Signer.XPubs, path, account.Signer.Quorum)
 		return txInput, sigInst, nil
 	}
 
@@ -199,16 +152,16 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte, change bool) 
 
 	switch address.(type) {
 	case *common.AddressWitnessPubKeyHash:
-		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
-		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
+		sigInst.AddRawWitnessKeys(account.Signer.XPubs, path, account.Signer.Quorum)
+		derivedXPubs := chainkd.DeriveXPubs(account.AccountXPubs, path[2:])
 		derivedPK := derivedXPubs[0].PublicKey()
 		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
 
 	case *common.AddressWitnessScriptHash:
-		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
-		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
+		sigInst.AddWitnessKeys(account.Signer.XPubs, path, account.Signer.Quorum)
+		derivedXPubs := chainkd.DeriveXPubs(account.AccountXPubs, path[2:])
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
-		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)
+		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Signer.Quorum)
 		if err != nil {
 			return nil, nil, err
 		}

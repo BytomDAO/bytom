@@ -38,7 +38,7 @@ func Annotated(a *Account) (*query.AnnotatedAccount, error) {
 		rawTags := json.RawMessage(tags)
 		aa.Tags = &rawTags
 	}
-	path := path(a.KeyIndex)
+	path := accountPath(a.KeyIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func Annotated(a *Account) (*query.AnnotatedAccount, error) {
 	for _, p := range path {
 		jsonPath = append(jsonPath, p)
 	}
-	for _, xpub := range a.XPubs {
+	for _, xpub := range a.AccountXPubs {
 		aa.Keys = append(aa.Keys, &query.AccountKey{
 			AccountXPub:           xpub,
 			AccountDerivationPath: jsonPath,

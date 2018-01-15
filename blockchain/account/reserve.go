@@ -49,6 +49,7 @@ type UTXO struct {
 	AccountID           string
 	Address             string
 	ControlProgramIndex uint64
+	Change              bool
 }
 
 func (u *UTXO) source() source {

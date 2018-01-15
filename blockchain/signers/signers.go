@@ -4,7 +4,6 @@ package signers
 import (
 	"bytes"
 	"context"
-	"encoding/binary"
 	"sort"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -43,26 +42,6 @@ type Signer struct {
 	XPubs    []chainkd.XPub `json:"xpubs"`
 	Quorum   int            `json:"quorum"`
 	KeyIndex uint32         `json:"key_index"`
-}
-
-// Path returns the complete path for derived keys
-// path format /change/index
-func Path(change bool, itemIndexes ...uint64) [][]byte {
-	var path [][]byte
-	changePath := make([]byte, 1)
-	if change == true {
-		changePath[0] = 1
-	} else {
-		changePath[0] = 0
-	}
-	path = append(path, changePath[:])
-
-	for _, idx := range itemIndexes {
-		var idxBytes [8]byte
-		binary.LittleEndian.PutUint64(idxBytes[:], idx)
-		path = append(path, idxBytes[:])
-	}
-	return path
 }
 
 // Create creates and stores a Signer in the database

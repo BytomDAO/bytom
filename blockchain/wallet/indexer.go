@@ -35,9 +35,10 @@ type accountOutput struct {
 }
 
 const (
-	//TxPrefix is wallet database transactions prefix
+	//TxPrefix is wallet database txs prefix
 	TxPrefix = "TXS:"
-	TxIndex  = "TID:"
+	//TxIndex is wallet database txs ID prefix
+	TxIndex = "TID:"
 )
 
 func formatKey(blockHeight uint64, position uint32) string {
@@ -260,6 +261,7 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 			ControlProgramIndex: out.keyIndex,
 			AccountID:           out.AccountID,
 			Address:             out.Address,
+			Change:              out.change,
 		}
 
 		data, err := json.Marshal(u)
@@ -306,8 +308,8 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 	return annotatedTxs
 }
 
+//GetTransactionsByTxID get txs by tx ID
 func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error) {
-	annotatedTx := query.AnnotatedTx{}
 	annotatedTxs := make([]query.AnnotatedTx, 0)
 	formatKey := ""
 
@@ -322,6 +324,8 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix + formatKey))
 	defer txIter.Release()
 	for txIter.Next() {
+		annotatedTx := query.AnnotatedTx{}
+
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}
@@ -347,13 +351,15 @@ func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) 
 	return false
 }
 
+//GetTransactionsByAccountID get txs by account ID
 func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]query.AnnotatedTx, error) {
-	annotatedTx := query.AnnotatedTx{}
 	annotatedTxs := make([]query.AnnotatedTx, 0)
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
 	for txIter.Next() {
+		annotatedTx := query.AnnotatedTx{}
+
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}

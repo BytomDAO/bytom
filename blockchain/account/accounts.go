@@ -119,21 +119,16 @@ func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) 
 // Account is structure of Bytom account
 type Account struct {
 	*signers.Signer
-	ID    string                 `json:"id"`
-	Alias string                 `json:"alias"`
-	Tags  map[string]interface{} `json:"tags"`
+	ID           string                 `json:"id"`
+	Alias        string                 `json:"alias"`
+	Tags         map[string]interface{} `json:"tags"`
+	AccountXPubs []chainkd.XPub         `json:"account_xpubs"`
 }
 
 func (m *Manager) getNextAccountIndex(xpubs []chainkd.XPub) (*uint32, error) {
-	var nextIndex uint32
+	var nextIndex uint32 = 1
 
-	if len(xpubs) != 1 {
-		return nil, errors.New("create account need only one xpub")
-	}
-
-	if rawIndex := m.db.Get(indexKey(xpubs[0])); rawIndex == nil {
-		nextIndex = 1
-	} else {
+	if rawIndex := m.db.Get(indexKey(xpubs[0])); rawIndex != nil {
 		nextIndex = uint32(binary.LittleEndian.Uint32(rawIndex)) + 1
 	}
 
@@ -146,7 +141,7 @@ func (m *Manager) getNextAccountIndex(xpubs []chainkd.XPub) (*uint32, error) {
 
 // path returns the complete path for hardened derived keys for new account
 // account path format /Purpose'/index'
-func path(index uint32) [][]byte {
+func accountPath(index uint32) [][]byte {
 	var path [][]byte
 
 	purposePath := make([]byte, 4)
@@ -156,6 +151,34 @@ func path(index uint32) [][]byte {
 	binary.LittleEndian.PutUint32(indexPath[:], harden+index)
 	path = append(path, indexPath)
 
+	return path
+}
+
+// path returns the complete path for derived keys
+// path format purpose'/account'/change/index
+func path(accountIndex uint32, change bool, itemIndexes ...uint64) [][]byte {
+	var path [][]byte
+	var purposeBytes [4]byte
+	binary.LittleEndian.PutUint32(purposeBytes[:], purpose)
+	path = append(path, purposeBytes[:])
+
+	var accountIndexBytes [4]byte
+	binary.LittleEndian.PutUint32(accountIndexBytes[:], harden+accountIndex)
+	path = append(path, accountIndexBytes[:])
+
+	changePath := make([]byte, 1)
+	if change == true {
+		changePath[0] = 1
+	} else {
+		changePath[0] = 0
+	}
+	path = append(path, changePath[:])
+
+	for _, idx := range itemIndexes {
+		var idxBytes [8]byte
+		binary.LittleEndian.PutUint64(idxBytes[:], idx)
+		path = append(path, idxBytes[:])
+	}
 	return path
 }
 
@@ -170,7 +193,7 @@ func (m *Manager) Create(ctx context.Context, hsm *pseudohsm.HSM, xpubs []chaink
 		return nil, errors.Wrap(err, "get account index error")
 	}
 
-	path := path(*nextAccountIndex)
+	path := accountPath(*nextAccountIndex)
 	xpriv, err := hsm.LoadChainKDKey(xpubs[0], auth)
 	if err != nil {
 		return nil, err
@@ -179,15 +202,14 @@ func (m *Manager) Create(ctx context.Context, hsm *pseudohsm.HSM, xpubs []chaink
 	//derived account hardened private key and store
 	accountXPriv := xpriv.Derive(path, true)
 	accountXPub := accountXPriv.XPub()
-	hsm.StoreAccountKey(accountXPub, accountXPriv, alias, auth)
 
 	accountXPubs := []chainkd.XPub{accountXPub}
-	id, signer, err := signers.Create(ctx, m.db, "account", accountXPubs, quorum, *nextAccountIndex, accessToken)
+
+	id, signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, *nextAccountIndex, accessToken)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
-
-	account := &Account{Signer: signer, ID: id, Alias: alias, Tags: tags}
+	account := &Account{Signer: signer, ID: id, Alias: alias, Tags: tags, AccountXPubs: accountXPubs}
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return nil, ErrMarshalAccount
@@ -311,10 +333,30 @@ func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bo
 	return cp, nil
 }
 
+// CPPath returns the complete path for control program derived keys
+// path format /change/index
+func CPPath(change bool, itemIndexes ...uint64) [][]byte {
+	var path [][]byte
+	changePath := make([]byte, 1)
+	if change == true {
+		changePath[0] = 1
+	} else {
+		changePath[0] = 0
+	}
+	path = append(path, changePath[:])
+
+	for _, idx := range itemIndexes {
+		var idxBytes [8]byte
+		binary.LittleEndian.PutUint64(idxBytes[:], idx)
+		path = append(path, idxBytes[:])
+	}
+	return path
+}
+
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	idx, err := m.nextCPIndex(m.db, account.KeyIndex, change)
-	path := signers.Path(change, idx)
-	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	path := CPPath(change, idx)
+	derivedXPubs := chainkd.DeriveXPubs(account.AccountXPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
 
@@ -341,8 +383,8 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 
 func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool, expiresAt time.Time) (*CtrlProgram, error) {
 	idx := m.nextIndex()
-	path := signers.Path(change, idx)
-	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	path := CPPath(change, idx)
+	derivedXPubs := chainkd.DeriveXPubs(account.AccountXPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
 	if err != nil {
@@ -382,8 +424,8 @@ func (m *Manager) createControlProgram(ctx context.Context, accountID string, ch
 		return nil, err
 	}
 
-	path := signers.Path(change, idx)
-	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	path := CPPath(change, idx)
+	derivedXPubs := chainkd.DeriveXPubs(account.AccountXPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	control, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
 	if err != nil {
@@ -457,8 +499,8 @@ func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
 		return vmutil.CoinbaseProgram(nil, 0, height)
 	}
 
-	path := signers.Path(false, idx)
-	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
+	path := CPPath(false, idx)
+	derivedXPubs := chainkd.DeriveXPubs(account.AccountXPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	script, err := vmutil.CoinbaseProgram(derivedPKs, account.Quorum, height)
 	if err != nil {
@@ -507,41 +549,8 @@ func (m *Manager) nextCPIndex(db dbm.DB, accountIndex uint32, change bool) (uint
 	}
 	key = append(key, changePath[:]...)
 
-	var nextIndex uint64
-	if rawIndex := db.Get(key); rawIndex == nil {
-		nextIndex = 1
-	} else {
-		nextIndex = uint64(binary.LittleEndian.Uint64(rawIndex)) + 1
-	}
-
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, nextIndex)
-	db.Set(key, buf)
-
-	return nextIndex, nil
-}
-
-func (m *Manager) getNextCoinbaseIndex(db dbm.DB, accountIndex uint32, change bool) (uint64, error) {
-	m.acpMu.Lock()
-	defer m.acpMu.Unlock()
-
-	key := make([]byte, 0)
-	accountIndexPath := make([]byte, 4)
-	binary.LittleEndian.PutUint32(accountIndexPath[:], accountIndex)
-	key = append(key, accountIndexPath[:]...)
-
-	changePath := make([]byte, 2)
-	if change {
-		binary.LittleEndian.PutUint16(changePath[:], 0x01)
-	} else {
-		binary.LittleEndian.PutUint16(changePath[:], 0x00)
-	}
-	key = append(key, changePath[:]...)
-
-	var nextIndex uint64
-	if rawIndex := db.Get(key); rawIndex == nil {
-		nextIndex = 1
-	} else {
+	var nextIndex uint64 = 1
+	if rawIndex := db.Get(key); rawIndex != nil {
 		nextIndex = uint64(binary.LittleEndian.Uint64(rawIndex)) + 1
 	}
 
@@ -553,7 +562,7 @@ func (m *Manager) getNextCoinbaseIndex(db dbm.DB, accountIndex uint32, change bo
 }
 
 func (m *Manager) nextCoinbaseIndex(ctx context.Context, accountIndex uint32, change bool) (uint64, error) {
-	n, err := m.getNextCoinbaseIndex(m.db, accountIndex, change)
+	n, err := m.nextCPIndex(m.db, accountIndex, change)
 	if err != nil {
 		return 0, err
 	}

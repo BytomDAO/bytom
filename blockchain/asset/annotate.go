@@ -43,16 +43,15 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 		aa.Alias = *a.Alias
 	}
 	if a.Signer != nil {
-		path := path(a.KeyIndex)
+		path := assetHardenPath(a.KeyIndex)
 		var jsonPath []chainjson.HexBytes
 		for _, p := range path {
 			jsonPath = append(jsonPath, p)
 		}
-		for _, xpub := range a.Signer.XPubs {
-			derived := xpub.Derive(path)
+		for i, xpub := range a.Signer.XPubs {
 			aa.Keys = append(aa.Keys, &query.AssetKey{
 				RootXPub:            xpub,
-				AssetPubkey:         derived.Bytes(),
+				AssetPubkey:         a.AssetXPubs[i].Bytes(),
 				AssetDerivationPath: jsonPath,
 			})
 		}
