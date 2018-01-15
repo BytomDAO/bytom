@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"encoding/hex"
 
 	log "github.com/sirupsen/logrus"
 
@@ -17,20 +16,19 @@ func (bcr *BlockchainReactor) createAccessToken(ctx context.Context, x struct {
 }) Response {
 	token, err := bcr.accessTokens.Create(ctx, x.ID, x.Type)
 	if err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
-	data := map[string]*string{"accessToken": token}
-	return resWrapper(data)
+	return NewSuccessResponse(token)
 }
 
 func (bcr *BlockchainReactor) listAccessTokens(ctx context.Context) Response {
 	tokens, err := bcr.accessTokens.List(ctx)
 	if err != nil {
 		log.Errorf("listAccessTokens: %v", err)
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(tokens)
+	return NewSuccessResponse(tokens)
 }
 
 func (bcr *BlockchainReactor) deleteAccessToken(ctx context.Context, x struct {
@@ -48,14 +46,9 @@ func (bcr *BlockchainReactor) checkAccessToken(ctx context.Context, x struct {
 	ID     string `json:"id"`
 	Secret string `json:"secret"`
 }) Response {
-	secret, err := hex.DecodeString(x.Secret)
-	if err != nil {
-		return resWrapper(nil, err)
-	}
-	_, err = bcr.accessTokens.Check(ctx, x.ID, secret)
-	if err != nil {
-		return resWrapper(nil, err)
+	if _, err := bcr.accessTokens.Check(ctx, x.ID, x.Secret); err != nil {
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(nil)
+	return NewSuccessResponse(nil)
 }

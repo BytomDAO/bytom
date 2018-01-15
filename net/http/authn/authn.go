@@ -3,7 +3,6 @@ package authn
 import (
 	"context"
 	"crypto/x509"
-	"encoding/hex"
 	"net"
 	"net/http"
 	"strings"
@@ -62,6 +61,11 @@ func (a *API) Authenticate(req *http.Request) (*http.Request, error) {
 	if local {
 		ctx = newContextWithLocalhost(ctx)
 	}
+
+	if !local && strings.HasPrefix(req.URL.Path, "/list-access-tokens") {
+		return req.WithContext(ctx), errors.New("only local can get access token list")
+	}
+
 	// Temporary workaround. Dashboard is always ok.
 	// See loopbackOn comment above.
 	if strings.HasPrefix(req.URL.Path, "/dashboard/") || req.URL.Path == "/dashboard" {
@@ -128,26 +132,18 @@ func (a *API) tokenAuthn(req *http.Request) (string, error) {
 	return user, a.cachedTokenAuthnCheck(req.Context(), user, pw)
 }
 
-func (a *API) tokenAuthnCheck(ctx context.Context, user, pw string) (bool, error) {
-	pwBytes, err := hex.DecodeString(pw)
-	if err != nil {
-		return false, nil
-	}
-	return a.tokens.Check(ctx, user, pwBytes)
-}
-
 func (a *API) cachedTokenAuthnCheck(ctx context.Context, user, pw string) error {
 	a.tokenMu.Lock()
-	res, ok := a.tokenMap[user+pw]
+	res, ok := a.tokenMap[user + pw]
 	a.tokenMu.Unlock()
 	if !ok || time.Now().After(res.lastLookup.Add(tokenExpiry)) {
-		valid, err := a.tokenAuthnCheck(ctx, user, pw)
+		valid, err := a.tokens.Check(ctx, user, pw)
 		if err != nil {
 			return errors.Wrap(err)
 		}
 		res = tokenResult{valid: valid, lastLookup: time.Now()}
 		a.tokenMu.Lock()
-		a.tokenMap[user+pw] = res
+		a.tokenMap[user + pw] = res
 		a.tokenMu.Unlock()
 	}
 	if !res.valid {
