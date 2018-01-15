@@ -61,6 +61,11 @@ func (a *API) Authenticate(req *http.Request) (*http.Request, error) {
 	if local {
 		ctx = newContextWithLocalhost(ctx)
 	}
+
+	if !local && strings.HasPrefix(req.URL.Path, "/list-access-tokens") {
+		return req.WithContext(ctx), errors.New("only local can get access token list")
+	}
+
 	// Temporary workaround. Dashboard is always ok.
 	// See loopbackOn comment above.
 	if strings.HasPrefix(req.URL.Path, "/dashboard/") || req.URL.Path == "/dashboard" {
