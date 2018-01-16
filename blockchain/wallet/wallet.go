@@ -173,7 +173,7 @@ func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, ali
 	if err != nil {
 		return nil, err
 	}
-	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, alias, nil, "")
+	newAccount, err := w.AccountMgr.Create([]chainkd.XPub{xpub.XPub}, SINGLE, alias, nil)
 	if err != nil {
 		return nil, err
 	}
