@@ -22,6 +22,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/vm/vmutil"
+	"encoding/hex"
 )
 
 const (
@@ -458,4 +459,63 @@ func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 	}
 
 	return accounts, nil
+}
+
+// AccountPubkey is structure of account pubkey
+type AccountPubkey struct {
+	Root   chainkd.XPub    		`json:"root_xpub"`
+	Pubkey string   			`json:"pubkey"`
+	Path   []string 			`json:"pubkey_derivation_path"`
+	Index  int					`json:"index"`
+}
+
+// createPubkey generate an pubkey for the select account
+func (m *Manager) createPubkey(ctx context.Context, accountID string) (*AccountPubkey, error) {
+	account, err := m.findByID(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+
+	idx := m.nextIndex()
+	rootXPub := account.XPubs[0]
+	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	derivedXPub := rootXPub.Derive(path)
+	pubkey := derivedXPub.PublicKey()
+
+	var pathStr []string
+	for _, p := range path {
+		pathStr = append(pathStr, hex.EncodeToString(p))
+	}
+
+	return &AccountPubkey{
+		Root:      	rootXPub,
+		Pubkey:    	hex.EncodeToString(pubkey),
+		Path: 		pathStr,
+		Index:		int(idx),
+	}, nil
+}
+
+// CreateContractProgram creates a contract program for an account
+func (m *Manager) CreateContractProgram(ctx context.Context, accountID string, contractProgram string) ([]byte, error) {
+	expiresAt := time.Time{}
+	idx := m.nextIndex()
+
+	contract, err := hex.DecodeString(contractProgram)
+	if err != nil {
+		return nil, err
+	}
+
+	cp := &CtrlProgram{
+		AccountID:      accountID,
+		KeyIndex:       idx,
+		ControlProgram: contract,
+		Change:         false,
+		ExpiresAt:      expiresAt,
+	}
+
+	if err = m.insertAccountControlProgram(ctx, cp); err != nil {
+		return nil, err
+	}
+
+	return cp.ControlProgram, nil
 }
