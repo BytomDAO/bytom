@@ -23,6 +23,7 @@ type (
 
 	TypedInput interface {
 		IsIssuance() bool
+		IsCoinbase() bool
 	}
 )
 

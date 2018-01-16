@@ -458,6 +458,9 @@ func TestValidateBlock(t *testing.T) {
 func TestCoinbase(t *testing.T) {
 	CbTx := mockCoinbaseTx(5000000000)
 	errCbTx := legacy.MapTx(&legacy.TxData{
+		Inputs: []*legacy.TxInput{
+			legacy.NewCoinbaseInput(nil, nil),
+		},
 		Outputs: []*legacy.TxOutput{
 			legacy.NewTxOutput(bc.AssetID{
 				V0: uint64(18446744073709551611),
@@ -668,6 +671,9 @@ func mockBlock() *bc.Block {
 
 func mockCoinbaseTx(amount uint64) *bc.Tx {
 	return legacy.MapTx(&legacy.TxData{
+		Inputs: []*legacy.TxInput{
+			legacy.NewCoinbaseInput(nil, nil),
+		},
 		Outputs: []*legacy.TxOutput{
 			legacy.NewTxOutput(*consensus.BTMAssetID, amount, []byte{1}, nil),
 		},

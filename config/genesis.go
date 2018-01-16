@@ -15,7 +15,9 @@ func GenerateGenesisTx() *legacy.Tx {
 	txData := legacy.TxData{
 		Version:        1,
 		SerializedSize: 63,
-		Inputs:         []*legacy.TxInput{},
+		Inputs: []*legacy.TxInput{
+			legacy.NewCoinbaseInput([]byte("May 4th Be With You"), nil),
+		},
 		Outputs: []*legacy.TxOutput{
 			&legacy.TxOutput{
 				AssetVersion: 1,
@@ -49,7 +51,7 @@ func GenerateGenesisBlock() *legacy.Block {
 		BlockHeader: legacy.BlockHeader{
 			Version:     1,
 			Height:      0,
-			Nonce:       1267808,
+			Nonce:       1523829,
 			Seed:        bc.NewHash(seed),
 			TimestampMS: 1511318565142,
 			BlockCommitment: legacy.BlockCommitment{

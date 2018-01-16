@@ -23,6 +23,7 @@ type SpendInput struct {
 }
 
 func (si *SpendInput) IsIssuance() bool { return false }
+func (si *SpendInput) IsCoinbase() bool { return false }
 
 func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount uint64, sourcePos uint64, controlProgram []byte, outRefDataHash bc.Hash, referenceData []byte) *TxInput {
 	const (
