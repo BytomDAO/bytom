@@ -12,7 +12,7 @@ const (
 	matSize     = 1 << 8 // Size of matrix
 	matNum      = 1 << 8 // Number of matrix
 	epochLength = 1 << 7 // Blocks per epoch
-	mulRounds   = 64     // Number of rounds in mulmatrix
+	mulRounds   = 1 << 8 // Number of rounds in mulmatrix
 )
 
 // CreateSeed return epoch seed, type is *bc.Hash

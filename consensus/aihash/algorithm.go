@@ -16,11 +16,6 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
-const (
-	hashBytes   = 64 // Hash length in bytes
-	cacheRounds = 3  // Number of rounds in cache production
-)
-
 // hasher is a repetitive hasher allowing the same hash data structures to be
 // reused between hash runs instead of requiring new ones to be created.
 type hasher func(dest []byte, data []byte)
