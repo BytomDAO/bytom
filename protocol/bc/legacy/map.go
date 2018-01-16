@@ -44,6 +44,7 @@ func MapTx(oldTx *TxData) *bc.Tx {
 			ord = e.Ordinal
 			// resume below after the switch
 
+		case *bc.Coinbase:
 		default:
 			continue
 		}
