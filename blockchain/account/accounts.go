@@ -117,12 +117,12 @@ type Account struct {
 }
 
 // Create creates a new Account.
-func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, accessToken string) (*Account, error) {
+func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}) (*Account, error) {
 	if existed := m.db.Get(aliasKey(alias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
 
-	id, signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, accessToken)
+	id, signer, err := signers.Create("account", xpubs, quorum)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
