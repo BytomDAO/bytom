@@ -37,6 +37,7 @@ type AnnotatedInput struct {
 	AccountAlias    string             `json:"account_alias,omitempty"`
 	AccountTags     *json.RawMessage   `json:"account_tags,omitempty"`
 	ReferenceData   *json.RawMessage   `json:"reference_data"`
+	Arbitrary       chainjson.HexBytes `json:"arbitrary,omitempty"`
 }
 
 //AnnotatedOutput means an annotated transaction output.

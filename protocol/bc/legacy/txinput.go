@@ -148,15 +148,17 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 	if err != nil {
 		return err
 	}
-
 	t.ReferenceData, err = blockchain.ReadVarstr31(r)
 	if err != nil {
 		return err
 	}
-
 	t.WitnessSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
 		// TODO(bobg): test that serialization flags include SerWitness, when we relax the serflags-must-be-0x7 rule
 		if t.AssetVersion != 1 {
+			return nil
+		}
+
+		if ci != nil {
 			return nil
 		}
 
