@@ -41,9 +41,12 @@ func getNativeAsset() *Asset {
 	defaultTags := make(map[string]interface{})
 	defaultTags["issue"] = "Bytom Official"
 
-	defitionMap := make(map[string]interface{})
-	defitionMap["name"] = "btm"
-	defitionBytes, _ := serializeAssetDef(defitionMap)
+	definitionMap := make(map[string]interface{})
+	definitionMap["name"] = "btm"
+	definitionMap["symbol"] = "btm"
+	definitionMap["decimals"] = 8
+	definitionMap["description"] = `Bytom Official Issue`
+	defitionBytes, _ := serializeAssetDef(definitionMap)
 
 	return &Asset{
 		Signer:            signer,
@@ -51,7 +54,7 @@ func getNativeAsset() *Asset {
 		Alias:             &alias,
 		VMVersion:         1,
 		Tags:              defaultTags,
-		DefinitionMap:     defitionMap,
+		DefinitionMap:     definitionMap,
 		RawDefinitionByte: defitionBytes,
 		InitialBlockHash:  genesisBlock.Hash()}
 }
@@ -363,8 +366,12 @@ func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int) (progra
 
 //UpdateAssetAlias updates oldAlias to newAlias
 func (reg *Registry) UpdateAssetAlias(oldAlias, newAlias string) error {
-	if oldAlias == "btm" {
+	if oldAlias == "btm" || newAlias == "btm" {
 		return ErrInternalAsset
+	}
+
+	if _, err := reg.GetIDByAlias(newAlias); err == nil {
+		return ErrDuplicateAlias
 	}
 
 	storeBatch := reg.db.NewBatch()
