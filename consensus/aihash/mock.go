@@ -1,6 +1,8 @@
 package aihash
 
-import "github.com/bytom/protocol/bc"
+import (
+	"github.com/bytom/protocol/bc"
+)
 
 func MockCreateSeed(height uint64, preSeed *bc.Hash, preBlockHashs []*bc.Hash) *bc.Hash {
 	return preBlockHashs[0]

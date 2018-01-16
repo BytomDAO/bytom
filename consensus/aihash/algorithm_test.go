@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/bytom/common/hexutil"
-	"github.com/bytom/consensus/aihash/matrix"
 	"github.com/bytom/protocol/bc"
 )
 

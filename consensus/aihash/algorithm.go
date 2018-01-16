@@ -12,7 +12,6 @@ import (
 	"gonum.org/v1/gonum/mat"
 
 	"github.com/bytom/common/bitutil"
-	"github.com/bytom/consensus/aihash/matrix"
 	"github.com/bytom/crypto/scrypt"
 	"github.com/bytom/protocol/bc"
 )

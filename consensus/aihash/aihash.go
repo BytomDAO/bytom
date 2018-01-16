@@ -4,7 +4,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bytom/consensus/aihash/matrix"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 )
