@@ -266,6 +266,7 @@ func (reg *Registry) findByID(ctx context.Context, id *bc.AssetID) (*Asset, erro
 	return asset, nil
 }
 
+//GetIDByAlias return AssetID string and nil by asset alias,if err ,return "" and err
 func (reg *Registry) GetIDByAlias(alias string) (string, error) {
 	rawID := reg.db.Get(AliasKey(alias))
 	if rawID == nil {
@@ -300,6 +301,7 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	return reg.findByID(ctx, assetID)
 }
 
+//GetAliasByID return asset alias string by AssetID string
 func (reg *Registry) GetAliasByID(id string) string {
 	//btm
 	if id == consensus.BTMAssetID.String() {
@@ -357,4 +359,37 @@ func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int) (progra
 	builder.AddRawBytes(issuanceProg)
 	prog, err := builder.Build()
 	return prog, 1, err
+}
+
+//UpdateAssetAlias updates oldAlias to newAlias
+func (reg *Registry) UpdateAssetAlias(oldAlias, newAlias string) error {
+	if oldAlias == "btm" {
+		return ErrInternalAsset
+	}
+
+	storeBatch := reg.db.NewBatch()
+
+	findAsset, err := reg.FindByAlias(nil, oldAlias)
+	if err != nil {
+		return err
+	}
+
+	findAsset.Alias = &newAlias
+	assetID := &findAsset.AssetID
+	rawAsset, err := json.Marshal(findAsset)
+	if err != nil {
+		return err
+	}
+
+	storeBatch.Set(Key(assetID), rawAsset)
+	storeBatch.Set(AliasKey(newAlias), []byte(assetID.String()))
+	storeBatch.Delete(AliasKey(oldAlias))
+	storeBatch.Write()
+
+	reg.cacheMu.Lock()
+	reg.aliasCache.Remove(oldAlias)
+	reg.aliasCache.Add(newAlias, findAsset)
+	reg.cacheMu.Unlock()
+
+	return nil
 }
