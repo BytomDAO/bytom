@@ -97,6 +97,7 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 	}
 
 	var (
+		ci      *CoinbaseInput
 		ii      *IssuanceInput
 		si      *SpendInput
 		assetID bc.AssetID
@@ -130,6 +131,12 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 			si = new(SpendInput)
 			si.SpendCommitmentSuffix, err = si.SpendCommitment.readFrom(r, 1)
 			if err != nil {
+				return err
+			}
+
+		case 2:
+			ci = new(CoinbaseInput)
+			if ci.Arbitrary, err = blockchain.ReadVarstr31(r); err != nil {
 				return err
 			}
 
@@ -192,7 +199,9 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 	if err != nil {
 		return err
 	}
-	if ii != nil {
+	if ci != nil {
+		t.TypedInput = ci
+	} else if ii != nil {
 		t.TypedInput = ii
 	} else if si != nil {
 		t.TypedInput = si
@@ -256,6 +265,14 @@ func (t *TxInput) WriteInputCommitment(w io.Writer, serflags uint8) (err error) 
 			_, err = prevouthash.WriteTo(w)
 		}
 		return err
+
+	case *CoinbaseInput:
+		if _, err = w.Write([]byte{2}); err != nil {
+			return err
+		}
+		if _, err = blockchain.WriteVarstr31(w, inp.Arbitrary); err != nil {
+			return errors.Wrap(err, "writing coinbase arbitrary")
+		}
 	}
 	return nil
 }
