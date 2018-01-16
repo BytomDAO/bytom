@@ -30,8 +30,8 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 		if !ok {
 			return errors.New("fail to find utxo entry")
 		}
-		if entry.Spend {
-			return errors.New("utxo has been spend")
+		if entry.Spent {
+			return errors.New("utxo has been spent")
 		}
 		entry.SpendOutput()
 	}
@@ -63,8 +63,8 @@ func (view *UtxoViewpoint) ApplyBlock(block *bc.Block) error {
 func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx) error {
 	for _, prevout := range tx.SpentOutputIDs {
 		entry, ok := view.Entries[prevout]
-		if !ok || !entry.Spend {
-			return errors.New("try to revert a unspend utxo")
+		if !ok || !entry.Spent {
+			return errors.New("try to revert an unspent utxo")
 		}
 
 		if !ok {

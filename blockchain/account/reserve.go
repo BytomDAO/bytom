@@ -242,7 +242,7 @@ func (re *reserver) checkUTXO(u *UTXO) bool {
 	if err != nil {
 		return false
 	}
-	return !utxo.Spend
+	return !utxo.Spent
 }
 
 func (re *reserver) source(src source) *sourceReserver {
