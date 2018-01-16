@@ -18,7 +18,7 @@ import (
 func TestDefineAsset(t *testing.T) {
 	ctx := context.Background()
 	reg := mockNewRegistry(t)
-	asset, err := reg.Define(ctx, []chainkd.XPub{testutil.TestXPub}, 1, nil, "asset-alias", nil, "")
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, "asset-alias", nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -37,7 +37,7 @@ func TestFindAssetByID(t *testing.T) {
 	ctx := context.Background()
 	reg := mockNewRegistry(t)
 	keys := []chainkd.XPub{testutil.TestXPub}
-	asset, err := reg.Define(ctx, keys, 1, nil, "", nil, "")
+	asset, err := reg.Define(keys, 1, nil, "", nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 

@@ -91,7 +91,7 @@ func (asset *Asset) RawDefinition() []byte {
 }
 
 // Define defines a new Asset.
-func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}, clientToken string) (*Asset, error) {
+func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}) (*Asset, error) {
 	if alias == "btm" {
 		return nil, ErrInternalAsset
 	}
@@ -100,7 +100,7 @@ func (reg *Registry) Define(ctx context.Context, xpubs []chainkd.XPub, quorum in
 		return nil, ErrDuplicateAlias
 	}
 
-	_, assetSigner, err := signers.Create(ctx, reg.db, "asset", xpubs, quorum, clientToken)
+	_, assetSigner, err := signers.Create("asset", xpubs, quorum)
 	if err != nil {
 		return nil, err
 	}

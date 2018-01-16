@@ -59,11 +59,11 @@ func TestHSM(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acct1, err := accounts.Create(ctx, []chainkd.XPub{xpub1.XPub}, 1, "acc1", nil, "")
+	acct1, err := accounts.Create([]chainkd.XPub{xpub1.XPub}, 1, "acc1", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	acct2, err := accounts.Create(ctx, []chainkd.XPub{xpub2.XPub}, 1, "acc2", nil, "")
+	acct2, err := accounts.Create([]chainkd.XPub{xpub2.XPub}, 1, "acc2", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,11 +71,11 @@ func TestHSM(t *testing.T) {
 	assetDef1 := map[string]interface{}{"foo": 1}
 	assetDef2 := map[string]interface{}{"foo": 2}
 
-	asset1, err := assets.Define(ctx, []chainkd.XPub{xpub1.XPub}, 1, assetDef1, "foo1", nil, "")
+	asset1, err := assets.Define([]chainkd.XPub{xpub1.XPub}, 1, assetDef1, "foo1", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	asset2, err := assets.Define(ctx, []chainkd.XPub{xpub2.XPub}, 1, assetDef2, "foo2", nil, "")
+	asset2, err := assets.Define([]chainkd.XPub{xpub2.XPub}, 1, assetDef2, "foo2", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
