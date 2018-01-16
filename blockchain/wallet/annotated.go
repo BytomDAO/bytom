@@ -167,11 +167,13 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock ui
 func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
-		AssetID:         orig.AssetID(),
-		Amount:          orig.Amount(),
 		AssetDefinition: &emptyJSONObject,
 		AssetTags:       &emptyJSONObject,
 		ReferenceData:   &emptyJSONObject,
+	}
+	if !orig.IsCoinbase() {
+		in.AssetID = orig.AssetID()
+		in.Amount = orig.Amount()
 	}
 	if isValidJSON(orig.ReferenceData) {
 		referenceData := json.RawMessage(orig.ReferenceData)
@@ -188,8 +190,10 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 	case *bc.Issuance:
 		in.Type = "issue"
 		in.IssuanceProgram = orig.IssuanceProgram()
+	case *bc.Coinbase:
+		in.Type = "coinbase"
+		in.Arbitrary = e.Arbitrary
 	}
-
 	return in
 }
 
