@@ -14,8 +14,9 @@ import (
 )
 
 func init() {
-	buildTransactionCmd.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend'")
+	buildTransactionCmd.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend', 'contract'")
 	buildTransactionCmd.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r", "", "program of receiver")
+	buildTransactionCmd.PersistentFlags().StringVarP(&contractProgram, "contract", "c", "", "program of contract")
 	buildTransactionCmd.PersistentFlags().StringVarP(&address, "address", "a", "", "address of receiver")
 	buildTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "program of receiver")
 	buildTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
@@ -34,6 +35,7 @@ var (
 	buildType       = ""
 	btmGas          = ""
 	receiverProgram = ""
+	contractProgram = ""
 	address         = ""
 	password        = ""
 	pretty          = false
@@ -93,9 +95,23 @@ var buildControlAddressReqFmt = `
 
 var buildControlAddressReqFmtByAlias = `
 	{"actions": [
-		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_alias": "%s"},
+		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
 		{"type": "spend_account", "asset_alias": "%s","amount": %s, "account_alias": "%s"},
 		{"type": "control_address", "asset_alias": "%s", "amount": %s,"address": "%s"}
+	]}`
+
+var buildContractReqFmt = `
+	{"actions": [
+		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
+		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
+		{"type": "control_program", "asset_id": "%s", "amount": %s, "control_program": "%s", "reference_data": {}}
+	]}`
+
+var buildContractReqFmtByAlias = `
+	{"actions": [
+		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
+		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
+		{"type": "control_program", "asset_alias": "%s", "amount": %s, "control_program": "%s", "reference_data": {}}
 	]}`
 
 var buildTransactionCmd = &cobra.Command{
@@ -131,13 +147,19 @@ var buildTransactionCmd = &cobra.Command{
 				buildReqStr = fmt.Sprintf(buildRetireReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
 				break
 			}
-			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
+			buildReqStr = fmt.Sprintf(buildRetireReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
 		case "address":
 			if alias {
 				buildReqStr = fmt.Sprintf(buildControlAddressReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
 				break
 			}
 			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
+		case "contract":
+			if alias {
+				buildReqStr = fmt.Sprintf(buildContractReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, contractProgram)
+				break
+			}
+			buildReqStr = fmt.Sprintf(buildContractReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, contractProgram)
 		default:
 			jww.ERROR.Println("Invalid transaction template type")
 			os.Exit(util.ErrLocalExe)
