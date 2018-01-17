@@ -86,6 +86,14 @@ func extendHash(hash []byte) []byte {
 	return extHash
 }
 
+// fnv is an algorithm inspired by the FNV hash, which in some cases is used as
+// a non-associative substitute for XOR. Note that we multiply the prime with
+// the full 32-bit input, in contrast with the FNV-1 spec which multiplies the
+// prime with one byte (octet) in turn.
+func fnv(a, b uint32) uint32 {
+	return a*0x01000193 ^ b
+}
+
 func mulMatrix(cache []uint32, headerhash []byte) []byte {
 	// Convert our destination slice to a byte buffer
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&cache))
@@ -129,6 +137,50 @@ func mulMatrix(cache []uint32, headerhash []byte) []byte {
 	return result
 }
 
+func hashMatrix(result []byte) *bc.Hash {
+	var mat8 [matSize][matSize]uint8
+	for i := 0; i < matSize; i++ {
+		for j := 0; j < matSize; j++ {
+			mat8[i][j] = uint8(result[i*matSize+j])
+		}
+	}
+
+	var mat32 [matSize][matSize / 4]uint32
+	for i := 0; i < matSize; i++ {
+		for j := 0; j < matSize; j += 4 {
+			mat32 = ((uint32(mat8[i][j])) << 24) |
+				((uint32(mat8[i][j+1])) << 16) |
+				((uint32(mat8[i][j+2])) << 8) |
+				((uint32(mat8[i][j+3])) << 0)
+		}
+	}
+
+	data := make([]uint32, 0)
+	for k := matSize; k > 1; k = k / 2 {
+		for j := 0; j < k/2; j++ {
+			for i := 0; i < matSize/4; i++ {
+				mat32[j][i] = fnv(mat32[j][i], mat32[j+k/2][i])
+			}
+		}
+	}
+
+	for i := 0; i < matSize; i++ {
+		for j := 0; j < matSize/4; j++ {
+			data = append(data, mat32[i][j])
+		}
+	}
+
+	// Convert our destination slice to a byte buffer
+	header := *(*reflect.SliceHeader)(unsafe.Pointer(&data))
+	header.Len *= 4
+	header.Cap *= 4
+	dataBytes := *(*[]byte)(unsafe.Pointer(&header))
+
+	bch := bc.NewHash(sha3.Sum256(dataBytes))
+
+	return &bch
+}
+
 // isLittleEndian returns whether the local system is running in little or big
 // endian byte order.
 func isLittleEndian() bool {
@@ -159,17 +211,4 @@ func bytesToUint32(src []byte) []uint32 {
 	}
 
 	return dest
-}
-
-func hashMatrix(m *matrix.Matrix, matSize int) *bc.Hash {
-	var item []byte
-	for i := 1; i <= matSize; i++ {
-		for j := 1; j <= matSize; j++ {
-			item = append(item, byte(m.Get(i, j)))
-		}
-	}
-
-	bch := bc.NewHash(sha3.Sum256(item))
-
-	return &bch
 }
