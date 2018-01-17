@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto"
+	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
@@ -461,45 +462,24 @@ func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 	return accounts, nil
 }
 
-// AccountPubkey is structure of account pubkey
-type AccountPubkey struct {
-	Root   chainkd.XPub `json:"root_xpub"`
-	Pubkey string       `json:"pubkey"`
-	Path   []string     `json:"pubkey_derivation_path"`
-	Index  int          `json:"index"`
-}
-
 // createPubkey generate an pubkey for the select account
-func (m *Manager) createPubkey(ctx context.Context, accountID string) (*AccountPubkey, error) {
+func (m *Manager) createPubkey(ctx context.Context, accountID string) (rootXPub chainkd.XPub, pubkey ed25519.PublicKey, path [][]byte, err error) {
 	account, err := m.findByID(ctx, accountID)
 	if err != nil {
-		return nil, err
+		return chainkd.XPub{}, nil, nil, err
 	}
 
 	idx := m.nextIndex()
-	rootXPub := account.XPubs[0]
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	rootXPub = account.XPubs[0]
+	path = signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPub := rootXPub.Derive(path)
-	pubkey := derivedXPub.PublicKey()
+	pubkey = derivedXPub.PublicKey()
 
-	var pathStr []string
-	for _, p := range path {
-		pathStr = append(pathStr, hex.EncodeToString(p))
-	}
-
-	return &AccountPubkey{
-		Root:   rootXPub,
-		Pubkey: hex.EncodeToString(pubkey),
-		Path:   pathStr,
-		Index:  int(idx),
-	}, nil
+	return rootXPub, pubkey, path, nil
 }
 
 // CreateContractProgram creates a contract program for an account
-func (m *Manager) CreateContractProgram(ctx context.Context, accountID string, contractProgram string) ([]byte, error) {
-	expiresAt := time.Time{}
-	idx := m.nextIndex()
-
+func (m *Manager) CreateContractHook(ctx context.Context, accountID string, contractProgram string) ([]byte, error) {
 	contract, err := hex.DecodeString(contractProgram)
 	if err != nil {
 		return nil, err
@@ -507,10 +487,8 @@ func (m *Manager) CreateContractProgram(ctx context.Context, accountID string, c
 
 	cp := &CtrlProgram{
 		AccountID:      accountID,
-		KeyIndex:       idx,
 		ControlProgram: contract,
 		Change:         false,
-		ExpiresAt:      expiresAt,
 	}
 
 	if err = m.insertAccountControlProgram(ctx, cp); err != nil {

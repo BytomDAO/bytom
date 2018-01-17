@@ -6,10 +6,18 @@ import (
 
 	"encoding/hex"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
 )
 
 const defaultReceiverExpiry = 30 * 24 * time.Hour // 30 days
+
+// AccountPubkey is structure of account pubkey
+type AccountPubkey struct {
+	Root   chainkd.XPub `json:"root_xpub"`
+	Pubkey string       `json:"pubkey"`
+	Path   []string     `json:"pubkey_derivation_path"`
+}
 
 // CreateReceiver creates a new account receiver for an account
 // with the provided expiry. If a zero time is provided for the
@@ -62,26 +70,30 @@ func (m *Manager) CreatePubkeyInfo(ctx context.Context, accountInfo string) (*Ac
 		accountID = s.ID
 	}
 
-	accountPubkey, err := m.createPubkey(ctx, accountID)
+	rootXPub, pubkey, path, err := m.createPubkey(ctx, accountID)
 	if err != nil {
 		return nil, err
 	}
 
+	var pathStr []string
+	for _, p := range path {
+		pathStr = append(pathStr, hex.EncodeToString(p))
+	}
+
 	return &AccountPubkey{
-		Root:   accountPubkey.Root,
-		Pubkey: accountPubkey.Pubkey,
-		Path:   accountPubkey.Path,
-		Index:  accountPubkey.Index,
+		Root:   rootXPub,
+		Pubkey: hex.EncodeToString(pubkey),
+		Path:   pathStr,
 	}, nil
 }
 
-func (m *Manager) CreateContract(ctx context.Context, accountInfo string, contractProgram string) (map[string]string, error) {
+func (m *Manager) CreateContractInfo(ctx context.Context, accountInfo string, contractProgram string) (map[string]string, error) {
 	accountID := accountInfo
 	if s, err := m.FindByAlias(ctx, accountInfo); err == nil {
 		accountID = s.ID
 	}
 
-	contract, err := m.CreateContractProgram(ctx, accountID, contractProgram)
+	contract, err := m.CreateContractHook(ctx, accountID, contractProgram)
 	if err != nil {
 		return nil, err
 	}
