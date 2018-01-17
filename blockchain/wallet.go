@@ -22,12 +22,13 @@ func (bcr *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
 }
 
 func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in struct {
-	Alias    string       `json:"alias"`
-	Password string       `json:"password"`
-	XPrv     chainkd.XPrv `json:"xprv"`
-	Index    uint64       `json:"index"`
+	KeyAlias     string       `json:"key_alias"`
+	Password     string       `json:"password"`
+	XPrv         chainkd.XPrv `json:"xprv"`
+	Index        uint64       `json:"index"`
+	AccountAlias string       `json:"account_alias"`
 }) Response {
-	xpub, err := bcr.wallet.ImportAccountPrivKey(bcr.hsm, in.XPrv, in.Alias, in.Password, in.Index)
+	xpub, err := bcr.wallet.ImportAccountPrivKey(bcr.hsm, in.XPrv, in.KeyAlias, in.Password, in.Index, in.AccountAlias)
 	if err != nil {
 		return resWrapper(nil, err)
 	}
