@@ -87,6 +87,7 @@ var (
 	ErrMarshalAsset   = errors.New("failed marshal asset")
 	ErrFindAsset      = errors.New("fail to find asset")
 	ErrInternalAsset  = errors.New("btm has been defined as the internal asset")
+	ErrNullAlias      = errors.New("null asset alias")
 )
 
 //NewRegistry create new registry
@@ -368,6 +369,10 @@ func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int) (progra
 func (reg *Registry) UpdateAssetAlias(oldAlias, newAlias string) error {
 	if oldAlias == "btm" || newAlias == "btm" {
 		return ErrInternalAsset
+	}
+
+	if oldAlias == "" || newAlias == "" {
+		return ErrNullAlias
 	}
 
 	if _, err := reg.GetIDByAlias(newAlias); err == nil {
