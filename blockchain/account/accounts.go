@@ -12,11 +12,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"encoding/hex"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto"
+	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
@@ -458,4 +460,40 @@ func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 	}
 
 	return accounts, nil
+}
+
+// createPubkey generate an pubkey for the select account
+func (m *Manager) createPubkey(ctx context.Context, accountID string) (rootXPub chainkd.XPub, pubkey ed25519.PublicKey, path [][]byte, err error) {
+	account, err := m.findByID(ctx, accountID)
+	if err != nil {
+		return chainkd.XPub{}, nil, nil, err
+	}
+
+	idx := m.nextIndex()
+	rootXPub = account.XPubs[0]
+	path = signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	derivedXPub := rootXPub.Derive(path)
+	pubkey = derivedXPub.PublicKey()
+
+	return rootXPub, pubkey, path, nil
+}
+
+// CreateContractProgram creates a contract program for an account
+func (m *Manager) CreateContractHook(ctx context.Context, accountID string, contractProgram string) ([]byte, error) {
+	contract, err := hex.DecodeString(contractProgram)
+	if err != nil {
+		return nil, err
+	}
+
+	cp := &CtrlProgram{
+		AccountID:      accountID,
+		ControlProgram: contract,
+		Change:         false,
+	}
+
+	if err = m.insertAccountControlProgram(ctx, cp); err != nil {
+		return nil, err
+	}
+
+	return cp.ControlProgram, nil
 }
