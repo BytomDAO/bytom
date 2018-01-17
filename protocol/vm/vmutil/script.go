@@ -35,20 +35,10 @@ func (b *Builder) addP2SPMultiSig(pubkeys []ed25519.PublicKey, nrequired int) er
 	return nil
 }
 
-// CoinbaseProgram generates the script for contorl coinbase output
-func CoinbaseProgram(pubkeys []ed25519.PublicKey, nrequired int, height uint64) ([]byte, error) {
+// DefaultCoinbaseProgram generates the script for contorl coinbase output
+func DefaultCoinbaseProgram() ([]byte, error) {
 	builder := NewBuilder()
-	builder.AddOp(vm.OP_BLOCKHEIGHT)
-	builder.AddInt64(int64(height))
-	builder.AddOp(vm.OP_GREATERTHAN)
-	builder.AddOp(vm.OP_VERIFY)
-
-	if nrequired == 0 {
-		return builder.Build()
-	}
-	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
-		return nil, err
-	}
+	builder.AddOp(vm.OP_TRUE)
 	return builder.Build()
 }
 

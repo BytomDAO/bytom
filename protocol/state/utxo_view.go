@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/bytom/blockchain/txdb/storage"
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -32,6 +33,9 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 		}
 		if entry.Spent {
 			return errors.New("utxo has been spent")
+		}
+		if entry.IsCoinBase && entry.BlockHeight+consensus.CoinbasePendingBlockNumber > block.Height {
+			return errors.New("coinbase utxo is not ready for use")
 		}
 		entry.SpendOutput()
 	}
