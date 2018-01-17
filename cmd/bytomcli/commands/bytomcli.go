@@ -131,5 +131,3 @@ func AddCommands() {
 
 	BytomcliCmd.AddCommand(versionCmd)
 }
-
-

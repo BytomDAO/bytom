@@ -182,7 +182,7 @@ var createAccountPubkeyCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var ins = struct {
-			AccountInfo string    `json:"account_info"`
+			AccountInfo string `json:"account_info"`
 		}{AccountInfo: args[0]}
 
 		data, exitCode := util.ClientCall("/create-account-pubkey", &ins)
@@ -200,10 +200,10 @@ var createAccountContractCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		var ins = struct {
-			AccountInfo string    		`json:"account_info"`
-			ContractProgram string   	`json:"contract_program"`
+			AccountInfo     string `json:"account_info"`
+			ContractProgram string `json:"contract_program"`
 		}{
-			AccountInfo: args[0],
+			AccountInfo:     args[0],
 			ContractProgram: args[1],
 		}
 

@@ -6,7 +6,7 @@ import (
 
 // POST /create-account-receiver
 func (bcr *BlockchainReactor) createAccountReceiver(ctx context.Context, ins struct {
-	AccountInfo string    `json:"account_info"`
+	AccountInfo string `json:"account_info"`
 }) Response {
 	receiver, err := bcr.accounts.CreateReceiver(nil, ins.AccountInfo)
 	if err != nil {
@@ -17,7 +17,7 @@ func (bcr *BlockchainReactor) createAccountReceiver(ctx context.Context, ins str
 }
 
 func (bcr *BlockchainReactor) createAccountAddress(ctx context.Context, ins struct {
-	AccountInfo string    `json:"account_info"`
+	AccountInfo string `json:"account_info"`
 }) Response {
 	receiver, err := bcr.accounts.CreateAddressReceiver(ctx, ins.AccountInfo)
 	if err != nil {
@@ -27,7 +27,7 @@ func (bcr *BlockchainReactor) createAccountAddress(ctx context.Context, ins stru
 }
 
 func (bcr *BlockchainReactor) createAccountPubkey(ctx context.Context, ins struct {
-	AccountInfo string    `json:"account_info"`
+	AccountInfo string `json:"account_info"`
 }) Response {
 	pubkeyInfo, err := bcr.accounts.CreatePubkeyInfo(nil, ins.AccountInfo)
 	if err != nil {
@@ -38,8 +38,8 @@ func (bcr *BlockchainReactor) createAccountPubkey(ctx context.Context, ins struc
 }
 
 func (bcr *BlockchainReactor) createAccountContract(ctx context.Context, ins struct {
-	AccountInfo string    		`json:"account_info"`
-	ContractProgram string    	`json:"contract_program"`
+	AccountInfo     string `json:"account_info"`
+	ContractProgram string `json:"contract_program"`
 }) Response {
 	contract, err := bcr.accounts.CreateContract(nil, ins.AccountInfo, ins.ContractProgram)
 	if err != nil {

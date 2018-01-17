@@ -95,7 +95,7 @@ var buildControlAddressReqFmt = `
 
 var buildControlAddressReqFmtByAlias = `
 	{"actions": [
-		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_alias": "%s"},
+		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
 		{"type": "spend_account", "asset_alias": "%s","amount": %s, "account_alias": "%s"},
 		{"type": "control_address", "asset_alias": "%s", "amount": %s,"address": "%s"}
 	]}`
@@ -147,7 +147,7 @@ var buildTransactionCmd = &cobra.Command{
 				buildReqStr = fmt.Sprintf(buildRetireReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
 				break
 			}
-			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
+			buildReqStr = fmt.Sprintf(buildRetireReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
 		case "address":
 			if alias {
 				buildReqStr = fmt.Sprintf(buildControlAddressReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)

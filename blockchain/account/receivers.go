@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"encoding/hex"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
-	"encoding/hex"
 )
 
 const defaultReceiverExpiry = 30 * 24 * time.Hour // 30 days
@@ -68,10 +68,10 @@ func (m *Manager) CreatePubkeyInfo(ctx context.Context, accountInfo string) (*Ac
 	}
 
 	return &AccountPubkey{
-		Root:      	accountPubkey.Root,
-		Pubkey:    	accountPubkey.Pubkey,
-		Path: 		accountPubkey.Path,
-		Index:		accountPubkey.Index,
+		Root:   accountPubkey.Root,
+		Pubkey: accountPubkey.Pubkey,
+		Path:   accountPubkey.Path,
+		Index:  accountPubkey.Index,
 	}, nil
 }
 

@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"encoding/hex"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
@@ -22,7 +23,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/vm/vmutil"
-	"encoding/hex"
 )
 
 const (
@@ -463,10 +463,10 @@ func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 
 // AccountPubkey is structure of account pubkey
 type AccountPubkey struct {
-	Root   chainkd.XPub    		`json:"root_xpub"`
-	Pubkey string   			`json:"pubkey"`
-	Path   []string 			`json:"pubkey_derivation_path"`
-	Index  int					`json:"index"`
+	Root   chainkd.XPub `json:"root_xpub"`
+	Pubkey string       `json:"pubkey"`
+	Path   []string     `json:"pubkey_derivation_path"`
+	Index  int          `json:"index"`
 }
 
 // createPubkey generate an pubkey for the select account
@@ -488,10 +488,10 @@ func (m *Manager) createPubkey(ctx context.Context, accountID string) (*AccountP
 	}
 
 	return &AccountPubkey{
-		Root:      	rootXPub,
-		Pubkey:    	hex.EncodeToString(pubkey),
-		Path: 		pathStr,
-		Index:		int(idx),
+		Root:   rootXPub,
+		Pubkey: hex.EncodeToString(pubkey),
+		Path:   pathStr,
+		Index:  int(idx),
 	}, nil
 }
 
