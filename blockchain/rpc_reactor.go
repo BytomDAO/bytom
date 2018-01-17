@@ -56,6 +56,8 @@ func (bcr *BlockchainReactor) BuildHandler() {
 		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
 		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 		m.Handle("/create-account-address", jsonHandler(bcr.createAccountAddress))
+		m.Handle("/create-account-pubkey", jsonHandler(bcr.createAccountPubkey))
+		m.Handle("/create-account-contract", jsonHandler(bcr.createAccountContract))
 		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
 		m.Handle("/delete-account", jsonHandler(bcr.deleteAccount))
 

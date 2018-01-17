@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"encoding/hex"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
 )
@@ -53,4 +54,37 @@ func (m *Manager) CreateAddressReceiver(ctx context.Context, accountInfo string)
 		Address:        program.Address,
 		ExpiresAt:      program.ExpiresAt,
 	}, nil
+}
+
+func (m *Manager) CreatePubkeyInfo(ctx context.Context, accountInfo string) (*AccountPubkey, error) {
+	accountID := accountInfo
+	if s, err := m.FindByAlias(ctx, accountInfo); err == nil {
+		accountID = s.ID
+	}
+
+	accountPubkey, err := m.createPubkey(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &AccountPubkey{
+		Root:   accountPubkey.Root,
+		Pubkey: accountPubkey.Pubkey,
+		Path:   accountPubkey.Path,
+		Index:  accountPubkey.Index,
+	}, nil
+}
+
+func (m *Manager) CreateContract(ctx context.Context, accountInfo string, contractProgram string) (map[string]string, error) {
+	accountID := accountInfo
+	if s, err := m.FindByAlias(ctx, accountInfo); err == nil {
+		accountID = s.ID
+	}
+
+	contract, err := m.CreateContractProgram(ctx, accountID, contractProgram)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]string{"contract_program": hex.EncodeToString(contract)}, nil
 }
