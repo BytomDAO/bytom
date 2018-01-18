@@ -8,12 +8,12 @@ import (
 	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/account"
-	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+	"time"
 )
 
 type rawOutput struct {
@@ -147,6 +147,21 @@ func saveExternalAssetDefinition(b *legacy.Block, walletDB db.DB) {
 			}
 		}
 	}
+}
+
+type OutputSummary struct {
+	Type         string     `json:"type"`
+	AssetID      bc.AssetID `json:"asset_id"`
+	AssetAlias   string     `json:"asset_alias,omitempty"`
+	Amount       uint64     `json:"amount"`
+	AccountID    string     `json:"account_id,omitempty"`
+	AccountAlias string     `json:"account_alias,omitempty"`
+}
+
+type TxSummary struct {
+	ID        bc.Hash         `json:"id"`
+	Timestamp time.Time       `json:"timestamp"`
+	Outputs   []OutputSummary `json:"outputs"`
 }
 
 //indexTransactions saves all annotated transactions to the database.
@@ -331,7 +346,6 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 
 //GetTransactionsByTxID get account txs by account tx ID
 func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error) {
-	annotatedTx := query.AnnotatedTx{}
 	annotatedTxs := make([]query.AnnotatedTx, 0)
 	formatKey := ""
 
@@ -346,6 +360,7 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix + formatKey))
 	defer txIter.Release()
 	for txIter.Next() {
+		annotatedTx := query.AnnotatedTx{}
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}
@@ -353,6 +368,23 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 	}
 
 	return annotatedTxs, nil
+}
+
+//GetTransactionsSummary get transactions summary
+func (w *Wallet) GetTransactionsSummary() ([]TxSummary, error) {
+	Txs := make([]TxSummary, 0)
+
+	txsIter := w.DB.IteratorPrefix([]byte(TxSPrefix))
+	defer txsIter.Release()
+	for txsIter.Next() {
+		tmpTxSummary := TxSummary{}
+		if err := json.Unmarshal(txsIter.Value(), &tmpTxSummary); err != nil {
+			return nil, err
+		}
+		Txs = append(Txs, tmpTxSummary)
+	}
+
+	return Txs, nil
 }
 
 func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) bool {

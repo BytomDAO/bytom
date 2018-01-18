@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/blockchain/wallet"
 )
 
 // POST /list-accounts
@@ -108,11 +109,15 @@ func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accou
 func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struct {
 	ID        string `json:"id"`
 	AccountID string `json:"account_id"`
+	Summary   bool   `json:"summary"`
 }) Response {
 	var transactions []query.AnnotatedTx
+	var txSummary []wallet.TxSummary
 	var err error
 
-	if filter.AccountID != "" {
+	if filter.Summary {
+		txSummary, err = bcr.wallet.GetTransactionsSummary()
+	} else if filter.AccountID != "" {
 		transactions, err = bcr.wallet.GetTransactionsByAccountID(filter.AccountID)
 	} else {
 		transactions, err = bcr.wallet.GetTransactionsByTxID(filter.ID)
@@ -121,6 +126,10 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struc
 	if err != nil {
 		log.Errorf("listTransactions: %v", err)
 		return resWrapper(nil, err)
+	}
+
+	if filter.Summary {
+		return resWrapper(txSummary)
 	}
 	return resWrapper(transactions)
 }
