@@ -71,6 +71,62 @@ func TestApplyBlock(t *testing.T) {
 			},
 			err: false,
 		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 7,
+				},
+				Transactions: []*bc.Tx{
+					&bc.Tx{
+						TxHeader: &bc.TxHeader{
+							ResultIds: []*bc.Hash{},
+						},
+						SpentOutputIDs: []bc.Hash{
+							bc.Hash{V0: 0},
+						},
+					},
+				},
+			},
+			inputView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false),
+				},
+			},
+			fetchView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, true),
+				},
+			},
+			err: false,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 0,
+				},
+				Transactions: []*bc.Tx{
+					&bc.Tx{
+						TxHeader: &bc.TxHeader{
+							ResultIds: []*bc.Hash{},
+						},
+						SpentOutputIDs: []bc.Hash{
+							bc.Hash{V0: 0},
+						},
+					},
+				},
+			},
+			inputView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false),
+				},
+			},
+			fetchView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, true),
+				},
+			},
+			err: true,
+		},
 	}
 
 	for i, c := range cases {
