@@ -16,6 +16,13 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
+const (
+	matSize     = 1 << 8 // Size of matrix
+	matNum      = 1 << 8 // Number of matrix
+	epochLength = 1 << 7 // Blocks per epoch
+	mulRounds   = 1 << 8 // Number of rounds in mulmatrix
+)
+
 // hasher is a repetitive hasher allowing the same hash data structures to be
 // reused between hash runs instead of requiring new ones to be created.
 type hasher func(dest []byte, data []byte)
@@ -94,7 +101,7 @@ func fnv(a, b uint32) uint32 {
 	return a*0x01000193 ^ b
 }
 
-func mulMatrix(cache []uint32, headerhash []byte) []byte {
+func mulMatrix(cache []uint32, headerhash []byte) []uint8 {
 	// Convert our destination slice to a byte buffer
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&cache))
 	header.Len *= 4
@@ -127,31 +134,32 @@ func mulMatrix(cache []uint32, headerhash []byte) []byte {
 		mb = mc
 	}
 
-	result := make([]byte, 0)
+	result := make([]uint8, 0)
 	for i := 0; i < matSize; i++ {
 		for j := 0; j < matSize; j++ {
-			result = append(result, byte(mc.At(i, j)))
+			result = append(result, uint8(mc.At(i, j)))
 		}
 	}
 
 	return result
 }
 
-func hashMatrix(result []byte) *bc.Hash {
+func hashMatrix(result []uint8) *bc.Hash {
 	var mat8 [matSize][matSize]uint8
 	for i := 0; i < matSize; i++ {
 		for j := 0; j < matSize; j++ {
-			mat8[i][j] = uint8(result[i*matSize+j])
+			mat8[i][j] = result[i*matSize+j]
 		}
 	}
 
 	var mat32 [matSize][matSize / 4]uint32
+	// ATTENTION !!!!!!! C++ is different!!!
 	for i := 0; i < matSize; i++ {
 		for j := 0; j < matSize; j += 4 {
-			mat32 = ((uint32(mat8[i][j])) << 24) |
-				((uint32(mat8[i][j+1])) << 16) |
-				((uint32(mat8[i][j+2])) << 8) |
-				((uint32(mat8[i][j+3])) << 0)
+			mat32[i][j] = (uint32(mat8[i][j])) |
+				((uint32(mat8[i][j+1])) << 8) |
+				((uint32(mat8[i][j+2])) << 16) |
+				((uint32(mat8[i][j+3])) << 24)
 		}
 	}
 

@@ -8,13 +8,6 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
-const (
-	matSize     = 1 << 8 // Size of matrix
-	matNum      = 1 << 8 // Number of matrix
-	epochLength = 1 << 7 // Blocks per epoch
-	mulRounds   = 1 << 8 // Number of rounds in mulmatrix
-)
-
 // CreateSeed return epoch seed, type is *bc.Hash
 func CreateSeed(height uint64, blockHashs []*bc.Hash) *bc.Hash {
 	if height < 128 {
