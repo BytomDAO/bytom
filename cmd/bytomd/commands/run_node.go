@@ -54,13 +54,10 @@ func runNode(cmd *cobra.Command, args []string) error {
 		if genDoc.ChainID == "" {
 			return fmt.Errorf("Genesis doc %v must include non-empty chain_id ", genDocFile)
 		}
-		if genDoc.AssetDefinition == nil {
-			return fmt.Errorf("Genesis doc %v must include non-empty AssetDefinition ", genDocFile)
-		}
+
 		config.ChainID = genDoc.ChainID
 		config.PrivateKey = genDoc.PrivateKey
 		config.Time = genDoc.GenesisTime
-		config.NativeAssetDef = genDoc.AssetDefinition
 	} else {
 		return fmt.Errorf("not find genesis.json")
 	}

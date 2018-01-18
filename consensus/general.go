@@ -6,6 +6,13 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
+func init() {
+	BTMDefinitionMap["name"] = BTMAlias
+	BTMDefinitionMap["symbol"] = BTMSymbol
+	BTMDefinitionMap["decimals"] = BTMDecimals
+	BTMDefinitionMap["description"] = BTMDescription
+}
+
 //consensus variables
 const (
 	// define the Max transaction size and Max block size
@@ -37,6 +44,15 @@ var BTMAssetID = &bc.AssetID{
 
 //BTMAlias is default btm
 var BTMAlias = "btm"
+
+//BTMSymbol
+var BTMSymbol = "btm"
+
+//BTMDecimals
+var BTMDecimals = 8
+
+//BTMDescription
+var BTMDescription = `Bytom Official Issue`
 
 //BTMDefinitionMap
 var BTMDefinitionMap = make(map[string]interface{})

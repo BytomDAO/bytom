@@ -53,7 +53,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 		return err
 	}
 
-	assetDef := asset.RawDefinition()
+	assetDef := asset.RawDefinitionByte
 
 	txin := legacy.NewIssuanceInput(nonce[:], a.Amount, a.ReferenceData, asset.InitialBlockHash, asset.IssuanceProgram, nil, assetDef)
 

@@ -16,18 +16,10 @@ var GenDocKey = []byte("GenDocKey")
 //------------------------------------------------------------
 // core types for a genesis definition
 type GenesisDoc struct {
-	GenesisTime     time.Time       `json:"genesis_time"`
-	ChainID         string          `json:"chain_id"`
-	PrivateKey      string          `json:"private_key"`
-	AppHash         data.Bytes      `json:"app_hash"`
-	AssetDefinition *NativeAssetDef `json:"native_asset_definition"`
-}
-
-type NativeAssetDef struct {
-	Name        string `json:"name"`
-	Symbol      string `json:"symbol"`
-	Decimals    int    `json:"decimals"`
-	Description string `json:"description"`
+	GenesisTime time.Time  `json:"genesis_time"`
+	ChainID     string     `json:"chain_id"`
+	PrivateKey  string     `json:"private_key"`
+	AppHash     data.Bytes `json:"app_hash"`
 }
 
 // Utility method for saving GenensisDoc as JSON file.

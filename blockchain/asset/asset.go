@@ -23,6 +23,10 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+func init() {
+	defaultNativeAsset = generateNativeAsset()
+}
+
 var defaultNativeAsset *Asset
 
 const (
@@ -35,14 +39,14 @@ const (
 	indexPrefix   = "ASSIDX:"
 )
 
-func GenerateNativeAsset() {
+func generateNativeAsset() *Asset {
 	genesisBlock := cfg.GenerateGenesisBlock()
 	signer := &signers.Signer{Type: "internal"}
 	alias := consensus.BTMAlias
 
 	definitionBytes, _ := SerializeAssetDef(consensus.BTMDefinitionMap)
 
-	defaultNativeAsset = &Asset{
+	return &Asset{
 		Signer:            signer,
 		AssetID:           *consensus.BTMAssetID,
 		Alias:             &alias,
@@ -121,11 +125,6 @@ type Asset struct {
 	Tags              map[string]interface{} `json:"tags"`
 	RawDefinitionByte chainjson.HexBytes     `json:"raw_definition_byte"`
 	DefinitionMap     map[string]interface{} `json:"definition"`
-}
-
-//RawDefinition return asset in the raw format
-func (asset *Asset) RawDefinition() []byte {
-	return []byte(asset.RawDefinitionByte)
 }
 
 func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint64, error) {
@@ -305,17 +304,17 @@ func (reg *Registry) GetAliasByID(id string) string {
 		return consensus.BTMAlias
 	}
 
-	aliasIter := reg.db.IteratorPrefix([]byte(AliasPrefix))
-	defer aliasIter.Release()
-
-	for aliasIter.Next() {
-		if rawID := aliasIter.Value(); string(rawID) == id {
-			aliasKey := aliasIter.Key()
-			return string(aliasKey[len(AliasPrefix):])
-		}
+	assetID := &bc.AssetID{}
+	if err := assetID.UnmarshalText([]byte(id)); err != nil {
+		return ""
 	}
 
-	return ""
+	asset, err := reg.findByID(nil, assetID)
+	if err != nil {
+		return ""
+	}
+
+	return *asset.Alias
 }
 
 // ListAssets returns the accounts in the db
@@ -372,13 +371,12 @@ func (reg *Registry) UpdateAssetAlias(oldAlias, newAlias string) error {
 		return ErrDuplicateAlias
 	}
 
-	storeBatch := reg.db.NewBatch()
-
 	findAsset, err := reg.FindByAlias(nil, oldAlias)
 	if err != nil {
 		return err
 	}
 
+	storeBatch := reg.db.NewBatch()
 	findAsset.Alias = &newAlias
 	assetID := &findAsset.AssetID
 	rawAsset, err := json.Marshal(findAsset)
