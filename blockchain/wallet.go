@@ -4,7 +4,19 @@ import (
 	"context"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/tendermint/go-wire/data/base58"
+	"chain/errors"
+	"github.com/bytom/crypto/sha3pool"
+	"bytes"
 )
+
+type KeyImportParams struct {
+	KeyAlias     string       `json:"alias"`
+	Password     string       `json:"password"`
+	XPrv         string       `json:"xprv"`
+	Index        uint64       `json:"index"`
+	AccountAlias string       `json:"account_alias"`
+}
 
 func (bcr *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
 	Password string       `json:"password"`
@@ -21,14 +33,26 @@ func (bcr *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
 	return NewSuccessResponse(privateKey{PrivateKey: *key})
 }
 
-func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in struct {
-	KeyAlias     string       `json:"key_alias"`
-	Password     string       `json:"password"`
-	XPrv         chainkd.XPrv `json:"xprv"`
-	Index        uint64       `json:"index"`
-	AccountAlias string       `json:"account_alias"`
-}) Response {
-	xpub, err := bcr.wallet.ImportAccountPrivKey(bcr.hsm, in.XPrv, in.KeyAlias, in.Password, in.Index, in.AccountAlias)
+func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in KeyImportParams) Response {
+	rawData, err := base58.Decode(in.XPrv)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	if len(rawData) != 68 {
+		return NewErrorResponse(errors.New("invalid private key hash length"))
+	}
+
+	var hashed [32]byte
+	sha3pool.Sum256(hashed[:], rawData[:64])
+	if res := bytes.Compare(hashed[:4], rawData[64:]); res != 0 {
+		return NewErrorResponse(errors.New("private hash error"))
+	}
+
+	var xprv [64]byte
+	copy(xprv[:], rawData[:64])
+
+	xpub, err := bcr.wallet.ImportAccountPrivKey(bcr.hsm, xprv, in.KeyAlias, in.Password, in.Index, in.AccountAlias)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
