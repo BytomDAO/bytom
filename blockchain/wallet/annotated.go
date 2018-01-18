@@ -65,7 +65,7 @@ func getExAliasDefinition(assetID *bc.AssetID, walletDB db.DB) (string, json.Raw
 		saveAlias := assetID.String()
 		if a, ok := definitionMap["name"]; ok {
 			tmpAlias := fmt.Sprintf("%v", a)
-			if tmpAlias != "" && tmpAlias != "btm" {
+			if tmpAlias != "" && tmpAlias != consensus.BTMAlias {
 				saveAlias = tmpAlias
 			}
 		}
@@ -84,8 +84,12 @@ func getExAliasDefinition(assetID *bc.AssetID, walletDB db.DB) (string, json.Raw
 func getAliasDefinition(assetID bc.AssetID, walletDB db.DB) (string, json.RawMessage, error) {
 	//btm
 	if assetID.String() == consensus.BTMAssetID.String() {
-		alias := "btm"
-		return alias, []byte(`{}`), nil
+		alias := consensus.BTMAlias
+		definition, err := asset.SerializeAssetDef(consensus.BTMDefinitionMap)
+		if err != nil {
+			return "", nil, err
+		}
+		return alias, definition, nil
 	}
 
 	//external asset

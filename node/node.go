@@ -26,6 +26,7 @@ import (
 	"github.com/bytom/blockchain/txfeed"
 	w "github.com/bytom/blockchain/wallet"
 	cfg "github.com/bytom/config"
+	"github.com/bytom/consensus"
 	"github.com/bytom/env"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
@@ -139,6 +140,13 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accessto
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 
+	//Native asset definition init
+	consensus.BTMAlias = config.NativeAssetDef.Name
+	consensus.BTMDefinitionMap["name"] = config.NativeAssetDef.Name
+	consensus.BTMDefinitionMap["symbol"] = config.NativeAssetDef.Symbol
+	consensus.BTMDefinitionMap["decimals"] = config.NativeAssetDef.Decimals
+	consensus.BTMDefinitionMap["description"] = config.NativeAssetDef.Description
+
 	// Get store
 	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
 	store := txdb.NewStore(txDB)
@@ -191,6 +199,7 @@ func NewNode(config *cfg.Config) *Node {
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
+		asset.GenerateNativeAsset()
 		wallet, err = w.NewWallet(walletDB, accounts, assets, chain)
 		if err != nil {
 			log.WithField("error", err).Error("init NewWallet")

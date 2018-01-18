@@ -45,6 +45,12 @@ func initFiles(cmd *cobra.Command, args []string) {
 	genDoc := types.GenesisDoc{
 		ChainID:    cmn.Fmt(config.ChainID),
 		PrivateKey: hex.EncodeToString(xprv.Bytes()),
+		AssetDefinition: &types.NativeAssetDef{
+			Name:        "btm",
+			Symbol:      "btm",
+			Decimals:    8,
+			Description: `Bytom Official Issue`,
+		},
 	}
 	genDoc.SaveAs(genFile)
 	log.WithField("genesis", config.GenesisFile()).Info("Initialized bytom")

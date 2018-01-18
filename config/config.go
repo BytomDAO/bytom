@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/bytom/types"
 	"path/filepath"
 	"time"
 )
@@ -57,6 +58,9 @@ type BaseConfig struct {
 
 	//The ID of the network to json
 	ChainID string `mapstructure:"chain_id"`
+
+	//NativeAssetDef is native btm asset definition
+	NativeAssetDef *types.NativeAssetDef `mapstructure:"asset_definition"`
 
 	// A JSON file containing the private key to use as a validator in the consensus protocol
 	PrivateKey string `mapstructure:"private_key"`

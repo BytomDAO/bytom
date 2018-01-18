@@ -23,6 +23,8 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+var defaultNativeAsset *Asset
+
 const (
 	maxAssetCache = 1000
 	assetPrefix   = "ASS:"
@@ -33,29 +35,20 @@ const (
 	indexPrefix   = "ASSIDX:"
 )
 
-func getNativeAsset() *Asset {
+func GenerateNativeAsset() {
 	genesisBlock := cfg.GenerateGenesisBlock()
 	signer := &signers.Signer{Type: "internal"}
-	alias := "btm"
+	alias := consensus.BTMAlias
 
-	defaultTags := make(map[string]interface{})
-	defaultTags["issue"] = "Bytom Official"
+	definitionBytes, _ := SerializeAssetDef(consensus.BTMDefinitionMap)
 
-	definitionMap := make(map[string]interface{})
-	definitionMap["name"] = "btm"
-	definitionMap["symbol"] = "btm"
-	definitionMap["decimals"] = 8
-	definitionMap["description"] = `Bytom Official Issue`
-	defitionBytes, _ := serializeAssetDef(definitionMap)
-
-	return &Asset{
+	defaultNativeAsset = &Asset{
 		Signer:            signer,
 		AssetID:           *consensus.BTMAssetID,
 		Alias:             &alias,
 		VMVersion:         1,
-		Tags:              defaultTags,
-		DefinitionMap:     definitionMap,
-		RawDefinitionByte: defitionBytes,
+		DefinitionMap:     consensus.BTMDefinitionMap,
+		RawDefinitionByte: definitionBytes,
 		InitialBlockHash:  genesisBlock.Hash()}
 }
 
@@ -154,7 +147,7 @@ func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint64, error) {
 
 // Define defines a new Asset.
 func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}) (*Asset, error) {
-	if alias == "btm" {
+	if alias == consensus.BTMAlias {
 		return nil, ErrInternalAsset
 	}
 
@@ -172,7 +165,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, err
 	}
 
-	rawDefinition, err := serializeAssetDef(definition)
+	rawDefinition, err := SerializeAssetDef(definition)
 	if err != nil {
 		return nil, ErrSerializing
 	}
@@ -309,7 +302,7 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 func (reg *Registry) GetAliasByID(id string) string {
 	//btm
 	if id == consensus.BTMAssetID.String() {
-		return "btm"
+		return consensus.BTMAlias
 	}
 
 	aliasIter := reg.db.IteratorPrefix([]byte(AliasPrefix))
@@ -327,7 +320,7 @@ func (reg *Registry) GetAliasByID(id string) string {
 
 // ListAssets returns the accounts in the db
 func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
-	assets := []*Asset{getNativeAsset()}
+	assets := []*Asset{defaultNativeAsset}
 	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix + id))
 	defer assetIter.Release()
 
@@ -341,13 +334,13 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 	return assets, nil
 }
 
-// serializeAssetDef produces a canonical byte representation of an asset
+// SerializeAssetDef produces a canonical byte representation of an asset
 // definition. Currently, this is implemented using pretty-printed JSON.
 // As is the standard for Go's map[string] serialization, object keys will
 // appear in lexicographic order. Although this is mostly meant for machine
 // consumption, the JSON is pretty-printed for easy reading.
 // The empty asset def is an empty byte slice.
-func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
+func SerializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	if def == nil {
 		return []byte{}, nil
 	}
@@ -367,7 +360,7 @@ func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int) (progra
 
 //UpdateAssetAlias updates oldAlias to newAlias
 func (reg *Registry) UpdateAssetAlias(oldAlias, newAlias string) error {
-	if oldAlias == "btm" || newAlias == "btm" {
+	if oldAlias == consensus.BTMAlias || newAlias == consensus.BTMAlias {
 		return ErrInternalAsset
 	}
 
