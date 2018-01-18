@@ -3,7 +3,6 @@
 package accesstoken
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
@@ -55,7 +54,7 @@ func NewStore(db dbm.DB) *CredentialStore {
 }
 
 // Create generates a new access token with the given ID.
-func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*Token, error) {
+func (cs *CredentialStore) Create(id, typ string) (*Token, error) {
 	if !validIDRegexp.MatchString(id) {
 		return nil, errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
@@ -90,7 +89,7 @@ func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*Token, 
 }
 
 // Check returns whether or not an id-secret pair is a valid access token.
-func (cs *CredentialStore) Check(ctx context.Context, id string, secret string) (bool, error) {
+func (cs *CredentialStore) Check(id string, secret string) (bool, error) {
 	if !validIDRegexp.MatchString(id) {
 		return false, errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
@@ -113,7 +112,7 @@ func (cs *CredentialStore) Check(ctx context.Context, id string, secret string) 
 }
 
 // List lists all access tokens.
-func (cs *CredentialStore) List(ctx context.Context) ([]*Token, error) {
+func (cs *CredentialStore) List() ([]*Token, error) {
 	tokens := make([]*Token, 0)
 	iter := cs.DB.Iterator()
 	defer iter.Release()
@@ -129,7 +128,7 @@ func (cs *CredentialStore) List(ctx context.Context) ([]*Token, error) {
 }
 
 // Delete deletes an access token by id.
-func (cs *CredentialStore) Delete(ctx context.Context, id string) error {
+func (cs *CredentialStore) Delete(id string) error {
 	if !validIDRegexp.MatchString(id) {
 		return errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}

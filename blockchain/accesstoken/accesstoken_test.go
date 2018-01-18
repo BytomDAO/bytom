@@ -1,7 +1,6 @@
 package accesstoken
 
 import (
-	"context"
 	"os"
 	"strings"
 	"testing"
@@ -15,7 +14,6 @@ func TestCreate(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
-	ctx := context.Background()
 
 	cases := []struct {
 		id, typ string
@@ -29,7 +27,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		_, err := cs.Create(ctx, c.id, c.typ)
+		_, err := cs.Create(c.id, c.typ)
 		if errors.Root(err) != c.want {
 			t.Errorf("Create(%s, %s) error = %s want %s", c.id, c.typ, err, c.want)
 		}
@@ -37,17 +35,16 @@ func TestCreate(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	ctx := context.Background()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
 	tokenMap := make(map[string]*Token)
-	tokenMap["ab"] = mustCreateToken(ctx, t, cs, "ab", "test")
-	tokenMap["bc"] = mustCreateToken(ctx, t, cs, "bc", "test")
-	tokenMap["cd"] = mustCreateToken(ctx, t, cs, "cd", "test")
+	tokenMap["ab"] = mustCreateToken(t, cs, "ab", "test")
+	tokenMap["bc"] = mustCreateToken(t, cs, "bc", "test")
+	tokenMap["cd"] = mustCreateToken(t, cs, "cd", "test")
 
-	got, err := cs.List(ctx)
+	got, err := cs.List()
 	if err != nil {
 		t.Errorf("List errored: get list error")
 	}
@@ -64,15 +61,14 @@ func TestList(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	ctx := context.Background()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
-	token := mustCreateToken(ctx, t, cs, "x", "client")
+	token := mustCreateToken(t, cs, "x", "client")
 	tokenParts := strings.Split(token.Token, ":")
 
-	valid, err := cs.Check(ctx, tokenParts[0], tokenParts[1])
+	valid, err := cs.Check(tokenParts[0], tokenParts[1])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +76,7 @@ func TestCheck(t *testing.T) {
 		t.Fatal("expected token and secret to be valid")
 	}
 
-	valid, err = cs.Check(ctx, "x", "badsecret")
+	valid, err = cs.Check("x", "badsecret")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,15 +86,14 @@ func TestCheck(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	ctx := context.Background()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
 	const id = "Y"
-	mustCreateToken(ctx, t, cs, id, "client")
+	mustCreateToken(t, cs, id, "client")
 
-	err := cs.Delete(ctx, id)
+	err := cs.Delete(id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,19 +105,18 @@ func TestDelete(t *testing.T) {
 }
 
 func TestDeleteWithInvalidId(t *testing.T) {
-	ctx := context.Background()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
-	err := cs.Delete(ctx, "@")
+	err := cs.Delete("@")
 	if errors.Root(err) != ErrBadID {
 		t.Errorf("Deletion with invalid id success, while it should not")
 	}
 }
 
-func mustCreateToken(ctx context.Context, t *testing.T, cs *CredentialStore, id, typ string) *Token {
-	token, err := cs.Create(ctx, id, typ)
+func mustCreateToken(t *testing.T, cs *CredentialStore, id, typ string) *Token {
+	token, err := cs.Create(id, typ)
 	if err != nil {
 		t.Fatal(err)
 	}
