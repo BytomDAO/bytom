@@ -567,8 +567,8 @@ func validateCoinbase(tx *bc.Tx, value uint64) error {
 		return errors.Wrap(errWrongCoinbaseTransaction, "dismatch output value")
 	}
 
-	inputEntry := tx.Entries[*tx.InputIDs[0]]
-	input, ok := resultEntry.(*bc.Coinbase)
+	inputEntry := tx.Entries[tx.InputIDs[0]]
+	input, ok := inputEntry.(*bc.Coinbase)
 	if !ok {
 		return errors.Wrap(errWrongCoinbaseTransaction, "decode input")
 	}
