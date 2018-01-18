@@ -67,7 +67,7 @@ func Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
 }
 
 // Create creates and stores a Signer in the database
-func Create(signerType string, xpubs []chainkd.XPub, quorum int) (string, *Signer, error) {
+func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64) (string, *Signer, error) {
 	if len(xpubs) == 0 {
 		return "", nil, errors.Wrap(ErrNoXPubs)
 	}
@@ -83,7 +83,7 @@ func Create(signerType string, xpubs []chainkd.XPub, quorum int) (string, *Signe
 		return "", nil, errors.Wrap(ErrBadQuorum)
 	}
 
-	id, keyIndex := IdGenerate()
+	id := IDGenerate()
 	return id, &Signer{
 		Type:     signerType,
 		XPubs:    xpubs,

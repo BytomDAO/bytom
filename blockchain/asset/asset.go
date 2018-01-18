@@ -2,6 +2,7 @@ package asset
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"sync"
 
@@ -25,6 +26,7 @@ const (
 	maxAssetCache = 1000
 	assetPrefix   = "ASS:"
 	aliasPrefix   = "ALS:"
+	indexPrefix   = "ASSIDX:"
 )
 
 func aliasKey(name string) []byte {
@@ -35,6 +37,10 @@ func aliasKey(name string) []byte {
 func Key(id *bc.AssetID) []byte {
 	name := id.String()
 	return []byte(assetPrefix + name)
+}
+
+func indexKey(xpub chainkd.XPub) []byte {
+	return []byte(indexPrefix + xpub.String())
 }
 
 // pre-define errors for supporting bytom errorFormatter
@@ -70,6 +76,8 @@ type Registry struct {
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
 	aliasCache *lru.Cache
+
+	assetIndexMu sync.Mutex
 }
 
 //Asset describe asset on bytom chain
@@ -90,6 +98,23 @@ func (asset *Asset) RawDefinition() []byte {
 	return asset.RawDefinitionByte
 }
 
+func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint64, error) {
+	reg.assetIndexMu.Lock()
+	defer reg.assetIndexMu.Unlock()
+
+	var nextIndex uint64 = 1
+
+	if rawIndex := reg.db.Get(indexKey(xpubs[0])); rawIndex != nil {
+		nextIndex = binary.LittleEndian.Uint64(rawIndex) + 1
+	}
+
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, nextIndex)
+	reg.db.Set(indexKey(xpubs[0]), buf)
+
+	return &nextIndex, nil
+}
+
 // Define defines a new Asset.
 func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}) (*Asset, error) {
 	if alias == "btm" {
@@ -100,7 +125,12 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, ErrDuplicateAlias
 	}
 
-	_, assetSigner, err := signers.Create("asset", xpubs, quorum)
+	nextAssetIndex, err := reg.getNextAssetIndex(xpubs)
+	if err != nil {
+		return nil, errors.Wrap(err, "get asset index error")
+	}
+
+	_, assetSigner, err := signers.Create("asset", xpubs, quorum, *nextAssetIndex)
 	if err != nil {
 		return nil, err
 	}
