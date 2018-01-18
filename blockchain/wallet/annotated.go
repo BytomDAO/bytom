@@ -73,10 +73,8 @@ func getAliasDefinition(assetID bc.AssetID, walletDB db.DB) (string, json.RawMes
 	//btm
 	if assetID.String() == consensus.BTMAssetID.String() {
 		alias := consensus.BTMAlias
-		definition, err := asset.SerializeAssetDef(consensus.BTMDefinitionMap)
-		if err != nil {
-			return "", nil, err
-		}
+		definition := []byte(asset.DefaultNativeAsset.RawDefinitionByte)
+
 		return alias, definition, nil
 	}
 

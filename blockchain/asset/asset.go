@@ -24,10 +24,10 @@ import (
 )
 
 func init() {
-	defaultNativeAsset = generateNativeAsset()
+	DefaultNativeAsset = generateNativeAsset()
 }
 
-var defaultNativeAsset *Asset
+var DefaultNativeAsset *Asset
 
 const (
 	maxAssetCache = 1000
@@ -44,7 +44,7 @@ func generateNativeAsset() *Asset {
 	signer := &signers.Signer{Type: "internal"}
 	alias := consensus.BTMAlias
 
-	definitionBytes, _ := SerializeAssetDef(consensus.BTMDefinitionMap)
+	definitionBytes, _ := serializeAssetDef(consensus.BTMDefinitionMap)
 
 	return &Asset{
 		Signer:            signer,
@@ -164,7 +164,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, err
 	}
 
-	rawDefinition, err := SerializeAssetDef(definition)
+	rawDefinition, err := serializeAssetDef(definition)
 	if err != nil {
 		return nil, ErrSerializing
 	}
@@ -319,7 +319,7 @@ func (reg *Registry) GetAliasByID(id string) string {
 
 // ListAssets returns the accounts in the db
 func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
-	assets := []*Asset{defaultNativeAsset}
+	assets := []*Asset{DefaultNativeAsset}
 	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix + id))
 	defer assetIter.Release()
 
@@ -333,13 +333,13 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 	return assets, nil
 }
 
-// SerializeAssetDef produces a canonical byte representation of an asset
+// serializeAssetDef produces a canonical byte representation of an asset
 // definition. Currently, this is implemented using pretty-printed JSON.
 // As is the standard for Go's map[string] serialization, object keys will
 // appear in lexicographic order. Although this is mostly meant for machine
 // consumption, the JSON is pretty-printed for easy reading.
 // The empty asset def is an empty byte slice.
-func SerializeAssetDef(def map[string]interface{}) ([]byte, error) {
+func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	if def == nil {
 		return []byte{}, nil
 	}
