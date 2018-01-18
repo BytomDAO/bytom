@@ -34,23 +34,23 @@ func (bcr *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
 }
 
 func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in KeyImportParams) Response {
-	privHash, err := base58.Decode(in.XPrv)
+	rawData, err := base58.Decode(in.XPrv)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
-	if len(privHash) != 68 {
+	if len(rawData) != 68 {
 		return NewErrorResponse(errors.New("invalid private key hash length"))
 	}
 
 	var hashed [32]byte
-	sha3pool.Sum256(hashed[:], privHash[:64])
-	if res := bytes.Compare(hashed[:4], privHash[64:]); res != 0 {
+	sha3pool.Sum256(hashed[:], rawData[:64])
+	if res := bytes.Compare(hashed[:4], rawData[64:]); res != 0 {
 		return NewErrorResponse(errors.New("private hash error"))
 	}
 
 	var xprv [64]byte
-	copy(xprv[:], privHash[:64])
+	copy(xprv[:], rawData[:64])
 
 	xpub, err := bcr.wallet.ImportAccountPrivKey(bcr.hsm, xprv, in.KeyAlias, in.Password, in.Index, in.AccountAlias)
 	if err != nil {
