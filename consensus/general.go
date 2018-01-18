@@ -25,6 +25,8 @@ const (
 
 	PayToWitnessPubKeyHashDataSize = 20
 	PayToWitnessScriptHashDataSize = 32
+
+	CoinbaseArbitrarySizeLimit = 128
 )
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom

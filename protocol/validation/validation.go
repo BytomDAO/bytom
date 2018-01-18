@@ -567,7 +567,14 @@ func validateCoinbase(tx *bc.Tx, value uint64) error {
 		return errors.Wrap(errWrongCoinbaseTransaction, "dismatch output value")
 	}
 
-	//TODO: require coinbase control program verify
+	inputEntry := tx.Entries[*tx.InputIDs[0]]
+	input, ok := resultEntry.(*bc.Coinbase)
+	if !ok {
+		return errors.Wrap(errWrongCoinbaseTransaction, "decode input")
+	}
+	if input.Arbitrary != nil && len(input.Arbitrary) > consensus.CoinbaseArbitrarySizeLimit {
+		return errors.Wrap(errWrongCoinbaseTransaction, "coinbase arbitrary is over size")
+	}
 	return nil
 }
 
@@ -595,6 +602,10 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, error) {
 	if tx.TxHeader.SerializedSize > consensus.MaxTxSize {
 		return 0, errWrongTransactionSize
+	}
+
+	if len(tx.ResultIds) == 0 {
+		return 0, errors.New("tx didn't have any output")
 	}
 
 	//TODO: handle the gas limit
