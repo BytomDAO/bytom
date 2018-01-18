@@ -59,11 +59,11 @@ func TestHSM(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acct1, err := accounts.Create([]chainkd.XPub{xpub1.XPub}, 1, "acc1", nil)
+	acct1, err := accounts.Create(ctx, []chainkd.XPub{xpub1.XPub}, 1, "acc1", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	acct2, err := accounts.Create([]chainkd.XPub{xpub2.XPub}, 1, "acc2", nil)
+	acct2, err := accounts.Create(ctx, []chainkd.XPub{xpub2.XPub}, 1, "acc2", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
