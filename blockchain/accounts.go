@@ -16,7 +16,7 @@ func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	Alias     string                 `json:"alias"`
 	Tags      map[string]interface{} `json:"tags"`
 }) Response {
-	acc, err := bcr.accounts.Create(ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags)
+	acc, err := bcr.accounts.Create(ctx, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -39,10 +39,10 @@ func (bcr *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag s
 
 	err := bcr.accounts.UpdateTags(nil, updateTag.AccountInfo, updateTag.Tags)
 	if err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(nil)
+	return NewSuccessResponse(nil)
 }
 
 //
@@ -51,7 +51,7 @@ func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, in struct {
 	AccountInfo string `json:"account_info"`
 }) Response {
 	if err := bcr.accounts.DeleteAccount(in); err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
-	return resWrapper(nil)
+	return NewSuccessResponse(nil)
 }

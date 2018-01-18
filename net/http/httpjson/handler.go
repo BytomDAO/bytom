@@ -50,7 +50,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	if h.inType != nil {
 		inPtr := reflect.New(h.inType)
-		err := Read(req.Context(), req.Body, inPtr.Interface())
+		err := Read(req.Body, inPtr.Interface())
 		if err != nil {
 			h.errFunc(req.Context(), w, err)
 			return
