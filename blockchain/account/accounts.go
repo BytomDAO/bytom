@@ -93,6 +93,7 @@ type Manager struct {
 	acpMu        sync.Mutex
 	acpIndexNext uint64 // next acp index in our block
 	acpIndexCap  uint64 // points to end of block
+	accIndexMu   sync.Mutex
 }
 
 // ExpireReservations removes reservations that have expired periodically.
@@ -122,6 +123,8 @@ type Account struct {
 }
 
 func (m *Manager) getNextAccountIndex(xpubs []chainkd.XPub) (*uint64, error) {
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
 	var nextIndex uint64 = 1
 
 	if rawIndex := m.db.Get(indexKey(xpubs[0])); rawIndex != nil {

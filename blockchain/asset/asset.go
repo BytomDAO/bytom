@@ -76,6 +76,8 @@ type Registry struct {
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
 	aliasCache *lru.Cache
+
+	assetIndexMu sync.Mutex
 }
 
 //Asset describe asset on bytom chain
@@ -97,6 +99,9 @@ func (asset *Asset) RawDefinition() []byte {
 }
 
 func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint64, error) {
+	reg.assetIndexMu.Lock()
+	defer reg.assetIndexMu.Unlock()
+
 	var nextIndex uint64 = 1
 
 	if rawIndex := reg.db.Get(indexKey(xpubs[0])); rawIndex != nil {
