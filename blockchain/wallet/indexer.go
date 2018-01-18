@@ -153,7 +153,7 @@ func saveExternalAssetDefinition(b *legacy.Block, walletDB db.DB) {
 func (w *Wallet) indexTransactions(batch db.Batch, b *legacy.Block) error {
 	annotatedTxs := filterAccountTxs(b, w)
 	saveExternalAssetDefinition(b, w.DB)
-	annotateTxsAsset(annotatedTxs, w.DB)
+	annotateTxsAsset(w, annotatedTxs)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
 	for _, tx := range annotatedTxs {

@@ -21,10 +21,10 @@ import (
 )
 
 // annotateTxs adds asset data to transactions
-func annotateTxsAsset(txs []*query.AnnotatedTx, walletDB db.DB) {
+func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 	for i, tx := range txs {
 		for j, input := range tx.Inputs {
-			alias, definition, err := getAliasDefinition(input.AssetID, walletDB)
+			alias, definition, err := w.getAliasDefinition(input.AssetID)
 			if err != nil {
 				continue
 			}
@@ -32,7 +32,7 @@ func annotateTxsAsset(txs []*query.AnnotatedTx, walletDB db.DB) {
 			txs[i].Inputs[j].AssetDefinition = &definition
 		}
 		for j, output := range tx.Outputs {
-			alias, definition, err := getAliasDefinition(output.AssetID, walletDB)
+			alias, definition, err := w.getAliasDefinition(output.AssetID)
 			if err != nil {
 				continue
 			}
@@ -42,9 +42,9 @@ func annotateTxsAsset(txs []*query.AnnotatedTx, walletDB db.DB) {
 	}
 }
 
-func getExternalDefinition(assetID *bc.AssetID, walletDB db.DB) (json.RawMessage, error) {
+func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) (json.RawMessage, error) {
 
-	definitionByte := walletDB.Get(asset.CalcExtAssetKey(assetID))
+	definitionByte := w.DB.Get(asset.CalcExtAssetKey(assetID))
 	if definitionByte == nil {
 		return nil, nil
 	}
@@ -55,7 +55,7 @@ func getExternalDefinition(assetID *bc.AssetID, walletDB db.DB) (json.RawMessage
 	}
 
 	saveAlias := assetID.String()
-	storeBatch := walletDB.NewBatch()
+	storeBatch := w.DB.NewBatch()
 
 	externalAsset := &asset.Asset{AssetID: *assetID, Alias: &saveAlias, DefinitionMap: definitionMap, Signer: &signers.Signer{Type: "external"}}
 	if rawAsset, err := json.Marshal(externalAsset); err == nil {
@@ -69,7 +69,7 @@ func getExternalDefinition(assetID *bc.AssetID, walletDB db.DB) (json.RawMessage
 
 }
 
-func getAliasDefinition(assetID bc.AssetID, walletDB db.DB) (string, json.RawMessage, error) {
+func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage, error) {
 	//btm
 	if assetID.String() == consensus.BTMAssetID.String() {
 		alias := consensus.BTMAlias
@@ -79,20 +79,16 @@ func getAliasDefinition(assetID bc.AssetID, walletDB db.DB) (string, json.RawMes
 	}
 
 	//local asset and saved external asset
-	var localAsset asset.Asset
-	if rawAsset := walletDB.Get(asset.Key(&assetID)); rawAsset != nil {
-		if err := json.Unmarshal(rawAsset, &localAsset); err != nil {
-			log.WithFields(log.Fields{"warn": err, "asset id": assetID.String()}).Warn("look up asset")
-			return "", nil, err
-		}
-
-		alias := *localAsset.Alias
-		definition := []byte(localAsset.RawDefinitionByte)
-		return alias, definition, nil
+	localAsset, err := w.AssetReg.FindByID(nil, &assetID)
+	if err != nil {
+		return "", nil, err
 	}
+	alias := *localAsset.Alias
+	definition := []byte(localAsset.RawDefinitionByte)
+	return alias, definition, nil
 
 	//external asset
-	if definition, err := getExternalDefinition(&assetID, walletDB); definition != nil {
+	if definition, err := w.getExternalDefinition(&assetID); definition != nil {
 		return assetID.String(), definition, err
 	}
 

@@ -42,7 +42,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 		return txbuilder.MissingFieldsError("asset_id")
 	}
 
-	asset, err := a.assets.findByID(ctx, a.AssetId)
+	asset, err := a.assets.FindByID(ctx, a.AssetId)
 	if err != nil {
 		return err
 	}

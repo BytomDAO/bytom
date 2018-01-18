@@ -219,7 +219,7 @@ func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[
 		if err := assetID.UnmarshalText([]byte(assetInfo)); err != nil {
 			return err
 		}
-		if asset, err = reg.findByID(ctx, assetID); err != nil {
+		if asset, err = reg.FindByID(ctx, assetID); err != nil {
 			return err
 		}
 	}
@@ -238,7 +238,7 @@ func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[
 }
 
 // findByID retrieves an Asset record along with its signer, given an assetID.
-func (reg *Registry) findByID(ctx context.Context, id *bc.AssetID) (*Asset, error) {
+func (reg *Registry) FindByID(ctx context.Context, id *bc.AssetID) (*Asset, error) {
 	reg.cacheMu.Lock()
 	cached, ok := reg.cache.Get(id.String())
 	reg.cacheMu.Unlock()
@@ -278,7 +278,7 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	cachedID, ok := reg.aliasCache.Get(alias)
 	reg.cacheMu.Unlock()
 	if ok {
-		return reg.findByID(ctx, cachedID.(*bc.AssetID))
+		return reg.FindByID(ctx, cachedID.(*bc.AssetID))
 	}
 
 	rawID := reg.db.Get(AliasKey(alias))
@@ -294,7 +294,7 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	reg.cacheMu.Lock()
 	reg.aliasCache.Add(alias, assetID)
 	reg.cacheMu.Unlock()
-	return reg.findByID(ctx, assetID)
+	return reg.FindByID(ctx, assetID)
 }
 
 //GetAliasByID return asset alias string by AssetID string
@@ -309,7 +309,7 @@ func (reg *Registry) GetAliasByID(id string) string {
 		return ""
 	}
 
-	asset, err := reg.findByID(nil, assetID)
+	asset, err := reg.FindByID(nil, assetID)
 	if err != nil {
 		return ""
 	}

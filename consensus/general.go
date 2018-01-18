@@ -6,13 +6,6 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
-func init() {
-	BTMDefinitionMap["name"] = BTMAlias
-	BTMDefinitionMap["symbol"] = BTMSymbol
-	BTMDefinitionMap["decimals"] = BTMDecimals
-	BTMDefinitionMap["description"] = BTMDescription
-}
-
 //consensus variables
 const (
 	// define the Max transaction size and Max block size
@@ -55,7 +48,12 @@ var BTMDecimals = 8
 var BTMDescription = `Bytom Official Issue`
 
 //BTMDefinitionMap
-var BTMDefinitionMap = make(map[string]interface{})
+var BTMDefinitionMap = map[string]interface{}{
+	"name":        BTMAlias,
+	"symbol":      BTMSymbol,
+	"decimals":    BTMDecimals,
+	"description": BTMDescription,
+}
 
 // BlockSubsidy calculate the coinbase rewards on given block height
 func BlockSubsidy(height uint64) uint64 {
