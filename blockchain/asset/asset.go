@@ -391,7 +391,6 @@ func (reg *Registry) UpdateAssetAlias(oldAlias, newAlias string) error {
 
 	reg.cacheMu.Lock()
 	reg.aliasCache.Remove(oldAlias)
-	reg.aliasCache.Add(newAlias, findAsset)
 	reg.cacheMu.Unlock()
 
 	return nil
