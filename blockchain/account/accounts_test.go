@@ -20,7 +20,7 @@ func TestCreateAccount(t *testing.T) {
 	m := mockAccountManager(t)
 	ctx := context.Background()
 
-	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias", nil)
+	account, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias", nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -39,7 +39,7 @@ func TestCreateAccountReusedAlias(t *testing.T) {
 	ctx := context.Background()
 	m.createTestAccount(ctx, t, "test-alias", nil)
 
-	_, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias", nil)
+	_, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias", nil)
 	if errors.Root(err) != ErrDuplicateAlias {
 		t.Errorf("expected %s when reusing an alias, got %v", ErrDuplicateAlias, err)
 	}
@@ -49,12 +49,12 @@ func TestDeleteAccount(t *testing.T) {
 	m := mockAccountManager(t)
 	ctx := context.Background()
 
-	account1, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias1", nil, "")
+	account1, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias1", nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	account2, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias2", nil, "")
+	account2, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias2", nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -136,7 +136,7 @@ func mockAccountManager(t *testing.T) *Manager {
 }
 
 func (m *Manager) createTestAccount(ctx context.Context, t testing.TB, alias string, tags map[string]interface{}) *Account {
-	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias, tags)
+	account, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, alias, tags)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}

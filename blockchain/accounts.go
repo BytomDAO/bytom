@@ -16,7 +16,7 @@ func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	Alias     string                 `json:"alias"`
 	Tags      map[string]interface{} `json:"tags"`
 }) Response {
-	acc, err := bcr.accounts.Create(ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags)
+	acc, err := bcr.accounts.Create(ctx, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
