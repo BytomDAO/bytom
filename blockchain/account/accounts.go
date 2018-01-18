@@ -30,6 +30,7 @@ const (
 	accountPrefix   = "ACC:"
 	accountCPPrefix = "ACP:"
 	keyNextIndex    = "NextIndex"
+	indexPrefix     = "ACIDX:"
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -43,6 +44,10 @@ var (
 
 func aliasKey(name string) []byte {
 	return []byte(aliasPrefix + name)
+}
+
+func indexKey(xpub chainkd.XPub) []byte {
+	return []byte(indexPrefix + xpub.String())
 }
 
 //Key account store prefix
@@ -116,13 +121,32 @@ type Account struct {
 	Tags  map[string]interface{} `json:"tags"`
 }
 
+func (m *Manager) getNextAccountIndex(xpubs []chainkd.XPub) (*uint64, error) {
+	var nextIndex uint64 = 1
+
+	if rawIndex := m.db.Get(indexKey(xpubs[0])); rawIndex != nil {
+		nextIndex = binary.LittleEndian.Uint64(rawIndex) + 1
+	}
+
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, nextIndex)
+	m.db.Set(indexKey(xpubs[0]), buf)
+
+	return &nextIndex, nil
+}
+
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}) (*Account, error) {
 	if existed := m.db.Get(aliasKey(alias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
 
-	id, signer, err := signers.Create("account", xpubs, quorum)
+	nextAccountIndex, err := m.getNextAccountIndex(xpubs)
+	if err != nil {
+		return nil, errors.Wrap(err, "get account index error")
+	}
+
+	id, signer, err := signers.Create("account", xpubs, quorum, *nextAccountIndex)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
