@@ -8,6 +8,7 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/util"
 )
 
 func init() {
@@ -42,7 +43,7 @@ var createAssetCmd = &cobra.Command{
 			xpub := chainkd.XPub{}
 			if err := xpub.UnmarshalText([]byte(x)); err != nil {
 				jww.ERROR.Println(err)
-				os.Exit(ErrLocalExe)
+				os.Exit(util.ErrLocalExe)
 			}
 			ins.RootXPubs = append(ins.RootXPubs, xpub)
 		}
@@ -55,7 +56,7 @@ var createAssetCmd = &cobra.Command{
 			tags := strings.Split(assetTags, ":")
 			if len(tags) != 2 {
 				jww.ERROR.Println("Invalid tags")
-				os.Exit(ErrLocalExe)
+				os.Exit(util.ErrLocalExe)
 			}
 			ins.Tags = map[string]interface{}{tags[0]: tags[1]}
 		}
@@ -64,13 +65,13 @@ var createAssetCmd = &cobra.Command{
 			definition := strings.Split(assetDefiniton, ":")
 			if len(definition) != 2 {
 				jww.ERROR.Println("Invalid definition")
-				os.Exit(ErrLocalExe)
+				os.Exit(util.ErrLocalExe)
 			}
 			ins.Definition = map[string]interface{}{definition[0]: definition[1]}
 		}
 
-		data, exitCode := clientCall("/create-asset", &ins)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/create-asset", &ins)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -87,8 +88,8 @@ var listAssetsCmd = &cobra.Command{
 			ID string `json:"id"`
 		}{ID: assetID}
 
-		data, exitCode := clientCall("/list-assets", &filter)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/list-assets", &filter)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -113,13 +114,13 @@ var updateAssetTagsCmd = &cobra.Command{
 			tags := strings.Split(assetUpdateTags, ":")
 			if len(tags) != 2 {
 				jww.ERROR.Println("Invalid tags")
-				os.Exit(ErrLocalExe)
+				os.Exit(util.ErrLocalExe)
 			}
 			updateTag.Tags = map[string]interface{}{tags[0]: tags[1]}
 		}
 
 		updateTag.AssetInfo = args[0]
-		if _, exitCode := clientCall("/update-asset-tags", &updateTag); exitCode != Success {
+		if _, exitCode := util.ClientCall("/update-asset-tags", &updateTag); exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 

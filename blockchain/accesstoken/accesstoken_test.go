@@ -2,7 +2,6 @@ package accesstoken
 
 import (
 	"context"
-	"encoding/hex"
 	"os"
 	"strings"
 	"testing"
@@ -43,23 +42,22 @@ func TestList(t *testing.T) {
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
-	mustCreateToken(ctx, t, cs, "ab", "test")
-	mustCreateToken(ctx, t, cs, "bc", "test")
-	mustCreateToken(ctx, t, cs, "cd", "test")
-
-	cases := struct {
-		want []string
-	}{
-		want: []string{"ab", "bc", "cd"},
-	}
+	tokenMap := make(map[string]*Token)
+	tokenMap["ab"] = mustCreateToken(ctx, t, cs, "ab", "test")
+	tokenMap["bc"] = mustCreateToken(ctx, t, cs, "bc", "test")
+	tokenMap["cd"] = mustCreateToken(ctx, t, cs, "cd", "test")
 
 	got, err := cs.List(ctx)
 	if err != nil {
 		t.Errorf("List errored: get list error")
 	}
-	for i, v := range got {
-		if m := strings.Compare(v.ID, cases.want[i]); m != 0 {
-			t.Errorf("List errored: %s %s", v.ID, cases.want[i])
+
+	if len(got) != len(tokenMap) {
+		t.Error("List errored: get invalid length")
+	}
+	for _, v := range got {
+		if m := strings.Compare(v.Token, tokenMap[v.ID].Token); m != 0 {
+			t.Errorf("List error: ID: %s, expected token: %s, DB token: %s", v.ID, *tokenMap[v.ID], v.Token)
 		}
 		continue
 	}
@@ -72,14 +70,9 @@ func TestCheck(t *testing.T) {
 	cs := NewStore(testDB)
 
 	token := mustCreateToken(ctx, t, cs, "x", "client")
-	tokenParts := strings.Split(*token, ":")
-	tokenID := tokenParts[0]
-	tokenSecret, err := hex.DecodeString(tokenParts[1])
-	if err != nil {
-		t.Fatal("bad token secret")
-	}
+	tokenParts := strings.Split(token.Token, ":")
 
-	valid, err := cs.Check(ctx, tokenID, tokenSecret)
+	valid, err := cs.Check(ctx, tokenParts[0], tokenParts[1])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +80,7 @@ func TestCheck(t *testing.T) {
 		t.Fatal("expected token and secret to be valid")
 	}
 
-	valid, err = cs.Check(ctx, "x", []byte("badsecret"))
+	valid, err = cs.Check(ctx, "x", "badsecret")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +121,7 @@ func TestDeleteWithInvalidId(t *testing.T) {
 	}
 }
 
-func mustCreateToken(ctx context.Context, t *testing.T, cs *CredentialStore, id, typ string) *string {
+func mustCreateToken(ctx context.Context, t *testing.T, cs *CredentialStore, id, typ string) *Token {
 	token, err := cs.Create(ctx, id, typ)
 	if err != nil {
 		t.Fatal(err)

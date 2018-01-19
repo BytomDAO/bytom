@@ -29,4 +29,7 @@ test:
 	@echo "====> Running go test"
 	@go test $(PACKAGES)
 
+benchmark:
+	go test -bench $(PACKAGES)
+
 .PHONY: test
