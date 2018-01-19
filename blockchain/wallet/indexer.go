@@ -356,7 +356,7 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 	if txID != "" {
 		rawFormatKey := w.DB.Get(calcTxIndexKey(txID))
 		if rawFormatKey == nil {
-			return nil, fmt.Errorf("No transaction(txid=%s)", txID)
+			return nil, fmt.Errorf("No transaction(txid=%s) ", txID)
 		}
 		formatKey = string(rawFormatKey)
 	}
@@ -375,19 +375,13 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 }
 
 //GetTransactionsSummary get transactions summary
-func (w *Wallet) GetTransactionsSummary() ([]TxSummary, error) {
+func (w *Wallet) GetTransactionsSummary(transactions []query.AnnotatedTx) []TxSummary {
 	Txs := make([]TxSummary, 0)
 
-	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
-	defer txIter.Release()
-	for txIter.Next() {
-		annotatedTx := query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-			return nil, err
-		}
+	for _, annotatedTx := range transactions {
 		tmpTxSummary := TxSummary{
 			Inputs:    make([]Summary, len(annotatedTx.Inputs)),
-			Outputs:   make([]Summary, len(annotatedTx.Inputs)),
+			Outputs:   make([]Summary, len(annotatedTx.Outputs)),
 			ID:        annotatedTx.ID,
 			Timestamp: annotatedTx.Timestamp}
 
@@ -412,7 +406,7 @@ func (w *Wallet) GetTransactionsSummary() ([]TxSummary, error) {
 		Txs = append(Txs, tmpTxSummary)
 	}
 
-	return Txs, nil
+	return Txs
 }
 
 func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) bool {

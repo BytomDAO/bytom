@@ -286,14 +286,8 @@ var listTransactionsCmd = &cobra.Command{
 		filter := struct {
 			ID        string `json:"id"`
 			AccountID string `json:"account_id"`
-			Summary   bool   `json:"summary"`
-		}{ID: txID, AccountID: account}
-
-		if txID != "" || account != "" || detail {
-			filter.Summary = false
-		} else {
-			filter.Summary = true
-		}
+			Detail    bool   `json:"detail"`
+		}{ID: txID, AccountID: account, Detail: detail}
 
 		data, exitCode := util.ClientCall("/list-transactions", &filter)
 		if exitCode != util.Success {
