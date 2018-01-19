@@ -3,17 +3,19 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/sha3pool"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"time"
 )
 
 type rawOutput struct {
@@ -149,19 +151,21 @@ func saveExternalAssetDefinition(b *legacy.Block, walletDB db.DB) {
 	}
 }
 
-type OutputSummary struct {
-	Type         string     `json:"type"`
-	AssetID      bc.AssetID `json:"asset_id"`
-	AssetAlias   string     `json:"asset_alias,omitempty"`
-	Amount       uint64     `json:"amount"`
-	AccountID    string     `json:"account_id,omitempty"`
-	AccountAlias string     `json:"account_alias,omitempty"`
+type Summary struct {
+	Type         string             `json:"type"`
+	AssetID      bc.AssetID         `json:"asset_id,omitempty"`
+	AssetAlias   string             `json:"asset_alias,omitempty"`
+	Amount       uint64             `json:"amount,omitempty"`
+	AccountID    string             `json:"account_id,omitempty"`
+	AccountAlias string             `json:"account_alias,omitempty"`
+	Arbitrary    chainjson.HexBytes `json:"arbitrary,omitempty"`
 }
 
 type TxSummary struct {
-	ID        bc.Hash         `json:"id"`
-	Timestamp time.Time       `json:"timestamp"`
-	Outputs   []OutputSummary `json:"outputs"`
+	ID        bc.Hash   `json:"id"`
+	Timestamp time.Time `json:"timestamp"`
+	Inputs    []Summary `json:"inputs"`
+	Outputs   []Summary `json:"outputs"`
 }
 
 //indexTransactions saves all annotated transactions to the database.
@@ -374,13 +378,37 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 func (w *Wallet) GetTransactionsSummary() ([]TxSummary, error) {
 	Txs := make([]TxSummary, 0)
 
-	txsIter := w.DB.IteratorPrefix([]byte(TxSPrefix))
-	defer txsIter.Release()
-	for txsIter.Next() {
-		tmpTxSummary := TxSummary{}
-		if err := json.Unmarshal(txsIter.Value(), &tmpTxSummary); err != nil {
+	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
+	defer txIter.Release()
+	for txIter.Next() {
+		annotatedTx := query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}
+		tmpTxSummary := TxSummary{
+			Inputs:    make([]Summary, len(annotatedTx.Inputs)),
+			Outputs:   make([]Summary, len(annotatedTx.Inputs)),
+			ID:        annotatedTx.ID,
+			Timestamp: annotatedTx.Timestamp}
+
+		for i, input := range annotatedTx.Inputs {
+			tmpTxSummary.Inputs[i].Type = input.Type
+			tmpTxSummary.Inputs[i].AccountID = input.AccountID
+			tmpTxSummary.Inputs[i].AccountAlias = input.AccountAlias
+			tmpTxSummary.Inputs[i].AssetID = input.AssetID
+			tmpTxSummary.Inputs[i].AssetAlias = input.AssetAlias
+			tmpTxSummary.Inputs[i].Amount = input.Amount
+			tmpTxSummary.Inputs[i].Arbitrary = input.Arbitrary
+		}
+		for j, output := range annotatedTx.Outputs {
+			tmpTxSummary.Outputs[j].Type = output.Type
+			tmpTxSummary.Outputs[j].AccountID = output.AccountID
+			tmpTxSummary.Outputs[j].AccountAlias = output.AccountAlias
+			tmpTxSummary.Outputs[j].AssetID = output.AssetID
+			tmpTxSummary.Outputs[j].AssetAlias = output.AssetAlias
+			tmpTxSummary.Outputs[j].Amount = output.Amount
+		}
+
 		Txs = append(Txs, tmpTxSummary)
 	}
 
