@@ -36,13 +36,46 @@ func TestSetBits(t *testing.T) {
 		},
 		{
 			op: map[int]bool{
-				8: false,
+				7: true,
+			},
+			result: []bool{false, false, false, false, false, false, false, true},
+		},
+		{
+			op: map[int]bool{
+				7: false,
 			},
 			result: []bool{false, false, false, false, false, false, false, false},
 		},
+		{
+			op: map[int]bool{
+				8: true,
+			},
+			result: []bool{false, false, false, false, false, false, false, false, true},
+		},
+		{
+			op: map[int]bool{
+				8: false,
+			},
+			result: []bool{false, false, false, false, false, false, false, false, false},
+		},
+		{
+			op: map[int]bool{
+				0: true,
+				1: false,
+				2: false,
+				3: true,
+				4: true,
+				5: true,
+				6: false,
+				7: true,
+				8: false,
+				9: true,
+			},
+			result: []bool{true, false, false, true, true, true, false, true, false, true},
+		},
 	}
 
-	for _, c := range cases {
+	for ci, c := range cases {
 		ts := NewTransactionStatus()
 		for k, v := range c.op {
 			if err := ts.SetStatus(k, v); err != nil {
@@ -56,11 +89,11 @@ func TestSetBits(t *testing.T) {
 				t.Error(err)
 			}
 			if result != v {
-				t.Errorf("bad result, want %b get %b", v, result)
+				t.Errorf("bad result, %d want %s get %s", i, v, result)
 			}
 		}
-		if len(ts.bitmap) != len(c.result)/bitsPerByte+1 {
-			t.Errorf("wrong bitmap size")
+		if len(ts.bitmap) != (len(c.result)+7)/bitsPerByte {
+			t.Errorf("wrong bitmap size, %d want %d get %d", ci, len(c.result)/bitsPerByte+1, len(ts.bitmap))
 		}
 	}
 }
