@@ -20,10 +20,10 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 	jsonTags := json.RawMessage(`{}`)
 	jsonDefinition := json.RawMessage(`{}`)
 
-	// a.RawDefinition is the asset definition as it appears on the
+	// a.RawDefinitionByte is the asset definition as it appears on the
 	// blockchain, so it's untrusted and may not be valid json.
-	if isValidJSON(a.RawDefinition()) {
-		jsonDefinition = json.RawMessage(a.RawDefinition())
+	if isValidJSON(a.RawDefinitionByte) {
+		jsonDefinition = json.RawMessage(a.RawDefinitionByte)
 	}
 
 	if a.Tags != nil {

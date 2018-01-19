@@ -4,9 +4,10 @@ import "io"
 
 func (Coinbase) typ() string { return "coinbase1" }
 func (c *Coinbase) writeForHash(w io.Writer) {
-	//mustWriteForHash(w, c.WitnessDestination)
+	mustWriteForHash(w, c.Arbitrary)
 }
 
+// SetDestination is support function for map tx
 func (c *Coinbase) SetDestination(id *Hash, val *AssetAmount, pos uint64) {
 	c.WitnessDestination = &ValueDestination{
 		Ref:      id,
@@ -16,6 +17,6 @@ func (c *Coinbase) SetDestination(id *Hash, val *AssetAmount, pos uint64) {
 }
 
 // NewCoinbase creates a new Coinbase.
-func NewCoinbase() *Coinbase {
-	return &Coinbase{}
+func NewCoinbase(arbitrary []byte) *Coinbase {
+	return &Coinbase{Arbitrary: arbitrary}
 }

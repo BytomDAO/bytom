@@ -2,7 +2,6 @@ package txbuilder
 
 import (
 	"context"
-	"time"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
@@ -41,7 +40,6 @@ type Action interface {
 type Receiver struct {
 	ControlProgram chainjson.HexBytes `json:"control_program,omitempty"`
 	Address        string             `json:"address,omitempty"`
-	ExpiresAt      time.Time          `json:"expires_at"`
 }
 
 // AccountPubkey is structure of account pubkey

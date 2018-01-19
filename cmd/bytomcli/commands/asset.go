@@ -127,3 +127,21 @@ var updateAssetTagsCmd = &cobra.Command{
 		jww.FEEDBACK.Println("Successfully update asset tags")
 	},
 }
+
+var updateAssetAliasCmd = &cobra.Command{
+	Use:   "update-asset-alias <oldAlias> <newAlias>",
+	Short: "Update the asset alias",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		var updateAlias = struct {
+			OldAlias string `json:"old_alias"`
+			NewAlias string `json:"new_alias"`
+		}{OldAlias: args[0], NewAlias: args[1]}
+
+		if _, exitCode := util.ClientCall("/update-asset-alias", &updateAlias); exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		jww.FEEDBACK.Println("Successfully update asset alias")
+	},
+}

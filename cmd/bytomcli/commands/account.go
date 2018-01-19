@@ -138,25 +138,6 @@ var updateAccountTagsCmd = &cobra.Command{
 	},
 }
 
-var createAccountReceiverCmd = &cobra.Command{
-	Use:   "create-account-receiver <accountID | alias>",
-	Short: "Create an account receiver control program",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		var ins = struct {
-			AccountInfo string    `json:"account_info"`
-			ExpiresAt   time.Time `json:"expires_at,omitempty"`
-		}{AccountInfo: args[0]}
-
-		data, exitCode := util.ClientCall("/create-account-receiver", &ins)
-		if exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-
-		printJSON(data)
-	},
-}
-
 var createAccountAddressCmd = &cobra.Command{
 	Use:   "create-account-address <accountID | alias>",
 	Short: "Create an account address",

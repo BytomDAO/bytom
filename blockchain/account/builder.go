@@ -74,7 +74,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	}
 
 	if res.Change > 0 {
-		acp, err := a.accounts.createControlProgram(ctx, a.AccountID, true, b.MaxTime())
+		acp, err := a.accounts.CreateAddress(ctx, a.AccountID, true)
 		if err != nil {
 			return errors.Wrap(err, "creating control program")
 		}
@@ -214,7 +214,7 @@ func (a *controlAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 	}
 
 	// Produce a control program, but don't insert it into the database yet.
-	acp, err := a.accounts.createControlProgram(ctx, a.AccountID, false, b.MaxTime())
+	acp, err := a.accounts.CreateAddress(ctx, a.AccountID, false)
 	if err != nil {
 		return err
 	}

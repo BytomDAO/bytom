@@ -226,43 +226,6 @@ func TestHasIssuance(t *testing.T) {
 	}
 }
 
-func TestIsCoinbase(t *testing.T) {
-	cases := []struct {
-		tx   *TxData
-		want bool
-	}{{
-		tx: &TxData{
-			Inputs: []*TxInput{NewIssuanceInput(nil, 0, nil, bc.Hash{}, nil, nil, nil)},
-		},
-		want: false,
-	}, {
-		tx: &TxData{
-			Inputs: []*TxInput{
-				NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, bc.Hash{}, nil),
-				NewIssuanceInput(nil, 0, nil, bc.Hash{}, nil, nil, nil),
-			},
-			Outputs: []*TxOutput{
-				NewTxOutput(bc.AssetID{}, 0, nil, nil),
-			},
-		},
-		want: false,
-	}, {
-		tx: &TxData{
-			Outputs: []*TxOutput{
-				NewTxOutput(bc.AssetID{}, 0, nil, nil),
-			},
-		},
-		want: true,
-	}}
-
-	for _, c := range cases {
-		got := c.tx.IsCoinbase()
-		if got != c.want {
-			t.Errorf("IsCoinbase(%+v) = %v want %v", c.tx, got, c.want)
-		}
-	}
-}
-
 func TestInvalidIssuance(t *testing.T) {
 	hex := ("07" + // serflags
 		"01" + // transaction version

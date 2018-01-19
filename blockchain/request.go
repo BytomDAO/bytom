@@ -11,7 +11,6 @@ import (
 
 var (
 	errBadActionType = errors.New("bad action type")
-	errBadAlias      = errors.New("bad alias")
 	errBadAction     = errors.New("bad action object")
 )
 
@@ -27,14 +26,14 @@ func (bcr *BlockchainReactor) filterAliases(ctx context.Context, br *BuildReques
 		alias, _ := m["asset_alias"].(string)
 		if id == "" && alias != "" {
 			switch alias {
-			case "btm":
+			case consensus.BTMAlias:
 				m["asset_id"] = consensus.BTMAssetID.String()
 			default:
-				asset, err := bcr.assets.FindByAlias(ctx, alias)
+				id, err := bcr.assets.GetIDByAlias(alias)
 				if err != nil {
 					return errors.WithDetailf(err, "invalid asset alias %s on action %d", alias, i)
 				}
-				m["asset_id"] = asset.AssetID.String()
+				m["asset_id"] = id
 			}
 		}
 

@@ -45,15 +45,16 @@ func runNode(cmd *cobra.Command, args []string) error {
 	if cmn.FileExists(genDocFile) {
 		jsonBlob, err := ioutil.ReadFile(genDocFile)
 		if err != nil {
-			return fmt.Errorf("Couldn't read GenesisDoc file: %v", err)
+			return fmt.Errorf("Couldn't read GenesisDoc file: %v ", err)
 		}
 		genDoc, err := types.GenesisDocFromJSON(jsonBlob)
 		if err != nil {
-			return fmt.Errorf("Error reading GenesisDoc: %v", err)
+			return fmt.Errorf("Error reading GenesisDoc: %v ", err)
 		}
 		if genDoc.ChainID == "" {
-			return fmt.Errorf("Genesis doc %v must include non-empty chain_id", genDocFile)
+			return fmt.Errorf("Genesis doc %v must include non-empty chain_id ", genDocFile)
 		}
+
 		config.ChainID = genDoc.ChainID
 		config.PrivateKey = genDoc.PrivateKey
 		config.Time = genDoc.GenesisTime

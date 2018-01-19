@@ -29,6 +29,7 @@ func init() {
 
 	listTransactionsCmd.PersistentFlags().StringVar(&txID, "id", "", "transaction id")
 	listTransactionsCmd.PersistentFlags().StringVar(&account, "account_id", "", "account id")
+	listTransactionsCmd.PersistentFlags().BoolVar(&detail, "detail", false, "list transactions details")
 }
 
 var (
@@ -42,6 +43,7 @@ var (
 	alias           = false
 	txID            = ""
 	account         = ""
+	detail          = false
 )
 
 var buildIssueReqFmt = `
@@ -306,7 +308,8 @@ var listTransactionsCmd = &cobra.Command{
 		filter := struct {
 			ID        string `json:"id"`
 			AccountID string `json:"account_id"`
-		}{ID: txID, AccountID: account}
+			Detail    bool   `json:"detail"`
+		}{ID: txID, AccountID: account, Detail: detail}
 
 		data, exitCode := util.ClientCall("/list-transactions", &filter)
 		if exitCode != util.Success {

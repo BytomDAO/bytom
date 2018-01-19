@@ -54,7 +54,6 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	if bcr.accounts != nil && bcr.assets != nil {
 		m.Handle("/create-account", jsonHandler(bcr.createAccount))
 		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
-		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 		m.Handle("/create-account-address", jsonHandler(bcr.createAccountAddress))
 		m.Handle("/create-account-pubkey", jsonHandler(bcr.createAccountPubkey))
 		m.Handle("/create-account-contract", jsonHandler(bcr.createAccountContract))
@@ -62,6 +61,7 @@ func (bcr *BlockchainReactor) BuildHandler() {
 		m.Handle("/delete-account", jsonHandler(bcr.deleteAccount))
 
 		m.Handle("/create-asset", jsonHandler(bcr.createAsset))
+		m.Handle("/update-asset-alias", jsonHandler(bcr.updateAssetAlias))
 		m.Handle("/update-asset-tags", jsonHandler(bcr.updateAssetTags))
 		m.Handle("/list-assets", jsonHandler(bcr.listAssets))
 
@@ -83,7 +83,6 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
 	m.Handle("/sign-submit-transaction", jsonHandler(bcr.signSubmit))
 
-	m.Handle("/create-control-program", jsonHandler(bcr.createControlProgram))
 	m.Handle("/create-transaction-feed", jsonHandler(bcr.createTxFeed))
 	m.Handle("/get-transaction-feed", jsonHandler(bcr.getTxFeed))
 	m.Handle("/update-transaction-feed", jsonHandler(bcr.updateTxFeed))
