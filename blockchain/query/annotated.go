@@ -28,14 +28,12 @@ type AnnotatedInput struct {
 	AssetID         bc.AssetID         `json:"asset_id"`
 	AssetAlias      string             `json:"asset_alias,omitempty"`
 	AssetDefinition *json.RawMessage   `json:"asset_definition"`
-	AssetTags       *json.RawMessage   `json:"asset_tags,omitempty"`
 	Amount          uint64             `json:"amount"`
 	IssuanceProgram chainjson.HexBytes `json:"issuance_program,omitempty"`
 	ControlProgram  chainjson.HexBytes `json:"-"`
 	SpentOutputID   *bc.Hash           `json:"spent_output_id,omitempty"`
 	AccountID       string             `json:"account_id,omitempty"`
 	AccountAlias    string             `json:"account_alias,omitempty"`
-	AccountTags     *json.RawMessage   `json:"account_tags,omitempty"`
 	ReferenceData   *json.RawMessage   `json:"reference_data"`
 	Arbitrary       chainjson.HexBytes `json:"arbitrary,omitempty"`
 }
@@ -49,11 +47,9 @@ type AnnotatedOutput struct {
 	AssetID         bc.AssetID         `json:"asset_id"`
 	AssetAlias      string             `json:"asset_alias,omitempty"`
 	AssetDefinition *json.RawMessage   `json:"asset_definition"`
-	AssetTags       *json.RawMessage   `json:"asset_tags"`
 	Amount          uint64             `json:"amount"`
 	AccountID       string             `json:"account_id,omitempty"`
 	AccountAlias    string             `json:"account_alias,omitempty"`
-	AccountTags     *json.RawMessage   `json:"account_tags,omitempty"`
 	ControlProgram  chainjson.HexBytes `json:"control_program"`
 	ReferenceData   *json.RawMessage   `json:"reference_data"`
 }

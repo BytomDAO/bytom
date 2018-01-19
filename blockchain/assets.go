@@ -50,3 +50,15 @@ func (bcr *BlockchainReactor) updateAssetTags(ctx context.Context, updateTag str
 
 	return resWrapper(nil)
 }
+
+// POST /update-asset-alias
+func (bcr *BlockchainReactor) updateAssetAlias(updateAlias struct {
+	OldAlias string `json:"old_alias"`
+	NewAlias string `json:"new_alias"`
+}) Response {
+	if err := bcr.assets.UpdateAssetAlias(updateAlias.OldAlias, updateAlias.NewAlias); err != nil {
+		return resWrapper(nil, err)
+	}
+
+	return resWrapper(nil)
+}
