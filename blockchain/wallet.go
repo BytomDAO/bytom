@@ -3,19 +3,19 @@ package blockchain
 import (
 	"context"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/tendermint/go-wire/data/base58"
-	"chain/errors"
-	"github.com/bytom/crypto/sha3pool"
 	"bytes"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/errors"
+	"github.com/tendermint/go-wire/data/base58"
 )
 
 type KeyImportParams struct {
-	KeyAlias     string       `json:"alias"`
-	Password     string       `json:"password"`
-	XPrv         string       `json:"xprv"`
-	Index        uint64       `json:"index"`
-	AccountAlias string       `json:"account_alias"`
+	KeyAlias     string `json:"alias"`
+	Password     string `json:"password"`
+	XPrv         string `json:"xprv"`
+	Index        uint64 `json:"index"`
+	AccountAlias string `json:"account_alias"`
 }
 
 func (bcr *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
