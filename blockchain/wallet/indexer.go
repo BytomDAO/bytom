@@ -383,7 +383,8 @@ func (w *Wallet) GetTransactionsSummary(transactions []query.AnnotatedTx) []TxSu
 			Inputs:    make([]Summary, len(annotatedTx.Inputs)),
 			Outputs:   make([]Summary, len(annotatedTx.Outputs)),
 			ID:        annotatedTx.ID,
-			Timestamp: annotatedTx.Timestamp}
+			Timestamp: annotatedTx.Timestamp,
+		}
 
 		for i, input := range annotatedTx.Inputs {
 			tmpTxSummary.Inputs[i].Type = input.Type
