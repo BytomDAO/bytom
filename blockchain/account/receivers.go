@@ -6,18 +6,10 @@ import (
 
 	"encoding/hex"
 	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
 )
 
 const defaultReceiverExpiry = 30 * 24 * time.Hour // 30 days
-
-// AccountPubkey is structure of account pubkey
-type AccountPubkey struct {
-	Root   chainkd.XPub `json:"root_xpub"`
-	Pubkey string       `json:"pubkey"`
-	Path   []string     `json:"pubkey_derivation_path"`
-}
 
 // CreateReceiver creates a new account receiver for an account
 // with the provided expiry. If a zero time is provided for the
@@ -64,7 +56,8 @@ func (m *Manager) CreateAddressReceiver(ctx context.Context, accountInfo string)
 	}, nil
 }
 
-func (m *Manager) CreatePubkeyInfo(ctx context.Context, accountInfo string) (*AccountPubkey, error) {
+// CreatePubkeyInfo creates a new public key for an account
+func (m *Manager) CreatePubkeyInfo(ctx context.Context, accountInfo string) (*txbuilder.AccountPubkey, error) {
 	accountID := accountInfo
 	if s, err := m.FindByAlias(ctx, accountInfo); err == nil {
 		accountID = s.ID
@@ -80,13 +73,14 @@ func (m *Manager) CreatePubkeyInfo(ctx context.Context, accountInfo string) (*Ac
 		pathStr = append(pathStr, hex.EncodeToString(p))
 	}
 
-	return &AccountPubkey{
+	return &txbuilder.AccountPubkey{
 		Root:   rootXPub,
 		Pubkey: hex.EncodeToString(pubkey),
 		Path:   pathStr,
 	}, nil
 }
 
+// CreateContractInfo creates a relationship to link contract with an account
 func (m *Manager) CreateContractInfo(ctx context.Context, accountInfo string, contractProgram string) (map[string]string, error) {
 	accountID := accountInfo
 	if s, err := m.FindByAlias(ctx, accountInfo); err == nil {

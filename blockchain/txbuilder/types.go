@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -41,4 +42,11 @@ type Receiver struct {
 	ControlProgram chainjson.HexBytes `json:"control_program,omitempty"`
 	Address        string             `json:"address,omitempty"`
 	ExpiresAt      time.Time          `json:"expires_at"`
+}
+
+// AccountPubkey is structure of account pubkey
+type AccountPubkey struct {
+	Root   chainkd.XPub `json:"root_xpub"`
+	Pubkey string       `json:"pubkey"`
+	Path   []string     `json:"pubkey_derivation_path"`
 }
