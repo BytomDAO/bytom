@@ -28,9 +28,9 @@ func CreateSeed(height uint64, blockHashs []*bc.Hash) *bc.Hash {
 	return &seedHash
 }
 
-// CreateCache return cache, type is []int32
-func CreateCache(seed []byte) ([]uint32, error) {
-	log.Debug("Start creating cache...")
+// GenerateCache return cache, type is []int32
+func GenerateCache(seed []byte) ([]uint32, error) {
+	log.Debug("Start generating cache...")
 	if seed == nil {
 		return nil, errors.New("Seed is invalid or not exist!")
 	}

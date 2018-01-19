@@ -23,6 +23,11 @@ const (
 	mulRounds   = 1 << 8 // Number of rounds in mulmatrix
 )
 
+type miningData struct {
+	seed  []byte   // seed length is 32 Bytes
+	cache []uint32 // cache length is 256*256*256 = 16777216 Bytes
+}
+
 // hasher is a repetitive hasher allowing the same hash data structures to be
 // reused between hash runs instead of requiring new ones to be created.
 type hasher func(dest []byte, data []byte)
