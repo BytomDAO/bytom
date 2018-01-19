@@ -43,8 +43,8 @@ func makeHasher(h hash.Hash) hasher {
 	}
 }
 
-// createSeed is the seed to use for generating a verification cache.
-func createSeed(blockHashs []*bc.Hash) []byte {
+// generateSeed is the seed to use for generating a verification cache.
+func (md *miningData) generateSeed(blockHashs []*bc.Hash) {
 	seed := make([]byte, 32)
 	seedSlice := make([]byte, 0)
 
@@ -54,7 +54,7 @@ func createSeed(blockHashs []*bc.Hash) []byte {
 	sha256 := makeHasher(sha3.New256())
 	sha256(seed, seedSlice)
 
-	return seed
+	md.seed = seed
 }
 
 // extend seed from 32 byte to 128 byte
@@ -71,8 +71,8 @@ func extendSeed(seed []byte) []byte {
 }
 
 // seed length is 32 bytes, cache is 16MB.
-func generateCache(seed []byte) []uint32 {
-	extSeed := extendSeed(seed)
+func (md *miningData) generateCache() {
+	extSeed := extendSeed(md.seed)
 	cache := make([]uint32, 0)
 
 	xy := make([]uint32, 64)
@@ -82,7 +82,7 @@ func generateCache(seed []byte) []uint32 {
 		cache = append(cache, v...)
 	}
 
-	return cache
+	md.cache = cache
 }
 
 // extendHash extend 32 Bytes hash to 256 Bytes.
