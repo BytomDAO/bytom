@@ -28,6 +28,7 @@ func init() {
 
 	listTransactionsCmd.PersistentFlags().StringVar(&txID, "id", "", "transaction id")
 	listTransactionsCmd.PersistentFlags().StringVar(&account, "account_id", "", "account id")
+	listTransactionsCmd.PersistentFlags().BoolVar(&detail, "detail", false, "list transactions details")
 }
 
 var (
@@ -40,6 +41,7 @@ var (
 	alias           = false
 	txID            = ""
 	account         = ""
+	detail          = false
 )
 
 var buildIssueReqFmt = `
@@ -131,7 +133,7 @@ var buildTransactionCmd = &cobra.Command{
 				buildReqStr = fmt.Sprintf(buildRetireReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
 				break
 			}
-			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
+			buildReqStr = fmt.Sprintf(buildRetireReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
 		case "address":
 			if alias {
 				buildReqStr = fmt.Sprintf(buildControlAddressReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
@@ -284,7 +286,8 @@ var listTransactionsCmd = &cobra.Command{
 		filter := struct {
 			ID        string `json:"id"`
 			AccountID string `json:"account_id"`
-		}{ID: txID, AccountID: account}
+			Detail    bool   `json:"detail"`
+		}{ID: txID, AccountID: account, Detail: detail}
 
 		data, exitCode := util.ClientCall("/list-transactions", &filter)
 		if exitCode != util.Success {

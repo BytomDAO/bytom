@@ -3,6 +3,7 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -11,6 +12,7 @@ import (
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/sha3pool"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -147,6 +149,23 @@ func saveExternalAssetDefinition(b *legacy.Block, walletDB db.DB) {
 			}
 		}
 	}
+}
+
+type Summary struct {
+	Type         string             `json:"type"`
+	AssetID      bc.AssetID         `json:"asset_id,omitempty"`
+	AssetAlias   string             `json:"asset_alias,omitempty"`
+	Amount       uint64             `json:"amount,omitempty"`
+	AccountID    string             `json:"account_id,omitempty"`
+	AccountAlias string             `json:"account_alias,omitempty"`
+	Arbitrary    chainjson.HexBytes `json:"arbitrary,omitempty"`
+}
+
+type TxSummary struct {
+	ID        bc.Hash   `json:"id"`
+	Timestamp time.Time `json:"timestamp"`
+	Inputs    []Summary `json:"inputs"`
+	Outputs   []Summary `json:"outputs"`
 }
 
 //indexTransactions saves all annotated transactions to the database.
@@ -331,14 +350,13 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 
 //GetTransactionsByTxID get account txs by account tx ID
 func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error) {
-	annotatedTx := query.AnnotatedTx{}
 	annotatedTxs := make([]query.AnnotatedTx, 0)
 	formatKey := ""
 
 	if txID != "" {
 		rawFormatKey := w.DB.Get(calcTxIndexKey(txID))
 		if rawFormatKey == nil {
-			return nil, fmt.Errorf("No transaction(txid=%s)", txID)
+			return nil, fmt.Errorf("No transaction(txid=%s) ", txID)
 		}
 		formatKey = string(rawFormatKey)
 	}
@@ -346,6 +364,7 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix + formatKey))
 	defer txIter.Release()
 	for txIter.Next() {
+		annotatedTx := query.AnnotatedTx{}
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}
@@ -353,6 +372,42 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 	}
 
 	return annotatedTxs, nil
+}
+
+//GetTransactionsSummary get transactions summary
+func (w *Wallet) GetTransactionsSummary(transactions []query.AnnotatedTx) []TxSummary {
+	Txs := make([]TxSummary, 0)
+
+	for _, annotatedTx := range transactions {
+		tmpTxSummary := TxSummary{
+			Inputs:    make([]Summary, len(annotatedTx.Inputs)),
+			Outputs:   make([]Summary, len(annotatedTx.Outputs)),
+			ID:        annotatedTx.ID,
+			Timestamp: annotatedTx.Timestamp,
+		}
+
+		for i, input := range annotatedTx.Inputs {
+			tmpTxSummary.Inputs[i].Type = input.Type
+			tmpTxSummary.Inputs[i].AccountID = input.AccountID
+			tmpTxSummary.Inputs[i].AccountAlias = input.AccountAlias
+			tmpTxSummary.Inputs[i].AssetID = input.AssetID
+			tmpTxSummary.Inputs[i].AssetAlias = input.AssetAlias
+			tmpTxSummary.Inputs[i].Amount = input.Amount
+			tmpTxSummary.Inputs[i].Arbitrary = input.Arbitrary
+		}
+		for j, output := range annotatedTx.Outputs {
+			tmpTxSummary.Outputs[j].Type = output.Type
+			tmpTxSummary.Outputs[j].AccountID = output.AccountID
+			tmpTxSummary.Outputs[j].AccountAlias = output.AccountAlias
+			tmpTxSummary.Outputs[j].AssetID = output.AssetID
+			tmpTxSummary.Outputs[j].AssetAlias = output.AssetAlias
+			tmpTxSummary.Outputs[j].Amount = output.Amount
+		}
+
+		Txs = append(Txs, tmpTxSummary)
+	}
+
+	return Txs
 }
 
 func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) bool {
