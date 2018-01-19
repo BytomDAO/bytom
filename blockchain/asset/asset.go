@@ -390,6 +390,7 @@ func (reg *Registry) UpdateAssetAlias(oldAlias, newAlias string) error {
 	storeBatch.Write()
 
 	reg.cacheMu.Lock()
+	reg.aliasCache.Add(newAlias, assetID)
 	reg.aliasCache.Remove(oldAlias)
 	reg.cacheMu.Unlock()
 
