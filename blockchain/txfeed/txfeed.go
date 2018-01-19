@@ -343,7 +343,6 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 		AssetID:         orig.AssetID(),
 		Amount:          orig.Amount(),
 		AssetDefinition: &emptyJSONObject,
-		AssetTags:       &emptyJSONObject,
 		ReferenceData:   &emptyJSONObject,
 	}
 
@@ -370,7 +369,6 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
 		Position:        idx,
 		AssetID:         *orig.AssetId,
 		AssetDefinition: &emptyJSONObject,
-		AssetTags:       &emptyJSONObject,
 		Amount:          orig.Amount,
 		ControlProgram:  orig.ControlProgram,
 		ReferenceData:   &emptyJSONObject,

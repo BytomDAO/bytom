@@ -23,7 +23,7 @@ func TestDefineAsset(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err := reg.findByID(ctx, &asset.AssetID)
+	found, err := reg.FindByID(ctx, &asset.AssetID)
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
@@ -42,7 +42,7 @@ func TestFindAssetByID(t *testing.T) {
 		testutil.FatalErr(t, err)
 
 	}
-	found, err := reg.findByID(ctx, &asset.AssetID)
+	found, err := reg.FindByID(ctx, &asset.AssetID)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
