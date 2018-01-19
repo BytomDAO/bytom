@@ -359,6 +359,7 @@ type CtrlProgram struct {
 	ControlProgram []byte
 	Change         bool
 	ExpiresAt      time.Time
+	ExtContractTag bool
 }
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*CtrlProgram) error {
@@ -478,7 +479,7 @@ func (m *Manager) createPubkey(ctx context.Context, accountID string) (rootXPub 
 	return rootXPub, pubkey, path, nil
 }
 
-// CreateContractProgram creates a contract program for an account
+// CreateContractHook generate a extend contract program for an account
 func (m *Manager) CreateContractHook(ctx context.Context, accountID string, contractProgram string) ([]byte, error) {
 	contract, err := hex.DecodeString(contractProgram)
 	if err != nil {
@@ -489,6 +490,7 @@ func (m *Manager) CreateContractHook(ctx context.Context, accountID string, cont
 		AccountID:      accountID,
 		ControlProgram: contract,
 		Change:         false,
+		ExtContractTag: true,
 	}
 
 	if err = m.insertAccountControlProgram(ctx, cp); err != nil {
