@@ -6,17 +6,22 @@ import (
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
-// CreateSeed return epoch seed, type is *bc.Hash
-func CreateSeed(height uint64, blockHashs []*bc.Hash) *bc.Hash {
+func InitData(header) {
+
+}
+
+// GenerateSeed return epoch seed, type is *bc.Hash
+func GenerateSeed(height uint64, blockHashs []*bc.Hash) *bc.Hash {
 	if height < 128 {
 		sha256 := makeHasher(sha3.New256())
 		seed := make([]byte, 32)
 		sha256(seed, seed)
 		seedHash := bc.BytesToHash(seed)
 	} else {
-		seed := createSeed(blockHashs)
+		seed := generateSeed(blockHashs)
 		seedHash := bc.BytesToHash(seed)
 	}
 
