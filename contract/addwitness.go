@@ -1,4 +1,4 @@
-package commands
+package contract
 
 import (
 	"encoding/hex"
@@ -9,8 +9,8 @@ import (
 	chainjson "github.com/bytom/encoding/json"
 )
 
-// Check the number of arguments for template contracts
-func checkContractArgs(contractName string, args []string, count int, usage string) bool {
+// CheckContractArgs check the number of arguments for template contracts
+func CheckContractArgs(contractName string, args []string, count int, usage string) bool {
 	switch contractName {
 	case "LockWithPublicKey":
 		if len(args) != count+3 {
@@ -61,7 +61,7 @@ func checkContractArgs(contractName string, args []string, count int, usage stri
 	return true
 }
 
-func reconstructTpl(tpl *txbuilder.Template, si *txbuilder.SigningInstruction) *txbuilder.Template {
+func ReconstructTpl(tpl *txbuilder.Template, si *txbuilder.SigningInstruction) *txbuilder.Template {
 	length := len(tpl.SigningInstructions)
 	if length <= 0 {
 		length = 1
@@ -74,7 +74,7 @@ func reconstructTpl(tpl *txbuilder.Template, si *txbuilder.SigningInstruction) *
 	return tpl
 }
 
-func addPublicKeyWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string) (*txbuilder.Template, error) {
+func AddPublicKeyWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string) (*txbuilder.Template, error) {
 	var rootPubKey chainkd.XPub
 	var path []chainjson.HexBytes
 	var totalRoot []chainkd.XPub
@@ -107,12 +107,12 @@ func addPublicKeyWitness(tpl *txbuilder.Template, rootPub string, path1 string, 
 		return nil, err
 	}
 
-	tpl = reconstructTpl(tpl, &si)
+	tpl = ReconstructTpl(tpl, &si)
 
 	return tpl, nil
 }
 
-func addMultiSigWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string, rootPub1 string, path11 string, path12 string) (*txbuilder.Template, error) {
+func AddMultiSigWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string, rootPub1 string, path11 string, path12 string) (*txbuilder.Template, error) {
 	var rootPubKey chainkd.XPub
 	var firstPath []chainjson.HexBytes
 	var secondPath []chainjson.HexBytes
@@ -170,12 +170,12 @@ func addMultiSigWitness(tpl *txbuilder.Template, rootPub string, path1 string, p
 		return nil, err
 	}
 
-	tpl = reconstructTpl(tpl, &si)
+	tpl = ReconstructTpl(tpl, &si)
 
 	return tpl, nil
 }
 
-func addPublicKeyHashWitness(tpl *txbuilder.Template, pubKey string, rootPub string, path1 string, path2 string) (*txbuilder.Template, error) {
+func AddPublicKeyHashWitness(tpl *txbuilder.Template, pubKey string, rootPub string, path1 string, path2 string) (*txbuilder.Template, error) {
 	var data []chainjson.HexBytes
 	var rootPubKey chainkd.XPub
 	var path []chainjson.HexBytes
@@ -216,12 +216,12 @@ func addPublicKeyHashWitness(tpl *txbuilder.Template, pubKey string, rootPub str
 		return nil, err
 	}
 
-	tpl = reconstructTpl(tpl, &si)
+	tpl = ReconstructTpl(tpl, &si)
 
 	return tpl, nil
 }
 
-func addValueWitness(tpl *txbuilder.Template, value string) (*txbuilder.Template, error) {
+func AddValueWitness(tpl *txbuilder.Template, value string) (*txbuilder.Template, error) {
 	var data []chainjson.HexBytes
 	var si txbuilder.SigningInstruction
 
@@ -232,12 +232,12 @@ func addValueWitness(tpl *txbuilder.Template, value string) (*txbuilder.Template
 	data = append(data, str)
 	si.AddDataWitness(data)
 
-	tpl = reconstructTpl(tpl, &si)
+	tpl = ReconstructTpl(tpl, &si)
 
 	return tpl, nil
 }
 
-func addPubValueWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string, selector string) (*txbuilder.Template, error) {
+func AddPubValueWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string, selector string) (*txbuilder.Template, error) {
 	var data []chainjson.HexBytes
 	var rootPubKey chainkd.XPub
 	var path []chainjson.HexBytes
@@ -278,7 +278,7 @@ func addPubValueWitness(tpl *txbuilder.Template, rootPub string, path1 string, p
 	data = append(data, str)
 	si.AddDataWitness(data)
 
-	tpl = reconstructTpl(tpl, &si)
+	tpl = ReconstructTpl(tpl, &si)
 
 	return tpl, nil
 }
