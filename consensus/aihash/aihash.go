@@ -40,5 +40,7 @@ func AIHash(header *bc.Hash, cache []uint32, md miningData) (*bc.Hash, error) {
 
 	result := mulMatrix(md.cache, header.Bytes())
 
-	return hashMatrix(result)
+	hash := hashMatrix(result)
+
+	return hash
 }
