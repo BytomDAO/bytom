@@ -10,6 +10,7 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
@@ -83,7 +84,7 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	reverseOuts := make([]*rawOutput, 0)
 
 	//handle spent UTXOs
-	for _, tx := range b.Transactions {
+	for txIndex, tx := range b.Transactions {
 		for _, inpID := range tx.Tx.InputIDs {
 			//spend and retire
 			sp, err := tx.Spend(inpID)
@@ -93,6 +94,10 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 
 			resOut, ok := tx.Entries[*sp.SpentOutputId].(*bc.Output)
 			if !ok {
+				continue
+			}
+
+			if b.TransactionStatus.GetStatus(txIndex) && resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 
@@ -173,18 +178,21 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	var err error
 
 	//handle spent UTXOs
-	delOutputIDs := prevoutDBKeys(b.Transactions...)
+	delOutputIDs := prevoutDBKeys(b)
 	for _, delOutputID := range delOutputIDs {
 		batch.Delete(account.UTXOKey(delOutputID))
 	}
 
 	//handle new UTXOs
 	outs := make([]*rawOutput, 0, len(b.Transactions))
-	for _, tx := range b.Transactions {
+	for txIndex, tx := range b.Transactions {
 		for j, out := range tx.Outputs {
 			resOutID := tx.ResultIds[j]
 			resOut, ok := tx.Entries[*resOutID].(*bc.Output)
 			if !ok {
+				continue
+			}
+			if b.TransactionStatus.GetStatus(txIndex) && resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 			out := &rawOutput{
@@ -208,10 +216,13 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	}
 }
 
-func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs []bc.Hash) {
-	for _, tx := range txs {
+func prevoutDBKeys(b *legacy.Block) (outputIDs []bc.Hash) {
+	for txIndex, tx := range b.Transactions {
 		for _, inpID := range tx.Tx.InputIDs {
 			if sp, err := tx.Spend(inpID); err == nil {
+				if b.TransactionStatus.GetStatus(txIndex) && *sp.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
+					continue
+				}
 				outputIDs = append(outputIDs, *sp.SpentOutputId)
 			}
 		}

@@ -1,6 +1,11 @@
 package bc
 
-import "errors"
+import (
+	"errors"
+	"io"
+
+	"github.com/bytom/encoding/blockchain"
+)
 
 const (
 	maxBitmapSize = 8388608
@@ -46,4 +51,14 @@ func (ts *TransactionStatus) GetStatus(i int) (bool, error) {
 
 	result := (ts.Bitmap[index] >> uint8(pos)) & 0x01
 	return result == 1, nil
+}
+
+func (ts *TransactionStatus) ReadFrom(r *blockchain.Reader) (err error) {
+	ts.Bitmap, err = blockchain.ReadVarstr31(r)
+	return err
+}
+
+func (ts *TransactionStatus) WriteTo(w io.Writer) error {
+	_, err := blockchain.WriteVarstr31(w, ts.Bitmap)
+	return err
 }

@@ -192,6 +192,7 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock ui
 		ReferenceData:          &emptyJSONObject,
 		Inputs:                 make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
+		StatusFail:             b.TransactionStatus.GetStatus(indexInBlock),
 	}
 	if isValidJSON(orig.ReferenceData) {
 		referenceData := json.RawMessage(orig.ReferenceData)

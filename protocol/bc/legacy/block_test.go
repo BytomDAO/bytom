@@ -46,6 +46,8 @@ func TestMarshalBlock(t *testing.T) {
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // tx merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
+		"01" + // tx status
+		"00" +
 		"00" + // nonce
 		"00" + // bits
 
@@ -104,6 +106,8 @@ func TestEmptyBlock(t *testing.T) {
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
+		"01" + // tx status
+		"00" +
 		"00" + // nonce
 		"00" + // bits
 		"00") // num transactions
@@ -122,6 +126,8 @@ func TestEmptyBlock(t *testing.T) {
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
+		"01" + // tx status
+		"00" +
 		"00" + // nonce
 		"00") // bits
 	want, _ = hex.DecodeString(wantHex)
@@ -159,6 +165,8 @@ func TestSmallBlock(t *testing.T) {
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
+		"01" + // tx status
+		"00" +
 		"00" + // nonce
 		"00" + // bits
 		"01" + // num transactions
