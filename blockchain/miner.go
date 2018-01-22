@@ -7,7 +7,7 @@ import (
 
 // Get the parameters of mining
 func (bcr *BlockchainReactor) getWork() Response {
-	var resp workResp
+	var resp WorkResp
 	if block, err := mining.NewBlockTemplate(bcr.chain, bcr.txPool, bcr.accounts); err != nil {
 		return NewErrorResponse(err)
 	} else {
@@ -22,7 +22,7 @@ func (bcr *BlockchainReactor) getWork() Response {
 	return NewSuccessResponse(resp)
 }
 
-type workResp struct {
+type WorkResp struct {
 	Header legacy.BlockHeader `json:"header"`
 	cache  []uint32       `json:"cache"`
 }
