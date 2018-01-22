@@ -97,7 +97,8 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 				continue
 			}
 
-			if b.TransactionStatus.GetStatus(txIndex) && resOut.Source.Value.AssetId != *consensus.BTMAssetID {
+			statusFail, _ := b.TransactionStatus.GetStatus(txIndex)
+			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 
@@ -192,7 +193,8 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 			if !ok {
 				continue
 			}
-			if b.TransactionStatus.GetStatus(txIndex) && resOut.Source.Value.AssetId != *consensus.BTMAssetID {
+			statusFail, _ := b.TransactionStatus.GetStatus(txIndex)
+			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 			out := &rawOutput{
@@ -220,7 +222,8 @@ func prevoutDBKeys(b *legacy.Block) (outputIDs []bc.Hash) {
 	for txIndex, tx := range b.Transactions {
 		for _, inpID := range tx.Tx.InputIDs {
 			if sp, err := tx.Spend(inpID); err == nil {
-				if b.TransactionStatus.GetStatus(txIndex) && *sp.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
+				statusFail, _ := b.TransactionStatus.GetStatus(txIndex)
+				if statusFail && *sp.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
 					continue
 				}
 				outputIDs = append(outputIDs, *sp.SpentOutputId)
@@ -315,7 +318,7 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, uint32(pos)))
+				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, pos))
 				local = true
 				break
 			}
@@ -331,7 +334,7 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 				continue
 			}
 			if bytes := w.DB.Get(account.UTXOKey(outid)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, uint32(pos)))
+				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, pos))
 				break
 			}
 		}
