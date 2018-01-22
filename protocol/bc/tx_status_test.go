@@ -1,4 +1,4 @@
-package legacy
+package bc
 
 import (
 	"testing"
@@ -92,8 +92,8 @@ func TestSetBits(t *testing.T) {
 				t.Errorf("bad result, %d want %s get %s", i, v, result)
 			}
 		}
-		if len(ts.bitmap) != (len(c.result)+7)/bitsPerByte {
-			t.Errorf("wrong bitmap size, %d want %d get %d", ci, len(c.result)/bitsPerByte+1, len(ts.bitmap))
+		if len(ts.Bitmap) != (len(c.result)+7)/bitsPerByte {
+			t.Errorf("wrong bitmap size, %d want %d get %d", ci, len(c.result)/bitsPerByte+1, len(ts.Bitmap))
 		}
 	}
 }

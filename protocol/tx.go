@@ -23,9 +23,9 @@ func (c *Chain) ValidateTx(tx *legacy.Tx) error {
 		return err
 	}
 	block := legacy.MapBlock(oldBlock)
-	fee, err := validation.ValidateTx(newTx, block)
+	fee, gasVaild, err := validation.ValidateTx(newTx, block)
 
-	if err != nil {
+	if !gasVaild && err != nil {
 		c.txPool.AddErrCache(&newTx.ID, err)
 		return err
 	}

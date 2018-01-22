@@ -31,6 +31,8 @@ type BlockHeader struct {
 	// to the time in the previous block.
 	TimestampMS uint64
 
+	TransactionStatus bc.TransactionStatus
+
 	BlockCommitment
 
 	Nonce uint64

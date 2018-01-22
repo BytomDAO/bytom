@@ -85,15 +85,16 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			PreviousBlockHash: preBlock.Hash(),
 			Seed:              *nextBlockSeed,
 			TimestampMS:       bc.Millis(time.Now()),
+			TransactionStatus: *bc.NewTransactionStatus(),
 			BlockCommitment:   legacy.BlockCommitment{},
 			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
 		},
-		Transactions: make([]*legacy.Tx, 0, len(txDescs)),
+		Transactions: []*legacy.Tx{nil},
 	}
 
 	appendTx := func(tx *legacy.Tx, weight, fee uint64) {
 		b.Transactions = append([]*legacy.Tx{tx}, b.Transactions...)
-		txEntries = append([]*bc.Tx{tx.Tx}, txEntries...)
+		txEntries = append(txEntries, tx.Tx)
 		blockWeight += weight
 		txFee += fee
 	}
@@ -109,17 +110,22 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			txPool.RemoveTransaction(&tx.ID)
 			continue
 		}
+		gasOnlyTx := false
+		if _, gasVaild, err := validation.ValidateTx(tx, preBcBlock); err != nil {
+			if !gasVaild {
+				log.WithField("error", err).Error("mining block generate skip tx due to")
+				txPool.RemoveTransaction(&tx.ID)
+				continue
+			}
+			gasOnlyTx = true
+		}
 		if err := view.ApplyTransaction(bcBlock, tx); err != nil {
 			log.WithField("error", err).Error("mining block generate skip tx due to")
 			txPool.RemoveTransaction(&tx.ID)
 			continue
 		}
-		if _, err := validation.ValidateTx(tx, preBcBlock); err != nil {
-			log.WithField("error", err).Error("mining block generate skip tx due to")
-			txPool.RemoveTransaction(&tx.ID)
-			continue
-		}
 
+		b.BlockHeader.TransactionStatus.SetStatus(len(b.Transactions), gasOnlyTx)
 		appendTx(txDesc.Tx, txDesc.Weight, txDesc.Fee)
 	}
 
@@ -127,7 +133,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	if err != nil {
 		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
 	}
-	appendTx(cbTx, 0, 0)
+	b.Transactions[0] = cbTx
 
 	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = bc.MerkleRoot(txEntries)
 	if err != nil {
