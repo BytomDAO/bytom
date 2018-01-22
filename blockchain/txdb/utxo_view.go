@@ -54,7 +54,7 @@ func getUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 
 func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 	for key, entry := range view.Entries {
-		if entry.Spend && !entry.IsCoinBase {
+		if entry.Spent && !entry.IsCoinBase {
 			batch.Delete(calcUtxoKey(&key))
 			continue
 		}
@@ -66,4 +66,8 @@ func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 		batch.Set(calcUtxoKey(&key), b)
 	}
 	return nil
+}
+
+func SaveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
+	return saveUtxoView(batch, view)
 }

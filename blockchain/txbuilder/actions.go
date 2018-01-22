@@ -37,9 +37,6 @@ func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) e
 		if len(a.Receiver.ControlProgram) == 0 {
 			missing = append(missing, "receiver.control_program")
 		}
-		if a.Receiver.ExpiresAt.IsZero() {
-			missing = append(missing, "receiver.expires_at")
-		}
 	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
@@ -48,7 +45,6 @@ func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) e
 		return MissingFieldsError(missing...)
 	}
 
-	b.RestrictMaxTime(a.Receiver.ExpiresAt)
 	out := legacy.NewTxOutput(*a.AssetId, a.Amount, a.Receiver.ControlProgram, a.ReferenceData)
 	return b.AddOutput(out)
 }

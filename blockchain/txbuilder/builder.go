@@ -26,7 +26,7 @@ type TemplateBuilder struct {
 }
 
 func (b *TemplateBuilder) AddInput(in *legacy.TxInput, sigInstruction *SigningInstruction) error {
-	if in.Amount() > math.MaxInt64 {
+	if !in.IsCoinbase() && in.Amount() > math.MaxInt64 {
 		return errors.WithDetailf(ErrBadAmount, "amount %d exceeds maximum value 2^63", in.Amount())
 	}
 	b.inputs = append(b.inputs, in)

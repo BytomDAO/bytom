@@ -30,6 +30,7 @@ const (
 	accountPrefix   = "ACC:"
 	accountCPPrefix = "ACP:"
 	keyNextIndex    = "NextIndex"
+	indexPrefix     = "ACIDX:"
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -43,6 +44,10 @@ var (
 
 func aliasKey(name string) []byte {
 	return []byte(aliasPrefix + name)
+}
+
+func indexKey(xpub chainkd.XPub) []byte {
+	return []byte(indexPrefix + xpub.String())
 }
 
 //Key account store prefix
@@ -88,6 +93,7 @@ type Manager struct {
 	acpMu        sync.Mutex
 	acpIndexNext uint64 // next acp index in our block
 	acpIndexCap  uint64 // points to end of block
+	accIndexMu   sync.Mutex
 }
 
 // ExpireReservations removes reservations that have expired periodically.
@@ -116,13 +122,34 @@ type Account struct {
 	Tags  map[string]interface{} `json:"tags"`
 }
 
+func (m *Manager) getNextAccountIndex(xpubs []chainkd.XPub) (*uint64, error) {
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
+	var nextIndex uint64 = 1
+
+	if rawIndex := m.db.Get(indexKey(xpubs[0])); rawIndex != nil {
+		nextIndex = binary.LittleEndian.Uint64(rawIndex) + 1
+	}
+
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, nextIndex)
+	m.db.Set(indexKey(xpubs[0]), buf)
+
+	return &nextIndex, nil
+}
+
 // Create creates a new Account.
-func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}, accessToken string) (*Account, error) {
+func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}) (*Account, error) {
 	if existed := m.db.Get(aliasKey(alias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
 
-	id, signer, err := signers.Create(ctx, m.db, "account", xpubs, quorum, accessToken)
+	nextAccountIndex, err := m.getNextAccountIndex(xpubs)
+	if err != nil {
+		return nil, errors.Wrap(err, "get account index error")
+	}
+
+	id, signer, err := signers.Create("account", xpubs, quorum, *nextAccountIndex)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
@@ -228,18 +255,20 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
-// CreateAddress generate an address for the select account
 func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool) (cp *CtrlProgram, err error) {
 	account, err := m.findByID(ctx, accountID)
 	if err != nil {
 		return nil, err
 	}
+	return m.createAddress(ctx, account, change)
+}
 
-	expiresAt := time.Now().Add(defaultReceiverExpiry)
+// CreateAddress generate an address for the select account
+func (m *Manager) createAddress(ctx context.Context, account *Account, change bool) (cp *CtrlProgram, err error) {
 	if len(account.XPubs) == 1 {
-		cp, err = m.createP2PKH(ctx, account, change, expiresAt)
+		cp, err = m.createP2PKH(ctx, account, change)
 	} else {
-		cp, err = m.createP2SH(ctx, account, change, expiresAt)
+		cp, err = m.createP2SH(ctx, account, change)
 	}
 	if err != nil {
 		return nil, err
@@ -251,7 +280,7 @@ func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bo
 	return cp, nil
 }
 
-func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
 	idx := m.nextIndex()
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
@@ -275,11 +304,10 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 		KeyIndex:       idx,
 		ControlProgram: control,
 		Change:         change,
-		ExpiresAt:      expiresAt,
 	}, nil
 }
 
-func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool, expiresAt time.Time) (*CtrlProgram, error) {
+func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
 	idx := m.nextIndex()
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
@@ -307,46 +335,7 @@ func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool,
 		KeyIndex:       idx,
 		ControlProgram: control,
 		Change:         change,
-		ExpiresAt:      expiresAt,
 	}, nil
-}
-
-func (m *Manager) createControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) (*CtrlProgram, error) {
-	account, err := m.findByID(ctx, accountID)
-	if err != nil {
-		return nil, err
-	}
-
-	idx := m.nextIndex()
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
-	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
-	derivedPKs := chainkd.XPubKeys(derivedXPubs)
-	control, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
-	if err != nil {
-		return nil, err
-	}
-
-	return &CtrlProgram{
-		AccountID:      account.ID,
-		KeyIndex:       idx,
-		ControlProgram: control,
-		Change:         change,
-		ExpiresAt:      expiresAt,
-	}, nil
-}
-
-// CreateControlProgram creates a control program
-// that is tied to the Account and stores it in the database.
-func (m *Manager) CreateControlProgram(ctx context.Context, accountID string, change bool, expiresAt time.Time) ([]byte, error) {
-	cp, err := m.createControlProgram(ctx, accountID, change, expiresAt)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = m.insertAccountControlProgram(ctx, cp); err != nil {
-		return nil, err
-	}
-	return cp.ControlProgram, nil
 }
 
 //CtrlProgram is structure of account control program
@@ -356,7 +345,6 @@ type CtrlProgram struct {
 	KeyIndex       uint64
 	ControlProgram []byte
 	Change         bool
-	ExpiresAt      time.Time
 }
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*CtrlProgram) error {
@@ -374,42 +362,25 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*Ctr
 }
 
 // GetCoinbaseControlProgram will return a coinbase script
-func (m *Manager) GetCoinbaseControlProgram(height uint64) ([]byte, error) {
+func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
 	defer accountIter.Release()
 	if !accountIter.Next() {
 		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
-		return vmutil.CoinbaseProgram(nil, 0, height)
+		return vmutil.DefaultCoinbaseProgram()
 	}
 	rawAccount := accountIter.Value()
 
 	account := &Account{}
 	if err := json.Unmarshal(rawAccount, account); err != nil {
-		log.Errorf("GetCoinbaseControlProgram: fail to unmarshal account %v", err)
-		return vmutil.CoinbaseProgram(nil, 0, height)
+		return nil, err
 	}
 
-	ctx := context.Background()
-	idx := m.nextIndex()
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
-	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
-	derivedPKs := chainkd.XPubKeys(derivedXPubs)
-
-	script, err := vmutil.CoinbaseProgram(derivedPKs, account.Quorum, height)
+	program, err := m.createAddress(nil, account, false)
 	if err != nil {
-		return script, err
+		return nil, err
 	}
-
-	err = m.insertAccountControlProgram(ctx, &CtrlProgram{
-		AccountID:      account.ID,
-		KeyIndex:       idx,
-		ControlProgram: script,
-		Change:         false,
-	})
-	if err != nil {
-		log.Errorf("GetCoinbaseControlProgram: fail to insertAccountControlProgram %v", err)
-	}
-	return script, nil
+	return program.ControlProgram, nil
 }
 
 func (m *Manager) nextIndex() uint64 {
@@ -436,10 +407,15 @@ func (m *Manager) DeleteAccount(in struct {
 	}
 
 	storeBatch := m.db.NewBatch()
+
+	m.cacheMu.Lock()
 	m.aliasCache.Remove(account.Alias)
+	m.cacheMu.Unlock()
+
 	storeBatch.Delete(aliasKey(account.Alias))
 	storeBatch.Delete(Key(account.ID))
 	storeBatch.Write()
+
 	return nil
 }
 

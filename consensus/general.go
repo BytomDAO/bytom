@@ -35,6 +35,26 @@ var BTMAssetID = &bc.AssetID{
 	V3: uint64(18446744073709551615),
 }
 
+//BTMAlias is default btm
+var BTMAlias = "btm"
+
+//BTMSymbol
+var BTMSymbol = "btm"
+
+//BTMDecimals
+var BTMDecimals = 8
+
+//BTMDescription
+var BTMDescription = `Bytom Official Issue`
+
+//BTMDefinitionMap
+var BTMDefinitionMap = map[string]interface{}{
+	"name":        BTMAlias,
+	"symbol":      BTMSymbol,
+	"decimals":    BTMDecimals,
+	"description": BTMDescription,
+}
+
 // BlockSubsidy calculate the coinbase rewards on given block height
 func BlockSubsidy(height uint64) uint64 {
 	if height == 0 {

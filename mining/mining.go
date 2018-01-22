@@ -28,20 +28,24 @@ import (
 // is nil, the coinbase transaction will instead be redeemable by anyone.
 func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64) (tx *legacy.Tx, err error) {
 	amount += consensus.BlockSubsidy(blockHeight)
-	unlockHeight := blockHeight + consensus.CoinbasePendingBlockNumber
 
 	var script []byte
 	if accountManager == nil {
-		script, err = vmutil.CoinbaseProgram(nil, 0, unlockHeight)
+		script, err = vmutil.DefaultCoinbaseProgram()
 	} else {
-		script, err = accountManager.GetCoinbaseControlProgram(unlockHeight)
+		script, err = accountManager.GetCoinbaseControlProgram()
 	}
 	if err != nil {
 		return
 	}
 
 	builder := txbuilder.NewBuilder(time.Now())
-	builder.AddOutput(legacy.NewTxOutput(*consensus.BTMAssetID, amount, script, nil))
+	if err = builder.AddInput(legacy.NewCoinbaseInput([]byte(string(blockHeight)), nil), &txbuilder.SigningInstruction{}); err != nil {
+		return
+	}
+	if err = builder.AddOutput(legacy.NewTxOutput(*consensus.BTMAssetID, amount, script, nil)); err != nil {
+		return
+	}
 	_, txData, err := builder.Build()
 	if err != nil {
 		return

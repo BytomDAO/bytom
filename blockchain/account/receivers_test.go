@@ -8,31 +8,11 @@ import (
 	"github.com/bytom/testutil"
 )
 
-func TestCreateReceiver(t *testing.T) {
-	m := mockAccountManager(t)
-	ctx := context.Background()
-
-	account, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias", nil, "")
-	if err != nil {
-		testutil.FatalErr(t, err)
-	}
-
-	_, err = m.CreateReceiver(ctx, account.ID)
-	if err != nil {
-		testutil.FatalErr(t, err)
-	}
-
-	_, err = m.CreateReceiver(ctx, account.Alias)
-	if err != nil {
-		testutil.FatalErr(t, err)
-	}
-}
-
 func TestCreateAddressReceiver(t *testing.T) {
 	m := mockAccountManager(t)
 	ctx := context.Background()
 
-	account, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias", nil, "")
+	account, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias", nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
