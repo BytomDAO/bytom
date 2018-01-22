@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
+	"github.com/bytom/util"
 )
 
 // accountIns is used for account related request.
@@ -75,13 +76,13 @@ func printJSON(data interface{}) {
 	dataMap, ok := data.(map[string]interface{})
 	if ok != true {
 		jww.ERROR.Println("invalid type assertion")
-		os.Exit(ErrLocalParse)
+		os.Exit(util.ErrLocalParse)
 	}
 
 	rawData, err := stdjson.MarshalIndent(dataMap, "", "  ")
 	if err != nil {
 		jww.ERROR.Println(err)
-		os.Exit(ErrLocalParse)
+		os.Exit(util.ErrLocalParse)
 	}
 
 	jww.FEEDBACK.Println(string(rawData))
@@ -91,7 +92,7 @@ func printJSONList(data interface{}) {
 	dataList, ok := data.([]interface{})
 	if ok != true {
 		jww.ERROR.Println("invalid type assertion")
-		os.Exit(ErrLocalParse)
+		os.Exit(util.ErrLocalParse)
 	}
 
 	for idx, item := range dataList {
@@ -99,7 +100,7 @@ func printJSONList(data interface{}) {
 		rawData, err := stdjson.MarshalIndent(item, "", "  ")
 		if err != nil {
 			jww.ERROR.Println(err)
-			os.Exit(ErrLocalParse)
+			os.Exit(util.ErrLocalParse)
 		}
 
 		jww.FEEDBACK.Println(string(rawData))

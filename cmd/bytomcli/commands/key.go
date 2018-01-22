@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/util"
 )
 
 var createKeyCmd = &cobra.Command{
@@ -24,8 +25,8 @@ var createKeyCmd = &cobra.Command{
 			Password string `json:"password"`
 		}{Alias: args[0], Password: "123456"}
 
-		data, exitCode := clientCall("/create-key", &key)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/create-key", &key)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -41,7 +42,7 @@ var deleteKeyCmd = &cobra.Command{
 		xpub := new(chainkd.XPub)
 		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
 			jww.ERROR.Println("delete-key:", err)
-			os.Exit(ErrLocalExe)
+			os.Exit(util.ErrLocalExe)
 		}
 
 		var key = struct {
@@ -49,7 +50,7 @@ var deleteKeyCmd = &cobra.Command{
 			XPub     chainkd.XPub `json:"xpubs"`
 		}{XPub: *xpub, Password: "123456"}
 
-		if _, exitCode := clientCall("/delete-key", &key); exitCode != Success {
+		if _, exitCode := util.ClientCall("/delete-key", &key); exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		jww.FEEDBACK.Println("Successfully delete key")
@@ -61,8 +62,8 @@ var listKeysCmd = &cobra.Command{
 	Short: "List the existing keys",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := clientCall("/list-keys")
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/list-keys")
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -90,8 +91,8 @@ var exportPrivateCmd = &cobra.Command{
 		key.XPub = *xpub
 		key.Password = args[1]
 
-		data, exitCode := clientCall("/export-private-key", &key)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/export-private-key", &key)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
@@ -114,11 +115,11 @@ var importPrivateCmd = &cobra.Command{
 		privHash, err := base58.Decode(args[1])
 		if err != nil {
 			jww.ERROR.Println("wif priv decode error")
-			os.Exit(ErrLocalExe)
+			os.Exit(util.ErrLocalExe)
 		}
 		if len(privHash) != 68 {
 			jww.ERROR.Println("wif priv length error")
-			os.Exit(ErrLocalExe)
+			os.Exit(util.ErrLocalExe)
 		}
 		var hashed [32]byte
 
@@ -126,7 +127,7 @@ var importPrivateCmd = &cobra.Command{
 
 		if res := bytes.Compare(hashed[:4], privHash[64:]); res != 0 {
 			jww.ERROR.Println("wif priv hash error")
-			os.Exit(ErrLocalExe)
+			os.Exit(util.ErrLocalExe)
 		}
 
 		var key Key
@@ -135,8 +136,8 @@ var importPrivateCmd = &cobra.Command{
 		key.Index, _ = strconv.ParseUint(args[2], 10, 64)
 		copy(key.XPrv[:], privHash[:64])
 
-		data, exitCode := clientCall("/import-private-key", &key)
-		if exitCode != Success {
+		data, exitCode := util.ClientCall("/import-private-key", &key)
+		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 		printJSON(data)

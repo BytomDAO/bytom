@@ -47,7 +47,6 @@ func (bcr *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 	if err := bcr.hsm.XDelete(x.XPub, x.Password); err != nil {
 		return resWrapper(nil, err)
 	}
-
 	return resWrapper(nil)
 }
 
@@ -64,12 +63,7 @@ func (bcr *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x stru
 }
 
 func (bcr *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
-	sigBytes, err := bcr.hsm.XSign(xpub, path, data[:], password)
-	if err == pseudohsm.ErrLoadKey {
-		log.Error(err)
-		return nil, nil
-	}
-	return sigBytes, err
+	return bcr.hsm.XSign(xpub, path, data[:], password)
 }
 
 func (bcr *BlockchainReactor) pseudohsmResetPassword(ctx context.Context, x struct {
