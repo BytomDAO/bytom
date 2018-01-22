@@ -30,7 +30,6 @@ func InitMiningData(height uint64, blockHashs []*bc.Hash) (md miningData) {
 	return
 }
 
-//
 func AIHash(header *bc.Hash, cache []uint32, md miningData) (*bc.Hash, error) {
 	if header == nil {
 		return nil, errors.New("BlockHeader Hash is invalid or not exist!")
