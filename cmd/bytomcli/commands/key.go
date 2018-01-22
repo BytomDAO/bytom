@@ -1,18 +1,15 @@
 package commands
 
 import (
-	"bytes"
 	"encoding/hex"
 	"os"
 	"strconv"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
-	"github.com/tendermint/go-wire/data/base58"
-
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/util"
+	"github.com/bytom/blockchain"
 )
 
 var createKeyCmd = &cobra.Command{
@@ -101,42 +98,22 @@ var exportPrivateCmd = &cobra.Command{
 }
 
 var importPrivateCmd = &cobra.Command{
-	Use:   "import-private-key <alias> <private key> <index> <password>",
+	Use:   "import-private-key <key-alias> <private key> <index> <password> <account-alias>",
 	Short: "Import the private key",
-	Args:  cobra.ExactArgs(4),
+	Args:  cobra.ExactArgs(5),
 	Run: func(cmd *cobra.Command, args []string) {
-		type Key struct {
-			Alias    string
-			Password string
-			XPrv     chainkd.XPrv
-			Index    uint64
-		}
-
-		privHash, err := base58.Decode(args[1])
+		var params blockchain.KeyImportParams
+		params.KeyAlias = args[0]
+		params.XPrv = args[1]
+		params.Password = args[3]
+		params.AccountAlias = args[4]
+		index, err := strconv.ParseUint(args[2], 10, 64)
 		if err != nil {
-			jww.ERROR.Println("wif priv decode error")
-			os.Exit(util.ErrLocalExe)
+			jww.ERROR.Println("params index wrong")
 		}
-		if len(privHash) != 68 {
-			jww.ERROR.Println("wif priv length error")
-			os.Exit(util.ErrLocalExe)
-		}
-		var hashed [32]byte
+		params.Index = index
 
-		sha3pool.Sum256(hashed[:], privHash[:64])
-
-		if res := bytes.Compare(hashed[:4], privHash[64:]); res != 0 {
-			jww.ERROR.Println("wif priv hash error")
-			os.Exit(util.ErrLocalExe)
-		}
-
-		var key Key
-		key.Alias = args[0]
-		key.Password = args[3]
-		key.Index, _ = strconv.ParseUint(args[2], 10, 64)
-		copy(key.XPrv[:], privHash[:64])
-
-		data, exitCode := util.ClientCall("/import-private-key", &key)
+		data, exitCode := util.ClientCall("/import-private-key", &params)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

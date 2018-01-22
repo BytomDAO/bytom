@@ -108,6 +108,7 @@ func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accou
 func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struct {
 	ID        string `json:"id"`
 	AccountID string `json:"account_id"`
+	Detail    bool   `json:"detail"`
 }) Response {
 	var transactions []query.AnnotatedTx
 	var err error
@@ -121,6 +122,11 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struc
 	if err != nil {
 		log.Errorf("listTransactions: %v", err)
 		return resWrapper(nil, err)
+	}
+
+	if filter.Detail == false {
+		txSummary := bcr.wallet.GetTransactionsSummary(transactions)
+		return resWrapper(txSummary)
 	}
 	return resWrapper(transactions)
 }

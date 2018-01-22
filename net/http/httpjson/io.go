@@ -18,7 +18,7 @@ var ErrBadRequest = errors.New("httpjson: bad request")
 // Read decodes a single JSON text from r into v.
 // The only error it returns is ErrBadRequest
 // (wrapped with the original error message as context).
-func Read(ctx context.Context, r io.Reader, v interface{}) error {
+func Read(r io.Reader, v interface{}) error {
 	dec := json.NewDecoder(r)
 	dec.UseNumber()
 	err := dec.Decode(v)

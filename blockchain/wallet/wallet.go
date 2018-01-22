@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/json"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-wire/data/base58"
@@ -168,12 +167,13 @@ func (w *Wallet) ExportAccountPrivKey(hsm *pseudohsm.HSM, xpub chainkd.XPub, aut
 }
 
 // ImportAccountPrivKey imports the account key in the Wallet Import Formt.
-func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, alias, auth string, index uint64) (*pseudohsm.XPub, error) {
-	xpub, _, err := hsm.ImportXPrvKey(auth, alias, xprv)
+func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, keyAlias, auth string, index uint64, accountAlias string) (*pseudohsm.XPub, error) {
+	xpub, _, err := hsm.ImportXPrvKey(auth, keyAlias, xprv)
 	if err != nil {
 		return nil, err
 	}
-	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, alias, nil, "")
+
+	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudoh
 
 func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
 	for i := uint64(0); i < index; i++ {
-		if _, err := w.AccountMgr.CreateControlProgram(nil, account.ID, true, time.Now()); err != nil {
+		if _, err := w.AccountMgr.CreateAddress(nil, account.ID, false); err != nil {
 			return err
 		}
 	}

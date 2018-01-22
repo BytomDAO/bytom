@@ -2,7 +2,6 @@ package txbuilder
 
 import (
 	"context"
-	"time"
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
@@ -40,5 +39,4 @@ type Action interface {
 type Receiver struct {
 	ControlProgram chainjson.HexBytes `json:"control_program,omitempty"`
 	Address        string             `json:"address,omitempty"`
-	ExpiresAt      time.Time          `json:"expires_at"`
 }

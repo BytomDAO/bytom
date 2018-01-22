@@ -10,7 +10,9 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/common"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
@@ -19,38 +21,78 @@ import (
 )
 
 // annotateTxs adds asset data to transactions
-func annotateTxsAsset(txs []*query.AnnotatedTx, walletDB db.DB) {
+func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 	for i, tx := range txs {
 		for j, input := range tx.Inputs {
-			localAsset, err := getAliasFromAssetID(input.AssetID, walletDB)
-			if localAsset == nil || err != nil {
+			alias, definition, err := w.getAliasDefinition(input.AssetID)
+			if err != nil {
 				continue
 			}
-			txs[i].Inputs[j].AssetAlias = *localAsset.Alias
+			txs[i].Inputs[j].AssetAlias = alias
+			txs[i].Inputs[j].AssetDefinition = &definition
 		}
 		for j, output := range tx.Outputs {
-			localAsset, err := getAliasFromAssetID(output.AssetID, walletDB)
-			if localAsset == nil || err != nil {
+			alias, definition, err := w.getAliasDefinition(output.AssetID)
+			if err != nil {
 				continue
 			}
-			txs[i].Outputs[j].AssetAlias = *localAsset.Alias
+			txs[i].Outputs[j].AssetAlias = alias
+			txs[i].Outputs[j].AssetDefinition = &definition
 		}
 	}
 }
 
-func getAliasFromAssetID(assetID bc.AssetID, walletDB db.DB) (*asset.Asset, error) {
-	var localAsset asset.Asset
-	rawAsset := walletDB.Get(asset.Key(&assetID))
-	if rawAsset == nil {
+func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) (json.RawMessage, error) {
+
+	definitionByte := w.DB.Get(asset.CalcExtAssetKey(assetID))
+	if definitionByte == nil {
 		return nil, nil
 	}
 
-	if err := json.Unmarshal(rawAsset, &localAsset); err != nil {
-		log.WithFields(log.Fields{"warn": err, "asset id": assetID.String()}).Warn("look up asset")
+	definitionMap := make(map[string]interface{})
+	if err := json.Unmarshal(definitionByte, &definitionMap); err != nil {
 		return nil, err
 	}
 
-	return &localAsset, nil
+	saveAlias := assetID.String()
+	storeBatch := w.DB.NewBatch()
+
+	externalAsset := &asset.Asset{AssetID: *assetID, Alias: &saveAlias, DefinitionMap: definitionMap, Signer: &signers.Signer{Type: "external"}}
+	if rawAsset, err := json.Marshal(externalAsset); err == nil {
+		log.WithFields(log.Fields{"assetID": assetID.String(), "alias": saveAlias}).Info("index external asset")
+		storeBatch.Set(asset.Key(assetID), rawAsset)
+	}
+	storeBatch.Set(asset.AliasKey(saveAlias), []byte(assetID.String()))
+	storeBatch.Write()
+
+	return definitionByte, nil
+
+}
+
+func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage, error) {
+	//btm
+	if assetID.String() == consensus.BTMAssetID.String() {
+		alias := consensus.BTMAlias
+		definition := []byte(asset.DefaultNativeAsset.RawDefinitionByte)
+
+		return alias, definition, nil
+	}
+
+	//local asset and saved external asset
+	localAsset, err := w.AssetReg.FindByID(nil, &assetID)
+	if err != nil {
+		return "", nil, err
+	}
+	alias := *localAsset.Alias
+	definition := []byte(localAsset.RawDefinitionByte)
+	return alias, definition, nil
+
+	//external asset
+	if definition, err := w.getExternalDefinition(&assetID); definition != nil {
+		return assetID.String(), definition, err
+	}
+
+	return "", nil, fmt.Errorf("look up asset %s :not found ", assetID.String())
 }
 
 // annotateTxs adds account data to transactions
@@ -61,20 +103,20 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB db.DB) {
 			if input.SpentOutputID == nil {
 				continue
 			}
-			account, err := getAccountFromUTXO(*input.SpentOutputID, walletDB)
-			if account == nil || err != nil {
+			localAccount, err := getAccountFromUTXO(*input.SpentOutputID, walletDB)
+			if localAccount == nil || err != nil {
 				continue
 			}
-			txs[i].Inputs[j].AccountAlias = account.Alias
-			txs[i].Inputs[j].AccountID = account.ID
+			txs[i].Inputs[j].AccountAlias = localAccount.Alias
+			txs[i].Inputs[j].AccountID = localAccount.ID
 		}
 		for j, output := range tx.Outputs {
-			account, err := getAccountFromACP(output.ControlProgram, walletDB)
-			if account == nil || err != nil {
+			localAccount, err := getAccountFromACP(output.ControlProgram, walletDB)
+			if localAccount == nil || err != nil {
 				continue
 			}
-			txs[i].Outputs[j].AccountAlias = account.Alias
-			txs[i].Outputs[j].AccountID = account.ID
+			txs[i].Outputs[j].AccountAlias = localAccount.Alias
+			txs[i].Outputs[j].AccountID = localAccount.ID
 		}
 	}
 }
@@ -167,11 +209,12 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock ui
 func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
-		AssetID:         orig.AssetID(),
-		Amount:          orig.Amount(),
 		AssetDefinition: &emptyJSONObject,
-		AssetTags:       &emptyJSONObject,
 		ReferenceData:   &emptyJSONObject,
+	}
+	if !orig.IsCoinbase() {
+		in.AssetID = orig.AssetID()
+		in.Amount = orig.Amount()
 	}
 	if isValidJSON(orig.ReferenceData) {
 		referenceData := json.RawMessage(orig.ReferenceData)
@@ -188,8 +231,10 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 	case *bc.Issuance:
 		in.Type = "issue"
 		in.IssuanceProgram = orig.IssuanceProgram()
+	case *bc.Coinbase:
+		in.Type = "coinbase"
+		in.Arbitrary = e.Arbitrary
 	}
-
 	return in
 }
 
@@ -201,7 +246,6 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
 		Position:        idx,
 		AssetID:         *orig.AssetId,
 		AssetDefinition: &emptyJSONObject,
-		AssetTags:       &emptyJSONObject,
 		Amount:          orig.Amount,
 		ControlProgram:  orig.ControlProgram,
 		ReferenceData:   &emptyJSONObject,

@@ -87,6 +87,7 @@ message Nonce {
 
 message Coinbase {
   ValueDestination witness_destination = 1;
+  bytes            arbitrary           = 2;
 }
 
 message Output {
