@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"fmt"
 	"encoding/json"
 
 	"github.com/bytom/mining"
@@ -20,15 +19,10 @@ func (bcr *BlockchainReactor) getWork() Response {
 	if seedCache, err := seedCaches.Get(&resp.Header.Seed); err != nil {
 		return NewErrorResponse(err)
 	} else {
-		fmt.Printf("----seed cashe:%v\n", seedCache)
 		resp.Cache = seedCache
 	}
 	if res, err := resp.MarshalJSON(); err == nil {
-		fmt.Printf("---------res:%v\n", res)
-		var test WorkResp
-		err = test.UnmarshalJSON(res)
-		fmt.Printf("----------test:%v, err:%v\n", test, err)
-		return NewSuccessResponse(res)
+		return NewSuccessResponse(string(res))
 	} else {
 		return NewErrorResponse(err)
 	}
@@ -40,10 +34,11 @@ type WorkResp struct {
 }
 
 type WorkByte struct {
-	ByteHeader []byte `json:"header"`
-	Cache	   []uint32 `json:"cache"`
+	ByteHeader []byte   `json:"header"`
+	Cache      []uint32 `json:"cache"`
 }
 
+// Unmarshal WorkResp
 func (work *WorkResp) UnmarshalJSON(b []byte) error {
 	var workByte WorkByte
 	if err := json.Unmarshal(b, &workByte); err != nil {
@@ -58,6 +53,7 @@ func (work *WorkResp) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// Marshal WorkResp
 func (work *WorkResp) MarshalJSON() ([]byte, error) {
 	var workByte WorkByte
 	var err error
