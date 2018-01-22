@@ -1,12 +1,14 @@
 package aihash
 
 import (
+	"encoding/hex"
+
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	// "github.com/bytom/protocol/bc/legacy"
 )
 
 func InitMiningData(height uint64, blockHashs []*bc.Hash) (md miningData) {
@@ -20,7 +22,7 @@ func InitMiningData(height uint64, blockHashs []*bc.Hash) (md miningData) {
 
 	log.WithFields(log.Fields{
 		"height": height,
-		"seed":   bc.BytesToHash(md.seed).String(),
+		"seed":   hex.EncodeToString(md.seed),
 	}).Debug("Created new seed.")
 
 	md.generateCache()
@@ -42,5 +44,5 @@ func AIHash(header *bc.Hash, cache []uint32, md miningData) (*bc.Hash, error) {
 
 	hash := hashMatrix(result)
 
-	return hash
+	return hash, nil
 }

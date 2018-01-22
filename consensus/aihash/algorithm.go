@@ -5,13 +5,13 @@ import (
 	"encoding/binary"
 	"hash"
 	"reflect"
-	"sync/atomic"
+	// "sync/atomic"
 	"unsafe"
 
 	"golang.org/x/crypto/sha3"
 	"gonum.org/v1/gonum/mat"
 
-	"github.com/bytom/common/bitutil"
+	// "github.com/bytom/common/bitutil"
 	"github.com/bytom/crypto/scrypt"
 	"github.com/bytom/protocol/bc"
 )
@@ -60,7 +60,7 @@ func (md *miningData) generateSeed(blockHashs []*bc.Hash) {
 // extend seed from 32 byte to 128 byte
 func extendSeed(seed []byte) []byte {
 	extSeed := make([]byte, 128)
-	extSeed[:32] = seed
+	copy(extSeed, seed)
 
 	for i := 0; i < 3; i++ {
 		h := sha3.Sum256(extSeed[i*32 : (i+1)*32])
@@ -72,6 +72,7 @@ func extendSeed(seed []byte) []byte {
 
 // seed length is 32 bytes, cache is 16MB.
 func (md *miningData) generateCache() {
+
 	extSeed := extendSeed(md.seed)
 	cache := make([]uint32, 0)
 
