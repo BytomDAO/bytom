@@ -81,7 +81,7 @@ type validationState struct {
 
 	gas *gasState
 
-	gasVaild *bool
+	gasVaild *int
 }
 
 var (
@@ -235,8 +235,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
 			return errNonemptyExtHash
 		}
-		gasVaild := true
-		vs.gasVaild = &gasVaild
+		*vs.gasVaild = 1
 
 		for i, src := range e.Sources {
 			vs2 := *vs
@@ -679,7 +678,7 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, bool, error) {
 	}
 
 	//TODO: handle the gas limit
-	gasVaild := false
+	gasVaild := 0
 	vs := &validationState{
 		block:   block,
 		tx:      tx,
@@ -692,5 +691,5 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, bool, error) {
 	}
 
 	err := checkValid(vs, tx.TxHeader)
-	return uint64(vs.gas.BTMValue), *vs.gasVaild, err
+	return uint64(vs.gas.BTMValue), *vs.gasVaild == 1, err
 }

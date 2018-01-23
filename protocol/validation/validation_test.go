@@ -379,6 +379,7 @@ func TestTxValidation(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		gasVaild := 0
 		t.Run(c.desc, func(t *testing.T) {
 			fixture = sample(t, nil)
 			tx = legacy.NewTx(*fixture.tx).Tx
@@ -390,7 +391,8 @@ func TestTxValidation(t *testing.T) {
 					gasLeft: int64(80000),
 					gasUsed: 0,
 				},
-				cache: make(map[bc.Hash]error),
+				cache:    make(map[bc.Hash]error),
+				gasVaild: &gasVaild,
 			}
 			out := tx.Entries[*tx.ResultIds[0]].(*bc.Output)
 			muxID := out.Source.Ref
@@ -475,9 +477,10 @@ func TestCoinbase(t *testing.T) {
 		},
 	})
 	cases := []struct {
-		block *bc.Block
-		tx    *bc.Tx
-		err   error
+		block    *bc.Block
+		tx       *bc.Tx
+		gasVaild bool
+		err      error
 	}{
 		{
 			block: &bc.Block{
@@ -486,8 +489,9 @@ func TestCoinbase(t *testing.T) {
 				},
 				Transactions: []*bc.Tx{errCbTx},
 			},
-			tx:  CbTx,
-			err: errWrongCoinbaseTransaction,
+			tx:       CbTx,
+			gasVaild: true,
+			err:      errWrongCoinbaseTransaction,
 		},
 		{
 			block: &bc.Block{
@@ -496,8 +500,9 @@ func TestCoinbase(t *testing.T) {
 				},
 				Transactions: []*bc.Tx{CbTx},
 			},
-			tx:  CbTx,
-			err: nil,
+			tx:       CbTx,
+			gasVaild: true,
+			err:      nil,
 		},
 		{
 			block: &bc.Block{
@@ -506,16 +511,20 @@ func TestCoinbase(t *testing.T) {
 				},
 				Transactions: []*bc.Tx{errCbTx},
 			},
-			tx:  errCbTx,
-			err: errWrongCoinbaseAsset,
+			tx:       errCbTx,
+			gasVaild: true,
+			err:      errWrongCoinbaseAsset,
 		},
 	}
 
 	for _, c := range cases {
-		_, _, err := ValidateTx(c.tx, c.block)
+		_, gasVaild, err := ValidateTx(c.tx, c.block)
 
 		if rootErr(err) != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)
+		}
+		if c.gasVaild != gasVaild {
+			t.Errorf("got gasVaild %s, want %s", gasVaild, c.gasVaild)
 		}
 	}
 }
