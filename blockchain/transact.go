@@ -135,10 +135,10 @@ func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest
 
 	tmpl, err := bcr.buildSingle(subctx, buildReqs)
 	if err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(tmpl)
+	return NewSuccessResponse(tmpl)
 }
 
 func (bcr *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {
@@ -236,8 +236,8 @@ func (bcr *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Templat
 
 // POST /sign-submit-transaction
 func (bcr *BlockchainReactor) signSubmit(ctx context.Context, x struct {
-	Password []string             `json:"password"`
-	Txs  txbuilder.Template `json:"transaction"`
+	Password []string           `json:"password"`
+	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
 
 	var err error

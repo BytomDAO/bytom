@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/errors"
 )
@@ -41,16 +40,16 @@ func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter strin
 func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) Response {
-	var txfeed interface{}
+	var tmpTxFeed interface{}
 	rawTxfeed, err := bcr.getTxFeedByAlias(ctx, in.Alias)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-	err = json.Unmarshal(rawTxfeed, &txfeed)
+	err = json.Unmarshal(rawTxfeed, &tmpTxFeed)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-	data := map[string]interface{}{"txfeed": txfeed}
+	data := map[string]interface{}{"txfeed": tmpTxFeed}
 	return NewSuccessResponse(data)
 }
 
@@ -77,24 +76,6 @@ func (bcr *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
-}
-
-// txAfterIsBefore returns true if a is before b. It returns an error if either
-// a or b are not valid query.TxAfters.
-func txAfterIsBefore(a, b string) (bool, error) {
-	aAfter, err := query.DecodeTxAfter(a)
-	if err != nil {
-		return false, err
-	}
-
-	bAfter, err := query.DecodeTxAfter(b)
-	if err != nil {
-		return false, err
-	}
-
-	return aAfter.FromBlockHeight < bAfter.FromBlockHeight ||
-		(aAfter.FromBlockHeight == bAfter.FromBlockHeight &&
-			aAfter.FromPosition < bAfter.FromPosition), nil
 }
 
 func (bcr *BlockchainReactor) getTxFeeds() ([]txfeed.TxFeed, error) {
