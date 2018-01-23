@@ -7,12 +7,12 @@ import (
 
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txdb/storage"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/state"
-	"github.com/bytom/consensus/aihash"
 )
 
 // maxCachedValidatedTxs is the max number of validated txs to cache.
@@ -235,16 +235,16 @@ func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 // This function is inline the setState function
 func (c *Chain) spawnHash128() {
 	var hash128 [128]bc.Hash
-	var start uint64 = 0
-	var point uint64 = 0
+	var start, point uint64 = 0
 	// Strategy to spawn hash128
 	height := c.state.block.Height
 
 	if height >= 128 {
 		start = height - 128
 	}
-	for i := start..height {
-		hash128[point++] = *(c.state.mainChain[i])
+	for i := start; i < height; i = i + 1 {
+		hash128[point] = *(c.state.mainChain[i])
+		point = point + 1
 	}
 
 	aihash.Notify(hash128)
