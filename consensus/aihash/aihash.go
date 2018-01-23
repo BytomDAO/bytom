@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-func InitMiningData(height uint64, blockHashs []*bc.Hash) (md miningData) {
+func InitMiningData(height uint64, blockHashs []*bc.Hash) (md MiningData) {
 	if height < 128 {
 		sha256 := makeHasher(sha3.New256())
 		seed := make([]byte, 32)
@@ -29,7 +29,7 @@ func InitMiningData(height uint64, blockHashs []*bc.Hash) (md miningData) {
 	return
 }
 
-func AIHash(header *bc.Hash, md miningData) (*bc.Hash, error) {
+func AIHash(header *bc.Hash, md MiningData) (*bc.Hash, error) {
 	if header == nil {
 		return nil, errors.New("BlockHeader Hash is invalid or not exist!")
 	}

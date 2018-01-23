@@ -20,7 +20,7 @@ const (
 	mulRounds   = 1 << 8 // Number of rounds in mulmatrix
 )
 
-type miningData struct {
+type MiningData struct {
 	seed  []byte   // seed length is 32 Bytes
 	cache []uint32 // cache length is 256*256*256 = 16777216 Bytes
 }
@@ -41,7 +41,7 @@ func makeHasher(h hash.Hash) hasher {
 }
 
 // generateSeed is the seed to use for generating a verification cache.
-func (md *miningData) generateSeed(blockHashs []*bc.Hash) {
+func (md *MiningData) generateSeed(blockHashs []*bc.Hash) {
 	seed := make([]byte, 32)
 	seedSlice := make([]byte, 0)
 
@@ -68,7 +68,7 @@ func extendSeed(seed []byte) []byte {
 }
 
 // seed length is 32 bytes, cache is 16MB.
-func (md *miningData) generateCache() {
+func (md *MiningData) generateCache() {
 
 	extSeed := extendSeed(md.seed)
 	cache := make([]uint32, 0)
