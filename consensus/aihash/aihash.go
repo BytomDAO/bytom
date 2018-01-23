@@ -15,7 +15,7 @@ func InitMiningData(hash128 [128]*bc.Hash) *MiningData {
 	var md MiningData
 	md.generateSeed(blockHashs)
 
-	log.Printf("Created new seed:%v", hex.EncodeToString(Md.seed))
+	log.Printf("Created new seed:%v", hex.EncodeToString(md.seed))
 
 	md.generateCache()
 
