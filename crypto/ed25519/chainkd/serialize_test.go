@@ -2,11 +2,10 @@ package chainkd
 
 import (
 	"bytes"
-	"reflect"
-	"testing"
-
 	"encoding/hex"
 	"encoding/json"
+	"reflect"
+	"testing"
 )
 
 func TestMarshalingFuncs(t *testing.T) {
