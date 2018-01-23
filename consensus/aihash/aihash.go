@@ -4,11 +4,10 @@ import (
 	"encoding/hex"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	// "github.com/bytom/protocol/bc/legacy"
+	"golang.org/x/crypto/sha3"
 )
 
 func InitMiningData(height uint64, blockHashs []*bc.Hash) (md miningData) {

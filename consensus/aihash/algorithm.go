@@ -5,15 +5,12 @@ import (
 	"encoding/binary"
 	"hash"
 	"reflect"
-	// "sync/atomic"
 	"unsafe"
 
-	"golang.org/x/crypto/sha3"
-	"gonum.org/v1/gonum/mat"
-
-	// "github.com/bytom/common/bitutil"
 	"github.com/bytom/crypto/scrypt"
 	"github.com/bytom/protocol/bc"
+	"golang.org/x/crypto/sha3"
+	"gonum.org/v1/gonum/mat"
 )
 
 const (
