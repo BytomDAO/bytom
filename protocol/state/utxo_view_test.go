@@ -8,6 +8,16 @@ import (
 	"github.com/bytom/testutil"
 )
 
+var defaultEntry = map[bc.Hash]bc.Entry{
+	bc.Hash{V0: 0}: &bc.Output{
+		Source: &bc.ValueSource{
+			Value: &bc.AssetAmount{
+				AssetId: &bc.AssetID{V0: 0},
+			},
+		},
+	},
+}
+
 func TestApplyBlock(t *testing.T) {
 	cases := []struct {
 		block     *bc.Block
@@ -17,7 +27,7 @@ func TestApplyBlock(t *testing.T) {
 	}{
 		{
 			block: &bc.Block{
-				BlockHeader: {
+				BlockHeader: &bc.BlockHeader{
 					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
@@ -25,6 +35,7 @@ func TestApplyBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -34,7 +45,7 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: {
+				BlockHeader: &bc.BlockHeader{
 					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
@@ -42,6 +53,7 @@ func TestApplyBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -54,7 +66,7 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: {
+				BlockHeader: &bc.BlockHeader{
 					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
@@ -65,6 +77,7 @@ func TestApplyBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -94,6 +107,7 @@ func TestApplyBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -123,6 +137,7 @@ func TestApplyBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -141,6 +156,7 @@ func TestApplyBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
+
 		if err := c.inputView.ApplyBlock(c.block); c.err != (err != nil) {
 			t.Errorf("want err = %v, get err = %v", c.err, err)
 		}
@@ -162,7 +178,7 @@ func TestDetachBlock(t *testing.T) {
 	}{
 		{
 			block: &bc.Block{
-				BlockHeader: {
+				BlockHeader: &bc.BlockHeader{
 					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
@@ -173,6 +189,7 @@ func TestDetachBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -181,7 +198,7 @@ func TestDetachBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: {
+				BlockHeader: &bc.BlockHeader{
 					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
@@ -192,6 +209,7 @@ func TestDetachBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -204,7 +222,7 @@ func TestDetachBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: {
+				BlockHeader: &bc.BlockHeader{
 					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
@@ -215,6 +233,7 @@ func TestDetachBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
