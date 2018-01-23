@@ -61,7 +61,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 // NewBlockTemplate returns a new block template that is ready to be solved
 func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (b *legacy.Block, err error) {
 	view := state.NewUtxoViewpoint()
-	txEntries := []*bc.Tx{}
+	txEntries := []*bc.Tx{nil}
 	blockWeight := uint64(0)
 	txFee := uint64(0)
 
@@ -131,7 +131,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	if err != nil {
 		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
 	}
-	txEntries = append(txEntries, b.Transactions[0].Tx)
+	txEntries[0] = b.Transactions[0].Tx
 
 	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = bc.MerkleRoot(txEntries)
 	return b, err
