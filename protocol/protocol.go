@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/state"
+	"github.com/bytom/consensus/aihash"
 )
 
 // maxCachedValidatedTxs is the max number of validated txs to cache.
@@ -231,6 +232,24 @@ func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 	return c.store.GetTransactionsUtxo(view, txs)
 }
 
+// This function is inline the setState function
+func (c *Chain) spawnHash128() {
+	var hash128 [128]bc.Hash
+	var start uint64 = 0
+	var point uint64 = 0
+	// Strategy to spawn hash128
+	height := c.state.block.Height
+
+	if height >= 128 {
+		start = height - 128
+	}
+	for i := start..height {
+		hash128[point++] = *(c.state.mainChain[i])
+	}
+
+	aihash.Notify(hash128)
+}
+
 // This function must be called with mu lock in above level
 func (c *Chain) setState(block *legacy.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
 	blockHash := block.Hash()
@@ -243,6 +262,7 @@ func (c *Chain) setState(block *legacy.Block, view *state.UtxoViewpoint, m map[u
 	if err := c.store.SaveChainStatus(block, view, c.state.mainChain); err != nil {
 		return err
 	}
+	c.spawnHash128()
 
 	c.state.cond.Broadcast()
 	return nil
