@@ -65,9 +65,6 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM) error {
 	return txbuilder.Sign(nil, tpl, nil, []string{"password", "password"}, func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
 		sigBytes, err := hsm.XSign(xpub, path, data[:], password)
-		if err != nil {
-			return nil, nil
-		}
 		return sigBytes, err
 	})
 }
