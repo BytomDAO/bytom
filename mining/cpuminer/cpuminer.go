@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/account"
-	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
