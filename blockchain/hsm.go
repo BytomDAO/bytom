@@ -26,18 +26,18 @@ func (bcr *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct 
 }) Response {
 	xpub, err := bcr.hsm.XCreate(in.Alias, in.Password)
 	if err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
-	return resWrapper(xpub)
+	return NewSuccessResponse(xpub)
 }
 
 func (bcr *BlockchainReactor) pseudohsmListKeys(ctx context.Context) Response {
 	xpubs, err := bcr.hsm.ListKeys()
 	if err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(xpubs)
+	return NewSuccessResponse(xpubs)
 }
 
 func (bcr *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
@@ -45,21 +45,21 @@ func (bcr *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 	XPub     chainkd.XPub `json:"xpubs"`
 }) Response {
 	if err := bcr.hsm.XDelete(x.XPub, x.Password); err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
-	return resWrapper(nil)
+	return NewSuccessResponse(nil)
 }
 
 func (bcr *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
-	Password []string             `json:"password"`
+	Password []string           `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
 	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password, bcr.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 	log.Info("Sign Transaction complete.")
-	return resWrapper(&x.Txs)
+	return NewSuccessResponse(&x.Txs)
 }
 
 func (bcr *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {

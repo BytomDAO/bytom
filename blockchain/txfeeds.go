@@ -18,9 +18,9 @@ func (bcr *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
 }) Response {
 	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Add TxFeed Failed")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
-	return resWrapper(nil)
+	return NewSuccessResponse(nil)
 }
 
 func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) ([]byte, error) {
@@ -44,14 +44,14 @@ func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
 	var txfeed interface{}
 	rawTxfeed, err := bcr.getTxFeedByAlias(ctx, in.Alias)
 	if err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 	err = json.Unmarshal(rawTxfeed, &txfeed)
 	if err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 	data := map[string]interface{}{"txfeed": txfeed}
-	return resWrapper(data)
+	return NewSuccessResponse(data)
 }
 
 // POST /delete-transaction-feed
@@ -59,9 +59,9 @@ func (bcr *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) Response {
 	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
-	return resWrapper(nil)
+	return NewSuccessResponse(nil)
 }
 
 // POST /update-transaction-feed
@@ -70,13 +70,13 @@ func (bcr *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
 	Filter string `json:"filter"`
 }) Response {
 	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Update TxFeed Failed")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
-	return resWrapper(nil)
+	return NewSuccessResponse(nil)
 }
 
 // txAfterIsBefore returns true if a is before b. It returns an error if either
@@ -119,8 +119,8 @@ func (bcr *BlockchainReactor) getTxFeeds() ([]txfeed.TxFeed, error) {
 func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context) Response {
 	txFeeds, err := bcr.getTxFeeds()
 	if err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(txFeeds)
+	return NewSuccessResponse(txFeeds)
 }
