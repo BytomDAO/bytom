@@ -44,13 +44,15 @@ func CheckContractArgs(contractName string, args []string, count int, usage stri
 			return false
 		}
 	case "LoanCollateral":
-		if !(len(args) == count+1 || len(args) == count+6) {
-			fmt.Println(usage + " <clauseSelector> (<innerAssetID|alias> <innerAmount> <innerAccountID|alias> <innerProgram> <controlProgram>) [flags]\n")
+		if !(len(args) == count+2 || len(args) == count+6) {
+			fmt.Println(usage + " <clauseSelector> (<innerAssetID|alias> <innerAmount> <innerAccountID|alias> <innerProgram> <controlProgram>) " +
+				"| (<controlProgram>) [flags]\n")
 			return false
 		}
 	case "CallOption":
-		if !(len(args) == count+1 || len(args) == count+8) {
-			fmt.Println(usage + " <clauseSelector> (<innerAssetID|alias> <innerAmount> <innerAccountID|alias> <innerProgram> <rootPub> <path1> <path2>) [flags]\n")
+		if !(len(args) == count+2 || len(args) == count+8) {
+			fmt.Println(usage + " <clauseSelector> (<innerAssetID|alias> <innerAmount> <innerAccountID|alias> <innerProgram> <rootPub> <path1> <path2>) " +
+				"| (<controlProgram>) [flags]\n")
 			return false
 		}
 	default:
@@ -61,7 +63,7 @@ func CheckContractArgs(contractName string, args []string, count int, usage stri
 	return true
 }
 
-func ReconstructTpl(tpl *txbuilder.Template, si *txbuilder.SigningInstruction) *txbuilder.Template {
+func reconstructTpl(tpl *txbuilder.Template, si *txbuilder.SigningInstruction) *txbuilder.Template {
 	length := len(tpl.SigningInstructions)
 	if length <= 0 {
 		length = 1
@@ -74,7 +76,7 @@ func ReconstructTpl(tpl *txbuilder.Template, si *txbuilder.SigningInstruction) *
 	return tpl
 }
 
-func AddPublicKeyWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string) (*txbuilder.Template, error) {
+func addPublicKeyWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string) (*txbuilder.Template, error) {
 	var rootPubKey chainkd.XPub
 	var path []chainjson.HexBytes
 	var totalRoot []chainkd.XPub
@@ -107,12 +109,12 @@ func AddPublicKeyWitness(tpl *txbuilder.Template, rootPub string, path1 string, 
 		return nil, err
 	}
 
-	tpl = ReconstructTpl(tpl, &si)
+	tpl = reconstructTpl(tpl, &si)
 
 	return tpl, nil
 }
 
-func AddMultiSigWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string, rootPub1 string, path11 string, path12 string) (*txbuilder.Template, error) {
+func addMultiSigWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string, rootPub1 string, path11 string, path12 string) (*txbuilder.Template, error) {
 	var rootPubKey chainkd.XPub
 	var firstPath []chainjson.HexBytes
 	var secondPath []chainjson.HexBytes
@@ -170,12 +172,12 @@ func AddMultiSigWitness(tpl *txbuilder.Template, rootPub string, path1 string, p
 		return nil, err
 	}
 
-	tpl = ReconstructTpl(tpl, &si)
+	tpl = reconstructTpl(tpl, &si)
 
 	return tpl, nil
 }
 
-func AddPublicKeyHashWitness(tpl *txbuilder.Template, pubKey string, rootPub string, path1 string, path2 string) (*txbuilder.Template, error) {
+func addPublicKeyHashWitness(tpl *txbuilder.Template, pubKey string, rootPub string, path1 string, path2 string) (*txbuilder.Template, error) {
 	var data []chainjson.HexBytes
 	var rootPubKey chainkd.XPub
 	var path []chainjson.HexBytes
@@ -216,12 +218,12 @@ func AddPublicKeyHashWitness(tpl *txbuilder.Template, pubKey string, rootPub str
 		return nil, err
 	}
 
-	tpl = ReconstructTpl(tpl, &si)
+	tpl = reconstructTpl(tpl, &si)
 
 	return tpl, nil
 }
 
-func AddValueWitness(tpl *txbuilder.Template, value string) (*txbuilder.Template, error) {
+func addValueWitness(tpl *txbuilder.Template, value string) (*txbuilder.Template, error) {
 	var data []chainjson.HexBytes
 	var si txbuilder.SigningInstruction
 
@@ -232,12 +234,12 @@ func AddValueWitness(tpl *txbuilder.Template, value string) (*txbuilder.Template
 	data = append(data, str)
 	si.AddDataWitness(data)
 
-	tpl = ReconstructTpl(tpl, &si)
+	tpl = reconstructTpl(tpl, &si)
 
 	return tpl, nil
 }
 
-func AddPubValueWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string, selector string) (*txbuilder.Template, error) {
+func addPubValueWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string, selector string) (*txbuilder.Template, error) {
 	var data []chainjson.HexBytes
 	var rootPubKey chainkd.XPub
 	var path []chainjson.HexBytes
@@ -278,7 +280,7 @@ func AddPubValueWitness(tpl *txbuilder.Template, rootPub string, path1 string, p
 	data = append(data, str)
 	si.AddDataWitness(data)
 
-	tpl = ReconstructTpl(tpl, &si)
+	tpl = reconstructTpl(tpl, &si)
 
 	return tpl, nil
 }
