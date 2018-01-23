@@ -65,7 +65,7 @@ func GenerateGenesisBlock() *legacy.Block {
 	for {
 		hash := block.Hash()
 		if difficulty.CheckProofOfWork(&hash, block.Bits) {
-			log.Info(block.Nonce)
+			log.WithField("block.Nonce=", block.Nonce).Info()
 			break
 		}
 		block.Nonce++
