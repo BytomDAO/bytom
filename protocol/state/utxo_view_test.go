@@ -17,6 +17,9 @@ func TestApplyBlock(t *testing.T) {
 	}{
 		{
 			block: &bc.Block{
+				BlockHeader: {
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						SpentOutputIDs: []bc.Hash{
@@ -31,6 +34,9 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
+				BlockHeader: {
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						SpentOutputIDs: []bc.Hash{
@@ -48,6 +54,9 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
+				BlockHeader: {
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -74,7 +83,8 @@ func TestApplyBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height: 7,
+					Height:            7,
+					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
@@ -102,7 +112,8 @@ func TestApplyBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height: 0,
+					Height:            0,
+					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
@@ -151,6 +162,9 @@ func TestDetachBlock(t *testing.T) {
 	}{
 		{
 			block: &bc.Block{
+				BlockHeader: {
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -167,6 +181,9 @@ func TestDetachBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
+				BlockHeader: {
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -187,6 +204,9 @@ func TestDetachBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
+				BlockHeader: {
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{

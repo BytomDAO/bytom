@@ -119,7 +119,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			}
 			gasOnlyTx = true
 		}
-		if err := view.ApplyTransaction(bcBlock, tx); err != nil {
+		if err := view.ApplyTransaction(bcBlock, tx, gasOnlyTx); err != nil {
 			log.WithField("error", err).Error("mining block generate skip tx due to")
 			txPool.RemoveTransaction(&tx.ID)
 			continue
