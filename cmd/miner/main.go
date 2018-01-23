@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/bytom/blockchain"
@@ -34,14 +35,9 @@ func doWork(work *blockchain.WorkResp) {
 }
 
 func main() {
-	data, exitCode := util.ClientCall("/get-work")
-	fmt.Printf("data:%v\n", data)
-	if exitCode != util.Success {
-		return
-	}
-
 	var work blockchain.WorkResp
-	if err := work.UnmarshalJSON([]byte(data.(string))); err == nil {
+	client := util.MustRPCClient()
+	if err := client.Call(context.Background(), "/get-work", nil, &work); err == nil {
 		doWork(&work)
 	} else {
 		fmt.Printf("---err:%v\n", err)
