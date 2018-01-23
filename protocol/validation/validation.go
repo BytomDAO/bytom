@@ -210,29 +210,19 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return err
 		}
 
-		for _, bytomInputID := range vs.tx.BytomInputIDs {
-			e, ok := vs.tx.Entries[bytomInputID]
+		for _, BTMInputID := range vs.tx.BTMInputIDs {
+			e, ok := vs.tx.Entries[BTMInputID]
 			if !ok {
-				return errors.Wrapf(bc.ErrMissingEntry, "entry for bytom input %x not found", bytomInputID)
+				return errors.Wrapf(bc.ErrMissingEntry, "entry for bytom input %x not found", BTMInputID)
 			}
 
 			vs2 := *vs
-			vs2.entryID = bytomInputID
+			vs2.entryID = BTMInputID
 			if err := checkValid(&vs2, e); err != nil {
 				return errors.Wrap(err, "checking value source")
 			}
 		}
-		gasVaild := true
-		vs.gasVaild = &gasVaild
 
-		for i, src := range e.Sources {
-			vs2 := *vs
-			vs2.sourcePos = uint64(i)
-			err = checkValidSrc(&vs2, src)
-			if err != nil {
-				return errors.Wrapf(err, "checking mux source %d", i)
-			}
-		}
 		for i, dest := range e.WitnessDestinations {
 			vs2 := *vs
 			vs2.destPos = uint64(i)
@@ -244,6 +234,17 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 
 		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
 			return errNonemptyExtHash
+		}
+		gasVaild := true
+		vs.gasVaild = &gasVaild
+
+		for i, src := range e.Sources {
+			vs2 := *vs
+			vs2.sourcePos = uint64(i)
+			err = checkValidSrc(&vs2, src)
+			if err != nil {
+				return errors.Wrapf(err, "checking mux source %d", i)
+			}
 		}
 
 	case *bc.Nonce:

@@ -194,7 +194,12 @@ func TestDetachBlock(t *testing.T) {
 				},
 			},
 			inputView: NewUtxoViewpoint(),
-			err:       true,
+			fetchView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+				},
+			},
+			err: false,
 		},
 		{
 			block: &bc.Block{
@@ -253,7 +258,7 @@ func TestDetachBlock(t *testing.T) {
 
 	for i, c := range cases {
 		if err := c.inputView.DetachBlock(c.block); c.err != (err != nil) {
-			t.Errorf("want err = %v, get err = %v", c.err, err)
+			t.Errorf("case %d want err = %v, get err = %v", i, c.err, err)
 		}
 		if c.err {
 			continue

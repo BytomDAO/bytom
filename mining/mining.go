@@ -59,26 +59,24 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (*legacy.Block, error) {
-	// Extend the most recently known best block.
-	var err error
-	preBlock := c.BestBlock()
+func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (b *legacy.Block, err error) {
 	view := state.NewUtxoViewpoint()
+	txEntries := []*bc.Tx{}
+	blockWeight := uint64(0)
+	txFee := uint64(0)
 
+	// get preblock info for generate next block
+	preBlock := c.BestBlock()
 	preBcBlock := legacy.MapBlock(preBlock)
 	nextBlockHeight := preBlock.BlockHeader.Height + 1
 	nextBlockSeed := algorithm.CreateSeed(nextBlockHeight, preBcBlock.Seed, []*bc.Hash{&preBcBlock.ID})
-	txDescs := txPool.GetTransactions()
-	txEntries := make([]*bc.Tx, 0, len(txDescs))
-	blockWeight := uint64(0)
-	txFee := uint64(0)
 
 	var compareDiffBH *legacy.BlockHeader
 	if compareDiffBlock, err := c.GetBlockByHeight(nextBlockHeight - consensus.BlocksPerRetarget); err == nil {
 		compareDiffBH = &compareDiffBlock.BlockHeader
 	}
 
-	b := &legacy.Block{
+	b = &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
 			Version:           1,
 			Height:            nextBlockHeight,
@@ -89,29 +87,23 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			BlockCommitment:   legacy.BlockCommitment{},
 			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
 		},
-		Transactions: []*legacy.Tx{},
+		Transactions: []*legacy.Tx{nil},
 	}
-	bcBlock := legacy.MapBlock(b)
+	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
 
-	appendTx := func(tx *legacy.Tx, weight, fee uint64) {
-		b.Transactions = append(b.Transactions, tx)
-		txEntries = append(txEntries, tx.Tx)
-		blockWeight += weight
-		txFee += fee
-	}
-
-	b.Transactions = append(b.Transactions, nil)
-	for _, txDesc := range txDescs {
+	for _, txDesc := range txPool.GetTransactions() {
 		tx := txDesc.Tx.Tx
+		gasOnlyTx := false
 		if blockWeight+txDesc.Weight > consensus.MaxBlockSzie-consensus.MaxTxSize {
 			break
 		}
+
 		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
 			log.WithField("error", err).Error("mining block generate skip tx due to")
 			txPool.RemoveTransaction(&tx.ID)
 			continue
 		}
-		gasOnlyTx := false
+
 		if _, gasVaild, err := validation.ValidateTx(tx, preBcBlock); err != nil {
 			if !gasVaild {
 				log.WithField("error", err).Error("mining block generate skip tx due to")
@@ -120,6 +112,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			}
 			gasOnlyTx = true
 		}
+
 		if err := view.ApplyTransaction(bcBlock, tx, gasOnlyTx); err != nil {
 			log.WithField("error", err).Error("mining block generate skip tx due to")
 			txPool.RemoveTransaction(&tx.ID)
@@ -127,20 +120,19 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		}
 
 		b.BlockHeader.TransactionStatus.SetStatus(len(b.Transactions), gasOnlyTx)
-		appendTx(txDesc.Tx, txDesc.Weight, txDesc.Fee)
+		b.Transactions = append(b.Transactions, txDesc.Tx)
+		txEntries = append(txEntries, tx)
+		blockWeight += txDesc.Weight
+		txFee += txDesc.Fee
 	}
 
-	cbTx, err := createCoinbaseTx(accountManager, txFee, nextBlockHeight)
+	// creater coinbase transaction
+	b.Transactions[0], err = createCoinbaseTx(accountManager, txFee, nextBlockHeight)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
 	}
-	b.Transactions[0] = cbTx
-	txEntries = append(txEntries, cbTx.Tx)
+	txEntries = append(txEntries, b.Transactions[0].Tx)
 
 	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = bc.MerkleRoot(txEntries)
-	if err != nil {
-		return nil, errors.Wrap(err, "calculating tx merkle root")
-	}
-
-	return b, nil
+	return b, err
 }

@@ -44,8 +44,8 @@ func MapTx(oldTx *TxData) *bc.Tx {
 			spentOutputIDs[*e.SpentOutputId] = true
 			ord = e.Ordinal
 			// resume below after the switch
-			if e.WitnessDestination.Value.GetAssetId() == consensus.BTMAssetID {
-				tx.BytomInputIDs = append(tx.BytomInputIDs, id)
+			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
+				tx.BTMInputIDs = append(tx.BTMInputIDs, id)
 			}
 
 		case *bc.Coinbase:
