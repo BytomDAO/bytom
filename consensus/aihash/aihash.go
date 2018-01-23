@@ -7,38 +7,31 @@ import (
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"golang.org/x/crypto/sha3"
 )
 
-func InitMiningData(height uint64, blockHashs []*bc.Hash) (md MiningData) {
-	if height < 128 {
-		sha256 := makeHasher(sha3.New256())
-		seed := make([]byte, 32)
-		sha256(md.seed, seed)
-	} else {
-		md.generateSeed(blockHashs)
-	}
+func InitMiningData(hash128 [128]*bc.Hash) *MiningData {
+	var blockHashs []*bc.Hash = hash128[:]
 
-	log.WithFields(log.Fields{
-		"height": height,
-		"seed":   hex.EncodeToString(md.seed),
-	}).Debug("Created new seed.")
+	var md MiningData
+	md.generateSeed(blockHashs)
+
+	log.Printf("Created new seed:%v", hex.EncodeToString(Md.seed))
 
 	md.generateCache()
 
-	return
+	return &md
 }
 
-func AIHash(header *bc.Hash, md MiningData) (*bc.Hash, error) {
+func AIHash(header *bc.Hash, cache []uint32) (*bc.Hash, error) {
 	if header == nil {
 		return nil, errors.New("BlockHeader Hash is invalid or not exist!")
 	}
 
-	if md.cache == nil {
+	if cache == nil {
 		return nil, errors.New("Mining data is invalid: cache is nil!")
 	}
 
-	result := mulMatrix(md.cache, header.Bytes())
+	result := mulMatrix(cache, header.Bytes())
 
 	hash := hashMatrix(result)
 

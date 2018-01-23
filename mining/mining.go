@@ -20,6 +20,7 @@ import (
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/bytom/consensus/aihash"
 )
 
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
@@ -62,7 +63,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	preBcBlock := legacy.MapBlock(preBlock)
 	nextBlockHeight := preBlock.BlockHeader.Height + 1
-	nextBlockSeed := aihash.CreateSeed(nextBlockHeight, preBcBlock.Seed, []*bc.Hash{&preBcBlock.ID})
+	nextBlockSeed := bc.BytesToHash(aihash.Md.GetSeed())
 	txDescs := txPool.GetTransactions()
 	txEntries := make([]*bc.Tx, 0, len(txDescs))
 	blockWeight := uint64(0)
@@ -78,7 +79,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			Version:           1,
 			Height:            nextBlockHeight,
 			PreviousBlockHash: preBlock.Hash(),
-			Seed:              *nextBlockSeed,
+			Seed:              nextBlockSeed,
 			TimestampMS:       bc.Millis(time.Now()),
 			BlockCommitment:   legacy.BlockCommitment{},
 			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),

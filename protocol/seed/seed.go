@@ -1,9 +1,10 @@
 package seed
 
 import (
+	"github.com/golang/groupcache/lru"
+
 	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/protocol/bc"
-	"github.com/golang/groupcache/lru"
 )
 
 const maxCached = 2
@@ -23,11 +24,8 @@ func (s *SeedCaches) Get(seed *bc.Hash) ([]uint32, error) {
 		return v.([]uint32), nil
 	}
 
-	cache, err := aihash.GenerateCache(seed)
-	if err != nil {
-		return nil, err
-	}
+	md := aihash.Md
 
-	s.cache.Add(seed, cache)
-	return cache, nil
+	s.cache.Add(seed, md.GetCache())
+	return md.GetCache(), nil
 }

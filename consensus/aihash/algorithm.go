@@ -40,6 +40,14 @@ func makeHasher(h hash.Hash) hasher {
 	}
 }
 
+func (md *MiningData) GetSeed() []byte {
+	return md.seed
+}
+
+func (md *MiningData) GetCache() []uint32 {
+	return md.cache
+}
+
 // generateSeed is the seed to use for generating a verification cache.
 func (md *MiningData) generateSeed(blockHashs []*bc.Hash) {
 	seed := make([]byte, 32)

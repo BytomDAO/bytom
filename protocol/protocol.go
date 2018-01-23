@@ -234,8 +234,9 @@ func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 
 // This function is inline the setState function
 func (c *Chain) spawnHash128() {
-	var hash128 [128]bc.Hash
-	var start, point uint64 = 0
+	var hash128 [128]*bc.Hash
+	var start uint64 = 0
+	var point uint64 = 0
 	// Strategy to spawn hash128
 	height := c.state.block.Height
 
@@ -243,7 +244,7 @@ func (c *Chain) spawnHash128() {
 		start = height - 128
 	}
 	for i := start; i < height; i = i + 1 {
-		hash128[point] = *(c.state.mainChain[i])
+		hash128[point] = (c.state.mainChain[i])
 		point = point + 1
 	}
 
@@ -262,7 +263,9 @@ func (c *Chain) setState(block *legacy.Block, view *state.UtxoViewpoint, m map[u
 	if err := c.store.SaveChainStatus(block, view, c.state.mainChain); err != nil {
 		return err
 	}
-	c.spawnHash128()
+	if c.state.block.Height % 128 == 0 {
+		c.spawnHash128()
+	}
 
 	c.state.cond.Broadcast()
 	return nil

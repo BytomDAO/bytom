@@ -4,14 +4,17 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
-var Hash128 = make(chan [128]bc.Hash)
+var (
+	Hash128 = make(chan [128]*bc.Hash)
+	Md *MiningData
+)
 
-func Observer() [128]bc.Hash {
+func Observer() {
 	hash128 := <-Hash128
 
-	return hash128
+	Md = InitMiningData(hash128)
 }
 
-func Notify(hash [128]bc.Hash) {
+func Notify(hash [128]*bc.Hash) {
 	Hash128 <- hash
 }
