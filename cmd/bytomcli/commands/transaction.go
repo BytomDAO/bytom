@@ -252,7 +252,7 @@ var signSubTransactionCmd = &cobra.Command{
 	Short: "Sign and Submit transaction templates with account password",
 	Args:  cobra.ExactArgs(1),
 	PreRun: func(cmd *cobra.Command, args []string) {
-		// cmd.MarkFlagRequired("password")
+		cmd.MarkFlagRequired("password")
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		template := txbuilder.Template{}
@@ -264,9 +264,9 @@ var signSubTransactionCmd = &cobra.Command{
 		}
 
 		var req = struct {
-			Auth string
-			Txs  txbuilder.Template `json:"transaction"`
-		}{Auth: "123456", Txs: template}
+			Password []string           `json:"password"`
+			Txs      txbuilder.Template `json:"transaction"`
+		}{Password: password, Txs: template}
 
 		jww.FEEDBACK.Printf("\n\n")
 		data, exitCode := util.ClientCall("/sign-submit-transaction", &req)
