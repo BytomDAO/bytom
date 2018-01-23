@@ -94,7 +94,7 @@ var buildInlineProgReqFmtByAlias = `
 	]}`
 
 // BuildContractTransaction generate the template contract transaction actions for buildTransaction
-func BuildContractTransaction(args []string, minArgsCount int, alias bool, btmGas string) (string, error) {
+func BuildContractTransaction(contractName string, args []string, minArgsCount int, alias bool, btmGas string) (string, error) {
 	var buildReqStr string
 	var selector string
 	var innerAssetInfo string
@@ -106,17 +106,16 @@ func BuildContractTransaction(args []string, minArgsCount int, alias bool, btmGa
 	var err error
 	const emptyStr = ""
 
-	if len(args) < 5 {
+	if len(args) < minArgsCount {
 		buf = fmt.Sprintf("the number of basic arguments[%d] is less than requirements[%d]", len(args), minArgsCount)
 		err = errors.New(buf)
 		return emptyStr, err
 	}
 
-	contractName := args[0]
-	outputID := args[1]
-	accountInfo := args[2]
-	assetInfo := args[3]
-	amount := args[4]
+	outputID := args[0]
+	accountInfo := args[1]
+	assetInfo := args[2]
+	amount := args[3]
 
 	switch contractName {
 	case "LockWithPublicKey":
