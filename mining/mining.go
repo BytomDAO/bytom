@@ -89,17 +89,18 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			BlockCommitment:   legacy.BlockCommitment{},
 			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
 		},
-		Transactions: []*legacy.Tx{nil},
+		Transactions: []*legacy.Tx{},
 	}
+	bcBlock := legacy.MapBlock(b)
 
 	appendTx := func(tx *legacy.Tx, weight, fee uint64) {
-		b.Transactions = append([]*legacy.Tx{tx}, b.Transactions...)
+		b.Transactions = append(b.Transactions, tx)
 		txEntries = append(txEntries, tx.Tx)
 		blockWeight += weight
 		txFee += fee
 	}
 
-	bcBlock := legacy.MapBlock(b)
+	b.Transactions = append(b.Transactions, nil)
 	for _, txDesc := range txDescs {
 		tx := txDesc.Tx.Tx
 		if blockWeight+txDesc.Weight > consensus.MaxBlockSzie-consensus.MaxTxSize {
@@ -134,6 +135,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
 	}
 	b.Transactions[0] = cbTx
+	txEntries = append(txEntries, cbTx.Tx)
 
 	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = bc.MerkleRoot(txEntries)
 	if err != nil {

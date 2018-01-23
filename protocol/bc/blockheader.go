@@ -16,6 +16,7 @@ func (bh *BlockHeader) writeForHash(w io.Writer) {
 	mustWriteForHash(w, bh.AssetsRoot)
 	mustWriteForHash(w, bh.Nonce)
 	mustWriteForHash(w, bh.Bits)
+	mustWriteForHash(w, bh.TransactionStatus)
 }
 
 // NewBlockHeader creates a new BlockHeader and populates
