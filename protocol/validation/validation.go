@@ -4,13 +4,13 @@ import (
 	"fmt"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/vm"
-	"github.com/bytom/consensus/aihash"
 )
 
 const (

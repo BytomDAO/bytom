@@ -6,7 +6,7 @@ import (
 
 var (
 	Hash128 = make(chan [128]*bc.Hash)
-	Md *MiningData
+	Md      *MiningData
 )
 
 func Observer() {
