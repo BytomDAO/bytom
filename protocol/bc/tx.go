@@ -15,7 +15,7 @@ type Tx struct {
 	// IDs of reachable entries of various kinds
 	NonceIDs       []Hash
 	SpentOutputIDs []Hash
-	BTMInputIDs    []Hash
+	GasInputIDs    []Hash
 }
 
 func (tx *Tx) SigHash(n uint32) (hash Hash) {

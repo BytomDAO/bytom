@@ -210,7 +210,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return err
 		}
 
-		for _, BTMInputID := range vs.tx.BTMInputIDs {
+		for _, BTMInputID := range vs.tx.GasInputIDs {
 			e, ok := vs.tx.Entries[BTMInputID]
 			if !ok {
 				return errors.Wrapf(bc.ErrMissingEntry, "entry for bytom input %x not found", BTMInputID)

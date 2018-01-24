@@ -45,7 +45,7 @@ func MapTx(oldTx *TxData) *bc.Tx {
 			ord = e.Ordinal
 			// resume below after the switch
 			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
-				tx.BTMInputIDs = append(tx.BTMInputIDs, id)
+				tx.GasInputIDs = append(tx.GasInputIDs, id)
 			}
 
 		case *bc.Coinbase:
