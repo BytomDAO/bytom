@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
@@ -56,24 +57,32 @@ func GenerateGenesisBlock() *legacy.Block {
 		BlockHeader: legacy.BlockHeader{
 			Version:     1,
 			Height:      0,
-			Nonce:       1267808,
+			Nonce:       0,
 			Seed:        bc.BytesToHash(aihash.Md.GetSeed()),
 			TimestampMS: 1511318565142,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 			},
-			Bits: 2161727821138738707,
+			Bits: 99900000,
 		},
 		Transactions: []*legacy.Tx{genesisCoinbaseTx},
 	}
 
+	fmt.Printf("1----------block:%v\n", block)
 	for {
 		hash := block.Hash()
-		if difficulty.CheckProofOfWork(&hash, block.Bits) {
+		proofHash, err := aihash.AIHash(&hash, aihash.Md.GetCache())
+		if err != nil {
+			log.Panicf("Fatal AIHash")
+		}
+
+		if difficulty.CheckProofOfWork(proofHash, block.Bits) {
+			fmt.Printf("Nonce----------nonce:%v\n", block.Nonce)
 			log.Info(block.Nonce)
 			break
 		}
 		block.Nonce++
 	}
+	fmt.Printf("2----------block:%v\n", block)
 	return block
 }

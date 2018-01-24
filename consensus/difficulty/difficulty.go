@@ -3,6 +3,7 @@ package difficulty
 // HashToBig converts a *bc.Hash into a big.Int that can be used to
 import (
 	"math/big"
+	"fmt"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
@@ -15,6 +16,15 @@ func HashToBig(hash *bc.Hash) *big.Int {
 	blen := len(buf)
 	for i := 0; i < blen/2; i++ {
 		buf[i], buf[blen-1-i] = buf[blen-1-i], buf[i]
+	}
+
+	return new(big.Int).SetBytes(buf[:])
+}
+
+func MaxHashBig() *big.Int {
+	var buf [32]byte
+	for i := 0; i < 32; i++ {
+		buf[i] = 255
 	}
 
 	return new(big.Int).SetBytes(buf[:])
@@ -50,6 +60,8 @@ func CompactToBig(compact uint64) *big.Int {
 		bn = bn.Neg(bn)
 	}
 
+	bn.Add(MaxHashBig(), bn.Neg(bn))
+
 	return bn
 }
 
@@ -84,6 +96,7 @@ func BigToCompact(n *big.Int) uint64 {
 
 // CheckProofOfWork the hash is vaild for given difficult
 func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
+	fmt.Printf("hash bigint:%v, bits bigint:%v\n", HashToBig(hash), CompactToBig(bits))
 	// return true
 	return HashToBig(hash).Cmp(CompactToBig(bits)) <= 0
 }
