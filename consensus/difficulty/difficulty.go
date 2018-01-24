@@ -121,7 +121,6 @@ func CalcWork(bits uint64) *big.Int {
 // CheckProofOfWork the hash is vaild for given difficult
 func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
 	fmt.Printf("hash bigint:%v, bits bigint:%v\n", HashToBig(hash), CalcWork(bits))
-	// return true
 	return HashToBig(hash).Cmp(CalcWork(bits)) <= 0
 }
 
