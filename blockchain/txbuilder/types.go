@@ -3,6 +3,7 @@ package txbuilder
 import (
 	"context"
 
+	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -39,4 +40,11 @@ type Action interface {
 type Receiver struct {
 	ControlProgram chainjson.HexBytes `json:"control_program,omitempty"`
 	Address        string             `json:"address,omitempty"`
+}
+
+// AccountPubkey is structure of account pubkey
+type AccountPubkey struct {
+	Root   chainkd.XPub `json:"root_xpub"`
+	Pubkey string       `json:"pubkey"`
+	Path   []string     `json:"pubkey_derivation_path"`
 }

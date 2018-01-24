@@ -49,6 +49,7 @@ type UTXO struct {
 	AccountID           string
 	Address             string
 	ControlProgramIndex uint64
+	ExtContractTag      bool
 }
 
 func (u *UTXO) source() source {
@@ -308,6 +309,11 @@ func (sr *sourceReserver) reserveFromCache(rid uint64, amount uint64) ([]*UTXO, 
 		// the state tree.
 		if !sr.validFn(u) {
 			delete(sr.cached, o)
+			continue
+		}
+
+		// If the contract is a custom contract, skip it.
+		if u.ExtContractTag {
 			continue
 		}
 
