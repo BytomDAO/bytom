@@ -2,8 +2,8 @@ package difficulty
 
 // HashToBig converts a *bc.Hash into a big.Int that can be used to
 import (
-	"math/big"
 	"fmt"
+	"math/big"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
