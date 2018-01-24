@@ -181,17 +181,3 @@ func (bcr *BlockchainReactor) gasRate() Response {
 	gasrate := map[string]int64{"gasRate": validation.GasRate}
 	return NewSuccessResponse(gasrate)
 }
-
-// wrapper json for response
-// Deprecated: We should use Response factor to create response
-func resWrapper(data interface{}, errWrapper ...error) Response {
-	var response Response
-
-	if errWrapper != nil {
-		response = Response{Status: FAIL, Msg: errWrapper[0].Error()}
-	} else {
-		response = Response{Status: SUCCESS, Data: data}
-	}
-
-	return response
-}

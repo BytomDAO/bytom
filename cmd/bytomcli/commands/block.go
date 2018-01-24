@@ -4,9 +4,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/bytom/util"
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+	"github.com/bytom/util"
 )
 
 var blockHashCmd = &cobra.Command{

@@ -18,10 +18,10 @@ func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
 	accounts, err := bcr.accounts.ListAccounts(filter.ID)
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(accounts)
+	return NewSuccessResponse(accounts)
 }
 
 // POST /list-assets
@@ -31,10 +31,10 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
 	assets, err := bcr.assets.ListAssets(filter.ID)
 	if err != nil {
 		log.Errorf("listAssets: %v", err)
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(assets)
+	return NewSuccessResponse(assets)
 }
 
 // POST /listBalances
@@ -42,10 +42,10 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
 	accountUTXOs, err := bcr.wallet.GetAccountUTXOs("")
 	if err != nil {
 		log.Errorf("GetAccountUTXOs: %v", err)
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(bcr.indexBalances(accountUTXOs))
+	return NewSuccessResponse(bcr.indexBalances(accountUTXOs))
 }
 
 type accountBalance struct {
@@ -121,14 +121,14 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struc
 
 	if err != nil {
 		log.Errorf("listTransactions: %v", err)
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	if filter.Detail == false {
 		txSummary := bcr.wallet.GetTransactionsSummary(transactions)
-		return resWrapper(txSummary)
+		return NewSuccessResponse(txSummary)
 	}
-	return resWrapper(transactions)
+	return NewSuccessResponse(transactions)
 }
 
 type annotatedUTXO struct {
@@ -156,7 +156,7 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 	accountUTXOs, err := bcr.wallet.GetAccountUTXOs(filter.ID)
 	if err != nil {
 		log.Errorf("list Unspent Outputs: %v", err)
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	for _, utxo := range accountUTXOs {
@@ -177,5 +177,5 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 		UTXOs = append(UTXOs, tmpUTXO)
 	}
 
-	return resWrapper(UTXOs)
+	return NewSuccessResponse(UTXOs)
 }

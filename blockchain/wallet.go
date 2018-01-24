@@ -1,13 +1,14 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 
-	"bytes"
+	"github.com/tendermint/go-wire/data/base58"
+
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
-	"github.com/tendermint/go-wire/data/base58"
 )
 
 type KeyImportParams struct {

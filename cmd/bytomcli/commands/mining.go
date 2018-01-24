@@ -3,8 +3,8 @@ package commands
 import (
 	"os"
 
-	"github.com/bytom/util"
 	"github.com/spf13/cobra"
+	"github.com/bytom/util"
 )
 
 var isMiningCmd = &cobra.Command{
