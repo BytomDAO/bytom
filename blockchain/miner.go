@@ -6,23 +6,24 @@ import (
 )
 
 // Get the parameters of mining
-func (bcr *BlockchainReactor) getWork() Response {
-	var resp workResp
+func (bcr *BlockchainReactor) getWork() *WorkResp {
+	var resp WorkResp
 	if block, err := mining.NewBlockTemplate(bcr.chain, bcr.txPool, bcr.accounts); err != nil {
-		return NewErrorResponse(err)
+		return nil
 	} else {
 		resp.Header = block.BlockHeader
 	}
 	seedCaches := bcr.chain.SeedCaches()
 	if seedCache, err := seedCaches.Get(&resp.Header.Seed); err != nil {
-		return NewErrorResponse(err)
+		return nil
 	} else {
-		resp.cache = seedCache
+		resp.Cache = seedCache
 	}
-	return NewSuccessResponse(resp)
+
+	return &resp
 }
 
-type workResp struct {
-	Header legacy.BlockHeader `json:"header"`
-	cache  []uint32       `json:"cache"`
+type WorkResp struct {
+	Header legacy.BlockHeader
+	Cache  []uint32
 }
