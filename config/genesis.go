@@ -63,7 +63,7 @@ func GenerateGenesisBlock() *legacy.Block {
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 			},
-			Bits: 99900000,
+			Bits: 100000000,
 		},
 		Transactions: []*legacy.Tx{genesisCoinbaseTx},
 	}
