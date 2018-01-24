@@ -263,7 +263,7 @@ func (c *Chain) setState(block *legacy.Block, view *state.UtxoViewpoint, m map[u
 	if err := c.store.SaveChainStatus(block, view, c.state.mainChain); err != nil {
 		return err
 	}
-	if c.state.block.Height % 128 == 0 {
+	if c.state.block.Height != 0 && c.state.block.Height % 128 == 0 {
 		c.spawnHash128()
 	}
 
