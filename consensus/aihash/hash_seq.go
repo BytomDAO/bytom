@@ -12,7 +12,7 @@ var (
 func Observer() {
 	//hash128 := <-Hash128
 
-//	Md = InitMiningData(hash128)
+	//	Md = InitMiningData(hash128)
 }
 
 func Notify(hash128 [128]*bc.Hash) {
