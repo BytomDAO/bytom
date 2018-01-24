@@ -8,11 +8,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/blockchain/contract"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol/bc/legacy"
+	"strconv"
 )
 
 var defaultTxTTL = 5 * time.Minute
@@ -55,13 +57,13 @@ func MergeActions(req *BuildRequest) []map[string]interface{} {
 		}
 
 		actionKey := m["asset_id"].(string) + m["account_id"].(string)
-		amountNumber := m["amount"].(json.Number)
-		amount, _ := amountNumber.Int64()
+		amountStr := fmt.Sprintf("%v", m["amount"])
+		amount, _ := strconv.ParseInt(amountStr, 10, 64)
 
 		if tmpM, ok := actionMap[actionKey]; ok {
-			tmpNumber, _ := tmpM["amount"].(json.Number)
-			tmpAmount, _ := tmpNumber.Int64()
-			tmpM["amount"] = json.Number(fmt.Sprintf("%v", tmpAmount+amount))
+			tmpAmountStr := fmt.Sprintf("%v", tmpM["amount"])
+			tmpAmount, _ := strconv.ParseInt(tmpAmountStr, 10, 64)
+			tmpM["amount"] = tmpAmount + amount
 		} else {
 			actionMap[actionKey] = m
 			actions = append(actions, m)
@@ -134,6 +136,45 @@ func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
 	tmpl, err := bcr.buildSingle(subctx, buildReqs)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	return NewSuccessResponse(tmpl)
+}
+
+// POST /build-contract-transaction
+func (bcr *BlockchainReactor) buildContractTX(ctx context.Context, req struct {
+	ContractName string   `json:"contract_name"`
+	Arguments    []string `json:"arguments"`
+	MinCount     int      `json:"min_count"`
+	Alias        bool     `json:"alias"`
+	BtmGas       string   `json:"btm_gas"`
+}) Response {
+	buildReqStr, err := contract.BuildContractTransaction(req.ContractName, req.Arguments, req.MinCount, req.Alias, req.BtmGas)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	var buildReq BuildRequest
+	if err := json.Unmarshal([]byte(buildReqStr), &buildReq); err != nil {
+		return NewErrorResponse(err)
+	}
+
+	subctx := reqid.NewSubContext(ctx, reqid.New())
+	tmpl, err := bcr.buildSingle(subctx, &buildReq)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	var contractArgs []string
+	count := req.MinCount
+	for count < len(req.Arguments) {
+		contractArgs = append(contractArgs, req.Arguments[count])
+		count++
+	}
+
+	tmpl, err = contract.AddContractArguments(tmpl, req.ContractName, contractArgs)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

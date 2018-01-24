@@ -3,6 +3,7 @@ package blockchain
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -79,8 +80,8 @@ func TestMergeActions(t *testing.T) {
 			actionType := a["type"].(string)
 			assetID := a["asset_id"].(string)
 			if actionType == "spend_account" {
-				amountNumber := a["amount"].(json.Number)
-				amount, _ := amountNumber.Int64()
+				amountStr := fmt.Sprintf("%v", a["amount"])
+				amount, _ := strconv.ParseInt(amountStr, 10, 64)
 
 				switch assetID {
 				case "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff":

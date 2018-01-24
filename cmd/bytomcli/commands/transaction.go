@@ -9,8 +9,8 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/bytom/blockchain"
+	"github.com/bytom/blockchain/contract"
 	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/contract"
 	"github.com/bytom/util"
 )
 
@@ -216,32 +216,34 @@ var buildContractTransactionCmd = &cobra.Command{
 		cmd.MarkFlagRequired("contract-name")
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		var buildReqStr string
-		var err error
-
 		minArgsCount := 4
 		usage := "Usage:\n  bytomcli build-contract-transaction <outputID> <accountID|alias> <assetID|alias> <amount> -c <contractName>"
-
 		if ok := contract.CheckContractArgs(contractName, args, minArgsCount, usage); !ok {
 			os.Exit(util.ErrLocalExe)
 		}
 
-		buildReqStr, err = contract.BuildContractTransaction(contractName, args, minArgsCount, alias, btmGas)
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(util.ErrLocalExe)
+		var req = struct {
+			ContractName string   `json:"contract_name"`
+			Arguments    []string `json:"arguments"`
+			MinCount     int      `json:"min_count"`
+			Alias        bool     `json:"alias"`
+			BtmGas       string   `json:"btm_gas"`
+		}{
+			ContractName: contractName,
+			Arguments:    args,
+			MinCount:     minArgsCount,
+			Alias:        alias,
+			BtmGas:       btmGas,
 		}
-		fmt.Println("buildReqStr", buildReqStr)
 
-		var buildReq blockchain.BuildRequest
-		if err := json.Unmarshal([]byte(buildReqStr), &buildReq); err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(util.ErrLocalExe)
-		}
-
-		data, exitCode := util.ClientCall("/build-transaction", &buildReq)
+		data, exitCode := util.ClientCall("/build-contract-transaction", &req)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
+		}
+
+		if pretty {
+			printJSON(data)
+			return
 		}
 
 		dataMap, ok := data.(map[string]interface{})
@@ -256,34 +258,7 @@ var buildContractTransactionCmd = &cobra.Command{
 			os.Exit(util.ErrLocalParse)
 		}
 
-		/********************add arguments for contract*********************/
-		var tpl *txbuilder.Template
-		err = json.Unmarshal(rawTemplate, &tpl)
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(util.ErrLocalParse)
-		}
-
-		var contractArgs []string
-		count := minArgsCount
-		for count < len(args) {
-			contractArgs = append(contractArgs, args[count])
-			count++
-		}
-
-		tpl, err = contract.AddContractArguments(tpl, contractName, contractArgs)
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(util.ErrLocalParse)
-		}
-
-		addWitnessTemplate, err := json.Marshal(tpl)
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(util.ErrLocalParse)
-		}
-
-		jww.FEEDBACK.Printf("\ntxbuilder.Template: \n%s\n", string(addWitnessTemplate))
+		jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, string(rawTemplate))
 	},
 }
 

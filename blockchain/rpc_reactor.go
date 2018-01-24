@@ -79,6 +79,7 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/", alwaysError(errors.New("not Found")))
 
 	m.Handle("/build-transaction", jsonHandler(bcr.build))
+	m.Handle("/build-contract-transaction", jsonHandler(bcr.buildContractTX))
 	m.Handle("/sign-transaction", jsonHandler(bcr.pseudohsmSignTemplates))
 	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
 	m.Handle("/sign-submit-transaction", jsonHandler(bcr.signSubmit))
