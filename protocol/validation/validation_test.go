@@ -117,7 +117,7 @@ func TestGasStatus(t *testing.T) {
 		if err != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)
 		} else if *c.input != *c.output {
-			t.Errorf("got gasStatus %s, want %s;", c.input, c.output)
+			t.Errorf("got gasStatus %v, want %v;", c.input, c.output)
 		}
 	}
 }
@@ -444,7 +444,7 @@ func TestValidateBlock(t *testing.T) {
 	for _, c := range cases {
 		txRoot, err := bc.MerkleRoot(c.block.Transactions)
 		if err != nil {
-			t.Errorf("computing transaction merkle root", err)
+			t.Errorf("computing transaction merkle root error: %v", err)
 			continue
 		}
 		c.block.TransactionsRoot = &txRoot
