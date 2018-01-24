@@ -270,10 +270,10 @@ func TestCacheFind(t *testing.T) {
 			},
 		},
 		// no match error
-		{Query: nomatchKey, WantError: ErrNoKey},
-		{Query: XPub{File: nomatchKey.File}, WantError: ErrNoKey},
-		{Query: XPub{File: filepath.Base(nomatchKey.File)}, WantError: ErrNoKey},
-		{Query: XPub{XPub: nomatchKey.XPub}, WantError: ErrNoKey},
+		{Query: nomatchKey, WantError: ErrLoadKey},
+		{Query: XPub{File: nomatchKey.File}, WantError: ErrLoadKey},
+		{Query: XPub{File: filepath.Base(nomatchKey.File)}, WantError: ErrLoadKey},
+		{Query: XPub{XPub: nomatchKey.XPub}, WantError: ErrLoadKey},
 	}
 	for i, test := range tests {
 		a, err := cache.find(test.Query)

@@ -1,26 +1,26 @@
 package chainkd
 
 import (
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha512"
-	"encoding/binary"
-	"hash"
 	"io"
 
 	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/crypto/ed25519/internal/edwards25519"
+	"github.com/bytom/crypto/ed25519/ecmath"
 )
 
 type (
-	// TODO(bobg): consider making these types opaque. See https://github.com/chain/chain/pull/1875#discussion_r80577736
+	//XPrv external private key
 	XPrv [64]byte
+	//XPub external public key
 	XPub [64]byte
 )
 
 var one = [32]byte{1}
 
-// NewXPrv takes a source of random bytes and produces a new XPrv. If
-// r is nil, crypto/rand.Reader is used.
+// NewXPrv takes a source of random bytes and produces a new XPrv.
+// If r is nil, crypto/rand.Reader is used.
 func NewXPrv(r io.Reader) (xprv XPrv, err error) {
 	if r == nil {
 		r = rand.Reader
@@ -30,89 +30,186 @@ func NewXPrv(r io.Reader) (xprv XPrv, err error) {
 	if err != nil {
 		return xprv, err
 	}
-	hasher := sha512.New()
-	hasher.Write([]byte("Bytom seed"))
-	hasher.Write(entropy[:])
-	hasher.Sum(xprv[:0])
-	modifyScalar(xprv[:32])
-	return xprv, nil
+	return RootXPrv(entropy[:]), nil
 }
 
-func (xprv XPrv) XPub() XPub {
-	var buf [32]byte
-	copy(buf[:], xprv[:32])
+// RootXPrv takes a seed binary string and produces a new xprv.
+func RootXPrv(seed []byte) (xprv XPrv) {
+	h := hmac.New(sha512.New, []byte{'R', 'o', 'o', 't'})
+	h.Write(seed)
+	h.Sum(xprv[:0])
+	pruneRootScalar(xprv[:32])
+	return
+}
 
-	var P edwards25519.ExtendedGroupElement
-	edwards25519.GeScalarMultBase(&P, &buf)
-	P.ToBytes(&buf)
+// XPub derives an extended public key from a given xprv.
+func (xprv XPrv) XPub() (xpub XPub) {
+	var scalar ecmath.Scalar
+	copy(scalar[:], xprv[:32])
 
-	var xpub XPub
+	var P ecmath.Point
+	P.ScMulBase(&scalar)
+	buf := P.Encode()
+
 	copy(xpub[:32], buf[:])
 	copy(xpub[32:], xprv[32:])
 
-	return xpub
+	return
 }
 
-func (xprv XPrv) Child(sel []byte, hardened bool) (res XPrv) {
+// Child derives a child xprv based on `selector` string and `hardened` flag.
+// If `hardened` is false, child xpub can be derived independently
+// from the parent xpub without using the parent xprv.
+// If `hardened` is true, child key can only be derived from the parent xprv.
+func (xprv XPrv) Child(sel []byte, hardened bool) XPrv {
 	if hardened {
-		hashKeySaltSelector(res[:], 0, xprv[:32], xprv[32:], sel)
-		return res
+		return xprv.hardenedChild(sel)
 	}
-
-	var s [32]byte
-	copy(s[:], xprv[:32])
-	var P edwards25519.ExtendedGroupElement
-	edwards25519.GeScalarMultBase(&P, &s)
-
-	var pubkey [32]byte
-	P.ToBytes(&pubkey)
-
-	hashKeySaltSelector(res[:], 1, pubkey[:], xprv[32:], sel)
-
-	var (
-		f  [32]byte
-		s2 [32]byte
-	)
-	copy(f[:], res[:32])
-	edwards25519.ScMulAdd(&s2, &one, &f, &s)
-	copy(res[:32], s2[:])
-
-	return res
+	return xprv.nonhardenedChild(sel)
 }
 
+func (xprv XPrv) hardenedChild(sel []byte) (res XPrv) {
+	h := hmac.New(sha512.New, xprv[32:])
+	h.Write([]byte{'H'})
+	h.Write(xprv[:32])
+	h.Write(sel)
+	h.Sum(res[:0])
+	pruneRootScalar(res[:32])
+	return
+}
+
+func (xprv XPrv) nonhardenedChild(sel []byte) (res XPrv) {
+	xpub := xprv.XPub()
+
+	h := hmac.New(sha512.New, xpub[32:])
+	h.Write([]byte{'N'})
+	h.Write(xpub[:32])
+	h.Write(sel)
+	h.Sum(res[:0])
+
+	pruneIntermediateScalar(res[:32])
+
+	// Unrolled the following loop:
+	// var carry int
+	// carry = 0
+	// for i := 0; i < 32; i++ {
+	//         sum := int(xprv[i]) + int(res[i]) + carry
+	//         res[i] = byte(sum & 0xff)
+	//         carry = (sum >> 8)
+	// }
+
+	sum := int(0)
+
+	sum = int(xprv[0]) + int(res[0]) + (sum >> 8)
+	res[0] = byte(sum & 0xff)
+	sum = int(xprv[1]) + int(res[1]) + (sum >> 8)
+	res[1] = byte(sum & 0xff)
+	sum = int(xprv[2]) + int(res[2]) + (sum >> 8)
+	res[2] = byte(sum & 0xff)
+	sum = int(xprv[3]) + int(res[3]) + (sum >> 8)
+	res[3] = byte(sum & 0xff)
+	sum = int(xprv[4]) + int(res[4]) + (sum >> 8)
+	res[4] = byte(sum & 0xff)
+	sum = int(xprv[5]) + int(res[5]) + (sum >> 8)
+	res[5] = byte(sum & 0xff)
+	sum = int(xprv[6]) + int(res[6]) + (sum >> 8)
+	res[6] = byte(sum & 0xff)
+	sum = int(xprv[7]) + int(res[7]) + (sum >> 8)
+	res[7] = byte(sum & 0xff)
+	sum = int(xprv[8]) + int(res[8]) + (sum >> 8)
+	res[8] = byte(sum & 0xff)
+	sum = int(xprv[9]) + int(res[9]) + (sum >> 8)
+	res[9] = byte(sum & 0xff)
+	sum = int(xprv[10]) + int(res[10]) + (sum >> 8)
+	res[10] = byte(sum & 0xff)
+	sum = int(xprv[11]) + int(res[11]) + (sum >> 8)
+	res[11] = byte(sum & 0xff)
+	sum = int(xprv[12]) + int(res[12]) + (sum >> 8)
+	res[12] = byte(sum & 0xff)
+	sum = int(xprv[13]) + int(res[13]) + (sum >> 8)
+	res[13] = byte(sum & 0xff)
+	sum = int(xprv[14]) + int(res[14]) + (sum >> 8)
+	res[14] = byte(sum & 0xff)
+	sum = int(xprv[15]) + int(res[15]) + (sum >> 8)
+	res[15] = byte(sum & 0xff)
+	sum = int(xprv[16]) + int(res[16]) + (sum >> 8)
+	res[16] = byte(sum & 0xff)
+	sum = int(xprv[17]) + int(res[17]) + (sum >> 8)
+	res[17] = byte(sum & 0xff)
+	sum = int(xprv[18]) + int(res[18]) + (sum >> 8)
+	res[18] = byte(sum & 0xff)
+	sum = int(xprv[19]) + int(res[19]) + (sum >> 8)
+	res[19] = byte(sum & 0xff)
+	sum = int(xprv[20]) + int(res[20]) + (sum >> 8)
+	res[20] = byte(sum & 0xff)
+	sum = int(xprv[21]) + int(res[21]) + (sum >> 8)
+	res[21] = byte(sum & 0xff)
+	sum = int(xprv[22]) + int(res[22]) + (sum >> 8)
+	res[22] = byte(sum & 0xff)
+	sum = int(xprv[23]) + int(res[23]) + (sum >> 8)
+	res[23] = byte(sum & 0xff)
+	sum = int(xprv[24]) + int(res[24]) + (sum >> 8)
+	res[24] = byte(sum & 0xff)
+	sum = int(xprv[25]) + int(res[25]) + (sum >> 8)
+	res[25] = byte(sum & 0xff)
+	sum = int(xprv[26]) + int(res[26]) + (sum >> 8)
+	res[26] = byte(sum & 0xff)
+	sum = int(xprv[27]) + int(res[27]) + (sum >> 8)
+	res[27] = byte(sum & 0xff)
+	sum = int(xprv[28]) + int(res[28]) + (sum >> 8)
+	res[28] = byte(sum & 0xff)
+	sum = int(xprv[29]) + int(res[29]) + (sum >> 8)
+	res[29] = byte(sum & 0xff)
+	sum = int(xprv[30]) + int(res[30]) + (sum >> 8)
+	res[30] = byte(sum & 0xff)
+	sum = int(xprv[31]) + int(res[31]) + (sum >> 8)
+	res[31] = byte(sum & 0xff)
+
+	if (sum >> 8) != 0 {
+		panic("sum does not fit in 256-bit int")
+	}
+	return
+}
+
+// Child derives a child xpub based on `selector` string.
+// The corresponding child xprv can be derived from the parent xprv
+// using non-hardened derivation: `parentxprv.Child(sel, false)`.
 func (xpub XPub) Child(sel []byte) (res XPub) {
-	hashKeySaltSelector(res[:], 1, xpub[:32], xpub[32:], sel)
+	h := hmac.New(sha512.New, xpub[32:])
+	h.Write([]byte{'N'})
+	h.Write(xpub[:32])
+	h.Write(sel)
+	h.Sum(res[:0])
+
+	pruneIntermediateScalar(res[:32])
 
 	var (
-		f [32]byte
-		F edwards25519.ExtendedGroupElement
+		f ecmath.Scalar
+		F ecmath.Point
 	)
 	copy(f[:], res[:32])
-	edwards25519.GeScalarMultBase(&F, &f)
+	F.ScMulBase(&f)
 
 	var (
 		pubkey [32]byte
-		P      edwards25519.ExtendedGroupElement
+		P      ecmath.Point
 	)
 	copy(pubkey[:], xpub[:32])
-	P.FromBytes(&pubkey)
+	_, ok := P.Decode(pubkey)
+	if !ok {
+		panic("XPub should have been validated on initialization")
+	}
 
-	var (
-		P2 edwards25519.ExtendedGroupElement
-		R  edwards25519.CompletedGroupElement
-		Fc edwards25519.CachedGroupElement
-	)
-	F.ToCached(&Fc)
-	edwards25519.GeAdd(&R, &P, &Fc)
-	R.ToExtended(&P2)
-
-	P2.ToBytes(&pubkey)
-
+	P.Add(&P, &F)
+	pubkey = P.Encode()
 	copy(res[:32], pubkey[:])
 
-	return res
+	return
 }
 
+// Derive generates a child xprv by recursively deriving
+// non-hardened child xprvs over the list of selectors:
+// `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
 func (xprv XPrv) Derive(path [][]byte) XPrv {
 	res := xprv
 	for _, p := range path {
@@ -121,6 +218,9 @@ func (xprv XPrv) Derive(path [][]byte) XPrv {
 	return res
 }
 
+// Derive generates a child xpub by recursively deriving
+// non-hardened child xpubs over the list of selectors:
+// `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
 func (xpub XPub) Derive(path [][]byte) XPub {
 	res := xpub
 	for _, p := range path {
@@ -129,53 +229,29 @@ func (xpub XPub) Derive(path [][]byte) XPub {
 	return res
 }
 
+// Sign creates an EdDSA signature using expanded private key
+// derived from the xprv.
 func (xprv XPrv) Sign(msg []byte) []byte {
-	var s [32]byte
-	copy(s[:], xprv[:32])
-
-	var h [64]byte
-	hashKeySalt(h[:], 2, xprv[:32], xprv[32:])
-
-	var P edwards25519.ExtendedGroupElement
-	edwards25519.GeScalarMultBase(&P, &s)
-
-	var pubkey [32]byte
-	P.ToBytes(&pubkey)
-
-	var r [64]byte
-	hasher := sha512.New()
-	hasher.Write(h[:32])
-	hasher.Write(msg)
-	hasher.Sum(r[:0])
-
-	var rReduced [32]byte
-	edwards25519.ScReduce(&rReduced, &r)
-
-	var rPoint edwards25519.ExtendedGroupElement
-	edwards25519.GeScalarMultBase(&rPoint, &rReduced)
-
-	var R [32]byte
-	rPoint.ToBytes(&R)
-
-	hasher.Reset()
-	hasher.Write(R[:])
-	hasher.Write(pubkey[:])
-	hasher.Write(msg)
-
-	var k [64]byte
-	hasher.Sum(k[:0])
-
-	var kReduced [32]byte
-	edwards25519.ScReduce(&kReduced, &k)
-
-	var S [32]byte
-	edwards25519.ScMulAdd(&S, &kReduced, &s, &rReduced)
-
-	return append(R[:], S[:]...)
+	return Ed25519InnerSign(xprv.ExpandedPrivateKey(), msg)
 }
 
+// Verify checks an EdDSA signature using public key
+// extracted from the first 32 bytes of the xpub.
 func (xpub XPub) Verify(msg []byte, sig []byte) bool {
 	return ed25519.Verify(xpub.PublicKey(), msg, sig)
+}
+
+// ExpandedPrivateKey generates a 64-byte key where
+// the first half is the scalar copied from xprv,
+// and the second half is the `prefix` is generated via PRF
+// from the xprv.
+func (xprv XPrv) ExpandedPrivateKey() ExpandedPrivateKey {
+	var res [64]byte
+	h := hmac.New(sha512.New, []byte{'E', 'x', 'p', 'a', 'n', 'd'})
+	h.Write(xprv[:])
+	h.Sum(res[:0])
+	copy(res[:32], xprv[:32])
+	return res[:]
 }
 
 // PublicKey extracts the ed25519 public key from an xpub.
@@ -183,32 +259,19 @@ func (xpub XPub) PublicKey() ed25519.PublicKey {
 	return ed25519.PublicKey(xpub[:32])
 }
 
-func hashKeySaltSelector(out []byte, version byte, key, salt, sel []byte) {
-	hasher := hashKeySaltHelper(version, key, salt)
-	var l [10]byte
-	n := binary.PutUvarint(l[:], uint64(len(sel)))
-	hasher.Write(l[:n])
-	hasher.Write(sel)
-	hasher.Sum(out[:0])
-	modifyScalar(out)
-}
-
-func hashKeySalt(out []byte, version byte, key, salt []byte) {
-	hasher := hashKeySaltHelper(version, key, salt)
-	hasher.Sum(out[:0])
-}
-
-func hashKeySaltHelper(version byte, key, salt []byte) hash.Hash {
-	hasher := sha512.New()
-	hasher.Write([]byte{version})
-	hasher.Write(key)
-	hasher.Write(salt)
-	return hasher
-}
-
-// s must be >= 32 bytes long and gets rewritten in place
-func modifyScalar(s []byte) {
+// s must be >= 32 bytes long and gets rewritten in place.
+// This is NOT the same pruning as in Ed25519: it additionally clears the third
+// highest bit to ensure subkeys do not overflow the second highest bit.
+func pruneRootScalar(s []byte) {
 	s[0] &= 248
-	s[31] &= 127
-	s[31] |= 64
+	s[31] &= 31 // clear top 3 bits
+	s[31] |= 64 // set second highest bit
+}
+
+// Clears lowest 3 bits and highest 23 bits of `f`.
+func pruneIntermediateScalar(f []byte) {
+	f[0] &= 248 // clear bottom 3 bits
+	f[29] &= 1  // clear 7 high bits
+	f[30] = 0   // clear 8 bits
+	f[31] = 0   // clear 8 bits
 }
