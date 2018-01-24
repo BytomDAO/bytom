@@ -50,16 +50,17 @@ message ValueDestination {
 }
 
 message BlockHeader {
-  uint64 version                   = 1;
-  uint64 serialized_size           = 2;
-  uint64 height                    = 3;
-  Hash   previous_block_id         = 4;
-  Hash   seed                      = 5;
-  uint64 timestamp_ms              = 6;
-  Hash   transactions_root         = 7;
-  Hash   assets_root               = 8;
-  uint64 nonce                     = 9;
-  uint64 bits                      = 10;
+  uint64            version            = 1;
+  uint64            serialized_size    = 2;
+  uint64            height             = 3;
+  Hash              previous_block_id  = 4;
+  Hash              seed               = 5;
+  uint64            timestamp_ms       = 6;
+  Hash              transactions_root  = 7;
+  Hash              assets_root        = 8;
+  TransactionStatus transaction_status = 9;
+  uint64            nonce              = 10;
+  uint64            bits               = 11;
 }
 
 message TxHeader {
@@ -68,6 +69,10 @@ message TxHeader {
   repeated Hash result_ids      = 3;
   Hash          data            = 4;
   Hash          ext_hash        = 5;
+}
+
+message TransactionStatus {
+  bytes bitmap = 1;
 }
 
 message Mux {

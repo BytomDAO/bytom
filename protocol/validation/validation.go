@@ -6,6 +6,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/consensus/difficulty"
+	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
@@ -79,6 +80,8 @@ type validationState struct {
 	cache map[bc.Hash]error
 
 	gas *gasState
+
+	gasVaild *int
 }
 
 var (
@@ -106,8 +109,10 @@ var (
 	errVersionRegression        = errors.New("version regression")
 	errWrongBlockSize           = errors.New("block size is too big")
 	errWrongTransactionSize     = errors.New("transaction size is too big")
+	errWrongTransactionStatus   = errors.New("transaction status is wrong")
 	errWrongCoinbaseTransaction = errors.New("wrong coinbase transaction")
 	errWrongCoinbaseAsset       = errors.New("wrong coinbase asset id")
+	errNotStandardTx            = errors.New("gas transaction is not standard transaction")
 )
 
 func checkValid(vs *validationState, e bc.Entry) (err error) {
@@ -205,14 +210,19 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return err
 		}
 
-		for i, src := range e.Sources {
+		for _, BTMInputID := range vs.tx.GasInputIDs {
+			e, ok := vs.tx.Entries[BTMInputID]
+			if !ok {
+				return errors.Wrapf(bc.ErrMissingEntry, "entry for bytom input %x not found", BTMInputID)
+			}
+
 			vs2 := *vs
-			vs2.sourcePos = uint64(i)
-			err = checkValidSrc(&vs2, src)
-			if err != nil {
-				return errors.Wrapf(err, "checking mux source %d", i)
+			vs2.entryID = BTMInputID
+			if err := checkValid(&vs2, e); err != nil {
+				return errors.Wrap(err, "checking value source")
 			}
 		}
+
 		for i, dest := range e.WitnessDestinations {
 			vs2 := *vs
 			vs2.destPos = uint64(i)
@@ -224,6 +234,16 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 
 		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
 			return errNonemptyExtHash
+		}
+		*vs.gasVaild = 1
+
+		for i, src := range e.Sources {
+			vs2 := *vs
+			vs2.sourcePos = uint64(i)
+			err = checkValidSrc(&vs2, src)
+			if err != nil {
+				return errors.Wrapf(err, "checking mux source %d", i)
+			}
 		}
 
 	case *bc.Nonce:
@@ -532,9 +552,16 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)
 		}
 
-		txBTMValue, err := ValidateTx(tx, b)
+		txBTMValue, gasVaild, err := ValidateTx(tx, b)
+		gasOnlyTx := false
 		if err != nil {
-			return errors.Wrapf(err, "validity of transaction %d of %d", i, len(b.Transactions))
+			if !gasVaild {
+				return errors.Wrapf(err, "validity of transaction %d of %d", i, len(b.Transactions))
+			}
+			gasOnlyTx = true
+		}
+		if status, err := b.TransactionStatus.GetStatus(i); err != nil || status != gasOnlyTx {
+			return errWrongTransactionStatus
 		}
 		coinbaseValue += txBTMValue
 	}
@@ -567,7 +594,14 @@ func validateCoinbase(tx *bc.Tx, value uint64) error {
 		return errors.Wrap(errWrongCoinbaseTransaction, "dismatch output value")
 	}
 
-	//TODO: require coinbase control program verify
+	inputEntry := tx.Entries[tx.InputIDs[0]]
+	input, ok := inputEntry.(*bc.Coinbase)
+	if !ok {
+		return errors.Wrap(errWrongCoinbaseTransaction, "decode input")
+	}
+	if input.Arbitrary != nil && len(input.Arbitrary) > consensus.CoinbaseArbitrarySizeLimit {
+		return errors.Wrap(errWrongCoinbaseTransaction, "coinbase arbitrary is over size")
+	}
 	return nil
 }
 
@@ -591,13 +625,60 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 	return nil
 }
 
+func validateStandardTx(tx *bc.Tx) error {
+	for _, id := range tx.InputIDs {
+		e, ok := tx.Entries[id]
+		if !ok {
+			return errors.New("miss tx input entry")
+		}
+		if spend, ok := e.(*bc.Spend); ok {
+			if *spend.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
+				continue
+			}
+			spentOutput, err := tx.Output(*spend.SpentOutputId)
+			if err != nil {
+				return errors.Wrap(err, "getting spend prevout")
+			}
+
+			if !segwit.IsP2WScript(spentOutput.ControlProgram.Code) {
+				return errNotStandardTx
+			}
+		}
+	}
+
+	for _, id := range tx.ResultIds {
+		e, ok := tx.Entries[*id]
+		if !ok {
+			return errors.New("miss tx output entry")
+		}
+		if output, ok := e.(*bc.Output); ok {
+			if *output.Source.Value.AssetId != *consensus.BTMAssetID {
+				continue
+			}
+			if !segwit.IsP2WScript(output.ControlProgram.Code) {
+				return errNotStandardTx
+			}
+		}
+	}
+	return nil
+}
+
 // ValidateTx validates a transaction.
-func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, error) {
+func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, bool, error) {
 	if tx.TxHeader.SerializedSize > consensus.MaxTxSize {
-		return 0, errWrongTransactionSize
+		return 0, false, errWrongTransactionSize
+	}
+
+	if len(tx.ResultIds) == 0 {
+		return 0, false, errors.New("tx didn't have any output")
+	}
+
+	if err := validateStandardTx(tx); err != nil {
+		return 0, false, err
 	}
 
 	//TODO: handle the gas limit
+	gasVaild := 0
 	vs := &validationState{
 		block:   block,
 		tx:      tx,
@@ -605,9 +686,10 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, error) {
 		gas: &gasState{
 			gasLeft: defaultGasLimit,
 		},
-		cache: make(map[bc.Hash]error),
+		gasVaild: &gasVaild,
+		cache:    make(map[bc.Hash]error),
 	}
 
 	err := checkValid(vs, tx.TxHeader)
-	return uint64(vs.gas.BTMValue), err
+	return uint64(vs.gas.BTMValue), *vs.gasVaild == 1, err
 }

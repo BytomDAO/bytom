@@ -5,6 +5,9 @@ import (
 	"math"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/protobuf/proto"
+
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
@@ -12,11 +15,11 @@ import (
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/vm"
+	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/testutil"
-
-	"github.com/davecgh/go-spew/spew"
-	"github.com/golang/protobuf/proto"
 )
+
+const dirPath = "pseudohsm/testdata/pseudo"
 
 func init() {
 	spew.Config.DisableMethods = true
@@ -376,6 +379,7 @@ func TestTxValidation(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		gasVaild := 0
 		t.Run(c.desc, func(t *testing.T) {
 			fixture = sample(t, nil)
 			tx = legacy.NewTx(*fixture.tx).Tx
@@ -387,7 +391,8 @@ func TestTxValidation(t *testing.T) {
 					gasLeft: int64(80000),
 					gasUsed: 0,
 				},
-				cache: make(map[bc.Hash]error),
+				cache:    make(map[bc.Hash]error),
+				gasVaild: &gasVaild,
 			}
 			out := tx.Entries[*tx.ResultIds[0]].(*bc.Output)
 			muxID := out.Source.Ref
@@ -447,6 +452,7 @@ func TestValidateBlock(t *testing.T) {
 			t.Errorf("computing transaction merkle root", err)
 			continue
 		}
+		c.block.BlockHeader.TransactionStatus = bc.NewTransactionStatus()
 		c.block.TransactionsRoot = &txRoot
 
 		if err = ValidateBlock(c.block, nil, seedCaches); rootErr(err) != c.err {
@@ -471,9 +477,10 @@ func TestCoinbase(t *testing.T) {
 		},
 	})
 	cases := []struct {
-		block *bc.Block
-		tx    *bc.Tx
-		err   error
+		block    *bc.Block
+		tx       *bc.Tx
+		gasVaild bool
+		err      error
 	}{
 		{
 			block: &bc.Block{
@@ -482,8 +489,9 @@ func TestCoinbase(t *testing.T) {
 				},
 				Transactions: []*bc.Tx{errCbTx},
 			},
-			tx:  CbTx,
-			err: errWrongCoinbaseTransaction,
+			tx:       CbTx,
+			gasVaild: true,
+			err:      errWrongCoinbaseTransaction,
 		},
 		{
 			block: &bc.Block{
@@ -492,8 +500,9 @@ func TestCoinbase(t *testing.T) {
 				},
 				Transactions: []*bc.Tx{CbTx},
 			},
-			tx:  CbTx,
-			err: nil,
+			tx:       CbTx,
+			gasVaild: true,
+			err:      nil,
 		},
 		{
 			block: &bc.Block{
@@ -502,22 +511,26 @@ func TestCoinbase(t *testing.T) {
 				},
 				Transactions: []*bc.Tx{errCbTx},
 			},
-			tx:  errCbTx,
-			err: errWrongCoinbaseAsset,
+			tx:       errCbTx,
+			gasVaild: true,
+			err:      errWrongCoinbaseAsset,
 		},
 	}
 
 	for _, c := range cases {
-		_, err := ValidateTx(c.tx, c.block)
+		_, gasVaild, err := ValidateTx(c.tx, c.block)
 
 		if rootErr(err) != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)
+		}
+		if c.gasVaild != gasVaild {
+			t.Errorf("got gasVaild %s, want %s", gasVaild, c.gasVaild)
 		}
 	}
 }
 
 func TestBlockHeaderValid(t *testing.T) {
-	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
+	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, nil, 0, 0)
 	baseBytes, _ := proto.Marshal(base)
 
 	var bh bc.BlockHeader
@@ -670,18 +683,20 @@ func mockBlock() *bc.Block {
 }
 
 func mockCoinbaseTx(amount uint64) *bc.Tx {
+	cp, _ := vmutil.DefaultCoinbaseProgram()
 	return legacy.MapTx(&legacy.TxData{
 		Inputs: []*legacy.TxInput{
 			legacy.NewCoinbaseInput(nil, nil),
 		},
 		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(*consensus.BTMAssetID, amount, []byte{1}, nil),
+			legacy.NewTxOutput(*consensus.BTMAssetID, amount, cp, nil),
 		},
 	})
 }
 
 func mockGasTxInput() *legacy.TxInput {
-	return legacy.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, []byte{byte(vm.OP_TRUE)}, *newHash(9), []byte{})
+	cp, _ := vmutil.DefaultCoinbaseProgram()
+	return legacy.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp, *newHash(9), []byte{})
 }
 
 // Like errors.Root, but also unwraps vm.Error objects.
