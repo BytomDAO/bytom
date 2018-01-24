@@ -109,7 +109,7 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struc
 	ID        string `json:"id"`
 	AccountID string `json:"account_id"`
 }) Response {
-	var transactions []query.AnnotatedTx
+	var transactions []*query.AnnotatedTx
 	var err error
 
 	if filter.AccountID != "" {

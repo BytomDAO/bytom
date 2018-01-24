@@ -344,9 +344,8 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 }
 
 //GetTransactionsByTxID get account txs by account tx ID
-func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error) {
-	annotatedTx := query.AnnotatedTx{}
-	annotatedTxs := make([]query.AnnotatedTx, 0)
+func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
 	formatKey := ""
 
 	if txID != "" {
@@ -360,7 +359,8 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix + formatKey))
 	defer txIter.Release()
 	for txIter.Next() {
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
 			return nil, err
 		}
 		annotatedTxs = append(annotatedTxs, annotatedTx)
@@ -369,7 +369,7 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 	return annotatedTxs, nil
 }
 
-func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) bool {
+func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
 	for _, input := range annotatedTx.Inputs {
 		if input.AccountID == accountID {
 			return true
@@ -386,13 +386,13 @@ func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) 
 }
 
 //GetTransactionsByAccountID get account txs by account ID
-func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]query.AnnotatedTx, error) {
-	annotatedTxs := make([]query.AnnotatedTx, 0)
+func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
 	for txIter.Next() {
-		annotatedTx := query.AnnotatedTx{}
+		annotatedTx := &query.AnnotatedTx{}
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}
