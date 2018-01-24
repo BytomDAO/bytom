@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -45,12 +46,18 @@ func GenerateGenesisBlock() *legacy.Block {
 	var seed [32]byte
 	sha3pool.Sum256(seed[:], make([]byte, 32))
 
+	var hash128 [128]*bc.Hash
+	for i := 0; i < 128 ; i++ {
+		hash := bc.NewHash(seed)
+		hash128[i] = &hash
+	}
+	aihash.Notify(hash128)
 	block := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
 			Version:     1,
 			Height:      0,
 			Nonce:       1267808,
-			Seed:        bc.NewHash(seed),
+			Seed:        bc.BytesToHash(aihash.Md.GetSeed()),
 			TimestampMS: 1511318565142,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,

@@ -166,11 +166,11 @@ func hashMatrix(result []uint8) *bc.Hash {
 	var mat32 [matSize][matSize / 4]uint32
 	// ATTENTION !!!!!!! C++ is different!!!
 	for i := 0; i < matSize; i++ {
-		for j := 0; j < matSize; j += 4 {
-			mat32[i][j] = (uint32(mat8[i][j])) |
-				((uint32(mat8[i][j+1])) << 8) |
-				((uint32(mat8[i][j+2])) << 16) |
-				((uint32(mat8[i][j+3])) << 24)
+		for j := 0; j < matSize/4; j++ {
+			mat32[i][j] = ((uint32(mat8[i][j+192])) << 24) |
+				((uint32(mat8[i][j+128])) << 16) |
+				((uint32(mat8[i][j+64])) << 8) |
+				((uint32(mat8[i][j])) << 0)
 		}
 	}
 
