@@ -82,7 +82,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			Height:            nextBlockHeight,
 			PreviousBlockHash: preBlock.Hash(),
 			Seed:              *nextBlockSeed,
-			TimestampMS:       bc.Millis(time.Now()),
+			Timestamp:         uint64(time.Now().Unix()),
 			TransactionStatus: *bc.NewTransactionStatus(),
 			BlockCommitment:   legacy.BlockCommitment{},
 			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
