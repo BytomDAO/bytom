@@ -20,6 +20,7 @@ type AnnotatedTx struct {
 	ReferenceData          *json.RawMessage   `json:"reference_data"`
 	Inputs                 []*AnnotatedInput  `json:"inputs"`
 	Outputs                []*AnnotatedOutput `json:"outputs"`
+	StatusFail             bool               `json:"status_fail"`
 }
 
 //AnnotatedInput means an annotated transaction input.

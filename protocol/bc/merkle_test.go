@@ -57,6 +57,11 @@ func TestMerkleRoot(t *testing.T) {
 						AssetVersion: 1,
 						TypedInput: &legacy.SpendInput{
 							Arguments: wit,
+							SpendCommitment: legacy.SpendCommitment{
+								AssetAmount: AssetAmount{
+									AssetId: &AssetID{V0: 0},
+								},
+							},
 						},
 					},
 				},

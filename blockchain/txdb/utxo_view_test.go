@@ -7,9 +7,9 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/txdb/storage"
-	"github.com/bytom/testutil"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/state"
+	"github.com/bytom/testutil"
 )
 
 func TestSaveUtxoView(t *testing.T) {
@@ -95,7 +95,7 @@ func TestGetTransactionsUtxo(t *testing.T) {
 			},
 			inputView: state.NewUtxoViewpoint(),
 			fetchView: state.NewUtxoViewpoint(),
-			err:       true,
+			err:       false,
 		},
 		{
 			txs: []*bc.Tx{
@@ -175,7 +175,7 @@ func TestGetTransactionsUtxo(t *testing.T) {
 
 	for i, c := range cases {
 		if err := getTransactionsUtxo(testDB, c.inputView, c.txs); c.err != (err != nil) {
-			t.Errorf("want err = %v, get err = %v", c.err, err)
+			t.Errorf("test case %d, want err = %v, get err = %v", i, c.err, err)
 		}
 		if !testutil.DeepEqual(c.inputView, c.fetchView) {
 			t.Errorf("test case %d, want %v, get %v", i, c.fetchView, c.inputView)

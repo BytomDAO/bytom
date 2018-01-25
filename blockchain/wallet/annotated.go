@@ -181,17 +181,19 @@ func isValidJSON(b []byte) bool {
 	return err == nil
 }
 
-func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock uint32) *query.AnnotatedTx {
+func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock int) *query.AnnotatedTx {
+	statusFail, _ := b.TransactionStatus.GetStatus(indexInBlock)
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
 		Timestamp:              b.Time(),
 		BlockID:                b.Hash(),
 		BlockHeight:            b.Height,
-		Position:               indexInBlock,
+		Position:               uint32(indexInBlock),
 		BlockTransactionsCount: uint32(len(b.Transactions)),
 		ReferenceData:          &emptyJSONObject,
 		Inputs:                 make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
+		StatusFail:             statusFail,
 	}
 	if isValidJSON(orig.ReferenceData) {
 		referenceData := json.RawMessage(orig.ReferenceData)
