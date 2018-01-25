@@ -23,10 +23,6 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
-func init() {
-	DefaultNativeAsset = generateNativeAsset()
-}
-
 var DefaultNativeAsset *Asset
 
 const (
@@ -36,24 +32,24 @@ const (
 	AliasPrefix = "ALS:"
 	//ExternalAssetPrefix is external definition assets prefix
 	ExternalAssetPrefix = "EXA"
-	indexPrefix   = "ASSIDX:"
+	indexPrefix         = "ASSIDX:"
 )
 
-func generateNativeAsset() *Asset {
+func InitNativeAsset() {
 	genesisBlock := cfg.GenerateGenesisBlock()
 	signer := &signers.Signer{Type: "internal"}
 	alias := consensus.BTMAlias
 
 	definitionBytes, _ := serializeAssetDef(consensus.BTMDefinitionMap)
-
-	return &Asset{
+	DefaultNativeAsset = &Asset{
 		Signer:            signer,
 		AssetID:           *consensus.BTMAssetID,
 		Alias:             &alias,
 		VMVersion:         1,
 		DefinitionMap:     consensus.BTMDefinitionMap,
 		RawDefinitionByte: definitionBytes,
-		InitialBlockHash:  genesisBlock.Hash()}
+		InitialBlockHash:  genesisBlock.Hash(),
+	}
 }
 
 func AliasKey(name string) []byte {

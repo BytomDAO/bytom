@@ -191,6 +191,7 @@ func NewNode(config *cfg.Config) *Node {
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
+		asset.InitNativeAsset()
 		wallet, err = w.NewWallet(walletDB, accounts, assets, chain)
 		if err != nil {
 			log.WithField("error", err).Error("init NewWallet")
