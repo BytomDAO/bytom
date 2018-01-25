@@ -3,7 +3,6 @@ package account
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,7 +28,9 @@ var (
 	// (and no other transaction spends funds from the account),
 	// new change outputs will be created
 	// in sufficient amounts to satisfy the request.
-	ErrReserved = errors.New("reservation found outputs already reserved")
+	ErrReserved    = errors.New("reservation found outputs already reserved")
+	ErrMatchUTXO   = errors.New("can't match enough valid utxos")
+	ErrReservation = errors.New("couldn't find reservation")
 )
 
 // UTXO describes an individual account utxo.
@@ -170,7 +171,7 @@ func (re *reserver) reserveUTXO(ctx context.Context, out bc.Hash, exp time.Time,
 
 	//u.ValidHeight > 0 means coinbase utxo
 	if u.ValidHeight > 0 && u.ValidHeight > re.c.Height() {
-		return nil, errors.New("didn't find utxo")
+		return nil, ErrMatchUTXO
 	}
 
 	rid := atomic.AddUint64(&re.nextReservationID, 1)
@@ -200,7 +201,7 @@ func (re *reserver) Cancel(ctx context.Context, rid uint64) error {
 	delete(re.reservations, rid)
 	re.reservationsMu.Unlock()
 	if !ok {
-		return fmt.Errorf("couldn't find reservation %d", rid)
+		return errors.Wrapf(ErrReservation, "rid=%d", rid)
 	}
 	re.source(res.Source).cancel(res)
 	/*if res.ClientToken != nil {
@@ -334,6 +335,7 @@ func (sr *sourceReserver) cancel(res *reservation) {
 
 func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*UTXO, error) {
 	utxos := []*UTXO{}
+	isPending := false
 	utxoIter := db.IteratorPrefix([]byte(UTXOPreFix))
 	defer utxoIter.Release()
 
@@ -345,6 +347,7 @@ func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*U
 
 		//u.ValidHeight > 0 means coinbase utxo
 		if u.ValidHeight > 0 && u.ValidHeight > currentHeight() {
+			isPending = true
 			continue
 		}
 
@@ -354,7 +357,10 @@ func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*U
 	}
 
 	if len(utxos) == 0 {
-		return nil, errors.New("can't match utxo")
+		if isPending {
+			return nil, errors.WithDetail(ErrMatchUTXO, "some coinbase utxos are pending")
+		}
+		return nil, ErrMatchUTXO
 	}
 	return utxos, nil
 }
@@ -363,7 +369,7 @@ func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*UTXO, error) {
 	u := &UTXO{}
 	data := db.Get(UTXOKey(outHash))
 	if data == nil {
-		return nil, fmt.Errorf("can't find utxo: %s", outHash.String())
+		return nil, errors.Wrapf(ErrMatchUTXO, "utxo_id = %s", outHash.String())
 	}
 	return u, json.Unmarshal(data, u)
 }
