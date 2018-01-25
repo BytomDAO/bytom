@@ -35,7 +35,7 @@ const (
 	indexPrefix         = "ASSIDX:"
 )
 
-func InitNativeAsset() {
+func initNativeAsset() {
 	genesisBlock := cfg.GenerateGenesisBlock()
 	signer := &signers.Signer{Type: "internal"}
 	alias := consensus.BTMAlias
@@ -85,6 +85,7 @@ var (
 
 //NewRegistry create new registry
 func NewRegistry(db dbm.DB, chain *protocol.Chain) *Registry {
+	initNativeAsset()
 	return &Registry{
 		db:               db,
 		chain:            chain,
