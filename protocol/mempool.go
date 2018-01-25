@@ -6,9 +6,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/golang/groupcache/lru"
+
+	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/golang/groupcache/lru"
+	"github.com/bytom/protocol/state"
 )
 
 var (
@@ -33,6 +36,7 @@ type TxPool struct {
 	lastUpdated int64
 	mtx         sync.RWMutex
 	pool        map[bc.Hash]*TxDesc
+	utxo        map[bc.Hash]bc.Hash
 	errCache    *lru.Cache
 	newTxCh     chan *legacy.Tx
 }
@@ -42,6 +46,7 @@ func NewTxPool() *TxPool {
 	return &TxPool{
 		lastUpdated: time.Now().Unix(),
 		pool:        make(map[bc.Hash]*TxDesc),
+		utxo:        make(map[bc.Hash]bc.Hash),
 		errCache:    lru.New(maxCachedErrTxs),
 		newTxCh:     make(chan *legacy.Tx, maxNewTxChSize),
 	}
@@ -53,7 +58,7 @@ func (mp *TxPool) GetNewTxCh() chan *legacy.Tx {
 }
 
 // AddTransaction add a verified transaction to pool
-func (mp *TxPool) AddTransaction(tx *legacy.Tx, height, fee uint64) *TxDesc {
+func (mp *TxPool) AddTransaction(tx *legacy.Tx, view *state.UtxoViewpoint, height, fee uint64) *TxDesc {
 	txD := &TxDesc{
 		Tx:       tx,
 		Added:    time.Now(),
@@ -68,6 +73,12 @@ func (mp *TxPool) AddTransaction(tx *legacy.Tx, height, fee uint64) *TxDesc {
 
 	mp.pool[tx.Tx.ID] = txD
 	atomic.StoreInt64(&mp.lastUpdated, time.Now().Unix())
+
+	for key, entry := range view.Entries {
+		if !entry.Spent {
+			mp.utxo[key] = tx.Tx.ID
+		}
+	}
 
 	mp.newTxCh <- tx
 	return txD
@@ -128,6 +139,20 @@ func (mp *TxPool) GetTransactions() []*TxDesc {
 		i++
 	}
 	return txDs
+}
+
+// GetTransactionUTXO return unconfirmed utxo
+func (mp *TxPool) GetTransactionUTXO(tx *bc.Tx) *state.UtxoViewpoint {
+	mp.mtx.RLock()
+	defer mp.mtx.RUnlock()
+
+	view := state.NewUtxoViewpoint()
+	for _, prevout := range tx.SpentOutputIDs {
+		if _, ok := mp.utxo[prevout]; ok {
+			view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false)
+		}
+	}
+	return view
 }
 
 // IsTransactionInPool check wheather a transaction in pool or not

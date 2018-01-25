@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/validation"
 )
@@ -22,14 +23,31 @@ func (c *Chain) ValidateTx(tx *legacy.Tx) error {
 	if err != nil {
 		return err
 	}
+
+	// validate the BVM contract
+	gasOnlyTx := false
 	block := legacy.MapBlock(oldBlock)
 	fee, gasVaild, err := validation.ValidateTx(newTx, block)
+	if err != nil {
+		if !gasVaild {
+			c.txPool.AddErrCache(&newTx.ID, err)
+			return err
+		}
+		gasOnlyTx = true
+	}
 
-	if !gasVaild && err != nil {
+	// validate the UTXO
+	view := c.txPool.GetTransactionUTXO(tx.Tx)
+	if err := c.GetTransactionsUtxo(view, []*bc.Tx{newTx}); err != nil {
 		c.txPool.AddErrCache(&newTx.ID, err)
 		return err
 	}
 
-	c.txPool.AddTransaction(tx, block.BlockHeader.Height, fee)
-	return errors.Sub(ErrBadTx, err)
+	if err := view.ApplyTransaction(block, newTx, gasOnlyTx); err != nil {
+		c.txPool.AddErrCache(&newTx.ID, err)
+		return err
+	}
+
+	c.txPool.AddTransaction(tx, view, block.BlockHeader.Height, fee)
+	return nil
 }

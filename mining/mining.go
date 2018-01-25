@@ -5,6 +5,7 @@
 package mining
 
 import (
+	"sort"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -91,7 +92,9 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	}
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
 
-	for _, txDesc := range txPool.GetTransactions() {
+	txs := txPool.GetTransactions()
+	sort.Sort(ByTime(txs))
+	for _, txDesc := range txs {
 		tx := txDesc.Tx.Tx
 		gasOnlyTx := false
 		if blockWeight+txDesc.Weight > consensus.MaxBlockSzie-consensus.MaxTxSize {
