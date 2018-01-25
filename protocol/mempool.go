@@ -109,10 +109,16 @@ func (mp *TxPool) RemoveTransaction(txHash *bc.Hash) {
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
 
-	if _, ok := mp.pool[*txHash]; ok {
-		delete(mp.pool, *txHash)
-		atomic.StoreInt64(&mp.lastUpdated, time.Now().Unix())
+	txD, ok := mp.pool[*txHash]
+	if !ok {
+		return
 	}
+
+	for _, output := range txD.Tx.TxHeader.ResultIds {
+		delete(mp.utxo, *output)
+	}
+	delete(mp.pool, *txHash)
+	atomic.StoreInt64(&mp.lastUpdated, time.Now().Unix())
 }
 
 // GetTransaction return the TxDesc by hash
