@@ -51,7 +51,7 @@ func GenerateGenesisBlock() *legacy.Block {
 		BlockHeader: legacy.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     1656075,
+			Nonce:     1851736,
 			Seed:      bc.NewHash(seed),
 			Timestamp: 1516788453,
 			BlockCommitment: legacy.BlockCommitment{
