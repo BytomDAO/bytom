@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
@@ -406,7 +407,6 @@ func TestTxValidation(t *testing.T) {
 }
 
 func TestValidateBlock(t *testing.T) {
-	s := bc.NewHash([32]byte{})
 	cases := []struct {
 		block *bc.Block
 		err   error
@@ -415,6 +415,8 @@ func TestValidateBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height: 0,
+					Nonce: 1,
+					Bits: 100000000,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1470000000000000000)},
 			},
@@ -424,6 +426,7 @@ func TestValidateBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height: 0,
+					Bits: 100000000,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
 			},
@@ -434,12 +437,22 @@ func TestValidateBlock(t *testing.T) {
 				BlockHeader: &bc.BlockHeader{
 					Height:         0,
 					SerializedSize: 88888888,
+					Bits: 100000000,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
 			},
 			err: errWrongBlockSize,
 		},
 	}
+	var se [32]byte
+	sha3pool.Sum256(se[:], make([]byte, 32))
+
+	var hash128 [128]*bc.Hash
+	for i := 0; i < 128 ; i++ {
+		hash := bc.NewHash(se)
+		hash128[i] = &hash
+	}
+	aihash.Notify(hash128)
 
 	seedCaches := seed.NewSeedCaches()
 	for _, c := range cases {
@@ -449,6 +462,10 @@ func TestValidateBlock(t *testing.T) {
 			continue
 		}
 		c.block.TransactionsRoot = &txRoot
+		c.block.ID.V0 = 9228794003182249000
+		c.block.ID.V1 = 13905459964694258202
+		c.block.ID.V2 = 6219318819534593206
+		c.block.ID.V3 = 977870882238200505
 
 		if err = ValidateBlock(c.block, nil, seedCaches); rootErr(err) != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)
