@@ -10,6 +10,7 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -242,6 +243,11 @@ func (re *reserver) checkUTXO(u *UTXO) bool {
 	if err != nil {
 		return false
 	}
+
+	if utxo.IsCoinBase && utxo.BlockHeight+consensus.CoinbasePendingBlockNumber < re.c.Height() {
+		return false
+	}
+
 	return !utxo.Spent
 }
 
@@ -358,7 +364,6 @@ func (sr *sourceReserver) cancel(res *reservation) {
 }
 
 func (sr *sourceReserver) refillCache() error {
-
 	utxos, err := findMatchingUTXOs(sr.db, sr.src)
 	if err != nil {
 		return errors.Wrap(err)
@@ -366,6 +371,9 @@ func (sr *sourceReserver) refillCache() error {
 
 	sr.mu.Lock()
 	for _, u := range utxos {
+		if !sr.validFn(u) {
+			continue
+		}
 		sr.cached[u.OutputID] = u
 	}
 	sr.mu.Unlock()
