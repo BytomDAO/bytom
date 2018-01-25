@@ -10,7 +10,6 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -50,6 +49,7 @@ type UTXO struct {
 	AccountID           string
 	Address             string
 	ControlProgramIndex uint64
+	ValidHeight         uint64
 }
 
 func (u *UTXO) source() source {
@@ -168,7 +168,8 @@ func (re *reserver) reserveUTXO(ctx context.Context, out bc.Hash, exp time.Time,
 		return nil, err
 	}
 
-	if !re.checkUTXO(u) {
+	//u.ValidHeight > 0 means coinbase utxo
+	if u.ValidHeight > 0 && u.ValidHeight > re.c.Height() {
 		return nil, errors.New("didn't find utxo")
 	}
 
@@ -238,19 +239,6 @@ func (re *reserver) ExpireReservations(ctx context.Context) error {
 	return nil
 }
 
-func (re *reserver) checkUTXO(u *UTXO) bool {
-	utxo, err := re.c.GetUtxo(&u.OutputID)
-	if err != nil {
-		return false
-	}
-
-	if utxo.IsCoinBase && utxo.BlockHeight+consensus.CoinbasePendingBlockNumber < re.c.Height() {
-		return false
-	}
-
-	return !utxo.Spent
-}
-
 func (re *reserver) source(src source) *sourceReserver {
 	re.sourcesMu.Lock()
 	defer re.sourcesMu.Unlock()
@@ -261,59 +249,40 @@ func (re *reserver) source(src source) *sourceReserver {
 	}
 
 	sr = &sourceReserver{
-		db:       re.db,
-		src:      src,
-		validFn:  re.checkUTXO,
-		cached:   make(map[bc.Hash]*UTXO),
-		reserved: make(map[bc.Hash]uint64),
+		db:            re.db,
+		src:           src,
+		reserved:      make(map[bc.Hash]uint64),
+		currentHeight: re.c.Height,
 	}
 	re.sources[src] = sr
 	return sr
 }
 
 type sourceReserver struct {
-	db       dbm.DB
-	src      source
-	validFn  func(u *UTXO) bool
-	mu       sync.Mutex
-	cached   map[bc.Hash]*UTXO
-	reserved map[bc.Hash]uint64
+	db            dbm.DB
+	src           source
+	currentHeight func() uint64
+	mu            sync.Mutex
+	reserved      map[bc.Hash]uint64
 }
 
 func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, error) {
-	reservedUTXOs, reservedAmount, err := sr.reserveFromCache(rid, amount)
-	if err == nil {
-		return reservedUTXOs, reservedAmount, nil
-	}
-
-	// Find the set of UTXOs that match this source.
-	err = sr.refillCache()
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return sr.reserveFromCache(rid, amount)
-}
-
-func (sr *sourceReserver) reserveFromCache(rid uint64, amount uint64) ([]*UTXO, uint64, error) {
 	var (
 		reserved, unavailable uint64
 		reservedUTXOs         []*UTXO
 	)
+
+	utxos, err := findMatchingUTXOs(sr.db, sr.src, sr.currentHeight)
+	if err != nil {
+		return nil, 0, errors.Wrap(err)
+	}
+
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
-
-	for o, u := range sr.cached {
+	for _, u := range utxos {
 		// If the UTXO is already reserved, skip it.
 		if _, ok := sr.reserved[u.OutputID]; ok {
 			unavailable += u.Amount
-			continue
-		}
-		// Cached utxos aren't guaranteed to still be valid; they may
-		// have been spent. Verify that that the outputs are still in
-		// the state tree.
-		if !sr.validFn(u) {
-			delete(sr.cached, o)
 			continue
 		}
 
@@ -363,25 +332,7 @@ func (sr *sourceReserver) cancel(res *reservation) {
 	}
 }
 
-func (sr *sourceReserver) refillCache() error {
-	utxos, err := findMatchingUTXOs(sr.db, sr.src)
-	if err != nil {
-		return errors.Wrap(err)
-	}
-
-	sr.mu.Lock()
-	for _, u := range utxos {
-		if !sr.validFn(u) {
-			continue
-		}
-		sr.cached[u.OutputID] = u
-	}
-	sr.mu.Unlock()
-
-	return nil
-}
-
-func findMatchingUTXOs(db dbm.DB, src source) ([]*UTXO, error) {
+func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*UTXO, error) {
 	utxos := []*UTXO{}
 	utxoIter := db.IteratorPrefix([]byte(UTXOPreFix))
 	defer utxoIter.Release()
@@ -390,6 +341,11 @@ func findMatchingUTXOs(db dbm.DB, src source) ([]*UTXO, error) {
 		u := &UTXO{}
 		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
 			return nil, errors.Wrap(err)
+		}
+
+		//u.ValidHeight > 0 means coinbase utxo
+		if u.ValidHeight > 0 && u.ValidHeight > currentHeight() {
+			continue
 		}
 
 		if u.AccountID == src.AccountID && u.AssetID == src.AssetID {
