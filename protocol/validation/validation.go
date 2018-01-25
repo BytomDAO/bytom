@@ -2,6 +2,7 @@ package validation
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/algorithm"
@@ -85,6 +86,7 @@ type validationState struct {
 }
 
 var (
+	errBadTimestamp             = errors.New("block timestamp is great than limit")
 	errGasCalculate             = errors.New("gas usage calculate got a math error")
 	errEmptyResults             = errors.New("transaction has no results")
 	errMismatchedAssetID        = errors.New("mismatched asset id")
@@ -528,6 +530,9 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 		if err != nil {
 			return err
 		}
+	}
+	if b.Timestamp > uint64(time.Now().Unix())+consensus.MaxTimeOffsetSeconds {
+		return errBadTimestamp
 	}
 
 	if b.BlockHeader.SerializedSize > consensus.MaxBlockSzie {
