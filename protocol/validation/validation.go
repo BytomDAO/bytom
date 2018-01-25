@@ -556,7 +556,9 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 		if b.Version == 1 && tx.Version != 1 {
 			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)
 		}
-
+		if tx.MaxTime > b.Timestamp {
+			return errors.New("invalid transaction maxtime")
+		}
 		txBTMValue, gasVaild, err := ValidateTx(tx, b)
 		gasOnlyTx := false
 		if err != nil {
@@ -673,7 +675,6 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, bool, error) {
 	if tx.TxHeader.SerializedSize > consensus.MaxTxSize {
 		return 0, false, errWrongTransactionSize
 	}
-
 	if len(tx.ResultIds) == 0 {
 		return 0, false, errors.New("tx didn't have any output")
 	}

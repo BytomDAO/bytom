@@ -9,6 +9,7 @@ import (
 
 // ErrBadTx is returned for transactions failing validation
 var ErrBadTx = errors.New("invalid transaction")
+var ErrTimeLimit = errors.New("invalid transaction maxtime")
 
 // ValidateTx validates the given transaction. A cache holds
 // per-transaction validation results and is consulted before
@@ -19,9 +20,10 @@ func (c *Chain) ValidateTx(tx *legacy.Tx) error {
 		return c.txPool.GetErrCache(&newTx.ID)
 	}
 
-	oldBlock, err := c.GetBlockByHash(c.state.hash)
-	if err != nil {
-		return err
+	oldBlock := c.BestBlock()
+	if tx.MaxTime > oldBlock.Timestamp {
+		c.txPool.AddErrCache(&newTx.ID, ErrTimeLimit)
+		return ErrTimeLimit
 	}
 
 	// validate the BVM contract
