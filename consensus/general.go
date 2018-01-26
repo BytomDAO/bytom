@@ -20,7 +20,7 @@ const (
 
 	// config for pow mining
 	PowMinBits            = uint64(2161727821138738707)
-	BlocksPerRetarget     = uint64(1024)
+	BlocksPerRetarget     = uint64(2)
 	TargetSecondsPerBlock = uint64(60)
 
 	PayToWitnessPubKeyHashDataSize = 20

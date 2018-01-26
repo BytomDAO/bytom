@@ -118,14 +118,17 @@ func CalcWork(bits uint64) *big.Int {
 	return new(big.Int).Div(oneLsh256, denominator)
 }
 
-// CheckProofOfWork the hash is vaild for given difficult
+// CheckProofOfWork the hash is valid for given difficult
 func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
-	fmt.Printf("hash bigint:%v, bits bigint:%v\n", HashToBig(hash), CalcWork(bits))
-	return HashToBig(hash).Cmp(CalcWork(bits)) <= 0
+	// fmt.Printf("hash bigint:%v, bits bigint:%v\n", HashToBig(hash), CalcWork(bits))
+	fmt.Printf("hash bigint:%v, bits bigint:%v\n", HashToBig(hash), CompactToBig(bits))
+	// return HashToBig(hash).Cmp(CalcWork(bits)) <= 0
+	return HashToBig(hash).Cmp(CompactToBig(bits)) <= 0
 }
 
 // CalcNextRequiredDifficulty return the difficult for next block
 func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {
+	// return lastBH.Bits
 	if lastBH == nil {
 		return consensus.PowMinBits
 	} else if (lastBH.Height)%consensus.BlocksPerRetarget != 0 || lastBH.Height == 0 {
@@ -136,6 +139,7 @@ func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {
 	actualTimeSpan := int64(lastBH.Time().Sub(compareBH.Time()).Seconds())
 
 	oldTarget := CompactToBig(lastBH.Bits)
+	// oldTarget := CalcWork(lastBH.Bits)
 	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(actualTimeSpan))
 	newTarget.Div(newTarget, big.NewInt(targetTimeSpan))
 	newTargetBits := BigToCompact(newTarget)

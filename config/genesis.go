@@ -2,11 +2,13 @@ package config
 
 import (
 	"fmt"
+	"time"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/consensus/aihash"
+	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -48,7 +50,7 @@ func GenerateGenesisBlock() *legacy.Block {
 	sha3pool.Sum256(seed[:], make([]byte, 32))
 
 	var hash128 [128]*bc.Hash
-	for i := 0; i < 128 ; i++ {
+	for i := 0; i < 128; i++ {
 		hash := bc.NewHash(seed)
 		hash128[i] = &hash
 	}
@@ -59,11 +61,11 @@ func GenerateGenesisBlock() *legacy.Block {
 			Height:      0,
 			Nonce:       0,
 			Seed:        bc.BytesToHash(aihash.Md.GetSeed()),
-			TimestampMS: 1511318565142,
+			TimestampMS: bc.Millis(time.Now()),
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 			},
-			Bits: 100000000,
+			Bits: 2305843009222082559,
 		},
 		Transactions: []*legacy.Tx{genesisCoinbaseTx},
 	}
