@@ -5,7 +5,6 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/state"
 )
 
 func TestTxPool(t *testing.T) {
@@ -15,7 +14,7 @@ func TestTxPool(t *testing.T) {
 	txB := mockCoinbaseTx(2000, 2324)
 	txC := mockCoinbaseTx(3000, 9322)
 
-	p.AddTransaction(txA, state.NewUtxoViewpoint(), 1000, 5000000000)
+	p.AddTransaction(txA, false, 1000, 5000000000)
 	if !p.IsTransactionInPool(&txA.ID) {
 		t.Errorf("fail to find added txA in tx pool")
 	} else {
@@ -28,7 +27,7 @@ func TestTxPool(t *testing.T) {
 	if p.IsTransactionInPool(&txB.ID) {
 		t.Errorf("shouldn't find txB in tx pool")
 	}
-	p.AddTransaction(txB, state.NewUtxoViewpoint(), 1, 5000000000)
+	p.AddTransaction(txB, false, 1, 5000000000)
 	if !p.IsTransactionInPool(&txB.ID) {
 		t.Errorf("shouldn find txB in tx pool")
 	}

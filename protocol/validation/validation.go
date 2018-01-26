@@ -556,8 +556,8 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 		if b.Version == 1 && tx.Version != 1 {
 			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)
 		}
-		if tx.MaxTime > b.Timestamp {
-			return errors.New("invalid transaction maxtime")
+		if tx.TimeRange > b.Timestamp {
+			return errors.New("invalid transaction time range")
 		}
 		txBTMValue, gasVaild, err := ValidateTx(tx, b)
 		gasOnlyTx := false

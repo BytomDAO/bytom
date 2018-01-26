@@ -9,6 +9,7 @@ import (
 	"github.com/golang/groupcache/lru"
 
 	"github.com/bytom/blockchain/txdb/storage"
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
@@ -58,7 +59,7 @@ func (mp *TxPool) GetNewTxCh() chan *legacy.Tx {
 }
 
 // AddTransaction add a verified transaction to pool
-func (mp *TxPool) AddTransaction(tx *legacy.Tx, view *state.UtxoViewpoint, height, fee uint64) *TxDesc {
+func (mp *TxPool) AddTransaction(tx *legacy.Tx, gasOnlyTx bool, height, fee uint64) *TxDesc {
 	txD := &TxDesc{
 		Tx:       tx,
 		Added:    time.Now(),
@@ -74,9 +75,10 @@ func (mp *TxPool) AddTransaction(tx *legacy.Tx, view *state.UtxoViewpoint, heigh
 	mp.pool[tx.Tx.ID] = txD
 	atomic.StoreInt64(&mp.lastUpdated, time.Now().Unix())
 
-	for key, entry := range view.Entries {
-		if !entry.Spent {
-			mp.utxo[key] = tx.Tx.ID
+	for _, id := range tx.TxHeader.ResultIds {
+		output, _ := tx.Output(*id)
+		if !gasOnlyTx || *output.Source.Value.AssetId == *consensus.BTMAssetID {
+			mp.utxo[*id] = tx.Tx.ID
 		}
 	}
 

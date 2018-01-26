@@ -66,7 +66,7 @@ message BlockHeader {
 message TxHeader {
   uint64        version         = 1;
   uint64        serialized_size = 2;
-  uint64        max_time        = 3;
+  uint64        time_range      = 3;
   repeated Hash result_ids      = 4;
   Hash          data            = 5;
   Hash          ext_hash        = 6;

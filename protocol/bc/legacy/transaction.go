@@ -85,7 +85,7 @@ type TxData struct {
 	Inputs         []*TxInput
 	Outputs        []*TxOutput
 
-	MaxTime uint64
+	TimeRange uint64
 
 	// The unconsumed suffix of the common fields extensible string
 	CommonFieldsSuffix []byte
@@ -137,7 +137,7 @@ func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 		return errors.Wrap(err, "reading transaction version")
 	}
 
-	if tx.MaxTime, err = blockchain.ReadVarint63(r); err != nil {
+	if tx.TimeRange, err = blockchain.ReadVarint63(r); err != nil {
 		return err
 	}
 	// Common witness
@@ -205,7 +205,7 @@ func (tx *TxData) writeTo(w io.Writer, serflags byte) error {
 		return errors.Wrap(err, "writing transaction version")
 	}
 
-	if _, err := blockchain.WriteVarint63(w, tx.MaxTime); err != nil {
+	if _, err := blockchain.WriteVarint63(w, tx.TimeRange); err != nil {
 		return errors.Wrap(err, "writing transaction maxtime")
 	}
 	// common witness
