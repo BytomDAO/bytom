@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"github.com/bytom/protocol/bc/legacy"
+	log "github.com/sirupsen/logrus"
 )
 
 // Get the parameters of mining
@@ -20,6 +21,13 @@ func (bcr *BlockchainReactor) getWork() *WorkResp {
 	}
 
 	return &resp
+}
+
+// Submit work for mining
+func (bcr *BlockchainReactor) submitWork(header legacy.BlockHeader) Response {
+	log.Printf("mining:---submitWork header:%v", header)
+	bcr.mining.NotifySpawnBlock(header)
+	return NewSuccessResponse(nil)
 }
 
 type WorkResp struct {

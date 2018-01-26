@@ -31,7 +31,7 @@ type CPUMiner struct {
 	chain             *protocol.Chain
 	accountManager    *account.Manager
 	txPool            *protocol.TxPool
-	currentBlock	  *legacy.Block
+	currentBlock      *legacy.Block
 	numWorkers        uint64
 	started           bool
 	discreteMining    bool
@@ -42,7 +42,7 @@ type CPUMiner struct {
 	updateHashes      chan uint64
 	speedMonitorQuit  chan struct{}
 	quit              chan struct{}
-	headerChan		  chan legacy.BlockHeader
+	headerChan        chan legacy.BlockHeader
 }
 
 // solveBlock attempts to find some combination of a nonce, extra nonce, and
@@ -70,6 +70,7 @@ func (m *CPUMiner) solveBlock(ticker *time.Ticker, quit chan struct{}) bool {
 				return false
 			}
 		case headerW := <-m.headerChan:
+			log.Infof("Receved mining work,header:%v", headerW)
 			if header.Height != headerW.Height {
 				return false
 			} else {
@@ -316,5 +317,6 @@ func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *pro
 		updateNumWorkers:  make(chan struct{}),
 		queryHashesPerSec: make(chan float64),
 		updateHashes:      make(chan uint64),
+		headerChan:        make(chan legacy.BlockHeader),
 	}
 }

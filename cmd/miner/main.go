@@ -15,7 +15,7 @@ const (
 )
 
 // do proof of work
-func doWork(work *blockchain.WorkResp) {
+func doWork(work *blockchain.WorkResp) bool {
 	fmt.Printf("work:%v\n", work)
 	for i := uint64(0); i <= maxNonce; i++ {
 		work.Header.Nonce = i
@@ -23,22 +23,26 @@ func doWork(work *blockchain.WorkResp) {
 		proofHash, err := algorithm.AIHash(work.Header.Height, &headerHash, work.Cache)
 		if err != nil {
 			fmt.Printf("Mining: failed on AIHash: %v\n", err)
-			return
+			return false
 		}
 
 		if difficulty.CheckProofOfWork(proofHash, work.Header.Bits) {
 			// to do: submitWork
 			fmt.Printf("Mining: successful-----proof hash:%v\n", proofHash)
-			return
+			return true
 		}
 	}
+	return false
 }
 
 func main() {
 	var work blockchain.WorkResp
 	client := util.MustRPCClient()
 	if err := client.Call(context.Background(), "/get-work", nil, &work); err == nil {
-		doWork(&work)
+		if doWork(&work) {
+			header := work.Header
+			client.Call(context.Background(), "/submit-work", &header, nil)
+		}
 	} else {
 		fmt.Printf("---err:%v\n", err)
 	}
