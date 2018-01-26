@@ -31,6 +31,7 @@ type CPUMiner struct {
 	chain             *protocol.Chain
 	accountManager    *account.Manager
 	txPool            *protocol.TxPool
+	currentBlock	  *legacy.Block
 	numWorkers        uint64
 	started           bool
 	discreteMining    bool
@@ -41,12 +42,17 @@ type CPUMiner struct {
 	updateHashes      chan uint64
 	speedMonitorQuit  chan struct{}
 	quit              chan struct{}
+	headerChan		  chan legacy.BlockHeader
 }
 
 // solveBlock attempts to find some combination of a nonce, extra nonce, and
 // current timestamp which makes the passed block hash to a value less than the
 // target difficulty.
-func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
+func (m *CPUMiner) solveBlock(ticker *time.Ticker, quit chan struct{}) bool {
+	block := m.currentBlock
+	if block == nil {
+		return false
+	}
 	header := &block.BlockHeader
 	seedCaches := m.chain.SeedCaches()
 	seedCache, err := seedCaches.Get(&header.Seed)
@@ -62,6 +68,13 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 		case <-ticker.C:
 			if m.chain.Height() >= header.Height {
 				return false
+			}
+		case headerW := <-m.headerChan:
+			if header.Height != headerW.Height {
+				return false
+			} else {
+				block.BlockHeader = headerW
+				return true
 			}
 		default:
 		}
@@ -79,6 +92,16 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 		}
 	}
 	return false
+}
+
+// Get current block
+func (m *CPUMiner) GetCurrentBlock() *legacy.Block {
+	return m.currentBlock
+}
+
+// Notify spawn block
+func (m *CPUMiner) NotifySpawnBlock(header legacy.BlockHeader) {
+	m.headerChan <- header
 }
 
 // generateBlocks is a worker that is controlled by the miningWorkerController.
@@ -100,21 +123,22 @@ out:
 		default:
 		}
 
-		block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
+		var err error
+		m.currentBlock, err = mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
 		if err != nil {
 			log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
 			continue
 		}
 
-		if m.solveBlock(block, ticker, quit) {
-			if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
+		if m.solveBlock(ticker, quit) {
+			if isOrphan, err := m.chain.ProcessBlock(m.currentBlock); err == nil {
 				log.WithFields(log.Fields{
-					"height":   block.BlockHeader.Height,
+					"height":   m.currentBlock.BlockHeader.Height,
 					"isOrphan": isOrphan,
-					"tx":       len(block.Transactions),
+					"tx":       len(m.currentBlock.Transactions),
 				}).Info("Miner processed block")
 			} else {
-				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
+				log.WithField("height", m.currentBlock.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
 			}
 		}
 	}
