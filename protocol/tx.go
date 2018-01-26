@@ -42,6 +42,6 @@ func (c *Chain) ValidateTx(tx *legacy.Tx) error {
 		gasOnlyTx = true
 	}
 
-	c.txPool.AddTransaction(tx, gasOnlyTx, block.BlockHeader.Height, fee)
-	return nil
+	_, err = c.txPool.AddTransaction(tx, gasOnlyTx, block.BlockHeader.Height, fee)
+	return err
 }

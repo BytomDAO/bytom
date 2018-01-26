@@ -13,13 +13,16 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
 	maxCachedErrTxs = 1000
 	maxNewTxChSize  = 1000
+	maxNewTxNum     = 10000
 	// ErrTransactionNotExist is the pre-defined error message
 	ErrTransactionNotExist = errors.New("transaction are not existed in the mempool")
+	ErrPoolIsFull          = errors.New("transaction pool reach the max number")
 )
 
 // TxDesc store tx and related info for mining strategy
@@ -59,7 +62,14 @@ func (mp *TxPool) GetNewTxCh() chan *legacy.Tx {
 }
 
 // AddTransaction add a verified transaction to pool
-func (mp *TxPool) AddTransaction(tx *legacy.Tx, gasOnlyTx bool, height, fee uint64) *TxDesc {
+func (mp *TxPool) AddTransaction(tx *legacy.Tx, gasOnlyTx bool, height, fee uint64) (*TxDesc, error) {
+	mp.mtx.Lock()
+	defer mp.mtx.Unlock()
+
+	if len(mp.pool) >= maxNewTxNum {
+		return nil, ErrPoolIsFull
+	}
+
 	txD := &TxDesc{
 		Tx:       tx,
 		Added:    time.Now(),
@@ -69,21 +79,22 @@ func (mp *TxPool) AddTransaction(tx *legacy.Tx, gasOnlyTx bool, height, fee uint
 		FeePerKB: fee * 1000 / tx.TxHeader.SerializedSize,
 	}
 
-	mp.mtx.Lock()
-	defer mp.mtx.Unlock()
-
 	mp.pool[tx.Tx.ID] = txD
 	atomic.StoreInt64(&mp.lastUpdated, time.Now().Unix())
 
 	for _, id := range tx.TxHeader.ResultIds {
-		output, _ := tx.Output(*id)
+		output, err := tx.Output(*id)
+		if err != nil {
+			return nil, err
+		}
 		if !gasOnlyTx || *output.Source.Value.AssetId == *consensus.BTMAssetID {
 			mp.utxo[*id] = tx.Tx.ID
 		}
 	}
 
 	mp.newTxCh <- tx
-	return txD
+	log.WithField("tx_id", tx.Tx.ID).Info("Add tx to mempool")
+	return txD, nil
 }
 
 // AddErrCache add a failed transaction record to lru cache
@@ -121,6 +132,8 @@ func (mp *TxPool) RemoveTransaction(txHash *bc.Hash) {
 	}
 	delete(mp.pool, *txHash)
 	atomic.StoreInt64(&mp.lastUpdated, time.Now().Unix())
+
+	log.WithField("tx_id", txHash).Info("remove tx from mempool")
 }
 
 // GetTransaction return the TxDesc by hash
