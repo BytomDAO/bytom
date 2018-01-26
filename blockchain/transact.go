@@ -73,12 +73,19 @@ func MergeActions(req *BuildRequest) []map[string]interface{} {
 	return actions
 }
 
-func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
+func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest, flag bool) (*txbuilder.Template, error) {
 	err := bcr.filterAliases(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	reqActions := MergeActions(req)
+
+	var reqActions []map[string]interface{}
+	if flag {
+		reqActions = req.Actions
+	} else {
+		reqActions = MergeActions(req)
+	}
+
 	actions := make([]txbuilder.Action, 0, len(reqActions))
 	for i, act := range reqActions {
 		typ, ok := act["type"].(string)
@@ -135,7 +142,7 @@ func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest
 
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
-	tmpl, err := bcr.buildSingle(subctx, buildReqs)
+	tmpl, err := bcr.buildSingle(subctx, buildReqs, false)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -162,7 +169,7 @@ func (bcr *BlockchainReactor) buildContractTX(ctx context.Context, req struct {
 	}
 
 	subctx := reqid.NewSubContext(ctx, reqid.New())
-	tmpl, err := bcr.buildSingle(subctx, &buildReq)
+	tmpl, err := bcr.buildSingle(subctx, &buildReq, true)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
