@@ -28,7 +28,7 @@ type rawOutput struct {
 	sourceID       bc.Hash
 	sourcePos      uint64
 	refData        bc.Hash
-	VaildHeight    uint64
+	ValidHeight    uint64
 }
 
 type accountOutput struct {
@@ -230,7 +230,7 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 
 			//coinbase utxo valid height
 			if txIndex == 0 {
-				out.VaildHeight = b.Height + consensus.CoinbasePendingBlockNumber
+				out.ValidHeight = b.Height + consensus.CoinbasePendingBlockNumber
 			}
 			outs = append(outs, out)
 		}
@@ -322,7 +322,7 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 			ControlProgramIndex: out.keyIndex,
 			AccountID:           out.AccountID,
 			Address:             out.Address,
-			ValidHeight:         out.VaildHeight,
+			ValidHeight:         out.ValidHeight,
 		}
 
 		data, err := json.Marshal(u)
