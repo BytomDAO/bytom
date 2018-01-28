@@ -21,11 +21,19 @@ import (
 const SINGLE = 1
 
 var walletKey = []byte("walletInfo")
+var privKeyKey = []byte("keysInfo")
 
 //StatusInfo is base valid block info to handle orphan block rollback
 type StatusInfo struct {
 	Height uint64
 	Hash   bc.Hash
+}
+
+//KeyInfo is key import status
+type KeyInfo struct {
+	Alias      string `json:"alias"`
+	ImportFlag bool   `json:"flag"`
+	Percent    uint8  `json:"percent"`
 }
 
 //Wallet is related to storing account unspent outputs
@@ -36,6 +44,8 @@ type Wallet struct {
 	AssetReg       *asset.Registry
 	chain          *protocol.Chain
 	rescanProgress chan struct{}
+	ImportPrivKey  bool
+	keysInfo       []KeyInfo
 }
 
 //NewWallet return a new wallet instance
@@ -46,12 +56,17 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		AssetReg:       asset,
 		chain:          chain,
 		rescanProgress: make(chan struct{}, 1),
+		ImportPrivKey:  false,
+		keysInfo:       make([]KeyInfo, 0),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
 		return nil, err
 	}
 
+	if err := w.loadKeysInfo(); err != nil {
+		return nil, err
+	}
 	go w.walletUpdater()
 	return w, nil
 }
@@ -67,10 +82,7 @@ func (w *Wallet) loadWalletInfo() error {
 	if err != nil {
 		return err
 	}
-	if err := w.attachBlock(block); err != nil {
-		return err
-	}
-	return nil
+	return w.attachBlock(block)
 }
 
 func (w *Wallet) commitWalletInfo(batch db.Batch) error {
@@ -82,6 +94,26 @@ func (w *Wallet) commitWalletInfo(batch db.Batch) error {
 
 	batch.Set(walletKey, rawWallet)
 	batch.Write()
+	return nil
+}
+
+//GetWalletInfo return stored wallet info and nil,if error,
+//return initial wallet info and err
+func (w *Wallet) loadKeysInfo() error {
+	if rawKeyInfo := w.DB.Get(privKeyKey); rawKeyInfo != nil {
+		json.Unmarshal(rawKeyInfo, &w.keysInfo)
+		return nil
+	}
+	return nil
+}
+
+func (w *Wallet) commitkeysInfo() error {
+	rawKeysInfo, err := json.Marshal(w.keysInfo)
+	if err != nil {
+		log.WithField("err", err).Error("save wallet info")
+		return err
+	}
+	w.DB.Set(privKeyKey, rawKeysInfo)
 	return nil
 }
 
@@ -114,6 +146,7 @@ func (w *Wallet) detachBlock(block *legacy.Block) error {
 func (w *Wallet) walletUpdater() {
 	for {
 		getRescanNotification(w)
+		checkRescanStatus(w)
 		for !w.chain.InMainChain(w.status.Height, w.status.Hash) {
 			block, err := w.chain.GetBlockByHash(&w.status.Hash)
 			if err != nil {
@@ -126,7 +159,6 @@ func (w *Wallet) walletUpdater() {
 				return
 			}
 		}
-
 		block, _ := w.chain.GetBlockByHeight(w.status.Height + 1)
 		if block == nil {
 			<-w.chain.BlockWaiter(w.status.Height + 1)
@@ -177,16 +209,23 @@ func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, key
 	if err != nil {
 		return nil, err
 	}
-	if err := w.recoveryAccountWalletDB(newAccount, xpub, index); err != nil {
+	if err := w.recoveryAccountWalletDB(newAccount, xpub, index, keyAlias); err != nil {
 		return nil, err
 	}
 	return xpub, nil
 }
 
-func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
+func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudohsm.XPub, index uint64, keyAlias string) error {
 	if err := w.createProgram(account, XPub, index); err != nil {
 		return err
 	}
+	w.ImportPrivKey = true
+	tmp := KeyInfo{
+		Alias:      keyAlias,
+		ImportFlag: true,
+	}
+	w.keysInfo = append(w.keysInfo, tmp)
+	w.commitkeysInfo()
 	w.rescanBlocks()
 
 	return nil
@@ -201,7 +240,29 @@ func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, i
 	return nil
 }
 
-//WalletUpdate process every valid block and reverse every invalid block which need to rollback
 func (w *Wallet) rescanBlocks() {
 	w.rescanProgress <- struct{}{}
+}
+
+//GetRescanStatus return key import rescan status
+func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
+	if err := w.loadKeysInfo(); err != nil {
+		return nil, err
+	}
+	for i, v := range w.keysInfo {
+		if v.ImportFlag == true {
+			w.keysInfo[i].Percent = uint8(w.status.Height * 100 / w.chain.Height())
+		}
+	}
+	return w.keysInfo, nil
+}
+
+func checkRescanStatus(w *Wallet) {
+	if w.ImportPrivKey {
+		if w.status.Height == w.chain.Height() {
+			w.ImportPrivKey = false
+		}
+
+		w.commitkeysInfo()
+	}
 }
