@@ -7,7 +7,6 @@ import (
 
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txdb/storage"
-	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -232,25 +231,6 @@ func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 	return c.store.GetTransactionsUtxo(view, txs)
 }
 
-// This function is inline the setState function
-func (c *Chain) spawnHash128() {
-	var hash128 [128]*bc.Hash
-	var start uint64 = 0
-	var point uint64 = 0
-	// Strategy to spawn hash128
-	height := c.state.block.Height
-
-	if height >= 128 {
-		start = height - 128
-	}
-	for i := start; i < height; i = i + 1 {
-		hash128[point] = (c.state.mainChain[i])
-		point = point + 1
-	}
-
-	aihash.Notify(hash128)
-}
-
 // This function must be called with mu lock in above level
 func (c *Chain) setState(block *legacy.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
 	blockHash := block.Hash()
@@ -262,9 +242,6 @@ func (c *Chain) setState(block *legacy.Block, view *state.UtxoViewpoint, m map[u
 
 	if err := c.store.SaveChainStatus(block, view, c.state.mainChain); err != nil {
 		return err
-	}
-	if c.state.block.Height != 0 && c.state.block.Height % 128 == 0 {
-		c.spawnHash128()
 	}
 
 	c.state.cond.Broadcast()
