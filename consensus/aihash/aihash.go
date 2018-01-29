@@ -22,6 +22,7 @@ func InitMiningData(hash128 [128]*bc.Hash) *MiningData {
 	return &md
 }
 
+// AIHash compute matrix list
 func AIHash(header *bc.Hash, cache []uint32) (*bc.Hash, error) {
 	if header == nil {
 		return nil, errors.New("BlockHeader Hash is invalid or not exist!")

@@ -11,15 +11,15 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/consensus/aihash"
 )
 
 const (
-	maxNonce          = ^uint64(0) // 2^32 - 1
+	maxNonce          = ^uint64(0) // 2^64 - 1
 	defaultNumWorkers = 1
 	hashUpdateSecs    = 1
 )

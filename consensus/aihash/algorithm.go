@@ -20,6 +20,7 @@ const (
 	mulRounds   = 1 << 8 // Number of rounds in mulmatrix
 )
 
+// MiningData store mining data
 type MiningData struct {
 	seed  []byte   // seed length is 32 Bytes
 	cache []uint32 // cache length is 256*256*256 = 16777216 Bytes
@@ -40,10 +41,12 @@ func makeHasher(h hash.Hash) hasher {
 	}
 }
 
+// GetSeed create seed, store in md
 func (md *MiningData) GetSeed() []byte {
 	return md.seed
 }
 
+// GetCache create cache, store in md
 func (md *MiningData) GetCache() []uint32 {
 	return md.cache
 }

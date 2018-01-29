@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
@@ -20,7 +21,6 @@ import (
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm/vmutil"
-	"github.com/bytom/consensus/aihash"
 )
 
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy

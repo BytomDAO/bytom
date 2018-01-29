@@ -43,7 +43,7 @@ func GenerateGenesisBlock() *legacy.Block {
 	genesisCoinbaseTx := GenerateGenesisTx()
 	merkleRoot, err := bc.MerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
 	if err != nil {
-		log.Panicf("Fatal create merkelRoot")
+		log.Panicf("Fatal create merkleRoot")
 	}
 
 	var seed [32]byte
