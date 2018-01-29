@@ -112,8 +112,6 @@ func (m *CPUMiner) NotifySpawnBlock(header legacy.BlockHeader) {
 func (m *CPUMiner) generateBlocks(quit chan struct{}, resume chan struct{}) {
 	ticker := time.NewTicker(time.Second * hashUpdateSecs)
 	defer ticker.Stop()
-	block := *(m.currentBlock)
-
 out:
 	for {
 		select {
@@ -121,22 +119,22 @@ out:
 			break out
 		case <-resume:
 			{
-				block = *(m.currentBlock)
+				log.Infof("-------generateBlocks resume")
+				block := *(m.currentBlock)
+				if m.solveBlock(&block, ticker, quit) {
+					if isOrphan, err := m.chain.ProcessBlock(&block); err == nil {
+						log.WithFields(log.Fields{
+							"height":   block.BlockHeader.Height,
+							"isOrphan": isOrphan,
+							"tx":       len(block.Transactions),
+						}).Info("Miner processed block")
+					} else {
+						log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
+					}
+					m.resume <- struct{}{}
+				}
 			}
 		default:
-		}
-
-		if m.solveBlock(&block, ticker, quit) {
-			if isOrphan, err := m.chain.ProcessBlock(&block); err == nil {
-				log.WithFields(log.Fields{
-					"height":   block.BlockHeader.Height,
-					"isOrphan": isOrphan,
-					"tx":       len(block.Transactions),
-				}).Info("Miner processed block")
-			} else {
-				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
-			}
-			m.resume <- struct{}{}
 		}
 	}
 
@@ -172,8 +170,10 @@ func (m *CPUMiner) miningWorkerController() {
 	if m.currentBlock, err = mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager); err != nil {
 		log.Panicf("Mining: failed on create NewBlockTemplate: %v", err)
 	}
-
 	launchWorkers(m.numWorkers)
+	for _, resume := range resumeWorkers {
+		resume <- struct{}{}
+	}
 
 out:
 	for {
@@ -212,6 +212,7 @@ out:
 			break out
 		case <-m.resume:
 			var err error
+			log.Infof("-----------resume")
 			if m.currentBlock, err = mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager); err != nil {
 				log.Panicf("Mining: failed on create NewBlockTemplate: %v", err)
 			}

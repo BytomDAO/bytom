@@ -25,7 +25,7 @@ func (bcr *BlockchainReactor) getWork() *WorkResp {
 
 // Submit work for mining
 func (bcr *BlockchainReactor) submitWork(header legacy.BlockHeader) Response {
-	log.Printf("mining:---submitWork header:%v", header)
+	log.Infof("mining:---submitWork header:%v", header)
 	bcr.mining.NotifySpawnBlock(header)
 	return NewSuccessResponse(nil)
 }
