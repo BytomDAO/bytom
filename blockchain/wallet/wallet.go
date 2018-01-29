@@ -31,9 +31,10 @@ type StatusInfo struct {
 
 //KeyInfo is key import status
 type KeyInfo struct {
-	Alias      string `json:"alias"`
-	ImportFlag bool   `json:"flag"`
-	Percent    uint8  `json:"percent"`
+	Alias      string       `json:"alias"`
+	XPub       chainkd.XPub `json:"xpub"`
+	ImportFlag bool         `json:"flag"`
+	Percent    uint8        `json:"percent"`
 }
 
 //Wallet is related to storing account unspent outputs
@@ -222,6 +223,7 @@ func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudoh
 	w.ImportPrivKey = true
 	tmp := KeyInfo{
 		Alias:      keyAlias,
+		XPub:       XPub.XPub,
 		ImportFlag: true,
 	}
 	w.keysInfo = append(w.keysInfo, tmp)

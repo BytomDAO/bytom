@@ -61,7 +61,7 @@ func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in KeyImportP
 	return NewSuccessResponse(xpub)
 }
 
-func (bcr *BlockchainReactor) importKeyProgress(ctx context.Context) Response {
+func (bcr *BlockchainReactor) keyImportProgress(ctx context.Context) Response {
 	data, err := bcr.wallet.GetRescanStatus()
 	if err != nil {
 		return NewErrorResponse(err)
