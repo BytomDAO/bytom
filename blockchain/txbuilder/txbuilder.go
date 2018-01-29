@@ -42,8 +42,7 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 		err := action.Build(ctx, &builder)
 		if err != nil {
 			log.WithFields(log.Fields{"action index": i, "error": err}).Error("Loop tx's action")
-			err = errors.WithData(err, "index", i)
-			errs = append(errs, err)
+			errs = append(errs, errors.WithDetailf(err, "action index %v", i))
 		}
 	}
 
