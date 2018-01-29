@@ -24,6 +24,12 @@ func NewHash(b32 [32]byte) (h Hash) {
 	return h
 }
 
+func BytesToHash(b []byte) (h Hash) {
+	var b32 [32]byte
+	copy(b32[:], b)
+	return NewHash(b32)
+}
+
 func (h Hash) Byte32() (b32 [32]byte) {
 	binary.BigEndian.PutUint64(b32[0:8], h.V0)
 	binary.BigEndian.PutUint64(b32[8:16], h.V1)

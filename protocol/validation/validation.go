@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/algorithm"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/errors"
@@ -543,7 +543,8 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 	if err != nil {
 		return err
 	}
-	proofHash, err := algorithm.AIHash(b.Height, &b.ID, seedCache)
+	hash := b.ID
+	proofHash, err := aihash.AIHash(&hash, seedCache)
 	if err != nil {
 		return err
 	}
@@ -626,9 +627,9 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 	if b.Timestamp <= prev.Timestamp {
 		return errors.WithDetailf(errMisorderedBlockTime, "previous block time %d, current block time %d", prev.Timestamp, b.Timestamp)
 	}
-	if *b.Seed != *algorithm.CreateSeed(b.Height, prev.Seed, []*bc.Hash{&prev.ID}) {
+	/*if *b.Seed != *aihash.CreateSeed(b.Height, prev.Seed, []*bc.Hash{&prev.ID}) {
 		return errors.New("wrong block seed")
-	}
+	}*/
 	return nil
 }
 

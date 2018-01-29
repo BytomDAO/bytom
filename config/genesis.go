@@ -1,11 +1,11 @@
 package config
 
 import (
+	"blockchain/crypto/sha3pool"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/difficulty"
-	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -41,7 +41,7 @@ func GenerateGenesisBlock() *legacy.Block {
 	genesisCoinbaseTx := GenerateGenesisTx()
 	merkleRoot, err := bc.MerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
 	if err != nil {
-		log.Panicf("Fatal create merkelRoot")
+		log.Panicf("Fatal create merkleRoot")
 	}
 
 	var seed [32]byte
@@ -51,13 +51,13 @@ func GenerateGenesisBlock() *legacy.Block {
 		BlockHeader: legacy.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     4216077,
+			Nonce:     1,
 			Seed:      bc.NewHash(seed),
-			Timestamp: 1516788453,
+			Timestamp: 1517211110,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 			},
-			Bits: 2161727821138738707,
+			Bits: 2305843009222082559,
 			TransactionStatus: bc.TransactionStatus{
 				Bitmap: []byte{0},
 			},
@@ -65,13 +65,5 @@ func GenerateGenesisBlock() *legacy.Block {
 		Transactions: []*legacy.Tx{genesisCoinbaseTx},
 	}
 
-	for {
-		hash := block.Hash()
-		if difficulty.CheckProofOfWork(&hash, block.Bits) {
-			log.WithField("block.Nonce=", block.Nonce).Info()
-			break
-		}
-		block.Nonce++
-	}
 	return block
 }

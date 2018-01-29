@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/account"
-	"github.com/bytom/consensus/algorithm"
+	"github.com/bytom/consensus/aihash"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	maxNonce          = ^uint64(0) // 2^32 - 1
+	maxNonce          = ^uint64(0) // 2^64 - 1
 	defaultNumWorkers = 1
 	hashUpdateSecs    = 1
 )
@@ -68,7 +68,7 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 
 		header.Nonce = i
 		headerHash := header.Hash()
-		proofHash, err := algorithm.AIHash(header.Height, &headerHash, seedCache)
+		proofHash, err := aihash.AIHash(&headerHash, seedCache)
 		if err != nil {
 			log.Errorf("Mining: failed on AIHash: %v", err)
 			return false

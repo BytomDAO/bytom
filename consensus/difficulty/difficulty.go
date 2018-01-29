@@ -2,11 +2,22 @@ package difficulty
 
 // HashToBig converts a *bc.Hash into a big.Int that can be used to
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
+)
+
+var (
+	// bigOne is 1 represented as a big.Int.  It is defined here to avoid
+	// the overhead of creating it multiple times.
+	bigOne = big.NewInt(1)
+
+	// oneLsh256 is 1 shifted left 256 bits.  It is defined here to avoid
+	// the overhead of creating it multiple times.
+	oneLsh256 = new(big.Int).Lsh(bigOne, 256)
 )
 
 // HashToBig convert bc.Hash to a difficult int
@@ -82,13 +93,42 @@ func BigToCompact(n *big.Int) uint64 {
 	return compact
 }
 
-// CheckProofOfWork the hash is vaild for given difficult
+// CalcWork calculates a work value from difficulty bits.  Bitcoin increases
+// the difficulty for generating a block by decreasing the value which the
+// generated hash must be less than.  This difficulty target is stored in each
+// block header using a compact representation as described in the documentation
+// for CompactToBig.  The main chain is selected by choosing the chain that has
+// the most proof of work (highest difficulty).  Since a lower target difficulty
+// value equates to higher actual difficulty, the work value which will be
+// accumulated must be the inverse of the difficulty.  Also, in order to avoid
+// potential division by zero and really small floating point numbers, the
+// result adds 1 to the denominator and multiplies the numerator by 2^256.
+func CalcWork(bits uint64) *big.Int {
+	// Return a work value of zero if the passed difficulty bits represent
+	// a negative number. Note this should not happen in practice with valid
+	// blocks, but an invalid block could trigger it.
+	difficultyNum := CompactToBig(bits)
+	fmt.Printf("--------difficultyNum:%v\n", difficultyNum)
+	if difficultyNum.Sign() <= 0 {
+		return big.NewInt(0)
+	}
+
+	// (1 << 256) / (difficultyNum + 1)
+	denominator := new(big.Int).Add(difficultyNum, bigOne)
+	return new(big.Int).Div(oneLsh256, denominator)
+}
+
+// CheckProofOfWork the hash is valid for given difficult
 func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
+	// fmt.Printf("hash bigint:%v, bits bigint:%v\n", HashToBig(hash), CalcWork(bits))
+	fmt.Printf("hash bigint:%v, bits bigint:%v\n", HashToBig(hash), CompactToBig(bits))
+	// return HashToBig(hash).Cmp(CalcWork(bits)) <= 0
 	return HashToBig(hash).Cmp(CompactToBig(bits)) <= 0
 }
 
 // CalcNextRequiredDifficulty return the difficult for next block
 func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {
+	// return lastBH.Bits
 	if lastBH == nil {
 		return consensus.PowMinBits
 	} else if (lastBH.Height)%consensus.BlocksPerRetarget != 0 || lastBH.Height == 0 {
@@ -99,6 +139,7 @@ func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {
 	actualTimeSpan := int64(lastBH.Timestamp - compareBH.Timestamp)
 
 	oldTarget := CompactToBig(lastBH.Bits)
+	// oldTarget := CalcWork(lastBH.Bits)
 	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(actualTimeSpan))
 	newTarget.Div(newTarget, big.NewInt(targetTimeSpan))
 	newTargetBits := BigToCompact(newTarget)
