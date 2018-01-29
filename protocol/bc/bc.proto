@@ -55,7 +55,7 @@ message BlockHeader {
   uint64            height             = 3;
   Hash              previous_block_id  = 4;
   Hash              seed               = 5;
-  uint64            timestamp_ms       = 6;
+  uint64            timestamp          = 6;
   Hash              transactions_root  = 7;
   Hash              assets_root        = 8;
   TransactionStatus transaction_status = 9;
@@ -66,9 +66,10 @@ message BlockHeader {
 message TxHeader {
   uint64        version         = 1;
   uint64        serialized_size = 2;
-  repeated Hash result_ids      = 3;
-  Hash          data            = 4;
-  Hash          ext_hash        = 5;
+  uint64        time_range      = 3;
+  repeated Hash result_ids      = 4;
+  Hash          data            = 5;
+  Hash          ext_hash        = 6;
 }
 
 message TransactionStatus {

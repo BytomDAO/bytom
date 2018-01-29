@@ -200,13 +200,13 @@ func (c *Chain) InMainChain(height uint64, hash bc.Hash) bool {
 }
 
 // TimestampMS returns the latest known block timestamp.
-func (c *Chain) TimestampMS() uint64 {
+func (c *Chain) Timestamp() uint64 {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
 	if c.state.block == nil {
 		return 0
 	}
-	return c.state.block.TimestampMS
+	return c.state.block.Timestamp
 }
 
 // BestBlock returns the chain tail block
