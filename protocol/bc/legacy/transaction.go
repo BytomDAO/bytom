@@ -85,6 +85,8 @@ type TxData struct {
 	Inputs         []*TxInput
 	Outputs        []*TxOutput
 
+	TimeRange uint64
+
 	// The unconsumed suffix of the common fields extensible string
 	CommonFieldsSuffix []byte
 
@@ -104,11 +106,6 @@ func (tx *TxData) HasIssuance() bool {
 	return false
 }
 
-// IsCoinbase returns true if this transaction is coinbase transaction.
-func (tx *TxData) IsCoinbase() bool {
-	return len(tx.Inputs) == 0 && len(tx.Outputs) == 1
-}
-
 func (tx *TxData) UnmarshalText(p []byte) error {
 	b := make([]byte, hex.DecodedLen(len(p)))
 	if _, err := hex.Decode(b, p); err != nil {
@@ -126,6 +123,7 @@ func (tx *TxData) UnmarshalText(p []byte) error {
 }
 
 func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
+	tx.SerializedSize = uint64(r.Len())
 	var serflags [1]byte
 	if _, err = io.ReadFull(r, serflags[:]); err != nil {
 		return errors.Wrap(err, "reading serialization flags")
@@ -139,8 +137,9 @@ func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 		return errors.Wrap(err, "reading transaction version")
 	}
 
-	tx.SerializedSize = uint64(r.Len())
-
+	if tx.TimeRange, err = blockchain.ReadVarint63(r); err != nil {
+		return err
+	}
 	// Common witness
 	tx.CommonWitnessSuffix, err = blockchain.ReadExtensibleString(r, tx.readCommonWitness)
 	if err != nil {
@@ -206,6 +205,9 @@ func (tx *TxData) writeTo(w io.Writer, serflags byte) error {
 		return errors.Wrap(err, "writing transaction version")
 	}
 
+	if _, err := blockchain.WriteVarint63(w, tx.TimeRange); err != nil {
+		return errors.Wrap(err, "writing transaction maxtime")
+	}
 	// common witness
 	if _, err := blockchain.WriteExtensibleString(w, tx.CommonWitnessSuffix, tx.writeCommonWitness); err != nil {
 		return errors.Wrap(err, "writing common witness")

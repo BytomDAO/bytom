@@ -21,13 +21,14 @@ func init() {
 	buildTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 	buildTransactionCmd.PersistentFlags().BoolVar(&alias, "alias", false, "use alias build transaction")
 
-	signTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
+	signTransactionCmd.PersistentFlags().StringArrayVarP(&password, "password", "p", []string{}, "password of the account which sign these transaction(s)")
 	signTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 
-	signSubTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
+	signSubTransactionCmd.PersistentFlags().StringArrayVarP(&password, "password", "p", []string{}, "password of the account which sign these transaction(s)")
 
 	listTransactionsCmd.PersistentFlags().StringVar(&txID, "id", "", "transaction id")
 	listTransactionsCmd.PersistentFlags().StringVar(&account, "account_id", "", "account id")
+	listTransactionsCmd.PersistentFlags().BoolVar(&detail, "detail", false, "list transactions details")
 }
 
 var (
@@ -35,11 +36,12 @@ var (
 	btmGas          = ""
 	receiverProgram = ""
 	address         = ""
-	password        = ""
+	password        = make([]string, 0)
 	pretty          = false
 	alias           = false
 	txID            = ""
 	account         = ""
+	detail          = false
 )
 
 var buildIssueReqFmt = `
@@ -131,7 +133,7 @@ var buildTransactionCmd = &cobra.Command{
 				buildReqStr = fmt.Sprintf(buildRetireReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
 				break
 			}
-			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
+			buildReqStr = fmt.Sprintf(buildRetireReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
 		case "address":
 			if alias {
 				buildReqStr = fmt.Sprintf(buildControlAddressReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
@@ -192,9 +194,9 @@ var signTransactionCmd = &cobra.Command{
 		}
 
 		var req = struct {
-			Auth string
-			Txs  txbuilder.Template `json:"transaction"`
-		}{Auth: "123456", Txs: template}
+			Password []string           `json:"password"`
+			Txs      txbuilder.Template `json:"transaction"`
+		}{Password: password, Txs: template}
 
 		jww.FEEDBACK.Printf("\n\n")
 		data, exitCode := util.ClientCall("/sign-transaction", &req)
@@ -250,7 +252,7 @@ var signSubTransactionCmd = &cobra.Command{
 	Short: "Sign and Submit transaction templates with account password",
 	Args:  cobra.ExactArgs(1),
 	PreRun: func(cmd *cobra.Command, args []string) {
-		// cmd.MarkFlagRequired("password")
+		cmd.MarkFlagRequired("password")
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		template := txbuilder.Template{}
@@ -262,9 +264,9 @@ var signSubTransactionCmd = &cobra.Command{
 		}
 
 		var req = struct {
-			Auth string
-			Txs  txbuilder.Template `json:"transaction"`
-		}{Auth: "123456", Txs: template}
+			Password []string           `json:"password"`
+			Txs      txbuilder.Template `json:"transaction"`
+		}{Password: password, Txs: template}
 
 		jww.FEEDBACK.Printf("\n\n")
 		data, exitCode := util.ClientCall("/sign-submit-transaction", &req)
@@ -284,7 +286,8 @@ var listTransactionsCmd = &cobra.Command{
 		filter := struct {
 			ID        string `json:"id"`
 			AccountID string `json:"account_id"`
-		}{ID: txID, AccountID: account}
+			Detail    bool   `json:"detail"`
+		}{ID: txID, AccountID: account, Detail: detail}
 
 		data, exitCode := util.ClientCall("/list-transactions", &filter)
 		if exitCode != util.Success {

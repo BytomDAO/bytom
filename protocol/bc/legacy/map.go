@@ -1,6 +1,7 @@
 package legacy
 
 import (
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm"
@@ -43,7 +44,11 @@ func MapTx(oldTx *TxData) *bc.Tx {
 			spentOutputIDs[*e.SpentOutputId] = true
 			ord = e.Ordinal
 			// resume below after the switch
+			if *e.WitnessDestination.Value.AssetId == *consensus.BTMAssetID {
+				tx.GasInputIDs = append(tx.GasInputIDs, id)
+			}
 
+		case *bc.Coinbase:
 		default:
 			continue
 		}
@@ -80,6 +85,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		firstSpendID bc.Hash
 		spends       []*bc.Spend
 		issuances    []*bc.Issuance
+		coinbase     *bc.Coinbase
 		muxSources   = make([]*bc.ValueSource, len(tx.Inputs))
 	)
 
@@ -161,15 +167,18 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		}
 	}
 
-	if tx.IsCoinbase() {
-		cb := bc.NewCoinbase()
-		cbID := addEntry(cb)
+	if len(tx.Inputs) == 1 {
+		if oldCB, ok := tx.Inputs[0].TypedInput.(*CoinbaseInput); ok {
+			cb := bc.NewCoinbase(oldCB.Arbitrary)
+			cbID := addEntry(cb)
 
-		out := tx.Outputs[0]
-		muxSources = []*bc.ValueSource{{
-			Ref:   &cbID,
-			Value: &out.AssetAmount,
-		}}
+			out := tx.Outputs[0]
+			muxSources = []*bc.ValueSource{{
+				Ref:   &cbID,
+				Value: &out.AssetAmount,
+			}}
+			coinbase = cb
+		}
 	}
 
 	mux := bc.NewMux(muxSources, &bc.Program{VmVersion: 1, Code: []byte{byte(vm.OP_TRUE)}})
@@ -183,7 +192,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		iss.SetDestination(&muxID, iss.Value, iss.Ordinal)
 	}
 
-	if tx.IsCoinbase() {
+	if coinbase != nil {
 		muxSource := mux.Sources[0]
 		cb := entryMap[*muxSource.Ref].(*bc.Coinbase)
 		cb.SetDestination(&muxID, muxSource.Value, 0)
@@ -225,14 +234,14 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	refdatahash := hashData(tx.ReferenceData)
-	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, resultIDs, &refdatahash)
+	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, tx.TimeRange, resultIDs, &refdatahash)
 	headerID = addEntry(h)
 
 	return headerID, h, entryMap
 }
 
 func mapBlockHeader(old *BlockHeader) (bhID bc.Hash, bh *bc.BlockHeader) {
-	bh = bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, &old.Seed, old.TimestampMS, &old.TransactionsMerkleRoot, &old.AssetsMerkleRoot, old.Nonce, old.Bits)
+	bh = bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, &old.Seed, old.Timestamp, &old.TransactionsMerkleRoot, &old.AssetsMerkleRoot, &old.TransactionStatus, old.Nonce, old.Bits)
 	bhID = bc.EntryID(bh)
 	return
 }

@@ -18,10 +18,10 @@ func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
 	accounts, err := bcr.accounts.ListAccounts(filter.ID)
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(accounts)
+	return NewSuccessResponse(accounts)
 }
 
 // POST /list-assets
@@ -31,10 +31,10 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
 	assets, err := bcr.assets.ListAssets(filter.ID)
 	if err != nil {
 		log.Errorf("listAssets: %v", err)
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(assets)
+	return NewSuccessResponse(assets)
 }
 
 // POST /listBalances
@@ -42,10 +42,10 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
 	accountUTXOs, err := bcr.wallet.GetAccountUTXOs("")
 	if err != nil {
 		log.Errorf("GetAccountUTXOs: %v", err)
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(bcr.indexBalances(accountUTXOs))
+	return NewSuccessResponse(bcr.indexBalances(accountUTXOs))
 }
 
 type accountBalance struct {
@@ -108,8 +108,9 @@ func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accou
 func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struct {
 	ID        string `json:"id"`
 	AccountID string `json:"account_id"`
+	Detail    bool   `json:"detail"`
 }) Response {
-	var transactions []query.AnnotatedTx
+	var transactions []*query.AnnotatedTx
 	var err error
 
 	if filter.AccountID != "" {
@@ -120,9 +121,14 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struc
 
 	if err != nil {
 		log.Errorf("listTransactions: %v", err)
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
-	return resWrapper(transactions)
+
+	if filter.Detail == false {
+		txSummary := bcr.wallet.GetTransactionsSummary(transactions)
+		return NewSuccessResponse(txSummary)
+	}
+	return NewSuccessResponse(transactions)
 }
 
 type annotatedUTXO struct {
@@ -138,6 +144,7 @@ type annotatedUTXO struct {
 	SourceID            string `json:"source_id"`
 	SourcePos           uint64 `json:"source_pos"`
 	RefDataHash         string `json:"ref_data"`
+	ValidHeight         uint64 `json:"valid_height"`
 }
 
 // POST /list-unspent-outputs
@@ -150,7 +157,7 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 	accountUTXOs, err := bcr.wallet.GetAccountUTXOs(filter.ID)
 	if err != nil {
 		log.Errorf("list Unspent Outputs: %v", err)
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	for _, utxo := range accountUTXOs {
@@ -164,6 +171,7 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 		tmpUTXO.RefDataHash = utxo.RefDataHash.String()
 		tmpUTXO.ControlProgramIndex = utxo.ControlProgramIndex
 		tmpUTXO.Address = utxo.Address
+		tmpUTXO.ValidHeight = utxo.ValidHeight
 
 		tmpUTXO.Alias = bcr.accounts.GetAliasByID(utxo.AccountID)
 		tmpUTXO.AssetAlias = bcr.assets.GetAliasByID(tmpUTXO.AssetID)
@@ -171,5 +179,5 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 		UTXOs = append(UTXOs, tmpUTXO)
 	}
 
-	return resWrapper(UTXOs)
+	return NewSuccessResponse(UTXOs)
 }

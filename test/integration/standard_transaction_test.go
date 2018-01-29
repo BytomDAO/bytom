@@ -10,8 +10,8 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/validation"
 	"github.com/bytom/test"
 )
 
@@ -41,7 +41,7 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "testAccount", nil, "")
+	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "testAccount", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
+	if _, _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -97,7 +97,7 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, "testAccount", nil, "")
+	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, "testAccount", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
+	if _, _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
 }

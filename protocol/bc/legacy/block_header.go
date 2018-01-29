@@ -26,10 +26,10 @@ type BlockHeader struct {
 
 	Seed bc.Hash
 
-	// Time of the block in milliseconds.
-	// Must grow monotonically and can be equal
-	// to the time in the previous block.
-	TimestampMS uint64
+	// Time of the block in seconds.
+	Timestamp uint64
+
+	TransactionStatus bc.TransactionStatus
 
 	BlockCommitment
 
@@ -39,7 +39,7 @@ type BlockHeader struct {
 
 // Time returns the time represented by the Timestamp in bh.
 func (bh *BlockHeader) Time() time.Time {
-	tsNano := bh.TimestampMS * uint64(time.Millisecond)
+	tsNano := bh.Timestamp * uint64(time.Second)
 	return time.Unix(0, int64(tsNano)).UTC()
 }
 
@@ -108,10 +108,13 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error)
 	if _, err = bh.Seed.ReadFrom(r); err != nil {
 		return 0, err
 	}
-	if bh.TimestampMS, err = blockchain.ReadVarint63(r); err != nil {
+	if bh.Timestamp, err = blockchain.ReadVarint63(r); err != nil {
 		return 0, err
 	}
 	if _, err = blockchain.ReadExtensibleString(r, bh.BlockCommitment.readFrom); err != nil {
+		return 0, err
+	}
+	if _, err = blockchain.ReadExtensibleString(r, bh.TransactionStatus.ReadFrom); err != nil {
 		return 0, err
 	}
 	if bh.Nonce, err = blockchain.ReadVarint63(r); err != nil {
@@ -146,10 +149,13 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 	if _, err = bh.Seed.WriteTo(w); err != nil {
 		return err
 	}
-	if _, err = blockchain.WriteVarint63(w, bh.TimestampMS); err != nil {
+	if _, err = blockchain.WriteVarint63(w, bh.Timestamp); err != nil {
 		return err
 	}
 	if _, err = blockchain.WriteExtensibleString(w, nil, bh.BlockCommitment.writeTo); err != nil {
+		return err
+	}
+	if _, err = blockchain.WriteExtensibleString(w, nil, bh.TransactionStatus.WriteTo); err != nil {
 		return err
 	}
 	if _, err = blockchain.WriteVarint63(w, bh.Nonce); err != nil {

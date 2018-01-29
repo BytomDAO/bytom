@@ -3,7 +3,6 @@ package account
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,7 +28,9 @@ var (
 	// (and no other transaction spends funds from the account),
 	// new change outputs will be created
 	// in sufficient amounts to satisfy the request.
-	ErrReserved = errors.New("reservation found outputs already reserved")
+	ErrReserved    = errors.New("reservation found outputs already reserved")
+	ErrMatchUTXO   = errors.New("can't match enough valid utxos")
+	ErrReservation = errors.New("couldn't find reservation")
 )
 
 // UTXO describes an individual account utxo.
@@ -49,6 +50,7 @@ type UTXO struct {
 	AccountID           string
 	Address             string
 	ControlProgramIndex uint64
+	ValidHeight         uint64
 }
 
 func (u *UTXO) source() source {
@@ -123,8 +125,11 @@ func (re *reserver) reserve(src source, amount uint64, clientToken *string, exp 
 
 	// Try to reserve the right amount.
 	rid := atomic.AddUint64(&re.nextReservationID, 1)
-	reserved, total, err := sourceReserver.reserve(rid, amount)
+	reserved, total, err, isImmature := sourceReserver.reserve(rid, amount)
 	if err != nil {
+		if isImmature {
+			return nil, errors.WithDetail(err, "some coinbase utxos are immature")
+		}
 		return nil, err
 	}
 
@@ -167,8 +172,9 @@ func (re *reserver) reserveUTXO(ctx context.Context, out bc.Hash, exp time.Time,
 		return nil, err
 	}
 
-	if !re.checkUTXO(u) {
-		return nil, errors.New("didn't find utxo")
+	//u.ValidHeight > 0 means coinbase utxo
+	if u.ValidHeight > 0 && u.ValidHeight > re.c.Height() {
+		return nil, errors.WithDetail(ErrMatchUTXO, "this coinbase utxo is immature")
 	}
 
 	rid := atomic.AddUint64(&re.nextReservationID, 1)
@@ -198,7 +204,7 @@ func (re *reserver) Cancel(ctx context.Context, rid uint64) error {
 	delete(re.reservations, rid)
 	re.reservationsMu.Unlock()
 	if !ok {
-		return fmt.Errorf("couldn't find reservation %d", rid)
+		return errors.Wrapf(ErrReservation, "rid=%d", rid)
 	}
 	re.source(res.Source).cancel(res)
 	/*if res.ClientToken != nil {
@@ -237,14 +243,6 @@ func (re *reserver) ExpireReservations(ctx context.Context) error {
 	return nil
 }
 
-func (re *reserver) checkUTXO(u *UTXO) bool {
-	utxo, err := re.c.GetUtxo(&u.OutputID)
-	if err != nil {
-		return false
-	}
-	return !utxo.Spent
-}
-
 func (re *reserver) source(src source) *sourceReserver {
 	re.sourcesMu.Lock()
 	defer re.sourcesMu.Unlock()
@@ -255,59 +253,40 @@ func (re *reserver) source(src source) *sourceReserver {
 	}
 
 	sr = &sourceReserver{
-		db:       re.db,
-		src:      src,
-		validFn:  re.checkUTXO,
-		cached:   make(map[bc.Hash]*UTXO),
-		reserved: make(map[bc.Hash]uint64),
+		db:            re.db,
+		src:           src,
+		reserved:      make(map[bc.Hash]uint64),
+		currentHeight: re.c.Height,
 	}
 	re.sources[src] = sr
 	return sr
 }
 
 type sourceReserver struct {
-	db       dbm.DB
-	src      source
-	validFn  func(u *UTXO) bool
-	mu       sync.Mutex
-	cached   map[bc.Hash]*UTXO
-	reserved map[bc.Hash]uint64
+	db            dbm.DB
+	src           source
+	currentHeight func() uint64
+	mu            sync.Mutex
+	reserved      map[bc.Hash]uint64
 }
 
-func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, error) {
-	reservedUTXOs, reservedAmount, err := sr.reserveFromCache(rid, amount)
-	if err == nil {
-		return reservedUTXOs, reservedAmount, nil
-	}
-
-	// Find the set of UTXOs that match this source.
-	err = sr.refillCache()
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return sr.reserveFromCache(rid, amount)
-}
-
-func (sr *sourceReserver) reserveFromCache(rid uint64, amount uint64) ([]*UTXO, uint64, error) {
+func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, error, bool) {
 	var (
 		reserved, unavailable uint64
 		reservedUTXOs         []*UTXO
 	)
+
+	utxos, err, isImmature := findMatchingUTXOs(sr.db, sr.src, sr.currentHeight)
+	if err != nil {
+		return nil, 0, errors.Wrap(err), isImmature
+	}
+
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
-
-	for o, u := range sr.cached {
+	for _, u := range utxos {
 		// If the UTXO is already reserved, skip it.
 		if _, ok := sr.reserved[u.OutputID]; ok {
 			unavailable += u.Amount
-			continue
-		}
-		// Cached utxos aren't guaranteed to still be valid; they may
-		// have been spent. Verify that that the outputs are still in
-		// the state tree.
-		if !sr.validFn(u) {
-			delete(sr.cached, o)
 			continue
 		}
 
@@ -320,12 +299,12 @@ func (sr *sourceReserver) reserveFromCache(rid uint64, amount uint64) ([]*UTXO, 
 	if reserved+unavailable < amount {
 		// Even if everything was available, this account wouldn't have
 		// enough to satisfy the request.
-		return nil, 0, ErrInsufficient
+		return nil, 0, ErrInsufficient, isImmature
 	}
 	if reserved < amount {
 		// The account has enough for the request, but some is tied up in
 		// other reservations.
-		return nil, 0, ErrReserved
+		return nil, 0, ErrReserved, isImmature
 	}
 
 	// We've found enough to satisfy the request.
@@ -333,7 +312,7 @@ func (sr *sourceReserver) reserveFromCache(rid uint64, amount uint64) ([]*UTXO, 
 		sr.reserved[u.OutputID] = rid
 	}
 
-	return reservedUTXOs, reserved, nil
+	return reservedUTXOs, reserved, nil, isImmature
 }
 
 func (sr *sourceReserver) reserveUTXO(rid uint64, utxo *UTXO) error {
@@ -357,31 +336,22 @@ func (sr *sourceReserver) cancel(res *reservation) {
 	}
 }
 
-func (sr *sourceReserver) refillCache() error {
-
-	utxos, err := findMatchingUTXOs(sr.db, sr.src)
-	if err != nil {
-		return errors.Wrap(err)
-	}
-
-	sr.mu.Lock()
-	for _, u := range utxos {
-		sr.cached[u.OutputID] = u
-	}
-	sr.mu.Unlock()
-
-	return nil
-}
-
-func findMatchingUTXOs(db dbm.DB, src source) ([]*UTXO, error) {
+func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*UTXO, error, bool) {
 	utxos := []*UTXO{}
+	isImmature := false
 	utxoIter := db.IteratorPrefix([]byte(UTXOPreFix))
 	defer utxoIter.Release()
 
 	for utxoIter.Next() {
 		u := &UTXO{}
 		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
-			return nil, errors.Wrap(err)
+			return nil, errors.Wrap(err), false
+		}
+
+		//u.ValidHeight > 0 means coinbase utxo
+		if u.ValidHeight > 0 && u.ValidHeight > currentHeight() {
+			isImmature = true
+			continue
 		}
 
 		if u.AccountID == src.AccountID && u.AssetID == src.AssetID {
@@ -390,16 +360,16 @@ func findMatchingUTXOs(db dbm.DB, src source) ([]*UTXO, error) {
 	}
 
 	if len(utxos) == 0 {
-		return nil, errors.New("can't match utxo")
+		return nil, ErrMatchUTXO, isImmature
 	}
-	return utxos, nil
+	return utxos, nil, isImmature
 }
 
 func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*UTXO, error) {
 	u := &UTXO{}
 	data := db.Get(UTXOKey(outHash))
 	if data == nil {
-		return nil, fmt.Errorf("can't find utxo: %s", outHash.String())
+		return nil, errors.Wrapf(ErrMatchUTXO, "utxo_id = %s", outHash.String())
 	}
 	return u, json.Unmarshal(data, u)
 }

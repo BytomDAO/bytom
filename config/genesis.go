@@ -1,15 +1,11 @@
 package config
 
 import (
-	"fmt"
-	"time"
+	"blockchain/crypto/sha3pool"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/aihash"
-	"github.com/bytom/consensus/difficulty"
-	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -19,7 +15,9 @@ func GenerateGenesisTx() *legacy.Tx {
 	txData := legacy.TxData{
 		Version:        1,
 		SerializedSize: 63,
-		Inputs:         []*legacy.TxInput{},
+		Inputs: []*legacy.TxInput{
+			legacy.NewCoinbaseInput([]byte("May 4th Be With You"), nil),
+		},
 		Outputs: []*legacy.TxOutput{
 			&legacy.TxOutput{
 				AssetVersion: 1,
@@ -49,42 +47,23 @@ func GenerateGenesisBlock() *legacy.Block {
 	var seed [32]byte
 	sha3pool.Sum256(seed[:], make([]byte, 32))
 
-	var hash128 [128]*bc.Hash
-	for i := 0; i < 128; i++ {
-		hash := bc.NewHash(seed)
-		hash128[i] = &hash
-	}
-	aihash.Notify(hash128)
 	block := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
-			Version:     1,
-			Height:      0,
-			Nonce:       0,
-			Seed:        bc.BytesToHash(aihash.Md.GetSeed()),
-			TimestampMS: bc.Millis(time.Now()),
+			Version:   1,
+			Height:    0,
+			Nonce:     1,
+			Seed:      bc.NewHash(seed),
+			Timestamp: 1517211110,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 			},
 			Bits: 2305843009222082559,
+			TransactionStatus: bc.TransactionStatus{
+				Bitmap: []byte{0},
+			},
 		},
 		Transactions: []*legacy.Tx{genesisCoinbaseTx},
 	}
 
-	fmt.Printf("1----------block:%v\n", block)
-	for {
-		hash := block.Hash()
-		proofHash, err := aihash.AIHash(&hash, aihash.Md.GetCache())
-		if err != nil {
-			log.Panicf("Fatal AIHash")
-		}
-
-		if difficulty.CheckProofOfWork(proofHash, block.Bits) {
-			fmt.Printf("Nonce----------nonce:%v\n", block.Nonce)
-			log.Info(block.Nonce)
-			break
-		}
-		block.Nonce++
-	}
-	fmt.Printf("2----------block:%v\n", block)
 	return block
 }

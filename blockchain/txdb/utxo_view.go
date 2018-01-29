@@ -25,7 +25,7 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 
 			data := db.Get(calcUtxoKey(&prevout))
 			if data == nil {
-				return errors.New("can't find utxo in db")
+				continue
 			}
 
 			var utxo storage.UtxoEntry
@@ -66,4 +66,8 @@ func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 		batch.Set(calcUtxoKey(&key), b)
 	}
 	return nil
+}
+
+func SaveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
+	return saveUtxoView(batch, view)
 }

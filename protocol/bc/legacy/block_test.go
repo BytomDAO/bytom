@@ -23,7 +23,7 @@ func TestMarshalBlock(t *testing.T) {
 		Transactions: []*Tx{
 			NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(43),
+				SerializedSize: uint64(46),
 				Outputs: []*TxOutput{
 					NewTxOutput(bc.AssetID{}, 1, nil, nil),
 				},
@@ -46,12 +46,15 @@ func TestMarshalBlock(t *testing.T) {
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // tx merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
+		"01" + // tx status
+		"00" +
 		"00" + // nonce
 		"00" + // bits
 
 		"01" + // num transactions
 		"07" + // tx 0, serialization flags
 		"01" + // tx 0, tx version
+		"00" + // tx maxtime
 		"00" + // tx 0, common witness extensible string length
 		"00" + // tx 0, inputs count
 		"01" + // tx 0, outputs count
@@ -104,6 +107,8 @@ func TestEmptyBlock(t *testing.T) {
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
+		"01" + // tx status
+		"00" +
 		"00" + // nonce
 		"00" + // bits
 		"00") // num transactions
@@ -122,6 +127,8 @@ func TestEmptyBlock(t *testing.T) {
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
+		"01" + // tx status
+		"00" +
 		"00" + // nonce
 		"00") // bits
 	want, _ = hex.DecodeString(wantHex)
@@ -129,7 +136,7 @@ func TestEmptyBlock(t *testing.T) {
 		t.Errorf("empty block header bytes = %x want %x", got, want)
 	}
 
-	wantHash := mustDecodeHash("8c85ed997cfdd22185ab28b4e4942c74646176fb293bd18bd19c973c42cec915")
+	wantHash := mustDecodeHash("8ba2dd5c6f88f8e95e7647b9342ae473eff81105927b18832c2c884ab673b582")
 	if h := block.Hash(); h != wantHash {
 		t.Errorf("got block hash %x, want %x", h.Bytes(), wantHash.Bytes())
 	}
@@ -159,10 +166,12 @@ func TestSmallBlock(t *testing.T) {
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
 		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
+		"01" + // tx status
+		"00" +
 		"00" + // nonce
 		"00" + // bits
 		"01" + // num transactions
-		"070100000000") // transaction
+		"07010000000000") // transaction
 	want, _ := hex.DecodeString(wantHex)
 	if !bytes.Equal(got, want) {
 		t.Errorf("small block bytes = %x want %x", got, want)

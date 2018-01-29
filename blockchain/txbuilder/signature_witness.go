@@ -47,7 +47,7 @@ var ErrEmptyProgram = errors.New("empty signature program")
 //  - the mintime and maxtime of the transaction (if non-zero)
 //  - the outputID and (if non-empty) reference data of the current input
 //  - the assetID, amount, control program, and (if non-empty) reference data of each output.
-func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint32, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
+func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint32, xpubs []chainkd.XPub, auth []string, signFn SignFunc) error {
 	// Compute the predicate to sign. This is either a
 	// txsighash program if tpl.AllowAdditional is false (i.e., the tx is complete
 	// and no further changes are allowed) or a program enforcing
@@ -91,7 +91,7 @@ func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint3
 		for i, p := range keyID.DerivationPath {
 			path[i] = p
 		}
-		sigBytes, err := signFn(ctx, keyID.XPub, path, h, auth)
+		sigBytes, err := signFn(ctx, keyID.XPub, path, h, auth[i])
 		if err != nil {
 			return errors.WithDetailf(err, "computing signature %d", i)
 		}

@@ -3,13 +3,17 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -24,6 +28,7 @@ type rawOutput struct {
 	sourceID       bc.Hash
 	sourcePos      uint64
 	refData        bc.Hash
+	ValidHeight    uint64
 }
 
 type accountOutput struct {
@@ -37,8 +42,8 @@ type accountOutput struct {
 const (
 	//TxPrefix is wallet database transactions prefix
 	TxPrefix = "TXS:"
-	//TxIndex is wallet database tx index prefix
-	TxIndex = "TID:"
+	//TxIndexPrefix is wallet database tx index prefix
+	TxIndexPrefix = "TID:"
 )
 
 func formatKey(blockHeight uint64, position uint32) string {
@@ -54,7 +59,7 @@ func calcDeleteKey(blockHeight uint64) []byte {
 }
 
 func calcTxIndexKey(txID string) []byte {
-	return []byte(TxIndex + txID)
+	return []byte(TxIndexPrefix + txID)
 }
 
 //deleteTransaction delete transactions when orphan block rollback
@@ -82,7 +87,7 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	reverseOuts := make([]*rawOutput, 0)
 
 	//handle spent UTXOs
-	for _, tx := range b.Transactions {
+	for txIndex, tx := range b.Transactions {
 		for _, inpID := range tx.Tx.InputIDs {
 			//spend and retire
 			sp, err := tx.Spend(inpID)
@@ -92,6 +97,11 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 
 			resOut, ok := tx.Entries[*sp.SpentOutputId].(*bc.Output)
 			if !ok {
+				continue
+			}
+
+			statusFail, _ := b.TransactionStatus.GetStatus(txIndex)
+			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 
@@ -128,10 +138,48 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	}
 }
 
+//save external assets definition
+func saveExternalAssetDefinition(b *legacy.Block, walletDB db.DB) {
+	storeBatch := walletDB.NewBatch()
+	defer storeBatch.Write()
+
+	for _, tx := range b.Transactions {
+		for _, orig := range tx.Inputs {
+			if ii, ok := orig.TypedInput.(*legacy.IssuanceInput); ok {
+				if isValidJSON(ii.AssetDefinition) {
+					assetID := ii.AssetID()
+					if assetExist := walletDB.Get(asset.CalcExtAssetKey(&assetID)); assetExist != nil {
+						continue
+					}
+					storeBatch.Set(asset.CalcExtAssetKey(&assetID), ii.AssetDefinition)
+				}
+			}
+		}
+	}
+}
+
+type Summary struct {
+	Type         string             `json:"type"`
+	AssetID      bc.AssetID         `json:"asset_id,omitempty"`
+	AssetAlias   string             `json:"asset_alias,omitempty"`
+	Amount       uint64             `json:"amount,omitempty"`
+	AccountID    string             `json:"account_id,omitempty"`
+	AccountAlias string             `json:"account_alias,omitempty"`
+	Arbitrary    chainjson.HexBytes `json:"arbitrary,omitempty"`
+}
+
+type TxSummary struct {
+	ID        bc.Hash   `json:"id"`
+	Timestamp time.Time `json:"timestamp"`
+	Inputs    []Summary `json:"inputs"`
+	Outputs   []Summary `json:"outputs"`
+}
+
 //indexTransactions saves all annotated transactions to the database.
 func (w *Wallet) indexTransactions(batch db.Batch, b *legacy.Block) error {
 	annotatedTxs := filterAccountTxs(b, w)
-	annotateTxsAsset(annotatedTxs, w.DB)
+	saveExternalAssetDefinition(b, w.DB)
+	annotateTxsAsset(w, annotatedTxs)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
 	for _, tx := range annotatedTxs {
@@ -151,18 +199,22 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	var err error
 
 	//handle spent UTXOs
-	delOutputIDs := prevoutDBKeys(b.Transactions...)
+	delOutputIDs := prevoutDBKeys(b)
 	for _, delOutputID := range delOutputIDs {
 		batch.Delete(account.UTXOKey(delOutputID))
 	}
 
 	//handle new UTXOs
 	outs := make([]*rawOutput, 0, len(b.Transactions))
-	for _, tx := range b.Transactions {
+	for txIndex, tx := range b.Transactions {
 		for j, out := range tx.Outputs {
 			resOutID := tx.ResultIds[j]
 			resOut, ok := tx.Entries[*resOutID].(*bc.Output)
 			if !ok {
+				continue
+			}
+			statusFail, _ := b.TransactionStatus.GetStatus(txIndex)
+			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 			out := &rawOutput{
@@ -175,6 +227,11 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 				sourcePos:      resOut.Source.Position,
 				refData:        *resOut.Data,
 			}
+
+			//coinbase utxo valid height
+			if txIndex == 0 {
+				out.ValidHeight = b.Height + consensus.CoinbasePendingBlockNumber
+			}
 			outs = append(outs, out)
 		}
 	}
@@ -186,10 +243,14 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	}
 }
 
-func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs []bc.Hash) {
-	for _, tx := range txs {
+func prevoutDBKeys(b *legacy.Block) (outputIDs []bc.Hash) {
+	for txIndex, tx := range b.Transactions {
 		for _, inpID := range tx.Tx.InputIDs {
 			if sp, err := tx.Spend(inpID); err == nil {
+				statusFail, _ := b.TransactionStatus.GetStatus(txIndex)
+				if statusFail && *sp.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
+					continue
+				}
 				outputIDs = append(outputIDs, *sp.SpentOutputId)
 			}
 		}
@@ -261,6 +322,7 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 			ControlProgramIndex: out.keyIndex,
 			AccountID:           out.AccountID,
 			Address:             out.Address,
+			ValidHeight:         out.ValidHeight,
 		}
 
 		data, err := json.Marshal(u)
@@ -282,7 +344,7 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, uint32(pos)))
+				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, pos))
 				local = true
 				break
 			}
@@ -298,7 +360,7 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 				continue
 			}
 			if bytes := w.DB.Get(account.UTXOKey(outid)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, uint32(pos)))
+				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, pos))
 				break
 			}
 		}
@@ -308,15 +370,14 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 }
 
 //GetTransactionsByTxID get account txs by account tx ID
-func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error) {
-	annotatedTx := query.AnnotatedTx{}
-	annotatedTxs := make([]query.AnnotatedTx, 0)
+func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
 	formatKey := ""
 
 	if txID != "" {
 		rawFormatKey := w.DB.Get(calcTxIndexKey(txID))
 		if rawFormatKey == nil {
-			return nil, fmt.Errorf("No transaction(txid=%s)", txID)
+			return nil, fmt.Errorf("No transaction(txid=%s) ", txID)
 		}
 		formatKey = string(rawFormatKey)
 	}
@@ -324,7 +385,8 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix + formatKey))
 	defer txIter.Release()
 	for txIter.Next() {
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
 			return nil, err
 		}
 		annotatedTxs = append(annotatedTxs, annotatedTx)
@@ -333,7 +395,43 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 	return annotatedTxs, nil
 }
 
-func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) bool {
+//GetTransactionsSummary get transactions summary
+func (w *Wallet) GetTransactionsSummary(transactions []*query.AnnotatedTx) []TxSummary {
+	Txs := make([]TxSummary, 0)
+
+	for _, annotatedTx := range transactions {
+		tmpTxSummary := TxSummary{
+			Inputs:    make([]Summary, len(annotatedTx.Inputs)),
+			Outputs:   make([]Summary, len(annotatedTx.Outputs)),
+			ID:        annotatedTx.ID,
+			Timestamp: annotatedTx.Timestamp,
+		}
+
+		for i, input := range annotatedTx.Inputs {
+			tmpTxSummary.Inputs[i].Type = input.Type
+			tmpTxSummary.Inputs[i].AccountID = input.AccountID
+			tmpTxSummary.Inputs[i].AccountAlias = input.AccountAlias
+			tmpTxSummary.Inputs[i].AssetID = input.AssetID
+			tmpTxSummary.Inputs[i].AssetAlias = input.AssetAlias
+			tmpTxSummary.Inputs[i].Amount = input.Amount
+			tmpTxSummary.Inputs[i].Arbitrary = input.Arbitrary
+		}
+		for j, output := range annotatedTx.Outputs {
+			tmpTxSummary.Outputs[j].Type = output.Type
+			tmpTxSummary.Outputs[j].AccountID = output.AccountID
+			tmpTxSummary.Outputs[j].AccountAlias = output.AccountAlias
+			tmpTxSummary.Outputs[j].AssetID = output.AssetID
+			tmpTxSummary.Outputs[j].AssetAlias = output.AssetAlias
+			tmpTxSummary.Outputs[j].Amount = output.Amount
+		}
+
+		Txs = append(Txs, tmpTxSummary)
+	}
+
+	return Txs
+}
+
+func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
 	for _, input := range annotatedTx.Inputs {
 		if input.AccountID == accountID {
 			return true
@@ -350,13 +448,13 @@ func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) 
 }
 
 //GetTransactionsByAccountID get account txs by account ID
-func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]query.AnnotatedTx, error) {
-	annotatedTxs := make([]query.AnnotatedTx, 0)
+func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
 	for txIter.Next() {
-		annotatedTx := query.AnnotatedTx{}
+		annotatedTx := &query.AnnotatedTx{}
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}

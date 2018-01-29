@@ -23,8 +23,13 @@ const (
 	BlocksPerRetarget     = uint64(2)
 	TargetSecondsPerBlock = uint64(60)
 
+	// MaxTimeOffsetSeconds is the maximum number of seconds a block time is allowed to be ahead of the current time
+	MaxTimeOffsetSeconds = uint64(60 * 60)
+
 	PayToWitnessPubKeyHashDataSize = 20
 	PayToWitnessScriptHashDataSize = 32
+
+	CoinbaseArbitrarySizeLimit = 128
 )
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
@@ -33,6 +38,26 @@ var BTMAssetID = &bc.AssetID{
 	V1: uint64(18446744073709551615),
 	V2: uint64(18446744073709551615),
 	V3: uint64(18446744073709551615),
+}
+
+//BTMAlias is default btm
+var BTMAlias = "btm"
+
+//BTMSymbol
+var BTMSymbol = "btm"
+
+//BTMDecimals
+var BTMDecimals = 8
+
+//BTMDescription
+var BTMDescription = `Bytom Official Issue`
+
+//BTMDefinitionMap
+var BTMDefinitionMap = map[string]interface{}{
+	"name":        BTMAlias,
+	"symbol":      BTMSymbol,
+	"decimals":    BTMDecimals,
+	"description": BTMDescription,
 }
 
 // BlockSubsidy calculate the coinbase rewards on given block height

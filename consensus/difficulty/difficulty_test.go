@@ -9,7 +9,7 @@ import (
 )
 
 func TestCalcNextRequiredDifficulty(t *testing.T) {
-	targetTimeSpan := uint64(consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock * 1000)
+	targetTimeSpan := uint64(consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock)
 	cases := []struct {
 		lastBH    *legacy.BlockHeader
 		compareBH *legacy.BlockHeader
@@ -18,19 +18,19 @@ func TestCalcNextRequiredDifficulty(t *testing.T) {
 		//{nil, nil, powMinBits},
 		//{&legacy.BlockHeader{Height: BlocksPerRetarget, Bits: 87654321}, nil, 87654321},
 		{
-			&legacy.BlockHeader{Height: consensus.BlocksPerRetarget, TimestampMS: targetTimeSpan, Bits: BigToCompact(big.NewInt(1000))},
-			&legacy.BlockHeader{Height: 0, TimestampMS: 0},
+			&legacy.BlockHeader{Height: consensus.BlocksPerRetarget, Timestamp: targetTimeSpan, Bits: BigToCompact(big.NewInt(1000))},
+			&legacy.BlockHeader{Height: 0, Timestamp: 0},
 			BigToCompact(big.NewInt(1000)),
 		},
 		{
-			&legacy.BlockHeader{Height: consensus.BlocksPerRetarget, TimestampMS: targetTimeSpan * 2, Bits: BigToCompact(big.NewInt(1000))},
-			&legacy.BlockHeader{Height: 0, TimestampMS: 0},
+			&legacy.BlockHeader{Height: consensus.BlocksPerRetarget, Timestamp: targetTimeSpan * 2, Bits: BigToCompact(big.NewInt(1000))},
+			&legacy.BlockHeader{Height: 0, Timestamp: 0},
 			BigToCompact(big.NewInt(2000)),
 		},
 		{
 			&legacy.BlockHeader{Height: consensus.
-				BlocksPerRetarget, TimestampMS: targetTimeSpan / 2, Bits: BigToCompact(big.NewInt(1000))},
-			&legacy.BlockHeader{Height: 0, TimestampMS: 0},
+				BlocksPerRetarget, Timestamp: targetTimeSpan / 2, Bits: BigToCompact(big.NewInt(1000))},
+			&legacy.BlockHeader{Height: 0, Timestamp: 0},
 			BigToCompact(big.NewInt(500)),
 		},
 	}

@@ -136,7 +136,7 @@ func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {
 	}
 
 	targetTimeSpan := int64(consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock)
-	actualTimeSpan := int64(lastBH.Time().Sub(compareBH.Time()).Seconds())
+	actualTimeSpan := int64(lastBH.Timestamp - compareBH.Timestamp)
 
 	oldTarget := CompactToBig(lastBH.Bits)
 	// oldTarget := CalcWork(lastBH.Bits)

@@ -20,6 +20,7 @@ type IssuanceInput struct {
 }
 
 func (ii *IssuanceInput) IsIssuance() bool { return true }
+func (ii *IssuanceInput) IsCoinbase() bool { return false }
 
 func (ii *IssuanceInput) AssetID() bc.AssetID {
 	defhash := ii.AssetDefinitionHash()

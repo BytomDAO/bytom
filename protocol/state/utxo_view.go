@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/bytom/blockchain/txdb/storage"
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -24,8 +25,16 @@ func (view *UtxoViewpoint) HasUtxo(hash *bc.Hash) bool {
 	return ok
 }
 
-func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
+func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFail bool) error {
 	for _, prevout := range tx.SpentOutputIDs {
+		spentOutput, err := tx.Output(prevout)
+		if err != nil {
+			return err
+		}
+		if statusFail && *spentOutput.Source.Value.AssetId != *consensus.BTMAssetID {
+			continue
+		}
+
 		entry, ok := view.Entries[prevout]
 		if !ok {
 			return errors.New("fail to find utxo entry")
@@ -33,12 +42,18 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 		if entry.Spent {
 			return errors.New("utxo has been spent")
 		}
+		if entry.IsCoinBase && entry.BlockHeight+consensus.CoinbasePendingBlockNumber > block.Height {
+			return errors.New("coinbase utxo is not ready for use")
+		}
 		entry.SpendOutput()
 	}
 
 	for _, id := range tx.TxHeader.ResultIds {
-		e := tx.Entries[*id]
-		if _, ok := e.(*bc.Output); !ok {
+		output, err := tx.Output(*id)
+		if err != nil {
+			return err
+		}
+		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
@@ -52,32 +67,45 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx) error {
 }
 
 func (view *UtxoViewpoint) ApplyBlock(block *bc.Block) error {
-	for _, tx := range block.Transactions {
-		if err := view.ApplyTransaction(block, tx); err != nil {
+	for i, tx := range block.Transactions {
+		statusFail, err := block.TransactionStatus.GetStatus(i)
+		if err != nil {
+			return err
+		}
+		if err := view.ApplyTransaction(block, tx, statusFail); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx) error {
+func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	for _, prevout := range tx.SpentOutputIDs {
-		entry, ok := view.Entries[prevout]
-		if !ok || !entry.Spent {
-			return errors.New("try to revert an unspent utxo")
+		spentOutput, err := tx.Output(prevout)
+		if err != nil {
+			return err
+		}
+		if statusFail && *spentOutput.Source.Value.AssetId != *consensus.BTMAssetID {
+			continue
 		}
 
+		entry, ok := view.Entries[prevout]
+		if ok && !entry.Spent {
+			return errors.New("try to revert an unspent utxo")
+		}
 		if !ok {
 			view.Entries[prevout] = storage.NewUtxoEntry(false, 0, false)
 			continue
 		}
-
 		entry.UnspendOutput()
 	}
 
 	for _, id := range tx.TxHeader.ResultIds {
-		e := tx.Entries[*id]
-		if _, ok := e.(*bc.Output); !ok {
+		output, err := tx.Output(*id)
+		if err != nil {
+			return err
+		}
+		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
@@ -87,8 +115,12 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx) error {
 }
 
 func (view *UtxoViewpoint) DetachBlock(block *bc.Block) error {
-	for _, tx := range block.Transactions {
-		if err := view.DetachTransaction(tx); err != nil {
+	for i, tx := range block.Transactions {
+		statusFail, err := block.TransactionStatus.GetStatus(i)
+		if err != nil {
+			return err
+		}
+		if err := view.DetachTransaction(tx, statusFail); err != nil {
 			return err
 		}
 	}

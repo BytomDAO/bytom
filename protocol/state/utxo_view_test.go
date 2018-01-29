@@ -8,6 +8,16 @@ import (
 	"github.com/bytom/testutil"
 )
 
+var defaultEntry = map[bc.Hash]bc.Entry{
+	bc.Hash{V0: 0}: &bc.Output{
+		Source: &bc.ValueSource{
+			Value: &bc.AssetAmount{
+				AssetId: &bc.AssetID{V0: 0},
+			},
+		},
+	},
+}
+
 func TestApplyBlock(t *testing.T) {
 	cases := []struct {
 		block     *bc.Block
@@ -17,11 +27,15 @@ func TestApplyBlock(t *testing.T) {
 	}{
 		{
 			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -31,11 +45,15 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -48,6 +66,9 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -56,6 +77,7 @@ func TestApplyBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -71,9 +93,70 @@ func TestApplyBlock(t *testing.T) {
 			},
 			err: false,
 		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height:            7,
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
+				Transactions: []*bc.Tx{
+					&bc.Tx{
+						TxHeader: &bc.TxHeader{
+							ResultIds: []*bc.Hash{},
+						},
+						SpentOutputIDs: []bc.Hash{
+							bc.Hash{V0: 0},
+						},
+						Entries: defaultEntry,
+					},
+				},
+			},
+			inputView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false),
+				},
+			},
+			fetchView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, true),
+				},
+			},
+			err: false,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height:            0,
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
+				Transactions: []*bc.Tx{
+					&bc.Tx{
+						TxHeader: &bc.TxHeader{
+							ResultIds: []*bc.Hash{},
+						},
+						SpentOutputIDs: []bc.Hash{
+							bc.Hash{V0: 0},
+						},
+						Entries: defaultEntry,
+					},
+				},
+			},
+			inputView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, false),
+				},
+			},
+			fetchView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(true, 0, true),
+				},
+			},
+			err: true,
+		},
 	}
 
 	for i, c := range cases {
+
 		if err := c.inputView.ApplyBlock(c.block); c.err != (err != nil) {
 			t.Errorf("want err = %v, get err = %v", c.err, err)
 		}
@@ -95,6 +178,9 @@ func TestDetachBlock(t *testing.T) {
 	}{
 		{
 			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -103,14 +189,23 @@ func TestDetachBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
 			inputView: NewUtxoViewpoint(),
-			err:       true,
+			fetchView: &UtxoViewpoint{
+				Entries: map[bc.Hash]*storage.UtxoEntry{
+					bc.Hash{V0: 0}: storage.NewUtxoEntry(false, 0, false),
+				},
+			},
+			err: false,
 		},
 		{
 			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -119,6 +214,7 @@ func TestDetachBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -131,6 +227,9 @@ func TestDetachBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					TransactionStatus: bc.NewTransactionStatus(),
+				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -139,6 +238,7 @@ func TestDetachBlock(t *testing.T) {
 						SpentOutputIDs: []bc.Hash{
 							bc.Hash{V0: 0},
 						},
+						Entries: defaultEntry,
 					},
 				},
 			},
@@ -158,7 +258,7 @@ func TestDetachBlock(t *testing.T) {
 
 	for i, c := range cases {
 		if err := c.inputView.DetachBlock(c.block); c.err != (err != nil) {
-			t.Errorf("want err = %v, get err = %v", c.err, err)
+			t.Errorf("case %d want err = %v, get err = %v", i, c.err, err)
 		}
 		if c.err {
 			continue
