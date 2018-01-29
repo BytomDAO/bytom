@@ -131,8 +131,8 @@ out:
 					} else {
 						log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
 					}
-					m.resume <- struct{}{}
 				}
+				m.resume <- struct{}{}
 			}
 		default:
 		}
