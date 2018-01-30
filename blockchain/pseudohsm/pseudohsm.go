@@ -179,18 +179,6 @@ func (h *HSM) HasKey(xprv chainkd.XPrv) bool {
 	return h.cache.hasKey(xprv.XPub())
 }
 
-func (h *HSM) CheckAliasAndKey(alias string, xprv chainkd.XPrv) (bool, error) {
-	if h.cache.hasAlias(alias) {
-		return false, ErrDuplicateKeyAlias
-	}
-
-	if h.cache.hasKey(xprv.XPub()) {
-		return false, ErrDuplicateKey
-	}
-
-	return true, nil
-}
-
 //ImportXPrvKey import XPrv to chainkd
 func (h *HSM) ImportXPrvKey(auth string, alias string, xprv chainkd.XPrv) (*XPub, bool, error) {
 	if ok := h.cache.hasAlias(alias); ok {
