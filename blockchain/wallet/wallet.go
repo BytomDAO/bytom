@@ -25,20 +25,18 @@ var privKeyKey = []byte("keysInfo")
 
 //StatusInfo is base valid block info to handle orphan block rollback
 type StatusInfo struct {
-	Height       uint64
-	Hash         bc.Hash
-	RescanHeight uint64
-	RescanHash   bc.Hash
-	RescanFlag   bool
+	WorkHeight uint64
+	WorkHash   bc.Hash
+	BestHeight uint64
+	BestHash   bc.Hash
 }
 
 //KeyInfo is key import status
 type KeyInfo struct {
-	Alias      string       `json:"alias"`
-	XPub       chainkd.XPub `json:"xpub"`
-	ImportFlag bool         `json:"flag"`
-	Percent    uint8        `json:"percent"`
-	Complete   bool         `json:"complete"`
+	Alias    string       `json:"alias"`
+	XPub     chainkd.XPub `json:"xpub"`
+	Percent  uint8        `json:"percent"`
+	Complete bool         `json:"complete"`
 }
 
 //Wallet is related to storing account unspent outputs
@@ -61,7 +59,6 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		AssetReg:       asset,
 		chain:          chain,
 		rescanProgress: make(chan struct{}, 1),
-		ImportPrivKey:  false,
 		keysInfo:       make([]KeyInfo, 0),
 	}
 
@@ -72,7 +69,10 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	if err := w.loadKeysInfo(); err != nil {
 		return nil, err
 	}
+
+	w.ImportPrivKey = w.getImportKeyFlag()
 	go w.walletUpdater()
+
 	return w, nil
 }
 
@@ -122,13 +122,17 @@ func (w *Wallet) commitkeysInfo() error {
 	return nil
 }
 
-func (w *Wallet) attachBlock(block *legacy.Block) error {
-	if w.status.RescanFlag == false && block.PreviousBlockHash != w.status.Hash {
-		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
-		return nil
+func (w *Wallet) getImportKeyFlag() bool {
+	for _, v := range w.keysInfo {
+		if v.Complete == false {
+			return true
+		}
 	}
+	return false
+}
 
-	if w.status.RescanFlag == true && block.PreviousBlockHash != w.status.RescanHash {
+func (w *Wallet) attachBlock(block *legacy.Block) error {
+	if block.PreviousBlockHash != w.status.WorkHash {
 		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
 		return nil
 	}
@@ -137,12 +141,11 @@ func (w *Wallet) attachBlock(block *legacy.Block) error {
 	w.indexTransactions(storeBatch, block)
 	w.buildAccountUTXOs(storeBatch, block)
 
-	if w.status.RescanFlag {
-		w.status.RescanHeight = block.Height
-		w.status.RescanHash = block.Hash()
-	} else {
-		w.status.Height = block.Height
-		w.status.Hash = block.Hash()
+	w.status.WorkHeight = block.Height
+	w.status.WorkHash = block.Hash()
+	if w.status.WorkHeight >= w.status.BestHeight {
+		w.status.BestHeight = w.status.WorkHeight
+		w.status.BestHash = w.status.WorkHash
 	}
 	return w.commitWalletInfo(storeBatch)
 }
@@ -150,20 +153,21 @@ func (w *Wallet) attachBlock(block *legacy.Block) error {
 func (w *Wallet) detachBlock(block *legacy.Block) error {
 	storeBatch := w.DB.NewBatch()
 	w.reverseAccountUTXOs(storeBatch, block)
-	w.deleteTransactions(storeBatch, w.status.Height)
+	w.deleteTransactions(storeBatch, w.status.BestHeight)
 
-	w.status.Height = block.Height - 1
-	w.status.Hash = block.PreviousBlockHash
+	w.status.BestHeight = block.Height - 1
+	w.status.BestHash = block.PreviousBlockHash
 	return w.commitWalletInfo(storeBatch)
 }
 
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
 func (w *Wallet) walletUpdater() {
 	for {
+		// config.GenesisBlock().hash
 		getRescanNotification(w)
 		checkRescanStatus(w)
-		for !w.chain.InMainChain(w.status.Height, w.status.Hash) {
-			block, err := w.chain.GetBlockByHash(&w.status.Hash)
+		for !w.chain.InMainChain(w.status.BestHeight, w.status.BestHash) {
+			block, err := w.chain.GetBlockByHash(&w.status.BestHash)
 			if err != nil {
 				log.WithField("err", err).Error("walletUpdater GetBlockByHash")
 				return
@@ -175,16 +179,13 @@ func (w *Wallet) walletUpdater() {
 			}
 		}
 
-		if w.status.Height <= w.status.RescanHeight {
-			w.status.RescanFlag = false
+		if w.status.WorkHeight > w.status.BestHeight {
+			w.status.WorkHeight = w.status.BestHeight
+			w.status.WorkHash = w.status.BestHash
 		}
-		height := w.status.Height
-		if w.status.RescanFlag {
-			height = w.status.RescanHeight
-		}
-		block, _ := w.chain.GetBlockByHeight(height + 1)
+		block, _ := w.chain.GetBlockByHeight(w.status.WorkHeight + 1)
 		if block == nil {
-			<-w.chain.BlockWaiter(height + 1)
+			<-w.chain.BlockWaiter(w.status.WorkHeight + 1)
 			continue
 		}
 
@@ -198,10 +199,9 @@ func (w *Wallet) walletUpdater() {
 func getRescanNotification(w *Wallet) {
 	select {
 	case <-w.rescanProgress:
-		w.status.RescanHeight = 1
-		block, _ := w.chain.GetBlockByHeight(w.status.RescanHeight)
-		w.status.RescanHash = block.Hash()
-		w.status.RescanFlag = true
+		w.status.WorkHeight = 0
+		block, _ := w.chain.GetBlockByHeight(w.status.WorkHeight)
+		w.status.WorkHash = block.Hash()
 	default:
 		return
 	}
@@ -245,10 +245,9 @@ func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudoh
 	}
 	w.ImportPrivKey = true
 	tmp := KeyInfo{
-		Alias:      keyAlias,
-		XPub:       XPub.XPub,
-		ImportFlag: true,
-		Complete:   false,
+		Alias:    keyAlias,
+		XPub:     XPub.XPub,
+		Complete: false,
 	}
 	w.keysInfo = append(w.keysInfo, tmp)
 	w.commitkeysInfo()
@@ -272,26 +271,24 @@ func (w *Wallet) rescanBlocks() {
 
 //GetRescanStatus return key import rescan status
 func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
-	if err := w.loadKeysInfo(); err != nil {
-		return nil, err
-	}
 	for i, v := range w.keysInfo {
-		if v.ImportFlag == true {
-			w.keysInfo[i].Percent = uint8(w.status.Height * 100 / w.chain.Height())
+		if v.Complete == false {
+			w.keysInfo[i].Percent = uint8(w.status.WorkHeight * 100 / w.status.BestHeight)
 		}
 	}
 	return w.keysInfo, nil
 }
 
 func checkRescanStatus(w *Wallet) {
-	if w.ImportPrivKey {
-		if w.status.Height == w.chain.Height() {
-			w.ImportPrivKey = false
-			for i := range w.keysInfo {
-				w.keysInfo[i].Complete = true
-			}
-		}
-
-		w.commitkeysInfo()
+	if !w.ImportPrivKey {
+		return
 	}
+	if w.status.WorkHeight >= w.status.BestHeight {
+		w.ImportPrivKey = false
+		for i := range w.keysInfo {
+			w.keysInfo[i].Complete = true
+		}
+	}
+
+	w.commitkeysInfo()
 }

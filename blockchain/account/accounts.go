@@ -276,7 +276,7 @@ func (m *Manager) createAddress(ctx context.Context, account *Account, change bo
 }
 
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx, _ := m.nextIndex(account)
+	idx := m.nextIndex(account)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
@@ -303,7 +303,7 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 }
 
 func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx, _ := m.nextIndex(account)
+	idx := m.nextIndex(account)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
@@ -378,7 +378,7 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	return program.ControlProgram, nil
 }
 
-func (m *Manager) nextIndex(account *Account) (uint64, error) {
+func (m *Manager) nextIndex(account *Account) uint64 {
 	m.acpMu.Lock()
 	defer m.acpMu.Unlock()
 
@@ -398,7 +398,7 @@ func (m *Manager) nextIndex(account *Account) (uint64, error) {
 	binary.LittleEndian.PutUint64(buf, nextIndex)
 	m.db.Set(key, buf)
 
-	return nextIndex, nil
+	return nextIndex
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.
