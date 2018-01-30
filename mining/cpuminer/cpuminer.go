@@ -49,30 +49,31 @@ type CPUMiner struct {
 // solveBlock attempts to find some combination of a nonce, extra nonce, and
 // current timestamp which makes the passed block hash to a value less than the
 // target difficulty.
-func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
+// return 0 is ok, 1 is quit, -1 is failed
+func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) int {
 	header := &block.BlockHeader
 	seedCaches := m.chain.SeedCaches()
 	seedCache, err := seedCaches.Get(&header.Seed)
 	if err != nil {
 		log.Errorf("Mining: failed on get seedCache: %v", err)
-		return false
+		return -1
 	}
 
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
 		case <-quit:
-			return false
+			return 1
 		case <-ticker.C:
 			if m.chain.Height() >= header.Height {
-				return false
+				return -1
 			}
 		case headerW := <-m.headerChan:
 			log.Infof("Receved mining work,header:%v", headerW)
 			if header.Height != headerW.Height {
-				return false
+				return -1
 			} else {
 				block.BlockHeader = headerW
-				return true
+				return 0
 			}
 		default:
 		}
@@ -82,14 +83,14 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 		proofHash, err := algorithm.AIHash(header.Height, &headerHash, seedCache)
 		if err != nil {
 			log.Errorf("Mining: failed on AIHash: %v", err)
-			return false
+			return -1
 		}
 
 		if difficulty.CheckProofOfWork(proofHash, header.Bits) {
-			return true
+			return 0
 		}
 	}
-	return false
+	return -1
 }
 
 // Get current block
@@ -115,13 +116,10 @@ func (m *CPUMiner) generateBlocks(quit chan struct{}, resume chan struct{}) {
 out:
 	for {
 		select {
-		case <-quit:
-			break out
 		case <-resume:
 			{
-				log.Infof("-------generateBlocks resume")
 				block := *(m.currentBlock)
-				if m.solveBlock(&block, ticker, quit) {
+				if num := m.solveBlock(&block, ticker, quit); num == 0 {
 					if isOrphan, err := m.chain.ProcessBlock(&block); err == nil {
 						log.WithFields(log.Fields{
 							"height":   block.BlockHeader.Height,
@@ -131,6 +129,8 @@ out:
 					} else {
 						log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
 					}
+				} else if num == 1 {
+					break out
 				}
 				m.resume <- struct{}{}
 			}
@@ -204,15 +204,12 @@ out:
 
 		case <-m.quit:
 			for _, quit := range runningWorkers {
+				//quit <- struct{}{}
 				close(quit)
-			}
-			for _, resume := range resumeWorkers {
-				close(resume)
 			}
 			break out
 		case <-m.resume:
 			var err error
-			log.Infof("-----------resume")
 			if m.currentBlock, err = mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager); err != nil {
 				log.Panicf("Mining: failed on create NewBlockTemplate: %v", err)
 			}
@@ -269,6 +266,7 @@ func (m *CPUMiner) Stop() {
 	if !m.started || m.discreteMining {
 		return
 	}
+	log.Info("----CPU miner stopped")
 
 	close(m.quit)
 	m.wg.Wait()
