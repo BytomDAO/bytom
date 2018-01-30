@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/bytom/blockchain"
-	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/util"
 )
@@ -20,15 +19,10 @@ func doWork(work *blockchain.WorkResp) {
 	for i := uint64(0); i <= maxNonce; i++ {
 		work.Header.Nonce = i
 		headerHash := work.Header.Hash()
-		proofHash, err := algorithm.AIHash(work.Header.Height, &headerHash, work.Cache)
-		if err != nil {
-			fmt.Printf("Mining: failed on AIHash: %v\n", err)
-			return
-		}
 
-		if difficulty.CheckProofOfWork(proofHash, work.Header.Bits) {
+		if difficulty.CheckProofOfWork(&headerHash, work.Header.Bits) {
 			// to do: submitWork
-			fmt.Printf("Mining: successful-----proof hash:%v\n", proofHash)
+			fmt.Printf("Mining: successful-----proof hash:%v\n", headerHash)
 			return
 		}
 	}
