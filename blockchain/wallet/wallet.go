@@ -35,6 +35,7 @@ type KeyInfo struct {
 	XPub       chainkd.XPub `json:"xpub"`
 	ImportFlag bool         `json:"flag"`
 	Percent    uint8        `json:"percent"`
+	Complete   bool         `json:"complete"`
 }
 
 //Wallet is related to storing account unspent outputs
@@ -225,6 +226,7 @@ func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudoh
 		Alias:      keyAlias,
 		XPub:       XPub.XPub,
 		ImportFlag: true,
+		Complete:   false,
 	}
 	w.keysInfo = append(w.keysInfo, tmp)
 	w.commitkeysInfo()
@@ -263,6 +265,9 @@ func checkRescanStatus(w *Wallet) {
 	if w.ImportPrivKey {
 		if w.status.Height == w.chain.Height() {
 			w.ImportPrivKey = false
+			for i := range w.keysInfo {
+				w.keysInfo[i].Complete = true
+			}
 		}
 
 		w.commitkeysInfo()
