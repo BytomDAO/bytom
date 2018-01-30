@@ -168,6 +168,14 @@ func (w *Wallet) ExportAccountPrivKey(hsm *pseudohsm.HSM, xpub chainkd.XPub, aut
 
 // ImportAccountPrivKey imports the account key in the Wallet Import Formt.
 func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, keyAlias, auth string, index uint64, accountAlias string) (*pseudohsm.XPub, error) {
+	if ok, err := hsm.CheckAliasAndKey(keyAlias, xprv); !ok {
+		return nil, err
+	}
+
+	if acc, _ := w.AccountMgr.FindByAlias(nil, accountAlias); acc != nil {
+		return nil, account.ErrDuplicateAlias
+	}
+
 	xpub, _, err := hsm.ImportXPrvKey(auth, keyAlias, xprv)
 	if err != nil {
 		return nil, err
