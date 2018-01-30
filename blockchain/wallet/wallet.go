@@ -25,8 +25,11 @@ var privKeyKey = []byte("keysInfo")
 
 //StatusInfo is base valid block info to handle orphan block rollback
 type StatusInfo struct {
-	Height uint64
-	Hash   bc.Hash
+	Height       uint64
+	Hash         bc.Hash
+	RescanHeight uint64
+	RescanHash   bc.Hash
+	RescanFlag   bool
 }
 
 //KeyInfo is key import status
@@ -120,7 +123,12 @@ func (w *Wallet) commitkeysInfo() error {
 }
 
 func (w *Wallet) attachBlock(block *legacy.Block) error {
-	if block.PreviousBlockHash != w.status.Hash {
+	if w.status.RescanFlag == false && block.PreviousBlockHash != w.status.Hash {
+		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
+		return nil
+	}
+
+	if w.status.RescanFlag == true && block.PreviousBlockHash != w.status.RescanHash {
 		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
 		return nil
 	}
@@ -129,8 +137,13 @@ func (w *Wallet) attachBlock(block *legacy.Block) error {
 	w.indexTransactions(storeBatch, block)
 	w.buildAccountUTXOs(storeBatch, block)
 
-	w.status.Height = block.Height
-	w.status.Hash = block.Hash()
+	if w.status.RescanFlag {
+		w.status.RescanHeight = block.Height
+		w.status.RescanHash = block.Hash()
+	} else {
+		w.status.Height = block.Height
+		w.status.Hash = block.Hash()
+	}
 	return w.commitWalletInfo(storeBatch)
 }
 
@@ -161,9 +174,17 @@ func (w *Wallet) walletUpdater() {
 				return
 			}
 		}
-		block, _ := w.chain.GetBlockByHeight(w.status.Height + 1)
+
+		if w.status.Height <= w.status.RescanHeight {
+			w.status.RescanFlag = false
+		}
+		height := w.status.Height
+		if w.status.RescanFlag {
+			height = w.status.RescanHeight
+		}
+		block, _ := w.chain.GetBlockByHeight(height + 1)
 		if block == nil {
-			<-w.chain.BlockWaiter(w.status.Height + 1)
+			<-w.chain.BlockWaiter(height + 1)
 			continue
 		}
 
@@ -177,9 +198,10 @@ func (w *Wallet) walletUpdater() {
 func getRescanNotification(w *Wallet) {
 	select {
 	case <-w.rescanProgress:
-		w.status.Height = 1
-		block, _ := w.chain.GetBlockByHeight(w.status.Height)
-		w.status.Hash = block.Hash()
+		w.status.RescanHeight = 1
+		block, _ := w.chain.GetBlockByHeight(w.status.RescanHeight)
+		w.status.RescanHash = block.Hash()
+		w.status.RescanFlag = true
 	default:
 		return
 	}
