@@ -49,11 +49,11 @@ func GenerateGenesisBlock() *legacy.Block {
 
 	block := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
-			Version:     1,
-			Height:      0,
-			Nonce:       1656075,
-			Seed:        bc.NewHash(seed),
-			TimestampMS: 1511318565142,
+			Version:   1,
+			Height:    0,
+			Nonce:     4216077,
+			Seed:      bc.NewHash(seed),
+			Timestamp: 1516788453,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 			},

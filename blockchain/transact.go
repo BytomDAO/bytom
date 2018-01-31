@@ -13,7 +13,6 @@ import (
 	"github.com/bytom/blockchain/contract"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
-	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -124,13 +123,12 @@ func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest
 
 	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime)
 	if errors.Root(err) == txbuilder.ErrAction {
-		// Format each of the inner errors contained in the data.
-		var formattedErrs []httperror.Response
+		// append each of the inner errors contained in the data.
+		var Errs string
 		for _, innerErr := range errors.Data(err)["actions"].([]error) {
-			resp := errorFormatter.Format(innerErr)
-			formattedErrs = append(formattedErrs, resp)
+			Errs = Errs + "<" + innerErr.Error() + ">"
 		}
-		err = errors.WithData(err, "actions", formattedErrs)
+		err = errors.New(err.Error() + "-" + Errs)
 	}
 	if err != nil {
 		return nil, err

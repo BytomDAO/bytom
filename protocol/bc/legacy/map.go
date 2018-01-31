@@ -234,14 +234,14 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	}
 
 	refdatahash := hashData(tx.ReferenceData)
-	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, resultIDs, &refdatahash)
+	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, tx.TimeRange, resultIDs, &refdatahash)
 	headerID = addEntry(h)
 
 	return headerID, h, entryMap
 }
 
 func mapBlockHeader(old *BlockHeader) (bhID bc.Hash, bh *bc.BlockHeader) {
-	bh = bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, &old.Seed, old.TimestampMS, &old.TransactionsMerkleRoot, &old.AssetsMerkleRoot, &old.TransactionStatus, old.Nonce, old.Bits)
+	bh = bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, &old.Seed, old.Timestamp, &old.TransactionsMerkleRoot, &old.AssetsMerkleRoot, &old.TransactionStatus, old.Nonce, old.Bits)
 	bhID = bc.EntryID(bh)
 	return
 }

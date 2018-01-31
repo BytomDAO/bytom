@@ -2,8 +2,8 @@ package txbuilder
 
 import (
 	"encoding/json"
-
 	"fmt"
+
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"

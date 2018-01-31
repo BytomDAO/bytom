@@ -2,9 +2,9 @@ package account
 
 import (
 	"context"
+	"encoding/hex"
 	"time"
 
-	"encoding/hex"
 	"github.com/bytom/blockchain/txbuilder"
 )
 
