@@ -89,10 +89,8 @@ func hashMatrix(result []uint8) *bc.Hash {
 		}
 	}
 
-	for i := 0; i < matSize; i++ {
-		for j := 0; j < matSize/4; j++ {
-			data = append(data, mat32[i][j])
-		}
+	for i := 0; i < matSize/4; i++ {
+		data = append(data, mat32[0][i])
 	}
 
 	// Convert our destination slice to a byte buffer
