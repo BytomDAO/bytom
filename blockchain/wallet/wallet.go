@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/json"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-wire/data/base58"
@@ -19,6 +20,9 @@ import (
 
 //SINGLE single sign
 const SINGLE = 1
+
+//RecoveryIndex walletdb recovery cp number
+const RecoveryIndex = 5000
 
 var walletKey = []byte("walletInfo")
 var privKeyKey = []byte("keysInfo")
@@ -52,7 +56,7 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) (*Wallet, error) {
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, xpubs []pseudohsm.XPub) (*Wallet, error) {
 	w := &Wallet{
 		DB:             walletDB,
 		AccountMgr:     account,
@@ -62,7 +66,9 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		keysInfo:       make([]KeyInfo, 0),
 	}
 
-	if err := w.loadWalletInfo(); err != nil {
+	var recoverFlag bool
+	var err error
+	if recoverFlag, err = w.loadWalletInfo(len(xpubs)); err != nil {
 		return nil, err
 	}
 
@@ -71,23 +77,34 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	w.ImportPrivKey = w.getImportKeyFlag()
+
 	go w.walletUpdater()
+
+	if recoverFlag == true {
+		for i, v := range xpubs {
+			w.ImportAccountXpubKey(i, v, RecoveryIndex)
+		}
+	}
 
 	return w, nil
 }
 
 //GetWalletInfo return stored wallet info and nil,if error,
 //return initial wallet info and err
-func (w *Wallet) loadWalletInfo() error {
+func (w *Wallet) loadWalletInfo(lenXPubs int) (bool, error) {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
-		return json.Unmarshal(rawWallet, &w.status)
+		return false, json.Unmarshal(rawWallet, &w.status)
+	}
+	var recoveryFlag bool
+	if lenXPubs != 0 {
+		recoveryFlag = true
 	}
 
 	block, err := w.chain.GetBlockByHeight(0)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return w.attachBlock(block)
+	return recoveryFlag, w.attachBlock(block)
 }
 
 func (w *Wallet) commitWalletInfo(batch db.Batch) error {
@@ -250,6 +267,22 @@ func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, key
 		return nil, err
 	}
 	return xpub, nil
+}
+
+// ImportAccountXpubKey imports the account key in the Wallet Import Formt.
+func (w *Wallet) ImportAccountXpubKey(xpubIndex int, xpub pseudohsm.XPub, cpIndex uint64) error {
+	accountAlias := fmt.Sprintf("recovery_%d", xpubIndex)
+
+	if acc, _ := w.AccountMgr.FindByAlias(nil, accountAlias); acc != nil {
+		return account.ErrDuplicateAlias
+	}
+
+	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias, nil)
+	if err != nil {
+		return err
+	}
+
+	return w.recoveryAccountWalletDB(newAccount, &xpub, cpIndex, xpub.Alias)
 }
 
 func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudohsm.XPub, index uint64, keyAlias string) error {
