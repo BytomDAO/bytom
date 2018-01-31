@@ -4,6 +4,7 @@ package account
 import (
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto"
+	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
@@ -340,6 +342,7 @@ type CtrlProgram struct {
 	KeyIndex       uint64
 	ControlProgram []byte
 	Change         bool
+	ExtContractTag bool
 }
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*CtrlProgram) error {
@@ -440,4 +443,41 @@ func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 	}
 
 	return accounts, nil
+}
+
+// createPubkey generate an pubkey for the select account
+func (m *Manager) createPubkey(ctx context.Context, accountID string) (rootXPub chainkd.XPub, pubkey ed25519.PublicKey, path [][]byte, err error) {
+	account, err := m.findByID(ctx, accountID)
+	if err != nil {
+		return chainkd.XPub{}, nil, nil, err
+	}
+
+	idx := m.nextIndex()
+	rootXPub = account.XPubs[0]
+	path = signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	derivedXPub := rootXPub.Derive(path)
+	pubkey = derivedXPub.PublicKey()
+
+	return rootXPub, pubkey, path, nil
+}
+
+// CreateContractHook generate a extend contract program for an account
+func (m *Manager) CreateContractHook(ctx context.Context, accountID string, contractProgram string) ([]byte, error) {
+	contract, err := hex.DecodeString(contractProgram)
+	if err != nil {
+		return nil, err
+	}
+
+	cp := &CtrlProgram{
+		AccountID:      accountID,
+		ControlProgram: contract,
+		Change:         false,
+		ExtContractTag: true,
+	}
+
+	if err = m.insertAccountControlProgram(ctx, cp); err != nil {
+		return nil, err
+	}
+
+	return cp.ControlProgram, nil
 }
