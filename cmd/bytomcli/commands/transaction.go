@@ -9,7 +9,6 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/bytom/blockchain"
-	"github.com/bytom/blockchain/contract"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/util"
 )
@@ -218,7 +217,7 @@ var buildContractTransactionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		minArgsCount := 4
 		usage := "Usage:\n  bytomcli build-contract-transaction <outputID> <accountID|alias> <assetID|alias> <amount> -c <contractName>"
-		if ok := contract.CheckContractArgs(contractName, args, minArgsCount, usage); !ok {
+		if ok := CheckContractArgs(contractName, args, minArgsCount, usage); !ok {
 			os.Exit(util.ErrLocalExe)
 		}
 

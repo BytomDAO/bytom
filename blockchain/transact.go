@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -14,7 +16,6 @@ import (
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol/bc/legacy"
-	"strconv"
 )
 
 var defaultTxTTL = 5 * time.Minute
@@ -57,12 +58,23 @@ func MergeActions(req *BuildRequest) []map[string]interface{} {
 		}
 
 		actionKey := m["asset_id"].(string) + m["account_id"].(string)
-		amountStr := fmt.Sprintf("%v", m["amount"])
-		amount, _ := strconv.ParseInt(amountStr, 10, 64)
+
+		var amount int64
+		if reflect.TypeOf(m["amount"]).Kind().String() == "float64" {
+			amount = int64(m["amount"].(float64))
+		} else {
+			amountStr := fmt.Sprintf("%v", m["amount"])
+			amount, _ = strconv.ParseInt(amountStr, 10, 64)
+		}
 
 		if tmpM, ok := actionMap[actionKey]; ok {
-			tmpAmountStr := fmt.Sprintf("%v", tmpM["amount"])
-			tmpAmount, _ := strconv.ParseInt(tmpAmountStr, 10, 64)
+			var tmpAmount int64
+			if reflect.TypeOf(tmpM["amount"]).Kind().String() == "float64" {
+				tmpAmount = int64(tmpM["amount"].(float64))
+			} else {
+				tmpAmountStr := fmt.Sprintf("%v", tmpM["amount"])
+				tmpAmount, _ = strconv.ParseInt(tmpAmountStr, 10, 64)
+			}
 			tmpM["amount"] = tmpAmount + amount
 		} else {
 			actionMap[actionKey] = m
@@ -73,19 +85,13 @@ func MergeActions(req *BuildRequest) []map[string]interface{} {
 	return actions
 }
 
-func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest, flag bool) (*txbuilder.Template, error) {
+func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
 	err := bcr.filterAliases(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	var reqActions []map[string]interface{}
-	if flag {
-		reqActions = req.Actions
-	} else {
-		reqActions = MergeActions(req)
-	}
-
+	reqActions := MergeActions(req)
 	actions := make([]txbuilder.Action, 0, len(reqActions))
 	for i, act := range reqActions {
 		typ, ok := act["type"].(string)
@@ -142,7 +148,7 @@ func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest
 
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
-	tmpl, err := bcr.buildSingle(subctx, buildReqs, false)
+	tmpl, err := bcr.buildSingle(subctx, buildReqs)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -164,12 +170,12 @@ func (bcr *BlockchainReactor) buildContractTX(ctx context.Context, req struct {
 	}
 
 	var buildReq BuildRequest
-	if err := json.Unmarshal([]byte(buildReqStr), &buildReq); err != nil {
+	if err := json.Unmarshal([]byte(*buildReqStr), &buildReq); err != nil {
 		return NewErrorResponse(err)
 	}
 
 	subctx := reqid.NewSubContext(ctx, reqid.New())
-	tmpl, err := bcr.buildSingle(subctx, &buildReq, true)
+	tmpl, err := bcr.buildSingle(subctx, &buildReq)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

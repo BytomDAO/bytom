@@ -7,60 +7,42 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/errors"
 )
 
-// CheckContractArgs check the number of arguments for template contracts
-func CheckContractArgs(contractName string, args []string, count int, usage string) bool {
-	switch contractName {
-	case "LockWithPublicKey":
-		if len(args) != count+3 {
-			fmt.Println(usage + " <rootPub> <path1> <path2> [flags]\n")
-			return false
-		}
-	case "LockWithMultiSig":
-		if len(args) != count+6 {
-			fmt.Println(usage + " <rootPub1> <path11> <path12> <rootPub2> <path21> <path22> [flags]\n")
-			return false
-		}
-	case "LockWithPublicKeyHash":
-		if len(args) != count+4 {
-			fmt.Println(usage + " <pubKey> <rootPub> <path1> <path2> [flags]\n")
-			return false
-		}
-	case "RevealPreimage":
-		if len(args) != count+1 {
-			fmt.Println(usage + " <value> [flags]\n")
-			return false
-		}
-	case "TradeOffer":
-		if !(len(args) == count+4 || len(args) == count+5) {
-			fmt.Println(usage + " <clauseSelector> (<innerAssetID|alias> <innerAmount> <innerAccountID|alias> <innerProgram>) " +
-				"| (<rootPub> <path1> <path2>) [flags]\n")
-			return false
-		}
-	case "Escrow":
-		if len(args) != count+5 {
-			fmt.Println(usage + " <clauseSelector> <rootPub> <path1> <path2> <controlProgram> [flags]\n")
-			return false
-		}
-	case "LoanCollateral":
-		if !(len(args) == count+2 || len(args) == count+6) {
-			fmt.Println(usage + " <clauseSelector> (<innerAssetID|alias> <innerAmount> <innerAccountID|alias> <innerProgram> <controlProgram>) " +
-				"| (<controlProgram>) [flags]\n")
-			return false
-		}
-	case "CallOption":
-		if !(len(args) == count+2 || len(args) == count+8) {
-			fmt.Println(usage + " <clauseSelector> (<innerAssetID|alias> <innerAmount> <innerAccountID|alias> <innerProgram> <rootPub> <path1> <path2>) " +
-				"| (<controlProgram>) [flags]\n")
-			return false
-		}
-	default:
-		fmt.Println("Invalid contract template name")
-		return false
-	}
+// PubKeyInfo is the elements of generating public key
+type PubKeyInfo struct {
+	rootPubKey string
+	path       []string
+}
 
-	return true
+// ParamInfo is the entire struct of contract arguments
+type ParamInfo struct {
+	frontData   []string
+	pubKeyInfos []PubKeyInfo
+	lastData    []string
+}
+
+// CommonPubInfo is the elements of RawTxSigWitness
+type CommonPubInfo struct {
+	rootPubKeys []chainkd.XPub
+	paths       [][]chainjson.HexBytes
+	quorum      int
+}
+
+func newPubKeyInfo(rootPub string, path []string) PubKeyInfo {
+	return PubKeyInfo{
+		rootPubKey: rootPub,
+		path:       path,
+	}
+}
+
+func newParamInfo(front []string, pubKeys []PubKeyInfo, last []string) ParamInfo {
+	return ParamInfo{
+		frontData:   front,
+		pubKeyInfos: pubKeys,
+		lastData:    last,
+	}
 }
 
 func reconstructTpl(tpl *txbuilder.Template, si *txbuilder.SigningInstruction) *txbuilder.Template {
@@ -76,211 +58,116 @@ func reconstructTpl(tpl *txbuilder.Template, si *txbuilder.SigningInstruction) *
 	return tpl
 }
 
-func addPublicKeyWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string) (*txbuilder.Template, error) {
-	var rootPubKey chainkd.XPub
-	var path []chainjson.HexBytes
-	var totalRoot []chainkd.XPub
-	var totalPath [][]chainjson.HexBytes
-	var si txbuilder.SigningInstruction
+func convertPubInfo(pubKeyInfos []PubKeyInfo) (*CommonPubInfo, error) {
+	rootPubKey := chainkd.XPub{}
+	path := []chainjson.HexBytes{}
+	commonPubInfo := CommonPubInfo{}
 
-	root, err := hex.DecodeString(rootPub)
+	for _, pubInfo := range pubKeyInfos {
+		hexPubKey, err := hex.DecodeString(pubInfo.rootPubKey)
+		if err != nil {
+			return nil, err
+		}
+		copy(rootPubKey[:], hexPubKey[:])
+
+		if len(pubInfo.path) != 2 {
+			buf := fmt.Sprintf("the length of path [%d] is not equal 2!", len(pubInfo.path))
+			err := errors.New(buf)
+			return nil, err
+		}
+
+		for _, strPath := range pubInfo.path {
+			hexPath, err := hex.DecodeString(strPath)
+			if err != nil {
+				return nil, err
+			}
+
+			path = append(path, hexPath)
+		}
+
+		commonPubInfo.rootPubKeys = append(commonPubInfo.rootPubKeys, rootPubKey)
+		commonPubInfo.paths = append(commonPubInfo.paths, path)
+		commonPubInfo.quorum++
+	}
+
+	return &commonPubInfo, nil
+}
+
+func addPubKeyArgs(tpl *txbuilder.Template, pubKeyInfos []PubKeyInfo) (*txbuilder.Template, error) {
+	si := txbuilder.SigningInstruction{}
+
+	pubInfo, err := convertPubInfo(pubKeyInfos)
 	if err != nil {
 		return nil, err
 	}
-	copy(rootPubKey[:], root[:])
 
-	p1, err := hex.DecodeString(path1)
-	if err != nil {
-		return nil, err
-	}
-
-	p2, err := hex.DecodeString(path2)
-	if err != nil {
-		return nil, err
-	}
-
-	path = append(path, p1)
-	path = append(path, p2)
-	totalRoot = append(totalRoot, rootPubKey)
-	totalPath = append(totalPath, path)
-
-	err = si.AddRawTxSigWitness(totalRoot, totalPath, 1)
+	err = si.AddRawTxSigWitness(pubInfo.rootPubKeys, pubInfo.paths, pubInfo.quorum)
 	if err != nil {
 		return nil, err
 	}
 
 	tpl = reconstructTpl(tpl, &si)
-
 	return tpl, nil
 }
 
-func addMultiSigWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string, rootPub1 string, path11 string, path12 string) (*txbuilder.Template, error) {
-	var rootPubKey chainkd.XPub
-	var firstPath []chainjson.HexBytes
-	var secondPath []chainjson.HexBytes
-	var totalRoot []chainkd.XPub
-	var totalPath [][]chainjson.HexBytes
-	var si txbuilder.SigningInstruction
-
-	//add the first arguments
-	root, err := hex.DecodeString(rootPub)
-	if err != nil {
-		return nil, err
-	}
-	copy(rootPubKey[:], root[:])
-
-	p1, err := hex.DecodeString(path1)
-	if err != nil {
-		return nil, err
+func addDataArgs(tpl *txbuilder.Template, value []string) (*txbuilder.Template, error) {
+	var dataWitness []chainjson.HexBytes
+	for _, v := range value {
+		data, err := hex.DecodeString(v)
+		if err != nil {
+			return nil, err
+		}
+		dataWitness = append(dataWitness, data)
 	}
 
-	p2, err := hex.DecodeString(path2)
-	if err != nil {
-		return nil, err
-	}
-
-	firstPath = append(firstPath, p1)
-	firstPath = append(firstPath, p2)
-
-	totalRoot = append(totalRoot, rootPubKey)
-	totalPath = append(totalPath, firstPath)
-
-	//add the second arguments
-	root, err = hex.DecodeString(rootPub1)
-	if err != nil {
-		return nil, err
-	}
-	copy(rootPubKey[:], root[:])
-
-	p1, err = hex.DecodeString(path11)
-	if err != nil {
-		return nil, err
-	}
-
-	p2, err = hex.DecodeString(path12)
-	if err != nil {
-		return nil, err
-	}
-
-	secondPath = append(secondPath, p1)
-	secondPath = append(secondPath, p2)
-	totalRoot = append(totalRoot, rootPubKey)
-	totalPath = append(totalPath, secondPath)
-
-	err = si.AddRawTxSigWitness(totalRoot, totalPath, 2)
-	if err != nil {
-		return nil, err
-	}
+	si := txbuilder.SigningInstruction{}
+	si.AddDataWitness(dataWitness)
 
 	tpl = reconstructTpl(tpl, &si)
-
 	return tpl, nil
 }
 
-func addPublicKeyHashWitness(tpl *txbuilder.Template, pubKey string, rootPub string, path1 string, path2 string) (*txbuilder.Template, error) {
-	var data []chainjson.HexBytes
-	var rootPubKey chainkd.XPub
-	var path []chainjson.HexBytes
-	var totalRoot []chainkd.XPub
-	var totalPath [][]chainjson.HexBytes
-	var si txbuilder.SigningInstruction
+func addParamArgs(tpl *txbuilder.Template, pubKeyValueInfo ParamInfo) (*txbuilder.Template, error) {
+	si := txbuilder.SigningInstruction{}
 
-	pubkey, err := hex.DecodeString(pubKey)
-	if err != nil {
-		return nil, err
-	}
-	data = append(data, pubkey)
-	si.AddDataWitness(data)
+	if pubKeyValueInfo.frontData != nil {
+		var frontDataWitness []chainjson.HexBytes
+		for _, data := range pubKeyValueInfo.frontData {
+			front, err := hex.DecodeString(data)
+			if err != nil {
+				return nil, err
+			}
+			frontDataWitness = append(frontDataWitness, front)
+		}
 
-	root, err := hex.DecodeString(rootPub)
-	if err != nil {
-		return nil, err
-	}
-	copy(rootPubKey[:], root[:])
-
-	p1, err := hex.DecodeString(path1)
-	if err != nil {
-		return nil, err
+		si.AddDataWitness(frontDataWitness)
 	}
 
-	p2, err := hex.DecodeString(path2)
-	if err != nil {
-		return nil, err
+	if pubKeyValueInfo.pubKeyInfos != nil {
+		pubInfo, err := convertPubInfo(pubKeyValueInfo.pubKeyInfos)
+		if err != nil {
+			return nil, err
+		}
+
+		err = si.AddRawTxSigWitness(pubInfo.rootPubKeys, pubInfo.paths, pubInfo.quorum)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	path = append(path, p1)
-	path = append(path, p2)
-	totalRoot = append(totalRoot, rootPubKey)
-	totalPath = append(totalPath, path)
+	if pubKeyValueInfo.lastData != nil {
+		var lastDataWitness []chainjson.HexBytes
+		for _, data := range pubKeyValueInfo.lastData {
+			front, err := hex.DecodeString(data)
+			if err != nil {
+				return nil, err
+			}
+			lastDataWitness = append(lastDataWitness, front)
+		}
 
-	err = si.AddRawTxSigWitness(totalRoot, totalPath, 1)
-	if err != nil {
-		return nil, err
+		si.AddDataWitness(lastDataWitness)
 	}
 
 	tpl = reconstructTpl(tpl, &si)
-
-	return tpl, nil
-}
-
-func addValueWitness(tpl *txbuilder.Template, value string) (*txbuilder.Template, error) {
-	var data []chainjson.HexBytes
-	var si txbuilder.SigningInstruction
-
-	str, err := hex.DecodeString(value)
-	if err != nil {
-		return nil, err
-	}
-	data = append(data, str)
-	si.AddDataWitness(data)
-
-	tpl = reconstructTpl(tpl, &si)
-
-	return tpl, nil
-}
-
-func addPubValueWitness(tpl *txbuilder.Template, rootPub string, path1 string, path2 string, selector string) (*txbuilder.Template, error) {
-	var data []chainjson.HexBytes
-	var rootPubKey chainkd.XPub
-	var path []chainjson.HexBytes
-	var totalRoot []chainkd.XPub
-	var totalPath [][]chainjson.HexBytes
-	var si txbuilder.SigningInstruction
-
-	root, err := hex.DecodeString(rootPub)
-	if err != nil {
-		return nil, err
-	}
-	copy(rootPubKey[:], root[:])
-
-	p1, err := hex.DecodeString(path1)
-	if err != nil {
-		return nil, err
-	}
-
-	p2, err := hex.DecodeString(path2)
-	if err != nil {
-		return nil, err
-	}
-
-	path = append(path, p1)
-	path = append(path, p2)
-	totalRoot = append(totalRoot, rootPubKey)
-	totalPath = append(totalPath, path)
-
-	err = si.AddRawTxSigWitness(totalRoot, totalPath, 1)
-	if err != nil {
-		return nil, err
-	}
-
-	str, err := hex.DecodeString(selector)
-	if err != nil {
-		return nil, err
-	}
-	data = append(data, str)
-	si.AddDataWitness(data)
-
-	tpl = reconstructTpl(tpl, &si)
-
 	return tpl, nil
 }
