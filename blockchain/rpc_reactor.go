@@ -112,6 +112,7 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/is-mining", jsonHandler(bcr.isMining))
 	m.Handle("/gas-rate", jsonHandler(bcr.gasRate))
 	m.Handle("/get-work", jsonHandler(bcr.getWork))
+	m.Handle("/submit-work", jsonHandler(bcr.submitWork))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
