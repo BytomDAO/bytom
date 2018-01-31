@@ -28,14 +28,16 @@ func doWork(work *blockchain.WorkResp) bool {
 }
 
 func main() {
-	var work blockchain.WorkResp
-	client := util.MustRPCClient()
-	if err := client.Call(context.Background(), "/get-work", nil, &work); err == nil {
-		if doWork(&work) {
-			header := work.Header
-			client.Call(context.Background(), "/submit-work", &header, nil)
+	for {
+		var work blockchain.WorkResp
+		client := util.MustRPCClient()
+		if err := client.Call(context.Background(), "/get-work", nil, &work); err == nil {
+			if doWork(&work) {
+				header := work.Header
+				client.Call(context.Background(), "/submit-work", &header, nil)
+			}
+		} else {
+			fmt.Printf("---err:%v\n", err)
 		}
-	} else {
-		fmt.Printf("---err:%v\n", err)
 	}
 }
