@@ -13,7 +13,6 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
@@ -70,7 +69,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	preBlock := c.BestBlock()
 	preBcBlock := legacy.MapBlock(preBlock)
 	nextBlockHeight := preBlock.BlockHeader.Height + 1
-	nextBlockSeed := algorithm.CreateSeed(nextBlockHeight, preBcBlock.Seed, []*bc.Hash{&preBcBlock.ID})
 
 	var compareDiffBH *legacy.BlockHeader
 	if compareDiffBlock, err := c.GetBlockByHeight(nextBlockHeight - consensus.BlocksPerRetarget); err == nil {
@@ -82,7 +80,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			Version:           1,
 			Height:            nextBlockHeight,
 			PreviousBlockHash: preBlock.Hash(),
-			Seed:              *nextBlockSeed,
 			Timestamp:         uint64(time.Now().Unix()),
 			TransactionStatus: *bc.NewTransactionStatus(),
 			BlockCommitment:   legacy.BlockCommitment{},

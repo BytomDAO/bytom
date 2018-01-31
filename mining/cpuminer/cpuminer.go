@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/account"
-	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
@@ -48,12 +47,6 @@ type CPUMiner struct {
 // target difficulty.
 func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
-	seedCaches := m.chain.SeedCaches()
-	seedCache, err := seedCaches.Get(&header.Seed)
-	if err != nil {
-		log.Errorf("Mining: failed on get seedCache: %v", err)
-		return false
-	}
 
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
@@ -68,13 +61,7 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 
 		header.Nonce = i
 		headerHash := header.Hash()
-		proofHash, err := algorithm.AIHash(header.Height, &headerHash, seedCache)
-		if err != nil {
-			log.Errorf("Mining: failed on AIHash: %v", err)
-			return false
-		}
-
-		if difficulty.CheckProofOfWork(proofHash, header.Bits) {
+		if difficulty.CheckProofOfWork(&headerHash, header.Bits) {
 			return true
 		}
 	}
