@@ -116,6 +116,11 @@ out:
 					} else {
 						log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
 					}
+					select {
+					case <-quit:
+						break out
+					default:
+					}
 				} else if num == 1 {
 					break out
 				}
