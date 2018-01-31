@@ -272,7 +272,7 @@ func (w *Wallet) rescanBlocks() {
 //GetRescanStatus return key import rescan status
 func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
 	for i, v := range w.keysInfo {
-		if v.Complete == false {
+		if v.Complete == false && w.status.BestHeight != 0 {
 			w.keysInfo[i].Percent = uint8(w.status.WorkHeight * 100 / w.status.BestHeight)
 		}
 	}
