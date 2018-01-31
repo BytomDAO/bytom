@@ -5,6 +5,7 @@
 package mining
 
 import (
+	"sort"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -12,7 +13,6 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
@@ -69,7 +69,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	preBlock := c.BestBlock()
 	preBcBlock := legacy.MapBlock(preBlock)
 	nextBlockHeight := preBlock.BlockHeader.Height + 1
-	nextBlockSeed := algorithm.CreateSeed(nextBlockHeight, preBcBlock.Seed, []*bc.Hash{&preBcBlock.ID})
 
 	var compareDiffBH *legacy.BlockHeader
 	if compareDiffBlock, err := c.GetBlockByHeight(nextBlockHeight - consensus.BlocksPerRetarget); err == nil {
@@ -81,8 +80,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			Version:           1,
 			Height:            nextBlockHeight,
 			PreviousBlockHash: preBlock.Hash(),
-			Seed:              *nextBlockSeed,
-			TimestampMS:       bc.Millis(time.Now()),
+			Timestamp:         uint64(time.Now().Unix()),
 			TransactionStatus: *bc.NewTransactionStatus(),
 			BlockCommitment:   legacy.BlockCommitment{},
 			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
@@ -91,7 +89,9 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	}
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
 
-	for _, txDesc := range txPool.GetTransactions() {
+	txs := txPool.GetTransactions()
+	sort.Sort(ByTime(txs))
+	for _, txDesc := range txs {
 		tx := txDesc.Tx.Tx
 		gasOnlyTx := false
 		if blockWeight+txDesc.Weight > consensus.MaxBlockSzie-consensus.MaxTxSize {

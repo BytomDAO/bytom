@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/errors"
 )
 
+//KeyImportParams private key import param
 type KeyImportParams struct {
 	KeyAlias     string `json:"alias"`
 	Password     string `json:"password"`
@@ -58,4 +59,12 @@ func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in KeyImportP
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(xpub)
+}
+
+func (bcr *BlockchainReactor) keyImportProgress(ctx context.Context) Response {
+	data, err := bcr.wallet.GetRescanStatus()
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(data)
 }

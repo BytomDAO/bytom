@@ -2,15 +2,14 @@ package validation
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/vm"
 )
 
@@ -85,6 +84,7 @@ type validationState struct {
 }
 
 var (
+	errBadTimestamp             = errors.New("block timestamp is great than limit")
 	errGasCalculate             = errors.New("gas usage calculate got a math error")
 	errEmptyResults             = errors.New("transaction has no results")
 	errMismatchedAssetID        = errors.New("mismatched asset id")
@@ -519,7 +519,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 
 // ValidateBlock validates a block and the transactions within.
 // It does not run the consensus program; for that, see ValidateBlockSig.
-func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
+func ValidateBlock(b, prev *bc.Block) error {
 	if b.Height > 0 {
 		if prev == nil {
 			return errors.WithDetailf(errNoPrevBlock, "height %d", b.Height)
@@ -529,20 +529,15 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 			return err
 		}
 	}
+	if b.Timestamp > uint64(time.Now().Unix())+consensus.MaxTimeOffsetSeconds {
+		return errBadTimestamp
+	}
 
 	if b.BlockHeader.SerializedSize > consensus.MaxBlockSzie {
 		return errWrongBlockSize
 	}
 
-	seedCache, err := seedCaches.Get(b.Seed)
-	if err != nil {
-		return err
-	}
-	proofHash, err := algorithm.AIHash(b.Height, &b.ID, seedCache)
-	if err != nil {
-		return err
-	}
-	if !difficulty.CheckProofOfWork(proofHash, b.BlockHeader.Bits) {
+	if !difficulty.CheckProofOfWork(&b.ID, b.BlockHeader.Bits) {
 		return errWorkProof
 	}
 
@@ -551,7 +546,9 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 		if b.Version == 1 && tx.Version != 1 {
 			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)
 		}
-
+		if tx.TimeRange > b.Timestamp {
+			return errors.New("invalid transaction time range")
+		}
 		txBTMValue, gasVaild, err := ValidateTx(tx, b)
 		gasOnlyTx := false
 		if err != nil {
@@ -616,11 +613,8 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 	if prev.ID != *b.PreviousBlockId {
 		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", prev.ID.Bytes(), b.PreviousBlockId.Bytes())
 	}
-	if b.TimestampMs <= prev.TimestampMs {
-		return errors.WithDetailf(errMisorderedBlockTime, "previous block time %d, current block time %d", prev.TimestampMs, b.TimestampMs)
-	}
-	if *b.Seed != *algorithm.CreateSeed(b.Height, prev.Seed, []*bc.Hash{&prev.ID}) {
-		return errors.New("wrong block seed")
+	if b.Timestamp <= prev.Timestamp {
+		return errors.WithDetailf(errMisorderedBlockTime, "previous block time %d, current block time %d", prev.Timestamp, b.Timestamp)
 	}
 	return nil
 }
@@ -668,7 +662,6 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, bool, error) {
 	if tx.TxHeader.SerializedSize > consensus.MaxTxSize {
 		return 0, false, errWrongTransactionSize
 	}
-
 	if len(tx.ResultIds) == 0 {
 		return 0, false, errors.New("tx didn't have any output")
 	}

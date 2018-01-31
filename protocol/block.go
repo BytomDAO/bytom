@@ -46,7 +46,7 @@ func (c *Chain) GetBlockByHeight(height uint64) (*legacy.Block, error) {
 func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
 	blockEnts := legacy.MapBlock(block)
 	prevEnts := legacy.MapBlock(prev)
-	if err := validation.ValidateBlock(blockEnts, prevEnts, c.seedCaches); err != nil {
+	if err := validation.ValidateBlock(blockEnts, prevEnts); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 	return nil

@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/state"
 )
 
@@ -130,8 +129,7 @@ type Chain struct {
 		hash      *bc.Hash
 		mainChain map[uint64]*bc.Hash
 	}
-	store      Store
-	seedCaches *seed.SeedCaches
+	store Store
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
@@ -141,7 +139,6 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 		orphanManage:     NewOrphanManage(),
 		store:            store,
 		txPool:           txPool,
-		seedCaches:       seed.NewSeedCaches(),
 	}
 	c.state.cond.L = new(sync.Mutex)
 	storeStatus := store.GetStoreStatus()
@@ -200,13 +197,13 @@ func (c *Chain) InMainChain(height uint64, hash bc.Hash) bool {
 }
 
 // TimestampMS returns the latest known block timestamp.
-func (c *Chain) TimestampMS() uint64 {
+func (c *Chain) Timestamp() uint64 {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
 	if c.state.block == nil {
 		return 0
 	}
-	return c.state.block.TimestampMS
+	return c.state.block.Timestamp
 }
 
 // BestBlock returns the chain tail block
@@ -214,11 +211,6 @@ func (c *Chain) BestBlock() *legacy.Block {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
 	return c.state.block
-}
-
-// SeedCaches return the seedCached manager
-func (c *Chain) SeedCaches() *seed.SeedCaches {
-	return c.seedCaches
 }
 
 // GetUtxo try to find the utxo status in db

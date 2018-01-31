@@ -62,18 +62,13 @@ func CPKey(hash common.Hash) []byte {
 
 // NewManager creates a new account manager
 func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
-	var nextIndex uint64
-	if index := walletDB.Get([]byte(keyNextIndex)); index != nil {
-		nextIndex = uint64(binary.LittleEndian.Uint64(index))
-	}
 	return &Manager{
-		db:           walletDB,
-		chain:        chain,
-		utxoDB:       newReserver(chain, walletDB),
-		cache:        lru.New(maxAccountCache),
-		aliasCache:   lru.New(maxAccountCache),
-		delayedACPs:  make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
-		acpIndexNext: nextIndex,
+		db:          walletDB,
+		chain:       chain,
+		utxoDB:      newReserver(chain, walletDB),
+		cache:       lru.New(maxAccountCache),
+		aliasCache:  lru.New(maxAccountCache),
+		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
 	}
 }
 
@@ -90,10 +85,9 @@ type Manager struct {
 	delayedACPsMu sync.Mutex
 	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
-	acpMu        sync.Mutex
-	acpIndexNext uint64 // next acp index in our block
-	acpIndexCap  uint64 // points to end of block
-	accIndexMu   sync.Mutex
+	acpMu       sync.Mutex
+	acpIndexCap uint64 // points to end of block
+	accIndexMu  sync.Mutex
 }
 
 // ExpireReservations removes reservations that have expired periodically.
@@ -255,6 +249,7 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
+// CreateAddress generate an address for the select account
 func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool) (cp *CtrlProgram, err error) {
 	account, err := m.findByID(ctx, accountID)
 	if err != nil {
@@ -281,7 +276,7 @@ func (m *Manager) createAddress(ctx context.Context, account *Account, change bo
 }
 
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.nextIndex()
+	idx := m.nextIndex(account)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
@@ -308,7 +303,7 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 }
 
 func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.nextIndex()
+	idx := m.nextIndex(account)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
@@ -383,16 +378,27 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	return program.ControlProgram, nil
 }
 
-func (m *Manager) nextIndex() uint64 {
+func (m *Manager) nextIndex(account *Account) uint64 {
 	m.acpMu.Lock()
 	defer m.acpMu.Unlock()
 
-	n := m.acpIndexNext
-	m.acpIndexNext++
+	key := make([]byte, 0)
+	key = append(key, account.Signer.XPubs[0].Bytes()...)
+
+	accountIndex := make([]byte, 8)
+	binary.LittleEndian.PutUint64(accountIndex[:], account.Signer.KeyIndex)
+	key = append(key, accountIndex[:]...)
+
+	var nextIndex uint64 = 1
+	if rawIndex := m.db.Get(key); rawIndex != nil {
+		nextIndex = uint64(binary.LittleEndian.Uint64(rawIndex)) + 1
+	}
+
 	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, m.acpIndexNext)
-	m.db.Set([]byte(keyNextIndex), buf)
-	return n
+	binary.LittleEndian.PutUint64(buf, nextIndex)
+	m.db.Set(key, buf)
+
+	return nextIndex
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.

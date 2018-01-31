@@ -2,6 +2,8 @@ package config
 
 import (
 	"testing"
+
+	"github.com/bytom/consensus/difficulty"
 )
 
 // test genesis
@@ -12,7 +14,16 @@ func TestGenerateGenesisTx(t *testing.T) {
 }
 
 func TestGenerateGenesisBlock(t *testing.T) {
-	if block := GenerateGenesisBlock(); block == nil {
-		t.Errorf("Generate genesis block failed")
+	block := GenerateGenesisBlock()
+	nonce := block.Nonce
+	for {
+		hash := block.Hash()
+		if difficulty.CheckProofOfWork(&hash, block.Bits) {
+			break
+		}
+		block.Nonce++
+	}
+	if block.Nonce != nonce {
+		t.Errorf("correct nonce is %d, but get %d", block.Nonce, nonce)
 	}
 }

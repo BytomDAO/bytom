@@ -1,6 +1,6 @@
 package storage
 
-// NewUtxoEntry will creaye a new utxo entry
+// NewUtxoEntry will create a new utxo entry
 func NewUtxoEntry(isCoinBase bool, blockHeight uint64, spent bool) *UtxoEntry {
 	return &UtxoEntry{
 		IsCoinBase:  isCoinBase,

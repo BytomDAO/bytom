@@ -14,12 +14,6 @@ func (bcr *BlockchainReactor) getWork() *WorkResp {
 	} else {
 		resp.Header = block.BlockHeader
 	}
-	seedCaches := bcr.chain.SeedCaches()
-	if seedCache, err := seedCaches.Get(&resp.Header.Seed); err != nil {
-		return nil
-	} else {
-		resp.Cache = seedCache
-	}
 
 	return &resp
 }
@@ -33,5 +27,4 @@ func (bcr *BlockchainReactor) submitWork(header legacy.BlockHeader) Response {
 
 type WorkResp struct {
 	Header legacy.BlockHeader
-	Cache  []uint32
 }

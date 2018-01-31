@@ -144,6 +144,7 @@ type annotatedUTXO struct {
 	SourceID            string `json:"source_id"`
 	SourcePos           uint64 `json:"source_pos"`
 	RefDataHash         string `json:"ref_data"`
+	ValidHeight         uint64 `json:"valid_height"`
 }
 
 // POST /list-unspent-outputs
@@ -170,6 +171,7 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 		tmpUTXO.RefDataHash = utxo.RefDataHash.String()
 		tmpUTXO.ControlProgramIndex = utxo.ControlProgramIndex
 		tmpUTXO.Address = utxo.Address
+		tmpUTXO.ValidHeight = utxo.ValidHeight
 
 		tmpUTXO.Alias = bcr.accounts.GetAliasByID(utxo.AccountID)
 		tmpUTXO.AssetAlias = bcr.assets.GetAliasByID(tmpUTXO.AssetID)

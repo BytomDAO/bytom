@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/bytom/blockchain"
-	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/util"
 )
@@ -26,8 +25,7 @@ func doWork(work *blockchain.WorkResp) bool {
 			return false
 		}
 
-		if difficulty.CheckProofOfWork(proofHash, work.Header.Bits) {
-			// to do: submitWork
+		if difficulty.CheckProofOfWork(&headerHash, work.Header.Bits) {
 			fmt.Printf("Mining: successful-----proof hash:%v\n", proofHash)
 			return true
 		}

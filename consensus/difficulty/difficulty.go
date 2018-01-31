@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/mining/tensority"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -84,7 +85,8 @@ func BigToCompact(n *big.Int) uint64 {
 
 // CheckProofOfWork the hash is vaild for given difficult
 func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
-	return HashToBig(hash).Cmp(CompactToBig(bits)) <= 0
+	compareHash := tensority.Hash(hash, hash)
+	return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0
 }
 
 // CalcNextRequiredDifficulty return the difficult for next block
@@ -96,7 +98,7 @@ func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {
 	}
 
 	targetTimeSpan := int64(consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock)
-	actualTimeSpan := int64(lastBH.Time().Sub(compareBH.Time()).Seconds())
+	actualTimeSpan := int64(lastBH.Timestamp - compareBH.Timestamp)
 
 	oldTarget := CompactToBig(lastBH.Bits)
 	newTarget := new(big.Int).Mul(oldTarget, big.NewInt(actualTimeSpan))

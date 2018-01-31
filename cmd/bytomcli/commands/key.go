@@ -2,6 +2,7 @@ package commands
 
 import (
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strconv"
 
@@ -119,5 +120,18 @@ var importPrivateCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 		printJSON(data)
+	},
+}
+
+var importKeyProgressCmd = &cobra.Command{
+	Use:   "import-key-progress",
+	Short: "Get import private key progress info",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		data, exitCode := util.ClientCall("/import-key-progress")
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+		fmt.Println("data:", data)
 	},
 }

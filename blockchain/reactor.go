@@ -50,10 +50,12 @@ type Response struct {
 	Data   interface{} `json:"data,omitempty"`
 }
 
+//NewSuccessResponse success response
 func NewSuccessResponse(data interface{}) Response {
 	return Response{Status: SUCCESS, Data: data}
 }
 
+//NewErrorResponse error response
 func NewErrorResponse(err error) Response {
 	return Response{Status: FAIL, Msg: err.Error()}
 }
@@ -308,7 +310,7 @@ func (bcr *BlockchainReactor) syncRoutine() {
 	}
 }
 
-// BroadcastStatusRequest broadcasts `BlockStore` height.
+// BroadcastStatusResponse broadcasts `BlockStore` height.
 func (bcr *BlockchainReactor) BroadcastStatusResponse() {
 	block := bcr.chain.BestBlock()
 	bcr.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
