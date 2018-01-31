@@ -157,6 +157,12 @@ func (w *Wallet) detachBlock(block *legacy.Block) error {
 
 	w.status.BestHeight = block.Height - 1
 	w.status.BestHash = block.PreviousBlockHash
+
+	if w.status.WorkHeight > w.status.BestHeight {
+		w.status.WorkHeight = w.status.BestHeight
+		w.status.WorkHash = w.status.BestHash
+	}
+
 	return w.commitWalletInfo(storeBatch)
 }
 
@@ -179,10 +185,6 @@ func (w *Wallet) walletUpdater() {
 			}
 		}
 
-		if w.status.WorkHeight > w.status.BestHeight {
-			w.status.WorkHeight = w.status.BestHeight
-			w.status.WorkHash = w.status.BestHash
-		}
 		block, _ := w.chain.GetBlockByHeight(w.status.WorkHeight + 1)
 		if block == nil {
 			<-w.chain.BlockWaiter(w.status.WorkHeight + 1)
@@ -271,17 +273,33 @@ func (w *Wallet) rescanBlocks() {
 
 //GetRescanStatus return key import rescan status
 func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
-	for i, v := range w.keysInfo {
-		if v.Complete == false && w.status.BestHeight != 0 {
-			w.keysInfo[i].Percent = uint8(w.status.WorkHeight * 100 / w.status.BestHeight)
-			if w.keysInfo[i].Percent == 100 {
-				w.keysInfo[i].Complete = true
-			}
-		} else if v.Complete == true {
-			w.keysInfo[i].Percent = 100
+	keysInfo := make([]KeyInfo, len(w.keysInfo))
+
+	if rawKeyInfo := w.DB.Get(privKeyKey); rawKeyInfo != nil {
+		if err := json.Unmarshal(rawKeyInfo, &keysInfo); err != nil {
+			return nil, err
 		}
 	}
-	return w.keysInfo, nil
+
+	var status StatusInfo
+	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
+		if err := json.Unmarshal(rawWallet, &status); err != nil {
+			return nil, err
+		}
+	}
+
+	for i, v := range keysInfo {
+		if v.Complete == true || status.BestHeight == 0 {
+			keysInfo[i].Percent = 100
+			continue
+		}
+
+		keysInfo[i].Percent = uint8(status.WorkHeight * 100 / status.BestHeight)
+		if v.Percent == 100 {
+			keysInfo[i].Complete = true
+		}
+	}
+	return keysInfo, nil
 }
 
 func checkRescanStatus(w *Wallet) {
