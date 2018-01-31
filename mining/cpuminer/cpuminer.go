@@ -51,13 +51,6 @@ type CPUMiner struct {
 // return 0 is ok, 1 is quit, -1 is failed
 func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) int {
 	header := &block.BlockHeader
-	seedCaches := m.chain.SeedCaches()
-	seedCache, err := seedCaches.Get(&header.Seed)
-	if err != nil {
-		log.Errorf("Mining: failed on get seedCache: %v", err)
-		return -1
-	}
-
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
 		case <-quit:
@@ -79,13 +72,8 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 
 		header.Nonce = i
 		headerHash := header.Hash()
-		proofHash, err := algorithm.AIHash(header.Height, &headerHash, seedCache)
-		if err != nil {
-			log.Errorf("Mining: failed on AIHash: %v", err)
-			return -1
-		}
 
-		if difficulty.CheckProofOfWork(proofHash, header.Bits) {
+		if difficulty.CheckProofOfWork(&headerHash, header.Bits) {
 			return 0
 		}
 	}

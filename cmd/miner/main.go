@@ -19,14 +19,8 @@ func doWork(work *blockchain.WorkResp) bool {
 	for i := uint64(0); i <= maxNonce; i++ {
 		work.Header.Nonce = i
 		headerHash := work.Header.Hash()
-		proofHash, err := algorithm.AIHash(work.Header.Height, &headerHash, work.Cache)
-		if err != nil {
-			fmt.Printf("Mining: failed on AIHash: %v\n", err)
-			return false
-		}
-
 		if difficulty.CheckProofOfWork(&headerHash, work.Header.Bits) {
-			fmt.Printf("Mining: successful-----proof hash:%v\n", proofHash)
+			fmt.Printf("Mining: successful-----proof hash:%v\n", headerHash)
 			return true
 		}
 	}
