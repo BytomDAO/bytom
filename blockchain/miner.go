@@ -1,8 +1,9 @@
 package blockchain
 
 import (
-	"github.com/bytom/protocol/bc/legacy"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 // Get the parameters of mining
