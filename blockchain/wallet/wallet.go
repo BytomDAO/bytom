@@ -62,7 +62,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		AccountMgr:     account,
 		AssetReg:       asset,
 		chain:          chain,
-		rescanProgress: make(chan struct{}, 10),
+		rescanProgress: make(chan struct{}, 1),
 		keysInfo:       make([]KeyInfo, 0),
 	}
 
@@ -305,7 +305,12 @@ func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, i
 }
 
 func (w *Wallet) rescanBlocks() {
-	w.rescanProgress <- struct{}{}
+	select {
+	case <-w.rescanProgress:
+		w.rescanProgress <- struct{}{}
+	default:
+		return
+	}
 }
 
 //GetRescanStatus return key import rescan status
