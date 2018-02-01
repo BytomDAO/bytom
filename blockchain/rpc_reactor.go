@@ -99,6 +99,7 @@ func (bcr *BlockchainReactor) BuildHandler() {
 
 	m.Handle("/export-private-key", jsonHandler(bcr.walletExportKey))
 	m.Handle("/import-private-key", jsonHandler(bcr.walletImportKey))
+	m.Handle("/import-key-progress", jsonHandler(bcr.keyImportProgress))
 
 	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
 	m.Handle("/get-block-by-hash", jsonHandler(bcr.getBlockByHash))
@@ -110,6 +111,8 @@ func (bcr *BlockchainReactor) BuildHandler() {
 
 	m.Handle("/is-mining", jsonHandler(bcr.isMining))
 	m.Handle("/gas-rate", jsonHandler(bcr.gasRate))
+	m.Handle("/get-work", jsonHandler(bcr.getWork))
+	m.Handle("/submit-work", jsonHandler(bcr.submitWork))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
@@ -123,6 +126,7 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	bcr.handler = handler
 }
 
+//AuthHandler access token auth handler
 func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore) http.Handler {
 
 	authenticator := authn.NewAPI(accessTokens)

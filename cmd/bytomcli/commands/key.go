@@ -2,14 +2,16 @@ package commands
 
 import (
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strconv"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
+
+	"github.com/bytom/blockchain"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/util"
-	"github.com/bytom/blockchain"
 )
 
 var createKeyCmd = &cobra.Command{
@@ -20,7 +22,7 @@ var createKeyCmd = &cobra.Command{
 		var key = struct {
 			Alias    string `json:"alias"`
 			Password string `json:"password"`
-		}{Alias: args[0], Password: "123456"}
+		}{Alias: args[0], Password: args[1]}
 
 		data, exitCode := util.ClientCall("/create-key", &key)
 		if exitCode != util.Success {
@@ -45,7 +47,7 @@ var deleteKeyCmd = &cobra.Command{
 		var key = struct {
 			Password string
 			XPub     chainkd.XPub `json:"xpubs"`
-		}{XPub: *xpub, Password: "123456"}
+		}{XPub: *xpub, Password: args[1]}
 
 		if _, exitCode := util.ClientCall("/delete-key", &key); exitCode != util.Success {
 			os.Exit(exitCode)
@@ -118,5 +120,18 @@ var importPrivateCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 		printJSON(data)
+	},
+}
+
+var importKeyProgressCmd = &cobra.Command{
+	Use:   "import-key-progress",
+	Short: "Get import private key progress info",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		data, exitCode := util.ClientCall("/import-key-progress")
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+		fmt.Println("data:", data)
 	},
 }

@@ -15,11 +15,11 @@ func TestTxHashes(t *testing.T) {
 	}{
 		{
 			txdata: &TxData{},
-			hash:   mustDecodeHash("02439cf4a8d801d10e84f5b3818226e38dac889dc626b7a1b5888b49510b38fe"),
+			hash:   mustDecodeHash("221ed254e69ffaefc0c52baff161392001f8c3ce5c120e4d2cba26eef0bf9500"),
 		},
 		{
 			txdata: sampleTx(),
-			hash:   mustDecodeHash("360eab1b2563e85d9a3f290f3f2c0d99c622c89088f8c2e2003000fbee62cca0"), // todo: verify this value,
+			hash:   mustDecodeHash("0fd4368e2348690af748eb1b4d5a661dd7ee2cf3b6555ce788aea391d9c10718"), // todo: verify this value,
 		},
 	}
 

@@ -4,8 +4,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/difficulty"
-	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -44,31 +42,21 @@ func GenerateGenesisBlock() *legacy.Block {
 		log.Panicf("Fatal create merkelRoot")
 	}
 
-	var seed [32]byte
-	sha3pool.Sum256(seed[:], make([]byte, 32))
-
 	block := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
-			Version:     1,
-			Height:      0,
-			Nonce:       1523829,
-			Seed:        bc.NewHash(seed),
-			TimestampMS: 1511318565142,
+			Version:   1,
+			Height:    0,
+			Nonce:     4216077,
+			Timestamp: 1516788453,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 			},
-			Bits: 2161727821138738707,
+			Bits: 2305843009222082559,
+			TransactionStatus: bc.TransactionStatus{
+				Bitmap: []byte{0},
+			},
 		},
 		Transactions: []*legacy.Tx{genesisCoinbaseTx},
-	}
-
-	for {
-		hash := block.Hash()
-		if difficulty.CheckProofOfWork(&hash, block.Bits) {
-			log.Info(block.Nonce)
-			break
-		}
-		block.Nonce++
 	}
 	return block
 }

@@ -19,7 +19,7 @@ var (
 	ErrDuplicateKeyAlias    = errors.New("duplicate key alias")
 	ErrDuplicateKey         = errors.New("duplicate key")
 	ErrInvalidAfter         = errors.New("invalid after")
-	ErrNoKey                = errors.New("key not found")
+	ErrLoadKey              = errors.New("key not found or wrong password ")
 	ErrInvalidKeySize       = errors.New("key invalid size")
 	ErrTooManyAliasesToList = errors.New("requested aliases exceeds limit")
 	ErrAmbiguousAlias       = errors.New("multiple keys match alias")
@@ -32,7 +32,7 @@ type HSM struct {
 	cacheMu  sync.Mutex
 	keyStore keyStore
 	cache    *keyCache
-	kdCache  map[chainkd.XPub]chainkd.XPrv
+	//kdCache  map[chainkd.XPub]chainkd.XPrv
 }
 
 // XPub type for pubkey for anyone can see
@@ -48,7 +48,7 @@ func New(keypath string) (*HSM, error) {
 	return &HSM{
 		keyStore: &keyStorePassphrase{keydir, LightScryptN, LightScryptP},
 		cache:    newKeyCache(keydir),
-		kdCache:  make(map[chainkd.XPub]chainkd.XPrv),
+		//kdCache:  make(map[chainkd.XPub]chainkd.XPrv),
 	}, nil
 }
 
@@ -110,15 +110,15 @@ func (h *HSM) LoadChainKDKey(xpub chainkd.XPub, auth string) (xprv chainkd.XPrv,
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
 
-	if xprv, ok := h.kdCache[xpub]; ok {
-		return xprv, nil
-	}
+	//if xprv, ok := h.kdCache[xpub]; ok {
+	//	return xprv, nil
+	//}
 
-	xpb, xkey, err := h.loadDecryptedKey(xpub, auth)
+	_, xkey, err := h.loadDecryptedKey(xpub, auth)
 	if err != nil {
-		return xprv, ErrNoKey
+		return xprv, ErrLoadKey
 	}
-	h.kdCache[xpb.XPub] = xkey.XPrv
+	//h.kdCache[xpb.XPub] = xkey.XPrv
 	return xkey.XPrv, nil
 }
 
@@ -137,6 +137,7 @@ func (h *HSM) XDelete(xpub chainkd.XPub, auth string) error {
 		return err
 	}
 
+	h.cacheMu.Lock()
 	// The order is crucial here. The key is dropped from the
 	// cache after the file is gone so that a reload happening in
 	// between won't insert it into the cache again.
@@ -144,8 +145,6 @@ func (h *HSM) XDelete(xpub chainkd.XPub, auth string) error {
 	if err == nil {
 		h.cache.delete(xpb)
 	}
-	h.cacheMu.Lock()
-	delete(h.kdCache, xpub)
 	h.cacheMu.Unlock()
 	return err
 }
@@ -170,6 +169,14 @@ func (h *HSM) ResetPassword(xpub chainkd.XPub, auth, newAuth string) error {
 		return err
 	}
 	return h.keyStore.StoreKey(xpb.File, xkey, newAuth)
+}
+
+func (h *HSM) HasAlias(alias string) bool {
+	return h.cache.hasAlias(alias)
+}
+
+func (h *HSM) HasKey(xprv chainkd.XPrv) bool {
+	return h.cache.hasKey(xprv.XPub())
 }
 
 //ImportXPrvKey import XPrv to chainkd

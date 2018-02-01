@@ -34,7 +34,7 @@ var (
 )
 
 // Wraper rpc's client
-func mustRPCClient() *rpc.Client {
+func MustRPCClient() *rpc.Client {
 	// TODO(kr): refactor some of this cert-loading logic into bytom/blockchain
 	// and use it from cored as well.
 	// Note that this function, unlike maybeUseTLS in cored,
@@ -83,7 +83,7 @@ func ClientCall(path string, req ...interface{}) (interface{}, int) {
 		request = req[0]
 	}
 
-	client := mustRPCClient()
+	client := MustRPCClient()
 	client.Call(context.Background(), path, request, response)
 
 	switch response.Status {

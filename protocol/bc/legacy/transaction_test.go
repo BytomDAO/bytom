@@ -16,7 +16,7 @@ import (
 )
 
 func TestTransactionTrailingGarbage(t *testing.T) {
-	const validTxHex = `070100000101270eac870dfde1e0feaa4fac6693dee38da2afe7f5cc83ce2b024f04a2400fd6e20a0104deadbeef027b7d0000`
+	const validTxHex = `07010000000101270eac870dfde1e0feaa4fac6693dee38da2afe7f5cc83ce2b024f04a2400fd6e20a0104deadbeef027b7d0000`
 
 	var validTx Tx
 	err := validTx.UnmarshalText([]byte(validTxHex))
@@ -47,23 +47,24 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(4),
+				SerializedSize: uint64(7),
 				Inputs:         nil,
 				Outputs:        nil,
 				ReferenceData:  nil,
 			}),
 			hex: ("07" + // serflags
 				"01" + // transaction version
+				"00" + // tx maxtime
 				"00" + // common witness extensible string length
 				"00" + // inputs count
 				"00" + // outputs count
 				"00"), // reference data
-			hash: mustDecodeHash("3629cd98d6707aab6055e125ea16be6a4e8e8c60aa195126ab7ee0cc246ab430"),
+			hash: mustDecodeHash("196ffe40c99e0c25bc2b7347db147e626a13132a8d404b92e270ec6e8df24234"),
 		},
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(156),
+				SerializedSize: uint64(159),
 				Inputs: []*TxInput{
 					NewIssuanceInput([]byte{10, 9, 8}, 1000000000000, []byte("input"), initialBlockHash, issuanceScript, [][]byte{[]byte{1, 2, 3}}, nil),
 				},
@@ -74,6 +75,7 @@ func TestTransaction(t *testing.T) {
 			}),
 			hex: ("07" + // serflags
 				"01" + // transaction version
+				"00" + // tx maxtime
 				"00" + // common witness extensible string length
 				"01" + // inputs count
 				"01" + // input 0, asset version
@@ -103,12 +105,12 @@ func TestTransaction(t *testing.T) {
 				"066f7574707574" + // output 0, reference data
 				"00" + // output 0, output witness
 				"0869737375616e6365"), // reference data
-			hash: mustDecodeHash("191646bc995127b369a1459a58759368d8f1b95adfda87c9c858165a49f67659"),
+			hash: mustDecodeHash("7a9e4f4b87d8af099081d0dfec77fe33ccf288d586308d8a14a640b72ca474f8"),
 		},
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(224),
+				SerializedSize: uint64(227),
 				Inputs: []*TxInput{
 					NewSpendInput(nil, mustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), bc.AssetID{}, 1000000000000, 1, []byte{1}, bc.Hash{}, []byte("input")),
 				},
@@ -120,6 +122,7 @@ func TestTransaction(t *testing.T) {
 			}),
 			hex: ("07" + // serflags
 				"01" + // transaction version
+				"00" + // tx maxtime
 				"00" + // common witness extensible string length
 				"01" + // inputs count
 				"01" + // input 0, asset version
@@ -154,7 +157,7 @@ func TestTransaction(t *testing.T) {
 				"00" + // output 1, reference data
 				"00" + // output 1, output witness
 				"0c646973747269627574696f6e"), // reference data
-			hash: mustDecodeHash("52611aef626501b815b0d80312fba172a5055b06458bbe32b980fd5e41ba8f46"),
+			hash: mustDecodeHash("4074fc31692af33defcee32189eaa8cb6219db259883707009b048d7165812ca"),
 		},
 	}
 	for i, test := range cases {
@@ -229,6 +232,7 @@ func TestHasIssuance(t *testing.T) {
 func TestInvalidIssuance(t *testing.T) {
 	hex := ("07" + // serflags
 		"01" + // transaction version
+		"00" + // tx maxtime
 		"00" + // common witness extensible string length
 		"01" + // inputs count
 		"01" + // input 0, asset version

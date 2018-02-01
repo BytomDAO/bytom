@@ -10,7 +10,6 @@ import (
 
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
-	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -109,13 +108,12 @@ func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest
 
 	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime)
 	if errors.Root(err) == txbuilder.ErrAction {
-		// Format each of the inner errors contained in the data.
-		var formattedErrs []httperror.Response
+		// append each of the inner errors contained in the data.
+		var Errs string
 		for _, innerErr := range errors.Data(err)["actions"].([]error) {
-			resp := errorFormatter.Format(innerErr)
-			formattedErrs = append(formattedErrs, resp)
+			Errs = Errs + "<" + innerErr.Error() + ">"
 		}
-		err = errors.WithData(err, "actions", formattedErrs)
+		err = errors.New(err.Error() + "-" + Errs)
 	}
 	if err != nil {
 		return nil, err
@@ -135,10 +133,10 @@ func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest
 
 	tmpl, err := bcr.buildSingle(subctx, buildReqs)
 	if err != nil {
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
-	return resWrapper(tmpl)
+	return NewSuccessResponse(tmpl)
 }
 
 func (bcr *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {
@@ -227,23 +225,23 @@ func (bcr *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Templat
 	txid, err := bcr.submitSingle(nil, tpl)
 	if err != nil {
 		log.WithField("err", err).Error("submit single tx")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	log.WithField("txid", txid).Info("submit single tx")
-	return resWrapper(txid)
+	return NewSuccessResponse(txid)
 }
 
 // POST /sign-submit-transaction
 func (bcr *BlockchainReactor) signSubmit(ctx context.Context, x struct {
-	Auth string             `json:"auth"`
-	Txs  txbuilder.Template `json:"transaction"`
+	Password []string           `json:"password"`
+	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
 
 	var err error
-	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Auth, bcr.pseudohsmSignTemplate); err != nil {
+	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Password, bcr.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	log.Info("Sign Transaction complete.")
@@ -251,9 +249,9 @@ func (bcr *BlockchainReactor) signSubmit(ctx context.Context, x struct {
 	txID, err := bcr.submitSingle(nil, &x.Txs)
 	if err != nil {
 		log.WithField("err", err).Error("submit single tx")
-		return resWrapper(nil, err)
+		return NewErrorResponse(err)
 	}
 
 	log.WithField("txid", txID["txid"]).Info("submit single tx")
-	return resWrapper(txID)
+	return NewSuccessResponse(txID)
 }

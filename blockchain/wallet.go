@@ -1,15 +1,17 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 
-	"bytes"
+	"github.com/tendermint/go-wire/data/base58"
+
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
-	"github.com/tendermint/go-wire/data/base58"
 )
 
+//KeyImportParams private key import param
 type KeyImportParams struct {
 	KeyAlias     string `json:"alias"`
 	Password     string `json:"password"`
@@ -57,4 +59,12 @@ func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in KeyImportP
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(xpub)
+}
+
+func (bcr *BlockchainReactor) keyImportProgress(ctx context.Context) Response {
+	data, err := bcr.wallet.GetRescanStatus()
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(data)
 }

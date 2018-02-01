@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
@@ -27,6 +28,7 @@ type rawOutput struct {
 	sourceID       bc.Hash
 	sourcePos      uint64
 	refData        bc.Hash
+	ValidHeight    uint64
 }
 
 type accountOutput struct {
@@ -85,7 +87,7 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	reverseOuts := make([]*rawOutput, 0)
 
 	//handle spent UTXOs
-	for _, tx := range b.Transactions {
+	for txIndex, tx := range b.Transactions {
 		for _, inpID := range tx.Tx.InputIDs {
 			//spend and retire
 			sp, err := tx.Spend(inpID)
@@ -95,6 +97,11 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 
 			resOut, ok := tx.Entries[*sp.SpentOutputId].(*bc.Output)
 			if !ok {
+				continue
+			}
+
+			statusFail, _ := b.TransactionStatus.GetStatus(txIndex)
+			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 
@@ -192,18 +199,22 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	var err error
 
 	//handle spent UTXOs
-	delOutputIDs := prevoutDBKeys(b.Transactions...)
+	delOutputIDs := prevoutDBKeys(b)
 	for _, delOutputID := range delOutputIDs {
 		batch.Delete(account.UTXOKey(delOutputID))
 	}
 
 	//handle new UTXOs
 	outs := make([]*rawOutput, 0, len(b.Transactions))
-	for _, tx := range b.Transactions {
+	for txIndex, tx := range b.Transactions {
 		for j, out := range tx.Outputs {
 			resOutID := tx.ResultIds[j]
 			resOut, ok := tx.Entries[*resOutID].(*bc.Output)
 			if !ok {
+				continue
+			}
+			statusFail, _ := b.TransactionStatus.GetStatus(txIndex)
+			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 			out := &rawOutput{
@@ -216,6 +227,11 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 				sourcePos:      resOut.Source.Position,
 				refData:        *resOut.Data,
 			}
+
+			//coinbase utxo valid height
+			if txIndex == 0 {
+				out.ValidHeight = b.Height + consensus.CoinbasePendingBlockNumber
+			}
 			outs = append(outs, out)
 		}
 	}
@@ -227,10 +243,14 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	}
 }
 
-func prevoutDBKeys(txs ...*legacy.Tx) (outputIDs []bc.Hash) {
-	for _, tx := range txs {
+func prevoutDBKeys(b *legacy.Block) (outputIDs []bc.Hash) {
+	for txIndex, tx := range b.Transactions {
 		for _, inpID := range tx.Tx.InputIDs {
 			if sp, err := tx.Spend(inpID); err == nil {
+				statusFail, _ := b.TransactionStatus.GetStatus(txIndex)
+				if statusFail && *sp.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
+					continue
+				}
 				outputIDs = append(outputIDs, *sp.SpentOutputId)
 			}
 		}
@@ -302,6 +322,7 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 			ControlProgramIndex: out.keyIndex,
 			AccountID:           out.AccountID,
 			Address:             out.Address,
+			ValidHeight:         out.ValidHeight,
 		}
 
 		data, err := json.Marshal(u)
@@ -323,7 +344,7 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, uint32(pos)))
+				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, pos))
 				local = true
 				break
 			}
@@ -339,7 +360,7 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 				continue
 			}
 			if bytes := w.DB.Get(account.UTXOKey(outid)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, uint32(pos)))
+				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, pos))
 				break
 			}
 		}
@@ -349,8 +370,8 @@ func filterAccountTxs(b *legacy.Block, w *Wallet) []*query.AnnotatedTx {
 }
 
 //GetTransactionsByTxID get account txs by account tx ID
-func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error) {
-	annotatedTxs := make([]query.AnnotatedTx, 0)
+func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
 	formatKey := ""
 
 	if txID != "" {
@@ -364,8 +385,8 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix + formatKey))
 	defer txIter.Release()
 	for txIter.Next() {
-		annotatedTx := query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
 			return nil, err
 		}
 		annotatedTxs = append(annotatedTxs, annotatedTx)
@@ -375,7 +396,7 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]query.AnnotatedTx, error)
 }
 
 //GetTransactionsSummary get transactions summary
-func (w *Wallet) GetTransactionsSummary(transactions []query.AnnotatedTx) []TxSummary {
+func (w *Wallet) GetTransactionsSummary(transactions []*query.AnnotatedTx) []TxSummary {
 	Txs := make([]TxSummary, 0)
 
 	for _, annotatedTx := range transactions {
@@ -410,7 +431,7 @@ func (w *Wallet) GetTransactionsSummary(transactions []query.AnnotatedTx) []TxSu
 	return Txs
 }
 
-func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) bool {
+func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
 	for _, input := range annotatedTx.Inputs {
 		if input.AccountID == accountID {
 			return true
@@ -427,13 +448,13 @@ func findTransactionsByAccount(annotatedTx query.AnnotatedTx, accountID string) 
 }
 
 //GetTransactionsByAccountID get account txs by account ID
-func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]query.AnnotatedTx, error) {
-	annotatedTxs := make([]query.AnnotatedTx, 0)
+func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
 	for txIter.Next() {
-		annotatedTx := query.AnnotatedTx{}
+		annotatedTx := &query.AnnotatedTx{}
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
 		}

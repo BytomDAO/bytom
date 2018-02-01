@@ -147,14 +147,14 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 			}
 		}
 		if (xpub.XPub == chainkd.XPub{}) {
-			return XPub{}, ErrNoKey
+			return XPub{}, ErrLoadKey
 		}
 	}
 	switch len(matches) {
 	case 1:
 		return matches[0], nil
 	case 0:
-		return XPub{}, ErrNoKey
+		return XPub{}, ErrLoadKey
 	default:
 		err := &AmbiguousKeyError{Pubkey: hex.EncodeToString(xpub.XPub[:]), Matches: make([]XPub, len(matches))}
 		copy(err.Matches, matches)

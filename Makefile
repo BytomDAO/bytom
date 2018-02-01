@@ -1,6 +1,6 @@
 PACKAGES = $(shell go list ./... | grep -v '/vendor/')
 
-all: bytomd bytomcli test
+all: bytomd bytomcli miner test
 
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
@@ -11,6 +11,11 @@ bytomcli:
 	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
 	@go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
     -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
+
+miner:
+	@echo "Building miner to cmd/miner/miner"
+	@go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
+    -o cmd/miner/miner cmd/miner/main.go
 
 multi_platform: bytomd bytomcli
 	@echo "Building multi platform binary"

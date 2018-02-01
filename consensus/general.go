@@ -23,8 +23,13 @@ const (
 	BlocksPerRetarget     = uint64(1024)
 	TargetSecondsPerBlock = uint64(60)
 
+	// MaxTimeOffsetSeconds is the maximum number of seconds a block time is allowed to be ahead of the current time
+	MaxTimeOffsetSeconds = uint64(60 * 60)
+
 	PayToWitnessPubKeyHashDataSize = 20
 	PayToWitnessScriptHashDataSize = 32
+
+	CoinbaseArbitrarySizeLimit = 128
 )
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom

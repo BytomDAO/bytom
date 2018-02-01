@@ -8,6 +8,21 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+func IsP2WScript(prog []byte) bool {
+	return IsP2WPKHScript(prog) || IsP2WSHScript(prog) || IsStraightforward(prog)
+}
+
+func IsStraightforward(prog []byte) bool {
+	insts, err := vm.ParseProgram(prog)
+	if err != nil {
+		return false
+	}
+	if len(insts) != 1 {
+		return false
+	}
+	return insts[0].Op == vm.OP_TRUE || insts[0].Op == vm.OP_FAIL
+}
+
 func IsP2WPKHScript(prog []byte) bool {
 	insts, err := vm.ParseProgram(prog)
 	if err != nil {
