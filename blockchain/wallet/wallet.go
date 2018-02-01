@@ -3,7 +3,6 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-wire/data/base58"
@@ -53,7 +52,6 @@ type Wallet struct {
 	chain          *protocol.Chain
 	rescanProgress chan struct{}
 	ImportPrivKey  bool
-	ImportKeyLock  sync.Mutex
 	keysInfo       []KeyInfo
 }
 
@@ -281,9 +279,6 @@ func (w *Wallet) ImportAccountXpubKey(xpubIndex int, xpub pseudohsm.XPub, cpInde
 }
 
 func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudohsm.XPub, index uint64, keyAlias string) error {
-	w.ImportKeyLock.Lock()
-	defer w.ImportKeyLock.Unlock()
-
 	if err := w.createProgram(account, XPub, index); err != nil {
 		return err
 	}
@@ -345,8 +340,6 @@ func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
 }
 
 func checkRescanStatus(w *Wallet) {
-	w.ImportKeyLock.Lock()
-	defer w.ImportKeyLock.Unlock()
 	if !w.ImportPrivKey {
 		return
 	}
