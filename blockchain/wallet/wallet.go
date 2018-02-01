@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/json"
+	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-wire/data/base58"
@@ -19,6 +20,9 @@ import (
 
 //SINGLE single sign
 const SINGLE = 1
+
+//RecoveryIndex walletdb recovery cp number
+const RecoveryIndex = 5000
 
 var walletKey = []byte("walletInfo")
 var privKeyKey = []byte("keysInfo")
@@ -52,7 +56,7 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) (*Wallet, error) {
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, xpubs []pseudohsm.XPub) (*Wallet, error) {
 	w := &Wallet{
 		DB:             walletDB,
 		AccountMgr:     account,
@@ -62,7 +66,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		keysInfo:       make([]KeyInfo, 0),
 	}
 
-	if err := w.loadWalletInfo(); err != nil {
+	if err := w.loadWalletInfo(xpubs); err != nil {
 		return nil, err
 	}
 
@@ -71,6 +75,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	w.ImportPrivKey = w.getImportKeyFlag()
+
 	go w.walletUpdater()
 
 	return w, nil
@@ -78,9 +83,15 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 
 //GetWalletInfo return stored wallet info and nil,if error,
 //return initial wallet info and err
-func (w *Wallet) loadWalletInfo() error {
+func (w *Wallet) loadWalletInfo(xpubs []pseudohsm.XPub) error {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
 		return json.Unmarshal(rawWallet, &w.status)
+	}
+
+	for i, v := range xpubs {
+		if err := w.ImportAccountXpubKey(i, v, RecoveryIndex); err != nil {
+			return err
+		}
 	}
 
 	block, err := w.chain.GetBlockByHeight(0)
@@ -169,7 +180,6 @@ func (w *Wallet) detachBlock(block *legacy.Block) error {
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
 func (w *Wallet) walletUpdater() {
 	for {
-		// config.GenesisBlock().hash
 		getRescanNotification(w)
 		checkRescanStatus(w)
 		for !w.chain.InMainChain(w.status.BestHeight, w.status.BestHash) {
@@ -252,6 +262,22 @@ func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, key
 	return xpub, nil
 }
 
+// ImportAccountXpubKey imports the account key in the Wallet Import Formt.
+func (w *Wallet) ImportAccountXpubKey(xpubIndex int, xpub pseudohsm.XPub, cpIndex uint64) error {
+	accountAlias := fmt.Sprintf("recovery_%d", xpubIndex)
+
+	if acc, _ := w.AccountMgr.FindByAlias(nil, accountAlias); acc != nil {
+		return account.ErrDuplicateAlias
+	}
+
+	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias, nil)
+	if err != nil {
+		return err
+	}
+
+	return w.recoveryAccountWalletDB(newAccount, &xpub, cpIndex, xpub.Alias)
+}
+
 func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudohsm.XPub, index uint64, keyAlias string) error {
 	if err := w.createProgram(account, XPub, index); err != nil {
 		return err
@@ -279,7 +305,12 @@ func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, i
 }
 
 func (w *Wallet) rescanBlocks() {
-	w.rescanProgress <- struct{}{}
+	select {
+	case <-w.rescanProgress:
+		w.rescanProgress <- struct{}{}
+	default:
+		return
+	}
 }
 
 //GetRescanStatus return key import rescan status

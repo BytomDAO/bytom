@@ -187,20 +187,22 @@ func NewNode(config *cfg.Config) *Node {
 		return nil
 	}
 
+	hsm, err := pseudohsm.New(config.KeysDir())
+	if err != nil {
+		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
+	}
+
 	if !config.Wallet.Disable {
+		xpubs, _ := hsm.ListKeys()
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, chain)
+		wallet, err = w.NewWallet(walletDB, accounts, assets, chain, xpubs)
 		if err != nil {
 			log.WithField("error", err).Error("init NewWallet")
 		}
 	}
 
-	hsm, err := pseudohsm.New(config.KeysDir())
-	if err != nil {
-		cmn.Exit(cmn.Fmt("initialize HSM failed: %v", err))
-	}
 	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet, txFeed, accessTokens, config.Mining)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
