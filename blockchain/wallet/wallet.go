@@ -68,9 +68,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		keysInfo:       make([]KeyInfo, 0),
 	}
 
-	var recoverFlag bool
-	var err error
-	if recoverFlag, err = w.loadWalletInfo(len(xpubs)); err != nil {
+	if err := w.loadWalletInfo(xpubs); err != nil {
 		return nil, err
 	}
 
@@ -82,31 +80,27 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 
 	go w.walletUpdater()
 
-	if recoverFlag == true {
-		for i, v := range xpubs {
-			w.ImportAccountXpubKey(i, v, RecoveryIndex)
-		}
-	}
-
 	return w, nil
 }
 
 //GetWalletInfo return stored wallet info and nil,if error,
 //return initial wallet info and err
-func (w *Wallet) loadWalletInfo(lenXPubs int) (bool, error) {
+func (w *Wallet) loadWalletInfo(xpubs []pseudohsm.XPub) error {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
-		return false, json.Unmarshal(rawWallet, &w.status)
+		return json.Unmarshal(rawWallet, &w.status)
 	}
-	var recoveryFlag bool
-	if lenXPubs != 0 {
-		recoveryFlag = true
+
+	for i, v := range xpubs {
+		if err := w.ImportAccountXpubKey(i, v, RecoveryIndex); err != nil {
+			return err
+		}
 	}
 
 	block, err := w.chain.GetBlockByHeight(0)
 	if err != nil {
-		return false, err
+		return err
 	}
-	return recoveryFlag, w.attachBlock(block)
+	return w.attachBlock(block)
 }
 
 func (w *Wallet) commitWalletInfo(batch db.Batch) error {
