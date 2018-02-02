@@ -14,7 +14,6 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm/vmutil"
@@ -79,13 +78,11 @@ func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage
 	}
 
 	//local asset and saved external asset
-	localAsset, err := w.AssetReg.FindByID(nil, &assetID)
-	if err != nil {
-		return "", nil, err
+	if localAsset, err := w.AssetReg.FindByID(nil, &assetID); err == nil {
+		alias := *localAsset.Alias
+		definition := []byte(localAsset.RawDefinitionByte)
+		return alias, definition, nil
 	}
-	alias := *localAsset.Alias
-	definition := []byte(localAsset.RawDefinitionByte)
-	return alias, definition, nil
 
 	//external asset
 	if definition, err := w.getExternalDefinition(&assetID); definition != nil {
@@ -127,19 +124,19 @@ func getAccountFromUTXO(outputID bc.Hash, walletDB db.DB) (*account.Account, err
 
 	accountUTXOValue := walletDB.Get(account.UTXOKey(outputID))
 	if accountUTXOValue == nil {
-		return nil, errors.Wrap(fmt.Errorf("failed get account utxo:%x ", outputID))
+		return nil, fmt.Errorf("failed get account utxo:%x ", outputID)
 	}
 
 	if err := json.Unmarshal(accountUTXOValue, &accountUTXO); err != nil {
-		return nil, errors.Wrap(err)
+		return nil, err
 	}
 
 	accountValue := walletDB.Get(account.Key(accountUTXO.AccountID))
 	if accountValue == nil {
-		return nil, errors.Wrap(fmt.Errorf("failed get account:%s ", accountUTXO.AccountID))
+		return nil, fmt.Errorf("failed get account:%s ", accountUTXO.AccountID)
 	}
 	if err := json.Unmarshal(accountValue, &localAccount); err != nil {
-		return nil, errors.Wrap(err)
+		return nil, err
 	}
 
 	return &localAccount, nil
@@ -154,20 +151,20 @@ func getAccountFromACP(program []byte, walletDB db.DB) (*account.Account, error)
 
 	rawProgram := walletDB.Get(account.CPKey(hash))
 	if rawProgram == nil {
-		return nil, errors.Wrap(fmt.Errorf("failed get account control program:%x ", hash))
+		return nil, fmt.Errorf("failed get account control program:%x ", hash)
 	}
 
 	if err := json.Unmarshal(rawProgram, &accountCP); err != nil {
-		return nil, errors.Wrap(err)
+		return nil, err
 	}
 
 	accountValue := walletDB.Get(account.Key(accountCP.AccountID))
 	if accountValue == nil {
-		return nil, errors.Wrap(fmt.Errorf("failed get account:%s ", accountCP.AccountID))
+		return nil, fmt.Errorf("failed get account:%s ", accountCP.AccountID)
 	}
 
 	if err := json.Unmarshal(accountValue, &localAccount); err != nil {
-		return nil, errors.Wrap(err)
+		return nil, err
 	}
 
 	return &localAccount, nil

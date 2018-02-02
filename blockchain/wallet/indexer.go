@@ -138,7 +138,9 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block) {
 	}
 }
 
-//save external assets definition
+//save external and local assets definition,
+//when query ,query local first and if have no then query external
+//details see getAliasDefinition
 func saveExternalAssetDefinition(b *legacy.Block, walletDB db.DB) {
 	storeBatch := walletDB.NewBatch()
 	defer storeBatch.Write()
