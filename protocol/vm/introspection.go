@@ -1,7 +1,5 @@
 package vm
 
-import "math"
-
 func opCheckOutput(vm *virtualMachine) error {
 	err := vm.applyCost(16)
 	if err != nil {
@@ -92,15 +90,11 @@ func opBlockTime(vm *virtualMachine) error {
 		return err
 	}
 
-	if vm.context.TimeMS == nil {
+	if vm.context.Time == nil {
 		return ErrContext
 	}
-	blockTimeMS := *vm.context.TimeMS
-	if blockTimeMS == 0 || blockTimeMS > math.MaxInt64 {
-		blockTimeMS = uint64(math.MaxInt64)
-	}
 
-	return vm.pushInt64(int64(blockTimeMS), true)
+	return vm.pushInt64(int64(*vm.context.Time), true)
 }
 
 func opEntryData(vm *virtualMachine) error {
