@@ -155,14 +155,13 @@ func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest
 }
 
 // POST /build-contract-transaction
-func (bcr *BlockchainReactor) buildContractTX(ctx context.Context, req struct {
-	ContractName string   `json:"contract_name"`
-	Arguments    []string `json:"arguments"`
-	MinCount     int      `json:"min_count"`
-	Alias        bool     `json:"alias"`
-	BtmGas       string   `json:"btm_gas"`
-}) Response {
-	buildReqStr, err := contract.BuildContractTransaction(req.ContractName, req.Arguments, req.MinCount, req.Alias, req.BtmGas)
+func (bcr *BlockchainReactor) buildContractTX(ctx context.Context, req *contract.ContractReq) Response {
+	act, err := req.ContractDecoder()
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	buildReqStr, err := act.Build()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -172,20 +171,12 @@ func (bcr *BlockchainReactor) buildContractTX(ctx context.Context, req struct {
 		return NewErrorResponse(err)
 	}
 
-	subctx := reqid.NewSubContext(ctx, reqid.New())
-	tmpl, err := bcr.buildSingle(subctx, &buildReq)
+	tmpl, err := bcr.buildSingle(ctx, &buildReq)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
-	var contractArgs []string
-	count := req.MinCount
-	for count < len(req.Arguments) {
-		contractArgs = append(contractArgs, req.Arguments[count])
-		count++
-	}
-
-	tmpl, err = contract.AddContractArguments(tmpl, req.ContractName, contractArgs)
+	tmpl, err = act.AddArgs(tmpl)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

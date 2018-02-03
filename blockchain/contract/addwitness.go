@@ -10,10 +10,28 @@ import (
 	"github.com/bytom/errors"
 )
 
+// CommonInfo is the common elements for contract transaction
+type CommonInfo struct {
+	OutputID    string `json:"outputid"`
+	AccountInfo string `json:"account"`
+	AssetInfo   string `json:"asset"`
+	Amount      string `json:"amount"`
+	Alias       bool   `json:"alias"`
+	BtmGas      string `json:"btm_gas"`
+}
+
 // PubKeyInfo is the elements of generating public key
 type PubKeyInfo struct {
-	rootPubKey string
-	path       []string
+	RootPubKey string   `json:"rootpub"`
+	Path       []string `json:"path"`
+}
+
+// PaymentInfo is the requirement of clause for contract
+type PaymentInfo struct {
+	InnerAccountInfo string `json:"inner_account"`
+	InnerAssetInfo   string `json:"inner_asset"`
+	InnerAmount      string `json:"inner_amount"`
+	InnerProgram     string `json:"inner_prog"`
 }
 
 // ParamInfo is the entire struct of contract arguments
@@ -30,14 +48,16 @@ type CommonPubInfo struct {
 	quorum      int
 }
 
-func newPubKeyInfo(rootPub string, path []string) PubKeyInfo {
+// NewPubKeyInfo creates a new PubKeyInfo
+func NewPubKeyInfo(rootPub string, path []string) PubKeyInfo {
 	return PubKeyInfo{
-		rootPubKey: rootPub,
-		path:       path,
+		RootPubKey: rootPub,
+		Path:       path,
 	}
 }
 
-func newParamInfo(front []string, pubKeys []PubKeyInfo, last []string) ParamInfo {
+// NewParamInfo creates a new ParamInfo
+func NewParamInfo(front []string, pubKeys []PubKeyInfo, last []string) ParamInfo {
 	return ParamInfo{
 		frontData:   front,
 		pubKeyInfos: pubKeys,
@@ -64,19 +84,19 @@ func convertPubInfo(pubKeyInfos []PubKeyInfo) (*CommonPubInfo, error) {
 	commonPubInfo := CommonPubInfo{}
 
 	for _, pubInfo := range pubKeyInfos {
-		hexPubKey, err := hex.DecodeString(pubInfo.rootPubKey)
+		hexPubKey, err := hex.DecodeString(pubInfo.RootPubKey)
 		if err != nil {
 			return nil, err
 		}
 		copy(rootPubKey[:], hexPubKey[:])
 
-		if len(pubInfo.path) != 2 {
-			buf := fmt.Sprintf("the length of path [%d] is not equal 2!", len(pubInfo.path))
+		if len(pubInfo.Path) != 2 {
+			buf := fmt.Sprintf("the length of path [%d] is not equal 2!", len(pubInfo.Path))
 			err := errors.New(buf)
 			return nil, err
 		}
 
-		for _, strPath := range pubInfo.path {
+		for _, strPath := range pubInfo.Path {
 			hexPath, err := hex.DecodeString(strPath)
 			if err != nil {
 				return nil, err

@@ -1,6 +1,7 @@
 package contract
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
@@ -11,37 +12,54 @@ const (
 	ClauseApprove string = "00000000"
 	//ClauseReject is the contract Escrow's clause reject
 	ClauseReject string = "1b000000"
+	//EscrowEnding is the contract Escrow's clause ending
+	EscrowEnding string = "2a000000"
 )
 
-func buildEscrowReq(args []string, minArgsCount int, alias bool, btmGas string) (*string, error) {
+// Escrow stores the information of Escrow contract.
+type Escrow struct {
+	CommonInfo
+	Selector       string `json:"selector"`
+	ControlProgram string `json:"control_program"`
+	PubKeyInfo
+}
+
+// DecodeEscrow unmarshal JSON-encoded data of contract action
+func DecodeEscrow(data []byte) (ContractAction, error) {
+	a := new(Escrow)
+	err := json.Unmarshal(data, a)
+	return a, err
+}
+
+// BuildContractReq create new ContractReq which contain contract's name and arguments
+func (a *Escrow) BuildContractReq(contractName string) (*ContractReq, error) {
+	arguments, err := json.Marshal(a)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ContractReq{
+		ContractName: contractName,
+		ContractArgs: arguments,
+	}, nil
+}
+
+// Build create a transaction request
+func (a *Escrow) Build() (*string, error) {
 	var buildReqStr string
 	var buf string
 
-	outputID := args[0]
-	accountInfo := args[1]
-	assetInfo := args[2]
-	amount := args[3]
-	selector := args[minArgsCount]
-	ClauseEnding := "2a000000"
-
-	if selector == ClauseApprove || selector == ClauseReject {
-		if len(args) != minArgsCount+5 {
-			buf = fmt.Sprintf("the number of arguments[%d] for clause 'approve' or 'reject' in contract 'Escrow' is not equal to 5", len(args)-minArgsCount)
-			err := errors.New(buf)
-			return nil, err
-		}
-
-		controlProgram := args[minArgsCount+4]
-		if alias {
-			buildReqStr = fmt.Sprintf(buildProgRecvReqFmtByAlias, outputID, assetInfo, amount, controlProgram, btmGas, accountInfo)
+	if a.Selector == ClauseApprove || a.Selector == ClauseReject {
+		if a.Alias {
+			buildReqStr = fmt.Sprintf(buildProgRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		} else {
-			buildReqStr = fmt.Sprintf(buildProgRecvReqFmt, outputID, assetInfo, amount, controlProgram, btmGas, accountInfo)
+			buildReqStr = fmt.Sprintf(buildProgRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		}
 	} else {
-		if selector == ClauseEnding {
+		if a.Selector == EscrowEnding {
 			buf = fmt.Sprintf("no clause was selected in this program, ending exit")
 		} else {
-			buf = fmt.Sprintf("selected clause [%v] error, clause must in set:[%v, %v, %v]", selector, ClauseApprove, ClauseReject, ClauseEnding)
+			buf = fmt.Sprintf("selected clause [%v] error, clause must in set:[%v, %v, %v]", a.Selector, ClauseApprove, ClauseReject, EscrowEnding)
 		}
 
 		err := errors.New(buf)
@@ -51,12 +69,13 @@ func buildEscrowReq(args []string, minArgsCount int, alias bool, btmGas string) 
 	return &buildReqStr, nil
 }
 
-func addEscrowArgs(tpl *txbuilder.Template, contractArgs []string) (*txbuilder.Template, error) {
+// AddArgs add the parameters for contract
+func (a *Escrow) AddArgs(tpl *txbuilder.Template) (*txbuilder.Template, error) {
 	var err error
 
-	if len(contractArgs) == 5 && (contractArgs[0] == ClauseApprove || contractArgs[0] == ClauseReject) {
-		pubInfo := newPubKeyInfo(contractArgs[1], []string{contractArgs[2], contractArgs[3]})
-		paramInfo := newParamInfo(nil, []PubKeyInfo{pubInfo}, []string{contractArgs[0]})
+	if a.Selector == ClauseApprove || a.Selector == ClauseReject {
+		pubInfo := NewPubKeyInfo(a.RootPubKey, a.Path)
+		paramInfo := NewParamInfo(nil, []PubKeyInfo{pubInfo}, []string{a.Selector})
 
 		if tpl, err = addParamArgs(tpl, paramInfo); err != nil {
 			return nil, err

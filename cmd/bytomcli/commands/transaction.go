@@ -221,21 +221,13 @@ var buildContractTransactionCmd = &cobra.Command{
 			os.Exit(util.ErrLocalExe)
 		}
 
-		var req = struct {
-			ContractName string   `json:"contract_name"`
-			Arguments    []string `json:"arguments"`
-			MinCount     int      `json:"min_count"`
-			Alias        bool     `json:"alias"`
-			BtmGas       string   `json:"btm_gas"`
-		}{
-			ContractName: contractName,
-			Arguments:    args,
-			MinCount:     minArgsCount,
-			Alias:        alias,
-			BtmGas:       btmGas,
+		req, err := BuildReq(contractName, args, alias, btmGas)
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
 		}
 
-		data, exitCode := util.ClientCall("/build-contract-transaction", &req)
+		data, exitCode := util.ClientCall("/build-contract-transaction", req)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
