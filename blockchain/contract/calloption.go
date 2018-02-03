@@ -27,7 +27,7 @@ type CallOption struct {
 
 // DecodeCallOption unmarshal JSON-encoded data of contract action
 func DecodeCallOption(data []byte) (ContractAction, error) {
-	a := new(Escrow)
+	a := new(CallOption)
 	err := json.Unmarshal(data, a)
 	return a, err
 }
@@ -52,17 +52,17 @@ func (a *CallOption) Build() (*string, error) {
 
 	if a.Selector == ClauseExercise {
 		if a.Alias {
-			buildReqStr = fmt.Sprintf(buildInlineProgReqFmtByAlias, a.OutputID,
+			buildReqStr = fmt.Sprintf(buildInlineAcctReqFmtByAlias, a.OutputID,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerProgram,
-				a.AssetInfo, a.Amount, a.ControlProgram,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerAccountInfo,
-				a.BtmGas, a.AccountInfo)
+				a.BtmGas, a.AccountInfo,
+				a.AssetInfo, a.Amount, a.AccountInfo)
 		} else {
-			buildReqStr = fmt.Sprintf(buildInlineProgReqFmt, a.OutputID,
+			buildReqStr = fmt.Sprintf(buildInlineAcctReqFmt, a.OutputID,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerProgram,
-				a.AssetInfo, a.Amount, a.ControlProgram,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerAccountInfo,
-				a.BtmGas, a.AccountInfo)
+				a.BtmGas, a.AccountInfo,
+				a.AssetInfo, a.Amount, a.AccountInfo)
 		}
 	} else if a.Selector == ClauseExpire {
 		if a.Alias {

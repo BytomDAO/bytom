@@ -14,7 +14,7 @@ type RevealPreimage struct {
 
 // DecodeRevealPreimage unmarshal JSON-encoded data of contract action
 func DecodeRevealPreimage(data []byte) (ContractAction, error) {
-	a := new(LockPubKey)
+	a := new(RevealPreimage)
 	err := json.Unmarshal(data, a)
 	return a, err
 }

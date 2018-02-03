@@ -14,7 +14,7 @@ type LockMultiSig struct {
 
 // DecodeLockMultiSig unmarshal JSON-encoded data of contract action
 func DecodeLockMultiSig(data []byte) (ContractAction, error) {
-	a := new(LockPubKey)
+	a := new(LockMultiSig)
 	err := json.Unmarshal(data, a)
 	return a, err
 }

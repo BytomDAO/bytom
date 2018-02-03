@@ -26,7 +26,7 @@ type LoanCollateral struct {
 
 // DecodeLoanCollateral unmarshal JSON-encoded data of contract action
 func DecodeLoanCollateral(data []byte) (ContractAction, error) {
-	a := new(Escrow)
+	a := new(LoanCollateral)
 	err := json.Unmarshal(data, a)
 	return a, err
 }
