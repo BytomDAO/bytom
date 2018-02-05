@@ -34,7 +34,9 @@ func alwaysError(err error) http.Handler {
 
 // serve http
 func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	bcr.handler.ServeHTTP(rw, req)
+	if bcr.handler != nil {
+		bcr.handler.ServeHTTP(rw, req)
+	}
 }
 
 func webAssetsHandler(next http.Handler) http.Handler {

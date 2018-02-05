@@ -99,13 +99,25 @@ After that, you'll see `.bytomd` generated in current directory, then launch the
 ### launch
 
 ``` bash
-$ ./bytomd node --wallet.enable --mining
+$ ./bytomd node --mining
 ```
 
 available flags for `bytomd node`:
 
-- `--wallet.enable`
-- `--mining`
+```
+      --auth.disable                Disable rpc access authenticate
+      --mining                      Enable mining
+      --p2p.dial_timeout int        Set dial timeout (default 3)
+      --p2p.handshake_timeout int   Set handshake timeout (default 30)
+      --p2p.laddr string            Node listen address.
+      --p2p.max_num_peers int       Set max num peers (default 50)
+      --p2p.pex                     Enable Peer-Exchange
+      --p2p.seeds string            Comma delimited host:port seed nodes
+      --p2p.skip_upnp               Skip UPNP configuration
+      --prof_laddr string           Use http to profile bytomd programs
+      --wallet.disable              Disable wallet
+      --web.closed                  Lanch web browser or not
+```
 
 Given the `bytomd` node is running, the general workflow is as follows:
 
@@ -123,7 +135,7 @@ $ open http://localhost:9888/
 
 ### Create key
 
-With `--wallet.enable`, you can create a key:
+You can create a key with the following command:
 
 ```bash
 $ ./bytomcli create-key alice 123
