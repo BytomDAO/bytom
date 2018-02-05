@@ -13,7 +13,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/testutil"
@@ -419,6 +418,7 @@ func TestValidateBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height: 0,
+					Bits:   2305843009230471167,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1470000000000000000)},
 			},
@@ -428,6 +428,7 @@ func TestValidateBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height: 0,
+					Bits:   2305843009230471167,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
 			},
@@ -437,6 +438,7 @@ func TestValidateBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height:         0,
+					Bits:           2305843009230471167,
 					SerializedSize: 88888888,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
@@ -445,7 +447,6 @@ func TestValidateBlock(t *testing.T) {
 		},
 	}
 
-	seedCaches := seed.NewSeedCaches()
 	for _, c := range cases {
 		txRoot, err := bc.MerkleRoot(c.block.Transactions)
 		if err != nil {
@@ -455,7 +456,7 @@ func TestValidateBlock(t *testing.T) {
 		c.block.BlockHeader.TransactionStatus = bc.NewTransactionStatus()
 		c.block.TransactionsRoot = &txRoot
 
-		if err = ValidateBlock(c.block, nil, seedCaches); rootErr(err) != c.err {
+		if err = ValidateBlock(c.block, nil); rootErr(err) != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)
 		}
 	}

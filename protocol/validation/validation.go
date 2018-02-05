@@ -5,13 +5,11 @@ import (
 	"time"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/algorithm"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/seed"
 	"github.com/bytom/protocol/vm"
 )
 
@@ -521,7 +519,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 
 // ValidateBlock validates a block and the transactions within.
 // It does not run the consensus program; for that, see ValidateBlockSig.
-func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
+func ValidateBlock(b, prev *bc.Block) error {
 	if b.Height > 0 {
 		if prev == nil {
 			return errors.WithDetailf(errNoPrevBlock, "height %d", b.Height)
@@ -539,15 +537,7 @@ func ValidateBlock(b, prev *bc.Block, seedCaches *seed.SeedCaches) error {
 		return errWrongBlockSize
 	}
 
-	seedCache, err := seedCaches.Get(b.Seed)
-	if err != nil {
-		return err
-	}
-	proofHash, err := algorithm.AIHash(b.Height, &b.ID, seedCache)
-	if err != nil {
-		return err
-	}
-	if !difficulty.CheckProofOfWork(proofHash, b.BlockHeader.Bits) {
+	if !difficulty.CheckProofOfWork(&b.ID, b.BlockHeader.Bits) {
 		return errWorkProof
 	}
 
@@ -625,9 +615,6 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 	}
 	if b.Timestamp <= prev.Timestamp {
 		return errors.WithDetailf(errMisorderedBlockTime, "previous block time %d, current block time %d", prev.Timestamp, b.Timestamp)
-	}
-	if *b.Seed != *algorithm.CreateSeed(b.Height, prev.Seed, []*bc.Hash{&prev.ID}) {
-		return errors.New("wrong block seed")
 	}
 	return nil
 }

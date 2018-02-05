@@ -114,6 +114,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(listKeysCmd)
 	BytomcliCmd.AddCommand(exportPrivateCmd)
 	BytomcliCmd.AddCommand(importPrivateCmd)
+	BytomcliCmd.AddCommand(importKeyProgressCmd)
 
 	BytomcliCmd.AddCommand(isMiningCmd)
 
