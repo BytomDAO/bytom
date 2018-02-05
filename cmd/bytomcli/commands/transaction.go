@@ -217,7 +217,8 @@ var buildContractTransactionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		minArgsCount := 4
 		usage := "Usage:\n  bytomcli build-contract-transaction <outputID> <accountID|alias> <assetID|alias> <amount> -c <contractName>"
-		if ok := CheckContractArgs(contractName, args, minArgsCount, usage); !ok {
+		if err := CheckContractArgs(contractName, args, minArgsCount, usage); err != nil {
+			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
 		}
 
