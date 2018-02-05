@@ -48,9 +48,10 @@ func (a *CallOption) BuildContractReq(contractName string) (*ContractReq, error)
 // Build create a transaction request
 func (a *CallOption) Build() (*string, error) {
 	var buildReqStr string
-	var buf string
+	var err error
 
-	if a.Selector == ClauseExercise {
+	switch a.Selector {
+	case ClauseExercise:
 		if a.Alias {
 			buildReqStr = fmt.Sprintf(buildInlineAcctReqFmtByAlias, a.OutputID,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerProgram,
@@ -64,20 +65,18 @@ func (a *CallOption) Build() (*string, error) {
 				a.BtmGas, a.AccountInfo,
 				a.AssetInfo, a.Amount, a.AccountInfo)
 		}
-	} else if a.Selector == ClauseExpire {
+	case ClauseExpire:
 		if a.Alias {
 			buildReqStr = fmt.Sprintf(buildProgRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		} else {
 			buildReqStr = fmt.Sprintf(buildProgRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		}
-	} else {
-		if a.Selector == CallOptionEnding {
-			buf = fmt.Sprintf("no clause was selected in this program, ending exit")
-		} else {
-			buf = fmt.Sprintf("selected clause [%v] error, clause must in set:[%v, %v, %v]", a.Selector, ClauseExercise, ClauseExpire, CallOptionEnding)
-		}
+	default:
+		err = errors.WithDetailf(ErrBadClause, "selected clause [%v] error, contract CallOption's clause must in set:[%v, %v]",
+			a.Selector, ClauseExercise, ClauseExpire)
+	}
 
-		err := errors.New(buf)
+	if err != nil {
 		return nil, err
 	}
 
@@ -85,25 +84,23 @@ func (a *CallOption) Build() (*string, error) {
 }
 
 // AddArgs add the parameters for contract
-func (a *CallOption) AddArgs(tpl *txbuilder.Template) (*txbuilder.Template, error) {
+func (a *CallOption) AddArgs(tpl *txbuilder.Template) error {
 	var err error
 
-	if a.Selector == ClauseExercise {
+	switch a.Selector {
+	case ClauseExercise:
 		pubInfo := NewPubKeyInfo(a.RootPubKey, a.Path)
 		paramInfo := NewParamInfo(nil, []PubKeyInfo{pubInfo}, []string{a.Selector})
-
-		if tpl, err = addParamArgs(tpl, paramInfo); err != nil {
-			return nil, err
-		}
-	} else if a.Selector == ClauseExpire {
-		if tpl, err = addDataArgs(tpl, []string{a.Selector}); err != nil {
-			return nil, err
-		}
-	} else {
-		buf := fmt.Sprintf("the arguments of contract 'CallOption' is not right, Please follow the prompts to add parameters!")
-		err = errors.New(buf)
-		return nil, err
+		err = addParamArgs(tpl, paramInfo)
+	case ClauseExpire:
+		err = addDataArgs(tpl, []string{a.Selector})
+	default:
+		err = errors.WithDetailf(ErrBadClause, "the selector[%s] for contract CallOption is wrong!", a.Selector)
 	}
 
-	return tpl, nil
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

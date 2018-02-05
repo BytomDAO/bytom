@@ -47,22 +47,21 @@ func (a *Escrow) BuildContractReq(contractName string) (*ContractReq, error) {
 // Build create a transaction request
 func (a *Escrow) Build() (*string, error) {
 	var buildReqStr string
-	var buf string
+	var err error
 
-	if a.Selector == ClauseApprove || a.Selector == ClauseReject {
+	switch a.Selector {
+	case ClauseApprove, ClauseReject:
 		if a.Alias {
 			buildReqStr = fmt.Sprintf(buildProgRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		} else {
 			buildReqStr = fmt.Sprintf(buildProgRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		}
-	} else {
-		if a.Selector == EscrowEnding {
-			buf = fmt.Sprintf("no clause was selected in this program, ending exit")
-		} else {
-			buf = fmt.Sprintf("selected clause [%v] error, clause must in set:[%v, %v, %v]", a.Selector, ClauseApprove, ClauseReject, EscrowEnding)
-		}
+	default:
+		err = errors.WithDetailf(ErrBadClause, "selected clause [%v] error, contract Escrow's clause must in set:[%v, %v]",
+			a.Selector, ClauseApprove, ClauseReject)
+	}
 
-		err := errors.New(buf)
+	if err != nil {
 		return nil, err
 	}
 
@@ -70,21 +69,21 @@ func (a *Escrow) Build() (*string, error) {
 }
 
 // AddArgs add the parameters for contract
-func (a *Escrow) AddArgs(tpl *txbuilder.Template) (*txbuilder.Template, error) {
+func (a *Escrow) AddArgs(tpl *txbuilder.Template) error {
 	var err error
 
-	if a.Selector == ClauseApprove || a.Selector == ClauseReject {
+	switch a.Selector {
+	case ClauseApprove, ClauseReject:
 		pubInfo := NewPubKeyInfo(a.RootPubKey, a.Path)
 		paramInfo := NewParamInfo(nil, []PubKeyInfo{pubInfo}, []string{a.Selector})
-
-		if tpl, err = addParamArgs(tpl, paramInfo); err != nil {
-			return nil, err
-		}
-	} else {
-		buf := fmt.Sprintf("the arguments of contract 'Escrow' is not right, Please follow the prompts to add parameters!")
-		err = errors.New(buf)
-		return nil, err
+		err = addParamArgs(tpl, paramInfo)
+	default:
+		err = errors.WithDetailf(ErrBadClause, "the selector[%s] for contract Escrow is wrong!", a.Selector)
 	}
 
-	return tpl, nil
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -2,7 +2,6 @@ package contract
 
 import (
 	"encoding/hex"
-	"fmt"
 
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -65,17 +64,15 @@ func NewParamInfo(front []string, pubKeys []PubKeyInfo, last []string) ParamInfo
 	}
 }
 
-func reconstructTpl(tpl *txbuilder.Template, si *txbuilder.SigningInstruction) *txbuilder.Template {
+func reconstructTpl(tpl *txbuilder.Template, si *txbuilder.SigningInstruction) {
 	length := len(tpl.SigningInstructions)
-	if length <= 0 {
+	if length == 0 {
 		length = 1
 		tpl.SigningInstructions = append(tpl.SigningInstructions, si)
 		tpl.SigningInstructions[length-1].Position = 0
 	} else {
 		tpl.SigningInstructions[0] = si
 	}
-
-	return tpl
 }
 
 func convertPubInfo(pubKeyInfos []PubKeyInfo) (*CommonPubInfo, error) {
@@ -91,8 +88,7 @@ func convertPubInfo(pubKeyInfos []PubKeyInfo) (*CommonPubInfo, error) {
 		copy(rootPubKey[:], hexPubKey[:])
 
 		if len(pubInfo.Path) != 2 {
-			buf := fmt.Sprintf("the length of path [%d] is not equal 2!", len(pubInfo.Path))
-			err := errors.New(buf)
+			err := errors.WithDetailf(ErrBadLength, "the length of path [%d] is not equal 2!", len(pubInfo.Path))
 			return nil, err
 		}
 
@@ -113,29 +109,28 @@ func convertPubInfo(pubKeyInfos []PubKeyInfo) (*CommonPubInfo, error) {
 	return &commonPubInfo, nil
 }
 
-func addPubKeyArgs(tpl *txbuilder.Template, pubKeyInfos []PubKeyInfo) (*txbuilder.Template, error) {
+func addPubKeyArgs(tpl *txbuilder.Template, pubKeyInfos []PubKeyInfo) error {
 	si := txbuilder.SigningInstruction{}
 
 	pubInfo, err := convertPubInfo(pubKeyInfos)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	err = si.AddRawTxSigWitness(pubInfo.rootPubKeys, pubInfo.paths, pubInfo.quorum)
-	if err != nil {
-		return nil, err
+	if err = si.AddRawTxSigWitness(pubInfo.rootPubKeys, pubInfo.paths, pubInfo.quorum); err != nil {
+		return err
 	}
 
-	tpl = reconstructTpl(tpl, &si)
-	return tpl, nil
+	reconstructTpl(tpl, &si)
+	return nil
 }
 
-func addDataArgs(tpl *txbuilder.Template, value []string) (*txbuilder.Template, error) {
+func addDataArgs(tpl *txbuilder.Template, value []string) error {
 	var dataWitness []chainjson.HexBytes
 	for _, v := range value {
 		data, err := hex.DecodeString(v)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		dataWitness = append(dataWitness, data)
 	}
@@ -143,11 +138,11 @@ func addDataArgs(tpl *txbuilder.Template, value []string) (*txbuilder.Template, 
 	si := txbuilder.SigningInstruction{}
 	si.AddDataWitness(dataWitness)
 
-	tpl = reconstructTpl(tpl, &si)
-	return tpl, nil
+	reconstructTpl(tpl, &si)
+	return nil
 }
 
-func addParamArgs(tpl *txbuilder.Template, pubKeyValueInfo ParamInfo) (*txbuilder.Template, error) {
+func addParamArgs(tpl *txbuilder.Template, pubKeyValueInfo ParamInfo) error {
 	si := txbuilder.SigningInstruction{}
 
 	if pubKeyValueInfo.frontData != nil {
@@ -155,7 +150,7 @@ func addParamArgs(tpl *txbuilder.Template, pubKeyValueInfo ParamInfo) (*txbuilde
 		for _, data := range pubKeyValueInfo.frontData {
 			front, err := hex.DecodeString(data)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			frontDataWitness = append(frontDataWitness, front)
 		}
@@ -166,12 +161,11 @@ func addParamArgs(tpl *txbuilder.Template, pubKeyValueInfo ParamInfo) (*txbuilde
 	if pubKeyValueInfo.pubKeyInfos != nil {
 		pubInfo, err := convertPubInfo(pubKeyValueInfo.pubKeyInfos)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		err = si.AddRawTxSigWitness(pubInfo.rootPubKeys, pubInfo.paths, pubInfo.quorum)
-		if err != nil {
-			return nil, err
+		if err = si.AddRawTxSigWitness(pubInfo.rootPubKeys, pubInfo.paths, pubInfo.quorum); err != nil {
+			return err
 		}
 	}
 
@@ -180,7 +174,7 @@ func addParamArgs(tpl *txbuilder.Template, pubKeyValueInfo ParamInfo) (*txbuilde
 		for _, data := range pubKeyValueInfo.lastData {
 			front, err := hex.DecodeString(data)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			lastDataWitness = append(lastDataWitness, front)
 		}
@@ -188,6 +182,6 @@ func addParamArgs(tpl *txbuilder.Template, pubKeyValueInfo ParamInfo) (*txbuilde
 		si.AddDataWitness(lastDataWitness)
 	}
 
-	tpl = reconstructTpl(tpl, &si)
-	return tpl, nil
+	reconstructTpl(tpl, &si)
+	return nil
 }

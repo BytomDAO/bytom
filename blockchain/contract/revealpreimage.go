@@ -46,12 +46,10 @@ func (a *RevealPreimage) Build() (*string, error) {
 }
 
 // AddArgs add the parameters for contract
-func (a *RevealPreimage) AddArgs(tpl *txbuilder.Template) (*txbuilder.Template, error) {
-	var err error
-
-	if tpl, err = addDataArgs(tpl, []string{a.Value}); err != nil {
-		return nil, err
+func (a *RevealPreimage) AddArgs(tpl *txbuilder.Template) error {
+	if err := addDataArgs(tpl, []string{a.Value}); err != nil {
+		return err
 	}
 
-	return tpl, nil
+	return nil
 }

@@ -46,13 +46,11 @@ func (a *LockPubKey) Build() (*string, error) {
 }
 
 // AddArgs add the parameters for contract
-func (a *LockPubKey) AddArgs(tpl *txbuilder.Template) (*txbuilder.Template, error) {
-	var err error
+func (a *LockPubKey) AddArgs(tpl *txbuilder.Template) error {
 	pubInfo := NewPubKeyInfo(a.RootPubKey, a.Path)
-
-	if tpl, err = addPubKeyArgs(tpl, []PubKeyInfo{pubInfo}); err != nil {
-		return nil, err
+	if err := addPubKeyArgs(tpl, []PubKeyInfo{pubInfo}); err != nil {
+		return err
 	}
 
-	return tpl, nil
+	return nil
 }

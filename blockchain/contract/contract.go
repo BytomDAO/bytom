@@ -6,6 +6,12 @@ import (
 	"github.com/bytom/errors"
 )
 
+var (
+	ErrBadLength    = errors.New("mismatched length")
+	ErrBadClause    = errors.New("mismatched contract clause")
+	ErrBadArguments = errors.New("mismatched contract arguments")
+)
+
 // ContractReq stores the information of contract
 type ContractReq struct {
 	ContractName string             `json:"contract_name"`
@@ -15,7 +21,7 @@ type ContractReq struct {
 // ContractAction represents the operation action for contract
 type ContractAction interface {
 	Build() (*string, error)
-	AddArgs(tpl *txbuilder.Template) (*txbuilder.Template, error)
+	AddArgs(tpl *txbuilder.Template) error
 }
 
 // ContractDecoder generalize contract objects into an interface

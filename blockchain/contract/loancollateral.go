@@ -47,9 +47,10 @@ func (a *LoanCollateral) BuildContractReq(contractName string) (*ContractReq, er
 // Build create a transaction request
 func (a *LoanCollateral) Build() (*string, error) {
 	var buildReqStr string
-	var buf string
+	var err error
 
-	if a.Selector == ClauseRepay {
+	switch a.Selector {
+	case ClauseRepay:
 		if a.Alias {
 			buildReqStr = fmt.Sprintf(buildInlineProgReqFmtByAlias, a.OutputID,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerProgram,
@@ -63,20 +64,18 @@ func (a *LoanCollateral) Build() (*string, error) {
 				a.InnerAssetInfo, a.InnerAmount, a.InnerAccountInfo,
 				a.BtmGas, a.AccountInfo)
 		}
-	} else if a.Selector == ClauseDefault {
+	case ClauseDefault:
 		if a.Alias {
 			buildReqStr = fmt.Sprintf(buildProgRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		} else {
 			buildReqStr = fmt.Sprintf(buildProgRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		}
-	} else {
-		if a.Selector == LoanCollateralEnding {
-			buf = fmt.Sprintf("no clause was selected in this program, ending exit")
-		} else {
-			buf = fmt.Sprintf("selected clause [%v] error, clause must in set:[%v, %v, %v]", a.Selector, ClauseRepay, ClauseDefault, LoanCollateralEnding)
-		}
+	default:
+		err = errors.WithDetailf(ErrBadClause, "selected clause [%v] error, contract LoanCollateral's clause must in set:[%v, %v]",
+			a.Selector, ClauseRepay, ClauseDefault)
+	}
 
-		err := errors.New(buf)
+	if err != nil {
 		return nil, err
 	}
 
@@ -84,22 +83,19 @@ func (a *LoanCollateral) Build() (*string, error) {
 }
 
 // AddArgs add the parameters for contract
-func (a *LoanCollateral) AddArgs(tpl *txbuilder.Template) (*txbuilder.Template, error) {
+func (a *LoanCollateral) AddArgs(tpl *txbuilder.Template) error {
 	var err error
 
-	if a.Selector == ClauseRepay {
-		if tpl, err = addDataArgs(tpl, []string{a.Selector}); err != nil {
-			return nil, err
-		}
-	} else if a.Selector == ClauseDefault {
-		if tpl, err = addDataArgs(tpl, []string{a.Selector}); err != nil {
-			return nil, err
-		}
-	} else {
-		buf := fmt.Sprintf("the arguments of contract 'LoanCollateral' is not right, Please follow the prompts to add parameters!")
-		err = errors.New(buf)
-		return nil, err
+	switch a.Selector {
+	case ClauseRepay, ClauseDefault:
+		err = addDataArgs(tpl, []string{a.Selector})
+	default:
+		err = errors.WithDetailf(ErrBadClause, "the selector[%s] for contract LoanCollateral is wrong!", a.Selector)
 	}
 
-	return tpl, nil
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

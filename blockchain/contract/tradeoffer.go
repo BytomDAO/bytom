@@ -13,7 +13,7 @@ const (
 	//ClauseCancel is the contract TradeOffer's clause cancel
 	ClauseCancel string = "13000000"
 	//TradeOfferEnding is the contract TradeOffer's clause ending
-	TradeOfferEnding string = "13000000"
+	TradeOfferEnding string = "1a000000"
 )
 
 // TradeOffer stores the information of TradeOffer contract
@@ -47,9 +47,10 @@ func (a *TradeOffer) BuildContractReq(contractName string) (*ContractReq, error)
 // Build create a transaction request
 func (a *TradeOffer) Build() (*string, error) {
 	var buildReqStr string
-	var buf string
+	var err error
 
-	if a.Selector == ClauseTrade {
+	switch a.Selector {
+	case ClauseTrade:
 		if a.Alias {
 			buildReqStr = fmt.Sprintf(buildInlineAcctReqFmtByAlias, a.OutputID,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerProgram,
@@ -63,20 +64,18 @@ func (a *TradeOffer) Build() (*string, error) {
 				a.BtmGas, a.AccountInfo,
 				a.AssetInfo, a.Amount, a.AccountInfo)
 		}
-	} else if a.Selector == ClauseCancel {
+	case ClauseCancel:
 		if a.Alias {
 			buildReqStr = fmt.Sprintf(buildAcctRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 		} else {
 			buildReqStr = fmt.Sprintf(buildAcctRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 		}
-	} else {
-		if a.Selector == TradeOfferEnding {
-			buf = fmt.Sprintf("no clause was selected in this program, ending exit")
-		} else {
-			buf = fmt.Sprintf("selected clause [%v] error, clause must in set:[%v, %v, %v]", a.Selector, ClauseTrade, ClauseCancel, TradeOfferEnding)
-		}
+	default:
+		err = errors.WithDetailf(ErrBadClause, "selected clause [%v] error, contract TradeOffer's clause must in set:[%v, %v]",
+			a.Selector, ClauseTrade, ClauseCancel)
+	}
 
-		err := errors.New(buf)
+	if err != nil {
 		return nil, err
 	}
 
@@ -84,25 +83,23 @@ func (a *TradeOffer) Build() (*string, error) {
 }
 
 // AddArgs add the parameters for contract
-func (a *TradeOffer) AddArgs(tpl *txbuilder.Template) (*txbuilder.Template, error) {
+func (a *TradeOffer) AddArgs(tpl *txbuilder.Template) error {
 	var err error
 
-	if a.Selector == ClauseTrade {
-		if tpl, err = addDataArgs(tpl, []string{a.Selector}); err != nil {
-			return nil, err
-		}
-	} else if a.Selector == ClauseCancel {
+	switch a.Selector {
+	case ClauseTrade:
+		err = addDataArgs(tpl, []string{a.Selector})
+	case ClauseCancel:
 		pubKeyInfo := NewPubKeyInfo(a.RootPubKey, a.Path)
 		paramInfo := NewParamInfo(nil, []PubKeyInfo{pubKeyInfo}, []string{a.Selector})
-
-		if tpl, err = addParamArgs(tpl, paramInfo); err != nil {
-			return nil, err
-		}
-	} else {
-		buf := fmt.Sprintf("the arguments of contract 'TradeOffer' is not right, Please follow the prompts to add parameters!")
-		err = errors.New(buf)
-		return nil, err
+		err = addParamArgs(tpl, paramInfo)
+	default:
+		err = errors.WithDetailf(ErrBadClause, "the selector[%s] for contract TradeOffer is wrong!", a.Selector)
 	}
 
-	return tpl, nil
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

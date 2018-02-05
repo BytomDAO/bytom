@@ -46,12 +46,10 @@ func (a *LockMultiSig) Build() (*string, error) {
 }
 
 // AddArgs add the parameters for contract
-func (a *LockMultiSig) AddArgs(tpl *txbuilder.Template) (*txbuilder.Template, error) {
-	var err error
-
-	if tpl, err = addPubKeyArgs(tpl, a.PubKeys); err != nil {
-		return nil, err
+func (a *LockMultiSig) AddArgs(tpl *txbuilder.Template) error {
+	if err := addPubKeyArgs(tpl, a.PubKeys); err != nil {
+		return err
 	}
 
-	return tpl, nil
+	return nil
 }

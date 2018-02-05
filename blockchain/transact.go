@@ -176,8 +176,7 @@ func (bcr *BlockchainReactor) buildContractTX(ctx context.Context, req *contract
 		return NewErrorResponse(err)
 	}
 
-	tmpl, err = act.AddArgs(tmpl)
-	if err != nil {
+	if err = act.AddArgs(tmpl); err != nil {
 		return NewErrorResponse(err)
 	}
 
