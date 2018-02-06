@@ -51,7 +51,7 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 	for _, id := range tx.TxHeader.ResultIds {
 		output, err := tx.Output(*id)
 		if err != nil {
-			return err
+			continue
 		}
 		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
