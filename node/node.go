@@ -36,9 +36,10 @@ import (
 )
 
 const (
-	httpReadTimeout  = 2 * time.Minute
-	httpWriteTimeout = time.Hour
-	webAddress       = "http://127.0.0.1:9888"
+	httpReadTimeout          = 2 * time.Minute
+	httpWriteTimeout         = time.Hour
+	webAddress               = "http://127.0.0.1:9888"
+	expireReservationsPeriod = time.Second
 )
 
 type Node struct {
@@ -201,6 +202,8 @@ func NewNode(config *cfg.Config) *Node {
 		if err != nil {
 			log.WithField("error", err).Error("init NewWallet")
 		}
+		// Clean up expired UTXO reservations periodically.
+		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
 	}
 
 	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet, txFeed, accessTokens, config.Mining)
