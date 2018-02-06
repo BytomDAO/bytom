@@ -8,7 +8,6 @@ import (
 // CheckContractArgs check the number of arguments for template contracts
 func CheckContractArgs(contractName string, args []string, count int, usage string) error {
 	var err error
-
 	switch contractName {
 	case "LockWithPublicKey":
 		if len(args) != count+3 {
