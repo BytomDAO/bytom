@@ -137,16 +137,16 @@ func BuildReq(contractName string, args []string, alias bool, btmGas string) (re
 func NewLockPubKey(args []string, alias bool, btmGas string) *contract.LockPubKey {
 	return &contract.LockPubKey{
 		CommonInfo: contract.CommonInfo{
-			OutputID    :args[0],
-			AccountInfo :args[1],
-			AssetInfo   :args[2],
-			Amount      :args[3],
-			Alias       :alias,
-			BtmGas      :btmGas,
+			OutputID:    args[0],
+			AccountInfo: args[1],
+			AssetInfo:   args[2],
+			Amount:      args[3],
+			Alias:       alias,
+			BtmGas:      btmGas,
 		},
-		PubKeyInfo:contract.PubKeyInfo{
-			RootPubKey :args[4],
-			Path       :[]string{args[5], args[6]},
+		PubKeyInfo: contract.PubKeyInfo{
+			RootPubKey: args[4],
+			Path:       []string{args[5], args[6]},
 		},
 	}
 }
@@ -158,14 +158,14 @@ func NewLockMultiSig(args []string, alias bool, btmGas string) *contract.LockMul
 
 	return &contract.LockMultiSig{
 		CommonInfo: contract.CommonInfo{
-			OutputID    :args[0],
-			AccountInfo :args[1],
-			AssetInfo   :args[2],
-			Amount      :args[3],
-			Alias       :alias,
-			BtmGas      :btmGas,
+			OutputID:    args[0],
+			AccountInfo: args[1],
+			AssetInfo:   args[2],
+			Amount:      args[3],
+			Alias:       alias,
+			BtmGas:      btmGas,
 		},
-		PubKeys:[]contract.PubKeyInfo{pubInfo1, pubInfo2},
+		PubKeys: []contract.PubKeyInfo{pubInfo1, pubInfo2},
 	}
 }
 
@@ -173,17 +173,17 @@ func NewLockMultiSig(args []string, alias bool, btmGas string) *contract.LockMul
 func NewLockPubHash(args []string, alias bool, btmGas string) *contract.LockPubHash {
 	return &contract.LockPubHash{
 		CommonInfo: contract.CommonInfo{
-			OutputID    :args[0],
-			AccountInfo :args[1],
-			AssetInfo   :args[2],
-			Amount      :args[3],
-			Alias       :alias,
-			BtmGas      :btmGas,
+			OutputID:    args[0],
+			AccountInfo: args[1],
+			AssetInfo:   args[2],
+			Amount:      args[3],
+			Alias:       alias,
+			BtmGas:      btmGas,
 		},
-		PublicKey:args[4],
-		PubKeyInfo:contract.PubKeyInfo{
-			RootPubKey :args[5],
-			Path       :[]string{args[6], args[7]},
+		PublicKey: args[4],
+		PubKeyInfo: contract.PubKeyInfo{
+			RootPubKey: args[5],
+			Path:       []string{args[6], args[7]},
 		},
 	}
 }
@@ -192,14 +192,14 @@ func NewLockPubHash(args []string, alias bool, btmGas string) *contract.LockPubH
 func NewRevealPreimage(args []string, alias bool, btmGas string) *contract.RevealPreimage {
 	return &contract.RevealPreimage{
 		CommonInfo: contract.CommonInfo{
-			OutputID    :args[0],
-			AccountInfo :args[1],
-			AssetInfo   :args[2],
-			Amount      :args[3],
-			Alias       :alias,
-			BtmGas      :btmGas,
+			OutputID:    args[0],
+			AccountInfo: args[1],
+			AssetInfo:   args[2],
+			Amount:      args[3],
+			Alias:       alias,
+			BtmGas:      btmGas,
 		},
-		Value:args[4],
+		Value: args[4],
 	}
 }
 
@@ -210,35 +210,35 @@ func NewTradeOffer(args []string, alias bool, btmGas string) *contract.TradeOffe
 	case contract.ClauseTrade:
 		return &contract.TradeOffer{
 			CommonInfo: contract.CommonInfo{
-				OutputID    :args[0],
-				AccountInfo :args[1],
-				AssetInfo   :args[2],
-				Amount      :args[3],
-				Alias       :alias,
-				BtmGas      :btmGas,
+				OutputID:    args[0],
+				AccountInfo: args[1],
+				AssetInfo:   args[2],
+				Amount:      args[3],
+				Alias:       alias,
+				BtmGas:      btmGas,
 			},
-			Selector:args[4],
+			Selector: args[4],
 			PaymentInfo: contract.PaymentInfo{
-				InnerAccountInfo :args[5],
-				InnerAssetInfo   :args[6],
-				InnerAmount      :args[7],
-				InnerProgram     :args[8],
+				InnerAccountInfo: args[5],
+				InnerAssetInfo:   args[6],
+				InnerAmount:      args[7],
+				InnerProgram:     args[8],
 			},
 		}
 	case contract.ClauseCancel:
 		return &contract.TradeOffer{
 			CommonInfo: contract.CommonInfo{
-				OutputID    :args[0],
-				AccountInfo :args[1],
-				AssetInfo   :args[2],
-				Amount      :args[3],
-				Alias       :alias,
-				BtmGas      :btmGas,
+				OutputID:    args[0],
+				AccountInfo: args[1],
+				AssetInfo:   args[2],
+				Amount:      args[3],
+				Alias:       alias,
+				BtmGas:      btmGas,
 			},
-			Selector:args[4],
-			PubKeyInfo:contract.PubKeyInfo{
-				RootPubKey :args[5],
-				Path       :[]string{args[6], args[7]},
+			Selector: args[4],
+			PubKeyInfo: contract.PubKeyInfo{
+				RootPubKey: args[5],
+				Path:       []string{args[6], args[7]},
 			},
 		}
 	default:
@@ -250,19 +250,19 @@ func NewTradeOffer(args []string, alias bool, btmGas string) *contract.TradeOffe
 func NewEscrow(args []string, alias bool, btmGas string) *contract.Escrow {
 	return &contract.Escrow{
 		CommonInfo: contract.CommonInfo{
-			OutputID    :args[0],
-			AccountInfo :args[1],
-			AssetInfo   :args[2],
-			Amount      :args[3],
-			Alias       :alias,
-			BtmGas      :btmGas,
+			OutputID:    args[0],
+			AccountInfo: args[1],
+			AssetInfo:   args[2],
+			Amount:      args[3],
+			Alias:       alias,
+			BtmGas:      btmGas,
 		},
-		Selector:args[4],
-		PubKeyInfo:contract.PubKeyInfo{
-			RootPubKey :args[5],
-			Path       :[]string{args[6], args[7]},
+		Selector: args[4],
+		PubKeyInfo: contract.PubKeyInfo{
+			RootPubKey: args[5],
+			Path:       []string{args[6], args[7]},
 		},
-		ControlProgram:args[8],
+		ControlProgram: args[8],
 	}
 }
 
@@ -273,33 +273,33 @@ func NewLoanCollateral(args []string, alias bool, btmGas string) *contract.LoanC
 	case contract.ClauseRepay:
 		return &contract.LoanCollateral{
 			CommonInfo: contract.CommonInfo{
-				OutputID    :args[0],
-				AccountInfo :args[1],
-				AssetInfo   :args[2],
-				Amount      :args[3],
-				Alias       :alias,
-				BtmGas      :btmGas,
+				OutputID:    args[0],
+				AccountInfo: args[1],
+				AssetInfo:   args[2],
+				Amount:      args[3],
+				Alias:       alias,
+				BtmGas:      btmGas,
 			},
-			Selector:args[4],
+			Selector: args[4],
 			PaymentInfo: contract.PaymentInfo{
-				InnerAccountInfo :args[5],
-				InnerAssetInfo   :args[6],
-				InnerAmount      :args[7],
-				InnerProgram     :args[8],
+				InnerAccountInfo: args[5],
+				InnerAssetInfo:   args[6],
+				InnerAmount:      args[7],
+				InnerProgram:     args[8],
 			},
 			ControlProgram: args[9],
 		}
 	case contract.ClauseDefault:
 		return &contract.LoanCollateral{
 			CommonInfo: contract.CommonInfo{
-				OutputID    :args[0],
-				AccountInfo :args[1],
-				AssetInfo   :args[2],
-				Amount      :args[3],
-				Alias       :alias,
-				BtmGas      :btmGas,
+				OutputID:    args[0],
+				AccountInfo: args[1],
+				AssetInfo:   args[2],
+				Amount:      args[3],
+				Alias:       alias,
+				BtmGas:      btmGas,
 			},
-			Selector:args[4],
+			Selector:       args[4],
 			ControlProgram: args[5],
 		}
 	default:
@@ -314,36 +314,36 @@ func NewCallOption(args []string, alias bool, btmGas string) *contract.CallOptio
 	case contract.ClauseExercise:
 		return &contract.CallOption{
 			CommonInfo: contract.CommonInfo{
-				OutputID    :args[0],
-				AccountInfo :args[1],
-				AssetInfo   :args[2],
-				Amount      :args[3],
-				Alias       :alias,
-				BtmGas      :btmGas,
+				OutputID:    args[0],
+				AccountInfo: args[1],
+				AssetInfo:   args[2],
+				Amount:      args[3],
+				Alias:       alias,
+				BtmGas:      btmGas,
 			},
-			Selector:args[4],
+			Selector: args[4],
 			PaymentInfo: contract.PaymentInfo{
-				InnerAccountInfo :args[5],
-				InnerAssetInfo   :args[6],
-				InnerAmount      :args[7],
-				InnerProgram     :args[8],
+				InnerAccountInfo: args[5],
+				InnerAssetInfo:   args[6],
+				InnerAmount:      args[7],
+				InnerProgram:     args[8],
 			},
-			PubKeyInfo:contract.PubKeyInfo{
-				RootPubKey :args[9],
-				Path       :[]string{args[10], args[11]},
+			PubKeyInfo: contract.PubKeyInfo{
+				RootPubKey: args[9],
+				Path:       []string{args[10], args[11]},
 			},
 		}
 	case contract.ClauseExpire:
 		return &contract.CallOption{
 			CommonInfo: contract.CommonInfo{
-				OutputID    :args[0],
-				AccountInfo :args[1],
-				AssetInfo   :args[2],
-				Amount      :args[3],
-				Alias       :alias,
-				BtmGas      :btmGas,
+				OutputID:    args[0],
+				AccountInfo: args[1],
+				AssetInfo:   args[2],
+				Amount:      args[3],
+				Alias:       alias,
+				BtmGas:      btmGas,
 			},
-			Selector:args[4],
+			Selector:       args[4],
 			ControlProgram: args[5],
 		}
 	default:
