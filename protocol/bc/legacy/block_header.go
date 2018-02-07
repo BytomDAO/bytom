@@ -13,26 +13,26 @@ import (
 // BlockHeader describes necessary data of the block.
 type BlockHeader struct {
 	// Version of the block.
-	Version uint64
+	Version uint64 `json:"version"`
 
 	// Height of the block in the block chain.
 	// Initial block has height 1.
-	Height uint64
+	Height uint64 `json:"height"`
 
 	// Hash of the previous block in the block chain.
-	PreviousBlockHash bc.Hash
+	PreviousBlockHash bc.Hash `json:"previous_block_hash"`
 
-	Seed bc.Hash
+	Seed bc.Hash `json:"seed"`
 
 	// Time of the block in seconds.
-	Timestamp uint64
+	Timestamp uint64 `json:"timestamp"`
 
-	TransactionStatus bc.TransactionStatus
+	TransactionStatus bc.TransactionStatus `json:"transaction_status"`
 
 	BlockCommitment
 
-	Nonce uint64
-	Bits  uint64
+	Nonce uint64 `json:"nonce"`
+	Bits  uint64 `json:"bits"`
 }
 
 // Time returns the time represented by the Timestamp in bh.

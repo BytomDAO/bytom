@@ -26,5 +26,5 @@ func (bcr *BlockchainReactor) submitWork(header legacy.BlockHeader) Response {
 }
 
 type WorkResp struct {
-	Header legacy.BlockHeader
+	Header legacy.BlockHeader `json:"header"`
 }
