@@ -12,12 +12,12 @@ type BlockCommitment struct {
 	// TransactionsMerkleRoot is the root hash of the Merkle binary hash
 	// tree formed by the hashes of all transactions included in the
 	// block.
-	TransactionsMerkleRoot bc.Hash
+	TransactionsMerkleRoot bc.Hash `json:"transaction_merkle_root"`
 
 	// AssetsMerkleRoot is the root hash of the Merkle Patricia Tree of
 	// the set of unspent outputs with asset version 1 after applying
 	// the block.
-	AssetsMerkleRoot bc.Hash
+	AssetsMerkleRoot bc.Hash `json:"asset_merkle_root"`
 }
 
 func (bc *BlockCommitment) readFrom(r *blockchain.Reader) error {
