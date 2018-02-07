@@ -33,23 +33,18 @@ func (a *LockMultiSig) BuildContractReq(contractName string) (*ContractReq, erro
 }
 
 // Build create a transaction request
-func (a *LockMultiSig) Build() (*string, error) {
-	var buildReqStr string
-
+func (a *LockMultiSig) Build() (buildReqStr string, err error) {
 	if a.Alias {
 		buildReqStr = fmt.Sprintf(buildAcctRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 	} else {
 		buildReqStr = fmt.Sprintf(buildAcctRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 	}
 
-	return &buildReqStr, nil
+	return
 }
 
 // AddArgs add the parameters for contract
-func (a *LockMultiSig) AddArgs(tpl *txbuilder.Template) error {
-	if err := addPubKeyArgs(tpl, a.PubKeys); err != nil {
-		return err
-	}
-
-	return nil
+func (a *LockMultiSig) AddArgs(tpl *txbuilder.Template) (err error) {
+	err = addPubKeyArgs(tpl, a.PubKeys)
+	return
 }

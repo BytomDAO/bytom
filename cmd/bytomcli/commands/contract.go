@@ -5,11 +5,102 @@ import (
 	"github.com/bytom/errors"
 )
 
-// BuildReq build the request for contact
-func BuildReq(contractName string, args []string, alias bool, btmGas string) (*contract.ContractReq, error) {
-	var req *contract.ContractReq
-	var err error
+// CheckContractArgs check the number of arguments for template contracts
+func CheckContractArgs(contractName string, args []string, count int, usage string) (err error) {
+	switch contractName {
+	case "LockWithPublicKey":
+		if len(args) != count+3 {
+			err = errors.WithDetailf(contract.ErrBadArguments, "%s <rootPub> <path1> <path2> [flags]\n", usage)
+		}
+	case "LockWithMultiSig":
+		if len(args) != count+6 {
+			err = errors.WithDetailf(contract.ErrBadArguments, "%s <rootPub1> <path11> <path12> <rootPub2> <path21> <path22> [flags]\n", usage)
+		}
+	case "LockWithPublicKeyHash":
+		if len(args) != count+4 {
+			err = errors.WithDetailf(contract.ErrBadArguments, "%s <pubKey> <rootPub> <path1> <path2> [flags]\n", usage)
+		}
+	case "RevealPreimage":
+		if len(args) != count+1 {
+			err = errors.WithDetailf(contract.ErrBadArguments, "%s <value> [flags]\n")
+		}
+	case "TradeOffer":
+		switch {
+		case len(args) <= count:
+			err = errors.WithDetailf(contract.ErrBadArguments, "%s <clauseSelector> (<innerAccountID|alias> <innerAssetID|alias> <innerAmount> <innerProgram>) | (<rootPub> <path1> <path2>) [flags]\n", usage)
+		case args[count] == contract.ClauseTrade:
+			if len(args) != count+5 {
+				err = errors.WithDetailf(contract.ErrBadArguments, "%s <clauseSelector> <innerAccountID|alias> <innerAssetID|alias> <innerAmount> <innerProgram> [flags]\n", usage)
+			}
+		case args[count] == contract.ClauseCancel:
+			if len(args) != count+4 {
+				err = errors.WithDetailf(contract.ErrBadArguments, "%s <clauseSelector> <rootPub> <path1> <path2> [flags]\n", usage)
+			}
+		case args[count] == contract.TradeOfferEnding:
+			err = errors.WithDetailf(contract.ErrBadArguments, "Clause ending was selected in contract %s, ending exit!", contractName)
+		default:
+			err = errors.WithDetailf(contract.ErrBadArguments, "selected clause [%s] error, contract %s's clause must in set:[%s, %s, %s]",
+				args[count], contractName, contract.ClauseTrade, contract.ClauseCancel, contract.TradeOfferEnding)
+		}
+	case "Escrow":
+		switch {
+		case len(args) <= count:
+			err = errors.WithDetailf(contract.ErrBadArguments, "%s <clauseSelector> <rootPub> <path1> <path2> <controlProgram> [flags]\n", usage)
+		case args[count] == contract.ClauseApprove || args[count] == contract.ClauseReject:
+			if len(args) != count+5 {
+				err = errors.WithDetailf(contract.ErrBadArguments, "%s <clauseSelector> <rootPub> <path1> <path2> <controlProgram> [flags]\n", usage)
+			}
+		case args[count] == contract.EscrowEnding:
+			err = errors.WithDetailf(contract.ErrBadArguments, "Clause ending was selected in contract %s, ending exit!", contractName)
+		default:
+			err = errors.WithDetailf(contract.ErrBadArguments, "selected clause [%s] error, contract %s's clause must in set:[%s, %s, %s]",
+				args[count], contractName, contract.ClauseApprove, contract.ClauseReject, contract.EscrowEnding)
+		}
+	case "LoanCollateral":
+		switch {
+		case len(args) <= count:
+			err = errors.WithDetailf(contract.ErrBadArguments, "%s <clauseSelector> (<innerAccountID|alias> <innerAssetID|alias> <innerAmount> <innerProgram> <controlProgram>) | (<controlProgram>) [flags]\n", usage)
+		case args[count] == contract.ClauseRepay:
+			if len(args) != count+6 {
+				err = errors.WithDetailf(contract.ErrBadArguments, "%s <clauseSelector> <innerAccountID|alias> <innerAssetID|alias> <innerAmount> <innerProgram> <controlProgram> [flags]\n", usage)
+			}
+		case args[count] == contract.ClauseDefault:
+			if len(args) != count+2 {
+				err = errors.WithDetailf(contract.ErrBadArguments, "%s <clauseSelector> <controlProgram> [flags]\n", usage)
+			}
+		case args[count] == contract.LoanCollateralEnding:
+			err = errors.WithDetailf(contract.ErrBadArguments, "Clause ending was selected in contract %s, ending exit!", contractName)
+		default:
+			err = errors.WithDetailf(contract.ErrBadArguments, "selected clause [%s] error, contract %s's clause must in set:[%s, %s, %s]",
+				args[count], contractName, contract.ClauseRepay, contract.ClauseDefault, contract.LoanCollateralEnding)
+		}
+	case "CallOption":
+		switch {
+		case len(args) <= count:
+			err = errors.WithDetailf(contract.ErrBadArguments, "%s <clauseSelector> (<innerAccountID|alias> <innerAssetID|alias> <innerAmount> <innerProgram> <rootPub> <path1> <path2>) | (<controlProgram>) [flags]\n", usage)
+		case args[count] == contract.ClauseExercise:
+			if len(args) != count+8 {
+				err = errors.WithDetailf(contract.ErrBadArguments, "%s <clauseSelector> <innerAccountID|alias> <innerAssetID|alias> <innerAmount> <innerProgram> <rootPub> <path1> <path2> [flags]\n", usage)
+			}
+		case args[count] == contract.ClauseExpire:
+			if len(args) != count+2 {
+				err = errors.WithDetailf(contract.ErrBadArguments, "%s <clauseSelector> <controlProgram> [flags]\n", usage)
+			}
+		case args[count] == contract.CallOptionEnding:
+			err = errors.WithDetailf(contract.ErrBadArguments, "Clause ending was selected in contract %s, ending exit!", contractName)
+		default:
+			err = errors.WithDetailf(contract.ErrBadArguments, "selected clause [%s] error, contract %s's clause must in set:[%s, %s, %s]",
+				args[count], contractName, contract.ClauseExercise, contract.ClauseExpire, contract.CallOptionEnding)
+		}
+	default:
+		err = errors.WithDetailf(contract.ErrBadArguments, "Invalid contract template name:%s", contractName)
+	}
 
+	return
+}
+
+// BuildReq build the request for contact
+func BuildReq(contractName string, args []string, alias bool, btmGas string) (req *contract.ContractReq, err error) {
 	switch contractName {
 	case "LockWithPublicKey":
 		contr := NewLockPubKey(args, alias, btmGas)
@@ -37,172 +128,225 @@ func BuildReq(contractName string, args []string, alias bool, btmGas string) (*c
 		req, err = contr.BuildContractReq(contractName)
 	default:
 		err = errors.New("Invalid contract!")
-		return nil, err
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
+	return
 }
 
 // NewLockPubKey create the contract object for LockWithPublicKey
 func NewLockPubKey(args []string, alias bool, btmGas string) *contract.LockPubKey {
-	var contr contract.LockPubKey
-
-	contr.OutputID = args[0]
-	contr.AccountInfo = args[1]
-	contr.AssetInfo = args[2]
-	contr.Amount = args[3]
-	contr.Alias = alias
-	contr.BtmGas = btmGas
-	contr.RootPubKey = args[4]
-	contr.Path = []string{args[5], args[6]}
-
-	return &contr
+	return &contract.LockPubKey{
+		CommonInfo: contract.CommonInfo{
+			OutputID    :args[0],
+			AccountInfo :args[1],
+			AssetInfo   :args[2],
+			Amount      :args[3],
+			Alias       :alias,
+			BtmGas      :btmGas,
+		},
+		PubKeyInfo:contract.PubKeyInfo{
+			RootPubKey :args[4],
+			Path       :[]string{args[5], args[6]},
+		},
+	}
 }
 
 // NewLockMultiSig create the contract object for LockWithMultiSig
 func NewLockMultiSig(args []string, alias bool, btmGas string) *contract.LockMultiSig {
-	var contr contract.LockMultiSig
-
-	contr.OutputID = args[0]
-	contr.AccountInfo = args[1]
-	contr.AssetInfo = args[2]
-	contr.Amount = args[3]
-	contr.Alias = alias
-	contr.BtmGas = btmGas
-
 	pubInfo1 := contract.NewPubKeyInfo(args[4], []string{args[5], args[6]})
 	pubInfo2 := contract.NewPubKeyInfo(args[7], []string{args[8], args[9]})
-	contr.PubKeys = []contract.PubKeyInfo{pubInfo1, pubInfo2}
 
-	return &contr
+	return &contract.LockMultiSig{
+		CommonInfo: contract.CommonInfo{
+			OutputID    :args[0],
+			AccountInfo :args[1],
+			AssetInfo   :args[2],
+			Amount      :args[3],
+			Alias       :alias,
+			BtmGas      :btmGas,
+		},
+		PubKeys:[]contract.PubKeyInfo{pubInfo1, pubInfo2},
+	}
 }
 
 // NewLockPubHash create the contract object for LockWithPublicKeyHash
 func NewLockPubHash(args []string, alias bool, btmGas string) *contract.LockPubHash {
-	var contr contract.LockPubHash
-
-	contr.OutputID = args[0]
-	contr.AccountInfo = args[1]
-	contr.AssetInfo = args[2]
-	contr.Amount = args[3]
-	contr.Alias = alias
-	contr.BtmGas = btmGas
-	contr.PublicKey = args[4]
-	contr.RootPubKey = args[5]
-	contr.Path = []string{args[6], args[7]}
-
-	return &contr
+	return &contract.LockPubHash{
+		CommonInfo: contract.CommonInfo{
+			OutputID    :args[0],
+			AccountInfo :args[1],
+			AssetInfo   :args[2],
+			Amount      :args[3],
+			Alias       :alias,
+			BtmGas      :btmGas,
+		},
+		PublicKey:args[4],
+		PubKeyInfo:contract.PubKeyInfo{
+			RootPubKey :args[5],
+			Path       :[]string{args[6], args[7]},
+		},
+	}
 }
 
 // NewRevealPreimage create the contract object for RevealPreimage
 func NewRevealPreimage(args []string, alias bool, btmGas string) *contract.RevealPreimage {
-	var contr contract.RevealPreimage
-
-	contr.OutputID = args[0]
-	contr.AccountInfo = args[1]
-	contr.AssetInfo = args[2]
-	contr.Amount = args[3]
-	contr.Alias = alias
-	contr.BtmGas = btmGas
-	contr.Value = args[4]
-
-	return &contr
+	return &contract.RevealPreimage{
+		CommonInfo: contract.CommonInfo{
+			OutputID    :args[0],
+			AccountInfo :args[1],
+			AssetInfo   :args[2],
+			Amount      :args[3],
+			Alias       :alias,
+			BtmGas      :btmGas,
+		},
+		Value:args[4],
+	}
 }
 
 // NewTradeOffer create the contract object for TradeOffer
 func NewTradeOffer(args []string, alias bool, btmGas string) *contract.TradeOffer {
-	var contr contract.TradeOffer
-
-	contr.OutputID = args[0]
-	contr.AccountInfo = args[1]
-	contr.AssetInfo = args[2]
-	contr.Amount = args[3]
-	contr.Alias = alias
-	contr.BtmGas = btmGas
-	contr.Selector = args[4]
-
-	if contr.Selector == contract.ClauseTrade {
-		contr.InnerAccountInfo = args[5]
-		contr.InnerAssetInfo = args[6]
-		contr.InnerAmount = args[7]
-		contr.InnerProgram = args[8]
-	} else if contr.Selector == contract.ClauseCancel {
-		contr.RootPubKey = args[5]
-		contr.Path = []string{args[6], args[7]}
+	selector := args[4]
+	switch selector {
+	case contract.ClauseTrade:
+		return &contract.TradeOffer{
+			CommonInfo: contract.CommonInfo{
+				OutputID    :args[0],
+				AccountInfo :args[1],
+				AssetInfo   :args[2],
+				Amount      :args[3],
+				Alias       :alias,
+				BtmGas      :btmGas,
+			},
+			Selector:args[4],
+			PaymentInfo: contract.PaymentInfo{
+				InnerAccountInfo :args[5],
+				InnerAssetInfo   :args[6],
+				InnerAmount      :args[7],
+				InnerProgram     :args[8],
+			},
+		}
+	case contract.ClauseCancel:
+		return &contract.TradeOffer{
+			CommonInfo: contract.CommonInfo{
+				OutputID    :args[0],
+				AccountInfo :args[1],
+				AssetInfo   :args[2],
+				Amount      :args[3],
+				Alias       :alias,
+				BtmGas      :btmGas,
+			},
+			Selector:args[4],
+			PubKeyInfo:contract.PubKeyInfo{
+				RootPubKey :args[5],
+				Path       :[]string{args[6], args[7]},
+			},
+		}
+	default:
+		return nil
 	}
-
-	return &contr
 }
 
 // NewEscrow create the contract object for Escrow
 func NewEscrow(args []string, alias bool, btmGas string) *contract.Escrow {
-	var contr contract.Escrow
-
-	contr.OutputID = args[0]
-	contr.AccountInfo = args[1]
-	contr.AssetInfo = args[2]
-	contr.Amount = args[3]
-	contr.Alias = alias
-	contr.BtmGas = btmGas
-	contr.Selector = args[4]
-	contr.RootPubKey = args[5]
-	contr.Path = []string{args[6], args[7]}
-	contr.ControlProgram = args[8]
-
-	return &contr
+	return &contract.Escrow{
+		CommonInfo: contract.CommonInfo{
+			OutputID    :args[0],
+			AccountInfo :args[1],
+			AssetInfo   :args[2],
+			Amount      :args[3],
+			Alias       :alias,
+			BtmGas      :btmGas,
+		},
+		Selector:args[4],
+		PubKeyInfo:contract.PubKeyInfo{
+			RootPubKey :args[5],
+			Path       :[]string{args[6], args[7]},
+		},
+		ControlProgram:args[8],
+	}
 }
 
 // NewLoanCollateral create the contract object for LoanCollateral
 func NewLoanCollateral(args []string, alias bool, btmGas string) *contract.LoanCollateral {
-	var contr contract.LoanCollateral
-
-	contr.OutputID = args[0]
-	contr.AccountInfo = args[1]
-	contr.AssetInfo = args[2]
-	contr.Amount = args[3]
-	contr.Alias = alias
-	contr.BtmGas = btmGas
-	contr.Selector = args[4]
-
-	if contr.Selector == contract.ClauseRepay {
-		contr.InnerAccountInfo = args[5]
-		contr.InnerAssetInfo = args[6]
-		contr.InnerAmount = args[7]
-		contr.InnerProgram = args[8]
-		contr.ControlProgram = args[9]
-	} else if contr.Selector == contract.ClauseDefault {
-		contr.ControlProgram = args[5]
+	selector := args[4]
+	switch selector {
+	case contract.ClauseRepay:
+		return &contract.LoanCollateral{
+			CommonInfo: contract.CommonInfo{
+				OutputID    :args[0],
+				AccountInfo :args[1],
+				AssetInfo   :args[2],
+				Amount      :args[3],
+				Alias       :alias,
+				BtmGas      :btmGas,
+			},
+			Selector:args[4],
+			PaymentInfo: contract.PaymentInfo{
+				InnerAccountInfo :args[5],
+				InnerAssetInfo   :args[6],
+				InnerAmount      :args[7],
+				InnerProgram     :args[8],
+			},
+			ControlProgram: args[9],
+		}
+	case contract.ClauseDefault:
+		return &contract.LoanCollateral{
+			CommonInfo: contract.CommonInfo{
+				OutputID    :args[0],
+				AccountInfo :args[1],
+				AssetInfo   :args[2],
+				Amount      :args[3],
+				Alias       :alias,
+				BtmGas      :btmGas,
+			},
+			Selector:args[4],
+			ControlProgram: args[5],
+		}
+	default:
+		return nil
 	}
-
-	return &contr
 }
 
 // NewCallOption create the contract object for CallOption
 func NewCallOption(args []string, alias bool, btmGas string) *contract.CallOption {
-	var contr contract.CallOption
-
-	contr.OutputID = args[0]
-	contr.AccountInfo = args[1]
-	contr.AssetInfo = args[2]
-	contr.Amount = args[3]
-	contr.Alias = alias
-	contr.BtmGas = btmGas
-	contr.Selector = args[4]
-
-	if contr.Selector == contract.ClauseExercise {
-		contr.InnerAccountInfo = args[5]
-		contr.InnerAssetInfo = args[6]
-		contr.InnerAmount = args[7]
-		contr.InnerProgram = args[8]
-		contr.RootPubKey = args[9]
-		contr.Path = []string{args[10], args[11]}
-	} else if contr.Selector == contract.ClauseExpire {
-		contr.ControlProgram = args[5]
+	selector := args[4]
+	switch selector {
+	case contract.ClauseExercise:
+		return &contract.CallOption{
+			CommonInfo: contract.CommonInfo{
+				OutputID    :args[0],
+				AccountInfo :args[1],
+				AssetInfo   :args[2],
+				Amount      :args[3],
+				Alias       :alias,
+				BtmGas      :btmGas,
+			},
+			Selector:args[4],
+			PaymentInfo: contract.PaymentInfo{
+				InnerAccountInfo :args[5],
+				InnerAssetInfo   :args[6],
+				InnerAmount      :args[7],
+				InnerProgram     :args[8],
+			},
+			PubKeyInfo:contract.PubKeyInfo{
+				RootPubKey :args[9],
+				Path       :[]string{args[10], args[11]},
+			},
+		}
+	case contract.ClauseExpire:
+		return &contract.CallOption{
+			CommonInfo: contract.CommonInfo{
+				OutputID    :args[0],
+				AccountInfo :args[1],
+				AssetInfo   :args[2],
+				Amount      :args[3],
+				Alias       :alias,
+				BtmGas      :btmGas,
+			},
+			Selector:args[4],
+			ControlProgram: args[5],
+		}
+	default:
+		return nil
 	}
-
-	return &contr
 }

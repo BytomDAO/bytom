@@ -167,7 +167,7 @@ func (bcr *BlockchainReactor) buildContractTX(ctx context.Context, req *contract
 	}
 
 	var buildReq BuildRequest
-	if err := json.Unmarshal([]byte(*buildReqStr), &buildReq); err != nil {
+	if err := json.Unmarshal([]byte(buildReqStr), &buildReq); err != nil {
 		return NewErrorResponse(err)
 	}
 

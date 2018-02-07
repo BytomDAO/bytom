@@ -45,10 +45,7 @@ func (a *TradeOffer) BuildContractReq(contractName string) (*ContractReq, error)
 }
 
 // Build create a transaction request
-func (a *TradeOffer) Build() (*string, error) {
-	var buildReqStr string
-	var err error
-
+func (a *TradeOffer) Build() (buildReqStr string, err error) {
 	switch a.Selector {
 	case ClauseTrade:
 		if a.Alias {
@@ -75,17 +72,11 @@ func (a *TradeOffer) Build() (*string, error) {
 			a.Selector, ClauseTrade, ClauseCancel)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return &buildReqStr, nil
+	return
 }
 
 // AddArgs add the parameters for contract
-func (a *TradeOffer) AddArgs(tpl *txbuilder.Template) error {
-	var err error
-
+func (a *TradeOffer) AddArgs(tpl *txbuilder.Template) (err error) {
 	switch a.Selector {
 	case ClauseTrade:
 		err = addDataArgs(tpl, []string{a.Selector})
@@ -97,9 +88,5 @@ func (a *TradeOffer) AddArgs(tpl *txbuilder.Template) error {
 		err = errors.WithDetailf(ErrBadClause, "the selector[%s] for contract TradeOffer is wrong!", a.Selector)
 	}
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return
 }

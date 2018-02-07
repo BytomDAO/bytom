@@ -46,10 +46,7 @@ func (a *CallOption) BuildContractReq(contractName string) (*ContractReq, error)
 }
 
 // Build create a transaction request
-func (a *CallOption) Build() (*string, error) {
-	var buildReqStr string
-	var err error
-
+func (a *CallOption) Build() (buildReqStr string, err error) {
 	switch a.Selector {
 	case ClauseExercise:
 		if a.Alias {
@@ -76,17 +73,11 @@ func (a *CallOption) Build() (*string, error) {
 			a.Selector, ClauseExercise, ClauseExpire)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return &buildReqStr, nil
+	return
 }
 
 // AddArgs add the parameters for contract
-func (a *CallOption) AddArgs(tpl *txbuilder.Template) error {
-	var err error
-
+func (a *CallOption) AddArgs(tpl *txbuilder.Template) (err error) {
 	switch a.Selector {
 	case ClauseExercise:
 		pubInfo := NewPubKeyInfo(a.RootPubKey, a.Path)
@@ -98,9 +89,5 @@ func (a *CallOption) AddArgs(tpl *txbuilder.Template) error {
 		err = errors.WithDetailf(ErrBadClause, "the selector[%s] for contract CallOption is wrong!", a.Selector)
 	}
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return
 }

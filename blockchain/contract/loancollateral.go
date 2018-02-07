@@ -45,10 +45,7 @@ func (a *LoanCollateral) BuildContractReq(contractName string) (*ContractReq, er
 }
 
 // Build create a transaction request
-func (a *LoanCollateral) Build() (*string, error) {
-	var buildReqStr string
-	var err error
-
+func (a *LoanCollateral) Build() (buildReqStr string, err error) {
 	switch a.Selector {
 	case ClauseRepay:
 		if a.Alias {
@@ -75,17 +72,11 @@ func (a *LoanCollateral) Build() (*string, error) {
 			a.Selector, ClauseRepay, ClauseDefault)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return &buildReqStr, nil
+	return
 }
 
 // AddArgs add the parameters for contract
-func (a *LoanCollateral) AddArgs(tpl *txbuilder.Template) error {
-	var err error
-
+func (a *LoanCollateral) AddArgs(tpl *txbuilder.Template) (err error) {
 	switch a.Selector {
 	case ClauseRepay, ClauseDefault:
 		err = addDataArgs(tpl, []string{a.Selector})
@@ -93,9 +84,5 @@ func (a *LoanCollateral) AddArgs(tpl *txbuilder.Template) error {
 		err = errors.WithDetailf(ErrBadClause, "the selector[%s] for contract LoanCollateral is wrong!", a.Selector)
 	}
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return
 }

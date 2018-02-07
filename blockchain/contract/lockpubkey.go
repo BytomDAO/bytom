@@ -33,24 +33,19 @@ func (a *LockPubKey) BuildContractReq(contractName string) (*ContractReq, error)
 }
 
 // Build create a transaction request
-func (a *LockPubKey) Build() (*string, error) {
-	var buildReqStr string
-
+func (a *LockPubKey) Build() (buildReqStr string, err error) {
 	if a.Alias {
 		buildReqStr = fmt.Sprintf(buildAcctRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 	} else {
 		buildReqStr = fmt.Sprintf(buildAcctRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 	}
 
-	return &buildReqStr, nil
+	return
 }
 
 // AddArgs add the parameters for contract
-func (a *LockPubKey) AddArgs(tpl *txbuilder.Template) error {
+func (a *LockPubKey) AddArgs(tpl *txbuilder.Template) (err error) {
 	pubInfo := NewPubKeyInfo(a.RootPubKey, a.Path)
-	if err := addPubKeyArgs(tpl, []PubKeyInfo{pubInfo}); err != nil {
-		return err
-	}
-
-	return nil
+	err = addPubKeyArgs(tpl, []PubKeyInfo{pubInfo})
+	return
 }

@@ -45,10 +45,7 @@ func (a *Escrow) BuildContractReq(contractName string) (*ContractReq, error) {
 }
 
 // Build create a transaction request
-func (a *Escrow) Build() (*string, error) {
-	var buildReqStr string
-	var err error
-
+func (a *Escrow) Build() (buildReqStr string, err error) {
 	switch a.Selector {
 	case ClauseApprove, ClauseReject:
 		if a.Alias {
@@ -61,17 +58,11 @@ func (a *Escrow) Build() (*string, error) {
 			a.Selector, ClauseApprove, ClauseReject)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return &buildReqStr, nil
+	return
 }
 
 // AddArgs add the parameters for contract
-func (a *Escrow) AddArgs(tpl *txbuilder.Template) error {
-	var err error
-
+func (a *Escrow) AddArgs(tpl *txbuilder.Template) (err error) {
 	switch a.Selector {
 	case ClauseApprove, ClauseReject:
 		pubInfo := NewPubKeyInfo(a.RootPubKey, a.Path)
@@ -81,9 +72,5 @@ func (a *Escrow) AddArgs(tpl *txbuilder.Template) error {
 		err = errors.WithDetailf(ErrBadClause, "the selector[%s] for contract Escrow is wrong!", a.Selector)
 	}
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return
 }

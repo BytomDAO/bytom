@@ -67,9 +67,8 @@ func NewParamInfo(front []string, pubKeys []PubKeyInfo, last []string) ParamInfo
 func reconstructTpl(tpl *txbuilder.Template, si *txbuilder.SigningInstruction) {
 	length := len(tpl.SigningInstructions)
 	if length == 0 {
-		length = 1
 		tpl.SigningInstructions = append(tpl.SigningInstructions, si)
-		tpl.SigningInstructions[length-1].Position = 0
+		tpl.SigningInstructions[0].Position = 0
 	} else {
 		tpl.SigningInstructions[0] = si
 	}

@@ -20,15 +20,12 @@ type ContractReq struct {
 
 // ContractAction represents the operation action for contract
 type ContractAction interface {
-	Build() (*string, error)
+	Build() (string, error)
 	AddArgs(tpl *txbuilder.Template) error
 }
 
 // ContractDecoder generalize contract objects into an interface
-func (a *ContractReq) ContractDecoder() (ContractAction, error) {
-	var act ContractAction
-	var err error
-
+func (a *ContractReq) ContractDecoder() (act ContractAction, err error) {
 	switch a.ContractName {
 	case "LockWithPublicKey":
 		act, err = DecodeLockPubKey(a.ContractArgs)
@@ -50,9 +47,5 @@ func (a *ContractReq) ContractDecoder() (ContractAction, error) {
 		err = errors.New("Invalid contract!")
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return act, nil
+	return
 }

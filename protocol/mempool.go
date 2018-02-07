@@ -93,7 +93,7 @@ func (mp *TxPool) AddTransaction(tx *legacy.Tx, gasOnlyTx bool, height, fee uint
 	}
 
 	mp.newTxCh <- tx
-	log.WithField("tx_id", tx.Tx.ID).Info("Add tx to mempool")
+	log.WithField("tx_id", tx.Tx.ID.String()).Info("Add tx to mempool")
 	return txD, nil
 }
 

@@ -34,26 +34,20 @@ func (a *LockPubHash) BuildContractReq(contractName string) (*ContractReq, error
 }
 
 // Build create a transaction request
-func (a *LockPubHash) Build() (*string, error) {
-	var buildReqStr string
-
+func (a *LockPubHash) Build() (buildReqStr string, err error) {
 	if a.Alias {
 		buildReqStr = fmt.Sprintf(buildAcctRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 	} else {
 		buildReqStr = fmt.Sprintf(buildAcctRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 	}
 
-	return &buildReqStr, nil
+	return
 }
 
 // AddArgs add the parameters for contract
-func (a *LockPubHash) AddArgs(tpl *txbuilder.Template) error {
+func (a *LockPubHash) AddArgs(tpl *txbuilder.Template) (err error) {
 	pubInfo := NewPubKeyInfo(a.RootPubKey, a.Path)
 	paramInfo := NewParamInfo([]string{a.PublicKey}, []PubKeyInfo{pubInfo}, nil)
-
-	if err := addParamArgs(tpl, paramInfo); err != nil {
-		return err
-	}
-
-	return nil
+	err = addParamArgs(tpl, paramInfo)
+	return
 }
