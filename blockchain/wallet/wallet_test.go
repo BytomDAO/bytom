@@ -18,6 +18,7 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
@@ -144,6 +145,20 @@ func TestExportAndImportPrivKey(t *testing.T) {
 
 	priv, err := w.ExportAccountPrivKey(hsm, xpub.XPub, pwd)
 
+	wantPriv, err := hsm.LoadChainKDKey(xpub.XPub, pwd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var hashed [32]byte
+	sha3pool.Sum256(hashed[:], wantPriv[:])
+
+	tmp := append(wantPriv[:], hashed[:4]...)
+	res := base58.Encode(tmp)
+
+	if res != *priv {
+		t.Fatalf("XPrivs should be identical.\nBefore: %v\n After: %v\n", *priv, res)
+	}
+
 	rawPriv, err := base58.Decode(*priv)
 	if err != nil {
 		t.Fatal(err)
@@ -168,6 +183,20 @@ func TestExportAndImportPrivKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	accountInfo := struct {
+		AccountInfo string `json:"account_info"`
+	}{AccountInfo: acnt1.Alias}
+
+	w.AccountMgr.DeleteAccount(accountInfo)
+
+	acnt2, err := w.ImportAccountPrivKey(hsm, xprv, xpub.Alias, pwd, 0, acnt1.Alias)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if acnt2.XPub != acnt1.XPubs[0] {
+		t.Fatalf("XPubs should be identical.\nBefore: %v\n After: %v\n", acnt1.XPubs[0], acnt2.XPub)
+	}
 }
 
 func mockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
