@@ -175,28 +175,6 @@ var createAccountPubkeyCmd = &cobra.Command{
 	},
 }
 
-var createAccountContractCmd = &cobra.Command{
-	Use:   "create-account-contract <accountID | alias> <contract_program>",
-	Short: "Create an account contract",
-	Args:  cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
-		var ins = struct {
-			AccountInfo     string `json:"account_info"`
-			ContractProgram string `json:"contract_program"`
-		}{
-			AccountInfo:     args[0],
-			ContractProgram: args[1],
-		}
-
-		data, exitCode := util.ClientCall("/create-account-contract", &ins)
-		if exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-
-		printJSON(data)
-	},
-}
-
 var listBalancesCmd = &cobra.Command{
 	Use:   "list-balances",
 	Short: "List the accounts balances",

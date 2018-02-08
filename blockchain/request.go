@@ -49,3 +49,23 @@ func (bcr *BlockchainReactor) filterAliases(ctx context.Context, br *BuildReques
 	}
 	return nil
 }
+
+// getContractAccountID can acquire the accountID and contractProgram by parsing BuildRequest's Actions,
+// when BuildRequest's Actions contain more than one accountInfo("account_id" or "account_alias"), the accountInfo is same
+func (bcr *BlockchainReactor) getContractAccountID(ctx context.Context, br *BuildRequest) (accountID string, contractProgram string, err error) {
+	for _, m := range br.Actions {
+		id, _ := m["account_id"].(string)
+		alias, _ := m["account_alias"].(string)
+		contractProgram, _ = m["control_program"].(string)
+		accountID = id
+		if id == "" && alias != "" {
+			acc, errMsg := bcr.accounts.FindByAlias(ctx, alias)
+			if errMsg != nil {
+				err = errors.WithDetailf(errMsg, "invalid account alias %s", alias)
+			}
+			accountID = acc.ID
+		}
+	}
+
+	return
+}
