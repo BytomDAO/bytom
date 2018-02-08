@@ -62,11 +62,15 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 	return b.Build()
 }
 
-func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM) error {
-	return txbuilder.Sign(nil, tpl, nil, []string{"password", "password"}, func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
+func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM, password string) (bool, error) {
+	err := txbuilder.Sign(nil, tpl, nil, []string{password, password}, func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
 		sigBytes, err := hsm.XSign(xpub, path, data[:], password)
 		return sigBytes, err
 	})
+	if err != nil {
+		return false, err
+	}
+	return txbuilder.SignProgress(tpl), nil
 }
 
 // Mock block

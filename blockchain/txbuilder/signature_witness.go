@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
 	chainjson "github.com/bytom/encoding/json"
@@ -93,7 +95,8 @@ func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint3
 		}
 		sigBytes, err := signFn(ctx, keyID.XPub, path, h, auth[i])
 		if err != nil {
-			return errors.WithDetailf(err, "computing signature %d", i)
+			log.WithField("err", err).Warningf("computing signature %d", i)
+			return nil
 		}
 		sw.Sigs[i] = sigBytes
 	}

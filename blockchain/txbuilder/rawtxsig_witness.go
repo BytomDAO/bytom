@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
 )
 
 // TODO(bobg): most of the code here is duplicated from
@@ -50,7 +51,8 @@ func (sw *RawTxSigWitness) sign(ctx context.Context, tpl *Template, index uint32
 		}
 		sigBytes, err := signFn(ctx, keyID.XPub, path, tpl.Hash(index).Byte32(), auth[i])
 		if err != nil {
-			return errors.WithDetailf(err, "computing signature %d", i)
+			log.WithField("err", err).Warningf("computing signature %d", i)
+			return nil
 		}
 		sw.Sigs[i] = sigBytes
 	}
