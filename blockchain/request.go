@@ -57,14 +57,25 @@ func (bcr *BlockchainReactor) getContractAccountID(ctx context.Context, br *Buil
 		id, _ := m["account_id"].(string)
 		alias, _ := m["account_alias"].(string)
 		contractProgram, _ = m["control_program"].(string)
-		accountID = id
-		if id == "" && alias != "" {
+
+		if id != "" {
+			accountID = id
+		} else if id == "" && alias != "" {
 			acc, errMsg := bcr.accounts.FindByAlias(ctx, alias)
 			if errMsg != nil {
 				err = errors.WithDetailf(errMsg, "invalid account alias %s", alias)
+				return
 			}
 			accountID = acc.ID
 		}
+	}
+
+	if accountID == "" {
+		err = errors.New("account is empty")
+	}
+
+	if contractProgram == "" {
+		err = errors.New("contract Program is empty")
 	}
 
 	return
