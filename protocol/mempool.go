@@ -85,6 +85,7 @@ func (mp *TxPool) AddTransaction(tx *legacy.Tx, gasOnlyTx bool, height, fee uint
 	for _, id := range tx.TxHeader.ResultIds {
 		output, err := tx.Output(*id)
 		if err != nil {
+			// error due to it's a retirement, utxo doesn't care this output type so skip it
 			continue
 		}
 		if !gasOnlyTx || *output.Source.Value.AssetId == *consensus.BTMAssetID {
