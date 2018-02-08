@@ -51,18 +51,3 @@ func (m *Manager) CreatePubkeyInfo(ctx context.Context, accountInfo string) (*tx
 		Path:   pathStr,
 	}, nil
 }
-
-// CreateContractInfo creates a relationship to link contract with an account
-func (m *Manager) CreateContractInfo(ctx context.Context, accountInfo string, contractProgram string) (map[string]string, error) {
-	accountID := accountInfo
-	if s, err := m.FindByAlias(ctx, accountInfo); err == nil {
-		accountID = s.ID
-	}
-
-	contract, err := m.CreateContractHook(ctx, accountID, contractProgram)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string]string{"contract_program": hex.EncodeToString(contract)}, nil
-}
