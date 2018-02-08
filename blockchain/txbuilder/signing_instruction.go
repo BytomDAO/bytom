@@ -2,6 +2,7 @@ package txbuilder
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
@@ -48,6 +49,37 @@ func (si *SigningInstruction) AddRawWitnessKeys(xpubs []chainkd.XPub, path [][]b
 		Keys:   keyIDs,
 	}
 	si.WitnessComponents = append(si.WitnessComponents, sw)
+}
+
+// AddRawTxSigWitness adds a SignatureWitness with the given quorum and
+// list of keys derived by applying the derivation path to each of the xpubs,
+// this function is used to a extend contract which contain signature parameters.
+func (si *SigningInstruction) AddRawTxSigWitness(xpubs []chainkd.XPub, path [][]chainjson.HexBytes, quorum int) error {
+	if len(path) != len(xpubs) && len(xpubs) != quorum {
+		buf := fmt.Sprintf("length is not equal, len(path):%d ,len(xpubs):%d , quorum:%d", len(path), len(xpubs), quorum)
+		err := errors.New(buf)
+		return err
+	}
+
+	keyIDs := make([]keyID, 0, len(xpubs))
+	for i, xpub := range xpubs {
+		keyIDs = append(keyIDs, keyID{xpub, path[i]})
+	}
+
+	sw := &RawTxSigWitness{
+		Quorum: quorum,
+		Keys:   keyIDs,
+	}
+	si.WitnessComponents = append(si.WitnessComponents, sw)
+	return nil
+}
+
+// AddDataWitness add DataWitness for a extend contract which not contain signature parameters.
+func (si *SigningInstruction) AddDataWitness(datawit []chainjson.HexBytes) {
+	for _, data := range datawit {
+		sw := DataWitness(data)
+		si.WitnessComponents = append(si.WitnessComponents, sw)
+	}
 }
 
 // SigningInstruction gives directions for signing inputs in a TxTemplate.
