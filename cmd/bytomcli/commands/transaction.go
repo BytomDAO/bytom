@@ -14,18 +14,21 @@ import (
 )
 
 func init() {
-	buildTransactionCmd.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend', 'contract'")
+	buildTransactionCmd.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend'")
 	buildTransactionCmd.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r", "", "program of receiver")
-	buildTransactionCmd.PersistentFlags().StringVarP(&contractProgram, "contract", "c", "", "program of contract")
 	buildTransactionCmd.PersistentFlags().StringVarP(&address, "address", "a", "", "address of receiver")
 	buildTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "program of receiver")
 	buildTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 	buildTransactionCmd.PersistentFlags().BoolVar(&alias, "alias", false, "use alias build transaction")
 
-	buildContractTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "program of receiver")
-	buildContractTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
-	buildContractTransactionCmd.PersistentFlags().BoolVar(&alias, "alias", false, "use alias build transaction")
-	buildContractTransactionCmd.PersistentFlags().StringVarP(&contractName, "contract-name", "c", "",
+	lockContractTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "program of receiver")
+	lockContractTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
+	lockContractTransactionCmd.PersistentFlags().BoolVar(&alias, "alias", false, "use alias build transaction")
+
+	unlockContractTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "program of receiver")
+	unlockContractTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
+	unlockContractTransactionCmd.PersistentFlags().BoolVar(&alias, "alias", false, "use alias build transaction")
+	unlockContractTransactionCmd.PersistentFlags().StringVarP(&contractName, "contract-name", "c", "",
 		"name of template contract, currently supported: 'LockWithPublicKey', 'LockWithMultiSig', 'LockWithPublicKeyHash',"+
 			"\n\t\t\t       'RevealPreimage', 'TradeOffer', 'Escrow', 'CallOption', 'LoanCollateral'")
 
@@ -43,7 +46,6 @@ var (
 	buildType       = ""
 	btmGas          = ""
 	receiverProgram = ""
-	contractProgram = ""
 	address         = ""
 	password        = make([]string, 0)
 	pretty          = false
@@ -164,12 +166,6 @@ var buildTransactionCmd = &cobra.Command{
 				break
 			}
 			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
-		case "contract":
-			if alias {
-				buildReqStr = fmt.Sprintf(buildContractReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, contractProgram)
-				break
-			}
-			buildReqStr = fmt.Sprintf(buildContractReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, contractProgram)
 		default:
 			jww.ERROR.Println("Invalid transaction template type")
 			os.Exit(util.ErrLocalExe)
@@ -207,8 +203,57 @@ var buildTransactionCmd = &cobra.Command{
 	},
 }
 
-var buildContractTransactionCmd = &cobra.Command{
-	Use:   "build-contract-transaction <outputID> <accountID|alias> <assetID|alias> <amount> -c <contractName> <contractArgs>",
+var lockContractTransactionCmd = &cobra.Command{
+	Use:   "lock-contract-transaction <accountID|alias> <assetID|alias> <amount> <contractProgram>",
+	Short: "Build one transaction template,default use account id and asset id",
+	Args:  cobra.ExactArgs(4),
+	Run: func(cmd *cobra.Command, args []string) {
+		var buildReqStr string
+		accountInfo := args[0]
+		assetInfo := args[1]
+		amount := args[2]
+		contractProgram := args[3]
+
+		if alias {
+			buildReqStr = fmt.Sprintf(buildContractReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, contractProgram)
+		} else {
+			buildReqStr = fmt.Sprintf(buildContractReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, contractProgram)
+		}
+
+		var buildReq blockchain.BuildRequest
+		if err := json.Unmarshal([]byte(buildReqStr), &buildReq); err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		data, exitCode := util.ClientCall("/lock-contract-transaction", &buildReq)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		if pretty {
+			printJSON(data)
+			return
+		}
+
+		dataMap, ok := data.(map[string]interface{})
+		if ok != true {
+			jww.ERROR.Println("invalid type assertion")
+			os.Exit(util.ErrLocalParse)
+		}
+
+		rawTemplate, err := json.Marshal(dataMap)
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalParse)
+		}
+
+		jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, string(rawTemplate))
+	},
+}
+
+var unlockContractTransactionCmd = &cobra.Command{
+	Use:   "unlock-contract-transaction <outputID> <accountID|alias> <assetID|alias> <amount> -c <contractName> <contractArgs>",
 	Short: "Build transaction for template contract, default use account id and asset id",
 	Args:  cobra.RangeArgs(4, 20),
 	PreRun: func(cmd *cobra.Command, args []string) {
@@ -216,7 +261,7 @@ var buildContractTransactionCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		minArgsCount := 4
-		usage := "Usage:\n  bytomcli build-contract-transaction <outputID> <accountID|alias> <assetID|alias> <amount> -c <contractName>"
+		usage := "Usage:\n  bytomcli unlock-contract-transaction <outputID> <accountID|alias> <assetID|alias> <amount> -c <contractName>"
 		if err := CheckContractArgs(contractName, args, minArgsCount, usage); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
@@ -228,7 +273,7 @@ var buildContractTransactionCmd = &cobra.Command{
 			os.Exit(util.ErrLocalExe)
 		}
 
-		data, exitCode := util.ClientCall("/build-contract-transaction", req)
+		data, exitCode := util.ClientCall("/unlock-contract-transaction", req)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

@@ -24,15 +24,3 @@ func (bcr *BlockchainReactor) createAccountPubkey(ctx context.Context, ins struc
 
 	return NewSuccessResponse(pubkeyInfo)
 }
-
-func (bcr *BlockchainReactor) createAccountContract(ctx context.Context, ins struct {
-	AccountInfo     string `json:"account_info"`
-	ContractProgram string `json:"contract_program"`
-}) Response {
-	contract, err := bcr.accounts.CreateContractInfo(nil, ins.AccountInfo, ins.ContractProgram)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	return NewSuccessResponse(contract)
-}

@@ -143,7 +143,6 @@ func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest
 
 // POST /build-transaction
 func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) Response {
-
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
 	tmpl, err := bcr.buildSingle(subctx, buildReqs)
@@ -154,8 +153,30 @@ func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest
 	return NewSuccessResponse(tmpl)
 }
 
-// POST /build-contract-transaction
-func (bcr *BlockchainReactor) buildContractTX(ctx context.Context, req *contract.ContractReq) Response {
+// POST /lock-contract-transaction
+func (bcr *BlockchainReactor) lockContractTX(ctx context.Context, buildReqs *BuildRequest) Response {
+	subctx := reqid.NewSubContext(ctx, reqid.New())
+
+	accoutID, contr_prog, err := bcr.getContractAccountID(ctx, buildReqs)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	// establish an association between account and contract
+	if _, err = bcr.accounts.CreateContractHook(ctx, accoutID, contr_prog); err != nil {
+		return NewErrorResponse(err)
+	}
+
+	tmpl, err := bcr.buildSingle(subctx, buildReqs)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	return NewSuccessResponse(tmpl)
+}
+
+// POST /unlock-contract-transaction
+func (bcr *BlockchainReactor) unlockContractTX(ctx context.Context, req *contract.ContractReq) Response {
 	act, err := req.ContractDecoder()
 	if err != nil {
 		return NewErrorResponse(err)
