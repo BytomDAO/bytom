@@ -666,6 +666,10 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (uint64, bool, error) {
 		return 0, false, errors.New("tx didn't have any output")
 	}
 
+	if len(tx.GasInputIDs) == 0 && tx != block.Transactions[0] {
+		return 0, false, errors.New("tx didn't have gas input")
+	}
+
 	if err := validateStandardTx(tx); err != nil {
 		return 0, false, err
 	}
