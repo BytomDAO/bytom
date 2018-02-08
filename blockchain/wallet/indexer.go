@@ -187,7 +187,8 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *legacy.Block) error {
 	for _, tx := range annotatedTxs {
 		rawTx, err := json.Marshal(tx)
 		if err != nil {
-			return errors.Wrap(err, "inserting annotated_txs to db")
+			log.WithField("err", err).Error("inserting annotated_txs to db")
+			return err
 		}
 
 		batch.Set(calcAnnotatedKey(formatKey(b.Height, uint32(tx.Position))), rawTx)

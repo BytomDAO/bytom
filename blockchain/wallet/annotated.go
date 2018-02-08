@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm/vmutil"
@@ -23,34 +24,26 @@ import (
 func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 	for i, tx := range txs {
 		for j, input := range tx.Inputs {
-			alias, definition, err := w.getAliasDefinition(input.AssetID)
-			if err != nil {
-				continue
-			}
-			txs[i].Inputs[j].AssetAlias = alias
-			txs[i].Inputs[j].AssetDefinition = &definition
+			txs[i].Inputs[j].AssetAlias, txs[i].Inputs[j].AssetDefinition =
+				w.getAliasDefinition(input.AssetID)
 		}
-		for j, output := range tx.Outputs {
-			alias, definition, err := w.getAliasDefinition(output.AssetID)
-			if err != nil {
-				continue
-			}
-			txs[i].Outputs[j].AssetAlias = alias
-			txs[i].Outputs[j].AssetDefinition = &definition
+		for k, output := range tx.Outputs {
+			txs[i].Outputs[k].AssetAlias, txs[i].Outputs[k].AssetDefinition =
+				w.getAliasDefinition(output.AssetID)
 		}
 	}
 }
 
-func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) (json.RawMessage, error) {
+func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) *chainjson.HexBytes {
 
 	definitionByte := w.DB.Get(asset.CalcExtAssetKey(assetID))
 	if definitionByte == nil {
-		return nil, nil
+		return nil
 	}
 
 	definitionMap := make(map[string]interface{})
 	if err := json.Unmarshal(definitionByte, &definitionMap); err != nil {
-		return nil, err
+		return nil
 	}
 
 	saveAlias := assetID.String()
@@ -64,32 +57,33 @@ func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) (json.RawMessage, er
 	storeBatch.Set(asset.AliasKey(saveAlias), []byte(assetID.String()))
 	storeBatch.Write()
 
-	return definitionByte, nil
+	d := chainjson.HexBytes(definitionByte)
+	return &d
 
 }
 
-func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage, error) {
+func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, *chainjson.HexBytes) {
 	//btm
 	if assetID.String() == consensus.BTMAssetID.String() {
 		alias := consensus.BTMAlias
-		definition := []byte(asset.DefaultNativeAsset.RawDefinitionByte)
+		definition := &asset.DefaultNativeAsset.RawDefinitionByte
 
-		return alias, definition, nil
+		return alias, definition
 	}
 
 	//local asset and saved external asset
 	if localAsset, err := w.AssetReg.FindByID(nil, &assetID); err == nil {
 		alias := *localAsset.Alias
-		definition := []byte(localAsset.RawDefinitionByte)
-		return alias, definition, nil
+		definition := &localAsset.RawDefinitionByte
+		return alias, definition
 	}
 
 	//external asset
-	if definition, err := w.getExternalDefinition(&assetID); definition != nil {
-		return assetID.String(), definition, err
+	if definition := w.getExternalDefinition(&assetID); definition != nil {
+		return assetID.String(), definition
 	}
 
-	return "", nil, fmt.Errorf("look up asset %s :not found ", assetID.String())
+	return "", nil
 }
 
 // annotateTxs adds account data to transactions
@@ -170,7 +164,7 @@ func getAccountFromACP(program []byte, walletDB db.DB) (*account.Account, error)
 	return &localAccount, nil
 }
 
-var emptyJSONObject = json.RawMessage(`{}`)
+var emptyJSONObject = chainjson.HexBytes(`{}`)
 
 func isValidJSON(b []byte) bool {
 	var v interface{}
@@ -193,7 +187,7 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock in
 		StatusFail:             statusFail,
 	}
 	if isValidJSON(orig.ReferenceData) {
-		referenceData := json.RawMessage(orig.ReferenceData)
+		referenceData := chainjson.HexBytes(orig.ReferenceData)
 		tx.ReferenceData = &referenceData
 	}
 	for i := range orig.Inputs {
@@ -216,7 +210,7 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 		in.Amount = orig.Amount()
 	}
 	if isValidJSON(orig.ReferenceData) {
-		referenceData := json.RawMessage(orig.ReferenceData)
+		referenceData := chainjson.HexBytes(orig.ReferenceData)
 		in.ReferenceData = &referenceData
 	}
 
@@ -250,7 +244,7 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
 		ReferenceData:   &emptyJSONObject,
 	}
 	if isValidJSON(orig.ReferenceData) {
-		referenceData := json.RawMessage(orig.ReferenceData)
+		referenceData := chainjson.HexBytes(orig.ReferenceData)
 		out.ReferenceData = &referenceData
 	}
 	if vmutil.IsUnspendable(out.ControlProgram) {
