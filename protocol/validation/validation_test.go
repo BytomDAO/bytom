@@ -488,17 +488,6 @@ func TestCoinbase(t *testing.T) {
 				BlockHeader: &bc.BlockHeader{
 					Height: 666,
 				},
-				Transactions: []*bc.Tx{errCbTx},
-			},
-			tx:       CbTx,
-			gasVaild: true,
-			err:      errWrongCoinbaseTransaction,
-		},
-		{
-			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					Height: 666,
-				},
 				Transactions: []*bc.Tx{CbTx},
 			},
 			tx:       CbTx,
@@ -518,14 +507,14 @@ func TestCoinbase(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
+	for i, c := range cases {
 		_, gasVaild, err := ValidateTx(c.tx, c.block)
 
 		if rootErr(err) != c.err {
-			t.Errorf("got error %s, want %s", err, c.err)
+			t.Errorf("#%d got error %s, want %s", i, err, c.err)
 		}
 		if c.gasVaild != gasVaild {
-			t.Errorf("got gasVaild %s, want %s", gasVaild, c.gasVaild)
+			t.Errorf("#%d got gasVaild %s, want %s", i, gasVaild, c.gasVaild)
 		}
 	}
 }
