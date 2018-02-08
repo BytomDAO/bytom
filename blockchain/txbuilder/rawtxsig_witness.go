@@ -70,6 +70,7 @@ func (sw RawTxSigWitness) materialize(args *[][]byte) error {
 	return nil
 }
 
+// MarshalJSON convert struct to json
 func (sw RawTxSigWitness) MarshalJSON() ([]byte, error) {
 	obj := struct {
 		Type   string               `json:"type"`

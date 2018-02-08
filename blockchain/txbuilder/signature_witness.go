@@ -14,6 +14,7 @@ import (
 )
 
 type (
+	// SignatureWitness is a sign struct
 	SignatureWitness struct {
 		// Quorum is the number of signatures required.
 		Quorum int `json:"quorum"`
@@ -37,6 +38,7 @@ type (
 	}
 )
 
+// ErrEmptyProgram is a type of error
 var ErrEmptyProgram = errors.New("empty signature program")
 
 // Sign populates sw.Sigs with as many signatures of the predicate in
@@ -121,6 +123,7 @@ func (sw SignatureWitness) materialize(args *[][]byte) error {
 	return nil
 }
 
+// MarshalJSON convert struct to json
 func (sw SignatureWitness) MarshalJSON() ([]byte, error) {
 	obj := struct {
 		Type   string               `json:"type"`

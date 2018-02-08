@@ -43,7 +43,7 @@ func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuil
 	return decoder, true
 }
 
-func MergeActions(req *BuildRequest) []map[string]interface{} {
+func mergeActions(req *BuildRequest) []map[string]interface{} {
 	actions := make([]map[string]interface{}, 0)
 	actionMap := make(map[string]map[string]interface{})
 
@@ -75,7 +75,7 @@ func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest
 	if err != nil {
 		return nil, err
 	}
-	reqActions := MergeActions(req)
+	reqActions := mergeActions(req)
 	actions := make([]txbuilder.Action, 0, len(reqActions))
 	for i, act := range reqActions {
 		typ, ok := act["type"].(string)
