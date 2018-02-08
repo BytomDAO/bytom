@@ -85,7 +85,7 @@ func (mp *TxPool) AddTransaction(tx *legacy.Tx, gasOnlyTx bool, height, fee uint
 	for _, id := range tx.TxHeader.ResultIds {
 		output, err := tx.Output(*id)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		if !gasOnlyTx || *output.Source.Value.AssetId == *consensus.BTMAssetID {
 			mp.utxo[*id] = tx.Tx.ID

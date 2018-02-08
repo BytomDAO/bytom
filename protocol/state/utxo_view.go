@@ -103,7 +103,7 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	for _, id := range tx.TxHeader.ResultIds {
 		output, err := tx.Output(*id)
 		if err != nil {
-			return err
+			continue
 		}
 		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
