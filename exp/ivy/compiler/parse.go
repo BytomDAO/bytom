@@ -47,7 +47,16 @@ func parse(buf []byte) (contracts []*Contract, err error) {
 // parse functions
 
 func parseContracts(p *parser) []*Contract {
+	if ok := parseVersion(p); !ok {
+		p.errorf("Parse version failed!")
+	}
+
 	var result []*Contract
+	contracts := parseContractImport(p)
+	for _, c := range contracts {
+		result = append(result, c)
+	}
+
 	for peekKeyword(p) == "contract" {
 		contract := parseContract(p)
 		result = append(result, contract)
@@ -62,10 +71,14 @@ func parseContract(p *parser) *Contract {
 	params := parseParams(p)
 	consumeKeyword(p, "locks")
 	value := consumeIdentifier(p)
+	var inheritance []string
+	if peekKeyword(p) == "extends" {
+		inheritance = parseInheritance(p)
+	}
 	consumeTok(p, "{")
 	clauses := parseClauses(p)
 	consumeTok(p, "}")
-	return &Contract{Name: name, Params: params, Clauses: clauses, Value: value}
+	return &Contract{Name: name, Params: params, Clauses: clauses, Value: value, Inheritance: inheritance }
 }
 
 // (p1, p2: t1, p3: t2)
@@ -394,6 +407,10 @@ func scanLiteralExpr(buf []byte, offset int) (expression, int) {
 	if newOffset >= 0 {
 		return bytesliteral, newOffset
 	}
+	booleanLiteral, newOffset := scanBoolLiteral(buf, offset) // true or false
+	if newOffset >= 0 {
+		return booleanLiteral, newOffset
+	}
 	return nil, -1
 }
 
@@ -402,7 +419,8 @@ func scanIdentifier(buf []byte, offset int) (string, int) {
 	i := offset
 	for ; i < len(buf) && isIDChar(buf[i], i == offset); i++ {
 	}
-	if i == offset {
+	//add the limit for length of identifier, reference standard of C99
+	if i == offset || (i - offset) > 31 {
 		return "", -1
 	}
 	return string(buf[offset:i]), i
@@ -492,6 +510,29 @@ func scanBytesLiteral(buf []byte, offset int) (bytesLiteral, int) {
 		return bytesLiteral{}, -1
 	}
 	return bytesLiteral(decoded), i
+}
+
+func scanBoolLiteral(buf []byte, offset int) (booleanLiteral, int) {
+	offset = skipWsAndComments(buf, offset)
+	if offset >= len(buf) {
+		return false, -1
+	}
+
+	var count int
+	for i := offset; i < len(buf); i++ {
+		if buf[i] == ' ' || buf[i] == '\n' {
+			count = i
+			break
+		}
+	}
+
+	if (count - offset) == 4 && string(buf[offset : count]) == "true" {
+		return true, count
+	} else if (count - offset) == 5 && string(buf[offset : count]) == "false" {
+		return false, count
+	}
+
+	return false, -1
 }
 
 func skipWsAndComments(buf []byte, offset int) int {
