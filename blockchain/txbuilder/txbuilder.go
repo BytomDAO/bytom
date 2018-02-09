@@ -72,7 +72,7 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 }
 
 // Sign will try to sign all the witness
-func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth []string, signFn SignFunc) error {
+func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
 	for i, sigInst := range tpl.SigningInstructions {
 		for j, wc := range sigInst.WitnessComponents {
 			switch sw := wc.(type) {

@@ -56,7 +56,7 @@ type signResp struct {
 }
 
 func (bcr *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
-	Password []string           `json:"password"`
+	Password string             `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
 	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password, bcr.pseudohsmSignTemplate); err != nil {

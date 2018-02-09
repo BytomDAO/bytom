@@ -91,7 +91,7 @@ func TestHSM(t *testing.T) {
 	}
 	//go accounts.ProcessBlocks(ctx)
 
-	err = txbuilder.Sign(ctx, tmpl, nil, []string{"password"}, func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
+	err = txbuilder.Sign(ctx, tmpl, nil, "password", func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
 		sigBytes, err := hsm.XSign(xpub, path, data[:], password)
 		if err != nil {
 			return nil, nil
