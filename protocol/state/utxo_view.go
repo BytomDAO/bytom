@@ -51,7 +51,8 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 	for _, id := range tx.TxHeader.ResultIds {
 		output, err := tx.Output(*id)
 		if err != nil {
-			return err
+			// error due to it's a retirement, utxo doesn't care this output type so skip it
+			continue
 		}
 		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
@@ -103,7 +104,8 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	for _, id := range tx.TxHeader.ResultIds {
 		output, err := tx.Output(*id)
 		if err != nil {
-			return err
+			// error due to it's a retirement, utxo doesn't care this output type so skip it
+			continue
 		}
 		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue

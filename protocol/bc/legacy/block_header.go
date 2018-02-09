@@ -1,13 +1,11 @@
 package legacy
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/bytom/encoding/blockchain"
-	"github.com/bytom/encoding/bufpool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 )
@@ -15,26 +13,26 @@ import (
 // BlockHeader describes necessary data of the block.
 type BlockHeader struct {
 	// Version of the block.
-	Version uint64
+	Version uint64 `json:"version"`
 
 	// Height of the block in the block chain.
 	// Initial block has height 1.
-	Height uint64
+	Height uint64 `json:"height"`
 
 	// Hash of the previous block in the block chain.
-	PreviousBlockHash bc.Hash
+	PreviousBlockHash bc.Hash `json:"previous_block_hash"`
 
-	Seed bc.Hash
+	Seed bc.Hash `json:"seed"`
 
 	// Time of the block in seconds.
-	Timestamp uint64
+	Timestamp uint64 `json:"timestamp"`
 
-	TransactionStatus bc.TransactionStatus
+	TransactionStatus bc.TransactionStatus `json:"transaction_status"`
 
 	BlockCommitment
 
-	Nonce uint64
-	Bits  uint64
+	Nonce uint64 `json:"nonce"`
+	Bits  uint64 `json:"bits"`
 }
 
 // Time returns the time represented by the Timestamp in bh.
@@ -59,31 +57,6 @@ func (bh *BlockHeader) Scan(val interface{}) error {
 func (bh *BlockHeader) Hash() bc.Hash {
 	h, _ := mapBlockHeader(bh)
 	return h
-}
-
-// MarshalText fulfills the json.Marshaler interface.
-// This guarantees that block headers will get deserialized correctly
-// when being parsed from HTTP requests.
-func (bh *BlockHeader) MarshalText() ([]byte, error) {
-	buf := bufpool.Get()
-	defer bufpool.Put(buf)
-	if _, err := bh.WriteTo(buf); err != nil {
-		return nil, err
-	}
-
-	enc := make([]byte, hex.EncodedLen(buf.Len()))
-	hex.Encode(enc, buf.Bytes())
-	return enc, nil
-}
-
-// UnmarshalText fulfills the encoding.TextUnmarshaler interface.
-func (bh *BlockHeader) UnmarshalText(text []byte) error {
-	decoded := make([]byte, hex.DecodedLen(len(text)))
-	if _, err := hex.Decode(decoded, text); err != nil {
-		return err
-	}
-	_, err := bh.readFrom(blockchain.NewReader(decoded))
-	return err
 }
 
 func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error) {
