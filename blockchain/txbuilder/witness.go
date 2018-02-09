@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 )
 
@@ -11,10 +12,10 @@ import (
 // a signature for a given xpub, derivation path, and hash.
 type SignFunc func(context.Context, chainkd.XPub, [][]byte, [32]byte, string) ([]byte, error)
 
-// materializeWitnesses takes a filled in Template and "materializes"
+// MaterializeWitnesses takes a filled in Template and "materializes"
 // each witness component, turning it into a vector of arguments for
 // the tx's input witness, creating a fully-signed transaction.
-func materializeWitnesses(txTemplate *Template) error {
+func MaterializeWitnesses(txTemplate *Template) error {
 	msg := txTemplate.Transaction
 
 	if msg == nil {
@@ -41,4 +42,32 @@ func materializeWitnesses(txTemplate *Template) error {
 	}
 
 	return nil
+}
+
+func signedCount(signs []chainjson.HexBytes) (count int) {
+	for _, sign := range signs {
+		if len(sign) > 0 {
+			count++
+		}
+	}
+	return
+}
+
+// SignProgress check is all the sign requirement are satisfy
+func SignProgress(txTemplate *Template) bool {
+	for _, sigInst := range txTemplate.SigningInstructions {
+		for _, wc := range sigInst.WitnessComponents {
+			switch sw := wc.(type) {
+			case *SignatureWitness:
+				if signedCount(sw.Sigs) < sw.Quorum {
+					return false
+				}
+			case *RawTxSigWitness:
+				if signedCount(sw.Sigs) < sw.Quorum {
+					return false
+				}
+			}
+		}
+	}
+	return true
 }

@@ -50,8 +50,13 @@ func (bcr *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 	return NewSuccessResponse(nil)
 }
 
+type signResp struct {
+	Tx           *txbuilder.Template `json:"transaction"`
+	SignComplete bool                `json:"sign_complete"`
+}
+
 func (bcr *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
-	Password []string           `json:"password"`
+	Password string             `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
 	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password, bcr.pseudohsmSignTemplate); err != nil {
@@ -59,7 +64,7 @@ func (bcr *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x stru
 		return NewErrorResponse(err)
 	}
 	log.Info("Sign Transaction complete.")
-	return NewSuccessResponse(&x.Txs)
+	return NewSuccessResponse(&signResp{Tx: &x.Txs, SignComplete: txbuilder.SignProgress(&x.Txs)})
 }
 
 func (bcr *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
