@@ -58,7 +58,6 @@ func (bcr *BlockchainReactor) BuildHandler() {
 		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
 		m.Handle("/create-account-address", jsonHandler(bcr.createAccountAddress))
 		m.Handle("/create-account-pubkey", jsonHandler(bcr.createAccountPubkey))
-		m.Handle("/create-account-contract", jsonHandler(bcr.createAccountContract))
 		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
 		m.Handle("/delete-account", jsonHandler(bcr.deleteAccount))
 
@@ -81,7 +80,8 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/", alwaysError(errors.New("not Found")))
 
 	m.Handle("/build-transaction", jsonHandler(bcr.build))
-	m.Handle("/build-contract-transaction", jsonHandler(bcr.buildContractTX))
+	m.Handle("/lock-contract-transaction", jsonHandler(bcr.lockContractTX))
+	m.Handle("/unlock-contract-transaction", jsonHandler(bcr.unlockContractTX))
 	m.Handle("/sign-transaction", jsonHandler(bcr.pseudohsmSignTemplates))
 	m.Handle("/submit-transaction", jsonHandler(bcr.submit))
 	m.Handle("/sign-submit-transaction", jsonHandler(bcr.signSubmit))
