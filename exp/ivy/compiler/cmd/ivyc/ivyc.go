@@ -1,12 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"log"
 	"os"
 	"strings"
-	"bufio"
 
 	"github.com/bytom/exp/ivy/compiler"
 )
@@ -62,7 +62,7 @@ func main() {
 
 	header := new(bytes.Buffer)
 	//fmt.Fprintf(header,"package %s\n\n", *packageName)
-	fmt.Fprintf(header,"package instance\n\n")
+	fmt.Fprintf(header, "package instance\n\n")
 
 	imports := map[string]bool{
 		"bytes":        true,
@@ -70,24 +70,25 @@ func main() {
 		"fmt":          true,
 		"github.com/bytom/exp/ivy/compiler": true,
 		"github.com/bytom/protocol/vm":      true,
-		"github.com/bytom/encoding/json": true,
+		"github.com/bytom/encoding/json":    true,
 	}
 
 	buf := new(bytes.Buffer)
 
 	if len(contracts) == 1 {
-		fmt.Fprintf(buf, "var %s_body_bytes []byte\n\n", contracts[0].Name)
+		fmt.Fprintf(buf, "// %sBodyBytes refer to contract's body\n", contracts[0].Name)
+		fmt.Fprintf(buf, "var %sBodyBytes []byte\n\n", contracts[0].Name)
 	} else {
 		fmt.Fprintf(buf, "var (\n")
 		for _, contract := range contracts {
-			fmt.Fprintf(buf, "\t%s_body_bytes []byte\n", contract.Name)
+			fmt.Fprintf(buf, "\t%sBodyBytes []byte\n", contract.Name)
 		}
 		fmt.Fprintf(buf, ")\n\n")
 	}
 
 	fmt.Fprintf(buf, "func init() {\n")
 	for _, contract := range contracts {
-		fmt.Fprintf(buf, "\t%s_body_bytes, _ = hex.DecodeString(\"%x\")\n", contract.Name, contract.Body)
+		fmt.Fprintf(buf, "\t%sBodyBytes, _ = hex.DecodeString(\"%x\")\n", contract.Name, contract.Body)
 	}
 	fmt.Fprintf(buf, "}\n\n")
 
@@ -137,7 +138,7 @@ func main() {
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{S: (*json.HexBytes)(&%s)})\n", param.Name)
 			}
 		}
-		fmt.Fprintf(buf, "\treturn compiler.Instantiate(%s_body_bytes, _contractParams,  %v, _contractArgs)\n", contract.Name, contract.Recursive)
+		fmt.Fprintf(buf, "\treturn compiler.Instantiate(%sBodyBytes, _contractParams,  %v, _contractArgs)\n", contract.Name, contract.Recursive)
 		fmt.Fprintf(buf, "}\n\n")
 
 		fmt.Fprintf(buf, "// ParsePayTo%s parses the arguments out of an instantiation of contract %s.\n", contract.Name, contract.Name)
@@ -166,7 +167,7 @@ func main() {
 			fmt.Fprintf(buf, "\tif !insts[0].IsPushdata() {\n")
 			fmt.Fprintf(buf, "\t\treturn nil, fmt.Errorf(\"too few arguments\")\n")
 			fmt.Fprintf(buf, "\t}\n")
-			fmt.Fprintf(buf, "\tif !bytes.Equal(%s_body_bytes, insts[0].Data) {\n", contract.Name)
+			fmt.Fprintf(buf, "\tif !bytes.Equal(%sBodyBytes, insts[0].Data) {\n", contract.Name)
 			fmt.Fprintf(buf, "\t\treturn nil, fmt.Errorf(\"body bytes do not match %s\")\n", contract.Name)
 			fmt.Fprintf(buf, "\t}\n")
 			fmt.Fprintf(buf, "\tinsts = insts[1:]\n")
@@ -185,7 +186,7 @@ func main() {
 			fmt.Fprintf(buf, "\tif !insts[1].IsPushdata() {\n")
 			fmt.Fprintf(buf, "\t\treturn nil, fmt.Errorf(\"wrong program format\")\n")
 			fmt.Fprintf(buf, "\t}\n")
-			fmt.Fprintf(buf, "\tif !bytes.Equal(%s_body_bytes, insts[1].Data) {\n", contract.Name)
+			fmt.Fprintf(buf, "\tif !bytes.Equal(%sBodyBytes, insts[1].Data) {\n", contract.Name)
 			fmt.Fprintf(buf, "\t\treturn nil, fmt.Errorf(\"body bytes do not match %s\")\n", contract.Name)
 			fmt.Fprintf(buf, "\t}\n")
 		}
@@ -209,11 +210,11 @@ func main() {
 		// the Bar clause of contract Foo.
 	}
 
-	fmt.Fprintf(header,"import (\n")
+	fmt.Fprintf(header, "import (\n")
 	for imp := range imports {
-		fmt.Fprintf(header,"\t\"%s\"\n", imp)
+		fmt.Fprintf(header, "\t\"%s\"\n", imp)
 	}
-	fmt.Fprintf(header,")\n\n")
+	fmt.Fprintf(header, ")\n\n")
 
 	//get the Environment variables of GOPATH
 	gopath := os.Getenv("GOPATH")
@@ -226,7 +227,7 @@ func main() {
 	if err != nil {
 		if os.IsNotExist(err) {
 			direrr := os.Mkdir(path, os.ModePerm)
-			if direrr != nil{
+			if direrr != nil {
 				log.Fatal(direrr)
 			}
 			fmt.Println("the path is create success")
@@ -240,7 +241,7 @@ func main() {
 	defer file.Close()
 	file.Write(header.Bytes())
 	file.Write(buf.Bytes())
-	fmt.Printf("create file [%s] success!\n", *packageName + ".go")
+	fmt.Printf("create file [%s] success!\n", *packageName+".go")
 }
 
 func paramsStr(params []*compiler.Param) string {
