@@ -2,25 +2,67 @@ package main
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+	"bufio"
 
 	"github.com/bytom/exp/ivy/compiler"
 )
 
-func main() {
-	packageName := flag.String("package", "main", "Go package name for generated file")
-	flag.Parse()
+// the directory (combined with GOPATH) to store compiled ivy contract file
+const (
+	GenerateIvyPath string = "/src/github.com/bytom/exp/ivy/instance/"
+)
 
-	contracts, err := compiler.Compile(os.Stdin)
+func main() {
+	if len(os.Args) != 2 {
+		fmt.Println("command args: [command] [contract file_path]")
+		fmt.Println("\n")
+		os.Exit(0)
+	}
+
+	filename := os.Args[1]
+	inputFile, inputError := os.Open(filename)
+	if inputError != nil {
+		fmt.Printf("An error occurred on opening the inputfile\n" +
+			"Does the file exist?\n" +
+			"Have you got acces to it?\n")
+		os.Exit(0)
+	}
+	defer inputFile.Close()
+
+	inputReader := bufio.NewReader(inputFile)
+	contracts, err := compiler.Compile(inputReader)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("package %s\n\n", *packageName)
+	var packageName *string
+	var midstr string
+	var outstr []string
+
+	//change the windows path into unix path
+	filename = strings.Replace(filename, "\\", "/", -1)
+	if strings.Contains(filename, "/") == true {
+		outstr = strings.Split(filename, "/")
+		midstr = outstr[len(outstr)-1]
+	} else {
+		midstr = filename
+	}
+
+	//check whether the filename contains point flag
+	if strings.Contains(midstr, ".") == true {
+		outstr = strings.Split(midstr, ".")
+		packageName = &outstr[0]
+	} else {
+		packageName = &midstr
+	}
+
+	header := new(bytes.Buffer)
+	//fmt.Fprintf(header,"package %s\n\n", *packageName)
+	fmt.Fprintf(header,"package instance\n\n")
 
 	imports := map[string]bool{
 		"bytes":        true,
@@ -28,6 +70,7 @@ func main() {
 		"fmt":          true,
 		"github.com/bytom/exp/ivy/compiler": true,
 		"github.com/bytom/protocol/vm":      true,
+		"github.com/bytom/encoding/json": true,
 	}
 
 	buf := new(bytes.Buffer)
@@ -69,7 +112,7 @@ func main() {
 			imports[imp] = true
 		}
 		fmt.Fprintf(buf, "func PayTo%s(%s) ([]byte, error) {\n", contract.Name, goParams)
-		fmt.Fprintf(buf, "\t_contractParams := []compiler.Param{\n")
+		fmt.Fprintf(buf, "\t_contractParams := []*compiler.Param{\n")
 		for _, param := range contract.Params {
 			fmt.Fprintf(buf, "\t\t{Name: \"%s\", Type: \"%s\"},\n", param.Name, param.Type)
 		}
@@ -81,18 +124,20 @@ func main() {
 				fmt.Fprintf(buf, "\t_%s := int64(%s)\n", param.Name, param.Name)
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{I: &_%s})\n", param.Name)
 			case "Asset":
-				fmt.Fprintf(buf, "\t_%s := %s[:]\n", param.Name, param.Name)
-				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{S: &_%s})\n", param.Name)
-			case "Boolean", "Hash", "Program", "PublicKey", "Signature", "String":
-				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{S: &%s})\n", param.Name)
+				fmt.Fprintf(buf, "\t_%s := %s.Bytes()\n", param.Name, param.Name)
+				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{S: (*json.HexBytes)(&_%s)})\n", param.Name)
+			case "Boolean":
+				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{B: &%s})\n", param.Name)
 			case "Integer":
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{I: &%s})\n", param.Name)
 			case "Time":
-				fmt.Fprintf(buf, "\t_%s := %s.UnixNano() / time.Millisecond\n", param.Name, param.Name)
+				fmt.Fprintf(buf, "\t_%s := %s.UnixNano() / int64(time.Millisecond)\n", param.Name, param.Name)
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{I: &_%s})\n", param.Name)
+			case "Hash", "Program", "PublicKey", "Signature", "String":
+				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{S: (*json.HexBytes)(&%s)})\n", param.Name)
 			}
 		}
-		fmt.Fprintf(buf, "\treturn compiler.Instantiate(_contractParams, %s_body_bytes, %v, _contractArgs)\n", contract.Name, contract.Recursive)
+		fmt.Fprintf(buf, "\treturn compiler.Instantiate(%s_body_bytes, _contractParams,  %v, _contractArgs)\n", contract.Name, contract.Recursive)
 		fmt.Fprintf(buf, "}\n\n")
 
 		fmt.Fprintf(buf, "// ParsePayTo%s parses the arguments out of an instantiation of contract %s.\n", contract.Name, contract.Name)
@@ -164,13 +209,38 @@ func main() {
 		// the Bar clause of contract Foo.
 	}
 
-	fmt.Printf("import (\n")
+	fmt.Fprintf(header,"import (\n")
 	for imp := range imports {
-		fmt.Printf("\t\"%s\"\n", imp)
+		fmt.Fprintf(header,"\t\"%s\"\n", imp)
 	}
-	fmt.Printf(")\n\n")
+	fmt.Fprintf(header,")\n\n")
 
-	os.Stdout.Write(buf.Bytes())
+	//get the Environment variables of GOPATH
+	gopath := os.Getenv("GOPATH")
+	fmt.Println("GOPATH:", gopath)
+	path := gopath + GenerateIvyPath
+	fmt.Println("instance path:", path)
+
+	//if the directory is not exist, create it
+	_, err = os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			direrr := os.Mkdir(path, os.ModePerm)
+			if direrr != nil{
+				log.Fatal(direrr)
+			}
+			fmt.Println("the path is create success")
+		} else {
+			log.Fatal(err)
+		}
+	}
+
+	//store buf by create file
+	file, _ := os.Create(path + *packageName + ".go")
+	defer file.Close()
+	file.Write(header.Bytes())
+	file.Write(buf.Bytes())
+	fmt.Printf("create file [%s] success!\n", *packageName + ".go")
 }
 
 func paramsStr(params []*compiler.Param) string {
@@ -189,7 +259,7 @@ func asGoParams(params []*compiler.Param) (goParams string, imports []string) {
 		case "Amount":
 			typ = "uint64"
 		case "Asset":
-			typ = "bc.AssetId"
+			typ = "bc.AssetID"
 			imports = append(imports, "github.com/bytom/protocol/bc")
 		case "Boolean":
 			typ = "bool"
