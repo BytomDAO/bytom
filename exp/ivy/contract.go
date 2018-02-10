@@ -3,14 +3,15 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"io"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/bytom/exp/ivy/instance"
 	"github.com/bytom/protocol/bc"
+	"github.com/spf13/cobra"
 )
 
 // the TimeLayout by time Template
@@ -19,276 +20,366 @@ const (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		help(os.Stdout)
-		os.Exit(0)
-	}
-
-	var tmp [32]byte
-	var result string
-
-	templateContractName := strings.TrimSpace(os.Args[1])
-	switch templateContractName {
-	case "LockWithPublicKey":
-		if len(os.Args) != 3 {
-			fmt.Println("args: [pubkey]\n\n")
-			os.Exit(0)
-		}
-
-		pubkey := os.Args[2]
-		if checkLength(pubkey) == false {
-			fmt.Println("the length of pubkey is not equal 32\n")
-			os.Exit(0)
-		}
-
-		pubkeyvalue, _ := hex.DecodeString(pubkey)
-
-		out, _ := instance.PayToLockWithPublicKey(pubkeyvalue)
-		result = hex.EncodeToString(out)
-
-		//check the program
-		_, err := instance.ParsePayToLockWithPublicKey(out)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
-
-	case "LockWithMultiSig":
-		if len(os.Args) != 5 {
-			fmt.Println("args: [pubkey1] [pubkey2] [pubkey3]\n\n")
-			os.Exit(0)
-		}
-		pubkey1 := os.Args[2]
-		pubkey2 := os.Args[3]
-		pubkey3 := os.Args[4]
-		if checkLength(pubkey1) == false || checkLength(pubkey2) == false || checkLength(pubkey3) == false {
-			fmt.Println("the length of pubkey is not equal 32\n")
-			os.Exit(0)
-		}
-
-		pub1, _ := hex.DecodeString(pubkey1)
-		pub2, _ := hex.DecodeString(pubkey2)
-		pub3, _ := hex.DecodeString(pubkey3)
-
-		out, _ := instance.PayToLockWithMultiSig(pub1, pub2, pub3)
-		result = hex.EncodeToString(out)
-
-		//check the program
-		_, err := instance.ParsePayToLockWithMultiSig(out)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
-
-	case "LockWithPublicKeyHash":
-		if len(os.Args) != 3 {
-			fmt.Println("args: [pubKeyHash]\n\n")
-			os.Exit(0)
-		}
-		pubkeyhash := os.Args[2]
-		if checkLength(pubkeyhash) == false {
-			fmt.Println("the length of pubKeyHash is not equal 32\n")
-			os.Exit(0)
-		}
-
-		hashvalue, _ := hex.DecodeString(pubkeyhash)
-
-		out, _ := instance.PayToLockWithPublicKeyHash(hashvalue)
-		result = hex.EncodeToString(out)
-
-		//check the program
-		_, err := instance.ParsePayToLockWithPublicKeyHash(out)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
-
-	case "TradeOffer":
-		if len(os.Args) != 6 {
-			fmt.Println("args: [assetid] [amount] [seller] [pubkey]\n\n")
-			os.Exit(0)
-		}
-		assetRequested := os.Args[2]
-		amountRequested := os.Args[3]
-		seller := os.Args[4]
-		pubkey := os.Args[5]
-		if checkLength(assetRequested) == false || checkLength(pubkey) == false {
-			fmt.Println("the length of assetid or pubkey is not equal 32\n")
-			os.Exit(0)
-		}
-
-		asset, _ := hex.DecodeString(assetRequested)
-		copy(tmp[:], asset[:32])
-		assetid := bc.NewAssetID(tmp)
-		//fmt.Println("assetid:", assetid)
-
-		amount, _ := strconv.ParseUint(amountRequested, 10, 64)
-		sell, _ := hex.DecodeString(seller)
-		pub, _ := hex.DecodeString(pubkey)
-
-		out, _ := instance.PayToTradeOffer(assetid, amount, sell, pub)
-		result = hex.EncodeToString(out)
-
-		//check the program
-		_, err := instance.ParsePayToTradeOffer(out)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
-
-	case "Escrow":
-		if len(os.Args) != 5 {
-			fmt.Println("args: [pubkey] [sender] [recipient]\n\n")
-			os.Exit(0)
-		}
-		pubkey := os.Args[2]
-		sender := os.Args[3]
-		recipient := os.Args[4]
-		if checkLength(pubkey) == false {
-			fmt.Println("the length of pubkey is not equal 32\n")
-			os.Exit(0)
-		}
-
-		pub, _ := hex.DecodeString(pubkey)
-		send, _ := hex.DecodeString(sender)
-		recip, _ := hex.DecodeString(recipient)
-
-		out, _ := instance.PayToEscrow(pub, send, recip)
-		result = hex.EncodeToString(out)
-
-		//check the program
-		_, err := instance.ParsePayToEscrow(out)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
-
-	case "CallOption":
-		if len(os.Args) != 7 {
-			fmt.Println("args: [price] [assetid] [seller] [buyerKey] [deadline]\n\n")
-			os.Exit(0)
-		}
-		strikePrice := os.Args[2]
-		strikeCurrency := os.Args[3]
-		seller := os.Args[4]
-		buyerKey := os.Args[5]
-		deadline := os.Args[6]
-		if checkLength(strikeCurrency) == false || checkLength(buyerKey) == false {
-			fmt.Println("the length of assetid or pubkey is not equal 32\n")
-			os.Exit(0)
-		}
-
-		asset, _ := hex.DecodeString(strikeCurrency)
-		copy(tmp[:], asset[:32])
-		assetid := bc.NewAssetID(tmp)
-
-		price, _ := strconv.ParseUint(strikePrice, 10, 64)
-		sell, _ := hex.DecodeString(seller)
-		pub, _ := hex.DecodeString(buyerKey)
-
-		deadline = strings.Replace(deadline, "*", " ", -1)
-		loc, _ := time.LoadLocation("Local")
-		expiretime, _ := time.ParseInLocation(TimeLayout, deadline, loc)
-		//fmt.Println("expiretime:", expiretime)
-
-		out, _ := instance.PayToCallOption(price, assetid, sell, pub, expiretime)
-		result = hex.EncodeToString(out)
-
-		//check the program
-		_, err := instance.ParsePayToCallOption(out)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
-
-	case "LoanCollateral":
-		if len(os.Args) != 7 {
-			fmt.Println("args: [assetid] [amount] [duetime] [lender] [borrower]\n\n")
-			os.Exit(0)
-		}
-		assetLoaned := os.Args[2]
-		amountLoaned := os.Args[3]
-		repaymentDue := os.Args[4]
-		lender := os.Args[5]
-		borrower := os.Args[6]
-		if checkLength(assetLoaned) == false {
-			fmt.Println("the length of assetid is not equal 32\n")
-			os.Exit(0)
-		}
-
-		asset, _ := hex.DecodeString(assetLoaned)
-		copy(tmp[:], asset[:32])
-		assetid := bc.NewAssetID(tmp)
-
-		amount, _ := strconv.ParseUint(amountLoaned, 10, 64)
-		lend, _ := hex.DecodeString(lender)
-		borrow, _ := hex.DecodeString(borrower)
-
-		repaymentDue = strings.Replace(repaymentDue, "*", " ", -1)
-		loc, _ := time.LoadLocation("Local")
-		duetime, _ := time.ParseInLocation(TimeLayout, repaymentDue, loc)
-		//fmt.Println("duetime:", duetime)
-
-		out, _ := instance.PayToLoanCollateral(assetid, amount, duetime, lend, borrow)
-		result = hex.EncodeToString(out)
-
-		//check the program
-		_, err := instance.ParsePayToLoanCollateral(out)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
-
-	case "RevealPreimage":
-		if len(os.Args) != 3 {
-			fmt.Println("args: [hash]\n\n")
-			os.Exit(0)
-		}
-		hash := os.Args[2]
-		if checkLength(hash) == false {
-			fmt.Println("the length of hash is not equal 32\n")
-			os.Exit(0)
-		}
-
-		hashvalue, _ := hex.DecodeString(hash)
-
-		out, _ := instance.PayToRevealPreimage(hashvalue)
-		result = hex.EncodeToString(out)
-
-		//check the program
-		_, err := instance.ParsePayToRevealPreimage(out)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(0)
-		}
-
-	default:
-		fmt.Printf("Error: the contract [%s] is not in ivy template contract\n\n\n", templateContractName)
-		os.Exit(0)
-	}
-
-	fmt.Printf("The Result ControlProgram:\n%s\n\n", result)
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	Execute()
 }
 
-func help(w io.Writer) {
-	fmt.Fprintln(w, "usage: ivy [command] [arguments]")
-	fmt.Fprint(w, "\nThe commands are:\n\n")
-	fmt.Fprintln(w, "\t LockWithPublicKey")
-	fmt.Fprintln(w, "\t LockWithMultiSig")
-	fmt.Fprintln(w, "\t LockWithPublicKeyHash")
-	fmt.Fprintln(w, "\t TradeOffer")
-	fmt.Fprintln(w, "\t Escrow")
-	fmt.Fprintln(w, "\t CallOption")
-	fmt.Fprintln(w, "\t LoanCollateral")
-	fmt.Fprintln(w, "\t RevealPreimage")
-	fmt.Fprintln(w)
+// IvyCmd is ivyInstance's root command.
+var IvyCmd = &cobra.Command{
+	Use:   "ivy",
+	Short: "ivy is a generate contract program tools",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(args) < 1 {
+			cmd.Usage()
+		}
+	},
 }
 
-func checkLength(str string) bool {
-	length := len(str)
-	if length != 64 { //the length of 32-bytes string is 64, because of a byte compose with two charactor
-		return false
-	}
+// Execute adds all child commands to the root command IvyCmd and sets flags appropriately.
+func Execute() {
+	AddCommands()
 
-	return true
+	if _, err := IvyCmd.ExecuteC(); err != nil {
+		os.Exit(0)
+	}
+}
+
+// AddCommands adds child commands to the root command IvyCmd.
+func AddCommands() {
+	IvyCmd.AddCommand(cmdLockWithPublicKey)
+	IvyCmd.AddCommand(cmdLockWithMultiSig)
+	IvyCmd.AddCommand(cmdLockWithPublicKeyHash)
+	IvyCmd.AddCommand(cmdRevealPreimage)
+	IvyCmd.AddCommand(cmdTradeOffer)
+	IvyCmd.AddCommand(cmdEscrow)
+	IvyCmd.AddCommand(cmdLoanCollateral)
+	IvyCmd.AddCommand(cmdCallOption)
+}
+
+var cmdLockWithPublicKey = &cobra.Command{
+	Use:   "LockWithPublicKey <pubkey>",
+	Short: "create a new contract for LockWithPublicKey",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		pubkeyStr := args[0]
+		if len(pubkeyStr) != 64 {
+			fmt.Printf("the length of byte pubkey[%d] is not equal 64\n", len(pubkeyStr))
+			os.Exit(0)
+		}
+
+		pubkey, _ := hex.DecodeString(pubkeyStr)
+		contractProgram, err := instance.PayToLockWithPublicKey(pubkey)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		//check the program
+		if _, err := instance.ParsePayToLockWithPublicKey(contractProgram); err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		fmt.Printf("The Result ControlProgram:\n%s\n", hex.EncodeToString(contractProgram))
+	},
+}
+
+var cmdLockWithMultiSig = &cobra.Command{
+	Use:   "LockWithMultiSig [pubkey1] [pubkey2] [pubkey3]",
+	Short: "create a new contract for LockWithMultiSig",
+	Args:  cobra.ExactArgs(3),
+	Run: func(cmd *cobra.Command, args []string) {
+		pubkeyStr1 := args[0]
+		pubkeyStr2 := args[1]
+		pubkeyStr3 := args[2]
+		if len(pubkeyStr1) != 64 || len(pubkeyStr2) != 64 || len(pubkeyStr3) != 64 {
+			fmt.Printf("the length of byte pubkey1[%d] or pubkey2[%d] or pubkey3[%d] is not equal 64\n",
+				len(pubkeyStr1), len(pubkeyStr2), len(pubkeyStr3))
+			os.Exit(0)
+		}
+
+		pubkey1, _ := hex.DecodeString(pubkeyStr1)
+		pubkey2, _ := hex.DecodeString(pubkeyStr2)
+		pubkey3, _ := hex.DecodeString(pubkeyStr3)
+		contractProgram, err := instance.PayToLockWithMultiSig(pubkey1, pubkey2, pubkey3)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		//check the program
+		if _, err := instance.ParsePayToLockWithMultiSig(contractProgram); err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		fmt.Printf("The Result ControlProgram:\n%s\n", hex.EncodeToString(contractProgram))
+	},
+}
+
+var cmdLockWithPublicKeyHash = &cobra.Command{
+	Use:   "LockWithPublicKeyHash <pubkeyHash>",
+	Short: "create a new contract for LockWithPublicKeyHash",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		pubkeyHashStr := args[0]
+		if len(pubkeyHashStr) != 64 {
+			fmt.Printf("the length of byte pubkeyHash[%d] is not equal 64\n", len(pubkeyHashStr))
+			os.Exit(0)
+		}
+
+		pubkeyHash, _ := hex.DecodeString(pubkeyHashStr)
+		contractProgram, err := instance.PayToLockWithPublicKeyHash(pubkeyHash)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		//check the program
+		if _, err := instance.ParsePayToLockWithPublicKeyHash(contractProgram); err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		fmt.Printf("The Result ControlProgram:\n%s\n", hex.EncodeToString(contractProgram))
+	},
+}
+
+var cmdRevealPreimage = &cobra.Command{
+	Use:   "RevealPreimage <valueHash>",
+	Short: "create a new contract for RevealPreimage",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		valueHashStr := args[0]
+		if len(valueHashStr) != 64 {
+			fmt.Printf("the length of byte valueHash[%d] is not equal 64\n", len(valueHashStr))
+			os.Exit(0)
+		}
+
+		valueHash, _ := hex.DecodeString(valueHashStr)
+		contractProgram, err := instance.PayToRevealPreimage(valueHash)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		//check the program
+		if _, err := instance.ParsePayToRevealPreimage(contractProgram); err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		fmt.Printf("The Result ControlProgram:\n%s\n", hex.EncodeToString(contractProgram))
+	},
+}
+
+var cmdTradeOffer = &cobra.Command{
+	Use:   "TradeOffer [assetID] [amount] [seller] [pubkey]",
+	Short: "create a new contract for TradeOffer",
+	Args:  cobra.ExactArgs(4),
+	Run: func(cmd *cobra.Command, args []string) {
+		assetStr := args[0]
+		amountStr := args[1]
+		sellerStr := args[2]
+		pubkeyStr := args[3]
+		if len(assetStr) != 64 || len(pubkeyStr) != 64 {
+			fmt.Printf("the length of byte assetID[%d] or pubkey[%d] is not equal 64\n", len(assetStr), len(pubkeyStr))
+			os.Exit(0)
+		}
+
+		assetByte, _ := hex.DecodeString(assetStr)
+		var b [32]byte
+		copy(b[:], assetByte[:32])
+		assetID := bc.NewAssetID(b)
+
+		amount, err := strconv.ParseUint(amountStr, 10, 64)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		seller, err := hex.DecodeString(sellerStr)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		pubkey, _ := hex.DecodeString(pubkeyStr)
+
+		contractProgram, err := instance.PayToTradeOffer(assetID, amount, seller, pubkey)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		//check the program
+		if _, err := instance.ParsePayToTradeOffer(contractProgram); err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		fmt.Printf("The Result ControlProgram:\n%s\n", hex.EncodeToString(contractProgram))
+	},
+}
+
+var cmdEscrow = &cobra.Command{
+	Use:   "Escrow [pubkey] [sender] [recipient]",
+	Short: "create a new contract for Escrow",
+	Args:  cobra.ExactArgs(3),
+	Run: func(cmd *cobra.Command, args []string) {
+		pubkeyStr := args[0]
+		senderStr := args[1]
+		recipientStr := args[2]
+		if len(pubkeyStr) != 64 {
+			fmt.Printf("the length of byte pubkey[%d] is not equal 64\n", len(pubkeyStr))
+			os.Exit(0)
+		}
+
+		pubkey, _ := hex.DecodeString(pubkeyStr)
+		sender, err := hex.DecodeString(senderStr)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		recipient, err := hex.DecodeString(recipientStr)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		contractProgram, err := instance.PayToEscrow(pubkey, sender, recipient)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		//check the program
+		if _, err := instance.ParsePayToEscrow(contractProgram); err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		fmt.Printf("The Result ControlProgram:\n%s\n", hex.EncodeToString(contractProgram))
+	},
+}
+
+var cmdLoanCollateral = &cobra.Command{
+	Use:   "LoanCollateral [assetID] [amount] [dueTime] [lender] [borrower]",
+	Short: "create a new contract for LoanCollateral",
+	Args:  cobra.ExactArgs(5),
+	Run: func(cmd *cobra.Command, args []string) {
+		assetStr := args[0]
+		amountStr := args[1]
+		dueTimeStr := args[2]
+		lenderStr := args[3]
+		borrowerStr := args[4]
+		if len(assetStr) != 64 {
+			fmt.Printf("the length of byte assetID[%d] is not equal 64\n", len(assetStr))
+			os.Exit(0)
+		}
+
+		assetByte, _ := hex.DecodeString(assetStr)
+		var b [32]byte
+		copy(b[:], assetByte[:32])
+		assetID := bc.NewAssetID(b)
+
+		amount, err := strconv.ParseUint(amountStr, 10, 64)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		dueTimeStr = strings.Replace(dueTimeStr, "*", " ", -1)
+		loc, _ := time.LoadLocation("Local")
+		dueTime, err := time.ParseInLocation(TimeLayout, dueTimeStr, loc)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		lender, err := hex.DecodeString(lenderStr)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		borrower, err := hex.DecodeString(borrowerStr)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		contractProgram, err := instance.PayToLoanCollateral(assetID, amount, dueTime, lender, borrower)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		//check the program
+		if _, err := instance.ParsePayToLoanCollateral(contractProgram); err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		fmt.Printf("The Result ControlProgram:\n%s\n", hex.EncodeToString(contractProgram))
+	},
+}
+
+var cmdCallOption = &cobra.Command{
+	Use:   "CallOption [amountPrice] [assetID] [seller] [buyerPubkey] [deadline]",
+	Short: "create a new contract for CallOption",
+	Args:  cobra.ExactArgs(5),
+	Run: func(cmd *cobra.Command, args []string) {
+		amountPriceStr := args[0]
+		assetStr := args[1]
+		sellerStr := args[2]
+		buyerPubkeyStr := args[3]
+		deadlineStr := args[4]
+		if len(assetStr) != 64 || len(buyerPubkeyStr) != 64 {
+			fmt.Printf("the length of byte assetID[%d] or buyerPubkey[%d] is not equal 64\n", len(assetStr), len(buyerPubkeyStr))
+			os.Exit(0)
+		}
+
+		amountPrice, err := strconv.ParseUint(amountPriceStr, 10, 64)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		assetByte, _ := hex.DecodeString(assetStr)
+		var b [32]byte
+		copy(b[:], assetByte[:32])
+		assetID := bc.NewAssetID(b)
+
+		seller, err := hex.DecodeString(sellerStr)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		buyerPubkey, _ := hex.DecodeString(buyerPubkeyStr)
+
+		deadlineStr = strings.Replace(deadlineStr, "*", " ", -1)
+		loc, _ := time.LoadLocation("Local")
+		deadline, err := time.ParseInLocation(TimeLayout, deadlineStr, loc)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		contractProgram, err := instance.PayToCallOption(amountPrice, assetID, seller, buyerPubkey, deadline)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		//check the program
+		if _, err := instance.ParsePayToCallOption(contractProgram); err != nil {
+			fmt.Println(err)
+			os.Exit(0)
+		}
+
+		fmt.Printf("The Result ControlProgram:\n%s\n", hex.EncodeToString(contractProgram))
+	},
 }
