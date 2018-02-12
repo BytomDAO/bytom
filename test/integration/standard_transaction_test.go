@@ -143,12 +143,12 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpub1, err := hsm.XCreate("test_pub1", "password1")
+	xpub1, err := hsm.XCreate("test_pub_x1", "password1")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	xpub2, err := hsm.XCreate("test_pub2", "password2")
+	xpub2, err := hsm.XCreate("test_pub2_x2", "password2")
 	if err != nil {
 		t.Fatal(err)
 	}
