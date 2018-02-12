@@ -63,6 +63,7 @@ func TestBrickP2PKH(t *testing.T) {
 	}
 
 	tx.Outputs = append(tx.Outputs, test.MockRetire())
+	tx.Outputs = append(tx.Outputs, test.MockOutput())
 	if _, _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
@@ -121,6 +122,7 @@ func TestBrickP2SH(t *testing.T) {
 	}
 
 	tx.Outputs = append(tx.Outputs, test.MockRetire())
+	tx.Outputs = append(tx.Outputs, test.MockOutput())
 	if _, _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
