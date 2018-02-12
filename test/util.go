@@ -57,9 +57,16 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 
 	b := txbuilder.NewBuilder(time.Now())
 	b.AddInput(txInput, sigInst)
-	out := legacy.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)}, nil)
-	b.AddOutput(out)
+	b.AddOutput(MockOutput())
 	return b.Build()
+}
+
+func MockRetire() *legacy.TxOutput {
+	return legacy.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)}, nil)
+}
+
+func MockOutput() *legacy.TxOutput {
+	return legacy.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_TRUE)}, nil)
 }
 
 func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM, password string) (bool, error) {
