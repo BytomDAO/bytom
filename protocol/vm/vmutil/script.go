@@ -60,14 +60,19 @@ func P2WSHProgram(hash []byte) ([]byte, error) {
 
 // P2PKHSigProgram generates the script for control with pubkey hash
 func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
-	builder := NewBuilder()
-	builder.AddOp(vm.OP_DUP)
-	builder.AddOp(vm.OP_HASH160)
-	builder.AddData(pubkeyHash)
-	builder.AddOp(vm.OP_EQUALVERIFY)
-	builder.AddOp(vm.OP_TXSIGHASH)
-	builder.AddOp(vm.OP_SWAP)
-	builder.AddOp(vm.OP_CHECKSIG)
+	builder := NewBuilder()                           // stack is now [SIG PREDICATE PUB]
+	builder.AddOp(vm.OP_DUP)                          // stack is now [SIG PREDICATE PUB PUB]
+	builder.AddOp(vm.OP_HASH160)                      // stack is now [SIG PREDICATE PUB PUBHASH]
+	builder.AddData(pubkeyHash)                       // stack is now [SIG PREDICATE PUB PUBHASH HASH]
+	builder.AddOp(vm.OP_EQUALVERIFY)                  // stack is now [SIG PREDICATE PUB]
+	builder.AddOp(vm.OP_SWAP)                         // stack is now [SIG PUB PREDICATE]
+	builder.AddOp(vm.OP_DUP).AddOp(vm.OP_TOALTSTACK)  // stash a copy of the predicate
+	builder.AddOp(vm.OP_SHA3)                         // stack is now [SIG PUB PREDICATEHASH]
+	builder.AddOp(vm.OP_SWAP)                         // stack is now [SIG PREDICATEHASH PUB]
+	builder.AddOp(vm.OP_CHECKSIG).AddOp(vm.OP_VERIFY) // stack is now [NARGS]
+	builder.AddOp(vm.OP_FROMALTSTACK)                 // stack is now [NARGS, PREDICATE]
+	builder.AddInt64(0)                               // stack is now [NARGS, PREDICATE,0]
+	builder.AddOp(vm.OP_CHECKPREDICATE)
 	return builder.Build()
 }
 

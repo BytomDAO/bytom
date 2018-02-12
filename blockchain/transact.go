@@ -144,9 +144,6 @@ func (bcr *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.T
 		return nil, errors.Wrap(txbuilder.ErrMissingRawTx)
 	}
 
-	if err := txbuilder.MaterializeWitnesses(tpl); err != nil {
-		return nil, err
-	}
 	if err := txbuilder.FinalizeTx(ctx, bcr.chain, tpl.Transaction); err != nil {
 		return nil, errors.Wrapf(err, "tx %s", tpl.Transaction.ID.String())
 	}
