@@ -93,4 +93,4 @@ test:
 benchmark:
 	go test -bench $(PACKAGES)
 
-.PHONY: test release-all test benchmark
+.PHONY: all target release-all clean test benchmark
