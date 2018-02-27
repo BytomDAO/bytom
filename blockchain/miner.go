@@ -19,10 +19,20 @@ func (bcr *BlockchainReactor) getWork() *WorkResp {
 }
 
 // Submit work for mining
-func (bcr *BlockchainReactor) submitWork(header legacy.BlockHeader) Response {
+func (bcr *BlockchainReactor) submitWork(header legacy.BlockHeader) bool {
 	log.Infof("mining:---submitWork header:%v", header)
 	bcr.mining.NotifySpawnBlock(header)
-	return NewSuccessResponse(nil)
+	for ;; {
+		if legacyBlock, err := bcr.chain.GetBlockByHeight(header.Height); err != nil {
+			continue;
+		} else {
+			if legacyBlock.Nonce != header.Nonce {
+				return false
+			}
+			return true
+		}
+	}
+	return true
 }
 
 type WorkResp struct {
