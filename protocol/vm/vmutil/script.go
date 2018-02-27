@@ -22,16 +22,13 @@ func (b *Builder) addP2SPMultiSig(pubkeys []ed25519.PublicKey, nrequired int) er
 		return err
 	}
 
-	b.AddOp(vm.OP_DUP).AddOp(vm.OP_TOALTSTACK) // stash a copy of the predicate
-	b.AddOp(vm.OP_SHA3)                        // stack is now [... NARGS SIG SIG SIG PREDICATEHASH]
+	b.AddOp(vm.OP_TXSIGHASH) // stack is now [... NARGS SIG SIG SIG PREDICATEHASH]
 	for _, p := range pubkeys {
 		b.AddData(p)
 	}
-	b.AddInt64(int64(nrequired))                     // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M]
-	b.AddInt64(int64(len(pubkeys)))                  // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M N]
-	b.AddOp(vm.OP_CHECKMULTISIG).AddOp(vm.OP_VERIFY) // stack is now [... NARGS]
-	b.AddOp(vm.OP_FROMALTSTACK)                      // stack is now [... NARGS PREDICATE]
-	b.AddInt64(0).AddOp(vm.OP_CHECKPREDICATE)
+	b.AddInt64(int64(nrequired))    // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M]
+	b.AddInt64(int64(len(pubkeys))) // stack is now [... SIG SIG SIG PREDICATEHASH PUB PUB PUB M N]
+	b.AddOp(vm.OP_CHECKMULTISIG)    // stack is now [... NARGS]
 	return nil
 }
 
