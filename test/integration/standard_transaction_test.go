@@ -17,7 +17,7 @@ import (
 )
 
 func TestP2PKH(t *testing.T) {
-	dirPath, err := ioutil.TempDir(".", "")
+	dirPath, err := ioutil.TempDir(".", "TestP2PKH")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestP2PKH(t *testing.T) {
 }
 
 func TestP2SH(t *testing.T) {
-	dirPath, err := ioutil.TempDir(".", "")
+	dirPath, err := ioutil.TempDir(".", "TestP2SH")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestP2SH(t *testing.T) {
 }
 
 func TestMutilNodeSign(t *testing.T) {
-	dirPath, err := ioutil.TempDir(".", "")
+	dirPath, err := ioutil.TempDir(".", "TestMutilNodeSign")
 	if err != nil {
 		t.Fatal(err)
 	}
