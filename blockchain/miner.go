@@ -22,9 +22,9 @@ func (bcr *BlockchainReactor) getWork() *WorkResp {
 func (bcr *BlockchainReactor) submitWork(header legacy.BlockHeader) bool {
 	log.Infof("mining:---submitWork header:%v", header)
 	bcr.mining.NotifySpawnBlock(header)
-	for ;; {
+	for {
 		if legacyBlock, err := bcr.chain.GetBlockByHeight(header.Height); err != nil {
-			continue;
+			continue
 		} else {
 			if legacyBlock.Nonce != header.Nonce {
 				return false
