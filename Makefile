@@ -69,7 +69,7 @@ multi_platform:
 
 test:
 	@echo "====> Running go test"
-	@go test $(PACKAGES)
+	@go test -tags "network" $(PACKAGES)
 
 benchmark:
 	go test -bench $(PACKAGES)
