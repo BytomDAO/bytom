@@ -1,3 +1,5 @@
+// +build !network
+
 package p2p
 
 import (
