@@ -1,17 +1,20 @@
 package tensority
 
 import (
-	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/scrypt"
+	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 )
 
 func calcSeed(blockHashs []*bc.Hash) []byte {
-	date := []byte{}
+	data := []byte{}
 	for _, blockHash := range blockHashs {
-		date = append(date, blockHash.Bytes()...)
+		data = append(data, blockHash.Bytes()...)
 	}
-	return crypto.Sha256(date)
+	var s [32]byte
+	sha3pool.Sum256(s[:], data)
+	return s[:]
+	// return crypto.Sha256(data)
 }
 
 // TODO: clean the code, now it's hard to read
@@ -20,7 +23,9 @@ func extendBytes(seed []byte, round int) []byte {
 	copy(extSeed, seed)
 
 	for i := 0; i < round; i++ {
-		h := crypto.Sha256(extSeed[i*32 : (i+1)*32])
+		// h := crypto.Sha256(extSeed[i*32 : (i+1)*32])
+		var h [32]byte
+		sha3pool.Sum256(h[:], extSeed[i*32:(i+1)*32])
 		copy(extSeed[(i+1)*32:(i+2)*32], h[:])
 	}
 

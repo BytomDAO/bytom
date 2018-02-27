@@ -18,24 +18,24 @@ const (
 )
 
 func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
-	data := make([]uint32, matNum*matSize*matSize)
+	ui32data := make([]uint32, matNum*matSize*matSize)
 	for i := 0; i < 128; i++ {
 		start := i * 1024 * 32
 		for j := 0; j < 512; j++ {
-			copy(data[start+j*32:start+j*32+32], cache[start+j*64:start+j*64+32])
-			copy(data[start+512*32+j*32:start+512*32+j*32+32], cache[start+j*64+32:start+j*64+64])
+			copy(ui32data[start+j*32:start+j*32+32], cache[start+j*64:start+j*64+32])
+			copy(ui32data[start+512*32+j*32:start+512*32+j*32+32], cache[start+j*64+32:start+j*64+64])
 		}
 	}
 
 	// Convert our destination slice to a byte buffer
-	header := *(*reflect.SliceHeader)(unsafe.Pointer(&data))
+	header := *(*reflect.SliceHeader)(unsafe.Pointer(&ui32data))
 	header.Len *= 4
 	header.Cap *= 4
-	dataInt8 := *(*[]int8)(unsafe.Pointer(&header))
+	i8data := *(*[]int8)(unsafe.Pointer(&header))
 
-	dataFloat64 := make([]float64, matNum*matSize*matSize)
-	for i := 0; i < len(dataInt8); i++ {
-		dataFloat64[i] = float64(dataInt8[i])
+	f64data := make([]float64, matNum*matSize*matSize)
+	for i := 0; i < matNum*matSize*matSize; i++ {
+		f64data[i] = float64(i8data[i])
 	}
 
 	tmp := mat.NewDense(matSize, matSize, make([]float64, matSize*matSize))
@@ -54,7 +54,7 @@ func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
 		for j := 0; j < 2; j++ {
 			for k := 0; k < 32; k++ {
 				index := int(sequence[k])
-				mb := mat.NewDense(matSize, matSize, dataFloat64[index*matSize*matSize:(index+1)*matSize*matSize])
+				mb := mat.NewDense(matSize, matSize, f64data[index*matSize*matSize:(index+1)*matSize*matSize])
 				mc.Mul(ma, mb)
 				for row := 0; row < matSize; row++ {
 					for col := 0; col < matSize; col++ {
@@ -116,13 +116,13 @@ func hashMatrix(result []uint8) *bc.Hash {
 		}
 	}
 
-	data := make([]uint32, 0)
+	ui32data := make([]uint32, 0)
 	for i := 0; i < matSize/4; i++ {
-		data = append(data, mat32[0][i])
+		ui32data = append(ui32data, mat32[0][i])
 	}
 
 	// Convert our destination slice to a byte buffer
-	header := *(*reflect.SliceHeader)(unsafe.Pointer(&data))
+	header := *(*reflect.SliceHeader)(unsafe.Pointer(&ui32data))
 	header.Len *= 4
 	header.Cap *= 4
 	dataBytes := *(*[]byte)(unsafe.Pointer(&header))
