@@ -79,6 +79,9 @@ func TestWalletUpdate(t *testing.T) {
 
 	block := mockSingleBlock(tx)
 
+	txStatus := bc.NewTransactionStatus()
+	store.SaveBlock(block, txStatus)
+
 	err = w.attachBlock(block)
 	if err != nil {
 		t.Fatal(err)

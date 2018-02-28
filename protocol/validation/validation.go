@@ -92,6 +92,7 @@ var (
 	errMismatchedMerkleRoot     = errors.New("mismatched merkle root")
 	errMismatchedPosition       = errors.New("mismatched value source/dest positions")
 	errMismatchedReference      = errors.New("mismatched reference")
+	errMismatchedTxStatus       = errors.New("mismatched transaction status")
 	errMismatchedValue          = errors.New("mismatched value")
 	errMisorderedBlockHeight    = errors.New("misordered block height")
 	errMisorderedBlockTime      = errors.New("misordered block time")
@@ -541,6 +542,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 		return errWorkProof
 	}
 
+	b.TransactionStatus = bc.NewTransactionStatus()
 	coinbaseValue := consensus.BlockSubsidy(b.BlockHeader.Height)
 	for i, tx := range b.Transactions {
 		if b.Version == 1 && tx.Version != 1 {
@@ -557,9 +559,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 			}
 			gasOnlyTx = true
 		}
-		if status, err := b.TransactionStatus.GetStatus(i); err != nil || status != gasOnlyTx {
-			return errWrongTransactionStatus
-		}
+		b.TransactionStatus.SetStatus(i, gasOnlyTx)
 		coinbaseValue += txBTMValue
 	}
 
@@ -577,6 +577,9 @@ func ValidateBlock(b, prev *bc.Block) error {
 		return errors.WithDetailf(errMismatchedMerkleRoot, "computed %x, current block wants %x", txRoot.Bytes(), b.TransactionsRoot.Bytes())
 	}
 
+	if bc.EntryID(b.TransactionStatus) != *b.TransactionStatusHash {
+		return errMismatchedTxStatus
+	}
 	return nil
 }
 

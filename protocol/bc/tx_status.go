@@ -21,6 +21,14 @@ func NewTransactionStatus() *TransactionStatus {
 	}
 }
 
+func (TransactionStatus) typ() string {
+	return "transaction_status"
+}
+
+func (ts *TransactionStatus) writeForHash(w io.Writer) {
+	mustWriteForHash(w, ts.Bitmap)
+}
+
 func (ts *TransactionStatus) SetStatus(i int, gasOnly bool) error {
 	if i >= maxBitmapSize {
 		return errOverRange

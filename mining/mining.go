@@ -61,6 +61,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 // NewBlockTemplate returns a new block template that is ready to be solved
 func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (b *legacy.Block, err error) {
 	view := state.NewUtxoViewpoint()
+	txStatus := bc.NewTransactionStatus()
 	txEntries := []*bc.Tx{nil}
 	blockWeight := uint64(0)
 	txFee := uint64(0)
@@ -81,7 +82,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			Height:            nextBlockHeight,
 			PreviousBlockHash: preBlock.Hash(),
 			Timestamp:         uint64(time.Now().Unix()),
-			TransactionStatus: *bc.NewTransactionStatus(),
 			BlockCommitment:   legacy.BlockCommitment{},
 			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
 		},
@@ -119,7 +119,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			continue
 		}
 
-		b.BlockHeader.TransactionStatus.SetStatus(len(b.Transactions), gasOnlyTx)
+		txStatus.SetStatus(len(b.Transactions), gasOnlyTx)
 		b.Transactions = append(b.Transactions, txDesc.Tx)
 		txEntries = append(txEntries, tx)
 		blockWeight += txDesc.Weight
@@ -134,5 +134,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	txEntries[0] = b.Transactions[0].Tx
 
 	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = bc.MerkleRoot(txEntries)
+	b.BlockHeader.BlockCommitment.TransactionStatusHash = bc.EntryID(txStatus)
 	return b, err
 }

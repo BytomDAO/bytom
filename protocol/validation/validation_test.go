@@ -455,6 +455,9 @@ func TestValidateBlock(t *testing.T) {
 		}
 		c.block.BlockHeader.TransactionStatus = bc.NewTransactionStatus()
 		c.block.TransactionsRoot = &txRoot
+		txStatus := bc.NewTransactionStatus()
+		txStatusHash := bc.EntryID(txStatus)
+		c.block.TransactionStatusHash = &txStatusHash
 
 		if err = ValidateBlock(c.block, nil); rootErr(err) != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)
@@ -520,7 +523,7 @@ func TestCoinbase(t *testing.T) {
 }
 
 func TestBlockHeaderValid(t *testing.T) {
-	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, nil, 0, 0)
+	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
 	baseBytes, _ := proto.Marshal(base)
 
 	var bh bc.BlockHeader

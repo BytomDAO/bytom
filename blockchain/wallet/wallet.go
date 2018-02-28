@@ -148,9 +148,15 @@ func (w *Wallet) attachBlock(block *legacy.Block) error {
 		return nil
 	}
 
+	blockHash := block.Hash()
+	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
+	if err != nil {
+		return err
+	}
+
 	storeBatch := w.DB.NewBatch()
-	w.indexTransactions(storeBatch, block)
-	w.buildAccountUTXOs(storeBatch, block)
+	w.indexTransactions(storeBatch, block, txStatus)
+	w.buildAccountUTXOs(storeBatch, block, txStatus)
 
 	w.status.WorkHeight = block.Height
 	w.status.WorkHash = block.Hash()
@@ -162,8 +168,14 @@ func (w *Wallet) attachBlock(block *legacy.Block) error {
 }
 
 func (w *Wallet) detachBlock(block *legacy.Block) error {
+	blockHash := block.Hash()
+	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
+	if err != nil {
+		return err
+	}
+
 	storeBatch := w.DB.NewBatch()
-	w.reverseAccountUTXOs(storeBatch, block)
+	w.reverseAccountUTXOs(storeBatch, block, txStatus)
 	w.deleteTransactions(storeBatch, w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1
