@@ -197,7 +197,7 @@ func (c *Chain) InMainChain(height uint64, hash bc.Hash) bool {
 	return *h == hash
 }
 
-// TimestampMS returns the latest known block timestamp.
+// Timestamp returns the latest known block timestamp.
 func (c *Chain) Timestamp() uint64 {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()

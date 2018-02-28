@@ -109,7 +109,6 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 	if _, err = bh.PreviousBlockHash.WriteTo(w); err != nil {
 		return err
 	}
-
 	if _, err = blockchain.WriteVarint63(w, bh.Timestamp); err != nil {
 		return err
 	}

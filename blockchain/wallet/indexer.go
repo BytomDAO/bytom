@@ -160,6 +160,7 @@ func saveExternalAssetDefinition(b *legacy.Block, walletDB db.DB) {
 	}
 }
 
+// Summary is ....
 type Summary struct {
 	Type         string             `json:"type"`
 	AssetID      bc.AssetID         `json:"asset_id,omitempty"`
@@ -170,6 +171,7 @@ type Summary struct {
 	Arbitrary    chainjson.HexBytes `json:"arbitrary,omitempty"`
 }
 
+// TxSummary is ....
 type TxSummary struct {
 	ID        bc.Hash   `json:"id"`
 	Timestamp time.Time `json:"timestamp"`
@@ -199,8 +201,6 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *legacy.Block, txStatus *bc
 
 //buildAccountUTXOs process valid blocks to build account unspent outputs db
 func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *bc.TransactionStatus) {
-	var err error
-
 	//handle spent UTXOs
 	delOutputIDs := prevoutDBKeys(b, txStatus)
 	for _, delOutputID := range delOutputIDs {
@@ -240,7 +240,7 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *bc
 	}
 	accOuts := loadAccountInfo(outs, w)
 
-	if err = upsertConfirmedAccountOutputs(accOuts, batch); err != nil {
+	if err := upsertConfirmedAccountOutputs(accOuts, batch); err != nil {
 		log.WithField("err", err).Error("building new account outputs")
 		return
 	}

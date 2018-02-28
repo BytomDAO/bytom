@@ -1,14 +1,13 @@
 package protocol
 
 import (
-	"blockchain/protocol/validation"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
+	"github.com/bytom/protocol/validation"
 )
 
 var (

@@ -447,6 +447,9 @@ func TestValidateBlock(t *testing.T) {
 		},
 	}
 
+	txStatus := bc.NewTransactionStatus()
+	txStatusHash := bc.EntryID(txStatus)
+
 	for _, c := range cases {
 		txRoot, err := bc.MerkleRoot(c.block.Transactions)
 		if err != nil {
@@ -455,8 +458,6 @@ func TestValidateBlock(t *testing.T) {
 		}
 		c.block.BlockHeader.TransactionStatus = bc.NewTransactionStatus()
 		c.block.TransactionsRoot = &txRoot
-		txStatus := bc.NewTransactionStatus()
-		txStatusHash := bc.EntryID(txStatus)
 		c.block.TransactionStatusHash = &txStatusHash
 
 		if err = ValidateBlock(c.block, nil); rootErr(err) != c.err {

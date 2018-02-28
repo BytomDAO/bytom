@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	blockStoreKey       = []byte("blockStore")
-	transationStatusKey = []byte("transactionStatus")
+	blockStoreKey  = []byte("blockStore")
+	txStatusPrefix = []byte("txStatus:")
 )
 
 // BlockStoreStateJSON represents the core's db status
@@ -61,7 +61,7 @@ func calcBlockKey(hash *bc.Hash) []byte {
 }
 
 func calcTxStatusKey(hash *bc.Hash) []byte {
-	return append(transationStatusKey, hash.Bytes()...)
+	return append(txStatusPrefix, hash.Bytes()...)
 }
 
 // GetBlock return the block by given hash
@@ -103,6 +103,11 @@ func (s *Store) GetBlock(hash *bc.Hash) (*legacy.Block, error) {
 	return s.cache.lookup(hash)
 }
 
+// GetTransactionsUtxo will return all the utxo that related to the input txs
+func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
+	return getTransactionsUtxo(s.db, view, txs)
+}
+
 // GetTransactionStatus will return the utxo that related to the block hash
 func (s *Store) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
 	data := s.db.Get(calcTxStatusKey(hash))
@@ -115,11 +120,6 @@ func (s *Store) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, erro
 		return nil, errors.Wrap(err, "unmarshaling transaction status")
 	}
 	return ts, nil
-}
-
-// GetTransactionsUtxo will return all the utxo that related to the input txs
-func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
-	return getTransactionsUtxo(s.db, view, txs)
 }
 
 // GetStoreStatus return the BlockStoreStateJSON
@@ -136,12 +136,12 @@ func (s *Store) GetMainchain(hash *bc.Hash) (map[uint64]*bc.Hash, error) {
 func (s *Store) SaveBlock(block *legacy.Block, ts *bc.TransactionStatus) error {
 	binaryBlock, err := block.MarshalText()
 	if err != nil {
-		common.PanicCrisis(common.Fmt("Error Marshal block meta: %v", err))
+		return errors.Wrap(err, "Marshal block meta")
 	}
 
 	binaryTxStatus, err := proto.Marshal(ts)
 	if err != nil {
-		common.PanicCrisis(common.Fmt("Error Marshal block transaction status: %v", err))
+		return errors.Wrap(err, "marshal block transaction status")
 	}
 
 	blockHash := block.Hash()
