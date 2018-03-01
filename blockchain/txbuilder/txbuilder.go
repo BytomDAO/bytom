@@ -15,6 +15,7 @@ import (
 	"github.com/bytom/protocol/bc/legacy"
 )
 
+// errors
 var (
 	ErrBadRefData          = errors.New("transaction reference data does not match previous template's reference data")
 	ErrBadTxInputIdx       = errors.New("unsigned tx missing input")
@@ -70,7 +71,8 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 	return tpl, nil
 }
 
-func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth []string, signFn SignFunc) error {
+// Sign will try to sign all the witness
+func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
 	for i, sigInst := range tpl.SigningInstructions {
 		for j, wc := range sigInst.WitnessComponents {
 			switch sw := wc.(type) {
@@ -87,7 +89,7 @@ func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth []strin
 			}
 		}
 	}
-	return materializeWitnesses(tpl)
+	return nil
 }
 
 func checkBlankCheck(tx *legacy.TxData) error {

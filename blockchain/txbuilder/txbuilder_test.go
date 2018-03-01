@@ -169,7 +169,7 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 			},
 		},
 	}}
-	err = materializeWitnesses(tpl)
+	err = MaterializeWitnesses(tpl)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -181,7 +181,7 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 	// Test with exact amount of signatures required, in correct order
 	component := tpl.SigningInstructions[0].WitnessComponents[0].(*SignatureWitness)
 	component.Sigs = []json.HexBytes{sig1, sig2}
-	err = materializeWitnesses(tpl)
+	err = MaterializeWitnesses(tpl)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
