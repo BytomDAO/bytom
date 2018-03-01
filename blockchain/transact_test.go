@@ -70,7 +70,7 @@ func TestMergeActions(t *testing.T) {
 			m["amount"] = json.Number(fmt.Sprintf("%v", amount))
 		}
 
-		actions := MergeActions(BuildReq)
+		actions := mergeActions(BuildReq)
 
 		if len(actions) != c.actionCount {
 			t.Fatalf("got error count %d, want %d", len(actions), c.actionCount)
