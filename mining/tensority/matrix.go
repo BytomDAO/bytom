@@ -18,7 +18,7 @@ const (
 )
 
 func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
-	ui32data := make([]uint32, matNum*matSize*matSize)
+	ui32data := make([]uint32, matNum*matSize*matSize/4)
 	for i := 0; i < 128; i++ {
 		start := i * 1024 * 32
 		for j := 0; j < 512; j++ {
@@ -27,7 +27,7 @@ func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
 		}
 	}
 
-	// Convert our destination slice to a byte buffer
+	// Convert our destination slice to a int8 buffer
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&ui32data))
 	header.Len *= 4
 	header.Cap *= 4
@@ -45,7 +45,7 @@ func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
 		for i := 0; i < 256; i++ {
 			dataIdentity[i*257] = float64(1)
 		}
-		ma := mat.NewDense(matSize, matSize, dataIdentity[:])
+		ma := mat.NewDense(matSize, matSize, dataIdentity)
 		mc := mat.NewDense(matSize, matSize, make([]float64, matSize*matSize))
 
 		var sequence [32]byte
@@ -55,7 +55,7 @@ func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
 			for k := 0; k < 32; k++ {
 				index := int(sequence[k])
 				mb := mat.NewDense(matSize, matSize, f64data[index*matSize*matSize:(index+1)*matSize*matSize])
-				mc.Mul(ma, mb)
+				mc.Mul(ma, mb.T())
 				for row := 0; row < matSize; row++ {
 					for col := 0; col < matSize; col++ {
 						i32v := int32(mc.At(row, col))
