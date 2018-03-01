@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -15,6 +16,7 @@ func main() {
 
 	var b32 [32]byte
 	seed128 := extendBytes(b32[:], 3)
+	swap(seed128)
 	hash := bc.NewHash(b32)
 	seed := bc.NewHash(b32)
 
@@ -46,11 +48,17 @@ func extendBytes(seed []byte, round int) []byte {
 	copy(extSeed, seed)
 
 	for i := 0; i < round; i++ {
-		// h := crypto.Sha256(extSeed[i*32 : (i+1)*32])
 		var h [32]byte
 		sha3pool.Sum256(h[:], extSeed[i*32:(i+1)*32])
 		copy(extSeed[(i+1)*32:(i+2)*32], h[:])
 	}
 
 	return extSeed
+}
+
+// swap changes the byte order of the buffer assuming a uint32 representation.
+func swap(buffer []byte) {
+	for i := 0; i < len(buffer); i += 4 {
+		binary.BigEndian.PutUint32(buffer[i:], binary.LittleEndian.Uint32(buffer[i:]))
+	}
 }
