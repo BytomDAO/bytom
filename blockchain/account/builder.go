@@ -160,7 +160,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte) (*legacy.TxIn
 		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
 
 	case *common.AddressWitnessScriptHash:
-		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
+		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
 		path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
 		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
