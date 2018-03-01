@@ -11,8 +11,8 @@ import (
 	"github.com/bytom/exp/ivy/compiler"
 )
 
-// the directory (combined with GOPATH) to store compiled ivy contract file
 const (
+	// GenerateIvyPath is the directory (need to combine with GOPATH) for store generated contract instance
 	GenerateIvyPath string = "/src/github.com/bytom/exp/ivy/instance/"
 )
 
@@ -61,7 +61,6 @@ func main() {
 	}
 
 	header := new(bytes.Buffer)
-	//fmt.Fprintf(header,"package %s\n\n", *packageName)
 	fmt.Fprintf(header, "package instance\n\n")
 
 	imports := map[string]bool{
@@ -218,9 +217,7 @@ func main() {
 
 	//get the Environment variables of GOPATH
 	gopath := os.Getenv("GOPATH")
-	fmt.Println("GOPATH:", gopath)
 	path := gopath + GenerateIvyPath
-	fmt.Println("instance path:", path)
 
 	//if the directory is not exist, create it
 	_, err = os.Stat(path)

@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"unicode"
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
-	"unicode"
 )
 
 // ValueInfo describes how a blockchain value is used in a contract
@@ -67,10 +67,9 @@ func Compile(r io.Reader) ([]*Contract, error) {
 		globalEnv.add(b.name, nilType, roleBuiltin)
 	}
 
-	// If the inheritance of the contract struct is not empty, should be add the clause of contract
+	// If the Inheritance in the struct of Contract is not empty, should be add the inheritance's clause into current contract
 	for _, contract := range contracts {
-		err := addInheritClause(contract, contracts)
-		if err != nil {
+		if err = addInheritClause(contract, contracts); err != nil {
 			return nil, err
 		}
 	}
@@ -344,8 +343,8 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	for _, s := range clause.statements {
 		s.countVarRefs(counts)
 
-		//Statistic the number of add(+) signs
-		var count int
+		// Statistic the number of add(+) signs for lockStatement
+		count := 0
 		switch stmt := s.(type) {
 		case *lockStatement:
 			lockedValue := []byte(stmt.locked.String())
@@ -386,13 +385,13 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 			// like "lock x+y with foo" (?) , this suggestion has been adopted and modified
 			var lockArr []string
 			lockedValue := []byte(stmt.locked.String())
-			fmt.Println("locked string:", stmt.locked.String())
 
-			//If the string contains parentheses "()", the locked value are the complex expressions,
-			//But Only the plus(x+y) expression is supported currently.
-			//the plus(+) expression means a connection with them in this place.
+			// If the string contains parentheses "()", the locked value are the complex expressions,
+			// because the add(+) is binaryExpr, the result of parse add(+) expression is (x + y).
+			// But Only the add(x+y) expression is supported currently,
+			// the add(+) expression means a connection with them in this place.
 			if lockedValue[0] == '(' && lockedValue[len(lockedValue)-1] == ')' {
-				//Remove the parentheses character and the space character
+				// Remove the parentheses character and the space character
 				var lockVal []byte
 				for i := 1; i < len(lockedValue)-1; i++ {
 					if unicode.IsSpace(rune(lockedValue[i])) || lockedValue[i] == '(' || lockedValue[i] == ')' {
@@ -401,20 +400,19 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 					lockVal = append(lockVal, lockedValue[i])
 				}
 
-				var pos int
+				pos := 0
 				for i := 0; i < len(lockVal); i++ {
 					if lockVal[i] == '+' {
-						lockArr = append(lockArr, string(lockVal[pos : i]))
+						lockArr = append(lockArr, string(lockVal[pos:i]))
 						pos = i + 1
 					}
 				}
-
 				lockArr = append(lockArr, string(lockVal[pos:]))
 			} else {
 				lockArr = append(lockArr, stmt.locked.String())
 			}
 
-			//check and compiled
+			// check and compiled
 			if stmt.locked.String() == contract.Value {
 				// index
 				stk = b.addInt64(stk, stmt.index)
@@ -437,14 +435,14 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 				stk = b.addCheckOutput(stk, fmt.Sprintf("checkOutput(%s, %s)", stmt.locked, stmt.program))
 				stk = b.addVerify(stk)
 			} else {
-				var req *ClauseReq
-				for _, r := range clause.Reqs {
-					for i, val := range lockArr {
-						if val == r.Name {
+				for i, val := range lockArr {
+					var req *ClauseReq
+					for _, r := range clause.Reqs {
+						if r.Name == val {
 							req = r
 
 							// index
-							stk = b.addInt64(stk, stmt.index + int64(i))
+							stk = b.addInt64(stk, stmt.index+int64(i))
 
 							// refdatahash
 							stk = b.addData(stk, nil)
@@ -474,9 +472,9 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 							stk = b.addVerify(stk)
 						}
 					}
-				}
-				if req == nil {
-					return fmt.Errorf("unknown value \"%s\" in lock statement in clause \"%s\"", stmt.locked, clause.Name)
+					if req == nil {
+						return fmt.Errorf("unknown value \"%s\" in lock statement in clause \"%s\"", stmt.locked, clause.Name)
+					}
 				}
 			}
 
@@ -546,9 +544,6 @@ func compileExpr(b *builder, stk stack, contract *Contract, clause *Clause, env 
 					return stk, fmt.Errorf("type mismatch in \"%s\": left operand has type \"%s\", right operand has type \"%s\"", e, lType, rType)
 				}
 			}
-			//if lType == "Boolean" {
-			//	return stk, fmt.Errorf("in \"%s\": using \"%s\" on Boolean values not allowed", e, e.op.op)
-			//}
 		}
 
 		stk = b.addOps(stk.dropN(2), e.op.opcodes, e.String())

@@ -78,7 +78,7 @@ func parseContract(p *parser) *Contract {
 	consumeTok(p, "{")
 	clauses := parseClauses(p)
 	consumeTok(p, "}")
-	return &Contract{Name: name, Params: params, Clauses: clauses, Value: value, Inheritance: inheritance }
+	return &Contract{Name: name, Params: params, Clauses: clauses, Value: value, Inheritance: inheritance}
 }
 
 // (p1, p2: t1, p3: t2)
@@ -420,7 +420,7 @@ func scanIdentifier(buf []byte, offset int) (string, int) {
 	for ; i < len(buf) && isIDChar(buf[i], i == offset); i++ {
 	}
 	//add the limit for length of identifier, reference standard of C99
-	if i == offset || (i - offset) > 31 {
+	if i == offset || (i-offset) > 31 {
 		return "", -1
 	}
 	return string(buf[offset:i]), i
@@ -526,9 +526,9 @@ func scanBoolLiteral(buf []byte, offset int) (booleanLiteral, int) {
 		}
 	}
 
-	if (count - offset) == 4 && string(buf[offset : count]) == "true" {
+	if (count-offset) == 4 && string(buf[offset:count]) == "true" {
 		return true, count
-	} else if (count - offset) == 5 && string(buf[offset : count]) == "false" {
+	} else if (count-offset) == 5 && string(buf[offset:count]) == "false" {
 		return false, count
 	}
 

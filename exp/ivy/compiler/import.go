@@ -1,19 +1,17 @@
 package compiler
 
 import (
+	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"bufio"
-	"io/ioutil"
 )
 
 func parsePath(p *parser) []*Contract {
 	path := parseImport(p)
 	filename := absolutePath(string(path))
-	fmt.Println("import path:", string(path))
-	fmt.Println("absolute import path:", filename)
 
 	inputFile, inputError := os.Open(filename)
 	if inputError != nil {
@@ -73,7 +71,6 @@ func scanImportStr(buf []byte, offset int) (bytesLiteral, int) {
 
 	panic(parseErr(buf, offset, "unterminated import string literal"))
 }
-
 
 func parseContractImport(p *parser) []*Contract {
 	var result []*Contract

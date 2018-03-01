@@ -198,10 +198,10 @@ func typeCheckClause(contract *Contract, clause *Clause, env *environ) error {
 			}
 
 		case *lockStatement:
-			//the lock statement can support value expression and plus(x+y) expression,
+			//the lock statement can support value expression and add(x+y) expression,
 			//If the statement is like "lock value with func", the type of expression is Value;
 			//If the statement is like "lock x + y with func", the type of expression is Integer, however,
-			//the result of plus(+) expression does not mean that two values are added, but rather a connection with them.
+			//the result of add(+) expression does not mean that two values are added, but rather a connection with them.
 			if t := stmt.locked.typ(env); !(t == valueType || t == intType) {
 				return fmt.Errorf("expression in lock statement in clause \"%s\" has type \"%s\", must be Value or Integer", clause.Name, t)
 			}

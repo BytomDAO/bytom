@@ -1,11 +1,10 @@
 package compiler
 
 import (
-	"fmt"
 	"github.com/Masterminds/semver"
 )
 
-const IVY_VERSION string = "1.9.9"
+const ivyVersion string = "1.9.9"
 
 func parseVersion(p *parser) bool {
 	if peekKeyword(p) == "pragma" {
@@ -20,7 +19,6 @@ func parseVersion(p *parser) bool {
 
 			//After removing the quotes is the version info
 			version := strliteral[1 : len(strliteral)-1]
-			fmt.Println("version info:", string(version))
 			if ok := checkVersion(string(version)); ok {
 				return true
 			}
@@ -39,7 +37,7 @@ func checkVersion(version string) bool {
 		panic(err)
 	}
 
-	v, err := semver.NewVersion(IVY_VERSION)
+	v, err := semver.NewVersion(ivyVersion)
 	if err != nil {
 		panic(err)
 	}

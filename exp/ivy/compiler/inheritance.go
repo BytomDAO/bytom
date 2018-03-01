@@ -1,9 +1,9 @@
 package compiler
 
 import (
-	"strings"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 func parseInheritance(p *parser) []string {
@@ -55,8 +55,8 @@ func addInheritClause(contract *Contract, contracts []*Contract) error {
 		}
 
 		// After add the inherited contract, The order of clause is: base_clause ... current_clause
-		for _, current_clause := range contract.Clauses {
-			result = append(result, current_clause)
+		for _, currentClause := range contract.Clauses {
+			result = append(result, currentClause)
 		}
 
 		contract.Clauses = result[:]
