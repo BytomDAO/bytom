@@ -1,71 +1,92 @@
-PACKAGES = $(shell go list ./... | grep -v '/vendor/')
+ifndef GOOS
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+	GOOS := darwin
+else ifeq ($(UNAME_S),Linux)
+	GOOS := linux
+else
+$(error "$$GOOS is not defined.")
+endif
+endif
 
-all: bytomd bytomcli miner test
+PACKAGES    := $(shell go list ./... | grep -v '/vendor/')
+BUILD_FLAGS := -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`"
 
-bytomd:
-	@echo "Building bytomd to cmd/bytomd/bytomd"
-	@go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/bytomd/bytomd cmd/bytomd/main.go
+MINER_BINARY32 := miner-$(GOOS)_386
+MINER_BINARY64 := miner-$(GOOS)_amd64
 
-bytomcli:
-	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
-	@go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
+BYTOMD_BINARY32 := bytomd-$(GOOS)_386
+BYTOMD_BINARY64 := bytomd-$(GOOS)_amd64
 
-miner:
-	@echo "Building miner to cmd/miner/miner"
-	@go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/miner/miner cmd/miner/main.go
+BYTOMCLI_BINARY32 := bytomcli-$(GOOS)_386
+BYTOMCLI_BINARY64 := bytomcli-$(GOOS)_amd64
 
-multi_platform:
-	@echo "Building multi platform binary"
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/darwin/bytomcli cmd/bytomcli/main.go
-	@echo "Building bytomd to cmd/bytomd/bytomd"
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/darwin/bytomd cmd/bytomd/main.go
-	@echo "Building miner to cmd/miner/miner"
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/darwin/miner cmd/miner/main.go
+VERSION := $(shell awk -F= '/Version =/ {print $$2}' version/version.go | tr -d "\" ")
 
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/windows/bytomcli cmd/bytomcli/main.go
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/windows/bytomd cmd/bytomd/main.go
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/windows/miner cmd/miner/main.go
+MINER_RELEASE32 := miner-$(VERSION)-$(GOOS)_386
+MINER_RELEASE64 := miner-$(VERSION)-$(GOOS)_amd64
 
-	go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/ubuntu64/bytomcli cmd/bytomcli/main.go
-	go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/ubuntu64/bytomd cmd/bytomd/main.go
-	go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/ubuntu64/miner cmd/miner/main.go
+BYTOMD_RELEASE32 := bytomd-$(VERSION)-$(GOOS)_386
+BYTOMD_RELEASE64 := bytomd-$(VERSION)-$(GOOS)_amd64
 
-386_multi_platform:
-	@echo "Building multi platform binary"
-	CGO_ENABLED=0 GOOS=darwin GOARCH=386 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/darwin386/bytomcli cmd/bytomcli/main.go
-	@echo "Building bytomd to cmd/bytomd/bytomd"
-	CGO_ENABLED=0 GOOS=darwin GOARCH=386 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/darwin386/bytomd cmd/bytomd/main.go
-	@echo "Building miner to cmd/miner/miner"
-	CGO_ENABLED=0 GOOS=darwin GOARCH=386 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/darwin386/miner cmd/miner/main.go
+BYTOMCLI_RELEASE32 := bytomcli-$(VERSION)-$(GOOS)_386
+BYTOMCLI_RELEASE64 := bytomcli-$(VERSION)-$(GOOS)_amd64
 
-	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/windows386/bytomcli cmd/bytomcli/main.go
-	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/windows386/bytomd cmd/bytomd/main.go
-	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/windows386/miner cmd/miner/main.go
+BYTOM_RELEASE32 := bytom-$(VERSION)-$(GOOS)_386
+BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
 
-	GOOS=linux GOARCH=386 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/linux386/bytomcli cmd/bytomcli/main.go
-	GOOS=linux GOARCH=386 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/linux386/bytomd cmd/bytomd/main.go
-	GOOS=linux GOARCH=386 go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
-    -o cmd/linux386/miner cmd/miner/main.go
+all: test target release-all
+
+target:
+	mkdir -p $@
+
+binary: target/$(BYTOMD_BINARY32) target/$(BYTOMD_BINARY64) target/$(BYTOMCLI_BINARY32) target/$(BYTOMCLI_BINARY64) target/$(MINER_BINARY32) target/$(MINER_BINARY64)
+
+ifeq ($(GOOS),windows)
+release: binary
+	cd target && cp -f $(MINER_BINARY32) $(MINER_BINARY32).exe
+	cd target && cp -f $(BYTOMD_BINARY32) $(BYTOMD_BINARY32).exe
+	cd target && cp -f $(BYTOMCLI_BINARY32) $(BYTOMCLI_BINARY32).exe
+	cd target && zip $(BYTOM_RELEASE32).zip $(MINER_BINARY32).exe $(BYTOMD_BINARY32).exe $(BYTOMCLI_BINARY32).exe
+	cd target && rm -f $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(MINER_BINARY32).exe $(BYTOMD_BINARY32).exe $(BYTOMCLI_BINARY32).exe
+	cd target && cp -f $(MINER_BINARY64) $(MINER_BINARY64).exe
+	cd target && cp -f $(BYTOMD_BINARY64) $(BYTOMD_BINARY64).exe
+	cd target && cp -f $(BYTOMCLI_BINARY64) $(BYTOMCLI_BINARY64).exe
+	cd target && zip $(BYTOM_RELEASE64).zip $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe
+	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe
+else
+release: binary
+	cd target && tar -czf $(BYTOM_RELEASE32).tgz $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32)
+	cd target && rm -f $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32)
+	cd target && tar -czf $(BYTOM_RELEASE64).tgz $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64)
+	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64)
+endif
+
+release-all: clean
+	GOOS=darwin  make release
+	GOOS=linux   make release
+	GOOS=windows make release
+
+clean:
+	rm -rf target
+
+target/$(BYTOMD_BINARY32):
+	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
+
+target/$(BYTOMD_BINARY64):
+	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
+
+target/$(BYTOMCLI_BINARY32):
+	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/bytomcli/main.go
+
+target/$(BYTOMCLI_BINARY64):
+	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/bytomcli/main.go
+
+target/$(MINER_BINARY32):
+	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/miner/main.go
+
+target/$(MINER_BINARY64):
+	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/miner/main.go
 
 test:
 	@echo "====> Running go test"
@@ -74,4 +95,4 @@ test:
 benchmark:
 	go test -bench $(PACKAGES)
 
-.PHONY: test
+.PHONY: all target release-all clean test benchmark
