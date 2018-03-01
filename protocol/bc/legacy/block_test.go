@@ -41,13 +41,10 @@ func TestMarshalBlock(t *testing.T) {
 		"01" + // version
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
-		"0000000000000000000000000000000000000000000000000000000000000000" + // seed hash
 		"00" + // timestamp
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // tx merkle root
-		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
-		"01" + // tx status
-		"00" +
+		"0000000000000000000000000000000000000000000000000000000000000000" + // tx status root
 		"00" + // nonce
 		"00" + // bits
 
@@ -102,13 +99,10 @@ func TestEmptyBlock(t *testing.T) {
 		"01" + // version
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
-		"0000000000000000000000000000000000000000000000000000000000000000" + // seed hash
 		"00" + // timestamp
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
-		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
-		"01" + // tx status
-		"00" +
+		"0000000000000000000000000000000000000000000000000000000000000000" + // tx status hash
 		"00" + // nonce
 		"00" + // bits
 		"00") // num transactions
@@ -122,13 +116,10 @@ func TestEmptyBlock(t *testing.T) {
 		"01" + // version
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
-		"0000000000000000000000000000000000000000000000000000000000000000" + // seed hash
 		"00" + // timestamp
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
-		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
-		"01" + // tx status
-		"00" +
+		"0000000000000000000000000000000000000000000000000000000000000000" + // tx status hash
 		"00" + // nonce
 		"00") // bits
 	want, _ = hex.DecodeString(wantHex)
@@ -136,7 +127,7 @@ func TestEmptyBlock(t *testing.T) {
 		t.Errorf("empty block header bytes = %x want %x", got, want)
 	}
 
-	wantHash := mustDecodeHash("8ba2dd5c6f88f8e95e7647b9342ae473eff81105927b18832c2c884ab673b582")
+	wantHash := mustDecodeHash("a950a33eb49913c06c0c5c0aa643bb55c5cd898f3b54e91971f07ca2123d7204")
 	if h := block.Hash(); h != wantHash {
 		t.Errorf("got block hash %x, want %x", h.Bytes(), wantHash.Bytes())
 	}
@@ -161,13 +152,10 @@ func TestSmallBlock(t *testing.T) {
 		"01" + // version
 		"01" + // block height
 		"0000000000000000000000000000000000000000000000000000000000000000" + // prev block hash
-		"0000000000000000000000000000000000000000000000000000000000000000" + // seed hash
 		"00" + // timestamp
 		"40" + // commitment extensible field length
 		"0000000000000000000000000000000000000000000000000000000000000000" + // transactions merkle root
-		"0000000000000000000000000000000000000000000000000000000000000000" + // assets merkle root
-		"01" + // tx status
-		"00" +
+		"0000000000000000000000000000000000000000000000000000000000000000" + // tx status hash
 		"00" + // nonce
 		"00" + // bits
 		"01" + // num transactions
