@@ -39,7 +39,7 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
 
 // POST /listBalances
 func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
-	accountUTXOs, err := bcr.wallet.GetAccountUTXOs("")
+	accountUTXOs, err := bcr.wallet.GetAccountUTXOs("", false)
 	if err != nil {
 		log.Errorf("GetAccountUTXOs: %v", err)
 		return NewErrorResponse(err)
@@ -149,12 +149,13 @@ type annotatedUTXO struct {
 
 // POST /list-unspent-outputs
 func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter struct {
-	ID string `json:"id"`
+	ID            string `json:"id"`
+	SmartContract bool   `json:"smart_contract"`
 }) Response {
 	tmpUTXO := annotatedUTXO{}
 	UTXOs := make([]annotatedUTXO, 0)
 
-	accountUTXOs, err := bcr.wallet.GetAccountUTXOs(filter.ID)
+	accountUTXOs, err := bcr.wallet.GetAccountUTXOs(filter.ID, filter.SmartContract)
 	if err != nil {
 		log.Errorf("list Unspent Outputs: %v", err)
 		return NewErrorResponse(err)

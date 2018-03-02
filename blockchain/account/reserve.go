@@ -156,19 +156,19 @@ func (re *reserver) reserve(src source, amount uint64, clientToken *string, exp 
 
 // ReserveUTXO reserves a specific utxo for spending. The resulting
 // reservation expires at exp.
-func (re *reserver) ReserveUTXO(ctx context.Context, out bc.Hash, clientToken *string, exp time.Time) (*reservation, error) {
+func (re *reserver) ReserveUTXO(ctx context.Context, out bc.Hash, clientToken *string, exp time.Time, isSUTXO bool) (*reservation, error) {
 	if clientToken == nil {
-		return re.reserveUTXO(ctx, out, exp, nil)
+		return re.reserveUTXO(ctx, out, exp, nil, isSUTXO)
 	}
 
 	untypedRes, err := re.idempotency.Once(*clientToken, func() (interface{}, error) {
-		return re.reserveUTXO(ctx, out, exp, clientToken)
+		return re.reserveUTXO(ctx, out, exp, clientToken, isSUTXO)
 	})
 	return untypedRes.(*reservation), err
 }
 
-func (re *reserver) reserveUTXO(ctx context.Context, out bc.Hash, exp time.Time, clientToken *string) (*reservation, error) {
-	u, err := findSpecificUTXO(re.db, out)
+func (re *reserver) reserveUTXO(ctx context.Context, out bc.Hash, exp time.Time, clientToken *string, isSUTXO bool) (*reservation, error) {
+	u, err := findSpecificUTXO(re.db, out, isSUTXO)
 	if err != nil {
 		return nil, err
 	}
@@ -371,11 +371,17 @@ func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*U
 	return utxos, nil, isImmature
 }
 
-func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*UTXO, error) {
+func findSpecificUTXO(db dbm.DB, outHash bc.Hash, isSUTXO bool) (*UTXO, error) {
 	u := &UTXO{}
-	data := db.Get(UTXOKey(outHash))
+
+	keyFunction := UTXOKey
+	if isSUTXO {
+		keyFunction = SUTXOKey
+	}
+
+	data := db.Get(keyFunction(outHash))
 	if data == nil {
-		return nil, errors.Wrapf(ErrMatchUTXO, "utxo_id = %s", outHash.String())
+		return nil, errors.Wrapf(ErrMatchUTXO, "output_id = %s", outHash.String())
 	}
 	return u, json.Unmarshal(data, u)
 }

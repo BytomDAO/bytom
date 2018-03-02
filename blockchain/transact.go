@@ -38,6 +38,8 @@ func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuil
 		decoder = bcr.accounts.DecodeSpendAction
 	case "spend_account_unspent_output":
 		decoder = bcr.accounts.DecodeSpendUTXOAction
+	case "spend_contract_unspent_output":
+		decoder = bcr.accounts.DecodeSpendSUTXOAction
 	case "set_transaction_reference_data":
 		decoder = txbuilder.DecodeSetTxRefDataAction
 	default:

@@ -110,13 +110,52 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 		return txbuilder.MissingFieldsError("output_id")
 	}
 
-	res, err := a.accounts.utxoDB.ReserveUTXO(ctx, *a.OutputID, a.ClientToken, b.MaxTime())
+	res, err := a.accounts.utxoDB.ReserveUTXO(ctx, *a.OutputID, a.ClientToken, b.MaxTime(), false)
 	if err != nil {
 		return err
 	}
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
 	account, err := a.accounts.findByID(ctx, res.Source.AccountID)
+	if err != nil {
+		return err
+	}
+
+	txInput, sigInst, err := UtxoToInputs(account.Signer, res.UTXOs[0], a.ReferenceData)
+	if err != nil {
+		return err
+	}
+	return b.AddInput(txInput, sigInst)
+}
+
+//DecodeSpendSUTXOAction unmarshal JSON-encoded data of spend smart contract utxo action
+func (m *Manager) DecodeSpendSUTXOAction(data []byte) (txbuilder.Action, error) {
+	a := &spendSUTXOAction{accounts: m}
+	err := json.Unmarshal(data, a)
+	return a, err
+}
+
+type spendSUTXOAction struct {
+	accounts         *Manager
+	OutputID         *bc.Hash `json:"output_id"`
+	ContractOperator string   `json:"contract_operator"`
+
+	ReferenceData chainjson.Map `json:"reference_data"`
+	ClientToken   *string       `json:"client_token"`
+}
+
+func (a *spendSUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
+	if a.OutputID == nil {
+		return txbuilder.MissingFieldsError("output_id")
+	}
+
+	res, err := a.accounts.utxoDB.ReserveUTXO(ctx, *a.OutputID, a.ClientToken, b.MaxTime(), true)
+	if err != nil {
+		return err
+	}
+	b.OnRollback(canceler(ctx, a.accounts, res.ID))
+
+	account, err := a.accounts.findByID(ctx, a.ContractOperator)
 	if err != nil {
 		return err
 	}

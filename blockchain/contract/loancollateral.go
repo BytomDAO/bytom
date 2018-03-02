@@ -49,13 +49,13 @@ func (a *LoanCollateral) Build() (buildReqStr string, err error) {
 	switch a.Selector {
 	case ClauseRepay:
 		if a.Alias {
-			buildReqStr = fmt.Sprintf(buildInlineProgReqFmtByAlias, a.OutputID,
+			buildReqStr = fmt.Sprintf(buildInlineProgReqFmtByAlias, a.OutputID, a.AccountInfo,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerProgram,
 				a.AssetInfo, a.Amount, a.ControlProgram,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerAccountInfo,
 				a.BtmGas, a.AccountInfo)
 		} else {
-			buildReqStr = fmt.Sprintf(buildInlineProgReqFmt, a.OutputID,
+			buildReqStr = fmt.Sprintf(buildInlineProgReqFmt, a.OutputID, a.AccountInfo,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerProgram,
 				a.AssetInfo, a.Amount, a.ControlProgram,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerAccountInfo,
@@ -63,9 +63,9 @@ func (a *LoanCollateral) Build() (buildReqStr string, err error) {
 		}
 	case ClauseDefault:
 		if a.Alias {
-			buildReqStr = fmt.Sprintf(buildProgRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
+			buildReqStr = fmt.Sprintf(buildProgRecvReqFmtByAlias, a.OutputID, a.AccountInfo, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		} else {
-			buildReqStr = fmt.Sprintf(buildProgRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
+			buildReqStr = fmt.Sprintf(buildProgRecvReqFmt, a.OutputID, a.AccountInfo, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		}
 	default:
 		err = errors.WithDetailf(ErrBadClause, "selected clause [%v] error, contract LoanCollateral's clause must in set:[%v, %v]",

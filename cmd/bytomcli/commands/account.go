@@ -22,6 +22,7 @@ func init() {
 	listAccountsCmd.PersistentFlags().StringVar(&accountID, "id", "", "ID of account")
 
 	listUnspentOutputsCmd.PersistentFlags().StringVar(&outputID, "id", "", "ID of unspent output")
+	listUnspentOutputsCmd.PersistentFlags().BoolVar(&smartContract, "contract", false, "list smart contract unspent outputs")
 }
 
 var (
@@ -31,6 +32,7 @@ var (
 	accountTags       = ""
 	accountUpdateTags = ""
 	outputID          = ""
+	smartContract     = false
 )
 
 var createAccountCmd = &cobra.Command{
@@ -195,8 +197,9 @@ var listUnspentOutputsCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		filter := struct {
-			ID string `json:"id"`
-		}{ID: outputID}
+			ID            string `json:"id"`
+			SmartContract bool   `json:"smart_contract"`
+		}{ID: outputID, SmartContract: smartContract}
 
 		data, exitCode := util.ClientCall("/list-unspent-outputs", &filter)
 		if exitCode != util.Success {
