@@ -36,7 +36,7 @@ func extendBytes(seed []byte, round int) []byte {
 
 func calcSeedCache(seed []byte) (cache []uint32) {
 	extSeed := extendBytes(seed, 3)
-	xy := make([]uint32, 64)
+	// xy := make([]uint32, 64)
 	v := make([]uint32, 32*1024)
 
 	// Swap the byte order on big endian systems
@@ -45,7 +45,8 @@ func calcSeedCache(seed []byte) (cache []uint32) {
 	}
 
 	for i := 0; i < 128; i++ {
-		scrypt.Smix(extSeed, 1, 1024, v, xy)
+		// scrypt.Smix(extSeed, 1, 1024, v, xy)
+		scrypt.Smix(extSeed, v)
 		cache = append(cache, v...)
 	}
 
