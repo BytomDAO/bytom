@@ -15,8 +15,12 @@ func main() {
 	fmt.Println("test tensority!")
 
 	var b32 [32]byte
+	// b32[1] = 1
+	// b32[2] = 2
+	// b32[3] = 3
+
 	seed128 := extendBytes(b32[:], 3)
-	swap(seed128)
+	// swap(seed128)
 	hash := bc.NewHash(b32)
 	seed := bc.NewHash(b32)
 
