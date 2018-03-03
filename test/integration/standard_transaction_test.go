@@ -66,7 +66,7 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
+	if _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -126,7 +126,7 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
+	if _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -199,7 +199,7 @@ func TestMutilNodeSign(t *testing.T) {
 	if err := txbuilder.MaterializeWitnesses(tpl); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
+	if _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
 }

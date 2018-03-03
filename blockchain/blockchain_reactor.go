@@ -3,9 +3,9 @@ package blockchain
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/protocol/validation"
 )
 
 // return network infomation
@@ -178,6 +178,6 @@ func (bcr *BlockchainReactor) isMining() Response {
 
 // return gasRate
 func (bcr *BlockchainReactor) gasRate() Response {
-	gasrate := map[string]int64{"gasRate": validation.GasRate}
+	gasrate := map[string]int64{"gasRate": consensus.VMGasRate}
 	return NewSuccessResponse(gasrate)
 }
