@@ -88,7 +88,7 @@ func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
 	return result
 }
 
-// TODO: check why
+// hashMatrix hash result of mulMatrix
 func hashMatrix(result []uint8) *bc.Hash {
 	var mat8 [matSize][matSize]uint8
 	for i := 0; i < matSize; i++ {

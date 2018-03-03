@@ -20,7 +20,6 @@ func calcSeed(blockHashs []*bc.Hash) []byte {
 	return s[:]
 }
 
-// TODO: clean the code, now it's hard to read
 func extendBytes(seed []byte, round int) []byte {
 	extSeed := make([]byte, len(seed)*(round+1))
 	copy(extSeed, seed)
