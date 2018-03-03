@@ -171,10 +171,12 @@ func (h *HSM) ResetPassword(xpub chainkd.XPub, auth, newAuth string) error {
 	return h.keyStore.StoreKey(xpb.File, xkey, newAuth)
 }
 
+//HasAlias check alias
 func (h *HSM) HasAlias(alias string) bool {
 	return h.cache.hasAlias(alias)
 }
 
+//HasKey check key
 func (h *HSM) HasKey(xprv chainkd.XPrv) bool {
 	return h.cache.hasKey(xprv.XPub())
 }

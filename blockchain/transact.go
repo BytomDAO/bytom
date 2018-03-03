@@ -48,6 +48,7 @@ func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuil
 	return decoder, true
 }
 
+//MergeActions merge spend actions into the same account and asset
 func MergeActions(req *BuildRequest) []map[string]interface{} {
 	actions := make([]map[string]interface{}, 0)
 	actionMap := make(map[string]map[string]interface{})
@@ -159,13 +160,13 @@ func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest
 func (bcr *BlockchainReactor) lockContractTX(ctx context.Context, buildReqs *BuildRequest) Response {
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
-	accoutID, contr_prog, err := bcr.getContractAccountID(ctx, buildReqs)
+	accountID, contractProg, err := bcr.getContractAccountID(ctx, buildReqs)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	// establish an association between account and contract
-	if _, err = bcr.accounts.CreateContractHook(ctx, accoutID, contr_prog); err != nil {
+	if _, err = bcr.accounts.CreateContractHook(ctx, accountID, contractProg); err != nil {
 		return NewErrorResponse(err)
 	}
 

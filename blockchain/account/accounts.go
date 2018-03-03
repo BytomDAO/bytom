@@ -28,6 +28,7 @@ import (
 
 const (
 	maxAccountCache = 1000
+	//ContractAccount is internal account
 	ContractAccount = "Contract"
 	aliasPrefix     = "ALI:"
 	accountPrefix   = "ACC:"

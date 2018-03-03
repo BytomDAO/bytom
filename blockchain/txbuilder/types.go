@@ -28,10 +28,12 @@ type Template struct {
 	AllowAdditional bool `json:"allow_additional_actions"`
 }
 
+//Hash return sign hash
 func (t *Template) Hash(idx uint32) bc.Hash {
 	return t.Transaction.SigHash(idx)
 }
 
+//Action is a interface
 type Action interface {
 	Build(context.Context, *TemplateBuilder) error
 }
