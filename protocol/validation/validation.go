@@ -16,11 +16,11 @@ import (
 const muxGasCost = int64(10)
 
 type GasState struct {
+	BTMValue   uint64
 	GasLeft    int64
 	GasUsed    int64
-	storageGas int64
 	GasVaild   bool
-	BTMValue   uint64
+	storageGas int64
 }
 
 func (g *GasState) setGas(BTMValue int64, txSize int64) error {
@@ -52,7 +52,7 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 
 func (g *GasState) setGasVaild() error {
 	var ok bool
-	if g.GasLeft, ok = checked.SubInt64(g.GasLeft, g.storageGas); !ok {
+	if g.GasLeft, ok = checked.SubInt64(g.GasLeft, g.storageGas); !ok || g.GasLeft < 0 {
 		return errors.Wrap(errGasCalculate, "setGasVaild calc gasLeft")
 	}
 
@@ -214,16 +214,12 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			parity[*dest.Value.AssetId] = diff
 		}
 
-		if amount, ok := parity[*consensus.BTMAssetID]; ok {
-			if err = vs.gasStatus.setGas(amount, int64(vs.tx.SerializedSize)); err != nil {
-				return err
-			}
-		} else {
-			return errNoGas
-		}
-
 		for assetID, amount := range parity {
-			if amount != 0 && assetID != *consensus.BTMAssetID {
+			if assetID == *consensus.BTMAssetID {
+				if err = vs.gasStatus.setGas(amount, int64(vs.tx.SerializedSize)); err != nil {
+					return err
+				}
+			} else if amount != 0 {
 				return errors.WithDetailf(errUnbalanced, "asset %x sources - destinations = %d (should be 0)", assetID.Bytes(), amount)
 			}
 		}
@@ -261,6 +257,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
 			return errNonemptyExtHash
 		}
+
 		if err := vs.gasStatus.setGasVaild(); err != nil {
 			return err
 		}

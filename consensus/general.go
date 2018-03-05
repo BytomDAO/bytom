@@ -32,9 +32,9 @@ const (
 	CoinbaseArbitrarySizeLimit = 128
 
 	VMGasRate        = int64(1000)
+	StorageGasRate   = int64(10000)
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
-	StorageGasRate   = int64(10000)
 )
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
