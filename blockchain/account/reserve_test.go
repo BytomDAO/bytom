@@ -91,13 +91,13 @@ func TestCancelReservation(t *testing.T) {
 	outid := utxo.OutputID
 
 	ctx := context.Background()
-	res, err := utxoDB.ReserveUTXO(ctx, outid, nil, time.Now())
+	res, err := utxoDB.ReserveUTXO(ctx, outid, nil, time.Now(), false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify that the UTXO is reserved.
-	_, err = utxoDB.ReserveUTXO(ctx, outid, nil, time.Now())
+	_, err = utxoDB.ReserveUTXO(ctx, outid, nil, time.Now(), false)
 	if err != ErrReserved {
 		t.Fatalf("got=%s want=%s", err, ErrReserved)
 	}
@@ -109,7 +109,7 @@ func TestCancelReservation(t *testing.T) {
 	}
 
 	// Reserving again should succeed.
-	_, err = utxoDB.ReserveUTXO(ctx, outid, nil, time.Now())
+	_, err = utxoDB.ReserveUTXO(ctx, outid, nil, time.Now(), false)
 	if err != nil {
 		t.Fatal(err)
 	}
