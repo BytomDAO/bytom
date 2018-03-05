@@ -32,7 +32,7 @@ const (
 	CoinbaseArbitrarySizeLimit = 128
 
 	VMGasRate        = int64(1000)
-	StorageGasRate   = int64(10000)
+	StorageGasRate   = int64(10)
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
 )
