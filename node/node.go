@@ -156,7 +156,9 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
 
-	sw := p2p.NewSwitch(config.P2P)
+	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
+
+	sw := p2p.NewSwitch(config.P2P, trustHistoryDB)
 
 	genesisBlock := cfg.GenerateGenesisBlock()
 

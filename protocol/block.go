@@ -40,6 +40,32 @@ func (c *Chain) GetBlockByHeight(height uint64) (*legacy.Block, error) {
 	return c.GetBlockByHash(hash)
 }
 
+// ValidateBlock validates an incoming block in advance of applying it
+// to a snapshot (with ApplyValidBlock) and committing it to the
+// blockchain (with CommitAppliedBlock).
+func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
+	blockEnts := legacy.MapBlock(block)
+	prevEnts := legacy.MapBlock(prev)
+	if err := validation.ValidateBlock(blockEnts, prevEnts); err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+	if err := validation.ValidateBlockBody(blockEnts); err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+	return nil
+}
+
+// ValidateBlock validates an incoming block in advance of applying it
+// to a snapshot (with ApplyValidBlock) and committing it to the
+// blockchain (with CommitAppliedBlock).
+func (c *Chain) ValidateBlockBody(block *legacy.Block) error {
+	blockEnts := legacy.MapBlock(block)
+	if err := validation.ValidateBlockBody(blockEnts); err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+	return nil
+}
+
 // ConnectBlock append block to end of chain
 func (c *Chain) ConnectBlock(block *legacy.Block) error {
 	c.state.cond.L.Lock()

@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -8,15 +9,22 @@ import (
 	"time"
 
 	cfg "github.com/bytom/config"
+	"github.com/bytom/p2p/trust"
 	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const (
 	reconnectAttempts = 30
 	reconnectInterval = 3 * time.Second
+
+	keyBannedPeer      = "BannedPeer"
+	defaultBanDuration = time.Hour * 24
 )
+
+var ErrConnectBannedPeer = errors.New("Connect banned peer")
 
 type Reactor interface {
 	cmn.Service // Start, Stop
@@ -61,16 +69,19 @@ incoming messages are received on the reactor.
 type Switch struct {
 	cmn.BaseService
 
-	config       *cfg.P2PConfig
-	peerConfig   *PeerConfig
-	listeners    []Listener
-	reactors     map[string]Reactor
-	chDescs      []*ChannelDescriptor
-	reactorsByCh map[byte]Reactor
-	peers        *PeerSet
-	dialing      *cmn.CMap
-	nodeInfo     *NodeInfo             // our node info
-	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
+	config           *cfg.P2PConfig
+	peerConfig       *PeerConfig
+	listeners        []Listener
+	reactors         map[string]Reactor
+	chDescs          []*ChannelDescriptor
+	reactorsByCh     map[byte]Reactor
+	peers            *PeerSet
+	dialing          *cmn.CMap
+	nodeInfo         *NodeInfo             // our node info
+	nodePrivKey      crypto.PrivKeyEd25519 // our node privkey
+	bannedPeer       map[string]time.Time
+	db               dbm.DB
+	TrustMetricStore *trust.TrustMetricStore
 
 	filterConnByAddr   func(net.Addr) error
 	filterConnByPubKey func(crypto.PubKeyEd25519) error
@@ -80,7 +91,7 @@ var (
 	ErrSwitchDuplicatePeer = errors.New("Duplicate peer")
 )
 
-func NewSwitch(config *cfg.P2PConfig) *Switch {
+func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB) *Switch {
 	sw := &Switch{
 		config:       config,
 		peerConfig:   DefaultPeerConfig(config),
@@ -90,8 +101,19 @@ func NewSwitch(config *cfg.P2PConfig) *Switch {
 		peers:        NewPeerSet(),
 		dialing:      cmn.NewCMap(),
 		nodeInfo:     nil,
+		db:           trustHistoryDB,
 	}
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
+	sw.TrustMetricStore = trust.NewTrustMetricStore(trustHistoryDB, trust.DefaultConfig())
+	sw.TrustMetricStore.Start()
+
+	sw.bannedPeer = make(map[string]time.Time)
+	if datajson := sw.db.Get([]byte(keyBannedPeer)); datajson != nil {
+		if err := json.Unmarshal(datajson, &sw.bannedPeer); err != nil {
+			return nil
+		}
+	}
+
 	return sw
 }
 
@@ -239,6 +261,11 @@ func (sw *Switch) AddPeer(peer *Peer) error {
 		return err
 	}
 
+	tm := trust.NewMetric()
+
+	tm.Start()
+	sw.TrustMetricStore.AddPeerTrustMetric(peer.mconn.RemoteAddress.IP.String(), tm)
+
 	log.WithField("peer", peer).Info("Added peer")
 	return nil
 }
@@ -317,6 +344,13 @@ func (sw *Switch) dialSeed(addr *NetAddress) {
 }
 
 func (sw *Switch) DialPeerWithAddress(addr *NetAddress, persistent bool) (*Peer, error) {
+	if banEnd, ok := sw.bannedPeer[addr.IP.String()]; ok {
+		if time.Now().Before(banEnd) {
+			return nil, ErrConnectBannedPeer
+		}
+		sw.DelBannedPeer(addr.IP.String())
+	}
+
 	sw.dialing.Set(addr.IP.String(), addr)
 	defer sw.dialing.Delete(addr.IP.String())
 
@@ -562,7 +596,7 @@ func makeSwitch(cfg *cfg.P2PConfig, i int, network, version string, initSwitch f
 	privKey := crypto.GenPrivKeyEd25519()
 	// new switch, add reactors
 	// TODO: let the config be passed in?
-	s := initSwitch(i, NewSwitch(cfg))
+	s := initSwitch(i, NewSwitch(cfg, nil))
 	s.SetNodeInfo(&NodeInfo{
 		PubKey:     privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
 		Moniker:    cmn.Fmt("switch%d", i),
@@ -591,6 +625,21 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 }
 
 func (sw *Switch) addPeerWithConnectionAndConfig(conn net.Conn, config *PeerConfig) error {
+	var host string
+	var err error
+
+	fullAddr := conn.RemoteAddr().String()
+	if host, _, err = net.SplitHostPort(fullAddr); err != nil {
+		return err
+	}
+
+	if banEnd, ok := sw.bannedPeer[host]; ok {
+		if time.Now().Before(banEnd) {
+			return ErrConnectBannedPeer
+		}
+		sw.DelBannedPeer(host)
+	}
+
 	peer, err := newInboundPeerWithConfig(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, config)
 	if err != nil {
 		conn.Close()
@@ -602,5 +651,22 @@ func (sw *Switch) addPeerWithConnectionAndConfig(conn net.Conn, config *PeerConf
 		return err
 	}
 
+	return nil
+}
+
+func (sw *Switch) AddBannedPeer(peer *Peer) error {
+	key := peer.mconn.RemoteAddress.IP.String()
+	sw.bannedPeer[key] = time.Now().Add(defaultBanDuration)
+	datajson, _ := json.Marshal(sw.bannedPeer)
+	sw.db.Set([]byte(keyBannedPeer), datajson)
+	return nil
+}
+
+func (sw *Switch) DelBannedPeer(addr string) error {
+	if _, ok := sw.bannedPeer[addr]; ok {
+		delete(sw.bannedPeer, addr)
+	}
+	datajson, _ := json.Marshal(sw.bannedPeer)
+	sw.db.Set([]byte(keyBannedPeer), datajson)
 	return nil
 }
