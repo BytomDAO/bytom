@@ -9,7 +9,6 @@ import (
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/validation"
@@ -59,10 +58,6 @@ func TestP2PKH(t *testing.T) {
 	}
 
 	if _, err := test.MockSign(tpl, hsm, "password"); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := txbuilder.MaterializeWitnesses(tpl); err != nil {
 		t.Fatal(err)
 	}
 
@@ -119,10 +114,6 @@ func TestP2SH(t *testing.T) {
 	}
 
 	if _, err := test.MockSign(tpl, hsm, "password"); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := txbuilder.MaterializeWitnesses(tpl); err != nil {
 		t.Fatal(err)
 	}
 
@@ -196,9 +187,6 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal("sign progress is not finish,  but both xpub1 and xpub2 is signed")
 	}
 
-	if err := txbuilder.MaterializeWitnesses(tpl); err != nil {
-		t.Fatal(err)
-	}
 	if _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}

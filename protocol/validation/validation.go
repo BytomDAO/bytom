@@ -134,7 +134,7 @@ var (
 	errUntimelyTransaction      = errors.New("block timestamp outside transaction time range")
 	errVersionRegression        = errors.New("version regression")
 	errWrongBlockSize           = errors.New("block size is too big")
-	errWrongTransactionSize     = errors.New("transaction size is too big")
+	errWrongTransactionSize     = errors.New("transaction size is not in vaild range")
 	errWrongTransactionStatus   = errors.New("transaction status is wrong")
 	errWrongCoinbaseTransaction = errors.New("wrong coinbase transaction")
 	errWrongCoinbaseAsset       = errors.New("wrong coinbase asset id")
@@ -575,7 +575,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 		gasStatus, err := ValidateTx(tx, b)
 		gasOnlyTx := false
 		if err != nil {
-			if !gasStatus.GasVaild {
+			if gasStatus == nil || !gasStatus.GasVaild {
 				return errors.Wrapf(err, "validity of transaction %d of %d", i, len(b.Transactions))
 			}
 			gasOnlyTx = true
@@ -688,7 +688,7 @@ func validateStandardTx(tx *bc.Tx) error {
 
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
-	if tx.TxHeader.SerializedSize > consensus.MaxTxSize {
+	if tx.TxHeader.SerializedSize > consensus.MaxTxSize || tx.TxHeader.SerializedSize == 0 {
 		return nil, errWrongTransactionSize
 	}
 	if len(tx.ResultIds) == 0 {

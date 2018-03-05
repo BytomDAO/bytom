@@ -642,6 +642,7 @@ func mockBlock() *bc.Block {
 func mockCoinbaseTx(amount uint64) *bc.Tx {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	return legacy.MapTx(&legacy.TxData{
+		SerializedSize: 1,
 		Inputs: []*legacy.TxInput{
 			legacy.NewCoinbaseInput(nil, nil),
 		},
