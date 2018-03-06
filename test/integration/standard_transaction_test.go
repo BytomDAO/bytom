@@ -9,7 +9,6 @@ import (
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/validation"
@@ -17,7 +16,7 @@ import (
 )
 
 func TestP2PKH(t *testing.T) {
-	dirPath, err := ioutil.TempDir(".", "")
+	dirPath, err := ioutil.TempDir(".", "TestP2PKH")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +36,7 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpub, err := hsm.XCreate("test_pub", "password")
+	xpub, err := hsm.XCreate("TestP2PKH", "password")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,17 +61,13 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := txbuilder.MaterializeWitnesses(tpl); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
+	if _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestP2SH(t *testing.T) {
-	dirPath, err := ioutil.TempDir(".", "")
+	dirPath, err := ioutil.TempDir(".", "TestP2SH")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,12 +87,12 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpub1, err := hsm.XCreate("test_pub1", "password")
+	xpub1, err := hsm.XCreate("TestP2SH1", "password")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	xpub2, err := hsm.XCreate("test_pub2", "password")
+	xpub2, err := hsm.XCreate("TestP2SH2", "password")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,17 +117,13 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := txbuilder.MaterializeWitnesses(tpl); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
+	if _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestMutilNodeSign(t *testing.T) {
-	dirPath, err := ioutil.TempDir(".", "")
+	dirPath, err := ioutil.TempDir(".", "TestMutilNodeSign")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,12 +143,12 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpub1, err := hsm.XCreate("test_pub1", "password1")
+	xpub1, err := hsm.XCreate("TestMutilNodeSign1", "password1")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	xpub2, err := hsm.XCreate("test_pub2", "password2")
+	xpub2, err := hsm.XCreate("TestMutilNodeSign2", "password2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,10 +187,7 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal("sign progress is not finish,  but both xpub1 and xpub2 is signed")
 	}
 
-	if err := txbuilder.MaterializeWitnesses(tpl); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
+	if _, err = validation.ValidateTx(legacy.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
 }

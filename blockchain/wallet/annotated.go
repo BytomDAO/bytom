@@ -172,8 +172,7 @@ func isValidJSON(b []byte) bool {
 	return err == nil
 }
 
-func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, indexInBlock int) *query.AnnotatedTx {
-	statusFail, _ := b.TransactionStatus.GetStatus(indexInBlock)
+func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
 		Timestamp:              b.Time(),

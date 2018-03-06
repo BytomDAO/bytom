@@ -130,6 +130,13 @@ func (b *TemplateBuilder) Build() (*Template, *legacy.TxData, error) {
 		tpl.SigningInstructions = append(tpl.SigningInstructions, instruction)
 		tx.Inputs = append(tx.Inputs, in)
 	}
+
+	txSerialized, err := tx.MarshalText()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tx.SerializedSize = uint64(len(txSerialized))
 	tpl.Transaction = legacy.NewTx(*tx)
 	return tpl, tx, nil
 }

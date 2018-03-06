@@ -35,10 +35,11 @@ type Store interface {
 	GetBlock(*bc.Hash) (*legacy.Block, error)
 	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
 	GetStoreStatus() txdb.BlockStoreStateJSON
+	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
 
-	SaveBlock(*legacy.Block) error
+	SaveBlock(*legacy.Block, *bc.TransactionStatus) error
 	SaveChainStatus(*legacy.Block, *state.UtxoViewpoint, map[uint64]*bc.Hash) error
 }
 
@@ -196,7 +197,7 @@ func (c *Chain) InMainChain(height uint64, hash bc.Hash) bool {
 	return *h == hash
 }
 
-// TimestampMS returns the latest known block timestamp.
+// Timestamp returns the latest known block timestamp.
 func (c *Chain) Timestamp() uint64 {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
@@ -216,6 +217,11 @@ func (c *Chain) BestBlock() *legacy.Block {
 // GetUtxo try to find the utxo status in db
 func (c *Chain) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 	return c.store.GetUtxo(hash)
+}
+
+// GetTransactionStatus return the transaction status of give block
+func (c *Chain) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
+	return c.store.GetTransactionStatus(hash)
 }
 
 // GetTransactionsUtxo return all the utxos that related to the txs' inputs

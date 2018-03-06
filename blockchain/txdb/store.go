@@ -4,16 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/txdb/storage"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
 )
 
-var blockStoreKey = []byte("blockStore")
+var (
+	blockStoreKey  = []byte("blockStore")
+	txStatusPrefix = []byte("txStatus:")
+)
 
 // BlockStoreStateJSON represents the core's db status
 type BlockStoreStateJSON struct {
@@ -53,6 +58,10 @@ type Store struct {
 
 func calcBlockKey(hash *bc.Hash) []byte {
 	return []byte(fmt.Sprintf("B:%v", hash.String()))
+}
+
+func calcTxStatusKey(hash *bc.Hash) []byte {
+	return append(txStatusPrefix, hash.Bytes()...)
 }
 
 // GetBlock return the block by given hash
@@ -99,6 +108,20 @@ func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 	return getTransactionsUtxo(s.db, view, txs)
 }
 
+// GetTransactionStatus will return the utxo that related to the block hash
+func (s *Store) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
+	data := s.db.Get(calcTxStatusKey(hash))
+	if data == nil {
+		return nil, errors.New("can't find the transaction status by given hash")
+	}
+
+	ts := &bc.TransactionStatus{}
+	if err := proto.Unmarshal(data, ts); err != nil {
+		return nil, errors.Wrap(err, "unmarshaling transaction status")
+	}
+	return ts, nil
+}
+
 // GetStoreStatus return the BlockStoreStateJSON
 func (s *Store) GetStoreStatus() BlockStoreStateJSON {
 	return loadBlockStoreStateJSON(s.db)
@@ -110,15 +133,22 @@ func (s *Store) GetMainchain(hash *bc.Hash) (map[uint64]*bc.Hash, error) {
 }
 
 // SaveBlock persists a new block in the database.
-func (s *Store) SaveBlock(block *legacy.Block) error {
+func (s *Store) SaveBlock(block *legacy.Block, ts *bc.TransactionStatus) error {
 	binaryBlock, err := block.MarshalText()
 	if err != nil {
-		common.PanicCrisis(common.Fmt("Error Marshal block meta: %v", err))
+		return errors.Wrap(err, "Marshal block meta")
+	}
+
+	binaryTxStatus, err := proto.Marshal(ts)
+	if err != nil {
+		return errors.Wrap(err, "marshal block transaction status")
 	}
 
 	blockHash := block.Hash()
-	s.db.Set(calcBlockKey(&blockHash), binaryBlock)
-	s.db.SetSync(nil, nil)
+	batch := s.db.NewBatch()
+	batch.Set(calcBlockKey(&blockHash), binaryBlock)
+	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
+	batch.Write()
 	return nil
 }
 

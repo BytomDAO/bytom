@@ -22,12 +22,8 @@ type BlockHeader struct {
 	// Hash of the previous block in the block chain.
 	PreviousBlockHash bc.Hash `json:"previous_block_hash"`
 
-	Seed bc.Hash `json:"seed"`
-
 	// Time of the block in seconds.
 	Timestamp uint64 `json:"timestamp"`
-
-	TransactionStatus bc.TransactionStatus `json:"transaction_status"`
 
 	BlockCommitment
 
@@ -78,16 +74,10 @@ func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error)
 	if _, err = bh.PreviousBlockHash.ReadFrom(r); err != nil {
 		return 0, err
 	}
-	if _, err = bh.Seed.ReadFrom(r); err != nil {
-		return 0, err
-	}
 	if bh.Timestamp, err = blockchain.ReadVarint63(r); err != nil {
 		return 0, err
 	}
 	if _, err = blockchain.ReadExtensibleString(r, bh.BlockCommitment.readFrom); err != nil {
-		return 0, err
-	}
-	if _, err = blockchain.ReadExtensibleString(r, bh.TransactionStatus.ReadFrom); err != nil {
 		return 0, err
 	}
 	if bh.Nonce, err = blockchain.ReadVarint63(r); err != nil {
@@ -119,16 +109,10 @@ func (bh *BlockHeader) writeTo(w io.Writer, serflags uint8) (err error) {
 	if _, err = bh.PreviousBlockHash.WriteTo(w); err != nil {
 		return err
 	}
-	if _, err = bh.Seed.WriteTo(w); err != nil {
-		return err
-	}
 	if _, err = blockchain.WriteVarint63(w, bh.Timestamp); err != nil {
 		return err
 	}
 	if _, err = blockchain.WriteExtensibleString(w, nil, bh.BlockCommitment.writeTo); err != nil {
-		return err
-	}
-	if _, err = blockchain.WriteExtensibleString(w, nil, bh.TransactionStatus.WriteTo); err != nil {
 		return err
 	}
 	if _, err = blockchain.WriteVarint63(w, bh.Nonce); err != nil {
