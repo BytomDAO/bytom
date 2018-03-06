@@ -126,6 +126,10 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		txEntries = append(txEntries, tx)
 		gasUsed += uint64(gasStatus.GasUsed)
 		txFee += txDesc.Fee
+
+		if gasUsed == consensus.MaxBlockGas {
+			break
+		}
 	}
 
 	// creater coinbase transaction
