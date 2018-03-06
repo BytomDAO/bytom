@@ -255,7 +255,6 @@ func MapBlock(old *Block) *bc.Block {
 	b.ID, b.BlockHeader = mapBlockHeader(&old.BlockHeader)
 	for _, oldTx := range old.Transactions {
 		b.Transactions = append(b.Transactions, oldTx.Tx)
-		b.BlockHeader.SerializedSize += oldTx.TxData.SerializedSize
 	}
 	return b
 }

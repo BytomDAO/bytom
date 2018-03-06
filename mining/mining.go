@@ -63,7 +63,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	view := state.NewUtxoViewpoint()
 	txStatus := bc.NewTransactionStatus()
 	txEntries := []*bc.Tx{nil}
-	blockWeight := uint64(0)
+	gasUsed := uint64(0)
 	txFee := uint64(0)
 
 	// get preblock info for generate next block
@@ -94,9 +94,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	for _, txDesc := range txs {
 		tx := txDesc.Tx.Tx
 		gasOnlyTx := false
-		if blockWeight+txDesc.Weight > consensus.MaxBlockSzie-consensus.MaxTxSize {
-			break
-		}
 
 		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
 			log.WithField("error", err).Error("mining block generate skip tx due to")
@@ -104,13 +101,18 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			continue
 		}
 
-		if _, gasVaild, err := validation.ValidateTx(tx, preBcBlock); err != nil {
-			if !gasVaild {
+		gasStatus, err := validation.ValidateTx(tx, preBcBlock)
+		if err != nil {
+			if !gasStatus.GasVaild {
 				log.WithField("error", err).Error("mining block generate skip tx due to")
 				txPool.RemoveTransaction(&tx.ID)
 				continue
 			}
 			gasOnlyTx = true
+		}
+
+		if gasUsed+uint64(gasStatus.GasUsed) > consensus.MaxBlockGas {
+			break
 		}
 
 		if err := view.ApplyTransaction(bcBlock, tx, gasOnlyTx); err != nil {
@@ -122,8 +124,12 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		txStatus.SetStatus(len(b.Transactions), gasOnlyTx)
 		b.Transactions = append(b.Transactions, txDesc.Tx)
 		txEntries = append(txEntries, tx)
-		blockWeight += txDesc.Weight
+		gasUsed += uint64(gasStatus.GasUsed)
 		txFee += txDesc.Fee
+
+		if gasUsed == consensus.MaxBlockGas {
+			break
+		}
 	}
 
 	// creater coinbase transaction

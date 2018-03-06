@@ -33,15 +33,15 @@ func (c *Chain) ValidateTx(tx *legacy.Tx) error {
 
 	// validate the BVM contract
 	gasOnlyTx := false
-	fee, gasVaild, err := validation.ValidateTx(newTx, block)
+	gasStatus, err := validation.ValidateTx(newTx, block)
 	if err != nil {
-		if !gasVaild {
+		if !gasStatus.GasVaild {
 			c.txPool.AddErrCache(&newTx.ID, err)
 			return err
 		}
 		gasOnlyTx = true
 	}
 
-	_, err = c.txPool.AddTransaction(tx, gasOnlyTx, block.BlockHeader.Height, fee)
+	_, err = c.txPool.AddTransaction(tx, gasOnlyTx, block.BlockHeader.Height, gasStatus.BTMValue)
 	return err
 }
