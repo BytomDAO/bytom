@@ -106,7 +106,7 @@ func (bcr *BlockchainReactor) getBlockByHash(strHash string) Response {
 func (bcr *BlockchainReactor) getBlockByHeight(height uint64) Response {
 	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
 	if err != nil {
-		log.WithField("error", err).Error("Fail to get block by hash")
+		log.WithField("error", err).Error("Fail to get block by height")
 		return NewErrorResponse(err)
 	}
 
