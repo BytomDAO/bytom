@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/bytom/consensus/difficulty"
@@ -27,16 +27,23 @@ func doWork(bh *legacy.BlockHeader) bool {
 }
 
 func main() {
-	client := util.MustRPCClient()
 	for {
+		data, _ := util.ClientCall("/minepool/get-work", nil)
+		rawData, err := json.Marshal(data)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+
 		bh := &legacy.BlockHeader{}
-		if err := client.Call(context.Background(), "/minepool/get-work", nil, bh); err != nil {
+		if err = json.Unmarshal(rawData, bh); err != nil {
 			fmt.Println(err)
 			break
 		}
 
 		if doWork(bh) {
-			client.Call(context.Background(), "/minepool/submit-work", bh, nil)
+			util.ClientCall("/minepool/submit-work", &bh)
 		}
+
 	}
 }
