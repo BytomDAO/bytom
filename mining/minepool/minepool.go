@@ -46,9 +46,9 @@ func (m *MinePool) blockUpdater() {
 }
 
 func (m *MinePool) generateBlock() {
-	if m.block != nil && m.chain.Height() < m.block.Height {
-		m.mutex.Lock()
-		defer m.mutex.Unlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	if m.block != nil && *m.chain.BestBlockHash() == m.block.PreviousBlockHash {
 		m.block.Timestamp = uint64(time.Now().Unix())
 		return
 	}
@@ -59,8 +59,6 @@ func (m *MinePool) generateBlock() {
 		return
 	}
 
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
 	m.block = block
 }
 
@@ -86,7 +84,13 @@ func (m *MinePool) SubmitWork(bh *legacy.BlockHeader) bool {
 
 	m.block.Nonce = bh.Nonce
 	m.block.Timestamp = bh.Timestamp
-	_, err := m.chain.ProcessBlock(m.block)
+	isOrphan, err := m.chain.ProcessBlock(m.block)
+
+	if err != nil {
+		log.Errorf("fail on SubmitWork on ProcessBlock %v", err)
+	} else if isOrphan {
+		log.Warning("SubmitWork is orphan")
+	}
 	return err == nil
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/protocol/bc/legacy"
@@ -19,7 +20,7 @@ func doWork(bh *legacy.BlockHeader) bool {
 		bh.Nonce = i
 		headerHash := bh.Hash()
 		if difficulty.CheckProofOfWork(&headerHash, bh.Bits) {
-			fmt.Printf("Mining: successful-----proof hash:%v\n", headerHash)
+			fmt.Printf("Mining: successful-----proof hash:%v\n", headerHash.String())
 			return true
 		}
 	}
@@ -27,23 +28,20 @@ func doWork(bh *legacy.BlockHeader) bool {
 }
 
 func main() {
-	for {
-		data, _ := util.ClientCall("/minepool/get-work", nil)
-		rawData, err := json.Marshal(data)
-		if err != nil {
-			fmt.Println(err)
-			break
-		}
-
-		bh := &legacy.BlockHeader{}
-		if err = json.Unmarshal(rawData, bh); err != nil {
-			fmt.Println(err)
-			break
-		}
-
-		if doWork(bh) {
-			util.ClientCall("/minepool/submit-work", &bh)
-		}
-
+	data, _ := util.ClientCall("/minepool/get-work", nil)
+	rawData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
+	bh := &legacy.BlockHeader{}
+	if err = json.Unmarshal(rawData, bh); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	if doWork(bh) {
+		util.ClientCall("/minepool/submit-work", &bh)
+	}
+
 }

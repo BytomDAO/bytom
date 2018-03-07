@@ -1,11 +1,13 @@
 package legacy
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/bytom/encoding/blockchain"
+	"github.com/bytom/encoding/bufpool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 )
@@ -53,6 +55,31 @@ func (bh *BlockHeader) Scan(val interface{}) error {
 func (bh *BlockHeader) Hash() bc.Hash {
 	h, _ := mapBlockHeader(bh)
 	return h
+}
+
+// MarshalText fulfills the json.Marshaler interface.
+// This guarantees that block headers will get deserialized correctly
+// when being parsed from HTTP requests.
+func (bh *BlockHeader) MarshalText() ([]byte, error) {
+	buf := bufpool.Get()
+	defer bufpool.Put(buf)
+	if _, err := bh.WriteTo(buf); err != nil {
+		return nil, err
+	}
+
+	enc := make([]byte, hex.EncodedLen(buf.Len()))
+	hex.Encode(enc, buf.Bytes())
+	return enc, nil
+}
+
+// UnmarshalText fulfills the encoding.TextUnmarshaler interface.
+func (bh *BlockHeader) UnmarshalText(text []byte) error {
+	decoded := make([]byte, hex.DecodedLen(len(text)))
+	if _, err := hex.Decode(decoded, text); err != nil {
+		return err
+	}
+	_, err := bh.readFrom(blockchain.NewReader(decoded))
+	return err
 }
 
 func (bh *BlockHeader) readFrom(r *blockchain.Reader) (serflag uint8, err error) {
