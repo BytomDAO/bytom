@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/bytom/blockchain"
 	"github.com/bytom/consensus/difficulty"
+	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/util"
 )
 
@@ -14,12 +14,11 @@ const (
 )
 
 // do proof of work
-func doWork(work *blockchain.WorkResp) bool {
-	fmt.Printf("work:%v\n", work)
+func doWork(bh *legacy.BlockHeader) bool {
 	for i := uint64(0); i <= maxNonce; i++ {
-		work.Header.Nonce = i
-		headerHash := work.Header.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, work.Header.Bits) {
+		bh.Nonce = i
+		headerHash := bh.Hash()
+		if difficulty.CheckProofOfWork(&headerHash, bh.Bits) {
 			fmt.Printf("Mining: successful-----proof hash:%v\n", headerHash)
 			return true
 		}
@@ -28,16 +27,16 @@ func doWork(work *blockchain.WorkResp) bool {
 }
 
 func main() {
+	client := util.MustRPCClient()
 	for {
-		var work blockchain.WorkResp
-		client := util.MustRPCClient()
-		if err := client.Call(context.Background(), "/get-work", nil, &work); err == nil {
-			if doWork(&work) {
-				header := work.Header
-				client.Call(context.Background(), "/submit-work", &header, nil)
-			}
-		} else {
-			fmt.Printf("---err:%v\n", err)
+		bh := &legacy.BlockHeader{}
+		if err := client.Call(context.Background(), "/minepool/get-work", nil, bh); err != nil {
+			fmt.Println(err)
+			break
+		}
+
+		if doWork(bh) {
+			client.Call(context.Background(), "/minepool/submit-work", bh, nil)
 		}
 	}
 }

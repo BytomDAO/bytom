@@ -16,6 +16,7 @@ import (
 
 const blockUpdateMS = 1000
 
+// MinePool is the support struct for p2p mine pool
 type MinePool struct {
 	mutex sync.RWMutex
 	block *legacy.Block
@@ -25,6 +26,7 @@ type MinePool struct {
 	txPool         *protocol.TxPool
 }
 
+// NewMinePool will create a new MinePool
 func NewMinePool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool) *MinePool {
 	m := &MinePool{
 		chain:          c,
@@ -35,6 +37,7 @@ func NewMinePool(c *protocol.Chain, accountManager *account.Manager, txPool *pro
 	return m
 }
 
+// blockUpdater is the goroutine for keep update mining block
 func (m *MinePool) blockUpdater() {
 	ticker := time.NewTicker(time.Millisecond * blockUpdateMS)
 	for _ = range ticker.C {
@@ -61,15 +64,18 @@ func (m *MinePool) generateBlock() {
 	m.block = block
 }
 
+// GetWork will return a block header for p2p mining
 func (m *MinePool) GetWork() (*legacy.BlockHeader, error) {
 	if m.block != nil {
-		m.mutex.RLocker()
+		m.mutex.RLock()
 		defer m.mutex.RUnlock()
-		return &m.block.BlockHeader, nil
+		bh := m.block.BlockHeader
+		return &bh, nil
 	}
 	return nil, errors.New("no block is ready for mining")
 }
 
+// SubmitWork will try to submit the result to the blockchain
 func (m *MinePool) SubmitWork(bh *legacy.BlockHeader) bool {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -84,6 +90,7 @@ func (m *MinePool) SubmitWork(bh *legacy.BlockHeader) bool {
 	return err == nil
 }
 
+// CheckReward will return the block reward for select block
 func (m *MinePool) CheckReward(hash *bc.Hash) (uint64, error) {
 	block, err := m.chain.GetBlockByHash(hash)
 	if err != nil {
