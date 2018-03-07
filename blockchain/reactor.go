@@ -19,7 +19,7 @@ import (
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
-	"github.com/bytom/mining/minepool"
+	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
@@ -75,7 +75,7 @@ type BlockchainReactor struct {
 	txPool        *protocol.TxPool
 	hsm           *pseudohsm.HSM
 	mining        *cpuminer.CPUMiner
-	minepool      *minepool.MinePool
+	miningPool    *miningpool.MiningPool
 	mux           *http.ServeMux
 	sw            *p2p.Switch
 	handler       http.Handler
@@ -178,7 +178,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 		blockKeeper:   newBlockKeeper(chain, sw),
 		txPool:        txPool,
 		mining:        cpuminer.NewCPUMiner(chain, accounts, txPool),
-		minepool:      minepool.NewMinePool(chain, accounts, txPool),
+		miningPool:    miningpool.NewMiningPool(chain, accounts, txPool),
 		mux:           http.NewServeMux(),
 		sw:            sw,
 		hsm:           hsm,

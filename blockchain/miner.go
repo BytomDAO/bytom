@@ -10,7 +10,7 @@ type WorkResp struct {
 }
 
 func (bcr *BlockchainReactor) getWork() Response {
-	bh, err := bcr.minepool.GetWork()
+	bh, err := bcr.miningPool.GetWork()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -18,12 +18,12 @@ func (bcr *BlockchainReactor) getWork() Response {
 }
 
 func (bcr *BlockchainReactor) submitWork(bh *legacy.BlockHeader) Response {
-	success := bcr.minepool.SubmitWork(bh)
+	success := bcr.miningPool.SubmitWork(bh)
 	return NewSuccessResponse(success)
 }
 
 func (bcr *BlockchainReactor) checkReward(hash *bc.Hash) Response {
-	reward, err := bcr.minepool.CheckReward(hash)
+	reward, err := bcr.miningPool.CheckReward(hash)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

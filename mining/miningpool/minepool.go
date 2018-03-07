@@ -1,4 +1,4 @@
-package minepool
+package miningpool
 
 import (
 	"errors"
@@ -16,8 +16,8 @@ import (
 
 const blockUpdateMS = 1000
 
-// MinePool is the support struct for p2p mine pool
-type MinePool struct {
+// MiningPool is the support struct for p2p mine pool
+type MiningPool struct {
 	mutex sync.RWMutex
 	block *legacy.Block
 
@@ -26,9 +26,9 @@ type MinePool struct {
 	txPool         *protocol.TxPool
 }
 
-// NewMinePool will create a new MinePool
-func NewMinePool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool) *MinePool {
-	m := &MinePool{
+// NewMiningPool will create a new MiningPool
+func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool) *MiningPool {
+	m := &MiningPool{
 		chain:          c,
 		accountManager: accountManager,
 		txPool:         txPool,
@@ -38,14 +38,14 @@ func NewMinePool(c *protocol.Chain, accountManager *account.Manager, txPool *pro
 }
 
 // blockUpdater is the goroutine for keep update mining block
-func (m *MinePool) blockUpdater() {
+func (m *MiningPool) blockUpdater() {
 	ticker := time.NewTicker(time.Millisecond * blockUpdateMS)
 	for _ = range ticker.C {
 		m.generateBlock()
 	}
 }
 
-func (m *MinePool) generateBlock() {
+func (m *MiningPool) generateBlock() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	if m.block != nil && *m.chain.BestBlockHash() == m.block.PreviousBlockHash {
@@ -55,7 +55,7 @@ func (m *MinePool) generateBlock() {
 
 	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
 	if err != nil {
-		log.Errorf("minepool: failed on create NewBlockTemplate: %v", err)
+		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (m *MinePool) generateBlock() {
 }
 
 // GetWork will return a block header for p2p mining
-func (m *MinePool) GetWork() (*legacy.BlockHeader, error) {
+func (m *MiningPool) GetWork() (*legacy.BlockHeader, error) {
 	if m.block != nil {
 		m.mutex.RLock()
 		defer m.mutex.RUnlock()
@@ -74,7 +74,7 @@ func (m *MinePool) GetWork() (*legacy.BlockHeader, error) {
 }
 
 // SubmitWork will try to submit the result to the blockchain
-func (m *MinePool) SubmitWork(bh *legacy.BlockHeader) bool {
+func (m *MiningPool) SubmitWork(bh *legacy.BlockHeader) bool {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -95,7 +95,7 @@ func (m *MinePool) SubmitWork(bh *legacy.BlockHeader) bool {
 }
 
 // CheckReward will return the block reward for select block
-func (m *MinePool) CheckReward(hash *bc.Hash) (uint64, error) {
+func (m *MiningPool) CheckReward(hash *bc.Hash) (uint64, error) {
 	block, err := m.chain.GetBlockByHash(hash)
 	if err != nil {
 		return 0, err
