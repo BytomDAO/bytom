@@ -1,6 +1,9 @@
 package blockchain
 
 import (
+	"context"
+
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
@@ -22,8 +25,13 @@ func (bcr *BlockchainReactor) submitWork(bh *legacy.BlockHeader) Response {
 	return NewSuccessResponse(success)
 }
 
-func (bcr *BlockchainReactor) checkReward(hash *bc.Hash) Response {
-	reward, err := bcr.miningPool.CheckReward(hash)
+func (bcr *BlockchainReactor) checkReward(ctx context.Context, req struct {
+	HexHash chainjson.HexBytes `json:"block_hash"`
+}) Response {
+	var b32 [32]byte
+	copy(b32[:], req.HexHash)
+	hash := bc.NewHash(b32)
+	reward, err := bcr.miningPool.CheckReward(&hash)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
