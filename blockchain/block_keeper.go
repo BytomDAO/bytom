@@ -43,7 +43,6 @@ func (p *blockKeeperPeer) SetStatus(height uint64, hash *bc.Hash) {
 type pendingResponse struct {
 	block *legacy.Block
 	src   *p2p.Peer
-	sw    *p2p.Switch
 }
 
 //TODO: add retry mechanism
@@ -84,8 +83,8 @@ func (bk *blockKeeper) Stop() {
 	bk.done <- true
 }
 
-func (bk *blockKeeper) AddBlock(block *legacy.Block, src *p2p.Peer, sw *p2p.Switch) {
-	bk.pendingProcessCh <- &pendingResponse{block: block, src: src, sw: sw}
+func (bk *blockKeeper) AddBlock(block *legacy.Block, src *p2p.Peer) {
+	bk.pendingProcessCh <- &pendingResponse{block: block, src: src}
 }
 
 func (bk *blockKeeper) IsCaughtUp() bool {
@@ -197,7 +196,7 @@ func (bk *blockKeeper) blockProcessWorker() {
 		blockHash := block.Hash()
 		isOrphan, err := bk.chain.ProcessBlock(block)
 		if err != nil {
-			pendingResponse.sw.AddScamPeer(pendingResponse.src)
+			bk.sw.AddScamPeer(pendingResponse.src)
 			log.WithField("hash", blockHash.String()).Errorf("blockKeeper fail process block %v", err)
 			continue
 		}

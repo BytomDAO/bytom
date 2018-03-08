@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -21,7 +22,7 @@ const (
 	reconnectAttempts = 30
 	reconnectInterval = 3 * time.Second
 
-	keyBannedPeer      = "BannedPeer"
+	bannedPeerKey      = "BannedPeer"
 	defaultBanDuration = time.Hour * 24
 	peerBannedTM       = 20
 )
@@ -85,6 +86,7 @@ type Switch struct {
 	db               dbm.DB
 	TrustMetricStore *trust.TrustMetricStore
 	ScamPeerCh       chan *Peer
+	mtx              sync.Mutex
 
 	filterConnByAddr   func(net.Addr) error
 	filterConnByPubKey func(crypto.PubKeyEd25519) error
@@ -112,7 +114,7 @@ func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB) *Switch {
 	sw.TrustMetricStore.Start()
 
 	sw.bannedPeer = make(map[string]time.Time)
-	if datajson := sw.db.Get([]byte(keyBannedPeer)); datajson != nil {
+	if datajson := sw.db.Get([]byte(bannedPeerKey)); datajson != nil {
 		if err := json.Unmarshal(datajson, &sw.bannedPeer); err != nil {
 			return nil
 		}
@@ -630,11 +632,9 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 }
 
 func (sw *Switch) addPeerWithConnectionAndConfig(conn net.Conn, config *PeerConfig) error {
-	var host string
-	var err error
-
 	fullAddr := conn.RemoteAddr().String()
-	if host, _, err = net.SplitHostPort(fullAddr); err != nil {
+	host, _, err := net.SplitHostPort(fullAddr)
+	if err != nil {
 		return err
 	}
 
@@ -657,19 +657,29 @@ func (sw *Switch) addPeerWithConnectionAndConfig(conn net.Conn, config *PeerConf
 }
 
 func (sw *Switch) AddBannedPeer(peer *Peer) error {
+	sw.mtx.Lock()
+	defer sw.mtx.Unlock()
+
 	key := peer.mconn.RemoteAddress.IP.String()
 	sw.bannedPeer[key] = time.Now().Add(defaultBanDuration)
-	datajson, _ := json.Marshal(sw.bannedPeer)
-	sw.db.Set([]byte(keyBannedPeer), datajson)
+	datajson, err := json.Marshal(sw.bannedPeer)
+	if err != nil {
+		return err
+	}
+	sw.db.Set([]byte(bannedPeerKey), datajson)
 	return nil
 }
 
 func (sw *Switch) DelBannedPeer(addr string) error {
-	if _, ok := sw.bannedPeer[addr]; ok {
-		delete(sw.bannedPeer, addr)
+	sw.mtx.Lock()
+	defer sw.mtx.Unlock()
+
+	delete(sw.bannedPeer, addr)
+	datajson, err := json.Marshal(sw.bannedPeer)
+	if err != nil {
+		return err
 	}
-	datajson, _ := json.Marshal(sw.bannedPeer)
-	sw.db.Set([]byte(keyBannedPeer), datajson)
+	sw.db.Set([]byte(bannedPeerKey), datajson)
 	return nil
 }
 

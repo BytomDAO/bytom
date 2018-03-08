@@ -100,8 +100,7 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
 			return err
 		}
-		hash := d.Hash()
-		txStatus, err := c.GetTransactionStatus(&hash)
+		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
 		if err != nil {
 			return err
 		}
@@ -115,8 +114,7 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, attachBlock.Transactions); err != nil {
 			return err
 		}
-		hash := a.Hash()
-		txStatus, err := c.GetTransactionStatus(&hash)
+		txStatus, err := c.GetTransactionStatus(&attachBlock.ID)
 		if err != nil {
 			return err
 		}
@@ -124,7 +122,7 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 		if err := utxoView.ApplyBlock(attachBlock, txStatus); err != nil {
 			return err
 		}
-		chainChanges[a.Height] = &hash
+		chainChanges[a.Height] = &attachBlock.ID
 	}
 
 	return c.setState(block, utxoView, chainChanges)

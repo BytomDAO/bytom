@@ -260,7 +260,6 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 			log.Errorf("Fail on BlockRequestMessage get block: %v", err)
 			return
 		}
-
 		response, err := NewBlockResponseMessage(block)
 		if err != nil {
 			log.Errorf("Fail on BlockRequestMessage create resoinse: %v", err)
@@ -269,7 +268,7 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{response})
 
 	case *BlockResponseMessage:
-		bcr.blockKeeper.AddBlock(msg.GetBlock(), src, bcr.sw)
+		bcr.blockKeeper.AddBlock(msg.GetBlock(), src)
 
 	case *StatusRequestMessage:
 		block := bcr.chain.BestBlock()
