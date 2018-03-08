@@ -231,16 +231,6 @@ func (bcr *BlockchainReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
 	bcr.blockKeeper.RemovePeer(peer.Key)
 }
 
-func delTrustMetric(tm *trust.TrustMetric, sw *p2p.Switch, src *p2p.Peer) {
-	key := src.Connection().RemoteAddress.IP.String()
-	tm.BadEvents(1)
-	if tm.TrustScore() < 20 {
-		sw.AddBannedPeer(src)
-		sw.TrustMetricStore.PeerDisconnected(key)
-		src.CloseConn()
-	}
-}
-
 // Receive implements Reactor by handling 4 types of messages (look below).
 func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	var tm *trust.TrustMetric
@@ -279,11 +269,7 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{response})
 
 	case *BlockResponseMessage:
-		block := msg.GetBlock()
-		if err := bcr.chain.ValidateBlockBody(block); err != nil {
-			delTrustMetric(tm, bcr.sw, src)
-		}
-		bcr.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
+		bcr.blockKeeper.AddBlock(msg.GetBlock(), src, bcr.sw)
 
 	case *StatusRequestMessage:
 		block := bcr.chain.BestBlock()
@@ -295,7 +281,7 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 	case *TransactionNotifyMessage:
 		tx := msg.GetTransaction()
 		if err := bcr.chain.ValidateTx(tx); err != nil {
-			delTrustMetric(tm, bcr.sw, src)
+			bcr.sw.AddScamPeer(src)
 		}
 
 	default:

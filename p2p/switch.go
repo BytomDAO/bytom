@@ -8,12 +8,13 @@ import (
 	"net"
 	"time"
 
-	cfg "github.com/bytom/config"
-	"github.com/bytom/p2p/trust"
 	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
+
+	cfg "github.com/bytom/config"
+	"github.com/bytom/p2p/trust"
 )
 
 const (
@@ -22,6 +23,7 @@ const (
 
 	keyBannedPeer      = "BannedPeer"
 	defaultBanDuration = time.Hour * 24
+	peerBannedTM       = 20
 )
 
 var ErrConnectBannedPeer = errors.New("Connect banned peer")
@@ -82,6 +84,7 @@ type Switch struct {
 	bannedPeer       map[string]time.Time
 	db               dbm.DB
 	TrustMetricStore *trust.TrustMetricStore
+	ScamPeerCh       chan *Peer
 
 	filterConnByAddr   func(net.Addr) error
 	filterConnByPubKey func(crypto.PubKeyEd25519) error
@@ -102,6 +105,7 @@ func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB) *Switch {
 		dialing:      cmn.NewCMap(),
 		nodeInfo:     nil,
 		db:           trustHistoryDB,
+		ScamPeerCh:   make(chan *Peer),
 	}
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	sw.TrustMetricStore = trust.NewTrustMetricStore(trustHistoryDB, trust.DefaultConfig())
@@ -113,7 +117,7 @@ func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB) *Switch {
 			return nil
 		}
 	}
-
+	go sw.scamPeerHandler()
 	return sw
 }
 
@@ -233,6 +237,10 @@ func (sw *Switch) AddPeer(peer *Peer) error {
 		return err
 	}
 
+	if err := sw.checkBannedPeer(peer.NodeInfo.ListenHost()); err != nil {
+		return err
+	}
+
 	// Avoid self
 	if sw.nodeInfo.PubKey.Equals(peer.PubKey().Wrap()) {
 		return errors.New("Ignoring connection from self")
@@ -344,11 +352,8 @@ func (sw *Switch) dialSeed(addr *NetAddress) {
 }
 
 func (sw *Switch) DialPeerWithAddress(addr *NetAddress, persistent bool) (*Peer, error) {
-	if banEnd, ok := sw.bannedPeer[addr.IP.String()]; ok {
-		if time.Now().Before(banEnd) {
-			return nil, ErrConnectBannedPeer
-		}
-		sw.DelBannedPeer(addr.IP.String())
+	if err := sw.checkBannedPeer(addr.IP.String()); err != nil {
+		return nil, err
 	}
 
 	sw.dialing.Set(addr.IP.String(), addr)
@@ -633,11 +638,8 @@ func (sw *Switch) addPeerWithConnectionAndConfig(conn net.Conn, config *PeerConf
 		return err
 	}
 
-	if banEnd, ok := sw.bannedPeer[host]; ok {
-		if time.Now().Before(banEnd) {
-			return ErrConnectBannedPeer
-		}
-		sw.DelBannedPeer(host)
+	if err = sw.checkBannedPeer(host); err != nil {
+		return err
 	}
 
 	peer, err := newInboundPeerWithConfig(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, config)
@@ -668,5 +670,41 @@ func (sw *Switch) DelBannedPeer(addr string) error {
 	}
 	datajson, _ := json.Marshal(sw.bannedPeer)
 	sw.db.Set([]byte(keyBannedPeer), datajson)
+	return nil
+}
+
+func (sw *Switch) scamPeerHandler() {
+	for src := range sw.ScamPeerCh {
+		var tm *trust.TrustMetric
+		key := src.Connection().RemoteAddress.IP.String()
+		if tm = sw.TrustMetricStore.GetPeerTrustMetric(key); tm == nil {
+			log.Errorf("Can't get peer trust metric")
+			continue
+		}
+		sw.delTrustMetric(tm, src)
+	}
+}
+
+func (sw *Switch) AddScamPeer(src *Peer) {
+	sw.ScamPeerCh <- src
+}
+
+func (sw *Switch) delTrustMetric(tm *trust.TrustMetric, src *Peer) {
+	key := src.Connection().RemoteAddress.IP.String()
+	tm.BadEvents(1)
+	if tm.TrustScore() < peerBannedTM {
+		sw.AddBannedPeer(src)
+		sw.TrustMetricStore.PeerDisconnected(key)
+		sw.StopPeerGracefully(src)
+	}
+}
+
+func (sw *Switch) checkBannedPeer(peer string) error {
+	if banEnd, ok := sw.bannedPeer[peer]; ok {
+		if time.Now().Before(banEnd) {
+			return ErrConnectBannedPeer
+		}
+		sw.DelBannedPeer(peer)
+	}
 	return nil
 }

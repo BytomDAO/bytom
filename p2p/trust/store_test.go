@@ -15,7 +15,7 @@ import (
 )
 
 func TestTrustMetricStoreSaveLoad(t *testing.T) {
-	dir, err := ioutil.TempDir("./", "trust_test")
+	dir, err := ioutil.TempDir("", "trust_test")
 	if err != nil {
 		panic(err)
 	}
@@ -26,7 +26,7 @@ func TestTrustMetricStoreSaveLoad(t *testing.T) {
 	// 0 peers saved
 	store := NewTrustMetricStore(historyDB, DefaultConfig())
 	store.SetLogger(log.TestingLogger())
-	store.SaveToDB()
+	store.saveToDB()
 	// Load the data from the file
 	store = NewTrustMetricStore(historyDB, DefaultConfig())
 	store.SetLogger(log.TestingLogger())
@@ -50,14 +50,13 @@ func TestTrustMetricStoreSaveLoad(t *testing.T) {
 		tm.Start()
 		store.AddPeerTrustMetric(key, tm)
 
-		tm.BadEvents(200)
-		tm.GoodEvents(2)
+		tm.BadEvents(10)
+		tm.GoodEvents(1)
 	}
 	// Check that we have 100 entries and save
 	assert.Equal(t, 100, store.Size())
 	// Give the 100 metrics time to process the history data
 	for i := 0; i < 100; i++ {
-		tt[i].NextTick()
 		tt[i].NextTick()
 		tt[i].NextTick()
 	}
@@ -140,6 +139,7 @@ func TestTrustMetricStorePeerScore(t *testing.T) {
 	assert.NotEqual(t, 100, first)
 	tm.BadEvents(10)
 	second := tm.TrustScore()
+
 	if second > first {
 		t.Errorf("A greater number of bad events should lower the trust score")
 	}
