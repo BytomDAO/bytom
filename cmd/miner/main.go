@@ -28,7 +28,7 @@ func doWork(bh *legacy.BlockHeader) bool {
 }
 
 func main() {
-	data, _ := util.ClientCall("/mining-pool/get-work", nil)
+	data, _ := util.ClientCall("/mining-pool/getwork", nil)
 	rawData, err := json.Marshal(data)
 	if err != nil {
 		fmt.Println(err)
@@ -41,7 +41,7 @@ func main() {
 	}
 
 	if doWork(bh) {
-		util.ClientCall("/mining-pool/submit-work", &bh)
+		util.ClientCall("/mining-pool/submitwork", &bh)
 	}
 
 }
