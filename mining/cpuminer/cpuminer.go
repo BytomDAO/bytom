@@ -30,7 +30,6 @@ type CPUMiner struct {
 	chain             *protocol.Chain
 	accountManager    *account.Manager
 	txPool            *protocol.TxPool
-	currentBlock      *legacy.Block
 	numWorkers        uint64
 	started           bool
 	discreteMining    bool
@@ -41,53 +40,32 @@ type CPUMiner struct {
 	updateHashes      chan uint64
 	speedMonitorQuit  chan struct{}
 	quit              chan struct{}
-	resume            chan struct{}
-	headerChan        chan legacy.BlockHeader
 }
 
 // solveBlock attempts to find some combination of a nonce, extra nonce, and
 // current timestamp which makes the passed block hash to a value less than the
 // target difficulty.
-// return 0 is ok, 1 is quit, -1 is failed
-func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) int {
+func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
+
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
 		case <-quit:
-			return 1
+			return false
 		case <-ticker.C:
 			if m.chain.Height() >= header.Height {
-				return -1
-			}
-		case headerW := <-m.headerChan:
-			log.Infof("Receved mining work,header:%v", headerW)
-			if header.Height != headerW.Height {
-				return -1
-			} else {
-				block.BlockHeader = headerW
-				return 0
+				return false
 			}
 		default:
 		}
 
 		header.Nonce = i
 		headerHash := header.Hash()
-
 		if difficulty.CheckProofOfWork(&headerHash, header.Bits) {
-			return 0
+			return true
 		}
 	}
-	return -1
-}
-
-// Get current block
-func (m *CPUMiner) GetCurrentBlock() *legacy.Block {
-	return m.currentBlock
-}
-
-// Notify spawn block
-func (m *CPUMiner) NotifySpawnBlock(header legacy.BlockHeader) {
-	m.headerChan <- header
+	return false
 }
 
 // generateBlocks is a worker that is controlled by the miningWorkerController.
@@ -97,36 +75,34 @@ func (m *CPUMiner) NotifySpawnBlock(header legacy.BlockHeader) {
 // is submitted.
 //
 // It must be run as a goroutine.
-func (m *CPUMiner) generateBlocks(quit chan struct{}, resume chan struct{}) {
+func (m *CPUMiner) generateBlocks(quit chan struct{}) {
 	ticker := time.NewTicker(time.Second * hashUpdateSecs)
 	defer ticker.Stop()
+
 out:
 	for {
 		select {
-		case <-resume:
-			{
-				block := *(m.currentBlock)
-				if num := m.solveBlock(&block, ticker, quit); num == 0 {
-					if isOrphan, err := m.chain.ProcessBlock(&block); err == nil {
-						log.WithFields(log.Fields{
-							"height":   block.BlockHeader.Height,
-							"isOrphan": isOrphan,
-							"tx":       len(block.Transactions),
-						}).Info("Miner processed block")
-					} else {
-						log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
-					}
-					select {
-					case <-quit:
-						break out
-					default:
-					}
-				} else if num == 1 {
-					break out
-				}
-				m.resume <- struct{}{}
-			}
+		case <-quit:
+			break out
 		default:
+		}
+
+		block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
+		if err != nil {
+			log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
+			continue
+		}
+
+		if m.solveBlock(block, ticker, quit) {
+			if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
+				log.WithFields(log.Fields{
+					"height":   block.BlockHeader.Height,
+					"isOrphan": isOrphan,
+					"tx":       len(block.Transactions),
+				}).Info("Miner processed block")
+			} else {
+				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
+			}
 		}
 	}
 
@@ -142,30 +118,19 @@ func (m *CPUMiner) miningWorkerController() {
 	// launchWorkers groups common code to launch a specified number of
 	// workers for generating blocks.
 	var runningWorkers []chan struct{}
-	var resumeWorkers []chan struct{}
 	launchWorkers := func(numWorkers uint64) {
 		for i := uint64(0); i < numWorkers; i++ {
 			quit := make(chan struct{})
-			resume := make(chan struct{})
 			runningWorkers = append(runningWorkers, quit)
-			resumeWorkers = append(resumeWorkers, resume)
 
 			m.workerWg.Add(1)
-			go m.generateBlocks(quit, resume)
+			go m.generateBlocks(quit)
 		}
 	}
 
 	// Launch the current number of workers by default.
 	runningWorkers = make([]chan struct{}, 0, m.numWorkers)
-	resumeWorkers = make([]chan struct{}, 0, m.numWorkers)
-	var err error
-	if m.currentBlock, err = mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager); err != nil {
-		log.Panicf("Mining: failed on create NewBlockTemplate: %v", err)
-	}
 	launchWorkers(m.numWorkers)
-	for _, resume := range resumeWorkers {
-		resume <- struct{}{}
-	}
 
 out:
 	for {
@@ -187,28 +152,15 @@ out:
 			// Signal the most recently created goroutines to exit.
 			for i := numRunning - 1; i >= m.numWorkers; i-- {
 				close(runningWorkers[i])
-				close(resumeWorkers[i])
 				runningWorkers[i] = nil
-				resumeWorkers[i] = nil
 				runningWorkers = runningWorkers[:i]
-				resumeWorkers = resumeWorkers[:i]
 			}
 
 		case <-m.quit:
 			for _, quit := range runningWorkers {
-				//quit <- struct{}{}
 				close(quit)
 			}
 			break out
-		case <-m.resume:
-			var err error
-			if m.currentBlock, err = mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager); err != nil {
-				log.Panicf("Mining: failed on create NewBlockTemplate: %v", err)
-			}
-
-			for _, resume := range resumeWorkers {
-				resume <- struct{}{}
-			}
 		}
 	}
 
@@ -235,7 +187,6 @@ func (m *CPUMiner) Start() {
 	}
 
 	m.quit = make(chan struct{})
-	m.resume = make(chan struct{})
 	m.speedMonitorQuit = make(chan struct{})
 	m.wg.Add(1)
 	go m.miningWorkerController()
@@ -258,7 +209,6 @@ func (m *CPUMiner) Stop() {
 	if !m.started || m.discreteMining {
 		return
 	}
-	log.Info("----CPU miner stopped")
 
 	close(m.quit)
 	m.wg.Wait()
@@ -329,6 +279,5 @@ func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *pro
 		updateNumWorkers:  make(chan struct{}),
 		queryHashesPerSec: make(chan float64),
 		updateHashes:      make(chan uint64),
-		headerChan:        make(chan legacy.BlockHeader),
 	}
 }

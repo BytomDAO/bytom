@@ -19,6 +19,7 @@ import (
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
+	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
@@ -74,6 +75,7 @@ type BlockchainReactor struct {
 	txPool        *protocol.TxPool
 	hsm           *pseudohsm.HSM
 	mining        *cpuminer.CPUMiner
+	miningPool    *miningpool.MiningPool
 	mux           *http.ServeMux
 	sw            *p2p.Switch
 	handler       http.Handler
@@ -168,7 +170,6 @@ type page struct {
 
 // NewBlockchainReactor returns the reactor of whole blockchain.
 func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *BlockchainReactor {
-	mining := cpuminer.NewCPUMiner(chain, accounts, txPool)
 	bcr := &BlockchainReactor{
 		chain:         chain,
 		wallet:        wallet,
@@ -176,7 +177,8 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 		assets:        assets,
 		blockKeeper:   newBlockKeeper(chain, sw),
 		txPool:        txPool,
-		mining:        mining,
+		mining:        cpuminer.NewCPUMiner(chain, accounts, txPool),
+		miningPool:    miningpool.NewMiningPool(chain, accounts, txPool),
 		mux:           http.NewServeMux(),
 		sw:            sw,
 		hsm:           hsm,
