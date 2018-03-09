@@ -104,6 +104,7 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/import-key-progress", jsonHandler(bcr.keyImportProgress))
 
 	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
+	m.Handle("/get-block-header-by-height", jsonHandler(bcr.getBlockHeaderByHeight))
 	m.Handle("/get-block-by-hash", jsonHandler(bcr.getBlockByHash))
 	m.Handle("/get-block-by-height", jsonHandler(bcr.getBlockByHeight))
 	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(bcr.getBlockTransactionsCountByHash))
@@ -113,7 +114,6 @@ func (bcr *BlockchainReactor) BuildHandler() {
 
 	m.Handle("/is-mining", jsonHandler(bcr.isMining))
 	m.Handle("/gas-rate", jsonHandler(bcr.gasRate))
-	m.Handle("/getreward", jsonHandler(bcr.checkReward))
 	m.Handle("/getwork", jsonHandler(bcr.getWork))
 	m.Handle("/submitwork", jsonHandler(bcr.submitWork))
 

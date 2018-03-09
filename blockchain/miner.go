@@ -3,18 +3,12 @@ package blockchain
 import (
 	"context"
 
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
 
-type GetReward struct {
-	Difficulty uint64   `json:"difficulty"`
-	Hash       *bc.Hash `json:"hash"`
-	Height     uint64   `json:"height"`
-	Version    uint64   `json:"version"`
-	PrevHash   *bc.Hash `json:"prev_hash"`
-	Reward     uint64   `json:"reward "`
-	Timestamp  uint64   `json:"timestamp"`
+type BlockHeaderByHeight struct {
+	BlockHeader *legacy.BlockHeader `json:"block_header"`
+	Reward      uint64              `json:"reward"`
 }
 
 func (bcr *BlockchainReactor) getWork() Response {
@@ -30,7 +24,7 @@ func (bcr *BlockchainReactor) submitWork(bh *legacy.BlockHeader) Response {
 	return NewSuccessResponse(success)
 }
 
-func (bcr *BlockchainReactor) checkReward(ctx context.Context, req struct {
+func (bcr *BlockchainReactor) getBlockHeaderByHeight(ctx context.Context, req struct {
 	Height uint64 `json:"block_height"`
 }) Response {
 	block, err := bcr.chain.GetBlockByHeight(req.Height)
@@ -38,15 +32,9 @@ func (bcr *BlockchainReactor) checkReward(ctx context.Context, req struct {
 		return NewErrorResponse(err)
 	}
 
-	hash := block.Hash()
-	resp := &GetReward{
-		Difficulty: block.Bits,
-		Hash:       &hash,
-		Height:     block.Height,
-		Version:    block.Version,
-		PrevHash:   &block.PreviousBlockHash,
-		Reward:     block.Transactions[0].Outputs[0].Amount,
-		Timestamp:  block.Timestamp,
+	resp := &BlockHeaderByHeight{
+		BlockHeader: &block.BlockHeader,
+		Reward:      block.Transactions[0].Outputs[0].Amount,
 	}
 	return NewSuccessResponse(resp)
 }
