@@ -22,6 +22,8 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/vm/vmutil"
+	"sort"
+	"strings"
 )
 
 const (
@@ -46,8 +48,15 @@ func aliasKey(name string) []byte {
 	return []byte(aliasPrefix + name)
 }
 
-func indexKey(xpub chainkd.XPub) []byte {
-	return []byte(indexPrefix + xpub.String())
+func indexKeys(xpubs []chainkd.XPub) []byte {
+	xpubStrings := make([]string, len(xpubs))
+	for i, xpub := range xpubs {
+		xpubStrings[i] = xpub.String()
+	}
+	sort.Strings(xpubStrings)
+	suffix := strings.Join(xpubStrings, "")
+
+	return []byte(indexPrefix + suffix)
 }
 
 //Key account store prefix
@@ -58,6 +67,17 @@ func Key(name string) []byte {
 //CPKey account control promgram store prefix
 func CPKey(hash common.Hash) []byte {
 	return append([]byte(accountCPPrefix), hash[:]...)
+}
+
+func convertUnit64ToBytes(nextIndex uint64) []byte {
+	buf := make([]byte, 8)
+	binary.PutUvarint(buf, nextIndex)
+	return buf
+}
+
+func convertBytesToUint64(rawIndex []byte) uint64 {
+	result, _ := binary.Uvarint(rawIndex)
+	return result
 }
 
 // NewManager creates a new account manager
@@ -119,15 +139,13 @@ type Account struct {
 func (m *Manager) getNextAccountIndex(xpubs []chainkd.XPub) (*uint64, error) {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
-	var nextIndex uint64 = 1
 
-	if rawIndex := m.db.Get(indexKey(xpubs[0])); rawIndex != nil {
-		nextIndex = binary.LittleEndian.Uint64(rawIndex) + 1
+	var nextIndex uint64 = 1
+	if rawIndexBytes := m.db.Get(indexKeys(xpubs)); rawIndexBytes != nil {
+		nextIndex = convertBytesToUint64(rawIndexBytes) + 1
 	}
 
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, nextIndex)
-	m.db.Set(indexKey(xpubs[0]), buf)
+	m.db.Set(indexKeys(xpubs), convertUnit64ToBytes(nextIndex))
 
 	return &nextIndex, nil
 }
