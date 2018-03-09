@@ -554,6 +554,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 			return err
 		}
 	}
+
 	if b.Timestamp > uint64(time.Now().Unix())+consensus.MaxTimeOffsetSeconds {
 		return errBadTimestamp
 	}

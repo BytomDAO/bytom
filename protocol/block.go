@@ -58,7 +58,7 @@ func (c *Chain) connectBlock(block *legacy.Block) (err error) {
 	if err := c.store.GetTransactionsUtxo(utxoView, bcBlock.Transactions); err != nil {
 		return err
 	}
-	if err := utxoView.ApplyBlock(bcBlock); err != nil {
+	if err := utxoView.ApplyBlock(bcBlock, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
 
@@ -100,7 +100,11 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
 			return err
 		}
-		if err := utxoView.DetachBlock(detachBlock); err != nil {
+		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
+		if err != nil {
+			return err
+		}
+		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
 			return err
 		}
 	}
@@ -110,11 +114,15 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, attachBlock.Transactions); err != nil {
 			return err
 		}
-		if err := utxoView.ApplyBlock(attachBlock); err != nil {
+		txStatus, err := c.GetTransactionStatus(&attachBlock.ID)
+		if err != nil {
 			return err
 		}
-		aHash := a.Hash()
-		chainChanges[a.Height] = &aHash
+
+		if err := utxoView.ApplyBlock(attachBlock, txStatus); err != nil {
+			return err
+		}
+		chainChanges[a.Height] = &attachBlock.ID
 	}
 
 	return c.setState(block, utxoView, chainChanges)
