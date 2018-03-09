@@ -40,11 +40,13 @@ func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
 
 	tmp := mat.NewDense(matSize, matSize, make([]float64, matSize*matSize))
 
+
+	dataIdentity := make([]float64, matSize*matSize)
+	for i := 0; i < 256; i++ {
+		dataIdentity[i*257] = float64(1)
+	}
+
 	for i := 0; i < 4; i++ {
-		dataIdentity := make([]float64, matSize*matSize)
-		for i := 0; i < 256; i++ {
-			dataIdentity[i*257] = float64(1)
-		}
 		ma := mat.NewDense(matSize, matSize, dataIdentity)
 		mc := mat.NewDense(matSize, matSize, make([]float64, matSize*matSize))
 
