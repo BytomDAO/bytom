@@ -22,6 +22,8 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/vm/vmutil"
+	"sort"
+	"strings"
 )
 
 const (
@@ -47,10 +49,12 @@ func aliasKey(name string) []byte {
 }
 
 func indexKeys(xpubs []chainkd.XPub) []byte {
-	suffix := ""
-	for _, xpub := range xpubs {
-		suffix += xpub.String()
+	xpubStrings := make([]string, len(xpubs))
+	for i, xpub := range xpubs {
+		xpubStrings[i] = xpub.String()
 	}
+	sort.Strings(xpubStrings)
+	suffix := strings.Join(xpubStrings, "")
 
 	return []byte(indexPrefix + suffix)
 }
