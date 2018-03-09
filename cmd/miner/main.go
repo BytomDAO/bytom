@@ -27,6 +27,31 @@ func doWork(bh *legacy.BlockHeader) bool {
 	return false
 }
 
+func getBlockHeaderByHeight(height uint64) {
+	type Req struct {
+		BlockHeight uint64 `json:"block_height"`
+	}
+
+	type Resp struct {
+		BlockHeader *legacy.BlockHeader `json:"block_header"`
+		Reward      uint64              `json:"reward"`
+	}
+
+	data, _ := util.ClientCall("/get-block-header-by-height", Req{BlockHeight: height})
+	rawData, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	resp := &Resp{}
+	if err = json.Unmarshal(rawData, resp); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	fmt.Println(resp.Reward)
+}
+
 func main() {
 	data, _ := util.ClientCall("/getwork", nil)
 	rawData, err := json.Marshal(data)
@@ -44,4 +69,5 @@ func main() {
 		util.ClientCall("/submitwork", &bh)
 	}
 
+	getBlockHeaderByHeight(bh.Height)
 }
