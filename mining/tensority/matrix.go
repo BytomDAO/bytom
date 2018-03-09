@@ -5,7 +5,6 @@ import (
 	"unsafe"
 
 	"gonum.org/v1/gonum/mat"
-
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 )
@@ -13,8 +12,6 @@ import (
 const (
 	matSize     = 1 << 8 // Size of matrix
 	matNum      = 1 << 8 // Number of matrix
-	epochLength = 1 << 7 // Blocks per epoch
-	mulRounds   = 1 << 8 // Number of rounds in mulmatrix
 )
 
 func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
