@@ -318,8 +318,7 @@ func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, i
 
 func (w *Wallet) rescanBlocks() {
 	select {
-	case <-w.rescanProgress:
-		w.rescanProgress <- struct{}{}
+	case w.rescanProgress <- struct{}{}:
 	default:
 		return
 	}
@@ -356,16 +355,15 @@ func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
 	return keysInfo, nil
 }
 
+//checkRescanStatus mark private key import process `Complete` if rescan finished
 func checkRescanStatus(w *Wallet) {
-	if !w.ImportPrivKey {
+	if !w.ImportPrivKey || w.status.WorkHeight < w.status.BestHeight {
 		return
 	}
-	if w.status.WorkHeight >= w.status.BestHeight {
-		w.ImportPrivKey = false
-		for i := range w.keysInfo {
-			w.keysInfo[i].Complete = true
-		}
-	}
 
+	w.ImportPrivKey = false
+	for _, keyInfo := range w.keysInfo {
+		keyInfo.Complete = true
+	}
 	w.commitkeysInfo()
 }
