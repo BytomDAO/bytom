@@ -157,16 +157,6 @@ func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest
 func (bcr *BlockchainReactor) lockContractTX(ctx context.Context, buildReqs *BuildRequest) Response {
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
-	accountID, contractProg, err := bcr.getContractAccountID(ctx, buildReqs)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	// establish an association between account and contract
-	if _, err = bcr.accounts.CreateContractHook(ctx, accountID, contractProg); err != nil {
-		return NewErrorResponse(err)
-	}
-
 	tmpl, err := bcr.buildSingle(subctx, buildReqs)
 	if err != nil {
 		return NewErrorResponse(err)
