@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
 
@@ -92,13 +91,4 @@ func (m *MiningPool) SubmitWork(bh *legacy.BlockHeader) bool {
 		log.Warning("SubmitWork is orphan")
 	}
 	return err == nil
-}
-
-// CheckReward will return the block reward for select block
-func (m *MiningPool) CheckReward(hash *bc.Hash) (uint64, error) {
-	block, err := m.chain.GetBlockByHash(hash)
-	if err != nil {
-		return 0, err
-	}
-	return block.Transactions[0].Outputs[0].Amount, nil
 }
