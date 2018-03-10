@@ -210,10 +210,6 @@ func smix(b []byte, r, N int, v, xy []uint32) {
 	}
 }
 
-func Smix(b []byte, r, N int, v, xy []uint32) {
-	smix(b, r, N, v, xy)
-}
-
 // Key derives a key from the password, salt, and cost parameters, returning
 // a byte slice of length keyLen that can be used as cryptographic key.
 //

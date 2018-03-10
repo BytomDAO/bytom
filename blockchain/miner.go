@@ -1,31 +1,40 @@
 package blockchain
 
 import (
-	log "github.com/sirupsen/logrus"
+	"context"
 
 	"github.com/bytom/protocol/bc/legacy"
 )
 
-// Get the parameters of mining
-func (bcr *BlockchainReactor) getWork() *WorkResp {
-	var resp WorkResp
+type BlockHeaderByHeight struct {
+	BlockHeader *legacy.BlockHeader `json:"block_header"`
+	Reward      uint64              `json:"reward"`
+}
 
-	if block := bcr.mining.GetCurrentBlock(); block != nil {
-		resp.Header = block.BlockHeader
-		return &resp
+func (bcr *BlockchainReactor) getWork() Response {
+	bh, err := bcr.miningPool.GetWork()
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(bh)
+}
+
+func (bcr *BlockchainReactor) submitWork(bh *legacy.BlockHeader) Response {
+	success := bcr.miningPool.SubmitWork(bh)
+	return NewSuccessResponse(success)
+}
+
+func (bcr *BlockchainReactor) getBlockHeaderByHeight(ctx context.Context, req struct {
+	Height uint64 `json:"block_height"`
+}) Response {
+	block, err := bcr.chain.GetBlockByHeight(req.Height)
+	if err != nil {
+		return NewErrorResponse(err)
 	}
 
-	return nil
-}
-
-// Submit work for mining
-func (bcr *BlockchainReactor) submitWork(header legacy.BlockHeader) Response {
-	log.Infof("mining:---submitWork header:%v", header)
-	bcr.mining.NotifySpawnBlock(header)
-	return NewSuccessResponse(nil)
-}
-
-//WorkResp is miner response struct
-type WorkResp struct {
-	Header legacy.BlockHeader `json:"header"`
+	resp := &BlockHeaderByHeight{
+		BlockHeader: &block.BlockHeader,
+		Reward:      block.Transactions[0].Outputs[0].Amount,
+	}
+	return NewSuccessResponse(resp)
 }

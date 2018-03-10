@@ -40,7 +40,7 @@ func (hook ContextHook) Fire(entry *log.Entry) error {
 }
 
 func init() {
-	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
+	log.SetFormatter(&log.TextFormatter{FullTimestamp: true, DisableColors: true})
 
 	// If environment variable BYTOM_DEBUG is not empty,
 	// then add the hook to logrus and set the log level to DEBUG

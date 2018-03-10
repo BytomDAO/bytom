@@ -9,8 +9,8 @@ import (
 //consensus variables
 const (
 	// define the Max transaction size and Max block size
-	MaxTxSize    = uint64(1048576)
-	MaxBlockSzie = uint64(10485760)
+	MaxTxSize   = uint64(1048576)
+	MaxBlockGas = uint64(100000000)
 
 	//config parameter for coinbase reward
 	CoinbasePendingBlockNumber = uint64(6)
@@ -30,6 +30,11 @@ const (
 	PayToWitnessScriptHashDataSize = 32
 
 	CoinbaseArbitrarySizeLimit = 128
+
+	VMGasRate        = int64(1000)
+	StorageGasRate   = int64(10)
+	MaxGasAmount     = int64(100000)
+	DefaultGasCredit = int64(80000)
 )
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
