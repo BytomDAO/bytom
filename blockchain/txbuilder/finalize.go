@@ -13,8 +13,9 @@ import (
 var (
 	// ErrRejected means the network rejected a tx (as a double-spend)
 	ErrRejected = errors.New("transaction rejected")
-
-	ErrMissingRawTx        = errors.New("missing raw tx")
+	//ErrMissingRawTx means missing transaction
+	ErrMissingRawTx = errors.New("missing raw tx")
+	//ErrBadInstructionCount means too many signing instructions compare with inputs
 	ErrBadInstructionCount = errors.New("too many signing instructions in template")
 )
 

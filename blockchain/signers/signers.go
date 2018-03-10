@@ -15,7 +15,9 @@ import (
 type keySpace byte
 
 const (
-	AssetKeySpace   keySpace = 0
+	//AssetKeySpace means asset key path type
+	AssetKeySpace keySpace = 0
+	//AccountKeySpace means account key path type
 	AccountKeySpace keySpace = 1
 )
 
@@ -134,6 +136,7 @@ func Find(ctx context.Context, db dbm.DB, typ, id string) (*Signer, error) {
 	return &s, nil
 }
 
+//ConvertKeys convert []byte to XPub
 func ConvertKeys(xpubs [][]byte) ([]chainkd.XPub, error) {
 	var xkeys []chainkd.XPub
 	for i, xpub := range xpubs {

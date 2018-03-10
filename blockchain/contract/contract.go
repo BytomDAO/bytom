@@ -2,13 +2,17 @@ package contract
 
 import (
 	stdjson "encoding/json"
+
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
 )
 
 var (
-	ErrBadLength    = errors.New("mismatched length")
-	ErrBadClause    = errors.New("mismatched contract clause")
+	//ErrBadLength means mismatched length
+	ErrBadLength = errors.New("mismatched length")
+	//ErrBadClause means mismatched contract clause
+	ErrBadClause = errors.New("mismatched contract clause")
+	//ErrBadArguments means mismatched contract arguments
 	ErrBadArguments = errors.New("mismatched contract arguments")
 )
 
@@ -44,7 +48,7 @@ func (a *ContractReq) ContractDecoder() (act ContractAction, err error) {
 	case "CallOption":
 		act, err = DecodeCallOption(a.ContractArgs)
 	default:
-		err = errors.New("Invalid contract!")
+		err = errors.New("Invalid contract")
 	}
 
 	return

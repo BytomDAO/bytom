@@ -23,6 +23,7 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+//DefaultNativeAsset return default internal Asset BTM
 var DefaultNativeAsset *Asset
 
 const (
@@ -52,6 +53,7 @@ func initNativeAsset() {
 	}
 }
 
+//AliasKey return alias key for storage
 func AliasKey(name string) []byte {
 	return []byte(AliasPrefix + name)
 }
@@ -234,7 +236,7 @@ func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[
 	return nil
 }
 
-// findByID retrieves an Asset record along with its signer, given an assetID.
+// FindByID retrieves an Asset record along with its signer, given an assetID.
 func (reg *Registry) FindByID(ctx context.Context, id *bc.AssetID) (*Asset, error) {
 	reg.cacheMu.Lock()
 	cached, ok := reg.cache.Get(id.String())

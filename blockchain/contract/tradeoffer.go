@@ -49,13 +49,13 @@ func (a *TradeOffer) Build() (buildReqStr string, err error) {
 	switch a.Selector {
 	case ClauseTrade:
 		if a.Alias {
-			buildReqStr = fmt.Sprintf(buildInlineAcctReqFmtByAlias, a.OutputID,
+			buildReqStr = fmt.Sprintf(buildInlineAcctReqFmtByAlias, a.OutputID, a.AccountInfo,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerProgram,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerAccountInfo,
 				a.BtmGas, a.AccountInfo,
 				a.AssetInfo, a.Amount, a.AccountInfo)
 		} else {
-			buildReqStr = fmt.Sprintf(buildInlineAcctReqFmt, a.OutputID,
+			buildReqStr = fmt.Sprintf(buildInlineAcctReqFmt, a.OutputID, a.AccountInfo,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerProgram,
 				a.InnerAssetInfo, a.InnerAmount, a.InnerAccountInfo,
 				a.BtmGas, a.AccountInfo,
@@ -63,9 +63,9 @@ func (a *TradeOffer) Build() (buildReqStr string, err error) {
 		}
 	case ClauseCancel:
 		if a.Alias {
-			buildReqStr = fmt.Sprintf(buildAcctRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
+			buildReqStr = fmt.Sprintf(buildAcctRecvReqFmtByAlias, a.OutputID, a.AccountInfo, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 		} else {
-			buildReqStr = fmt.Sprintf(buildAcctRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
+			buildReqStr = fmt.Sprintf(buildAcctRecvReqFmt, a.OutputID, a.AccountInfo, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 		}
 	default:
 		err = errors.WithDetailf(ErrBadClause, "selected clause [%v] error, contract TradeOffer's clause must in set:[%v, %v]",
