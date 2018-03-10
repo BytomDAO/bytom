@@ -135,12 +135,12 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 // UtxoToInputs convert an utxo to the txinput
 func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
 	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash, refData)
+	sigInst := &txbuilder.SigningInstruction{}
 	if signer == nil {
-		return txInput, nil, nil
+		return txInput, sigInst, nil
 	}
 
 	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
-	sigInst := &txbuilder.SigningInstruction{}
 	if u.Address == "" {
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
 		return txInput, sigInst, nil

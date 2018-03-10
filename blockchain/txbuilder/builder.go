@@ -9,12 +9,10 @@ import (
 	"github.com/bytom/protocol/bc/legacy"
 )
 
-// NewBuilder return new TemplateBuilder instance
 func NewBuilder(maxTime time.Time) *TemplateBuilder {
 	return &TemplateBuilder{maxTime: maxTime}
 }
 
-// TemplateBuilder is struct of building transactions
 type TemplateBuilder struct {
 	base                *legacy.TxData
 	inputs              []*legacy.TxInput
@@ -27,20 +25,15 @@ type TemplateBuilder struct {
 	callbacks           []func() error
 }
 
-// AddInput add inputs of transactions
 func (b *TemplateBuilder) AddInput(in *legacy.TxInput, sigInstruction *SigningInstruction) error {
 	if !in.IsCoinbase() && in.Amount() > math.MaxInt64 {
 		return errors.WithDetailf(ErrBadAmount, "amount %d exceeds maximum value 2^63", in.Amount())
 	}
 	b.inputs = append(b.inputs, in)
-
-	if sigInstruction != nil {
-		b.signingInstructions = append(b.signingInstructions, sigInstruction)
-	}
+	b.signingInstructions = append(b.signingInstructions, sigInstruction)
 	return nil
 }
 
-// AddOutput add outputs of transactions
 func (b *TemplateBuilder) AddOutput(o *legacy.TxOutput) error {
 	if o.Amount > math.MaxInt64 {
 		return errors.WithDetailf(ErrBadAmount, "amount %d exceeds maximum value 2^63", o.Amount)
@@ -49,21 +42,18 @@ func (b *TemplateBuilder) AddOutput(o *legacy.TxOutput) error {
 	return nil
 }
 
-// RestrictMinTime set minTime
 func (b *TemplateBuilder) RestrictMinTime(t time.Time) {
 	if t.After(b.minTime) {
 		b.minTime = t
 	}
 }
 
-// RestrictMaxTime set maxTime
 func (b *TemplateBuilder) RestrictMaxTime(t time.Time) {
 	if t.Before(b.maxTime) {
 		b.maxTime = t
 	}
 }
 
-// MaxTime return maxTime
 func (b *TemplateBuilder) MaxTime() time.Time {
 	return b.maxTime
 }
@@ -102,7 +92,6 @@ func (b *TemplateBuilder) rollback() {
 	}
 }
 
-// Build build transactions with template
 func (b *TemplateBuilder) Build() (*Template, *legacy.TxData, error) {
 	// Run any building callbacks.
 	for _, cb := range b.callbacks {
