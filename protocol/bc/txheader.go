@@ -16,6 +16,7 @@ func (h *TxHeader) writeForHash(w io.Writer) {
 	mustWriteForHash(w, h.ExtHash)
 }
 
+// TODO: remove Data in TxHeader
 // NewTxHeader creates an new TxHeader.
 func NewTxHeader(version, serializedSize, timeRange uint64, resultIDs []*Hash, data *Hash) *TxHeader {
 	return &TxHeader{

@@ -233,7 +233,8 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		mux.WitnessDestinations = append(mux.WitnessDestinations, dest)
 	}
 
-	refdatahash := hashData(tx.ReferenceData)
+	// TODO: remove refdasa hash in TxHeader
+	refdatahash := hashData([]byte{})
 	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, tx.TimeRange, resultIDs, &refdatahash)
 	headerID = addEntry(h)
 

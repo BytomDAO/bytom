@@ -126,22 +126,8 @@ func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) er
 	return b.AddOutput(out)
 }
 
-// DecodeSetTxRefDataAction convert input data to action struct
-func DecodeSetTxRefDataAction(data []byte) (Action, error) {
-	a := new(setTxRefDataAction)
-	err := stdjson.Unmarshal(data, a)
-	return a, err
-}
-
 type setTxRefDataAction struct {
 	Data json.Map `json:"reference_data"`
-}
-
-func (a *setTxRefDataAction) Build(ctx context.Context, b *TemplateBuilder) error {
-	if len(a.Data) == 0 {
-		return MissingFieldsError("reference_data")
-	}
-	return b.setReferenceData(a.Data)
 }
 
 // DecodeRetireAction convert input data to action struct
