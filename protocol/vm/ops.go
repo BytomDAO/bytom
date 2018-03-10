@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
-	"reflect"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
@@ -485,13 +484,4 @@ func init() {
 			isExpansion[i] = true
 		}
 	}
-}
-
-// IsPushdata judge instruction whether is a pushdata operation(include opFalse operation)
-func (inst *Instruction) IsPushdata() bool {
-	if reflect.ValueOf(ops[inst.Op].fn) == reflect.ValueOf(ops[OP_1].fn) || inst.Op == OP_FALSE {
-		return true
-	}
-
-	return false
 }
