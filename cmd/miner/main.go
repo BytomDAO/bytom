@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bytom/blockchain"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/util"
@@ -19,7 +20,7 @@ func doWork(bh *legacy.BlockHeader) bool {
 	for i := uint64(0); i <= maxNonce; i++ {
 		bh.Nonce = i
 		headerHash := bh.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, bh.Bits) {
+		if difficulty.CheckProofOfWork(&headerHash, &bh.PreviousBlockHash, bh.Bits) {
 			fmt.Printf("Mining: successful-----proof hash:%v\n", headerHash.String())
 			return true
 		}
@@ -59,15 +60,15 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	bh := &legacy.BlockHeader{}
-	if err = json.Unmarshal(rawData, bh); err != nil {
+	resp := &blockchain.GetWorkResp{}
+	if err = json.Unmarshal(rawData, resp); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	if doWork(bh) {
-		util.ClientCall("/submitwork", &bh)
+	if doWork(resp.BlockHeader) {
+		util.ClientCall("/submitwork", resp.BlockHeader)
 	}
 
-	getBlockHeaderByHeight(bh.Height)
+	getBlockHeaderByHeight(resp.BlockHeader.Height)
 }
