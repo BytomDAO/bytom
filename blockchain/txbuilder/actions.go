@@ -126,10 +126,6 @@ func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) er
 	return b.AddOutput(out)
 }
 
-type setTxRefDataAction struct {
-	Data json.Map `json:"reference_data"`
-}
-
 // DecodeRetireAction convert input data to action struct
 func DecodeRetireAction(data []byte) (Action, error) {
 	a := new(retireAction)
