@@ -18,7 +18,7 @@ func TestGenerateGenesisBlock(t *testing.T) {
 	nonce := block.Nonce
 	for {
 		hash := block.Hash()
-		if difficulty.CheckProofOfWork(&hash, block.Bits) {
+		if difficulty.CheckProofOfWork(&hash, &block.PreviousBlockHash, block.Bits) {
 			break
 		}
 		block.Nonce++

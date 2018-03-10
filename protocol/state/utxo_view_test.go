@@ -157,7 +157,7 @@ func TestApplyBlock(t *testing.T) {
 
 	for i, c := range cases {
 
-		if err := c.inputView.ApplyBlock(c.block); c.err != (err != nil) {
+		if err := c.inputView.ApplyBlock(c.block, c.block.TransactionStatus); c.err != (err != nil) {
 			t.Errorf("want err = %v, get err = %v", c.err, err)
 		}
 		if c.err {
@@ -257,7 +257,7 @@ func TestDetachBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if err := c.inputView.DetachBlock(c.block); c.err != (err != nil) {
+		if err := c.inputView.DetachBlock(c.block, c.block.TransactionStatus); c.err != (err != nil) {
 			t.Errorf("case %d want err = %v, get err = %v", i, c.err, err)
 		}
 		if c.err {

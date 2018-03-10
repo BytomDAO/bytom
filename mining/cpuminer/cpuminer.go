@@ -61,7 +61,7 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 
 		header.Nonce = i
 		headerHash := header.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, header.Bits) {
+		if difficulty.CheckProofOfWork(&headerHash, &header.PreviousBlockHash, header.Bits) {
 			return true
 		}
 	}
