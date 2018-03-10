@@ -85,19 +85,19 @@ func TestCancelReservation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	batch.Set(UTXOKey(utxo.OutputID), data)
+	batch.Set(StandardUTXOKey(utxo.OutputID), data)
 	batch.Write()
 
 	outid := utxo.OutputID
 
 	ctx := context.Background()
-	res, err := utxoDB.ReserveUTXO(ctx, outid, nil, time.Now(), false)
+	res, err := utxoDB.ReserveUTXO(ctx, outid, nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify that the UTXO is reserved.
-	_, err = utxoDB.ReserveUTXO(ctx, outid, nil, time.Now(), false)
+	_, err = utxoDB.ReserveUTXO(ctx, outid, nil, time.Now())
 	if err != ErrReserved {
 		t.Fatalf("got=%s want=%s", err, ErrReserved)
 	}
@@ -109,7 +109,7 @@ func TestCancelReservation(t *testing.T) {
 	}
 
 	// Reserving again should succeed.
-	_, err = utxoDB.ReserveUTXO(ctx, outid, nil, time.Now(), false)
+	_, err = utxoDB.ReserveUTXO(ctx, outid, nil, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}

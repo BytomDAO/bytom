@@ -35,9 +35,9 @@ func (a *LockMultiSig) BuildContractReq(contractName string) (*ContractReq, erro
 // Build create a transaction request
 func (a *LockMultiSig) Build() (buildReqStr string, err error) {
 	if a.Alias {
-		buildReqStr = fmt.Sprintf(buildAcctRecvReqFmtByAlias, a.OutputID, a.AccountInfo, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
+		buildReqStr = fmt.Sprintf(buildAcctRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 	} else {
-		buildReqStr = fmt.Sprintf(buildAcctRecvReqFmt, a.OutputID, a.AccountInfo, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
+		buildReqStr = fmt.Sprintf(buildAcctRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.AccountInfo, a.BtmGas, a.AccountInfo)
 	}
 
 	return

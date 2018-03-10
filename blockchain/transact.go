@@ -38,8 +38,6 @@ func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuil
 		decoder = bcr.accounts.DecodeSpendAction
 	case "spend_account_unspent_output":
 		decoder = bcr.accounts.DecodeSpendUTXOAction
-	case "spend_contract_unspent_output":
-		decoder = bcr.accounts.DecodeSpendSUTXOAction
 	case "set_transaction_reference_data":
 		decoder = txbuilder.DecodeSetTxRefDataAction
 	default:
@@ -302,7 +300,7 @@ func (bcr *BlockchainReactor) signSubmit(ctx context.Context, x struct {
 	Password []string           `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
-	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password, bcr.pseudohsmSignTemplate); err != nil {
+	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password[0], bcr.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")
 		return NewErrorResponse(err)
 	}

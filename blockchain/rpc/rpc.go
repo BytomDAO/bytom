@@ -160,7 +160,7 @@ func (c *Client) CallRaw(ctx context.Context, path string, request interface{}) 
 }
 
 func cleanedURLString(u *url.URL) string {
-	var dup = *u
+	var dup url.URL = *u
 	dup.User = nil
 	return dup.String()
 }

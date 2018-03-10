@@ -30,8 +30,6 @@ import (
 
 const (
 	maxAccountCache = 1000
-	//ContractAccount is internal account
-	ContractAccount = "Contract"
 	aliasPrefix     = "ALI:"
 	accountPrefix   = "ACC:"
 	accountCPPrefix = "ACP:"
@@ -255,11 +253,6 @@ func (m *Manager) findByID(ctx context.Context, id string) (*Account, error) {
 // GetAliasByID return the account alias by given ID
 func (m *Manager) GetAliasByID(id string) string {
 	account := &Account{}
-
-	//smart contract account
-	if id == ContractAccount {
-		return ContractAccount
-	}
 
 	rawAccount := m.db.Get(Key(id))
 	if rawAccount == nil {
@@ -492,7 +485,6 @@ func (m *Manager) CreateContractHook(ctx context.Context, accountID string, cont
 	}
 
 	cp := &CtrlProgram{
-		AccountID:      ContractAccount,
 		ControlProgram: contract,
 		Change:         false,
 		ExtContractTag: true,

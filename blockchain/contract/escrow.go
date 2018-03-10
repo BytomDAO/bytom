@@ -49,9 +49,9 @@ func (a *Escrow) Build() (buildReqStr string, err error) {
 	switch a.Selector {
 	case ClauseApprove, ClauseReject:
 		if a.Alias {
-			buildReqStr = fmt.Sprintf(buildProgRecvReqFmtByAlias, a.OutputID, a.AccountInfo, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
+			buildReqStr = fmt.Sprintf(buildProgRecvReqFmtByAlias, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		} else {
-			buildReqStr = fmt.Sprintf(buildProgRecvReqFmt, a.OutputID, a.AccountInfo, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
+			buildReqStr = fmt.Sprintf(buildProgRecvReqFmt, a.OutputID, a.AssetInfo, a.Amount, a.ControlProgram, a.BtmGas, a.AccountInfo)
 		}
 	default:
 		err = errors.WithDetailf(ErrBadClause, "selected clause [%v] error, contract Escrow's clause must in set:[%v, %v]",
