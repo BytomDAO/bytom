@@ -173,16 +173,9 @@ func assignIndexes(clause *Clause) {
 	for _, s := range clause.statements {
 		switch stmt := s.(type) {
 		case *lockStatement:
-			count := 0
-			lockedValue := []byte(stmt.locked.String())
-			for i := 1; i < len(lockedValue)-1; i++ {
-				if lockedValue[i] == '+' {
-					count++
-				}
-			}
-
 			stmt.index = nextIndex
-			nextIndex = nextIndex + int64(count) + 1
+			nextIndex++
+
 		case *unlockStatement:
 			nextIndex++
 		}
@@ -198,12 +191,8 @@ func typeCheckClause(contract *Contract, clause *Clause, env *environ) error {
 			}
 
 		case *lockStatement:
-			//the lock statement can support value expression and plus(x+y) expression,
-			//If the statement is like "lock value with func", the type of expression is Value;
-			//If the statement is like "lock x + y with func", the type of expression is Integer, however,
-			//the result of plus(+) expression does not mean that two values are added, but rather a connection with them.
-			if t := stmt.locked.typ(env); !(t == valueType || t == intType) {
-				return fmt.Errorf("expression in lock statement in clause \"%s\" has type \"%s\", must be Value or Integer", clause.Name, t)
+			if t := stmt.locked.typ(env); t != valueType {
+				return fmt.Errorf("expression in lock statement in clause \"%s\" has type \"%s\", must be Value", clause.Name, t)
 			}
 			if t := stmt.program.typ(env); t != progType {
 				return fmt.Errorf("program in lock statement in clause \"%s\" has type \"%s\", must be Program", clause.Name, t)

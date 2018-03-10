@@ -41,20 +41,19 @@ func GenerateGenesisBlock() *legacy.Block {
 	if err != nil {
 		log.Panicf("Fatal create merkelRoot")
 	}
+	txStatus := bc.NewTransactionStatus()
 
 	block := &legacy.Block{
 		BlockHeader: legacy.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     4216077,
+			Nonce:     4216076,
 			Timestamp: 1516788453,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
+				TransactionStatusHash:  bc.EntryID(txStatus),
 			},
 			Bits: 2305843009222082559,
-			TransactionStatus: bc.TransactionStatus{
-				Bitmap: []byte{0},
-			},
 		},
 		Transactions: []*legacy.Tx{genesisCoinbaseTx},
 	}

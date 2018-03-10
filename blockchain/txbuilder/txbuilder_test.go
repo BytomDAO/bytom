@@ -61,7 +61,8 @@ func TestBuild(t *testing.T) {
 
 	want := &Template{
 		Transaction: legacy.NewTx(legacy.TxData{
-			Version: 1,
+			Version:        1,
+			SerializedSize: 410,
 			Inputs: []*legacy.TxInput{
 				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil, bc.Hash{}, nil),
 			},

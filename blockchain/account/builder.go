@@ -116,12 +116,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	}
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
-	account, err := a.accounts.findByID(ctx, res.Source.AccountID)
-	if err != nil {
-		return err
-	}
-
-	txInput, sigInst, err := UtxoToInputs(account.Signer, res.UTXOs[0], a.ReferenceData)
+	txInput, sigInst, err := UtxoToInputs(nil, res.UTXOs[0], a.ReferenceData)
 	if err != nil {
 		return err
 	}
@@ -140,8 +135,12 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 // UtxoToInputs convert an utxo to the txinput
 func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
 	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash, refData)
-	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
 	sigInst := &txbuilder.SigningInstruction{}
+	if signer == nil {
+		return txInput, sigInst, nil
+	}
+
+	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
 	if u.Address == "" {
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
 		return txInput, sigInst, nil
@@ -160,7 +159,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte) (*legacy.TxIn
 		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
 
 	case *common.AddressWitnessScriptHash:
-		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
+		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
 		path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
 		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)

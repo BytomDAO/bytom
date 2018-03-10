@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
-	"unicode"
 )
 
 // ValueInfo describes how a blockchain value is used in a contract
@@ -65,14 +64,6 @@ func Compile(r io.Reader) ([]*Contract, error) {
 	}
 	for _, b := range builtins {
 		globalEnv.add(b.name, nilType, roleBuiltin)
-	}
-
-	// If the inheritance of the contract struct is not empty, should be add the clause of contract
-	for _, contract := range contracts {
-		err := addInheritClause(contract, contracts)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	// All contracts must be checked for recursiveness before any are
@@ -340,24 +331,8 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 		req.assetExpr.countVarRefs(counts)
 		req.amountExpr.countVarRefs(counts)
 	}
-
 	for _, s := range clause.statements {
 		s.countVarRefs(counts)
-
-		//Statistic the number of add(+) signs
-		var count int
-		switch stmt := s.(type) {
-		case *lockStatement:
-			lockedValue := []byte(stmt.locked.String())
-			for i := 1; i < len(lockedValue)-1; i++ {
-				if lockedValue[i] == '+' {
-					count++
-				}
-			}
-			if count > 1 {
-				counts[stmt.program.String()] = counts[stmt.program.String()] + count
-			}
-		}
 	}
 
 	for _, s := range clause.statements {
@@ -382,103 +357,54 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 			}
 
 		case *lockStatement:
+			// index
+			stk = b.addInt64(stk, stmt.index)
+
+			// refdatahash
+			stk = b.addData(stk, nil)
+
 			// TODO: permit more complex expressions for locked,
-			// like "lock x+y with foo" (?) , this suggestion has been adopted and modified
-			var lockArr []string
-			lockedValue := []byte(stmt.locked.String())
-			fmt.Println("locked string:", stmt.locked.String())
+			// like "lock x+y with foo" (?)
 
-			//If the string contains parentheses "()", the locked value are the complex expressions,
-			//But Only the plus(x+y) expression is supported currently.
-			//the plus(+) expression means a connection with them in this place.
-			if lockedValue[0] == '(' && lockedValue[len(lockedValue)-1] == ')' {
-				//Remove the parentheses character and the space character
-				var lockVal []byte
-				for i := 1; i < len(lockedValue)-1; i++ {
-					if unicode.IsSpace(rune(lockedValue[i])) || lockedValue[i] == '(' || lockedValue[i] == ')' {
-						continue
-					}
-					lockVal = append(lockVal, lockedValue[i])
-				}
-
-				var pos int
-				for i := 0; i < len(lockVal); i++ {
-					if lockVal[i] == '+' {
-						lockArr = append(lockArr, string(lockVal[pos : i]))
-						pos = i + 1
-					}
-				}
-
-				lockArr = append(lockArr, string(lockVal[pos:]))
-			} else {
-				lockArr = append(lockArr, stmt.locked.String())
-			}
-
-			//check and compiled
 			if stmt.locked.String() == contract.Value {
-				// index
-				stk = b.addInt64(stk, stmt.index)
-
-				// refdatahash
-				stk = b.addData(stk, nil)
-
 				stk = b.addAmount(stk)
 				stk = b.addAsset(stk)
-
-				// version
-				stk = b.addInt64(stk, 1)
-
-				// prog
-				stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.program)
-				if err != nil {
-					return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
-				}
-
-				stk = b.addCheckOutput(stk, fmt.Sprintf("checkOutput(%s, %s)", stmt.locked, stmt.program))
-				stk = b.addVerify(stk)
 			} else {
 				var req *ClauseReq
 				for _, r := range clause.Reqs {
-					for i, val := range lockArr {
-						if val == r.Name {
-							req = r
-
-							// index
-							stk = b.addInt64(stk, stmt.index + int64(i))
-
-							// refdatahash
-							stk = b.addData(stk, nil)
-
-							// amount
-							stk, err = compileExpr(b, stk, contract, clause, env, counts, req.amountExpr)
-							if err != nil {
-								return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
-							}
-
-							// asset
-							stk, err = compileExpr(b, stk, contract, clause, env, counts, req.assetExpr)
-							if err != nil {
-								return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
-							}
-
-							// version
-							stk = b.addInt64(stk, 1)
-
-							// prog
-							stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.program)
-							if err != nil {
-								return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
-							}
-
-							stk = b.addCheckOutput(stk, fmt.Sprintf("checkOutput(%s, %s)", val, stmt.program))
-							stk = b.addVerify(stk)
-						}
+					if stmt.locked.String() == r.Name {
+						req = r
+						break
 					}
 				}
 				if req == nil {
 					return fmt.Errorf("unknown value \"%s\" in lock statement in clause \"%s\"", stmt.locked, clause.Name)
 				}
+
+				// amount
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, req.amountExpr)
+				if err != nil {
+					return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				}
+
+				// asset
+				stk, err = compileExpr(b, stk, contract, clause, env, counts, req.assetExpr)
+				if err != nil {
+					return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+				}
 			}
+
+			// version
+			stk = b.addInt64(stk, 1)
+
+			// prog
+			stk, err = compileExpr(b, stk, contract, clause, env, counts, stmt.program)
+			if err != nil {
+				return errors.Wrapf(err, "in lock statement in clause \"%s\"", clause.Name)
+			}
+
+			stk = b.addCheckOutput(stk, fmt.Sprintf("checkOutput(%s, %s)", stmt.locked, stmt.program))
+			stk = b.addVerify(stk)
 
 		case *unlockStatement:
 			if len(clause.statements) == 1 {
@@ -546,9 +472,9 @@ func compileExpr(b *builder, stk stack, contract *Contract, clause *Clause, env 
 					return stk, fmt.Errorf("type mismatch in \"%s\": left operand has type \"%s\", right operand has type \"%s\"", e, lType, rType)
 				}
 			}
-			//if lType == "Boolean" {
-			//	return stk, fmt.Errorf("in \"%s\": using \"%s\" on Boolean values not allowed", e, e.op.op)
-			//}
+			if lType == "Boolean" {
+				return stk, fmt.Errorf("in \"%s\": using \"%s\" on Boolean values not allowed", e, e.op.op)
+			}
 		}
 
 		stk = b.addOps(stk.dropN(2), e.op.opcodes, e.String())

@@ -4,7 +4,6 @@ package account
 import (
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"sync"
 	"time"
@@ -24,6 +23,8 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/vm/vmutil"
+	"sort"
+	"strings"
 )
 
 const (
@@ -31,7 +32,6 @@ const (
 	aliasPrefix     = "ALI:"
 	accountPrefix   = "ACC:"
 	accountCPPrefix = "ACP:"
-	keyNextIndex    = "NextIndex"
 	indexPrefix     = "ACIDX:"
 )
 
@@ -41,15 +41,21 @@ var (
 	ErrFindAccount    = errors.New("fail to find account")
 	ErrMarshalAccount = errors.New("failed marshal account")
 	ErrMarshalTags    = errors.New("failed marshal account to update tags")
-	ErrStandardQuorum = errors.New("need single key pair account to create standard transaction")
 )
 
 func aliasKey(name string) []byte {
 	return []byte(aliasPrefix + name)
 }
 
-func indexKey(xpub chainkd.XPub) []byte {
-	return []byte(indexPrefix + xpub.String())
+func indexKeys(xpubs []chainkd.XPub) []byte {
+	xpubStrings := make([]string, len(xpubs))
+	for i, xpub := range xpubs {
+		xpubStrings[i] = xpub.String()
+	}
+	sort.Strings(xpubStrings)
+	suffix := strings.Join(xpubStrings, "")
+
+	return []byte(indexPrefix + suffix)
 }
 
 //Key account store prefix
@@ -60,6 +66,17 @@ func Key(name string) []byte {
 //CPKey account control promgram store prefix
 func CPKey(hash common.Hash) []byte {
 	return append([]byte(accountCPPrefix), hash[:]...)
+}
+
+func convertUnit64ToBytes(nextIndex uint64) []byte {
+	buf := make([]byte, 8)
+	binary.PutUvarint(buf, nextIndex)
+	return buf
+}
+
+func convertBytesToUint64(rawIndex []byte) uint64 {
+	result, _ := binary.Uvarint(rawIndex)
+	return result
 }
 
 // NewManager creates a new account manager
@@ -121,15 +138,13 @@ type Account struct {
 func (m *Manager) getNextAccountIndex(xpubs []chainkd.XPub) (*uint64, error) {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
-	var nextIndex uint64 = 1
 
-	if rawIndex := m.db.Get(indexKey(xpubs[0])); rawIndex != nil {
-		nextIndex = binary.LittleEndian.Uint64(rawIndex) + 1
+	var nextIndex uint64 = 1
+	if rawIndexBytes := m.db.Get(indexKeys(xpubs)); rawIndexBytes != nil {
+		nextIndex = convertBytesToUint64(rawIndexBytes) + 1
 	}
 
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, nextIndex)
-	m.db.Set(indexKey(xpubs[0]), buf)
+	m.db.Set(indexKeys(xpubs), convertUnit64ToBytes(nextIndex))
 
 	return &nextIndex, nil
 }
@@ -459,25 +474,4 @@ func (m *Manager) createPubkey(ctx context.Context, accountID string) (rootXPub 
 	pubkey = derivedXPub.PublicKey()
 
 	return rootXPub, pubkey, path, nil
-}
-
-// CreateContractHook generate a extend contract program for an account
-func (m *Manager) CreateContractHook(ctx context.Context, accountID string, contractProgram string) ([]byte, error) {
-	contract, err := hex.DecodeString(contractProgram)
-	if err != nil {
-		return nil, err
-	}
-
-	cp := &CtrlProgram{
-		AccountID:      accountID,
-		ControlProgram: contract,
-		Change:         false,
-		ExtContractTag: true,
-	}
-
-	if err = m.insertAccountControlProgram(ctx, cp); err != nil {
-		return nil, err
-	}
-
-	return cp.ControlProgram, nil
 }

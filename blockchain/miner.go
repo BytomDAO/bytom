@@ -1,30 +1,51 @@
 package blockchain
 
 import (
-	log "github.com/sirupsen/logrus"
+	"context"
 
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
 
-// Get the parameters of mining
-func (bcr *BlockchainReactor) getWork() *WorkResp {
-	var resp WorkResp
-	if block := bcr.mining.GetCurrentBlock(); block == nil {
-		return nil
-	} else {
-		resp.Header = block.BlockHeader
+type BlockHeaderByHeight struct {
+	BlockHeader *legacy.BlockHeader `json:"block_header"`
+	Reward      uint64              `json:"reward"`
+}
+
+type GetWorkResp struct {
+	BlockHeader *legacy.BlockHeader `json:"block_header"`
+	Seed        *bc.Hash            `json:"seed"`
+}
+
+func (bcr *BlockchainReactor) getWork() Response {
+	bh, err := bcr.miningPool.GetWork()
+	if err != nil {
+		return NewErrorResponse(err)
 	}
 
-	return &resp
+	resp := &GetWorkResp{
+		BlockHeader: bh,
+		Seed:        &bh.PreviousBlockHash,
+	}
+	return NewSuccessResponse(resp)
 }
 
-// Submit work for mining
-func (bcr *BlockchainReactor) submitWork(header legacy.BlockHeader) Response {
-	log.Infof("mining:---submitWork header:%v", header)
-	bcr.mining.NotifySpawnBlock(header)
-	return NewSuccessResponse(nil)
+func (bcr *BlockchainReactor) submitWork(bh *legacy.BlockHeader) Response {
+	success := bcr.miningPool.SubmitWork(bh)
+	return NewSuccessResponse(success)
 }
 
-type WorkResp struct {
-	Header legacy.BlockHeader `json:"header"`
+func (bcr *BlockchainReactor) getBlockHeaderByHeight(ctx context.Context, req struct {
+	Height uint64 `json:"block_height"`
+}) Response {
+	block, err := bcr.chain.GetBlockByHeight(req.Height)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	resp := &BlockHeaderByHeight{
+		BlockHeader: &block.BlockHeader,
+		Reward:      block.Transactions[0].Outputs[0].Amount,
+	}
+	return NewSuccessResponse(resp)
 }

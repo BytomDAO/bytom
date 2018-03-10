@@ -40,18 +40,6 @@ func (c *Chain) GetBlockByHeight(height uint64) (*legacy.Block, error) {
 	return c.GetBlockByHash(hash)
 }
 
-// ValidateBlock validates an incoming block in advance of applying it
-// to a snapshot (with ApplyValidBlock) and committing it to the
-// blockchain (with CommitAppliedBlock).
-func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
-	blockEnts := legacy.MapBlock(block)
-	prevEnts := legacy.MapBlock(prev)
-	if err := validation.ValidateBlock(blockEnts, prevEnts); err != nil {
-		return errors.Sub(ErrBadBlock, err)
-	}
-	return nil
-}
-
 // ConnectBlock append block to end of chain
 func (c *Chain) ConnectBlock(block *legacy.Block) error {
 	c.state.cond.L.Lock()
@@ -59,14 +47,18 @@ func (c *Chain) ConnectBlock(block *legacy.Block) error {
 	return c.connectBlock(block)
 }
 
-func (c *Chain) connectBlock(block *legacy.Block) error {
+func (c *Chain) connectBlock(block *legacy.Block) (err error) {
 	bcBlock := legacy.MapBlock(block)
 	utxoView := state.NewUtxoViewpoint()
+	bcBlock.TransactionStatus, err = c.store.GetTransactionStatus(&bcBlock.ID)
+	if err != nil {
+		return err
+	}
 
 	if err := c.store.GetTransactionsUtxo(utxoView, bcBlock.Transactions); err != nil {
 		return err
 	}
-	if err := utxoView.ApplyBlock(bcBlock); err != nil {
+	if err := utxoView.ApplyBlock(bcBlock, bcBlock.TransactionStatus); err != nil {
 		return err
 	}
 
@@ -108,7 +100,11 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
 			return err
 		}
-		if err := utxoView.DetachBlock(detachBlock); err != nil {
+		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
+		if err != nil {
+			return err
+		}
+		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
 			return err
 		}
 	}
@@ -118,11 +114,15 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, attachBlock.Transactions); err != nil {
 			return err
 		}
-		if err := utxoView.ApplyBlock(attachBlock); err != nil {
+		txStatus, err := c.GetTransactionStatus(&attachBlock.ID)
+		if err != nil {
 			return err
 		}
-		aHash := a.Hash()
-		chainChanges[a.Height] = &aHash
+
+		if err := utxoView.ApplyBlock(attachBlock, txStatus); err != nil {
+			return err
+		}
+		chainChanges[a.Height] = &attachBlock.ID
 	}
 
 	return c.setState(block, utxoView, chainChanges)
@@ -131,12 +131,17 @@ func (c *Chain) reorganizeChain(block *legacy.Block) error {
 // SaveBlock will validate and save block into storage
 func (c *Chain) SaveBlock(block *legacy.Block) error {
 	preBlock, _ := c.GetBlockByHash(&block.PreviousBlockHash)
-	if err := c.ValidateBlock(block, preBlock); err != nil {
+	blockEnts := legacy.MapBlock(block)
+	prevEnts := legacy.MapBlock(preBlock)
+
+	if err := validation.ValidateBlock(blockEnts, prevEnts); err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+
+	if err := c.store.SaveBlock(block, blockEnts.TransactionStatus); err != nil {
 		return err
 	}
-	if err := c.store.SaveBlock(block); err != nil {
-		return err
-	}
+
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"height": block.Height, "hash": blockHash.String()}).Info("Block saved on disk")
 	return nil

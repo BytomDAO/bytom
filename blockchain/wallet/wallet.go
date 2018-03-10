@@ -148,9 +148,15 @@ func (w *Wallet) attachBlock(block *legacy.Block) error {
 		return nil
 	}
 
+	blockHash := block.Hash()
+	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
+	if err != nil {
+		return err
+	}
+
 	storeBatch := w.DB.NewBatch()
-	w.indexTransactions(storeBatch, block)
-	w.buildAccountUTXOs(storeBatch, block)
+	w.indexTransactions(storeBatch, block, txStatus)
+	w.buildAccountUTXOs(storeBatch, block, txStatus)
 
 	w.status.WorkHeight = block.Height
 	w.status.WorkHash = block.Hash()
@@ -162,8 +168,14 @@ func (w *Wallet) attachBlock(block *legacy.Block) error {
 }
 
 func (w *Wallet) detachBlock(block *legacy.Block) error {
+	blockHash := block.Hash()
+	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
+	if err != nil {
+		return err
+	}
+
 	storeBatch := w.DB.NewBatch()
-	w.reverseAccountUTXOs(storeBatch, block)
+	w.reverseAccountUTXOs(storeBatch, block, txStatus)
 	w.deleteTransactions(storeBatch, w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1
@@ -306,8 +318,7 @@ func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, i
 
 func (w *Wallet) rescanBlocks() {
 	select {
-	case <-w.rescanProgress:
-		w.rescanProgress <- struct{}{}
+	case w.rescanProgress <- struct{}{}:
 	default:
 		return
 	}
@@ -344,16 +355,15 @@ func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
 	return keysInfo, nil
 }
 
+//checkRescanStatus mark private key import process `Complete` if rescan finished
 func checkRescanStatus(w *Wallet) {
-	if !w.ImportPrivKey {
+	if !w.ImportPrivKey || w.status.WorkHeight < w.status.BestHeight {
 		return
 	}
-	if w.status.WorkHeight >= w.status.BestHeight {
-		w.ImportPrivKey = false
-		for i := range w.keysInfo {
-			w.keysInfo[i].Complete = true
-		}
-	}
 
+	w.ImportPrivKey = false
+	for _, keyInfo := range w.keysInfo {
+		keyInfo.Complete = true
+	}
 	w.commitkeysInfo()
 }

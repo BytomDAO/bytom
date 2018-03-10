@@ -1,10 +1,7 @@
 package vmutil
 
 import (
-	"bytes"
 	"testing"
-
-	"github.com/bytom/crypto/ed25519"
 )
 
 // TestIsUnspendable ensures the IsUnspendable function returns the expected
@@ -36,24 +33,5 @@ func TestIsUnspendable(t *testing.T) {
 				i, res, test.expected)
 			continue
 		}
-	}
-}
-
-func TestP2SP(t *testing.T) {
-	pub1, _, _ := ed25519.GenerateKey(nil)
-	pub2, _, _ := ed25519.GenerateKey(nil)
-	prog, _ := P2SPMultiSigProgram([]ed25519.PublicKey{pub1, pub2}, 1)
-	pubs, n, err := ParseP2SPMultiSigProgram(prog)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if n != 1 {
-		t.Errorf("expected nrequired=1, got %d", n)
-	}
-	if !bytes.Equal(pubs[0], pub1) {
-		t.Errorf("expected first pubkey to be %x, got %x", pub1, pubs[0])
-	}
-	if !bytes.Equal(pubs[1], pub2) {
-		t.Errorf("expected second pubkey to be %x, got %x", pub2, pubs[1])
 	}
 }
