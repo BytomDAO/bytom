@@ -17,13 +17,20 @@ import (
 
 // errors
 var (
-	ErrBadRefData          = errors.New("transaction reference data does not match previous template's reference data")
-	ErrBadTxInputIdx       = errors.New("unsigned tx missing input")
+	//ErrBadRefData means invalid reference data
+	ErrBadRefData = errors.New("transaction reference data does not match previous template's reference data")
+	//ErrBadTxInputIdx means unsigned tx input
+	ErrBadTxInputIdx = errors.New("unsigned tx missing input")
+	//ErrBadWitnessComponent means invalid witness component
 	ErrBadWitnessComponent = errors.New("invalid witness component")
-	ErrBadAmount           = errors.New("bad asset amount")
-	ErrBlankCheck          = errors.New("unsafe transaction: leaves assets free to control")
-	ErrAction              = errors.New("errors occurred in one or more actions")
-	ErrMissingFields       = errors.New("required field is missing")
+	//ErrBadAmount means invalid asset amount
+	ErrBadAmount = errors.New("bad asset amount")
+	//ErrBlankCheck means unsafe transaction
+	ErrBlankCheck = errors.New("unsafe transaction: leaves assets free to control")
+	//ErrAction means errors occurred in actions
+	ErrAction = errors.New("errors occurred in one or more actions")
+	//ErrMissingFields means missing required fields
+	ErrMissingFields = errors.New("required field is missing")
 )
 
 // Build builds or adds on to a transaction.

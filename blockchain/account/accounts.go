@@ -4,7 +4,6 @@ package account
 import (
 	"context"
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"sync"
 	"time"
@@ -33,7 +32,6 @@ const (
 	aliasPrefix     = "ALI:"
 	accountPrefix   = "ACC:"
 	accountCPPrefix = "ACP:"
-	keyNextIndex    = "NextIndex"
 	indexPrefix     = "ACIDX:"
 )
 
@@ -43,7 +41,6 @@ var (
 	ErrFindAccount    = errors.New("fail to find account")
 	ErrMarshalAccount = errors.New("failed marshal account")
 	ErrMarshalTags    = errors.New("failed marshal account to update tags")
-	ErrStandardQuorum = errors.New("need single key pair account to create standard transaction")
 )
 
 func aliasKey(name string) []byte {
@@ -477,25 +474,4 @@ func (m *Manager) createPubkey(ctx context.Context, accountID string) (rootXPub 
 	pubkey = derivedXPub.PublicKey()
 
 	return rootXPub, pubkey, path, nil
-}
-
-// CreateContractHook generate a extend contract program for an account
-func (m *Manager) CreateContractHook(ctx context.Context, accountID string, contractProgram string) ([]byte, error) {
-	contract, err := hex.DecodeString(contractProgram)
-	if err != nil {
-		return nil, err
-	}
-
-	cp := &CtrlProgram{
-		AccountID:      accountID,
-		ControlProgram: contract,
-		Change:         false,
-		ExtContractTag: true,
-	}
-
-	if err = m.insertAccountControlProgram(ctx, cp); err != nil {
-		return nil, err
-	}
-
-	return cp.ControlProgram, nil
 }
