@@ -559,7 +559,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 		return errBadTimestamp
 	}
 
-	if !difficulty.CheckProofOfWork(&b.ID, b.BlockHeader.Bits) {
+	if !difficulty.CheckProofOfWork(&b.ID, b.PreviousBlockId, b.BlockHeader.Bits) {
 		return errWorkProof
 	}
 

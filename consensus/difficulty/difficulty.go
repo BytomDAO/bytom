@@ -84,8 +84,8 @@ func BigToCompact(n *big.Int) uint64 {
 }
 
 // CheckProofOfWork the hash is vaild for given difficult
-func CheckProofOfWork(hash *bc.Hash, bits uint64) bool {
-	compareHash := tensority.Hash(hash, hash)
+func CheckProofOfWork(hash, seed *bc.Hash, bits uint64) bool {
+	compareHash := tensority.Hash(hash, seed)
 	return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0
 }
 

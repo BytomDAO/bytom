@@ -19,7 +19,7 @@ func doWork(bh *legacy.BlockHeader) bool {
 	for i := uint64(0); i <= maxNonce; i++ {
 		bh.Nonce = i
 		headerHash := bh.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, bh.Bits) {
+		if difficulty.CheckProofOfWork(&headerHash, &bh.PreviousBlockHash, bh.Bits) {
 			fmt.Printf("Mining: successful-----proof hash:%v\n", headerHash.String())
 			return true
 		}
