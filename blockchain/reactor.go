@@ -19,7 +19,9 @@ import (
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
+	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/types"
@@ -74,6 +76,7 @@ type BlockchainReactor struct {
 	txPool        *protocol.TxPool
 	hsm           *pseudohsm.HSM
 	mining        *cpuminer.CPUMiner
+	miningPool    *miningpool.MiningPool
 	mux           *http.ServeMux
 	sw            *p2p.Switch
 	handler       http.Handler
@@ -168,7 +171,6 @@ type page struct {
 
 // NewBlockchainReactor returns the reactor of whole blockchain.
 func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *BlockchainReactor {
-	mining := cpuminer.NewCPUMiner(chain, accounts, txPool)
 	bcr := &BlockchainReactor{
 		chain:         chain,
 		wallet:        wallet,
@@ -176,7 +178,8 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 		assets:        assets,
 		blockKeeper:   newBlockKeeper(chain, sw),
 		txPool:        txPool,
-		mining:        mining,
+		mining:        cpuminer.NewCPUMiner(chain, accounts, txPool),
+		miningPool:    miningpool.NewMiningPool(chain, accounts, txPool),
 		mux:           http.NewServeMux(),
 		sw:            sw,
 		hsm:           hsm,
@@ -232,6 +235,13 @@ func (bcr *BlockchainReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
 
 // Receive implements Reactor by handling 4 types of messages (look below).
 func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
+	var tm *trust.TrustMetric
+	key := src.Connection().RemoteAddress.IP.String()
+	if tm = bcr.sw.TrustMetricStore.GetPeerTrustMetric(key); tm == nil {
+		log.Errorf("Can't get peer trust metric")
+		return
+	}
+
 	_, msg, err := DecodeMessage(msgBytes)
 	if err != nil {
 		log.Errorf("Error decoding messagek %v", err)
@@ -252,7 +262,6 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 			log.Errorf("Fail on BlockRequestMessage get block: %v", err)
 			return
 		}
-
 		response, err := NewBlockResponseMessage(block)
 		if err != nil {
 			log.Errorf("Fail on BlockRequestMessage create resoinse: %v", err)
@@ -261,7 +270,7 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{response})
 
 	case *BlockResponseMessage:
-		bcr.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
+		bcr.blockKeeper.AddBlock(msg.GetBlock(), src)
 
 	case *StatusRequestMessage:
 		block := bcr.chain.BestBlock()
@@ -273,7 +282,7 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 	case *TransactionNotifyMessage:
 		tx := msg.GetTransaction()
 		if err := bcr.chain.ValidateTx(tx); err != nil {
-			log.Errorf("TransactionNotifyMessage: %v", err)
+			bcr.sw.AddScamPeer(src)
 		}
 
 	default:

@@ -89,7 +89,7 @@ func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth string,
 			}
 		}
 	}
-	return nil
+	return materializeWitnesses(tpl)
 }
 
 func checkBlankCheck(tx *legacy.TxData) error {
