@@ -358,7 +358,6 @@ type CtrlProgram struct {
 	KeyIndex       uint64
 	ControlProgram []byte
 	Change         bool
-	ExtContractTag bool
 }
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*CtrlProgram) error {
