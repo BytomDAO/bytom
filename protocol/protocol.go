@@ -221,6 +221,7 @@ func (c *Chain) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 	return c.store.GetUtxo(hash)
 }
 
+// GetSeed return the seed for the given block
 func (c *Chain) GetSeed(height uint64, preBlock *bc.Hash) (*bc.Hash, error) {
 	if height == 0 {
 		return consensus.InitialSeed, nil

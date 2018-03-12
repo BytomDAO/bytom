@@ -15,6 +15,7 @@ import (
 
 const muxGasCost = int64(10)
 
+// GasState record the gas usage status
 type GasState struct {
 	BTMValue   uint64
 	GasLeft    int64

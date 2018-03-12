@@ -7,11 +7,13 @@ import (
 	"github.com/bytom/protocol/bc/legacy"
 )
 
+// BlockHeaderByHeight is resp struct for API
 type BlockHeaderByHeight struct {
 	BlockHeader *legacy.BlockHeader `json:"block_header"`
 	Reward      uint64              `json:"reward"`
 }
 
+// GetWorkResp is resp struct for API
 type GetWorkResp struct {
 	BlockHeader *legacy.BlockHeader `json:"block_header"`
 	Seed        *bc.Hash            `json:"seed"`

@@ -59,7 +59,7 @@ var InitialSeed = &bc.Hash{
 	V3: uint64(9357197556716379726),
 }
 
-//BTMDefinitionMap
+// BTMDefinitionMap is the ....
 var BTMDefinitionMap = map[string]interface{}{
 	"name":        BTMAlias,
 	"symbol":      BTMSymbol,
