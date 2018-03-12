@@ -544,7 +544,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 
 // ValidateBlock validates a block and the transactions within.
 // It does not run the consensus program; for that, see ValidateBlockSig.
-func ValidateBlock(b, prev *bc.Block) error {
+func ValidateBlock(b, prev *bc.Block, seed *bc.Hash) error {
 	if b.Height > 0 {
 		if prev == nil {
 			return errors.WithDetailf(errNoPrevBlock, "height %d", b.Height)
@@ -559,7 +559,7 @@ func ValidateBlock(b, prev *bc.Block) error {
 		return errBadTimestamp
 	}
 
-	if !difficulty.CheckProofOfWork(&b.ID, b.PreviousBlockId, b.BlockHeader.Bits) {
+	if !difficulty.CheckProofOfWork(&b.ID, seed, b.BlockHeader.Bits) {
 		return errWorkProof
 	}
 
