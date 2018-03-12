@@ -370,8 +370,7 @@ func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*UTXO, error) {
 
 	data := db.Get(StandardUTXOKey(outHash))
 	if data == nil {
-		data = db.Get(ContractUTXOKey(outHash))
-		if data == nil {
+		if data = db.Get(ContractUTXOKey(outHash)); data == nil {
 			return nil, errors.Wrapf(ErrMatchUTXO, "output_id = %s", outHash.String())
 		}
 	}

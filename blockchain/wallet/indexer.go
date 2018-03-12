@@ -251,30 +251,33 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *bc
 	}
 }
 
-func prevoutDBKeys(batch db.Batch, b *legacy.Block, txStatus *bc.TransactionStatus) (outputIDs []bc.Hash) {
+func prevoutDBKeys(batch db.Batch, b *legacy.Block, txStatus *bc.TransactionStatus) {
 	for txIndex, tx := range b.Transactions {
 		for _, inpID := range tx.Tx.InputIDs {
-			if sp, err := tx.Spend(inpID); err == nil {
-				statusFail, _ := txStatus.GetStatus(txIndex)
-				if statusFail && *sp.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
-					continue
-				}
-				outputIDs = append(outputIDs, *sp.SpentOutputId)
+			sp, err := tx.Spend(inpID)
+			if err != nil {
+				log.WithField("err", err).Error("building spend entry type")
+				continue
+			}
 
-				resOut, ok := tx.Entries[*sp.SpentOutputId].(*bc.Output)
-				if !ok {
-					// retirement
-					log.WithField("SpentOutputId", *sp.SpentOutputId).Info("the OutputId is retirement")
-					continue
-				}
+			statusFail, _ := txStatus.GetStatus(txIndex)
+			if statusFail && *sp.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
+				continue
+			}
 
-				if segwit.IsP2WScript(resOut.ControlProgram.Code) {
-					// delete standard UTXOs
-					batch.Delete(account.StandardUTXOKey(*sp.SpentOutputId))
-				} else {
-					// delete contract UTXOs
-					batch.Delete(account.ContractUTXOKey(*sp.SpentOutputId))
-				}
+			resOut, ok := tx.Entries[*sp.SpentOutputId].(*bc.Output)
+			if !ok {
+				// retirement
+				log.WithField("SpentOutputId", *sp.SpentOutputId).Info("the OutputId is retirement")
+				continue
+			}
+
+			if segwit.IsP2WScript(resOut.ControlProgram.Code) {
+				// delete standard UTXOs
+				batch.Delete(account.StandardUTXOKey(*sp.SpentOutputId))
+			} else {
+				// delete contract UTXOs
+				batch.Delete(account.ContractUTXOKey(*sp.SpentOutputId))
 			}
 		}
 	}
@@ -389,13 +392,6 @@ func (w *Wallet) filterAccountTxs(b *legacy.Block, txStatus *bc.TransactionStatu
 
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos))
-				local = true
-				break
-			}
-
-			//smart contract transactions
-			if !segwit.IsP2WScript(v.ControlProgram) {
 				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos))
 				local = true
 				break

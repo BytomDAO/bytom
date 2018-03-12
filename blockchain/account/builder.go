@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
@@ -16,6 +14,8 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm/vmutil"
+
+	log "github.com/sirupsen/logrus"
 )
 
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
@@ -116,7 +116,16 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	}
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
-	txInput, sigInst, err := UtxoToInputs(nil, res.UTXOs[0], a.ReferenceData)
+	var accountSigner *signers.Signer
+	if len(res.Source.AccountID) != 0 {
+		account, err := a.accounts.findByID(ctx, res.Source.AccountID)
+		if err != nil {
+			return err
+		}
+		accountSigner = account.Signer
+	}
+
+	txInput, sigInst, err := UtxoToInputs(accountSigner, res.UTXOs[0], a.ReferenceData)
 	if err != nil {
 		return err
 	}
