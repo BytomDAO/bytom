@@ -85,7 +85,7 @@ func TestCancelReservation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	batch.Set(UTXOKey(utxo.OutputID), data)
+	batch.Set(StandardUTXOKey(utxo.OutputID), data)
 	batch.Write()
 
 	outid := utxo.OutputID
