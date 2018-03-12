@@ -23,9 +23,14 @@ func (bcr *BlockchainReactor) getWork() Response {
 		return NewErrorResponse(err)
 	}
 
+	seed, err := bcr.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
 	resp := &GetWorkResp{
 		BlockHeader: bh,
-		Seed:        &bh.PreviousBlockHash,
+		Seed:        seed,
 	}
 	return NewSuccessResponse(resp)
 }
