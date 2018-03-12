@@ -50,6 +50,7 @@ type UTXO struct {
 	AccountID           string
 	Address             string
 	ControlProgramIndex uint64
+	ExtContractTag      bool
 	ValidHeight         uint64
 }
 
@@ -287,6 +288,11 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, e
 		// If the UTXO is already reserved, skip it.
 		if _, ok := sr.reserved[u.OutputID]; ok {
 			unavailable += u.Amount
+			continue
+		}
+
+		// If the contract is a custom contract, skip it.
+		if u.ExtContractTag {
 			continue
 		}
 
