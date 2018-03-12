@@ -15,11 +15,11 @@ func TestTxHashes(t *testing.T) {
 	}{
 		{
 			txdata: &TxData{},
-			hash:   mustDecodeHash("221ed254e69ffaefc0c52baff161392001f8c3ce5c120e4d2cba26eef0bf9500"),
+			hash:   mustDecodeHash("e52b4bc1367e750d88953b78eeb4c8d352504133a04129f53c099cd03e500f22"),
 		},
 		{
 			txdata: sampleTx(),
-			hash:   mustDecodeHash("0fd4368e2348690af748eb1b4d5a661dd7ee2cf3b6555ce788aea391d9c10718"), // todo: verify this value,
+			hash:   mustDecodeHash("cee0721776e50e7788e8e727e3635856053a651eec4766f7b4c86c60547d2884"), // todo: verify this value,
 		},
 	}
 
@@ -62,6 +62,5 @@ func sampleTx() *TxData {
 			NewTxOutput(assetID, 600000000000, []byte{1}, nil),
 			NewTxOutput(assetID, 400000000000, []byte{2}, nil),
 		},
-		ReferenceData: []byte("distribution"),
 	}
 }

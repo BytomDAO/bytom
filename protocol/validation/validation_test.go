@@ -627,7 +627,6 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		Version:       result.txVersion,
 		Inputs:        result.txInputs,
 		Outputs:       result.txOutputs,
-		ReferenceData: result.txRefData,
 	}
 
 	return &result
