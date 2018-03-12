@@ -4,17 +4,19 @@ import (
 	"context"
 
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
+// BlockHeaderByHeight is resp struct for API
 type BlockHeaderByHeight struct {
-	BlockHeader *legacy.BlockHeader `json:"block_header"`
-	Reward      uint64              `json:"reward"`
+	BlockHeader *types.BlockHeader `json:"block_header"`
+	Reward      uint64             `json:"reward"`
 }
 
+// GetWorkResp is resp struct for API
 type GetWorkResp struct {
-	BlockHeader *legacy.BlockHeader `json:"block_header"`
-	Seed        *bc.Hash            `json:"seed"`
+	BlockHeader *types.BlockHeader `json:"block_header"`
+	Seed        *bc.Hash           `json:"seed"`
 }
 
 func (bcr *BlockchainReactor) getWork() Response {
@@ -23,14 +25,19 @@ func (bcr *BlockchainReactor) getWork() Response {
 		return NewErrorResponse(err)
 	}
 
+	seed, err := bcr.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
 	resp := &GetWorkResp{
 		BlockHeader: bh,
-		Seed:        &bh.PreviousBlockHash,
+		Seed:        seed,
 	}
 	return NewSuccessResponse(resp)
 }
 
-func (bcr *BlockchainReactor) submitWork(bh *legacy.BlockHeader) Response {
+func (bcr *BlockchainReactor) submitWork(bh *types.BlockHeader) Response {
 	success := bcr.miningPool.SubmitWork(bh)
 	return NewSuccessResponse(success)
 }

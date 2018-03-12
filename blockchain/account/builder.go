@@ -14,7 +14,7 @@ import (
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
@@ -29,7 +29,6 @@ type spendAction struct {
 	accounts *Manager
 	bc.AssetAmount
 	AccountID     string        `json:"account_id"`
-	ReferenceData chainjson.Map `json:"reference_data"`
 	ClientToken   *string       `json:"client_token"`
 }
 
@@ -63,7 +62,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
 	for _, r := range res.UTXOs {
-		txInput, sigInst, err := UtxoToInputs(acct.Signer, r, a.ReferenceData)
+		txInput, sigInst, err := UtxoToInputs(acct.Signer, r)
 		if err != nil {
 			return errors.Wrap(err, "creating inputs")
 		}
@@ -82,7 +81,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 		// Don't insert the control program until callbacks are executed.
 		a.accounts.insertControlProgramDelayed(ctx, b, acp)
 
-		err = b.AddOutput(legacy.NewTxOutput(*a.AssetId, res.Change, acp.ControlProgram, nil))
+		err = b.AddOutput(types.NewTxOutput(*a.AssetId, res.Change, acp.ControlProgram))
 		if err != nil {
 			return errors.Wrap(err, "adding change output")
 		}
@@ -101,7 +100,6 @@ type spendUTXOAction struct {
 	accounts *Manager
 	OutputID *bc.Hash `json:"output_id"`
 
-	ReferenceData chainjson.Map `json:"reference_data"`
 	ClientToken   *string       `json:"client_token"`
 }
 
@@ -116,12 +114,16 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	}
 	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
-	account, err := a.accounts.findByID(ctx, res.Source.AccountID)
-	if err != nil {
-		return err
+	var accountSigner *signers.Signer
+	if len(res.Source.AccountID) != 0 {
+		account, err := a.accounts.findByID(ctx, res.Source.AccountID)
+		if err != nil {
+			return err
+		}
+		accountSigner = account.Signer
 	}
 
-	txInput, sigInst, err := UtxoToInputs(account.Signer, res.UTXOs[0], a.ReferenceData)
+	txInput, sigInst, err := UtxoToInputs(accountSigner, res.UTXOs[0])
 	if err != nil {
 		return err
 	}
@@ -138,10 +140,14 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 }
 
 // UtxoToInputs convert an utxo to the txinput
-func UtxoToInputs(signer *signers.Signer, u *UTXO, refData []byte) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
-	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash, refData)
-	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
+func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.SigningInstruction, error) {
+	txInput := types.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)
 	sigInst := &txbuilder.SigningInstruction{}
+	if signer == nil {
+		return txInput, sigInst, nil
+	}
+
+	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
 	if u.Address == "" {
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
 		return txInput, sigInst, nil
@@ -220,7 +226,7 @@ func (a *controlAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 	}
 	a.accounts.insertControlProgramDelayed(ctx, b, acp)
 
-	return b.AddOutput(legacy.NewTxOutput(*a.AssetId, a.Amount, acp.ControlProgram, a.ReferenceData))
+	return b.AddOutput(types.NewTxOutput(*a.AssetId, a.Amount, acp.ControlProgram))
 }
 
 // insertControlProgramDelayed takes a template builder and an account

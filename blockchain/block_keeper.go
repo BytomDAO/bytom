@@ -10,7 +10,7 @@ import (
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 type blockKeeperPeer struct {
@@ -41,7 +41,7 @@ func (p *blockKeeperPeer) SetStatus(height uint64, hash *bc.Hash) {
 }
 
 type pendingResponse struct {
-	block *legacy.Block
+	block *types.Block
 	src   *p2p.Peer
 }
 
@@ -83,7 +83,7 @@ func (bk *blockKeeper) Stop() {
 	bk.done <- true
 }
 
-func (bk *blockKeeper) AddBlock(block *legacy.Block, src *p2p.Peer) {
+func (bk *blockKeeper) AddBlock(block *types.Block, src *p2p.Peer) {
 	bk.pendingProcessCh <- &pendingResponse{block: block, src: src}
 }
 

@@ -11,16 +11,15 @@ import (
 
 //AnnotatedTx means an annotated transaction.
 type AnnotatedTx struct {
-	ID                     bc.Hash             `json:"id"`
-	Timestamp              time.Time           `json:"timestamp"`
-	BlockID                bc.Hash             `json:"block_id"`
-	BlockHeight            uint64              `json:"block_height"`
-	Position               uint32              `json:"position"`
-	BlockTransactionsCount uint32              `json:"block_transactions_count,omitempty"`
-	ReferenceData          *chainjson.HexBytes `json:"reference_data"`
-	Inputs                 []*AnnotatedInput   `json:"inputs"`
-	Outputs                []*AnnotatedOutput  `json:"outputs"`
-	StatusFail             bool                `json:"status_fail"`
+	ID                     bc.Hash            `json:"tx_id"`
+	Timestamp              time.Time          `json:"block_time"`
+	BlockID                bc.Hash            `json:"block_hash"`
+	BlockHeight            uint64             `json:"block_height"`
+	Position               uint32             `json:"block_index"`
+	BlockTransactionsCount uint32             `json:"block_transactions_count,omitempty"`
+	Inputs                 []*AnnotatedInput  `json:"inputs"`
+	Outputs                []*AnnotatedOutput `json:"outputs"`
+	StatusFail             bool               `json:"status_fail"`
 }
 
 //AnnotatedInput means an annotated transaction input.
@@ -35,7 +34,6 @@ type AnnotatedInput struct {
 	SpentOutputID   *bc.Hash            `json:"spent_output_id,omitempty"`
 	AccountID       string              `json:"account_id,omitempty"`
 	AccountAlias    string              `json:"account_alias,omitempty"`
-	ReferenceData   *chainjson.HexBytes `json:"reference_data"`
 	Arbitrary       chainjson.HexBytes  `json:"arbitrary,omitempty"`
 }
 
@@ -52,23 +50,16 @@ type AnnotatedOutput struct {
 	AccountID       string              `json:"account_id,omitempty"`
 	AccountAlias    string              `json:"account_alias,omitempty"`
 	ControlProgram  chainjson.HexBytes  `json:"control_program"`
-	ReferenceData   *chainjson.HexBytes `json:"reference_data"`
 }
 
 //AnnotatedAccount means an annotated account.
 type AnnotatedAccount struct {
-	ID     string           `json:"id"`
-	Alias  string           `json:"alias,omitempty"`
-	Keys   []*AccountKey    `json:"keys"`
-	Quorum int              `json:"quorum"`
-	Tags   *json.RawMessage `json:"tags"`
-}
-
-//AccountKey means an account key.
-type AccountKey struct {
-	RootXPub              chainkd.XPub         `json:"root_xpub"`
-	AccountXPub           chainkd.XPub         `json:"account_xpub"`
-	AccountDerivationPath []chainjson.HexBytes `json:"account_derivation_path"`
+	ID       string           `json:"id"`
+	Alias    string           `json:"alias,omitempty"`
+	XPubs    []chainkd.XPub   `json:"xpubs"`
+	Quorum   int              `json:"quorum"`
+	Tags     *json.RawMessage `json:"tags"`
+	KeyIndex uint64           `json:"key_index"`
 }
 
 //AnnotatedAsset means an annotated asset.

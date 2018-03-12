@@ -8,12 +8,12 @@ import (
 	"github.com/golang/groupcache/singleflight"
 
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 const maxCachedBlocks = 30
 
-func newBlockCache(fillFn func(hash *bc.Hash) *legacy.Block) blockCache {
+func newBlockCache(fillFn func(hash *bc.Hash) *types.Block) blockCache {
 	return blockCache{
 		lru:    lru.New(maxCachedBlocks),
 		fillFn: fillFn,
@@ -23,11 +23,11 @@ func newBlockCache(fillFn func(hash *bc.Hash) *legacy.Block) blockCache {
 type blockCache struct {
 	mu     sync.Mutex
 	lru    *lru.Cache
-	fillFn func(hash *bc.Hash) *legacy.Block
+	fillFn func(hash *bc.Hash) *types.Block
 	single singleflight.Group
 }
 
-func (c *blockCache) lookup(hash *bc.Hash) (*legacy.Block, error) {
+func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) {
 	if b, ok := c.get(hash); ok {
 		return b, nil
 	}
@@ -44,20 +44,20 @@ func (c *blockCache) lookup(hash *bc.Hash) (*legacy.Block, error) {
 	if err != nil {
 		return nil, err
 	}
-	return block.(*legacy.Block), nil
+	return block.(*types.Block), nil
 }
 
-func (c *blockCache) get(hash *bc.Hash) (*legacy.Block, bool) {
+func (c *blockCache) get(hash *bc.Hash) (*types.Block, bool) {
 	c.mu.Lock()
 	block, ok := c.lru.Get(hash)
 	c.mu.Unlock()
 	if block == nil {
 		return nil, ok
 	}
-	return block.(*legacy.Block), ok
+	return block.(*types.Block), ok
 }
 
-func (c *blockCache) add(block *legacy.Block) {
+func (c *blockCache) add(block *types.Block) {
 	c.mu.Lock()
 	c.lru.Add(block.Hash(), block)
 	c.mu.Unlock()

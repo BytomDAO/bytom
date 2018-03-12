@@ -23,7 +23,7 @@ import (
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/legacy"
+	protocolTypes "github.com/bytom/protocol/bc/types"
 	"github.com/bytom/types"
 )
 
@@ -251,7 +251,7 @@ func (bcr *BlockchainReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte)
 
 	switch msg := msg.(type) {
 	case *BlockRequestMessage:
-		var block *legacy.Block
+		var block *protocolTypes.Block
 		var err error
 		if msg.Height != 0 {
 			block, err = bcr.chain.GetBlockByHeight(msg.Height)
@@ -326,7 +326,7 @@ func (bcr *BlockchainReactor) BroadcastStatusResponse() {
 }
 
 // BroadcastTransaction broadcats `BlockStore` transaction.
-func (bcr *BlockchainReactor) BroadcastTransaction(tx *legacy.Tx) error {
+func (bcr *BlockchainReactor) BroadcastTransaction(tx *protocolTypes.Tx) error {
 	msg, err := NewTransactionNotifyMessage(tx)
 	if err != nil {
 		return err

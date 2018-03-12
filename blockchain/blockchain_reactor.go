@@ -5,7 +5,7 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 // return network infomation
@@ -48,7 +48,7 @@ func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) Response {
 		return NewErrorResponse(err)
 	}
 
-	bcBlock := legacy.MapBlock(block)
+	bcBlock := types.MapBlock(block)
 	return NewSuccessResponse(bcBlock.BlockHeader)
 }
 
@@ -78,7 +78,7 @@ func (bcr *BlockchainReactor) getBlockByHash(strHash string) Response {
 		return NewErrorResponse(err)
 	}
 
-	bcBlock := legacy.MapBlock(legacyBlock)
+	bcBlock := types.MapBlock(legacyBlock)
 	block := &GetBlockByHashJSON{BlockHeader: bcBlock.BlockHeader}
 	for _, tx := range bcBlock.Transactions {
 		txJSON := &TxJSON{}
@@ -110,7 +110,7 @@ func (bcr *BlockchainReactor) getBlockByHeight(height uint64) Response {
 		return NewErrorResponse(err)
 	}
 
-	bcBlock := legacy.MapBlock(legacyBlock)
+	bcBlock := types.MapBlock(legacyBlock)
 	res := &GetBlockByHashJSON{BlockHeader: bcBlock.BlockHeader}
 	for _, tx := range bcBlock.Transactions {
 		txJSON := &TxJSON{}

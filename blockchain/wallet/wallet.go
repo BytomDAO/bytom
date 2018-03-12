@@ -15,7 +15,7 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 //SINGLE single sign
@@ -56,7 +56,8 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, xpubs []pseudohsm.XPub) (*Wallet, error) {
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry,
+	chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
 		DB:             walletDB,
 		AccountMgr:     account,
@@ -66,7 +67,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		keysInfo:       make([]KeyInfo, 0),
 	}
 
-	if err := w.loadWalletInfo(xpubs); err != nil {
+	if err := w.loadWalletInfo(); err != nil {
 		return nil, err
 	}
 
@@ -83,15 +84,9 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 
 //GetWalletInfo return stored wallet info and nil,if error,
 //return initial wallet info and err
-func (w *Wallet) loadWalletInfo(xpubs []pseudohsm.XPub) error {
+func (w *Wallet) loadWalletInfo() error {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
 		return json.Unmarshal(rawWallet, &w.status)
-	}
-
-	for i, v := range xpubs {
-		if err := w.ImportAccountXpubKey(i, v, RecoveryIndex); err != nil {
-			return err
-		}
 	}
 
 	block, err := w.chain.GetBlockByHeight(0)
@@ -142,7 +137,7 @@ func (w *Wallet) getImportKeyFlag() bool {
 	return false
 }
 
-func (w *Wallet) attachBlock(block *legacy.Block) error {
+func (w *Wallet) attachBlock(block *types.Block) error {
 	if block.PreviousBlockHash != w.status.WorkHash {
 		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
 		return nil
@@ -167,7 +162,7 @@ func (w *Wallet) attachBlock(block *legacy.Block) error {
 	return w.commitWalletInfo(storeBatch)
 }
 
-func (w *Wallet) detachBlock(block *legacy.Block) error {
+func (w *Wallet) detachBlock(block *types.Block) error {
 	blockHash := block.Hash()
 	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
 	if err != nil {

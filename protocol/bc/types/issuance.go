@@ -1,4 +1,4 @@
-package legacy
+package types
 
 import (
 	"github.com/bytom/crypto/sha3pool"
@@ -24,7 +24,7 @@ func (ii *IssuanceInput) IsCoinbase() bool { return false }
 
 func (ii *IssuanceInput) AssetID() bc.AssetID {
 	defhash := ii.AssetDefinitionHash()
-	return bc.ComputeAssetID(ii.IssuanceProgram, &ii.InitialBlock, ii.VMVersion, &defhash)
+	return bc.ComputeAssetID(ii.IssuanceProgram, ii.VMVersion, &defhash)
 }
 
 func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
@@ -38,20 +38,16 @@ func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
 func NewIssuanceInput(
 	nonce []byte,
 	amount uint64,
-	referenceData []byte,
-	initialBlock bc.Hash,
 	issuanceProgram []byte,
 	arguments [][]byte,
 	assetDefinition []byte,
 ) *TxInput {
 	return &TxInput{
 		AssetVersion:  1,
-		ReferenceData: referenceData,
 		TypedInput: &IssuanceInput{
 			Nonce:  nonce,
 			Amount: amount,
 			IssuanceWitness: IssuanceWitness{
-				InitialBlock:    initialBlock,
 				AssetDefinition: assetDefinition,
 				VMVersion:       1,
 				IssuanceProgram: issuanceProgram,

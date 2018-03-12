@@ -1,4 +1,4 @@
-package legacy
+package types
 
 import (
 	"bytes"
@@ -23,9 +23,9 @@ func TestMarshalBlock(t *testing.T) {
 		Transactions: []*Tx{
 			NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(46),
+				SerializedSize: uint64(44),
 				Outputs: []*TxOutput{
-					NewTxOutput(bc.AssetID{}, 1, nil, nil),
+					NewTxOutput(bc.AssetID{}, 1, nil),
 				},
 			}),
 		}}
@@ -61,9 +61,7 @@ func TestMarshalBlock(t *testing.T) {
 		"01" + // tx 0, output 0 commitment, amount
 		"01" + // tx 0, output 0 commitment vm version
 		"00" + // tx 0, output 0 control program
-		"00" + // tx 0, output 0 reference data
-		"00" + // tx 0, output 0 output witness
-		"00\"") // tx 0 reference data
+		"00\"") // tx 0, output 0 output witness
 
 	if !bytes.Equal(got, []byte(wantHex)) {
 		t.Errorf("marshaled block bytes = %s want %s", got, []byte(wantHex))
@@ -127,7 +125,7 @@ func TestEmptyBlock(t *testing.T) {
 		t.Errorf("empty block header bytes = %x want %x", got, want)
 	}
 
-	wantHash := mustDecodeHash("a950a33eb49913c06c0c5c0aa643bb55c5cd898f3b54e91971f07ca2123d7204")
+	wantHash := mustDecodeHash("9609d2e45760f34cbc6c6d948c3fb9b6d7b61552d9d17fdd5b7d0cb5d2e67244")
 	if h := block.Hash(); h != wantHash {
 		t.Errorf("got block hash %x, want %x", h.Bytes(), wantHash.Bytes())
 	}
@@ -159,7 +157,7 @@ func TestSmallBlock(t *testing.T) {
 		"00" + // nonce
 		"00" + // bits
 		"01" + // num transactions
-		"07010000000000") // transaction
+		"070100000000") // transaction
 	want, _ := hex.DecodeString(wantHex)
 	if !bytes.Equal(got, want) {
 		t.Errorf("small block bytes = %x want %x", got, want)

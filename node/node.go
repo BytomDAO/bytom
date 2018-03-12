@@ -12,11 +12,12 @@ import (
 
 	"github.com/kr/secureheader"
 	log "github.com/sirupsen/logrus"
-	crypto "github.com/tendermint/go-crypto"
-	wire "github.com/tendermint/go-wire"
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/crypto/ed25519/chainkd"
 	bc "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
@@ -54,10 +55,7 @@ type Node struct {
 	addrBook *p2p.AddrBook         // known peers
 
 	evsw       types.EventSwitch // pub/sub for services
-	blockStore *txdb.Store
 	bcReactor  *bc.BlockchainReactor
-	accounts   *account.Manager
-	assets     *asset.Registry
 }
 
 func NewNodeDefault(config *cfg.Config) *Node {
@@ -196,14 +194,18 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	if !config.Wallet.Disable {
-		xpubs, _ := hsm.ListKeys()
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, chain, xpubs)
+		wallet, err = w.NewWallet(walletDB, accounts, assets, chain)
 		if err != nil {
 			log.WithField("error", err).Error("init NewWallet")
 		}
+
+		if err := initOrRecoverAccount(hsm, wallet); err != nil {
+			log.WithField("error", err).Error("initialize or recover account")
+		}
+
 		// Clean up expired UTXO reservations periodically.
 		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
 	}
@@ -240,13 +242,40 @@ func NewNode(config *cfg.Config) *Node {
 
 		evsw:       eventSwitch,
 		bcReactor:  bcReactor,
-		blockStore: store,
-		accounts:   accounts,
-		assets:     assets,
 	}
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
 	return node
+}
+
+func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
+	xpubs := hsm.ListKeys()
+
+	if len(xpubs) == 0 {
+		xpub, err := hsm.XCreate("default", "123456")
+		if err != nil {
+			return err
+		}
+
+		wallet.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "default", nil)
+		return nil
+	}
+
+	accounts, err := wallet.AccountMgr.ListAccounts("")
+	if err != nil {
+		return err
+	}
+
+	if len(accounts) > 0 {
+		return nil
+	}
+
+	for i, xPub := range xpubs {
+		if err := wallet.ImportAccountXpubKey(i, xPub, w.RecoveryIndex); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Lanch web broser or not

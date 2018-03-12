@@ -1,4 +1,4 @@
-package legacy
+package types
 
 import (
 	"github.com/bytom/consensus"
@@ -8,7 +8,7 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
-// MapTx converts a legacy TxData object into its entries-based
+// MapTx converts a types TxData object into its entries-based
 // representation.
 func MapTx(oldTx *TxData) *bc.Tx {
 	txid, header, entries := mapTx(oldTx)
@@ -97,10 +97,9 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Value:    &oldSp.AssetAmount,
 				Position: oldSp.SourcePosition,
 			}
-			out := bc.NewOutput(src, prog, &oldSp.RefDataHash, 0) // ordinal doesn't matter for prevouts, only for result outputs
+			out := bc.NewOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
 			prevoutID := addEntry(out)
-			refdatahash := hashData(inp.ReferenceData)
-			sp := bc.NewSpend(&prevoutID, &refdatahash, uint64(i))
+			sp := bc.NewSpend(&prevoutID, uint64(i))
 			sp.WitnessArguments = oldSp.Arguments
 			id := addEntry(sp)
 			muxSources[i] = &bc.ValueSource{
@@ -144,11 +143,9 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 			val := inp.AssetAmount()
 
-			refdatahash := hashData(inp.ReferenceData)
 			assetdefhash := hashData(oldIss.AssetDefinition)
-			iss := bc.NewIssuance(&anchorID, &val, &refdatahash, uint64(i))
+			iss := bc.NewIssuance(&anchorID, &val, uint64(i))
 			iss.WitnessAssetDefinition = &bc.AssetDefinition{
-				InitialBlockId: &oldIss.InitialBlock,
 				Data:           &assetdefhash,
 				IssuanceProgram: &bc.Program{
 					VmVersion: oldIss.VMVersion,
@@ -209,8 +206,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		var dest *bc.ValueDestination
 		if vmutil.IsUnspendable(out.ControlProgram) {
 			// retirement
-			refdatahash := hashData(out.ReferenceData)
-			r := bc.NewRetirement(src, &refdatahash, uint64(i))
+			r := bc.NewRetirement(src, uint64(i))
 			rID := addEntry(r)
 			resultIDs = append(resultIDs, &rID)
 			dest = &bc.ValueDestination{
@@ -220,8 +216,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		} else {
 			// non-retirement
 			prog := &bc.Program{out.VMVersion, out.ControlProgram}
-			refdatahash := hashData(out.ReferenceData)
-			o := bc.NewOutput(src, prog, &refdatahash, uint64(i))
+			o := bc.NewOutput(src, prog, uint64(i))
 			oID := addEntry(o)
 			resultIDs = append(resultIDs, &oID)
 			dest = &bc.ValueDestination{
@@ -233,8 +228,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		mux.WitnessDestinations = append(mux.WitnessDestinations, dest)
 	}
 
-	refdatahash := hashData(tx.ReferenceData)
-	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, tx.TimeRange, resultIDs, &refdatahash)
+	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, tx.TimeRange, resultIDs)
 	headerID = addEntry(h)
 
 	return headerID, h, entryMap
@@ -246,7 +240,7 @@ func mapBlockHeader(old *BlockHeader) (bhID bc.Hash, bh *bc.BlockHeader) {
 	return
 }
 
-// MapBlock converts a legacy block to bc block
+// MapBlock converts a types block to bc block
 func MapBlock(old *Block) *bc.Block {
 	if old == nil {
 		return nil // if old is nil, so should new be

@@ -32,12 +32,7 @@ func (bcr *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct 
 }
 
 func (bcr *BlockchainReactor) pseudohsmListKeys(ctx context.Context) Response {
-	xpubs, err := bcr.hsm.ListKeys()
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	return NewSuccessResponse(xpubs)
+	return NewSuccessResponse(bcr.hsm.ListKeys())
 }
 
 func (bcr *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {

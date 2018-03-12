@@ -21,7 +21,7 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 func TestWalletUpdate(t *testing.T) {
@@ -71,7 +71,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx := legacy.NewTx(*txData)
+	tx := types.NewTx(*txData)
 
 	reg := asset.NewRegistry(testDB, chain)
 
@@ -80,7 +80,7 @@ func TestWalletUpdate(t *testing.T) {
 	block := mockSingleBlock(tx)
 
 	txStatus := bc.NewTransactionStatus()
-	store.SaveBlock(block, txStatus)
+	store.SaveBlock(block, txStatus, consensus.InitialSeed)
 
 	err = w.attachBlock(block)
 	if err != nil {
@@ -118,8 +118,12 @@ func TestExportAndImportPrivKey(t *testing.T) {
 
 	genesisBlock := cfg.GenerateGenesisBlock()
 
-	chain.SaveBlock(genesisBlock)
-	chain.ConnectBlock(genesisBlock)
+	if err = chain.SaveBlock(genesisBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err = chain.ConnectBlock(genesisBlock); err != nil {
+		t.Fatal(err)
+	}
 
 	acntManager := account.NewManager(testDB, chain)
 	reg := asset.NewRegistry(testDB, chain)
@@ -135,7 +139,7 @@ func TestExportAndImportPrivKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	w, err := NewWallet(testDB, acntManager, reg, chain, nil)
+	w, err := NewWallet(testDB, acntManager, reg, chain)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,15 +220,15 @@ func mockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
 	return utxo
 }
 
-func mockTxData(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *legacy.TxData, error) {
-	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo, nil)
+func mockTxData(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *types.TxData, error) {
+	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	b := txbuilder.NewBuilder(time.Now())
 	b.AddInput(txInput, sigInst)
-	out := legacy.NewTxOutput(*consensus.BTMAssetID, 100, utxo.ControlProgram, nil)
+	out := types.NewTxOutput(*consensus.BTMAssetID, 100, utxo.ControlProgram)
 	b.AddOutput(out)
 	return b.Build()
 }
@@ -239,13 +243,13 @@ func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry
 	}
 }
 
-func mockSingleBlock(tx *legacy.Tx) *legacy.Block {
-	return &legacy.Block{
-		BlockHeader: legacy.BlockHeader{
+func mockSingleBlock(tx *types.Tx) *types.Block {
+	return &types.Block{
+		BlockHeader: types.BlockHeader{
 			Version: 1,
 			Height:  1,
 			Bits:    2305843009230471167,
 		},
-		Transactions: []*legacy.Tx{tx},
+		Transactions: []*types.Tx{tx},
 	}
 }

@@ -1,9 +1,6 @@
-package legacy
-
-import "github.com/bytom/protocol/bc"
+package types
 
 type IssuanceWitness struct {
-	InitialBlock    bc.Hash
 	AssetDefinition []byte
 	VMVersion       uint64
 	IssuanceProgram []byte

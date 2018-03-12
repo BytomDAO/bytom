@@ -16,7 +16,7 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
@@ -116,7 +116,7 @@ func getAccountFromUTXO(outputID bc.Hash, walletDB db.DB) (*account.Account, err
 	accountUTXO := account.UTXO{}
 	localAccount := account.Account{}
 
-	accountUTXOValue := walletDB.Get(account.UTXOKey(outputID))
+	accountUTXOValue := walletDB.Get(account.StandardUTXOKey(outputID))
 	if accountUTXOValue == nil {
 		return nil, fmt.Errorf("failed get account utxo:%x ", outputID)
 	}
@@ -172,7 +172,7 @@ func isValidJSON(b []byte) bool {
 	return err == nil
 }
 
-func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
+func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
 		Timestamp:              b.Time(),
@@ -180,14 +180,9 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, statusFail bool
 		BlockHeight:            b.Height,
 		Position:               uint32(indexInBlock),
 		BlockTransactionsCount: uint32(len(b.Transactions)),
-		ReferenceData:          &emptyJSONObject,
 		Inputs:                 make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
 		StatusFail:             statusFail,
-	}
-	if isValidJSON(orig.ReferenceData) {
-		referenceData := chainjson.HexBytes(orig.ReferenceData)
-		tx.ReferenceData = &referenceData
 	}
 	for i := range orig.Inputs {
 		tx.Inputs = append(tx.Inputs, buildAnnotatedInput(orig, uint32(i)))
@@ -198,19 +193,14 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, statusFail bool
 	return tx
 }
 
-func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
+func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
 		AssetDefinition: &emptyJSONObject,
-		ReferenceData:   &emptyJSONObject,
 	}
 	if !orig.IsCoinbase() {
 		in.AssetID = orig.AssetID()
 		in.Amount = orig.Amount()
-	}
-	if isValidJSON(orig.ReferenceData) {
-		referenceData := chainjson.HexBytes(orig.ReferenceData)
-		in.ReferenceData = &referenceData
 	}
 
 	id := tx.Tx.InputIDs[i]
@@ -230,7 +220,7 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 	return in
 }
 
-func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
+func buildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 	orig := tx.Outputs[idx]
 	outid := tx.OutputID(idx)
 	out := &query.AnnotatedOutput{
@@ -240,11 +230,6 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
 		AssetDefinition: &emptyJSONObject,
 		Amount:          orig.Amount,
 		ControlProgram:  orig.ControlProgram,
-		ReferenceData:   &emptyJSONObject,
-	}
-	if isValidJSON(orig.ReferenceData) {
-		referenceData := chainjson.HexBytes(orig.ReferenceData)
-		out.ReferenceData = &referenceData
 	}
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"

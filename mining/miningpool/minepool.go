@@ -10,7 +10,7 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 const blockUpdateMS = 1000
@@ -18,7 +18,7 @@ const blockUpdateMS = 1000
 // MiningPool is the support struct for p2p mine pool
 type MiningPool struct {
 	mutex sync.RWMutex
-	block *legacy.Block
+	block *types.Block
 
 	chain          *protocol.Chain
 	accountManager *account.Manager
@@ -62,7 +62,7 @@ func (m *MiningPool) generateBlock() {
 }
 
 // GetWork will return a block header for p2p mining
-func (m *MiningPool) GetWork() (*legacy.BlockHeader, error) {
+func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
 	if m.block != nil {
 		m.mutex.RLock()
 		defer m.mutex.RUnlock()
@@ -73,7 +73,7 @@ func (m *MiningPool) GetWork() (*legacy.BlockHeader, error) {
 }
 
 // SubmitWork will try to submit the result to the blockchain
-func (m *MiningPool) SubmitWork(bh *legacy.BlockHeader) bool {
+func (m *MiningPool) SubmitWork(bh *types.BlockHeader) bool {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 

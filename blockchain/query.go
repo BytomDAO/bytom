@@ -21,7 +21,17 @@ func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
 		return NewErrorResponse(err)
 	}
 
-	return NewSuccessResponse(accounts)
+	annotatedAccounts := make([]query.AnnotatedAccount, 0, len(accounts))
+	for _, acc := range accounts {
+		annotated, err := account.Annotated(acc)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+
+		annotatedAccounts = append(annotatedAccounts, *annotated)
+	}
+
+	return NewSuccessResponse(annotatedAccounts)
 }
 
 // POST /list-assets
@@ -104,6 +114,19 @@ func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accou
 	return balances
 }
 
+// POST /get-transaction
+func (bcr *BlockchainReactor) getTransaction(ctx context.Context, txInfo struct {
+	TxID string `json:"tx_id"`
+}) Response {
+	transaction, err := bcr.wallet.GetTransactionByTxID(txInfo.TxID)
+	if err != nil {
+		log.Errorf("getTransaction error: %v", err)
+		return NewErrorResponse(err)
+	}
+
+	return NewSuccessResponse(transaction)
+}
+
 // POST /list-transactions
 func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struct {
 	ID        string `json:"id"`
@@ -143,7 +166,6 @@ type annotatedUTXO struct {
 	Program             string `json:"program"`
 	SourceID            string `json:"source_id"`
 	SourcePos           uint64 `json:"source_pos"`
-	RefDataHash         string `json:"ref_data"`
 	ValidHeight         uint64 `json:"valid_height"`
 }
 
@@ -168,7 +190,6 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 		tmpUTXO.Amount = utxo.Amount
 		tmpUTXO.SourcePos = utxo.SourcePos
 		tmpUTXO.Program = fmt.Sprintf("%x", utxo.ControlProgram)
-		tmpUTXO.RefDataHash = utxo.RefDataHash.String()
 		tmpUTXO.ControlProgramIndex = utxo.ControlProgramIndex
 		tmpUTXO.Address = utxo.Address
 		tmpUTXO.ValidHeight = utxo.ValidHeight

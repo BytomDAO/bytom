@@ -11,20 +11,14 @@ import (
 	"github.com/pborman/uuid"
 )
 
-// listKeyMaxAliases limits the alias filter to a sane maximum size.
-const listKeyMaxAliases = 200
-
 // pre-define errors for supporting bytom errorFormatter
 var (
 	ErrDuplicateKeyAlias    = errors.New("duplicate key alias")
 	ErrDuplicateKey         = errors.New("duplicate key")
 	ErrInvalidAfter         = errors.New("invalid after")
 	ErrLoadKey              = errors.New("key not found or wrong password ")
-	ErrInvalidKeySize       = errors.New("key invalid size")
 	ErrTooManyAliasesToList = errors.New("requested aliases exceeds limit")
-	ErrAmbiguousAlias       = errors.New("multiple keys match alias")
 	ErrDecrypt              = errors.New("could not decrypt key with given passphrase")
-	ErrInvalidKeyType       = errors.New("key type stored invalid")
 )
 
 // HSM type for storing pubkey and privatekey
@@ -39,7 +33,7 @@ type HSM struct {
 type XPub struct {
 	Alias string       `json:"alias"`
 	XPub  chainkd.XPub `json:"xpub"`
-	File  string       `json:"file"`
+	File  string       `json:"-"`
 }
 
 // New method for HSM struct
@@ -86,9 +80,9 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 }
 
 // ListKeys returns a list of all xpubs from the store
-func (h *HSM) ListKeys() ([]XPub, error) {
+func (h *HSM) ListKeys() []XPub {
 	xpubs := h.cache.keys()
-	return xpubs, nil
+	return xpubs
 }
 
 // XSign looks up the xprv given the xpub, optionally derives a new

@@ -11,7 +11,7 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/reqid"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 var defaultTxTTL = 5 * time.Minute
@@ -35,8 +35,6 @@ func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuil
 		decoder = bcr.accounts.DecodeSpendAction
 	case "spend_account_unspent_output":
 		decoder = bcr.accounts.DecodeSpendUTXOAction
-	case "set_transaction_reference_data":
-		decoder = txbuilder.DecodeSetTxRefDataAction
 	default:
 		return nil, false
 	}
@@ -128,7 +126,6 @@ func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest
 
 // POST /build-transaction
 func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) Response {
-
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
 	tmpl, err := bcr.buildSingle(subctx, buildReqs)
@@ -184,7 +181,7 @@ func (bcr *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *tx
 	return nil
 }
 
-func (bcr *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx, height uint64) (uint64, error) {
+func (bcr *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *types.Tx, height uint64) (uint64, error) {
 	log.Printf("waitForTxInBlock function")
 	for {
 		height++
