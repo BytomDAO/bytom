@@ -516,15 +516,19 @@ func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.Annotate
 }
 
 // GetAccountUTXOs return all account unspent outputs
-func (w *Wallet) GetAccountUTXOs(id string) ([]account.UTXO, error) {
+func (w *Wallet) GetAccountUTXOs(id string, isSmartContract bool) ([]account.UTXO, error) {
 	accountUTXO := account.UTXO{}
 	accountUTXOs := make([]account.UTXO, 0)
 
-	accountUTXOIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix + id))
+	prefix := account.UTXOPreFix
+	if isSmartContract {
+		prefix = account.SUTXOPrefix
+	}
+	accountUTXOIter := w.DB.IteratorPrefix([]byte(prefix + id))
 	defer accountUTXOIter.Release()
 	for accountUTXOIter.Next() {
 		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {
-			hashKey := accountUTXOIter.Key()[len(account.UTXOPreFix):]
+			hashKey := accountUTXOIter.Key()[len(prefix):]
 			log.WithField("UTXO hash", string(hashKey)).Warn("get account UTXO")
 			continue
 		}
