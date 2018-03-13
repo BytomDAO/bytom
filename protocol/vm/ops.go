@@ -206,7 +206,6 @@ const (
 	OP_AMOUNT      Op = 0xc3
 	OP_PROGRAM     Op = 0xc4
 	OP_BLOCKTIME   Op = 0xc5
-	OP_TXDATA      Op = 0xc7
 	OP_ENTRYDATA   Op = 0xc8
 	OP_INDEX       Op = 0xc9
 	OP_ENTRYID     Op = 0xca
@@ -316,7 +315,6 @@ var (
 		OP_AMOUNT:      {OP_AMOUNT, "AMOUNT", opAmount},
 		OP_PROGRAM:     {OP_PROGRAM, "PROGRAM", opProgram},
 		OP_BLOCKTIME:   {OP_BLOCKTIME, "BLOCKTIME", opBlockTime},
-		OP_TXDATA:      {OP_TXDATA, "TXDATA", opTxData},
 		OP_ENTRYDATA:   {OP_ENTRYDATA, "ENTRYDATA", opEntryData},
 		OP_INDEX:       {OP_INDEX, "INDEX", opIndex},
 		OP_ENTRYID:     {OP_ENTRYID, "ENTRYID", opEntryID},

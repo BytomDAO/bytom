@@ -110,18 +110,6 @@ func opEntryData(vm *virtualMachine) error {
 	return vm.push(*vm.context.EntryData, true)
 }
 
-func opTxData(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
-		return err
-	}
-
-	if vm.context.TxData == nil {
-		return ErrContext
-	}
-	return vm.push(*vm.context.TxData, true)
-}
-
 func opIndex(vm *virtualMachine) error {
 	err := vm.applyCost(1)
 	if err != nil {

@@ -29,7 +29,6 @@ type Context struct {
 	Amount        *uint64
 	Time          *uint64
 	EntryData     *[]byte
-	TxData        *[]byte
 	DestPos       *uint64
 	AnchorID      *[]byte
 	SpentOutputID *[]byte

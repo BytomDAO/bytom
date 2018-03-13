@@ -16,7 +16,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		tx          = vs.tx
 		blockHeight = vs.block.BlockHeader.GetHeight()
 		numResults  = uint64(len(tx.ResultIds))
-		txData      = tx.Data.Bytes()
 		entryID     = bc.EntryID(entry) // TODO(bobg): pass this in, don't recompute it
 
 		assetID       *[]byte
@@ -104,7 +103,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		Amount:        amount,
 		Time:          &vs.block.Timestamp,
 		EntryData:     entryData,
-		TxData:        &txData,
 		DestPos:       destPos,
 		AnchorID:      anchorID,
 		SpentOutputID: spentOutputID,

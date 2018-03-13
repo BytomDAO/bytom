@@ -119,7 +119,6 @@ func TestIntrospectionOps(t *testing.T) {
 	entryID := mustDecodeHex("2e68d78cdeaa98944c12512cf9c719eb4881e9afb61e4b766df5f369aee6392c")
 	entryData := mustDecodeHex("44be5e14ce216f4b2c35a5eb0b35d078bda55cf05b5d36ee0e7a01fbc6ef62b7")
 	assetID := mustDecodeHex("0100000000000000000000000000000000000000000000000000000000000000")
-	txData := mustDecodeHex("3e5190f2691e6d451c50edf9a9a66a7a6779c787676452810dbf4f6e4053682c")
 
 	type testStruct struct {
 		op      Op
@@ -268,16 +267,6 @@ func TestIntrospectionOps(t *testing.T) {
 			dataStack:    [][]byte{[]byte("issueprog")},
 		},
 	}, {
-		op: OP_TXDATA,
-		startVM: &virtualMachine{
-			context: &Context{TxData: &txData},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49959,
-			deferredCost: 40,
-			dataStack:    [][]byte{txData},
-		},
-	}, {
 		op: OP_ENTRYDATA,
 		startVM: &virtualMachine{
 			context: &Context{EntryData: &entryData},
@@ -311,7 +300,7 @@ func TestIntrospectionOps(t *testing.T) {
 
 	txops := []Op{
 		OP_CHECKOUTPUT, OP_ASSET, OP_AMOUNT, OP_PROGRAM,
-		OP_TXDATA, OP_ENTRYDATA, OP_INDEX, OP_OUTPUTID,
+		OP_ENTRYDATA, OP_INDEX, OP_OUTPUTID,
 	}
 
 	for _, op := range txops {

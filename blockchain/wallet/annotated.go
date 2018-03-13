@@ -116,7 +116,7 @@ func getAccountFromUTXO(outputID bc.Hash, walletDB db.DB) (*account.Account, err
 	accountUTXO := account.UTXO{}
 	localAccount := account.Account{}
 
-	accountUTXOValue := walletDB.Get(account.UTXOKey(outputID))
+	accountUTXOValue := walletDB.Get(account.StandardUTXOKey(outputID))
 	if accountUTXOValue == nil {
 		return nil, fmt.Errorf("failed get account utxo:%x ", outputID)
 	}
@@ -184,10 +184,6 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, statusFail bool
 		Inputs:                 make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
 		StatusFail:             statusFail,
-	}
-	if isValidJSON(orig.ReferenceData) {
-		referenceData := chainjson.HexBytes(orig.ReferenceData)
-		tx.ReferenceData = &referenceData
 	}
 	for i := range orig.Inputs {
 		tx.Inputs = append(tx.Inputs, buildAnnotatedInput(orig, uint32(i)))

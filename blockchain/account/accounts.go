@@ -6,6 +6,8 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,8 +26,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/vm/vmutil"
-	"sort"
-	"strings"
 )
 
 const (
@@ -33,7 +33,6 @@ const (
 	aliasPrefix     = "ALI:"
 	accountPrefix   = "ACC:"
 	accountCPPrefix = "ACP:"
-	keyNextIndex    = "NextIndex"
 	indexPrefix     = "ACIDX:"
 )
 
@@ -43,7 +42,6 @@ var (
 	ErrFindAccount    = errors.New("fail to find account")
 	ErrMarshalAccount = errors.New("failed marshal account")
 	ErrMarshalTags    = errors.New("failed marshal account to update tags")
-	ErrStandardQuorum = errors.New("need single key pair account to create standard transaction")
 )
 
 func aliasKey(name string) []byte {
@@ -403,7 +401,7 @@ func (m *Manager) nextIndex(account *Account) uint64 {
 	m.acpMu.Lock()
 	defer m.acpMu.Unlock()
 
-	key := make([]byte, 0)
+	var key []byte
 	key = append(key, account.Signer.XPubs[0].Bytes()...)
 
 	accountIndex := make([]byte, 8)

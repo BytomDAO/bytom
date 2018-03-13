@@ -51,7 +51,6 @@ func TestBuild(t *testing.T) {
 	actions := []Action{
 		newControlProgramAction(bc.AssetAmount{AssetId: &assetID2, Amount: 6}, []byte("dest")),
 		testAction(bc.AssetAmount{AssetId: &assetID1, Amount: 5}),
-		&setTxRefDataAction{Data: []byte("xyz")},
 	}
 	expiryTime := time.Now().Add(time.Minute)
 	got, err := Build(ctx, nil, actions, expiryTime)
@@ -62,7 +61,7 @@ func TestBuild(t *testing.T) {
 	want := &Template{
 		Transaction: legacy.NewTx(legacy.TxData{
 			Version:        1,
-			SerializedSize: 410,
+			SerializedSize: 402,
 			Inputs: []*legacy.TxInput{
 				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil, bc.Hash{}, nil),
 			},
@@ -70,7 +69,6 @@ func TestBuild(t *testing.T) {
 				legacy.NewTxOutput(assetID2, 6, []byte("dest"), nil),
 				legacy.NewTxOutput(assetID1, 5, []byte("change"), nil),
 			},
-			ReferenceData: []byte("xyz"),
 		}),
 		SigningInstructions: []*SigningInstruction{{
 			WitnessComponents: []witnessComponent{},
@@ -83,20 +81,6 @@ func TestBuild(t *testing.T) {
 
 	if !testutil.DeepEqual(got.SigningInstructions, want.SigningInstructions) {
 		t.Errorf("got signing instructions:\n\t%#v\nwant signing instructions:\n\t%#v", got.SigningInstructions, want.SigningInstructions)
-	}
-
-	// setting tx refdata twice should fail
-	actions = append(actions, &setTxRefDataAction{Data: []byte("lmnop")})
-	_, err = Build(ctx, nil, actions, expiryTime)
-	if errors.Root(err) != ErrAction {
-		t.Errorf("got error %#v, want ErrAction", err)
-	}
-	errs := errors.Data(err)["actions"].([]error)
-	if len(errs) != 1 {
-		t.Errorf("got error %v action errors, want 1", len(errs))
-	}
-	if errors.Root(errs[0]) != ErrBadRefData {
-		t.Errorf("got error %v in action error, want ErrBadRefData", errs[0])
 	}
 }
 

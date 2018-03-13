@@ -22,6 +22,7 @@ const (
 	PowMinBits            = uint64(2161727821138738707)
 	BlocksPerRetarget     = uint64(1024)
 	TargetSecondsPerBlock = uint64(60)
+	SeedPerRetarget       = uint64(128)
 
 	// MaxTimeOffsetSeconds is the maximum number of seconds a block time is allowed to be ahead of the current time
 	MaxTimeOffsetSeconds = uint64(60 * 60)
@@ -35,6 +36,11 @@ const (
 	StorageGasRate   = int64(10)
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
+
+	BTMAlias       = "btm"
+	BTMSymbol      = "btm"
+	BTMDecimals    = 8
+	BTMDescription = `Bytom Official Issue`
 )
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
@@ -45,19 +51,15 @@ var BTMAssetID = &bc.AssetID{
 	V3: uint64(18446744073709551615),
 }
 
-//BTMAlias is default btm
-var BTMAlias = "btm"
+// InitialSeed is SHA3-256 of Byte[0^32]
+var InitialSeed = &bc.Hash{
+	V0: uint64(11412844483649490393),
+	V1: uint64(4614157290180302959),
+	V2: uint64(1780246333311066183),
+	V3: uint64(9357197556716379726),
+}
 
-//BTMSymbol
-var BTMSymbol = "btm"
-
-//BTMDecimals
-var BTMDecimals = 8
-
-//BTMDescription
-var BTMDescription = `Bytom Official Issue`
-
-//BTMDefinitionMap
+// BTMDefinitionMap is the ....
 var BTMDefinitionMap = map[string]interface{}{
 	"name":        BTMAlias,
 	"symbol":      BTMSymbol,

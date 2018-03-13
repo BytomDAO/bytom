@@ -10,14 +10,22 @@ import (
 )
 
 const (
-	//UTXOPreFix is AccountUTXOKey prefix
+	//UTXOPreFix is StandardUTXOKey prefix
 	UTXOPreFix = "ACU:"
+	//SUTXOPrefix is ContractUTXOKey prefix
+	SUTXOPrefix = "SCU:"
 )
 
-//UTXOKey makes a account unspent outputs key to store
-func UTXOKey(id bc.Hash) []byte {
+// StandardUTXOKey makes an account unspent outputs key to store
+func StandardUTXOKey(id bc.Hash) []byte {
 	name := id.String()
 	return []byte(UTXOPreFix + name)
+}
+
+// ContractUTXOKey makes a smart contract unspent outputs key to store
+func ContractUTXOKey(id bc.Hash) []byte {
+	name := id.String()
+	return []byte(SUTXOPrefix + name)
 }
 
 var emptyJSONObject = json.RawMessage(`{}`)

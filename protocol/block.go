@@ -134,11 +134,16 @@ func (c *Chain) SaveBlock(block *legacy.Block) error {
 	blockEnts := legacy.MapBlock(block)
 	prevEnts := legacy.MapBlock(preBlock)
 
-	if err := validation.ValidateBlock(blockEnts, prevEnts); err != nil {
+	seed, err := c.GetSeed(block.Height, &block.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
+
+	if err := validation.ValidateBlock(blockEnts, prevEnts, seed); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	if err := c.store.SaveBlock(block, blockEnts.TransactionStatus); err != nil {
+	if err := c.store.SaveBlock(block, blockEnts.TransactionStatus, seed); err != nil {
 		return err
 	}
 

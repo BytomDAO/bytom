@@ -7,6 +7,7 @@ import (
 
 	"github.com/bytom/blockchain"
 	"github.com/bytom/consensus/difficulty"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/util"
 )
@@ -16,11 +17,11 @@ const (
 )
 
 // do proof of work
-func doWork(bh *legacy.BlockHeader) bool {
+func doWork(bh *legacy.BlockHeader, seed *bc.Hash) bool {
 	for i := uint64(0); i <= maxNonce; i++ {
 		bh.Nonce = i
 		headerHash := bh.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, &bh.PreviousBlockHash, bh.Bits) {
+		if difficulty.CheckProofOfWork(&headerHash, seed, bh.Bits) {
 			fmt.Printf("Mining: successful-----proof hash:%v\n", headerHash.String())
 			return true
 		}
@@ -66,7 +67,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if doWork(resp.BlockHeader) {
+	if doWork(resp.BlockHeader, resp.Seed) {
 		util.ClientCall("/submitwork", resp.BlockHeader)
 	}
 
