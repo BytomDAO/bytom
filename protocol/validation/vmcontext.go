@@ -51,14 +51,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		destPos = &e.WitnessDestination.Position
 		s := e.SpentOutputId.Bytes()
 		spentOutputID = &s
-
-	case *bc.Output:
-		d := e.Data.Bytes()
-		entryData = &d
-
-	case *bc.Retirement:
-		d := e.Data.Bytes()
-		entryData = &d
 	}
 
 	var txSigHash *[]byte
@@ -127,17 +119,17 @@ type entryContext struct {
 
 func (ec *entryContext) checkOutput(index uint64, data []byte, amount uint64, assetID []byte, vmVersion uint64, code []byte, expansion bool) (bool, error) {
 	checkEntry := func(e bc.Entry) (bool, error) {
-		check := func(prog *bc.Program, value *bc.AssetAmount, dataHash *bc.Hash) bool {
+		check := func(prog *bc.Program, value *bc.AssetAmount) bool {
 			return (prog.VmVersion == vmVersion &&
 				bytes.Equal(prog.Code, code) &&
 				bytes.Equal(value.AssetId.Bytes(), assetID) &&
 				value.Amount == amount &&
-				(len(data) == 0 || bytes.Equal(dataHash.Bytes(), data)))
+				(len(data) == 0))
 		}
 
 		switch e := e.(type) {
 		case *bc.Output:
-			return check(e.ControlProgram, e.Source.Value, e.Data), nil
+			return check(e.ControlProgram, e.Source.Value), nil
 
 		case *bc.Retirement:
 			var prog bc.Program
@@ -149,7 +141,7 @@ func (ec *entryContext) checkOutput(index uint64, data []byte, amount uint64, as
 				// (The spec always requires prog.VmVersion to be zero.)
 				prog.Code = code
 			}
-			return check(&prog, e.Source.Value, e.Data), nil
+			return check(&prog, e.Source.Value), nil
 		}
 
 		return false, vm.ErrContext

@@ -1,8 +1,6 @@
 package txbuilder
 
 import (
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 )
@@ -55,12 +53,6 @@ func buildSigProgram(tpl *Template, index uint32) ([]byte, error) {
 			Index:       i,
 			AssetAmount: out.AssetAmount,
 			Program:     out.ControlProgram,
-		}
-		if len(out.ReferenceData) > 0 {
-			var b32 [32]byte
-			sha3pool.Sum256(b32[:], out.ReferenceData)
-			h := bc.NewHash(b32)
-			c.RefDataHash = &h
 		}
 		constraints = append(constraints, c)
 	}

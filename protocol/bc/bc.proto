@@ -96,16 +96,14 @@ message Coinbase {
 message Output {
   ValueSource source          = 1;
   Program     control_program = 2;
-  Hash        data            = 3;
-  Hash        ext_hash        = 4;
-  uint64      ordinal         = 5;
+  Hash        ext_hash        = 3;
+  uint64      ordinal         = 4;
 }
 
 message Retirement {
   ValueSource source   = 1;
-  Hash        data     = 2;
-  Hash        ext_hash = 3;
-  uint64      ordinal  = 4;
+  Hash        ext_hash = 2;
+  uint64      ordinal  = 3;
 }
 
 message Issuance {

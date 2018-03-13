@@ -113,7 +113,6 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *
 				txHash:         tx.ID,
 				sourceID:       *resOut.Source.Ref,
 				sourcePos:      resOut.Source.Position,
-				refData:        *resOut.Data,
 			}
 			reverseOuts = append(reverseOuts, out)
 		}
@@ -233,7 +232,6 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *bc
 				outputIndex:    uint32(j),
 				sourceID:       *resOut.Source.Ref,
 				sourcePos:      resOut.Source.Position,
-				refData:        *resOut.Data,
 			}
 
 			// coinbase utxo valid height

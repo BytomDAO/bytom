@@ -243,7 +243,6 @@ func TestTxValidation(t *testing.T) {
 				// identical second transaction in order to get a similar but
 				// not equal output entry for the mux to falsely point
 				// to. That entry must be added to the first tx's Entries map.
-				fixture.txOutputs[0].ReferenceData = []byte{1}
 				fixture2 := sample(t, fixture)
 				tx2 := legacy.NewTx(*fixture2.tx).Tx
 				out2ID := tx2.ResultIds[0]

@@ -234,10 +234,6 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
 		ControlProgram:  orig.ControlProgram,
 		ReferenceData:   &emptyJSONObject,
 	}
-	if isValidJSON(orig.ReferenceData) {
-		referenceData := chainjson.HexBytes(orig.ReferenceData)
-		out.ReferenceData = &referenceData
-	}
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"
 	} else {
