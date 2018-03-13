@@ -221,7 +221,7 @@ func mockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
 }
 
 func mockTxData(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *legacy.TxData, error) {
-	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo, nil)
+	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo)
 	if err != nil {
 		return nil, nil, err
 	}

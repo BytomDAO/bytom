@@ -126,7 +126,6 @@ func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest
 
 // POST /build-transaction
 func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) Response {
-
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
 	tmpl, err := bcr.buildSingle(subctx, buildReqs)

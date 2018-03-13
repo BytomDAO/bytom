@@ -597,8 +597,8 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 
 		result.txInputs = []*legacy.TxInput{
 			legacy.NewIssuanceInput([]byte{3}, 10, []byte{4}, result.initialBlockID, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
-			legacy.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1, *newHash(6), []byte{7}),
-			legacy.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2, *newHash(9), []byte{10}),
+			legacy.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1, *newHash(6)),
+			legacy.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2, *newHash(9)),
 		}
 	}
 
@@ -655,7 +655,7 @@ func mockCoinbaseTx(amount uint64) *bc.Tx {
 
 func mockGasTxInput() *legacy.TxInput {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
-	return legacy.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp, *newHash(9), []byte{})
+	return legacy.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp, *newHash(9))
 }
 
 // Like errors.Root, but also unwraps vm.Error objects.

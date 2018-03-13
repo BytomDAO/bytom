@@ -219,7 +219,6 @@ func (t *TxInput) writeTo(w io.Writer, serflags uint8) error {
 	_, err := blockchain.WriteExtensibleString(w, t.CommitmentSuffix, func(w io.Writer) error {
 		return t.WriteInputCommitment(w, serflags)
 	})
-
 	if err != nil {
 		return errors.Wrap(err, "writing input commitment")
 	}
