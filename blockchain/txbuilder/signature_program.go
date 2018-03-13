@@ -55,10 +55,7 @@ func buildSigProgram(tpl *Template, index uint32) ([]byte, error) {
 	// unconditional. Rationale: no one should be able to change "my"
 	// reference data; anyone should be able to set tx refdata but, once
 	// set, it should be immutable.
-	if len(tpl.Transaction.ReferenceData) > 0 {
-		constraints = append(constraints, refdataConstraint{tpl.Transaction.ReferenceData, true})
-	}
-	constraints = append(constraints, refdataConstraint{tpl.Transaction.Inputs[index].ReferenceData, false})
+	constraints = append(constraints, refdataConstraint{tpl.Transaction.Inputs[index].ReferenceData})
 
 	for i, out := range tpl.Transaction.Outputs {
 		c := &payConstraint{

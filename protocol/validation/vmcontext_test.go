@@ -13,7 +13,6 @@ import (
 
 func TestCheckOutput(t *testing.T) {
 	tx := legacy.NewTx(legacy.TxData{
-		ReferenceData: []byte("txref"),
 		Inputs: []*legacy.TxInput{
 			legacy.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendprog"), bc.Hash{}, []byte("ref")),
 			legacy.NewIssuanceInput(nil, 6, nil, bc.Hash{}, []byte("issueprog"), nil, nil),

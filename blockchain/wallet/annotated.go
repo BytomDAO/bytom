@@ -185,10 +185,6 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, statusFail bool
 		Outputs:                make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
 		StatusFail:             statusFail,
 	}
-	if isValidJSON(orig.ReferenceData) {
-		referenceData := chainjson.HexBytes(orig.ReferenceData)
-		tx.ReferenceData = &referenceData
-	}
 	for i := range orig.Inputs {
 		tx.Inputs = append(tx.Inputs, buildAnnotatedInput(orig, uint32(i)))
 	}

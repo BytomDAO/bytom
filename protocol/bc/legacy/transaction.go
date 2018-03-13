@@ -92,8 +92,6 @@ type TxData struct {
 
 	// The unconsumed suffix of the common witness extensible string
 	CommonWitnessSuffix []byte
-
-	ReferenceData []byte
 }
 
 // HasIssuance returns true if this transaction has an issuance input.
@@ -170,8 +168,7 @@ func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 		tx.Outputs = append(tx.Outputs, to)
 	}
 
-	tx.ReferenceData, err = blockchain.ReadVarstr31(r)
-	return errors.Wrap(err, "reading transaction reference data")
+	return nil
 }
 
 // does not read the enclosing extensible string
@@ -231,7 +228,7 @@ func (tx *TxData) writeTo(w io.Writer, serflags byte) error {
 		}
 	}
 
-	return writeRefData(w, tx.ReferenceData, serflags)
+	return nil
 }
 
 // does not write the enclosing extensible string

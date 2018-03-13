@@ -35,7 +35,6 @@ func (o outputIDConstraint) code() []byte {
 // given data.
 type refdataConstraint struct {
 	data []byte
-	tx   bool
 }
 
 func (r refdataConstraint) code() []byte {
@@ -43,11 +42,7 @@ func (r refdataConstraint) code() []byte {
 	sha3pool.Sum256(h[:], r.data)
 	builder := vmutil.NewBuilder()
 	builder.AddData(h[:])
-	if r.tx {
-		builder.AddOp(vm.OP_TXDATA)
-	} else {
-		builder.AddOp(vm.OP_ENTRYDATA)
-	}
+	builder.AddOp(vm.OP_ENTRYDATA)
 	builder.AddOp(vm.OP_EQUAL)
 	prog, _ := builder.Build() // error is impossible
 	return prog
