@@ -28,8 +28,10 @@ var (
 	// (and no other transaction spends funds from the account),
 	// new change outputs will be created
 	// in sufficient amounts to satisfy the request.
-	ErrReserved    = errors.New("reservation found outputs already reserved")
-	ErrMatchUTXO   = errors.New("can't match enough valid utxos")
+	ErrReserved = errors.New("reservation found outputs already reserved")
+	// ErrMatchUTXO indicates the account doesn't contain enough utxo to satisfy the reservation.
+	ErrMatchUTXO = errors.New("can't match enough valid utxos")
+	// ErrReservation indicates the reserver doesn't found the reservation with the provided ID.
 	ErrReservation = errors.New("couldn't find reservation")
 )
 
