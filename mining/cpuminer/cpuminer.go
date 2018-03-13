@@ -47,6 +47,10 @@ type CPUMiner struct {
 // target difficulty.
 func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
+	seed, err := m.chain.GetSeed(header.Height, &header.PreviousBlockHash)
+	if err != nil {
+		return false
+	}
 
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
@@ -61,7 +65,7 @@ func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit cha
 
 		header.Nonce = i
 		headerHash := header.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, &header.PreviousBlockHash, header.Bits) {
+		if difficulty.CheckProofOfWork(&headerHash, seed, header.Bits) {
 			return true
 		}
 	}
