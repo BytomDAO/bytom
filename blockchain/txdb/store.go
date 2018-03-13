@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	blockStoreKey  = []byte("blockStore")
-	txStatusPrefix = []byte("txStatus:")
+	blockStoreKey   = []byte("blockStore")
+	blockSeedPrefix = []byte("blockSeed:")
+	txStatusPrefix  = []byte("txStatus:")
 )
 
 // BlockStoreStateJSON represents the core's db status
@@ -58,6 +59,10 @@ type Store struct {
 
 func calcBlockKey(hash *bc.Hash) []byte {
 	return []byte(fmt.Sprintf("B:%v", hash.String()))
+}
+
+func calcSeedKey(hash *bc.Hash) []byte {
+	return append(blockSeedPrefix, hash.Bytes()...)
 }
 
 func calcTxStatusKey(hash *bc.Hash) []byte {
@@ -103,6 +108,20 @@ func (s *Store) GetBlock(hash *bc.Hash) (*legacy.Block, error) {
 	return s.cache.lookup(hash)
 }
 
+// GetSeed will return the seed of given block
+func (s *Store) GetSeed(hash *bc.Hash) (*bc.Hash, error) {
+	data := s.db.Get(calcSeedKey(hash))
+	if data == nil {
+		return nil, errors.New("can't find the seed by given hash")
+	}
+
+	seed := &bc.Hash{}
+	if err := proto.Unmarshal(data, seed); err != nil {
+		return nil, errors.Wrap(err, "unmarshaling seed")
+	}
+	return seed, nil
+}
+
 // GetTransactionsUtxo will return all the utxo that related to the input txs
 func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
 	return getTransactionsUtxo(s.db, view, txs)
@@ -133,7 +152,7 @@ func (s *Store) GetMainchain(hash *bc.Hash) (map[uint64]*bc.Hash, error) {
 }
 
 // SaveBlock persists a new block in the database.
-func (s *Store) SaveBlock(block *legacy.Block, ts *bc.TransactionStatus) error {
+func (s *Store) SaveBlock(block *legacy.Block, ts *bc.TransactionStatus, seed *bc.Hash) error {
 	binaryBlock, err := block.MarshalText()
 	if err != nil {
 		return errors.Wrap(err, "Marshal block meta")
@@ -144,10 +163,16 @@ func (s *Store) SaveBlock(block *legacy.Block, ts *bc.TransactionStatus) error {
 		return errors.Wrap(err, "marshal block transaction status")
 	}
 
+	binarySeed, err := proto.Marshal(seed)
+	if err != nil {
+		return errors.Wrap(err, "marshal block seed")
+	}
+
 	blockHash := block.Hash()
 	batch := s.db.NewBatch()
 	batch.Set(calcBlockKey(&blockHash), binaryBlock)
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
+	batch.Set(calcSeedKey(&blockHash), binarySeed)
 	batch.Write()
 	return nil
 }

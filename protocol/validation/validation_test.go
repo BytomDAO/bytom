@@ -449,7 +449,7 @@ func TestValidateBlock(t *testing.T) {
 		c.block.TransactionsRoot = &txRoot
 		c.block.TransactionStatusHash = &txStatusHash
 
-		if err = ValidateBlock(c.block, nil); rootErr(err) != c.err {
+		if err = ValidateBlock(c.block, nil, &bc.Hash{}); rootErr(err) != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)
 		}
 	}
@@ -627,7 +627,6 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		Version:       result.txVersion,
 		Inputs:        result.txInputs,
 		Outputs:       result.txOutputs,
-		ReferenceData: result.txRefData,
 	}
 
 	return &result
