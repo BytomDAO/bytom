@@ -62,16 +62,16 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(144),
+				SerializedSize: uint64(139),
 				Inputs: []*TxInput{
-					NewIssuanceInput([]byte{10, 9, 8}, 1000000000000, []byte("input"), initialBlockHash, issuanceScript, [][]byte{[]byte{1, 2, 3}}, nil),
+					NewIssuanceInput([]byte{10, 9, 8}, 1000000000000, initialBlockHash, issuanceScript, [][]byte{[]byte{1, 2, 3}}, nil),
 				},
 				Outputs: []*TxOutput{
 					NewTxOutput(bc.AssetID{}, 1000000000000, []byte{1}),
 				},
 			}),
-			hex: ("0701000001012b00030a0908a9b2b6c5394888ab5396f583ae484b8459486b14268e2bef1b637440335eb6c180a094a58d1d05696e7075742903deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d0101010000"), // reference data
-			hash: mustDecodeHash("5c75ca1108e93f259e398b97c170e70de318ed2d9f275894b896dce1e6bd2010"),
+			hex: ("0701000001012b00030a0908a9b2b6c5394888ab5396f583ae484b8459486b14268e2bef1b637440335eb6c180a094a58d1d002903deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d0101010000"), // reference data
+			hash: mustDecodeHash("4c46be303c3ec71c45fea642270cbd6822989fd8412da1a66912488612d8ec23"),
 		},
 		{
 			tx: NewTx(TxData{
@@ -127,14 +127,14 @@ func TestHasIssuance(t *testing.T) {
 		want bool
 	}{{
 		tx: &TxData{
-			Inputs: []*TxInput{NewIssuanceInput(nil, 0, nil, bc.Hash{}, nil, nil, nil)},
+			Inputs: []*TxInput{NewIssuanceInput(nil, 0, bc.Hash{}, nil, nil, nil)},
 		},
 		want: true,
 	}, {
 		tx: &TxData{
 			Inputs: []*TxInput{
 				NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, bc.Hash{}),
-				NewIssuanceInput(nil, 0, nil, bc.Hash{}, nil, nil, nil),
+				NewIssuanceInput(nil, 0, bc.Hash{}, nil, nil, nil),
 			},
 		},
 		want: true,

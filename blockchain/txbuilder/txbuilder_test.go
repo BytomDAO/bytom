@@ -104,7 +104,7 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 	unsigned := legacy.NewTx(legacy.TxData{
 		Version: 1,
 		Inputs: []*legacy.TxInput{
-			legacy.NewIssuanceInput([]byte{1}, 100, nil, initialBlockHash, issuanceProg, nil, nil),
+			legacy.NewIssuanceInput([]byte{1}, 100, initialBlockHash, issuanceProg, nil, nil),
 		},
 		Outputs: []*legacy.TxOutput{
 			legacy.NewTxOutput(assetID, 100, outscript),

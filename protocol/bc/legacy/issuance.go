@@ -38,7 +38,6 @@ func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
 func NewIssuanceInput(
 	nonce []byte,
 	amount uint64,
-	referenceData []byte,
 	initialBlock bc.Hash,
 	issuanceProgram []byte,
 	arguments [][]byte,
@@ -46,7 +45,6 @@ func NewIssuanceInput(
 ) *TxInput {
 	return &TxInput{
 		AssetVersion:  1,
-		ReferenceData: referenceData,
 		TypedInput: &IssuanceInput{
 			Nonce:  nonce,
 			Amount: amount,

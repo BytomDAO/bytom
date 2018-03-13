@@ -10,17 +10,15 @@ import (
 
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 )
 
 //NewIssueAction create a new asset issue action
-func (reg *Registry) NewIssueAction(assetAmount bc.AssetAmount, referenceData chainjson.Map) txbuilder.Action {
+func (reg *Registry) NewIssueAction(assetAmount bc.AssetAmount) txbuilder.Action {
 	return &issueAction{
 		assets:        reg,
 		AssetAmount:   assetAmount,
-		ReferenceData: referenceData,
 	}
 }
 
@@ -34,7 +32,6 @@ func (reg *Registry) DecodeIssueAction(data []byte) (txbuilder.Action, error) {
 type issueAction struct {
 	assets *Registry
 	bc.AssetAmount
-	ReferenceData chainjson.Map `json:"reference_data"`
 }
 
 func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
@@ -55,7 +52,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 
 	assetDef := asset.RawDefinitionByte
 
-	txin := legacy.NewIssuanceInput(nonce[:], a.Amount, a.ReferenceData, asset.InitialBlockHash, asset.IssuanceProgram, nil, assetDef)
+	txin := legacy.NewIssuanceInput(nonce[:], a.Amount, asset.InitialBlockHash, asset.IssuanceProgram, nil, assetDef)
 
 	tplIn := &txbuilder.SigningInstruction{}
 	path := signers.Path(asset.Signer, signers.AssetKeySpace)
