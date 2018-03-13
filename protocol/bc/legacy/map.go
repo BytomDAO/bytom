@@ -99,8 +99,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			}
 			out := bc.NewOutput(src, prog, &oldSp.RefDataHash, 0) // ordinal doesn't matter for prevouts, only for result outputs
 			prevoutID := addEntry(out)
-			refdatahash := hashData(inp.ReferenceData)
-			sp := bc.NewSpend(&prevoutID, &refdatahash, uint64(i))
+			sp := bc.NewSpend(&prevoutID, uint64(i))
 			sp.WitnessArguments = oldSp.Arguments
 			id := addEntry(sp)
 			muxSources[i] = &bc.ValueSource{
@@ -144,9 +143,8 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 			val := inp.AssetAmount()
 
-			refdatahash := hashData(inp.ReferenceData)
 			assetdefhash := hashData(oldIss.AssetDefinition)
-			iss := bc.NewIssuance(&anchorID, &val, &refdatahash, uint64(i))
+			iss := bc.NewIssuance(&anchorID, &val, uint64(i))
 			iss.WitnessAssetDefinition = &bc.AssetDefinition{
 				InitialBlockId: &oldIss.InitialBlock,
 				Data:           &assetdefhash,

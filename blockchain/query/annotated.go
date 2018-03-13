@@ -27,7 +27,7 @@ type AnnotatedTx struct {
 type AnnotatedInput struct {
 	Type            string              `json:"type"`
 	AssetID         bc.AssetID          `json:"asset_id"`
-	AssetAlias      string              `json:"asset_alias,omitempty"`
+	AssetAlias      string              `json:"asset_alias,omitempty"TestBuild`
 	AssetDefinition *chainjson.HexBytes `json:"asset_definition"`
 	Amount          uint64              `json:"amount"`
 	IssuanceProgram chainjson.HexBytes  `json:"issuance_program,omitempty"`

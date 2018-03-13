@@ -40,8 +40,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		assetID = &a1
 		amount = &e.Value.Amount
 		destPos = &e.WitnessDestination.Position
-		d := e.Data.Bytes()
-		entryData = &d
 		a2 := e.AnchorId.Bytes()
 		anchorID = &a2
 
@@ -51,8 +49,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		assetID = &a1
 		amount = &spentOutput.Source.Value.Amount
 		destPos = &e.WitnessDestination.Position
-		d := e.Data.Bytes()
-		entryData = &d
 		s := e.SpentOutputId.Bytes()
 		spentOutputID = &s
 

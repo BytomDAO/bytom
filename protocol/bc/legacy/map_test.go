@@ -67,7 +67,7 @@ func TestMapCoinbaseTx(t *testing.T) {
 	oldTx := &TxData{
 		Version: 1,
 		Inputs: []*TxInput{
-			NewCoinbaseInput(nil, nil),
+			NewCoinbaseInput(nil),
 		},
 		Outputs: []*TxOutput{
 			NewTxOutput(*BTMAssetID, 800000000000, []byte{1}),

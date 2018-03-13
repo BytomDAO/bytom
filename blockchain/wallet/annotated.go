@@ -204,10 +204,6 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 		in.AssetID = orig.AssetID()
 		in.Amount = orig.Amount()
 	}
-	if isValidJSON(orig.ReferenceData) {
-		referenceData := chainjson.HexBytes(orig.ReferenceData)
-		in.ReferenceData = &referenceData
-	}
 
 	id := tx.Tx.InputIDs[i]
 	e := tx.Entries[id]
