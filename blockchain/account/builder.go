@@ -81,7 +81,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 		// Don't insert the control program until callbacks are executed.
 		a.accounts.insertControlProgramDelayed(ctx, b, acp)
 
-		err = b.AddOutput(legacy.NewTxOutput(*a.AssetId, res.Change, acp.ControlProgram, nil))
+		err = b.AddOutput(legacy.NewTxOutput(*a.AssetId, res.Change, acp.ControlProgram))
 		if err != nil {
 			return errors.Wrap(err, "adding change output")
 		}
@@ -227,7 +227,7 @@ func (a *controlAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 	}
 	a.accounts.insertControlProgramDelayed(ctx, b, acp)
 
-	return b.AddOutput(legacy.NewTxOutput(*a.AssetId, a.Amount, acp.ControlProgram, a.ReferenceData))
+	return b.AddOutput(legacy.NewTxOutput(*a.AssetId, a.Amount, acp.ControlProgram))
 }
 
 // insertControlProgramDelayed takes a template builder and an account

@@ -18,11 +18,11 @@ func TestCheckOutput(t *testing.T) {
 			legacy.NewIssuanceInput(nil, 6, nil, bc.Hash{}, []byte("issueprog"), nil, nil),
 		},
 		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("wrongprog"), nil),
-			legacy.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("controlprog"), nil),
-			legacy.NewTxOutput(bc.NewAssetID([32]byte{2}), 8, []byte("controlprog"), nil),
-			legacy.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"), nil),
-			legacy.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"), []byte("outref")),
+			legacy.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("wrongprog"), ),
+			legacy.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("controlprog"),),
+			legacy.NewTxOutput(bc.NewAssetID([32]byte{2}), 8, []byte("controlprog"),),
+			legacy.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"),),
+			legacy.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"),),
 		},
 	})
 
@@ -50,7 +50,7 @@ func TestCheckOutput(t *testing.T) {
 			assetID:   append([]byte{2}, make([]byte, 31)...),
 			vmVersion: 1,
 			code:      []byte("controlprog"),
-			wantOk:    true,
+			wantOk:    false,
 		},
 		{
 			index:     3,

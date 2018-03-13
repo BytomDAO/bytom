@@ -22,7 +22,7 @@ type TxOutput struct {
 	ReferenceData []byte
 }
 
-func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram, referenceData []byte) *TxOutput {
+func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
 	return &TxOutput{
 		AssetVersion: 1,
 		OutputCommitment: OutputCommitment{
@@ -33,7 +33,6 @@ func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram, referenceDat
 			VMVersion:      1,
 			ControlProgram: controlProgram,
 		},
-		ReferenceData: referenceData,
 	}
 }
 

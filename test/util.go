@@ -57,7 +57,7 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 
 	b := txbuilder.NewBuilder(time.Now())
 	b.AddInput(txInput, sigInst)
-	out := legacy.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)}, nil)
+	out := legacy.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)})
 	b.AddOutput(out)
 	return b.Build()
 }

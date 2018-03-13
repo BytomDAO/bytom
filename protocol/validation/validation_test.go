@@ -615,8 +615,8 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		}
 
 		result.txOutputs = []*legacy.TxOutput{
-			legacy.NewTxOutput(result.assetID, 25, cp1, []byte{11}),
-			legacy.NewTxOutput(result.assetID, 45, cp2, []byte{12}),
+			legacy.NewTxOutput(result.assetID, 25, cp1),
+			legacy.NewTxOutput(result.assetID, 45, cp2),
 		}
 	}
 	if len(result.txRefData) == 0 {
@@ -648,7 +648,7 @@ func mockCoinbaseTx(amount uint64) *bc.Tx {
 			legacy.NewCoinbaseInput(nil, nil),
 		},
 		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(*consensus.BTMAssetID, amount, cp, nil),
+			legacy.NewTxOutput(*consensus.BTMAssetID, amount, cp),
 		},
 	})
 }

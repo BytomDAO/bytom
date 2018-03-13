@@ -59,8 +59,8 @@ func sampleTx() *TxData {
 			NewSpendInput(nil, bc.NewHash([32]byte{0x11}), assetID, 1, 1, []byte{2}, bc.Hash{}),
 		},
 		Outputs: []*TxOutput{
-			NewTxOutput(assetID, 600000000000, []byte{1}, nil),
-			NewTxOutput(assetID, 400000000000, []byte{2}, nil),
+			NewTxOutput(assetID, 600000000000, []byte{1}),
+			NewTxOutput(assetID, 400000000000, []byte{2}),
 		},
 	}
 }

@@ -88,7 +88,7 @@ func TestDuplicateLeaves(t *testing.T) {
 		txs[i] = legacy.NewTx(legacy.TxData{
 			Version: 1,
 			Inputs:  []*legacy.TxInput{legacy.NewIssuanceInput(now, i, nil, initialBlockHash, trueProg, nil, nil)},
-			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(assetID, i, trueProg, nil)},
+			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(assetID, i, trueProg)},
 		}).Tx
 	}
 
@@ -121,7 +121,7 @@ func TestAllDuplicateLeaves(t *testing.T) {
 	tx := legacy.NewTx(legacy.TxData{
 		Version: 1,
 		Inputs:  []*legacy.TxInput{issuanceInp},
-		Outputs: []*legacy.TxOutput{legacy.NewTxOutput(assetID, 1, trueProg, nil)},
+		Outputs: []*legacy.TxOutput{legacy.NewTxOutput(assetID, 1, trueProg)},
 	}).Tx
 	tx1, tx2, tx3, tx4, tx5, tx6 := tx, tx, tx, tx, tx, tx
 

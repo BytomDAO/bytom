@@ -36,7 +36,7 @@ func TestTransaction(t *testing.T) {
 	issuanceScript := []byte{1}
 	initialBlockHashHex := "03deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d"
 	initialBlockHash := mustDecodeHash(initialBlockHashHex)
-	//
+
 	assetID := bc.ComputeAssetID(issuanceScript, &initialBlockHash, 1, &bc.EmptyStringHash)
 
 	cases := []struct {
@@ -62,16 +62,16 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(150),
+				SerializedSize: uint64(144),
 				Inputs: []*TxInput{
 					NewIssuanceInput([]byte{10, 9, 8}, 1000000000000, []byte("input"), initialBlockHash, issuanceScript, [][]byte{[]byte{1, 2, 3}}, nil),
 				},
 				Outputs: []*TxOutput{
-					NewTxOutput(bc.AssetID{}, 1000000000000, []byte{1}, []byte("output")),
+					NewTxOutput(bc.AssetID{}, 1000000000000, []byte{1}),
 				},
 			}),
-			hex: ("0701000001012b00030a0908a9b2b6c5394888ab5396f583ae484b8459486b14268e2bef1b637440335eb6c180a094a58d1d05696e7075742903deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d010101066f757470757400"), // reference data
-			hash: mustDecodeHash("7603c9dbd98381883f96b9b90d37cedab93879fe03591ceec6c7933e096fc158"),
+			hex: ("0701000001012b00030a0908a9b2b6c5394888ab5396f583ae484b8459486b14268e2bef1b637440335eb6c180a094a58d1d05696e7075742903deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d0101010000"), // reference data
+			hash: mustDecodeHash("5c75ca1108e93f259e398b97c170e70de318ed2d9f275894b896dce1e6bd2010"),
 		},
 		{
 			tx: NewTx(TxData{
@@ -81,8 +81,8 @@ func TestTransaction(t *testing.T) {
 					NewSpendInput(nil, mustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), bc.AssetID{}, 1000000000000, 1, []byte{1}, bc.Hash{}),
 				},
 				Outputs: []*TxOutput{
-					NewTxOutput(assetID, 600000000000, []byte{1}, nil),
-					NewTxOutput(assetID, 400000000000, []byte{2}, nil),
+					NewTxOutput(assetID, 600000000000, []byte{1}),
+					NewTxOutput(assetID, 400000000000, []byte{2}),
 				},
 			}),
 			hex: ("0701000001016c016add385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292000000000000000000000000000000000000000000000000000000000000000080a094a58d1d010101010000000000000000000000000000000000000000000000000000000000000000000100020129a9b2b6c5394888ab5396f583ae484b8459486b14268e2bef1b637440335eb6c180e0a596bb1101010100000129a9b2b6c5394888ab5396f583ae484b8459486b14268e2bef1b637440335eb6c180c0ee8ed20b0101020000"), // output 1, output witness
@@ -216,7 +216,7 @@ func BenchmarkTxWriteToTrue200(b *testing.B) {
 	tx := &Tx{}
 	for i := 0; i < 200; i++ {
 		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, bc.Hash{}))
-		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil, nil))
+		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil))
 	}
 	for i := 0; i < b.N; i++ {
 		tx.writeTo(ioutil.Discard, 0)
@@ -227,7 +227,7 @@ func BenchmarkTxWriteToFalse200(b *testing.B) {
 	tx := &Tx{}
 	for i := 0; i < 200; i++ {
 		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, bc.Hash{}))
-		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil, nil))
+		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil))
 	}
 	for i := 0; i < b.N; i++ {
 		tx.writeTo(ioutil.Discard, serRequired)
@@ -251,7 +251,7 @@ func BenchmarkTxInputWriteToFalse(b *testing.B) {
 }
 
 func BenchmarkTxOutputWriteToTrue(b *testing.B) {
-	output := NewTxOutput(bc.AssetID{}, 0, nil, nil)
+	output := NewTxOutput(bc.AssetID{}, 0, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		output.writeTo(ew, 0)
@@ -259,7 +259,7 @@ func BenchmarkTxOutputWriteToTrue(b *testing.B) {
 }
 
 func BenchmarkTxOutputWriteToFalse(b *testing.B) {
-	output := NewTxOutput(bc.AssetID{}, 0, nil, nil)
+	output := NewTxOutput(bc.AssetID{}, 0, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		output.writeTo(ew, serRequired)

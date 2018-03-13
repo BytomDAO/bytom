@@ -89,7 +89,7 @@ func issue(t testing.TB, asset *testAsset, dest *testDest, amount uint64) (*lega
 			legacy.NewIssuanceInput([]byte{1}, amount, nil, bc.Hash{}, assetCP, nil, nil),
 		},
 		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(asset.AssetID, amount, destCP, nil),
+			legacy.NewTxOutput(asset.AssetID, amount, destCP),
 		},
 	})
 	asset.sign(t, tx, 0)

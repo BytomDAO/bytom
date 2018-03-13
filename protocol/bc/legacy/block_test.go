@@ -25,7 +25,7 @@ func TestMarshalBlock(t *testing.T) {
 				Version:        1,
 				SerializedSize: uint64(45),
 				Outputs: []*TxOutput{
-					NewTxOutput(bc.AssetID{}, 1, nil, nil),
+					NewTxOutput(bc.AssetID{}, 1, nil),
 				},
 			}),
 		}}

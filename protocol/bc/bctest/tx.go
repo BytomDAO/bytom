@@ -52,7 +52,7 @@ func NewIssuanceTx(tb testing.TB, initial bc.Hash, opts ...func(*legacy.Tx)) *le
 		Version: 1,
 		Inputs:  []*legacy.TxInput{txin},
 		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(txin.AssetID(), 100, []byte{0xbe, 0xef}, nil),
+			legacy.NewTxOutput(txin.AssetID(), 100, []byte{0xbe, 0xef}),
 		},
 	})
 
