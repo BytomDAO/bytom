@@ -20,8 +20,10 @@ var (
 	maxCachedErrTxs = 1000
 	maxNewTxChSize  = 1000
 	maxNewTxNum     = 10000
+
 	// ErrTransactionNotExist is the pre-defined error message
 	ErrTransactionNotExist = errors.New("transaction are not existed in the mempool")
+	// ErrPoolIsFull indicates the pool is full
 	ErrPoolIsFull          = errors.New("transaction pool reach the max number")
 )
 
@@ -94,7 +96,7 @@ func (mp *TxPool) AddTransaction(tx *legacy.Tx, gasOnlyTx bool, height, fee uint
 	}
 
 	mp.newTxCh <- tx
-	log.WithField("tx_id", tx.Tx.ID).Info("Add tx to mempool")
+	log.WithField("tx_id", tx.Tx.ID.String()).Info("Add tx to mempool")
 	return txD, nil
 }
 

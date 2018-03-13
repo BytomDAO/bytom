@@ -29,7 +29,7 @@ func TestDefineAsset(t *testing.T) {
 	}
 
 	if !testutil.DeepEqual(asset, found) {
-		t.Errorf("expected asset %s to be recorded as %s", asset, found)
+		t.Errorf("expected asset %v to be recorded as %v", asset, found)
 	}
 }
 
