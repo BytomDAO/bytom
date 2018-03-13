@@ -132,7 +132,6 @@ func DecodeRetireAction(data []byte) (Action, error) {
 
 type retireAction struct {
 	bc.AssetAmount
-	ReferenceData json.Map `json:"reference_data"`
 }
 
 func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {

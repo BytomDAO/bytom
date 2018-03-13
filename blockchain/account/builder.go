@@ -100,7 +100,6 @@ type spendUTXOAction struct {
 	accounts *Manager
 	OutputID *bc.Hash `json:"output_id"`
 
-	ReferenceData chainjson.Map `json:"reference_data"`
 	ClientToken   *string       `json:"client_token"`
 }
 
