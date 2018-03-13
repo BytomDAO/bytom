@@ -26,7 +26,6 @@ func DecodeControlReceiverAction(data []byte) (Action, error) {
 type controlReceiverAction struct {
 	bc.AssetAmount
 	Receiver      *Receiver `json:"receiver"`
-	ReferenceData json.Map  `json:"reference_data"`
 }
 
 func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -106,7 +105,6 @@ func DecodeControlProgramAction(data []byte) (Action, error) {
 type controlProgramAction struct {
 	bc.AssetAmount
 	Program       json.HexBytes `json:"control_program"`
-	ReferenceData json.Map      `json:"reference_data"`
 }
 
 func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) error {
