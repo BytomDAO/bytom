@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
@@ -14,8 +16,6 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm/vmutil"
-
-	log "github.com/sirupsen/logrus"
 )
 
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
