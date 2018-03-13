@@ -442,7 +442,7 @@ func TestValidateBlock(t *testing.T) {
 	for _, c := range cases {
 		txRoot, err := bc.MerkleRoot(c.block.Transactions)
 		if err != nil {
-			t.Errorf("computing transaction merkle root", err)
+			t.Errorf("computing transaction merkle root error: %v", err)
 			continue
 		}
 		c.block.BlockHeader.TransactionStatus = bc.NewTransactionStatus()
@@ -624,9 +624,9 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 	}
 
 	result.tx = &legacy.TxData{
-		Version:       result.txVersion,
-		Inputs:        result.txInputs,
-		Outputs:       result.txOutputs,
+		Version: result.txVersion,
+		Inputs:  result.txInputs,
+		Outputs: result.txOutputs,
 	}
 
 	return &result
