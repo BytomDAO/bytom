@@ -80,7 +80,7 @@ func TestWalletUpdate(t *testing.T) {
 	block := mockSingleBlock(tx)
 
 	txStatus := bc.NewTransactionStatus()
-	store.SaveBlock(block, txStatus)
+	store.SaveBlock(block, txStatus, consensus.InitialSeed)
 
 	err = w.attachBlock(block)
 	if err != nil {
@@ -118,8 +118,12 @@ func TestExportAndImportPrivKey(t *testing.T) {
 
 	genesisBlock := cfg.GenerateGenesisBlock()
 
-	chain.SaveBlock(genesisBlock)
-	chain.ConnectBlock(genesisBlock)
+	if err = chain.SaveBlock(genesisBlock); err != nil {
+		t.Fatal(err)
+	}
+	if err = chain.ConnectBlock(genesisBlock); err != nil {
+		t.Fatal(err)
+	}
 
 	acntManager := account.NewManager(testDB, chain)
 	reg := asset.NewRegistry(testDB, chain)
