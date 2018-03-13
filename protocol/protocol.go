@@ -1,13 +1,13 @@
 package protocol
 
 import (
-	"blockchain/consensus"
 	"context"
 	"sync"
 	"time"
 
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txdb/storage"
+	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/legacy"
