@@ -28,8 +28,10 @@ var (
 	// (and no other transaction spends funds from the account),
 	// new change outputs will be created
 	// in sufficient amounts to satisfy the request.
-	ErrReserved    = errors.New("reservation found outputs already reserved")
-	ErrMatchUTXO   = errors.New("can't match enough valid utxos")
+	ErrReserved = errors.New("reservation found outputs already reserved")
+	// ErrMatchUTXO indicates the account doesn't contain enough utxo to satisfy the reservation.
+	ErrMatchUTXO = errors.New("can't match enough valid utxos")
+	// ErrReservation indicates the reserver doesn't found the reservation with the provided ID.
 	ErrReservation = errors.New("couldn't find reservation")
 )
 
@@ -125,7 +127,7 @@ func (re *reserver) reserve(src source, amount uint64, clientToken *string, exp 
 
 	// Try to reserve the right amount.
 	rid := atomic.AddUint64(&re.nextReservationID, 1)
-	reserved, total, err, isImmature := sourceReserver.reserve(rid, amount)
+	reserved, total, isImmature, err := sourceReserver.reserve(rid, amount)
 	if err != nil {
 		if isImmature {
 			return nil, errors.WithDetail(err, "some coinbase utxos are immature")
@@ -270,15 +272,15 @@ type sourceReserver struct {
 	reserved      map[bc.Hash]uint64
 }
 
-func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, error, bool) {
+func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, bool, error) {
 	var (
 		reserved, unavailable uint64
 		reservedUTXOs         []*UTXO
 	)
 
-	utxos, err, isImmature := findMatchingUTXOs(sr.db, sr.src, sr.currentHeight)
+	utxos, isImmature, err := findMatchingUTXOs(sr.db, sr.src, sr.currentHeight)
 	if err != nil {
-		return nil, 0, errors.Wrap(err), isImmature
+		return nil, 0, isImmature, errors.Wrap(err)
 	}
 
 	sr.mu.Lock()
@@ -299,12 +301,12 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, e
 	if reserved+unavailable < amount {
 		// Even if everything was available, this account wouldn't have
 		// enough to satisfy the request.
-		return nil, 0, ErrInsufficient, isImmature
+		return nil, 0, isImmature, ErrInsufficient
 	}
 	if reserved < amount {
 		// The account has enough for the request, but some is tied up in
 		// other reservations.
-		return nil, 0, ErrReserved, isImmature
+		return nil, 0, isImmature, ErrReserved
 	}
 
 	// We've found enough to satisfy the request.
@@ -312,7 +314,7 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, e
 		sr.reserved[u.OutputID] = rid
 	}
 
-	return reservedUTXOs, reserved, nil, isImmature
+	return reservedUTXOs, reserved, isImmature, nil
 }
 
 func (sr *sourceReserver) reserveUTXO(rid uint64, utxo *UTXO) error {
@@ -336,7 +338,7 @@ func (sr *sourceReserver) cancel(res *reservation) {
 	}
 }
 
-func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*UTXO, error, bool) {
+func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*UTXO, bool, error) {
 	utxos := []*UTXO{}
 	isImmature := false
 	utxoIter := db.IteratorPrefix([]byte(UTXOPreFix))
@@ -345,7 +347,7 @@ func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*U
 	for utxoIter.Next() {
 		u := &UTXO{}
 		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
-			return nil, errors.Wrap(err), false
+			return nil, false, errors.Wrap(err)
 		}
 
 		//u.ValidHeight > 0 means coinbase utxo
@@ -360,16 +362,19 @@ func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*U
 	}
 
 	if len(utxos) == 0 {
-		return nil, ErrMatchUTXO, isImmature
+		return nil, isImmature, ErrMatchUTXO
 	}
-	return utxos, nil, isImmature
+	return utxos, isImmature, nil
 }
 
 func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*UTXO, error) {
 	u := &UTXO{}
-	data := db.Get(UTXOKey(outHash))
+
+	data := db.Get(StandardUTXOKey(outHash))
 	if data == nil {
-		return nil, errors.Wrapf(ErrMatchUTXO, "utxo_id = %s", outHash.String())
+		if data = db.Get(ContractUTXOKey(outHash)); data == nil {
+			return nil, errors.Wrapf(ErrMatchUTXO, "output_id = %s", outHash.String())
+		}
 	}
 	return u, json.Unmarshal(data, u)
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto/sha3pool"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
@@ -128,12 +129,19 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *
 	for _, tx := range b.Transactions {
 		for j := range tx.Outputs {
 			resOutID := tx.ResultIds[j]
-			if _, ok := tx.Entries[*resOutID].(*bc.Output); !ok {
+			resOut, ok := tx.Entries[*resOutID].(*bc.Output)
+			if !ok {
 				//retirement
 				continue
 			}
-			//delete new UTXOs
-			batch.Delete(account.UTXOKey(*resOutID))
+
+			if segwit.IsP2WScript(resOut.ControlProgram.Code) {
+				// delete standard UTXOs
+				batch.Delete(account.StandardUTXOKey(*resOutID))
+			} else {
+				// delete contract UTXOs
+				batch.Delete(account.ContractUTXOKey(*resOutID))
+			}
 		}
 	}
 }
@@ -201,11 +209,8 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *legacy.Block, txStatus *bc
 
 //buildAccountUTXOs process valid blocks to build account unspent outputs db
 func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *bc.TransactionStatus) {
-	//handle spent UTXOs
-	delOutputIDs := prevoutDBKeys(b, txStatus)
-	for _, delOutputID := range delOutputIDs {
-		batch.Delete(account.UTXOKey(delOutputID))
-	}
+	// get the spent UTXOs and delete the UTXOs from DB
+	prevoutDBKeys(batch, b, txStatus)
 
 	//handle new UTXOs
 	outs := make([]*rawOutput, 0, len(b.Transactions))
@@ -246,15 +251,33 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *bc
 	}
 }
 
-func prevoutDBKeys(b *legacy.Block, txStatus *bc.TransactionStatus) (outputIDs []bc.Hash) {
+func prevoutDBKeys(batch db.Batch, b *legacy.Block, txStatus *bc.TransactionStatus) {
 	for txIndex, tx := range b.Transactions {
 		for _, inpID := range tx.Tx.InputIDs {
-			if sp, err := tx.Spend(inpID); err == nil {
-				statusFail, _ := txStatus.GetStatus(txIndex)
-				if statusFail && *sp.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
-					continue
-				}
-				outputIDs = append(outputIDs, *sp.SpentOutputId)
+			sp, err := tx.Spend(inpID)
+			if err != nil {
+				log.WithField("err", err).Error("building spend entry type")
+				continue
+			}
+
+			statusFail, _ := txStatus.GetStatus(txIndex)
+			if statusFail && *sp.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
+				continue
+			}
+
+			resOut, ok := tx.Entries[*sp.SpentOutputId].(*bc.Output)
+			if !ok {
+				// retirement
+				log.WithField("SpentOutputId", *sp.SpentOutputId).Info("the OutputId is retirement")
+				continue
+			}
+
+			if segwit.IsP2WScript(resOut.ControlProgram.Code) {
+				// delete standard UTXOs
+				batch.Delete(account.StandardUTXOKey(*sp.SpentOutputId))
+			} else {
+				// delete contract UTXOs
+				batch.Delete(account.ContractUTXOKey(*sp.SpentOutputId))
 			}
 		}
 	}
@@ -276,6 +299,19 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 
 	var hash [32]byte
 	for s := range outsByScript {
+		//smart contract UTXO
+		if !segwit.IsP2WScript([]byte(s)) {
+			for _, out := range outsByScript[s] {
+				newOut := &accountOutput{
+					rawOutput: *out,
+					change:    false,
+				}
+				result = append(result, newOut)
+			}
+
+			continue
+		}
+
 		sha3pool.Sum256(hash[:], []byte(s))
 		bytes := w.DB.Get(account.CPKey(hash))
 		if bytes == nil {
@@ -332,7 +368,15 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 		if err != nil {
 			return errors.Wrap(err, "failed marshal accountutxo")
 		}
-		batch.Set(account.UTXOKey(out.OutputID), data)
+
+		if segwit.IsP2WScript(out.ControlProgram) {
+			// standard UTXOs
+			batch.Set(account.StandardUTXOKey(out.OutputID), data)
+		} else {
+			// contract UTXOs
+			batch.Set(account.ContractUTXOKey(out.OutputID), data)
+		}
+
 	}
 	return nil
 }
@@ -363,7 +407,7 @@ func (w *Wallet) filterAccountTxs(b *legacy.Block, txStatus *bc.TransactionStatu
 			if err != nil {
 				continue
 			}
-			if bytes := w.DB.Get(account.UTXOKey(outid)); bytes != nil {
+			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
 				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos))
 				break
 			}

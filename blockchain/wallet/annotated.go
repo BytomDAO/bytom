@@ -116,7 +116,7 @@ func getAccountFromUTXO(outputID bc.Hash, walletDB db.DB) (*account.Account, err
 	accountUTXO := account.UTXO{}
 	localAccount := account.Account{}
 
-	accountUTXOValue := walletDB.Get(account.UTXOKey(outputID))
+	accountUTXOValue := walletDB.Get(account.StandardUTXOKey(outputID))
 	if accountUTXOValue == nil {
 		return nil, fmt.Errorf("failed get account utxo:%x ", outputID)
 	}
