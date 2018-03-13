@@ -34,11 +34,10 @@ type rawOutput struct {
 
 type accountOutput struct {
 	rawOutput
-	AccountID      string
-	Address        string
-	keyIndex       uint64
-	change         bool
-	ExtContractTag bool
+	AccountID string
+	Address   string
+	keyIndex  uint64
+	change    bool
 }
 
 const (
@@ -331,12 +330,11 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 
 		for _, out := range outsByScript[s] {
 			newOut := &accountOutput{
-				rawOutput:      *out,
-				AccountID:      cp.AccountID,
-				Address:        cp.Address,
-				keyIndex:       cp.KeyIndex,
-				change:         cp.Change,
-				ExtContractTag: cp.ExtContractTag,
+				rawOutput: *out,
+				AccountID: cp.AccountID,
+				Address:   cp.Address,
+				keyIndex:  cp.KeyIndex,
+				change:    cp.Change,
 			}
 			result = append(result, newOut)
 		}
@@ -361,7 +359,6 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 			ControlProgram:      out.ControlProgram,
 			RefDataHash:         out.refData,
 			ControlProgramIndex: out.keyIndex,
-			ExtContractTag:      out.ExtContractTag,
 			AccountID:           out.AccountID,
 			Address:             out.Address,
 			ValidHeight:         out.ValidHeight,
