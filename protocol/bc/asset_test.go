@@ -12,8 +12,8 @@ func TestComputeAssetID(t *testing.T) {
 	assetID := ComputeAssetID(issuanceScript, &initialBlockHash, 1, &EmptyStringHash)
 
 	unhashed := append([]byte{}, initialBlockHash.Bytes()...)
-	unhashed = append(unhashed, 0x01) // vmVersion
-	unhashed = append(unhashed, 0x01) // length of issuanceScript
+	unhashed = append(unhashed, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}...) // vmVersion
+	unhashed = append(unhashed, 0x01)                                                      // length of issuanceScript
 	unhashed = append(unhashed, issuanceScript...)
 	unhashed = append(unhashed, EmptyStringHash.Bytes()...)
 	want := NewAssetID(sha3.Sum256(unhashed))

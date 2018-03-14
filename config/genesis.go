@@ -47,7 +47,7 @@ func GenerateGenesisBlock() *legacy.Block {
 		BlockHeader: legacy.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     4216080,
+			Nonce:     4216083,
 			Timestamp: 1516788453,
 			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
