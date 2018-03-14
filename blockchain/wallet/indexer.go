@@ -253,7 +253,6 @@ func prevoutDBKeys(batch db.Batch, b *legacy.Block, txStatus *bc.TransactionStat
 		for _, inpID := range tx.Tx.InputIDs {
 			sp, err := tx.Spend(inpID)
 			if err != nil {
-				log.WithField("err", err).Error("building spend entry type")
 				continue
 			}
 

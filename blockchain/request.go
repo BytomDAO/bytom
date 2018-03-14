@@ -14,6 +14,7 @@ var (
 	errBadAction     = errors.New("bad action object")
 )
 
+// BuildRequest is main struct when building transactions
 type BuildRequest struct {
 	Tx      *legacy.TxData           `json:"base_transaction"`
 	Actions []map[string]interface{} `json:"actions"`

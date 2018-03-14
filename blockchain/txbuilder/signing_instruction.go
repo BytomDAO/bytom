@@ -29,7 +29,7 @@ func (si *SigningInstruction) AddWitnessKeys(xpubs []chainkd.XPub, path [][]byte
 	si.WitnessComponents = append(si.WitnessComponents, sw)
 }
 
-// AddWitnessKeys adds a SignatureWitness with the given quorum and
+// AddRawWitnessKeys adds a SignatureWitness with the given quorum and
 // list of keys derived by applying the derivation path to each of the
 // xpubs.
 func (si *SigningInstruction) AddRawWitnessKeys(xpubs []chainkd.XPub, path [][]byte, quorum int) {
@@ -64,6 +64,7 @@ type witnessComponent interface {
 	materialize(*[][]byte) error
 }
 
+// UnmarshalJSON unmarshal SigningInstruction
 func (si *SigningInstruction) UnmarshalJSON(b []byte) error {
 	var pre struct {
 		Position          uint32            `json:"position"`
