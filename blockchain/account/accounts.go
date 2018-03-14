@@ -104,7 +104,6 @@ type Manager struct {
 	delayedACPsMu sync.Mutex
 	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
-	acpMu       sync.Mutex
 	acpIndexCap uint64 // points to end of block
 	accIndexMu  sync.Mutex
 }
@@ -135,7 +134,7 @@ type Account struct {
 	Tags  map[string]interface{} `json:"tags"`
 }
 
-func (m *Manager) getNextAccountIndex(xpubs []chainkd.XPub) (*uint64, error) {
+func (m *Manager) getNextXpubsIndex(xpubs []chainkd.XPub) uint64 {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 
@@ -146,7 +145,7 @@ func (m *Manager) getNextAccountIndex(xpubs []chainkd.XPub) (*uint64, error) {
 
 	m.db.Set(indexKeys(xpubs), convertUnit64ToBytes(nextIndex))
 
-	return &nextIndex, nil
+	return nextIndex
 }
 
 // Create creates a new Account.
@@ -155,12 +154,9 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, ErrDuplicateAlias
 	}
 
-	nextAccountIndex, err := m.getNextAccountIndex(xpubs)
-	if err != nil {
-		return nil, errors.Wrap(err, "get account index error")
-	}
+	nextAccountIndex := m.getNextXpubsIndex(xpubs)
 
-	id, signer, err := signers.Create("account", xpubs, quorum, *nextAccountIndex)
+	id, signer, err := signers.Create("account", xpubs, quorum, nextAccountIndex)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
@@ -293,7 +289,7 @@ func (m *Manager) createAddress(ctx context.Context, account *Account, change bo
 }
 
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.nextIndex(account)
+	idx := m.nextAccountIndex(account)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
@@ -320,7 +316,7 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 }
 
 func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.nextIndex(account)
+	idx := m.nextAccountIndex(account)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
@@ -395,27 +391,8 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	return program.ControlProgram, nil
 }
 
-func (m *Manager) nextIndex(account *Account) uint64 {
-	m.acpMu.Lock()
-	defer m.acpMu.Unlock()
-
-	var key []byte
-	key = append(key, account.Signer.XPubs[0].Bytes()...)
-
-	accountIndex := make([]byte, 8)
-	binary.LittleEndian.PutUint64(accountIndex[:], account.Signer.KeyIndex)
-	key = append(key, accountIndex[:]...)
-
-	var nextIndex uint64 = 1
-	if rawIndex := m.db.Get(key); rawIndex != nil {
-		nextIndex = uint64(binary.LittleEndian.Uint64(rawIndex)) + 1
-	}
-
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, nextIndex)
-	m.db.Set(key, buf)
-
-	return nextIndex
+func (m *Manager) nextAccountIndex(account *Account) uint64 {
+	return m.getNextXpubsIndex(account.Signer.XPubs)
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.
