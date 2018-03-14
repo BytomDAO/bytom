@@ -248,7 +248,7 @@ var lockContractTransactionCmd = &cobra.Command{
 			os.Exit(util.ErrLocalParse)
 		}
 
-		jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, string(rawTemplate))
+		jww.FEEDBACK.Printf("Template Type: lock-contract\n%s\n", string(rawTemplate))
 	},
 }
 
@@ -295,7 +295,7 @@ var unlockContractTransactionCmd = &cobra.Command{
 			os.Exit(util.ErrLocalParse)
 		}
 
-		jww.FEEDBACK.Printf("Template Type: %s\n%s\n", buildType, string(rawTemplate))
+		jww.FEEDBACK.Printf("Template Type: unlock-contract\n%s\n", string(rawTemplate))
 	},
 }
 

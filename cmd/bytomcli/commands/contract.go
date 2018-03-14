@@ -22,7 +22,7 @@ func CheckContractArgs(contractName string, args []string, count int, usage stri
 		}
 	case "RevealPreimage":
 		if len(args) != count+1 {
-			err = errors.WithDetailf(contract.ErrBadArguments, "%s <value> [flags]\n")
+			err = errors.WithDetailf(contract.ErrBadArguments, "%s <value> [flags]\n", usage)
 		}
 	case "TradeOffer":
 		switch {
