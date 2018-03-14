@@ -88,9 +88,25 @@ func (w *Wallet) loadWalletInfo(xpubs []pseudohsm.XPub) error {
 		return json.Unmarshal(rawWallet, &w.status)
 	}
 
-	for i, v := range xpubs {
-		if err := w.ImportAccountXpubKey(i, v, RecoveryIndex); err != nil {
-			return err
+	accounts, err := w.AccountMgr.ListAccounts("")
+	if err != nil {
+		return err
+	}
+
+	for i, xPub := range xpubs {
+		var accountExisted = false
+		for _, acc := range accounts {
+			if len(acc.Signer.XPubs) == 1 && acc.Signer.XPubs[0] == xPub.XPub {
+				accountExisted = true
+				break
+			}
+		}
+
+
+		if !accountExisted {
+			if err := w.ImportAccountXpubKey(i, xPub, RecoveryIndex); err != nil {
+				return err
+			}
 		}
 	}
 

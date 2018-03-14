@@ -86,9 +86,9 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 }
 
 // ListKeys returns a list of all xpubs from the store
-func (h *HSM) ListKeys() ([]XPub, error) {
+func (h *HSM) ListKeys() []XPub {
 	xpubs := h.cache.keys()
-	return xpubs, nil
+	return xpubs
 }
 
 // XSign looks up the xprv given the xpub, optionally derives a new
