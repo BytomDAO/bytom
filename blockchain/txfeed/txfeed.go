@@ -344,7 +344,6 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 		AssetID:         orig.AssetID(),
 		Amount:          orig.Amount(),
 		AssetDefinition: &emptyJSONObject,
-		ReferenceData:   &emptyJSONObject,
 	}
 
 	id := tx.Tx.InputIDs[i]
@@ -372,7 +371,6 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
 		AssetDefinition: &emptyJSONObject,
 		Amount:          orig.Amount,
 		ControlProgram:  orig.ControlProgram,
-		ReferenceData:   &emptyJSONObject,
 	}
 
 	if vmutil.IsUnspendable(out.ControlProgram) {
