@@ -20,7 +20,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 
 		assetID       *[]byte
 		amount        *uint64
-		entryData     *[]byte
 		destPos       *uint64
 		anchorID      *[]byte
 		spentOutputID *[]byte
@@ -89,7 +88,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		NumResults:    &numResults,
 		AssetID:       assetID,
 		Amount:        amount,
-		EntryData:     entryData,
 		DestPos:       destPos,
 		AnchorID:      anchorID,
 		SpentOutputID: spentOutputID,
@@ -117,14 +115,13 @@ type entryContext struct {
 	entries map[bc.Hash]bc.Entry
 }
 
-func (ec *entryContext) checkOutput(index uint64, data []byte, amount uint64, assetID []byte, vmVersion uint64, code []byte, expansion bool) (bool, error) {
+func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte, vmVersion uint64, code []byte, expansion bool) (bool, error) {
 	checkEntry := func(e bc.Entry) (bool, error) {
 		check := func(prog *bc.Program, value *bc.AssetAmount) bool {
 			return (prog.VmVersion == vmVersion &&
 				bytes.Equal(prog.Code, code) &&
 				bytes.Equal(value.AssetId.Bytes(), assetID) &&
-				value.Amount == amount &&
-				(len(data) == 0))
+				value.Amount == amount)
 		}
 
 		switch e := e.(type) {
