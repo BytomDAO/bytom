@@ -11,7 +11,6 @@ func (Issuance) typ() string { return "issuance1" }
 func (iss *Issuance) writeForHash(w io.Writer) {
 	mustWriteForHash(w, iss.AnchorId)
 	mustWriteForHash(w, iss.Value)
-	mustWriteForHash(w, iss.Data)
 	mustWriteForHash(w, iss.ExtHash)
 }
 
@@ -24,11 +23,10 @@ func (iss *Issuance) SetDestination(id *Hash, val *AssetAmount, pos uint64) {
 }
 
 // NewIssuance creates a new Issuance.
-func NewIssuance(anchorID *Hash, value *AssetAmount, data *Hash, ordinal uint64) *Issuance {
+func NewIssuance(anchorID *Hash, value *AssetAmount, ordinal uint64) *Issuance {
 	return &Issuance{
 		AnchorId: anchorID,
 		Value:    value,
-		Data:     data,
 		Ordinal:  ordinal,
 	}
 }

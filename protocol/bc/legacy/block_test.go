@@ -23,9 +23,9 @@ func TestMarshalBlock(t *testing.T) {
 		Transactions: []*Tx{
 			NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(45),
+				SerializedSize: uint64(44),
 				Outputs: []*TxOutput{
-					NewTxOutput(bc.AssetID{}, 1, nil, nil),
+					NewTxOutput(bc.AssetID{}, 1, nil),
 				},
 			}),
 		}}
@@ -61,7 +61,6 @@ func TestMarshalBlock(t *testing.T) {
 		"01" + // tx 0, output 0 commitment, amount
 		"01" + // tx 0, output 0 commitment vm version
 		"00" + // tx 0, output 0 control program
-		"00" + // tx 0, output 0 reference data
 		"00\"") // tx 0, output 0 output witness
 
 	if !bytes.Equal(got, []byte(wantHex)) {

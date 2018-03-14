@@ -26,7 +26,6 @@ func DecodeControlReceiverAction(data []byte) (Action, error) {
 type controlReceiverAction struct {
 	bc.AssetAmount
 	Receiver      *Receiver `json:"receiver"`
-	ReferenceData json.Map  `json:"reference_data"`
 }
 
 func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -45,7 +44,7 @@ func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) e
 		return MissingFieldsError(missing...)
 	}
 
-	out := legacy.NewTxOutput(*a.AssetId, a.Amount, a.Receiver.ControlProgram, a.ReferenceData)
+	out := legacy.NewTxOutput(*a.AssetId, a.Amount, a.Receiver.ControlProgram)
 	return b.AddOutput(out)
 }
 
@@ -59,7 +58,6 @@ func DecodeControlAddressAction(data []byte) (Action, error) {
 type controlAddressAction struct {
 	bc.AssetAmount
 	Address       string   `json:"address"`
-	ReferenceData json.Map `json:"reference_data"`
 }
 
 func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -93,7 +91,7 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 		return err
 	}
 
-	out := legacy.NewTxOutput(*a.AssetId, a.Amount, program, a.ReferenceData)
+	out := legacy.NewTxOutput(*a.AssetId, a.Amount, program)
 	return b.AddOutput(out)
 }
 
@@ -107,7 +105,6 @@ func DecodeControlProgramAction(data []byte) (Action, error) {
 type controlProgramAction struct {
 	bc.AssetAmount
 	Program       json.HexBytes `json:"control_program"`
-	ReferenceData json.Map      `json:"reference_data"`
 }
 
 func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -122,7 +119,7 @@ func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) er
 		return MissingFieldsError(missing...)
 	}
 
-	out := legacy.NewTxOutput(*a.AssetId, a.Amount, a.Program, a.ReferenceData)
+	out := legacy.NewTxOutput(*a.AssetId, a.Amount, a.Program)
 	return b.AddOutput(out)
 }
 
@@ -135,7 +132,6 @@ func DecodeRetireAction(data []byte) (Action, error) {
 
 type retireAction struct {
 	bc.AssetAmount
-	ReferenceData json.Map `json:"reference_data"`
 }
 
 func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -150,6 +146,6 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	out := legacy.NewTxOutput(*a.AssetId, a.Amount, retirementProgram, a.ReferenceData)
+	out := legacy.NewTxOutput(*a.AssetId, a.Amount, retirementProgram)
 	return b.AddOutput(out)
 }

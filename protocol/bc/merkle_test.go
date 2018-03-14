@@ -87,8 +87,8 @@ func TestDuplicateLeaves(t *testing.T) {
 		now := []byte(time.Now().String())
 		txs[i] = legacy.NewTx(legacy.TxData{
 			Version: 1,
-			Inputs:  []*legacy.TxInput{legacy.NewIssuanceInput(now, i, nil, initialBlockHash, trueProg, nil, nil)},
-			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(assetID, i, trueProg, nil)},
+			Inputs:  []*legacy.TxInput{legacy.NewIssuanceInput(now, i, initialBlockHash, trueProg, nil, nil)},
+			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(assetID, i, trueProg)},
 		}).Tx
 	}
 
@@ -116,12 +116,12 @@ func TestAllDuplicateLeaves(t *testing.T) {
 	trueProg := []byte{byte(vm.OP_TRUE)}
 	assetID := ComputeAssetID(trueProg, &initialBlockHash, 1, &EmptyStringHash)
 	now := []byte(time.Now().String())
-	issuanceInp := legacy.NewIssuanceInput(now, 1, nil, initialBlockHash, trueProg, nil, nil)
+	issuanceInp := legacy.NewIssuanceInput(now, 1, initialBlockHash, trueProg, nil, nil)
 
 	tx := legacy.NewTx(legacy.TxData{
 		Version: 1,
 		Inputs:  []*legacy.TxInput{issuanceInp},
-		Outputs: []*legacy.TxOutput{legacy.NewTxOutput(assetID, 1, trueProg, nil)},
+		Outputs: []*legacy.TxOutput{legacy.NewTxOutput(assetID, 1, trueProg)},
 	}).Tx
 	tx1, tx2, tx3, tx4, tx5, tx6 := tx, tx, tx, tx, tx, tx
 

@@ -243,7 +243,6 @@ func TestTxValidation(t *testing.T) {
 				// identical second transaction in order to get a similar but
 				// not equal output entry for the mux to falsely point
 				// to. That entry must be added to the first tx's Entries map.
-				fixture.txOutputs[0].ReferenceData = []byte{1}
 				fixture2 := sample(t, fixture)
 				tx2 := legacy.NewTx(*fixture2.tx).Tx
 				out2ID := tx2.ResultIds[0]
@@ -596,9 +595,9 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		args2 := [][]byte{[]byte{6}, []byte{7}}
 
 		result.txInputs = []*legacy.TxInput{
-			legacy.NewIssuanceInput([]byte{3}, 10, []byte{4}, result.initialBlockID, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
-			legacy.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1, *newHash(6), []byte{7}),
-			legacy.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2, *newHash(9), []byte{10}),
+			legacy.NewIssuanceInput([]byte{3}, 10, result.initialBlockID, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
+			legacy.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1, *newHash(6)),
+			legacy.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2, *newHash(9)),
 		}
 	}
 
@@ -615,8 +614,8 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		}
 
 		result.txOutputs = []*legacy.TxOutput{
-			legacy.NewTxOutput(result.assetID, 25, cp1, []byte{11}),
-			legacy.NewTxOutput(result.assetID, 45, cp2, []byte{12}),
+			legacy.NewTxOutput(result.assetID, 25, cp1),
+			legacy.NewTxOutput(result.assetID, 45, cp2),
 		}
 	}
 	if len(result.txRefData) == 0 {
@@ -645,17 +644,17 @@ func mockCoinbaseTx(amount uint64) *bc.Tx {
 	return legacy.MapTx(&legacy.TxData{
 		SerializedSize: 1,
 		Inputs: []*legacy.TxInput{
-			legacy.NewCoinbaseInput(nil, nil),
+			legacy.NewCoinbaseInput(nil),
 		},
 		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(*consensus.BTMAssetID, amount, cp, nil),
+			legacy.NewTxOutput(*consensus.BTMAssetID, amount, cp),
 		},
 	})
 }
 
 func mockGasTxInput() *legacy.TxInput {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
-	return legacy.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp, *newHash(9), []byte{})
+	return legacy.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp, *newHash(9))
 }
 
 // Like errors.Root, but also unwraps vm.Error objects.

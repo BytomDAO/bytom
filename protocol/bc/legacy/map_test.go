@@ -40,10 +40,6 @@ func TestMapTx(t *testing.T) {
 				if !bytes.Equal(newOut.ControlProgram.Code, oldOut.ControlProgram) {
 					t.Errorf("header.ResultIds[%d].(*output).ControlProgram.Code is %x, expected %x", i, newOut.ControlProgram.Code, oldOut.ControlProgram)
 				}
-				if *newOut.Data != hashData(oldOut.ReferenceData) {
-					want := hashData(oldOut.ReferenceData)
-					t.Errorf("header.ResultIds[%d].(*output).Data is %x, expected %x", i, newOut.Data.Bytes(), want.Bytes())
-				}
 				if !newOut.ExtHash.IsZero() {
 					t.Errorf("header.ResultIds[%d].(*output).ExtHash is %x, expected zero", i, newOut.ExtHash.Bytes())
 				}
@@ -67,10 +63,10 @@ func TestMapCoinbaseTx(t *testing.T) {
 	oldTx := &TxData{
 		Version: 1,
 		Inputs: []*TxInput{
-			NewCoinbaseInput(nil, nil),
+			NewCoinbaseInput(nil),
 		},
 		Outputs: []*TxOutput{
-			NewTxOutput(*BTMAssetID, 800000000000, []byte{1}, nil),
+			NewTxOutput(*BTMAssetID, 800000000000, []byte{1}),
 		},
 	}
 	oldOut := oldTx.Outputs[0]

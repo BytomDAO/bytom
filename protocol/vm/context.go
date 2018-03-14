@@ -28,11 +28,10 @@ type Context struct {
 	AssetID       *[]byte
 	Amount        *uint64
 	Time          *uint64
-	EntryData     *[]byte
 	DestPos       *uint64
 	AnchorID      *[]byte
 	SpentOutputID *[]byte
 
 	TxSigHash   func() []byte
-	CheckOutput func(index uint64, data []byte, amount uint64, assetID []byte, vmVersion uint64, code []byte, expansion bool) (bool, error)
+	CheckOutput func(index uint64, amount uint64, assetID []byte, vmVersion uint64, code []byte, expansion bool) (bool, error)
 }

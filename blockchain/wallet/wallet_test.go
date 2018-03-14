@@ -221,14 +221,14 @@ func mockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
 }
 
 func mockTxData(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *legacy.TxData, error) {
-	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo, nil)
+	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	b := txbuilder.NewBuilder(time.Now())
 	b.AddInput(txInput, sigInst)
-	out := legacy.NewTxOutput(*consensus.BTMAssetID, 100, utxo.ControlProgram, nil)
+	out := legacy.NewTxOutput(*consensus.BTMAssetID, 100, utxo.ControlProgram)
 	b.AddOutput(out)
 	return b.Build()
 }

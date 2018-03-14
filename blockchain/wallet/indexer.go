@@ -28,7 +28,6 @@ type rawOutput struct {
 	outputIndex    uint32
 	sourceID       bc.Hash
 	sourcePos      uint64
-	refData        bc.Hash
 	ValidHeight    uint64
 }
 
@@ -113,7 +112,6 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *
 				txHash:         tx.ID,
 				sourceID:       *resOut.Source.Ref,
 				sourcePos:      resOut.Source.Position,
-				refData:        *resOut.Data,
 			}
 			reverseOuts = append(reverseOuts, out)
 		}
@@ -233,7 +231,6 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *bc
 				outputIndex:    uint32(j),
 				sourceID:       *resOut.Source.Ref,
 				sourcePos:      resOut.Source.Position,
-				refData:        *resOut.Data,
 			}
 
 			// coinbase utxo valid height
@@ -256,7 +253,6 @@ func prevoutDBKeys(batch db.Batch, b *legacy.Block, txStatus *bc.TransactionStat
 		for _, inpID := range tx.Tx.InputIDs {
 			sp, err := tx.Spend(inpID)
 			if err != nil {
-				log.WithField("err", err).Error("building spend entry type")
 				continue
 			}
 
@@ -357,7 +353,6 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 			Amount:              out.Amount,
 			SourcePos:           out.sourcePos,
 			ControlProgram:      out.ControlProgram,
-			RefDataHash:         out.refData,
 			ControlProgramIndex: out.keyIndex,
 			AccountID:           out.AccountID,
 			Address:             out.Address,

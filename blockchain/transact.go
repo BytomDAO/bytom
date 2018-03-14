@@ -87,7 +87,6 @@ func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest
 	if err != nil {
 		return nil, err
 	}
-
 	reqActions := mergeActions(req)
 	actions := make([]txbuilder.Action, 0, len(reqActions))
 	for i, act := range reqActions {
