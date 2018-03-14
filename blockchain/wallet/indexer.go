@@ -28,7 +28,6 @@ type rawOutput struct {
 	outputIndex    uint32
 	sourceID       bc.Hash
 	sourcePos      uint64
-	refData        bc.Hash
 	ValidHeight    uint64
 }
 
@@ -355,7 +354,6 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 			Amount:              out.Amount,
 			SourcePos:           out.sourcePos,
 			ControlProgram:      out.ControlProgram,
-			RefDataHash:         out.refData,
 			ControlProgramIndex: out.keyIndex,
 			AccountID:           out.AccountID,
 			Address:             out.Address,
