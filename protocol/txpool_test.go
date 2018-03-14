@@ -53,7 +53,7 @@ func mockCoinbaseTx(serializedSize uint64, amount uint64) *legacy.Tx {
 	oldTx := &legacy.TxData{
 		SerializedSize: serializedSize,
 		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(*consensus.BTMAssetID, amount, []byte{1}, nil),
+			legacy.NewTxOutput(*consensus.BTMAssetID, amount, []byte{1}),
 		},
 	}
 

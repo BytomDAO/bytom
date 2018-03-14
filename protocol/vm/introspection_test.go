@@ -117,7 +117,6 @@ func TestBlockHeight(t *testing.T) {
 func TestIntrospectionOps(t *testing.T) {
 	// arbitrary
 	entryID := mustDecodeHex("2e68d78cdeaa98944c12512cf9c719eb4881e9afb61e4b766df5f369aee6392c")
-	entryData := mustDecodeHex("44be5e14ce216f4b2c35a5eb0b35d078bda55cf05b5d36ee0e7a01fbc6ef62b7")
 	assetID := mustDecodeHex("0100000000000000000000000000000000000000000000000000000000000000")
 
 	type testStruct struct {
@@ -131,21 +130,20 @@ func TestIntrospectionOps(t *testing.T) {
 		startVM: &virtualMachine{
 			dataStack: [][]byte{
 				{0},
-				[]byte{},
 				{1},
 				append([]byte{9}, make([]byte, 31)...),
 				{1},
 				[]byte("missingprog"),
 			},
 			context: &Context{
-				CheckOutput: func(uint64, []byte, uint64, []byte, uint64, []byte, bool) (bool, error) {
+				CheckOutput: func(uint64, uint64, []byte, uint64, []byte, bool) (bool, error) {
 					return false, nil
 				},
 			},
 		},
 		wantVM: &virtualMachine{
-			runLimit:     50070,
-			deferredCost: -86,
+			runLimit:     50062,
+			deferredCost: -78,
 			dataStack:    [][]byte{{}},
 		},
 	}, {
@@ -202,7 +200,7 @@ func TestIntrospectionOps(t *testing.T) {
 				[]byte("controlprog"),
 			},
 			context: &Context{
-				CheckOutput: func(uint64, []byte, uint64, []byte, uint64, []byte, bool) (bool, error) {
+				CheckOutput: func(uint64, uint64, []byte, uint64, []byte, bool) (bool, error) {
 					return false, ErrBadValue
 				},
 			},
@@ -267,16 +265,6 @@ func TestIntrospectionOps(t *testing.T) {
 			dataStack:    [][]byte{[]byte("issueprog")},
 		},
 	}, {
-		op: OP_ENTRYDATA,
-		startVM: &virtualMachine{
-			context: &Context{EntryData: &entryData},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49959,
-			deferredCost: 40,
-			dataStack:    [][]byte{entryData},
-		},
-	}, {
 		op: OP_INDEX,
 		startVM: &virtualMachine{
 			context: &Context{DestPos: new(uint64)},
@@ -300,7 +288,7 @@ func TestIntrospectionOps(t *testing.T) {
 
 	txops := []Op{
 		OP_CHECKOUTPUT, OP_ASSET, OP_AMOUNT, OP_PROGRAM,
-		OP_ENTRYDATA, OP_INDEX, OP_OUTPUTID,
+		OP_INDEX, OP_OUTPUTID,
 	}
 
 	for _, op := range txops {

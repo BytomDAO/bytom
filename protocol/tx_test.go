@@ -86,10 +86,10 @@ func issue(t testing.TB, asset *testAsset, dest *testDest, amount uint64) (*lega
 	tx := legacy.NewTx(legacy.TxData{
 		Version: 1,
 		Inputs: []*legacy.TxInput{
-			legacy.NewIssuanceInput([]byte{1}, amount, nil, bc.Hash{}, assetCP, nil, nil),
+			legacy.NewIssuanceInput([]byte{1}, amount, bc.Hash{}, assetCP, nil, nil),
 		},
 		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(asset.AssetID, amount, destCP, nil),
+			legacy.NewTxOutput(asset.AssetID, amount, destCP),
 		},
 	})
 	asset.sign(t, tx, 0)

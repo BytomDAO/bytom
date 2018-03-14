@@ -18,11 +18,9 @@ type TxOutput struct {
 	// Unconsumed suffixes of the commitment and witness extensible strings.
 	CommitmentSuffix []byte
 	WitnessSuffix    []byte
-
-	ReferenceData []byte
 }
 
-func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram, referenceData []byte) *TxOutput {
+func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
 	return &TxOutput{
 		AssetVersion: 1,
 		OutputCommitment: OutputCommitment{
@@ -33,7 +31,6 @@ func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram, referenceDat
 			VMVersion:      1,
 			ControlProgram: controlProgram,
 		},
-		ReferenceData: referenceData,
 	}
 }
 
@@ -46,11 +43,6 @@ func (to *TxOutput) readFrom(r *blockchain.Reader, txVersion uint64) (err error)
 	to.CommitmentSuffix, err = to.OutputCommitment.readFrom(r, to.AssetVersion)
 	if err != nil {
 		return errors.Wrap(err, "reading output commitment")
-	}
-
-	to.ReferenceData, err = blockchain.ReadVarstr31(r)
-	if err != nil {
-		return errors.Wrap(err, "reading reference data")
 	}
 
 	// read and ignore the (empty) output witness
@@ -66,10 +58,6 @@ func (to *TxOutput) writeTo(w io.Writer, serflags byte) error {
 
 	if err := to.WriteCommitment(w); err != nil {
 		return errors.Wrap(err, "writing output commitment")
-	}
-
-	if err := writeRefData(w, to.ReferenceData, serflags); err != nil {
-		return errors.Wrap(err, "writing reference data")
 	}
 
 	// write witness (empty in v1)
@@ -100,7 +88,7 @@ func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
 		Value:    &sc.AssetAmount,
 		Position: sc.SourcePosition,
 	}
-	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, &sc.RefDataHash, 0)
+	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0)
 
 	h = bc.EntryID(o)
 	return h, nil
