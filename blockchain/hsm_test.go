@@ -80,8 +80,8 @@ func TestHSM(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	issue1 := txbuilder.Action(assets.NewIssueAction(bc.AssetAmount{AssetId: &asset1.AssetID, Amount: 100}, nil))
-	issue2 := txbuilder.Action(assets.NewIssueAction(bc.AssetAmount{AssetId: &asset2.AssetID, Amount: 200}, nil))
+	issue1 := txbuilder.Action(assets.NewIssueAction(bc.AssetAmount{AssetId: &asset1.AssetID, Amount: 100}))
+	issue2 := txbuilder.Action(assets.NewIssueAction(bc.AssetAmount{AssetId: &asset2.AssetID, Amount: 200}))
 	spend1 := accounts.NewControlAction(bc.AssetAmount{AssetId: &asset1.AssetID, Amount: 100}, acct1.ID, nil)
 	spend2 := accounts.NewControlAction(bc.AssetAmount{AssetId: &asset2.AssetID, Amount: 200}, acct2.ID, nil)
 

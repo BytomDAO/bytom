@@ -12,7 +12,6 @@ import (
 type (
 	TxInput struct {
 		AssetVersion  uint64
-		ReferenceData []byte
 		TypedInput
 
 		// Unconsumed suffixes of the commitment and witness extensible
@@ -148,10 +147,6 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 	if err != nil {
 		return err
 	}
-	t.ReferenceData, err = blockchain.ReadVarstr31(r)
-	if err != nil {
-		return err
-	}
 	t.WitnessSuffix, err = blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
 		// TODO(bobg): test that serialization flags include SerWitness, when we relax the serflags-must-be-0x7 rule
 		if t.AssetVersion != 1 {
@@ -219,14 +214,10 @@ func (t *TxInput) writeTo(w io.Writer, serflags uint8) error {
 	_, err := blockchain.WriteExtensibleString(w, t.CommitmentSuffix, func(w io.Writer) error {
 		return t.WriteInputCommitment(w, serflags)
 	})
-
 	if err != nil {
 		return errors.Wrap(err, "writing input commitment")
 	}
 
-	if _, err = blockchain.WriteVarstr31(w, t.ReferenceData); err != nil {
-		return errors.Wrap(err, "writing reference data")
-	}
 
 	if serflags&SerWitness != 0 {
 		if _, err = blockchain.WriteExtensibleString(w, t.WitnessSuffix, t.writeInputWitness); err != nil {

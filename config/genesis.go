@@ -14,7 +14,7 @@ func GenerateGenesisTx() *legacy.Tx {
 		Version:        1,
 		SerializedSize: 63,
 		Inputs: []*legacy.TxInput{
-			legacy.NewCoinbaseInput([]byte("May 4th Be With You"), nil),
+			legacy.NewCoinbaseInput([]byte("May 4th Be With You")),
 		},
 		Outputs: []*legacy.TxOutput{
 			&legacy.TxOutput{

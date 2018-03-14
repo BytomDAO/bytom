@@ -180,7 +180,6 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, statusFail bool
 		BlockHeight:            b.Height,
 		Position:               uint32(indexInBlock),
 		BlockTransactionsCount: uint32(len(b.Transactions)),
-		ReferenceData:          &emptyJSONObject,
 		Inputs:                 make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
 		StatusFail:             statusFail,
@@ -198,15 +197,10 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
 		AssetDefinition: &emptyJSONObject,
-		ReferenceData:   &emptyJSONObject,
 	}
 	if !orig.IsCoinbase() {
 		in.AssetID = orig.AssetID()
 		in.Amount = orig.Amount()
-	}
-	if isValidJSON(orig.ReferenceData) {
-		referenceData := chainjson.HexBytes(orig.ReferenceData)
-		in.ReferenceData = &referenceData
 	}
 
 	id := tx.Tx.InputIDs[i]
@@ -236,11 +230,6 @@ func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
 		AssetDefinition: &emptyJSONObject,
 		Amount:          orig.Amount,
 		ControlProgram:  orig.ControlProgram,
-		ReferenceData:   &emptyJSONObject,
-	}
-	if isValidJSON(orig.ReferenceData) {
-		referenceData := chainjson.HexBytes(orig.ReferenceData)
-		out.ReferenceData = &referenceData
 	}
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"

@@ -46,13 +46,13 @@ func NewIssuanceTx(tb testing.TB, initial bc.Hash, opts ...func(*legacy.Tx)) *le
 		testutil.FatalErr(tb, err)
 	}
 	assetdef := []byte(`{"type": "prottest issuance"}`)
-	txin := legacy.NewIssuanceInput(nonce[:], 100, nil, initial, issuanceProgram, nil, assetdef)
+	txin := legacy.NewIssuanceInput(nonce[:], 100, initial, issuanceProgram, nil, assetdef)
 
 	tx := legacy.NewTx(legacy.TxData{
 		Version: 1,
 		Inputs:  []*legacy.TxInput{txin},
 		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(txin.AssetID(), 100, []byte{0xbe, 0xef}, nil),
+			legacy.NewTxOutput(txin.AssetID(), 100, []byte{0xbe, 0xef}),
 		},
 	})
 

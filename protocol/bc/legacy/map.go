@@ -97,10 +97,9 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				Value:    &oldSp.AssetAmount,
 				Position: oldSp.SourcePosition,
 			}
-			out := bc.NewOutput(src, prog, &oldSp.RefDataHash, 0) // ordinal doesn't matter for prevouts, only for result outputs
+			out := bc.NewOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
 			prevoutID := addEntry(out)
-			refdatahash := hashData(inp.ReferenceData)
-			sp := bc.NewSpend(&prevoutID, &refdatahash, uint64(i))
+			sp := bc.NewSpend(&prevoutID, uint64(i))
 			sp.WitnessArguments = oldSp.Arguments
 			id := addEntry(sp)
 			muxSources[i] = &bc.ValueSource{
@@ -144,9 +143,8 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 			val := inp.AssetAmount()
 
-			refdatahash := hashData(inp.ReferenceData)
 			assetdefhash := hashData(oldIss.AssetDefinition)
-			iss := bc.NewIssuance(&anchorID, &val, &refdatahash, uint64(i))
+			iss := bc.NewIssuance(&anchorID, &val, uint64(i))
 			iss.WitnessAssetDefinition = &bc.AssetDefinition{
 				InitialBlockId: &oldIss.InitialBlock,
 				Data:           &assetdefhash,
@@ -209,8 +207,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		var dest *bc.ValueDestination
 		if vmutil.IsUnspendable(out.ControlProgram) {
 			// retirement
-			refdatahash := hashData(out.ReferenceData)
-			r := bc.NewRetirement(src, &refdatahash, uint64(i))
+			r := bc.NewRetirement(src, uint64(i))
 			rID := addEntry(r)
 			resultIDs = append(resultIDs, &rID)
 			dest = &bc.ValueDestination{
@@ -220,8 +217,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		} else {
 			// non-retirement
 			prog := &bc.Program{out.VMVersion, out.ControlProgram}
-			refdatahash := hashData(out.ReferenceData)
-			o := bc.NewOutput(src, prog, &refdatahash, uint64(i))
+			o := bc.NewOutput(src, prog, uint64(i))
 			oID := addEntry(o)
 			resultIDs = append(resultIDs, &oID)
 			dest = &bc.ValueDestination{

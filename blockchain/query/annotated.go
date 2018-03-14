@@ -17,7 +17,6 @@ type AnnotatedTx struct {
 	BlockHeight            uint64              `json:"block_height"`
 	Position               uint32              `json:"position"`
 	BlockTransactionsCount uint32              `json:"block_transactions_count,omitempty"`
-	ReferenceData          *chainjson.HexBytes `json:"reference_data"`
 	Inputs                 []*AnnotatedInput   `json:"inputs"`
 	Outputs                []*AnnotatedOutput  `json:"outputs"`
 	StatusFail             bool                `json:"status_fail"`
@@ -35,7 +34,6 @@ type AnnotatedInput struct {
 	SpentOutputID   *bc.Hash            `json:"spent_output_id,omitempty"`
 	AccountID       string              `json:"account_id,omitempty"`
 	AccountAlias    string              `json:"account_alias,omitempty"`
-	ReferenceData   *chainjson.HexBytes `json:"reference_data"`
 	Arbitrary       chainjson.HexBytes  `json:"arbitrary,omitempty"`
 }
 
@@ -52,7 +50,6 @@ type AnnotatedOutput struct {
 	AccountID       string              `json:"account_id,omitempty"`
 	AccountAlias    string              `json:"account_alias,omitempty"`
 	ControlProgram  chainjson.HexBytes  `json:"control_program"`
-	ReferenceData   *chainjson.HexBytes `json:"reference_data"`
 }
 
 //AnnotatedAccount means an annotated account.
