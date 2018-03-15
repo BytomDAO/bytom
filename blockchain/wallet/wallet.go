@@ -57,7 +57,7 @@ type Wallet struct {
 
 //NewWallet return a new wallet instance
 func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry,
-	chain *protocol.Chain, hsm *pseudohsm.HSM) (*Wallet, error) {
+	chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
 		DB:             walletDB,
 		AccountMgr:     account,
@@ -67,16 +67,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry,
 		keysInfo:       make([]KeyInfo, 0),
 	}
 
-	xpubs := hsm.ListKeys()
-	if len(xpubs) == 0 {
-		if xpub, err := hsm.XCreate("default", ""); err != nil {
-			return nil, err
-		} else {
-			account.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "default", nil)
-		}
-	}
-
-	if err := w.loadWalletInfo(xpubs); err != nil {
+	if err := w.loadWalletInfo(); err != nil {
 		return nil, err
 	}
 
@@ -93,31 +84,9 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry,
 
 //GetWalletInfo return stored wallet info and nil,if error,
 //return initial wallet info and err
-func (w *Wallet) loadWalletInfo(xpubs []pseudohsm.XPub) error {
+func (w *Wallet) loadWalletInfo() error {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
 		return json.Unmarshal(rawWallet, &w.status)
-	}
-
-	accounts, err := w.AccountMgr.ListAccounts("")
-	if err != nil {
-		return err
-	}
-
-	for i, xPub := range xpubs {
-		var accountExisted = false
-		for _, acc := range accounts {
-			if len(acc.Signer.XPubs) == 1 && acc.Signer.XPubs[0] == xPub.XPub {
-				accountExisted = true
-				break
-			}
-		}
-
-
-		if !accountExisted {
-			if err := w.ImportAccountXpubKey(i, xPub, RecoveryIndex); err != nil {
-				return err
-			}
-		}
 	}
 
 	block, err := w.chain.GetBlockByHeight(0)
