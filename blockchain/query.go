@@ -168,7 +168,6 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 		tmpUTXO.Amount = utxo.Amount
 		tmpUTXO.SourcePos = utxo.SourcePos
 		tmpUTXO.Program = fmt.Sprintf("%x", utxo.ControlProgram)
-		tmpUTXO.RefDataHash = utxo.RefDataHash.String()
 		tmpUTXO.ControlProgramIndex = utxo.ControlProgramIndex
 		tmpUTXO.Address = utxo.Address
 		tmpUTXO.ValidHeight = utxo.ValidHeight
