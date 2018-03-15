@@ -56,7 +56,8 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, xpubs []pseudohsm.XPub) (*Wallet, error) {
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry,
+	chain *protocol.Chain, hsm *pseudohsm.HSM) (*Wallet, error) {
 	w := &Wallet{
 		DB:             walletDB,
 		AccountMgr:     account,
@@ -64,6 +65,15 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		chain:          chain,
 		rescanProgress: make(chan struct{}, 1),
 		keysInfo:       make([]KeyInfo, 0),
+	}
+
+	xpubs := hsm.ListKeys()
+	if len(xpubs) == 0 {
+		if xpub, err := hsm.XCreate("default", ""); err != nil {
+			return nil, err
+		} else {
+			account.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "default", nil)
+		}
 	}
 
 	if err := w.loadWalletInfo(xpubs); err != nil {

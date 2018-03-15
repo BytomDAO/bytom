@@ -196,11 +196,10 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	if !config.Wallet.Disable {
-		xpubs := hsm.ListKeys()
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, chain, xpubs)
+		wallet, err = w.NewWallet(walletDB, accounts, assets, chain, hsm)
 		if err != nil {
 			log.WithField("error", err).Error("init NewWallet")
 		}

@@ -139,7 +139,7 @@ func TestExportAndImportPrivKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	w, err := NewWallet(testDB, acntManager, reg, chain, nil)
+	w, err := NewWallet(testDB, acntManager, reg, chain, hsm)
 	if err != nil {
 		t.Fatal(err)
 	}
