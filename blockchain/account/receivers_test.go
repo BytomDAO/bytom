@@ -17,12 +17,12 @@ func TestCreateAddressReceiver(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	_, err = m.CreateAddressReceiver(ctx, account.ID)
+	_, err = m.CreateAccountReceiver(ctx, account.ID)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	_, err = m.CreateAddressReceiver(ctx, account.Alias)
+	_, err = m.CreateAccountReceiver(ctx, account.Alias)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
