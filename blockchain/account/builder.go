@@ -141,7 +141,7 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 
 // UtxoToInputs convert an utxo to the txinput
 func UtxoToInputs(signer *signers.Signer, u *UTXO) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
-	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram, u.RefDataHash)
+	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)
 	sigInst := &txbuilder.SigningInstruction{}
 	if signer == nil {
 		return txInput, sigInst, nil

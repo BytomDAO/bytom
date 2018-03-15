@@ -25,7 +25,7 @@ import (
 type testAction bc.AssetAmount
 
 func (t testAction) Build(ctx context.Context, b *TemplateBuilder) error {
-	in := legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), *t.AssetId, t.Amount, 0, nil, bc.Hash{})
+	in := legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), *t.AssetId, t.Amount, 0, nil)
 	tplIn := &SigningInstruction{}
 
 	err := b.AddInput(in, tplIn)
@@ -61,9 +61,9 @@ func TestBuild(t *testing.T) {
 	want := &Template{
 		Transaction: legacy.NewTx(legacy.TxData{
 			Version:        1,
-			SerializedSize: 396,
+			SerializedSize: 332,
 			Inputs: []*legacy.TxInput{
-				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil, bc.Hash{}),
+				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
 			},
 			Outputs: []*legacy.TxOutput{
 				legacy.NewTxOutput(assetID2, 6, []byte("dest")),
@@ -190,27 +190,27 @@ func TestCheckBlankCheck(t *testing.T) {
 		want error
 	}{{
 		tx: &legacy.TxData{
-			Inputs: []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, bc.Hash{})},
+			Inputs: []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
 		tx: &legacy.TxData{
-			Inputs:  []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, bc.Hash{})},
+			Inputs:  []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
 			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(bc.AssetID{}, 3, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
 		tx: &legacy.TxData{
 			Inputs: []*legacy.TxInput{
-				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, bc.Hash{}),
-				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.NewAssetID([32]byte{1}), 5, 0, nil, bc.Hash{}),
+				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil),
+				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.NewAssetID([32]byte{1}), 5, 0, nil),
 			},
 			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(bc.AssetID{}, 5, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
 		tx: &legacy.TxData{
-			Inputs: []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, bc.Hash{})},
+			Inputs: []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
 			Outputs: []*legacy.TxOutput{
 				legacy.NewTxOutput(bc.AssetID{}, math.MaxInt64, nil),
 				legacy.NewTxOutput(bc.AssetID{}, 7, nil),
@@ -220,14 +220,14 @@ func TestCheckBlankCheck(t *testing.T) {
 	}, {
 		tx: &legacy.TxData{
 			Inputs: []*legacy.TxInput{
-				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, bc.Hash{}),
-				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, math.MaxInt64, 0, nil, bc.Hash{}),
+				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil),
+				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, math.MaxInt64, 0, nil),
 			},
 		},
 		want: ErrBadAmount,
 	}, {
 		tx: &legacy.TxData{
-			Inputs:  []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, bc.Hash{})},
+			Inputs:  []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
 			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(bc.AssetID{}, 5, nil)},
 		},
 		want: nil,
@@ -238,7 +238,7 @@ func TestCheckBlankCheck(t *testing.T) {
 		want: nil,
 	}, {
 		tx: &legacy.TxData{
-			Inputs:  []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil, bc.Hash{})},
+			Inputs:  []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
 			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(bc.NewAssetID([32]byte{1}), 5, nil)},
 		},
 		want: nil,
