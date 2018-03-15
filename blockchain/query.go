@@ -143,7 +143,6 @@ type annotatedUTXO struct {
 	Program             string `json:"program"`
 	SourceID            string `json:"source_id"`
 	SourcePos           uint64 `json:"source_pos"`
-	RefDataHash         string `json:"ref_data"`
 	ValidHeight         uint64 `json:"valid_height"`
 }
 
