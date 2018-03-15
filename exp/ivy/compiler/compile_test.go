@@ -1,5 +1,6 @@
 package compiler
 
+/*
 import (
 	"encoding/hex"
 	"encoding/json"
@@ -102,3 +103,4 @@ func mustDecodeHex(h string) []byte {
 	}
 	return bits
 }
+*/
