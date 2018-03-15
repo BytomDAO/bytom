@@ -277,19 +277,8 @@ func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
 	}
 
 	for i, xPub := range xpubs {
-		var accountExisted = false
-		for _, acc := range accounts {
-			if len(acc.Signer.XPubs) == 1 && acc.Signer.XPubs[0] == xPub.XPub {
-				accountExisted = true
-				break
-			}
-		}
-
-
-		if !accountExisted {
-			if err := wallet.ImportAccountXpubKey(i, xPub, w.RecoveryIndex); err != nil {
-				return err
-			}
+		if err := wallet.ImportAccountXpubKey(i, xPub, w.RecoveryIndex); err != nil {
+			return err
 		}
 	}
 	return nil
