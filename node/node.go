@@ -258,33 +258,41 @@ func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
 	xpubs := hsm.ListKeys()
 
 	if len(xpubs) == 0 {
-		if xpub, err := hsm.XCreate("default", ""); err == nil {
-			wallet.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "default", nil)
+		xpub, err := hsm.XCreate("default", "");
+		if err != nil {
+			return err
 		}
+
+		wallet.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "default", nil)
 		return nil
 	}
 
-	if accounts, err := wallet.AccountMgr.ListAccounts(""); err != nil {
+	accounts, err := wallet.AccountMgr.ListAccounts("")
+	if err != nil {
 		return err
-	} else {
-		for i, xPub := range xpubs {
-			var accountExisted = false
-			for _, acc := range accounts {
-				if len(acc.Signer.XPubs) == 1 && acc.Signer.XPubs[0] == xPub.XPub {
-					accountExisted = true
-					break
-				}
-			}
+	}
 
-
-			if !accountExisted {
-				if err := wallet.ImportAccountXpubKey(i, xPub, w.RecoveryIndex); err != nil {
-					return err
-				}
-			}
-		}
+	if len(accounts) > 0 {
 		return nil
 	}
+
+	for i, xPub := range xpubs {
+		var accountExisted = false
+		for _, acc := range accounts {
+			if len(acc.Signer.XPubs) == 1 && acc.Signer.XPubs[0] == xPub.XPub {
+				accountExisted = true
+				break
+			}
+		}
+
+
+		if !accountExisted {
+			if err := wallet.ImportAccountXpubKey(i, xPub, w.RecoveryIndex); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // Lanch web broser or not
