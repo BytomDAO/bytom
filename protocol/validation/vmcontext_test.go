@@ -1,7 +1,6 @@
 package validation
 
 import (
-	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -14,7 +13,7 @@ import (
 func TestCheckOutput(t *testing.T) {
 	tx := legacy.NewTx(legacy.TxData{
 		Inputs: []*legacy.TxInput{
-			legacy.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendprog"), bc.Hash{}),
+			legacy.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendprog")),
 			legacy.NewIssuanceInput(nil, 6, bc.Hash{}, []byte("issueprog"), nil, nil),
 		},
 		Outputs: []*legacy.TxOutput{
@@ -93,12 +92,4 @@ func TestCheckOutput(t *testing.T) {
 
 		})
 	}
-}
-
-func mustDecodeHex(h string) []byte {
-	bits, err := hex.DecodeString(h)
-	if err != nil {
-		panic(err)
-	}
-	return bits
 }

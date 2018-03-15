@@ -76,16 +76,16 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(206),
+				SerializedSize: uint64(174),
 				Inputs: []*TxInput{
-					NewSpendInput(nil, mustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), bc.AssetID{}, 1000000000000, 1, []byte{1}, bc.Hash{}),
+					NewSpendInput(nil, mustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), bc.AssetID{}, 1000000000000, 1, []byte{1}),
 				},
 				Outputs: []*TxOutput{
 					NewTxOutput(assetID, 600000000000, []byte{1}),
 					NewTxOutput(assetID, 400000000000, []byte{2}),
 				},
 			}),
-			hex: ("0701000001016c016add385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292000000000000000000000000000000000000000000000000000000000000000080a094a58d1d0101010100000000000000000000000000000000000000000000000000000000000000000100020129fa48ca4e0150f83fbf26cf83211d136313cde98601a667d999ab9cc27b723d4680e0a596bb11010101000129fa48ca4e0150f83fbf26cf83211d136313cde98601a667d999ab9cc27b723d4680c0ee8ed20b01010200"), // output 1, output witness
+			hex: ("0701000001014c014add385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292000000000000000000000000000000000000000000000000000000000000000080a094a58d1d010101010100020129fa48ca4e0150f83fbf26cf83211d136313cde98601a667d999ab9cc27b723d4680e0a596bb11010101000129fa48ca4e0150f83fbf26cf83211d136313cde98601a667d999ab9cc27b723d4680c0ee8ed20b01010200"), // output 1, output witness
 			hash: mustDecodeHash("828b56bb1946e8fe04e4dffd6b856d3a5ded4c96d05464d3d2ceb470c1620bc4"),
 		},
 	}
@@ -133,7 +133,7 @@ func TestHasIssuance(t *testing.T) {
 	}, {
 		tx: &TxData{
 			Inputs: []*TxInput{
-				NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, bc.Hash{}),
+				NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil),
 				NewIssuanceInput(nil, 0, bc.Hash{}, nil, nil, nil),
 			},
 		},
@@ -141,7 +141,7 @@ func TestHasIssuance(t *testing.T) {
 	}, {
 		tx: &TxData{
 			Inputs: []*TxInput{
-				NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, bc.Hash{}),
+				NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil),
 			},
 		},
 		want: false,
@@ -214,7 +214,7 @@ func BenchmarkTxWriteToFalse(b *testing.B) {
 func BenchmarkTxWriteToTrue200(b *testing.B) {
 	tx := &Tx{}
 	for i := 0; i < 200; i++ {
-		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, bc.Hash{}))
+		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil))
 		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil))
 	}
 	for i := 0; i < b.N; i++ {
@@ -225,7 +225,7 @@ func BenchmarkTxWriteToTrue200(b *testing.B) {
 func BenchmarkTxWriteToFalse200(b *testing.B) {
 	tx := &Tx{}
 	for i := 0; i < 200; i++ {
-		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, bc.Hash{}))
+		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil))
 		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil))
 	}
 	for i := 0; i < b.N; i++ {
@@ -234,7 +234,7 @@ func BenchmarkTxWriteToFalse200(b *testing.B) {
 }
 
 func BenchmarkTxInputWriteToTrue(b *testing.B) {
-	input := NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, bc.Hash{})
+	input := NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		input.writeTo(ew, 0)
@@ -242,7 +242,7 @@ func BenchmarkTxInputWriteToTrue(b *testing.B) {
 }
 
 func BenchmarkTxInputWriteToFalse(b *testing.B) {
-	input := NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil, bc.Hash{})
+	input := NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		input.writeTo(ew, serRequired)

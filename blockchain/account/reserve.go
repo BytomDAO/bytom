@@ -47,7 +47,6 @@ type UTXO struct {
 
 	SourcePos      uint64
 	ControlProgram []byte
-	RefDataHash    bc.Hash
 
 	AccountID           string
 	Address             string

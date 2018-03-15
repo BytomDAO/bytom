@@ -25,7 +25,7 @@ type SpendInput struct {
 func (si *SpendInput) IsIssuance() bool { return false }
 func (si *SpendInput) IsCoinbase() bool { return false }
 
-func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount uint64, sourcePos uint64, controlProgram []byte, outRefDataHash bc.Hash) *TxInput {
+func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount uint64, sourcePos uint64, controlProgram []byte) *TxInput {
 	const (
 		vmver    = 1
 		assetver = 1
@@ -39,7 +39,6 @@ func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amo
 		SourcePosition: sourcePos,
 		VMVersion:      vmver,
 		ControlProgram: controlProgram,
-		RefDataHash:    outRefDataHash,
 	}
 	return &TxInput{
 		AssetVersion:  assetver,
@@ -58,7 +57,6 @@ type SpendCommitment struct {
 	SourcePosition uint64
 	VMVersion      uint64
 	ControlProgram []byte
-	RefDataHash    bc.Hash
 }
 
 func (sc *SpendCommitment) writeExtensibleString(w io.Writer, suffix []byte, assetVersion uint64) error {
@@ -89,10 +87,6 @@ func (sc *SpendCommitment) writeContents(w io.Writer, suffix []byte, assetVersio
 		_, err = blockchain.WriteVarstr31(w, sc.ControlProgram)
 		if err != nil {
 			return errors.Wrap(err, "writing control program")
-		}
-		_, err = sc.RefDataHash.WriteTo(w)
-		if err != nil {
-			return errors.Wrap(err, "writing reference data hash")
 		}
 	}
 	if len(suffix) > 0 {
@@ -129,10 +123,6 @@ func (sc *SpendCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) (
 			sc.ControlProgram, err = blockchain.ReadVarstr31(r)
 			if err != nil {
 				return errors.Wrap(err, "reading control program")
-			}
-			_, err = sc.RefDataHash.ReadFrom(r)
-			if err != nil {
-				return errors.Wrap(err, "reading reference data hash")
 			}
 			return nil
 		}
