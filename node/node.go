@@ -55,10 +55,7 @@ type Node struct {
 	addrBook *p2p.AddrBook         // known peers
 
 	evsw       types.EventSwitch // pub/sub for services
-	blockStore *txdb.Store
 	bcReactor  *bc.BlockchainReactor
-	accounts   *account.Manager
-	assets     *asset.Registry
 }
 
 func NewNodeDefault(config *cfg.Config) *Node {
@@ -245,9 +242,6 @@ func NewNode(config *cfg.Config) *Node {
 
 		evsw:       eventSwitch,
 		bcReactor:  bcReactor,
-		blockStore: store,
-		accounts:   accounts,
-		assets:     assets,
 	}
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
