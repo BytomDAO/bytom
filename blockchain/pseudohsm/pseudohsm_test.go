@@ -44,10 +44,7 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 		t.Error("expected verify with derived pubkey of sig from derived privkey to succeed")
 	}
 
-	xpubs, err := hsm.ListKeys()
-	if err != nil {
-		t.Fatal(err)
-	}
+	xpubs := hsm.ListKeys()
 	if len(xpubs) != 2 {
 		t.Error("expected 2 entries in the db")
 	}
