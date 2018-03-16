@@ -146,7 +146,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			assetdefhash := hashData(oldIss.AssetDefinition)
 			iss := bc.NewIssuance(&anchorID, &val, uint64(i))
 			iss.WitnessAssetDefinition = &bc.AssetDefinition{
-				InitialBlockId: &oldIss.InitialBlock,
 				Data:           &assetdefhash,
 				IssuanceProgram: &bc.Program{
 					VmVersion: oldIss.VMVersion,

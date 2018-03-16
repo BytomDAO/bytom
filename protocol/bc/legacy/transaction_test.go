@@ -16,7 +16,7 @@ import (
 )
 
 func TestTransactionTrailingGarbage(t *testing.T) {
-	const validTxHex = `0701000001012b00030a0908fa48ca4e0150f83fbf26cf83211d136313cde98601a667d999ab9cc27b723d4680a094a58d1d2903deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	const validTxHex = `0701000001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
 
 	var validTx Tx
 	err := validTx.UnmarshalText([]byte(validTxHex))
@@ -34,10 +34,8 @@ func TestTransactionTrailingGarbage(t *testing.T) {
 
 func TestTransaction(t *testing.T) {
 	issuanceScript := []byte{1}
-	initialBlockHashHex := "03deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d"
-	initialBlockHash := mustDecodeHash(initialBlockHashHex)
 
-	assetID := bc.ComputeAssetID(issuanceScript, &initialBlockHash, 1, &bc.EmptyStringHash)
+	assetID := bc.ComputeAssetID(issuanceScript, 1, &bc.EmptyStringHash)
 
 	cases := []struct {
 		tx   *Tx
@@ -62,16 +60,16 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(137),
+				SerializedSize: uint64(105),
 				Inputs: []*TxInput{
-					NewIssuanceInput([]byte{10, 9, 8}, 1000000000000, initialBlockHash, issuanceScript, [][]byte{[]byte{1, 2, 3}}, nil),
+					NewIssuanceInput([]byte{10, 9, 8}, 1000000000000, issuanceScript, [][]byte{[]byte{1, 2, 3}}, nil),
 				},
 				Outputs: []*TxOutput{
 					NewTxOutput(bc.AssetID{}, 1000000000000, []byte{1}),
 				},
 			}),
-			hex: ("0701000001012b00030a0908fa48ca4e0150f83fbf26cf83211d136313cde98601a667d999ab9cc27b723d4680a094a58d1d2903deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100"), // reference data
-			hash: mustDecodeHash("1cc75450adcfb8c605dc5719fce3d05646aee8ebe886b62d83d749b597d72ac4"),
+			hex: ("0701000001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100"), // reference data
+			hash: mustDecodeHash("7e6928130bc91e115f6ebe1fb4238d51e4155a7f9f809a36a5ebea7342ad1f63"),
 		},
 		{
 			tx: NewTx(TxData{
@@ -85,8 +83,8 @@ func TestTransaction(t *testing.T) {
 					NewTxOutput(assetID, 400000000000, []byte{2}),
 				},
 			}),
-			hex: ("0701000001014c014add385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292000000000000000000000000000000000000000000000000000000000000000080a094a58d1d010101010100020129fa48ca4e0150f83fbf26cf83211d136313cde98601a667d999ab9cc27b723d4680e0a596bb11010101000129fa48ca4e0150f83fbf26cf83211d136313cde98601a667d999ab9cc27b723d4680c0ee8ed20b01010200"), // output 1, output witness
-			hash: mustDecodeHash("828b56bb1946e8fe04e4dffd6b856d3a5ded4c96d05464d3d2ceb470c1620bc4"),
+			hex: ("0701000001014c014add385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292000000000000000000000000000000000000000000000000000000000000000080a094a58d1d010101010100020129916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380e0a596bb11010101000129916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380c0ee8ed20b01010200"), // output 1, output witness
+			hash: mustDecodeHash("e89ea19ec8acb92d697c06ebf841020bb9f1d9ace983efcb47c09913cff99026"),
 		},
 	}
 	for i, test := range cases {
@@ -127,14 +125,14 @@ func TestHasIssuance(t *testing.T) {
 		want bool
 	}{{
 		tx: &TxData{
-			Inputs: []*TxInput{NewIssuanceInput(nil, 0, bc.Hash{}, nil, nil, nil)},
+			Inputs: []*TxInput{NewIssuanceInput(nil, 0, nil, nil, nil)},
 		},
 		want: true,
 	}, {
 		tx: &TxData{
 			Inputs: []*TxInput{
 				NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil),
-				NewIssuanceInput(nil, 0, bc.Hash{}, nil, nil, nil),
+				NewIssuanceInput(nil, 0, nil, nil, nil),
 			},
 		},
 		want: true,

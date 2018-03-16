@@ -159,10 +159,6 @@ func (t *TxInput) readFrom(r *blockchain.Reader) (err error) {
 
 		if ii != nil {
 			// read IssuanceInput witness
-			if _, err = ii.InitialBlock.ReadFrom(r); err != nil {
-				return err
-			}
-
 			ii.AssetDefinition, err = blockchain.ReadVarstr31(r)
 			if err != nil {
 				return err
@@ -276,11 +272,7 @@ func (t *TxInput) writeInputWitness(w io.Writer) error {
 	}
 	switch inp := t.TypedInput.(type) {
 	case *IssuanceInput:
-		_, err := inp.InitialBlock.WriteTo(w)
-		if err != nil {
-			return err
-		}
-		_, err = blockchain.WriteVarstr31(w, inp.AssetDefinition)
+		_, err := blockchain.WriteVarstr31(w, inp.AssetDefinition)
 		if err != nil {
 			return err
 		}

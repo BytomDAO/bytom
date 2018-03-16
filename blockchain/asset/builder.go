@@ -52,7 +52,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 
 	assetDef := asset.RawDefinitionByte
 
-	txin := legacy.NewIssuanceInput(nonce[:], a.Amount, asset.InitialBlockHash, asset.IssuanceProgram, nil, assetDef)
+	txin := legacy.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, assetDef)
 
 	tplIn := &txbuilder.SigningInstruction{}
 	path := signers.Path(asset.Signer, signers.AssetKeySpace)

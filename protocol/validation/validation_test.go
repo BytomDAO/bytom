@@ -573,7 +573,7 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 	}
 	if result.assetID.IsZero() {
 		refdatahash := hashData(result.assetDef)
-		result.assetID = bc.ComputeAssetID(result.issuanceProg.Code, &result.initialBlockID, result.issuanceProg.VmVersion, &refdatahash)
+		result.assetID = bc.ComputeAssetID(result.issuanceProg.Code, result.issuanceProg.VmVersion, &refdatahash)
 	}
 
 	if result.txVersion == 0 {
@@ -593,7 +593,7 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		args2 := [][]byte{[]byte{6}, []byte{7}}
 
 		result.txInputs = []*legacy.TxInput{
-			legacy.NewIssuanceInput([]byte{3}, 10, result.initialBlockID, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
+			legacy.NewIssuanceInput([]byte{3}, 10, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
 			legacy.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1),
 			legacy.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2),
 		}

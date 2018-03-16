@@ -12,7 +12,6 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/blockchain/signers"
-	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -36,7 +35,6 @@ const (
 )
 
 func initNativeAsset() {
-	genesisBlock := cfg.GenerateGenesisBlock()
 	signer := &signers.Signer{Type: "internal"}
 	alias := consensus.BTMAlias
 
@@ -48,7 +46,6 @@ func initNativeAsset() {
 		VMVersion:         1,
 		DefinitionMap:     consensus.BTMDefinitionMap,
 		RawDefinitionByte: definitionBytes,
-		InitialBlockHash:  genesisBlock.Hash(),
 	}
 }
 
@@ -118,7 +115,6 @@ type Asset struct {
 	Alias             *string                `json:"alias"`
 	VMVersion         uint64                 `json:"vm_version"`
 	IssuanceProgram   chainjson.HexBytes     `json:"issue_program"`
-	InitialBlockHash  bc.Hash                `json:"init_blockhash"`
 	Tags              map[string]interface{} `json:"tags"`
 	RawDefinitionByte chainjson.HexBytes     `json:"raw_definition_byte"`
 	DefinitionMap     map[string]interface{} `json:"definition"`
@@ -180,8 +176,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		RawDefinitionByte: rawDefinition,
 		VMVersion:         vmver,
 		IssuanceProgram:   issuanceProgram,
-		InitialBlockHash:  reg.initialBlockHash,
-		AssetID:           bc.ComputeAssetID(issuanceProgram, &reg.initialBlockHash, vmver, &defHash),
+		AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
 		Signer:            assetSigner,
 		Tags:              tags,
 	}

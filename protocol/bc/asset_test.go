@@ -8,10 +8,9 @@ import (
 
 func TestComputeAssetID(t *testing.T) {
 	issuanceScript := []byte{1}
-	initialBlockHash := mustDecodeHash("dd506f5d4c3f904d3d4b3c3be597c9198c6193ffd14a28570e4a923ce40cf9e5")
-	assetID := ComputeAssetID(issuanceScript, &initialBlockHash, 1, &EmptyStringHash)
+	assetID := ComputeAssetID(issuanceScript, 1, &EmptyStringHash)
 
-	unhashed := append([]byte{}, initialBlockHash.Bytes()...)
+	unhashed := append([]byte{})
 	unhashed = append(unhashed, []byte{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}...) // vmVersion
 	unhashed = append(unhashed, 0x01)                                                      // length of issuanceScript
 	unhashed = append(unhashed, issuanceScript...)
@@ -27,12 +26,11 @@ var assetIDSink AssetID
 
 func BenchmarkComputeAssetID(b *testing.B) {
 	var (
-		initialBlockHash Hash
 		issuanceScript   = []byte{5}
 	)
 
 	for i := 0; i < b.N; i++ {
-		assetIDSink = ComputeAssetID(issuanceScript, &initialBlockHash, 1, &EmptyStringHash)
+		assetIDSink = ComputeAssetID(issuanceScript, 1, &EmptyStringHash)
 	}
 }
 

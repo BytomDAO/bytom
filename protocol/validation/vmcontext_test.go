@@ -14,7 +14,7 @@ func TestCheckOutput(t *testing.T) {
 	tx := legacy.NewTx(legacy.TxData{
 		Inputs: []*legacy.TxInput{
 			legacy.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendprog")),
-			legacy.NewIssuanceInput(nil, 6, bc.Hash{}, []byte("issueprog"), nil, nil),
+			legacy.NewIssuanceInput(nil, 6, []byte("issueprog"), nil, nil),
 		},
 		Outputs: []*legacy.TxOutput{
 			legacy.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("wrongprog")),

@@ -85,7 +85,6 @@ func TestBuild(t *testing.T) {
 }
 
 func TestSignatureWitnessMaterialize(t *testing.T) {
-	var initialBlockHash bc.Hash
 	privkey1, pubkey1, err := chainkd.NewXKeys(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -99,12 +98,12 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 		t.Fatal(err)
 	}
 	issuanceProg, _ := vmutil.P2SPMultiSigProgram([]ed25519.PublicKey{pubkey1.PublicKey(), pubkey2.PublicKey(), pubkey3.PublicKey()}, 2)
-	assetID := bc.ComputeAssetID(issuanceProg, &initialBlockHash, 1, &bc.EmptyStringHash)
+	assetID := bc.ComputeAssetID(issuanceProg, 1, &bc.EmptyStringHash)
 	outscript := mustDecodeHex("76a914c5d128911c28776f56baaac550963f7b88501dc388c0")
 	unsigned := legacy.NewTx(legacy.TxData{
 		Version: 1,
 		Inputs: []*legacy.TxInput{
-			legacy.NewIssuanceInput([]byte{1}, 100, initialBlockHash, issuanceProg, nil, nil),
+			legacy.NewIssuanceInput([]byte{1}, 100, issuanceProg, nil, nil),
 		},
 		Outputs: []*legacy.TxOutput{
 			legacy.NewTxOutput(assetID, 100, outscript),
