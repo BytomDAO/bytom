@@ -8,7 +8,7 @@ import (
 	"github.com/bytom/blockchain"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/util"
 )
 
@@ -17,7 +17,7 @@ const (
 )
 
 // do proof of work
-func doWork(bh *legacy.BlockHeader, seed *bc.Hash) bool {
+func doWork(bh *types.BlockHeader, seed *bc.Hash) bool {
 	for i := uint64(0); i <= maxNonce; i++ {
 		bh.Nonce = i
 		headerHash := bh.Hash()
@@ -35,8 +35,8 @@ func getBlockHeaderByHeight(height uint64) {
 	}
 
 	type Resp struct {
-		BlockHeader *legacy.BlockHeader `json:"block_header"`
-		Reward      uint64              `json:"reward"`
+		BlockHeader *types.BlockHeader `json:"block_header"`
+		Reward      uint64             `json:"reward"`
 	}
 
 	data, _ := util.ClientCall("/get-block-header-by-height", Req{BlockHeight: height})

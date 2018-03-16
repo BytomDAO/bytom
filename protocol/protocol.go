@@ -10,7 +10,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
 )
 
@@ -33,7 +33,7 @@ var (
 type Store interface {
 	BlockExist(*bc.Hash) bool
 
-	GetBlock(*bc.Hash) (*legacy.Block, error)
+	GetBlock(*bc.Hash) (*types.Block, error)
 	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
 	GetStoreStatus() txdb.BlockStoreStateJSON
 	GetSeed(*bc.Hash) (*bc.Hash, error)
@@ -41,14 +41,14 @@ type Store interface {
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
 
-	SaveBlock(*legacy.Block, *bc.TransactionStatus, *bc.Hash) error
-	SaveChainStatus(*legacy.Block, *state.UtxoViewpoint, map[uint64]*bc.Hash) error
+	SaveBlock(*types.Block, *bc.TransactionStatus, *bc.Hash) error
+	SaveChainStatus(*types.Block, *state.UtxoViewpoint, map[uint64]*bc.Hash) error
 }
 
 // OrphanManage is use to handle all the orphan block
 type OrphanManage struct {
 	//TODO: add orphan cached block limit
-	orphan     map[bc.Hash]*legacy.Block
+	orphan     map[bc.Hash]*types.Block
 	preOrphans map[bc.Hash][]*bc.Hash
 	mtx        sync.RWMutex
 }
@@ -56,7 +56,7 @@ type OrphanManage struct {
 // NewOrphanManage return a new orphan block
 func NewOrphanManage() *OrphanManage {
 	return &OrphanManage{
-		orphan:     make(map[bc.Hash]*legacy.Block),
+		orphan:     make(map[bc.Hash]*types.Block),
 		preOrphans: make(map[bc.Hash][]*bc.Hash),
 	}
 }
@@ -70,7 +70,7 @@ func (o *OrphanManage) BlockExist(hash *bc.Hash) bool {
 }
 
 // Add will add the block to OrphanManage
-func (o *OrphanManage) Add(block *legacy.Block) {
+func (o *OrphanManage) Add(block *types.Block) {
 	blockHash := block.Hash()
 	o.mtx.Lock()
 	defer o.mtx.Unlock()
@@ -108,7 +108,7 @@ func (o *OrphanManage) Delete(hash *bc.Hash) {
 }
 
 // Get return the orphan block by hash
-func (o *OrphanManage) Get(hash *bc.Hash) (*legacy.Block, bool) {
+func (o *OrphanManage) Get(hash *bc.Hash) (*types.Block, bool) {
 	o.mtx.RLock()
 	block, ok := o.orphan[*hash]
 	o.mtx.RUnlock()
@@ -128,7 +128,7 @@ type Chain struct {
 
 	state struct {
 		cond      sync.Cond
-		block     *legacy.Block
+		block     *types.Block
 		hash      *bc.Hash
 		mainChain map[uint64]*bc.Hash
 	}
@@ -179,7 +179,7 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 	return c.state.hash
 }
 
-func (c *Chain) inMainchain(block *legacy.Block) bool {
+func (c *Chain) inMainchain(block *types.Block) bool {
 	hash, ok := c.state.mainChain[block.Height]
 	if !ok {
 		return false
@@ -210,7 +210,7 @@ func (c *Chain) Timestamp() uint64 {
 }
 
 // BestBlock returns the chain tail block
-func (c *Chain) BestBlock() *legacy.Block {
+func (c *Chain) BestBlock() *types.Block {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
 	return c.state.block
@@ -242,7 +242,7 @@ func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(block *legacy.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
+func (c *Chain) setState(block *types.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
 	blockHash := block.Hash()
 	c.state.block = block
 	c.state.hash = &blockHash

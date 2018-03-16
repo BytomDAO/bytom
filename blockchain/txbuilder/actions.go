@@ -9,7 +9,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 )
@@ -44,7 +44,7 @@ func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) e
 		return MissingFieldsError(missing...)
 	}
 
-	out := legacy.NewTxOutput(*a.AssetId, a.Amount, a.Receiver.ControlProgram)
+	out := types.NewTxOutput(*a.AssetId, a.Amount, a.Receiver.ControlProgram)
 	return b.AddOutput(out)
 }
 
@@ -91,7 +91,7 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 		return err
 	}
 
-	out := legacy.NewTxOutput(*a.AssetId, a.Amount, program)
+	out := types.NewTxOutput(*a.AssetId, a.Amount, program)
 	return b.AddOutput(out)
 }
 
@@ -119,7 +119,7 @@ func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) er
 		return MissingFieldsError(missing...)
 	}
 
-	out := legacy.NewTxOutput(*a.AssetId, a.Amount, a.Program)
+	out := types.NewTxOutput(*a.AssetId, a.Amount, a.Program)
 	return b.AddOutput(out)
 }
 
@@ -146,6 +146,6 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	out := legacy.NewTxOutput(*a.AssetId, a.Amount, retirementProgram)
+	out := types.NewTxOutput(*a.AssetId, a.Amount, retirementProgram)
 	return b.AddOutput(out)
 }

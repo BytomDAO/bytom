@@ -11,7 +11,7 @@ import (
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 //NewIssueAction create a new asset issue action
@@ -52,7 +52,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 
 	assetDef := asset.RawDefinitionByte
 
-	txin := legacy.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, assetDef)
+	txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, assetDef)
 
 	tplIn := &txbuilder.SigningInstruction{}
 	path := signers.Path(asset.Signer, signers.AssetKeySpace)

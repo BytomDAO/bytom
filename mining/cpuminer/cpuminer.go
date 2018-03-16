@@ -14,7 +14,7 @@ import (
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 const (
@@ -45,7 +45,7 @@ type CPUMiner struct {
 // solveBlock attempts to find some combination of a nonce, extra nonce, and
 // current timestamp which makes the passed block hash to a value less than the
 // target difficulty.
-func (m *CPUMiner) solveBlock(block *legacy.Block, ticker *time.Ticker, quit chan struct{}) bool {
+func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
 	seed, err := m.chain.GetSeed(header.Height, &header.PreviousBlockHash)
 	if err != nil {

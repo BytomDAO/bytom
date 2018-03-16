@@ -11,7 +11,7 @@ import (
 	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
 	log "github.com/sirupsen/logrus"
 )
@@ -29,7 +29,7 @@ var (
 
 // TxDesc store tx and related info for mining strategy
 type TxDesc struct {
-	Tx       *legacy.Tx
+	Tx       *types.Tx
 	Added    time.Time
 	Height   uint64
 	Weight   uint64
@@ -44,7 +44,7 @@ type TxPool struct {
 	pool        map[bc.Hash]*TxDesc
 	utxo        map[bc.Hash]bc.Hash
 	errCache    *lru.Cache
-	newTxCh     chan *legacy.Tx
+	newTxCh     chan *types.Tx
 }
 
 // NewTxPool init a new TxPool
@@ -54,17 +54,17 @@ func NewTxPool() *TxPool {
 		pool:        make(map[bc.Hash]*TxDesc),
 		utxo:        make(map[bc.Hash]bc.Hash),
 		errCache:    lru.New(maxCachedErrTxs),
-		newTxCh:     make(chan *legacy.Tx, maxNewTxChSize),
+		newTxCh:     make(chan *types.Tx, maxNewTxChSize),
 	}
 }
 
 // GetNewTxCh return a unconfirmed transaction feed channel
-func (mp *TxPool) GetNewTxCh() chan *legacy.Tx {
+func (mp *TxPool) GetNewTxCh() chan *types.Tx {
 	return mp.newTxCh
 }
 
 // AddTransaction add a verified transaction to pool
-func (mp *TxPool) AddTransaction(tx *legacy.Tx, gasOnlyTx bool, height, fee uint64) (*TxDesc, error) {
+func (mp *TxPool) AddTransaction(tx *types.Tx, gasOnlyTx bool, height, fee uint64) (*TxDesc, error) {
 	mp.mtx.Lock()
 	defer mp.mtx.Unlock()
 

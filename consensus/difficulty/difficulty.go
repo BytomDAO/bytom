@@ -7,7 +7,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/mining/tensority"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 // HashToBig convert bc.Hash to a difficult int
@@ -90,7 +90,7 @@ func CheckProofOfWork(hash, seed *bc.Hash, bits uint64) bool {
 }
 
 // CalcNextRequiredDifficulty return the difficult for next block
-func CalcNextRequiredDifficulty(lastBH, compareBH *legacy.BlockHeader) uint64 {
+func CalcNextRequiredDifficulty(lastBH, compareBH *types.BlockHeader) uint64 {
 	if lastBH == nil {
 		return consensus.PowMinBits
 	} else if (lastBH.Height)%consensus.BlocksPerRetarget != 0 || lastBH.Height == 0 {

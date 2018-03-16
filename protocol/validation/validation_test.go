@@ -12,7 +12,7 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/testutil"
@@ -242,7 +242,7 @@ func TestTxValidation(t *testing.T) {
 				// not equal output entry for the mux to falsely point
 				// to. That entry must be added to the first tx's Entries map.
 				fixture2 := sample(t, fixture)
-				tx2 := legacy.NewTx(*fixture2.tx).Tx
+				tx2 := types.NewTx(*fixture2.tx).Tx
 				out2ID := tx2.ResultIds[0]
 				out2 := tx2.Entries[*out2ID].(*bc.Output)
 				tx.Entries[*out2ID] = out2
@@ -377,7 +377,7 @@ func TestTxValidation(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
 			fixture = sample(t, nil)
-			tx = legacy.NewTx(*fixture.tx).Tx
+			tx = types.NewTx(*fixture.tx).Tx
 			vs = &validationState{
 				block:   mockBlock(),
 				tx:      tx,
@@ -524,10 +524,10 @@ type txFixture struct {
 	assetDef       []byte
 	assetID        bc.AssetID
 	txVersion      uint64
-	txInputs       []*legacy.TxInput
-	txOutputs      []*legacy.TxOutput
+	txInputs       []*types.TxInput
+	txOutputs      []*types.TxOutput
 	txRefData      []byte
-	tx             *legacy.TxData
+	tx             *types.TxData
 }
 
 // Produces a sample transaction in a txFixture object (see above). A
@@ -592,10 +592,10 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		}
 		args2 := [][]byte{[]byte{6}, []byte{7}}
 
-		result.txInputs = []*legacy.TxInput{
-			legacy.NewIssuanceInput([]byte{3}, 10, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
-			legacy.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1),
-			legacy.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2),
+		result.txInputs = []*types.TxInput{
+			types.NewIssuanceInput([]byte{3}, 10, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
+			types.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1),
+			types.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2),
 		}
 	}
 
@@ -611,16 +611,16 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 			tb.Fatal(err)
 		}
 
-		result.txOutputs = []*legacy.TxOutput{
-			legacy.NewTxOutput(result.assetID, 25, cp1),
-			legacy.NewTxOutput(result.assetID, 45, cp2),
+		result.txOutputs = []*types.TxOutput{
+			types.NewTxOutput(result.assetID, 25, cp1),
+			types.NewTxOutput(result.assetID, 45, cp2),
 		}
 	}
 	if len(result.txRefData) == 0 {
 		result.txRefData = []byte{13}
 	}
 
-	result.tx = &legacy.TxData{
+	result.tx = &types.TxData{
 		Version: result.txVersion,
 		Inputs:  result.txInputs,
 		Outputs: result.txOutputs,
@@ -639,20 +639,20 @@ func mockBlock() *bc.Block {
 
 func mockCoinbaseTx(amount uint64) *bc.Tx {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
-	return legacy.MapTx(&legacy.TxData{
+	return types.MapTx(&types.TxData{
 		SerializedSize: 1,
-		Inputs: []*legacy.TxInput{
-			legacy.NewCoinbaseInput(nil),
+		Inputs: []*types.TxInput{
+			types.NewCoinbaseInput(nil),
 		},
-		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(*consensus.BTMAssetID, amount, cp),
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(*consensus.BTMAssetID, amount, cp),
 		},
 	})
 }
 
-func mockGasTxInput() *legacy.TxInput {
+func mockGasTxInput() *types.TxInput {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
-	return legacy.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp)
+	return types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp)
 }
 
 // Like errors.Root, but also unwraps vm.Error objects.

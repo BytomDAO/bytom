@@ -11,7 +11,7 @@ import (
 	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
 )
 
@@ -70,20 +70,20 @@ func calcTxStatusKey(hash *bc.Hash) []byte {
 }
 
 // GetBlock return the block by given hash
-func GetBlock(db dbm.DB, hash *bc.Hash) *legacy.Block {
+func GetBlock(db dbm.DB, hash *bc.Hash) *types.Block {
 	bytez := db.Get(calcBlockKey(hash))
 	if bytez == nil {
 		return nil
 	}
 
-	block := &legacy.Block{}
+	block := &types.Block{}
 	block.UnmarshalText(bytez)
 	return block
 }
 
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
-	cache := newBlockCache(func(hash *bc.Hash) *legacy.Block {
+	cache := newBlockCache(func(hash *bc.Hash) *types.Block {
 		return GetBlock(db, hash)
 	})
 	return &Store{
@@ -104,7 +104,7 @@ func (s *Store) BlockExist(hash *bc.Hash) bool {
 }
 
 // GetBlock return the block by given hash
-func (s *Store) GetBlock(hash *bc.Hash) (*legacy.Block, error) {
+func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
 	return s.cache.lookup(hash)
 }
 
@@ -152,7 +152,7 @@ func (s *Store) GetMainchain(hash *bc.Hash) (map[uint64]*bc.Hash, error) {
 }
 
 // SaveBlock persists a new block in the database.
-func (s *Store) SaveBlock(block *legacy.Block, ts *bc.TransactionStatus, seed *bc.Hash) error {
+func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus, seed *bc.Hash) error {
 	binaryBlock, err := block.MarshalText()
 	if err != nil {
 		return errors.Wrap(err, "Marshal block meta")
@@ -178,7 +178,7 @@ func (s *Store) SaveBlock(block *legacy.Block, ts *bc.TransactionStatus, seed *b
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(block *legacy.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
+func (s *Store) SaveChainStatus(block *types.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
 	hash := block.Hash()
 	batch := s.db.NewBatch()
 

@@ -14,7 +14,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
@@ -38,7 +38,7 @@ type Tracker struct {
 	DB       dbm.DB
 	TxFeeds  []*TxFeed
 	chain    *protocol.Chain
-	txfeedCh chan *legacy.Tx
+	txfeedCh chan *types.Tx
 }
 
 type rawOutput struct {
@@ -73,7 +73,7 @@ func NewTracker(db dbm.DB, chain *protocol.Chain) *Tracker {
 		DB:       db,
 		TxFeeds:  make([]*TxFeed, 0, 10),
 		chain:    chain,
-		txfeedCh: make(chan *legacy.Tx, maxNewTxfeedChSize),
+		txfeedCh: make(chan *types.Tx, maxNewTxfeedChSize),
 	}
 
 	return s
@@ -182,7 +182,7 @@ func (t *Tracker) Prepare(ctx context.Context) error {
 }
 
 //GetTxfeedCh return a txfeed channel.
-func (t *Tracker) GetTxfeedCh() chan *legacy.Tx {
+func (t *Tracker) GetTxfeedCh() chan *types.Tx {
 	return t.txfeedCh
 }
 
@@ -300,7 +300,7 @@ func outputFilter(txfeed *TxFeed, value *query.AnnotatedOutput) bool {
 }
 
 //TxFilter filter tx from mempool.
-func (t *Tracker) TxFilter(tx *legacy.Tx) error {
+func (t *Tracker) TxFilter(tx *types.Tx) error {
 	var annotatedTx *query.AnnotatedTx
 	// Build the fully annotated transaction.
 	annotatedTx = buildAnnotatedTransaction(tx)
@@ -322,7 +322,7 @@ func (t *Tracker) TxFilter(tx *legacy.Tx) error {
 
 var emptyJSONObject = chainjson.HexBytes(`{}`)
 
-func buildAnnotatedTransaction(orig *legacy.Tx) *query.AnnotatedTx {
+func buildAnnotatedTransaction(orig *types.Tx) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:      orig.ID,
 		Inputs:  make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
@@ -338,7 +338,7 @@ func buildAnnotatedTransaction(orig *legacy.Tx) *query.AnnotatedTx {
 	return tx
 }
 
-func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
+func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
 		AssetID:         orig.AssetID(),
@@ -361,7 +361,7 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 	return in
 }
 
-func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
+func buildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 	orig := tx.Outputs[idx]
 	outid := tx.OutputID(idx)
 	out := &query.AnnotatedOutput{

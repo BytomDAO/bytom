@@ -16,7 +16,7 @@ import (
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/testutil"
@@ -25,14 +25,14 @@ import (
 type testAction bc.AssetAmount
 
 func (t testAction) Build(ctx context.Context, b *TemplateBuilder) error {
-	in := legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), *t.AssetId, t.Amount, 0, nil)
+	in := types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), *t.AssetId, t.Amount, 0, nil)
 	tplIn := &SigningInstruction{}
 
 	err := b.AddInput(in, tplIn)
 	if err != nil {
 		return err
 	}
-	return b.AddOutput(legacy.NewTxOutput(*t.AssetId, t.Amount, []byte("change")))
+	return b.AddOutput(types.NewTxOutput(*t.AssetId, t.Amount, []byte("change")))
 }
 
 func newControlProgramAction(assetAmt bc.AssetAmount, script []byte) *controlProgramAction {
@@ -59,15 +59,15 @@ func TestBuild(t *testing.T) {
 	}
 
 	want := &Template{
-		Transaction: legacy.NewTx(legacy.TxData{
+		Transaction: types.NewTx(types.TxData{
 			Version:        1,
 			SerializedSize: 332,
-			Inputs: []*legacy.TxInput{
-				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
 			},
-			Outputs: []*legacy.TxOutput{
-				legacy.NewTxOutput(assetID2, 6, []byte("dest")),
-				legacy.NewTxOutput(assetID1, 5, []byte("change")),
+			Outputs: []*types.TxOutput{
+				types.NewTxOutput(assetID2, 6, []byte("dest")),
+				types.NewTxOutput(assetID1, 5, []byte("change")),
 			},
 		}),
 		SigningInstructions: []*SigningInstruction{{
@@ -100,13 +100,13 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 	issuanceProg, _ := vmutil.P2SPMultiSigProgram([]ed25519.PublicKey{pubkey1.PublicKey(), pubkey2.PublicKey(), pubkey3.PublicKey()}, 2)
 	assetID := bc.ComputeAssetID(issuanceProg, 1, &bc.EmptyStringHash)
 	outscript := mustDecodeHex("76a914c5d128911c28776f56baaac550963f7b88501dc388c0")
-	unsigned := legacy.NewTx(legacy.TxData{
+	unsigned := types.NewTx(types.TxData{
 		Version: 1,
-		Inputs: []*legacy.TxInput{
-			legacy.NewIssuanceInput([]byte{1}, 100, issuanceProg, nil, nil),
+		Inputs: []*types.TxInput{
+			types.NewIssuanceInput([]byte{1}, 100, issuanceProg, nil, nil),
 		},
-		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(assetID, 100, outscript),
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(assetID, 100, outscript),
 		},
 	})
 
@@ -185,60 +185,60 @@ func mustDecodeHex(str string) []byte {
 
 func TestCheckBlankCheck(t *testing.T) {
 	cases := []struct {
-		tx   *legacy.TxData
+		tx   *types.TxData
 		want error
 	}{{
-		tx: &legacy.TxData{
-			Inputs: []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
+		tx: &types.TxData{
+			Inputs: []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
-		tx: &legacy.TxData{
-			Inputs:  []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(bc.AssetID{}, 3, nil)},
+		tx: &types.TxData{
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
+			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 3, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
-		tx: &legacy.TxData{
-			Inputs: []*legacy.TxInput{
-				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil),
-				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.NewAssetID([32]byte{1}), 5, 0, nil),
+		tx: &types.TxData{
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil),
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.NewAssetID([32]byte{1}), 5, 0, nil),
 			},
-			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(bc.AssetID{}, 5, nil)},
+			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
 		},
 		want: ErrBlankCheck,
 	}, {
-		tx: &legacy.TxData{
-			Inputs: []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*legacy.TxOutput{
-				legacy.NewTxOutput(bc.AssetID{}, math.MaxInt64, nil),
-				legacy.NewTxOutput(bc.AssetID{}, 7, nil),
-			},
-		},
-		want: ErrBadAmount,
-	}, {
-		tx: &legacy.TxData{
-			Inputs: []*legacy.TxInput{
-				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil),
-				legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, math.MaxInt64, 0, nil),
+		tx: &types.TxData{
+			Inputs: []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
+			Outputs: []*types.TxOutput{
+				types.NewTxOutput(bc.AssetID{}, math.MaxInt64, nil),
+				types.NewTxOutput(bc.AssetID{}, 7, nil),
 			},
 		},
 		want: ErrBadAmount,
 	}, {
-		tx: &legacy.TxData{
-			Inputs:  []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(bc.AssetID{}, 5, nil)},
+		tx: &types.TxData{
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil),
+				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, math.MaxInt64, 0, nil),
+			},
+		},
+		want: ErrBadAmount,
+	}, {
+		tx: &types.TxData{
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
+			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
 		},
 		want: nil,
 	}, {
-		tx: &legacy.TxData{
-			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(bc.AssetID{}, 5, nil)},
+		tx: &types.TxData{
+			Outputs: []*types.TxOutput{types.NewTxOutput(bc.AssetID{}, 5, nil)},
 		},
 		want: nil,
 	}, {
-		tx: &legacy.TxData{
-			Inputs:  []*legacy.TxInput{legacy.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
-			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(bc.NewAssetID([32]byte{1}), 5, nil)},
+		tx: &types.TxData{
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), bc.AssetID{}, 5, 0, nil)},
+			Outputs: []*types.TxOutput{types.NewTxOutput(bc.NewAssetID([32]byte{1}), 5, nil)},
 		},
 		want: nil,
 	}}

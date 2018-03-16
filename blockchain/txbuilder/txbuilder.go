@@ -12,7 +12,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 // errors
@@ -38,7 +38,7 @@ var (
 // Build partners then satisfy and consume inputs and destinations.
 // The final party must ensure that the transaction is
 // balanced before calling finalize.
-func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime time.Time) (*Template, error) {
+func Build(ctx context.Context, tx *types.TxData, actions []Action, maxTime time.Time) (*Template, error) {
 	builder := TemplateBuilder{
 		base:    tx,
 		maxTime: maxTime,
@@ -99,7 +99,7 @@ func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth string,
 	return materializeWitnesses(tpl)
 }
 
-func checkBlankCheck(tx *legacy.TxData) error {
+func checkBlankCheck(tx *types.TxData) error {
 	assetMap := make(map[bc.AssetID]int64)
 	var ok bool
 	for _, in := range tx.Inputs {

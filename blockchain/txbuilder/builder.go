@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 // NewBuilder return new TemplateBuilder instance
@@ -15,9 +15,9 @@ func NewBuilder(maxTime time.Time) *TemplateBuilder {
 
 // TemplateBuilder is struct of building transactions
 type TemplateBuilder struct {
-	base                *legacy.TxData
-	inputs              []*legacy.TxInput
-	outputs             []*legacy.TxOutput
+	base                *types.TxData
+	inputs              []*types.TxInput
+	outputs             []*types.TxOutput
 	signingInstructions []*SigningInstruction
 	minTime             time.Time
 	maxTime             time.Time
@@ -27,7 +27,7 @@ type TemplateBuilder struct {
 }
 
 // AddInput add inputs of transactions
-func (b *TemplateBuilder) AddInput(in *legacy.TxInput, sigInstruction *SigningInstruction) error {
+func (b *TemplateBuilder) AddInput(in *types.TxInput, sigInstruction *SigningInstruction) error {
 	if !in.IsCoinbase() && in.Amount() > math.MaxInt64 {
 		return errors.WithDetailf(ErrBadAmount, "amount %d exceeds maximum value 2^63", in.Amount())
 	}
@@ -37,7 +37,7 @@ func (b *TemplateBuilder) AddInput(in *legacy.TxInput, sigInstruction *SigningIn
 }
 
 // AddOutput add outputs of transactions
-func (b *TemplateBuilder) AddOutput(o *legacy.TxOutput) error {
+func (b *TemplateBuilder) AddOutput(o *types.TxOutput) error {
 	if o.Amount > math.MaxInt64 {
 		return errors.WithDetailf(ErrBadAmount, "amount %d exceeds maximum value 2^63", o.Amount)
 	}
@@ -88,7 +88,7 @@ func (b *TemplateBuilder) rollback() {
 }
 
 // Build build transactions with template
-func (b *TemplateBuilder) Build() (*Template, *legacy.TxData, error) {
+func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 	// Run any building callbacks.
 	for _, cb := range b.callbacks {
 		err := cb()
@@ -100,7 +100,7 @@ func (b *TemplateBuilder) Build() (*Template, *legacy.TxData, error) {
 	tpl := &Template{}
 	tx := b.base
 	if tx == nil {
-		tx = &legacy.TxData{
+		tx = &types.TxData{
 			Version: 1,
 		}
 		tpl.Local = true
@@ -128,6 +128,6 @@ func (b *TemplateBuilder) Build() (*Template, *legacy.TxData, error) {
 	}
 
 	tx.SerializedSize = uint64(len(txSerialized))
-	tpl.Transaction = legacy.NewTx(*tx)
+	tpl.Transaction = types.NewTx(*tx)
 	return tpl, tx, nil
 }

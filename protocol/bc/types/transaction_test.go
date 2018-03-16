@@ -1,4 +1,4 @@
-package legacy
+package types
 
 import (
 	"bytes"
@@ -106,7 +106,7 @@ func TestTransaction(t *testing.T) {
 			t.Errorf("test %d: error unmarshaling tx from json: %s", i, err)
 		}
 		if !testutil.DeepEqual(test.tx.TxData, txFromJSON.TxData) {
-			t.Errorf("test %d: legacy.TxData -> json -> legacy.TxData: got:\n%s\nwant:\n%s", i, spew.Sdump(txFromJSON.TxData), spew.Sdump(test.tx.TxData))
+			t.Errorf("test %d: types.TxData -> json -> types.TxData: got:\n%s\nwant:\n%s", i, spew.Sdump(txFromJSON.TxData), spew.Sdump(test.tx.TxData))
 		}
 
 		tx1 := new(TxData)

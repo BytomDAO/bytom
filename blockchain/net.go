@@ -8,7 +8,7 @@ import (
 	wire "github.com/tendermint/go-wire"
 
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 const (
@@ -74,7 +74,7 @@ type BlockResponseMessage struct {
 }
 
 // NewBlockResponseMessage produce new BlockResponseMessage instance
-func NewBlockResponseMessage(block *legacy.Block) (*BlockResponseMessage, error) {
+func NewBlockResponseMessage(block *types.Block) (*BlockResponseMessage, error) {
 	rawBlock, err := block.MarshalText()
 	if err != nil {
 		return nil, err
@@ -83,10 +83,10 @@ func NewBlockResponseMessage(block *legacy.Block) (*BlockResponseMessage, error)
 }
 
 // GetBlock return block struct
-func (m *BlockResponseMessage) GetBlock() *legacy.Block {
-	block := &legacy.Block{
-		BlockHeader:  legacy.BlockHeader{},
-		Transactions: []*legacy.Tx{},
+func (m *BlockResponseMessage) GetBlock() *types.Block {
+	block := &types.Block{
+		BlockHeader:  types.BlockHeader{},
+		Transactions: []*types.Tx{},
 	}
 	block.UnmarshalText(m.RawBlock)
 	return block
@@ -102,7 +102,7 @@ type TransactionNotifyMessage struct {
 }
 
 // NewTransactionNotifyMessage produce new TransactionNotifyMessage instance
-func NewTransactionNotifyMessage(tx *legacy.Tx) (*TransactionNotifyMessage, error) {
+func NewTransactionNotifyMessage(tx *types.Tx) (*TransactionNotifyMessage, error) {
 	rawTx, err := tx.TxData.MarshalText()
 	if err != nil {
 		return nil, err
@@ -111,8 +111,8 @@ func NewTransactionNotifyMessage(tx *legacy.Tx) (*TransactionNotifyMessage, erro
 }
 
 // GetTransaction return Tx struct
-func (m *TransactionNotifyMessage) GetTransaction() *legacy.Tx {
-	tx := &legacy.Tx{}
+func (m *TransactionNotifyMessage) GetTransaction() *types.Tx {
+	tx := &types.Tx{}
 	tx.UnmarshalText(m.RawTx)
 	return tx
 }
@@ -135,7 +135,7 @@ type StatusResponseMessage struct {
 }
 
 // NewStatusResponseMessage produce new StatusResponseMessage instance
-func NewStatusResponseMessage(block *legacy.Block) *StatusResponseMessage {
+func NewStatusResponseMessage(block *types.Block) *StatusResponseMessage {
 	return &StatusResponseMessage{
 		Height:  block.Height,
 		RawHash: block.Hash().Byte32(),

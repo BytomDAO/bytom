@@ -6,7 +6,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 var (
@@ -16,7 +16,7 @@ var (
 
 // BuildRequest is main struct when building transactions
 type BuildRequest struct {
-	Tx      *legacy.TxData           `json:"base_transaction"`
+	Tx      *types.TxData            `json:"base_transaction"`
 	Actions []map[string]interface{} `json:"actions"`
 	TTL     json.Duration            `json:"ttl"`
 }
