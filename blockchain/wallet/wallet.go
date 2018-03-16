@@ -15,7 +15,7 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 //SINGLE single sign
@@ -137,7 +137,7 @@ func (w *Wallet) getImportKeyFlag() bool {
 	return false
 }
 
-func (w *Wallet) attachBlock(block *legacy.Block) error {
+func (w *Wallet) attachBlock(block *types.Block) error {
 	if block.PreviousBlockHash != w.status.WorkHash {
 		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
 		return nil
@@ -162,7 +162,7 @@ func (w *Wallet) attachBlock(block *legacy.Block) error {
 	return w.commitWalletInfo(storeBatch)
 }
 
-func (w *Wallet) detachBlock(block *legacy.Block) error {
+func (w *Wallet) detachBlock(block *types.Block) error {
 	blockHash := block.Hash()
 	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
 	if err != nil {

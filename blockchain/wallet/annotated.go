@@ -16,7 +16,7 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
@@ -172,7 +172,7 @@ func isValidJSON(b []byte) bool {
 	return err == nil
 }
 
-func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
+func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
 		Timestamp:              b.Time(),
@@ -193,7 +193,7 @@ func buildAnnotatedTransaction(orig *legacy.Tx, b *legacy.Block, statusFail bool
 	return tx
 }
 
-func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
+func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
 		AssetDefinition: &emptyJSONObject,
@@ -220,7 +220,7 @@ func buildAnnotatedInput(tx *legacy.Tx, i uint32) *query.AnnotatedInput {
 	return in
 }
 
-func buildAnnotatedOutput(tx *legacy.Tx, idx int) *query.AnnotatedOutput {
+func buildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 	orig := tx.Outputs[idx]
 	outid := tx.OutputID(idx)
 	out := &query.AnnotatedOutput{

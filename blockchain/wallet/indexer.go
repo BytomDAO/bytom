@@ -17,7 +17,7 @@ import (
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 type rawOutput struct {
@@ -80,7 +80,7 @@ func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
 }
 
 // ReverseAccountUTXOs process the invalid blocks when orphan block rollback
-func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
 	var err error
 
 	// unknow how many spent and retire outputs
@@ -147,13 +147,13 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *
 // saveExternalAssetDefinition save external and local assets definition,
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
-func saveExternalAssetDefinition(b *legacy.Block, walletDB db.DB) {
+func saveExternalAssetDefinition(b *types.Block, walletDB db.DB) {
 	storeBatch := walletDB.NewBatch()
 	defer storeBatch.Write()
 
 	for _, tx := range b.Transactions {
 		for _, orig := range tx.Inputs {
-			if ii, ok := orig.TypedInput.(*legacy.IssuanceInput); ok {
+			if ii, ok := orig.TypedInput.(*types.IssuanceInput); ok {
 				if isValidJSON(ii.AssetDefinition) {
 					assetID := ii.AssetID()
 					if assetExist := walletDB.Get(asset.CalcExtAssetKey(&assetID)); assetExist != nil {
@@ -186,7 +186,7 @@ type TxSummary struct {
 }
 
 // indexTransactions saves all annotated transactions to the database.
-func (w *Wallet) indexTransactions(batch db.Batch, b *legacy.Block, txStatus *bc.TransactionStatus) error {
+func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAsset(w, annotatedTxs)
@@ -206,7 +206,7 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *legacy.Block, txStatus *bc
 }
 
 // buildAccountUTXOs process valid blocks to build account unspent outputs db
-func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
 	// get the spent UTXOs and delete the UTXOs from DB
 	prevoutDBKeys(batch, b, txStatus)
 
@@ -248,7 +248,7 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *legacy.Block, txStatus *bc
 	}
 }
 
-func prevoutDBKeys(batch db.Batch, b *legacy.Block, txStatus *bc.TransactionStatus) {
+func prevoutDBKeys(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
 	for txIndex, tx := range b.Transactions {
 		for _, inpID := range tx.Tx.InputIDs {
 			sp, err := tx.Spend(inpID)
@@ -377,7 +377,7 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 }
 
 // filterAccountTxs related and build the fully annotated transactions.
-func (w *Wallet) filterAccountTxs(b *legacy.Block, txStatus *bc.TransactionStatus) []*query.AnnotatedTx {
+func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) []*query.AnnotatedTx {
 	annotatedTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
 	for pos, tx := range b.Transactions {
 		statusFail, _ := txStatus.GetStatus(pos)

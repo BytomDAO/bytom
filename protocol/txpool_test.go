@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 func TestTxPool(t *testing.T) {
@@ -49,16 +49,16 @@ func TestTxPool(t *testing.T) {
 	}
 }
 
-func mockCoinbaseTx(serializedSize uint64, amount uint64) *legacy.Tx {
-	oldTx := &legacy.TxData{
+func mockCoinbaseTx(serializedSize uint64, amount uint64) *types.Tx {
+	oldTx := &types.TxData{
 		SerializedSize: serializedSize,
-		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(*consensus.BTMAssetID, amount, []byte{1}),
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(*consensus.BTMAssetID, amount, []byte{1}),
 		},
 	}
 
-	return &legacy.Tx{
+	return &types.Tx{
 		TxData: *oldTx,
-		Tx:     legacy.MapTx(oldTx),
+		Tx:     types.MapTx(oldTx),
 	}
 }

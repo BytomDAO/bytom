@@ -3,7 +3,7 @@ package protocol
 import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/validation"
 )
 
@@ -13,9 +13,9 @@ var ErrBadTx = errors.New("invalid transaction")
 // ValidateTx validates the given transaction. A cache holds
 // per-transaction validation results and is consulted before
 // performing full validation.
-func (c *Chain) ValidateTx(tx *legacy.Tx) error {
+func (c *Chain) ValidateTx(tx *types.Tx) error {
 	newTx := tx.Tx
-	block := legacy.MapBlock(c.BestBlock())
+	block := types.MapBlock(c.BestBlock())
 	if ok := c.txPool.HaveTransaction(&newTx.ID); ok {
 		return c.txPool.GetErrCache(&newTx.ID)
 	}

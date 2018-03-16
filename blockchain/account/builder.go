@@ -14,7 +14,7 @@ import (
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
@@ -81,7 +81,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 		// Don't insert the control program until callbacks are executed.
 		a.accounts.insertControlProgramDelayed(ctx, b, acp)
 
-		err = b.AddOutput(legacy.NewTxOutput(*a.AssetId, res.Change, acp.ControlProgram))
+		err = b.AddOutput(types.NewTxOutput(*a.AssetId, res.Change, acp.ControlProgram))
 		if err != nil {
 			return errors.Wrap(err, "adding change output")
 		}
@@ -140,8 +140,8 @@ func canceler(ctx context.Context, m *Manager, rid uint64) func() {
 }
 
 // UtxoToInputs convert an utxo to the txinput
-func UtxoToInputs(signer *signers.Signer, u *UTXO) (*legacy.TxInput, *txbuilder.SigningInstruction, error) {
-	txInput := legacy.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)
+func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.SigningInstruction, error) {
+	txInput := types.NewSpendInput(nil, u.SourceID, u.AssetID, u.Amount, u.SourcePos, u.ControlProgram)
 	sigInst := &txbuilder.SigningInstruction{}
 	if signer == nil {
 		return txInput, sigInst, nil
@@ -226,7 +226,7 @@ func (a *controlAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder)
 	}
 	a.accounts.insertControlProgramDelayed(ctx, b, acp)
 
-	return b.AddOutput(legacy.NewTxOutput(*a.AssetId, a.Amount, acp.ControlProgram))
+	return b.AddOutput(types.NewTxOutput(*a.AssetId, a.Amount, acp.ControlProgram))
 }
 
 // insertControlProgramDelayed takes a template builder and an account

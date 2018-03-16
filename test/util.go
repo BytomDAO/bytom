@@ -15,7 +15,7 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 )
 
@@ -49,7 +49,7 @@ func MockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
 	return utxo
 }
 
-func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *legacy.TxData, error) {
+func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *types.TxData, error) {
 	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo)
 	if err != nil {
 		return nil, nil, err
@@ -57,7 +57,7 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 
 	b := txbuilder.NewBuilder(time.Now())
 	b.AddInput(txInput, sigInst)
-	out := legacy.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)})
+	out := types.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)})
 	b.AddOutput(out)
 	return b.Build()
 }

@@ -1,4 +1,4 @@
-package legacy
+package types
 
 // CoinbaseInput is record the coinbase message
 type CoinbaseInput struct {

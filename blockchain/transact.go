@@ -11,7 +11,7 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/reqid"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 var defaultTxTTL = 5 * time.Minute
@@ -181,7 +181,7 @@ func (bcr *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *tx
 	return nil
 }
 
-func (bcr *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx, height uint64) (uint64, error) {
+func (bcr *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *types.Tx, height uint64) (uint64, error) {
 	log.Printf("waitForTxInBlock function")
 	for {
 		height++

@@ -17,7 +17,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm/vmutil"
@@ -26,7 +26,7 @@ import (
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64) (tx *legacy.Tx, err error) {
+func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64) (tx *types.Tx, err error) {
 	amount += consensus.BlockSubsidy(blockHeight)
 
 	var script []byte
@@ -40,10 +40,10 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	}
 
 	builder := txbuilder.NewBuilder(time.Now())
-	if err = builder.AddInput(legacy.NewCoinbaseInput([]byte(string(blockHeight))), &txbuilder.SigningInstruction{}); err != nil {
+	if err = builder.AddInput(types.NewCoinbaseInput([]byte(string(blockHeight))), &txbuilder.SigningInstruction{}); err != nil {
 		return
 	}
-	if err = builder.AddOutput(legacy.NewTxOutput(*consensus.BTMAssetID, amount, script)); err != nil {
+	if err = builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, amount, script)); err != nil {
 		return
 	}
 	_, txData, err := builder.Build()
@@ -51,15 +51,15 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 		return
 	}
 
-	tx = &legacy.Tx{
+	tx = &types.Tx{
 		TxData: *txData,
-		Tx:     legacy.MapTx(txData),
+		Tx:     types.MapTx(txData),
 	}
 	return
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (b *legacy.Block, err error) {
+func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (b *types.Block, err error) {
 	view := state.NewUtxoViewpoint()
 	txStatus := bc.NewTransactionStatus()
 	txEntries := []*bc.Tx{nil}
@@ -68,24 +68,24 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	// get preblock info for generate next block
 	preBlock := c.BestBlock()
-	preBcBlock := legacy.MapBlock(preBlock)
+	preBcBlock := types.MapBlock(preBlock)
 	nextBlockHeight := preBlock.BlockHeader.Height + 1
 
-	var compareDiffBH *legacy.BlockHeader
+	var compareDiffBH *types.BlockHeader
 	if compareDiffBlock, err := c.GetBlockByHeight(nextBlockHeight - consensus.BlocksPerRetarget); err == nil {
 		compareDiffBH = &compareDiffBlock.BlockHeader
 	}
 
-	b = &legacy.Block{
-		BlockHeader: legacy.BlockHeader{
+	b = &types.Block{
+		BlockHeader: types.BlockHeader{
 			Version:           1,
 			Height:            nextBlockHeight,
 			PreviousBlockHash: preBlock.Hash(),
 			Timestamp:         uint64(time.Now().Unix()),
-			BlockCommitment:   legacy.BlockCommitment{},
+			BlockCommitment:   types.BlockCommitment{},
 			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
 		},
-		Transactions: []*legacy.Tx{nil},
+		Transactions: []*types.Tx{nil},
 	}
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/testutil"
@@ -21,7 +21,7 @@ import (
 
 	issueTx, _, _ := issue(t, nil, nil, 1)
 
-	got, _, err := c.GenerateBlock(ctx, b1, state.Empty(), time.Now(), []*legacy.Tx{issueTx})
+	got, _, err := c.GenerateBlock(ctx, b1, state.Empty(), time.Now(), []*types.Tx{issueTx})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func newDest(t testing.TB) *testDest {
 	}
 }
 
-func (d *testDest) sign(t testing.TB, tx *legacy.Tx, index uint32) {
+func (d *testDest) sign(t testing.TB, tx *types.Tx, index uint32) {
 	txsighash := tx.SigHash(index)
 	prog, _ := vm.Assemble(fmt.Sprintf("0x%x TXSIGHASH EQUAL", txsighash.Bytes()))
 	h := sha3.Sum256(prog)
@@ -73,7 +73,7 @@ func newAsset(t testing.TB) *testAsset {
 	}
 }
 
-func issue(t testing.TB, asset *testAsset, dest *testDest, amount uint64) (*legacy.Tx, *testAsset, *testDest) {
+func issue(t testing.TB, asset *testAsset, dest *testDest, amount uint64) (*types.Tx, *testAsset, *testDest) {
 	if asset == nil {
 		asset = newAsset(t)
 	}
@@ -82,13 +82,13 @@ func issue(t testing.TB, asset *testAsset, dest *testDest, amount uint64) (*lega
 	}
 	assetCP, _ := asset.controlProgram()
 	destCP, _ := dest.controlProgram()
-	tx := legacy.NewTx(legacy.TxData{
+	tx := types.NewTx(types.TxData{
 		Version: 1,
-		Inputs: []*legacy.TxInput{
-			legacy.NewIssuanceInput([]byte{1}, amount, assetCP, nil, nil),
+		Inputs: []*types.TxInput{
+			types.NewIssuanceInput([]byte{1}, amount, assetCP, nil, nil),
 		},
-		Outputs: []*legacy.TxOutput{
-			legacy.NewTxOutput(asset.AssetID, amount, destCP),
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(asset.AssetID, amount, destCP),
 		},
 	})
 	asset.sign(t, tx, 0)

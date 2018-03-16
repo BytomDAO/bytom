@@ -5,12 +5,12 @@ import (
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 // Template represents a partially- or fully-signed transaction.
 type Template struct {
-	Transaction         *legacy.Tx            `json:"raw_transaction"`
+	Transaction         *types.Tx             `json:"raw_transaction"`
 	SigningInstructions []*SigningInstruction `json:"signing_instructions"`
 
 	// Local indicates that all inputs to the transaction are signed

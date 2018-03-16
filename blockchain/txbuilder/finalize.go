@@ -6,7 +6,7 @@ import (
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 )
 
@@ -22,7 +22,7 @@ var (
 // FinalizeTx validates a transaction signature template,
 // assembles a fully signed tx, and stores the effects of
 // its changes on the UTXO set.
-func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *legacy.Tx) error {
+func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 	err := checkTxSighashCommitment(tx)
 	if err != nil {
 		return err
@@ -56,7 +56,7 @@ var (
 	ErrTxSignatureFailure = errors.New("tx signature was attempted but failed")
 )
 
-func checkTxSighashCommitment(tx *legacy.Tx) error {
+func checkTxSighashCommitment(tx *types.Tx) error {
 	// TODO: this is the local sender check rules, we might don't need it due to the rule is difference
 	return nil
 	var lastError error
@@ -64,9 +64,9 @@ func checkTxSighashCommitment(tx *legacy.Tx) error {
 	for i, inp := range tx.Inputs {
 		var args [][]byte
 		switch t := inp.TypedInput.(type) {
-		case *legacy.SpendInput:
+		case *types.SpendInput:
 			args = t.Arguments
-		case *legacy.IssuanceInput:
+		case *types.IssuanceInput:
 			args = t.Arguments
 		}
 		// Note: These numbers will need to change if more args are added such that the minimum length changes
@@ -112,7 +112,7 @@ func checkTxSighashCommitment(tx *legacy.Tx) error {
 	Peer *rpc.Client
 }
 
-func (rg *RemoteGenerator) Submit(ctx context.Context, tx *legacy.Tx) error {
+func (rg *RemoteGenerator) Submit(ctx context.Context, tx *types.Tx) error {
 	err := rg.Peer.Call(ctx, "/rpc/submit", tx, nil)
 	err = errors.Wrap(err, "generator transaction notice")
 	return err
