@@ -32,9 +32,8 @@ message AssetAmount {
 }
 
 message AssetDefinition {
-  Hash    initial_block_id = 1;
-  Program issuance_program = 2;
-  Hash    data             = 3;
+  Program issuance_program = 1;
+  Hash    data             = 2;
 }
 
 message ValueSource {

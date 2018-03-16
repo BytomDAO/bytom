@@ -15,7 +15,7 @@ func TestMerkleRoot(t *testing.T) {
 		want      Hash
 	}{{
 		witnesses: [][][]byte{
-			[][]byte{
+			{
 				{1},
 				[]byte("00000"),
 			},
@@ -23,11 +23,11 @@ func TestMerkleRoot(t *testing.T) {
 		want: mustDecodeHash("dd26282725467a18bf98ed14e022da9493436dd09372cfeae13080cbaaded00f"),
 	}, {
 		witnesses: [][][]byte{
-			[][]byte{
+			{
 				{1},
 				[]byte("000000"),
 			},
-			[][]byte{
+			{
 				{1},
 				[]byte("111111"),
 			},
@@ -35,11 +35,11 @@ func TestMerkleRoot(t *testing.T) {
 		want: mustDecodeHash("a112fb9aea40e6d8b2e9f443ec326d49bea7b61cd616b4bddeb9ebb010e76bf5"),
 	}, {
 		witnesses: [][][]byte{
-			[][]byte{
+			{
 				{1},
 				[]byte("000000"),
 			},
-			[][]byte{
+			{
 				{2},
 				[]byte("111111"),
 				[]byte("222222"),
@@ -79,15 +79,14 @@ func TestMerkleRoot(t *testing.T) {
 }
 
 func TestDuplicateLeaves(t *testing.T) {
-	var initialBlockHash Hash
 	trueProg := []byte{byte(vm.OP_TRUE)}
-	assetID := ComputeAssetID(trueProg, &initialBlockHash, 1, &EmptyStringHash)
+	assetID := ComputeAssetID(trueProg, 1, &EmptyStringHash)
 	txs := make([]*Tx, 6)
 	for i := uint64(0); i < 6; i++ {
 		now := []byte(time.Now().String())
 		txs[i] = legacy.NewTx(legacy.TxData{
 			Version: 1,
-			Inputs:  []*legacy.TxInput{legacy.NewIssuanceInput(now, i, initialBlockHash, trueProg, nil, nil)},
+			Inputs:  []*legacy.TxInput{legacy.NewIssuanceInput(now, i, trueProg, nil, nil)},
 			Outputs: []*legacy.TxOutput{legacy.NewTxOutput(assetID, i, trueProg)},
 		}).Tx
 	}
@@ -112,11 +111,10 @@ func TestDuplicateLeaves(t *testing.T) {
 }
 
 func TestAllDuplicateLeaves(t *testing.T) {
-	var initialBlockHash Hash
 	trueProg := []byte{byte(vm.OP_TRUE)}
-	assetID := ComputeAssetID(trueProg, &initialBlockHash, 1, &EmptyStringHash)
+	assetID := ComputeAssetID(trueProg, 1, &EmptyStringHash)
 	now := []byte(time.Now().String())
-	issuanceInp := legacy.NewIssuanceInput(now, 1, initialBlockHash, trueProg, nil, nil)
+	issuanceInp := legacy.NewIssuanceInput(now, 1, trueProg, nil, nil)
 
 	tx := legacy.NewTx(legacy.TxData{
 		Version: 1,

@@ -65,8 +65,7 @@ type testAsset struct {
 func newAsset(t testing.TB) *testAsset {
 	dest := newDest(t)
 	cp, _ := dest.controlProgram()
-	var initialBlockID bc.Hash
-	assetID := bc.ComputeAssetID(cp, &initialBlockID, 1, &bc.EmptyStringHash)
+	assetID := bc.ComputeAssetID(cp, 1, &bc.EmptyStringHash)
 
 	return &testAsset{
 		AssetID:  assetID,
@@ -86,7 +85,7 @@ func issue(t testing.TB, asset *testAsset, dest *testDest, amount uint64) (*lega
 	tx := legacy.NewTx(legacy.TxData{
 		Version: 1,
 		Inputs: []*legacy.TxInput{
-			legacy.NewIssuanceInput([]byte{1}, amount, bc.Hash{}, assetCP, nil, nil),
+			legacy.NewIssuanceInput([]byte{1}, amount, assetCP, nil, nil),
 		},
 		Outputs: []*legacy.TxOutput{
 			legacy.NewTxOutput(asset.AssetID, amount, destCP),

@@ -176,7 +176,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		RawDefinitionByte: rawDefinition,
 		VMVersion:         vmver,
 		IssuanceProgram:   issuanceProgram,
-		AssetID:           bc.ComputeAssetID(issuanceProgram, &reg.initialBlockHash, vmver, &defHash),
+		AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
 		Signer:            assetSigner,
 		Tags:              tags,
 	}

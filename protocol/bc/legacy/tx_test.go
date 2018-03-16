@@ -19,7 +19,7 @@ func TestTxHashes(t *testing.T) {
 		},
 		{
 			txdata: sampleTx(),
-			hash:   mustDecodeHash("33c121707a5c5567ed2c0a63da1fbc4077d51bc367b9630c664bfc241b51e641"), // todo: verify this value,
+			hash:   mustDecodeHash("718ef8d06b8a2b9e93d6c1555bfcda83aed492643b4e7dd85b816fa13ced46b9"), // todo: verify this value,
 		},
 	}
 
@@ -49,8 +49,7 @@ func BenchmarkHashNonemptyTx(b *testing.B) {
 }
 
 func sampleTx() *TxData {
-	initialBlockHash := mustDecodeHash("03deff1d4319d67baa10a6d26c1fea9c3e8d30e33474efee1a610a9bb49d758d")
-	assetID := bc.ComputeAssetID([]byte{1}, &initialBlockHash, 1, &bc.EmptyStringHash)
+	assetID := bc.ComputeAssetID([]byte{1}, 1, &bc.EmptyStringHash)
 	return &TxData{
 		Version:        1,
 		SerializedSize: 66,
