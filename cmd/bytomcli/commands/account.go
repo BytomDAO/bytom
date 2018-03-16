@@ -138,9 +138,9 @@ var updateAccountTagsCmd = &cobra.Command{
 	},
 }
 
-var createAccountAddressCmd = &cobra.Command{
-	Use:   "create-account-address <accountID | alias>",
-	Short: "Create an account address",
+var createAccountReceiverCmd = &cobra.Command{
+	Use:   "create-account-receiver <accountID | alias>",
+	Short: "Create an account receiver",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var ins = struct {
@@ -148,7 +148,7 @@ var createAccountAddressCmd = &cobra.Command{
 			ExpiresAt   time.Time `json:"expires_at,omitempty"`
 		}{AccountInfo: args[0]}
 
-		data, exitCode := util.ClientCall("/create-account-address", &ins)
+		data, exitCode := util.ClientCall("/create-account-receiver", &ins)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
