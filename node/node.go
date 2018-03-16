@@ -252,7 +252,7 @@ func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
 	xpubs := hsm.ListKeys()
 
 	if len(xpubs) == 0 {
-		xpub, err := hsm.XCreate("default", "");
+		xpub, err := hsm.XCreate("default", "123456")
 		if err != nil {
 			return err
 		}
