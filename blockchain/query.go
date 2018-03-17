@@ -21,7 +21,17 @@ func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
 		return NewErrorResponse(err)
 	}
 
-	return NewSuccessResponse(accounts)
+	annotatedAccounts := make([]query.AnnotatedAccount, 0, len(accounts))
+	for _, acc := range accounts {
+		annotated, err := account.Annotated(acc)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+
+		annotatedAccounts = append(annotatedAccounts, *annotated)
+	}
+
+	return NewSuccessResponse(annotatedAccounts)
 }
 
 // POST /list-assets

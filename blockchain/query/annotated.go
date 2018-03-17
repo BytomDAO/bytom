@@ -56,16 +56,10 @@ type AnnotatedOutput struct {
 type AnnotatedAccount struct {
 	ID     string           `json:"id"`
 	Alias  string           `json:"alias,omitempty"`
-	Keys   []*AccountKey    `json:"keys"`
+	XPubs    []chainkd.XPub `json:"xpubs"`
 	Quorum int              `json:"quorum"`
 	Tags   *json.RawMessage `json:"tags"`
-}
-
-//AccountKey means an account key.
-type AccountKey struct {
-	RootXPub              chainkd.XPub         `json:"root_xpub"`
-	AccountXPub           chainkd.XPub         `json:"account_xpub"`
-	AccountDerivationPath []chainjson.HexBytes `json:"account_derivation_path"`
+	KeyIndex uint64         `json:"key_index"`
 }
 
 //AnnotatedAsset means an annotated asset.

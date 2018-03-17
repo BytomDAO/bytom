@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/signers"
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -33,10 +31,12 @@ var emptyJSONObject = json.RawMessage(`{}`)
 //Annotated init an annotated account object
 func Annotated(a *Account) (*query.AnnotatedAccount, error) {
 	aa := &query.AnnotatedAccount{
-		ID:     a.ID,
-		Alias:  a.Alias,
-		Quorum: a.Quorum,
-		Tags:   &emptyJSONObject,
+		ID:       a.ID,
+		Alias:    a.Alias,
+		Quorum:   a.Quorum,
+		Tags:     &emptyJSONObject,
+		XPubs:    a.XPubs,
+		KeyIndex: a.KeyIndex,
 	}
 
 	tags, err := json.Marshal(a.Tags)
@@ -48,17 +48,5 @@ func Annotated(a *Account) (*query.AnnotatedAccount, error) {
 		aa.Tags = &rawTags
 	}
 
-	path := signers.Path(a.Signer, signers.AccountKeySpace)
-	var jsonPath []chainjson.HexBytes
-	for _, p := range path {
-		jsonPath = append(jsonPath, p)
-	}
-	for _, xpub := range a.XPubs {
-		aa.Keys = append(aa.Keys, &query.AccountKey{
-			RootXPub:              xpub,
-			AccountXPub:           xpub.Derive(path),
-			AccountDerivationPath: jsonPath,
-		})
-	}
 	return aa, nil
 }
