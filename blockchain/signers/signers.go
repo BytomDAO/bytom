@@ -3,13 +3,11 @@ package signers
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"sort"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 type keySpace byte
@@ -90,61 +88,6 @@ func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64
 		Quorum:   quorum,
 		KeyIndex: keyIndex,
 	}, nil
-}
-
-// Find retrieves a Signer from the database
-// using the type and id.
-func Find(ctx context.Context, db dbm.DB, typ, id string) (*Signer, error) {
-	/*const q = `
-		SELECT id, type, xpubs, quorum, key_index
-		FROM signers WHERE id=$1
-	`
-	*/
-
-	var (
-		s         Signer
-		xpubBytes [][]byte
-	)
-	/*
-		err := db.QueryRowContext(ctx, q, id).Scan(
-			&s.ID,
-			&s.Type,
-			(*pq.ByteaArray)(&xpubBytes),
-			&s.Quorum,
-			&s.KeyIndex,
-		)
-		if err == sql.ErrNoRows {
-			return nil, errors.Wrap(pg.ErrUserInputNotFound)
-		}
-		if err != nil {
-			return nil, errors.Wrap(err)
-		}
-
-		if s.Type != typ {
-			return nil, errors.Wrap(ErrBadType)
-		}*/
-
-	keys, err := ConvertKeys(xpubBytes)
-	if err != nil {
-		return nil, errors.WithDetail(errors.New("bad xpub in databse"), errors.Detail(err))
-	}
-
-	s.XPubs = keys
-
-	return &s, nil
-}
-
-func ConvertKeys(xpubs [][]byte) ([]chainkd.XPub, error) {
-	var xkeys []chainkd.XPub
-	for i, xpub := range xpubs {
-		var xkey chainkd.XPub
-		if len(xpub) != len(xkey) {
-			return nil, errors.WithDetailf(ErrBadXPub, "key %d: xpub is not valid", i)
-		}
-		copy(xkey[:], xpub)
-		xkeys = append(xkeys, xkey)
-	}
-	return xkeys, nil
 }
 
 type sortKeys []chainkd.XPub
