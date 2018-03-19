@@ -3,7 +3,6 @@ package blockchain
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	log "github.com/sirupsen/logrus"
 
@@ -15,7 +14,7 @@ import (
 func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	accounts, err := bcr.accounts.ListAccounts(filter.ID)
+	accounts, err := bcr.wallet.AccountMgr.ListAccounts(filter.ID)
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
 		return NewErrorResponse(err)
@@ -38,7 +37,7 @@ func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
 func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	assets, err := bcr.assets.ListAssets(filter.ID)
+	assets, err := bcr.wallet.AssetReg.ListAssets(filter.ID)
 	if err != nil {
 		log.Errorf("listAssets: %v", err)
 		return NewErrorResponse(err)
@@ -49,69 +48,25 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
 
 // POST /listBalances
 func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
-	accountUTXOs, err := bcr.wallet.GetAccountUTXOs("")
-	if err != nil {
+	if balances, err := bcr.wallet.GetAccountBalances(""); err != nil {
 		log.Errorf("GetAccountUTXOs: %v", err)
+		return NewErrorResponse(err)
+	} else {
+		return NewSuccessResponse(balances)
+	}
+}
+
+// POST /get-transaction
+func (bcr *BlockchainReactor) getTransaction(ctx context.Context, txInfo struct {
+	TxID string `json:"tx_id"`
+}) Response {
+	transaction, err := bcr.wallet.GetTransactionByTxID(txInfo.TxID)
+	if err != nil {
+		log.Errorf("getTransaction error: %v", err)
 		return NewErrorResponse(err)
 	}
 
-	return NewSuccessResponse(bcr.indexBalances(accountUTXOs))
-}
-
-type accountBalance struct {
-	AccountID  string `json:"account_id"`
-	Alias      string `json:"account_alias"`
-	AssetAlias string `json:"asset_alias"`
-	AssetID    string `json:"asset_id"`
-	Amount     uint64 `json:"amount"`
-}
-
-func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accountBalance {
-	accBalance := make(map[string]map[string]uint64)
-	balances := make([]accountBalance, 0)
-	tmpBalance := accountBalance{}
-
-	for _, accountUTXO := range accountUTXOs {
-
-		assetID := accountUTXO.AssetID.String()
-		if _, ok := accBalance[accountUTXO.AccountID]; ok {
-			if _, ok := accBalance[accountUTXO.AccountID][assetID]; ok {
-				accBalance[accountUTXO.AccountID][assetID] += accountUTXO.Amount
-			} else {
-				accBalance[accountUTXO.AccountID][assetID] = accountUTXO.Amount
-			}
-		} else {
-			accBalance[accountUTXO.AccountID] = map[string]uint64{assetID: accountUTXO.Amount}
-		}
-	}
-
-	sortedAccount := []string{}
-	for k := range accBalance {
-		sortedAccount = append(sortedAccount, k)
-	}
-	sort.Strings(sortedAccount)
-
-	for _, id := range sortedAccount {
-		sortedAsset := []string{}
-		for k := range accBalance[id] {
-			sortedAsset = append(sortedAsset, k)
-		}
-		sort.Strings(sortedAsset)
-
-		for _, assetID := range sortedAsset {
-
-			alias := bcr.accounts.GetAliasByID(id)
-			assetAlias := bcr.assets.GetAliasByID(assetID)
-			tmpBalance.Alias = alias
-			tmpBalance.AccountID = id
-			tmpBalance.AssetID = assetID
-			tmpBalance.AssetAlias = assetAlias
-			tmpBalance.Amount = accBalance[id][assetID]
-			balances = append(balances, tmpBalance)
-		}
-	}
-
-	return balances
+	return NewSuccessResponse(transaction)
 }
 
 // POST /list-transactions
@@ -181,8 +136,8 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 		tmpUTXO.Address = utxo.Address
 		tmpUTXO.ValidHeight = utxo.ValidHeight
 
-		tmpUTXO.Alias = bcr.accounts.GetAliasByID(utxo.AccountID)
-		tmpUTXO.AssetAlias = bcr.assets.GetAliasByID(tmpUTXO.AssetID)
+		tmpUTXO.Alias = bcr.wallet.AccountMgr.GetAliasByID(utxo.AccountID)
+		tmpUTXO.AssetAlias = bcr.wallet.AssetReg.GetAliasByID(tmpUTXO.AssetID)
 
 		UTXOs = append(UTXOs, tmpUTXO)
 	}

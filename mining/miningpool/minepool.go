@@ -10,6 +10,7 @@ import (
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -23,14 +24,16 @@ type MiningPool struct {
 	chain          *protocol.Chain
 	accountManager *account.Manager
 	txPool         *protocol.TxPool
+	newBlockCh     chan *bc.Hash
 }
 
 // NewMiningPool will create a new MiningPool
-func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool) *MiningPool {
+func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash) *MiningPool {
 	m := &MiningPool{
 		chain:          c,
 		accountManager: accountManager,
 		txPool:         txPool,
+		newBlockCh:     newBlockCh,
 	}
 	go m.blockUpdater()
 	return m
@@ -90,5 +93,8 @@ func (m *MiningPool) SubmitWork(bh *types.BlockHeader) bool {
 	} else if isOrphan {
 		log.Warning("SubmitWork is orphan")
 	}
+
+	blockHash := bh.Hash()
+	m.newBlockCh <- &blockHash
 	return err == nil
 }

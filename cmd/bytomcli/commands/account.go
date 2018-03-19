@@ -157,6 +157,38 @@ var createAccountReceiverCmd = &cobra.Command{
 	},
 }
 
+var listAddressesCmd = &cobra.Command{
+	Use:   "list-addresses",
+	Short: "List the account addresses",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		data, exitCode := util.ClientCall("/list-addresses")
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSONList(data)
+	},
+}
+
+var validateAddressCmd = &cobra.Command{
+	Use:   "validate-address",
+	Short: "validate the account addresses",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		var ins = struct {
+			Address string `json:"address"`
+		}{Address: args[0]}
+
+		data, exitCode := util.ClientCall("/validate-address", &ins)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
 var listBalancesCmd = &cobra.Command{
 	Use:   "list-balances",
 	Short: "List the accounts balances",

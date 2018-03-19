@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"reflect"
 	"time"
@@ -10,19 +9,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	"github.com/bytom/blockchain/accesstoken"
-	"github.com/bytom/blockchain/account"
-	"github.com/bytom/blockchain/asset"
-	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/blockchain/wallet"
-	"github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc"
 	protocolTypes "github.com/bytom/protocol/bc/types"
 	"github.com/bytom/types"
 )
@@ -30,9 +24,8 @@ import (
 const (
 	// BlockchainChannel is a channel for blocks and status updates
 	BlockchainChannel = byte(0x40)
+	maxNewBlockChSize = int(1024)
 
-	defaultChannelCapacity      = 100
-	trySyncIntervalMS           = 100
 	statusUpdateIntervalSeconds = 10
 	maxBlockchainResponseSize   = 22020096 + 2
 	crosscoreRPCPrefix          = "/rpc/"
@@ -68,42 +61,17 @@ type BlockchainReactor struct {
 
 	chain         *protocol.Chain
 	wallet        *wallet.Wallet
-	accounts      *account.Manager
-	assets        *asset.Registry
-	accessTokens  *accesstoken.CredentialStore
 	txFeedTracker *txfeed.Tracker
 	blockKeeper   *blockKeeper
 	txPool        *protocol.TxPool
-	hsm           *pseudohsm.HSM
 	mining        *cpuminer.CPUMiner
 	miningPool    *miningpool.MiningPool
 	mux           *http.ServeMux
 	sw            *p2p.Switch
 	handler       http.Handler
 	evsw          types.EventSwitch
+	newBlockCh    chan *bc.Hash
 	miningEnable  bool
-}
-
-func batchRecover(ctx context.Context, v *interface{}) {
-	if r := recover(); r != nil {
-		var err error
-		if recoveredErr, ok := r.(error); ok {
-			err = recoveredErr
-		} else {
-			err = fmt.Errorf("panic with %T", r)
-		}
-		err = errors.Wrap(err)
-		*v = err
-	}
-
-	if *v == nil {
-		return
-	}
-	// Convert errors into error responses (including errors
-	// from recovered panics above).
-	if err, ok := (*v).(error); ok {
-		*v = errorFormatter.Format(err)
-	}
 }
 
 func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
@@ -128,64 +96,21 @@ func maxBytes(h http.Handler) http.Handler {
 	})
 }
 
-// Used as a request object for api queries
-type requestQuery struct {
-	Filter       string        `json:"filter,omitempty"`
-	FilterParams []interface{} `json:"filter_params,omitempty"`
-	SumBy        []string      `json:"sum_by,omitempty"`
-	PageSize     int           `json:"page_size"`
-
-	// AscLongPoll and Timeout are used by /list-transactions
-	// to facilitate notifications.
-	AscLongPoll bool          `json:"ascending_with_long_poll,omitempty"`
-	Timeout     json.Duration `json:"timeout"`
-
-	// After is a completely opaque cursor, indicating that only
-	// items in the result set after the one identified by `After`
-	// should be included. It has no relationship to time.
-	After string `json:"after"`
-
-	// These two are used for time-range queries like /list-transactions
-	StartTimeMS uint64 `json:"start_time,omitempty"`
-	EndTimeMS   uint64 `json:"end_time,omitempty"`
-
-	// This is used for point-in-time queries like /list-balances
-	// TODO(bobg): Different request structs for endpoints with different needs
-	TimestampMS uint64 `json:"timestamp,omitempty"`
-
-	// This is used for filtering results from /list-access-tokens
-	// Value must be "client" or "network"
-	Type string `json:"type"`
-
-	// Aliases is used to filter results from /mockshm/list-keys
-	Aliases []string `json:"aliases,omitempty"`
-}
-
-// Used as a response object for api queries
-type page struct {
-	Items    interface{}  `json:"items"`
-	Next     requestQuery `json:"next"`
-	LastPage bool         `json:"last_page"`
-	After    string       `json:"after"`
-}
-
 // NewBlockchainReactor returns the reactor of whole blockchain.
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch,wallet *wallet.Wallet, txfeeds *txfeed.Tracker, miningEnable bool) *BlockchainReactor {
+	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 	bcr := &BlockchainReactor{
 		chain:         chain,
 		wallet:        wallet,
-		accounts:      accounts,
-		assets:        assets,
 		blockKeeper:   newBlockKeeper(chain, sw),
 		txPool:        txPool,
-		mining:        cpuminer.NewCPUMiner(chain, accounts, txPool),
-		miningPool:    miningpool.NewMiningPool(chain, accounts, txPool),
+		mining:        cpuminer.NewCPUMiner(chain, wallet.AccountMgr, txPool, newBlockCh),
+		miningPool:    miningpool.NewMiningPool(chain, wallet.AccountMgr, txPool, newBlockCh),
 		mux:           http.NewServeMux(),
 		sw:            sw,
-		hsm:           hsm,
 		txFeedTracker: txfeeds,
-		accessTokens:  accessTokens,
 		miningEnable:  miningEnable,
+		newBlockCh:    newBlockCh,
 	}
 	bcr.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcr)
 	return bcr
@@ -215,7 +140,7 @@ func (bcr *BlockchainReactor) OnStop() {
 // GetChannels implements Reactor
 func (bcr *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
 	return []*p2p.ChannelDescriptor{
-		&p2p.ChannelDescriptor{
+		{
 			ID:                BlockchainChannel,
 			Priority:          5,
 			SendQueueCapacity: 100,
@@ -299,6 +224,12 @@ func (bcr *BlockchainReactor) syncRoutine() {
 
 	for {
 		select {
+		case blockHash := <-bcr.newBlockCh:
+			block, err := bcr.chain.GetBlockByHash(blockHash)
+			if err != nil {
+				log.Errorf("Error get block from newBlockCh %v", err)
+			}
+			log.WithFields(log.Fields{"Hash": blockHash, "height": block.Height}).Info("Boardcast my new block")
 		case newTx := <-newTxCh:
 			bcr.txFeedTracker.TxFilter(newTx)
 			go bcr.BroadcastTransaction(newTx)

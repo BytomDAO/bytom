@@ -3,7 +3,7 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
-	"time"
+	"sort"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -84,7 +84,7 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *types.Block, txStatus *b
 	var err error
 
 	// unknow how many spent and retire outputs
-	reverseOuts := make([]*rawOutput, 0)
+	reverseOuts := []*rawOutput{}
 
 	// handle spent UTXOs
 	for txIndex, tx := range b.Transactions {
@@ -179,8 +179,8 @@ type Summary struct {
 
 // TxSummary is the struct of transaction summary
 type TxSummary struct {
-	ID        bc.Hash   `json:"id"`
-	Timestamp time.Time `json:"timestamp"`
+	ID        bc.Hash   `json:"tx_id"`
+	Timestamp uint64    `json:"block_time"`
 	Inputs    []Summary `json:"inputs"`
 	Outputs   []Summary `json:"outputs"`
 }
@@ -412,6 +412,22 @@ func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus
 	return annotatedTxs
 }
 
+// GetTransactionByTxID get transaction by txID
+func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
+	formatKey := w.DB.Get(calcTxIndexKey(txID))
+	if formatKey == nil {
+		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
+	}
+
+	annotatedTx := &query.AnnotatedTx{}
+	txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
+	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
+		return nil, err
+	}
+
+	return annotatedTx, nil
+}
+
 // GetTransactionsByTxID get account txs by account tx ID
 func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
@@ -440,7 +456,7 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error
 
 // GetTransactionsSummary get transactions summary
 func (w *Wallet) GetTransactionsSummary(transactions []*query.AnnotatedTx) []TxSummary {
-	Txs := make([]TxSummary, 0)
+	Txs := []TxSummary{}
 
 	for _, annotatedTx := range transactions {
 		tmpTxSummary := TxSummary{
@@ -513,7 +529,7 @@ func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.Annotate
 // GetAccountUTXOs return all account unspent outputs
 func (w *Wallet) GetAccountUTXOs(id string) ([]account.UTXO, error) {
 	accountUTXO := account.UTXO{}
-	accountUTXOs := make([]account.UTXO, 0)
+	accountUTXOs := []account.UTXO{}
 
 	accountUTXOIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix + id))
 	defer accountUTXOIter.Release()
@@ -528,4 +544,67 @@ func (w *Wallet) GetAccountUTXOs(id string) ([]account.UTXO, error) {
 	}
 
 	return accountUTXOs, nil
+}
+
+func (w *Wallet) GetAccountBalances(id string) ([]accountBalance, error) {
+	accountUTXOs, err := w.GetAccountUTXOs("")
+	if err != nil {
+		return nil, err
+	}
+
+	return w.indexBalances(accountUTXOs), nil
+}
+
+type accountBalance struct {
+	AccountID  string `json:"account_id"`
+	Alias      string `json:"account_alias"`
+	AssetAlias string `json:"asset_alias"`
+	AssetID    string `json:"asset_id"`
+	Amount     uint64 `json:"amount"`
+}
+
+func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) []accountBalance {
+	accBalance := make(map[string]map[string]uint64)
+	balances := make([]accountBalance, 0)
+	tmpBalance := accountBalance{}
+
+	for _, accountUTXO := range accountUTXOs {
+		assetID := accountUTXO.AssetID.String()
+		if _, ok := accBalance[accountUTXO.AccountID]; ok {
+			if _, ok := accBalance[accountUTXO.AccountID][assetID]; ok {
+				accBalance[accountUTXO.AccountID][assetID] += accountUTXO.Amount
+			} else {
+				accBalance[accountUTXO.AccountID][assetID] = accountUTXO.Amount
+			}
+		} else {
+			accBalance[accountUTXO.AccountID] = map[string]uint64{assetID: accountUTXO.Amount}
+		}
+	}
+
+	var sortedAccount []string
+	for k := range accBalance {
+		sortedAccount = append(sortedAccount, k)
+	}
+	sort.Strings(sortedAccount)
+
+	for _, id := range sortedAccount {
+		var sortedAsset []string
+		for k := range accBalance[id] {
+			sortedAsset = append(sortedAsset, k)
+		}
+		sort.Strings(sortedAsset)
+
+		for _, assetID := range sortedAsset {
+			alias := w.AccountMgr.GetAliasByID(id)
+			assetAlias := w.AssetReg.GetAliasByID(assetID)
+			tmpBalance.Alias = alias
+			tmpBalance.AccountID = id
+			tmpBalance.AssetID = assetID
+			tmpBalance.AssetAlias = assetAlias
+			tmpBalance.Amount = accBalance[id][assetID]
+			balances = append(balances, tmpBalance)
+		}
+	}
+
+	return balances
 }
