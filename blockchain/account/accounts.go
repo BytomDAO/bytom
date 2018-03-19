@@ -155,7 +155,8 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 	nextAccountIndex := m.getNextXpubsIndex(xpubs)
 
-	id, signer, err := signers.Create("account", xpubs, quorum, nextAccountIndex)
+	signer, err := signers.Create("account", xpubs, quorum, nextAccountIndex)
+	id := signers.IDGenerate()
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}

@@ -65,24 +65,23 @@ func Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
 }
 
 // Create creates and stores a Signer in the database
-func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64) (string, *Signer, error) {
+func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64) (*Signer, error) {
 	if len(xpubs) == 0 {
-		return "", nil, errors.Wrap(ErrNoXPubs)
+		return nil, errors.Wrap(ErrNoXPubs)
 	}
 
 	sort.Sort(sortKeys(xpubs)) // this transforms the input slice
 	for i := 1; i < len(xpubs); i++ {
 		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
-			return "", nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpubs[i])
+			return nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpubs[i])
 		}
 	}
 
 	if quorum == 0 || quorum > len(xpubs) {
-		return "", nil, errors.Wrap(ErrBadQuorum)
+		return nil, errors.Wrap(ErrBadQuorum)
 	}
 
-	id := IDGenerate()
-	return id, &Signer{
+	return &Signer{
 		Type:     signerType,
 		XPubs:    xpubs,
 		Quorum:   quorum,
