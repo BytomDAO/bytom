@@ -56,8 +56,11 @@ func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) Response {
 	return NewSuccessResponse(bcBlock.BlockHeader)
 }
 
-type TxResp struct {
+type BlockTx struct {
 	ID         bc.Hash                  `json:"id"`
+	Version    uint64                   `json:"version"`
+	Size       uint64                   `json:"size"`
+	TimeRange  uint64                   `json:"time_range"`
 	Inputs     []*query.AnnotatedInput  `json:"inputs"`
 	Outputs    []*query.AnnotatedOutput `json:"outputs"`
 	StatusFail bool                     `json:"status_fail"`
@@ -69,24 +72,24 @@ type GetBlockReq struct {
 }
 
 type GetBlockResp struct {
-	Hash                   *bc.Hash  `json:"hash"`
-	Size                   uint64    `json:"size"`
-	Version                uint64    `json:"version"`
-	Height                 uint64    `json:"height"`
-	PreviousBlockHash      *bc.Hash  `json:"previous_block_hash"`
-	Timestamp              uint64    `json:"timestamp"`
-	Nonce                  uint64    `json:"nonce"`
-	Bits                   uint64    `json:"bits"`
-	Difficulty             string    `json:"difficulty"`
-	TransactionsMerkleRoot *bc.Hash  `json:"transaction_merkle_root"`
-	TransactionStatusHash  *bc.Hash  `json:"transaction_status_hash"`
-	Transactions           []*TxResp `json:"transactions"`
+	Hash                   *bc.Hash   `json:"hash"`
+	Size                   uint64     `json:"size"`
+	Version                uint64     `json:"version"`
+	Height                 uint64     `json:"height"`
+	PreviousBlockHash      *bc.Hash   `json:"previous_block_hash"`
+	Timestamp              uint64     `json:"timestamp"`
+	Nonce                  uint64     `json:"nonce"`
+	Bits                   uint64     `json:"bits"`
+	Difficulty             string     `json:"difficulty"`
+	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
+	TransactionStatusHash  *bc.Hash   `json:"transaction_status_hash"`
+	Transactions           []*BlockTx `json:"transactions"`
 }
 
 // return block by hash
 func (bcr *BlockchainReactor) getBlock(ins GetBlockReq) Response {
-	block := &types.Block{}
 	var err error
+	block := &types.Block{}
 	if len(ins.BlockHash) == 32 {
 		b32 := [32]byte{}
 		copy(b32[:], ins.BlockHash)
@@ -100,12 +103,12 @@ func (bcr *BlockchainReactor) getBlock(ins GetBlockReq) Response {
 	}
 
 	blockHash := block.Hash()
+	txStatus, err := bcr.chain.GetTransactionStatus(&blockHash)
 	rawBlock, err := block.MarshalText()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
-	txStatus, err := bcr.chain.GetTransactionStatus(&blockHash)
 	resp := &GetBlockResp{
 		Hash:                   &blockHash,
 		Size:                   uint64(len(rawBlock)),
@@ -118,14 +121,17 @@ func (bcr *BlockchainReactor) getBlock(ins GetBlockReq) Response {
 		Difficulty:             difficulty.CompactToBig(block.Bits).String(),
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
 		TransactionStatusHash:  &block.TransactionStatusHash,
-		Transactions:           []*TxResp{},
+		Transactions:           []*BlockTx{},
 	}
 
 	for i, orig := range block.Transactions {
-		tx := &TxResp{
-			ID:      orig.ID,
-			Inputs:  []*query.AnnotatedInput{},
-			Outputs: []*query.AnnotatedOutput{},
+		tx := &BlockTx{
+			ID:        orig.ID,
+			Version:   orig.Version,
+			Size:      orig.SerializedSize,
+			TimeRange: orig.TimeRange,
+			Inputs:    []*query.AnnotatedInput{},
+			Outputs:   []*query.AnnotatedOutput{},
 		}
 		tx.StatusFail, err = txStatus.GetStatus(i)
 		if err != nil {
