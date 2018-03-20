@@ -114,6 +114,19 @@ func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accou
 	return balances
 }
 
+// POST /get-transaction
+func (bcr *BlockchainReactor) getTransaction(ctx context.Context, txInfo struct {
+	TxID string `json:"tx_id"`
+}) Response {
+	transaction, err := bcr.wallet.GetTransactionByTxID(txInfo.TxID)
+	if err != nil {
+		log.Errorf("getTransaction error: %v", err)
+		return NewErrorResponse(err)
+	}
+
+	return NewSuccessResponse(transaction)
+}
+
 // POST /list-transactions
 func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struct {
 	ID        string `json:"id"`

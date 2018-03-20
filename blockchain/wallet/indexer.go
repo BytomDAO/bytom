@@ -412,6 +412,22 @@ func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus
 	return annotatedTxs
 }
 
+// GetTransactionByTxID get transaction by txID
+func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
+	formatKey := w.DB.Get(calcTxIndexKey(txID))
+	if formatKey == nil {
+		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
+	}
+
+	annotatedTx := &query.AnnotatedTx{}
+	txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
+	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
+		return nil, err
+	}
+
+	return annotatedTx, nil
+}
+
 // GetTransactionsByTxID get account txs by account tx ID
 func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
