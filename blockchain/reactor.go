@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"reflect"
 	"time"
@@ -16,8 +15,6 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/blockchain/wallet"
-	"github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/p2p"
@@ -31,8 +28,6 @@ const (
 	// BlockchainChannel is a channel for blocks and status updates
 	BlockchainChannel = byte(0x40)
 
-	defaultChannelCapacity      = 100
-	trySyncIntervalMS           = 100
 	statusUpdateIntervalSeconds = 10
 	maxBlockchainResponseSize   = 22020096 + 2
 	crosscoreRPCPrefix          = "/rpc/"
@@ -84,28 +79,6 @@ type BlockchainReactor struct {
 	miningEnable  bool
 }
 
-func batchRecover(ctx context.Context, v *interface{}) {
-	if r := recover(); r != nil {
-		var err error
-		if recoveredErr, ok := r.(error); ok {
-			err = recoveredErr
-		} else {
-			err = fmt.Errorf("panic with %T", r)
-		}
-		err = errors.Wrap(err)
-		*v = err
-	}
-
-	if *v == nil {
-		return
-	}
-	// Convert errors into error responses (including errors
-	// from recovered panics above).
-	if err, ok := (*v).(error); ok {
-		*v = errorFormatter.Format(err)
-	}
-}
-
 func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"is_configured": false,
@@ -126,47 +99,6 @@ func maxBytes(h http.Handler) http.Handler {
 		}
 		h.ServeHTTP(w, req)
 	})
-}
-
-// Used as a request object for api queries
-type requestQuery struct {
-	Filter       string        `json:"filter,omitempty"`
-	FilterParams []interface{} `json:"filter_params,omitempty"`
-	SumBy        []string      `json:"sum_by,omitempty"`
-	PageSize     int           `json:"page_size"`
-
-	// AscLongPoll and Timeout are used by /list-transactions
-	// to facilitate notifications.
-	AscLongPoll bool          `json:"ascending_with_long_poll,omitempty"`
-	Timeout     json.Duration `json:"timeout"`
-
-	// After is a completely opaque cursor, indicating that only
-	// items in the result set after the one identified by `After`
-	// should be included. It has no relationship to time.
-	After string `json:"after"`
-
-	// These two are used for time-range queries like /list-transactions
-	StartTimeMS uint64 `json:"start_time,omitempty"`
-	EndTimeMS   uint64 `json:"end_time,omitempty"`
-
-	// This is used for point-in-time queries like /list-balances
-	// TODO(bobg): Different request structs for endpoints with different needs
-	TimestampMS uint64 `json:"timestamp,omitempty"`
-
-	// This is used for filtering results from /list-access-tokens
-	// Value must be "client" or "network"
-	Type string `json:"type"`
-
-	// Aliases is used to filter results from /mockshm/list-keys
-	Aliases []string `json:"aliases,omitempty"`
-}
-
-// Used as a response object for api queries
-type page struct {
-	Items    interface{}  `json:"items"`
-	Next     requestQuery `json:"next"`
-	LastPage bool         `json:"last_page"`
-	After    string       `json:"after"`
 }
 
 // NewBlockchainReactor returns the reactor of whole blockchain.
@@ -215,7 +147,7 @@ func (bcr *BlockchainReactor) OnStop() {
 // GetChannels implements Reactor
 func (bcr *BlockchainReactor) GetChannels() []*p2p.ChannelDescriptor {
 	return []*p2p.ChannelDescriptor{
-		&p2p.ChannelDescriptor{
+		{
 			ID:                BlockchainChannel,
 			Priority:          5,
 			SendQueueCapacity: 100,
