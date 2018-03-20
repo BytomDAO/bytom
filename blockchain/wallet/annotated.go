@@ -185,15 +185,15 @@ func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, 
 		StatusFail:             statusFail,
 	}
 	for i := range orig.Inputs {
-		tx.Inputs = append(tx.Inputs, buildAnnotatedInput(orig, uint32(i)))
+		tx.Inputs = append(tx.Inputs, BuildAnnotatedInput(orig, uint32(i)))
 	}
 	for i := range orig.Outputs {
-		tx.Outputs = append(tx.Outputs, buildAnnotatedOutput(orig, i))
+		tx.Outputs = append(tx.Outputs, BuildAnnotatedOutput(orig, i))
 	}
 	return tx
 }
 
-func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
+func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
 		AssetDefinition: &emptyJSONObject,
@@ -220,7 +220,7 @@ func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	return in
 }
 
-func buildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
+func BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 	orig := tx.Outputs[idx]
 	outid := tx.OutputID(idx)
 	out := &query.AnnotatedOutput{
