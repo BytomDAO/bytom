@@ -4,7 +4,10 @@ import (
 	"context"
 
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/common"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/protocol/vm/vmutil"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -54,4 +57,41 @@ func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, in struct {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
+}
+
+type validateAddressResp struct {
+	Vaild   bool `json:"vaild"`
+	IsLocal bool `json:"is_local"`
+}
+
+// POST /validate-address
+func (bcr *BlockchainReactor) validateAddress(ctx context.Context, ins struct {
+	Address string `json:"address"`
+}) Response {
+	resp := &validateAddressResp{
+		Vaild:   false,
+		IsLocal: false,
+	}
+	address, err := common.DecodeAddress(ins.Address, &consensus.MainNetParams)
+	if err != nil {
+		return NewSuccessResponse(resp)
+	}
+
+	redeemContract := address.ScriptAddress()
+	program := []byte{}
+	switch address.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		program, err = vmutil.P2WPKHProgram(redeemContract)
+	case *common.AddressWitnessScriptHash:
+		program, err = vmutil.P2WSHProgram(redeemContract)
+	default:
+		return NewSuccessResponse(resp)
+	}
+	if err != nil {
+		return NewSuccessResponse(resp)
+	}
+
+	resp.Vaild = true
+	resp.IsLocal = bcr.accounts.IsLocalControlProgram(program)
+	return NewSuccessResponse(resp)
 }
