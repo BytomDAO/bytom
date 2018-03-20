@@ -37,7 +37,7 @@ func (bcr *BlockchainReactor) pseudohsmListKeys(ctx context.Context) Response {
 
 func (bcr *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 	Password string       `json:"password"`
-	XPub     chainkd.XPub `json:"xpubs"`
+	XPub     chainkd.XPub `json:"xpub"`
 }) Response {
 	if err := bcr.hsm.XDelete(x.XPub, x.Password); err != nil {
 		return NewErrorResponse(err)
