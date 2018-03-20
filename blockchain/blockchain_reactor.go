@@ -56,6 +56,7 @@ func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) Response {
 	return NewSuccessResponse(bcBlock.BlockHeader)
 }
 
+// BlockTx is the tx struct for getBlock func
 type BlockTx struct {
 	ID         bc.Hash                  `json:"id"`
 	Version    uint64                   `json:"version"`
@@ -66,11 +67,13 @@ type BlockTx struct {
 	StatusFail bool                     `json:"status_fail"`
 }
 
+// GetBlockReq is used to handle getBlock req
 type GetBlockReq struct {
 	BlockHeight uint64             `json:"block_height"`
 	BlockHash   chainjson.HexBytes `json:"block_hash"`
 }
 
+// GetBlockResp is the resp for getBlock api
 type GetBlockResp struct {
 	Hash                   *bc.Hash   `json:"hash"`
 	Size                   uint64     `json:"size"`
