@@ -69,6 +69,7 @@ func (bcr *BlockchainReactor) BuildHandler() {
 		m.Handle("/list-keys", jsonHandler(bcr.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
 
+		m.Handle("/get-transaction", jsonHandler(bcr.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
 		m.Handle("/list-balances", jsonHandler(bcr.listBalances))
 		m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))

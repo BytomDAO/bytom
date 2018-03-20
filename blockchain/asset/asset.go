@@ -152,7 +152,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, errors.Wrap(err, "get asset index error")
 	}
 
-	_, assetSigner, err := signers.Create("asset", xpubs, quorum, *nextAssetIndex)
+	assetSigner, err := signers.Create("asset", xpubs, quorum, *nextAssetIndex)
 	if err != nil {
 		return nil, err
 	}
