@@ -145,7 +145,7 @@ func (bcr *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.T
 		return nil, errors.Wrapf(err, "tx %s", tpl.Transaction.ID.String())
 	}
 
-	return map[string]string{"txid": tpl.Transaction.ID.String()}, nil
+	return map[string]string{"tx_id": tpl.Transaction.ID.String()}, nil
 }
 
 // finalizeTxWait calls FinalizeTx and then waits for confirmation of
@@ -223,7 +223,7 @@ func (bcr *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Templat
 		return NewErrorResponse(err)
 	}
 
-	log.WithField("txid", txID["txid"]).Info("submit single tx")
+	log.WithField("tx_id", txID["tx_id"]).Info("submit single tx")
 	return NewSuccessResponse(txID)
 }
 
@@ -244,6 +244,6 @@ func (bcr *BlockchainReactor) signSubmit(ctx context.Context, x struct {
 		return NewErrorResponse(err)
 	}
 
-	log.WithField("txid", txID["txid"]).Info("submit single tx")
+	log.WithField("tx_id", txID["tx_id"]).Info("submit single tx")
 	return NewSuccessResponse(txID)
 }
