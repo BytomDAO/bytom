@@ -9,7 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/blockchain/wallet"
 	"github.com/bytom/mining/cpuminer"
@@ -62,7 +61,6 @@ type BlockchainReactor struct {
 
 	chain         *protocol.Chain
 	wallet        *wallet.Wallet
-	accessTokens  *accesstoken.CredentialStore
 	txFeedTracker *txfeed.Tracker
 	blockKeeper   *blockKeeper
 	txPool        *protocol.TxPool
@@ -99,7 +97,7 @@ func maxBytes(h http.Handler) http.Handler {
 }
 
 // NewBlockchainReactor returns the reactor of whole blockchain.
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch,wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch,wallet *wallet.Wallet, txfeeds *txfeed.Tracker, miningEnable bool) *BlockchainReactor {
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 	bcr := &BlockchainReactor{
 		chain:         chain,
@@ -111,7 +109,6 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2
 		mux:           http.NewServeMux(),
 		sw:            sw,
 		txFeedTracker: txfeeds,
-		accessTokens:  accessTokens,
 		miningEnable:  miningEnable,
 		newBlockCh:    newBlockCh,
 	}

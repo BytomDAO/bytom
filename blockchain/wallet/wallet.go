@@ -8,6 +8,7 @@ import (
 	"github.com/tendermint/go-wire/data/base58"
 	"github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pseudohsm"
@@ -50,6 +51,7 @@ type Wallet struct {
 	AccountMgr     *account.Manager
 	AssetReg       *asset.Registry
 	Hsm            *pseudohsm.HSM
+	Tokens  	   *accesstoken.CredentialStore
 	chain          *protocol.Chain
 	rescanProgress chan struct{}
 	ImportPrivKey  bool
@@ -58,13 +60,14 @@ type Wallet struct {
 
 //NewWallet return a new wallet instance
 func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM,
-	chain *protocol.Chain) (*Wallet, error) {
+	accessTokens *accesstoken.CredentialStore, chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
 		DB:             walletDB,
 		AccountMgr:     account,
 		AssetReg:       asset,
 		chain:          chain,
 		Hsm:            hsm,
+		Tokens:         accessTokens,
 		rescanProgress: make(chan struct{}, 1),
 		keysInfo:       make([]KeyInfo, 0),
 	}
