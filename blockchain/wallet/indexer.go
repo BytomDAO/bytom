@@ -3,7 +3,6 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -84,7 +83,7 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *types.Block, txStatus *b
 	var err error
 
 	// unknow how many spent and retire outputs
-	reverseOuts := make([]*rawOutput, 0)
+	reverseOuts := []*rawOutput{}
 
 	// handle spent UTXOs
 	for txIndex, tx := range b.Transactions {
@@ -179,8 +178,8 @@ type Summary struct {
 
 // TxSummary is the struct of transaction summary
 type TxSummary struct {
-	ID        bc.Hash   `json:"id"`
-	Timestamp time.Time `json:"timestamp"`
+	ID        bc.Hash   `json:"tx_id"`
+	Timestamp uint64    `json:"block_time"`
 	Inputs    []Summary `json:"inputs"`
 	Outputs   []Summary `json:"outputs"`
 }
@@ -412,6 +411,22 @@ func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus
 	return annotatedTxs
 }
 
+// GetTransactionByTxID get transaction by txID
+func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
+	formatKey := w.DB.Get(calcTxIndexKey(txID))
+	if formatKey == nil {
+		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
+	}
+
+	annotatedTx := &query.AnnotatedTx{}
+	txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
+	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
+		return nil, err
+	}
+
+	return annotatedTx, nil
+}
+
 // GetTransactionsByTxID get account txs by account tx ID
 func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
@@ -440,7 +455,7 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error
 
 // GetTransactionsSummary get transactions summary
 func (w *Wallet) GetTransactionsSummary(transactions []*query.AnnotatedTx) []TxSummary {
-	Txs := make([]TxSummary, 0)
+	Txs := []TxSummary{}
 
 	for _, annotatedTx := range transactions {
 		tmpTxSummary := TxSummary{
@@ -513,7 +528,7 @@ func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.Annotate
 // GetAccountUTXOs return all account unspent outputs
 func (w *Wallet) GetAccountUTXOs(id string) ([]account.UTXO, error) {
 	accountUTXO := account.UTXO{}
-	accountUTXOs := make([]account.UTXO, 0)
+	accountUTXOs := []account.UTXO{}
 
 	accountUTXOIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix + id))
 	defer accountUTXOIter.Release()

@@ -89,6 +89,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(updateAssetTagsCmd)
 	BytomcliCmd.AddCommand(updateAssetAliasCmd)
 
+	BytomcliCmd.AddCommand(getTransactionCmd)
 	BytomcliCmd.AddCommand(listTransactionsCmd)
 	BytomcliCmd.AddCommand(listUnspentOutputsCmd)
 	BytomcliCmd.AddCommand(listBalancesCmd)
@@ -98,12 +99,11 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(submitTransactionCmd)
 	BytomcliCmd.AddCommand(signSubTransactionCmd)
 
-	BytomcliCmd.AddCommand(blockHeightCmd)
+	BytomcliCmd.AddCommand(getBlockCountCmd)
 	BytomcliCmd.AddCommand(blockHashCmd)
-	BytomcliCmd.AddCommand(getBlockByHashCmd)
+	BytomcliCmd.AddCommand(getBlockCmd)
 	BytomcliCmd.AddCommand(getBlockHeaderByHashCmd)
 	BytomcliCmd.AddCommand(getBlockTransactionsCountByHashCmd)
-	BytomcliCmd.AddCommand(getBlockByHeightCmd)
 	BytomcliCmd.AddCommand(getBlockTransactionsCountByHeightCmd)
 
 	BytomcliCmd.AddCommand(createKeyCmd)

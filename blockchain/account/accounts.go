@@ -369,6 +369,14 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*Ctr
 	return nil
 }
 
+// IsLocalControlProgram check is the input control program belong to local
+func (m *Manager) IsLocalControlProgram(prog []byte) bool {
+	var hash common.Hash
+	sha3pool.Sum256(hash[:], prog)
+	bytes := m.db.Get(CPKey(hash))
+	return bytes != nil
+}
+
 // GetCoinbaseControlProgram will return a coinbase script
 func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
@@ -434,4 +442,21 @@ func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 	}
 
 	return accounts, nil
+}
+
+// ListControlProgram return all the local control program
+func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
+	cps := []*CtrlProgram{}
+	cpIter := m.db.IteratorPrefix([]byte(accountCPPrefix))
+	defer cpIter.Release()
+
+	for cpIter.Next() {
+		cp := &CtrlProgram{}
+		if err := json.Unmarshal(cpIter.Value(), cp); err != nil {
+			return nil, err
+		}
+		cps = append(cps, cp)
+	}
+
+	return cps, nil
 }

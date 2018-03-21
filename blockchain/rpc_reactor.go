@@ -53,12 +53,14 @@ func webAssetsHandler(next http.Handler) http.Handler {
 // BuildHandler is in charge of all the rpc handling.
 func (bcr *BlockchainReactor) BuildHandler() {
 	m := bcr.mux
-	if bcr.accounts != nil && bcr.assets != nil {
+	if bcr.wallet.AccountMgr != nil && bcr.wallet.AssetReg != nil {
 		m.Handle("/create-account", jsonHandler(bcr.createAccount))
 		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
 		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
 		m.Handle("/list-accounts", jsonHandler(bcr.listAccounts))
+		m.Handle("/list-addresses", jsonHandler(bcr.listAddresses))
 		m.Handle("/delete-account", jsonHandler(bcr.deleteAccount))
+		m.Handle("/validate-address", jsonHandler(bcr.validateAddress))
 
 		m.Handle("/create-asset", jsonHandler(bcr.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(bcr.updateAssetAlias))
@@ -69,6 +71,7 @@ func (bcr *BlockchainReactor) BuildHandler() {
 		m.Handle("/list-keys", jsonHandler(bcr.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
 
+		m.Handle("/get-transaction", jsonHandler(bcr.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
 		m.Handle("/list-balances", jsonHandler(bcr.listBalances))
 		m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
@@ -97,7 +100,6 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/check-access-token", jsonHandler(bcr.checkAccessToken))
 
 	m.Handle("/block-hash", jsonHandler(bcr.getBestBlockHash))
-	m.Handle("/block-height", jsonHandler(bcr.blockHeight))
 
 	m.Handle("/export-private-key", jsonHandler(bcr.walletExportKey))
 	m.Handle("/import-private-key", jsonHandler(bcr.walletImportKey))
@@ -105,8 +107,8 @@ func (bcr *BlockchainReactor) BuildHandler() {
 
 	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
 	m.Handle("/get-block-header-by-height", jsonHandler(bcr.getBlockHeaderByHeight))
-	m.Handle("/get-block-by-hash", jsonHandler(bcr.getBlockByHash))
-	m.Handle("/get-block-by-height", jsonHandler(bcr.getBlockByHeight))
+	m.Handle("/get-block", jsonHandler(bcr.getBlock))
+	m.Handle("/get-block-count", jsonHandler(bcr.getBlockCount))
 	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(bcr.getBlockTransactionsCountByHash))
 	m.Handle("/get-block-transactions-count-by-height", jsonHandler(bcr.getBlockTransactionsCountByHeight))
 

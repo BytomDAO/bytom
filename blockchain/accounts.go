@@ -4,7 +4,10 @@ import (
 	"context"
 
 	"github.com/bytom/blockchain/account"
+	"github.com/bytom/common"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/protocol/vm/vmutil"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -16,7 +19,7 @@ func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 	Alias     string                 `json:"alias"`
 	Tags      map[string]interface{} `json:"tags"`
 }) Response {
-	acc, err := bcr.accounts.Create(ctx, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags)
+	acc, err := bcr.wallet.AccountMgr.Create(ctx, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -37,7 +40,7 @@ func (bcr *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag s
 	Tags        map[string]interface{} `json:"tags"`
 }) Response {
 
-	err := bcr.accounts.UpdateTags(nil, updateTag.AccountInfo, updateTag.Tags)
+	err := bcr.wallet.AccountMgr.UpdateTags(nil, updateTag.AccountInfo, updateTag.Tags)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -50,8 +53,66 @@ func (bcr *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag s
 func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, in struct {
 	AccountInfo string `json:"account_info"`
 }) Response {
-	if err := bcr.accounts.DeleteAccount(in); err != nil {
+	if err := bcr.wallet.AccountMgr.DeleteAccount(in); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
+}
+
+type validateAddressResp struct {
+	Vaild   bool `json:"vaild"`
+	IsLocal bool `json:"is_local"`
+}
+
+// POST /validate-address
+func (bcr *BlockchainReactor) validateAddress(ctx context.Context, ins struct {
+	Address string `json:"address"`
+}) Response {
+	resp := &validateAddressResp{
+		Vaild:   false,
+		IsLocal: false,
+	}
+	address, err := common.DecodeAddress(ins.Address, &consensus.MainNetParams)
+	if err != nil {
+		return NewSuccessResponse(resp)
+	}
+
+	redeemContract := address.ScriptAddress()
+	program := []byte{}
+	switch address.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		program, err = vmutil.P2WPKHProgram(redeemContract)
+	case *common.AddressWitnessScriptHash:
+		program, err = vmutil.P2WSHProgram(redeemContract)
+	default:
+		return NewSuccessResponse(resp)
+	}
+	if err != nil {
+		return NewSuccessResponse(resp)
+	}
+
+	resp.Vaild = true
+	resp.IsLocal = bcr.wallet.AccountMgr.IsLocalControlProgram(program)
+	return NewSuccessResponse(resp)
+}
+
+type addressResp struct {
+	AccountID string `json:"account_id"`
+	Address   string `json:"address"`
+}
+
+func (bcr *BlockchainReactor) listAddresses(ctx context.Context) Response {
+	cps, err := bcr.wallet.AccountMgr.ListControlProgram()
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	addresses := []*addressResp{}
+	for _, cp := range cps {
+		if cp.Address == "" {
+			continue
+		}
+		addresses = append(addresses, &addressResp{AccountID: cp.AccountID, Address: cp.Address})
+	}
+	return NewSuccessResponse(addresses)
 }

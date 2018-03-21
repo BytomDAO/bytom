@@ -278,6 +278,24 @@ var signSubTransactionCmd = &cobra.Command{
 	},
 }
 
+var getTransactionCmd = &cobra.Command{
+	Use:   "get-transaction <hash>",
+	Short: "get the transaction by matching the given transaction hash",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		txInfo := &struct {
+			TxID string `json:"tx_id"`
+		}{TxID: args[0]}
+
+		data, exitCode := util.ClientCall("/get-transaction", txInfo)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
 var listTransactionsCmd = &cobra.Command{
 	Use:   "list-transactions",
 	Short: "List the transactions",

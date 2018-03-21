@@ -175,7 +175,7 @@ func isValidJSON(b []byte) bool {
 func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
-		Timestamp:              b.Time(),
+		Timestamp:              b.Timestamp,
 		BlockID:                b.Hash(),
 		BlockHeight:            b.Height,
 		Position:               uint32(indexInBlock),
@@ -185,15 +185,16 @@ func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, 
 		StatusFail:             statusFail,
 	}
 	for i := range orig.Inputs {
-		tx.Inputs = append(tx.Inputs, buildAnnotatedInput(orig, uint32(i)))
+		tx.Inputs = append(tx.Inputs, BuildAnnotatedInput(orig, uint32(i)))
 	}
 	for i := range orig.Outputs {
-		tx.Outputs = append(tx.Outputs, buildAnnotatedOutput(orig, i))
+		tx.Outputs = append(tx.Outputs, BuildAnnotatedOutput(orig, i))
 	}
 	return tx
 }
 
-func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
+// BuildAnnotatedInput build the annotated input.
+func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
 		AssetDefinition: &emptyJSONObject,
@@ -220,7 +221,8 @@ func buildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	return in
 }
 
-func buildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
+// BuildAnnotatedOutput build the annotated output.
+func BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 	orig := tx.Outputs[idx]
 	outid := tx.OutputID(idx)
 	out := &query.AnnotatedOutput{
