@@ -24,7 +24,7 @@ func (bcr *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct 
 	Alias    string `json:"alias"`
 	Password string `json:"password"`
 }) Response {
-	xpub, err := bcr.hsm.XCreate(in.Alias, in.Password)
+	xpub, err := bcr.wallet.Hsm.XCreate(in.Alias, in.Password)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -32,14 +32,14 @@ func (bcr *BlockchainReactor) pseudohsmCreateKey(ctx context.Context, in struct 
 }
 
 func (bcr *BlockchainReactor) pseudohsmListKeys(ctx context.Context) Response {
-	return NewSuccessResponse(bcr.hsm.ListKeys())
+	return NewSuccessResponse(bcr.wallet.Hsm.ListKeys())
 }
 
 func (bcr *BlockchainReactor) pseudohsmDeleteKey(ctx context.Context, x struct {
 	Password string       `json:"password"`
 	XPub     chainkd.XPub `json:"xpub"`
 }) Response {
-	if err := bcr.hsm.XDelete(x.XPub, x.Password); err != nil {
+	if err := bcr.wallet.Hsm.XDelete(x.XPub, x.Password); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
@@ -63,7 +63,7 @@ func (bcr *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x stru
 }
 
 func (bcr *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
-	return bcr.hsm.XSign(xpub, path, data[:], password)
+	return bcr.wallet.Hsm.XSign(xpub, path, data[:], password)
 }
 
 func (bcr *BlockchainReactor) pseudohsmResetPassword(ctx context.Context, x struct {
@@ -71,5 +71,5 @@ func (bcr *BlockchainReactor) pseudohsmResetPassword(ctx context.Context, x stru
 	NewPassword string
 	XPub        chainkd.XPub `json:"xpubs"`
 }) error {
-	return bcr.hsm.ResetPassword(x.XPub, x.OldPassword, x.NewPassword)
+	return bcr.wallet.Hsm.ResetPassword(x.XPub, x.OldPassword, x.NewPassword)
 }

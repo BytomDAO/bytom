@@ -49,6 +49,7 @@ type Wallet struct {
 	status         StatusInfo
 	AccountMgr     *account.Manager
 	AssetReg       *asset.Registry
+	Hsm            *pseudohsm.HSM
 	chain          *protocol.Chain
 	rescanProgress chan struct{}
 	ImportPrivKey  bool
@@ -56,13 +57,14 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry,
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM,
 	chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
 		DB:             walletDB,
 		AccountMgr:     account,
 		AssetReg:       asset,
 		chain:          chain,
+		Hsm:            hsm,
 		rescanProgress: make(chan struct{}, 1),
 		keysInfo:       make([]KeyInfo, 0),
 	}
@@ -228,8 +230,8 @@ func getRescanNotification(w *Wallet) {
 
 // ExportAccountPrivKey exports the account private key as a WIF for encoding as a string
 // in the Wallet Import Formt.
-func (w *Wallet) ExportAccountPrivKey(hsm *pseudohsm.HSM, xpub chainkd.XPub, auth string) (*string, error) {
-	xprv, err := hsm.LoadChainKDKey(xpub, auth)
+func (w *Wallet) ExportAccountPrivKey(xpub chainkd.XPub, auth string) (*string, error) {
+	xprv, err := w.Hsm.LoadChainKDKey(xpub, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -242,11 +244,11 @@ func (w *Wallet) ExportAccountPrivKey(hsm *pseudohsm.HSM, xpub chainkd.XPub, aut
 }
 
 // ImportAccountPrivKey imports the account key in the Wallet Import Formt.
-func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, keyAlias, auth string, index uint64, accountAlias string) (*pseudohsm.XPub, error) {
-	if hsm.HasAlias(keyAlias) {
+func (w *Wallet) ImportAccountPrivKey(xprv chainkd.XPrv, keyAlias, auth string, index uint64, accountAlias string) (*pseudohsm.XPub, error) {
+	if w.Hsm.HasAlias(keyAlias) {
 		return nil, pseudohsm.ErrDuplicateKeyAlias
 	}
-	if hsm.HasKey(xprv) {
+	if w.Hsm.HasKey(xprv) {
 		return nil, pseudohsm.ErrDuplicateKey
 	}
 
@@ -254,7 +256,7 @@ func (w *Wallet) ImportAccountPrivKey(hsm *pseudohsm.HSM, xprv chainkd.XPrv, key
 		return nil, account.ErrDuplicateAlias
 	}
 
-	xpub, _, err := hsm.ImportXPrvKey(auth, keyAlias, xprv)
+	xpub, _, err := w.Hsm.ImportXPrvKey(auth, keyAlias, xprv)
 	if err != nil {
 		return nil, err
 	}
