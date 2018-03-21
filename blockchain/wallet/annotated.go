@@ -175,7 +175,7 @@ func isValidJSON(b []byte) bool {
 func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
-		Timestamp:              b.Time(),
+		Timestamp:              b.Timestamp,
 		BlockID:                b.Hash(),
 		BlockHeight:            b.Height,
 		Position:               uint32(indexInBlock),
@@ -193,6 +193,7 @@ func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, 
 	return tx
 }
 
+// BuildAnnotatedInput build the annotated input.
 func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
@@ -220,6 +221,7 @@ func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	return in
 }
 
+// BuildAnnotatedOutput build the annotated output.
 func BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 	orig := tx.Outputs[idx]
 	outid := tx.OutputID(idx)
