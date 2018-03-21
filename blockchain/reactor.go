@@ -10,7 +10,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/blockchain/accesstoken"
-	"github.com/bytom/blockchain/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txfeed"
@@ -65,7 +64,6 @@ type BlockchainReactor struct {
 
 	chain         *protocol.Chain
 	wallet        *wallet.Wallet
-	accounts      *account.Manager
 	assets        *asset.Registry
 	accessTokens  *accesstoken.CredentialStore
 	txFeedTracker *txfeed.Tracker
@@ -105,17 +103,16 @@ func maxBytes(h http.Handler) http.Handler {
 }
 
 // NewBlockchainReactor returns the reactor of whole blockchain.
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *BlockchainReactor {
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 	bcr := &BlockchainReactor{
 		chain:         chain,
 		wallet:        wallet,
-		accounts:      accounts,
 		assets:        assets,
 		blockKeeper:   newBlockKeeper(chain, sw),
 		txPool:        txPool,
-		mining:        cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh),
-		miningPool:    miningpool.NewMiningPool(chain, accounts, txPool, newBlockCh),
+		mining:        cpuminer.NewCPUMiner(chain, wallet.AccountMgr, txPool, newBlockCh),
+		miningPool:    miningpool.NewMiningPool(chain, wallet.AccountMgr, txPool, newBlockCh),
 		mux:           http.NewServeMux(),
 		sw:            sw,
 		hsm:           hsm,

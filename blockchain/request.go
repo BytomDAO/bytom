@@ -41,7 +41,7 @@ func (bcr *BlockchainReactor) filterAliases(ctx context.Context, br *BuildReques
 		id, _ = m["account_id"].(string)
 		alias, _ = m["account_alias"].(string)
 		if id == "" && alias != "" {
-			acc, err := bcr.accounts.FindByAlias(ctx, alias)
+			acc, err := bcr.wallet.AccountMgr.FindByAlias(ctx, alias)
 			if err != nil {
 				return errors.WithDetailf(err, "invalid account alias %s on action %d", alias, i)
 			}
