@@ -20,7 +20,7 @@ func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuil
 	var decoder func([]byte) (txbuilder.Action, error)
 	switch action {
 	case "control_account":
-		decoder = bcr.accounts.DecodeControlAction
+		decoder = bcr.wallet.AccountMgr.DecodeControlAction
 	case "control_address":
 		decoder = txbuilder.DecodeControlAddressAction
 	case "control_program":
@@ -28,13 +28,13 @@ func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuil
 	case "control_receiver":
 		decoder = txbuilder.DecodeControlReceiverAction
 	case "issue":
-		decoder = bcr.assets.DecodeIssueAction
+		decoder = bcr.wallet.AssetReg.DecodeIssueAction
 	case "retire":
 		decoder = txbuilder.DecodeRetireAction
 	case "spend_account":
-		decoder = bcr.accounts.DecodeSpendAction
+		decoder = bcr.wallet.AccountMgr.DecodeSpendAction
 	case "spend_account_unspent_output":
-		decoder = bcr.accounts.DecodeSpendUTXOAction
+		decoder = bcr.wallet.AccountMgr.DecodeSpendUTXOAction
 	default:
 		return nil, false
 	}
