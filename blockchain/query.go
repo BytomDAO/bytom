@@ -3,7 +3,6 @@ package blockchain
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	log "github.com/sirupsen/logrus"
 
@@ -49,69 +48,12 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
 
 // POST /listBalances
 func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
-	accountUTXOs, err := bcr.wallet.GetAccountUTXOs("")
-	if err != nil {
+	if balances, err := bcr.wallet.GetAccountBalances(""); err != nil {
 		log.Errorf("GetAccountUTXOs: %v", err)
 		return NewErrorResponse(err)
+	} else {
+		return NewSuccessResponse(balances)
 	}
-
-	return NewSuccessResponse(bcr.indexBalances(accountUTXOs))
-}
-
-type accountBalance struct {
-	AccountID  string `json:"account_id"`
-	Alias      string `json:"account_alias"`
-	AssetAlias string `json:"asset_alias"`
-	AssetID    string `json:"asset_id"`
-	Amount     uint64 `json:"amount"`
-}
-
-func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accountBalance {
-	accBalance := make(map[string]map[string]uint64)
-	balances := make([]accountBalance, 0)
-	tmpBalance := accountBalance{}
-
-	for _, accountUTXO := range accountUTXOs {
-
-		assetID := accountUTXO.AssetID.String()
-		if _, ok := accBalance[accountUTXO.AccountID]; ok {
-			if _, ok := accBalance[accountUTXO.AccountID][assetID]; ok {
-				accBalance[accountUTXO.AccountID][assetID] += accountUTXO.Amount
-			} else {
-				accBalance[accountUTXO.AccountID][assetID] = accountUTXO.Amount
-			}
-		} else {
-			accBalance[accountUTXO.AccountID] = map[string]uint64{assetID: accountUTXO.Amount}
-		}
-	}
-
-	sortedAccount := []string{}
-	for k := range accBalance {
-		sortedAccount = append(sortedAccount, k)
-	}
-	sort.Strings(sortedAccount)
-
-	for _, id := range sortedAccount {
-		sortedAsset := []string{}
-		for k := range accBalance[id] {
-			sortedAsset = append(sortedAsset, k)
-		}
-		sort.Strings(sortedAsset)
-
-		for _, assetID := range sortedAsset {
-
-			alias := bcr.wallet.AccountMgr.GetAliasByID(id)
-			assetAlias := bcr.wallet.AssetReg.GetAliasByID(assetID)
-			tmpBalance.Alias = alias
-			tmpBalance.AccountID = id
-			tmpBalance.AssetID = assetID
-			tmpBalance.AssetAlias = assetAlias
-			tmpBalance.Amount = accBalance[id][assetID]
-			balances = append(balances, tmpBalance)
-		}
-	}
-
-	return balances
 }
 
 // POST /get-transaction
