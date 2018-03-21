@@ -2,7 +2,6 @@ package query
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
@@ -12,7 +11,7 @@ import (
 //AnnotatedTx means an annotated transaction.
 type AnnotatedTx struct {
 	ID                     bc.Hash            `json:"tx_id"`
-	Timestamp              time.Time          `json:"block_time"`
+	Timestamp              uint64             `json:"block_time"`
 	BlockID                bc.Hash            `json:"block_hash"`
 	BlockHeight            uint64             `json:"block_height"`
 	Position               uint32             `json:"block_index"`
