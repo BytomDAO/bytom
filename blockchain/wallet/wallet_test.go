@@ -139,7 +139,7 @@ func TestExportAndImportPrivKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	w, err := NewWallet(testDB, acntManager, reg, chain)
+	w, err := NewWallet(testDB, acntManager, reg, hsm, chain)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestExportAndImportPrivKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	priv, err := w.ExportAccountPrivKey(hsm, xpub.XPub, pwd)
+	priv, err := w.ExportAccountPrivKey(xpub.XPub, pwd)
 
 	wantPriv, err := hsm.LoadChainKDKey(xpub.XPub, pwd)
 	if err != nil {
@@ -178,14 +178,14 @@ func TestExportAndImportPrivKey(t *testing.T) {
 	var xprv [64]byte
 	copy(xprv[:], rawPriv[:64])
 
-	_, err = w.ImportAccountPrivKey(hsm, xprv, xpub.Alias, pwd, 0, acnt1.Alias)
+	_, err = w.ImportAccountPrivKey(xprv, xpub.Alias, pwd, 0, acnt1.Alias)
 	if err != pseudohsm.ErrDuplicateKeyAlias {
 		t.Fatal(err)
 	}
 
 	hsm.XDelete(xpub.XPub, pwd)
 
-	_, err = w.ImportAccountPrivKey(hsm, xprv, xpub.Alias, pwd, 0, acnt1.Alias)
+	_, err = w.ImportAccountPrivKey(xprv, xpub.Alias, pwd, 0, acnt1.Alias)
 	if err != account.ErrDuplicateAlias {
 		t.Fatal(err)
 	}
@@ -196,7 +196,7 @@ func TestExportAndImportPrivKey(t *testing.T) {
 
 	w.AccountMgr.DeleteAccount(accountInfo)
 
-	acnt2, err := w.ImportAccountPrivKey(hsm, xprv, xpub.Alias, pwd, 0, acnt1.Alias)
+	acnt2, err := w.ImportAccountPrivKey(xprv, xpub.Alias, pwd, 0, acnt1.Alias)
 	if err != nil {
 		t.Fatal(err)
 	}

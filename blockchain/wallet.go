@@ -24,7 +24,7 @@ func (bcr *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
 	Password string       `json:"password"`
 	XPub     chainkd.XPub `json:"xpub"`
 }) Response {
-	key, err := bcr.wallet.ExportAccountPrivKey(bcr.hsm, in.XPub, in.Password)
+	key, err := bcr.wallet.ExportAccountPrivKey(in.XPub, in.Password)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -54,7 +54,7 @@ func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in KeyImportP
 	var xprv [64]byte
 	copy(xprv[:], rawData[:64])
 
-	xpub, err := bcr.wallet.ImportAccountPrivKey(bcr.hsm, xprv, in.KeyAlias, in.Password, in.Index, in.AccountAlias)
+	xpub, err := bcr.wallet.ImportAccountPrivKey(xprv, in.KeyAlias, in.Password, in.Index, in.AccountAlias)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
