@@ -15,7 +15,7 @@ import (
 type KeyImportParams struct {
 	KeyAlias     string `json:"alias"`
 	Password     string `json:"password"`
-	XPrv         string `json:"private_key"`
+	XPrv         string `json:"xprv"`
 	Index        uint64 `json:"index"`
 	AccountAlias string `json:"account_alias"`
 }
