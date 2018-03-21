@@ -26,12 +26,12 @@ var blockHashCmd = &cobra.Command{
 	},
 }
 
-var blockHeightCmd = &cobra.Command{
-	Use:   "block-height",
+var getBlockCountCmd = &cobra.Command{
+	Use:   "get-block-count",
 	Short: "Get the number of most recent block",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/block-height")
+		data, exitCode := util.ClientCall("/get-block-count")
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

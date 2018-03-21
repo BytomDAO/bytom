@@ -100,7 +100,6 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/check-access-token", jsonHandler(bcr.checkAccessToken))
 
 	m.Handle("/block-hash", jsonHandler(bcr.getBestBlockHash))
-	m.Handle("/block-height", jsonHandler(bcr.blockHeight))
 
 	m.Handle("/export-private-key", jsonHandler(bcr.walletExportKey))
 	m.Handle("/import-private-key", jsonHandler(bcr.walletImportKey))
@@ -109,6 +108,7 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	m.Handle("/get-block-header-by-hash", jsonHandler(bcr.getBlockHeaderByHash))
 	m.Handle("/get-block-header-by-height", jsonHandler(bcr.getBlockHeaderByHeight))
 	m.Handle("/get-block", jsonHandler(bcr.getBlock))
+	m.Handle("/get-block-count", jsonHandler(bcr.getBlockCount))
 	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(bcr.getBlockTransactionsCountByHash))
 	m.Handle("/get-block-transactions-count-by-height", jsonHandler(bcr.getBlockTransactionsCountByHeight))
 

@@ -182,9 +182,9 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) R
 	return NewSuccessResponse(count)
 }
 
-// return block height
-func (bcr *BlockchainReactor) blockHeight() Response {
-	blockHeight := map[string]uint64{"blockHeight": bcr.chain.Height()}
+// return current block count
+func (bcr *BlockchainReactor) getBlockCount() Response {
+	blockHeight := map[string]uint64{"block_count": bcr.chain.Height()}
 	return NewSuccessResponse(blockHeight)
 }
 
