@@ -3,6 +3,7 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -17,7 +18,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	"sort"
 )
 
 type rawOutput struct {
