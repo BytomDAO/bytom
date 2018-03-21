@@ -28,7 +28,7 @@ func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuil
 	case "control_receiver":
 		decoder = txbuilder.DecodeControlReceiverAction
 	case "issue":
-		decoder = bcr.assets.DecodeIssueAction
+		decoder = bcr.wallet.AssetReg.DecodeIssueAction
 	case "retire":
 		decoder = txbuilder.DecodeRetireAction
 	case "spend_account":

@@ -30,7 +30,7 @@ func (bcr *BlockchainReactor) filterAliases(ctx context.Context, br *BuildReques
 			case consensus.BTMAlias:
 				m["asset_id"] = consensus.BTMAssetID.String()
 			default:
-				id, err := bcr.assets.GetIDByAlias(alias)
+				id, err := bcr.wallet.AssetReg.GetIDByAlias(alias)
 				if err != nil {
 					return errors.WithDetailf(err, "invalid asset alias %s on action %d", alias, i)
 				}

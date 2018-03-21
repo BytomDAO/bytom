@@ -38,7 +38,7 @@ func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
 func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	assets, err := bcr.assets.ListAssets(filter.ID)
+	assets, err := bcr.wallet.AssetReg.ListAssets(filter.ID)
 	if err != nil {
 		log.Errorf("listAssets: %v", err)
 		return NewErrorResponse(err)
@@ -101,7 +101,7 @@ func (bcr *BlockchainReactor) indexBalances(accountUTXOs []account.UTXO) []accou
 		for _, assetID := range sortedAsset {
 
 			alias := bcr.wallet.AccountMgr.GetAliasByID(id)
-			assetAlias := bcr.assets.GetAliasByID(assetID)
+			assetAlias := bcr.wallet.AssetReg.GetAliasByID(assetID)
 			tmpBalance.Alias = alias
 			tmpBalance.AccountID = id
 			tmpBalance.AssetID = assetID
@@ -195,7 +195,7 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 		tmpUTXO.ValidHeight = utxo.ValidHeight
 
 		tmpUTXO.Alias = bcr.wallet.AccountMgr.GetAliasByID(utxo.AccountID)
-		tmpUTXO.AssetAlias = bcr.assets.GetAliasByID(tmpUTXO.AssetID)
+		tmpUTXO.AssetAlias = bcr.wallet.AssetReg.GetAliasByID(tmpUTXO.AssetID)
 
 		UTXOs = append(UTXOs, tmpUTXO)
 	}
