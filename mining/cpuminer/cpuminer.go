@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -40,6 +41,7 @@ type CPUMiner struct {
 	updateHashes      chan uint64
 	speedMonitorQuit  chan struct{}
 	quit              chan struct{}
+	newBlockCh        chan *bc.Hash
 }
 
 // solveBlock attempts to find some combination of a nonce, extra nonce, and
@@ -104,6 +106,9 @@ out:
 					"isOrphan": isOrphan,
 					"tx":       len(block.Transactions),
 				}).Info("Miner processed block")
+
+				blockHash := block.Hash()
+				m.newBlockCh <- &blockHash
 			} else {
 				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
 			}
@@ -274,7 +279,7 @@ func (m *CPUMiner) NumWorkers() int32 {
 // NewCPUMiner returns a new instance of a CPU miner for the provided configuration.
 // Use Start to begin the mining process.  See the documentation for CPUMiner
 // type for more details.
-func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool) *CPUMiner {
+func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash) *CPUMiner {
 	return &CPUMiner{
 		chain:             c,
 		accountManager:    accountManager,
@@ -283,5 +288,6 @@ func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *pro
 		updateNumWorkers:  make(chan struct{}),
 		queryHashesPerSec: make(chan float64),
 		updateHashes:      make(chan uint64),
+		newBlockCh:        newBlockCh,
 	}
 }

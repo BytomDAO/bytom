@@ -20,6 +20,7 @@ import (
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc"
 	protocolTypes "github.com/bytom/protocol/bc/types"
 	"github.com/bytom/types"
 )
@@ -27,6 +28,7 @@ import (
 const (
 	// BlockchainChannel is a channel for blocks and status updates
 	BlockchainChannel = byte(0x40)
+	maxNewBlockChSize = int(1024)
 
 	statusUpdateIntervalSeconds = 10
 	maxBlockchainResponseSize   = 22020096 + 2
@@ -76,6 +78,7 @@ type BlockchainReactor struct {
 	sw            *p2p.Switch
 	handler       http.Handler
 	evsw          types.EventSwitch
+	newBlockCh    chan *bc.Hash
 	miningEnable  bool
 }
 
@@ -103,6 +106,7 @@ func maxBytes(h http.Handler) http.Handler {
 
 // NewBlockchainReactor returns the reactor of whole blockchain.
 func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, assets *asset.Registry, sw *p2p.Switch, hsm *pseudohsm.HSM, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, accessTokens *accesstoken.CredentialStore, miningEnable bool) *BlockchainReactor {
+	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 	bcr := &BlockchainReactor{
 		chain:         chain,
 		wallet:        wallet,
@@ -110,14 +114,15 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, accoun
 		assets:        assets,
 		blockKeeper:   newBlockKeeper(chain, sw),
 		txPool:        txPool,
-		mining:        cpuminer.NewCPUMiner(chain, accounts, txPool),
-		miningPool:    miningpool.NewMiningPool(chain, accounts, txPool),
+		mining:        cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh),
+		miningPool:    miningpool.NewMiningPool(chain, accounts, txPool, newBlockCh),
 		mux:           http.NewServeMux(),
 		sw:            sw,
 		hsm:           hsm,
 		txFeedTracker: txfeeds,
 		accessTokens:  accessTokens,
 		miningEnable:  miningEnable,
+		newBlockCh:    newBlockCh,
 	}
 	bcr.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcr)
 	return bcr
@@ -231,6 +236,12 @@ func (bcr *BlockchainReactor) syncRoutine() {
 
 	for {
 		select {
+		case blockHash := <-bcr.newBlockCh:
+			block, err := bcr.chain.GetBlockByHash(blockHash)
+			if err != nil {
+				log.Errorf("Error get block from newBlockCh %v", err)
+			}
+			log.WithFields(log.Fields{"Hash": blockHash, "height": block.Height}).Info("Boardcast my new block")
 		case newTx := <-newTxCh:
 			bcr.txFeedTracker.TxFilter(newTx)
 			go bcr.BroadcastTransaction(newTx)
