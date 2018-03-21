@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/reqid"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -215,16 +216,20 @@ func (bcr *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *types.Tx
 	}
 }
 
+type submitTxResp struct {
+	TxID *bc.Hash `json:"tx_id"`
+}
+
 // POST /submit-transaction
-func (bcr *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Template) Response {
-	txID, err := bcr.submitSingle(nil, tpl)
-	if err != nil {
-		log.WithField("err", err).Error("submit single tx")
+func (bcr *BlockchainReactor) submit(ctx context.Context, ins struct {
+	Tx types.Tx `json:"raw_transaction"`
+}) Response {
+	if err := txbuilder.FinalizeTx(ctx, bcr.chain, &ins.Tx); err != nil {
 		return NewErrorResponse(err)
 	}
 
-	log.WithField("tx_id", txID["tx_id"]).Info("submit single tx")
-	return NewSuccessResponse(txID)
+	log.WithField("tx_id", ins.Tx.ID).Info("submit single tx")
+	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
 }
 
 // POST /sign-submit-transaction
