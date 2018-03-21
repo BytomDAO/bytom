@@ -2,14 +2,31 @@ package blockchain
 
 import (
 	"context"
+
+	"github.com/bytom/blockchain/txbuilder"
 )
 
 func (bcr *BlockchainReactor) createAccountReceiver(ctx context.Context, ins struct {
-	AccountInfo string `json:"account_info"`
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
 }) Response {
-	receiver, err := bcr.wallet.AccountMgr.CreateAccountReceiver(ctx, ins.AccountInfo)
+	accountID := ins.AccountID
+	if ins.AccountAlias != "" {
+		account, err := bcr.wallet.AccountMgr.FindByAlias(ctx, ins.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+
+		accountID = account.ID
+	}
+
+	program, err := bcr.wallet.AccountMgr.CreateAddress(ctx, accountID, false)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-	return NewSuccessResponse(receiver)
+
+	return NewSuccessResponse(&txbuilder.Receiver{
+		ControlProgram: program.ControlProgram,
+		Address:        program.Address,
+	})
 }
