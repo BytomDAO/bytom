@@ -443,3 +443,20 @@ func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 
 	return accounts, nil
 }
+
+// ListControlProgram return all the local control program
+func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
+	cps := []*CtrlProgram{}
+	cpIter := m.db.IteratorPrefix([]byte(accountCPPrefix))
+	defer cpIter.Release()
+
+	for cpIter.Next() {
+		cp := &CtrlProgram{}
+		if err := json.Unmarshal(cpIter.Value(), cp); err != nil {
+			return nil, err
+		}
+		cps = append(cps, cp)
+	}
+
+	return cps, nil
+}

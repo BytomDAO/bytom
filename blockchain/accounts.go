@@ -95,3 +95,24 @@ func (bcr *BlockchainReactor) validateAddress(ctx context.Context, ins struct {
 	resp.IsLocal = bcr.accounts.IsLocalControlProgram(program)
 	return NewSuccessResponse(resp)
 }
+
+type addressResp struct {
+	AccountID string `json:"account_id"`
+	Address   string `json:"address"`
+}
+
+func (bcr *BlockchainReactor) listAddresses(ctx context.Context) Response {
+	cps, err := bcr.accounts.ListControlProgram()
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	addresses := []*addressResp{}
+	for _, cp := range cps {
+		if cp.Address == "" {
+			continue
+		}
+		addresses = append(addresses, &addressResp{AccountID: cp.AccountID, Address: cp.Address})
+	}
+	return NewSuccessResponse(addresses)
+}
