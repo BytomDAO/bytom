@@ -17,7 +17,7 @@ func (bcr *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 	Definition map[string]interface{} `json:"definition"`
 	Tags       map[string]interface{} `json:"tags"`
 }) Response {
-	ass, err := bcr.assets.Define(
+	ass, err := bcr.wallet.AssetReg.Define(
 		ins.RootXPubs,
 		ins.Quorum,
 		ins.Definition,
@@ -43,7 +43,7 @@ func (bcr *BlockchainReactor) updateAssetTags(ctx context.Context, updateTag str
 	AssetInfo string                 `json:"asset_info"`
 	Tags      map[string]interface{} `json:"tags"`
 }) Response {
-	err := bcr.assets.UpdateTags(nil, updateTag.AssetInfo, updateTag.Tags)
+	err := bcr.wallet.AssetReg.UpdateTags(nil, updateTag.AssetInfo, updateTag.Tags)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -56,7 +56,7 @@ func (bcr *BlockchainReactor) updateAssetAlias(updateAlias struct {
 	OldAlias string `json:"old_alias"`
 	NewAlias string `json:"new_alias"`
 }) Response {
-	if err := bcr.assets.UpdateAssetAlias(updateAlias.OldAlias, updateAlias.NewAlias); err != nil {
+	if err := bcr.wallet.AssetReg.UpdateAssetAlias(updateAlias.OldAlias, updateAlias.NewAlias); err != nil {
 		return NewErrorResponse(err)
 	}
 
