@@ -53,7 +53,7 @@ func webAssetsHandler(next http.Handler) http.Handler {
 // BuildHandler is in charge of all the rpc handling.
 func (bcr *BlockchainReactor) BuildHandler() {
 	m := bcr.mux
-	if bcr.wallet.AccountMgr != nil && bcr.wallet.AssetReg != nil {
+	if bcr.wallet != nil && bcr.wallet.AccountMgr != nil && bcr.wallet.AssetReg != nil {
 		m.Handle("/create-account", jsonHandler(bcr.createAccount))
 		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
 		m.Handle("/create-account-receiver", jsonHandler(bcr.createAccountReceiver))
