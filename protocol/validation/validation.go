@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	muxGasCost    = int64(10)
+	muxGasCost = int64(10)
+	// timeRangeGash is the block height we will reach after 100 years
 	timeRangeGash = uint64(21024000)
 )
 
