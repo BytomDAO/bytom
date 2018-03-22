@@ -56,10 +56,7 @@ type Node struct {
 
 	evsw       types.EventSwitch // pub/sub for services
 	bcReactor  *bc.BlockchainReactor
-}
-
-func NewNodeDefault(config *cfg.Config) *Node {
-	return NewNode(config)
+	server     *http.Server
 }
 
 func RedirectHandler(next http.Handler) http.Handler {
@@ -87,7 +84,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	wh.h.ServeHTTP(w, req)
 }
 
-func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accesstoken.CredentialStore) {
+func (n *Node) initServer(accessTokens *accesstoken.CredentialStore) {
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
 	var coreHandler waitHandler
@@ -97,7 +94,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accessto
 
 	var handler http.Handler = mux
 
-	if config.Auth.Disable == false {
+	if n.config.Auth.Disable == false {
 		handler = bc.AuthHandler(handler, accessTokens)
 	}
 	handler = RedirectHandler(handler)
@@ -106,7 +103,7 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accessto
 	secureheader.DefaultConfig.HTTPSRedirect = false
 	secureheader.DefaultConfig.Next = handler
 
-	server := &http.Server{
+	n.server = &http.Server{
 		// Note: we should not set TLSConfig here;
 		// we took care of TLS with the listener in maybeUseTLS.
 		Handler:      secureheader.DefaultConfig,
@@ -117,22 +114,8 @@ func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accessto
 		// https://github.com/golang/go/issues/17071
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
-	listenAddr := env.String("LISTEN", config.ApiAddress)
-	log.WithField("api address:", config.ApiAddress).Info("Rpc listen")
-	listener, err := net.Listen("tcp", *listenAddr)
-	if err != nil {
-		cmn.Exit(cmn.Fmt("Failed to register tcp port: %v", err))
-	}
 
-	// The `Serve` call has to happen in its own goroutine because
-	// it's blocking and we need to proceed to the rest of the core setup after
-	// we call it.
-	go func() {
-		if err := server.Serve(listener); err != nil {
-			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
-		}
-	}()
-	coreHandler.Set(h)
+	coreHandler.Set(n.bcReactor)
 }
 
 func NewNode(config *cfg.Config) *Node {
@@ -214,7 +197,6 @@ func NewNode(config *cfg.Config) *Node {
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
-	rpcInit(bcReactor, config, accessTokens)
 	// Optionally, start the pex reactor
 	var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
@@ -244,6 +226,7 @@ func NewNode(config *cfg.Config) *Node {
 		bcReactor:  bcReactor,
 	}
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
+	node.initServer(accessTokens)
 
 	return node
 }
@@ -289,6 +272,24 @@ func lanchWebBroser(lanch bool) {
 	}
 }
 
+func (n *Node) startHTTPserver() {
+	listenAddr := env.String("LISTEN", n.config.ApiAddress)
+	log.WithField("api address:", n.config.ApiAddress).Info("Rpc listen")
+	listener, err := net.Listen("tcp", *listenAddr)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("Failed to register tcp port: %v", err))
+	}
+
+	// The `Serve` call has to happen in its own goroutine because
+	// it's blocking and we need to proceed to the rest of the core setup after
+	// we call it.
+	go func() {
+		if err := n.server.Serve(listener); err != nil {
+			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
+		}
+	}()
+}
+
 func (n *Node) OnStart() error {
 	// Create & add listener
 	p, address := ProtocolAndAddress(n.config.P2P.ListenAddress)
@@ -311,7 +312,10 @@ func (n *Node) OnStart() error {
 			return err
 		}
 	}
+
+	n.startHTTPserver()
 	lanchWebBroser(!n.config.Web.Closed)
+
 	return nil
 }
 
