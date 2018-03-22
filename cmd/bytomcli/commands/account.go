@@ -3,7 +3,6 @@ package commands
 import (
 	"os"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -139,14 +138,18 @@ var updateAccountTagsCmd = &cobra.Command{
 }
 
 var createAccountReceiverCmd = &cobra.Command{
-	Use:   "create-account-receiver <accountID | alias>",
+	Use:   "create-account-receiver <accountAlias> [accountID]",
 	Short: "Create an account receiver",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
 		var ins = struct {
-			AccountInfo string    `json:"account_info"`
-			ExpiresAt   time.Time `json:"expires_at,omitempty"`
-		}{AccountInfo: args[0]}
+			AccountID    string `json:"account_id"`
+			AccountAlias string `json:"account_alias"`
+		}{AccountAlias: args[0]}
+
+		if len(args) == 2 {
+			ins.AccountID = args[1]
+		}
 
 		data, exitCode := util.ClientCall("/create-account-receiver", &ins)
 		if exitCode != util.Success {

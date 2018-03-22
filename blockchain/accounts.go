@@ -97,8 +97,9 @@ func (bcr *BlockchainReactor) validateAddress(ctx context.Context, ins struct {
 }
 
 type addressResp struct {
-	AccountID string `json:"account_id"`
-	Address   string `json:"address"`
+	AccountAlias string `json:"account_alias"`
+	AccountID    string `json:"account_id"`
+	Address      string `json:"address"`
 }
 
 func (bcr *BlockchainReactor) listAddresses(ctx context.Context) Response {
@@ -112,7 +113,9 @@ func (bcr *BlockchainReactor) listAddresses(ctx context.Context) Response {
 		if cp.Address == "" {
 			continue
 		}
-		addresses = append(addresses, &addressResp{AccountID: cp.AccountID, Address: cp.Address})
+
+		accountAlias := bcr.wallet.AccountMgr.GetAliasByID(cp.AccountID)
+		addresses = append(addresses, &addressResp{AccountAlias: accountAlias, AccountID: cp.AccountID, Address: cp.Address})
 	}
 	return NewSuccessResponse(addresses)
 }
