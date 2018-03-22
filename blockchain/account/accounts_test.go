@@ -30,7 +30,7 @@ func TestCreateAccount(t *testing.T) {
 		t.Errorf("unexpected error %v", err)
 	}
 	if !testutil.DeepEqual(account, found) {
-		t.Errorf("expected account %s to be recorded as %s", account, found)
+		t.Errorf("expected account %v to be recorded as %v", account, found)
 	}
 }
 
