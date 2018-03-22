@@ -70,11 +70,11 @@ func (bcr *BlockchainReactor) BuildHandler() {
 		m.Handle("/create-key", jsonHandler(bcr.pseudohsmCreateKey))
 		m.Handle("/list-keys", jsonHandler(bcr.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(bcr.pseudohsmDeleteKey))
+		m.Handle("/reset-key-password", jsonHandler(bcr.pseudohsmResetPassword))
 
 		m.Handle("/get-transaction", jsonHandler(bcr.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(bcr.listTransactions))
 		m.Handle("/list-balances", jsonHandler(bcr.listBalances))
-		m.Handle("/reset-password", jsonHandler(bcr.pseudohsmResetPassword))
 	} else {
 		log.Warn("Please enable wallet")
 	}
