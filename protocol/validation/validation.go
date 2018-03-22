@@ -568,12 +568,6 @@ func ValidateBlock(b, prev *bc.Block, seed *bc.Hash) error {
 	coinbaseValue := consensus.BlockSubsidy(b.BlockHeader.Height)
 	gasUsed := uint64(0)
 	for i, tx := range b.Transactions {
-		if b.Version == 1 && tx.Version != 1 {
-			return errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", b.Version, tx.Version)
-		}
-		if tx.TimeRange > b.Timestamp {
-			return errors.New("invalid transaction time range")
-		}
 		gasStatus, err := ValidateTx(tx, b)
 		gasOnlyTx := false
 		if err != nil {
@@ -690,6 +684,12 @@ func validateStandardTx(tx *bc.Tx) error {
 
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
+	if block.Version == 1 && tx.Version != 1 {
+		return nil, errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
+	}
+	if tx.TimeRange != 0 && tx.TimeRange < block.Timestamp {
+		return nil, errors.New("invalid transaction time range")
+	}
 	if tx.TxHeader.SerializedSize > consensus.MaxTxSize || tx.TxHeader.SerializedSize == 0 {
 		return nil, errWrongTransactionSize
 	}

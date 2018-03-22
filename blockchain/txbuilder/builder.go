@@ -21,6 +21,7 @@ type TemplateBuilder struct {
 	signingInstructions []*SigningInstruction
 	minTime             time.Time
 	maxTime             time.Time
+	timeRange           uint64
 	referenceData       []byte
 	rollbacks           []func()
 	callbacks           []func() error
@@ -104,6 +105,10 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 			Version: 1,
 		}
 		tpl.Local = true
+	}
+
+	if b.timeRange != 0 {
+		tx.TimeRange = b.timeRange
 	}
 
 	// Add all the built outputs.

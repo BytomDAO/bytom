@@ -85,7 +85,7 @@ func TestHSM(t *testing.T) {
 	spend1 := accounts.NewControlAction(bc.AssetAmount{AssetId: &asset1.AssetID, Amount: 100}, acct1.ID, nil)
 	spend2 := accounts.NewControlAction(bc.AssetAmount{AssetId: &asset2.AssetID, Amount: 200}, acct2.ID, nil)
 
-	tmpl, err := txbuilder.Build(ctx, nil, []txbuilder.Action{issue1, issue2, spend1, spend2}, time.Now().Add(time.Minute))
+	tmpl, err := txbuilder.Build(ctx, nil, []txbuilder.Action{issue1, issue2, spend1, spend2}, time.Now().Add(time.Minute), 0)
 	if err != nil {
 		t.Fatal(err)
 	}

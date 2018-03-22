@@ -16,9 +16,10 @@ var (
 
 // BuildRequest is main struct when building transactions
 type BuildRequest struct {
-	Tx      *types.TxData            `json:"base_transaction"`
-	Actions []map[string]interface{} `json:"actions"`
-	TTL     json.Duration            `json:"ttl"`
+	Tx        *types.TxData            `json:"base_transaction"`
+	Actions   []map[string]interface{} `json:"actions"`
+	TTL       json.Duration            `json:"ttl"`
+	TimeRange uint64                   `json:"time_range"`
 }
 
 func (bcr *BlockchainReactor) filterAliases(ctx context.Context, br *BuildRequest) error {

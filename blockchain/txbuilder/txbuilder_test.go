@@ -53,7 +53,7 @@ func TestBuild(t *testing.T) {
 		testAction(bc.AssetAmount{AssetId: &assetID1, Amount: 5}),
 	}
 	expiryTime := time.Now().Add(time.Minute)
-	got, err := Build(ctx, nil, actions, expiryTime)
+	got, err := Build(ctx, nil, actions, expiryTime, 0)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
