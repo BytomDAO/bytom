@@ -13,7 +13,10 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
-const muxGasCost = int64(10)
+const (
+	muxGasCost    = int64(10)
+	timeRangeGash = uint64(21024000)
+)
 
 // GasState record the gas usage status
 type GasState struct {
@@ -687,12 +690,17 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	if block.Version == 1 && tx.Version != 1 {
 		return nil, errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
 	}
-	if tx.TimeRange != 0 && tx.TimeRange < block.Timestamp {
-		return nil, errors.New("invalid transaction time range")
+
+	if tx.TimeRange > timeRangeGash && tx.TimeRange < block.Timestamp {
+		return nil, errors.New("transaction max timestamp is lower than block's")
+	} else if tx.TimeRange != 0 && tx.TimeRange < block.Height {
+		return nil, errors.New("transaction max block height is lower than block's")
 	}
+
 	if tx.TxHeader.SerializedSize > consensus.MaxTxSize || tx.TxHeader.SerializedSize == 0 {
 		return nil, errWrongTransactionSize
 	}
+
 	if len(tx.ResultIds) == 0 {
 		return nil, errors.New("tx didn't have any output")
 	}
