@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 
 	dbm "github.com/tendermint/tmlibs/db"
@@ -14,7 +15,6 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/testutil"
-	"reflect"
 )
 
 func TestCreateAccount(t *testing.T) {
