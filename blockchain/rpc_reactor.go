@@ -45,7 +45,7 @@ func webAssetsHandler(next http.Handler) http.Handler {
 
 // BuildHandler is in charge of all the rpc handling.
 func (bcr *BlockchainReactor) BuildHandler() {
-	m := bcr.mux
+	m := http.NewServeMux()
 	if bcr.wallet != nil && bcr.wallet.AccountMgr != nil && bcr.wallet.AssetReg != nil {
 		m.Handle("/create-account", jsonHandler(bcr.createAccount))
 		m.Handle("/update-account-tags", jsonHandler(bcr.updateAccountTags))
@@ -126,7 +126,6 @@ func (bcr *BlockchainReactor) BuildHandler() {
 
 //AuthHandler access token auth Handler
 func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore) http.Handler {
-
 	authenticator := authn.NewAPI(accessTokens)
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {

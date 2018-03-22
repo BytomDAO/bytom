@@ -66,7 +66,6 @@ type BlockchainReactor struct {
 	txPool        *protocol.TxPool
 	mining        *cpuminer.CPUMiner
 	miningPool    *miningpool.MiningPool
-	mux           *http.ServeMux
 	sw            *p2p.Switch
 	Handler       http.Handler
 	evsw          types.EventSwitch
@@ -104,7 +103,6 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2
 		wallet:        wallet,
 		blockKeeper:   newBlockKeeper(chain, sw),
 		txPool:        txPool,
-		mux:           http.NewServeMux(),
 		sw:            sw,
 		txFeedTracker: txfeeds,
 		miningEnable:  miningEnable,
