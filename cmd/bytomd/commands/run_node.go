@@ -63,7 +63,7 @@ func runNode(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create & start node
-	n := node.NewNodeDefault(config)
+	n := node.NewNode(config)
 	if _, err := n.Start(); err != nil {
 		return fmt.Errorf("Failed to start node: %v", err)
 	} else {
