@@ -54,9 +54,10 @@ type Node struct {
 	sw       *p2p.Switch           // p2p connections
 	addrBook *p2p.AddrBook         // known peers
 
-	evsw       types.EventSwitch // pub/sub for services
-	bcReactor  *bc.BlockchainReactor
-	server     *http.Server
+	evsw         types.EventSwitch // pub/sub for services
+	bcReactor    *bc.BlockchainReactor
+	server       *http.Server
+	accessTokens *accesstoken.CredentialStore
 }
 
 func RedirectHandler(next http.Handler) http.Handler {
@@ -84,7 +85,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	wh.h.ServeHTTP(w, req)
 }
 
-func (n *Node) initServer(accessTokens *accesstoken.CredentialStore) {
+func (n *Node) initServer() {
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
 	var coreHandler waitHandler
@@ -95,7 +96,7 @@ func (n *Node) initServer(accessTokens *accesstoken.CredentialStore) {
 	var handler http.Handler = mux
 
 	if n.config.Auth.Disable == false {
-		handler = bc.AuthHandler(handler, accessTokens)
+		handler = bc.AuthHandler(handler, n.accessTokens)
 	}
 	handler = RedirectHandler(handler)
 
@@ -115,7 +116,7 @@ func (n *Node) initServer(accessTokens *accesstoken.CredentialStore) {
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
 
-	coreHandler.Set(n.bcReactor)
+	coreHandler.Set(n.bcReactor.Handler)
 }
 
 func NewNode(config *cfg.Config) *Node {
@@ -193,7 +194,7 @@ func NewNode(config *cfg.Config) *Node {
 		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
 	}
 
-	bcReactor := bc.NewBlockchainReactor(chain, txPool,sw, wallet, txFeed, config.Mining)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, sw, wallet, txFeed, config.Mining)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
@@ -222,11 +223,11 @@ func NewNode(config *cfg.Config) *Node {
 		sw:       sw,
 		addrBook: addrBook,
 
-		evsw:       eventSwitch,
-		bcReactor:  bcReactor,
+		evsw:         eventSwitch,
+		bcReactor:    bcReactor,
+		accessTokens: accessTokens,
 	}
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
-	node.initServer(accessTokens)
 
 	return node
 }
@@ -272,7 +273,9 @@ func lanchWebBroser(lanch bool) {
 	}
 }
 
-func (n *Node) startHTTPserver() {
+func (n *Node) initAndstartServer() {
+	n.initServer()
+
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	log.WithField("api address:", n.config.ApiAddress).Info("Rpc listen")
 	listener, err := net.Listen("tcp", *listenAddr)
@@ -313,7 +316,7 @@ func (n *Node) OnStart() error {
 		}
 	}
 
-	n.startHTTPserver()
+	n.initAndstartServer()
 	lanchWebBroser(!n.config.Web.Closed)
 
 	return nil
