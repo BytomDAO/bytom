@@ -66,10 +66,13 @@ func (bcr *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub ch
 	return bcr.wallet.Hsm.XSign(xpub, path, data[:], password)
 }
 
-func (bcr *BlockchainReactor) pseudohsmResetPassword(ctx context.Context, x struct {
-	OldPassword string
-	NewPassword string
-	XPub        chainkd.XPub `json:"xpubs"`
-}) error {
-	return bcr.wallet.Hsm.ResetPassword(x.XPub, x.OldPassword, x.NewPassword)
+func (bcr *BlockchainReactor) pseudohsmResetPassword(ctx context.Context, ins struct {
+	XPub        chainkd.XPub `json:"xpub"`
+	OldPassword string       `json:"old_password"`
+	NewPassword string       `json:"new_password"`
+}) Response {
+	if err := bcr.wallet.Hsm.ResetPassword(ins.XPub, ins.OldPassword, ins.NewPassword); err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(nil)
 }

@@ -70,6 +70,30 @@ var listKeysCmd = &cobra.Command{
 	},
 }
 
+var resetKeyPwdCmd = &cobra.Command{
+	Use:   "reset-key-password <xpub> <old-password> <new-password>",
+	Short: "Delete a key",
+	Args:  cobra.ExactArgs(3),
+	Run: func(cmd *cobra.Command, args []string) {
+		xpub := new(chainkd.XPub)
+		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
+			jww.ERROR.Println("reset-key-password args not vaild:", err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		ins := struct {
+			XPub        chainkd.XPub `json:"xpub"`
+			OldPassword string       `json:"old_password"`
+			NewPassword string       `json:"new_password"`
+		}{XPub: *xpub, OldPassword: args[1], NewPassword: args[2]}
+
+		if _, exitCode := util.ClientCall("/reset-key-password", &ins); exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+		jww.FEEDBACK.Println("Successfully reset key password")
+	},
+}
+
 var exportPrivateCmd = &cobra.Command{
 	Use:   "export-private-key <xpub> <password>",
 	Short: "Export the private key",

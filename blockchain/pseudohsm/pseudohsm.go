@@ -156,19 +156,21 @@ func (h *HSM) loadDecryptedKey(xpub chainkd.XPub, auth string) (XPub, *XKey, err
 	return xpb, xkey, err
 }
 
-// ResetPassword the passphrase of an existing xpub
-func (h *HSM) ResetPassword(xpub chainkd.XPub, auth, newAuth string) error {
-	xpb, xkey, err := h.loadDecryptedKey(xpub, auth)
+// ResetPassword reset passphrase for an existing xpub
+func (h *HSM) ResetPassword(xpub chainkd.XPub, oldAuth, newAuth string) error {
+	xpb, xkey, err := h.loadDecryptedKey(xpub, oldAuth)
 	if err != nil {
 		return err
 	}
 	return h.keyStore.StoreKey(xpb.File, xkey, newAuth)
 }
 
+// HasAlias check whether the key alias exists
 func (h *HSM) HasAlias(alias string) bool {
 	return h.cache.hasAlias(alias)
 }
 
+// HasKey check whether the private key exists
 func (h *HSM) HasKey(xprv chainkd.XPrv) bool {
 	return h.cache.hasKey(xprv.XPub())
 }
