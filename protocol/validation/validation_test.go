@@ -117,7 +117,7 @@ func TestGasStatus(t *testing.T) {
 		if rootErr(err) != c.err {
 			t.Errorf("case %d: got error %s, want %s", i, err, c.err)
 		} else if *c.input != *c.output {
-			t.Errorf("case %d: gasStatus %s, want %s;", i, c.input, c.output)
+			t.Errorf("case %d: gasStatus %v, want %v;", i, c.input, c.output)
 		}
 	}
 }
@@ -480,7 +480,7 @@ func TestCoinbase(t *testing.T) {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
 		}
 		if c.GasVaild != gasStatus.GasVaild {
-			t.Errorf("#%d got GasVaild %s, want %s", i, gasStatus.GasVaild, c.GasVaild)
+			t.Errorf("#%d got GasVaild %t, want %t", i, gasStatus.GasVaild, c.GasVaild)
 		}
 	}
 }
