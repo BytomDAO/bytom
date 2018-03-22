@@ -485,6 +485,59 @@ func TestCoinbase(t *testing.T) {
 	}
 }
 
+func TestTimeRange(t *testing.T) {
+	cases := []struct {
+		timeRange uint64
+		err       bool
+	}{
+		{
+			timeRange: 0,
+			err:       false,
+		},
+		{
+			timeRange: 334,
+			err:       false,
+		},
+		{
+			timeRange: 332,
+			err:       true,
+		},
+		{
+			timeRange: 1521625824,
+			err:       false,
+		},
+		{
+			timeRange: 1421625824,
+			err:       true,
+		},
+	}
+
+	block := &bc.Block{
+		BlockHeader: &bc.BlockHeader{
+			Height:    333,
+			Timestamp: 1521625823,
+		},
+	}
+
+	tx := types.MapTx(&types.TxData{
+		SerializedSize: 1,
+		TimeRange:      0,
+		Inputs: []*types.TxInput{
+			mockGasTxInput(),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
+		},
+	})
+
+	for i, c := range cases {
+		tx.TimeRange = c.timeRange
+		if _, err := ValidateTx(tx, block); (err != nil) != c.err {
+			t.Errorf("#%d got error %s, want %s", i, !c.err, c.err)
+		}
+	}
+}
+
 func TestBlockHeaderValid(t *testing.T) {
 	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
 	baseBytes, _ := proto.Marshal(base)

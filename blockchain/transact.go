@@ -105,7 +105,7 @@ func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest
 	}
 	maxTime := time.Now().Add(ttl)
 
-	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime)
+	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime, req.TimeRange)
 	if errors.Root(err) == txbuilder.ErrAction {
 		// append each of the inner errors contained in the data.
 		var Errs string
