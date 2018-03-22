@@ -78,3 +78,18 @@ type AssetKey struct {
 	AssetPubkey         chainjson.HexBytes   `json:"asset_pubkey"`
 	AssetDerivationPath []chainjson.HexBytes `json:"asset_derivation_path"`
 }
+
+type AnnotatedUTXO struct {
+	Alias               string `json:"account_alias"`
+	OutputID            string `json:"id"`
+	AssetID             string `json:"asset_id"`
+	AssetAlias          string `json:"asset_alias"`
+	Amount              uint64 `json:"amount"`
+	AccountID           string `json:"account_id"`
+	Address             string `json:"address"`
+	ControlProgramIndex uint64 `json:"control_program_index"`
+	Program             string `json:"program"`
+	SourceID            string `json:"source_id"`
+	SourcePos           uint64 `json:"source_pos"`
+	ValidHeight         uint64 `json:"valid_height"`
+}
