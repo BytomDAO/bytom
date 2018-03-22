@@ -68,7 +68,7 @@ type BlockchainReactor struct {
 	miningPool    *miningpool.MiningPool
 	mux           *http.ServeMux
 	sw            *p2p.Switch
-	handler       http.Handler
+	Handler       http.Handler
 	evsw          types.EventSwitch
 	newBlockCh    chan *bc.Hash
 	miningEnable  bool

@@ -18,7 +18,7 @@ var (
 	errNotAuthenticated = errors.New("not authenticated")
 )
 
-// json handler
+// json Handler
 func jsonHandler(f interface{}) http.Handler {
 	h, err := httpjson.Handler(f, errorFormatter.Write)
 	if err != nil {
@@ -27,16 +27,9 @@ func jsonHandler(f interface{}) http.Handler {
 	return h
 }
 
-// error handler
+// error Handler
 func alwaysError(err error) http.Handler {
 	return jsonHandler(func() error { return err })
-}
-
-// serve http
-func (bcr *BlockchainReactor) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if bcr.handler != nil {
-		bcr.handler.ServeHTTP(rw, req)
-	}
 }
 
 func webAssetsHandler(next http.Handler) http.Handler {
@@ -128,10 +121,10 @@ func (bcr *BlockchainReactor) BuildHandler() {
 	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
 
-	bcr.handler = handler
+	bcr.Handler = handler
 }
 
-//AuthHandler access token auth handler
+//AuthHandler access token auth Handler
 func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore) http.Handler {
 
 	authenticator := authn.NewAPI(accessTokens)
