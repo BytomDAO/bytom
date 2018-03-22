@@ -3,6 +3,7 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -543,4 +544,67 @@ func (w *Wallet) GetAccountUTXOs(id string) ([]account.UTXO, error) {
 	}
 
 	return accountUTXOs, nil
+}
+
+func (w *Wallet) GetAccountBalances(id string) ([]accountBalance, error) {
+	accountUTXOs, err := w.GetAccountUTXOs("")
+	if err != nil {
+		return nil, err
+	}
+
+	return w.indexBalances(accountUTXOs), nil
+}
+
+type accountBalance struct {
+	AccountID  string `json:"account_id"`
+	Alias      string `json:"account_alias"`
+	AssetAlias string `json:"asset_alias"`
+	AssetID    string `json:"asset_id"`
+	Amount     uint64 `json:"amount"`
+}
+
+func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) []accountBalance {
+	accBalance := make(map[string]map[string]uint64)
+	balances := make([]accountBalance, 0)
+	tmpBalance := accountBalance{}
+
+	for _, accountUTXO := range accountUTXOs {
+		assetID := accountUTXO.AssetID.String()
+		if _, ok := accBalance[accountUTXO.AccountID]; ok {
+			if _, ok := accBalance[accountUTXO.AccountID][assetID]; ok {
+				accBalance[accountUTXO.AccountID][assetID] += accountUTXO.Amount
+			} else {
+				accBalance[accountUTXO.AccountID][assetID] = accountUTXO.Amount
+			}
+		} else {
+			accBalance[accountUTXO.AccountID] = map[string]uint64{assetID: accountUTXO.Amount}
+		}
+	}
+
+	var sortedAccount []string
+	for k := range accBalance {
+		sortedAccount = append(sortedAccount, k)
+	}
+	sort.Strings(sortedAccount)
+
+	for _, id := range sortedAccount {
+		var sortedAsset []string
+		for k := range accBalance[id] {
+			sortedAsset = append(sortedAsset, k)
+		}
+		sort.Strings(sortedAsset)
+
+		for _, assetID := range sortedAsset {
+			alias := w.AccountMgr.GetAliasByID(id)
+			assetAlias := w.AssetReg.GetAliasByID(assetID)
+			tmpBalance.Alias = alias
+			tmpBalance.AccountID = id
+			tmpBalance.AssetID = assetID
+			tmpBalance.AssetAlias = assetAlias
+			tmpBalance.Amount = accBalance[id][assetID]
+			balances = append(balances, tmpBalance)
+		}
+	}
+
+	return balances
 }
