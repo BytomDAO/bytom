@@ -96,50 +96,32 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struc
 	return NewSuccessResponse(transactions)
 }
 
-type annotatedUTXO struct {
-	Alias               string `json:"account_alias"`
-	OutputID            string `json:"id"`
-	AssetID             string `json:"asset_id"`
-	AssetAlias          string `json:"asset_alias"`
-	Amount              uint64 `json:"amount"`
-	AccountID           string `json:"account_id"`
-	Address             string `json:"address"`
-	ControlProgramIndex uint64 `json:"control_program_index"`
-	Program             string `json:"program"`
-	SourceID            string `json:"source_id"`
-	SourcePos           uint64 `json:"source_pos"`
-	ValidHeight         uint64 `json:"valid_height"`
-}
-
 // POST /list-unspent-outputs
 func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	tmpUTXO := annotatedUTXO{}
-	UTXOs := make([]annotatedUTXO, 0)
-
 	accountUTXOs, err := bcr.wallet.GetAccountUTXOs(filter.ID)
 	if err != nil {
 		log.Errorf("list Unspent Outputs: %v", err)
 		return NewErrorResponse(err)
 	}
 
+	var UTXOs []query.AnnotatedUTXO
 	for _, utxo := range accountUTXOs {
-		tmpUTXO.AccountID = utxo.AccountID
-		tmpUTXO.OutputID = utxo.OutputID.String()
-		tmpUTXO.SourceID = utxo.SourceID.String()
-		tmpUTXO.AssetID = utxo.AssetID.String()
-		tmpUTXO.Amount = utxo.Amount
-		tmpUTXO.SourcePos = utxo.SourcePos
-		tmpUTXO.Program = fmt.Sprintf("%x", utxo.ControlProgram)
-		tmpUTXO.ControlProgramIndex = utxo.ControlProgramIndex
-		tmpUTXO.Address = utxo.Address
-		tmpUTXO.ValidHeight = utxo.ValidHeight
-
-		tmpUTXO.Alias = bcr.wallet.AccountMgr.GetAliasByID(utxo.AccountID)
-		tmpUTXO.AssetAlias = bcr.wallet.AssetReg.GetAliasByID(tmpUTXO.AssetID)
-
-		UTXOs = append(UTXOs, tmpUTXO)
+		UTXOs = append(UTXOs, query.AnnotatedUTXO{
+			AccountID:           utxo.AccountID,
+			OutputID:            utxo.OutputID.String(),
+			SourceID:            utxo.SourceID.String(),
+			AssetID:             utxo.AssetID.String(),
+			Amount:              utxo.Amount,
+			SourcePos:           utxo.SourcePos,
+			Program:             fmt.Sprintf("%x", utxo.ControlProgram),
+			ControlProgramIndex: utxo.ControlProgramIndex,
+			Address:             utxo.Address,
+			ValidHeight:         utxo.ValidHeight,
+			Alias:               bcr.wallet.AccountMgr.GetAliasByID(utxo.AccountID),
+			AssetAlias:          bcr.wallet.AssetReg.GetAliasByID(utxo.AssetID.String()),
+		})
 	}
 
 	return NewSuccessResponse(UTXOs)
