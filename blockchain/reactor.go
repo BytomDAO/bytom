@@ -97,21 +97,28 @@ func maxBytes(h http.Handler) http.Handler {
 }
 
 // NewBlockchainReactor returns the reactor of whole blockchain.
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch,wallet *wallet.Wallet, txfeeds *txfeed.Tracker, miningEnable bool) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, miningEnable bool) *BlockchainReactor {
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 	bcr := &BlockchainReactor{
 		chain:         chain,
 		wallet:        wallet,
 		blockKeeper:   newBlockKeeper(chain, sw),
 		txPool:        txPool,
-		mining:        cpuminer.NewCPUMiner(chain, wallet.AccountMgr, txPool, newBlockCh),
-		miningPool:    miningpool.NewMiningPool(chain, wallet.AccountMgr, txPool, newBlockCh),
 		mux:           http.NewServeMux(),
 		sw:            sw,
 		txFeedTracker: txfeeds,
 		miningEnable:  miningEnable,
 		newBlockCh:    newBlockCh,
 	}
+
+	if wallet == nil {
+		bcr.mining = cpuminer.NewCPUMiner(chain, nil, txPool, newBlockCh)
+		bcr.miningPool = miningpool.NewMiningPool(chain, nil, txPool, newBlockCh)
+	} else {
+		bcr.mining = cpuminer.NewCPUMiner(chain, wallet.AccountMgr, txPool, newBlockCh)
+		bcr.miningPool = miningpool.NewMiningPool(chain, wallet.AccountMgr, txPool, newBlockCh)
+	}
+
 	bcr.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcr)
 	return bcr
 }
