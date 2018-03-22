@@ -1,0 +1,91 @@
+{
+  "keys": [
+    {"name": "alice", "password": "alice"},
+    {"name": "bob", "password": "bob"}
+  ],
+  "accounts": [
+    {"name": "alice", "keys": ["alice"], "quorum": 1},
+    {"name": "bob", "keys": ["bob"], "quorum": 1},
+    {"name": "multi-sig", "keys": ["alice", "bob"], "quorum": 2}
+  ],
+  "blocks": [
+    {
+      "coinbase_account": "alice",
+      "post_states": [
+        {"name": "alice", "asset": "btm", "amount": 624000000000}
+      ],
+      "append": 6
+    },
+    {
+      "coinbase_account": "bob",
+      "transactions": [
+        {
+          "passwords": ["alice"],
+          "inputs": [
+            {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "btm"}
+          ],
+          "outputs": [
+            {"type": "output", "name": "bob", "amount": 40000000000, "asset": "btm"},
+            {"type": "output", "name": "multi-sig", "amount": 50000000000, "asset": "btm"}
+          ]
+        }
+      ],
+      "post_states": [
+        {"name": "alice", "asset": "btm", "amount": 524000000000},
+        {"name": "bob", "asset": "btm", "amount": 674000000000},
+        {"name": "multi-sig", "asset": "btm", "amount": 50000000000}
+      ],
+      "append": 6
+    },
+    {
+      "coinbase_account": "bob",
+      "transactions": [
+        {
+          "passwords": ["bob", "alice"],
+          "inputs": [
+            {"type": "spend_account", "name": "multi-sig", "amount": 1000000000, "asset": "btm"},
+            {"type": "issue", "name": "multi-sig", "amount": 100, "asset": "gold"}
+          ],
+          "outputs": [
+            {"type": "output", "name": "multi-sig", "amount": 100, "asset": "gold"}
+          ]
+        }
+      ],
+      "post_states": [
+        {"name": "alice", "asset": "btm", "amount": 524000000000},
+        {"name": "multi-sig", "asset": "gold", "amount": 100},
+        {"name": "multi-sig", "asset": "btm", "amount": 49000000000},
+        {"name": "bob", "asset": "btm", "amount": 1299000000000}
+      ],
+      "append": 6
+    },
+    {
+      "coinbase_account": "multi-sig",
+      "transactions": [
+        {
+          "passwords": ["alice", "bob"],
+          "inputs": [
+            {"type": "spend_account", "name": "multi-sig", "amount": 1000000000, "asset": "btm"},
+            {"type": "spend_account", "name": "multi-sig", "amount": 40, "asset": "gold"},
+            {"type": "spend_account", "name": "bob", "amount": 100000000000, "asset": "btm"},
+            {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "btm"}
+          ],
+          "outputs": [
+            {"type": "output", "name": "alice", "amount": 20, "asset": "gold"},
+            {"type": "output", "name": "bob", "amount": 20, "asset": "gold"},
+            {"type": "output", "name": "multi-sig", "amount": 200000000000, "asset": "btm"}
+          ]
+        }
+      ],
+      "post_states": [
+        {"name": "multi-sig", "asset": "btm", "amount": 873000000000},
+        {"name": "multi-sig", "asset": "gold", "amount": 60},
+        {"name": "alice", "asset": "btm", "amount": 424000000000},
+        {"name": "alice", "asset": "gold", "amount": 20},
+        {"name": "bob", "asset": "btm", "amount": 1199000000000},
+        {"name": "bob", "asset": "gold", "amount": 20}
+      ],
+      "append": 0
+    }
+  ]
+}

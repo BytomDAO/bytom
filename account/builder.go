@@ -32,6 +32,24 @@ type spendAction struct {
 	ClientToken   *string       `json:"client_token"`
 }
 
+type SpendAction struct {
+	Action *spendAction
+}
+
+func (a *SpendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
+	return a.Action.Build(ctx, b)
+}
+
+func NewSpendAction(accountManager *Manager, assetAmount bc.AssetAmount, accountID string) *SpendAction {
+	return &SpendAction{
+		Action: &spendAction{
+			accounts: accountManager,
+			AssetAmount: assetAmount,
+			AccountID: accountID,
+		},
+	}
+}
+
 func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if a.AccountID == "" {
