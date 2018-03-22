@@ -83,6 +83,8 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(listAccountsCmd)
 	BytomcliCmd.AddCommand(updateAccountTagsCmd)
 	BytomcliCmd.AddCommand(createAccountReceiverCmd)
+	BytomcliCmd.AddCommand(listAddressesCmd)
+	BytomcliCmd.AddCommand(validateAddressCmd)
 
 	BytomcliCmd.AddCommand(createAssetCmd)
 	BytomcliCmd.AddCommand(listAssetsCmd)
