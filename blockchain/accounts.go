@@ -13,13 +13,13 @@ import (
 )
 
 // POST /create-account
-func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
+func (a *API) createAccount(ctx context.Context, ins struct {
 	RootXPubs []chainkd.XPub         `json:"root_xpubs"`
 	Quorum    int                    `json:"quorum"`
 	Alias     string                 `json:"alias"`
 	Tags      map[string]interface{} `json:"tags"`
 }) Response {
-	acc, err := bcr.wallet.AccountMgr.Create(ctx, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags)
+	acc, err := a.wallet.AccountMgr.Create(ctx, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -35,12 +35,12 @@ func (bcr *BlockchainReactor) createAccount(ctx context.Context, ins struct {
 }
 
 // POST /update-account-tags
-func (bcr *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag struct {
+func (a *API) updateAccountTags(ctx context.Context, updateTag struct {
 	AccountInfo string                 `json:"account_info"`
 	Tags        map[string]interface{} `json:"tags"`
 }) Response {
 
-	err := bcr.wallet.AccountMgr.UpdateTags(nil, updateTag.AccountInfo, updateTag.Tags)
+	err := a.wallet.AccountMgr.UpdateTags(nil, updateTag.AccountInfo, updateTag.Tags)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -50,10 +50,10 @@ func (bcr *BlockchainReactor) updateAccountTags(ctx context.Context, updateTag s
 
 //
 // POST /delete-account
-func (bcr *BlockchainReactor) deleteAccount(ctx context.Context, in struct {
+func (a *API) deleteAccount(ctx context.Context, in struct {
 	AccountInfo string `json:"account_info"`
 }) Response {
-	if err := bcr.wallet.AccountMgr.DeleteAccount(in); err != nil {
+	if err := a.wallet.AccountMgr.DeleteAccount(in); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
@@ -65,7 +65,7 @@ type validateAddressResp struct {
 }
 
 // POST /validate-address
-func (bcr *BlockchainReactor) validateAddress(ctx context.Context, ins struct {
+func (a *API) validateAddress(ctx context.Context, ins struct {
 	Address string `json:"address"`
 }) Response {
 	resp := &validateAddressResp{
@@ -92,7 +92,7 @@ func (bcr *BlockchainReactor) validateAddress(ctx context.Context, ins struct {
 	}
 
 	resp.Vaild = true
-	resp.IsLocal = bcr.wallet.AccountMgr.IsLocalControlProgram(program)
+	resp.IsLocal = a.wallet.AccountMgr.IsLocalControlProgram(program)
 	return NewSuccessResponse(resp)
 }
 
@@ -102,8 +102,8 @@ type addressResp struct {
 	Address      string `json:"address"`
 }
 
-func (bcr *BlockchainReactor) listAddresses(ctx context.Context) Response {
-	cps, err := bcr.wallet.AccountMgr.ListControlProgram()
+func (a *API) listAddresses(ctx context.Context) Response {
+	cps, err := a.wallet.AccountMgr.ListControlProgram()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -114,7 +114,7 @@ func (bcr *BlockchainReactor) listAddresses(ctx context.Context) Response {
 			continue
 		}
 
-		accountAlias := bcr.wallet.AccountMgr.GetAliasByID(cp.AccountID)
+		accountAlias := a.wallet.AccountMgr.GetAliasByID(cp.AccountID)
 		addresses = append(addresses, &addressResp{AccountAlias: accountAlias, AccountID: cp.AccountID, Address: cp.Address})
 	}
 	return NewSuccessResponse(addresses)

@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/net/http/authn"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
+	"github.com/bytom/blockchain/wallet"
 )
 
 var (
@@ -43,6 +44,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 type API struct {
 	bcr     *BlockchainReactor
+	wallet  *wallet.Wallet
 	server  *http.Server
 	handler http.Handler
 }
@@ -100,7 +102,8 @@ func (a *API) StartServer(address string) {
 
 func NewAPI(bcr *BlockchainReactor, config *cfg.Config) *API {
 	api := &API{
-		bcr: bcr,
+		bcr:    bcr,
+		wallet: bcr.wallet,
 	}
 	api.buildHandler()
 	api.initServer(config)
@@ -116,13 +119,13 @@ func (a *API) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 func (a *API) buildHandler() {
 	m := http.NewServeMux()
 	if a.bcr.wallet != nil && a.bcr.wallet.AccountMgr != nil && a.bcr.wallet.AssetReg != nil {
-		m.Handle("/create-account", jsonHandler(a.bcr.createAccount))
-		m.Handle("/update-account-tags", jsonHandler(a.bcr.updateAccountTags))
-		m.Handle("/create-account-receiver", jsonHandler(a.bcr.createAccountReceiver))
+		m.Handle("/create-account", jsonHandler(a.createAccount))
+		m.Handle("/update-account-tags", jsonHandler(a.updateAccountTags))
+		m.Handle("/create-account-receiver", jsonHandler(a.createAccountReceiver))
 		m.Handle("/list-accounts", jsonHandler(a.bcr.listAccounts))
-		m.Handle("/list-addresses", jsonHandler(a.bcr.listAddresses))
-		m.Handle("/delete-account", jsonHandler(a.bcr.deleteAccount))
-		m.Handle("/validate-address", jsonHandler(a.bcr.validateAddress))
+		m.Handle("/list-addresses", jsonHandler(a.listAddresses))
+		m.Handle("/delete-account", jsonHandler(a.deleteAccount))
+		m.Handle("/validate-address", jsonHandler(a.validateAddress))
 
 		m.Handle("/create-asset", jsonHandler(a.bcr.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.bcr.updateAssetAlias))
