@@ -124,14 +124,12 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 
 	addresses := []*addressResp{}
 	for _, cp := range cps {
-		if cp.Address == "" {
+		if cp.Address == "" || (len(accountID) != 0 && strings.Compare(accountID, cp.AccountID) != 0) {
 			continue
 		}
 
-		if len(accountID) == 0 || strings.Compare(accountID, cp.AccountID) == 0 {
-			accountAlias := a.wallet.AccountMgr.GetAliasByID(cp.AccountID)
-			addresses = append(addresses, &addressResp{AccountAlias: accountAlias, AccountID: cp.AccountID, Address: cp.Address})
-		}
+		accountAlias := a.wallet.AccountMgr.GetAliasByID(cp.AccountID)
+		addresses = append(addresses, &addressResp{AccountAlias: accountAlias, AccountID: cp.AccountID, Address: cp.Address})
 	}
 	return NewSuccessResponse(addresses)
 }
