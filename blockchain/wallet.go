@@ -20,11 +20,11 @@ type KeyImportParams struct {
 	AccountAlias string `json:"account_alias"`
 }
 
-func (bcr *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
+func (a *API) walletExportKey(ctx context.Context, in struct {
 	Password string       `json:"password"`
 	XPub     chainkd.XPub `json:"xpub"`
 }) Response {
-	key, err := bcr.wallet.ExportAccountPrivKey(in.XPub, in.Password)
+	key, err := a.wallet.ExportAccountPrivKey(in.XPub, in.Password)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -35,7 +35,7 @@ func (bcr *BlockchainReactor) walletExportKey(ctx context.Context, in struct {
 	return NewSuccessResponse(privateKey{PrivateKey: *key})
 }
 
-func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in KeyImportParams) Response {
+func (a *API) walletImportKey(ctx context.Context, in KeyImportParams) Response {
 	rawData, err := base58.Decode(in.XPrv)
 	if err != nil {
 		return NewErrorResponse(err)
@@ -54,15 +54,15 @@ func (bcr *BlockchainReactor) walletImportKey(ctx context.Context, in KeyImportP
 	var xprv [64]byte
 	copy(xprv[:], rawData[:64])
 
-	xpub, err := bcr.wallet.ImportAccountPrivKey(xprv, in.KeyAlias, in.Password, in.Index, in.AccountAlias)
+	xpub, err := a.wallet.ImportAccountPrivKey(xprv, in.KeyAlias, in.Password, in.Index, in.AccountAlias)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(xpub)
 }
 
-func (bcr *BlockchainReactor) keyImportProgress(ctx context.Context) Response {
-	data, err := bcr.wallet.GetRescanStatus()
+func (a *API) keyImportProgress(ctx context.Context) Response {
+	data, err := a.wallet.GetRescanStatus()
 	if err != nil {
 		return NewErrorResponse(err)
 	}

@@ -17,11 +17,11 @@ import (
 
 var defaultTxTTL = 5 * time.Minute
 
-func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
+func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
 	var decoder func([]byte) (txbuilder.Action, error)
 	switch action {
 	case "control_account":
-		decoder = bcr.wallet.AccountMgr.DecodeControlAction
+		decoder = a.wallet.AccountMgr.DecodeControlAction
 	case "control_address":
 		decoder = txbuilder.DecodeControlAddressAction
 	case "control_program":
@@ -29,13 +29,13 @@ func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuil
 	case "control_receiver":
 		decoder = txbuilder.DecodeControlReceiverAction
 	case "issue":
-		decoder = bcr.wallet.AssetReg.DecodeIssueAction
+		decoder = a.wallet.AssetReg.DecodeIssueAction
 	case "retire":
 		decoder = txbuilder.DecodeRetireAction
 	case "spend_account":
-		decoder = bcr.wallet.AccountMgr.DecodeSpendAction
+		decoder = a.wallet.AccountMgr.DecodeSpendAction
 	case "spend_account_unspent_output":
-		decoder = bcr.wallet.AccountMgr.DecodeSpendUTXOAction
+		decoder = a.wallet.AccountMgr.DecodeSpendUTXOAction
 	default:
 		return nil, false
 	}
@@ -69,8 +69,8 @@ func mergeActions(req *BuildRequest) []map[string]interface{} {
 	return actions
 }
 
-func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
-	err := bcr.filterAliases(ctx, req)
+func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
+	err := a.filterAliases(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest
 		if !ok {
 			return nil, errors.WithDetailf(errBadActionType, "no action type provided on action %d", i)
 		}
-		decoder, ok := bcr.actionDecoder(typ)
+		decoder, ok := a.actionDecoder(typ)
 		if !ok {
 			return nil, errors.WithDetailf(errBadActionType, "unknown action type %q on action %d", typ, i)
 		}
@@ -126,10 +126,10 @@ func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest
 }
 
 // POST /build-transaction
-func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) Response {
+func (a *API) build(ctx context.Context, buildReqs *BuildRequest) Response {
 	subctx := reqid.NewSubContext(ctx, reqid.New())
 
-	tmpl, err := bcr.buildSingle(subctx, buildReqs)
+	tmpl, err := a.buildSingle(subctx, buildReqs)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -137,12 +137,12 @@ func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest
 	return NewSuccessResponse(tmpl)
 }
 
-func (bcr *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {
+func (a *API) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {
 	if tpl.Transaction == nil {
 		return nil, errors.Wrap(txbuilder.ErrMissingRawTx)
 	}
 
-	if err := txbuilder.FinalizeTx(ctx, bcr.chain, tpl.Transaction); err != nil {
+	if err := txbuilder.FinalizeTx(ctx, a.bcr.chain, tpl.Transaction); err != nil {
 		return nil, errors.Wrapf(err, "tx %s", tpl.Transaction.ID.String())
 	}
 
@@ -221,10 +221,10 @@ type submitTxResp struct {
 }
 
 // POST /submit-transaction
-func (bcr *BlockchainReactor) submit(ctx context.Context, ins struct {
+func (a *API) submit(ctx context.Context, ins struct {
 	Tx types.Tx `json:"raw_transaction"`
 }) Response {
-	if err := txbuilder.FinalizeTx(ctx, bcr.chain, &ins.Tx); err != nil {
+	if err := txbuilder.FinalizeTx(ctx, a.bcr.chain, &ins.Tx); err != nil {
 		return NewErrorResponse(err)
 	}
 
@@ -233,17 +233,17 @@ func (bcr *BlockchainReactor) submit(ctx context.Context, ins struct {
 }
 
 // POST /sign-submit-transaction
-func (bcr *BlockchainReactor) signSubmit(ctx context.Context, x struct {
+func (a *API) signSubmit(ctx context.Context, x struct {
 	Password []string           `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
-	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password[0], bcr.pseudohsmSignTemplate); err != nil {
+	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password[0], a.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")
 		return NewErrorResponse(err)
 	}
 	log.Info("Sign Transaction complete.")
 
-	txID, err := bcr.submitSingle(nil, &x.Txs)
+	txID, err := a.submitSingle(nil, &x.Txs)
 	if err != nil {
 		log.WithField("err", err).Error("submit single tx")
 		return NewErrorResponse(err)

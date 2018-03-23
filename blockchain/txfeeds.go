@@ -11,11 +11,11 @@ import (
 )
 
 // POST /create-txfeed
-func (bcr *BlockchainReactor) createTxFeed(ctx context.Context, in struct {
+func (a *API) createTxFeed(ctx context.Context, in struct {
 	Alias  string `json:"alias"`
 	Filter string `json:"filter"`
 }) Response {
-	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
+	if err := a.bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Add TxFeed Failed")
 		return NewErrorResponse(err)
 	}
@@ -37,11 +37,11 @@ func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter strin
 }
 
 // POST /get-transaction-feed
-func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
+func (a *API) getTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) Response {
 	var tmpTxFeed interface{}
-	rawTxfeed, err := bcr.getTxFeedByAlias(ctx, in.Alias)
+	rawTxfeed, err := a.bcr.getTxFeedByAlias(ctx, in.Alias)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -54,35 +54,35 @@ func (bcr *BlockchainReactor) getTxFeed(ctx context.Context, in struct {
 }
 
 // POST /delete-transaction-feed
-func (bcr *BlockchainReactor) deleteTxFeed(ctx context.Context, in struct {
+func (a *API) deleteTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) Response {
-	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
+	if err := a.bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
 }
 
 // POST /update-transaction-feed
-func (bcr *BlockchainReactor) updateTxFeed(ctx context.Context, in struct {
+func (a *API) updateTxFeed(ctx context.Context, in struct {
 	Alias  string `json:"alias"`
 	Filter string `json:"filter"`
 }) Response {
-	if err := bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
+	if err := a.bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return NewErrorResponse(err)
 	}
-	if err := bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
+	if err := a.bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Update TxFeed Failed")
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
 }
 
-func (bcr *BlockchainReactor) getTxFeeds() ([]txfeed.TxFeed, error) {
+func (a *API) getTxFeeds() ([]txfeed.TxFeed, error) {
 	txFeed := txfeed.TxFeed{}
 	txFeeds := make([]txfeed.TxFeed, 0)
 
-	iter := bcr.txFeedTracker.DB.Iterator()
+	iter := a.bcr.txFeedTracker.DB.Iterator()
 	defer iter.Release()
 
 	for iter.Next() {
@@ -97,8 +97,8 @@ func (bcr *BlockchainReactor) getTxFeeds() ([]txfeed.TxFeed, error) {
 
 // listTxFeeds is an http handler for listing txfeeds. It does not take a filter.
 // POST /list-transaction-feeds
-func (bcr *BlockchainReactor) listTxFeeds(ctx context.Context) Response {
-	txFeeds, err := bcr.getTxFeeds()
+func (a *API) listTxFeeds(ctx context.Context) Response {
+	txFeeds, err := a.getTxFeeds()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
