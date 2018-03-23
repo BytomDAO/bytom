@@ -1,12 +1,18 @@
 package blockchain
 
 import (
+	"crypto/tls"
+	"net"
 	"net/http"
+	"sync"
 	"time"
 
+	"github.com/kr/secureheader"
 	log "github.com/sirupsen/logrus"
+	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/blockchain/accesstoken"
+	cfg "github.com/bytom/config"
 	"github.com/bytom/dashboard"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/authn"
@@ -16,16 +22,89 @@ import (
 
 var (
 	errNotAuthenticated = errors.New("not authenticated")
+	httpReadTimeout     = 2 * time.Minute
+	httpWriteTimeout    = time.Hour
 )
 
-type API struct {
-	bcr *BlockchainReactor
+type waitHandler struct {
+	h  http.Handler
+	wg sync.WaitGroup
 }
 
-func NewAPI(bcr *BlockchainReactor) *API {
-	return &API{
+func (wh *waitHandler) Set(h http.Handler) {
+	wh.h = h
+	wh.wg.Done()
+}
+
+func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	wh.wg.Wait()
+	wh.h.ServeHTTP(w, req)
+}
+
+type API struct {
+	bcr    *BlockchainReactor
+	server *http.Server
+}
+
+func initServer(config *cfg.Config, tokens *accesstoken.CredentialStore, h http.Handler) *http.Server {
+	// The waitHandler accepts incoming requests, but blocks until its underlying
+	// handler is set, when the second phase is complete.
+	var coreHandler waitHandler
+	coreHandler.wg.Add(1)
+	mux := http.NewServeMux()
+	mux.Handle("/", &coreHandler)
+
+	var handler http.Handler = mux
+
+	if config.Auth.Disable == false {
+		handler = AuthHandler(handler, tokens)
+	}
+	handler = RedirectHandler(handler)
+
+	secureheader.DefaultConfig.PermitClearLoopback = true
+	secureheader.DefaultConfig.HTTPSRedirect = false
+	secureheader.DefaultConfig.Next = handler
+
+	server := &http.Server{
+		// Note: we should not set TLSConfig here;
+		// we took care of TLS with the listener in maybeUseTLS.
+		Handler:      secureheader.DefaultConfig,
+		ReadTimeout:  httpReadTimeout,
+		WriteTimeout: httpWriteTimeout,
+		// Disable HTTP/2 for now until the Go implementation is more stable.
+		// https://github.com/golang/go/issues/16450
+		// https://github.com/golang/go/issues/17071
+		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
+	}
+
+	coreHandler.Set(h)
+	return server
+}
+
+func (a *API) StartServer(address string) {
+	log.WithField("api address:", address).Info("Rpc listen")
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("Failed to register tcp port: %v", err))
+	}
+
+	// The `Serve` call has to happen in its own goroutine because
+	// it's blocking and we need to proceed to the rest of the core setup after
+	// we call it.
+	go func() {
+		if err := a.server.Serve(listener); err != nil {
+			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
+		}
+	}()
+}
+
+func NewAPI(bcr *BlockchainReactor, config *cfg.Config) *API {
+	api := &API{
 		bcr: bcr,
 	}
+	api.server = initServer(config, bcr.wallet.Tokens, api)
+
+	return api
 }
 
 func (a *API) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -152,5 +231,15 @@ func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore
 			return
 		}
 		handler.ServeHTTP(rw, req)
+	})
+}
+
+func RedirectHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path == "/" {
+			http.Redirect(w, req, "/dashboard/", http.StatusFound)
+			return
+		}
+		next.ServeHTTP(w, req)
 	})
 }
