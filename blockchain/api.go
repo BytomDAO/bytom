@@ -47,7 +47,7 @@ type API struct {
 	handler http.Handler
 }
 
-func initServer(config *cfg.Config, tokens *accesstoken.CredentialStore, h http.Handler) *http.Server {
+func (a *API) initServer(config *cfg.Config) {
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
 	var coreHandler waitHandler
@@ -58,7 +58,7 @@ func initServer(config *cfg.Config, tokens *accesstoken.CredentialStore, h http.
 	var handler http.Handler = mux
 
 	if config.Auth.Disable == false {
-		handler = AuthHandler(handler, tokens)
+		handler = AuthHandler(handler, a.bcr.wallet.Tokens)
 	}
 	handler = RedirectHandler(handler)
 
@@ -66,7 +66,7 @@ func initServer(config *cfg.Config, tokens *accesstoken.CredentialStore, h http.
 	secureheader.DefaultConfig.HTTPSRedirect = false
 	secureheader.DefaultConfig.Next = handler
 
-	server := &http.Server{
+	a.server = &http.Server{
 		// Note: we should not set TLSConfig here;
 		// we took care of TLS with the listener in maybeUseTLS.
 		Handler:      secureheader.DefaultConfig,
@@ -78,8 +78,7 @@ func initServer(config *cfg.Config, tokens *accesstoken.CredentialStore, h http.
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
 
-	coreHandler.Set(h)
-	return server
+	coreHandler.Set(a)
 }
 
 func (a *API) StartServer(address string) {
@@ -104,7 +103,7 @@ func NewAPI(bcr *BlockchainReactor, config *cfg.Config) *API {
 		bcr: bcr,
 	}
 	api.buildHandler()
-	api.server = initServer(config, bcr.wallet.Tokens, api)
+	api.initServer(config)
 
 	return api
 }
