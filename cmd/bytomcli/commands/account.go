@@ -20,11 +20,15 @@ func init() {
 
 	listAccountsCmd.PersistentFlags().StringVar(&accountID, "id", "", "ID of account")
 
+	listAddressesCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
+	listAddressesCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
+
 	listUnspentOutputsCmd.PersistentFlags().StringVar(&outputID, "id", "", "ID of unspent output")
 }
 
 var (
 	accountID         = ""
+	accountAlias      = ""
 	accountQuorum     = 1
 	accountToken      = ""
 	accountTags       = ""
@@ -165,7 +169,12 @@ var listAddressesCmd = &cobra.Command{
 	Short: "List the account addresses",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/list-addresses")
+		var ins = struct {
+			AccountID    string `json:"account_id"`
+			AccountAlias string `json:"account_alias"`
+		}{AccountID: accountID, AccountAlias: accountAlias}
+
+		data, exitCode := util.ClientCall("/list-addresses", &ins)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

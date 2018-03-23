@@ -2,14 +2,15 @@ package blockchain
 
 import (
 	"context"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/account"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol/vm/vmutil"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // POST /create-account
@@ -102,7 +103,20 @@ type addressResp struct {
 	Address      string `json:"address"`
 }
 
-func (a *API) listAddresses(ctx context.Context) Response {
+func (a *API) listAddresses(ctx context.Context, ins struct {
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+}) Response {
+	accountID := ins.AccountID
+	if ins.AccountAlias != "" {
+		account, err := a.wallet.AccountMgr.FindByAlias(ctx, ins.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+
+		accountID = account.ID
+	}
+
 	cps, err := a.wallet.AccountMgr.ListControlProgram()
 	if err != nil {
 		return NewErrorResponse(err)
@@ -110,7 +124,7 @@ func (a *API) listAddresses(ctx context.Context) Response {
 
 	addresses := []*addressResp{}
 	for _, cp := range cps {
-		if cp.Address == "" {
+		if cp.Address == "" || (len(accountID) != 0 && strings.Compare(accountID, cp.AccountID) != 0) {
 			continue
 		}
 
