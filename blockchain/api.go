@@ -122,7 +122,7 @@ func (a *API) buildHandler() {
 		m.Handle("/create-account", jsonHandler(a.createAccount))
 		m.Handle("/update-account-tags", jsonHandler(a.updateAccountTags))
 		m.Handle("/create-account-receiver", jsonHandler(a.createAccountReceiver))
-		m.Handle("/list-accounts", jsonHandler(a.bcr.listAccounts))
+		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
 		m.Handle("/list-addresses", jsonHandler(a.listAddresses))
 		m.Handle("/delete-account", jsonHandler(a.deleteAccount))
 		m.Handle("/validate-address", jsonHandler(a.validateAddress))

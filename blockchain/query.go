@@ -11,10 +11,10 @@ import (
 )
 
 // POST /list-accounts
-func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
+func (a *API) listAccounts(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	accounts, err := bcr.wallet.AccountMgr.ListAccounts(filter.ID)
+	accounts, err := a.wallet.AccountMgr.ListAccounts(filter.ID)
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
 		return NewErrorResponse(err)
