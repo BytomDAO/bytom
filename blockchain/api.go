@@ -132,10 +132,10 @@ func (a *API) buildHandler() {
 		m.Handle("/update-asset-tags", jsonHandler(a.updateAssetTags))
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
-		m.Handle("/create-key", jsonHandler(a.bcr.pseudohsmCreateKey))
-		m.Handle("/list-keys", jsonHandler(a.bcr.pseudohsmListKeys))
-		m.Handle("/delete-key", jsonHandler(a.bcr.pseudohsmDeleteKey))
-		m.Handle("/reset-key-password", jsonHandler(a.bcr.pseudohsmResetPassword))
+		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
+		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
+		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
+		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
 
 		m.Handle("/get-transaction", jsonHandler(a.bcr.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.bcr.listTransactions))
