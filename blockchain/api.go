@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/net/http/authn"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
+	"github.com/bytom/protocol"
 	"github.com/bytom/blockchain/wallet"
 )
 
@@ -45,6 +46,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 type API struct {
 	bcr     *BlockchainReactor
 	wallet  *wallet.Wallet
+	chain   *protocol.Chain
 	server  *http.Server
 	handler http.Handler
 }
@@ -104,6 +106,7 @@ func NewAPI(bcr *BlockchainReactor, config *cfg.Config) *API {
 	api := &API{
 		bcr:    bcr,
 		wallet: bcr.wallet,
+		chain:  bcr.chain,
 	}
 	api.buildHandler()
 	api.initServer(config)
