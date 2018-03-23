@@ -116,7 +116,8 @@ func (n *Node) initServer() {
 		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
 	}
 
-	coreHandler.Set(n.bcReactor.Handler)
+	api := bc.NewAPI(n.bcReactor)
+	coreHandler.Set(api)
 }
 
 func NewNode(config *cfg.Config) *Node {

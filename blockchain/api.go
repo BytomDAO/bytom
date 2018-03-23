@@ -18,6 +18,20 @@ var (
 	errNotAuthenticated = errors.New("not authenticated")
 )
 
+type API struct {
+	bcr *BlockchainReactor
+}
+
+func NewAPI(bcr *BlockchainReactor) *API {
+	return &API{
+		bcr: bcr,
+	}
+}
+
+func (a *API) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	a.bcr.Handler.ServeHTTP(rw, req)
+}
+
 // json Handler
 func jsonHandler(f interface{}) http.Handler {
 	h, err := httpjson.Handler(f, errorFormatter.Write)
