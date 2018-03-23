@@ -50,11 +50,11 @@ type signResp struct {
 	SignComplete bool                `json:"sign_complete"`
 }
 
-func (bcr *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x struct {
+func (a *API) pseudohsmSignTemplates(ctx context.Context, x struct {
 	Password string             `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
-	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password, bcr.pseudohsmSignTemplate); err != nil {
+	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password, a.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")
 		return NewErrorResponse(err)
 	}
@@ -62,8 +62,8 @@ func (bcr *BlockchainReactor) pseudohsmSignTemplates(ctx context.Context, x stru
 	return NewSuccessResponse(&signResp{Tx: &x.Txs, SignComplete: txbuilder.SignProgress(&x.Txs)})
 }
 
-func (bcr *BlockchainReactor) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
-	return bcr.wallet.Hsm.XSign(xpub, path, data[:], password)
+func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
+	return a.wallet.Hsm.XSign(xpub, path, data[:], password)
 }
 
 type ResetPasswordResp struct {

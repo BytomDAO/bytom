@@ -13,7 +13,7 @@ import (
 )
 
 // return network infomation
-func (bcr *BlockchainReactor) getNetInfo() Response {
+func (a *API) getNetInfo() Response {
 	type netInfo struct {
 		Listening    bool   `json:"listening"`
 		Syncing      bool   `json:"syncing"`
@@ -23,30 +23,30 @@ func (bcr *BlockchainReactor) getNetInfo() Response {
 		HighestBlock uint64 `json:"highest_block"`
 	}
 	net := &netInfo{}
-	net.Listening = bcr.sw.IsListening()
-	net.Syncing = bcr.blockKeeper.IsCaughtUp()
-	net.Mining = bcr.mining.IsMining()
-	net.PeerCount = len(bcr.sw.Peers().List())
-	net.CurrentBlock = bcr.blockKeeper.chainHeight
-	net.HighestBlock = bcr.blockKeeper.maxPeerHeight
+	net.Listening = a.bcr.sw.IsListening()
+	net.Syncing = a.bcr.blockKeeper.IsCaughtUp()
+	net.Mining = a.bcr.mining.IsMining()
+	net.PeerCount = len(a.bcr.sw.Peers().List())
+	net.CurrentBlock = a.bcr.blockKeeper.chainHeight
+	net.HighestBlock = a.bcr.blockKeeper.maxPeerHeight
 
 	return NewSuccessResponse(net)
 }
 
 // return best block hash
-func (bcr *BlockchainReactor) getBestBlockHash() Response {
-	blockHash := map[string]string{"blockHash": bcr.chain.BestBlockHash().String()}
+func (a *API) getBestBlockHash() Response {
+	blockHash := map[string]string{"blockHash": a.bcr.chain.BestBlockHash().String()}
 	return NewSuccessResponse(blockHash)
 }
 
 // return block header by hash
-func (bcr *BlockchainReactor) getBlockHeaderByHash(strHash string) Response {
+func (a *API) getBlockHeaderByHash(strHash string) Response {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
 		return NewErrorResponse(err)
 	}
-	block, err := bcr.chain.GetBlockByHash(&hash)
+	block, err := a.bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
 		return NewErrorResponse(err)
@@ -90,23 +90,23 @@ type GetBlockResp struct {
 }
 
 // return block by hash
-func (bcr *BlockchainReactor) getBlock(ins GetBlockReq) Response {
+func (a *API) getBlock(ins GetBlockReq) Response {
 	var err error
 	block := &types.Block{}
 	if len(ins.BlockHash) == 32 {
 		b32 := [32]byte{}
 		copy(b32[:], ins.BlockHash)
 		hash := bc.NewHash(b32)
-		block, err = bcr.chain.GetBlockByHash(&hash)
+		block, err = a.bcr.chain.GetBlockByHash(&hash)
 	} else {
-		block, err = bcr.chain.GetBlockByHeight(ins.BlockHeight)
+		block, err = a.bcr.chain.GetBlockByHeight(ins.BlockHeight)
 	}
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	blockHash := block.Hash()
-	txStatus, err := bcr.chain.GetTransactionStatus(&blockHash)
+	txStatus, err := a.bcr.chain.GetTransactionStatus(&blockHash)
 	rawBlock, err := block.MarshalText()
 	if err != nil {
 		return NewErrorResponse(err)
@@ -153,14 +153,14 @@ func (bcr *BlockchainReactor) getBlock(ins GetBlockReq) Response {
 }
 
 // return block transactions count by hash
-func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) Response {
+func (a *API) getBlockTransactionsCountByHash(strHash string) Response {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
 		return NewErrorResponse(err)
 	}
 
-	legacyBlock, err := bcr.chain.GetBlockByHash(&hash)
+	legacyBlock, err := a.bcr.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
 		return NewErrorResponse(err)
@@ -171,8 +171,8 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHash(strHash string) Re
 }
 
 // return block transactions count by height
-func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) Response {
-	legacyBlock, err := bcr.chain.GetBlockByHeight(height)
+func (a *API) getBlockTransactionsCountByHeight(height uint64) Response {
+	legacyBlock, err := a.bcr.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
 		return NewErrorResponse(err)
@@ -183,19 +183,19 @@ func (bcr *BlockchainReactor) getBlockTransactionsCountByHeight(height uint64) R
 }
 
 // return current block count
-func (bcr *BlockchainReactor) getBlockCount() Response {
-	blockHeight := map[string]uint64{"block_count": bcr.chain.Height()}
+func (a *API) getBlockCount() Response {
+	blockHeight := map[string]uint64{"block_count": a.bcr.chain.Height()}
 	return NewSuccessResponse(blockHeight)
 }
 
 // return is in mining or not
-func (bcr *BlockchainReactor) isMining() Response {
-	IsMining := map[string]bool{"isMining": bcr.mining.IsMining()}
+func (a *API) isMining() Response {
+	IsMining := map[string]bool{"isMining": a.bcr.mining.IsMining()}
 	return NewSuccessResponse(IsMining)
 }
 
 // return gasRate
-func (bcr *BlockchainReactor) gasRate() Response {
+func (a *API) gasRate() Response {
 	gasrate := map[string]int64{"gasRate": consensus.VMGasRate}
 	return NewSuccessResponse(gasrate)
 }
