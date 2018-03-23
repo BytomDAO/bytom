@@ -67,7 +67,6 @@ type BlockchainReactor struct {
 	mining        *cpuminer.CPUMiner
 	miningPool    *miningpool.MiningPool
 	sw            *p2p.Switch
-	Handler       http.Handler
 	evsw          types.EventSwitch
 	newBlockCh    chan *bc.Hash
 	miningEnable  bool
@@ -124,7 +123,6 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2
 // OnStart implements BaseService
 func (bcr *BlockchainReactor) OnStart() error {
 	bcr.BaseReactor.OnStart()
-	bcr.BuildHandler()
 
 	if bcr.miningEnable {
 		bcr.mining.Start()

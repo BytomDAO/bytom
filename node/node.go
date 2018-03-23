@@ -2,15 +2,11 @@ package node
 
 import (
 	"context"
-	"crypto/tls"
-	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/kr/secureheader"
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire"
@@ -28,7 +24,6 @@ import (
 	w "github.com/bytom/blockchain/wallet"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/env"
-	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/types"
@@ -37,8 +32,6 @@ import (
 )
 
 const (
-	httpReadTimeout          = 2 * time.Minute
-	httpWriteTimeout         = time.Hour
 	webAddress               = "http://127.0.0.1:9888"
 	expireReservationsPeriod = time.Second
 )
@@ -56,67 +49,8 @@ type Node struct {
 
 	evsw         types.EventSwitch // pub/sub for services
 	bcReactor    *bc.BlockchainReactor
-	server       *http.Server
 	accessTokens *accesstoken.CredentialStore
-}
-
-func RedirectHandler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path == "/" {
-			http.Redirect(w, req, "/dashboard/", http.StatusFound)
-			return
-		}
-		next.ServeHTTP(w, req)
-	})
-}
-
-type waitHandler struct {
-	h  http.Handler
-	wg sync.WaitGroup
-}
-
-func (wh *waitHandler) Set(h http.Handler) {
-	wh.h = h
-	wh.wg.Done()
-}
-
-func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	wh.wg.Wait()
-	wh.h.ServeHTTP(w, req)
-}
-
-func (n *Node) initServer() {
-	// The waitHandler accepts incoming requests, but blocks until its underlying
-	// handler is set, when the second phase is complete.
-	var coreHandler waitHandler
-	coreHandler.wg.Add(1)
-	mux := http.NewServeMux()
-	mux.Handle("/", &coreHandler)
-
-	var handler http.Handler = mux
-
-	if n.config.Auth.Disable == false {
-		handler = bc.AuthHandler(handler, n.accessTokens)
-	}
-	handler = RedirectHandler(handler)
-
-	secureheader.DefaultConfig.PermitClearLoopback = true
-	secureheader.DefaultConfig.HTTPSRedirect = false
-	secureheader.DefaultConfig.Next = handler
-
-	n.server = &http.Server{
-		// Note: we should not set TLSConfig here;
-		// we took care of TLS with the listener in maybeUseTLS.
-		Handler:      secureheader.DefaultConfig,
-		ReadTimeout:  httpReadTimeout,
-		WriteTimeout: httpWriteTimeout,
-		// Disable HTTP/2 for now until the Go implementation is more stable.
-		// https://github.com/golang/go/issues/16450
-		// https://github.com/golang/go/issues/17071
-		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
-	}
-
-	coreHandler.Set(n.bcReactor.Handler)
+	api          *bc.API
 }
 
 func NewNode(config *cfg.Config) *Node {
@@ -273,24 +207,11 @@ func lanchWebBroser(lanch bool) {
 	}
 }
 
-func (n *Node) initAndstartServer() {
-	n.initServer()
+func (n *Node) initAndstartApiServer() {
+	n.api = bc.NewAPI(n.bcReactor, n.config)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
-	log.WithField("api address:", n.config.ApiAddress).Info("Rpc listen")
-	listener, err := net.Listen("tcp", *listenAddr)
-	if err != nil {
-		cmn.Exit(cmn.Fmt("Failed to register tcp port: %v", err))
-	}
-
-	// The `Serve` call has to happen in its own goroutine because
-	// it's blocking and we need to proceed to the rest of the core setup after
-	// we call it.
-	go func() {
-		if err := n.server.Serve(listener); err != nil {
-			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
-		}
-	}()
+	n.api.StartServer(*listenAddr)
 }
 
 func (n *Node) OnStart() error {
@@ -316,7 +237,7 @@ func (n *Node) OnStart() error {
 		}
 	}
 
-	n.initAndstartServer()
+	n.initAndstartApiServer()
 	lanchWebBroser(!n.config.Web.Closed)
 
 	return nil
