@@ -34,10 +34,10 @@ func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
 }
 
 // POST /list-assets
-func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
+func (a *API) listAssets(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	assets, err := bcr.wallet.AssetReg.ListAssets(filter.ID)
+	assets, err := a.wallet.AssetReg.ListAssets(filter.ID)
 	if err != nil {
 		log.Errorf("listAssets: %v", err)
 		return NewErrorResponse(err)
@@ -47,8 +47,8 @@ func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
 }
 
 // POST /listBalances
-func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
-	if balances, err := bcr.wallet.GetAccountBalances(""); err != nil {
+func (a *API) listBalances(ctx context.Context) Response {
+	if balances, err := a.wallet.GetAccountBalances(""); err != nil {
 		log.Errorf("GetAccountUTXOs: %v", err)
 		return NewErrorResponse(err)
 	} else {
@@ -57,10 +57,10 @@ func (bcr *BlockchainReactor) listBalances(ctx context.Context) Response {
 }
 
 // POST /get-transaction
-func (bcr *BlockchainReactor) getTransaction(ctx context.Context, txInfo struct {
+func (a *API) getTransaction(ctx context.Context, txInfo struct {
 	TxID string `json:"tx_id"`
 }) Response {
-	transaction, err := bcr.wallet.GetTransactionByTxID(txInfo.TxID)
+	transaction, err := a.wallet.GetTransactionByTxID(txInfo.TxID)
 	if err != nil {
 		log.Errorf("getTransaction error: %v", err)
 		return NewErrorResponse(err)
@@ -70,7 +70,7 @@ func (bcr *BlockchainReactor) getTransaction(ctx context.Context, txInfo struct 
 }
 
 // POST /list-transactions
-func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struct {
+func (a *API) listTransactions(ctx context.Context, filter struct {
 	ID        string `json:"id"`
 	AccountID string `json:"account_id"`
 	Detail    bool   `json:"detail"`
@@ -79,9 +79,9 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struc
 	var err error
 
 	if filter.AccountID != "" {
-		transactions, err = bcr.wallet.GetTransactionsByAccountID(filter.AccountID)
+		transactions, err = a.wallet.GetTransactionsByAccountID(filter.AccountID)
 	} else {
-		transactions, err = bcr.wallet.GetTransactionsByTxID(filter.ID)
+		transactions, err = a.wallet.GetTransactionsByTxID(filter.ID)
 	}
 
 	if err != nil {
@@ -90,17 +90,17 @@ func (bcr *BlockchainReactor) listTransactions(ctx context.Context, filter struc
 	}
 
 	if filter.Detail == false {
-		txSummary := bcr.wallet.GetTransactionsSummary(transactions)
+		txSummary := a.wallet.GetTransactionsSummary(transactions)
 		return NewSuccessResponse(txSummary)
 	}
 	return NewSuccessResponse(transactions)
 }
 
 // POST /list-unspent-outputs
-func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter struct {
+func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	accountUTXOs, err := bcr.wallet.GetAccountUTXOs(filter.ID)
+	accountUTXOs, err := a.wallet.GetAccountUTXOs(filter.ID)
 	if err != nil {
 		log.Errorf("list Unspent Outputs: %v", err)
 		return NewErrorResponse(err)
@@ -119,8 +119,8 @@ func (bcr *BlockchainReactor) listUnspentOutputs(ctx context.Context, filter str
 			ControlProgramIndex: utxo.ControlProgramIndex,
 			Address:             utxo.Address,
 			ValidHeight:         utxo.ValidHeight,
-			Alias:               bcr.wallet.AccountMgr.GetAliasByID(utxo.AccountID),
-			AssetAlias:          bcr.wallet.AssetReg.GetAliasByID(utxo.AssetID.String()),
+			Alias:               a.wallet.AccountMgr.GetAliasByID(utxo.AccountID),
+			AssetAlias:          a.wallet.AssetReg.GetAliasByID(utxo.AssetID.String()),
 		})
 	}
 

@@ -19,13 +19,13 @@ type GetWorkResp struct {
 	Seed        *bc.Hash           `json:"seed"`
 }
 
-func (bcr *BlockchainReactor) getWork() Response {
-	bh, err := bcr.miningPool.GetWork()
+func (a *API) getWork() Response {
+	bh, err := a.bcr.miningPool.GetWork()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
-	seed, err := bcr.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
+	seed, err := a.bcr.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -37,15 +37,15 @@ func (bcr *BlockchainReactor) getWork() Response {
 	return NewSuccessResponse(resp)
 }
 
-func (bcr *BlockchainReactor) submitWork(bh *types.BlockHeader) Response {
-	success := bcr.miningPool.SubmitWork(bh)
+func (a *API) submitWork(bh *types.BlockHeader) Response {
+	success := a.bcr.miningPool.SubmitWork(bh)
 	return NewSuccessResponse(success)
 }
 
-func (bcr *BlockchainReactor) getBlockHeaderByHeight(ctx context.Context, req struct {
+func (a *API) getBlockHeaderByHeight(ctx context.Context, req struct {
 	Height uint64 `json:"block_height"`
 }) Response {
-	block, err := bcr.chain.GetBlockByHeight(req.Height)
+	block, err := a.bcr.chain.GetBlockByHeight(req.Height)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

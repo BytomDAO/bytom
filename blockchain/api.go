@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/net/http/authn"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
+	"github.com/bytom/blockchain/wallet"
 )
 
 var (
@@ -43,6 +44,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 type API struct {
 	bcr     *BlockchainReactor
+	wallet  *wallet.Wallet
 	server  *http.Server
 	handler http.Handler
 }
@@ -100,7 +102,8 @@ func (a *API) StartServer(address string) {
 
 func NewAPI(bcr *BlockchainReactor, config *cfg.Config) *API {
 	api := &API{
-		bcr: bcr,
+		bcr:    bcr,
+		wallet: bcr.wallet,
 	}
 	api.buildHandler()
 	api.initServer(config)
@@ -116,70 +119,70 @@ func (a *API) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 func (a *API) buildHandler() {
 	m := http.NewServeMux()
 	if a.bcr.wallet != nil && a.bcr.wallet.AccountMgr != nil && a.bcr.wallet.AssetReg != nil {
-		m.Handle("/create-account", jsonHandler(a.bcr.createAccount))
-		m.Handle("/update-account-tags", jsonHandler(a.bcr.updateAccountTags))
-		m.Handle("/create-account-receiver", jsonHandler(a.bcr.createAccountReceiver))
+		m.Handle("/create-account", jsonHandler(a.createAccount))
+		m.Handle("/update-account-tags", jsonHandler(a.updateAccountTags))
+		m.Handle("/create-account-receiver", jsonHandler(a.createAccountReceiver))
 		m.Handle("/list-accounts", jsonHandler(a.bcr.listAccounts))
-		m.Handle("/list-addresses", jsonHandler(a.bcr.listAddresses))
-		m.Handle("/delete-account", jsonHandler(a.bcr.deleteAccount))
-		m.Handle("/validate-address", jsonHandler(a.bcr.validateAddress))
+		m.Handle("/list-addresses", jsonHandler(a.listAddresses))
+		m.Handle("/delete-account", jsonHandler(a.deleteAccount))
+		m.Handle("/validate-address", jsonHandler(a.validateAddress))
 
-		m.Handle("/create-asset", jsonHandler(a.bcr.createAsset))
-		m.Handle("/update-asset-alias", jsonHandler(a.bcr.updateAssetAlias))
-		m.Handle("/update-asset-tags", jsonHandler(a.bcr.updateAssetTags))
-		m.Handle("/list-assets", jsonHandler(a.bcr.listAssets))
+		m.Handle("/create-asset", jsonHandler(a.createAsset))
+		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
+		m.Handle("/update-asset-tags", jsonHandler(a.updateAssetTags))
+		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
-		m.Handle("/create-key", jsonHandler(a.bcr.pseudohsmCreateKey))
-		m.Handle("/list-keys", jsonHandler(a.bcr.pseudohsmListKeys))
-		m.Handle("/delete-key", jsonHandler(a.bcr.pseudohsmDeleteKey))
-		m.Handle("/reset-key-password", jsonHandler(a.bcr.pseudohsmResetPassword))
+		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
+		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
+		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
+		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
 
-		m.Handle("/get-transaction", jsonHandler(a.bcr.getTransaction))
-		m.Handle("/list-transactions", jsonHandler(a.bcr.listTransactions))
-		m.Handle("/list-balances", jsonHandler(a.bcr.listBalances))
+		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
+		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
+		m.Handle("/list-balances", jsonHandler(a.listBalances))
 	} else {
 		log.Warn("Please enable wallet")
 	}
 
 	m.Handle("/", alwaysError(errors.New("not Found")))
 
-	m.Handle("/build-transaction", jsonHandler(a.bcr.build))
-	m.Handle("/sign-transaction", jsonHandler(a.bcr.pseudohsmSignTemplates))
-	m.Handle("/submit-transaction", jsonHandler(a.bcr.submit))
-	m.Handle("/sign-submit-transaction", jsonHandler(a.bcr.signSubmit))
+	m.Handle("/build-transaction", jsonHandler(a.build))
+	m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
+	m.Handle("/submit-transaction", jsonHandler(a.submit))
+	m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
 
-	m.Handle("/create-transaction-feed", jsonHandler(a.bcr.createTxFeed))
-	m.Handle("/get-transaction-feed", jsonHandler(a.bcr.getTxFeed))
-	m.Handle("/update-transaction-feed", jsonHandler(a.bcr.updateTxFeed))
-	m.Handle("/delete-transaction-feed", jsonHandler(a.bcr.deleteTxFeed))
-	m.Handle("/list-transaction-feeds", jsonHandler(a.bcr.listTxFeeds))
-	m.Handle("/list-unspent-outputs", jsonHandler(a.bcr.listUnspentOutputs))
+	m.Handle("/create-transaction-feed", jsonHandler(a.createTxFeed))
+	m.Handle("/get-transaction-feed", jsonHandler(a.getTxFeed))
+	m.Handle("/update-transaction-feed", jsonHandler(a.updateTxFeed))
+	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
+	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
+	m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
 	m.Handle("/info", jsonHandler(a.bcr.info))
 
-	m.Handle("/create-access-token", jsonHandler(a.bcr.createAccessToken))
-	m.Handle("/list-access-tokens", jsonHandler(a.bcr.listAccessTokens))
-	m.Handle("/delete-access-token", jsonHandler(a.bcr.deleteAccessToken))
-	m.Handle("/check-access-token", jsonHandler(a.bcr.checkAccessToken))
+	m.Handle("/create-access-token", jsonHandler(a.createAccessToken))
+	m.Handle("/list-access-tokens", jsonHandler(a.listAccessTokens))
+	m.Handle("/delete-access-token", jsonHandler(a.deleteAccessToken))
+	m.Handle("/check-access-token", jsonHandler(a.checkAccessToken))
 
-	m.Handle("/block-hash", jsonHandler(a.bcr.getBestBlockHash))
+	m.Handle("/block-hash", jsonHandler(a.getBestBlockHash))
 
-	m.Handle("/export-private-key", jsonHandler(a.bcr.walletExportKey))
-	m.Handle("/import-private-key", jsonHandler(a.bcr.walletImportKey))
-	m.Handle("/import-key-progress", jsonHandler(a.bcr.keyImportProgress))
+	m.Handle("/export-private-key", jsonHandler(a.walletExportKey))
+	m.Handle("/import-private-key", jsonHandler(a.walletImportKey))
+	m.Handle("/import-key-progress", jsonHandler(a.keyImportProgress))
 
-	m.Handle("/get-block-header-by-hash", jsonHandler(a.bcr.getBlockHeaderByHash))
-	m.Handle("/get-block-header-by-height", jsonHandler(a.bcr.getBlockHeaderByHeight))
-	m.Handle("/get-block", jsonHandler(a.bcr.getBlock))
-	m.Handle("/get-block-count", jsonHandler(a.bcr.getBlockCount))
-	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(a.bcr.getBlockTransactionsCountByHash))
-	m.Handle("/get-block-transactions-count-by-height", jsonHandler(a.bcr.getBlockTransactionsCountByHeight))
+	m.Handle("/get-block-header-by-hash", jsonHandler(a.getBlockHeaderByHash))
+	m.Handle("/get-block-header-by-height", jsonHandler(a.getBlockHeaderByHeight))
+	m.Handle("/get-block", jsonHandler(a.getBlock))
+	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
+	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(a.getBlockTransactionsCountByHash))
+	m.Handle("/get-block-transactions-count-by-height", jsonHandler(a.getBlockTransactionsCountByHeight))
 
-	m.Handle("/net-info", jsonHandler(a.bcr.getNetInfo))
+	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 
-	m.Handle("/is-mining", jsonHandler(a.bcr.isMining))
-	m.Handle("/gas-rate", jsonHandler(a.bcr.gasRate))
-	m.Handle("/getwork", jsonHandler(a.bcr.getWork))
-	m.Handle("/submitwork", jsonHandler(a.bcr.submitWork))
+	m.Handle("/is-mining", jsonHandler(a.isMining))
+	m.Handle("/gas-rate", jsonHandler(a.gasRate))
+	m.Handle("/getwork", jsonHandler(a.getWork))
+	m.Handle("/submitwork", jsonHandler(a.submitWork))
 
 	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if l := latency(m, req); l != nil {
