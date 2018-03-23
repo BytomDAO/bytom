@@ -2,7 +2,6 @@ package txdb
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/tendermint/tmlibs/common"
@@ -16,9 +15,11 @@ import (
 )
 
 var (
-	blockStoreKey   = []byte("blockStore")
-	blockSeedPrefix = []byte("blockSeed:")
-	txStatusPrefix  = []byte("txStatus:")
+	blockStoreKey     = []byte("blockStore")
+	blockPrefix       = []byte("B:")
+	blockHeaderPrefix = []byte("BH:")
+	blockSeedPrefix   = []byte("BS:")
+	txStatusPrefix    = []byte("BTS:")
 )
 
 // BlockStoreStateJSON represents the core's db status
@@ -58,7 +59,11 @@ type Store struct {
 }
 
 func calcBlockKey(hash *bc.Hash) []byte {
-	return []byte(fmt.Sprintf("B:%v", hash.String()))
+	return append(blockPrefix, hash.Bytes()...)
+}
+
+func calcBlockHeaderKey(hash *bc.Hash) []byte {
+	return append(blockHeaderPrefix, hash.Bytes()...)
 }
 
 func calcSeedKey(hash *bc.Hash) []byte {
@@ -106,6 +111,18 @@ func (s *Store) BlockExist(hash *bc.Hash) bool {
 // GetBlock return the block by given hash
 func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
 	return s.cache.lookup(hash)
+}
+
+// GetBlockHeader return the block by given hash
+func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	bytez := s.db.Get(calcBlockHeaderKey(hash))
+	if bytez == nil {
+		return nil, errors.New("can't find the block header by given hash")
+	}
+
+	bh := &types.BlockHeader{}
+	err := bh.UnmarshalText(bytez)
+	return bh, err
 }
 
 // GetSeed will return the seed of given block
@@ -158,6 +175,11 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus, seed *bc
 		return errors.Wrap(err, "Marshal block meta")
 	}
 
+	binaryBlockHeader, err := block.BlockHeader.MarshalText()
+	if err != nil {
+		return errors.Wrap(err, "Marshal block header")
+	}
+
 	binaryTxStatus, err := proto.Marshal(ts)
 	if err != nil {
 		return errors.Wrap(err, "marshal block transaction status")
@@ -171,6 +193,7 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus, seed *bc
 	blockHash := block.Hash()
 	batch := s.db.NewBatch()
 	batch.Set(calcBlockKey(&blockHash), binaryBlock)
+	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
 	batch.Set(calcSeedKey(&blockHash), binarySeed)
 	batch.Write()
