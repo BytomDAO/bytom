@@ -34,10 +34,10 @@ func (bcr *BlockchainReactor) listAccounts(ctx context.Context, filter struct {
 }
 
 // POST /list-assets
-func (bcr *BlockchainReactor) listAssets(ctx context.Context, filter struct {
+func (a *API) listAssets(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	assets, err := bcr.wallet.AssetReg.ListAssets(filter.ID)
+	assets, err := a.wallet.AssetReg.ListAssets(filter.ID)
 	if err != nil {
 		log.Errorf("listAssets: %v", err)
 		return NewErrorResponse(err)

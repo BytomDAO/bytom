@@ -10,14 +10,14 @@ import (
 )
 
 // POST /create-asset
-func (bcr *BlockchainReactor) createAsset(ctx context.Context, ins struct {
+func (a *API) createAsset(ctx context.Context, ins struct {
 	Alias      string                 `json:"alias"`
 	RootXPubs  []chainkd.XPub         `json:"root_xpubs"`
 	Quorum     int                    `json:"quorum"`
 	Definition map[string]interface{} `json:"definition"`
 	Tags       map[string]interface{} `json:"tags"`
 }) Response {
-	ass, err := bcr.wallet.AssetReg.Define(
+	ass, err := a.wallet.AssetReg.Define(
 		ins.RootXPubs,
 		ins.Quorum,
 		ins.Definition,
@@ -39,11 +39,11 @@ func (bcr *BlockchainReactor) createAsset(ctx context.Context, ins struct {
 }
 
 // POST /update-asset-tags
-func (bcr *BlockchainReactor) updateAssetTags(ctx context.Context, updateTag struct {
+func (a *API) updateAssetTags(ctx context.Context, updateTag struct {
 	AssetInfo string                 `json:"asset_info"`
 	Tags      map[string]interface{} `json:"tags"`
 }) Response {
-	err := bcr.wallet.AssetReg.UpdateTags(nil, updateTag.AssetInfo, updateTag.Tags)
+	err := a.wallet.AssetReg.UpdateTags(nil, updateTag.AssetInfo, updateTag.Tags)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -52,11 +52,11 @@ func (bcr *BlockchainReactor) updateAssetTags(ctx context.Context, updateTag str
 }
 
 // POST /update-asset-alias
-func (bcr *BlockchainReactor) updateAssetAlias(updateAlias struct {
+func (a *API) updateAssetAlias(updateAlias struct {
 	OldAlias string `json:"old_alias"`
 	NewAlias string `json:"new_alias"`
 }) Response {
-	if err := bcr.wallet.AssetReg.UpdateAssetAlias(updateAlias.OldAlias, updateAlias.NewAlias); err != nil {
+	if err := a.wallet.AssetReg.UpdateAssetAlias(updateAlias.OldAlias, updateAlias.NewAlias); err != nil {
 		return NewErrorResponse(err)
 	}
 
