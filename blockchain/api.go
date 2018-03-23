@@ -190,7 +190,6 @@ func (a *API) buildHandler() {
 	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
 
-	a.bcr.Handler = handler
 	a.handler = handler
 }
 
