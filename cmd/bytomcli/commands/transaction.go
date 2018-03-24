@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/bytom/blockchain"
+	"github.com/bytom/api"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/util"
@@ -146,7 +146,7 @@ var buildTransactionCmd = &cobra.Command{
 			os.Exit(util.ErrLocalExe)
 		}
 
-		var buildReq blockchain.BuildRequest
+		var buildReq api.BuildRequest
 		if err := json.Unmarshal([]byte(buildReqStr), &buildReq); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
