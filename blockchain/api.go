@@ -184,7 +184,7 @@ func (a *API) buildHandler() {
 	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
 	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
 	m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
-	m.Handle("/info", jsonHandler(a.bcr.info))
+	m.Handle("/info", jsonHandler(a.bcr.Info))
 
 	m.Handle("/create-access-token", jsonHandler(a.createAccessToken))
 	m.Handle("/list-access-tokens", jsonHandler(a.listAccessTokens))

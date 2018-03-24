@@ -47,7 +47,7 @@ type BlockchainReactor struct {
 	miningEnable  bool
 }
 
-func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
+func (bcr *BlockchainReactor) Info(ctx context.Context) (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"is_configured": false,
 		"version":       "0.001",

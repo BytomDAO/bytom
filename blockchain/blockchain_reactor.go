@@ -3,6 +3,7 @@ package blockchain
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/api"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/wallet"
 	"github.com/bytom/consensus"
@@ -12,25 +13,24 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
+func (bcr *BlockchainReactor) GetNodeInfo() *api.NetInfo {
+	return &api.NetInfo{
+		Listening:    bcr.sw.IsListening(),
+		Syncing:      bcr.blockKeeper.IsCaughtUp(),
+		Mining:       bcr.mining.IsMining(),
+		PeerCount:    len(bcr.sw.Peers().List()),
+		CurrentBlock: bcr.blockKeeper.chainHeight,
+		HighestBlock: bcr.blockKeeper.maxPeerHeight,
+	}
+}
+
+func (bcr *BlockchainReactor) IsMining() bool {
+	return bcr.mining.IsMining()
+}
+
 // return network infomation
 func (a *API) getNetInfo() Response {
-	type netInfo struct {
-		Listening    bool   `json:"listening"`
-		Syncing      bool   `json:"syncing"`
-		Mining       bool   `json:"mining"`
-		PeerCount    int    `json:"peer_count"`
-		CurrentBlock uint64 `json:"current_block"`
-		HighestBlock uint64 `json:"highest_block"`
-	}
-	net := &netInfo{}
-	net.Listening = a.bcr.sw.IsListening()
-	net.Syncing = a.bcr.blockKeeper.IsCaughtUp()
-	net.Mining = a.bcr.mining.IsMining()
-	net.PeerCount = len(a.bcr.sw.Peers().List())
-	net.CurrentBlock = a.bcr.blockKeeper.chainHeight
-	net.HighestBlock = a.bcr.blockKeeper.maxPeerHeight
-
-	return NewSuccessResponse(net)
+	return NewSuccessResponse(a.bcr.GetNodeInfo())
 }
 
 // return best block hash
@@ -190,7 +190,7 @@ func (a *API) getBlockCount() Response {
 
 // return is in mining or not
 func (a *API) isMining() Response {
-	IsMining := map[string]bool{"isMining": a.bcr.mining.IsMining()}
+	IsMining := map[string]bool{"isMining": a.bcr.IsMining()}
 	return NewSuccessResponse(IsMining)
 }
 
