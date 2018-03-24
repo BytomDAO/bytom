@@ -25,7 +25,7 @@ func (a *API) getWork() Response {
 		return NewErrorResponse(err)
 	}
 
-	seed, err := a.bcr.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
+	seed, err := a.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -45,7 +45,7 @@ func (a *API) submitWork(bh *types.BlockHeader) Response {
 func (a *API) getBlockHeaderByHeight(ctx context.Context, req struct {
 	Height uint64 `json:"block_height"`
 }) Response {
-	block, err := a.bcr.chain.GetBlockByHeight(req.Height)
+	block, err := a.chain.GetBlockByHeight(req.Height)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
