@@ -10,7 +10,7 @@ import (
 
 	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/account"
-	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"

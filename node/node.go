@@ -17,7 +17,7 @@ import (
 	bc "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/account"
-	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"

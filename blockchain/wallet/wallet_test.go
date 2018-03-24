@@ -11,7 +11,7 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
-	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/blockchain/txdb"

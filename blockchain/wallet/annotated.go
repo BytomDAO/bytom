@@ -8,7 +8,7 @@ import (
 	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
-	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/common"
