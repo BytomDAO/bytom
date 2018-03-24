@@ -15,7 +15,7 @@ import (
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	bc "github.com/bytom/blockchain"
-	"github.com/bytom/blockchain/accesstoken"
+	"github.com/bytom/accesstoken"
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"

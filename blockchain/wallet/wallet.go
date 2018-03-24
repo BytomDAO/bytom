@@ -8,7 +8,7 @@ import (
 	"github.com/tendermint/go-wire/data/base58"
 	"github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/accesstoken"
+	"github.com/bytom/accesstoken"
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"

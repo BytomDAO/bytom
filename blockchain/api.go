@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	"github.com/bytom/blockchain/accesstoken"
+	"github.com/bytom/accesstoken"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/dashboard"
 	"github.com/bytom/errors"

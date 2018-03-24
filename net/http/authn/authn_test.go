@@ -9,7 +9,7 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/accesstoken"
+	"github.com/bytom/accesstoken"
 	"github.com/bytom/errors"
 )
 
