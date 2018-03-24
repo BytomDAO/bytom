@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"net/http"
 	"reflect"
 	"time"
 
@@ -70,18 +69,6 @@ func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{},
 		"build_date":    "------",
 		"build_config":  "---------",
 	}, nil
-}
-
-func maxBytes(h http.Handler) http.Handler {
-	const maxReqSize = 1e7 // 10MB
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		// A block can easily be bigger than maxReqSize, but everything
-		// else should be pretty small.
-		if req.URL.Path != crosscoreRPCPrefix+"signer/sign-block" {
-			req.Body = http.MaxBytesReader(w, req.Body, maxReqSize)
-		}
-		h.ServeHTTP(w, req)
-	})
 }
 
 // NewBlockchainReactor returns the reactor of whole blockchain.

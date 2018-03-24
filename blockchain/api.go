@@ -203,10 +203,22 @@ func (a *API) buildHandler() {
 		}
 		m.ServeHTTP(w, req)
 	})
-	handler := maxBytes(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
+	handler := maxBytesHandler(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
 
 	a.handler = handler
+}
+
+func maxBytesHandler(h http.Handler) http.Handler {
+	const maxReqSize = 1e7 // 10MB
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		// A block can easily be bigger than maxReqSize, but everything
+		// else should be pretty small.
+		if req.URL.Path != crosscoreRPCPrefix+"signer/sign-block" {
+			req.Body = http.MaxBytesReader(w, req.Body, maxReqSize)
+		}
+		h.ServeHTTP(w, req)
+	})
 }
 
 // json Handler
