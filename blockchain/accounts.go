@@ -40,7 +40,6 @@ func (a *API) updateAccountTags(ctx context.Context, updateTag struct {
 	AccountInfo string                 `json:"account_info"`
 	Tags        map[string]interface{} `json:"tags"`
 }) Response {
-
 	err := a.wallet.AccountMgr.UpdateTags(nil, updateTag.AccountInfo, updateTag.Tags)
 	if err != nil {
 		return NewErrorResponse(err)

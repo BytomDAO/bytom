@@ -62,7 +62,7 @@ func (a *API) initServer(config *cfg.Config) {
 	var handler http.Handler = mux
 
 	if config.Auth.Disable == false {
-		handler = AuthHandler(handler, a.bcr.wallet.Tokens)
+		handler = AuthHandler(handler, a.wallet.Tokens)
 	}
 	handler = RedirectHandler(handler)
 
@@ -121,7 +121,7 @@ func (a *API) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 // buildHandler is in charge of all the rpc handling.
 func (a *API) buildHandler() {
 	m := http.NewServeMux()
-	if a.bcr.wallet != nil && a.bcr.wallet.AccountMgr != nil && a.bcr.wallet.AssetReg != nil {
+	if a.wallet != nil && a.wallet.AccountMgr != nil && a.wallet.AssetReg != nil {
 		m.Handle("/create-account", jsonHandler(a.createAccount))
 		m.Handle("/update-account-tags", jsonHandler(a.updateAccountTags))
 		m.Handle("/create-account-receiver", jsonHandler(a.createAccountReceiver))
