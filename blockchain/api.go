@@ -28,6 +28,16 @@ var (
 	httpWriteTimeout    = time.Hour
 )
 
+//NewSuccessResponse success response
+func NewSuccessResponse(data interface{}) Response {
+	return Response{Status: SUCCESS, Data: data}
+}
+
+//NewErrorResponse error response
+func NewErrorResponse(err error) Response {
+	return Response{Status: FAIL, Msg: err.Error()}
+}
+
 type waitHandler struct {
 	h  http.Handler
 	wg sync.WaitGroup
