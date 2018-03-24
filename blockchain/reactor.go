@@ -2,7 +2,6 @@ package blockchain
 
 import (
 	"context"
-	"net/http"
 	"reflect"
 	"time"
 
@@ -31,27 +30,13 @@ const (
 	crosscoreRPCPrefix          = "/rpc/"
 )
 
-const (
-	// SUCCESS indicates the rpc calling is successful.
-	SUCCESS = "success"
-	// FAIL indicated the rpc calling is failed.
-	FAIL = "fail"
-)
-
-// Response describes the response standard.
-type Response struct {
-	Status string      `json:"status,omitempty"`
-	Msg    string      `json:"msg,omitempty"`
-	Data   interface{} `json:"data,omitempty"`
-}
-
 //BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
 	chain         *protocol.Chain
 	wallet        *wallet.Wallet
-	txFeedTracker *txfeed.Tracker
+	TxFeedTracker *txfeed.Tracker // TODO: move it out from BlockchainReactor
 	blockKeeper   *blockKeeper
 	txPool        *protocol.TxPool
 	mining        *cpuminer.CPUMiner
@@ -62,7 +47,7 @@ type BlockchainReactor struct {
 	miningEnable  bool
 }
 
-func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{}, error) {
+func (bcr *BlockchainReactor) Info(ctx context.Context) (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"is_configured": false,
 		"version":       "0.001",
@@ -70,18 +55,6 @@ func (bcr *BlockchainReactor) info(ctx context.Context) (map[string]interface{},
 		"build_date":    "------",
 		"build_config":  "---------",
 	}, nil
-}
-
-func maxBytes(h http.Handler) http.Handler {
-	const maxReqSize = 1e7 // 10MB
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		// A block can easily be bigger than maxReqSize, but everything
-		// else should be pretty small.
-		if req.URL.Path != crosscoreRPCPrefix+"signer/sign-block" {
-			req.Body = http.MaxBytesReader(w, req.Body, maxReqSize)
-		}
-		h.ServeHTTP(w, req)
-	})
 }
 
 // NewBlockchainReactor returns the reactor of whole blockchain.
@@ -93,7 +66,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2
 		blockKeeper:   newBlockKeeper(chain, sw),
 		txPool:        txPool,
 		sw:            sw,
-		txFeedTracker: txfeeds,
+		TxFeedTracker: txfeeds,
 		miningEnable:  miningEnable,
 		newBlockCh:    newBlockCh,
 	}
@@ -224,7 +197,7 @@ func (bcr *BlockchainReactor) syncRoutine() {
 			}
 			log.WithFields(log.Fields{"Hash": blockHash, "height": block.Height}).Info("Boardcast my new block")
 		case newTx := <-newTxCh:
-			bcr.txFeedTracker.TxFilter(newTx)
+			bcr.TxFeedTracker.TxFilter(newTx)
 			go bcr.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
 			go bcr.BroadcastStatusResponse()

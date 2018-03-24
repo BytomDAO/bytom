@@ -49,6 +49,7 @@ type Node struct {
 
 	evsw         types.EventSwitch // pub/sub for services
 	bcReactor    *bc.BlockchainReactor
+	wallet       *w.Wallet
 	accessTokens *accesstoken.CredentialStore
 	api          *bc.API
 }
@@ -160,6 +161,7 @@ func NewNode(config *cfg.Config) *Node {
 		evsw:         eventSwitch,
 		bcReactor:    bcReactor,
 		accessTokens: accessTokens,
+		wallet:       wallet,
 	}
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
