@@ -30,20 +30,6 @@ const (
 	crosscoreRPCPrefix          = "/rpc/"
 )
 
-const (
-	// SUCCESS indicates the rpc calling is successful.
-	SUCCESS = "success"
-	// FAIL indicated the rpc calling is failed.
-	FAIL = "fail"
-)
-
-// Response describes the response standard.
-type Response struct {
-	Status string      `json:"status,omitempty"`
-	Msg    string      `json:"msg,omitempty"`
-	Data   interface{} `json:"data,omitempty"`
-}
-
 //BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor

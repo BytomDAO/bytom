@@ -28,6 +28,20 @@ var (
 	httpWriteTimeout    = time.Hour
 )
 
+const (
+	// SUCCESS indicates the rpc calling is successful.
+	SUCCESS = "success"
+	// FAIL indicated the rpc calling is failed.
+	FAIL = "fail"
+)
+
+// Response describes the response standard.
+type Response struct {
+	Status string      `json:"status,omitempty"`
+	Msg    string      `json:"msg,omitempty"`
+	Data   interface{} `json:"data,omitempty"`
+}
+
 //NewSuccessResponse success response
 func NewSuccessResponse(data interface{}) Response {
 	return Response{Status: SUCCESS, Data: data}
