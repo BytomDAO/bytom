@@ -8,8 +8,8 @@ import (
 
 	"github.com/golang/groupcache/lru"
 
-	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/consensus"
+	"github.com/bytom/database/storage"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"

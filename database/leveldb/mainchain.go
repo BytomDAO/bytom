@@ -1,4 +1,4 @@
-package txdb
+package leveldb
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/txdb/storage"
+	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 )

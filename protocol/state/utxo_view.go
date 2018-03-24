@@ -3,8 +3,8 @@ package state
 import (
 	"errors"
 
-	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/consensus"
+	"github.com/bytom/database/storage"
 	"github.com/bytom/protocol/bc"
 )
 

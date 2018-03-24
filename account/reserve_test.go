@@ -11,10 +11,10 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/txdb"
-	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/database/leveldb"
+	"github.com/bytom/database/storage"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/state"
@@ -73,7 +73,7 @@ func TestCancelReservation(t *testing.T) {
 	view := state.NewUtxoViewpoint()
 	view.Entries[utxoE.hash] = utxoE.utxoEntry
 
-	txdb.SaveUtxoView(batch, view)
+	leveldb.SaveUtxoView(batch, view)
 	batch.Write()
 
 	utxoDB := newReserver(chain, testDB)
@@ -116,7 +116,7 @@ func TestCancelReservation(t *testing.T) {
 }
 
 func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
-	store := txdb.NewStore(testDB)
+	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool()
 	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)
 	if err != nil {

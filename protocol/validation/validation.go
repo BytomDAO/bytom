@@ -554,8 +554,7 @@ func ValidateBlock(b, prev *bc.Block, seed *bc.Hash) error {
 		if prev == nil {
 			return errors.WithDetailf(errNoPrevBlock, "height %d", b.Height)
 		}
-		err := validateBlockAgainstPrev(b, prev)
-		if err != nil {
+		if err := validateBlockAgainstPrev(b, prev); err != nil {
 			return err
 		}
 	}
@@ -641,9 +640,6 @@ func validateBlockAgainstPrev(b, prev *bc.Block) error {
 
 	if prev.ID != *b.PreviousBlockId {
 		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", prev.ID.Bytes(), b.PreviousBlockId.Bytes())
-	}
-	if b.Timestamp <= prev.Timestamp {
-		return errors.WithDetailf(errMisorderedBlockTime, "previous block time %d, current block time %d", prev.Timestamp, b.Timestamp)
 	}
 	return nil
 }
