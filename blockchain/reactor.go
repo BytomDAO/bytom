@@ -10,7 +10,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/blockchain/txfeed"
-	"github.com/bytom/blockchain/wallet"
+	"github.com/bytom/wallet"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/p2p"

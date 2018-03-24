@@ -4,7 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/wallet"
+	"github.com/bytom/wallet"
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 	chainjson "github.com/bytom/encoding/json"

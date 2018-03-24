@@ -7,8 +7,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/account"
-	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/account"
+	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/common"

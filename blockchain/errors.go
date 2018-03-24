@@ -3,7 +3,7 @@ package blockchain
 import (
 	"context"
 
-	"github.com/bytom/blockchain/account"
+	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/query/filter"
 	"github.com/bytom/blockchain/rpc"

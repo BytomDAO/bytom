@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/account"
+	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
 )
 

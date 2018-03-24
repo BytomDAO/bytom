@@ -3,7 +3,7 @@ package blockchain
 import (
 	"context"
 
-	"github.com/bytom/blockchain/asset"
+	"github.com/bytom/asset"
 	"github.com/bytom/crypto/ed25519/chainkd"
 
 	log "github.com/sirupsen/logrus"
