@@ -1,4 +1,4 @@
-package blockchain
+package api
 
 import (
 	"crypto/tls"
@@ -12,6 +12,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/accesstoken"
+	"github.com/bytom/blockchain"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/dashboard"
 	"github.com/bytom/errors"
@@ -32,7 +33,8 @@ const (
 	// SUCCESS indicates the rpc calling is successful.
 	SUCCESS = "success"
 	// FAIL indicated the rpc calling is failed.
-	FAIL = "fail"
+	FAIL               = "fail"
+	crosscoreRPCPrefix = "/rpc/"
 )
 
 // Response describes the response standard.
@@ -68,7 +70,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 type API struct {
-	bcr     *BlockchainReactor
+	bcr     *blockchain.BlockchainReactor
 	wallet  *wallet.Wallet
 	chain   *protocol.Chain
 	server  *http.Server
@@ -126,11 +128,11 @@ func (a *API) StartServer(address string) {
 	}()
 }
 
-func NewAPI(bcr *BlockchainReactor, config *cfg.Config) *API {
+func NewAPI(bcr *blockchain.BlockchainReactor, wallet *wallet.Wallet, chain *protocol.Chain, config *cfg.Config) *API {
 	api := &API{
 		bcr:    bcr,
-		wallet: bcr.wallet,
-		chain:  bcr.chain,
+		wallet: wallet,
+		chain:  chain,
 	}
 	api.buildHandler()
 	api.initServer(config)

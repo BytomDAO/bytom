@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/bytom/blockchain"
+	"github.com/bytom/api"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/util"
 )
@@ -128,7 +128,7 @@ var importPrivateCmd = &cobra.Command{
 	Short: "Import the private key",
 	Args:  cobra.ExactArgs(5),
 	Run: func(cmd *cobra.Command, args []string) {
-		var params blockchain.KeyImportParams
+		var params api.KeyImportParams
 		params.KeyAlias = args[0]
 		params.XPrv = args[1]
 		params.Password = args[3]

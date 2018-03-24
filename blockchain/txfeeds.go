@@ -4,25 +4,10 @@ import (
 	"context"
 	"encoding/json"
 
-	log "github.com/sirupsen/logrus"
-
-	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/errors"
 )
 
-// POST /create-txfeed
-func (a *API) createTxFeed(ctx context.Context, in struct {
-	Alias  string `json:"alias"`
-	Filter string `json:"filter"`
-}) Response {
-	if err := a.bcr.TxFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
-		log.WithField("error", err).Error("Add TxFeed Failed")
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(nil)
-}
-
-func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter string) ([]byte, error) {
+func (bcr *BlockchainReactor) GetTxFeedByAlias(ctx context.Context, filter string) ([]byte, error) {
 	jf, err := json.Marshal(filter)
 	if err != nil {
 		return nil, err
@@ -34,74 +19,4 @@ func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter strin
 	}
 
 	return value, nil
-}
-
-// POST /get-transaction-feed
-func (a *API) getTxFeed(ctx context.Context, in struct {
-	Alias string `json:"alias,omitempty"`
-}) Response {
-	var tmpTxFeed interface{}
-	rawTxfeed, err := a.bcr.getTxFeedByAlias(ctx, in.Alias)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-	err = json.Unmarshal(rawTxfeed, &tmpTxFeed)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-	data := map[string]interface{}{"txfeed": tmpTxFeed}
-	return NewSuccessResponse(data)
-}
-
-// POST /delete-transaction-feed
-func (a *API) deleteTxFeed(ctx context.Context, in struct {
-	Alias string `json:"alias,omitempty"`
-}) Response {
-	if err := a.bcr.TxFeedTracker.Delete(ctx, in.Alias); err != nil {
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(nil)
-}
-
-// POST /update-transaction-feed
-func (a *API) updateTxFeed(ctx context.Context, in struct {
-	Alias  string `json:"alias"`
-	Filter string `json:"filter"`
-}) Response {
-	if err := a.bcr.TxFeedTracker.Delete(ctx, in.Alias); err != nil {
-		return NewErrorResponse(err)
-	}
-	if err := a.bcr.TxFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
-		log.WithField("error", err).Error("Update TxFeed Failed")
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(nil)
-}
-
-func (a *API) getTxFeeds() ([]txfeed.TxFeed, error) {
-	txFeed := txfeed.TxFeed{}
-	txFeeds := make([]txfeed.TxFeed, 0)
-
-	iter := a.bcr.TxFeedTracker.DB.Iterator()
-	defer iter.Release()
-
-	for iter.Next() {
-		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
-			return nil, err
-		}
-		txFeeds = append(txFeeds, txFeed)
-	}
-
-	return txFeeds, nil
-}
-
-// listTxFeeds is an http handler for listing txfeeds. It does not take a filter.
-// POST /list-transaction-feeds
-func (a *API) listTxFeeds(ctx context.Context) Response {
-	txFeeds, err := a.getTxFeeds()
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	return NewSuccessResponse(txFeeds)
 }

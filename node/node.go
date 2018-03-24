@@ -13,14 +13,15 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/api"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	bc "github.com/bytom/blockchain"
 	"github.com/bytom/accesstoken"
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
-	bc "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
-	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
 	"github.com/bytom/p2p"
@@ -51,7 +52,8 @@ type Node struct {
 	bcReactor    *bc.BlockchainReactor
 	wallet       *w.Wallet
 	accessTokens *accesstoken.CredentialStore
-	api          *bc.API
+	api          *api.API
+	chain        *protocol.Chain
 }
 
 func NewNode(config *cfg.Config) *Node {
@@ -162,6 +164,7 @@ func NewNode(config *cfg.Config) *Node {
 		bcReactor:    bcReactor,
 		accessTokens: accessTokens,
 		wallet:       wallet,
+		chain:        chain,
 	}
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
@@ -210,7 +213,7 @@ func lanchWebBroser(lanch bool) {
 }
 
 func (n *Node) initAndstartApiServer() {
-	n.api = bc.NewAPI(n.bcReactor, n.config)
+	n.api = api.NewAPI(n.bcReactor, n.wallet, n.chain, n.config)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	n.api.StartServer(*listenAddr)
