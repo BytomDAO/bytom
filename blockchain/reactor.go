@@ -36,7 +36,7 @@ type BlockchainReactor struct {
 
 	chain         *protocol.Chain
 	wallet        *wallet.Wallet
-	txFeedTracker *txfeed.Tracker
+	TxFeedTracker *txfeed.Tracker // TODO: move it out from BlockchainReactor
 	blockKeeper   *blockKeeper
 	txPool        *protocol.TxPool
 	mining        *cpuminer.CPUMiner
@@ -66,7 +66,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2
 		blockKeeper:   newBlockKeeper(chain, sw),
 		txPool:        txPool,
 		sw:            sw,
-		txFeedTracker: txfeeds,
+		TxFeedTracker: txfeeds,
 		miningEnable:  miningEnable,
 		newBlockCh:    newBlockCh,
 	}
@@ -197,7 +197,7 @@ func (bcr *BlockchainReactor) syncRoutine() {
 			}
 			log.WithFields(log.Fields{"Hash": blockHash, "height": block.Height}).Info("Boardcast my new block")
 		case newTx := <-newTxCh:
-			bcr.txFeedTracker.TxFilter(newTx)
+			bcr.TxFeedTracker.TxFilter(newTx)
 			go bcr.BroadcastTransaction(newTx)
 		case _ = <-statusUpdateTicker.C:
 			go bcr.BroadcastStatusResponse()
