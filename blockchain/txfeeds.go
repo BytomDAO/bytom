@@ -15,7 +15,7 @@ func (a *API) createTxFeed(ctx context.Context, in struct {
 	Alias  string `json:"alias"`
 	Filter string `json:"filter"`
 }) Response {
-	if err := a.bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
+	if err := a.bcr.TxFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Add TxFeed Failed")
 		return NewErrorResponse(err)
 	}
@@ -28,7 +28,7 @@ func (bcr *BlockchainReactor) getTxFeedByAlias(ctx context.Context, filter strin
 		return nil, err
 	}
 
-	value := bcr.txFeedTracker.DB.Get(jf)
+	value := bcr.TxFeedTracker.DB.Get(jf)
 	if value == nil {
 		return nil, errors.New("No transaction feed")
 	}
@@ -57,7 +57,7 @@ func (a *API) getTxFeed(ctx context.Context, in struct {
 func (a *API) deleteTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) Response {
-	if err := a.bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
+	if err := a.bcr.TxFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
@@ -68,10 +68,10 @@ func (a *API) updateTxFeed(ctx context.Context, in struct {
 	Alias  string `json:"alias"`
 	Filter string `json:"filter"`
 }) Response {
-	if err := a.bcr.txFeedTracker.Delete(ctx, in.Alias); err != nil {
+	if err := a.bcr.TxFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return NewErrorResponse(err)
 	}
-	if err := a.bcr.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
+	if err := a.bcr.TxFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Update TxFeed Failed")
 		return NewErrorResponse(err)
 	}
@@ -82,7 +82,7 @@ func (a *API) getTxFeeds() ([]txfeed.TxFeed, error) {
 	txFeed := txfeed.TxFeed{}
 	txFeeds := make([]txfeed.TxFeed, 0)
 
-	iter := a.bcr.txFeedTracker.DB.Iterator()
+	iter := a.bcr.TxFeedTracker.DB.Iterator()
 	defer iter.Release()
 
 	for iter.Next() {

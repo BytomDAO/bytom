@@ -3,54 +3,52 @@ package blockchain
 import (
 	"context"
 
-	"github.com/bytom/protocol/bc"
+	"github.com/bytom/api"
 	"github.com/bytom/protocol/bc/types"
 )
 
-// BlockHeaderByHeight is resp struct for API
-type BlockHeaderByHeight struct {
-	BlockHeader *types.BlockHeader `json:"block_header"`
-	Reward      uint64             `json:"reward"`
+func (bcr *BlockchainReactor) GetWork() (*api.GetWorkResp, error) {
+	bh, err := bcr.miningPool.GetWork()
+	if err != nil {
+		return nil, err
+	}
+
+	seed, err := bcr.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return &api.GetWorkResp{
+		BlockHeader: bh,
+		Seed:        seed,
+	}, nil
 }
 
-// GetWorkResp is resp struct for API
-type GetWorkResp struct {
-	BlockHeader *types.BlockHeader `json:"block_header"`
-	Seed        *bc.Hash           `json:"seed"`
+func (bcr *BlockchainReactor) SubmitWork(bh *types.BlockHeader) bool {
+	return bcr.miningPool.SubmitWork(bh)
 }
 
 func (a *API) getWork() Response {
-	bh, err := a.bcr.miningPool.GetWork()
+	work, err := a.bcr.GetWork()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-
-	seed, err := a.bcr.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	resp := &GetWorkResp{
-		BlockHeader: bh,
-		Seed:        seed,
-	}
-	return NewSuccessResponse(resp)
+	return NewSuccessResponse(work)
 }
 
 func (a *API) submitWork(bh *types.BlockHeader) Response {
-	success := a.bcr.miningPool.SubmitWork(bh)
-	return NewSuccessResponse(success)
+	return NewSuccessResponse(a.bcr.SubmitWork(bh))
 }
 
 func (a *API) getBlockHeaderByHeight(ctx context.Context, req struct {
 	Height uint64 `json:"block_height"`
 }) Response {
-	block, err := a.bcr.chain.GetBlockByHeight(req.Height)
+	block, err := a.chain.GetBlockByHeight(req.Height)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
-	resp := &BlockHeaderByHeight{
+	resp := &api.BlockHeaderByHeight{
 		BlockHeader: &block.BlockHeader,
 		Reward:      block.Transactions[0].Outputs[0].Amount,
 	}
