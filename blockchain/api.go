@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/net/http/authn"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
+	"github.com/bytom/protocol"
 	"github.com/bytom/blockchain/wallet"
 )
 
@@ -26,6 +27,16 @@ var (
 	httpReadTimeout     = 2 * time.Minute
 	httpWriteTimeout    = time.Hour
 )
+
+//NewSuccessResponse success response
+func NewSuccessResponse(data interface{}) Response {
+	return Response{Status: SUCCESS, Data: data}
+}
+
+//NewErrorResponse error response
+func NewErrorResponse(err error) Response {
+	return Response{Status: FAIL, Msg: err.Error()}
+}
 
 type waitHandler struct {
 	h  http.Handler
@@ -45,6 +56,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 type API struct {
 	bcr     *BlockchainReactor
 	wallet  *wallet.Wallet
+	chain   *protocol.Chain
 	server  *http.Server
 	handler http.Handler
 }
@@ -60,7 +72,7 @@ func (a *API) initServer(config *cfg.Config) {
 	var handler http.Handler = mux
 
 	if config.Auth.Disable == false {
-		handler = AuthHandler(handler, a.bcr.wallet.Tokens)
+		handler = AuthHandler(handler, a.wallet.Tokens)
 	}
 	handler = RedirectHandler(handler)
 
@@ -104,6 +116,7 @@ func NewAPI(bcr *BlockchainReactor, config *cfg.Config) *API {
 	api := &API{
 		bcr:    bcr,
 		wallet: bcr.wallet,
+		chain:  bcr.chain,
 	}
 	api.buildHandler()
 	api.initServer(config)
@@ -118,11 +131,11 @@ func (a *API) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 // buildHandler is in charge of all the rpc handling.
 func (a *API) buildHandler() {
 	m := http.NewServeMux()
-	if a.bcr.wallet != nil && a.bcr.wallet.AccountMgr != nil && a.bcr.wallet.AssetReg != nil {
+	if a.wallet != nil && a.wallet.AccountMgr != nil && a.wallet.AssetReg != nil {
 		m.Handle("/create-account", jsonHandler(a.createAccount))
 		m.Handle("/update-account-tags", jsonHandler(a.updateAccountTags))
 		m.Handle("/create-account-receiver", jsonHandler(a.createAccountReceiver))
-		m.Handle("/list-accounts", jsonHandler(a.bcr.listAccounts))
+		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
 		m.Handle("/list-addresses", jsonHandler(a.listAddresses))
 		m.Handle("/delete-account", jsonHandler(a.deleteAccount))
 		m.Handle("/validate-address", jsonHandler(a.validateAddress))

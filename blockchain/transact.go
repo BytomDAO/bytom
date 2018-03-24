@@ -142,7 +142,7 @@ func (a *API) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[st
 		return nil, errors.Wrap(txbuilder.ErrMissingRawTx)
 	}
 
-	if err := txbuilder.FinalizeTx(ctx, a.bcr.chain, tpl.Transaction); err != nil {
+	if err := txbuilder.FinalizeTx(ctx, a.chain, tpl.Transaction); err != nil {
 		return nil, errors.Wrapf(err, "tx %s", tpl.Transaction.ID.String())
 	}
 
@@ -224,7 +224,7 @@ type submitTxResp struct {
 func (a *API) submit(ctx context.Context, ins struct {
 	Tx types.Tx `json:"raw_transaction"`
 }) Response {
-	if err := txbuilder.FinalizeTx(ctx, a.bcr.chain, &ins.Tx); err != nil {
+	if err := txbuilder.FinalizeTx(ctx, a.chain, &ins.Tx); err != nil {
 		return NewErrorResponse(err)
 	}
 

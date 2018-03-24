@@ -35,7 +35,7 @@ func (a *API) getNetInfo() Response {
 
 // return best block hash
 func (a *API) getBestBlockHash() Response {
-	blockHash := map[string]string{"blockHash": a.bcr.chain.BestBlockHash().String()}
+	blockHash := map[string]string{"blockHash": a.chain.BestBlockHash().String()}
 	return NewSuccessResponse(blockHash)
 }
 
@@ -46,7 +46,7 @@ func (a *API) getBlockHeaderByHash(strHash string) Response {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
 		return NewErrorResponse(err)
 	}
-	block, err := a.bcr.chain.GetBlockByHash(&hash)
+	block, err := a.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
 		return NewErrorResponse(err)
@@ -97,16 +97,16 @@ func (a *API) getBlock(ins GetBlockReq) Response {
 		b32 := [32]byte{}
 		copy(b32[:], ins.BlockHash)
 		hash := bc.NewHash(b32)
-		block, err = a.bcr.chain.GetBlockByHash(&hash)
+		block, err = a.chain.GetBlockByHash(&hash)
 	} else {
-		block, err = a.bcr.chain.GetBlockByHeight(ins.BlockHeight)
+		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
 	}
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	blockHash := block.Hash()
-	txStatus, err := a.bcr.chain.GetTransactionStatus(&blockHash)
+	txStatus, err := a.chain.GetTransactionStatus(&blockHash)
 	rawBlock, err := block.MarshalText()
 	if err != nil {
 		return NewErrorResponse(err)
@@ -160,7 +160,7 @@ func (a *API) getBlockTransactionsCountByHash(strHash string) Response {
 		return NewErrorResponse(err)
 	}
 
-	legacyBlock, err := a.bcr.chain.GetBlockByHash(&hash)
+	legacyBlock, err := a.chain.GetBlockByHash(&hash)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
 		return NewErrorResponse(err)
@@ -172,7 +172,7 @@ func (a *API) getBlockTransactionsCountByHash(strHash string) Response {
 
 // return block transactions count by height
 func (a *API) getBlockTransactionsCountByHeight(height uint64) Response {
-	legacyBlock, err := a.bcr.chain.GetBlockByHeight(height)
+	legacyBlock, err := a.chain.GetBlockByHeight(height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
 		return NewErrorResponse(err)
@@ -184,7 +184,7 @@ func (a *API) getBlockTransactionsCountByHeight(height uint64) Response {
 
 // return current block count
 func (a *API) getBlockCount() Response {
-	blockHeight := map[string]uint64{"block_count": a.bcr.chain.Height()}
+	blockHeight := map[string]uint64{"block_count": a.chain.Height()}
 	return NewSuccessResponse(blockHeight)
 }
 
