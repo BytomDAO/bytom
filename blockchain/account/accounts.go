@@ -34,6 +34,8 @@ const (
 	indexPrefix     = "ACIDX:"
 )
 
+var miningAddressKey = []byte("miningAddress")
+
 // pre-define errors for supporting bytom errorFormatter
 var (
 	ErrDuplicateAlias = errors.New("duplicate account alias")
@@ -379,16 +381,20 @@ func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 
 // GetCoinbaseControlProgram will return a coinbase script
 func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
+	if data := m.db.Get(miningAddressKey); data != nil {
+		cp := &CtrlProgram{}
+		return cp.ControlProgram, json.Unmarshal(data, cp)
+	}
+
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
 	defer accountIter.Release()
 	if !accountIter.Next() {
 		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
 		return vmutil.DefaultCoinbaseProgram()
 	}
-	rawAccount := accountIter.Value()
 
 	account := &Account{}
-	if err := json.Unmarshal(rawAccount, account); err != nil {
+	if err := json.Unmarshal(accountIter.Value(), account); err != nil {
 		return nil, err
 	}
 
@@ -396,6 +402,13 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	rawCP, err := json.Marshal(program)
+	if err != nil {
+		return nil, err
+	}
+
+	m.db.Set(miningAddressKey, rawCP)
 	return program.ControlProgram, nil
 }
 
