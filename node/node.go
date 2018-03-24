@@ -21,7 +21,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
-	w "github.com/bytom/blockchain/wallet"
+	w "github.com/bytom/wallet"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/env"
 	"github.com/bytom/p2p"

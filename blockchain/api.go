@@ -19,7 +19,7 @@ import (
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/protocol"
-	"github.com/bytom/blockchain/wallet"
+	"github.com/bytom/wallet"
 )
 
 var (
