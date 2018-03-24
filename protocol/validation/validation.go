@@ -7,6 +7,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/consensus/segwit"
+	"github.com/bytom/database"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
@@ -549,7 +550,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 
 // ValidateBlock validates a block and the transactions within.
 // It does not run the consensus program; for that, see ValidateBlockSig.
-func ValidateBlock(b, prev *bc.Block, seed *bc.Hash) error {
+func ValidateBlock(b, prev *bc.Block, seed *bc.Hash, store database.Store) error {
 	if b.Height > 0 {
 		if prev == nil {
 			return errors.WithDetailf(errNoPrevBlock, "height %d", b.Height)
@@ -559,8 +560,8 @@ func ValidateBlock(b, prev *bc.Block, seed *bc.Hash) error {
 		}
 	}
 
-	if b.Timestamp > uint64(time.Now().Unix())+consensus.MaxTimeOffsetSeconds {
-		return errBadTimestamp
+	if err := validateBlockTime(b, store); err != nil {
+		return err
 	}
 
 	if !difficulty.CheckProofOfWork(&b.ID, seed, b.BlockHeader.Bits) {
@@ -604,6 +605,13 @@ func ValidateBlock(b, prev *bc.Block, seed *bc.Hash) error {
 
 	if bc.EntryID(b.TransactionStatus) != *b.TransactionStatusHash {
 		return errMismatchedTxStatus
+	}
+	return nil
+}
+
+func validateBlockTime(b *bc.Block, store database.Store) error {
+	if b.Timestamp > uint64(time.Now().Unix())+consensus.MaxTimeOffsetSeconds {
+		return errBadTimestamp
 	}
 	return nil
 }
