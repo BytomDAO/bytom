@@ -6,6 +6,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/query/filter"
+	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
@@ -47,6 +48,7 @@ var errorFormatter = httperror.Formatter{
 		context.DeadlineExceeded:     {408, "BTM001", "Request timed out"},
 		httpjson.ErrBadRequest:       {400, "BTM003", "Invalid request body"},
 		txbuilder.ErrMissingFields:   {400, "BTM010", "One or more fields are missing"},
+		rpc.ErrWrongNetwork:          {502, "BTM104", "A peer core is operating on a different blockchain network"},
 		protocol.ErrTheDistantFuture: {400, "BTM105", "Requested height is too far ahead"},
 
 		// Signers error namespace (2xx)
