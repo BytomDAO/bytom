@@ -14,11 +14,11 @@ import (
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/blockchain/txdb"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/database/leveldb"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -34,7 +34,7 @@ func TestWalletUpdate(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	store := txdb.NewStore(testDB)
+	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool()
 
 	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)
@@ -108,7 +108,7 @@ func TestExportAndImportPrivKey(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	store := txdb.NewStore(testDB)
+	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool()
 
 	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)

@@ -1,4 +1,4 @@
-package txdb
+package leveldb
 
 import (
 	"fmt"

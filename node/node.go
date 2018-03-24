@@ -13,22 +13,22 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
-	bc "github.com/bytom/blockchain"
 	"github.com/bytom/accesstoken"
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
+	bc "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
-	w "github.com/bytom/wallet"
 	cfg "github.com/bytom/config"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/types"
 	"github.com/bytom/util/browser"
 	"github.com/bytom/version"
+	w "github.com/bytom/wallet"
 )
 
 const (
@@ -58,7 +58,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	// Get store
 	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-	store := txdb.NewStore(txDB)
+	store := leveldb.NewStore(txDB)
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)

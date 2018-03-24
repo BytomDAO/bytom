@@ -3,7 +3,7 @@ package state
 import (
 	"testing"
 
-	"github.com/bytom/blockchain/txdb/storage"
+	"github.com/bytom/database/storage"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/testutil"
 )

@@ -1,9 +1,9 @@
-package txdb
+package leveldb
 
 import (
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/txdb/storage"
+	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/state"

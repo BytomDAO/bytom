@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bytom/blockchain/txdb"
-	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/consensus"
+	"github.com/bytom/database"
+	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -22,28 +22,6 @@ var (
 	// too far in excess of the tip of the blockchain.
 	ErrTheDistantFuture = errors.New("block height too far in future")
 )
-
-// Store provides storage for blockchain data: blocks and state tree
-// snapshots.
-//
-// Note, this is different from a state snapshot. A state snapshot
-// provides access to the state at a given point in time -- outputs
-// and issuance memory. The Chain type uses Store to load state
-// from storage and persist validated data.
-type Store interface {
-	BlockExist(*bc.Hash) bool
-
-	GetBlock(*bc.Hash) (*types.Block, error)
-	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
-	GetStoreStatus() txdb.BlockStoreStateJSON
-	GetSeed(*bc.Hash) (*bc.Hash, error)
-	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)
-	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
-	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
-
-	SaveBlock(*types.Block, *bc.TransactionStatus, *bc.Hash) error
-	SaveChainStatus(*types.Block, *state.UtxoViewpoint, map[uint64]*bc.Hash) error
-}
 
 // OrphanManage is use to handle all the orphan block
 type OrphanManage struct {
@@ -132,11 +110,11 @@ type Chain struct {
 		hash      *bc.Hash
 		mainChain map[uint64]*bc.Hash
 	}
-	store Store
+	store database.Store
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, error) {
+func NewChain(initialBlockHash bc.Hash, store database.Store, txPool *TxPool) (*Chain, error) {
 	c := &Chain{
 		InitialBlockHash: initialBlockHash,
 		orphanManage:     NewOrphanManage(),

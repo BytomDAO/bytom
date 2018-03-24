@@ -1,4 +1,4 @@
-package txdb
+package leveldb
 
 import (
 	"encoding/json"
@@ -7,7 +7,8 @@ import (
 	"github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/txdb/storage"
+	"github.com/bytom/database"
+	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -22,28 +23,14 @@ var (
 	txStatusPrefix    = []byte("BTS:")
 )
 
-// BlockStoreStateJSON represents the core's db status
-type BlockStoreStateJSON struct {
-	Height uint64
-	Hash   *bc.Hash
-}
-
-func (bsj BlockStoreStateJSON) save(batch dbm.Batch) {
-	bytes, err := json.Marshal(bsj)
-	if err != nil {
-		common.PanicSanity(common.Fmt("Could not marshal state bytes: %v", err))
-	}
-	batch.Set(blockStoreKey, bytes)
-}
-
-func loadBlockStoreStateJSON(db dbm.DB) BlockStoreStateJSON {
+func loadBlockStoreStateJSON(db dbm.DB) database.BlockStoreStateJSON {
 	bytes := db.Get(blockStoreKey)
 	if bytes == nil {
-		return BlockStoreStateJSON{
+		return database.BlockStoreStateJSON{
 			Height: 0,
 		}
 	}
-	bsj := BlockStoreStateJSON{}
+	bsj := database.BlockStoreStateJSON{}
 	if err := json.Unmarshal(bytes, &bsj); err != nil {
 		common.PanicCrisis(common.Fmt("Could not unmarshal bytes: %X", bytes))
 	}
@@ -159,7 +146,7 @@ func (s *Store) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, erro
 }
 
 // GetStoreStatus return the BlockStoreStateJSON
-func (s *Store) GetStoreStatus() BlockStoreStateJSON {
+func (s *Store) GetStoreStatus() database.BlockStoreStateJSON {
 	return loadBlockStoreStateJSON(s.db)
 }
 
@@ -213,9 +200,13 @@ func (s *Store) SaveChainStatus(block *types.Block, view *state.UtxoViewpoint, m
 		return err
 	}
 
-	BlockStoreStateJSON{Height: block.Height, Hash: &hash}.save(batch)
-	batch.Write()
+	bytes, err := json.Marshal(database.BlockStoreStateJSON{Height: block.Height, Hash: &hash})
+	if err != nil {
+		return err
+	}
 
+	batch.Set(blockStoreKey, bytes)
+	batch.Write()
 	cleanMainchainDB(s.db, &hash)
 	return nil
 }
