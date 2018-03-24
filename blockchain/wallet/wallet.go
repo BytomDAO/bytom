@@ -9,7 +9,7 @@ import (
 	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/accesstoken"
-	"github.com/bytom/blockchain/account"
+	"github.com/bytom/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/crypto/ed25519/chainkd"

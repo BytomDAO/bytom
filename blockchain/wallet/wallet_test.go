@@ -10,7 +10,7 @@ import (
 	"github.com/tendermint/go-wire/data/base58"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/account"
+	"github.com/bytom/account"
 	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
