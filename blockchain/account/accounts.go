@@ -381,10 +381,9 @@ func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 
 // GetCoinbaseControlProgram will return a coinbase script
 func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
-	cp := &CtrlProgram{}
 	if data := m.db.Get(miningAddressKey); data != nil {
-		err := json.Unmarshal(data, cp)
-		return cp.ControlProgram, err
+		cp := &CtrlProgram{}
+		return cp.ControlProgram, json.Unmarshal(data, cp)
 	}
 
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
@@ -405,6 +404,10 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	}
 
 	rawCP, err := json.Marshal(program)
+	if err != nil {
+		return nil, err
+	}
+
 	m.db.Set(miningAddressKey, rawCP)
 	return program.ControlProgram, nil
 }
