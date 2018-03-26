@@ -446,7 +446,7 @@ func TestValidateBlock(t *testing.T) {
 		c.block.TransactionsRoot = &txRoot
 		c.block.TransactionStatusHash = &txStatusHash
 
-		if err = ValidateBlock(c.block, nil, &bc.Hash{}); rootErr(err) != c.err {
+		if err = ValidateBlock(c.block, nil, &bc.Hash{}, nil); rootErr(err) != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)
 		}
 	}

@@ -139,7 +139,7 @@ func (c *Chain) SaveBlock(block *types.Block) error {
 		return err
 	}
 
-	if err := validation.ValidateBlock(blockEnts, prevEnts, seed); err != nil {
+	if err := validation.ValidateBlock(blockEnts, prevEnts, seed, c.store); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
