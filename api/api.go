@@ -69,30 +69,28 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	wh.h.ServeHTTP(w, req)
 }
 
+// API is the scheduling center for server
 type API struct {
-	bcr     *blockchain.BlockchainReactor
-	wallet  *wallet.Wallet
-	chain   *protocol.Chain
-	server  *http.Server
-	handler http.Handler
+	bcr          *blockchain.BlockchainReactor
+	wallet       *wallet.Wallet
+	accessTokens *accesstoken.CredentialStore
+	chain        *protocol.Chain
+	server       *http.Server
+	handler      http.Handler
 }
 
 func (a *API) initServer(config *cfg.Config) {
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
 	var coreHandler waitHandler
+	var handler http.Handler
+
 	coreHandler.wg.Add(1)
 	mux := http.NewServeMux()
 	mux.Handle("/", &coreHandler)
 
-	var handler http.Handler = mux
-
 	if config.Auth.Disable == false {
-		if a.wallet == nil {
-			handler = AuthHandler(handler, nil)
-		} else {
-			handler = AuthHandler(handler, a.wallet.Tokens)
-		}
+		handler = AuthHandler(handler, a.accessTokens)
 	}
 	handler = RedirectHandler(handler)
 
@@ -115,6 +113,7 @@ func (a *API) initServer(config *cfg.Config) {
 	coreHandler.Set(a)
 }
 
+// StartServer start the server
 func (a *API) StartServer(address string) {
 	log.WithField("api address:", address).Info("Rpc listen")
 	listener, err := net.Listen("tcp", address)
@@ -132,11 +131,13 @@ func (a *API) StartServer(address string) {
 	}()
 }
 
-func NewAPI(bcr *blockchain.BlockchainReactor, wallet *wallet.Wallet, chain *protocol.Chain, config *cfg.Config) *API {
+// NewAPI create and initialize the API
+func NewAPI(bcr *blockchain.BlockchainReactor, wallet *wallet.Wallet, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore) *API {
 	api := &API{
-		bcr:    bcr,
-		wallet: wallet,
-		chain:  chain,
+		bcr:          bcr,
+		wallet:       wallet,
+		chain:        chain,
+		accessTokens: token,
 	}
 	api.buildHandler()
 	api.initServer(config)
@@ -153,47 +154,40 @@ func (a *API) buildHandler() {
 	walletEnable := false
 	m := http.NewServeMux()
 	if a.wallet != nil {
-		if a.wallet.AccountMgr != nil && a.wallet.AssetReg != nil {
-			walletEnable = true
+		walletEnable = true
 
-			m.Handle("/create-account", jsonHandler(a.createAccount))
-			m.Handle("/update-account-tags", jsonHandler(a.updateAccountTags))
-			m.Handle("/list-accounts", jsonHandler(a.listAccounts))
-			m.Handle("/delete-account", jsonHandler(a.deleteAccount))
+		m.Handle("/create-account", jsonHandler(a.createAccount))
+		m.Handle("/update-account-tags", jsonHandler(a.updateAccountTags))
+		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
+		m.Handle("/delete-account", jsonHandler(a.deleteAccount))
 
-			m.Handle("/create-account-receiver", jsonHandler(a.createAccountReceiver))
-			m.Handle("/list-addresses", jsonHandler(a.listAddresses))
-			m.Handle("/validate-address", jsonHandler(a.validateAddress))
+		m.Handle("/create-account-receiver", jsonHandler(a.createAccountReceiver))
+		m.Handle("/list-addresses", jsonHandler(a.listAddresses))
+		m.Handle("/validate-address", jsonHandler(a.validateAddress))
 
-			m.Handle("/create-asset", jsonHandler(a.createAsset))
-			m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
-			m.Handle("/update-asset-tags", jsonHandler(a.updateAssetTags))
-			m.Handle("/list-assets", jsonHandler(a.listAssets))
+		m.Handle("/create-asset", jsonHandler(a.createAsset))
+		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
+		m.Handle("/update-asset-tags", jsonHandler(a.updateAssetTags))
+		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
-			m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
-			m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
-			m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
-			m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
+		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
+		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
+		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
+		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
 
-			m.Handle("/export-private-key", jsonHandler(a.walletExportKey))
-			m.Handle("/import-private-key", jsonHandler(a.walletImportKey))
-			m.Handle("/import-key-progress", jsonHandler(a.keyImportProgress))
+		m.Handle("/export-private-key", jsonHandler(a.walletExportKey))
+		m.Handle("/import-private-key", jsonHandler(a.walletImportKey))
+		m.Handle("/import-key-progress", jsonHandler(a.keyImportProgress))
 
-			m.Handle("/build-transaction", jsonHandler(a.build))
-			m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
-			m.Handle("/submit-transaction", jsonHandler(a.submit))
-			m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
-			m.Handle("/get-transaction", jsonHandler(a.getTransaction))
-			m.Handle("/list-transactions", jsonHandler(a.listTransactions))
+		m.Handle("/build-transaction", jsonHandler(a.build))
+		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
+		m.Handle("/submit-transaction", jsonHandler(a.submit))
+		m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
+		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
+		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
 
-			m.Handle("/list-balances", jsonHandler(a.listBalances))
-			m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
-		} else if a.wallet.Tokens != nil {
-			m.Handle("/create-access-token", jsonHandler(a.createAccessToken))
-			m.Handle("/list-access-tokens", jsonHandler(a.listAccessTokens))
-			m.Handle("/delete-access-token", jsonHandler(a.deleteAccessToken))
-			m.Handle("/check-access-token", jsonHandler(a.checkAccessToken))
-		}
+		m.Handle("/list-balances", jsonHandler(a.listBalances))
+		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
 	} else {
 		log.Warn("Please enable wallet")
 	}
@@ -203,6 +197,11 @@ func (a *API) buildHandler() {
 
 	m.Handle("/info", jsonHandler(a.bcr.Info))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
+
+	m.Handle("/create-access-token", jsonHandler(a.createAccessToken))
+	m.Handle("/list-access-tokens", jsonHandler(a.listAccessTokens))
+	m.Handle("/delete-access-token", jsonHandler(a.deleteAccessToken))
+	m.Handle("/check-access-token", jsonHandler(a.checkAccessToken))
 
 	m.Handle("/create-transaction-feed", jsonHandler(a.createTxFeed))
 	m.Handle("/get-transaction-feed", jsonHandler(a.getTxFeed))

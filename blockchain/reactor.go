@@ -30,7 +30,7 @@ const (
 	crosscoreRPCPrefix          = "/rpc/"
 )
 
-//BlockchainReactor handles long-term catchup syncing.
+// BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
@@ -47,6 +47,7 @@ type BlockchainReactor struct {
 	miningEnable  bool
 }
 
+// Info return the server information
 func (bcr *BlockchainReactor) Info(ctx context.Context) (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"is_configured": false,
@@ -71,7 +72,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2
 		newBlockCh:    newBlockCh,
 	}
 
-	if wallet == nil || wallet.AccountMgr == nil {
+	if wallet == nil {
 		bcr.mining = cpuminer.NewCPUMiner(chain, nil, txPool, newBlockCh)
 		bcr.miningPool = miningpool.NewMiningPool(chain, nil, txPool, newBlockCh)
 	} else {

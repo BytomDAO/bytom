@@ -118,7 +118,7 @@ func NewNode(config *cfg.Config) *Node {
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, accessTokens, chain)
+		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain)
 		if err != nil {
 			log.WithField("error", err).Error("init NewWallet")
 		}
@@ -129,10 +129,6 @@ func NewNode(config *cfg.Config) *Node {
 
 		// Clean up expired UTXO reservations periodically.
 		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
-	} else if accessTokens != nil {
-		wallet = &w.Wallet{
-			Tokens: accessTokens,
-		}
 	}
 
 	bcReactor := bc.NewBlockchainReactor(chain, txPool, sw, wallet, txFeed, config.Mining)
@@ -215,7 +211,7 @@ func lanchWebBroser() {
 }
 
 func (n *Node) initAndstartApiServer() {
-	n.api = api.NewAPI(n.bcReactor, n.wallet, n.chain, n.config)
+	n.api = api.NewAPI(n.bcReactor, n.wallet, n.chain, n.config, n.accessTokens)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	n.api.StartServer(*listenAddr)
