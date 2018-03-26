@@ -202,13 +202,11 @@ func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
 }
 
 // Lanch web broser or not
-func lanchWebBroser(lanch bool) {
-	if lanch {
-		log.Info("Launching System Browser with :", webAddress)
-		if err := browser.Open(webAddress); err != nil {
-			log.Error(err.Error())
-			return
-		}
+func lanchWebBroser() {
+	log.Info("Launching System Browser with :", webAddress)
+	if err := browser.Open(webAddress); err != nil {
+		log.Error(err.Error())
+		return
 	}
 }
 
@@ -243,7 +241,9 @@ func (n *Node) OnStart() error {
 	}
 
 	n.initAndstartApiServer()
-	lanchWebBroser(!n.config.Web.Closed)
+	if !n.config.Web.Closed {
+		lanchWebBroser()
+	}
 
 	return nil
 }

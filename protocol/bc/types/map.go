@@ -146,7 +146,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			assetdefhash := hashData(oldIss.AssetDefinition)
 			iss := bc.NewIssuance(&anchorID, &val, uint64(i))
 			iss.WitnessAssetDefinition = &bc.AssetDefinition{
-				Data:           &assetdefhash,
+				Data: &assetdefhash,
 				IssuanceProgram: &bc.Program{
 					VmVersion: oldIss.VMVersion,
 					Code:      oldIss.IssuanceProgram,
@@ -235,7 +235,16 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 }
 
 func mapBlockHeader(old *BlockHeader) (bhID bc.Hash, bh *bc.BlockHeader) {
-	bh = bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.Timestamp, &old.TransactionsMerkleRoot, &old.TransactionStatusHash, old.Nonce, old.Bits)
+	bh = bc.NewBlockHeader(
+		old.Version,
+		old.Height,
+		&old.PreviousBlockHash,
+		old.Timestamp,
+		&old.TransactionsMerkleRoot,
+		&old.TransactionStatusHash,
+		old.Nonce,
+		old.Bits,
+	)
 	bhID = bc.EntryID(bh)
 	return
 }
