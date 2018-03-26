@@ -89,6 +89,7 @@ func (a *API) initServer(config *cfg.Config) {
 	mux := http.NewServeMux()
 	mux.Handle("/", &coreHandler)
 
+	handler = mux
 	if config.Auth.Disable == false {
 		handler = AuthHandler(handler, a.accessTokens)
 	}
