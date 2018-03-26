@@ -12,6 +12,7 @@ type Store interface {
 	BlockExist(*bc.Hash) bool
 
 	GetBlock(*bc.Hash) (*types.Block, error)
+	GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)
 	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
 	GetStoreStatus() BlockStoreStateJSON
 	GetSeed(*bc.Hash) (*bc.Hash, error)
