@@ -3,7 +3,6 @@ package commands
 import (
 	"os"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -21,11 +20,15 @@ func init() {
 
 	listAccountsCmd.PersistentFlags().StringVar(&accountID, "id", "", "ID of account")
 
+	listAddressesCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
+	listAddressesCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
+
 	listUnspentOutputsCmd.PersistentFlags().StringVar(&outputID, "id", "", "ID of unspent output")
 }
 
 var (
 	accountID         = ""
+	accountAlias      = ""
 	accountQuorum     = 1
 	accountToken      = ""
 	accountTags       = ""
@@ -138,17 +141,58 @@ var updateAccountTagsCmd = &cobra.Command{
 	},
 }
 
-var createAccountAddressCmd = &cobra.Command{
-	Use:   "create-account-address <accountID | alias>",
-	Short: "Create an account address",
+var createAccountReceiverCmd = &cobra.Command{
+	Use:   "create-account-receiver <accountAlias> [accountID]",
+	Short: "Create an account receiver",
+	Args:  cobra.RangeArgs(1, 2),
+	Run: func(cmd *cobra.Command, args []string) {
+		var ins = struct {
+			AccountID    string `json:"account_id"`
+			AccountAlias string `json:"account_alias"`
+		}{AccountAlias: args[0]}
+
+		if len(args) == 2 {
+			ins.AccountID = args[1]
+		}
+
+		data, exitCode := util.ClientCall("/create-account-receiver", &ins)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
+var listAddressesCmd = &cobra.Command{
+	Use:   "list-addresses",
+	Short: "List the account addresses",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		var ins = struct {
+			AccountID    string `json:"account_id"`
+			AccountAlias string `json:"account_alias"`
+		}{AccountID: accountID, AccountAlias: accountAlias}
+
+		data, exitCode := util.ClientCall("/list-addresses", &ins)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSONList(data)
+	},
+}
+
+var validateAddressCmd = &cobra.Command{
+	Use:   "validate-address",
+	Short: "validate the account addresses",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var ins = struct {
-			AccountInfo string    `json:"account_info"`
-			ExpiresAt   time.Time `json:"expires_at,omitempty"`
-		}{AccountInfo: args[0]}
+			Address string `json:"address"`
+		}{Address: args[0]}
 
-		data, exitCode := util.ClientCall("/create-account-address", &ins)
+		data, exitCode := util.ClientCall("/validate-address", &ins)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

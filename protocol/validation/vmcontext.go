@@ -16,12 +16,10 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		tx          = vs.tx
 		blockHeight = vs.block.BlockHeader.GetHeight()
 		numResults  = uint64(len(tx.ResultIds))
-		txData      = tx.Data.Bytes()
 		entryID     = bc.EntryID(entry) // TODO(bobg): pass this in, don't recompute it
 
 		assetID       *[]byte
 		amount        *uint64
-		entryData     *[]byte
 		destPos       *uint64
 		anchorID      *[]byte
 		spentOutputID *[]byte
@@ -41,8 +39,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		assetID = &a1
 		amount = &e.Value.Amount
 		destPos = &e.WitnessDestination.Position
-		d := e.Data.Bytes()
-		entryData = &d
 		a2 := e.AnchorId.Bytes()
 		anchorID = &a2
 
@@ -52,18 +48,8 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		assetID = &a1
 		amount = &spentOutput.Source.Value.Amount
 		destPos = &e.WitnessDestination.Position
-		d := e.Data.Bytes()
-		entryData = &d
 		s := e.SpentOutputId.Bytes()
 		spentOutputID = &s
-
-	case *bc.Output:
-		d := e.Data.Bytes()
-		entryData = &d
-
-	case *bc.Retirement:
-		d := e.Data.Bytes()
-		entryData = &d
 	}
 
 	var txSigHash *[]byte
@@ -102,8 +88,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		NumResults:    &numResults,
 		AssetID:       assetID,
 		Amount:        amount,
-		EntryData:     entryData,
-		TxData:        &txData,
 		DestPos:       destPos,
 		AnchorID:      anchorID,
 		SpentOutputID: spentOutputID,
@@ -131,19 +115,18 @@ type entryContext struct {
 	entries map[bc.Hash]bc.Entry
 }
 
-func (ec *entryContext) checkOutput(index uint64, data []byte, amount uint64, assetID []byte, vmVersion uint64, code []byte, expansion bool) (bool, error) {
+func (ec *entryContext) checkOutput(index uint64, amount uint64, assetID []byte, vmVersion uint64, code []byte, expansion bool) (bool, error) {
 	checkEntry := func(e bc.Entry) (bool, error) {
-		check := func(prog *bc.Program, value *bc.AssetAmount, dataHash *bc.Hash) bool {
+		check := func(prog *bc.Program, value *bc.AssetAmount) bool {
 			return (prog.VmVersion == vmVersion &&
 				bytes.Equal(prog.Code, code) &&
 				bytes.Equal(value.AssetId.Bytes(), assetID) &&
-				value.Amount == amount &&
-				(len(data) == 0 || bytes.Equal(dataHash.Bytes(), data)))
+				value.Amount == amount)
 		}
 
 		switch e := e.(type) {
 		case *bc.Output:
-			return check(e.ControlProgram, e.Source.Value, e.Data), nil
+			return check(e.ControlProgram, e.Source.Value), nil
 
 		case *bc.Retirement:
 			var prog bc.Program
@@ -155,7 +138,7 @@ func (ec *entryContext) checkOutput(index uint64, data []byte, amount uint64, as
 				// (The spec always requires prog.VmVersion to be zero.)
 				prog.Code = code
 			}
-			return check(&prog, e.Source.Value, e.Data), nil
+			return check(&prog, e.Source.Value), nil
 		}
 
 		return false, vm.ErrContext

@@ -12,17 +12,15 @@ func (h *TxHeader) writeForHash(w io.Writer) {
 	mustWriteForHash(w, h.Version)
 	mustWriteForHash(w, h.TimeRange)
 	mustWriteForHash(w, h.ResultIds)
-	mustWriteForHash(w, h.Data)
 	mustWriteForHash(w, h.ExtHash)
 }
 
 // NewTxHeader creates an new TxHeader.
-func NewTxHeader(version, serializedSize, timeRange uint64, resultIDs []*Hash, data *Hash) *TxHeader {
+func NewTxHeader(version, serializedSize, timeRange uint64, resultIDs []*Hash) *TxHeader {
 	return &TxHeader{
 		Version:        version,
 		SerializedSize: serializedSize,
 		TimeRange:      timeRange,
 		ResultIds:      resultIDs,
-		Data:           data,
 	}
 }

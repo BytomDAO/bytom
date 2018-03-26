@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytom/api"
 	"github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/env"
@@ -76,7 +77,7 @@ func MustRPCClient() *rpc.Client {
 // Wrapper rpc call api.
 func ClientCall(path string, req ...interface{}) (interface{}, int) {
 
-	var response = &blockchain.Response{}
+	var response = &api.Response{}
 	var request interface{}
 
 	if req != nil {
@@ -87,7 +88,7 @@ func ClientCall(path string, req ...interface{}) (interface{}, int) {
 	client.Call(context.Background(), path, request, response)
 
 	switch response.Status {
-	case blockchain.FAIL:
+	case api.FAIL:
 		jww.ERROR.Println(response.Msg)
 		return nil, ErrRemote
 	case "":

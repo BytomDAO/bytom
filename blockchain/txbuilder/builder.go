@@ -1,31 +1,34 @@
 package txbuilder
 
 import (
-	"bytes"
 	"math"
 	"time"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
+// NewBuilder return new TemplateBuilder instance
 func NewBuilder(maxTime time.Time) *TemplateBuilder {
 	return &TemplateBuilder{maxTime: maxTime}
 }
 
+// TemplateBuilder is struct of building transactions
 type TemplateBuilder struct {
-	base                *legacy.TxData
-	inputs              []*legacy.TxInput
-	outputs             []*legacy.TxOutput
+	base                *types.TxData
+	inputs              []*types.TxInput
+	outputs             []*types.TxOutput
 	signingInstructions []*SigningInstruction
 	minTime             time.Time
 	maxTime             time.Time
+	timeRange           uint64
 	referenceData       []byte
 	rollbacks           []func()
 	callbacks           []func() error
 }
 
-func (b *TemplateBuilder) AddInput(in *legacy.TxInput, sigInstruction *SigningInstruction) error {
+// AddInput add inputs of transactions
+func (b *TemplateBuilder) AddInput(in *types.TxInput, sigInstruction *SigningInstruction) error {
 	if !in.IsCoinbase() && in.Amount() > math.MaxInt64 {
 		return errors.WithDetailf(ErrBadAmount, "amount %d exceeds maximum value 2^63", in.Amount())
 	}
@@ -34,7 +37,8 @@ func (b *TemplateBuilder) AddInput(in *legacy.TxInput, sigInstruction *SigningIn
 	return nil
 }
 
-func (b *TemplateBuilder) AddOutput(o *legacy.TxOutput) error {
+// AddOutput add outputs of transactions
+func (b *TemplateBuilder) AddOutput(o *types.TxOutput) error {
 	if o.Amount > math.MaxInt64 {
 		return errors.WithDetailf(ErrBadAmount, "amount %d exceeds maximum value 2^63", o.Amount)
 	}
@@ -42,18 +46,21 @@ func (b *TemplateBuilder) AddOutput(o *legacy.TxOutput) error {
 	return nil
 }
 
+// RestrictMinTime set minTime
 func (b *TemplateBuilder) RestrictMinTime(t time.Time) {
 	if t.After(b.minTime) {
 		b.minTime = t
 	}
 }
 
+// RestrictMaxTime set maxTime
 func (b *TemplateBuilder) RestrictMaxTime(t time.Time) {
 	if t.Before(b.maxTime) {
 		b.maxTime = t
 	}
 }
 
+// MaxTime return maxTime
 func (b *TemplateBuilder) MaxTime() time.Time {
 	return b.maxTime
 }
@@ -75,24 +82,14 @@ func (b *TemplateBuilder) OnBuild(buildFn func() error) {
 	b.callbacks = append(b.callbacks, buildFn)
 }
 
-func (b *TemplateBuilder) setReferenceData(data []byte) error {
-	if b.base != nil && len(b.base.ReferenceData) != 0 && !bytes.Equal(b.base.ReferenceData, data) {
-		return errors.Wrap(ErrBadRefData)
-	}
-	if len(b.referenceData) != 0 && !bytes.Equal(b.referenceData, data) {
-		return errors.Wrap(ErrBadRefData)
-	}
-	b.referenceData = data
-	return nil
-}
-
 func (b *TemplateBuilder) rollback() {
 	for _, f := range b.rollbacks {
 		f()
 	}
 }
 
-func (b *TemplateBuilder) Build() (*Template, *legacy.TxData, error) {
+// Build build transactions with template
+func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 	// Run any building callbacks.
 	for _, cb := range b.callbacks {
 		err := cb()
@@ -104,15 +101,14 @@ func (b *TemplateBuilder) Build() (*Template, *legacy.TxData, error) {
 	tpl := &Template{}
 	tx := b.base
 	if tx == nil {
-		tx = &legacy.TxData{
+		tx = &types.TxData{
 			Version: 1,
 		}
 		tpl.Local = true
 	}
 
-	// Set transaction reference data if applicable.
-	if len(b.referenceData) > 0 {
-		tx.ReferenceData = b.referenceData
+	if b.timeRange != 0 {
+		tx.TimeRange = b.timeRange
 	}
 
 	// Add all the built outputs.
@@ -130,6 +126,13 @@ func (b *TemplateBuilder) Build() (*Template, *legacy.TxData, error) {
 		tpl.SigningInstructions = append(tpl.SigningInstructions, instruction)
 		tx.Inputs = append(tx.Inputs, in)
 	}
-	tpl.Transaction = legacy.NewTx(*tx)
+
+	txSerialized, err := tx.MarshalText()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	tx.SerializedSize = uint64(len(txSerialized))
+	tpl.Transaction = types.NewTx(*tx)
 	return tpl, tx, nil
 }

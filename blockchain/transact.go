@@ -2,155 +2,13 @@ package blockchain
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
-	"github.com/bytom/net/http/reqid"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
-
-var defaultTxTTL = 5 * time.Minute
-
-func (bcr *BlockchainReactor) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
-	var decoder func([]byte) (txbuilder.Action, error)
-	switch action {
-	case "control_account":
-		decoder = bcr.accounts.DecodeControlAction
-	case "control_address":
-		decoder = txbuilder.DecodeControlAddressAction
-	case "control_program":
-		decoder = txbuilder.DecodeControlProgramAction
-	case "control_receiver":
-		decoder = txbuilder.DecodeControlReceiverAction
-	case "issue":
-		decoder = bcr.assets.DecodeIssueAction
-	case "retire":
-		decoder = txbuilder.DecodeRetireAction
-	case "spend_account":
-		decoder = bcr.accounts.DecodeSpendAction
-	case "spend_account_unspent_output":
-		decoder = bcr.accounts.DecodeSpendUTXOAction
-	case "set_transaction_reference_data":
-		decoder = txbuilder.DecodeSetTxRefDataAction
-	default:
-		return nil, false
-	}
-	return decoder, true
-}
-
-func MergeActions(req *BuildRequest) []map[string]interface{} {
-	actions := make([]map[string]interface{}, 0)
-	actionMap := make(map[string]map[string]interface{})
-
-	for _, m := range req.Actions {
-		if actionType := m["type"].(string); actionType != "spend_account" {
-			actions = append(actions, m)
-			continue
-		}
-
-		actionKey := m["asset_id"].(string) + m["account_id"].(string)
-		amountNumber := m["amount"].(json.Number)
-		amount, _ := amountNumber.Int64()
-
-		if tmpM, ok := actionMap[actionKey]; ok {
-			tmpNumber, _ := tmpM["amount"].(json.Number)
-			tmpAmount, _ := tmpNumber.Int64()
-			tmpM["amount"] = json.Number(fmt.Sprintf("%v", tmpAmount+amount))
-		} else {
-			actionMap[actionKey] = m
-			actions = append(actions, m)
-		}
-	}
-
-	return actions
-}
-
-func (bcr *BlockchainReactor) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
-	err := bcr.filterAliases(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	reqActions := MergeActions(req)
-	actions := make([]txbuilder.Action, 0, len(reqActions))
-	for i, act := range reqActions {
-		typ, ok := act["type"].(string)
-		if !ok {
-			return nil, errors.WithDetailf(errBadActionType, "no action type provided on action %d", i)
-		}
-		decoder, ok := bcr.actionDecoder(typ)
-		if !ok {
-			return nil, errors.WithDetailf(errBadActionType, "unknown action type %q on action %d", typ, i)
-		}
-
-		// Remarshal to JSON, the action may have been modified when we
-		// filtered aliases.
-		b, err := json.Marshal(act)
-		if err != nil {
-			return nil, err
-		}
-		action, err := decoder(b)
-		if err != nil {
-			return nil, errors.WithDetailf(errBadAction, "%s on action %d", err.Error(), i)
-		}
-		actions = append(actions, action)
-	}
-
-	ttl := req.TTL.Duration
-	if ttl == 0 {
-		ttl = defaultTxTTL
-	}
-	maxTime := time.Now().Add(ttl)
-
-	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime)
-	if errors.Root(err) == txbuilder.ErrAction {
-		// append each of the inner errors contained in the data.
-		var Errs string
-		for _, innerErr := range errors.Data(err)["actions"].([]error) {
-			Errs = Errs + "<" + innerErr.Error() + ">"
-		}
-		err = errors.New(err.Error() + "-" + Errs)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	// ensure null is never returned for signing instructions
-	if tpl.SigningInstructions == nil {
-		tpl.SigningInstructions = []*txbuilder.SigningInstruction{}
-	}
-	return tpl, nil
-}
-
-// POST /build-transaction
-func (bcr *BlockchainReactor) build(ctx context.Context, buildReqs *BuildRequest) Response {
-
-	subctx := reqid.NewSubContext(ctx, reqid.New())
-
-	tmpl, err := bcr.buildSingle(subctx, buildReqs)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	return NewSuccessResponse(tmpl)
-}
-
-func (bcr *BlockchainReactor) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {
-	if tpl.Transaction == nil {
-		return nil, errors.Wrap(txbuilder.ErrMissingRawTx)
-	}
-
-	err := txbuilder.FinalizeTx(ctx, bcr.chain, tpl.Transaction)
-	if err != nil {
-		return nil, errors.Wrapf(err, "tx %s", tpl.Transaction.ID.String())
-	}
-
-	return map[string]string{"txid": tpl.Transaction.ID.String()}, nil
-}
 
 // finalizeTxWait calls FinalizeTx and then waits for confirmation of
 // the transaction.  A nil error return means the transaction is
@@ -185,7 +43,7 @@ func (bcr *BlockchainReactor) finalizeTxWait(ctx context.Context, txTemplate *tx
 	return nil
 }
 
-func (bcr *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.Tx, height uint64) (uint64, error) {
+func (bcr *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *types.Tx, height uint64) (uint64, error) {
 	log.Printf("waitForTxInBlock function")
 	for {
 		height++
@@ -217,41 +75,4 @@ func (bcr *BlockchainReactor) waitForTxInBlock(ctx context.Context, tx *legacy.T
 			// the tx's blockchain prevouts still exist in the state tree.
 		}
 	}
-}
-
-// POST /submit-transaction
-func (bcr *BlockchainReactor) submit(ctx context.Context, tpl *txbuilder.Template) Response {
-
-	txid, err := bcr.submitSingle(nil, tpl)
-	if err != nil {
-		log.WithField("err", err).Error("submit single tx")
-		return NewErrorResponse(err)
-	}
-
-	log.WithField("txid", txid).Info("submit single tx")
-	return NewSuccessResponse(txid)
-}
-
-// POST /sign-submit-transaction
-func (bcr *BlockchainReactor) signSubmit(ctx context.Context, x struct {
-	Password []string           `json:"password"`
-	Txs      txbuilder.Template `json:"transaction"`
-}) Response {
-
-	var err error
-	if err = txbuilder.Sign(ctx, &x.Txs, nil, x.Password, bcr.pseudohsmSignTemplate); err != nil {
-		log.WithField("build err", err).Error("fail on sign transaction.")
-		return NewErrorResponse(err)
-	}
-
-	log.Info("Sign Transaction complete.")
-
-	txID, err := bcr.submitSingle(nil, &x.Txs)
-	if err != nil {
-		log.WithField("err", err).Error("submit single tx")
-		return NewErrorResponse(err)
-	}
-
-	log.WithField("txid", txID["txid"]).Info("submit single tx")
-	return NewSuccessResponse(txID)
 }

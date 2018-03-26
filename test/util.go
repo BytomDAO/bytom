@@ -6,16 +6,16 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/account"
+	"github.com/bytom/account"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/blockchain/txdb"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/database/leveldb"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 )
 
@@ -25,7 +25,7 @@ func MockTxPool() *protocol.TxPool {
 }
 
 func MockChain(testDB dbm.DB) (*protocol.Chain, error) {
-	store := txdb.NewStore(testDB)
+	store := leveldb.NewStore(testDB)
 	txPool := MockTxPool()
 	genesisBlock := cfg.GenerateGenesisBlock()
 	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
@@ -49,24 +49,27 @@ func MockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
 	return utxo
 }
 
-func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *legacy.TxData, error) {
-	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo, nil)
+func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *types.TxData, error) {
+	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	b := txbuilder.NewBuilder(time.Now())
 	b.AddInput(txInput, sigInst)
-	out := legacy.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)}, nil)
+	out := types.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)})
 	b.AddOutput(out)
 	return b.Build()
 }
 
-func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM) error {
-	return txbuilder.Sign(nil, tpl, nil, []string{"password", "password"}, func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
-		sigBytes, err := hsm.XSign(xpub, path, data[:], password)
-		return sigBytes, err
+func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM, password string) (bool, error) {
+	err := txbuilder.Sign(nil, tpl, nil, password, func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
+		return hsm.XSign(xpub, path, data[:], password)
 	})
+	if err != nil {
+		return false, err
+	}
+	return txbuilder.SignProgress(tpl), nil
 }
 
 // Mock block
