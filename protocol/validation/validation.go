@@ -626,7 +626,7 @@ func validateBlockTime(b *bc.Block, store database.Store) error {
 		if iterBH.Height == 0 {
 			break
 		}
-		iterBH, err = store.GetBlockHeader(b.PreviousBlockId)
+		iterBH, err = store.GetBlockHeader(&iterBH.PreviousBlockHash)
 		if err != nil {
 			return err
 		}
@@ -634,7 +634,7 @@ func validateBlockTime(b *bc.Block, store database.Store) error {
 
 	sort.Sort(common.TimeSorter(timestamps))
 	medianTime := timestamps[len(timestamps)/2]
-	if b.Timestamp < medianTime {
+	if b.Timestamp <= medianTime {
 		return errBadTimestamp
 	}
 	return nil
