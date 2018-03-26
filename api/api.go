@@ -304,12 +304,17 @@ func latencyHandler(m *http.ServeMux, walletEnable bool) http.Handler {
 		}
 
 		// when the wallet is not been opened and the url path is not been found, redirect url path to error
-		if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {
-			url := req.URL
-			url.Path = "/error"
-			http.Redirect(w, req, url.String(), http.StatusOK)
-		}
+		walletRedirectHandler(m, walletEnable, w, req)
 
 		m.ServeHTTP(w, req)
 	})
+}
+
+// walletRedirectHandler redirect to error when the wallet is closed
+func walletRedirectHandler(m *http.ServeMux, walletEnable bool, w http.ResponseWriter, req *http.Request) {
+	if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {
+		url := req.URL
+		url.Path = "/error"
+		http.Redirect(w, req, url.String(), http.StatusOK)
+	}
 }
