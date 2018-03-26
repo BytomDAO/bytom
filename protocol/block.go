@@ -130,10 +130,7 @@ func (c *Chain) reorganizeChain(block *types.Block) error {
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) SaveBlock(block *types.Block) error {
-	preBlock, err := c.GetBlockByHash(&block.PreviousBlockHash)
-	if err != nil {
-		return err
-	}
+	preBlock, _ := c.GetBlockByHash(&block.PreviousBlockHash)
 
 	blockEnts := types.MapBlock(block)
 	prevEnts := types.MapBlock(preBlock)
