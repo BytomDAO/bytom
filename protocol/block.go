@@ -151,7 +151,8 @@ func (c *Chain) SaveBlock(block *types.Block) error {
 		return err
 	}
 
-	log.WithFields(log.Fields{"height": block.Height, "hash": block.Hash().String()}).Info("Block saved on disk")
+	blockHash := block.Hash()
+	log.WithFields(log.Fields{"height": block.Height, "hash": blockHash.String()}).Info("Block saved on disk")
 	return nil
 }
 
