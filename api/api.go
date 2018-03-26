@@ -69,26 +69,29 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	wh.h.ServeHTTP(w, req)
 }
 
+// API is the scheduling center for server
 type API struct {
-	bcr     *blockchain.BlockchainReactor
-	wallet  *wallet.Wallet
-	chain   *protocol.Chain
-	server  *http.Server
-	handler http.Handler
+	bcr          *blockchain.BlockchainReactor
+	wallet       *wallet.Wallet
+	accessTokens *accesstoken.CredentialStore
+	chain        *protocol.Chain
+	server       *http.Server
+	handler      http.Handler
 }
 
 func (a *API) initServer(config *cfg.Config) {
 	// The waitHandler accepts incoming requests, but blocks until its underlying
 	// handler is set, when the second phase is complete.
 	var coreHandler waitHandler
+	var handler http.Handler
+
 	coreHandler.wg.Add(1)
 	mux := http.NewServeMux()
 	mux.Handle("/", &coreHandler)
 
-	var handler http.Handler = mux
-
+	handler = mux
 	if config.Auth.Disable == false {
-		handler = AuthHandler(handler, a.wallet.Tokens)
+		handler = AuthHandler(handler, a.accessTokens)
 	}
 	handler = RedirectHandler(handler)
 
@@ -111,6 +114,7 @@ func (a *API) initServer(config *cfg.Config) {
 	coreHandler.Set(a)
 }
 
+// StartServer start the server
 func (a *API) StartServer(address string) {
 	log.WithField("api address:", address).Info("Rpc listen")
 	listener, err := net.Listen("tcp", address)
@@ -128,11 +132,13 @@ func (a *API) StartServer(address string) {
 	}()
 }
 
-func NewAPI(bcr *blockchain.BlockchainReactor, wallet *wallet.Wallet, chain *protocol.Chain, config *cfg.Config) *API {
+// NewAPI create and initialize the API
+func NewAPI(bcr *blockchain.BlockchainReactor, wallet *wallet.Wallet, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore) *API {
 	api := &API{
-		bcr:    bcr,
-		wallet: wallet,
-		chain:  chain,
+		bcr:          bcr,
+		wallet:       wallet,
+		chain:        chain,
+		accessTokens: token,
 	}
 	api.buildHandler()
 	api.initServer(config)
@@ -146,14 +152,18 @@ func (a *API) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 // buildHandler is in charge of all the rpc handling.
 func (a *API) buildHandler() {
+	walletEnable := false
 	m := http.NewServeMux()
-	if a.wallet != nil && a.wallet.AccountMgr != nil && a.wallet.AssetReg != nil {
+	if a.wallet != nil {
+		walletEnable = true
+
 		m.Handle("/create-account", jsonHandler(a.createAccount))
 		m.Handle("/update-account-tags", jsonHandler(a.updateAccountTags))
-		m.Handle("/create-account-receiver", jsonHandler(a.createAccountReceiver))
 		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
-		m.Handle("/list-addresses", jsonHandler(a.listAddresses))
 		m.Handle("/delete-account", jsonHandler(a.deleteAccount))
+
+		m.Handle("/create-account-receiver", jsonHandler(a.createAccountReceiver))
+		m.Handle("/list-addresses", jsonHandler(a.listAddresses))
 		m.Handle("/validate-address", jsonHandler(a.validateAddress))
 
 		m.Handle("/create-asset", jsonHandler(a.createAsset))
@@ -166,39 +176,41 @@ func (a *API) buildHandler() {
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
 
+		m.Handle("/export-private-key", jsonHandler(a.walletExportKey))
+		m.Handle("/import-private-key", jsonHandler(a.walletImportKey))
+		m.Handle("/import-key-progress", jsonHandler(a.keyImportProgress))
+
+		m.Handle("/build-transaction", jsonHandler(a.build))
+		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
+		m.Handle("/submit-transaction", jsonHandler(a.submit))
+		m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
+
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
+		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
 	} else {
 		log.Warn("Please enable wallet")
 	}
 
 	m.Handle("/", alwaysError(errors.New("not Found")))
+	m.Handle("/error", jsonHandler(a.walletError))
 
-	m.Handle("/build-transaction", jsonHandler(a.build))
-	m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
-	m.Handle("/submit-transaction", jsonHandler(a.submit))
-	m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
-
-	m.Handle("/create-transaction-feed", jsonHandler(a.createTxFeed))
-	m.Handle("/get-transaction-feed", jsonHandler(a.getTxFeed))
-	m.Handle("/update-transaction-feed", jsonHandler(a.updateTxFeed))
-	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
-	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
-	m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
 	m.Handle("/info", jsonHandler(a.bcr.Info))
+	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 
 	m.Handle("/create-access-token", jsonHandler(a.createAccessToken))
 	m.Handle("/list-access-tokens", jsonHandler(a.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(a.deleteAccessToken))
 	m.Handle("/check-access-token", jsonHandler(a.checkAccessToken))
 
+	m.Handle("/create-transaction-feed", jsonHandler(a.createTxFeed))
+	m.Handle("/get-transaction-feed", jsonHandler(a.getTxFeed))
+	m.Handle("/update-transaction-feed", jsonHandler(a.updateTxFeed))
+	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
+	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
+
 	m.Handle("/block-hash", jsonHandler(a.getBestBlockHash))
-
-	m.Handle("/export-private-key", jsonHandler(a.walletExportKey))
-	m.Handle("/import-private-key", jsonHandler(a.walletImportKey))
-	m.Handle("/import-key-progress", jsonHandler(a.keyImportProgress))
-
 	m.Handle("/get-block-header-by-hash", jsonHandler(a.getBlockHeaderByHash))
 	m.Handle("/get-block-header-by-height", jsonHandler(a.getBlockHeaderByHeight))
 	m.Handle("/get-block", jsonHandler(a.getBlock))
@@ -206,20 +218,13 @@ func (a *API) buildHandler() {
 	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(a.getBlockTransactionsCountByHash))
 	m.Handle("/get-block-transactions-count-by-height", jsonHandler(a.getBlockTransactionsCountByHeight))
 
-	m.Handle("/net-info", jsonHandler(a.getNetInfo))
-
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/getwork", jsonHandler(a.getWork))
 	m.Handle("/submitwork", jsonHandler(a.submitWork))
 
-	latencyHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if l := latency(m, req); l != nil {
-			defer l.RecordSince(time.Now())
-		}
-		m.ServeHTTP(w, req)
-	})
-	handler := maxBytesHandler(latencyHandler) // TODO(tessr): consider moving this to non-core specific mux
+	handler := latencyHandler(m, walletEnable)
+	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
 
 	a.handler = handler
@@ -262,7 +267,7 @@ func webAssetsHandler(next http.Handler) http.Handler {
 	return mux
 }
 
-//AuthHandler access token auth Handler
+// AuthHandler access token auth Handler
 func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore) http.Handler {
 	authenticator := authn.NewAPI(accessTokens)
 
@@ -279,6 +284,7 @@ func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore
 	})
 }
 
+// RedirectHandler redirect to dashboard handler
 func RedirectHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if req.URL.Path == "/" {
@@ -287,4 +293,28 @@ func RedirectHandler(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, req)
 	})
+}
+
+// latencyHandler take latency for the request url path, and redirect url path to wait-disable when wallet is closed
+func latencyHandler(m *http.ServeMux, walletEnable bool) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		// latency for the request url path
+		if l := latency(m, req); l != nil {
+			defer l.RecordSince(time.Now())
+		}
+
+		// when the wallet is not been opened and the url path is not been found, redirect url path to error
+		walletRedirectHandler(m, walletEnable, w, req)
+
+		m.ServeHTTP(w, req)
+	})
+}
+
+// walletRedirectHandler redirect to error when the wallet is closed
+func walletRedirectHandler(m *http.ServeMux, walletEnable bool, w http.ResponseWriter, req *http.Request) {
+	if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {
+		url := req.URL
+		url.Path = "/error"
+		http.Redirect(w, req, url.String(), http.StatusOK)
+	}
 }

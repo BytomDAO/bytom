@@ -9,7 +9,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/blockchain/txfeed"
-	"github.com/bytom/wallet"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/p2p"
@@ -18,6 +17,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	protocolTypes "github.com/bytom/protocol/bc/types"
 	"github.com/bytom/types"
+	"github.com/bytom/wallet"
 )
 
 const (
@@ -30,7 +30,7 @@ const (
 	crosscoreRPCPrefix          = "/rpc/"
 )
 
-//BlockchainReactor handles long-term catchup syncing.
+// BlockchainReactor handles long-term catchup syncing.
 type BlockchainReactor struct {
 	p2p.BaseReactor
 
@@ -47,6 +47,7 @@ type BlockchainReactor struct {
 	miningEnable  bool
 }
 
+// Info return the server information
 func (bcr *BlockchainReactor) Info(ctx context.Context) (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"is_configured": false,

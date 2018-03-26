@@ -68,3 +68,8 @@ func (a *API) keyImportProgress(ctx context.Context) Response {
 	}
 	return NewSuccessResponse(data)
 }
+
+// POST /wallet error
+func (a *API) walletError() Response {
+	return NewErrorResponse(errors.New("wallet not found, please check that the wallet is open"))
+}
