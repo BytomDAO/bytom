@@ -20,7 +20,7 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 	Alias     string                 `json:"alias"`
 	Tags      map[string]interface{} `json:"tags"`
 }) Response {
-	acc, err := a.wallet.AccountMgr.Create(ctx, ins.RootXPubs, ins.Quorum, ins.Alias, ins.Tags)
+	acc, err := a.wallet.AccountMgr.Create(ctx, ins.RootXPubs, ins.Quorum, strings.TrimSpace(ins.Alias), ins.Tags)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
