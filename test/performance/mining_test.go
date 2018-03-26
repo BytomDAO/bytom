@@ -6,7 +6,7 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/account"
+	"github.com/bytom/account"
 	"github.com/bytom/config"
 	"github.com/bytom/mining"
 	"github.com/bytom/test"

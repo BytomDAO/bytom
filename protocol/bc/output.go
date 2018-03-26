@@ -12,16 +12,14 @@ func (Output) typ() string { return "output1" }
 func (o *Output) writeForHash(w io.Writer) {
 	mustWriteForHash(w, o.Source)
 	mustWriteForHash(w, o.ControlProgram)
-	mustWriteForHash(w, o.Data)
 	mustWriteForHash(w, o.ExtHash)
 }
 
 // NewOutput creates a new Output.
-func NewOutput(source *ValueSource, controlProgram *Program, data *Hash, ordinal uint64) *Output {
+func NewOutput(source *ValueSource, controlProgram *Program, ordinal uint64) *Output {
 	return &Output{
 		Source:         source,
 		ControlProgram: controlProgram,
-		Data:           data,
 		Ordinal:        ordinal,
 	}
 }

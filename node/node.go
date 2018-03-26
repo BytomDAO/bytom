@@ -2,42 +2,37 @@ package node
 
 import (
 	"context"
-	"crypto/tls"
-	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/kr/secureheader"
 	log "github.com/sirupsen/logrus"
-	crypto "github.com/tendermint/go-crypto"
-	wire "github.com/tendermint/go-wire"
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/accesstoken"
+	"github.com/bytom/account"
+	"github.com/bytom/api"
+	"github.com/bytom/asset"
 	bc "github.com/bytom/blockchain"
-	"github.com/bytom/blockchain/accesstoken"
-	"github.com/bytom/blockchain/account"
-	"github.com/bytom/blockchain/asset"
 	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/txdb"
 	"github.com/bytom/blockchain/txfeed"
-	w "github.com/bytom/blockchain/wallet"
 	cfg "github.com/bytom/config"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
-	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/types"
 	"github.com/bytom/util/browser"
 	"github.com/bytom/version"
+	w "github.com/bytom/wallet"
 )
 
 const (
-	httpReadTimeout          = 2 * time.Minute
-	httpWriteTimeout         = time.Hour
 	webAddress               = "http://127.0.0.1:9888"
 	expireReservationsPeriod = time.Second
 )
@@ -53,88 +48,12 @@ type Node struct {
 	sw       *p2p.Switch           // p2p connections
 	addrBook *p2p.AddrBook         // known peers
 
-	evsw       types.EventSwitch // pub/sub for services
-	blockStore *txdb.Store
-	bcReactor  *bc.BlockchainReactor
-	accounts   *account.Manager
-	assets     *asset.Registry
-}
-
-func NewNodeDefault(config *cfg.Config) *Node {
-	return NewNode(config)
-}
-
-func RedirectHandler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if req.URL.Path == "/" {
-			http.Redirect(w, req, "/dashboard/", http.StatusFound)
-			return
-		}
-		next.ServeHTTP(w, req)
-	})
-}
-
-type waitHandler struct {
-	h  http.Handler
-	wg sync.WaitGroup
-}
-
-func (wh *waitHandler) Set(h http.Handler) {
-	wh.h = h
-	wh.wg.Done()
-}
-
-func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	wh.wg.Wait()
-	wh.h.ServeHTTP(w, req)
-}
-
-func rpcInit(h *bc.BlockchainReactor, config *cfg.Config, accessTokens *accesstoken.CredentialStore) {
-	// The waitHandler accepts incoming requests, but blocks until its underlying
-	// handler is set, when the second phase is complete.
-	var coreHandler waitHandler
-	coreHandler.wg.Add(1)
-	mux := http.NewServeMux()
-	mux.Handle("/", &coreHandler)
-
-	var handler http.Handler = mux
-
-	if config.Auth.Disable == false {
-		handler = bc.AuthHandler(handler, accessTokens)
-	}
-	handler = RedirectHandler(handler)
-
-	secureheader.DefaultConfig.PermitClearLoopback = true
-	secureheader.DefaultConfig.HTTPSRedirect = false
-	secureheader.DefaultConfig.Next = handler
-
-	server := &http.Server{
-		// Note: we should not set TLSConfig here;
-		// we took care of TLS with the listener in maybeUseTLS.
-		Handler:      secureheader.DefaultConfig,
-		ReadTimeout:  httpReadTimeout,
-		WriteTimeout: httpWriteTimeout,
-		// Disable HTTP/2 for now until the Go implementation is more stable.
-		// https://github.com/golang/go/issues/16450
-		// https://github.com/golang/go/issues/17071
-		TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){},
-	}
-	listenAddr := env.String("LISTEN", config.ApiAddress)
-	log.WithField("api address:", config.ApiAddress).Info("Rpc listen")
-	listener, err := net.Listen("tcp", *listenAddr)
-	if err != nil {
-		cmn.Exit(cmn.Fmt("Failed to register tcp port: %v", err))
-	}
-
-	// The `Serve` call has to happen in its own goroutine because
-	// it's blocking and we need to proceed to the rest of the core setup after
-	// we call it.
-	go func() {
-		if err := server.Serve(listener); err != nil {
-			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
-		}
-	}()
-	coreHandler.Set(h)
+	evsw         types.EventSwitch // pub/sub for services
+	bcReactor    *bc.BlockchainReactor
+	wallet       *w.Wallet
+	accessTokens *accesstoken.CredentialStore
+	api          *api.API
+	chain        *protocol.Chain
 }
 
 func NewNode(config *cfg.Config) *Node {
@@ -142,7 +61,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	// Get store
 	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-	store := txdb.NewStore(txDB)
+	store := leveldb.NewStore(txDB)
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
@@ -156,7 +75,9 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
 
-	sw := p2p.NewSwitch(config.P2P)
+	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
+
+	sw := p2p.NewSwitch(config.P2P, trustHistoryDB)
 
 	genesisBlock := cfg.GenerateGenesisBlock()
 
@@ -194,23 +115,26 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	if !config.Wallet.Disable {
-		xpubs, _ := hsm.ListKeys()
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, chain, xpubs)
+		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain)
 		if err != nil {
 			log.WithField("error", err).Error("init NewWallet")
 		}
+
+		if err := initOrRecoverAccount(hsm, wallet); err != nil {
+			log.WithField("error", err).Error("initialize or recover account")
+		}
+
 		// Clean up expired UTXO reservations periodically.
 		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
 	}
 
-	bcReactor := bc.NewBlockchainReactor(chain, txPool, accounts, assets, sw, hsm, wallet, txFeed, accessTokens, config.Mining)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, sw, wallet, txFeed, config.Mining)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 
-	rpcInit(bcReactor, config, accessTokens)
 	// Optionally, start the pex reactor
 	var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
@@ -236,26 +160,61 @@ func NewNode(config *cfg.Config) *Node {
 		sw:       sw,
 		addrBook: addrBook,
 
-		evsw:       eventSwitch,
-		bcReactor:  bcReactor,
-		blockStore: store,
-		accounts:   accounts,
-		assets:     assets,
+		evsw:         eventSwitch,
+		bcReactor:    bcReactor,
+		accessTokens: accessTokens,
+		wallet:       wallet,
+		chain:        chain,
 	}
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
 	return node
 }
 
-// Lanch web broser or not
-func lanchWebBroser(lanch bool) {
-	if lanch {
-		log.Info("Launching System Browser with :", webAddress)
-		if err := browser.Open(webAddress); err != nil {
-			log.Error(err.Error())
-			return
+func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
+	xpubs := hsm.ListKeys()
+
+	if len(xpubs) == 0 {
+		xpub, err := hsm.XCreate("default", "123456")
+		if err != nil {
+			return err
+		}
+
+		wallet.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "default", nil)
+		return nil
+	}
+
+	accounts, err := wallet.AccountMgr.ListAccounts("")
+	if err != nil {
+		return err
+	}
+
+	if len(accounts) > 0 {
+		return nil
+	}
+
+	for i, xPub := range xpubs {
+		if err := wallet.ImportAccountXpubKey(i, xPub, w.RecoveryIndex); err != nil {
+			return err
 		}
 	}
+	return nil
+}
+
+// Lanch web broser or not
+func lanchWebBroser() {
+	log.Info("Launching System Browser with :", webAddress)
+	if err := browser.Open(webAddress); err != nil {
+		log.Error(err.Error())
+		return
+	}
+}
+
+func (n *Node) initAndstartApiServer() {
+	n.api = api.NewAPI(n.bcReactor, n.wallet, n.chain, n.config, n.accessTokens)
+
+	listenAddr := env.String("LISTEN", n.config.ApiAddress)
+	n.api.StartServer(*listenAddr)
 }
 
 func (n *Node) OnStart() error {
@@ -280,7 +239,12 @@ func (n *Node) OnStart() error {
 			return err
 		}
 	}
-	lanchWebBroser(!n.config.Web.Closed)
+
+	n.initAndstartApiServer()
+	if !n.config.Web.Closed {
+		lanchWebBroser()
+	}
+
 	return nil
 }
 

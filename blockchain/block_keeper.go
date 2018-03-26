@@ -10,7 +10,7 @@ import (
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 type blockKeeperPeer struct {
@@ -41,8 +41,8 @@ func (p *blockKeeperPeer) SetStatus(height uint64, hash *bc.Hash) {
 }
 
 type pendingResponse struct {
-	block  *legacy.Block
-	peerID string
+	block *types.Block
+	src   *p2p.Peer
 }
 
 //TODO: add retry mechanism
@@ -83,8 +83,8 @@ func (bk *blockKeeper) Stop() {
 	bk.done <- true
 }
 
-func (bk *blockKeeper) AddBlock(block *legacy.Block, peerID string) {
-	bk.pendingProcessCh <- &pendingResponse{block: block, peerID: peerID}
+func (bk *blockKeeper) AddBlock(block *types.Block, src *p2p.Peer) {
+	bk.pendingProcessCh <- &pendingResponse{block: block, src: src}
 }
 
 func (bk *blockKeeper) IsCaughtUp() bool {
@@ -191,10 +191,12 @@ func (bk *blockKeeper) blockRequestWorker() {
 
 func (bk *blockKeeper) blockProcessWorker() {
 	for pendingResponse := range bk.pendingProcessCh {
+
 		block := pendingResponse.block
 		blockHash := block.Hash()
 		isOrphan, err := bk.chain.ProcessBlock(block)
 		if err != nil {
+			bk.sw.AddScamPeer(pendingResponse.src)
 			log.WithField("hash", blockHash.String()).Errorf("blockKeeper fail process block %v", err)
 			continue
 		}
@@ -205,7 +207,7 @@ func (bk *blockKeeper) blockProcessWorker() {
 		}).Info("blockKeeper processed block")
 
 		if isOrphan {
-			bk.requestBlockByHash(pendingResponse.peerID, &block.PreviousBlockHash)
+			bk.requestBlockByHash(pendingResponse.src.Key, &block.PreviousBlockHash)
 		}
 	}
 }
