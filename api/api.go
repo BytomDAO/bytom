@@ -199,9 +199,7 @@ func (a *API) buildHandler() {
 	}
 
 	m.Handle("/", alwaysError(errors.New("not Found")))
-
-	// redirect url path wallet-disable when the wallet is closed, please don't use this pattern
-	m.Handle("/wallet-disable", jsonHandler(a.walletDisable))
+	m.Handle("/error", jsonHandler(a.walletError))
 
 	m.Handle("/info", jsonHandler(a.bcr.Info))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
@@ -305,10 +303,10 @@ func latencyHandler(m *http.ServeMux, walletEnable bool) http.Handler {
 			defer l.RecordSince(time.Now())
 		}
 
-		// when the wallet is not been opened and the url path is not been found, redirect url path to wait-disable
+		// when the wallet is not been opened and the url path is not been found, redirect url path to error
 		if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {
 			url := req.URL
-			url.Path = "/wallet-disable"
+			url.Path = "/error"
 			http.Redirect(w, req, url.String(), http.StatusOK)
 		}
 
