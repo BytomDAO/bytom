@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strings"
 
 	"github.com/bytom/asset"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -21,7 +22,7 @@ func (a *API) createAsset(ctx context.Context, ins struct {
 		ins.RootXPubs,
 		ins.Quorum,
 		ins.Definition,
-		ins.Alias,
+		strings.TrimSpace(ins.Alias),
 		ins.Tags,
 	)
 	if err != nil {
