@@ -25,7 +25,7 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	Alias    string `json:"alias"`
 	Password string `json:"password"`
 }) Response {
-	xpub, err := a.wallet.Hsm.XCreate(strings.Trim(in.Alias, " "), in.Password)
+	xpub, err := a.wallet.Hsm.XCreate(strings.TrimSpace(in.Alias), in.Password)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
