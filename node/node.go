@@ -13,15 +13,15 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/api"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	bc "github.com/bytom/blockchain"
 	"github.com/bytom/accesstoken"
 	"github.com/bytom/account"
+	"github.com/bytom/api"
 	"github.com/bytom/asset"
+	bc "github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
+	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
 	"github.com/bytom/p2p"
@@ -129,6 +129,10 @@ func NewNode(config *cfg.Config) *Node {
 
 		// Clean up expired UTXO reservations periodically.
 		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
+	} else if accessTokens != nil {
+		wallet = &w.Wallet{
+			Tokens: accessTokens,
+		}
 	}
 
 	bcReactor := bc.NewBlockchainReactor(chain, txPool, sw, wallet, txFeed, config.Mining)

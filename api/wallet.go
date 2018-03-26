@@ -68,3 +68,8 @@ func (a *API) keyImportProgress(ctx context.Context) Response {
 	}
 	return NewSuccessResponse(data)
 }
+
+// POST /wallet-disable, used to redirect url path and response wallet error
+func (a *API) walletDisable() Response {
+	return NewErrorResponse(errors.New("wallet is closed, please open the wallet"))
+}

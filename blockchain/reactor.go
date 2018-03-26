@@ -9,7 +9,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/blockchain/txfeed"
-	"github.com/bytom/wallet"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/p2p"
@@ -18,6 +17,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	protocolTypes "github.com/bytom/protocol/bc/types"
 	"github.com/bytom/types"
+	"github.com/bytom/wallet"
 )
 
 const (
@@ -71,7 +71,7 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2
 		newBlockCh:    newBlockCh,
 	}
 
-	if wallet == nil {
+	if wallet == nil || wallet.AccountMgr == nil {
 		bcr.mining = cpuminer.NewCPUMiner(chain, nil, txPool, newBlockCh)
 		bcr.miningPool = miningpool.NewMiningPool(chain, nil, txPool, newBlockCh)
 	} else {
