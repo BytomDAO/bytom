@@ -69,10 +69,10 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	// get preblock info for generate next block
 	preBlock := c.BestBlock()
 	preBcBlock := types.MapBlock(preBlock)
-	nextBlockHeight := preBlock.BlockHeader.Height + 1
+	nextBlockHeight := preBlock.Height + 1
 
 	var compareDiffBH *types.BlockHeader
-	if compareDiffBlock, err := c.GetBlockByHeight(nextBlockHeight - consensus.BlocksPerRetarget); err == nil {
+	if compareDiffBlock, err := c.GetBlockByHeight(preBlock.Height - consensus.BlocksPerRetarget); err == nil {
 		compareDiffBH = &compareDiffBlock.BlockHeader
 	}
 
