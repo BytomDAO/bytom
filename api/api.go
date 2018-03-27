@@ -224,6 +224,7 @@ func (a *API) buildHandler() {
 	m.Handle("/submitwork", jsonHandler(a.submitWork))
 
 	handler := latencyHandler(m, walletEnable)
+	handler = walletRedirectHandler(handler)
 	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
 
@@ -303,18 +304,23 @@ func latencyHandler(m *http.ServeMux, walletEnable bool) http.Handler {
 			defer l.RecordSince(time.Now())
 		}
 
-		// when the wallet is not been opened and the url path is not been found, redirect url path to error
-		walletRedirectHandler(m, walletEnable, w, req)
+		// when the wallet is not been opened and the url path is not been found, modify url path to error,
+		// and after redirecting to the new url in func walletRedirectHandler
+		if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {
+			req.URL.Path = "/error"
+		}
 
 		m.ServeHTTP(w, req)
 	})
 }
 
 // walletRedirectHandler redirect to error when the wallet is closed
-func walletRedirectHandler(m *http.ServeMux, walletEnable bool, w http.ResponseWriter, req *http.Request) {
-	if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {
-		url := req.URL
-		url.Path = "/error"
-		http.Redirect(w, req, url.String(), http.StatusOK)
-	}
+func walletRedirectHandler(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if req.URL.Path == "/error" {
+			http.Redirect(w, req, req.URL.String(), http.StatusOK)
+			return
+		}
+		handler.ServeHTTP(w, req)
+	})
 }
