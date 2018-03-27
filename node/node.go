@@ -44,9 +44,10 @@ type Node struct {
 	config *cfg.Config
 
 	// network
-	privKey  crypto.PrivKeyEd25519 // local node's p2p key
-	sw       *p2p.Switch           // p2p connections
-	addrBook *p2p.AddrBook         // known peers
+	// privKey crypto.PrivKeyEd25519 // local node's p2p key
+	// sw       *p2p.Switch           // p2p connections
+	// addrBook *p2p.AddrBook         // known peers
+	syncManager *netsync.SyncManager
 
 	evsw         types.EventSwitch // pub/sub for services
 	bcReactor    *bc.BlockchainReactor
@@ -74,10 +75,6 @@ func NewNode(config *cfg.Config) *Node {
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
-
-	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-
-	sw := p2p.NewSwitch(config.P2P, trustHistoryDB)
 
 	genesisBlock := cfg.GenerateGenesisBlock()
 
@@ -130,18 +127,12 @@ func NewNode(config *cfg.Config) *Node {
 		// Clean up expired UTXO reservations periodically.
 		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
 	}
+	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, accounts, true)
 
 	bcReactor := bc.NewBlockchainReactor(chain, txPool, sw, wallet, txFeed, config.Mining)
 
-	sw.AddReactor("BLOCKCHAIN", bcReactor)
+	// sw.AddReactor("BLOCKCHAIN", bcReactor)
 
-	// Optionally, start the pex reactor
-	var addrBook *p2p.AddrBook
-	if config.P2P.PexReactor {
-		addrBook = p2p.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
-		pexReactor := p2p.NewPEXReactor(addrBook)
-		sw.AddReactor("PEX", pexReactor)
-	}
 
 	// run the profile server
 	profileHost := config.ProfListenAddress
@@ -156,10 +147,8 @@ func NewNode(config *cfg.Config) *Node {
 	node := &Node{
 		config: config,
 
-		privKey:  privKey,
-		sw:       sw,
-		addrBook: addrBook,
 
+		syncManager: syncManager,
 		evsw:         eventSwitch,
 		bcReactor:    bcReactor,
 		accessTokens: accessTokens,
@@ -218,28 +207,8 @@ func (n *Node) initAndstartApiServer() {
 }
 
 func (n *Node) OnStart() error {
-	// Create & add listener
-	p, address := ProtocolAndAddress(n.config.P2P.ListenAddress)
-	l := p2p.NewDefaultListener(p, address, n.config.P2P.SkipUPNP, nil)
-	n.sw.AddListener(l)
 
-	// Start the switch
-	n.sw.SetNodeInfo(n.makeNodeInfo())
-	n.sw.SetNodePrivKey(n.privKey)
-	_, err := n.sw.Start()
-	if err != nil {
-		return err
-	}
-
-	// If seeds exist, add them to the address book and dial out
-	if n.config.P2P.Seeds != "" {
-		// dial out
-		seeds := strings.Split(n.config.P2P.Seeds, ",")
-		if err := n.DialSeeds(seeds); err != nil {
-			return err
-		}
-	}
-
+	n.syncManager.Start(20)
 	n.initAndstartApiServer()
 	if !n.config.Web.Closed {
 		lanchWebBroser()
@@ -250,10 +219,9 @@ func (n *Node) OnStart() error {
 
 func (n *Node) OnStop() {
 	n.BaseService.OnStop()
-
+	n.syncManager.Stop(20)
 	log.Info("Stopping Node")
 	// TODO: gracefully disconnect from peers.
-	n.sw.Stop()
 
 }
 
@@ -264,68 +232,14 @@ func (n *Node) RunForever() {
 	})
 }
 
-// Add a Listener to accept inbound peer connections.
-// Add listeners before starting the Node.
-// The first listener is the primary listener (in NodeInfo)
-func (n *Node) AddListener(l p2p.Listener) {
-	n.sw.AddListener(l)
-}
-
-func (n *Node) Switch() *p2p.Switch {
-	return n.sw
-}
-
 func (n *Node) EventSwitch() types.EventSwitch {
 	return n.evsw
 }
 
-func (n *Node) makeNodeInfo() *p2p.NodeInfo {
-	nodeInfo := &p2p.NodeInfo{
-		PubKey:  n.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
-		Moniker: n.config.Moniker,
-		Network: "bytom",
-		Version: version.Version,
-		Other: []string{
-			cmn.Fmt("wire_version=%v", wire.Version),
-			cmn.Fmt("p2p_version=%v", p2p.Version),
-		},
-	}
-
-	if !n.sw.IsListening() {
-		return nodeInfo
-	}
-
-	p2pListener := n.sw.Listeners()[0]
-	p2pHost := p2pListener.ExternalAddress().IP.String()
-	p2pPort := p2pListener.ExternalAddress().Port
-	//rpcListenAddr := n.config.RPC.ListenAddress
-
-	// We assume that the rpcListener has the same ExternalAddress.
-	// This is probably true because both P2P and RPC listeners use UPnP,
-	// except of course if the rpc is only bound to localhost
-	nodeInfo.ListenAddr = cmn.Fmt("%v:%v", p2pHost, p2pPort)
-	//nodeInfo.Other = append(nodeInfo.Other, cmn.Fmt("rpc_addr=%v", rpcListenAddr))
-	return nodeInfo
+func (n *Node) SyncManager() *netsync.SyncManager {
+	return n.syncManager
 }
 
-//------------------------------------------------------------------------------
 
-func (n *Node) NodeInfo() *p2p.NodeInfo {
-	return n.sw.NodeInfo()
-}
-
-func (n *Node) DialSeeds(seeds []string) error {
-	return n.sw.DialSeeds(n.addrBook, seeds)
-}
-
-// Defaults to tcp
-func ProtocolAndAddress(listenAddr string) (string, string) {
-	p, address := "tcp", listenAddr
-	parts := strings.SplitN(address, "://", 2)
-	if len(parts) == 2 {
-		p, address = parts[0], parts[1]
-	}
-	return p, address
-}
 
 //------------------------------------------------------------------------------
