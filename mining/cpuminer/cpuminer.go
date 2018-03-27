@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	maxNonce          = ^uint64(0) // 2^32 - 1
+	maxNonce          = ^uint64(0) // 2^64 - 1
 	defaultNumWorkers = 1
 	hashUpdateSecs    = 1
 )
