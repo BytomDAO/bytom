@@ -16,6 +16,7 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/dashboard"
 	"github.com/bytom/errors"
+	"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/authn"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
@@ -227,6 +228,7 @@ func (a *API) buildHandler() {
 	handler = walletRedirectHandler(handler)
 	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
+	handler = gzip.Handler{Handler: handler}
 
 	a.handler = handler
 }
