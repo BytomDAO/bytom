@@ -269,6 +269,9 @@ func (bk *blockKeeper) bestHeight() uint64 {
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
 // will never be propagated to this particular peer.
 func (bk *blockKeeper) MarkTransaction(peer string, hash [32]byte) {
+	bk.mtx.RLock()
+	defer bk.mtx.RUnlock()
+
 	// If we reached the memory allowance, drop a previously known transaction hash
 	for bk.peers[peer].knownTxs.Size() >= maxKnownTxs {
 		bk.peers[peer].knownTxs.Pop()
@@ -279,6 +282,9 @@ func (bk *blockKeeper) MarkTransaction(peer string, hash [32]byte) {
 // MarkBlock marks a block as known for the peer, ensuring that the block will
 // never be propagated to this particular peer.
 func (bk *blockKeeper) MarkBlock(peer string, hash [32]byte) {
+	bk.mtx.RLock()
+	defer bk.mtx.RUnlock()
+
 	// If we reached the memory allowance, drop a previously known block hash
 	for bk.peers[peer].knownBlocks.Size() >= maxKnownBlocks {
 		bk.peers[peer].knownBlocks.Pop()
@@ -289,6 +295,9 @@ func (bk *blockKeeper) MarkBlock(peer string, hash [32]byte) {
 // PeersWithoutTx retrieves a list of peers that do not have a given transaction
 // in their set of known hashes.
 func (bk *blockKeeper) PeersWithoutTx(hash [32]byte) []*p2p.Peer {
+	bk.mtx.RLock()
+	defer bk.mtx.RUnlock()
+
 	list := make([]*p2p.Peer, 0, len(bk.peers))
 	for _, p := range bk.peers {
 		if !p.knownTxs.Has(hash) {
@@ -301,6 +310,9 @@ func (bk *blockKeeper) PeersWithoutTx(hash [32]byte) []*p2p.Peer {
 // PeersWithoutBlock retrieves a list of peers that do not have a given block in
 // their set of known hashes.
 func (bk *blockKeeper) PeersWithoutBlock(hash [32]byte) []*p2p.Peer {
+	bk.mtx.RLock()
+	defer bk.mtx.RUnlock()
+
 	list := make([]*p2p.Peer, 0, len(bk.peers))
 	for _, p := range bk.peers {
 		if !p.knownBlocks.Has(hash) {
