@@ -37,21 +37,27 @@ func GenerateGenesisTx() *types.Tx {
 // GenerateGenesisBlock will return genesis block
 func GenerateGenesisBlock() *types.Block {
 	genesisCoinbaseTx := GenerateGenesisTx()
-	merkleRoot, err := bc.MerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
+	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
 	if err != nil {
-		log.Panicf("Fatal create merkelRoot")
+		log.Panicf("Fatal create tx merkelRoot")
 	}
+
 	txStatus := bc.NewTransactionStatus()
+	txStatus.SetStatus(0, false)
+	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	if err != nil {
+		log.Panicf("Fatal create tx status gmerkelRoot")
+	}
 
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     4216083,
+			Nonce:     4216085,
 			Timestamp: 1516788453,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
-				TransactionStatusHash:  bc.EntryID(txStatus),
+				TransactionStatusHash:  txStatusHash,
 			},
 			Bits: 2305843009222082559,
 		},
