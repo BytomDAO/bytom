@@ -1,27 +1,23 @@
-package blockchain
+package netsync
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
 
-	wire "github.com/tendermint/go-wire"
+	"github.com/tendermint/go-wire"
 
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
 const (
-	// BlockRequestByte means block request message
-	BlockRequestByte = byte(0x10)
-	// BlockResponseByte means block response message
-	BlockResponseByte = byte(0x11)
-	// StatusRequestByte means status request message
-	StatusRequestByte = byte(0x20)
-	// StatusResponseByte means status response message
+	BlockRequestByte   = byte(0x10)
+	BlockResponseByte  = byte(0x11)
+	StatusRequestByte  = byte(0x20)
 	StatusResponseByte = byte(0x21)
-	// NewTransactionByte means transaction notify message
 	NewTransactionByte = byte(0x30)
+	NewMineBlockByte   = byte(0x40)
 )
 
 // BlockchainMessage is a generic message for this reactor.
@@ -34,9 +30,9 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&StatusRequestMessage{}, StatusRequestByte},
 	wire.ConcreteType{&StatusResponseMessage{}, StatusResponseByte},
 	wire.ConcreteType{&TransactionNotifyMessage{}, NewTransactionByte},
+	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
 )
 
-// DecodeMessage decode receive messages
 func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	msgType = bz[0]
 	n := int(0)
@@ -48,13 +44,6 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	return
 }
 
-// BlockRequestMessage is block request message struct
-type BlockRequestMessage struct {
-	Height  uint64
-	RawHash [32]byte
-}
-
-// GetHash return block hash
 func (m *BlockRequestMessage) GetHash() *bc.Hash {
 	hash := bc.NewHash(m.RawHash)
 	return &hash
@@ -68,12 +57,10 @@ func (m *BlockRequestMessage) String() string {
 	return fmt.Sprintf("BlockRequestMessage{Hash: %s}", hash.String())
 }
 
-// BlockResponseMessage is block response message struct
 type BlockResponseMessage struct {
 	RawBlock []byte
 }
 
-// NewBlockResponseMessage produce new BlockResponseMessage instance
 func NewBlockResponseMessage(block *types.Block) (*BlockResponseMessage, error) {
 	rawBlock, err := block.MarshalText()
 	if err != nil {
@@ -82,7 +69,6 @@ func NewBlockResponseMessage(block *types.Block) (*BlockResponseMessage, error) 
 	return &BlockResponseMessage{RawBlock: rawBlock}, nil
 }
 
-// GetBlock return block struct
 func (m *BlockResponseMessage) GetBlock() *types.Block {
 	block := &types.Block{
 		BlockHeader:  types.BlockHeader{},
@@ -96,12 +82,10 @@ func (m *BlockResponseMessage) String() string {
 	return fmt.Sprintf("BlockResponseMessage{Size: %d}", len(m.RawBlock))
 }
 
-// TransactionNotifyMessage is transaction notify message struct
 type TransactionNotifyMessage struct {
 	RawTx []byte
 }
 
-// NewTransactionNotifyMessage produce new TransactionNotifyMessage instance
 func NewTransactionNotifyMessage(tx *types.Tx) (*TransactionNotifyMessage, error) {
 	rawTx, err := tx.TxData.MarshalText()
 	if err != nil {
@@ -110,31 +94,29 @@ func NewTransactionNotifyMessage(tx *types.Tx) (*TransactionNotifyMessage, error
 	return &TransactionNotifyMessage{RawTx: rawTx}, nil
 }
 
-// GetTransaction return Tx struct
-func (m *TransactionNotifyMessage) GetTransaction() *types.Tx {
+func (m *TransactionNotifyMessage) GetTransaction() (*types.Tx, error) {
 	tx := &types.Tx{}
-	tx.UnmarshalText(m.RawTx)
-	return tx
+	if err := tx.UnmarshalText(m.RawTx); err != nil {
+		return nil, err
+	}
+	return tx, nil
 }
 
 func (m *TransactionNotifyMessage) String() string {
 	return fmt.Sprintf("TransactionNotifyMessage{Size: %d}", len(m.RawTx))
 }
 
-// StatusRequestMessage is status request message struct
 type StatusRequestMessage struct{}
 
 func (m *StatusRequestMessage) String() string {
 	return "StatusRequestMessage"
 }
 
-// StatusResponseMessage is status response message struct
 type StatusResponseMessage struct {
 	Height  uint64
 	RawHash [32]byte
 }
 
-// NewStatusResponseMessage produce new StatusResponseMessage instance
 func NewStatusResponseMessage(block *types.Block) *StatusResponseMessage {
 	return &StatusResponseMessage{
 		Height:  block.Height,
@@ -142,7 +124,6 @@ func NewStatusResponseMessage(block *types.Block) *StatusResponseMessage {
 	}
 }
 
-// GetHash return hash pointer
 func (m *StatusResponseMessage) GetHash() *bc.Hash {
 	hash := bc.NewHash(m.RawHash)
 	return &hash
@@ -151,4 +132,28 @@ func (m *StatusResponseMessage) GetHash() *bc.Hash {
 func (m *StatusResponseMessage) String() string {
 	hash := m.GetHash()
 	return fmt.Sprintf("StatusResponseMessage{Height: %d, Hash: %s}", m.Height, hash.String())
+}
+
+type MineBlockMessage struct {
+	RawBlock []byte
+}
+
+func NewMinedBlockMessage(block *types.Block) (*MineBlockMessage, error) {
+	rawBlock, err := block.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	return &MineBlockMessage{RawBlock: rawBlock}, nil
+}
+
+func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
+	block := &types.Block{}
+	if err:=block.UnmarshalText(m.RawBlock);err!=nil{
+		return nil, err
+	}
+	return block, nil
+}
+
+func (m *MineBlockMessage) String() string {
+	return fmt.Sprintf("NewMineBlockMessage{Size: %d}", len(m.RawBlock))
 }
