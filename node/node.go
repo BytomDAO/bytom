@@ -131,7 +131,7 @@ func NewNode(config *cfg.Config) *Node {
 		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
 	}
 
-	bcReactor := bc.NewBlockchainReactor(chain, txPool, sw, wallet, txFeed, config.Mining)
+	bcReactor := bc.NewBlockchainReactor(chain, txPool, sw, accounts, txFeed, config.Mining)
 
 	sw.AddReactor("BLOCKCHAIN", bcReactor)
 

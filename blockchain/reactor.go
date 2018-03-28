@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
+	"github.com/bytom/account"
 	"github.com/bytom/blockchain/txfeed"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
@@ -17,7 +18,6 @@ import (
 	"github.com/bytom/protocol/bc"
 	protocolTypes "github.com/bytom/protocol/bc/types"
 	"github.com/bytom/types"
-	"github.com/bytom/wallet"
 )
 
 const (
@@ -27,7 +27,6 @@ const (
 
 	statusUpdateIntervalSeconds = 10
 	maxBlockchainResponseSize   = 22020096 + 2
-	crosscoreRPCPrefix          = "/rpc/"
 )
 
 // BlockchainReactor handles long-term catchup syncing.
@@ -35,7 +34,6 @@ type BlockchainReactor struct {
 	p2p.BaseReactor
 
 	chain         *protocol.Chain
-	wallet        *wallet.Wallet
 	TxFeedTracker *txfeed.Tracker // TODO: move it out from BlockchainReactor
 	blockKeeper   *blockKeeper
 	txPool        *protocol.TxPool
@@ -59,11 +57,10 @@ func (bcr *BlockchainReactor) Info(ctx context.Context) (map[string]interface{},
 }
 
 // NewBlockchainReactor returns the reactor of whole blockchain.
-func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, miningEnable bool) *BlockchainReactor {
+func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, accountMgr *account.Manager, txfeeds *txfeed.Tracker, miningEnable bool) *BlockchainReactor {
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 	bcr := &BlockchainReactor{
 		chain:         chain,
-		wallet:        wallet,
 		blockKeeper:   newBlockKeeper(chain, sw),
 		txPool:        txPool,
 		sw:            sw,
@@ -72,13 +69,8 @@ func NewBlockchainReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2
 		newBlockCh:    newBlockCh,
 	}
 
-	if wallet == nil {
-		bcr.mining = cpuminer.NewCPUMiner(chain, nil, txPool, newBlockCh)
-		bcr.miningPool = miningpool.NewMiningPool(chain, nil, txPool, newBlockCh)
-	} else {
-		bcr.mining = cpuminer.NewCPUMiner(chain, wallet.AccountMgr, txPool, newBlockCh)
-		bcr.miningPool = miningpool.NewMiningPool(chain, wallet.AccountMgr, txPool, newBlockCh)
-	}
+	bcr.mining = cpuminer.NewCPUMiner(chain, accountMgr, txPool, newBlockCh)
+	bcr.miningPool = miningpool.NewMiningPool(chain, accountMgr, txPool, newBlockCh)
 
 	bcr.BaseReactor = *p2p.NewBaseReactor("BlockchainReactor", bcr)
 	return bcr
