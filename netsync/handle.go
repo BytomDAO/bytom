@@ -68,7 +68,7 @@ func NewSyncManager(config *cfg.Config, chain *protocol.Chain, txPool *protocol.
 
 	manager.sw = p2p.NewSwitch(config.P2P, trustHistoryDB)
 
-	protocolReactor := NewProtocalReactor(chain, txPool,  manager.sw, manager.fetcher)
+	protocolReactor := NewProtocalReactor(chain, txPool, manager.sw, manager.fetcher)
 	manager.blockKeeper = protocolReactor.blockKeeper
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 	manager.newPeerCh = protocolReactor.GetNewPeerChan()
@@ -206,20 +206,24 @@ func (self *SyncManager) BroadcastTx(tx *types.Tx) {
 		return
 	}
 	peers := self.blockKeeper.PeersWithoutTx(tx.ID.Byte32())
-	self.sw.BroadcastToPeers(BlockchainChannel, peers, struct{ BlockchainMessage }{msg})
+	for _, peer := range peers {
+		self.blockKeeper.MarkTransaction(peer.Key, tx.ID.Byte32())
+		peer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	}
 }
 
 // BroadcastBlock will  propagate a block to it's peers.
 func (self *SyncManager) BroadcastMinedBlock(block *types.Block) {
-	peers := self.blockKeeper.PeersWithoutBlock(block.Hash().Byte32())
-
 	msg, err := NewMinedBlockMessage(block)
 	if err != nil {
 		log.Errorf("Failed on mined broadcast mined block %v", err)
 		return
 	}
-	self.sw.BroadcastToPeers(BlockchainChannel, peers, struct{ BlockchainMessage }{msg})
-
+	peers := self.blockKeeper.PeersWithoutBlock(block.Hash().Byte32())
+	for _, peer := range peers {
+		self.blockKeeper.MarkBlock(peer.Key, block.Hash().Byte32())
+		peer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	}
 }
 
 func (self *SyncManager) NodeInfo() *p2p.NodeInfo {
