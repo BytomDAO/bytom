@@ -41,14 +41,15 @@ type SyncManager struct {
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-func NewSyncManager(config *cfg.Config, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, newBlockCh *chan *bc.Hash/*, miningEnable bool*/) (*SyncManager, error) {
+func NewSyncManager(config *cfg.Config, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, newBlockCh chan *bc.Hash /*, miningEnable bool*/) (*SyncManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &SyncManager{
-		txPool:   txPool,
-		chain:    chain,
-		privKey:  crypto.GenPrivKeyEd25519(),
-		config:   config,
-		quitSync: make(chan struct{}),
+		txPool:     txPool,
+		chain:      chain,
+		privKey:    crypto.GenPrivKeyEd25519(),
+		config:     config,
+		quitSync:   make(chan struct{}),
+		newBlockCh: newBlockCh,
 	}
 
 	heighter := func() uint64 {
@@ -68,7 +69,7 @@ func NewSyncManager(config *cfg.Config, chain *protocol.Chain, txPool *protocol.
 
 	manager.sw = p2p.NewSwitch(config.P2P, trustHistoryDB)
 
-	protocolReactor := NewProtocalReactor(chain, txPool, accounts, manager.sw, config.Mining, manager.newBlockCh, manager.fetcher)
+	protocolReactor := NewProtocalReactor(chain, txPool,  manager.sw, manager.fetcher)
 	manager.blockKeeper = protocolReactor.blockKeeper
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 	manager.newPeerCh = protocolReactor.GetNewPeerChan()

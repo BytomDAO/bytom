@@ -126,7 +126,7 @@ func NewNode(config *cfg.Config) *Node {
 	}
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 
-	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, accounts, &newBlockCh)
+	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, accounts, newBlockCh)
 
 	// run the profile server
 	profileHost := config.ProfListenAddress

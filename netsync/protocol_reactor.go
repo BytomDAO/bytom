@@ -6,12 +6,10 @@ import (
 	"reflect"
 
 	"fmt"
-	"github.com/bytom/account"
 	"github.com/bytom/netsync/fetcher"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -50,26 +48,24 @@ func NewErrorResponse(err error) Response {
 type ProtocalReactor struct {
 	p2p.BaseReactor
 
-	chain        *protocol.Chain
-	blockKeeper  *blockKeeper
-	txPool       *protocol.TxPool
-	sw           *p2p.Switch
-	fetcher      *fetcher.Fetcher
+	chain       *protocol.Chain
+	blockKeeper *blockKeeper
+	txPool      *protocol.TxPool
+	sw          *p2p.Switch
+	fetcher     *fetcher.Fetcher
 
 	newPeerCh chan struct{}
 }
 
 // NewProtocalReactor returns the reactor of whole blockchain.
-func NewProtocalReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, sw *p2p.Switch, miningEnable bool, newBlockCh chan *bc.Hash, fetcher *fetcher.Fetcher) *ProtocalReactor {
+func NewProtocalReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, fetcher *fetcher.Fetcher) *ProtocalReactor {
 	pr := &ProtocalReactor{
-		chain:        chain,
-		blockKeeper:  newBlockKeeper(chain, sw),
-		txPool:       txPool,
-		//mining:       cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh),
-		sw:           sw,
-		//miningEnable: miningEnable,
-		fetcher:      fetcher,
-		newPeerCh:    make(chan struct{}),
+		chain:       chain,
+		blockKeeper: newBlockKeeper(chain, sw),
+		txPool:      txPool,
+		sw:          sw,
+		fetcher:     fetcher,
+		newPeerCh:   make(chan struct{}),
 	}
 	pr.BaseReactor = *p2p.NewBaseReactor("ProtocalReactor", pr)
 	return pr
