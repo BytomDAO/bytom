@@ -26,7 +26,6 @@ type SyncManager struct {
 	addrBook  *p2p.AddrBook // known peers
 
 	privKey     crypto.PrivKeyEd25519 // local node's p2p key
-	maxPeers    int
 	chain       *core.Chain
 	txPool      *core.TxPool
 	fetcher     *fetcher.Fetcher
@@ -150,8 +149,7 @@ func (self *SyncManager) netStart() error {
 	return nil
 }
 
-func (self *SyncManager) Start(maxPeers int) {
-	self.maxPeers = maxPeers
+func (self *SyncManager) Start() {
 	self.netStart()
 	// broadcast transactions
 	go self.txBroadcastLoop()
@@ -166,7 +164,7 @@ func (self *SyncManager) Start(maxPeers int) {
 	// go self.txsyncLoop()
 }
 
-func (self *SyncManager) Stop(maxPeers int) {
+func (self *SyncManager) Stop() {
 	close(self.quitSync)
 	self.sw.Stop()
 }

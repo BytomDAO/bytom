@@ -207,7 +207,7 @@ func (n *Node) OnStart() error {
 	if n.miningEnable {
 		n.cpuMiner.Start()
 	}
-	n.syncManager.Start(20)
+	n.syncManager.Start()
 	n.initAndstartApiServer()
 	if !n.config.Web.Closed {
 		lanchWebBroser()
@@ -221,7 +221,7 @@ func (n *Node) OnStop() {
 	if n.miningEnable {
 		n.cpuMiner.Stop()
 	}
-	n.syncManager.Stop(20)
+	n.syncManager.Stop()
 	log.Info("Stopping Node")
 	// TODO: gracefully disconnect from peers.
 }
