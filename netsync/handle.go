@@ -1,22 +1,23 @@
 package netsync
 
 import (
-	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 	"strings"
 
-	"github.com/bytom/blockchain/account"
+	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
+	cmn "github.com/tendermint/tmlibs/common"
+	dbm "github.com/tendermint/tmlibs/db"
+
+	"github.com/bytom/account"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/netsync/fetcher"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/version"
-	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-wire"
-	cmn "github.com/tendermint/tmlibs/common"
 )
 
 type SyncManager struct {
@@ -31,30 +32,22 @@ type SyncManager struct {
 	fetcher     *fetcher.Fetcher
 	blockKeeper *blockKeeper
 
-	newBlockCh chan *bc.Hash
-	newPeerCh  *chan struct{}
-	quitSync   chan struct{}
-	//noMorePeers chan struct{}
-	config *cfg.Config
-	synchronising   int32
-
-	// wait group is used for graceful shutdowns during downloading
-	// and processing
-	//wg sync.WaitGroup
+	newBlockCh    chan *bc.Hash
+	newPeerCh     *chan struct{}
+	quitSync      chan struct{}
+	config        *cfg.Config
+	synchronising int32
 }
 
 // NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
 // with the ethereum network.
-func NewSyncManager(config *cfg.Config, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, miningEnable bool) (*SyncManager, error) {
-	// privKey := crypto.GenPrivKeyEd25519()
+func NewSyncManager(config *cfg.Config, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, newBlockCh *chan *bc.Hash/*, miningEnable bool*/) (*SyncManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &SyncManager{
-		txPool:  txPool,
-		chain:   chain,
-		privKey: crypto.GenPrivKeyEd25519(),
-		config:  config,
-		//newPeerCh: make(chan struct{}),
-		//noMorePeers: make(chan struct{}),
+		txPool:   txPool,
+		chain:    chain,
+		privKey:  crypto.GenPrivKeyEd25519(),
+		config:   config,
 		quitSync: make(chan struct{}),
 	}
 
@@ -62,14 +55,14 @@ func NewSyncManager(config *cfg.Config, chain *protocol.Chain, txPool *protocol.
 		return chain.Height()
 	}
 
-	inserter := func(block *legacy.Block) (bool, error) {
+	inserter := func(block *types.Block) (bool, error) {
 
 		return manager.chain.ProcessBlock(block)
 	}
 
 	manager.fetcher = fetcher.New(chain.GetBlockByHash, manager.BroadcastMinedBlock, heighter, inserter, manager.removePeer)
 
-	manager.newBlockCh = make(chan *bc.Hash, maxNewBlockChSize)
+	//manager.newBlockCh = make(chan *bc.Hash, maxNewBlockChSize)
 
 	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 
@@ -79,6 +72,7 @@ func NewSyncManager(config *cfg.Config, chain *protocol.Chain, txPool *protocol.
 	manager.blockKeeper = protocolReactor.blockKeeper
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 	manager.newPeerCh = protocolReactor.GetNewPeerChan()
+
 	// Optionally, start the pex reactor
 	//var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
@@ -124,7 +118,6 @@ func (self *SyncManager) makeNodeInfo() *p2p.NodeInfo {
 	// This is probably true because both P2P and RPC listeners use UPnP,
 	// except of course if the rpc is only bound to localhost
 	nodeInfo.ListenAddr = cmn.Fmt("%v:%v", p2pHost, p2pPort)
-	//nodeInfo.Other = append(nodeInfo.Other, cmn.Fmt("rpc_addr=%v", rpcListenAddr))
 	return nodeInfo
 }
 
@@ -179,7 +172,6 @@ func (self *SyncManager) Stop(maxPeers int) {
 
 func (self *SyncManager) txBroadcastLoop() {
 	newTxCh := self.txPool.GetNewTxCh()
-
 	for {
 		select {
 		case newTx := <-newTxCh:
@@ -208,7 +200,7 @@ func (self *SyncManager) minedBroadcastLoop() {
 }
 
 // BroadcastTransaction broadcats `BlockStore` transaction.
-func (self *SyncManager) BroadcastTx(tx *legacy.Tx) {
+func (self *SyncManager) BroadcastTx(tx *types.Tx) {
 	msg, err := NewTransactionNotifyMessage(tx)
 	if err != nil {
 		log.Errorf("Failed on broadcast tx %v", err)
@@ -219,7 +211,7 @@ func (self *SyncManager) BroadcastTx(tx *legacy.Tx) {
 }
 
 // BroadcastBlock will  propagate a block to it's peers.
-func (self *SyncManager) BroadcastMinedBlock(block *legacy.Block) {
+func (self *SyncManager) BroadcastMinedBlock(block *types.Block) {
 	peers := self.blockKeeper.PeersWithoutBlock(block.Hash().Byte32())
 
 	msg, err := NewMinedBlockMessage(block)
@@ -233,6 +225,10 @@ func (self *SyncManager) BroadcastMinedBlock(block *legacy.Block) {
 
 func (self *SyncManager) NodeInfo() *p2p.NodeInfo {
 	return self.sw.NodeInfo()
+}
+
+func (self *SyncManager) BlockKeeper() *blockKeeper {
+	return self.blockKeeper
 }
 
 func (self *SyncManager) DialSeeds(seeds []string) error {

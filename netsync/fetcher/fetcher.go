@@ -25,7 +25,7 @@ import (
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 const (
@@ -42,16 +42,16 @@ var (
 )
 
 // blockRetrievalFn is a callback type for retrieving a block from the local chain.
-type blockRetrievalFn func(hash *bc.Hash) (*legacy.Block, error)
+type blockRetrievalFn func(hash *bc.Hash) (*types.Block, error)
 
 // blockBroadcasterFn is a callback type for broadcasting a block to connected peers.
-type blockBroadcasterFn func(block *legacy.Block)
+type blockBroadcasterFn func(block *types.Block)
 
 // chainHeightFn is a callback type to retrieve the current chain height.
 type chainHeightFn func() uint64
 
 // chainInsertFn is a callback type to insert a batch of blocks into the local chain.
-type chainInsertFn func(block *legacy.Block) (bool, error)
+type chainInsertFn func(block *types.Block) (bool, error)
 
 // peerDropFn is a callback type for dropping a peer detected as malicious.
 type peerDropFn func(id string)
@@ -59,7 +59,7 @@ type peerDropFn func(id string)
 // inject represents a schedules import operation.
 type inject struct {
 	origin string
-	block  *legacy.Block
+	block  *types.Block
 }
 
 // Fetcher is responsible for accumulating block announcements from various peers
@@ -67,7 +67,6 @@ type inject struct {
 type Fetcher struct {
 	// Various event channels
 	inject chan *inject
-	//done   chan bc.Hash
 	quit   chan struct{}
 
 	// Block cache
@@ -87,7 +86,6 @@ type Fetcher struct {
 func New(getBlock blockRetrievalFn /*verifyHeader headerVerifierFn,*/, broadcastBlock blockBroadcasterFn, chainHeight chainHeightFn, insertChain chainInsertFn, dropPeer peerDropFn) *Fetcher {
 	return &Fetcher{
 		inject:         make(chan *inject),
-		//done:           make(chan bc.Hash),
 		quit:           make(chan struct{}),
 		queue:          prque.New(),
 		queues:         make(map[string]int),
@@ -113,7 +111,7 @@ func (f *Fetcher) Stop() {
 }
 
 // Enqueue tries to fill gaps the the fetcher's future import queue.
-func (f *Fetcher) Enqueue(peer string, block *legacy.Block) error {
+func (f *Fetcher) Enqueue(peer string, block *types.Block) error {
 	op := &inject{
 		origin: peer,
 		block:  block,
@@ -164,20 +162,13 @@ func (f *Fetcher) loop() {
 
 // enqueue schedules a new future import operation, if the block to be imported
 // has not yet been seen.
-func (f *Fetcher) enqueue(peer string, block *legacy.Block) {
+func (f *Fetcher) enqueue(peer string, block *types.Block) {
 	hash := block.Hash()
 
-	//// Ensure the peer isn't DOSing us
-	//count := f.queues[peer] + 1
-	//if count > blockLimit {
-	//	log.Info("Discarded propagated block, exceeded allowance", "peer", peer, "number", block.Height, "hash", hash, "limit", blockLimit)
-	//	//f.forgetHash(hash)
-	//	return
-	//}
+	//TODO: Ensure the peer isn't DOSing us
 	// Discard any past or too distant blocks
 	if dist := int64(block.Height) - int64(f.chainHeight()); dist < -maxUncleDist || dist > maxQueueDist {
 		log.Info("Discarded propagated block, too far away", "peer", peer, "number", block.Height, "hash", hash, "distance", dist)
-		//f.forgetHash(hash)
 		return
 	}
 	// Schedule the block for future importing
@@ -186,8 +177,6 @@ func (f *Fetcher) enqueue(peer string, block *legacy.Block) {
 			origin: peer,
 			block:  block,
 		}
-		//fmt.Println("block count:", count)
-		//f.queues[peer] = count
 		f.queued[hash] = op
 		f.queue.Push(op, -float32(block.Height))
 		log.Debug("Queued propagated block", "peer", peer, "number", block.Height, "hash", hash, "queued", f.queue.Size())
@@ -197,14 +186,12 @@ func (f *Fetcher) enqueue(peer string, block *legacy.Block) {
 // insert spawns a new goroutine to run a block insertion into the chain. If the
 // block's number is at the same height as the current import phase, it updates
 // the phase states accordingly.
-func (f *Fetcher) insert(peer string, block *legacy.Block) {
+func (f *Fetcher) insert(peer string, block *types.Block) {
 	hash := block.Hash()
 
 	// Run the import on a new thread
 	log.Info("Importing propagated block", "peer", peer, "number", block.Height, "hash", hash)
 	go func() {
-		//defer func() { f.done <- hash }()
-
 		// If the parent's unknown, abort insertion
 		parent, err := f.getBlock(&block.PreviousBlockHash)
 		if err != nil {
@@ -223,7 +210,6 @@ func (f *Fetcher) insert(peer string, block *legacy.Block) {
 		}
 		// If import succeeded, broadcast the block
 		log.Info("success insert block from cache. height:", block.Height)
-		//TODO: broadcastBlock result check
 		go f.broadcastBlock(block)
 	}()
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/tendermint/go-wire"
 
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
 const (
@@ -61,7 +61,7 @@ type BlockResponseMessage struct {
 	RawBlock []byte
 }
 
-func NewBlockResponseMessage(block *legacy.Block) (*BlockResponseMessage, error) {
+func NewBlockResponseMessage(block *types.Block) (*BlockResponseMessage, error) {
 	rawBlock, err := block.MarshalText()
 	if err != nil {
 		return nil, err
@@ -69,10 +69,10 @@ func NewBlockResponseMessage(block *legacy.Block) (*BlockResponseMessage, error)
 	return &BlockResponseMessage{RawBlock: rawBlock}, nil
 }
 
-func (m *BlockResponseMessage) GetBlock() *legacy.Block {
-	block := &legacy.Block{
-		BlockHeader:  legacy.BlockHeader{},
-		Transactions: []*legacy.Tx{},
+func (m *BlockResponseMessage) GetBlock() *types.Block {
+	block := &types.Block{
+		BlockHeader:  types.BlockHeader{},
+		Transactions: []*types.Tx{},
 	}
 	block.UnmarshalText(m.RawBlock)
 	return block
@@ -86,7 +86,7 @@ type TransactionNotifyMessage struct {
 	RawTx []byte
 }
 
-func NewTransactionNotifyMessage(tx *legacy.Tx) (*TransactionNotifyMessage, error) {
+func NewTransactionNotifyMessage(tx *types.Tx) (*TransactionNotifyMessage, error) {
 	rawTx, err := tx.TxData.MarshalText()
 	if err != nil {
 		return nil, err
@@ -94,8 +94,8 @@ func NewTransactionNotifyMessage(tx *legacy.Tx) (*TransactionNotifyMessage, erro
 	return &TransactionNotifyMessage{RawTx: rawTx}, nil
 }
 
-func (m *TransactionNotifyMessage) GetTransaction() (*legacy.Tx, error) {
-	tx := &legacy.Tx{}
+func (m *TransactionNotifyMessage) GetTransaction() (*types.Tx, error) {
+	tx := &types.Tx{}
 	if err := tx.UnmarshalText(m.RawTx); err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ type StatusResponseMessage struct {
 	RawHash [32]byte
 }
 
-func NewStatusResponseMessage(block *legacy.Block) *StatusResponseMessage {
+func NewStatusResponseMessage(block *types.Block) *StatusResponseMessage {
 	return &StatusResponseMessage{
 		Height:  block.Height,
 		RawHash: block.Hash().Byte32(),
@@ -138,7 +138,7 @@ type MineBlockMessage struct {
 	RawBlock []byte
 }
 
-func NewMinedBlockMessage(block *legacy.Block) (*MineBlockMessage, error) {
+func NewMinedBlockMessage(block *types.Block) (*MineBlockMessage, error) {
 	rawBlock, err := block.MarshalText()
 	if err != nil {
 		return nil, err
@@ -146,8 +146,8 @@ func NewMinedBlockMessage(block *legacy.Block) (*MineBlockMessage, error) {
 	return &MineBlockMessage{RawBlock: rawBlock}, nil
 }
 
-func (m *MineBlockMessage) GetMineBlock() (*legacy.Block, error) {
-	block := &legacy.Block{}
+func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
+	block := &types.Block{}
 	if err:=block.UnmarshalText(m.RawBlock);err!=nil{
 		return nil, err
 	}

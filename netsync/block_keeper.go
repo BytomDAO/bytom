@@ -6,12 +6,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/fatih/set.v0"
 
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
-	"gopkg.in/fatih/set.v0"
+	"github.com/bytom/protocol/bc/types"
 )
 
 const (
@@ -64,16 +64,14 @@ func (p *blockKeeperPeer) SetStatus(height uint64, hash *bc.Hash) {
 }
 
 type pendingResponse struct {
-	block *legacy.Block
+	block *types.Block
 	src   *p2p.Peer
 }
 
 //TODO: add retry mechanism
 type blockKeeper struct {
-	mtx         sync.RWMutex
-	chainHeight uint64
-	//maxPeerHeight uint64
-	//chainUpdateCh <-chan struct{}
+	mtx          sync.RWMutex
+	chainHeight  uint64
 	peerUpdateCh chan struct{}
 	done         chan bool
 
@@ -87,9 +85,7 @@ type blockKeeper struct {
 func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
 	chainHeight := chain.Height()
 	bk := &blockKeeper{
-		chainHeight: chainHeight,
-		//maxPeerHeight: uint64(0),
-		//chainUpdateCh: chain.BlockWaiter(chainHeight + 1),
+		chainHeight:  chainHeight,
 		peerUpdateCh: make(chan struct{}, 1000),
 		done:         make(chan bool, 1),
 
@@ -100,15 +96,21 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
 		quitSync:         make(chan struct{}),
 	}
 	go bk.blockProcessWorker()
-	//go bk.blockRequestWorker()
 	return bk
+}
+
+func (bk *blockKeeper) GetChainHeight() uint64 {
+	bk.mtx.RLock()
+	defer bk.mtx.RUnlock()
+
+	return bk.chainHeight
 }
 
 func (bk *blockKeeper) Stop() {
 	bk.done <- true
 }
 
-func (bk *blockKeeper) AddBlock(block *legacy.Block, src *p2p.Peer) {
+func (bk *blockKeeper) AddBlock(block *types.Block, src *p2p.Peer) {
 	bk.pendingProcessCh <- &pendingResponse{block: block, src: src}
 }
 
@@ -151,10 +153,6 @@ func (bk *blockKeeper) requestBlockByHash(peerID string, hash *bc.Hash) error {
 }
 
 func (bk *blockKeeper) requestBlockByHeight(peer *p2p.Peer, height uint64) error {
-	//peer := bk.sw.Peers().Get(peerID)
-	//if peer == nil {
-	//	return errors.New("can't find peer in peer pool")
-	//}
 	msg := &BlockRequestMessage{Height: height}
 	peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
@@ -180,8 +178,6 @@ func (bk *blockKeeper) BlockRequestWorker(peer *p2p.Peer, maxPeerHeight uint64) 
 	if bk.chainHeight < chainHeight {
 		bk.chainHeight = chainHeight
 	}
-	//chainHeight := bk.chainHeight
-	//maxPeerHeight := bk.bestHeight()
 	bk.mtx.RUnlock()
 
 	for i := chainHeight + 1; i <= maxPeerHeight; i++ {
@@ -250,6 +246,13 @@ func (bk *blockKeeper) BestPeer() *p2p.Peer {
 }
 
 // BestPeer retrieves the known peer with the currently highest total difficulty.
+func (bk *blockKeeper) BestHeight() uint64 {
+	bk.mtx.RLock()
+	defer bk.mtx.RUnlock()
+
+	return bk.bestHeight()
+}
+
 func (bk *blockKeeper) bestHeight() uint64 {
 	var (
 		bestHeight uint64

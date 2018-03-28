@@ -6,22 +6,18 @@ import (
 	"reflect"
 
 	"fmt"
-	"github.com/bytom/blockchain/account"
-	"github.com/bytom/mining/cpuminer"
-	"github.com/bytom/mining/miningpool"
+	"github.com/bytom/account"
 	"github.com/bytom/netsync/fetcher"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
-	"github.com/bytom/types"
+	"github.com/bytom/protocol/bc/types"
 )
 
 const (
 	// BlockchainChannel is a channel for blocks and status updates
 	BlockchainChannel = byte(0x40)
-	maxNewBlockChSize = int(1024)
 
 	maxBlockchainResponseSize = 22020096 + 2
 )
@@ -57,11 +53,7 @@ type ProtocalReactor struct {
 	chain        *protocol.Chain
 	blockKeeper  *blockKeeper
 	txPool       *protocol.TxPool
-	mining       *cpuminer.CPUMiner
-	miningPool   *miningpool.MiningPool
 	sw           *p2p.Switch
-	evsw         types.EventSwitch
-	miningEnable bool
 	fetcher      *fetcher.Fetcher
 
 	newPeerCh chan struct{}
@@ -73,10 +65,9 @@ func NewProtocalReactor(chain *protocol.Chain, txPool *protocol.TxPool, accounts
 		chain:        chain,
 		blockKeeper:  newBlockKeeper(chain, sw),
 		txPool:       txPool,
-		mining:       cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh),
-		miningPool:   miningpool.NewMiningPool(chain, accounts, txPool, newBlockCh),
+		//mining:       cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh),
 		sw:           sw,
-		miningEnable: miningEnable,
+		//miningEnable: miningEnable,
 		fetcher:      fetcher,
 		newPeerCh:    make(chan struct{}),
 	}
@@ -103,19 +94,12 @@ func (pr *ProtocalReactor) GetNewPeerChan() *chan struct{} {
 // OnStart implements BaseService
 func (pr *ProtocalReactor) OnStart() error {
 	pr.BaseReactor.OnStart()
-
-	if pr.miningEnable {
-		pr.mining.Start()
-	}
 	return nil
 }
 
 // OnStop implements BaseService
 func (pr *ProtocalReactor) OnStop() {
 	pr.BaseReactor.OnStop()
-	if pr.miningEnable {
-		pr.mining.Stop()
-	}
 	pr.blockKeeper.Stop()
 }
 
@@ -148,7 +132,7 @@ func (pr *ProtocalReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 
 	switch msg := msg.(type) {
 	case *BlockRequestMessage:
-		var block *legacy.Block
+		var block *types.Block
 		var err error
 		if msg.Height != 0 {
 			block, err = pr.chain.GetBlockByHeight(msg.Height)
@@ -214,7 +198,7 @@ func (pr *ProtocalReactor) BroadcastStatusResponse() {
 }
 
 // BroadcastTransaction broadcats `BlockStore` transaction.
-func (pr *ProtocalReactor) BroadcastTransaction(tx *legacy.Tx) error {
+func (pr *ProtocalReactor) BroadcastTransaction(tx *types.Tx) error {
 	msg, err := NewTransactionNotifyMessage(tx)
 	if err != nil {
 		return err

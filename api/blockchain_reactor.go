@@ -14,7 +14,7 @@ import (
 
 // return network infomation
 func (a *API) getNetInfo() Response {
-	return NewSuccessResponse(a.bcr.GetNodeInfo())
+	return NewSuccessResponse(a.GetNodeInfo())
 }
 
 // return best block hash
@@ -174,7 +174,7 @@ func (a *API) getBlockCount() Response {
 
 // return is in mining or not
 func (a *API) isMining() Response {
-	IsMining := map[string]bool{"isMining": a.bcr.IsMining()}
+	IsMining := map[string]bool{"isMining": a.IsMining()}
 	return NewSuccessResponse(IsMining)
 }
 
