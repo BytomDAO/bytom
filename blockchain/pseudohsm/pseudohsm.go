@@ -51,6 +51,10 @@ func (h *HSM) XCreate(alias string, auth string) (*XPub, error) {
 	if ok := h.cache.hasAlias(alias); ok {
 		return nil, ErrDuplicateKeyAlias
 	}
+
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+
 	xpub, _, err := h.createChainKDKey(auth, alias, false)
 	if err != nil {
 		return nil, err
