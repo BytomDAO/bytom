@@ -68,8 +68,13 @@ message TxHeader {
   Hash          ext_hash        = 5;
 }
 
+message TxVerifyResult {
+  bool status_fail = 1;
+}
+
 message TransactionStatus {
-  bytes bitmap = 1;
+  uint64                  version        = 1;
+  repeated TxVerifyResult verify_status  = 2;
 }
 
 message Mux {

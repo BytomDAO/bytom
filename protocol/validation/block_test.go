@@ -23,7 +23,7 @@ func generate(tb testing.TB, prev *bc.Block) *bc.Block {
 	}
 
 	var err error
-	b.TransactionsMerkleRoot, err = bc.MerkleRoot(nil)
+	b.TransactionsMerkleRoot, err = bc.TxMerkleRoot(nil)
 	if err != nil {
 		tb.Fatal(err)
 	}

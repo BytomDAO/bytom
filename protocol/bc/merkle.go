@@ -11,9 +11,46 @@ var (
 	interiorPrefix = []byte{0x01}
 )
 
-// MerkleRoot creates a merkle tree from a slice of transactions
+// TxMerkleRoot creates a merkle tree from a slice of TxVerifyResult
+func TxStatusMerkleRoot(tvr []*TxVerifyResult) (root Hash, err error) {
+	switch {
+	case len(tvr) == 0:
+		return EmptyStringHash, nil
+
+	case len(tvr) == 1:
+		h := sha3pool.Get256()
+		defer sha3pool.Put256(h)
+
+		h.Write(leafPrefix)
+		tvr[0].WriteTo(h)
+		root.ReadFrom(h)
+		return root, nil
+
+	default:
+		k := prevPowerOfTwo(len(tvr))
+		left, err := TxStatusMerkleRoot(tvr[:k])
+		if err != nil {
+			return root, err
+		}
+
+		right, err := TxStatusMerkleRoot(tvr[k:])
+		if err != nil {
+			return root, err
+		}
+
+		h := sha3pool.Get256()
+		defer sha3pool.Put256(h)
+		h.Write(interiorPrefix)
+		left.WriteTo(h)
+		right.WriteTo(h)
+		root.ReadFrom(h)
+		return root, nil
+	}
+}
+
+// TxMerkleRoot creates a merkle tree from a slice of transactions
 // and returns the root hash of the tree.
-func MerkleRoot(transactions []*Tx) (root Hash, err error) {
+func TxMerkleRoot(transactions []*Tx) (root Hash, err error) {
 	switch {
 	case len(transactions) == 0:
 		return EmptyStringHash, nil
@@ -29,12 +66,12 @@ func MerkleRoot(transactions []*Tx) (root Hash, err error) {
 
 	default:
 		k := prevPowerOfTwo(len(transactions))
-		left, err := MerkleRoot(transactions[:k])
+		left, err := TxMerkleRoot(transactions[:k])
 		if err != nil {
 			return root, err
 		}
 
-		right, err := MerkleRoot(transactions[k:])
+		right, err := TxMerkleRoot(transactions[k:])
 		if err != nil {
 			return root, err
 		}

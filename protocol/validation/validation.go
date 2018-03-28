@@ -599,7 +599,7 @@ func ValidateBlock(b, prev *bc.Block, seed *bc.Hash, store database.Store) error
 		return err
 	}
 
-	txRoot, err := bc.MerkleRoot(b.Transactions)
+	txRoot, err := bc.TxMerkleRoot(b.Transactions)
 	if err != nil {
 		return errors.Wrap(err, "computing transaction merkle root")
 	}
@@ -608,7 +608,12 @@ func ValidateBlock(b, prev *bc.Block, seed *bc.Hash, store database.Store) error
 		return errors.WithDetailf(errMismatchedMerkleRoot, "computed %x, current block wants %x", txRoot.Bytes(), b.TransactionsRoot.Bytes())
 	}
 
-	if bc.EntryID(b.TransactionStatus) != *b.TransactionStatusHash {
+	txStatusHash, err := bc.TxStatusMerkleRoot(b.TransactionStatus.VerifyStatus)
+	if err != nil {
+		return err
+	}
+
+	if txStatusHash != *b.TransactionStatusHash {
 		return errMismatchedTxStatus
 	}
 	return nil
