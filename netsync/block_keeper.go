@@ -116,7 +116,7 @@ func (bk *blockKeeper) AddBlock(block *types.Block, src *p2p.Peer) {
 func (bk *blockKeeper) IsCaughtUp() bool {
 	bk.mtx.RLock()
 	defer bk.mtx.RUnlock()
-	return bk.chain.Height() >= bk.bestHeight()
+	return bk.chain.Height() < bk.bestHeight()
 }
 
 func (bk *blockKeeper) RemovePeer(peerID string) {
