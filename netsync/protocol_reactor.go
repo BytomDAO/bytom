@@ -83,8 +83,8 @@ func (pr *ProtocalReactor) GetChannels() []*p2p.ChannelDescriptor {
 }
 
 // GetChannels implements Reactor
-func (pr *ProtocalReactor) GetNewPeerChan() *chan struct{} {
-	return &pr.newPeerCh
+func (pr *ProtocalReactor) GetNewPeerChan() chan struct{} {
+	return pr.newPeerCh
 }
 
 // OnStart implements BaseService

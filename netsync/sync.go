@@ -17,8 +17,8 @@
 package netsync
 
 import (
-	"time"
 	"sync/atomic"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -44,7 +44,7 @@ func (self *SyncManager) syncer() {
 
 	for {
 		select {
-		case <-*self.newPeerCh:
+		case <-self.newPeerCh:
 			log.Info("New peer connected.")
 			// Make sure we have peers to select from, then sync
 			if self.sw.Peers().Size() < minDesiredPeerCount {

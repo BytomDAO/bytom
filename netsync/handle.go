@@ -32,7 +32,7 @@ type SyncManager struct {
 	blockKeeper *blockKeeper
 
 	newBlockCh    chan *bc.Hash
-	newPeerCh     *chan struct{}
+	newPeerCh     chan struct{}
 	quitSync      chan struct{}
 	config        *cfg.Config
 	synchronising int32
