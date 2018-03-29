@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/bytom/errors"
 )
 
 const (
@@ -94,7 +95,7 @@ func (r *PEXReactor) GetChannels() []*ChannelDescriptor {
 
 // AddPeer implements Reactor by adding peer to the address book (if inbound)
 // or by requesting more addresses (if outbound).
-func (r *PEXReactor) AddPeer(p *Peer) {
+func (r *PEXReactor) AddPeer(p *Peer) error{
 	if p.IsOutbound() {
 		// For outbound peers, the address is already in the books.
 		// Either it was added in DialSeeds or when we
@@ -110,10 +111,11 @@ func (r *PEXReactor) AddPeer(p *Peer) {
 				"addr":  p.ListenAddr,
 				"error": err,
 			}).Error("Error in AddPeer: Invalid peer address")
-			return
+			return errors.New("Error in AddPeer: Invalid peer address")
 		}
 		r.book.AddAddress(addr, addr)
 	}
+	return nil
 }
 
 // RemovePeer implements Reactor.

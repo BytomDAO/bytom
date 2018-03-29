@@ -6,18 +6,26 @@ import (
 	"reflect"
 
 	"fmt"
+	"github.com/bytom/errors"
 	"github.com/bytom/netsync/fetcher"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"strings"
+	"time"
 )
 
 const (
 	// BlockchainChannel is a channel for blocks and status updates
-	BlockchainChannel = byte(0x40)
-
+	BlockchainChannel         = byte(0x40)
 	maxBlockchainResponseSize = 22020096 + 2
+	protocolHandshakeTimeout  = time.Second * 10
+)
+
+var (
+	ErrProtocalHandshakeTimeout = errors.New("Protocal handshake timeout")
 )
 
 const (
@@ -32,6 +40,12 @@ type Response struct {
 	Status string      `json:"status,omitempty"`
 	Msg    string      `json:"msg,omitempty"`
 	Data   interface{} `json:"data,omitempty"`
+}
+
+type initalPeerStatus struct {
+	peerID string
+	height uint64
+	hash   *bc.Hash
 }
 
 //NewSuccessResponse success response
@@ -54,18 +68,20 @@ type ProtocalReactor struct {
 	sw          *p2p.Switch
 	fetcher     *fetcher.Fetcher
 
-	newPeerCh chan struct{}
+	newPeerCh    chan struct{}
+	peerStatusCh chan *initalPeerStatus
 }
 
 // NewProtocalReactor returns the reactor of whole blockchain.
 func NewProtocalReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, fetcher *fetcher.Fetcher) *ProtocalReactor {
 	pr := &ProtocalReactor{
-		chain:       chain,
-		blockKeeper: newBlockKeeper(chain, sw),
-		txPool:      txPool,
-		sw:          sw,
-		fetcher:     fetcher,
-		newPeerCh:   make(chan struct{}),
+		chain:        chain,
+		blockKeeper:  newBlockKeeper(chain, sw),
+		txPool:       txPool,
+		sw:           sw,
+		fetcher:      fetcher,
+		newPeerCh:    make(chan struct{}),
+		peerStatusCh: make(chan *initalPeerStatus),
 	}
 	pr.BaseReactor = *p2p.NewBaseReactor("ProtocalReactor", pr)
 	return pr
@@ -100,9 +116,22 @@ func (pr *ProtocalReactor) OnStop() {
 }
 
 // AddPeer implements Reactor by sending our state to peer.
-func (pr *ProtocalReactor) AddPeer(peer *p2p.Peer) {
-	pr.blockKeeper.AddPeer(peer)
+func (pr *ProtocalReactor) AddPeer(peer *p2p.Peer) error {
 	peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}})
+	handshakeWait := time.NewTimer(protocolHandshakeTimeout)
+	for {
+		select {
+		case status := <-pr.peerStatusCh:
+			if strings.Compare(status.peerID, peer.Key) == 0 {
+				pr.blockKeeper.AddPeer(peer)
+				pr.blockKeeper.SetPeerHeight(status.peerID, status.height, status.hash)
+				pr.newPeerCh <- struct{}{}
+				return nil
+			}
+		case <-handshakeWait.C:
+			return ErrProtocalHandshakeTimeout
+		}
+	}
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
@@ -155,8 +184,13 @@ func (pr *ProtocalReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 
 	case *StatusResponseMessage:
-		pr.blockKeeper.SetPeerHeight(src.Key, msg.Height, msg.GetHash())
-		pr.newPeerCh <- struct{}{}
+		//pr.blockKeeper.SetPeerHeight(src.Key, msg.Height, msg.GetHash())
+		peerStatus := &initalPeerStatus{
+			peerID: src.Key,
+			height: msg.Height,
+			hash:   msg.GetHash(),
+		}
+		pr.peerStatusCh <- peerStatus
 
 	case *TransactionNotifyMessage:
 		//TODO: test
