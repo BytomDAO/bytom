@@ -2,6 +2,7 @@ package netsync
 
 import (
 	"errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -79,7 +80,7 @@ type blockKeeper struct {
 	sw               *p2p.Switch
 	peers            map[string]*blockKeeperPeer
 	pendingProcessCh chan *pendingResponse
-	quitSync         chan struct{}
+	quitReqBlockCh   chan *string
 }
 
 func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
@@ -93,7 +94,7 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
 		sw:               sw,
 		peers:            make(map[string]*blockKeeperPeer),
 		pendingProcessCh: make(chan *pendingResponse),
-		quitSync:         make(chan struct{}),
+		quitReqBlockCh:   make(chan *string),
 	}
 	go bk.blockProcessWorker()
 	return bk
@@ -125,7 +126,7 @@ func (bk *blockKeeper) RemovePeer(peerID string) {
 	delete(bk.peers, peerID)
 	bk.mtx.Unlock()
 	log.WithField("ID", peerID).Info("Delete peer from blockKeeper")
-	bk.quitSync <- struct{}{}
+	bk.quitReqBlockCh <- &peerID
 }
 
 func (bk *blockKeeper) AddPeer(peer *p2p.Peer) {
@@ -196,9 +197,11 @@ func (bk *blockKeeper) BlockRequestWorker(peer *p2p.Peer, maxPeerHeight uint64) 
 			case <-syncWait.C:
 				log.Info("Request block timeout")
 				return
-			case <-bk.quitSync:
-				log.Info("Quite block sync")
-				return
+			case peerid := <-bk.quitReqBlockCh:
+				if strings.Compare(*peerid, peer.Key) == 0 {
+					log.Info("Quite block request worker")
+					return
+				}
 			}
 		}
 	}
