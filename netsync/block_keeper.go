@@ -29,15 +29,13 @@ type BlockRequestMessage struct {
 }
 
 type blockKeeperPeer struct {
-	mtx     sync.RWMutex
-	height  uint64
-	hash    *bc.Hash
-	peer    *p2p.Peer
-	version int // Protocol version negotiated
+	mtx    sync.RWMutex
+	height uint64
+	hash   *bc.Hash
+	peer   *p2p.Peer
 
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
-
 }
 
 func newBlockKeeperPeer(height uint64, hash *bc.Hash) *blockKeeperPeer {
@@ -47,7 +45,6 @@ func newBlockKeeperPeer(height uint64, hash *bc.Hash) *blockKeeperPeer {
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 	}
-
 }
 
 func (p *blockKeeperPeer) GetStatus() (height uint64, hash *bc.Hash) {
@@ -77,17 +74,12 @@ type blockKeeper struct {
 
 	pendingProcessCh chan *pendingResponse
 	quitReqBlockCh   chan *string
-	peerUpdateCh     chan struct{}
-	done             chan bool
 
 	mtx sync.RWMutex
 }
 
 func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
 	bk := &blockKeeper{
-		peerUpdateCh: make(chan struct{}, 1000),
-		done:         make(chan bool, 1),
-
 		chain:            chain,
 		sw:               sw,
 		peers:            make(map[string]*blockKeeperPeer),
@@ -106,7 +98,7 @@ func (bk *blockKeeper) GetChainHeight() uint64 {
 }
 
 func (bk *blockKeeper) Stop() {
-	bk.done <- true
+	return
 }
 
 func (bk *blockKeeper) AddBlock(block *types.Block, src *p2p.Peer) {
@@ -138,7 +130,7 @@ func (bk *blockKeeper) AddPeer(peer *p2p.Peer) {
 		log.WithFields(log.Fields{"ID": peer.Key}).Info("Add new peer to blockKeeper")
 		return
 	}
-	log.WithField("ID", peer.Key).Info("Add peer to blockKeeper")
+	log.WithField("ID", peer.Key).Warning("Add existing peer to blockKeeper")
 }
 
 func (bk *blockKeeper) requestBlockByHash(peerID string, hash *bc.Hash) error {
@@ -250,10 +242,7 @@ func (bk *blockKeeper) BestHeight() uint64 {
 }
 
 func (bk *blockKeeper) bestHeight() uint64 {
-	var (
-		bestHeight uint64
-	)
-
+	var bestHeight uint64
 	for _, p := range bk.peers {
 		if p.height > bestHeight {
 			bestHeight = p.height

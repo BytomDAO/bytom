@@ -33,7 +33,7 @@ import (
 const (
 	webAddress               = "http://127.0.0.1:9888"
 	expireReservationsPeriod = time.Second
-	maxNewBlockChSize        = int(1024)
+	maxNewBlockChSize        = 1024
 )
 
 type Node struct {
@@ -126,7 +126,7 @@ func NewNode(config *cfg.Config) *Node {
 	}
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 
-	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, accounts, newBlockCh)
+	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, newBlockCh)
 
 	// run the profile server
 	profileHost := config.ProfListenAddress

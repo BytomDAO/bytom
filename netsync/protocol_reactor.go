@@ -1,11 +1,13 @@
 package netsync
 
 import (
+	"reflect"
+	"strings"
+	"time"
+
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
-	"reflect"
 
-	"fmt"
 	"github.com/bytom/errors"
 	"github.com/bytom/netsync/fetcher"
 	"github.com/bytom/p2p"
@@ -13,8 +15,6 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	"strings"
-	"time"
 )
 
 const (
@@ -176,7 +176,7 @@ func (pr *ProtocalReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{response})
 
 	case *BlockResponseMessage:
-		fmt.Println("BlockResponseMessage height:", msg.GetBlock().Height)
+		log.Info("BlockResponseMessage height:", msg.GetBlock().Height)
 		pr.blockKeeper.AddBlock(msg.GetBlock(), src)
 
 	case *StatusRequestMessage:

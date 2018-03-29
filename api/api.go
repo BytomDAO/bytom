@@ -205,7 +205,6 @@ func (a *API) buildHandler() {
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/error", jsonHandler(a.walletError))
 
-	//m.Handle("/info", jsonHandler(a.Info))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 
 	m.Handle("/create-access-token", jsonHandler(a.createAccessToken))

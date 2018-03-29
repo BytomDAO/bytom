@@ -9,11 +9,9 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/account"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/netsync/fetcher"
 	"github.com/bytom/p2p"
-	"github.com/bytom/protocol"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -38,9 +36,7 @@ type SyncManager struct {
 	synchronising int32
 }
 
-// NewProtocolManager returns a new ethereum sub protocol manager. The Ethereum sub protocol manages peers capable
-// with the ethereum network.
-func NewSyncManager(config *cfg.Config, chain *protocol.Chain, txPool *protocol.TxPool, accounts *account.Manager, newBlockCh chan *bc.Hash /*, miningEnable bool*/) (*SyncManager, error) {
+func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &SyncManager{
 		txPool:     txPool,
@@ -56,13 +52,10 @@ func NewSyncManager(config *cfg.Config, chain *protocol.Chain, txPool *protocol.
 	}
 
 	inserter := func(block *types.Block) (bool, error) {
-
 		return manager.chain.ProcessBlock(block)
 	}
 
 	manager.fetcher = fetcher.New(chain.GetBlockByHash, manager.BroadcastMinedBlock, heighter, inserter, manager.removePeer)
-
-	//manager.newBlockCh = make(chan *bc.Hash, maxNewBlockChSize)
 
 	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 
@@ -236,13 +229,6 @@ func (self *SyncManager) BlockKeeper() *blockKeeper {
 
 func (self *SyncManager) DialSeeds(seeds []string) error {
 	return self.sw.DialSeeds(self.addrBook, seeds)
-}
-
-// Add a Listener to accept inbound peer connections.
-// Add listeners before starting the Node.
-// The first listener is the primary listener (in NodeInfo)
-func (self *SyncManager) AddListener(l p2p.Listener) {
-	self.sw.AddListener(l)
 }
 
 func (self *SyncManager) Switch() *p2p.Switch {
