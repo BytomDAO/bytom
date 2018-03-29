@@ -71,22 +71,20 @@ type pendingResponse struct {
 
 //TODO: add retry mechanism
 type blockKeeper struct {
-	mtx          sync.RWMutex
-	chainHeight  uint64
-	peerUpdateCh chan struct{}
-	done         chan bool
+	chain *protocol.Chain
+	sw    *p2p.Switch
+	peers map[string]*blockKeeperPeer
 
-	chain            *protocol.Chain
-	sw               *p2p.Switch
-	peers            map[string]*blockKeeperPeer
 	pendingProcessCh chan *pendingResponse
 	quitReqBlockCh   chan *string
+	peerUpdateCh     chan struct{}
+	done             chan bool
+
+	mtx sync.RWMutex
 }
 
 func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
-	chainHeight := chain.Height()
 	bk := &blockKeeper{
-		chainHeight:  chainHeight,
 		peerUpdateCh: make(chan struct{}, 1000),
 		done:         make(chan bool, 1),
 
@@ -104,7 +102,7 @@ func (bk *blockKeeper) GetChainHeight() uint64 {
 	bk.mtx.RLock()
 	defer bk.mtx.RUnlock()
 
-	return bk.chainHeight
+	return bk.chain.Height()
 }
 
 func (bk *blockKeeper) Stop() {
@@ -118,7 +116,7 @@ func (bk *blockKeeper) AddBlock(block *types.Block, src *p2p.Peer) {
 func (bk *blockKeeper) IsCaughtUp() bool {
 	bk.mtx.RLock()
 	defer bk.mtx.RUnlock()
-	return bk.chainHeight >= bk.bestHeight()
+	return bk.chain.Height() >= bk.bestHeight()
 }
 
 func (bk *blockKeeper) RemovePeer(peerID string) {
@@ -174,12 +172,7 @@ func (bk *blockKeeper) RequestBlockByHeight(peer *p2p.Peer, height uint64) {
 }
 
 func (bk *blockKeeper) BlockRequestWorker(peer *p2p.Peer, maxPeerHeight uint64) {
-	bk.mtx.RLock()
 	chainHeight := bk.chain.Height()
-	if bk.chainHeight < chainHeight {
-		bk.chainHeight = chainHeight
-	}
-	bk.mtx.RUnlock()
 
 	for i := chainHeight + 1; i <= maxPeerHeight; i++ {
 		bk.RequestBlockByHeight(peer, i)
