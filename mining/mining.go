@@ -62,6 +62,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (b *types.Block, err error) {
 	view := state.NewUtxoViewpoint()
 	txStatus := bc.NewTransactionStatus()
+	txStatus.SetStatus(0, false)
 	txEntries := []*bc.Tx{nil}
 	gasUsed := uint64(0)
 	txFee := uint64(0)
@@ -139,7 +140,11 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	}
 	txEntries[0] = b.Transactions[0].Tx
 
-	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = bc.MerkleRoot(txEntries)
-	b.BlockHeader.BlockCommitment.TransactionStatusHash = bc.EntryID(txStatus)
+	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = bc.TxMerkleRoot(txEntries)
+	if err != nil {
+		return nil, err
+	}
+
+	b.BlockHeader.BlockCommitment.TransactionStatusHash, err = bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	return b, err
 }
