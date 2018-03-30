@@ -174,16 +174,12 @@ func (pr *ProtocalReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.peerStatusCh <- peerStatus
 
 	case *TransactionNotifyMessage:
-		//TODO: test
 		tx, err := msg.GetTransaction()
 		if err != nil {
 			log.Errorf("Error decoding new tx %v", err)
 			return
 		}
-		pr.blockKeeper.MarkTransaction(src.Key, tx.ID.Byte32())
-		if err := pr.chain.ValidateTx(tx); err != nil {
-			pr.sw.AddScamPeer(src)
-		}
+		pr.blockKeeper.AddTX(tx,src)
 
 	case *MineBlockMessage:
 		block, err := msg.GetMineBlock()

@@ -20,6 +20,9 @@ const (
 
 	syncTimeout        = 30 * time.Second
 	requestRetryTicker = 15 * time.Second
+
+	maxBlocksPending = 1024
+	maxtxsPending    = 32768
 )
 
 type BlockRequestMessage struct {
@@ -32,6 +35,11 @@ type pendingResponse struct {
 	src   *p2p.Peer
 }
 
+type txsNotify struct {
+	tx  *types.Tx
+	src *p2p.Peer
+}
+
 //TODO: add retry mechanism
 type blockKeeper struct {
 	chain *protocol.Chain
@@ -39,6 +47,7 @@ type blockKeeper struct {
 	peers map[string]*blockKeeperPeer
 
 	pendingProcessCh chan *pendingResponse
+	txsProcessCh     chan *txsNotify
 	quitReqBlockCh   chan *string
 
 	mtx sync.RWMutex
@@ -49,15 +58,21 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
 		chain:            chain,
 		sw:               sw,
 		peers:            make(map[string]*blockKeeperPeer),
-		pendingProcessCh: make(chan *pendingResponse),
+		pendingProcessCh: make(chan *pendingResponse, maxBlocksPending),
+		txsProcessCh:     make(chan *txsNotify, maxtxsPending),
 		quitReqBlockCh:   make(chan *string),
 	}
 	go bk.blockProcessWorker()
+	go bk.txsProcessWorker()
 	return bk
 }
 
 func (bk *blockKeeper) AddBlock(block *types.Block, src *p2p.Peer) {
 	bk.pendingProcessCh <- &pendingResponse{block: block, src: src}
+}
+
+func (bk *blockKeeper) AddTX(tx *types.Tx, src *p2p.Peer) {
+	bk.txsProcessCh <- &txsNotify{tx: tx, src: src}
 }
 
 func (bk *blockKeeper) IsCaughtUp() bool {
@@ -248,6 +263,16 @@ func (bk *blockKeeper) blockProcessWorker() {
 
 		if isOrphan {
 			bk.requestBlockByHash(pendingResponse.src.Key, &block.PreviousBlockHash)
+		}
+	}
+}
+
+func (bk *blockKeeper) txsProcessWorker() {
+	for txsResponse := range bk.txsProcessCh {
+		tx:=txsResponse.tx
+		bk.MarkTransaction(txsResponse.src.Key, tx.ID.Byte32())
+		if err := bk.chain.ValidateTx(tx); err != nil {
+			bk.sw.AddScamPeer(txsResponse.src)
 		}
 	}
 }
