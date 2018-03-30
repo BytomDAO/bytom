@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"strings"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
@@ -16,6 +17,34 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/testutil"
 )
+
+func TestCreateAccountWithUppercase(t *testing.T) {
+	m := mockAccountManager(t)
+	alias := "UPPER"
+	account, err := m.Create(nil, []chainkd.XPub{testutil.TestXPub}, 1, alias, nil)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if account.Alias != strings.ToLower(alias) {
+		t.Fatal("created account alias should be lowercase")
+	}
+}
+
+func TestCreateAccountWithSpaceTrimed(t *testing.T) {
+	m := mockAccountManager(t)
+	alias := " with space "
+	account, err := m.Create(nil, []chainkd.XPub{testutil.TestXPub}, 1, alias, nil)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if account.Alias != strings.TrimSpace(alias) {
+		t.Fatal("created account alias should be lowercase")
+	}
+}
 
 func TestCreateAccount(t *testing.T) {
 	m := mockAccountManager(t)

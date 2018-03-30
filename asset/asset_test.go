@@ -6,15 +6,41 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"strings"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/consensus"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/testutil"
 )
+
+func TestDefineAssetWithLowercase(t *testing.T) {
+	reg := mockNewRegistry(t)
+	alias := "lower"
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *asset.Alias != strings.ToUpper(alias) {
+		t.Fatal("created asset alias should be uppercase")
+	}
+}
+
+func TestDefineAssetWithSpaceTrimed(t *testing.T) {
+	reg := mockNewRegistry(t)
+	alias := " WITH SPACE "
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *asset.Alias != strings.TrimSpace(alias) {
+		t.Fatal("created asset alias should be uppercase")
+	}
+}
 
 func TestDefineAsset(t *testing.T) {
 	ctx := context.Background()
@@ -31,6 +57,14 @@ func TestDefineAsset(t *testing.T) {
 
 	if !testutil.DeepEqual(asset, found) {
 		t.Errorf("expected asset %v to be recorded as %v", asset, found)
+	}
+}
+
+func TestDefineBtmAsset(t *testing.T) {
+	reg := mockNewRegistry(t)
+	_, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, consensus.BTMAlias, nil)
+	if err == nil {
+		testutil.FatalErr(t, err)
 	}
 }
 

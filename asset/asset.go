@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"strings"
 	"sync"
 
 	"github.com/golang/groupcache/lru"
@@ -139,11 +140,12 @@ func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint64, error) {
 
 // Define defines a new Asset.
 func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}) (*Asset, error) {
-	if alias == consensus.BTMAlias {
+	normalizedAlias := strings.ToUpper(strings.TrimSpace(alias))
+	if normalizedAlias == consensus.BTMAlias {
 		return nil, ErrInternalAsset
 	}
 
-	if existed := reg.db.Get(AliasKey(alias)); existed != nil {
+	if existed := reg.db.Get(AliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
 
@@ -186,7 +188,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 	}
 
 	if alias != "" {
-		asset.Alias = &alias
+		asset.Alias = &normalizedAlias
 	}
 
 	ass, err := json.Marshal(asset)
@@ -195,7 +197,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 	}
 
 	storeBatch := reg.db.NewBatch()
-	storeBatch.Set(AliasKey(alias), []byte(asset.AssetID.String()))
+	storeBatch.Set(AliasKey(normalizedAlias), []byte(asset.AssetID.String()))
 	storeBatch.Set(Key(&asset.AssetID), ass)
 	storeBatch.Write()
 
