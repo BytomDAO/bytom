@@ -10,6 +10,7 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/consensus"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -31,6 +32,14 @@ func TestDefineAsset(t *testing.T) {
 
 	if !testutil.DeepEqual(asset, found) {
 		t.Errorf("expected asset %v to be recorded as %v", asset, found)
+	}
+}
+
+func TestDefineBtmAsset(t *testing.T) {
+	reg := mockNewRegistry(t)
+	_, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, consensus.BTMAlias, nil)
+	if err == nil {
+		testutil.FatalErr(t, err)
 	}
 }
 
