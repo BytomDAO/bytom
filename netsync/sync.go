@@ -63,13 +63,13 @@ func (self *SyncManager) syncer() {
 }
 
 // synchronise tries to sync up our local block chain with a remote peer.
-func (self *SyncManager) synchronise(peer *p2p.Peer) {
+func (self *SyncManager) synchronise(peer *p2p.Peer, bestHeight uint64) {
 	// Short circuit if no peers are available
 	if peer == nil {
 		return
 	}
 
-	if self.blockKeeper.peers[peer.Key].height > self.chain.Height() {
+	if bestHeight > self.chain.Height() {
 		// Make sure only one goroutine is ever allowed past this point at once
 		if !atomic.CompareAndSwapInt32(&self.synchronising, 0, 1) {
 			log.Info("Synchronising ...")

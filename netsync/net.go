@@ -18,6 +18,8 @@ const (
 	StatusResponseByte = byte(0x21)
 	NewTransactionByte = byte(0x30)
 	NewMineBlockByte   = byte(0x40)
+
+	maxBlockchainResponseSize = 22020096 + 2
 )
 
 // BlockchainMessage is a generic message for this reactor.

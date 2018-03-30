@@ -10,17 +10,28 @@ type NetInfo struct {
 }
 
 func (a *API) GetNodeInfo() *NetInfo {
-	return &NetInfo{
+	info := &NetInfo{
 		Listening:    a.sync.Switch().IsListening(),
 		Syncing:      a.sync.BlockKeeper().IsCaughtUp(),
 		Mining:       a.cpuMiner.IsMining(),
 		PeerCount:    len(a.sync.Switch().Peers().List()),
-		CurrentBlock: a.sync.BlockKeeper().GetChainHeight(),
-		HighestBlock: a.sync.BlockKeeper().BestHeight(),
+		CurrentBlock: a.chain.Height(),
 	}
+	_, info.HighestBlock = a.sync.BlockKeeper().BestPeer()
+	return info
+}
+
+// return network infomation
+func (a *API) getNetInfo() Response {
+	return NewSuccessResponse(a.GetNodeInfo())
+}
+
+// return is in mining or not
+func (a *API) isMining() Response {
+	IsMining := map[string]bool{"isMining": a.IsMining()}
+	return NewSuccessResponse(IsMining)
 }
 
 func (a *API) IsMining() bool {
 	return a.cpuMiner.IsMining()
 }
-

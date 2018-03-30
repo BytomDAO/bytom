@@ -20,7 +20,6 @@ import (
 const (
 	// BlockchainChannel is a channel for blocks and status updates
 	BlockchainChannel         = byte(0x40)
-	maxBlockchainResponseSize = 22020096 + 2
 	protocolHandshakeTimeout  = time.Second * 10
 )
 
@@ -28,12 +27,6 @@ var (
 	ErrProtocalHandshakeTimeout = errors.New("Protocal handshake timeout")
 )
 
-const (
-	// SUCCESS indicates the rpc calling is successful.
-	SUCCESS = "success"
-	// FAIL indicated the rpc calling is failed.
-	FAIL = "fail"
-)
 
 // Response describes the response standard.
 type Response struct {
@@ -46,16 +39,6 @@ type initalPeerStatus struct {
 	peerID string
 	height uint64
 	hash   *bc.Hash
-}
-
-//NewSuccessResponse success response
-func NewSuccessResponse(data interface{}) Response {
-	return Response{Status: SUCCESS, Data: data}
-}
-
-//NewErrorResponse error response
-func NewErrorResponse(err error) Response {
-	return Response{Status: FAIL, Msg: err.Error()}
 }
 
 //ProtocalReactor handles long-term catchup syncing.
@@ -112,7 +95,6 @@ func (pr *ProtocalReactor) OnStart() error {
 // OnStop implements BaseService
 func (pr *ProtocalReactor) OnStop() {
 	pr.BaseReactor.OnStop()
-	pr.blockKeeper.Stop()
 }
 
 // AddPeer implements Reactor by sending our state to peer.
@@ -184,7 +166,6 @@ func (pr *ProtocalReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
 
 	case *StatusResponseMessage:
-		//pr.blockKeeper.SetPeerHeight(src.Key, msg.Height, msg.GetHash())
 		peerStatus := &initalPeerStatus{
 			peerID: src.Key,
 			height: msg.Height,

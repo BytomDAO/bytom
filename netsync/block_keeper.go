@@ -90,17 +90,6 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
 	return bk
 }
 
-func (bk *blockKeeper) GetChainHeight() uint64 {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	return bk.chain.Height()
-}
-
-func (bk *blockKeeper) Stop() {
-	return
-}
-
 func (bk *blockKeeper) AddBlock(block *types.Block, src *p2p.Peer) {
 	bk.pendingProcessCh <- &pendingResponse{block: block, src: src}
 }
@@ -155,7 +144,6 @@ func (bk *blockKeeper) SetPeerHeight(peerID string, height uint64, hash *bc.Hash
 
 	if peer, ok := bk.peers[peerID]; ok {
 		peer.SetStatus(height, hash)
-		return
 	}
 }
 
@@ -215,30 +203,20 @@ func (bk *blockKeeper) blockProcessWorker() {
 	}
 }
 
-// BestPeer retrieves the known peer with the currently highest total difficulty.
-func (bk *blockKeeper) BestPeer() *p2p.Peer {
+func (bk *blockKeeper) BestPeer() (*p2p.Peer, uint64) {
 	bk.mtx.RLock()
 	defer bk.mtx.RUnlock()
 
-	var (
-		bestPeer   *p2p.Peer
-		bestHeight uint64
-	)
+	var bestPeer *p2p.Peer
+	var bestHeight uint64
 
 	for _, p := range bk.peers {
 		if bestPeer == nil || p.height > bestHeight {
 			bestPeer, bestHeight = p.peer, p.height
 		}
 	}
-	return bestPeer
-}
 
-// BestPeer retrieves the known peer with the currently highest total difficulty.
-func (bk *blockKeeper) BestHeight() uint64 {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	return bk.bestHeight()
+	return bestPeer, bestHeight
 }
 
 func (bk *blockKeeper) bestHeight() uint64 {
