@@ -4,6 +4,7 @@ package pseudohsm
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -48,14 +49,15 @@ func New(keypath string) (*HSM, error) {
 
 // XCreate produces a new random xprv and stores it in the db.
 func (h *HSM) XCreate(alias string, auth string) (*XPub, error) {
-	if ok := h.cache.hasAlias(alias); ok {
+	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
+	if ok := h.cache.hasAlias(normalizedAlias); ok {
 		return nil, ErrDuplicateKeyAlias
 	}
 
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
 
-	xpub, _, err := h.createChainKDKey(auth, alias, false)
+	xpub, _, err := h.createChainKDKey(auth, normalizedAlias, false)
 	if err != nil {
 		return nil, err
 	}

@@ -3,11 +3,52 @@ package pseudohsm
 import (
 	"fmt"
 	"testing"
+	"strings"
 
 	"github.com/bytom/errors"
 )
 
 const dirPath = "testdata/pseudo"
+
+func TestCreateKeyWithUpperCase(t *testing.T) {
+	hsm, _ := New(dirPath)
+
+	alias := "UPPER"
+
+	xpub, err := hsm.XCreate(alias, "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if xpub.Alias != strings.ToLower(alias) {
+		t.Fatal("the created key alias should be lowercase")
+	}
+
+	err = hsm.XDelete(xpub.XPub, "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCreateKeyWithWhiteSpaceTrimed(t *testing.T) {
+	hsm, _ := New(dirPath)
+
+	alias := " with space surrounding "
+
+	xpub, err := hsm.XCreate(alias, "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if xpub.Alias != strings.TrimSpace(alias) {
+		t.Fatal("the created key alias should be lowercase")
+	}
+
+	err = hsm.XDelete(xpub.XPub, "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestPseudoHSMChainKDKeys(t *testing.T) {
 
