@@ -2,14 +2,7 @@ package util
 
 import (
 	"context"
-	"net"
-	"net/http"
-	"path/filepath"
-	"strings"
-	"time"
-
 	"github.com/bytom/api"
-	"github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/env"
 	jww "github.com/spf13/jwalterweatherman"
@@ -30,48 +23,12 @@ const (
 )
 
 var (
-	home    = blockchain.HomeDirFromEnvironment()
 	coreURL = env.String("BYTOM_URL", "http://localhost:9888")
 )
 
 // Wraper rpc's client
 func MustRPCClient() *rpc.Client {
-	// TODO(kr): refactor some of this cert-loading logic into bytom/blockchain
-	// and use it from cored as well.
-	// Note that this function, unlike maybeUseTLS in cored,
-	// does not load the cert and key from env vars,
-	// only from the filesystem.
-	certFile := filepath.Join(home, "tls.crt")
-	keyFile := filepath.Join(home, "tls.key")
-	config, err := blockchain.TLSConfig(certFile, keyFile, "")
-	if err == blockchain.ErrNoTLS {
-		return &rpc.Client{BaseURL: *coreURL}
-	} else if err != nil {
-		jww.ERROR.Println("loading TLS cert:", err)
-	}
-
-	t := &http.Transport{
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-			DualStack: true,
-		}).DialContext,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSClientConfig:       config,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-	}
-
-	url := *coreURL
-	if strings.HasPrefix(url, "http:") {
-		url = "https:" + url[5:]
-	}
-
-	return &rpc.Client{
-		BaseURL: url,
-		Client:  &http.Client{Transport: t},
-	}
+	return &rpc.Client{BaseURL: *coreURL}
 }
 
 // Wrapper rpc call api.
