@@ -202,18 +202,3 @@ func (pr *ProtocalReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	}
 }
 
-// BroadcastStatusResponse broadcasts `BlockStore` height.
-func (pr *ProtocalReactor) BroadcastStatusResponse() {
-	block := pr.chain.BestBlock()
-	pr.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
-}
-
-// BroadcastTransaction broadcats `BlockStore` transaction.
-func (pr *ProtocalReactor) BroadcastTransaction(tx *types.Tx) error {
-	msg, err := NewTransactionNotifyMessage(tx)
-	if err != nil {
-		return err
-	}
-	pr.Switch.Broadcast(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	return nil
-}
