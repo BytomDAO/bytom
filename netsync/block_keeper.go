@@ -1,14 +1,13 @@
 package netsync
 
 import (
-	"errors"
 	"strings"
 	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/fatih/set.v0"
 
+	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -26,39 +25,6 @@ const (
 type BlockRequestMessage struct {
 	Height  uint64
 	RawHash [32]byte
-}
-
-type blockKeeperPeer struct {
-	mtx    sync.RWMutex
-	height uint64
-	hash   *bc.Hash
-	peer   *p2p.Peer
-
-	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set // Set of block hashes known to be known by this peer
-}
-
-func newBlockKeeperPeer(height uint64, hash *bc.Hash) *blockKeeperPeer {
-	return &blockKeeperPeer{
-		height:      height,
-		hash:        hash,
-		knownTxs:    set.New(),
-		knownBlocks: set.New(),
-	}
-}
-
-func (p *blockKeeperPeer) GetStatus() (height uint64, hash *bc.Hash) {
-	p.mtx.RLock()
-	defer p.mtx.RUnlock()
-	return p.height, p.hash
-}
-
-func (p *blockKeeperPeer) SetStatus(height uint64, hash *bc.Hash) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-
-	p.height = height
-	p.hash = hash
 }
 
 type pendingResponse struct {
@@ -97,7 +63,8 @@ func (bk *blockKeeper) AddBlock(block *types.Block, src *p2p.Peer) {
 func (bk *blockKeeper) IsCaughtUp() bool {
 	bk.mtx.RLock()
 	defer bk.mtx.RUnlock()
-	return bk.chain.Height() < bk.bestHeight()
+	_, height := bk.BestPeer()
+	return bk.chain.Height() < height
 }
 
 func (bk *blockKeeper) RemovePeer(peerID string) {
@@ -122,22 +89,6 @@ func (bk *blockKeeper) AddPeer(peer *p2p.Peer) {
 	log.WithField("ID", peer.Key).Warning("Add existing peer to blockKeeper")
 }
 
-func (bk *blockKeeper) requestBlockByHash(peerID string, hash *bc.Hash) error {
-	peer := bk.sw.Peers().Get(peerID)
-	if peer == nil {
-		return errors.New("can't find peer in peer pool")
-	}
-	msg := &BlockRequestMessage{RawHash: hash.Byte32()}
-	peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	return nil
-}
-
-func (bk *blockKeeper) requestBlockByHeight(peer *p2p.Peer, height uint64) error {
-	msg := &BlockRequestMessage{Height: height}
-	peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	return nil
-}
-
 func (bk *blockKeeper) SetPeerHeight(peerID string, height uint64, hash *bc.Hash) {
 	bk.mtx.Lock()
 	defer bk.mtx.Unlock()
@@ -147,15 +98,113 @@ func (bk *blockKeeper) SetPeerHeight(peerID string, height uint64, hash *bc.Hash
 	}
 }
 
-func (bk *blockKeeper) RequestBlockByHeight(peer *p2p.Peer, height uint64) {
-	bk.requestBlockByHeight(peer, height)
+func (bk *blockKeeper) BestPeer() (*p2p.Peer, uint64) {
+	bk.mtx.RLock()
+	defer bk.mtx.RUnlock()
+
+	var bestPeer *p2p.Peer
+	var bestHeight uint64
+
+	for _, p := range bk.peers {
+		if bestPeer == nil || p.height > bestHeight {
+			bestPeer, bestHeight = p.peer, p.height
+		}
+	}
+
+	return bestPeer, bestHeight
+}
+
+// MarkTransaction marks a transaction as known for the peer, ensuring that it
+// will never be propagated to this particular peer.
+func (bk *blockKeeper) MarkTransaction(peerID string, hash [32]byte) error {
+	bk.mtx.RLock()
+	defer bk.mtx.RUnlock()
+
+	bkPeer := bk.peers[peerID]
+	if bkPeer == nil {
+		return errors.New("Can't find block keeper peer.")
+	}
+
+	bkPeer.MarkTransaction(hash)
+	return nil
+}
+
+// MarkBlock marks a block as known for the peer, ensuring that the block will
+// never be propagated to this particular peer.
+func (bk *blockKeeper) MarkBlock(peerID string, hash [32]byte) error {
+	bk.mtx.RLock()
+	defer bk.mtx.RUnlock()
+
+	bkPeer := bk.peers[peerID]
+	if bkPeer == nil {
+		return errors.New("Can't find block keeper peer.")
+	}
+
+	bkPeer.MarkBlock(hash)
+	return nil
+}
+
+// PeersWithoutTx retrieves a list of peers that do not have a given transaction
+// in their set of known hashes.
+func (bk *blockKeeper) PeersWithoutTx(hash [32]byte) []*p2p.Peer {
+	bk.mtx.RLock()
+	defer bk.mtx.RUnlock()
+
+	list := make([]*p2p.Peer, 0, len(bk.peers))
+	for _, p := range bk.peers {
+		if !p.knownTxs.Has(hash) {
+			list = append(list, p.peer)
+		}
+	}
+	return list
+}
+
+// PeersWithoutBlock retrieves a list of peers that do not have a given block in
+// their set of known hashes.
+func (bk *blockKeeper) PeersWithoutBlock(hash [32]byte) []*p2p.Peer {
+	bk.mtx.RLock()
+	defer bk.mtx.RUnlock()
+
+	list := make([]*p2p.Peer, 0, len(bk.peers))
+	for _, p := range bk.peers {
+		if !p.knownBlocks.Has(hash) {
+			list = append(list, p.peer)
+		}
+	}
+	return list
+}
+
+func (bk *blockKeeper) requestBlockByHash(peerID string, hash *bc.Hash) error {
+	bkPeer := bk.peers[peerID]
+	if bkPeer == nil {
+		return errors.New("Can't find block keeper peer.")
+	}
+
+	if err := bkPeer.requestBlockByHash(hash); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (bk *blockKeeper) requestBlockByHeight(peerID string, height uint64) error {
+	bkPeer := bk.peers[peerID]
+	if bkPeer == nil {
+		return errors.New("Can't find block keeper peer.")
+	}
+
+	if err := bkPeer.requestBlockByHeight(height); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (bk *blockKeeper) BlockRequestWorker(peer *p2p.Peer, maxPeerHeight uint64) {
 	chainHeight := bk.chain.Height()
 
 	for i := chainHeight + 1; i <= maxPeerHeight; i++ {
-		bk.RequestBlockByHeight(peer, i)
+		bk.requestBlockByHeight(peer.Key, i)
 		waiter := bk.chain.BlockWaiter(i)
 		retryTicker := time.Tick(requestRetryTicker)
 		syncWait := time.NewTimer(syncTimeout)
@@ -166,7 +215,7 @@ func (bk *blockKeeper) BlockRequestWorker(peer *p2p.Peer, maxPeerHeight uint64) 
 			case <-waiter:
 				break retryLoop
 			case <-retryTicker:
-				bk.RequestBlockByHeight(peer, i)
+				bk.requestBlockByHeight(peer.Key, i)
 			case <-syncWait.C:
 				log.Info("Request block timeout")
 				return
@@ -201,86 +250,4 @@ func (bk *blockKeeper) blockProcessWorker() {
 			bk.requestBlockByHash(pendingResponse.src.Key, &block.PreviousBlockHash)
 		}
 	}
-}
-
-func (bk *blockKeeper) BestPeer() (*p2p.Peer, uint64) {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	var bestPeer *p2p.Peer
-	var bestHeight uint64
-
-	for _, p := range bk.peers {
-		if bestPeer == nil || p.height > bestHeight {
-			bestPeer, bestHeight = p.peer, p.height
-		}
-	}
-
-	return bestPeer, bestHeight
-}
-
-func (bk *blockKeeper) bestHeight() uint64 {
-	var bestHeight uint64
-	for _, p := range bk.peers {
-		if p.height > bestHeight {
-			bestHeight = p.height
-		}
-	}
-	return bestHeight
-}
-
-// MarkTransaction marks a transaction as known for the peer, ensuring that it
-// will never be propagated to this particular peer.
-func (bk *blockKeeper) MarkTransaction(peer string, hash [32]byte) {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	// If we reached the memory allowance, drop a previously known transaction hash
-	for bk.peers[peer].knownTxs.Size() >= maxKnownTxs {
-		bk.peers[peer].knownTxs.Pop()
-	}
-	bk.peers[peer].knownTxs.Add(hash)
-}
-
-// MarkBlock marks a block as known for the peer, ensuring that the block will
-// never be propagated to this particular peer.
-func (bk *blockKeeper) MarkBlock(peer string, hash [32]byte) {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	// If we reached the memory allowance, drop a previously known block hash
-	for bk.peers[peer].knownBlocks.Size() >= maxKnownBlocks {
-		bk.peers[peer].knownBlocks.Pop()
-	}
-	bk.peers[peer].knownBlocks.Add(hash)
-}
-
-// PeersWithoutTx retrieves a list of peers that do not have a given transaction
-// in their set of known hashes.
-func (bk *blockKeeper) PeersWithoutTx(hash [32]byte) []*p2p.Peer {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	list := make([]*p2p.Peer, 0, len(bk.peers))
-	for _, p := range bk.peers {
-		if !p.knownTxs.Has(hash) {
-			list = append(list, p.peer)
-		}
-	}
-	return list
-}
-
-// PeersWithoutBlock retrieves a list of peers that do not have a given block in
-// their set of known hashes.
-func (bk *blockKeeper) PeersWithoutBlock(hash [32]byte) []*p2p.Peer {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	list := make([]*p2p.Peer, 0, len(bk.peers))
-	for _, p := range bk.peers {
-		if !p.knownBlocks.Has(hash) {
-			list = append(list, p.peer)
-		}
-	}
-	return list
 }
