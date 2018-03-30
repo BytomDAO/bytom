@@ -151,7 +151,8 @@ func (m *Manager) getNextXpubsIndex(xpubs []chainkd.XPub) uint64 {
 
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}) (*Account, error) {
-	if existed := m.db.Get(aliasKey(alias)); existed != nil {
+	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
+	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
 
@@ -163,7 +164,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err)
 	}
 
-	account := &Account{Signer: signer, ID: id, Alias: alias, Tags: tags}
+	account := &Account{Signer: signer, ID: id, Alias: normalizedAlias, Tags: tags}
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return nil, ErrMarshalAccount

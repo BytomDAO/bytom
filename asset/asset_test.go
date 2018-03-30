@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"strings"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
@@ -16,6 +17,30 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/testutil"
 )
+
+func TestDefineAssetWithLowercase(t *testing.T) {
+	reg := mockNewRegistry(t)
+	alias := "lower"
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *asset.Alias != strings.ToUpper(alias) {
+		t.Fatal("created asset alias should be uppercase")
+	}
+}
+
+func TestDefineAssetWithSpaceTrimed(t *testing.T) {
+	reg := mockNewRegistry(t)
+	alias := " WITH SPACE "
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *asset.Alias != strings.TrimSpace(alias) {
+		t.Fatal("created asset alias should be uppercase")
+	}
+}
 
 func TestDefineAsset(t *testing.T) {
 	ctx := context.Background()
