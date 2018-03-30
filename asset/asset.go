@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
-	"strings"
 	"sync"
 
 	"github.com/golang/groupcache/lru"
@@ -140,7 +139,7 @@ func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint64, error) {
 
 // Define defines a new Asset.
 func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}) (*Asset, error) {
-	if strings.ToLower(alias) == consensus.BTMAlias {
+	if alias == consensus.BTMAlias {
 		return nil, ErrInternalAsset
 	}
 
