@@ -116,26 +116,44 @@ func TestCompactToBig(t *testing.T) {
 		{
 			BStrCompact:	`00000011` + //Exponent
 							`0` + //Sign
-							`0000000000000000000000000000000000000000000000000000000`, //
+							`0000000000000000000000000000000000000000000000000000000`, //Mantissa
 			expect:	 		0,
 		},
 		{
 			BStrCompact:	`00000011` + //Exponent
 							`1` + //Sign
-							`0000000000000000000000000000000000000000000000000000000`, //
+							`0000000000000000000000000000000000000000000000000000000`, //Mantissa
 			expect:	 		0,
 		},
 		{
 			BStrCompact:	`00000011` + //Exponent
 							`0` + //Sign
-							`0000000000000000000000000000000000000000000000000000001`, //
+							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
 			expect:	 		1,
 		},
 		{
 			BStrCompact:	`00000011` + //Exponent
 							`1` + //Sign
-							`0000000000000000000000000000000000000000000000000000001`, //
+							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
 			expect:	 		-1,
+		},
+		{
+			BStrCompact:	`00000100` + //Exponent
+							`0` + //Sign
+							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+			expect:	 		256,
+		},
+		{
+			BStrCompact:	`00000100` + //Exponent
+							`1` + //Sign
+							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+			expect:	 		-256,
+		},
+		{
+			BStrCompact:	`00001010` + //Exponent
+							`0` + //Sign
+							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+			expect:	 		0x7fffffffffffffff,
 		},
 	}
 
@@ -145,7 +163,7 @@ func TestCompactToBig(t *testing.T) {
 		result := CompactToBig(compact).Int64()
 
 		if result != c.expect {
-			t.Errorf("case %d: content mismatch:\n\tgeting\t\t%x\n\texpecting\t%x", i, result, c.expect)
+			t.Errorf("case %d: content mismatch:\n\tgeting\t\t0x%016x\n\texpecting\t0x%016x", i, result, c.expect)
 		}
 	}
 }

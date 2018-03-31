@@ -21,7 +21,7 @@ func HashToBig(hash *bc.Hash) *big.Int {
 	return new(big.Int).SetBytes(buf[:])
 }
 
-// CompactToBig converts a compact representation of a whole 64-bit int number
+// CompactToBig converts a compact representation of a whole Int64 number
 // N to an big.Int. The representation is similar to IEEE754 floating point
 // numbers.
 //
