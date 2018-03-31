@@ -3,6 +3,7 @@ package test
 import (
 	"crypto/rand"
 	"time"
+	"encoding/json"
 
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
@@ -68,7 +69,20 @@ func (g *TxGenerator) AddSpendInput(accountAlias, assetAlias string, amount uint
 	if err != nil {
 		return err
 	}
-	spendAction := account.NewSpendAction(g.AccountManager, *assetAmount, acc.ID)
+
+	reqAction := make(map[string]interface{})
+	reqAction["account_id"] = acc.ID
+	reqAction["amount"] = amount
+	reqAction["asset_id"] = assetAmount.AssetId.String()
+	data, err := json.Marshal(reqAction)
+	if err != nil {
+		return err
+	}
+
+	spendAction, err := g.AccountManager.DecodeSpendAction(data)
+	if err != nil {
+		return err
+	}
 	return spendAction.Build(nil, g.Builder)
 }
 
