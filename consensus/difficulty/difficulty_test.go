@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 	"reflect"
+	"strconv"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/types"
@@ -109,25 +110,21 @@ func TestHashToBig(t *testing.T) {
 
 func TestCompactToBig(t *testing.T) {
 	cases := []struct {
-		compact 	uint64
-		expect		int64
+		BStrCompact 	string
+		expect			int64
 	}{
 		{
-			compact: 	0b0000000000000000000000000000000000000000000000000000000000000000,
-			expect:	 	1,
+			BStrCompact: 	`00000000` //Exponent
+						+	`0` //Sign
+						+ 	`0000000000000000000000000000000000000000000000000000000`, //Mantissa
+			expect:	 	0,
 		},
-		// {
-		// 	compact: 0b0000000000000000000000000000000000000000000000000000000000000000
-		// 	expect:
-		// },
-		// {
-		// 	compact: 0b0000000000000000000000000000000000000000000000000000000000000000
-		// 	expect:
-		// },
 	}
 
 	for i, c := range cases {
-		result := CompactToBig(c.compact).Int64()
+		compact, _ := strconv.ParseUint(c.BStrCompact, 2, 64)
+
+		result := CompactToBig(compact).Int64()
 
 		if result != c.expect {
 			t.Errorf("case %d: content mismatch:\n\tgeting\t\t%x\n\texpecting\t%x", i, result, c.expect)
