@@ -32,6 +32,13 @@ func MockChain(testDB dbm.DB) (*protocol.Chain, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := chain.SaveBlock(genesisBlock); err != nil {
+		return nil, err
+	}
+	if err := chain.ConnectBlock(genesisBlock); err != nil {
+		return nil, err
+	}
+
 	return chain, nil
 }
 
