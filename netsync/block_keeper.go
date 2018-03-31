@@ -25,6 +25,13 @@ const (
 	maxtxsPending    = 32768
 )
 
+var (
+	errGetBlockTimeout = errors.New("Get block Timeout")
+	errPeerDropped     = errors.New("Peer dropped")
+	errCommAbnorm      = errors.New("Peer communication abnormality")
+	errScamPeer        = errors.New("Scam peer")
+)
+
 type BlockRequestMessage struct {
 	Height  uint64
 	RawHash [32]byte
@@ -62,7 +69,6 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
 		txsProcessCh:     make(chan *txsNotify, maxtxsPending),
 		quitReqBlockCh:   make(chan *string),
 	}
-	go bk.blockProcessWorker()
 	go bk.txsProcessWorker()
 	return bk
 }
@@ -194,11 +200,9 @@ func (bk *blockKeeper) requestBlockByHash(peerID string, hash *bc.Hash) error {
 	if bkPeer == nil {
 		return errors.New("Can't find block keeper peer.")
 	}
-
 	if err := bkPeer.requestBlockByHash(hash); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -207,69 +211,90 @@ func (bk *blockKeeper) requestBlockByHeight(peerID string, height uint64) error 
 	if bkPeer == nil {
 		return errors.New("Can't find block keeper peer.")
 	}
-
 	if err := bkPeer.requestBlockByHeight(height); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func (bk *blockKeeper) BlockRequestWorker(peer *p2p.Peer, maxPeerHeight uint64) {
+func (bk *blockKeeper) BlockRequestWorker(peer *p2p.Peer, maxPeerHeight uint64) error {
 	chainHeight := bk.chain.Height()
-
-	for i := chainHeight + 1; i <= maxPeerHeight; i++ {
-		bk.requestBlockByHeight(peer.Key, i)
-		waiter := bk.chain.BlockWaiter(i)
-		retryTicker := time.Tick(requestRetryTicker)
-		syncWait := time.NewTimer(syncTimeout)
-
-	retryLoop:
-		for {
-			select {
-			case <-waiter:
-				break retryLoop
-			case <-retryTicker:
-				bk.requestBlockByHeight(peer.Key, i)
-			case <-syncWait.C:
-				log.Info("Request block timeout")
-				return
-			case peerid := <-bk.quitReqBlockCh:
-				if strings.Compare(*peerid, peer.Key) == 0 {
-					log.Info("Quite block request worker")
-					return
-				}
-			}
+	isOrphan := false
+	var hash *bc.Hash
+	for num := chainHeight + 1; num <= maxPeerHeight; {
+		block, err := bk.BlockRequest(peer.Key, num, hash, isOrphan)
+		if errors.Root(err) == errPeerDropped || errors.Root(err) == errGetBlockTimeout {
+			log.WithField("Peer abnormality. PeerID: ", peer.Key).Info(err)
+			return errCommAbnorm
 		}
+
+		isOrphan, err = bk.chain.ProcessBlock(block)
+		if err != nil {
+			bk.sw.AddScamPeer(peer)
+			log.WithField("hash: ", block.Hash()).Errorf("blockKeeper fail process block %v", err)
+			return errScamPeer
+		}
+		if isOrphan {
+			hash = &block.PreviousBlockHash
+			continue
+		}
+		num++
+	}
+	return nil
+}
+
+func (bk *blockKeeper) blockRequest(peerID string, height uint64, hash *bc.Hash, isOrphan bool) {
+	if isOrphan == true {
+		bk.requestBlockByHash(peerID, hash)
+	} else {
+		bk.requestBlockByHeight(peerID, height)
 	}
 }
 
-func (bk *blockKeeper) blockProcessWorker() {
-	for pendingResponse := range bk.pendingProcessCh {
+func (bk *blockKeeper) BlockRequest(peerID string, height uint64, hash *bc.Hash, isOrphan bool) (*types.Block, error) {
+	var block *types.Block
+	var srcPeer *p2p.Peer
 
-		block := pendingResponse.block
-		blockHash := block.Hash()
-		isOrphan, err := bk.chain.ProcessBlock(block)
-		if err != nil {
-			bk.sw.AddScamPeer(pendingResponse.src)
-			log.WithField("hash", blockHash.String()).Errorf("blockKeeper fail process block %v", err)
-			continue
-		}
-		log.WithFields(log.Fields{
-			"height":   block.Height,
-			"hash":     blockHash.String(),
-			"isOrphan": isOrphan,
-		}).Info("blockKeeper processed block")
+	bk.blockRequest(peerID, height, hash, isOrphan)
+	retryTicker := time.Tick(requestRetryTicker)
+	syncWait := time.NewTimer(syncTimeout)
 
-		if isOrphan {
-			bk.requestBlockByHash(pendingResponse.src.Key, &block.PreviousBlockHash)
+	for {
+		select {
+		case pendingResponse := <-bk.pendingProcessCh:
+			srcPeer = pendingResponse.src
+			block = pendingResponse.block
+			if strings.Compare(srcPeer.Key, peerID) != 0 {
+				log.Warning("From different peer")
+				continue
+			}
+			if block.Height != height && isOrphan == false {
+				log.Warning("Block height error")
+				continue
+			}
+			tmpHash := block.Hash()
+			if strings.Compare(hash.String(), (&tmpHash).String()) != 0 && isOrphan == true {
+				log.Warning("Block hash error")
+				continue
+			}
+			return block, nil
+		case <-retryTicker:
+			bk.blockRequest(peerID, height, hash, isOrphan)
+		case <-syncWait.C:
+			log.Warning("Request block timeout")
+			return nil, errGetBlockTimeout
+		case peerid := <-bk.quitReqBlockCh:
+			if strings.Compare(*peerid, peerID) == 0 {
+				log.Info("Quite block request worker")
+				return nil, errPeerDropped
+			}
 		}
 	}
 }
 
 func (bk *blockKeeper) txsProcessWorker() {
 	for txsResponse := range bk.txsProcessCh {
-		tx:=txsResponse.tx
+		tx := txsResponse.tx
 		bk.MarkTransaction(txsResponse.src.Key, tx.ID.Byte32())
 		if err := bk.chain.ValidateTx(tx); err != nil {
 			bk.sw.AddScamPeer(txsResponse.src)
