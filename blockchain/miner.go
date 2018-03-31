@@ -28,6 +28,6 @@ func (bcr *BlockchainReactor) GetWork() (*GetWorkResp, error) {
 	}, nil
 }
 
-func (bcr *BlockchainReactor) SubmitWork(bh *types.BlockHeader) bool {
+func (bcr *BlockchainReactor) SubmitWork(bh *types.BlockHeader) error {
 	return bcr.miningPool.SubmitWork(bh)
 }

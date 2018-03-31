@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/bytom/api"
 	"github.com/bytom/blockchain"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/protocol/bc"
@@ -55,7 +56,7 @@ func getBlockHeaderByHeight(height uint64) {
 }
 
 func main() {
-	data, _ := util.ClientCall("/getwork", nil)
+	data, _ := util.ClientCall("/get-work", nil)
 	rawData, err := json.Marshal(data)
 	if err != nil {
 		fmt.Println(err)
@@ -68,7 +69,7 @@ func main() {
 	}
 
 	if doWork(resp.BlockHeader, resp.Seed) {
-		util.ClientCall("/submitwork", resp.BlockHeader)
+		util.ClientCall("/submit-work", &api.SubmitWorkReq{BlockHeader: resp.BlockHeader})
 	}
 
 	getBlockHeaderByHeight(resp.BlockHeader.Height)

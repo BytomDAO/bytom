@@ -16,8 +16,8 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/dashboard"
 	"github.com/bytom/errors"
-	"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/authn"
+	"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/protocol"
@@ -221,8 +221,8 @@ func (a *API) buildHandler() {
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
-	m.Handle("/getwork", jsonHandler(a.getWork))
-	m.Handle("/submitwork", jsonHandler(a.submitWork))
+	m.Handle("/get-work", jsonHandler(a.getWork))
+	m.Handle("/submit-work", jsonHandler(a.submitWork))
 
 	handler := latencyHandler(m, walletEnable)
 	handler = walletRedirectHandler(handler)

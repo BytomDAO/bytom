@@ -76,25 +76,26 @@ func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
 }
 
 // SubmitWork will try to submit the result to the blockchain
-func (m *MiningPool) SubmitWork(bh *types.BlockHeader) bool {
+func (m *MiningPool) SubmitWork(bh *types.BlockHeader) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	if m.block == nil || bh.PreviousBlockHash != m.block.PreviousBlockHash {
-		return false
+		return errors.New("pending mining block has been changed")
 	}
 
 	m.block.Nonce = bh.Nonce
 	m.block.Timestamp = bh.Timestamp
 	isOrphan, err := m.chain.ProcessBlock(m.block)
-
 	if err != nil {
-		log.Errorf("fail on SubmitWork on ProcessBlock %v", err)
-	} else if isOrphan {
+		return err
+	}
+
+	if isOrphan {
 		log.Warning("SubmitWork is orphan")
 	}
 
 	blockHash := bh.Hash()
 	m.newBlockCh <- &blockHash
-	return err == nil
+	return nil
 }
