@@ -102,7 +102,7 @@ func TestHashToBig(t *testing.T) {
 		copy(resArr[:], result)
 
 		if !reflect.DeepEqual(resArr, c.expect) {
-			t.Errorf("case %d: content mismatch: getting %x, expecting %x", i, resArr, c.expect)
+			t.Errorf("case %d: content mismatch:\n\tgeting\t\t%x\n\texpecting\t%x", i, resArr, c.expect)
 		}
 	}
 }
