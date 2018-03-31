@@ -106,3 +106,31 @@ func TestHashToBig(t *testing.T) {
 		}
 	}
 }
+
+func TestCompactToBig(t *testing.T) {
+	cases := []struct {
+		compact 	uint64
+		expect		int64
+	}{
+		{
+			compact: 	0b0000000000000000000000000000000000000000000000000000000000000000,
+			expect:	 	1,
+		},
+		// {
+		// 	compact: 0b0000000000000000000000000000000000000000000000000000000000000000
+		// 	expect:
+		// },
+		// {
+		// 	compact: 0b0000000000000000000000000000000000000000000000000000000000000000
+		// 	expect:
+		// },
+	}
+
+	for i, c := range cases {
+		result := CompactToBig(c.compact).Int64()
+
+		if result != c.expect {
+			t.Errorf("case %d: content mismatch:\n\tgeting\t\t%x\n\texpecting\t%x", i, result, c.expect)
+		}
+	}
+}
