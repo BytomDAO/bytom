@@ -14,8 +14,15 @@ func (a *API) getWork() Response {
 	return NewSuccessResponse(work)
 }
 
-func (a *API) submitWork(bh *types.BlockHeader) Response {
-	return NewSuccessResponse(a.bcr.SubmitWork(bh))
+type SubmitWorkReq struct {
+	BlockHeader *types.BlockHeader `json:"block_header"`
+}
+
+func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
+	if err := a.bcr.SubmitWork(req.BlockHeader); err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(true)
 }
 
 func (a *API) getBlockHeaderByHeight(ctx context.Context, req struct {
