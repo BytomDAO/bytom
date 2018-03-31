@@ -3,6 +3,7 @@ package difficulty
 import (
 	"math/big"
 	"testing"
+	"reflect"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/types"
@@ -95,12 +96,12 @@ func TestHashToBig(t *testing.T) {
 	for i, c := range cases {
 		bhash := bc.NewHash(c.hashBytes)
 
-		result := TestHashToBig(&bhash).Bytes()
+		result := HashToBig(&bhash).Bytes()
 
 		var resArr [32]byte
 		copy(resArr[:], result)
 
-		if !reflect.DeepEqual(resArr, tt.expect) {
+		if !reflect.DeepEqual(resArr, c.expect) {
 			t.Errorf("case %d: content mismatch: getting %x, expecting %x", i, resArr, c.expect)
 		}
 	}
