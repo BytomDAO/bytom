@@ -99,6 +99,10 @@ target/$(MINER_BINARY64):
 
 test:
 	@echo "====> Running go test"
+	@echo $(GOPATH)
+	@echo `ls -l`
+	@echo `pwd`
+	@echo `git rev-parse HEAD`
 	@go test -tags "network" $(PACKAGES)
 
 benchmark:
