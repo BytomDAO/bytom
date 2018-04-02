@@ -14,7 +14,10 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-const blockUpdateMS = 1000
+const (
+	blockUpdateMS   = 1000
+	maxSubmitChSize = 100
+)
 
 type submitBlockMsg struct {
 	blockHeader *types.BlockHeader
@@ -36,6 +39,7 @@ type MiningPool struct {
 // NewMiningPool will create a new MiningPool
 func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash) *MiningPool {
 	m := &MiningPool{
+		submitCh:       make(chan *submitBlockMsg, maxSubmitChSize),
 		chain:          c,
 		accountManager: accountManager,
 		txPool:         txPool,
@@ -91,13 +95,13 @@ func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
 	return nil, errors.New("no block is ready for mining")
 }
 
+// SubmitWork will try to submit the result to the blockchain
 func (m *MiningPool) SubmitWork(bh *types.BlockHeader) error {
 	reply := make(chan error, 1)
 	m.submitCh <- &submitBlockMsg{blockHeader: bh, reply: reply}
 	return <-reply
 }
 
-// SubmitWork will try to submit the result to the blockchain
 func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
