@@ -90,6 +90,13 @@ func (c *Chain) getReorganizeBlocks(block *types.Block) ([]*types.Block, []*type
 	return attachBlocks, detachBlocks
 }
 
+// ReorganizeChain reorganize to longest chain
+func (c *Chain) ReorganizeChain(block *types.Block) error {
+	c.state.cond.L.Lock()
+	defer c.state.cond.L.Unlock()
+	return c.reorganizeChain(block)
+}
+
 func (c *Chain) reorganizeChain(block *types.Block) error {
 	attachBlocks, detachBlocks := c.getReorganizeBlocks(block)
 	utxoView := state.NewUtxoViewpoint()

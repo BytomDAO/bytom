@@ -15,6 +15,7 @@ import (
 var (
 	baseDir      = filepath.Join(".", "testdata")
 	stateTestDir = filepath.Join(baseDir, "state_tests")
+	chainTestDir = filepath.Join(baseDir, "chain_tests")
 )
 
 func readJson(reader io.Reader, value interface{}) error {

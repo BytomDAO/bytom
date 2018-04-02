@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/tendermint/tmlibs/db"
+
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
@@ -20,7 +22,6 @@ import (
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
-	"github.com/tendermint/tmlibs/db"
 )
 
 type TxGenerator struct {
