@@ -12,6 +12,7 @@ import (
 	"github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
+	browser "github.com/toqueteos/webbrowser"
 
 	"github.com/bytom/accesstoken"
 	"github.com/bytom/account"
@@ -27,7 +28,6 @@ import (
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/types"
-	"github.com/bytom/util/browser"
 	"github.com/bytom/version"
 	w "github.com/bytom/wallet"
 )
