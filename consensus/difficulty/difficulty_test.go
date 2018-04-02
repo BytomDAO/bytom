@@ -152,7 +152,7 @@ func TestCompactToBig(t *testing.T) {
 		{
 			BStrCompact:	`00001010` + //Exponent
 							`0` + //Sign
-							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+							`0000000000000000000000000000000000000000000000010000000`, //Mantissa
 			expect:	 		0x7fffffffffffffff,
 		},
 	}
