@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 	"reflect"
-	"strconv"
+	// "strconv"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/types"
@@ -173,7 +173,9 @@ func TestBigToCompact(t *testing.T) {
 		in  int64
 		out uint64
 	}{
-		{0, 2161727821138738707},
+		{0, 0},
+		{576460752303947776, 576460752303947776},
+		{576460752305389568, 576460752305389568},
 		{-1, 2161727821138738707},
 	}
 
