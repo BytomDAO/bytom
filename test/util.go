@@ -19,6 +19,14 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
+const (
+	vmVersion       = 1
+	blkVersion      = 1
+	assetVersion    = 1
+	defaultDuration = 10
+	maxNonce        = ^uint64(0)
+)
+
 // Mock transaction pool
 func MockTxPool() *protocol.TxPool {
 	return protocol.NewTxPool()

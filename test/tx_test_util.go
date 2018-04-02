@@ -2,18 +2,25 @@ package test
 
 import (
 	"crypto/rand"
-	"time"
 	"encoding/json"
+	"fmt"
+	"time"
 
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/common"
 	"github.com/bytom/consensus"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
+	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/tendermint/tmlibs/db"
 )
 
 type TxGenerator struct {
@@ -161,6 +168,83 @@ func gasUsed(tx *types.Tx) uint64 {
 		}
 	}
 	return inputSum - outputSum
+}
+
+// CreateSpendInput create SpendInput which spent the output from tx
+func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, error) {
+	outputId := tx.ResultIds[outputIndex]
+	output, ok := tx.Entries[*outputId].(*bc.Output)
+	if !ok {
+		return nil, fmt.Errorf("retirement can't be spent")
+	}
+
+	sc := types.SpendCommitment{
+		AssetAmount:    *output.Source.Value,
+		SourceID:       *output.Source.Ref,
+		SourcePosition: output.Ordinal,
+		VMVersion:      vmVersion,
+		ControlProgram: output.ControlProgram.Code,
+	}
+	return &types.SpendInput{
+		SpendCommitment: sc,
+	}, nil
+}
+
+// Read CtrlProgram from db, construct SignInstruction for SpendInput
+func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
+	cp := account.CtrlProgram{}
+	var hash [32]byte
+	sha3pool.Sum256(hash[:], input.ControlProgram)
+	bytes := db.Get(account.CPKey(hash))
+	if bytes == nil {
+		return nil, fmt.Errorf("can't find CtrlProgram for the SpendInput")
+	}
+
+	err := json.Unmarshal(bytes, &cp)
+	if err != nil {
+		return nil, err
+	}
+
+	sigInst := &txbuilder.SigningInstruction{}
+	if signer == nil {
+		return sigInst, nil
+	}
+
+	// FIXME: code duplicate with account/builder.go
+	path := signers.Path(signer, signers.AccountKeySpace, cp.KeyIndex)
+	if cp.Address == "" {
+		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
+		return sigInst, nil
+	}
+
+	address, err := common.DecodeAddress(cp.Address, &consensus.MainNetParams)
+	if err != nil {
+		return nil, err
+	}
+
+	switch address.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
+		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
+		derivedPK := derivedXPubs[0].PublicKey()
+		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
+
+	case *common.AddressWitnessScriptHash:
+		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
+		path := signers.Path(signer, signers.AccountKeySpace, cp.KeyIndex)
+		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
+		derivedPKs := chainkd.XPubKeys(derivedXPubs)
+		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)
+		if err != nil {
+			return nil, err
+		}
+		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness(script))
+
+	default:
+		return nil, errors.New("unsupport address type")
+	}
+
+	return sigInst, nil
 }
 
 // CreateCoinbaseTx create coinbase tx at block height, gasUsed is txs fee

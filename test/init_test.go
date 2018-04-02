@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	baseDir           = filepath.Join(".", "testdata")
-	blockchainTestDir = filepath.Join(baseDir, "blockchain_tests")
+	baseDir      = filepath.Join(".", "testdata")
+	stateTestDir = filepath.Join(baseDir, "state_tests")
 )
 
 func readJson(reader io.Reader, value interface{}) error {
