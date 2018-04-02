@@ -3,7 +3,7 @@ package protocol
 import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/validation"
 )
 
@@ -13,9 +13,9 @@ var ErrBadTx = errors.New("invalid transaction")
 // ValidateTx validates the given transaction. A cache holds
 // per-transaction validation results and is consulted before
 // performing full validation.
-func (c *Chain) ValidateTx(tx *types.Tx) error {
+func (c *Chain) ValidateTx(tx *legacy.Tx) error {
 	newTx := tx.Tx
-	block := types.MapBlock(c.BestBlock())
+	block := legacy.MapBlock(c.BestBlock())
 	if ok := c.txPool.HaveTransaction(&newTx.ID); ok {
 		return c.txPool.GetErrCache(&newTx.ID)
 	}
@@ -33,15 +33,15 @@ func (c *Chain) ValidateTx(tx *types.Tx) error {
 
 	// validate the BVM contract
 	gasOnlyTx := false
-	gasStatus, err := validation.ValidateTx(newTx, block)
+	fee, gasVaild, err := validation.ValidateTx(newTx, block)
 	if err != nil {
-		if gasStatus == nil || !gasStatus.GasVaild {
+		if !gasVaild {
 			c.txPool.AddErrCache(&newTx.ID, err)
 			return err
 		}
 		gasOnlyTx = true
 	}
 
-	_, err = c.txPool.AddTransaction(tx, gasOnlyTx, block.BlockHeader.Height, gasStatus.BTMValue)
+	_, err = c.txPool.AddTransaction(tx, gasOnlyTx, block.BlockHeader.Height, fee)
 	return err
 }

@@ -5,12 +5,12 @@ import (
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 // Template represents a partially- or fully-signed transaction.
 type Template struct {
-	Transaction         *types.Tx             `json:"raw_transaction"`
+	Transaction         *legacy.Tx            `json:"raw_transaction"`
 	SigningInstructions []*SigningInstruction `json:"signing_instructions"`
 
 	// Local indicates that all inputs to the transaction are signed
@@ -27,12 +27,10 @@ type Template struct {
 	AllowAdditional bool `json:"allow_additional_actions"`
 }
 
-// Hash return sign hash
 func (t *Template) Hash(idx uint32) bc.Hash {
 	return t.Transaction.SigHash(idx)
 }
 
-// Action is a interface
 type Action interface {
 	Build(context.Context, *TemplateBuilder) error
 }

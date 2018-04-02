@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bytom/accesstoken"
+	"github.com/bytom/blockchain/accesstoken"
 	"github.com/bytom/errors"
 )
 

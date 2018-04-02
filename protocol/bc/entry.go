@@ -1,7 +1,6 @@
 package bc
 
 import (
-	"encoding/binary"
 	"fmt"
 	"io"
 	"reflect"
@@ -84,9 +83,7 @@ func writeForHash(w io.Writer, c interface{}) error {
 		_, err := w.Write([]byte{v})
 		return errors.Wrap(err, "writing byte for hash")
 	case uint64:
-		buf := [8]byte{}
-		binary.LittleEndian.PutUint64(buf[:], v)
-		_, err := w.Write(buf[:])
+		_, err := blockchain.WriteVarint63(w, v)
 		return errors.Wrapf(err, "writing uint64 (%d) for hash", v)
 	case []byte:
 		_, err := blockchain.WriteVarstr31(w, v)

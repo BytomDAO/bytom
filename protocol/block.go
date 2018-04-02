@@ -5,7 +5,7 @@ import (
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
 )
@@ -25,12 +25,12 @@ func (c *Chain) BlockExist(hash *bc.Hash) bool {
 }
 
 // GetBlockByHash return a block by given hash
-func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
+func (c *Chain) GetBlockByHash(hash *bc.Hash) (*legacy.Block, error) {
 	return c.store.GetBlock(hash)
 }
 
 // GetBlockByHeight return a block by given height
-func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
+func (c *Chain) GetBlockByHeight(height uint64) (*legacy.Block, error) {
 	c.state.cond.L.Lock()
 	hash, ok := c.state.mainChain[height]
 	c.state.cond.L.Unlock()
@@ -40,25 +40,33 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 	return c.GetBlockByHash(hash)
 }
 
+// ValidateBlock validates an incoming block in advance of applying it
+// to a snapshot (with ApplyValidBlock) and committing it to the
+// blockchain (with CommitAppliedBlock).
+func (c *Chain) ValidateBlock(block, prev *legacy.Block) error {
+	blockEnts := legacy.MapBlock(block)
+	prevEnts := legacy.MapBlock(prev)
+	if err := validation.ValidateBlock(blockEnts, prevEnts); err != nil {
+		return errors.Sub(ErrBadBlock, err)
+	}
+	return nil
+}
+
 // ConnectBlock append block to end of chain
-func (c *Chain) ConnectBlock(block *types.Block) error {
+func (c *Chain) ConnectBlock(block *legacy.Block) error {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
 	return c.connectBlock(block)
 }
 
-func (c *Chain) connectBlock(block *types.Block) (err error) {
-	bcBlock := types.MapBlock(block)
+func (c *Chain) connectBlock(block *legacy.Block) error {
+	bcBlock := legacy.MapBlock(block)
 	utxoView := state.NewUtxoViewpoint()
-	bcBlock.TransactionStatus, err = c.store.GetTransactionStatus(&bcBlock.ID)
-	if err != nil {
-		return err
-	}
 
 	if err := c.store.GetTransactionsUtxo(utxoView, bcBlock.Transactions); err != nil {
 		return err
 	}
-	if err := utxoView.ApplyBlock(bcBlock, bcBlock.TransactionStatus); err != nil {
+	if err := utxoView.ApplyBlock(bcBlock); err != nil {
 		return err
 	}
 
@@ -73,13 +81,13 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	return nil
 }
 
-func (c *Chain) getReorganizeBlocks(block *types.Block) ([]*types.Block, []*types.Block) {
-	attachBlocks := []*types.Block{}
-	detachBlocks := []*types.Block{}
+func (c *Chain) getReorganizeBlocks(block *legacy.Block) ([]*legacy.Block, []*legacy.Block) {
+	attachBlocks := []*legacy.Block{}
+	detachBlocks := []*legacy.Block{}
 	ancestor := block
 
 	for !c.inMainchain(ancestor) {
-		attachBlocks = append([]*types.Block{ancestor}, attachBlocks...)
+		attachBlocks = append([]*legacy.Block{ancestor}, attachBlocks...)
 		ancestor, _ = c.GetBlockByHash(&ancestor.PreviousBlockHash)
 	}
 
@@ -90,70 +98,51 @@ func (c *Chain) getReorganizeBlocks(block *types.Block) ([]*types.Block, []*type
 	return attachBlocks, detachBlocks
 }
 
-func (c *Chain) reorganizeChain(block *types.Block) error {
+func (c *Chain) reorganizeChain(block *legacy.Block) error {
 	attachBlocks, detachBlocks := c.getReorganizeBlocks(block)
 	utxoView := state.NewUtxoViewpoint()
 	chainChanges := map[uint64]*bc.Hash{}
 
 	for _, d := range detachBlocks {
-		detachBlock := types.MapBlock(d)
+		detachBlock := legacy.MapBlock(d)
 		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
 			return err
 		}
-		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
-		if err != nil {
-			return err
-		}
-		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
+		if err := utxoView.DetachBlock(detachBlock); err != nil {
 			return err
 		}
 	}
 
 	for _, a := range attachBlocks {
-		attachBlock := types.MapBlock(a)
+		attachBlock := legacy.MapBlock(a)
 		if err := c.store.GetTransactionsUtxo(utxoView, attachBlock.Transactions); err != nil {
 			return err
 		}
-		txStatus, err := c.GetTransactionStatus(&attachBlock.ID)
-		if err != nil {
+		if err := utxoView.ApplyBlock(attachBlock); err != nil {
 			return err
 		}
-
-		if err := utxoView.ApplyBlock(attachBlock, txStatus); err != nil {
-			return err
-		}
-		chainChanges[a.Height] = &attachBlock.ID
+		aHash := a.Hash()
+		chainChanges[a.Height] = &aHash
 	}
 
 	return c.setState(block, utxoView, chainChanges)
 }
 
 // SaveBlock will validate and save block into storage
-func (c *Chain) SaveBlock(block *types.Block) error {
+func (c *Chain) SaveBlock(block *legacy.Block) error {
 	preBlock, _ := c.GetBlockByHash(&block.PreviousBlockHash)
-
-	blockEnts := types.MapBlock(block)
-	prevEnts := types.MapBlock(preBlock)
-
-	seed, err := c.GetSeed(block.Height, &block.PreviousBlockHash)
-	if err != nil {
+	if err := c.ValidateBlock(block, preBlock); err != nil {
 		return err
 	}
-
-	if err := validation.ValidateBlock(blockEnts, prevEnts, seed, c.store); err != nil {
-		return errors.Sub(ErrBadBlock, err)
-	}
-
-	if err := c.store.SaveBlock(block, blockEnts.TransactionStatus, seed); err != nil {
+	if err := c.store.SaveBlock(block); err != nil {
 		return err
 	}
-
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"height": block.Height, "hash": blockHash.String()}).Info("Block saved on disk")
 	return nil
 }
 
-func (c *Chain) findBestChainTail(block *types.Block) (bestBlock *types.Block) {
+func (c *Chain) findBestChainTail(block *legacy.Block) (bestBlock *legacy.Block) {
 	bestBlock = block
 	blockHash := block.Hash()
 	preorphans, ok := c.orphanManage.preOrphans[blockHash]
@@ -185,7 +174,7 @@ func (c *Chain) findBestChainTail(block *types.Block) (bestBlock *types.Block) {
 }
 
 // ProcessBlock is the entry for handle block insert
-func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
+func (c *Chain) ProcessBlock(block *legacy.Block) (bool, error) {
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithField("hash", blockHash.String()).Info("Skip process due to block already been handled")

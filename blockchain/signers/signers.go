@@ -3,11 +3,13 @@ package signers
 
 import (
 	"bytes"
+	"context"
 	"encoding/binary"
 	"sort"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
 type keySpace byte
@@ -65,28 +67,84 @@ func Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
 }
 
 // Create creates and stores a Signer in the database
-func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64) (*Signer, error) {
+func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64) (string, *Signer, error) {
 	if len(xpubs) == 0 {
-		return nil, errors.Wrap(ErrNoXPubs)
+		return "", nil, errors.Wrap(ErrNoXPubs)
 	}
 
 	sort.Sort(sortKeys(xpubs)) // this transforms the input slice
 	for i := 1; i < len(xpubs); i++ {
 		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
-			return nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpubs[i])
+			return "", nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpubs[i])
 		}
 	}
 
 	if quorum == 0 || quorum > len(xpubs) {
-		return nil, errors.Wrap(ErrBadQuorum)
+		return "", nil, errors.Wrap(ErrBadQuorum)
 	}
 
-	return &Signer{
+	id := IDGenerate()
+	return id, &Signer{
 		Type:     signerType,
 		XPubs:    xpubs,
 		Quorum:   quorum,
 		KeyIndex: keyIndex,
 	}, nil
+}
+
+// Find retrieves a Signer from the database
+// using the type and id.
+func Find(ctx context.Context, db dbm.DB, typ, id string) (*Signer, error) {
+	/*const q = `
+		SELECT id, type, xpubs, quorum, key_index
+		FROM signers WHERE id=$1
+	`
+	*/
+
+	var (
+		s         Signer
+		xpubBytes [][]byte
+	)
+	/*
+		err := db.QueryRowContext(ctx, q, id).Scan(
+			&s.ID,
+			&s.Type,
+			(*pq.ByteaArray)(&xpubBytes),
+			&s.Quorum,
+			&s.KeyIndex,
+		)
+		if err == sql.ErrNoRows {
+			return nil, errors.Wrap(pg.ErrUserInputNotFound)
+		}
+		if err != nil {
+			return nil, errors.Wrap(err)
+		}
+
+		if s.Type != typ {
+			return nil, errors.Wrap(ErrBadType)
+		}*/
+
+	keys, err := ConvertKeys(xpubBytes)
+	if err != nil {
+		return nil, errors.WithDetail(errors.New("bad xpub in databse"), errors.Detail(err))
+	}
+
+	s.XPubs = keys
+
+	return &s, nil
+}
+
+func ConvertKeys(xpubs [][]byte) ([]chainkd.XPub, error) {
+	var xkeys []chainkd.XPub
+	for i, xpub := range xpubs {
+		var xkey chainkd.XPub
+		if len(xpub) != len(xkey) {
+			return nil, errors.WithDetailf(ErrBadXPub, "key %d: xpub is not valid", i)
+		}
+		copy(xkey[:], xpub)
+		xkeys = append(xkeys, xkey)
+	}
+	return xkeys, nil
 }
 
 type sortKeys []chainkd.XPub

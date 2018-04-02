@@ -1,15 +1,11 @@
 package commands
 
 import (
-	"encoding/hex"
 	"os"
 	"strconv"
-	"unicode"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
-
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/util"
 )
 
@@ -26,12 +22,12 @@ var blockHashCmd = &cobra.Command{
 	},
 }
 
-var getBlockCountCmd = &cobra.Command{
-	Use:   "get-block-count",
+var blockHeightCmd = &cobra.Command{
+	Use:   "block-height",
 	Short: "Get the number of most recent block",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/get-block-count")
+		data, exitCode := util.ClientCall("/block-height")
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
@@ -39,53 +35,12 @@ var getBlockCountCmd = &cobra.Command{
 	},
 }
 
-var getBlockCmd = &cobra.Command{
-	Use:   "get-block <hash> | <height>",
-	Short: "Get a whole block matching the given hash or height",
+var getBlockByHashCmd = &cobra.Command{
+	Use:   "get-block-by-hash <hash>",
+	Short: "Get a whole block matching the given hash",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		var hash chainjson.HexBytes
-		var height uint64
-		var err error
-		isNumber := false
-
-		for _, ch := range args[0] {
-			// check whether the char is hex digit
-			if !(unicode.IsNumber(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')) {
-				jww.ERROR.Printf("Invalid value for hash or height")
-				os.Exit(util.ErrLocalExe)
-			}
-
-			if !unicode.IsNumber(ch) {
-				isNumber = true
-			}
-		}
-
-		if isNumber {
-			if len(args[0]) != 64 {
-				jww.ERROR.Printf("Invalid hash length")
-				os.Exit(util.ErrLocalExe)
-			}
-
-			hash, err = hex.DecodeString(args[0])
-			if err != nil {
-				jww.ERROR.Println(err)
-				os.Exit(util.ErrLocalExe)
-			}
-		} else {
-			height, err = strconv.ParseUint(args[0], 10, 64)
-			if err != nil {
-				jww.ERROR.Printf("Invalid height value")
-				os.Exit(util.ErrLocalExe)
-			}
-		}
-
-		blockReq := &struct {
-			BlockHeight uint64             `json:"block_height"`
-			BlockHash   chainjson.HexBytes `json:"block_hash"`
-		}{BlockHeight: height, BlockHash: hash}
-
-		data, exitCode := util.ClientCall("/get-block", blockReq)
+		data, exitCode := util.ClientCall("/get-block-by-hash", args[0])
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
@@ -115,6 +70,26 @@ var getBlockTransactionsCountByHashCmd = &cobra.Command{
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
+		printJSON(data)
+	},
+}
+
+var getBlockByHeightCmd = &cobra.Command{
+	Use:   "get-block-by-height <height>",
+	Short: "Get a whole block matching the given height",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		height, err := strconv.ParseUint(args[0], 10, 64)
+		if err != nil {
+			jww.ERROR.Printf("Invalid height value")
+			os.Exit(util.ErrLocalExe)
+		}
+
+		data, exitCode := util.ClientCall("/get-block-by-height", height)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
 		printJSON(data)
 	},
 }

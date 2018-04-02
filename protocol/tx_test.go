@@ -8,7 +8,7 @@ import (
 
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/testutil"
@@ -21,7 +21,7 @@ import (
 
 	issueTx, _, _ := issue(t, nil, nil, 1)
 
-	got, _, err := c.GenerateBlock(ctx, b1, state.Empty(), time.Now(), []*types.Tx{issueTx})
+	got, _, err := c.GenerateBlock(ctx, b1, state.Empty(), time.Now(), []*legacy.Tx{issueTx})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func newDest(t testing.TB) *testDest {
 	}
 }
 
-func (d *testDest) sign(t testing.TB, tx *types.Tx, index uint32) {
+func (d *testDest) sign(t testing.TB, tx *legacy.Tx, index uint32) {
 	txsighash := tx.SigHash(index)
 	prog, _ := vm.Assemble(fmt.Sprintf("0x%x TXSIGHASH EQUAL", txsighash.Bytes()))
 	h := sha3.Sum256(prog)
@@ -65,7 +65,8 @@ type testAsset struct {
 func newAsset(t testing.TB) *testAsset {
 	dest := newDest(t)
 	cp, _ := dest.controlProgram()
-	assetID := bc.ComputeAssetID(cp, 1, &bc.EmptyStringHash)
+	var initialBlockID bc.Hash
+	assetID := bc.ComputeAssetID(cp, &initialBlockID, 1, &bc.EmptyStringHash)
 
 	return &testAsset{
 		AssetID:  assetID,
@@ -73,7 +74,7 @@ func newAsset(t testing.TB) *testAsset {
 	}
 }
 
-func issue(t testing.TB, asset *testAsset, dest *testDest, amount uint64) (*types.Tx, *testAsset, *testDest) {
+func issue(t testing.TB, asset *testAsset, dest *testDest, amount uint64) (*legacy.Tx, *testAsset, *testDest) {
 	if asset == nil {
 		asset = newAsset(t)
 	}
@@ -82,13 +83,13 @@ func issue(t testing.TB, asset *testAsset, dest *testDest, amount uint64) (*type
 	}
 	assetCP, _ := asset.controlProgram()
 	destCP, _ := dest.controlProgram()
-	tx := types.NewTx(types.TxData{
+	tx := legacy.NewTx(legacy.TxData{
 		Version: 1,
-		Inputs: []*types.TxInput{
-			types.NewIssuanceInput([]byte{1}, amount, assetCP, nil, nil),
+		Inputs: []*legacy.TxInput{
+			legacy.NewIssuanceInput([]byte{1}, amount, nil, bc.Hash{}, assetCP, nil, nil),
 		},
-		Outputs: []*types.TxOutput{
-			types.NewTxOutput(asset.AssetID, amount, destCP),
+		Outputs: []*legacy.TxOutput{
+			legacy.NewTxOutput(asset.AssetID, amount, destCP, nil),
 		},
 	})
 	asset.sign(t, tx, 0)

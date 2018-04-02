@@ -5,32 +5,32 @@ import (
 	"testing"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 func TestCalcNextRequiredDifficulty(t *testing.T) {
 	targetTimeSpan := uint64(consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock)
 	cases := []struct {
-		lastBH    *types.BlockHeader
-		compareBH *types.BlockHeader
+		lastBH    *legacy.BlockHeader
+		compareBH *legacy.BlockHeader
 		want      uint64
 	}{
 		//{nil, nil, powMinBits},
-		//{&types.BlockHeader{Height: BlocksPerRetarget, Bits: 87654321}, nil, 87654321},
+		//{&legacy.BlockHeader{Height: BlocksPerRetarget, Bits: 87654321}, nil, 87654321},
 		{
-			&types.BlockHeader{Height: consensus.BlocksPerRetarget, Timestamp: targetTimeSpan, Bits: BigToCompact(big.NewInt(1000))},
-			&types.BlockHeader{Height: 0, Timestamp: 0},
+			&legacy.BlockHeader{Height: consensus.BlocksPerRetarget, Timestamp: targetTimeSpan, Bits: BigToCompact(big.NewInt(1000))},
+			&legacy.BlockHeader{Height: 0, Timestamp: 0},
 			BigToCompact(big.NewInt(1000)),
 		},
 		{
-			&types.BlockHeader{Height: consensus.BlocksPerRetarget, Timestamp: targetTimeSpan * 2, Bits: BigToCompact(big.NewInt(1000))},
-			&types.BlockHeader{Height: 0, Timestamp: 0},
+			&legacy.BlockHeader{Height: consensus.BlocksPerRetarget, Timestamp: targetTimeSpan * 2, Bits: BigToCompact(big.NewInt(1000))},
+			&legacy.BlockHeader{Height: 0, Timestamp: 0},
 			BigToCompact(big.NewInt(2000)),
 		},
 		{
-			&types.BlockHeader{Height: consensus.
+			&legacy.BlockHeader{Height: consensus.
 				BlocksPerRetarget, Timestamp: targetTimeSpan / 2, Bits: BigToCompact(big.NewInt(1000))},
-			&types.BlockHeader{Height: 0, Timestamp: 0},
+			&legacy.BlockHeader{Height: 0, Timestamp: 0},
 			BigToCompact(big.NewInt(500)),
 		},
 	}

@@ -11,14 +11,20 @@ import (
 	"github.com/pborman/uuid"
 )
 
+// listKeyMaxAliases limits the alias filter to a sane maximum size.
+const listKeyMaxAliases = 200
+
 // pre-define errors for supporting bytom errorFormatter
 var (
 	ErrDuplicateKeyAlias    = errors.New("duplicate key alias")
 	ErrDuplicateKey         = errors.New("duplicate key")
 	ErrInvalidAfter         = errors.New("invalid after")
 	ErrLoadKey              = errors.New("key not found or wrong password ")
+	ErrInvalidKeySize       = errors.New("key invalid size")
 	ErrTooManyAliasesToList = errors.New("requested aliases exceeds limit")
+	ErrAmbiguousAlias       = errors.New("multiple keys match alias")
 	ErrDecrypt              = errors.New("could not decrypt key with given passphrase")
+	ErrInvalidKeyType       = errors.New("key type stored invalid")
 )
 
 // HSM type for storing pubkey and privatekey
@@ -33,7 +39,7 @@ type HSM struct {
 type XPub struct {
 	Alias string       `json:"alias"`
 	XPub  chainkd.XPub `json:"xpub"`
-	File  string       `json:"-"`
+	File  string       `json:"file"`
 }
 
 // New method for HSM struct
@@ -80,9 +86,9 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 }
 
 // ListKeys returns a list of all xpubs from the store
-func (h *HSM) ListKeys() []XPub {
+func (h *HSM) ListKeys() ([]XPub, error) {
 	xpubs := h.cache.keys()
-	return xpubs
+	return xpubs, nil
 }
 
 // XSign looks up the xprv given the xpub, optionally derives a new
@@ -156,21 +162,19 @@ func (h *HSM) loadDecryptedKey(xpub chainkd.XPub, auth string) (XPub, *XKey, err
 	return xpb, xkey, err
 }
 
-// ResetPassword reset passphrase for an existing xpub
-func (h *HSM) ResetPassword(xpub chainkd.XPub, oldAuth, newAuth string) error {
-	xpb, xkey, err := h.loadDecryptedKey(xpub, oldAuth)
+// ResetPassword the passphrase of an existing xpub
+func (h *HSM) ResetPassword(xpub chainkd.XPub, auth, newAuth string) error {
+	xpb, xkey, err := h.loadDecryptedKey(xpub, auth)
 	if err != nil {
 		return err
 	}
 	return h.keyStore.StoreKey(xpb.File, xkey, newAuth)
 }
 
-// HasAlias check whether the key alias exists
 func (h *HSM) HasAlias(alias string) bool {
 	return h.cache.hasAlias(alias)
 }
 
-// HasKey check whether the private key exists
 func (h *HSM) HasKey(xprv chainkd.XPrv) bool {
 	return h.cache.hasKey(xprv.XPub())
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/net"
 )
 
-// ErrNoTLS means that no TLS configuration available
 var ErrNoTLS = errors.New("no TLS configuration available")
 
 // TLSConfig returns a TLS config suitable for use

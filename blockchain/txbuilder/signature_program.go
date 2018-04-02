@@ -1,6 +1,8 @@
 package txbuilder
 
 import (
+	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 )
@@ -48,11 +50,27 @@ func buildSigProgram(tpl *Template, index uint32) ([]byte, error) {
 		constraints = append(constraints, outputIDConstraint(*sp.SpentOutputId))
 	}
 
+	// Commitment to the tx-level refdata is conditional on it being
+	// non-empty. Commitment to the input-level refdata is
+	// unconditional. Rationale: no one should be able to change "my"
+	// reference data; anyone should be able to set tx refdata but, once
+	// set, it should be immutable.
+	if len(tpl.Transaction.ReferenceData) > 0 {
+		constraints = append(constraints, refdataConstraint{tpl.Transaction.ReferenceData, true})
+	}
+	constraints = append(constraints, refdataConstraint{tpl.Transaction.Inputs[index].ReferenceData, false})
+
 	for i, out := range tpl.Transaction.Outputs {
 		c := &payConstraint{
 			Index:       i,
 			AssetAmount: out.AssetAmount,
 			Program:     out.ControlProgram,
+		}
+		if len(out.ReferenceData) > 0 {
+			var b32 [32]byte
+			sha3pool.Sum256(b32[:], out.ReferenceData)
+			h := bc.NewHash(b32)
+			c.RefDataHash = &h
 		}
 		constraints = append(constraints, c)
 	}

@@ -8,9 +8,8 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/bytom/api"
+	"github.com/bytom/blockchain"
 	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/util"
 )
 
@@ -22,10 +21,10 @@ func init() {
 	buildTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 	buildTransactionCmd.PersistentFlags().BoolVar(&alias, "alias", false, "use alias build transaction")
 
-	signTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
+	signTransactionCmd.PersistentFlags().StringArrayVarP(&password, "password", "p", []string{}, "password of the account which sign these transaction(s)")
 	signTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 
-	signSubTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
+	signSubTransactionCmd.PersistentFlags().StringArrayVarP(&password, "password", "p", []string{}, "password of the account which sign these transaction(s)")
 
 	listTransactionsCmd.PersistentFlags().StringVar(&txID, "id", "", "transaction id")
 	listTransactionsCmd.PersistentFlags().StringVar(&account, "account_id", "", "account id")
@@ -37,7 +36,7 @@ var (
 	btmGas          = ""
 	receiverProgram = ""
 	address         = ""
-	password        = ""
+	password        = make([]string, 0)
 	pretty          = false
 	alias           = false
 	txID            = ""
@@ -146,7 +145,7 @@ var buildTransactionCmd = &cobra.Command{
 			os.Exit(util.ErrLocalExe)
 		}
 
-		var buildReq api.BuildRequest
+		var buildReq blockchain.BuildRequest
 		if err := json.Unmarshal([]byte(buildReqStr), &buildReq); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
@@ -195,7 +194,7 @@ var signTransactionCmd = &cobra.Command{
 		}
 
 		var req = struct {
-			Password string             `json:"password"`
+			Password []string           `json:"password"`
 			Txs      txbuilder.Template `json:"transaction"`
 		}{Password: password, Txs: template}
 
@@ -226,21 +225,20 @@ var signTransactionCmd = &cobra.Command{
 }
 
 var submitTransactionCmd = &cobra.Command{
-	Use:   "submit-transaction  <signed json raw_transaction>",
+	Use:   "submit-transaction  <signed json template>",
 	Short: "Submit signed transaction template",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		var ins = struct {
-			Tx types.Tx `json:"raw_transaction"`
-		}{}
+		template := txbuilder.Template{}
 
-		err := json.Unmarshal([]byte(args[0]), &ins)
+		err := json.Unmarshal([]byte(args[0]), &template)
 		if err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
 		}
 
-		data, exitCode := util.ClientCall("/submit-transaction", &ins)
+		jww.FEEDBACK.Printf("\n\n")
+		data, exitCode := util.ClientCall("/submit-transaction", &template)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
@@ -268,28 +266,10 @@ var signSubTransactionCmd = &cobra.Command{
 		var req = struct {
 			Password []string           `json:"password"`
 			Txs      txbuilder.Template `json:"transaction"`
-		}{Password: []string{password}, Txs: template}
+		}{Password: password, Txs: template}
 
 		jww.FEEDBACK.Printf("\n\n")
 		data, exitCode := util.ClientCall("/sign-submit-transaction", &req)
-		if exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-
-		printJSON(data)
-	},
-}
-
-var getTransactionCmd = &cobra.Command{
-	Use:   "get-transaction <hash>",
-	Short: "get the transaction by matching the given transaction hash",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		txInfo := &struct {
-			TxID string `json:"tx_id"`
-		}{TxID: args[0]}
-
-		data, exitCode := util.ClientCall("/get-transaction", txInfo)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

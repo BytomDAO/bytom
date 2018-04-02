@@ -1,33 +1,30 @@
 package blockchain
 
 import (
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/protocol/bc/legacy"
 )
 
-// GetWorkResp is resp struct for API
-type GetWorkResp struct {
-	BlockHeader *types.BlockHeader `json:"block_header"`
-	Seed        *bc.Hash           `json:"seed"`
-}
-
-func (bcr *BlockchainReactor) GetWork() (*GetWorkResp, error) {
-	bh, err := bcr.miningPool.GetWork()
-	if err != nil {
-		return nil, err
+// Get the parameters of mining
+func (bcr *BlockchainReactor) getWork() *WorkResp {
+	var resp WorkResp
+	if block := bcr.mining.GetCurrentBlock(); block == nil {
+		return nil
+	} else {
+		resp.Header = block.BlockHeader
 	}
 
-	seed, err := bcr.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	return &GetWorkResp{
-		BlockHeader: bh,
-		Seed:        seed,
-	}, nil
+	return &resp
 }
 
-func (bcr *BlockchainReactor) SubmitWork(bh *types.BlockHeader) bool {
-	return bcr.miningPool.SubmitWork(bh)
+// Submit work for mining
+func (bcr *BlockchainReactor) submitWork(header legacy.BlockHeader) Response {
+	log.Infof("mining:---submitWork header:%v", header)
+	bcr.mining.NotifySpawnBlock(header)
+	return NewSuccessResponse(nil)
+}
+
+type WorkResp struct {
+	Header legacy.BlockHeader `json:"header"`
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 )
@@ -26,6 +26,7 @@ func DecodeControlReceiverAction(data []byte) (Action, error) {
 type controlReceiverAction struct {
 	bc.AssetAmount
 	Receiver      *Receiver `json:"receiver"`
+	ReferenceData json.Map  `json:"reference_data"`
 }
 
 func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -44,7 +45,7 @@ func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) e
 		return MissingFieldsError(missing...)
 	}
 
-	out := types.NewTxOutput(*a.AssetId, a.Amount, a.Receiver.ControlProgram)
+	out := legacy.NewTxOutput(*a.AssetId, a.Amount, a.Receiver.ControlProgram, a.ReferenceData)
 	return b.AddOutput(out)
 }
 
@@ -58,6 +59,7 @@ func DecodeControlAddressAction(data []byte) (Action, error) {
 type controlAddressAction struct {
 	bc.AssetAmount
 	Address       string   `json:"address"`
+	ReferenceData json.Map `json:"reference_data"`
 }
 
 func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -91,7 +93,7 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 		return err
 	}
 
-	out := types.NewTxOutput(*a.AssetId, a.Amount, program)
+	out := legacy.NewTxOutput(*a.AssetId, a.Amount, program, a.ReferenceData)
 	return b.AddOutput(out)
 }
 
@@ -105,6 +107,7 @@ func DecodeControlProgramAction(data []byte) (Action, error) {
 type controlProgramAction struct {
 	bc.AssetAmount
 	Program       json.HexBytes `json:"control_program"`
+	ReferenceData json.Map      `json:"reference_data"`
 }
 
 func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -119,8 +122,26 @@ func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) er
 		return MissingFieldsError(missing...)
 	}
 
-	out := types.NewTxOutput(*a.AssetId, a.Amount, a.Program)
+	out := legacy.NewTxOutput(*a.AssetId, a.Amount, a.Program, a.ReferenceData)
 	return b.AddOutput(out)
+}
+
+// DecodeSetTxRefDataAction convert input data to action struct
+func DecodeSetTxRefDataAction(data []byte) (Action, error) {
+	a := new(setTxRefDataAction)
+	err := stdjson.Unmarshal(data, a)
+	return a, err
+}
+
+type setTxRefDataAction struct {
+	Data json.Map `json:"reference_data"`
+}
+
+func (a *setTxRefDataAction) Build(ctx context.Context, b *TemplateBuilder) error {
+	if len(a.Data) == 0 {
+		return MissingFieldsError("reference_data")
+	}
+	return b.setReferenceData(a.Data)
 }
 
 // DecodeRetireAction convert input data to action struct
@@ -132,6 +153,7 @@ func DecodeRetireAction(data []byte) (Action, error) {
 
 type retireAction struct {
 	bc.AssetAmount
+	ReferenceData json.Map `json:"reference_data"`
 }
 
 func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -146,6 +168,6 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	out := types.NewTxOutput(*a.AssetId, a.Amount, retirementProgram)
+	out := legacy.NewTxOutput(*a.AssetId, a.Amount, retirementProgram, a.ReferenceData)
 	return b.AddOutput(out)
 }
