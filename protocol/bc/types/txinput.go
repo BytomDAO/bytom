@@ -9,9 +9,16 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
+// serflag variables for input types
+const (
+	CoinbaseInputType = iota
+	IssuanceInputType
+	SpendInputType
+)
+
 type (
 	TxInput struct {
-		AssetVersion  uint64
+		AssetVersion uint64
 		TypedInput
 
 		// Unconsumed suffixes of the commitment and witness extensible
@@ -21,8 +28,7 @@ type (
 	}
 
 	TypedInput interface {
-		IsIssuance() bool
-		IsCoinbase() bool
+		InputType() int
 	}
 )
 
@@ -213,7 +219,6 @@ func (t *TxInput) writeTo(w io.Writer, serflags uint8) error {
 	if err != nil {
 		return errors.Wrap(err, "writing input commitment")
 	}
-
 
 	if serflags&SerWitness != 0 {
 		if _, err = blockchain.WriteExtensibleString(w, t.WitnessSuffix, t.writeInputWitness); err != nil {

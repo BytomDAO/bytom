@@ -19,8 +19,7 @@ type IssuanceInput struct {
 	IssuanceWitness
 }
 
-func (ii *IssuanceInput) IsIssuance() bool { return true }
-func (ii *IssuanceInput) IsCoinbase() bool { return false }
+func (ii *IssuanceInput) InputType() int { return IssuanceInputType }
 
 func (ii *IssuanceInput) AssetID() bc.AssetID {
 	defhash := ii.AssetDefinitionHash()
@@ -43,7 +42,7 @@ func NewIssuanceInput(
 	assetDefinition []byte,
 ) *TxInput {
 	return &TxInput{
-		AssetVersion:  1,
+		AssetVersion: 1,
 		TypedInput: &IssuanceInput{
 			Nonce:  nonce,
 			Amount: amount,

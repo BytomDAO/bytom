@@ -97,7 +97,7 @@ type TxData struct {
 // HasIssuance returns true if this transaction has an issuance input.
 func (tx *TxData) HasIssuance() bool {
 	for _, in := range tx.Inputs {
-		if in.IsIssuance() {
+		if in.InputType() == IssuanceInputType {
 			return true
 		}
 	}
