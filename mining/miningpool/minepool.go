@@ -16,7 +16,7 @@ import (
 
 const (
 	blockUpdateMS   = 1000
-	maxSubmitChSize = 100
+	maxSubmitChSize = 50
 )
 
 type submitBlockMsg struct {
