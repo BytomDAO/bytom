@@ -332,7 +332,7 @@ func TestStackUnderflow(t *testing.T) {
 		{3, opCheckMultiSig}, // special, see also TestCryptoOps
 
 		// introspection
-		{5, opCheckOutput},
+		{6, opCheckOutput},
 
 		// numeric
 		{1, op1Add},

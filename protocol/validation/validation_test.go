@@ -12,11 +12,13 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/testutil"
 )
+
+const dirPath = "pseudohsm/testdata/pseudo"
 
 func init() {
 	spew.Config.DisableMethods = true
@@ -24,100 +26,100 @@ func init() {
 
 func TestGasStatus(t *testing.T) {
 	cases := []struct {
-		input  *GasState
-		output *GasState
-		f      func(*GasState) error
+		input  *gasState
+		output *gasState
+		f      func(*gasState) error
 		err    error
 	}{
 		{
-			input: &GasState{
-				GasLeft:  10000,
-				GasUsed:  0,
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
 				BTMValue: 0,
 			},
-			output: &GasState{
-				GasLeft:  10000 / consensus.VMGasRate,
-				GasUsed:  0,
+			output: &gasState{
+				gasLeft:  10000 / GasRate,
+				gasUsed:  0,
 				BTMValue: 10000,
 			},
-			f: func(input *GasState) error {
-				return input.setGas(10000, 0)
+			f: func(input *gasState) error {
+				return input.setGas(10000)
 			},
 			err: nil,
 		},
 		{
-			input: &GasState{
-				GasLeft:  10000,
-				GasUsed:  0,
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
 				BTMValue: 0,
 			},
-			output: &GasState{
-				GasLeft:  10000,
-				GasUsed:  0,
+			output: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
 				BTMValue: 0,
 			},
-			f: func(input *GasState) error {
-				return input.setGas(-10000, 0)
+			f: func(input *gasState) error {
+				return input.setGas(-10000)
 			},
 			err: errGasCalculate,
 		},
 		{
-			input: &GasState{
-				GasLeft:  consensus.DefaultGasCredit,
-				GasUsed:  0,
+			input: &gasState{
+				gasLeft:  defaultGasLimit,
+				gasUsed:  0,
 				BTMValue: 0,
 			},
-			output: &GasState{
-				GasLeft:  100000,
-				GasUsed:  0,
+			output: &gasState{
+				gasLeft:  defaultGasLimit,
+				gasUsed:  0,
 				BTMValue: 80000000000,
 			},
-			f: func(input *GasState) error {
-				return input.setGas(80000000000, 0)
+			f: func(input *gasState) error {
+				return input.setGas(80000000000)
 			},
 			err: nil,
 		},
 		{
-			input: &GasState{
-				GasLeft:  10000,
-				GasUsed:  0,
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
 				BTMValue: 0,
 			},
-			output: &GasState{
-				GasLeft:  10000,
-				GasUsed:  0,
+			output: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
 				BTMValue: 0,
 			},
-			f: func(input *GasState) error {
+			f: func(input *gasState) error {
 				return input.updateUsage(-1)
 			},
 			err: errGasCalculate,
 		},
 		{
-			input: &GasState{
-				GasLeft:  10000,
-				GasUsed:  0,
+			input: &gasState{
+				gasLeft:  10000,
+				gasUsed:  0,
 				BTMValue: 0,
 			},
-			output: &GasState{
-				GasLeft:  9999,
-				GasUsed:  1,
+			output: &gasState{
+				gasLeft:  9999,
+				gasUsed:  1,
 				BTMValue: 0,
 			},
-			f: func(input *GasState) error {
+			f: func(input *gasState) error {
 				return input.updateUsage(9999)
 			},
 			err: nil,
 		},
 	}
 
-	for i, c := range cases {
+	for _, c := range cases {
 		err := c.f(c.input)
 
-		if rootErr(err) != c.err {
-			t.Errorf("case %d: got error %s, want %s", i, err, c.err)
+		if err != c.err {
+			t.Errorf("got error %s, want %s", err, c.err)
 		} else if *c.input != *c.output {
-			t.Errorf("case %d: gasStatus %v, want %v;", i, c.input, c.output)
+			t.Errorf("got gasStatus %s, want %s;", c.input, c.output)
 		}
 	}
 }
@@ -241,8 +243,9 @@ func TestTxValidation(t *testing.T) {
 				// identical second transaction in order to get a similar but
 				// not equal output entry for the mux to falsely point
 				// to. That entry must be added to the first tx's Entries map.
+				fixture.txOutputs[0].ReferenceData = []byte{1}
 				fixture2 := sample(t, fixture)
-				tx2 := types.NewTx(*fixture2.tx).Tx
+				tx2 := legacy.NewTx(*fixture2.tx).Tx
 				out2ID := tx2.ResultIds[0]
 				out2 := tx2.Entries[*out2ID].(*bc.Output)
 				tx.Entries[*out2ID] = out2
@@ -375,18 +378,20 @@ func TestTxValidation(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		gasVaild := 0
 		t.Run(c.desc, func(t *testing.T) {
 			fixture = sample(t, nil)
-			tx = types.NewTx(*fixture.tx).Tx
+			tx = legacy.NewTx(*fixture.tx).Tx
 			vs = &validationState{
 				block:   mockBlock(),
 				tx:      tx,
 				entryID: tx.ID,
-				gasStatus: &GasState{
-					GasLeft: int64(80000),
-					GasUsed: 0,
+				gas: &gasState{
+					gasLeft: int64(80000),
+					gasUsed: 0,
 				},
-				cache: make(map[bc.Hash]error),
+				cache:    make(map[bc.Hash]error),
+				gasVaild: &gasVaild,
 			}
 			out := tx.Entries[*tx.ResultIds[0]].(*bc.Output)
 			muxID := out.Source.Ref
@@ -412,9 +417,8 @@ func TestValidateBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height:          0,
-					Bits:            2305843009230471167,
-					PreviousBlockId: &bc.Hash{},
+					Height: 0,
+					Bits:   2305843009230471167,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1470000000000000000)},
 			},
@@ -423,30 +427,36 @@ func TestValidateBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height:          0,
-					Bits:            2305843009230471167,
-					PreviousBlockId: &bc.Hash{},
+					Height: 0,
+					Bits:   2305843009230471167,
 				},
 				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
 			},
 			err: errWrongCoinbaseTransaction,
 		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height:         0,
+					Bits:           2305843009230471167,
+					SerializedSize: 88888888,
+				},
+				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
+			},
+			err: errWrongBlockSize,
+		},
 	}
-
-	txStatus := bc.NewTransactionStatus()
-	txStatusHash := bc.EntryID(txStatus)
 
 	for _, c := range cases {
 		txRoot, err := bc.MerkleRoot(c.block.Transactions)
 		if err != nil {
-			t.Errorf("computing transaction merkle root error: %v", err)
+			t.Errorf("computing transaction merkle root", err)
 			continue
 		}
 		c.block.BlockHeader.TransactionStatus = bc.NewTransactionStatus()
 		c.block.TransactionsRoot = &txRoot
-		c.block.TransactionStatusHash = &txStatusHash
 
-		if err = ValidateBlock(c.block, nil, &bc.Hash{}, nil); rootErr(err) != c.err {
+		if err = ValidateBlock(c.block, nil); rootErr(err) != c.err {
 			t.Errorf("got error %s, want %s", err, c.err)
 		}
 	}
@@ -454,10 +464,23 @@ func TestValidateBlock(t *testing.T) {
 
 func TestCoinbase(t *testing.T) {
 	CbTx := mockCoinbaseTx(5000000000)
+	errCbTx := legacy.MapTx(&legacy.TxData{
+		Inputs: []*legacy.TxInput{
+			legacy.NewCoinbaseInput(nil, nil),
+		},
+		Outputs: []*legacy.TxOutput{
+			legacy.NewTxOutput(bc.AssetID{
+				V0: uint64(18446744073709551611),
+				V1: uint64(18446744073709551615),
+				V2: uint64(18446744073709551615),
+				V3: uint64(18446744073709551615),
+			}, 800000000000, []byte{1}, nil),
+		},
+	})
 	cases := []struct {
 		block    *bc.Block
 		tx       *bc.Tx
-		GasVaild bool
+		gasVaild bool
 		err      error
 	}{
 		{
@@ -468,78 +491,36 @@ func TestCoinbase(t *testing.T) {
 				Transactions: []*bc.Tx{CbTx},
 			},
 			tx:       CbTx,
-			GasVaild: true,
+			gasVaild: true,
 			err:      nil,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{
+					Height: 666,
+				},
+				Transactions: []*bc.Tx{errCbTx},
+			},
+			tx:       errCbTx,
+			gasVaild: true,
+			err:      errWrongCoinbaseAsset,
 		},
 	}
 
 	for i, c := range cases {
-		gasStatus, err := ValidateTx(c.tx, c.block)
+		_, gasVaild, err := ValidateTx(c.tx, c.block)
 
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
 		}
-		if c.GasVaild != gasStatus.GasVaild {
-			t.Errorf("#%d got GasVaild %t, want %t", i, gasStatus.GasVaild, c.GasVaild)
-		}
-	}
-}
-
-func TestTimeRange(t *testing.T) {
-	cases := []struct {
-		timeRange uint64
-		err       bool
-	}{
-		{
-			timeRange: 0,
-			err:       false,
-		},
-		{
-			timeRange: 334,
-			err:       false,
-		},
-		{
-			timeRange: 332,
-			err:       true,
-		},
-		{
-			timeRange: 1521625824,
-			err:       false,
-		},
-		{
-			timeRange: 1421625824,
-			err:       true,
-		},
-	}
-
-	block := &bc.Block{
-		BlockHeader: &bc.BlockHeader{
-			Height:    333,
-			Timestamp: 1521625823,
-		},
-	}
-
-	tx := types.MapTx(&types.TxData{
-		SerializedSize: 1,
-		TimeRange:      0,
-		Inputs: []*types.TxInput{
-			mockGasTxInput(),
-		},
-		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
-		},
-	})
-
-	for i, c := range cases {
-		tx.TimeRange = c.timeRange
-		if _, err := ValidateTx(tx, block); (err != nil) != c.err {
-			t.Errorf("#%d got error %s, want %s", i, !c.err, c.err)
+		if c.gasVaild != gasVaild {
+			t.Errorf("#%d got gasVaild %s, want %s", i, gasVaild, c.gasVaild)
 		}
 	}
 }
 
 func TestBlockHeaderValid(t *testing.T) {
-	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
+	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, nil, 0, 0)
 	baseBytes, _ := proto.Marshal(base)
 
 	var bh bc.BlockHeader
@@ -577,10 +558,10 @@ type txFixture struct {
 	assetDef       []byte
 	assetID        bc.AssetID
 	txVersion      uint64
-	txInputs       []*types.TxInput
-	txOutputs      []*types.TxOutput
+	txInputs       []*legacy.TxInput
+	txOutputs      []*legacy.TxOutput
 	txRefData      []byte
-	tx             *types.TxData
+	tx             *legacy.TxData
 }
 
 // Produces a sample transaction in a txFixture object (see above). A
@@ -626,7 +607,7 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 	}
 	if result.assetID.IsZero() {
 		refdatahash := hashData(result.assetDef)
-		result.assetID = bc.ComputeAssetID(result.issuanceProg.Code, result.issuanceProg.VmVersion, &refdatahash)
+		result.assetID = bc.ComputeAssetID(result.issuanceProg.Code, &result.initialBlockID, result.issuanceProg.VmVersion, &refdatahash)
 	}
 
 	if result.txVersion == 0 {
@@ -645,10 +626,10 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		}
 		args2 := [][]byte{[]byte{6}, []byte{7}}
 
-		result.txInputs = []*types.TxInput{
-			types.NewIssuanceInput([]byte{3}, 10, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
-			types.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1),
-			types.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2),
+		result.txInputs = []*legacy.TxInput{
+			legacy.NewIssuanceInput([]byte{3}, 10, []byte{4}, result.initialBlockID, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
+			legacy.NewSpendInput(args1, *newHash(5), result.assetID, 20, 0, cp1, *newHash(6), []byte{7}),
+			legacy.NewSpendInput(args2, *newHash(8), result.assetID, 40, 0, cp2, *newHash(9), []byte{10}),
 		}
 	}
 
@@ -664,19 +645,20 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 			tb.Fatal(err)
 		}
 
-		result.txOutputs = []*types.TxOutput{
-			types.NewTxOutput(result.assetID, 25, cp1),
-			types.NewTxOutput(result.assetID, 45, cp2),
+		result.txOutputs = []*legacy.TxOutput{
+			legacy.NewTxOutput(result.assetID, 25, cp1, []byte{11}),
+			legacy.NewTxOutput(result.assetID, 45, cp2, []byte{12}),
 		}
 	}
 	if len(result.txRefData) == 0 {
 		result.txRefData = []byte{13}
 	}
 
-	result.tx = &types.TxData{
-		Version: result.txVersion,
-		Inputs:  result.txInputs,
-		Outputs: result.txOutputs,
+	result.tx = &legacy.TxData{
+		Version:       result.txVersion,
+		Inputs:        result.txInputs,
+		Outputs:       result.txOutputs,
+		ReferenceData: result.txRefData,
 	}
 
 	return &result
@@ -692,20 +674,19 @@ func mockBlock() *bc.Block {
 
 func mockCoinbaseTx(amount uint64) *bc.Tx {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
-	return types.MapTx(&types.TxData{
-		SerializedSize: 1,
-		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput(nil),
+	return legacy.MapTx(&legacy.TxData{
+		Inputs: []*legacy.TxInput{
+			legacy.NewCoinbaseInput(nil, nil),
 		},
-		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, amount, cp),
+		Outputs: []*legacy.TxOutput{
+			legacy.NewTxOutput(*consensus.BTMAssetID, amount, cp, nil),
 		},
 	})
 }
 
-func mockGasTxInput() *types.TxInput {
+func mockGasTxInput() *legacy.TxInput {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
-	return types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp)
+	return legacy.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp, *newHash(9), []byte{})
 }
 
 // Like errors.Root, but also unwraps vm.Error objects.

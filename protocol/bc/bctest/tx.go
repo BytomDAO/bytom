@@ -10,7 +10,7 @@ import (
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc/legacy"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/testutil"
@@ -22,7 +22,7 @@ import (
 //
 // The asset issued is created from randomly-generated keys. The resulting
 // transaction is finalized (signed with a TXSIGHASH commitment).
-func NewIssuanceTx(tb testing.TB, initial bc.Hash, opts ...func(*types.Tx)) *types.Tx {
+func NewIssuanceTx(tb testing.TB, initial bc.Hash, opts ...func(*legacy.Tx)) *legacy.Tx {
 	// Generate a random key pair for the asset being issued.
 	xprv, xpub, err := chainkd.NewXKeys(nil)
 	if err != nil {
@@ -46,13 +46,13 @@ func NewIssuanceTx(tb testing.TB, initial bc.Hash, opts ...func(*types.Tx)) *typ
 		testutil.FatalErr(tb, err)
 	}
 	assetdef := []byte(`{"type": "prottest issuance"}`)
-	txin := types.NewIssuanceInput(nonce[:], 100, issuanceProgram, nil, assetdef)
+	txin := legacy.NewIssuanceInput(nonce[:], 100, nil, initial, issuanceProgram, nil, assetdef)
 
-	tx := types.NewTx(types.TxData{
+	tx := legacy.NewTx(legacy.TxData{
 		Version: 1,
-		Inputs:  []*types.TxInput{txin},
-		Outputs: []*types.TxOutput{
-			types.NewTxOutput(txin.AssetID(), 100, []byte{0xbe, 0xef}),
+		Inputs:  []*legacy.TxInput{txin},
+		Outputs: []*legacy.TxOutput{
+			legacy.NewTxOutput(txin.AssetID(), 100, []byte{0xbe, 0xef}, nil),
 		},
 	})
 

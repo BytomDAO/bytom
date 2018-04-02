@@ -89,7 +89,7 @@ func TestSetBits(t *testing.T) {
 				t.Error(err)
 			}
 			if result != v {
-				t.Errorf("bad result, %d want %t get %t", i, v, result)
+				t.Errorf("bad result, %d want %s get %s", i, v, result)
 			}
 		}
 		if len(ts.Bitmap) != (len(c.result)+7)/bitsPerByte {

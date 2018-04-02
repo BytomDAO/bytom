@@ -5,7 +5,8 @@ import (
 	"github.com/bytom/p2p"
 )
 
-// NetInfo return p2p net status
+//-----------------------------------------------------------------------------
+
 func NetInfo(p2pSwitch *p2p.Switch) (*ctypes.ResultNetInfo, error) {
 	listening := p2pSwitch.IsListening()
 	listeners := []string{}

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 func dummyValidateTx(*bc.Tx) error {
@@ -12,13 +12,13 @@ func dummyValidateTx(*bc.Tx) error {
 }
 
 func generate(tb testing.TB, prev *bc.Block) *bc.Block {
-	b := &types.Block{
-		BlockHeader: types.BlockHeader{
+	b := &legacy.Block{
+		BlockHeader: legacy.BlockHeader{
 			Version:           1,
 			Height:            prev.Height + 1,
 			PreviousBlockHash: prev.ID,
 			Timestamp:         prev.Timestamp + 1,
-			BlockCommitment:   types.BlockCommitment{},
+			BlockCommitment:   legacy.BlockCommitment{},
 		},
 	}
 
@@ -28,5 +28,5 @@ func generate(tb testing.TB, prev *bc.Block) *bc.Block {
 		tb.Fatal(err)
 	}
 
-	return types.MapBlock(b)
+	return legacy.MapBlock(b)
 }

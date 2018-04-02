@@ -1,5 +1,3 @@
-// +build !network
-
 package p2p_test
 
 import (

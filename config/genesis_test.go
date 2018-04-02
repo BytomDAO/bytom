@@ -3,7 +3,6 @@ package config
 import (
 	"testing"
 
-	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 )
 
@@ -19,7 +18,7 @@ func TestGenerateGenesisBlock(t *testing.T) {
 	nonce := block.Nonce
 	for {
 		hash := block.Hash()
-		if difficulty.CheckProofOfWork(&hash, consensus.InitialSeed, block.Bits) {
+		if difficulty.CheckProofOfWork(&hash, block.Bits) {
 			break
 		}
 		block.Nonce++

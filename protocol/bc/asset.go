@@ -35,8 +35,9 @@ func (ad *AssetDefinition) ComputeAssetID() (assetID AssetID) {
 	return NewAssetID(b)
 }
 
-func ComputeAssetID(prog []byte, vmVersion uint64, data *Hash) AssetID {
+func ComputeAssetID(prog []byte, initialBlockID *Hash, vmVersion uint64, data *Hash) AssetID {
 	def := &AssetDefinition{
+		InitialBlockId: initialBlockID,
 		IssuanceProgram: &Program{
 			VmVersion: vmVersion,
 			Code:      prog,

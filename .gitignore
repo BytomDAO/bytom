@@ -26,8 +26,6 @@ cmd/bytomcli/bytomcli
 cmd/bytom/.bytom
 .bytomd
 
-target
-
 *.exe
 
 # vim

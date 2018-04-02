@@ -5,21 +5,21 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc/legacy"
 )
 
 // GenerateGenesisTx will return genesis transaction
-func GenerateGenesisTx() *types.Tx {
-	txData := types.TxData{
+func GenerateGenesisTx() *legacy.Tx {
+	txData := legacy.TxData{
 		Version:        1,
 		SerializedSize: 63,
-		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput([]byte("May 4th Be With You")),
+		Inputs: []*legacy.TxInput{
+			legacy.NewCoinbaseInput([]byte("May 4th Be With You"), nil),
 		},
-		Outputs: []*types.TxOutput{
-			&types.TxOutput{
+		Outputs: []*legacy.TxOutput{
+			&legacy.TxOutput{
 				AssetVersion: 1,
-				OutputCommitment: types.OutputCommitment{
+				OutputCommitment: legacy.OutputCommitment{
 					AssetAmount: bc.AssetAmount{
 						AssetId: consensus.BTMAssetID,
 						Amount:  consensus.InitialBlockSubsidy,
@@ -31,31 +31,32 @@ func GenerateGenesisTx() *types.Tx {
 		},
 	}
 
-	return types.NewTx(txData)
+	return legacy.NewTx(txData)
 }
 
 // GenerateGenesisBlock will return genesis block
-func GenerateGenesisBlock() *types.Block {
+func GenerateGenesisBlock() *legacy.Block {
 	genesisCoinbaseTx := GenerateGenesisTx()
 	merkleRoot, err := bc.MerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
 	if err != nil {
 		log.Panicf("Fatal create merkelRoot")
 	}
-	txStatus := bc.NewTransactionStatus()
 
-	block := &types.Block{
-		BlockHeader: types.BlockHeader{
+	block := &legacy.Block{
+		BlockHeader: legacy.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     4216083,
+			Nonce:     4216077,
 			Timestamp: 1516788453,
-			BlockCommitment: types.BlockCommitment{
+			BlockCommitment: legacy.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
-				TransactionStatusHash:  bc.EntryID(txStatus),
 			},
 			Bits: 2305843009222082559,
+			TransactionStatus: bc.TransactionStatus{
+				Bitmap: []byte{0},
+			},
 		},
-		Transactions: []*types.Tx{genesisCoinbaseTx},
+		Transactions: []*legacy.Tx{genesisCoinbaseTx},
 	}
 	return block
 }

@@ -1,14 +1,11 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"os"
 
 	"github.com/bytom/blockchain"
 	"github.com/bytom/consensus/difficulty"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/util"
 )
 
@@ -17,59 +14,30 @@ const (
 )
 
 // do proof of work
-func doWork(bh *types.BlockHeader, seed *bc.Hash) bool {
+func doWork(work *blockchain.WorkResp) bool {
+	fmt.Printf("work:%v\n", work)
 	for i := uint64(0); i <= maxNonce; i++ {
-		bh.Nonce = i
-		headerHash := bh.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, seed, bh.Bits) {
-			fmt.Printf("Mining: successful-----proof hash:%v\n", headerHash.String())
+		work.Header.Nonce = i
+		headerHash := work.Header.Hash()
+		if difficulty.CheckProofOfWork(&headerHash, work.Header.Bits) {
+			fmt.Printf("Mining: successful-----proof hash:%v\n", headerHash)
 			return true
 		}
 	}
 	return false
 }
 
-func getBlockHeaderByHeight(height uint64) {
-	type Req struct {
-		BlockHeight uint64 `json:"block_height"`
-	}
-
-	type Resp struct {
-		BlockHeader *types.BlockHeader `json:"block_header"`
-		Reward      uint64             `json:"reward"`
-	}
-
-	data, _ := util.ClientCall("/get-block-header-by-height", Req{BlockHeight: height})
-	rawData, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	resp := &Resp{}
-	if err = json.Unmarshal(rawData, resp); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	fmt.Println(resp.Reward)
-}
-
 func main() {
-	data, _ := util.ClientCall("/getwork", nil)
-	rawData, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	for {
+		var work blockchain.WorkResp
+		client := util.MustRPCClient()
+		if err := client.Call(context.Background(), "/get-work", nil, &work); err == nil {
+			if doWork(&work) {
+				header := work.Header
+				client.Call(context.Background(), "/submit-work", &header, nil)
+			}
+		} else {
+			fmt.Printf("---err:%v\n", err)
+		}
 	}
-	resp := &blockchain.GetWorkResp{}
-	if err = json.Unmarshal(rawData, resp); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	if doWork(resp.BlockHeader, resp.Seed) {
-		util.ClientCall("/submitwork", resp.BlockHeader)
-	}
-
-	getBlockHeaderByHeight(resp.BlockHeader.Height)
 }
