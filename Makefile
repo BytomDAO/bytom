@@ -103,7 +103,7 @@ test:
 	@echo `ls -l`
 	@echo `pwd`
 	@echo `git rev-parse HEAD`
-	@go test -tags "network" $(PACKAGES)
+	@go test
 
 benchmark:
 	go test -bench $(PACKAGES)
