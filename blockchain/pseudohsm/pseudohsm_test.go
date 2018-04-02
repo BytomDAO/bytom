@@ -3,11 +3,52 @@ package pseudohsm
 import (
 	"fmt"
 	"testing"
+	"strings"
 
 	"github.com/bytom/errors"
 )
 
 const dirPath = "testdata/pseudo"
+
+func TestCreateKeyWithUpperCase(t *testing.T) {
+	hsm, _ := New(dirPath)
+
+	alias := "UPPER"
+
+	xpub, err := hsm.XCreate(alias, "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if xpub.Alias != strings.ToLower(alias) {
+		t.Fatal("the created key alias should be lowercase")
+	}
+
+	err = hsm.XDelete(xpub.XPub, "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCreateKeyWithWhiteSpaceTrimed(t *testing.T) {
+	hsm, _ := New(dirPath)
+
+	alias := " with space surrounding "
+
+	xpub, err := hsm.XCreate(alias, "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if xpub.Alias != strings.TrimSpace(alias) {
+		t.Fatal("the created key alias should be lowercase")
+	}
+
+	err = hsm.XDelete(xpub.XPub, "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestPseudoHSMChainKDKeys(t *testing.T) {
 
@@ -44,10 +85,7 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 		t.Error("expected verify with derived pubkey of sig from derived privkey to succeed")
 	}
 
-	xpubs, err := hsm.ListKeys()
-	if err != nil {
-		t.Fatal(err)
-	}
+	xpubs := hsm.ListKeys()
 	if len(xpubs) != 2 {
 		t.Error("expected 2 entries in the db")
 	}

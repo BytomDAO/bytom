@@ -12,17 +12,25 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/legacy"
+	"github.com/bytom/protocol/bc/types"
 )
 
+// errors
 var (
-	ErrBadRefData          = errors.New("transaction reference data does not match previous template's reference data")
-	ErrBadTxInputIdx       = errors.New("unsigned tx missing input")
+	//ErrBadRefData means invalid reference data
+	ErrBadRefData = errors.New("transaction reference data does not match previous template's reference data")
+	//ErrBadTxInputIdx means unsigned tx input
+	ErrBadTxInputIdx = errors.New("unsigned tx missing input")
+	//ErrBadWitnessComponent means invalid witness component
 	ErrBadWitnessComponent = errors.New("invalid witness component")
-	ErrBadAmount           = errors.New("bad asset amount")
-	ErrBlankCheck          = errors.New("unsafe transaction: leaves assets free to control")
-	ErrAction              = errors.New("errors occurred in one or more actions")
-	ErrMissingFields       = errors.New("required field is missing")
+	//ErrBadAmount means invalid asset amount
+	ErrBadAmount = errors.New("bad asset amount")
+	//ErrBlankCheck means unsafe transaction
+	ErrBlankCheck = errors.New("unsafe transaction: leaves assets free to control")
+	//ErrAction means errors occurred in actions
+	ErrAction = errors.New("errors occurred in one or more actions")
+	//ErrMissingFields means missing required fields
+	ErrMissingFields = errors.New("required field is missing")
 )
 
 // Build builds or adds on to a transaction.
@@ -30,10 +38,11 @@ var (
 // Build partners then satisfy and consume inputs and destinations.
 // The final party must ensure that the transaction is
 // balanced before calling finalize.
-func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime time.Time) (*Template, error) {
+func Build(ctx context.Context, tx *types.TxData, actions []Action, maxTime time.Time, timeRange uint64) (*Template, error) {
 	builder := TemplateBuilder{
-		base:    tx,
-		maxTime: maxTime,
+		base:      tx,
+		maxTime:   maxTime,
+		timeRange: timeRange,
 	}
 
 	// Build all of the actions, updating the builder.
@@ -70,7 +79,8 @@ func Build(ctx context.Context, tx *legacy.TxData, actions []Action, maxTime tim
 	return tpl, nil
 }
 
-func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth []string, signFn SignFunc) error {
+// Sign will try to sign all the witness
+func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
 	for i, sigInst := range tpl.SigningInstructions {
 		for j, wc := range sigInst.WitnessComponents {
 			switch sw := wc.(type) {
@@ -90,7 +100,7 @@ func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth []strin
 	return materializeWitnesses(tpl)
 }
 
-func checkBlankCheck(tx *legacy.TxData) error {
+func checkBlankCheck(tx *types.TxData) error {
 	assetMap := make(map[bc.AssetID]int64)
 	var ok bool
 	for _, in := range tx.Inputs {

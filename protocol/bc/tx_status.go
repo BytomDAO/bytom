@@ -1,64 +1,49 @@
 package bc
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
-
-	"github.com/bytom/encoding/blockchain"
 )
 
 const (
-	maxBitmapSize = 8388608
-	bitsPerByte   = 8
+	TransactionStatusVersion = 1
 )
-
-var errOverRange = errors.New("bitmap range exceed the limit")
-var errBadRange = errors.New("bitmap get a unexisted bit")
 
 func NewTransactionStatus() *TransactionStatus {
 	return &TransactionStatus{
-		Bitmap: []byte{0},
+		Version:      TransactionStatusVersion,
+		VerifyStatus: []*TxVerifyResult{},
 	}
 }
 
 func (ts *TransactionStatus) SetStatus(i int, gasOnly bool) error {
-	if i >= maxBitmapSize {
-		return errOverRange
+	if i > len(ts.VerifyStatus) {
+		return errors.New("setStatus should be set one by one")
 	}
 
-	index, pos := i/bitsPerByte, i%bitsPerByte
-	for len(ts.Bitmap) < index+1 {
-		ts.Bitmap = append(ts.Bitmap, 0)
-	}
-
-	if gasOnly {
-		ts.Bitmap[index] |= 0x01 << uint8(pos)
+	if i == len(ts.VerifyStatus) {
+		ts.VerifyStatus = append(ts.VerifyStatus, &TxVerifyResult{StatusFail: gasOnly})
 	} else {
-		ts.Bitmap[index] &^= 0x01 << uint8(pos)
+		ts.VerifyStatus[i].StatusFail = gasOnly
 	}
 	return nil
 }
 
 func (ts *TransactionStatus) GetStatus(i int) (bool, error) {
-	if i >= maxBitmapSize {
-		return false, errOverRange
+	if i >= len(ts.VerifyStatus) {
+		return false, errors.New("GetStatus is out of range")
 	}
 
-	index, pos := i/bitsPerByte, i%bitsPerByte
-	for len(ts.Bitmap) < index+1 {
-		return false, errBadRange
+	return ts.VerifyStatus[i].StatusFail, nil
+}
+
+func (tvr *TxVerifyResult) WriteTo(w io.Writer) (int64, error) {
+	bytes, err := json.Marshal(tvr)
+	if err != nil {
+		return 0, err
 	}
 
-	result := (ts.Bitmap[index] >> uint8(pos)) & 0x01
-	return result == 1, nil
-}
-
-func (ts *TransactionStatus) ReadFrom(r *blockchain.Reader) (err error) {
-	ts.Bitmap, err = blockchain.ReadVarstr31(r)
-	return err
-}
-
-func (ts *TransactionStatus) WriteTo(w io.Writer) error {
-	_, err := blockchain.WriteVarstr31(w, ts.Bitmap)
-	return err
+	n, err := w.Write(bytes)
+	return int64(n), err
 }

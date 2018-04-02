@@ -3,8 +3,8 @@ package state
 import (
 	"errors"
 
-	"github.com/bytom/blockchain/txdb/storage"
 	"github.com/bytom/consensus"
+	"github.com/bytom/database/storage"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -67,9 +67,9 @@ func (view *UtxoViewpoint) ApplyTransaction(block *bc.Block, tx *bc.Tx, statusFa
 	return nil
 }
 
-func (view *UtxoViewpoint) ApplyBlock(block *bc.Block) error {
+func (view *UtxoViewpoint) ApplyBlock(block *bc.Block, txStatus *bc.TransactionStatus) error {
 	for i, tx := range block.Transactions {
-		statusFail, err := block.TransactionStatus.GetStatus(i)
+		statusFail, err := txStatus.GetStatus(i)
 		if err != nil {
 			return err
 		}
@@ -116,9 +116,9 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	return nil
 }
 
-func (view *UtxoViewpoint) DetachBlock(block *bc.Block) error {
+func (view *UtxoViewpoint) DetachBlock(block *bc.Block, txStatus *bc.TransactionStatus) error {
 	for i, tx := range block.Transactions {
-		statusFail, err := block.TransactionStatus.GetStatus(i)
+		statusFail, err := txStatus.GetStatus(i)
 		if err != nil {
 			return err
 		}

@@ -1,6 +1,7 @@
 package bc
 
 import (
+	"io"
 	"math"
 
 	"github.com/bytom/crypto/sha3pool"
@@ -11,30 +12,32 @@ var (
 	interiorPrefix = []byte{0x01}
 )
 
-// MerkleRoot creates a merkle tree from a slice of transactions
-// and returns the root hash of the tree.
-func MerkleRoot(transactions []*Tx) (root Hash, err error) {
+type merkleNode interface {
+	WriteTo(io.Writer) (int64, error)
+}
+
+func merkleRoot(nodes []merkleNode) (root Hash, err error) {
 	switch {
-	case len(transactions) == 0:
+	case len(nodes) == 0:
 		return EmptyStringHash, nil
 
-	case len(transactions) == 1:
+	case len(nodes) == 1:
 		h := sha3pool.Get256()
 		defer sha3pool.Put256(h)
 
 		h.Write(leafPrefix)
-		transactions[0].ID.WriteTo(h)
+		nodes[0].WriteTo(h)
 		root.ReadFrom(h)
 		return root, nil
 
 	default:
-		k := prevPowerOfTwo(len(transactions))
-		left, err := MerkleRoot(transactions[:k])
+		k := prevPowerOfTwo(len(nodes))
+		left, err := merkleRoot(nodes[:k])
 		if err != nil {
 			return root, err
 		}
 
-		right, err := MerkleRoot(transactions[k:])
+		right, err := merkleRoot(nodes[k:])
 		if err != nil {
 			return root, err
 		}
@@ -47,6 +50,25 @@ func MerkleRoot(transactions []*Tx) (root Hash, err error) {
 		root.ReadFrom(h)
 		return root, nil
 	}
+}
+
+// TxMerkleRoot creates a merkle tree from a slice of TxVerifyResult
+func TxStatusMerkleRoot(tvrs []*TxVerifyResult) (root Hash, err error) {
+	nodes := []merkleNode{}
+	for _, tvr := range tvrs {
+		nodes = append(nodes, tvr)
+	}
+	return merkleRoot(nodes)
+}
+
+// TxMerkleRoot creates a merkle tree from a slice of transactions
+// and returns the root hash of the tree.
+func TxMerkleRoot(transactions []*Tx) (root Hash, err error) {
+	nodes := []merkleNode{}
+	for _, tx := range transactions {
+		nodes = append(nodes, tx.ID)
+	}
+	return merkleRoot(nodes)
 }
 
 // prevPowerOfTwo returns the largest power of two that is smaller than a given number.

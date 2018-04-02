@@ -1,3 +1,5 @@
+// +build !network
+
 package p2p
 
 import (
@@ -5,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
 
 	cfg "github.com/bytom/config"

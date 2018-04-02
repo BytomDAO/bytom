@@ -32,9 +32,8 @@ message AssetAmount {
 }
 
 message AssetDefinition {
-  Hash    initial_block_id = 1;
-  Program issuance_program = 2;
-  Hash    data             = 3;
+  Program issuance_program = 1;
+  Hash    data             = 2;
 }
 
 message ValueSource {
@@ -50,17 +49,15 @@ message ValueDestination {
 }
 
 message BlockHeader {
-  uint64            version            = 1;
-  uint64            serialized_size    = 2;
-  uint64            height             = 3;
-  Hash              previous_block_id  = 4;
-  Hash              seed               = 5;
-  uint64            timestamp          = 6;
-  Hash              transactions_root  = 7;
-  Hash              assets_root        = 8;
-  TransactionStatus transaction_status = 9;
-  uint64            nonce              = 10;
-  uint64            bits               = 11;
+  uint64            version                 = 1;
+  uint64            height                  = 2;
+  Hash              previous_block_id       = 3;
+  uint64            timestamp               = 4;
+  Hash              transactions_root       = 5;
+  Hash              transaction_status_hash = 6;
+  uint64            nonce                   = 7;
+  uint64            bits                    = 8;
+  TransactionStatus transaction_status      = 9;
 }
 
 message TxHeader {
@@ -68,12 +65,16 @@ message TxHeader {
   uint64        serialized_size = 2;
   uint64        time_range      = 3;
   repeated Hash result_ids      = 4;
-  Hash          data            = 5;
-  Hash          ext_hash        = 6;
+  Hash          ext_hash        = 5;
+}
+
+message TxVerifyResult {
+  bool status_fail = 1;
 }
 
 message TransactionStatus {
-  bytes bitmap = 1;
+  uint64                  version        = 1;
+  repeated TxVerifyResult verify_status  = 2;
 }
 
 message Mux {
@@ -99,36 +100,32 @@ message Coinbase {
 message Output {
   ValueSource source          = 1;
   Program     control_program = 2;
-  Hash        data            = 3;
-  Hash        ext_hash        = 4;
-  uint64      ordinal         = 5;
+  Hash        ext_hash        = 3;
+  uint64      ordinal         = 4;
 }
 
 message Retirement {
   ValueSource source   = 1;
-  Hash        data     = 2;
-  Hash        ext_hash = 3;
-  uint64      ordinal  = 4;
+  Hash        ext_hash = 2;
+  uint64      ordinal  = 3;
 }
 
 message Issuance {
   Hash             anchor_id                = 1;
   AssetAmount      value                    = 2;
-  Hash             data                     = 3;
-  Hash             ext_hash                 = 4;
-  ValueDestination witness_destination      = 5;
-  AssetDefinition  witness_asset_definition = 6;
-  repeated bytes   witness_arguments        = 7;
-  Hash             witness_anchored_id      = 8;
-  uint64           ordinal                  = 9;
+  Hash             ext_hash                 = 3;
+  ValueDestination witness_destination      = 4;
+  AssetDefinition  witness_asset_definition = 5;
+  repeated bytes   witness_arguments        = 6;
+  Hash             witness_anchored_id      = 7;
+  uint64           ordinal                  = 8;
 }
 
 message Spend {
   Hash             spent_output_id     = 1;
-  Hash             data                = 2;
-  Hash             ext_hash            = 3;
-  ValueDestination witness_destination = 4;
-  repeated bytes   witness_arguments   = 5;
-  Hash             witness_anchored_id = 6;
-  uint64           ordinal             = 7;
+  Hash             ext_hash            = 2;
+  ValueDestination witness_destination = 3;
+  repeated bytes   witness_arguments   = 4;
+  Hash             witness_anchored_id = 5;
+  uint64           ordinal             = 6;
 }

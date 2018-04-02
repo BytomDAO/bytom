@@ -8,8 +8,9 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/bytom/blockchain"
+	"github.com/bytom/api"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/util"
 )
 
@@ -21,10 +22,10 @@ func init() {
 	buildTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 	buildTransactionCmd.PersistentFlags().BoolVar(&alias, "alias", false, "use alias build transaction")
 
-	signTransactionCmd.PersistentFlags().StringArrayVarP(&password, "password", "p", []string{}, "password of the account which sign these transaction(s)")
+	signTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
 	signTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 
-	signSubTransactionCmd.PersistentFlags().StringArrayVarP(&password, "password", "p", []string{}, "password of the account which sign these transaction(s)")
+	signSubTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
 
 	listTransactionsCmd.PersistentFlags().StringVar(&txID, "id", "", "transaction id")
 	listTransactionsCmd.PersistentFlags().StringVar(&account, "account_id", "", "account id")
@@ -36,7 +37,7 @@ var (
 	btmGas          = ""
 	receiverProgram = ""
 	address         = ""
-	password        = make([]string, 0)
+	password        = ""
 	pretty          = false
 	alias           = false
 	txID            = ""
@@ -53,7 +54,7 @@ var buildIssueReqFmt = `
 
 var buildIssueReqFmtByAlias = `
 	{"actions": [
-		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
+		{"type": "spend_account", "asset_alias": "BTM", "amount":%s, "account_alias": "%s"},
 		{"type": "issue", "asset_alias": "%s", "amount": %s},
 		{"type": "control_account", "asset_alias": "%s", "amount": %s, "account_alias": "%s"}
 	]}`
@@ -67,7 +68,7 @@ var buildSpendReqFmt = `
 
 var buildSpendReqFmtByAlias = `
 	{"actions": [
-		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
+		{"type": "spend_account", "asset_alias": "BTM", "amount":%s, "account_alias": "%s"},
 		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
 		{"type": "control_receiver", "asset_alias": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
 	]}`
@@ -81,7 +82,7 @@ var buildRetireReqFmt = `
 
 var buildRetireReqFmtByAlias = `
 	{"actions": [
-		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
+		{"type": "spend_account", "asset_alias": "BTM", "amount":%s, "account_alias": "%s"},
 		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
 		{"type": "retire", "asset_alias": "%s","amount": %s,"account_alias": "%s"}
 	]}`
@@ -95,7 +96,7 @@ var buildControlAddressReqFmt = `
 
 var buildControlAddressReqFmtByAlias = `
 	{"actions": [
-		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_alias": "%s"},
+		{"type": "spend_account", "asset_alias": "BTM", "amount":%s, "account_alias": "%s"},
 		{"type": "spend_account", "asset_alias": "%s","amount": %s, "account_alias": "%s"},
 		{"type": "control_address", "asset_alias": "%s", "amount": %s,"address": "%s"}
 	]}`
@@ -145,7 +146,7 @@ var buildTransactionCmd = &cobra.Command{
 			os.Exit(util.ErrLocalExe)
 		}
 
-		var buildReq blockchain.BuildRequest
+		var buildReq api.BuildRequest
 		if err := json.Unmarshal([]byte(buildReqStr), &buildReq); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
@@ -194,7 +195,7 @@ var signTransactionCmd = &cobra.Command{
 		}
 
 		var req = struct {
-			Password []string           `json:"password"`
+			Password string             `json:"password"`
 			Txs      txbuilder.Template `json:"transaction"`
 		}{Password: password, Txs: template}
 
@@ -225,20 +226,21 @@ var signTransactionCmd = &cobra.Command{
 }
 
 var submitTransactionCmd = &cobra.Command{
-	Use:   "submit-transaction  <signed json template>",
+	Use:   "submit-transaction  <signed json raw_transaction>",
 	Short: "Submit signed transaction template",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		template := txbuilder.Template{}
+		var ins = struct {
+			Tx types.Tx `json:"raw_transaction"`
+		}{}
 
-		err := json.Unmarshal([]byte(args[0]), &template)
+		err := json.Unmarshal([]byte(args[0]), &ins)
 		if err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
 		}
 
-		jww.FEEDBACK.Printf("\n\n")
-		data, exitCode := util.ClientCall("/submit-transaction", &template)
+		data, exitCode := util.ClientCall("/submit-transaction", &ins)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
@@ -266,10 +268,28 @@ var signSubTransactionCmd = &cobra.Command{
 		var req = struct {
 			Password []string           `json:"password"`
 			Txs      txbuilder.Template `json:"transaction"`
-		}{Password: password, Txs: template}
+		}{Password: []string{password}, Txs: template}
 
 		jww.FEEDBACK.Printf("\n\n")
 		data, exitCode := util.ClientCall("/sign-submit-transaction", &req)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
+var getTransactionCmd = &cobra.Command{
+	Use:   "get-transaction <hash>",
+	Short: "get the transaction by matching the given transaction hash",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		txInfo := &struct {
+			TxID string `json:"tx_id"`
+		}{TxID: args[0]}
+
+		data, exitCode := util.ClientCall("/get-transaction", txInfo)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
