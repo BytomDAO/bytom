@@ -16,10 +16,16 @@ import (
 
 const blockUpdateMS = 1000
 
+type submitBlockMsg struct {
+	blockHeader *types.BlockHeader
+	reply       chan error
+}
+
 // MiningPool is the support struct for p2p mine pool
 type MiningPool struct {
-	mutex sync.RWMutex
-	block *types.Block
+	mutex    sync.RWMutex
+	block    *types.Block
+	submitCh chan *submitBlockMsg
 
 	chain          *protocol.Chain
 	accountManager *account.Manager
@@ -42,8 +48,18 @@ func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *p
 // blockUpdater is the goroutine for keep update mining block
 func (m *MiningPool) blockUpdater() {
 	ticker := time.NewTicker(time.Millisecond * blockUpdateMS)
-	for _ = range ticker.C {
-		m.generateBlock()
+	for {
+		select {
+		case <-ticker.C:
+			m.generateBlock()
+
+		case submitMsg := <-m.submitCh:
+			err := m.submitWork(submitMsg.blockHeader)
+			if err != nil {
+				m.generateBlock()
+			}
+			submitMsg.reply <- err
+		}
 	}
 }
 
@@ -75,8 +91,14 @@ func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
 	return nil, errors.New("no block is ready for mining")
 }
 
-// SubmitWork will try to submit the result to the blockchain
 func (m *MiningPool) SubmitWork(bh *types.BlockHeader) error {
+	reply := make(chan error, 1)
+	m.submitCh <- &submitBlockMsg{blockHeader: bh, reply: reply}
+	return <-reply
+}
+
+// SubmitWork will try to submit the result to the blockchain
+func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
