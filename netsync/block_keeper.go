@@ -23,6 +23,7 @@ const (
 
 	maxBlocksPending = 1024
 	maxtxsPending    = 32768
+	maxQuitReq       = 256
 )
 
 var (
@@ -38,20 +39,20 @@ type BlockRequestMessage struct {
 }
 
 type pendingResponse struct {
-	block *types.Block
-	src   *p2p.Peer
+	block  *types.Block
+	peerID string
 }
 
 type txsNotify struct {
-	tx  *types.Tx
-	src *p2p.Peer
+	tx     *types.Tx
+	peerID string
 }
 
 //TODO: add retry mechanism
 type blockKeeper struct {
 	chain *protocol.Chain
 	sw    *p2p.Switch
-	peers map[string]*blockKeeperPeer
+	peers *peerSet
 
 	pendingProcessCh chan *pendingResponse
 	txsProcessCh     chan *txsNotify
@@ -60,177 +61,83 @@ type blockKeeper struct {
 	mtx sync.RWMutex
 }
 
-func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch) *blockKeeper {
+func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet) *blockKeeper {
 	bk := &blockKeeper{
 		chain:            chain,
 		sw:               sw,
-		peers:            make(map[string]*blockKeeperPeer),
+		peers:            peers,
 		pendingProcessCh: make(chan *pendingResponse, maxBlocksPending),
 		txsProcessCh:     make(chan *txsNotify, maxtxsPending),
-		quitReqBlockCh:   make(chan *string),
+		quitReqBlockCh:   make(chan *string, maxQuitReq),
 	}
 	go bk.txsProcessWorker()
 	return bk
 }
 
-func (bk *blockKeeper) AddBlock(block *types.Block, src *p2p.Peer) {
-	bk.pendingProcessCh <- &pendingResponse{block: block, src: src}
+func (bk *blockKeeper) AddBlock(block *types.Block, peerID string) {
+	bk.pendingProcessCh <- &pendingResponse{block: block, peerID: peerID}
 }
 
-func (bk *blockKeeper) AddTX(tx *types.Tx, src *p2p.Peer) {
-	bk.txsProcessCh <- &txsNotify{tx: tx, src: src}
+func (bk *blockKeeper) AddTX(tx *types.Tx, peerID string) {
+	bk.txsProcessCh <- &txsNotify{tx: tx, peerID: peerID}
 }
 
 func (bk *blockKeeper) IsCaughtUp() bool {
 	bk.mtx.RLock()
 	defer bk.mtx.RUnlock()
-	_, height := bk.BestPeer()
+	_, height := bk.peers.BestPeer()
 	return bk.chain.Height() < height
 }
 
 func (bk *blockKeeper) RemovePeer(peerID string) {
 	bk.mtx.Lock()
-	delete(bk.peers, peerID)
+	delete(bk.peers.peers, peerID)
 	bk.mtx.Unlock()
 	log.WithField("ID", peerID).Info("Delete peer from blockKeeper")
 	bk.quitReqBlockCh <- &peerID
 }
 
-func (bk *blockKeeper) AddPeer(peer *p2p.Peer) {
-	bk.mtx.Lock()
-	defer bk.mtx.Unlock()
-
-	if tmp := bk.peers[peer.Key]; tmp == nil {
-		keeperPeer := newBlockKeeperPeer(0, nil)
-		bk.peers[peer.Key] = keeperPeer
-		bk.peers[peer.Key].peer = peer
-		log.WithFields(log.Fields{"ID": peer.Key}).Info("Add new peer to blockKeeper")
-		return
+func (bk *blockKeeper) BroadcastTx(tx *types.Tx) error {
+	msg, err := NewTransactionNotifyMessage(tx)
+	if err != nil {
+		return errors.New("Failed construction tx msg")
 	}
-	log.WithField("ID", peer.Key).Warning("Add existing peer to blockKeeper")
-}
-
-func (bk *blockKeeper) SetPeerHeight(peerID string, height uint64, hash *bc.Hash) {
-	bk.mtx.Lock()
-	defer bk.mtx.Unlock()
-
-	if peer, ok := bk.peers[peerID]; ok {
-		peer.SetStatus(height, hash)
-	}
-}
-
-func (bk *blockKeeper) BestPeer() (*p2p.Peer, uint64) {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	var bestPeer *p2p.Peer
-	var bestHeight uint64
-
-	for _, p := range bk.peers {
-		if bestPeer == nil || p.height > bestHeight {
-			bestPeer, bestHeight = p.peer, p.height
-		}
-	}
-
-	return bestPeer, bestHeight
-}
-
-// MarkTransaction marks a transaction as known for the peer, ensuring that it
-// will never be propagated to this particular peer.
-func (bk *blockKeeper) MarkTransaction(peerID string, hash [32]byte) error {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	bkPeer := bk.peers[peerID]
-	if bkPeer == nil {
-		return errors.New("Can't find block keeper peer.")
-	}
-
-	bkPeer.MarkTransaction(hash)
-	return nil
-}
-
-// MarkBlock marks a block as known for the peer, ensuring that the block will
-// never be propagated to this particular peer.
-func (bk *blockKeeper) MarkBlock(peerID string, hash [32]byte) error {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	bkPeer := bk.peers[peerID]
-	if bkPeer == nil {
-		return errors.New("Can't find block keeper peer.")
-	}
-
-	bkPeer.MarkBlock(hash)
-	return nil
-}
-
-// PeersWithoutTx retrieves a list of peers that do not have a given transaction
-// in their set of known hashes.
-func (bk *blockKeeper) PeersWithoutTx(hash [32]byte) []*p2p.Peer {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	list := make([]*p2p.Peer, 0, len(bk.peers))
-	for _, p := range bk.peers {
-		if !p.knownTxs.Has(hash) {
-			list = append(list, p.peer)
-		}
-	}
-	return list
-}
-
-// PeersWithoutBlock retrieves a list of peers that do not have a given block in
-// their set of known hashes.
-func (bk *blockKeeper) PeersWithoutBlock(hash [32]byte) []*p2p.Peer {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
-
-	list := make([]*p2p.Peer, 0, len(bk.peers))
-	for _, p := range bk.peers {
-		if !p.knownBlocks.Has(hash) {
-			list = append(list, p.peer)
-		}
-	}
-	return list
-}
-
-func (bk *blockKeeper) requestBlockByHash(peerID string, hash *bc.Hash) error {
-	bkPeer := bk.peers[peerID]
-	if bkPeer == nil {
-		return errors.New("Can't find block keeper peer.")
-	}
-	if err := bkPeer.requestBlockByHash(hash); err != nil {
-		return err
+	peers := bk.peers.PeersWithoutTx(tx.ID.Byte32())
+	for _, peer := range peers {
+		bk.peers.peers[peer.Key].MarkTransaction(tx.ID.Byte32())
+		peer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	}
 	return nil
 }
 
-func (bk *blockKeeper) requestBlockByHeight(peerID string, height uint64) error {
-	bkPeer := bk.peers[peerID]
-	if bkPeer == nil {
-		return errors.New("Can't find block keeper peer.")
+func (bk *blockKeeper) BroadcastMinedBlock(block *types.Block) error {
+	msg, err := NewMinedBlockMessage(block)
+	if err != nil {
+		return errors.New("Failed construction block msg")
 	}
-	if err := bkPeer.requestBlockByHeight(height); err != nil {
-		return err
+	peers := bk.peers.PeersWithoutBlock(block.Hash().Byte32())
+	for _, peer := range peers {
+		bk.peers.MarkBlock(peer.Key, block.Hash().Byte32())
+		peer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	}
 	return nil
 }
 
-func (bk *blockKeeper) BlockRequestWorker(peer *p2p.Peer, maxPeerHeight uint64) error {
+func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) error {
 	chainHeight := bk.chain.Height()
 	isOrphan := false
 	var hash *bc.Hash
 	for num := chainHeight + 1; num <= maxPeerHeight; {
-		block, err := bk.BlockRequest(peer.Key, num, hash, isOrphan)
+		//orphanHeight :=
+		block, err := bk.BlockRequest(peerID, num, hash, isOrphan)
 		if errors.Root(err) == errPeerDropped || errors.Root(err) == errGetBlockTimeout {
-			log.WithField("Peer abnormality. PeerID: ", peer.Key).Info(err)
+			log.WithField("Peer abnormality. PeerID: ", peerID).Info(err)
 			return errCommAbnorm
 		}
 
 		isOrphan, err = bk.chain.ProcessBlock(block)
 		if err != nil {
-			bk.sw.AddScamPeer(peer)
+			bk.sw.AddScamPeer(bk.peers.Peer(peerID).getPeer())
 			log.WithField("hash: ", block.Hash()).Errorf("blockKeeper fail process block %v", err)
 			return errScamPeer
 		}
@@ -245,15 +152,14 @@ func (bk *blockKeeper) BlockRequestWorker(peer *p2p.Peer, maxPeerHeight uint64) 
 
 func (bk *blockKeeper) blockRequest(peerID string, height uint64, hash *bc.Hash, isOrphan bool) {
 	if isOrphan == true {
-		bk.requestBlockByHash(peerID, hash)
+		bk.peers.requestBlockByHash(peerID, hash)
 	} else {
-		bk.requestBlockByHeight(peerID, height)
+		bk.peers.requestBlockByHeight(peerID, height)
 	}
 }
 
 func (bk *blockKeeper) BlockRequest(peerID string, height uint64, hash *bc.Hash, isOrphan bool) (*types.Block, error) {
 	var block *types.Block
-	var srcPeer *p2p.Peer
 
 	bk.blockRequest(peerID, height, hash, isOrphan)
 	retryTicker := time.Tick(requestRetryTicker)
@@ -262,9 +168,8 @@ func (bk *blockKeeper) BlockRequest(peerID string, height uint64, hash *bc.Hash,
 	for {
 		select {
 		case pendingResponse := <-bk.pendingProcessCh:
-			srcPeer = pendingResponse.src
 			block = pendingResponse.block
-			if strings.Compare(srcPeer.Key, peerID) != 0 {
+			if strings.Compare(pendingResponse.peerID, peerID) != 0 {
 				log.Warning("From different peer")
 				continue
 			}
@@ -295,9 +200,9 @@ func (bk *blockKeeper) BlockRequest(peerID string, height uint64, hash *bc.Hash,
 func (bk *blockKeeper) txsProcessWorker() {
 	for txsResponse := range bk.txsProcessCh {
 		tx := txsResponse.tx
-		bk.MarkTransaction(txsResponse.src.Key, tx.ID.Byte32())
+		bk.peers.MarkTransaction(txsResponse.peerID, tx.ID.Byte32())
 		if err := bk.chain.ValidateTx(tx); err != nil {
-			bk.sw.AddScamPeer(txsResponse.src)
+			bk.sw.AddScamPeer(bk.peers.Peer(txsResponse.peerID).getPeer())
 		}
 	}
 }

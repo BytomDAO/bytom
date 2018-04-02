@@ -28,6 +28,7 @@ type SyncManager struct {
 	txPool      *core.TxPool
 	fetcher     *fetcher.Fetcher
 	blockKeeper *blockKeeper
+	peers       *peerSet
 
 	newBlockCh    chan *bc.Hash
 	newPeerCh     chan struct{}
@@ -45,6 +46,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		config:     config,
 		quitSync:   make(chan struct{}),
 		newBlockCh: newBlockCh,
+		peers:      newPeerSet(),
 	}
 
 	heighter := func() uint64 {
@@ -61,8 +63,9 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 
 	manager.sw = p2p.NewSwitch(config.P2P, trustHistoryDB)
 
-	protocolReactor := NewProtocalReactor(chain, txPool, manager.sw, manager.fetcher)
-	manager.blockKeeper = protocolReactor.blockKeeper
+	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers)
+
+	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 	manager.newPeerCh = protocolReactor.GetNewPeerChan()
 
@@ -193,29 +196,15 @@ func (self *SyncManager) minedBroadcastLoop() {
 
 // BroadcastTransaction broadcats `BlockStore` transaction.
 func (self *SyncManager) BroadcastTx(tx *types.Tx) {
-	msg, err := NewTransactionNotifyMessage(tx)
-	if err != nil {
-		log.Errorf("Failed on broadcast tx %v", err)
-		return
-	}
-	peers := self.blockKeeper.PeersWithoutTx(tx.ID.Byte32())
-	for _, peer := range peers {
-		self.blockKeeper.MarkTransaction(peer.Key, tx.ID.Byte32())
-		peer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	if err := self.blockKeeper.BroadcastTx(tx); err != nil {
+		log.Errorf("SyncManager: failed on broadcast tx: %v", err)
 	}
 }
 
 // BroadcastBlock will  propagate a block to it's peers.
 func (self *SyncManager) BroadcastMinedBlock(block *types.Block) {
-	msg, err := NewMinedBlockMessage(block)
-	if err != nil {
-		log.Errorf("Failed on mined broadcast mined block %v", err)
-		return
-	}
-	peers := self.blockKeeper.PeersWithoutBlock(block.Hash().Byte32())
-	for _, peer := range peers {
-		self.blockKeeper.MarkBlock(peer.Key, block.Hash().Byte32())
-		peer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	if err := self.blockKeeper.BroadcastMinedBlock(block); err != nil {
+		log.Errorf("SyncManager: failed on broadcast mined block: %v", err)
 	}
 }
 
@@ -225,6 +214,10 @@ func (self *SyncManager) NodeInfo() *p2p.NodeInfo {
 
 func (self *SyncManager) BlockKeeper() *blockKeeper {
 	return self.blockKeeper
+}
+
+func (self *SyncManager) Peers() *peerSet {
+	return self.peers
 }
 
 func (self *SyncManager) DialSeeds(seeds []string) error {

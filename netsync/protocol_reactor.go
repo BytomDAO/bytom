@@ -19,14 +19,13 @@ import (
 
 const (
 	// BlockchainChannel is a channel for blocks and status updates
-	BlockchainChannel         = byte(0x40)
-	protocolHandshakeTimeout  = time.Second * 10
+	BlockchainChannel        = byte(0x40)
+	protocolHandshakeTimeout = time.Second * 10
 )
 
 var (
-	ErrProtocalHandshakeTimeout = errors.New("Protocal handshake timeout")
+	ErrProtocolHandshakeTimeout = errors.New("Protocal handshake timeout")
 )
-
 
 // Response describes the response standard.
 type Response struct {
@@ -42,7 +41,7 @@ type initalPeerStatus struct {
 }
 
 //ProtocalReactor handles long-term catchup syncing.
-type ProtocalReactor struct {
+type ProtocolReactor struct {
 	p2p.BaseReactor
 
 	chain       *protocol.Chain
@@ -50,28 +49,30 @@ type ProtocalReactor struct {
 	txPool      *protocol.TxPool
 	sw          *p2p.Switch
 	fetcher     *fetcher.Fetcher
+	peers       *peerSet
 
 	newPeerCh    chan struct{}
 	peerStatusCh chan *initalPeerStatus
 }
 
-// NewProtocalReactor returns the reactor of whole blockchain.
-func NewProtocalReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, fetcher *fetcher.Fetcher) *ProtocalReactor {
-	pr := &ProtocalReactor{
+// NewProtocolReactor returns the reactor of whole blockchain.
+func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, blockPeer *blockKeeper, fetcher *fetcher.Fetcher, peers *peerSet) *ProtocolReactor {
+	pr := &ProtocolReactor{
 		chain:        chain,
-		blockKeeper:  newBlockKeeper(chain, sw),
+		blockKeeper:  blockPeer,
 		txPool:       txPool,
 		sw:           sw,
 		fetcher:      fetcher,
+		peers:        peers,
 		newPeerCh:    make(chan struct{}),
 		peerStatusCh: make(chan *initalPeerStatus),
 	}
-	pr.BaseReactor = *p2p.NewBaseReactor("ProtocalReactor", pr)
+	pr.BaseReactor = *p2p.NewBaseReactor("ProtocolReactor", pr)
 	return pr
 }
 
 // GetChannels implements Reactor
-func (pr *ProtocalReactor) GetChannels() []*p2p.ChannelDescriptor {
+func (pr *ProtocolReactor) GetChannels() []*p2p.ChannelDescriptor {
 	return []*p2p.ChannelDescriptor{
 		&p2p.ChannelDescriptor{
 			ID:                BlockchainChannel,
@@ -82,47 +83,47 @@ func (pr *ProtocalReactor) GetChannels() []*p2p.ChannelDescriptor {
 }
 
 // GetChannels implements Reactor
-func (pr *ProtocalReactor) GetNewPeerChan() chan struct{} {
+func (pr *ProtocolReactor) GetNewPeerChan() chan struct{} {
 	return pr.newPeerCh
 }
 
 // OnStart implements BaseService
-func (pr *ProtocalReactor) OnStart() error {
+func (pr *ProtocolReactor) OnStart() error {
 	pr.BaseReactor.OnStart()
 	return nil
 }
 
 // OnStop implements BaseService
-func (pr *ProtocalReactor) OnStop() {
+func (pr *ProtocolReactor) OnStop() {
 	pr.BaseReactor.OnStop()
 }
 
 // AddPeer implements Reactor by sending our state to peer.
-func (pr *ProtocalReactor) AddPeer(peer *p2p.Peer) error {
+func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}})
 	handshakeWait := time.NewTimer(protocolHandshakeTimeout)
 	for {
 		select {
 		case status := <-pr.peerStatusCh:
 			if strings.Compare(status.peerID, peer.Key) == 0 {
-				pr.blockKeeper.AddPeer(peer)
-				pr.blockKeeper.SetPeerHeight(status.peerID, status.height, status.hash)
+				pr.peers.AddPeer(peer)
+				pr.peers.SetPeerStatus(status.peerID, status.height, status.hash)
 				pr.newPeerCh <- struct{}{}
 				return nil
 			}
 		case <-handshakeWait.C:
-			return ErrProtocalHandshakeTimeout
+			return ErrProtocolHandshakeTimeout
 		}
 	}
 }
 
 // RemovePeer implements Reactor by removing peer from the pool.
-func (pr *ProtocalReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
+func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
 	pr.blockKeeper.RemovePeer(peer.Key)
 }
 
 // Receive implements Reactor by handling 4 types of messages (look below).
-func (pr *ProtocalReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
+func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	var tm *trust.TrustMetric
 	key := src.Connection().RemoteAddress.IP.String()
 	if tm = pr.sw.TrustMetricStore.GetPeerTrustMetric(key); tm == nil {
@@ -159,7 +160,7 @@ func (pr *ProtocalReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 
 	case *BlockResponseMessage:
 		log.Info("BlockResponseMessage height:", msg.GetBlock().Height)
-		pr.blockKeeper.AddBlock(msg.GetBlock(), src)
+		pr.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
 
 	case *StatusRequestMessage:
 		block := pr.chain.BestBlock()
@@ -179,7 +180,7 @@ func (pr *ProtocalReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 			log.Errorf("Error decoding new tx %v", err)
 			return
 		}
-		pr.blockKeeper.AddTX(tx,src)
+		pr.blockKeeper.AddTX(tx, src.Key)
 
 	case *MineBlockMessage:
 		block, err := msg.GetMineBlock()
@@ -188,13 +189,12 @@ func (pr *ProtocalReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 			return
 		}
 		// Mark the peer as owning the block and schedule it for import
-		pr.blockKeeper.MarkBlock(src.Key, block.Hash().Byte32())
+		pr.peers.MarkBlock(src.Key, block.Hash().Byte32())
 		pr.fetcher.Enqueue(src.Key, block)
 		hash := block.Hash()
-		pr.blockKeeper.peers[src.Key].SetStatus(block.Height, &hash)
+		pr.peers.SetPeerStatus(src.Key, block.Height, &hash)
 
 	default:
 		log.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
 	}
 }
-

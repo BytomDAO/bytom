@@ -21,8 +21,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/bytom/p2p"
 )
 
 const (
@@ -50,11 +48,11 @@ func (self *SyncManager) syncer() {
 			if self.sw.Peers().Size() < minDesiredPeerCount {
 				break
 			}
-			go self.synchronise(self.blockKeeper.BestPeer())
+			go self.synchronise()
 
 		case <-forceSync.C:
 			// Force a sync even if not enough peers are present
-			go self.synchronise(self.blockKeeper.BestPeer())
+			go self.synchronise()
 
 		case <-self.quitSync:
 			return
@@ -63,20 +61,20 @@ func (self *SyncManager) syncer() {
 }
 
 // synchronise tries to sync up our local block chain with a remote peer.
-func (self *SyncManager) synchronise(peer *p2p.Peer, bestHeight uint64) {
+func (self *SyncManager) synchronise() {
+	// Make sure only one goroutine is ever allowed past this point at once
+	if !atomic.CompareAndSwapInt32(&self.synchronising, 0, 1) {
+		log.Info("Synchronising ...")
+		return
+	}
+	defer atomic.StoreInt32(&self.synchronising, 0)
+
+	peer, bestHeight := self.peers.BestPeer()
 	// Short circuit if no peers are available
 	if peer == nil {
 		return
 	}
-
 	if bestHeight > self.chain.Height() {
-		// Make sure only one goroutine is ever allowed past this point at once
-		if !atomic.CompareAndSwapInt32(&self.synchronising, 0, 1) {
-			log.Info("Synchronising ...")
-			return
-		}
-		defer atomic.StoreInt32(&self.synchronising, 0)
-
-		self.blockKeeper.BlockRequestWorker(peer, self.blockKeeper.peers[peer.Key].height)
+		self.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
 	}
 }

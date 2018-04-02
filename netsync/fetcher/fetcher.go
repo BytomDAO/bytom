@@ -19,7 +19,6 @@ package fetcher
 
 import (
 	"errors"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
@@ -29,12 +28,8 @@ import (
 )
 
 const (
-	arriveTimeout = 500 * time.Millisecond // Time allowance before an announced block is explicitly requested
-	gatherSlack   = 100 * time.Millisecond // Interval used to collate almost-expired announces with fetches
-	maxUncleDist  = 7                      // Maximum allowed backward distance from the chain head
-	maxQueueDist  = 1024                   //32 // Maximum allowed distance from the chain head to queue
-	hashLimit     = 256                    // Maximum number of unique blocks a peer may have announced
-	blockLimit    = 64                     // Maximum number of unique blocks a peer may have delivered
+	maxUncleDist = 7    // Maximum allowed backward distance from the chain head
+	maxQueueDist = 1024 //32 // Maximum allowed distance from the chain head to queue
 )
 
 var (
@@ -187,31 +182,16 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 // block's number is at the same height as the current import phase, it updates
 // the phase states accordingly.
 func (f *Fetcher) insert(peer string, block *types.Block) {
-	hash := block.Hash()
-
 	// Run the import on a new thread
-	log.Info("Importing propagated block", "peer", peer, "number", block.Height, "hash", hash)
-	go func() {
-		// If the parent's unknown, abort insertion
-		parent, err := f.getBlock(&block.PreviousBlockHash)
-		if err != nil {
-			log.Info("Unknown parent of propagated block", "peer", peer, "number", block.Height, "hash", hash, "parent", block.PreviousBlockHash.String())
-			return
-		}
-		if parent == nil {
-			log.Info("Unknown parent of propagated block", "peer", peer, "number", block.Height, "hash", hash, "parent", block.PreviousBlockHash.String())
-			return
-		}
-
-		// Run the actual import and log any issues
-		if _, err := f.insertChain(block); err != nil {
-			log.Info("Propagated block import failed", "peer", peer, "number", block.Height, "hash", hash, "err", err)
-			return
-		}
-		// If import succeeded, broadcast the block
-		log.Info("success insert block from cache. height:", block.Height)
-		go f.broadcastBlock(block)
-	}()
+	log.Info("Importing propagated block", "peer", peer, "number", block.Height, "hash", block.Hash())
+	// Run the actual import and log any issues
+	if _, err := f.insertChain(block); err != nil {
+		log.Info("Propagated block import failed", "peer", peer, "number", block.Height, "hash", block.Hash(), "err", err)
+		return
+	}
+	// If import succeeded, broadcast the block
+	log.Info("success insert block from cache. height:", block.Height)
+	go f.broadcastBlock(block)
 }
 
 // forgetBlock removes all traces of a queued block from the fetcher's internal

@@ -17,7 +17,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 		PeerCount:    len(a.sync.Switch().Peers().List()),
 		CurrentBlock: a.chain.Height(),
 	}
-	_, info.HighestBlock = a.sync.BlockKeeper().BestPeer()
+	_, info.HighestBlock = a.sync.Peers().BestPeer()
 	if info.CurrentBlock > info.HighestBlock {
 		info.HighestBlock = info.CurrentBlock
 	}
