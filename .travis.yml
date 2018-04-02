@@ -17,5 +17,4 @@ branches:
         - dev
 
 script:
-    - cd $HOME/gopath/src/github.com/Bytom/bytom/
     - make
