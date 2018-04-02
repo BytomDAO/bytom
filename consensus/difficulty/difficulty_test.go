@@ -108,62 +108,82 @@ func TestHashToBig(t *testing.T) {
 	}
 }
 
-func TestCompactToBig(t *testing.T) {
-	cases := []struct {
-		BStrCompact 	string
-		expect			int64
+// func TestCompactToBig(t *testing.T) {
+// 	cases := []struct {
+// 		BStrCompact 	string
+// 		expect			int64
+// 	}{
+// 		{
+// 			BStrCompact:	`00000011` + //Exponent
+// 							`0` + //Sign
+// 							`0000000000000000000000000000000000000000000000000000000`, //Mantissa
+// 			expect:	 		0,
+// 		},
+// 		{
+// 			BStrCompact:	`00000011` + //Exponent
+// 							`1` + //Sign
+// 							`0000000000000000000000000000000000000000000000000000000`, //Mantissa
+// 			expect:	 		0,
+// 		},
+// 		{
+// 			BStrCompact:	`00000011` + //Exponent
+// 							`0` + //Sign
+// 							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+// 			expect:	 		1,
+// 		},
+// 		{
+// 			BStrCompact:	`00000011` + //Exponent
+// 							`1` + //Sign
+// 							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+// 			expect:	 		-1,
+// 		},
+// 		{
+// 			BStrCompact:	`00000100` + //Exponent
+// 							`0` + //Sign
+// 							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+// 			expect:	 		256,
+// 		},
+// 		{
+// 			BStrCompact:	`00000100` + //Exponent
+// 							`1` + //Sign
+// 							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+// 			expect:	 		-256,
+// 		},
+// 		{
+// 			BStrCompact:	`00001010` + //Exponent
+// 							`0` + //Sign
+// 							`0000000000000000000000000000000000000000000000010000000`, //Mantissa
+// 			expect:	 		0x7fffffffffffffff,
+// 		},
+// 	}
+
+// 	for i, c := range cases {
+// 		compact, _ := strconv.ParseUint(c.BStrCompact, 2, 64)
+
+// 		result := CompactToBig(compact).Int64()
+
+// 		if result != c.expect {
+// 			t.Errorf("case %d: content mismatch:\n\tgeting\t\t0x%016x\n\texpecting\t0x%016x", i, result, c.expect)
+// 		}
+// 	}
+// }
+
+func TestBigToCompact(t *testing.T) {
+	tests := []struct {
+		in  int64
+		out uint64
 	}{
-		{
-			BStrCompact:	`00000011` + //Exponent
-							`0` + //Sign
-							`0000000000000000000000000000000000000000000000000000000`, //Mantissa
-			expect:	 		0,
-		},
-		{
-			BStrCompact:	`00000011` + //Exponent
-							`1` + //Sign
-							`0000000000000000000000000000000000000000000000000000000`, //Mantissa
-			expect:	 		0,
-		},
-		{
-			BStrCompact:	`00000011` + //Exponent
-							`0` + //Sign
-							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-			expect:	 		1,
-		},
-		{
-			BStrCompact:	`00000011` + //Exponent
-							`1` + //Sign
-							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-			expect:	 		-1,
-		},
-		{
-			BStrCompact:	`00000100` + //Exponent
-							`0` + //Sign
-							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-			expect:	 		256,
-		},
-		{
-			BStrCompact:	`00000100` + //Exponent
-							`1` + //Sign
-							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-			expect:	 		-256,
-		},
-		{
-			BStrCompact:	`00001010` + //Exponent
-							`0` + //Sign
-							`0000000000000000000000000000000000000000000000010000000`, //Mantissa
-			expect:	 		0x7fffffffffffffff,
-		},
+		{0, 2161727821138738707},
+		{-1, 2161727821138738707},
 	}
 
-	for i, c := range cases {
-		compact, _ := strconv.ParseUint(c.BStrCompact, 2, 64)
-
-		result := CompactToBig(compact).Int64()
-
-		if result != c.expect {
-			t.Errorf("case %d: content mismatch:\n\tgeting\t\t0x%016x\n\texpecting\t0x%016x", i, result, c.expect)
+	for x, test := range tests {
+		n := big.NewInt(test.in)
+		r := BigToCompact(n)
+		if r != test.out {
+			t.Errorf("TestBigToCompact test #%d failed: got %d want %d\n",
+				x, r, test.out)
+			return
 		}
 	}
 }
