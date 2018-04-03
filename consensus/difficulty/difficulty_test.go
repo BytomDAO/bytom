@@ -112,62 +112,58 @@ func TestHashToBig(t *testing.T) {
 func TestCompactToBig(t *testing.T) {
 	cases := []struct {
 		in 	string
-		out	big.Int
+		out	*big.Int
 	}{
 		{
 			in:		`00000011` + //Exponent
 					`0` + //Sign
 					`0000000000000000000000000000000000000000000000000000000`, //Mantissa
-			out:	*big.NewInt(0),
+			out:	big.NewInt(0),
 		},
 		{
 			in:		`00000011` + //Exponent
 					`1` + //Sign
 					`0000000000000000000000000000000000000000000000000000000`, //Mantissa
-			out:	*big.NewInt(0),
+			out:	big.NewInt(0),
 		},
 		{
 			in:	`	00000011` + //Exponent
 					`0` + //Sign
 					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-			out:	*big.NewInt(1),
+			out:	big.NewInt(1),
 		},
 		{
 			in:		`00000011` + //Exponent
 					`1` + //Sign
 					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-			out:	*big.NewInt(-1),
+			out:	big.NewInt(-1),
 		},
 		{
 			in:		`00000100` + //Exponent
 					`0` + //Sign
 					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-			out:	*big.NewInt(256),
+			out:	big.NewInt(256),
 		},
 		{
 			in:		`00000100` + //Exponent
 					`1` + //Sign
 					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-			out:	*big.NewInt(-256),
+			out:	big.NewInt(-256),
 		},
 		{
 			in:		`00001010` + //Exponent
 					`0` + //Sign
 					`0000000000000000000000000000000000000000000000010000000`, //Mantissa
-			out:	*big.NewInt(0x7fffffffffffffff),
+			out:	big.NewInt(0x7fffffffffffffff),
 		},
 	}
 
 	for i, c := range cases {
 		compact, _ := strconv.ParseUint(c.in, 2, 64)
 
-		r := *CompactToBig(compact)
+		r := CompactToBig(compact)
 
-		// if result != c.out {
-		// 	t.Errorf("case %d: content mismatch:\n\tgeting\t\t0x%016x\n\touting\t0x%016x", i, result, c.out)
-		// }
-
-		if r != c.out {
+		if r.Cmp(c.out) != 0 {
 			t.Error("TestBigToCompact test #", i, "failed: got", r, "want", c.out)
 			return
 		}
