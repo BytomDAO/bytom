@@ -14,7 +14,7 @@ import (
 
 var (
 	baseDir      = filepath.Join(".", "testdata")
-	stateTestDir = filepath.Join(baseDir, "state_tests")
+	walletTestDir = filepath.Join(baseDir, "wallet_tests")
 	chainTestDir = filepath.Join(baseDir, "chain_tests")
 )
 
