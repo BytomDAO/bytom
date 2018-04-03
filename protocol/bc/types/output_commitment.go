@@ -10,8 +10,7 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
-// OutputCommitment contains the commitment data for a transaction
-// output (which also appears in the spend input of that output).
+// OutputCommitment contains the commitment data for a transaction output.
 type OutputCommitment struct {
 	bc.AssetAmount
 	VMVersion      uint64
