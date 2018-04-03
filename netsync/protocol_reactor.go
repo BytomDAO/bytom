@@ -9,7 +9,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/netsync/fetcher"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol"
@@ -48,24 +47,26 @@ type ProtocolReactor struct {
 	blockKeeper *blockKeeper
 	txPool      *protocol.TxPool
 	sw          *p2p.Switch
-	fetcher     *fetcher.Fetcher
+	fetcher     *Fetcher
 	peers       *peerSet
 
-	newPeerCh    chan struct{}
-	peerStatusCh chan *initalPeerStatus
+	newPeerCh      chan struct{}
+	quitReqBlockCh chan *string
+	peerStatusCh   chan *initalPeerStatus
 }
 
 // NewProtocolReactor returns the reactor of whole blockchain.
-func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, blockPeer *blockKeeper, fetcher *fetcher.Fetcher, peers *peerSet) *ProtocolReactor {
+func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, blockPeer *blockKeeper, fetcher *Fetcher, peers *peerSet, newPeerCh chan struct{}, quitReqBlockCh chan *string) *ProtocolReactor {
 	pr := &ProtocolReactor{
-		chain:        chain,
-		blockKeeper:  blockPeer,
-		txPool:       txPool,
-		sw:           sw,
-		fetcher:      fetcher,
-		peers:        peers,
-		newPeerCh:    make(chan struct{}),
-		peerStatusCh: make(chan *initalPeerStatus),
+		chain:          chain,
+		blockKeeper:    blockPeer,
+		txPool:         txPool,
+		sw:             sw,
+		fetcher:        fetcher,
+		peers:          peers,
+		newPeerCh:      newPeerCh,
+		quitReqBlockCh: quitReqBlockCh,
+		peerStatusCh:   make(chan *initalPeerStatus),
 	}
 	pr.BaseReactor = *p2p.NewBaseReactor("ProtocolReactor", pr)
 	return pr
@@ -80,11 +81,6 @@ func (pr *ProtocolReactor) GetChannels() []*p2p.ChannelDescriptor {
 			SendQueueCapacity: 100,
 		},
 	}
-}
-
-// GetChannels implements Reactor
-func (pr *ProtocolReactor) GetNewPeerChan() chan struct{} {
-	return pr.newPeerCh
 }
 
 // OnStart implements BaseService
@@ -119,7 +115,8 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 
 // RemovePeer implements Reactor by removing peer from the pool.
 func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
-	pr.blockKeeper.RemovePeer(peer.Key)
+	pr.quitReqBlockCh <- &peer.Key
+	pr.peers.RemovePeer(peer.Key)
 }
 
 // Receive implements Reactor by handling 4 types of messages (look below).
@@ -180,7 +177,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 			log.Errorf("Error decoding new tx %v", err)
 			return
 		}
-		pr.blockKeeper.AddTX(tx, src.Key)
+		pr.blockKeeper.AddTx(tx, src.Key)
 
 	case *MineBlockMessage:
 		block, err := msg.GetMineBlock()
@@ -189,9 +186,9 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 			return
 		}
 		// Mark the peer as owning the block and schedule it for import
-		pr.peers.MarkBlock(src.Key, block.Hash().Byte32())
-		pr.fetcher.Enqueue(src.Key, block)
 		hash := block.Hash()
+		pr.peers.MarkBlock(src.Key, &hash)
+		pr.fetcher.Enqueue(src.Key, block)
 		pr.peers.SetPeerStatus(src.Key, block.Height, &hash)
 
 	default:

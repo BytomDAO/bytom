@@ -15,7 +15,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package fetcher contains the block announcement based synchronisation.
-package fetcher
+package netsync
 
 import (
 	"errors"
@@ -23,6 +23,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
+	"github.com/bytom/p2p"
+	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -36,21 +38,6 @@ var (
 	errTerminated = errors.New("terminated")
 )
 
-// blockRetrievalFn is a callback type for retrieving a block from the local chain.
-type blockRetrievalFn func(hash *bc.Hash) (*types.Block, error)
-
-// blockBroadcasterFn is a callback type for broadcasting a block to connected peers.
-type blockBroadcasterFn func(block *types.Block)
-
-// chainHeightFn is a callback type to retrieve the current chain height.
-type chainHeightFn func() uint64
-
-// chainInsertFn is a callback type to insert a batch of blocks into the local chain.
-type chainInsertFn func(block *types.Block) (bool, error)
-
-// peerDropFn is a callback type for dropping a peer detected as malicious.
-type peerDropFn func(id string)
-
 // inject represents a schedules import operation.
 type inject struct {
 	origin string
@@ -60,6 +47,10 @@ type inject struct {
 // Fetcher is responsible for accumulating block announcements from various peers
 // and scheduling them for retrieval.
 type Fetcher struct {
+	chain *core.Chain
+	sw    *p2p.Switch
+	peers *peerSet
+
 	// Various event channels
 	inject chan *inject
 	quit   chan struct{}
@@ -68,28 +59,19 @@ type Fetcher struct {
 	queue  *prque.Prque        // Queue containing the import operations (block number sorted)
 	queues map[string]int      // Per peer block counts to prevent memory exhaustion
 	queued map[bc.Hash]*inject // Set of already queued blocks (to dedup imports)
-
-	// Callbacks
-	getBlock       blockRetrievalFn   // Retrieves a block from the local chain
-	broadcastBlock blockBroadcasterFn // Broadcasts a block to connected peers
-	chainHeight    chainHeightFn      // Retrieves the current chain's height
-	insertChain    chainInsertFn      // Injects a batch of blocks into the chain
-	dropPeer       peerDropFn         // Drops a peer for misbehaving
 }
 
 // New creates a block fetcher to retrieve blocks based on hash announcements.
-func New(getBlock blockRetrievalFn /*verifyHeader headerVerifierFn,*/, broadcastBlock blockBroadcasterFn, chainHeight chainHeightFn, insertChain chainInsertFn, dropPeer peerDropFn) *Fetcher {
+func NewFetcher(chain *core.Chain, sw *p2p.Switch, peers *peerSet) *Fetcher {
 	return &Fetcher{
-		inject:         make(chan *inject),
-		quit:           make(chan struct{}),
-		queue:          prque.New(),
-		queues:         make(map[string]int),
-		queued:         make(map[bc.Hash]*inject),
-		getBlock:       getBlock,
-		broadcastBlock: broadcastBlock,
-		chainHeight:    chainHeight,
-		insertChain:    insertChain,
-		dropPeer:       dropPeer,
+		chain:  chain,
+		sw:     sw,
+		peers:  peers,
+		inject: make(chan *inject),
+		quit:   make(chan struct{}),
+		queue:  prque.New(),
+		queues: make(map[string]int),
+		queued: make(map[bc.Hash]*inject),
 	}
 }
 
@@ -124,7 +106,7 @@ func (f *Fetcher) Enqueue(peer string, block *types.Block) error {
 func (f *Fetcher) loop() {
 	for {
 		// Import any queued blocks that could potentially fit
-		height := f.chainHeight()
+		height := f.chain.Height()
 		for !f.queue.Empty() {
 			op := f.queue.PopItem().(*inject)
 			// If too high up the chain or phase, continue later
@@ -135,7 +117,7 @@ func (f *Fetcher) loop() {
 			}
 			// Otherwise if fresh and still unknown, try and import
 			hash := op.block.Hash()
-			block, _ := f.getBlock(&hash)
+			block, _ := f.chain.GetBlockByHash(&hash)
 			if number+maxUncleDist < height || block != nil {
 				f.forgetBlock(hash)
 				continue
@@ -162,7 +144,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 
 	//TODO: Ensure the peer isn't DOSing us
 	// Discard any past or too distant blocks
-	if dist := int64(block.Height) - int64(f.chainHeight()); dist < -maxUncleDist || dist > maxQueueDist {
+	if dist := int64(block.Height) - int64(f.chain.Height()); dist < -maxUncleDist || dist > maxQueueDist {
 		log.Info("Discarded propagated block, too far away", "peer", peer, "number", block.Height, "hash", hash, "distance", dist)
 		return
 	}
@@ -185,13 +167,13 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 	// Run the import on a new thread
 	log.Info("Importing propagated block", "peer", peer, "number", block.Height, "hash", block.Hash())
 	// Run the actual import and log any issues
-	if _, err := f.insertChain(block); err != nil {
+	if _, err := f.chain.ProcessBlock(block); err != nil {
 		log.Info("Propagated block import failed", "peer", peer, "number", block.Height, "hash", block.Hash(), "err", err)
 		return
 	}
 	// If import succeeded, broadcast the block
 	log.Info("success insert block from cache. height:", block.Height)
-	go f.broadcastBlock(block)
+	go f.peers.BroadcastMinedBlock(block)
 }
 
 // forgetBlock removes all traces of a queued block from the fetcher's internal

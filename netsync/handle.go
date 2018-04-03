@@ -10,11 +10,9 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
-	"github.com/bytom/netsync/fetcher"
 	"github.com/bytom/p2p"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/version"
 )
 
@@ -26,12 +24,13 @@ type SyncManager struct {
 	privKey     crypto.PrivKeyEd25519 // local node's p2p key
 	chain       *core.Chain
 	txPool      *core.TxPool
-	fetcher     *fetcher.Fetcher
+	fetcher     *Fetcher
 	blockKeeper *blockKeeper
 	peers       *peerSet
 
 	newBlockCh    chan *bc.Hash
 	newPeerCh     chan struct{}
+	dropPeerCh    chan *string
 	quitSync      chan struct{}
 	config        *cfg.Config
 	synchronising int32
@@ -46,28 +45,19 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		config:     config,
 		quitSync:   make(chan struct{}),
 		newBlockCh: newBlockCh,
+		newPeerCh:  make(chan struct{}),
+		dropPeerCh:   make(chan *string, maxQuitReq),
 		peers:      newPeerSet(),
 	}
 
-	heighter := func() uint64 {
-		return chain.Height()
-	}
-
-	inserter := func(block *types.Block) (bool, error) {
-		return manager.chain.ProcessBlock(block)
-	}
-
-	manager.fetcher = fetcher.New(chain.GetBlockByHash, manager.BroadcastMinedBlock, heighter, inserter, manager.removePeer)
-
 	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-
 	manager.sw = p2p.NewSwitch(config.P2P, trustHistoryDB)
 
-	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers)
+	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers, manager.dropPeerCh)
+	manager.fetcher = NewFetcher(chain, manager.sw, manager.peers)
 
-	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers)
+	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
-	manager.newPeerCh = protocolReactor.GetNewPeerChan()
 
 	// Optionally, start the pex reactor
 	//var addrBook *p2p.AddrBook
@@ -90,10 +80,10 @@ func protocolAndAddress(listenAddr string) (string, string) {
 	return p, address
 }
 
-func (self *SyncManager) makeNodeInfo() *p2p.NodeInfo {
+func (sm *SyncManager) makeNodeInfo() *p2p.NodeInfo {
 	nodeInfo := &p2p.NodeInfo{
-		PubKey:  self.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
-		Moniker: self.config.Moniker,
+		PubKey:  sm.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
+		Moniker: sm.config.Moniker,
 		Network: "bytom",
 		Version: version.Version,
 		Other: []string{
@@ -102,11 +92,11 @@ func (self *SyncManager) makeNodeInfo() *p2p.NodeInfo {
 		},
 	}
 
-	if !self.sw.IsListening() {
+	if !sm.sw.IsListening() {
 		return nodeInfo
 	}
 
-	p2pListener := self.sw.Listeners()[0]
+	p2pListener := sm.sw.Listeners()[0]
 	p2pHost := p2pListener.ExternalAddress().IP.String()
 	p2pPort := p2pListener.ExternalAddress().Port
 
@@ -117,27 +107,27 @@ func (self *SyncManager) makeNodeInfo() *p2p.NodeInfo {
 	return nodeInfo
 }
 
-func (self *SyncManager) netStart() error {
+func (sm *SyncManager) netStart() error {
 	// Create & add listener
-	p, address := protocolAndAddress(self.config.P2P.ListenAddress)
+	p, address := protocolAndAddress(sm.config.P2P.ListenAddress)
 
-	l := p2p.NewDefaultListener(p, address, self.config.P2P.SkipUPNP, nil)
+	l := p2p.NewDefaultListener(p, address, sm.config.P2P.SkipUPNP, nil)
 
-	self.sw.AddListener(l)
+	sm.sw.AddListener(l)
 
 	// Start the switch
-	self.sw.SetNodeInfo(self.makeNodeInfo())
-	self.sw.SetNodePrivKey(self.privKey)
-	_, err := self.sw.Start()
+	sm.sw.SetNodeInfo(sm.makeNodeInfo())
+	sm.sw.SetNodePrivKey(sm.privKey)
+	_, err := sm.sw.Start()
 	if err != nil {
 		return err
 	}
 
 	// If seeds exist, add them to the address book and dial out
-	if self.config.P2P.Seeds != "" {
+	if sm.config.P2P.Seeds != "" {
 		// dial out
-		seeds := strings.Split(self.config.P2P.Seeds, ",")
-		if err := self.DialSeeds(seeds); err != nil {
+		seeds := strings.Split(sm.config.P2P.Seeds, ",")
+		if err := sm.DialSeeds(seeds); err != nil {
 			return err
 		}
 	}
@@ -145,113 +135,77 @@ func (self *SyncManager) netStart() error {
 	return nil
 }
 
-func (self *SyncManager) Start() {
-	self.netStart()
+func (sm *SyncManager) Start() {
+	sm.netStart()
 	// broadcast transactions
-	go self.txBroadcastLoop()
+	go sm.txBroadcastLoop()
 
 	// broadcast mined blocks
-	go self.minedBroadcastLoop()
+	go sm.minedBroadcastLoop()
 
 	// start sync handlers
-	go self.syncer()
+	go sm.syncer()
 
 	//TODO:
-	// go self.txsyncLoop()
+	// go sm.txsyncLoop()
 }
 
-func (self *SyncManager) Stop() {
-	close(self.quitSync)
-	self.sw.Stop()
+func (sm *SyncManager) Stop() {
+	close(sm.quitSync)
+	sm.sw.Stop()
 }
 
-func (self *SyncManager) txBroadcastLoop() {
-	newTxCh := self.txPool.GetNewTxCh()
+func (sm *SyncManager) txBroadcastLoop() {
+	newTxCh := sm.txPool.GetNewTxCh()
 	for {
 		select {
 		case newTx := <-newTxCh:
-			self.BroadcastTx(newTx)
+			sm.peers.BroadcastTx(newTx)
 
-		case <-self.quitSync:
+		case <-sm.quitSync:
 			return
 		}
 	}
 }
 
-func (self *SyncManager) minedBroadcastLoop() {
+func (sm *SyncManager) minedBroadcastLoop() {
 	for {
 		select {
-		case blockHash := <-self.newBlockCh:
-			block, err := self.chain.GetBlockByHash(blockHash)
+		case blockHash := <-sm.newBlockCh:
+			block, err := sm.chain.GetBlockByHash(blockHash)
 			if err != nil {
 				log.Errorf("Failed on mined broadcast loop get block %v", err)
 				return
 			}
-			self.BroadcastMinedBlock(block)
-		case <-self.quitSync:
+			sm.peers.BroadcastMinedBlock(block)
+		case <-sm.quitSync:
 			return
 		}
 	}
 }
 
-// BroadcastTransaction broadcats `BlockStore` transaction.
-func (self *SyncManager) BroadcastTx(tx *types.Tx) {
-	if err := self.blockKeeper.BroadcastTx(tx); err != nil {
-		log.Errorf("SyncManager: failed on broadcast tx: %v", err)
-	}
+func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
+	return sm.sw.NodeInfo()
 }
 
-// BroadcastBlock will  propagate a block to it's peers.
-func (self *SyncManager) BroadcastMinedBlock(block *types.Block) {
-	if err := self.blockKeeper.BroadcastMinedBlock(block); err != nil {
-		log.Errorf("SyncManager: failed on broadcast mined block: %v", err)
-	}
+func (sm *SyncManager) BlockKeeper() *blockKeeper {
+	return sm.blockKeeper
 }
 
-func (self *SyncManager) NodeInfo() *p2p.NodeInfo {
-	return self.sw.NodeInfo()
+func (sm *SyncManager) Peers() *peerSet {
+	return sm.peers
 }
 
-func (self *SyncManager) BlockKeeper() *blockKeeper {
-	return self.blockKeeper
+func (sm *SyncManager) DialSeeds(seeds []string) error {
+	return sm.sw.DialSeeds(sm.addrBook, seeds)
 }
 
-func (self *SyncManager) Peers() *peerSet {
-	return self.peers
+func (sm *SyncManager) Switch() *p2p.Switch {
+	return sm.sw
 }
 
-func (self *SyncManager) DialSeeds(seeds []string) error {
-	return self.sw.DialSeeds(self.addrBook, seeds)
-}
-
-func (self *SyncManager) Switch() *p2p.Switch {
-	return self.sw
-}
-
-func (self *SyncManager) removePeer(id string) {
-	// Short circuit if the peer was already removed
-	peers := self.sw.Peers()
-	if peers == nil {
-		return
-	}
-
-	peer := peers.Get(id)
-	if peer == nil {
-		return
-	}
-
-	peers.Remove(peer)
-	log.Debug("Removing bytom peer", "peer", id)
-
-	// Unregister the peer from the downloader and Ethereum peer set
-	//pm.downloader.UnregisterPeer(id)
-	//if err := pm.peers.Unregister(id); err != nil {
-	//	log.Error("Peer removal failed", "peer", id, "err", err)
-	//}
-	// Hard disconnect at the networking layer
-	//TODO
-	if peer != nil {
-		//peer.Peer.Disconnect(p2p.DiscUselessPeer)
-		peer.CloseConn()
-	}
+func (sm *SyncManager) removePeer(peerID string) {
+	sm.peers.DropPeer(peerID)
+	sm.peers.Unregister(peerID)
+	log.Debug("Removing peer", "peerID:", peerID)
 }

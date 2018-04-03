@@ -30,11 +30,11 @@ const (
 
 // syncer is responsible for periodically synchronising with the network, both
 // downloading hashes and blocks as well as handling the announcement handler.
-func (self *SyncManager) syncer() {
+func (sm *SyncManager) syncer() {
 	// Start and ensure cleanup of sync mechanisms
-	self.fetcher.Start()
-	defer self.fetcher.Stop()
-	//defer self.downloader.Terminate()
+	sm.fetcher.Start()
+	defer sm.fetcher.Stop()
+	//defer sm.downloader.Terminate()
 
 	// Wait for different events to fire synchronisation operations
 	forceSync := time.NewTicker(forceSyncCycle)
@@ -42,39 +42,39 @@ func (self *SyncManager) syncer() {
 
 	for {
 		select {
-		case <-self.newPeerCh:
+		case <-sm.newPeerCh:
 			log.Info("New peer connected.")
 			// Make sure we have peers to select from, then sync
-			if self.sw.Peers().Size() < minDesiredPeerCount {
+			if sm.sw.Peers().Size() < minDesiredPeerCount {
 				break
 			}
-			go self.synchronise()
+			go sm.synchronise()
 
 		case <-forceSync.C:
 			// Force a sync even if not enough peers are present
-			go self.synchronise()
+			go sm.synchronise()
 
-		case <-self.quitSync:
+		case <-sm.quitSync:
 			return
 		}
 	}
 }
 
 // synchronise tries to sync up our local block chain with a remote peer.
-func (self *SyncManager) synchronise() {
+func (sm *SyncManager) synchronise() {
 	// Make sure only one goroutine is ever allowed past this point at once
-	if !atomic.CompareAndSwapInt32(&self.synchronising, 0, 1) {
+	if !atomic.CompareAndSwapInt32(&sm.synchronising, 0, 1) {
 		log.Info("Synchronising ...")
 		return
 	}
-	defer atomic.StoreInt32(&self.synchronising, 0)
+	defer atomic.StoreInt32(&sm.synchronising, 0)
 
-	peer, bestHeight := self.peers.BestPeer()
+	peer, bestHeight := sm.peers.BestPeer()
 	// Short circuit if no peers are available
 	if peer == nil {
 		return
 	}
-	if bestHeight > self.chain.Height() {
-		self.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
+	if bestHeight > sm.chain.Height() {
+		sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
 	}
 }

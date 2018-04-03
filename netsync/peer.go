@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
 )
 
 var (
@@ -18,10 +19,11 @@ var (
 )
 
 type peer struct {
-	mtx    sync.RWMutex
-	id     string
-	height uint64
-	hash   *bc.Hash
+	mtx     sync.RWMutex
+	version int // Protocol version negotiated
+	id      string
+	height  uint64
+	hash    *bc.Hash
 	*p2p.Peer
 
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
@@ -73,7 +75,7 @@ func (p *peer) getPeer() *p2p.Peer {
 
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
 // will never be propagated to this particular peer.
-func (p *peer) MarkTransaction(hash [32]byte) {
+func (p *peer) MarkTransaction(hash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -81,12 +83,12 @@ func (p *peer) MarkTransaction(hash [32]byte) {
 	for p.knownTxs.Size() >= maxKnownTxs {
 		p.knownTxs.Pop()
 	}
-	p.knownTxs.Add(hash)
+	p.knownTxs.Add(hash.String())
 }
 
 // MarkBlock marks a block as known for the peer, ensuring that the block will
 // never be propagated to this particular peer.
-func (p *peer) MarkBlock(hash [32]byte) {
+func (p *peer) MarkBlock(hash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -94,7 +96,7 @@ func (p *peer) MarkBlock(hash [32]byte) {
 	for p.knownBlocks.Size() >= maxKnownBlocks {
 		p.knownBlocks.Pop()
 	}
-	p.knownBlocks.Add(hash)
+	p.knownBlocks.Add(hash.String())
 }
 
 type peerSet struct {
@@ -139,6 +141,18 @@ func (ps *peerSet) Unregister(id string) error {
 	return nil
 }
 
+func (ps *peerSet) DropPeer(id string) error {
+	ps.lock.Lock()
+	defer ps.lock.Unlock()
+
+	peer, ok := ps.peers[id]
+	if !ok {
+		return errNotRegistered
+	}
+	peer.CloseConn()
+	return nil
+}
+
 // Peer retrieves the registered peer with the given id.
 func (ps *peerSet) Peer(id string) *peer {
 	ps.lock.RLock()
@@ -157,7 +171,7 @@ func (ps *peerSet) Len() int {
 
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
 // will never be propagated to this particular peer.
-func (ps *peerSet) MarkTransaction(peerID string, hash [32]byte) {
+func (ps *peerSet) MarkTransaction(peerID string, hash *bc.Hash) {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -168,7 +182,7 @@ func (ps *peerSet) MarkTransaction(peerID string, hash [32]byte) {
 
 // MarkBlock marks a block as known for the peer, ensuring that the block will
 // never be propagated to this particular peer.
-func (ps *peerSet) MarkBlock(peerID string, hash [32]byte) {
+func (ps *peerSet) MarkBlock(peerID string, hash *bc.Hash) {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -179,13 +193,13 @@ func (ps *peerSet) MarkBlock(peerID string, hash [32]byte) {
 
 // PeersWithoutBlock retrieves a list of peers that do not have a given block in
 // their set of known hashes.
-func (ps *peerSet) PeersWithoutBlock(hash [32]byte) []*peer {
+func (ps *peerSet) PeersWithoutBlock(hash *bc.Hash) []*peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if !p.knownBlocks.Has(hash) {
+		if !p.knownBlocks.Has(hash.String()) {
 			list = append(list, p)
 		}
 	}
@@ -194,13 +208,13 @@ func (ps *peerSet) PeersWithoutBlock(hash [32]byte) []*peer {
 
 // PeersWithoutTx retrieves a list of peers that do not have a given transaction
 // in their set of known hashes.
-func (ps *peerSet) PeersWithoutTx(hash [32]byte) []*peer {
+func (ps *peerSet) PeersWithoutTx(hash *bc.Hash) []*peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
 	list := make([]*peer, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if !p.knownTxs.Has(hash) {
+		if !p.knownTxs.Has(hash.String()) {
 			list = append(list, p)
 		}
 	}
@@ -249,6 +263,15 @@ func (ps *peerSet) AddPeer(peer *p2p.Peer) {
 	log.WithField("ID", peer.Key).Warning("Add existing peer to blockKeeper")
 }
 
+
+func (ps *peerSet) RemovePeer(peerID string) {
+	ps.lock.Lock()
+	defer ps.lock.Unlock()
+
+	delete(ps.peers, peerID)
+	log.WithField("ID", peerID).Info("Delete peer from peerset")
+}
+
 func (ps *peerSet) SetPeerStatus(peerID string, height uint64, hash *bc.Hash) {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
@@ -278,4 +301,31 @@ func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
 		return errors.New("Can't find peer.")
 	}
 	return peer.requestBlockByHeight(height)
+}
+
+func (ps *peerSet) BroadcastMinedBlock(block *types.Block) error {
+	msg, err := NewMinedBlockMessage(block)
+	if err != nil {
+		return errors.New("Failed construction block msg")
+	}
+	hash:=block.Hash()
+	peers := ps.PeersWithoutBlock(&hash)
+	for _, peer := range peers {
+		ps.MarkBlock(peer.Key, &hash)
+		peer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	}
+	return nil
+}
+
+func (ps *peerSet) BroadcastTx(tx *types.Tx) error {
+	msg, err := NewTransactionNotifyMessage(tx)
+	if err != nil {
+		return errors.New("Failed construction tx msg")
+	}
+	peers := ps.PeersWithoutTx(&tx.ID)
+	for _, peer := range peers {
+		ps.peers[peer.Key].MarkTransaction(&tx.ID)
+		peer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	}
+	return nil
 }
