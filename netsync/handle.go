@@ -206,6 +206,5 @@ func (sm *SyncManager) Switch() *p2p.Switch {
 
 func (sm *SyncManager) removePeer(peerID string) {
 	sm.peers.DropPeer(peerID)
-	sm.peers.Unregister(peerID)
 	log.Debug("Removing peer", "peerID:", peerID)
 }

@@ -10,8 +10,8 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"fmt"
 )
 
 const (
@@ -31,6 +31,7 @@ var (
 	errPeerDropped     = errors.New("Peer dropped")
 	errCommAbnorm      = errors.New("Peer communication abnormality")
 	errScamPeer        = errors.New("Scam peer")
+	errReqBlock        = errors.New("Request block error")
 )
 
 type BlockRequestMessage struct {
@@ -92,15 +93,13 @@ func (bk *blockKeeper) IsCaughtUp() bool {
 func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) error {
 	chainHeight := bk.chain.Height()
 	isOrphan := false
-	var hash *bc.Hash
 	for num := chainHeight + 1; num <= maxPeerHeight; {
-		//orphanHeight :=
-		block, err := bk.BlockRequest(peerID, num, hash, isOrphan)
-		if errors.Root(err) == errPeerDropped || errors.Root(err) == errGetBlockTimeout {
+		block, err := bk.BlockRequest(peerID, num)
+		if errors.Root(err) == errPeerDropped || errors.Root(err) == errGetBlockTimeout || errors.Root(err) == errReqBlock {
 			log.WithField("Peer abnormality. PeerID: ", peerID).Info(err)
+			bk.peers.DropPeer(peerID)
 			return errCommAbnorm
 		}
-
 		isOrphan, err = bk.chain.ProcessBlock(block)
 		if err != nil {
 			bk.sw.AddScamPeer(bk.peers.Peer(peerID).getPeer())
@@ -108,26 +107,24 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 			return errScamPeer
 		}
 		if isOrphan {
-			hash = &block.PreviousBlockHash
+			num--
 			continue
 		}
-		num++
+		num = bk.chain.Height() + 1
 	}
 	return nil
 }
 
-func (bk *blockKeeper) blockRequest(peerID string, height uint64, hash *bc.Hash, isOrphan bool) {
-	if isOrphan == true {
-		bk.peers.requestBlockByHash(peerID, hash)
-	} else {
-		bk.peers.requestBlockByHeight(peerID, height)
-	}
+func (bk *blockKeeper) blockRequest(peerID string, height uint64) error {
+	return bk.peers.requestBlockByHeight(peerID, height)
 }
 
-func (bk *blockKeeper) BlockRequest(peerID string, height uint64, hash *bc.Hash, isOrphan bool) (*types.Block, error) {
+func (bk *blockKeeper) BlockRequest(peerID string, height uint64) (*types.Block, error) {
 	var block *types.Block
 
-	bk.blockRequest(peerID, height, hash, isOrphan)
+	if err := bk.blockRequest(peerID, height); err != nil {
+		return nil, errReqBlock
+	}
 	retryTicker := time.Tick(requestRetryTicker)
 	syncWait := time.NewTimer(syncTimeout)
 
@@ -139,18 +136,15 @@ func (bk *blockKeeper) BlockRequest(peerID string, height uint64, hash *bc.Hash,
 				log.Warning("From different peer")
 				continue
 			}
-			if block.Height != height && isOrphan == false {
+			if block.Height != height {
 				log.Warning("Block height error")
-				continue
-			}
-			tmpHash := block.Hash()
-			if strings.Compare(hash.String(), (&tmpHash).String()) != 0 && isOrphan == true {
-				log.Warning("Block hash error")
 				continue
 			}
 			return block, nil
 		case <-retryTicker:
-			bk.blockRequest(peerID, height, hash, isOrphan)
+			if err := bk.blockRequest(peerID, height); err != nil {
+				return nil, errReqBlock
+			}
 		case <-syncWait.C:
 			log.Warning("Request block timeout")
 			return nil, errGetBlockTimeout

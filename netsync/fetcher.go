@@ -172,7 +172,7 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 		return
 	}
 	// If import succeeded, broadcast the block
-	log.Info("success insert block from cache. height:", block.Height)
+	log.Info("success process a block from new mined blocks cache. block height:", block.Height)
 	go f.peers.BroadcastMinedBlock(block)
 }
 
