@@ -41,7 +41,7 @@ func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amo
 		ControlProgram: controlProgram,
 	}
 	return &TxInput{
-		AssetVersion:  assetver,
+		AssetVersion: assetver,
 		TypedInput: &SpendInput{
 			SpendCommitment: sc,
 			Arguments:       arguments,

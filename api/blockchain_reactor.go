@@ -4,12 +4,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/wallet"
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/wallet"
 )
 
 // return network infomation

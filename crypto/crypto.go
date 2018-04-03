@@ -49,7 +49,6 @@ func Ripemd160(data []byte) []byte {
 	return ripemd.Sum(nil)
 }
 
-
 func zeroBytes(bytes []byte) {
 	for i := range bytes {
 		bytes[i] = 0

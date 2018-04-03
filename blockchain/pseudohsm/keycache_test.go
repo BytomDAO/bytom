@@ -1,12 +1,12 @@
 package pseudohsm
 
 import (
+	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
-	"encoding/hex"
-	"io/ioutil"
 	"reflect"
 	"sort"
 	"testing"
@@ -17,21 +17,20 @@ import (
 	"github.com/davecgh/go-spew/spew"
 )
 
-
 var (
-	cachetestDir, _   = filepath.Abs(filepath.Join("testdata", "keystore"))
-	cachetestKeys = []XPub{
+	cachetestDir, _ = filepath.Abs(filepath.Join("testdata", "keystore"))
+	cachetestKeys   = []XPub{
 		{
-			Alias:   "langyu",
-			File:    filepath.Join(cachetestDir, "UTC--2017-09-13T07-11-07.863320100Z--bm1pktmny6q69dlqulja2p2ja28k2vd6wvqpk5r76a"),
+			Alias: "langyu",
+			File:  filepath.Join(cachetestDir, "UTC--2017-09-13T07-11-07.863320100Z--bm1pktmny6q69dlqulja2p2ja28k2vd6wvqpk5r76a"),
 		},
 		{
-			Alias:   "aaatest",
-			File:    filepath.Join(cachetestDir, "aaa"),
+			Alias: "aaatest",
+			File:  filepath.Join(cachetestDir, "aaa"),
 		},
 		{
-			Alias:   "zzztest",
-			File:    filepath.Join(cachetestDir, "zzz"),
+			Alias: "zzztest",
+			File:  filepath.Join(cachetestDir, "zzz"),
 		},
 	}
 )
@@ -46,7 +45,7 @@ func TestWatchNewFile(t *testing.T) {
 	kc.keys()
 	time.Sleep(200 * time.Millisecond)
 	// Move in the files.
-	wantKeystores:= make([]XPub, len(cachetestKeys))
+	wantKeystores := make([]XPub, len(cachetestKeys))
 	for i := range cachetestKeys {
 		a := cachetestKeys[i]
 		a.File = filepath.Join(dir, filepath.Base(a.File))
@@ -67,7 +66,6 @@ func TestWatchNewFile(t *testing.T) {
 	}
 	t.Errorf("got %s, want %s", spew.Sdump(list), spew.Sdump(wantKeystores))
 }
-
 
 func TestWatchNoDir(t *testing.T) {
 	t.Parallel()
@@ -111,7 +109,6 @@ func TestCacheInitialReload(t *testing.T) {
 	}
 }
 
-
 func TestCacheAddDeleteOrder(t *testing.T) {
 	cache := newKeyCache("testdata/no-such-dir")
 	cache.watcher.running = true // prevent unexpected reloads
@@ -119,43 +116,39 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 
 	keys := []XPub{
 		{
-			Alias:   "bm1pvheagygs9d72stp79u9vduhmdyjpnvud0y89y7",
-			File:    "-309830980",
-			XPub:    tmpPubkeys(t, r),
+			Alias: "bm1pvheagygs9d72stp79u9vduhmdyjpnvud0y89y7",
+			File:  "-309830980",
+			XPub:  tmpPubkeys(t, r),
 		},
 		{
-			Alias:  "bm1pyk3qny8gzem6p4fx8t5d344tnldguv8lvx2aww",
-			File:    "ggg",
-			XPub:	 tmpPubkeys(t, r),
+			Alias: "bm1pyk3qny8gzem6p4fx8t5d344tnldguv8lvx2aww",
+			File:  "ggg",
+			XPub:  tmpPubkeys(t, r),
 		},
 		{
-			Alias:   "bm1p6s0ckxrudy7hqht4n5fhcs4gp69krv3c84jn9x",
-			File:    "zzzzzz-the-very-last-one.keyXXX",
-			XPub:	 tmpPubkeys(t, r),
-
+			Alias: "bm1p6s0ckxrudy7hqht4n5fhcs4gp69krv3c84jn9x",
+			File:  "zzzzzz-the-very-last-one.keyXXX",
+			XPub:  tmpPubkeys(t, r),
 		},
 		{
-			Alias:   "bm1p7xkfhsw50y44t63mk0dfxxkvuyg6t3s0r6xs54",
-			File:    "SOMETHING.key",
-			XPub:	 tmpPubkeys(t, r),
-
+			Alias: "bm1p7xkfhsw50y44t63mk0dfxxkvuyg6t3s0r6xs54",
+			File:  "SOMETHING.key",
+			XPub:  tmpPubkeys(t, r),
 		},
 		{
-			Alias:   "bm1peu9ql7x8c7aeca60j40sg5w4kylpf7l3jmau0g",
-			File:    "UTC--2016-03-22T12-57-55.920751759Z--bm1peu9ql7x8c7aeca60j40sg5w4kylpf7l3jmau0g",
-			XPub:	 tmpPubkeys(t, r),
-
+			Alias: "bm1peu9ql7x8c7aeca60j40sg5w4kylpf7l3jmau0g",
+			File:  "UTC--2016-03-22T12-57-55.920751759Z--bm1peu9ql7x8c7aeca60j40sg5w4kylpf7l3jmau0g",
+			XPub:  tmpPubkeys(t, r),
 		},
 		{
-			Alias:   "bm1p0s68e4ggp0vy5ue2lztsxvl2smpnqp9al8jyvh",
-			File:    "aaa",
-			XPub:	 tmpPubkeys(t, r),
-
+			Alias: "bm1p0s68e4ggp0vy5ue2lztsxvl2smpnqp9al8jyvh",
+			File:  "aaa",
+			XPub:  tmpPubkeys(t, r),
 		},
 		{
-			Alias:   "bm1pjq8ttfl7ppqtcc5qqff0s45p7ew9l9pjmlu5xw",
-			File:    "zzz",
-			XPub:	 tmpPubkeys(t, r),
+			Alias: "bm1pjq8ttfl7ppqtcc5qqff0s45p7ew9l9pjmlu5xw",
+			File:  "zzz",
+			XPub:  tmpPubkeys(t, r),
 		},
 	}
 	for _, a := range keys {
@@ -167,14 +160,14 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 
 	// Check that the account list is sorted by filename.
 	wantKeys := make([]XPub, len(keys))
-	copy(wantKeys , keys)
+	copy(wantKeys, keys)
 	sort.Sort(keysByFile(wantKeys))
 	list := cache.keys()
-	
+
 	if !reflect.DeepEqual(list, wantKeys) {
 		t.Fatalf("got keys: %s\nwant %s", spew.Sdump(keys), spew.Sdump(wantKeys))
 	}
-	
+
 	for _, a := range keys {
 		if !cache.hasKey(a.XPub) {
 			t.Errorf("expected hashKey(%x) to return true", a.XPub)
@@ -184,7 +177,7 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 	for i := 0; i < len(keys); i += 2 {
 		cache.delete(wantKeys[i])
 	}
-	cache.delete(XPub{Alias: "bm1pug2xpcvpzepdf0paulnndhpxtpjvre8ypd0jtj", File: "something", XPub:tmpPubkeys(t, r)})
+	cache.delete(XPub{Alias: "bm1pug2xpcvpzepdf0paulnndhpxtpjvre8ypd0jtj", File: "something", XPub: tmpPubkeys(t, r)})
 
 	// Check content again after deletion.
 	wantKeysAfterDelete := []XPub{
@@ -206,7 +199,6 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 	}
 }
 
-
 func TestCacheFind(t *testing.T) {
 	dir := filepath.Join("testdata", "dir")
 	cache := newKeyCache(dir)
@@ -216,25 +208,24 @@ func TestCacheFind(t *testing.T) {
 	dup := tmpPubkeys(t, r)
 	keys := []XPub{
 		{
-			Alias:   "bm1pmv9kg68j3edvqrv62lxllev4ugjv0zf6g5pwf6",
-			File:    filepath.Join(dir, "a.key"),
-			XPub:	 tmpPubkeys(t, r),
-
+			Alias: "bm1pmv9kg68j3edvqrv62lxllev4ugjv0zf6g5pwf6",
+			File:  filepath.Join(dir, "a.key"),
+			XPub:  tmpPubkeys(t, r),
 		},
 		{
-			Alias:  "bm1ptspg4x6kjjp642gdpzan0ynq9zr7z4m34nqpet",
-			File:    filepath.Join(dir, "b.key"),
-			XPub:	 tmpPubkeys(t, r),
+			Alias: "bm1ptspg4x6kjjp642gdpzan0ynq9zr7z4m34nqpet",
+			File:  filepath.Join(dir, "b.key"),
+			XPub:  tmpPubkeys(t, r),
 		},
 		{
-			Alias:   "bm1pmlpy0946zsvdg29v80gw0mkq2n0ghkg0fpmhav",
-			File:    filepath.Join(dir, "c.key"),
-			XPub:	 dup,
+			Alias: "bm1pmlpy0946zsvdg29v80gw0mkq2n0ghkg0fpmhav",
+			File:  filepath.Join(dir, "c.key"),
+			XPub:  dup,
 		},
 		{
-			Alias:  "bm1pmlpy0946zsvdg29v80gw0mkq2n0ghkg0fpmhav",
-			File:    filepath.Join(dir, "c2.key"),
-			XPub:	 dup,
+			Alias: "bm1pmlpy0946zsvdg29v80gw0mkq2n0ghkg0fpmhav",
+			File:  filepath.Join(dir, "c2.key"),
+			XPub:  dup,
 		},
 	}
 	for _, a := range keys {
@@ -242,9 +233,9 @@ func TestCacheFind(t *testing.T) {
 	}
 
 	nomatchKey := XPub{
-		Alias:   "bm1pu2vmgps4d9e3mrsuzp58w777apky4rjgn5rn9e",
-		File:    filepath.Join(dir, "something"),
-		XPub:	 tmpPubkeys(t, r),
+		Alias: "bm1pu2vmgps4d9e3mrsuzp58w777apky4rjgn5rn9e",
+		File:  filepath.Join(dir, "something"),
+		XPub:  tmpPubkeys(t, r),
 	}
 	tests := []struct {
 		Query      XPub
@@ -288,7 +279,6 @@ func TestCacheFind(t *testing.T) {
 	}
 }
 
-
 func tmpManager(t *testing.T) (string, *keyCache) {
 	d, err := ioutil.TempDir("", "bytom-keystore-test")
 	if err != nil {
@@ -297,17 +287,16 @@ func tmpManager(t *testing.T) (string, *keyCache) {
 	return d, newKeyCache(d)
 }
 
+func tmpPubkeys(t *testing.T, r *rand.Rand) chainkd.XPub {
 
-func tmpPubkeys(t *testing.T,  r *rand.Rand) chainkd.XPub {
- 
 	var xpub chainkd.XPub
 	pick := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	bytes := []byte(pick)
-    result := []byte{}
+	result := []byte{}
 
 	for i := 0; i < 64; i++ {
-      result = append(result, bytes[r.Intn(len(bytes))])
-   }
-   copy(xpub[:], result[:])
-   return xpub
+		result = append(result, bytes[r.Intn(len(bytes))])
+	}
+	copy(xpub[:], result[:])
+	return xpub
 }

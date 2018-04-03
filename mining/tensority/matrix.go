@@ -4,14 +4,14 @@ import (
 	"reflect"
 	"unsafe"
 
-	"gonum.org/v1/gonum/mat"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
+	"gonum.org/v1/gonum/mat"
 )
 
 const (
-	matSize     = 1 << 8 // Size of matrix
-	matNum      = 1 << 8 // Number of matrix
+	matSize = 1 << 8 // Size of matrix
+	matNum  = 1 << 8 // Number of matrix
 )
 
 func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
@@ -36,7 +36,6 @@ func mulMatrix(headerhash []byte, cache []uint32) []uint8 {
 	}
 
 	tmp := mat.NewDense(matSize, matSize, make([]float64, matSize*matSize))
-
 
 	dataIdentity := make([]float64, matSize*matSize)
 	for i := 0; i < 256; i++ {

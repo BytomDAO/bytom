@@ -14,7 +14,7 @@ func (cb *CoinbaseInput) IsCoinbase() bool { return true }
 // NewCoinbaseInput create a new coinbase input struct
 func NewCoinbaseInput(arbitrary []byte) *TxInput {
 	return &TxInput{
-		AssetVersion:  1,
+		AssetVersion: 1,
 		TypedInput: &CoinbaseInput{
 			Arbitrary: arbitrary,
 		},

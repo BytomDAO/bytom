@@ -29,13 +29,12 @@ func (o outputIDConstraint) code() []byte {
 	return prog
 }
 
-
 // PayConstraint requires the transaction to include a given output
 // at the given index, optionally with the given refdatahash.
 type payConstraint struct {
 	Index int
 	bc.AssetAmount
-	Program     []byte
+	Program []byte
 }
 
 func (p payConstraint) code() []byte {

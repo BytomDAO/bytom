@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
-	"testing"
 	"strings"
+	"testing"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
