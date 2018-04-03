@@ -23,32 +23,32 @@ type AnnotatedTx struct {
 
 //AnnotatedInput means an annotated transaction input.
 type AnnotatedInput struct {
-	Type            string              `json:"type"`
-	AssetID         bc.AssetID          `json:"asset_id"`
-	AssetAlias      string              `json:"asset_alias,omitempty"`
-	AssetDefinition *chainjson.HexBytes `json:"asset_definition"`
-	Amount          uint64              `json:"amount"`
-	IssuanceProgram chainjson.HexBytes  `json:"issuance_program,omitempty"`
-	ControlProgram  chainjson.HexBytes  `json:"-"`
-	SpentOutputID   *bc.Hash            `json:"spent_output_id,omitempty"`
-	AccountID       string              `json:"account_id,omitempty"`
-	AccountAlias    string              `json:"account_alias,omitempty"`
-	Arbitrary       chainjson.HexBytes  `json:"arbitrary,omitempty"`
+	Type            string             `json:"type"`
+	AssetID         bc.AssetID         `json:"asset_id"`
+	AssetAlias      string             `json:"asset_alias,omitempty"`
+	AssetDefinition *json.RawMessage   `json:"asset_definition"`
+	Amount          uint64             `json:"amount"`
+	IssuanceProgram chainjson.HexBytes `json:"issuance_program,omitempty"`
+	ControlProgram  chainjson.HexBytes `json:"-"`
+	SpentOutputID   *bc.Hash           `json:"spent_output_id,omitempty"`
+	AccountID       string             `json:"account_id,omitempty"`
+	AccountAlias    string             `json:"account_alias,omitempty"`
+	Arbitrary       chainjson.HexBytes `json:"arbitrary,omitempty"`
 }
 
 //AnnotatedOutput means an annotated transaction output.
 type AnnotatedOutput struct {
-	Type            string              `json:"type"`
-	OutputID        bc.Hash             `json:"id"`
-	TransactionID   *bc.Hash            `json:"transaction_id,omitempty"`
-	Position        int                 `json:"position"`
-	AssetID         bc.AssetID          `json:"asset_id"`
-	AssetAlias      string              `json:"asset_alias,omitempty"`
-	AssetDefinition *chainjson.HexBytes `json:"asset_definition"`
-	Amount          uint64              `json:"amount"`
-	AccountID       string              `json:"account_id,omitempty"`
-	AccountAlias    string              `json:"account_alias,omitempty"`
-	ControlProgram  chainjson.HexBytes  `json:"control_program"`
+	Type            string             `json:"type"`
+	OutputID        bc.Hash            `json:"id"`
+	TransactionID   *bc.Hash           `json:"transaction_id,omitempty"`
+	Position        int                `json:"position"`
+	AssetID         bc.AssetID         `json:"asset_id"`
+	AssetAlias      string             `json:"asset_alias,omitempty"`
+	AssetDefinition *json.RawMessage   `json:"asset_definition"`
+	Amount          uint64             `json:"amount"`
+	AccountID       string             `json:"account_id,omitempty"`
+	AccountAlias    string             `json:"account_alias,omitempty"`
+	ControlProgram  chainjson.HexBytes `json:"control_program"`
 }
 
 //AnnotatedAccount means an annotated account.
