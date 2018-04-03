@@ -68,7 +68,9 @@ func BigToCompact(n *big.Int) uint64 {
 
 	if exponent <= 3 {
 		mantissa = uint64(n.Bits()[0])
+
 		mantissa <<= 8 * (3 - exponent)
+		// fmt.Printf("0x%x\n", mantissa)
 	} else {
 		tn := new(big.Int).Set(n)
 		mantissa = uint64(tn.Rsh(tn, 8*(exponent-3)).Bits()[0])
