@@ -5,13 +5,13 @@ import (
 	"testing"
 	"reflect"
 	// "fmt"
-	// "strconv"
+	"strconv"
 
-	// "github.com/bytom/consensus"
-	// "github.com/bytom/protocol/bc/types"
+	"github.com/bytom/consensus"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/bc"
 )
-/*
+
 func TestCalcNextRequiredDifficulty(t *testing.T) {
 	targetTimeSpan := uint64(consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock)
 	cases := []struct {
@@ -45,7 +45,7 @@ func TestCalcNextRequiredDifficulty(t *testing.T) {
 		}
 	}
 }
-*/
+
 func TestHashToBig(t *testing.T) {
 	cases := []struct {
 		hashBytes	[32]byte
@@ -109,65 +109,70 @@ func TestHashToBig(t *testing.T) {
 	}
 }
 
-// func TestCompactToBig(t *testing.T) {
-// 	cases := []struct {
-// 		BStrCompact 	string
-// 		expect			int64
-// 	}{
-// 		{
-// 			BStrCompact:	`00000011` + //Exponent
-// 							`0` + //Sign
-// 							`0000000000000000000000000000000000000000000000000000000`, //Mantissa
-// 			expect:	 		0,
-// 		},
-// 		{
-// 			BStrCompact:	`00000011` + //Exponent
-// 							`1` + //Sign
-// 							`0000000000000000000000000000000000000000000000000000000`, //Mantissa
-// 			expect:	 		0,
-// 		},
-// 		{
-// 			BStrCompact:	`00000011` + //Exponent
-// 							`0` + //Sign
-// 							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-// 			expect:	 		1,
-// 		},
-// 		{
-// 			BStrCompact:	`00000011` + //Exponent
-// 							`1` + //Sign
-// 							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-// 			expect:	 		-1,
-// 		},
-// 		{
-// 			BStrCompact:	`00000100` + //Exponent
-// 							`0` + //Sign
-// 							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-// 			expect:	 		256,
-// 		},
-// 		{
-// 			BStrCompact:	`00000100` + //Exponent
-// 							`1` + //Sign
-// 							`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-// 			expect:	 		-256,
-// 		},
-// 		{
-// 			BStrCompact:	`00001010` + //Exponent
-// 							`0` + //Sign
-// 							`0000000000000000000000000000000000000000000000010000000`, //Mantissa
-// 			expect:	 		0x7fffffffffffffff,
-// 		},
-// 	}
+func TestCompactToBig(t *testing.T) {
+	cases := []struct {
+		in 	string
+		out	big.Int
+	}{
+		{
+			in:		`00000011` + //Exponent
+					`0` + //Sign
+					`0000000000000000000000000000000000000000000000000000000`, //Mantissa
+			out:	*big.NewInt(0),
+		},
+		{
+			in:		`00000011` + //Exponent
+					`1` + //Sign
+					`0000000000000000000000000000000000000000000000000000000`, //Mantissa
+			out:	*big.NewInt(0),
+		},
+		{
+			in:	`	00000011` + //Exponent
+					`0` + //Sign
+					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+			out:	*big.NewInt(1),
+		},
+		{
+			in:		`00000011` + //Exponent
+					`1` + //Sign
+					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+			out:	*big.NewInt(-1),
+		},
+		{
+			in:		`00000100` + //Exponent
+					`0` + //Sign
+					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+			out:	*big.NewInt(256),
+		},
+		{
+			in:		`00000100` + //Exponent
+					`1` + //Sign
+					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+			out:	*big.NewInt(-256),
+		},
+		{
+			in:		`00001010` + //Exponent
+					`0` + //Sign
+					`0000000000000000000000000000000000000000000000010000000`, //Mantissa
+			out:	*big.NewInt(0x7fffffffffffffff),
+		},
+	}
 
-// 	for i, c := range cases {
-// 		compact, _ := strconv.ParseUint(c.BStrCompact, 2, 64)
+	for i, c := range cases {
+		compact, _ := strconv.ParseUint(c.in, 2, 64)
 
-// 		result := CompactToBig(compact).Int64()
+		r := *CompactToBig(compact)
 
-// 		if result != c.expect {
-// 			t.Errorf("case %d: content mismatch:\n\tgeting\t\t0x%016x\n\texpecting\t0x%016x", i, result, c.expect)
-// 		}
-// 	}
-// }
+		// if result != c.out {
+		// 	t.Errorf("case %d: content mismatch:\n\tgeting\t\t0x%016x\n\touting\t0x%016x", i, result, c.out)
+		// }
+
+		if r != c.out {
+			t.Error("TestBigToCompact test #", i, "failed: got", r, "want", c.out)
+			return
+		}
+	}
+}
 
 func TestBigToCompact(t *testing.T) {
 	// basic tests
