@@ -16,7 +16,7 @@ import (
 )
 
 func TestTransactionTrailingGarbage(t *testing.T) {
-	const validTxHex = `0701000001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	const validTxHex = `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
 
 	var validTx Tx
 	err := validTx.UnmarshalText([]byte(validTxHex))
@@ -45,14 +45,13 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(6),
+				SerializedSize: uint64(5),
 				Inputs:         nil,
 				Outputs:        nil,
 			}),
 			hex: ("07" + // serflags
 				"01" + // transaction version
 				"00" + // tx maxtime
-				"00" + // common witness extensible string length
 				"00" + // inputs count
 				"00"), // outputs count
 			hash: mustDecodeHash("b28048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea7d60"),
@@ -60,7 +59,7 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(105),
+				SerializedSize: uint64(104),
 				Inputs: []*TxInput{
 					NewIssuanceInput([]byte{10, 9, 8}, 1000000000000, issuanceScript, [][]byte{[]byte{1, 2, 3}}, nil),
 				},
@@ -68,13 +67,13 @@ func TestTransaction(t *testing.T) {
 					NewTxOutput(bc.AssetID{}, 1000000000000, []byte{1}),
 				},
 			}),
-			hex: ("0701000001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100"), // reference data
+			hex:  ("07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100"), // reference data
 			hash: mustDecodeHash("7e6928130bc91e115f6ebe1fb4238d51e4155a7f9f809a36a5ebea7342ad1f63"),
 		},
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(174),
+				SerializedSize: uint64(173),
 				Inputs: []*TxInput{
 					NewSpendInput(nil, mustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), bc.AssetID{}, 1000000000000, 1, []byte{1}),
 				},
@@ -83,7 +82,7 @@ func TestTransaction(t *testing.T) {
 					NewTxOutput(assetID, 400000000000, []byte{2}),
 				},
 			}),
-			hex: ("0701000001014c014add385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292000000000000000000000000000000000000000000000000000000000000000080a094a58d1d010101010100020129916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380e0a596bb11010101000129916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380c0ee8ed20b01010200"), // output 1, output witness
+			hex:  ("07010001014c014add385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292000000000000000000000000000000000000000000000000000000000000000080a094a58d1d010101010100020129916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380e0a596bb11010101000129916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380c0ee8ed20b01010200"), // output 1, output witness
 			hash: mustDecodeHash("e89ea19ec8acb92d697c06ebf841020bb9f1d9ace983efcb47c09913cff99026"),
 		},
 	}
@@ -119,48 +118,10 @@ func TestTransaction(t *testing.T) {
 	}
 }
 
-func TestHasIssuance(t *testing.T) {
-	cases := []struct {
-		tx   *TxData
-		want bool
-	}{{
-		tx: &TxData{
-			Inputs: []*TxInput{NewIssuanceInput(nil, 0, nil, nil, nil)},
-		},
-		want: true,
-	}, {
-		tx: &TxData{
-			Inputs: []*TxInput{
-				NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil),
-				NewIssuanceInput(nil, 0, nil, nil, nil),
-			},
-		},
-		want: true,
-	}, {
-		tx: &TxData{
-			Inputs: []*TxInput{
-				NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil),
-			},
-		},
-		want: false,
-	}, {
-		tx:   &TxData{},
-		want: false,
-	}}
-
-	for _, c := range cases {
-		got := c.tx.HasIssuance()
-		if got != c.want {
-			t.Errorf("HasIssuance(%+v) = %v want %v", c.tx, got, c.want)
-		}
-	}
-}
-
 func TestInvalidIssuance(t *testing.T) {
 	hex := ("07" + // serflags
 		"01" + // transaction version
 		"00" + // tx maxtime
-		"00" + // common witness extensible string length
 		"01" + // inputs count
 		"01" + // input 0, asset version
 		"2b" + // input 0, input commitment length prefix
@@ -235,7 +196,7 @@ func BenchmarkTxInputWriteToTrue(b *testing.B) {
 	input := NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
-		input.writeTo(ew, 0)
+		input.writeTo(ew)
 	}
 }
 
@@ -243,7 +204,7 @@ func BenchmarkTxInputWriteToFalse(b *testing.B) {
 	input := NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
-		input.writeTo(ew, serRequired)
+		input.writeTo(ew)
 	}
 }
 
@@ -251,7 +212,7 @@ func BenchmarkTxOutputWriteToTrue(b *testing.B) {
 	output := NewTxOutput(bc.AssetID{}, 0, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
-		output.writeTo(ew, 0)
+		output.writeTo(ew)
 	}
 }
 
@@ -259,7 +220,7 @@ func BenchmarkTxOutputWriteToFalse(b *testing.B) {
 	output := NewTxOutput(bc.AssetID{}, 0, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
-		output.writeTo(ew, serRequired)
+		output.writeTo(ew)
 	}
 }
 

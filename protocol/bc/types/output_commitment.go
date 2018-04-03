@@ -37,11 +37,9 @@ func (oc *OutputCommitment) writeContents(w io.Writer, suffix []byte, assetVersi
 		}
 	}
 	if len(suffix) > 0 {
-		if _, err = w.Write(suffix); err != nil {
-			return errors.Wrap(err, "writing suffix")
-		}
+		_, err = w.Write(suffix)
 	}
-	return nil
+	return errors.Wrap(err, "writing suffix")
 }
 
 func (oc *OutputCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) (suffix []byte, err error) {
@@ -68,7 +66,7 @@ func (oc *OutputCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) 
 func (oc *OutputCommitment) Hash(suffix []byte, assetVersion uint64) (outputhash bc.Hash) {
 	h := sha3pool.Get256()
 	defer sha3pool.Put256(h)
-	oc.writeExtensibleString(h, suffix, assetVersion) // TODO(oleg): get rid of this assetVersion parameter to actually write all the bytes
+	oc.writeExtensibleString(h, suffix, assetVersion)
 	outputhash.ReadFrom(h)
 	return outputhash
 }

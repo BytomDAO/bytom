@@ -14,4 +14,4 @@ func NewCoinbaseInput(arbitrary []byte) *TxInput {
 }
 
 // InputType is the interface function for return the input type
-func (cb *CoinbaseInput) InputType() int { return CoinbaseInputType }
+func (cb *CoinbaseInput) InputType() uint8 { return CoinbaseInputType }

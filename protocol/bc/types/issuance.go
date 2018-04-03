@@ -32,7 +32,7 @@ func NewIssuanceInput(nonce []byte, amount uint64, issuanceProgram []byte, argum
 }
 
 // InputType is the interface function for return the input type.
-func (ii *IssuanceInput) InputType() int { return IssuanceInputType }
+func (ii *IssuanceInput) InputType() uint8 { return IssuanceInputType }
 
 // AssetID calculate the assetID of the issuance input.
 func (ii *IssuanceInput) AssetID() bc.AssetID {

@@ -23,7 +23,7 @@ func TestMarshalBlock(t *testing.T) {
 		Transactions: []*Tx{
 			NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(44),
+				SerializedSize: uint64(43),
 				Outputs: []*TxOutput{
 					NewTxOutput(bc.AssetID{}, 1, nil),
 				},
@@ -52,7 +52,6 @@ func TestMarshalBlock(t *testing.T) {
 		"07" + // tx 0, serialization flags
 		"01" + // tx 0, tx version
 		"00" + // tx maxtime
-		"00" + // tx 0, common witness extensible string length
 		"00" + // tx 0, inputs count
 		"01" + // tx 0, outputs count
 		"01" + // tx 0 output 0, asset version
@@ -157,7 +156,7 @@ func TestSmallBlock(t *testing.T) {
 		"00" + // nonce
 		"00" + // bits
 		"01" + // num transactions
-		"070100000000") // transaction
+		"0701000000") // transaction
 	want, _ := hex.DecodeString(wantHex)
 	if !bytes.Equal(got, want) {
 		t.Errorf("small block bytes = %x want %x", got, want)

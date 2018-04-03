@@ -12,23 +12,13 @@ import (
 
 // SpendInput satisfies the TypedInput interface and represents a spend transaction.
 type SpendInput struct {
-	// Commitment
+	SpendCommitmentSuffix []byte   // The unconsumed suffix of the output commitment
+	Arguments             [][]byte // Witness
 	SpendCommitment
-
-	// The unconsumed suffix of the output commitment
-	SpendCommitmentSuffix []byte
-
-	// Witness
-	Arguments [][]byte
 }
 
-func (si *SpendInput) InputType() int { return SpendInputType }
-
-func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount uint64, sourcePos uint64, controlProgram []byte) *TxInput {
-	const (
-		vmver    = 1
-		assetver = 1
-	)
+// NewSpendInput create a new SpendInput struct.
+func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amount, sourcePos uint64, controlProgram []byte) *TxInput {
 	sc := SpendCommitment{
 		AssetAmount: bc.AssetAmount{
 			AssetId: &assetID,
@@ -36,11 +26,11 @@ func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amo
 		},
 		SourceID:       sourceID,
 		SourcePosition: sourcePos,
-		VMVersion:      vmver,
+		VMVersion:      1,
 		ControlProgram: controlProgram,
 	}
 	return &TxInput{
-		AssetVersion: assetver,
+		AssetVersion: 1,
 		TypedInput: &SpendInput{
 			SpendCommitment: sc,
 			Arguments:       arguments,
@@ -48,8 +38,10 @@ func NewSpendInput(arguments [][]byte, sourceID bc.Hash, assetID bc.AssetID, amo
 	}
 }
 
-// SpendCommitment contains the commitment data for a transaction
-// output (which also appears in the spend input of that output).
+// InputType is the interface function for return the input type.
+func (si *SpendInput) InputType() uint8 { return SpendInputType }
+
+// SpendCommitment contains the commitment data for a transaction output.
 type SpendCommitment struct {
 	bc.AssetAmount
 	SourceID       bc.Hash
@@ -90,11 +82,8 @@ func (sc *SpendCommitment) writeContents(w io.Writer, suffix []byte, assetVersio
 	}
 	if len(suffix) > 0 {
 		_, err = w.Write(suffix)
-		if err != nil {
-			return errors.Wrap(err, "writing suffix")
-		}
 	}
-	return nil
+	return errors.Wrap(err, "writing suffix")
 }
 
 func (sc *SpendCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) (suffix []byte, err error) {
@@ -132,7 +121,7 @@ func (sc *SpendCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) (
 func (sc *SpendCommitment) Hash(suffix []byte, assetVersion uint64) (spendhash bc.Hash) {
 	h := sha3pool.Get256()
 	defer sha3pool.Put256(h)
-	sc.writeExtensibleString(h, suffix, assetVersion) // TODO(oleg): get rid of this assetVersion parameter to actually write all the bytes
+	sc.writeExtensibleString(h, suffix, assetVersion)
 	spendhash.ReadFrom(h)
 	return spendhash
 }

@@ -8,16 +8,12 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
-// TODO(bobg): Review serialization/deserialization logic for
-// assetVersions other than 1.
-
+// TxOutput is the top level struct of tx output.
 type TxOutput struct {
 	AssetVersion uint64
 	OutputCommitment
-
 	// Unconsumed suffixes of the commitment and witness extensible strings.
 	CommitmentSuffix []byte
-	WitnessSuffix    []byte
 }
 
 func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
@@ -51,7 +47,7 @@ func (to *TxOutput) readFrom(r *blockchain.Reader, txVersion uint64) (err error)
 	return errors.Wrap(err, "reading output witness")
 }
 
-func (to *TxOutput) writeTo(w io.Writer, serflags byte) error {
+func (to *TxOutput) writeTo(w io.Writer) error {
 	if _, err := blockchain.WriteVarint63(w, to.AssetVersion); err != nil {
 		return errors.Wrap(err, "writing asset version")
 	}
