@@ -11,7 +11,7 @@ import (
 
 type (
 	TxInput struct {
-		AssetVersion  uint64
+		AssetVersion uint64
 		TypedInput
 
 		// Unconsumed suffixes of the commitment and witness extensible
@@ -213,7 +213,6 @@ func (t *TxInput) writeTo(w io.Writer, serflags uint8) error {
 	if err != nil {
 		return errors.Wrap(err, "writing input commitment")
 	}
-
 
 	if serflags&SerWitness != 0 {
 		if _, err = blockchain.WriteExtensibleString(w, t.WitnessSuffix, t.writeInputWitness); err != nil {

@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+
 	"github.com/bytom/api"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/env"

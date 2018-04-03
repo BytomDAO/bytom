@@ -134,7 +134,7 @@ func (a *API) tokenAuthn(req *http.Request) (string, error) {
 
 func (a *API) cachedTokenAuthnCheck(ctx context.Context, user, pw string) error {
 	a.tokenMu.Lock()
-	res, ok := a.tokenMap[user + pw]
+	res, ok := a.tokenMap[user+pw]
 	a.tokenMu.Unlock()
 	if !ok || time.Now().After(res.lastLookup.Add(tokenExpiry)) {
 		valid, err := a.tokens.Check(ctx, user, pw)
@@ -143,7 +143,7 @@ func (a *API) cachedTokenAuthnCheck(ctx context.Context, user, pw string) error 
 		}
 		res = tokenResult{valid: valid, lastLookup: time.Now()}
 		a.tokenMu.Lock()
-		a.tokenMap[user + pw] = res
+		a.tokenMap[user+pw] = res
 		a.tokenMu.Unlock()
 	}
 	if !res.valid {
