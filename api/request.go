@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strings"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/encoding/json"
@@ -26,6 +27,7 @@ func (a *API) filterAliases(ctx context.Context, br *BuildRequest) error {
 	for i, m := range br.Actions {
 		id, _ := m["asset_id"].(string)
 		alias, _ := m["asset_alias"].(string)
+		alias = strings.ToUpper(alias)
 		if id == "" && alias != "" {
 			switch alias {
 			case consensus.BTMAlias:
