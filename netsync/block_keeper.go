@@ -11,7 +11,6 @@ import (
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
-	"fmt"
 )
 
 const (
@@ -160,8 +159,9 @@ func (bk *blockKeeper) BlockRequest(peerID string, height uint64) (*types.Block,
 func (bk *blockKeeper) txsProcessWorker() {
 	for txsResponse := range bk.txsProcessCh {
 		tx := txsResponse.tx
+		log.Info("Receive new tx from remote peer. TxID:", tx.ID.String())
 		bk.peers.MarkTransaction(txsResponse.peerID, &tx.ID)
-		if err := bk.chain.ValidateTx(tx); err != nil {
+		if isOrphan, err := bk.chain.ValidateTx(tx); err != nil && isOrphan == false {
 			bk.sw.AddScamPeer(bk.peers.Peer(txsResponse.peerID).getPeer())
 		}
 	}
