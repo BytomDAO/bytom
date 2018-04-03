@@ -1,10 +1,10 @@
 package test
 
 import (
-	"os"
-	"time"
 	"encoding/json"
 	"fmt"
+	"os"
+	"time"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
@@ -34,6 +34,9 @@ func (ctx *ChainTestContext) solve(block *types.Block) error {
 }
 
 func (ctx *ChainTestContext) update(block *types.Block) error {
+	if err := ctx.solve(block); err != nil {
+		return err
+	}
 	if err := ctx.Chain.SaveBlock(block); err != nil {
 		return err
 	}
@@ -50,9 +53,6 @@ func (ctx *ChainTestContext) append(blkNum uint64) error {
 		prevBlockHash := prevBlock.Hash()
 		block, err := DefaultEmptyBlock(prevBlock.Height+1, timestamp, prevBlockHash, prevBlock.Bits)
 		if err != nil {
-			return err
-		}
-		if err := ctx.solve(block); err != nil {
 			return err
 		}
 		if err := ctx.update(block); err != nil {
@@ -146,10 +146,10 @@ func (ctx *ChainTestContext) getUtxoEntries() map[string]*storage.UtxoEntry {
 
 func (ctx *ChainTestContext) validateRollback(utxoEntries map[string]*storage.UtxoEntry) error {
 	newUtxoEntries := ctx.getUtxoEntries()
-	beforeRollBackLen := len(utxoEntries)
+	beforeRollbackLen := len(utxoEntries)
 	nowLen := len(newUtxoEntries)
-	if nowLen != beforeRollBackLen {
-		return fmt.Errorf("now we have %d utxo entries, before rollback we have %d", nowLen, beforeRollBackLen)
+	if nowLen != beforeRollbackLen {
+		return fmt.Errorf("now we have %d utxo entries, before rollback we have %d", nowLen, beforeRollbackLen)
 	}
 
 	for key, entry := range utxoEntries {
@@ -160,16 +160,8 @@ func (ctx *ChainTestContext) validateRollback(utxoEntries map[string]*storage.Ut
 	return nil
 }
 
-func (ctx *ChainTestContext) rollBackTo(height uint64) error {
-	block, err := ctx.Chain.GetBlockByHeight(height)
-	if err != nil {
-		return err
-	}
-	return ctx.Chain.ReorganizeChain(block)
-}
-
 type ChainTestConfig struct {
-	RollBackTo uint64     `json:"roll_back_to"`
+	RollbackTo uint64     `json:"rollback_to"`
 	Blocks     []*ctBlock `json:"blocks"`
 }
 
@@ -272,13 +264,10 @@ func (cfg *ChainTestConfig) Run() error {
 	}
 
 	var utxoEntries map[string]*storage.UtxoEntry
-	var rollBackBlock *types.Block
+	var rollbackBlock *types.Block
 	for _, blk := range cfg.Blocks {
 		block, err := blk.createBlock(ctx)
 		if err != nil {
-			return err
-		}
-		if err := ctx.solve(block); err != nil {
 			return err
 		}
 		if err := ctx.update(block); err != nil {
@@ -290,27 +279,27 @@ func (cfg *ChainTestConfig) Run() error {
 		if err := ctx.validateExecution(block); err != nil {
 			return err
 		}
-		if cfg.RollBackTo != 0 && cfg.RollBackTo == ctx.Chain.Height() {
+		if block.Height <= cfg.RollbackTo && cfg.RollbackTo <= block.Height+blk.Append {
 			utxoEntries = ctx.getUtxoEntries()
-			rollBackBlock = block
+			rollbackBlock = block
 		}
 		if err := ctx.append(blk.Append); err != nil {
 			return err
 		}
 	}
 
-	if rollBackBlock == nil {
+	if rollbackBlock == nil {
 		return nil
 	}
 
 	// rollback and validate
-	if err := ctx.rollBackTo(cfg.RollBackTo); err != nil {
+	if err := ctx.Chain.ReorganizeChain(rollbackBlock); err != nil {
 		return err
 	}
 	if err := ctx.validateRollback(utxoEntries); err != nil {
 		return err
 	}
-	if err := ctx.validateStatus(rollBackBlock); err != nil {
+	if err := ctx.validateStatus(rollbackBlock); err != nil {
 		return err
 	}
 	return nil

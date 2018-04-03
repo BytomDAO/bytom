@@ -1,5 +1,5 @@
 {
-  "roll_back_to": 10,
+  "rollback_to": 10,
   "blocks": [
     {
       "append": 6

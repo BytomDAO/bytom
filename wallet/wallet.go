@@ -167,6 +167,10 @@ func (w *Wallet) attachBlock(block *types.Block) error {
 	return w.commitWalletInfo(storeBatch)
 }
 
+func (w *Wallet) DetachBlock(block *types.Block) error {
+	return w.detachBlock(block)
+}
+
 func (w *Wallet) detachBlock(block *types.Block) error {
 	blockHash := block.Hash()
 	txStatus, err := w.chain.GetTransactionStatus(&blockHash)

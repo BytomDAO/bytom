@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
@@ -17,9 +18,10 @@ import (
 )
 
 type WalletTestConfig struct {
-	Keys     []*keyInfo     `json:"keys"`
-	Accounts []*accountInfo `json:"accounts"`
-	Blocks   []*wtBlock     `json:"blocks"`
+	Keys       []*keyInfo     `json:"keys"`
+	Accounts   []*accountInfo `json:"accounts"`
+	Blocks     []*wtBlock     `json:"blocks"`
+	RollbackTo uint64         `json:"rollback_to"`
 }
 
 type keyInfo struct {
@@ -190,6 +192,9 @@ func (ctx *WalletTestContext) solve(block *types.Block) error {
 }
 
 func (ctx *WalletTestContext) update(block *types.Block) error {
+	if err := ctx.solve(block); err != nil {
+		return err
+	}
 	if err := ctx.Chain.SaveBlock(block); err != nil {
 		return err
 	}
@@ -216,6 +221,49 @@ func (ctx *WalletTestContext) getBalance(accountAlias string, assetAlias string)
 	return 0, nil
 }
 
+func (ctx *WalletTestContext) getAccBalances() map[string]map[string]uint64 {
+	accBalances := make(map[string]map[string]uint64)
+	balances, err := ctx.Wallet.GetAccountBalances("")
+	if err != nil {
+		return nil
+	}
+
+	for _, balance := range balances {
+		if accBalance, ok := accBalances[balance.Alias]; ok {
+			if _, ok := accBalance[balance.AssetAlias]; ok {
+				accBalance[balance.AssetAlias] += balance.Amount
+				continue
+			}
+			accBalance[balance.AssetAlias] = balance.Amount
+			continue
+		}
+		accBalances[balance.Alias] = map[string]uint64{balance.AssetAlias: balance.Amount}
+	}
+	return accBalances
+}
+
+func (ctx *WalletTestContext) getDetachedBlocks(height uint64) ([]*types.Block, error) {
+	currentHeight := ctx.Chain.Height()
+	detachedBlocks := make([]*types.Block, 0, currentHeight-height)
+	for i := currentHeight; i > height; i-- {
+		block, err := ctx.Chain.GetBlockByHeight(i)
+		if err != nil {
+			return detachedBlocks, err
+		}
+		detachedBlocks = append(detachedBlocks, block)
+	}
+	return detachedBlocks, nil
+}
+
+func (ctx *WalletTestContext) validateRollback(oldAccBalances map[string]map[string]uint64) error {
+	accBalances := ctx.getAccBalances()
+	if reflect.DeepEqual(oldAccBalances, accBalances) {
+		return nil
+	} else {
+		return fmt.Errorf("different account balances after rollback")
+	}
+}
+
 func (ctx *WalletTestContext) append(blkNum uint64) error {
 	for i := uint64(0); i < blkNum; i++ {
 		prevBlock := ctx.Chain.BestBlock()
@@ -225,9 +273,6 @@ func (ctx *WalletTestContext) append(blkNum uint64) error {
 		if err != nil {
 			return err
 		}
-		if err := ctx.solve(block); err != nil {
-			return err
-		}
 		if err := ctx.update(block); err != nil {
 			return nil
 		}
@@ -235,7 +280,7 @@ func (ctx *WalletTestContext) append(blkNum uint64) error {
 	return nil
 }
 
-func (config *WalletTestConfig) Run() error {
+func (cfg *WalletTestConfig) Run() error {
 	dirPath, err := ioutil.TempDir(".", "pseudo_hsm")
 	if err != nil {
 		return err
@@ -262,24 +307,23 @@ func (config *WalletTestConfig) Run() error {
 		Chain:  chain,
 	}
 
-	for _, key := range config.Keys {
+	for _, key := range cfg.Keys {
 		if err := ctx.createKey(key.Name, key.Password); err != nil {
 			return err
 		}
 	}
 
-	for _, acc := range config.Accounts {
+	for _, acc := range cfg.Accounts {
 		if err := ctx.createAccount(acc.Name, acc.Keys, acc.Quorum); err != nil {
 			return err
 		}
 	}
 
-	for _, blk := range config.Blocks {
+	var accBalances map[string]map[string]uint64
+	var rollbackBlock *types.Block
+	for _, blk := range cfg.Blocks {
 		block, err := blk.create(ctx)
 		if err != nil {
-			return err
-		}
-		if err := ctx.solve(block); err != nil {
 			return err
 		}
 		if err := ctx.update(block); err != nil {
@@ -288,9 +332,31 @@ func (config *WalletTestConfig) Run() error {
 		if err := blk.verifyPostStates(ctx); err != nil {
 			return err
 		}
+		if block.Height <= cfg.RollbackTo && cfg.RollbackTo <= block.Height+blk.Append {
+			accBalances = ctx.getAccBalances()
+			rollbackBlock = block
+		}
 		if err := ctx.append(blk.Append); err != nil {
 			return err
 		}
 	}
-	return nil
+
+	if rollbackBlock == nil {
+		return nil
+	}
+
+	// rollback and validate
+	detachedBlocks, err := ctx.getDetachedBlocks(rollbackBlock.Height)
+	if err != nil {
+		return err
+	}
+	if err := ctx.Chain.ReorganizeChain(rollbackBlock); err != nil {
+		return err
+	}
+	for _, block := range detachedBlocks {
+		if err := ctx.Wallet.DetachBlock(block); err != nil {
+			return err
+		}
+	}
+	return ctx.validateRollback(accBalances)
 }
