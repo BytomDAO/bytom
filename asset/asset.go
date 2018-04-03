@@ -140,6 +140,10 @@ func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint64, error) {
 
 // Define defines a new Asset.
 func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}) (*Asset, error) {
+	if len(xpubs) == 0 {
+		return nil, errors.Wrap(signers.ErrNoXPubs)
+	}
+
 	normalizedAlias := strings.ToUpper(strings.TrimSpace(alias))
 	if normalizedAlias == consensus.BTMAlias {
 		return nil, ErrInternalAsset
