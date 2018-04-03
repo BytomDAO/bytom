@@ -170,6 +170,7 @@ func TestHashToBig(t *testing.T) {
 // }
 
 func TestBigToCompact(t *testing.T) {
+	// basic tests
 	tests := []struct {
 		in  int64
 		out uint64
@@ -190,7 +191,8 @@ func TestBigToCompact(t *testing.T) {
 		}
 	}
 
-	//btm_PowMinBits = 2161727821138738707 = 0x1e000000000dbe13
+	// btm PowMin test
+	// PowMinBits = 2161727821138738707 = 0x1e000000000dbe13
 	n := big.NewInt(0).Lsh(big.NewInt(0x0dbe13), 27*8)
 	out := uint64(0x1e000000000dbe13)
 	r := BigToCompact(n)
