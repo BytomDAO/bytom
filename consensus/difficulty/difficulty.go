@@ -3,7 +3,7 @@ package difficulty
 // HashToBig converts a *bc.Hash into a big.Int that can be used to
 import (
 	"math/big"
-	// "fmt"
+	"fmt"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/mining/tensority"
@@ -66,7 +66,11 @@ func BigToCompact(n *big.Int) uint64 {
 	// Bytes() returns the absolute value of n as a big-endian byte slice
 	exponent := uint(len(n.Bytes()))
 
+	//???
+	fmt.Printf("0x%016x\n", n.Bits()[0])
+	
 	if exponent <= 3 {
+		//Bits() returns the absolute value of n as a little-endian uint64 slice 
 		mantissa = uint64(n.Bits()[0])
 		mantissa <<= 8 * (3 - exponent)
 	} else {
@@ -86,7 +90,7 @@ func BigToCompact(n *big.Int) uint64 {
 	return compact
 }
 
-// CheckProofOfWork the hash is vaild for given difficult
+// CheckProofOfWork checks whether the hash is vaild for a given difficulty
 func CheckProofOfWork(hash, seed *bc.Hash, bits uint64) bool {
 	compareHash := tensority.Hash(hash, seed)
 	return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0
