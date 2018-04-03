@@ -1,9 +1,7 @@
 package difficulty
 
-// HashToBig converts a *bc.Hash into a big.Int that can be used to
 import (
 	"math/big"
-	"fmt"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/mining/tensority"
@@ -11,7 +9,7 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-// HashToBig convert bc.Hash to a difficult int
+// HashToBig convert bc.Hash to a difficulty int
 func HashToBig(hash *bc.Hash) *big.Int {
 	buf := hash.Byte32()
 	blen := len(buf)
@@ -66,15 +64,17 @@ func BigToCompact(n *big.Int) uint64 {
 	// Bytes() returns the absolute value of n as a big-endian byte slice
 	exponent := uint(len(n.Bytes()))
 
-	//???
-	fmt.Printf("0x%016x\n", n.Bits()[0])
-	
+	// Bits() returns the absolute value of n as a little-endian uint64 slice 
 	if exponent <= 3 {
-		//Bits() returns the absolute value of n as a little-endian uint64 slice 
 		mantissa = uint64(n.Bits()[0])
 		mantissa <<= 8 * (3 - exponent)
 	} else {
 		tn := new(big.Int).Set(n)
+		// Since the base for the exponent is 256, the exponent can be treated
+		// as the number of bytes to represent the full 256-bit number. And as
+		// the exponent is treated as the number of bytes, Rsh 8*(exponent-3)
+		// makes sure that the shifted tn won't occupy more than 8*3=24 bits,
+		// and can be read from Bits()[0], which is 64-bit
 		mantissa = uint64(tn.Rsh(tn, 8*(exponent-3)).Bits()[0])
 	}
 

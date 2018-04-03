@@ -182,15 +182,15 @@ func TestBigToCompact(t *testing.T) {
 		// {576460752305389568, 576460752305389568},
 	}
 
-	// for x, test := range tests {
-	// 	n := big.NewInt(test.in)
-	// 	r := BigToCompact(n)
-	// 	if r != test.out {
-	// 		t.Errorf("TestBigToCompact test #%d failed: got 0x%016x want 0x%016x\n",
-	// 			x, r, test.out)
-	// 		return
-	// 	}
-	// }
+	for x, test := range tests {
+		n := big.NewInt(test.in)
+		r := BigToCompact(n)
+		if r != test.out {
+			t.Errorf("TestBigToCompact test #%d failed: got 0x%016x want 0x%016x\n",
+				x, r, test.out)
+			return
+		}
+	}
 
 	//btm_PowMinBits = 2161727821138738707 = 0x1e000000000dbe13
 	n := big.NewInt(0).Lsh(big.NewInt(0x0dbe13), 27*8)
