@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"testing"
 	"reflect"
+	"fmt"
 	// "strconv"
 
 	// "github.com/bytom/consensus"
@@ -173,12 +174,19 @@ func TestBigToCompact(t *testing.T) {
 		in  int64
 		out uint64
 	}{
-		{0, 0},
+		{ 0, 0},
+		{-0, 0},
+		{ 1, 0x0100000000010000},
 		{-1, 0x0180000000010000},
 		// {576460752303947776, 576460752303947776},
 		// {576460752305389568, 576460752305389568},
-		// {-1, 2161727821138738707},//btm PowMinBits
+		{big.NewInt(0x0dbe13000000).Int64 , 2161727821138738707},//btm PowMinBits
+		{big.NewInt(0).SetBytes(byte[2]{0x00, 0x00}) , 2161727821138738707},//btm PowMinBits
 	}
+
+	n := CompactToBig(2161727821138738707)
+	fmt.Println("bytes", n.Bytes())
+	fmt.Printf("bits:0x%x\n", n.Bits()[0])
 
 	for x, test := range tests {
 		n := big.NewInt(test.in)
