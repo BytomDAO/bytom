@@ -164,7 +164,7 @@ func (g *TxGenerator) AddTxInput(txInput *types.TxInput, signInstruction *txbuil
 }
 
 func (g *TxGenerator) AddTxInputFromUtxo(utxo *account.UTXO, accountAlias string) error {
-	acc, err := g.AccountManager.FindByAlias(nil, "alice")
+	acc, err := g.AccountManager.FindByAlias(nil, accountAlias)
 	if err != nil {
 		return err
 	}
