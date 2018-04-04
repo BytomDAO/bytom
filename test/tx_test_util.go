@@ -40,6 +40,71 @@ func NewTxGenerator(accountManager *account.Manager, assets *asset.Registry, hsm
 	}
 }
 
+func (g *TxGenerator) reset() {
+	g.Builder = txbuilder.NewBuilder(time.Now())
+}
+
+func (g *TxGenerator) createKey(alias string, auth string) error {
+	_, err := g.Hsm.XCreate(alias, auth)
+	return err
+}
+
+func (g *TxGenerator) getPubkey(keyAlias string) *chainkd.XPub {
+	pubKeys := g.Hsm.ListKeys()
+	for i, key := range pubKeys {
+		if key.Alias == keyAlias {
+			return &pubKeys[i].XPub
+		}
+	}
+	return nil
+}
+
+func (g *TxGenerator) createAccounts(name string, keys []string, quorum int) error {
+	xpubs := []chainkd.XPub{}
+	for _, alias := range keys {
+		xpub := g.getPubkey(alias)
+		if xpub == nil {
+			return fmt.Errorf("can't find pubkey for %s", alias)
+		}
+		xpubs = append(xpubs, *xpub)
+	}
+	_, err := g.AccountManager.Create(nil, xpubs, quorum, name, nil)
+	return err
+}
+
+func (g *TxGenerator) createAsset(accountAlias string, assetAlias string) (*asset.Asset, error) {
+	acc, err := g.AccountManager.FindByAlias(nil, accountAlias)
+	if err != nil {
+		return nil, err
+	}
+	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
+}
+
+func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (*account.UTXO, error) {
+	ctrlProg, err := g.createControlProgram(accountAlias, false)
+	if err != nil {
+		return nil, err
+	}
+
+	assetDef, err := g.Assets.FindByAlias(nil, assetAlias)
+	if err != nil {
+		return nil, err
+	}
+	utxo := &account.UTXO{
+		OutputID:            bc.Hash{V0: 1},
+		SourceID:            bc.Hash{V0: 1},
+		AssetID:             assetDef.AssetID,
+		Amount:              amount,
+		SourcePos:           0,
+		ControlProgram:      ctrlProg.ControlProgram,
+		ControlProgramIndex: ctrlProg.KeyIndex,
+		AccountID:           ctrlProg.AccountID,
+		Address:             ctrlProg.Address,
+		ValidHeight:         0,
+	}
+	return utxo, nil
+}
+
 func (g *TxGenerator) assetAmount(assetAlias string, amount uint64) (*bc.AssetAmount, error) {
 	if assetAlias == "BTM" {
 		a := &bc.AssetAmount{
@@ -92,6 +157,23 @@ func (g *TxGenerator) AddSpendInput(accountAlias, assetAlias string, amount uint
 		return err
 	}
 	return spendAction.Build(nil, g.Builder)
+}
+
+func (g *TxGenerator) AddTxInput(txInput *types.TxInput, signInstruction *txbuilder.SigningInstruction) error {
+	return g.Builder.AddInput(txInput, signInstruction)
+}
+
+func (g *TxGenerator) AddTxInputFromUtxo(utxo *account.UTXO, accountAlias string) error {
+	acc, err := g.AccountManager.FindByAlias(nil, "alice")
+	if err != nil {
+		return err
+	}
+
+	txInput, signInst, err := account.UtxoToInputs(acc.Signer, utxo)
+	if err != nil {
+		return err
+	}
+	return g.AddTxInput(txInput, signInst)
 }
 
 func (g *TxGenerator) AddIssuanceInput(assetAlias string, amount uint64) error {
