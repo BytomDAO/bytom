@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/encoding/blockchain"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
@@ -116,12 +115,4 @@ func (sc *SpendCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) (
 		}
 		return nil
 	})
-}
-
-func (sc *SpendCommitment) Hash(suffix []byte, assetVersion uint64) (spendhash bc.Hash) {
-	h := sha3pool.Get256()
-	defer sha3pool.Put256(h)
-	sc.writeExtensibleString(h, suffix, assetVersion)
-	spendhash.ReadFrom(h)
-	return spendhash
 }

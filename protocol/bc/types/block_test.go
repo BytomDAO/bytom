@@ -141,7 +141,7 @@ func TestSmallBlock(t *testing.T) {
 			Version: 1,
 			Height:  1,
 		},
-		Transactions: []*Tx{NewTx(TxData{Version: CurrentTransactionVersion})},
+		Transactions: []*Tx{NewTx(TxData{Version: currentTransactionVersion})},
 	}
 
 	got := serialize(t, &block)

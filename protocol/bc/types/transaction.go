@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	CurrentTransactionVersion = 1   // the latest supported tx version.
+	currentTransactionVersion = 1   // the latest supported tx version.
 	serRequired               = 0x7 // Bit mask accepted serialization flag.
 )
 
