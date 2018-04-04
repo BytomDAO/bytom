@@ -59,10 +59,14 @@ func (cfg *TxTestConfig) Run() error {
 			return err
 		}
 
-		_, err = validation.ValidateTx(tx.Tx, MockBlock())
+		status, err := validation.ValidateTx(tx.Tx, MockBlock())
 		result := err == nil
 		if result != t.Valid {
 			return fmt.Errorf("tx %s validate failed: %s", t.Describe, err.Error())
+		}
+
+		if result && t.GasUsed != status.BTMValue {
+			return fmt.Errorf("gas used dismatch, expected: %d, have: %d", t.GasUsed, gasUsed)
 		}
 	}
 	return nil
@@ -72,6 +76,7 @@ type ttTransaction struct {
 	wtTransaction
 	Describe string `json:"describe"`
 	Valid    bool   `json:"valid"`
+	GasUsed  uint64 `json:"gas_used"`
 }
 
 func (t *ttTransaction) create(g *TxGenerator) (*types.Tx, error) {

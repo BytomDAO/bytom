@@ -18,7 +18,8 @@
       "outputs": [
         {"type": "output", "name": "bob", "amount": 40000000000, "asset": "BTM"}
       ],
-      "valid": true
+      "valid": true,
+      "gas_used": 60000000000
     },
     {
       "describe": "single sign btm tx, out of gas",
@@ -42,7 +43,8 @@
         {"type": "output", "name": "bob", "amount": 30000000000, "asset": "BTM"},
         {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"}
       ],
-      "valid": true
+      "valid": true,
+      "gas_used": 140000000000
     },
     {
       "describe": "single sign asset tx",
@@ -55,7 +57,8 @@
         {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"},
         {"type": "output", "name": "alice", "amount": 100, "asset": "GOLD"}
       ],
-      "valid": true
+      "valid": true,
+      "gas_used": 70000000000
     },
     {
       "describe": "single sign asset, out of gas",
@@ -94,7 +97,8 @@
         {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"},
         {"type": "retire", "name": "alice", "amount": 100, "asset": "GOLD"}
       ],
-      "valid": true
+      "valid": true,
+      "gas_used": 70000000000
     },
     {
       "describe": "normal multi-sig asset with issue and retire",
@@ -106,10 +110,12 @@
         {"type": "spend_account", "name": "alice", "amount": 10, "asset": "GOLD"}
       ],
       "outputs": [
+        {"type": "output", "name": "multi-sig", "amount": 199500000000, "asset": "BTM"},
         {"type": "output", "name": "multi-sig", "amount": 100, "asset": "MULTI-SIGN-ASSET"},
         {"type": "retire", "name": "alice", "amount": 10, "asset": "GOLD"}
       ],
-      "valid": true
+      "valid": true,
+      "gas_used": 500000000
     },
     {
       "describe": "multi-sig asset with issue and retire, out of gas",
