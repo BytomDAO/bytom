@@ -58,24 +58,19 @@ func (sc *SpendCommitment) writeExtensibleString(w io.Writer, suffix []byte, ass
 
 func (sc *SpendCommitment) writeContents(w io.Writer, suffix []byte, assetVersion uint64) (err error) {
 	if assetVersion == 1 {
-		_, err = sc.SourceID.WriteTo(w)
-		if err != nil {
+		if _, err = sc.SourceID.WriteTo(w); err != nil {
 			return errors.Wrap(err, "writing source id")
 		}
-		_, err = sc.AssetAmount.WriteTo(w)
-		if err != nil {
+		if _, err = sc.AssetAmount.WriteTo(w); err != nil {
 			return errors.Wrap(err, "writing asset amount")
 		}
-		_, err = blockchain.WriteVarint63(w, sc.SourcePosition)
-		if err != nil {
+		if _, err = blockchain.WriteVarint63(w, sc.SourcePosition); err != nil {
 			return errors.Wrap(err, "writing source position")
 		}
-		_, err = blockchain.WriteVarint63(w, sc.VMVersion)
-		if err != nil {
+		if _, err = blockchain.WriteVarint63(w, sc.VMVersion); err != nil {
 			return errors.Wrap(err, "writing vm version")
 		}
-		_, err = blockchain.WriteVarstr31(w, sc.ControlProgram)
-		if err != nil {
+		if _, err = blockchain.WriteVarstr31(w, sc.ControlProgram); err != nil {
 			return errors.Wrap(err, "writing control program")
 		}
 	}
@@ -88,27 +83,22 @@ func (sc *SpendCommitment) writeContents(w io.Writer, suffix []byte, assetVersio
 func (sc *SpendCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) (suffix []byte, err error) {
 	return blockchain.ReadExtensibleString(r, func(r *blockchain.Reader) error {
 		if assetVersion == 1 {
-			_, err := sc.SourceID.ReadFrom(r)
-			if err != nil {
+			if _, err := sc.SourceID.ReadFrom(r); err != nil {
 				return errors.Wrap(err, "reading source id")
 			}
-			err = sc.AssetAmount.ReadFrom(r)
-			if err != nil {
+			if err = sc.AssetAmount.ReadFrom(r); err != nil {
 				return errors.Wrap(err, "reading asset+amount")
 			}
-			sc.SourcePosition, err = blockchain.ReadVarint63(r)
-			if err != nil {
+			if sc.SourcePosition, err = blockchain.ReadVarint63(r); err != nil {
 				return errors.Wrap(err, "reading source position")
 			}
-			sc.VMVersion, err = blockchain.ReadVarint63(r)
-			if err != nil {
+			if sc.VMVersion, err = blockchain.ReadVarint63(r); err != nil {
 				return errors.Wrap(err, "reading VM version")
 			}
 			if sc.VMVersion != 1 {
 				return fmt.Errorf("unrecognized VM version %d for asset version 1", sc.VMVersion)
 			}
-			sc.ControlProgram, err = blockchain.ReadVarstr31(r)
-			if err != nil {
+			if sc.ControlProgram, err = blockchain.ReadVarstr31(r); err != nil {
 				return errors.Wrap(err, "reading control program")
 			}
 			return nil
