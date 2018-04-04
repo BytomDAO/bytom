@@ -139,6 +139,19 @@
         {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"}
       ],
       "valid": false
+    },
+    {
+      "describe": "multi utxo btm tx, output large than input",
+      "passwords": ["alice", "bob"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "spend_account", "name": "bob", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"},
+        {"type": "output", "name": "alice", "amount": 200000000000, "asset": "BTM"}
+      ],
+      "valid": false
     }
   ]
 }
