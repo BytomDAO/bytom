@@ -16,6 +16,7 @@ var (
 	baseDir       = filepath.Join(".", "testdata")
 	walletTestDir = filepath.Join(baseDir, "wallet_tests")
 	chainTestDir  = filepath.Join(baseDir, "chain_tests")
+	txTestDir = filepath.Join(baseDir, "tx_tests")
 )
 
 func readJson(reader io.Reader, value interface{}) error {
