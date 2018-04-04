@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 	"reflect"
-	// "fmt"
+	"fmt"
 	"strconv"
 
 	"github.com/bytom/consensus"
@@ -42,6 +42,7 @@ func TestCalcNextRequiredDifficulty(t *testing.T) {
 	for i, c := range cases {
 		if got := CalcNextRequiredDifficulty(c.lastBH, c.compareBH); got != c.want {
 			t.Errorf("Compile(%d) = %d want %d", i, got, c.want)
+			return
 		}
 	}
 }
@@ -105,6 +106,7 @@ func TestHashToBig(t *testing.T) {
 
 		if !reflect.DeepEqual(resArr, c.expect) {
 			t.Errorf("case %d: content mismatch:\n\tgeting\t\t%x\n\texpecting\t%x", i, resArr, c.expect)
+			return
 		}
 	}
 }
@@ -115,43 +117,43 @@ func TestCompactToBig(t *testing.T) {
 		out	*big.Int
 	}{
 		{
-			in:		`00000011` + //Exponent
+			in:		`00000000` + //Exponent
 					`0` + //Sign
 					`0000000000000000000000000000000000000000000000000000000`, //Mantissa
 			out:	big.NewInt(0),
 		},
 		{
-			in:		`00000011` + //Exponent
+			in:		`00000000` + //Exponent
 					`1` + //Sign
 					`0000000000000000000000000000000000000000000000000000000`, //Mantissa
 			out:	big.NewInt(0),
 		},
 		{
-			in:	`	00000011` + //Exponent
+			in:		`00000001` + //Exponent
 					`0` + //Sign
-					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+					`0000000000000000000000000000000000000010000000000000000`, //Mantissa
 			out:	big.NewInt(1),
 		},
 		{
-			in:		`00000011` + //Exponent
+			in:		`00000001` + //Exponent
 					`1` + //Sign
-					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
+					`0000000000000000000000000000000000000010000000000000000`, //Mantissa
 			out:	big.NewInt(-1),
 		},
 		{
-			in:		`00000100` + //Exponent
+			in:		`00000011` + //Exponent
 					`0` + //Sign
-					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-			out:	big.NewInt(256),
+					`0000000000000000000000000000000000000010000000000000000`, //Mantissa
+			out:	big.NewInt(65536),
+		},
+		{
+			in:		`00000011` + //Exponent
+					`1` + //Sign
+					`0000000000000000000000000000000000000010000000000000000`, //Mantissa
+			out:	big.NewInt(-65536),
 		},
 		{
 			in:		`00000100` + //Exponent
-					`1` + //Sign
-					`0000000000000000000000000000000000000000000000000000001`, //Mantissa
-			out:	big.NewInt(-256),
-		},
-		{
-			in:		`00001010` + //Exponent
 					`0` + //Sign
 					`0000000000000000000000000000000000000000000000010000000`, //Mantissa
 			out:	big.NewInt(0x7fffffffffffffff),
@@ -164,7 +166,7 @@ func TestCompactToBig(t *testing.T) {
 		r := CompactToBig(compact)
 
 		if r.Cmp(c.out) != 0 {
-			t.Error("TestBigToCompact test #", i, "failed: got", r, "want", c.out)
+			t.Error("TestCompactToBig test #", i, "failed: got", r, "want", c.out)
 			return
 		}
 	}
@@ -176,14 +178,21 @@ func TestBigToCompact(t *testing.T) {
 		in  int64
 		out uint64
 	}{
-		{ 0, 0},
-		{-0, 0},
-		{ 1, 0x0100000000010000},
-		{-1, 0x0180000000010000},
+		{     0, 0x0000000000000000},
+		{    -0, 0x0000000000000000},
+		{     1, 0x0100000000010000},
+		{    -1, 0x0180000000010000},
+		{ 65536, 0x0300000000010000},
+		{-65536, 0x0380000000010000},
 	}
 
 	for x, test := range tests {
 		n := big.NewInt(test.in)
+
+
+		fmt.Println(n.Bytes())
+
+
 		r := BigToCompact(n)
 		if r != test.out {
 			t.Errorf("TestBigToCompact test #%d failed: got 0x%016x want 0x%016x\n",
@@ -193,7 +202,8 @@ func TestBigToCompact(t *testing.T) {
 	}
 
 	// btm PowMin test
-	// PowMinBits = 2161727821138738707 = 0x1e000000000dbe13
+	// PowMinBits = 2161727821138738707, i.e 0x1e000000000dbe13, as defined in
+	// /consensus/general.go
 	n := big.NewInt(0).Lsh(big.NewInt(0x0dbe13), 27*8)
 	out := uint64(0x1e000000000dbe13)
 	r := BigToCompact(n)
