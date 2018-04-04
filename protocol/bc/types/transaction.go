@@ -135,7 +135,7 @@ func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 
 	for ; n > 0; n-- {
 		to := new(TxOutput)
-		if err = to.readFrom(r, tx.Version); err != nil {
+		if err = to.readFrom(r); err != nil {
 			return errors.Wrapf(err, "reading output %d", len(tx.Outputs))
 		}
 		tx.Outputs = append(tx.Outputs, to)

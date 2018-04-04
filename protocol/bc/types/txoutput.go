@@ -31,7 +31,7 @@ func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOu
 	}
 }
 
-func (to *TxOutput) readFrom(r *blockchain.Reader, txVersion uint64) (err error) {
+func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 	if to.AssetVersion, err = blockchain.ReadVarint63(r); err != nil {
 		return errors.Wrap(err, "reading asset version")
 	}
