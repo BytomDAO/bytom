@@ -6,6 +6,9 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc"
+
+	"fmt"
 )
 
 func TestCalcNextRequiredDifficulty(t *testing.T) {
@@ -40,4 +43,19 @@ func TestCalcNextRequiredDifficulty(t *testing.T) {
 			t.Errorf("Compile(%d) = %d want %d", i, got, c.want)
 		}
 	}
+}
+
+func TestDifficulty(t *testing.T) {
+	x := &bc.Hash{
+		V0: uint64(18446744073709551615),
+		V1: uint64(18446744073709551615),
+		V2: uint64(18446744073709551615),
+		V3: uint64(18446744073709551615),
+	}
+
+	diff := HashToBig(x)
+	y := diff.Div(diff, big.NewInt(20))
+
+	bits := BigToCompact(y)
+	fmt.Println(bits)
 }
