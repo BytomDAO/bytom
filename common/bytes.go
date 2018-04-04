@@ -21,9 +21,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	log "github.com/sirupsen/logrus"
 	"math/big"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func ToHex(b []byte) string {

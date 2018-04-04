@@ -26,7 +26,7 @@ var assetIDSink AssetID
 
 func BenchmarkComputeAssetID(b *testing.B) {
 	var (
-		issuanceScript   = []byte{5}
+		issuanceScript = []byte{5}
 	)
 
 	for i := 0; i < b.N; i++ {
