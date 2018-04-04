@@ -59,7 +59,7 @@ func (g *TxGenerator) getPubkey(keyAlias string) *chainkd.XPub {
 	return nil
 }
 
-func (g *TxGenerator) createAccounts(name string, keys []string, quorum int) error {
+func (g *TxGenerator) createAccount(name string, keys []string, quorum int) error {
 	xpubs := []chainkd.XPub{}
 	for _, alias := range keys {
 		xpub := g.getPubkey(alias)
@@ -86,15 +86,15 @@ func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (
 		return nil, err
 	}
 
-	assetDef, err := g.Assets.FindByAlias(nil, assetAlias)
+	assetAmount, err := g.assetAmount(assetAlias, amount)
 	if err != nil {
 		return nil, err
 	}
 	utxo := &account.UTXO{
 		OutputID:            bc.Hash{V0: 1},
 		SourceID:            bc.Hash{V0: 1},
-		AssetID:             assetDef.AssetID,
-		Amount:              amount,
+		AssetID:             *assetAmount.AssetId,
+		Amount:              assetAmount.Amount,
 		SourcePos:           0,
 		ControlProgram:      ctrlProg.ControlProgram,
 		ControlProgramIndex: ctrlProg.KeyIndex,
