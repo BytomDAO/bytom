@@ -337,14 +337,14 @@ func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
 		}
 	}
 
-	for i, v := range keysInfo {
-		if v.Complete == true || status.BestHeight == 0 {
+	for i := range keysInfo {
+		if keysInfo[i].Complete == true || status.BestHeight == 0 {
 			keysInfo[i].Percent = 100
 			continue
 		}
 
 		keysInfo[i].Percent = uint8(status.WorkHeight * 100 / status.BestHeight)
-		if v.Percent == 100 {
+		if keysInfo[i].Percent == 100 {
 			keysInfo[i].Complete = true
 		}
 	}
