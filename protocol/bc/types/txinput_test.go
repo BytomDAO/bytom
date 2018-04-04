@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -118,5 +119,44 @@ func TestSerializationSpend(t *testing.T) {
 
 	if !testutil.DeepEqual(*spend, gotSpend) {
 		t.Errorf("expected marshaled/unmarshaled txinput to be:\n%sgot:\n%s", spew.Sdump(*spend), spew.Sdump(gotSpend))
+	}
+}
+
+func TestSerializationCoinbase(t *testing.T) {
+	coinbase := NewCoinbaseInput([]byte("arbitrary"))
+	fmt.Println(hex.EncodeToString([]byte("arbitrary")))
+	wantHex := strings.Join([]string{
+		"01",                 // asset version
+		"0b",                 // input commitment length
+		"02",                 // coinbase type flag
+		"09",                 // arbitrary length
+		"617262697472617279", // arbitrary data
+		"00",                 // witness length
+	}, "")
+
+	// Test convert struct to hex
+	var buffer bytes.Buffer
+	if err := coinbase.writeTo(&buffer); err != nil {
+		t.Fatal(err)
+	}
+
+	gotHex := hex.EncodeToString(buffer.Bytes())
+	if gotHex != wantHex {
+		t.Errorf("serialization bytes = %s want %s", gotHex, wantHex)
+	}
+
+	// Test convert hex to struct
+	var gotCoinbase TxInput
+	decodeHex, err := hex.DecodeString(wantHex)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := gotCoinbase.readFrom(blockchain.NewReader(decodeHex)); err != nil {
+		t.Fatal(err)
+	}
+
+	if !testutil.DeepEqual(*coinbase, gotCoinbase) {
+		t.Errorf("expected marshaled/unmarshaled txinput to be:\n%sgot:\n%s", spew.Sdump(*coinbase), spew.Sdump(gotCoinbase))
 	}
 }
