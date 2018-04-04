@@ -57,10 +57,10 @@ func TestSerializationOutputCommitment(t *testing.T) {
 	if getSuffix, err := gotOC.readFrom(blockchain.NewReader(decodeHex), 1); err != nil {
 		t.Fatal(err)
 	} else if len(getSuffix) != 0 {
-		t.Errorf("spend commitment read from got garbage hex left")
+		t.Errorf("output commitment read from got garbage hex left")
 	}
 
 	if !testutil.DeepEqual(*oc, gotOC) {
-		t.Errorf("expected marshaled/unmarshaled spend commitment to be:\n%sgot:\n%s", spew.Sdump(*oc), spew.Sdump(gotOC))
+		t.Errorf("expected marshaled/unmarshaled output commitment to be:\n%sgot:\n%s", spew.Sdump(*oc), spew.Sdump(gotOC))
 	}
 }
