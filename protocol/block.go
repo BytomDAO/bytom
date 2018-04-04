@@ -189,7 +189,7 @@ func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithField("hash", blockHash.String()).Info("Skip process due to block already been handled")
-		return false, nil
+		return c.orphanManage.BlockExist(&blockHash), nil
 	}
 	if !c.store.BlockExist(&block.PreviousBlockHash) {
 		c.orphanManage.Add(block)
