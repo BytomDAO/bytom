@@ -238,6 +238,27 @@ func TestInvalidIssuance(t *testing.T) {
 	}
 }
 
+func TestFuzzUnknownAssetVersion(t *testing.T) {
+	rawTx := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	want := Tx{}
+	if err := want.UnmarshalText([]byte(rawTx)); err != nil {
+		t.Fatal(err)
+	}
+
+	b, err := want.MarshalText()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := Tx{}
+	if err = got.UnmarshalText(b); err != nil {
+		t.Fatal(err)
+	}
+	if got.ID.String() != want.ID.String() {
+		t.Errorf("tx id changed to %s", got.ID.String())
+	}
+}
+
 func BenchmarkTxWriteToTrue(b *testing.B) {
 	tx := &Tx{}
 	for i := 0; i < b.N; i++ {
