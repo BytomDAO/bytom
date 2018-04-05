@@ -19,6 +19,7 @@
         {"type": "output", "name": "bob", "amount": 40000000000, "asset": "BTM"}
       ],
       "valid": true,
+      "gas_only": false,
       "tx_fee": 60000000000
     },
     {
@@ -30,6 +31,7 @@
       "outputs": [
         {"type": "output", "name": "bob", "amount": 100000000000, "asset": "BTM"}
       ],
+      "gas_only": false,
       "valid": false
     },
     {
@@ -44,6 +46,7 @@
         {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"}
       ],
       "valid": true,
+      "gas_only": false,
       "tx_fee": 140000000000
     },
     {
@@ -58,6 +61,7 @@
         {"type": "output", "name": "alice", "amount": 100, "asset": "GOLD"}
       ],
       "valid": true,
+      "gas_only": false,
       "tx_fee": 70000000000
     },
     {
@@ -71,7 +75,8 @@
         {"type": "output", "name": "alice", "amount": 100000000000, "asset": "BTM"},
         {"type": "output", "name": "alice", "amount": 100, "asset": "RMB"}
       ],
-      "valid": false
+      "valid": false,
+      "gas_only": false
     },
     {
       "describe": "single sign asset, input not equal with output",
@@ -84,7 +89,8 @@
         {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"},
         {"type": "output", "name": "alice", "amount": 50, "asset": "SILVER"}
       ],
-      "valid": false
+      "valid": false,
+      "gas_only": false
     },
     {
       "describe": "normal single sign with retire",
@@ -98,6 +104,22 @@
         {"type": "retire", "name": "alice", "amount": 100, "asset": "GOLD"}
       ],
       "valid": true,
+      "gas_only": false,
+      "tx_fee": 70000000000
+    },
+    {
+      "describe": "gas only tx",
+      "passwords": ["alice"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "spend_account", "name": "bob", "amount": 100, "asset": "GOLD"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"},
+        {"type": "retire", "name": "alice", "amount": 100, "asset": "GOLD"}
+      ],
+      "valid": false,
+      "gas_only": true,
       "tx_fee": 70000000000
     },
     {
@@ -115,6 +137,7 @@
         {"type": "retire", "name": "alice", "amount": 10, "asset": "GOLD"}
       ],
       "valid": true,
+      "gas_only": false,
       "tx_fee": 500000000
     },
     {
@@ -131,6 +154,7 @@
         {"type": "output", "name": "multi-sig", "amount": 100, "asset": "DOLLAR"},
         {"type": "retire", "name": "alice", "amount": 10, "asset": "GOLD"}
       ],
+      "gas_only": false,
       "valid": false
     },
     {
@@ -144,6 +168,7 @@
         {"type": "output", "name": "bob", "amount": 30000000000, "asset": "BTM"},
         {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"}
       ],
+      "gas_only": false,
       "valid": false
     },
     {
@@ -157,6 +182,7 @@
         {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"},
         {"type": "output", "name": "alice", "amount": 200000000000, "asset": "BTM"}
       ],
+      "gas_only": false,
       "valid": false
     },
     {
@@ -169,6 +195,7 @@
       "outputs": [
         {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"}
       ],
+      "gas_only": false,
       "valid": false
     },
     {
@@ -182,6 +209,7 @@
         {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"}
       ],
       "tx_fee": 10000000000,
+      "gas_only": false,
       "valid": true
     },
     {
@@ -194,6 +222,7 @@
       "outputs": [
         {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"}
       ],
+      "gas_only": false,
       "valid": false
     }
   ]

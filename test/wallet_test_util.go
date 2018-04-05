@@ -180,22 +180,8 @@ func (ctx *WalletTestContext) createAccount(name string, keys []string, quorum i
 	return err
 }
 
-func (ctx *WalletTestContext) solve(block *types.Block) error {
-	seed, err := ctx.Chain.GetSeed(block.Height, &block.PreviousBlockHash)
-	if err != nil {
-		return err
-	}
-	return Solve(seed, block)
-}
-
 func (ctx *WalletTestContext) update(block *types.Block) error {
-	if err := ctx.solve(block); err != nil {
-		return err
-	}
-	if err := ctx.Chain.SaveBlock(block); err != nil {
-		return err
-	}
-	if err := ctx.Chain.ConnectBlock(block); err != nil {
+	if err := SolveAndUpdate(ctx.Chain, block); err != nil {
 		return err
 	}
 	if err := ctx.Wallet.AttachBlock(block); err != nil {

@@ -5,16 +5,20 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+	"time"
+	"encoding/json"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"encoding/json"
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/validation"
+	"github.com/bytom/protocol/vm"
 )
 
 type TxTestConfig struct {
@@ -77,6 +81,14 @@ func (cfg *TxTestConfig) Run() error {
 		if status == nil {
 			continue
 		}
+
+		gasOnlyTx := false
+		if err != nil && status.GasVaild {
+			gasOnlyTx = true
+		}
+		if gasOnlyTx != t.GasOnly {
+			return fmt.Errorf("gas only tx %s validate failed", t.Describe)
+		}
 		if result && t.TxFee != status.BTMValue {
 			return fmt.Errorf("gas used dismatch, expected: %d, have: %d", t.TxFee, status.BTMValue)
 		}
@@ -89,6 +101,7 @@ type ttTransaction struct {
 	Describe string `json:"describe"`
 	Version  uint64 `json:"version"`
 	Valid    bool   `json:"valid"`
+	GasOnly  bool   `json:"gas_only"`
 	TxFee    uint64 `json:"tx_fee"`
 }
 
@@ -151,4 +164,57 @@ func TestTx(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
+}
+
+func TestCoinbaseMature(t *testing.T) {
+	db := dbm.NewDB("test_coinbase_mature_db", "leveldb", "test_coinbase_mature_db")
+	defer os.RemoveAll("test_coinbase_mature_db")
+	chain, _ := MockChain(db)
+
+	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
+	block := chain.BestBlock()
+	spendInput, err := CreateSpendInput(block.Transactions[0], 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txInput := &types.TxInput{
+		AssetVersion: assetVersion,
+		TypedInput:   spendInput,
+	}
+
+	builder := txbuilder.NewBuilder(time.Now())
+	builder.AddInput(txInput, &txbuilder.SigningInstruction{})
+	output := types.NewTxOutput(*consensus.BTMAssetID, 100000000000, defaultCtrlProg)
+	builder.AddOutput(output)
+	tpl, _, err := builder.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	txs := []*types.Tx{tpl.Transaction}
+	matureHeight := chain.Height() + consensus.CoinbasePendingBlockNumber
+	currentHeight := chain.Height()
+	for h := currentHeight + 1; h < matureHeight; h++ {
+		block, err := NewBlock(chain, txs, defaultCtrlProg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(block.Transactions) == 2 {
+			t.Fatalf("spent immature coinbase output success")
+		}
+		if err := SolveAndUpdate(chain, block); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	block, err = NewBlock(chain, txs, defaultCtrlProg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(block.Transactions) != 2 {
+		t.Fatal("spent mature coinbase output failed")
+	}
+	if err := SolveAndUpdate(chain, block); err != nil {
+		t.Fatal(err)
+	}
 }

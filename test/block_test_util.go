@@ -115,6 +115,21 @@ func DefaultEmptyBlock(height uint64, timestamp uint64, prevBlockHash bc.Hash, b
 	return block, err
 }
 
+func SolveAndUpdate(chain *protocol.Chain, block *types.Block) error {
+	seed, err := chain.GetSeed(block.Height, &block.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
+	Solve(seed, block)
+	if err := chain.SaveBlock(block); err != nil {
+		return err
+	}
+	if err := chain.ConnectBlock(block); err != nil {
+		return err
+	}
+	return nil
+}
+
 func Solve(seed *bc.Hash, block *types.Block) error {
 	header := &block.BlockHeader
 	for i := uint64(0); i < maxNonce; i++ {

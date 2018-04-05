@@ -25,27 +25,6 @@ type ChainTestContext struct {
 	DB    dbm.DB
 }
 
-func (ctx *ChainTestContext) solve(block *types.Block) error {
-	seed, err := ctx.Chain.GetSeed(block.Height, &block.PreviousBlockHash)
-	if err != nil {
-		return err
-	}
-	return Solve(seed, block)
-}
-
-func (ctx *ChainTestContext) update(block *types.Block) error {
-	if err := ctx.solve(block); err != nil {
-		return err
-	}
-	if err := ctx.Chain.SaveBlock(block); err != nil {
-		return err
-	}
-	if err := ctx.Chain.ConnectBlock(block); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (ctx *ChainTestContext) append(blkNum uint64) error {
 	for i := uint64(0); i < blkNum; i++ {
 		prevBlock := ctx.Chain.BestBlock()
@@ -55,7 +34,7 @@ func (ctx *ChainTestContext) append(blkNum uint64) error {
 		if err != nil {
 			return err
 		}
-		if err := ctx.update(block); err != nil {
+		if err := SolveAndUpdate(ctx.Chain, block); err != nil {
 			return nil
 		}
 	}
@@ -267,7 +246,7 @@ func (cfg *ChainTestConfig) Run() error {
 		if err != nil {
 			return err
 		}
-		if err := ctx.update(block); err != nil {
+		if err := SolveAndUpdate(ctx.Chain, block); err != nil {
 			return err
 		}
 		if err := ctx.validateStatus(block); err != nil {
