@@ -3,7 +3,6 @@ package types
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -124,7 +123,6 @@ func TestSerializationSpend(t *testing.T) {
 
 func TestSerializationCoinbase(t *testing.T) {
 	coinbase := NewCoinbaseInput([]byte("arbitrary"))
-	fmt.Println(hex.EncodeToString([]byte("arbitrary")))
 	wantHex := strings.Join([]string{
 		"01",                 // asset version
 		"0b",                 // input commitment length
