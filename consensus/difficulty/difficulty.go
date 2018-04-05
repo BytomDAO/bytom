@@ -11,6 +11,8 @@ import (
 
 // HashToBig convert bc.Hash to a difficulty int
 func HashToBig(hash *bc.Hash) *big.Int {
+	// reverse the bytes of the hash (little-endian) to use it in the big
+	// package (big-endian)
 	buf := hash.Byte32()
 	blen := len(buf)
 	for i := 0; i < blen/2; i++ {
@@ -22,7 +24,7 @@ func HashToBig(hash *bc.Hash) *big.Int {
 
 // CompactToBig converts a compact representation of a whole unsigned integer
 // N to an big.Int. The representation is similar to IEEE754 floating point
-// numbers.
+// numbers. Sign is not really being used.
 //
 //	-------------------------------------------------
 //	|   Exponent     |    Sign    |    Mantissa     |
@@ -31,6 +33,7 @@ func HashToBig(hash *bc.Hash) *big.Int {
 //	-------------------------------------------------
 //
 // 	N = (-1^sign) * mantissa * 256^(exponent-3)
+//  Actually it will be nicer to use 7 instead of 3 for robustness reason.
 func CompactToBig(compact uint64) *big.Int {
 	// Extract the mantissa, sign bit, and exponent.
 	mantissa := compact & 0x007fffffffffffff
@@ -54,7 +57,8 @@ func CompactToBig(compact uint64) *big.Int {
 }
 
 // BigToCompact converts a whole number N to a compact representation using
-// an unsigned 64-bit number
+// an unsigned 64-bit number. Sign is not really being used, but it's kept
+// here.
 func BigToCompact(n *big.Int) uint64 {
 	if n.Sign() == 0 {
 		return 0
@@ -90,13 +94,15 @@ func BigToCompact(n *big.Int) uint64 {
 	return compact
 }
 
-// CheckProofOfWork checks whether the hash is vaild for a given difficulty
+// CheckProofOfWork checks whether the hash is vaild for a given difficulty.
 func CheckProofOfWork(hash, seed *bc.Hash, bits uint64) bool {
 	compareHash := tensority.Hash(hash, seed)
 	return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0
 }
 
-// CalcNextRequiredDifficulty return the difficult for next block
+// CalcNextRequiredDifficulty return the difficulty using compact representation
+// for next block, when a lower difficulty Int actually reflects a more difficult
+// mining progress.
 func CalcNextRequiredDifficulty(lastBH, compareBH *types.BlockHeader) uint64 {
 	if lastBH == nil {
 		return consensus.PowMinBits

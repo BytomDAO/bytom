@@ -4,7 +4,6 @@ import (
 	"math/big"
 	"testing"
 	"reflect"
-	// "fmt"
 	"strconv"
 
 	"github.com/bytom/consensus"
@@ -12,6 +11,7 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
+// A lower difficulty Int actually reflects a more difficult mining progress.
 func TestCalcNextRequiredDifficulty(t *testing.T) {
 	targetTimeSpan := uint64(consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock)
 	cases := []struct {
@@ -19,23 +19,85 @@ func TestCalcNextRequiredDifficulty(t *testing.T) {
 		compareBH *types.BlockHeader
 		want      uint64
 	}{
-		//{nil, nil, powMinBits},
-		//{&types.BlockHeader{Height: BlocksPerRetarget, Bits: 87654321}, nil, 87654321},
 		{
-			&types.BlockHeader{Height: consensus.BlocksPerRetarget, Timestamp: targetTimeSpan, Bits: BigToCompact(big.NewInt(1000))},
-			&types.BlockHeader{Height: 0, Timestamp: 0},
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan,
+				Bits: BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height: 0,
+				Timestamp: 0},
 			BigToCompact(big.NewInt(1000)),
 		},
 		{
-			&types.BlockHeader{Height: consensus.BlocksPerRetarget, Timestamp: targetTimeSpan * 2, Bits: BigToCompact(big.NewInt(1000))},
-			&types.BlockHeader{Height: 0, Timestamp: 0},
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan * 2,
+				Bits: BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height: 0,
+				Timestamp: 0},
 			BigToCompact(big.NewInt(2000)),
 		},
 		{
-			&types.BlockHeader{Height: consensus.
-				BlocksPerRetarget, Timestamp: targetTimeSpan / 2, Bits: BigToCompact(big.NewInt(1000))},
-			&types.BlockHeader{Height: 0, Timestamp: 0},
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan * 2 - consensus.TargetSecondsPerBlock,
+				Bits: BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height: 0,
+				Timestamp: 0},
+			BigToCompact(big.NewInt(1000)),
+		},
+		{
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan / 2,
+				Bits: BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height: 0,
+				Timestamp: 0},
 			BigToCompact(big.NewInt(500)),
+		},
+		{
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget  * 2,
+				Timestamp: targetTimeSpan + targetTimeSpan * 2,
+				Bits: BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan},
+			BigToCompact(big.NewInt(2000)),
+		},
+		{
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget  * 2,
+				Timestamp: targetTimeSpan + targetTimeSpan / 2,
+				Bits: BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan},
+			BigToCompact(big.NewInt(500)),
+		},
+		{
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget  * 2 - 1,
+				Timestamp: targetTimeSpan + targetTimeSpan * 2 - consensus.TargetSecondsPerBlock,
+				Bits: BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan},
+			BigToCompact(big.NewInt(1000)),
+		},
+		{
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget  * 2 - 1,
+				Timestamp: targetTimeSpan + targetTimeSpan / 2 - consensus.TargetSecondsPerBlock,
+				Bits: BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height: consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan},
+			BigToCompact(big.NewInt(1000)),
 		},
 	}
 
