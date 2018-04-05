@@ -68,7 +68,7 @@ func BigToCompact(n *big.Int) uint64 {
 	// Bytes() returns the absolute value of n as a big-endian byte slice
 	exponent := uint(len(n.Bytes()))
 
-	// Bits() returns the absolute value of n as a little-endian uint64 slice 
+	// Bits() returns the absolute value of n as a little-endian uint64 slice
 	if exponent <= 3 {
 		mantissa = uint64(n.Bits()[0])
 		mantissa <<= 8 * (3 - exponent)
