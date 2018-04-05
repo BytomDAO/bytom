@@ -232,7 +232,7 @@ func (g *TxGenerator) Sign(passwords []string) (*types.Tx, error) {
 	return tpl.Transaction, nil
 }
 
-func gasUsed(tx *types.Tx) uint64 {
+func txFee(tx *types.Tx) uint64 {
 	if len(tx.Inputs) == 1 && tx.Inputs[0].IsCoinbase() {
 		return 0
 	}
@@ -330,9 +330,9 @@ func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signe
 	return sigInst, nil
 }
 
-// CreateCoinbaseTx create coinbase tx at block height, gasUsed is txs fee
-func CreateCoinbaseTx(controlProgram []byte, height, gasUsed uint64) (*types.Tx, error) {
-	coinbaseValue := consensus.BlockSubsidy(height) + gasUsed
+// CreateCoinbaseTx create coinbase tx at block height
+func CreateCoinbaseTx(controlProgram []byte, height, txsFee uint64) (*types.Tx, error) {
+	coinbaseValue := consensus.BlockSubsidy(height) + txsFee
 	builder := txbuilder.NewBuilder(time.Now())
 	if err := builder.AddInput(types.NewCoinbaseInput([]byte(string(height))), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err

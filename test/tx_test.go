@@ -1,10 +1,10 @@
 package test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
-	"fmt"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
@@ -65,8 +65,8 @@ func (cfg *TxTestConfig) Run() error {
 			return fmt.Errorf("tx %s validate failed: %s", t.Describe, err.Error())
 		}
 
-		if result && t.GasUsed != status.BTMValue {
-			return fmt.Errorf("gas used dismatch, expected: %d, have: %d", t.GasUsed, gasUsed)
+		if result && t.TxFee != status.BTMValue {
+			return fmt.Errorf("gas used dismatch, expected: %d, have: %d", t.TxFee, status.BTMValue)
 		}
 	}
 	return nil
@@ -76,7 +76,7 @@ type ttTransaction struct {
 	wtTransaction
 	Describe string `json:"describe"`
 	Valid    bool   `json:"valid"`
-	GasUsed  uint64 `json:"gas_used"`
+	TxFee    uint64 `json:"tx_fee"`
 }
 
 func (t *ttTransaction) create(g *TxGenerator) (*types.Tx, error) {

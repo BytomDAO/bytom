@@ -179,10 +179,7 @@ func (b *ctBlock) createBlock(ctx *ChainTestContext) (*types.Block, error) {
 		}
 		txs = append(txs, tx)
 	}
-
-	prevBlock := ctx.Chain.BestBlock()
-	timestamp := prevBlock.Timestamp + defaultDuration
-	return NewBlock(prevBlock.Version, prevBlock.Height+1, timestamp, prevBlock.Bits, prevBlock.Hash(), txs, []byte{byte(vm.OP_TRUE)})
+	return NewBlock(ctx.Chain, txs, []byte{byte(vm.OP_TRUE)})
 }
 
 type ctTransaction struct {

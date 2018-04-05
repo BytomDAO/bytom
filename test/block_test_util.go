@@ -1,55 +1,90 @@
 package test
 
 import (
+	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
+	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/state"
+	"github.com/bytom/protocol/validation"
 )
 
-func NewBlock(version, height, timestamp, bits uint64, prevBlockHash bc.Hash, txs []*types.Tx, controlProgram []byte) (*types.Block, error) {
-	gas := uint64(0)
-	transactions := []*types.Tx{nil}
+func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*types.Block, error) {
+	view := state.NewUtxoViewpoint()
+	gasUsed := uint64(0)
+	txsFee := uint64(0)
 	txEntries := []*bc.Tx{nil}
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
-	for i, tx := range txs {
-		gas += gasUsed(tx)
-		transactions = append(transactions, tx)
-		// TODO: validate tx
-		txEntries = append(txEntries, tx.Tx)
-		txStatus.SetStatus(i+1, false)
-	}
 
-	coinbaseTx, err := CreateCoinbaseTx(controlProgram, height, gas)
-	if err != nil {
-		return nil, err
-	}
-	transactions[0] = coinbaseTx
-	txEntries[0] = coinbaseTx.Tx
-	txMerkleRoot, err := bc.TxMerkleRoot(txEntries)
-	if err != nil {
-		return nil, err
-	}
-	txStatusMerkleRoot, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	if err != nil {
-		return nil, err
+	preBlock := chain.BestBlock()
+	preBcBlock := types.MapBlock(preBlock)
+
+	var compareDiffBH *types.BlockHeader
+	if compareDiffBlock, err := chain.GetBlockByHeight(preBlock.Height - consensus.BlocksPerRetarget); err == nil {
+		compareDiffBH = &compareDiffBlock.BlockHeader
 	}
 
 	b := &types.Block{
 		BlockHeader: types.BlockHeader{
-			Version:           version,
-			Height:            height,
-			Timestamp:         timestamp,
-			Bits:              bits,
-			PreviousBlockHash: prevBlockHash,
-			BlockCommitment: types.BlockCommitment{
-				TransactionsMerkleRoot: txMerkleRoot,
-				TransactionStatusHash:  txStatusMerkleRoot,
-			},
+			Version:           1,
+			Height:            preBlock.Height + 1,
+			PreviousBlockHash: preBlock.Hash(),
+			Timestamp:         preBlock.Timestamp + defaultDuration,
+			BlockCommitment:   types.BlockCommitment{},
+			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
 		},
-		Transactions: transactions,
+		Transactions: []*types.Tx{nil},
 	}
-	return b, nil
+	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: preBlock.Height + 1}}
+
+	for _, tx := range txs {
+		gasOnlyTx := false
+		if err := chain.GetTransactionsUtxo(view, []*bc.Tx{tx.Tx}); err != nil {
+			continue
+		}
+
+		gasStatus, err := validation.ValidateTx(tx.Tx, preBcBlock)
+		if err != nil {
+			if !gasStatus.GasVaild {
+				continue
+			}
+			gasOnlyTx = true
+		}
+
+		if gasUsed+uint64(gasStatus.GasUsed) > consensus.MaxBlockGas {
+			break
+		}
+
+		if err := view.ApplyTransaction(bcBlock, tx.Tx, gasOnlyTx); err != nil {
+			continue
+		}
+
+		txStatus.SetStatus(len(b.Transactions), gasOnlyTx)
+		b.Transactions = append(b.Transactions, tx)
+		txEntries = append(txEntries, tx.Tx)
+		gasUsed += uint64(gasStatus.GasUsed)
+		if gasUsed == consensus.MaxBlockGas {
+			break
+		}
+		txsFee += txFee(tx)
+	}
+
+	coinbaseTx, err := CreateCoinbaseTx(controlProgram, preBlock.Height+1, txsFee)
+	if err != nil {
+		return nil, err
+	}
+
+	b.Transactions[0] = coinbaseTx
+	txEntries[0] = coinbaseTx.Tx
+	b.TransactionsMerkleRoot, err = bc.TxMerkleRoot(txEntries)
+	if err != nil {
+		return nil, err
+	}
+
+	b.TransactionStatusHash, err = bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	return b, err
 }
 
 func DefaultEmptyBlock(height uint64, timestamp uint64, prevBlockHash bc.Hash, bits uint64) (*types.Block, error) {

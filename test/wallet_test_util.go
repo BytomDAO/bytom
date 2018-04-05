@@ -155,14 +155,11 @@ func (ctx *WalletTestContext) createAsset(accountAlias string, assetAlias string
 }
 
 func (ctx *WalletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) (*types.Block, error) {
-	prevBlock := ctx.Chain.BestBlock()
-	height := prevBlock.Height + 1
-	timestamp := prevBlock.Timestamp + defaultDuration
 	controlProgram, err := ctx.createControlProgram(coinbaseAccount, true)
 	if err != nil {
 		return nil, err
 	}
-	return NewBlock(blkVersion, height, timestamp, prevBlock.Bits, prevBlock.Hash(), txs, controlProgram.ControlProgram)
+	return NewBlock(ctx.Chain, txs, controlProgram.ControlProgram)
 }
 
 func (ctx *WalletTestContext) createKey(name string, password string) error {
