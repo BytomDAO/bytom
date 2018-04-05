@@ -158,6 +158,43 @@
         {"type": "output", "name": "alice", "amount": 200000000000, "asset": "BTM"}
       ],
       "valid": false
+    },
+    {
+      "describe": "version is 0",
+      "passwords": ["alice"],
+      "version": 0,
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"}
+      ],
+      "valid": false
+    },
+    {
+      "describe": "version is 1",
+      "passwords": ["alice"],
+      "version": 1,
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"}
+      ],
+      "tx_fee": 10000000000,
+      "valid": true
+    },
+    {
+      "describe": "version greater than block version(1)",
+      "passwords": ["alice"],
+      "version": 12,
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"}
+      ],
+      "valid": false
     }
   ]
 }

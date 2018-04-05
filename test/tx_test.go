@@ -8,9 +8,11 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"encoding/json"
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/validation"
 )
@@ -53,18 +55,28 @@ func (cfg *TxTestConfig) Run() error {
 		}
 	}
 
+	block := &bc.Block{
+		BlockHeader: &bc.BlockHeader{
+			Height:  1,
+			Version: 1,
+		},
+	}
 	for _, t := range cfg.Transactions {
 		tx, err := t.create(generator)
 		if err != nil {
 			return err
 		}
 
-		status, err := validation.ValidateTx(tx.Tx, MockBlock())
+		tx.TxData.Version = t.Version
+		tx.Tx = types.MapTx(&tx.TxData)
+		status, err := validation.ValidateTx(tx.Tx, block)
 		result := err == nil
 		if result != t.Valid {
-			return fmt.Errorf("tx %s validate failed: %s", t.Describe, err.Error())
+			return fmt.Errorf("tx %s validate failed, expected: %t, have: %t", t.Describe, t.Valid, result)
 		}
-
+		if status == nil {
+			continue
+		}
 		if result && t.TxFee != status.BTMValue {
 			return fmt.Errorf("gas used dismatch, expected: %d, have: %d", t.TxFee, status.BTMValue)
 		}
@@ -75,8 +87,24 @@ func (cfg *TxTestConfig) Run() error {
 type ttTransaction struct {
 	wtTransaction
 	Describe string `json:"describe"`
+	Version  uint64 `json:"version"`
 	Valid    bool   `json:"valid"`
 	TxFee    uint64 `json:"tx_fee"`
+}
+
+// UnmarshalJSON unmarshal transaction with default version 1
+func (t *ttTransaction) UnmarshalJSON(data []byte) error {
+	type typeAlias ttTransaction
+	tx := &typeAlias{
+		Version: 1,
+	}
+
+	err := json.Unmarshal(data, tx)
+	if err != nil {
+		return err
+	}
+	*t = ttTransaction(*tx)
+	return nil
 }
 
 func (t *ttTransaction) create(g *TxGenerator) (*types.Tx, error) {
