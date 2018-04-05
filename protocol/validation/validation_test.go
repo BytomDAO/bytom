@@ -434,14 +434,19 @@ func TestValidateBlock(t *testing.T) {
 	}
 
 	txStatus := bc.NewTransactionStatus()
-	txStatusHash := bc.EntryID(txStatus)
+	txStatus.SetStatus(0, false)
+	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	if err != nil {
+		t.Error(err)
+	}
 
 	for _, c := range cases {
-		txRoot, err := bc.MerkleRoot(c.block.Transactions)
+		txRoot, err := bc.TxMerkleRoot(c.block.Transactions)
 		if err != nil {
 			t.Errorf("computing transaction merkle root error: %v", err)
 			continue
 		}
+
 		c.block.BlockHeader.TransactionStatus = bc.NewTransactionStatus()
 		c.block.TransactionsRoot = &txRoot
 		c.block.TransactionStatusHash = &txStatusHash

@@ -43,7 +43,7 @@ func NewIssuanceInput(
 	assetDefinition []byte,
 ) *TxInput {
 	return &TxInput{
-		AssetVersion:  1,
+		AssetVersion: 1,
 		TypedInput: &IssuanceInput{
 			Nonce:  nonce,
 			Amount: amount,

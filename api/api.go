@@ -19,6 +19,7 @@ import (
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/net/http/authn"
+	"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/netsync"
@@ -228,12 +229,13 @@ func (a *API) buildHandler() {
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
-	m.Handle("/getwork", jsonHandler(a.getWork))
-	m.Handle("/submitwork", jsonHandler(a.submitWork))
+	m.Handle("/get-work", jsonHandler(a.getWork))
+	m.Handle("/submit-work", jsonHandler(a.submitWork))
 
 	handler := latencyHandler(m, walletEnable)
 	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
+	handler = gzip.Handler{Handler: handler}
 
 	a.handler = handler
 }
@@ -311,18 +313,20 @@ func latencyHandler(m *http.ServeMux, walletEnable bool) http.Handler {
 			defer l.RecordSince(time.Now())
 		}
 
-		// when the wallet is not been opened and the url path is not been found, redirect url path to error
-		walletRedirectHandler(m, walletEnable, w, req)
+		// when the wallet is not been opened and the url path is not been found, modify url path to error,
+		// and redirect handler to error
+		if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {
+			req.URL.Path = "/error"
+			walletRedirectHandler(w, req)
+			return
+		}
 
 		m.ServeHTTP(w, req)
 	})
 }
 
 // walletRedirectHandler redirect to error when the wallet is closed
-func walletRedirectHandler(m *http.ServeMux, walletEnable bool, w http.ResponseWriter, req *http.Request) {
-	if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {
-		url := req.URL
-		url.Path = "/error"
-		http.Redirect(w, req, url.String(), http.StatusOK)
-	}
+func walletRedirectHandler(w http.ResponseWriter, req *http.Request) {
+	h := http.RedirectHandler(req.URL.String(), http.StatusMovedPermanently)
+	h.ServeHTTP(w, req)
 }

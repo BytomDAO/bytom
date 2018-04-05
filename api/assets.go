@@ -22,7 +22,7 @@ func (a *API) createAsset(ctx context.Context, ins struct {
 		ins.RootXPubs,
 		ins.Quorum,
 		ins.Definition,
-		strings.TrimSpace(ins.Alias),
+		strings.ToUpper(strings.TrimSpace(ins.Alias)),
 		ins.Tags,
 	)
 	if err != nil {

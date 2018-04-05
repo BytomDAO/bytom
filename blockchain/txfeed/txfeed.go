@@ -10,7 +10,6 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/query"
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -320,7 +319,7 @@ func (t *Tracker) TxFilter(tx *types.Tx) error {
 	return nil
 }
 
-var emptyJSONObject = chainjson.HexBytes(`{}`)
+var emptyJSONObject = json.RawMessage(`{}`)
 
 func buildAnnotatedTransaction(orig *types.Tx) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{

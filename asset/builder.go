@@ -17,8 +17,8 @@ import (
 //NewIssueAction create a new asset issue action
 func (reg *Registry) NewIssueAction(assetAmount bc.AssetAmount) txbuilder.Action {
 	return &issueAction{
-		assets:        reg,
-		AssetAmount:   assetAmount,
+		assets:      reg,
+		AssetAmount: assetAmount,
 	}
 }
 

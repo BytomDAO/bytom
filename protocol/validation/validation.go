@@ -116,6 +116,7 @@ type validationState struct {
 
 var (
 	errBadTimestamp             = errors.New("block timestamp is not in the vaild range")
+	errBadBits                  = errors.New("block bits is invaild")
 	errGasCalculate             = errors.New("gas usage calculate got a math error")
 	errEmptyResults             = errors.New("transaction has no results")
 	errMismatchedAssetID        = errors.New("mismatched asset id")
@@ -563,6 +564,9 @@ func ValidateBlock(b, prev *bc.Block, seed *bc.Hash, store database.Store) error
 		if err := validateBlockTime(b, store); err != nil {
 			return err
 		}
+		if err := validateBlockBits(b, prev, store); err != nil {
+			return err
+		}
 	}
 
 	if !difficulty.CheckProofOfWork(&b.ID, seed, b.BlockHeader.Bits) {
@@ -595,7 +599,7 @@ func ValidateBlock(b, prev *bc.Block, seed *bc.Hash, store database.Store) error
 		return err
 	}
 
-	txRoot, err := bc.MerkleRoot(b.Transactions)
+	txRoot, err := bc.TxMerkleRoot(b.Transactions)
 	if err != nil {
 		return errors.Wrap(err, "computing transaction merkle root")
 	}
@@ -604,8 +608,43 @@ func ValidateBlock(b, prev *bc.Block, seed *bc.Hash, store database.Store) error
 		return errors.WithDetailf(errMismatchedMerkleRoot, "computed %x, current block wants %x", txRoot.Bytes(), b.TransactionsRoot.Bytes())
 	}
 
-	if bc.EntryID(b.TransactionStatus) != *b.TransactionStatusHash {
+	txStatusHash, err := bc.TxStatusMerkleRoot(b.TransactionStatus.VerifyStatus)
+	if err != nil {
+		return err
+	}
+
+	if txStatusHash != *b.TransactionStatusHash {
 		return errMismatchedTxStatus
+	}
+	return nil
+}
+
+func validateBlockBits(b, prev *bc.Block, store database.Store) error {
+	if prev.Height%consensus.BlocksPerRetarget != 0 || prev.Height == 0 {
+		if b.Bits != prev.Bits {
+			return errBadBits
+		}
+		return nil
+	}
+
+	lastBH, err := store.GetBlockHeader(b.PreviousBlockId)
+	if err != nil {
+		return err
+	}
+
+	compareBH, err := store.GetBlockHeader(&lastBH.PreviousBlockHash)
+	if err != nil {
+		return err
+	}
+
+	for compareBH.Height%consensus.BlocksPerRetarget != 0 {
+		if compareBH, err = store.GetBlockHeader(&compareBH.PreviousBlockHash); err != nil {
+			return err
+		}
+	}
+
+	if b.Bits != difficulty.CalcNextRequiredDifficulty(lastBH, compareBH) {
+		return errBadBits
 	}
 	return nil
 }

@@ -25,7 +25,7 @@ func DecodeControlReceiverAction(data []byte) (Action, error) {
 
 type controlReceiverAction struct {
 	bc.AssetAmount
-	Receiver      *Receiver `json:"receiver"`
+	Receiver *Receiver `json:"receiver"`
 }
 
 func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -57,7 +57,7 @@ func DecodeControlAddressAction(data []byte) (Action, error) {
 
 type controlAddressAction struct {
 	bc.AssetAmount
-	Address       string   `json:"address"`
+	Address string `json:"address"`
 }
 
 func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -104,7 +104,7 @@ func DecodeControlProgramAction(data []byte) (Action, error) {
 
 type controlProgramAction struct {
 	bc.AssetAmount
-	Program       json.HexBytes `json:"control_program"`
+	Program json.HexBytes `json:"control_program"`
 }
 
 func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) error {

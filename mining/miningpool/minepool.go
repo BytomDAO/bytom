@@ -14,12 +14,21 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-const blockUpdateMS = 1000
+const (
+	blockUpdateMS   = 1000
+	maxSubmitChSize = 50
+)
+
+type submitBlockMsg struct {
+	blockHeader *types.BlockHeader
+	reply       chan error
+}
 
 // MiningPool is the support struct for p2p mine pool
 type MiningPool struct {
-	mutex sync.RWMutex
-	block *types.Block
+	mutex    sync.RWMutex
+	block    *types.Block
+	submitCh chan *submitBlockMsg
 
 	chain          *protocol.Chain
 	accountManager *account.Manager
@@ -30,6 +39,7 @@ type MiningPool struct {
 // NewMiningPool will create a new MiningPool
 func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash) *MiningPool {
 	m := &MiningPool{
+		submitCh:       make(chan *submitBlockMsg, maxSubmitChSize),
 		chain:          c,
 		accountManager: accountManager,
 		txPool:         txPool,
@@ -42,8 +52,18 @@ func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *p
 // blockUpdater is the goroutine for keep update mining block
 func (m *MiningPool) blockUpdater() {
 	ticker := time.NewTicker(time.Millisecond * blockUpdateMS)
-	for _ = range ticker.C {
-		m.generateBlock()
+	for {
+		select {
+		case <-ticker.C:
+			m.generateBlock()
+
+		case submitMsg := <-m.submitCh:
+			err := m.submitWork(submitMsg.blockHeader)
+			if err != nil {
+				m.generateBlock()
+			}
+			submitMsg.reply <- err
+		}
 	}
 }
 
@@ -76,25 +96,32 @@ func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
 }
 
 // SubmitWork will try to submit the result to the blockchain
-func (m *MiningPool) SubmitWork(bh *types.BlockHeader) bool {
+func (m *MiningPool) SubmitWork(bh *types.BlockHeader) error {
+	reply := make(chan error, 1)
+	m.submitCh <- &submitBlockMsg{blockHeader: bh, reply: reply}
+	return <-reply
+}
+
+func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	if m.block == nil || bh.PreviousBlockHash != m.block.PreviousBlockHash {
-		return false
+		return errors.New("pending mining block has been changed")
 	}
 
 	m.block.Nonce = bh.Nonce
 	m.block.Timestamp = bh.Timestamp
 	isOrphan, err := m.chain.ProcessBlock(m.block)
-
 	if err != nil {
-		log.Errorf("fail on SubmitWork on ProcessBlock %v", err)
-	} else if isOrphan {
+		return err
+	}
+
+	if isOrphan {
 		log.Warning("SubmitWork is orphan")
 	}
 
 	blockHash := bh.Hash()
 	m.newBlockCh <- &blockHash
-	return err == nil
+	return nil
 }

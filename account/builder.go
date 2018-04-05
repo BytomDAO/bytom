@@ -28,8 +28,8 @@ func (m *Manager) DecodeSpendAction(data []byte) (txbuilder.Action, error) {
 type spendAction struct {
 	accounts *Manager
 	bc.AssetAmount
-	AccountID     string        `json:"account_id"`
-	ClientToken   *string       `json:"client_token"`
+	AccountID   string  `json:"account_id"`
+	ClientToken *string `json:"client_token"`
 }
 
 func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
@@ -100,7 +100,7 @@ type spendUTXOAction struct {
 	accounts *Manager
 	OutputID *bc.Hash `json:"output_id"`
 
-	ClientToken   *string       `json:"client_token"`
+	ClientToken *string `json:"client_token"`
 }
 
 func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {

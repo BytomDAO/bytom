@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
+	browser "github.com/toqueteos/webbrowser"
 
 	"github.com/bytom/accesstoken"
 	"github.com/bytom/account"
@@ -26,7 +27,6 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/types"
-	"github.com/bytom/util/browser"
 	w "github.com/bytom/wallet"
 )
 

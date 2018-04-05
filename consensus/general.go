@@ -38,8 +38,8 @@ const (
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
 
-	BTMAlias       = "btm"
-	BTMSymbol      = "btm"
+	BTMAlias       = "BTM"
+	BTMSymbol      = "BTM"
 	BTMDecimals    = 8
 	BTMDescription = `Bytom Official Issue`
 )
