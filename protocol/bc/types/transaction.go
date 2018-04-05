@@ -99,7 +99,7 @@ func (tx *TxData) UnmarshalText(p []byte) error {
 }
 
 func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
-	tx.SerializedSize = uint64(r.Len())
+	startSerializedSize := r.Len()
 	var serflags [1]byte
 	if _, err = io.ReadFull(r, serflags[:]); err != nil {
 		return errors.Wrap(err, "reading serialization flags")
@@ -140,6 +140,7 @@ func (tx *TxData) readFrom(r *blockchain.Reader) (err error) {
 		}
 		tx.Outputs = append(tx.Outputs, to)
 	}
+	tx.SerializedSize = uint64(startSerializedSize - r.Len())
 	return nil
 }
 
