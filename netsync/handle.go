@@ -30,6 +30,7 @@ type SyncManager struct {
 
 	newBlockCh    chan *bc.Hash
 	newPeerCh     chan struct{}
+	txSyncCh      chan *txsync
 	dropPeerCh    chan *string
 	quitSync      chan struct{}
 	config        *cfg.Config
@@ -46,7 +47,8 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		quitSync:   make(chan struct{}),
 		newBlockCh: newBlockCh,
 		newPeerCh:  make(chan struct{}),
-		dropPeerCh:   make(chan *string, maxQuitReq),
+		txSyncCh:    make(chan *txsync),
+		dropPeerCh: make(chan *string, maxQuitReq),
 		peers:      newPeerSet(),
 	}
 
@@ -56,7 +58,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers, manager.dropPeerCh)
 	manager.fetcher = NewFetcher(chain, manager.sw, manager.peers)
 
-	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.dropPeerCh)
+	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
 	// Optionally, start the pex reactor
@@ -146,8 +148,7 @@ func (sm *SyncManager) Start() {
 	// start sync handlers
 	go sm.syncer()
 
-	//TODO:
-	// go sm.txsyncLoop()
+	go sm.txsyncLoop()
 }
 
 func (sm *SyncManager) Stop() {

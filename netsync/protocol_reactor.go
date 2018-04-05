@@ -52,11 +52,12 @@ type ProtocolReactor struct {
 
 	newPeerCh      chan struct{}
 	quitReqBlockCh chan *string
+	txSyncCh       chan *txsync
 	peerStatusCh   chan *initalPeerStatus
 }
 
 // NewProtocolReactor returns the reactor of whole blockchain.
-func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, blockPeer *blockKeeper, fetcher *Fetcher, peers *peerSet, newPeerCh chan struct{}, quitReqBlockCh chan *string) *ProtocolReactor {
+func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, blockPeer *blockKeeper, fetcher *Fetcher, peers *peerSet, newPeerCh chan struct{}, txSyncCh chan *txsync, quitReqBlockCh chan *string) *ProtocolReactor {
 	pr := &ProtocolReactor{
 		chain:          chain,
 		blockKeeper:    blockPeer,
@@ -65,6 +66,7 @@ func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.
 		fetcher:        fetcher,
 		peers:          peers,
 		newPeerCh:      newPeerCh,
+		txSyncCh:       txSyncCh,
 		quitReqBlockCh: quitReqBlockCh,
 		peerStatusCh:   make(chan *initalPeerStatus),
 	}
@@ -94,6 +96,19 @@ func (pr *ProtocolReactor) OnStop() {
 	pr.BaseReactor.OnStop()
 }
 
+// syncTransactions starts sending all currently pending transactions to the given peer.
+func (pr *ProtocolReactor) syncTransactions(p *peer) {
+	pending := pr.txPool.GetTransactions()
+	if len(pending) == 0 {
+		return
+	}
+	txs := make([]*types.Tx, len(pending))
+	for i, batch := range pending {
+		txs[i] = batch.Tx
+	}
+	pr.txSyncCh <- &txsync{p, txs}
+}
+
 // AddPeer implements Reactor by sending our state to peer.
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}})
@@ -104,6 +119,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 			if strings.Compare(status.peerID, peer.Key) == 0 {
 				pr.peers.AddPeer(peer)
 				pr.peers.SetPeerStatus(status.peerID, status.height, status.hash)
+				pr.syncTransactions(pr.peers.Peer(peer.Key))
 				pr.newPeerCh <- struct{}{}
 				return nil
 			}

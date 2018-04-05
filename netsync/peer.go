@@ -66,6 +66,19 @@ func (p *peer) requestBlockByHeight(height uint64) error {
 	return nil
 }
 
+func (p *peer) SendTransactions(txs []*types.Tx) error {
+	for _, tx := range txs {
+		msg, err := NewTransactionNotifyMessage(tx)
+		if err != nil {
+			return errors.New("Failed construction tx msg")
+		}
+		hash := &tx.ID
+		p.knownTxs.Add(hash.String())
+		p.Peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	}
+	return nil
+}
+
 func (p *peer) getPeer() *p2p.Peer {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
@@ -264,7 +277,6 @@ func (ps *peerSet) AddPeer(peer *p2p.Peer) {
 	log.WithField("ID", peer.Key).Warning("Add existing peer to blockKeeper")
 }
 
-
 func (ps *peerSet) RemovePeer(peerID string) {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
@@ -309,7 +321,7 @@ func (ps *peerSet) BroadcastMinedBlock(block *types.Block) error {
 	if err != nil {
 		return errors.New("Failed construction block msg")
 	}
-	hash:=block.Hash()
+	hash := block.Hash()
 	peers := ps.PeersWithoutBlock(&hash)
 	for _, peer := range peers {
 		ps.MarkBlock(peer.Key, &hash)

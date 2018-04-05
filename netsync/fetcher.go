@@ -165,10 +165,10 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 // the phase states accordingly.
 func (f *Fetcher) insert(peer string, block *types.Block) {
 	// Run the import on a new thread
-	log.Info("Importing propagated block", "peer", peer, "number", block.Height, "hash", block.Hash())
+	log.Info("Importing propagated block", " from peer:", peer, " height:", block.Height)
 	// Run the actual import and log any issues
 	if _, err := f.chain.ProcessBlock(block); err != nil {
-		log.Info("Propagated block import failed", "peer", peer, "number", block.Height, "hash", block.Hash(), "err", err)
+		log.Info("Propagated block import failed", " from peer:", peer, " height:", block.Height, "err", err)
 		return
 	}
 	// If import succeeded, broadcast the block
