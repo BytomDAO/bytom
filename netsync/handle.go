@@ -16,8 +16,9 @@ import (
 	"github.com/bytom/version"
 )
 
+//SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
-	networkId uint64
+	networkID uint64
 	sw        *p2p.Switch
 	addrBook  *p2p.AddrBook // known peers
 
@@ -37,6 +38,7 @@ type SyncManager struct {
 	synchronising int32
 }
 
+//NewSyncManager create a sync manager
 func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
 	// Create the protocol manager with the base fields
 	manager := &SyncManager{
@@ -137,6 +139,7 @@ func (sm *SyncManager) netStart() error {
 	return nil
 }
 
+//Start start sync manager service
 func (sm *SyncManager) Start() {
 	sm.netStart()
 	// broadcast transactions
@@ -151,6 +154,7 @@ func (sm *SyncManager) Start() {
 	go sm.txsyncLoop()
 }
 
+//Stop stop sync manager
 func (sm *SyncManager) Stop() {
 	close(sm.quitSync)
 	sm.sw.Stop()
@@ -185,22 +189,27 @@ func (sm *SyncManager) minedBroadcastLoop() {
 	}
 }
 
+//NodeInfo get P2P peer node info
 func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
 	return sm.sw.NodeInfo()
 }
 
+//BlockKeeper get block keeper
 func (sm *SyncManager) BlockKeeper() *blockKeeper {
 	return sm.blockKeeper
 }
 
+//Peers get sync manager peer set
 func (sm *SyncManager) Peers() *peerSet {
 	return sm.peers
 }
 
+//DialSeeds dial seed peers
 func (sm *SyncManager) DialSeeds(seeds []string) error {
 	return sm.sw.DialSeeds(sm.addrBook, seeds)
 }
 
+//Switch get sync manager switch
 func (sm *SyncManager) Switch() *p2p.Switch {
 	return sm.sw
 }

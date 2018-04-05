@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
+//protocol msg
 const (
 	BlockRequestByte   = byte(0x10)
 	BlockResponseByte  = byte(0x11)
@@ -35,6 +36,7 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
 )
 
+//DecodeMessage decode msg
 func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	msgType = bz[0]
 	n := int(0)
@@ -46,11 +48,13 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	return
 }
 
+//GetHash get hash
 func (m *BlockRequestMessage) GetHash() *bc.Hash {
 	hash := bc.NewHash(m.RawHash)
 	return &hash
 }
 
+//String convert msg to string
 func (m *BlockRequestMessage) String() string {
 	if m.Height > 0 {
 		return fmt.Sprintf("BlockRequestMessage{Height: %d}", m.Height)
@@ -59,10 +63,12 @@ func (m *BlockRequestMessage) String() string {
 	return fmt.Sprintf("BlockRequestMessage{Hash: %s}", hash.String())
 }
 
+//BlockResponseMessage response get block msg
 type BlockResponseMessage struct {
 	RawBlock []byte
 }
 
+//NewBlockResponseMessage construct bock response msg
 func NewBlockResponseMessage(block *types.Block) (*BlockResponseMessage, error) {
 	rawBlock, err := block.MarshalText()
 	if err != nil {
@@ -71,6 +77,7 @@ func NewBlockResponseMessage(block *types.Block) (*BlockResponseMessage, error) 
 	return &BlockResponseMessage{RawBlock: rawBlock}, nil
 }
 
+//GetBlock get block from msg
 func (m *BlockResponseMessage) GetBlock() *types.Block {
 	block := &types.Block{
 		BlockHeader:  types.BlockHeader{},
@@ -80,14 +87,17 @@ func (m *BlockResponseMessage) GetBlock() *types.Block {
 	return block
 }
 
+//String convert msg to string
 func (m *BlockResponseMessage) String() string {
 	return fmt.Sprintf("BlockResponseMessage{Size: %d}", len(m.RawBlock))
 }
 
+//TransactionNotifyMessage notify new tx msg
 type TransactionNotifyMessage struct {
 	RawTx []byte
 }
 
+//NewTransactionNotifyMessage construct notify new tx msg
 func NewTransactionNotifyMessage(tx *types.Tx) (*TransactionNotifyMessage, error) {
 	rawTx, err := tx.TxData.MarshalText()
 	if err != nil {
@@ -96,6 +106,7 @@ func NewTransactionNotifyMessage(tx *types.Tx) (*TransactionNotifyMessage, error
 	return &TransactionNotifyMessage{RawTx: rawTx}, nil
 }
 
+//GetTransaction get tx from msg
 func (m *TransactionNotifyMessage) GetTransaction() (*types.Tx, error) {
 	tx := &types.Tx{}
 	if err := tx.UnmarshalText(m.RawTx); err != nil {
@@ -104,21 +115,26 @@ func (m *TransactionNotifyMessage) GetTransaction() (*types.Tx, error) {
 	return tx, nil
 }
 
+//String
 func (m *TransactionNotifyMessage) String() string {
 	return fmt.Sprintf("TransactionNotifyMessage{Size: %d}", len(m.RawTx))
 }
 
+//StatusRequestMessage status request msg
 type StatusRequestMessage struct{}
 
+//String
 func (m *StatusRequestMessage) String() string {
 	return "StatusRequestMessage"
 }
 
+//StatusResponseMessage get status response msg
 type StatusResponseMessage struct {
 	Height  uint64
 	RawHash [32]byte
 }
 
+//NewStatusResponseMessage construct get status response msg
 func NewStatusResponseMessage(block *types.Block) *StatusResponseMessage {
 	return &StatusResponseMessage{
 		Height:  block.Height,
@@ -126,20 +142,24 @@ func NewStatusResponseMessage(block *types.Block) *StatusResponseMessage {
 	}
 }
 
+//GetHash get hash from msg
 func (m *StatusResponseMessage) GetHash() *bc.Hash {
 	hash := bc.NewHash(m.RawHash)
 	return &hash
 }
 
+//String convert msg to string
 func (m *StatusResponseMessage) String() string {
 	hash := m.GetHash()
 	return fmt.Sprintf("StatusResponseMessage{Height: %d, Hash: %s}", m.Height, hash.String())
 }
 
+//MineBlockMessage new mined block msg
 type MineBlockMessage struct {
 	RawBlock []byte
 }
 
+//NewMinedBlockMessage construct new mined block msg
 func NewMinedBlockMessage(block *types.Block) (*MineBlockMessage, error) {
 	rawBlock, err := block.MarshalText()
 	if err != nil {
@@ -148,6 +168,7 @@ func NewMinedBlockMessage(block *types.Block) (*MineBlockMessage, error) {
 	return &MineBlockMessage{RawBlock: rawBlock}, nil
 }
 
+//GetMineBlock get mine block from msg
 func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
 	block := &types.Block{}
 	if err:=block.UnmarshalText(m.RawBlock);err!=nil{
@@ -156,6 +177,7 @@ func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
 	return block, nil
 }
 
+//String convert msg to string
 func (m *MineBlockMessage) String() string {
 	return fmt.Sprintf("NewMineBlockMessage{Size: %d}", len(m.RawBlock))
 }

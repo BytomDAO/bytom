@@ -23,7 +23,8 @@ const (
 )
 
 var (
-	ErrProtocolHandshakeTimeout = errors.New("Protocal handshake timeout")
+	//ErrProtocolHandshakeTimeout peers handshake timeout
+	ErrProtocolHandshakeTimeout = errors.New("Protocol handshake timeout")
 )
 
 // Response describes the response standard.
@@ -39,7 +40,7 @@ type initalPeerStatus struct {
 	hash   *bc.Hash
 }
 
-//ProtocalReactor handles long-term catchup syncing.
+//ProtocolReactor handles new coming protocol message.
 type ProtocolReactor struct {
 	p2p.BaseReactor
 

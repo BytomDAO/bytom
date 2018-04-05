@@ -33,6 +33,7 @@ var (
 	errReqBlock        = errors.New("Request block error")
 )
 
+//BlockRequestMessage request blocks from remote peers by height/hash
 type BlockRequestMessage struct {
 	Height  uint64
 	RawHash [32]byte

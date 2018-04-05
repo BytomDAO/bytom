@@ -300,7 +300,7 @@ func (ps *peerSet) requestBlockByHash(peerID string, hash *bc.Hash) error {
 
 	peer, ok := ps.peers[peerID]
 	if !ok {
-		return errors.New("Can't find peer.")
+		return errors.New("Can't find peer. ")
 	}
 	return peer.requestBlockByHash(hash)
 }
@@ -311,7 +311,7 @@ func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
 
 	peer, ok := ps.peers[peerID]
 	if !ok {
-		return errors.New("Can't find peer.")
+		return errors.New("Can't find peer. ")
 	}
 	return peer.requestBlockByHeight(height)
 }

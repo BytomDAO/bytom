@@ -96,7 +96,7 @@ func (sm *SyncManager) synchronise() {
 // connection. When a new peer appears, we relay all currently pending
 // transactions. In order to minimise egress bandwidth usage, we send
 // the transactions in small packs to one peer at a time.
-func (pm *SyncManager) txsyncLoop() {
+func (sm *SyncManager) txsyncLoop() {
 	var (
 		pending = make(map[string]*txsync)
 		sending = false               // whether a send is active
@@ -141,7 +141,7 @@ func (pm *SyncManager) txsyncLoop() {
 
 	for {
 		select {
-		case s := <-pm.txSyncCh:
+		case s := <-sm.txSyncCh:
 			pending[s.p.Key] = s
 			if !sending {
 				send(s)
@@ -157,7 +157,7 @@ func (pm *SyncManager) txsyncLoop() {
 			if s := pick(); s != nil {
 				send(s)
 			}
-		case <-pm.quitSync:
+		case <-sm.quitSync:
 			return
 		}
 	}
