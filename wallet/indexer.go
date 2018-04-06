@@ -211,24 +211,26 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *types.Block, txStatus *bc.
 	prevoutDBKeys(batch, b, txStatus)
 
 	// handle new UTXOs
-	outs := make([]*rawOutput, 0, len(b.Transactions))
+	var outs []*rawOutput
 	for txIndex, tx := range b.Transactions {
-		for j, out := range tx.Outputs {
-			resOutID := tx.ResultIds[j]
+		for i, out := range tx.Outputs {
+			resOutID := tx.ResultIds[i]
 			resOut, ok := tx.Entries[*resOutID].(*bc.Output)
 			if !ok {
 				continue
 			}
-			statusFail, _ := txStatus.GetStatus(txIndex)
-			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
+
+			if statusFail, _ := txStatus.GetStatus(txIndex);
+				statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
+
 			out := &rawOutput{
-				OutputID:       *tx.OutputID(j),
+				OutputID:       *tx.OutputID(i),
 				AssetAmount:    out.AssetAmount,
 				ControlProgram: out.ControlProgram,
 				txHash:         tx.ID,
-				outputIndex:    uint32(j),
+				outputIndex:    uint32(i),
 				sourceID:       *resOut.Source.Ref,
 				sourcePos:      resOut.Source.Position,
 			}
@@ -244,7 +246,6 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *types.Block, txStatus *bc.
 
 	if err := upsertConfirmedAccountOutputs(accOuts, batch); err != nil {
 		log.WithField("err", err).Error("building new account outputs")
-		return
 	}
 }
 
@@ -522,33 +523,27 @@ func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.Annotate
 }
 
 // GetAccountUTXOs return all account unspent outputs
-func (w *Wallet) GetAccountUTXOs(id string) ([]account.UTXO, error) {
-	accountUTXO := account.UTXO{}
-	accountUTXOs := []account.UTXO{}
+func (w *Wallet) GetAccountUTXOs(id string) []account.UTXO {
+	var accountUTXOs []account.UTXO
 
 	accountUTXOIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix + id))
 	defer accountUTXOIter.Release()
 	for accountUTXOIter.Next() {
+		accountUTXO := account.UTXO{}
 		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {
 			hashKey := accountUTXOIter.Key()[len(account.UTXOPreFix):]
 			log.WithField("UTXO hash", string(hashKey)).Warn("get account UTXO")
-			continue
+		} else {
+			accountUTXOs = append(accountUTXOs, accountUTXO)
 		}
-
-		accountUTXOs = append(accountUTXOs, accountUTXO)
 	}
 
-	return accountUTXOs, nil
+	return accountUTXOs
 }
 
 // GetAccountBalances return all account balances
-func (w *Wallet) GetAccountBalances(id string) ([]AccountBalance, error) {
-	accountUTXOs, err := w.GetAccountUTXOs("")
-	if err != nil {
-		return nil, err
-	}
-
-	return w.indexBalances(accountUTXOs), nil
+func (w *Wallet) GetAccountBalances(id string) []AccountBalance {
+	return w.indexBalances(w.GetAccountUTXOs(""))
 }
 
 // AccountBalance account balance

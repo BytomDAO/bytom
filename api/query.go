@@ -48,12 +48,7 @@ func (a *API) listAssets(ctx context.Context, filter struct {
 
 // POST /listBalances
 func (a *API) listBalances(ctx context.Context) Response {
-	if balances, err := a.wallet.GetAccountBalances(""); err != nil {
-		log.Errorf("GetAccountUTXOs: %v", err)
-		return NewErrorResponse(err)
-	} else {
-		return NewSuccessResponse(balances)
-	}
+	return NewSuccessResponse(a.wallet.GetAccountBalances(""))
 }
 
 // POST /get-transaction
@@ -100,11 +95,7 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	accountUTXOs, err := a.wallet.GetAccountUTXOs(filter.ID)
-	if err != nil {
-		log.Errorf("list Unspent Outputs: %v", err)
-		return NewErrorResponse(err)
-	}
+	accountUTXOs := a.wallet.GetAccountUTXOs(filter.ID)
 
 	var UTXOs []query.AnnotatedUTXO
 	for _, utxo := range accountUTXOs {
