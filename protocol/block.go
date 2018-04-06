@@ -123,6 +123,8 @@ func (c *Chain) reorganizeChain(block *types.Block) error {
 			return err
 		}
 		chainChanges[a.Height] = &attachBlock.ID
+		// TODO: put this action in better place
+		c.orphanManage.Delete(&attachBlock.ID)
 	}
 
 	return c.setState(block, utxoView, chainChanges)
