@@ -218,3 +218,53 @@ func TestCoinbaseMature(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCoinbaseTx(t *testing.T) {
+	db := dbm.NewDB("test_coinbase_tx_db", "leveldb", "test_coinbase_tx_db")
+	defer os.RemoveAll("test_coinbase_tx_db")
+	chain, _ := MockChain(db)
+
+	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
+	genesis := chain.BestBlock()
+	block, _ := DefaultEmptyBlock(genesis.Height+1, uint64(time.Now().Unix()), genesis.Hash(), genesis.Bits)
+	if err := SolveAndUpdate(chain, block); err != nil {
+		t.Fatal(err)
+	}
+
+	spendInput, err := CreateSpendInput(block.Transactions[0], 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txInput := &types.TxInput{
+		AssetVersion: assetVersion,
+		TypedInput:   spendInput,
+	}
+
+	builder := txbuilder.NewBuilder(time.Now())
+	builder.AddInput(txInput, &txbuilder.SigningInstruction{})
+	output := types.NewTxOutput(*consensus.BTMAssetID, 100000000000, defaultCtrlProg)
+	builder.AddOutput(output)
+	tpl, _, err := builder.Build()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block, err = NewBlock(chain, []*types.Tx{tpl.Transaction}, defaultCtrlProg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	coinbaseTx, err := CreateCoinbaseTx(defaultCtrlProg, block.Height, 100000)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ReplaceCoinbase(block, coinbaseTx); err != nil {
+		t.Fatal(err)
+	}
+
+	err = SolveAndUpdate(chain, block)
+	if err == nil {
+		t.Fatalf("invalid coinbase tx validate success")
+	}
+}

@@ -89,6 +89,17 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	return b, err
 }
 
+func ReplaceCoinbase(block *types.Block, coinbaseTx *types.Tx) (err error) {
+	block.Transactions[0] = coinbaseTx
+	txEntires := []*bc.Tx{coinbaseTx.Tx}
+	for i := 1; i < len(block.Transactions); i++ {
+		txEntires = append(txEntires, block.Transactions[i].Tx)
+	}
+
+	block.TransactionsMerkleRoot, err = bc.TxMerkleRoot(txEntires)
+	return
+}
+
 func DefaultEmptyBlock(height uint64, timestamp uint64, prevBlockHash bc.Hash, bits uint64) (*types.Block, error) {
 	coinbaseTx, err := DefaultCoinbaseTx(height)
 	if err != nil {
