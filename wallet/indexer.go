@@ -21,7 +21,7 @@ import (
 )
 
 type rawOutput struct {
-	OutputID bc.Hash
+	OutputID       bc.Hash
 	bc.AssetAmount
 	ControlProgram []byte
 	txHash         bc.Hash
@@ -379,22 +379,17 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 // filterAccountTxs related and build the fully annotated transactions.
 func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) []*query.AnnotatedTx {
 	annotatedTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
+
+transactionLoop:
 	for pos, tx := range b.Transactions {
 		statusFail, _ := txStatus.GetStatus(pos)
-		local := false
 		for _, v := range tx.Outputs {
 			var hash [32]byte
-
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
 				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos))
-				local = true
-				break
+				continue transactionLoop
 			}
-		}
-
-		if local == true {
-			continue
 		}
 
 		for _, v := range tx.Inputs {
@@ -404,7 +399,7 @@ func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus
 			}
 			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
 				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos))
-				break
+				continue transactionLoop
 			}
 		}
 	}
@@ -546,7 +541,8 @@ func (w *Wallet) GetAccountUTXOs(id string) ([]account.UTXO, error) {
 	return accountUTXOs, nil
 }
 
-func (w *Wallet) GetAccountBalances(id string) ([]accountBalance, error) {
+// GetAccountBalances return all account balances
+func (w *Wallet) GetAccountBalances(id string) ([]AccountBalance, error) {
 	accountUTXOs, err := w.GetAccountUTXOs("")
 	if err != nil {
 		return nil, err
@@ -555,7 +551,8 @@ func (w *Wallet) GetAccountBalances(id string) ([]accountBalance, error) {
 	return w.indexBalances(accountUTXOs), nil
 }
 
-type accountBalance struct {
+// AccountBalance account balance
+type AccountBalance struct {
 	AccountID  string `json:"account_id"`
 	Alias      string `json:"account_alias"`
 	AssetAlias string `json:"asset_alias"`
@@ -563,10 +560,10 @@ type accountBalance struct {
 	Amount     uint64 `json:"amount"`
 }
 
-func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) []accountBalance {
+func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) []AccountBalance {
 	accBalance := make(map[string]map[string]uint64)
-	balances := make([]accountBalance, 0)
-	tmpBalance := accountBalance{}
+	balances := make([]AccountBalance, 0)
+	tmpBalance := AccountBalance{}
 
 	for _, accountUTXO := range accountUTXOs {
 		assetID := accountUTXO.AssetID.String()
