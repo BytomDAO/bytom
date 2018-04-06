@@ -1,6 +1,5 @@
 package difficulty
 
-// HashToBig converts a *bc.Hash into a big.Int that can be used to
 import (
 	"math/big"
 
@@ -10,8 +9,10 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-// HashToBig convert bc.Hash to a difficult int
+// HashToBig convert bc.Hash to a difficulty int
 func HashToBig(hash *bc.Hash) *big.Int {
+	// reverse the bytes of the hash (little-endian) to use it in the big
+	// package (big-endian)
 	buf := hash.Byte32()
 	blen := len(buf)
 	for i := 0; i < blen/2; i++ {
@@ -21,9 +22,9 @@ func HashToBig(hash *bc.Hash) *big.Int {
 	return new(big.Int).SetBytes(buf[:])
 }
 
-// CompactToBig converts a compact representation of a whole number N to an
-// unsigned 64-bit number.  The representation is similar to IEEE754 floating
-// point numbers.
+// CompactToBig converts a compact representation of a whole unsigned integer
+// N to an big.Int. The representation is similar to IEEE754 floating point
+// numbers. Sign is not really being used.
 //
 //	-------------------------------------------------
 //	|   Exponent     |    Sign    |    Mantissa     |
@@ -32,6 +33,7 @@ func HashToBig(hash *bc.Hash) *big.Int {
 //	-------------------------------------------------
 //
 // 	N = (-1^sign) * mantissa * 256^(exponent-3)
+//  Actually it will be nicer to use 7 instead of 3 for robustness reason.
 func CompactToBig(compact uint64) *big.Int {
 	// Extract the mantissa, sign bit, and exponent.
 	mantissa := compact & 0x007fffffffffffff
@@ -55,19 +57,28 @@ func CompactToBig(compact uint64) *big.Int {
 }
 
 // BigToCompact converts a whole number N to a compact representation using
-// an unsigned 64-bit number
+// an unsigned 64-bit number. Sign is not really being used, but it's kept
+// here.
 func BigToCompact(n *big.Int) uint64 {
 	if n.Sign() == 0 {
 		return 0
 	}
 
 	var mantissa uint64
+	// Bytes() returns the absolute value of n as a big-endian byte slice
 	exponent := uint(len(n.Bytes()))
+
+	// Bits() returns the absolute value of n as a little-endian uint64 slice
 	if exponent <= 3 {
 		mantissa = uint64(n.Bits()[0])
 		mantissa <<= 8 * (3 - exponent)
 	} else {
 		tn := new(big.Int).Set(n)
+		// Since the base for the exponent is 256, the exponent can be treated
+		// as the number of bytes to represent the full 256-bit number. And as
+		// the exponent is treated as the number of bytes, Rsh 8*(exponent-3)
+		// makes sure that the shifted tn won't occupy more than 8*3=24 bits,
+		// and can be read from Bits()[0], which is 64-bit
 		mantissa = uint64(tn.Rsh(tn, 8*(exponent-3)).Bits()[0])
 	}
 
@@ -83,13 +94,15 @@ func BigToCompact(n *big.Int) uint64 {
 	return compact
 }
 
-// CheckProofOfWork the hash is vaild for given difficult
+// CheckProofOfWork checks whether the hash is vaild for a given difficulty.
 func CheckProofOfWork(hash, seed *bc.Hash, bits uint64) bool {
 	compareHash := tensority.Hash(hash, seed)
 	return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0
 }
 
-// CalcNextRequiredDifficulty return the difficult for next block
+// CalcNextRequiredDifficulty return the difficulty using compact representation
+// for next block, when a lower difficulty Int actually reflects a more difficult
+// mining progress.
 func CalcNextRequiredDifficulty(lastBH, compareBH *types.BlockHeader) uint64 {
 	if lastBH == nil {
 		return consensus.PowMinBits

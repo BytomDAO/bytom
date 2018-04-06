@@ -1,8 +1,6 @@
 package types
 
 import (
-	"bytes"
-	"database/sql/driver"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -20,21 +18,20 @@ const (
 	SerBlockFull
 )
 
-// Block describes a complete block, including its header
-// and the transactions it contains.
+// Block describes a complete block, including its header and the transactions
+// it contains.
 type Block struct {
 	BlockHeader
 	Transactions []*Tx
 }
 
-// MarshalText fulfills the json.Marshaler interface.
-// This guarantees that blocks will get deserialized correctly
-// when being parsed from HTTP requests.
+// MarshalText fulfills the json.Marshaler interface. This guarantees that
+// blocks will get deserialized correctly when being parsed from HTTP requests.
 func (b *Block) MarshalText() ([]byte, error) {
 	buf := bufpool.Get()
 	defer bufpool.Put(buf)
-	_, err := b.WriteTo(buf)
-	if err != nil {
+
+	if _, err := b.WriteTo(buf); err != nil {
 		return nil, err
 	}
 
@@ -46,49 +43,19 @@ func (b *Block) MarshalText() ([]byte, error) {
 // UnmarshalText fulfills the encoding.TextUnmarshaler interface.
 func (b *Block) UnmarshalText(text []byte) error {
 	decoded := make([]byte, hex.DecodedLen(len(text)))
-	_, err := hex.Decode(decoded, text)
-	if err != nil {
+	if _, err := hex.Decode(decoded, text); err != nil {
 		return err
 	}
 
 	r := blockchain.NewReader(decoded)
-	err = b.readFrom(r)
-	if err != nil {
+	if err := b.readFrom(r); err != nil {
 		return err
 	}
+
 	if trailing := r.Len(); trailing > 0 {
 		return fmt.Errorf("trailing garbage (%d bytes)", trailing)
 	}
 	return nil
-}
-
-// Scan fulfills the sql.Scanner interface.
-func (b *Block) Scan(val interface{}) error {
-	driverBuf, ok := val.([]byte)
-	if !ok {
-		return errors.New("Scan must receive a byte slice")
-	}
-	buf := make([]byte, len(driverBuf))
-	copy(buf[:], driverBuf)
-	r := blockchain.NewReader(buf)
-	err := b.readFrom(r)
-	if err != nil {
-		return err
-	}
-	if trailing := r.Len(); trailing > 0 {
-		return fmt.Errorf("trailing garbage (%d bytes)", trailing)
-	}
-	return nil
-}
-
-// Value fulfills the sql.driver.Valuer interface.
-func (b *Block) Value() (driver.Value, error) {
-	buf := new(bytes.Buffer)
-	_, err := b.WriteTo(buf)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
 
 func (b *Block) readFrom(r *blockchain.Reader) error {
@@ -96,22 +63,23 @@ func (b *Block) readFrom(r *blockchain.Reader) error {
 	if err != nil {
 		return err
 	}
-	if serflags&SerBlockTransactions == SerBlockTransactions {
-		n, err := blockchain.ReadVarint31(r)
-		if err != nil {
-			return errors.Wrap(err, "reading number of transactions")
+
+	if serflags == SerBlockHeader {
+		return nil
+	}
+
+	n, err := blockchain.ReadVarint31(r)
+	if err != nil {
+		return errors.Wrap(err, "reading number of transactions")
+	}
+
+	for ; n > 0; n-- {
+		data := TxData{}
+		if err = data.readFrom(r); err != nil {
+			return errors.Wrapf(err, "reading transaction %d", len(b.Transactions))
 		}
-		for ; n > 0; n-- {
-			var data TxData
-			err = data.readFrom(r)
-			if err != nil {
-				return errors.Wrapf(err, "reading transaction %d", len(b.Transactions))
-			}
-			// TODO(kr): store/reload hashes;
-			// don't compute here if not necessary.
-			tx := NewTx(data)
-			b.Transactions = append(b.Transactions, tx)
-		}
+
+		b.Transactions = append(b.Transactions, NewTx(data))
 	}
 	return nil
 }
@@ -119,17 +87,29 @@ func (b *Block) readFrom(r *blockchain.Reader) error {
 // WriteTo will write block to input io.Writer
 func (b *Block) WriteTo(w io.Writer) (int64, error) {
 	ew := errors.NewWriter(w)
-	b.writeTo(ew, SerBlockFull)
+	if err := b.writeTo(ew, SerBlockFull); err != nil {
+		return 0, err
+	}
 	return ew.Written(), ew.Err()
 }
 
-// assumes w has sticky errors
-func (b *Block) writeTo(w io.Writer, serflags uint8) {
-	b.BlockHeader.writeTo(w, serflags)
-	if serflags&SerBlockTransactions == SerBlockTransactions {
-		blockchain.WriteVarint31(w, uint64(len(b.Transactions))) // TODO(bobg): check and return error
-		for _, tx := range b.Transactions {
-			tx.WriteTo(w)
+func (b *Block) writeTo(w io.Writer, serflags uint8) error {
+	if err := b.BlockHeader.writeTo(w, serflags); err != nil {
+		return err
+	}
+
+	if serflags == SerBlockHeader {
+		return nil
+	}
+
+	if _, err := blockchain.WriteVarint31(w, uint64(len(b.Transactions))); err != nil {
+		return err
+	}
+
+	for _, tx := range b.Transactions {
+		if _, err := tx.WriteTo(w); err != nil {
+			return err
 		}
 	}
+	return nil
 }

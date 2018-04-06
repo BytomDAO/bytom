@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/testutil"
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -114,5 +115,21 @@ func TestMapCoinbaseTx(t *testing.T) {
 		}
 	} else {
 		t.Errorf("entryMap contains nothing for input")
+	}
+}
+
+func sampleTx() *TxData {
+	assetID := bc.ComputeAssetID([]byte{1}, 1, &bc.EmptyStringHash)
+	return &TxData{
+		Version:        1,
+		SerializedSize: 66,
+		Inputs: []*TxInput{
+			NewSpendInput(nil, testutil.MustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), assetID, 1000000000000, 1, []byte{1}),
+			NewSpendInput(nil, bc.NewHash([32]byte{0x11}), assetID, 1, 1, []byte{2}),
+		},
+		Outputs: []*TxOutput{
+			NewTxOutput(assetID, 600000000000, []byte{1}),
+			NewTxOutput(assetID, 400000000000, []byte{2}),
+		},
 	}
 }
