@@ -93,9 +93,16 @@ func (bk *blockKeeper) IsCaughtUp() bool {
 func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) error {
 	chainHeight := bk.chain.Height()
 	num := chainHeight + 1
+	orphanNum := uint64(0)
+	reqNum := uint64(0)
 	isOrphan := false
 	for num <= maxPeerHeight && num > 0 {
-		block, err := bk.BlockRequest(peerID, num)
+		if isOrphan {
+			reqNum = orphanNum
+		} else {
+			reqNum = num
+		}
+		block, err := bk.BlockRequest(peerID, reqNum)
 		if errors.Root(err) == errPeerDropped || errors.Root(err) == errGetBlockTimeout || errors.Root(err) == errReqBlock {
 			log.WithField("Peer abnormality. PeerID: ", peerID).Info(err)
 			bk.peers.DropPeer(peerID)
@@ -108,10 +115,10 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 			return errScamPeer
 		}
 		if isOrphan {
-			num--
+			orphanNum = block.Height - 1
 			continue
 		}
-		num = bk.chain.Height() + 1
+		num++
 	}
 	return nil
 }
