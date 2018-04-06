@@ -44,11 +44,11 @@ type wtBlock struct {
 }
 
 func (b *wtBlock) create(ctx *WalletTestContext) (*types.Block, error) {
-	transactions := []*types.Tx{}
+	transactions := make([]*types.Tx, 0, len(b.Transactions))
 	for _, t := range b.Transactions {
 		tx, err := t.create(ctx)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		transactions = append(transactions, tx)
 	}
