@@ -195,7 +195,7 @@ func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	in := &query.AnnotatedInput{
 		AssetDefinition: &emptyJSONObject,
 	}
-	if !orig.IsCoinbase() {
+	if orig.InputType() != types.CoinbaseInputType {
 		in.AssetID = orig.AssetID()
 		in.Amount = orig.Amount()
 	}

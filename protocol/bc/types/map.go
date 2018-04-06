@@ -81,12 +81,10 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	// available in case an issuance needs it for its anchor.
 
 	var (
-		firstSpend   *bc.Spend
-		firstSpendID bc.Hash
-		spends       []*bc.Spend
-		issuances    []*bc.Issuance
-		coinbase     *bc.Coinbase
-		muxSources   = make([]*bc.ValueSource, len(tx.Inputs))
+		spends     []*bc.Spend
+		issuances  []*bc.Issuance
+		coinbase   *bc.Coinbase
+		muxSources = make([]*bc.ValueSource, len(tx.Inputs))
 	)
 
 	for i, inp := range tx.Inputs {
@@ -105,10 +103,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 			muxSources[i] = &bc.ValueSource{
 				Ref:   &id,
 				Value: &oldSp.AssetAmount,
-			}
-			if firstSpend == nil {
-				firstSpend = sp
-				firstSpendID = id
 			}
 			spends = append(spends, sp)
 		}
@@ -136,9 +130,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				nonce := bc.NewNonce(&bc.Program{VmVersion: 1, Code: prog})
 				anchorID = addEntry(nonce)
 				setAnchored = nonce.SetAnchored
-			} else if firstSpend != nil {
-				anchorID = firstSpendID
-				setAnchored = firstSpend.SetAnchored
 			}
 
 			val := inp.AssetAmount()
@@ -234,26 +225,17 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 	return headerID, h, entryMap
 }
 
-func mapBlockHeader(old *BlockHeader) (bhID bc.Hash, bh *bc.BlockHeader) {
-	bh = bc.NewBlockHeader(
-		old.Version,
-		old.Height,
-		&old.PreviousBlockHash,
-		old.Timestamp,
-		&old.TransactionsMerkleRoot,
-		&old.TransactionStatusHash,
-		old.Nonce,
-		old.Bits,
-	)
-	bhID = bc.EntryID(bh)
-	return
+func mapBlockHeader(old *BlockHeader) (bc.Hash, *bc.BlockHeader) {
+	bh := bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.Timestamp, &old.TransactionsMerkleRoot, &old.TransactionStatusHash, old.Nonce, old.Bits)
+	return bc.EntryID(bh), bh
 }
 
 // MapBlock converts a types block to bc block
 func MapBlock(old *Block) *bc.Block {
 	if old == nil {
-		return nil // if old is nil, so should new be
+		return nil
 	}
+
 	b := new(bc.Block)
 	b.ID, b.BlockHeader = mapBlockHeader(&old.BlockHeader)
 	for _, oldTx := range old.Transactions {
