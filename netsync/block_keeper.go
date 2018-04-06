@@ -94,7 +94,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 	chainHeight := bk.chain.Height()
 	num := chainHeight + 1
 	isOrphan := false
-	for num <= maxPeerHeight {
+	for num <= maxPeerHeight && num > 0 {
 		block, err := bk.BlockRequest(peerID, num)
 		if errors.Root(err) == errPeerDropped || errors.Root(err) == errGetBlockTimeout || errors.Root(err) == errReqBlock {
 			log.WithField("Peer abnormality. PeerID: ", peerID).Info(err)
