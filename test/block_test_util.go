@@ -1,6 +1,8 @@
 package test
 
 import (
+	"time"
+
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/protocol"
@@ -31,7 +33,7 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 			Version:           1,
 			Height:            preBlock.Height + 1,
 			PreviousBlockHash: preBlock.Hash(),
-			Timestamp:         preBlock.Timestamp + defaultDuration,
+			Timestamp:         uint64(time.Now().Unix()),
 			BlockCommitment:   types.BlockCommitment{},
 			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
 		},

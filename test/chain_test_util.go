@@ -28,7 +28,7 @@ type ChainTestContext struct {
 func (ctx *ChainTestContext) append(blkNum uint64) error {
 	for i := uint64(0); i < blkNum; i++ {
 		prevBlock := ctx.Chain.BestBlock()
-		timestamp := prevBlock.Timestamp + defaultDuration
+		timestamp := uint64(time.Now().Unix())
 		prevBlockHash := prevBlock.Hash()
 		block, err := DefaultEmptyBlock(prevBlock.Height+1, timestamp, prevBlockHash, prevBlock.Bits)
 		if err != nil {
