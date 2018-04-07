@@ -8,13 +8,11 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
 )
 
 // NewBlock create block according to the current status of chain
 func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*types.Block, error) {
-	view := state.NewUtxoViewpoint()
 	gasUsed := uint64(0)
 	txsFee := uint64(0)
 	txEntries := []*bc.Tx{nil}
@@ -40,14 +38,9 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 		},
 		Transactions: []*types.Tx{nil},
 	}
-	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: preBlock.Height + 1}}
 
 	for _, tx := range txs {
 		gasOnlyTx := false
-		if err := chain.GetTransactionsUtxo(view, []*bc.Tx{tx.Tx}); err != nil {
-			continue
-		}
-
 		gasStatus, err := validation.ValidateTx(tx.Tx, preBcBlock)
 		if err != nil {
 			if !gasStatus.GasVaild {
@@ -56,21 +49,10 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 			gasOnlyTx = true
 		}
 
-		if gasUsed+uint64(gasStatus.GasUsed) > consensus.MaxBlockGas {
-			break
-		}
-
-		if err := view.ApplyTransaction(bcBlock, tx.Tx, gasOnlyTx); err != nil {
-			continue
-		}
-
 		txStatus.SetStatus(len(b.Transactions), gasOnlyTx)
 		b.Transactions = append(b.Transactions, tx)
 		txEntries = append(txEntries, tx.Tx)
 		gasUsed += uint64(gasStatus.GasUsed)
-		if gasUsed == consensus.MaxBlockGas {
-			break
-		}
 		txsFee += txFee(tx)
 	}
 

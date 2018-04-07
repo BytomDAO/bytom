@@ -147,6 +147,7 @@ type chainTestConfig struct {
 type ctBlock struct {
 	Transactions []*ctTransaction `json:"transactions"`
 	Append       uint64           `json:"append"`
+	Invalid      bool             `json:"invalid"`
 }
 
 func (b *ctBlock) createBlock(ctx *chainTestContext) (*types.Block, error) {
@@ -246,7 +247,11 @@ func (cfg *chainTestConfig) Run() error {
 		if err != nil {
 			return err
 		}
-		if err := SolveAndUpdate(ctx.Chain, block); err != nil {
+		err = SolveAndUpdate(ctx.Chain, block)
+		if err != nil && blk.Invalid {
+			continue
+		}
+		if err != nil {
 			return err
 		}
 		if err := ctx.validateStatus(block); err != nil {

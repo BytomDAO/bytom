@@ -1,12 +1,12 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
-	"encoding/json"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
@@ -199,8 +199,12 @@ func TestCoinbaseMature(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(block.Transactions) == 2 {
-			t.Fatalf("spent immature coinbase output success")
+		if err := SolveAndUpdate(chain, block); err == nil {
+			t.Fatal("spent immature coinbase output success")
+		}
+		block, err = NewBlock(chain, nil, defaultCtrlProg)
+		if err != nil {
+			t.Fatal(err)
 		}
 		if err := SolveAndUpdate(chain, block); err != nil {
 			t.Fatal(err)
@@ -211,11 +215,8 @@ func TestCoinbaseMature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(block.Transactions) != 2 {
-		t.Fatal("spent mature coinbase output failed")
-	}
 	if err := SolveAndUpdate(chain, block); err != nil {
-		t.Fatal(err)
+		t.Fatalf("spent mature coinbase output failed: %s", err)
 	}
 }
 
