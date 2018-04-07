@@ -135,7 +135,18 @@ func (s *Store) LoadBlockIndex() (*protocol.BlockIndex, error) {
 			return nil, err
 		}
 
-		node := protocol.NewBlockNode(bh, lastNode)
+		var parent *protocol.BlockNode
+		if lastNode == nil || lastNode.Hash == bh.PreviousBlockHash {
+			parent = lastNode
+		} else {
+			parent = blockIndex.GetNode(&bh.PreviousBlockHash)
+		}
+
+		node, err := protocol.NewBlockNode(bh, parent)
+		if err != nil {
+			return nil, err
+		}
+
 		blockIndex.AddNode(node)
 		lastNode = node
 	}

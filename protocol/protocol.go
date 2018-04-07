@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
@@ -55,19 +56,43 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 		txPool:           txPool,
 	}
 	c.state.cond.L = new(sync.Mutex)
-	storeStatus := store.GetStoreStatus()
-	c.state.hash = storeStatus.Hash
+
 	var err error
+	if storeStatus := store.GetStoreStatus(); storeStatus.Hash != nil {
+		c.state.hash = storeStatus.Hash
+	} else {
+		if err = c.initChainStatus(); err != nil {
+			return nil, err
+		}
+	}
 
 	if c.index, err = store.LoadBlockIndex(); err != nil {
 		return nil, err
 	}
+
 	bestNode := c.index.GetNode(c.state.hash)
 	c.index.SetMainChain(bestNode)
-	if c.state.block, err = store.GetBlock(storeStatus.Hash); err != nil {
-		return nil, err
-	}
 	return c, nil
+}
+
+func (c *Chain) initChainStatus() error {
+	genesisBlock := config.GenerateGenesisBlock()
+	txStatus := bc.NewTransactionStatus()
+	for i, _ := range genesisBlock.Transactions {
+		txStatus.SetStatus(i, false)
+	}
+
+	if err := c.store.SaveBlock(genesisBlock, txStatus); err != nil {
+		return err
+	}
+
+	if err := c.connectBlock(genesisBlock); err != nil {
+		return err
+	}
+
+	hash := genesisBlock.Hash()
+	c.state.hash = &hash
+	return nil
 }
 
 // Height returns the current height of the blockchain.

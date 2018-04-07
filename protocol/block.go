@@ -34,7 +34,7 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 	if node == nil {
 		return nil, errors.New("can't find block in given hight")
 	}
-	return c.store.GetBlock(&node.hash)
+	return c.store.GetBlock(&node.Hash)
 }
 
 // ConnectBlock append block to end of chain

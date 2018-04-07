@@ -19,7 +19,7 @@ const approxNodesPerDay = 24 * 24
 // aid in selecting the best chain to be the main chain.
 type BlockNode struct {
 	parent  *BlockNode // parent is the parent block for this node.
-	hash    bc.Hash    // hash of the block.
+	Hash    bc.Hash    // hash of the block.
 	seed    *bc.Hash   // seed hash of the block
 	workSum *big.Int   // total amount of work in the chain up to
 
@@ -39,7 +39,7 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 
 	node := &BlockNode{
 		parent:    parent,
-		hash:      bh.Hash(),
+		Hash:      bh.Hash(),
 		workSum:   difficulty.CalcWork(bh.Bits),
 		version:   bh.Version,
 		height:    bh.Height,
@@ -63,7 +63,7 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 func (node *BlockNode) blockHeader() *types.BlockHeader {
 	previousBlockHash := bc.Hash{}
 	if node.parent != nil {
-		previousBlockHash = node.parent.hash
+		previousBlockHash = node.parent.Hash
 	}
 	return &types.BlockHeader{
 		Version:           node.version,
@@ -82,7 +82,7 @@ func (node *BlockNode) blockHeader() *types.BlockHeader {
 // nextSeed calculate the seed for next block
 func (node *BlockNode) nextSeed() *bc.Hash {
 	if node.height%consensus.SeedPerRetarget == 0 {
-		return &node.hash
+		return &node.Hash
 	}
 	return node.seed
 }
@@ -106,7 +106,7 @@ func NewBlockIndex() *BlockIndex {
 // AddNode will add node to the index map
 func (bi *BlockIndex) AddNode(node *BlockNode) {
 	bi.Lock()
-	bi.index[node.hash] = node
+	bi.index[node.Hash] = node
 	bi.Unlock()
 }
 
