@@ -121,7 +121,7 @@ func (t *ttTransaction) UnmarshalJSON(data []byte) error {
 }
 
 func (t *ttTransaction) create(g *TxGenerator) (*types.Tx, error) {
-	g.reset()
+	g.Reset()
 	for _, input := range t.Inputs {
 		switch input.Type {
 		case "spend_account":

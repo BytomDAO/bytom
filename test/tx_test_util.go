@@ -24,6 +24,7 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+// TxGenerator used to generate new tx
 type TxGenerator struct {
 	Builder        *txbuilder.TemplateBuilder
 	AccountManager *account.Manager
@@ -31,6 +32,7 @@ type TxGenerator struct {
 	Hsm            *pseudohsm.HSM
 }
 
+// NewTxGenerator create a TxGenerator
 func NewTxGenerator(accountManager *account.Manager, assets *asset.Registry, hsm *pseudohsm.HSM) *TxGenerator {
 	return &TxGenerator{
 		Builder:        txbuilder.NewBuilder(time.Now()),
@@ -40,7 +42,8 @@ func NewTxGenerator(accountManager *account.Manager, assets *asset.Registry, hsm
 	}
 }
 
-func (g *TxGenerator) reset() {
+// Reset reset transaction builder, used to create a new tx
+func (g *TxGenerator) Reset() {
 	g.Builder = txbuilder.NewBuilder(time.Now())
 }
 
@@ -132,6 +135,7 @@ func (g *TxGenerator) createControlProgram(accountAlias string, change bool) (*a
 	return g.AccountManager.CreateAddress(nil, acc.ID, change)
 }
 
+// AddSpendInput add a spend input
 func (g *TxGenerator) AddSpendInput(accountAlias, assetAlias string, amount uint64) error {
 	assetAmount, err := g.assetAmount(assetAlias, amount)
 	if err != nil {
@@ -159,10 +163,12 @@ func (g *TxGenerator) AddSpendInput(accountAlias, assetAlias string, amount uint
 	return spendAction.Build(nil, g.Builder)
 }
 
+// AddTxInput add a tx input and signing instruction
 func (g *TxGenerator) AddTxInput(txInput *types.TxInput, signInstruction *txbuilder.SigningInstruction) error {
 	return g.Builder.AddInput(txInput, signInstruction)
 }
 
+// AddTxInputFromUtxo add a tx input which spent the utxo
 func (g *TxGenerator) AddTxInputFromUtxo(utxo *account.UTXO, accountAlias string) error {
 	acc, err := g.AccountManager.FindByAlias(nil, accountAlias)
 	if err != nil {
@@ -176,6 +182,7 @@ func (g *TxGenerator) AddTxInputFromUtxo(utxo *account.UTXO, accountAlias string
 	return g.AddTxInput(txInput, signInst)
 }
 
+// AddIssuanceInput add a issue input
 func (g *TxGenerator) AddIssuanceInput(assetAlias string, amount uint64) error {
 	asset, err := g.Assets.FindByAlias(nil, assetAlias)
 	if err != nil {
@@ -195,6 +202,7 @@ func (g *TxGenerator) AddIssuanceInput(assetAlias string, amount uint64) error {
 	return g.Builder.AddInput(issuanceInput, signInstruction)
 }
 
+// AddTxOutput add a tx output
 func (g *TxGenerator) AddTxOutput(accountAlias, assetAlias string, amount uint64) error {
 	assetAmount, err := g.assetAmount(assetAlias, uint64(amount))
 	if err != nil {
@@ -208,6 +216,7 @@ func (g *TxGenerator) AddTxOutput(accountAlias, assetAlias string, amount uint64
 	return g.Builder.AddOutput(out)
 }
 
+// AddRetirement add a retirement output
 func (g *TxGenerator) AddRetirement(assetAlias string, amount uint64) error {
 	assetAmount, err := g.assetAmount(assetAlias, uint64(amount))
 	if err != nil {
@@ -218,6 +227,7 @@ func (g *TxGenerator) AddRetirement(assetAlias string, amount uint64) error {
 	return g.Builder.AddOutput(out)
 }
 
+// Sign used to sign tx
 func (g *TxGenerator) Sign(passwords []string) (*types.Tx, error) {
 	tpl, _, err := g.Builder.Build()
 	if err != nil {
@@ -233,7 +243,7 @@ func (g *TxGenerator) Sign(passwords []string) (*types.Tx, error) {
 }
 
 func txFee(tx *types.Tx) uint64 {
-	if len(tx.Inputs) == 1 && tx.Inputs[0].IsCoinbase() {
+	if len(tx.Inputs) == 1 && tx.Inputs[0].InputType() == types.CoinbaseInputType {
 		return 0
 	}
 
@@ -255,8 +265,8 @@ func txFee(tx *types.Tx) uint64 {
 
 // CreateSpendInput create SpendInput which spent the output from tx
 func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, error) {
-	outputId := tx.ResultIds[outputIndex]
-	output, ok := tx.Entries[*outputId].(*bc.Output)
+	outputID := tx.ResultIds[outputIndex]
+	output, ok := tx.Entries[*outputID].(*bc.Output)
 	if !ok {
 		return nil, fmt.Errorf("retirement can't be spent")
 	}
@@ -273,7 +283,7 @@ func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, erro
 	}, nil
 }
 
-// Read CtrlProgram from db, construct SignInstruction for SpendInput
+// SignInstructionFor read CtrlProgram from db, construct SignInstruction for SpendInput
 func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
 	cp := account.CtrlProgram{}
 	var hash [32]byte

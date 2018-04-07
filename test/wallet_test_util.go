@@ -18,7 +18,7 @@ import (
 	w "github.com/bytom/wallet"
 )
 
-type WalletTestConfig struct {
+type walletTestConfig struct {
 	Keys       []*keyInfo     `json:"keys"`
 	Accounts   []*accountInfo `json:"accounts"`
 	Blocks     []*wtBlock     `json:"blocks"`
@@ -43,7 +43,7 @@ type wtBlock struct {
 	Append          uint64            `json:"append"`
 }
 
-func (b *wtBlock) create(ctx *WalletTestContext) (*types.Block, error) {
+func (b *wtBlock) create(ctx *walletTestContext) (*types.Block, error) {
 	transactions := make([]*types.Tx, 0, len(b.Transactions))
 	for _, t := range b.Transactions {
 		tx, err := t.create(ctx)
@@ -55,7 +55,7 @@ func (b *wtBlock) create(ctx *WalletTestContext) (*types.Block, error) {
 	return ctx.newBlock(transactions, b.CoinbaseAccount)
 }
 
-func (b *wtBlock) verifyPostStates(ctx *WalletTestContext) error {
+func (b *wtBlock) verifyPostStates(ctx *walletTestContext) error {
 	for _, state := range b.PostStates {
 		balance, err := ctx.getBalance(state.AccountAlias, state.AssetAlias)
 		if err != nil {
@@ -76,7 +76,7 @@ type wtTransaction struct {
 }
 
 // create signed transaction
-func (t *wtTransaction) create(ctx *WalletTestContext) (*types.Tx, error) {
+func (t *wtTransaction) create(ctx *walletTestContext) (*types.Tx, error) {
 	generator := NewTxGenerator(ctx.Wallet.AccountMgr, ctx.Wallet.AssetReg, ctx.Wallet.Hsm)
 	for _, input := range t.Inputs {
 		switch input.Type {
@@ -123,12 +123,12 @@ type accountBalance struct {
 	Amount       uint64 `json:"amount"`
 }
 
-type WalletTestContext struct {
+type walletTestContext struct {
 	Wallet *w.Wallet
 	Chain  *protocol.Chain
 }
 
-func (ctx *WalletTestContext) createControlProgram(accountName string, change bool) (*account.CtrlProgram, error) {
+func (ctx *walletTestContext) createControlProgram(accountName string, change bool) (*account.CtrlProgram, error) {
 	acc, err := ctx.Wallet.AccountMgr.FindByAlias(nil, accountName)
 	if err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func (ctx *WalletTestContext) createControlProgram(accountName string, change bo
 	return ctx.Wallet.AccountMgr.CreateAddress(nil, acc.ID, change)
 }
 
-func (ctx *WalletTestContext) getPubkey(keyAlias string) *chainkd.XPub {
+func (ctx *walletTestContext) getPubkey(keyAlias string) *chainkd.XPub {
 	pubKeys := ctx.Wallet.Hsm.ListKeys()
 	for i, key := range pubKeys {
 		if key.Alias == keyAlias {
@@ -147,7 +147,7 @@ func (ctx *WalletTestContext) getPubkey(keyAlias string) *chainkd.XPub {
 	return nil
 }
 
-func (ctx *WalletTestContext) createAsset(accountAlias string, assetAlias string) (*asset.Asset, error) {
+func (ctx *walletTestContext) createAsset(accountAlias string, assetAlias string) (*asset.Asset, error) {
 	acc, err := ctx.Wallet.AccountMgr.FindByAlias(nil, accountAlias)
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func (ctx *WalletTestContext) createAsset(accountAlias string, assetAlias string
 	return ctx.Wallet.AssetReg.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
 }
 
-func (ctx *WalletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) (*types.Block, error) {
+func (ctx *walletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) (*types.Block, error) {
 	controlProgram, err := ctx.createControlProgram(coinbaseAccount, true)
 	if err != nil {
 		return nil, err
@@ -163,12 +163,12 @@ func (ctx *WalletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) 
 	return NewBlock(ctx.Chain, txs, controlProgram.ControlProgram)
 }
 
-func (ctx *WalletTestContext) createKey(name string, password string) error {
+func (ctx *walletTestContext) createKey(name string, password string) error {
 	_, err := ctx.Wallet.Hsm.XCreate(name, password)
 	return err
 }
 
-func (ctx *WalletTestContext) createAccount(name string, keys []string, quorum int) error {
+func (ctx *walletTestContext) createAccount(name string, keys []string, quorum int) error {
 	xpubs := []chainkd.XPub{}
 	for _, alias := range keys {
 		xpub := ctx.getPubkey(alias)
@@ -181,7 +181,7 @@ func (ctx *WalletTestContext) createAccount(name string, keys []string, quorum i
 	return err
 }
 
-func (ctx *WalletTestContext) update(block *types.Block) error {
+func (ctx *walletTestContext) update(block *types.Block) error {
 	if err := SolveAndUpdate(ctx.Chain, block); err != nil {
 		return err
 	}
@@ -191,12 +191,8 @@ func (ctx *WalletTestContext) update(block *types.Block) error {
 	return nil
 }
 
-func (ctx *WalletTestContext) getBalance(accountAlias string, assetAlias string) (uint64, error) {
-	balances, err := ctx.Wallet.GetAccountBalances("")
-	if err != nil {
-		return 0, err
-	}
-
+func (ctx *walletTestContext) getBalance(accountAlias string, assetAlias string) (uint64, error) {
+	balances := ctx.Wallet.GetAccountBalances("")
 	for _, balance := range balances {
 		if balance.Alias == accountAlias && balance.AssetAlias == assetAlias {
 			return balance.Amount, nil
@@ -205,13 +201,9 @@ func (ctx *WalletTestContext) getBalance(accountAlias string, assetAlias string)
 	return 0, nil
 }
 
-func (ctx *WalletTestContext) getAccBalances() map[string]map[string]uint64 {
+func (ctx *walletTestContext) getAccBalances() map[string]map[string]uint64 {
 	accBalances := make(map[string]map[string]uint64)
-	balances, err := ctx.Wallet.GetAccountBalances("")
-	if err != nil {
-		return nil
-	}
-
+	balances := ctx.Wallet.GetAccountBalances("")
 	for _, balance := range balances {
 		if accBalance, ok := accBalances[balance.Alias]; ok {
 			if _, ok := accBalance[balance.AssetAlias]; ok {
@@ -226,7 +218,7 @@ func (ctx *WalletTestContext) getAccBalances() map[string]map[string]uint64 {
 	return accBalances
 }
 
-func (ctx *WalletTestContext) getDetachedBlocks(height uint64) ([]*types.Block, error) {
+func (ctx *walletTestContext) getDetachedBlocks(height uint64) ([]*types.Block, error) {
 	currentHeight := ctx.Chain.Height()
 	detachedBlocks := make([]*types.Block, 0, currentHeight-height)
 	for i := currentHeight; i > height; i-- {
@@ -239,16 +231,15 @@ func (ctx *WalletTestContext) getDetachedBlocks(height uint64) ([]*types.Block, 
 	return detachedBlocks, nil
 }
 
-func (ctx *WalletTestContext) validateRollback(oldAccBalances map[string]map[string]uint64) error {
+func (ctx *walletTestContext) validateRollback(oldAccBalances map[string]map[string]uint64) error {
 	accBalances := ctx.getAccBalances()
 	if reflect.DeepEqual(oldAccBalances, accBalances) {
 		return nil
-	} else {
-		return fmt.Errorf("different account balances after rollback")
 	}
+	return fmt.Errorf("different account balances after rollback")
 }
 
-func (ctx *WalletTestContext) append(blkNum uint64) error {
+func (ctx *walletTestContext) append(blkNum uint64) error {
 	for i := uint64(0); i < blkNum; i++ {
 		prevBlock := ctx.Chain.BestBlock()
 		timestamp := uint64(time.Now().Unix())
@@ -264,7 +255,7 @@ func (ctx *WalletTestContext) append(blkNum uint64) error {
 	return nil
 }
 
-func (cfg *WalletTestConfig) Run() error {
+func (cfg *walletTestConfig) Run() error {
 	dirPath, err := ioutil.TempDir(".", "pseudo_hsm")
 	if err != nil {
 		return err
@@ -286,7 +277,7 @@ func (cfg *WalletTestConfig) Run() error {
 	if err != nil {
 		return err
 	}
-	ctx := &WalletTestContext{
+	ctx := &walletTestContext{
 		Wallet: wallet,
 		Chain:  chain,
 	}

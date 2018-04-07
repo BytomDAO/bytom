@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/protocol/validation"
 )
 
+// NewBlock create block according to the current status of chain
 func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*types.Block, error) {
 	view := state.NewUtxoViewpoint()
 	gasUsed := uint64(0)
@@ -89,6 +90,7 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	return b, err
 }
 
+// ReplaceCoinbase replace the coinbase tx of block with coinbaseTx
 func ReplaceCoinbase(block *types.Block, coinbaseTx *types.Tx) (err error) {
 	block.Transactions[0] = coinbaseTx
 	txEntires := []*bc.Tx{coinbaseTx.Tx}
@@ -100,6 +102,7 @@ func ReplaceCoinbase(block *types.Block, coinbaseTx *types.Tx) (err error) {
 	return
 }
 
+// DefaultEmptyBlock create a block only have coinbase tx, anyone can spent the output
 func DefaultEmptyBlock(height uint64, timestamp uint64, prevBlockHash bc.Hash, bits uint64) (*types.Block, error) {
 	coinbaseTx, err := DefaultCoinbaseTx(height)
 	if err != nil {
@@ -128,6 +131,7 @@ func DefaultEmptyBlock(height uint64, timestamp uint64, prevBlockHash bc.Hash, b
 	return block, err
 }
 
+// SolveAndUpdate solve difficulty and update chain status
 func SolveAndUpdate(chain *protocol.Chain, block *types.Block) error {
 	seed, err := chain.GetSeed(block.Height, &block.PreviousBlockHash)
 	if err != nil {
@@ -143,6 +147,7 @@ func SolveAndUpdate(chain *protocol.Chain, block *types.Block) error {
 	return nil
 }
 
+// Solve solve difficulty
 func Solve(seed *bc.Hash, block *types.Block) error {
 	header := &block.BlockHeader
 	for i := uint64(0); i < maxNonce; i++ {

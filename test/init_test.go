@@ -19,7 +19,7 @@ var (
 	txTestDir = filepath.Join(baseDir, "tx_tests")
 )
 
-func readJson(reader io.Reader, value interface{}) error {
+func readJSON(reader io.Reader, value interface{}) error {
 	data, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return fmt.Errorf("error reading JSON file: %v", err)
@@ -34,14 +34,14 @@ func readJson(reader io.Reader, value interface{}) error {
 	return nil
 }
 
-func readJsonFile(fn string, value interface{}) error {
+func readJSONFile(fn string, value interface{}) error {
 	file, err := os.Open(fn)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	err = readJson(file, value)
+	err = readJSON(file, value)
 	if err != nil {
 		return fmt.Errorf("%s in file %s", err.Error(), fn)
 	}
@@ -90,7 +90,7 @@ func walk(t *testing.T, dir string, runTest interface{}) {
 
 func runTestFile(t *testing.T, path, name string, runTest interface{}) {
 	m := makeMapFromTestFunc(runTest)
-	if err := readJsonFile(path, m.Addr().Interface()); err != nil {
+	if err := readJSONFile(path, m.Addr().Interface()); err != nil {
 		t.Fatal(err)
 	}
 	runTestFunc(runTest, t, name, m)

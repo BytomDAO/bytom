@@ -20,12 +20,12 @@ import (
 
 const utxoPrefix = "UT:"
 
-type ChainTestContext struct {
+type chainTestContext struct {
 	Chain *protocol.Chain
 	DB    dbm.DB
 }
 
-func (ctx *ChainTestContext) append(blkNum uint64) error {
+func (ctx *chainTestContext) append(blkNum uint64) error {
 	for i := uint64(0); i < blkNum; i++ {
 		prevBlock := ctx.Chain.BestBlock()
 		timestamp := uint64(time.Now().Unix())
@@ -41,7 +41,7 @@ func (ctx *ChainTestContext) append(blkNum uint64) error {
 	return nil
 }
 
-func (ctx *ChainTestContext) validateStatus(block *types.Block) error {
+func (ctx *chainTestContext) validateStatus(block *types.Block) error {
 	// validate in mainchain
 	if !ctx.Chain.InMainChain(block.Height, block.Hash()) {
 		return fmt.Errorf("block %d is not in mainchain", block.Height)
@@ -76,7 +76,7 @@ func (ctx *ChainTestContext) validateStatus(block *types.Block) error {
 	return nil
 }
 
-func (ctx *ChainTestContext) validateExecution(block *types.Block) error {
+func (ctx *chainTestContext) validateExecution(block *types.Block) error {
 	for _, tx := range block.Transactions {
 		for _, spentOutputID := range tx.SpentOutputIDs {
 			utxoEntry, _ := leveldb.GetUtxo(ctx.DB, &spentOutputID)
@@ -107,7 +107,7 @@ func (ctx *ChainTestContext) validateExecution(block *types.Block) error {
 	return nil
 }
 
-func (ctx *ChainTestContext) getUtxoEntries() map[string]*storage.UtxoEntry {
+func (ctx *chainTestContext) getUtxoEntries() map[string]*storage.UtxoEntry {
 	utxoEntries := make(map[string]*storage.UtxoEntry)
 	iter := ctx.DB.IteratorPrefix([]byte(utxoPrefix))
 	defer iter.Release()
@@ -123,7 +123,7 @@ func (ctx *ChainTestContext) getUtxoEntries() map[string]*storage.UtxoEntry {
 	return utxoEntries
 }
 
-func (ctx *ChainTestContext) validateRollback(utxoEntries map[string]*storage.UtxoEntry) error {
+func (ctx *chainTestContext) validateRollback(utxoEntries map[string]*storage.UtxoEntry) error {
 	newUtxoEntries := ctx.getUtxoEntries()
 	beforeRollbackLen := len(utxoEntries)
 	nowLen := len(newUtxoEntries)
@@ -139,7 +139,7 @@ func (ctx *ChainTestContext) validateRollback(utxoEntries map[string]*storage.Ut
 	return nil
 }
 
-type ChainTestConfig struct {
+type chainTestConfig struct {
 	RollbackTo uint64     `json:"rollback_to"`
 	Blocks     []*ctBlock `json:"blocks"`
 }
@@ -149,7 +149,7 @@ type ctBlock struct {
 	Append       uint64           `json:"append"`
 }
 
-func (b *ctBlock) createBlock(ctx *ChainTestContext) (*types.Block, error) {
+func (b *ctBlock) createBlock(ctx *chainTestContext) (*types.Block, error) {
 	txs := make([]*types.Tx, 0, len(b.Transactions))
 	for _, t := range b.Transactions {
 		tx, err := t.createTransaction(ctx, txs)
@@ -172,7 +172,7 @@ type ctInput struct {
 	OutputIndex uint64 `json:"output_index"`
 }
 
-func (input *ctInput) createTxInput(ctx *ChainTestContext) (*types.TxInput, error) {
+func (input *ctInput) createTxInput(ctx *chainTestContext) (*types.TxInput, error) {
 	block, err := ctx.Chain.GetBlockByHeight(input.Height)
 	if err != nil {
 		return nil, err
@@ -203,7 +203,7 @@ func (input *ctInput) createDependencyTxInput(txs []*types.Tx) (*types.TxInput, 
 	}, nil
 }
 
-func (t *ctTransaction) createTransaction(ctx *ChainTestContext, txs []*types.Tx) (*types.Tx, error) {
+func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx) (*types.Tx, error) {
 	builder := txbuilder.NewBuilder(time.Now())
 	sigInst := &txbuilder.SigningInstruction{}
 	currentHeight := ctx.Chain.Height()
@@ -230,11 +230,11 @@ func (t *ctTransaction) createTransaction(ctx *ChainTestContext, txs []*types.Tx
 	return tpl.Transaction, err
 }
 
-func (cfg *ChainTestConfig) Run() error {
+func (cfg *chainTestConfig) Run() error {
 	db := dbm.NewDB("chain_test_db", "leveldb", "chain_test_db")
 	defer os.RemoveAll("chain_test_db")
 	chain, _ := MockChain(db)
-	ctx := &ChainTestContext{
+	ctx := &chainTestContext{
 		Chain: chain,
 		DB:    db,
 	}
