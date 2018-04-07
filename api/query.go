@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/consensus"
 )
 
 // POST /list-accounts
@@ -116,4 +117,10 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	}
 
 	return NewSuccessResponse(UTXOs)
+}
+
+// return gasRate
+func (a *API) gasRate() Response {
+	gasrate := map[string]int64{"gasRate": consensus.VMGasRate}
+	return NewSuccessResponse(gasrate)
 }

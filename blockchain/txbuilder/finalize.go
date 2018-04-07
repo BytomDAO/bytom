@@ -28,7 +28,7 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 		return err
 	}
 
-	err = c.ValidateTx(tx)
+	_, err = c.ValidateTx(tx)
 	if errors.Root(err) == protocol.ErrBadTx {
 		return errors.Sub(ErrRejected, err)
 	}

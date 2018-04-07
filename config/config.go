@@ -189,6 +189,7 @@ func DefaultP2PConfig() *P2PConfig {
 		MaxNumPeers:      50,
 		HandshakeTimeout: 30,
 		DialTimeout:      3,
+		PexReactor:       true,
 	}
 }
 
