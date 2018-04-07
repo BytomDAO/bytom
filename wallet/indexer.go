@@ -443,12 +443,7 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error
 		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
 			return nil, err
 		}
-		annotatedTxs = append(annotatedTxs, annotatedTx)
-	}
-
-	// reverse annotatedTxs
-	for i, j := 0, len(annotatedTxs) - 1; i < j; i, j = i + 1, j - 1 {
-		annotatedTxs[i], annotatedTxs[j] = annotatedTxs[j], annotatedTxs[i]
+		annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
 	}
 
 	return annotatedTxs, nil
