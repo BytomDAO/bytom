@@ -34,7 +34,7 @@ type Reactor interface {
 
 	SetSwitch(*Switch)
 	GetChannels() []*ChannelDescriptor
-	AddPeer(peer *Peer)
+	AddPeer(peer *Peer) error
 	RemovePeer(peer *Peer, reason interface{})
 	Receive(chID byte, peer *Peer, msgBytes []byte)
 }
@@ -261,7 +261,9 @@ func (sw *Switch) AddPeer(peer *Peer) error {
 
 	// Start peer
 	if sw.IsRunning() {
-		sw.startInitPeer(peer)
+		if err := sw.startInitPeer(peer); err != nil {
+			return err
+		}
 	}
 
 	// Add the peer to .peers.
@@ -303,11 +305,14 @@ func (sw *Switch) SetPubKeyFilter(f func(crypto.PubKeyEd25519) error) {
 	sw.filterConnByPubKey = f
 }
 
-func (sw *Switch) startInitPeer(peer *Peer) {
+func (sw *Switch) startInitPeer(peer *Peer) error {
 	peer.Start() // spawn send/recv routines
 	for _, reactor := range sw.reactors {
-		reactor.AddPeer(peer)
+		if err := reactor.AddPeer(peer); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // Dial a list of seeds asynchronously in random order
@@ -427,7 +432,7 @@ func (sw *Switch) NumPeers() (outbound, inbound, dialing int) {
 	return
 }
 
-func (sw *Switch) Peers() IPeerSet {
+func (sw *Switch) Peers() *PeerSet {
 	return sw.peers
 }
 

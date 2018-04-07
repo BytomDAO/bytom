@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/bytom/api"
-	"github.com/bytom/blockchain"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -62,7 +61,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	resp := &blockchain.GetWorkResp{}
+	resp := &api.GetWorkResp{}
 	if err = json.Unmarshal(rawData, resp); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
