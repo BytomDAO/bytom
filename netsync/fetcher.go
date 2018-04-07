@@ -10,22 +10,16 @@ import (
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"strings"
 )
 
 const (
-	maxUncleDist = 7    // Maximum allowed backward distance from the chain head
 	maxQueueDist = 1024 //32 // Maximum allowed distance from the chain head to queue
 )
 
 var (
 	errTerminated = errors.New("terminated")
 )
-
-// inject represents a schedules import operation.
-type inject struct {
-	origin string
-	block  *types.Block
-}
 
 // Fetcher is responsible for accumulating block announcements from various peers
 // and scheduling them for retrieval.
@@ -35,26 +29,26 @@ type Fetcher struct {
 	peers *peerSet
 
 	// Various event channels
-	inject chan *inject
-	quit   chan struct{}
+	newMinedBlock chan *blockPending
+	quit          chan struct{}
 
 	// Block cache
-	queue  *prque.Prque        // Queue containing the import operations (block number sorted)
-	queues map[string]int      // Per peer block counts to prevent memory exhaustion
-	queued map[bc.Hash]*inject // Set of already queued blocks (to dedup imports)
+	queue  *prque.Prque              // Queue containing the import operations (block number sorted)
+	queues map[string]int            // Per peer block counts to prevent memory exhaustion
+	queued map[bc.Hash]*blockPending // Set of already queued blocks (to dedup imports)
 }
 
 //NewFetcher New creates a block fetcher to retrieve blocks of the new mined.
 func NewFetcher(chain *core.Chain, sw *p2p.Switch, peers *peerSet) *Fetcher {
 	return &Fetcher{
-		chain:  chain,
-		sw:     sw,
-		peers:  peers,
-		inject: make(chan *inject),
-		quit:   make(chan struct{}),
-		queue:  prque.New(),
-		queues: make(map[string]int),
-		queued: make(map[bc.Hash]*inject),
+		chain:         chain,
+		sw:            sw,
+		peers:         peers,
+		newMinedBlock: make(chan *blockPending),
+		quit:          make(chan struct{}),
+		queue:         prque.New(),
+		queues:        make(map[string]int),
+		queued:        make(map[bc.Hash]*blockPending),
 	}
 }
 
@@ -72,12 +66,12 @@ func (f *Fetcher) Stop() {
 
 // Enqueue tries to fill gaps the the fetcher's future import queue.
 func (f *Fetcher) Enqueue(peer string, block *types.Block) error {
-	op := &inject{
-		origin: peer,
+	op := &blockPending{
+		peerID: peer,
 		block:  block,
 	}
 	select {
-	case f.inject <- op:
+	case f.newMinedBlock <- op:
 		return nil
 	case <-f.quit:
 		return errTerminated
@@ -91,7 +85,7 @@ func (f *Fetcher) loop() {
 		// Import any queued blocks that could potentially fit
 		height := f.chain.Height()
 		for !f.queue.Empty() {
-			op := f.queue.PopItem().(*inject)
+			op := f.queue.PopItem().(*blockPending)
 			// If too high up the chain or phase, continue later
 			number := op.block.Height
 			if number > height+1 {
@@ -101,11 +95,15 @@ func (f *Fetcher) loop() {
 			// Otherwise if fresh and still unknown, try and import
 			hash := op.block.Hash()
 			block, _ := f.chain.GetBlockByHash(&hash)
-			if number+maxUncleDist < height || block != nil {
+			if block != nil {
 				f.forgetBlock(hash)
 				continue
 			}
-			f.insert(op.origin, op.block)
+			if strings.Compare(op.block.PreviousBlockHash.String(), f.chain.BestBlockHash().String()) != 0 {
+				f.forgetBlock(hash)
+				continue
+			}
+			f.insert(op.peerID, op.block)
 		}
 		// Wait for an outside event to occur
 		select {
@@ -113,9 +111,9 @@ func (f *Fetcher) loop() {
 			// Fetcher terminating, abort all operations
 			return
 
-		case op := <-f.inject:
+		case op := <-f.newMinedBlock:
 			// A direct block insertion was requested, try and fill any pending gaps
-			f.enqueue(op.origin, op.block)
+			f.enqueue(op.peerID, op.block)
 		}
 	}
 }
@@ -127,19 +125,19 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 
 	//TODO: Ensure the peer isn't DOSing us
 	// Discard any past or too distant blocks
-	if dist := int64(block.Height) - int64(f.chain.Height()); dist < -maxUncleDist || dist > maxQueueDist {
-		log.Info("Discarded propagated block, too far away", "peer", peer, "number", block.Height, "hash", hash, "distance", dist)
+	if dist := int64(block.Height) - int64(f.chain.Height()); dist < 0 || dist > maxQueueDist {
+		log.Info("Discarded propagated block, too far away", "peer:", peer, "number:", block.Height, "distance:", dist)
 		return
 	}
 	// Schedule the block for future importing
 	if _, ok := f.queued[hash]; !ok {
-		op := &inject{
-			origin: peer,
+		op := &blockPending{
+			peerID: peer,
 			block:  block,
 		}
 		f.queued[hash] = op
 		f.queue.Push(op, -float32(block.Height))
-		log.Debug("Queued propagated block", "peer", peer, "number", block.Height, "hash", hash, "queued", f.queue.Size())
+		log.Info("Queued propagated block", "peer", peer, "number", block.Height, "queued", f.queue.Size())
 	}
 }
 
@@ -163,9 +161,9 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 // state.
 func (f *Fetcher) forgetBlock(hash bc.Hash) {
 	if insert := f.queued[hash]; insert != nil {
-		f.queues[insert.origin]--
-		if f.queues[insert.origin] == 0 {
-			delete(f.queues, insert.origin)
+		f.queues[insert.peerID]--
+		if f.queues[insert.peerID] == 0 {
+			delete(f.queues, insert.peerID)
 		}
 		delete(f.queued, hash)
 	}

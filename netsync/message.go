@@ -36,6 +36,16 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
 )
 
+type blockPending struct {
+	block  *types.Block
+	peerID string
+}
+
+type txsNotify struct {
+	tx     *types.Tx
+	peerID string
+}
+
 //DecodeMessage decode msg
 func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	msgType = bz[0]
@@ -46,6 +56,12 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 		err = errors.New("DecodeMessage() had bytes left over")
 	}
 	return
+}
+
+//BlockRequestMessage request blocks from remote peers by height/hash
+type BlockRequestMessage struct {
+	Height  uint64
+	RawHash [32]byte
 }
 
 //GetHash get hash

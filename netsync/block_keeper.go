@@ -2,7 +2,6 @@ package netsync
 
 import (
 	"strings"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -33,33 +32,15 @@ var (
 	errReqBlock        = errors.New("Request block error")
 )
 
-//BlockRequestMessage request blocks from remote peers by height/hash
-type BlockRequestMessage struct {
-	Height  uint64
-	RawHash [32]byte
-}
-
-type pendingResponse struct {
-	block  *types.Block
-	peerID string
-}
-
-type txsNotify struct {
-	tx     *types.Tx
-	peerID string
-}
-
 //TODO: add retry mechanism
 type blockKeeper struct {
 	chain *protocol.Chain
 	sw    *p2p.Switch
 	peers *peerSet
 
-	pendingProcessCh chan *pendingResponse
+	pendingProcessCh chan *blockPending
 	txsProcessCh     chan *txsNotify
 	quitReqBlockCh   chan *string
-
-	mtx sync.RWMutex
 }
 
 func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitReqBlockCh chan *string) *blockKeeper {
@@ -67,7 +48,7 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitR
 		chain:            chain,
 		sw:               sw,
 		peers:            peers,
-		pendingProcessCh: make(chan *pendingResponse, maxBlocksPending),
+		pendingProcessCh: make(chan *blockPending, maxBlocksPending),
 		txsProcessCh:     make(chan *txsNotify, maxtxsPending),
 		quitReqBlockCh:   quitReqBlockCh,
 	}
@@ -76,7 +57,7 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitR
 }
 
 func (bk *blockKeeper) AddBlock(block *types.Block, peerID string) {
-	bk.pendingProcessCh <- &pendingResponse{block: block, peerID: peerID}
+	bk.pendingProcessCh <- &blockPending{block: block, peerID: peerID}
 }
 
 func (bk *blockKeeper) AddTx(tx *types.Tx, peerID string) {
@@ -84,15 +65,12 @@ func (bk *blockKeeper) AddTx(tx *types.Tx, peerID string) {
 }
 
 func (bk *blockKeeper) IsCaughtUp() bool {
-	bk.mtx.RLock()
-	defer bk.mtx.RUnlock()
 	_, height := bk.peers.BestPeer()
 	return bk.chain.Height() < height
 }
 
 func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) error {
-	chainHeight := bk.chain.Height()
-	num := chainHeight + 1
+	num := bk.chain.Height() + 1
 	orphanNum := uint64(0)
 	reqNum := uint64(0)
 	isOrphan := false

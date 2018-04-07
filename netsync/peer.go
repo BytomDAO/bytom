@@ -18,6 +18,8 @@ var (
 	errNotRegistered     = errors.New("peer is not registered")
 )
 
+const defaultVersion = 1
+
 type peer struct {
 	mtx     sync.RWMutex
 	version int // Protocol version negotiated
@@ -32,6 +34,7 @@ type peer struct {
 
 func newPeer(height uint64, hash *bc.Hash, Peer *p2p.Peer) *peer {
 	return &peer{
+		version:     defaultVersion,
 		height:      height,
 		hash:        hash,
 		Peer:        Peer,
