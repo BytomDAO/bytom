@@ -7,7 +7,6 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
-	"github.com/bytom/protocol/validation"
 )
 
 var (
@@ -31,13 +30,11 @@ func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
 
 // GetBlockByHeight return a block by given height
 func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
-	c.state.cond.L.Lock()
-	hash, ok := c.state.mainChain[height]
-	c.state.cond.L.Unlock()
-	if !ok {
+	node := c.index.NodeByHeight(height)
+	if node == nil {
 		return nil, errors.New("can't find block in given hight")
 	}
-	return c.GetBlockByHash(hash)
+	return c.store.GetBlock(&node.hash)
 }
 
 // ConnectBlock append block to end of chain
@@ -62,8 +59,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	blockHash := block.Hash()
-	if err := c.setState(block, utxoView, map[uint64]*bc.Hash{block.Height: &blockHash}); err != nil {
+	if err := c.setState(block, utxoView); err != nil {
 		return err
 	}
 
@@ -78,7 +74,7 @@ func (c *Chain) getReorganizeBlocks(block *types.Block) ([]*types.Block, []*type
 	detachBlocks := []*types.Block{}
 	ancestor := block
 
-	for !c.inMainchain(ancestor) {
+	for !c.index.InMainchain(block.Hash()) {
 		attachBlocks = append([]*types.Block{ancestor}, attachBlocks...)
 		ancestor, _ = c.GetBlockByHash(&ancestor.PreviousBlockHash)
 	}
@@ -93,7 +89,7 @@ func (c *Chain) getReorganizeBlocks(block *types.Block) ([]*types.Block, []*type
 func (c *Chain) reorganizeChain(block *types.Block) error {
 	attachBlocks, detachBlocks := c.getReorganizeBlocks(block)
 	utxoView := state.NewUtxoViewpoint()
-	chainChanges := map[uint64]*bc.Hash{}
+	var newMainChain []*BlockNode
 
 	for _, d := range detachBlocks {
 		detachBlock := types.MapBlock(d)
@@ -122,32 +118,35 @@ func (c *Chain) reorganizeChain(block *types.Block) error {
 		if err := utxoView.ApplyBlock(attachBlock, txStatus); err != nil {
 			return err
 		}
-		chainChanges[a.Height] = &attachBlock.ID
+
+		newMainChain = append(newMainChain, c.index.LookupNode(&attachBlock.ID))
 	}
 
-	return c.setState(block, utxoView, chainChanges)
+	for _, node := range newMainChain {
+		c.index.SetTip(node)
+	}
+	return c.setState(block, utxoView)
 }
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) SaveBlock(block *types.Block) error {
 	preBlock, _ := c.GetBlockByHash(&block.PreviousBlockHash)
+	preBlockHash := preBlock.Hash()
+	parentNode := c.index.LookupNode(&preBlockHash)
+	node := NewBlockNode(&block.BlockHeader, parentNode)
 
 	blockEnts := types.MapBlock(block)
 	prevEnts := types.MapBlock(preBlock)
 
-	seed, err := c.GetSeed(block.Height, &block.PreviousBlockHash)
-	if err != nil {
-		return err
-	}
-
-	if err := validation.ValidateBlock(blockEnts, prevEnts, seed, c.store); err != nil {
+	if err := ValidateBlock(blockEnts, prevEnts, node.seed, c.index); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
-	if err := c.store.SaveBlock(block, blockEnts.TransactionStatus, seed); err != nil {
+	if err := c.store.SaveBlock(block, blockEnts.TransactionStatus); err != nil {
 		return err
 	}
 
+	c.index.AddNode(node)
 	blockHash := block.Hash()
 	log.WithFields(log.Fields{"height": block.Height, "hash": blockHash.String()}).Info("Block saved on disk")
 	return nil

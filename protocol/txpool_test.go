@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 func TestTxPool(t *testing.T) {
@@ -50,13 +51,16 @@ func TestTxPool(t *testing.T) {
 }
 
 func mockCoinbaseTx(serializedSize uint64, amount uint64) *types.Tx {
+	cp, _ := vmutil.DefaultCoinbaseProgram()
 	oldTx := &types.TxData{
 		SerializedSize: serializedSize,
+		Inputs: []*types.TxInput{
+			types.NewCoinbaseInput(nil),
+		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, amount, []byte{1}),
+			types.NewTxOutput(*consensus.BTMAssetID, amount, cp),
 		},
 	}
-
 	return &types.Tx{
 		TxData: *oldTx,
 		Tx:     types.MapTx(oldTx),

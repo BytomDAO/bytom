@@ -404,59 +404,6 @@ func TestTxValidation(t *testing.T) {
 	}
 }
 
-func TestValidateBlock(t *testing.T) {
-	cases := []struct {
-		block *bc.Block
-		err   error
-	}{
-		{
-			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					Height:          0,
-					Bits:            2305843009230471167,
-					PreviousBlockId: &bc.Hash{},
-				},
-				Transactions: []*bc.Tx{mockCoinbaseTx(1470000000000000000)},
-			},
-			err: nil,
-		},
-		{
-			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					Height:          0,
-					Bits:            2305843009230471167,
-					PreviousBlockId: &bc.Hash{},
-				},
-				Transactions: []*bc.Tx{mockCoinbaseTx(1)},
-			},
-			err: errWrongCoinbaseTransaction,
-		},
-	}
-
-	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
-	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	if err != nil {
-		t.Error(err)
-	}
-
-	for _, c := range cases {
-		txRoot, err := bc.TxMerkleRoot(c.block.Transactions)
-		if err != nil {
-			t.Errorf("computing transaction merkle root error: %v", err)
-			continue
-		}
-
-		c.block.BlockHeader.TransactionStatus = bc.NewTransactionStatus()
-		c.block.TransactionsRoot = &txRoot
-		c.block.TransactionStatusHash = &txStatusHash
-
-		if err = ValidateBlock(c.block, nil, &bc.Hash{}, nil); rootErr(err) != c.err {
-			t.Errorf("got error %s, want %s", err, c.err)
-		}
-	}
-}
-
 func TestCoinbase(t *testing.T) {
 	CbTx := mockCoinbaseTx(5000000000)
 	cases := []struct {

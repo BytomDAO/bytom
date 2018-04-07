@@ -2,11 +2,11 @@ package protocol
 
 import (
 	"context"
+	"math/big"
 	"sync"
 	"time"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/database"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
@@ -31,20 +31,23 @@ type Chain struct {
 	InitialBlockHash  bc.Hash
 	MaxIssuanceWindow time.Duration // only used by generators
 
+	index        *BlockIndex
 	orphanManage *OrphanManage
 	txPool       *TxPool
 
 	state struct {
-		cond      sync.Cond
-		block     *types.Block
-		hash      *bc.Hash
-		mainChain map[uint64]*bc.Hash
+		cond    sync.Cond
+		block   *types.Block
+		hash    *bc.Hash
+		height  uint64
+		workSum big.Int
 	}
-	store database.Store
+
+	store Store
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(initialBlockHash bc.Hash, store database.Store, txPool *TxPool) (*Chain, error) {
+func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, error) {
 	c := &Chain{
 		InitialBlockHash: initialBlockHash,
 		orphanManage:     NewOrphanManage(),
@@ -53,18 +56,15 @@ func NewChain(initialBlockHash bc.Hash, store database.Store, txPool *TxPool) (*
 	}
 	c.state.cond.L = new(sync.Mutex)
 	storeStatus := store.GetStoreStatus()
-
-	if storeStatus.Hash == nil {
-		c.state.mainChain = make(map[uint64]*bc.Hash)
-		return c, nil
-	}
-
 	c.state.hash = storeStatus.Hash
 	var err error
-	if c.state.block, err = store.GetBlock(storeStatus.Hash); err != nil {
+
+	if c.index, err = store.LoadBlockIndex(); err != nil {
 		return nil, err
 	}
-	if c.state.mainChain, err = store.GetMainchain(storeStatus.Hash); err != nil {
+	bestNode := c.index.LookupNode(c.state.hash)
+	c.index.SetTip(bestNode)
+	if c.state.block, err = store.GetBlock(storeStatus.Hash); err != nil {
 		return nil, err
 	}
 	return c, nil
@@ -87,24 +87,9 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 	return c.state.hash
 }
 
-func (c *Chain) inMainchain(block *types.Block) bool {
-	hash, ok := c.state.mainChain[block.Height]
-	if !ok {
-		return false
-	}
-	return *hash == block.Hash()
-}
-
 // InMainChain checks wheather a block is in the main chain
-func (c *Chain) InMainChain(height uint64, hash bc.Hash) bool {
-	c.state.cond.L.Lock()
-	h, ok := c.state.mainChain[height]
-	c.state.cond.L.Unlock()
-	if !ok {
-		return false
-	}
-
-	return *h == hash
+func (c *Chain) InMainChain(hash bc.Hash) bool {
+	return c.index.InMainchain(hash)
 }
 
 // Timestamp returns the latest known block timestamp.
@@ -136,7 +121,12 @@ func (c *Chain) GetSeed(height uint64, preBlock *bc.Hash) (*bc.Hash, error) {
 	} else if height%consensus.SeedPerRetarget == 0 {
 		return preBlock, nil
 	}
-	return c.store.GetSeed(preBlock)
+
+	node := c.index.LookupNode(preBlock)
+	if node == nil {
+		return nil, errors.New("can't find preblock in the blockindex")
+	}
+	return node.seed, nil
 }
 
 // GetTransactionStatus return the transaction status of give block
@@ -150,15 +140,12 @@ func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(block *types.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
+func (c *Chain) setState(block *types.Block, view *state.UtxoViewpoint) error {
 	blockHash := block.Hash()
 	c.state.block = block
 	c.state.hash = &blockHash
-	for k, v := range m {
-		c.state.mainChain[k] = v
-	}
 
-	if err := c.store.SaveChainStatus(block, view, c.state.mainChain); err != nil {
+	if err := c.store.SaveChainStatus(block, view); err != nil {
 		return err
 	}
 
