@@ -151,10 +151,10 @@ type StatusResponseMessage struct {
 }
 
 //NewStatusResponseMessage construct get status response msg
-func NewStatusResponseMessage(block *types.Block) *StatusResponseMessage {
+func NewStatusResponseMessage(blockHeader *types.BlockHeader) *StatusResponseMessage {
 	return &StatusResponseMessage{
-		Height:  block.Height,
-		RawHash: block.Hash().Byte32(),
+		Height:  blockHeader.Height,
+		RawHash: blockHeader.Hash().Byte32(),
 	}
 }
 
@@ -187,7 +187,7 @@ func NewMinedBlockMessage(block *types.Block) (*MineBlockMessage, error) {
 //GetMineBlock get mine block from msg
 func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
 	block := &types.Block{}
-	if err:=block.UnmarshalText(m.RawBlock);err!=nil{
+	if err := block.UnmarshalText(m.RawBlock); err != nil {
 		return nil, err
 	}
 	return block, nil

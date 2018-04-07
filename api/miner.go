@@ -3,8 +3,8 @@ package api
 import (
 	"context"
 
-	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
 )
 
 func (a *API) getWork() Response {
@@ -14,7 +14,6 @@ func (a *API) getWork() Response {
 	}
 	return NewSuccessResponse(work)
 }
-
 
 type SubmitWorkReq struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
@@ -54,7 +53,7 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 		return nil, err
 	}
 
-	seed, err := a.chain.GetSeed(bh.Height, &bh.PreviousBlockHash)
+	seed, err := a.chain.CalcNextSeed(&bh.PreviousBlockHash)
 	if err != nil {
 		return nil, err
 	}

@@ -73,21 +73,10 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
 
-	genesisBlock := cfg.GenerateGenesisBlock()
-
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
-	}
-
-	if chain.BestBlockHash() == nil {
-		if err := chain.SaveBlock(genesisBlock); err != nil {
-			cmn.Exit(cmn.Fmt("Failed to save genesisBlock to store: %v", err))
-		}
-		if err := chain.ConnectBlock(genesisBlock); err != nil {
-			cmn.Exit(cmn.Fmt("Failed to connect genesisBlock to chain: %v", err))
-		}
 	}
 
 	var accounts *account.Manager = nil

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/bytom/config"
-	"github.com/bytom/consensus"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
@@ -38,22 +37,20 @@ type Chain struct {
 
 	state struct {
 		cond    sync.Cond
-		block   *types.Block
 		hash    *bc.Hash
 		height  uint64
-		workSum big.Int
+		workSum *big.Int
 	}
 
 	store Store
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
-func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, error) {
+func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 	c := &Chain{
-		InitialBlockHash: initialBlockHash,
-		orphanManage:     NewOrphanManage(),
-		store:            store,
-		txPool:           txPool,
+		orphanManage: NewOrphanManage(),
+		store:        store,
+		txPool:       txPool,
 	}
 	c.state.cond.L = new(sync.Mutex)
 
@@ -72,6 +69,8 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 
 	bestNode := c.index.GetNode(c.state.hash)
 	c.index.SetMainChain(bestNode)
+	c.state.height = bestNode.height
+	c.state.workSum = bestNode.workSum
 	return c, nil
 }
 
@@ -99,10 +98,7 @@ func (c *Chain) initChainStatus() error {
 func (c *Chain) Height() uint64 {
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
-	if c.state.block == nil {
-		return 0
-	}
-	return c.state.block.Height
+	return c.state.height
 }
 
 // BestBlockHash return the hash of the chain tail block
@@ -117,21 +113,10 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 	return c.index.InMainchain(hash)
 }
 
-// Timestamp returns the latest known block timestamp.
-func (c *Chain) Timestamp() uint64 {
-	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
-	if c.state.block == nil {
-		return 0
-	}
-	return c.state.block.Timestamp
-}
-
 // BestBlock returns the chain tail block
-func (c *Chain) BestBlock() *types.Block {
-	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
-	return c.state.block
+func (c *Chain) BestBlockHeader() *types.BlockHeader {
+	node := c.index.BestNode()
+	return node.blockHeader()
 }
 
 // GetUtxo try to find the utxo status in db
@@ -139,19 +124,22 @@ func (c *Chain) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
 	return c.store.GetUtxo(hash)
 }
 
-// GetSeed return the seed for the given block
-func (c *Chain) GetSeed(height uint64, preBlock *bc.Hash) (*bc.Hash, error) {
-	if height == 0 {
-		return consensus.InitialSeed, nil
-	} else if height%consensus.SeedPerRetarget == 0 {
-		return preBlock, nil
-	}
-
+// CalcNextSeed return the seed for the given block
+func (c *Chain) CalcNextSeed(preBlock *bc.Hash) (*bc.Hash, error) {
 	node := c.index.GetNode(preBlock)
 	if node == nil {
 		return nil, errors.New("can't find preblock in the blockindex")
 	}
-	return node.seed, nil
+	return node.CalcNextSeed(), nil
+}
+
+// CalcNextBits return the seed for the given block
+func (c *Chain) CalcNextBits(preBlock *bc.Hash) (uint64, error) {
+	node := c.index.GetNode(preBlock)
+	if node == nil {
+		return 0, errors.New("can't find preblock in the blockindex")
+	}
+	return node.CalcNextBits(), nil
 }
 
 // GetTransactionStatus return the transaction status of give block
@@ -166,16 +154,17 @@ func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 
 // This function must be called with mu lock in above level
 func (c *Chain) setState(block *types.Block, view *state.UtxoViewpoint) error {
-	blockHash := block.Hash()
-	c.state.block = block
-	c.state.hash = &blockHash
-
 	if err := c.store.SaveChainStatus(block, view); err != nil {
 		return err
 	}
 
+	blockHash := block.Hash()
 	node := c.index.GetNode(&blockHash)
 	c.index.SetMainChain(node)
+	c.state.hash = &blockHash
+	c.state.height = node.height
+	c.state.workSum = node.workSum
+
 	c.state.cond.Broadcast()
 	return nil
 }
@@ -213,7 +202,7 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	go func() {
 		c.state.cond.L.Lock()
 		defer c.state.cond.L.Unlock()
-		for c.state.block.Height < height {
+		for c.state.height < height {
 			c.state.cond.Wait()
 		}
 		ch <- struct{}{}

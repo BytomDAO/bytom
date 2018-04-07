@@ -13,7 +13,6 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -68,27 +67,27 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	txFee := uint64(0)
 
 	// get preblock info for generate next block
-	preBlock := c.BestBlock()
-	preBcBlock := types.MapBlock(preBlock)
-	nextBlockHeight := preBlock.Height + 1
-
-	var compareDiffBH *types.BlockHeader
-	if compareDiffBlock, err := c.GetBlockByHeight(preBlock.Height - consensus.BlocksPerRetarget); err == nil {
-		compareDiffBH = &compareDiffBlock.BlockHeader
+	preBlockHeader := c.BestBlockHeader()
+	preBlockHash := preBlockHeader.Hash()
+	nextBlockHeight := preBlockHeader.Height + 1
+	nextBits, err := c.CalcNextBits(&preBlockHash)
+	if err != nil {
+		return nil, err
 	}
 
 	b = &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:           1,
 			Height:            nextBlockHeight,
-			PreviousBlockHash: preBlock.Hash(),
+			PreviousBlockHash: preBlockHash,
 			Timestamp:         uint64(time.Now().Unix()),
 			BlockCommitment:   types.BlockCommitment{},
-			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
+			Bits:              nextBits,
 		},
 		Transactions: []*types.Tx{nil},
 	}
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
+	preBcBlock := types.MapBlock(&types.Block{BlockHeader: *preBlockHeader})
 
 	txs := txPool.GetTransactions()
 	sort.Sort(ByTime(txs))

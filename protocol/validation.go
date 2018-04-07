@@ -1,10 +1,8 @@
 package protocol
 
 import (
-	"sort"
 	"time"
 
-	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/errors"
@@ -34,23 +32,16 @@ var (
 
 // ValidateBlock validates a block and the transactions within.
 // It does not run the consensus program; for that, see ValidateBlockSig.
-func ValidateBlock(b, prev *bc.Block, seed *bc.Hash, blockIndex *BlockIndex) error {
-	if b.Height > 0 {
-		if prev == nil {
-			return errors.WithDetailf(errNoPrevBlock, "height %d", b.Height)
-		}
-		if err := validateBlockAgainstPrev(b, prev); err != nil {
-			return err
-		}
-		if err := validateBlockTime(b, blockIndex); err != nil {
-			return err
-		}
-		if err := validateBlockBits(b, prev, blockIndex); err != nil {
-			return err
-		}
+func (c *Chain) validateBlock(b *bc.Block) error {
+	parent := c.index.GetNode(b.PreviousBlockId)
+	if parent == nil {
+		return errors.WithDetailf(errNoPrevBlock, "height %d", b.Height)
+	}
+	if err := validateBlockAgainstPrev(b, parent); err != nil {
+		return err
 	}
 
-	if !difficulty.CheckProofOfWork(&b.ID, seed, b.BlockHeader.Bits) {
+	if !difficulty.CheckProofOfWork(&b.ID, parent.CalcNextSeed(), b.BlockHeader.Bits) {
 		return errWorkProof
 	}
 
@@ -100,46 +91,12 @@ func ValidateBlock(b, prev *bc.Block, seed *bc.Hash, blockIndex *BlockIndex) err
 	return nil
 }
 
-func validateBlockBits(b, prev *bc.Block, blockIndex *BlockIndex) error {
-	if prev.Height%consensus.BlocksPerRetarget != 0 || prev.Height == 0 {
-		if b.Bits != prev.Bits {
-			return errBadBits
-		}
-		return nil
-	}
-
-	lastNode := blockIndex.GetNode(b.PreviousBlockId)
-	compareNode := lastNode.parent
-
-	for compareNode.height%consensus.BlocksPerRetarget != 0 {
-		compareNode = compareNode.parent
-	}
-
-	if b.Bits != difficulty.CalcNextRequiredDifficulty(lastNode.blockHeader(), compareNode.blockHeader()) {
-		return errBadBits
-	}
-	return nil
-}
-
-func validateBlockTime(b *bc.Block, blockIndex *BlockIndex) error {
+func validateBlockTime(b *bc.Block, parent *BlockNode) error {
 	if b.Timestamp > uint64(time.Now().Unix())+consensus.MaxTimeOffsetSeconds {
 		return errBadTimestamp
 	}
 
-	iterNode := blockIndex.GetNode(b.PreviousBlockId)
-
-	timestamps := []uint64{}
-	for len(timestamps) < consensus.MedianTimeBlocks {
-		timestamps = append(timestamps, iterNode.timestamp)
-		if iterNode.height == 0 {
-			break
-		}
-		iterNode = iterNode.parent
-	}
-
-	sort.Sort(common.TimeSorter(timestamps))
-	medianTime := timestamps[len(timestamps)/2]
-	if b.Timestamp <= medianTime {
+	if b.Timestamp <= parent.CalcPastMedianTime() {
 		return errBadTimestamp
 	}
 	return nil
@@ -167,16 +124,21 @@ func validateCoinbase(tx *bc.Tx, value uint64) error {
 	return nil
 }
 
-func validateBlockAgainstPrev(b, prev *bc.Block) error {
-	if b.Version < prev.Version {
-		return errors.WithDetailf(errVersionRegression, "previous block verson %d, current block version %d", prev.Version, b.Version)
+func validateBlockAgainstPrev(b *bc.Block, parent *BlockNode) error {
+	if b.Version < parent.version {
+		return errors.WithDetailf(errVersionRegression, "previous block verson %d, current block version %d", parent.version, b.Version)
 	}
-	if b.Height != prev.Height+1 {
-		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", prev.Height, b.Height)
+	if b.Height != parent.height+1 {
+		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", parent.height, b.Height)
 	}
-
-	if prev.ID != *b.PreviousBlockId {
-		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", prev.ID.Bytes(), b.PreviousBlockId.Bytes())
+	if b.Bits != parent.CalcNextBits() {
+		return errBadBits
+	}
+	if parent.Hash != *b.PreviousBlockId {
+		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash.Bytes(), b.PreviousBlockId.Bytes())
+	}
+	if err := validateBlockTime(b, parent); err != nil {
+		return err
 	}
 	return nil
 }

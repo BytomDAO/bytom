@@ -20,7 +20,7 @@ var (
 
 // BlockExist check is a block in chain or orphan
 func (c *Chain) BlockExist(hash *bc.Hash) bool {
-	return c.orphanManage.BlockExist(hash) || c.store.BlockExist(hash)
+	return c.orphanManage.BlockExist(hash) || c.index.BlockExist(hash)
 }
 
 // GetBlockByHash return a block by given hash
@@ -79,7 +79,7 @@ func (c *Chain) getReorganizeBlocks(block *types.Block) ([]*types.Block, []*type
 		ancestor, _ = c.GetBlockByHash(&ancestor.PreviousBlockHash)
 	}
 
-	for d := c.state.block; d.Hash() != ancestor.Hash(); d, _ = c.GetBlockByHash(&d.PreviousBlockHash) {
+	for d, _ := c.store.GetBlock(c.state.hash); d.Hash() != ancestor.Hash(); d, _ = c.store.GetBlock(&d.PreviousBlockHash) {
 		detachBlocks = append(detachBlocks, d)
 	}
 
@@ -126,15 +126,8 @@ func (c *Chain) reorganizeChain(block *types.Block) error {
 
 // SaveBlock will validate and save block into storage
 func (c *Chain) SaveBlock(block *types.Block) error {
-	preBlock, _ := c.GetBlockByHash(&block.PreviousBlockHash)
-	preBlockHash := preBlock.Hash()
-	parentNode := c.index.GetNode(&preBlockHash)
-	node, _ := NewBlockNode(&block.BlockHeader, parentNode)
-
 	blockEnts := types.MapBlock(block)
-	prevEnts := types.MapBlock(preBlock)
-
-	if err := ValidateBlock(blockEnts, prevEnts, node.seed, c.index); err != nil {
+	if err := c.validateBlock(blockEnts); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
@@ -142,9 +135,14 @@ func (c *Chain) SaveBlock(block *types.Block) error {
 		return err
 	}
 
+	parent := c.index.GetNode(&block.PreviousBlockHash)
+	node, err := NewBlockNode(&block.BlockHeader, parent)
+	if err != nil {
+		return err
+	}
+
 	c.index.AddNode(node)
-	blockHash := block.Hash()
-	log.WithFields(log.Fields{"height": block.Height, "hash": blockHash.String()}).Info("Block saved on disk")
+	log.WithFields(log.Fields{"height": block.Height, "hash": blockEnts.ID.String()}).Info("Block saved on disk")
 	return nil
 }
 
@@ -169,13 +167,13 @@ func (c *Chain) findBestChainTail(block *types.Block) (bestBlock *types.Block) {
 			}).Errorf("findBestChainTail fail on save block %v", err)
 			continue
 		}
+		c.orphanManage.Delete(preorphan)
 
 		if subResult := c.findBestChainTail(orphanBlock); subResult.Height > bestBlock.Height {
 			bestBlock = subResult
 		}
 	}
 
-	c.orphanManage.Delete(&blockHash)
 	return
 }
 
@@ -197,11 +195,11 @@ func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
 	bestBlock := c.findBestChainTail(block)
 	c.state.cond.L.Lock()
 	defer c.state.cond.L.Unlock()
-	if c.state.block.Hash() == bestBlock.PreviousBlockHash {
+	if *c.state.hash == bestBlock.PreviousBlockHash {
 		return false, c.connectBlock(bestBlock)
 	}
 
-	if bestBlock.Height > c.state.block.Height && bestBlock.Bits >= c.state.block.Bits {
+	if bestBlock.Height > c.state.height {
 		return false, c.reorganizeChain(bestBlock)
 	}
 

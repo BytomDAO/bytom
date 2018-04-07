@@ -3,8 +3,10 @@ package protocol
 import (
 	"errors"
 	"math/big"
+	"sort"
 	"sync"
 
+	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/protocol/bc"
@@ -53,7 +55,7 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 	if bh.Height == 0 {
 		node.seed = consensus.InitialSeed
 	} else {
-		node.seed = parent.nextSeed()
+		node.seed = parent.CalcNextSeed()
 		node.workSum = node.workSum.Add(parent.workSum, node.workSum)
 	}
 	return node, nil
@@ -79,8 +81,33 @@ func (node *BlockNode) blockHeader() *types.BlockHeader {
 	}
 }
 
-// nextSeed calculate the seed for next block
-func (node *BlockNode) nextSeed() *bc.Hash {
+func (node *BlockNode) CalcPastMedianTime() uint64 {
+	timestamps := []uint64{}
+	iterNode := node
+	for i := 0; i < consensus.MedianTimeBlocks && iterNode != nil; i++ {
+		timestamps = append(timestamps, iterNode.timestamp)
+		iterNode = iterNode.parent
+	}
+
+	sort.Sort(common.TimeSorter(timestamps))
+	return timestamps[len(timestamps)/2]
+}
+
+// CalcNextBits calculate the seed for next block
+func (node *BlockNode) CalcNextBits() uint64 {
+	if node.height%consensus.BlocksPerRetarget != 0 || node.height == 0 {
+		return node.bits
+	}
+
+	compareNode := node.parent
+	for compareNode.height%consensus.BlocksPerRetarget != 0 {
+		compareNode = compareNode.parent
+	}
+	return difficulty.CalcNextRequiredDifficulty(node.blockHeader(), compareNode.blockHeader())
+}
+
+// CalcNextSeed calculate the seed for next block
+func (node *BlockNode) CalcNextSeed() *bc.Hash {
 	if node.height%consensus.SeedPerRetarget == 0 {
 		return &node.Hash
 	}
@@ -117,9 +144,23 @@ func (bi *BlockIndex) GetNode(hash *bc.Hash) *BlockNode {
 	return bi.index[*hash]
 }
 
+func (bi *BlockIndex) BestNode() *BlockNode {
+	bi.RLock()
+	defer bi.RUnlock()
+	return bi.mainChain[len(bi.mainChain)-1]
+}
+
+// BlockExist check does the block existed in blockIndex
+func (bi *BlockIndex) BlockExist(hash *bc.Hash) bool {
+	bi.RLock()
+	_, ok := bi.index[*hash]
+	bi.RUnlock()
+	return ok
+}
+
 // TODO: THIS FUNCTION MIGHT BE DELETED
 func (bi *BlockIndex) InMainchain(hash bc.Hash) bool {
-	bi.RLocker()
+	bi.RLock()
 	defer bi.RUnlock()
 
 	node, ok := bi.index[hash]
@@ -138,7 +179,7 @@ func (bi *BlockIndex) nodeByHeight(height uint64) *BlockNode {
 
 // NodeByHeight returns the block node at the specified height.
 func (bi *BlockIndex) NodeByHeight(height uint64) *BlockNode {
-	bi.RLocker()
+	bi.RLock()
 	defer bi.RUnlock()
 	return bi.nodeByHeight(height)
 }
@@ -146,7 +187,7 @@ func (bi *BlockIndex) NodeByHeight(height uint64) *BlockNode {
 // SetMainChain will set the the mainChain array
 func (bi *BlockIndex) SetMainChain(node *BlockNode) {
 	bi.Lock()
-	defer bi.RUnlock()
+	defer bi.Unlock()
 
 	needed := node.height + 1
 	if uint64(cap(bi.mainChain)) < needed {
