@@ -14,7 +14,6 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm/vmutil"
@@ -24,18 +23,17 @@ import (
 func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 	for i, tx := range txs {
 		for j, input := range tx.Inputs {
-			txs[i].Inputs[j].AssetAlias, txs[i].Inputs[j].AssetDefinition =
-				w.getAliasDefinition(input.AssetID)
+			alias, definition := w.getAliasDefinition(input.AssetID)
+			txs[i].Inputs[j].AssetAlias, txs[i].Inputs[j].AssetDefinition = alias, &definition
 		}
 		for k, output := range tx.Outputs {
-			txs[i].Outputs[k].AssetAlias, txs[i].Outputs[k].AssetDefinition =
-				w.getAliasDefinition(output.AssetID)
+			alias, definition := w.getAliasDefinition(output.AssetID)
+			txs[i].Outputs[k].AssetAlias, txs[i].Outputs[k].AssetDefinition = alias, &definition
 		}
 	}
 }
 
-func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) *chainjson.HexBytes {
-
+func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
 	definitionByte := w.DB.Get(asset.CalcExtAssetKey(assetID))
 	if definitionByte == nil {
 		return nil
@@ -57,16 +55,14 @@ func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) *chainjson.HexBytes 
 	storeBatch.Set(asset.AliasKey(saveAlias), []byte(assetID.String()))
 	storeBatch.Write()
 
-	d := chainjson.HexBytes(definitionByte)
-	return &d
-
+	return definitionByte
 }
 
-func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, *chainjson.HexBytes) {
+func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage) {
 	//btm
 	if assetID.String() == consensus.BTMAssetID.String() {
 		alias := consensus.BTMAlias
-		definition := &asset.DefaultNativeAsset.RawDefinitionByte
+		definition := []byte(asset.DefaultNativeAsset.RawDefinitionByte)
 
 		return alias, definition
 	}
@@ -74,7 +70,7 @@ func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, *chainjson.HexB
 	//local asset and saved external asset
 	if localAsset, err := w.AssetReg.FindByID(nil, &assetID); err == nil {
 		alias := *localAsset.Alias
-		definition := &localAsset.RawDefinitionByte
+		definition := []byte(localAsset.RawDefinitionByte)
 		return alias, definition
 	}
 
@@ -164,7 +160,7 @@ func getAccountFromACP(program []byte, walletDB db.DB) (*account.Account, error)
 	return &localAccount, nil
 }
 
-var emptyJSONObject = chainjson.HexBytes(`{}`)
+var emptyJSONObject = json.RawMessage(`{}`)
 
 func isValidJSON(b []byte) bool {
 	var v interface{}
@@ -199,7 +195,7 @@ func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	in := &query.AnnotatedInput{
 		AssetDefinition: &emptyJSONObject,
 	}
-	if !orig.IsCoinbase() {
+	if orig.InputType() != types.CoinbaseInputType {
 		in.AssetID = orig.AssetID()
 		in.Amount = orig.Amount()
 	}
