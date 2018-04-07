@@ -156,10 +156,9 @@ func saveExternalAssetDefinition(b *types.Block, walletDB db.DB) {
 			if ii, ok := orig.TypedInput.(*types.IssuanceInput); ok {
 				if isValidJSON(ii.AssetDefinition) {
 					assetID := ii.AssetID()
-					if assetExist := walletDB.Get(asset.CalcExtAssetKey(&assetID)); assetExist != nil {
-						continue
+					if assetExist := walletDB.Get(asset.CalcExtAssetKey(&assetID)); assetExist == nil {
+						storeBatch.Set(asset.CalcExtAssetKey(&assetID), ii.AssetDefinition)
 					}
-					storeBatch.Set(asset.CalcExtAssetKey(&assetID), ii.AssetDefinition)
 				}
 			}
 		}
@@ -426,7 +425,7 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 
 // GetTransactionsByTxID get account txs by account tx ID
 func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
-	annotatedTxs := []*query.AnnotatedTx{}
+	var annotatedTxs []*query.AnnotatedTx
 	formatKey := ""
 
 	if txID != "" {
@@ -437,14 +436,14 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error
 		formatKey = string(rawFormatKey)
 	}
 
-	txIter := w.DB.IteratorPrefix([]byte(TxPrefix + formatKey))
+	txIter := w.DB.IteratorPrefix(calcAnnotatedKey(formatKey))
 	defer txIter.Release()
 	for txIter.Next() {
 		annotatedTx := &query.AnnotatedTx{}
 		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
 			return nil, err
 		}
-		annotatedTxs = append(annotatedTxs, annotatedTx)
+		annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
 	}
 
 	return annotatedTxs, nil
