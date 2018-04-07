@@ -89,7 +89,6 @@ func (c *Chain) getReorganizeBlocks(block *types.Block) ([]*types.Block, []*type
 func (c *Chain) reorganizeChain(block *types.Block) error {
 	attachBlocks, detachBlocks := c.getReorganizeBlocks(block)
 	utxoView := state.NewUtxoViewpoint()
-	var newMainChain []*BlockNode
 
 	for _, d := range detachBlocks {
 		detachBlock := types.MapBlock(d)
@@ -119,13 +118,9 @@ func (c *Chain) reorganizeChain(block *types.Block) error {
 			return err
 		}
 
-		newMainChain = append(newMainChain, c.index.LookupNode(&attachBlock.ID))
 		c.orphanManage.Delete(&attachBlock.ID)
 	}
 
-	for _, node := range newMainChain {
-		c.index.SetTip(node)
-	}
 	return c.setState(block, utxoView)
 }
 
@@ -133,8 +128,8 @@ func (c *Chain) reorganizeChain(block *types.Block) error {
 func (c *Chain) SaveBlock(block *types.Block) error {
 	preBlock, _ := c.GetBlockByHash(&block.PreviousBlockHash)
 	preBlockHash := preBlock.Hash()
-	parentNode := c.index.LookupNode(&preBlockHash)
-	node := NewBlockNode(&block.BlockHeader, parentNode)
+	parentNode := c.index.GetNode(&preBlockHash)
+	node, _ := NewBlockNode(&block.BlockHeader, parentNode)
 
 	blockEnts := types.MapBlock(block)
 	prevEnts := types.MapBlock(preBlock)

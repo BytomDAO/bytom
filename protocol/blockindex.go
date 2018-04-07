@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"errors"
 	"math/big"
 	"sync"
 
@@ -9,6 +10,10 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
+
+// approxNodesPerDay is an approximation of the number of new blocks there are
+// in a week on average.
+const approxNodesPerDay = 24 * 24
 
 // BlockNode represents a block within the block chain and is primarily used to
 // aid in selecting the best chain to be the main chain.
@@ -27,7 +32,11 @@ type BlockNode struct {
 	transactionStatusHash  bc.Hash
 }
 
-func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) *BlockNode {
+func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) {
+	if bh.Height != 0 && parent == nil {
+		return nil, errors.New("parent node can not be nil")
+	}
+
 	node := &BlockNode{
 		parent:    parent,
 		hash:      bh.Hash(),
@@ -43,23 +52,23 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) *BlockNode {
 
 	if bh.Height == 0 {
 		node.seed = consensus.InitialSeed
-	} else if bh.Height%consensus.SeedPerRetarget == 0 {
-		node.seed = &parent.hash
 	} else {
-		node.seed = parent.seed
-	}
-
-	if parent != nil {
+		node.seed = parent.nextSeed()
 		node.workSum = node.workSum.Add(parent.workSum, node.workSum)
 	}
-	return node
+	return node, nil
 }
 
+// blockHeader convert a node to the header struct
 func (node *BlockNode) blockHeader() *types.BlockHeader {
+	previousBlockHash := bc.Hash{}
+	if node.parent != nil {
+		previousBlockHash = node.parent.hash
+	}
 	return &types.BlockHeader{
 		Version:           node.version,
 		Height:            node.height,
-		PreviousBlockHash: node.parent.hash,
+		PreviousBlockHash: previousBlockHash,
 		Timestamp:         node.timestamp,
 		Nonce:             node.nonce,
 		Bits:              node.bits,
@@ -70,6 +79,15 @@ func (node *BlockNode) blockHeader() *types.BlockHeader {
 	}
 }
 
+// nextSeed calculate the seed for next block
+func (node *BlockNode) nextSeed() *bc.Hash {
+	if node.height%consensus.SeedPerRetarget == 0 {
+		return &node.hash
+	}
+	return node.seed
+}
+
+// BlockIndex is the struct for help chain trace block chain as tree
 type BlockIndex struct {
 	sync.RWMutex
 
@@ -77,25 +95,29 @@ type BlockIndex struct {
 	mainChain []*BlockNode
 }
 
+// NewBlockIndex will create a empty BlockIndex
 func NewBlockIndex() *BlockIndex {
 	return &BlockIndex{
 		index:     make(map[bc.Hash]*BlockNode),
-		mainChain: []*BlockNode{},
+		mainChain: make([]*BlockNode, 0, approxNodesPerDay),
 	}
 }
 
+// AddNode will add node to the index map
 func (bi *BlockIndex) AddNode(node *BlockNode) {
 	bi.Lock()
 	bi.index[node.hash] = node
 	bi.Unlock()
 }
 
-func (bi *BlockIndex) LookupNode(hash *bc.Hash) *BlockNode {
+// GetNode will search node from the index map
+func (bi *BlockIndex) GetNode(hash *bc.Hash) *BlockNode {
 	bi.RLock()
 	defer bi.RUnlock()
 	return bi.index[*hash]
 }
 
+// TODO: THIS FUNCTION MIGHT BE DELETED
 func (bi *BlockIndex) InMainchain(hash bc.Hash) bool {
 	bi.RLocker()
 	defer bi.RUnlock()
@@ -114,21 +136,33 @@ func (bi *BlockIndex) nodeByHeight(height uint64) *BlockNode {
 	return bi.mainChain[height]
 }
 
-// NodeByHeight returns the block node at the specified height.  Nil will be
-// returned if the height does not exist.
+// NodeByHeight returns the block node at the specified height.
 func (bi *BlockIndex) NodeByHeight(height uint64) *BlockNode {
 	bi.RLocker()
 	defer bi.RUnlock()
 	return bi.nodeByHeight(height)
 }
 
-func (bi *BlockIndex) SetTip(node *BlockNode) {
+// SetMainChain will set the the mainChain array
+func (bi *BlockIndex) SetMainChain(node *BlockNode) {
 	bi.Lock()
-	bi.Unlock()
+	defer bi.RUnlock()
 
-	if uint64(len(bi.mainChain)) == node.height {
-		bi.mainChain = append(bi.mainChain, node)
+	needed := node.height + 1
+	if uint64(cap(bi.mainChain)) < needed {
+		nodes := make([]*BlockNode, needed, needed+approxNodesPerDay)
+		copy(nodes, bi.mainChain)
+		bi.mainChain = nodes
 	} else {
+		i := uint64(len(bi.mainChain))
+		bi.mainChain = bi.mainChain[0:needed]
+		for ; i < needed; i++ {
+			bi.mainChain[i] = nil
+		}
+	}
+
+	for node != nil && bi.mainChain[node.height] != node {
 		bi.mainChain[node.height] = node
+		node = node.parent
 	}
 }

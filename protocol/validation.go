@@ -108,7 +108,7 @@ func validateBlockBits(b, prev *bc.Block, blockIndex *BlockIndex) error {
 		return nil
 	}
 
-	lastNode := blockIndex.LookupNode(b.PreviousBlockId)
+	lastNode := blockIndex.GetNode(b.PreviousBlockId)
 	compareNode := lastNode.parent
 
 	for compareNode.height%consensus.BlocksPerRetarget != 0 {
@@ -126,7 +126,7 @@ func validateBlockTime(b *bc.Block, blockIndex *BlockIndex) error {
 		return errBadTimestamp
 	}
 
-	iterNode := blockIndex.LookupNode(b.PreviousBlockId)
+	iterNode := blockIndex.GetNode(b.PreviousBlockId)
 
 	timestamps := []uint64{}
 	for len(timestamps) < consensus.MedianTimeBlocks {

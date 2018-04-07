@@ -62,8 +62,8 @@ func NewChain(initialBlockHash bc.Hash, store Store, txPool *TxPool) (*Chain, er
 	if c.index, err = store.LoadBlockIndex(); err != nil {
 		return nil, err
 	}
-	bestNode := c.index.LookupNode(c.state.hash)
-	c.index.SetTip(bestNode)
+	bestNode := c.index.GetNode(c.state.hash)
+	c.index.SetMainChain(bestNode)
 	if c.state.block, err = store.GetBlock(storeStatus.Hash); err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (c *Chain) GetSeed(height uint64, preBlock *bc.Hash) (*bc.Hash, error) {
 		return preBlock, nil
 	}
 
-	node := c.index.LookupNode(preBlock)
+	node := c.index.GetNode(preBlock)
 	if node == nil {
 		return nil, errors.New("can't find preblock in the blockindex")
 	}
@@ -149,6 +149,8 @@ func (c *Chain) setState(block *types.Block, view *state.UtxoViewpoint) error {
 		return err
 	}
 
+	node := c.index.GetNode(&blockHash)
+	c.index.SetMainChain(node)
 	c.state.cond.Broadcast()
 	return nil
 }
