@@ -126,7 +126,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 	//TODO: Ensure the peer isn't DOSing us
 	// Discard any past or too distant blocks
 	if dist := int64(block.Height) - int64(f.chain.Height()); dist < 0 || dist > maxQueueDist {
-		log.Info("Discarded propagated block, too far away", "peer:", peer, "number:", block.Height, "distance:", dist)
+		log.Info("Discarded propagated block, too far away", " peer: ", peer, "number: ", block.Height, "distance: ", dist)
 		return
 	}
 	// Schedule the block for future importing
@@ -137,7 +137,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 		}
 		f.queued[hash] = op
 		f.queue.Push(op, -float32(block.Height))
-		log.Info("Queued propagated block", "peer", peer, "number", block.Height, "queued", f.queue.Size())
+		log.Info("Queued propagated block.", " peer: ", peer, "number: ", block.Height, "queued: ", f.queue.Size())
 	}
 }
 
@@ -146,14 +146,14 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 // the phase states accordingly.
 func (f *Fetcher) insert(peer string, block *types.Block) {
 	// Run the import on a new thread
-	log.Info("Importing propagated block", " from peer:", peer, " height:", block.Height)
+	log.Info("Importing propagated block", " from peer: ", peer, " height: ", block.Height)
 	// Run the actual import and log any issues
 	if _, err := f.chain.ProcessBlock(block); err != nil {
-		log.Info("Propagated block import failed", " from peer:", peer, " height:", block.Height, "err", err)
+		log.Info("Propagated block import failed", " from peer: ", peer, " height: ", block.Height, "err: ", err)
 		return
 	}
 	// If import succeeded, broadcast the block
-	log.Info("success process a block from new mined blocks cache. block height:", block.Height)
+	log.Info("success process a block from new mined blocks cache. block height: ", block.Height)
 	go f.peers.BroadcastMinedBlock(block)
 }
 
