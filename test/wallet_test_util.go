@@ -266,8 +266,8 @@ func (cfg *walletTestConfig) Run() error {
 		return err
 	}
 
-	db := dbm.NewDB("state_test_db", "leveldb", "state_test_db")
-	defer os.RemoveAll("state_test_db")
+	db := dbm.NewDB("wallet_test_db", "leveldb", "wallet_test_db")
+	defer os.RemoveAll("wallet_test_db")
 	chain, _ := MockChain(db)
 	walletDB := dbm.NewDB("wallet", "leveldb", "wallet_db")
 	defer os.RemoveAll("wallet_db")

@@ -1,11 +1,13 @@
 {
   "keys": [
     {"name": "alice", "password": "alice"},
-    {"name": "bob", "password": "bob"}
+    {"name": "bob", "password": "bob"},
+    {"name": "default", "password": "default"}
   ],
   "accounts": [
     {"name": "alice", "keys": ["alice"], "quorum": 1},
-    {"name": "bob", "keys": ["bob"], "quorum": 1}
+    {"name": "bob", "keys": ["bob"], "quorum": 1},
+    {"name": "default", "keys": ["default"], "quorum": 1}
   ],
   "blocks": [
     {
@@ -86,6 +88,25 @@
         {"name": "alice", "asset": "GOLD", "amount": 0},
         {"name": "bob", "asset": "BTM", "amount": 1250000000000},
         {"name": "bob", "asset": "GOLD", "amount": 0}
+      ],
+      "append": 0
+    },
+    {
+      "coinbase_account": "default",
+      "transactions": [
+        {
+          "passwords": ["alice"],
+          "inputs": [
+            {"type": "spend_account", "name": "alice", "amount": 1000000000, "asset": "BTM"}
+          ]
+        }
+      ],
+      "post_states": [
+        {"name": "alice", "asset": "BTM", "amount": 1246000000000},
+        {"name": "alice", "asset": "GOLD", "amount": 0},
+        {"name": "bob", "asset": "BTM", "amount": 1250000000000},
+        {"name": "bob", "asset": "GOLD", "amount": 0},
+        {"name": "default", "asset": "BTM", "amount": 624000000000}
       ],
       "append": 0
     }
