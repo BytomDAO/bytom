@@ -20,8 +20,8 @@ const (
 
 	// config for pow mining
 	PowMinBits            = uint64(2305843009213861724)
-	BlocksPerRetarget     = uint64(256)
-	TargetSecondsPerBlock = uint64(40)
+	BlocksPerRetarget     = uint64(128)
+	TargetSecondsPerBlock = uint64(30)
 	SeedPerRetarget       = uint64(128)
 
 	// MaxTimeOffsetSeconds is the maximum number of seconds a block time is allowed to be ahead of the current time
