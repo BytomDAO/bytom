@@ -21,7 +21,7 @@ import (
 )
 
 type rawOutput struct {
-	OutputID       bc.Hash
+	OutputID bc.Hash
 	bc.AssetAmount
 	ControlProgram []byte
 	txHash         bc.Hash
@@ -219,8 +219,7 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *types.Block, txStatus *bc.
 				continue
 			}
 
-			if statusFail, _ := txStatus.GetStatus(txIndex);
-				statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
+			if statusFail, _ := txStatus.GetStatus(txIndex); statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
 				continue
 			}
 
