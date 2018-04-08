@@ -9,7 +9,6 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
-	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
@@ -17,6 +16,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
+	"github.com/Masterminds/glide/cfg"
 )
 
 const (
@@ -40,7 +40,7 @@ func MockChain(testDB dbm.DB) (*protocol.Chain, error) {
 		return nil, err
 	}
 
-	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		return nil, err
 	}

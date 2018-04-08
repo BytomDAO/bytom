@@ -192,7 +192,7 @@ func (m *Manager) DecodeControlAction(data []byte) (txbuilder.Action, error) {
 type controlAction struct {
 	accounts *Manager
 	bc.AssetAmount
-	AccountID     string        `json:"account_id"`
+	AccountID string `json:"account_id"`
 }
 
 func (a *controlAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {

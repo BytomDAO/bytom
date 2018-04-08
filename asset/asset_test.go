@@ -14,7 +14,6 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/testutil"
 )
 
@@ -99,7 +98,7 @@ func TestUpdateAssetTags(t *testing.T) {
 
 	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +211,7 @@ func TestListAssets(t *testing.T) {
 func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
 	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		return nil, err
 	}

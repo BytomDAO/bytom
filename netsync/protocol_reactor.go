@@ -177,8 +177,8 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
 
 	case *StatusRequestMessage:
-		block := pr.chain.BestBlock()
-		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(block)})
+		blockHeader := pr.chain.BestBlockHeader()
+		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(blockHeader)})
 
 	case *StatusResponseMessage:
 		peerStatus := &initalPeerStatus{

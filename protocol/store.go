@@ -1,4 +1,4 @@
-package database
+package protocol
 
 import (
 	"github.com/bytom/database/storage"
@@ -12,16 +12,14 @@ type Store interface {
 	BlockExist(*bc.Hash) bool
 
 	GetBlock(*bc.Hash) (*types.Block, error)
-	GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)
-	GetMainchain(*bc.Hash) (map[uint64]*bc.Hash, error)
 	GetStoreStatus() BlockStoreStateJSON
-	GetSeed(*bc.Hash) (*bc.Hash, error)
 	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
 
-	SaveBlock(*types.Block, *bc.TransactionStatus, *bc.Hash) error
-	SaveChainStatus(*types.Block, *state.UtxoViewpoint, map[uint64]*bc.Hash) error
+	LoadBlockIndex() (*BlockIndex, error)
+	SaveBlock(*types.Block, *bc.TransactionStatus) error
+	SaveChainStatus(*types.Block, *state.UtxoViewpoint) error
 }
 
 // BlockStoreStateJSON represents the core's db status

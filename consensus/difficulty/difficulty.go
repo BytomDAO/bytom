@@ -9,6 +9,16 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
+var (
+	// bigOne is 1 represented as a big.Int.  It is defined here to avoid
+	// the overhead of creating it multiple times.
+	bigOne = big.NewInt(1)
+
+	// oneLsh256 is 1 shifted left 256 bits.  It is defined here to avoid
+	// the overhead of creating it multiple times.
+	oneLsh256 = new(big.Int).Lsh(bigOne, 256)
+)
+
 // HashToBig convert bc.Hash to a difficulty int
 func HashToBig(hash *bc.Hash) *big.Int {
 	// reverse the bytes of the hash (little-endian) to use it in the big
@@ -20,6 +30,18 @@ func HashToBig(hash *bc.Hash) *big.Int {
 	}
 
 	return new(big.Int).SetBytes(buf[:])
+}
+
+// CalcWork calculates a work value from difficulty bits.
+func CalcWork(bits uint64) *big.Int {
+	difficultyNum := CompactToBig(bits)
+	if difficultyNum.Sign() <= 0 {
+		return big.NewInt(0)
+	}
+
+	// (1 << 256) / (difficultyNum + 1)
+	denominator := new(big.Int).Add(difficultyNum, bigOne)
+	return new(big.Int).Div(oneLsh256, denominator)
 }
 
 // CompactToBig converts a compact representation of a whole unsigned integer

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -69,11 +70,27 @@ func mergeActions(req *BuildRequest) []map[string]interface{} {
 	return actions
 }
 
+func onlyHaveSpendActions(req *BuildRequest) bool {
+	count := 0
+	for _, m := range req.Actions {
+		if actionType := m["type"].(string); strings.HasPrefix(actionType, "spend") {
+			count++
+		}
+	}
+
+	return count == len(req.Actions)
+}
+
 func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
 	err := a.filterAliases(ctx, req)
 	if err != nil {
 		return nil, err
 	}
+
+	if onlyHaveSpendActions(req) {
+		return nil, errors.New("transaction only contain spend actions, didn't have output actions")
+	}
+
 	reqActions := mergeActions(req)
 	actions := make([]txbuilder.Action, 0, len(reqActions))
 	for i, act := range reqActions {
