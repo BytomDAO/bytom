@@ -190,7 +190,7 @@ func (w *Wallet) walletUpdater() {
 	for {
 		getRescanNotification(w)
 		checkRescanStatus(w)
-		for !w.chain.InMainChain(w.status.BestHeight, w.status.BestHash) {
+		for !w.chain.InMainChain(w.status.BestHash) {
 			block, err := w.chain.GetBlockByHash(&w.status.BestHash)
 			if err != nil {
 				log.WithField("err", err).Error("walletUpdater GetBlockByHash")

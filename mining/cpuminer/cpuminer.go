@@ -49,7 +49,7 @@ type CPUMiner struct {
 // target difficulty.
 func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
-	seed, err := m.chain.GetSeed(header.Height, &header.PreviousBlockHash)
+	seed, err := m.chain.CalcNextSeed(&header.PreviousBlockHash)
 	if err != nil {
 		return false
 	}

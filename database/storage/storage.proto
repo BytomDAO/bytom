@@ -7,13 +7,3 @@ message UtxoEntry {
   uint64 blockHeight = 2;
   bool   spent       = 3;
 }
-
-// Mainchain represents a mainchain of the blockchain
-message Mainchain {
-
-  repeated Hash hashs = 1;
-
-  message Hash {
-    bytes key = 1;
-  }
-}
