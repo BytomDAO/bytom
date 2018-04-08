@@ -15,9 +15,7 @@ import (
 	"github.com/bytom/protocol/state"
 )
 
-// maxCachedValidatedTxs is the max number of validated txs to cache.
 const (
-	maxCachedValidatedTxs = 1000
 	maxProcessBlockChSize = 1024
 )
 
