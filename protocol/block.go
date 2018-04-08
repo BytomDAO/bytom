@@ -74,7 +74,7 @@ func (c *Chain) getReorganizeBlocks(block *types.Block) ([]*types.Block, []*type
 	detachBlocks := []*types.Block{}
 	ancestor := block
 
-	for !c.index.InMainchain(block.Hash()) {
+	for !c.index.InMainchain(ancestor.Hash()) {
 		attachBlocks = append([]*types.Block{ancestor}, attachBlocks...)
 		ancestor, _ = c.GetBlockByHash(&ancestor.PreviousBlockHash)
 	}
