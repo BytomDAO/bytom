@@ -102,6 +102,7 @@ func (c *Chain) reorganizeChain(block *types.Block) error {
 		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
 			return err
 		}
+		log.WithFields(log.Fields{"height": detachBlock.Height, "hash": detachBlock.ID.String()}).Debug("Detach from mainchain")
 	}
 
 	for _, a := range attachBlocks {
@@ -117,6 +118,7 @@ func (c *Chain) reorganizeChain(block *types.Block) error {
 		if err := utxoView.ApplyBlock(attachBlock, txStatus); err != nil {
 			return err
 		}
+		log.WithFields(log.Fields{"height": attachBlock.Height, "hash": attachBlock.ID.String()}).Debug("Attach from mainchain")
 	}
 
 	return c.setState(block, utxoView)
@@ -132,6 +134,7 @@ func (c *Chain) SaveBlock(block *types.Block) error {
 	if err := c.store.SaveBlock(block, blockEnts.TransactionStatus); err != nil {
 		return err
 	}
+	log.WithFields(log.Fields{"height": block.Height, "hash": blockEnts.ID.String()}).Info("Block saved on disk")
 
 	c.orphanManage.Delete(&blockEnts.ID)
 	parent := c.index.GetNode(&block.PreviousBlockHash)
@@ -141,7 +144,6 @@ func (c *Chain) SaveBlock(block *types.Block) error {
 	}
 
 	c.index.AddNode(node)
-	log.WithFields(log.Fields{"height": block.Height, "hash": blockEnts.ID.String()}).Info("Block saved on disk")
 	return nil
 }
 
@@ -203,10 +205,11 @@ func (c *Chain) blockProcesser() {
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
-		log.WithField("hash", blockHash.String()).Info("Skip process due to block already been handled")
+		log.WithField("hash", blockHash.String()).Debug("Skip process due to block already been handled")
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
 	if !c.store.BlockExist(&block.PreviousBlockHash) {
+		log.WithField("hash", blockHash.String()).Debug("Add block to orphan manage")
 		c.orphanManage.Add(block)
 		return true, nil
 	}
@@ -220,10 +223,12 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	bestNode := c.index.GetNode(&bestBlockHash)
 
 	if bestNode.parent == bestMainChain {
+		log.WithField("hash", blockHash.String()).Debug("Start to append block to the tail of mainchain")
 		return false, c.connectBlock(bestBlock)
 	}
 
 	if bestNode.height > bestMainChain.height && bestNode.workSum.Cmp(bestMainChain.workSum) >= 0 {
+		log.WithField("hash", blockHash.String()).Debug("Start to reorganize mainchain")
 		return false, c.reorganizeChain(bestBlock)
 	}
 
