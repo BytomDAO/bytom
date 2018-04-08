@@ -117,8 +117,6 @@ func (c *Chain) reorganizeChain(block *types.Block) error {
 		if err := utxoView.ApplyBlock(attachBlock, txStatus); err != nil {
 			return err
 		}
-
-		c.orphanManage.Delete(&attachBlock.ID)
 	}
 
 	return c.setState(block, utxoView)
@@ -135,6 +133,7 @@ func (c *Chain) SaveBlock(block *types.Block) error {
 		return err
 	}
 
+	c.orphanManage.Delete(&blockEnts.ID)
 	parent := c.index.GetNode(&block.PreviousBlockHash)
 	node, err := NewBlockNode(&block.BlockHeader, parent)
 	if err != nil {
@@ -167,7 +166,6 @@ func (c *Chain) findBestChainTail(block *types.Block) (bestBlock *types.Block) {
 			}).Errorf("findBestChainTail fail on save block %v", err)
 			continue
 		}
-		c.orphanManage.Delete(preorphan)
 
 		if subResult := c.findBestChainTail(orphanBlock); subResult.Height > bestBlock.Height {
 			bestBlock = subResult
@@ -177,8 +175,32 @@ func (c *Chain) findBestChainTail(block *types.Block) (bestBlock *types.Block) {
 	return
 }
 
-// ProcessBlock is the entry for handle block insert
+type processBlockResponse struct {
+	isOrphan bool
+	err      error
+}
+
+type processBlockMsg struct {
+	block *types.Block
+	reply chan processBlockResponse
+}
+
 func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
+	reply := make(chan processBlockResponse, 1)
+	c.processBlockCh <- &processBlockMsg{block: block, reply: reply}
+	response := <-reply
+	return response.isOrphan, response.err
+}
+
+func (c *Chain) blockProcesser() {
+	for msg := range c.processBlockCh {
+		isOrphan, err := c.processBlock(msg.block)
+		msg.reply <- processBlockResponse{isOrphan: isOrphan, err: err}
+	}
+}
+
+// ProcessBlock is the entry for handle block insert
+func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
 		log.WithField("hash", blockHash.String()).Info("Skip process due to block already been handled")
@@ -193,8 +215,6 @@ func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
 	}
 
 	bestBlock := c.findBestChainTail(block)
-	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
 	if *c.state.hash == bestBlock.PreviousBlockHash {
 		return false, c.connectBlock(bestBlock)
 	}

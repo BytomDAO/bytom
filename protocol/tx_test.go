@@ -14,22 +14,6 @@ import (
 	"github.com/bytom/testutil"
 )
 
-/*func TestBadMaxIssuanceWindow(t *testing.T) {
-	ctx := context.Background()
-	c, b1 := newTestChain(t, time.Now())
-	c.MaxIssuanceWindow = time.Second
-
-	issueTx, _, _ := issue(t, nil, nil, 1)
-
-	got, _, err := c.GenerateBlock(ctx, b1, state.Empty(), time.Now(), []*types.Tx{issueTx})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got.Transactions) != 0 {
-		t.Error("expected issuance past max issuance window to be rejected")
-	}
-}*/
-
 type testDest struct {
 	privKey ed25519.PrivateKey
 }

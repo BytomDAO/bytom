@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/big"
 	"sync"
-	"time"
 
 	"github.com/bytom/config"
 	"github.com/bytom/database/storage"
@@ -15,7 +14,10 @@ import (
 )
 
 // maxCachedValidatedTxs is the max number of validated txs to cache.
-const maxCachedValidatedTxs = 1000
+const (
+	maxCachedValidatedTxs = 1000
+	maxProcessBlockChSize = 1024
+)
 
 var (
 	// ErrTheDistantFuture is returned when waiting for a blockheight
@@ -28,12 +30,10 @@ var (
 // validation logic from package validation to decide what
 // objects can be safely stored.
 type Chain struct {
-	InitialBlockHash  bc.Hash
-	MaxIssuanceWindow time.Duration // only used by generators
-
-	index        *BlockIndex
-	orphanManage *OrphanManage
-	txPool       *TxPool
+	index          *BlockIndex
+	orphanManage   *OrphanManage
+	txPool         *TxPool
+	processBlockCh chan *processBlockMsg
 
 	state struct {
 		cond    sync.Cond
@@ -48,9 +48,10 @@ type Chain struct {
 // NewChain returns a new Chain using store as the underlying storage.
 func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 	c := &Chain{
-		orphanManage: NewOrphanManage(),
-		store:        store,
-		txPool:       txPool,
+		orphanManage:   NewOrphanManage(),
+		store:          store,
+		txPool:         txPool,
+		processBlockCh: make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
 	c.state.cond.L = new(sync.Mutex)
 
@@ -71,6 +72,7 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 	c.index.SetMainChain(bestNode)
 	c.state.height = bestNode.height
 	c.state.workSum = bestNode.workSum
+	go c.blockProcesser()
 	return c, nil
 }
 
@@ -163,6 +165,9 @@ func (c *Chain) setState(block *types.Block, view *state.UtxoViewpoint) error {
 	if err := c.store.SaveChainStatus(block, view); err != nil {
 		return err
 	}
+
+	c.state.cond.L.Lock()
+	defer c.state.cond.L.Unlock()
 
 	blockHash := block.Hash()
 	node := c.index.GetNode(&blockHash)

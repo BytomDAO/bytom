@@ -85,19 +85,17 @@ var (
 func NewRegistry(db dbm.DB, chain *protocol.Chain) *Registry {
 	initNativeAsset()
 	return &Registry{
-		db:               db,
-		chain:            chain,
-		initialBlockHash: chain.InitialBlockHash,
-		cache:            lru.New(maxAssetCache),
-		aliasCache:       lru.New(maxAssetCache),
+		db:         db,
+		chain:      chain,
+		cache:      lru.New(maxAssetCache),
+		aliasCache: lru.New(maxAssetCache),
 	}
 }
 
 // Registry tracks and stores all known assets on a blockchain.
 type Registry struct {
-	db               dbm.DB
-	chain            *protocol.Chain
-	initialBlockHash bc.Hash
+	db    dbm.DB
+	chain *protocol.Chain
 
 	idGroup    singleflight.Group
 	aliasGroup singleflight.Group
