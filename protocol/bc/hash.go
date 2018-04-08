@@ -2,7 +2,6 @@ package bc
 
 import (
 	"bytes"
-	"database/sql/driver"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -73,23 +72,6 @@ func (h *Hash) UnmarshalJSON(b []byte) error {
 func (h Hash) Bytes() []byte {
 	b32 := h.Byte32()
 	return b32[:]
-}
-
-// Value satisfies the driver.Valuer interface
-func (h Hash) Value() (driver.Value, error) {
-	return h.Bytes(), nil
-}
-
-// Scan satisfies the driver.Scanner interface
-func (h *Hash) Scan(v interface{}) error {
-	var buf [32]byte
-	b, ok := v.([]byte)
-	if !ok {
-		return fmt.Errorf("Hash.Scan received unsupported type %T", v)
-	}
-	copy(buf[:], b)
-	*h = NewHash(buf)
-	return nil
 }
 
 // WriteTo satisfies the io.WriterTo interface.

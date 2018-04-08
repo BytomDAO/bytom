@@ -4,14 +4,11 @@ import "io"
 
 // Issuance is a source of new value on a blockchain. It satisfies the
 // Entry interface.
-//
-// (Not to be confused with the deprecated type IssuanceInput.)
 
 func (Issuance) typ() string { return "issuance1" }
 func (iss *Issuance) writeForHash(w io.Writer) {
 	mustWriteForHash(w, iss.NonceHash)
 	mustWriteForHash(w, iss.Value)
-	mustWriteForHash(w, iss.ExtHash)
 }
 
 func (iss *Issuance) SetDestination(id *Hash, val *AssetAmount, pos uint64) {

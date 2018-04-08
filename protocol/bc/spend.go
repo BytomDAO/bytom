@@ -10,7 +10,6 @@ import "io"
 func (Spend) typ() string { return "spend1" }
 func (s *Spend) writeForHash(w io.Writer) {
 	mustWriteForHash(w, s.SpentOutputId)
-	mustWriteForHash(w, s.ExtHash)
 }
 
 func (s *Spend) SetDestination(id *Hash, val *AssetAmount, pos uint64) {

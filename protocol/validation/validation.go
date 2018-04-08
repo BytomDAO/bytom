@@ -252,10 +252,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
-			return errNonemptyExtHash
-		}
-
 		if err := vs.gasStatus.setGasVaild(); err != nil {
 			return err
 		}
@@ -277,20 +273,12 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "checking output source")
 		}
 
-		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
-			return errNonemptyExtHash
-		}
-
 	case *bc.Retirement:
 		vs2 := *vs
 		vs2.sourcePos = 0
 		err = checkValidSrc(&vs2, e.Source)
 		if err != nil {
 			return errors.Wrap(err, "checking retirement source")
-		}
-
-		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
-			return errNonemptyExtHash
 		}
 
 	case *bc.Issuance:
@@ -312,10 +300,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		err = checkValidDest(&destVS, e.WitnessDestination)
 		if err != nil {
 			return errors.Wrap(err, "checking issuance destination")
-		}
-
-		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
-			return errNonemptyExtHash
 		}
 
 	case *bc.Spend:
@@ -354,10 +338,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		err = checkValidDest(&vs2, e.WitnessDestination)
 		if err != nil {
 			return errors.Wrap(err, "checking spend destination")
-		}
-
-		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
-			return errNonemptyExtHash
 		}
 
 	default:

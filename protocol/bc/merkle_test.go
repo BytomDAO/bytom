@@ -7,6 +7,7 @@ import (
 	. "github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
+	"github.com/bytom/testutil"
 )
 
 func TestMerkleRoot(t *testing.T) {
@@ -20,7 +21,7 @@ func TestMerkleRoot(t *testing.T) {
 				[]byte("00000"),
 			},
 		},
-		want: mustDecodeHash("fe34dbd5da0ce3656f423fd7aad7fc7e879353174d33a6446c2ed0e3f3512101"),
+		want: testutil.MustDecodeHash("fe34dbd5da0ce3656f423fd7aad7fc7e879353174d33a6446c2ed0e3f3512101"),
 	}, {
 		witnesses: [][][]byte{
 			{
@@ -32,7 +33,7 @@ func TestMerkleRoot(t *testing.T) {
 				[]byte("111111"),
 			},
 		},
-		want: mustDecodeHash("0e4b4c1af18b8f59997804d69f8f66879ad5e30027346ee003ff7c7a512e5554"),
+		want: testutil.MustDecodeHash("0e4b4c1af18b8f59997804d69f8f66879ad5e30027346ee003ff7c7a512e5554"),
 	}, {
 		witnesses: [][][]byte{
 			{
@@ -45,7 +46,7 @@ func TestMerkleRoot(t *testing.T) {
 				[]byte("222222"),
 			},
 		},
-		want: mustDecodeHash("0e4b4c1af18b8f59997804d69f8f66879ad5e30027346ee003ff7c7a512e5554"),
+		want: testutil.MustDecodeHash("0e4b4c1af18b8f59997804d69f8f66879ad5e30027346ee003ff7c7a512e5554"),
 	}}
 
 	for _, c := range cases {
@@ -140,12 +141,4 @@ func TestAllDuplicateLeaves(t *testing.T) {
 	if root1 == root2 {
 		t.Error("forged merkle tree with all duplicate leaves")
 	}
-}
-
-func mustDecodeHash(s string) (h Hash) {
-	err := h.UnmarshalText([]byte(s))
-	if err != nil {
-		panic(err)
-	}
-	return h
 }

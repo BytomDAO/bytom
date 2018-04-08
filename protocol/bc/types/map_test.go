@@ -41,9 +41,6 @@ func TestMapTx(t *testing.T) {
 				if !bytes.Equal(newOut.ControlProgram.Code, oldOut.ControlProgram) {
 					t.Errorf("header.ResultIds[%d].(*output).ControlProgram.Code is %x, expected %x", i, newOut.ControlProgram.Code, oldOut.ControlProgram)
 				}
-				if !newOut.ExtHash.IsZero() {
-					t.Errorf("header.ResultIds[%d].(*output).ExtHash is %x, expected zero", i, newOut.ExtHash.Bytes())
-				}
 			} else {
 				t.Errorf("header.ResultIds[%d] has type %T, expected *Output", i, resultEntry)
 			}
