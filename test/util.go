@@ -20,11 +20,10 @@ import (
 )
 
 const (
-	vmVersion       = 1
-	blkVersion      = 1
-	assetVersion    = 1
-	defaultDuration = 10
-	maxNonce        = ^uint64(0)
+	vmVersion    = 1
+	blockVersion = 1
+	assetVersion = 1
+	maxNonce     = ^uint64(0)
 )
 
 // MockTxPool mock transaction pool
@@ -36,7 +35,11 @@ func MockTxPool() *protocol.TxPool {
 func MockChain(testDB dbm.DB) (*protocol.Chain, error) {
 	store := leveldb.NewStore(testDB)
 	txPool := MockTxPool()
-	genesisBlock := cfg.GenerateGenesisBlock()
+	genesisBlock, err := GenerateGenesisBlock()
+	if err != nil {
+		return nil, err
+	}
+
 	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
 	if err != nil {
 		return nil, err
@@ -96,4 +99,36 @@ func MockBlock() *bc.Block {
 	return &bc.Block{
 		BlockHeader: &bc.BlockHeader{Height: 1},
 	}
+}
+
+// GenerateGenesisBlock will return genesis block
+func GenerateGenesisBlock() (*types.Block, error) {
+	genesisCoinbaseTx := cfg.GenerateGenesisTx()
+	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
+	if err != nil {
+		return nil, err
+	}
+
+	txStatus := bc.NewTransactionStatus()
+	txStatus.SetStatus(0, false)
+	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	block := &types.Block{
+		BlockHeader: types.BlockHeader{
+			Version:   1,
+			Height:    0,
+			Nonce:     4216085,
+			Timestamp: 1516788453,
+			BlockCommitment: types.BlockCommitment{
+				TransactionsMerkleRoot: merkleRoot,
+				TransactionStatusHash:  txStatusHash,
+			},
+			Bits: 2305843009222082559,
+		},
+		Transactions: []*types.Tx{genesisCoinbaseTx},
+	}
+	return block, nil
 }

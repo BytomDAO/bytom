@@ -93,7 +93,7 @@ func DefaultEmptyBlock(height uint64, timestamp uint64, prevBlockHash bc.Hash, b
 
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
-			Version:           blkVersion,
+			Version:           blockVersion,
 			Height:            height,
 			Timestamp:         timestamp,
 			PreviousBlockHash: prevBlockHash,
