@@ -2,7 +2,6 @@ package types
 
 import (
 	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
@@ -190,10 +189,4 @@ func MapBlock(old *Block) *bc.Block {
 		b.Transactions = append(b.Transactions, oldTx.Tx)
 	}
 	return b
-}
-
-func hashData(data []byte) bc.Hash {
-	var b32 [32]byte
-	sha3pool.Sum256(b32[:], data)
-	return bc.NewHash(b32)
 }

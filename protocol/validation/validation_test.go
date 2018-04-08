@@ -272,20 +272,6 @@ func TestTxValidation(t *testing.T) {
 			},
 		},
 		{
-			desc: "tx header exthash nonempty",
-			f: func() {
-				tx.ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
-		{
-			desc: "tx header exthash nonempty, but that's OK",
-			f: func() {
-				tx.Version = 2
-				tx.ExtHash = newHash(1)
-			},
-		},
-		{
 			desc: "issuance program failure",
 			f: func() {
 				iss := txIssuance(t, tx, 0)

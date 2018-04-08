@@ -171,10 +171,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			if len(e.ResultIds) == 0 {
 				return errEmptyResults
 			}
-
-			if e.ExtHash != nil && !e.ExtHash.IsZero() {
-				return errNonemptyExtHash
-			}
 		}
 
 	case *bc.Coinbase:

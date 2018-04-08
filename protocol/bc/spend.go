@@ -28,7 +28,3 @@ func NewSpend(spentOutputID *Hash, ordinal uint64) *Spend {
 		Ordinal:       ordinal,
 	}
 }
-
-func (s *Spend) SetAnchored(id *Hash) {
-	s.WitnessAnchoredId = id
-}

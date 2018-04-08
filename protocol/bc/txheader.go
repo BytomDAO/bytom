@@ -12,7 +12,6 @@ func (h *TxHeader) writeForHash(w io.Writer) {
 	mustWriteForHash(w, h.Version)
 	mustWriteForHash(w, h.TimeRange)
 	mustWriteForHash(w, h.ResultIds)
-	mustWriteForHash(w, h.ExtHash)
 }
 
 // NewTxHeader creates an new TxHeader.

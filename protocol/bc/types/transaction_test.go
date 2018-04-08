@@ -36,7 +36,7 @@ func TestTransaction(t *testing.T) {
 				"00", // inputs count
 				"00", // outputs count
 			}, ""),
-			hash: testutil.MustDecodeHash("b28048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea7d60"),
+			hash: testutil.MustDecodeHash("8e88b9cb4615128c7209dff695f68b8de5b38648bf3d44d2d0e6a674848539c9"),
 		},
 		{
 			tx: NewTx(TxData{
@@ -101,7 +101,7 @@ func TestTransaction(t *testing.T) {
 				"74727565", // output 0: control program
 				"00",       // output 0: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("8bf40a5d8da5ad3a0c94dd52fc8653029626624c211b776c42eb43521d467de8"),
+			hash: testutil.MustDecodeHash("5878f1084bea003d36c23cabef3291bac3dd25275c5dfcd184beb000eadbd212"),
 		},
 		{
 			tx: NewTx(TxData{
@@ -144,7 +144,7 @@ func TestTransaction(t *testing.T) {
 				"66616c7365", // output 1: control program
 				"00",         // output 1: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("f9619fba57770ce6d9aaf0e53211cdaef8ced77292acbef21dbc3422515c3f02"),
+			hash: testutil.MustDecodeHash("d39f5d3cffcff9e32fd409cccfaae85665e8aeac0abc972944acab2a0ef674e3"),
 		},
 	}
 	for i, test := range cases {
