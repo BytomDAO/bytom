@@ -36,7 +36,6 @@ func TestAPIHandler(t *testing.T) {
 		path        string
 		request     interface{}
 		respWant    *Response
-		respWantErr error
 	}{
 		{
 			path: "/create-key",

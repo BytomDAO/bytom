@@ -48,25 +48,3 @@ func Ripemd160(data []byte) []byte {
 
 	return ripemd.Sum(nil)
 }
-
-func zeroBytes(bytes []byte) {
-	for i := range bytes {
-		bytes[i] = 0
-	}
-}
-
-func toInt(bytes []byte) []int {
-	ints := make([]int, len(bytes))
-	for i := range bytes {
-		ints[i] = int(bytes[i])
-	}
-	return ints
-}
-
-func toBytes(ints []int) []byte {
-	bytes := make([]byte, len(ints))
-	for i := range ints {
-		bytes[i] = byte(ints[i])
-	}
-	return bytes
-}

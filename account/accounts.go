@@ -105,7 +105,6 @@ type Manager struct {
 	delayedACPsMu sync.Mutex
 	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
-	acpIndexCap uint64 // points to end of block
 	accIndexMu  sync.Mutex
 }
 
@@ -292,7 +291,7 @@ func (m *Manager) createAddress(ctx context.Context, account *Account, change bo
 }
 
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.nextAccountIndex(account)
+	idx := m.getNextXpubsIndex(account.Signer.XPubs)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
@@ -319,7 +318,7 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 }
 
 func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.nextAccountIndex(account)
+	idx := m.getNextXpubsIndex(account.Signer.XPubs)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
@@ -411,10 +410,6 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 
 	m.db.Set(miningAddressKey, rawCP)
 	return program.ControlProgram, nil
-}
-
-func (m *Manager) nextAccountIndex(account *Account) uint64 {
-	return m.getNextXpubsIndex(account.Signer.XPubs)
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.

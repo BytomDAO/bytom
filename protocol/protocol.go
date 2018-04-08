@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/config"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
@@ -13,9 +15,7 @@ import (
 	"github.com/bytom/protocol/state"
 )
 
-// maxCachedValidatedTxs is the max number of validated txs to cache.
 const (
-	maxCachedValidatedTxs = 1000
 	maxProcessBlockChSize = 1024
 )
 
@@ -176,6 +176,11 @@ func (c *Chain) setState(block *types.Block, view *state.UtxoViewpoint) error {
 	c.state.height = node.height
 	c.state.workSum = node.workSum
 
+	log.WithFields(log.Fields{
+		"height":  c.state.height,
+		"hash":    c.state.hash.String(),
+		"workSum": c.state.workSum,
+	}).Debug("Chain best status has been changed")
 	c.state.cond.Broadcast()
 	return nil
 }

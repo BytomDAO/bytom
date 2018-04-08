@@ -1,13 +1,11 @@
 package api
 
 import (
-	"expvar"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/bytom/metrics"
-	"github.com/bytom/net/http/reqid"
 )
 
 var (
@@ -41,30 +39,4 @@ func latency(tab *http.ServeMux, req *http.Request) *metrics.RotatingLatency {
 		return l
 	}
 	return nil
-}
-
-var (
-	ncoreMu   sync.Mutex
-	ncore     = expvar.NewInt("ncore")
-	ncoreTime time.Time
-	coresSeen map[string]bool
-)
-
-func coreCounter(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		countCore(reqid.CoreIDFromContext(req.Context()))
-		h.ServeHTTP(w, req)
-	})
-}
-
-func countCore(id string) {
-	t := time.Now()
-	ncoreMu.Lock()
-	defer ncoreMu.Unlock()
-	if t.Sub(ncoreTime) > time.Minute {
-		ncore.Set(int64(len(coresSeen)))
-		ncoreTime = t
-		coresSeen = make(map[string]bool)
-	}
-	coresSeen[id] = true
 }
