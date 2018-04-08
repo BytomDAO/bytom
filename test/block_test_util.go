@@ -120,13 +120,8 @@ func SolveAndUpdate(chain *protocol.Chain, block *types.Block) error {
 		return err
 	}
 	Solve(seed, block)
-	if err := chain.SaveBlock(block); err != nil {
-		return err
-	}
-	if err := chain.ConnectBlock(block); err != nil {
-		return err
-	}
-	return nil
+	_, err = chain.ProcessBlock(block)
+	return err
 }
 
 // Solve solve difficulty
