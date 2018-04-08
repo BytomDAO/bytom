@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/golang/groupcache/lru"
-	"github.com/golang/groupcache/singleflight"
 	dbm "github.com/tendermint/tmlibs/db"
 	"golang.org/x/crypto/sha3"
 
@@ -96,9 +95,6 @@ func NewRegistry(db dbm.DB, chain *protocol.Chain) *Registry {
 type Registry struct {
 	db    dbm.DB
 	chain *protocol.Chain
-
-	idGroup    singleflight.Group
-	aliasGroup singleflight.Group
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
