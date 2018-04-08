@@ -14,7 +14,6 @@ import (
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
-	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
@@ -37,7 +36,7 @@ func TestWalletUpdate(t *testing.T) {
 	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool()
 
-	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +79,7 @@ func TestWalletUpdate(t *testing.T) {
 	block := mockSingleBlock(tx)
 
 	txStatus := bc.NewTransactionStatus()
-	store.SaveBlock(block, txStatus, consensus.InitialSeed)
+	store.SaveBlock(block, txStatus)
 
 	err = w.attachBlock(block)
 	if err != nil {
@@ -111,17 +110,8 @@ func TestExportAndImportPrivKey(t *testing.T) {
 	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool()
 
-	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
-		t.Fatal(err)
-	}
-
-	genesisBlock := cfg.GenerateGenesisBlock()
-
-	if err = chain.SaveBlock(genesisBlock); err != nil {
-		t.Fatal(err)
-	}
-	if err = chain.ConnectBlock(genesisBlock); err != nil {
 		t.Fatal(err)
 	}
 

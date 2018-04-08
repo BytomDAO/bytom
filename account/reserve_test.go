@@ -118,7 +118,7 @@ func TestCancelReservation(t *testing.T) {
 func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
 	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		return nil, err
 	}

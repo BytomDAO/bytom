@@ -85,7 +85,13 @@ func (c *Chain) initChainStatus() error {
 		return err
 	}
 
-	if err := c.connectBlock(genesisBlock); err != nil {
+	utxoView := state.NewUtxoViewpoint()
+	bcBlock := types.MapBlock(genesisBlock)
+	if err := utxoView.ApplyBlock(bcBlock, txStatus); err != nil {
+		return err
+	}
+
+	if err := c.store.SaveChainStatus(genesisBlock, utxoView); err != nil {
 		return err
 	}
 
