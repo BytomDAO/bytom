@@ -89,6 +89,7 @@ func (sm *SyncManager) synchronise() {
 		return
 	}
 	if bestHeight > sm.chain.Height() {
+		log.Info("sync peer:", peer.Addr())
 		sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
 	}
 }
