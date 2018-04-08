@@ -17,9 +17,9 @@
 package netsync
 
 import (
+	"math/rand"
 	"sync/atomic"
 	"time"
-	"math/rand"
 
 	log "github.com/sirupsen/logrus"
 

@@ -49,7 +49,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		quitSync:   make(chan struct{}),
 		newBlockCh: newBlockCh,
 		newPeerCh:  make(chan struct{}),
-		txSyncCh:    make(chan *txsync),
+		txSyncCh:   make(chan *txsync),
 		dropPeerCh: make(chan *string, maxQuitReq),
 		peers:      newPeerSet(),
 	}
