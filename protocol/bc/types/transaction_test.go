@@ -101,7 +101,7 @@ func TestTransaction(t *testing.T) {
 				"74727565", // output 0: control program
 				"00",       // output 0: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("904973cfa4ded5b3d84adba1d4d43b8a189d749679e9ee13da5ab83d1473069e"),
+			hash: testutil.MustDecodeHash("8bf40a5d8da5ad3a0c94dd52fc8653029626624c211b776c42eb43521d467de8"),
 		},
 		{
 			tx: NewTx(TxData{
