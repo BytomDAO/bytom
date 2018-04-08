@@ -215,11 +215,15 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	}
 
 	bestBlock := c.findBestChainTail(block)
-	if *c.state.hash == bestBlock.PreviousBlockHash {
+	bestMainChain := c.index.BestNode()
+	bestBlockHash := bestBlock.Hash()
+	bestNode := c.index.GetNode(&bestBlockHash)
+
+	if bestNode.parent == bestMainChain {
 		return false, c.connectBlock(bestBlock)
 	}
 
-	if bestBlock.Height > c.state.height {
+	if bestNode.height > bestMainChain.height && bestNode.workSum.Cmp(bestMainChain.workSum) >= 0 {
 		return false, c.reorganizeChain(bestBlock)
 	}
 

@@ -84,10 +84,9 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			BlockCommitment:   types.BlockCommitment{},
 			Bits:              nextBits,
 		},
-		Transactions: []*types.Tx{nil},
 	}
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
-	preBcBlock := types.MapBlock(&types.Block{BlockHeader: *preBlockHeader})
+	b.Transactions = []*types.Tx{nil}
 
 	txs := txPool.GetTransactions()
 	sort.Sort(ByTime(txs))
@@ -101,7 +100,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			continue
 		}
 
-		gasStatus, err := validation.ValidateTx(tx, preBcBlock)
+		gasStatus, err := validation.ValidateTx(tx, bcBlock)
 		if err != nil {
 			if !gasStatus.GasVaild {
 				log.WithField("error", err).Error("mining block generate skip tx due to")
