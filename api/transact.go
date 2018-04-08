@@ -70,7 +70,7 @@ func mergeActions(req *BuildRequest) []map[string]interface{} {
 	return actions
 }
 
-func checkSpendActions(req *BuildRequest) bool {
+func onlyHaveSpendActions(req *BuildRequest) bool {
 	count := 0
 	for _, m := range req.Actions {
 		if actionType := m["type"].(string); strings.HasPrefix(actionType, "spend") {
@@ -87,7 +87,7 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		return nil, err
 	}
 
-	if checkSpendActions(req) {
+	if onlyHaveSpendActions(req) {
 		return nil, errors.New("transaction only contain spend actions, didn't have output actions")
 	}
 
