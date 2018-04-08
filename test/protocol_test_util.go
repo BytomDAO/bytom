@@ -42,10 +42,7 @@ func declChain(name string, baseChain *protocol.Chain, baseHeight uint64, height
 		if err != nil {
 			return nil, err
 		}
-		if err := chain.SaveBlock(block); err != nil {
-			return nil, err
-		}
-		if err := chain.ConnectBlock(block); err != nil {
+		if err := SolveAndUpdate(chain, block); err != nil {
 			return nil, err
 		}
 	}

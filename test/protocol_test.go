@@ -32,7 +32,7 @@ func TestForkCase1(t *testing.T) {
 		t.Fatalf("test fork case1 failed")
 	}
 
-	if !c1.InMainChain(9, *bestBlockHash) || !c2.InMainChain(9, *bestBlockHash) {
+	if !c1.InMainChain(*bestBlockHash) || !c2.InMainChain(*bestBlockHash) {
 		t.Fatalf("best block is not in main chain")
 	}
 }
@@ -63,7 +63,7 @@ func TestForkCase2(t *testing.T) {
 		t.Fatalf("test fork case2 failed")
 	}
 
-	if !c1.InMainChain(6, *c1BestBlockHash) || !c2.InMainChain(6, *c2BestBlockHash) {
+	if !c1.InMainChain(*c1BestBlockHash) || !c2.InMainChain(*c2BestBlockHash) {
 		t.Fatalf("best block is not in main chain")
 	}
 }
@@ -90,7 +90,7 @@ func TestBlockSync(t *testing.T) {
 		t.Fatalf("test block sync failed")
 	}
 
-	if !c1.InMainChain(8, *bestBlockHash) || !c2.InMainChain(8, *bestBlockHash) {
+	if !c1.InMainChain(*bestBlockHash) || !c2.InMainChain(*bestBlockHash) {
 		t.Fatalf("test block sync failed, best block is not in main chain")
 	}
 }

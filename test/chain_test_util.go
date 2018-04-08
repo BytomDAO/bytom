@@ -27,10 +27,10 @@ type chainTestContext struct {
 
 func (ctx *chainTestContext) append(blkNum uint64) error {
 	for i := uint64(0); i < blkNum; i++ {
-		prevBlock := ctx.Chain.BestBlock()
+		prevBlockHeader := ctx.Chain.BestBlockHeader()
 		timestamp := uint64(time.Now().Unix())
-		prevBlockHash := prevBlock.Hash()
-		block, err := DefaultEmptyBlock(prevBlock.Height+1, timestamp, prevBlockHash, prevBlock.Bits)
+		prevBlockHash := prevBlockHeader.Hash()
+		block, err := DefaultEmptyBlock(prevBlockHeader.Height+1, timestamp, prevBlockHash, prevBlockHeader.Bits)
 		if err != nil {
 			return err
 		}
@@ -43,19 +43,19 @@ func (ctx *chainTestContext) append(blkNum uint64) error {
 
 func (ctx *chainTestContext) validateStatus(block *types.Block) error {
 	// validate in mainchain
-	if !ctx.Chain.InMainChain(block.Height, block.Hash()) {
+	if !ctx.Chain.InMainChain(block.Hash()) {
 		return fmt.Errorf("block %d is not in mainchain", block.Height)
 	}
 
 	// validate chain status and saved block
-	bestBlock := ctx.Chain.BestBlock()
+	bestBlockHeader := ctx.Chain.BestBlockHeader()
 	chainBlock, err := ctx.Chain.GetBlockByHeight(block.Height)
 	if err != nil {
 		return err
 	}
 
 	blockHash := block.Hash()
-	if bestBlock.Hash() != blockHash || chainBlock.Hash() != blockHash {
+	if bestBlockHeader.Hash() != blockHash || chainBlock.Hash() != blockHash {
 		return fmt.Errorf("chain status error")
 	}
 

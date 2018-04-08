@@ -39,8 +39,6 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 
 // ConnectBlock append block to end of chain
 func (c *Chain) ConnectBlock(block *types.Block) error {
-	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
 	return c.connectBlock(block)
 }
 
@@ -88,8 +86,6 @@ func (c *Chain) getReorganizeBlocks(block *types.Block) ([]*types.Block, []*type
 
 // ReorganizeChain reorganize to longest chain
 func (c *Chain) ReorganizeChain(block *types.Block) error {
-	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
 	return c.reorganizeChain(block)
 }
 

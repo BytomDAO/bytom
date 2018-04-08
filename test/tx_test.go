@@ -174,7 +174,12 @@ func TestCoinbaseMature(t *testing.T) {
 	chain, _ := MockChain(db)
 
 	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
-	block := chain.BestBlock()
+	height := chain.Height()
+	block, err := chain.GetBlockByHeight(height)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	spendInput, err := CreateSpendInput(block.Transactions[0], 0)
 	if err != nil {
 		t.Fatal(err)
@@ -228,8 +233,8 @@ func TestCoinbaseTx(t *testing.T) {
 	chain, _ := MockChain(db)
 
 	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
-	genesis := chain.BestBlock()
-	block, _ := DefaultEmptyBlock(genesis.Height+1, uint64(time.Now().Unix()), genesis.Hash(), genesis.Bits)
+	genesisHeader := chain.BestBlockHeader()
+	block, _ := DefaultEmptyBlock(genesisHeader.Height+1, uint64(time.Now().Unix()), genesisHeader.Hash(), genesisHeader.Bits)
 	if err := SolveAndUpdate(chain, block); err != nil {
 		t.Fatal(err)
 	}

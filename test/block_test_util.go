@@ -19,29 +19,28 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
 
-	preBlock := chain.BestBlock()
-	preBcBlock := types.MapBlock(preBlock)
-
+	preBlockHeader := chain.BestBlockHeader()
 	var compareDiffBH *types.BlockHeader
-	if compareDiffBlock, err := chain.GetBlockByHeight(preBlock.Height - consensus.BlocksPerRetarget); err == nil {
+	if compareDiffBlock, err := chain.GetBlockByHeight(preBlockHeader.Height - consensus.BlocksPerRetarget); err == nil {
 		compareDiffBH = &compareDiffBlock.BlockHeader
 	}
 
 	b := &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:           1,
-			Height:            preBlock.Height + 1,
-			PreviousBlockHash: preBlock.Hash(),
+			Height:            preBlockHeader.Height + 1,
+			PreviousBlockHash: preBlockHeader.Hash(),
 			Timestamp:         uint64(time.Now().Unix()),
 			BlockCommitment:   types.BlockCommitment{},
-			Bits:              difficulty.CalcNextRequiredDifficulty(&preBlock.BlockHeader, compareDiffBH),
+			Bits:              difficulty.CalcNextRequiredDifficulty(preBlockHeader, compareDiffBH),
 		},
 		Transactions: []*types.Tx{nil},
 	}
 
+	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: preBlockHeader.Height+1}}
 	for _, tx := range txs {
 		gasOnlyTx := false
-		gasStatus, err := validation.ValidateTx(tx.Tx, preBcBlock)
+		gasStatus, err := validation.ValidateTx(tx.Tx, bcBlock)
 		if err != nil {
 			if !gasStatus.GasVaild {
 				continue
@@ -56,7 +55,7 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 		txsFee += txFee(tx)
 	}
 
-	coinbaseTx, err := CreateCoinbaseTx(controlProgram, preBlock.Height+1, txsFee)
+	coinbaseTx, err := CreateCoinbaseTx(controlProgram, preBlockHeader.Height+1, txsFee)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +114,7 @@ func DefaultEmptyBlock(height uint64, timestamp uint64, prevBlockHash bc.Hash, b
 
 // SolveAndUpdate solve difficulty and update chain status
 func SolveAndUpdate(chain *protocol.Chain, block *types.Block) error {
-	seed, err := chain.GetSeed(block.Height, &block.PreviousBlockHash)
+	seed, err := chain.CalcNextSeed(&block.PreviousBlockHash)
 	if err != nil {
 		return err
 	}

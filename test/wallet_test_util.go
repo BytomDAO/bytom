@@ -241,10 +241,10 @@ func (ctx *walletTestContext) validateRollback(oldAccBalances map[string]map[str
 
 func (ctx *walletTestContext) append(blkNum uint64) error {
 	for i := uint64(0); i < blkNum; i++ {
-		prevBlock := ctx.Chain.BestBlock()
+		prevBlockHeader := ctx.Chain.BestBlockHeader()
 		timestamp := uint64(time.Now().Unix())
-		prevBlockHash := prevBlock.Hash()
-		block, err := DefaultEmptyBlock(prevBlock.Height+1, timestamp, prevBlockHash, prevBlock.Bits)
+		prevBlockHash := prevBlockHeader.Hash()
+		block, err := DefaultEmptyBlock(prevBlockHeader.Height+1, timestamp, prevBlockHash, prevBlockHeader.Bits)
 		if err != nil {
 			return err
 		}
