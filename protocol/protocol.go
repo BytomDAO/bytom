@@ -180,7 +180,7 @@ func (c *Chain) setState(block *types.Block, view *state.UtxoViewpoint) error {
 		"height":  c.state.height,
 		"hash":    c.state.hash.String(),
 		"workSum": c.state.workSum,
-	}).Debug("Chain best status has been changed")
+	}).Info("Chain best status has been changed")
 	c.state.cond.Broadcast()
 	return nil
 }
