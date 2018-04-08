@@ -172,8 +172,6 @@ func (c *Chain) findBestChainTail(block *types.Block) (bestBlock *types.Block) {
 		if subResult := c.findBestChainTail(orphanBlock); subResult.Height > bestBlock.Height {
 			bestBlock = subResult
 		}
-		hash := orphanBlock.Hash()
-		c.orphanManage.Delete(&hash)
 	}
 
 	return

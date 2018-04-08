@@ -20,8 +20,8 @@ const (
 
 	// config for pow mining
 	PowMinBits            = uint64(2305843009213861724)
-	BlocksPerRetarget     = uint64(1024)
-	TargetSecondsPerBlock = uint64(60)
+	BlocksPerRetarget     = uint64(256)
+	TargetSecondsPerBlock = uint64(40)
 	SeedPerRetarget       = uint64(128)
 
 	// MaxTimeOffsetSeconds is the maximum number of seconds a block time is allowed to be ahead of the current time
@@ -34,7 +34,7 @@ const (
 	CoinbaseArbitrarySizeLimit = 128
 
 	VMGasRate        = int64(1000)
-	StorageGasRate   = int64(0)
+	StorageGasRate   = int64(10)
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
 
