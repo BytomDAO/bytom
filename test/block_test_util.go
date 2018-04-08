@@ -37,7 +37,7 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 		Transactions: []*types.Tx{nil},
 	}
 
-	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: preBlockHeader.Height+1}}
+	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: preBlockHeader.Height + 1}}
 	for _, tx := range txs {
 		gasOnlyTx := false
 		gasStatus, err := validation.ValidateTx(tx.Tx, bcBlock)
