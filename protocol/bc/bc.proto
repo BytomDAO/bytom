@@ -85,13 +85,6 @@ message Mux {
   repeated bytes            witness_arguments    = 5;
 }
 
-message Nonce {
-  Program        program             = 1;
-  Hash           ext_hash            = 2;
-  repeated bytes witness_arguments   = 3;
-  Hash           witness_anchored_id = 4;
-}
-
 message Coinbase {
   ValueDestination witness_destination = 1;
   bytes            arbitrary           = 2;
@@ -111,7 +104,7 @@ message Retirement {
 }
 
 message Issuance {
-  Hash             anchor_id                = 1;
+  Hash             nonce_hash               = 1;
   AssetAmount      value                    = 2;
   Hash             ext_hash                 = 3;
   ValueDestination witness_destination      = 4;

@@ -21,22 +21,12 @@ func MapTx(oldTx *TxData) *bc.Tx {
 	}
 
 	var (
-		nonceIDs       = make(map[bc.Hash]bool)
 		spentOutputIDs = make(map[bc.Hash]bool)
 	)
 	for id, e := range entries {
 		var ord uint64
 		switch e := e.(type) {
 		case *bc.Issuance:
-			anchor, ok := entries[*e.AnchorId]
-			if !ok {
-				// this tx will be invalid because this issuance is
-				// missing an anchor
-				continue
-			}
-			if _, ok := anchor.(*bc.Nonce); ok {
-				nonceIDs[*e.AnchorId] = true
-			}
 			ord = e.Ordinal
 			// resume below after the switch
 
@@ -58,9 +48,6 @@ func MapTx(oldTx *TxData) *bc.Tx {
 		tx.InputIDs[ord] = id
 	}
 
-	for id := range nonceIDs {
-		tx.NonceIDs = append(tx.NonceIDs, id)
-	}
 	for id := range spentOutputIDs {
 		tx.SpentOutputIDs = append(tx.SpentOutputIDs, id)
 	}
@@ -118,19 +105,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 				anchorID    bc.Hash
 				setAnchored = func(*bc.Hash) {}
 			)
-
-			if len(oldIss.Nonce) > 0 {
-				assetID := oldIss.AssetID()
-
-				builder := vmutil.NewBuilder()
-				builder.AddData(oldIss.Nonce).AddOp(vm.OP_DROP)
-				builder.AddOp(vm.OP_ASSET).AddData(assetID.Bytes()).AddOp(vm.OP_EQUAL)
-				prog, _ := builder.Build() // error is impossible
-
-				nonce := bc.NewNonce(&bc.Program{VmVersion: 1, Code: prog})
-				anchorID = addEntry(nonce)
-				setAnchored = nonce.SetAnchored
-			}
 
 			val := inp.AssetAmount()
 

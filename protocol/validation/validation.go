@@ -273,20 +273,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-	case *bc.Nonce:
-		//TODO: add block heigh range check on the control program
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.Program, e.WitnessArguments), vs.gasStatus.GasLeft)
-		if err != nil {
-			return errors.Wrap(err, "checking nonce program")
-		}
-		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
-			return err
-		}
-
-		if vs.tx.Version == 1 && e.ExtHash != nil && !e.ExtHash.IsZero() {
-			return errNonemptyExtHash
-		}
-
 	case *bc.Output:
 		vs2 := *vs
 		vs2.sourcePos = 0
@@ -317,43 +303,12 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.WithDetailf(errMismatchedAssetID, "asset ID is %x, issuance wants %x", computedAssetID.Bytes(), e.Value.AssetId.Bytes())
 		}
 
-		anchor, ok := vs.tx.Entries[*e.AnchorId]
-		if !ok {
-			return errors.Wrapf(bc.ErrMissingEntry, "entry for issuance anchor %x not found", e.AnchorId.Bytes())
-		}
-
 		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking issuance program")
 		}
 		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
 			return err
-		}
-
-		var anchored *bc.Hash
-		switch a := anchor.(type) {
-		case *bc.Nonce:
-			anchored = a.WitnessAnchoredId
-
-		case *bc.Spend:
-			anchored = a.WitnessAnchoredId
-
-		case *bc.Issuance:
-			anchored = a.WitnessAnchoredId
-
-		default:
-			return errors.WithDetailf(bc.ErrEntryType, "issuance anchor has type %T, should be nonce, spend, or issuance", anchor)
-		}
-
-		if *anchored != vs.entryID {
-			return errors.WithDetailf(errMismatchedReference, "issuance %x anchor is for %x", vs.entryID.Bytes(), anchored.Bytes())
-		}
-
-		anchorVS := *vs
-		anchorVS.entryID = *e.AnchorId
-		err = checkValid(&anchorVS, anchor)
-		if err != nil {
-			return errors.Wrap(err, "checking issuance anchor")
 		}
 
 		destVS := *vs

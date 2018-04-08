@@ -12,8 +12,6 @@ type Tx struct {
 	Entries  map[Hash]Entry
 	InputIDs []Hash // 1:1 correspondence with TxData.Inputs
 
-	// IDs of reachable entries of various kinds
-	NonceIDs       []Hash
 	SpentOutputIDs []Hash
 	GasInputIDs    []Hash
 }
@@ -69,16 +67,4 @@ func (tx *Tx) Issuance(id Hash) (*Issuance, error) {
 		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
 	}
 	return iss, nil
-}
-
-func (tx *Tx) Nonce(id Hash) (*Nonce, error) {
-	e, ok := tx.Entries[id]
-	if !ok || e == nil {
-		return nil, errors.Wrapf(ErrMissingEntry, "id %x", id.Bytes())
-	}
-	nonce, ok := e.(*Nonce)
-	if !ok {
-		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
-	}
-	return nonce, nil
 }

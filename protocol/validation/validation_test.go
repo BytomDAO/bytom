@@ -201,33 +201,6 @@ func TestTxValidation(t *testing.T) {
 			},
 		},
 		{
-			desc: "failing nonce program",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				nonce.Program.Code = []byte{byte(vm.OP_FALSE)}
-			},
-			err: vm.ErrFalseVMResult,
-		},
-		{
-			desc: "nonce exthash nonempty",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				nonce.ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
-		{
-			desc: "nonce exthash nonempty, but that's OK",
-			f: func() {
-				tx.Version = 2
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				nonce.ExtHash = newHash(1)
-			},
-		},
-		{
 			desc: "mismatched output source / mux dest position",
 			f: func() {
 				tx.Entries[*tx.ResultIds[0]].(*bc.Output).Source.Position = 1
