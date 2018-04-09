@@ -80,7 +80,7 @@ func (c *Chain) getReorganizeBlocks(block *types.Block) ([]*types.Block, []*type
 }
 
 // ReorganizeChain reorganize to longest chain
-func (c *Chain) ReorganizeChain(block *types.Block) error {
+func (c *Chain) reorganizeChain(block *types.Block) error {
 	attachBlocks, detachBlocks := c.getReorganizeBlocks(block)
 	utxoView := state.NewUtxoViewpoint()
 
@@ -223,7 +223,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 
 	if bestNode.height > bestMainChain.height && bestNode.workSum.Cmp(bestMainChain.workSum) >= 0 {
 		log.WithField("hash", blockHash.String()).Debug("Start to reorganize mainchain")
-		return false, c.ReorganizeChain(bestBlock)
+		return false, c.reorganizeChain(bestBlock)
 	}
 
 	return false, nil

@@ -1,7 +1,6 @@
 package test
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
+	"github.com/golang/protobuf/proto"
 )
 
 const utxoPrefix = "UT:"
@@ -99,7 +99,7 @@ func (ctx *chainTestContext) getUtxoEntries() map[string]*storage.UtxoEntry {
 
 	for iter.Next() {
 		utxoEntry := storage.UtxoEntry{}
-		if err := json.Unmarshal(iter.Value(), &utxoEntry); err != nil {
+		if err := proto.Unmarshal(iter.Value(), &utxoEntry); err != nil {
 			return nil
 		}
 		key := string(iter.Key())
@@ -110,14 +110,8 @@ func (ctx *chainTestContext) getUtxoEntries() map[string]*storage.UtxoEntry {
 
 func (ctx *chainTestContext) validateRollback(utxoEntries map[string]*storage.UtxoEntry) error {
 	newUtxoEntries := ctx.getUtxoEntries()
-	beforeRollbackLen := len(utxoEntries)
-	nowLen := len(newUtxoEntries)
-	if nowLen != beforeRollbackLen {
-		return fmt.Errorf("now we have %d utxo entries, before rollback we have %d", nowLen, beforeRollbackLen)
-	}
-
-	for key, entry := range utxoEntries {
-		if *entry != *newUtxoEntries[key] {
+	for key := range utxoEntries {
+		if _, ok := newUtxoEntries[key]; !ok {
 			return fmt.Errorf("can't find utxo entry after rollback")
 		}
 	}
@@ -260,16 +254,16 @@ func (cfg *chainTestConfig) Run() error {
 	}
 
 	// rollback and validate
-	if err := ctx.Chain.ReorganizeChain(rollbackBlock); err != nil {
+	forkedChain, err := declChain("forked_chain", ctx.Chain, rollbackBlock.Height, ctx.Chain.Height()+1)
+	defer os.RemoveAll("forked_chain")
+	if err != nil {
 		return err
 	}
-	if err := ctx.validateRollback(utxoEntries); err != nil {
+
+	if err := merge(forkedChain, ctx.Chain); err != nil {
 		return err
 	}
-	if err := ctx.validateStatus(rollbackBlock); err != nil {
-		return err
-	}
-	return nil
+	return ctx.validateRollback(utxoEntries)
 }
 
 // if the output(hash) was spent in block

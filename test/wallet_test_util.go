@@ -308,9 +308,17 @@ func (cfg *walletTestConfig) Run() error {
 	if err != nil {
 		return err
 	}
-	if err := ctx.Chain.ReorganizeChain(rollbackBlock); err != nil {
+
+	forkedChain, err := declChain("forked_chain", ctx.Chain, rollbackBlock.Height, ctx.Chain.Height()+1)
+	defer os.RemoveAll("forked_chain")
+	if err != nil {
 		return err
 	}
+
+	if err := merge(forkedChain, ctx.Chain); err != nil {
+		return err
+	}
+
 	for _, block := range detachedBlocks {
 		if err := ctx.Wallet.DetachBlock(block); err != nil {
 			return err
