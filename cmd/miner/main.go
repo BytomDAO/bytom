@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	maxNonce = ^uint64(0) // 2^32 - 1
+	maxNonce = ^uint64(0) // 2^64 - 1
 )
 
 // do proof of work
