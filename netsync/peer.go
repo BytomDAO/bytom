@@ -165,7 +165,6 @@ func (ps *peerSet) DropPeer(id string) error {
 	if !ok {
 		return errNotRegistered
 	}
-	delete(ps.peers, id)
 	peer.CloseConn()
 	return nil
 }
