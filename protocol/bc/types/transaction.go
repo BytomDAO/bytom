@@ -11,10 +11,7 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
-const (
-	currentTransactionVersion = 1   // the latest supported tx version.
-	serRequired               = 0x7 // Bit mask accepted serialization flag.
-)
+const serRequired = 0x7 // Bit mask accepted serialization flag.
 
 // Tx holds a transaction along with its hash.
 type Tx struct {

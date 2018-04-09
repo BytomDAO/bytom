@@ -52,7 +52,7 @@ func merkleRoot(nodes []merkleNode) (root Hash, err error) {
 	}
 }
 
-// TxMerkleRoot creates a merkle tree from a slice of TxVerifyResult
+// TxStatusMerkleRoot creates a merkle tree from a slice of TxVerifyResult
 func TxStatusMerkleRoot(tvrs []*TxVerifyResult) (root Hash, err error) {
 	nodes := []merkleNode{}
 	for _, tvr := range tvrs {

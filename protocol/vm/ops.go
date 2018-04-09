@@ -208,7 +208,6 @@ const (
 	OP_INDEX       Op = 0xc9
 	OP_ENTRYID     Op = 0xca
 	OP_OUTPUTID    Op = 0xcb
-	OP_NONCE       Op = 0xcc
 	OP_BLOCKHEIGHT Op = 0xcd
 )
 
@@ -315,7 +314,6 @@ var (
 		OP_INDEX:       {OP_INDEX, "INDEX", opIndex},
 		OP_ENTRYID:     {OP_ENTRYID, "ENTRYID", opEntryID},
 		OP_OUTPUTID:    {OP_OUTPUTID, "OUTPUTID", opOutputID},
-		OP_NONCE:       {OP_NONCE, "NONCE", opNonce},
 		OP_BLOCKHEIGHT: {OP_BLOCKHEIGHT, "BLOCKHEIGHT", opBlockHeight},
 	}
 

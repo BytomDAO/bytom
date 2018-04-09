@@ -112,18 +112,6 @@ func opOutputID(vm *virtualMachine) error {
 	return vm.push(*vm.context.SpentOutputID, true)
 }
 
-func opNonce(vm *virtualMachine) error {
-	err := vm.applyCost(1)
-	if err != nil {
-		return err
-	}
-
-	if vm.context.AnchorID == nil {
-		return ErrContext
-	}
-	return vm.push(*vm.context.AnchorID, true)
-}
-
 func opBlockHeight(vm *virtualMachine) error {
 	err := vm.applyCost(1)
 	if err != nil {

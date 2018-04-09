@@ -12,7 +12,6 @@ func (Output) typ() string { return "output1" }
 func (o *Output) writeForHash(w io.Writer) {
 	mustWriteForHash(w, o.Source)
 	mustWriteForHash(w, o.ControlProgram)
-	mustWriteForHash(w, o.ExtHash)
 }
 
 // NewOutput creates a new Output.
