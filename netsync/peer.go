@@ -157,18 +157,6 @@ func (ps *peerSet) Unregister(id string) error {
 	return nil
 }
 
-func (ps *peerSet) DropPeer(id string) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	peer, ok := ps.peers[id]
-	if !ok {
-		return errNotRegistered
-	}
-	peer.CloseConn()
-	return nil
-}
-
 // Peer retrieves the registered peer with the given id.
 func (ps *peerSet) Peer(id string) *peer {
 	ps.lock.RLock()
