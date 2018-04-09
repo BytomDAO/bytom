@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
@@ -146,7 +146,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 		return txInput, sigInst, nil
 	}
 
-	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
+	path := signers.Path(signer.KeyIndex, signers.AccountKeySpace, u.ControlProgramIndex)
 	if u.Address == "" {
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
 		return txInput, sigInst, nil
@@ -166,7 +166,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 
 	case *common.AddressWitnessScriptHash:
 		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
-		path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
+		path := signers.Path(signer.KeyIndex, signers.AccountKeySpace, u.ControlProgramIndex)
 		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
 		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)

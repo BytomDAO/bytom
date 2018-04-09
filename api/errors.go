@@ -7,7 +7,7 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/query/filter"
 	"github.com/bytom/blockchain/rpc"
-	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httperror"

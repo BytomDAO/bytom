@@ -51,10 +51,10 @@ type Signer struct {
 }
 
 // Path returns the complete path for derived keys
-func Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
+func Path(keyIndex uint64, ks keySpace, itemIndexes ...uint64) [][]byte {
 	var path [][]byte
 	signerPath := [9]byte{byte(ks)}
-	binary.LittleEndian.PutUint64(signerPath[1:], s.KeyIndex)
+	binary.LittleEndian.PutUint64(signerPath[1:], keyIndex)
 	path = append(path, signerPath[:])
 	for _, idx := range itemIndexes {
 		var idxBytes [8]byte
