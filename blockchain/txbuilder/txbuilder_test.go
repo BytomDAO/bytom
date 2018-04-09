@@ -60,8 +60,7 @@ func TestBuild(t *testing.T) {
 
 	want := &Template{
 		Transaction: types.NewTx(types.TxData{
-			Version:        1,
-			SerializedSize: 330,
+			Version: 1,
 			Inputs: []*types.TxInput{
 				types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), assetID1, 5, 0, nil),
 			},
