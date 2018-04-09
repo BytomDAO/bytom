@@ -207,6 +207,17 @@ func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx
 	}
 
 	tpl, _, err := builder.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	txSerialized, err := tpl.Transaction.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	tpl.Transaction.Tx.SerializedSize = uint64(len(txSerialized))
+	tpl.Transaction.TxData.SerializedSize = uint64(len(txSerialized))
 	return tpl.Transaction, err
 }
 

@@ -233,6 +233,14 @@ func (g *TxGenerator) Sign(passwords []string) (*types.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	txSerialized, err := tpl.Transaction.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	tpl.Transaction.Tx.SerializedSize = uint64(len(txSerialized))
+	tpl.Transaction.TxData.SerializedSize = uint64(len(txSerialized))
 	for _, password := range passwords {
 		_, err = MockSign(tpl, g.Hsm, password)
 		if err != nil {
@@ -350,8 +358,20 @@ func CreateCoinbaseTx(controlProgram []byte, height, txsFee uint64) (*types.Tx, 
 	if err := builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, coinbaseValue, controlProgram)); err != nil {
 		return nil, err
 	}
-	template, _, err := builder.Build()
-	return template.Transaction, err
+
+	tpl, _, err := builder.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	txSerialized, err := tpl.Transaction.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	tpl.Transaction.Tx.SerializedSize = uint64(len(txSerialized))
+	tpl.Transaction.TxData.SerializedSize = uint64(len(txSerialized))
+	return tpl.Transaction, nil
 }
 
 // CreateTxFromTx create a tx spent the output in outputIndex at baseTx
@@ -371,5 +391,16 @@ func CreateTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64, c
 	builder.AddOutput(output)
 
 	tpl, _, err := builder.Build()
-	return tpl.Transaction, err
+	if err != nil {
+		return nil, err
+	}
+
+	txSerialized, err := tpl.Transaction.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	tpl.Transaction.Tx.SerializedSize = uint64(len(txSerialized))
+	tpl.Transaction.TxData.SerializedSize = uint64(len(txSerialized))
+	return tpl.Transaction, nil
 }
