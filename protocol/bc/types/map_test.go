@@ -4,132 +4,156 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
+
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/testutil"
-	"github.com/davecgh/go-spew/spew"
 )
 
-func TestMapTx(t *testing.T) {
-	// sample data copied from transaction_test.go
-	// TODO(bobg): factor out into reusable test utility
-
-	oldTx := sampleTx()
-	oldOuts := oldTx.Outputs
-
-	_, header, entryMap := mapTx(oldTx)
-	t.Log(spew.Sdump(entryMap))
-
-	if header.Version != 1 {
-		t.Errorf("header.Version is %d, expected 1", header.Version)
+func TestMapSpendTx(t *testing.T) {
+	cases := []*TxData{
+		&TxData{
+			Inputs: []*TxInput{
+				NewSpendInput(nil, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 88, 3, []byte{1}),
+			},
+			Outputs: []*TxOutput{
+				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+			},
+		},
+		&TxData{
+			Inputs: []*TxInput{
+				NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
+			},
+			Outputs: []*TxOutput{
+				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+			},
+		},
+		&TxData{
+			Inputs: []*TxInput{
+				NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
+				NewSpendInput(nil, testutil.MustDecodeHash("db7b16ac737440d6e38559996ddabb207d7ce84fbd6f3bfd2525d234761dc863"), *consensus.BTMAssetID, 88, 3, []byte{1}),
+			},
+			Outputs: []*TxOutput{
+				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+				NewTxOutput(*consensus.BTMAssetID, 80, []byte{1}),
+			},
+		},
 	}
-	if header.SerializedSize != oldTx.SerializedSize {
-		t.Errorf("header.SerializedSize is %d, expected %d", header.SerializedSize, oldTx.SerializedSize)
-	}
-	if len(header.ResultIds) != len(oldOuts) {
-		t.Errorf("header.ResultIds contains %d item(s), expected %d", len(header.ResultIds), len(oldOuts))
-	}
 
-	for i, oldOut := range oldOuts {
-		if resultEntry, ok := entryMap[*header.ResultIds[i]]; ok {
-			if newOut, ok := resultEntry.(*bc.Output); ok {
-				if *newOut.Source.Value != oldOut.AssetAmount {
-					t.Errorf("header.ResultIds[%d].(*output).Source is %v, expected %v", i, newOut.Source.Value, oldOut.AssetAmount)
+	for _, txData := range cases {
+		tx := MapTx(txData)
+		if len(tx.ResultIds) != len(txData.Outputs) {
+			t.Errorf("ResultIds contains %d item(s), expected %d", len(tx.ResultIds), len(txData.Outputs))
+		}
+
+		for i, oldIn := range txData.Inputs {
+			resultEntry, ok := tx.Entries[tx.InputIDs[i]]
+			if !ok {
+				t.Errorf("entryMap contains nothing for tx.InputIDs[%d] (%x)", i, tx.InputIDs[i].Bytes())
+			}
+			switch newInput := resultEntry.(type) {
+			case *bc.Issuance:
+				if *newInput.Value.AssetId != oldIn.AssetID() || newInput.Value.Amount != oldIn.Amount() {
+					t.Errorf("tx.InputIDs[%d]'s asset amount is not equal after map'", i)
 				}
-				if newOut.ControlProgram.VmVersion != 1 {
-					t.Errorf("header.ResultIds[%d].(*output).ControlProgram.VMVersion is %d, expected 1", i, newOut.ControlProgram.VmVersion)
+			case *bc.Spend:
+				spendOut, err := tx.Output(*newInput.SpentOutputId)
+				if err != nil {
+					t.Fatal(err)
 				}
-				if !bytes.Equal(newOut.ControlProgram.Code, oldOut.ControlProgram) {
-					t.Errorf("header.ResultIds[%d].(*output).ControlProgram.Code is %x, expected %x", i, newOut.ControlProgram.Code, oldOut.ControlProgram)
+				if *spendOut.Source.Value != oldIn.AssetAmount() {
+					t.Errorf("tx.InputIDs[%d]'s asset amount is not equal after map'", i)
 				}
-				if !newOut.ExtHash.IsZero() {
-					t.Errorf("header.ResultIds[%d].(*output).ExtHash is %x, expected zero", i, newOut.ExtHash.Bytes())
-				}
-			} else {
+			default:
+				t.Errorf("unexpect input type")
+			}
+		}
+
+		for i, oldOut := range txData.Outputs {
+			resultEntry, ok := tx.Entries[*tx.ResultIds[i]]
+			if !ok {
+				t.Errorf("entryMap contains nothing for header.ResultIds[%d] (%x)", i, tx.ResultIds[i].Bytes())
+			}
+			newOut, ok := resultEntry.(*bc.Output)
+			if !ok {
 				t.Errorf("header.ResultIds[%d] has type %T, expected *Output", i, resultEntry)
 			}
-		} else {
-			t.Errorf("entryMap contains nothing for header.ResultIds[%d] (%x)", i, header.ResultIds[i].Bytes())
+
+			if *newOut.Source.Value != oldOut.AssetAmount {
+				t.Errorf("header.ResultIds[%d].(*output).Source is %v, expected %v", i, newOut.Source.Value, oldOut.AssetAmount)
+			}
+			if newOut.ControlProgram.VmVersion != 1 {
+				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.VMVersion is %d, expected 1", i, newOut.ControlProgram.VmVersion)
+			}
+			if !bytes.Equal(newOut.ControlProgram.Code, oldOut.ControlProgram) {
+				t.Errorf("header.ResultIds[%d].(*output).ControlProgram.Code is %x, expected %x", i, newOut.ControlProgram.Code, oldOut.ControlProgram)
+			}
+
 		}
 	}
 }
 
 func TestMapCoinbaseTx(t *testing.T) {
-	// define the BTM asset id, the soul asset of Bytom
-	var BTMAssetID = &bc.AssetID{
-		V0: uint64(18446744073709551615),
-		V1: uint64(18446744073709551615),
-		V2: uint64(18446744073709551615),
-		V3: uint64(18446744073709551615),
-	}
-	oldTx := &TxData{
-		Version: 1,
+	txData := &TxData{
 		Inputs: []*TxInput{
-			NewCoinbaseInput(nil),
+			NewCoinbaseInput([]byte("TestMapCoinbaseTx")),
 		},
 		Outputs: []*TxOutput{
-			NewTxOutput(*BTMAssetID, 800000000000, []byte{1}),
+			NewTxOutput(*consensus.BTMAssetID, 800000000000, []byte{1}),
 		},
 	}
-	oldOut := oldTx.Outputs[0]
+	oldOut := txData.Outputs[0]
 
-	_, header, entryMap := mapTx(oldTx)
-	t.Log(spew.Sdump(entryMap))
+	tx := MapTx(txData)
+	t.Log(spew.Sdump(tx.Entries))
 
-	outEntry, ok := entryMap[*header.ResultIds[0]]
+	if len(tx.InputIDs) != 1 {
+		t.Errorf("expect to  only have coinbase input id")
+	}
+	if len(tx.SpentOutputIDs) != 0 {
+		t.Errorf("coinbase tx doesn't spend any utxo")
+	}
+	if len(tx.GasInputIDs) != 0 {
+		t.Errorf("coinbase tx doesn't spend any gas input")
+	}
+	if len(tx.ResultIds) != 1 {
+		t.Errorf("expect to  only have one output")
+	}
+
+	outEntry, ok := tx.Entries[*tx.ResultIds[0]]
 	if !ok {
 		t.Errorf("entryMap contains nothing for output")
-		return
 	}
 	newOut, ok := outEntry.(*bc.Output)
 	if !ok {
 		t.Errorf("header.ResultIds[0] has type %T, expected *Output", outEntry)
-		return
 	}
 	if *newOut.Source.Value != oldOut.AssetAmount {
 		t.Errorf("(*output).Source is %v, expected %v", newOut.Source.Value, oldOut.AssetAmount)
-		return
 	}
 
-	muxEntry, ok := entryMap[*newOut.Source.Ref]
+	muxEntry, ok := tx.Entries[*newOut.Source.Ref]
 	if !ok {
 		t.Errorf("entryMap contains nothing for mux")
-		return
 	}
 	mux, ok := muxEntry.(*bc.Mux)
 	if !ok {
 		t.Errorf("muxEntry has type %T, expected *Mux", muxEntry)
-		return
 	}
-	if *mux.WitnessDestinations[0].Value != oldOut.AssetAmount {
-		t.Errorf("(*Mux).Source is %v, expected %v", newOut.Source.Value, oldOut.AssetAmount)
-		return
+	if *mux.WitnessDestinations[0].Value != *newOut.Source.Value {
+		t.Errorf("(*Mux).Destinations is %v, expected %v", *mux.WitnessDestinations[0].Value, *newOut.Source.Value)
 	}
 
-	if coinbaseEntry, ok := entryMap[*mux.Sources[0].Ref]; ok {
-		if coinbase, ok := coinbaseEntry.(*bc.Coinbase); ok {
-			if *coinbase.WitnessDestination.Value != oldOut.AssetAmount {
-				t.Errorf("(*Coinbase).Source is %v, expected %v", newOut.Source.Value, oldOut.AssetAmount)
-			}
-		} else {
-			t.Errorf("inputEntry has type %T, expected *Coinbase", coinbaseEntry)
-		}
-	} else {
-		t.Errorf("entryMap contains nothing for input")
+	coinbaseEntry, ok := tx.Entries[tx.InputIDs[0]]
+	if !ok {
+		t.Errorf("entryMap contains nothing for coinbase input")
 	}
-}
-
-func sampleTx() *TxData {
-	assetID := bc.ComputeAssetID([]byte{1}, 1, &bc.EmptyStringHash)
-	return &TxData{
-		Version:        1,
-		SerializedSize: 66,
-		Inputs: []*TxInput{
-			NewSpendInput(nil, testutil.MustDecodeHash("dd385f6fe25d91d8c1bd0fa58951ad56b0c5229dcc01f61d9f9e8b9eb92d3292"), assetID, 1000000000000, 1, []byte{1}),
-			NewSpendInput(nil, bc.NewHash([32]byte{0x11}), assetID, 1, 1, []byte{2}),
-		},
-		Outputs: []*TxOutput{
-			NewTxOutput(assetID, 600000000000, []byte{1}),
-			NewTxOutput(assetID, 400000000000, []byte{2}),
-		},
+	coinbase, ok := coinbaseEntry.(*bc.Coinbase)
+	if !ok {
+		t.Errorf("inputEntry has type %T, expected *Coinbase", coinbaseEntry)
+	}
+	if coinbase.WitnessDestination.Value != mux.Sources[0].Value {
+		t.Errorf("(*Coinbase).Destination is %v, expected %v", coinbase.WitnessDestination.Value, *mux.Sources[0].Value)
 	}
 }

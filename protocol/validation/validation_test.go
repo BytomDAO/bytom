@@ -187,47 +187,6 @@ func TestTxValidation(t *testing.T) {
 			err: errUnbalanced,
 		},
 		{
-			desc: "nonempty mux exthash",
-			f: func() {
-				mux.ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
-		{
-			desc: "nonempty mux exthash, but that's OK",
-			f: func() {
-				tx.Version = 2
-				mux.ExtHash = newHash(1)
-			},
-		},
-		{
-			desc: "failing nonce program",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				nonce.Program.Code = []byte{byte(vm.OP_FALSE)}
-			},
-			err: vm.ErrFalseVMResult,
-		},
-		{
-			desc: "nonce exthash nonempty",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				nonce.ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
-		{
-			desc: "nonce exthash nonempty, but that's OK",
-			f: func() {
-				tx.Version = 2
-				iss := txIssuance(t, tx, 0)
-				nonce := tx.Entries[*iss.AnchorId].(*bc.Nonce)
-				nonce.ExtHash = newHash(1)
-			},
-		},
-		{
 			desc: "mismatched output source / mux dest position",
 			f: func() {
 				tx.Entries[*tx.ResultIds[0]].(*bc.Output).Source.Position = 1
@@ -271,20 +230,6 @@ func TestTxValidation(t *testing.T) {
 			err: errMismatchedValue,
 		},
 		{
-			desc: "output exthash nonempty",
-			f: func() {
-				tx.Entries[*tx.ResultIds[0]].(*bc.Output).ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
-		{
-			desc: "output exthash nonempty, but that's OK",
-			f: func() {
-				tx.Version = 2
-				tx.Entries[*tx.ResultIds[0]].(*bc.Output).ExtHash = newHash(1)
-			},
-		},
-		{
 			desc: "empty tx results",
 			f: func() {
 				tx.ResultIds = nil
@@ -299,42 +244,12 @@ func TestTxValidation(t *testing.T) {
 			},
 		},
 		{
-			desc: "tx header exthash nonempty",
-			f: func() {
-				tx.ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
-		{
-			desc: "tx header exthash nonempty, but that's OK",
-			f: func() {
-				tx.Version = 2
-				tx.ExtHash = newHash(1)
-			},
-		},
-		{
 			desc: "issuance program failure",
 			f: func() {
 				iss := txIssuance(t, tx, 0)
 				iss.WitnessArguments[0] = []byte{}
 			},
 			err: vm.ErrFalseVMResult,
-		},
-		{
-			desc: "issuance exthash nonempty",
-			f: func() {
-				iss := txIssuance(t, tx, 0)
-				iss.ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
-		{
-			desc: "issuance exthash nonempty, but that's OK",
-			f: func() {
-				tx.Version = 2
-				iss := txIssuance(t, tx, 0)
-				iss.ExtHash = newHash(1)
-			},
 		},
 		{
 			desc: "spend control program failure",
@@ -355,22 +270,6 @@ func TestTxValidation(t *testing.T) {
 				}
 			},
 			err: errMismatchedValue,
-		},
-		{
-			desc: "spend exthash nonempty",
-			f: func() {
-				spend := txSpend(t, tx, 1)
-				spend.ExtHash = newHash(1)
-			},
-			err: errNonemptyExtHash,
-		},
-		{
-			desc: "spend exthash nonempty, but that's OK",
-			f: func() {
-				tx.Version = 2
-				spend := txSpend(t, tx, 1)
-				spend.ExtHash = newHash(1)
-			},
 		},
 	}
 

@@ -48,3 +48,12 @@ func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
 	defhash.ReadFrom(sha)
 	return defhash
 }
+
+// NonceHash return the hash of the issuance asset definition.
+func (ii *IssuanceInput) NonceHash() (hash bc.Hash) {
+	sha := sha3pool.Get256()
+	defer sha3pool.Put256(sha)
+	sha.Write(ii.Nonce)
+	hash.ReadFrom(sha)
+	return hash
+}

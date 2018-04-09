@@ -53,7 +53,7 @@ func GenerateGenesisBlock() *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     4216193,
+			Nonce:     4216221,
 			Timestamp: 1516788453,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
