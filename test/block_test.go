@@ -114,7 +114,7 @@ func TestBlockHeader(t *testing.T) {
 			valid:      true,
 		},
 		{
-			desc:       "invalid timestamp, less then median",
+			desc:       "invalid timestamp, less than median",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
 			prevHeight: chain.Height,
 			timestamp:  func() uint64 { return genesisHeader.Timestamp },
