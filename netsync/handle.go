@@ -213,8 +213,3 @@ func (sm *SyncManager) DialSeeds(seeds []string) error {
 func (sm *SyncManager) Switch() *p2p.Switch {
 	return sm.sw
 }
-
-func (sm *SyncManager) removePeer(peerID string) {
-	sm.peers.DropPeer(peerID)
-	log.Debug("Removing peer", "peerID:", peerID)
-}

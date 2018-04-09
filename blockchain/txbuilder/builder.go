@@ -127,12 +127,6 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 		tx.Inputs = append(tx.Inputs, in)
 	}
 
-	txSerialized, err := tx.MarshalText()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	tx.SerializedSize = uint64(len(txSerialized))
 	tpl.Transaction = types.NewTx(*tx)
 	return tpl, tx, nil
 }

@@ -51,7 +51,7 @@ func calcBlockKey(hash *bc.Hash) []byte {
 
 func calcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
 	buf := [8]byte{}
-	binary.LittleEndian.PutUint64(buf[:], height)
+	binary.BigEndian.PutUint64(buf[:], height)
 	key := append(blockHeaderPrefix, buf[:]...)
 	return append(key, hash.Bytes()...)
 }

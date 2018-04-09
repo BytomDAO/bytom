@@ -61,6 +61,7 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	tx.SerializedSize = 1
 	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
@@ -117,6 +118,7 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	tx.SerializedSize = 1
 	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
@@ -187,6 +189,7 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal("sign progress is not finish,  but both xpub1 and xpub2 is signed")
 	}
 
+	tx.SerializedSize = 1
 	if _, err = validation.ValidateTx(types.MapTx(tx), test.MockBlock()); err != nil {
 		t.Fatal(err)
 	}
