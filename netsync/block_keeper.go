@@ -83,7 +83,11 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 		block, err := bk.BlockRequest(peerID, reqNum)
 		if errors.Root(err) == errPeerDropped || errors.Root(err) == errGetBlockTimeout || errors.Root(err) == errReqBlock {
 			log.WithField("Peer abnormality. PeerID: ", peerID).Info(err)
-			bk.peers.DropPeer(peerID)
+			peer, ok := bk.peers.peers[peerID]
+			if !ok {
+				return errNotRegistered
+			}
+			bk.sw.StopPeerGracefully(peer.Peer)
 			return errCommAbnorm
 		}
 		isOrphan, err = bk.chain.ProcessBlock(block)
