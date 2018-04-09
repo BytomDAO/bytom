@@ -367,3 +367,23 @@ func DefaultCoinbaseTx(height uint64) (*types.Tx, error) {
 	template, _, err := builder.Build()
 	return template.Transaction, err
 }
+
+// CreateTxFromTx create a tx spent the output in outputIndex at baseTx
+func CreateTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64, ctrlProgram []byte) (*types.Tx, error) {
+	spendInput, err := CreateSpendInput(baseTx, outputIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	txInput := &types.TxInput{
+		AssetVersion: assetVersion,
+		TypedInput:   spendInput,
+	}
+	output := types.NewTxOutput(*consensus.BTMAssetID, outputAmount, ctrlProgram)
+	builder := txbuilder.NewBuilder(time.Now())
+	builder.AddInput(txInput, &txbuilder.SigningInstruction{})
+	builder.AddOutput(output)
+
+	tpl, _, err := builder.Build()
+	return tpl.Transaction, err
+}

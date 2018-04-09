@@ -19,10 +19,7 @@ func TestBlockHeader(t *testing.T) {
 	defer os.RemoveAll("block_test_db")
 	chain, _, _, _ := MockChain(db)
 	genesisHeader := chain.BestBlockHeader()
-
-	timestamp := uint64(time.Now().Unix())
-	block, _ := DefaultEmptyBlock(genesisHeader.Height+1, timestamp, genesisHeader.Hash(), genesisHeader.Bits)
-	if err := SolveAndUpdate(chain, block); err != nil {
+	if err := AppendBlocks(chain, 1); err != nil {
 		t.Fatal(err)
 	}
 

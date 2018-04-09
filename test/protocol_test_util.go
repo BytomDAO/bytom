@@ -7,21 +7,7 @@ import (
 
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/vm"
 )
-
-func appendBlocks(chain *protocol.Chain, num uint64) error {
-	for i := uint64(0); i < num; i++ {
-		block, err := NewBlock(chain, nil, []byte{byte(vm.OP_TRUE)})
-		if err != nil {
-			return err
-		}
-		if err := SolveAndUpdate(chain, block); err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 func declChain(name string, baseChain *protocol.Chain, baseHeight uint64, height uint64) (*protocol.Chain, error) {
 	chainDB := dbm.NewDB(name, "leveldb", name)
@@ -31,7 +17,7 @@ func declChain(name string, baseChain *protocol.Chain, baseHeight uint64, height
 	}
 
 	if baseChain == nil {
-		if err := appendBlocks(chain, height); err != nil {
+		if err := AppendBlocks(chain, height); err != nil {
 			return nil, err
 		}
 		return chain, nil
@@ -47,7 +33,7 @@ func declChain(name string, baseChain *protocol.Chain, baseHeight uint64, height
 		}
 	}
 
-	err = appendBlocks(chain, height-baseHeight)
+	err = AppendBlocks(chain, height-baseHeight)
 	return chain, err
 }
 

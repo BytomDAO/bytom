@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/validation"
+	"github.com/bytom/protocol/vm"
 )
 
 // NewBlock create block according to the current status of chain
@@ -83,33 +84,18 @@ func ReplaceCoinbase(block *types.Block, coinbaseTx *types.Tx) (err error) {
 	return
 }
 
-// DefaultEmptyBlock create a block only have coinbase tx, anyone can spent the output
-func DefaultEmptyBlock(height uint64, timestamp uint64, prevBlockHash bc.Hash, bits uint64) (*types.Block, error) {
-	coinbaseTx, err := DefaultCoinbaseTx(height)
-	if err != nil {
-		return nil, err
+// AppendBlocks append empty blocks to chain, mainly used to mature the coinbase tx
+func AppendBlocks(chain *protocol.Chain, num uint64) error {
+	for i := uint64(0); i < num; i++ {
+		block, err := NewBlock(chain, nil, []byte{byte(vm.OP_TRUE)})
+		if err != nil {
+			return err
+		}
+		if err := SolveAndUpdate(chain, block); err != nil {
+			return err
+		}
 	}
-
-	block := &types.Block{
-		BlockHeader: types.BlockHeader{
-			Version:           blockVersion,
-			Height:            height,
-			Timestamp:         timestamp,
-			PreviousBlockHash: prevBlockHash,
-			Bits:              bits,
-		},
-		Transactions: []*types.Tx{coinbaseTx},
-	}
-	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
-	block.TransactionsMerkleRoot, err = bc.TxMerkleRoot([]*bc.Tx{coinbaseTx.Tx})
-	if err != nil {
-		return nil, err
-	}
-
-	txStatusMerkleRoot, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	block.TransactionStatusHash = txStatusMerkleRoot
-	return block, err
+	return nil
 }
 
 // SolveAndUpdate solve difficulty and update chain status

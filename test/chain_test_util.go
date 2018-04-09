@@ -26,22 +26,6 @@ type chainTestContext struct {
 	Store *leveldb.Store
 }
 
-func (ctx *chainTestContext) append(blkNum uint64) error {
-	for i := uint64(0); i < blkNum; i++ {
-		prevBlockHeader := ctx.Chain.BestBlockHeader()
-		timestamp := uint64(time.Now().Unix())
-		prevBlockHash := prevBlockHeader.Hash()
-		block, err := DefaultEmptyBlock(prevBlockHeader.Height+1, timestamp, prevBlockHash, prevBlockHeader.Bits)
-		if err != nil {
-			return err
-		}
-		if err := SolveAndUpdate(ctx.Chain, block); err != nil {
-			return nil
-		}
-	}
-	return nil
-}
-
 func (ctx *chainTestContext) validateStatus(block *types.Block) error {
 	// validate in mainchain
 	if !ctx.Chain.InMainChain(block.Hash()) {
@@ -266,7 +250,7 @@ func (cfg *chainTestConfig) Run() error {
 			utxoEntries = ctx.getUtxoEntries()
 			rollbackBlock = block
 		}
-		if err := ctx.append(blk.Append); err != nil {
+		if err := AppendBlocks(ctx.Chain, blk.Append); err != nil {
 			return err
 		}
 	}

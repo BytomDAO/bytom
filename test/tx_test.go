@@ -233,9 +233,12 @@ func TestCoinbaseTx(t *testing.T) {
 	chain, _, _, _ := MockChain(db)
 
 	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
-	genesisHeader := chain.BestBlockHeader()
-	block, _ := DefaultEmptyBlock(genesisHeader.Height+1, uint64(time.Now().Unix()), genesisHeader.Hash(), genesisHeader.Bits)
-	if err := SolveAndUpdate(chain, block); err != nil {
+	if err := AppendBlocks(chain, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	block, err := chain.GetBlockByHeight(chain.Height())
+	if err != nil {
 		t.Fatal(err)
 	}
 

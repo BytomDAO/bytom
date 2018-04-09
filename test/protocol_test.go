@@ -5,12 +5,9 @@ package test
 import (
 	"os"
 	"testing"
-	"time"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 )
@@ -103,25 +100,6 @@ func TestBlockSync(t *testing.T) {
 	}
 }
 
-func createTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64) (*types.Tx, error) {
-	spendInput, err := CreateSpendInput(baseTx, outputIndex)
-	if err != nil {
-		return nil, err
-	}
-
-	txInput := &types.TxInput{
-		AssetVersion: assetVersion,
-		TypedInput:   spendInput,
-	}
-	output := types.NewTxOutput(*consensus.BTMAssetID, outputAmount, []byte{byte(vm.OP_TRUE)})
-	builder := txbuilder.NewBuilder(time.Now())
-	builder.AddInput(txInput, &txbuilder.SigningInstruction{})
-	builder.AddOutput(output)
-
-	tpl, _, err := builder.Build()
-	return tpl.Transaction, err
-}
-
 func TestDoubleSpentInDiffBlock(t *testing.T) {
 	chainDB := dbm.NewDB("tx_pool_test", "leveldb", "tx_pool_test")
 	defer os.RemoveAll("tx_pool_test")
@@ -129,7 +107,7 @@ func TestDoubleSpentInDiffBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := appendBlocks(chain, 6); err != nil {
+	if err := AppendBlocks(chain, 6); err != nil {
 		t.Fatal(err)
 	}
 
@@ -138,7 +116,7 @@ func TestDoubleSpentInDiffBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tx, err := createTxFromTx(block.Transactions[0], 0, 10000)
+	tx, err := CreateTxFromTx(block.Transactions[0], 0, 10000, []byte{byte(vm.OP_TRUE)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +128,7 @@ func TestDoubleSpentInDiffBlock(t *testing.T) {
 	}
 
 	// create a double spent tx in another block
-	tx, err = createTxFromTx(block.Transactions[0], 0, 10000)
+	tx, err = CreateTxFromTx(block.Transactions[0], 0, 10000, []byte{byte(vm.OP_TRUE)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +149,7 @@ func TestDoubleSpentInSameBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := appendBlocks(chain, 7); err != nil {
+	if err := AppendBlocks(chain, 7); err != nil {
 		t.Fatal(err)
 	}
 
@@ -180,13 +158,13 @@ func TestDoubleSpentInSameBlock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tx1, err := createTxFromTx(block.Transactions[0], 0, 10000)
+	tx1, err := CreateTxFromTx(block.Transactions[0], 0, 10000, []byte{byte(vm.OP_TRUE)})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// create tx spend the coinbase output in block 1
-	tx2, err := createTxFromTx(block.Transactions[0], 0, 10000)
+	tx2, err := CreateTxFromTx(block.Transactions[0], 0, 10000, []byte{byte(vm.OP_TRUE)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +202,7 @@ func TestTxPoolDependencyTx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := appendBlocks(chain, 7); err != nil {
+	if err := AppendBlocks(chain, 7); err != nil {
 		t.Fatal(err)
 	}
 
@@ -233,7 +211,7 @@ func TestTxPoolDependencyTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx, err := createTxFromTx(block.Transactions[0], 0, 500000000000)
+	tx, err := CreateTxFromTx(block.Transactions[0], 0, 500000000000, []byte{byte(vm.OP_TRUE)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +221,7 @@ func TestTxPoolDependencyTx(t *testing.T) {
 	txs[0] = tx
 	for i := 1; i < 10; i++ {
 		outputAmount -= 5000000000
-		tx, err := createTxFromTx(txs[i-1], 0, outputAmount)
+		tx, err := CreateTxFromTx(txs[i-1], 0, outputAmount, []byte{byte(vm.OP_TRUE)})
 		if err != nil {
 			t.Fatal(err)
 		}

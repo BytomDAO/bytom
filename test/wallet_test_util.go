@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
-	"time"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
@@ -239,22 +238,6 @@ func (ctx *walletTestContext) validateRollback(oldAccBalances map[string]map[str
 	return fmt.Errorf("different account balances after rollback")
 }
 
-func (ctx *walletTestContext) append(blkNum uint64) error {
-	for i := uint64(0); i < blkNum; i++ {
-		prevBlockHeader := ctx.Chain.BestBlockHeader()
-		timestamp := uint64(time.Now().Unix())
-		prevBlockHash := prevBlockHeader.Hash()
-		block, err := DefaultEmptyBlock(prevBlockHeader.Height+1, timestamp, prevBlockHash, prevBlockHeader.Bits)
-		if err != nil {
-			return err
-		}
-		if err := ctx.update(block); err != nil {
-			return nil
-		}
-	}
-	return nil
-}
-
 func (cfg *walletTestConfig) Run() error {
 	dirPath, err := ioutil.TempDir(".", "pseudo_hsm")
 	if err != nil {
@@ -311,7 +294,7 @@ func (cfg *walletTestConfig) Run() error {
 			accBalances = ctx.getAccBalances()
 			rollbackBlock = block
 		}
-		if err := ctx.append(blk.Append); err != nil {
+		if err := AppendBlocks(ctx.Chain, blk.Append); err != nil {
 			return err
 		}
 	}
