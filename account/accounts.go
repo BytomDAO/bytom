@@ -14,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"

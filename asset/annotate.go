@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/signers"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/vm/vmutil"
 )

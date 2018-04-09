@@ -11,7 +11,7 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/signers"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"

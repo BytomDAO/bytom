@@ -10,7 +10,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/signers"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"

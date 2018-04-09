@@ -8,7 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
