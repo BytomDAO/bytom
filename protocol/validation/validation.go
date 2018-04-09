@@ -3,6 +3,8 @@ package validation
 import (
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/errors"
@@ -621,5 +623,8 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	}
 
 	err := checkValid(vs, tx.TxHeader)
+	if err != nil {
+		log.Info("BTMValue:", vs.gasStatus.BTMValue, "GasLeft:", vs.gasStatus.GasLeft, "GasUsed:", vs.gasStatus.GasUsed, "GasVaild:", vs.gasStatus.GasVaild, "storageGas:", vs.gasStatus.storageGas, "txsize:", tx.SerializedSize)
+	}
 	return vs.gasStatus, err
 }
