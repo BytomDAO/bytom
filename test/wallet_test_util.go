@@ -268,7 +268,7 @@ func (cfg *walletTestConfig) Run() error {
 
 	db := dbm.NewDB("wallet_test_db", "leveldb", "wallet_test_db")
 	defer os.RemoveAll("wallet_test_db")
-	chain, _ := MockChain(db)
+	chain, _, _, _ := MockChain(db)
 	walletDB := dbm.NewDB("wallet", "leveldb", "wallet_db")
 	defer os.RemoveAll("wallet_db")
 	accountManager := account.NewManager(walletDB, chain)

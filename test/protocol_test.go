@@ -5,6 +5,14 @@ package test
 import (
 	"os"
 	"testing"
+	"time"
+
+	dbm "github.com/tendermint/tmlibs/db"
+
+	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/consensus"
+	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/vm"
 )
 
 // case1:           |------c1(height=7)
@@ -92,5 +100,172 @@ func TestBlockSync(t *testing.T) {
 
 	if !c1.InMainChain(*bestBlockHash) || !c2.InMainChain(*bestBlockHash) {
 		t.Fatalf("test block sync failed, best block is not in main chain")
+	}
+}
+
+func createTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64) (*types.Tx, error) {
+	spendInput, err := CreateSpendInput(baseTx, outputIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	txInput := &types.TxInput{
+		AssetVersion: assetVersion,
+		TypedInput:   spendInput,
+	}
+	output := types.NewTxOutput(*consensus.BTMAssetID, outputAmount, []byte{byte(vm.OP_TRUE)})
+	builder := txbuilder.NewBuilder(time.Now())
+	builder.AddInput(txInput, &txbuilder.SigningInstruction{})
+	builder.AddOutput(output)
+
+	tpl, _, err := builder.Build()
+	return tpl.Transaction, err
+}
+
+func TestDoubleSpentInDiffBlock(t *testing.T) {
+	chainDB := dbm.NewDB("tx_pool_test", "leveldb", "tx_pool_test")
+	defer os.RemoveAll("tx_pool_test")
+	chain, _, txPool, err := MockChain(chainDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := appendBlocks(chain, 6); err != nil {
+		t.Fatal(err)
+	}
+
+	// create tx spend the coinbase output in block 1
+	block, err := chain.GetBlockByHeight(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := createTxFromTx(block.Transactions[0], 0, 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	newBlock, err := NewBlock(chain, []*types.Tx{tx}, []byte{byte(vm.OP_TRUE)})
+	err = SolveAndUpdate(chain, newBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a double spent tx in another block
+	tx, err = createTxFromTx(block.Transactions[0], 0, 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = chain.ValidateTx(tx)
+	if err == nil {
+		t.Fatal("validate double spent tx success")
+	}
+	if txPool.HaveTransaction(&tx.ID) {
+		t.Fatalf("tx pool have double spent tx")
+	}
+}
+
+func TestDoubleSpentInSameBlock(t *testing.T) {
+	chainDB := dbm.NewDB("tx_pool_test", "leveldb", "tx_pool_test")
+	defer os.RemoveAll("tx_pool_test")
+	chain, _, txPool, err := MockChain(chainDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := appendBlocks(chain, 7); err != nil {
+		t.Fatal(err)
+	}
+
+	// create tx spend the coinbase output in block 1
+	block, err := chain.GetBlockByHeight(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx1, err := createTxFromTx(block.Transactions[0], 0, 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create tx spend the coinbase output in block 1
+	tx2, err := createTxFromTx(block.Transactions[0], 0, 10000)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = chain.ValidateTx(tx1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = chain.ValidateTx(tx2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !txPool.HaveTransaction(&tx1.ID) {
+		t.Fatalf("can't find tx in tx pool")
+	}
+	if !txPool.HaveTransaction(&tx2.ID) {
+		t.Fatalf("can't find tx in tx pool")
+	}
+
+	block, err = NewBlock(chain, []*types.Tx{tx1, tx2}, []byte{byte(vm.OP_TRUE)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := SolveAndUpdate(chain, block); err == nil {
+		t.Fatalf("process double spent tx success")
+	}
+}
+
+func TestTxPoolDependencyTx(t *testing.T) {
+	chainDB := dbm.NewDB("tx_pool_test", "leveldb", "tx_pool_test")
+	defer os.RemoveAll("tx_pool_test")
+	chain, _, txPool, err := MockChain(chainDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := appendBlocks(chain, 7); err != nil {
+		t.Fatal(err)
+	}
+
+	block, err := chain.GetBlockByHeight(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx, err := createTxFromTx(block.Transactions[0], 0, 500000000000)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outputAmount := uint64(500000000000)
+	txs := []*types.Tx{nil}
+	txs[0] = tx
+	for i := 1; i < 10; i++ {
+		outputAmount -= 5000000000
+		tx, err := createTxFromTx(txs[i-1], 0, outputAmount)
+		if err != nil {
+			t.Fatal(err)
+		}
+		txs = append(txs, tx)
+	}
+
+	// validate tx and put it into tx pool
+	for _, tx := range txs {
+		if _, err := chain.ValidateTx(tx); err != nil {
+			t.Fatal(err)
+		}
+		if !txPool.HaveTransaction(&tx.ID) {
+			t.Fatal("can't find tx in txpool")
+		}
+	}
+
+	block, err = NewBlock(chain, txs, []byte{byte(vm.OP_TRUE)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := SolveAndUpdate(chain, block); err != nil {
+		t.Fatal("process dependency tx failed")
 	}
 }

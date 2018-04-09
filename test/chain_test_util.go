@@ -23,6 +23,7 @@ const utxoPrefix = "UT:"
 type chainTestContext struct {
 	Chain *protocol.Chain
 	DB    dbm.DB
+	Store *leveldb.Store
 }
 
 func (ctx *chainTestContext) append(blkNum uint64) error {
@@ -79,7 +80,7 @@ func (ctx *chainTestContext) validateStatus(block *types.Block) error {
 func (ctx *chainTestContext) validateExecution(block *types.Block) error {
 	for _, tx := range block.Transactions {
 		for _, spentOutputID := range tx.SpentOutputIDs {
-			utxoEntry, _ := leveldb.GetUtxo(ctx.DB, &spentOutputID)
+			utxoEntry, _ := ctx.Store.GetUtxo(&spentOutputID)
 			if utxoEntry == nil {
 				continue
 			}
@@ -92,7 +93,7 @@ func (ctx *chainTestContext) validateExecution(block *types.Block) error {
 		}
 
 		for _, outputID := range tx.ResultIds {
-			utxoEntry, _ := leveldb.GetUtxo(ctx.DB, outputID)
+			utxoEntry, _ := ctx.Store.GetUtxo(outputID)
 			if utxoEntry == nil && isSpent(outputID, block) {
 				continue
 			}
@@ -234,10 +235,11 @@ func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx
 func (cfg *chainTestConfig) Run() error {
 	db := dbm.NewDB("chain_test_db", "leveldb", "chain_test_db")
 	defer os.RemoveAll("chain_test_db")
-	chain, _ := MockChain(db)
+	chain, store, _, _ := MockChain(db)
 	ctx := &chainTestContext{
 		Chain: chain,
 		DB:    db,
+		Store: store,
 	}
 
 	var utxoEntries map[string]*storage.UtxoEntry

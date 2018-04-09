@@ -17,7 +17,7 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	chain, err := test.MockChain(testDB)
+	chain, _, _, err := test.MockChain(testDB)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -25,8 +25,7 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 
 	txPool := test.MockTxPool()
 	genesisBlock := config.GenerateGenesisBlock()
-	chain.SaveBlock(genesisBlock)
-	chain.ConnectBlock(genesisBlock)
+	chain.ProcessBlock(genesisBlock)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

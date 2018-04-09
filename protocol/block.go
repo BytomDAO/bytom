@@ -37,11 +37,6 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 	return c.store.GetBlock(&node.Hash)
 }
 
-// ConnectBlock append block to end of chain
-func (c *Chain) ConnectBlock(block *types.Block) error {
-	return c.connectBlock(block)
-}
-
 func (c *Chain) connectBlock(block *types.Block) (err error) {
 	bcBlock := types.MapBlock(block)
 	utxoView := state.NewUtxoViewpoint()
@@ -86,10 +81,6 @@ func (c *Chain) getReorganizeBlocks(block *types.Block) ([]*types.Block, []*type
 
 // ReorganizeChain reorganize to longest chain
 func (c *Chain) ReorganizeChain(block *types.Block) error {
-	return c.reorganizeChain(block)
-}
-
-func (c *Chain) reorganizeChain(block *types.Block) error {
 	attachBlocks, detachBlocks := c.getReorganizeBlocks(block)
 	utxoView := state.NewUtxoViewpoint()
 
@@ -232,7 +223,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 
 	if bestNode.height > bestMainChain.height && bestNode.workSum.Cmp(bestMainChain.workSum) >= 0 {
 		log.WithField("hash", blockHash.String()).Debug("Start to reorganize mainchain")
-		return false, c.reorganizeChain(bestBlock)
+		return false, c.ReorganizeChain(bestBlock)
 	}
 
 	return false, nil

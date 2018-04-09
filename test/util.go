@@ -31,10 +31,11 @@ func MockTxPool() *protocol.TxPool {
 }
 
 // MockChain mock chain with genesis block
-func MockChain(testDB dbm.DB) (*protocol.Chain, error) {
+func MockChain(testDB dbm.DB) (*protocol.Chain, *leveldb.Store, *protocol.TxPool, error) {
 	store := leveldb.NewStore(testDB)
 	txPool := MockTxPool()
-	return protocol.NewChain(store, txPool)
+	chain, err := protocol.NewChain(store, txPool)
+	return chain, store, txPool, err
 }
 
 // MockUTXO mock a utxo

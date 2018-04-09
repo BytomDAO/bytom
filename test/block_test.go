@@ -17,7 +17,7 @@ import (
 func TestBlockHeader(t *testing.T) {
 	db := dbm.NewDB("block_test_db", "leveldb", "block_test_db")
 	defer os.RemoveAll("block_test_db")
-	chain, _ := MockChain(db)
+	chain, _, _, _ := MockChain(db)
 	genesisHeader := chain.BestBlockHeader()
 
 	timestamp := uint64(time.Now().Unix())
@@ -67,16 +67,6 @@ func TestBlockHeader(t *testing.T) {
 			valid:      false,
 		},
 		{
-			desc:       "invalid prev hash, can't find seed from db",
-			version:    func() uint64 { return chain.BestBlockHeader().Version },
-			prevHeight: chain.Height,
-			timestamp:  func() uint64 { return uint64(time.Now().Unix()) },
-			prevHash:   func() *bc.Hash { return &bc.Hash{V0: 1} },
-			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      false,
-			valid:      false,
-		},
-		{
 			desc:       "invalid prev hash, prev hash dismatch",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
 			prevHeight: chain.Height,
@@ -117,7 +107,7 @@ func TestBlockHeader(t *testing.T) {
 			valid:      true,
 		},
 		{
-			desc:       "valid timestamp, less then last block, but greater than median",
+			desc:       "valid timestamp, less than last block, but greater than median",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
 			prevHeight: chain.Height,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp - 1 },
@@ -157,16 +147,10 @@ func TestBlockHeader(t *testing.T) {
 		if c.solve {
 			Solve(seed, block)
 		}
-		err = chain.SaveBlock(block)
+		_, err = chain.ProcessBlock(block)
 		result := err == nil
 		if result != c.valid {
 			t.Fatalf("%s test failed, expected: %t, have: %t, err: %s", c.desc, c.valid, result, err)
-		}
-		if err != nil {
-			continue
-		}
-		if err := chain.ConnectBlock(block); err != nil {
-			t.Fatal(err)
 		}
 	}
 }

@@ -42,7 +42,7 @@ func (cfg *TxTestConfig) Run() error {
 
 	chainDB := dbm.NewDB("chain_db", "leveldb", "chain_db")
 	defer os.RemoveAll("chain_db")
-	chain, _ := MockChain(chainDB)
+	chain, _, _, _ := MockChain(chainDB)
 	txTestDB := dbm.NewDB("tx_test_db", "leveldb", "tx_test_db")
 	defer os.RemoveAll("tx_test_db")
 	accountManager := account.NewManager(txTestDB, chain)
@@ -171,7 +171,7 @@ func TestTx(t *testing.T) {
 func TestCoinbaseMature(t *testing.T) {
 	db := dbm.NewDB("test_coinbase_mature_db", "leveldb", "test_coinbase_mature_db")
 	defer os.RemoveAll("test_coinbase_mature_db")
-	chain, _ := MockChain(db)
+	chain, _, _, _ := MockChain(db)
 
 	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
 	height := chain.Height()
@@ -230,7 +230,7 @@ func TestCoinbaseMature(t *testing.T) {
 func TestCoinbaseTx(t *testing.T) {
 	db := dbm.NewDB("test_coinbase_tx_db", "leveldb", "test_coinbase_tx_db")
 	defer os.RemoveAll("test_coinbase_tx_db")
-	chain, _ := MockChain(db)
+	chain, _, _, _ := MockChain(db)
 
 	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
 	genesisHeader := chain.BestBlockHeader()

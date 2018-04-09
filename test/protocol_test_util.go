@@ -25,7 +25,7 @@ func appendBlocks(chain *protocol.Chain, num uint64) error {
 
 func declChain(name string, baseChain *protocol.Chain, baseHeight uint64, height uint64) (*protocol.Chain, error) {
 	chainDB := dbm.NewDB(name, "leveldb", name)
-	chain, err := MockChain(chainDB)
+	chain, _, _, err := MockChain(chainDB)
 	if err != nil {
 		return nil, err
 	}
