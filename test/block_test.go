@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 )
 
@@ -149,5 +150,49 @@ func TestBlockHeader(t *testing.T) {
 		if result != c.valid {
 			t.Fatalf("%s test failed, expected: %t, have: %t, err: %s", c.desc, c.valid, result, err)
 		}
+	}
+}
+
+func TestMaxBlockGas(t *testing.T) {
+	chainDB := dbm.NewDB("test_block_db", "leveldb", "test_block_db")
+	defer os.RemoveAll("test_block_db")
+	chain, _, _, err := MockChain(chainDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := AppendBlocks(chain, 7); err != nil {
+		t.Fatal(err)
+	}
+
+	block, err := chain.GetBlockByHeight(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx, err := CreateTxFromTx(block.Transactions[0], 0, 600000000000, []byte{byte(vm.OP_TRUE)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	outputAmount := uint64(600000000000)
+	txs := []*types.Tx{nil}
+	txs[0] = tx
+	for i := 1; i < 50000; i++ {
+		outputAmount -= 10000000
+		tx, err := CreateTxFromTx(txs[i-1], 0, outputAmount, []byte{byte(vm.OP_TRUE)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		txs = append(txs, tx)
+	}
+
+	block, err = NewBlock(chain, txs, []byte{byte(vm.OP_TRUE)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := SolveAndUpdate(chain, block); err == nil {
+		t.Fatalf("test max block gas failed")
 	}
 }
