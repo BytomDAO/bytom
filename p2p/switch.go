@@ -463,10 +463,15 @@ func (sw *Switch) StopPeerForError(peer *Peer, reason interface{}) {
 						}).Info("Error reconnecting to peer. Giving up")
 						return
 					}
+					if err == ErrSwitchDuplicatePeer {
+						log.WithField("error", err).Info("Error reconnecting to peer.")
+						return
+					}
 					log.WithFields(log.Fields{
 						"retries": i,
 						"error":   err,
 					}).Info("Error reconnecting to peer. Trying again")
+
 					time.Sleep(reconnectInterval)
 					continue
 				}
