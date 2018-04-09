@@ -354,20 +354,6 @@ func CreateCoinbaseTx(controlProgram []byte, height, txsFee uint64) (*types.Tx, 
 	return template.Transaction, err
 }
 
-// DefaultCoinbaseTx create coinbase tx at block height, anyone can spend the output
-func DefaultCoinbaseTx(height uint64) (*types.Tx, error) {
-	builder := txbuilder.NewBuilder(time.Now())
-	coinbaseValue := consensus.BlockSubsidy(height)
-	if err := builder.AddInput(types.NewCoinbaseInput([]byte(string(height))), &txbuilder.SigningInstruction{}); err != nil {
-		return nil, err
-	}
-	if err := builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, coinbaseValue, []byte{byte(vm.OP_TRUE)})); err != nil {
-		return nil, err
-	}
-	template, _, err := builder.Build()
-	return template.Transaction, err
-}
-
 // CreateTxFromTx create a tx spent the output in outputIndex at baseTx
 func CreateTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64, ctrlProgram []byte) (*types.Tx, error) {
 	spendInput, err := CreateSpendInput(baseTx, outputIndex)

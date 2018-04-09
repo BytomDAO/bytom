@@ -8,14 +8,12 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -180,25 +178,12 @@ func TestCoinbaseMature(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	spendInput, err := CreateSpendInput(block.Transactions[0], 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	txInput := &types.TxInput{
-		AssetVersion: assetVersion,
-		TypedInput:   spendInput,
-	}
-
-	builder := txbuilder.NewBuilder(time.Now())
-	builder.AddInput(txInput, &txbuilder.SigningInstruction{})
-	output := types.NewTxOutput(*consensus.BTMAssetID, 100000000000, defaultCtrlProg)
-	builder.AddOutput(output)
-	tpl, _, err := builder.Build()
+	tx, err := CreateTxFromTx(block.Transactions[0], 0, 100000000000, defaultCtrlProg)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	txs := []*types.Tx{tpl.Transaction}
+	txs := []*types.Tx{tx}
 	matureHeight := chain.Height() + consensus.CoinbasePendingBlockNumber
 	currentHeight := chain.Height()
 	for h := currentHeight + 1; h < matureHeight; h++ {
@@ -242,25 +227,12 @@ func TestCoinbaseTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	spendInput, err := CreateSpendInput(block.Transactions[0], 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	txInput := &types.TxInput{
-		AssetVersion: assetVersion,
-		TypedInput:   spendInput,
-	}
-
-	builder := txbuilder.NewBuilder(time.Now())
-	builder.AddInput(txInput, &txbuilder.SigningInstruction{})
-	output := types.NewTxOutput(*consensus.BTMAssetID, 100000000000, defaultCtrlProg)
-	builder.AddOutput(output)
-	tpl, _, err := builder.Build()
+	tx, err := CreateTxFromTx(block.Transactions[0], 0, 100000000000, defaultCtrlProg)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	block, err = NewBlock(chain, []*types.Tx{tpl.Transaction}, defaultCtrlProg)
+	block, err = NewBlock(chain, []*types.Tx{tx}, defaultCtrlProg)
 	if err != nil {
 		t.Fatal(err)
 	}
