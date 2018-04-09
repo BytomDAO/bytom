@@ -11,10 +11,10 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// Hash represents a 256-bit hash.
-
+// EmptyStringHash represents a 256-bit hash.
 var EmptyStringHash = NewHash(sha3.Sum256(nil))
 
+// NewHash convert the input byte array to hash
 func NewHash(b32 [32]byte) (h Hash) {
 	h.V0 = binary.BigEndian.Uint64(b32[0:8])
 	h.V1 = binary.BigEndian.Uint64(b32[8:16])
@@ -23,6 +23,7 @@ func NewHash(b32 [32]byte) (h Hash) {
 	return h
 }
 
+// Byte32 return the byte array representation
 func (h Hash) Byte32() (b32 [32]byte) {
 	binary.BigEndian.PutUint64(b32[0:8], h.V0)
 	binary.BigEndian.PutUint64(b32[8:16], h.V1)
@@ -69,6 +70,7 @@ func (h *Hash) UnmarshalJSON(b []byte) error {
 	return h.UnmarshalText([]byte(s))
 }
 
+// Bytes returns the byte representation
 func (h Hash) Bytes() []byte {
 	b32 := h.Byte32()
 	return b32[:]

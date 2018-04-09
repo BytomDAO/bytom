@@ -12,6 +12,7 @@ func (s *Spend) writeForHash(w io.Writer) {
 	mustWriteForHash(w, s.SpentOutputId)
 }
 
+// SetDestination will link the spend to the output
 func (s *Spend) SetDestination(id *Hash, val *AssetAmount, pos uint64) {
 	s.WitnessDestination = &ValueDestination{
 		Ref:      id,

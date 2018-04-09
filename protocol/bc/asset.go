@@ -8,20 +8,36 @@ import (
 	"github.com/bytom/encoding/blockchain"
 )
 
-// AssetID is the Hash256 of the asset definition.
+// NewAssetID convert byte array to aseet id
 func NewAssetID(b [32]byte) (a AssetID) {
 	return AssetID(NewHash(b))
 }
 
-func (a AssetID) Byte32() (b32 [32]byte)               { return Hash(a).Byte32() }
-func (a AssetID) MarshalText() ([]byte, error)         { return Hash(a).MarshalText() }
-func (a *AssetID) UnmarshalText(b []byte) error        { return (*Hash)(a).UnmarshalText(b) }
-func (a *AssetID) UnmarshalJSON(b []byte) error        { return (*Hash)(a).UnmarshalJSON(b) }
-func (a AssetID) Bytes() []byte                        { return Hash(a).Bytes() }
-func (a AssetID) WriteTo(w io.Writer) (int64, error)   { return Hash(a).WriteTo(w) }
-func (a *AssetID) ReadFrom(r io.Reader) (int64, error) { return (*Hash)(a).ReadFrom(r) }
-func (a *AssetID) IsZero() bool                        { return (*Hash)(a).IsZero() }
+// Byte32 return the byte array representation
+func (a AssetID) Byte32() (b32 [32]byte) { return Hash(a).Byte32() }
 
+// MarshalText satisfies the TextMarshaler interface.
+func (a AssetID) MarshalText() ([]byte, error) { return Hash(a).MarshalText() }
+
+// UnmarshalText satisfies the TextUnmarshaler interface.
+func (a *AssetID) UnmarshalText(b []byte) error { return (*Hash)(a).UnmarshalText(b) }
+
+// UnmarshalJSON satisfies the json.Unmarshaler interface.
+func (a *AssetID) UnmarshalJSON(b []byte) error { return (*Hash)(a).UnmarshalJSON(b) }
+
+// Bytes returns the byte representation.
+func (a AssetID) Bytes() []byte { return Hash(a).Bytes() }
+
+// WriteTo satisfies the io.WriterTo interface.
+func (a AssetID) WriteTo(w io.Writer) (int64, error) { return Hash(a).WriteTo(w) }
+
+// ReadFrom satisfies the io.ReaderFrom interface.
+func (a *AssetID) ReadFrom(r io.Reader) (int64, error) { return (*Hash)(a).ReadFrom(r) }
+
+// IsZero tells whether a Asset pointer is nil or points to an all-zero hash.
+func (a *AssetID) IsZero() bool { return (*Hash)(a).IsZero() }
+
+// ComputeAssetID calculate the asset id from AssetDefinition
 func (ad *AssetDefinition) ComputeAssetID() (assetID AssetID) {
 	h := sha3pool.Get256()
 	defer sha3pool.Put256(h)
@@ -31,6 +47,7 @@ func (ad *AssetDefinition) ComputeAssetID() (assetID AssetID) {
 	return NewAssetID(b)
 }
 
+// ComputeAssetID implement the assetID calculate logic
 func ComputeAssetID(prog []byte, vmVersion uint64, data *Hash) AssetID {
 	def := &AssetDefinition{
 		IssuanceProgram: &Program{
@@ -42,6 +59,7 @@ func ComputeAssetID(prog []byte, vmVersion uint64, data *Hash) AssetID {
 	return def.ComputeAssetID()
 }
 
+// ReadFrom read the AssetAmount from the bytes
 func (a *AssetAmount) ReadFrom(r *blockchain.Reader) (err error) {
 	var assetID AssetID
 	if _, err = assetID.ReadFrom(r); err != nil {
@@ -52,6 +70,7 @@ func (a *AssetAmount) ReadFrom(r *blockchain.Reader) (err error) {
 	return err
 }
 
+// WriteTo convert struct to byte and write to io
 func (a AssetAmount) WriteTo(w io.Writer) (int64, error) {
 	n, err := a.AssetId.WriteTo(w)
 	if err != nil {
@@ -61,6 +80,7 @@ func (a AssetAmount) WriteTo(w io.Writer) (int64, error) {
 	return n + int64(n2), err
 }
 
+// Equal check does two AssetAmount have same assetID and amount
 func (a *AssetAmount) Equal(other *AssetAmount) (eq bool, err error) {
 	if a == nil || other == nil {
 		return false, errors.New("empty asset amount")

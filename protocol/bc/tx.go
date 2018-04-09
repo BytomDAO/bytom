@@ -16,6 +16,7 @@ type Tx struct {
 	GasInputIDs    []Hash
 }
 
+// SigHash ...
 func (tx *Tx) SigHash(n uint32) (hash Hash) {
 	hasher := sha3pool.Get256()
 	defer sha3pool.Put256(hasher)
@@ -27,12 +28,12 @@ func (tx *Tx) SigHash(n uint32) (hash Hash) {
 }
 
 // Convenience routines for accessing entries of specific types by ID.
-
 var (
 	ErrEntryType    = errors.New("invalid entry type")
 	ErrMissingEntry = errors.New("missing entry")
 )
 
+// Output try to get the output entry by given hash
 func (tx *Tx) Output(id Hash) (*Output, error) {
 	e, ok := tx.Entries[id]
 	if !ok || e == nil {
@@ -45,6 +46,7 @@ func (tx *Tx) Output(id Hash) (*Output, error) {
 	return o, nil
 }
 
+// Spend try to get the spend entry by given hash
 func (tx *Tx) Spend(id Hash) (*Spend, error) {
 	e, ok := tx.Entries[id]
 	if !ok || e == nil {
@@ -57,6 +59,7 @@ func (tx *Tx) Spend(id Hash) (*Spend, error) {
 	return sp, nil
 }
 
+// Issuance try to get the issuance entry by given hash
 func (tx *Tx) Issuance(id Hash) (*Issuance, error) {
 	e, ok := tx.Entries[id]
 	if !ok || e == nil {

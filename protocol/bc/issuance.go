@@ -11,6 +11,7 @@ func (iss *Issuance) writeForHash(w io.Writer) {
 	mustWriteForHash(w, iss.Value)
 }
 
+// SetDestination will link the issuance to the output
 func (iss *Issuance) SetDestination(id *Hash, val *AssetAmount, pos uint64) {
 	iss.WitnessDestination = &ValueDestination{
 		Ref:      id,
