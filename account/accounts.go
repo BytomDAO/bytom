@@ -292,7 +292,7 @@ func (m *Manager) createAddress(ctx context.Context, account *Account, change bo
 
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
 	idx := m.getNextXpubsIndex(account.Signer.XPubs)
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	path := signers.Path(account.Signer.KeyIndex, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
@@ -319,7 +319,7 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 
 func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
 	idx := m.getNextXpubsIndex(account.Signer.XPubs)
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+	path := signers.Path(account.Signer.KeyIndex, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)

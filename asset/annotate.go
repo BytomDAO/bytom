@@ -44,7 +44,7 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 		aa.Alias = *a.Alias
 	}
 	if a.Signer != nil {
-		path := signers.Path(a.Signer, signers.AssetKeySpace)
+		path := signers.Path(a.Signer.KeyIndex, signers.AssetKeySpace)
 		var jsonPath []chainjson.HexBytes
 		for _, p := range path {
 			jsonPath = append(jsonPath, p)

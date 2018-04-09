@@ -55,7 +55,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 	txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, assetDef)
 
 	tplIn := &txbuilder.SigningInstruction{}
-	path := signers.Path(asset.Signer, signers.AssetKeySpace)
+	path := signers.Path(asset.Signer.KeyIndex, signers.AssetKeySpace)
 	tplIn.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
 
 	log.Info("Issue action build")
