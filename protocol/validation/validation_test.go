@@ -141,13 +141,6 @@ func TestTxValidation(t *testing.T) {
 			desc: "base case",
 		},
 		{
-			desc: "failing mux program",
-			f: func() {
-				mux.Program.Code = []byte{byte(vm.OP_FALSE)}
-			},
-			err: vm.ErrFalseVMResult,
-		},
-		{
 			desc: "unbalanced mux amounts",
 			f: func() {
 				mux.Sources[0].Value.Amount++

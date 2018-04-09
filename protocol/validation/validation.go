@@ -11,11 +11,8 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
-const (
-	muxGasCost = int64(10)
-	// timeRangeGash is the block height we will reach after 100 years
-	timeRangeGash = uint64(21024000)
-)
+// timeRangeGash is the block height we will reach after 100 years
+const timeRangeGash = uint64(21024000)
 
 // GasState record the gas usage status
 type GasState struct {
@@ -32,11 +29,6 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 	}
 
 	g.BTMValue = uint64(BTMValue)
-
-	if BTMValue == 0 {
-		g.GasLeft = muxGasCost
-		return nil
-	}
 
 	var ok bool
 	if g.GasLeft, ok = checked.DivInt64(BTMValue, consensus.VMGasRate); !ok {
@@ -220,14 +212,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			} else if amount != 0 {
 				return errors.WithDetailf(errUnbalanced, "asset %x sources - destinations = %d (should be 0)", assetID.Bytes(), amount)
 			}
-		}
-
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.Program, e.WitnessArguments), vs.gasStatus.GasLeft)
-		if err != nil {
-			return errors.Wrap(err, "checking mux program")
-		}
-		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
-			return err
 		}
 
 		for _, BTMInputID := range vs.tx.GasInputIDs {
