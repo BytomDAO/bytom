@@ -12,7 +12,6 @@ import (
 func TestOutputIDAndNonceOp(t *testing.T) {
 	// arbitrary
 	outputID := mustDecodeHex("0a60f9b12950c84c221012a808ef7782823b7e16b71fe2ba01811cda96a217df")
-	nonceID := mustDecodeHex("c4a6e6256debfca379595e444b91af56846397e8007ea87c40c622170dd13ff7")
 
 	prog := []byte{uint8(OP_OUTPUTID)}
 	vm := &virtualMachine{
@@ -40,34 +39,6 @@ func TestOutputIDAndNonceOp(t *testing.T) {
 	err = vm.step()
 	if err != ErrContext {
 		t.Errorf("expected ErrContext, got %v", err)
-	}
-
-	prog = []byte{uint8(OP_NONCE)}
-	vm = &virtualMachine{
-		runLimit: 50000,
-		program:  prog,
-		context:  &Context{AnchorID: nil},
-	}
-	err = vm.step()
-	if err != ErrContext {
-		t.Errorf("expected ErrContext, got %v", err)
-	}
-
-	prog = []byte{uint8(OP_NONCE)}
-	vm = &virtualMachine{
-		runLimit: 50000,
-		program:  prog,
-		context:  &Context{AnchorID: &nonceID},
-	}
-	err = vm.step()
-	if err != nil {
-		t.Fatal(err)
-	}
-	gotVM = vm
-
-	expectedStack = [][]byte{nonceID}
-	if !testutil.DeepEqual(gotVM.dataStack, expectedStack) {
-		t.Errorf("expected stack %v, got %v", expectedStack, gotVM.dataStack)
 	}
 }
 

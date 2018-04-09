@@ -21,26 +21,15 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		assetID       *[]byte
 		amount        *uint64
 		destPos       *uint64
-		anchorID      *[]byte
 		spentOutputID *[]byte
 	)
 
 	switch e := entry.(type) {
-	case *bc.Nonce:
-		anchored := tx.Entries[*e.WitnessAnchoredId]
-		if iss, ok := anchored.(*bc.Issuance); ok {
-			a1 := iss.Value.AssetId.Bytes()
-			assetID = &a1
-			amount = &iss.Value.Amount
-		}
-
 	case *bc.Issuance:
 		a1 := e.Value.AssetId.Bytes()
 		assetID = &a1
 		amount = &e.Value.Amount
 		destPos = &e.WitnessDestination.Position
-		a2 := e.AnchorId.Bytes()
-		anchorID = &a2
 
 	case *bc.Spend:
 		spentOutput := tx.Entries[*e.SpentOutputId].(*bc.Output)
@@ -89,7 +78,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		AssetID:       assetID,
 		Amount:        amount,
 		DestPos:       destPos,
-		AnchorID:      anchorID,
 		SpentOutputID: spentOutputID,
 		CheckOutput:   ec.checkOutput,
 	}

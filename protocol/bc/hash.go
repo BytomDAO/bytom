@@ -2,7 +2,6 @@ package bc
 
 import (
 	"bytes"
-	"database/sql/driver"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -12,10 +11,10 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-// Hash represents a 256-bit hash.
-
+// EmptyStringHash represents a 256-bit hash.
 var EmptyStringHash = NewHash(sha3.Sum256(nil))
 
+// NewHash convert the input byte array to hash
 func NewHash(b32 [32]byte) (h Hash) {
 	h.V0 = binary.BigEndian.Uint64(b32[0:8])
 	h.V1 = binary.BigEndian.Uint64(b32[8:16])
@@ -24,6 +23,7 @@ func NewHash(b32 [32]byte) (h Hash) {
 	return h
 }
 
+// Byte32 return the byte array representation
 func (h Hash) Byte32() (b32 [32]byte) {
 	binary.BigEndian.PutUint64(b32[0:8], h.V0)
 	binary.BigEndian.PutUint64(b32[8:16], h.V1)
@@ -70,26 +70,10 @@ func (h *Hash) UnmarshalJSON(b []byte) error {
 	return h.UnmarshalText([]byte(s))
 }
 
+// Bytes returns the byte representation
 func (h Hash) Bytes() []byte {
 	b32 := h.Byte32()
 	return b32[:]
-}
-
-// Value satisfies the driver.Valuer interface
-func (h Hash) Value() (driver.Value, error) {
-	return h.Bytes(), nil
-}
-
-// Scan satisfies the driver.Scanner interface
-func (h *Hash) Scan(v interface{}) error {
-	var buf [32]byte
-	b, ok := v.([]byte)
-	if !ok {
-		return fmt.Errorf("Hash.Scan received unsupported type %T", v)
-	}
-	copy(buf[:], b)
-	*h = NewHash(buf)
-	return nil
 }
 
 // WriteTo satisfies the io.WriterTo interface.

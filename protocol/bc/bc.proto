@@ -65,7 +65,6 @@ message TxHeader {
   uint64        serialized_size = 2;
   uint64        time_range      = 3;
   repeated Hash result_ids      = 4;
-  Hash          ext_hash        = 5;
 }
 
 message TxVerifyResult {
@@ -80,16 +79,8 @@ message TransactionStatus {
 message Mux {
   repeated ValueSource      sources              = 1; // issuances, spends, and muxes
   Program                   program              = 2;
-  Hash                      ext_hash             = 3;
-  repeated ValueDestination witness_destinations = 4; // outputs, retirements, and muxes
-  repeated bytes            witness_arguments    = 5;
-}
-
-message Nonce {
-  Program        program             = 1;
-  Hash           ext_hash            = 2;
-  repeated bytes witness_arguments   = 3;
-  Hash           witness_anchored_id = 4;
+  repeated ValueDestination witness_destinations = 3; // outputs, retirements, and muxes
+  repeated bytes            witness_arguments    = 4;
 }
 
 message Coinbase {
@@ -100,32 +91,26 @@ message Coinbase {
 message Output {
   ValueSource source          = 1;
   Program     control_program = 2;
-  Hash        ext_hash        = 3;
-  uint64      ordinal         = 4;
+  uint64      ordinal         = 3;
 }
 
 message Retirement {
   ValueSource source   = 1;
-  Hash        ext_hash = 2;
-  uint64      ordinal  = 3;
+  uint64      ordinal  = 2;
 }
 
 message Issuance {
-  Hash             anchor_id                = 1;
+  Hash             nonce_hash               = 1;
   AssetAmount      value                    = 2;
-  Hash             ext_hash                 = 3;
-  ValueDestination witness_destination      = 4;
-  AssetDefinition  witness_asset_definition = 5;
-  repeated bytes   witness_arguments        = 6;
-  Hash             witness_anchored_id      = 7;
-  uint64           ordinal                  = 8;
+  ValueDestination witness_destination      = 3;
+  AssetDefinition  witness_asset_definition = 4;
+  repeated bytes   witness_arguments        = 5;
+  uint64           ordinal                  = 6;
 }
 
 message Spend {
   Hash             spent_output_id     = 1;
-  Hash             ext_hash            = 2;
-  ValueDestination witness_destination = 3;
-  repeated bytes   witness_arguments   = 4;
-  Hash             witness_anchored_id = 5;
-  uint64           ordinal             = 6;
+  ValueDestination witness_destination = 2;
+  repeated bytes   witness_arguments   = 3;
+  uint64           ordinal             = 4;
 }
