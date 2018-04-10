@@ -103,8 +103,9 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 		}
 		num++
 	}
-	log.Info("Block sync complete. Broadcast new status chain height:", bk.chain.Height())
-	block, err := bk.chain.GetBlockByHash(bk.chain.BestBlockHash())
+	bestHash := bk.chain.BestBlockHash()
+	log.Info("Block sync complete. Broadcast new status chain height:", bk.chain.Height(), "block hash:", bestHash)
+	block, err := bk.chain.GetBlockByHash(bestHash)
 	if err != nil {
 		log.Errorf("Failed on sync complete broadcast status get block %v", err)
 		return errGetBlockByHash
