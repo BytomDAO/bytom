@@ -40,9 +40,6 @@ type BaseConfig struct {
 	// This should be set in viper so it can unmarshal into this struct
 	RootDir string `mapstructure:"home"`
 
-	// A JSON file containing the initial validator set and other meta data
-	Genesis string `mapstructure:"genesis_file"`
-
 	//The ID of the network to json
 	ChainID string `mapstructure:"chain_id"`
 
@@ -87,7 +84,6 @@ type BaseConfig struct {
 // Default configurable base parameters.
 func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
-		Genesis:           "genesis.json",
 		Moniker:           "anonymous",
 		ProfListenAddress: "",
 		FastSync:          true,
@@ -99,10 +95,6 @@ func DefaultBaseConfig() BaseConfig {
 		KeysPath:          "keystore",
 		HsmUrl:            "",
 	}
-}
-
-func (b BaseConfig) GenesisFile() string {
-	return rootify(b.Genesis, b.RootDir)
 }
 
 func (b BaseConfig) DBDir() string {

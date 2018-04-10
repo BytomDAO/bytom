@@ -88,7 +88,7 @@ func (sm *SyncManager) makeNodeInfo() *p2p.NodeInfo {
 	nodeInfo := &p2p.NodeInfo{
 		PubKey:  sm.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
 		Moniker: sm.config.Moniker,
-		Network: "bytom",
+		Network: sm.config.ChainID,
 		Version: version.Version,
 		Other: []string{
 			cmn.Fmt("wire_version=%v", wire.Version),
