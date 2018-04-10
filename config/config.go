@@ -101,10 +101,6 @@ func DefaultBaseConfig() BaseConfig {
 	}
 }
 
-func (b BaseConfig) GenesisFile() string {
-	return rootify(b.Genesis, b.RootDir)
-}
-
 func (b BaseConfig) DBDir() string {
 	return rootify(b.DBPath, b.RootDir)
 }
