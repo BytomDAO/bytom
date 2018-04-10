@@ -468,10 +468,7 @@ func checkStandardTx(tx *bc.Tx) error {
 		}
 
 		output, ok := e.(*bc.Output)
-		if !ok {
-			continue
-		}
-		if *output.Source.Value.AssetId != *consensus.BTMAssetID {
+		if !ok || *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
