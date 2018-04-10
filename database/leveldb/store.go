@@ -1,15 +1,16 @@
 package leveldb
 
 import (
+	"encoding/binary"
 	"encoding/json"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/database"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
+	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
@@ -19,18 +20,17 @@ var (
 	blockStoreKey     = []byte("blockStore")
 	blockPrefix       = []byte("B:")
 	blockHeaderPrefix = []byte("BH:")
-	blockSeedPrefix   = []byte("BS:")
 	txStatusPrefix    = []byte("BTS:")
 )
 
-func loadBlockStoreStateJSON(db dbm.DB) database.BlockStoreStateJSON {
+func loadBlockStoreStateJSON(db dbm.DB) protocol.BlockStoreStateJSON {
 	bytes := db.Get(blockStoreKey)
 	if bytes == nil {
-		return database.BlockStoreStateJSON{
+		return protocol.BlockStoreStateJSON{
 			Height: 0,
 		}
 	}
-	bsj := database.BlockStoreStateJSON{}
+	bsj := protocol.BlockStoreStateJSON{}
 	if err := json.Unmarshal(bytes, &bsj); err != nil {
 		common.PanicCrisis(common.Fmt("Could not unmarshal bytes: %X", bytes))
 	}
@@ -49,12 +49,11 @@ func calcBlockKey(hash *bc.Hash) []byte {
 	return append(blockPrefix, hash.Bytes()...)
 }
 
-func calcBlockHeaderKey(hash *bc.Hash) []byte {
-	return append(blockHeaderPrefix, hash.Bytes()...)
-}
-
-func calcSeedKey(hash *bc.Hash) []byte {
-	return append(blockSeedPrefix, hash.Bytes()...)
+func calcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
+	buf := [8]byte{}
+	binary.BigEndian.PutUint64(buf[:], height)
+	key := append(blockHeaderPrefix, buf[:]...)
+	return append(key, hash.Bytes()...)
 }
 
 func calcTxStatusKey(hash *bc.Hash) []byte {
@@ -100,32 +99,6 @@ func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
 	return s.cache.lookup(hash)
 }
 
-// GetBlockHeader return the block by given hash
-func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
-	bytez := s.db.Get(calcBlockHeaderKey(hash))
-	if bytez == nil {
-		return nil, errors.New("can't find the block header by given hash")
-	}
-
-	bh := &types.BlockHeader{}
-	err := bh.UnmarshalText(bytez)
-	return bh, err
-}
-
-// GetSeed will return the seed of given block
-func (s *Store) GetSeed(hash *bc.Hash) (*bc.Hash, error) {
-	data := s.db.Get(calcSeedKey(hash))
-	if data == nil {
-		return nil, errors.New("can't find the seed by given hash")
-	}
-
-	seed := &bc.Hash{}
-	if err := proto.Unmarshal(data, seed); err != nil {
-		return nil, errors.Wrap(err, "unmarshaling seed")
-	}
-	return seed, nil
-}
-
 // GetTransactionsUtxo will return all the utxo that related to the input txs
 func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
 	return getTransactionsUtxo(s.db, view, txs)
@@ -146,17 +119,43 @@ func (s *Store) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, erro
 }
 
 // GetStoreStatus return the BlockStoreStateJSON
-func (s *Store) GetStoreStatus() database.BlockStoreStateJSON {
+func (s *Store) GetStoreStatus() protocol.BlockStoreStateJSON {
 	return loadBlockStoreStateJSON(s.db)
 }
 
-// GetMainchain read the mainchain map from db
-func (s *Store) GetMainchain(hash *bc.Hash) (map[uint64]*bc.Hash, error) {
-	return getMainchain(s.db, hash)
+func (s *Store) LoadBlockIndex() (*protocol.BlockIndex, error) {
+	blockIndex := protocol.NewBlockIndex()
+	bhIter := s.db.IteratorPrefix(blockHeaderPrefix)
+	defer bhIter.Release()
+
+	var lastNode *protocol.BlockNode
+	for bhIter.Next() {
+		bh := &types.BlockHeader{}
+		if err := bh.UnmarshalText(bhIter.Value()); err != nil {
+			return nil, err
+		}
+
+		var parent *protocol.BlockNode
+		if lastNode == nil || lastNode.Hash == bh.PreviousBlockHash {
+			parent = lastNode
+		} else {
+			parent = blockIndex.GetNode(&bh.PreviousBlockHash)
+		}
+
+		node, err := protocol.NewBlockNode(bh, parent)
+		if err != nil {
+			return nil, err
+		}
+
+		blockIndex.AddNode(node)
+		lastNode = node
+	}
+
+	return blockIndex, nil
 }
 
-// SaveBlock persists a new block in the database.
-func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus, seed *bc.Hash) error {
+// SaveBlock persists a new block in the protocol.
+func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	binaryBlock, err := block.MarshalText()
 	if err != nil {
 		return errors.Wrap(err, "Marshal block meta")
@@ -172,41 +171,30 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus, seed *bc
 		return errors.Wrap(err, "marshal block transaction status")
 	}
 
-	binarySeed, err := proto.Marshal(seed)
-	if err != nil {
-		return errors.Wrap(err, "marshal block seed")
-	}
-
 	blockHash := block.Hash()
 	batch := s.db.NewBatch()
 	batch.Set(calcBlockKey(&blockHash), binaryBlock)
-	batch.Set(calcBlockHeaderKey(&blockHash), binaryBlockHeader)
+	batch.Set(calcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
-	batch.Set(calcSeedKey(&blockHash), binarySeed)
 	batch.Write()
 	return nil
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(block *types.Block, view *state.UtxoViewpoint, m map[uint64]*bc.Hash) error {
+func (s *Store) SaveChainStatus(block *types.Block, view *state.UtxoViewpoint) error {
 	hash := block.Hash()
 	batch := s.db.NewBatch()
-
-	if err := saveMainchain(batch, m, &hash); err != nil {
-		return err
-	}
 
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
 	}
 
-	bytes, err := json.Marshal(database.BlockStoreStateJSON{Height: block.Height, Hash: &hash})
+	bytes, err := json.Marshal(protocol.BlockStoreStateJSON{Height: block.Height, Hash: &hash})
 	if err != nil {
 		return err
 	}
 
 	batch.Set(blockStoreKey, bytes)
 	batch.Write()
-	cleanMainchainDB(s.db, &hash)
 	return nil
 }

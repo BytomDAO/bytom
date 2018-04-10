@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/golang/groupcache/lru"
-	"github.com/golang/groupcache/singleflight"
 	dbm "github.com/tendermint/tmlibs/db"
 	"golang.org/x/crypto/sha3"
 
@@ -85,22 +84,17 @@ var (
 func NewRegistry(db dbm.DB, chain *protocol.Chain) *Registry {
 	initNativeAsset()
 	return &Registry{
-		db:               db,
-		chain:            chain,
-		initialBlockHash: chain.InitialBlockHash,
-		cache:            lru.New(maxAssetCache),
-		aliasCache:       lru.New(maxAssetCache),
+		db:         db,
+		chain:      chain,
+		cache:      lru.New(maxAssetCache),
+		aliasCache: lru.New(maxAssetCache),
 	}
 }
 
 // Registry tracks and stores all known assets on a blockchain.
 type Registry struct {
-	db               dbm.DB
-	chain            *protocol.Chain
-	initialBlockHash bc.Hash
-
-	idGroup    singleflight.Group
-	aliasGroup singleflight.Group
+	db    dbm.DB
+	chain *protocol.Chain
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
@@ -140,6 +134,10 @@ func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint64, error) {
 
 // Define defines a new Asset.
 func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}) (*Asset, error) {
+	if len(xpubs) == 0 {
+		return nil, errors.Wrap(signers.ErrNoXPubs)
+	}
+
 	normalizedAlias := strings.ToUpper(strings.TrimSpace(alias))
 	if normalizedAlias == consensus.BTMAlias {
 		return nil, ErrInternalAsset

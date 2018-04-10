@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/txfeed"
+	"github.com/bytom/errors"
 )
 
 // POST /create-txfeed
@@ -14,7 +15,7 @@ func (a *API) createTxFeed(ctx context.Context, in struct {
 	Alias  string `json:"alias"`
 	Filter string `json:"filter"`
 }) Response {
-	if err := a.bcr.TxFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
+	if err := a.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Add TxFeed Failed")
 		return NewErrorResponse(err)
 	}
@@ -26,7 +27,7 @@ func (a *API) getTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) Response {
 	var tmpTxFeed interface{}
-	rawTxfeed, err := a.bcr.GetTxFeedByAlias(ctx, in.Alias)
+	rawTxfeed, err := a.GetTxFeedByAlias(ctx, in.Alias)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -42,7 +43,7 @@ func (a *API) getTxFeed(ctx context.Context, in struct {
 func (a *API) deleteTxFeed(ctx context.Context, in struct {
 	Alias string `json:"alias,omitempty"`
 }) Response {
-	if err := a.bcr.TxFeedTracker.Delete(ctx, in.Alias); err != nil {
+	if err := a.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
@@ -53,10 +54,10 @@ func (a *API) updateTxFeed(ctx context.Context, in struct {
 	Alias  string `json:"alias"`
 	Filter string `json:"filter"`
 }) Response {
-	if err := a.bcr.TxFeedTracker.Delete(ctx, in.Alias); err != nil {
+	if err := a.txFeedTracker.Delete(ctx, in.Alias); err != nil {
 		return NewErrorResponse(err)
 	}
-	if err := a.bcr.TxFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
+	if err := a.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
 		log.WithField("error", err).Error("Update TxFeed Failed")
 		return NewErrorResponse(err)
 	}
@@ -67,7 +68,7 @@ func (a *API) getTxFeeds() ([]txfeed.TxFeed, error) {
 	txFeed := txfeed.TxFeed{}
 	txFeeds := make([]txfeed.TxFeed, 0)
 
-	iter := a.bcr.TxFeedTracker.DB.Iterator()
+	iter := a.txFeedTracker.DB.Iterator()
 	defer iter.Release()
 
 	for iter.Next() {
@@ -89,4 +90,18 @@ func (a *API) listTxFeeds(ctx context.Context) Response {
 	}
 
 	return NewSuccessResponse(txFeeds)
+}
+
+func (a *API) GetTxFeedByAlias(ctx context.Context, filter string) ([]byte, error) {
+	jf, err := json.Marshal(filter)
+	if err != nil {
+		return nil, err
+	}
+
+	value := a.txFeedTracker.DB.Get(jf)
+	if value == nil {
+		return nil, errors.New("No transaction feed")
+	}
+
+	return value, nil
 }

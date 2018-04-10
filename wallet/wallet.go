@@ -190,7 +190,7 @@ func (w *Wallet) walletUpdater() {
 	for {
 		getRescanNotification(w)
 		checkRescanStatus(w)
-		for !w.chain.InMainChain(w.status.BestHeight, w.status.BestHash) {
+		for !w.chain.InMainChain(w.status.BestHash) {
 			block, err := w.chain.GetBlockByHash(&w.status.BestHash)
 			if err != nil {
 				log.WithField("err", err).Error("walletUpdater GetBlockByHash")
@@ -337,14 +337,14 @@ func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
 		}
 	}
 
-	for i, v := range keysInfo {
-		if v.Complete == true || status.BestHeight == 0 {
+	for i := range keysInfo {
+		if keysInfo[i].Complete == true || status.BestHeight == 0 {
 			keysInfo[i].Percent = 100
 			continue
 		}
 
 		keysInfo[i].Percent = uint8(status.WorkHeight * 100 / status.BestHeight)
-		if v.Percent == 100 {
+		if keysInfo[i].Percent == 100 {
 			keysInfo[i].Complete = true
 		}
 	}

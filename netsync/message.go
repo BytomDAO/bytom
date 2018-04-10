@@ -1,27 +1,26 @@
-package blockchain
+package netsync
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
 
-	wire "github.com/tendermint/go-wire"
+	"github.com/tendermint/go-wire"
 
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
+//protocol msg
 const (
-	// BlockRequestByte means block request message
-	BlockRequestByte = byte(0x10)
-	// BlockResponseByte means block response message
-	BlockResponseByte = byte(0x11)
-	// StatusRequestByte means status request message
-	StatusRequestByte = byte(0x20)
-	// StatusResponseByte means status response message
+	BlockRequestByte   = byte(0x10)
+	BlockResponseByte  = byte(0x11)
+	StatusRequestByte  = byte(0x20)
 	StatusResponseByte = byte(0x21)
-	// NewTransactionByte means transaction notify message
 	NewTransactionByte = byte(0x30)
+	NewMineBlockByte   = byte(0x40)
+
+	maxBlockchainResponseSize = 22020096 + 2
 )
 
 // BlockchainMessage is a generic message for this reactor.
@@ -34,9 +33,20 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&StatusRequestMessage{}, StatusRequestByte},
 	wire.ConcreteType{&StatusResponseMessage{}, StatusResponseByte},
 	wire.ConcreteType{&TransactionNotifyMessage{}, NewTransactionByte},
+	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
 )
 
-// DecodeMessage decode receive messages
+type blockPending struct {
+	block  *types.Block
+	peerID string
+}
+
+type txsNotify struct {
+	tx     *types.Tx
+	peerID string
+}
+
+//DecodeMessage decode msg
 func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	msgType = bz[0]
 	n := int(0)
@@ -48,18 +58,19 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	return
 }
 
-// BlockRequestMessage is block request message struct
+//BlockRequestMessage request blocks from remote peers by height/hash
 type BlockRequestMessage struct {
 	Height  uint64
 	RawHash [32]byte
 }
 
-// GetHash return block hash
+//GetHash get hash
 func (m *BlockRequestMessage) GetHash() *bc.Hash {
 	hash := bc.NewHash(m.RawHash)
 	return &hash
 }
 
+//String convert msg to string
 func (m *BlockRequestMessage) String() string {
 	if m.Height > 0 {
 		return fmt.Sprintf("BlockRequestMessage{Height: %d}", m.Height)
@@ -68,12 +79,12 @@ func (m *BlockRequestMessage) String() string {
 	return fmt.Sprintf("BlockRequestMessage{Hash: %s}", hash.String())
 }
 
-// BlockResponseMessage is block response message struct
+//BlockResponseMessage response get block msg
 type BlockResponseMessage struct {
 	RawBlock []byte
 }
 
-// NewBlockResponseMessage produce new BlockResponseMessage instance
+//NewBlockResponseMessage construct bock response msg
 func NewBlockResponseMessage(block *types.Block) (*BlockResponseMessage, error) {
 	rawBlock, err := block.MarshalText()
 	if err != nil {
@@ -82,7 +93,7 @@ func NewBlockResponseMessage(block *types.Block) (*BlockResponseMessage, error) 
 	return &BlockResponseMessage{RawBlock: rawBlock}, nil
 }
 
-// GetBlock return block struct
+//GetBlock get block from msg
 func (m *BlockResponseMessage) GetBlock() *types.Block {
 	block := &types.Block{
 		BlockHeader:  types.BlockHeader{},
@@ -92,16 +103,17 @@ func (m *BlockResponseMessage) GetBlock() *types.Block {
 	return block
 }
 
+//String convert msg to string
 func (m *BlockResponseMessage) String() string {
 	return fmt.Sprintf("BlockResponseMessage{Size: %d}", len(m.RawBlock))
 }
 
-// TransactionNotifyMessage is transaction notify message struct
+//TransactionNotifyMessage notify new tx msg
 type TransactionNotifyMessage struct {
 	RawTx []byte
 }
 
-// NewTransactionNotifyMessage produce new TransactionNotifyMessage instance
+//NewTransactionNotifyMessage construct notify new tx msg
 func NewTransactionNotifyMessage(tx *types.Tx) (*TransactionNotifyMessage, error) {
 	rawTx, err := tx.TxData.MarshalText()
 	if err != nil {
@@ -110,45 +122,78 @@ func NewTransactionNotifyMessage(tx *types.Tx) (*TransactionNotifyMessage, error
 	return &TransactionNotifyMessage{RawTx: rawTx}, nil
 }
 
-// GetTransaction return Tx struct
-func (m *TransactionNotifyMessage) GetTransaction() *types.Tx {
+//GetTransaction get tx from msg
+func (m *TransactionNotifyMessage) GetTransaction() (*types.Tx, error) {
 	tx := &types.Tx{}
-	tx.UnmarshalText(m.RawTx)
-	return tx
+	if err := tx.UnmarshalText(m.RawTx); err != nil {
+		return nil, err
+	}
+	return tx, nil
 }
 
+//String
 func (m *TransactionNotifyMessage) String() string {
 	return fmt.Sprintf("TransactionNotifyMessage{Size: %d}", len(m.RawTx))
 }
 
-// StatusRequestMessage is status request message struct
+//StatusRequestMessage status request msg
 type StatusRequestMessage struct{}
 
+//String
 func (m *StatusRequestMessage) String() string {
 	return "StatusRequestMessage"
 }
 
-// StatusResponseMessage is status response message struct
+//StatusResponseMessage get status response msg
 type StatusResponseMessage struct {
 	Height  uint64
 	RawHash [32]byte
 }
 
-// NewStatusResponseMessage produce new StatusResponseMessage instance
-func NewStatusResponseMessage(block *types.Block) *StatusResponseMessage {
+//NewStatusResponseMessage construct get status response msg
+func NewStatusResponseMessage(blockHeader *types.BlockHeader) *StatusResponseMessage {
 	return &StatusResponseMessage{
-		Height:  block.Height,
-		RawHash: block.Hash().Byte32(),
+		Height:  blockHeader.Height,
+		RawHash: blockHeader.Hash().Byte32(),
 	}
 }
 
-// GetHash return hash pointer
+//GetHash get hash from msg
 func (m *StatusResponseMessage) GetHash() *bc.Hash {
 	hash := bc.NewHash(m.RawHash)
 	return &hash
 }
 
+//String convert msg to string
 func (m *StatusResponseMessage) String() string {
 	hash := m.GetHash()
 	return fmt.Sprintf("StatusResponseMessage{Height: %d, Hash: %s}", m.Height, hash.String())
+}
+
+//MineBlockMessage new mined block msg
+type MineBlockMessage struct {
+	RawBlock []byte
+}
+
+//NewMinedBlockMessage construct new mined block msg
+func NewMinedBlockMessage(block *types.Block) (*MineBlockMessage, error) {
+	rawBlock, err := block.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	return &MineBlockMessage{RawBlock: rawBlock}, nil
+}
+
+//GetMineBlock get mine block from msg
+func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
+	block := &types.Block{}
+	if err := block.UnmarshalText(m.RawBlock); err != nil {
+		return nil, err
+	}
+	return block, nil
+}
+
+//String convert msg to string
+func (m *MineBlockMessage) String() string {
+	return fmt.Sprintf("NewMineBlockMessage{Size: %d}", len(m.RawBlock))
 }

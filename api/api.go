@@ -12,14 +12,17 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/accesstoken"
-	"github.com/bytom/blockchain"
+	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/dashboard"
 	"github.com/bytom/errors"
+	"github.com/bytom/mining/cpuminer"
+	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/net/http/authn"
 	"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
+	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/wallet"
 )
@@ -72,12 +75,15 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // API is the scheduling center for server
 type API struct {
-	bcr          *blockchain.BlockchainReactor
-	wallet       *wallet.Wallet
-	accessTokens *accesstoken.CredentialStore
-	chain        *protocol.Chain
-	server       *http.Server
-	handler      http.Handler
+	sync          *netsync.SyncManager
+	wallet        *wallet.Wallet
+	accessTokens  *accesstoken.CredentialStore
+	chain         *protocol.Chain
+	server        *http.Server
+	handler       http.Handler
+	txFeedTracker *txfeed.Tracker
+	cpuMiner      *cpuminer.CPUMiner
+	miningPool    *miningpool.MiningPool
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -134,12 +140,15 @@ func (a *API) StartServer(address string) {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(bcr *blockchain.BlockchainReactor, wallet *wallet.Wallet, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore) *API {
+func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore) *API {
 	api := &API{
-		bcr:          bcr,
-		wallet:       wallet,
-		chain:        chain,
-		accessTokens: token,
+		sync:          sync,
+		wallet:        wallet,
+		chain:         chain,
+		accessTokens:  token,
+		txFeedTracker: txfeeds,
+		cpuMiner:      cpuMiner,
+		miningPool:    miningPool,
 	}
 	api.buildHandler()
 	api.initServer(config)
@@ -197,7 +206,6 @@ func (a *API) buildHandler() {
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/error", jsonHandler(a.walletError))
 
-	m.Handle("/info", jsonHandler(a.bcr.Info))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 
 	m.Handle("/create-access-token", jsonHandler(a.createAccessToken))

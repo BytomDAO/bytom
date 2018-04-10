@@ -6,17 +6,17 @@ import (
 	"io"
 )
 
-const (
-	TransactionStatusVersion = 1
-)
+const transactionStatusVersion = 1
 
+// NewTransactionStatus create a empty TransactionStatus struct
 func NewTransactionStatus() *TransactionStatus {
 	return &TransactionStatus{
-		Version:      TransactionStatusVersion,
+		Version:      transactionStatusVersion,
 		VerifyStatus: []*TxVerifyResult{},
 	}
 }
 
+// SetStatus set the tx status of given index
 func (ts *TransactionStatus) SetStatus(i int, gasOnly bool) error {
 	if i > len(ts.VerifyStatus) {
 		return errors.New("setStatus should be set one by one")
@@ -30,6 +30,7 @@ func (ts *TransactionStatus) SetStatus(i int, gasOnly bool) error {
 	return nil
 }
 
+// GetStatus get the tx status of given index
 func (ts *TransactionStatus) GetStatus(i int) (bool, error) {
 	if i >= len(ts.VerifyStatus) {
 		return false, errors.New("GetStatus is out of range")
@@ -38,6 +39,7 @@ func (ts *TransactionStatus) GetStatus(i int) (bool, error) {
 	return ts.VerifyStatus[i].StatusFail, nil
 }
 
+// WriteTo will write TxVerifyResult struct to io.Writer
 func (tvr *TxVerifyResult) WriteTo(w io.Writer) (int64, error) {
 	bytes, err := json.Marshal(tvr)
 	if err != nil {

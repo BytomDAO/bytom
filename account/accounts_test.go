@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
-	"testing"
 	"strings"
+	"testing"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
@@ -14,7 +14,6 @@ import (
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/testutil"
 )
 
@@ -127,7 +126,7 @@ func TestUpdateAccountTags(t *testing.T) {
 
 	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +223,7 @@ func mockAccountManager(t *testing.T) *Manager {
 
 	store := leveldb.NewStore(testDB)
 	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(bc.Hash{}, store, txPool)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,7 +11,6 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -28,8 +27,8 @@ func (m *Manager) DecodeSpendAction(data []byte) (txbuilder.Action, error) {
 type spendAction struct {
 	accounts *Manager
 	bc.AssetAmount
-	AccountID     string        `json:"account_id"`
-	ClientToken   *string       `json:"client_token"`
+	AccountID   string  `json:"account_id"`
+	ClientToken *string `json:"client_token"`
 }
 
 func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
@@ -100,7 +99,7 @@ type spendUTXOAction struct {
 	accounts *Manager
 	OutputID *bc.Hash `json:"output_id"`
 
-	ClientToken   *string       `json:"client_token"`
+	ClientToken *string `json:"client_token"`
 }
 
 func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
@@ -183,16 +182,6 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 	return txInput, sigInst, nil
 }
 
-//NewControlAction create new control action
-func (m *Manager) NewControlAction(amt bc.AssetAmount, accountID string, refData chainjson.Map) txbuilder.Action {
-	return &controlAction{
-		accounts:      m,
-		AssetAmount:   amt,
-		AccountID:     accountID,
-		ReferenceData: refData,
-	}
-}
-
 //DecodeControlAction unmarshal JSON-encoded data of control action
 func (m *Manager) DecodeControlAction(data []byte) (txbuilder.Action, error) {
 	a := &controlAction{accounts: m}
@@ -203,8 +192,7 @@ func (m *Manager) DecodeControlAction(data []byte) (txbuilder.Action, error) {
 type controlAction struct {
 	accounts *Manager
 	bc.AssetAmount
-	AccountID     string        `json:"account_id"`
-	ReferenceData chainjson.Map `json:"reference_data"`
+	AccountID string `json:"account_id"`
 }
 
 func (a *controlAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {

@@ -23,12 +23,20 @@ var (
 // assembles a fully signed tx, and stores the effects of
 // its changes on the UTXO set.
 func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
-	err := checkTxSighashCommitment(tx)
-	if err != nil {
+	if err := checkTxSighashCommitment(tx); err != nil {
 		return err
 	}
 
-	err = c.ValidateTx(tx)
+	// This part is use for prevent tx size  is 0
+	data, err := tx.TxData.MarshalText()
+	if err != nil {
+		return err
+	}
+	if err := tx.UnmarshalText(data); err != nil {
+		return err
+	}
+
+	_, err = c.ValidateTx(tx)
 	if errors.Root(err) == protocol.ErrBadTx {
 		return errors.Sub(ErrRejected, err)
 	}

@@ -9,7 +9,6 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
-	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
@@ -27,8 +26,7 @@ func MockTxPool() *protocol.TxPool {
 func MockChain(testDB dbm.DB) (*protocol.Chain, error) {
 	store := leveldb.NewStore(testDB)
 	txPool := MockTxPool()
-	genesisBlock := cfg.GenerateGenesisBlock()
-	chain, err := protocol.NewChain(genesisBlock.Hash(), store, txPool)
+	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		return nil, err
 	}

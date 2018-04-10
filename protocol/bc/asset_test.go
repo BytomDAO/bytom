@@ -15,9 +15,8 @@ func TestComputeAssetID(t *testing.T) {
 	unhashed = append(unhashed, 0x01)                                                      // length of issuanceScript
 	unhashed = append(unhashed, issuanceScript...)
 	unhashed = append(unhashed, EmptyStringHash.Bytes()...)
-	want := NewAssetID(sha3.Sum256(unhashed))
 
-	if assetID != want {
+	if want := NewAssetID(sha3.Sum256(unhashed)); assetID != want {
 		t.Errorf("asset id = %x want %x", assetID.Bytes(), want.Bytes())
 	}
 }
@@ -26,18 +25,10 @@ var assetIDSink AssetID
 
 func BenchmarkComputeAssetID(b *testing.B) {
 	var (
-		issuanceScript   = []byte{5}
+		issuanceScript = []byte{5}
 	)
 
 	for i := 0; i < b.N; i++ {
 		assetIDSink = ComputeAssetID(issuanceScript, 1, &EmptyStringHash)
 	}
-}
-
-func mustDecodeHash(s string) (h Hash) {
-	err := h.UnmarshalText([]byte(s))
-	if err != nil {
-		panic(err)
-	}
-	return h
 }

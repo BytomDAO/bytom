@@ -19,7 +19,7 @@ const (
 	InitialBlockSubsidy        = uint64(1470000000000000000)
 
 	// config for pow mining
-	PowMinBits            = uint64(2161727821138738707)
+	PowMinBits            = uint64(2305843009213861724)
 	BlocksPerRetarget     = uint64(1024)
 	TargetSecondsPerBlock = uint64(60)
 	SeedPerRetarget       = uint64(128)
@@ -34,7 +34,7 @@ const (
 	CoinbaseArbitrarySizeLimit = 128
 
 	VMGasRate        = int64(1000)
-	StorageGasRate   = int64(10)
+	StorageGasRate   = int64(0)
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
 

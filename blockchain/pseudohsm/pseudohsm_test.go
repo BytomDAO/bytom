@@ -2,8 +2,8 @@ package pseudohsm
 
 import (
 	"fmt"
-	"testing"
 	"strings"
+	"testing"
 
 	"github.com/bytom/errors"
 )

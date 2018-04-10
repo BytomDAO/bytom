@@ -5,18 +5,13 @@ type CoinbaseInput struct {
 	Arbitrary []byte
 }
 
-// IsIssuance is the interface function for return the struct type
-func (cb *CoinbaseInput) IsIssuance() bool { return false }
-
-// IsCoinbase is the interface function for return the struct type
-func (cb *CoinbaseInput) IsCoinbase() bool { return true }
-
 // NewCoinbaseInput create a new coinbase input struct
 func NewCoinbaseInput(arbitrary []byte) *TxInput {
 	return &TxInput{
-		AssetVersion:  1,
-		TypedInput: &CoinbaseInput{
-			Arbitrary: arbitrary,
-		},
+		AssetVersion: 1,
+		TypedInput:   &CoinbaseInput{Arbitrary: arbitrary},
 	}
 }
+
+// InputType is the interface function for return the input type
+func (cb *CoinbaseInput) InputType() uint8 { return CoinbaseInputType }

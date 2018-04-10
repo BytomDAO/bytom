@@ -4,18 +4,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/wallet"
-	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/wallet"
 )
-
-// return network infomation
-func (a *API) getNetInfo() Response {
-	return NewSuccessResponse(a.bcr.GetNodeInfo())
-}
 
 // return best block hash
 func (a *API) getBestBlockHash() Response {
@@ -170,16 +164,4 @@ func (a *API) getBlockTransactionsCountByHeight(height uint64) Response {
 func (a *API) getBlockCount() Response {
 	blockHeight := map[string]uint64{"block_count": a.chain.Height()}
 	return NewSuccessResponse(blockHeight)
-}
-
-// return is in mining or not
-func (a *API) isMining() Response {
-	IsMining := map[string]bool{"isMining": a.bcr.IsMining()}
-	return NewSuccessResponse(IsMining)
-}
-
-// return gasRate
-func (a *API) gasRate() Response {
-	gasrate := map[string]int64{"gasRate": consensus.VMGasRate}
-	return NewSuccessResponse(gasrate)
 }
