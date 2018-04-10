@@ -28,9 +28,9 @@ import (
 
 func TestInsertChain(t *testing.T) {
 	testNumber := 3
-	blockTxNumber := 100
+	blockTxNumber := 10
 	totalTxNumber := testNumber * blockTxNumber
-	otherAssetNum := 20
+	otherAssetNum := 2
 
 	chain, txs, err := GenerateChainData(totalTxNumber, otherAssetNum, "P2PKH")
 	if err != nil {
@@ -274,7 +274,7 @@ func AddTxBuilder(tplBuilder *txbuilder.TemplateBuilder, utxo *account.UTXO, sig
 
 func BuildTx(baseUtxo *account.UTXO, otherUtxos []*account.UTXO, signer *signers.Signer) (*txbuilder.Template, error) {
 	btmServiceFlag := false
-	if otherUtxos == nil {
+	if otherUtxos == nil || len(otherUtxos) == 0 {
 		btmServiceFlag = true
 	}
 
