@@ -309,7 +309,21 @@ func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
 func (ps *peerSet) BroadcastMinedBlock(block *types.Block) error {
 	msg, err := NewMinedBlockMessage(block)
 	if err != nil {
-		return errors.New("Failed construction block msg")
+		return errors.New("Failed construction mined block msg")
+	}
+	hash := block.Hash()
+	peers := ps.PeersWithoutBlock(&hash)
+	for _, peer := range peers {
+		ps.MarkBlock(peer.Key, &hash)
+		peer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	}
+	return nil
+}
+
+func (ps *peerSet) BroadcastNewBlock(block *types.Block) error {
+	msg, err := NewMinedBlockMessage(block)
+	if err != nil {
+		return errors.New("Failed construction new block msg")
 	}
 	hash := block.Hash()
 	peers := ps.PeersWithoutBlock(&hash)

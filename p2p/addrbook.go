@@ -577,7 +577,7 @@ func (a *AddrBook) addAddress(addr, src *NetAddress) {
 	bucket := a.calcNewBucket(addr, src)
 	a.addToNewBucket(ka, bucket)
 
-	log.Info("Added new address", "address", addr, "total", a.size())
+	log.Info("Added new address.", " address:", addr, " total", a.size())
 }
 
 // Make space in the new buckets by expiring the really bad entries.

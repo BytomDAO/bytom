@@ -29,6 +29,7 @@ var (
 	errPeerDropped     = errors.New("Peer dropped")
 	errCommAbnorm      = errors.New("Peer communication abnormality")
 	errScamPeer        = errors.New("Scam peer")
+	errGetBlockByHash  = errors.New("Scam peer")
 	errReqBlock        = errors.New("Request block error")
 )
 
@@ -102,6 +103,13 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 		}
 		num++
 	}
+	log.Info("Block sync complete. Broadcast new status chain height:", bk.chain.Height())
+	block, err := bk.chain.GetBlockByHash(bk.chain.BestBlockHash())
+	if err != nil {
+		log.Errorf("Failed on sync complete broadcast status get block %v", err)
+		return errGetBlockByHash
+	}
+	bk.peers.BroadcastNewBlock(block)
 	return nil
 }
 
