@@ -79,15 +79,11 @@ func TestCheckOutput(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
 			gotOk, err := txCtx.checkOutput(test.index, test.amount, test.assetID, test.vmVersion, test.code, false)
 			if g := errors.Root(err); g != test.wantErr {
-				t.Errorf("checkOutput(%v, %v, %x, %v, %x) err = %v, want %v",
-					test.index, test.amount, test.assetID, test.vmVersion, test.code,
-					g, test.wantErr)
+				t.Errorf("checkOutput(%v, %v, %x, %v, %x) err = %v, want %v", test.index, test.amount, test.assetID, test.vmVersion, test.code, g, test.wantErr)
 				return
 			}
 			if gotOk != test.wantOk {
-				t.Errorf("checkOutput(%v, %v, %x, %v, %x) ok = %t, want %v",
-					test.index, test.amount, test.assetID, test.vmVersion, test.code,
-					gotOk, test.wantOk)
+				t.Errorf("checkOutput(%v, %v, %x, %v, %x) ok = %t, want %v", test.index, test.amount, test.assetID, test.vmVersion, test.code, gotOk, test.wantOk)
 			}
 
 		})

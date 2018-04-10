@@ -90,6 +90,7 @@ type validationState struct {
 }
 
 var (
+	errBadTimeRange              = errors.New("tx time range is invalid")
 	errCoinbaseArbitraryOversize = errors.New("coinbase arbitrary size is larger than limit")
 	errGasCalculate              = errors.New("gas usage calculate got a math error")
 	errEmptyResults              = errors.New("transaction has no results")
@@ -444,7 +445,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-func validateStandardTx(tx *bc.Tx) error {
+func checkStandardTx(tx *bc.Tx) error {
 	for _, id := range tx.GasInputIDs {
 		spend, err := tx.Spend(id)
 		if err != nil {
@@ -461,17 +462,38 @@ func validateStandardTx(tx *bc.Tx) error {
 	}
 
 	for _, id := range tx.ResultIds {
-		output, err := tx.Output(*id)
-		if err != nil {
-			return err
+		e, ok := tx.Entries[*id]
+		if !ok {
+			return errors.Wrapf(bc.ErrMissingEntry, "id %x", id.Bytes())
 		}
 
+		output, ok := e.(*bc.Output)
+		if !ok {
+			continue
+		}
 		if *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
 		}
+
 		if !segwit.IsP2WScript(output.ControlProgram.Code) {
 			return errNotStandardTx
 		}
+	}
+	return nil
+}
+
+func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
+	if tx.TimeRange == 0 {
+		return nil
+	}
+
+	blockVal := block.Height
+	if tx.TimeRange > timeRangeGash {
+		blockVal = block.Timestamp
+	}
+
+	if tx.TimeRange < blockVal {
+		return errBadTimeRange
 	}
 	return nil
 }
@@ -481,26 +503,13 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	if block.Version == 1 && tx.Version != 1 {
 		return nil, errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
 	}
-
-	if tx.TimeRange > timeRangeGash && tx.TimeRange < block.Timestamp {
-		return nil, errors.New("transaction max timestamp is lower than block's")
-	} else if tx.TimeRange != 0 && tx.TimeRange < block.Height {
-		return nil, errors.New("transaction max block height is lower than block's")
-	}
-
-	if tx.TxHeader.SerializedSize > consensus.MaxTxSize || tx.TxHeader.SerializedSize == 0 {
+	if tx.SerializedSize == 0 {
 		return nil, errWrongTransactionSize
 	}
-
-	if len(tx.ResultIds) == 0 {
-		return nil, errors.New("tx didn't have any output")
+	if err := checkTimeRange(tx, block); err != nil {
+		return nil, err
 	}
-
-	if len(tx.GasInputIDs) == 0 && tx != block.Transactions[0] {
-		return nil, errors.New("tx didn't have gas input")
-	}
-
-	if err := validateStandardTx(tx); err != nil {
+	if err := checkStandardTx(tx); err != nil {
 		return nil, err
 	}
 
@@ -513,7 +522,5 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 		},
 		cache: make(map[bc.Hash]error),
 	}
-
-	err := checkValid(vs, tx.TxHeader)
-	return vs.gasStatus, err
+	return vs.gasStatus, checkValid(vs, tx.TxHeader)
 }
