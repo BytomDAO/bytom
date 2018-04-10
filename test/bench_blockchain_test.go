@@ -4,48 +4,61 @@ import (
 	"testing"
 )
 
-func BenchmarkInsertChain_CoinBaseTx_NoOtherAsset(b *testing.B) {
+func BenchmarkInsertChain_CoinBaseTx_NoAsset(b *testing.B) {
 	benchInsertChain(b, 0, 0, "")
 }
 
-func BenchmarkInsertChain_BtmTx_NoOtherAsset(b *testing.B) {
+func BenchmarkChain_BtmTx_NoAsset(b *testing.B) {
 	benchInsertChain(b, 1, 0, "")
 }
 
-func BenchmarkInsertChain_10BtmTx_NoOtherAsset(b *testing.B) {
+func BenchmarkChain_10BtmTx_NoAsset(b *testing.B) {
 	benchInsertChain(b, 10, 0, "")
 }
 
-func BenchmarkInsertChain_200BtmTx_NoOtherAsset(b *testing.B) {
+func BenchmarkChain_200BtmTx_NoAsset(b *testing.B) {
 	benchInsertChain(b, 200, 0, "")
 }
 
-func BenchmarkInsertChain_3000BtmTx_NoOtherAsset(b *testing.B) {
+func BenchmarkChain_3000BtmTx_NoAsset(b *testing.B) {
 	benchInsertChain(b, 3000, 0,"")
 }
 
-func BenchmarkInsertChain_BtmTx_OtherAsset(b *testing.B) {
+func BenchmarkChain_BtmTx_1Asset(b *testing.B) {
 	benchInsertChain(b, 1, 1,"")
 }
 
-func BenchmarkInsertChain_200BtmTx_OtherAsset(b *testing.B) {
+func BenchmarkChain_200BtmTx_10Asset(b *testing.B) {
 	benchInsertChain(b, 200, 10,"")
 }
 
-func BenchmarkInsertChain_1000BtmTx_OtherAsset(b *testing.B) {
+func BenchmarkChain_1000BtmTx_10Asset(b *testing.B) {
 	benchInsertChain(b, 1000, 10, "")
 }
 
-func BenchmarkInsertChain_BtmTx_NoOtherAsset_P2PKH(b *testing.B) {
-	benchInsertChain(b, 10, 0, "P2PKH")
+// standard Transaction
+func BenchmarkChain_BtmTx_NoAsset_P2PKH(b *testing.B) {
+	benchInsertChain(b, 1000, 0, "P2PKH")
 }
 
-func BenchmarkInsertChain_BtmTx_NoOtherAsset_P2SH(b *testing.B) {
-	benchInsertChain(b, 10, 0, "P2SH")
+func BenchmarkChain_tmTx_10Asset_P2PKH(b *testing.B) {
+	benchInsertChain(b, 300, 100, "P2PKH")
 }
 
-func BenchmarkInsertChain_BtmTx_NoOtherAsset_MutiSign(b *testing.B) {
-	benchInsertChain(b, 10, 0, "MutiSign")
+func BenchmarkChain_BtmTx_NoAsset_P2SH(b *testing.B) {
+	benchInsertChain(b, 1000, 0, "P2SH")
+}
+
+func BenchmarkChain_BtmTx_10Asset_P2SH(b *testing.B) {
+	benchInsertChain(b, 1000, 10, "P2SH")
+}
+
+func BenchmarkChain_BtmTx_NoAsset_MutiSign(b *testing.B) {
+	benchInsertChain(b, 1000, 0, "MutiSign")
+}
+
+func BenchmarkChain_BtmTx_10Asset_MutiSign(b *testing.B) {
+	benchInsertChain(b, 1000, 10, "MutiSign")
 }
 
 func benchInsertChain(b *testing.B, blockTxNumber int, otherAssetNum int, txType string) {
