@@ -3,7 +3,7 @@ package test
 import (
 	"fmt"
 	"io/ioutil"
-	//"os"
+	"os"
 	"testing"
 	"time"
 	"errors"
@@ -32,27 +32,27 @@ func TestInsertChain(t *testing.T) {
 	totalTxNumber := testNumber * blockTxNumber
 	otherAssetNum := 2
 
-	chain, txs, err := GenerateChainData(totalTxNumber, otherAssetNum, "P2PKH")
+	chain, txs, txPool, err := GenerateChainData(totalTxNumber, otherAssetNum, "P2PKH")
 	if err != nil {
 		t.Fatal("GenerateChainData err:", err)
 	}
 
 	for i := 0; i < testNumber; i++ {
 		testTxs := txs[blockTxNumber*i : blockTxNumber*(i+1)]
-		if err := InsertChain(chain, testTxs); err != nil {
+		if err := InsertChain(chain, txPool, testTxs); err != nil {
 			t.Fatal("Failed to insert block into chain:", err)
 		}
 	}
 }
 
-func GenerateChainData(txNumber, otherAssetNum int, txType string) (*protocol.Chain, []*types.Tx, error) {
+func GenerateChainData(txNumber, otherAssetNum int, txType string) (*protocol.Chain, []*types.Tx, *protocol.TxPool, error) {
 	dirPath, err := ioutil.TempDir(".", "testDB")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	// os.RemoveAll(dirPath)
+	defer os.RemoveAll(dirPath)
 
 	// generate transactions
 	txs := []*types.Tx{}
@@ -60,22 +60,22 @@ func GenerateChainData(txNumber, otherAssetNum int, txType string) (*protocol.Ch
 	case "P2PKH":
 		txs, err = MockTxsP2PKH(dirPath, testDB, txNumber, otherAssetNum)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	case "P2SH":
 		txs, err = MockTxsP2SH(dirPath, testDB, txNumber, otherAssetNum)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	case "MutiSign":
 		txs, err = MockTxsMutiSign(dirPath, testDB, txNumber, otherAssetNum)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	default:
 		txs, err = CreateTxbyNum(txNumber, otherAssetNum)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -89,25 +89,27 @@ func GenerateChainData(txNumber, otherAssetNum int, txType string) (*protocol.Ch
 	}
 
 	if err := SetUtxoView(testDB, utxoView); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	txPool := protocol.NewTxPool()
 	store := leveldb.NewStore(testDB)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return chain, txs, nil
+	go processNewTxch(txPool)
+
+	return chain, txs, txPool, nil
 }
 
-func InsertChain(chain *protocol.Chain, txs []*types.Tx) error {
+func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx) error {
 	if err := InsertTxPool(chain, txs); err != nil {
 		return err
 	}
 
-	block, err := CreateBlock(chain)
+	block, err := CreateBlock(chain, txPool)
 	if err != nil {
 		return err
 	}
@@ -145,10 +147,8 @@ func InsertTxPool(chain *protocol.Chain, txs []*types.Tx) error {
 	return nil
 }
 
-func CreateBlock(chain *protocol.Chain) (b *types.Block, err error) {
-	txpool := chain.GetTxPool()
-	go processNewTxch(txpool)
-	return mining.NewBlockTemplate(chain, txpool, nil)
+func CreateBlock(chain *protocol.Chain, txPool *protocol.TxPool) (b *types.Block, err error) {
+	return mining.NewBlockTemplate(chain, txPool, nil)
 }
 
 func processNewTxch(txPool *protocol.TxPool) {

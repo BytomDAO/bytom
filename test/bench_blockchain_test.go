@@ -66,7 +66,7 @@ func benchInsertChain(b *testing.B, blockTxNumber int, otherAssetNum int, txType
 	totalTxNumber := testNumber * blockTxNumber
 
 	// Generate a chain test data.
-	chain, txs, err := GenerateChainData(totalTxNumber, otherAssetNum, txType)
+	chain, txs, txPool, err := GenerateChainData(totalTxNumber, otherAssetNum, txType)
 	if err != nil {
 		b.Fatal("GenerateChainData err:", err)
 	}
@@ -76,7 +76,7 @@ func benchInsertChain(b *testing.B, blockTxNumber int, otherAssetNum int, txType
 	b.ResetTimer()
 	for i := 0; i < testNumber; i++ {
 		testTxs := txs[blockTxNumber*i : blockTxNumber*(i+1)]
-		if err := InsertChain(chain, testTxs); err != nil {
+		if err := InsertChain(chain, txPool, testTxs); err != nil {
 			b.Fatal("Failed to insert block into chain:", err)
 		}
 	}
