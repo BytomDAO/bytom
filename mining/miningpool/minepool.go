@@ -59,7 +59,7 @@ func (m *MiningPool) blockUpdater() {
 
 		case submitMsg := <-m.submitCh:
 			err := m.submitWork(submitMsg.blockHeader)
-			if err != nil {
+			if err == nil {
 				m.generateBlock()
 			}
 			submitMsg.reply <- err
@@ -116,9 +116,8 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 	if err != nil {
 		return err
 	}
-
 	if isOrphan {
-		log.Warning("SubmitWork is orphan")
+		return errors.New("submit result is orphan")
 	}
 
 	blockHash := bh.Hash()

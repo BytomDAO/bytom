@@ -108,12 +108,12 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 }) Response {
 	accountID := ins.AccountID
 	if ins.AccountAlias != "" {
-		account, err := a.wallet.AccountMgr.FindByAlias(ctx, ins.AccountAlias)
+		acc, err := a.wallet.AccountMgr.FindByAlias(ctx, ins.AccountAlias)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
 
-		accountID = account.ID
+		accountID = acc.ID
 	}
 
 	cps, err := a.wallet.AccountMgr.ListControlProgram()
@@ -121,7 +121,7 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	addresses := []*addressResp{}
+	var addresses []*addressResp
 	for _, cp := range cps {
 		if cp.Address == "" || (len(accountID) != 0 && strings.Compare(accountID, cp.AccountID) != 0) {
 			continue
