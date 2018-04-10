@@ -27,18 +27,16 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 		return err
 	}
 
-	// This paret is use for prevent tx size  is 0
-	if tx.SerializedSize == 0 {
-		data, err := tx.TxData.MarshalText()
-		if err != nil {
-			return err
-		}
-		if err := tx.UnmarshalText(data); err != nil {
-			return err
-		}
+	// This part is use for prevent tx size  is 0
+	data, err := tx.TxData.MarshalText()
+	if err != nil {
+		return err
+	}
+	if err := tx.UnmarshalText(data); err != nil {
+		return err
 	}
 
-	_, err := c.ValidateTx(tx)
+	_, err = c.ValidateTx(tx)
 	if errors.Root(err) == protocol.ErrBadTx {
 		return errors.Sub(ErrRejected, err)
 	}
