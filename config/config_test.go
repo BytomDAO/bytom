@@ -15,10 +15,8 @@ func TestDefaultConfig(t *testing.T) {
 
 	// check the root dir stuff...
 	cfg.SetRoot("/foo")
-	cfg.Genesis = "bar"
 	cfg.DBPath = "/opt/data"
 
-	assert.Equal("/foo/bar", cfg.GenesisFile())
 	assert.Equal("/opt/data", cfg.DBDir())
 
 }
