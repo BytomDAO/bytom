@@ -112,15 +112,6 @@ func validateCoinbase(tx *bc.Tx, value uint64) error {
 	if output.Source.Value.Amount != value {
 		return errors.Wrap(errWrongCoinbaseTransaction, "dismatch output value")
 	}
-
-	inputEntry := tx.Entries[tx.InputIDs[0]]
-	input, ok := inputEntry.(*bc.Coinbase)
-	if !ok {
-		return errors.Wrap(errWrongCoinbaseTransaction, "decode input")
-	}
-	if input.Arbitrary != nil && len(input.Arbitrary) > consensus.CoinbaseArbitrarySizeLimit {
-		return errors.Wrap(errWrongCoinbaseTransaction, "coinbase arbitrary is over size")
-	}
 	return nil
 }
 
