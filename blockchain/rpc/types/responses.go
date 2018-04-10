@@ -4,21 +4,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytom/p2p"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/types"
 	"github.com/tendermint/go-crypto"
 	"github.com/tendermint/go-wire/data"
+
+	"github.com/bytom/p2p"
+	"github.com/bytom/protocol/bc"
 )
 
 type BlockNonce [8]byte
 
 type ResultBlockchainInfo struct {
 	LastHeight uint64 `json:"last_height"`
-}
-
-type ResultGenesis struct {
-	Genesis *types.GenesisDoc `json:"genesis"`
 }
 
 type ResultBlock struct {

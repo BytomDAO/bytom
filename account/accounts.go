@@ -455,7 +455,7 @@ func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 
 // ListControlProgram return all the local control program
 func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
-	cps := []*CtrlProgram{}
+	var cps []*CtrlProgram
 	cpIter := m.db.IteratorPrefix([]byte(accountCPPrefix))
 	defer cpIter.Release()
 
