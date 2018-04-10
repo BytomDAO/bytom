@@ -50,6 +50,12 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 		return
 	}
 
+	byteData, err := txData.MarshalText()
+	if err != nil {
+		return
+	}
+	txData.SerializedSize = uint64(len(byteData))
+
 	tx = &types.Tx{
 		TxData: *txData,
 		Tx:     types.MapTx(txData),
