@@ -99,15 +99,12 @@ var (
 	errMismatchedReference       = errors.New("mismatched reference")
 	errMismatchedValue           = errors.New("mismatched value")
 	errMissingField              = errors.New("missing required field")
-	errNoGas                     = errors.New("no gas input")
 	errNoSource                  = errors.New("no source for value")
-	errNonemptyExtHash           = errors.New("non-empty extension hash")
 	errOverflow                  = errors.New("arithmetic overflow/underflow")
 	errOverGasCredit             = errors.New("all gas credit has been spend")
 	errPosition                  = errors.New("invalid source or destination position")
 	errTxVersion                 = errors.New("invalid transaction version")
 	errUnbalanced                = errors.New("unbalanced")
-	errUntimelyTransaction       = errors.New("block timestamp outside transaction time range")
 	errWrongTransactionSize      = errors.New("transaction size is not in vaild range")
 	errWrongCoinbaseTransaction  = errors.New("wrong coinbase transaction")
 	errWrongCoinbaseAsset        = errors.New("wrong coinbase asset id")
@@ -486,27 +483,26 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
+	gasStatus := &GasState{GasVaild: false}
 	if block.Version == 1 && tx.Version != 1 {
-		return nil, errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
+		return gasStatus, errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
 	}
 	if tx.SerializedSize == 0 {
-		return nil, errWrongTransactionSize
+		return gasStatus, errWrongTransactionSize
 	}
 	if err := checkTimeRange(tx, block); err != nil {
-		return nil, err
+		return gasStatus, err
 	}
 	if err := checkStandardTx(tx); err != nil {
-		return nil, err
+		return gasStatus, err
 	}
 
 	vs := &validationState{
-		block:   block,
-		tx:      tx,
-		entryID: tx.ID,
-		gasStatus: &GasState{
-			GasVaild: false,
-		},
-		cache: make(map[bc.Hash]error),
+		block:     block,
+		tx:        tx,
+		entryID:   tx.ID,
+		gasStatus: gasStatus,
+		cache:     make(map[bc.Hash]error),
 	}
 	return vs.gasStatus, checkValid(vs, tx.TxHeader)
 }
