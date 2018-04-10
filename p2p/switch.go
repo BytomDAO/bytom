@@ -390,7 +390,6 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress, persistent bool) (*Peer,
 	}
 	log.WithFields(log.Fields{
 		"address": addr,
-		"error":   err,
 	}).Info("Dialed and added peer")
 	return peer, nil
 }

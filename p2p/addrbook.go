@@ -168,7 +168,7 @@ func (a *AddrBook) AddAddress(addr *NetAddress, src *NetAddress) {
 	log.WithFields(log.Fields{
 		"addr": addr,
 		"src":  src,
-	}).Info("Add address to book")
+	}).Debug("Add address to book")
 	a.addAddress(addr, src)
 }
 
