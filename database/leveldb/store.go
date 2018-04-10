@@ -123,26 +123,26 @@ func (s *Store) GetStoreStatus() protocol.BlockStoreStateJSON {
 	return loadBlockStoreStateJSON(s.db)
 }
 
-func (s *Store) LoadBlockIndex() (*protocol.BlockIndex, error) {
-	blockIndex := protocol.NewBlockIndex()
+func (s *Store) LoadBlockIndex() (*state.BlockIndex, error) {
+	blockIndex := state.NewBlockIndex()
 	bhIter := s.db.IteratorPrefix(blockHeaderPrefix)
 	defer bhIter.Release()
 
-	var lastNode *protocol.BlockNode
+	var lastNode *state.BlockNode
 	for bhIter.Next() {
 		bh := &types.BlockHeader{}
 		if err := bh.UnmarshalText(bhIter.Value()); err != nil {
 			return nil, err
 		}
 
-		var parent *protocol.BlockNode
+		var parent *state.BlockNode
 		if lastNode == nil || lastNode.Hash == bh.PreviousBlockHash {
 			parent = lastNode
 		} else {
 			parent = blockIndex.GetNode(&bh.PreviousBlockHash)
 		}
 
-		node, err := protocol.NewBlockNode(bh, parent)
+		node, err := state.NewBlockNode(bh, parent)
 		if err != nil {
 			return nil, err
 		}
