@@ -226,3 +226,8 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 
 	return ch
 }
+
+// GetTxPool returns chain txPool
+func (c *Chain) GetTxPool() *TxPool {
+	return c.txPool
+}
