@@ -7,6 +7,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
+	"github.com/bytom/protocol/validation"
 )
 
 var (
@@ -127,7 +128,8 @@ func (c *Chain) reorganizeChain(block *types.Block) error {
 // SaveBlock will validate and save block into storage
 func (c *Chain) SaveBlock(block *types.Block) error {
 	blockEnts := types.MapBlock(block)
-	if err := c.validateBlock(blockEnts); err != nil {
+	parent := c.index.GetNode(&block.PreviousBlockHash)
+	if err := validation.ValidateBlock(blockEnts, parent); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
 
@@ -137,8 +139,7 @@ func (c *Chain) SaveBlock(block *types.Block) error {
 	log.WithFields(log.Fields{"height": block.Height, "hash": blockEnts.ID.String()}).Info("Block saved on disk")
 
 	c.orphanManage.Delete(&blockEnts.ID)
-	parent := c.index.GetNode(&block.PreviousBlockHash)
-	node, err := NewBlockNode(&block.BlockHeader, parent)
+	node, err := state.NewBlockNode(&block.BlockHeader, parent)
 	if err != nil {
 		return err
 	}
@@ -222,12 +223,12 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	bestBlockHash := bestBlock.Hash()
 	bestNode := c.index.GetNode(&bestBlockHash)
 
-	if bestNode.parent == bestMainChain {
+	if bestNode.Parent == bestMainChain {
 		log.WithField("hash", blockHash.String()).Debug("Start to append block to the tail of mainchain")
 		return false, c.connectBlock(bestBlock)
 	}
 
-	if bestNode.height > bestMainChain.height && bestNode.workSum.Cmp(bestMainChain.workSum) >= 0 {
+	if bestNode.Height > bestMainChain.Height && bestNode.WorkSum.Cmp(bestMainChain.WorkSum) >= 0 {
 		log.WithField("hash", blockHash.String()).Debug("Start to reorganize mainchain")
 		return false, c.reorganizeChain(bestBlock)
 	}

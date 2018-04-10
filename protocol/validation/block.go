@@ -1,4 +1,4 @@
-package protocol
+package validation
 
 import (
 	"time"
@@ -7,33 +7,28 @@ import (
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/validation"
+	"github.com/bytom/protocol/state"
 )
 
 var (
-	errBadTimestamp             = errors.New("block timestamp is not in the vaild range")
-	errBadBits                  = errors.New("block bits is invaild")
-	errMismatchedBlock          = errors.New("mismatched block")
-	errMismatchedMerkleRoot     = errors.New("mismatched merkle root")
-	errMismatchedTxStatus       = errors.New("mismatched transaction status")
-	errMismatchedValue          = errors.New("mismatched value")
-	errMisorderedBlockHeight    = errors.New("misordered block height")
-	errMisorderedBlockTime      = errors.New("misordered block time")
-	errNoPrevBlock              = errors.New("no previous block")
-	errOverflow                 = errors.New("arithmetic overflow/underflow")
-	errOverBlockLimit           = errors.New("block's gas is over the limit")
-	errWorkProof                = errors.New("invalid difficulty proof of work")
-	errVersionRegression        = errors.New("version regression")
-	errWrongBlockSize           = errors.New("block size is too big")
-	errWrongTransactionStatus   = errors.New("transaction status is wrong")
-	errWrongCoinbaseTransaction = errors.New("wrong coinbase transaction")
-	errNotStandardTx            = errors.New("gas transaction is not standard transaction")
+	errBadTimestamp           = errors.New("block timestamp is not in the vaild range")
+	errBadBits                = errors.New("block bits is invaild")
+	errMismatchedBlock        = errors.New("mismatched block")
+	errMismatchedMerkleRoot   = errors.New("mismatched merkle root")
+	errMismatchedTxStatus     = errors.New("mismatched transaction status")
+	errMisorderedBlockHeight  = errors.New("misordered block height")
+	errMisorderedBlockTime    = errors.New("misordered block time")
+	errNoPrevBlock            = errors.New("no previous block")
+	errOverBlockLimit         = errors.New("block's gas is over the limit")
+	errWorkProof              = errors.New("invalid difficulty proof of work")
+	errVersionRegression      = errors.New("version regression")
+	errWrongBlockSize         = errors.New("block size is too big")
+	errWrongTransactionStatus = errors.New("transaction status is wrong")
 )
 
 // ValidateBlock validates a block and the transactions within.
 // It does not run the consensus program; for that, see ValidateBlockSig.
-func (c *Chain) validateBlock(b *bc.Block) error {
-	parent := c.index.GetNode(b.PreviousBlockId)
+func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 	if parent == nil {
 		return errors.WithDetailf(errNoPrevBlock, "height %d", b.Height)
 	}
@@ -49,7 +44,7 @@ func (c *Chain) validateBlock(b *bc.Block) error {
 	coinbaseValue := consensus.BlockSubsidy(b.BlockHeader.Height)
 	gasUsed := uint64(0)
 	for i, tx := range b.Transactions {
-		gasStatus, err := validation.ValidateTx(tx, b)
+		gasStatus, err := ValidateTx(tx, b)
 		gasOnlyTx := false
 		if err != nil {
 			if gasStatus == nil || !gasStatus.GasVaild {
@@ -91,7 +86,7 @@ func (c *Chain) validateBlock(b *bc.Block) error {
 	return nil
 }
 
-func validateBlockTime(b *bc.Block, parent *BlockNode) error {
+func validateBlockTime(b *bc.Block, parent *state.BlockNode) error {
 	if b.Timestamp > uint64(time.Now().Unix())+consensus.MaxTimeOffsetSeconds {
 		return errBadTimestamp
 	}
@@ -115,12 +110,12 @@ func validateCoinbase(tx *bc.Tx, value uint64) error {
 	return nil
 }
 
-func validateBlockAgainstPrev(b *bc.Block, parent *BlockNode) error {
-	if b.Version < parent.version {
-		return errors.WithDetailf(errVersionRegression, "previous block verson %d, current block version %d", parent.version, b.Version)
+func validateBlockAgainstPrev(b *bc.Block, parent *state.BlockNode) error {
+	if b.Version < parent.Version {
+		return errors.WithDetailf(errVersionRegression, "previous block verson %d, current block version %d", parent.Version, b.Version)
 	}
-	if b.Height != parent.height+1 {
-		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", parent.height, b.Height)
+	if b.Height != parent.Height+1 {
+		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", parent.Height, b.Height)
 	}
 	if b.Bits != parent.CalcNextBits() {
 		return errBadBits

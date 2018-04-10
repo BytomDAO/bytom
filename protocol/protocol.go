@@ -30,7 +30,7 @@ var (
 // validation logic from package validation to decide what
 // objects can be safely stored.
 type Chain struct {
-	index          *BlockIndex
+	index          *state.BlockIndex
 	orphanManage   *OrphanManage
 	txPool         *TxPool
 	processBlockCh chan *processBlockMsg
@@ -70,8 +70,8 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 
 	bestNode := c.index.GetNode(c.state.hash)
 	c.index.SetMainChain(bestNode)
-	c.state.height = bestNode.height
-	c.state.workSum = bestNode.workSum
+	c.state.height = bestNode.Height
+	c.state.workSum = bestNode.WorkSum
 	go c.blockProcesser()
 	return c, nil
 }
@@ -124,7 +124,7 @@ func (c *Chain) InMainChain(hash bc.Hash) bool {
 // BestBlock returns the chain tail block
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
 	node := c.index.BestNode()
-	return node.blockHeader()
+	return node.BlockHeader()
 }
 
 // GetUtxo try to find the utxo status in db
@@ -173,8 +173,8 @@ func (c *Chain) setState(block *types.Block, view *state.UtxoViewpoint) error {
 	node := c.index.GetNode(&blockHash)
 	c.index.SetMainChain(node)
 	c.state.hash = &blockHash
-	c.state.height = node.height
-	c.state.workSum = node.workSum
+	c.state.height = node.Height
+	c.state.workSum = node.WorkSum
 
 	log.WithFields(log.Fields{
 		"height":  c.state.height,
