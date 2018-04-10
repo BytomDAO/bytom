@@ -59,7 +59,7 @@ func (m *MiningPool) blockUpdater() {
 
 		case submitMsg := <-m.submitCh:
 			err := m.submitWork(submitMsg.blockHeader)
-			if err != nil {
+			if err == nil {
 				m.generateBlock()
 			}
 			submitMsg.reply <- err
