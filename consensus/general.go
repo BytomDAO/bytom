@@ -8,8 +8,7 @@ import (
 
 //consensus variables
 const (
-	// define the Max transaction size and Max block size
-	MaxTxSize   = uint64(1048576)
+	// Max gas that one block contains
 	MaxBlockGas = uint64(100000000)
 
 	//config parameter for coinbase reward
@@ -34,7 +33,7 @@ const (
 	CoinbaseArbitrarySizeLimit = 128
 
 	VMGasRate        = int64(1000)
-	StorageGasRate   = int64(0)
+	StorageGasRate   = int64(5)
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
 

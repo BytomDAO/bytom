@@ -87,7 +87,7 @@ func (sm *SyncManager) synchronise() {
 	if peer == nil {
 		return
 	}
-	if bestHeight > sm.chain.Height() {
+	if bestHeight > sm.chain.BestBlockHeight() {
 		sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
 	}
 }

@@ -66,11 +66,11 @@ func (bk *blockKeeper) AddTx(tx *types.Tx, peerID string) {
 
 func (bk *blockKeeper) IsCaughtUp() bool {
 	_, height := bk.peers.BestPeer()
-	return bk.chain.Height() < height
+	return bk.chain.BestBlockHeight() < height
 }
 
 func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) error {
-	num := bk.chain.Height() + 1
+	num := bk.chain.BestBlockHeight() + 1
 	currentHash := bk.chain.BestBlockHash()
 	orphanNum := uint64(0)
 	reqNum := uint64(0)
@@ -106,7 +106,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 		num++
 	}
 	bestHash := bk.chain.BestBlockHash()
-	log.Info("Block sync complete. height:", bk.chain.Height(), " hash:", bestHash)
+	log.Info("Block sync complete. height:", bk.chain.BestBlockHeight(), " hash:", bestHash)
 	if strings.Compare(currentHash.String(), bestHash.String()) != 0 {
 		log.Info("Broadcast new chain status.")
 
