@@ -21,8 +21,6 @@ var defaultTxTTL = 5 * time.Minute
 func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
 	var decoder func([]byte) (txbuilder.Action, error)
 	switch action {
-	case "control_account":
-		decoder = a.wallet.AccountMgr.DecodeControlAction
 	case "control_address":
 		decoder = txbuilder.DecodeControlAddressAction
 	case "control_program":
