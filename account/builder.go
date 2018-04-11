@@ -182,41 +182,6 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 	return txInput, sigInst, nil
 }
 
-//DecodeControlAction unmarshal JSON-encoded data of control action
-func (m *Manager) DecodeControlAction(data []byte) (txbuilder.Action, error) {
-	a := &controlAction{accounts: m}
-	err := json.Unmarshal(data, a)
-	return a, err
-}
-
-type controlAction struct {
-	accounts *Manager
-	bc.AssetAmount
-	AccountID string `json:"account_id"`
-}
-
-func (a *controlAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
-	var missing []string
-	if a.AccountID == "" {
-		missing = append(missing, "account_id")
-	}
-	if a.AssetId.IsZero() {
-		missing = append(missing, "asset_id")
-	}
-	if len(missing) > 0 {
-		return txbuilder.MissingFieldsError(missing...)
-	}
-
-	// Produce a control program, but don't insert it into the database yet.
-	acp, err := a.accounts.CreateAddress(ctx, a.AccountID, false)
-	if err != nil {
-		return err
-	}
-	a.accounts.insertControlProgramDelayed(ctx, b, acp)
-
-	return b.AddOutput(types.NewTxOutput(*a.AssetId, a.Amount, acp.ControlProgram))
-}
-
 // insertControlProgramDelayed takes a template builder and an account
 // control program that hasn't been inserted to the database yet. It
 // registers callbacks on the TemplateBuilder so that all of the template's

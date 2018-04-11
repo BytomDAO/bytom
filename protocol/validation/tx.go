@@ -46,6 +46,10 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 }
 
 func (g *GasState) setGasVaild() error {
+	if g.GasVaild {
+		return nil
+	}
+
 	var ok bool
 	if g.GasLeft, ok = checked.SubInt64(g.GasLeft, g.StorageGas); !ok || g.GasLeft < 0 {
 		return errors.Wrap(errGasCalculate, "setGasVaild calc gasLeft")

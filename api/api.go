@@ -231,6 +231,7 @@ func (a *API) buildHandler() {
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/get-work", jsonHandler(a.getWork))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
+	m.Handle("/set-mining", jsonHandler(a.setMining))
 
 	handler := latencyHandler(m, walletEnable)
 	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux
