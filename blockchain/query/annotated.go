@@ -29,7 +29,7 @@ type AnnotatedInput struct {
 	AssetDefinition *json.RawMessage   `json:"asset_definition"`
 	Amount          uint64             `json:"amount"`
 	IssuanceProgram chainjson.HexBytes `json:"issuance_program,omitempty"`
-	ControlProgram  chainjson.HexBytes `json:"control_program"`
+	ControlProgram  chainjson.HexBytes `json:"control_program,omitempty"`
 	Address         string             `json:"address,omitempty"`
 	SpentOutputID   *bc.Hash           `json:"spent_output_id,omitempty"`
 	AccountID       string             `json:"account_id,omitempty"`
