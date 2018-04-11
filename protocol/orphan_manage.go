@@ -81,6 +81,7 @@ func (o *OrphanManage) Get(hash *bc.Hash) (*types.Block, bool) {
 	return block, ok
 }
 
+// GetPrevOrphans return the list of child orphans
 func (o *OrphanManage) GetPrevOrphans(hash *bc.Hash) ([]*bc.Hash, bool) {
 	o.mtx.RLock()
 	prevOrphans, ok := o.prevOrphans[*hash]

@@ -188,6 +188,7 @@ type processBlockMsg struct {
 	reply chan processBlockResponse
 }
 
+// ProcessBlock is the entry for chain update
 func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
 	reply := make(chan processBlockResponse, 1)
 	c.processBlockCh <- &processBlockMsg{block: block, reply: reply}

@@ -22,7 +22,7 @@ type Store interface {
 	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error
 }
 
-// BlockStoreStateJSON represents the core's db status
+// BlockStoreState represents the core's db status
 type BlockStoreState struct {
 	Height uint64
 	Hash   *bc.Hash

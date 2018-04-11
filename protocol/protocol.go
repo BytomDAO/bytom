@@ -53,8 +53,8 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 		return nil, err
 	}
 
-	bestNode := c.index.GetNode(storeStatus.Hash)
-	c.index.SetMainChain(bestNode)
+	c.bestNode = c.index.GetNode(storeStatus.Hash)
+	c.index.SetMainChain(c.bestNode)
 	go c.blockProcesser()
 	return c, nil
 }
@@ -62,7 +62,7 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 func (c *Chain) initChainStatus() error {
 	genesisBlock := config.GenerateGenesisBlock()
 	txStatus := bc.NewTransactionStatus()
-	for i, _ := range genesisBlock.Transactions {
+	for i := range genesisBlock.Transactions {
 		txStatus.SetStatus(i, false)
 	}
 
@@ -83,7 +83,7 @@ func (c *Chain) initChainStatus() error {
 	return c.store.SaveChainStatus(node, utxoView)
 }
 
-// Height returns the current height of the blockchain.
+// BestBlockHeight returns the current height of the blockchain.
 func (c *Chain) BestBlockHeight() uint64 {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
@@ -97,7 +97,7 @@ func (c *Chain) BestBlockHash() *bc.Hash {
 	return &c.bestNode.Hash
 }
 
-// BestBlock returns the chain tail block
+// BestBlockHeader returns the chain tail block
 func (c *Chain) BestBlockHeader() *types.BlockHeader {
 	node := c.index.BestNode()
 	return node.BlockHeader()
