@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -66,4 +67,30 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 
 func (a *API) SubmitWork(bh *types.BlockHeader) error {
 	return a.miningPool.SubmitWork(bh)
+}
+
+func (a *API) setMining(in struct {
+	IsMining bool `json:"is_mining"`
+}) Response {
+	if in.IsMining {
+		return a.StartMining()
+	} else {
+		return a.StopMining()
+	}
+}
+
+func (a *API) StartMining() Response {
+	if a.cpuMiner.IsMining() {
+		return NewErrorResponse(errors.New("Mining is already running"))
+	}
+	a.cpuMiner.Start()
+	return NewSuccessResponse("")
+}
+
+func (a *API) StopMining() Response {
+	a.cpuMiner.Stop()
+	if a.cpuMiner.IsMining() {
+		return NewErrorResponse(errors.New("Failed to stop mining"))
+	}
+	return NewSuccessResponse("")
 }

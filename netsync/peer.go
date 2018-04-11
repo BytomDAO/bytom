@@ -334,6 +334,10 @@ func (ps *peerSet) BroadcastNewBlock(block *types.Block) error {
 	return nil
 }
 
+func (ps *peerSet) BroadcastNewStatus(block *types.Block) error {
+	return ps.BroadcastMinedBlock(block)
+}
+
 func (ps *peerSet) BroadcastTx(tx *types.Tx) error {
 	msg, err := NewTransactionNotifyMessage(tx)
 	if err != nil {
