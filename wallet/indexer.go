@@ -386,12 +386,7 @@ transactionLoop:
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
-				accountCP := account.CtrlProgram{}
-				if err := json.Unmarshal(bytes, &accountCP); err != nil {
-					continue transactionLoop
-				}
-
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos, accountCP.Address))
+				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
 		}
@@ -402,7 +397,7 @@ transactionLoop:
 				continue
 			}
 			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos, ""))
+				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
 		}

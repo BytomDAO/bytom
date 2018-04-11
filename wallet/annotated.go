@@ -169,7 +169,7 @@ func isValidJSON(b []byte) bool {
 	return err == nil
 }
 
-func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int, address string) *query.AnnotatedTx {
+func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
 		Timestamp:              b.Timestamp,
@@ -182,16 +182,16 @@ func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, 
 		StatusFail:             statusFail,
 	}
 	for i := range orig.Inputs {
-		tx.Inputs = append(tx.Inputs, BuildAnnotatedInput(orig, uint32(i)))
+		tx.Inputs = append(tx.Inputs, w.BuildAnnotatedInput(orig, uint32(i)))
 	}
 	for i := range orig.Outputs {
-		tx.Outputs = append(tx.Outputs, BuildAnnotatedOutput(orig, i, address))
+		tx.Outputs = append(tx.Outputs, w.BuildAnnotatedOutput(orig, i))
 	}
 	return tx
 }
 
 // BuildAnnotatedInput build the annotated input.
-func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
+func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
 		AssetDefinition: &emptyJSONObject,
@@ -207,7 +207,7 @@ func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	case *bc.Spend:
 		in.Type = "spend"
 		in.ControlProgram = orig.ControlProgram()
-		in.Address = buildAddressFromControlProgram(in.ControlProgram)
+		in.Address = w.getAddressFromControlProgram(in.ControlProgram)
 		in.SpentOutputID = e.SpentOutputId
 	case *bc.Issuance:
 		in.Type = "issue"
@@ -219,8 +219,15 @@ func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	return in
 }
 
-func buildAddressFromControlProgram(prog []byte) string {
-	if segwit.IsP2WPKHScript(prog) {
+func (w *Wallet) getAddressFromControlProgram(prog []byte) string {
+	var hash [32]byte
+	sha3pool.Sum256(hash[:], prog)
+	if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
+		accountCP := account.CtrlProgram{}
+		if err := json.Unmarshal(bytes, &accountCP); err == nil {
+			return accountCP.Address
+		}
+	} else if segwit.IsP2WPKHScript(prog) {
 		if pubHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
 			return buildP2PKHAddress(pubHash)
 		}
@@ -252,7 +259,7 @@ func buildP2SHAddress(scriptHash []byte) string {
 }
 
 // BuildAnnotatedOutput build the annotated output.
-func BuildAnnotatedOutput(tx *types.Tx, idx int, address string) *query.AnnotatedOutput {
+func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 	orig := tx.Outputs[idx]
 	outid := tx.OutputID(idx)
 	out := &query.AnnotatedOutput{
@@ -262,8 +269,9 @@ func BuildAnnotatedOutput(tx *types.Tx, idx int, address string) *query.Annotate
 		AssetDefinition: &emptyJSONObject,
 		Amount:          orig.Amount,
 		ControlProgram:  orig.ControlProgram,
-		Address:         address,
+		Address:         w.getAddressFromControlProgram(orig.ControlProgram),
 	}
+
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"
 	} else {
