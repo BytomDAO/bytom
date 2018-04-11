@@ -162,6 +162,6 @@ func (a *API) getBlockTransactionsCountByHeight(height uint64) Response {
 
 // return current block count
 func (a *API) getBlockCount() Response {
-	blockHeight := map[string]uint64{"block_count": a.chain.Height()}
+	blockHeight := map[string]uint64{"block_count": a.chain.BestBlockHeight()}
 	return NewSuccessResponse(blockHeight)
 }
