@@ -38,9 +38,9 @@ func declChain(name string, baseChain *protocol.Chain, baseHeight uint64, height
 }
 
 func ancestorOf(c1 *protocol.Chain, c2 *protocol.Chain) (*types.Block, error) {
-	start := c1.Height()
-	if c2.Height() < c1.Height() {
-		start = c2.Height()
+	start := c1.BestBlockHeight()
+	if c2.BestBlockHeight() < c1.BestBlockHeight() {
+		start = c2.BestBlockHeight()
 	}
 
 	for i := start; i >= 0; i-- {
@@ -61,7 +61,7 @@ func ancestorOf(c1 *protocol.Chain, c2 *protocol.Chain) (*types.Block, error) {
 
 func merge(c1 *protocol.Chain, c2 *protocol.Chain) error {
 	// c1 and c2 are same
-	if c1.Height() == c2.Height() && *c1.BestBlockHash() == *c2.BestBlockHash() {
+	if c1.BestBlockHeight() == c2.BestBlockHeight() && *c1.BestBlockHash() == *c2.BestBlockHash() {
 		return nil
 	}
 
@@ -71,7 +71,7 @@ func merge(c1 *protocol.Chain, c2 *protocol.Chain) error {
 	}
 
 	processBlocks := func(dest *protocol.Chain, src *protocol.Chain, height uint64) error {
-		for h := src.Height(); h > height; h-- {
+		for h := src.BestBlockHeight(); h > height; h-- {
 			block, err := src.GetBlockByHeight(h)
 			if err != nil {
 				return err

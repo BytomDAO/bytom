@@ -174,7 +174,7 @@ func (re *reserver) reserveUTXO(ctx context.Context, out bc.Hash, exp time.Time,
 	}
 
 	//u.ValidHeight > 0 means coinbase utxo
-	if u.ValidHeight > 0 && u.ValidHeight > re.c.Height() {
+	if u.ValidHeight > 0 && u.ValidHeight > re.c.BestBlockHeight() {
 		return nil, errors.WithDetail(ErrMatchUTXO, "this coinbase utxo is immature")
 	}
 
@@ -257,7 +257,7 @@ func (re *reserver) source(src source) *sourceReserver {
 		db:            re.db,
 		src:           src,
 		reserved:      make(map[bc.Hash]uint64),
-		currentHeight: re.c.Height,
+		currentHeight: re.c.BestBlockHeight,
 	}
 	re.sources[src] = sr
 	return sr

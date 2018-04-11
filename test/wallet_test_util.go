@@ -218,7 +218,7 @@ func (ctx *walletTestContext) getAccBalances() map[string]map[string]uint64 {
 }
 
 func (ctx *walletTestContext) getDetachedBlocks(height uint64) ([]*types.Block, error) {
-	currentHeight := ctx.Chain.Height()
+	currentHeight := ctx.Chain.BestBlockHeight()
 	detachedBlocks := make([]*types.Block, 0, currentHeight-height)
 	for i := currentHeight; i > height; i-- {
 		block, err := ctx.Chain.GetBlockByHeight(i)
@@ -309,7 +309,7 @@ func (cfg *walletTestConfig) Run() error {
 		return err
 	}
 
-	forkedChain, err := declChain("forked_chain", ctx.Chain, rollbackBlock.Height, ctx.Chain.Height()+1)
+	forkedChain, err := declChain("forked_chain", ctx.Chain, rollbackBlock.Height, ctx.Chain.BestBlockHeight()+1)
 	defer os.RemoveAll("forked_chain")
 	if err != nil {
 		return err

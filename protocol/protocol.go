@@ -1,77 +1,60 @@
 package protocol
 
 import (
-	"context"
-	"math/big"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/config"
-	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
 )
 
-const (
-	maxProcessBlockChSize = 1024
-)
+const maxProcessBlockChSize = 1024
 
-var (
-	// ErrTheDistantFuture is returned when waiting for a blockheight
-	// too far in excess of the tip of the blockchain.
-	ErrTheDistantFuture = errors.New("block height too far in future")
-)
+// ErrTheDistantFuture is returned when waiting for a blockheight too far in
+// excess of the tip of the blockchain.
+var ErrTheDistantFuture = errors.New("block height too far in future")
 
-// Chain provides a complete, minimal blockchain database. It
-// delegates the underlying storage to other objects, and uses
-// validation logic from package validation to decide what
-// objects can be safely stored.
+// Chain provides functions for working with the Bytom block chain.
 type Chain struct {
-	index          *BlockIndex
+	index          *state.BlockIndex
 	orphanManage   *OrphanManage
 	txPool         *TxPool
+	store          Store
 	processBlockCh chan *processBlockMsg
 
-	state struct {
-		cond    sync.Cond
-		hash    *bc.Hash
-		height  uint64
-		workSum *big.Int
-	}
-
-	store Store
+	cond     sync.Cond
+	bestNode *state.BlockNode
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
 func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 	c := &Chain{
 		orphanManage:   NewOrphanManage(),
-		store:          store,
 		txPool:         txPool,
+		store:          store,
 		processBlockCh: make(chan *processBlockMsg, maxProcessBlockChSize),
 	}
-	c.state.cond.L = new(sync.Mutex)
+	c.cond.L = new(sync.Mutex)
 
-	var err error
-	if storeStatus := store.GetStoreStatus(); storeStatus.Hash != nil {
-		c.state.hash = storeStatus.Hash
-	} else {
-		if err = c.initChainStatus(); err != nil {
+	storeStatus := store.GetStoreStatus()
+	if storeStatus == nil {
+		if err := c.initChainStatus(); err != nil {
 			return nil, err
 		}
+		storeStatus = store.GetStoreStatus()
 	}
 
+	var err error
 	if c.index, err = store.LoadBlockIndex(); err != nil {
 		return nil, err
 	}
 
-	bestNode := c.index.GetNode(c.state.hash)
-	c.index.SetMainChain(bestNode)
-	c.state.height = bestNode.height
-	c.state.workSum = bestNode.workSum
+	c.bestNode = c.index.GetNode(storeStatus.Hash)
+	c.index.SetMainChain(c.bestNode)
 	go c.blockProcesser()
 	return c, nil
 }
@@ -79,7 +62,7 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 func (c *Chain) initChainStatus() error {
 	genesisBlock := config.GenerateGenesisBlock()
 	txStatus := bc.NewTransactionStatus()
-	for i, _ := range genesisBlock.Transactions {
+	for i := range genesisBlock.Transactions {
 		txStatus.SetStatus(i, false)
 	}
 
@@ -93,43 +76,36 @@ func (c *Chain) initChainStatus() error {
 		return err
 	}
 
-	if err := c.store.SaveChainStatus(genesisBlock, utxoView); err != nil {
+	node, err := state.NewBlockNode(&genesisBlock.BlockHeader, nil)
+	if err != nil {
 		return err
 	}
-
-	hash := genesisBlock.Hash()
-	c.state.hash = &hash
-	return nil
+	return c.store.SaveChainStatus(node, utxoView)
 }
 
-// Height returns the current height of the blockchain.
-func (c *Chain) Height() uint64 {
-	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
-	return c.state.height
+// BestBlockHeight returns the current height of the blockchain.
+func (c *Chain) BestBlockHeight() uint64 {
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	return c.bestNode.Height
 }
 
 // BestBlockHash return the hash of the chain tail block
 func (c *Chain) BestBlockHash() *bc.Hash {
-	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
-	return c.state.hash
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
+	return &c.bestNode.Hash
+}
+
+// BestBlockHeader returns the chain tail block
+func (c *Chain) BestBlockHeader() *types.BlockHeader {
+	node := c.index.BestNode()
+	return node.BlockHeader()
 }
 
 // InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(hash bc.Hash) bool {
 	return c.index.InMainchain(hash)
-}
-
-// BestBlock returns the chain tail block
-func (c *Chain) BestBlockHeader() *types.BlockHeader {
-	node := c.index.BestNode()
-	return node.blockHeader()
-}
-
-// GetUtxo try to find the utxo status in db
-func (c *Chain) GetUtxo(hash *bc.Hash) (*storage.UtxoEntry, error) {
-	return c.store.GetUtxo(hash)
 }
 
 // CalcNextSeed return the seed for the given block
@@ -150,76 +126,31 @@ func (c *Chain) CalcNextBits(preBlock *bc.Hash) (uint64, error) {
 	return node.CalcNextBits(), nil
 }
 
-// GetTransactionStatus return the transaction status of give block
-func (c *Chain) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
-	return c.store.GetTransactionStatus(hash)
-}
-
-// GetTransactionsUtxo return all the utxos that related to the txs' inputs
-func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
-	return c.store.GetTransactionsUtxo(view, txs)
-}
-
 // This function must be called with mu lock in above level
-func (c *Chain) setState(block *types.Block, view *state.UtxoViewpoint) error {
-	if err := c.store.SaveChainStatus(block, view); err != nil {
+func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint) error {
+	if err := c.store.SaveChainStatus(node, view); err != nil {
 		return err
 	}
 
-	c.state.cond.L.Lock()
-	defer c.state.cond.L.Unlock()
+	c.cond.L.Lock()
+	defer c.cond.L.Unlock()
 
-	blockHash := block.Hash()
-	node := c.index.GetNode(&blockHash)
 	c.index.SetMainChain(node)
-	c.state.hash = &blockHash
-	c.state.height = node.height
-	c.state.workSum = node.workSum
+	c.bestNode = node
 
-	log.WithFields(log.Fields{
-		"height":  c.state.height,
-		"hash":    c.state.hash.String(),
-		"workSum": c.state.workSum,
-	}).Debug("Chain best status has been changed")
-	c.state.cond.Broadcast()
+	log.WithFields(log.Fields{"height": c.bestNode.Height, "hash": c.bestNode.Hash}).Debug("chain best status has been update")
+	c.cond.Broadcast()
 	return nil
 }
 
-// BlockSoonWaiter returns a channel that
-// waits for the block at the given height,
-// but it is an error to wait for a block far in the future.
-// WaitForBlockSoon will timeout if the context times out.
-// To wait unconditionally, the caller should use WaitForBlock.
-func (c *Chain) BlockSoonWaiter(ctx context.Context, height uint64) <-chan error {
-	ch := make(chan error, 1)
-
-	go func() {
-		const slop = 3
-		if height > c.Height()+slop {
-			ch <- ErrTheDistantFuture
-			return
-		}
-
-		select {
-		case <-c.BlockWaiter(height):
-			ch <- nil
-		case <-ctx.Done():
-			ch <- ctx.Err()
-		}
-	}()
-
-	return ch
-}
-
-// BlockWaiter returns a channel that
-// waits for the block at the given height.
+// BlockWaiter returns a channel that waits for the block at the given height.
 func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	ch := make(chan struct{}, 1)
 	go func() {
-		c.state.cond.L.Lock()
-		defer c.state.cond.L.Unlock()
-		for c.state.height < height {
-			c.state.cond.Wait()
+		c.cond.L.Lock()
+		defer c.cond.L.Unlock()
+		for c.bestNode.Height < height {
+			c.cond.Wait()
 		}
 		ch <- struct{}{}
 	}()

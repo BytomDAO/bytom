@@ -66,11 +66,11 @@ func (bk *blockKeeper) AddTx(tx *types.Tx, peerID string) {
 
 func (bk *blockKeeper) IsCaughtUp() bool {
 	_, height := bk.peers.BestPeer()
-	return bk.chain.Height() < height
+	return bk.chain.BestBlockHeight() < height
 }
 
 func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) error {
-	num := bk.chain.Height() + 1
+	num := bk.chain.BestBlockHeight() + 1
 	orphanNum := uint64(0)
 	reqNum := uint64(0)
 	isOrphan := false

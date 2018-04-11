@@ -186,7 +186,7 @@ func (input *ctInput) createDependencyTxInput(txs []*types.Tx) (*types.TxInput, 
 func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx) (*types.Tx, error) {
 	builder := txbuilder.NewBuilder(time.Now())
 	sigInst := &txbuilder.SigningInstruction{}
-	currentHeight := ctx.Chain.Height()
+	currentHeight := ctx.Chain.BestBlockHeight()
 	for _, input := range t.Inputs {
 		var txInput *types.TxInput
 		var err error
@@ -265,7 +265,7 @@ func (cfg *chainTestConfig) Run() error {
 	}
 
 	// rollback and validate
-	forkedChain, err := declChain("forked_chain", ctx.Chain, rollbackBlock.Height, ctx.Chain.Height()+1)
+	forkedChain, err := declChain("forked_chain", ctx.Chain, rollbackBlock.Height, ctx.Chain.BestBlockHeight()+1)
 	defer os.RemoveAll("forked_chain")
 	if err != nil {
 		return err

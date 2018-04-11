@@ -172,7 +172,7 @@ func TestCoinbaseMature(t *testing.T) {
 	chain, _, _, _ := MockChain(db)
 
 	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
-	height := chain.Height()
+	height := chain.BestBlockHeight()
 	block, err := chain.GetBlockByHeight(height)
 	if err != nil {
 		t.Fatal(err)
@@ -184,8 +184,8 @@ func TestCoinbaseMature(t *testing.T) {
 	}
 
 	txs := []*types.Tx{tx}
-	matureHeight := chain.Height() + consensus.CoinbasePendingBlockNumber
-	currentHeight := chain.Height()
+	matureHeight := chain.BestBlockHeight() + consensus.CoinbasePendingBlockNumber
+	currentHeight := chain.BestBlockHeight()
 	for h := currentHeight + 1; h < matureHeight; h++ {
 		block, err := NewBlock(chain, txs, defaultCtrlProg)
 		if err != nil {
@@ -222,7 +222,7 @@ func TestCoinbaseTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block, err := chain.GetBlockByHeight(chain.Height())
+	block, err := chain.GetBlockByHeight(chain.BestBlockHeight())
 	if err != nil {
 		t.Fatal(err)
 	}
