@@ -84,8 +84,8 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 		block, err := bk.BlockRequest(peerID, reqNum)
 		if errors.Root(err) == errPeerDropped || errors.Root(err) == errGetBlockTimeout || errors.Root(err) == errReqBlock {
 			log.WithField("Peer abnormality. PeerID: ", peerID).Info(err)
-			peer, ok := bk.peers.peers[peerID]
-			if !ok {
+			peer := bk.peers.Peer(peerID)
+			if peer == nil {
 				log.Info("peer is not registered")
 				break
 			}
@@ -116,7 +116,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 			return errGetBlockByHash
 		}
 
-		if err := bk.peers.BroadcastNewStatusBlock(block); err != nil {
+		if err := bk.peers.BroadcastNewStatus(block); err != nil {
 			log.Errorf("Failed on broadcast new status block %v", err)
 			return errBroadcastStatus
 		}

@@ -320,7 +320,7 @@ func (ps *peerSet) BroadcastMinedBlock(block *types.Block) error {
 	return nil
 }
 
-func (ps *peerSet) BroadcastNewStatusBlock(block *types.Block) error {
+func (ps *peerSet) BroadcastNewStatus(block *types.Block) error {
 	return ps.BroadcastMinedBlock(block)
 }
 
