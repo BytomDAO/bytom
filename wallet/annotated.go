@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -206,6 +207,7 @@ func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	case *bc.Spend:
 		in.Type = "spend"
 		in.ControlProgram = orig.ControlProgram()
+		in.Address = buildAddressFromControlProgram(in.ControlProgram)
 		in.SpentOutputID = e.SpentOutputId
 	case *bc.Issuance:
 		in.Type = "issue"
@@ -215,6 +217,38 @@ func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 		in.Arbitrary = e.Arbitrary
 	}
 	return in
+}
+
+func buildAddressFromControlProgram(prog []byte) string {
+	if segwit.IsP2WPKHScript(prog) {
+		if pubHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
+			return buildP2PKHAddress(pubHash)
+		}
+	} else if segwit.IsP2WSHScript(prog) {
+		if scriptHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
+			return buildP2SHAddress(scriptHash)
+		}
+	}
+
+	return ""
+}
+
+func buildP2PKHAddress(pubHash []byte) string {
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.MainNetParams)
+	if err != nil {
+		return ""
+	}
+
+	return address.EncodeAddress()
+}
+
+func buildP2SHAddress(scriptHash []byte) string {
+	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.MainNetParams)
+	if err != nil {
+		return ""
+	}
+
+	return address.EncodeAddress()
 }
 
 // BuildAnnotatedOutput build the annotated output.
