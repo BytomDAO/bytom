@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -168,7 +169,7 @@ func isValidJSON(b []byte) bool {
 	return err == nil
 }
 
-func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
+func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
 		Timestamp:              b.Timestamp,
@@ -181,16 +182,16 @@ func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, 
 		StatusFail:             statusFail,
 	}
 	for i := range orig.Inputs {
-		tx.Inputs = append(tx.Inputs, BuildAnnotatedInput(orig, uint32(i)))
+		tx.Inputs = append(tx.Inputs, w.BuildAnnotatedInput(orig, uint32(i)))
 	}
 	for i := range orig.Outputs {
-		tx.Outputs = append(tx.Outputs, BuildAnnotatedOutput(orig, i))
+		tx.Outputs = append(tx.Outputs, w.BuildAnnotatedOutput(orig, i))
 	}
 	return tx
 }
 
 // BuildAnnotatedInput build the annotated input.
-func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
+func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
 		AssetDefinition: &emptyJSONObject,
@@ -206,6 +207,7 @@ func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	case *bc.Spend:
 		in.Type = "spend"
 		in.ControlProgram = orig.ControlProgram()
+		in.Address = w.getAddressFromControlProgram(in.ControlProgram)
 		in.SpentOutputID = e.SpentOutputId
 	case *bc.Issuance:
 		in.Type = "issue"
@@ -217,8 +219,40 @@ func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	return in
 }
 
+func (w *Wallet) getAddressFromControlProgram(prog []byte) string {
+	if segwit.IsP2WPKHScript(prog) {
+		if pubHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
+			return buildP2PKHAddress(pubHash)
+		}
+	} else if segwit.IsP2WSHScript(prog) {
+		if scriptHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
+			return buildP2SHAddress(scriptHash)
+		}
+	}
+
+	return ""
+}
+
+func buildP2PKHAddress(pubHash []byte) string {
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.MainNetParams)
+	if err != nil {
+		return ""
+	}
+
+	return address.EncodeAddress()
+}
+
+func buildP2SHAddress(scriptHash []byte) string {
+	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.MainNetParams)
+	if err != nil {
+		return ""
+	}
+
+	return address.EncodeAddress()
+}
+
 // BuildAnnotatedOutput build the annotated output.
-func BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
+func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 	orig := tx.Outputs[idx]
 	outid := tx.OutputID(idx)
 	out := &query.AnnotatedOutput{
@@ -228,7 +262,9 @@ func BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 		AssetDefinition: &emptyJSONObject,
 		Amount:          orig.Amount,
 		ControlProgram:  orig.ControlProgram,
+		Address:         w.getAddressFromControlProgram(orig.ControlProgram),
 	}
+
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"
 	} else {

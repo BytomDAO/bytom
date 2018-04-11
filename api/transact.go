@@ -182,10 +182,10 @@ func (a *API) submit(ctx context.Context, ins struct {
 
 // POST /sign-submit-transaction
 func (a *API) signSubmit(ctx context.Context, x struct {
-	Password []string           `json:"password"`
+	Password string           `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
-	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password[0], a.pseudohsmSignTemplate); err != nil {
+	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password, a.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")
 		return NewErrorResponse(err)
 	}
