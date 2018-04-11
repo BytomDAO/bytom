@@ -73,23 +73,22 @@ func (a *API) setMining(in struct {
 	IsMining bool `json:"is_mining"`
 }) Response {
 	if in.IsMining {
-		return a.StartMining()
-	} else {
-		return a.StopMining()
+		return a.startMining()
 	}
+	return a.stopMining()
 }
 
-func (a *API) StartMining() Response {
-	if a.cpuMiner.IsMining() {
-		return NewErrorResponse(errors.New("Mining is already running"))
-	}
+func (a *API) startMining() Response {
 	a.cpuMiner.Start()
+	if !a.IsMining() {
+		return NewErrorResponse(errors.New("Failed to start mining"))
+	}
 	return NewSuccessResponse("")
 }
 
-func (a *API) StopMining() Response {
+func (a *API) stopMining() Response {
 	a.cpuMiner.Stop()
-	if a.cpuMiner.IsMining() {
+	if a.IsMining() {
 		return NewErrorResponse(errors.New("Failed to stop mining"))
 	}
 	return NewSuccessResponse("")

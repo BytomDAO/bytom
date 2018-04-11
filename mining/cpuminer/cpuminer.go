@@ -59,7 +59,7 @@ func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan
 		case <-quit:
 			return false
 		case <-ticker.C:
-			if m.chain.Height() >= header.Height {
+			if m.chain.BestBlockHeight() >= header.Height {
 				return false
 			}
 		default:
