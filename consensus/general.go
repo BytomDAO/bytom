@@ -15,12 +15,12 @@ const (
 	//config parameter for coinbase reward
 	CoinbasePendingBlockNumber = uint64(6)
 	subsidyReductionInterval   = uint64(560640)
-	baseSubsidy                = uint64(624000000000)
+	baseSubsidy                = uint64(41250000000)
 	InitialBlockSubsidy        = uint64(1470000000000000000)
 
 	// config for pow mining
 	PowMinBits            = uint64(2305843009213861724)
-	BlocksPerRetarget     = uint64(1024)
+	BlocksPerRetarget     = uint64(128)
 	TargetSecondsPerBlock = uint64(60)
 	SeedPerRetarget       = uint64(128)
 

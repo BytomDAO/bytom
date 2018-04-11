@@ -32,9 +32,8 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 	if err != nil {
 		return err
 	}
-	if err := tx.UnmarshalText(data); err != nil {
-		return err
-	}
+	tx.TxData.SerializedSize = uint64(len(data))
+	tx.Tx.SerializedSize = uint64(len(data))
 
 	_, err = c.ValidateTx(tx)
 	if errors.Root(err) == protocol.ErrBadTx {
