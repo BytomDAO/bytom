@@ -220,14 +220,7 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 }
 
 func (w *Wallet) getAddressFromControlProgram(prog []byte) string {
-	var hash [32]byte
-	sha3pool.Sum256(hash[:], prog)
-	if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
-		accountCP := account.CtrlProgram{}
-		if err := json.Unmarshal(bytes, &accountCP); err == nil {
-			return accountCP.Address
-		}
-	} else if segwit.IsP2WPKHScript(prog) {
+	if segwit.IsP2WPKHScript(prog) {
 		if pubHash, err := segwit.GetHashFromStandardProg(prog); err == nil {
 			return buildP2PKHAddress(pubHash)
 		}
