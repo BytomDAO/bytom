@@ -123,7 +123,7 @@ func (a *API) getBlock(ins GetBlockReq) Response {
 			tx.Inputs = append(tx.Inputs, wallet.BuildAnnotatedInput(orig, uint32(i)))
 		}
 		for i := range orig.Outputs {
-			tx.Outputs = append(tx.Outputs, wallet.BuildAnnotatedOutput(orig, i))
+			tx.Outputs = append(tx.Outputs, wallet.BuildAnnotatedOutput(orig, i, ""))
 		}
 		resp.Transactions = append(resp.Transactions, tx)
 	}

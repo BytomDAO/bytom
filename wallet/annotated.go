@@ -168,7 +168,7 @@ func isValidJSON(b []byte) bool {
 	return err == nil
 }
 
-func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
+func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int, address string) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
 		Timestamp:              b.Timestamp,
@@ -184,7 +184,7 @@ func buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, 
 		tx.Inputs = append(tx.Inputs, BuildAnnotatedInput(orig, uint32(i)))
 	}
 	for i := range orig.Outputs {
-		tx.Outputs = append(tx.Outputs, BuildAnnotatedOutput(orig, i))
+		tx.Outputs = append(tx.Outputs, BuildAnnotatedOutput(orig, i, address))
 	}
 	return tx
 }
@@ -218,7 +218,7 @@ func BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 }
 
 // BuildAnnotatedOutput build the annotated output.
-func BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
+func BuildAnnotatedOutput(tx *types.Tx, idx int, address string) *query.AnnotatedOutput {
 	orig := tx.Outputs[idx]
 	outid := tx.OutputID(idx)
 	out := &query.AnnotatedOutput{
@@ -228,6 +228,7 @@ func BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOutput {
 		AssetDefinition: &emptyJSONObject,
 		Amount:          orig.Amount,
 		ControlProgram:  orig.ControlProgram,
+		Address:         address,
 	}
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"

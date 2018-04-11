@@ -386,7 +386,12 @@ transactionLoop:
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos))
+				accountCP := account.CtrlProgram{}
+				if err := json.Unmarshal(bytes, &accountCP); err != nil {
+					continue transactionLoop
+				}
+
+				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos, accountCP.Address))
 				continue transactionLoop
 			}
 		}
@@ -397,7 +402,7 @@ transactionLoop:
 				continue
 			}
 			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos))
+				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos, ""))
 				continue transactionLoop
 			}
 		}
@@ -502,7 +507,7 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 
 // GetTransactionsByAccountID get account txs by account ID
 func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
-	annotatedTxs := []*query.AnnotatedTx{}
+	var annotatedTxs []*query.AnnotatedTx
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
