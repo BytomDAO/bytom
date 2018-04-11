@@ -211,16 +211,16 @@ func TestTxPoolDependencyTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx, err := CreateTxFromTx(block.Transactions[0], 0, 500000000000, []byte{byte(vm.OP_TRUE)})
+	tx, err := CreateTxFromTx(block.Transactions[0], 0, 5000000000, []byte{byte(vm.OP_TRUE)})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	outputAmount := uint64(500000000000)
+	outputAmount := uint64(5000000000)
 	txs := []*types.Tx{nil}
 	txs[0] = tx
 	for i := 1; i < 10; i++ {
-		outputAmount -= 5000000000
+		outputAmount -= 50000000
 		tx, err := CreateTxFromTx(txs[i-1], 0, outputAmount, []byte{byte(vm.OP_TRUE)})
 		if err != nil {
 			t.Fatal(err)

@@ -11,7 +11,7 @@
     {
       "coinbase_account": "alice",
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 624000000000}
+        {"name": "alice", "asset": "BTM", "amount": 41250000000}
       ],
       "append": 6
     },
@@ -30,8 +30,8 @@
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 622000000000},
-        {"name": "bob", "asset": "BTM", "amount": 626000000000}
+        {"name": "alice", "asset": "BTM", "amount": 39250000000},
+        {"name": "bob", "asset": "BTM", "amount": 43250000000}
       ],
       "append": 0
     }

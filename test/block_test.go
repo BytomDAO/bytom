@@ -176,8 +176,7 @@ func TestMaxBlockGas(t *testing.T) {
 	}
 
 	outputAmount := uint64(600000000000)
-	txs := []*types.Tx{nil}
-	txs[0] = tx
+	txs := []*types.Tx{tx}
 	for i := 1; i < 50000; i++ {
 		outputAmount -= 10000000
 		tx, err := CreateTxFromTx(txs[i-1], 0, outputAmount, []byte{byte(vm.OP_TRUE)})

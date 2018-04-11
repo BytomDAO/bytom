@@ -178,7 +178,7 @@ func TestCoinbaseMature(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx, err := CreateTxFromTx(block.Transactions[0], 0, 100000000000, defaultCtrlProg)
+	tx, err := CreateTxFromTx(block.Transactions[0], 0, 1000000000, defaultCtrlProg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +227,7 @@ func TestCoinbaseTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tx, err := CreateTxFromTx(block.Transactions[0], 0, 100000000000, defaultCtrlProg)
+	tx, err := CreateTxFromTx(block.Transactions[0], 0, 1000000000, defaultCtrlProg)
 	if err != nil {
 		t.Fatal(err)
 	}
