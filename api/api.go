@@ -193,6 +193,7 @@ func (a *API) buildHandler() {
 		m.Handle("/build-transaction", jsonHandler(a.build))
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
 		m.Handle("/submit-transaction", jsonHandler(a.submit))
+		// TODO remove this api, separate sign and submit process
 		m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
