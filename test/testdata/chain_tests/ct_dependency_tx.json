@@ -1,0 +1,74 @@
+{
+  "blocks": [
+    {
+      "append": 6
+    },
+    {
+      "transactions": [
+        {
+          "inputs": [
+            {"height": 1, "tx_index": 0, "output_index": 0}
+          ],
+          "outputs": [3000000000, 10000000, 3000000000]
+        }
+      ],
+      "append": 2
+    },
+    {
+      "transactions": [
+        {
+          "inputs": [
+            {"height": 2, "tx_index": 0, "output_index": 0}
+          ],
+          "outputs": [3000000000, 10000000, 3000000000]
+        }
+      ]
+    },
+    {
+      "transactions": [
+        {
+          "inputs": [
+            {"height": 8, "tx_index": 1, "output_index": 0},
+            {"height": 3, "tx_index": 0, "output_index": 0}
+          ],
+          "outputs": [3000000000, 10000000, 3000000000]
+        },
+        {
+          "inputs": [
+            {"height": 11, "tx_index": 1, "output_index": 0},
+            {"height": 4, "tx_index": 0, "output_index": 0}
+          ],
+          "outputs": [3000000000, 10000000, 3000000000]
+        }
+      ]
+    },
+    {
+      "transactions": [
+        {
+          "inputs": [
+            {"height": 12, "tx_index": 1, "output_index": 0},
+            {"height": 12, "tx_index": 2, "output_index": 0},
+            {"height": 12, "tx_index": 2, "output_index": 2}
+          ],
+          "outputs": [3000000000, 10000000, 3000000000]
+        },
+        {
+          "inputs": [
+            {"height": 13, "tx_index": 1, "output_index": 0},
+            {"height": 13, "tx_index": 1, "output_index": 2},
+            {"height": 5, "tx_index": 0, "output_index": 0}
+          ],
+          "outputs": [3000000000, 10000000, 3000000000]
+        },
+        {
+          "inputs": [
+            {"height": 13, "tx_index": 2, "output_index": 0},
+            {"height": 13, "tx_index": 1, "output_index": 1},
+            {"height": 6, "tx_index": 0, "output_index": 0}
+          ],
+          "outputs": [3000000000, 10000000, 3000000000]
+        }
+      ]
+    }
+  ]
+}

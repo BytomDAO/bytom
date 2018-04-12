@@ -107,4 +107,7 @@ test:
 benchmark:
 	go test -bench $(PACKAGES)
 
+functional-tests:
+	@go test -v -timeout=30m -tags=functional ./test
+
 .PHONY: all target release-all clean test benchmark

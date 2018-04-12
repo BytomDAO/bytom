@@ -25,7 +25,7 @@ func TestP2PKH(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	chain, err := test.MockChain(testDB)
+	chain, _, _, err := test.MockChain(testDB)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestP2SH(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	chain, err := test.MockChain(testDB)
+	chain, _, _, err := test.MockChain(testDB)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestMutilNodeSign(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	chain, err := test.MockChain(testDB)
+	chain, _, _, err := test.MockChain(testDB)
 	if err != nil {
 		t.Fatal(err)
 	}

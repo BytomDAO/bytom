@@ -81,7 +81,7 @@ func TestWalletUpdate(t *testing.T) {
 	txStatus := bc.NewTransactionStatus()
 	store.SaveBlock(block, txStatus)
 
-	err = w.attachBlock(block)
+	err = w.AttachBlock(block)
 	if err != nil {
 		t.Fatal(err)
 	}

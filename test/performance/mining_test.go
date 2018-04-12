@@ -16,7 +16,7 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	chain, err := test.MockChain(testDB)
+	chain, _, _, err := test.MockChain(testDB)
 	if err != nil {
 		b.Fatal(err)
 	}

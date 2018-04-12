@@ -375,7 +375,7 @@ func TestTimeRange(t *testing.T) {
 	for i, c := range cases {
 		tx.TimeRange = c.timeRange
 		if _, err := ValidateTx(tx, block); (err != nil) != c.err {
-			t.Errorf("#%d got error %s, want %s", i, !c.err, c.err)
+			t.Errorf("#%d got error %t, want %t", i, !c.err, c.err)
 		}
 	}
 }
