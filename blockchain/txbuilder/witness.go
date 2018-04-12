@@ -53,6 +53,21 @@ func signedCount(signs []chainjson.HexBytes) (count int) {
 	return
 }
 
+// SignCount
+func SignCount(txTemplate *Template) int {
+	for _, sigInst := range txTemplate.SigningInstructions {
+		for _, wc := range sigInst.WitnessComponents {
+			switch sw := wc.(type) {
+			case *SignatureWitness:
+				return signedCount(sw.Sigs)
+			case *RawTxSigWitness:
+				return signedCount(sw.Sigs)
+			}
+		}
+	}
+	return 0
+}
+
 // SignProgress check is all the sign requirement are satisfy
 func SignProgress(txTemplate *Template) bool {
 	for _, sigInst := range txTemplate.SigningInstructions {
