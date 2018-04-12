@@ -45,6 +45,11 @@ bytomcli:
 	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
 	go build $(BUILD_FLAGS) -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
 
+bytomcli:
+	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
+	@go build -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`" \
+	-o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
+
 target:
 	mkdir -p $@
 
