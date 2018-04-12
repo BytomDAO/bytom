@@ -247,3 +247,40 @@ func TestTxPoolDependencyTx(t *testing.T) {
 		t.Fatal("process dependency tx failed")
 	}
 }
+
+func TestAddInvalidTxToTxPool(t *testing.T) {
+	chainDB := dbm.NewDB("tx_pool_test", "leveldb", "tx_pool_test")
+	defer os.RemoveAll("tx_pool_test")
+
+	chain, _, txPool, err := MockChain(chainDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := AppendBlocks(chain, 7); err != nil {
+		t.Fatal(err)
+	}
+
+	block, err := chain.GetBlockByHeight(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	//invalid tx, output amount greater than input
+	tx, err := CreateTxFromTx(block.Transactions[0], 0, 60000000000, []byte{byte(vm.OP_TRUE)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := chain.ValidateTx(tx); err == nil {
+		t.Fatalf("add invalid tx to txpool success")
+	}
+
+	if txPool.IsTransactionInPool(&tx.ID) {
+		t.Fatalf("add invalid tx to txpool success")
+	}
+
+	if !txPool.IsTransactionInErrCache(&tx.ID) {
+		t.Fatalf("can't find invalid tx in txpool err cache")
+	}
+}
