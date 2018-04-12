@@ -266,9 +266,9 @@ var signSubTransactionCmd = &cobra.Command{
 		}
 
 		var req = struct {
-			Password []string           `json:"password"`
+			Password string           `json:"password"`
 			Txs      txbuilder.Template `json:"transaction"`
-		}{Password: []string{password}, Txs: template}
+		}{Password: password, Txs: template}
 
 		jww.FEEDBACK.Printf("\n\n")
 		data, exitCode := util.ClientCall("/sign-submit-transaction", &req)
