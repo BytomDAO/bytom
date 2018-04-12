@@ -47,3 +47,13 @@ cmd/bytomd/bytomd_error/genesis.json
 blockchain/pseudohsm/testdata/pseudo/UTC--2017-11-01T09-24-31.848287391Z--931de33f-e62e-4de7-8036-f82ad5efa77e
 blockchain/pseudohsm/testdata/pseudo/UTC--2017-11-01T09-24-31.953012475Z--36b63ec7-b585-4a0e-95ff-e3f71b4ccb8b
 blockchain/pseudohsm/UTC--2017-11-01T09-24-30.596579759Z--2178d885-aca6-4436-a865-e7e439e4bd9c
+
+# ====> Sublime Text
+# Sublime Text Project and Workspace Files
+*.sublime-workspace
+*.sublime-project
+
+# ====> VS Code
+# VS Code Config Files
+.vscode/
+
