@@ -138,7 +138,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 		}
 		f.queued[hash] = op
 		f.queue.Push(op, -float32(block.Height))
-		log.Info("Queued propagated block.", " peer: ", peer, "number: ", block.Height, "queued: ", f.queue.Size())
+		log.Info("Queued receive mine block.", " peer:", peer, " number:", block.Height, " queued:", f.queue.Size())
 	}
 }
 
