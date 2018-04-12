@@ -288,7 +288,7 @@ $ ./bytomcli create-asset silver 674b0d709c5c2f6eb49e5f205c4393e91f1fa745ff62954
 
 ### Sending transaction
 
-Every asset-related action is trigger via sending a transaction, which requires two steps to complete, i.e., `build-transaction` and `sign-subit-transaction`. Don't forget to enable `--mining`.
+Every asset-related action is trigger via sending a transaction, which requires two steps to complete, i.e., `build-transaction` and `sign-submit-transaction`. Don't forget to enable `--mining`.
 
 #### Issue
 
