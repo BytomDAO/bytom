@@ -46,7 +46,7 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +160,7 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

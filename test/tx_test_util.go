@@ -84,7 +84,7 @@ func (g *TxGenerator) createAsset(accountAlias string, assetAlias string) (*asse
 }
 
 func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (*account.UTXO, error) {
-	ctrlProg, err := g.createControlProgram(accountAlias, false)
+	ctrlProg, err := g.createControlProgram(accountAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -127,12 +127,12 @@ func (g *TxGenerator) assetAmount(assetAlias string, amount uint64) (*bc.AssetAm
 	}, nil
 }
 
-func (g *TxGenerator) createControlProgram(accountAlias string, change bool) (*account.CtrlProgram, error) {
+func (g *TxGenerator) createControlProgram(accountAlias string) (*account.CtrlProgram, error) {
 	acc, err := g.AccountManager.FindByAlias(nil, accountAlias)
 	if err != nil {
 		return nil, err
 	}
-	return g.AccountManager.CreateAddress(nil, acc.ID, change)
+	return g.AccountManager.CreateAddress(nil, acc.ID)
 }
 
 // AddSpendInput add a spend input
@@ -208,7 +208,7 @@ func (g *TxGenerator) AddTxOutput(accountAlias, assetAlias string, amount uint64
 	if err != nil {
 		return err
 	}
-	controlProgram, err := g.createControlProgram(accountAlias, false)
+	controlProgram, err := g.createControlProgram(accountAlias)
 	if err != nil {
 		return err
 	}

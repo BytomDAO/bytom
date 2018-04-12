@@ -263,20 +263,20 @@ func (m *Manager) GetAliasByID(id string) string {
 }
 
 // CreateAddress generate an address for the select account
-func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool) (cp *CtrlProgram, err error) {
+func (m *Manager) CreateAddress(ctx context.Context, accountID string) (cp *CtrlProgram, err error) {
 	account, err := m.findByID(ctx, accountID)
 	if err != nil {
 		return nil, err
 	}
-	return m.createAddress(ctx, account, change)
+	return m.createAddress(ctx, account)
 }
 
 // CreateAddress generate an address for the select account
-func (m *Manager) createAddress(ctx context.Context, account *Account, change bool) (cp *CtrlProgram, err error) {
+func (m *Manager) createAddress(ctx context.Context, account *Account) (cp *CtrlProgram, err error) {
 	if len(account.XPubs) == 1 {
-		cp, err = m.createP2PKH(ctx, account, change)
+		cp, err = m.createP2PKH(ctx, account)
 	} else {
-		cp, err = m.createP2SH(ctx, account, change)
+		cp, err = m.createP2SH(ctx, account)
 	}
 	if err != nil {
 		return nil, err
@@ -288,7 +288,7 @@ func (m *Manager) createAddress(ctx context.Context, account *Account, change bo
 	return cp, nil
 }
 
-func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
+func (m *Manager) createP2PKH(ctx context.Context, account *Account) (*CtrlProgram, error) {
 	idx := m.getNextXpubsIndex(account.Signer.XPubs)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
@@ -311,11 +311,10 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 		Address:        address.EncodeAddress(),
 		KeyIndex:       idx,
 		ControlProgram: control,
-		Change:         change,
 	}, nil
 }
 
-func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
+func (m *Manager) createP2SH(ctx context.Context, account *Account) (*CtrlProgram, error) {
 	idx := m.getNextXpubsIndex(account.Signer.XPubs)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
@@ -342,7 +341,6 @@ func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool)
 		Address:        address.EncodeAddress(),
 		KeyIndex:       idx,
 		ControlProgram: control,
-		Change:         change,
 	}, nil
 }
 
@@ -352,7 +350,6 @@ type CtrlProgram struct {
 	Address        string
 	KeyIndex       uint64
 	ControlProgram []byte
-	Change         bool
 }
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*CtrlProgram) error {
@@ -396,7 +393,7 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 		return nil, err
 	}
 
-	program, err := m.createAddress(nil, account, false)
+	program, err := m.createAddress(nil, account)
 	if err != nil {
 		return nil, err
 	}
