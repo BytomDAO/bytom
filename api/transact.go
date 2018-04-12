@@ -191,7 +191,7 @@ func (a *API) signSubmit(ctx context.Context, x struct {
 		return NewErrorResponse(err)
 	}
 
-	if txbuilder.SignCount(&x.Txs) == 0 {
+	if signCount, complete := txbuilder.SignInfo(&x.Txs); !complete && signCount == 0 {
 		return NewErrorResponse(pseudohsm.ErrLoadKey)
 	}
 	log.Info("Sign Transaction complete.")
