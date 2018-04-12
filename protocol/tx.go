@@ -43,6 +43,7 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 	gasStatus, err := validation.ValidateTx(tx.Tx, block)
 	if gasStatus.GasVaild == false {
 		c.txPool.AddErrCache(&tx.ID, err)
+		return false, err
 	}
 
 	_, err = c.txPool.AddTransaction(tx, err != nil, block.BlockHeader.Height, gasStatus.BTMValue)
