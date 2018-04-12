@@ -224,6 +224,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	bestBlockHash := bestBlock.Hash()
 	bestNode := c.index.GetNode(&bestBlockHash)
 
+
 	if bestNode.Parent == c.bestNode {
 		log.Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)

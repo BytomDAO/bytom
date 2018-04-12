@@ -20,7 +20,7 @@ const (
 
 	// period to ensure peers connected
 	defaultEnsurePeersPeriod = 30 * time.Second
-	minNumOutboundPeers      = 10
+	minNumOutboundPeers      = 3
 	maxPexMessageSize        = 1048576 // 1MB
 
 	// maximum messages one peer can send to us during `msgCountByPeerFlushInterval`

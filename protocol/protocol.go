@@ -136,6 +136,7 @@ func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint) error
 	defer c.cond.L.Unlock()
 
 	c.index.SetMainChain(node)
+
 	c.bestNode = node
 
 	log.WithFields(log.Fields{"height": c.bestNode.Height, "hash": c.bestNode.Hash}).Debug("chain best status has been update")

@@ -105,7 +105,7 @@ func (m *BlockResponseMessage) GetBlock() *types.Block {
 
 //String convert msg to string
 func (m *BlockResponseMessage) String() string {
-	return fmt.Sprintf("BlockResponseMessage{Size: %d}", len(m.RawBlock))
+	return fmt.Sprintf("BlockResponseMessage")
 }
 
 //TransactionNotifyMessage notify new tx msg

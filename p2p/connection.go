@@ -409,19 +409,19 @@ FOR_LOOP:
 		// Block until .recvMonitor says we can read.
 		c.recvMonitor.Limit(maxMsgPacketTotalSize, atomic.LoadInt64(&c.config.RecvRate), true)
 
-/*
-		// Peek into bufReader for debugging
-		if numBytes := c.bufReader.Buffered(); numBytes > 0 {
-			log.Infof("Peek connection buffer numBytes:", numBytes)
-			bytes, err := c.bufReader.Peek(cmn.MinInt(numBytes, 100))
-			if err == nil {
-				log.Infof("bytes:", bytes)
+		/*
+			// Peek into bufReader for debugging
+			if numBytes := c.bufReader.Buffered(); numBytes > 0 {
+				log.Infof("Peek connection buffer numBytes:", numBytes)
+				bytes, err := c.bufReader.Peek(cmn.MinInt(numBytes, 100))
+				if err == nil {
+					log.Infof("bytes:", bytes)
+				} else {
+					log.Warning("Error peeking connection buffer err:", err)
+				}
 			} else {
-				log.Warning("Error peeking connection buffer err:", err)
+				log.Warning("Received bytes number is:", numBytes)
 			}
-		} else {
-			log.Warning("Received bytes number is:", numBytes)
-		}
 		*/
 
 		// Read packet type
@@ -435,6 +435,7 @@ FOR_LOOP:
 					"conn":  c,
 					"error": err,
 				}).Error("Connection failed @ recvRoutine (reading byte)")
+				c.conn.Close()
 				c.stopForError(err)
 			}
 			break FOR_LOOP
