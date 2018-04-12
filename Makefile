@@ -80,7 +80,11 @@ release-all: clean
 	GOOS=windows make release
 
 clean:
-	rm -rf target
+	@echo "Cleaning binaries built"
+	@rm -rf cmd/bytomd/bytomd
+	@rm -rf cmd/bytomcli/bytomcli
+	@rm -rf cmd/miner/miner
+	@rm -rf target
 
 target/$(BYTOMD_BINARY32):
 	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
