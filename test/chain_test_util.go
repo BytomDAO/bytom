@@ -111,8 +111,12 @@ func (ctx *chainTestContext) getUtxoEntries() map[string]*storage.UtxoEntry {
 func (ctx *chainTestContext) validateRollback(utxoEntries map[string]*storage.UtxoEntry) error {
 	newUtxoEntries := ctx.getUtxoEntries()
 	for key := range utxoEntries {
-		if _, ok := newUtxoEntries[key]; !ok {
-			return fmt.Errorf("can't find utxo entry after rollback")
+		entry, ok := newUtxoEntries[key]
+		if !ok {
+			return fmt.Errorf("can't find utxo after rollback")
+		}
+		if entry.Spent != utxoEntries[key].Spent {
+			return fmt.Errorf("utxo status dismatch after rollback")
 		}
 	}
 	return nil

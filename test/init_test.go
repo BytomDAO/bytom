@@ -41,8 +41,7 @@ func readJSONFile(fn string, value interface{}) error {
 	}
 	defer file.Close()
 
-	err = readJSON(file, value)
-	if err != nil {
+	if err := readJSON(file, value); err != nil {
 		return fmt.Errorf("%s in file %s", err.Error(), fn)
 	}
 	return nil
