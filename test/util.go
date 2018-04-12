@@ -75,7 +75,8 @@ func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM, password string) (boo
 	if err != nil {
 		return false, err
 	}
-	return txbuilder.SignProgress(tpl), nil
+	_, complete := txbuilder.SignProgress(tpl)
+	return complete, nil
 }
 
 // MockBlock mock a block
