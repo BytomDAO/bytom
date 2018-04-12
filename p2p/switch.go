@@ -363,6 +363,9 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress, persistent bool) (*Peer,
 	if err := sw.checkBannedPeer(addr.IP.String()); err != nil {
 		return nil, err
 	}
+	if strings.Compare(addr.IP.String(), sw.nodeInfo.ListenHost())==0 {
+		return nil, errors.New("Connect self")
+	}
 	for _, v := range sw.Peers().list {
 		if strings.Compare(v.mconn.RemoteAddress.IP.String(), addr.IP.String()) == 0 {
 			return nil, errors.New("Peer is connected")
