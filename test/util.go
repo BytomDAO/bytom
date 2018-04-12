@@ -18,21 +18,27 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
-// Mock transaction pool
+const (
+	vmVersion    = 1
+	blockVersion = 1
+	assetVersion = 1
+	maxNonce     = ^uint64(0)
+)
+
+// MockTxPool mock transaction pool
 func MockTxPool() *protocol.TxPool {
 	return protocol.NewTxPool()
 }
 
-func MockChain(testDB dbm.DB) (*protocol.Chain, error) {
+// MockChain mock chain with genesis block
+func MockChain(testDB dbm.DB) (*protocol.Chain, *leveldb.Store, *protocol.TxPool, error) {
 	store := leveldb.NewStore(testDB)
 	txPool := MockTxPool()
 	chain, err := protocol.NewChain(store, txPool)
-	if err != nil {
-		return nil, err
-	}
-	return chain, nil
+	return chain, store, txPool, err
 }
 
+// MockUTXO mock a utxo
 func MockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
 	utxo := &account.UTXO{}
 	utxo.OutputID = bc.Hash{V0: 1}
@@ -47,6 +53,7 @@ func MockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
 	return utxo
 }
 
+// MockTx mock a tx
 func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *types.TxData, error) {
 	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo)
 	if err != nil {
@@ -60,6 +67,7 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 	return b.Build()
 }
 
+// MockSign sign a tx
 func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM, password string) (bool, error) {
 	err := txbuilder.Sign(nil, tpl, nil, password, func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
 		return hsm.XSign(xpub, path, data[:], password)
@@ -70,7 +78,7 @@ func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM, password string) (boo
 	return txbuilder.SignProgress(tpl), nil
 }
 
-// Mock block
+// MockBlock mock a block
 func MockBlock() *bc.Block {
 	return &bc.Block{
 		BlockHeader: &bc.BlockHeader{Height: 1},

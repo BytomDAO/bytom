@@ -12,18 +12,18 @@ type Store interface {
 	BlockExist(*bc.Hash) bool
 
 	GetBlock(*bc.Hash) (*types.Block, error)
-	GetStoreStatus() BlockStoreStateJSON
+	GetStoreStatus() *BlockStoreState
 	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
 
-	LoadBlockIndex() (*BlockIndex, error)
+	LoadBlockIndex() (*state.BlockIndex, error)
 	SaveBlock(*types.Block, *bc.TransactionStatus) error
-	SaveChainStatus(*types.Block, *state.UtxoViewpoint) error
+	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error
 }
 
-// BlockStoreStateJSON represents the core's db status
-type BlockStoreStateJSON struct {
+// BlockStoreState represents the core's db status
+type BlockStoreState struct {
 	Height uint64
 	Hash   *bc.Hash
 }

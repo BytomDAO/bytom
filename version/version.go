@@ -2,7 +2,7 @@ package version
 
 var (
 	// The full version string
-	Version = "0.4.5"
+	Version = "0.4.6"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
 )

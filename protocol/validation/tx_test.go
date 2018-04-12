@@ -1,12 +1,10 @@
 package validation
 
 import (
-	"fmt"
 	"math"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/golang/protobuf/proto"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/sha3pool"
@@ -139,13 +137,6 @@ func TestTxValidation(t *testing.T) {
 	}{
 		{
 			desc: "base case",
-		},
-		{
-			desc: "failing mux program",
-			f: func() {
-				mux.Program.Code = []byte{byte(vm.OP_FALSE)}
-			},
-			err: vm.ErrFalseVMResult,
 		},
 		{
 			desc: "unbalanced mux amounts",
@@ -384,36 +375,8 @@ func TestTimeRange(t *testing.T) {
 	for i, c := range cases {
 		tx.TimeRange = c.timeRange
 		if _, err := ValidateTx(tx, block); (err != nil) != c.err {
-			t.Errorf("#%d got error %s, want %s", i, !c.err, c.err)
+			t.Errorf("#%d got error %t, want %t", i, !c.err, c.err)
 		}
-	}
-}
-
-func TestBlockHeaderValid(t *testing.T) {
-	base := bc.NewBlockHeader(1, 1, &bc.Hash{}, 1, &bc.Hash{}, &bc.Hash{}, 0, 0)
-	baseBytes, _ := proto.Marshal(base)
-
-	var bh bc.BlockHeader
-
-	cases := []struct {
-		f   func()
-		err error
-	}{
-		{},
-		{
-			f: func() {
-				bh.Version = 2
-			},
-		},
-	}
-
-	for i, c := range cases {
-		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
-			proto.Unmarshal(baseBytes, &bh)
-			if c.f != nil {
-				c.f()
-			}
-		})
 	}
 }
 

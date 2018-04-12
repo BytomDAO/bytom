@@ -8,7 +8,6 @@ import (
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/wallet"
 )
 
 // return best block hash
@@ -120,10 +119,10 @@ func (a *API) getBlock(ins GetBlockReq) Response {
 		}
 
 		for i := range orig.Inputs {
-			tx.Inputs = append(tx.Inputs, wallet.BuildAnnotatedInput(orig, uint32(i)))
+			tx.Inputs = append(tx.Inputs, a.wallet.BuildAnnotatedInput(orig, uint32(i)))
 		}
 		for i := range orig.Outputs {
-			tx.Outputs = append(tx.Outputs, wallet.BuildAnnotatedOutput(orig, i))
+			tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(orig, i))
 		}
 		resp.Transactions = append(resp.Transactions, tx)
 	}
@@ -162,6 +161,6 @@ func (a *API) getBlockTransactionsCountByHeight(height uint64) Response {
 
 // return current block count
 func (a *API) getBlockCount() Response {
-	blockHeight := map[string]uint64{"block_count": a.chain.Height()}
+	blockHeight := map[string]uint64{"block_count": a.chain.BestBlockHeight()}
 	return NewSuccessResponse(blockHeight)
 }

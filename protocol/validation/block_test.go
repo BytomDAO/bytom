@@ -3,30 +3,87 @@ package validation
 import (
 	"testing"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/state"
 )
 
-func dummyValidateTx(*bc.Tx) error {
-	return nil
-}
-
-func generate(tb testing.TB, prev *bc.Block) *bc.Block {
-	b := &types.Block{
-		BlockHeader: types.BlockHeader{
-			Version:           1,
-			Height:            prev.Height + 1,
-			PreviousBlockHash: prev.ID,
-			Timestamp:         prev.Timestamp + 1,
-			BlockCommitment:   types.BlockCommitment{},
+func TestCheckBlockTime(t *testing.T) {
+	cases := []struct {
+		blockTime  uint64
+		parentTime uint64
+		err        error
+	}{
+		{
+			blockTime:  1520000001,
+			parentTime: 1520000000,
+			err:        nil,
+		},
+		{
+			blockTime:  1510000000,
+			parentTime: 1520000000,
+			err:        errBadTimestamp,
+		},
+		{
+			blockTime:  9999999999,
+			parentTime: 1520000000,
+			err:        errBadTimestamp,
 		},
 	}
 
-	var err error
-	b.TransactionsMerkleRoot, err = bc.TxMerkleRoot(nil)
-	if err != nil {
-		tb.Fatal(err)
+	parent := &state.BlockNode{}
+	block := &bc.Block{
+		BlockHeader: &bc.BlockHeader{},
 	}
 
-	return types.MapBlock(b)
+	for i, c := range cases {
+		parent.Timestamp = c.parentTime
+		block.Timestamp = c.blockTime
+		if err := checkBlockTime(block, parent); rootErr(err) != c.err {
+			t.Errorf("case %d got error %s, want %s", i, err, c.err)
+		}
+	}
+}
+
+func TestCheckCoinbaseAmount(t *testing.T) {
+	cases := []struct {
+		txs    []*types.Tx
+		amount uint64
+		err    error
+	}{
+		{
+			txs: []*types.Tx{
+				types.NewTx(types.TxData{
+					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
+					Outputs: []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
+				}),
+			},
+			amount: 5000,
+			err:    nil,
+		},
+		{
+			txs: []*types.Tx{
+				types.NewTx(types.TxData{
+					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
+					Outputs: []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
+				}),
+			},
+			amount: 6000,
+			err:    errWrongCoinbaseTransaction,
+		},
+		{
+			txs:    []*types.Tx{},
+			amount: 5000,
+			err:    errWrongCoinbaseTransaction,
+		},
+	}
+
+	block := new(types.Block)
+	for i, c := range cases {
+		block.Transactions = c.txs
+		if err := checkCoinbaseAmount(types.MapBlock(block), c.amount); rootErr(err) != c.err {
+			t.Errorf("case %d got error %s, want %s", i, err, c.err)
+		}
+	}
 }

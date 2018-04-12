@@ -9,6 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/reqid"
@@ -21,8 +22,6 @@ var defaultTxTTL = 5 * time.Minute
 func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
 	var decoder func([]byte) (txbuilder.Action, error)
 	switch action {
-	case "control_account":
-		decoder = a.wallet.AccountMgr.DecodeControlAction
 	case "control_address":
 		decoder = txbuilder.DecodeControlAddressAction
 	case "control_program":
@@ -184,12 +183,16 @@ func (a *API) submit(ctx context.Context, ins struct {
 
 // POST /sign-submit-transaction
 func (a *API) signSubmit(ctx context.Context, x struct {
-	Password []string           `json:"password"`
+	Password string             `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
-	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password[0], a.pseudohsmSignTemplate); err != nil {
+	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password, a.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")
 		return NewErrorResponse(err)
+	}
+
+	if signCount, complete := txbuilder.SignInfo(&x.Txs); !complete && signCount == 0 {
+		return NewErrorResponse(pseudohsm.ErrLoadKey)
 	}
 	log.Info("Sign Transaction complete.")
 

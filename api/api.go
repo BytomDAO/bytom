@@ -193,6 +193,7 @@ func (a *API) buildHandler() {
 		m.Handle("/build-transaction", jsonHandler(a.build))
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
 		m.Handle("/submit-transaction", jsonHandler(a.submit))
+		// TODO remove this api, separate sign and submit process
 		m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
@@ -231,6 +232,7 @@ func (a *API) buildHandler() {
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/get-work", jsonHandler(a.getWork))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
+	m.Handle("/set-mining", jsonHandler(a.setMining))
 
 	handler := latencyHandler(m, walletEnable)
 	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux

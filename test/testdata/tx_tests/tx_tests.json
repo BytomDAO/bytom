@@ -1,0 +1,229 @@
+{
+  "keys": [
+    {"name": "alice", "password": "alice"},
+    {"name": "bob", "password": "bob"}
+  ],
+  "accounts": [
+    {"name": "alice", "keys": ["alice"], "quorum": 1},
+    {"name": "bob", "keys": ["bob"], "quorum": 1},
+    {"name": "multi-sig", "keys": ["alice", "bob"], "quorum": 2}
+  ],
+  "transactions": [
+    {
+      "describe": "normal single sign btm tx",
+      "passwords": ["alice"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 40000000000, "asset": "BTM"}
+      ],
+      "valid": true,
+      "gas_only": false,
+      "tx_fee": 60000000000
+    },
+    {
+      "describe": "single sign btm tx, out of gas",
+      "passwords": ["alice"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "gas_only": false,
+      "valid": false
+    },
+    {
+      "describe": "normal multi utxo btm tx",
+      "passwords": ["alice", "bob"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "spend_account", "name": "bob", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 30000000000, "asset": "BTM"},
+        {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"}
+      ],
+      "valid": true,
+      "gas_only": false,
+      "tx_fee": 140000000000
+    },
+    {
+      "describe": "single sign asset tx",
+      "passwords": ["alice"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "issue", "name": "alice", "amount": 100, "asset": "GOLD"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"},
+        {"type": "output", "name": "alice", "amount": 100, "asset": "GOLD"}
+      ],
+      "valid": true,
+      "gas_only": false,
+      "tx_fee": 70000000000
+    },
+    {
+      "describe": "single sign asset, out of gas",
+      "passwords": ["alice"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "issue", "name": "alice", "amount": 100, "asset": "RMB"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "output", "name": "alice", "amount": 100, "asset": "RMB"}
+      ],
+      "valid": false,
+      "gas_only": false
+    },
+    {
+      "describe": "single sign asset, input not equal with output",
+      "passwords": ["alice"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "issue", "name": "alice", "amount": 100, "asset": "SILVER"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"},
+        {"type": "output", "name": "alice", "amount": 50, "asset": "SILVER"}
+      ],
+      "valid": false,
+      "gas_only": false
+    },
+    {
+      "describe": "normal single sign with retire",
+      "passwords": ["alice"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "spend_account", "name": "alice", "amount": 100, "asset": "GOLD"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"},
+        {"type": "retire", "name": "alice", "amount": 100, "asset": "GOLD"}
+      ],
+      "valid": true,
+      "gas_only": false,
+      "tx_fee": 70000000000
+    },
+    {
+      "describe": "gas only tx",
+      "passwords": ["alice"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "spend_account", "name": "bob", "amount": 100, "asset": "GOLD"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"},
+        {"type": "retire", "name": "alice", "amount": 100, "asset": "GOLD"}
+      ],
+      "valid": false,
+      "gas_only": true,
+      "tx_fee": 70000000000
+    },
+    {
+      "describe": "normal multi-sig asset with issue and retire",
+      "passwords": ["alice", "bob"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "spend_account", "name": "bob", "amount": 100000000000, "asset": "BTM"},
+        {"type": "issue", "name": "multi-sig", "amount": 100, "asset": "MULTI-SIGN-ASSET"},
+        {"type": "spend_account", "name": "alice", "amount": 10, "asset": "GOLD"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "multi-sig", "amount": 199500000000, "asset": "BTM"},
+        {"type": "output", "name": "multi-sig", "amount": 100, "asset": "MULTI-SIGN-ASSET"},
+        {"type": "retire", "name": "alice", "amount": 10, "asset": "GOLD"}
+      ],
+      "valid": true,
+      "gas_only": false,
+      "tx_fee": 500000000
+    },
+    {
+      "describe": "multi-sig asset with issue and retire, out of gas",
+      "passwords": ["alice", "bob"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "spend_account", "name": "bob", "amount": 100000000000, "asset": "BTM"},
+        {"type": "issue", "name": "multi-sig", "amount": 100, "asset": "DOLLAR"},
+        {"type": "spend_account", "name": "alice", "amount": 10, "asset": "GOLD"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "multi-sig", "amount": 200000000000, "asset": "BTM"},
+        {"type": "output", "name": "multi-sig", "amount": 100, "asset": "DOLLAR"},
+        {"type": "retire", "name": "alice", "amount": 10, "asset": "GOLD"}
+      ],
+      "gas_only": false,
+      "valid": false
+    },
+    {
+      "describe": "multi utxo btm tx, wrong sig",
+      "passwords": ["alice"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "spend_account", "name": "bob", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 30000000000, "asset": "BTM"},
+        {"type": "output", "name": "alice", "amount": 30000000000, "asset": "BTM"}
+      ],
+      "gas_only": false,
+      "valid": false
+    },
+    {
+      "describe": "multi utxo btm tx, output large than input",
+      "passwords": ["alice", "bob"],
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"},
+        {"type": "spend_account", "name": "bob", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"},
+        {"type": "output", "name": "alice", "amount": 200000000000, "asset": "BTM"}
+      ],
+      "gas_only": false,
+      "valid": false
+    },
+    {
+      "describe": "version is 0",
+      "passwords": ["alice"],
+      "version": 0,
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"}
+      ],
+      "gas_only": false,
+      "valid": false
+    },
+    {
+      "describe": "version is 1",
+      "passwords": ["alice"],
+      "version": 1,
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"}
+      ],
+      "tx_fee": 10000000000,
+      "gas_only": false,
+      "valid": true
+    },
+    {
+      "describe": "version greater than block version(1)",
+      "passwords": ["alice"],
+      "version": 12,
+      "inputs": [
+        {"type": "spend_account", "name": "alice", "amount": 100000000000, "asset": "BTM"}
+      ],
+      "outputs": [
+        {"type": "output", "name": "bob", "amount": 90000000000, "asset": "BTM"}
+      ],
+      "gas_only": false,
+      "valid": false
+    }
+  ]
+}

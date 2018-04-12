@@ -57,7 +57,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,7 +81,7 @@ func TestWalletUpdate(t *testing.T) {
 	txStatus := bc.NewTransactionStatus()
 	store.SaveBlock(block, txStatus)
 
-	err = w.attachBlock(block)
+	err = w.AttachBlock(block)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,19 +8,18 @@ import (
 
 //consensus variables
 const (
-	// define the Max transaction size and Max block size
-	MaxTxSize   = uint64(1048576)
+	// Max gas that one block contains
 	MaxBlockGas = uint64(100000000)
 
 	//config parameter for coinbase reward
 	CoinbasePendingBlockNumber = uint64(6)
 	subsidyReductionInterval   = uint64(560640)
-	baseSubsidy                = uint64(624000000000)
+	baseSubsidy                = uint64(41250000000)
 	InitialBlockSubsidy        = uint64(1470000000000000000)
 
 	// config for pow mining
 	PowMinBits            = uint64(2305843009213861724)
-	BlocksPerRetarget     = uint64(1024)
+	BlocksPerRetarget     = uint64(128)
 	TargetSecondsPerBlock = uint64(60)
 	SeedPerRetarget       = uint64(128)
 
@@ -34,7 +33,7 @@ const (
 	CoinbaseArbitrarySizeLimit = 128
 
 	VMGasRate        = int64(1000)
-	StorageGasRate   = int64(0)
+	StorageGasRate   = int64(5)
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
 

@@ -36,7 +36,6 @@ type accountOutput struct {
 	AccountID string
 	Address   string
 	keyIndex  uint64
-	change    bool
 }
 
 const (
@@ -299,7 +298,6 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 			for _, out := range outsByScript[s] {
 				newOut := &accountOutput{
 					rawOutput: *out,
-					change:    false,
 				}
 				result = append(result, newOut)
 			}
@@ -329,7 +327,6 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 				AccountID: cp.AccountID,
 				Address:   cp.Address,
 				keyIndex:  cp.KeyIndex,
-				change:    cp.Change,
 			}
 			result = append(result, newOut)
 		}
@@ -386,7 +383,7 @@ transactionLoop:
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos))
+				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
 		}
@@ -397,7 +394,7 @@ transactionLoop:
 				continue
 			}
 			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, buildAnnotatedTransaction(tx, b, statusFail, pos))
+				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
 		}
@@ -502,7 +499,7 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 
 // GetTransactionsByAccountID get account txs by account ID
 func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
-	annotatedTxs := []*query.AnnotatedTx{}
+	var annotatedTxs []*query.AnnotatedTx
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()

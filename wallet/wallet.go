@@ -94,7 +94,7 @@ func (w *Wallet) loadWalletInfo() error {
 	if err != nil {
 		return err
 	}
-	return w.attachBlock(block)
+	return w.AttachBlock(block)
 }
 
 func (w *Wallet) commitWalletInfo(batch db.Batch) error {
@@ -138,7 +138,8 @@ func (w *Wallet) getImportKeyFlag() bool {
 	return false
 }
 
-func (w *Wallet) attachBlock(block *types.Block) error {
+// AttachBlock attach a new block
+func (w *Wallet) AttachBlock(block *types.Block) error {
 	if block.PreviousBlockHash != w.status.WorkHash {
 		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
 		return nil
@@ -163,7 +164,8 @@ func (w *Wallet) attachBlock(block *types.Block) error {
 	return w.commitWalletInfo(storeBatch)
 }
 
-func (w *Wallet) detachBlock(block *types.Block) error {
+// DetachBlock detach a block and rollback state
+func (w *Wallet) DetachBlock(block *types.Block) error {
 	blockHash := block.Hash()
 	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
 	if err != nil {
@@ -197,7 +199,7 @@ func (w *Wallet) walletUpdater() {
 				return
 			}
 
-			if err := w.detachBlock(block); err != nil {
+			if err := w.DetachBlock(block); err != nil {
 				log.WithField("err", err).Error("walletUpdater detachBlock")
 				return
 			}
@@ -209,7 +211,7 @@ func (w *Wallet) walletUpdater() {
 			continue
 		}
 
-		if err := w.attachBlock(block); err != nil {
+		if err := w.AttachBlock(block); err != nil {
 			log.WithField("err", err).Error("walletUpdater stop")
 			return
 		}
@@ -305,7 +307,7 @@ func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudoh
 
 func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
 	for i := uint64(0); i < index; i++ {
-		if _, err := w.AccountMgr.CreateAddress(nil, account.ID, false); err != nil {
+		if _, err := w.AccountMgr.CreateAddress(nil, account.ID); err != nil {
 			return err
 		}
 	}
