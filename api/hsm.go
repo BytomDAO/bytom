@@ -59,8 +59,7 @@ func (a *API) pseudohsmSignTemplates(ctx context.Context, x struct {
 		return NewErrorResponse(err)
 	}
 	log.Info("Sign Transaction complete.")
-	_, complete := txbuilder.SignProgress(&x.Txs)
-	return NewSuccessResponse(&signResp{Tx: &x.Txs, SignComplete: complete})
+	return NewSuccessResponse(&signResp{Tx: &x.Txs, SignComplete: txbuilder.SignProgress(&x.Txs)})
 }
 
 func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
