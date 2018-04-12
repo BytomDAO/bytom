@@ -268,7 +268,7 @@ func (r *PEXReactor) ensurePeers() {
 			alreadyDialing := r.Switch.IsDialing(try)
 			var alreadyConnected bool
 			for _, v := range r.Switch.Peers().list {
-				if strings.Compare(v.mconn.RemoteAddress.String(), try.String()) == 0 {
+				if strings.Compare(v.mconn.RemoteAddress.IP.String(), try.IP.String()) == 0 {
 					alreadyConnected = true
 					break
 				}

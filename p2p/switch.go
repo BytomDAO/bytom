@@ -16,6 +16,7 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/trust"
+	"strings"
 )
 
 const (
@@ -362,7 +363,11 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress, persistent bool) (*Peer,
 	if err := sw.checkBannedPeer(addr.IP.String()); err != nil {
 		return nil, err
 	}
-
+	for _, v := range sw.Peers().list {
+		if strings.Compare(v.mconn.RemoteAddress.IP.String(), addr.IP.String()) == 0 {
+			return nil, errors.New("Peer is connected")
+		}
+	}
 	sw.dialing.Set(addr.IP.String(), addr)
 	defer sw.dialing.Delete(addr.IP.String())
 
