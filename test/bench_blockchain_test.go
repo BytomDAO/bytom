@@ -1,80 +1,85 @@
 package test
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 )
 
-func BenchmarkInsertChain_CoinBaseTx_NoAsset(b *testing.B) {
+func BenchmarkChain_CoinBaseTx_NoAsset(b *testing.B) {
 	benchInsertChain(b, 0, 0, "")
 }
 
-func BenchmarkChain_BtmTx_NoAsset(b *testing.B) {
+func BenchmarkChain_BtmTx_NoAsset_BASE(b *testing.B) {
 	benchInsertChain(b, 1, 0, "")
 }
 
-func BenchmarkChain_10BtmTx_NoAsset(b *testing.B) {
-	benchInsertChain(b, 10, 0, "")
+func BenchmarkChain_5000BtmTx_NoAsset_BASE(b *testing.B) {
+	benchInsertChain(b, 5000, 0, "")
 }
 
-func BenchmarkChain_200BtmTx_NoAsset(b *testing.B) {
-	benchInsertChain(b, 200, 0, "")
+func BenchmarkChain_5000BtmTx_5Asset_BASE(b *testing.B) {
+	benchInsertChain(b, 5000, 5, "")
 }
 
-func BenchmarkChain_3000BtmTx_NoAsset(b *testing.B) {
-	benchInsertChain(b, 3000, 0,"")
+func BenchmarkChain_10000BtmTx_NoAsset_BASE(b *testing.B) {
+	benchInsertChain(b, 10000, 0, "")
 }
 
-func BenchmarkChain_BtmTx_1Asset(b *testing.B) {
-	benchInsertChain(b, 1, 1,"")
+func BenchmarkChain_10000BtmTx_1Asset_BASE(b *testing.B) {
+	benchInsertChain(b, 10000, 1, "")
 }
 
-func BenchmarkChain_200BtmTx_10Asset(b *testing.B) {
-	benchInsertChain(b, 200, 10,"")
-}
-
-func BenchmarkChain_1000BtmTx_10Asset(b *testing.B) {
-	benchInsertChain(b, 1000, 10, "")
+func BenchmarkChain_10000BtmTx_5Asset_BASE(b *testing.B) {
+	benchInsertChain(b, 10000, 5, "")
 }
 
 // standard Transaction
 func BenchmarkChain_BtmTx_NoAsset_P2PKH(b *testing.B) {
-	benchInsertChain(b, 1000, 0, "P2PKH")
+	benchInsertChain(b, 5000, 0, "P2PKH")
 }
 
-func BenchmarkChain_tmTx_10Asset_P2PKH(b *testing.B) {
-	benchInsertChain(b, 300, 100, "P2PKH")
+func BenchmarkChain_BtmTx_5Asset_P2PKH(b *testing.B) {
+	benchInsertChain(b, 5000, 5, "P2PKH")
 }
 
 func BenchmarkChain_BtmTx_NoAsset_P2SH(b *testing.B) {
-	benchInsertChain(b, 1000, 0, "P2SH")
+	benchInsertChain(b, 5000, 0, "P2SH")
 }
 
-func BenchmarkChain_BtmTx_10Asset_P2SH(b *testing.B) {
-	benchInsertChain(b, 1000, 10, "P2SH")
+func BenchmarkChain_BtmTx_5Asset_P2SH(b *testing.B) {
+	benchInsertChain(b, 5000, 5, "P2SH")
 }
 
 func BenchmarkChain_BtmTx_NoAsset_MutiSign(b *testing.B) {
-	benchInsertChain(b, 1000, 0, "MutiSign")
+	benchInsertChain(b, 5000, 0, "MutiSign")
 }
 
-func BenchmarkChain_BtmTx_10Asset_MutiSign(b *testing.B) {
-	benchInsertChain(b, 1000, 10, "MutiSign")
+func BenchmarkChain_BtmTx_5Asset_MutiSign(b *testing.B) {
+	benchInsertChain(b, 5000, 5, "MutiSign")
 }
 
 func benchInsertChain(b *testing.B, blockTxNumber int, otherAssetNum int, txType string) {
+	b.StopTimer()
 	testNumber := b.N
 	totalTxNumber := testNumber * blockTxNumber
 
+	dirPath, err := ioutil.TempDir(".", "testDB")
+	if err != nil {
+		b.Fatal("create dirPath err:", err)
+	}
+	defer os.RemoveAll(dirPath)
+
 	// Generate a chain test data.
-	chain, txs, txPool, err := GenerateChainData(totalTxNumber, otherAssetNum, txType)
+	chain, txs, txPool, err := GenerateChainData(dirPath, totalTxNumber, otherAssetNum, txType)
 	if err != nil {
 		b.Fatal("GenerateChainData err:", err)
 	}
 
-	// Set the time for inserting block into the new chain.
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < testNumber; i++ {
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
 		testTxs := txs[blockTxNumber*i : blockTxNumber*(i+1)]
 		if err := InsertChain(chain, txPool, testTxs); err != nil {
 			b.Fatal("Failed to insert block into chain:", err)
