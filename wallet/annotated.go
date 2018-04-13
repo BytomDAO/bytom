@@ -48,7 +48,14 @@ func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
 	saveAlias := assetID.String()
 	storeBatch := w.DB.NewBatch()
 
-	externalAsset := &asset.Asset{AssetID: *assetID, Alias: &saveAlias, DefinitionMap: definitionMap, Signer: &signers.Signer{Type: "external"}}
+	externalAsset := &asset.Asset{
+		AssetID:           *assetID,
+		Alias:             &saveAlias,
+		DefinitionMap:     definitionMap,
+		RawDefinitionByte: definitionByte,
+		Signer:            &signers.Signer{Type: "external"},
+	}
+
 	if rawAsset, err := json.Marshal(externalAsset); err == nil {
 		log.WithFields(log.Fields{"assetID": assetID.String(), "alias": saveAlias}).Info("index external asset")
 		storeBatch.Set(asset.Key(assetID), rawAsset)
