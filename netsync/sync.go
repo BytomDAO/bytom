@@ -88,10 +88,13 @@ func (sm *SyncManager) synchronise() {
 	if peer == nil {
 		return
 	}
-	if ok:=sm.Switch().Peers().Has(peer.Key); !ok{
+
+	if ok := sm.Switch().Peers().Has(peer.Key); !ok {
 		log.Info("Peer disconnected")
 		sm.sw.StopPeerGracefully(peer)
+		return
 	}
+
 	if bestHeight > sm.chain.BestBlockHeight() {
 		log.Info("sync peer:", peer.Addr(), " height:", bestHeight)
 		sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
