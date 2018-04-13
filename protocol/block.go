@@ -41,16 +41,16 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 	var attachNodes []*state.BlockNode
 	var detachNodes []*state.BlockNode
 
-	attachIter := node
-	for c.index.NodeByHeight(attachIter.Height) != attachIter {
-		attachNodes = append([]*state.BlockNode{attachIter}, attachNodes...)
-		attachIter = attachIter.Parent
+	attachNode := node
+	for c.index.NodeByHeight(attachNode.Height) != attachNode {
+		attachNodes = append([]*state.BlockNode{attachNode}, attachNodes...)
+		attachNode = attachNode.Parent
 	}
 
-	detachIter := c.bestNode
-	for detachIter != attachIter {
-		detachNodes = append(detachNodes, detachIter)
-		detachIter = detachIter.Parent
+	detachNode := c.bestNode
+	for detachNode != attachNode {
+		detachNodes = append(detachNodes, detachNode)
+		detachNode = detachNode.Parent
 	}
 	return attachNodes, detachNodes
 }
