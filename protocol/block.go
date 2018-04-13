@@ -13,7 +13,6 @@ import (
 var (
 	// ErrBadBlock is returned when a block is invalid.
 	ErrBadBlock = errors.New("invalid block")
-
 	// ErrBadStateRoot is returned when the computed assets merkle root
 	// disagrees with the one declared in a block header.
 	ErrBadStateRoot = errors.New("invalid state merkle root")
@@ -36,6 +35,24 @@ func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 		return nil, errors.New("can't find block in given hight")
 	}
 	return c.store.GetBlock(&node.Hash)
+}
+
+func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, []*state.BlockNode) {
+	var attachNodes []*state.BlockNode
+	var detachNodes []*state.BlockNode
+
+	attachIter := node
+	for c.index.NodeByHeight(attachIter.Height) != attachIter {
+		attachNodes = append([]*state.BlockNode{attachIter}, attachNodes...)
+		attachIter = attachIter.Parent
+	}
+
+	detachIter := c.bestNode
+	for detachIter != attachIter {
+		detachNodes = append(detachNodes, detachIter)
+		detachIter = detachIter.Parent
+	}
+	return attachNodes, detachNodes
 }
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
@@ -61,24 +78,6 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		c.txPool.RemoveTransaction(&tx.Tx.ID)
 	}
 	return nil
-}
-
-func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, []*state.BlockNode) {
-	var attachNodes []*state.BlockNode
-	var detachNodes []*state.BlockNode
-
-	attachIter := node
-	for c.index.NodeByHeight(attachIter.Height) != attachIter {
-		attachNodes = append([]*state.BlockNode{attachIter}, attachNodes...)
-		attachIter = attachIter.Parent
-	}
-
-	detachIter := c.bestNode
-	for detachIter != attachIter {
-		detachNodes = append(detachNodes, detachIter)
-		detachIter = detachIter.Parent
-	}
-	return attachNodes, detachNodes
 }
 
 func (c *Chain) reorganizeChain(node *state.BlockNode) error {
