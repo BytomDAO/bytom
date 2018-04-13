@@ -28,6 +28,8 @@ var (
 	ErrBadType = errors.New("type must be client or network")
 	// ErrNoMatchID is returned when Delete is called on nonexisting ID.
 	ErrNoMatchID = errors.New("nonexisting access token ID")
+	// ErrInvalidToken is returned when Check is called on invalid token
+	ErrInvalidToken = errors.New("invalid token")
 
 	// validIDRegexp checks that all characters are alphumeric, _ or -.
 	// It also must have a length of at least 1.
@@ -109,7 +111,7 @@ func (cs *CredentialStore) Check(ctx context.Context, id string, secret string) 
 		return true, nil
 	}
 
-	return false, nil
+	return false, ErrInvalidToken
 }
 
 // List lists all access tokens.

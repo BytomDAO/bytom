@@ -81,8 +81,8 @@ func TestCheck(t *testing.T) {
 	}
 
 	valid, err = cs.Check(ctx, "x", "badsecret")
-	if err != nil {
-		t.Fatal(err)
+	if err == nil {
+		t.Fatal("invalid token check passed")
 	}
 	if valid {
 		t.Fatal("expected bad secret to not be valid")
