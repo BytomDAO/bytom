@@ -22,6 +22,7 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+// DefaultNativeAsset is the BTM Asset
 var DefaultNativeAsset *Asset
 
 const (
@@ -49,6 +50,7 @@ func initNativeAsset() {
 	}
 }
 
+// AliasKey store asset alias
 func AliasKey(name string) []byte {
 	return []byte(AliasPrefix + name)
 }
@@ -170,13 +172,18 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, err
 	}
 
-	defHash := bc.NewHash(sha3.Sum256(rawDefinition))
+	assetID := bc.ComputeAssetID(issuanceProgram, vmver, nil)
+	if rawDefinition != nil {
+		defHash := bc.NewHash(sha3.Sum256(rawDefinition))
+		assetID = bc.ComputeAssetID(issuanceProgram, vmver, &defHash)
+	}
+
 	asset := &Asset{
 		DefinitionMap:     definition,
 		RawDefinitionByte: rawDefinition,
 		VMVersion:         vmver,
 		IssuanceProgram:   issuanceProgram,
-		AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
+		AssetID:           assetID,
 		Signer:            assetSigner,
 		Tags:              tags,
 	}
@@ -229,7 +236,7 @@ func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[
 	return nil
 }
 
-// findByID retrieves an Asset record along with its signer, given an assetID.
+// FindByID retrieves an Asset record along with its signer, given an assetID.
 func (reg *Registry) FindByID(ctx context.Context, id *bc.AssetID) (*Asset, error) {
 	reg.cacheMu.Lock()
 	cached, ok := reg.cache.Get(id.String())
@@ -333,7 +340,7 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 // The empty asset def is an empty byte slice.
 func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	if def == nil {
-		return []byte{}, nil
+		return nil, nil
 	}
 	return json.MarshalIndent(def, "", "  ")
 }
