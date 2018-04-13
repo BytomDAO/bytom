@@ -37,9 +37,28 @@ BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
 
 all: test target release-all
 
+ifeq ($(GOOS),linux)
+bytomd:
+	@rm -f mining/tensority/*.go
+	@cp mining/tensority/stlib/*.go mining/tensority/
+	@g++ -o mining/tensority/stlib/cSimdTs.o -c mining/tensority/stlib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fopenmp -D_USE_OPENMP
+	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+else ifeq ($(GOOS),darwin)
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
+	rm -f mining/tensority/*.go
+	cp mining/tensority/dylib/*.go mining/tensority/
+	rm -f mining/tensority/dylib/*.dylib
+	g++ -shared -o mining/tensority/dylib/cSimdTs.dylib mining/tensority/stlib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fPIC
+	cp mining/tensority/dylib/cSimdTs.dylib cmd/bytomd/
+	go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+else
+bytomd:
+	@echo "Building bytomd to cmd/bytomd/bytomd"
+	@rm -f mining/tensority/*.go
+	@cp mining/tensority/legacy/*.go mining/tensority/
 	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+endif
 
 bytomcli:
 	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
@@ -82,6 +101,9 @@ release-all: clean
 clean:
 	@echo "Cleaning binaries built"
 	@rm -rf cmd/bytomd/bytomd
+	@rm -rf cmd/bytomd/*.dylib
+	@rm -rf mining/tensority/*.dylib
+	@rm -rf mining/tensority/dylib/*.dylib
 	@rm -rf cmd/bytomcli/bytomcli
 	@rm -rf cmd/miner/miner
 	@rm -rf target
