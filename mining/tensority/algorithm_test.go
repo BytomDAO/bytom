@@ -119,7 +119,7 @@ func TestHash(t *testing.T) {
 		bhhash := bc.NewHash(tt.blockHeader)
 		bhseed := bc.NewHash(tt.seed)
 
-		result := Hash(&bhhash, &bhseed).Bytes()
+		result := algorithm(&bhhash, &bhseed).Bytes()
 
 		var resArr [32]byte
 		copy(resArr[:], result)

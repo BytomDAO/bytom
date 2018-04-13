@@ -7,6 +7,8 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
+const maxAIHashCached = 2048
+
 func algorithm(hash, seed *bc.Hash) *bc.Hash {
 	cache := calcSeedCache(seed.Bytes())
 	data := mulMatrix(hash.Bytes(), cache)
@@ -27,7 +29,7 @@ type Cache struct {
 
 // NewCache create a cache struct
 func NewCache() *Cache {
-	return &Cache{lruCache: lru.New(1024)}
+	return &Cache{lruCache: lru.New(maxAIHashCached)}
 }
 
 // AddCache is used for add tensority calculate result
