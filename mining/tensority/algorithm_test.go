@@ -8,7 +8,7 @@ import (
 )
 
 // Tests that tensority hash result is correct.
-func TestHash(t *testing.T) {
+func TestAlgorithm(t *testing.T) {
 	tests := []struct {
 		blockHeader [32]byte
 		seed        [32]byte
