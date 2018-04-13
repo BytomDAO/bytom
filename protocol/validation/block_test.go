@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/mining/tensority"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
@@ -83,6 +84,104 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 	for i, c := range cases {
 		block.Transactions = c.txs
 		if err := checkCoinbaseAmount(types.MapBlock(block), c.amount); rootErr(err) != c.err {
+			t.Errorf("case %d got error %s, want %s", i, err, c.err)
+		}
+	}
+}
+
+func TestValidateBlockHeader(t *testing.T) {
+	// add (hash, seed) --> (tensority hash) to the  tensority cache for avoid
+	// real matrix calculate cost.
+	tensority.AIHash.AddCache(&bc.Hash{V0: 0}, &bc.Hash{}, &bc.Hash{V0: 1<<64 - 1, V1: 1<<64 - 1, V2: 1<<64 - 1, V3: 1<<64 - 1})
+	tensority.AIHash.AddCache(&bc.Hash{V0: 1}, &bc.Hash{}, &bc.Hash{})
+
+	cases := []struct {
+		block  *bc.Block
+		parent *state.BlockNode
+		err    error
+	}{
+		{
+			block: &bc.Block{BlockHeader: &bc.BlockHeader{
+				Version: 1,
+			}},
+			parent: &state.BlockNode{
+				Version: 2,
+			},
+			err: errVersionRegression,
+		},
+		{
+			block: &bc.Block{BlockHeader: &bc.BlockHeader{
+				Height: 20,
+			}},
+			parent: &state.BlockNode{
+				Height: 18,
+			},
+			err: errMisorderedBlockHeight,
+		},
+		{
+			block: &bc.Block{BlockHeader: &bc.BlockHeader{
+				Height: 20,
+				Bits:   0,
+			}},
+			parent: &state.BlockNode{
+				Height: 19,
+				Bits:   2305843009214532812,
+			},
+			err: errBadBits,
+		},
+		{
+			block: &bc.Block{BlockHeader: &bc.BlockHeader{
+				Height:          20,
+				PreviousBlockId: &bc.Hash{V0: 18},
+			}},
+			parent: &state.BlockNode{
+				Height: 19,
+				Hash:   bc.Hash{V0: 19},
+			},
+			err: errMismatchedBlock,
+		},
+		{
+			block: &bc.Block{
+				ID: bc.Hash{V0: 0},
+				BlockHeader: &bc.BlockHeader{
+					Height:          1,
+					Timestamp:       1523352601,
+					PreviousBlockId: &bc.Hash{V0: 0},
+					Bits:            2305843009214532812,
+				},
+			},
+			parent: &state.BlockNode{
+				Height:    0,
+				Timestamp: 1523352600,
+				Hash:      bc.Hash{V0: 0},
+				Seed:      &bc.Hash{V1: 1},
+				Bits:      2305843009214532812,
+			},
+			err: errWorkProof,
+		},
+		{
+			block: &bc.Block{
+				ID: bc.Hash{V0: 1},
+				BlockHeader: &bc.BlockHeader{
+					Height:          1,
+					Timestamp:       1523352601,
+					PreviousBlockId: &bc.Hash{V0: 0},
+					Bits:            2305843009214532812,
+				},
+			},
+			parent: &state.BlockNode{
+				Height:    0,
+				Timestamp: 1523352600,
+				Hash:      bc.Hash{V0: 0},
+				Seed:      &bc.Hash{V1: 1},
+				Bits:      2305843009214532812,
+			},
+			err: nil,
+		},
+	}
+
+	for i, c := range cases {
+		if err := ValidateBlockHeader(c.block, c.parent); rootErr(err) != c.err {
 			t.Errorf("case %d got error %s, want %s", i, err, c.err)
 		}
 	}
