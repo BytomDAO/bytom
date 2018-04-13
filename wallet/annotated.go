@@ -76,6 +76,10 @@ func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage
 
 	//local asset and saved external asset
 	if localAsset, err := w.AssetReg.FindByID(nil, &assetID); err == nil {
+		if localAsset == nil {
+			return "", nil
+		}
+
 		alias := *localAsset.Alias
 		definition := []byte(localAsset.RawDefinitionByte)
 		return alias, definition
