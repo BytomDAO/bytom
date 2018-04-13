@@ -184,7 +184,7 @@ var listAddressesCmd = &cobra.Command{
 }
 
 var validateAddressCmd = &cobra.Command{
-	Use:   "validate-address",
+	Use:   "validate-address <address>",
 	Short: "validate the account addresses",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
