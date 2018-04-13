@@ -26,16 +26,12 @@ func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 		for j, input := range tx.Inputs {
 			alias, definition := w.getAliasDefinition(input.AssetID)
 			txs[i].Inputs[j].AssetAlias = alias
-			if len(definition) > 0 {
-				txs[i].Inputs[j].AssetDefinition = &definition
-			}
+			txs[i].Inputs[j].AssetDefinition = &definition
 		}
 		for k, output := range tx.Outputs {
 			alias, definition := w.getAliasDefinition(output.AssetID)
 			txs[i].Outputs[k].AssetAlias = alias
-			if len(definition) > 0 {
-				txs[i].Outputs[k].AssetDefinition = &definition
-			}
+			txs[i].Outputs[k].AssetDefinition = &definition
 		}
 	}
 }
@@ -81,7 +77,10 @@ func (w *Wallet) getAliasDefinition(assetID bc.AssetID) (string, json.RawMessage
 		}
 
 		alias := *localAsset.Alias
-		definition := []byte(localAsset.RawDefinitionByte)
+		var definition []byte
+		if localAsset.RawDefinitionByte != nil {
+			definition = []byte(localAsset.RawDefinitionByte)
+		}
 		return alias, definition
 	}
 
