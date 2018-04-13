@@ -136,6 +136,10 @@ func (cs *CredentialStore) Delete(ctx context.Context, id string) error {
 		return errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
 
+	if value := cs.DB.Get([]byte(id)); value == nil {
+		return errors.WithDetailf(ErrNoMatchID, "check id %q", id)
+	}
+
 	cs.DB.Delete([]byte(id))
 	return nil
 }
