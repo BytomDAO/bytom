@@ -177,7 +177,6 @@ func (a *API) buildHandler() {
 
 		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
-		m.Handle("/update-asset-tags", jsonHandler(a.updateAssetTags))
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
 		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))

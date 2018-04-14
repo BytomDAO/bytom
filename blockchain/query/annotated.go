@@ -70,7 +70,6 @@ type AnnotatedAsset struct {
 	Keys            []*AssetKey        `json:"keys"`
 	Quorum          int                `json:"quorum"`
 	Definition      *json.RawMessage   `json:"definition"`
-	Tags            *json.RawMessage   `json:"tags"`
 }
 
 //AssetKey means an asset key.
