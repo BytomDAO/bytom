@@ -162,7 +162,6 @@ $ ./bytomcli create-account alice d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc2
   "id": "0CIT3OI100A04",
   "key_index": 1,
   "quorum": 1,
-  "tags": null,
   "xpubs": [
     "d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"
   ]
@@ -203,7 +202,6 @@ $ ./bytomcli create-account multi_account d91df216da6c5641ef454c8da1e56362f86ed8
   "id": "0CIT6J0QG0A06",
   "key_index": 1,
   "quorum": 2,
-  "tags": null,
   "xpubs": [
     "cb6057b683c5a341ea29e02ec5bb1e53691eb3b14c285138175d42b07d0551798977fc50203bde1dc2827a07f6f26237fa8ec3c6a2ef272ed80f9211f9c6ac64",
     "d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"
@@ -231,8 +229,7 @@ $ ./bytomcli create-asset GOLD d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab
       "root_xpub": "d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"
     }
   ],
-  "quorum": 1,
-  "tags": {}
+  "quorum": 1
 }
 ```
 
@@ -267,8 +264,7 @@ $ ./bytomcli create-asset SILVER d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26
       "root_xpub": "d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"
     }
   ],
-  "quorum": 1,
-  "tags": {}
+  "quorum": 1
 }
 ```
 

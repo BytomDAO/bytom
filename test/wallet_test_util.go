@@ -151,7 +151,7 @@ func (ctx *walletTestContext) createAsset(accountAlias string, assetAlias string
 	if err != nil {
 		return nil, err
 	}
-	return ctx.Wallet.AssetReg.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
+	return ctx.Wallet.AssetReg.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias)
 }
 
 func (ctx *walletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) (*types.Block, error) {
@@ -176,7 +176,7 @@ func (ctx *walletTestContext) createAccount(name string, keys []string, quorum i
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := ctx.Wallet.AccountMgr.Create(nil, xpubs, quorum, name, nil)
+	_, err := ctx.Wallet.AccountMgr.Create(nil, xpubs, quorum, name)
 	return err
 }
 

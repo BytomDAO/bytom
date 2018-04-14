@@ -21,14 +21,9 @@ func (a *API) listAccounts(ctx context.Context, filter struct {
 		return NewErrorResponse(err)
 	}
 
-	annotatedAccounts := make([]query.AnnotatedAccount, 0, len(accounts))
+	var annotatedAccounts []query.AnnotatedAccount
 	for _, acc := range accounts {
-		annotated, err := account.Annotated(acc)
-		if err != nil {
-			return NewErrorResponse(err)
-		}
-
-		annotatedAccounts = append(annotatedAccounts, *annotated)
+		annotatedAccounts = append(annotatedAccounts, *account.Annotated(acc))
 	}
 
 	return NewSuccessResponse(annotatedAccounts)
