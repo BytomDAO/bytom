@@ -22,6 +22,7 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+// DefaultNativeAsset is the native BTM asset
 var DefaultNativeAsset *Asset
 
 const (
@@ -49,6 +50,7 @@ func initNativeAsset() {
 	}
 }
 
+// AliasKey is alias of asset
 func AliasKey(name string) []byte {
 	return []byte(AliasPrefix + name)
 }
@@ -229,7 +231,7 @@ func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[
 	return nil
 }
 
-// findByID retrieves an Asset record along with its signer, given an assetID.
+// FindByID retrieves an Asset record along with its signer, given an assetID.
 func (reg *Registry) FindByID(ctx context.Context, id *bc.AssetID) (*Asset, error) {
 	reg.cacheMu.Lock()
 	cached, ok := reg.cache.Get(id.String())
@@ -333,7 +335,7 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 // The empty asset def is an empty byte slice.
 func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	if def == nil {
-		return []byte{}, nil
+		def = make(map[string]interface{}, 0)
 	}
 	return json.MarshalIndent(def, "", "  ")
 }
