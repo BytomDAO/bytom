@@ -36,6 +36,7 @@ type accountOutput struct {
 	AccountID string
 	Address   string
 	keyIndex  uint64
+	change    bool
 }
 
 const (
@@ -298,6 +299,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 			for _, out := range outsByScript[s] {
 				newOut := &accountOutput{
 					rawOutput: *out,
+					change:    false,
 				}
 				result = append(result, newOut)
 			}
@@ -327,6 +329,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 				AccountID: cp.AccountID,
 				Address:   cp.Address,
 				keyIndex:  cp.KeyIndex,
+				change:    cp.Change,
 			}
 			result = append(result, newOut)
 		}

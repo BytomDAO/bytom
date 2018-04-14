@@ -127,13 +127,13 @@ type walletTestContext struct {
 	Chain  *protocol.Chain
 }
 
-func (ctx *walletTestContext) createControlProgram(accountName string) (*account.CtrlProgram, error) {
+func (ctx *walletTestContext) createControlProgram(accountName string, change bool) (*account.CtrlProgram, error) {
 	acc, err := ctx.Wallet.AccountMgr.FindByAlias(nil, accountName)
 	if err != nil {
 		return nil, err
 	}
 
-	return ctx.Wallet.AccountMgr.CreateAddress(nil, acc.ID)
+	return ctx.Wallet.AccountMgr.CreateAddress(nil, acc.ID, change)
 }
 
 func (ctx *walletTestContext) getPubkey(keyAlias string) *chainkd.XPub {
@@ -155,7 +155,7 @@ func (ctx *walletTestContext) createAsset(accountAlias string, assetAlias string
 }
 
 func (ctx *walletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) (*types.Block, error) {
-	controlProgram, err := ctx.createControlProgram(coinbaseAccount)
+	controlProgram, err := ctx.createControlProgram(coinbaseAccount, true)
 	if err != nil {
 		return nil, err
 	}

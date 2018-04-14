@@ -51,7 +51,7 @@ func TestCancelReservation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID)
+	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
