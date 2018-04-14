@@ -68,6 +68,11 @@ $ git clone https://github.com/Bytom/bytom $GOPATH/src/github.com/bytom
 
 #### Build
 
+> On Windows platform, you'd better have MinGW installed. For example, you may choose
+> 1. [nuwen's MinGW Distro](https://nuwen.net/mingw.html) on a Windows x64 machine or
+> 2. [mingw-w64](https://mingw-w64.org/doku.php/download/mingw-builds) on a Windows x32 machine
+> and configure the `path` environment viarable correctly.
+
 ``` bash
 $ cd $GOPATH/src/github.com/bytom
 $ make bytomd    # build bytomd
@@ -75,6 +80,8 @@ $ make bytomcli  # build bytomcli
 ```
 
 When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytomd` and `cmd/bytomcli` directory, respectively.
+
+_(What is more, if you would like to run `make release-all`, please make sure you have `md5sha1sum` via `brew install md5sha1sum` on MacOS, so that the command `md5sum` works.)_
 
 ## Example
 
