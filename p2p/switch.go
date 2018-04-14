@@ -13,10 +13,11 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"strings"
+
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/trust"
-	"strings"
 )
 
 const (
@@ -516,6 +517,8 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		// ignore connection if we already have enough
 		maxPeers := sw.config.MaxNumPeers
 		if maxPeers <= sw.peers.Size() {
+			// close inConn
+			inConn.Close()
 			log.WithFields(log.Fields{
 				"address":  inConn.RemoteAddr().String(),
 				"numPeers": sw.peers.Size(),
@@ -527,6 +530,8 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		// New inbound connection!
 		err := sw.addPeerWithConnectionAndConfig(inConn, sw.peerConfig)
 		if err != nil {
+			// conn close for returing err
+			inConn.Close()
 			log.WithFields(log.Fields{
 				"address": inConn.RemoteAddr().String(),
 				"error":   err,
@@ -662,12 +667,10 @@ func (sw *Switch) addPeerWithConnectionAndConfig(conn net.Conn, config *PeerConf
 
 	peer, err := newInboundPeerWithConfig(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, config)
 	if err != nil {
-		conn.Close()
 		return err
 	}
 	peer.SetLogger(sw.Logger.With("peer", conn.RemoteAddr()))
 	if err = sw.AddPeer(peer); err != nil {
-		conn.Close()
 		return err
 	}
 
