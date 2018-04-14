@@ -53,7 +53,7 @@ func (g *TxGenerator) createKey(alias string, auth string) error {
 }
 
 func (g *TxGenerator) getPubkey(keyAlias string) *chainkd.XPub {
-	pubKeys := g.Hsm.ListKeys()
+	pubKeys := g.Hsm.ListKeys(nil)
 	for i, key := range pubKeys {
 		if key.Alias == keyAlias {
 			return &pubKeys[i].XPub

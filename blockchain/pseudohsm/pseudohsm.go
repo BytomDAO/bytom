@@ -86,8 +86,12 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 }
 
 // ListKeys returns a list of all xpubs from the store
-func (h *HSM) ListKeys() []XPub {
+func (h *HSM) ListKeys(xpub *chainkd.XPub) []XPub {
 	xpubs := h.cache.keys()
+	if xpub != nil {
+		xpubs = h.cache.byPubs[*xpub]
+	}
+
 	return xpubs
 }
 

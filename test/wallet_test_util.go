@@ -137,7 +137,7 @@ func (ctx *walletTestContext) createControlProgram(accountName string, change bo
 }
 
 func (ctx *walletTestContext) getPubkey(keyAlias string) *chainkd.XPub {
-	pubKeys := ctx.Wallet.Hsm.ListKeys()
+	pubKeys := ctx.Wallet.Hsm.ListKeys(nil)
 	for i, key := range pubKeys {
 		if key.Alias == keyAlias {
 			return &pubKeys[i].XPub
