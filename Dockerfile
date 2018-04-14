@@ -22,3 +22,6 @@ CMD ["bytomd"]
 
 # sample command
 # docker run -p 9888:9888 bytom:latest bytomd node --web.closed --auth.disable
+# docker run -d -p 9888:9888 bytom:latest bytomd node --web.closed --auth.disable
+# docker container ls
+# docker stop [CONTAINER ID]
