@@ -100,6 +100,7 @@ type addressResp struct {
 	AccountAlias string `json:"account_alias"`
 	AccountID    string `json:"account_id"`
 	Address      string `json:"address"`
+	Change       bool   `json:"change"`
 }
 
 func (a *API) listAddresses(ctx context.Context, ins struct {
@@ -128,7 +129,12 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 		}
 
 		accountAlias := a.wallet.AccountMgr.GetAliasByID(cp.AccountID)
-		addresses = append(addresses, &addressResp{AccountAlias: accountAlias, AccountID: cp.AccountID, Address: cp.Address})
+		addresses = append(addresses, &addressResp{
+			AccountAlias: accountAlias,
+			AccountID:    cp.AccountID,
+			Address:      cp.Address,
+			Change:       cp.Change,
+		})
 	}
 	return NewSuccessResponse(addresses)
 }

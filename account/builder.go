@@ -72,7 +72,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	}
 
 	if res.Change > 0 {
-		acp, err := a.accounts.CreateAddress(ctx, a.AccountID)
+		acp, err := a.accounts.CreateCtrlProgramForChange(ctx, a.AccountID)
 		if err != nil {
 			return errors.Wrap(err, "creating control program")
 		}
