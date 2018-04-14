@@ -1,6 +1,8 @@
 # build the image
 # docker build -t bytom .
 
+
+
 # Build Bytom in a stock Go builder container
 FROM golang:1.9-alpine as builder
 
@@ -17,7 +19,12 @@ COPY --from=builder /go/src/github.com/bytom/cmd/bytomd/bytomd /usr/local/bin/
 COPY --from=builder /go/src/github.com/bytom/cmd/bytomcli/bytomcli /usr/local/bin/
 
 EXPOSE 1999 46656 46657 9888
-# CMD ["bytomd", "node", "--help"]
+
+
+
+
+# if u r running the container the first time plz init it with 'bytomd init --chain_id testnet' and then run 'bytomd node --help' for further instructions.
+
 
 ## sample commands
 # docker run -it -p 9888:9888 -v ~/.bytomd:/.bytomd bytom:latest
