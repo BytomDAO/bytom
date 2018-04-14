@@ -9,7 +9,7 @@ $(error "$$GOOS is not defined.")
 endif
 endif
 
-PACKAGES    := $(shell go list ./... | grep -v '/vendor/')
+PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v 'github.com/bytom/mining/tensority/legacy' | grep -v 'github.com/bytom/mining/tensority/stlib' | grep -v 'github.com/bytom/mining/tensority/dylib')
 BUILD_FLAGS := -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`"
 
 MINER_BINARY32 := miner-$(GOOS)_386
@@ -40,18 +40,18 @@ all: test target release-all
 ifeq ($(GOOS),linux)
 bytomd:
 	@rm -f mining/tensority/*.go
-	@cp mining/tensority/stlib/*.go mining/tensority/
-	@g++ -o mining/tensority/stlib/cSimdTs.o -c mining/tensority/stlib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fopenmp -D_USE_OPENMP
+	cp mining/tensority/stlib/*.go mining/tensority/
+	g++ -o mining/tensority/stlib/cSimdTs.o -c mining/tensority/stlib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fopenmp -D_USE_OPENMP
 	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 else ifeq ($(GOOS),darwin)
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
-	rm -f mining/tensority/*.go
-	cp mining/tensority/dylib/*.go mining/tensority/
-	rm -f mining/tensority/dylib/*.dylib
-	g++ -shared -o mining/tensority/dylib/cSimdTs.dylib mining/tensority/stlib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fPIC
-	cp mining/tensority/dylib/cSimdTs.dylib cmd/bytomd/
-	go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+	@rm -f mining/tensority/*.go
+	@cp mining/tensority/dylib/*.go mining/tensority/
+	@rm -f mining/tensority/dylib/*.dylib
+	@g++ -shared -o mining/tensority/dylib/cSimdTs.dylib mining/tensority/stlib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fPIC
+	@cp mining/tensority/dylib/cSimdTs.dylib cmd/bytomd/
+	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 else
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
@@ -62,6 +62,8 @@ endif
 
 bytomcli:
 	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
+	@rm -f mining/tensority/*.go
+	@cp mining/tensority/legacy/*.go mining/tensority/
 	@go build $(BUILD_FLAGS) -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
 
 target:
@@ -100,13 +102,16 @@ release-all: clean
 
 clean:
 	@echo "Cleaning binaries built"
+	@rm -rf target
+	@rm -rf cmd/miner/miner
+	@rm -rf cmd/bytomcli/bytomcli
 	@rm -rf cmd/bytomd/bytomd
 	@rm -rf cmd/bytomd/*.dylib
 	@rm -rf mining/tensority/*.dylib
 	@rm -rf mining/tensority/dylib/*.dylib
-	@rm -rf cmd/bytomcli/bytomcli
-	@rm -rf cmd/miner/miner
-	@rm -rf target
+	@rm -rf mining/tensority/stlib/*.o
+	@rm -f mining/tensority/*.go
+	@cp mining/tensority/legacy/*.go mining/tensority/
 
 target/$(BYTOMD_BINARY32):
 	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
@@ -128,14 +133,24 @@ target/$(MINER_BINARY64):
 
 test:
 	@echo "====> Running go test"
+	@rm -f mining/tensority/*.go
+	@cp mining/tensority/legacy/*.go mining/tensority/
 	@go test -tags "network" $(PACKAGES)
 
 benchmark:
-	go test -bench $(PACKAGES)
+	@rm -f mining/tensority/*.go
+	@cp mining/tensority/legacy/*.go mining/tensority/
+	@go test -bench $(PACKAGES)
 
 functional-tests:
+	@rm -f mining/tensority/*.go
+	@cp mining/tensority/legacy/*.go mining/tensority/
 	@go test -v -timeout=30m -tags=functional ./test
 
 ci: test functional-tests
 
 .PHONY: all target release-all clean test benchmark
+
+
+
+
