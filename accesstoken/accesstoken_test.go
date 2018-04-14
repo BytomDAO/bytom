@@ -72,20 +72,14 @@ func TestCheck(t *testing.T) {
 	token := mustCreateToken(ctx, t, cs, "x", "client")
 	tokenParts := strings.Split(token.Token, ":")
 
-	valid, err := cs.Check(ctx, tokenParts[0], tokenParts[1])
+	err := cs.Check(ctx, tokenParts[0], tokenParts[1])
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !valid {
-		t.Fatal("expected token and secret to be valid")
-	}
 
-	valid, err = cs.Check(ctx, "x", "badsecret")
+	err = cs.Check(ctx, "x", "badsecret")
 	if err == nil {
 		t.Fatal("invalid token check passed")
-	}
-	if valid {
-		t.Fatal("expected bad secret to not be valid")
 	}
 }
 
