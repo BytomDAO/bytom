@@ -291,12 +291,10 @@ func (r *PEXReactor) ensurePeers() {
 
 	// Dial picked addresses
 	for _, item := range toDial {
-		go func(picked *NetAddress) {
-			_, err := r.Switch.DialPeerWithAddress(picked, false)
-			if err != nil {
-				r.book.MarkAttempt(picked)
-			}
-		}(item)
+		_, err := r.Switch.DialPeerWithAddress(item, false)
+		if err != nil {
+			r.book.MarkAttempt(item)
+		}
 	}
 
 	// If we need more addresses, pick a random peer and ask for more.

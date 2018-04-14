@@ -344,11 +344,8 @@ func (sw *Switch) DialSeeds(addrBook *AddrBook, seeds []string) error {
 	// permute the list, dial them in random order.
 	perm := rand.Perm(len(netAddrs))
 	for i := 0; i < len(perm); i++ {
-		go func(i int) {
-			time.Sleep(time.Duration(rand.Int63n(3000)) * time.Millisecond)
-			j := perm[i]
-			sw.dialSeed(netAddrs[j])
-		}(i)
+		j := perm[i]
+		sw.dialSeed(netAddrs[j])
 	}
 	return nil
 }
