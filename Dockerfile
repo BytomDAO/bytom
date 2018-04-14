@@ -22,16 +22,16 @@ EXPOSE 1999 46656 46657 9888
 
 
 
-
-# if u r running the container the first time plz init it with 'bytomd init --chain_id testnet' and then run 'bytomd node --help' for further instructions.
-
-
 ## sample commands
+# docker run -v ~/.bytomd:/.bytomd bytom:latest bytomd init --chain_id testnet
 # docker run -it -p 9888:9888 -v ~/.bytomd:/.bytomd bytom:latest
-# bytomd init --chain_id testnet
+# bytomcli create-access-token xxx
 # bytomd node --web.closed --auth.disable
 # exit
 
 # docker run -d -p 9888:9888 -v ~/.bytomd:/.bytomd bytom:latest bytomd node --web.closed --auth.disable
 # docker container ls
 # docker stop <containerId>
+
+# docker ps
+# docker exec -it <containerId> bytomcli create-access-token <tokenId>
