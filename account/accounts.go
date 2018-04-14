@@ -262,6 +262,11 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
+// CreateAddressForChange generate an address for the UTXO change
+func (m *Manager) CreateCtrlProgramForChange(ctx context.Context, accountID string) (cp *CtrlProgram, err error) {
+	return m.CreateAddress(ctx, accountID, true)
+}
+
 // CreateAddress generate an address for the select account
 func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool) (cp *CtrlProgram, err error) {
 	account, err := m.findByID(ctx, accountID)
@@ -352,7 +357,7 @@ type CtrlProgram struct {
 	Address        string
 	KeyIndex       uint64
 	ControlProgram []byte
-	Change         bool
+	Change         bool // Mark whether this control program is for UTXO change
 }
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*CtrlProgram) error {

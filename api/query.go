@@ -100,7 +100,7 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 
 	var UTXOs []query.AnnotatedUTXO
 	for _, utxo := range accountUTXOs {
-		UTXOs = append(UTXOs, query.AnnotatedUTXO{
+		UTXOs = append([]query.AnnotatedUTXO{{
 			AccountID:           utxo.AccountID,
 			OutputID:            utxo.OutputID.String(),
 			SourceID:            utxo.SourceID.String(),
@@ -113,7 +113,8 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 			ValidHeight:         utxo.ValidHeight,
 			Alias:               a.wallet.AccountMgr.GetAliasByID(utxo.AccountID),
 			AssetAlias:          a.wallet.AssetReg.GetAliasByID(utxo.AssetID.String()),
-		})
+			Change:              utxo.Change,
+		}}, UTXOs...)
 	}
 
 	return NewSuccessResponse(UTXOs)

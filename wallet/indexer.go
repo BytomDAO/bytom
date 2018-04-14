@@ -21,7 +21,7 @@ import (
 )
 
 type rawOutput struct {
-	OutputID bc.Hash
+	OutputID       bc.Hash
 	bc.AssetAmount
 	ControlProgram []byte
 	txHash         bc.Hash
@@ -356,6 +356,7 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 			AccountID:           out.AccountID,
 			Address:             out.Address,
 			ValidHeight:         out.ValidHeight,
+			Change:              out.change,
 		}
 
 		data, err := json.Marshal(u)

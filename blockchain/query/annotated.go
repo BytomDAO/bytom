@@ -94,4 +94,5 @@ type AnnotatedUTXO struct {
 	SourceID            string `json:"source_id"`
 	SourcePos           uint64 `json:"source_pos"`
 	ValidHeight         uint64 `json:"valid_height"`
+	Change              bool   `json:"change"`
 }
