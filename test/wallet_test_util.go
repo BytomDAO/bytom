@@ -176,7 +176,7 @@ func (ctx *walletTestContext) createAccount(name string, keys []string, quorum i
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := ctx.Wallet.AccountMgr.Create(nil, xpubs, quorum, name, nil)
+	_, err := ctx.Wallet.AccountMgr.Create(nil, xpubs, quorum, name)
 	return err
 }
 

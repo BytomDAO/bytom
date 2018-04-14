@@ -71,7 +71,7 @@ func (g *TxGenerator) createAccount(name string, keys []string, quorum int) erro
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := g.AccountManager.Create(nil, xpubs, quorum, name, nil)
+	_, err := g.AccountManager.Create(nil, xpubs, quorum, name)
 	return err
 }
 

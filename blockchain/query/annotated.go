@@ -59,7 +59,6 @@ type AnnotatedAccount struct {
 	Alias    string           `json:"alias,omitempty"`
 	XPubs    []chainkd.XPub   `json:"xpubs"`
 	Quorum   int              `json:"quorum"`
-	Tags     *json.RawMessage `json:"tags"`
 	KeyIndex uint64           `json:"key_index"`
 }
 
