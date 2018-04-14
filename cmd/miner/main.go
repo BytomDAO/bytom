@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"log"
-	// "os"
+	"os"
 
 	"github.com/bytom/api"
 	"github.com/bytom/consensus/difficulty"
@@ -54,6 +54,9 @@ func getBlockHeaderByHeight(height uint64) {
 
 func main() {
 	data, _ := util.ClientCall("/get-work", nil)
+	if data == nil {
+		os.Exit(1)
+	}
 	rawData, err := json.Marshal(data)
 	if err != nil {
 		log.Fatalln(err)
