@@ -17,11 +17,14 @@ COPY --from=builder /go/src/github.com/bytom/cmd/bytomd/bytomd /usr/local/bin/
 COPY --from=builder /go/src/github.com/bytom/cmd/bytomcli/bytomcli /usr/local/bin/
 
 EXPOSE 1999 46656 46657 9888
-RUN bytomd init --chain_id testnet
-CMD ["bytomd"]
+# CMD ["bytomd", "node", "--help"]
 
-# sample command
-# docker run -p 9888:9888 bytom:latest bytomd node --web.closed --auth.disable
-# docker run -d -p 9888:9888 bytom:latest bytomd node --web.closed --auth.disable
+## sample commands
+# docker run -it -p 9888:9888 -v ~/.bytomd:/.bytomd bytom:latest
+# bytomd init --chain_id testnet
+# bytomd node --web.closed --auth.disable
+# exit
+
+# docker run -d -p 9888:9888 -v ~/.bytomd:/.bytomd bytom:latest bytomd node --web.closed --auth.disable
 # docker container ls
-# docker stop [CONTAINER ID]
+# docker stop <containerId>
