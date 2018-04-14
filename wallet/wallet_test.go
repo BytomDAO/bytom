@@ -64,23 +64,29 @@ func TestWalletUpdate(t *testing.T) {
 
 	controlProg.KeyIndex = 1
 
-	utxo := mockUTXO(controlProg)
-	_, txData, err := mockTxData(utxo, testAccount)
+	reg := asset.NewRegistry(testDB, chain)
+	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, "TESTASSET", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	utxos := []*account.UTXO{}
+	btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
+	utxos = append(utxos, btmUtxo)
+	OtherUtxo := mockUTXO(controlProg, &asset.AssetID)
+	utxos = append(utxos, OtherUtxo)
+
+	_, txData, err := mockTxData(utxos, testAccount)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	tx := types.NewTx(*txData)
-
-	reg := asset.NewRegistry(testDB, chain)
-
-	w := mockWallet(testDB, accountManager, reg, chain)
-
 	block := mockSingleBlock(tx)
-
 	txStatus := bc.NewTransactionStatus()
 	store.SaveBlock(block, txStatus)
 
+	w := mockWallet(testDB, accountManager, reg, chain)
 	err = w.AttachBlock(block)
 	if err != nil {
 		t.Fatal(err)
@@ -196,11 +202,11 @@ func TestExportAndImportPrivKey(t *testing.T) {
 	}
 }
 
-func mockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
+func mockUTXO(controlProg *account.CtrlProgram, assetID *bc.AssetID) *account.UTXO {
 	utxo := &account.UTXO{}
 	utxo.OutputID = bc.Hash{V0: 1}
 	utxo.SourceID = bc.Hash{V0: 2}
-	utxo.AssetID = *consensus.BTMAssetID
+	utxo.AssetID = *assetID
 	utxo.Amount = 1000000000
 	utxo.SourcePos = 0
 	utxo.ControlProgram = controlProg.ControlProgram
@@ -210,17 +216,26 @@ func mockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
 	return utxo
 }
 
-func mockTxData(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *types.TxData, error) {
-	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo)
-	if err != nil {
-		return nil, nil, err
+func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder.Template, *types.TxData, error) {
+	tplBuilder := txbuilder.NewBuilder(time.Now())
+
+	for _, utxo := range utxos {
+		txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo)
+		if err != nil {
+			return nil, nil, err
+		}
+		tplBuilder.AddInput(txInput, sigInst)
+
+		out := &types.TxOutput{}
+		if utxo.AssetID == *consensus.BTMAssetID {
+			out = types.NewTxOutput(utxo.AssetID, 100, utxo.ControlProgram)
+		} else {
+			out = types.NewTxOutput(utxo.AssetID, utxo.Amount, utxo.ControlProgram)
+		}
+		tplBuilder.AddOutput(out)
 	}
 
-	b := txbuilder.NewBuilder(time.Now())
-	b.AddInput(txInput, sigInst)
-	out := types.NewTxOutput(*consensus.BTMAssetID, 100, utxo.ControlProgram)
-	b.AddOutput(out)
-	return b.Build()
+	return tplBuilder.Build()
 }
 
 func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) *Wallet {
