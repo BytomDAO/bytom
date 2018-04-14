@@ -1,3 +1,6 @@
+# build the image
+# docker build -t bytom .
+
 # Build Bytom in a stock Go builder container
 FROM golang:1.9-alpine as builder
 
@@ -13,5 +16,9 @@ RUN apk add --no-cache ca-certificates
 COPY --from=builder /go/src/github.com/bytom/cmd/bytomd/bytomd /usr/local/bin/
 COPY --from=builder /go/src/github.com/bytom/cmd/bytomcli/bytomcli /usr/local/bin/
 
-EXPOSE 1999 46656 46657
+EXPOSE 1999 46656 46657 9888
+RUN bytomd init --chain_id testnet
 CMD ["bytomd"]
+
+# sample command
+# docker run -p 9888:9888 bytom:latest bytomd node --web.closed --auth.disable
