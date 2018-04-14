@@ -22,7 +22,7 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
-// DefaultNativeAsset is the native BTM asset
+// DefaultNativeAsset native BTM asset
 var DefaultNativeAsset *Asset
 
 const (
@@ -50,7 +50,7 @@ func initNativeAsset() {
 	}
 }
 
-// AliasKey is alias of asset
+// AliasKey store asset alias prefix
 func AliasKey(name string) []byte {
 	return []byte(AliasPrefix + name)
 }
@@ -332,7 +332,6 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 // As is the standard for Go's map[string] serialization, object keys will
 // appear in lexicographic order. Although this is mostly meant for machine
 // consumption, the JSON is pretty-printed for easy reading.
-// The empty asset def is an empty byte slice.
 func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	if def == nil {
 		def = make(map[string]interface{}, 0)
