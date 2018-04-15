@@ -14,6 +14,7 @@ import (
 
 const (
 	maxNonce = ^uint64(0) // 2^64 - 1
+	isCrazy = false
 )
 
 // do proof of work
@@ -53,23 +54,29 @@ func getBlockHeaderByHeight(height uint64) {
 }
 
 func main() {
-	data, _ := util.ClientCall("/get-work", nil)
-	if data == nil {
-		os.Exit(1)
-	}
-	rawData, err := json.Marshal(data)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	resp := &api.GetWorkResp{}
-	if err = json.Unmarshal(rawData, resp); err != nil {
-		log.Fatalln(err)
-	}
+	for true {
+		data, _ := util.ClientCall("/get-work", nil)
+		if data == nil {
+			os.Exit(1)
+		}
+		rawData, err := json.Marshal(data)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		resp := &api.GetWorkResp{}
+		if err = json.Unmarshal(rawData, resp); err != nil {
+			log.Fatalln(err)
+		}
 
-	log.Println("Mining at height:", resp.BlockHeader.Height)
-	if doWork(resp.BlockHeader, resp.Seed) {
-		util.ClientCall("/submit-work", &api.SubmitWorkReq{BlockHeader: resp.BlockHeader})
-	}
+		log.Println("Mining at height:", resp.BlockHeader.Height)
+		if doWork(resp.BlockHeader, resp.Seed) {
+			util.ClientCall("/submit-work", &api.SubmitWorkReq{BlockHeader: resp.BlockHeader})
+		}
 
-	getBlockHeaderByHeight(resp.BlockHeader.Height)
+		getBlockHeaderByHeight(resp.BlockHeader.Height)
+
+		if !isCrazy {
+			return
+		}	
+	}
 }
