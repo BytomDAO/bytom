@@ -264,9 +264,12 @@ func (w *Wallet) ImportAccountPrivKey(xprv chainkd.XPrv, keyAlias, auth string, 
 
 	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias)
 	if err != nil {
+		w.Hsm.XDelete(xpub.XPub, auth)
 		return nil, err
 	}
 	if err := w.recoveryAccountWalletDB(newAccount, xpub, index, keyAlias); err != nil {
+		w.AccountMgr.DeleteAccount(newAccount.ID)
+		w.Hsm.XDelete(xpub.XPub, auth)
 		return nil, err
 	}
 	return xpub, nil

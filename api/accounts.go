@@ -28,11 +28,14 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 	return NewSuccessResponse(annotatedAccount)
 }
 
+// AccountInfo
+type AccountInfo struct {
+	Info string `json:"account_info"`
+}
+
 // POST /delete-account
-func (a *API) deleteAccount(ctx context.Context, in struct {
-	AccountInfo string `json:"account_info"`
-}) Response {
-	if err := a.wallet.AccountMgr.DeleteAccount(in); err != nil {
+func (a *API) deleteAccount(ctx context.Context, in AccountInfo) Response {
+	if err := a.wallet.AccountMgr.DeleteAccount(in.Info); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)

@@ -390,13 +390,16 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	return program.ControlProgram, nil
 }
 
-// DeleteAccount deletes the account's ID or alias matching accountInfo.
-func (m *Manager) DeleteAccount(in struct {
+// AccountInfo
+type Info struct {
 	AccountInfo string `json:"account_info"`
-}) (err error) {
+}
+
+// DeleteAccount deletes the account's ID or alias matching accountInfo.
+func (m *Manager) DeleteAccount(aliasOrId string) (err error) {
 	account := &Account{}
-	if account, err = m.FindByAlias(nil, in.AccountInfo); err != nil {
-		if account, err = m.findByID(nil, in.AccountInfo); err != nil {
+	if account, err = m.FindByAlias(nil, aliasOrId); err != nil {
+		if account, err = m.findByID(nil, aliasOrId); err != nil {
 			return err
 		}
 	}

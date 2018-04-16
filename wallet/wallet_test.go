@@ -186,11 +186,7 @@ func TestExportAndImportPrivKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountInfo := struct {
-		AccountInfo string `json:"account_info"`
-	}{AccountInfo: acnt1.Alias}
-
-	w.AccountMgr.DeleteAccount(accountInfo)
+	w.AccountMgr.DeleteAccount(acnt1.Alias)
 
 	acnt2, err := w.ImportAccountPrivKey(xprv, xpub.Alias, pwd, 0, acnt1.Alias)
 	if err != nil {

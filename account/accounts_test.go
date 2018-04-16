@@ -87,14 +87,7 @@ func TestDeleteAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	cases := []struct {
-		AccountInfo string `json:"account_info"`
-	}{
-		{AccountInfo: account1.Alias},
-		{AccountInfo: account2.ID},
-	}
-
-	if err = m.DeleteAccount(cases[0]); err != nil {
+	if err = m.DeleteAccount(account1.Alias); err != nil {
 		testutil.FatalErr(t, err)
 	}
 
@@ -103,7 +96,7 @@ func TestDeleteAccount(t *testing.T) {
 		t.Errorf("expected account %v should be deleted", found)
 	}
 
-	if err = m.DeleteAccount(cases[1]); err != nil {
+	if err = m.DeleteAccount(account2.ID); err != nil {
 		testutil.FatalErr(t, err)
 	}
 
