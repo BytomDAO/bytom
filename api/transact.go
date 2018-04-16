@@ -11,7 +11,9 @@ import (
 
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
+	"github.com/bytom/math/checked"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -43,7 +45,7 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 }
 
 func mergeActions(req *BuildRequest) []map[string]interface{} {
-	actions := make([]map[string]interface{}, 0)
+	var actions []map[string]interface{}
 	actionMap := make(map[string]map[string]interface{})
 
 	for _, m := range req.Actions {
@@ -204,4 +206,39 @@ func (a *API) signSubmit(ctx context.Context, x struct {
 
 	log.WithField("tx_id", txID["tx_id"]).Info("submit single tx")
 	return NewSuccessResponse(txID)
+}
+
+type calculateTxGasResp struct {
+	LeftBTM     int64 `json:"left_btm"`
+	ConsumedBTM int64 `json:"consumed_btm"`
+	LeftGas     int64 `json:"left_gas"`
+	ConsumedGas int64 `json:"consumed_gas"`
+	StorageGas  int64 `json:"storage_gas"`
+	VMGas       int64 `json:"vm_gas"`
+}
+
+// POST /calculate-transaction-gas
+func (a *API) calculateGas(ctx context.Context, ins struct {
+	Tx types.Tx `json:"raw_transaction"`
+}) Response {
+	gasState, err := txbuilder.CalculateTxGas(a.chain, &ins.Tx)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	btmLeft, ok := checked.MulInt64(gasState.GasLeft, consensus.VMGasRate)
+	if !ok {
+		return NewErrorResponse(errors.New("calculate btmleft got a math error"))
+	}
+
+	txGasResp := &calculateTxGasResp{
+		LeftBTM:     btmLeft,
+		ConsumedBTM: int64(gasState.BTMValue) - btmLeft,
+		LeftGas:     gasState.GasLeft,
+		ConsumedGas: gasState.GasUsed,
+		StorageGas:  gasState.StorageGas,
+		VMGas:       gasState.GasUsed - gasState.StorageGas,
+	}
+
+	return NewSuccessResponse(txGasResp)
 }
