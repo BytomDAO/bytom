@@ -208,7 +208,7 @@ func (a *API) signSubmit(ctx context.Context, x struct {
 	return NewSuccessResponse(txID)
 }
 
-type calculateTxGasResp struct {
+type EstimateTxGasResp struct {
 	LeftBTM     int64 `json:"left_btm"`
 	ConsumedBTM int64 `json:"consumed_btm"`
 	LeftGas     int64 `json:"left_gas"`
@@ -231,7 +231,7 @@ func (a *API) estimateTxGas(ctx context.Context, ins struct {
 		return NewErrorResponse(errors.New("calculate btmleft got a math error"))
 	}
 
-	txGasResp := &calculateTxGasResp{
+	txGasResp := &EstimateTxGasResp{
 		LeftBTM:     btmLeft,
 		ConsumedBTM: int64(gasState.BTMValue) - btmLeft,
 		LeftGas:     gasState.GasLeft,
