@@ -189,6 +189,7 @@ func (n *Node) initAndstartApiServer() {
 	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
+	env.Parse()
 	n.api.StartServer(*listenAddr)
 }
 
