@@ -335,30 +335,20 @@ func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
 		}
 	}
 
-	var status StatusInfo
-	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
-		if err := json.Unmarshal(rawWallet, &status); err != nil {
-			return nil, err
-		}
-	}
-
-	for i := range keysInfo {
-		if keysInfo[i].Complete == true || status.BestHeight == 0 {
-			keysInfo[i].Percent = 100
-			continue
-		}
-
-		keysInfo[i].Percent = uint8(status.WorkHeight * 100 / status.BestHeight)
-		if keysInfo[i].Percent == 100 {
-			keysInfo[i].Complete = true
-		}
-	}
 	return keysInfo, nil
 }
 
 //updateRescanStatus mark private key import process `Complete` if rescan finished
 func updateRescanStatus(w *Wallet) {
-	if !w.ImportingPrivateKey || w.status.WorkHeight < w.status.BestHeight {
+	if !w.ImportingPrivateKey {
+		return
+	}
+
+	if w.status.WorkHeight < w.status.BestHeight {
+		percent := uint8(w.status.WorkHeight * 100 / w.status.BestHeight)
+		for _, keyInfo := range w.importingKeysInfo {
+			keyInfo.Percent = percent
+		}
 		return
 	}
 
@@ -368,4 +358,5 @@ func updateRescanStatus(w *Wallet) {
 		keyInfo.Complete = true
 	}
 	w.commitkeysInfo()
+	// TODO: delete the generated but not used addresses
 }
