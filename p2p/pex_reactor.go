@@ -6,8 +6,6 @@ import (
 	"math/rand"
 	"reflect"
 	"time"
-	"strings"
-
 	log "github.com/sirupsen/logrus"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -268,7 +266,7 @@ func (r *PEXReactor) ensurePeers() {
 			alreadyDialing := r.Switch.IsDialing(try)
 			var alreadyConnected bool
 			for _, v := range r.Switch.Peers().list {
-				if strings.Compare(v.mconn.RemoteAddress.String(), try.String()) == 0 {
+				if v.mconn.RemoteAddress.String() == try.String() {
 					alreadyConnected = true
 					break
 				}
