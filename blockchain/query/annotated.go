@@ -59,7 +59,6 @@ type AnnotatedAccount struct {
 	Alias    string           `json:"alias,omitempty"`
 	XPubs    []chainkd.XPub   `json:"xpubs"`
 	Quorum   int              `json:"quorum"`
-	Tags     *json.RawMessage `json:"tags"`
 	KeyIndex uint64           `json:"key_index"`
 }
 
@@ -71,7 +70,6 @@ type AnnotatedAsset struct {
 	Keys            []*AssetKey        `json:"keys"`
 	Quorum          int                `json:"quorum"`
 	Definition      *json.RawMessage   `json:"definition"`
-	Tags            *json.RawMessage   `json:"tags"`
 }
 
 //AssetKey means an asset key.
@@ -94,4 +92,5 @@ type AnnotatedUTXO struct {
 	SourceID            string `json:"source_id"`
 	SourcePos           uint64 `json:"source_pos"`
 	ValidHeight         uint64 `json:"valid_height"`
+	Change              bool   `json:"change"`
 }
