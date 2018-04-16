@@ -248,8 +248,7 @@ func TestCoinbaseTx(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err = SolveAndUpdate(chain, block)
-		if err == nil {
+		if err := SolveAndUpdate(chain, block); err == nil {
 			t.Fatalf("invalid coinbase tx validate success")
 		}
 	}

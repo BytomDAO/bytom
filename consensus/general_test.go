@@ -1,29 +1,38 @@
 package consensus
 
-/*func TestSubsidy(t *testing.T) {
+import "testing"
+
+func TestSubsidy(t *testing.T) {
 	cases := []struct {
-		bh      *BlockHeader
 		subsidy uint64
+		height  uint64
 	}{
 		{
-			bh: &BlockHeader{
-				Height: 1,
-			},
-			subsidy: 624000000000,
+			subsidy: baseSubsidy,
+			height:  1,
 		},
 		{
-			bh: &BlockHeader{
-				Height: 560640,
-			},
-			subsidy: 312000000000,
+			subsidy: baseSubsidy,
+			height:  subsidyReductionInterval - 1,
+		},
+		{
+			subsidy: baseSubsidy / 2,
+			height:  subsidyReductionInterval,
+		},
+		{
+			subsidy: baseSubsidy / 2,
+			height:  subsidyReductionInterval + 1,
+		},
+		{
+			subsidy: baseSubsidy / 1024,
+			height:  subsidyReductionInterval * 10,
 		},
 	}
 
 	for _, c := range cases {
-		subsidy := c.bh.BlockSubsidy()
-
+		subsidy := BlockSubsidy(c.height)
 		if subsidy != c.subsidy {
 			t.Errorf("got subsidy %s, want %s", subsidy, c.subsidy)
 		}
 	}
-}*/
+}

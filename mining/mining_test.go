@@ -1,42 +1,34 @@
 package mining
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 func TestCreateCoinbaseTx(t *testing.T) {
 	reductionInterval := uint64(560640)
-	baseReward := uint64(41250000000)
+	baseSubsidy := uint64(41250000000)
 	cases := []struct {
-		height uint64
-		txFee  uint64
-		reward uint64
+		height  uint64
+		txFee   uint64
+		subsidy uint64
 	}{
 		{
-			height: reductionInterval - 1,
-			txFee:  0,
-			reward: baseReward,
+			height:  reductionInterval - 1,
+			txFee:   100000000,
+			subsidy: baseSubsidy + 100000000,
 		},
 		{
-			height: reductionInterval,
-			txFee:  0,
-			reward: baseReward / 2,
+			height:  reductionInterval,
+			txFee:   2000000000,
+			subsidy: baseSubsidy/2 + 2000000000,
 		},
 		{
-			height: reductionInterval + 1,
-			txFee:  0,
-			reward: baseReward / 2,
+			height:  reductionInterval + 1,
+			txFee:   0,
+			subsidy: baseSubsidy / 2,
 		},
 		{
-			height: reductionInterval * 2,
-			txFee:  100000000,
-			reward: baseReward/4 + 100000000,
-		},
-		{
-			height: reductionInterval * 10,
-			txFee:  0,
-			reward: baseReward / 1024,
+			height:  reductionInterval * 2,
+			txFee:   100000000,
+			subsidy: baseSubsidy/4 + 100000000,
 		},
 	}
 
@@ -47,9 +39,8 @@ func TestCreateCoinbaseTx(t *testing.T) {
 		}
 
 		outputAmount := coinbaseTx.Outputs[0].OutputCommitment.Amount
-		fmt.Println(outputAmount)
-		if outputAmount != c.reward {
-			t.Fatalf("coinbase tx reward dismatch, expected: %d, have: %d", c.reward, outputAmount)
+		if outputAmount != c.subsidy {
+			t.Fatalf("coinbase tx reward dismatch, expected: %d, have: %d", c.subsidy, outputAmount)
 		}
 	}
 }
