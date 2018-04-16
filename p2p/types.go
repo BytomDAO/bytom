@@ -72,6 +72,10 @@ func (info NodeInfo) String() string {
 	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [remote %v, listen %v], version: %v (%v)}", info.PubKey, info.Moniker, info.Network, info.RemoteAddr, info.ListenAddr, info.Version, info.Other)
 }
 
+func (info NodeInfo) NetWorkID() string {
+	return info.Network
+}
+
 func splitVersion(version string) (string, string, string, error) {
 	spl := strings.Split(version, ".")
 	if len(spl) != 3 {
