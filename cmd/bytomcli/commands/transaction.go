@@ -304,6 +304,20 @@ var signSubTransactionCmd = &cobra.Command{
 	},
 }
 
+var getTxPoolCmd = &cobra.Command{
+	Use:   "get-txpool",
+	Short: "get txpool transactions hashes",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		data, exitCode := util.ClientCall("/get-txpool")
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSONList(data)
+	},
+}
+
 var getTransactionCmd = &cobra.Command{
 	Use:   "get-transaction <hash>",
 	Short: "get the transaction by matching the given transaction hash",

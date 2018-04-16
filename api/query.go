@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus"
+	"github.com/bytom/protocol/bc"
 )
 
 // POST /list-accounts
@@ -85,6 +86,23 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 		return NewSuccessResponse(txSummary)
 	}
 	return NewSuccessResponse(transactions)
+}
+
+type getTxPoolResp struct {
+	TxID bc.Hash `json:"tx_id"`
+}
+
+// POST /get-txpool
+func (a *API) getChainTxPool(ctx context.Context) Response {
+	txIDs := []getTxPoolResp{}
+
+	txPool := a.chain.GetTxPool()
+	txs := txPool.GetTransactions()
+	for _, txDesc := range txs {
+		txIDs = append(txIDs, getTxPoolResp{TxID: bc.Hash(txDesc.Tx.ID)})
+	}
+
+	return NewSuccessResponse(txIDs)
 }
 
 // POST /list-unspent-outputs

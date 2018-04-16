@@ -194,8 +194,10 @@ func (a *API) buildHandler() {
 		m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
 		// TODO remove this api, separate sign and submit process
 		m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
+
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
+		m.Handle("/get-txpool", jsonHandler(a.getChainTxPool))
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
