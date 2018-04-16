@@ -72,13 +72,11 @@ func TestCheck(t *testing.T) {
 	token := mustCreateToken(ctx, t, cs, "x", "client")
 	tokenParts := strings.Split(token.Token, ":")
 
-	err := cs.Check(ctx, tokenParts[0], tokenParts[1])
-	if err != nil {
+	if err := cs.Check(ctx, tokenParts[0], tokenParts[1]); err != nil {
 		t.Fatal(err)
 	}
 
-	err = cs.Check(ctx, "x", "badsecret")
-	if err == nil {
+	if err := cs.Check(ctx, "x", "badsecret"); err != ErrInvalidToken {
 		t.Fatal("invalid token check passed")
 	}
 }
