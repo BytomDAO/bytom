@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/account"
@@ -13,9 +14,9 @@ import (
 
 // POST /create-account
 func (a *API) createAccount(ctx context.Context, ins struct {
-	RootXPubs []chainkd.XPub         `json:"root_xpubs"`
-	Quorum    int                    `json:"quorum"`
-	Alias     string                 `json:"alias"`
+	RootXPubs []chainkd.XPub `json:"root_xpubs"`
+	Quorum    int            `json:"quorum"`
+	Alias     string         `json:"alias"`
 }) Response {
 	acc, err := a.wallet.AccountMgr.Create(ctx, ins.RootXPubs, ins.Quorum, ins.Alias)
 	if err != nil {
@@ -90,29 +91,30 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 	AccountAlias string `json:"account_alias"`
 }) Response {
 	accountID := ins.AccountID
+	var target *account.Account
 	if ins.AccountAlias != "" {
 		acc, err := a.wallet.AccountMgr.FindByAlias(ctx, ins.AccountAlias)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
-
-		accountID = acc.ID
+		target = acc
+	} else {
+		acc, err := a.wallet.AccountMgr.FindByID(ctx, accountID)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		target = acc
 	}
 
-	cps, err := a.wallet.AccountMgr.ListControlProgram()
+	cps, err := a.wallet.AccountMgr.ListCtrlProgramsByXpubs(ctx, target.XPubs)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	var addresses []*addressResp
 	for _, cp := range cps {
-		if cp.Address == "" || (accountID != "" && accountID != cp.AccountID) {
-			continue
-		}
-
-		accountAlias := a.wallet.AccountMgr.GetAliasByID(cp.AccountID)
 		addresses = append(addresses, &addressResp{
-			AccountAlias: accountAlias,
+			AccountAlias: target.Alias,
 			AccountID:    cp.AccountID,
 			Address:      cp.Address,
 			Change:       cp.Change,

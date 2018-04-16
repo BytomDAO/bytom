@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/ecmath"
+	"bytes"
 )
 
 type (
@@ -17,7 +18,16 @@ type (
 	XPub [64]byte
 )
 
-var one = [32]byte{1}
+// CompareTwoXPubs
+func CompareTwoXPubs(a, b []XPub) int {
+	for i, xpub := range a {
+		result := bytes.Compare(xpub[:], b[i][:])
+		if result != 0 {
+			return result
+		}
+	}
+	return 0
+}
 
 // NewXPrv takes a source of random bytes and produces a new XPrv.
 // If r is nil, crypto/rand.Reader is used.

@@ -33,10 +33,12 @@ type StatusInfo struct {
 	WorkHash   bc.Hash
 	BestHeight uint64
 	BestHash   bc.Hash
+	selfProgramsOnChain Set
 }
 
 //KeyInfo is key import status
 type KeyInfo struct {
+	account  account.Account
 	Alias    string       `json:"alias"`
 	XPub     chainkd.XPub `json:"xpub"`
 	Percent  uint8        `json:"percent"`
@@ -59,13 +61,13 @@ type Wallet struct {
 //NewWallet return a new wallet instance
 func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
-		DB:                walletDB,
-		AccountMgr:        account,
-		AssetReg:          asset,
-		chain:             chain,
-		Hsm:               hsm,
-		rescanProgress:    make(chan struct{}, 1),
-		importingKeysInfo: make([]KeyInfo, 0),
+		DB:                  walletDB,
+		AccountMgr:          account,
+		AssetReg:            asset,
+		chain:               chain,
+		Hsm:                 hsm,
+		rescanProgress:      make(chan struct{}, 1),
+		importingKeysInfo:   make([]KeyInfo, 0),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -90,6 +92,7 @@ func (w *Wallet) loadWalletInfo() error {
 		return json.Unmarshal(rawWallet, &w.status)
 	}
 
+	w.status.selfProgramsOnChain = NewSet()
 	block, err := w.chain.GetBlockByHeight(0)
 	if err != nil {
 		return err
@@ -191,7 +194,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 func (w *Wallet) walletUpdater() {
 	for {
 		getRescanNotification(w)
-		updateRescanStatus(w)
+		w.updateRescanStatus()
 		for !w.chain.InMainChain(w.status.BestHash) {
 			block, err := w.chain.GetBlockByHash(&w.status.BestHash)
 			if err != nil {
@@ -297,6 +300,7 @@ func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudoh
 	}
 	w.ImportingPrivateKey = true
 	tmp := KeyInfo{
+		account:  *account,
 		Alias:    keyAlias,
 		XPub:     XPub.XPub,
 		Complete: false,
@@ -339,7 +343,7 @@ func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
 }
 
 //updateRescanStatus mark private key import process `Complete` if rescan finished
-func updateRescanStatus(w *Wallet) {
+func (w *Wallet) updateRescanStatus() {
 	if !w.ImportingPrivateKey {
 		return
 	}
@@ -349,6 +353,7 @@ func updateRescanStatus(w *Wallet) {
 		for _, keyInfo := range w.importingKeysInfo {
 			keyInfo.Percent = percent
 		}
+		w.commitkeysInfo()
 		return
 	}
 
@@ -356,7 +361,14 @@ func updateRescanStatus(w *Wallet) {
 	for _, keyInfo := range w.importingKeysInfo {
 		keyInfo.Percent = 100
 		keyInfo.Complete = true
+
+		if cps, err := w.AccountMgr.ListCtrlProgramsByXpubs(nil, keyInfo.account.XPubs); err == nil {
+			for _, cp := range cps {
+				if !w.status.selfProgramsOnChain.Contains(cp.Address) {
+					w.AccountMgr.DeleteAccountControlProgram(cp.ControlProgram)
+				}
+			}
+		}
 	}
 	w.commitkeysInfo()
-	// TODO: delete the generated but not used addresses
 }

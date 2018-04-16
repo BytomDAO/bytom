@@ -53,7 +53,7 @@ func TestCreateAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err := m.findByID(ctx, account.ID)
+	found, err := m.FindByID(ctx, account.ID)
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
@@ -91,7 +91,7 @@ func TestDeleteAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err := m.findByID(ctx, account1.ID)
+	found, err := m.FindByID(ctx, account1.ID)
 	if err != nil {
 		t.Errorf("expected account %v should be deleted", found)
 	}
@@ -100,7 +100,7 @@ func TestDeleteAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err = m.findByID(ctx, account2.ID)
+	found, err = m.FindByID(ctx, account2.ID)
 	if err != nil {
 		t.Errorf("expected account %v should be deleted", found)
 	}
@@ -111,7 +111,7 @@ func TestFindByID(t *testing.T) {
 	ctx := context.Background()
 	account := m.createTestAccount(ctx, t, "", nil)
 
-	found, err := m.findByID(ctx, account.ID)
+	found, err := m.FindByID(ctx, account.ID)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}

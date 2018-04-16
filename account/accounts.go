@@ -104,7 +104,7 @@ type Manager struct {
 	delayedACPsMu sync.Mutex
 	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
-	accIndexMu  sync.Mutex
+	accIndexMu sync.Mutex
 }
 
 // ExpireReservations removes reservations that have expired periodically.
@@ -180,7 +180,7 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*Account, erro
 	cachedID, ok := m.aliasCache.Get(alias)
 	m.cacheMu.Unlock()
 	if ok {
-		return m.findByID(ctx, cachedID.(string))
+		return m.FindByID(ctx, cachedID.(string))
 	}
 
 	rawID := m.db.Get(aliasKey(alias))
@@ -192,11 +192,11 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*Account, erro
 	m.cacheMu.Lock()
 	m.aliasCache.Add(alias, accountID)
 	m.cacheMu.Unlock()
-	return m.findByID(ctx, accountID)
+	return m.FindByID(ctx, accountID)
 }
 
-// findByID returns an account's Signer record by its ID.
-func (m *Manager) findByID(ctx context.Context, id string) (*Account, error) {
+// FindByID returns an account's Signer record by its ID.
+func (m *Manager) FindByID(ctx context.Context, id string) (*Account, error) {
 	m.cacheMu.Lock()
 	cachedAccount, ok := m.cache.Get(id)
 	m.cacheMu.Unlock()
@@ -244,7 +244,7 @@ func (m *Manager) CreateCtrlProgramForChange(ctx context.Context, accountID stri
 
 // CreateAddress generate an address for the select account
 func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool) (cp *CtrlProgram, err error) {
-	account, err := m.findByID(ctx, accountID)
+	account, err := m.FindByID(ctx, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -268,6 +268,23 @@ func (m *Manager) createAddress(ctx context.Context, account *Account, change bo
 	return cp, nil
 }
 
+// listAddressesById
+func (m *Manager) ListCtrlProgramsByXpubs(ctx context.Context, xpubs []chainkd.XPub) ([]*CtrlProgram, error) {
+	cps, err := m.ListControlProgram()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*CtrlProgram
+	for _, cp := range cps {
+		if cp.Address == "" || chainkd.CompareTwoXPubs(cp.XPubs, xpubs) != 0 {
+			continue
+		}
+		result = append(result, cp)
+	}
+	return result, nil
+}
+
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
 	idx := m.getNextXpubsIndex(account.Signer.XPubs)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
@@ -288,6 +305,7 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 
 	return &CtrlProgram{
 		AccountID:      account.ID,
+		XPubs:          account.Signer.XPubs,
 		Address:        address.EncodeAddress(),
 		KeyIndex:       idx,
 		ControlProgram: control,
@@ -319,6 +337,7 @@ func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool)
 
 	return &CtrlProgram{
 		AccountID:      account.ID,
+		XPubs:          account.Signer.XPubs,
 		Address:        address.EncodeAddress(),
 		KeyIndex:       idx,
 		ControlProgram: control,
@@ -329,6 +348,7 @@ func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool)
 //CtrlProgram is structure of account control program
 type CtrlProgram struct {
 	AccountID      string
+	XPubs          []chainkd.XPub
 	Address        string
 	KeyIndex       uint64
 	ControlProgram []byte
@@ -347,6 +367,12 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*Ctr
 		m.db.Set(CPKey(hash), accountCP)
 	}
 	return nil
+}
+
+func (m *Manager) DeleteAccountControlProgram(prog []byte) {
+	var hash common.Hash
+	sha3pool.Sum256(hash[:], prog)
+	m.db.Delete(CPKey(hash))
 }
 
 // IsLocalControlProgram check is the input control program belong to local
@@ -399,7 +425,7 @@ type Info struct {
 func (m *Manager) DeleteAccount(aliasOrId string) (err error) {
 	account := &Account{}
 	if account, err = m.FindByAlias(nil, aliasOrId); err != nil {
-		if account, err = m.findByID(nil, aliasOrId); err != nil {
+		if account, err = m.FindByID(nil, aliasOrId); err != nil {
 			return err
 		}
 	}
