@@ -110,7 +110,6 @@ type Asset struct {
 	Alias             *string                `json:"alias"`
 	VMVersion         uint64                 `json:"vm_version"`
 	IssuanceProgram   chainjson.HexBytes     `json:"issue_program"`
-	Tags              map[string]interface{} `json:"tags"`
 	RawDefinitionByte chainjson.HexBytes     `json:"raw_definition_byte"`
 	DefinitionMap     map[string]interface{} `json:"definition"`
 }
@@ -133,7 +132,7 @@ func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint64, error) {
 }
 
 // Define defines a new Asset.
-func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, tags map[string]interface{}) (*Asset, error) {
+func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string) (*Asset, error) {
 	if len(xpubs) == 0 {
 		return nil, errors.Wrap(signers.ErrNoXPubs)
 	}
@@ -178,7 +177,6 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		IssuanceProgram:   issuanceProgram,
 		AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
 		Signer:            assetSigner,
-		Tags:              tags,
 	}
 
 	if existAsset := reg.db.Get(Key(&asset.AssetID)); existAsset != nil {
@@ -200,33 +198,6 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 	storeBatch.Write()
 
 	return asset, nil
-}
-
-// UpdateTags modifies the tags of the specified asset. The asset may be
-// identified either by id or alias, but not both.
-func (reg *Registry) UpdateTags(ctx context.Context, assetInfo string, tags map[string]interface{}) (err error) {
-	asset := &Asset{}
-	if asset, err = reg.FindByAlias(ctx, assetInfo); err != nil {
-		assetID := &bc.AssetID{}
-		if err := assetID.UnmarshalText([]byte(assetInfo)); err != nil {
-			return err
-		}
-		if asset, err = reg.FindByID(ctx, assetID); err != nil {
-			return err
-		}
-	}
-
-	asset.Tags = tags
-	rawAsset, err := json.Marshal(asset)
-	if err != nil {
-		return ErrMarshalAsset
-	}
-
-	reg.db.Set(Key(&asset.AssetID), rawAsset)
-	reg.cacheMu.Lock()
-	reg.cache.Add(asset.AssetID, asset)
-	reg.cacheMu.Unlock()
-	return nil
 }
 
 // findByID retrieves an Asset record along with its signer, given an assetID.

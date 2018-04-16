@@ -262,7 +262,7 @@ func (w *Wallet) ImportAccountPrivKey(xprv chainkd.XPrv, keyAlias, auth string, 
 		return nil, err
 	}
 
-	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias, nil)
+	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +280,7 @@ func (w *Wallet) ImportAccountXpubKey(xpubIndex int, xpub pseudohsm.XPub, cpInde
 		return account.ErrDuplicateAlias
 	}
 
-	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias, nil)
+	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias)
 	if err != nil {
 		return err
 	}

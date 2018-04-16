@@ -71,7 +71,7 @@ func (g *TxGenerator) createAccount(name string, keys []string, quorum int) erro
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := g.AccountManager.Create(nil, xpubs, quorum, name, nil)
+	_, err := g.AccountManager.Create(nil, xpubs, quorum, name)
 	return err
 }
 
@@ -80,7 +80,7 @@ func (g *TxGenerator) createAsset(accountAlias string, assetAlias string) (*asse
 	if err != nil {
 		return nil, err
 	}
-	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
+	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias)
 }
 
 func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (*account.UTXO, error) {

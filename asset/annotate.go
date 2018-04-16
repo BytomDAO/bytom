@@ -17,7 +17,6 @@ func isValidJSON(b []byte) bool {
 
 //Annotated annotate the asset
 func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
-	jsonTags := json.RawMessage(`{}`)
 	jsonDefinition := json.RawMessage(`{}`)
 
 	// a.RawDefinitionByte is the asset definition as it appears on the
@@ -26,18 +25,9 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 		jsonDefinition = json.RawMessage(a.RawDefinitionByte)
 	}
 
-	if a.Tags != nil {
-		b, err := json.Marshal(a.Tags)
-		if err != nil {
-			return nil, err
-		}
-		jsonTags = b
-	}
-
 	aa := &query.AnnotatedAsset{
 		ID:              a.AssetID,
 		Definition:      &jsonDefinition,
-		Tags:            &jsonTags,
 		IssuanceProgram: chainjson.HexBytes(a.IssuanceProgram),
 	}
 	if a.Alias != nil {

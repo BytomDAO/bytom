@@ -155,7 +155,7 @@ func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
 			return err
 		}
 
-		wallet.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "default", nil)
+		wallet.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "default")
 		return nil
 	}
 
