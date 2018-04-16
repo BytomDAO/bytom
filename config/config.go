@@ -1,7 +1,10 @@
 package config
 
 import (
+	"os"
+	"os/user"
 	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -180,4 +183,33 @@ func rootify(path, root string) string {
 		return path
 	}
 	return filepath.Join(root, path)
+}
+
+// DefaultDataDir is the default data directory to use for the databases and other
+// persistence requirements.
+func DefaultDataDir() string {
+	// Try to place the data folder in the user's home dir
+	home := homeDir()
+	dataDir := "./.Bytom"
+	if home != "" {
+		switch runtime.GOOS {
+		case "darwin":
+			dataDir = filepath.Join(home, "Library", "Bytom")
+		case "windows":
+			dataDir = filepath.Join(home, "AppData", "Roaming", "Bytom")
+		default:
+			dataDir = filepath.Join(home, ".Bytom")
+		}
+	}
+	return dataDir
+}
+
+func homeDir() string {
+	if home := os.Getenv("HOME"); home != "" {
+		return home
+	}
+	if usr, err := user.Current(); err == nil {
+		return usr.HomeDir
+	}
+	return ""
 }
