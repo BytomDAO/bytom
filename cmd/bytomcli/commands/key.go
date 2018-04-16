@@ -14,6 +14,12 @@ import (
 	"github.com/bytom/util"
 )
 
+var xpubStr = ""
+
+func init() {
+	listKeysCmd.PersistentFlags().StringVar(&xpubStr, "xpub", "", "xpub of key")
+}
+
 var createKeyCmd = &cobra.Command{
 	Use:   "create-key <alias> <password>",
 	Short: "Create a key",
@@ -61,7 +67,21 @@ var listKeysCmd = &cobra.Command{
 	Short: "List the existing keys",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/list-keys")
+		xpub := chainkd.XPub{}
+		if xpubStr != "" {
+			pub, err := hex.DecodeString(xpubStr)
+			if err != nil {
+				jww.ERROR.Println("list-keys err:", err)
+				os.Exit(util.ErrLocalExe)
+			}
+			copy(xpub[:], pub[:])
+		}
+
+		filter := struct {
+			Xpub chainkd.XPub `json:"xpub"`
+		}{Xpub: xpub}
+
+		data, exitCode := util.ClientCall("/list-keys", &filter)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

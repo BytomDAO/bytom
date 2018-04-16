@@ -31,8 +31,20 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	return NewSuccessResponse(xpub)
 }
 
-func (a *API) pseudohsmListKeys(ctx context.Context) Response {
-	return NewSuccessResponse(a.wallet.Hsm.ListKeys())
+func (a *API) pseudohsmListKeys(ctx context.Context, in struct {
+	Xpub chainkd.XPub `json:"xpub"`
+}) Response {
+	var pub *chainkd.XPub
+	if (in.Xpub != chainkd.XPub{}) {
+		pub = &in.Xpub
+	}
+
+	xpubs := a.wallet.Hsm.ListKeys(pub)
+	if xpubs == nil {
+		xpubs = []pseudohsm.XPub{}
+	}
+
+	return NewSuccessResponse(xpubs)
 }
 
 func (a *API) pseudohsmDeleteKey(ctx context.Context, x struct {
@@ -66,6 +78,7 @@ func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path
 	return a.wallet.Hsm.XSign(xpub, path, data[:], password)
 }
 
+// ResetPasswordResp reset password response
 type ResetPasswordResp struct {
 	Changed bool `json:"changed"`
 }

@@ -147,7 +147,7 @@ func NewNode(config *cfg.Config) *Node {
 }
 
 func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
-	xpubs := hsm.ListKeys()
+	xpubs := hsm.ListKeys(nil)
 
 	if len(xpubs) == 0 {
 		xpub, err := hsm.XCreate("default", "123456")
