@@ -29,6 +29,7 @@ var (
 
 // Wraper rpc's client
 func MustRPCClient() *rpc.Client {
+	env.Parse()
 	return &rpc.Client{BaseURL: *coreURL}
 }
 
