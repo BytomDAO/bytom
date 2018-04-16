@@ -7,6 +7,7 @@ type NetInfo struct {
 	PeerCount    int    `json:"peer_count"`
 	CurrentBlock uint64 `json:"current_block"`
 	HighestBlock uint64 `json:"highest_block"`
+	NetWorkID    string `json:"network_id"`
 }
 
 func (a *API) GetNodeInfo() *NetInfo {
@@ -16,6 +17,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 		Mining:       a.cpuMiner.IsMining(),
 		PeerCount:    len(a.sync.Switch().Peers().List()),
 		CurrentBlock: a.chain.BestBlockHeight(),
+		NetWorkID:    a.sync.NodeInfo().Network,
 	}
 	_, info.HighestBlock = a.sync.Peers().BestPeer()
 	if info.CurrentBlock > info.HighestBlock {
