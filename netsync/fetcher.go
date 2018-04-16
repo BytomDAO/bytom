@@ -6,11 +6,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
+	"strings"
+
 	"github.com/bytom/p2p"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	"strings"
 )
 
 const (
@@ -83,7 +84,7 @@ func (f *Fetcher) Enqueue(peer string, block *types.Block) error {
 func (f *Fetcher) loop() {
 	for {
 		// Import any queued blocks that could potentially fit
-		height := f.chain.Height()
+		height := f.chain.BestBlockHeight()
 		for !f.queue.Empty() {
 			op := f.queue.PopItem().(*blockPending)
 			// If too high up the chain or phase, continue later
@@ -125,7 +126,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 
 	//TODO: Ensure the peer isn't DOSing us
 	// Discard any past or too distant blocks
-	if dist := int64(block.Height) - int64(f.chain.Height()); dist < 0 || dist > maxQueueDist {
+	if dist := int64(block.Height) - int64(f.chain.BestBlockHeight()); dist < 0 || dist > maxQueueDist {
 		log.Info("Discarded propagated block, too far away", " peer: ", peer, "number: ", block.Height, "distance: ", dist)
 		return
 	}
@@ -137,7 +138,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 		}
 		f.queued[hash] = op
 		f.queue.Push(op, -float32(block.Height))
-		log.Info("Queued propagated block.", " peer: ", peer, "number: ", block.Height, "queued: ", f.queue.Size())
+		log.Info("Queued receive mine block.", " peer:", peer, " number:", block.Height, " queued:", f.queue.Size())
 	}
 }
 

@@ -27,8 +27,8 @@ const (
 var (
 	errGetBlockTimeout = errors.New("Get block Timeout")
 	errPeerDropped     = errors.New("Peer dropped")
-	errCommAbnorm      = errors.New("Peer communication abnormality")
-	errScamPeer        = errors.New("Scam peer")
+	errGetBlockByHash  = errors.New("Get block by hash error")
+	errBroadcastStatus = errors.New("Broadcast new status block error")
 	errReqBlock        = errors.New("Request block error")
 )
 
@@ -66,11 +66,12 @@ func (bk *blockKeeper) AddTx(tx *types.Tx, peerID string) {
 
 func (bk *blockKeeper) IsCaughtUp() bool {
 	_, height := bk.peers.BestPeer()
-	return bk.chain.Height() < height
+	return bk.chain.BestBlockHeight() < height
 }
 
 func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) error {
-	num := bk.chain.Height() + 1
+	num := bk.chain.BestBlockHeight() + 1
+	currentHash := bk.chain.BestBlockHash()
 	orphanNum := uint64(0)
 	reqNum := uint64(0)
 	isOrphan := false
@@ -83,24 +84,42 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 		block, err := bk.BlockRequest(peerID, reqNum)
 		if errors.Root(err) == errPeerDropped || errors.Root(err) == errGetBlockTimeout || errors.Root(err) == errReqBlock {
 			log.WithField("Peer abnormality. PeerID: ", peerID).Info(err)
-			peer, ok := bk.peers.peers[peerID]
-			if !ok {
-				return errNotRegistered
+			peer := bk.peers.Peer(peerID)
+			if peer == nil {
+				log.Info("peer is not registered")
+				break
 			}
+			log.Info("Peer communication abnormality")
 			bk.sw.StopPeerGracefully(peer.Peer)
-			return errCommAbnorm
+			break
 		}
 		isOrphan, err = bk.chain.ProcessBlock(block)
 		if err != nil {
 			bk.sw.AddScamPeer(bk.peers.Peer(peerID).getPeer())
-			log.WithField("hash: ", block.Hash()).Errorf("blockKeeper fail process block %v", err)
-			return errScamPeer
+			log.WithField("hash:", block.Hash()).Errorf("blockKeeper fail process block %v ", err)
+			break
 		}
 		if isOrphan {
 			orphanNum = block.Height - 1
 			continue
 		}
 		num++
+	}
+	bestHash := bk.chain.BestBlockHash()
+	log.Info("Block sync complete. height:", bk.chain.BestBlockHeight(), " hash:", bestHash)
+	if strings.Compare(currentHash.String(), bestHash.String()) != 0 {
+		log.Info("Broadcast new chain status.")
+
+		block, err := bk.chain.GetBlockByHash(bestHash)
+		if err != nil {
+			log.Errorf("Failed on sync complete broadcast status get block %v", err)
+			return errGetBlockByHash
+		}
+
+		if err := bk.peers.BroadcastNewStatus(block); err != nil {
+			log.Errorf("Failed on broadcast new status block %v", err)
+			return errBroadcastStatus
+		}
 	}
 	return nil
 }

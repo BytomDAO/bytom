@@ -104,7 +104,6 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 		tx = &types.TxData{
 			Version: 1,
 		}
-		tpl.Local = true
 	}
 
 	if b.timeRange != 0 {

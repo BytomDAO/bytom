@@ -13,12 +13,6 @@ type Template struct {
 	Transaction         *types.Tx             `json:"raw_transaction"`
 	SigningInstructions []*SigningInstruction `json:"signing_instructions"`
 
-	// Local indicates that all inputs to the transaction are signed
-	// exclusively by keys managed by this Core. Whenever accepting
-	// a template from an external Core, `Local` should be set to
-	// false.
-	Local bool `json:"local"`
-
 	// AllowAdditional affects whether Sign commits to the tx sighash or
 	// to individual details of the tx so far. When true, signatures
 	// commit to tx details, and new details may be added but existing

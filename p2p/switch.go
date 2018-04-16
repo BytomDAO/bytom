@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/rand"
 	"net"
@@ -15,6 +14,7 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
+	"github.com/bytom/errors"
 	"github.com/bytom/p2p/trust"
 )
 
@@ -390,7 +390,6 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress, persistent bool) (*Peer,
 	}
 	log.WithFields(log.Fields{
 		"address": addr,
-		"error":   err,
 	}).Info("Dialed and added peer")
 	return peer, nil
 }
@@ -461,6 +460,10 @@ func (sw *Switch) StopPeerForError(peer *Peer, reason interface{}) {
 							"retries": i,
 							"error":   err,
 						}).Info("Error reconnecting to peer. Giving up")
+						return
+					}
+					if errors.Root(err) == ErrSwitchDuplicatePeer {
+						log.WithField("error", err).Info("Error reconnecting to peer. ")
 						return
 					}
 					log.WithFields(log.Fields{

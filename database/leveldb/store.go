@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/golang/protobuf/proto"
+	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
@@ -23,15 +24,13 @@ var (
 	txStatusPrefix    = []byte("BTS:")
 )
 
-func loadBlockStoreStateJSON(db dbm.DB) protocol.BlockStoreStateJSON {
+func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
 	bytes := db.Get(blockStoreKey)
 	if bytes == nil {
-		return protocol.BlockStoreStateJSON{
-			Height: 0,
-		}
+		return nil
 	}
-	bsj := protocol.BlockStoreStateJSON{}
-	if err := json.Unmarshal(bytes, &bsj); err != nil {
+	bsj := &protocol.BlockStoreState{}
+	if err := json.Unmarshal(bytes, bsj); err != nil {
 		common.PanicCrisis(common.Fmt("Could not unmarshal bytes: %X", bytes))
 	}
 	return bsj
@@ -119,30 +118,30 @@ func (s *Store) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, erro
 }
 
 // GetStoreStatus return the BlockStoreStateJSON
-func (s *Store) GetStoreStatus() protocol.BlockStoreStateJSON {
+func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 	return loadBlockStoreStateJSON(s.db)
 }
 
-func (s *Store) LoadBlockIndex() (*protocol.BlockIndex, error) {
-	blockIndex := protocol.NewBlockIndex()
+func (s *Store) LoadBlockIndex() (*state.BlockIndex, error) {
+	blockIndex := state.NewBlockIndex()
 	bhIter := s.db.IteratorPrefix(blockHeaderPrefix)
 	defer bhIter.Release()
 
-	var lastNode *protocol.BlockNode
+	var lastNode *state.BlockNode
 	for bhIter.Next() {
 		bh := &types.BlockHeader{}
 		if err := bh.UnmarshalText(bhIter.Value()); err != nil {
 			return nil, err
 		}
 
-		var parent *protocol.BlockNode
+		var parent *state.BlockNode
 		if lastNode == nil || lastNode.Hash == bh.PreviousBlockHash {
 			parent = lastNode
 		} else {
 			parent = blockIndex.GetNode(&bh.PreviousBlockHash)
 		}
 
-		node, err := protocol.NewBlockNode(bh, parent)
+		node, err := state.NewBlockNode(bh, parent)
 		if err != nil {
 			return nil, err
 		}
@@ -177,19 +176,19 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	batch.Set(calcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
 	batch.Write()
+
+	log.WithFields(log.Fields{"height": block.Height, "hash": blockHash.String()}).Info("block saved on disk")
 	return nil
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(block *types.Block, view *state.UtxoViewpoint) error {
-	hash := block.Hash()
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint) error {
 	batch := s.db.NewBatch()
-
 	if err := saveUtxoView(batch, view); err != nil {
 		return err
 	}
 
-	bytes, err := json.Marshal(protocol.BlockStoreStateJSON{Height: block.Height, Hash: &hash})
+	bytes, err := json.Marshal(protocol.BlockStoreState{Height: node.Height, Hash: &node.Hash})
 	if err != nil {
 		return err
 	}

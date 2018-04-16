@@ -3,6 +3,8 @@ package protocol
 import (
 	"sync"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -10,16 +12,16 @@ import (
 // OrphanManage is use to handle all the orphan block
 type OrphanManage struct {
 	//TODO: add orphan cached block limit
-	orphan     map[bc.Hash]*types.Block
-	preOrphans map[bc.Hash][]*bc.Hash
-	mtx        sync.RWMutex
+	orphan      map[bc.Hash]*types.Block
+	prevOrphans map[bc.Hash][]*bc.Hash
+	mtx         sync.RWMutex
 }
 
 // NewOrphanManage return a new orphan block
 func NewOrphanManage() *OrphanManage {
 	return &OrphanManage{
-		orphan:     make(map[bc.Hash]*types.Block),
-		preOrphans: make(map[bc.Hash][]*bc.Hash),
+		orphan:      make(map[bc.Hash]*types.Block),
+		prevOrphans: make(map[bc.Hash][]*bc.Hash),
 	}
 }
 
@@ -42,7 +44,9 @@ func (o *OrphanManage) Add(block *types.Block) {
 	}
 
 	o.orphan[blockHash] = block
-	o.preOrphans[block.PreviousBlockHash] = append(o.preOrphans[block.PreviousBlockHash], &blockHash)
+	o.prevOrphans[block.PreviousBlockHash] = append(o.prevOrphans[block.PreviousBlockHash], &blockHash)
+
+	log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
 }
 
 // Delete will delelte the block from OrphanManage
@@ -55,15 +59,15 @@ func (o *OrphanManage) Delete(hash *bc.Hash) {
 	}
 	delete(o.orphan, *hash)
 
-	preOrphans, ok := o.preOrphans[block.PreviousBlockHash]
-	if !ok || len(preOrphans) == 1 {
-		delete(o.preOrphans, block.PreviousBlockHash)
+	prevOrphans, ok := o.prevOrphans[block.PreviousBlockHash]
+	if !ok || len(prevOrphans) == 1 {
+		delete(o.prevOrphans, block.PreviousBlockHash)
 		return
 	}
 
-	for i, preOrphan := range preOrphans {
+	for i, preOrphan := range prevOrphans {
 		if preOrphan == hash {
-			o.preOrphans[block.PreviousBlockHash] = append(preOrphans[:i], preOrphans[i+1:]...)
+			o.prevOrphans[block.PreviousBlockHash] = append(prevOrphans[:i], prevOrphans[i+1:]...)
 			return
 		}
 	}
@@ -75,4 +79,12 @@ func (o *OrphanManage) Get(hash *bc.Hash) (*types.Block, bool) {
 	block, ok := o.orphan[*hash]
 	o.mtx.RUnlock()
 	return block, ok
+}
+
+// GetPrevOrphans return the list of child orphans
+func (o *OrphanManage) GetPrevOrphans(hash *bc.Hash) ([]*bc.Hash, bool) {
+	o.mtx.RLock()
+	prevOrphans, ok := o.prevOrphans[*hash]
+	o.mtx.RUnlock()
+	return prevOrphans, ok
 }

@@ -111,8 +111,12 @@ func (ctx *chainTestContext) getUtxoEntries() map[string]*storage.UtxoEntry {
 func (ctx *chainTestContext) validateRollback(utxoEntries map[string]*storage.UtxoEntry) error {
 	newUtxoEntries := ctx.getUtxoEntries()
 	for key := range utxoEntries {
-		if _, ok := newUtxoEntries[key]; !ok {
-			return fmt.Errorf("can't find utxo entry after rollback")
+		entry, ok := newUtxoEntries[key]
+		if !ok {
+			return fmt.Errorf("can't find utxo after rollback")
+		}
+		if entry.Spent != utxoEntries[key].Spent {
+			return fmt.Errorf("utxo status dismatch after rollback")
 		}
 	}
 	return nil
@@ -186,7 +190,7 @@ func (input *ctInput) createDependencyTxInput(txs []*types.Tx) (*types.TxInput, 
 func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx) (*types.Tx, error) {
 	builder := txbuilder.NewBuilder(time.Now())
 	sigInst := &txbuilder.SigningInstruction{}
-	currentHeight := ctx.Chain.Height()
+	currentHeight := ctx.Chain.BestBlockHeight()
 	for _, input := range t.Inputs {
 		var txInput *types.TxInput
 		var err error
@@ -265,7 +269,7 @@ func (cfg *chainTestConfig) Run() error {
 	}
 
 	// rollback and validate
-	forkedChain, err := declChain("forked_chain", ctx.Chain, rollbackBlock.Height, ctx.Chain.Height()+1)
+	forkedChain, err := declChain("forked_chain", ctx.Chain, rollbackBlock.Height, ctx.Chain.BestBlockHeight()+1)
 	defer os.RemoveAll("forked_chain")
 	if err != nil {
 		return err

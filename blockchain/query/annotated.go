@@ -26,10 +26,11 @@ type AnnotatedInput struct {
 	Type            string             `json:"type"`
 	AssetID         bc.AssetID         `json:"asset_id"`
 	AssetAlias      string             `json:"asset_alias,omitempty"`
-	AssetDefinition *json.RawMessage   `json:"asset_definition"`
+	AssetDefinition *json.RawMessage   `json:"asset_definition,omitempty"`
 	Amount          uint64             `json:"amount"`
 	IssuanceProgram chainjson.HexBytes `json:"issuance_program,omitempty"`
-	ControlProgram  chainjson.HexBytes `json:"-"`
+	ControlProgram  chainjson.HexBytes `json:"control_program,omitempty"`
+	Address         string             `json:"address,omitempty"`
 	SpentOutputID   *bc.Hash           `json:"spent_output_id,omitempty"`
 	AccountID       string             `json:"account_id,omitempty"`
 	AccountAlias    string             `json:"account_alias,omitempty"`
@@ -44,11 +45,12 @@ type AnnotatedOutput struct {
 	Position        int                `json:"position"`
 	AssetID         bc.AssetID         `json:"asset_id"`
 	AssetAlias      string             `json:"asset_alias,omitempty"`
-	AssetDefinition *json.RawMessage   `json:"asset_definition"`
+	AssetDefinition *json.RawMessage   `json:"asset_definition,omitempty"`
 	Amount          uint64             `json:"amount"`
 	AccountID       string             `json:"account_id,omitempty"`
 	AccountAlias    string             `json:"account_alias,omitempty"`
 	ControlProgram  chainjson.HexBytes `json:"control_program"`
+	Address         string             `json:"address,omitempty"`
 }
 
 //AnnotatedAccount means an annotated account.
@@ -57,7 +59,6 @@ type AnnotatedAccount struct {
 	Alias    string           `json:"alias,omitempty"`
 	XPubs    []chainkd.XPub   `json:"xpubs"`
 	Quorum   int              `json:"quorum"`
-	Tags     *json.RawMessage `json:"tags"`
 	KeyIndex uint64           `json:"key_index"`
 }
 
@@ -69,7 +70,6 @@ type AnnotatedAsset struct {
 	Keys            []*AssetKey        `json:"keys"`
 	Quorum          int                `json:"quorum"`
 	Definition      *json.RawMessage   `json:"definition"`
-	Tags            *json.RawMessage   `json:"tags"`
 }
 
 //AssetKey means an asset key.
@@ -92,4 +92,5 @@ type AnnotatedUTXO struct {
 	SourceID            string `json:"source_id"`
 	SourcePos           uint64 `json:"source_pos"`
 	ValidHeight         uint64 `json:"valid_height"`
+	Change              bool   `json:"change"`
 }

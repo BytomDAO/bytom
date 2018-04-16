@@ -49,14 +49,14 @@ var buildIssueReqFmt = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
 		{"type": "issue", "asset_id": "%s", "amount": %s},
-		{"type": "control_account", "asset_id": "%s", "amount": %s, "account_id": "%s"}
+		{"type": "control_address", "asset_id": "%s", "amount": %s, "address": "%s"}
 	]}`
 
 var buildIssueReqFmtByAlias = `
 	{"actions": [
 		{"type": "spend_account", "asset_alias": "BTM", "amount":%s, "account_alias": "%s"},
 		{"type": "issue", "asset_alias": "%s", "amount": %s},
-		{"type": "control_account", "asset_alias": "%s", "amount": %s, "account_alias": "%s"}
+		{"type": "control_address", "asset_alias": "%s", "amount": %s, "address": "%s"}
 	]}`
 
 var buildSpendReqFmt = `
@@ -119,10 +119,10 @@ var buildTransactionCmd = &cobra.Command{
 		switch buildType {
 		case "issue":
 			if alias {
-				buildReqStr = fmt.Sprintf(buildIssueReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, assetInfo, amount, accountInfo)
+				buildReqStr = fmt.Sprintf(buildIssueReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, assetInfo, amount, address)
 				break
 			}
-			buildReqStr = fmt.Sprintf(buildIssueReqFmt, btmGas, accountInfo, assetInfo, amount, assetInfo, amount, accountInfo)
+			buildReqStr = fmt.Sprintf(buildIssueReqFmt, btmGas, accountInfo, assetInfo, amount, assetInfo, amount, address)
 		case "spend":
 			if alias {
 				buildReqStr = fmt.Sprintf(buildSpendReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, receiverProgram)
@@ -266,9 +266,9 @@ var signSubTransactionCmd = &cobra.Command{
 		}
 
 		var req = struct {
-			Password []string           `json:"password"`
+			Password string           `json:"password"`
 			Txs      txbuilder.Template `json:"transaction"`
-		}{Password: []string{password}, Txs: template}
+		}{Password: password, Txs: template}
 
 		jww.FEEDBACK.Printf("\n\n")
 		data, exitCode := util.ClientCall("/sign-submit-transaction", &req)

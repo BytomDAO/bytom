@@ -11,11 +11,8 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
-const (
-	muxGasCost = int64(10)
-	// timeRangeGash is the block height we will reach after 100 years
-	timeRangeGash = uint64(21024000)
-)
+// timeRangeGash is the block height we will reach after 100 years
+const timeRangeGash = uint64(21024000)
 
 // GasState record the gas usage status
 type GasState struct {
@@ -23,7 +20,7 @@ type GasState struct {
 	GasLeft    int64
 	GasUsed    int64
 	GasVaild   bool
-	storageGas int64
+	StorageGas int64
 }
 
 func (g *GasState) setGas(BTMValue int64, txSize int64) error {
@@ -32,11 +29,6 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 	}
 
 	g.BTMValue = uint64(BTMValue)
-
-	if BTMValue == 0 {
-		g.GasLeft = muxGasCost
-		return nil
-	}
 
 	var ok bool
 	if g.GasLeft, ok = checked.DivInt64(BTMValue, consensus.VMGasRate); !ok {
@@ -47,7 +39,7 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 		g.GasLeft = consensus.MaxGasAmount
 	}
 
-	if g.storageGas, ok = checked.MulInt64(txSize, consensus.StorageGasRate); !ok {
+	if g.StorageGas, ok = checked.MulInt64(txSize, consensus.StorageGasRate); !ok {
 		return errors.Wrap(errGasCalculate, "setGas calc tx storage gas")
 	}
 	return nil
@@ -55,11 +47,11 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 
 func (g *GasState) setGasVaild() error {
 	var ok bool
-	if g.GasLeft, ok = checked.SubInt64(g.GasLeft, g.storageGas); !ok || g.GasLeft < 0 {
+	if g.GasLeft, ok = checked.SubInt64(g.GasLeft, g.StorageGas); !ok || g.GasLeft < 0 {
 		return errors.Wrap(errGasCalculate, "setGasVaild calc gasLeft")
 	}
 
-	if g.GasUsed, ok = checked.AddInt64(g.GasUsed, g.storageGas); !ok {
+	if g.GasUsed, ok = checked.AddInt64(g.GasUsed, g.StorageGas); !ok {
 		return errors.Wrap(errGasCalculate, "setGasVaild calc gasUsed")
 	}
 
@@ -79,7 +71,7 @@ func (g *GasState) updateUsage(gasLeft int64) error {
 		return errors.Wrap(errGasCalculate, "updateUsage calc gas diff")
 	}
 
-	if !g.GasVaild && (g.GasUsed > consensus.DefaultGasCredit || g.storageGas > g.GasLeft) {
+	if !g.GasVaild && (g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft) {
 		return errOverGasCredit
 	}
 	return nil
@@ -88,64 +80,40 @@ func (g *GasState) updateUsage(gasLeft int64) error {
 // validationState contains the context that must propagate through
 // the transaction graph when validating entries.
 type validationState struct {
-	// The ID of the blockchain
-	block *bc.Block
-
-	// The enclosing transaction object
-	tx *bc.Tx
-
-	// The ID of the nearest enclosing entry
-	entryID bc.Hash
-
-	// The source position, for validating ValueSources
-	sourcePos uint64
-
-	// The destination position, for validating ValueDestinations
-	destPos uint64
-
-	// Memoized per-entry validation results
-	cache map[bc.Hash]error
-
+	block     *bc.Block
+	tx        *bc.Tx
 	gasStatus *GasState
+	entryID   bc.Hash           // The ID of the nearest enclosing entry
+	sourcePos uint64            // The source position, for validate ValueSources
+	destPos   uint64            // The destination position, for validate ValueDestinations
+	cache     map[bc.Hash]error // Memoized per-entry validation results
 }
 
 var (
-	errGasCalculate             = errors.New("gas usage calculate got a math error")
-	errEmptyResults             = errors.New("transaction has no results")
-	errMismatchedAssetID        = errors.New("mismatched asset id")
-	errMismatchedBlock          = errors.New("mismatched block")
-	errMismatchedMerkleRoot     = errors.New("mismatched merkle root")
-	errMismatchedPosition       = errors.New("mismatched value source/dest positions")
-	errMismatchedReference      = errors.New("mismatched reference")
-	errMismatchedTxStatus       = errors.New("mismatched transaction status")
-	errMismatchedValue          = errors.New("mismatched value")
-	errMisorderedBlockHeight    = errors.New("misordered block height")
-	errMisorderedBlockTime      = errors.New("misordered block time")
-	errMissingField             = errors.New("missing required field")
-	errNoGas                    = errors.New("no gas input")
-	errNoPrevBlock              = errors.New("no previous block")
-	errNoSource                 = errors.New("no source for value")
-	errNonemptyExtHash          = errors.New("non-empty extension hash")
-	errOverflow                 = errors.New("arithmetic overflow/underflow")
-	errOverGasCredit            = errors.New("all gas credit has been spend")
-	errOverBlockLimit           = errors.New("block's gas is over the limit")
-	errPosition                 = errors.New("invalid source or destination position")
-	errWorkProof                = errors.New("invalid difficulty proof of work")
-	errTxVersion                = errors.New("invalid transaction version")
-	errUnbalanced               = errors.New("unbalanced")
-	errUntimelyTransaction      = errors.New("block timestamp outside transaction time range")
-	errVersionRegression        = errors.New("version regression")
-	errWrongBlockSize           = errors.New("block size is too big")
-	errWrongTransactionSize     = errors.New("transaction size is not in vaild range")
-	errWrongTransactionStatus   = errors.New("transaction status is wrong")
-	errWrongCoinbaseTransaction = errors.New("wrong coinbase transaction")
-	errWrongCoinbaseAsset       = errors.New("wrong coinbase asset id")
-	errNotStandardTx            = errors.New("gas transaction is not standard transaction")
+	errBadTimeRange              = errors.New("tx time range is invalid")
+	errCoinbaseArbitraryOversize = errors.New("coinbase arbitrary size is larger than limit")
+	errGasCalculate              = errors.New("gas usage calculate got a math error")
+	errEmptyResults              = errors.New("transaction has no results")
+	errMismatchedAssetID         = errors.New("mismatched asset id")
+	errMismatchedPosition        = errors.New("mismatched value source/dest positions")
+	errMismatchedReference       = errors.New("mismatched reference")
+	errMismatchedValue           = errors.New("mismatched value")
+	errMissingField              = errors.New("missing required field")
+	errNoSource                  = errors.New("no source for value")
+	errOverflow                  = errors.New("arithmetic overflow/underflow")
+	errOverGasCredit             = errors.New("all gas credit has been spend")
+	errPosition                  = errors.New("invalid source or destination position")
+	errTxVersion                 = errors.New("invalid transaction version")
+	errUnbalanced                = errors.New("unbalanced")
+	errWrongTransactionSize      = errors.New("transaction size is not in vaild range")
+	errWrongCoinbaseTransaction  = errors.New("wrong coinbase transaction")
+	errWrongCoinbaseAsset        = errors.New("wrong coinbase asset id")
+	errNotStandardTx             = errors.New("gas transaction is not standard transaction")
 )
 
 func checkValid(vs *validationState, e bc.Entry) (err error) {
-	entryID := bc.EntryID(e)
 	var ok bool
+	entryID := bc.EntryID(e)
 	if err, ok = vs.cache[entryID]; ok {
 		return err
 	}
@@ -156,37 +124,17 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 
 	switch e := e.(type) {
 	case *bc.TxHeader:
-
 		for i, resID := range e.ResultIds {
 			resultEntry := vs.tx.Entries[*resID]
 			vs2 := *vs
 			vs2.entryID = *resID
-			err = checkValid(&vs2, resultEntry)
-			if err != nil {
+			if err = checkValid(&vs2, resultEntry); err != nil {
 				return errors.Wrapf(err, "checking result %d", i)
 			}
 		}
 
-		if e.Version == 1 {
-			if len(e.ResultIds) == 0 {
-				return errEmptyResults
-			}
-		}
-
-	case *bc.Coinbase:
-		if vs.block == nil || len(vs.block.Transactions) == 0 || vs.block.Transactions[0] != vs.tx {
-			return errWrongCoinbaseTransaction
-		}
-
-		if *e.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
-			return errWrongCoinbaseAsset
-		}
-
-		vs2 := *vs
-		vs2.destPos = 0
-		err = checkValidDest(&vs2, e.WitnessDestination)
-		if err != nil {
-			return errors.Wrap(err, "checking coinbase destination")
+		if e.Version == 1 && len(e.ResultIds) == 0 {
+			return errEmptyResults
 		}
 
 	case *bc.Mux:
@@ -222,14 +170,6 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.Program, e.WitnessArguments), vs.gasStatus.GasLeft)
-		if err != nil {
-			return errors.Wrap(err, "checking mux program")
-		}
-		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
-			return err
-		}
-
 		for _, BTMInputID := range vs.tx.GasInputIDs {
 			e, ok := vs.tx.Entries[BTMInputID]
 			if !ok {
@@ -239,28 +179,28 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			vs2 := *vs
 			vs2.entryID = BTMInputID
 			if err := checkValid(&vs2, e); err != nil {
-				return errors.Wrap(err, "checking value source")
+				return errors.Wrap(err, "checking gas input")
 			}
 		}
 
 		for i, dest := range e.WitnessDestinations {
 			vs2 := *vs
 			vs2.destPos = uint64(i)
-			err = checkValidDest(&vs2, dest)
-			if err != nil {
+			if err = checkValidDest(&vs2, dest); err != nil {
 				return errors.Wrapf(err, "checking mux destination %d", i)
 			}
 		}
 
-		if err := vs.gasStatus.setGasVaild(); err != nil {
-			return err
+		if len(vs.tx.GasInputIDs) > 0 {
+			if err := vs.gasStatus.setGasVaild(); err != nil {
+				return err
+			}
 		}
 
 		for i, src := range e.Sources {
 			vs2 := *vs
 			vs2.sourcePos = uint64(i)
-			err = checkValidSrc(&vs2, src)
-			if err != nil {
+			if err = checkValidSrc(&vs2, src); err != nil {
 				return errors.Wrapf(err, "checking mux source %d", i)
 			}
 		}
@@ -268,16 +208,14 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 	case *bc.Output:
 		vs2 := *vs
 		vs2.sourcePos = 0
-		err = checkValidSrc(&vs2, e.Source)
-		if err != nil {
+		if err = checkValidSrc(&vs2, e.Source); err != nil {
 			return errors.Wrap(err, "checking output source")
 		}
 
 	case *bc.Retirement:
 		vs2 := *vs
 		vs2.sourcePos = 0
-		err = checkValidSrc(&vs2, e.Source)
-		if err != nil {
+		if err = checkValidSrc(&vs2, e.Source); err != nil {
 			return errors.Wrap(err, "checking retirement source")
 		}
 
@@ -297,8 +235,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 
 		destVS := *vs
 		destVS.destPos = 0
-		err = checkValidDest(&destVS, e.WitnessDestination)
-		if err != nil {
+		if err = checkValidDest(&destVS, e.WitnessDestination); err != nil {
 			return errors.Wrap(err, "checking issuance destination")
 		}
 
@@ -310,6 +247,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err != nil {
 			return errors.Wrap(err, "getting spend prevout")
 		}
+
 		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, spentOutput.ControlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
 		if err != nil {
 			return errors.Wrap(err, "checking control program")
@@ -335,10 +273,31 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 
 		vs2 := *vs
 		vs2.destPos = 0
-		err = checkValidDest(&vs2, e.WitnessDestination)
-		if err != nil {
+		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
 			return errors.Wrap(err, "checking spend destination")
 		}
+
+	case *bc.Coinbase:
+		if vs.block == nil || len(vs.block.Transactions) == 0 || vs.block.Transactions[0] != vs.tx {
+			return errWrongCoinbaseTransaction
+		}
+
+		if *e.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
+			return errWrongCoinbaseAsset
+		}
+
+		if e.Arbitrary != nil && len(e.Arbitrary) > consensus.CoinbaseArbitrarySizeLimit {
+			return errCoinbaseArbitraryOversize
+		}
+
+		vs2 := *vs
+		vs2.destPos = 0
+		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
+			return errors.Wrap(err, "checking coinbase destination")
+		}
+
+		// special case for coinbase transaction, it's valid unit all the verify has been passed
+		vs.gasStatus.GasVaild = true
 
 	default:
 		return fmt.Errorf("entry has unexpected type %T", e)
@@ -362,10 +321,10 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 	if !ok {
 		return errors.Wrapf(bc.ErrMissingEntry, "entry for value source %x not found", vs.Ref.Bytes())
 	}
+
 	vstate2 := *vstate
 	vstate2.entryID = *vs.Ref
-	err := checkValid(&vstate2, e)
-	if err != nil {
+	if err := checkValid(&vstate2, e); err != nil {
 		return errors.Wrap(err, "checking value source")
 	}
 
@@ -376,6 +335,7 @@ func checkValidSrc(vstate *validationState, vs *bc.ValueSource) error {
 			return errors.Wrapf(errPosition, "invalid position %d for coinbase source", vs.Position)
 		}
 		dest = ref.WitnessDestination
+
 	case *bc.Issuance:
 		if vs.Position != 0 {
 			return errors.Wrapf(errPosition, "invalid position %d for issuance source", vs.Position)
@@ -432,6 +392,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	if !ok {
 		return errors.Wrapf(bc.ErrMissingEntry, "entry for value destination %x not found", vd.Ref.Bytes())
 	}
+
 	var src *bc.ValueSource
 	switch ref := e.(type) {
 	case *bc.Output:
@@ -475,82 +436,78 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-func validateStandardTx(tx *bc.Tx) error {
-	for _, id := range tx.InputIDs {
-		e, ok := tx.Entries[id]
-		if !ok {
-			return errors.New("miss tx input entry")
+func checkStandardTx(tx *bc.Tx) error {
+	for _, id := range tx.GasInputIDs {
+		spend, err := tx.Spend(id)
+		if err != nil {
+			return err
 		}
-		if spend, ok := e.(*bc.Spend); ok {
-			if *spend.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
-				continue
-			}
-			spentOutput, err := tx.Output(*spend.SpentOutputId)
-			if err != nil {
-				return errors.Wrap(err, "getting spend prevout")
-			}
+		spentOutput, err := tx.Output(*spend.SpentOutputId)
+		if err != nil {
+			return err
+		}
 
-			if !segwit.IsP2WScript(spentOutput.ControlProgram.Code) {
-				return errNotStandardTx
-			}
+		if !segwit.IsP2WScript(spentOutput.ControlProgram.Code) {
+			return errNotStandardTx
 		}
 	}
 
 	for _, id := range tx.ResultIds {
 		e, ok := tx.Entries[*id]
 		if !ok {
-			return errors.New("miss tx output entry")
+			return errors.Wrapf(bc.ErrMissingEntry, "id %x", id.Bytes())
 		}
-		if output, ok := e.(*bc.Output); ok {
-			if *output.Source.Value.AssetId != *consensus.BTMAssetID {
-				continue
-			}
-			if !segwit.IsP2WScript(output.ControlProgram.Code) {
-				return errNotStandardTx
-			}
+
+		output, ok := e.(*bc.Output)
+		if !ok || *output.Source.Value.AssetId != *consensus.BTMAssetID {
+			continue
 		}
+
+		if !segwit.IsP2WScript(output.ControlProgram.Code) {
+			return errNotStandardTx
+		}
+	}
+	return nil
+}
+
+func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
+	if tx.TimeRange == 0 {
+		return nil
+	}
+
+	blockVal := block.Height
+	if tx.TimeRange > timeRangeGash {
+		blockVal = block.Timestamp
+	}
+
+	if tx.TimeRange < blockVal {
+		return errBadTimeRange
 	}
 	return nil
 }
 
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
+	gasStatus := &GasState{GasVaild: false}
 	if block.Version == 1 && tx.Version != 1 {
-		return nil, errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
+		return gasStatus, errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
 	}
-
-	if tx.TimeRange > timeRangeGash && tx.TimeRange < block.Timestamp {
-		return nil, errors.New("transaction max timestamp is lower than block's")
-	} else if tx.TimeRange != 0 && tx.TimeRange < block.Height {
-		return nil, errors.New("transaction max block height is lower than block's")
+	if tx.SerializedSize == 0 {
+		return gasStatus, errWrongTransactionSize
 	}
-
-	if tx.TxHeader.SerializedSize > consensus.MaxTxSize || tx.TxHeader.SerializedSize == 0 {
-		return nil, errWrongTransactionSize
+	if err := checkTimeRange(tx, block); err != nil {
+		return gasStatus, err
 	}
-
-	if len(tx.ResultIds) == 0 {
-		return nil, errors.New("tx didn't have any output")
-	}
-
-	if len(tx.GasInputIDs) == 0 && tx != block.Transactions[0] {
-		return nil, errors.New("tx didn't have gas input")
-	}
-
-	if err := validateStandardTx(tx); err != nil {
-		return nil, err
+	if err := checkStandardTx(tx); err != nil {
+		return gasStatus, err
 	}
 
 	vs := &validationState{
-		block:   block,
-		tx:      tx,
-		entryID: tx.ID,
-		gasStatus: &GasState{
-			GasVaild: false,
-		},
-		cache: make(map[bc.Hash]error),
+		block:     block,
+		tx:        tx,
+		entryID:   tx.ID,
+		gasStatus: gasStatus,
+		cache:     make(map[bc.Hash]error),
 	}
-
-	err := checkValid(vs, tx.TxHeader)
-	return vs.gasStatus, err
+	return vs.gasStatus, checkValid(vs, tx.TxHeader)
 }

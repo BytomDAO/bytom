@@ -435,6 +435,7 @@ FOR_LOOP:
 					"conn":  c,
 					"error": err,
 				}).Error("Connection failed @ recvRoutine (reading byte)")
+				c.conn.Close()
 				c.stopForError(err)
 			}
 			break FOR_LOOP

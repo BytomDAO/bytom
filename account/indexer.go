@@ -1,8 +1,6 @@
 package account
 
 import (
-	"encoding/json"
-
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/protocol/bc"
 )
@@ -26,27 +24,13 @@ func ContractUTXOKey(id bc.Hash) []byte {
 	return []byte(SUTXOPrefix + name)
 }
 
-var emptyJSONObject = json.RawMessage(`{}`)
-
 //Annotated init an annotated account object
-func Annotated(a *Account) (*query.AnnotatedAccount, error) {
-	aa := &query.AnnotatedAccount{
+func Annotated(a *Account) *query.AnnotatedAccount {
+	return &query.AnnotatedAccount{
 		ID:       a.ID,
 		Alias:    a.Alias,
 		Quorum:   a.Quorum,
-		Tags:     &emptyJSONObject,
 		XPubs:    a.XPubs,
 		KeyIndex: a.KeyIndex,
 	}
-
-	tags, err := json.Marshal(a.Tags)
-	if err != nil {
-		return nil, err
-	}
-	if len(tags) > 0 {
-		rawTags := json.RawMessage(tags)
-		aa.Tags = &rawTags
-	}
-
-	return aa, nil
 }

@@ -37,7 +37,7 @@ func TestBlockHeader(t *testing.T) {
 		{
 			desc:       "block version is 0",
 			version:    func() uint64 { return 0 },
-			prevHeight: chain.Height,
+			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return uint64(time.Now().Unix()) },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
@@ -47,7 +47,7 @@ func TestBlockHeader(t *testing.T) {
 		{
 			desc:       "block version grater than prevBlock.Version",
 			version:    func() uint64 { return chain.BestBlockHeader().Version + 10 },
-			prevHeight: chain.Height,
+			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return uint64(time.Now().Unix()) },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
@@ -57,7 +57,7 @@ func TestBlockHeader(t *testing.T) {
 		{
 			desc:       "invalid block, misorder block height",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
-			prevHeight: func() uint64 { return chain.Height() + 1 },
+			prevHeight: func() uint64 { return chain.BestBlockHeight() + 1 },
 			timestamp:  func() uint64 { return uint64(time.Now().Unix()) },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
@@ -67,7 +67,7 @@ func TestBlockHeader(t *testing.T) {
 		{
 			desc:       "invalid prev hash, prev hash dismatch",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
-			prevHeight: chain.Height,
+			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return uint64(time.Now().Unix()) },
 			prevHash:   func() *bc.Hash { hash := genesisHeader.Hash(); return &hash },
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
@@ -77,7 +77,7 @@ func TestBlockHeader(t *testing.T) {
 		{
 			desc:       "invalid bits",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
-			prevHeight: chain.Height,
+			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return uint64(time.Now().Unix()) },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits + 100 },
@@ -87,7 +87,7 @@ func TestBlockHeader(t *testing.T) {
 		{
 			desc:       "invalid timestamp, greater than MaxTimeOffsetSeconds from system time",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
-			prevHeight: chain.Height,
+			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 60 },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
@@ -97,7 +97,7 @@ func TestBlockHeader(t *testing.T) {
 		{
 			desc:       "valid timestamp, greater than last block",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
-			prevHeight: chain.Height,
+			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 3 },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
@@ -107,7 +107,7 @@ func TestBlockHeader(t *testing.T) {
 		{
 			desc:       "valid timestamp, less than last block, but greater than median",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
-			prevHeight: chain.Height,
+			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp - 1 },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
@@ -117,7 +117,7 @@ func TestBlockHeader(t *testing.T) {
 		{
 			desc:       "invalid timestamp, less than median",
 			version:    func() uint64 { return chain.BestBlockHeader().Version },
-			prevHeight: chain.Height,
+			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return genesisHeader.Timestamp },
 			prevHash:   chain.BestBlockHash,
 			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
@@ -176,8 +176,7 @@ func TestMaxBlockGas(t *testing.T) {
 	}
 
 	outputAmount := uint64(600000000000)
-	txs := []*types.Tx{nil}
-	txs[0] = tx
+	txs := []*types.Tx{tx}
 	for i := 1; i < 50000; i++ {
 		outputAmount -= 10000000
 		tx, err := CreateTxFromTx(txs[i-1], 0, outputAmount, []byte{byte(vm.OP_TRUE)})

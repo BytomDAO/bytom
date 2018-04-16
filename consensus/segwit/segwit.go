@@ -72,3 +72,12 @@ func ConvertP2SHProgram(prog []byte) ([]byte, error) {
 	}
 	return nil, errors.New("unknow P2SHP version number")
 }
+
+func GetHashFromStandardProg(prog []byte) ([]byte, error) {
+	insts, err := vm.ParseProgram(prog)
+	if err != nil {
+		return nil, err
+	}
+
+	return insts[1].Data, nil
+}

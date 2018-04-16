@@ -20,7 +20,7 @@ import (
 func TestDefineAssetWithLowercase(t *testing.T) {
 	reg := mockNewRegistry(t)
 	alias := "lower"
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias, nil)
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestDefineAssetWithLowercase(t *testing.T) {
 func TestDefineAssetWithSpaceTrimed(t *testing.T) {
 	reg := mockNewRegistry(t)
 	alias := " WITH SPACE "
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias, nil)
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestDefineAssetWithSpaceTrimed(t *testing.T) {
 func TestDefineAsset(t *testing.T) {
 	ctx := context.Background()
 	reg := mockNewRegistry(t)
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, "asset-alias", nil)
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, "asset-alias")
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -61,7 +61,7 @@ func TestDefineAsset(t *testing.T) {
 
 func TestDefineBtmAsset(t *testing.T) {
 	reg := mockNewRegistry(t)
-	_, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, consensus.BTMAlias, nil)
+	_, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, consensus.BTMAlias)
 	if err == nil {
 		testutil.FatalErr(t, err)
 	}
@@ -71,7 +71,7 @@ func TestFindAssetByID(t *testing.T) {
 	ctx := context.Background()
 	reg := mockNewRegistry(t)
 	keys := []chainkd.XPub{testutil.TestXPub}
-	asset, err := reg.Define(keys, 1, nil, "", nil)
+	asset, err := reg.Define(keys, 1, nil, "")
 	if err != nil {
 		testutil.FatalErr(t, err)
 
@@ -86,73 +86,6 @@ func TestFindAssetByID(t *testing.T) {
 	}
 }
 
-func TestUpdateAssetTags(t *testing.T) {
-	dirPath, err := ioutil.TempDir(".", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dirPath)
-
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
-
-	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool()
-	chain, err := protocol.NewChain(store, txPool)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	reg := NewRegistry(testDB, chain)
-	ctx := context.Background()
-
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, "asset-alias",
-		map[string]interface{}{
-			"test_tag": "v0",
-		})
-	if err != nil {
-		testutil.FatalErr(t, err)
-	}
-
-	// Update by ID
-	wantTags := map[string]interface{}{
-		"test_tag": "v1",
-	}
-
-	if reg.UpdateTags(ctx, asset.AssetID.String(), wantTags) != nil {
-		testutil.FatalErr(t, err)
-	}
-
-	asset1, err := reg.FindByAlias(ctx, *asset.Alias)
-	if err != nil {
-		testutil.FatalErr(t, err)
-	}
-
-	gotTags := asset1.Tags
-	if !reflect.DeepEqual(gotTags, wantTags) {
-		t.Fatalf("tags:\ngot:  %v\nwant: %v", gotTags, wantTags)
-	}
-
-	// Update by alias
-	wantTags = map[string]interface{}{
-		"test_tag": "v2",
-	}
-
-	if reg.UpdateTags(ctx, *asset.Alias, wantTags) != nil {
-		testutil.FatalErr(t, err)
-	}
-
-	asset2, err := reg.FindByAlias(ctx, *asset.Alias)
-	if err != nil {
-		testutil.FatalErr(t, err)
-	}
-
-	gotTags = asset2.Tags
-	if !reflect.DeepEqual(gotTags, wantTags) {
-		t.Fatalf("tags:\ngot:  %v\nwant: %v", gotTags, wantTags)
-	}
-}
-
 func TestUpdateAssetAlias(t *testing.T) {
 	ctx := context.Background()
 	reg := mockNewRegistry(t)
@@ -160,7 +93,7 @@ func TestUpdateAssetAlias(t *testing.T) {
 	oldAlias := "OLD_ALIAS"
 	newAlias := "NEW_ALIAS"
 
-	_, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, oldAlias, nil)
+	_, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, oldAlias)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -186,12 +119,12 @@ func TestListAssets(t *testing.T) {
 	firstAlias := "FIRST_ALIAS"
 	secondAlias := "SECOND_ALIAS"
 
-	firstAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, firstAlias, nil)
+	firstAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, firstAlias)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	secondAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, secondAlias, nil)
+	secondAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, secondAlias)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}

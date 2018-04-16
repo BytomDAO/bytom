@@ -13,7 +13,7 @@
     {
       "coinbase_account": "alice",
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 624000000000}
+        {"name": "alice", "asset": "BTM", "amount": 41250000000}
       ],
       "append": 6
     },
@@ -32,14 +32,14 @@
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 623000000000},
+        {"name": "alice", "asset": "BTM", "amount": 40250000000},
         {"name": "alice", "asset": "GOLD", "amount": 100},
-        {"name": "bob", "asset": "BTM", "amount": 625000000000}
+        {"name": "bob", "asset": "BTM", "amount": 42250000000}
       ],
       "append": 0
     },
     {
-      "coinbase_account": "bob",
+      "coinbase_account": "default",
       "transactions": [
         {
           "passwords": ["alice"],
@@ -63,14 +63,14 @@
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 622000000000},
+        {"name": "alice", "asset": "BTM", "amount": 39250000000},
         {"name": "alice", "asset": "GOLD", "amount": 0},
-        {"name": "bob", "asset": "BTM", "amount": 1250000000000}
+        {"name": "bob", "asset": "BTM", "amount": 42250000000}
       ],
       "append": 0
     },
     {
-      "coinbase_account": "alice",
+      "coinbase_account": "default",
       "transactions": [
         {
           "passwords": ["alice"],
@@ -84,9 +84,9 @@
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 1246000000000},
+        {"name": "alice", "asset": "BTM", "amount": 39250000000},
         {"name": "alice", "asset": "GOLD", "amount": 0},
-        {"name": "bob", "asset": "BTM", "amount": 1250000000000},
+        {"name": "bob", "asset": "BTM", "amount": 42250000000},
         {"name": "bob", "asset": "GOLD", "amount": 0}
       ],
       "append": 0
@@ -102,11 +102,10 @@
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 1246000000000},
+        {"name": "alice", "asset": "BTM", "amount": 39250000000},
         {"name": "alice", "asset": "GOLD", "amount": 0},
-        {"name": "bob", "asset": "BTM", "amount": 1250000000000},
-        {"name": "bob", "asset": "GOLD", "amount": 0},
-        {"name": "default", "asset": "BTM", "amount": 624000000000}
+        {"name": "bob", "asset": "BTM", "amount": 42250000000},
+        {"name": "bob", "asset": "GOLD", "amount": 0}
       ],
       "append": 0
     }

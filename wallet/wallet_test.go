@@ -52,7 +52,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub}, 1, "testAccount", nil)
+	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub}, 1, "testAccount")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestExportAndImportPrivKey(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	acnt1, err := w.AccountMgr.Create(ctx, []chainkd.XPub{xpub.XPub}, 1, "account-alias", nil)
+	acnt1, err := w.AccountMgr.Create(ctx, []chainkd.XPub{xpub.XPub}, 1, "account-alias")
 	if err != nil {
 		t.Fatal(err)
 	}

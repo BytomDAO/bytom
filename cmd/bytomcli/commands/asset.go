@@ -17,8 +17,6 @@ func init() {
 	createAssetCmd.PersistentFlags().StringVarP(&assetTags, "tags", "t", "", "tags")
 	createAssetCmd.PersistentFlags().StringVarP(&assetDefiniton, "definition", "d", "", "definition for the asset")
 
-	updateAssetTagsCmd.PersistentFlags().StringVarP(&assetUpdateTags, "tags", "t", "", "tags to add, delete or update")
-
 	listAssetsCmd.PersistentFlags().StringVar(&assetID, "id", "", "ID of asset")
 }
 
@@ -28,7 +26,6 @@ var (
 	assetToken      = ""
 	assetTags       = ""
 	assetDefiniton  = ""
-	assetUpdateTags = ""
 )
 
 var createAssetCmd = &cobra.Command{
@@ -51,15 +48,6 @@ var createAssetCmd = &cobra.Command{
 		ins.Quorum = assetQuorum
 		ins.Alias = args[0]
 		ins.AccessToken = assetToken
-
-		if len(assetTags) != 0 {
-			tags := strings.Split(assetTags, ":")
-			if len(tags) != 2 {
-				jww.ERROR.Println("Invalid tags")
-				os.Exit(util.ErrLocalExe)
-			}
-			ins.Tags = map[string]interface{}{tags[0]: tags[1]}
-		}
 
 		if len(assetDefiniton) != 0 {
 			definition := strings.Split(assetDefiniton, ":")
@@ -94,37 +82,6 @@ var listAssetsCmd = &cobra.Command{
 		}
 
 		printJSONList(data)
-	},
-}
-
-var updateAssetTagsCmd = &cobra.Command{
-	Use:   "update-asset-tags <assetID|alias>",
-	Short: "Update the asset tags",
-	Args:  cobra.ExactArgs(1),
-	PreRun: func(cmd *cobra.Command, args []string) {
-		cmd.MarkFlagRequired("tags")
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		var updateTag = struct {
-			AssetInfo string                 `json:"asset_info"`
-			Tags      map[string]interface{} `json:"tags"`
-		}{}
-
-		if len(assetUpdateTags) != 0 {
-			tags := strings.Split(assetUpdateTags, ":")
-			if len(tags) != 2 {
-				jww.ERROR.Println("Invalid tags")
-				os.Exit(util.ErrLocalExe)
-			}
-			updateTag.Tags = map[string]interface{}{tags[0]: tags[1]}
-		}
-
-		updateTag.AssetInfo = args[0]
-		if _, exitCode := util.ClientCall("/update-asset-tags", &updateTag); exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-
-		jww.FEEDBACK.Println("Successfully update asset tags")
 	},
 }
 

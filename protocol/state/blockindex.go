@@ -1,4 +1,4 @@
-package protocol
+package state
 
 import (
 	"errors"
@@ -20,18 +20,18 @@ const approxNodesPerDay = 24 * 24
 // BlockNode represents a block within the block chain and is primarily used to
 // aid in selecting the best chain to be the main chain.
 type BlockNode struct {
-	parent  *BlockNode // parent is the parent block for this node.
+	Parent  *BlockNode // parent is the parent block for this node.
 	Hash    bc.Hash    // hash of the block.
-	seed    *bc.Hash   // seed hash of the block
-	workSum *big.Int   // total amount of work in the chain up to
+	Seed    *bc.Hash   // seed hash of the block
+	WorkSum *big.Int   // total amount of work in the chain up to
 
-	version                uint64
-	height                 uint64
-	timestamp              uint64
-	nonce                  uint64
-	bits                   uint64
-	transactionsMerkleRoot bc.Hash
-	transactionStatusHash  bc.Hash
+	Version                uint64
+	Height                 uint64
+	Timestamp              uint64
+	Nonce                  uint64
+	Bits                   uint64
+	TransactionsMerkleRoot bc.Hash
+	TransactionStatusHash  bc.Hash
 }
 
 func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) {
@@ -40,43 +40,43 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 	}
 
 	node := &BlockNode{
-		parent:    parent,
+		Parent:    parent,
 		Hash:      bh.Hash(),
-		workSum:   difficulty.CalcWork(bh.Bits),
-		version:   bh.Version,
-		height:    bh.Height,
-		timestamp: bh.Timestamp,
-		nonce:     bh.Nonce,
-		bits:      bh.Bits,
-		transactionsMerkleRoot: bh.TransactionsMerkleRoot,
-		transactionStatusHash:  bh.TransactionStatusHash,
+		WorkSum:   difficulty.CalcWork(bh.Bits),
+		Version:   bh.Version,
+		Height:    bh.Height,
+		Timestamp: bh.Timestamp,
+		Nonce:     bh.Nonce,
+		Bits:      bh.Bits,
+		TransactionsMerkleRoot: bh.TransactionsMerkleRoot,
+		TransactionStatusHash:  bh.TransactionStatusHash,
 	}
 
 	if bh.Height == 0 {
-		node.seed = consensus.InitialSeed
+		node.Seed = consensus.InitialSeed
 	} else {
-		node.seed = parent.CalcNextSeed()
-		node.workSum = node.workSum.Add(parent.workSum, node.workSum)
+		node.Seed = parent.CalcNextSeed()
+		node.WorkSum = node.WorkSum.Add(parent.WorkSum, node.WorkSum)
 	}
 	return node, nil
 }
 
 // blockHeader convert a node to the header struct
-func (node *BlockNode) blockHeader() *types.BlockHeader {
+func (node *BlockNode) BlockHeader() *types.BlockHeader {
 	previousBlockHash := bc.Hash{}
-	if node.parent != nil {
-		previousBlockHash = node.parent.Hash
+	if node.Parent != nil {
+		previousBlockHash = node.Parent.Hash
 	}
 	return &types.BlockHeader{
-		Version:           node.version,
-		Height:            node.height,
+		Version:           node.Version,
+		Height:            node.Height,
 		PreviousBlockHash: previousBlockHash,
-		Timestamp:         node.timestamp,
-		Nonce:             node.nonce,
-		Bits:              node.bits,
+		Timestamp:         node.Timestamp,
+		Nonce:             node.Nonce,
+		Bits:              node.Bits,
 		BlockCommitment: types.BlockCommitment{
-			TransactionsMerkleRoot: node.transactionsMerkleRoot,
-			TransactionStatusHash:  node.transactionStatusHash,
+			TransactionsMerkleRoot: node.TransactionsMerkleRoot,
+			TransactionStatusHash:  node.TransactionStatusHash,
 		},
 	}
 }
@@ -85,8 +85,8 @@ func (node *BlockNode) CalcPastMedianTime() uint64 {
 	timestamps := []uint64{}
 	iterNode := node
 	for i := 0; i < consensus.MedianTimeBlocks && iterNode != nil; i++ {
-		timestamps = append(timestamps, iterNode.timestamp)
-		iterNode = iterNode.parent
+		timestamps = append(timestamps, iterNode.Timestamp)
+		iterNode = iterNode.Parent
 	}
 
 	sort.Sort(common.TimeSorter(timestamps))
@@ -95,23 +95,23 @@ func (node *BlockNode) CalcPastMedianTime() uint64 {
 
 // CalcNextBits calculate the seed for next block
 func (node *BlockNode) CalcNextBits() uint64 {
-	if node.height%consensus.BlocksPerRetarget != 0 || node.height == 0 {
-		return node.bits
+	if node.Height%consensus.BlocksPerRetarget != 0 || node.Height == 0 {
+		return node.Bits
 	}
 
-	compareNode := node.parent
-	for compareNode.height%consensus.BlocksPerRetarget != 0 {
-		compareNode = compareNode.parent
+	compareNode := node.Parent
+	for compareNode.Height%consensus.BlocksPerRetarget != 0 {
+		compareNode = compareNode.Parent
 	}
-	return difficulty.CalcNextRequiredDifficulty(node.blockHeader(), compareNode.blockHeader())
+	return difficulty.CalcNextRequiredDifficulty(node.BlockHeader(), compareNode.BlockHeader())
 }
 
 // CalcNextSeed calculate the seed for next block
 func (node *BlockNode) CalcNextSeed() *bc.Hash {
-	if node.height%consensus.SeedPerRetarget == 0 {
+	if node.Height%consensus.SeedPerRetarget == 0 {
 		return &node.Hash
 	}
-	return node.seed
+	return node.Seed
 }
 
 // BlockIndex is the struct for help chain trace block chain as tree
@@ -167,7 +167,7 @@ func (bi *BlockIndex) InMainchain(hash bc.Hash) bool {
 	if !ok {
 		return false
 	}
-	return bi.nodeByHeight(node.height) == node
+	return bi.nodeByHeight(node.Height) == node
 }
 
 func (bi *BlockIndex) nodeByHeight(height uint64) *BlockNode {
@@ -189,7 +189,7 @@ func (bi *BlockIndex) SetMainChain(node *BlockNode) {
 	bi.Lock()
 	defer bi.Unlock()
 
-	needed := node.height + 1
+	needed := node.Height + 1
 	if uint64(cap(bi.mainChain)) < needed {
 		nodes := make([]*BlockNode, needed, needed+approxNodesPerDay)
 		copy(nodes, bi.mainChain)
@@ -202,8 +202,8 @@ func (bi *BlockIndex) SetMainChain(node *BlockNode) {
 		}
 	}
 
-	for node != nil && bi.mainChain[node.height] != node {
-		bi.mainChain[node.height] = node
-		node = node.parent
+	for node != nil && bi.mainChain[node.Height] != node {
+		bi.mainChain[node.Height] = node
+		node = node.Parent
 	}
 }

@@ -41,7 +41,6 @@ var (
 	ErrDuplicateAlias = errors.New("duplicate account alias")
 	ErrFindAccount    = errors.New("fail to find account")
 	ErrMarshalAccount = errors.New("failed marshal account")
-	ErrMarshalTags    = errors.New("failed marshal account to update tags")
 )
 
 func aliasKey(name string) []byte {
@@ -131,7 +130,6 @@ type Account struct {
 	*signers.Signer
 	ID    string
 	Alias string
-	Tags  map[string]interface{}
 }
 
 func (m *Manager) getNextXpubsIndex(xpubs []chainkd.XPub) uint64 {
@@ -149,21 +147,19 @@ func (m *Manager) getNextXpubsIndex(xpubs []chainkd.XPub) uint64 {
 }
 
 // Create creates a new Account.
-func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}) (*Account, error) {
+func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string) (*Account, error) {
 	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
 	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
 
-	nextAccountIndex := m.getNextXpubsIndex(xpubs)
-
-	signer, err := signers.Create("account", xpubs, quorum, nextAccountIndex)
+	signer, err := signers.Create("account", xpubs, quorum, m.getNextXpubsIndex(xpubs))
 	id := signers.IDGenerate()
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
-	account := &Account{Signer: signer, ID: id, Alias: normalizedAlias, Tags: tags}
+	account := &Account{Signer: signer, ID: id, Alias: normalizedAlias}
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return nil, ErrMarshalAccount
@@ -176,29 +172,6 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	storeBatch.Write()
 
 	return account, nil
-}
-
-// UpdateTags modifies the tags of the specified account. The account may be
-// identified either by ID or Alias, but not both.
-func (m *Manager) UpdateTags(ctx context.Context, accountInfo string, tags map[string]interface{}) (err error) {
-	account := &Account{}
-	if account, err = m.FindByAlias(nil, accountInfo); err != nil {
-		if account, err = m.findByID(ctx, accountInfo); err != nil {
-			return err
-		}
-	}
-
-	account.Tags = tags
-	rawAccount, err := json.Marshal(account)
-	if err != nil {
-		return ErrMarshalTags
-	}
-
-	m.db.Set(Key(account.ID), rawAccount)
-	m.cacheMu.Lock()
-	m.cache.Add(account.ID, account)
-	m.cacheMu.Unlock()
-	return nil
 }
 
 // FindByAlias retrieves an account's Signer record by its alias
@@ -262,6 +235,11 @@ func (m *Manager) GetAliasByID(id string) string {
 		return ""
 	}
 	return account.Alias
+}
+
+// CreateAddressForChange generate an address for the UTXO change
+func (m *Manager) CreateCtrlProgramForChange(ctx context.Context, accountID string) (cp *CtrlProgram, err error) {
+	return m.CreateAddress(ctx, accountID, true)
 }
 
 // CreateAddress generate an address for the select account
@@ -354,7 +332,7 @@ type CtrlProgram struct {
 	Address        string
 	KeyIndex       uint64
 	ControlProgram []byte
-	Change         bool
+	Change         bool // Mark whether this control program is for UTXO change
 }
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*CtrlProgram) error {

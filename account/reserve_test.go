@@ -46,7 +46,7 @@ func TestCancelReservation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub}, 1, "testAccount", nil)
+	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub}, 1, "testAccount")
 	if err != nil {
 		t.Fatal(err)
 	}

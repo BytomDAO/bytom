@@ -24,21 +24,25 @@ var defaultConfigTmpl = `# This is a TOML config file.
 fast_sync = true
 db_backend = "leveldb"
 api_addr = "0.0.0.0:9888"
+`
 
+var mainNetConfigTmpl = `chain_id = "mainnet"
 [p2p]
 laddr = "tcp://0.0.0.0:46656"
+seeds = ""
 `
 
-var testnetSeeds = `
-seeds = "139.162.105.40:46656,139.162.88.74:46656,47.96.42.1:46656,45.79.213.28:46656,212.111.41.245:46656"
+var testNetConfigTmpl = `chain_id = "testnet"
+[p2p]
+laddr = "tcp://0.0.0.0:46656"
+seeds = "172.104.224.219:46656,198.74.61.131:46656,212.111.41.245:46656"
 `
-var mainnetSeeds = `seeds = ""`
 
 // Select network seeds to merge a new string.
 func selectNetwork(network string) string {
 	if network == "testnet" {
-		return defaultConfigTmpl + testnetSeeds
+		return defaultConfigTmpl + testNetConfigTmpl
 	} else {
-		return defaultConfigTmpl + mainnetSeeds
+		return defaultConfigTmpl + mainNetConfigTmpl
 	}
 }
