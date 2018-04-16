@@ -249,9 +249,9 @@ var submitTransactionCmd = &cobra.Command{
 	},
 }
 
-var calculateTransactionGasCmd = &cobra.Command{
-	Use:   "calculate-transaction-gas  <signed json raw_transaction>",
-	Short: "calculate gas for signed transaction",
+var estimateTransactionGasCmd = &cobra.Command{
+	Use:   "estimate-transaction-gas  <signed json raw_transaction>",
+	Short: "estimate gas for signed transaction",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var ins = struct {
@@ -264,7 +264,7 @@ var calculateTransactionGasCmd = &cobra.Command{
 			os.Exit(util.ErrLocalExe)
 		}
 
-		data, exitCode := util.ClientCall("/calculate-transaction-gas", &ins)
+		data, exitCode := util.ClientCall("/estimate-transaction-gas", &ins)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

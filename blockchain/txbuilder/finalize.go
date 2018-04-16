@@ -47,8 +47,8 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 	return errors.Wrap(err)
 }
 
-// CalculateTxGas calculate a transaction gas by validating a transaction
-func CalculateTxGas(c *protocol.Chain, tx *types.Tx) (*validation.GasState, error) {
+// EstimateTxGas estimate a transaction gas by validating a transaction
+func EstimateTxGas(c *protocol.Chain, tx *types.Tx) (*validation.GasState, error) {
 	// This part is use for prevent tx size  is 0
 	data, err := tx.TxData.MarshalText()
 	if err != nil {

@@ -217,11 +217,11 @@ type calculateTxGasResp struct {
 	VMGas       int64 `json:"vm_gas"`
 }
 
-// POST /calculate-transaction-gas
-func (a *API) calculateGas(ctx context.Context, ins struct {
+// POST /estimate-transaction-gas
+func (a *API) estimateTxGas(ctx context.Context, ins struct {
 	Tx types.Tx `json:"raw_transaction"`
 }) Response {
-	gasState, err := txbuilder.CalculateTxGas(a.chain, &ins.Tx)
+	gasState, err := txbuilder.EstimateTxGas(a.chain, &ins.Tx)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
