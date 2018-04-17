@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -18,15 +19,20 @@ var (
 	errNotRegistered     = errors.New("peer is not registered")
 )
 
-const defaultVersion = 1
+const (
+	defaultVersion      = 1
+	defaultBanThreshold = uint64(100)
+)
 
 type peer struct {
-	mtx     sync.RWMutex
-	version int // Protocol version negotiated
-	id      string
-	height  uint64
-	hash    *bc.Hash
-	*p2p.Peer
+	mtx      sync.RWMutex
+	version  int // Protocol version negotiated
+	id       string
+	height   uint64
+	hash     *bc.Hash
+	banScore trust.DynamicBanScore
+
+	swPeer *p2p.Peer
 
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
@@ -37,7 +43,7 @@ func newPeer(height uint64, hash *bc.Hash, Peer *p2p.Peer) *peer {
 		version:     defaultVersion,
 		height:      height,
 		hash:        hash,
-		Peer:        Peer,
+		swPeer:        Peer,
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 	}
@@ -59,13 +65,13 @@ func (p *peer) SetStatus(height uint64, hash *bc.Hash) {
 
 func (p *peer) requestBlockByHash(hash *bc.Hash) error {
 	msg := &BlockRequestMessage{RawHash: hash.Byte32()}
-	p.Peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
 }
 
 func (p *peer) requestBlockByHeight(height uint64) error {
 	msg := &BlockRequestMessage{Height: height}
-	p.Peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
 }
 
@@ -77,7 +83,7 @@ func (p *peer) SendTransactions(txs []*types.Tx) error {
 		}
 		hash := &tx.ID
 		p.knownTxs.Add(hash.String())
-		p.Peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+		p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	}
 	return nil
 }
@@ -86,7 +92,7 @@ func (p *peer) getPeer() *p2p.Peer {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
 
-	return p.Peer
+	return p.swPeer
 }
 
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
@@ -113,6 +119,33 @@ func (p *peer) MarkBlock(hash *bc.Hash) {
 		p.knownBlocks.Pop()
 	}
 	p.knownBlocks.Add(hash.String())
+}
+
+// addBanScore increases the persistent and decaying ban score fields by the
+// values passed as parameters. If the resulting score exceeds half of the ban
+// threshold, a warning is logged including the reason provided. Further, if
+// the score is above the ban threshold, the peer will be banned and
+// disconnected.
+func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
+	warnThreshold := defaultBanThreshold >> 1
+	if transient == 0 && persistent == 0 {
+		// The score is not being increased, but a warning message is still
+		// logged if the score is above the warn threshold.
+		score := p.banScore.Int()
+		if score > warnThreshold {
+			log.Info("Misbehaving peer %s: %s -- ban score is %d, "+"it was not increased this time", p, reason, score)
+		}
+		return false
+	}
+	score := p.banScore.Increase(persistent, transient)
+	if score > warnThreshold {
+		log.Infof("Misbehaving peer %s: %s -- ban score increased to %d", p, reason, score)
+		if score > defaultBanThreshold {
+			log.Errorf("Misbehaving peer %s -- banning and disconnecting", p)
+			return true
+		}
+	}
+	return false
 }
 
 type peerSet struct {
@@ -235,7 +268,7 @@ func (ps *peerSet) BestPeer() (*p2p.Peer, uint64) {
 
 	for _, p := range ps.peers {
 		if bestPeer == nil || p.height > bestHeight {
-			bestPeer, bestHeight = p.Peer, p.height
+			bestPeer, bestHeight = p.swPeer, p.height
 		}
 	}
 
@@ -249,7 +282,7 @@ func (ps *peerSet) Close() {
 	defer ps.lock.Unlock()
 
 	for _, p := range ps.peers {
-		p.CloseConn()
+		p.swPeer.CloseConn()
 	}
 	ps.closed = true
 }
@@ -314,8 +347,8 @@ func (ps *peerSet) BroadcastMinedBlock(block *types.Block) error {
 	hash := block.Hash()
 	peers := ps.PeersWithoutBlock(&hash)
 	for _, peer := range peers {
-		ps.MarkBlock(peer.Key, &hash)
-		peer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
+		ps.MarkBlock(peer.swPeer.Key, &hash)
+		peer.swPeer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	}
 	return nil
 }
@@ -331,8 +364,8 @@ func (ps *peerSet) BroadcastTx(tx *types.Tx) error {
 	}
 	peers := ps.PeersWithoutTx(&tx.ID)
 	for _, peer := range peers {
-		ps.peers[peer.Key].MarkTransaction(&tx.ID)
-		peer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
+		ps.peers[peer.swPeer.Key].MarkTransaction(&tx.ID)
+		peer.swPeer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	}
 	return nil
 }
