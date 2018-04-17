@@ -56,7 +56,7 @@ func TestList(t *testing.T) {
 		t.Error("List errored: get invalid length")
 	}
 	for _, v := range got {
-		if m := strings.Compare(v.Token, tokenMap[v.ID].Token); m != 0 {
+		if v.Token != tokenMap[v.ID].Token {
 			t.Errorf("List error: ID: %s, expected token: %s, DB token: %s", v.ID, *tokenMap[v.ID], v.Token)
 		}
 		continue

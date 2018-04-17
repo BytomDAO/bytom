@@ -282,10 +282,10 @@ func (t *Tracker) Delete(ctx context.Context, alias string) error {
 func outputFilter(txfeed *TxFeed, value *query.AnnotatedOutput) bool {
 	assetidstr := value.AssetID.String()
 
-	if 0 != strings.Compare(txfeed.Param.assetID, assetidstr) && txfeed.Param.assetID != "" {
+	if txfeed.Param.assetID != assetidstr && txfeed.Param.assetID != "" {
 		return false
 	}
-	if 0 != strings.Compare(txfeed.Param.transType, value.Type) && txfeed.Param.transType != "" {
+	if txfeed.Param.transType != value.Type && txfeed.Param.transType != "" {
 		return false
 	}
 	if txfeed.Param.amountLowerLimit > value.Amount && txfeed.Param.amountLowerLimit != 0 {
