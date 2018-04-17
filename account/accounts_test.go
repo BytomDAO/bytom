@@ -53,7 +53,7 @@ func TestCreateAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err := m.findByID(ctx, account.ID)
+	found, err := m.FindByID(ctx, account.ID)
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
@@ -87,27 +87,20 @@ func TestDeleteAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	cases := []struct {
-		AccountInfo string `json:"account_info"`
-	}{
-		{AccountInfo: account1.Alias},
-		{AccountInfo: account2.ID},
-	}
-
-	if err = m.DeleteAccount(cases[0]); err != nil {
+	if err = m.DeleteAccount(account1.Alias); err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err := m.findByID(ctx, account1.ID)
+	found, err := m.FindByID(ctx, account1.ID)
 	if err != nil {
 		t.Errorf("expected account %v should be deleted", found)
 	}
 
-	if err = m.DeleteAccount(cases[1]); err != nil {
+	if err = m.DeleteAccount(account2.ID); err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err = m.findByID(ctx, account2.ID)
+	found, err = m.FindByID(ctx, account2.ID)
 	if err != nil {
 		t.Errorf("expected account %v should be deleted", found)
 	}
@@ -118,7 +111,7 @@ func TestFindByID(t *testing.T) {
 	ctx := context.Background()
 	account := m.createTestAccount(ctx, t, "", nil)
 
-	found, err := m.findByID(ctx, account.ID)
+	found, err := m.FindByID(ctx, account.ID)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}

@@ -107,7 +107,7 @@ func (cs *CredentialStore) Check(ctx context.Context, id string, secret string) 
 		return err
 	}
 
-	if strings.Compare(strings.Split(token.Token, ":")[1], secret) == 0 {
+	if strings.Split(token.Token, ":")[1] == secret {
 		return nil
 	}
 

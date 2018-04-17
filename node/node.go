@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
@@ -58,7 +59,9 @@ type Node struct {
 
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
-
+	if config.ChainID == "testnet" {
+		consensus.ActiveNetParams = &consensus.TestNetParams
+	}
 	// Get store
 	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
 	store := leveldb.NewStore(txDB)
