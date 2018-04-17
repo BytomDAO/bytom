@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
@@ -10,6 +9,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -91,16 +91,10 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 
 // POST /get-unconfirmed-transaction
 func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
-	TxID string `json:"tx_id"`
+	TxID chainjson.HexBytes `json:"tx_id"`
 }) Response {
-	txID, err := hex.DecodeString(filter.TxID)
-	if err != nil {
-		log.Errorf("convert txID[%s] string to byte err: %v", filter.TxID, err)
-		return NewErrorResponse(err)
-	}
-
 	var tmpTxID [32]byte
-	copy(tmpTxID[:], txID[:])
+	copy(tmpTxID[:], filter.TxID[:])
 
 	txHash := bc.NewHash(tmpTxID)
 	txPool := a.chain.GetTxPool()
@@ -129,18 +123,14 @@ func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 	return NewSuccessResponse(tx)
 }
 
-type getTxPoolResp struct {
-	TxID bc.Hash `json:"tx_id"`
-}
-
 // POST /list-unconform-transactions
-func (a *API) listUnconformTxs(ctx context.Context) Response {
-	txIDs := []getTxPoolResp{}
+func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
+	txIDs := []bc.Hash{}
 
 	txPool := a.chain.GetTxPool()
 	txs := txPool.GetTransactions()
 	for _, txDesc := range txs {
-		txIDs = append(txIDs, getTxPoolResp{TxID: bc.Hash(txDesc.Tx.ID)})
+		txIDs = append(txIDs, bc.Hash(txDesc.Tx.ID))
 	}
 
 	return NewSuccessResponse(txIDs)

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/bytom/api"
 	"github.com/bytom/blockchain/txbuilder"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/util"
 )
@@ -347,9 +349,15 @@ var getUnconfirmedTransactionCmd = &cobra.Command{
 	Short: "get unconfirmed transaction by matching the given transaction hash",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		txID, err := hex.DecodeString(args[0])
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
+		}
+
 		txInfo := &struct {
-			TxID string `json:"tx_id"`
-		}{TxID: args[0]}
+			TxID chainjson.HexBytes `json:"tx_id"`
+		}{TxID: txID}
 
 		data, exitCode := util.ClientCall("/get-unconfirmed-transaction", txInfo)
 		if exitCode != util.Success {
