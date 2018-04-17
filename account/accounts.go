@@ -268,8 +268,8 @@ func (m *Manager) createAddress(ctx context.Context, account *Account, change bo
 	return cp, nil
 }
 
-// listAddressesById
-func (m *Manager) ListCtrlProgramsByXpubs(ctx context.Context, xpubs []chainkd.XPub) ([]*CtrlProgram, error) {
+// ListCtrlProgramsByAccountId
+func (m *Manager) ListCtrlProgramsByAccountId(ctx context.Context, accountId string) ([]*CtrlProgram, error) {
 	cps, err := m.ListControlProgram()
 	if err != nil {
 		return nil, err
@@ -277,7 +277,7 @@ func (m *Manager) ListCtrlProgramsByXpubs(ctx context.Context, xpubs []chainkd.X
 
 	var result []*CtrlProgram
 	for _, cp := range cps {
-		if cp.Address == "" || chainkd.IsXpubsEqual(cp.XPubs, xpubs) {
+		if cp.Address == "" || cp.AccountID != accountId {
 			continue
 		}
 		result = append(result, cp)
@@ -305,7 +305,6 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 
 	return &CtrlProgram{
 		AccountID:      account.ID,
-		XPubs:          account.Signer.XPubs,
 		Address:        address.EncodeAddress(),
 		KeyIndex:       idx,
 		ControlProgram: control,
@@ -337,7 +336,6 @@ func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool)
 
 	return &CtrlProgram{
 		AccountID:      account.ID,
-		XPubs:          account.Signer.XPubs,
 		Address:        address.EncodeAddress(),
 		KeyIndex:       idx,
 		ControlProgram: control,
@@ -348,7 +346,6 @@ func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool)
 //CtrlProgram is structure of account control program
 type CtrlProgram struct {
 	AccountID      string
-	XPubs          []chainkd.XPub
 	Address        string
 	KeyIndex       uint64
 	ControlProgram []byte

@@ -362,7 +362,7 @@ func (w *Wallet) updateRescanStatus() {
 		keyInfo.Percent = 100
 		keyInfo.Complete = true
 
-		if cps, err := w.AccountMgr.ListCtrlProgramsByXpubs(nil, keyInfo.account.XPubs); err == nil {
+		if cps, err := w.AccountMgr.ListCtrlProgramsByAccountId(nil, keyInfo.account.ID); err == nil {
 			for _, cp := range cps {
 				if !w.status.OnChainAddresses.Contains(cp.Address) {
 					w.AccountMgr.DeleteAccountControlProgram(cp.ControlProgram)

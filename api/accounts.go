@@ -106,7 +106,7 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 		target = acc
 	}
 
-	cps, err := a.wallet.AccountMgr.ListCtrlProgramsByXpubs(ctx, target.XPubs)
+	cps, err := a.wallet.AccountMgr.ListCtrlProgramsByAccountId(ctx, target.ID)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

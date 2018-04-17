@@ -1,7 +1,6 @@
 package chainkd
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha512"
@@ -17,17 +16,6 @@ type (
 	//XPub external public key
 	XPub [64]byte
 )
-
-// IsXpubsEqual
-func IsXpubsEqual(a, b []XPub) bool {
-	for i, xpub := range a {
-		result := bytes.Compare(xpub[:], b[i][:])
-		if result != 0 {
-			return false
-		}
-	}
-	return true
-}
 
 // NewXPrv takes a source of random bytes and produces a new XPrv.
 // If r is nil, crypto/rand.Reader is used.
