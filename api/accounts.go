@@ -29,11 +29,14 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 	return NewSuccessResponse(annotatedAccount)
 }
 
+// AccountInfo
+type AccountInfo struct {
+	Info string `json:"account_info"`
+}
+
 // POST /delete-account
-func (a *API) deleteAccount(ctx context.Context, in struct {
-	AccountInfo string `json:"account_info"`
-}) Response {
-	if err := a.wallet.AccountMgr.DeleteAccount(in); err != nil {
+func (a *API) deleteAccount(ctx context.Context, in AccountInfo) Response {
+	if err := a.wallet.AccountMgr.DeleteAccount(in.Info); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
@@ -88,29 +91,30 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 	AccountAlias string `json:"account_alias"`
 }) Response {
 	accountID := ins.AccountID
+	var target *account.Account
 	if ins.AccountAlias != "" {
 		acc, err := a.wallet.AccountMgr.FindByAlias(ctx, ins.AccountAlias)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
-
-		accountID = acc.ID
+		target = acc
+	} else {
+		acc, err := a.wallet.AccountMgr.FindByID(ctx, accountID)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		target = acc
 	}
 
-	cps, err := a.wallet.AccountMgr.ListControlProgram()
+	cps, err := a.wallet.AccountMgr.ListCtrlProgramsByAccountId(ctx, target.ID)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	var addresses []*addressResp
 	for _, cp := range cps {
-		if cp.Address == "" || (accountID != "" && accountID != cp.AccountID) {
-			continue
-		}
-
-		accountAlias := a.wallet.AccountMgr.GetAliasByID(cp.AccountID)
 		addresses = append(addresses, &addressResp{
-			AccountAlias: accountAlias,
+			AccountAlias: target.Alias,
 			AccountID:    cp.AccountID,
 			Address:      cp.Address,
 			Change:       cp.Change,

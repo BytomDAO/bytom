@@ -180,7 +180,7 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*Account, erro
 	cachedID, ok := m.aliasCache.Get(alias)
 	m.cacheMu.Unlock()
 	if ok {
-		return m.findByID(ctx, cachedID.(string))
+		return m.FindByID(ctx, cachedID.(string))
 	}
 
 	rawID := m.db.Get(aliasKey(alias))
@@ -192,11 +192,11 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*Account, erro
 	m.cacheMu.Lock()
 	m.aliasCache.Add(alias, accountID)
 	m.cacheMu.Unlock()
-	return m.findByID(ctx, accountID)
+	return m.FindByID(ctx, accountID)
 }
 
-// findByID returns an account's Signer record by its ID.
-func (m *Manager) findByID(ctx context.Context, id string) (*Account, error) {
+// FindByID returns an account's Signer record by its ID.
+func (m *Manager) FindByID(ctx context.Context, id string) (*Account, error) {
 	m.cacheMu.Lock()
 	cachedAccount, ok := m.cache.Get(id)
 	m.cacheMu.Unlock()
@@ -244,7 +244,7 @@ func (m *Manager) CreateCtrlProgramForChange(ctx context.Context, accountID stri
 
 // CreateAddress generate an address for the select account
 func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool) (cp *CtrlProgram, err error) {
-	account, err := m.findByID(ctx, accountID)
+	account, err := m.FindByID(ctx, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -266,6 +266,23 @@ func (m *Manager) createAddress(ctx context.Context, account *Account, change bo
 		return nil, err
 	}
 	return cp, nil
+}
+
+// ListCtrlProgramsByAccountId
+func (m *Manager) ListCtrlProgramsByAccountId(ctx context.Context, accountId string) ([]*CtrlProgram, error) {
+	cps, err := m.ListControlProgram()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*CtrlProgram
+	for _, cp := range cps {
+		if cp.Address == "" || cp.AccountID != accountId {
+			continue
+		}
+		result = append(result, cp)
+	}
+	return result, nil
 }
 
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
@@ -349,6 +366,12 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*Ctr
 	return nil
 }
 
+func (m *Manager) DeleteAccountControlProgram(prog []byte) {
+	var hash common.Hash
+	sha3pool.Sum256(hash[:], prog)
+	m.db.Delete(CPKey(hash))
+}
+
 // IsLocalControlProgram check is the input control program belong to local
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash common.Hash
@@ -390,13 +413,16 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	return program.ControlProgram, nil
 }
 
-// DeleteAccount deletes the account's ID or alias matching accountInfo.
-func (m *Manager) DeleteAccount(in struct {
+// AccountInfo
+type Info struct {
 	AccountInfo string `json:"account_info"`
-}) (err error) {
+}
+
+// DeleteAccount deletes the account's ID or alias matching accountInfo.
+func (m *Manager) DeleteAccount(aliasOrId string) (err error) {
 	account := &Account{}
-	if account, err = m.FindByAlias(nil, in.AccountInfo); err != nil {
-		if account, err = m.findByID(nil, in.AccountInfo); err != nil {
+	if account, err = m.FindByAlias(nil, aliasOrId); err != nil {
+		if account, err = m.FindByID(nil, aliasOrId); err != nil {
 			return err
 		}
 	}
