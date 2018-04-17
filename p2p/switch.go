@@ -25,7 +25,6 @@ const (
 
 	bannedPeerKey      = "BannedPeer"
 	defaultBanDuration = time.Hour * 24
-	peerBannedTM       = 20
 )
 
 var ErrConnectBannedPeer = errors.New("Connect banned peer")
@@ -85,7 +84,6 @@ type Switch struct {
 	nodePrivKey      crypto.PrivKeyEd25519 // our node privkey
 	bannedPeer       map[string]time.Time
 	db               dbm.DB
-	TrustMetricStore *trust.TrustMetricStore
 	ScamPeerCh       chan *Peer
 	mtx              sync.Mutex
 
@@ -113,8 +111,6 @@ func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB) *Switch {
 		ScamPeerCh:   make(chan *Peer),
 	}
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
-	sw.TrustMetricStore = trust.NewTrustMetricStore(trustHistoryDB, trust.DefaultConfig())
-	sw.TrustMetricStore.Start()
 
 	sw.bannedPeer = make(map[string]time.Time)
 	if datajson := sw.db.Get([]byte(bannedPeerKey)); datajson != nil {
@@ -122,7 +118,7 @@ func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB) *Switch {
 			return nil
 		}
 	}
-	go sw.scamPeerHandler()
+	trust.Init()
 	return sw
 }
 
@@ -275,11 +271,6 @@ func (sw *Switch) AddPeer(peer *Peer) error {
 	if err := sw.peers.Add(peer); err != nil {
 		return err
 	}
-
-	tm := trust.NewMetric()
-
-	tm.Start()
-	sw.TrustMetricStore.AddPeerTrustMetric(peer.mconn.RemoteAddress.IP.String(), tm)
 
 	log.WithField("peer", peer).Info("Added peer")
 	return nil
@@ -698,32 +689,6 @@ func (sw *Switch) DelBannedPeer(addr string) error {
 	}
 	sw.db.Set([]byte(bannedPeerKey), datajson)
 	return nil
-}
-
-func (sw *Switch) scamPeerHandler() {
-	for src := range sw.ScamPeerCh {
-		var tm *trust.TrustMetric
-		key := src.Connection().RemoteAddress.IP.String()
-		if tm = sw.TrustMetricStore.GetPeerTrustMetric(key); tm == nil {
-			log.Errorf("Can't get peer trust metric")
-			continue
-		}
-		sw.delTrustMetric(tm, src)
-	}
-}
-
-func (sw *Switch) AddScamPeer(src *Peer) {
-	sw.ScamPeerCh <- src
-}
-
-func (sw *Switch) delTrustMetric(tm *trust.TrustMetric, src *Peer) {
-	key := src.Connection().RemoteAddress.IP.String()
-	tm.BadEvents(1)
-	if tm.TrustScore() < peerBannedTM {
-		sw.AddBannedPeer(src)
-		sw.TrustMetricStore.PeerDisconnected(key)
-		sw.StopPeerGracefully(src)
-	}
 }
 
 func (sw *Switch) checkBannedPeer(peer string) error {

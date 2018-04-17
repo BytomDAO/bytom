@@ -10,7 +10,6 @@ import (
 
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
-	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -151,13 +150,6 @@ func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
 
 // Receive implements Reactor by handling 4 types of messages (look below).
 func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
-	var tm *trust.TrustMetric
-	key := src.Connection().RemoteAddress.IP.String()
-	if tm = pr.sw.TrustMetricStore.GetPeerTrustMetric(key); tm == nil {
-		log.Errorf("Can't get peer trust metric")
-		return
-	}
-
 	_, msg, err := DecodeMessage(msgBytes)
 	if err != nil {
 		log.Errorf("Error decoding messagek %v", err)
