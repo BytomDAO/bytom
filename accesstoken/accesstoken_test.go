@@ -56,7 +56,7 @@ func TestList(t *testing.T) {
 		t.Error("List errored: get invalid length")
 	}
 	for _, v := range got {
-		if m := strings.Compare(v.Token, tokenMap[v.ID].Token); m != 0 {
+		if v.Token != tokenMap[v.ID].Token {
 			t.Errorf("List error: ID: %s, expected token: %s, DB token: %s", v.ID, *tokenMap[v.ID], v.Token)
 		}
 		continue
@@ -72,20 +72,12 @@ func TestCheck(t *testing.T) {
 	token := mustCreateToken(ctx, t, cs, "x", "client")
 	tokenParts := strings.Split(token.Token, ":")
 
-	valid, err := cs.Check(ctx, tokenParts[0], tokenParts[1])
-	if err != nil {
+	if err := cs.Check(ctx, tokenParts[0], tokenParts[1]); err != nil {
 		t.Fatal(err)
-	}
-	if !valid {
-		t.Fatal("expected token and secret to be valid")
 	}
 
-	valid, err = cs.Check(ctx, "x", "badsecret")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if valid {
-		t.Fatal("expected bad secret to not be valid")
+	if err := cs.Check(ctx, "x", "badsecret"); err != ErrInvalidToken {
+		t.Fatal("invalid token check passed")
 	}
 }
 

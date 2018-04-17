@@ -18,7 +18,7 @@ func init() {
 	buildTransactionCmd.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend'")
 	buildTransactionCmd.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r", "", "program of receiver")
 	buildTransactionCmd.PersistentFlags().StringVarP(&address, "address", "a", "", "address of receiver")
-	buildTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "program of receiver")
+	buildTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "gas of this transaction")
 	buildTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 	buildTransactionCmd.PersistentFlags().BoolVar(&alias, "alias", false, "use alias build transaction")
 
@@ -227,7 +227,7 @@ var signTransactionCmd = &cobra.Command{
 
 var submitTransactionCmd = &cobra.Command{
 	Use:   "submit-transaction  <signed json raw_transaction>",
-	Short: "Submit signed transaction template",
+	Short: "Submit signed transaction",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var ins = struct {
@@ -241,6 +241,30 @@ var submitTransactionCmd = &cobra.Command{
 		}
 
 		data, exitCode := util.ClientCall("/submit-transaction", &ins)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
+var estimateTransactionGasCmd = &cobra.Command{
+	Use:   "estimate-transaction-gas  <signed json raw_transaction>",
+	Short: "estimate gas for signed transaction",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		var ins = struct {
+			Tx types.Tx `json:"raw_transaction"`
+		}{}
+
+		err := json.Unmarshal([]byte(args[0]), &ins)
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		data, exitCode := util.ClientCall("/estimate-transaction-gas", &ins)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
@@ -266,7 +290,7 @@ var signSubTransactionCmd = &cobra.Command{
 		}
 
 		var req = struct {
-			Password string           `json:"password"`
+			Password string             `json:"password"`
 			Txs      txbuilder.Template `json:"transaction"`
 		}{Password: password, Txs: template}
 

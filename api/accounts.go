@@ -2,8 +2,6 @@ package api
 
 import (
 	"context"
-	"strings"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/account"
@@ -105,7 +103,7 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 
 	var addresses []*addressResp
 	for _, cp := range cps {
-		if cp.Address == "" || (len(accountID) != 0 && strings.Compare(accountID, cp.AccountID) != 0) {
+		if cp.Address == "" || (accountID != "" && accountID != cp.AccountID) {
 			continue
 		}
 

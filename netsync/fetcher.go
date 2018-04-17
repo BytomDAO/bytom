@@ -6,8 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
-	"strings"
-
 	"github.com/bytom/p2p"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -100,7 +98,7 @@ func (f *Fetcher) loop() {
 				f.forgetBlock(hash)
 				continue
 			}
-			if strings.Compare(op.block.PreviousBlockHash.String(), f.chain.BestBlockHash().String()) != 0 {
+			if op.block.PreviousBlockHash.String() != f.chain.BestBlockHash().String() {
 				f.forgetBlock(hash)
 				continue
 			}

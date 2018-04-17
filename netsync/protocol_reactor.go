@@ -127,7 +127,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	for {
 		select {
 		case status := <-pr.peerStatusCh:
-			if strings.Compare(status.peerID, peer.Key) == 0 {
+			if status.peerID == peer.Key {
 				pr.peers.AddPeer(peer)
 				pr.peers.SetPeerStatus(status.peerID, status.height, status.hash)
 				pr.syncTransactions(pr.peers.Peer(peer.Key))

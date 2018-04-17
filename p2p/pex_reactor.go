@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytom/errors"
 	log "github.com/sirupsen/logrus"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
+
+	"github.com/bytom/errors"  
 )
 
 const (

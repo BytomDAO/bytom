@@ -129,7 +129,7 @@ func TestListAssets(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	wantAssets := []*Asset{DefaultNativeAsset, secondAsset, firstAsset}
+	wantAssets := []*Asset{DefaultNativeAsset, firstAsset, secondAsset}
 
 	gotAssets, err := reg.ListAssets("")
 	if err != nil {
