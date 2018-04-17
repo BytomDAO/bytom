@@ -23,7 +23,7 @@ func (a *API) listAccounts(ctx context.Context, filter struct {
 		return NewErrorResponse(err)
 	}
 
-	var annotatedAccounts []query.AnnotatedAccount
+	annotatedAccounts := []query.AnnotatedAccount{}
 	for _, acc := range accounts {
 		annotatedAccounts = append(annotatedAccounts, *account.Annotated(acc))
 	}
@@ -44,7 +44,7 @@ func (a *API) listAssets(ctx context.Context, filter struct {
 	return NewSuccessResponse(assets)
 }
 
-// POST /listBalances
+// POST /list-balances
 func (a *API) listBalances(ctx context.Context) Response {
 	return NewSuccessResponse(a.wallet.GetAccountBalances(""))
 }
@@ -68,7 +68,7 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	AccountID string `json:"account_id"`
 	Detail    bool   `json:"detail"`
 }) Response {
-	var transactions []*query.AnnotatedTx
+	transactions := []*query.AnnotatedTx{}
 	var err error
 
 	if filter.AccountID != "" {
@@ -142,7 +142,7 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 }) Response {
 	accountUTXOs := a.wallet.GetAccountUTXOs(filter.ID)
 
-	var UTXOs []query.AnnotatedUTXO
+	UTXOs := []query.AnnotatedUTXO{}
 	for _, utxo := range accountUTXOs {
 		UTXOs = append([]query.AnnotatedUTXO{{
 			AccountID:           utxo.AccountID,

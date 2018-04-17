@@ -435,7 +435,7 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 
 // GetTransactionsByTxID get account txs by account tx ID
 func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
-	var annotatedTxs []*query.AnnotatedTx
+	annotatedTxs := []*query.AnnotatedTx{}
 	formatKey := ""
 
 	if txID != "" {
@@ -513,7 +513,7 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 
 // GetTransactionsByAccountID get account txs by account ID
 func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
-	var annotatedTxs []*query.AnnotatedTx
+	annotatedTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()

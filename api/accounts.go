@@ -111,7 +111,7 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	var addresses []*addressResp
+	addresses := []*addressResp{}
 	for _, cp := range cps {
 		addresses = append(addresses, &addressResp{
 			AccountAlias: target.Alias,
