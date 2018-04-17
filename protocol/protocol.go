@@ -160,7 +160,5 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 
 // GetTxPool return chain txpool.
 func (c *Chain) GetTxPool() *TxPool {
-	c.cond.L.Lock()
-	defer c.cond.L.Unlock()
 	return c.txPool
 }

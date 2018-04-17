@@ -2,11 +2,11 @@ package api
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
-	"encoding/hex"
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus"
