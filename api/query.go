@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"encoding/hex"
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus"
@@ -88,12 +89,52 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	return NewSuccessResponse(transactions)
 }
 
+// POST /get-unconfirmed-transaction
+func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
+	TxID string `json:"tx_id"`
+}) Response {
+	txID, err := hex.DecodeString(filter.TxID)
+	if err != nil {
+		log.Errorf("convert txID[%s] string to byte err: %v", filter.TxID, err)
+		return NewErrorResponse(err)
+	}
+
+	var tmpTxID [32]byte
+	copy(tmpTxID[:], txID[:])
+
+	txHash := bc.NewHash(tmpTxID)
+	txPool := a.chain.GetTxPool()
+	txDesc, err := txPool.GetTransaction(&txHash)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	tx := &BlockTx{
+		ID:         txDesc.Tx.ID,
+		Version:    txDesc.Tx.Version,
+		Size:       txDesc.Tx.SerializedSize,
+		TimeRange:  txDesc.Tx.TimeRange,
+		Inputs:     []*query.AnnotatedInput{},
+		Outputs:    []*query.AnnotatedOutput{},
+		StatusFail: false,
+	}
+
+	for i := range txDesc.Tx.Inputs {
+		tx.Inputs = append(tx.Inputs, a.wallet.BuildAnnotatedInput(txDesc.Tx, uint32(i)))
+	}
+	for i := range txDesc.Tx.Outputs {
+		tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(txDesc.Tx, i))
+	}
+
+	return NewSuccessResponse(tx)
+}
+
 type getTxPoolResp struct {
 	TxID bc.Hash `json:"tx_id"`
 }
 
-// POST /get-txpool
-func (a *API) getChainTxPool(ctx context.Context) Response {
+// POST /list-unconform-transactions
+func (a *API) listUnconformTxs(ctx context.Context) Response {
 	txIDs := []getTxPoolResp{}
 
 	txPool := a.chain.GetTxPool()

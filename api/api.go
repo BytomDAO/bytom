@@ -197,7 +197,9 @@ func (a *API) buildHandler() {
 
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
-		m.Handle("/get-txpool", jsonHandler(a.getChainTxPool))
+
+		m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
+		m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconformTxs))
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))

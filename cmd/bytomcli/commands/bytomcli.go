@@ -91,6 +91,10 @@ func AddCommands() {
 
 	BytomcliCmd.AddCommand(getTransactionCmd)
 	BytomcliCmd.AddCommand(listTransactionsCmd)
+
+	BytomcliCmd.AddCommand(getUnconfirmedTransactionCmd)
+	BytomcliCmd.AddCommand(listUnconfirmedTransactionsCmd)
+
 	BytomcliCmd.AddCommand(listUnspentOutputsCmd)
 	BytomcliCmd.AddCommand(listBalancesCmd)
 
@@ -99,7 +103,6 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(submitTransactionCmd)
 	BytomcliCmd.AddCommand(estimateTransactionGasCmd)
 	BytomcliCmd.AddCommand(signSubTransactionCmd)
-	BytomcliCmd.AddCommand(getTxPoolCmd)
 
 	BytomcliCmd.AddCommand(getBlockCountCmd)
 	BytomcliCmd.AddCommand(blockHashCmd)

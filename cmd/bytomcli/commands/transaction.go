@@ -304,20 +304,6 @@ var signSubTransactionCmd = &cobra.Command{
 	},
 }
 
-var getTxPoolCmd = &cobra.Command{
-	Use:   "get-txpool",
-	Short: "get txpool transactions hashes",
-	Args:  cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/get-txpool")
-		if exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-
-		printJSONList(data)
-	},
-}
-
 var getTransactionCmd = &cobra.Command{
 	Use:   "get-transaction <hash>",
 	Short: "get the transaction by matching the given transaction hash",
@@ -348,6 +334,38 @@ var listTransactionsCmd = &cobra.Command{
 		}{ID: txID, AccountID: account, Detail: detail}
 
 		data, exitCode := util.ClientCall("/list-transactions", &filter)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSONList(data)
+	},
+}
+
+var getUnconfirmedTransactionCmd = &cobra.Command{
+	Use:   "get-unconfirmed-transaction <hash>",
+	Short: "get unconfirmed transaction by matching the given transaction hash",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		txInfo := &struct {
+			TxID string `json:"tx_id"`
+		}{TxID: args[0]}
+
+		data, exitCode := util.ClientCall("/get-unconfirmed-transaction", txInfo)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
+var listUnconfirmedTransactionsCmd = &cobra.Command{
+	Use:   "list-unconfirmed-transactions",
+	Short: "list unconfirmed transactions hashes",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		data, exitCode := util.ClientCall("/list-unconfirmed-transactions")
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
