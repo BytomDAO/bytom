@@ -277,7 +277,7 @@ func (m *Manager) ListCtrlProgramsByXpubs(ctx context.Context, xpubs []chainkd.X
 
 	var result []*CtrlProgram
 	for _, cp := range cps {
-		if cp.Address == "" || chainkd.CompareTwoXPubs(cp.XPubs, xpubs) != 0 {
+		if cp.Address == "" || chainkd.IsXpubsEqual(cp.XPubs, xpubs) {
 			continue
 		}
 		result = append(result, cp)
