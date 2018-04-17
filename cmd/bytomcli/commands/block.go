@@ -13,12 +13,12 @@ import (
 	"github.com/bytom/util"
 )
 
-var blockHashCmd = &cobra.Command{
-	Use:   "block-hash",
+var getBlockHashCmd = &cobra.Command{
+	Use:   "get-block-hash",
 	Short: "Get the hash of most recent block",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("block-hash")
+		data, exitCode := util.ClientCall("get-block-hash")
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
