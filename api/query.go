@@ -123,7 +123,7 @@ func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 	return NewSuccessResponse(tx)
 }
 
-// POST /list-unconform-transactions
+// POST /list-unconfirmed-transactions
 func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
 	txIDs := []bc.Hash{}
 
