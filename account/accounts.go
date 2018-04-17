@@ -32,6 +32,7 @@ const (
 	accountPrefix   = "ACC:"
 	accountCPPrefix = "ACP:"
 	indexPrefix     = "ACIDX:"
+	xpubsPrefix     = "AXPUBS:"
 )
 
 var miningAddressKey = []byte("miningAddress")
@@ -41,6 +42,7 @@ var (
 	ErrDuplicateAlias = errors.New("duplicate account alias")
 	ErrFindAccount    = errors.New("fail to find account")
 	ErrMarshalAccount = errors.New("failed marshal account")
+	ErrDuplicateXpubs = errors.New("account with same xpubs already exists")
 )
 
 func aliasKey(name string) []byte {
@@ -66,6 +68,10 @@ func Key(name string) []byte {
 //CPKey account control promgram store prefix
 func CPKey(hash common.Hash) []byte {
 	return append([]byte(accountCPPrefix), hash[:]...)
+}
+
+func xpubsKey(xpubs []chainkd.XPub) []byte {
+	return []byte(xpubsPrefix + chainkd.XpubsToString(xpubs))
 }
 
 func convertUnit64ToBytes(nextIndex uint64) []byte {
@@ -153,6 +159,11 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, ErrDuplicateAlias
 	}
 
+	xpubsKey := xpubsKey(xpubs)
+	if m.db.Get(xpubsKey) != nil {
+		return nil, ErrDuplicateXpubs
+	}
+
 	signer, err := signers.Create("account", xpubs, quorum, m.getNextXpubsIndex(xpubs))
 	id := signers.IDGenerate()
 	if err != nil {
@@ -167,6 +178,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	storeBatch := m.db.NewBatch()
 
 	accountID := Key(id)
+	storeBatch.Set(xpubsKey, []byte(id))
 	storeBatch.Set(accountID, rawAccount)
 	storeBatch.Set(aliasKey(alias), []byte(id))
 	storeBatch.Write()
@@ -433,6 +445,7 @@ func (m *Manager) DeleteAccount(aliasOrId string) (err error) {
 	m.aliasCache.Remove(account.Alias)
 	m.cacheMu.Unlock()
 
+	storeBatch.Delete(xpubsKey(account.XPubs))
 	storeBatch.Delete(aliasKey(account.Alias))
 	storeBatch.Delete(Key(account.ID))
 	storeBatch.Write()
