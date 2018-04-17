@@ -1,13 +1,11 @@
 package wallet
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
-	"github.com/tendermint/go-wire/data/base58"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
@@ -16,7 +14,6 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -103,101 +100,6 @@ func TestWalletUpdate(t *testing.T) {
 	}
 }
 
-func TestExportAndImportPrivKey(t *testing.T) {
-	dirPath, err := ioutil.TempDir(".", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dirPath)
-
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	defer os.RemoveAll("temp")
-
-	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool()
-
-	chain, err := protocol.NewChain(store, txPool)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	acntManager := account.NewManager(testDB, chain)
-	reg := asset.NewRegistry(testDB, chain)
-
-	hsm, err := pseudohsm.New(dirPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pwd := "password"
-	xpub, err := hsm.XCreate("alias", pwd)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	w, err := NewWallet(testDB, acntManager, reg, hsm, chain)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ctx := context.Background()
-	acnt1, err := w.AccountMgr.Create(ctx, []chainkd.XPub{xpub.XPub}, 1, "account-alias")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	priv, err := w.ExportAccountPrivKey(xpub.XPub, pwd)
-
-	wantPriv, err := hsm.LoadChainKDKey(xpub.XPub, pwd)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var hashed [32]byte
-	sha3pool.Sum256(hashed[:], wantPriv[:])
-
-	tmp := append(wantPriv[:], hashed[:4]...)
-	res := base58.Encode(tmp)
-
-	if res != *priv {
-		t.Fatalf("XPrivs should be identical.\nBefore: %v\n After: %v\n", *priv, res)
-	}
-
-	rawPriv, err := base58.Decode(*priv)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(rawPriv) != 68 {
-		t.Fatal("invalid private key hash length")
-	}
-
-	var xprv [64]byte
-	copy(xprv[:], rawPriv[:64])
-
-	_, err = w.ImportAccountPrivKey(xprv, xpub.Alias, pwd, 0, acnt1.Alias)
-	if err != pseudohsm.ErrDuplicateKeyAlias {
-		t.Fatal(err)
-	}
-
-	hsm.XDelete(xpub.XPub, pwd)
-
-	_, err = w.ImportAccountPrivKey(xprv, xpub.Alias, pwd, 0, acnt1.Alias)
-	if err != account.ErrDuplicateAlias {
-		t.Fatal(err)
-	}
-
-	w.AccountMgr.DeleteAccount(acnt1.Alias)
-
-	acnt2, err := w.ImportAccountPrivKey(xprv, xpub.Alias, pwd, 0, acnt1.Alias)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if acnt2.XPub != acnt1.XPubs[0] {
-		t.Fatalf("XPubs should be identical.\nBefore: %v\n After: %v\n", acnt1.XPubs[0], acnt2.XPub)
-	}
-}
-
 func mockUTXO(controlProg *account.CtrlProgram, assetID *bc.AssetID) *account.UTXO {
 	utxo := &account.UTXO{}
 	utxo.OutputID = bc.Hash{V0: 1}
@@ -240,10 +142,6 @@ func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry
 		AccountMgr:          account,
 		AssetReg:            asset,
 		chain:               chain,
-		rescanProgress:      make(chan struct{}, 1),
-	}
-	wallet.status = StatusInfo{
-		OnChainAddresses: NewAddressSet(),
 	}
 	return wallet
 }

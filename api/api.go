@@ -184,10 +184,6 @@ func (a *API) buildHandler() {
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
 
-		m.Handle("/export-private-key", jsonHandler(a.walletExportKey))
-		m.Handle("/import-private-key", jsonHandler(a.walletImportKey))
-		m.Handle("/import-key-progress", jsonHandler(a.keyImportProgress))
-
 		m.Handle("/build-transaction", jsonHandler(a.build))
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
 		m.Handle("/submit-transaction", jsonHandler(a.submit))
