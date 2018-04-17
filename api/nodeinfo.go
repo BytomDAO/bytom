@@ -33,7 +33,7 @@ func (a *API) getNetInfo() Response {
 
 // return is in mining or not
 func (a *API) isMining() Response {
-	IsMining := map[string]bool{"isMining": a.IsMining()}
+	IsMining := map[string]bool{"is_mining": a.IsMining()}
 	return NewSuccessResponse(IsMining)
 }
 
