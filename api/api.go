@@ -168,7 +168,6 @@ func (a *API) buildHandler() {
 		walletEnable = true
 
 		m.Handle("/create-account", jsonHandler(a.createAccount))
-		m.Handle("/update-account-tags", jsonHandler(a.updateAccountTags))
 		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
 		m.Handle("/delete-account", jsonHandler(a.deleteAccount))
 
@@ -178,7 +177,6 @@ func (a *API) buildHandler() {
 
 		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
-		m.Handle("/update-asset-tags", jsonHandler(a.updateAssetTags))
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
 		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
@@ -193,6 +191,7 @@ func (a *API) buildHandler() {
 		m.Handle("/build-transaction", jsonHandler(a.build))
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
 		m.Handle("/submit-transaction", jsonHandler(a.submit))
+		m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
 		// TODO remove this api, separate sign and submit process
 		m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))

@@ -52,6 +52,7 @@ type UTXO struct {
 	Address             string
 	ControlProgramIndex uint64
 	ValidHeight         uint64
+	Change              bool
 }
 
 func (u *UTXO) source() source {

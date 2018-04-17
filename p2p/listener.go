@@ -190,7 +190,7 @@ func getUPNPExternalAddress(externalPort, internalPort int) *NetAddress {
 		externalPort = defaultExternalPort
 	}
 
-	externalPort, err = nat.AddPortMapping("tcp", externalPort, internalPort, "tendermint", 0)
+	externalPort, err = nat.AddPortMapping("tcp", externalPort, internalPort, "bytomd", 0)
 	if err != nil {
 		log.WithField("error", err).Error("Could not add UPNP port mapping")
 		return nil

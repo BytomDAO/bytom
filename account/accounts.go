@@ -41,7 +41,6 @@ var (
 	ErrDuplicateAlias = errors.New("duplicate account alias")
 	ErrFindAccount    = errors.New("fail to find account")
 	ErrMarshalAccount = errors.New("failed marshal account")
-	ErrMarshalTags    = errors.New("failed marshal account to update tags")
 )
 
 func aliasKey(name string) []byte {
@@ -131,7 +130,6 @@ type Account struct {
 	*signers.Signer
 	ID    string
 	Alias string
-	Tags  map[string]interface{}
 }
 
 func (m *Manager) getNextXpubsIndex(xpubs []chainkd.XPub) uint64 {
@@ -149,7 +147,7 @@ func (m *Manager) getNextXpubsIndex(xpubs []chainkd.XPub) uint64 {
 }
 
 // Create creates a new Account.
-func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string, tags map[string]interface{}) (*Account, error) {
+func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string) (*Account, error) {
 	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
 	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
@@ -161,7 +159,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, errors.Wrap(err)
 	}
 
-	account := &Account{Signer: signer, ID: id, Alias: normalizedAlias, Tags: tags}
+	account := &Account{Signer: signer, ID: id, Alias: normalizedAlias}
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return nil, ErrMarshalAccount
@@ -174,29 +172,6 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	storeBatch.Write()
 
 	return account, nil
-}
-
-// UpdateTags modifies the tags of the specified account. The account may be
-// identified either by ID or Alias, but not both.
-func (m *Manager) UpdateTags(ctx context.Context, accountInfo string, tags map[string]interface{}) (err error) {
-	account := &Account{}
-	if account, err = m.FindByAlias(nil, accountInfo); err != nil {
-		if account, err = m.findByID(ctx, accountInfo); err != nil {
-			return err
-		}
-	}
-
-	account.Tags = tags
-	rawAccount, err := json.Marshal(account)
-	if err != nil {
-		return ErrMarshalTags
-	}
-
-	m.db.Set(Key(account.ID), rawAccount)
-	m.cacheMu.Lock()
-	m.cache.Add(account.ID, account)
-	m.cacheMu.Unlock()
-	return nil
 }
 
 // FindByAlias retrieves an account's Signer record by its alias
@@ -262,21 +237,26 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
+// CreateAddressForChange generate an address for the UTXO change
+func (m *Manager) CreateCtrlProgramForChange(ctx context.Context, accountID string) (cp *CtrlProgram, err error) {
+	return m.CreateAddress(ctx, accountID, true)
+}
+
 // CreateAddress generate an address for the select account
-func (m *Manager) CreateAddress(ctx context.Context, accountID string) (cp *CtrlProgram, err error) {
+func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool) (cp *CtrlProgram, err error) {
 	account, err := m.findByID(ctx, accountID)
 	if err != nil {
 		return nil, err
 	}
-	return m.createAddress(ctx, account)
+	return m.createAddress(ctx, account, change)
 }
 
 // CreateAddress generate an address for the select account
-func (m *Manager) createAddress(ctx context.Context, account *Account) (cp *CtrlProgram, err error) {
+func (m *Manager) createAddress(ctx context.Context, account *Account, change bool) (cp *CtrlProgram, err error) {
 	if len(account.XPubs) == 1 {
-		cp, err = m.createP2PKH(ctx, account)
+		cp, err = m.createP2PKH(ctx, account, change)
 	} else {
-		cp, err = m.createP2SH(ctx, account)
+		cp, err = m.createP2SH(ctx, account, change)
 	}
 	if err != nil {
 		return nil, err
@@ -288,7 +268,7 @@ func (m *Manager) createAddress(ctx context.Context, account *Account) (cp *Ctrl
 	return cp, nil
 }
 
-func (m *Manager) createP2PKH(ctx context.Context, account *Account) (*CtrlProgram, error) {
+func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
 	idx := m.getNextXpubsIndex(account.Signer.XPubs)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
@@ -311,10 +291,11 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account) (*CtrlProgr
 		Address:        address.EncodeAddress(),
 		KeyIndex:       idx,
 		ControlProgram: control,
+		Change:         change,
 	}, nil
 }
 
-func (m *Manager) createP2SH(ctx context.Context, account *Account) (*CtrlProgram, error) {
+func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
 	idx := m.getNextXpubsIndex(account.Signer.XPubs)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
@@ -341,6 +322,7 @@ func (m *Manager) createP2SH(ctx context.Context, account *Account) (*CtrlProgra
 		Address:        address.EncodeAddress(),
 		KeyIndex:       idx,
 		ControlProgram: control,
+		Change:         change,
 	}, nil
 }
 
@@ -350,6 +332,7 @@ type CtrlProgram struct {
 	Address        string
 	KeyIndex       uint64
 	ControlProgram []byte
+	Change         bool // Mark whether this control program is for UTXO change
 }
 
 func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*CtrlProgram) error {
@@ -393,7 +376,7 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 		return nil, err
 	}
 
-	program, err := m.createAddress(nil, account)
+	program, err := m.createAddress(nil, account, false)
 	if err != nil {
 		return nil, err
 	}
