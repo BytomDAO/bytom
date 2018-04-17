@@ -62,6 +62,19 @@ func TestCreateAccount(t *testing.T) {
 	}
 }
 
+func TestCreateAccountWithSameXpub(t *testing.T) {
+	m := mockAccountManager(t)
+	ctx := context.Background()
+
+	xPubs := []chainkd.XPub{testutil.TestXPub}
+	m.Create(ctx, xPubs, 1, "test-alias")
+
+	_, err := m.Create(ctx, xPubs, 1, "test-alias2")
+	if err == nil {
+		t.Error("unexpected account created successfully")
+	}
+}
+
 func TestCreateAccountReusedAlias(t *testing.T) {
 	m := mockAccountManager(t)
 	ctx := context.Background()
@@ -82,11 +95,6 @@ func TestDeleteAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	account2, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias2")
-	if err != nil {
-		testutil.FatalErr(t, err)
-	}
-
 	if err = m.DeleteAccount(account1.Alias); err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -94,6 +102,11 @@ func TestDeleteAccount(t *testing.T) {
 	found, err := m.FindByID(ctx, account1.ID)
 	if err != nil {
 		t.Errorf("expected account %v should be deleted", found)
+	}
+
+	account2, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias2")
+	if err != nil {
+		testutil.FatalErr(t, err)
 	}
 
 	if err = m.DeleteAccount(account2.ID); err != nil {

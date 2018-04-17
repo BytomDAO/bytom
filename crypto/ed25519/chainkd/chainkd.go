@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"io"
+	"strings"
 
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/ecmath"
@@ -16,6 +17,14 @@ type (
 	//XPub external public key
 	XPub [64]byte
 )
+
+func XpubsToString(xpubs []XPub) string {
+	var strs []string
+	for _, xpub := range xpubs {
+		strs = append(strs, string(xpub[:]))
+	}
+	return strings.Join(strs, "")
+}
 
 // NewXPrv takes a source of random bytes and produces a new XPrv.
 // If r is nil, crypto/rand.Reader is used.
