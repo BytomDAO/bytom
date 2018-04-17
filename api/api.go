@@ -219,7 +219,7 @@ func (a *API) buildHandler() {
 	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
 	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
 
-	m.Handle("/block-hash", jsonHandler(a.getBestBlockHash))
+	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header-by-hash", jsonHandler(a.getBlockHeaderByHash))
 	m.Handle("/get-block-header-by-height", jsonHandler(a.getBlockHeaderByHeight))
 	m.Handle("/get-block", jsonHandler(a.getBlock))
