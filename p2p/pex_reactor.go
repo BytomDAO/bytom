@@ -12,7 +12,7 @@ import (
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	"github.com/bytom/errors"  
+	"github.com/bytom/errors"
 )
 
 const (
@@ -292,8 +292,7 @@ func (r *PEXReactor) ensurePeers() {
 
 	// Dial picked addresses
 	for _, item := range toDial {
-		_, err := r.Switch.DialPeerWithAddress(item, false)
-		if err != nil {
+		if _, err := r.Switch.DialPeerWithAddress(item, false); err != nil {
 			r.book.MarkAttempt(item)
 		}
 	}

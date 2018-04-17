@@ -7,13 +7,12 @@ import (
 	"net"
 	"sync"
 	"time"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
-
-	"strings"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
