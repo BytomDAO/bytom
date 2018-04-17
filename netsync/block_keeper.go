@@ -1,7 +1,6 @@
 package netsync
 
 import (
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -107,7 +106,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 	}
 	bestHash := bk.chain.BestBlockHash()
 	log.Info("Block sync complete. height:", bk.chain.BestBlockHeight(), " hash:", bestHash)
-	if strings.Compare(currentHash.String(), bestHash.String()) != 0 {
+	if currentHash.String() != bestHash.String() {
 		log.Info("Broadcast new chain status.")
 
 		block, err := bk.chain.GetBlockByHash(bestHash)
@@ -141,7 +140,7 @@ func (bk *blockKeeper) BlockRequest(peerID string, height uint64) (*types.Block,
 		select {
 		case pendingResponse := <-bk.pendingProcessCh:
 			block = pendingResponse.block
-			if strings.Compare(pendingResponse.peerID, peerID) != 0 {
+			if pendingResponse.peerID != peerID {
 				log.Warning("From different peer")
 				continue
 			}
@@ -158,7 +157,7 @@ func (bk *blockKeeper) BlockRequest(peerID string, height uint64) (*types.Block,
 			log.Warning("Request block timeout")
 			return nil, errGetBlockTimeout
 		case peerid := <-bk.quitReqBlockCh:
-			if strings.Compare(*peerid, peerID) == 0 {
+			if *peerid == peerID {
 				log.Info("Quite block request worker")
 				return nil, errPeerDropped
 			}

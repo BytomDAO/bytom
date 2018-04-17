@@ -186,11 +186,7 @@ func TestExportAndImportPrivKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	accountInfo := struct {
-		AccountInfo string `json:"account_info"`
-	}{AccountInfo: acnt1.Alias}
-
-	w.AccountMgr.DeleteAccount(accountInfo)
+	w.AccountMgr.DeleteAccount(acnt1.Alias)
 
 	acnt2, err := w.ImportAccountPrivKey(xprv, xpub.Alias, pwd, 0, acnt1.Alias)
 	if err != nil {
@@ -239,13 +235,17 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 }
 
 func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) *Wallet {
-	return &Wallet{
-		DB:             walletDB,
-		AccountMgr:     account,
-		AssetReg:       asset,
-		chain:          chain,
-		rescanProgress: make(chan struct{}, 1),
+	wallet := &Wallet{
+		DB:                  walletDB,
+		AccountMgr:          account,
+		AssetReg:            asset,
+		chain:               chain,
+		rescanProgress:      make(chan struct{}, 1),
 	}
+	wallet.status = StatusInfo{
+		OnChainAddresses: NewAddressSet(),
+	}
+	return wallet
 }
 
 func mockSingleBlock(tx *types.Tx) *types.Block {
