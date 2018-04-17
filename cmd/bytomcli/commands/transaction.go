@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/bytom/api"
 	"github.com/bytom/blockchain/txbuilder"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/util"
 )
@@ -334,6 +336,44 @@ var listTransactionsCmd = &cobra.Command{
 		}{ID: txID, AccountID: account, Detail: detail}
 
 		data, exitCode := util.ClientCall("/list-transactions", &filter)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSONList(data)
+	},
+}
+
+var getUnconfirmedTransactionCmd = &cobra.Command{
+	Use:   "get-unconfirmed-transaction <hash>",
+	Short: "get unconfirmed transaction by matching the given transaction hash",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		txID, err := hex.DecodeString(args[0])
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		txInfo := &struct {
+			TxID chainjson.HexBytes `json:"tx_id"`
+		}{TxID: txID}
+
+		data, exitCode := util.ClientCall("/get-unconfirmed-transaction", txInfo)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
+var listUnconfirmedTransactionsCmd = &cobra.Command{
+	Use:   "list-unconfirmed-transactions",
+	Short: "list unconfirmed transactions hashes",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		data, exitCode := util.ClientCall("/list-unconfirmed-transactions")
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
