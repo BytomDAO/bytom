@@ -8,6 +8,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
+	"github.com/bytom/testutil"
 )
 
 func TestCheckBlockTime(t *testing.T) {
@@ -92,8 +93,8 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 func TestValidateBlockHeader(t *testing.T) {
 	// add (hash, seed) --> (tensority hash) to the  tensority cache for avoid
 	// real matrix calculate cost.
-	tensority.AIHash.AddCache(&bc.Hash{V0: 0}, &bc.Hash{}, &bc.Hash{V0: 1<<64 - 1, V1: 1<<64 - 1, V2: 1<<64 - 1, V3: 1<<64 - 1})
-	tensority.AIHash.AddCache(&bc.Hash{V0: 1}, &bc.Hash{}, &bc.Hash{})
+	tensority.AIHash.AddCache(&bc.Hash{V0: 0}, &bc.Hash{}, testutil.MaxHash)
+	tensority.AIHash.AddCache(&bc.Hash{V0: 1}, &bc.Hash{}, testutil.MinHash)
 
 	cases := []struct {
 		block  *bc.Block
