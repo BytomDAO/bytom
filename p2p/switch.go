@@ -7,6 +7,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
@@ -19,8 +20,8 @@ import (
 )
 
 const (
-	reconnectAttempts = 30
-	reconnectInterval = 3 * time.Second
+	reconnectAttempts = 10
+	reconnectInterval = 10 * time.Second
 
 	bannedPeerKey      = "BannedPeer"
 	defaultBanDuration = time.Hour * 24
@@ -94,6 +95,8 @@ type Switch struct {
 
 var (
 	ErrSwitchDuplicatePeer = errors.New("Duplicate peer")
+	ErrConnectSelf         = errors.New("Connect self")
+	ErrPeerConnected       = errors.New("Peer is connected")
 )
 
 func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB) *Switch {
@@ -340,11 +343,8 @@ func (sw *Switch) DialSeeds(addrBook *AddrBook, seeds []string) error {
 	// permute the list, dial them in random order.
 	perm := rand.Perm(len(netAddrs))
 	for i := 0; i < len(perm); i++ {
-		go func(i int) {
-			time.Sleep(time.Duration(rand.Int63n(3000)) * time.Millisecond)
-			j := perm[i]
-			sw.dialSeed(netAddrs[j])
-		}(i)
+		j := perm[i]
+		sw.dialSeed(netAddrs[j])
 	}
 	return nil
 }
@@ -362,7 +362,14 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress, persistent bool) (*Peer,
 	if err := sw.checkBannedPeer(addr.IP.String()); err != nil {
 		return nil, err
 	}
-
+	if strings.Compare(addr.IP.String(), sw.nodeInfo.ListenHost()) == 0 {
+		return nil, ErrConnectSelf
+	}
+	for _, v := range sw.Peers().list {
+		if strings.Compare(v.mconn.RemoteAddress.IP.String(), addr.IP.String()) == 0 {
+			return nil, ErrPeerConnected
+		}
+	}
 	sw.dialing.Set(addr.IP.String(), addr)
 	defer sw.dialing.Delete(addr.IP.String())
 
@@ -446,38 +453,38 @@ func (sw *Switch) StopPeerForError(peer *Peer, reason interface{}) {
 	sw.stopAndRemovePeer(peer, reason)
 
 	if peer.IsPersistent() {
-		go func() {
-			log.WithField("peer", peer).Info("Reconnecting to peer")
-			for i := 1; i < reconnectAttempts; i++ {
-				if !sw.IsRunning() {
-					return
-				}
+		log.WithField("peer", peer).Info("Reconnecting to peer")
+		for i := 1; i < reconnectAttempts; i++ {
+			if !sw.IsRunning() {
+				return
+			}
 
-				peer, err := sw.DialPeerWithAddress(addr, true)
-				if err != nil {
-					if i == reconnectAttempts {
-						log.WithFields(log.Fields{
-							"retries": i,
-							"error":   err,
-						}).Info("Error reconnecting to peer. Giving up")
-						return
-					}
-					if errors.Root(err) == ErrSwitchDuplicatePeer {
-						log.WithField("error", err).Info("Error reconnecting to peer. ")
-						return
-					}
+			peer, err := sw.DialPeerWithAddress(addr, true)
+			if err != nil {
+				if i == reconnectAttempts {
 					log.WithFields(log.Fields{
 						"retries": i,
 						"error":   err,
-					}).Info("Error reconnecting to peer. Trying again")
-					time.Sleep(reconnectInterval)
-					continue
+					}).Info("Error reconnecting to peer. Giving up")
+					return
 				}
 
-				log.WithField("peer", peer).Info("Reconnected to peer")
-				return
+				if errors.Root(err) == ErrConnectBannedPeer || errors.Root(err) == ErrPeerConnected || errors.Root(err) == ErrSwitchDuplicatePeer || errors.Root(err) == ErrConnectSelf {
+					log.WithField("error", err).Info("Error reconnecting to peer. ")
+					return
+				}
+
+				log.WithFields(log.Fields{
+					"retries": i,
+					"error":   err,
+				}).Info("Error reconnecting to peer. Trying again")
+				time.Sleep(reconnectInterval)
+				continue
 			}
-		}()
+
+			log.WithField("peer", peer).Info("Reconnected to peer")
+			return
+		}
 	}
 }
 
@@ -506,6 +513,8 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		// ignore connection if we already have enough
 		maxPeers := sw.config.MaxNumPeers
 		if maxPeers <= sw.peers.Size() {
+			// close inConn
+			inConn.Close()
 			log.WithFields(log.Fields{
 				"address":  inConn.RemoteAddr().String(),
 				"numPeers": sw.peers.Size(),
@@ -517,6 +526,8 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		// New inbound connection!
 		err := sw.addPeerWithConnectionAndConfig(inConn, sw.peerConfig)
 		if err != nil {
+			// conn close for returing err
+			inConn.Close()
 			log.WithFields(log.Fields{
 				"address": inConn.RemoteAddr().String(),
 				"error":   err,
@@ -652,12 +663,10 @@ func (sw *Switch) addPeerWithConnectionAndConfig(conn net.Conn, config *PeerConf
 
 	peer, err := newInboundPeerWithConfig(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, config)
 	if err != nil {
-		conn.Close()
 		return err
 	}
 	peer.SetLogger(sw.Logger.With("peer", conn.RemoteAddr()))
 	if err = sw.AddPeer(peer); err != nil {
-		conn.Close()
 		return err
 	}
 
