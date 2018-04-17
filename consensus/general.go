@@ -90,6 +90,8 @@ type Params struct {
 	Bech32HRPSegwit string
 }
 
+var ActiveNetParams = &MainNetParams
+
 // MainNetParams is the config for production
 var MainNetParams = Params{
 	Name:            "main",

@@ -241,7 +241,7 @@ func (w *Wallet) getAddressFromControlProgram(prog []byte) string {
 }
 
 func buildP2PKHAddress(pubHash []byte) string {
-	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.MainNetParams)
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, consensus.ActiveNetParams)
 	if err != nil {
 		return ""
 	}
@@ -250,7 +250,7 @@ func buildP2PKHAddress(pubHash []byte) string {
 }
 
 func buildP2SHAddress(scriptHash []byte) string {
-	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.MainNetParams)
+	address, err := common.NewAddressWitnessScriptHash(scriptHash, consensus.ActiveNetParams)
 	if err != nil {
 		return ""
 	}

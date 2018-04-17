@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/account"
@@ -13,9 +14,9 @@ import (
 
 // POST /create-account
 func (a *API) createAccount(ctx context.Context, ins struct {
-	RootXPubs []chainkd.XPub         `json:"root_xpubs"`
-	Quorum    int                    `json:"quorum"`
-	Alias     string                 `json:"alias"`
+	RootXPubs []chainkd.XPub `json:"root_xpubs"`
+	Quorum    int            `json:"quorum"`
+	Alias     string         `json:"alias"`
 }) Response {
 	acc, err := a.wallet.AccountMgr.Create(ctx, ins.RootXPubs, ins.Quorum, ins.Alias)
 	if err != nil {
@@ -51,7 +52,7 @@ func (a *API) validateAddress(ctx context.Context, ins struct {
 		Vaild:   false,
 		IsLocal: false,
 	}
-	address, err := common.DecodeAddress(ins.Address, &consensus.MainNetParams)
+	address, err := common.DecodeAddress(ins.Address, consensus.ActiveNetParams)
 	if err != nil {
 		return NewSuccessResponse(resp)
 	}
