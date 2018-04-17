@@ -103,7 +103,7 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	var addresses []*addressResp
+	addresses := []*addressResp{}
 	for _, cp := range cps {
 		if cp.Address == "" || (len(accountID) != 0 && strings.Compare(accountID, cp.AccountID) != 0) {
 			continue
