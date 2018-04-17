@@ -235,14 +235,17 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 }
 
 func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) *Wallet {
-	return &Wallet{
+	wallet := &Wallet{
 		DB:                  walletDB,
 		AccountMgr:          account,
 		AssetReg:            asset,
 		chain:               chain,
 		rescanProgress:      make(chan struct{}, 1),
-		selfProgramsOnChain: NewSet(),
 	}
+	wallet.status = StatusInfo{
+		OnChainAddresses: NewAddressSet(),
+	}
+	return wallet
 }
 
 func mockSingleBlock(tx *types.Tx) *types.Block {

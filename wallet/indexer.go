@@ -390,7 +390,7 @@ transactionLoop:
 			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
 				cp := &account.CtrlProgram{}
 				if err := json.Unmarshal(bytes, cp); err == nil {
-					w.status.selfProgramsOnChain.Add(cp.Address)
+					w.status.OnChainAddresses.Add(cp.Address)
 				}
 
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))

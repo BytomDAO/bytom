@@ -29,11 +29,11 @@ var dbKeyForimportingPrivateKey = []byte("importingKeysInfo")
 
 //StatusInfo is base valid block info to handle orphan block rollback
 type StatusInfo struct {
-	WorkHeight uint64
-	WorkHash   bc.Hash
-	BestHeight uint64
-	BestHash   bc.Hash
-	selfProgramsOnChain Set
+	WorkHeight       uint64
+	WorkHash         bc.Hash
+	BestHeight       uint64
+	BestHash         bc.Hash
+	OnChainAddresses AddressSet
 }
 
 //KeyInfo is key import status
@@ -92,7 +92,7 @@ func (w *Wallet) loadWalletInfo() error {
 		return json.Unmarshal(rawWallet, &w.status)
 	}
 
-	w.status.selfProgramsOnChain = NewSet()
+	w.status.OnChainAddresses = NewAddressSet()
 	block, err := w.chain.GetBlockByHeight(0)
 	if err != nil {
 		return err
@@ -364,7 +364,7 @@ func (w *Wallet) updateRescanStatus() {
 
 		if cps, err := w.AccountMgr.ListCtrlProgramsByXpubs(nil, keyInfo.account.XPubs); err == nil {
 			for _, cp := range cps {
-				if !w.status.selfProgramsOnChain.Contains(cp.Address) {
+				if !w.status.OnChainAddresses.Contains(cp.Address) {
 					w.AccountMgr.DeleteAccountControlProgram(cp.ControlProgram)
 				}
 			}
