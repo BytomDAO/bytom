@@ -266,6 +266,13 @@ func (r *PEXReactor) ensurePeers() {
 			if try == nil {
 				break
 			}
+			ka := r.book.addrLookup[try.String()]
+			if ka != nil {
+				if ka.isBad() {
+					log.Info("Pick invalid address.")
+					continue
+				}
+			}
 			_, alreadySelected := toDial[try.IP.String()]
 			alreadyDialing := r.Switch.IsDialing(try)
 			var alreadyConnected bool
@@ -294,6 +301,8 @@ func (r *PEXReactor) ensurePeers() {
 	for _, item := range toDial {
 		if _, err := r.Switch.DialPeerWithAddress(item, false); err != nil {
 			r.book.MarkAttempt(item)
+		} else {
+			r.book.MarkGood(item)
 		}
 	}
 
