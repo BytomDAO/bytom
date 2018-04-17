@@ -115,9 +115,6 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(deleteKeyCmd)
 	BytomcliCmd.AddCommand(listKeysCmd)
 	BytomcliCmd.AddCommand(resetKeyPwdCmd)
-	BytomcliCmd.AddCommand(exportPrivateCmd)
-	BytomcliCmd.AddCommand(importPrivateCmd)
-	BytomcliCmd.AddCommand(importKeyProgressCmd)
 
 	BytomcliCmd.AddCommand(isMiningCmd)
 
