@@ -2,6 +2,7 @@ package netsync
 
 import (
 	"reflect"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -19,11 +20,13 @@ const (
 	// BlockchainChannel is a channel for blocks and status updates
 	BlockchainChannel        = byte(0x40)
 	protocolHandshakeTimeout = time.Second * 10
+	handshakeRetryTicker     = 4 * time.Second
 )
 
 var (
 	//ErrProtocolHandshakeTimeout peers handshake timeout
 	ErrProtocolHandshakeTimeout = errors.New("Protocol handshake timeout")
+	ErrStatusRequest            = errors.New("Status request error")
 )
 
 // Response describes the response standard.
@@ -49,6 +52,7 @@ type ProtocolReactor struct {
 	sw          *p2p.Switch
 	fetcher     *Fetcher
 	peers       *peerSet
+	handshakeMu sync.Mutex
 
 	newPeerCh      chan struct{}
 	quitReqBlockCh chan *string
@@ -111,7 +115,13 @@ func (pr *ProtocolReactor) syncTransactions(p *peer) {
 
 // AddPeer implements Reactor by sending our state to peer.
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
-	peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}})
+	pr.handshakeMu.Lock()
+	defer pr.handshakeMu.Unlock()
+
+	if ok := peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
+		return ErrStatusRequest
+	}
+	retryTicker := time.Tick(handshakeRetryTicker)
 	handshakeWait := time.NewTimer(protocolHandshakeTimeout)
 	for {
 		select {
@@ -122,6 +132,10 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 				pr.syncTransactions(pr.peers.Peer(peer.Key))
 				pr.newPeerCh <- struct{}{}
 				return nil
+			}
+		case <-retryTicker:
+			if ok := peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
+				return ErrStatusRequest
 			}
 		case <-handshakeWait.C:
 			return ErrProtocolHandshakeTimeout

@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"strings"
 	"time"
+
 	log "github.com/sirupsen/logrus"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
+
 	"github.com/bytom/errors"
 )
 
@@ -244,6 +247,7 @@ func (r *PEXReactor) ensurePeers() {
 		return
 	}
 
+	newBias := cmn.MinInt(numOutPeers, 8)*10 + 10
 	toDial := make(map[string]*NetAddress)
 
 	// Try to pick numToDial addresses to dial.
@@ -253,7 +257,7 @@ func (r *PEXReactor) ensurePeers() {
 		// if we already have many connections. This algorithm isn't perfect, but
 		// it somewhat ensures that we prioritize connecting to more-vetted
 		// peers.
-		newBias := cmn.MinInt(numOutPeers, 8)*10 + 10
+
 		var picked *NetAddress
 		// Try to fetch a new peer 3 times.
 		// This caps the maximum number of tries to 3 * numToDial.
@@ -265,8 +269,9 @@ func (r *PEXReactor) ensurePeers() {
 			_, alreadySelected := toDial[try.IP.String()]
 			alreadyDialing := r.Switch.IsDialing(try)
 			var alreadyConnected bool
+
 			for _, v := range r.Switch.Peers().list {
-				if v.mconn.RemoteAddress.String() == try.String() {
+				if strings.Compare(v.mconn.RemoteAddress.IP.String(), try.IP.String()) == 0 {
 					alreadyConnected = true
 					break
 				}
@@ -287,12 +292,9 @@ func (r *PEXReactor) ensurePeers() {
 
 	// Dial picked addresses
 	for _, item := range toDial {
-		go func(picked *NetAddress) {
-			_, err := r.Switch.DialPeerWithAddress(picked, false)
-			if err != nil {
-				r.book.MarkAttempt(picked)
-			}
-		}(item)
+		if _, err := r.Switch.DialPeerWithAddress(item, false); err != nil {
+			r.book.MarkAttempt(item)
+		}
 	}
 
 	// If we need more addresses, pick a random peer and ask for more.
