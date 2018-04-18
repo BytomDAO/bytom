@@ -188,7 +188,6 @@ type TxSummary struct {
 func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
-	annotateTxsAsset(w, annotatedTxs)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
 	for _, tx := range annotatedTxs {
@@ -443,6 +442,7 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error
 		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
 			return nil, err
 		}
+		annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 		annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
 	}
 
@@ -514,6 +514,7 @@ func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.Annotate
 		}
 
 		if findTransactionsByAccount(annotatedTx, accountID) {
+			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			annotatedTxs = append(annotatedTxs, annotatedTx)
 		}
 	}
