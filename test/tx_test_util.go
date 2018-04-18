@@ -296,7 +296,7 @@ func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signe
 	cp := account.CtrlProgram{}
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], input.ControlProgram)
-	bytes := db.Get(account.CPKey(hash))
+	bytes := db.Get(account.ContractKey(hash))
 	if bytes == nil {
 		return nil, fmt.Errorf("can't find CtrlProgram for the SpendInput")
 	}

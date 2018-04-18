@@ -27,15 +27,13 @@ var DefaultNativeAsset *Asset
 
 const (
 	maxAssetCache = 1000
-	//AliasPrefix is asset alias prefix
-	AliasPrefix = "ALS:"
-	//ExternalAssetPrefix is external definition assets prefix
-	ExternalAssetPrefix = "EXA"
 )
 
 var (
-	assetIndexKey = []byte("assetIndex")
-	assetPrefix   = []byte("ASS:")
+	assetIndexKey  = []byte("AssetIndex")
+	assetPrefix    = []byte("Asset:")
+	aliasPrefix    = []byte("AssetAlias:")
+	extAssetPrefix = []byte("EXA:")
 )
 
 func initNativeAsset() {
@@ -55,18 +53,17 @@ func initNativeAsset() {
 
 // AliasKey store asset alias prefix
 func AliasKey(name string) []byte {
-	return []byte(AliasPrefix + name)
+	return append(aliasPrefix, []byte(name)...)
 }
 
-//Key asset store prefix
+// AssetKey asset store prefix
 func Key(id *bc.AssetID) []byte {
 	return append(assetPrefix, id.Bytes()...)
 }
 
-//CalcExtAssetKey return store external assets key
-func CalcExtAssetKey(id *bc.AssetID) []byte {
-	name := id.String()
-	return []byte(ExternalAssetPrefix + name)
+// ExtAssetKey return store external assets key
+func ExtAssetKey(id *bc.AssetID) []byte {
+	return append(extAssetPrefix, id.Bytes()...)
 }
 
 // pre-define errors for supporting bytom errorFormatter
@@ -287,7 +284,7 @@ func (reg *Registry) GetAsset(id *bc.AssetID) (*Asset, error) {
 		return asset, nil
 	}
 
-	if extAsset := reg.db.Get(CalcExtAssetKey(id)); extAsset != nil {
+	if extAsset := reg.db.Get(ExtAssetKey(id)); extAsset != nil {
 		if err := json.Unmarshal(extAsset, asset); err != nil {
 			return nil, err
 		}

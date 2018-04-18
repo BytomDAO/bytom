@@ -25,16 +25,16 @@ import (
 )
 
 const (
-	maxAccountCache     = 1000
-	aliasPrefix         = "ALI:"
-	accountCPPrefix     = "ACP:"
-	contractIndexPrefix = "ACPI:"
+	maxAccountCache = 1000
 )
 
 var (
-	miningAddressKey = []byte("miningAddress")
-	accountIndexKey  = []byte("accountIndex")
-	accountPrefix    = []byte("ACC:")
+	accountIndexKey     = []byte("AccountIndex")
+	accountPrefix       = []byte("Account:")
+	aliasPrefix         = []byte("AccountAlias:")
+	contractIndexPrefix = []byte("ContractIndex")
+	contractPrefix      = []byte("Contract:")
+	miningAddressKey    = []byte("MiningAddress")
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -45,21 +45,21 @@ var (
 )
 
 func aliasKey(name string) []byte {
-	return []byte(aliasPrefix + name)
+	return append(aliasPrefix, []byte(name)...)
 }
 
-//Key account store prefix
+// Key account store prefix
 func Key(name string) []byte {
 	return append(accountPrefix, []byte(name)...)
 }
 
-//CPKey account control promgram store prefix
-func CPKey(hash common.Hash) []byte {
-	return append([]byte(accountCPPrefix), hash[:]...)
+// ContractKey account control promgram store prefix
+func ContractKey(hash common.Hash) []byte {
+	return append(contractPrefix, hash[:]...)
 }
 
 func contractIndexKey(accountID string) []byte {
-	return append([]byte(contractIndexPrefix), []byte(accountID)...)
+	return append(contractIndexPrefix, []byte(accountID)...)
 }
 
 // NewManager creates a new account manager
@@ -232,11 +232,6 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
-// CreateAddressForChange generate an address for the UTXO change
-func (m *Manager) CreateCtrlProgramForChange(ctx context.Context, accountID string) (cp *CtrlProgram, err error) {
-	return m.CreateAddress(ctx, accountID, true)
-}
-
 // CreateAddress generate an address for the select account
 func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool) (cp *CtrlProgram, err error) {
 	account, err := m.FindByID(ctx, accountID)
@@ -261,23 +256,6 @@ func (m *Manager) createAddress(ctx context.Context, account *Account, change bo
 		return nil, err
 	}
 	return cp, nil
-}
-
-// ListCtrlProgramsByAccountId
-func (m *Manager) ListCtrlProgramsByAccountId(ctx context.Context, accountId string) ([]*CtrlProgram, error) {
-	cps, err := m.ListControlProgram()
-	if err != nil {
-		return nil, err
-	}
-
-	var result []*CtrlProgram
-	for _, cp := range cps {
-		if cp.Address == "" || cp.AccountID != accountId {
-			continue
-		}
-		result = append(result, cp)
-	}
-	return result, nil
 }
 
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
@@ -356,22 +334,16 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*Ctr
 		}
 
 		sha3pool.Sum256(hash[:], prog.ControlProgram)
-		m.db.Set(CPKey(hash), accountCP)
+		m.db.Set(ContractKey(hash), accountCP)
 	}
 	return nil
-}
-
-func (m *Manager) DeleteAccountControlProgram(prog []byte) {
-	var hash common.Hash
-	sha3pool.Sum256(hash[:], prog)
-	m.db.Delete(CPKey(hash))
 }
 
 // IsLocalControlProgram check is the input control program belong to local
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash common.Hash
 	sha3pool.Sum256(hash[:], prog)
-	bytes := m.db.Get(CPKey(hash))
+	bytes := m.db.Get(ContractKey(hash))
 	return bytes != nil
 }
 
@@ -408,16 +380,11 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	return program.ControlProgram, nil
 }
 
-// AccountInfo
-type Info struct {
-	AccountInfo string `json:"account_info"`
-}
-
 // DeleteAccount deletes the account's ID or alias matching accountInfo.
-func (m *Manager) DeleteAccount(aliasOrId string) (err error) {
+func (m *Manager) DeleteAccount(aliasOrID string) (err error) {
 	account := &Account{}
-	if account, err = m.FindByAlias(nil, aliasOrId); err != nil {
-		if account, err = m.FindByID(nil, aliasOrId); err != nil {
+	if account, err = m.FindByAlias(nil, aliasOrID); err != nil {
+		if account, err = m.FindByID(nil, aliasOrID); err != nil {
 			return err
 		}
 	}
@@ -455,7 +422,7 @@ func (m *Manager) ListAccounts() ([]*Account, error) {
 // ListControlProgram return all the local control program
 func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
 	var cps []*CtrlProgram
-	cpIter := m.db.IteratorPrefix([]byte(accountCPPrefix))
+	cpIter := m.db.IteratorPrefix(contractPrefix)
 	defer cpIter.Release()
 
 	for cpIter.Next() {
