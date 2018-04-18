@@ -21,12 +21,15 @@ func (m *Manager) Backup() (*AccountImage, error) {
 	defer accountIter.Release()
 
 	for accountIter.Next() {
-		accountSlice := &AccountSlice{}
-		if err := json.Unmarshal(accountIter.Value(), accountSlice.Account); err != nil {
+		a := &Account{}
+		if err := json.Unmarshal(accountIter.Value(), a); err != nil {
 			return nil, err
 		}
 
-		accountSlice.ContractIndex = m.getNextContractIndex(accountSlice.Account.ID)
+		accountSlice := &AccountSlice{
+			Account:       a,
+			ContractIndex: m.getNextContractIndex(a.ID),
+		}
 		accountSlices = append(accountSlices, accountSlice)
 	}
 
