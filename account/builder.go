@@ -152,7 +152,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 		return txInput, sigInst, nil
 	}
 
-	address, err := common.DecodeAddress(u.Address, consensus.ActiveNetParams)
+	address, err := common.DecodeAddress(u.Address, &consensus.ActiveNetParams)
 	if err != nil {
 		return nil, nil, err
 	}

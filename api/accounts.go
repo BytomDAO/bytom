@@ -55,7 +55,7 @@ func (a *API) validateAddress(ctx context.Context, ins struct {
 		Vaild:   false,
 		IsLocal: false,
 	}
-	address, err := common.DecodeAddress(ins.Address, consensus.ActiveNetParams)
+	address, err := common.DecodeAddress(ins.Address, &consensus.ActiveNetParams)
 	if err != nil {
 		return NewSuccessResponse(resp)
 	}

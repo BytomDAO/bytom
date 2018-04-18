@@ -90,7 +90,13 @@ type Params struct {
 	Bech32HRPSegwit string
 }
 
-var ActiveNetParams = &MainNetParams
+var ActiveNetParams = MainNetParams
+
+// NetParams is the correspondence between chain_id and Params
+var NetParams = map[string]Params{
+	"mainnet": MainNetParams,
+	"testnet": TestNetParams,
+}
 
 // MainNetParams is the config for production
 var MainNetParams = Params{

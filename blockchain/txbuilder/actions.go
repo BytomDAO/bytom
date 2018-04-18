@@ -72,7 +72,7 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 		return MissingFieldsError(missing...)
 	}
 
-	address, err := common.DecodeAddress(a.Address, consensus.ActiveNetParams)
+	address, err := common.DecodeAddress(a.Address, &consensus.ActiveNetParams)
 	if err != nil {
 		return err
 	}

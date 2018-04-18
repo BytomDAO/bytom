@@ -59,9 +59,7 @@ type Node struct {
 
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
-	if config.ChainID == "testnet" {
-		consensus.ActiveNetParams = &consensus.TestNetParams
-	}
+	initActiveNetParams(config)
 	// Get store
 	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
 	store := leveldb.NewStore(txDB)
@@ -147,6 +145,14 @@ func NewNode(config *cfg.Config) *Node {
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
 	return node
+}
+
+func initActiveNetParams(config *cfg.Config) {
+	var exist bool
+	consensus.ActiveNetParams, exist = consensus.NetParams[config.ChainID]
+	if !exist {
+		cmn.Exit(cmn.Fmt("chain_id[%v] don't exist", config.ChainID))
+	}
 }
 
 func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
