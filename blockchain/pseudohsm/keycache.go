@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
+	log "github.com/sirupsen/logrus"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does
@@ -167,7 +168,7 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 func (kc *keyCache) reload() {
 	keys, err := kc.scan()
 	if err != nil {
-		fmt.Printf("can't load keys: %v\n", err.Error())
+		log.WithField("load keys error", err).Error("can't load keys")
 	}
 	kc.all = keys
 	sort.Sort(kc.all)
@@ -177,7 +178,7 @@ func (kc *keyCache) reload() {
 	for _, k := range keys {
 		kc.byPubs[k.XPub] = append(kc.byPubs[k.XPub], k)
 	}
-	fmt.Printf("reloaded keys, cache has %d keys\n", len(kc.all))
+	log.WithField("cache has keys:", len(kc.all)).Debug("reloaded keys")
 }
 
 func (kc *keyCache) scan() ([]XPub, error) {
@@ -212,9 +213,9 @@ func (kc *keyCache) scan() ([]XPub, error) {
 		err = json.NewDecoder(buf).Decode(&keyJSON)
 		switch {
 		case err != nil:
-			fmt.Printf("can't decode key %s: %v", path, err)
+			log.WithField("decode json err", err).Errorf("can't decode key %s: %v", path, err)
 		case (keyJSON.Alias == ""):
-			fmt.Printf("can't decode key %s: missing or void alias", path)
+			log.WithField("can't decode key, key path:", path).Warn("missing or void alias")
 		default:
 			keys = append(keys, XPub{XPub: keyJSON.XPub, Alias: keyJSON.Alias, File: path})
 		}
