@@ -20,9 +20,7 @@ import (
 
 const (
 	vmVersion    = 1
-	blockVersion = 1
 	assetVersion = 1
-	maxNonce     = ^uint64(0)
 )
 
 // MockTxPool mock transaction pool
@@ -69,7 +67,7 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 
 // MockSign sign a tx
 func MockSign(tpl *txbuilder.Template, hsm *pseudohsm.HSM, password string) (bool, error) {
-	err := txbuilder.Sign(nil, tpl, nil, password, func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
+	err := txbuilder.Sign(nil, tpl, password, func(_ context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {
 		return hsm.XSign(xpub, path, data[:], password)
 	})
 	if err != nil {

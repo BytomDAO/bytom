@@ -8,7 +8,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
@@ -80,17 +79,17 @@ func Build(ctx context.Context, tx *types.TxData, actions []Action, maxTime time
 }
 
 // Sign will try to sign all the witness
-func Sign(ctx context.Context, tpl *Template, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
+func Sign(ctx context.Context, tpl *Template, auth string, signFn SignFunc) error {
 	for i, sigInst := range tpl.SigningInstructions {
 		for j, wc := range sigInst.WitnessComponents {
 			switch sw := wc.(type) {
 			case *SignatureWitness:
-				err := sw.sign(ctx, tpl, uint32(i), xpubs, auth, signFn)
+				err := sw.sign(ctx, tpl, uint32(i), auth, signFn)
 				if err != nil {
 					return errors.WithDetailf(err, "adding signature(s) to signature witness component %d of input %d", j, i)
 				}
 			case *RawTxSigWitness:
-				err := sw.sign(ctx, tpl, uint32(i), xpubs, auth, signFn)
+				err := sw.sign(ctx, tpl, uint32(i), auth, signFn)
 				if err != nil {
 					return errors.WithDetailf(err, "adding signature(s) to raw-signature witness component %d of input %d", j, i)
 				}

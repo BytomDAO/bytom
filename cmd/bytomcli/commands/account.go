@@ -2,6 +2,7 @@ package commands
 
 import (
 	"os"
+
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
@@ -12,7 +13,6 @@ import (
 func init() {
 	createAccountCmd.PersistentFlags().IntVarP(&accountQuorum, "quorom", "q", 1, "quorum must be greater than 0 and less than or equal to the number of signers")
 	createAccountCmd.PersistentFlags().StringVarP(&accountToken, "access", "a", "", "access token")
-	createAccountCmd.PersistentFlags().StringVarP(&accountTags, "tags", "t", "", "tags")
 
 	listAccountsCmd.PersistentFlags().StringVar(&accountID, "id", "", "ID of account")
 
@@ -23,12 +23,11 @@ func init() {
 }
 
 var (
-	accountID         = ""
-	accountAlias      = ""
-	accountQuorum     = 1
-	accountToken      = ""
-	accountTags       = ""
-	outputID          = ""
+	accountID     = ""
+	accountAlias  = ""
+	accountQuorum = 1
+	accountToken  = ""
+	outputID      = ""
 )
 
 var createAccountCmd = &cobra.Command{

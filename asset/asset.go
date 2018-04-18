@@ -321,17 +321,20 @@ func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int) (progra
 	return prog, 1, err
 }
 
-//UpdateAssetAlias updates oldAlias to newAlias
-func (reg *Registry) UpdateAssetAlias(oldAlias, newAlias string) error {
+//UpdateAssetAlias updates asset alias
+func (reg *Registry) UpdateAssetAlias(id, newAlias string) error {
+	oldAlias := reg.GetAliasByID(id)
+	normalizedAlias := strings.ToUpper(strings.TrimSpace(newAlias))
+
 	if oldAlias == consensus.BTMAlias || newAlias == consensus.BTMAlias {
 		return ErrInternalAsset
 	}
 
-	if oldAlias == "" || newAlias == "" {
+	if oldAlias == "" || normalizedAlias == "" {
 		return ErrNullAlias
 	}
 
-	if _, err := reg.GetIDByAlias(newAlias); err == nil {
+	if _, err := reg.GetIDByAlias(normalizedAlias); err == nil {
 		return ErrDuplicateAlias
 	}
 
@@ -341,7 +344,7 @@ func (reg *Registry) UpdateAssetAlias(oldAlias, newAlias string) error {
 	}
 
 	storeBatch := reg.db.NewBatch()
-	findAsset.Alias = &newAlias
+	findAsset.Alias = &normalizedAlias
 	assetID := &findAsset.AssetID
 	rawAsset, err := json.Marshal(findAsset)
 	if err != nil {

@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 )
 
@@ -21,7 +20,7 @@ type RawTxSigWitness struct {
 	Sigs   []chainjson.HexBytes `json:"signatures"`
 }
 
-func (sw *RawTxSigWitness) sign(ctx context.Context, tpl *Template, index uint32, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
+func (sw *RawTxSigWitness) sign(ctx context.Context, tpl *Template, index uint32, auth string, signFn SignFunc) error {
 	if len(sw.Sigs) < len(sw.Keys) {
 		// Each key in sw.Keys may produce a signature in sw.Sigs. Make
 		// sure there are enough slots in sw.Sigs and that we preserve any
@@ -35,17 +34,7 @@ func (sw *RawTxSigWitness) sign(ctx context.Context, tpl *Template, index uint32
 			// Already have a signature for this key
 			continue
 		}
-		var found bool
-		for _, xpub := range xpubs {
-			if keyID.XPub == xpub {
-				found = true
-				break
-			}
-		}
-		if xpubs != nil && !found {
-			continue
-		}
-		path := make([]([]byte), len(keyID.DerivationPath))
+		path := make([][]byte, len(keyID.DerivationPath))
 		for i, p := range keyID.DerivationPath {
 			path[i] = p
 		}
