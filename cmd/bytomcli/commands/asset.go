@@ -14,18 +14,16 @@ import (
 func init() {
 	createAssetCmd.PersistentFlags().IntVarP(&assetQuorum, "quorom", "q", 1, "quorum must be greater than 0 and less than or equal to the number of signers")
 	createAssetCmd.PersistentFlags().StringVarP(&assetToken, "access", "a", "", "access token")
-	createAssetCmd.PersistentFlags().StringVarP(&assetTags, "tags", "t", "", "tags")
 	createAssetCmd.PersistentFlags().StringVarP(&assetDefiniton, "definition", "d", "", "definition for the asset")
 
 	listAssetsCmd.PersistentFlags().StringVar(&assetID, "id", "", "ID of asset")
 }
 
 var (
-	assetID         = ""
-	assetQuorum     = 1
-	assetToken      = ""
-	assetTags       = ""
-	assetDefiniton  = ""
+	assetID        = ""
+	assetQuorum    = 1
+	assetToken     = ""
+	assetDefiniton = ""
 )
 
 var createAssetCmd = &cobra.Command{
