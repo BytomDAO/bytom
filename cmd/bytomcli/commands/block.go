@@ -13,12 +13,12 @@ import (
 	"github.com/bytom/util"
 )
 
-var blockHashCmd = &cobra.Command{
-	Use:   "block-hash",
+var getBlockHashCmd = &cobra.Command{
+	Use:   "get-block-hash",
 	Short: "Get the hash of most recent block",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("block-hash")
+		data, exitCode := util.ClientCall("get-block-hash")
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
@@ -94,7 +94,7 @@ var getBlockCmd = &cobra.Command{
 }
 
 var getBlockHeaderByHashCmd = &cobra.Command{
-	Use:   "get-block-header-by-hash",
+	Use:   "get-block-header-by-hash <hash>",
 	Short: "Get the header of a block matching the given hash",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -107,7 +107,7 @@ var getBlockHeaderByHashCmd = &cobra.Command{
 }
 
 var getBlockTransactionsCountByHashCmd = &cobra.Command{
-	Use:   "get-block-transactions-count-by-hash",
+	Use:   "get-block-transactions-count-by-hash <hash>",
 	Short: "Get the transactions count of a block matching the given hash",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -120,7 +120,7 @@ var getBlockTransactionsCountByHashCmd = &cobra.Command{
 }
 
 var getBlockTransactionsCountByHeightCmd = &cobra.Command{
-	Use:   "get-block-transactions-count-by-height",
+	Use:   "get-block-transactions-count-by-height <height>",
 	Short: "Get the transactions count of a block matching the given height",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

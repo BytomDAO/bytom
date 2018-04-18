@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/bytom/api"
 	"github.com/bytom/blockchain/txbuilder"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/util"
 )
@@ -18,7 +20,7 @@ func init() {
 	buildTransactionCmd.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend'")
 	buildTransactionCmd.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r", "", "program of receiver")
 	buildTransactionCmd.PersistentFlags().StringVarP(&address, "address", "a", "", "address of receiver")
-	buildTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "program of receiver")
+	buildTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "gas of this transaction")
 	buildTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 	buildTransactionCmd.PersistentFlags().BoolVar(&alias, "alias", false, "use alias build transaction")
 
@@ -227,7 +229,7 @@ var signTransactionCmd = &cobra.Command{
 
 var submitTransactionCmd = &cobra.Command{
 	Use:   "submit-transaction  <signed json raw_transaction>",
-	Short: "Submit signed transaction template",
+	Short: "Submit signed transaction",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var ins = struct {
@@ -241,6 +243,30 @@ var submitTransactionCmd = &cobra.Command{
 		}
 
 		data, exitCode := util.ClientCall("/submit-transaction", &ins)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
+var estimateTransactionGasCmd = &cobra.Command{
+	Use:   "estimate-transaction-gas  <signed json raw_transaction>",
+	Short: "estimate gas for signed transaction",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		var ins = struct {
+			Tx types.Tx `json:"raw_transaction"`
+		}{}
+
+		err := json.Unmarshal([]byte(args[0]), &ins)
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		data, exitCode := util.ClientCall("/estimate-transaction-gas", &ins)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
@@ -266,7 +292,7 @@ var signSubTransactionCmd = &cobra.Command{
 		}
 
 		var req = struct {
-			Password string           `json:"password"`
+			Password string             `json:"password"`
 			Txs      txbuilder.Template `json:"transaction"`
 		}{Password: password, Txs: template}
 
@@ -310,6 +336,44 @@ var listTransactionsCmd = &cobra.Command{
 		}{ID: txID, AccountID: account, Detail: detail}
 
 		data, exitCode := util.ClientCall("/list-transactions", &filter)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSONList(data)
+	},
+}
+
+var getUnconfirmedTransactionCmd = &cobra.Command{
+	Use:   "get-unconfirmed-transaction <hash>",
+	Short: "get unconfirmed transaction by matching the given transaction hash",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		txID, err := hex.DecodeString(args[0])
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		txInfo := &struct {
+			TxID chainjson.HexBytes `json:"tx_id"`
+		}{TxID: txID}
+
+		data, exitCode := util.ClientCall("/get-unconfirmed-transaction", txInfo)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
+var listUnconfirmedTransactionsCmd = &cobra.Command{
+	Use:   "list-unconfirmed-transactions",
+	Short: "list unconfirmed transactions hashes",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		data, exitCode := util.ClientCall("/list-unconfirmed-transactions")
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

@@ -9,6 +9,8 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus"
+	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/protocol/bc"
 )
 
 // POST /list-accounts
@@ -21,7 +23,7 @@ func (a *API) listAccounts(ctx context.Context, filter struct {
 		return NewErrorResponse(err)
 	}
 
-	var annotatedAccounts []query.AnnotatedAccount
+	annotatedAccounts := []query.AnnotatedAccount{}
 	for _, acc := range accounts {
 		annotatedAccounts = append(annotatedAccounts, *account.Annotated(acc))
 	}
@@ -42,7 +44,7 @@ func (a *API) listAssets(ctx context.Context, filter struct {
 	return NewSuccessResponse(assets)
 }
 
-// POST /listBalances
+// POST /list-balances
 func (a *API) listBalances(ctx context.Context) Response {
 	return NewSuccessResponse(a.wallet.GetAccountBalances(""))
 }
@@ -66,7 +68,7 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	AccountID string `json:"account_id"`
 	Detail    bool   `json:"detail"`
 }) Response {
-	var transactions []*query.AnnotatedTx
+	transactions := []*query.AnnotatedTx{}
 	var err error
 
 	if filter.AccountID != "" {
@@ -87,13 +89,60 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	return NewSuccessResponse(transactions)
 }
 
+// POST /get-unconfirmed-transaction
+func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
+	TxID chainjson.HexBytes `json:"tx_id"`
+}) Response {
+	var tmpTxID [32]byte
+	copy(tmpTxID[:], filter.TxID[:])
+
+	txHash := bc.NewHash(tmpTxID)
+	txPool := a.chain.GetTxPool()
+	txDesc, err := txPool.GetTransaction(&txHash)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	tx := &BlockTx{
+		ID:         txDesc.Tx.ID,
+		Version:    txDesc.Tx.Version,
+		Size:       txDesc.Tx.SerializedSize,
+		TimeRange:  txDesc.Tx.TimeRange,
+		Inputs:     []*query.AnnotatedInput{},
+		Outputs:    []*query.AnnotatedOutput{},
+		StatusFail: false,
+	}
+
+	for i := range txDesc.Tx.Inputs {
+		tx.Inputs = append(tx.Inputs, a.wallet.BuildAnnotatedInput(txDesc.Tx, uint32(i)))
+	}
+	for i := range txDesc.Tx.Outputs {
+		tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(txDesc.Tx, i))
+	}
+
+	return NewSuccessResponse(tx)
+}
+
+// POST /list-unconfirmed-transactions
+func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
+	txIDs := []bc.Hash{}
+
+	txPool := a.chain.GetTxPool()
+	txs := txPool.GetTransactions()
+	for _, txDesc := range txs {
+		txIDs = append(txIDs, bc.Hash(txDesc.Tx.ID))
+	}
+
+	return NewSuccessResponse(txIDs)
+}
+
 // POST /list-unspent-outputs
 func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
 	accountUTXOs := a.wallet.GetAccountUTXOs(filter.ID)
 
-	var UTXOs []query.AnnotatedUTXO
+	UTXOs := []query.AnnotatedUTXO{}
 	for _, utxo := range accountUTXOs {
 		UTXOs = append([]query.AnnotatedUTXO{{
 			AccountID:           utxo.AccountID,
@@ -117,6 +166,6 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 
 // return gasRate
 func (a *API) gasRate() Response {
-	gasrate := map[string]int64{"gasRate": consensus.VMGasRate}
+	gasrate := map[string]int64{"gas_rate": consensus.VMGasRate}
 	return NewSuccessResponse(gasrate)
 }

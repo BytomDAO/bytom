@@ -28,6 +28,8 @@ var (
 	ErrBadType = errors.New("type must be client or network")
 	// ErrNoMatchID is returned when Delete is called on nonexisting ID.
 	ErrNoMatchID = errors.New("nonexisting access token ID")
+	// ErrInvalidToken is returned when Check is called on invalid token
+	ErrInvalidToken = errors.New("invalid token")
 
 	// validIDRegexp checks that all characters are alphumeric, _ or -.
 	// It also must have a length of at least 1.
@@ -90,26 +92,26 @@ func (cs *CredentialStore) Create(ctx context.Context, id, typ string) (*Token, 
 }
 
 // Check returns whether or not an id-secret pair is a valid access token.
-func (cs *CredentialStore) Check(ctx context.Context, id string, secret string) (bool, error) {
+func (cs *CredentialStore) Check(ctx context.Context, id string, secret string) error {
 	if !validIDRegexp.MatchString(id) {
-		return false, errors.WithDetailf(ErrBadID, "invalid id %q", id)
+		return errors.WithDetailf(ErrBadID, "invalid id %q", id)
 	}
 
 	var value []byte
 	token := &Token{}
 
 	if value = cs.DB.Get([]byte(id)); value == nil {
-		return false, errors.WithDetailf(ErrNoMatchID, "check id %q nonexisting", id)
+		return errors.WithDetailf(ErrNoMatchID, "check id %q nonexisting", id)
 	}
 	if err := json.Unmarshal(value, token); err != nil {
-		return false, err
+		return err
 	}
 
-	if strings.Compare(strings.Split(token.Token, ":")[1], secret) == 0 {
-		return true, nil
+	if strings.Split(token.Token, ":")[1] == secret {
+		return nil
 	}
 
-	return false, nil
+	return ErrInvalidToken
 }
 
 // List lists all access tokens.
@@ -132,6 +134,10 @@ func (cs *CredentialStore) List(ctx context.Context) ([]*Token, error) {
 func (cs *CredentialStore) Delete(ctx context.Context, id string) error {
 	if !validIDRegexp.MatchString(id) {
 		return errors.WithDetailf(ErrBadID, "invalid id %q", id)
+	}
+
+	if value := cs.DB.Get([]byte(id)); value == nil {
+		return errors.WithDetailf(ErrNoMatchID, "check id %q", id)
 	}
 
 	cs.DB.Delete([]byte(id))

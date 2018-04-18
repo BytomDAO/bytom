@@ -43,7 +43,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 		return txbuilder.MissingFieldsError(missing...)
 	}
 
-	acct, err := a.accounts.findByID(ctx, a.AccountID)
+	acct, err := a.accounts.FindByID(ctx, a.AccountID)
 	if err != nil {
 		return errors.Wrap(err, "get account info")
 	}
@@ -115,7 +115,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 
 	var accountSigner *signers.Signer
 	if len(res.Source.AccountID) != 0 {
-		account, err := a.accounts.findByID(ctx, res.Source.AccountID)
+		account, err := a.accounts.FindByID(ctx, res.Source.AccountID)
 		if err != nil {
 			return err
 		}
@@ -152,7 +152,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 		return txInput, sigInst, nil
 	}
 
-	address, err := common.DecodeAddress(u.Address, &consensus.MainNetParams)
+	address, err := common.DecodeAddress(u.Address, consensus.ActiveNetParams)
 	if err != nil {
 		return nil, nil, err
 	}

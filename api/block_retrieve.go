@@ -12,7 +12,7 @@ import (
 
 // return best block hash
 func (a *API) getBestBlockHash() Response {
-	blockHash := map[string]string{"blockHash": a.chain.BestBlockHash().String()}
+	blockHash := map[string]string{"block_hash": a.chain.BestBlockHash().String()}
 	return NewSuccessResponse(blockHash)
 }
 
