@@ -285,6 +285,11 @@ func (reg *Registry) GetAliasByID(id string) string {
 // GetAsset get asset by assetID
 func (reg *Registry) GetAsset(id string) (*Asset, error) {
 	asset := &Asset{}
+
+	if strings.Compare(id, DefaultNativeAsset.AssetID.String()) == 0 {
+		return DefaultNativeAsset, nil
+	}
+
 	if interAsset := reg.db.Get([]byte(assetPrefix + id)); interAsset != nil {
 		if err := json.Unmarshal(interAsset, asset); err != nil {
 			return nil, err
