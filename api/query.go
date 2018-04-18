@@ -123,6 +123,11 @@ func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 	return NewSuccessResponse(tx)
 }
 
+type unconfirmedTxsResp struct {
+	Total uint64    `json:"total"`
+	TxIDs []bc.Hash `json:"tx_ids"`
+}
+
 // POST /list-unconfirmed-transactions
 func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
 	txIDs := []bc.Hash{}
@@ -133,7 +138,10 @@ func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
 		txIDs = append(txIDs, bc.Hash(txDesc.Tx.ID))
 	}
 
-	return NewSuccessResponse(txIDs)
+	return NewSuccessResponse(&unconfirmedTxsResp{
+		Total: uint64(len(txIDs)),
+		TxIDs: txIDs,
+	})
 }
 
 // POST /list-unspent-outputs
