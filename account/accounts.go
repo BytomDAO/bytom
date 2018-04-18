@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -27,14 +26,17 @@ import (
 )
 
 const (
-	maxAccountCache = 1000
-	aliasPrefix     = "ALI:"
-	accountPrefix   = "ACC:"
-	accountCPPrefix = "ACP:"
-	indexPrefix     = "ACIDX:"
+	maxAccountCache     = 1000
+	aliasPrefix         = "ALI:"
+	accountPrefix       = "ACC:"
+	accountCPPrefix     = "ACP:"
+	contractIndexPrefix = "ACPI:"
 )
 
-var miningAddressKey = []byte("miningAddress")
+var (
+	miningAddressKey = []byte("miningAddress")
+	accountIndexKey  = []byte("accountIndex")
+)
 
 // pre-define errors for supporting bytom errorFormatter
 var (
@@ -47,17 +49,6 @@ func aliasKey(name string) []byte {
 	return []byte(aliasPrefix + name)
 }
 
-func indexKeys(xpubs []chainkd.XPub) []byte {
-	xpubStrings := make([]string, len(xpubs))
-	for i, xpub := range xpubs {
-		xpubStrings[i] = xpub.String()
-	}
-	sort.Strings(xpubStrings)
-	suffix := strings.Join(xpubStrings, "")
-
-	return []byte(indexPrefix + suffix)
-}
-
 //Key account store prefix
 func Key(name string) []byte {
 	return []byte(accountPrefix + name)
@@ -66,6 +57,10 @@ func Key(name string) []byte {
 //CPKey account control promgram store prefix
 func CPKey(hash common.Hash) []byte {
 	return append([]byte(accountCPPrefix), hash[:]...)
+}
+
+func contractIndexKey(accountID string) []byte {
+	return append([]byte(contractIndexPrefix), []byte(accountID)...)
 }
 
 func convertUnit64ToBytes(nextIndex uint64) []byte {
@@ -132,17 +127,29 @@ type Account struct {
 	Alias string
 }
 
-func (m *Manager) getNextXpubsIndex(xpubs []chainkd.XPub) uint64 {
+func (m *Manager) getNextAccountIndex() uint64 {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 
 	var nextIndex uint64 = 1
-	if rawIndexBytes := m.db.Get(indexKeys(xpubs)); rawIndexBytes != nil {
+	if rawIndexBytes := m.db.Get(accountIndexKey); rawIndexBytes != nil {
 		nextIndex = convertBytesToUint64(rawIndexBytes) + 1
 	}
 
-	m.db.Set(indexKeys(xpubs), convertUnit64ToBytes(nextIndex))
+	m.db.Set(accountIndexKey, convertUnit64ToBytes(nextIndex))
+	return nextIndex
+}
 
+func (m *Manager) getNextContractIndex(accountID string) uint64 {
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
+
+	var nextIndex uint64 = 1
+	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
+		nextIndex = convertBytesToUint64(rawIndexBytes) + 1
+	}
+
+	m.db.Set(contractIndexKey(accountID), convertUnit64ToBytes(nextIndex))
 	return nextIndex
 }
 
@@ -153,7 +160,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 		return nil, ErrDuplicateAlias
 	}
 
-	signer, err := signers.Create("account", xpubs, quorum, m.getNextXpubsIndex(xpubs))
+	signer, err := signers.Create("account", xpubs, quorum, m.getNextAccountIndex())
 	id := signers.IDGenerate()
 	if err != nil {
 		return nil, errors.Wrap(err)
@@ -286,7 +293,7 @@ func (m *Manager) ListCtrlProgramsByAccountId(ctx context.Context, accountId str
 }
 
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.getNextXpubsIndex(account.Signer.XPubs)
+	idx := m.getNextContractIndex(account.ID)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
@@ -313,7 +320,7 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 }
 
 func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.getNextXpubsIndex(account.Signer.XPubs)
+	idx := m.getNextContractIndex(account.ID)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)

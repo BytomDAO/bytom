@@ -199,6 +199,9 @@ func (a *API) buildHandler() {
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
+
+		m.Handle("/backup-wallet", jsonHandler(a.backupWalletImage))
+		m.Handle("/restore-wallet", jsonHandler(a.restoreWalletImage))
 	} else {
 		log.Warn("Please enable wallet")
 	}

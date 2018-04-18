@@ -34,7 +34,7 @@ type HSM struct {
 type XPub struct {
 	Alias string       `json:"alias"`
 	XPub  chainkd.XPub `json:"xpub"`
-	File  string       `json:"-"`
+	File  string       `json:"file"`
 }
 
 // New method for HSM struct
@@ -179,32 +179,4 @@ func (h *HSM) HasAlias(alias string) bool {
 // HasKey check whether the private key exists
 func (h *HSM) HasKey(xprv chainkd.XPrv) bool {
 	return h.cache.hasKey(xprv.XPub())
-}
-
-//ImportXPrvKey import XPrv to chainkd
-func (h *HSM) ImportXPrvKey(auth string, alias string, xprv chainkd.XPrv) (*XPub, bool, error) {
-	if ok := h.cache.hasAlias(alias); ok {
-		return nil, false, ErrDuplicateKeyAlias
-	}
-
-	if ok := h.cache.hasKey(xprv.XPub()); ok {
-		return nil, false, ErrDuplicateKey
-	}
-
-	xpub := xprv.XPub()
-	id := uuid.NewRandom()
-	key := &XKey{
-		ID:      id,
-		KeyType: "bytom_kd",
-		XPub:    xpub,
-		XPrv:    xprv,
-		Alias:   alias,
-	}
-	file := h.keyStore.JoinPath(keyFileName(key.ID.String()))
-	if err := h.keyStore.StoreKey(file, key, auth); err != nil {
-		return nil, false, errors.Wrap(err, "storing keys")
-	}
-
-	h.cache.add(XPub{XPub: xpub, Alias: alias, File: file})
-	return &XPub{XPub: xpub, Alias: alias, File: file}, true, nil
 }

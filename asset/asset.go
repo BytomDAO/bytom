@@ -32,8 +32,9 @@ const (
 	AliasPrefix = "ALS:"
 	//ExternalAssetPrefix is external definition assets prefix
 	ExternalAssetPrefix = "EXA"
-	indexPrefix         = "ASSIDX:"
 )
+
+var assetIndexKey = []byte("ASSETINDEX")
 
 func initNativeAsset() {
 	signer := &signers.Signer{Type: "internal"}
@@ -59,10 +60,6 @@ func AliasKey(name string) []byte {
 func Key(id *bc.AssetID) []byte {
 	name := id.String()
 	return []byte(assetPrefix + name)
-}
-
-func indexKey(xpub chainkd.XPub) []byte {
-	return []byte(indexPrefix + xpub.String())
 }
 
 //CalcExtAssetKey return store external assets key
@@ -116,21 +113,24 @@ type Asset struct {
 	DefinitionMap     map[string]interface{} `json:"definition"`
 }
 
-func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint64, error) {
+func (reg *Registry) getNextAssetIndex() (uint64, error) {
 	reg.assetIndexMu.Lock()
 	defer reg.assetIndexMu.Unlock()
 
 	var nextIndex uint64 = 1
 
-	if rawIndex := reg.db.Get(indexKey(xpubs[0])); rawIndex != nil {
+	if rawIndex := reg.db.Get(assetIndexKey); rawIndex != nil {
 		nextIndex = binary.LittleEndian.Uint64(rawIndex) + 1
 	}
 
+	reg.saveNextAssetIndex(nextIndex)
+	return nextIndex, nil
+}
+
+func (reg *Registry) saveNextAssetIndex(nextIndex uint64) {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, nextIndex)
-	reg.db.Set(indexKey(xpubs[0]), buf)
-
-	return &nextIndex, nil
+	reg.db.Set(assetIndexKey, buf)
 }
 
 // Define defines a new Asset.
@@ -148,12 +148,12 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, ErrDuplicateAlias
 	}
 
-	nextAssetIndex, err := reg.getNextAssetIndex(xpubs)
+	nextAssetIndex, err := reg.getNextAssetIndex()
 	if err != nil {
 		return nil, errors.Wrap(err, "get asset index error")
 	}
 
-	assetSigner, err := signers.Create("asset", xpubs, quorum, *nextAssetIndex)
+	assetSigner, err := signers.Create("asset", xpubs, quorum, nextAssetIndex)
 	if err != nil {
 		return nil, err
 	}
