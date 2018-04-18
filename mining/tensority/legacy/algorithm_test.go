@@ -246,7 +246,7 @@ func TestHash(t *testing.T) {
         sT := time.Now()
         bhhash := bc.NewHash(tt.blockHeader)
         sdhash := bc.NewHash(tt.seed)
-        result := Hash(&bhhash, &sdhash).Bytes()
+        result := algorithm(&bhhash, &sdhash).Bytes()
         var resArr [32]byte
         copy(resArr[:], result)
         eT := time.Now()
