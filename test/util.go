@@ -20,9 +20,7 @@ import (
 
 const (
 	vmVersion    = 1
-	blockVersion = 1
 	assetVersion = 1
-	maxNonce     = ^uint64(0)
 )
 
 // MockTxPool mock transaction pool
