@@ -319,17 +319,6 @@ func (reg *Registry) ListAssets() ([]*Asset, error) {
 		assets = append(assets, asset)
 	}
 
-	extAssetIter := reg.db.IteratorPrefix([]byte(ExternalAssetPrefix))
-	defer extAssetIter.Release()
-
-	for extAssetIter.Next() {
-		asset := &Asset{}
-		if err := json.Unmarshal(extAssetIter.Value(), asset); err != nil {
-			return nil, err
-		}
-		assets = append(assets, asset)
-	}
-
 	return assets, nil
 }
 
