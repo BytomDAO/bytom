@@ -162,20 +162,10 @@ func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
 		return nil
 	}
 
-	accounts, err := wallet.AccountMgr.ListAccounts("")
-	if err != nil {
+	if _, err := wallet.AccountMgr.ListAccounts(""); err != nil {
 		return err
 	}
 
-	if len(accounts) > 0 {
-		return nil
-	}
-
-	for i, xPub := range xpubs {
-		if err := wallet.ImportAccountXpubKey(i, xPub, w.RecoveryIndex); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
@@ -237,5 +227,3 @@ func (n *Node) SyncManager() *netsync.SyncManager {
 func (n *Node) MiningPool() *miningpool.MiningPool {
 	return n.miningPool
 }
-
-//------------------------------------------------------------------------------

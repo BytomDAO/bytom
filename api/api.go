@@ -184,16 +184,10 @@ func (a *API) buildHandler() {
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
 
-		m.Handle("/export-private-key", jsonHandler(a.walletExportKey))
-		m.Handle("/import-private-key", jsonHandler(a.walletImportKey))
-		m.Handle("/import-key-progress", jsonHandler(a.keyImportProgress))
-
 		m.Handle("/build-transaction", jsonHandler(a.build))
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
 		m.Handle("/submit-transaction", jsonHandler(a.submit))
 		m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
-		// TODO remove this api, separate sign and submit process
-		m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
 
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
@@ -223,7 +217,7 @@ func (a *API) buildHandler() {
 	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
 	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
 
-	m.Handle("/block-hash", jsonHandler(a.getBestBlockHash))
+	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header-by-hash", jsonHandler(a.getBlockHeaderByHash))
 	m.Handle("/get-block-header-by-height", jsonHandler(a.getBlockHeaderByHeight))
 	m.Handle("/get-block", jsonHandler(a.getBlock))

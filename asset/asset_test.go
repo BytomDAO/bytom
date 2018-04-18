@@ -93,12 +93,12 @@ func TestUpdateAssetAlias(t *testing.T) {
 	oldAlias := "OLD_ALIAS"
 	newAlias := "NEW_ALIAS"
 
-	_, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, oldAlias)
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, oldAlias)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	if reg.UpdateAssetAlias(oldAlias, newAlias) != nil {
+	if reg.UpdateAssetAlias(asset.AssetID.String(), newAlias) != nil {
 		testutil.FatalErr(t, err)
 	}
 

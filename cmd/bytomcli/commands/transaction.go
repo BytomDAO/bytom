@@ -27,8 +27,6 @@ func init() {
 	signTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
 	signTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 
-	signSubTransactionCmd.PersistentFlags().StringVarP(&password, "password", "p", "", "password of the account which sign these transaction(s)")
-
 	listTransactionsCmd.PersistentFlags().StringVar(&txID, "id", "", "transaction id")
 	listTransactionsCmd.PersistentFlags().StringVar(&account, "account_id", "", "account id")
 	listTransactionsCmd.PersistentFlags().BoolVar(&detail, "detail", false, "list transactions details")
@@ -65,14 +63,14 @@ var buildSpendReqFmt = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
 		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
-		{"type": "control_receiver", "asset_id": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
+		{"type": "control_receiver", "asset_id": "%s", "amount": %s, "receiver":{"control_program": "%s"}}
 	]}`
 
 var buildSpendReqFmtByAlias = `
 	{"actions": [
 		{"type": "spend_account", "asset_alias": "BTM", "amount":%s, "account_alias": "%s"},
 		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
-		{"type": "control_receiver", "asset_alias": "%s", "amount": %s, "receiver":{"control_program": "%s","expires_at":"2017-12-28T12:52:06.78309768+08:00"}}
+		{"type": "control_receiver", "asset_alias": "%s", "amount": %s, "receiver":{"control_program": "%s"}}
 	]}`
 
 var buildRetireReqFmt = `
@@ -267,37 +265,6 @@ var estimateTransactionGasCmd = &cobra.Command{
 		}
 
 		data, exitCode := util.ClientCall("/estimate-transaction-gas", &ins)
-		if exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-
-		printJSON(data)
-	},
-}
-
-var signSubTransactionCmd = &cobra.Command{
-	Use:   "sign-submit-transaction  <json templates>",
-	Short: "Sign and Submit transaction templates with account password",
-	Args:  cobra.ExactArgs(1),
-	PreRun: func(cmd *cobra.Command, args []string) {
-		cmd.MarkFlagRequired("password")
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		template := txbuilder.Template{}
-
-		err := json.Unmarshal([]byte(args[0]), &template)
-		if err != nil {
-			jww.ERROR.Println(err)
-			os.Exit(util.ErrLocalExe)
-		}
-
-		var req = struct {
-			Password string             `json:"password"`
-			Txs      txbuilder.Template `json:"transaction"`
-		}{Password: password, Txs: template}
-
-		jww.FEEDBACK.Printf("\n\n")
-		data, exitCode := util.ClientCall("/sign-submit-transaction", &req)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

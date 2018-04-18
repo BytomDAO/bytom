@@ -188,7 +188,6 @@ type TxSummary struct {
 func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
-	annotateTxsAsset(w, annotatedTxs)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
 	for _, tx := range annotatedTxs {
@@ -383,23 +382,13 @@ func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus
 transactionLoop:
 	for pos, tx := range b.Transactions {
 		statusFail, _ := txStatus.GetStatus(pos)
-		isLocal := false
 		for _, v := range tx.Outputs {
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
-				cp := &account.CtrlProgram{}
-				if err := json.Unmarshal(bytes, cp); err == nil {
-					w.status.OnChainAddresses.Add(cp.Address)
-				}
-
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
-				isLocal = true
+				continue transactionLoop
 			}
-		}
-
-		if isLocal {
-			continue
 		}
 
 		for _, v := range tx.Inputs {
@@ -453,6 +442,7 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error
 		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
 			return nil, err
 		}
+		annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 		annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
 	}
 
@@ -524,6 +514,7 @@ func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.Annotate
 		}
 
 		if findTransactionsByAccount(annotatedTx, accountID) {
+			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			annotatedTxs = append(annotatedTxs, annotatedTx)
 		}
 	}

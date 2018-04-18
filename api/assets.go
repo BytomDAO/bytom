@@ -39,10 +39,10 @@ func (a *API) createAsset(ctx context.Context, ins struct {
 
 // POST /update-asset-alias
 func (a *API) updateAssetAlias(updateAlias struct {
-	OldAlias string `json:"old_alias"`
-	NewAlias string `json:"new_alias"`
+	ID       string `json:"id"`
+	NewAlias string `json:"alias"`
 }) Response {
-	if err := a.wallet.AssetReg.UpdateAssetAlias(updateAlias.OldAlias, updateAlias.NewAlias); err != nil {
+	if err := a.wallet.AssetReg.UpdateAssetAlias(updateAlias.ID, updateAlias.NewAlias); err != nil {
 		return NewErrorResponse(err)
 	}
 

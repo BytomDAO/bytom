@@ -9,7 +9,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
@@ -155,18 +154,6 @@ func (a *API) build(ctx context.Context, buildReqs *BuildRequest) Response {
 	return NewSuccessResponse(tmpl)
 }
 
-func (a *API) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {
-	if tpl.Transaction == nil {
-		return nil, errors.Wrap(txbuilder.ErrMissingRawTx)
-	}
-
-	if err := txbuilder.FinalizeTx(ctx, a.chain, tpl.Transaction); err != nil {
-		return nil, errors.Wrapf(err, "tx %s", tpl.Transaction.ID.String())
-	}
-
-	return map[string]string{"tx_id": tpl.Transaction.ID.String()}, nil
-}
-
 type submitTxResp struct {
 	TxID *bc.Hash `json:"tx_id"`
 }
@@ -181,31 +168,6 @@ func (a *API) submit(ctx context.Context, ins struct {
 
 	log.WithField("tx_id", ins.Tx.ID).Info("submit single tx")
 	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
-}
-
-// POST /sign-submit-transaction
-func (a *API) signSubmit(ctx context.Context, x struct {
-	Password string             `json:"password"`
-	Txs      txbuilder.Template `json:"transaction"`
-}) Response {
-	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password, a.pseudohsmSignTemplate); err != nil {
-		log.WithField("build err", err).Error("fail on sign transaction.")
-		return NewErrorResponse(err)
-	}
-
-	if signCount, complete := txbuilder.SignInfo(&x.Txs); !complete && signCount == 0 {
-		return NewErrorResponse(pseudohsm.ErrLoadKey)
-	}
-	log.Info("Sign Transaction complete.")
-
-	txID, err := a.submitSingle(nil, &x.Txs)
-	if err != nil {
-		log.WithField("err", err).Error("submit single tx")
-		return NewErrorResponse(err)
-	}
-
-	log.WithField("tx_id", txID["tx_id"]).Info("submit single tx")
-	return NewSuccessResponse(txID)
 }
 
 type EstimateTxGasResp struct {
