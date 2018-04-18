@@ -68,7 +68,7 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	AccountID string `json:"account_id"`
 	Detail    bool   `json:"detail"`
 }) Response {
-	var transactions []*query.AnnotatedTx
+	transactions := []*query.AnnotatedTx{}
 	var err error
 
 	if filter.AccountID != "" {
