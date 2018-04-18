@@ -31,9 +31,13 @@ func (a *API) listAccounts(ctx context.Context) Response {
 
 // POST /get-asset
 func (a *API) getAsset(ctx context.Context, filter struct {
-	ID string `json:"id"`
+	ID chainjson.HexBytes `json:"id"`
 }) Response {
-	asset, err := a.wallet.AssetReg.GetAsset(filter.ID)
+	var b32 [32]byte
+	copy(b32[:], filter.ID)
+	assetID := bc.NewAssetID(b32)
+
+	asset, err := a.wallet.AssetReg.GetAsset(&assetID)
 	if err != nil {
 		log.Errorf("getAsset: %v", err)
 		return NewErrorResponse(err)

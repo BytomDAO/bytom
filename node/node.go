@@ -168,7 +168,7 @@ func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
 		return nil
 	}
 
-	if _, err := wallet.AccountMgr.ListAccounts(""); err != nil {
+	if _, err := wallet.AccountMgr.ListAccounts(); err != nil {
 		return err
 	}
 
