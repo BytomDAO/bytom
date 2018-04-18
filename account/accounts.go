@@ -3,7 +3,6 @@ package account
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"strings"
 	"sync"
@@ -28,7 +27,6 @@ import (
 const (
 	maxAccountCache     = 1000
 	aliasPrefix         = "ALI:"
-	accountPrefix       = "ACC:"
 	accountCPPrefix     = "ACP:"
 	contractIndexPrefix = "ACPI:"
 )
@@ -36,6 +34,7 @@ const (
 var (
 	miningAddressKey = []byte("miningAddress")
 	accountIndexKey  = []byte("accountIndex")
+	accountPrefix    = []byte("ACC:")
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -51,7 +50,7 @@ func aliasKey(name string) []byte {
 
 //Key account store prefix
 func Key(name string) []byte {
-	return []byte(accountPrefix + name)
+	return append(accountPrefix, []byte(name)...)
 }
 
 //CPKey account control promgram store prefix
@@ -61,17 +60,6 @@ func CPKey(hash common.Hash) []byte {
 
 func contractIndexKey(accountID string) []byte {
 	return append([]byte(contractIndexPrefix), []byte(accountID)...)
-}
-
-func convertUnit64ToBytes(nextIndex uint64) []byte {
-	buf := make([]byte, 8)
-	binary.PutUvarint(buf, nextIndex)
-	return buf
-}
-
-func convertBytesToUint64(rawIndex []byte) uint64 {
-	result, _ := binary.Uvarint(rawIndex)
-	return result
 }
 
 // NewManager creates a new account manager
@@ -133,10 +121,10 @@ func (m *Manager) getNextAccountIndex() uint64 {
 
 	var nextIndex uint64 = 1
 	if rawIndexBytes := m.db.Get(accountIndexKey); rawIndexBytes != nil {
-		nextIndex = convertBytesToUint64(rawIndexBytes) + 1
+		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
 	}
 
-	m.db.Set(accountIndexKey, convertUnit64ToBytes(nextIndex))
+	m.db.Set(accountIndexKey, common.Unit64ToBytes(nextIndex))
 	return nextIndex
 }
 
@@ -144,12 +132,12 @@ func (m *Manager) getNextContractIndex(accountID string) uint64 {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 
-	var nextIndex uint64 = 1
+	nextIndex := uint64(1)
 	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
-		nextIndex = convertBytesToUint64(rawIndexBytes) + 1
+		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
 	}
 
-	m.db.Set(contractIndexKey(accountID), convertUnit64ToBytes(nextIndex))
+	m.db.Set(contractIndexKey(accountID), common.Unit64ToBytes(nextIndex))
 	return nextIndex
 }
 
@@ -448,9 +436,9 @@ func (m *Manager) DeleteAccount(aliasOrId string) (err error) {
 }
 
 // ListAccounts will return the accounts in the db
-func (m *Manager) ListAccounts(id string) ([]*Account, error) {
+func (m *Manager) ListAccounts() ([]*Account, error) {
 	accounts := []*Account{}
-	accountIter := m.db.IteratorPrefix([]byte(accountPrefix + id))
+	accountIter := m.db.IteratorPrefix(accountPrefix)
 	defer accountIter.Release()
 
 	for accountIter.Next() {

@@ -3,66 +3,74 @@ package account
 
 import (
 	"encoding/json"
+
+	"github.com/bytom/common"
 )
 
-type AccountSlice struct {
-	Account       *Account
-	ContractIndex uint64
+// ImageSlice record info of single account
+type ImageSlice struct {
+	Account       *Account `json:"account"`
+	ContractIndex uint64   `json:"contract_index"`
 }
 
-type AccountImage struct {
-	AccountSlice []*AccountSlice
-	AccountIndex uint64
+// Image is the struct for hold export account data
+type Image struct {
+	Slice        []*ImageSlice `json:"slices"`
+	AccountIndex uint64        `json:"account_index"`
 }
 
-func (m *Manager) Backup() (*AccountImage, error) {
-	accountSlices := []*AccountSlice{}
-	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
+// Backup export all the account info into image
+func (m *Manager) Backup() (*Image, error) {
+	image := &Image{
+		Slice:        []*ImageSlice{},
+		AccountIndex: m.getNextAccountIndex(),
+	}
+
+	accountIter := m.db.IteratorPrefix(accountPrefix)
 	defer accountIter.Release()
-
 	for accountIter.Next() {
 		a := &Account{}
 		if err := json.Unmarshal(accountIter.Value(), a); err != nil {
 			return nil, err
 		}
 
-		accountSlice := &AccountSlice{
+		image.Slice = append(image.Slice, &ImageSlice{
 			Account:       a,
 			ContractIndex: m.getNextContractIndex(a.ID),
-		}
-		accountSlices = append(accountSlices, accountSlice)
+		})
 	}
-
-	accountImage := &AccountImage{
-		AccountSlice: accountSlices,
-		AccountIndex: m.getNextAccountIndex(),
-	}
-	return accountImage, nil
+	return image, nil
 }
 
-func (m *Manager) Restore(image *AccountImage) error {
-	if localIndex := m.getNextAccountIndex(); localIndex > image.AccountIndex {
-		image.AccountIndex = localIndex
-	}
-
+// Restore import the accountImages into account manage
+func (m *Manager) Restore(image *Image) error {
 	storeBatch := m.db.NewBatch()
-	for _, accountSlice := range image.AccountSlice {
-		rawAccount, err := json.Marshal(accountSlice.Account)
+	for _, slice := range image.Slice {
+		if existed := m.db.Get(aliasKey(slice.Account.Alias)); existed != nil {
+			return ErrDuplicateAlias
+		}
+
+		rawAccount, err := json.Marshal(slice.Account)
 		if err != nil {
 			return ErrMarshalAccount
 		}
 
-		if existed := m.db.Get(aliasKey(accountSlice.Account.Alias)); existed != nil {
-			return ErrDuplicateAlias
-		}
-
-		accountID := Key(accountSlice.Account.ID)
-		storeBatch.Set(accountID, rawAccount)
-		storeBatch.Set(aliasKey(accountSlice.Account.Alias), accountID)
-		storeBatch.Set(contractIndexKey(accountSlice.Account.ID), convertUnit64ToBytes(accountSlice.ContractIndex))
+		storeBatch.Set(Key(slice.Account.ID), rawAccount)
+		storeBatch.Set(aliasKey(slice.Account.Alias), []byte(slice.Account.ID))
+		storeBatch.Set(contractIndexKey(slice.Account.ID), common.Unit64ToBytes(slice.ContractIndex))
 	}
 
-	storeBatch.Set(accountIndexKey, convertUnit64ToBytes(image.AccountIndex))
+	if localIndex := m.getNextAccountIndex(); localIndex < image.AccountIndex {
+		storeBatch.Set(accountIndexKey, common.Unit64ToBytes(image.AccountIndex))
+	}
 	storeBatch.Write()
+
+	for _, slice := range image.Slice {
+		for i := uint64(1); i < slice.ContractIndex; i++ {
+			if _, err := m.createAddress(nil, slice.Account, false); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }

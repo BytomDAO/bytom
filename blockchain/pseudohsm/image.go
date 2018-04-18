@@ -6,11 +6,13 @@ import (
 	"path/filepath"
 )
 
+// KeyImage is the struct for hold export key data
 type KeyImage struct {
 	XPub XPub   `json:"xpub"`
 	XKey []byte `json:"xkey"`
 }
 
+// Backup export all the HSM keys into array
 func (h *HSM) Backup() ([]*KeyImage, error) {
 	images := []*KeyImage{}
 	xpubs := h.cache.keys()
@@ -25,6 +27,7 @@ func (h *HSM) Backup() ([]*KeyImage, error) {
 	return images, nil
 }
 
+// Restore import the keyImages into HSM
 func (h *HSM) Restore(images []*KeyImage) error {
 	for _, image := range images {
 		if ok := h.cache.hasAlias(image.XPub.Alias); ok {
