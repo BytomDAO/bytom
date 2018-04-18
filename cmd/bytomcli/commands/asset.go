@@ -15,12 +15,9 @@ func init() {
 	createAssetCmd.PersistentFlags().IntVarP(&assetQuorum, "quorom", "q", 1, "quorum must be greater than 0 and less than or equal to the number of signers")
 	createAssetCmd.PersistentFlags().StringVarP(&assetToken, "access", "a", "", "access token")
 	createAssetCmd.PersistentFlags().StringVarP(&assetDefiniton, "definition", "d", "", "definition for the asset")
-
-	listAssetsCmd.PersistentFlags().StringVar(&assetID, "id", "", "ID of asset")
 }
 
 var (
-	assetID        = ""
 	assetQuorum    = 1
 	assetToken     = ""
 	assetDefiniton = ""
@@ -65,16 +62,30 @@ var createAssetCmd = &cobra.Command{
 	},
 }
 
+var getAssetCmd = &cobra.Command{
+	Use:   "get-asset <assetID>",
+	Short: "get asset by assetID",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		filter := struct {
+			ID string `json:"id"`
+		}{ID: args[0]}
+
+		data, exitCode := util.ClientCall("/get-asset", &filter)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
 var listAssetsCmd = &cobra.Command{
 	Use:   "list-assets",
 	Short: "List the existing assets",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		filter := struct {
-			ID string `json:"id"`
-		}{ID: assetID}
-
-		data, exitCode := util.ClientCall("/list-assets", &filter)
+		data, exitCode := util.ClientCall("/list-assets")
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
