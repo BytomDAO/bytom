@@ -29,11 +29,22 @@ func (a *API) listAccounts(ctx context.Context) Response {
 	return NewSuccessResponse(annotatedAccounts)
 }
 
-// POST /list-assets
-func (a *API) listAssets(ctx context.Context, filter struct {
+// POST /get-asset
+func (a *API) getAsset(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	assets, err := a.wallet.AssetReg.ListAssets(filter.ID)
+	asset, err := a.wallet.AssetReg.GetAsset(filter.ID)
+	if err != nil {
+		log.Errorf("getAsset: %v", err)
+		return NewErrorResponse(err)
+	}
+
+	return NewSuccessResponse(asset)
+}
+
+// POST /list-assets
+func (a *API) listAssets(ctx context.Context) Response {
+	assets, err := a.wallet.AssetReg.ListAssets()
 	if err != nil {
 		log.Errorf("listAssets: %v", err)
 		return NewErrorResponse(err)
@@ -121,6 +132,11 @@ func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 	return NewSuccessResponse(tx)
 }
 
+type unconfirmedTxsResp struct {
+	Total uint64    `json:"total"`
+	TxIDs []bc.Hash `json:"tx_ids"`
+}
+
 // POST /list-unconfirmed-transactions
 func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
 	txIDs := []bc.Hash{}
@@ -131,7 +147,10 @@ func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
 		txIDs = append(txIDs, bc.Hash(txDesc.Tx.ID))
 	}
 
-	return NewSuccessResponse(txIDs)
+	return NewSuccessResponse(&unconfirmedTxsResp{
+		Total: uint64(len(txIDs)),
+		TxIDs: txIDs,
+	})
 }
 
 // POST /list-unspent-outputs

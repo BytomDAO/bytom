@@ -288,7 +288,7 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 	pubHash := crypto.Ripemd160(derivedPK)
 
 	// TODO: pass different params due to config
-	address, err := common.NewAddressWitnessPubKeyHash(pubHash, consensus.ActiveNetParams)
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +319,7 @@ func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool)
 	scriptHash := crypto.Sha256(signScript)
 
 	// TODO: pass different params due to config
-	address, err := common.NewAddressWitnessScriptHash(scriptHash, consensus.ActiveNetParams)
+	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
 	if err != nil {
 		return nil, err
 	}
