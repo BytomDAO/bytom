@@ -13,8 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/crypto/ed25519/chainkd"
 )
 
 // Minimum amount of time between cache reloads. This limit applies if the platform does
