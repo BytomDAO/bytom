@@ -81,24 +81,27 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(createAccountCmd)
 	BytomcliCmd.AddCommand(deleteAccountCmd)
 	BytomcliCmd.AddCommand(listAccountsCmd)
-	BytomcliCmd.AddCommand(updateAccountTagsCmd)
 	BytomcliCmd.AddCommand(createAccountReceiverCmd)
 	BytomcliCmd.AddCommand(listAddressesCmd)
 	BytomcliCmd.AddCommand(validateAddressCmd)
 
 	BytomcliCmd.AddCommand(createAssetCmd)
 	BytomcliCmd.AddCommand(listAssetsCmd)
-	BytomcliCmd.AddCommand(updateAssetTagsCmd)
 	BytomcliCmd.AddCommand(updateAssetAliasCmd)
 
 	BytomcliCmd.AddCommand(getTransactionCmd)
 	BytomcliCmd.AddCommand(listTransactionsCmd)
+
+	BytomcliCmd.AddCommand(getUnconfirmedTransactionCmd)
+	BytomcliCmd.AddCommand(listUnconfirmedTransactionsCmd)
+
 	BytomcliCmd.AddCommand(listUnspentOutputsCmd)
 	BytomcliCmd.AddCommand(listBalancesCmd)
 
 	BytomcliCmd.AddCommand(buildTransactionCmd)
 	BytomcliCmd.AddCommand(signTransactionCmd)
 	BytomcliCmd.AddCommand(submitTransactionCmd)
+	BytomcliCmd.AddCommand(estimateTransactionGasCmd)
 	BytomcliCmd.AddCommand(signSubTransactionCmd)
 
 	BytomcliCmd.AddCommand(getBlockCountCmd)

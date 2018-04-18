@@ -21,7 +21,7 @@ import (
 )
 
 type rawOutput struct {
-	OutputID bc.Hash
+	OutputID       bc.Hash
 	bc.AssetAmount
 	ControlProgram []byte
 	txHash         bc.Hash
@@ -36,6 +36,7 @@ type accountOutput struct {
 	AccountID string
 	Address   string
 	keyIndex  uint64
+	change    bool
 }
 
 const (
@@ -298,6 +299,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 			for _, out := range outsByScript[s] {
 				newOut := &accountOutput{
 					rawOutput: *out,
+					change:    false,
 				}
 				result = append(result, newOut)
 			}
@@ -327,6 +329,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 				AccountID: cp.AccountID,
 				Address:   cp.Address,
 				keyIndex:  cp.KeyIndex,
+				change:    cp.Change,
 			}
 			result = append(result, newOut)
 		}
@@ -353,6 +356,7 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 			AccountID:           out.AccountID,
 			Address:             out.Address,
 			ValidHeight:         out.ValidHeight,
+			Change:              out.change,
 		}
 
 		data, err := json.Marshal(u)
@@ -379,13 +383,23 @@ func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus
 transactionLoop:
 	for pos, tx := range b.Transactions {
 		statusFail, _ := txStatus.GetStatus(pos)
+		isLocal := false
 		for _, v := range tx.Outputs {
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
+				cp := &account.CtrlProgram{}
+				if err := json.Unmarshal(bytes, cp); err == nil {
+					w.status.OnChainAddresses.Add(cp.Address)
+				}
+
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
-				continue transactionLoop
+				isLocal = true
 			}
+		}
+
+		if isLocal {
+			continue
 		}
 
 		for _, v := range tx.Inputs {
@@ -421,7 +435,7 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 
 // GetTransactionsByTxID get account txs by account tx ID
 func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
-	var annotatedTxs []*query.AnnotatedTx
+	annotatedTxs := []*query.AnnotatedTx{}
 	formatKey := ""
 
 	if txID != "" {
@@ -499,7 +513,7 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 
 // GetTransactionsByAccountID get account txs by account ID
 func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
-	var annotatedTxs []*query.AnnotatedTx
+	annotatedTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()

@@ -42,7 +42,7 @@ func (a *API) checkAccessToken(ctx context.Context, x struct {
 	ID     string `json:"id"`
 	Secret string `json:"secret"`
 }) Response {
-	if _, err := a.accessTokens.Check(ctx, x.ID, x.Secret); err != nil {
+	if err := a.accessTokens.Check(ctx, x.ID, x.Secret); err != nil {
 		return NewErrorResponse(err)
 	}
 

@@ -7,6 +7,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm"
 )
 
@@ -44,6 +45,27 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 	}
 
 	return errors.Wrap(err)
+}
+
+// EstimateTxGas estimate a transaction gas by validating a transaction
+func EstimateTxGas(c *protocol.Chain, tx *types.Tx) (*validation.GasState, error) {
+	// This part is use for prevent tx size  is 0
+	data, err := tx.TxData.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	tx.TxData.SerializedSize = uint64(len(data))
+	tx.Tx.SerializedSize = uint64(len(data))
+
+	bh := c.BestBlockHeader()
+	block := types.MapBlock(&types.Block{BlockHeader: *bh})
+
+	gasState, err := validation.ValidateTx(tx.Tx, block)
+	if err != nil {
+		return nil, err
+	}
+
+	return gasState, nil
 }
 
 var (

@@ -46,7 +46,7 @@ var deleteKeyCmd = &cobra.Command{
 
 		var key = struct {
 			Password string
-			XPub     chainkd.XPub `json:"xpubs"`
+			XPub     chainkd.XPub `json:"xpub"`
 		}{XPub: *xpub, Password: args[1]}
 
 		if _, exitCode := util.ClientCall("/delete-key", &key); exitCode != util.Success {

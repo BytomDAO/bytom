@@ -25,18 +25,20 @@ const SINGLE = 1
 const RecoveryIndex = 5000
 
 var walletKey = []byte("walletInfo")
-var privKeyKey = []byte("keysInfo")
+var dbKeyForimportingPrivateKey = []byte("importingKeysInfo")
 
 //StatusInfo is base valid block info to handle orphan block rollback
 type StatusInfo struct {
-	WorkHeight uint64
-	WorkHash   bc.Hash
-	BestHeight uint64
-	BestHash   bc.Hash
+	WorkHeight       uint64
+	WorkHash         bc.Hash
+	BestHeight       uint64
+	BestHash         bc.Hash
+	OnChainAddresses AddressSet
 }
 
 //KeyInfo is key import status
 type KeyInfo struct {
+	account  account.Account
 	Alias    string       `json:"alias"`
 	XPub     chainkd.XPub `json:"xpub"`
 	Percent  uint8        `json:"percent"`
@@ -45,27 +47,27 @@ type KeyInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB             db.DB
-	status         StatusInfo
-	AccountMgr     *account.Manager
-	AssetReg       *asset.Registry
-	Hsm            *pseudohsm.HSM
-	chain          *protocol.Chain
-	rescanProgress chan struct{}
-	ImportPrivKey  bool
-	keysInfo       []KeyInfo
+	DB                  db.DB
+	status              StatusInfo
+	AccountMgr          *account.Manager
+	AssetReg            *asset.Registry
+	Hsm                 *pseudohsm.HSM
+	chain               *protocol.Chain
+	rescanProgress      chan struct{}
+	ImportingPrivateKey bool
+	importingKeysInfo   []KeyInfo
 }
 
 //NewWallet return a new wallet instance
 func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
-		DB:             walletDB,
-		AccountMgr:     account,
-		AssetReg:       asset,
-		chain:          chain,
-		Hsm:            hsm,
-		rescanProgress: make(chan struct{}, 1),
-		keysInfo:       make([]KeyInfo, 0),
+		DB:                  walletDB,
+		AccountMgr:          account,
+		AssetReg:            asset,
+		chain:               chain,
+		Hsm:                 hsm,
+		rescanProgress:      make(chan struct{}, 1),
+		importingKeysInfo:   make([]KeyInfo, 0),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -76,7 +78,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		return nil, err
 	}
 
-	w.ImportPrivKey = w.getImportKeyFlag()
+	w.ImportingPrivateKey = w.getImportKeyFlag()
 
 	go w.walletUpdater()
 
@@ -90,6 +92,7 @@ func (w *Wallet) loadWalletInfo() error {
 		return json.Unmarshal(rawWallet, &w.status)
 	}
 
+	w.status.OnChainAddresses = NewAddressSet()
 	block, err := w.chain.GetBlockByHeight(0)
 	if err != nil {
 		return err
@@ -112,25 +115,25 @@ func (w *Wallet) commitWalletInfo(batch db.Batch) error {
 //GetWalletInfo return stored wallet info and nil,if error,
 //return initial wallet info and err
 func (w *Wallet) loadKeysInfo() error {
-	if rawKeyInfo := w.DB.Get(privKeyKey); rawKeyInfo != nil {
-		json.Unmarshal(rawKeyInfo, &w.keysInfo)
+	if rawKeyInfo := w.DB.Get(dbKeyForimportingPrivateKey); rawKeyInfo != nil {
+		json.Unmarshal(rawKeyInfo, &w.importingKeysInfo)
 		return nil
 	}
 	return nil
 }
 
 func (w *Wallet) commitkeysInfo() error {
-	rawKeysInfo, err := json.Marshal(w.keysInfo)
+	rawKeysInfo, err := json.Marshal(w.importingKeysInfo)
 	if err != nil {
 		log.WithField("err", err).Error("save wallet info")
 		return err
 	}
-	w.DB.Set(privKeyKey, rawKeysInfo)
+	w.DB.Set(dbKeyForimportingPrivateKey, rawKeysInfo)
 	return nil
 }
 
 func (w *Wallet) getImportKeyFlag() bool {
-	for _, v := range w.keysInfo {
+	for _, v := range w.importingKeysInfo {
 		if v.Complete == false {
 			return true
 		}
@@ -191,7 +194,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 func (w *Wallet) walletUpdater() {
 	for {
 		getRescanNotification(w)
-		checkRescanStatus(w)
+		w.updateRescanStatus()
 		for !w.chain.InMainChain(w.status.BestHash) {
 			block, err := w.chain.GetBlockByHash(&w.status.BestHash)
 			if err != nil {
@@ -262,11 +265,14 @@ func (w *Wallet) ImportAccountPrivKey(xprv chainkd.XPrv, keyAlias, auth string, 
 		return nil, err
 	}
 
-	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias, nil)
+	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias)
 	if err != nil {
+		w.Hsm.XDelete(xpub.XPub, auth)
 		return nil, err
 	}
 	if err := w.recoveryAccountWalletDB(newAccount, xpub, index, keyAlias); err != nil {
+		w.AccountMgr.DeleteAccount(newAccount.ID)
+		w.Hsm.XDelete(xpub.XPub, auth)
 		return nil, err
 	}
 	return xpub, nil
@@ -280,7 +286,7 @@ func (w *Wallet) ImportAccountXpubKey(xpubIndex int, xpub pseudohsm.XPub, cpInde
 		return account.ErrDuplicateAlias
 	}
 
-	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias, nil)
+	newAccount, err := w.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, SINGLE, accountAlias)
 	if err != nil {
 		return err
 	}
@@ -292,13 +298,14 @@ func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudoh
 	if err := w.createProgram(account, XPub, index); err != nil {
 		return err
 	}
-	w.ImportPrivKey = true
+	w.ImportingPrivateKey = true
 	tmp := KeyInfo{
+		account:  *account,
 		Alias:    keyAlias,
 		XPub:     XPub.XPub,
 		Complete: false,
 	}
-	w.keysInfo = append(w.keysInfo, tmp)
+	w.importingKeysInfo = append(w.importingKeysInfo, tmp)
 	w.commitkeysInfo()
 	w.rescanBlocks()
 
@@ -307,7 +314,7 @@ func (w *Wallet) recoveryAccountWalletDB(account *account.Account, XPub *pseudoh
 
 func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
 	for i := uint64(0); i < index; i++ {
-		if _, err := w.AccountMgr.CreateAddress(nil, account.ID); err != nil {
+		if _, err := w.AccountMgr.CreateAddress(nil, account.ID, false); err != nil {
 			return err
 		}
 	}
@@ -324,44 +331,44 @@ func (w *Wallet) rescanBlocks() {
 
 //GetRescanStatus return key import rescan status
 func (w *Wallet) GetRescanStatus() ([]KeyInfo, error) {
-	keysInfo := make([]KeyInfo, len(w.keysInfo))
+	keysInfo := make([]KeyInfo, len(w.importingKeysInfo))
 
-	if rawKeyInfo := w.DB.Get(privKeyKey); rawKeyInfo != nil {
+	if rawKeyInfo := w.DB.Get(dbKeyForimportingPrivateKey); rawKeyInfo != nil {
 		if err := json.Unmarshal(rawKeyInfo, &keysInfo); err != nil {
 			return nil, err
 		}
 	}
 
-	var status StatusInfo
-	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
-		if err := json.Unmarshal(rawWallet, &status); err != nil {
-			return nil, err
-		}
-	}
-
-	for i := range keysInfo {
-		if keysInfo[i].Complete == true || status.BestHeight == 0 {
-			keysInfo[i].Percent = 100
-			continue
-		}
-
-		keysInfo[i].Percent = uint8(status.WorkHeight * 100 / status.BestHeight)
-		if keysInfo[i].Percent == 100 {
-			keysInfo[i].Complete = true
-		}
-	}
 	return keysInfo, nil
 }
 
-//checkRescanStatus mark private key import process `Complete` if rescan finished
-func checkRescanStatus(w *Wallet) {
-	if !w.ImportPrivKey || w.status.WorkHeight < w.status.BestHeight {
+//updateRescanStatus mark private key import process `Complete` if rescan finished
+func (w *Wallet) updateRescanStatus() {
+	if !w.ImportingPrivateKey {
 		return
 	}
 
-	w.ImportPrivKey = false
-	for _, keyInfo := range w.keysInfo {
+	if w.status.WorkHeight < w.status.BestHeight {
+		percent := uint8(w.status.WorkHeight * 100 / w.status.BestHeight)
+		for _, keyInfo := range w.importingKeysInfo {
+			keyInfo.Percent = percent
+		}
+		w.commitkeysInfo()
+		return
+	}
+
+	w.ImportingPrivateKey = false
+	for _, keyInfo := range w.importingKeysInfo {
+		keyInfo.Percent = 100
 		keyInfo.Complete = true
+
+		if cps, err := w.AccountMgr.ListCtrlProgramsByAccountId(nil, keyInfo.account.ID); err == nil {
+			for _, cp := range cps {
+				if !w.status.OnChainAddresses.Contains(cp.Address) {
+					w.AccountMgr.DeleteAccountControlProgram(cp.ControlProgram)
+				}
+			}
+		}
 	}
 	w.commitkeysInfo()
 }

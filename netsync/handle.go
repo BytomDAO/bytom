@@ -141,7 +141,7 @@ func (sm *SyncManager) netStart() error {
 
 //Start start sync manager service
 func (sm *SyncManager) Start() {
-	sm.netStart()
+	go sm.netStart()
 	// broadcast transactions
 	go sm.txBroadcastLoop()
 

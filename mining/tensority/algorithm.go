@@ -7,7 +7,7 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
-const maxAIHashCached = 2048
+const maxAIHashCached = 64
 
 func algorithm(hash, seed *bc.Hash) *bc.Hash {
 	cache := calcSeedCache(seed.Bytes())

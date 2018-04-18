@@ -17,7 +17,6 @@ type accountIns struct {
 	RootXPubs   []chainkd.XPub         `json:"root_xpubs"`
 	Quorum      int                    `json:"quorum"`
 	Alias       string                 `json:"alias"`
-	Tags        map[string]interface{} `json:"tags"`
 	AccessToken string                 `json:"access_token"`
 }
 
@@ -26,7 +25,6 @@ type assetIns struct {
 	RootXPubs   []chainkd.XPub         `json:"root_xpubs"`
 	Quorum      int                    `json:"quorum"`
 	Alias       string                 `json:"alias"`
-	Tags        map[string]interface{} `json:"tags"`
 	Definition  map[string]interface{} `json:"definition"`
 	AccessToken string                 `json:"access_token"`
 }
