@@ -107,8 +107,9 @@ release-all: clean
 clean:
 	@echo "Cleaning binaries built"
 	@rm -rf target
-	@rm -rf cmd/miner/miner
 	@rm -rf cmd/bytomcli/bytomcli
+	@rm -rf cmd/miner/miner
+	@rm -rf cmd/miner/*.dylib
 	@rm -rf cmd/bytomd/bytomd
 	@rm -rf cmd/bytomd/*.dylib
 	@rm -rf mining/tensority/*.dylib
