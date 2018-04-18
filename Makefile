@@ -39,21 +39,19 @@ all: test target release-all
 
 ifeq ($(GOOS),linux)
 bytomd:
-	@echo "Building bytomd to cmd/bytomd/bytomd"
+	@echo "Building bytomd to cmd/bytomd/bytomd for Linux"
 	@rm -f mining/tensority/*.go
 	@cp mining/tensority/stlib/*.go mining/tensority/
-	@echo "Building for Linux"
 	@g++ -o mining/tensority/stlib/cSimdTs.o -c mining/tensority/stlib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fopenmp -D_USE_OPENMP
 	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 	@rm -f mining/tensority/*.go
 	@cp mining/tensority/legacy/*.go mining/tensority/
 else ifeq ($(GOOS),darwin)
 bytomd:
-	@echo "Building bytomd to cmd/bytomd/bytomd"
+	@echo "Building bytomd to cmd/bytomd/bytomd for Darwin"
 	@rm -f mining/tensority/*.go
 	@rm -f mining/tensority/dylib/*.dylib
 	@cp mining/tensority/dylib/*.go mining/tensority/
-	@echo "Building for Darwin"
 	@g++ -shared -o mining/tensority/dylib/cSimdTs.dylib mining/tensority/stlib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fPIC
 	@cp mining/tensority/dylib/cSimdTs.dylib cmd/bytomd/
 	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
