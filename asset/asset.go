@@ -282,10 +282,28 @@ func (reg *Registry) GetAliasByID(id string) string {
 	return *asset.Alias
 }
 
+// GetAsset get asset by assetID
+func (reg *Registry) GetAsset(id string) (*Asset, error) {
+	asset := &Asset{}
+	if interAsset := reg.db.Get([]byte(assetPrefix + id)); interAsset != nil {
+		if err := json.Unmarshal(interAsset, asset); err != nil {
+			return nil, err
+		}
+		return asset, nil
+	}
+
+	if extAsset := reg.db.Get([]byte(ExternalAssetPrefix + id)); extAsset != nil {
+		if err := json.Unmarshal(extAsset, asset); err != nil {
+			return nil, err
+		}
+	}
+	return asset, nil
+}
+
 // ListAssets returns the accounts in the db
-func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
+func (reg *Registry) ListAssets() ([]*Asset, error) {
 	assets := []*Asset{DefaultNativeAsset}
-	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix + id))
+	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix))
 	defer assetIter.Release()
 
 	for assetIter.Next() {
@@ -295,6 +313,18 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 		}
 		assets = append(assets, asset)
 	}
+
+	extAssetIter := reg.db.IteratorPrefix([]byte(ExternalAssetPrefix))
+	defer extAssetIter.Release()
+
+	for extAssetIter.Next() {
+		asset := &Asset{}
+		if err := json.Unmarshal(extAssetIter.Value(), asset); err != nil {
+			return nil, err
+		}
+		assets = append(assets, asset)
+	}
+
 	return assets, nil
 }
 

@@ -86,6 +86,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(validateAddressCmd)
 
 	BytomcliCmd.AddCommand(createAssetCmd)
+	BytomcliCmd.AddCommand(getAssetCmd)
 	BytomcliCmd.AddCommand(listAssetsCmd)
 	BytomcliCmd.AddCommand(updateAssetAliasCmd)
 
