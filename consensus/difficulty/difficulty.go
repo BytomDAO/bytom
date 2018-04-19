@@ -109,7 +109,7 @@ func BigToCompact(n *big.Int) uint64 {
 		exponent++
 	}
 
-	compact := uint64(exponent<<56) | mantissa
+	compact := uint64(exponent)<<56 | mantissa
 	if n.Sign() < 0 {
 		compact |= 0x0080000000000000
 	}
