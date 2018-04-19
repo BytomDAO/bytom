@@ -265,3 +265,13 @@ func ByteSliceToInterface(slice [][]byte) (ret []interface{}) {
 
 	return
 }
+
+func Unit64ToBytes(n uint64) []byte {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, n)
+	return buf
+}
+
+func BytesToUnit64(b []byte) uint64 {
+	return binary.LittleEndian.Uint64(b)
+}
