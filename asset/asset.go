@@ -275,21 +275,25 @@ func (reg *Registry) GetAliasByID(id string) string {
 }
 
 // GetAsset get asset by assetID
-func (reg *Registry) GetAsset(id *bc.AssetID) (*Asset, error) {
-	asset := &Asset{}
+func (reg *Registry) GetAsset(id string) (*Asset, error) {
+	var assetID bc.AssetID
+	if err := assetID.UnmarshalText([]byte(id)); err != nil {
+		return nil, err
+	}
 
-	if id.String() == DefaultNativeAsset.AssetID.String() {
+	if assetID.String() == DefaultNativeAsset.AssetID.String() {
 		return DefaultNativeAsset, nil
 	}
 
-	if interAsset := reg.db.Get(Key(id)); interAsset != nil {
+	asset := &Asset{}
+	if interAsset := reg.db.Get(Key(&assetID)); interAsset != nil {
 		if err := json.Unmarshal(interAsset, asset); err != nil {
 			return nil, err
 		}
 		return asset, nil
 	}
 
-	if extAsset := reg.db.Get(ExtAssetKey(id)); extAsset != nil {
+	if extAsset := reg.db.Get(ExtAssetKey(&assetID)); extAsset != nil {
 		if err := json.Unmarshal(extAsset, asset); err != nil {
 			return nil, err
 		}
