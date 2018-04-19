@@ -19,7 +19,6 @@ import (
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
 	"github.com/bytom/mining/cpuminer"
@@ -107,10 +106,6 @@ func NewNode(config *cfg.Config) *Node {
 			log.WithField("error", err).Error("init NewWallet")
 		}
 
-		if err := initOrRecoverAccount(hsm, wallet); err != nil {
-			log.WithField("error", err).Error("initialize or recover account")
-		}
-
 		// Clean up expired UTXO reservations periodically.
 		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
 	}
@@ -153,26 +148,6 @@ func initActiveNetParams(config *cfg.Config) {
 	if !exist {
 		cmn.Exit(cmn.Fmt("chain_id[%v] don't exist", config.ChainID))
 	}
-}
-
-func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
-	xpubs := hsm.ListKeys()
-
-	if len(xpubs) == 0 {
-		xpub, err := hsm.XCreate("default", "123456")
-		if err != nil {
-			return err
-		}
-
-		wallet.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "default")
-		return nil
-	}
-
-	if _, err := wallet.AccountMgr.ListAccounts(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Lanch web broser or not
