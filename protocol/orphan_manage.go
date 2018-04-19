@@ -49,7 +49,7 @@ func (o *OrphanManage) Add(block *types.Block) {
 	log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
 }
 
-// Delete will delelte the block from OrphanManage
+// Delete will delete the block from OrphanManage
 func (o *OrphanManage) Delete(hash *bc.Hash) {
 	o.mtx.Lock()
 	defer o.mtx.Unlock()

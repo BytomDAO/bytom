@@ -17,9 +17,6 @@ import (
 //SINGLE single sign
 const SINGLE = 1
 
-//RecoveryIndex walletdb recovery cp number
-const RecoveryIndex = 5000
-
 var walletKey = []byte("walletInfo")
 
 //StatusInfo is base valid block info to handle orphan block rollback

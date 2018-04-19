@@ -98,6 +98,7 @@ type Registry struct {
 	aliasCache *lru.Cache
 
 	assetIndexMu sync.Mutex
+	assetMu      sync.Mutex
 }
 
 //Asset describe asset on bytom chain
@@ -131,9 +132,16 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 	}
 
 	normalizedAlias := strings.ToUpper(strings.TrimSpace(alias))
+	if normalizedAlias == "" {
+		return nil, errors.Wrap(ErrNullAlias)
+	}
+
 	if normalizedAlias == consensus.BTMAlias {
 		return nil, ErrInternalAsset
 	}
+
+	reg.assetMu.Lock()
+	defer reg.assetMu.Unlock()
 
 	if existed := reg.db.Get(AliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
@@ -166,14 +174,11 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		IssuanceProgram:   issuanceProgram,
 		AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
 		Signer:            assetSigner,
+		Alias:             &normalizedAlias,
 	}
 
 	if existAsset := reg.db.Get(Key(&asset.AssetID)); existAsset != nil {
 		return nil, ErrDuplicateAsset
-	}
-
-	if alias != "" {
-		asset.Alias = &normalizedAlias
 	}
 
 	ass, err := json.Marshal(asset)
