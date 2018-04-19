@@ -16,9 +16,9 @@ func (a *API) walletError() Response {
 
 // WalletImage hold the ziped wallet data
 type WalletImage struct {
-	AccountImage *account.Image        `json:"account_image"`
-	AssetImage   *asset.Image          `json:"asset_image"`
-	KeyImages    []*pseudohsm.KeyImage `json:"key_images"`
+	AccountImage *account.Image      `json:"account_image"`
+	AssetImage   *asset.Image        `json:"asset_image"`
+	KeyImages    *pseudohsm.KeyImage `json:"key_images"`
 }
 
 func (a *API) restoreWalletImage(ctx context.Context, image WalletImage) Response {

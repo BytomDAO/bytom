@@ -2,44 +2,52 @@
 package pseudohsm
 
 import (
+	"encoding/json"
 	"io/ioutil"
-	"path/filepath"
 )
 
 // KeyImage is the struct for hold export key data
 type KeyImage struct {
-	XPub XPub   `json:"xpub"`
-	XKey []byte `json:"xkey"`
+	XKeys []*encryptedKeyJSON `json:"xkeys"`
 }
 
 // Backup export all the HSM keys into array
-func (h *HSM) Backup() ([]*KeyImage, error) {
-	images := []*KeyImage{}
+func (h *HSM) Backup() (*KeyImage, error) {
+	image := &KeyImage{}
 	xpubs := h.cache.keys()
 	for _, xpub := range xpubs {
-		xKey, err := ioutil.ReadFile(xpub.File)
+		data, err := ioutil.ReadFile(xpub.File)
 		if err != nil {
 			return nil, err
 		}
 
-		images = append(images, &KeyImage{XPub: xpub, XKey: xKey})
+		xKey := &encryptedKeyJSON{}
+		if err := json.Unmarshal(data, xKey); err != nil {
+			return nil, err
+		}
+
+		image.XKeys = append(image.XKeys, xKey)
 	}
-	return images, nil
+	return image, nil
 }
 
 // Restore import the keyImages into HSM
-func (h *HSM) Restore(images []*KeyImage) error {
-	for _, image := range images {
-		if ok := h.cache.hasAlias(image.XPub.Alias); ok {
+func (h *HSM) Restore(image *KeyImage) error {
+	for _, xKey := range image.XKeys {
+		if ok := h.cache.hasAlias(xKey.Alias); ok {
 			return ErrDuplicateKeyAlias
 		}
 
-		fileName := filepath.Base(image.XPub.File)
-		image.XPub.File = h.keyStore.JoinPath(fileName)
-		if err := writeKeyFile(image.XPub.File, image.XKey); err != nil {
+		rawKey, err := json.Marshal(xKey)
+		if err != nil {
+			return err
+		}
+
+		file := h.keyStore.JoinPath(keyFileName(xKey.ID))
+		if err := writeKeyFile(file, rawKey); err != nil {
 			return nil
 		}
-		h.cache.add(image.XPub)
 	}
+	h.cache.maybeReload()
 	return nil
 }
