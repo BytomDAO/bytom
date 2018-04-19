@@ -1,4 +1,4 @@
-// Package account stores and tracks accounts within a Chain Core.
+// Package account stores and tracks accounts within a Bytom Core.
 package account
 
 import (
