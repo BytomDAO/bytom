@@ -130,6 +130,39 @@ func TestTxValidation(t *testing.T) {
 		mux *bc.Mux
 	)
 
+	addCoinbase := func(assetID *bc.AssetID, amount uint64, arbitrary []byte) {
+		coinbase := bc.NewCoinbase(arbitrary)
+		txOutput := types.NewTxOutput(*assetID, amount, []byte{byte(vm.OP_TRUE)})
+		muxID := getMuxID(tx)
+		coinbase.SetDestination(muxID, &txOutput.AssetAmount, uint64(len(mux.Sources)))
+		coinbaseID := bc.EntryID(coinbase)
+		tx.Entries[coinbaseID] = coinbase
+
+		mux.Sources = append(mux.Sources, &bc.ValueSource{
+			Ref:   &coinbaseID,
+			Value: &txOutput.AssetAmount,
+		})
+
+		src := &bc.ValueSource{
+			Ref:      muxID,
+			Value:    &txOutput.AssetAmount,
+			Position: uint64(len(tx.ResultIds)),
+		}
+		prog := &bc.Program{txOutput.VMVersion, txOutput.ControlProgram}
+		output := bc.NewOutput(src, prog, uint64(len(tx.ResultIds)))
+		outputID := bc.EntryID(output)
+		tx.Entries[outputID] = output
+
+		dest := &bc.ValueDestination{
+			Value:    src.Value,
+			Ref:      &outputID,
+			Position: 0,
+		}
+		mux.WitnessDestinations = append(mux.WitnessDestinations, dest)
+		tx.ResultIds = append(tx.ResultIds, &outputID)
+		vs.block.Transactions = append(vs.block.Transactions, vs.tx)
+	}
+
 	cases := []struct {
 		desc string // description of the test case
 		f    func() // function to adjust tx, vs, and/or mux
@@ -146,6 +179,21 @@ func TestTxValidation(t *testing.T) {
 				iss.WitnessDestination.Value.Amount++
 			},
 			err: errUnbalanced,
+		},
+		{
+			desc: "unbalanced mux amounts",
+			f: func() {
+				mux.WitnessDestinations[0].Value.Amount++
+			},
+			err: errUnbalanced,
+		},
+		{
+			desc: "balanced mux amounts",
+			f: func() {
+				mux.Sources[1].Value.Amount++
+				mux.WitnessDestinations[0].Value.Amount++
+			},
+			err: nil,
 		},
 		{
 			desc: "overflowing mux source amounts",
@@ -262,6 +310,150 @@ func TestTxValidation(t *testing.T) {
 			},
 			err: errMismatchedValue,
 		},
+		{
+			desc: "gas out of limit",
+			f: func() {
+				vs.tx.SerializedSize = 10000000
+			},
+			err: errOverGasCredit,
+		},
+		{
+			desc: "overflowing storage gas",
+			f: func() {
+				vs.tx.SerializedSize = math.MaxInt64
+			},
+			err: errGasCalculate,
+		},
+		{
+			desc: "can't find gas spend input in entries",
+			f: func() {
+				spendID := mux.Sources[len(mux.Sources)-1].Ref
+				delete(tx.Entries, *spendID)
+				mux.Sources = mux.Sources[:len(mux.Sources)-1]
+			},
+			err: bc.ErrMissingEntry,
+		},
+		{
+			desc: "no gas spend input",
+			f: func() {
+				spendID := mux.Sources[len(mux.Sources)-1].Ref
+				delete(tx.Entries, *spendID)
+				mux.Sources = mux.Sources[:len(mux.Sources)-1]
+				tx.GasInputIDs = nil
+				vs.gasStatus.GasLeft = 0
+			},
+			err: vm.ErrRunLimitExceeded,
+		},
+		{
+			desc: "no gas spend input, but set gas left, so it's ok",
+			f: func() {
+				spendID := mux.Sources[len(mux.Sources)-1].Ref
+				delete(tx.Entries, *spendID)
+				mux.Sources = mux.Sources[:len(mux.Sources)-1]
+				tx.GasInputIDs = nil
+			},
+			err: nil,
+		},
+		{
+			desc: "mismatched gas spend input destination amount/prevout source amount",
+			f: func() {
+				spendID := mux.Sources[len(mux.Sources)-1].Ref
+				spend := tx.Entries[*spendID].(*bc.Spend)
+				spend.WitnessDestination.Value = &bc.AssetAmount{
+					AssetId: spend.WitnessDestination.Value.AssetId,
+					Amount:  spend.WitnessDestination.Value.Amount + 1,
+				}
+			},
+			err: errMismatchedValue,
+		},
+		{
+			desc: "mismatched witness asset destination",
+			f: func() {
+				issuanceID := mux.Sources[0].Ref
+				issuance := tx.Entries[*issuanceID].(*bc.Issuance)
+				issuance.WitnessAssetDefinition.Data = &bc.Hash{V0: 9999}
+			},
+			err: errMismatchedAssetID,
+		},
+		{
+			desc: "issuance witness position greater than length of mux sources",
+			f: func() {
+				issuanceID := mux.Sources[0].Ref
+				issuance := tx.Entries[*issuanceID].(*bc.Issuance)
+				issuance.WitnessDestination.Position = uint64(len(mux.Sources) + 1)
+			},
+			err: errPosition,
+		},
+		{
+			desc: "normal coinbase tx",
+			f: func() {
+				addCoinbase(consensus.BTMAssetID, 100000, nil)
+			},
+			err: nil,
+		},
+		{
+			desc: "invalid coinbase tx asset id",
+			f: func() {
+				addCoinbase(&bc.AssetID{V1: 100}, 100000, nil)
+			},
+			err: errWrongCoinbaseAsset,
+		},
+		{
+			desc: "coinbase tx is not first tx in block",
+			f: func() {
+				addCoinbase(consensus.BTMAssetID, 100000, nil)
+				vs.block.Transactions[0] = nil
+			},
+			err: errWrongCoinbaseTransaction,
+		},
+		{
+			desc: "coinbase arbitrary size out of limit",
+			f: func() {
+				arbitrary := make([]byte, consensus.CoinbaseArbitrarySizeLimit+1)
+				addCoinbase(consensus.BTMAssetID, 100000, arbitrary)
+			},
+			err: errCoinbaseArbitraryOversize,
+		},
+		{
+			desc: "normal retirement output",
+			f: func() {
+				outputID := tx.ResultIds[0]
+				output := tx.Entries[*outputID].(*bc.Output)
+				retirement := bc.NewRetirement(output.Source, output.Ordinal)
+				retirementID := bc.EntryID(retirement)
+				tx.Entries[retirementID] = retirement
+				delete(tx.Entries, *outputID)
+				tx.ResultIds[0] = &retirementID
+				mux.WitnessDestinations[0].Ref = &retirementID
+			},
+			err: nil,
+		},
+		{
+			desc: "ordinal doesn't matter for prevouts",
+			f: func() {
+				spend := txSpend(t, tx, 1)
+				prevout := tx.Entries[*spend.SpentOutputId].(*bc.Output)
+				newPrevout := bc.NewOutput(prevout.Source, prevout.ControlProgram, 10)
+				hash := bc.EntryID(newPrevout)
+				spend.SpentOutputId = &hash
+			},
+			err: nil,
+		},
+		{
+			desc: "mux witness destination have no source",
+			f: func() {
+				dest := &bc.ValueDestination{
+					Value: &bc.AssetAmount{
+						AssetId: &bc.AssetID{V2: 1000},
+						Amount:  100,
+					},
+					Ref:      mux.WitnessDestinations[0].Ref,
+					Position: 0,
+				}
+				mux.WitnessDestinations = append(mux.WitnessDestinations, dest)
+			},
+			err: errNoSource,
+		},
 	}
 
 	for _, c := range cases {
@@ -278,8 +470,7 @@ func TestTxValidation(t *testing.T) {
 				},
 				cache: make(map[bc.Hash]error),
 			}
-			out := tx.Entries[*tx.ResultIds[0]].(*bc.Output)
-			muxID := out.Source.Ref
+			muxID := getMuxID(tx)
 			mux = tx.Entries[*muxID].(*bc.Mux)
 
 			if c.f != nil {
@@ -393,7 +584,6 @@ type txFixture struct {
 	txVersion      uint64
 	txInputs       []*types.TxInput
 	txOutputs      []*types.TxOutput
-	txRefData      []byte
 	tx             *types.TxData
 }
 
@@ -483,9 +673,6 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 			types.NewTxOutput(result.assetID, 45, cp2),
 		}
 	}
-	if len(result.txRefData) == 0 {
-		result.txRefData = []byte{13}
-	}
 
 	result.tx = &types.TxData{
 		Version: result.txVersion,
@@ -566,4 +753,15 @@ func txSpend(t *testing.T, tx *bc.Tx, index int) *bc.Spend {
 		t.Fatal(err)
 	}
 	return res
+}
+
+func getMuxID(tx *bc.Tx) *bc.Hash {
+	out := tx.Entries[*tx.ResultIds[0]]
+	switch result := out.(type) {
+	case *bc.Output:
+		return result.Source.Ref
+	case *bc.Retirement:
+		return result.Source.Ref
+	}
+	return nil
 }
