@@ -33,6 +33,9 @@ func (h *HSM) Backup() (*KeyImage, error) {
 
 // Restore import the keyImages into HSM
 func (h *HSM) Restore(image *KeyImage) error {
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+
 	for _, xKey := range image.XKeys {
 		if ok := h.cache.hasAlias(xKey.Alias); ok {
 			return ErrDuplicateKeyAlias

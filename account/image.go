@@ -68,7 +68,6 @@ func (m *Manager) Restore(image *Image) error {
 		}
 		storeBatch.Set(Key(slice.Account.ID), rawAccount)
 		storeBatch.Set(aliasKey(slice.Account.Alias), []byte(slice.Account.ID))
-		storeBatch.Set(contractIndexKey(slice.Account.ID), common.Unit64ToBytes(slice.ContractIndex))
 	}
 
 	if localIndex := m.getNextAccountIndex(); localIndex < maxAccountIndex {
