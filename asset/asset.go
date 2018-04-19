@@ -219,23 +219,14 @@ func (reg *Registry) FindByID(ctx context.Context, id *bc.AssetID) (*Asset, erro
 	return asset, nil
 }
 
-//GetIDByAlias return AssetID string and nil by asset alias,if err ,return "" and err
-func (reg *Registry) GetIDByAlias(alias string) (string, error) {
-	rawID := reg.db.Get(AliasKey(alias))
-	if rawID == nil {
-		return "", ErrFindAsset
-	}
-	return string(rawID), nil
-}
-
 // FindByAlias retrieves an Asset record along with its signer,
 // given an asset alias.
-func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, error) {
+func (reg *Registry) FindByAlias(alias string) (*Asset, error) {
 	reg.cacheMu.Lock()
 	cachedID, ok := reg.aliasCache.Get(alias)
 	reg.cacheMu.Unlock()
 	if ok {
-		return reg.FindByID(ctx, cachedID.(*bc.AssetID))
+		return reg.FindByID(nil, cachedID.(*bc.AssetID))
 	}
 
 	rawID := reg.db.Get(AliasKey(alias))
@@ -251,7 +242,7 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	reg.cacheMu.Lock()
 	reg.aliasCache.Add(alias, assetID)
 	reg.cacheMu.Unlock()
-	return reg.FindByID(ctx, assetID)
+	return reg.FindByID(nil, assetID)
 }
 
 //GetAliasByID return asset alias string by AssetID string
@@ -356,11 +347,11 @@ func (reg *Registry) UpdateAssetAlias(id, newAlias string) error {
 		return ErrNullAlias
 	}
 
-	if _, err := reg.GetIDByAlias(normalizedAlias); err == nil {
+	if _, err := reg.FindByAlias(normalizedAlias); err == nil {
 		return ErrDuplicateAlias
 	}
 
-	findAsset, err := reg.FindByAlias(nil, oldAlias)
+	findAsset, err := reg.FindByAlias(oldAlias)
 	if err != nil {
 		return err
 	}
