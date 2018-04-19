@@ -58,12 +58,12 @@ func BenchmarkChain_BtmTx_1Asset_P2SH(b *testing.B) {
 	benchInsertChain(b, 100, 1, "P2SH")
 }
 
-func BenchmarkChain_BtmTx_NoAsset_MutiSign(b *testing.B) {
-	benchInsertChain(b, 100, 0, "MutiSign")
+func BenchmarkChain_BtmTx_NoAsset_MultiSign(b *testing.B) {
+	benchInsertChain(b, 100, 0, "MultiSign")
 }
 
-func BenchmarkChain_BtmTx_1Asset_MutiSign(b *testing.B) {
-	benchInsertChain(b, 100, 1, "MutiSign")
+func BenchmarkChain_BtmTx_1Asset_MultiSign(b *testing.B) {
+	benchInsertChain(b, 100, 1, "MultiSign")
 }
 
 func benchInsertChain(b *testing.B, blockTxNumber int, otherAssetNum int, txType string) {
@@ -113,8 +113,8 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 		if err != nil {
 			return nil, nil, nil, err
 		}
-	case "MutiSign":
-		txs, err = MockTxsMutiSign(dirPath, testDB, txNumber, otherAssetNum)
+	case "MultiSign":
+		txs, err = MockTxsMultiSign(dirPath, testDB, txNumber, otherAssetNum)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -481,19 +481,19 @@ func MockTxsP2SH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) 
 	return txs, nil
 }
 
-func MockTxsMutiSign(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) ([]*types.Tx, error) {
+func MockTxsMultiSign(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) ([]*types.Tx, error) {
 	accountManager := account.NewManager(testDB, nil)
 	hsm, err := pseudohsm.New(keyDirPath)
 	if err != nil {
 		return nil, err
 	}
 
-	xpub1, err := hsm.XCreate("TestMutilNodeSign1", "password1")
+	xpub1, err := hsm.XCreate("TestMultilNodeSign1", "password1")
 	if err != nil {
 		return nil, err
 	}
 
-	xpub2, err := hsm.XCreate("TestMutilNodeSign2", "password2")
+	xpub2, err := hsm.XCreate("TestMultilNodeSign2", "password2")
 	if err != nil {
 		return nil, err
 	}
