@@ -139,11 +139,11 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, errors.Wrap(signers.ErrNoXPubs)
 	}
 
-	if strings.TrimSpace(alias) == "" {
+	normalizedAlias := strings.ToUpper(strings.TrimSpace(alias))
+	if normalizedAlias == "" {
 		return nil, errors.Wrap(ErrNullAlias)
 	}
 
-	normalizedAlias := strings.ToUpper(strings.TrimSpace(alias))
 	if normalizedAlias == consensus.BTMAlias {
 		return nil, ErrInternalAsset
 	}
