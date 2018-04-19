@@ -301,8 +301,10 @@ func (reg *Registry) GetAsset(id string) (*Asset, error) {
 		if err := json.Unmarshal(extAsset, asset); err != nil {
 			return nil, err
 		}
+		return asset, nil
 	}
-	return asset, nil
+
+	return nil, errors.WithDetailf(ErrFindAsset, "no such asset, assetID: %s", id)
 }
 
 // ListAssets returns the accounts in the db
