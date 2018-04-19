@@ -165,8 +165,18 @@ func (sm *SyncManager) txBroadcastLoop() {
 	for {
 		select {
 		case newTx := <-newTxCh:
-			sm.peers.BroadcastTx(newTx)
-
+			peers,err:=sm.peers.BroadcastTx(newTx)
+			if err != nil {
+				log.Errorf("Broadcast new tx error. %v", err)
+				return
+			}
+			for _, peer := range peers {
+				if ban := peer.addBanScore(0, 50, "Broadcast new tx error"); ban {
+					peer := sm.peers.Peer(peer.id).getPeer()
+					sm.sw.AddBannedPeer(peer)
+					sm.sw.StopPeerGracefully(peer)
+				}
+			}
 		case <-sm.quitSync:
 			return
 		}
@@ -182,7 +192,18 @@ func (sm *SyncManager) minedBroadcastLoop() {
 				log.Errorf("Failed on mined broadcast loop get block %v", err)
 				return
 			}
-			sm.peers.BroadcastMinedBlock(block)
+			peers, err := sm.peers.BroadcastMinedBlock(block)
+			if err != nil {
+				log.Errorf("Broadcast mine block error. %v", err)
+				return
+			}
+			for _, peer := range peers {
+				if ban := peer.addBanScore(0, 50, "Broadcast block error"); ban {
+					peer := sm.peers.Peer(peer.id).getPeer()
+					sm.sw.AddBannedPeer(peer)
+					sm.sw.StopPeerGracefully(peer)
+				}
+			}
 		case <-sm.quitSync:
 			return
 		}
