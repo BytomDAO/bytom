@@ -49,13 +49,13 @@ func New(keypath string) (*HSM, error) {
 
 // XCreate produces a new random xprv and stores it in the db.
 func (h *HSM) XCreate(alias string, auth string) (*XPub, error) {
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+
 	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
 	if ok := h.cache.hasAlias(normalizedAlias); ok {
 		return nil, ErrDuplicateKeyAlias
 	}
-
-	h.cacheMu.Lock()
-	defer h.cacheMu.Unlock()
 
 	xpub, _, err := h.createChainKDKey(auth, normalizedAlias, false)
 	if err != nil {
