@@ -269,7 +269,6 @@ func (r *PEXReactor) ensurePeers() {
 			ka := r.book.addrLookup[try.String()]
 			if ka != nil {
 				if ka.isBad() {
-					log.Info("Pick invalid address.")
 					continue
 				}
 			}
