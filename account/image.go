@@ -15,15 +15,13 @@ type ImageSlice struct {
 
 // Image is the struct for hold export account data
 type Image struct {
-	Slice        []*ImageSlice `json:"slices"`
-	AccountIndex uint64        `json:"account_index"`
+	Slice []*ImageSlice `json:"slices"`
 }
 
 // Backup export all the account info into image
 func (m *Manager) Backup() (*Image, error) {
 	image := &Image{
-		Slice:        []*ImageSlice{},
-		AccountIndex: m.getNextAccountIndex(),
+		Slice: []*ImageSlice{},
 	}
 
 	accountIter := m.db.IteratorPrefix(accountPrefix)
@@ -44,6 +42,7 @@ func (m *Manager) Backup() (*Image, error) {
 
 // Restore import the accountImages into account manage
 func (m *Manager) Restore(image *Image) error {
+	maxAccountIndex := uint64(0)
 	storeBatch := m.db.NewBatch()
 	for _, slice := range image.Slice {
 		if existed := m.db.Get(aliasKey(slice.Account.Alias)); existed != nil {
@@ -55,13 +54,16 @@ func (m *Manager) Restore(image *Image) error {
 			return ErrMarshalAccount
 		}
 
+		if slice.Account.Signer.KeyIndex > maxAccountIndex {
+			maxAccountIndex = slice.Account.Signer.KeyIndex
+		}
 		storeBatch.Set(Key(slice.Account.ID), rawAccount)
 		storeBatch.Set(aliasKey(slice.Account.Alias), []byte(slice.Account.ID))
 		storeBatch.Set(contractIndexKey(slice.Account.ID), common.Unit64ToBytes(slice.ContractIndex))
 	}
 
-	if localIndex := m.getNextAccountIndex(); localIndex < image.AccountIndex {
-		storeBatch.Set(accountIndexKey, common.Unit64ToBytes(image.AccountIndex))
+	if localIndex := m.getNextAccountIndex(); localIndex < maxAccountIndex {
+		storeBatch.Set(accountIndexKey, common.Unit64ToBytes(maxAccountIndex))
 	}
 	storeBatch.Write()
 

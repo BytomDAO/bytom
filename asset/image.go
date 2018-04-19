@@ -10,15 +10,13 @@ import (
 
 // Image is the struct for hold export asset data
 type Image struct {
-	Assets     []*Asset `json:"assets"`
-	AssetIndex uint64   `json:"asset_index"`
+	Assets []*Asset `json:"assets"`
 }
 
 // Backup export all the asset info into image
 func (reg *Registry) Backup() (*Image, error) {
 	assetImage := &Image{
-		AssetIndex: reg.getNextAssetIndex(),
-		Assets:     []*Asset{},
+		Assets: []*Asset{},
 	}
 
 	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix))
@@ -36,6 +34,7 @@ func (reg *Registry) Backup() (*Image, error) {
 
 // Restore load the image data into asset manage
 func (reg *Registry) Restore(image *Image) error {
+	maxAssetIndex := uint64(0)
 	storeBatch := reg.db.NewBatch()
 	for _, asset := range image.Assets {
 		if localAssetID := reg.db.Get(AliasKey(*asset.Alias)); localAssetID != nil {
@@ -52,12 +51,15 @@ func (reg *Registry) Restore(image *Image) error {
 			return err
 		}
 
+		if asset.Signer.KeyIndex > maxAssetIndex {
+			maxAssetIndex = asset.Signer.KeyIndex
+		}
 		storeBatch.Set(AliasKey(*asset.Alias), asset.AssetID.Bytes())
 		storeBatch.Set(Key(&asset.AssetID), rawAsset)
 	}
 
-	if localIndex := reg.getNextAssetIndex(); localIndex < image.AssetIndex {
-		storeBatch.Set(assetIndexKey, common.Unit64ToBytes(image.AssetIndex))
+	if localIndex := reg.getNextAssetIndex(); localIndex < maxAssetIndex {
+		storeBatch.Set(assetIndexKey, common.Unit64ToBytes(maxAssetIndex))
 	}
 	storeBatch.Write()
 	return nil
