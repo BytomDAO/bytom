@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/net/http/reqid"
@@ -170,36 +171,66 @@ func (a *API) submit(ctx context.Context, ins struct {
 	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
 }
 
+// EstimateTxGasResp estimate transaction consumed gas
 type EstimateTxGasResp struct {
-	LeftBTM     int64 `json:"left_btm"`
-	ConsumedBTM int64 `json:"consumed_btm"`
-	LeftGas     int64 `json:"left_gas"`
-	ConsumedGas int64 `json:"consumed_gas"`
-	StorageGas  int64 `json:"storage_gas"`
-	VMGas       int64 `json:"vm_gas"`
+	TotalGas   int64 `json:"total_gas"`
+	StorageGas int64 `json:"storage_gas"`
+	VMGas      int64 `json:"vm_gas"`
 }
 
 // POST /estimate-transaction-gas
-func (a *API) estimateTxGas(ctx context.Context, ins struct {
-	Tx types.Tx `json:"raw_transaction"`
+func (a *API) estimateTxGas(ctx context.Context, in struct {
+	TxTemplate txbuilder.Template `json:"transaction_template"`
 }) Response {
-	gasState, err := txbuilder.EstimateTxGas(a.chain, &ins.Tx)
+	// base tx size and not include sign
+	data, err := in.TxTemplate.Transaction.TxData.MarshalText()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
+	baseTxSize := int64(len(data))
 
-	btmLeft, ok := checked.MulInt64(gasState.GasLeft, consensus.VMGasRate)
+	// extra tx size for sign witness parts
+	baseWitnessSize := int64(300)
+	lenSignInst := int64(len(in.TxTemplate.SigningInstructions))
+	signSize := baseWitnessSize * lenSignInst
+
+	// total gas for tx storage
+	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+signSize, consensus.StorageGasRate)
 	if !ok {
-		return NewErrorResponse(errors.New("calculate btmleft got a math error"))
+		return NewErrorResponse(errors.New("calculate txsize gas got a math error"))
 	}
 
+	// consume gas for run VM
+	totalP2WPKHGas := int64(0)
+	totalP2WSHGas := int64(0)
+	baseP2WPKHGas := int64(1419)
+	baseP2WSHGas := int64(2499)
+
+	for _, inpID := range in.TxTemplate.Transaction.Tx.InputIDs {
+		sp, err := in.TxTemplate.Transaction.Spend(inpID)
+		if err != nil {
+			continue
+		}
+
+		resOut, ok := in.TxTemplate.Transaction.Entries[*sp.SpentOutputId].(*bc.Output)
+		if !ok {
+			continue
+		}
+
+		if segwit.IsP2WPKHScript(resOut.ControlProgram.Code) {
+			totalP2WPKHGas += baseP2WPKHGas
+		} else if segwit.IsP2WPKHScript(resOut.ControlProgram.Code) {
+			totalP2WSHGas += baseP2WSHGas
+		}
+	}
+
+	// total estimate gas
+	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
+
 	txGasResp := &EstimateTxGasResp{
-		LeftBTM:     btmLeft,
-		ConsumedBTM: int64(gasState.BTMValue) - btmLeft,
-		LeftGas:     gasState.GasLeft,
-		ConsumedGas: gasState.GasUsed,
-		StorageGas:  gasState.StorageGas,
-		VMGas:       gasState.GasUsed - gasState.StorageGas,
+		TotalGas:   totalGas,
+		StorageGas: totalTxSizeGas,
+		VMGas:      totalP2WPKHGas + totalP2WSHGas,
 	}
 
 	return NewSuccessResponse(txGasResp)
