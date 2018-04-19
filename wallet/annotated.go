@@ -35,7 +35,7 @@ func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 }
 
 func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
-	definitionByte := w.DB.Get(asset.CalcExtAssetKey(assetID))
+	definitionByte := w.DB.Get(asset.ExtAssetKey(assetID))
 	if definitionByte == nil {
 		return nil
 	}
@@ -147,7 +147,7 @@ func getAccountFromACP(program []byte, walletDB db.DB) (*account.Account, error)
 
 	sha3pool.Sum256(hash[:], program)
 
-	rawProgram := walletDB.Get(account.CPKey(hash))
+	rawProgram := walletDB.Get(account.ContractKey(hash))
 	if rawProgram == nil {
 		return nil, fmt.Errorf("failed get account control program:%x ", hash)
 	}

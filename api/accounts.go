@@ -106,13 +106,16 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 		target = acc
 	}
 
-	cps, err := a.wallet.AccountMgr.ListCtrlProgramsByAccountId(ctx, target.ID)
+	cps, err := a.wallet.AccountMgr.ListControlProgram()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	addresses := []*addressResp{}
 	for _, cp := range cps {
+		if cp.Address == "" || cp.AccountID != target.ID {
+			continue
+		}
 		addresses = append(addresses, &addressResp{
 			AccountAlias: target.Alias,
 			AccountID:    cp.AccountID,

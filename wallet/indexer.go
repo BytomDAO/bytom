@@ -21,7 +21,7 @@ import (
 )
 
 type rawOutput struct {
-	OutputID       bc.Hash
+	OutputID bc.Hash
 	bc.AssetAmount
 	ControlProgram []byte
 	txHash         bc.Hash
@@ -156,8 +156,8 @@ func saveExternalAssetDefinition(b *types.Block, walletDB db.DB) {
 			if ii, ok := orig.TypedInput.(*types.IssuanceInput); ok {
 				if isValidJSON(ii.AssetDefinition) {
 					assetID := ii.AssetID()
-					if assetExist := walletDB.Get(asset.CalcExtAssetKey(&assetID)); assetExist == nil {
-						storeBatch.Set(asset.CalcExtAssetKey(&assetID), ii.AssetDefinition)
+					if assetExist := walletDB.Get(asset.ExtAssetKey(&assetID)); assetExist == nil {
+						storeBatch.Set(asset.ExtAssetKey(&assetID), ii.AssetDefinition)
 					}
 				}
 			}
@@ -307,7 +307,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 		}
 
 		sha3pool.Sum256(hash[:], []byte(s))
-		bytes := w.DB.Get(account.CPKey(hash))
+		bytes := w.DB.Get(account.ContractKey(hash))
 		if bytes == nil {
 			continue
 		}
@@ -385,7 +385,7 @@ transactionLoop:
 		for _, v := range tx.Outputs {
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram)
-			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
+			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}

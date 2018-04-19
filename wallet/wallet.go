@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/json"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
 
@@ -20,30 +21,32 @@ var walletKey = []byte("walletInfo")
 
 //StatusInfo is base valid block info to handle orphan block rollback
 type StatusInfo struct {
-	WorkHeight       uint64
-	WorkHash         bc.Hash
-	BestHeight       uint64
-	BestHash         bc.Hash
+	WorkHeight uint64
+	WorkHash   bc.Hash
+	BestHeight uint64
+	BestHash   bc.Hash
 }
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB                  db.DB
-	status              StatusInfo
-	AccountMgr          *account.Manager
-	AssetReg            *asset.Registry
-	Hsm                 *pseudohsm.HSM
-	chain               *protocol.Chain
+	DB         db.DB
+	status     StatusInfo
+	AccountMgr *account.Manager
+	AssetReg   *asset.Registry
+	Hsm        *pseudohsm.HSM
+	chain      *protocol.Chain
+	rescanCh   chan struct{}
 }
 
 //NewWallet return a new wallet instance
 func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
-		DB:                  walletDB,
-		AccountMgr:          account,
-		AssetReg:            asset,
-		chain:               chain,
-		Hsm:                 hsm,
+		DB:         walletDB,
+		AccountMgr: account,
+		AssetReg:   asset,
+		chain:      chain,
+		Hsm:        hsm,
+		rescanCh:   make(chan struct{}, 1),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -133,6 +136,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
 func (w *Wallet) walletUpdater() {
 	for {
+		w.getRescanNotification()
 		for !w.chain.InMainChain(w.status.BestHash) {
 			block, err := w.chain.GetBlockByHash(&w.status.BestHash)
 			if err != nil {
@@ -159,6 +163,24 @@ func (w *Wallet) walletUpdater() {
 	}
 }
 
+func (w *Wallet) RescanBlocks() {
+	select {
+	case w.rescanCh <- struct{}{}:
+	default:
+		return
+	}
+}
+
+func (w *Wallet) getRescanNotification() {
+	select {
+	case <-w.rescanCh:
+		w.status.WorkHeight = 0
+		block, _ := w.chain.GetBlockByHeight(w.status.WorkHeight)
+		w.status.WorkHash = block.Hash()
+	default:
+		return
+	}
+}
 
 func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
 	for i := uint64(0); i < index; i++ {
