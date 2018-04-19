@@ -32,7 +32,7 @@ func TestSubsidy(t *testing.T) {
 	for _, c := range cases {
 		subsidy := BlockSubsidy(c.height)
 		if subsidy != c.subsidy {
-			t.Errorf("got subsidy %s, want %s", subsidy, c.subsidy)
+			t.Errorf("got subsidy %d, want %d", subsidy, c.subsidy)
 		}
 	}
 }

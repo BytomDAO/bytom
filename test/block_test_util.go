@@ -42,7 +42,7 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 		gasOnlyTx := false
 		gasStatus, err := validation.ValidateTx(tx.Tx, bcBlock)
 		if err != nil {
-			if !gasStatus.GasVaild {
+			if !gasStatus.GasValid {
 				continue
 			}
 			gasOnlyTx = true

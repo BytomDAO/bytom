@@ -116,7 +116,7 @@ func BigToCompact(n *big.Int) uint64 {
 	return compact
 }
 
-// CheckProofOfWork checks whether the hash is vaild for a given difficulty.
+// CheckProofOfWork checks whether the hash is valid for a given difficulty.
 func CheckProofOfWork(hash, seed *bc.Hash, bits uint64) bool {
 	compareHash := tensority.AIHash.Hash(hash, seed)
 	return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0
