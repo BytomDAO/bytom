@@ -490,7 +490,7 @@ func TestCoinbase(t *testing.T) {
 	cases := []struct {
 		block    *bc.Block
 		tx       *bc.Tx
-		GasVaild bool
+		GasValid bool
 		err      error
 	}{
 		{
@@ -501,7 +501,7 @@ func TestCoinbase(t *testing.T) {
 				Transactions: []*bc.Tx{CbTx},
 			},
 			tx:       CbTx,
-			GasVaild: true,
+			GasValid: true,
 			err:      nil,
 		},
 	}
@@ -512,8 +512,8 @@ func TestCoinbase(t *testing.T) {
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
 		}
-		if c.GasVaild != gasStatus.GasVaild {
-			t.Errorf("#%d got GasVaild %t, want %t", i, gasStatus.GasVaild, c.GasVaild)
+		if c.GasValid != gasStatus.GasValid {
+			t.Errorf("#%d got GasValid %t, want %t", i, gasStatus.GasValid, c.GasValid)
 		}
 	}
 }

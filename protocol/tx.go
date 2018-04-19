@@ -41,7 +41,7 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 	}
 
 	gasStatus, err := validation.ValidateTx(tx.Tx, block)
-	if gasStatus.GasVaild == false {
+	if gasStatus.GasValid == false {
 		c.txPool.AddErrCache(&tx.ID, err)
 		return false, err
 	}
