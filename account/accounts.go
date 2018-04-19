@@ -105,6 +105,7 @@ type Manager struct {
 	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
 	accIndexMu sync.Mutex
+	accountMu  sync.Mutex
 }
 
 // ExpireReservations removes reservations that have expired periodically.
@@ -148,6 +149,9 @@ func (m *Manager) getNextXpubsIndex(xpubs []chainkd.XPub) uint64 {
 
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string) (*Account, error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
 	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
 	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
