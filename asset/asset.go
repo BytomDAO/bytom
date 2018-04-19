@@ -140,6 +140,10 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 	}
 
 	normalizedAlias := strings.ToUpper(strings.TrimSpace(alias))
+	if normalizedAlias == "" {
+		return nil, errors.Wrap(ErrNullAlias)
+	}
+
 	if normalizedAlias == consensus.BTMAlias {
 		return nil, ErrInternalAsset
 	}
@@ -179,14 +183,11 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		IssuanceProgram:   issuanceProgram,
 		AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
 		Signer:            assetSigner,
+		Alias:             &normalizedAlias,
 	}
 
 	if existAsset := reg.db.Get(Key(&asset.AssetID)); existAsset != nil {
 		return nil, ErrDuplicateAsset
-	}
-
-	if alias != "" {
-		asset.Alias = &normalizedAlias
 	}
 
 	ass, err := json.Marshal(asset)

@@ -71,7 +71,7 @@ func TestFindAssetByID(t *testing.T) {
 	ctx := context.Background()
 	reg := mockNewRegistry(t)
 	keys := []chainkd.XPub{testutil.TestXPub}
-	asset, err := reg.Define(keys, 1, nil, "")
+	asset, err := reg.Define(keys, 1, nil, "TESTASSET")
 	if err != nil {
 		testutil.FatalErr(t, err)
 
