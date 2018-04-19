@@ -37,13 +37,12 @@ func (reg *Registry) Restore(image *Image) error {
 	maxAssetIndex := uint64(0)
 	storeBatch := reg.db.NewBatch()
 	for _, asset := range image.Assets {
-		if localAssetID := reg.db.Get(AliasKey(*asset.Alias)); localAssetID != nil {
-			if string(localAssetID) != asset.AssetID.String() {
-				return ErrDuplicateAlias
-			}
-
+		if existed := reg.db.Get(Key(&asset.AssetID)); existed != nil {
 			log.WithFields(log.Fields{"alias": asset.Alias, "id": asset.AssetID}).Warning("skip restore asset due to already existed")
 			continue
+		}
+		if existed := reg.db.Get(AliasKey(*asset.Alias)); existed != nil {
+			return ErrDuplicateAlias
 		}
 
 		rawAsset, err := json.Marshal(asset)

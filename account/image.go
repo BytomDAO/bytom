@@ -4,6 +4,8 @@ package account
 import (
 	"encoding/json"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/common"
 )
 
@@ -45,6 +47,13 @@ func (m *Manager) Restore(image *Image) error {
 	maxAccountIndex := uint64(0)
 	storeBatch := m.db.NewBatch()
 	for _, slice := range image.Slice {
+		if existed := m.db.Get(Key(slice.Account.ID)); existed != nil {
+			log.WithFields(log.Fields{
+				"alias": slice.Account.Alias,
+				"id":    slice.Account.ID,
+			}).Warning("skip restore account due to already existed")
+			continue
+		}
 		if existed := m.db.Get(aliasKey(slice.Account.Alias)); existed != nil {
 			return ErrDuplicateAlias
 		}
@@ -68,7 +77,7 @@ func (m *Manager) Restore(image *Image) error {
 	storeBatch.Write()
 
 	for _, slice := range image.Slice {
-		for i := uint64(1); i < slice.ContractIndex; i++ {
+		for i := uint64(1); i <= slice.ContractIndex; i++ {
 			if _, err := m.createAddress(nil, slice.Account, false); err != nil {
 				return err
 			}
