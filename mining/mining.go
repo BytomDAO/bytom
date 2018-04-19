@@ -108,7 +108,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 		gasStatus, err := validation.ValidateTx(tx, bcBlock)
 		if err != nil {
-			if !gasStatus.GasVaild {
+			if !gasStatus.GasValid {
 				log.WithField("error", err).Error("mining block generate skip tx due to")
 				txPool.RemoveTransaction(&tx.ID)
 				continue

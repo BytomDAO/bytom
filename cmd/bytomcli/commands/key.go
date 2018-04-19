@@ -72,7 +72,7 @@ var resetKeyPwdCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		xpub := new(chainkd.XPub)
 		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
-			jww.ERROR.Println("reset-key-password args not vaild:", err)
+			jww.ERROR.Println("reset-key-password args not valid:", err)
 			os.Exit(util.ErrLocalExe)
 		}
 
