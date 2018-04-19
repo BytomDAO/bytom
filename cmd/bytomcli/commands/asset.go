@@ -95,14 +95,14 @@ var listAssetsCmd = &cobra.Command{
 }
 
 var updateAssetAliasCmd = &cobra.Command{
-	Use:   "update-asset-alias <oldAlias> <newAlias>",
+	Use:   "update-asset-alias <assetID> <newAlias>",
 	Short: "Update the asset alias",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		var updateAlias = struct {
-			OldAlias string `json:"old_alias"`
-			NewAlias string `json:"new_alias"`
-		}{OldAlias: args[0], NewAlias: args[1]}
+			ID       string `json:"id"`
+			NewAlias string `json:"alias"`
+		}{ID: args[0], NewAlias: args[1]}
 
 		if _, exitCode := util.ClientCall("/update-asset-alias", &updateAlias); exitCode != util.Success {
 			os.Exit(exitCode)
