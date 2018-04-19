@@ -57,7 +57,11 @@ func (a *API) listAssets(ctx context.Context) Response {
 
 // POST /list-balances
 func (a *API) listBalances(ctx context.Context) Response {
-	return NewSuccessResponse(a.wallet.GetAccountBalances(""))
+	balances, err := a.wallet.GetAccountBalances("")
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(balances)
 }
 
 // POST /get-transaction

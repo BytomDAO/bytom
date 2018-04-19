@@ -542,23 +542,23 @@ func (w *Wallet) GetAccountUTXOs(id string) []account.UTXO {
 }
 
 // GetAccountBalances return all account balances
-func (w *Wallet) GetAccountBalances(id string) []AccountBalance {
+func (w *Wallet) GetAccountBalances(id string) ([]AccountBalance, error) {
 	return w.indexBalances(w.GetAccountUTXOs(""))
 }
 
 // AccountBalance account balance
 type AccountBalance struct {
-	AccountID  string `json:"account_id"`
-	Alias      string `json:"account_alias"`
-	AssetAlias string `json:"asset_alias"`
-	AssetID    string `json:"asset_id"`
-	Amount     uint64 `json:"amount"`
+	AccountID       string                 `json:"account_id"`
+	Alias           string                 `json:"account_alias"`
+	AssetAlias      string                 `json:"asset_alias"`
+	AssetID         string                 `json:"asset_id"`
+	Amount          uint64                 `json:"amount"`
+	AssetDefinition map[string]interface{} `json:"asset_definition"`
 }
 
-func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) []AccountBalance {
+func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) ([]AccountBalance, error) {
 	accBalance := make(map[string]map[string]uint64)
 	balances := make([]AccountBalance, 0)
-	tmpBalance := AccountBalance{}
 
 	for _, accountUTXO := range accountUTXOs {
 		assetID := accountUTXO.AssetID.String()
@@ -588,15 +588,22 @@ func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) []AccountBalance {
 
 		for _, assetID := range sortedAsset {
 			alias := w.AccountMgr.GetAliasByID(id)
-			assetAlias := w.AssetReg.GetAliasByID(assetID)
-			tmpBalance.Alias = alias
-			tmpBalance.AccountID = id
-			tmpBalance.AssetID = assetID
-			tmpBalance.AssetAlias = assetAlias
-			tmpBalance.Amount = accBalance[id][assetID]
-			balances = append(balances, tmpBalance)
+			targetAsset, err := w.AssetReg.GetAsset(assetID)
+			if err != nil {
+				return nil, err
+			}
+
+			assetAlias := *targetAsset.Alias
+			balances = append(balances, AccountBalance{
+				Alias: alias,
+				AccountID: id,
+				AssetID: assetID,
+				AssetAlias: assetAlias,
+				Amount: accBalance[id][assetID],
+				AssetDefinition: targetAsset.DefinitionMap,
+			})
 		}
 	}
 
-	return balances
+	return balances, nil
 }
