@@ -13,7 +13,7 @@ const (
 
 	//config parameter for coinbase reward
 	CoinbasePendingBlockNumber = uint64(6)
-	subsidyReductionInterval   = uint64(560640)
+	subsidyReductionInterval   = uint64(840000)
 	baseSubsidy                = uint64(41250000000)
 	InitialBlockSubsidy        = uint64(1470000000000000000)
 
@@ -32,15 +32,12 @@ const (
 
 	CoinbaseArbitrarySizeLimit = 128
 
-	VMGasRate        = int64(1000)
-	StorageGasRate   = int64(5)
+	VMGasRate        = int64(100)
+	StorageGasRate   = int64(2)
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
 
-	BTMAlias       = "BTM"
-	BTMSymbol      = "BTM"
-	BTMDecimals    = 8
-	BTMDescription = `Bytom Official Issue`
+	BTMAlias = "BTM"
 )
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
@@ -62,9 +59,9 @@ var InitialSeed = &bc.Hash{
 // BTMDefinitionMap is the ....
 var BTMDefinitionMap = map[string]interface{}{
 	"name":        BTMAlias,
-	"symbol":      BTMSymbol,
-	"decimals":    BTMDecimals,
-	"description": BTMDescription,
+	"symbol":      BTMAlias,
+	"decimals":    8,
+	"description": `Bytom Official Issue`,
 }
 
 // BlockSubsidy calculate the coinbase rewards on given block height
@@ -88,6 +85,14 @@ type Params struct {
 	// Name defines a human-readable identifier for the network.
 	Name            string
 	Bech32HRPSegwit string
+}
+
+var ActiveNetParams = MainNetParams
+
+// NetParams is the correspondence between chain_id and Params
+var NetParams = map[string]Params{
+	"mainnet": MainNetParams,
+	"testnet": TestNetParams,
 }
 
 // MainNetParams is the config for production

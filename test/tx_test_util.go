@@ -117,7 +117,7 @@ func (g *TxGenerator) assetAmount(assetAlias string, amount uint64) (*bc.AssetAm
 		return a, nil
 	}
 
-	asset, err := g.Assets.FindByAlias(nil, assetAlias)
+	asset, err := g.Assets.FindByAlias(assetAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func (g *TxGenerator) AddTxInputFromUtxo(utxo *account.UTXO, accountAlias string
 
 // AddIssuanceInput add a issue input
 func (g *TxGenerator) AddIssuanceInput(assetAlias string, amount uint64) error {
-	asset, err := g.Assets.FindByAlias(nil, assetAlias)
+	asset, err := g.Assets.FindByAlias(assetAlias)
 	if err != nil {
 		return err
 	}
@@ -296,7 +296,7 @@ func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signe
 	cp := account.CtrlProgram{}
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], input.ControlProgram)
-	bytes := db.Get(account.CPKey(hash))
+	bytes := db.Get(account.ContractKey(hash))
 	if bytes == nil {
 		return nil, fmt.Errorf("can't find CtrlProgram for the SpendInput")
 	}

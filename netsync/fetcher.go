@@ -143,17 +143,33 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 // insert spawns a new goroutine to run a block insertion into the chain. If the
 // block's number is at the same height as the current import phase, it updates
 // the phase states accordingly.
-func (f *Fetcher) insert(peer string, block *types.Block) {
+func (f *Fetcher) insert(peerID string, block *types.Block) {
 	// Run the import on a new thread
-	log.Info("Importing propagated block", " from peer: ", peer, " height: ", block.Height)
+	log.Info("Importing propagated block", " from peer: ", peerID, " height: ", block.Height)
 	// Run the actual import and log any issues
 	if _, err := f.chain.ProcessBlock(block); err != nil {
-		log.Info("Propagated block import failed", " from peer: ", peer, " height: ", block.Height, "err: ", err)
+		log.Info("Propagated block import failed", " from peer: ", peerID, " height: ", block.Height, "err: ", err)
+		peer := f.peers.Peer(peerID)
+		if ban := peer.addBanScore(50, 0, "block process error"); ban {
+			f.sw.AddBannedPeer(peer.getPeer())
+			f.sw.StopPeerGracefully(peer.getPeer())
+		}
 		return
 	}
 	// If import succeeded, broadcast the block
 	log.Info("success process a block from new mined blocks cache. block height: ", block.Height)
-	go f.peers.BroadcastMinedBlock(block)
+	peers, err := f.peers.BroadcastMinedBlock(block)
+	if err != nil {
+		log.Errorf("Broadcast mine block error. %v", err)
+		return
+	}
+	for _, peer := range peers {
+		if ban := peer.addBanScore(0, 50, "Broadcast block error"); ban {
+			peer := f.peers.Peer(peer.id).getPeer()
+			f.sw.AddBannedPeer(peer)
+			f.sw.StopPeerGracefully(peer)
+		}
+	}
 }
 
 // forgetBlock removes all traces of a queued block from the fetcher's internal

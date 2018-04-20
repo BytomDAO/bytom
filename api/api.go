@@ -177,6 +177,7 @@ func (a *API) buildHandler() {
 
 		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
+		m.Handle("/get-asset", jsonHandler(a.getAsset))
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
 		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
@@ -184,21 +185,19 @@ func (a *API) buildHandler() {
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
 
-		m.Handle("/export-private-key", jsonHandler(a.walletExportKey))
-		m.Handle("/import-private-key", jsonHandler(a.walletImportKey))
-		m.Handle("/import-key-progress", jsonHandler(a.keyImportProgress))
-
 		m.Handle("/build-transaction", jsonHandler(a.build))
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
 		m.Handle("/submit-transaction", jsonHandler(a.submit))
 		m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
-		// TODO remove this api, separate sign and submit process
-		m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
+
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
+
+		m.Handle("/backup-wallet", jsonHandler(a.backupWalletImage))
+		m.Handle("/restore-wallet", jsonHandler(a.restoreWalletImage))
 	} else {
 		log.Warn("Please enable wallet")
 	}
@@ -219,13 +218,14 @@ func (a *API) buildHandler() {
 	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
 	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
 
-	m.Handle("/block-hash", jsonHandler(a.getBestBlockHash))
+	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
+	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
+
+	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header-by-hash", jsonHandler(a.getBlockHeaderByHash))
 	m.Handle("/get-block-header-by-height", jsonHandler(a.getBlockHeaderByHeight))
 	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
-	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(a.getBlockTransactionsCountByHash))
-	m.Handle("/get-block-transactions-count-by-height", jsonHandler(a.getBlockTransactionsCountByHeight))
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))

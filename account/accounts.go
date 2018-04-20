@@ -1,11 +1,9 @@
-// Package account stores and tracks accounts within a Chain Core.
+// Package account stores and tracks accounts within a Bytom Core.
 package account
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/json"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -28,13 +26,16 @@ import (
 
 const (
 	maxAccountCache = 1000
-	aliasPrefix     = "ALI:"
-	accountPrefix   = "ACC:"
-	accountCPPrefix = "ACP:"
-	indexPrefix     = "ACIDX:"
 )
 
-var miningAddressKey = []byte("miningAddress")
+var (
+	accountIndexKey     = []byte("AccountIndex")
+	accountPrefix       = []byte("Account:")
+	aliasPrefix         = []byte("AccountAlias:")
+	contractIndexPrefix = []byte("ContractIndex")
+	contractPrefix      = []byte("Contract:")
+	miningAddressKey    = []byte("MiningAddress")
+)
 
 // pre-define errors for supporting bytom errorFormatter
 var (
@@ -44,39 +45,21 @@ var (
 )
 
 func aliasKey(name string) []byte {
-	return []byte(aliasPrefix + name)
+	return append(aliasPrefix, []byte(name)...)
 }
 
-func indexKeys(xpubs []chainkd.XPub) []byte {
-	xpubStrings := make([]string, len(xpubs))
-	for i, xpub := range xpubs {
-		xpubStrings[i] = xpub.String()
-	}
-	sort.Strings(xpubStrings)
-	suffix := strings.Join(xpubStrings, "")
-
-	return []byte(indexPrefix + suffix)
-}
-
-//Key account store prefix
+// Key account store prefix
 func Key(name string) []byte {
-	return []byte(accountPrefix + name)
+	return append(accountPrefix, []byte(name)...)
 }
 
-//CPKey account control promgram store prefix
-func CPKey(hash common.Hash) []byte {
-	return append([]byte(accountCPPrefix), hash[:]...)
+// ContractKey account control promgram store prefix
+func ContractKey(hash common.Hash) []byte {
+	return append(contractPrefix, hash[:]...)
 }
 
-func convertUnit64ToBytes(nextIndex uint64) []byte {
-	buf := make([]byte, 8)
-	binary.PutUvarint(buf, nextIndex)
-	return buf
-}
-
-func convertBytesToUint64(rawIndex []byte) uint64 {
-	result, _ := binary.Uvarint(rawIndex)
-	return result
+func contractIndexKey(accountID string) []byte {
+	return append(contractIndexPrefix, []byte(accountID)...)
 }
 
 // NewManager creates a new account manager
@@ -104,7 +87,8 @@ type Manager struct {
 	delayedACPsMu sync.Mutex
 	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
-	accIndexMu  sync.Mutex
+	accIndexMu sync.Mutex
+	accountMu  sync.Mutex
 }
 
 // ExpireReservations removes reservations that have expired periodically.
@@ -128,32 +112,47 @@ func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) 
 // Account is structure of Bytom account
 type Account struct {
 	*signers.Signer
-	ID    string
-	Alias string
+	ID    string `json:"id"`
+	Alias string `json:"alias"`
 }
 
-func (m *Manager) getNextXpubsIndex(xpubs []chainkd.XPub) uint64 {
+func (m *Manager) getNextAccountIndex() uint64 {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 
 	var nextIndex uint64 = 1
-	if rawIndexBytes := m.db.Get(indexKeys(xpubs)); rawIndexBytes != nil {
-		nextIndex = convertBytesToUint64(rawIndexBytes) + 1
+	if rawIndexBytes := m.db.Get(accountIndexKey); rawIndexBytes != nil {
+		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
 	}
 
-	m.db.Set(indexKeys(xpubs), convertUnit64ToBytes(nextIndex))
+	m.db.Set(accountIndexKey, common.Unit64ToBytes(nextIndex))
+	return nextIndex
+}
 
+func (m *Manager) getNextContractIndex(accountID string) uint64 {
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
+
+	nextIndex := uint64(1)
+	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
+		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
+	}
+
+	m.db.Set(contractIndexKey(accountID), common.Unit64ToBytes(nextIndex))
 	return nextIndex
 }
 
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string) (*Account, error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
 	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
 	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
 
-	signer, err := signers.Create("account", xpubs, quorum, m.getNextXpubsIndex(xpubs))
+	signer, err := signers.Create("account", xpubs, quorum, m.getNextAccountIndex())
 	id := signers.IDGenerate()
 	if err != nil {
 		return nil, errors.Wrap(err)
@@ -180,7 +179,7 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*Account, erro
 	cachedID, ok := m.aliasCache.Get(alias)
 	m.cacheMu.Unlock()
 	if ok {
-		return m.findByID(ctx, cachedID.(string))
+		return m.FindByID(ctx, cachedID.(string))
 	}
 
 	rawID := m.db.Get(aliasKey(alias))
@@ -192,11 +191,11 @@ func (m *Manager) FindByAlias(ctx context.Context, alias string) (*Account, erro
 	m.cacheMu.Lock()
 	m.aliasCache.Add(alias, accountID)
 	m.cacheMu.Unlock()
-	return m.findByID(ctx, accountID)
+	return m.FindByID(ctx, accountID)
 }
 
-// findByID returns an account's Signer record by its ID.
-func (m *Manager) findByID(ctx context.Context, id string) (*Account, error) {
+// FindByID returns an account's Signer record by its ID.
+func (m *Manager) FindByID(ctx context.Context, id string) (*Account, error) {
 	m.cacheMu.Lock()
 	cachedAccount, ok := m.cache.Get(id)
 	m.cacheMu.Unlock()
@@ -237,14 +236,9 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
-// CreateAddressForChange generate an address for the UTXO change
-func (m *Manager) CreateCtrlProgramForChange(ctx context.Context, accountID string) (cp *CtrlProgram, err error) {
-	return m.CreateAddress(ctx, accountID, true)
-}
-
 // CreateAddress generate an address for the select account
 func (m *Manager) CreateAddress(ctx context.Context, accountID string, change bool) (cp *CtrlProgram, err error) {
-	account, err := m.findByID(ctx, accountID)
+	account, err := m.FindByID(ctx, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -269,14 +263,14 @@ func (m *Manager) createAddress(ctx context.Context, account *Account, change bo
 }
 
 func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.getNextXpubsIndex(account.Signer.XPubs)
+	idx := m.getNextContractIndex(account.ID)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
 
 	// TODO: pass different params due to config
-	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.MainNetParams)
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +290,7 @@ func (m *Manager) createP2PKH(ctx context.Context, account *Account, change bool
 }
 
 func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.getNextXpubsIndex(account.Signer.XPubs)
+	idx := m.getNextContractIndex(account.ID)
 	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
@@ -307,7 +301,7 @@ func (m *Manager) createP2SH(ctx context.Context, account *Account, change bool)
 	scriptHash := crypto.Sha256(signScript)
 
 	// TODO: pass different params due to config
-	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.MainNetParams)
+	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
 	if err != nil {
 		return nil, err
 	}
@@ -344,7 +338,7 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*Ctr
 		}
 
 		sha3pool.Sum256(hash[:], prog.ControlProgram)
-		m.db.Set(CPKey(hash), accountCP)
+		m.db.Set(ContractKey(hash), accountCP)
 	}
 	return nil
 }
@@ -353,7 +347,7 @@ func (m *Manager) insertAccountControlProgram(ctx context.Context, progs ...*Ctr
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash common.Hash
 	sha3pool.Sum256(hash[:], prog)
-	bytes := m.db.Get(CPKey(hash))
+	bytes := m.db.Get(ContractKey(hash))
 	return bytes != nil
 }
 
@@ -391,12 +385,10 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.
-func (m *Manager) DeleteAccount(in struct {
-	AccountInfo string `json:"account_info"`
-}) (err error) {
+func (m *Manager) DeleteAccount(aliasOrID string) (err error) {
 	account := &Account{}
-	if account, err = m.FindByAlias(nil, in.AccountInfo); err != nil {
-		if account, err = m.findByID(nil, in.AccountInfo); err != nil {
+	if account, err = m.FindByAlias(nil, aliasOrID); err != nil {
+		if account, err = m.FindByID(nil, aliasOrID); err != nil {
 			return err
 		}
 	}
@@ -415,9 +407,9 @@ func (m *Manager) DeleteAccount(in struct {
 }
 
 // ListAccounts will return the accounts in the db
-func (m *Manager) ListAccounts(id string) ([]*Account, error) {
+func (m *Manager) ListAccounts() ([]*Account, error) {
 	accounts := []*Account{}
-	accountIter := m.db.IteratorPrefix([]byte(accountPrefix + id))
+	accountIter := m.db.IteratorPrefix(accountPrefix)
 	defer accountIter.Release()
 
 	for accountIter.Next() {
@@ -434,7 +426,7 @@ func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 // ListControlProgram return all the local control program
 func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
 	var cps []*CtrlProgram
-	cpIter := m.db.IteratorPrefix([]byte(accountCPPrefix))
+	cpIter := m.db.IteratorPrefix(contractPrefix)
 	defer cpIter.Release()
 
 	for cpIter.Next() {

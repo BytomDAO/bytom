@@ -71,7 +71,7 @@ func TestFindAssetByID(t *testing.T) {
 	ctx := context.Background()
 	reg := mockNewRegistry(t)
 	keys := []chainkd.XPub{testutil.TestXPub}
-	asset, err := reg.Define(keys, 1, nil, "")
+	asset, err := reg.Define(keys, 1, nil, "TESTASSET")
 	if err != nil {
 		testutil.FatalErr(t, err)
 
@@ -87,22 +87,21 @@ func TestFindAssetByID(t *testing.T) {
 }
 
 func TestUpdateAssetAlias(t *testing.T) {
-	ctx := context.Background()
 	reg := mockNewRegistry(t)
 
 	oldAlias := "OLD_ALIAS"
 	newAlias := "NEW_ALIAS"
 
-	_, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, oldAlias)
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, oldAlias)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	if reg.UpdateAssetAlias(oldAlias, newAlias) != nil {
+	if reg.UpdateAssetAlias(asset.AssetID.String(), newAlias) != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	asset1, err := reg.FindByAlias(ctx, newAlias)
+	asset1, err := reg.FindByAlias(newAlias)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -131,7 +130,7 @@ func TestListAssets(t *testing.T) {
 
 	wantAssets := []*Asset{DefaultNativeAsset, firstAsset, secondAsset}
 
-	gotAssets, err := reg.ListAssets("")
+	gotAssets, err := reg.ListAssets()
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}

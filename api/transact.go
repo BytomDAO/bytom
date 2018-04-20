@@ -9,9 +9,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/net/http/reqid"
@@ -155,18 +155,6 @@ func (a *API) build(ctx context.Context, buildReqs *BuildRequest) Response {
 	return NewSuccessResponse(tmpl)
 }
 
-func (a *API) submitSingle(ctx context.Context, tpl *txbuilder.Template) (map[string]string, error) {
-	if tpl.Transaction == nil {
-		return nil, errors.Wrap(txbuilder.ErrMissingRawTx)
-	}
-
-	if err := txbuilder.FinalizeTx(ctx, a.chain, tpl.Transaction); err != nil {
-		return nil, errors.Wrapf(err, "tx %s", tpl.Transaction.ID.String())
-	}
-
-	return map[string]string{"tx_id": tpl.Transaction.ID.String()}, nil
-}
-
 type submitTxResp struct {
 	TxID *bc.Hash `json:"tx_id"`
 }
@@ -183,61 +171,66 @@ func (a *API) submit(ctx context.Context, ins struct {
 	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
 }
 
-// POST /sign-submit-transaction
-func (a *API) signSubmit(ctx context.Context, x struct {
-	Password string             `json:"password"`
-	Txs      txbuilder.Template `json:"transaction"`
-}) Response {
-	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password, a.pseudohsmSignTemplate); err != nil {
-		log.WithField("build err", err).Error("fail on sign transaction.")
-		return NewErrorResponse(err)
-	}
-
-	if signCount, complete := txbuilder.SignInfo(&x.Txs); !complete && signCount == 0 {
-		return NewErrorResponse(pseudohsm.ErrLoadKey)
-	}
-	log.Info("Sign Transaction complete.")
-
-	txID, err := a.submitSingle(nil, &x.Txs)
-	if err != nil {
-		log.WithField("err", err).Error("submit single tx")
-		return NewErrorResponse(err)
-	}
-
-	log.WithField("tx_id", txID["tx_id"]).Info("submit single tx")
-	return NewSuccessResponse(txID)
-}
-
+// EstimateTxGasResp estimate transaction consumed gas
 type EstimateTxGasResp struct {
-	LeftBTM     int64 `json:"left_btm"`
-	ConsumedBTM int64 `json:"consumed_btm"`
-	LeftGas     int64 `json:"left_gas"`
-	ConsumedGas int64 `json:"consumed_gas"`
-	StorageGas  int64 `json:"storage_gas"`
-	VMGas       int64 `json:"vm_gas"`
+	TotalNeu   int64 `json:"total_neu"`
+	StorageNeu int64 `json:"storage_neu"`
+	VMNeu      int64 `json:"vm_neu"`
 }
 
 // POST /estimate-transaction-gas
-func (a *API) estimateTxGas(ctx context.Context, ins struct {
-	Tx types.Tx `json:"raw_transaction"`
+func (a *API) estimateTxGas(ctx context.Context, in struct {
+	TxTemplate txbuilder.Template `json:"transaction_template"`
 }) Response {
-	gasState, err := txbuilder.EstimateTxGas(a.chain, &ins.Tx)
+	// base tx size and not include sign
+	data, err := in.TxTemplate.Transaction.TxData.MarshalText()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
+	baseTxSize := int64(len(data))
 
-	btmLeft, ok := checked.MulInt64(gasState.GasLeft, consensus.VMGasRate)
+	// extra tx size for sign witness parts
+	baseWitnessSize := int64(300)
+	lenSignInst := int64(len(in.TxTemplate.SigningInstructions))
+	signSize := baseWitnessSize * lenSignInst
+
+	// total gas for tx storage
+	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+signSize, consensus.StorageGasRate)
 	if !ok {
-		return NewErrorResponse(errors.New("calculate btmleft got a math error"))
+		return NewErrorResponse(errors.New("calculate txsize gas got a math error"))
 	}
 
+	// consume gas for run VM
+	totalP2WPKHGas := int64(0)
+	totalP2WSHGas := int64(0)
+	baseP2WPKHGas := int64(1419)
+	baseP2WSHGas := int64(2499)
+
+	for _, inpID := range in.TxTemplate.Transaction.Tx.InputIDs {
+		sp, err := in.TxTemplate.Transaction.Spend(inpID)
+		if err != nil {
+			continue
+		}
+
+		resOut, err := in.TxTemplate.Transaction.Output(*sp.SpentOutputId)
+		if err != nil {
+			continue
+		}
+
+		if segwit.IsP2WPKHScript(resOut.ControlProgram.Code) {
+			totalP2WPKHGas += baseP2WPKHGas
+		} else if segwit.IsP2WSHScript(resOut.ControlProgram.Code) {
+			totalP2WSHGas += baseP2WSHGas
+		}
+	}
+
+	// total estimate gas
+	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
+
 	txGasResp := &EstimateTxGasResp{
-		LeftBTM:     btmLeft,
-		ConsumedBTM: int64(gasState.BTMValue) - btmLeft,
-		LeftGas:     gasState.GasLeft,
-		ConsumedGas: gasState.GasUsed,
-		StorageGas:  gasState.StorageGas,
-		VMGas:       gasState.GasUsed - gasState.StorageGas,
+		TotalNeu:   totalGas * consensus.VMGasRate,
+		StorageNeu: totalTxSizeGas * consensus.VMGasRate,
+		VMNeu:      (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
 	}
 
 	return NewSuccessResponse(txGasResp)

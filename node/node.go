@@ -18,7 +18,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/consensus"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
 	"github.com/bytom/mining/cpuminer"
@@ -58,7 +58,7 @@ type Node struct {
 
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
-
+	initActiveNetParams(config)
 	// Get store
 	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
 	store := leveldb.NewStore(txDB)
@@ -106,10 +106,6 @@ func NewNode(config *cfg.Config) *Node {
 			log.WithField("error", err).Error("init NewWallet")
 		}
 
-		if err := initOrRecoverAccount(hsm, wallet); err != nil {
-			log.WithField("error", err).Error("initialize or recover account")
-		}
-
 		// Clean up expired UTXO reservations periodically.
 		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
 	}
@@ -146,34 +142,12 @@ func NewNode(config *cfg.Config) *Node {
 	return node
 }
 
-func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
-	xpubs := hsm.ListKeys()
-
-	if len(xpubs) == 0 {
-		xpub, err := hsm.XCreate("default", "123456")
-		if err != nil {
-			return err
-		}
-
-		wallet.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "default")
-		return nil
+func initActiveNetParams(config *cfg.Config) {
+	var exist bool
+	consensus.ActiveNetParams, exist = consensus.NetParams[config.ChainID]
+	if !exist {
+		cmn.Exit(cmn.Fmt("chain_id[%v] don't exist", config.ChainID))
 	}
-
-	accounts, err := wallet.AccountMgr.ListAccounts("")
-	if err != nil {
-		return err
-	}
-
-	if len(accounts) > 0 {
-		return nil
-	}
-
-	for i, xPub := range xpubs {
-		if err := wallet.ImportAccountXpubKey(i, xPub, w.RecoveryIndex); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // Lanch web broser or not
@@ -234,5 +208,3 @@ func (n *Node) SyncManager() *netsync.SyncManager {
 func (n *Node) MiningPool() *miningpool.MiningPool {
 	return n.miningPool
 }
-
-//------------------------------------------------------------------------------

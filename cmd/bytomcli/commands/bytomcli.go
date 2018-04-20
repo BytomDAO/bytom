@@ -86,11 +86,16 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(validateAddressCmd)
 
 	BytomcliCmd.AddCommand(createAssetCmd)
+	BytomcliCmd.AddCommand(getAssetCmd)
 	BytomcliCmd.AddCommand(listAssetsCmd)
 	BytomcliCmd.AddCommand(updateAssetAliasCmd)
 
 	BytomcliCmd.AddCommand(getTransactionCmd)
 	BytomcliCmd.AddCommand(listTransactionsCmd)
+
+	BytomcliCmd.AddCommand(getUnconfirmedTransactionCmd)
+	BytomcliCmd.AddCommand(listUnconfirmedTransactionsCmd)
+
 	BytomcliCmd.AddCommand(listUnspentOutputsCmd)
 	BytomcliCmd.AddCommand(listBalancesCmd)
 
@@ -98,22 +103,16 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(signTransactionCmd)
 	BytomcliCmd.AddCommand(submitTransactionCmd)
 	BytomcliCmd.AddCommand(estimateTransactionGasCmd)
-	BytomcliCmd.AddCommand(signSubTransactionCmd)
 
 	BytomcliCmd.AddCommand(getBlockCountCmd)
-	BytomcliCmd.AddCommand(blockHashCmd)
+	BytomcliCmd.AddCommand(getBlockHashCmd)
 	BytomcliCmd.AddCommand(getBlockCmd)
 	BytomcliCmd.AddCommand(getBlockHeaderByHashCmd)
-	BytomcliCmd.AddCommand(getBlockTransactionsCountByHashCmd)
-	BytomcliCmd.AddCommand(getBlockTransactionsCountByHeightCmd)
 
 	BytomcliCmd.AddCommand(createKeyCmd)
 	BytomcliCmd.AddCommand(deleteKeyCmd)
 	BytomcliCmd.AddCommand(listKeysCmd)
 	BytomcliCmd.AddCommand(resetKeyPwdCmd)
-	BytomcliCmd.AddCommand(exportPrivateCmd)
-	BytomcliCmd.AddCommand(importPrivateCmd)
-	BytomcliCmd.AddCommand(importKeyProgressCmd)
 
 	BytomcliCmd.AddCommand(isMiningCmd)
 

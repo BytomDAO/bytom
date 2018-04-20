@@ -5,7 +5,7 @@ ifeq ($(UNAME_S),Darwin)
 else ifeq ($(UNAME_S),Linux)
 	GOOS := linux
 else
-$(error "$$GOOS is not defined.")
+$(error "$$GOOS is not defined. If you are using Windows, try to re-make using 'GOOS=windows make ...' ")
 endif
 endif
 
@@ -113,5 +113,7 @@ benchmark:
 
 functional-tests:
 	@go test -v -timeout=30m -tags=functional ./test
+
+ci: test functional-tests
 
 .PHONY: all target release-all clean test benchmark

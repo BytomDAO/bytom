@@ -17,8 +17,6 @@ type (
 	XPub [64]byte
 )
 
-var one = [32]byte{1}
-
 // NewXPrv takes a source of random bytes and produces a new XPrv.
 // If r is nil, crypto/rand.Reader is used.
 func NewXPrv(r io.Reader) (xprv XPrv, err error) {

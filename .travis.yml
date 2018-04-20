@@ -17,4 +17,4 @@ branches:
         - dev
 
 script:
-    - make test
+    - make ci
