@@ -31,8 +31,12 @@ func (a *API) getBlockHeaderByHash(req struct {
 		return NewErrorResponse(err)
 	}
 
-	bcBlock := types.MapBlock(block)
-	return NewSuccessResponse(bcBlock.BlockHeader)
+	resp := &BlockHeaderByHeight{
+		BlockHeader: &block.BlockHeader,
+		Reward:      block.Transactions[0].Outputs[0].Amount,
+	}
+
+	return NewSuccessResponse(resp)
 }
 
 // BlockTx is the tx struct for getBlock func
@@ -129,40 +133,6 @@ func (a *API) getBlock(ins GetBlockReq) Response {
 		resp.Transactions = append(resp.Transactions, tx)
 	}
 	return NewSuccessResponse(resp)
-}
-
-// return block transactions count by hash
-func (a *API) getBlockTransactionsCountByHash(req struct {
-	BlockHash string `json:"block_hash"`
-}) Response {
-	hash := bc.Hash{}
-	if err := hash.UnmarshalText([]byte(req.BlockHash)); err != nil {
-		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return NewErrorResponse(err)
-	}
-
-	legacyBlock, err := a.chain.GetBlockByHash(&hash)
-	if err != nil {
-		log.WithField("error", err).Error("Fail to get block by hash")
-		return NewErrorResponse(err)
-	}
-
-	count := map[string]int{"tx_count": len(legacyBlock.Transactions)}
-	return NewSuccessResponse(count)
-}
-
-// return block transactions count by height
-func (a *API) getBlockTransactionsCountByHeight(req struct {
-	Height uint64 `json:"block_height"`
-}) Response {
-	legacyBlock, err := a.chain.GetBlockByHeight(req.Height)
-	if err != nil {
-		log.WithField("error", err).Error("Fail to get block by hash")
-		return NewErrorResponse(err)
-	}
-
-	count := map[string]int{"tx_count": len(legacyBlock.Transactions)}
-	return NewSuccessResponse(count)
 }
 
 // return current block count

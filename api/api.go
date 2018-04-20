@@ -226,8 +226,6 @@ func (a *API) buildHandler() {
 	m.Handle("/get-block-header-by-height", jsonHandler(a.getBlockHeaderByHeight))
 	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
-	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(a.getBlockTransactionsCountByHash))
-	m.Handle("/get-block-transactions-count-by-height", jsonHandler(a.getBlockTransactionsCountByHeight))
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
