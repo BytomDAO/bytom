@@ -87,7 +87,6 @@ func TestFindAssetByID(t *testing.T) {
 }
 
 func TestUpdateAssetAlias(t *testing.T) {
-	ctx := context.Background()
 	reg := mockNewRegistry(t)
 
 	oldAlias := "OLD_ALIAS"
@@ -102,7 +101,7 @@ func TestUpdateAssetAlias(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	asset1, err := reg.FindByAlias(ctx, newAlias)
+	asset1, err := reg.FindByAlias(newAlias)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
