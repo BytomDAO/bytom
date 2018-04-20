@@ -13,7 +13,7 @@ const (
 
 	//config parameter for coinbase reward
 	CoinbasePendingBlockNumber = uint64(6)
-	subsidyReductionInterval   = uint64(560640)
+	subsidyReductionInterval   = uint64(840000)
 	baseSubsidy                = uint64(41250000000)
 	InitialBlockSubsidy        = uint64(1470000000000000000)
 
@@ -33,7 +33,7 @@ const (
 	CoinbaseArbitrarySizeLimit = 128
 
 	VMGasRate        = int64(100)
-	StorageGasRate   = int64(5)
+	StorageGasRate   = int64(2)
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
 
