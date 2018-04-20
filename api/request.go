@@ -33,11 +33,11 @@ func (a *API) filterAliases(ctx context.Context, br *BuildRequest) error {
 			case consensus.BTMAlias:
 				m["asset_id"] = consensus.BTMAssetID.String()
 			default:
-				id, err := a.wallet.AssetReg.GetIDByAlias(alias)
+				asset, err := a.wallet.AssetReg.FindByAlias(alias)
 				if err != nil {
 					return errors.WithDetailf(err, "invalid asset alias %s on action %d", alias, i)
 				}
-				m["asset_id"] = id
+				m["asset_id"] = asset.AssetID.String()
 			}
 		}
 

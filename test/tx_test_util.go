@@ -117,7 +117,7 @@ func (g *TxGenerator) assetAmount(assetAlias string, amount uint64) (*bc.AssetAm
 		return a, nil
 	}
 
-	asset, err := g.Assets.FindByAlias(nil, assetAlias)
+	asset, err := g.Assets.FindByAlias(assetAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func (g *TxGenerator) AddTxInputFromUtxo(utxo *account.UTXO, accountAlias string
 
 // AddIssuanceInput add a issue input
 func (g *TxGenerator) AddIssuanceInput(assetAlias string, amount uint64) error {
-	asset, err := g.Assets.FindByAlias(nil, assetAlias)
+	asset, err := g.Assets.FindByAlias(assetAlias)
 	if err != nil {
 		return err
 	}
