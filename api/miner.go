@@ -16,6 +16,7 @@ func (a *API) getWork() Response {
 	return NewSuccessResponse(work)
 }
 
+// SubmitWorkReq used to submitWork req
 type SubmitWorkReq struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
 }
@@ -27,27 +28,13 @@ func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
 	return NewSuccessResponse(true)
 }
 
-func (a *API) getBlockHeaderByHeight(ctx context.Context, req struct {
-	Height uint64 `json:"block_height"`
-}) Response {
-	block, err := a.chain.GetBlockByHeight(req.Height)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	resp := &BlockHeaderByHeight{
-		BlockHeader: &block.BlockHeader,
-		Reward:      block.Transactions[0].Outputs[0].Amount,
-	}
-	return NewSuccessResponse(resp)
-}
-
 // GetWorkResp is resp struct for API
 type GetWorkResp struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
 	Seed        *bc.Hash           `json:"seed"`
 }
 
+// GetWork get work
 func (a *API) GetWork() (*GetWorkResp, error) {
 	bh, err := a.miningPool.GetWork()
 	if err != nil {
@@ -65,6 +52,7 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 	}, nil
 }
 
+// SubmitWork submit work
 func (a *API) SubmitWork(bh *types.BlockHeader) error {
 	return a.miningPool.SubmitWork(bh)
 }
