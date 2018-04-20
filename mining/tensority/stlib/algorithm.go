@@ -7,7 +7,7 @@ import "C"
 
 import (
 	"unsafe"
-	
+
 	"github.com/golang/groupcache/lru"
 
 	"github.com/bytom/crypto/sha3pool"
