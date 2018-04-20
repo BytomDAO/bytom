@@ -219,7 +219,7 @@ func (a *API) estimateTxGas(ctx context.Context, in struct {
 
 		if segwit.IsP2WPKHScript(resOut.ControlProgram.Code) {
 			totalP2WPKHGas += baseP2WPKHGas
-		} else if segwit.IsP2WPKHScript(resOut.ControlProgram.Code) {
+		} else if segwit.IsP2WSHScript(resOut.ControlProgram.Code) {
 			totalP2WSHGas += baseP2WSHGas
 		}
 	}
