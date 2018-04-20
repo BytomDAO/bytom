@@ -63,6 +63,13 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
+	// Create & add listener
+	p, address := protocolAndAddress(manager.config.P2P.ListenAddress)
+	l := p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP, nil)
+	manager.sw.AddListener(l)
+	manager.sw.SetNodeInfo(manager.makeNodeInfo())
+	manager.sw.SetNodePrivKey(manager.privKey)
+
 	// Optionally, start the pex reactor
 	//var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
@@ -112,16 +119,7 @@ func (sm *SyncManager) makeNodeInfo() *p2p.NodeInfo {
 }
 
 func (sm *SyncManager) netStart() error {
-	// Create & add listener
-	p, address := protocolAndAddress(sm.config.P2P.ListenAddress)
-
-	l := p2p.NewDefaultListener(p, address, sm.config.P2P.SkipUPNP, nil)
-
-	sm.sw.AddListener(l)
-
 	// Start the switch
-	sm.sw.SetNodeInfo(sm.makeNodeInfo())
-	sm.sw.SetNodePrivKey(sm.privKey)
 	_, err := sm.sw.Start()
 	if err != nil {
 		return err
@@ -165,7 +163,7 @@ func (sm *SyncManager) txBroadcastLoop() {
 	for {
 		select {
 		case newTx := <-newTxCh:
-			peers,err:=sm.peers.BroadcastTx(newTx)
+			peers, err := sm.peers.BroadcastTx(newTx)
 			if err != nil {
 				log.Errorf("Broadcast new tx error. %v", err)
 				return
