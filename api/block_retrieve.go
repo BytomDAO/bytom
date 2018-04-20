@@ -31,8 +31,8 @@ type BlockTx struct {
 	StatusFail bool                     `json:"status_fail"`
 }
 
-// GetBlockReq is used to handle getBlock req
-type GetBlockReq struct {
+// BlockReq is used to handle getBlock req
+type BlockReq struct {
 	BlockHeight uint64             `json:"block_height"`
 	BlockHash   chainjson.HexBytes `json:"block_hash"`
 }
@@ -54,7 +54,7 @@ type GetBlockResp struct {
 }
 
 // return block by hash
-func (a *API) getBlock(ins GetBlockReq) Response {
+func (a *API) getBlock(ins BlockReq) Response {
 	var err error
 	block := &types.Block{}
 	if len(ins.BlockHash) == 32 {
@@ -122,7 +122,7 @@ type GetBlockHeaderResp struct {
 	Reward      uint64             `json:"reward"`
 }
 
-func (a *API) getBlockHeader(ins GetBlockReq) Response {
+func (a *API) getBlockHeader(ins BlockReq) Response {
 	var err error
 	block := &types.Block{}
 	if len(ins.BlockHash) == 32 {
