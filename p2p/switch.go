@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"strings"
 	"sync"
 	"time"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
@@ -72,19 +72,19 @@ incoming messages are received on the reactor.
 type Switch struct {
 	cmn.BaseService
 
-	config           *cfg.P2PConfig
-	peerConfig       *PeerConfig
-	listeners        []Listener
-	reactors         map[string]Reactor
-	chDescs          []*ChannelDescriptor
-	reactorsByCh     map[byte]Reactor
-	peers            *PeerSet
-	dialing          *cmn.CMap
-	nodeInfo         *NodeInfo             // our node info
-	nodePrivKey      crypto.PrivKeyEd25519 // our node privkey
-	bannedPeer       map[string]time.Time
-	db               dbm.DB
-	mtx              sync.Mutex
+	config       *cfg.P2PConfig
+	peerConfig   *PeerConfig
+	listeners    []Listener
+	reactors     map[string]Reactor
+	chDescs      []*ChannelDescriptor
+	reactorsByCh map[byte]Reactor
+	peers        *PeerSet
+	dialing      *cmn.CMap
+	nodeInfo     *NodeInfo             // our node info
+	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
+	bannedPeer   map[string]time.Time
+	db           dbm.DB
+	mtx          sync.Mutex
 
 	filterConnByAddr   func(net.Addr) error
 	filterConnByPubKey func(crypto.PubKeyEd25519) error
@@ -330,12 +330,6 @@ func (sw *Switch) DialSeeds(addrBook *AddrBook, seeds []string) error {
 		addrBook.Save()
 	}
 
-	// permute the list, dial them in random order.
-	//perm := rand.Perm(len(netAddrs))
-	//for i := 0; i < len(perm); i++ {
-	//	j := perm[i]
-	//	sw.dialSeed(netAddrs[j])
-	//}
 	return nil
 }
 
