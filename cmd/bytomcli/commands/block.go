@@ -98,7 +98,11 @@ var getBlockHeaderByHashCmd = &cobra.Command{
 	Short: "Get the header of a block matching the given hash",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/get-block-header-by-hash", args[0])
+		var req = struct {
+			BlockHash string `json:"block_hash"`
+		}{BlockHash: args[0]}
+
+		data, exitCode := util.ClientCall("/get-block-header-by-hash", &req)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
@@ -111,7 +115,11 @@ var getBlockTransactionsCountByHashCmd = &cobra.Command{
 	Short: "Get the transactions count of a block matching the given hash",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/get-block-transactions-count-by-hash", args[0])
+		var req = struct {
+			BlockHash string `json:"block_hash"`
+		}{BlockHash: args[0]}
+
+		data, exitCode := util.ClientCall("/get-block-transactions-count-by-hash", &req)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
@@ -124,13 +132,17 @@ var getBlockTransactionsCountByHeightCmd = &cobra.Command{
 	Short: "Get the transactions count of a block matching the given height",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		ui64, err := strconv.ParseUint(args[0], 10, 64)
+		height, err := strconv.ParseUint(args[0], 10, 64)
 		if err != nil {
 			jww.ERROR.Printf("Invalid height value")
 			os.Exit(util.ErrLocalExe)
 		}
 
-		data, exitCode := util.ClientCall("/get-block-transactions-count-by-height", ui64)
+		var req = struct {
+			Height uint64 `json:"block_height"`
+		}{Height: height}
+
+		data, exitCode := util.ClientCall("/get-block-transactions-count-by-height", &req)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

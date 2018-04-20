@@ -17,9 +17,11 @@ func (a *API) getBestBlockHash() Response {
 }
 
 // return block header by hash
-func (a *API) getBlockHeaderByHash(strHash string) Response {
+func (a *API) getBlockHeaderByHash(req struct {
+	BlockHash string `json:"block_hash"`
+}) Response {
 	hash := bc.Hash{}
-	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
+	if err := hash.UnmarshalText([]byte(req.BlockHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
 		return NewErrorResponse(err)
 	}
@@ -130,9 +132,11 @@ func (a *API) getBlock(ins GetBlockReq) Response {
 }
 
 // return block transactions count by hash
-func (a *API) getBlockTransactionsCountByHash(strHash string) Response {
+func (a *API) getBlockTransactionsCountByHash(req struct {
+	BlockHash string `json:"block_hash"`
+}) Response {
 	hash := bc.Hash{}
-	if err := hash.UnmarshalText([]byte(strHash)); err != nil {
+	if err := hash.UnmarshalText([]byte(req.BlockHash)); err != nil {
 		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
 		return NewErrorResponse(err)
 	}
@@ -143,19 +147,21 @@ func (a *API) getBlockTransactionsCountByHash(strHash string) Response {
 		return NewErrorResponse(err)
 	}
 
-	count := map[string]int{"count": len(legacyBlock.Transactions)}
+	count := map[string]int{"tx_count": len(legacyBlock.Transactions)}
 	return NewSuccessResponse(count)
 }
 
 // return block transactions count by height
-func (a *API) getBlockTransactionsCountByHeight(height uint64) Response {
-	legacyBlock, err := a.chain.GetBlockByHeight(height)
+func (a *API) getBlockTransactionsCountByHeight(req struct {
+	Height uint64 `json:"block_height"`
+}) Response {
+	legacyBlock, err := a.chain.GetBlockByHeight(req.Height)
 	if err != nil {
 		log.WithField("error", err).Error("Fail to get block by hash")
 		return NewErrorResponse(err)
 	}
 
-	count := map[string]int{"count": len(legacyBlock.Transactions)}
+	count := map[string]int{"tx_count": len(legacyBlock.Transactions)}
 	return NewSuccessResponse(count)
 }
 
