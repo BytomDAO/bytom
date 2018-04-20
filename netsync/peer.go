@@ -353,7 +353,9 @@ func (ps *peerSet) BroadcastMinedBlock(block *types.Block) ([]*peer, error) {
 			abnormalPeers = append(abnormalPeers, peer)
 			continue
 		}
-		ps.MarkBlock(peer.swPeer.Key, &hash)
+		if p, ok := ps.peers[peer.id]; ok {
+			p.MarkBlock(&hash)
+		}
 	}
 	return abnormalPeers, nil
 }
@@ -374,7 +376,9 @@ func (ps *peerSet) BroadcastTx(tx *types.Tx) ([]*peer, error) {
 			abnormalPeers = append(abnormalPeers, peer)
 			continue
 		}
-		ps.peers[peer.swPeer.Key].MarkTransaction(&tx.ID)
+		if p, ok := ps.peers[peer.id]; ok {
+			p.MarkTransaction(&tx.ID)
+		}
 	}
 	return abnormalPeers, nil
 }
