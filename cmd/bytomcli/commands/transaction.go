@@ -250,21 +250,23 @@ var submitTransactionCmd = &cobra.Command{
 }
 
 var estimateTransactionGasCmd = &cobra.Command{
-	Use:   "estimate-transaction-gas  <signed json raw_transaction>",
-	Short: "estimate gas for signed transaction",
+	Use:   "estimate-transaction-gas  <json templates>",
+	Short: "estimate gas for build transaction",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		var ins = struct {
-			Tx types.Tx `json:"raw_transaction"`
-		}{}
+		template := txbuilder.Template{}
 
-		err := json.Unmarshal([]byte(args[0]), &ins)
+		err := json.Unmarshal([]byte(args[0]), &template)
 		if err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
 		}
 
-		data, exitCode := util.ClientCall("/estimate-transaction-gas", &ins)
+		var req = struct {
+			TxTemplate txbuilder.Template `json:"transaction_template"`
+		}{TxTemplate: template}
+
+		data, exitCode := util.ClientCall("/estimate-transaction-gas", &req)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

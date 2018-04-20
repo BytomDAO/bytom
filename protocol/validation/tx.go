@@ -19,7 +19,7 @@ type GasState struct {
 	BTMValue   uint64
 	GasLeft    int64
 	GasUsed    int64
-	GasVaild   bool
+	GasValid   bool
 	StorageGas int64
 }
 
@@ -45,17 +45,17 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 	return nil
 }
 
-func (g *GasState) setGasVaild() error {
+func (g *GasState) setGasValid() error {
 	var ok bool
 	if g.GasLeft, ok = checked.SubInt64(g.GasLeft, g.StorageGas); !ok || g.GasLeft < 0 {
-		return errors.Wrap(errGasCalculate, "setGasVaild calc gasLeft")
+		return errors.Wrap(errGasCalculate, "setGasValid calc gasLeft")
 	}
 
 	if g.GasUsed, ok = checked.AddInt64(g.GasUsed, g.StorageGas); !ok {
-		return errors.Wrap(errGasCalculate, "setGasVaild calc gasUsed")
+		return errors.Wrap(errGasCalculate, "setGasValid calc gasUsed")
 	}
 
-	g.GasVaild = true
+	g.GasValid = true
 	return nil
 }
 
@@ -71,7 +71,7 @@ func (g *GasState) updateUsage(gasLeft int64) error {
 		return errors.Wrap(errGasCalculate, "updateUsage calc gas diff")
 	}
 
-	if !g.GasVaild && (g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft) {
+	if !g.GasValid && (g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft) {
 		return errOverGasCredit
 	}
 	return nil
@@ -105,7 +105,7 @@ var (
 	errPosition                  = errors.New("invalid source or destination position")
 	errTxVersion                 = errors.New("invalid transaction version")
 	errUnbalanced                = errors.New("unbalanced")
-	errWrongTransactionSize      = errors.New("transaction size is not in vaild range")
+	errWrongTransactionSize      = errors.New("transaction size is not in valid range")
 	errWrongCoinbaseTransaction  = errors.New("wrong coinbase transaction")
 	errWrongCoinbaseAsset        = errors.New("wrong coinbase asset id")
 	errNotStandardTx             = errors.New("gas transaction is not standard transaction")
@@ -192,7 +192,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 		if len(vs.tx.GasInputIDs) > 0 {
-			if err := vs.gasStatus.setGasVaild(); err != nil {
+			if err := vs.gasStatus.setGasValid(); err != nil {
 				return err
 			}
 		}
@@ -297,7 +297,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 		// special case for coinbase transaction, it's valid unit all the verify has been passed
-		vs.gasStatus.GasVaild = true
+		vs.gasStatus.GasValid = true
 
 	default:
 		return fmt.Errorf("entry has unexpected type %T", e)
@@ -488,7 +488,7 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 
 // ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
-	gasStatus := &GasState{GasVaild: false}
+	gasStatus := &GasState{GasValid: false}
 	if block.Version == 1 && tx.Version != 1 {
 		return gasStatus, errors.WithDetailf(errTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
 	}

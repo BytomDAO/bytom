@@ -193,11 +193,11 @@ func (a *API) buildHandler() {
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
 
-		m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
-		m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
-
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
+
+		m.Handle("/backup-wallet", jsonHandler(a.backupWalletImage))
+		m.Handle("/restore-wallet", jsonHandler(a.restoreWalletImage))
 	} else {
 		log.Warn("Please enable wallet")
 	}
@@ -218,13 +218,14 @@ func (a *API) buildHandler() {
 	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
 	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
 
+	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
+	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
+
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header-by-hash", jsonHandler(a.getBlockHeaderByHash))
 	m.Handle("/get-block-header-by-height", jsonHandler(a.getBlockHeaderByHeight))
 	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
-	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(a.getBlockTransactionsCountByHash))
-	m.Handle("/get-block-transactions-count-by-height", jsonHandler(a.getBlockTransactionsCountByHeight))
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))

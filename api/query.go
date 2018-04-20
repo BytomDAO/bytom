@@ -14,10 +14,8 @@ import (
 )
 
 // POST /list-accounts
-func (a *API) listAccounts(ctx context.Context, filter struct {
-	ID string `json:"id"`
-}) Response {
-	accounts, err := a.wallet.AccountMgr.ListAccounts(filter.ID)
+func (a *API) listAccounts(ctx context.Context) Response {
+	accounts, err := a.wallet.AccountMgr.ListAccounts()
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
 		return NewErrorResponse(err)
@@ -57,7 +55,11 @@ func (a *API) listAssets(ctx context.Context) Response {
 
 // POST /list-balances
 func (a *API) listBalances(ctx context.Context) Response {
-	return NewSuccessResponse(a.wallet.GetAccountBalances(""))
+	balances, err := a.wallet.GetAccountBalances("")
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(balances)
 }
 
 // POST /get-transaction

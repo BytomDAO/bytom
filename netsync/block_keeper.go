@@ -121,9 +121,17 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 			return errGetBlockByHash
 		}
 
-		if err := bk.peers.BroadcastNewStatus(block); err != nil {
+		peers, err := bk.peers.BroadcastNewStatus(block)
+		if err != nil {
 			log.Errorf("Failed on broadcast new status block %v", err)
 			return errBroadcastStatus
+		}
+		for _, peer := range peers {
+			if ban := peer.addBanScore(0, 50, "Broadcast block error"); ban {
+				peer := bk.peers.Peer(peer.id).getPeer()
+				bk.sw.AddBannedPeer(peer)
+				bk.sw.StopPeerGracefully(peer)
+			}
 		}
 	}
 	return nil
