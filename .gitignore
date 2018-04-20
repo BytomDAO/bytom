@@ -29,6 +29,8 @@ cmd/bytom/.bytom
 target
 
 *.exe
+*.dylib
+*.zip
 
 # vim
 **.swp

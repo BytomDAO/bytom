@@ -8,7 +8,7 @@ package tensority
 #include <stdlib.h>
 #include <dlfcn.h>
 
-typedef uint8_t* (*CSIMDTS_FUNC)(uint8_t*, uint8_t*, uint8_t*);
+typedef int (*CSIMDTS_FUNC)(uint8_t*, uint8_t*, uint8_t*);
 #define DYLIB_CSIMDTS_PATH "./cSimdTs.dylib"
 
 int dylib_csimdts(uint8_t blockheader[32],

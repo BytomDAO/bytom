@@ -12,7 +12,7 @@ BytomMatList16* matList_int16;
 uint8_t *result;
 map <vector<uint8_t>, BytomMatList16*> seedCache;
 
-uint8_t *SimdTs(uint8_t blockheader[32], uint8_t seed[32], uint8_t res[32]){
+int SimdTs(uint8_t blockheader[32], uint8_t seed[32], uint8_t res[32]){
     result = res;
     vector<uint8_t> seedVec(seed, seed + 32);
 
@@ -33,5 +33,7 @@ uint8_t *SimdTs(uint8_t blockheader[32], uint8_t seed[32], uint8_t res[32]){
 
     iter_mineBytom(blockheader, 32, result);
     
-    return result;
+    result = NULL;
+    delete matList_int16;
+    return 0;
 }
