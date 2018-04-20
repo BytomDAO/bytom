@@ -239,24 +239,27 @@ func TestHash(t *testing.T) {
 	}
 
 	startT := time.Now()
-	for i, tt := range tests {
-		fmt.Printf("Test case %d:\n", i+1)
+	for j := 0; j < 2000; j++ {
+		fmt.Println(j, "/ 2000")
+		for i, tt := range tests {
+			fmt.Printf("Test case %d:\n", i+1)
 
-		sT := time.Now()
-		bhhash := bc.NewHash(tt.blockHeader)
-		sdhash := bc.NewHash(tt.seed)
-		result := algorithm(&bhhash, &sdhash).Bytes()
-		var resArr [32]byte
-		copy(resArr[:], result)
-		eT := time.Now()
-		fmt.Println("\tTotal verification time:", eT.Sub(sT))
+			sT := time.Now()
+			bhhash := bc.NewHash(tt.blockHeader)
+			sdhash := bc.NewHash(tt.seed)
+			result := algorithm(&bhhash, &sdhash).Bytes()
+			var resArr [32]byte
+			copy(resArr[:], result)
+			eT := time.Now()
+			fmt.Println("\tTotal verification time:", eT.Sub(sT))
 
-		if !reflect.DeepEqual(resArr, tt.hash) {
-			t.Errorf("\tFAIL\n")
-			t.Errorf("\tGets\t%x\n", resArr)
-			t.Errorf("\tExpects\t%x\n", tt.hash)
-		} else {
-			fmt.Printf("\tPASS\n")
+			if !reflect.DeepEqual(resArr, tt.hash) {
+				t.Errorf("\tFAIL\n")
+				t.Errorf("\tGets\t%x\n", resArr)
+				t.Errorf("\tExpects\t%x\n", tt.hash)
+			} else {
+				fmt.Printf("\tPASS\n")
+			}
 		}
 	}
 	endT := time.Now()
