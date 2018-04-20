@@ -98,43 +98,14 @@ var getBlockHeaderByHashCmd = &cobra.Command{
 	Short: "Get the header of a block matching the given hash",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/get-block-header-by-hash", args[0])
+		var req = struct {
+			BlockHash string `json:"block_hash"`
+		}{BlockHash: args[0]}
+
+		data, exitCode := util.ClientCall("/get-block-header-by-hash", &req)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
-		printJSON(data)
-	},
-}
-
-var getBlockTransactionsCountByHashCmd = &cobra.Command{
-	Use:   "get-block-transactions-count-by-hash <hash>",
-	Short: "Get the transactions count of a block matching the given hash",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/get-block-transactions-count-by-hash", args[0])
-		if exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-		printJSON(data)
-	},
-}
-
-var getBlockTransactionsCountByHeightCmd = &cobra.Command{
-	Use:   "get-block-transactions-count-by-height <height>",
-	Short: "Get the transactions count of a block matching the given height",
-	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		ui64, err := strconv.ParseUint(args[0], 10, 64)
-		if err != nil {
-			jww.ERROR.Printf("Invalid height value")
-			os.Exit(util.ErrLocalExe)
-		}
-
-		data, exitCode := util.ClientCall("/get-block-transactions-count-by-height", ui64)
-		if exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-
 		printJSON(data)
 	},
 }
