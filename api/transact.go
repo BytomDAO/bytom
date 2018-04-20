@@ -212,8 +212,8 @@ func (a *API) estimateTxGas(ctx context.Context, in struct {
 			continue
 		}
 
-		resOut, ok := in.TxTemplate.Transaction.Entries[*sp.SpentOutputId].(*bc.Output)
-		if !ok {
+		resOut, err := in.TxTemplate.Transaction.Output(*sp.SpentOutputId)
+		if err != nil {
 			continue
 		}
 
