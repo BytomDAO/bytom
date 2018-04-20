@@ -36,7 +36,6 @@ const (
 	StorageGasRate   = int64(5)
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
-	NeuBtmRate       = float64(100000)
 
 	BTMAlias       = "BTM"
 	BTMSymbol      = "BTM"
