@@ -31,6 +31,7 @@ uint8_t *SimdTs(uint8_t blockheader[32], uint8_t seed[32]){
 
     iter_mineBytom(blockheader, 32, result);
     
-    delete matList_int16;
+    // do not gc!!!
+    // delete matList_int16;
     return result;
 }
