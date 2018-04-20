@@ -173,9 +173,9 @@ func (a *API) submit(ctx context.Context, ins struct {
 
 // EstimateTxGasResp estimate transaction consumed gas
 type EstimateTxGasResp struct {
-	TotalGas   int64 `json:"total_gas"`
-	StorageGas int64 `json:"storage_gas"`
-	VMGas      int64 `json:"vm_gas"`
+	TotalNeu   float64 `json:"total_neu"`
+	StorageNeu float64 `json:"storage_neu"`
+	VMNeu      float64 `json:"vm_neu"`
 }
 
 // POST /estimate-transaction-gas
@@ -228,9 +228,9 @@ func (a *API) estimateTxGas(ctx context.Context, in struct {
 	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
 
 	txGasResp := &EstimateTxGasResp{
-		TotalGas:   totalGas,
-		StorageGas: totalTxSizeGas,
-		VMGas:      totalP2WPKHGas + totalP2WSHGas,
+		TotalNeu:   float64(totalGas) / consensus.NeuBtmRate,
+		StorageNeu: float64(totalTxSizeGas) / consensus.NeuBtmRate,
+		VMNeu:      float64(totalP2WPKHGas+totalP2WSHGas) / consensus.NeuBtmRate,
 	}
 
 	return NewSuccessResponse(txGasResp)
