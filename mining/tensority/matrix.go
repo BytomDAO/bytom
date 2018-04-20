@@ -5,10 +5,11 @@ import (
 	"runtime"
 	"sync"
 	"unsafe"
+	
+	"gonum.org/v1/gonum/mat"
 
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
-	"gonum.org/v1/gonum/mat"
 )
 
 const (

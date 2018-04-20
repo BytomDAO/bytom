@@ -7,10 +7,11 @@ import "C"
 
 import (
 	"unsafe"
+	
+	"github.com/golang/groupcache/lru"
 
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
-	"github.com/golang/groupcache/lru"
 )
 
 const maxAIHashCached = 64
