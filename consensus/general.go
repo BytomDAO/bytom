@@ -32,15 +32,12 @@ const (
 
 	CoinbaseArbitrarySizeLimit = 128
 
-	VMGasRate        = int64(1000)
+	VMGasRate        = int64(100)
 	StorageGasRate   = int64(5)
 	MaxGasAmount     = int64(100000)
 	DefaultGasCredit = int64(80000)
 
-	BTMAlias       = "BTM"
-	BTMSymbol      = "BTM"
-	BTMDecimals    = 8
-	BTMDescription = `Bytom Official Issue`
+	BTMAlias = "BTM"
 )
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
@@ -62,9 +59,9 @@ var InitialSeed = &bc.Hash{
 // BTMDefinitionMap is the ....
 var BTMDefinitionMap = map[string]interface{}{
 	"name":        BTMAlias,
-	"symbol":      BTMSymbol,
-	"decimals":    BTMDecimals,
-	"description": BTMDescription,
+	"symbol":      BTMAlias,
+	"decimals":    8,
+	"description": `Bytom Official Issue`,
 }
 
 // BlockSubsidy calculate the coinbase rewards on given block height
