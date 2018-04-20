@@ -1,8 +1,6 @@
 package api
 
 import (
-	log "github.com/sirupsen/logrus"
-
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus/difficulty"
 	chainjson "github.com/bytom/encoding/json"
@@ -16,27 +14,10 @@ func (a *API) getBestBlockHash() Response {
 	return NewSuccessResponse(blockHash)
 }
 
-// return block header by hash
-func (a *API) getBlockHeaderByHash(req struct {
-	BlockHash string `json:"block_hash"`
-}) Response {
-	hash := bc.Hash{}
-	if err := hash.UnmarshalText([]byte(req.BlockHash)); err != nil {
-		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
-		return NewErrorResponse(err)
-	}
-	block, err := a.chain.GetBlockByHash(&hash)
-	if err != nil {
-		log.WithField("error", err).Error("Fail to get block by hash")
-		return NewErrorResponse(err)
-	}
-
-	resp := &BlockHeaderByHeight{
-		BlockHeader: &block.BlockHeader,
-		Reward:      block.Transactions[0].Outputs[0].Amount,
-	}
-
-	return NewSuccessResponse(resp)
+// return current block count
+func (a *API) getBlockCount() Response {
+	blockHeight := map[string]uint64{"block_count": a.chain.BestBlockHeight()}
+	return NewSuccessResponse(blockHeight)
 }
 
 // BlockTx is the tx struct for getBlock func
@@ -135,8 +116,30 @@ func (a *API) getBlock(ins GetBlockReq) Response {
 	return NewSuccessResponse(resp)
 }
 
-// return current block count
-func (a *API) getBlockCount() Response {
-	blockHeight := map[string]uint64{"block_count": a.chain.BestBlockHeight()}
-	return NewSuccessResponse(blockHeight)
+// GetBlockHeaderResp is resp struct for getBlockHeader API
+type GetBlockHeaderResp struct {
+	BlockHeader *types.BlockHeader `json:"block_header"`
+	Reward      uint64             `json:"reward"`
+}
+
+func (a *API) getBlockHeader(ins GetBlockReq) Response {
+	var err error
+	block := &types.Block{}
+	if len(ins.BlockHash) == 32 {
+		b32 := [32]byte{}
+		copy(b32[:], ins.BlockHash)
+		hash := bc.NewHash(b32)
+		block, err = a.chain.GetBlockByHash(&hash)
+	} else {
+		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
+	}
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	resp := &GetBlockHeaderResp{
+		BlockHeader: &block.BlockHeader,
+		Reward:      block.Transactions[0].Outputs[0].Amount,
+	}
+	return NewSuccessResponse(resp)
 }
