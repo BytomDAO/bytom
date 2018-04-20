@@ -184,7 +184,7 @@ func TestTransaction(t *testing.T) {
 }
 
 func TestTransactionTrailingGarbage(t *testing.T) {
-	// validTxHex is a vaild tx, we don't care what's inside as long as it's vaild
+	// validTxHex is a valid tx, we don't care what's inside as long as it's valid
 	validTxHex := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
 	validTx := Tx{}
 	if err := validTx.UnmarshalText([]byte(validTxHex)); err != nil {

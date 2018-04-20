@@ -208,8 +208,13 @@ func (a *AddrBook) PickAddress(newBias int) *NetAddress {
 	if (newCorrelation+oldCorrelation)*a.rand.Float64() < oldCorrelation {
 		// pick random Old bucket.
 		var bucket map[string]*knownAddress = nil
-		for len(bucket) == 0 {
+		num := 0
+		for len(bucket) == 0 && num < oldBucketCount {
 			bucket = a.addrOld[a.rand.Intn(len(a.addrOld))]
+			num++
+		}
+		if num == oldBucketCount {
+			return nil
 		}
 		// pick a random ka from bucket.
 		randIndex := a.rand.Intn(len(bucket))
@@ -223,8 +228,13 @@ func (a *AddrBook) PickAddress(newBias int) *NetAddress {
 	} else {
 		// pick random New bucket.
 		var bucket map[string]*knownAddress = nil
-		for len(bucket) == 0 {
+		num := 0
+		for len(bucket) == 0 && num < newBucketCount {
 			bucket = a.addrNew[a.rand.Intn(len(a.addrNew))]
+			num++
+		}
+		if num == newBucketCount {
+			return nil
 		}
 		// pick a random ka from bucket.
 		randIndex := a.rand.Intn(len(bucket))
@@ -825,12 +835,12 @@ func (ka *knownAddress) removeBucketRef(bucketIdx int) int {
 */
 func (ka *knownAddress) isBad() bool {
 	// Has been attempted in the last minute --> good
-	if ka.LastAttempt.Before(time.Now().Add(-1 * time.Minute)) {
-		return false
+	if ka.LastAttempt.After(time.Now().Add(-1 * time.Minute)) {
+		return true
 	}
 
 	// Over a month old?
-	if ka.LastAttempt.After(time.Now().Add(-1 * numMissingDays * time.Hour * 24)) {
+	if ka.LastAttempt.Before(time.Now().Add(-1 * numMissingDays * time.Hour * 24)) {
 		return true
 	}
 

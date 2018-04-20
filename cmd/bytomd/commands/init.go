@@ -1,6 +1,10 @@
 package commands
 
 import (
+	"os"
+	"path"
+
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	cfg "github.com/bytom/config"
@@ -19,9 +23,18 @@ func init() {
 }
 
 func initFiles(cmd *cobra.Command, args []string) {
+	configFilePath := path.Join(config.RootDir, "config.toml")
+	if _, err := os.Stat(configFilePath); !os.IsNotExist(err) {
+		log.WithField("config", configFilePath).Info("Already exists config file.")
+		return
+	}
+
 	if config.ChainID == "mainnet" {
 		cfg.EnsureRoot(config.RootDir, "mainnet")
 	} else {
 		cfg.EnsureRoot(config.RootDir, "testnet")
 	}
+
+	log.WithField("config", configFilePath).Info("Initialized bytom")
+
 }

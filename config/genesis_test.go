@@ -2,9 +2,6 @@ package config
 
 import (
 	"testing"
-
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/difficulty"
 )
 
 // test genesis
@@ -14,7 +11,7 @@ func TestGenerateGenesisTx(t *testing.T) {
 	}
 }
 
-func TestGenerateGenesisBlock(t *testing.T) {
+/*func TestGenerateGenesisBlock(t *testing.T) {
 	block := GenerateGenesisBlock()
 	nonce := block.Nonce
 	for {
@@ -27,4 +24,4 @@ func TestGenerateGenesisBlock(t *testing.T) {
 	if block.Nonce != nonce {
 		t.Errorf("correct nonce is %d, but get %d", block.Nonce, nonce)
 	}
-}
+}*/

@@ -96,7 +96,7 @@ func (tp *TxPool) AddTransaction(tx *types.Tx, gasOnlyTx bool, height, fee uint6
 	}
 
 	tp.newTxCh <- tx
-	log.WithField("tx_id", tx.Tx.ID.String()).Info("Add tx to mempool")
+	log.WithField("tx_id", tx.Tx.ID.String()).Debug("Add tx to mempool")
 	return txD, nil
 }
 
@@ -136,7 +136,7 @@ func (tp *TxPool) RemoveTransaction(txHash *bc.Hash) {
 	delete(tp.pool, *txHash)
 	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())
 
-	log.WithField("tx_id", txHash).Info("remove tx from mempool")
+	log.WithField("tx_id", txHash).Debug("remove tx from mempool")
 }
 
 // GetTransaction return the TxDesc by hash

@@ -83,7 +83,7 @@ func (cfg *TxTestConfig) Run() error {
 		}
 
 		gasOnlyTx := false
-		if err != nil && status.GasVaild {
+		if err != nil && status.GasValid {
 			gasOnlyTx = true
 		}
 		if gasOnlyTx != t.GasOnly {

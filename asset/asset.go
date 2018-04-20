@@ -2,7 +2,6 @@ package asset
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"strings"
 	"sync"
@@ -12,6 +11,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -27,12 +27,13 @@ var DefaultNativeAsset *Asset
 
 const (
 	maxAssetCache = 1000
-	assetPrefix   = "ASS:"
-	//AliasPrefix is asset alias prefix
-	AliasPrefix = "ALS:"
-	//ExternalAssetPrefix is external definition assets prefix
-	ExternalAssetPrefix = "EXA"
-	indexPrefix         = "ASSIDX:"
+)
+
+var (
+	assetIndexKey  = []byte("AssetIndex")
+	assetPrefix    = []byte("Asset:")
+	aliasPrefix    = []byte("AssetAlias:")
+	extAssetPrefix = []byte("EXA:")
 )
 
 func initNativeAsset() {
@@ -52,23 +53,17 @@ func initNativeAsset() {
 
 // AliasKey store asset alias prefix
 func AliasKey(name string) []byte {
-	return []byte(AliasPrefix + name)
+	return append(aliasPrefix, []byte(name)...)
 }
 
-//Key asset store prefix
+// AssetKey asset store prefix
 func Key(id *bc.AssetID) []byte {
-	name := id.String()
-	return []byte(assetPrefix + name)
+	return append(assetPrefix, id.Bytes()...)
 }
 
-func indexKey(xpub chainkd.XPub) []byte {
-	return []byte(indexPrefix + xpub.String())
-}
-
-//CalcExtAssetKey return store external assets key
-func CalcExtAssetKey(id *bc.AssetID) []byte {
-	name := id.String()
-	return []byte(ExternalAssetPrefix + name)
+// ExtAssetKey return store external assets key
+func ExtAssetKey(id *bc.AssetID) []byte {
+	return append(extAssetPrefix, id.Bytes()...)
 }
 
 // pre-define errors for supporting bytom errorFormatter
@@ -103,6 +98,7 @@ type Registry struct {
 	aliasCache *lru.Cache
 
 	assetIndexMu sync.Mutex
+	assetMu      sync.Mutex
 }
 
 //Asset describe asset on bytom chain
@@ -116,21 +112,17 @@ type Asset struct {
 	DefinitionMap     map[string]interface{} `json:"definition"`
 }
 
-func (reg *Registry) getNextAssetIndex(xpubs []chainkd.XPub) (*uint64, error) {
+func (reg *Registry) getNextAssetIndex() uint64 {
 	reg.assetIndexMu.Lock()
 	defer reg.assetIndexMu.Unlock()
 
-	var nextIndex uint64 = 1
-
-	if rawIndex := reg.db.Get(indexKey(xpubs[0])); rawIndex != nil {
-		nextIndex = binary.LittleEndian.Uint64(rawIndex) + 1
+	nextIndex := uint64(1)
+	if rawIndex := reg.db.Get(assetIndexKey); rawIndex != nil {
+		nextIndex = common.BytesToUnit64(rawIndex) + 1
 	}
 
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, nextIndex)
-	reg.db.Set(indexKey(xpubs[0]), buf)
-
-	return &nextIndex, nil
+	reg.db.Set(assetIndexKey, common.Unit64ToBytes(nextIndex))
+	return nextIndex
 }
 
 // Define defines a new Asset.
@@ -140,20 +132,23 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 	}
 
 	normalizedAlias := strings.ToUpper(strings.TrimSpace(alias))
+	if normalizedAlias == "" {
+		return nil, errors.Wrap(ErrNullAlias)
+	}
+
 	if normalizedAlias == consensus.BTMAlias {
 		return nil, ErrInternalAsset
 	}
+
+	reg.assetMu.Lock()
+	defer reg.assetMu.Unlock()
 
 	if existed := reg.db.Get(AliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
 
-	nextAssetIndex, err := reg.getNextAssetIndex(xpubs)
-	if err != nil {
-		return nil, errors.Wrap(err, "get asset index error")
-	}
-
-	assetSigner, err := signers.Create("asset", xpubs, quorum, *nextAssetIndex)
+	nextAssetIndex := reg.getNextAssetIndex()
+	assetSigner, err := signers.Create("asset", xpubs, quorum, nextAssetIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -179,14 +174,11 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		IssuanceProgram:   issuanceProgram,
 		AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
 		Signer:            assetSigner,
+		Alias:             &normalizedAlias,
 	}
 
 	if existAsset := reg.db.Get(Key(&asset.AssetID)); existAsset != nil {
 		return nil, ErrDuplicateAsset
-	}
-
-	if alias != "" {
-		asset.Alias = &normalizedAlias
 	}
 
 	ass, err := json.Marshal(asset)
@@ -227,23 +219,14 @@ func (reg *Registry) FindByID(ctx context.Context, id *bc.AssetID) (*Asset, erro
 	return asset, nil
 }
 
-//GetIDByAlias return AssetID string and nil by asset alias,if err ,return "" and err
-func (reg *Registry) GetIDByAlias(alias string) (string, error) {
-	rawID := reg.db.Get(AliasKey(alias))
-	if rawID == nil {
-		return "", ErrFindAsset
-	}
-	return string(rawID), nil
-}
-
 // FindByAlias retrieves an Asset record along with its signer,
 // given an asset alias.
-func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, error) {
+func (reg *Registry) FindByAlias(alias string) (*Asset, error) {
 	reg.cacheMu.Lock()
 	cachedID, ok := reg.aliasCache.Get(alias)
 	reg.cacheMu.Unlock()
 	if ok {
-		return reg.FindByID(ctx, cachedID.(*bc.AssetID))
+		return reg.FindByID(nil, cachedID.(*bc.AssetID))
 	}
 
 	rawID := reg.db.Get(AliasKey(alias))
@@ -259,7 +242,7 @@ func (reg *Registry) FindByAlias(ctx context.Context, alias string) (*Asset, err
 	reg.cacheMu.Lock()
 	reg.aliasCache.Add(alias, assetID)
 	reg.cacheMu.Unlock()
-	return reg.FindByID(ctx, assetID)
+	return reg.FindByID(nil, assetID)
 }
 
 //GetAliasByID return asset alias string by AssetID string
@@ -282,10 +265,39 @@ func (reg *Registry) GetAliasByID(id string) string {
 	return *asset.Alias
 }
 
+// GetAsset get asset by assetID
+func (reg *Registry) GetAsset(id string) (*Asset, error) {
+	var assetID bc.AssetID
+	if err := assetID.UnmarshalText([]byte(id)); err != nil {
+		return nil, err
+	}
+
+	if assetID.String() == DefaultNativeAsset.AssetID.String() {
+		return DefaultNativeAsset, nil
+	}
+
+	asset := &Asset{}
+	if interAsset := reg.db.Get(Key(&assetID)); interAsset != nil {
+		if err := json.Unmarshal(interAsset, asset); err != nil {
+			return nil, err
+		}
+		return asset, nil
+	}
+
+	if extAsset := reg.db.Get(ExtAssetKey(&assetID)); extAsset != nil {
+		if err := json.Unmarshal(extAsset, asset); err != nil {
+			return nil, err
+		}
+		return asset, nil
+	}
+
+	return nil, errors.WithDetailf(ErrFindAsset, "no such asset, assetID: %s", id)
+}
+
 // ListAssets returns the accounts in the db
-func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
+func (reg *Registry) ListAssets() ([]*Asset, error) {
 	assets := []*Asset{DefaultNativeAsset}
-	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix + id))
+	assetIter := reg.db.IteratorPrefix(assetPrefix)
 	defer assetIter.Release()
 
 	for assetIter.Next() {
@@ -295,6 +307,7 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 		}
 		assets = append(assets, asset)
 	}
+
 	return assets, nil
 }
 
@@ -321,27 +334,30 @@ func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int) (progra
 	return prog, 1, err
 }
 
-//UpdateAssetAlias updates oldAlias to newAlias
-func (reg *Registry) UpdateAssetAlias(oldAlias, newAlias string) error {
+//UpdateAssetAlias updates asset alias
+func (reg *Registry) UpdateAssetAlias(id, newAlias string) error {
+	oldAlias := reg.GetAliasByID(id)
+	normalizedAlias := strings.ToUpper(strings.TrimSpace(newAlias))
+
 	if oldAlias == consensus.BTMAlias || newAlias == consensus.BTMAlias {
 		return ErrInternalAsset
 	}
 
-	if oldAlias == "" || newAlias == "" {
+	if oldAlias == "" || normalizedAlias == "" {
 		return ErrNullAlias
 	}
 
-	if _, err := reg.GetIDByAlias(newAlias); err == nil {
+	if _, err := reg.FindByAlias(normalizedAlias); err == nil {
 		return ErrDuplicateAlias
 	}
 
-	findAsset, err := reg.FindByAlias(nil, oldAlias)
+	findAsset, err := reg.FindByAlias(oldAlias)
 	if err != nil {
 		return err
 	}
 
 	storeBatch := reg.db.NewBatch()
-	findAsset.Alias = &newAlias
+	findAsset.Alias = &normalizedAlias
 	assetID := &findAsset.AssetID
 	rawAsset, err := json.Marshal(findAsset)
 	if err != nil {
