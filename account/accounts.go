@@ -112,8 +112,8 @@ func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) 
 // Account is structure of Bytom account
 type Account struct {
 	*signers.Signer
-	ID    string
-	Alias string
+	ID    string `json:"id"`
+	Alias string `json:"alias"`
 }
 
 func (m *Manager) getNextAccountIndex() uint64 {
