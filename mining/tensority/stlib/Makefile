@@ -11,7 +11,8 @@ else
 endif
 
 $(TARGET): cSimdTs.o
-	cd .. && go test 
+	cd .. && go test
+	rm *.o
 
 %.o: %.cpp
 	g++ -o $@ -c $^ -std=c++11 -pthread -mavx2 -O3 -fopenmp -D_USE_OPENMP

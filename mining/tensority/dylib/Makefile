@@ -15,7 +15,11 @@ $(TARGET).dylib: cSimdTs.cpp
 	cp *.go ../
 	g++ -shared -o $@ $^ -std=c++11 -pthread -mavx2 -O3 -fPIC
 	cp cSimdTs.dylib ../
-	cd .. && go test 
+	cd .. && go test
+	rm -rf *.dylib
+	rm -rf ../*.dylib
+	rm -rf ../*.go
+	cp ../legacy/*.go ../
 
 clean:
 	rm -f *.o *.so *.a *.dylib
