@@ -29,6 +29,8 @@ cmd/bytom/.bytom
 target
 
 *.exe
+*.dylib
+*.zip
 
 # vim
 **.swp
@@ -57,3 +59,6 @@ blockchain/pseudohsm/UTC--2017-11-01T09-24-30.596579759Z--2178d885-aca6-4436-a86
 # VS Code Config Files
 .vscode/
 
+
+# log files for monitoring or debugging
+*.log
