@@ -84,7 +84,6 @@ type Switch struct {
 	nodePrivKey      crypto.PrivKeyEd25519 // our node privkey
 	bannedPeer       map[string]time.Time
 	db               dbm.DB
-	ScamPeerCh       chan *Peer
 	mtx              sync.Mutex
 
 	filterConnByAddr   func(net.Addr) error
@@ -108,7 +107,6 @@ func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB) *Switch {
 		dialing:      cmn.NewCMap(),
 		nodeInfo:     nil,
 		db:           trustHistoryDB,
-		ScamPeerCh:   make(chan *Peer),
 	}
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 
