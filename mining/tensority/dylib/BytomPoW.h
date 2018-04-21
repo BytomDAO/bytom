@@ -352,8 +352,8 @@ static inline void iter_mineBytom(
     Mat256x256i8 *resArr8=new Mat256x256i8[4];
     sha3_ctx *ctx = new sha3_ctx;
 
-    clock_t start, end;
-    start = clock();
+    // clock_t start, end;
+    // start = clock();
     // Itz faster using single thread ...
     for(int k=0; k<4; k++) { // The k-loop
         uint8_t sequence[32];
@@ -381,10 +381,10 @@ static inline void iter_mineBytom(
     res8->add(*res8, resArr8[2]);
     res8->add(*res8, resArr8[3]);
 
-    end = clock();
-    std::cout << "\tTime for getting MulMatix: "
-              << (double)(end - start) / CLOCKS_PER_SEC << "s"
-              << std::endl;
+    // end = clock();
+    // std::cout << "\tTime for getting MulMatix: "
+    //           << (double)(end - start) / CLOCKS_PER_SEC << "s"
+    //           << std::endl;
 
     Arr256x64i32 arr(*res8);
     arr.reduceFNV();

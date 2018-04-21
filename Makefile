@@ -43,7 +43,7 @@ bytomd-simd:
 	rm -f mining/tensority/*.go
 	rm -f mining/tensority/dylib/*.dylib
 	cp mining/tensority/dylib/*.go mining/tensority/
-	g++ -shared -o mining/tensority/dylib/cSimdTs.dylib mining/tensority/stlib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fPIC
+	g++ -shared -o mining/tensority/dylib/cSimdTs.dylib mining/tensority/dylib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fPIC
 	cp mining/tensority/dylib/cSimdTs.dylib cmd/bytomd/
 	go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 	rm -f mining/tensority/*.go
