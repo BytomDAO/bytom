@@ -131,12 +131,12 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, errors.Wrap(signers.ErrNoXPubs)
 	}
 
-	normalizedAlias := strings.ToUpper(strings.TrimSpace(alias))
-	if normalizedAlias == "" {
+	alias = strings.ToUpper(strings.TrimSpace(alias))
+	if alias == "" {
 		return nil, errors.Wrap(ErrNullAlias)
 	}
 
-	if normalizedAlias == consensus.BTMAlias {
+	if alias == consensus.BTMAlias {
 		return nil, ErrInternalAsset
 	}
 
@@ -167,9 +167,9 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		IssuanceProgram:   issuanceProgram,
 		AssetID:           bc.ComputeAssetID(issuanceProgram, vmver, &defHash),
 		Signer:            assetSigner,
-		Alias:             &normalizedAlias,
+		Alias:             &alias,
 	}
-	return a, reg.SaveAsset(a, normalizedAlias)
+	return a, reg.SaveAsset(a, alias)
 }
 
 func (reg *Registry) SaveAsset(a *Asset, alias string) error {
@@ -341,17 +341,20 @@ func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int) (progra
 //UpdateAssetAlias updates asset alias
 func (reg *Registry) UpdateAssetAlias(id, newAlias string) error {
 	oldAlias := reg.GetAliasByID(id)
-	normalizedAlias := strings.ToUpper(strings.TrimSpace(newAlias))
+	newAlias = strings.ToUpper(strings.TrimSpace(newAlias))
 
 	if oldAlias == consensus.BTMAlias || newAlias == consensus.BTMAlias {
 		return ErrInternalAsset
 	}
 
-	if oldAlias == "" || normalizedAlias == "" {
+	if oldAlias == "" || newAlias == "" {
 		return ErrNullAlias
 	}
 
-	if _, err := reg.FindByAlias(normalizedAlias); err == nil {
+	reg.assetMu.Lock()
+	defer reg.assetMu.Unlock()
+
+	if _, err := reg.FindByAlias(newAlias); err == nil {
 		return ErrDuplicateAlias
 	}
 
@@ -361,7 +364,7 @@ func (reg *Registry) UpdateAssetAlias(id, newAlias string) error {
 	}
 
 	storeBatch := reg.db.NewBatch()
-	findAsset.Alias = &normalizedAlias
+	findAsset.Alias = &newAlias
 	assetID := &findAsset.AssetID
 	rawAsset, err := json.Marshal(findAsset)
 	if err != nil {
