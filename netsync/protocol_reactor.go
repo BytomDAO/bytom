@@ -108,6 +108,9 @@ func (pr *ProtocolReactor) OnStop() {
 
 // syncTransactions starts sending all currently pending transactions to the given peer.
 func (pr *ProtocolReactor) syncTransactions(p *peer) {
+	if p == nil {
+		return
+	}
 	pending := pr.txPool.GetTransactions()
 	if len(pending) == 0 {
 		return
@@ -123,7 +126,9 @@ func (pr *ProtocolReactor) syncTransactions(p *peer) {
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	pr.handshakeMu.Lock()
 	defer pr.handshakeMu.Unlock()
-
+	if peer == nil {
+		return errPeerDropped
+	}
 	if ok := peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
 		return ErrStatusRequest
 	}
@@ -139,11 +144,18 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 				}
 				pr.peers.AddPeer(peer)
 				pr.peers.SetPeerStatus(status.peerID, status.height, status.hash)
-				pr.syncTransactions(pr.peers.Peer(peer.Key))
+				prPeer, ok := pr.peers.Peer(peer.Key)
+				if !ok {
+					return errPeerDropped
+				}
+				pr.syncTransactions(prPeer)
 				pr.newPeerCh <- struct{}{}
 				return nil
 			}
 		case <-retryTicker:
+			if peer == nil {
+				return errPeerDropped
+			}
 			if ok := peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
 				return ErrStatusRequest
 			}
@@ -155,7 +167,11 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 
 // RemovePeer implements Reactor by removing peer from the pool.
 func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
-	pr.quitReqBlockCh <- &peer.Key
+	select {
+	case pr.quitReqBlockCh <- &peer.Key:
+	default:
+		log.Warning("quitReqBlockCh is full")
+	}
 	pr.peers.RemovePeer(peer.Key)
 }
 
