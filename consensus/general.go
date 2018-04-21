@@ -19,7 +19,7 @@ const (
 	CoinbasePendingBlockNumber = uint64(100)
 	subsidyReductionInterval   = uint64(840000)
 	baseSubsidy                = uint64(41250000000)
-	InitialBlockSubsidy        = uint64(1470000041250000000)
+	InitialBlockSubsidy        = uint64(147000041250000000)
 
 	// config for pow mining
 	PowMinBits            = uint64(2305843009213861724)
