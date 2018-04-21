@@ -44,6 +44,7 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 	return decoder, true
 }
 
+// TODO modify mergeActions to loadSpendAction
 func mergeActions(req *BuildRequest) ([]map[string]interface{}, error) {
 	var actions []map[string]interface{}
 	actionMap := make(map[string]map[string]interface{})
