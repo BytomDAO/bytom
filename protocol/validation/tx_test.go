@@ -66,7 +66,7 @@ func TestGasStatus(t *testing.T) {
 				BTMValue: 0,
 			},
 			output: &GasState{
-				GasLeft:  100000,
+				GasLeft:  200000,
 				GasUsed:  0,
 				BTMValue: 80000000000,
 			},
@@ -318,13 +318,6 @@ func TestTxValidation(t *testing.T) {
 			err: errOverGasCredit,
 		},
 		{
-			desc: "overflowing storage gas",
-			f: func() {
-				vs.tx.SerializedSize = math.MaxInt64
-			},
-			err: errGasCalculate,
-		},
-		{
 			desc: "can't find gas spend input in entries",
 			f: func() {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
@@ -456,7 +449,7 @@ func TestTxValidation(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
+	for i, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
 			fixture = sample(t, nil)
 			tx = types.NewTx(*fixture.tx).Tx
@@ -479,7 +472,7 @@ func TestTxValidation(t *testing.T) {
 			err := checkValid(vs, tx.TxHeader)
 
 			if rootErr(err) != c.err {
-				t.Errorf("got error %s, want %s; validationState is:\n%s", err, c.err, spew.Sdump(vs))
+				t.Errorf("case #%d (%s) got error %s, want %s; validationState is:\n%s", i, c.desc, err, c.err, spew.Sdump(vs))
 			}
 		})
 	}
