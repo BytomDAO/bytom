@@ -177,7 +177,7 @@ func SendReq(method string, args []string) (interface{}, bool) {
 	default:
 		return "", false
 	}
-	data, exitCode := util.ClientCall(methodPath, &param)
+	data, exitCode := ClientCall(methodPath, &param)
 	if exitCode != util.Success {
 		return "", false
 	}

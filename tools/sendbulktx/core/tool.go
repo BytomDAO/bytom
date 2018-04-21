@@ -29,7 +29,7 @@ type config struct {
 func init() {
 	sendTxCmd.PersistentFlags().IntVar(&thdTxNum, "thdtxnum", 10, " The number of transactions per goroutine")
 	sendTxCmd.PersistentFlags().IntVar(&thdNum, "thdnum", 5, "goroutine num")
-	sendTxCmd.PersistentFlags().IntVar(&assetNum, "assetnum", 10, "Number of transactions asset")
+	sendTxCmd.PersistentFlags().IntVar(&assetNum, "assetnum", 100000000, "Number of transactions asset,unit: neu")
 	sendTxCmd.PersistentFlags().StringVar(&configFile, "config", "./config.toml", "config file")
 }
 
