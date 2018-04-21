@@ -107,7 +107,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(getBlockCountCmd)
 	BytomcliCmd.AddCommand(getBlockHashCmd)
 	BytomcliCmd.AddCommand(getBlockCmd)
-	BytomcliCmd.AddCommand(getBlockHeaderByHashCmd)
+	BytomcliCmd.AddCommand(getBlockHeaderCmd)
 
 	BytomcliCmd.AddCommand(createKeyCmd)
 	BytomcliCmd.AddCommand(deleteKeyCmd)
