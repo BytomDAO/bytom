@@ -44,7 +44,7 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 	return decoder, true
 }
 
-func mergeActions(req *BuildRequest) []map[string]interface{} {
+func mergeActions(req *BuildRequest) ([]map[string]interface{}, error) {
 	var actions []map[string]interface{}
 	actionMap := make(map[string]map[string]interface{})
 
@@ -54,13 +54,28 @@ func mergeActions(req *BuildRequest) []map[string]interface{} {
 			continue
 		}
 
-		actionKey := m["asset_id"].(string) + m["account_id"].(string)
-		amountNumber := m["amount"].(json.Number)
-		amount, _ := amountNumber.Int64()
+		if m["amount"] == nil {
+			return nil, errEmptyAmount
+		}
 
+		amountNumber := m["amount"].(json.Number)
+		amount, err := amountNumber.Int64()
+		if err != nil || amount == 0 {
+			return nil, errBadAmount
+		}
+
+		actionKey := m["asset_id"].(string) + m["account_id"].(string)
 		if tmpM, ok := actionMap[actionKey]; ok {
-			tmpNumber, _ := tmpM["amount"].(json.Number)
-			tmpAmount, _ := tmpNumber.Int64()
+			if tmpM["amount"] == nil {
+				return nil, errEmptyAmount
+			}
+
+			tmpNumber := tmpM["amount"].(json.Number)
+			tmpAmount, err := tmpNumber.Int64()
+			if err != nil || tmpAmount == 0 {
+				return nil, errBadAmount
+			}
+
 			tmpM["amount"] = json.Number(fmt.Sprintf("%v", tmpAmount+amount))
 		} else {
 			actionMap[actionKey] = m
@@ -68,7 +83,7 @@ func mergeActions(req *BuildRequest) []map[string]interface{} {
 		}
 	}
 
-	return actions
+	return actions, nil
 }
 
 func onlyHaveSpendActions(req *BuildRequest) bool {
@@ -92,7 +107,11 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		return nil, errors.New("transaction only contain spend actions, didn't have output actions")
 	}
 
-	reqActions := mergeActions(req)
+	reqActions, err := mergeActions(req)
+	if err != nil {
+		return nil, errors.WithDetail(err, "unmarshal json amount error in mergeActions")
+	}
+
 	actions := make([]txbuilder.Action, 0, len(reqActions))
 	for i, act := range reqActions {
 		typ, ok := act["type"].(string)

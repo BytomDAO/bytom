@@ -13,6 +13,8 @@ import (
 var (
 	errBadActionType = errors.New("bad action type")
 	errBadAction     = errors.New("bad action object")
+	errEmptyAmount   = errors.New("nil amount in the request actions")
+	errBadAmount     = errors.New("bad amount in the request actions")
 )
 
 // BuildRequest is main struct when building transactions
