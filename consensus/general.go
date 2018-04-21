@@ -22,7 +22,6 @@ const (
 	InitialBlockSubsidy        = uint64(147000041250000000)
 
 	// config for pow mining
-	PowMinBits            = uint64(2305843009213861724)
 	BlocksPerRetarget     = uint64(2016)
 	TargetSecondsPerBlock = uint64(150)
 	SeedPerRetarget       = uint64(256)
