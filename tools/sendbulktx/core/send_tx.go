@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
 
 	"github.com/bytom/api"
 	"github.com/bytom/blockchain/txbuilder"
@@ -185,7 +186,7 @@ func SendReq(method string, args []string) (interface{}, bool) {
 }
 
 // Sendbulktx send asset tx
-func Sendbulktx(threadTxNum int, txBtmNum string, sendAcct string, sendasset string, controlPrograms []string, txidChan chan string) {
+func Sendbulktx(threadTxNum int, txBtmNum string, sendAcct string, sendasset string, controlPrograms []string, txidChan chan string, index *uint64) {
 	arrayLen := len(controlPrograms)
 	for i := 0; i < threadTxNum; i++ {
 		//build tx
@@ -222,6 +223,9 @@ func Sendbulktx(threadTxNum int, txBtmNum string, sendAcct string, sendasset str
 			txidChan <- ""
 			continue
 		}
+
+		atomic.AddUint64(index, 1)
+		fmt.Println("tx num:", atomic.LoadUint64(index), " txid:", resp)
 		type txID struct {
 			Txid string `json:"tx_id"`
 		}

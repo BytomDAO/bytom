@@ -74,8 +74,9 @@ var sendTxCmd = &cobra.Command{
 		txBtm := fmt.Sprintf("%d", assetNum)
 		fmt.Println("*****************send tx start*****************")
 		// send btm to account
+		index := uint64(0)
 		for i := 0; i < thdNum; i++ {
-			go Sendbulktx(thdTxNum, txBtm, sendAcct, sendasset, controlPrograms, txidChan)
+			go Sendbulktx(thdTxNum, txBtm, sendAcct, sendasset, controlPrograms, txidChan, &index)
 		}
 
 		txs := list.New()

@@ -6,6 +6,7 @@ import (
 	"github.com/bytom/api"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/env"
+	jww "github.com/spf13/jwalterweatherman"
 )
 
 const (
@@ -44,11 +45,11 @@ func ClientCall(path string, req ...interface{}) (interface{}, int) {
 
 	client := MustRPCClient()
 	client.Call(context.Background(), path, request, response)
-
 	switch response.Status {
 	case api.FAIL:
 		return nil, ErrRemote
 	case "":
+		jww.ERROR.Println("Unable to connect to the bytomd")
 		return nil, ErrConnect
 	}
 
