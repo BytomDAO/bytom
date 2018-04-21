@@ -114,6 +114,6 @@ benchmark:
 functional-tests:
 	@go test -v -timeout=30m -tags=functional ./test
 
-ci: test functional-tests
+ci: test
 
 .PHONY: all target release-all clean test benchmark
