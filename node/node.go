@@ -60,16 +60,15 @@ func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 	initActiveNetParams(config)
 	// Get store
-	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-	store := leveldb.NewStore(txDB)
+	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
+	store := leveldb.NewStore(coreDB)
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
 
 	// Make event switch
 	eventSwitch := types.NewEventSwitch()
-	_, err := eventSwitch.Start()
-	if err != nil {
+	if _, err := eventSwitch.Start(); err != nil {
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
 

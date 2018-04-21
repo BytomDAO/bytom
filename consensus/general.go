@@ -85,6 +85,7 @@ type Params struct {
 	Bech32HRPSegwit string
 }
 
+// ActiveNetParams is ...
 var ActiveNetParams = MainNetParams
 
 // NetParams is the correspondence between chain_id and Params
