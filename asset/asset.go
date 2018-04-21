@@ -52,7 +52,7 @@ func initNativeAsset() {
 }
 
 // AliasKey store asset alias prefix
-func AliasKey(name string) []byte {
+func aliasKey(name string) []byte {
 	return append(aliasPrefix, []byte(name)...)
 }
 
@@ -140,13 +140,6 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, ErrInternalAsset
 	}
 
-	reg.assetMu.Lock()
-	defer reg.assetMu.Unlock()
-
-	if existed := reg.db.Get(AliasKey(normalizedAlias)); existed != nil {
-		return nil, ErrDuplicateAlias
-	}
-
 	nextAssetIndex := reg.getNextAssetIndex()
 	assetSigner, err := signers.Create("asset", xpubs, quorum, nextAssetIndex)
 	if err != nil {
@@ -167,7 +160,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 	}
 
 	defHash := bc.NewHash(sha3.Sum256(rawDefinition))
-	asset := &Asset{
+	a := &Asset{
 		DefinitionMap:     definition,
 		RawDefinitionByte: rawDefinition,
 		VMVersion:         vmver,
@@ -176,22 +169,33 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		Signer:            assetSigner,
 		Alias:             &normalizedAlias,
 	}
+	return a, reg.SaveAsset(a, normalizedAlias)
+}
 
-	if existAsset := reg.db.Get(Key(&asset.AssetID)); existAsset != nil {
-		return nil, ErrDuplicateAsset
+func (reg *Registry) SaveAsset(a *Asset, alias string) error {
+	reg.assetMu.Lock()
+	defer reg.assetMu.Unlock()
+
+	aliasKey := aliasKey(alias)
+	if existed := reg.db.Get(aliasKey); existed != nil {
+		return ErrDuplicateAlias
 	}
 
-	ass, err := json.Marshal(asset)
+	assetKey := Key(&a.AssetID)
+	if existAsset := reg.db.Get(assetKey); existAsset != nil {
+		return ErrDuplicateAsset
+	}
+
+	rawAsset, err := json.Marshal(a)
 	if err != nil {
-		return nil, ErrMarshalAsset
+		return ErrMarshalAsset
 	}
 
 	storeBatch := reg.db.NewBatch()
-	storeBatch.Set(AliasKey(normalizedAlias), []byte(asset.AssetID.String()))
-	storeBatch.Set(Key(&asset.AssetID), ass)
+	storeBatch.Set(aliasKey, []byte(a.AssetID.String()))
+	storeBatch.Set(assetKey, rawAsset)
 	storeBatch.Write()
-
-	return asset, nil
+	return nil
 }
 
 // FindByID retrieves an Asset record along with its signer, given an assetID.
@@ -229,7 +233,7 @@ func (reg *Registry) FindByAlias(alias string) (*Asset, error) {
 		return reg.FindByID(nil, cachedID.(*bc.AssetID))
 	}
 
-	rawID := reg.db.Get(AliasKey(alias))
+	rawID := reg.db.Get(aliasKey(alias))
 	if rawID == nil {
 		return nil, errors.Wrapf(ErrFindAsset, "no such asset, alias: %s", alias)
 	}
@@ -365,8 +369,8 @@ func (reg *Registry) UpdateAssetAlias(id, newAlias string) error {
 	}
 
 	storeBatch.Set(Key(assetID), rawAsset)
-	storeBatch.Set(AliasKey(newAlias), []byte(assetID.String()))
-	storeBatch.Delete(AliasKey(oldAlias))
+	storeBatch.Set(aliasKey(newAlias), []byte(assetID.String()))
+	storeBatch.Delete(aliasKey(oldAlias))
 	storeBatch.Write()
 
 	reg.cacheMu.Lock()
