@@ -9,19 +9,23 @@ import (
 //consensus variables
 const (
 	// Max gas that one block contains
-	MaxBlockGas = uint64(100000000)
+	MaxBlockGas      = uint64(10000000)
+	VMGasRate        = int64(200)
+	StorageGasRate   = int64(1)
+	MaxGasAmount     = int64(200000)
+	DefaultGasCredit = int64(30000)
 
 	//config parameter for coinbase reward
-	CoinbasePendingBlockNumber = uint64(6)
+	CoinbasePendingBlockNumber = uint64(100)
 	subsidyReductionInterval   = uint64(840000)
 	baseSubsidy                = uint64(41250000000)
-	InitialBlockSubsidy        = uint64(1470000000000000000)
+	InitialBlockSubsidy        = uint64(1470000041250000000)
 
 	// config for pow mining
 	PowMinBits            = uint64(2305843009213861724)
-	BlocksPerRetarget     = uint64(128)
-	TargetSecondsPerBlock = uint64(60)
-	SeedPerRetarget       = uint64(128)
+	BlocksPerRetarget     = uint64(2016)
+	TargetSecondsPerBlock = uint64(150)
+	SeedPerRetarget       = uint64(256)
 
 	// MaxTimeOffsetSeconds is the maximum number of seconds a block time is allowed to be ahead of the current time
 	MaxTimeOffsetSeconds = uint64(60 * 60)
@@ -29,13 +33,7 @@ const (
 
 	PayToWitnessPubKeyHashDataSize = 20
 	PayToWitnessScriptHashDataSize = 32
-
-	CoinbaseArbitrarySizeLimit = 128
-
-	VMGasRate        = int64(100)
-	StorageGasRate   = int64(2)
-	MaxGasAmount     = int64(100000)
-	DefaultGasCredit = int64(80000)
+	CoinbaseArbitrarySizeLimit     = 128
 
 	BTMAlias = "BTM"
 )
