@@ -156,7 +156,7 @@ func NewStatusResponseMessage(blockHeader *types.BlockHeader, hash *bc.Hash) *St
 	return &StatusResponseMessage{
 		Height:      blockHeader.Height,
 		RawHash:     blockHeader.Hash().Byte32(),
-		GenesisHash: (*hash).Byte32(),
+		GenesisHash: hash.Byte32(),
 	}
 }
 
