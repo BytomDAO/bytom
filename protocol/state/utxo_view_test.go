@@ -138,7 +138,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
-					Height:            7,
+					Height:            101,
 					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
@@ -288,7 +288,7 @@ func TestApplyBlock(t *testing.T) {
 	for i, c := range cases {
 		c.block.TransactionStatus.SetStatus(0, c.gasOnlyTx)
 		if err := c.inputView.ApplyBlock(c.block, c.block.TransactionStatus); c.err != (err != nil) {
-			t.Errorf("want err = %v, get err = %v", c.err, err)
+			t.Errorf("case #%d want err = %v, get err = %v", i, c.err, err)
 		}
 		if c.err {
 			continue
