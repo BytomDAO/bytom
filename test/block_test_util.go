@@ -1,8 +1,6 @@
 package test
 
 import (
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/mining/tensority"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -20,9 +18,10 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	txStatus.SetStatus(0, false)
 
 	preBlockHeader := chain.BestBlockHeader()
-	var compareDiffBH *types.BlockHeader
-	if compareDiffBlock, err := chain.GetBlockByHeight(preBlockHeader.Height - consensus.BlocksPerRetarget); err == nil {
-		compareDiffBH = &compareDiffBlock.BlockHeader
+	preBlockHash := preBlockHeader.Hash()
+	nextBits, err := chain.CalcNextBits(&preBlockHash)
+	if err != nil {
+		return nil, err
 	}
 
 	b := &types.Block{
@@ -32,7 +31,7 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 			PreviousBlockHash: preBlockHeader.Hash(),
 			Timestamp:         preBlockHeader.Timestamp + 1,
 			BlockCommitment:   types.BlockCommitment{},
-			Bits:              difficulty.CalcNextRequiredDifficulty(preBlockHeader, compareDiffBH),
+			Bits:              nextBits,
 		},
 		Transactions: []*types.Tx{nil},
 	}
