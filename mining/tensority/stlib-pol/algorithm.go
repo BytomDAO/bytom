@@ -1,8 +1,8 @@
 package tensority
 
 // #cgo CFLAGS: -I.
-// #cgo LDFLAGS: -L./stlib/ -l:cSimdTs.o -lstdc++ -lgomp
-// #include "./stlib/cSimdTs.h"
+// #cgo LDFLAGS: -L./stlib-pol/ -l:cSimdTs.o -lstdc++ -lgomp
+// #include "./stlib-pol/cSimdTs.h"
 import "C"
 
 import (
