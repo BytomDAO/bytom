@@ -54,43 +54,43 @@ func (p *peer) setStatus(height uint64, hash *bc.Hash) {
 	p.hash = hash
 }
 
-func (p *peer) requestBlockByHash(hash *bc.Hash) error {
-	msg := &BlockRequestMessage{RawHash: hash.Byte32()}
-	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	return nil
-}
-
-func (p *peer) requestBlockByHeight(height uint64) error {
+func (p *peer) reqBlockByHeight(height uint64) bool {
 	msg := &BlockRequestMessage{Height: height}
-	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	return nil
+	return p.swPeer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
 }
 
 func (p *peer) sendTransaction(tx *types.Tx) bool {
-	msg, err := NewTransactionNotifyMessage(tx)
-	if err != nil {
+	if p.knownTxs.Has(tx.ID.String()) {
 		return true
 	}
 
-	p.knownTxs.Add(tx.ID.String())
+	msg, err := NewTransactionNotifyMessage(tx)
+	if err != nil {
+		log.WithField("err", err).Errorf("NewTransactionNotifyMessage fail on generate message")
+		return true
+	}
+
+	p.markTransaction(&tx.ID)
 	return p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 }
 
 func (p *peer) sendBlock(block *types.Block) bool {
-	msg, err := NewMinedBlockMessage(block)
-	if err != nil {
+	blockHash := block.Hash()
+	if p.knownBlocks.Has(blockHash.String()) {
 		return true
 	}
 
-	blockHash := block.Hash()
-	p.knownBlocks.Add(blockHash.String())
+	msg, err := NewMinedBlockMessage(block)
+	if err != nil {
+		log.WithField("err", err).Errorf("NewMinedBlockMessage fail on generate message")
+		return true
+	}
+
+	p.markBlock(&blockHash)
 	return p.swPeer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
 }
 
 func (p *peer) getPeer() *p2p.Peer {
-	p.mtx.RLock()
-	defer p.mtx.RUnlock()
-
 	return p.swPeer
 }
 
@@ -126,6 +126,9 @@ func (p *peer) markBlock(hash *bc.Hash) {
 // the score is above the ban threshold, the peer will be banned and
 // disconnected.
 func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
 	warnThreshold := defaultBanThreshold >> 1
 	if transient == 0 && persistent == 0 {
 		// The score is not being increased, but a warning message is still

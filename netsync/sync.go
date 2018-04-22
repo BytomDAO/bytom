@@ -83,21 +83,14 @@ func (sm *SyncManager) synchronise() {
 	}
 	defer atomic.StoreInt32(&sm.synchronising, 0)
 
-	peer, bestHeight := sm.peers.BestPeer()
-	// Short circuit if no peers are available
-	if peer == nil {
+	peerID, height := sm.peers.BestPeer()
+	if peerID == "" {
 		return
 	}
 
-	if ok := sm.Switch().Peers().Has(peer.Key); !ok {
-		log.Info("Peer disconnected")
-		sm.sw.StopPeerGracefully(peer)
-		return
-	}
-
-	if bestHeight > sm.chain.BestBlockHeight() {
-		log.Info("sync peer:", peer.Addr(), " height:", bestHeight)
-		sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
+	if height > sm.chain.BestBlockHeight() {
+		log.Info("sync peer:", peerID, " height:", height)
+		sm.blockKeeper.BlockRequestWorker(peerID, height)
 	}
 }
 

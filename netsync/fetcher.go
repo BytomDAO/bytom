@@ -152,10 +152,7 @@ func (f *Fetcher) insert(peerID string, block *types.Block) {
 	}
 	// If import succeeded, broadcast the block
 	log.Info("success process a block from new mined blocks cache. block height: ", block.Height)
-	if err := f.peers.BroadcastMinedBlock(block); err != nil {
-		log.Errorf("Broadcast mine block error. %v", err)
-		return
-	}
+	f.peers.BroadcastMinedBlock(block)
 }
 
 // forgetBlock removes all traces of a queued block from the fetcher's internal

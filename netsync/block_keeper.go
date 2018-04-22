@@ -107,16 +107,13 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 			return errGetBlockByHash
 		}
 
-		if err := bk.peers.BroadcastMinedBlock(block); err != nil {
-			log.Errorf("Failed on broadcast new status block %v", err)
-			return errBroadcastStatus
-		}
+		bk.peers.BroadcastMinedBlock(block)
 	}
 	return nil
 }
 
 func (bk *blockKeeper) blockRequest(peerID string, height uint64) error {
-	return bk.peers.RequestBlockByHeight(peerID, height)
+	return bk.peers.ReqBlockByHeight(peerID, height)
 }
 
 func (bk *blockKeeper) BlockRequest(peerID string, height uint64) (*types.Block, error) {

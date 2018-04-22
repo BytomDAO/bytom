@@ -18,8 +18,6 @@ import (
 )
 
 const (
-	// BlockchainChannel is a channel for blocks and status updates
-	BlockchainChannel        = byte(0x40)
 	protocolHandshakeTimeout = time.Second * 10
 	handshakeRetryTicker     = 4 * time.Second
 )
@@ -89,7 +87,7 @@ func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.
 func (pr *ProtocolReactor) GetChannels() []*p2p.ChannelDescriptor {
 	return []*p2p.ChannelDescriptor{
 		&p2p.ChannelDescriptor{
-			ID:                BlockchainChannel,
+			ID:                node.BlockchainChannel,
 			Priority:          5,
 			SendQueueCapacity: 100,
 		},
@@ -125,7 +123,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	pr.handshakeMu.Lock()
 	defer pr.handshakeMu.Unlock()
 
-	if ok := peer.Send(BlockchainChannel, struct{ node.BlockchainMessage }{&node.StatusRequestMessage{}}); !ok {
+	if ok := peer.Send(node.BlockchainChannel, struct{ node.BlockchainMessage }{&node.StatusRequestMessage{}}); !ok {
 		return ErrStatusRequest
 	}
 	retryTicker := time.Tick(handshakeRetryTicker)
@@ -138,14 +136,13 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 					log.Info("Remote peer genesis block hash:", status.genesisHash.String(), " local hash:", pr.genesisHash.String())
 					return ErrDiffGenesisHash
 				}
-				pr.peers.AddPeer(peer)
-				pr.peers.SetPeerStatus(status.peerID, status.height, status.hash)
+				pr.peers.AddPeer(peer, status.height, status.hash)
 				pr.syncTransactions(peer.Key)
 				pr.newPeerCh <- struct{}{}
 				return nil
 			}
 		case <-retryTicker:
-			if ok := peer.Send(BlockchainChannel, struct{ node.BlockchainMessage }{&node.StatusRequestMessage{}}); !ok {
+			if ok := peer.Send(node.BlockchainChannel, struct{ node.BlockchainMessage }{&node.StatusRequestMessage{}}); !ok {
 				return ErrStatusRequest
 			}
 		case <-handshakeWait.C:
@@ -197,7 +194,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 			log.Errorf("Fail on BlockRequestMessage create resoinse: %v", err)
 			return
 		}
-		src.TrySend(BlockchainChannel, struct{ node.BlockchainMessage }{response})
+		src.TrySend(node.BlockchainChannel, struct{ node.BlockchainMessage }{response})
 
 	case *node.BlockResponseMessage:
 		log.Info("BlockResponseMessage height:", msg.GetBlock().Height)
@@ -205,7 +202,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 
 	case *node.StatusRequestMessage:
 		blockHeader := pr.chain.BestBlockHeader()
-		src.TrySend(BlockchainChannel, struct{ node.BlockchainMessage }{node.NewStatusResponseMessage(blockHeader, &pr.genesisHash)})
+		src.TrySend(node.BlockchainChannel, struct{ node.BlockchainMessage }{node.NewStatusResponseMessage(blockHeader, &pr.genesisHash)})
 
 	case *node.StatusResponseMessage:
 		peerStatus := &initalPeerStatus{

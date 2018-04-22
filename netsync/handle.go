@@ -164,10 +164,7 @@ func (sm *SyncManager) txBroadcastLoop() {
 	for {
 		select {
 		case newTx := <-newTxCh:
-			if err := sm.peers.BroadcastTx(newTx); err != nil {
-				log.Errorf("Broadcast new tx error. %v", err)
-				return
-			}
+			sm.peers.BroadcastTx(newTx)
 		case <-sm.quitSync:
 			return
 		}
@@ -183,10 +180,7 @@ func (sm *SyncManager) minedBroadcastLoop() {
 				log.Errorf("Failed on mined broadcast loop get block %v", err)
 				return
 			}
-			if err := sm.peers.BroadcastMinedBlock(block); err != nil {
-				log.Errorf("Broadcast mine block error. %v", err)
-				return
-			}
+			sm.peers.BroadcastMinedBlock(block)
 		case <-sm.quitSync:
 			return
 		}
