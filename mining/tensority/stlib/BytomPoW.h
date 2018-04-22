@@ -1,3 +1,4 @@
+/* BytomPoW.h */
 #ifndef BYTOMPOW_H
 #define BYTOMPOW_H
 
@@ -347,7 +348,7 @@ struct BytomMatList16 {
 // extern BytomMatList8* matList_int8;
 extern BytomMatList16* matList_int16;
 
-static inline void iter_mineBytom(
+inline void iter_mineBytom(
                         const uint8_t *fixedMessage,
                         uint32_t len,
                         // uint8_t nonce[8],
@@ -409,7 +410,7 @@ static inline void iter_mineBytom(
     delete ctx;
 }
 
-static inline void incrNonce(uint8_t nonce[8]) {
+inline void incrNonce(uint8_t nonce[8]) {
     for(int i=0; i<8; i++) {
         if(nonce[i]!=255) {
             nonce[i]++;
@@ -420,7 +421,7 @@ static inline void incrNonce(uint8_t nonce[8]) {
     }
 }
 
-static inline int countLeadingZero(uint8_t result[32]) {
+inline int countLeadingZero(uint8_t result[32]) {
     int count=0;
     for (int i=31; i>=0; i--) { // NOTE: reverse
         if (result[i] < 1) {
@@ -451,7 +452,7 @@ static inline int countLeadingZero(uint8_t result[32]) {
     return count;
 }
 
-// static inline int test_mineBytom(
+// inline int test_mineBytom(
 //     const uint8_t *fixedMessage,
 //     uint32_t len,
 //     uint8_t nonce[32],

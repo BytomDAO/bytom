@@ -52,6 +52,8 @@ inline void rhash_keccak_final(sha3_ctx *ctx, unsigned char* result);
 #endif /* __cplusplus */
 
 
+
+// Adpated from sha3.c
 /*--------------------------------------------------------------------------*/
 /* sha3.c - an implementation of Secure Hash Algorithm 3 (Keccak).
  * based on the
@@ -74,8 +76,7 @@ inline void rhash_keccak_final(sha3_ctx *ctx, unsigned char* result);
 
 #include <assert.h>
 #include <string.h>
-#include "byte_order.h"
-// #include "sha3.h"
+#include "byte_order-allInOne.h"
 
 /* constants */
 #define NumberOfRounds 24
@@ -91,7 +92,7 @@ static uint64_t keccak_round_constants[NumberOfRounds] = {
 };
 
 /* Initializing a sha3 context for given number of output bits */
-static inline void rhash_keccak_init(sha3_ctx *ctx, unsigned bits)
+inline void rhash_keccak_init(sha3_ctx *ctx, unsigned bits)
 {
     /* NB: The Keccak capacity parameter = bits * 2 */
     unsigned rate = 1600 - bits * 2;
@@ -142,7 +143,7 @@ inline void rhash_sha3_512_init(sha3_ctx *ctx)
 }
 
 /* Keccak theta() transformation */
-static inline void keccak_theta(uint64_t *A)
+inline void keccak_theta(uint64_t *A)
 {
     unsigned int x;
     uint64_t C[5], D[5];
@@ -166,7 +167,7 @@ static inline void keccak_theta(uint64_t *A)
 }
 
 /* Keccak pi() transformation */
-static inline void keccak_pi(uint64_t *A)
+inline void keccak_pi(uint64_t *A)
 {
     uint64_t A1;
     A1 = A[1];
@@ -198,7 +199,7 @@ static inline void keccak_pi(uint64_t *A)
 }
 
 /* Keccak chi() transformation */
-static inline void keccak_chi(uint64_t *A)
+inline void keccak_chi(uint64_t *A)
 {
     int i;
     for (i = 0; i < 25; i += 5) {
@@ -211,7 +212,7 @@ static inline void keccak_chi(uint64_t *A)
     }
 }
 
-static inline void rhash_sha3_permutation(uint64_t *state)
+inline void rhash_sha3_permutation(uint64_t *state)
 {
     int round;
     for (round = 0; round < NumberOfRounds; round++)
@@ -259,7 +260,7 @@ static inline void rhash_sha3_permutation(uint64_t *state)
  * @param block the message block to process
  * @param block_size the size of the processed block in bytes
  */
-static inline void rhash_sha3_process_block(uint64_t hash[25], const uint64_t *block, size_t block_size)
+inline void rhash_sha3_process_block(uint64_t hash[25], const uint64_t *block, size_t block_size)
 {
     /* expanded loop */
     hash[ 0] ^= le2me_64(block[ 0]);
