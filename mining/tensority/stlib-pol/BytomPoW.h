@@ -347,13 +347,13 @@ struct BytomMatList16 {
 
 // extern BytomMatList8* matList_int8;
 // extern BytomMatList16* matList_int16;
+extern BytomMatList16 matList_int16;
 
 inline void iter_mineBytom(
                         const uint8_t *fixedMessage,
                         uint32_t len,
                         // uint8_t nonce[8],
-                        uint8_t result[32],
-                        BytomMatList16 matList_int16) {
+                        uint8_t result[32]) {
     Mat256x256i8 *resArr8=new Mat256x256i8[4];
 
     clock_t start, end;
