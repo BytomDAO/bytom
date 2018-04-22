@@ -19,10 +19,9 @@ const (
 	CoinbasePendingBlockNumber = uint64(100)
 	subsidyReductionInterval   = uint64(840000)
 	baseSubsidy                = uint64(41250000000)
-	InitialBlockSubsidy        = uint64(1470000041250000000)
+	InitialBlockSubsidy        = uint64(147000041250000000)
 
 	// config for pow mining
-	PowMinBits            = uint64(2305843009213861724)
 	BlocksPerRetarget     = uint64(2016)
 	TargetSecondsPerBlock = uint64(150)
 	SeedPerRetarget       = uint64(256)
@@ -85,6 +84,7 @@ type Params struct {
 	Bech32HRPSegwit string
 }
 
+// ActiveNetParams is ...
 var ActiveNetParams = MainNetParams
 
 // NetParams is the correspondence between chain_id and Params
