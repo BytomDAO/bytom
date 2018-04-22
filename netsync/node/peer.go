@@ -1,4 +1,4 @@
-package netsync
+package node
 
 import (
 	"sync"
@@ -22,6 +22,9 @@ var (
 const (
 	defaultVersion      = 1
 	defaultBanThreshold = uint64(100)
+
+	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
+	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
 )
 
 type peer struct {
@@ -76,7 +79,7 @@ func (p *peer) requestBlockByHeight(height uint64) error {
 	return nil
 }
 
-func (p *peer) SendTransactions(txs []*types.Tx) error {
+func (p *peer) sendTransactions(txs []*types.Tx) error {
 	for _, tx := range txs {
 		msg, err := NewTransactionNotifyMessage(tx)
 		if err != nil {
@@ -149,22 +152,24 @@ func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 	return false
 }
 
-type peerSet struct {
+type PeerSet struct {
 	peers  map[string]*peer
+	sw     *p2p.Switch
 	lock   sync.RWMutex
 	closed bool
 }
 
 // newPeerSet creates a new peer set to track the active participants.
-func newPeerSet() *peerSet {
-	return &peerSet{
+func NewPeerSet(sw *p2p.Switch) *PeerSet {
+	return &PeerSet{
+		sw:    sw,
 		peers: make(map[string]*peer),
 	}
 }
 
 // Register injects a new peer into the working set, or returns an error if the
 // peer is already known.
-func (ps *peerSet) Register(p *peer) error {
+func (ps *PeerSet) Register(p *peer) error {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
 
@@ -180,7 +185,7 @@ func (ps *peerSet) Register(p *peer) error {
 
 // Unregister removes a remote peer from the active set, disabling any further
 // actions to/from that particular entity.
-func (ps *peerSet) Unregister(id string) error {
+func (ps *PeerSet) Unregister(id string) error {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
 
@@ -192,7 +197,7 @@ func (ps *peerSet) Unregister(id string) error {
 }
 
 // Peer retrieves the registered peer with the given id.
-func (ps *peerSet) Peer(id string) *peer {
+func (ps *PeerSet) Peer(id string) *peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -200,7 +205,7 @@ func (ps *peerSet) Peer(id string) *peer {
 }
 
 // Len returns if the current number of peers in the set.
-func (ps *peerSet) Len() int {
+func (ps *PeerSet) Len() int {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -209,7 +214,7 @@ func (ps *peerSet) Len() int {
 
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
 // will never be propagated to this particular peer.
-func (ps *peerSet) MarkTransaction(peerID string, hash *bc.Hash) {
+func (ps *PeerSet) MarkTransaction(peerID string, hash *bc.Hash) {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -220,7 +225,7 @@ func (ps *peerSet) MarkTransaction(peerID string, hash *bc.Hash) {
 
 // MarkBlock marks a block as known for the peer, ensuring that the block will
 // never be propagated to this particular peer.
-func (ps *peerSet) MarkBlock(peerID string, hash *bc.Hash) {
+func (ps *PeerSet) MarkBlock(peerID string, hash *bc.Hash) {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -231,7 +236,7 @@ func (ps *peerSet) MarkBlock(peerID string, hash *bc.Hash) {
 
 // PeersWithoutBlock retrieves a list of peers that do not have a given block in
 // their set of known hashes.
-func (ps *peerSet) PeersWithoutBlock(hash *bc.Hash) []*peer {
+func (ps *PeerSet) PeersWithoutBlock(hash *bc.Hash) []*peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -246,7 +251,7 @@ func (ps *peerSet) PeersWithoutBlock(hash *bc.Hash) []*peer {
 
 // PeersWithoutTx retrieves a list of peers that do not have a given transaction
 // in their set of known hashes.
-func (ps *peerSet) PeersWithoutTx(hash *bc.Hash) []*peer {
+func (ps *PeerSet) PeersWithoutTx(hash *bc.Hash) []*peer {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -259,8 +264,27 @@ func (ps *peerSet) PeersWithoutTx(hash *bc.Hash) []*peer {
 	return list
 }
 
+func (ps *PeerSet) AddBanScore(peerID string, persistent, transient uint64, reason string) bool {
+	ps.lock.Lock()
+
+	peer, ok := ps.peers[peerID]
+	if !ok {
+		ps.lock.Unlock()
+		return true
+	}
+
+	ban := peer.addBanScore(persistent, transient, reason)
+	if ban {
+		ps.sw.AddBannedPeer(peer.getPeer())
+		ps.initiativeRemovePeer(peer)
+	} else {
+		ps.lock.Unlock()
+	}
+	return ban
+}
+
 // BestPeer retrieves the known peer with the currently highest total difficulty.
-func (ps *peerSet) BestPeer() (*p2p.Peer, uint64) {
+func (ps *PeerSet) BestPeer() (*p2p.Peer, uint64) {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
@@ -278,7 +302,7 @@ func (ps *peerSet) BestPeer() (*p2p.Peer, uint64) {
 
 // Close disconnects all peers.
 // No new peers can be registered after Close has returned.
-func (ps *peerSet) Close() {
+func (ps *PeerSet) Close() {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
 
@@ -288,7 +312,7 @@ func (ps *peerSet) Close() {
 	ps.closed = true
 }
 
-func (ps *peerSet) AddPeer(peer *p2p.Peer) {
+func (ps *PeerSet) AddPeer(peer *p2p.Peer) {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
 
@@ -301,7 +325,7 @@ func (ps *peerSet) AddPeer(peer *p2p.Peer) {
 	log.WithField("ID", peer.Key).Warning("Add existing peer to blockKeeper")
 }
 
-func (ps *peerSet) RemovePeer(peerID string) {
+func (ps *PeerSet) RemovePeer(peerID string) {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
 
@@ -309,7 +333,26 @@ func (ps *peerSet) RemovePeer(peerID string) {
 	log.WithField("ID", peerID).Info("Delete peer from peerset")
 }
 
-func (ps *peerSet) SetPeerStatus(peerID string, height uint64, hash *bc.Hash) {
+func (ps *PeerSet) InitiativeRemovePeer(peerID string) {
+	ps.lock.Lock()
+
+	peer, ok := ps.peers[peerID]
+	if !ok {
+		ps.lock.Unlock()
+		return
+	}
+
+	ps.initiativeRemovePeer(peer)
+}
+
+func (ps *PeerSet) initiativeRemovePeer(peer *peer) {
+	delete(ps.peers, peer.id)
+	log.WithField("ID", peer.id).Info("Delete peer from peerset")
+	ps.lock.Unlock()
+	ps.sw.StopPeerGracefully(peer.getPeer())
+}
+
+func (ps *PeerSet) SetPeerStatus(peerID string, height uint64, hash *bc.Hash) {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
 
@@ -318,7 +361,7 @@ func (ps *peerSet) SetPeerStatus(peerID string, height uint64, hash *bc.Hash) {
 	}
 }
 
-func (ps *peerSet) requestBlockByHash(peerID string, hash *bc.Hash) error {
+func (ps *PeerSet) requestBlockByHash(peerID string, hash *bc.Hash) error {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
 
@@ -329,7 +372,7 @@ func (ps *peerSet) requestBlockByHash(peerID string, hash *bc.Hash) error {
 	return peer.requestBlockByHash(hash)
 }
 
-func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
+func (ps *PeerSet) RequestBlockByHeight(peerID string, height uint64) error {
 	ps.lock.Lock()
 	defer ps.lock.Unlock()
 
@@ -340,45 +383,55 @@ func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
 	return peer.requestBlockByHeight(height)
 }
 
-func (ps *peerSet) BroadcastMinedBlock(block *types.Block) ([]*peer, error) {
+func (ps *PeerSet) SendTransactions(peerID string, txs []*types.Tx) error {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	peer, ok := ps.peers[peerID]
+	if !ok {
+		return errors.New("Can't find peer. ")
+	}
+
+	return peer.sendTransactions(txs)
+}
+
+func (ps *PeerSet) BroadcastMinedBlock(block *types.Block) error {
 	msg, err := NewMinedBlockMessage(block)
 	if err != nil {
-		return nil, errors.New("Failed construction block msg")
+		return errors.New("Failed construction block msg")
 	}
 	hash := block.Hash()
 	peers := ps.PeersWithoutBlock(&hash)
-	abnormalPeers := make([]*peer, 0)
 	for _, peer := range peers {
 		if ok := peer.swPeer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
-			abnormalPeers = append(abnormalPeers, peer)
+			peer.addBanScore(0, 50, "Broadcast block error")
 			continue
 		}
 		if p, ok := ps.peers[peer.id]; ok {
 			p.MarkBlock(&hash)
 		}
 	}
-	return abnormalPeers, nil
+	return nil
 }
 
-func (ps *peerSet) BroadcastNewStatus(block *types.Block) ([]*peer, error) {
+func (ps *PeerSet) BroadcastNewStatus(block *types.Block) error {
 	return ps.BroadcastMinedBlock(block)
 }
 
-func (ps *peerSet) BroadcastTx(tx *types.Tx) ([]*peer, error) {
+func (ps *PeerSet) BroadcastTx(tx *types.Tx) error {
 	msg, err := NewTransactionNotifyMessage(tx)
 	if err != nil {
-		return nil, errors.New("Failed construction tx msg")
+		return errors.New("Failed construction tx msg")
 	}
 	peers := ps.PeersWithoutTx(&tx.ID)
-	abnormalPeers := make([]*peer, 0)
 	for _, peer := range peers {
 		if ok := peer.swPeer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
-			abnormalPeers = append(abnormalPeers, peer)
+			peer.addBanScore(0, 50, "Broadcast new tx error")
 			continue
 		}
 		if p, ok := ps.peers[peer.id]; ok {
 			p.MarkTransaction(&tx.ID)
 		}
 	}
-	return abnormalPeers, nil
+	return nil
 }
