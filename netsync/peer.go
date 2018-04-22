@@ -319,8 +319,8 @@ func (ps *peerSet) SetPeerStatus(peerID string, height uint64, hash *bc.Hash) {
 }
 
 func (ps *peerSet) requestBlockByHash(peerID string, hash *bc.Hash) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
 
 	peer, ok := ps.peers[peerID]
 	if !ok {
@@ -330,8 +330,8 @@ func (ps *peerSet) requestBlockByHash(peerID string, hash *bc.Hash) error {
 }
 
 func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
 
 	peer, ok := ps.peers[peerID]
 	if !ok {
@@ -341,6 +341,9 @@ func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
 }
 
 func (ps *peerSet) BroadcastMinedBlock(block *types.Block) ([]*peer, error) {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
 	msg, err := NewMinedBlockMessage(block)
 	if err != nil {
 		return nil, errors.New("Failed construction block msg")
@@ -365,6 +368,9 @@ func (ps *peerSet) BroadcastNewStatus(block *types.Block) ([]*peer, error) {
 }
 
 func (ps *peerSet) BroadcastTx(tx *types.Tx) ([]*peer, error) {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
 	msg, err := NewTransactionNotifyMessage(tx)
 	if err != nil {
 		return nil, errors.New("Failed construction tx msg")
