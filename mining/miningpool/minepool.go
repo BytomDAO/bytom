@@ -114,6 +114,7 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 	m.block.Timestamp = bh.Timestamp
 	isOrphan, err := m.chain.ProcessBlock(m.block)
 	if err != nil {
+		log.WithFields(log.Fields{"err": err, "height": m.block.Height}).Warning("submitWork failed")
 		return err
 	}
 	if isOrphan {
