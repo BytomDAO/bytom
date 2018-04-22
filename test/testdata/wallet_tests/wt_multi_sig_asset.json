@@ -1,12 +1,14 @@
 {
   "keys": [
     {"name": "alice", "password": "alice"},
-    {"name": "bob", "password": "bob"}
+    {"name": "bob", "password": "bob"},
+    {"name": "none", "password": "none"}
   ],
   "accounts": [
     {"name": "alice", "keys": ["alice"], "quorum": 1},
     {"name": "bob", "keys": ["bob"], "quorum": 1},
-    {"name": "multi-sig", "keys": ["alice", "bob"], "quorum": 2}
+    {"name": "multi-sig", "keys": ["alice", "bob"], "quorum": 2},
+    {"name": "none", "keys": ["none"], "quorum": 1}
   ],
   "blocks": [
     {
@@ -14,31 +16,37 @@
       "post_states": [
         {"name": "alice", "asset": "BTM", "amount": 41250000000}
       ],
-      "append": 6
+      "append": 100
     },
     {
-      "coinbase_account": "bob",
+      "coinbase_account": "none",
       "transactions": [
         {
           "passwords": ["alice"],
           "inputs": [
-            {"type": "spend_account", "name": "alice", "amount": 10000000000, "asset": "BTM"}
+            {"type": "spend_account", "name": "alice", "amount": 40000000000, "asset": "BTM"}
           ],
           "outputs": [
-            {"type": "output", "name": "bob", "amount": 4000000000, "asset": "BTM"},
+            {"type": "output", "name": "bob", "amount": 5000000000, "asset": "BTM"},
+            {"type": "output", "name": "bob", "amount": 5000000000, "asset": "BTM"},
+            {"type": "output", "name": "bob", "amount": 5000000000, "asset": "BTM"},
+            {"type": "output", "name": "alice", "amount": 5000000000, "asset": "BTM"},
+            {"type": "output", "name": "alice", "amount": 2000000000, "asset": "BTM"},
+            {"type": "output", "name": "alice", "amount": 2000000000, "asset": "BTM"},
+            {"type": "output", "name": "multi-sig", "amount": 5000000000, "asset": "BTM"},
+            {"type": "output", "name": "multi-sig", "amount": 5000000000, "asset": "BTM"},
             {"type": "output", "name": "multi-sig", "amount": 5000000000, "asset": "BTM"}
           ]
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 31250000000},
-        {"name": "bob", "asset": "BTM", "amount": 46250000000},
-        {"name": "multi-sig", "asset": "BTM", "amount": 5000000000}
-      ],
-      "append": 6
+        {"name": "alice", "asset": "BTM", "amount": 10250000000},
+        {"name": "bob", "asset": "BTM", "amount": 15000000000},
+        {"name": "multi-sig", "asset": "BTM", "amount": 15000000000}
+      ]
     },
     {
-      "coinbase_account": "bob",
+      "coinbase_account": "none",
       "transactions": [
         {
           "passwords": ["bob", "alice"],
@@ -52,15 +60,14 @@
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 31250000000},
+        {"name": "alice", "asset": "BTM", "amount": 10250000000},
         {"name": "multi-sig", "asset": "GOLD", "amount": 100},
-        {"name": "multi-sig", "asset": "BTM", "amount": 4000000000},
-        {"name": "bob", "asset": "BTM", "amount": 88500000000}
-      ],
-      "append": 6
+        {"name": "multi-sig", "asset": "BTM", "amount": 14000000000},
+        {"name": "bob", "asset": "BTM", "amount": 15000000000}
+      ]
     },
     {
-      "coinbase_account": "multi-sig",
+      "coinbase_account": "none",
       "transactions": [
         {
           "passwords": ["alice", "bob"],
@@ -78,14 +85,13 @@
         }
       ],
       "post_states": [
-        {"name": "multi-sig", "asset": "BTM", "amount": 65250000000},
+        {"name": "multi-sig", "asset": "BTM", "amount": 33000000000},
         {"name": "multi-sig", "asset": "GOLD", "amount": 60},
-        {"name": "alice", "asset": "BTM", "amount": 21250000000},
+        {"name": "alice", "asset": "BTM", "amount": 250000000},
         {"name": "alice", "asset": "GOLD", "amount": 20},
-        {"name": "bob", "asset": "BTM", "amount": 78500000000},
+        {"name": "bob", "asset": "BTM", "amount": 5000000000},
         {"name": "bob", "asset": "GOLD", "amount": 20}
-      ],
-      "append": 0
+      ]
     }
   ]
 }
