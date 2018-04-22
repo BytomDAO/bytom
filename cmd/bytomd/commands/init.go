@@ -17,7 +17,7 @@ var initFilesCmd = &cobra.Command{
 }
 
 func init() {
-	initFilesCmd.Flags().String("chain_id", config.ChainID, "Select [mainnet] or [testnet]")
+	initFilesCmd.Flags().String("chain_id", config.ChainID, "Select [mainnet] or [testnet] or [solonet]")
 
 	RootCmd.AddCommand(initFilesCmd)
 }
@@ -31,8 +31,10 @@ func initFiles(cmd *cobra.Command, args []string) {
 
 	if config.ChainID == "mainnet" {
 		cfg.EnsureRoot(config.RootDir, "mainnet")
-	} else {
+	} else if config.ChainID == "testnet" {
 		cfg.EnsureRoot(config.RootDir, "testnet")
+	} else {
+		cfg.EnsureRoot(config.RootDir, "solonet")
 	}
 
 	log.WithField("config", configFilePath).Info("Initialized bytom")

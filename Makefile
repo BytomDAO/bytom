@@ -9,7 +9,8 @@ $(error "$$GOOS is not defined. If you are using Windows, try to re-make using '
 endif
 endif
 
-PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v 'github.com/bytom/mining/tensority/legacy' | grep -v 'github.com/bytom/mining/tensority/stlib' | grep -v 'github.com/bytom/mining/tensority/dylib')
+PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v 'github.com/bytom/mining/tensority/legacy' | grep -v 'github.com/bytom/mining/tensority/stlib' | grep -v 'github.com/bytom/mining/tensority/dylib')
+
 BUILD_FLAGS := -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`"
 
 MINER_BINARY32 := miner-$(GOOS)_386
@@ -152,7 +153,7 @@ benchmark:
 functional-tests:
 	@rm -f mining/tensority/*.go
 	@cp mining/tensority/legacy/*.go mining/tensority/
-	@go test -v -timeout=30m -tags=functional ./test
+	@go test -v -timeout=5m -tags=functional ./test
 
 ci: test functional-tests
 

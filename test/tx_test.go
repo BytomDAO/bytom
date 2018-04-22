@@ -172,6 +172,10 @@ func TestCoinbaseMature(t *testing.T) {
 	chain, _, _, _ := MockChain(db)
 
 	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
+	if err := AppendBlocks(chain, 1); err != nil {
+		t.Fatal(err)
+	}
+
 	height := chain.BestBlockHeight()
 	block, err := chain.GetBlockByHeight(height)
 	if err != nil {

@@ -2,6 +2,7 @@ package netsync
 
 import (
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,6 +27,7 @@ var (
 	//ErrProtocolHandshakeTimeout peers handshake timeout
 	ErrProtocolHandshakeTimeout = errors.New("Protocol handshake timeout")
 	ErrStatusRequest            = errors.New("Status request error")
+	ErrDiffGenesisHash          = errors.New("Different genesis hash")
 )
 
 // Response describes the response standard.
@@ -36,9 +38,10 @@ type Response struct {
 }
 
 type initalPeerStatus struct {
-	peerID string
-	height uint64
-	hash   *bc.Hash
+	peerID      string
+	height      uint64
+	hash        *bc.Hash
+	genesisHash *bc.Hash
 }
 
 //ProtocolReactor handles new coming protocol message.
@@ -52,6 +55,7 @@ type ProtocolReactor struct {
 	fetcher     *Fetcher
 	peers       *peerSet
 	handshakeMu sync.Mutex
+	genesisHash bc.Hash
 
 	newPeerCh      chan struct{}
 	quitReqBlockCh chan *string
@@ -74,6 +78,9 @@ func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.
 		peerStatusCh:   make(chan *initalPeerStatus),
 	}
 	pr.BaseReactor = *p2p.NewBaseReactor("ProtocolReactor", pr)
+	genesisBlock, _ := pr.chain.GetBlockByHeight(0)
+	pr.genesisHash = genesisBlock.Hash()
+
 	return pr
 }
 
@@ -126,6 +133,10 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 		select {
 		case status := <-pr.peerStatusCh:
 			if status.peerID == peer.Key {
+				if strings.Compare(pr.genesisHash.String(), status.genesisHash.String()) != 0 {
+					log.Info("Remote peer genesis block hash:", status.genesisHash.String(), " local hash:", pr.genesisHash.String())
+					return ErrDiffGenesisHash
+				}
 				pr.peers.AddPeer(peer)
 				pr.peers.SetPeerStatus(status.peerID, status.height, status.hash)
 				pr.syncTransactions(pr.peers.Peer(peer.Key))
@@ -183,13 +194,14 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 
 	case *StatusRequestMessage:
 		blockHeader := pr.chain.BestBlockHeader()
-		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(blockHeader)})
+		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(blockHeader, &pr.genesisHash)})
 
 	case *StatusResponseMessage:
 		peerStatus := &initalPeerStatus{
-			peerID: src.Key,
-			height: msg.Height,
-			hash:   msg.GetHash(),
+			peerID:      src.Key,
+			height:      msg.Height,
+			hash:        msg.GetHash(),
+			genesisHash: msg.GetGenesisHash(),
 		}
 		pr.peerStatusCh <- peerStatus
 
