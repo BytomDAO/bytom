@@ -308,7 +308,7 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 		return assets, nil
 	}
 
-	if assetIDStr == "" {
+	if assetIDStr != "" {
 		assetID := &bc.AssetID{}
 		if err := assetID.UnmarshalText([]byte(assetIDStr)); err != nil {
 			return nil, err
