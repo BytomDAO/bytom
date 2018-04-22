@@ -31,7 +31,7 @@ uint8_t *SimdTs(uint8_t blockheader[32], uint8_t seed[32]){
 
     iter_mineBytom(blockheader, 32, result);
     
-    // do not gc!!!
+    // do not free matList_int16 in the memory, for the implementation of cache
     // delete matList_int16;
     return result;
 }
