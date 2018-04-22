@@ -168,11 +168,14 @@ func (sm *SyncManager) txBroadcastLoop() {
 				log.Errorf("Broadcast new tx error. %v", err)
 				return
 			}
-			for _, peer := range peers {
-				if ban := peer.addBanScore(0, 50, "Broadcast new tx error"); ban {
-					peer := sm.peers.Peer(peer.id).getPeer()
-					sm.sw.AddBannedPeer(peer)
-					sm.sw.StopPeerGracefully(peer)
+			for _, smPeer := range peers {
+				if smPeer == nil {
+					continue
+				}
+				swPeer := smPeer.getPeer()
+				if ban := smPeer.addBanScore(0, 50, "Broadcast new tx error"); ban {
+					sm.sw.AddBannedPeer(swPeer)
+					sm.sw.StopPeerGracefully(swPeer)
 				}
 			}
 		case <-sm.quitSync:
@@ -195,11 +198,14 @@ func (sm *SyncManager) minedBroadcastLoop() {
 				log.Errorf("Broadcast mine block error. %v", err)
 				return
 			}
-			for _, peer := range peers {
-				if ban := peer.addBanScore(0, 50, "Broadcast block error"); ban {
-					peer := sm.peers.Peer(peer.id).getPeer()
-					sm.sw.AddBannedPeer(peer)
-					sm.sw.StopPeerGracefully(peer)
+			for _, smPeer := range peers {
+				if smPeer == nil {
+					continue
+				}
+				swPeer := smPeer.getPeer()
+				if ban := smPeer.addBanScore(0, 50, "Broadcast block error"); ban {
+					sm.sw.AddBannedPeer(swPeer)
+					sm.sw.StopPeerGracefully(swPeer)
 				}
 			}
 		case <-sm.quitSync:
