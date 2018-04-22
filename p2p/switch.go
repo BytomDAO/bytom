@@ -480,11 +480,11 @@ func (sw *Switch) StopPeerGracefully(peer *Peer) {
 }
 
 func (sw *Switch) stopAndRemovePeer(peer *Peer, reason interface{}) {
-	sw.peers.Remove(peer)
-	peer.Stop()
 	for _, reactor := range sw.reactors {
 		reactor.RemovePeer(peer, reason)
 	}
+	sw.peers.Remove(peer)
+	peer.Stop()
 }
 
 func (sw *Switch) listenerRoutine(l Listener) {
