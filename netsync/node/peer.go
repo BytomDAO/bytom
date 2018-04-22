@@ -87,7 +87,7 @@ func (p *peer) sendBlock(block *types.Block) bool {
 	}
 
 	p.markBlock(&blockHash)
-	return p.swPeer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	return p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 }
 
 func (p *peer) getPeer() *p2p.Peer {

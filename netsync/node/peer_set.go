@@ -13,10 +13,9 @@ import (
 
 // PeerSet contains all the connected peer info
 type PeerSet struct {
-	peers  map[string]*peer
-	sw     *p2p.Switch
-	lock   sync.RWMutex
-	closed bool
+	peers map[string]*peer
+	sw    *p2p.Switch
+	lock  sync.RWMutex
 }
 
 // NewPeerSet creates a new peer set to track the active participants.
@@ -79,7 +78,7 @@ func (ps *PeerSet) AddBanScore(peerID string, persistent, transient uint64, reas
 
 func (ps *PeerSet) initiativeRemovePeer(peer *peer) {
 	delete(ps.peers, peer.id)
-	log.WithField("ID", peer.id).Info("Delete peer from peer set")
+	log.WithField("ID", peer.id).Info("initiative remove peer from peer set")
 	ps.lock.Unlock()
 	ps.sw.StopPeerGracefully(peer.getPeer())
 }
@@ -114,7 +113,7 @@ func (ps *PeerSet) BestPeer() (string, uint64) {
 
 	var best *peer
 	for _, p := range ps.peers {
-		if best == nil || p.height > best.height {
+		if p.height > best.height {
 			best = p
 		}
 	}
@@ -128,12 +127,12 @@ func (ps *PeerSet) AddPeer(peer *p2p.Peer, height uint64, hash *bc.Hash) {
 	defer ps.lock.Unlock()
 
 	if _, ok := ps.peers[peer.Key]; !ok {
-		log.WithField("ID", peer.Key).Warning("add existing peer to blockKeeper")
+		log.WithField("ID", peer.Key).Warning("add existing peer to peer set")
 		return
 	}
 
 	ps.peers[peer.Key] = newPeer(height, hash, peer)
-	log.WithFields(log.Fields{"ID": peer.Key}).Info("add new peer to blockKeeper")
+	log.WithFields(log.Fields{"ID": peer.Key}).Info("add new peer to peer set")
 }
 
 // RemovePeer handle the dc action from switch level
@@ -147,8 +146,8 @@ func (ps *PeerSet) RemovePeer(peerID string) {
 
 // ReqBlockByHeight req the block from selected peer
 func (ps *PeerSet) ReqBlockByHeight(peerID string, height uint64) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
 
 	peer, ok := ps.peers[peerID]
 	if !ok {
@@ -156,7 +155,7 @@ func (ps *PeerSet) ReqBlockByHeight(peerID string, height uint64) error {
 	}
 
 	if ok = peer.reqBlockByHeight(height); !ok {
-		return errors.New("fail to sent req")
+		return errors.New("fail to sent req block by height")
 	}
 	return nil
 }
@@ -173,7 +172,7 @@ func (ps *PeerSet) SendTransactions(peerID string, txs []*types.Tx) error {
 
 	for _, tx := range txs {
 		if ok = peer.sendTransaction(tx); !ok {
-			return errors.New("fail to sent req")
+			return errors.New("fail to sent req tx")
 		}
 	}
 	return nil
