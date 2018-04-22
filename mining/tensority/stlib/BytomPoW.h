@@ -338,11 +338,11 @@ struct BytomMatList16 {
     //     }
     // }
 
-    void copyFrom(BytomMatList16& other) {
-        for(int i=0; i<256; i++) {
-            matVec[i]->copyFrom(*other.matVec[i]);
-        }
-    }
+    // void copyFrom(BytomMatList16& other) {
+    //     for(int i=0; i<256; i++) {
+    //         matVec[i]->copyFrom(*other.matVec[i]);
+    //     }
+    // }
 };
 
 // extern BytomMatList8* matList_int8;
