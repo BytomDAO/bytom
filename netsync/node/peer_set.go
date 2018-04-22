@@ -69,6 +69,7 @@ func (ps *PeerSet) AddBanScore(peerID string, persistent, transient uint64, reas
 	ban := peer.addBanScore(persistent, transient, reason)
 	if ban {
 		ps.sw.AddBannedPeer(peer.getPeer())
+		log.WithField("ID", peer.id).Info("add peer to ban list")
 		ps.initiativeRemovePeer(peer)
 	} else {
 		ps.lock.Unlock()
@@ -111,7 +112,7 @@ func (ps *PeerSet) BestPeer() (string, uint64) {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
 
-	var best *peer
+	best := &peer{}
 	for _, p := range ps.peers {
 		if p.height > best.height {
 			best = p
