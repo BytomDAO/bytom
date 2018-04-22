@@ -56,7 +56,7 @@ func aliasKey(name string) []byte {
 	return append(aliasPrefix, []byte(name)...)
 }
 
-// AssetKey asset store prefix
+// Key store asset prefix
 func Key(id *bc.AssetID) []byte {
 	return append(assetPrefix, id.Bytes()...)
 }
@@ -172,6 +172,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 	return a, reg.SaveAsset(a, alias)
 }
 
+// SaveAsset store asset
 func (reg *Registry) SaveAsset(a *Asset, alias string) error {
 	reg.assetMu.Lock()
 	defer reg.assetMu.Unlock()
@@ -299,8 +300,32 @@ func (reg *Registry) GetAsset(id string) (*Asset, error) {
 }
 
 // ListAssets returns the accounts in the db
-func (reg *Registry) ListAssets() ([]*Asset, error) {
+func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 	assets := []*Asset{DefaultNativeAsset}
+
+	assetIDStr := strings.TrimSpace(id)
+	if assetIDStr == DefaultNativeAsset.AssetID.String() {
+		return assets, nil
+	}
+
+	if assetIDStr != "" {
+		assetID := &bc.AssetID{}
+		if err := assetID.UnmarshalText([]byte(assetIDStr)); err != nil {
+			return nil, err
+		}
+
+		asset := &Asset{}
+		interAsset := reg.db.Get(Key(assetID))
+		if interAsset != nil {
+			if err := json.Unmarshal(interAsset, asset); err != nil {
+				return nil, err
+			}
+			return []*Asset{asset}, nil
+		}
+
+		return []*Asset{}, nil
+	}
+
 	assetIter := reg.db.IteratorPrefix(assetPrefix)
 	defer assetIter.Release()
 
