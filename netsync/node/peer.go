@@ -53,13 +53,13 @@ func newPeer(height uint64, hash *bc.Hash, Peer *p2p.Peer) *peer {
 	}
 }
 
-func (p *peer) GetStatus() (height uint64, hash *bc.Hash) {
+func (p *peer) getStatus() (height uint64, hash *bc.Hash) {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
 	return p.height, p.hash
 }
 
-func (p *peer) SetStatus(height uint64, hash *bc.Hash) {
+func (p *peer) setStatus(height uint64, hash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -101,7 +101,7 @@ func (p *peer) getPeer() *p2p.Peer {
 
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
 // will never be propagated to this particular peer.
-func (p *peer) MarkTransaction(hash *bc.Hash) {
+func (p *peer) markTransaction(hash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -114,7 +114,7 @@ func (p *peer) MarkTransaction(hash *bc.Hash) {
 
 // MarkBlock marks a block as known for the peer, ensuring that the block will
 // never be propagated to this particular peer.
-func (p *peer) MarkBlock(hash *bc.Hash) {
+func (p *peer) markBlock(hash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
@@ -159,49 +159,12 @@ type PeerSet struct {
 	closed bool
 }
 
-// newPeerSet creates a new peer set to track the active participants.
+// NewPeerSet creates a new peer set to track the active participants.
 func NewPeerSet(sw *p2p.Switch) *PeerSet {
 	return &PeerSet{
 		sw:    sw,
 		peers: make(map[string]*peer),
 	}
-}
-
-// Register injects a new peer into the working set, or returns an error if the
-// peer is already known.
-func (ps *PeerSet) Register(p *peer) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	if ps.closed {
-		return errClosed
-	}
-	if _, ok := ps.peers[p.id]; ok {
-		return errAlreadyRegistered
-	}
-	ps.peers[p.id] = p
-	return nil
-}
-
-// Unregister removes a remote peer from the active set, disabling any further
-// actions to/from that particular entity.
-func (ps *PeerSet) Unregister(id string) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	if _, ok := ps.peers[id]; !ok {
-		return errNotRegistered
-	}
-	delete(ps.peers, id)
-	return nil
-}
-
-// Peer retrieves the registered peer with the given id.
-func (ps *PeerSet) Peer(id string) *peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	return ps.peers[id]
 }
 
 // Len returns if the current number of peers in the set.
@@ -219,7 +182,7 @@ func (ps *PeerSet) MarkTransaction(peerID string, hash *bc.Hash) {
 	defer ps.lock.RUnlock()
 
 	if peer, ok := ps.peers[peerID]; ok {
-		peer.MarkTransaction(hash)
+		peer.markTransaction(hash)
 	}
 }
 
@@ -230,7 +193,7 @@ func (ps *PeerSet) MarkBlock(peerID string, hash *bc.Hash) {
 	defer ps.lock.RUnlock()
 
 	if peer, ok := ps.peers[peerID]; ok {
-		peer.MarkBlock(hash)
+		peer.markBlock(hash)
 	}
 }
 
@@ -357,7 +320,7 @@ func (ps *PeerSet) SetPeerStatus(peerID string, height uint64, hash *bc.Hash) {
 	defer ps.lock.Unlock()
 
 	if peer, ok := ps.peers[peerID]; ok {
-		peer.SetStatus(height, hash)
+		peer.setStatus(height, hash)
 	}
 }
 
@@ -408,7 +371,7 @@ func (ps *PeerSet) BroadcastMinedBlock(block *types.Block) error {
 			continue
 		}
 		if p, ok := ps.peers[peer.id]; ok {
-			p.MarkBlock(&hash)
+			p.markBlock(&hash)
 		}
 	}
 	return nil
@@ -430,7 +393,7 @@ func (ps *PeerSet) BroadcastTx(tx *types.Tx) error {
 			continue
 		}
 		if p, ok := ps.peers[peer.id]; ok {
-			p.MarkTransaction(&tx.ID)
+			p.markTransaction(&tx.ID)
 		}
 	}
 	return nil
