@@ -303,16 +303,30 @@ func (reg *Registry) GetAsset(id string) (*Asset, error) {
 func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 	assets := []*Asset{DefaultNativeAsset}
 
-	assetKey := assetPrefix
-	if strings.Compare(strings.TrimSpace(id), "") == 0 {
-		assetID := &bc.AssetID{}
-		if err := assetID.UnmarshalText([]byte(strings.TrimSpace(id))); err != nil {
-			return nil, err
-		}
-		assetKey = Key(assetID)
+	assetIDStr := strings.TrimSpace(id)
+	if strings.Compare(assetIDStr, DefaultNativeAsset.AssetID.String()) == 0 {
+		return assets, nil
 	}
 
-	assetIter := reg.db.IteratorPrefix(assetKey)
+	if strings.Compare(assetIDStr, "") != 0 {
+		assetID := &bc.AssetID{}
+		if err := assetID.UnmarshalText([]byte(assetIDStr)); err != nil {
+			return nil, err
+		}
+
+		asset := &Asset{}
+		interAsset := reg.db.Get(Key(assetID))
+		if interAsset != nil {
+			if err := json.Unmarshal(interAsset, asset); err != nil {
+				return nil, err
+			}
+			return []*Asset{asset}, nil
+		}
+
+		return []*Asset{}, nil
+	}
+
+	assetIter := reg.db.IteratorPrefix(assetPrefix)
 	defer assetIter.Release()
 
 	for assetIter.Next() {
