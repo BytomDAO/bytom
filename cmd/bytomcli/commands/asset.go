@@ -15,9 +15,12 @@ func init() {
 	createAssetCmd.PersistentFlags().IntVarP(&assetQuorum, "quorom", "q", 1, "quorum must be greater than 0 and less than or equal to the number of signers")
 	createAssetCmd.PersistentFlags().StringVarP(&assetToken, "access", "a", "", "access token")
 	createAssetCmd.PersistentFlags().StringVarP(&assetDefiniton, "definition", "d", "", "definition for the asset")
+
+	listAssetsCmd.PersistentFlags().StringVar(&assetID, "id", "", "ID of asset")
 }
 
 var (
+	assetID        = ""
 	assetQuorum    = 1
 	assetToken     = ""
 	assetDefiniton = ""
@@ -85,7 +88,11 @@ var listAssetsCmd = &cobra.Command{
 	Short: "List the existing assets",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/list-assets")
+		filter := struct {
+			ID string `json:"id"`
+		}{ID: assetID}
+
+		data, exitCode := util.ClientCall("/list-assets", &filter)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
