@@ -1,12 +1,11 @@
 #include <iostream>
 #include <cstdio>
 #include <map>
+#include <mutex>
+#include <condition_variable>
 #include "cSimdTs.h"
 #include "BytomPoW.h"
 #include "seed.h"
-
-#include <mutex>
-#include <condition_variable>
 
 using namespace std;
 
@@ -14,21 +13,10 @@ BytomMatList16* matList_int16;
 uint8_t result[32] = {0};
 map <vector<uint8_t>, BytomMatList16*> seedCache;
 static const int cacheSize = 42; //"Answer to the Ultimate Question of Life, the Universe, and Everything"
-
-
-std::mutex mtx;
-// std::condition_variable cv;
-// std::string data;
-// bool ready = false;
-// bool processed = false;
- 
-
+mutex mtx;
 
 uint8_t *SimdTs(uint8_t blockheader[32], uint8_t seed[32]){
-
     mtx.lock();
-
-
     vector<uint8_t> seedVec(seed, seed + 32);
 
     if(seedCache.find(seedVec) != seedCache.end()) {
