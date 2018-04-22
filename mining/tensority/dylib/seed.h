@@ -1,7 +1,8 @@
+/* seed.h */
 #ifndef SEED_H
 #define SEED_H
 
-static inline void extend(uint32_t* exted, uint8_t *g_seed){
+inline void extend(uint32_t* exted, uint8_t *g_seed){
     sha3_ctx *ctx = (sha3_ctx*)calloc(1, sizeof(*ctx));
     // uint8_t seedHash[4*32];
     uint8_t seedHash[4][32];
@@ -32,7 +33,7 @@ static inline void extend(uint32_t* exted, uint8_t *g_seed){
     free(ctx);
 }
 
-static inline void init_seed(Words32 &seed, uint32_t _seed[32])
+inline void init_seed(Words32 &seed, uint32_t _seed[32])
 {
     for (int i = 0; i < 16; i++)
         seed.lo.w[i] = _seed[i];
