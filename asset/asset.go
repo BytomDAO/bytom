@@ -304,11 +304,11 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 	assets := []*Asset{DefaultNativeAsset}
 
 	assetIDStr := strings.TrimSpace(id)
-	if strings.Compare(assetIDStr, DefaultNativeAsset.AssetID.String()) == 0 {
+	if assetIDStr == DefaultNativeAsset.AssetID.String() {
 		return assets, nil
 	}
 
-	if strings.Compare(assetIDStr, "") != 0 {
+	if assetIDStr == "" {
 		assetID := &bc.AssetID{}
 		if err := assetID.UnmarshalText([]byte(assetIDStr)); err != nil {
 			return nil, err
