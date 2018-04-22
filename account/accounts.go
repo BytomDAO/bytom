@@ -409,7 +409,7 @@ func (m *Manager) DeleteAccount(aliasOrID string) (err error) {
 // ListAccounts will return the accounts in the db
 func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 	accounts := []*Account{}
-	accountIter := m.db.IteratorPrefix(Key(id))
+	accountIter := m.db.IteratorPrefix(Key(strings.TrimSpace(id)))
 	defer accountIter.Release()
 
 	for accountIter.Next() {

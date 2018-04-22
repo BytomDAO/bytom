@@ -303,12 +303,16 @@ func (reg *Registry) GetAsset(id string) (*Asset, error) {
 func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 	assets := []*Asset{DefaultNativeAsset}
 
-	assetID := &bc.AssetID{}
-	if err := assetID.UnmarshalText([]byte(id)); err != nil {
-		return nil, err
+	assetKey := assetPrefix
+	if strings.Compare(strings.TrimSpace(id), "") == 0 {
+		assetID := &bc.AssetID{}
+		if err := assetID.UnmarshalText([]byte(strings.TrimSpace(id))); err != nil {
+			return nil, err
+		}
+		assetKey = Key(assetID)
 	}
 
-	assetIter := reg.db.IteratorPrefix(Key(assetID))
+	assetIter := reg.db.IteratorPrefix(assetKey)
 	defer assetIter.Release()
 
 	for assetIter.Next() {
