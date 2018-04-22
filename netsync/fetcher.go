@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
-	"github.com/bytom/p2p"
+	"github.com/bytom/netsync/node"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -24,8 +24,7 @@ var (
 // and scheduling them for retrieval.
 type Fetcher struct {
 	chain *core.Chain
-	sw    *p2p.Switch
-	peers *peerSet
+	peers *node.PeerSet
 
 	// Various event channels
 	newMinedBlock chan *blockPending
@@ -38,10 +37,9 @@ type Fetcher struct {
 }
 
 //NewFetcher New creates a block fetcher to retrieve blocks of the new mined.
-func NewFetcher(chain *core.Chain, sw *p2p.Switch, peers *peerSet) *Fetcher {
+func NewFetcher(chain *core.Chain, peers *node.PeerSet) *Fetcher {
 	return &Fetcher{
 		chain:         chain,
-		sw:            sw,
 		peers:         peers,
 		newMinedBlock: make(chan *blockPending),
 		quit:          make(chan struct{}),
@@ -149,27 +147,12 @@ func (f *Fetcher) insert(peerID string, block *types.Block) {
 	// Run the actual import and log any issues
 	if _, err := f.chain.ProcessBlock(block); err != nil {
 		log.Info("Propagated block import failed", " from peer: ", peerID, " height: ", block.Height, "err: ", err)
-		peer := f.peers.Peer(peerID)
-		if ban := peer.addBanScore(50, 0, "block process error"); ban {
-			f.sw.AddBannedPeer(peer.getPeer())
-			f.sw.StopPeerGracefully(peer.getPeer())
-		}
+		f.peers.AddBanScore(peerID, 50, 0, "block process error")
 		return
 	}
 	// If import succeeded, broadcast the block
 	log.Info("success process a block from new mined blocks cache. block height: ", block.Height)
-	peers, err := f.peers.BroadcastMinedBlock(block)
-	if err != nil {
-		log.Errorf("Broadcast mine block error. %v", err)
-		return
-	}
-	for _, peer := range peers {
-		if ban := peer.addBanScore(0, 50, "Broadcast block error"); ban {
-			peer := f.peers.Peer(peer.id).getPeer()
-			f.sw.AddBannedPeer(peer)
-			f.sw.StopPeerGracefully(peer)
-		}
-	}
+	f.peers.BroadcastMinedBlock(block)
 }
 
 // forgetBlock removes all traces of a queued block from the fetcher's internal

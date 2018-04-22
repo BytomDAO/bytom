@@ -1,4 +1,4 @@
-package netsync
+package node
 
 import (
 	"bytes"
@@ -13,6 +13,8 @@ import (
 
 //protocol msg
 const (
+	BlockchainChannel = byte(0x40)
+
 	BlockRequestByte   = byte(0x10)
 	BlockResponseByte  = byte(0x11)
 	StatusRequestByte  = byte(0x20)
@@ -35,16 +37,6 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&TransactionNotifyMessage{}, NewTransactionByte},
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
 )
-
-type blockPending struct {
-	block  *types.Block
-	peerID string
-}
-
-type txsNotify struct {
-	tx     *types.Tx
-	peerID string
-}
 
 //DecodeMessage decode msg
 func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {

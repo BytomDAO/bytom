@@ -10,6 +10,7 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
+	"github.com/bytom/netsync/node"
 	"github.com/bytom/p2p"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -27,7 +28,7 @@ type SyncManager struct {
 	txPool      *core.TxPool
 	fetcher     *Fetcher
 	blockKeeper *blockKeeper
-	peers       *peerSet
+	peers       *node.PeerSet
 
 	newBlockCh    chan *bc.Hash
 	newPeerCh     chan struct{}
@@ -51,14 +52,14 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		newPeerCh:  make(chan struct{}),
 		txSyncCh:   make(chan *txsync),
 		dropPeerCh: make(chan *string, maxQuitReq),
-		peers:      newPeerSet(),
 	}
 
 	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 	manager.sw = p2p.NewSwitch(config.P2P, trustHistoryDB)
 
-	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers, manager.dropPeerCh)
-	manager.fetcher = NewFetcher(chain, manager.sw, manager.peers)
+	manager.peers = node.NewPeerSet(manager.sw)
+	manager.blockKeeper = newBlockKeeper(manager.chain, manager.peers, manager.dropPeerCh)
+	manager.fetcher = NewFetcher(chain, manager.peers)
 
 	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
@@ -163,18 +164,7 @@ func (sm *SyncManager) txBroadcastLoop() {
 	for {
 		select {
 		case newTx := <-newTxCh:
-			peers, err := sm.peers.BroadcastTx(newTx)
-			if err != nil {
-				log.Errorf("Broadcast new tx error. %v", err)
-				return
-			}
-			for _, peer := range peers {
-				if ban := peer.addBanScore(0, 50, "Broadcast new tx error"); ban {
-					peer := sm.peers.Peer(peer.id).getPeer()
-					sm.sw.AddBannedPeer(peer)
-					sm.sw.StopPeerGracefully(peer)
-				}
-			}
+			sm.peers.BroadcastTx(newTx)
 		case <-sm.quitSync:
 			return
 		}
@@ -190,18 +180,7 @@ func (sm *SyncManager) minedBroadcastLoop() {
 				log.Errorf("Failed on mined broadcast loop get block %v", err)
 				return
 			}
-			peers, err := sm.peers.BroadcastMinedBlock(block)
-			if err != nil {
-				log.Errorf("Broadcast mine block error. %v", err)
-				return
-			}
-			for _, peer := range peers {
-				if ban := peer.addBanScore(0, 50, "Broadcast block error"); ban {
-					peer := sm.peers.Peer(peer.id).getPeer()
-					sm.sw.AddBannedPeer(peer)
-					sm.sw.StopPeerGracefully(peer)
-				}
-			}
+			sm.peers.BroadcastMinedBlock(block)
 		case <-sm.quitSync:
 			return
 		}
@@ -219,7 +198,7 @@ func (sm *SyncManager) BlockKeeper() *blockKeeper {
 }
 
 //Peers get sync manager peer set
-func (sm *SyncManager) Peers() *peerSet {
+func (sm *SyncManager) Peers() *node.PeerSet {
 	return sm.peers
 }
 

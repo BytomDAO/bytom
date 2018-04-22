@@ -37,7 +37,7 @@ const (
 )
 
 type txsync struct {
-	p   *peer
+	p   string
 	txs []*types.Tx
 }
 
@@ -83,21 +83,14 @@ func (sm *SyncManager) synchronise() {
 	}
 	defer atomic.StoreInt32(&sm.synchronising, 0)
 
-	peer, bestHeight := sm.peers.BestPeer()
-	// Short circuit if no peers are available
-	if peer == nil {
+	peerID, height := sm.peers.BestPeer()
+	if peerID == "" {
 		return
 	}
 
-	if ok := sm.Switch().Peers().Has(peer.Key); !ok {
-		log.Info("Peer disconnected")
-		sm.sw.StopPeerGracefully(peer)
-		return
-	}
-
-	if bestHeight > sm.chain.BestBlockHeight() {
-		log.Info("sync peer:", peer.Addr(), " height:", bestHeight)
-		sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
+	if height > sm.chain.BestBlockHeight() {
+		log.Info("sync peer:", peerID, " height:", height)
+		sm.blockKeeper.BlockRequestWorker(peerID, height)
 	}
 }
 
@@ -126,12 +119,12 @@ func (sm *SyncManager) txsyncLoop() {
 		// Remove the transactions that will be sent.
 		s.txs = s.txs[:copy(s.txs, s.txs[len(pack.txs):])]
 		if len(s.txs) == 0 {
-			delete(pending, s.p.swPeer.Key)
+			delete(pending, s.p)
 		}
 		// Send the pack in the background.
 		log.Info("Sending batch of transactions. ", "count:", len(pack.txs), " bytes:", size)
 		sending = true
-		go func() { done <- pack.p.SendTransactions(pack.txs) }()
+		go func() { done <- sm.peers.SendTransactions(pack.p, pack.txs) }()
 	}
 
 	// pick chooses the next pending sync.
@@ -151,7 +144,7 @@ func (sm *SyncManager) txsyncLoop() {
 	for {
 		select {
 		case s := <-sm.txSyncCh:
-			pending[s.p.swPeer.Key] = s
+			pending[s.p] = s
 			if !sending {
 				send(s)
 			}
@@ -160,7 +153,7 @@ func (sm *SyncManager) txsyncLoop() {
 			// Stop tracking peers that cause send failures.
 			if err != nil {
 				log.Info("Transaction send failed", "err", err)
-				delete(pending, pack.p.swPeer.Key)
+				delete(pending, pack.p)
 			}
 			// Schedule the next send.
 			if s := pick(); s != nil {

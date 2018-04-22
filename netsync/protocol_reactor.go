@@ -10,6 +10,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/errors"
+	"github.com/bytom/netsync/node"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -17,8 +18,6 @@ import (
 )
 
 const (
-	// BlockchainChannel is a channel for blocks and status updates
-	BlockchainChannel        = byte(0x40)
 	protocolHandshakeTimeout = time.Second * 10
 	handshakeRetryTicker     = 4 * time.Second
 )
@@ -53,7 +52,7 @@ type ProtocolReactor struct {
 	txPool      *protocol.TxPool
 	sw          *p2p.Switch
 	fetcher     *Fetcher
-	peers       *peerSet
+	peers       *node.PeerSet
 	handshakeMu sync.Mutex
 	genesisHash bc.Hash
 
@@ -64,7 +63,7 @@ type ProtocolReactor struct {
 }
 
 // NewProtocolReactor returns the reactor of whole blockchain.
-func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, blockPeer *blockKeeper, fetcher *Fetcher, peers *peerSet, newPeerCh chan struct{}, txSyncCh chan *txsync, quitReqBlockCh chan *string) *ProtocolReactor {
+func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, blockPeer *blockKeeper, fetcher *Fetcher, peers *node.PeerSet, newPeerCh chan struct{}, txSyncCh chan *txsync, quitReqBlockCh chan *string) *ProtocolReactor {
 	pr := &ProtocolReactor{
 		chain:          chain,
 		blockKeeper:    blockPeer,
@@ -88,7 +87,7 @@ func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.
 func (pr *ProtocolReactor) GetChannels() []*p2p.ChannelDescriptor {
 	return []*p2p.ChannelDescriptor{
 		&p2p.ChannelDescriptor{
-			ID:                BlockchainChannel,
+			ID:                node.BlockchainChannel,
 			Priority:          5,
 			SendQueueCapacity: 100,
 		},
@@ -107,7 +106,7 @@ func (pr *ProtocolReactor) OnStop() {
 }
 
 // syncTransactions starts sending all currently pending transactions to the given peer.
-func (pr *ProtocolReactor) syncTransactions(p *peer) {
+func (pr *ProtocolReactor) syncTransactions(peerID string) {
 	pending := pr.txPool.GetTransactions()
 	if len(pending) == 0 {
 		return
@@ -116,7 +115,7 @@ func (pr *ProtocolReactor) syncTransactions(p *peer) {
 	for i, batch := range pending {
 		txs[i] = batch.Tx
 	}
-	pr.txSyncCh <- &txsync{p, txs}
+	pr.txSyncCh <- &txsync{peerID, txs}
 }
 
 // AddPeer implements Reactor by sending our state to peer.
@@ -124,7 +123,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	pr.handshakeMu.Lock()
 	defer pr.handshakeMu.Unlock()
 
-	if ok := peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
+	if ok := peer.Send(node.BlockchainChannel, struct{ node.BlockchainMessage }{&node.StatusRequestMessage{}}); !ok {
 		return ErrStatusRequest
 	}
 	retryTicker := time.Tick(handshakeRetryTicker)
@@ -137,14 +136,13 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 					log.Info("Remote peer genesis block hash:", status.genesisHash.String(), " local hash:", pr.genesisHash.String())
 					return ErrDiffGenesisHash
 				}
-				pr.peers.AddPeer(peer)
-				pr.peers.SetPeerStatus(status.peerID, status.height, status.hash)
-				pr.syncTransactions(pr.peers.Peer(peer.Key))
+				pr.peers.AddPeer(peer, status.height, status.hash)
+				pr.syncTransactions(peer.Key)
 				pr.newPeerCh <- struct{}{}
 				return nil
 			}
 		case <-retryTicker:
-			if ok := peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
+			if ok := peer.Send(node.BlockchainChannel, struct{ node.BlockchainMessage }{&node.StatusRequestMessage{}}); !ok {
 				return ErrStatusRequest
 			}
 		case <-handshakeWait.C:
@@ -159,9 +157,19 @@ func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
 	pr.peers.RemovePeer(peer.Key)
 }
 
+type blockPending struct {
+	block  *types.Block
+	peerID string
+}
+
+type txsNotify struct {
+	tx     *types.Tx
+	peerID string
+}
+
 // Receive implements Reactor by handling 4 types of messages (look below).
 func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
-	_, msg, err := DecodeMessage(msgBytes)
+	_, msg, err := node.DecodeMessage(msgBytes)
 	if err != nil {
 		log.Errorf("Error decoding messagek %v", err)
 		return
@@ -169,7 +177,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Receive request")
 
 	switch msg := msg.(type) {
-	case *BlockRequestMessage:
+	case *node.BlockRequestMessage:
 		var block *types.Block
 		var err error
 		if msg.Height != 0 {
@@ -181,22 +189,22 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 			log.Errorf("Fail on BlockRequestMessage get block: %v", err)
 			return
 		}
-		response, err := NewBlockResponseMessage(block)
+		response, err := node.NewBlockResponseMessage(block)
 		if err != nil {
 			log.Errorf("Fail on BlockRequestMessage create resoinse: %v", err)
 			return
 		}
-		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{response})
+		src.TrySend(node.BlockchainChannel, struct{ node.BlockchainMessage }{response})
 
-	case *BlockResponseMessage:
+	case *node.BlockResponseMessage:
 		log.Info("BlockResponseMessage height:", msg.GetBlock().Height)
 		pr.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
 
-	case *StatusRequestMessage:
+	case *node.StatusRequestMessage:
 		blockHeader := pr.chain.BestBlockHeader()
-		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(blockHeader, &pr.genesisHash)})
+		src.TrySend(node.BlockchainChannel, struct{ node.BlockchainMessage }{node.NewStatusResponseMessage(blockHeader, &pr.genesisHash)})
 
-	case *StatusResponseMessage:
+	case *node.StatusResponseMessage:
 		peerStatus := &initalPeerStatus{
 			peerID:      src.Key,
 			height:      msg.Height,
@@ -205,7 +213,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		}
 		pr.peerStatusCh <- peerStatus
 
-	case *TransactionNotifyMessage:
+	case *node.TransactionNotifyMessage:
 		tx, err := msg.GetTransaction()
 		if err != nil {
 			log.Errorf("Error decoding new tx %v", err)
@@ -213,7 +221,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		}
 		pr.blockKeeper.AddTx(tx, src.Key)
 
-	case *MineBlockMessage:
+	case *node.MineBlockMessage:
 		block, err := msg.GetMineBlock()
 		if err != nil {
 			log.Errorf("Error decoding mined block %v", err)
