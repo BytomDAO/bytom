@@ -91,6 +91,8 @@ var ActiveNetParams = MainNetParams
 var NetParams = map[string]Params{
 	"mainnet": MainNetParams,
 	"testnet": TestNetParams,
+	"solonet": SoloNetParams,
+
 }
 
 // MainNetParams is the config for production
@@ -103,4 +105,10 @@ var MainNetParams = Params{
 var TestNetParams = Params{
 	Name:            "test",
 	Bech32HRPSegwit: "tm",
+}
+
+// TestNetParams is the config for test-net
+var SoloNetParams = Params{
+	Name:            "solo",
+	Bech32HRPSegwit: "sm",
 }
