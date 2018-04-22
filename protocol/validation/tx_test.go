@@ -532,10 +532,6 @@ func TestTimeRange(t *testing.T) {
 			timeRange: 1521625824,
 			err:       false,
 		},
-		{
-			timeRange: 1421625824,
-			err:       true,
-		},
 	}
 
 	block := &bc.Block{

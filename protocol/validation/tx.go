@@ -475,12 +475,7 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 		return nil
 	}
 
-	blockVal := block.Height
-	if tx.TimeRange > timeRangeGash {
-		blockVal = block.Timestamp
-	}
-
-	if tx.TimeRange < blockVal {
+	if tx.TimeRange < block.Height {
 		return errBadTimeRange
 	}
 	return nil
