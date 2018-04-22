@@ -10,6 +10,7 @@ using namespace std;
 BytomMatList16* matList_int16;
 uint8_t result[32] = {0};
 map <vector<uint8_t>, BytomMatList16*> seedCache;
+static const int cacheSize = 42; //"Answer to the Ultimate Question of Life, the Universe, and Everything"
 
 uint8_t *SimdTs(uint8_t blockheader[32], uint8_t seed[32]){
     vector<uint8_t> seedVec(seed, seed + 32);
@@ -33,5 +34,11 @@ uint8_t *SimdTs(uint8_t blockheader[32], uint8_t seed[32]){
     
     // do not free matList_int16 in the memory, for the implementation of cache
     // delete matList_int16;
+    if(seedCache.size() > cacheSize) {
+        for(map<vector<uint8_t>, BytomMatList16*>::iterator it=seedCache.begin(); it!=seedCache.end(); ++it){
+            delete it->second;
+        }
+        seedCache.clear();
+    }
     return result;
 }
