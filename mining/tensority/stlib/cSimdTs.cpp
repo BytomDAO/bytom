@@ -26,7 +26,7 @@ uint8_t *SimdTs(uint8_t blockheader[32], uint8_t seed[32]){
         matList_int16 = new BytomMatList16;
         matList_int16->init(extSeed);
 
-        seedCache.insert(pair<vector<uint8_t>, BytomMatList16*>(seedVec, matList_int16));
+        seedCache.insert(make_pair(seedVec, matList_int16));
     }
 
     iter_mineBytom(blockheader, 32, result);
