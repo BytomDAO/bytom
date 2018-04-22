@@ -11,7 +11,7 @@ using namespace std;
 BytomMatList16* matList_int16;
 uint8_t *result;
 map <vector<uint8_t>, BytomMatList16*> seedCache;
-static const int cacheSize = 42; //"Answer to the Ultimate Question of Life, the Universe, and Everything"
+static const int cacheSize = 3; //"Answer to the Ultimate Question of Life, the Universe, and Everything"
 mutex mtx;
 
 int SimdTs(uint8_t blockheader[32], uint8_t seed[32], uint8_t res[32]){
