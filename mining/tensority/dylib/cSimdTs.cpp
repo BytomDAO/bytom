@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdio>
 #include <map>
+#include <mutex>
 #include "cSimdTs.h"
 #include "BytomPoW.h"
 #include "seed.h"
@@ -8,11 +9,13 @@
 using namespace std;
 
 BytomMatList16* matList_int16;
-// uint8_t result[32] = {0};
 uint8_t *result;
 map <vector<uint8_t>, BytomMatList16*> seedCache;
+static const int cacheSize = 42; //"Answer to the Ultimate Question of Life, the Universe, and Everything"
+mutex mtx;
 
 int SimdTs(uint8_t blockheader[32], uint8_t seed[32], uint8_t res[32]){
+    mtx.lock();
     result = res;
     vector<uint8_t> seedVec(seed, seed + 32);
 
@@ -28,12 +31,21 @@ int SimdTs(uint8_t blockheader[32], uint8_t seed[32], uint8_t res[32]){
         matList_int16 = new BytomMatList16;
         matList_int16->init(extSeed);
 
-        seedCache.insert(pair<vector<uint8_t>, BytomMatList16*>(seedVec, matList_int16));
+        seedCache.insert(make_pair(seedVec, matList_int16));
     }
 
     iter_mineBytom(blockheader, 32, result);
     
+    // result = NULL;
+    // delete matList_int16;
+    
+    if(seedCache.size() > cacheSize) {
+        for(map<vector<uint8_t>, BytomMatList16*>::iterator it=seedCache.begin(); it!=seedCache.end(); ++it){
+            delete it->second;
+        }
+        seedCache.clear();
+    }
     result = NULL;
-    delete matList_int16;
+    mtx.unlock();
     return 0;
 }

@@ -2,7 +2,6 @@
 #include <cstdio>
 #include <map>
 #include <mutex>
-#include <condition_variable>
 #include "cSimdTs.h"
 #include "BytomPoW.h"
 #include "seed.h"
