@@ -129,7 +129,9 @@ func (a *AddrBook) init() {
 
 // OnStart implements Service.
 func (a *AddrBook) OnStart() error {
-	a.BaseService.OnStart()
+	if err := a.BaseService.OnStart(); err != nil {
+		return err
+	}
 	a.loadFromFile(a.filePath)
 	a.wg.Add(1)
 	go a.saveRoutine()
@@ -155,6 +157,8 @@ func (a *AddrBook) AddOurAddress(addr *NetAddress) {
 
 func (a *AddrBook) OurAddresses() []*NetAddress {
 	addrs := []*NetAddress{}
+	a.mtx.Lock()
+	defer a.mtx.Unlock()
 	for _, addr := range a.ourAddrs {
 		addrs = append(addrs, addr)
 	}
@@ -585,9 +589,9 @@ func (a *AddrBook) addAddress(addr, src *NetAddress) {
 	}
 
 	bucket := a.calcNewBucket(addr, src)
-	a.addToNewBucket(ka, bucket)
-
-	log.Info("Added new address ", "address:", addr, " total:", a.size())
+	if a.addToNewBucket(ka, bucket) {
+		log.Info("Added new address ", "address:", addr, " total:", a.size())
+	}
 }
 
 // Make space in the new buckets by expiring the really bad entries.
