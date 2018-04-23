@@ -27,10 +27,12 @@ type config struct {
 }
 
 func init() {
-	sendTxCmd.PersistentFlags().IntVar(&thdTxNum, "thdtxnum", 10, " The number of transactions per goroutine")
-	sendTxCmd.PersistentFlags().IntVar(&thdNum, "thdnum", 5, "goroutine num")
+	sendTxCmd.PersistentFlags().IntVar(&thdTxNum, "thdtxnum", 1, " The number of transactions per goroutine")
+	sendTxCmd.PersistentFlags().IntVar(&thdNum, "thdnum", 1, "goroutine num")
 	sendTxCmd.PersistentFlags().IntVar(&assetNum, "assetnum", 100000000, "Number of transactions asset,unit: neu")
+	sendTxCmd.PersistentFlags().IntVar(&mulOutput, "muloutput", 0, "Multiple outputs")
 	sendTxCmd.PersistentFlags().StringVar(&configFile, "config", "./config.toml", "config file")
+
 }
 
 var (
@@ -41,6 +43,7 @@ var (
 	sendAcct   string
 	sendasset  string
 	configFile string
+	mulOutput  int
 	cfg        config
 	m          sync.Mutex
 	sucess     = 0
