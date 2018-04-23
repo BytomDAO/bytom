@@ -155,6 +155,9 @@ func (a *AddrBook) AddOurAddress(addr *NetAddress) {
 
 func (a *AddrBook) OurAddresses() []*NetAddress {
 	addrs := []*NetAddress{}
+	a.mtx.Lock()
+	defer a.mtx.Unlock()
+
 	for _, addr := range a.ourAddrs {
 		addrs = append(addrs, addr)
 	}
