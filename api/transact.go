@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -247,8 +248,13 @@ func (a *API) estimateTxGas(ctx context.Context, in struct {
 	// total estimate gas
 	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
 
+	// rounding totalNeu with base 100000
+	totalNeu := float64(totalGas*consensus.VMGasRate) / float64(100000)
+	roundingNeu := math.Ceil(totalNeu)
+	estimateNeu := int64(roundingNeu) * int64(100000)
+
 	txGasResp := &EstimateTxGasResp{
-		TotalNeu:   totalGas * consensus.VMGasRate,
+		TotalNeu:   estimateNeu,
 		StorageNeu: totalTxSizeGas * consensus.VMGasRate,
 		VMNeu:      (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
 	}
