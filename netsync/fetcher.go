@@ -154,7 +154,7 @@ func (f *Fetcher) insert(peerID string, block *types.Block) {
 			return
 		}
 		swPeer := fPeer.getPeer()
-		if ban := fPeer.addBanScore(50, 0, "block process error"); ban {
+		if ban := fPeer.addBanScore(20, 0, "block process error"); ban {
 			f.sw.AddBannedPeer(swPeer)
 			f.sw.StopPeerGracefully(swPeer)
 		}
