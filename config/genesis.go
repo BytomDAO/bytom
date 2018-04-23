@@ -49,7 +49,7 @@ func GenesisBlock() *types.Block {
 			Height:    0,
 			Nonce:     2083236893,
 			Timestamp: 1524202000,
-			Bits:      2089670227111054243,
+			Bits:      2305843009214532812,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 				TransactionStatusHash:  txStatusHash,
