@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	reconnectAttempts = 10
+	reconnectAttempts = 5
 	reconnectInterval = 10 * time.Second
 
 	bannedPeerKey      = "BannedPeer"
@@ -340,7 +340,7 @@ func (sw *Switch) DialSeeds(addrBook *AddrBook, seeds []string) error {
 }
 
 func (sw *Switch) dialSeed(addr *NetAddress) {
-	peer, err := sw.DialPeerWithAddress(addr, true)
+	peer, err := sw.DialPeerWithAddress(addr, false)
 	if err != nil {
 		log.WithField("error", err).Error("Error dialing seed")
 	} else {
@@ -449,7 +449,7 @@ func (sw *Switch) StopPeerForError(peer *Peer, reason interface{}) {
 				return
 			}
 
-			peer, err := sw.DialPeerWithAddress(addr, true)
+			peer, err := sw.DialPeerWithAddress(addr, false)
 			if err != nil {
 				if i == reconnectAttempts {
 					log.WithFields(log.Fields{
