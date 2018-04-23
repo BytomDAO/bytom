@@ -106,7 +106,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 				log.Info("peer is deleted")
 				break
 			}
-			if ban := bkPeer.addBanScore(50, 0, "block process error"); ban {
+			if ban := bkPeer.addBanScore(20, 0, "block process error"); ban {
 				bk.sw.AddBannedPeer(swPeer)
 				bk.sw.StopPeerGracefully(swPeer)
 			}
@@ -199,7 +199,7 @@ func (bk *blockKeeper) txsProcessWorker() {
 		if isOrphan, err := bk.chain.ValidateTx(tx); err != nil && isOrphan == false {
 			if bkPeer, ok := bk.peers.Peer(txsResponse.peerID); ok {
 				swPeer := bkPeer.getPeer()
-				if ban := bkPeer.addBanScore(50, 0, "tx error"); ban {
+				if ban := bkPeer.addBanScore(10, 0, "tx error"); ban {
 					bk.sw.AddBannedPeer(swPeer)
 					bk.sw.StopPeerGracefully(swPeer)
 				}
