@@ -41,7 +41,7 @@ func (reg *Registry) Restore(image *Image) error {
 			log.WithFields(log.Fields{"alias": asset.Alias, "id": asset.AssetID}).Warning("skip restore asset due to already existed")
 			continue
 		}
-		if existed := reg.db.Get(AliasKey(*asset.Alias)); existed != nil {
+		if existed := reg.db.Get(aliasKey(*asset.Alias)); existed != nil {
 			return ErrDuplicateAlias
 		}
 
@@ -53,7 +53,7 @@ func (reg *Registry) Restore(image *Image) error {
 		if asset.Signer.KeyIndex > maxAssetIndex {
 			maxAssetIndex = asset.Signer.KeyIndex
 		}
-		storeBatch.Set(AliasKey(*asset.Alias), asset.AssetID.Bytes())
+		storeBatch.Set(aliasKey(*asset.Alias), asset.AssetID.Bytes())
 		storeBatch.Set(Key(&asset.AssetID), rawAsset)
 	}
 

@@ -174,9 +174,9 @@ func (w *Wallet) RescanBlocks() {
 func (w *Wallet) getRescanNotification() {
 	select {
 	case <-w.rescanCh:
-		w.status.WorkHeight = 0
-		block, _ := w.chain.GetBlockByHeight(w.status.WorkHeight)
-		w.status.WorkHash = block.Hash()
+		block, _ := w.chain.GetBlockByHeight(0)
+		w.status.WorkHash = bc.Hash{}
+		w.AttachBlock(block)
 	default:
 		return
 	}

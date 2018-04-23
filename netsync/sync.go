@@ -82,6 +82,9 @@ func (sm *SyncManager) synchronise() {
 		return
 	}
 	defer atomic.StoreInt32(&sm.synchronising, 0)
+	for len(sm.dropPeerCh) > 0 {
+		<-sm.dropPeerCh
+	}
 
 	peer, bestHeight := sm.peers.BestPeer()
 	// Short circuit if no peers are available
