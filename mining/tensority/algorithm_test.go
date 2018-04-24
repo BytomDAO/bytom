@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"testing"
 	"time"
-	"runtime"
-	"sync"
 
 	"github.com/bytom/protocol/bc"
 )
@@ -241,49 +239,26 @@ func TestAlgorithm(t *testing.T) {
 	}
 
 	startT := time.Now()
+	for i, tt := range tests {
+		fmt.Printf("Test case %d:\n", i+1)
 
+		sT := time.Now()
+		bhhash := bc.NewHash(tt.blockHeader)
+		sdhash := bc.NewHash(tt.seed)
+		result := algorithm(&bhhash, &sdhash).Bytes()
+		var resArr [32]byte
+		copy(resArr[:], result)
+		eT := time.Now()
+		fmt.Println("\tTotal verification time:", eT.Sub(sT))
 
-	runtime.GOMAXPROCS(4)
-	round := 1
-	var wg sync.WaitGroup
-	wg.Add(round*len(tests))
-
-
-	for j := 0; j < round; j++ {
-
-		for i, tt := range tests {
-			go func(i int, tt struct {
-									blockHeader [32]byte
-									seed        [32]byte
-									hash        [32]byte
-								}) {
-
-				fmt.Printf("Test case %d:\n", i+1)
-				defer wg.Done()
-
-				sT := time.Now()
-				bhhash := bc.NewHash(tt.blockHeader)
-				sdhash := bc.NewHash(tt.seed)
-				result := algorithm(&bhhash, &sdhash).Bytes()
-				var resArr [32]byte
-				copy(resArr[:], result)
-				eT := time.Now()
-				fmt.Println("\tTotal verification time:", eT.Sub(sT))
-
-				if !reflect.DeepEqual(resArr, tt.hash) {
-					t.Errorf("\tFAIL\n")
-					t.Errorf("\tGets\t%x\n", resArr)
-					t.Errorf("\tExpects\t%x\n", tt.hash)
-				} else {
-					fmt.Printf("\tPASS\n")
-				}
-			} (i, tt)
+		if !reflect.DeepEqual(resArr, tt.hash) {
+			t.Errorf("\tFAIL\n")
+			t.Errorf("\tGets\t%x\n", resArr)
+			t.Errorf("\tExpects\t%x\n", tt.hash)
+		} else {
+			fmt.Printf("\tPASS\n")
 		}
 	}
-	wg.Wait()
 	endT := time.Now()
 	fmt.Println("Avg time:", time.Duration(int(endT.Sub(startT))/len(tests)))
 }
-
-
-
