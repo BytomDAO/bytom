@@ -19,7 +19,7 @@ func genesisTx() *types.Tx {
 	txData := types.TxData{
 		Version: 1,
 		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput([]byte("Information is power. January 11, 2013. Computing is power. April 24, 2018.")),
+			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewTxOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),
