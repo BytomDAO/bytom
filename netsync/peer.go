@@ -346,7 +346,7 @@ func (ps *peerSet) BroadcastMinedBlock(block *types.Block) ([]*peer, error) {
 	peers := ps.PeersWithoutBlock(&hash)
 	abnormalPeers := make([]*peer, 0)
 	for _, peer := range peers {
-		if ok := peer.swPeer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+		if ok := peer.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			abnormalPeers = append(abnormalPeers, peer)
 			continue
 		}
@@ -369,7 +369,7 @@ func (ps *peerSet) BroadcastTx(tx *types.Tx) ([]*peer, error) {
 	peers := ps.PeersWithoutTx(&tx.ID)
 	abnormalPeers := make([]*peer, 0)
 	for _, peer := range peers {
-		if ok := peer.swPeer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+		if ok := peer.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			abnormalPeers = append(abnormalPeers, peer)
 			continue
 		}
