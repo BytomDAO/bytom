@@ -47,7 +47,7 @@ func GenesisBlock() *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     2083236893,
+			Nonce:     9253507043297,
 			Timestamp: 1524549600,
 			Bits:      2161727821137910632,
 			BlockCommitment: types.BlockCommitment{
