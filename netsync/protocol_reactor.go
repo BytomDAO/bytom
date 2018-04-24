@@ -129,7 +129,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	if peer == nil {
 		return errPeerDropped
 	}
-	if ok := peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
+	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
 		return ErrStatusRequest
 	}
 	retryTicker := time.Tick(handshakeRetryTicker)
@@ -156,7 +156,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 			if peer == nil {
 				return errPeerDropped
 			}
-			if ok := peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
+			if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
 				return ErrStatusRequest
 			}
 		case <-handshakeWait.C:
