@@ -19,7 +19,7 @@ func genesisTx() *types.Tx {
 	txData := types.TxData{
 		Version: 1,
 		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput([]byte("May 4th Be With You")),
+			types.NewCoinbaseInput([]byte("Information is power. January 11, 2013. Computing is power. April 24, 2018.")),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewTxOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),
@@ -49,7 +49,7 @@ func GenesisBlock() *types.Block {
 			Height:    0,
 			Nonce:     2083236893,
 			Timestamp: 1524202000,
-			Bits:      2305843009214532812,
+			Bits:      2161727821137910632,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 				TransactionStatusHash:  txStatusHash,
