@@ -120,6 +120,93 @@ func TestGasStatus(t *testing.T) {
 	}
 }
 
+func TestOverflow(t *testing.T) {
+	sourceID := &bc.Hash{V0: 9999}
+	ctrlProgram := []byte{byte(vm.OP_TRUE)}
+	newTx := func(inputs []uint64, outputs []uint64) *bc.Tx {
+		txInputs := make([]*types.TxInput, 0, len(inputs))
+		txOutputs := make([]*types.TxOutput, 0, len(outputs))
+
+		for _, amount := range inputs {
+			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, 0, ctrlProgram)
+			txInputs = append(txInputs, txInput)
+		}
+
+		for _, amount := range outputs {
+			txOutput := types.NewTxOutput(*consensus.BTMAssetID, amount, ctrlProgram)
+			txOutputs = append(txOutputs, txOutput)
+		}
+
+		txData := &types.TxData{
+			Version:        1,
+			SerializedSize: 100,
+			TimeRange:      0,
+			Inputs:         txInputs,
+			Outputs:        txOutputs,
+		}
+		return types.MapTx(txData)
+	}
+
+	cases := []struct {
+		inputs  []uint64
+		outputs []uint64
+		err     error
+	}{
+		{
+			inputs:  []uint64{math.MaxUint64, 1},
+			outputs: []uint64{0},
+			err:     errOverflow,
+		},
+		{
+			inputs:  []uint64{math.MaxUint64, math.MaxUint64},
+			outputs: []uint64{0},
+			err:     errOverflow,
+		},
+		{
+			inputs:  []uint64{math.MaxUint64, math.MaxUint64 - 1},
+			outputs: []uint64{0},
+			err:     errOverflow,
+		},
+		{
+			inputs:  []uint64{math.MaxInt64, 1},
+			outputs: []uint64{0},
+			err:     errOverflow,
+		},
+		{
+			inputs:  []uint64{math.MaxInt64, math.MaxInt64},
+			outputs: []uint64{0},
+			err:     errOverflow,
+		},
+		{
+			inputs:  []uint64{math.MaxInt64, math.MaxInt64 - 1},
+			outputs: []uint64{0},
+			err:     errOverflow,
+		},
+		{
+			inputs:  []uint64{0},
+			outputs: []uint64{math.MaxUint64},
+			err:     errOverflow,
+		},
+		{
+			inputs:  []uint64{0},
+			outputs: []uint64{math.MaxInt64},
+			err:     errGasCalculate,
+		},
+		{
+			inputs:  []uint64{math.MaxInt64 - 1},
+			outputs: []uint64{math.MaxInt64},
+			err:     errGasCalculate,
+		},
+	}
+
+	for i, c := range cases {
+		tx := newTx(c.inputs, c.outputs)
+		if _, err := ValidateTx(tx, mockBlock()); rootErr(err) != c.err {
+			t.Fatalf("case %d test failed, want %s, have %s", i, c.err, rootErr(err))
+		}
+	}
+}
+
 func TestTxValidation(t *testing.T) {
 	var (
 		tx      *bc.Tx

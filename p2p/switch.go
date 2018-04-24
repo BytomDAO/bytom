@@ -20,11 +20,11 @@ import (
 )
 
 const (
-	reconnectAttempts = 10
+	reconnectAttempts = 5
 	reconnectInterval = 10 * time.Second
 
 	bannedPeerKey      = "BannedPeer"
-	defaultBanDuration = time.Hour * 24
+	defaultBanDuration = time.Hour * 1
 )
 
 var ErrConnectBannedPeer = errors.New("Connect banned peer")
@@ -340,7 +340,7 @@ func (sw *Switch) DialSeeds(addrBook *AddrBook, seeds []string) error {
 }
 
 func (sw *Switch) dialSeed(addr *NetAddress) {
-	peer, err := sw.DialPeerWithAddress(addr, true)
+	peer, err := sw.DialPeerWithAddress(addr, false)
 	if err != nil {
 		log.WithField("error", err).Error("Error dialing seed")
 	} else {
@@ -449,7 +449,7 @@ func (sw *Switch) StopPeerForError(peer *Peer, reason interface{}) {
 				return
 			}
 
-			peer, err := sw.DialPeerWithAddress(addr, true)
+			peer, err := sw.DialPeerWithAddress(addr, false)
 			if err != nil {
 				if i == reconnectAttempts {
 					log.WithFields(log.Fields{
@@ -679,10 +679,7 @@ func (sw *Switch) AddBannedPeer(peer *Peer) error {
 	return nil
 }
 
-func (sw *Switch) DelBannedPeer(addr string) error {
-	sw.mtx.Lock()
-	defer sw.mtx.Unlock()
-
+func (sw *Switch) delBannedPeer(addr string) error {
 	delete(sw.bannedPeer, addr)
 	datajson, err := json.Marshal(sw.bannedPeer)
 	if err != nil {
@@ -693,11 +690,14 @@ func (sw *Switch) DelBannedPeer(addr string) error {
 }
 
 func (sw *Switch) checkBannedPeer(peer string) error {
+	sw.mtx.Lock()
+	defer sw.mtx.Unlock()
+
 	if banEnd, ok := sw.bannedPeer[peer]; ok {
 		if time.Now().Before(banEnd) {
 			return ErrConnectBannedPeer
 		}
-		sw.DelBannedPeer(peer)
+		sw.delBannedPeer(peer)
 	}
 	return nil
 }

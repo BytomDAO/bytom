@@ -29,7 +29,7 @@ api_addr = "0.0.0.0:9888"
 var mainNetConfigTmpl = `chain_id = "mainnet"
 [p2p]
 laddr = "tcp://0.0.0.0:46657"
-seeds = "45.79.213.28:46657,198.74.61.131:46657,212.111.41.245:46657,47.100.214.154:46657,47.100.109.199:46657,47.100.105.165:46657"
+seeds = ""
 `
 
 var testNetConfigTmpl = `chain_id = "testnet"

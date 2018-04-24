@@ -2,6 +2,7 @@ package validation
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/segwit"
@@ -140,6 +141,9 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 	case *bc.Mux:
 		parity := make(map[bc.AssetID]int64)
 		for i, src := range e.Sources {
+			if src.Value.Amount > math.MaxInt64 {
+				return errors.WithDetailf(errOverflow, "amount %d exceeds maximum value 2^63", src.Value.Amount)
+			}
 			sum, ok := checked.AddInt64(parity[*src.Value.AssetId], int64(src.Value.Amount))
 			if !ok {
 				return errors.WithDetailf(errOverflow, "adding %d units of asset %x from mux source %d to total %d overflows int64", src.Value.Amount, src.Value.AssetId.Bytes(), i, parity[*src.Value.AssetId])
@@ -152,7 +156,9 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			if !ok {
 				return errors.WithDetailf(errNoSource, "mux destination %d, asset %x, has no corresponding source", i, dest.Value.AssetId.Bytes())
 			}
-
+			if dest.Value.Amount > math.MaxInt64 {
+				return errors.WithDetailf(errOverflow, "amount %d exceeds maximum value 2^63", dest.Value.Amount)
+			}
 			diff, ok := checked.SubInt64(sum, int64(dest.Value.Amount))
 			if !ok {
 				return errors.WithDetailf(errOverflow, "subtracting %d units of asset %x from mux destination %d from total %d underflows int64", dest.Value.Amount, dest.Value.AssetId.Bytes(), i, sum)
