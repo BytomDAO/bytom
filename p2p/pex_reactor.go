@@ -20,7 +20,7 @@ const (
 	PexChannel = byte(0x00)
 
 	// period to ensure peers connected
-	defaultEnsurePeersPeriod = 30 * time.Second
+	defaultEnsurePeersPeriod = 120 * time.Second
 	minNumOutboundPeers      = 10
 	maxPexMessageSize        = 1048576 // 1MB
 
@@ -164,12 +164,16 @@ func (r *PEXReactor) Receive(chID byte, src *Peer, msgBytes []byte) {
 
 // RequestPEX asks peer for more addresses.
 func (r *PEXReactor) RequestPEX(p *Peer) {
-	p.Send(PexChannel, struct{ PexMessage }{&pexRequestMessage{}})
+	if ok := p.TrySend(PexChannel, struct{ PexMessage }{&pexRequestMessage{}}); !ok {
+		r.sw.StopPeerGracefully(p)
+	}
 }
 
 // SendAddrs sends addrs to the peer.
 func (r *PEXReactor) SendAddrs(p *Peer, addrs []*NetAddress) {
-	p.Send(PexChannel, struct{ PexMessage }{&pexAddrsMessage{Addrs: addrs}})
+	if ok := p.TrySend(PexChannel, struct{ PexMessage }{&pexAddrsMessage{Addrs: addrs}}); !ok {
+		r.sw.StopPeerGracefully(p)
+	}
 }
 
 // SetEnsurePeersPeriod sets period to ensure peers connected.
@@ -203,7 +207,7 @@ func (r *PEXReactor) IncrementMsgCountForPeer(addr string) {
 // Ensures that sufficient peers are connected. (continuous)
 func (r *PEXReactor) ensurePeersRoutine() {
 	// Randomize when routine starts
-	ensurePeersPeriodMs := r.ensurePeersPeriod.Nanoseconds() / 1e6
+	ensurePeersPeriodMs := int64(10000)
 	time.Sleep(time.Duration(rand.Int63n(ensurePeersPeriodMs)) * time.Millisecond)
 
 	// fire once immediately.

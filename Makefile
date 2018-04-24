@@ -155,7 +155,7 @@ functional-tests:
 	@cp mining/tensority/legacy/*.go mining/tensority/
 	@go test -v -timeout=5m -tags=functional ./test
 
-ci: test functional-tests
+ci: test
 
 .PHONY: all target release-all clean test benchmark
 
