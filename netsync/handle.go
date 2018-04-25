@@ -74,7 +74,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	//var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
 		manager.addrBook = p2p.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
-		pexReactor := p2p.NewPEXReactor(manager.addrBook)
+		pexReactor := p2p.NewPEXReactor(manager.addrBook, manager.sw)
 		manager.sw.AddReactor("PEX", pexReactor)
 	}
 
