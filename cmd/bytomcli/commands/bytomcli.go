@@ -141,6 +141,8 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(getBlockHashCmd)
 	BytomcliCmd.AddCommand(getBlockCmd)
 	BytomcliCmd.AddCommand(getBlockHeaderCmd)
+	BytomcliCmd.AddCommand(getDifficultyCmd)
+	BytomcliCmd.AddCommand(getHashRateCmd)
 
 	BytomcliCmd.AddCommand(createKeyCmd)
 	BytomcliCmd.AddCommand(deleteKeyCmd)

@@ -146,3 +146,29 @@ var getBlockHeaderCmd = &cobra.Command{
 		printJSON(data)
 	},
 }
+
+var getDifficultyCmd = &cobra.Command{
+	Use:   "get-difficulty",
+	Short: "Get the difficulty of most recent block",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		data, exitCode := util.ClientCall("/get-difficulty")
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+		printJSON(data)
+	},
+}
+
+var getHashRateCmd = &cobra.Command{
+	Use:   "get-hash-rate",
+	Short: "Get the nonce of most recent block",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		data, exitCode := util.ClientCall("/get-hash-rate")
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+		printJSON(data)
+	},
+}

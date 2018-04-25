@@ -143,3 +143,45 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 	}
 	return NewSuccessResponse(resp)
 }
+
+// GetDifficultyResp is resp struct for getDifficulty API
+type GetDifficultyResp struct {
+	BlockHash  *bc.Hash `json:"hash"`
+	Bits       uint64   `json:"bits"`
+	Difficulty string   `json:"difficulty"`
+}
+
+func (a *API) getDifficulty() Response {
+	hash := a.chain.BestBlockHash()
+	block, err := a.chain.GetBlockByHash(hash)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	resp := &GetDifficultyResp{
+		BlockHash:  hash,
+		Bits:       block.Bits,
+		Difficulty: difficulty.CompactToBig(block.Bits).String(),
+	}
+	return NewSuccessResponse(resp)
+}
+
+// getHashRateResp is resp struct for getHashRate API
+type getHashRateResp struct {
+	BlockHash *bc.Hash `json:"hash"`
+	Nonce     uint64   `json:"nonce"`
+}
+
+func (a *API) getHashRate() Response {
+	hash := a.chain.BestBlockHash()
+	block, err := a.chain.GetBlockByHash(hash)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	resp := &getHashRateResp{
+		BlockHash: hash,
+		Nonce:     block.Nonce,
+	}
+	return NewSuccessResponse(resp)
+}
