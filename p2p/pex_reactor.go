@@ -110,18 +110,22 @@ func (r *PEXReactor) AddPeer(p *Peer) error {
 				return ErrSendPexFail
 			}
 		}
-	} else { // For inbound connections, the peer is its own source
-		addr, err := NewNetAddressString(p.ListenAddr)
-		if err != nil {
-			// this should never happen
-			log.WithFields(log.Fields{
-				"addr":  p.ListenAddr,
-				"error": err,
-			}).Error("Error in AddPeer: Invalid peer address")
-			return errors.New("Error in AddPeer: Invalid peer address")
-		}
-		r.book.AddAddress(addr, addr)
+		return nil
 	}
+
+	// For inbound connections, the peer is its own source
+	addr, err := NewNetAddressString(p.ListenAddr)
+	if err != nil {
+		// this should never happen
+		log.WithFields(log.Fields{
+			"addr":  p.ListenAddr,
+			"error": err,
+		}).Error("Error in AddPeer: Invalid peer address")
+		return errors.New("Error in AddPeer: Invalid peer address")
+	}
+	r.book.AddAddress(addr, addr)
+
+	// close the connect if connect is big than max limit
 	if r.sw.peers.Size() >= r.sw.config.MaxNumPeers {
 		if ok := r.SendAddrs(p, r.book.GetSelection()); ok {
 			r.sw.StopPeerGracefully(p)
