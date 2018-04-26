@@ -21,7 +21,7 @@ const (
 
 	// period to ensure peers connected
 	defaultEnsurePeersPeriod = 120 * time.Second
-	minNumOutboundPeers      = 10
+	minNumOutboundPeers      = 5
 	maxPexMessageSize        = 1048576 // 1MB
 
 	// maximum messages one peer can send to us during `msgCountByPeerFlushInterval`
@@ -110,17 +110,27 @@ func (r *PEXReactor) AddPeer(p *Peer) error {
 				return ErrSendPexFail
 			}
 		}
-	} else { // For inbound connections, the peer is its own source
-		addr, err := NewNetAddressString(p.ListenAddr)
-		if err != nil {
-			// this should never happen
-			log.WithFields(log.Fields{
-				"addr":  p.ListenAddr,
-				"error": err,
-			}).Error("Error in AddPeer: Invalid peer address")
-			return errors.New("Error in AddPeer: Invalid peer address")
+		return nil
+	}
+
+	// For inbound connections, the peer is its own source
+	addr, err := NewNetAddressString(p.ListenAddr)
+	if err != nil {
+		// this should never happen
+		log.WithFields(log.Fields{
+			"addr":  p.ListenAddr,
+			"error": err,
+		}).Error("Error in AddPeer: Invalid peer address")
+		return errors.New("Error in AddPeer: Invalid peer address")
+	}
+	r.book.AddAddress(addr, addr)
+
+	// close the connect if connect is big than max limit
+	if r.sw.peers.Size() >= r.sw.config.MaxNumPeers {
+		if ok := r.SendAddrs(p, r.book.GetSelection()); ok {
+			r.sw.StopPeerGracefully(p)
 		}
-		r.book.AddAddress(addr, addr)
+		return errors.New("Error in AddPeer: reach the max peer, exchange then close")
 	}
 	return nil
 }
