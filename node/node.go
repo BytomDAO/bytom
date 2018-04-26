@@ -4,6 +4,9 @@ import (
 	"context"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"path"
+	"path/filepath"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -58,6 +61,7 @@ type Node struct {
 
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
+	initLogFile(config)
 	initActiveNetParams(config)
 	// Get store
 	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
@@ -146,6 +150,18 @@ func initActiveNetParams(config *cfg.Config) {
 	consensus.ActiveNetParams, exist = consensus.NetParams[config.ChainID]
 	if !exist {
 		cmn.Exit(cmn.Fmt("chain_id[%v] don't exist", config.ChainID))
+	}
+}
+
+func initLogFile(config *cfg.Config) {
+	logFilePath := filepath.Join(config.RootDir, "log")
+	cmn.EnsureDir(logFilePath, 0700)
+	logFileName := path.Join(logFilePath, config.LogName)
+	file, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err == nil {
+		log.SetOutput(file)
+	} else {
+		log.Info("Failed to open log file, using default")
 	}
 }
 
