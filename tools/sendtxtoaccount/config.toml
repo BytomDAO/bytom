@@ -1,0 +1,4 @@
+send_acct_id = "0D3J0Q50G0A02"
+password = "123456"
+send_asset_id = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+btm_gas=0.4
