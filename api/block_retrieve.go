@@ -217,16 +217,7 @@ func (a *API) getHashRate(ins BlockReq) Response {
 	}
 
 	diffTime := block.Timestamp - preBlock.Timestamp
-	if diffTime <= 0 {
-		diffTime = 150
-	}
-
-	bigOne := big.NewInt(1)
-	oneLsh256 := new(big.Int).Lsh(big.NewInt(1), 256)
-
-	difficultyNum := difficulty.CompactToBig(block.Bits)
-	denominator := new(big.Int).Add(difficultyNum, bigOne)
-	hashCount := new(big.Int).Div(oneLsh256, denominator)
+	hashCount := difficulty.CalcWork(block.Bits)
 	hashRate := new(big.Int).Div(hashCount, big.NewInt(int64(diffTime)))
 
 	blockHash := block.Hash()
