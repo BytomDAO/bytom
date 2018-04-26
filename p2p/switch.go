@@ -490,7 +490,9 @@ func (sw *Switch) stopAndRemovePeer(peer *Peer, reason interface{}) {
 		reactor.RemovePeer(peer, reason)
 	}
 	sw.peers.Remove(peer)
-	peer.Stop()
+	log.Info("Del peer from switch.")
+	go peer.Stop()
+	log.Info("Peer connection is closed.")
 }
 
 func (sw *Switch) listenerRoutine(l Listener) {

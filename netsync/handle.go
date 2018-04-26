@@ -173,10 +173,8 @@ func (sm *SyncManager) txBroadcastLoop() {
 					continue
 				}
 				swPeer := smPeer.getPeer()
-				if ban := smPeer.addBanScore(0, 50, "Broadcast new tx error"); ban {
-					sm.sw.AddBannedPeer(swPeer)
-					sm.sw.StopPeerGracefully(swPeer)
-				}
+				log.Info("Tx broadcast error. Stop Peer.")
+				sm.sw.StopPeerGracefully(swPeer)
 			}
 		case <-sm.quitSync:
 			return
@@ -203,10 +201,8 @@ func (sm *SyncManager) minedBroadcastLoop() {
 					continue
 				}
 				swPeer := smPeer.getPeer()
-				if ban := smPeer.addBanScore(0, 50, "Broadcast block error"); ban {
-					sm.sw.AddBannedPeer(swPeer)
-					sm.sw.StopPeerGracefully(swPeer)
-				}
+				log.Info("New mined block broadcast error. Stop Peer.")
+				sm.sw.StopPeerGracefully(swPeer)
 			}
 		case <-sm.quitSync:
 			return
