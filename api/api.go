@@ -205,8 +205,6 @@ func (a *API) buildHandler() {
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/error", jsonHandler(a.walletError))
 
-	m.Handle("/net-info", jsonHandler(a.getNetInfo))
-
 	m.Handle("/create-access-token", jsonHandler(a.createAccessToken))
 	m.Handle("/list-access-tokens", jsonHandler(a.listAccessTokens))
 	m.Handle("/delete-access-token", jsonHandler(a.deleteAccessToken))
@@ -225,12 +223,17 @@ func (a *API) buildHandler() {
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
 	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
+	m.Handle("/get-difficulty", jsonHandler(a.getDifficulty))
+	m.Handle("/get-hash-rate", jsonHandler(a.getHashRate))
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
-	m.Handle("/gas-rate", jsonHandler(a.gasRate))
+	m.Handle("/set-mining", jsonHandler(a.setMining))
+
 	m.Handle("/get-work", jsonHandler(a.getWork))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
-	m.Handle("/set-mining", jsonHandler(a.setMining))
+
+	m.Handle("/gas-rate", jsonHandler(a.gasRate))
+	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 
 	handler := latencyHandler(m, walletEnable)
 	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux
