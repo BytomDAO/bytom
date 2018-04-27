@@ -167,7 +167,7 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 
 	accountID := Key(id)
 	storeBatch.Set(accountID, rawAccount)
-	storeBatch.Set(aliasKey(alias), []byte(id))
+	storeBatch.Set(aliasKey(normalizedAlias), []byte(id))
 	storeBatch.Write()
 
 	return account, nil
