@@ -500,15 +500,15 @@ func (sw *Switch) listenerRoutine(l Listener) {
 			break
 		}
 
-		// ignore connection if we already have enough
-		maxPeers := sw.config.MaxNumPeers
-		if maxPeers <= sw.peers.Size() {
+		// disconnect if we alrady have 2 * MaxNumPeers, we do this because we wanna address book get exchanged even if
+		// the connect is full. The pex will disconnect the peer after address exchange, the max connected peer won't
+		// be double of MaxNumPeers
+		if sw.config.MaxNumPeers*2 <= sw.peers.Size() {
 			// close inConn
 			inConn.Close()
 			log.WithFields(log.Fields{
 				"address":  inConn.RemoteAddr().String(),
 				"numPeers": sw.peers.Size(),
-				"max":      maxPeers,
 			}).Info("Ignoring inbound connection: already have enough peers")
 			continue
 		}

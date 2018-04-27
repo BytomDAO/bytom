@@ -4,8 +4,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bytom/util"
 	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
+
+	"github.com/bytom/util"
 )
 
 var isMiningCmd = &cobra.Command{
@@ -21,7 +23,7 @@ var isMiningCmd = &cobra.Command{
 	},
 }
 
-var miningCmd = &cobra.Command{
+var setMiningCmd = &cobra.Command{
 	Use:   "set-mining <true or false>",
 	Short: "start or stop mining",
 	Args:  cobra.ExactArgs(1),
@@ -34,13 +36,19 @@ var miningCmd = &cobra.Command{
 		default:
 			isMining = false
 		}
+
 		miningInfo := &struct {
 			IsMining bool `json:"is_mining"`
 		}{IsMining: isMining}
-		data, exitCode := util.ClientCall("/set-mining", miningInfo)
-		if exitCode != util.Success {
+
+		if _, exitCode := util.ClientCall("/set-mining", miningInfo); exitCode != util.Success {
 			os.Exit(exitCode)
 		}
-		printJSON(data)
+
+		if isMining {
+			jww.FEEDBACK.Println("start mining success")
+		} else {
+			jww.FEEDBACK.Println("stop mining success")
+		}
 	},
 }
