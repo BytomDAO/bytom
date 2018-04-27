@@ -172,10 +172,8 @@ func (f *Fetcher) insert(peerID string, block *types.Block) {
 			continue
 		}
 		swPeer := fPeer.getPeer()
-		if ban := fPeer.addBanScore(0, 50, "Broadcast block error"); ban {
-			f.sw.AddBannedPeer(swPeer)
-			f.sw.StopPeerGracefully(swPeer)
-		}
+		log.Info("Fetcher broadcast block error. Stop peer.")
+		f.sw.StopPeerGracefully(swPeer)
 	}
 }
 
