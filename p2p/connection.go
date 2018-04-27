@@ -493,10 +493,6 @@ FOR_LOOP:
 		default:
 			cmn.PanicSanity(cmn.Fmt("Unknown message type %X", pktType))
 		}
-
-		// TODO: shouldn't this go in the sendRoutine?
-		// Better to send a ping packet when *we* haven't sent anything for a while.
-		c.pingTimer.Reset()
 	}
 
 	// Cleanup
