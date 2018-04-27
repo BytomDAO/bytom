@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"encoding/hex"
 	"os"
+
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
@@ -86,5 +88,49 @@ var resetKeyPwdCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 		jww.FEEDBACK.Println("Successfully reset key password")
+	},
+}
+
+var signMsgCmd = &cobra.Command{
+	Use:   "sign-message <address> <message> <password>",
+	Short: "sign message to generate signature",
+	Args:  cobra.ExactArgs(3),
+	Run: func(cmd *cobra.Command, args []string) {
+		var req = struct {
+			Address  string `json:"address"`
+			Message  []byte `json:"message"`
+			Password string `json:"password"`
+		}{Address: args[0], Message: []byte(args[1]), Password: args[2]}
+
+		data, exitCode := util.ClientCall("/sign-message", &req)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+		printJSON(data)
+	},
+}
+
+var verifyMsgCmd = &cobra.Command{
+	Use:   "verify-message <address> <message> <signature>",
+	Short: "verify signature for specified message",
+	Args:  cobra.ExactArgs(3),
+	Run: func(cmd *cobra.Command, args []string) {
+		signature, err := hex.DecodeString(args[2])
+		if err != nil {
+			jww.ERROR.Println("convert signature error:", err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		var req = struct {
+			Address   string `json:"address"`
+			Message   []byte `json:"message"`
+			Signature []byte `json:"signature"`
+		}{Address: args[0], Message: []byte(args[1]), Signature: signature}
+
+		data, exitCode := util.ClientCall("/verify-message", &req)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+		printJSON(data)
 	},
 }

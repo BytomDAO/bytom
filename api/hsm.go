@@ -2,12 +2,15 @@ package api
 
 import (
 	"context"
+	"encoding/hex"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httperror"
 )
 
@@ -66,6 +69,7 @@ func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path
 	return a.wallet.Hsm.XSign(xpub, path, data[:], password)
 }
 
+// ResetPasswordResp is response for reset password password
 type ResetPasswordResp struct {
 	Changed bool `json:"changed"`
 }
@@ -81,4 +85,55 @@ func (a *API) pseudohsmResetPassword(ctx context.Context, ins struct {
 	}
 	resp.Changed = true
 	return NewSuccessResponse(resp)
+}
+
+// SignMsgResp is response for sign message
+type SignMsgResp struct {
+	Signature string `json:"signature"`
+}
+
+func (a *API) pseudohsmSignMsg(ctx context.Context, ins struct {
+	Address  string `json:"address"`
+	Message  []byte `json:"message"`
+	Password string `json:"password"`
+}) Response {
+	account, err := a.wallet.AccountMgr.GetAccountByAddress(ins.Address)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	if len(account.XPubs) == 0 {
+		return NewErrorResponse(errors.New("account xpubs is nil"))
+	}
+
+	sig, err := a.wallet.Hsm.XSign(account.XPubs[0], nil, ins.Message, ins.Password)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(SignMsgResp{Signature: hex.EncodeToString(sig)})
+}
+
+// VerifyMsgResp is response for verify message
+type VerifyMsgResp struct {
+	VerifyResult bool `json:" result"`
+}
+
+func (a *API) pseudohsmVerifyMsg(ctx context.Context, ins struct {
+	Address   string `json:"address"`
+	Message   []byte `json:"message"`
+	Signature []byte `json:"signature"`
+}) Response {
+	account, err := a.wallet.AccountMgr.GetAccountByAddress(ins.Address)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	if len(account.XPubs) == 0 {
+		return NewErrorResponse(errors.New("account xpubs is nil"))
+	}
+
+	if ed25519.Verify(account.XPubs[0].PublicKey(), ins.Message, ins.Signature) {
+		return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
+	}
+	return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
 }

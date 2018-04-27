@@ -185,6 +185,9 @@ func (a *API) buildHandler() {
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
 
+		m.Handle("/sign-message", jsonHandler(a.pseudohsmSignMsg))
+		m.Handle("/verify-message", jsonHandler(a.pseudohsmVerifyMsg))
+
 		m.Handle("/build-transaction", jsonHandler(a.build))
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
 		m.Handle("/submit-transaction", jsonHandler(a.submit))
