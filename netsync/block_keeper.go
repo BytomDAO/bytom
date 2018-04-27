@@ -94,9 +94,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 				log.Info("peer is not registered")
 				break
 			}
-			if ban := bkPeer.addBanScore(0, 50, "block request error"); ban {
-				bk.sw.AddBannedPeer(swPeer)
-			}
+			log.Info("Block keeper request block error. Stop peer.")
 			bk.sw.StopPeerGracefully(swPeer)
 			break
 		}
@@ -140,10 +138,8 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 				return errPeerNotRegister
 			}
 			swPeer := peer.getPeer()
-			if ban := peer.addBanScore(0, 50, "Broadcast block error"); ban {
-				bk.sw.AddBannedPeer(swPeer)
-				bk.sw.StopPeerGracefully(swPeer)
-			}
+			log.Info("Block keeper broadcast block error. Stop peer.")
+			bk.sw.StopPeerGracefully(swPeer)
 		}
 	}
 	return nil
