@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	"runtime"
 
 	"github.com/bytom/protocol/bc"
 )
