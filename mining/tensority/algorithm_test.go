@@ -1,10 +1,9 @@
 package tensority
 
 import (
-	// "fmt"
 	"reflect"
 	"testing"
-	// "time"
+	"time"
 
 	"github.com/bytom/protocol/bc"
 )
@@ -238,27 +237,47 @@ var tests = []struct {
 
 // Tests that tensority hash result is correct.
 func TestAlgorithm(t *testing.T) {
-	// startT := time.Now()
-	for _, tt := range tests {
-		// fmt.Printf("Test case %d:\n", i+1)
-
-		// sT := time.Now()
+	startT := time.Now()
+	for i, tt := range tests {
+		sT := time.Now()
 		bhhash := bc.NewHash(tt.blockHeader)
 		sdhash := bc.NewHash(tt.seed)
 		result := algorithm(&bhhash, &sdhash).Bytes()
 		var resArr [32]byte
 		copy(resArr[:], result)
-		// eT := time.Now()
-		// fmt.Println("\tTotal verification time:", eT.Sub(sT))
+		eT := time.Now()
 
 		if !reflect.DeepEqual(resArr, tt.hash) {
-			t.Errorf("\tFAIL\n")
-			t.Errorf("\tGets\t%x\n", resArr)
-			t.Errorf("\tExpects\t%x\n", tt.hash)
+			t.Errorf("Test case %d:\n", i+1)
+			t.Errorf("Gets\t%x\n", resArr)
+			t.Errorf("Expects\t%x\n", tt.hash)
+			t.Errorf("FAIL\n\n")
 		} else {
-			// fmt.Printf("\tPASS\n")
+			t.Logf("Test case %d:\n", i+1)
+			t.Log("Total verification time:", eT.Sub(sT))
+			t.Log("PASS\n")
 		}
 	}
-	// endT := time.Now()
-	// fmt.Println("Avg time:", time.Duration(int(endT.Sub(startT))/len(tests)))
+	endT := time.Now()
+	t.Log("Avg time:", time.Duration(int(endT.Sub(startT))/len(tests)))
+}
+
+func BenchmarkAlgorithm(b *testing.B) {
+	bhhash := bc.NewHash(tests[0].blockHeader)
+	sdhash := bc.NewHash(tests[0].seed)
+	b.ResetTimer()
+	for i:=0 ; i<b.N ; i++ {
+		algorithm(&bhhash, &sdhash)
+	}
+}
+
+func BenchmarkAlgorithmParallel(b *testing.B) {
+	bhhash := bc.NewHash(tests[0].blockHeader)
+	sdhash := bc.NewHash(tests[0].seed)
+
+    b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			algorithm(&bhhash, &sdhash)
+	    }
+    })
 }
