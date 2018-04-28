@@ -187,7 +187,6 @@ func AddTemplateFunc() {
 		listKeysCmd.Name(),
 		resetKeyPwdCmd.Name(),
 		signMsgCmd.Name(),
-		verifyMsgCmd.Name(),
 
 		buildTransactionCmd.Name(),
 		signTransactionCmd.Name(),

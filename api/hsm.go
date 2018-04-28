@@ -91,7 +91,7 @@ type SignMsgResp struct {
 	Signature string `json:"signature"`
 }
 
-func (a *API) pseudohsmSignMsg(ctx context.Context, ins struct {
+func (a *API) signMessage(ctx context.Context, ins struct {
 	RootXPub chainkd.XPub `json:"root_xpub"`
 	Message  []byte       `json:"message"`
 	Password string       `json:"password"`
@@ -108,7 +108,7 @@ type VerifyMsgResp struct {
 	VerifyResult bool `json:" result"`
 }
 
-func (a *API) pseudohsmVerifyMsg(ctx context.Context, ins struct {
+func (a *API) verifyMessage(ctx context.Context, ins struct {
 	RootXPub  chainkd.XPub `json:"root_xpub"`
 	Message   []byte       `json:"message"`
 	Signature []byte       `json:"signature"`
