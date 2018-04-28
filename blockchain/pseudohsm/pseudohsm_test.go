@@ -134,6 +134,11 @@ func TestSignAndVerifyMessage(t *testing.T) {
 	if !ed25519.Verify(xpub.XPub.PublicKey(), []byte(msg), sig) {
 		t.Fatal("verify sign failed")
 	}
+
+	err = hsm.XDelete(xpub.XPub, "password")
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func BenchmarkSign(b *testing.B) {
