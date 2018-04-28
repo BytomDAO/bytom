@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/errors"
 )
 
@@ -114,6 +115,24 @@ func TestKeyWithEmptyAlias(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestSignAndVerifyMessage(t *testing.T) {
+	hsm, _ := New(dirPath)
+	xpub, err := hsm.XCreate("TESTKEY", "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg := "this is a test message"
+	sig, err := hsm.XSign(xpub.XPub, nil, []byte(msg), "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !ed25519.Verify(xpub.XPub.PublicKey(), []byte(msg), sig) {
+		t.Fatal("verify sign failed")
 	}
 }
 

@@ -92,15 +92,21 @@ var resetKeyPwdCmd = &cobra.Command{
 }
 
 var signMsgCmd = &cobra.Command{
-	Use:   "sign-message <address> <message> <password>",
+	Use:   "sign-message <xpub> <message> <password>",
 	Short: "sign message to generate signature",
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
+		xpub := chainkd.XPub{}
+		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
+		}
+
 		var req = struct {
-			Address  string `json:"address"`
-			Message  []byte `json:"message"`
-			Password string `json:"password"`
-		}{Address: args[0], Message: []byte(args[1]), Password: args[2]}
+			RootXPub chainkd.XPub `json:"root_xpub"`
+			Message  []byte       `json:"message"`
+			Password string       `json:"password"`
+		}{RootXPub: xpub, Message: []byte(args[1]), Password: args[2]}
 
 		data, exitCode := util.ClientCall("/sign-message", &req)
 		if exitCode != util.Success {
@@ -111,10 +117,16 @@ var signMsgCmd = &cobra.Command{
 }
 
 var verifyMsgCmd = &cobra.Command{
-	Use:   "verify-message <address> <message> <signature>",
+	Use:   "verify-message <xpub> <message> <signature>",
 	Short: "verify signature for specified message",
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
+		xpub := chainkd.XPub{}
+		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
+		}
+
 		signature, err := hex.DecodeString(args[2])
 		if err != nil {
 			jww.ERROR.Println("convert signature error:", err)
@@ -122,10 +134,10 @@ var verifyMsgCmd = &cobra.Command{
 		}
 
 		var req = struct {
-			Address   string `json:"address"`
-			Message   []byte `json:"message"`
-			Signature []byte `json:"signature"`
-		}{Address: args[0], Message: []byte(args[1]), Signature: signature}
+			RootXPub  chainkd.XPub `json:"root_xpub"`
+			Message   []byte       `json:"message"`
+			Signature []byte       `json:"signature"`
+		}{RootXPub: xpub, Message: []byte(args[1]), Signature: signature}
 
 		data, exitCode := util.ClientCall("/verify-message", &req)
 		if exitCode != util.Success {

@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httperror"
 )
 
@@ -93,20 +92,11 @@ type SignMsgResp struct {
 }
 
 func (a *API) pseudohsmSignMsg(ctx context.Context, ins struct {
-	Address  string `json:"address"`
-	Message  []byte `json:"message"`
-	Password string `json:"password"`
+	RootXPub chainkd.XPub `json:"root_xpub"`
+	Message  []byte       `json:"message"`
+	Password string       `json:"password"`
 }) Response {
-	account, err := a.wallet.AccountMgr.GetAccountByAddress(ins.Address)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	if len(account.XPubs) == 0 {
-		return NewErrorResponse(errors.New("account xpubs is nil"))
-	}
-
-	sig, err := a.wallet.Hsm.XSign(account.XPubs[0], nil, ins.Message, ins.Password)
+	sig, err := a.wallet.Hsm.XSign(ins.RootXPub, nil, ins.Message, ins.Password)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -119,20 +109,11 @@ type VerifyMsgResp struct {
 }
 
 func (a *API) pseudohsmVerifyMsg(ctx context.Context, ins struct {
-	Address   string `json:"address"`
-	Message   []byte `json:"message"`
-	Signature []byte `json:"signature"`
+	RootXPub  chainkd.XPub `json:"root_xpub"`
+	Message   []byte       `json:"message"`
+	Signature []byte       `json:"signature"`
 }) Response {
-	account, err := a.wallet.AccountMgr.GetAccountByAddress(ins.Address)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	if len(account.XPubs) == 0 {
-		return NewErrorResponse(errors.New("account xpubs is nil"))
-	}
-
-	if ed25519.Verify(account.XPubs[0].PublicKey(), ins.Message, ins.Signature) {
+	if ed25519.Verify(ins.RootXPub.PublicKey(), ins.Message, ins.Signature) {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
 	}
 	return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})

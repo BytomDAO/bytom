@@ -148,6 +148,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(deleteKeyCmd)
 	BytomcliCmd.AddCommand(listKeysCmd)
 	BytomcliCmd.AddCommand(resetKeyPwdCmd)
+
 	BytomcliCmd.AddCommand(signMsgCmd)
 	BytomcliCmd.AddCommand(verifyMsgCmd)
 
