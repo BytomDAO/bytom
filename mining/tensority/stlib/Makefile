@@ -13,12 +13,10 @@ endif
 $(TARGET): cSimdTs.o
 	rm -rf ../*.go
 	cp *.go ../
-	cd .. && go test
+	cd .. && go test -v && go test -bench=.
 	rm *.o
 	rm -rf ../*.go
 	cp ../legacy/*.go ../
-
-
 
 %.o: %.cpp
 	g++ -o $@ -c $^ -std=c++11 -pthread -mavx2 -O3 -fopenmp -D_USE_OPENMP
