@@ -1,6 +1,8 @@
 package api
 
 import (
+	"math/big"
+
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus/difficulty"
 	chainjson "github.com/bytom/encoding/json"
@@ -140,6 +142,89 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 	resp := &GetBlockHeaderResp{
 		BlockHeader: &block.BlockHeader,
 		Reward:      block.Transactions[0].Outputs[0].Amount,
+	}
+	return NewSuccessResponse(resp)
+}
+
+// GetDifficultyResp is resp struct for getDifficulty API
+type GetDifficultyResp struct {
+	BlockHash   *bc.Hash `json:"hash"`
+	BlockHeight uint64   `json:"height"`
+	Bits        uint64   `json:"bits"`
+	Difficulty  string   `json:"difficulty"`
+}
+
+func (a *API) getDifficulty(ins *BlockReq) Response {
+	var err error
+	block := &types.Block{}
+
+	if len(ins.BlockHash) == 32 && ins.BlockHash != nil {
+		b32 := [32]byte{}
+		copy(b32[:], ins.BlockHash)
+		hash := bc.NewHash(b32)
+		block, err = a.chain.GetBlockByHash(&hash)
+	} else if ins.BlockHeight > 0 {
+		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
+	} else {
+		hash := a.chain.BestBlockHash()
+		block, err = a.chain.GetBlockByHash(hash)
+	}
+
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	blockHash := block.Hash()
+	resp := &GetDifficultyResp{
+		BlockHash:   &blockHash,
+		BlockHeight: block.Height,
+		Bits:        block.Bits,
+		Difficulty:  difficulty.CalcWork(block.Bits).String(),
+	}
+	return NewSuccessResponse(resp)
+}
+
+// getHashRateResp is resp struct for getHashRate API
+type getHashRateResp struct {
+	BlockHash   *bc.Hash `json:"hash"`
+	BlockHeight uint64   `json:"height"`
+	HashRate    uint64   `json:"hash_rate"`
+}
+
+func (a *API) getHashRate(ins BlockReq) Response {
+	var err error
+	block := &types.Block{}
+
+	if len(ins.BlockHash) == 32 && ins.BlockHash != nil {
+		b32 := [32]byte{}
+		copy(b32[:], ins.BlockHash)
+		hash := bc.NewHash(b32)
+		block, err = a.chain.GetBlockByHash(&hash)
+	} else if ins.BlockHeight > 0 {
+		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
+	} else {
+		hash := a.chain.BestBlockHash()
+		block, err = a.chain.GetBlockByHash(hash)
+	}
+
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	preBlock, err := a.chain.GetBlockByHash(&block.PreviousBlockHash)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	diffTime := block.Timestamp - preBlock.Timestamp
+	hashCount := difficulty.CalcWork(block.Bits)
+	hashRate := new(big.Int).Div(hashCount, big.NewInt(int64(diffTime)))
+
+	blockHash := block.Hash()
+	resp := &getHashRateResp{
+		BlockHash:   &blockHash,
+		BlockHeight: block.Height,
+		HashRate:    hashRate.Uint64(),
 	}
 	return NewSuccessResponse(resp)
 }
