@@ -68,10 +68,10 @@ func (a *API) getTxFeeds() ([]txfeed.TxFeed, error) {
 	txFeed := txfeed.TxFeed{}
 	txFeeds := make([]txfeed.TxFeed, 0)
 
-	iter := a.txFeedTracker.DB.Iterator()
-	defer iter.Release()
+	iter := a.txFeedTracker.DB.Iterator(nil, nil)
+	defer iter.Close()
 
-	for iter.Next() {
+	for ; iter.Valid(); iter.Next() {
 		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
 			return nil, err
 		}

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
 type Config struct {
@@ -68,7 +70,7 @@ type BaseConfig struct {
 	TxIndex string `mapstructure:"tx_index"`
 
 	// Database backend: leveldb | memdb
-	DBBackend string `mapstructure:"db_backend"`
+	DBBackend dbm.DBBackendType `mapstructure:"db_backend"`
 
 	// Database directory
 	DBPath string `mapstructure:"db_dir"`

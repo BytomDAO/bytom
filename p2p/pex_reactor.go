@@ -241,7 +241,7 @@ func (r *PEXReactor) ensurePeersRoutine() {
 		select {
 		case <-ticker.C:
 			r.ensurePeers()
-		case <-r.Quit:
+		case <-r.Quit():
 			ticker.Stop()
 			return
 		}
@@ -350,7 +350,7 @@ func (r *PEXReactor) flushMsgCountByPeer() {
 		select {
 		case <-ticker.C:
 			r.msgCountByPeer.Clear()
-		case <-r.Quit:
+		case <-r.Quit():
 			ticker.Stop()
 			return
 		}

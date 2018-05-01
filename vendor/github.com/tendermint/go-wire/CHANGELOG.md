@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.3 (Mar 2, 2018)
+
+FEATURES:
+ - new Marshal API in preparation for major upgrade: MarshalBinary, UnmarshalBinary, MarshalJSON, UnmarshalJSON
+
+## 0.7.2 (Dec 5, 2017)
+
+IMPROVEMENTS:
+ - data: expose Marshal and Unmarshal methods on `Bytes` to support protobuf
+ - nowriter: start adding new interfaces for improved technical language and organization
+
+BUG FIXES:
+ - fix incorrect byte write count for integers
+
 ## 0.7.1 (Oct 27, 2017)
 
 BUG FIXES:

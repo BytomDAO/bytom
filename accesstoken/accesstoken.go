@@ -117,10 +117,10 @@ func (cs *CredentialStore) Check(ctx context.Context, id string, secret string) 
 // List lists all access tokens.
 func (cs *CredentialStore) List(ctx context.Context) ([]*Token, error) {
 	tokens := make([]*Token, 0)
-	iter := cs.DB.Iterator()
-	defer iter.Release()
+	iter := cs.DB.Iterator(nil, nil)
+	defer iter.Close()
 
-	for iter.Next() {
+	for ; iter.Valid(); iter.Next() {
 		token := &Token{}
 		if err := json.Unmarshal(iter.Value(), token); err != nil {
 			return nil, err

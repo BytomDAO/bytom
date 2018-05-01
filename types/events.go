@@ -2,7 +2,7 @@ package types
 
 import (
 	// for registering TMEventData as events.EventData
-	abci "github.com/tendermint/abci/types"
+	// abci "github.com/tendermint/abci/types"
 	"github.com/tendermint/go-wire/data"
 	//cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/events"
@@ -110,10 +110,10 @@ type EventDataNewBlockHeader struct {
 type EventDataTx struct {
 	Height int `json:"height"`
 	//Tx     Tx            `json:"tx"`
-	Data  data.Bytes    `json:"data"`
-	Log   string        `json:"log"`
-	Code  abci.CodeType `json:"code"`
-	Error string        `json:"error"` // this is redundant information for now
+	Data  data.Bytes `json:"data"`
+	Log   string     `json:"log"`
+	Code  uint32     `json:"code"`
+	Error string     `json:"error"` // this is redundant information for now
 }
 
 // NOTE: This goes into the replay WAL

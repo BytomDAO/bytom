@@ -358,9 +358,9 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 		return cp.ControlProgram, json.Unmarshal(data, cp)
 	}
 
-	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
-	defer accountIter.Release()
-	if !accountIter.Next() {
+	accountIter := dbm.IteratePrefix(m.db, []byte(accountPrefix))
+	defer accountIter.Close()
+	if accountIter.Next(); !accountIter.Valid() {
 		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
 		return vmutil.DefaultCoinbaseProgram()
 	}
@@ -409,10 +409,10 @@ func (m *Manager) DeleteAccount(aliasOrID string) (err error) {
 // ListAccounts will return the accounts in the db
 func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 	accounts := []*Account{}
-	accountIter := m.db.IteratorPrefix(Key(strings.TrimSpace(id)))
-	defer accountIter.Release()
+	accountIter := dbm.IteratePrefix(m.db, Key(strings.TrimSpace(id)))
+	defer accountIter.Close()
 
-	for accountIter.Next() {
+	for ; accountIter.Valid(); accountIter.Next() {
 		account := &Account{}
 		if err := json.Unmarshal(accountIter.Value(), &account); err != nil {
 			return nil, err
@@ -426,10 +426,10 @@ func (m *Manager) ListAccounts(id string) ([]*Account, error) {
 // ListControlProgram return all the local control program
 func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
 	var cps []*CtrlProgram
-	cpIter := m.db.IteratorPrefix(contractPrefix)
-	defer cpIter.Release()
+	cpIter := dbm.IteratePrefix(m.db, contractPrefix)
+	defer cpIter.Close()
 
-	for cpIter.Next() {
+	for ; cpIter.Valid(); cpIter.Next() {
 		cp := &CtrlProgram{}
 		if err := json.Unmarshal(cpIter.Value(), cp); err != nil {
 			return nil, err

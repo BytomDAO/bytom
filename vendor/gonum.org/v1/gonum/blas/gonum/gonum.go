@@ -109,6 +109,58 @@ func checkZMatrix(name byte, m, n int, a []complex128, lda int) {
 	}
 }
 
+func checkZBandMatrix(name byte, m, n, kL, kU int, ab []complex128, ldab int) {
+	if m < 0 {
+		panic(mLT0)
+	}
+	if n < 0 {
+		panic(nLT0)
+	}
+	if kL < 0 {
+		panic(kLLT0)
+	}
+	if kU < 0 {
+		panic(kULT0)
+	}
+	if ldab < kL+kU+1 {
+		panic("blas: illegal stride of band matrix " + string(name))
+	}
+	nRow := min(m, n+kL)
+	if len(ab) < (nRow-1)*ldab+kL+1+kU {
+		panic("blas: insufficient " + string(name) + " band matrix slice length")
+	}
+}
+
+func checkZhbMatrix(name byte, n, k int, ab []complex128, ldab int) {
+	if n < 0 {
+		panic(nLT0)
+	}
+	if k < 0 {
+		panic(kLT0)
+	}
+	if ldab < k+1 {
+		panic("blas: illegal stride of Hermitian band matrix " + string(name))
+	}
+	if len(ab) < (n-1)*ldab+k+1 {
+		panic("blas: insufficient " + string(name) + " Hermitian band matrix slice length")
+	}
+}
+
+func checkZtbMatrix(name byte, n, k int, ab []complex128, ldab int) {
+	if n < 0 {
+		panic(nLT0)
+	}
+	if k < 0 {
+		panic(kLT0)
+	}
+	if ldab < k+1 {
+		panic("blas: illegal stride of triangular band matrix " + string(name))
+	}
+	if len(ab) < (n-1)*ldab+k+1 {
+		panic("blas: insufficient " + string(name) + " triangular band matrix slice length")
+	}
+}
+
 func checkZVector(name byte, n int, x []complex128, incX int) {
 	if n < 0 {
 		panic(nLT0)

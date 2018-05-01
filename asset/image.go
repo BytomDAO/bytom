@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
+	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/common"
 )
@@ -19,9 +20,9 @@ func (reg *Registry) Backup() (*Image, error) {
 		Assets: []*Asset{},
 	}
 
-	assetIter := reg.db.IteratorPrefix([]byte(assetPrefix))
-	defer assetIter.Release()
-	for assetIter.Next() {
+	assetIter := dbm.IteratePrefix(reg.db, []byte(assetPrefix))
+	defer assetIter.Close()
+	for ; assetIter.Valid(); assetIter.Next() {
 		asset := &Asset{}
 		if err := json.Unmarshal(assetIter.Value(), asset); err != nil {
 			return nil, err

@@ -6,7 +6,7 @@ import (
 	"sort"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/tmlibs/db"
+	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
@@ -63,13 +63,13 @@ func calcTxIndexKey(txID string) []byte {
 }
 
 // deleteTransaction delete transactions when orphan block rollback
-func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
+func (w *Wallet) deleteTransactions(batch dbm.Batch, height uint64) {
 	tmpTx := query.AnnotatedTx{}
 
-	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
-	defer txIter.Release()
+	txIter := dbm.IteratePrefix(w.DB, calcDeleteKey(height))
+	defer txIter.Close()
 
-	for txIter.Next() {
+	for ; txIter.Valid(); txIter.Next() {
 		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
 			// delete index
 			batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
@@ -80,7 +80,7 @@ func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
 }
 
 // ReverseAccountUTXOs process the invalid blocks when orphan block rollback
-func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) reverseAccountUTXOs(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
 	var err error
 
 	// unknow how many spent and retire outputs
@@ -147,7 +147,7 @@ func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *types.Block, txStatus *b
 // saveExternalAssetDefinition save external and local assets definition,
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
-func saveExternalAssetDefinition(b *types.Block, walletDB db.DB) {
+func saveExternalAssetDefinition(b *types.Block, walletDB dbm.DB) {
 	storeBatch := walletDB.NewBatch()
 	defer storeBatch.Write()
 
@@ -185,7 +185,7 @@ type TxSummary struct {
 }
 
 // indexTransactions saves all annotated transactions to the database.
-func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
+func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
@@ -204,7 +204,7 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 }
 
 // buildAccountUTXOs process valid blocks to build account unspent outputs db
-func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) buildAccountUTXOs(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
 	// get the spent UTXOs and delete the UTXOs from DB
 	prevoutDBKeys(batch, b, txStatus)
 
@@ -246,7 +246,7 @@ func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *types.Block, txStatus *bc.
 	}
 }
 
-func prevoutDBKeys(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func prevoutDBKeys(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
 	for txIndex, tx := range b.Transactions {
 		for _, inpID := range tx.Tx.InputIDs {
 			sp, err := tx.Spend(inpID)
@@ -340,7 +340,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 // upsertConfirmedAccountOutputs records the account data for confirmed utxos.
 // If the account utxo already exists (because it's from a local tx), the
 // block confirmation data will in the row will be updated.
-func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error {
+func upsertConfirmedAccountOutputs(outs []*accountOutput, batch dbm.Batch) error {
 	var u *account.UTXO
 
 	for _, out := range outs {
@@ -435,9 +435,9 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error
 		formatKey = string(rawFormatKey)
 	}
 
-	txIter := w.DB.IteratorPrefix(calcAnnotatedKey(formatKey))
-	defer txIter.Release()
-	for txIter.Next() {
+	txIter := dbm.IteratePrefix(w.DB, calcAnnotatedKey(formatKey))
+	defer txIter.Close()
+	for ; txIter.Valid(); txIter.Next() {
 		annotatedTx := &query.AnnotatedTx{}
 		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
 			return nil, err
@@ -505,9 +505,9 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 
-	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
-	defer txIter.Release()
-	for txIter.Next() {
+	txIter := dbm.IteratePrefix(w.DB, []byte(TxPrefix))
+	defer txIter.Close()
+	for ; txIter.Valid(); txIter.Next() {
 		annotatedTx := &query.AnnotatedTx{}
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return nil, err
@@ -526,9 +526,9 @@ func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.Annotate
 func (w *Wallet) GetAccountUTXOs(id string) []account.UTXO {
 	var accountUTXOs []account.UTXO
 
-	accountUTXOIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix + id))
-	defer accountUTXOIter.Release()
-	for accountUTXOIter.Next() {
+	accountUTXOIter := dbm.IteratePrefix(w.DB, []byte(account.UTXOPreFix+id))
+	defer accountUTXOIter.Close()
+	for ; accountUTXOIter.Valid(); accountUTXOIter.Next() {
 		accountUTXO := account.UTXO{}
 		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {
 			hashKey := accountUTXOIter.Key()[len(account.UTXOPreFix):]
@@ -595,11 +595,11 @@ func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) ([]AccountBalance, e
 
 			assetAlias := *targetAsset.Alias
 			balances = append(balances, AccountBalance{
-				Alias: alias,
-				AccountID: id,
-				AssetID: assetID,
-				AssetAlias: assetAlias,
-				Amount: accBalance[id][assetID],
+				Alias:           alias,
+				AccountID:       id,
+				AssetID:         assetID,
+				AssetAlias:      assetAlias,
+				Amount:          accBalance[id][assetID],
 				AssetDefinition: targetAsset.DefinitionMap,
 			})
 		}

@@ -326,10 +326,10 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 		return []*Asset{}, nil
 	}
 
-	assetIter := reg.db.IteratorPrefix(assetPrefix)
-	defer assetIter.Release()
+	assetIter := dbm.IteratePrefix(reg.db, assetPrefix)
+	defer assetIter.Close()
 
-	for assetIter.Next() {
+	for ; assetIter.Valid(); assetIter.Next() {
 		asset := &Asset{}
 		if err := json.Unmarshal(assetIter.Value(), asset); err != nil {
 			return nil, err
