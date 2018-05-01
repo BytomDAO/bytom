@@ -120,7 +120,7 @@ func (sm *SyncManager) makeNodeInfo() *p2p.NodeInfo {
 
 func (sm *SyncManager) netStart() error {
 	// Start the switch
-	_, err := sm.sw.Start()
+	err := sm.sw.Start()
 	if err != nil {
 		return err
 	}

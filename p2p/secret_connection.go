@@ -199,12 +199,14 @@ func shareEphPubKey(conn io.ReadWriteCloser, locEphPub *[32]byte) (remEphPub *[3
 	var err1, err2 error
 
 	cmn.Parallel(
-		func() {
+		func(_ int) (val interface{}, err error, abort bool) {
 			_, err1 = conn.Write(locEphPub[:])
+			return
 		},
-		func() {
+		func(_ int) (val interface{}, err error, abort bool) {
 			remEphPub = new([32]byte)
 			_, err2 = io.ReadFull(conn, remEphPub[:])
+			return
 		},
 	)
 
@@ -269,11 +271,12 @@ func shareAuthSignature(sc *SecretConnection, pubKey crypto.PubKeyEd25519, signa
 	var err1, err2 error
 
 	cmn.Parallel(
-		func() {
+		func(_ int) (val interface{}, err error, abort bool) {
 			msgBytes := wire.BinaryBytes(authSigMessage{pubKey.Wrap(), signature.Wrap()})
 			_, err1 = sc.Write(msgBytes)
+			return
 		},
-		func() {
+		func(_ int) (val interface{}, err error, abort bool) {
 			readBuffer := make([]byte, authSigMsgSize)
 			_, err2 = io.ReadFull(sc, readBuffer)
 			if err2 != nil {
@@ -281,6 +284,7 @@ func shareAuthSignature(sc *SecretConnection, pubKey crypto.PubKeyEd25519, signa
 			}
 			n := int(0) // not used.
 			recvMsg = wire.ReadBinary(authSigMessage{}, bytes.NewBuffer(readBuffer), authSigMsgSize, &n, &err2).(authSigMessage)
+			return
 		})
 
 	if err1 != nil {

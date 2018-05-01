@@ -124,11 +124,11 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 
 func (s *Store) LoadBlockIndex() (*state.BlockIndex, error) {
 	blockIndex := state.NewBlockIndex()
-	bhIter := s.db.IteratorPrefix(blockHeaderPrefix)
-	defer bhIter.Release()
+	bhIter := dbm.IteratePrefix(s.db, blockHeaderPrefix)
+	defer bhIter.Close()
 
 	var lastNode *state.BlockNode
-	for bhIter.Next() {
+	for ; bhIter.Valid(); bhIter.Next() {
 		bh := &types.BlockHeader{}
 		if err := bh.UnmarshalText(bhIter.Value()); err != nil {
 			return nil, err

@@ -155,34 +155,11 @@ func (Implementation) Sger(m, n int, alpha float32, x []float32, incX int, y []f
 	if m == 0 || n == 0 || alpha == 0 {
 		return
 	}
-
-	var ky, kx int
-	if incY > 0 {
-		ky = 0
-	} else {
-		ky = -(n - 1) * incY
-	}
-
-	if incX > 0 {
-		kx = 0
-	} else {
-		kx = -(m - 1) * incX
-	}
-
-	if incX == 1 && incY == 1 {
-		x = x[:m]
-		y = y[:n]
-		for i, xv := range x {
-			f32.AxpyUnitary(alpha*xv, y, a[i*lda:i*lda+n])
-		}
-		return
-	}
-
-	ix := kx
-	for i := 0; i < m; i++ {
-		f32.AxpyInc(alpha*x[ix], y, a[i*lda:i*lda+n], uintptr(n), uintptr(incY), 1, uintptr(ky), 0)
-		ix += incX
-	}
+	f32.Ger(uintptr(m), uintptr(n),
+		alpha,
+		x, uintptr(incX),
+		y, uintptr(incY),
+		a, uintptr(lda))
 }
 
 // Sgbmv computes
@@ -265,14 +242,13 @@ func (Implementation) Sgbmv(tA blas.Transpose, m, n, kL, kU int, alpha float32, 
 
 	// i and j are indices of the compacted banded matrix.
 	// off is the offset into the dense matrix (off + j = densej)
-	ld := min(m, n)
 	nCol := kU + 1 + kL
 	if tA == blas.NoTrans {
 		iy := ky
 		if incX == 1 {
 			for i := 0; i < min(m, n+kL); i++ {
 				l := max(0, kL-i)
-				u := min(nCol, ld+kL-i)
+				u := min(nCol, n+kL-i)
 				off := max(0, i-kL)
 				atmp := a[i*lda+l : i*lda+u]
 				xtmp := x[off : off+u-l]
@@ -287,7 +263,7 @@ func (Implementation) Sgbmv(tA blas.Transpose, m, n, kL, kU int, alpha float32, 
 		}
 		for i := 0; i < min(m, n+kL); i++ {
 			l := max(0, kL-i)
-			u := min(nCol, ld+kL-i)
+			u := min(nCol, n+kL-i)
 			off := max(0, i-kL)
 			atmp := a[i*lda+l : i*lda+u]
 			jx := kx
@@ -304,7 +280,7 @@ func (Implementation) Sgbmv(tA blas.Transpose, m, n, kL, kU int, alpha float32, 
 	if incX == 1 {
 		for i := 0; i < min(m, n+kL); i++ {
 			l := max(0, kL-i)
-			u := min(nCol, ld+kL-i)
+			u := min(nCol, n+kL-i)
 			off := max(0, i-kL)
 			atmp := a[i*lda+l : i*lda+u]
 			tmp := alpha * x[i]
@@ -319,7 +295,7 @@ func (Implementation) Sgbmv(tA blas.Transpose, m, n, kL, kU int, alpha float32, 
 	ix := kx
 	for i := 0; i < min(m, n+kL); i++ {
 		l := max(0, kL-i)
-		u := min(nCol, ld+kL-i)
+		u := min(nCol, n+kL-i)
 		off := max(0, i-kL)
 		atmp := a[i*lda+l : i*lda+u]
 		tmp := alpha * x[ix]

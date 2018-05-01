@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
+	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/common"
 )
@@ -26,9 +27,9 @@ func (m *Manager) Backup() (*Image, error) {
 		Slice: []*ImageSlice{},
 	}
 
-	accountIter := m.db.IteratorPrefix(accountPrefix)
-	defer accountIter.Release()
-	for accountIter.Next() {
+	accountIter := dbm.IteratePrefix(m.db, accountPrefix)
+	defer accountIter.Close()
+	for ; accountIter.Valid(); accountIter.Next() {
 		a := &Account{}
 		if err := json.Unmarshal(accountIter.Value(), a); err != nil {
 			return nil, err

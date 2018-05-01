@@ -11,6 +11,166 @@ import (
 	"gonum.org/v1/gonum/internal/asm/c128"
 )
 
+// Zgbmv performs one of the matrix-vector operations
+//  y = alpha * A * x + beta * y    if trans = blas.NoTrans
+//  y = alpha * A^T * x + beta * y  if trans = blas.Trans
+//  y = alpha * A^H * x + beta * y  if trans = blas.ConjTrans
+// where alpha and beta are scalars, x and y are vectors, and A is an m×n band matrix
+// with kL subdiagonals and kU superdiagonals.
+func (Implementation) Zgbmv(trans blas.Transpose, m, n, kL, kU int, alpha complex128, ab []complex128, ldab int, x []complex128, incX int, beta complex128, y []complex128, incY int) {
+	checkZBandMatrix('A', m, n, kL, kU, ab, ldab)
+	var lenX, lenY int
+	switch trans {
+	default:
+		panic(badTranspose)
+	case blas.NoTrans:
+		lenX = n
+		lenY = m
+	case blas.Trans, blas.ConjTrans:
+		lenX = m
+		lenY = n
+	}
+	checkZVector('x', lenX, x, incX)
+	checkZVector('y', lenY, y, incY)
+
+	if m == 0 || n == 0 || (alpha == 0 && beta == 1) {
+		return
+	}
+
+	var kx int
+	if incX < 0 {
+		kx = (1 - lenX) * incX
+	}
+	var ky int
+	if incY < 0 {
+		ky = (1 - lenY) * incY
+	}
+
+	// Form y = beta*y.
+	if beta != 1 {
+		if incY == 1 {
+			if beta == 0 {
+				for i := range y[:lenY] {
+					y[i] = 0
+				}
+			} else {
+				c128.ScalUnitary(beta, y[:lenY])
+			}
+		} else {
+			iy := ky
+			if beta == 0 {
+				for i := 0; i < lenY; i++ {
+					y[iy] = 0
+					iy += incY
+				}
+			} else {
+				if incY > 0 {
+					c128.ScalInc(beta, y, uintptr(lenY), uintptr(incY))
+				} else {
+					c128.ScalInc(beta, y, uintptr(lenY), uintptr(-incY))
+				}
+			}
+		}
+	}
+
+	nRow := min(m, n+kL)
+	nCol := kL + 1 + kU
+	switch trans {
+	case blas.NoTrans:
+		iy := ky
+		if incX == 1 {
+			for i := 0; i < nRow; i++ {
+				l := max(0, kL-i)
+				u := min(nCol, n+kL-i)
+				aRow := ab[i*ldab+l : i*ldab+u]
+				off := max(0, i-kL)
+				xtmp := x[off : off+u-l]
+				var sum complex128
+				for j, v := range aRow {
+					sum += xtmp[j] * v
+				}
+				y[iy] += alpha * sum
+				iy += incY
+			}
+		} else {
+			for i := 0; i < nRow; i++ {
+				l := max(0, kL-i)
+				u := min(nCol, n+kL-i)
+				aRow := ab[i*ldab+l : i*ldab+u]
+				off := max(0, i-kL) * incX
+				jx := kx
+				var sum complex128
+				for _, v := range aRow {
+					sum += x[off+jx] * v
+					jx += incX
+				}
+				y[iy] += alpha * sum
+				iy += incY
+			}
+		}
+	case blas.Trans:
+		if incX == 1 {
+			for i := 0; i < nRow; i++ {
+				l := max(0, kL-i)
+				u := min(nCol, n+kL-i)
+				aRow := ab[i*ldab+l : i*ldab+u]
+				off := max(0, i-kL) * incY
+				alphaxi := alpha * x[i]
+				jy := ky
+				for _, v := range aRow {
+					y[off+jy] += alphaxi * v
+					jy += incY
+				}
+			}
+		} else {
+			ix := kx
+			for i := 0; i < nRow; i++ {
+				l := max(0, kL-i)
+				u := min(nCol, n+kL-i)
+				aRow := ab[i*ldab+l : i*ldab+u]
+				off := max(0, i-kL) * incY
+				alphaxi := alpha * x[ix]
+				jy := ky
+				for _, v := range aRow {
+					y[off+jy] += alphaxi * v
+					jy += incY
+				}
+				ix += incX
+			}
+		}
+	case blas.ConjTrans:
+		if incX == 1 {
+			for i := 0; i < nRow; i++ {
+				l := max(0, kL-i)
+				u := min(nCol, n+kL-i)
+				aRow := ab[i*ldab+l : i*ldab+u]
+				off := max(0, i-kL) * incY
+				alphaxi := alpha * x[i]
+				jy := ky
+				for _, v := range aRow {
+					y[off+jy] += alphaxi * cmplx.Conj(v)
+					jy += incY
+				}
+			}
+		} else {
+			ix := kx
+			for i := 0; i < nRow; i++ {
+				l := max(0, kL-i)
+				u := min(nCol, n+kL-i)
+				aRow := ab[i*ldab+l : i*ldab+u]
+				off := max(0, i-kL) * incY
+				alphaxi := alpha * x[ix]
+				jy := ky
+				for _, v := range aRow {
+					y[off+jy] += alphaxi * cmplx.Conj(v)
+					jy += incY
+				}
+				ix += incX
+			}
+		}
+	}
+}
+
 // Zgemv performs one of the matrix-vector operations
 //  y = alpha * A * x + beta * y    if trans = blas.NoTrans
 //  y = alpha * A^T * x + beta * y  if trans = blas.Trans
@@ -206,6 +366,146 @@ func (Implementation) Zgeru(m, n int, alpha complex128, x []complex128, incX int
 			c128.AxpyInc(tmp, y, a[i*lda:i*lda+n], uintptr(n), uintptr(incY), 1, uintptr(jy), 0)
 		}
 		kx += incX
+	}
+}
+
+// Zhbmv performs the matrix-vector operation
+//  y = alpha * A * x + beta * y
+// where alpha and beta are scalars, x and y are vectors, and A is an n×n
+// Hermitian band matrix with k super-diagonals. The imaginary parts of
+// the diagonal elements of A are ignored and assumed to be zero.
+func (Implementation) Zhbmv(uplo blas.Uplo, n, k int, alpha complex128, ab []complex128, ldab int, x []complex128, incX int, beta complex128, y []complex128, incY int) {
+	if uplo != blas.Upper && uplo != blas.Lower {
+		panic(badUplo)
+	}
+	checkZhbMatrix('A', n, k, ab, ldab)
+	checkZVector('x', n, x, incX)
+	checkZVector('y', n, y, incY)
+
+	if n == 0 || (alpha == 0 && beta == 1) {
+		return
+	}
+
+	// Set up the start indices in X and Y.
+	var kx int
+	if incX < 0 {
+		kx = (1 - n) * incX
+	}
+	var ky int
+	if incY < 0 {
+		ky = (1 - n) * incY
+	}
+
+	// Form y = beta*y.
+	if beta != 1 {
+		if incY == 1 {
+			if beta == 0 {
+				for i := range y[:n] {
+					y[i] = 0
+				}
+			} else {
+				for i, v := range y[:n] {
+					y[i] = beta * v
+				}
+			}
+		} else {
+			iy := ky
+			if beta == 0 {
+				for i := 0; i < n; i++ {
+					y[iy] = 0
+					iy += incY
+				}
+			} else {
+				for i := 0; i < n; i++ {
+					y[iy] = beta * y[iy]
+					iy += incY
+				}
+			}
+		}
+	}
+
+	if alpha == 0 {
+		return
+	}
+
+	// The elements of A are accessed sequentially with one pass through ab.
+	switch uplo {
+	case blas.Upper:
+		iy := ky
+		if incX == 1 {
+			for i := 0; i < n; i++ {
+				aRow := ab[i*ldab:]
+				alphaxi := alpha * x[i]
+				sum := alphaxi * complex(real(aRow[0]), 0)
+				u := min(k+1, n-i)
+				jy := incY
+				for j := 1; j < u; j++ {
+					v := aRow[j]
+					sum += alpha * x[i+j] * v
+					y[iy+jy] += alphaxi * cmplx.Conj(v)
+					jy += incY
+				}
+				y[iy] += sum
+				iy += incY
+			}
+		} else {
+			ix := kx
+			for i := 0; i < n; i++ {
+				aRow := ab[i*ldab:]
+				alphaxi := alpha * x[ix]
+				sum := alphaxi * complex(real(aRow[0]), 0)
+				u := min(k+1, n-i)
+				jx := incX
+				jy := incY
+				for j := 1; j < u; j++ {
+					v := aRow[j]
+					sum += alpha * x[ix+jx] * v
+					y[iy+jy] += alphaxi * cmplx.Conj(v)
+					jx += incX
+					jy += incY
+				}
+				y[iy] += sum
+				ix += incX
+				iy += incY
+			}
+		}
+	case blas.Lower:
+		iy := ky
+		if incX == 1 {
+			for i := 0; i < n; i++ {
+				l := max(0, k-i)
+				alphaxi := alpha * x[i]
+				jy := l * incY
+				aRow := ab[i*ldab:]
+				for j := l; j < k; j++ {
+					v := aRow[j]
+					y[iy] += alpha * v * x[i-k+j]
+					y[iy-k*incY+jy] += alphaxi * cmplx.Conj(v)
+					jy += incY
+				}
+				y[iy] += alphaxi * complex(real(aRow[k]), 0)
+				iy += incY
+			}
+		} else {
+			ix := kx
+			for i := 0; i < n; i++ {
+				l := max(0, k-i)
+				alphaxi := alpha * x[ix]
+				jx := l * incX
+				jy := l * incY
+				aRow := ab[i*ldab:]
+				for j := l; j < k; j++ {
+					v := aRow[j]
+					y[iy] += alpha * v * x[ix-k*incX+jx]
+					y[iy-k*incY+jy] += alphaxi * cmplx.Conj(v)
+					jx += incX
+					jy += incY
+				}
+				y[iy] += alphaxi * complex(real(aRow[k]), 0)
+				ix += incX
+				iy += incY
+			}
+		}
 	}
 }
 
@@ -939,6 +1239,217 @@ func (Implementation) Zhpr2(uplo blas.Uplo, n int, alpha complex128, x []complex
 	}
 }
 
+// Ztbmv performs one of the matrix-vector operations
+//  x = A * x    if trans = blas.NoTrans
+//  x = A^T * x  if trans = blas.Trans
+//  x = A^H * x  if trans = blas.ConjTrans
+// where x is an n element vector and A is an n×n triangular band matrix, with
+// (k+1) diagonals.
+func (Implementation) Ztbmv(uplo blas.Uplo, trans blas.Transpose, diag blas.Diag, n, k int, ab []complex128, ldab int, x []complex128, incX int) {
+	if uplo != blas.Upper && uplo != blas.Lower {
+		panic(badUplo)
+	}
+	if trans != blas.NoTrans && trans != blas.Trans && trans != blas.ConjTrans {
+		panic(badTranspose)
+	}
+	if diag != blas.Unit && diag != blas.NonUnit {
+		panic(badDiag)
+	}
+	checkZtbMatrix('A', n, k, ab, ldab)
+	checkZVector('x', n, x, incX)
+
+	if n == 0 {
+		return
+	}
+
+	// Set up start index in X.
+	var kx int
+	if incX < 0 {
+		kx = (1 - n) * incX
+	}
+
+	switch trans {
+	case blas.NoTrans:
+		if uplo == blas.Upper {
+			if incX == 1 {
+				for i := 0; i < n; i++ {
+					xi := x[i]
+					if diag == blas.NonUnit {
+						xi *= ab[i*ldab]
+					}
+					kk := min(k, n-i-1)
+					for j, aij := range ab[i*ldab+1 : i*ldab+kk+1] {
+						xi += x[i+j+1] * aij
+					}
+					x[i] = xi
+				}
+			} else {
+				ix := kx
+				for i := 0; i < n; i++ {
+					xi := x[ix]
+					if diag == blas.NonUnit {
+						xi *= ab[i*ldab]
+					}
+					kk := min(k, n-i-1)
+					jx := ix + incX
+					for _, aij := range ab[i*ldab+1 : i*ldab+kk+1] {
+						xi += x[jx] * aij
+						jx += incX
+					}
+					x[ix] = xi
+					ix += incX
+				}
+			}
+		} else {
+			if incX == 1 {
+				for i := n - 1; i >= 0; i-- {
+					xi := x[i]
+					if diag == blas.NonUnit {
+						xi *= ab[i*ldab+k]
+					}
+					kk := min(k, i)
+					for j, aij := range ab[i*ldab+k-kk : i*ldab+k] {
+						xi += x[i-kk+j] * aij
+					}
+					x[i] = xi
+				}
+			} else {
+				ix := kx + (n-1)*incX
+				for i := n - 1; i >= 0; i-- {
+					xi := x[ix]
+					if diag == blas.NonUnit {
+						xi *= ab[i*ldab+k]
+					}
+					kk := min(k, i)
+					jx := ix - kk*incX
+					for _, aij := range ab[i*ldab+k-kk : i*ldab+k] {
+						xi += x[jx] * aij
+						jx += incX
+					}
+					x[ix] = xi
+					ix -= incX
+				}
+			}
+		}
+	case blas.Trans:
+		if uplo == blas.Upper {
+			if incX == 1 {
+				for i := n - 1; i >= 0; i-- {
+					kk := min(k, n-i-1)
+					xi := x[i]
+					for j, aij := range ab[i*ldab+1 : i*ldab+kk+1] {
+						x[i+j+1] += xi * aij
+					}
+					if diag == blas.NonUnit {
+						x[i] *= ab[i*ldab]
+					}
+				}
+			} else {
+				ix := kx + (n-1)*incX
+				for i := n - 1; i >= 0; i-- {
+					kk := min(k, n-i-1)
+					jx := ix + incX
+					xi := x[ix]
+					for _, aij := range ab[i*ldab+1 : i*ldab+kk+1] {
+						x[jx] += xi * aij
+						jx += incX
+					}
+					if diag == blas.NonUnit {
+						x[ix] *= ab[i*ldab]
+					}
+					ix -= incX
+				}
+			}
+		} else {
+			if incX == 1 {
+				for i := 0; i < n; i++ {
+					kk := min(k, i)
+					xi := x[i]
+					for j, aij := range ab[i*ldab+k-kk : i*ldab+k] {
+						x[i-kk+j] += xi * aij
+					}
+					if diag == blas.NonUnit {
+						x[i] *= ab[i*ldab+k]
+					}
+				}
+			} else {
+				ix := kx
+				for i := 0; i < n; i++ {
+					kk := min(k, i)
+					jx := ix - kk*incX
+					xi := x[ix]
+					for _, aij := range ab[i*ldab+k-kk : i*ldab+k] {
+						x[jx] += xi * aij
+						jx += incX
+					}
+					if diag == blas.NonUnit {
+						x[ix] *= ab[i*ldab+k]
+					}
+					ix += incX
+				}
+			}
+		}
+	case blas.ConjTrans:
+		if uplo == blas.Upper {
+			if incX == 1 {
+				for i := n - 1; i >= 0; i-- {
+					kk := min(k, n-i-1)
+					xi := x[i]
+					for j, aij := range ab[i*ldab+1 : i*ldab+kk+1] {
+						x[i+j+1] += xi * cmplx.Conj(aij)
+					}
+					if diag == blas.NonUnit {
+						x[i] *= cmplx.Conj(ab[i*ldab])
+					}
+				}
+			} else {
+				ix := kx + (n-1)*incX
+				for i := n - 1; i >= 0; i-- {
+					kk := min(k, n-i-1)
+					jx := ix + incX
+					xi := x[ix]
+					for _, aij := range ab[i*ldab+1 : i*ldab+kk+1] {
+						x[jx] += xi * cmplx.Conj(aij)
+						jx += incX
+					}
+					if diag == blas.NonUnit {
+						x[ix] *= cmplx.Conj(ab[i*ldab])
+					}
+					ix -= incX
+				}
+			}
+		} else {
+			if incX == 1 {
+				for i := 0; i < n; i++ {
+					kk := min(k, i)
+					xi := x[i]
+					for j, aij := range ab[i*ldab+k-kk : i*ldab+k] {
+						x[i-kk+j] += xi * cmplx.Conj(aij)
+					}
+					if diag == blas.NonUnit {
+						x[i] *= cmplx.Conj(ab[i*ldab+k])
+					}
+				}
+			} else {
+				ix := kx
+				for i := 0; i < n; i++ {
+					kk := min(k, i)
+					jx := ix - kk*incX
+					xi := x[ix]
+					for _, aij := range ab[i*ldab+k-kk : i*ldab+k] {
+						x[jx] += xi * cmplx.Conj(aij)
+						jx += incX
+					}
+					if diag == blas.NonUnit {
+						x[ix] *= cmplx.Conj(ab[i*ldab+k])
+					}
+					ix += incX
+				}
+			}
+		}
+	}
+}
+
 // Ztpmv performs one of the matrix-vector operations
 //  x = A * x    if trans = blas.NoTrans
 //  x = A^T * x  if trans = blas.Trans
@@ -1155,6 +1666,225 @@ func (Implementation) Ztpmv(uplo blas.Uplo, trans blas.Transpose, diag blas.Diag
 				}
 				ix += incX
 				kk += i + 1
+			}
+		}
+	}
+}
+
+// Ztpsv solves one of the systems of equations
+//  A*x = b     if trans == blas.NoTrans,
+//  A^T*x = b,  if trans == blas.Trans,
+//  A^H*x = b,  if trans == blas.ConjTrans,
+// where b and x are n element vectors and A is an n×n triangular matrix in
+// packed form.
+//
+// On entry, x contains the values of b, and the solution is
+// stored in-place into x.
+//
+// No test for singularity or near-singularity is included in this
+// routine. Such tests must be performed before calling this routine.
+func (Implementation) Ztpsv(uplo blas.Uplo, trans blas.Transpose, diag blas.Diag, n int, ap []complex128, x []complex128, incX int) {
+	if uplo != blas.Upper && uplo != blas.Lower {
+		panic(badUplo)
+	}
+	if trans != blas.NoTrans && trans != blas.Trans && trans != blas.ConjTrans {
+		panic(badTranspose)
+	}
+	if diag != blas.Unit && diag != blas.NonUnit {
+		panic(badDiag)
+	}
+	if len(ap) < n*(n+1)/2 {
+		panic("blas: insufficient A packed matrix slice length")
+	}
+	checkZVector('x', n, x, incX)
+
+	if n == 0 {
+		return
+	}
+
+	// Set up start index in X.
+	var kx int
+	if incX < 0 {
+		kx = (1 - n) * incX
+	}
+
+	// The elements of A are accessed sequentially with one pass through ap.
+
+	if trans == blas.NoTrans {
+		// Form x = inv(A)*x.
+		if uplo == blas.Upper {
+			kk := n*(n+1)/2 - 1
+			if incX == 1 {
+				for i := n - 1; i >= 0; i-- {
+					aii := ap[kk]
+					if n-i-1 > 0 {
+						x[i] -= c128.DotuUnitary(x[i+1:n], ap[kk+1:kk+n-i])
+					}
+					if diag == blas.NonUnit {
+						x[i] /= aii
+					}
+					kk -= n - i + 1
+				}
+			} else {
+				ix := kx + (n-1)*incX
+				for i := n - 1; i >= 0; i-- {
+					aii := ap[kk]
+					if n-i-1 > 0 {
+						x[ix] -= c128.DotuInc(x, ap[kk+1:kk+n-i], uintptr(n-i-1), uintptr(incX), 1, uintptr(ix+incX), 0)
+					}
+					if diag == blas.NonUnit {
+						x[ix] /= aii
+					}
+					ix -= incX
+					kk -= n - i + 1
+				}
+			}
+		} else {
+			kk := 0
+			if incX == 1 {
+				for i := 0; i < n; i++ {
+					if i > 0 {
+						x[i] -= c128.DotuUnitary(x[:i], ap[kk:kk+i+1])
+					}
+					if diag == blas.NonUnit {
+						x[i] /= ap[kk+i]
+					}
+					kk += i + 1
+				}
+			} else {
+				ix := kx
+				for i := 0; i < n; i++ {
+					if i > 0 {
+						x[ix] -= c128.DotuInc(x, ap[kk:kk+i+1], uintptr(i), uintptr(incX), 1, uintptr(kx), 0)
+					}
+					if diag == blas.NonUnit {
+						x[ix] /= ap[kk+i]
+					}
+					ix += incX
+					kk += i + 1
+				}
+			}
+		}
+		return
+	}
+
+	if trans == blas.Trans {
+		// Form x = inv(A^T)*x.
+		if uplo == blas.Upper {
+			kk := 0
+			if incX == 1 {
+				for j := 0; j < n; j++ {
+					if diag == blas.NonUnit {
+						x[j] /= ap[kk]
+					}
+					if n-j-1 > 0 {
+						c128.AxpyUnitary(-x[j], ap[kk+1:kk+n-j], x[j+1:n])
+					}
+					kk += n - j
+				}
+			} else {
+				jx := kx
+				for j := 0; j < n; j++ {
+					if diag == blas.NonUnit {
+						x[jx] /= ap[kk]
+					}
+					if n-j-1 > 0 {
+						c128.AxpyInc(-x[jx], ap[kk+1:kk+n-j], x, uintptr(n-j-1), 1, uintptr(incX), 0, uintptr(jx+incX))
+					}
+					jx += incX
+					kk += n - j
+				}
+			}
+		} else {
+			kk := n*(n+1)/2 - n
+			if incX == 1 {
+				for j := n - 1; j >= 0; j-- {
+					if diag == blas.NonUnit {
+						x[j] /= ap[kk+j]
+					}
+					if j > 0 {
+						c128.AxpyUnitary(-x[j], ap[kk:kk+j], x[:j])
+					}
+					kk -= j
+				}
+			} else {
+				jx := kx + (n-1)*incX
+				for j := n - 1; j >= 0; j-- {
+					if diag == blas.NonUnit {
+						x[jx] /= ap[kk+j]
+					}
+					if j > 0 {
+						c128.AxpyInc(-x[jx], ap[kk:kk+j], x, uintptr(j), 1, uintptr(incX), 0, uintptr(kx))
+					}
+					jx -= incX
+					kk -= j
+				}
+			}
+		}
+		return
+	}
+
+	// Form x = inv(A^H)*x.
+	if uplo == blas.Upper {
+		kk := 0
+		if incX == 1 {
+			for j := 0; j < n; j++ {
+				if diag == blas.NonUnit {
+					x[j] /= cmplx.Conj(ap[kk])
+				}
+				xj := x[j]
+				k := kk + 1
+				for i := j + 1; i < n; i++ {
+					x[i] -= xj * cmplx.Conj(ap[k])
+					k++
+				}
+				kk += n - j
+			}
+		} else {
+			jx := kx
+			for j := 0; j < n; j++ {
+				if diag == blas.NonUnit {
+					x[jx] /= cmplx.Conj(ap[kk])
+				}
+				xj := x[jx]
+				ix := jx + incX
+				k := kk + 1
+				for i := j + 1; i < n; i++ {
+					x[ix] -= xj * cmplx.Conj(ap[k])
+					ix += incX
+					k++
+				}
+				jx += incX
+				kk += n - j
+			}
+		}
+	} else {
+		kk := n*(n+1)/2 - n
+		if incX == 1 {
+			for j := n - 1; j >= 0; j-- {
+				if diag == blas.NonUnit {
+					x[j] /= cmplx.Conj(ap[kk+j])
+				}
+				xj := x[j]
+				for i := 0; i < j; i++ {
+					x[i] -= xj * cmplx.Conj(ap[kk+i])
+				}
+				kk -= j
+			}
+		} else {
+			jx := kx + (n-1)*incX
+			for j := n - 1; j >= 0; j-- {
+				if diag == blas.NonUnit {
+					x[jx] /= cmplx.Conj(ap[kk+j])
+				}
+				xj := x[jx]
+				ix := kx
+				for i := 0; i < j; i++ {
+					x[ix] -= xj * cmplx.Conj(ap[kk+i])
+					ix += incX
+				}
+				jx -= incX
+				kk -= j
 			}
 		}
 	}

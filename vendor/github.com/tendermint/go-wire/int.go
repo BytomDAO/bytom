@@ -88,7 +88,6 @@ func ReadUint8(r io.Reader, n *int, err *error) uint8 {
 func WriteInt16(i int16, w io.Writer, n *int, err *error) {
 	var buf [2]byte
 	binary.BigEndian.PutUint16(buf[:], uint16(i))
-	*n += 2
 	WriteTo(buf[:], w, n, err)
 }
 
@@ -111,7 +110,6 @@ func GetInt16(buf []byte) int16 {
 func WriteUint16(i uint16, w io.Writer, n *int, err *error) {
 	var buf [2]byte
 	binary.BigEndian.PutUint16(buf[:], uint16(i))
-	*n += 2
 	WriteTo(buf[:], w, n, err)
 }
 
@@ -162,7 +160,6 @@ func ReadUint16s(r io.Reader, n *int, err *error) []uint16 {
 func WriteInt32(i int32, w io.Writer, n *int, err *error) {
 	var buf [4]byte
 	binary.BigEndian.PutUint32(buf[:], uint32(i))
-	*n += 4
 	WriteTo(buf[:], w, n, err)
 }
 
@@ -185,7 +182,6 @@ func GetInt32(buf []byte) int32 {
 func WriteUint32(i uint32, w io.Writer, n *int, err *error) {
 	var buf [4]byte
 	binary.BigEndian.PutUint32(buf[:], uint32(i))
-	*n += 4
 	WriteTo(buf[:], w, n, err)
 }
 
@@ -208,7 +204,6 @@ func GetUint32(buf []byte) uint32 {
 func WriteInt64(i int64, w io.Writer, n *int, err *error) {
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], uint64(i))
-	*n += 8
 	WriteTo(buf[:], w, n, err)
 }
 
@@ -231,7 +226,6 @@ func GetInt64(buf []byte) int64 {
 func WriteUint64(i uint64, w io.Writer, n *int, err *error) {
 	var buf [8]byte
 	binary.BigEndian.PutUint64(buf[:], uint64(i))
-	*n += 8
 	WriteTo(buf[:], w, n, err)
 }
 

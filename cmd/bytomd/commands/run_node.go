@@ -41,7 +41,7 @@ func init() {
 func runNode(cmd *cobra.Command, args []string) error {
 	// Create & start node
 	n := node.NewNode(config)
-	if _, err := n.Start(); err != nil {
+	if err := n.Start(); err != nil {
 		return fmt.Errorf("Failed to start node: %v", err)
 	} else {
 		log.WithField("nodeInfo", n.SyncManager().Switch().NodeInfo()).Info("Started node")

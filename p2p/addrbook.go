@@ -421,7 +421,7 @@ out:
 		select {
 		case <-dumpAddressTicker.C:
 			a.saveToFile(a.filePath)
-		case <-a.Quit:
+		case <-a.Quit():
 			break out
 		}
 	}

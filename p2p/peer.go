@@ -55,7 +55,7 @@ func DefaultPeerConfig(config *cfg.P2PConfig) *PeerConfig {
 	return &PeerConfig{
 		AuthEnc:          true,
 		HandshakeTimeout: time.Duration(config.HandshakeTimeout), // * time.Second,
-		DialTimeout:      time.Duration(config.DialTimeout),  // * time.Second,
+		DialTimeout:      time.Duration(config.DialTimeout),      // * time.Second,
 		MConfig:          DefaultMConnConfig(),
 		Fuzz:             false,
 		FuzzConfig:       DefaultFuzzConnConfig(),
@@ -152,14 +152,16 @@ func (p *Peer) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duration) er
 	var err1 error
 	var err2 error
 	cmn.Parallel(
-		func() {
+		func(_ int) (val interface{}, err error, abort bool) {
 			var n int
 			wire.WriteBinary(ourNodeInfo, p.conn, &n, &err1)
+			return
 		},
-		func() {
+		func(_ int) (val interface{}, err error, abort bool) {
 			var n int
 			wire.ReadBinary(peerNodeInfo, p.conn, maxNodeInfoSize, &n, &err2)
 			log.WithField("peerNodeInfo", peerNodeInfo).Info("Peer handshake")
+			return
 		})
 	if err1 != nil {
 		return errors.Wrap(err1, "Error during handshake/write")
@@ -206,7 +208,7 @@ func (p *Peer) PubKey() crypto.PubKeyEd25519 {
 // OnStart implements BaseService.
 func (p *Peer) OnStart() error {
 	p.BaseService.OnStart()
-	_, err := p.mconn.Start()
+	err := p.mconn.Start()
 	return err
 }
 

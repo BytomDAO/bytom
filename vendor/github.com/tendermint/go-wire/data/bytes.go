@@ -30,6 +30,17 @@ var (
 // app base58...
 type Bytes []byte
 
+// Marshal needed for protobuf compatibility
+func (b Bytes) Marshal() ([]byte, error) {
+	return b, nil
+}
+
+// Unmarshal needed for protobuf compatibility
+func (b *Bytes) Unmarshal(data []byte) error {
+	*b = data
+	return nil
+}
+
 func (b Bytes) MarshalJSON() ([]byte, error) {
 	return Encoder.Marshal(b)
 }

@@ -341,10 +341,10 @@ func (sr *sourceReserver) cancel(res *reservation) {
 func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*UTXO, bool, error) {
 	utxos := []*UTXO{}
 	isImmature := false
-	utxoIter := db.IteratorPrefix([]byte(UTXOPreFix))
-	defer utxoIter.Release()
+	utxoIter := dbm.IteratePrefix(db, []byte(UTXOPreFix))
+	defer utxoIter.Close()
 
-	for utxoIter.Next() {
+	for ; utxoIter.Valid(); utxoIter.Next() {
 		u := &UTXO{}
 		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
 			return nil, false, errors.Wrap(err)

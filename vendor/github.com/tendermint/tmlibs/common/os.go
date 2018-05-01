@@ -124,32 +124,35 @@ func MustWriteFile(filePath string, contents []byte, mode os.FileMode) {
 	}
 }
 
-// WriteFileAtomic writes newBytes to temp and atomically moves to filePath
-// when everything else succeeds.
-func WriteFileAtomic(filePath string, newBytes []byte, mode os.FileMode) error {
-	dir := filepath.Dir(filePath)
-	f, err := ioutil.TempFile(dir, "")
+// WriteFileAtomic creates a temporary file with data and the perm given and
+// swaps it atomically with filename if successful.
+func WriteFileAtomic(filename string, data []byte, perm os.FileMode) error {
+	var (
+		dir      = filepath.Dir(filename)
+		tempFile = filepath.Join(dir, "write-file-atomic-"+RandStr(32))
+		// Override in case it does exist, create in case it doesn't and force kernel
+		// flush, which still leaves the potential of lingering disk cache.
+		flag = os.O_WRONLY | os.O_CREATE | os.O_SYNC | os.O_TRUNC
+	)
+
+	f, err := os.OpenFile(tempFile, flag, perm)
 	if err != nil {
 		return err
 	}
-	_, err = f.Write(newBytes)
-	if err == nil {
-		err = f.Sync()
+	// Clean up in any case. Defer stacking order is last-in-first-out.
+	defer os.Remove(f.Name())
+	defer f.Close()
+
+	if n, err := f.Write(data); err != nil {
+		return err
+	} else if n < len(data) {
+		return io.ErrShortWrite
 	}
-	if closeErr := f.Close(); err == nil {
-		err = closeErr
-	}
-	if permErr := os.Chmod(f.Name(), mode); err == nil {
-		err = permErr
-	}
-	if err == nil {
-		err = os.Rename(f.Name(), filePath)
-	}
-	// any err should result in full cleanup
-	if err != nil {
-		os.Remove(f.Name())
-	}
-	return err
+	// Close the file before renaming it, otherwise it will cause "The process 
+	// cannot access the file because it is being used by another process." on windows.
+	f.Close()
+
+	return os.Rename(f.Name(), filename)
 }
 
 //--------------------------------------------------------------------------------
@@ -183,11 +186,10 @@ func Prompt(prompt string, defaultValue string) (string, error) {
 	line, err := reader.ReadString('\n')
 	if err != nil {
 		return defaultValue, err
-	} else {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			return defaultValue, nil
-		}
-		return line, nil
 	}
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return defaultValue, nil
+	}
+	return line, nil
 }

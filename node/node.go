@@ -68,7 +68,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	// Make event switch
 	eventSwitch := types.NewEventSwitch()
-	if _, err := eventSwitch.Start(); err != nil {
+	if err := eventSwitch.Start(); err != nil {
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
 

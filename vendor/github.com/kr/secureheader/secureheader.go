@@ -4,8 +4,9 @@
 //
 //   Strict Transport Security: https://tools.ietf.org/html/rfc6797
 //   Frame Options:             https://tools.ietf.org/html/draft-ietf-websec-x-frame-options-00
-//   Cross Site Scripting:      http://msdn.microsoft.com/en-us/library/dd565647%28v=vs.85%29.aspx
-//   Content Type Options:      http://msdn.microsoft.com/en-us/library/ie/gg622941%28v=vs.85%29.aspx
+//   Cross Site Scripting:      https://msdn.microsoft.com/en-us/library/dd565647%28v=vs.85%29.aspx
+//   Content Type Options:      https://msdn.microsoft.com/en-us/library/ie/gg622941%28v=vs.85%29.aspx
+//   Content Security Policy:   https://dvcs.w3.org/hg/content-security-policy/raw-file/tip/csp-specification.dev.html
 //
 // The easiest way to use this package:
 //
@@ -19,10 +20,6 @@
 // This package was inspired by Twitter's secureheaders Ruby
 // library. See https://github.com/twitter/secureheaders.
 package secureheader
-
-// TODO(kr): figure out how to add this one:
-//   Content Security Policy:   https://dvcs.w3.org/hg/content-security-policy/raw-file/tip/csp-specification.dev.html
-// See https://github.com/kr/secureheader/issues/1.
 
 import (
 	"net"
@@ -41,9 +38,18 @@ var DefaultConfig = &Config{
 
 	ContentTypeOptions: true,
 
+	CSP:          false,
+	CSPBody:      "default-src 'self'",
+	CSPReportURI: "",
+
+	CSPReportOnly:          false,
+	CSPReportOnlyBody:      "default-src 'self'",
+	CSPReportOnlyReportURI: "",
+
 	HSTS:                  true,
 	HSTSMaxAge:            300 * 24 * time.Hour,
 	HSTSIncludeSubdomains: true,
+	HSTSPreload:           false,
 
 	FrameOptions:       true,
 	FrameOptionsPolicy: Deny,
@@ -65,6 +71,27 @@ type Config struct {
 	// If true, sets X-Content-Type-Options to "nosniff".
 	ContentTypeOptions bool
 
+	// If true, send a Content-Security-Policy header. For more
+	// information on deploying CSP, see for example
+	// https://medium.com/sourceclear/content-security-policy-with-sentry-efb04f336f59
+	// Dsiabled by default. If you set CSP = true,
+	// the default policy is "default-src 'self'" and reporting is disabled.
+	// To enable reporting, set CSPReportURI to your reporting endpoint.
+	CSP          bool
+	CSPBody      string
+	CSPReportURI string
+
+	// If true, the browser will report CSP violations, but won't enforce them
+	// It *is* meaningful to set both headers
+	// Content-Security-Policy *AND* Content-Security-Policy-Report-Only
+	// and give them different bodys & report-uri's. The browser will
+	// enforce the former, but only generate warnings on the latter.
+	// Like CSPBody, the default is "default-src 'self'", and
+	// Set CSPReportOnlyReportURI to your reporting endpoint.
+	CSPReportOnly          bool
+	CSPReportOnlyBody      string
+	CSPReportOnlyReportURI string
+
 	// If true, sets the HTTP Strict Transport Security header
 	// field, which instructs browsers to send future requests
 	// over HTTPS, even if the URL uses the unencrypted http
@@ -72,6 +99,7 @@ type Config struct {
 	HSTS                  bool
 	HSTSMaxAge            time.Duration
 	HSTSIncludeSubdomains bool
+	HSTSPreload           bool
 
 	// If true, sets X-Frame-Options, to control when the request
 	// should be displayed inside an HTML frame.
@@ -105,10 +133,27 @@ func (c *Config) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if c.ContentTypeOptions {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 	}
+	if c.CSP {
+		v := c.CSPBody
+		if c.CSPReportURI != "" {
+			v += "; report-uri " + c.CSPReportURI
+		}
+		w.Header().Set("Content-Security-Policy", v)
+	}
+	if c.CSPReportOnly {
+		v := c.CSPReportOnlyBody
+		if c.CSPReportOnlyReportURI != "" {
+			v += "; report-uri " + c.CSPReportOnlyReportURI
+		}
+		w.Header().Set("Content-Security-Policy-Report-Only", v)
+	}
 	if c.HSTS && c.isHTTPS(r) {
 		v := "max-age=" + strconv.FormatInt(int64(c.HSTSMaxAge/time.Second), 10)
 		if c.HSTSIncludeSubdomains {
 			v += "; includeSubDomains"
+		}
+		if c.HSTSPreload {
+			v += "; preload"
 		}
 		w.Header().Set("Strict-Transport-Security", v)
 	}

@@ -79,10 +79,10 @@ func NewTracker(db dbm.DB, chain *protocol.Chain) *Tracker {
 }
 
 func loadTxFeed(db dbm.DB, txFeeds []*TxFeed) ([]*TxFeed, error) {
-	iter := db.Iterator()
-	defer iter.Release()
+	iter := db.Iterator(nil, nil)
+	defer iter.Close()
 
-	for iter.Next() {
+	for ; iter.Valid(); iter.Next() {
 		txFeed := &TxFeed{}
 		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
 			return nil, err
@@ -138,10 +138,10 @@ func parseTxfeed(db dbm.DB, filters []filter) error {
 	var txFeed TxFeed
 	var index int
 
-	iter := db.Iterator()
-	defer iter.Release()
+	iter := db.Iterator(nil, nil)
+	defer iter.Close()
 
-	for iter.Next() {
+	for ; iter.Valid(); iter.Next() {
 
 		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
 			return err
