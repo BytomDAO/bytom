@@ -113,9 +113,10 @@ func TestEstimateTxGas(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	totalNeu := float64(estimateResult.StorageNeu+estimateResult.VMNeu) / float64(100000)
+	baseRate := float64(100000)
+	totalNeu := float64(estimateResult.StorageNeu+estimateResult.VMNeu) / baseRate
 	roundingNeu := math.Ceil(totalNeu)
-	estimateNeu := int64(roundingNeu) * int64(100000)
+	estimateNeu := int64(roundingNeu) * int64(baseRate)
 
 	if estimateResult.TotalNeu != estimateNeu {
 		t.Errorf(`got=%#v; want=%#v`, estimateResult.TotalNeu, estimateNeu)
