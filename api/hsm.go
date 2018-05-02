@@ -66,6 +66,7 @@ func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path
 	return a.wallet.Hsm.XSign(xpub, path, data[:], password)
 }
 
+// ResetPasswordResp is response for reset password password
 type ResetPasswordResp struct {
 	Changed bool `json:"changed"`
 }

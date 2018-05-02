@@ -39,9 +39,11 @@ var (
 
 // pre-define errors for supporting bytom errorFormatter
 var (
-	ErrDuplicateAlias = errors.New("duplicate account alias")
-	ErrFindAccount    = errors.New("fail to find account")
-	ErrMarshalAccount = errors.New("failed marshal account")
+	ErrDuplicateAlias  = errors.New("duplicate account alias")
+	ErrFindAccount     = errors.New("fail to find account")
+	ErrMarshalAccount  = errors.New("failed marshal account")
+	ErrInvalidAddress  = errors.New("invalid address")
+	ErrFindCtrlProgram = errors.New("fail to find account control program")
 )
 
 func aliasKey(name string) []byte {
@@ -438,4 +440,55 @@ func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
 	}
 
 	return cps, nil
+}
+
+// GetProgramByAddress return CtrlProgram by given address
+func (m *Manager) GetProgramByAddress(address string) (*CtrlProgram, error) {
+	addr, err := common.DecodeAddress(address, &consensus.ActiveNetParams)
+	if err != nil {
+		return nil, err
+	}
+
+	redeemContract := addr.ScriptAddress()
+	program := []byte{}
+	switch addr.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		program, err = vmutil.P2WPKHProgram(redeemContract)
+	case *common.AddressWitnessScriptHash:
+		program, err = vmutil.P2WSHProgram(redeemContract)
+	default:
+		return nil, ErrInvalidAddress
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var hash [32]byte
+	cp := &CtrlProgram{}
+	sha3pool.Sum256(hash[:], program)
+	rawProgram := m.db.Get(ContractKey(hash))
+	if rawProgram == nil {
+		return nil, ErrFindCtrlProgram
+	}
+
+	if err := json.Unmarshal(rawProgram, cp); err != nil {
+		return nil, err
+	}
+
+	return cp, nil
+}
+
+// GetAccountByProgram return Account by given CtrlProgram
+func (m *Manager) GetAccountByProgram(program *CtrlProgram) (*Account, error) {
+	rawAccount := m.db.Get(Key(program.AccountID))
+	if rawAccount == nil {
+		return nil, ErrFindAccount
+	}
+
+	account := &Account{}
+	if err := json.Unmarshal(rawAccount, account); err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }
