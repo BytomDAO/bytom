@@ -3,8 +3,12 @@ package api
 import (
 	"context"
 	"encoding/hex"
+	"strings"
 
 	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/common"
+	"github.com/bytom/consensus"
+	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 )
@@ -49,10 +53,23 @@ type VerifyMsgResp struct {
 }
 
 func (a *API) verifyMessage(ctx context.Context, ins struct {
+	Address     string       `json:"address"`
 	DerivedXPub chainkd.XPub `json:"derived_xpub"`
 	Message     []byte       `json:"message"`
 	Signature   []byte       `json:"signature"`
 }) Response {
+	derivedPK := ins.DerivedXPub.PublicKey()
+	pubHash := crypto.Ripemd160(derivedPK)
+	addressPubHash, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	address := addressPubHash.EncodeAddress()
+	if address != strings.TrimSpace(ins.Address) {
+		return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
+	}
+
 	if ed25519.Verify(ins.DerivedXPub.PublicKey(), ins.Message, ins.Signature) {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
 	}

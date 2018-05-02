@@ -111,27 +111,28 @@ var signMsgCmd = &cobra.Command{
 }
 
 var verifyMsgCmd = &cobra.Command{
-	Use:   "verify-message <xpub> <message> <signature>",
+	Use:   "verify-message <address> <xpub> <message> <signature>",
 	Short: "verify signature for specified message",
-	Args:  cobra.ExactArgs(3),
+	Args:  cobra.ExactArgs(4),
 	Run: func(cmd *cobra.Command, args []string) {
 		xpub := chainkd.XPub{}
-		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
+		if err := xpub.UnmarshalText([]byte(args[1])); err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
 		}
 
-		signature, err := hex.DecodeString(args[2])
+		signature, err := hex.DecodeString(args[3])
 		if err != nil {
 			jww.ERROR.Println("convert signature error:", err)
 			os.Exit(util.ErrLocalExe)
 		}
 
 		var req = struct {
+			Address     string       `json:"address"`
 			DerivedXPub chainkd.XPub `json:"derived_xpub"`
 			Message     []byte       `json:"message"`
 			Signature   []byte       `json:"signature"`
-		}{DerivedXPub: xpub, Message: []byte(args[1]), Signature: signature}
+		}{Address: args[0], DerivedXPub: xpub, Message: []byte(args[2]), Signature: signature}
 
 		data, exitCode := util.ClientCall("/verify-message", &req)
 		if exitCode != util.Success {
