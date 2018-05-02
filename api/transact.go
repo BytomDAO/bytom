@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -19,7 +20,10 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-var defaultTxTTL = 5 * time.Minute
+var (
+	defaultTxTTL    = 5 * time.Minute
+	defaultBaseRate = float64(100000)
+)
 
 func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
 	var decoder func([]byte) (txbuilder.Action, error)
@@ -198,26 +202,24 @@ type EstimateTxGasResp struct {
 	VMNeu      int64 `json:"vm_neu"`
 }
 
-// POST /estimate-transaction-gas
-func (a *API) estimateTxGas(ctx context.Context, in struct {
-	TxTemplate txbuilder.Template `json:"transaction_template"`
-}) Response {
+// EstimateTxGas estimate consumed neu for transaction
+func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	// base tx size and not include sign
-	data, err := in.TxTemplate.Transaction.TxData.MarshalText()
+	data, err := template.Transaction.TxData.MarshalText()
 	if err != nil {
-		return NewErrorResponse(err)
+		return nil, err
 	}
 	baseTxSize := int64(len(data))
 
 	// extra tx size for sign witness parts
 	baseWitnessSize := int64(300)
-	lenSignInst := int64(len(in.TxTemplate.SigningInstructions))
+	lenSignInst := int64(len(template.SigningInstructions))
 	signSize := baseWitnessSize * lenSignInst
 
 	// total gas for tx storage
 	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+signSize, consensus.StorageGasRate)
 	if !ok {
-		return NewErrorResponse(errors.New("calculate txsize gas got a math error"))
+		return nil, errors.New("calculate txsize gas got a math error")
 	}
 
 	// consume gas for run VM
@@ -226,13 +228,13 @@ func (a *API) estimateTxGas(ctx context.Context, in struct {
 	baseP2WPKHGas := int64(1419)
 	baseP2WSHGas := int64(2499)
 
-	for _, inpID := range in.TxTemplate.Transaction.Tx.InputIDs {
-		sp, err := in.TxTemplate.Transaction.Spend(inpID)
+	for _, inpID := range template.Transaction.Tx.InputIDs {
+		sp, err := template.Transaction.Spend(inpID)
 		if err != nil {
 			continue
 		}
 
-		resOut, err := in.TxTemplate.Transaction.Output(*sp.SpentOutputId)
+		resOut, err := template.Transaction.Output(*sp.SpentOutputId)
 		if err != nil {
 			continue
 		}
@@ -247,11 +249,25 @@ func (a *API) estimateTxGas(ctx context.Context, in struct {
 	// total estimate gas
 	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
 
-	txGasResp := &EstimateTxGasResp{
-		TotalNeu:   totalGas * consensus.VMGasRate,
+	// rounding totalNeu with base rate 100000
+	totalNeu := float64(totalGas*consensus.VMGasRate) / defaultBaseRate
+	roundingNeu := math.Ceil(totalNeu)
+	estimateNeu := int64(roundingNeu) * int64(defaultBaseRate)
+
+	return &EstimateTxGasResp{
+		TotalNeu:   estimateNeu,
 		StorageNeu: totalTxSizeGas * consensus.VMGasRate,
 		VMNeu:      (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
-	}
+	}, nil
+}
 
+// POST /estimate-transaction-gas
+func (a *API) estimateTxGas(ctx context.Context, in struct {
+	TxTemplate txbuilder.Template `json:"transaction_template"`
+}) Response {
+	txGasResp, err := EstimateTxGas(in.TxTemplate)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
 	return NewSuccessResponse(txGasResp)
 }
