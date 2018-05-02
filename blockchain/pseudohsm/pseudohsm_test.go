@@ -125,14 +125,23 @@ func TestSignAndVerifyMessage(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	path := [][]byte{{3, 2, 6, 3, 8, 2, 7}}
+	derivedXPub := xpub.XPub.Derive(path)
+
 	msg := "this is a test message"
-	sig, err := hsm.XSign(xpub.XPub, nil, []byte(msg), "password")
+	sig, err := hsm.XSign(xpub.XPub, path, []byte(msg), "password")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !ed25519.Verify(xpub.XPub.PublicKey(), []byte(msg), sig) {
-		t.Fatal("verify sign failed")
+	// derivedXPub verify success
+	if !ed25519.Verify(derivedXPub.PublicKey(), []byte(msg), sig) {
+		t.Fatal("right derivedXPub verify sign failed")
+	}
+
+	// rootXPub verify failed
+	if ed25519.Verify(xpub.XPub.PublicKey(), []byte(msg), sig) {
+		t.Fatal("right rootXPub verify derivedXPub sign succeed")
 	}
 
 	err = hsm.XDelete(xpub.XPub, "password")

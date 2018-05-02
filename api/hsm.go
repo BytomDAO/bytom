@@ -2,13 +2,11 @@ package api
 
 import (
 	"context"
-	"encoding/hex"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/net/http/httperror"
 )
@@ -84,37 +82,4 @@ func (a *API) pseudohsmResetPassword(ctx context.Context, ins struct {
 	}
 	resp.Changed = true
 	return NewSuccessResponse(resp)
-}
-
-// SignMsgResp is response for sign message
-type SignMsgResp struct {
-	Signature string `json:"signature"`
-}
-
-func (a *API) signMessage(ctx context.Context, ins struct {
-	RootXPub chainkd.XPub `json:"root_xpub"`
-	Message  []byte       `json:"message"`
-	Password string       `json:"password"`
-}) Response {
-	sig, err := a.wallet.Hsm.XSign(ins.RootXPub, nil, ins.Message, ins.Password)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(SignMsgResp{Signature: hex.EncodeToString(sig)})
-}
-
-// VerifyMsgResp is response for verify message
-type VerifyMsgResp struct {
-	VerifyResult bool `json:" result"`
-}
-
-func (a *API) verifyMessage(ctx context.Context, ins struct {
-	RootXPub  chainkd.XPub `json:"root_xpub"`
-	Message   []byte       `json:"message"`
-	Signature []byte       `json:"signature"`
-}) Response {
-	if ed25519.Verify(ins.RootXPub.PublicKey(), ins.Message, ins.Signature) {
-		return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
-	}
-	return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
 }
