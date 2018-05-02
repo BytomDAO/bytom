@@ -11,7 +11,7 @@ import (
 )
 
 func genesisTx() *types.Tx {
-	contract, err := hex.DecodeString("00148c9d063ff74ee6d9ffa88d83aeb038068366c4c4")
+	contract, err := hex.DecodeString("0014be16ca4a2b8294821267febd9a60320cb15f559e")
 	if err != nil {
 		log.Panicf("fail on decode genesis tx output control program")
 	}
@@ -48,8 +48,8 @@ func GenesisBlock() *types.Block {
 			Version:   1,
 			Height:    0,
 			Nonce:     9253507043297,
-			Timestamp: 1525243800,
-			Bits:      2305843009213777838,
+			Timestamp: 1525219200,
+			Bits:      2233785415176481843,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 				TransactionStatusHash:  txStatusHash,
