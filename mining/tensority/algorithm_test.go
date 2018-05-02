@@ -275,7 +275,6 @@ func BenchmarkAlgorithm(b *testing.B) {
 func BenchmarkAlgorithmParallel(b *testing.B) {
 	bhhash := bc.NewHash(tests[0].blockHeader)
 	sdhash := bc.NewHash(tests[0].seed)
-
 	b.SetParallelism(runtime.NumCPU())
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
