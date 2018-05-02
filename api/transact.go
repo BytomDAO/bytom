@@ -20,7 +20,10 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-var defaultTxTTL = 5 * time.Minute
+var (
+	defaultTxTTL    = 5 * time.Minute
+	defaultBaseRate = float64(100000)
+)
 
 func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
 	var decoder func([]byte) (txbuilder.Action, error)
@@ -246,10 +249,10 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	// total estimate gas
 	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
 
-	// rounding totalNeu with base 100000
-	totalNeu := float64(totalGas*consensus.VMGasRate) / float64(100000)
+	// rounding totalNeu with base rate 100000
+	totalNeu := float64(totalGas*consensus.VMGasRate) / defaultBaseRate
 	roundingNeu := math.Ceil(totalNeu)
-	estimateNeu := int64(roundingNeu) * int64(100000)
+	estimateNeu := int64(roundingNeu) * int64(defaultBaseRate)
 
 	return &EstimateTxGasResp{
 		TotalNeu:   estimateNeu,
