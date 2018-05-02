@@ -20,14 +20,16 @@ const (
 	PexChannel = byte(0x00)
 
 	// period to ensure peers connected
-	defaultEnsurePeersPeriod = 30 * time.Second
-	minNumOutboundPeers      = 10
+	defaultEnsurePeersPeriod = 120 * time.Second
+	minNumOutboundPeers      = 5
 	maxPexMessageSize        = 1048576 // 1MB
 
 	// maximum messages one peer can send to us during `msgCountByPeerFlushInterval`
 	defaultMaxMsgCountByPeer    = 1000
 	msgCountByPeerFlushInterval = 1 * time.Hour
 )
+
+var ErrSendPexFail = errors.New("Send pex message fail")
 
 // PEXReactor handles PEX (peer exchange) and ensures that an
 // adequate number of peers are connected to the switch.
@@ -58,8 +60,9 @@ type PEXReactor struct {
 }
 
 // NewPEXReactor creates new PEX reactor.
-func NewPEXReactor(b *AddrBook) *PEXReactor {
+func NewPEXReactor(b *AddrBook, sw *Switch) *PEXReactor {
 	r := &PEXReactor{
+		sw:                sw,
 		book:              b,
 		ensurePeersPeriod: defaultEnsurePeersPeriod,
 		msgCountByPeer:    cmn.NewCMap(),
@@ -103,19 +106,31 @@ func (r *PEXReactor) AddPeer(p *Peer) error {
 		// Either it was added in DialSeeds or when we
 		// received the peer's address in r.Receive
 		if r.book.NeedMoreAddrs() {
-			r.RequestPEX(p)
+			if ok := r.RequestPEX(p); !ok {
+				return ErrSendPexFail
+			}
 		}
-	} else { // For inbound connections, the peer is its own source
-		addr, err := NewNetAddressString(p.ListenAddr)
-		if err != nil {
-			// this should never happen
-			log.WithFields(log.Fields{
-				"addr":  p.ListenAddr,
-				"error": err,
-			}).Error("Error in AddPeer: Invalid peer address")
-			return errors.New("Error in AddPeer: Invalid peer address")
+		return nil
+	}
+
+	// For inbound connections, the peer is its own source
+	addr, err := NewNetAddressString(p.ListenAddr)
+	if err != nil {
+		// this should never happen
+		log.WithFields(log.Fields{
+			"addr":  p.ListenAddr,
+			"error": err,
+		}).Error("Error in AddPeer: Invalid peer address")
+		return errors.New("Error in AddPeer: Invalid peer address")
+	}
+	r.book.AddAddress(addr, addr)
+
+	// close the connect if connect is big than max limit
+	if r.sw.peers.Size() >= r.sw.config.MaxNumPeers {
+		if ok := r.SendAddrs(p, r.book.GetSelection()); ok {
+			r.sw.StopPeerGracefully(p)
 		}
-		r.book.AddAddress(addr, addr)
+		return errors.New("Error in AddPeer: reach the max peer, exchange then close")
 	}
 	return nil
 }
@@ -148,7 +163,9 @@ func (r *PEXReactor) Receive(chID byte, src *Peer, msgBytes []byte) {
 	switch msg := msg.(type) {
 	case *pexRequestMessage:
 		// src requested some peers.
-		r.SendAddrs(src, r.book.GetSelection())
+		if ok := r.SendAddrs(src, r.book.GetSelection()); !ok {
+			log.Info("Send address message failed. Stop peer.")
+		}
 	case *pexAddrsMessage:
 		// We received some peer addresses from src.
 		// (We don't want to get spammed with bad peers)
@@ -163,13 +180,21 @@ func (r *PEXReactor) Receive(chID byte, src *Peer, msgBytes []byte) {
 }
 
 // RequestPEX asks peer for more addresses.
-func (r *PEXReactor) RequestPEX(p *Peer) {
-	p.Send(PexChannel, struct{ PexMessage }{&pexRequestMessage{}})
+func (r *PEXReactor) RequestPEX(p *Peer) bool {
+	ok := p.TrySend(PexChannel, struct{ PexMessage }{&pexRequestMessage{}})
+	if !ok {
+		r.sw.StopPeerGracefully(p)
+	}
+	return ok
 }
 
 // SendAddrs sends addrs to the peer.
-func (r *PEXReactor) SendAddrs(p *Peer, addrs []*NetAddress) {
-	p.Send(PexChannel, struct{ PexMessage }{&pexAddrsMessage{Addrs: addrs}})
+func (r *PEXReactor) SendAddrs(p *Peer, addrs []*NetAddress) bool {
+	ok := p.TrySend(PexChannel, struct{ PexMessage }{&pexAddrsMessage{Addrs: addrs}})
+	if !ok {
+		r.sw.StopPeerGracefully(p)
+	}
+	return ok
 }
 
 // SetEnsurePeersPeriod sets period to ensure peers connected.
@@ -203,7 +228,7 @@ func (r *PEXReactor) IncrementMsgCountForPeer(addr string) {
 // Ensures that sufficient peers are connected. (continuous)
 func (r *PEXReactor) ensurePeersRoutine() {
 	// Randomize when routine starts
-	ensurePeersPeriodMs := r.ensurePeersPeriod.Nanoseconds() / 1e6
+	ensurePeersPeriodMs := int64(10000)
 	time.Sleep(time.Duration(rand.Int63n(ensurePeersPeriodMs)) * time.Millisecond)
 
 	// fire once immediately.
@@ -311,7 +336,9 @@ func (r *PEXReactor) ensurePeers() {
 			i := rand.Int() % len(peers)
 			peer := peers[i]
 			log.WithField("peer", peer).Info("No addresses to dial. Sending pexRequest to random peer")
-			r.RequestPEX(peer)
+			if ok := r.RequestPEX(peer); !ok {
+				log.Info("Send request address message failed. Stop peer.")
+			}
 		}
 	}
 }

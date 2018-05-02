@@ -74,7 +74,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	//var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
 		manager.addrBook = p2p.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
-		pexReactor := p2p.NewPEXReactor(manager.addrBook)
+		pexReactor := p2p.NewPEXReactor(manager.addrBook, manager.sw)
 		manager.sw.AddReactor("PEX", pexReactor)
 	}
 
@@ -173,10 +173,8 @@ func (sm *SyncManager) txBroadcastLoop() {
 					continue
 				}
 				swPeer := smPeer.getPeer()
-				if ban := smPeer.addBanScore(0, 50, "Broadcast new tx error"); ban {
-					sm.sw.AddBannedPeer(swPeer)
-					sm.sw.StopPeerGracefully(swPeer)
-				}
+				log.Info("Tx broadcast error. Stop Peer.")
+				sm.sw.StopPeerGracefully(swPeer)
 			}
 		case <-sm.quitSync:
 			return
@@ -203,10 +201,8 @@ func (sm *SyncManager) minedBroadcastLoop() {
 					continue
 				}
 				swPeer := smPeer.getPeer()
-				if ban := smPeer.addBanScore(0, 50, "Broadcast block error"); ban {
-					sm.sw.AddBannedPeer(swPeer)
-					sm.sw.StopPeerGracefully(swPeer)
-				}
+				log.Info("New mined block broadcast error. Stop Peer.")
+				sm.sw.StopPeerGracefully(swPeer)
 			}
 		case <-sm.quitSync:
 			return

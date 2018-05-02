@@ -79,8 +79,8 @@ type MConnection struct {
 
 	quit         chan struct{}
 	flushTimer   *cmn.ThrottleTimer // flush writes as necessary but throttled.
-	pingTimer    *cmn.RepeatTimer   // send pings periodically
-	chStatsTimer *cmn.RepeatTimer   // update channel stats periodically
+	pingTimer    *time.Ticker       // send pings periodically
+	chStatsTimer *time.Ticker       // update channel stats periodically
 
 	LocalAddress  *NetAddress
 	RemoteAddress *NetAddress
@@ -124,6 +124,9 @@ func NewMConnectionWithConfig(conn net.Conn, chDescs []*ChannelDescriptor, onRec
 		onError:     onError,
 		config:      config,
 
+		pingTimer:    time.NewTicker(pingTimeout),
+		chStatsTimer: time.NewTicker(updateState),
+
 		LocalAddress:  NewNetAddress(conn.LocalAddr()),
 		RemoteAddress: NewNetAddress(conn.RemoteAddr()),
 	}
@@ -150,8 +153,6 @@ func (c *MConnection) OnStart() error {
 	c.BaseService.OnStart()
 	c.quit = make(chan struct{})
 	c.flushTimer = cmn.NewThrottleTimer("flush", flushThrottle)
-	c.pingTimer = cmn.NewRepeatTimer("ping", pingTimeout)
-	c.chStatsTimer = cmn.NewRepeatTimer("chStats", updateState)
 	go c.sendRoutine()
 	go c.recvRoutine()
 	return nil
@@ -160,8 +161,6 @@ func (c *MConnection) OnStart() error {
 func (c *MConnection) OnStop() {
 	c.BaseService.OnStop()
 	c.flushTimer.Stop()
-	c.pingTimer.Stop()
-	c.chStatsTimer.Stop()
 	if c.quit != nil {
 		close(c.quit)
 	}
@@ -299,11 +298,11 @@ FOR_LOOP:
 			// NOTE: flushTimer.Set() must be called every time
 			// something is written to .bufWriter.
 			c.flush()
-		case <-c.chStatsTimer.Ch:
+		case <-c.chStatsTimer.C:
 			for _, channel := range c.channels {
 				channel.updateStats()
 			}
-		case <-c.pingTimer.Ch:
+		case <-c.pingTimer.C:
 			log.Debug("Send Ping")
 			wire.WriteByte(packetTypePing, c.bufWriter, &n, &err)
 			c.sendMonitor.Update(int(n))
@@ -493,10 +492,6 @@ FOR_LOOP:
 		default:
 			cmn.PanicSanity(cmn.Fmt("Unknown message type %X", pktType))
 		}
-
-		// TODO: shouldn't this go in the sendRoutine?
-		// Better to send a ping packet when *we* haven't sent anything for a while.
-		c.pingTimer.Reset()
 	}
 
 	// Cleanup
