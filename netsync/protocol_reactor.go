@@ -179,7 +179,7 @@ func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
 func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	_, msg, err := DecodeMessage(msgBytes)
 	if err != nil {
-		log.Errorf("Error decoding messagek %v", err)
+		log.Errorf("Error decoding message %v", err)
 		return
 	}
 	log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Receive request")
