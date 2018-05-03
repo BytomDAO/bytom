@@ -81,6 +81,8 @@ type BaseConfig struct {
 
 	ApiAddress string `mapstructure:"api_addr"`
 
+	VaultMode bool `mapstructure:"vault_mode"`
+
 	Time time.Time
 }
 

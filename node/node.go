@@ -170,7 +170,9 @@ func (n *Node) OnStart() error {
 	if n.miningEnable {
 		n.cpuMiner.Start()
 	}
-	n.syncManager.Start()
+	if !n.config.VaultMode {
+		n.syncManager.Start()
+	}
 	n.initAndstartApiServer()
 	if !n.config.Web.Closed {
 		launchWebBrowser()
@@ -184,9 +186,9 @@ func (n *Node) OnStop() {
 	if n.miningEnable {
 		n.cpuMiner.Stop()
 	}
-	n.syncManager.Stop()
-	log.Info("Stopping Node")
-	// TODO: gracefully disconnect from peers.
+	if !n.config.VaultMode {
+		n.syncManager.Stop()
+	}
 }
 
 func (n *Node) RunForever() {
