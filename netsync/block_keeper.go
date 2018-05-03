@@ -81,7 +81,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 		return errPeerNotRegister
 	}
 	swPeer := bkPeer.getPeer()
-	for num <= maxPeerHeight && num > 0 {
+	for 0 < num && num <= maxPeerHeight {
 		if isOrphan {
 			reqNum = orphanNum
 		} else {
