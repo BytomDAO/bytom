@@ -81,6 +81,8 @@ type BaseConfig struct {
 
 	ApiAddress string `mapstructure:"api_addr"`
 
+	OfflineMode bool `mapstructure:"offline_mode"`
+
 	Time time.Time
 }
 
