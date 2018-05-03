@@ -26,15 +26,17 @@ var (
 
 // do proof of work
 func doWork(bh *types.BlockHeader, seed *bc.Hash) bool {
+	log.Println("Start from nonce:", lastNonce+1)
 	for i := uint64(lastNonce + 1); i <= uint64(lastNonce+consensus.TargetSecondsPerBlock*esHR) && i <= maxNonce; i++ {
 		bh.Nonce = i
-		log.Printf("nonce = %v\n", i)
+		// log.Printf("nonce = %v\n", i)
 		headerHash := bh.Hash()
 		if difficulty.CheckProofOfWork(&headerHash, seed, bh.Bits) {
 			log.Printf("Mining succeed! Proof hash: %v\n", headerHash.String())
 			return true
 		}
 	}
+	log.Println("Stop at nonce:", bh.Nonce)
 	lastNonce = bh.Nonce
 	return false
 }
