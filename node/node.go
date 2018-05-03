@@ -170,7 +170,7 @@ func (n *Node) OnStart() error {
 	if n.miningEnable {
 		n.cpuMiner.Start()
 	}
-	if !n.config.OfflineMode {
+	if !n.config.VaultMode {
 		n.syncManager.Start()
 	}
 	n.initAndstartApiServer()
@@ -186,7 +186,7 @@ func (n *Node) OnStop() {
 	if n.miningEnable {
 		n.cpuMiner.Stop()
 	}
-	if !n.config.OfflineMode {
+	if !n.config.VaultMode {
 		n.syncManager.Stop()
 	}
 }
