@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/consensus"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
 )
 
 // POST /list-accounts
@@ -159,6 +160,37 @@ func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
 		Total: uint64(len(txIDs)),
 		TxIDs: txIDs,
 	})
+}
+
+// RawTx is the tx struct for getRawTransaction
+type RawTx struct {
+	Version   uint64                   `json:"version"`
+	Size      uint64                   `json:"size"`
+	TimeRange uint64                   `json:"time_range"`
+	Inputs    []*query.AnnotatedInput  `json:"inputs"`
+	Outputs   []*query.AnnotatedOutput `json:"outputs"`
+}
+
+// POST /get-transaction-template
+func (a *API) getRawTransaction(ctx context.Context, ins struct {
+	Tx types.Tx `json:"raw_transaction"`
+}) Response {
+	tx := &RawTx{
+		Version:   ins.Tx.Version,
+		Size:      ins.Tx.SerializedSize,
+		TimeRange: ins.Tx.TimeRange,
+		Inputs:    []*query.AnnotatedInput{},
+		Outputs:   []*query.AnnotatedOutput{},
+	}
+
+	for i := range ins.Tx.Inputs {
+		tx.Inputs = append(tx.Inputs, a.wallet.BuildAnnotatedInput(&ins.Tx, uint32(i)))
+	}
+	for i := range ins.Tx.Outputs {
+		tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(&ins.Tx, i))
+	}
+
+	return NewSuccessResponse(tx)
 }
 
 // POST /list-unspent-outputs

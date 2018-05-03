@@ -219,6 +219,7 @@ func (a *API) buildHandler() {
 
 	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
 	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
+	m.Handle("/get-raw-transaction", jsonHandler(a.getRawTransaction))
 
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
