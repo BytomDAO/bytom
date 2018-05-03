@@ -149,8 +149,8 @@ func initActiveNetParams(config *cfg.Config) {
 	}
 }
 
-// Lanch web broser or not
-func lanchWebBroser() {
+// Launch web browser or not
+func launchWebBrowser() {
 	log.Info("Launching System Browser with :", webAddress)
 	if err := browser.Open(webAddress); err != nil {
 		log.Error(err.Error())
@@ -173,7 +173,7 @@ func (n *Node) OnStart() error {
 	n.syncManager.Start()
 	n.initAndstartApiServer()
 	if !n.config.Web.Closed {
-		lanchWebBroser()
+		launchWebBrowser()
 	}
 
 	return nil
