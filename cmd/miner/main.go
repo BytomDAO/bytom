@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/bytom/api"
+	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -14,19 +15,29 @@ import (
 
 const (
 	maxNonce = ^uint64(0) // 2^64 - 1
-	isCrazy = false
+	isCrazy  = true
+	esHR     = 1 //estimated Hashrate
+)
+
+var (
+	lastNonce  = ^uint64(0)
+	lastHeight = uint64(0)
 )
 
 // do proof of work
 func doWork(bh *types.BlockHeader, seed *bc.Hash) bool {
-	for i := uint64(0); i <= maxNonce; i++ {
+	log.Println("Start from nonce:", lastNonce+1)
+	for i := uint64(lastNonce + 1); i <= uint64(lastNonce+consensus.TargetSecondsPerBlock*esHR) && i <= maxNonce; i++ {
 		bh.Nonce = i
+		// log.Printf("nonce = %v\n", i)
 		headerHash := bh.Hash()
 		if difficulty.CheckProofOfWork(&headerHash, seed, bh.Bits) {
 			log.Printf("Mining succeed! Proof hash: %v\n", headerHash.String())
 			return true
 		}
 	}
+	log.Println("Stop at nonce:", bh.Nonce)
+	lastNonce = bh.Nonce
 	return false
 }
 
@@ -69,14 +80,17 @@ func main() {
 		}
 
 		log.Println("Mining at height:", resp.BlockHeader.Height)
+		if lastHeight != resp.BlockHeader.Height {
+			lastNonce = ^uint64(0)
+		}
 		if doWork(resp.BlockHeader, resp.Seed) {
 			util.ClientCall("/submit-work", &api.SubmitWorkReq{BlockHeader: resp.BlockHeader})
+			getBlockHeaderByHeight(resp.BlockHeader.Height)
 		}
 
-		getBlockHeaderByHeight(resp.BlockHeader.Height)
-
+		lastHeight = resp.BlockHeader.Height
 		if !isCrazy {
 			return
-		}	
+		}
 	}
 }
