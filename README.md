@@ -60,6 +60,12 @@ $ go version
 $ go env GOROOT GOPATH
 ```
 
+For macOS, if you want to use `bytomd-simd` then should use new `clang++` compiler version different with 
+the one which already provides. if you install it with `brew install llvm`,then you can check:
+```bash
+$ /usr/local/opt/llvm/bin/clang++ -v
+```
+
 #### Get the source code
 
 ``` bash

@@ -2,8 +2,10 @@ ifndef GOOS
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
 	GOOS := darwin
+	CC = /usr/local/opt/llvm/bin/clang++
 else ifeq ($(UNAME_S),Linux)
 	GOOS := linux
+	CC = g++
 else
 $(error "$$GOOS is not defined. If you are using Windows, try to re-make using 'GOOS=windows make ...' ")
 endif
@@ -38,27 +40,14 @@ BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
 
 all: test target release-all
 
-ifeq ($(GOOS),darwin)
 bytomd-simd:
-	@echo "Building bytomd to cmd/bytomd/bytomd for Darwin"
-	rm -f mining/tensority/*.go
-	rm -f mining/tensority/dylib/*.dylib
-	cp mining/tensority/dylib/*.go mining/tensority/
-	g++ -shared -o mining/tensority/dylib/cSimdTs.dylib mining/tensority/dylib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fPIC
-	cp mining/tensority/dylib/cSimdTs.dylib cmd/bytomd/
-	go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
-	rm -f mining/tensority/*.go
-	cp mining/tensority/legacy/*.go mining/tensority/
-else
-bytomd-simd:
-	@echo "Building bytomd to cmd/bytomd/bytomd for Linux"
+	@echo "Building bytomd to cmd/bytomd/bytomd for $(GOOS)"
 	rm -f mining/tensority/*.go
 	cp mining/tensority/stlib/*.go mining/tensority/
-	g++ -o mining/tensority/stlib/cSimdTs.o -c mining/tensority/stlib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fopenmp -D_USE_OPENMP
+	$(CC) -o mining/tensority/stlib/cSimdTs.o -c mining/tensority/stlib/cSimdTs.cpp -std=c++11 -pthread -mavx2 -O3 -fopenmp -D_USE_OPENMP
 	go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 	rm -f mining/tensority/*.go
 	cp mining/tensority/legacy/*.go mining/tensority/
-endif
 
 
 bytomd:

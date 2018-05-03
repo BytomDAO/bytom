@@ -1,7 +1,9 @@
 package tensority
 
-// #cgo CFLAGS: -I.
-// #cgo LDFLAGS: -L./stlib/ -l:cSimdTs.o -lstdc++ -lgomp
+// #cgo !darwin CFLAGS: -I.
+// #cgo !darwin LDFLAGS: -L./stlib/ -l:cSimdTs.o -lstdc++ -lgomp
+// #cgo darwin CFLAGS: -I. -I/usr/local/opt/llvm/include
+// #cgo darwin LDFLAGS: -L./stlib/ -lcSimdTs.o -lstdc++ -lomp -L/usr/local/opt/llvm/lib
 // #include "./stlib/cSimdTs.h"
 import "C"
 
