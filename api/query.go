@@ -171,7 +171,7 @@ type RawTx struct {
 	Outputs   []*query.AnnotatedOutput `json:"outputs"`
 }
 
-// POST /get-transaction-template
+// POST /get-raw-transaction
 func (a *API) getRawTransaction(ctx context.Context, ins struct {
 	Tx types.Tx `json:"raw_transaction"`
 }) Response {
