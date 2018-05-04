@@ -87,7 +87,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		Timestamp:              block.Timestamp,
 		Nonce:                  block.Nonce,
 		Bits:                   block.Bits,
-		Difficulty:             difficulty.CompactToBig(block.Bits).String(),
+		Difficulty:             difficulty.CalcWork(block.Bits).String(),
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
 		TransactionStatusHash:  &block.TransactionStatusHash,
 		Transactions:           []*BlockTx{},
