@@ -275,22 +275,22 @@ var estimateTransactionGasCmd = &cobra.Command{
 	},
 }
 
-var getRawTransactionCmd = &cobra.Command{
-	Use:   "get-raw-transaction <raw_transaction>",
-	Short: "get the transaction by raw_transaction",
+var decodeRawTransactionCmd = &cobra.Command{
+	Use:   "decode-raw-transaction <raw_transaction>",
+	Short: "decode the raw transaction",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var ins = struct {
 			Tx types.Tx `json:"raw_transaction"`
 		}{}
 
-		err := json.Unmarshal([]byte(args[0]), &ins)
+		err := ins.Tx.UnmarshalText([]byte(args[0]))
 		if err != nil {
 			jww.ERROR.Println(err)
 			os.Exit(util.ErrLocalExe)
 		}
 
-		data, exitCode := util.ClientCall("/get-raw-transaction", &ins)
+		data, exitCode := util.ClientCall("/decode-raw-transaction", &ins)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

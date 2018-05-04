@@ -169,11 +169,11 @@ type RawTx struct {
 	TimeRange uint64                   `json:"time_range"`
 	Inputs    []*query.AnnotatedInput  `json:"inputs"`
 	Outputs   []*query.AnnotatedOutput `json:"outputs"`
-	Fee       uint64                   `json:"fee"`
+	Fee       int64                    `json:"fee"`
 }
 
-// POST /get-raw-transaction
-func (a *API) getRawTransaction(ctx context.Context, ins struct {
+// POST /decode-raw-transaction
+func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 	Tx types.Tx `json:"raw_transaction"`
 }) Response {
 	tx := &RawTx{
@@ -205,7 +205,7 @@ func (a *API) getRawTransaction(ctx context.Context, ins struct {
 		}
 	}
 
-	tx.Fee = totalInputBtm - totalOutputBtm
+	tx.Fee = int64(totalInputBtm) - int64(totalOutputBtm)
 	return NewSuccessResponse(tx)
 }
 
