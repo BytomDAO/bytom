@@ -64,9 +64,11 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
 	// Create & add listener
-	p, address := protocolAndAddress(manager.config.P2P.ListenAddress)
-	l := p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP, nil)
-	manager.sw.AddListener(l)
+	if !config.VaultMode {
+		p, address := protocolAndAddress(manager.config.P2P.ListenAddress)
+		l := p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP, nil)
+		manager.sw.AddListener(l)
+	}
 	manager.sw.SetNodeInfo(manager.makeNodeInfo())
 	manager.sw.SetNodePrivKey(manager.privKey)
 
