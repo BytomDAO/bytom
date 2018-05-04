@@ -169,6 +169,7 @@ type RawTx struct {
 	TimeRange uint64                   `json:"time_range"`
 	Inputs    []*query.AnnotatedInput  `json:"inputs"`
 	Outputs   []*query.AnnotatedOutput `json:"outputs"`
+	Fee       uint64                   `json:"fee"`
 }
 
 // POST /get-raw-transaction
@@ -190,6 +191,21 @@ func (a *API) getRawTransaction(ctx context.Context, ins struct {
 		tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(&ins.Tx, i))
 	}
 
+	totalInputBtm := uint64(0)
+	totalOutputBtm := uint64(0)
+	for _, input := range tx.Inputs {
+		if input.AssetID.String() == consensus.BTMAssetID.String() {
+			totalInputBtm += input.Amount
+		}
+	}
+
+	for _, output := range tx.Outputs {
+		if output.AssetID.String() == consensus.BTMAssetID.String() {
+			totalOutputBtm += output.Amount
+		}
+	}
+
+	tx.Fee = totalInputBtm - totalOutputBtm
 	return NewSuccessResponse(tx)
 }
 
