@@ -84,6 +84,9 @@ type BaseConfig struct {
 	VaultMode bool `mapstructure:"vault_mode"`
 
 	Time time.Time
+
+	// log file name
+	LogName string `mapstructure:"log_name"`
 }
 
 // Default configurable base parameters.
@@ -99,6 +102,7 @@ func DefaultBaseConfig() BaseConfig {
 		DBPath:            "data",
 		KeysPath:          "keystore",
 		HsmUrl:            "",
+		LogName:           "bytom.log",
 	}
 }
 
