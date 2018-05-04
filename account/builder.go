@@ -46,7 +46,7 @@ func MergeSpendAction(spendActions []txbuilder.Action) []txbuilder.Action {
 				actionMap[actionKey] = act
 			}
 		default:
-			continue
+			actions = append(actions, act)
 		}
 	}
 

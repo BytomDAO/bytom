@@ -113,10 +113,9 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		return nil, errors.New("transaction only contain spend actions, didn't have output actions")
 	}
 
-	reqActions := req.Actions
 	spendActions := []txbuilder.Action{}
-	actions := make([]txbuilder.Action, 0, len(reqActions))
-	for i, act := range reqActions {
+	actions := make([]txbuilder.Action, 0, len(req.Actions))
+	for i, act := range req.Actions {
 		typ, ok := act["type"].(string)
 		if !ok {
 			return nil, errors.WithDetailf(errBadActionType, "no action type provided on action %d", i)
@@ -143,11 +142,7 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 			actions = append(actions, action)
 		}
 	}
-
-	spends := account.MergeSpendAction(spendActions)
-	for _, act := range spends {
-		actions = append(actions, act)
-	}
+	actions = append(account.MergeSpendAction(spendActions), actions...)
 
 	ttl := req.TTL.Duration
 	if ttl == 0 {
