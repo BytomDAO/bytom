@@ -128,6 +128,7 @@ func AddCommands() {
 
 	BytomcliCmd.AddCommand(getUnconfirmedTransactionCmd)
 	BytomcliCmd.AddCommand(listUnconfirmedTransactionsCmd)
+	BytomcliCmd.AddCommand(decodeRawTransactionCmd)
 
 	BytomcliCmd.AddCommand(listUnspentOutputsCmd)
 	BytomcliCmd.AddCommand(listBalancesCmd)
