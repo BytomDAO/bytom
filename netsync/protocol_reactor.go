@@ -199,7 +199,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		}
 		response, err := NewBlockResponseMessage(block)
 		if err != nil {
-			log.Errorf("Fail on BlockRequestMessage create resoinse: %v", err)
+			log.Errorf("Fail on BlockRequestMessage create response: %v", err)
 			return
 		}
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{response})
