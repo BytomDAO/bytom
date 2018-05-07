@@ -116,8 +116,6 @@ func NewNode(config *cfg.Config) *Node {
 
 		// Clean up expired UTXO reservations periodically.
 		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
-	} else if config.Wallet.Rescan {
-		log.Info("Failed to start rescan wallet because wallet is disable")
 	}
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 
