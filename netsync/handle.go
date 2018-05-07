@@ -129,12 +129,6 @@ func (sm *SyncManager) makeNodeInfo(listenOpen bool) *p2p.NodeInfo {
 }
 
 func (sm *SyncManager) netStart() error {
-	// Start the switch
-	_, err := sm.sw.Start()
-	if err != nil {
-		return err
-	}
-
 	if !sm.mapResult {
 		p2pListener := sm.sw.Listeners()[0]
 		ListenAddr := cmn.Fmt("%v:%v", p2pListener.ExternalAddress().IP.String(), p2pListener.ExternalAddress().Port)
@@ -150,6 +144,13 @@ func (sm *SyncManager) netStart() error {
 			sm.sw.SetNodeInfo(sm.makeNodeInfo(true))
 		}
 	}
+	log.WithField("nodeInfo", sm.sw.NodeInfo()).Info("net start")
+
+	// Start the switch
+	_, err := sm.sw.Start()
+	if err != nil {
+		return err
+	}
 
 	// If seeds exist, add them to the address book and dial out
 	if sm.config.P2P.Seeds != "" {
@@ -159,7 +160,6 @@ func (sm *SyncManager) netStart() error {
 			return err
 		}
 	}
-	log.WithField("nodeInfo", sm.sw.NodeInfo()).Info("net start")
 	return nil
 }
 
