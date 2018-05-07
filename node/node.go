@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -61,6 +63,9 @@ type Node struct {
 
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
+	if err := lockDataDirectory(config); err != nil {
+		cmn.Exit("Error: " + err.Error())
+	}
 	initLogFile(config)
 	initActiveNetParams(config)
 	// Get store
@@ -148,6 +153,15 @@ func NewNode(config *cfg.Config) *Node {
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
 	return node
+}
+
+// Lock data directory after daemonization
+func lockDataDirectory(config *cfg.Config) error {
+	_, _, err := flock.New(filepath.Join(config.RootDir, "LOCK"))
+	if err != nil {
+		return errors.New("datadir already used by another process")
+	}
+	return nil
 }
 
 func initActiveNetParams(config *cfg.Config) {
