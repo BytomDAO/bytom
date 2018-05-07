@@ -331,7 +331,7 @@ func (sw *Switch) DialSeeds(addrBook *AddrBook, seeds []string) error {
 	}
 	//permute the list, dial them in random order.
 	perm := rand.Perm(len(netAddrs))
-	for i := 0; i < len(perm); i++ {
+	for i := 0; i < len(perm); i+=2 {
 		j := perm[i]
 		sw.dialSeed(netAddrs[j])
 	}
