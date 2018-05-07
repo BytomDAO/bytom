@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -47,49 +46,6 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 		return nil, false
 	}
 	return decoder, true
-}
-
-// TODO modify mergeActions to loadSpendAction
-func mergeActions(req *BuildRequest) ([]map[string]interface{}, error) {
-	var actions []map[string]interface{}
-	actionMap := make(map[string]map[string]interface{})
-
-	for _, m := range req.Actions {
-		if actionType := m["type"].(string); actionType != "spend_account" {
-			actions = append(actions, m)
-			continue
-		}
-
-		if m["amount"] == nil {
-			return nil, errEmptyAmount
-		}
-
-		amountNumber := m["amount"].(json.Number)
-		amount, err := amountNumber.Int64()
-		if err != nil || amount == 0 {
-			return nil, errBadAmount
-		}
-
-		actionKey := m["asset_id"].(string) + m["account_id"].(string)
-		if tmpM, ok := actionMap[actionKey]; ok {
-			if tmpM["amount"] == nil {
-				return nil, errEmptyAmount
-			}
-
-			tmpNumber := tmpM["amount"].(json.Number)
-			tmpAmount, err := tmpNumber.Int64()
-			if err != nil || tmpAmount == 0 {
-				return nil, errBadAmount
-			}
-
-			tmpM["amount"] = json.Number(fmt.Sprintf("%v", tmpAmount+amount))
-		} else {
-			actionMap[actionKey] = m
-			actions = append(actions, m)
-		}
-	}
-
-	return actions, nil
 }
 
 func onlyHaveSpendActions(req *BuildRequest) bool {
