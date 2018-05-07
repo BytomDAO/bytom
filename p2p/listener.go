@@ -56,7 +56,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlo
 	// Create listener
 	var listener net.Listener
 	var err error
-	var mapResult bool
+	var mapResult = false
 	for i := 0; i < tryListenSeconds; i++ {
 		listener, err = net.Listen(protocol, lAddr)
 		if err == nil {
@@ -88,7 +88,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlo
 		// If the lAddrIP is INADDR_ANY, try UPnP
 		if lAddrIP == "" || lAddrIP == "0.0.0.0" {
 			extAddr = getUPNPExternalAddress(lAddrPort, listenerPort)
-			if extAddr!=nil {
+			if extAddr != nil {
 				mapResult = true
 			}
 		}
