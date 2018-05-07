@@ -149,6 +149,7 @@ func (p *P2PConfig) AddrBookFile() string {
 //-----------------------------------------------------------------------------
 type WalletConfig struct {
 	Disable bool `mapstructure:"disable"`
+	Rescan  bool `mapstructure:"rescan"`
 }
 
 type RPCAuthConfig struct {
@@ -177,6 +178,7 @@ func DefaultWebConfig() *WebConfig {
 func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
 		Disable: false,
+		Rescan:  false,
 	}
 }
 
