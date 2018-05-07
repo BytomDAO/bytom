@@ -198,18 +198,17 @@ func rootify(path, root string) string {
 func DefaultDataDir() string {
 	// Try to place the data folder in the user's home dir
 	home := homeDir()
-	dataDir := "./.bytom"
-	if home != "" {
-		switch runtime.GOOS {
-		case "darwin":
-			dataDir = filepath.Join(home, "Library", "Bytom")
-		case "windows":
-			dataDir = filepath.Join(home, "AppData", "Roaming", "Bytom")
-		default:
-			dataDir = filepath.Join(home, ".bytom")
-		}
+	if home == "" {
+		return "./.bytom"
 	}
-	return dataDir
+	switch runtime.GOOS {
+	case "darwin":
+		return filepath.Join(home, "Library", "Bytom")
+	case "windows":
+		return filepath.Join(home, "AppData", "Roaming", "Bytom")
+	default:
+		return filepath.Join(home, ".bytom")
+	}
 }
 
 func homeDir() string {
