@@ -21,7 +21,7 @@ type SignMsgResp struct {
 
 func (a *API) signMessage(ctx context.Context, ins struct {
 	Address  string `json:"address"`
-	Message  []byte `json:"message"`
+	Message  string `json:"message"`
 	Password string `json:"password"`
 }) Response {
 	cp, err := a.wallet.AccountMgr.GetProgramByAddress(ins.Address)
@@ -37,7 +37,7 @@ func (a *API) signMessage(ctx context.Context, ins struct {
 	path := signers.Path(account.Signer, signers.AccountKeySpace, cp.KeyIndex)
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 
-	sig, err := a.wallet.Hsm.XSign(account.XPubs[0], path, ins.Message, ins.Password)
+	sig, err := a.wallet.Hsm.XSign(account.XPubs[0], path, []byte(ins.Message), ins.Password)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -49,15 +49,20 @@ func (a *API) signMessage(ctx context.Context, ins struct {
 
 // VerifyMsgResp is response for verify message
 type VerifyMsgResp struct {
-	VerifyResult bool `json:" result"`
+	VerifyResult bool `json:"result"`
 }
 
 func (a *API) verifyMessage(ctx context.Context, ins struct {
 	Address     string       `json:"address"`
 	DerivedXPub chainkd.XPub `json:"derived_xpub"`
-	Message     []byte       `json:"message"`
-	Signature   []byte       `json:"signature"`
+	Message     string       `json:"message"`
+	Signature   string       `json:"signature"`
 }) Response {
+	sig, err := hex.DecodeString(ins.Signature)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
 	derivedPK := ins.DerivedXPub.PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
 	addressPubHash, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
@@ -70,7 +75,7 @@ func (a *API) verifyMessage(ctx context.Context, ins struct {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
 	}
 
-	if ed25519.Verify(ins.DerivedXPub.PublicKey(), ins.Message, ins.Signature) {
+	if ed25519.Verify(ins.DerivedXPub.PublicKey(), []byte(ins.Message), sig) {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
 	}
 	return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
