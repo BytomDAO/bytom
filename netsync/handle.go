@@ -32,6 +32,7 @@ type SyncManager struct {
 	blockKeeper *blockKeeper
 	peers       *peerSet
 	mapResult   bool
+	extIP       bool
 
 	newBlockCh    chan *bc.Hash
 	newPeerCh     chan struct{}
@@ -68,16 +69,17 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
 	// Create & add listener
-	var mapResult bool
+	var mapResult, extIP bool
 	var l p2p.Listener
 	if !config.VaultMode {
 		p, address := protocolAndAddress(manager.config.P2P.ListenAddress)
-		l, mapResult = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP, nil)
+		l, mapResult, extIP = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP, nil)
 		manager.sw.AddListener(l)
 	}
 	manager.sw.SetNodeInfo(manager.makeNodeInfo(mapResult))
 	manager.sw.SetNodePrivKey(manager.privKey)
 	manager.mapResult = mapResult
+	manager.extIP = extIP
 	// Optionally, start the pex reactor
 	//var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
@@ -129,7 +131,7 @@ func (sm *SyncManager) makeNodeInfo(listenOpen bool) *p2p.NodeInfo {
 }
 
 func (sm *SyncManager) netStart() error {
-	if !sm.mapResult {
+	if !sm.mapResult && sm.extIP {
 		p2pListener := sm.sw.Listeners()[0]
 		ListenAddr := cmn.Fmt("%v:%v", p2pListener.ExternalAddress().IP.String(), p2pListener.ExternalAddress().Port)
 		conn, err := net.DialTimeout("tcp", ListenAddr, 3*time.Second)

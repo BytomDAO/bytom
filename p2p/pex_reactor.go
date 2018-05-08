@@ -232,15 +232,21 @@ func (r *PEXReactor) ensurePeersRoutine() {
 	time.Sleep(time.Duration(rand.Int63n(ensurePeersPeriodMs)) * time.Millisecond)
 
 	// fire once immediately.
-	r.ensurePeers()
+	r.ensurePeers(r.sw.peers.Size())
 
 	// fire periodically
 	ticker := time.NewTicker(r.ensurePeersPeriod)
-
+	quickTicker := time.NewTicker(time.Second * 5)
 	for {
 		select {
 		case <-ticker.C:
-			r.ensurePeers()
+			if r.sw.peers.Size() >= 3 {
+				r.ensurePeers(r.sw.peers.Size())
+			}
+		case <-quickTicker.C:
+			if r.sw.peers.Size() < 3 {
+				r.ensurePeers(r.sw.peers.Size())
+			}
 		case <-r.Quit:
 			ticker.Stop()
 			return
@@ -260,9 +266,9 @@ func (r *PEXReactor) ensurePeersRoutine() {
 // What we're currently doing in terms of marking good/bad peers is just a
 // placeholder. It should not be the case that an address becomes old/vetted
 // upon a single successful connection.
-func (r *PEXReactor) ensurePeers() {
+func (r *PEXReactor) ensurePeers(num int) {
 	numOutPeers, _, numDialing := r.Switch.NumPeers()
-	numToDial := minNumOutboundPeers - (numOutPeers + numDialing)
+	numToDial := minNumOutboundPeers*(minNumOutboundPeers-num) - (numOutPeers + numDialing)
 	log.WithFields(log.Fields{
 		"numOutPeers": numOutPeers,
 		"numDialing":  numDialing,
@@ -310,7 +316,7 @@ func (r *PEXReactor) ensurePeers() {
 			if alreadySelected || alreadyDialing || alreadyConnected {
 				continue
 			} else {
-				log.WithField("addr", try).Info("Will dial address")
+				log.Debug("Will dial address addr:", try)
 				picked = try
 				break
 			}
@@ -320,14 +326,15 @@ func (r *PEXReactor) ensurePeers() {
 		}
 		toDial[picked.IP.String()] = picked
 	}
-
 	// Dial picked addresses
 	for _, item := range toDial {
-		if _, err := r.Switch.DialPeerWithAddress(item, false); err != nil {
-			r.book.MarkAttempt(item)
-		} else {
-			r.book.MarkGood(item)
-		}
+		go func(picked *NetAddress) {
+			if _, err := r.Switch.DialPeerWithAddress(picked, false); err != nil {
+				r.book.MarkAttempt(picked)
+			} else {
+				r.book.MarkGood(picked)
+			}
+		}(item)
 	}
 
 	// If we need more addresses, pick a random peer and ask for more.

@@ -11,12 +11,15 @@ import (
 )
 
 var defaultServices  = []string{
+	"http://members.3322.org/dyndns/getip",
+	"http://ifconfig.me/",
 	"http://icanhazip.com/",
 	"http://ifconfig.io/ip",
 	"http://ident.me/",
 	"http://whatismyip.akamai.com/",
 	"http://myip.dnsomatic.com/",
 	"http://diagnostic.opendns.com/myip",
+	"http://myexternalip.com/raw",
 }
 
 type IpResult struct {
