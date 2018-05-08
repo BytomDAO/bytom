@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/hex"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -98,9 +97,9 @@ var signMsgCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var req = struct {
 			Address  string `json:"address"`
-			Message  []byte `json:"message"`
+			Message  string `json:"message"`
 			Password string `json:"password"`
-		}{Address: args[0], Message: []byte(args[1]), Password: args[2]}
+		}{Address: args[0], Message: args[1], Password: args[2]}
 
 		data, exitCode := util.ClientCall("/sign-message", &req)
 		if exitCode != util.Success {
@@ -121,18 +120,12 @@ var verifyMsgCmd = &cobra.Command{
 			os.Exit(util.ErrLocalExe)
 		}
 
-		signature, err := hex.DecodeString(args[3])
-		if err != nil {
-			jww.ERROR.Println("convert signature error:", err)
-			os.Exit(util.ErrLocalExe)
-		}
-
 		var req = struct {
 			Address     string       `json:"address"`
 			DerivedXPub chainkd.XPub `json:"derived_xpub"`
-			Message     []byte       `json:"message"`
-			Signature   []byte       `json:"signature"`
-		}{Address: args[0], DerivedXPub: xpub, Message: []byte(args[2]), Signature: signature}
+			Message     string       `json:"message"`
+			Signature   string       `json:"signature"`
+		}{Address: args[0], DerivedXPub: xpub, Message: args[2], Signature: args[3]}
 
 		data, exitCode := util.ClientCall("/verify-message", &req)
 		if exitCode != util.Success {
