@@ -128,10 +128,14 @@ func (r *PEXReactor) AddPeer(p *Peer) error {
 	// close the connect if connect is big than max limit
 	if r.sw.peers.Size() >= r.sw.config.MaxNumPeers {
 		if ok := r.SendAddrs(p, r.book.GetSelection()); ok {
-			r.sw.StopPeerGracefully(p)
+			select {
+			case <-time.After(1 * time.Second):
+				r.sw.StopPeerGracefully(p)
+			}
 		}
 		return errors.New("Error in AddPeer: reach the max peer, exchange then close")
 	}
+
 	return nil
 }
 
