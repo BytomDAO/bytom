@@ -333,7 +333,7 @@ func (r *PEXReactor) ensurePeers() {
 	var wg sync.WaitGroup
 	for _, item := range toDial {
 		wg.Add(1)
-		go r.dialPeerWorker(item, wg)
+		go r.dialPeerWorker(item, &wg)
 	}
 	wg.Wait()
 
@@ -350,7 +350,7 @@ func (r *PEXReactor) ensurePeers() {
 	}
 }
 
-func (r *PEXReactor) dialPeerWorker(a *NetAddress, wg sync.WaitGroup) {
+func (r *PEXReactor) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	if _, err := r.Switch.DialPeerWithAddress(a, false); err != nil {
 		r.book.MarkAttempt(a)
 	} else {
