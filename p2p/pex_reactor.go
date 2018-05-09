@@ -6,9 +6,8 @@ import (
 	"math/rand"
 	"reflect"
 	"strings"
-	"sync/atomic"
-	"time"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	wire "github.com/tendermint/go-wire"
@@ -59,7 +58,6 @@ type PEXReactor struct {
 	// tracks message count by peer, so we can prevent abuse
 	msgCountByPeer    *cmn.CMap
 	maxMsgCountByPeer uint16
-	dialing           int32
 	wg                sync.WaitGroup
 }
 
@@ -273,14 +271,8 @@ func (r *PEXReactor) ensurePeersRoutine() {
 // placeholder. It should not be the case that an address becomes old/vetted
 // upon a single successful connection.
 func (r *PEXReactor) ensurePeers() {
-	if !atomic.CompareAndSwapInt32(&r.dialing, 0, 1) {
-		log.Info("Ensure peers ...")
-		return
-	}
-	defer atomic.StoreInt32(&r.dialing, 0)
-
 	numOutPeers, _, numDialing := r.Switch.NumPeers()
-	numToDial := minNumOutboundPeers*(minNumOutboundPeers-numOutPeers) - (numOutPeers + numDialing)
+	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing)) * 5
 	log.WithFields(log.Fields{
 		"numOutPeers": numOutPeers,
 		"numDialing":  numDialing,

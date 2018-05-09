@@ -128,6 +128,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlo
 
 		if err == nil && conn != nil {
 			log.Info("Success open listen port")
+			listenerStatus = true
 			conn.Close()
 		}
 	}
