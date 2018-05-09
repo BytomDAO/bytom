@@ -28,7 +28,7 @@ type IpResult struct {
 var timeout = time.Duration(10)
 
 func GetIP() *IpResult {
-	resultCh := make(chan *IpResult)
+	resultCh := make(chan *IpResult, 1)
 	for _, s := range ipCheckServices {
 		go ipAddress(s, resultCh)
 	}
@@ -36,9 +36,7 @@ func GetIP() *IpResult {
 	for {
 		select {
 		case result := <-resultCh:
-			if result.Success {
-				return result
-			}
+			return result
 		case <-time.After(time.Second * timeout):
 			return &IpResult{false, ""}
 		}
@@ -49,31 +47,22 @@ func ipAddress(service string, done chan<- *IpResult) {
 	client := http.Client{Timeout: time.Duration(timeout * time.Second)}
 	resp, err := client.Get(service)
 	if err != nil {
-		sendResult(&IpResult{false, ""}, done)
 		return
 	}
 
 	defer resp.Body.Close()
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		sendResult(&IpResult{false, ""}, done)
 		return
 	}
 
 	address := strings.TrimSpace(string(data))
 	if net.ParseIP(address) != nil {
-		sendResult(&IpResult{true, address}, done)
-		return
-	}
-
-	sendResult(&IpResult{false, ""}, done)
-}
-
-func sendResult(result *IpResult, done chan<- *IpResult) {
-	select {
-	case done <- result:
-		return
-	default:
-		return
+		select {
+		case done <- &IpResult{true, address}:
+			return
+		default:
+			return
+		}
 	}
 }
