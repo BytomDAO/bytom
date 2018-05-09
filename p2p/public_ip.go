@@ -1,8 +1,6 @@
 package p2p
 
 import (
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -10,7 +8,7 @@ import (
 	"time"
 )
 
-var defaultServices = []string{
+var ipCheckServices = []string{
 	"http://members.3322.org/dyndns/getip",
 	"http://ifconfig.me/",
 	"http://icanhazip.com/",
@@ -25,68 +23,50 @@ var defaultServices = []string{
 type IpResult struct {
 	Success bool
 	Ip      string
-	Error   error
 }
 
-var timeout time.Duration
+var timeout = time.Duration(10)
 
-func GetIP(services []string, to time.Duration) *IpResult {
+func GetIP() *IpResult {
+	resultCh := make(chan *IpResult)
+	for _, s := range ipCheckServices {
+		go ipAddress(s, resultCh)
+	}
 
-	if services == nil || len(services) == 0 {
-		services = defaultServices
-	}
-	if to == 0 {
-		to = time.Duration(10)
-	}
-	timeout = to
-
-	count := len(services)
-	done := make(chan *IpResult)
-	for k := range services {
-		go ipAddress(services[k], done)
-	}
 	for {
 		select {
-		case result := <-done:
+		case result := <-resultCh:
 			if result.Success {
 				return result
-			} else {
-				count--
-				if count == 0 {
-					result.Error = errors.New("All services doesn't available.")
-					return result
-				}
 			}
-			continue
 		case <-time.After(time.Second * timeout):
-			return &IpResult{false, "", errors.New("Timed out")}
+			return &IpResult{false, ""}
 		}
 	}
 }
 
 func ipAddress(service string, done chan<- *IpResult) {
-
-	timeout := time.Duration(time.Second * timeout)
-	client := http.Client{Timeout: timeout}
+	client := http.Client{Timeout: time.Duration(timeout * time.Second)}
 	resp, err := client.Get(service)
-
 	if err != nil {
-		sendResult(&IpResult{false, "", errors.New("Time out")}, done)
+		sendResult(&IpResult{false, ""}, done)
 		return
 	}
 
-	if err == nil {
-
-		defer resp.Body.Close()
-
-		address, err := ioutil.ReadAll(resp.Body)
-		ip := fmt.Sprintf("%s", strings.TrimSpace(string(address)))
-		if err == nil && net.ParseIP(ip) != nil {
-			sendResult(&IpResult{true, ip, nil}, done)
-			return
-		}
+	defer resp.Body.Close()
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		sendResult(&IpResult{false, ""}, done)
+		return
 	}
-	sendResult(&IpResult{false, "", errors.New("Unable to talk with a service")}, done)
+
+	address := strings.TrimSpace(string(data))
+	if net.ParseIP(address) != nil {
+		sendResult(&IpResult{true, address}, done)
+		return
+	}
+
+	sendResult(&IpResult{false, ""}, done)
 }
 
 func sendResult(result *IpResult, done chan<- *IpResult) {

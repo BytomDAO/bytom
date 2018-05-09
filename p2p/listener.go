@@ -97,7 +97,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlo
 		}
 	}
 	if extAddr == nil {
-		if address := GetIP([]string{}, time.Duration(0)); address.Success == true {
+		if address := GetIP(); address.Success == true {
 			extAddr = NewNetAddressIPPort(net.ParseIP(address.Ip), uint16(lAddrPort))
 			getExtIP = true
 		}
