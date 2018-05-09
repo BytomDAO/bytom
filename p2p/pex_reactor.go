@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -57,6 +58,7 @@ type PEXReactor struct {
 	// tracks message count by peer, so we can prevent abuse
 	msgCountByPeer    *cmn.CMap
 	maxMsgCountByPeer uint16
+	wg                sync.WaitGroup
 }
 
 // NewPEXReactor creates new PEX reactor.
@@ -128,10 +130,12 @@ func (r *PEXReactor) AddPeer(p *Peer) error {
 	// close the connect if connect is big than max limit
 	if r.sw.peers.Size() >= r.sw.config.MaxNumPeers {
 		if ok := r.SendAddrs(p, r.book.GetSelection()); ok {
+			<-time.After(1 * time.Second)
 			r.sw.StopPeerGracefully(p)
 		}
 		return errors.New("Error in AddPeer: reach the max peer, exchange then close")
 	}
+
 	return nil
 }
 
@@ -236,13 +240,19 @@ func (r *PEXReactor) ensurePeersRoutine() {
 
 	// fire periodically
 	ticker := time.NewTicker(r.ensurePeersPeriod)
+	quickTicker := time.NewTicker(time.Second * 1)
 
 	for {
 		select {
 		case <-ticker.C:
 			r.ensurePeers()
+		case <-quickTicker.C:
+			if r.sw.peers.Size() < 3 {
+				r.ensurePeers()
+			}
 		case <-r.Quit:
 			ticker.Stop()
+			quickTicker.Stop()
 			return
 		}
 	}
@@ -262,7 +272,7 @@ func (r *PEXReactor) ensurePeersRoutine() {
 // upon a single successful connection.
 func (r *PEXReactor) ensurePeers() {
 	numOutPeers, _, numDialing := r.Switch.NumPeers()
-	numToDial := minNumOutboundPeers - (numOutPeers + numDialing)
+	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing)) * 5
 	log.WithFields(log.Fields{
 		"numOutPeers": numOutPeers,
 		"numDialing":  numDialing,
@@ -310,7 +320,7 @@ func (r *PEXReactor) ensurePeers() {
 			if alreadySelected || alreadyDialing || alreadyConnected {
 				continue
 			} else {
-				log.WithField("addr", try).Info("Will dial address")
+				log.Debug("Will dial address addr:", try)
 				picked = try
 				break
 			}
@@ -320,15 +330,19 @@ func (r *PEXReactor) ensurePeers() {
 		}
 		toDial[picked.IP.String()] = picked
 	}
-
 	// Dial picked addresses
 	for _, item := range toDial {
-		if _, err := r.Switch.DialPeerWithAddress(item, false); err != nil {
-			r.book.MarkAttempt(item)
-		} else {
-			r.book.MarkGood(item)
-		}
+		r.wg.Add(1)
+		go func(picked *NetAddress) {
+			if _, err := r.Switch.DialPeerWithAddress(picked, false); err != nil {
+				r.book.MarkAttempt(picked)
+			} else {
+				r.book.MarkGood(picked)
+			}
+			r.wg.Done()
+		}(item)
 	}
+	r.wg.Wait()
 
 	// If we need more addresses, pick a random peer and ask for more.
 	if r.book.NeedMoreAddrs() {

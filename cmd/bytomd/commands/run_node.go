@@ -45,7 +45,7 @@ func runNode(cmd *cobra.Command, args []string) error {
 	if _, err := n.Start(); err != nil {
 		return fmt.Errorf("Failed to start node: %v", err)
 	} else {
-		log.WithField("nodeInfo", n.SyncManager().Switch().NodeInfo()).Info("Started node")
+		log.Info("Start node ", n.SyncManager().NodeInfo())
 	}
 
 	// Trap signal, run forever.
