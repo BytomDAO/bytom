@@ -58,7 +58,6 @@ type PEXReactor struct {
 	// tracks message count by peer, so we can prevent abuse
 	msgCountByPeer    *cmn.CMap
 	maxMsgCountByPeer uint16
-	wg                sync.WaitGroup
 }
 
 // NewPEXReactor creates new PEX reactor.
@@ -330,19 +329,13 @@ func (r *PEXReactor) ensurePeers() {
 		}
 		toDial[picked.IP.String()] = picked
 	}
-	// Dial picked addresses
+
+	var wg *sync.WaitGroup
 	for _, item := range toDial {
-		r.wg.Add(1)
-		go func(picked *NetAddress) {
-			if _, err := r.Switch.DialPeerWithAddress(picked, false); err != nil {
-				r.book.MarkAttempt(picked)
-			} else {
-				r.book.MarkGood(picked)
-			}
-			r.wg.Done()
-		}(item)
+		wg.Add(1)
+		go r.dialPeerWorker(item, wg)
 	}
-	r.wg.Wait()
+	wg.Wait()
 
 	// If we need more addresses, pick a random peer and ask for more.
 	if r.book.NeedMoreAddrs() {
@@ -355,6 +348,15 @@ func (r *PEXReactor) ensurePeers() {
 			}
 		}
 	}
+}
+
+func (r *PEXReactor) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
+	if _, err := r.Switch.DialPeerWithAddress(a, false); err != nil {
+		r.book.MarkAttempt(a)
+	} else {
+		r.book.MarkGood(a)
+	}
+	wg.Done()
 }
 
 func (r *PEXReactor) flushMsgCountByPeer() {

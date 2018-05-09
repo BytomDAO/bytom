@@ -4,13 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 	"time"
-	"regexp"
 )
 
-var defaultServices  = []string{
+var defaultServices = []string{
 	"http://members.3322.org/dyndns/getip",
 	"http://ifconfig.me/",
 	"http://icanhazip.com/",
@@ -24,8 +24,8 @@ var defaultServices  = []string{
 
 type IpResult struct {
 	Success bool
-	Ip string
-	Error error
+	Ip      string
+	Error   error
 }
 
 var timeout time.Duration
@@ -45,8 +45,8 @@ func GetIP(services []string, to time.Duration) *IpResult {
 	for k := range services {
 		go ipAddress(services[k], done)
 	}
-	for ;; {
-		select{
+	for {
+		select {
 		case result := <-done:
 			if result.Success {
 				return result
@@ -81,7 +81,7 @@ func ipAddress(service string, done chan<- *IpResult) {
 
 		address, err := ioutil.ReadAll(resp.Body)
 		ip := fmt.Sprintf("%s", strings.TrimSpace(string(address)))
-		if err== nil && checkIp(ip) {
+		if err == nil && net.ParseIP(ip) != nil {
 			sendResult(&IpResult{true, ip, nil}, done)
 			return
 		}
@@ -96,12 +96,4 @@ func sendResult(result *IpResult, done chan<- *IpResult) {
 	default:
 		return
 	}
-}
-
-func checkIp(ip string) bool {
-	match, _ := regexp.MatchString(`^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$`, ip)
-	if match {
-		return true
-	}
-	return false
 }
