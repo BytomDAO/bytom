@@ -9,9 +9,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"net"
-	"time"
-
 	cfg "github.com/bytom/config"
 	"github.com/bytom/p2p"
 	core "github.com/bytom/protocol"
@@ -31,8 +28,6 @@ type SyncManager struct {
 	fetcher     *Fetcher
 	blockKeeper *blockKeeper
 	peers       *peerSet
-	mapResult   bool
-	extIP       bool
 
 	newBlockCh    chan *bc.Hash
 	newPeerCh     chan struct{}
@@ -69,17 +64,15 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
 	// Create & add listener
-	var mapResult, extIP bool
+	var listenerStatus bool
 	var l p2p.Listener
 	if !config.VaultMode {
 		p, address := protocolAndAddress(manager.config.P2P.ListenAddress)
-		l, mapResult, extIP = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP, nil)
+		l, listenerStatus = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP, nil)
 		manager.sw.AddListener(l)
 	}
-	manager.sw.SetNodeInfo(manager.makeNodeInfo(mapResult))
+	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
 	manager.sw.SetNodePrivKey(manager.privKey)
-	manager.mapResult = mapResult
-	manager.extIP = extIP
 	// Optionally, start the pex reactor
 	//var addrBook *p2p.AddrBook
 	if config.P2P.PexReactor {
@@ -101,7 +94,7 @@ func protocolAndAddress(listenAddr string) (string, string) {
 	return p, address
 }
 
-func (sm *SyncManager) makeNodeInfo(listenOpen bool) *p2p.NodeInfo {
+func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 	nodeInfo := &p2p.NodeInfo{
 		PubKey:  sm.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
 		Moniker: sm.config.Moniker,
@@ -122,7 +115,7 @@ func (sm *SyncManager) makeNodeInfo(listenOpen bool) *p2p.NodeInfo {
 	// We assume that the rpcListener has the same ExternalAddress.
 	// This is probably true because both P2P and RPC listeners use UPnP,
 	// except of course if the rpc is only bound to localhost
-	if listenOpen {
+	if listenerStatus {
 		nodeInfo.ListenAddr = cmn.Fmt("%v:%v", p2pListener.ExternalAddress().IP.String(), p2pListener.ExternalAddress().Port)
 	} else {
 		nodeInfo.ListenAddr = cmn.Fmt("%v:%v", p2pListener.InternalAddress().IP.String(), p2pListener.InternalAddress().Port)
@@ -131,23 +124,6 @@ func (sm *SyncManager) makeNodeInfo(listenOpen bool) *p2p.NodeInfo {
 }
 
 func (sm *SyncManager) netStart() error {
-	if !sm.mapResult && sm.extIP {
-		p2pListener := sm.sw.Listeners()[0]
-		ListenAddr := cmn.Fmt("%v:%v", p2pListener.ExternalAddress().IP.String(), p2pListener.ExternalAddress().Port)
-		conn, err := net.DialTimeout("tcp", ListenAddr, 3*time.Second)
-
-		if err != nil && conn == nil {
-			log.Error("Could not open listen port")
-		}
-
-		if err == nil && conn != nil {
-			log.Info("Success open listen port")
-			conn.Close()
-			sm.sw.SetNodeInfo(sm.makeNodeInfo(true))
-		}
-	}
-	log.WithField("nodeInfo", sm.sw.NodeInfo()).Info("net start")
-
 	// Start the switch
 	_, err := sm.sw.Start()
 	if err != nil {

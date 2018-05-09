@@ -49,15 +49,15 @@ func splitHostPort(addr string) (host string, port int) {
 }
 
 // skipUPNP: If true, does not try getUPNPExternalAddress()
-func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlog.Logger) (Listener, bool, bool) {
+func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlog.Logger) (Listener, bool) {
 	// Local listen IP & port
 	lAddrIP, lAddrPort := splitHostPort(lAddr)
 
 	// Create listener
 	var listener net.Listener
 	var err error
-	var mapResult = false
-	var extIP = false
+	var getExtIP = false
+	var listenerStatus = false
 
 	for i := 0; i < tryListenSeconds; i++ {
 		listener, err = net.Listen(protocol, lAddr)
@@ -91,18 +91,15 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlo
 		if lAddrIP == "" || lAddrIP == "0.0.0.0" {
 			extAddr = getUPNPExternalAddress(lAddrPort, listenerPort)
 			if extAddr != nil {
-				mapResult = true
-			} else {
-				extIP = true
+				getExtIP = true
+				listenerStatus = true
 			}
 		}
 	}
 	if extAddr == nil {
 		if address := GetIP([]string{}, time.Duration(0)); address.Success == true {
 			extAddr = NewNetAddressIPPort(net.ParseIP(address.Ip), uint16(lAddrPort))
-			extIP = true
-		} else {
-			log.Info("Error get external ip:", address.Error)
+			getExtIP = true
 		}
 	}
 	// Otherwise just use the local address...
@@ -121,7 +118,21 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlo
 	}
 	dl.BaseService = *cmn.NewBaseService(logger, "DefaultListener", dl)
 	dl.Start() // Started upon construction
-	return dl, mapResult, extIP
+
+	if !listenerStatus && getExtIP {
+		conn, err := net.DialTimeout("tcp", extAddr.String(), 3*time.Second)
+
+		if err != nil && conn == nil {
+			log.Error("Could not open listen port")
+		}
+
+		if err == nil && conn != nil {
+			log.Info("Success open listen port")
+			conn.Close()
+		}
+	}
+
+	return dl, listenerStatus
 }
 
 func (l *DefaultListener) OnStart() error {
