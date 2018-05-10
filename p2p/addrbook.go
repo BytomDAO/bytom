@@ -15,7 +15,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	crypto "github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
@@ -491,7 +491,7 @@ func (a *AddrBook) addToOldBucket(ka *knownAddress, bucketIdx int) bool {
 	}
 
 	addrStr := ka.Addr.String()
-	bucket := a.getBucket(bucketTypeNew, bucketIdx)
+	bucket := a.getBucket(bucketTypeOld, bucketIdx)
 
 	// Already exists?
 	if _, ok := bucket[addrStr]; ok {
@@ -590,7 +590,7 @@ func (a *AddrBook) addAddress(addr, src *NetAddress) {
 	bucket := a.calcNewBucket(addr, src)
 	a.addToNewBucket(ka, bucket)
 
-	log.Info("Added new address ", "address:", addr, " total:", a.size())
+	log.Debug("Added new address ", "address:", addr, " total:", a.size())
 }
 
 // Make space in the new buckets by expiring the really bad entries.
@@ -837,8 +837,8 @@ func (ka *knownAddress) removeBucketRef(bucketIdx int) int {
    worth keeping hold of.
 */
 func (ka *knownAddress) isBad() bool {
-	// Has been attempted in the last minute --> good
-	if ka.LastAttempt.After(time.Now().Add(-1 * time.Minute)) {
+	// Has been attempted in the last minute --> bad
+	if ka.LastAttempt.After(time.Now().Add(-1*time.Minute)) && ka.Attempts != 0 {
 		return true
 	}
 
@@ -853,8 +853,7 @@ func (ka *knownAddress) isBad() bool {
 	}
 
 	// Hasn't succeeded in too long?
-	if ka.LastSuccess.Before(time.Now().Add(-1*minBadDays*time.Hour*24)) &&
-		ka.Attempts >= maxFailures {
+	if ka.LastSuccess.Before(time.Now().Add(-1*minBadDays*time.Hour*24)) && ka.Attempts >= maxFailures {
 		return true
 	}
 

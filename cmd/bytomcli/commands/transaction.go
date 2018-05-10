@@ -275,6 +275,30 @@ var estimateTransactionGasCmd = &cobra.Command{
 	},
 }
 
+var decodeRawTransactionCmd = &cobra.Command{
+	Use:   "decode-raw-transaction <raw_transaction>",
+	Short: "decode the raw transaction",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		var ins = struct {
+			Tx types.Tx `json:"raw_transaction"`
+		}{}
+
+		err := ins.Tx.UnmarshalText([]byte(args[0]))
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		data, exitCode := util.ClientCall("/decode-raw-transaction", &ins)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
 var getTransactionCmd = &cobra.Command{
 	Use:   "get-transaction <hash>",
 	Short: "get the transaction by matching the given transaction hash",

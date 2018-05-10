@@ -31,6 +31,33 @@ type spendAction struct {
 	ClientToken *string `json:"client_token"`
 }
 
+// MergeSpendAction merge common assetID and accountID spend action
+func MergeSpendAction(spendActions []txbuilder.Action) []txbuilder.Action {
+	actions := []txbuilder.Action{}
+	actionMap := make(map[string]*spendAction)
+
+	for _, act := range spendActions {
+		switch act := act.(type) {
+		case *spendAction:
+			actionKey := act.AssetId.String() + act.AccountID
+			if tmpAct, ok := actionMap[actionKey]; ok {
+				tmpAct.Amount += act.Amount
+			} else {
+				actionMap[actionKey] = act
+			}
+		default:
+			actions = append(actions, act)
+		}
+	}
+
+	for actKey := range actionMap {
+		spend := actionMap[actKey]
+		actions = append(actions, txbuilder.Action(spend))
+	}
+
+	return actions
+}
+
 func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
 	var missing []string
 	if a.AccountID == "" {

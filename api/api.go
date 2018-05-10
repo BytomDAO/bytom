@@ -184,6 +184,7 @@ func (a *API) buildHandler() {
 		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
+		m.Handle("/sign-message", jsonHandler(a.signMessage))
 
 		m.Handle("/build-transaction", jsonHandler(a.build))
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
@@ -218,6 +219,7 @@ func (a *API) buildHandler() {
 
 	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
 	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
+	m.Handle("/decode-raw-transaction", jsonHandler(a.decodeRawTransaction))
 
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
@@ -232,6 +234,7 @@ func (a *API) buildHandler() {
 	m.Handle("/get-work", jsonHandler(a.getWork))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
 
+	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 

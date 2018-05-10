@@ -95,9 +95,9 @@ func zeroKey(k *XKey) {
 
 // keyFileName implements the naming convention for keyfiles:
 // UTC--<created_at UTC ISO8601>-<address hex>
-func keyFileName(keyAlias string) string {
+func keyFileName(keyId string) string {
 	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), keyAlias)
+	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), keyId)
 }
 
 func toISO8601(t time.Time) string {
