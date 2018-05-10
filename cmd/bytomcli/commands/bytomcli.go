@@ -128,6 +128,7 @@ func AddCommands() {
 
 	BytomcliCmd.AddCommand(getUnconfirmedTransactionCmd)
 	BytomcliCmd.AddCommand(listUnconfirmedTransactionsCmd)
+	BytomcliCmd.AddCommand(decodeRawTransactionCmd)
 
 	BytomcliCmd.AddCommand(listUnspentOutputsCmd)
 	BytomcliCmd.AddCommand(listBalancesCmd)
@@ -148,6 +149,9 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(deleteKeyCmd)
 	BytomcliCmd.AddCommand(listKeysCmd)
 	BytomcliCmd.AddCommand(resetKeyPwdCmd)
+
+	BytomcliCmd.AddCommand(signMsgCmd)
+	BytomcliCmd.AddCommand(verifyMsgCmd)
 
 	BytomcliCmd.AddCommand(createTransactionFeedCmd)
 	BytomcliCmd.AddCommand(listTransactionFeedsCmd)
@@ -183,6 +187,7 @@ func AddTemplateFunc() {
 		deleteKeyCmd.Name(),
 		listKeysCmd.Name(),
 		resetKeyPwdCmd.Name(),
+		signMsgCmd.Name(),
 
 		buildTransactionCmd.Name(),
 		signTransactionCmd.Name(),

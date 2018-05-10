@@ -331,7 +331,7 @@ func (sw *Switch) DialSeeds(addrBook *AddrBook, seeds []string) error {
 	}
 	//permute the list, dial them in random order.
 	perm := rand.Perm(len(netAddrs))
-	for i := 0; i < len(perm)/2; i++ {
+	for i := 0; i < len(perm); i += 2 {
 		j := perm[i]
 		sw.dialSeed(netAddrs[j])
 	}
@@ -363,13 +363,10 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress, persistent bool) (*Peer,
 	sw.dialing.Set(addr.IP.String(), addr)
 	defer sw.dialing.Delete(addr.IP.String())
 
-	log.WithField("address", addr).Info("Dialing peer")
+	log.Debug("Dialing peer address:", addr)
 	peer, err := newOutboundPeerWithConfig(addr, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, sw.peerConfig)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"address": addr,
-			"error":   err,
-		}).Info("Failed to dial peer")
+		log.Debug("Failed to dial peer", " address:", addr, " error:", err)
 		return nil, err
 	}
 	peer.SetLogger(sw.Logger.With("peer", addr))
