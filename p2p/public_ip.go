@@ -25,7 +25,7 @@ type IpResult struct {
 	Ip      string
 }
 
-var timeout = time.Duration(10)
+var timeout = time.Duration(5)
 
 func GetIP() *IpResult {
 	resultCh := make(chan *IpResult, 1)
