@@ -63,7 +63,7 @@ $ go env GOROOT GOPATH
 #### Get the source code
 
 ``` bash
-$ git clone https://github.com/Bytom/bytom $GOPATH/src/github.com/bytom
+$ git clone https://github.com/Bytom/bytom.git $GOPATH/src/github.com/bytom
 ```
 
 #### Build
