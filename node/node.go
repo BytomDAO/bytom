@@ -6,7 +6,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -173,15 +172,17 @@ func initActiveNetParams(config *cfg.Config) {
 }
 
 func initLogFile(config *cfg.Config) {
-	logFilePath := filepath.Join(config.RootDir, "log")
-	cmn.EnsureDir(logFilePath, 0700)
-	logFileName := path.Join(logFilePath, config.LogName)
-	file, err := os.OpenFile(logFileName, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if config.LogFile == "" {
+		return
+	}
+	cmn.EnsureDir(filepath.Dir(config.LogFile), 0700)
+	file, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err == nil {
 		log.SetOutput(file)
 	} else {
-		log.Info("Failed to open log file, using default")
+		log.WithField("err", err).Info("using default")
 	}
+
 }
 
 // Lanch web broser or not
