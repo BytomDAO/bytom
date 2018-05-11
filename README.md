@@ -63,7 +63,7 @@ $ go env GOROOT GOPATH
 #### Get the source code
 
 ``` bash
-$ git clone https://github.com/Bytom/bytom $GOPATH/src/github.com/bytom
+$ git clone https://github.com/Bytom/bytom.git $GOPATH/src/github.com/bytom
 ```
 
 #### Build
@@ -86,15 +86,16 @@ First of all, initialize the node:
 
 ```bash
 $ cd ./cmd/bytomd
-$ ./bytomd init --chain_id testnet
+$ ./bytomd init --chain_id mainnet
 ```
 
-There are two options for the flag `--chain_id`:
+There are three options for the flag `--chain_id`:
 
-- `testnet`: connect to the testnet.
-- `mainnet`: standalone mode.
+- `mainnet`: connect to the mainnet.
+- `testnet`: connect to the testnet wisdom.
+- `solonet`: standalone mode.
 
-After that, you'll see `.bytomd` generated in current directory, then launch the node.
+After that, you'll see `config.toml` generated, then launch the node.
 
 ### launch
 
@@ -106,16 +107,20 @@ available flags for `bytomd node`:
 
 ```
       --auth.disable                Disable rpc access authenticate
+      --chain_id string             Select network type
+  -h, --help                        help for node
       --mining                      Enable mining
       --p2p.dial_timeout int        Set dial timeout (default 3)
       --p2p.handshake_timeout int   Set handshake timeout (default 30)
       --p2p.laddr string            Node listen address.
       --p2p.max_num_peers int       Set max num peers (default 50)
-      --p2p.pex                     Enable Peer-Exchange
+      --p2p.pex                     Enable Peer-Exchange  (default true)
       --p2p.seeds string            Comma delimited host:port seed nodes
       --p2p.skip_upnp               Skip UPNP configuration
       --prof_laddr string           Use http to profile bytomd programs
+      --vault_mode                  Run in the offline enviroment
       --wallet.disable              Disable wallet
+      --wallet.rescan               Rescan wallet
       --web.closed                  Lanch web browser or not
 ```
 
