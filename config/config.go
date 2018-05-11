@@ -86,7 +86,7 @@ type BaseConfig struct {
 	Time time.Time
 
 	// log file name
-	LogName string `mapstructure:"log_name"`
+	LogFile string `mapstructure:"log_file"`
 }
 
 // Default configurable base parameters.
@@ -102,7 +102,6 @@ func DefaultBaseConfig() BaseConfig {
 		DBPath:            "data",
 		KeysPath:          "keystore",
 		HsmUrl:            "",
-		LogName:           "bytom.log",
 	}
 }
 
