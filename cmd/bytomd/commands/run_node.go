@@ -36,6 +36,9 @@ func init() {
 	runNodeCmd.Flags().Int("p2p.handshake_timeout", config.P2P.HandshakeTimeout, "Set handshake timeout")
 	runNodeCmd.Flags().Int("p2p.dial_timeout", config.P2P.DialTimeout, "Set dial timeout")
 
+	// log flags
+	runNodeCmd.Flags().String("log_file", config.LogFile, "Log output file")
+
 	RootCmd.AddCommand(runNodeCmd)
 }
 
