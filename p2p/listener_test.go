@@ -11,7 +11,7 @@ import (
 
 func TestListener(t *testing.T) {
 	// Create a listener
-	l := NewDefaultListener("tcp", ":8001", true, log.TestingLogger())
+	l, _ := NewDefaultListener("tcp", ":8001", true, log.TestingLogger())
 
 	// Dial the listener
 	lAddr := l.ExternalAddress()

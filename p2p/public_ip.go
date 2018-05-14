@@ -57,7 +57,7 @@ func ipAddress(service string, done chan<- *IpResult) {
 	}
 
 	address := strings.TrimSpace(string(data))
-	if net.ParseIP(address) != nil {
+	if ip := net.ParseIP(address); ip != nil && ip.To4() != nil {
 		select {
 		case done <- &IpResult{true, address}:
 			return
