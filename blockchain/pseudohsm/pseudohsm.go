@@ -34,7 +34,7 @@ type HSM struct {
 type XPub struct {
 	Alias string       `json:"alias"`
 	XPub  chainkd.XPub `json:"xpub"`
-	File  string       `json:"file"`
+	File  string       `json:"-"`
 }
 
 // New method for HSM struct
