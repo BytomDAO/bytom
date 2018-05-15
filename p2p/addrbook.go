@@ -69,9 +69,6 @@ const (
 	// max addresses returned by GetSelection
 	// NOTE: this must match "maxPexMessageSize"
 	maxGetSelection = 250
-
-	// current version of the on-disk format.
-	serializationVersion = 1
 )
 
 const (
@@ -83,18 +80,21 @@ const (
 type AddrBook struct {
 	cmn.BaseService
 
-	mtx               sync.Mutex
+	// immutable after creation
 	filePath          string
 	routabilityStrict bool
-	rand              *rand.Rand
 	key               string
-	ourAddrs          map[string]*NetAddress
-	addrLookup        map[string]*knownAddress // new & old
-	addrNew           []map[string]*knownAddress
-	addrOld           []map[string]*knownAddress
-	wg                sync.WaitGroup
-	nOld              int
-	nNew              int
+
+	mtx        sync.Mutex
+	rand       *rand.Rand
+	ourAddrs   map[string]*NetAddress
+	addrLookup map[string]*knownAddress // new & old
+	addrNew    []map[string]*knownAddress
+	addrOld    []map[string]*knownAddress
+	nOld       int
+	nNew       int
+
+	wg sync.WaitGroup
 }
 
 // NewAddrBook creates a new address book.
