@@ -20,7 +20,6 @@ import (
 type SyncManager struct {
 	networkID uint64
 	sw        *p2p.Switch
-	addrBook  *p2p.AddrBook // known peers
 
 	privKey     crypto.PrivKeyEd25519 // local node's p2p key
 	chain       *core.Chain
@@ -73,13 +72,6 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	}
 	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
 	manager.sw.SetNodePrivKey(manager.privKey)
-	// Optionally, start the pex reactor
-	//var addrBook *p2p.AddrBook
-	if config.P2P.PexReactor {
-		manager.addrBook = p2p.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
-		pexReactor := p2p.NewPEXReactor(manager.addrBook, manager.sw)
-		manager.sw.AddReactor("PEX", pexReactor)
-	}
 
 	return manager, nil
 }
@@ -231,7 +223,7 @@ func (sm *SyncManager) Peers() *peerSet {
 
 //DialSeeds dial seed peers
 func (sm *SyncManager) DialSeeds(seeds []string) error {
-	return sm.sw.DialSeeds(sm.addrBook, seeds)
+	return sm.sw.DialSeeds(seeds)
 }
 
 //Switch get sync manager switch
