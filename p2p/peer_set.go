@@ -27,6 +27,7 @@ type peerSetItem struct {
 	index int
 }
 
+// NewPeerSet creates a new peerSet with a list of initial capacity of 256 items.
 func NewPeerSet() *PeerSet {
 	return &PeerSet{
 		lookup: make(map[string]*peerSetItem),
@@ -34,6 +35,7 @@ func NewPeerSet() *PeerSet {
 	}
 }
 
+// Add adds the peer to the PeerSet.
 // Returns false if peer with key (PubKeyEd25519) is already set
 func (ps *PeerSet) Add(peer *Peer) error {
 	ps.mtx.Lock()
@@ -50,6 +52,8 @@ func (ps *PeerSet) Add(peer *Peer) error {
 	return nil
 }
 
+// Has returns true if the PeerSet contains
+// the peer referred to by this peerKey.
 func (ps *PeerSet) Has(peerKey string) bool {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
@@ -57,17 +61,18 @@ func (ps *PeerSet) Has(peerKey string) bool {
 	return ok
 }
 
+// Get looks up a peer by the provided peerKey.
 func (ps *PeerSet) Get(peerKey string) *Peer {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
 	item, ok := ps.lookup[peerKey]
 	if ok {
 		return item.peer
-	} else {
-		return nil
 	}
+	return nil
 }
 
+// Remove discards peer if the peer was previously memoized.
 func (ps *PeerSet) Remove(peer *Peer) {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
@@ -99,6 +104,7 @@ func (ps *PeerSet) Remove(peer *Peer) {
 
 }
 
+// Size returns the number of unique items in the peerSet.
 func (ps *PeerSet) Size() int {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
