@@ -1,4 +1,4 @@
-// Modified for Tendermint
+// Modified for Bytom
 // Originally Copyright (c) 2013-2014 Conformal Systems LLC.
 // https://github.com/conformal/btcd/blob/master/LICENSE
 
@@ -45,7 +45,6 @@ func NewNetAddress(addr net.Addr) *NetAddress {
 // address in the form of "IP:Port". Also resolves the host if host
 // is not an IP.
 func NewNetAddressString(addr string) (*NetAddress, error) {
-
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
 		return nil, err
@@ -88,7 +87,7 @@ func NewNetAddressStrings(addrs []string) ([]*NetAddress, error) {
 // NewNetAddressIPPort returns a new NetAddress using the provided IP
 // and port number.
 func NewNetAddressIPPort(ip net.IP, port uint16) *NetAddress {
-	na := &NetAddress{
+	return &NetAddress{
 		IP:   ip,
 		Port: port,
 		str: net.JoinHostPort(
@@ -96,7 +95,6 @@ func NewNetAddressIPPort(ip net.IP, port uint16) *NetAddress {
 			strconv.FormatUint(uint64(port), 10),
 		),
 	}
-	return na
 }
 
 // Equals reports whether na and other are the same addresses.
@@ -104,16 +102,6 @@ func (na *NetAddress) Equals(other interface{}) bool {
 	if o, ok := other.(*NetAddress); ok {
 		return na.String() == o.String()
 	}
-
-	return false
-}
-
-func (na *NetAddress) Less(other interface{}) bool {
-	if o, ok := other.(*NetAddress); ok {
-		return na.String() < o.String()
-	}
-
-	cmn.PanicSanity("Cannot compare unequal types")
 	return false
 }
 
@@ -128,9 +116,16 @@ func (na *NetAddress) String() string {
 	return na.str
 }
 
+func (na *NetAddress) DialString() string {
+	return net.JoinHostPort(
+		na.IP.String(),
+		strconv.FormatUint(uint64(na.Port), 10),
+	)
+}
+
 // Dial calls net.Dial on the address.
 func (na *NetAddress) Dial() (net.Conn, error) {
-	conn, err := net.Dial("tcp", na.String())
+	conn, err := net.Dial("tcp", na.DialString())
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +134,7 @@ func (na *NetAddress) Dial() (net.Conn, error) {
 
 // DialTimeout calls net.DialTimeout on the address.
 func (na *NetAddress) DialTimeout(timeout time.Duration) (net.Conn, error) {
-	conn, err := net.DialTimeout("tcp", na.String(), timeout)
+	conn, err := net.DialTimeout("tcp", na.DialString(), timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +169,6 @@ func (na *NetAddress) ReachabilityTo(o *NetAddress) int {
 		Ipv6_weak
 		Ipv4
 		Ipv6_strong
-		Private
 	)
 	if !na.Routable() {
 		return Unreachable
