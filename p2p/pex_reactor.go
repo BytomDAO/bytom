@@ -351,7 +351,7 @@ func (r *PEXReactor) ensurePeers() {
 }
 
 func (r *PEXReactor) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
-	if _, err := r.Switch.DialPeerWithAddress(a, false); err != nil {
+	if _, err := r.Switch.DialPeerWithAddress(a); err != nil {
 		r.book.MarkAttempt(a)
 	} else {
 		r.book.MarkGood(a)

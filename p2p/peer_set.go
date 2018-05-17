@@ -39,7 +39,7 @@ func (ps *PeerSet) Add(peer *Peer) error {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
 	if ps.lookup[peer.Key] != nil {
-		return ErrSwitchDuplicatePeer
+		return ErrDuplicatePeer
 	}
 
 	index := len(ps.list)
