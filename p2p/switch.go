@@ -301,7 +301,7 @@ func (sw *Switch) filterConnByIP(ip string) error {
 }
 
 func (sw *Switch) filterConnByPeer(peer *Peer) error {
-	if err := sw.checkBannedPeer(peer.mconn.RemoteAddress.IP.String()); err != nil {
+	if err := sw.checkBannedPeer(peer.NodeInfo.RemoteAddrHost()); err != nil {
 		return ErrConnectBannedPeer
 	}
 
@@ -428,7 +428,7 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 func (sw *Switch) AddBannedPeer(peer *Peer) error {
 	sw.mtx.Lock()
 	defer sw.mtx.Unlock()
-	key := peer.mconn.RemoteAddress.IP.String()
+	key := peer.NodeInfo.RemoteAddrHost()
 	sw.bannedPeer[key] = time.Now().Add(defaultBanDuration)
 	datajson, err := json.Marshal(sw.bannedPeer)
 	if err != nil {
