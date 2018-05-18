@@ -67,7 +67,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	var l p2p.Listener
 	if !config.VaultMode {
 		p, address := protocolAndAddress(manager.config.P2P.ListenAddress)
-		l, listenerStatus = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP, nil)
+		l, listenerStatus = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP)
 		manager.sw.AddListener(l)
 	}
 	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
