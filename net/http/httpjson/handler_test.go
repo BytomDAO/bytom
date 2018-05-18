@@ -23,17 +23,17 @@ func TestHandler(t *testing.T) {
 		wantErr  error
 	}{
 		{"", ``, `{"message":"ok"}`, func() {}, nil},
-		{"", ``, `1`, func() int { return 1 }, nil},
-		{"", ``, `{"message":"ok"}`, func() error { return nil }, nil},
-		{"", ``, ``, func() error { return errX }, errX},
 		{"", ``, `1`, func() (int, error) { return 1, nil }, nil},
+		{"", ``, `null`, func() error { return nil }, nil},
 		{"", ``, ``, func() (int, error) { return 0, errX }, errX},
-		{"", `1`, `1`, func(i int) int { return i }, nil},
-		{"", `1`, `1`, func(i *int) int { return *i }, nil},
-		{"", `"foo"`, `"foo"`, func(s string) string { return s }, nil},
-		{"", `{"x":1}`, `1`, func(x struct{ X int }) int { return x.X }, nil},
-		{"", `{"x":1}`, `1`, func(x *struct{ X int }) int { return x.X }, nil},
-		{"", ``, `1`, func(ctx context.Context) int { return ctx.Value("k").(int) }, nil},
+		{"", ``, ``, func() (int, error) { return 1, errX }, errX},
+		{"", ``, ``, func() (int, error) { return 0, errX }, errX},
+		{"", `1`, `1`, func(i int) (int, error) { return i, nil }, nil},
+		{"", `1`, `1`, func(i *int) (int, error) { return *i, nil }, nil},
+		{"", `"foo"`, `"foo"`, func(s string) (string, error) { return s, nil }, nil},
+		{"", `{"x":1}`, `1`, func(x struct{ X int }) (int, error) { return x.X, nil }, nil},
+		{"", `{"x":1}`, `1`, func(x *struct{ X int }) (int, error) { return x.X, nil }, nil},
+		{"", ``, `1`, func(ctx context.Context) (int, error) { return ctx.Value("k").(int), nil }, nil},
 	}
 
 	for _, test := range cases {

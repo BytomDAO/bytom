@@ -13,8 +13,8 @@ var (
 	testFormatter = Formatter{
 		Default:     Info{500, "CH000", "Internal server error"},
 		IsTemporary: func(Info, error) bool { return false },
-		Errors: map[error]Info{
-			errNotFound: {400, "CH002", "Not found"},
+		Errors: map[string]Info{
+			errNotFound.Error(): {400, "CH002", "Not found"},
 		},
 	}
 )

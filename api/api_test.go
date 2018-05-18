@@ -13,14 +13,13 @@ import (
 	"github.com/bytom/accesstoken"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/testutil"
 )
 
 func TestAPIHandler(t *testing.T) {
-	a := &API{}
-	response := &Response{}
-
 	// init httptest server
+	a := &API{}
 	a.buildHandler()
 	server := httptest.NewServer(a.handler)
 	defer server.Close()
@@ -38,7 +37,7 @@ func TestAPIHandler(t *testing.T) {
 	cases := []struct {
 		path     string
 		request  interface{}
-		respWant *Response
+		respWant interface{}
 	}{
 		{
 			path: "/create-key",
@@ -46,17 +45,23 @@ func TestAPIHandler(t *testing.T) {
 				Alias    string `json:"alias"`
 				Password string `json:"password"`
 			}{Alias: "alice", Password: "123456"},
-			respWant: &Response{
-				Status: "fail",
-				Msg:    "wallet not found, please check that the wallet is open",
+			respWant: &httperror.Response{
+				Info: httperror.Info{
+					ChainCode: "BTM000",
+					Message:   "Bytom API Error",
+				},
+				Temporary: true,
 			},
 		},
 		{
 			path:    "/error",
 			request: nil,
-			respWant: &Response{
-				Status: "fail",
-				Msg:    "wallet not found, please check that the wallet is open",
+			respWant: &httperror.Response{
+				Info: httperror.Info{
+					ChainCode: "BTM000",
+					Message:   "Bytom API Error",
+				},
+				Temporary: true,
 			},
 		},
 		{
@@ -91,11 +96,23 @@ func TestAPIHandler(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		response = &Response{}
-		client.Call(context.Background(), c.path, c.request, &response)
+		response := &Response{}
+		if err := client.Call(context.Background(), c.path, c.request, &response); err != nil {
+			if msgErr, ok := err.(rpc.ErrStatusCode); ok && msgErr.ErrorData != nil {
+				if !testutil.DeepEqual(msgErr.ErrorData, c.respWant) {
+					t.Errorf(`error response got=%#v; want=%#v`, msgErr.ErrorData, c.respWant)
+				}
+			} else {
+				t.Fatal(err)
+			}
 
-		if !testutil.DeepEqual(response.Status, c.respWant.Status) {
-			t.Errorf(`got=%#v; want=%#v`, response.Status, c.respWant.Status)
+			continue
+		}
+
+		if wantResp, ok := c.respWant.(Response); ok {
+			if !testutil.DeepEqual(response.Status, wantResp.Status) {
+				t.Errorf(`normal response got=%#v; want=%#v`, response.Status, wantResp.Status)
+			}
 		}
 	}
 }
