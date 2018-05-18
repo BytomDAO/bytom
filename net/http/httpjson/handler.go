@@ -76,45 +76,57 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	rv := h.fv.Call(a)
 
-	if len(rv) != 1 {
-		h.errFunc(req.Context(), w, errors.New("Exception of response result"))
-		return
-	}
-
-	result, err := json.Marshal(rv[0].Interface())
-	if err != nil {
-		h.errFunc(req.Context(), w, berr.WithDetail(err, "json marshal error"))
-		return
-	}
-
-	resp := Response{}
-	if err := json.Unmarshal(result, &resp); err != nil {
-		h.errFunc(req.Context(), w, berr.WithDetail(err, "json unmarshal error"))
-		return
-	}
-
-	if resp.Status == FAIL {
-		// restore error message to bytom errors struct
-		errSplits := strings.Split(resp.Msg, ": ")
-		rootErr := errSplits[len(errSplits)-1]
-		detailErr := errSplits[:len(errSplits)-1]
-
-		var detail string
-		for i, s := range detailErr {
-			if i == 0 {
-				detail = detail + s
-				continue
-			}
-			detail = detail + ": " + s
+	var (
+		res interface{}
+		err error
+	)
+	switch n := len(rv); {
+	case n == 0:
+		res = &DefaultResponse
+	case n == 1:
+		res = rv[0].Interface()
+		result, err := json.Marshal(res)
+		if err != nil {
+			h.errFunc(req.Context(), w, berr.WithDetail(err, "json marshal error"))
+			return
 		}
 
-		err := berr.New(rootErr)
-		err = berr.WithDetail(err, detail)
+		resp := Response{}
+		if err := json.Unmarshal(result, &resp); err != nil {
+			h.errFunc(req.Context(), w, berr.WithDetail(err, "json unmarshal error"))
+			return
+		}
+
+		if resp.Status == FAIL {
+			// restore error message to bytom errors struct
+			errSplits := strings.Split(resp.Msg, ": ")
+			rootErr := errSplits[len(errSplits)-1]
+			detailErr := errSplits[:len(errSplits)-1]
+
+			var detail string
+			for i, s := range detailErr {
+				if i == 0 {
+					detail = detail + s
+					continue
+				}
+				detail = detail + ": " + s
+			}
+
+			err := berr.New(rootErr)
+			err = berr.WithDetail(err, detail)
+			h.errFunc(req.Context(), w, err)
+			return
+		}
+	case n == 2:
+		res = rv[0].Interface()
+		err, _ = rv[1].Interface().(error)
+	}
+	if err != nil {
 		h.errFunc(req.Context(), w, err)
 		return
 	}
 
-	Write(req.Context(), w, 200, rv[0].Interface())
+	Write(req.Context(), w, 200, res)
 }
 
 var (
