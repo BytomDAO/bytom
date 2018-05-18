@@ -110,7 +110,7 @@ out:
 				blockHash := block.Hash()
 				m.newBlockCh <- &blockHash
 			} else {
-				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
+				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
 			}
 		}
 	}
