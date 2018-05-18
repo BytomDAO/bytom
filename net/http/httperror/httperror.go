@@ -30,7 +30,7 @@ type Response struct {
 type Formatter struct {
 	Default     Info
 	IsTemporary func(info Info, err error) bool
-	Errors      map[error]Info
+	Errors      map[string]Info
 }
 
 // Format builds an error Response body describing err by consulting
@@ -45,7 +45,7 @@ func (f Formatter) Format(err error) (body Response) {
 			body = Response{f.Default, "", nil, true}
 		}
 	}()
-	info, ok := f.Errors[root]
+	info, ok := f.Errors[root.Error()]
 	if !ok {
 		info = f.Default
 	}

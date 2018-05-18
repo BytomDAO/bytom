@@ -6,6 +6,9 @@ import (
 	"errors"
 	"net/http"
 	"reflect"
+	"strings"
+
+	berr "github.com/bytom/errors"
 )
 
 // ErrorWriter is responsible for writing the provided error value
@@ -25,6 +28,20 @@ type handler struct {
 	hasCtx  bool
 	errFunc ErrorWriter
 }
+
+// Response describes the response standard.
+type Response struct {
+	Status string      `json:"status,omitempty"`
+	Msg    string      `json:"msg,omitempty"`
+	Data   interface{} `json:"data,omitempty"`
+}
+
+const (
+	// SUCCESS indicates the rpc calling is successful.
+	SUCCESS = "success"
+	// FAIL indicated the rpc calling is failed.
+	FAIL = "fail"
+)
 
 // Handler returns an HTTP handler for function f.
 // See the package doc for details on allowed signatures for f.
@@ -59,29 +76,45 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	rv := h.fv.Call(a)
 
-	var (
-		res interface{}
-		err error
-	)
-	switch n := len(rv); {
-	case n == 0:
-		res = &DefaultResponse
-	case n == 1 && !h.fv.Type().Out(0).Implements(errorType):
-		res = rv[0].Interface()
-	case n == 1 && h.fv.Type().Out(0).Implements(errorType):
-		// out param is of type error; its value can still be nil
-		res = &DefaultResponse
-		err, _ = rv[0].Interface().(error)
-	case n == 2:
-		res = rv[0].Interface()
-		err, _ = rv[1].Interface().(error)
+	if len(rv) != 1 {
+		h.errFunc(req.Context(), w, errors.New("Exception of response result"))
+		return
 	}
+
+	result, err := json.Marshal(rv[0].Interface())
 	if err != nil {
+		h.errFunc(req.Context(), w, berr.WithDetail(err, "json marshal error"))
+		return
+	}
+
+	resp := Response{}
+	if err := json.Unmarshal(result, &resp); err != nil {
+		h.errFunc(req.Context(), w, berr.WithDetail(err, "json unmarshal error"))
+		return
+	}
+
+	if resp.Status == FAIL {
+		// restore error message to bytom errors struct
+		errSplits := strings.Split(resp.Msg, ": ")
+		rootErr := errSplits[len(errSplits)-1]
+		detailErr := errSplits[:len(errSplits)-1]
+
+		var detail string
+		for i, s := range detailErr {
+			if i == 0 {
+				detail = detail + s
+				continue
+			}
+			detail = detail + ": " + s
+		}
+
+		err := berr.New(rootErr)
+		err = berr.WithDetail(err, detail)
 		h.errFunc(req.Context(), w, err)
 		return
 	}
 
-	Write(req.Context(), w, 200, res)
+	Write(req.Context(), w, 200, rv[0].Interface())
 }
 
 var (
