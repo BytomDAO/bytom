@@ -11,6 +11,7 @@ import (
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/pex"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/version"
@@ -54,11 +55,14 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	}
 
 	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-	manager.sw = p2p.NewSwitch(config.P2P, trustHistoryDB)
+	addrBook := pex.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
+	manager.sw = p2p.NewSwitch(config.P2P, addrBook, trustHistoryDB)
+
+	pexReactor := pex.NewPEXReactor(addrBook)
+	manager.sw.AddReactor("PEX", pexReactor)
 
 	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers, manager.dropPeerCh)
 	manager.fetcher = NewFetcher(chain, manager.sw, manager.peers)
-
 	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 

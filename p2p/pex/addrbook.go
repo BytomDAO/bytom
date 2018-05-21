@@ -10,8 +10,11 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
+	tcrypto "github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
+
+	"github.com/bytom/crypto"
+	"github.com/bytom/p2p"
 )
 
 // AddrBook - concurrency safe peer address manager.
@@ -25,7 +28,7 @@ type AddrBook struct {
 
 	mtx        sync.RWMutex
 	rand       *rand.Rand
-	ourAddrs   map[string]*NetAddress
+	ourAddrs   map[string]*p2p.NetAddress
 	addrLookup map[string]*knownAddress // new & old
 	bucketsNew []map[string]*knownAddress
 	bucketsOld []map[string]*knownAddress
@@ -38,9 +41,9 @@ func NewAddrBook(filePath string, routabilityStrict bool) *AddrBook {
 	a := &AddrBook{
 		filePath:          filePath,
 		routabilityStrict: routabilityStrict,
-		key:               crypto.CRandHex(24),
+		key:               tcrypto.CRandHex(24),
 		rand:              rand.New(rand.NewSource(time.Now().UnixNano())),
-		ourAddrs:          make(map[string]*NetAddress),
+		ourAddrs:          make(map[string]*p2p.NetAddress),
 		addrLookup:        make(map[string]*knownAddress),
 		bucketsNew:        make([]map[string]*knownAddress, newBucketCount),
 		bucketsOld:        make([]map[string]*knownAddress, oldBucketCount),
@@ -75,14 +78,22 @@ func (a *AddrBook) OnStop() {
 }
 
 // AddAddress add address to address book
-func (a *AddrBook) AddAddress(addr, src *NetAddress) error {
+func (a *AddrBook) AddAddress(addr, src *p2p.NetAddress) error {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 	return a.addAddress(addr, src)
 }
 
+// AddOurAddress one of our addresses.
+func (a *AddrBook) AddOurAddress(addr *p2p.NetAddress) {
+	a.mtx.Lock()
+	defer a.mtx.Unlock()
+
+	a.ourAddrs[addr.String()] = addr
+}
+
 // GetSelection randomly selects some addresses (old & new). Suitable for peer-exchange protocols.
-func (a *AddrBook) GetSelection() []*NetAddress {
+func (a *AddrBook) GetSelection() []*p2p.NetAddress {
 	a.mtx.RLock()
 	defer a.mtx.RUnlock()
 
@@ -93,7 +104,7 @@ func (a *AddrBook) GetSelection() []*NetAddress {
 
 	numAddresses := cmn.MaxInt(cmn.MinInt(minGetSelection, bookSize), bookSize*getSelectionPercent/100)
 	numAddresses = cmn.MinInt(maxGetSelection, numAddresses)
-	allAddr := []*NetAddress{}
+	allAddr := []*p2p.NetAddress{}
 	for _, ka := range a.addrLookup {
 		allAddr = append(allAddr, ka.Addr)
 	}
@@ -106,7 +117,7 @@ func (a *AddrBook) GetSelection() []*NetAddress {
 }
 
 // MarkGood marks the peer as good and moves it into an "old" bucket.
-func (a *AddrBook) MarkGood(addr *NetAddress) {
+func (a *AddrBook) MarkGood(addr *p2p.NetAddress) {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 
@@ -119,7 +130,7 @@ func (a *AddrBook) MarkGood(addr *NetAddress) {
 }
 
 // MarkAttempt marks that an attempt was made to connect to the address.
-func (a *AddrBook) MarkAttempt(addr *NetAddress) {
+func (a *AddrBook) MarkAttempt(addr *p2p.NetAddress) {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 
@@ -134,7 +145,7 @@ func (a *AddrBook) NeedMoreAddrs() bool {
 }
 
 // PickAddress picks a random address from random bucket
-func (a *AddrBook) PickAddress(bias int) *NetAddress {
+func (a *AddrBook) PickAddress(bias int) *p2p.NetAddress {
 	a.mtx.RLock()
 	defer a.mtx.RUnlock()
 
@@ -176,7 +187,7 @@ func (a *AddrBook) PickAddress(bias int) *NetAddress {
 }
 
 // RemoveAddress removes the address from the book.
-func (a *AddrBook) RemoveAddress(addr *NetAddress) {
+func (a *AddrBook) RemoveAddress(addr *p2p.NetAddress) {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 
@@ -192,7 +203,7 @@ func (a *AddrBook) Size() int {
 	return a.size()
 }
 
-func (a *AddrBook) addAddress(addr, src *NetAddress) error {
+func (a *AddrBook) addAddress(addr, src *p2p.NetAddress) error {
 	if addr == nil || src == nil {
 		return errors.New("can't add nil to address book")
 	}
@@ -267,12 +278,12 @@ func (a *AddrBook) addToOldBucket(ka *knownAddress, bucketIdx int) error {
 	return nil
 }
 
-func (a *AddrBook) calcNewBucket(addr, src *NetAddress) int {
+func (a *AddrBook) calcNewBucket(addr, src *p2p.NetAddress) int {
 	data1 := []byte{}
 	data1 = append(data1, []byte(a.key)...)
 	data1 = append(data1, []byte(a.groupKey(addr))...)
 	data1 = append(data1, []byte(a.groupKey(src))...)
-	hash1 := doubleSha256(data1)
+	hash1 := crypto.DoubleSha256(data1)
 	hash64 := binary.BigEndian.Uint64(hash1)
 	hash64 %= newBucketsPerGroup
 	var hashbuf [8]byte
@@ -282,15 +293,15 @@ func (a *AddrBook) calcNewBucket(addr, src *NetAddress) int {
 	data2 = append(data2, a.groupKey(src)...)
 	data2 = append(data2, hashbuf[:]...)
 
-	hash2 := doubleSha256(data2)
+	hash2 := crypto.DoubleSha256(data2)
 	return int(binary.BigEndian.Uint64(hash2) % newBucketCount)
 }
 
-func (a *AddrBook) calcOldBucket(addr *NetAddress) int {
+func (a *AddrBook) calcOldBucket(addr *p2p.NetAddress) int {
 	data1 := []byte{}
 	data1 = append(data1, []byte(a.key)...)
 	data1 = append(data1, []byte(addr.String())...)
-	hash1 := doubleSha256(data1)
+	hash1 := crypto.DoubleSha256(data1)
 	hash64 := binary.BigEndian.Uint64(hash1)
 	hash64 %= oldBucketsPerGroup
 	var hashbuf [8]byte
@@ -300,14 +311,14 @@ func (a *AddrBook) calcOldBucket(addr *NetAddress) int {
 	data2 = append(data2, a.groupKey(addr)...)
 	data2 = append(data2, hashbuf[:]...)
 
-	hash2 := doubleSha256(data2)
+	hash2 := crypto.DoubleSha256(data2)
 	return int(binary.BigEndian.Uint64(hash2) % oldBucketCount)
 }
 
 func (a *AddrBook) expireNew(bucketIdx int) {
-	for addrStr, ka := range a.bucketsNew[bucketIdx] {
+	for _, ka := range a.bucketsNew[bucketIdx] {
 		if ka.isBad() {
-			a.removeFromBucket(ka, bucketTypeNew, bucketIdx)
+			a.removeFromBucket(ka, bucketIdx)
 			return
 		}
 	}
@@ -328,7 +339,7 @@ func (a *AddrBook) getBucket(bucketType byte, bucketIdx int) map[string]*knownAd
 	}
 }
 
-func (a *AddrBook) groupKey(na *NetAddress) string {
+func (a *AddrBook) groupKey(na *p2p.NetAddress) string {
 	if a.routabilityStrict && na.Local() {
 		return "local"
 	}
@@ -409,7 +420,7 @@ func (a *AddrBook) removeFromBucket(ka *knownAddress, bucketIdx int) {
 	delete(bucket, ka.Addr.String())
 	if ka.removeBucketRef(bucketIdx) == 0 {
 		delete(a.addrLookup, ka.Addr.String())
-		if ka.bucketType == bucketTypeNew {
+		if ka.BucketType == bucketTypeNew {
 			a.nNew--
 		} else {
 			a.nOld--

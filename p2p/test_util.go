@@ -77,7 +77,7 @@ func makeSwitch(cfg *cfg.P2PConfig, i int, network, version string, initSwitch f
 	privKey := crypto.GenPrivKeyEd25519()
 	// new switch, add reactors
 	// TODO: let the config be passed in?
-	s := initSwitch(i, NewSwitch(cfg, nil))
+	s := initSwitch(i, NewSwitch(cfg, nil, nil))
 	s.SetNodeInfo(&NodeInfo{
 		PubKey:     privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
 		Moniker:    cmn.Fmt("switch%d", i),

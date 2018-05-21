@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	cmn "github.com/tendermint/tmlibs/common"
 )
 
 type addrBookJSON struct {
@@ -11,7 +14,7 @@ type addrBookJSON struct {
 	Addrs []*knownAddress
 }
 
-func (a *AddrBook) saveToFile() error {
+func (a *AddrBook) SaveToFile() error {
 	a.mtx.RLock()
 	defer a.mtx.RUnlock()
 
@@ -34,7 +37,7 @@ func (a *AddrBook) loadFromFile() error {
 
 	r, err := os.Open(a.filePath)
 	if err != nil {
-		return error
+		return err
 	}
 
 	defer r.Close()
@@ -64,11 +67,11 @@ func (a *AddrBook) saveRoutine() {
 	for {
 		select {
 		case <-ticker.C:
-			if err := a.saveToFile(); err != nil {
+			if err := a.SaveToFile(); err != nil {
 				log.WithField("err", err).Error("failed to save AddrBook to file")
 			}
 		case <-a.Quit:
-			a.saveToFile()
+			a.SaveToFile()
 			return
 		}
 	}

@@ -30,6 +30,15 @@ var (
 	ErrConnectBannedPeer = errors.New("Connect banned peer")
 )
 
+// An AddrBook represents an address book from the pex package, which is used to store peer addresses.
+type AddrBook interface {
+	AddAddress(*NetAddress, *NetAddress) error
+	AddOurAddress(*NetAddress)
+	MarkGood(*NetAddress)
+	RemoveAddress(*NetAddress)
+	SaveToFile() error
+}
+
 //-----------------------------------------------------------------------------
 
 // Switch handles peer connections and exposes an API to receive incoming messages
@@ -39,7 +48,7 @@ var (
 type Switch struct {
 	cmn.BaseService
 
-	config       *cfg.P2PConfig
+	Config       *cfg.P2PConfig
 	peerConfig   *PeerConfig
 	listeners    []Listener
 	reactors     map[string]Reactor
@@ -49,16 +58,16 @@ type Switch struct {
 	dialing      *cmn.CMap
 	nodeInfo     *NodeInfo             // our node info
 	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
-	addrBook     *AddrBook
+	addrBook     AddrBook
 	bannedPeer   map[string]time.Time
 	db           dbm.DB
 	mtx          sync.Mutex
 }
 
 // NewSwitch creates a new Switch with the given config.
-func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB) *Switch {
+func NewSwitch(config *cfg.P2PConfig, addrBook AddrBook, trustHistoryDB dbm.DB) *Switch {
 	sw := &Switch{
-		config:       config,
+		Config:       config,
 		peerConfig:   DefaultPeerConfig(config),
 		reactors:     make(map[string]Reactor),
 		chDescs:      make([]*ChannelDescriptor, 0),
@@ -66,17 +75,10 @@ func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB) *Switch {
 		peers:        NewPeerSet(),
 		dialing:      cmn.NewCMap(),
 		nodeInfo:     nil,
+		addrBook:     addrBook,
 		db:           trustHistoryDB,
 	}
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
-
-	// Optionally, start the pex reactor
-	if config.PexReactor {
-		sw.addrBook = NewAddrBook(config.AddrBookFile(), config.AddrBookStrict)
-		pexReactor := NewPEXReactor(sw.addrBook, sw)
-		sw.AddReactor("PEX", pexReactor)
-	}
-
 	sw.bannedPeer = make(map[string]time.Time)
 	if datajson := sw.db.Get([]byte(bannedPeerKey)); datajson != nil {
 		if err := json.Unmarshal(datajson, &sw.bannedPeer); err != nil {
@@ -259,7 +261,7 @@ func (sw *Switch) DialSeeds(seeds []string) error {
 			sw.addrBook.AddAddress(netAddr, ourAddr)
 		}
 
-		sw.addrBook.Save()
+		sw.addrBook.SaveToFile()
 	}
 
 	//permute the list, dial them in random order.
@@ -403,7 +405,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		// disconnect if we alrady have 2 * MaxNumPeers, we do this because we wanna address book get exchanged even if
 		// the connect is full. The pex will disconnect the peer after address exchange, the max connected peer won't
 		// be double of MaxNumPeers
-		if sw.peers.Size() >= sw.config.MaxNumPeers*2 {
+		if sw.peers.Size() >= sw.Config.MaxNumPeers*2 {
 			inConn.Close()
 			log.Info("Ignoring inbound connection: already have enough peers.")
 			continue
@@ -419,7 +421,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 }
 
 func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
-	peerConn, err := newInboundPeerConn(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, sw.config)
+	peerConn, err := newInboundPeerConn(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, sw.Config)
 	if err != nil {
 		conn.Close()
 		return err

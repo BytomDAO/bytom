@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	wire "github.com/tendermint/go-wire"
+
+	"github.com/bytom/p2p"
 )
 
 const (
@@ -36,7 +38,7 @@ type pexRequestMessage struct{}
 func (m *pexRequestMessage) String() string { return "[pexRequest]" }
 
 type pexAddrsMessage struct {
-	Addrs []*NetAddress
+	Addrs []*p2p.NetAddress
 }
 
 func (m *pexAddrsMessage) String() string { return fmt.Sprintf("[pexAddrs %v]", m.Addrs) }

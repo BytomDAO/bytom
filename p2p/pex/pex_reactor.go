@@ -9,6 +9,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
+
+	"github.com/bytom/p2p"
 )
 
 const (
@@ -24,7 +26,7 @@ const (
 
 // PEXReactor handles peer exchange and ensures that an adequate number of peers are connected to the switch.
 type PEXReactor struct {
-	BaseReactor
+	p2p.BaseReactor
 	book           *AddrBook
 	msgCountByPeer *cmn.CMap
 }
@@ -35,7 +37,7 @@ func NewPEXReactor(b *AddrBook) *PEXReactor {
 		book:           b,
 		msgCountByPeer: cmn.NewCMap(),
 	}
-	r.BaseReactor = *NewBaseReactor("PEXReactor", r)
+	r.BaseReactor = *p2p.NewBaseReactor("PEXReactor", r)
 	return r
 }
 
@@ -55,8 +57,8 @@ func (r *PEXReactor) OnStop() {
 }
 
 // GetChannels implements Reactor
-func (r *PEXReactor) GetChannels() []*ChannelDescriptor {
-	return []*ChannelDescriptor{&ChannelDescriptor{
+func (r *PEXReactor) GetChannels() []*p2p.ChannelDescriptor {
+	return []*p2p.ChannelDescriptor{&p2p.ChannelDescriptor{
 		ID:                PexChannel,
 		Priority:          1,
 		SendQueueCapacity: 10,
@@ -64,7 +66,7 @@ func (r *PEXReactor) GetChannels() []*ChannelDescriptor {
 }
 
 // AddPeer adding peer to the address book
-func (r *PEXReactor) AddPeer(p *Peer) error {
+func (r *PEXReactor) AddPeer(p *p2p.Peer) error {
 	if p.IsOutbound() {
 		if r.book.NeedMoreAddrs() && !r.RequestAddrs(p) {
 			return errors.New("Send pex message fail")
@@ -72,13 +74,13 @@ func (r *PEXReactor) AddPeer(p *Peer) error {
 		return nil
 	}
 
-	addr, err := NewNetAddressString(p.ListenAddr)
+	addr, err := p2p.NewNetAddressString(p.ListenAddr)
 	if err != nil {
 		return errors.New("addPeer: invalid peer address")
 	}
 
 	r.book.AddAddress(addr, addr)
-	if r.Switch.peers.Size() >= r.Switch.config.MaxNumPeers {
+	if r.Switch.Peers().Size() >= r.Switch.Config.MaxNumPeers {
 		if r.SendAddrs(p, r.book.GetSelection()) {
 			<-time.After(1 * time.Second)
 			r.Switch.StopPeerGracefully(p)
@@ -89,7 +91,7 @@ func (r *PEXReactor) AddPeer(p *Peer) error {
 }
 
 // Receive implements Reactor by handling incoming PEX messages.
-func (r *PEXReactor) Receive(chID byte, p *Peer, rawMsg []byte) {
+func (r *PEXReactor) Receive(chID byte, p *p2p.Peer, rawMsg []byte) {
 	srcAddr := p.Connection().RemoteAddress
 	srcAddrStr := srcAddr.String()
 	r.incrementMsgCount(srcAddrStr)
@@ -108,7 +110,7 @@ func (r *PEXReactor) Receive(chID byte, p *Peer, rawMsg []byte) {
 
 	switch msg := msg.(type) {
 	case *pexRequestMessage:
-		if !r.SendAddrs(src, r.book.GetSelection()) {
+		if !r.SendAddrs(p, r.book.GetSelection()) {
 			log.Error("failed to send pex address message")
 		}
 
@@ -127,10 +129,10 @@ func (r *PEXReactor) Receive(chID byte, p *Peer, rawMsg []byte) {
 }
 
 // RemovePeer implements Reactor.
-func (r *PEXReactor) RemovePeer(p *Peer, reason interface{}) {}
+func (r *PEXReactor) RemovePeer(p *p2p.Peer, reason interface{}) {}
 
 // RequestPEX asks peer for more addresses.
-func (r *PEXReactor) RequestAddrs(p *Peer) bool {
+func (r *PEXReactor) RequestAddrs(p *p2p.Peer) bool {
 	ok := p.TrySend(PexChannel, struct{ PexMessage }{&pexRequestMessage{}})
 	if !ok {
 		r.Switch.StopPeerGracefully(p)
@@ -139,7 +141,7 @@ func (r *PEXReactor) RequestAddrs(p *Peer) bool {
 }
 
 // SendAddrs sends addrs to the peer.
-func (r *PEXReactor) SendAddrs(p *Peer, addrs []*NetAddress) bool {
+func (r *PEXReactor) SendAddrs(p *p2p.Peer, addrs []*p2p.NetAddress) bool {
 	ok := p.TrySend(PexChannel, struct{ PexMessage }{&pexAddrsMessage{Addrs: addrs}})
 	if !ok {
 		r.Switch.StopPeerGracefully(p)
@@ -147,8 +149,8 @@ func (r *PEXReactor) SendAddrs(p *Peer, addrs []*NetAddress) bool {
 	return ok
 }
 
-func (r *PEXReactor) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
-	if _, err := r.Switch.DialPeerWithAddress(a, false); err != nil {
+func (r *PEXReactor) dialPeerWorker(a *p2p.NetAddress, wg *sync.WaitGroup) {
+	if err := r.Switch.DialPeerWithAddress(a); err != nil {
 		r.book.MarkAttempt(a)
 	} else {
 		r.book.MarkGood(a)
@@ -169,8 +171,14 @@ func (r *PEXReactor) ensurePeers() {
 	}
 
 	newBias := cmn.MinInt(numOutPeers, 8)*10 + 10
-	toDial := make(map[string]*NetAddress)
+	toDial := make(map[string]*p2p.NetAddress)
 	maxAttempts := numToDial * 3
+
+	connectedPeers := make(map[string]struct{})
+	for _, peer := range r.Switch.Peers().List() {
+		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
+	}
+
 	for i := 0; i < maxAttempts && len(toDial) < numToDial; i++ {
 		try := r.book.PickAddress(newBias)
 		if try == nil {
@@ -182,7 +190,7 @@ func (r *PEXReactor) ensurePeers() {
 		if dialling := r.Switch.IsDialing(try); dialling {
 			continue
 		}
-		if connected := r.Switch.Peers().Has(try.ID); connected {
+		if _, ok := connectedPeers[try.IP.String()]; ok {
 			continue
 		}
 
@@ -215,7 +223,7 @@ func (r *PEXReactor) ensurePeersRoutine() {
 		case <-ticker.C:
 			r.ensurePeers()
 		case <-quickTicker.C:
-			if r.Switch.peers.Size() < 3 {
+			if r.Switch.Peers().Size() < 3 {
 				r.ensurePeers()
 			}
 		case <-r.Quit:
