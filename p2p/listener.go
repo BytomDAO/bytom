@@ -11,6 +11,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 )
 
+//Listener subset of the methods of DefaultListener
 type Listener interface {
 	Connections() <-chan net.Conn
 	InternalAddress() *NetAddress
@@ -19,7 +20,7 @@ type Listener interface {
 	Stop() bool
 }
 
-// Implements Listener
+//DefaultListener Implements bytomd server Listener
 type DefaultListener struct {
 	cmn.BaseService
 
@@ -47,7 +48,7 @@ func splitHostPort(addr string) (host string, port int) {
 	return host, port
 }
 
-// skipUPNP: If true, does not try getUPNPExternalAddress()
+//NewDefaultListener create a default listener
 func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener, bool) {
 	// Local listen IP & port
 	lAddrIP, lAddrPort := splitHostPort(lAddr)
@@ -82,6 +83,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 
 	// Determine external address...
 	var extAddr *NetAddress
+	//skipUPNP: If true, does not try getUPNPExternalAddress()
 	if !skipUPNP {
 		// If the lAddrIP is INADDR_ANY, try UPnP
 		if lAddrIP == "" || lAddrIP == "0.0.0.0" {
@@ -132,18 +134,20 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 	return dl, listenerStatus
 }
 
+//OnStart start listener
 func (l *DefaultListener) OnStart() error {
 	l.BaseService.OnStart()
 	go l.listenRoutine()
 	return nil
 }
 
+//OnStop stop listener
 func (l *DefaultListener) OnStop() {
 	l.BaseService.OnStop()
 	l.listener.Close()
 }
 
-// Accept connections and pass on the channel
+//listenRoutine Accept connections and pass on the channel
 func (l *DefaultListener) listenRoutine() {
 	for {
 		conn, err := l.listener.Accept()
@@ -168,33 +172,32 @@ func (l *DefaultListener) listenRoutine() {
 	}
 }
 
-// A channel of inbound connections.
-// It gets closed when the listener closes.
+//Connections a channel of inbound connections. It gets closed when the listener closes.
 func (l *DefaultListener) Connections() <-chan net.Conn {
 	return l.connections
 }
 
+//InternalAddress listener internal address
 func (l *DefaultListener) InternalAddress() *NetAddress {
 	return l.intAddr
 }
 
+//ExternalAddress listener external address for remote peer dial
 func (l *DefaultListener) ExternalAddress() *NetAddress {
 	return l.extAddr
 }
 
-// NOTE: The returned listener is already Accept()'ing.
-// So it's not suitable to pass into http.Serve().
+// NetListener the returned listener is already Accept()'ing. So it's not suitable to pass into http.Serve().
 func (l *DefaultListener) NetListener() net.Listener {
 	return l.listener
 }
 
+//String string of default listener
 func (l *DefaultListener) String() string {
 	return fmt.Sprintf("Listener(@%v)", l.extAddr)
 }
 
-/* external address helpers */
-
-// UPNP external address discovery & port mapping
+//getUPNPExternalAddress UPNP external address discovery & port mapping
 func getUPNPExternalAddress(externalPort, internalPort int) *NetAddress {
 	log.Info("Getting UPNP external address")
 	nat, err := upnp.Discover()
