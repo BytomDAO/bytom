@@ -60,8 +60,7 @@ func onlyHaveSpendActions(req *BuildRequest) bool {
 }
 
 func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
-	err := a.filterAliases(ctx, req)
-	if err != nil {
+	if err := a.completeMissingIds(ctx, req); err != nil {
 		return nil, err
 	}
 
