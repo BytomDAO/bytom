@@ -19,17 +19,21 @@ import (
 // Redial function to reconnect. Note that inbound peers can't be
 // made persistent. They should be made persistent on the other end.
 //
+
+// peerConn contains the raw connection and its config.
+type peerConn struct {
+	outbound bool
+	config   *PeerConfig
+	conn     net.Conn // source connection
+}
+
 // Before using a peer, you will need to perform a handshake on connection.
 type Peer struct {
 	cmn.BaseService
 
-	outbound bool
-
-	conn  net.Conn     // source connection
+	// raw peerConn and the multiplex connection
+	*peerConn
 	mconn *MConnection // multiplex connection
-
-	persistent bool
-	config     *PeerConfig
 
 	*NodeInfo
 	Key  string
@@ -55,40 +59,52 @@ func DefaultPeerConfig(config *cfg.P2PConfig) *PeerConfig {
 	return &PeerConfig{
 		AuthEnc:          true,
 		HandshakeTimeout: time.Duration(config.HandshakeTimeout), // * time.Second,
-		DialTimeout:      time.Duration(config.DialTimeout),  // * time.Second,
+		DialTimeout:      time.Duration(config.DialTimeout),      // * time.Second,
 		MConfig:          DefaultMConnConfig(),
 		Fuzz:             false,
 		FuzzConfig:       DefaultFuzzConnConfig(),
 	}
 }
 
-func newOutboundPeer(addr *NetAddress, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *cfg.P2PConfig) (*Peer, error) {
-	return newOutboundPeerWithConfig(addr, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, DefaultPeerConfig(config))
+func newPeer(pc *peerConn, nodeInfo *NodeInfo, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{})) *Peer {
+	// Key and NodeInfo are set after Handshake
+	p := &Peer{
+		peerConn: pc,
+		NodeInfo: nodeInfo,
+
+		Data: cmn.NewCMap(),
+	}
+	p.Key = nodeInfo.PubKey.KeyString()
+	p.mconn = createMConnection(pc.conn, p, reactorsByCh, chDescs, onPeerError, pc.config.MConfig)
+
+	p.BaseService = *cmn.NewBaseService(nil, "Peer", p)
+	return p
 }
 
-func newOutboundPeerWithConfig(addr *NetAddress, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *PeerConfig) (*Peer, error) {
+func newOutboundPeer(addr *NetAddress, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *cfg.P2PConfig) (*peerConn, error) {
+	return newOutboundPeerConn(addr, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, DefaultPeerConfig(config))
+}
+
+func newOutboundPeerConn(addr *NetAddress, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *PeerConfig) (*peerConn, error) {
 	conn, err := dial(addr, config)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error creating peer")
+		return nil, errors.Wrap(err, "Error dial peer")
 	}
 
-	peer, err := newPeerFromConnAndConfig(conn, true, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, config)
+	pc, err := newPeerConn(conn, true, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, config)
 	if err != nil {
 		conn.Close()
 		return nil, err
 	}
-	return peer, nil
+
+	return pc, nil
 }
 
-func newInboundPeerConn(conn net.Conn, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *cfg.P2PConfig) (*Peer, error) {
-	return newInboundPeerWithConfig(conn, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, DefaultPeerConfig(config))
+func newInboundPeerConn(conn net.Conn, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *cfg.P2PConfig) (*peerConn, error) {
+	return newPeerConn(conn, false, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, DefaultPeerConfig(config))
 }
 
-func newInboundPeerWithConfig(conn net.Conn, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *PeerConfig) (*Peer, error) {
-	return newPeerFromConnAndConfig(conn, false, reactorsByCh, chDescs, onPeerError, ourNodePrivKey, config)
-}
-
-func newPeerFromConnAndConfig(rawConn net.Conn, outbound bool, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *PeerConfig) (*Peer, error) {
+func newPeerConn(rawConn net.Conn, outbound bool, reactorsByCh map[byte]Reactor, chDescs []*ChannelDescriptor, onPeerError func(*Peer, interface{}), ourNodePrivKey crypto.PrivKeyEd25519, config *PeerConfig) (*peerConn, error) {
 	conn := rawConn
 
 	// Fuzz connection
@@ -108,45 +124,24 @@ func newPeerFromConnAndConfig(rawConn net.Conn, outbound bool, reactorsByCh map[
 		}
 	}
 
-	// Key and NodeInfo are set after Handshake
-	p := &Peer{
+	// Only the information we already have
+	return &peerConn{
+		config:   config,
 		outbound: outbound,
 		conn:     conn,
-		config:   config,
-		Data:     cmn.NewCMap(),
-	}
-
-	p.mconn = createMConnection(conn, p, reactorsByCh, chDescs, onPeerError, config.MConfig)
-
-	p.BaseService = *cmn.NewBaseService(nil, "Peer", p)
-
-	return p, nil
+	}, nil
 }
 
 // CloseConn should be used when the peer was created, but never started.
-func (p *Peer) CloseConn() {
-	p.conn.Close()
-}
-
-// makePersistent marks the peer as persistent.
-func (p *Peer) makePersistent() {
-	if !p.outbound {
-		panic("inbound peers can't be made persistent")
-	}
-
-	p.persistent = true
-}
-
-// IsPersistent returns true if the peer is persitent, false otherwise.
-func (p *Peer) IsPersistent() bool {
-	return p.persistent
+func (pc *peerConn) CloseConn() {
+	pc.conn.Close()
 }
 
 // HandshakeTimeout performs a handshake between a given node and the peer.
 // NOTE: blocking
-func (p *Peer) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duration) error {
+func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duration) (*NodeInfo, error) {
 	// Set deadline for handshake so we don't block forever on conn.ReadFull
-	p.conn.SetDeadline(time.Now().Add(timeout))
+	pc.conn.SetDeadline(time.Now().Add(timeout))
 
 	var peerNodeInfo = new(NodeInfo)
 	var err1 error
@@ -154,37 +149,24 @@ func (p *Peer) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duration) er
 	cmn.Parallel(
 		func() {
 			var n int
-			wire.WriteBinary(ourNodeInfo, p.conn, &n, &err1)
+			wire.WriteBinary(ourNodeInfo, pc.conn, &n, &err1)
 		},
 		func() {
 			var n int
-			wire.ReadBinary(peerNodeInfo, p.conn, maxNodeInfoSize, &n, &err2)
+			wire.ReadBinary(peerNodeInfo, pc.conn, maxNodeInfoSize, &n, &err2)
 			log.WithField("peerNodeInfo", peerNodeInfo).Info("Peer handshake")
 		})
 	if err1 != nil {
-		return errors.Wrap(err1, "Error during handshake/write")
+		return peerNodeInfo, errors.Wrap(err1, "Error during handshake/write")
 	}
 	if err2 != nil {
-		return errors.Wrap(err2, "Error during handshake/read")
-	}
-
-	if p.config.AuthEnc {
-		// Check that the professed PubKey matches the sconn's.
-		if !peerNodeInfo.PubKey.Equals(p.PubKey().Wrap()) {
-			return fmt.Errorf("Ignoring connection with unmatching pubkey: %v vs %v",
-				peerNodeInfo.PubKey, p.PubKey())
-		}
+		return peerNodeInfo, errors.Wrap(err2, "Error during handshake/read")
 	}
 
 	// Remove deadline
-	p.conn.SetDeadline(time.Time{})
+	pc.conn.SetDeadline(time.Time{})
 
-	peerNodeInfo.RemoteAddr = p.Addr().String()
-
-	p.NodeInfo = peerNodeInfo
-	p.Key = peerNodeInfo.PubKey.KeyString()
-
-	return nil
+	return peerNodeInfo, nil
 }
 
 // Addr returns peer's remote network address.
@@ -293,11 +275,7 @@ func createMConnection(conn net.Conn, p *Peer, reactorsByCh map[byte]Reactor, ch
 	onReceive := func(chID byte, msgBytes []byte) {
 		reactor := reactorsByCh[chID]
 		if reactor == nil {
-			if chID == PexChannel {
-				return
-			} else {
-				cmn.PanicSanity(cmn.Fmt("Unknown channel %X", chID))
-			}
+			cmn.PanicSanity(cmn.Fmt("Unknown channel %X", chID))
 		}
 		reactor.Receive(chID, p, msgBytes)
 	}
