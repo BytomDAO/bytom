@@ -167,9 +167,6 @@ func (l *DefaultListener) listenRoutine() {
 
 	// Cleanup
 	close(l.connections)
-	for _ = range l.connections {
-		// Drain
-	}
 }
 
 //Connections a channel of inbound connections. It gets closed when the listener closes.
