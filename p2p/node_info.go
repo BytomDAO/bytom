@@ -21,7 +21,9 @@ type NodeInfo struct {
 	Other      []string             `json:"other"`   // other application specific data
 }
 
-// CONTRACT: two nodes are compatible if the major/minor versions match and network match
+// CompatibleWith checks if two NodeInfo are compatible with eachother.
+// CONTRACT: two nodes are compatible if the major version matches and network match
+// and they have at least one channel in common.
 func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
 	iMajor, iMinor, _, iErr := splitVersion(info.Version)
 	oMajor, oMinor, _, oErr := splitVersion(other.Version)
@@ -68,8 +70,13 @@ func (info *NodeInfo) ListenPort() int {
 	return port_i
 }
 
+func (info *NodeInfo) RemoteAddrHost() string {
+	host, _, _ := net.SplitHostPort(info.RemoteAddr)
+	return host
+}
+
 func (info NodeInfo) String() string {
-	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [remote %v, listen %v], version: %v (%v)}", info.PubKey, info.Moniker, info.Network, info.RemoteAddr, info.ListenAddr, info.Version, info.Other)
+	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [listen %v], version: %v (%v)}", info.PubKey, info.Moniker, info.Network, info.ListenAddr, info.Version, info.Other)
 }
 
 func splitVersion(version string) (string, string, string, error) {
