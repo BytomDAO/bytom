@@ -111,7 +111,7 @@ func (ps *PeerSet) Size() int {
 	return len(ps.list)
 }
 
-// threadsafe list of peers.
+// List threadsafe list of peers.
 func (ps *PeerSet) List() []*Peer {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
