@@ -23,6 +23,7 @@ const (
 	defaultBanDuration = time.Hour * 1
 )
 
+//pre-define errors for connecting fail
 var (
 	ErrDuplicatePeer     = errors.New("Duplicate peer")
 	ErrConnectSelf       = errors.New("Connect self")
@@ -147,7 +148,7 @@ func (sw *Switch) NodeInfo() *NodeInfo {
 	return sw.nodeInfo
 }
 
-// SetNodeKey sets the switch's private key for authenticated encryption.
+// SetNodePrivKey sets the switch's private key for authenticated encryption.
 // NOTE: Not goroutine safe.
 func (sw *Switch) SetNodePrivKey(nodePrivKey crypto.PrivKeyEd25519) {
 	sw.nodePrivKey = nodePrivKey
@@ -190,7 +191,7 @@ func (sw *Switch) OnStop() {
 	}
 }
 
-// addPeer performs the P2P handshake with a peer
+// AddPeer performs the P2P handshake with a peer
 // that already has a SecretConnection. If all goes well,
 // it starts the peer and adds it to the switch.
 // NOTE: This performs a blocking handshake before the peer is added.
@@ -240,7 +241,7 @@ func (sw *Switch) startInitPeer(peer *Peer) error {
 	return nil
 }
 
-// Dial a list of seeds asynchronously in random order
+// DialSeeds a list of seeds asynchronously in random order
 func (sw *Switch) DialSeeds(seeds []string) error {
 	netAddrs, err := NewNetAddressStrings(seeds)
 	if err != nil {
@@ -321,6 +322,7 @@ func (sw *Switch) filterConnByPeer(peer *Peer) error {
 	return nil
 }
 
+//DialPeerWithAddress dial node from net address
 func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 	log.Debug("Dialing peer address:", addr)
 
@@ -347,11 +349,12 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 	return nil
 }
 
+//IsDialing prevent duplicate dialing
 func (sw *Switch) IsDialing(addr *NetAddress) bool {
 	return sw.dialing.Has(addr.IP.String())
 }
 
-// Returns the count of outbound/inbound and outbound-dialing peers.
+// NumPeers Returns the count of outbound/inbound and outbound-dialing peers.
 func (sw *Switch) NumPeers() (outbound, inbound, dialing int) {
 	peers := sw.peers.List()
 	for _, peer := range peers {
@@ -365,6 +368,7 @@ func (sw *Switch) NumPeers() (outbound, inbound, dialing int) {
 	return
 }
 
+//Peers return switch peerset
 func (sw *Switch) Peers() *PeerSet {
 	return sw.peers
 }
@@ -375,7 +379,7 @@ func (sw *Switch) StopPeerForError(peer *Peer, reason interface{}) {
 	sw.stopAndRemovePeer(peer, reason)
 }
 
-// Disconnect from a peer gracefully.
+// StopPeerGracefully disconnect from a peer gracefully.
 func (sw *Switch) StopPeerGracefully(peer *Peer) {
 	log.Info("Stopping peer gracefully")
 	sw.stopAndRemovePeer(peer, nil)
@@ -428,6 +432,7 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 	return nil
 }
 
+//AddBannedPeer add peer to blacklist
 func (sw *Switch) AddBannedPeer(peer *Peer) error {
 	sw.mtx.Lock()
 	defer sw.mtx.Unlock()

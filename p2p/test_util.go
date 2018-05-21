@@ -10,9 +10,10 @@ import (
 	cfg "github.com/bytom/config"
 )
 
+//PanicOnAddPeerErr add peer error
 var PanicOnAddPeerErr = false
 
-// Switches connected via arbitrary net.Conn; useful for testing
+// MakeConnectedSwitches switches connected via arbitrary net.Conn; useful for testing
 // Returns n switches, connected according to the connect func.
 // If connect==Connect2Switches, the switches will be fully connected.
 // initSwitch defines how the ith switch should be initialized (ie. with what reactors).
@@ -36,7 +37,7 @@ func MakeConnectedSwitches(cfg *cfg.P2PConfig, n int, initSwitch func(int, *Swit
 	return switches
 }
 
-// Will connect switches i and j via net.Pipe()
+// Connect2Switches will connect switches i and j via net.Pipe()
 // Blocks until a conection is established.
 // NOTE: caller ensures i and j are within bounds
 func Connect2Switches(switches []*Switch, i, j int) {
