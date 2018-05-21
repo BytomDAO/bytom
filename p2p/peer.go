@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"time"
 
@@ -15,11 +14,6 @@ import (
 	cfg "github.com/bytom/config"
 )
 
-// Peer could be marked as persistent, in which case you can use
-// Redial function to reconnect. Note that inbound peers can't be
-// made persistent. They should be made persistent on the other end.
-//
-
 // peerConn contains the raw connection and its config.
 type peerConn struct {
 	outbound bool
@@ -27,7 +21,7 @@ type peerConn struct {
 	conn     net.Conn // source connection
 }
 
-// Before using a peer, you will need to perform a handshake on connection.
+// Peer represent a bytom network node
 type Peer struct {
 	cmn.BaseService
 
@@ -234,14 +228,6 @@ func (p *Peer) CanSend(chID byte) bool {
 		return false
 	}
 	return p.mconn.CanSend(chID)
-}
-
-// WriteTo writes the peer's public key to w.
-func (p *Peer) WriteTo(w io.Writer) (n int64, err error) {
-	var n_ int
-	wire.WriteString(p.Key, w, &n_, &err)
-	n += int64(n_)
-	return
 }
 
 // String representation.

@@ -11,6 +11,7 @@ import (
 
 const maxNodeInfoSize = 10240 // 10Kb
 
+//NodeInfo peer node info
 type NodeInfo struct {
 	PubKey     crypto.PubKeyEd25519 `json:"pub_key"`
 	Moniker    string               `json:"moniker"`
@@ -56,25 +57,29 @@ func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
 	return nil
 }
 
+//ListenHost peer listener ip address
 func (info *NodeInfo) ListenHost() string {
 	host, _, _ := net.SplitHostPort(info.ListenAddr)
 	return host
 }
 
+//ListenPort peer listener port
 func (info *NodeInfo) ListenPort() int {
 	_, port, _ := net.SplitHostPort(info.ListenAddr)
-	port_i, err := strconv.Atoi(port)
+	portInt, err := strconv.Atoi(port)
 	if err != nil {
 		return -1
 	}
-	return port_i
+	return portInt
 }
 
+//RemoteAddrHost peer external ip address
 func (info *NodeInfo) RemoteAddrHost() string {
 	host, _, _ := net.SplitHostPort(info.RemoteAddr)
 	return host
 }
 
+//String representation
 func (info NodeInfo) String() string {
 	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [listen %v], version: %v (%v)}", info.PubKey, info.Moniker, info.Network, info.ListenAddr, info.Version, info.Other)
 }
