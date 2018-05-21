@@ -37,9 +37,6 @@ type CPUMiner struct {
 	wg                sync.WaitGroup
 	workerWg          sync.WaitGroup
 	updateNumWorkers  chan struct{}
-	queryHashesPerSec chan float64
-	updateHashes      chan uint64
-	speedMonitorQuit  chan struct{}
 	quit              chan struct{}
 	newBlockCh        chan *bc.Hash
 }
@@ -173,10 +170,7 @@ out:
 		}
 	}
 
-	// Wait until all workers shut down to stop the speed monitor since
-	// they rely on being able to send updates to it.
 	m.workerWg.Wait()
-	close(m.speedMonitorQuit)
 	m.wg.Done()
 }
 
@@ -189,14 +183,12 @@ func (m *CPUMiner) Start() {
 	m.Lock()
 	defer m.Unlock()
 
-	// Nothing to do if the miner is already running or if running in
-	// discrete mode (using GenerateNBlocks).
-	if m.started || m.discreteMining {
+	// Nothing to do if the miner is already running
+	if m.started {
 		return
 	}
 
 	m.quit = make(chan struct{})
-	m.speedMonitorQuit = make(chan struct{})
 	m.wg.Add(1)
 	go m.miningWorkerController()
 
@@ -213,9 +205,8 @@ func (m *CPUMiner) Stop() {
 	m.Lock()
 	defer m.Unlock()
 
-	// Nothing to do if the miner is not currently running or if running in
-	// discrete mode (using GenerateNBlocks).
-	if !m.started || m.discreteMining {
+	// Nothing to do if the miner is not currently running
+	if !m.started {
 		return
 	}
 
@@ -286,8 +277,6 @@ func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *pro
 		txPool:            txPool,
 		numWorkers:        defaultNumWorkers,
 		updateNumWorkers:  make(chan struct{}),
-		queryHashesPerSec: make(chan float64),
-		updateHashes:      make(chan uint64),
 		newBlockCh:        newBlockCh,
 	}
 }
