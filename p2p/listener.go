@@ -9,7 +9,6 @@ import (
 	"github.com/bytom/p2p/upnp"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
-	tlog "github.com/tendermint/tmlibs/log"
 )
 
 type Listener interface {
@@ -49,7 +48,7 @@ func splitHostPort(addr string) (host string, port int) {
 }
 
 // skipUPNP: If true, does not try getUPNPExternalAddress()
-func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlog.Logger) (Listener, bool) {
+func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener, bool) {
 	// Local listen IP & port
 	lAddrIP, lAddrPort := splitHostPort(lAddr)
 
@@ -72,10 +71,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlo
 	}
 	// Actual listener local IP & port
 	listenerIP, listenerPort := splitHostPort(listener.Addr().String())
-	log.WithFields(log.Fields{
-		"ip":   listenerIP,
-		"port": listenerPort,
-	}).Info("Local listener")
+	log.Info("Local listener", " ip:", listenerIP, " port:", listenerPort)
 
 	// Determine internal address...
 	var intAddr *NetAddress
@@ -104,7 +100,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlo
 	}
 	// Otherwise just use the local address...
 	if extAddr == nil {
-		extAddr = getNaiveExternalAddress(listenerPort)
+		extAddr = getNaiveExternalAddress(listenerPort, false)
 	}
 	if extAddr == nil {
 		cmn.PanicCrisis("Could not determine external address!")
@@ -116,7 +112,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool, logger tlo
 		extAddr:     extAddr,
 		connections: make(chan net.Conn, numBufferedConnections),
 	}
-	dl.BaseService = *cmn.NewBaseService(logger, "DefaultListener", dl)
+	dl.BaseService = *cmn.NewBaseService(nil, "DefaultListener", dl)
 	dl.Start() // Started upon construction
 
 	if !listenerStatus && getExtIP {
@@ -203,13 +199,13 @@ func getUPNPExternalAddress(externalPort, internalPort int) *NetAddress {
 	log.Info("Getting UPNP external address")
 	nat, err := upnp.Discover()
 	if err != nil {
-		log.WithField("error", err).Error("Could not perform UPNP discover")
+		log.Info("Could not perform UPNP discover. error:", err)
 		return nil
 	}
 
 	ext, err := nat.GetExternalAddress()
 	if err != nil {
-		log.WithField("error", err).Error("Could not perform UPNP external address")
+		log.Info("Could not perform UPNP external address. error:", err)
 		return nil
 	}
 
@@ -220,16 +216,15 @@ func getUPNPExternalAddress(externalPort, internalPort int) *NetAddress {
 
 	externalPort, err = nat.AddPortMapping("tcp", externalPort, internalPort, "bytomd", 0)
 	if err != nil {
-		log.WithField("error", err).Error("Could not add UPNP port mapping")
+		log.Info("Could not add UPNP port mapping. error:", err)
 		return nil
 	}
 
-	log.WithField("address", ext).Info("Got UPNP external address")
+	log.Info("Got UPNP external address ", ext)
 	return NewNetAddressIPPort(ext, uint16(externalPort))
 }
 
-// TODO: use syscalls: http://pastebin.com/9exZG4rh
-func getNaiveExternalAddress(port int) *NetAddress {
+func getNaiveExternalAddress(port int, settleForLocal bool) *NetAddress {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		cmn.PanicCrisis(cmn.Fmt("Could not fetch interface addresses: %v", err))
@@ -241,10 +236,13 @@ func getNaiveExternalAddress(port int) *NetAddress {
 			continue
 		}
 		v4 := ipnet.IP.To4()
-		if v4 == nil || v4[0] == 127 {
+		if v4 == nil || (!settleForLocal && v4[0] == 127) {
 			continue
 		} // loopback
 		return NewNetAddressIPPort(ipnet.IP, uint16(port))
 	}
-	return nil
+
+	// try again, but settle for local
+	log.Info("Node may not be connected to internet. Settling for local address")
+	return getNaiveExternalAddress(port, true)
 }
