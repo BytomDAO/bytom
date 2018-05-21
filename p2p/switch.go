@@ -14,8 +14,8 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
-	"github.com/bytom/p2p/trust"
 	"github.com/bytom/errors"
+	"github.com/bytom/p2p/trust"
 )
 
 const (
@@ -195,24 +195,30 @@ func (sw *Switch) OnStop() {
 // it starts the peer and adds it to the switch.
 // NOTE: This performs a blocking handshake before the peer is added.
 // CONTRACT: If error is returned, peer is nil, and conn is immediately closed.
-func (sw *Switch) AddPeer(peer *Peer) error {
-	if err := peer.HandshakeTimeout(sw.nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout*time.Second)); err != nil {
+func (sw *Switch) AddPeer(pc *peerConn) error {
+	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout*time.Second))
+	if err != nil {
 		return ErrConnectBannedPeer
 	}
+	// Check version, chain id
+	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
+		return err
+	}
+
+	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)
+
 	//filter peer
 	if err := sw.filterConnByPeer(peer); err != nil {
 		return err
 	}
-	// Check version, chain id
-	if err := sw.nodeInfo.CompatibleWith(peer.NodeInfo); err != nil {
-		return err
-	}
+
 	// Start peer
 	if sw.IsRunning() {
 		if err := sw.startInitPeer(peer); err != nil {
 			return err
 		}
 	}
+
 	// Add the peer to .peers.
 	// We start it first so that a peer in the list is safe to Stop.
 	// It should not err since we already checked peers.Has()
@@ -266,11 +272,9 @@ func (sw *Switch) DialSeeds(seeds []string) error {
 }
 
 func (sw *Switch) dialSeed(addr *NetAddress) {
-	peer, err := sw.DialPeerWithAddress(addr)
+	err := sw.DialPeerWithAddress(addr)
 	if err != nil {
-		log.WithField("error", err).Error("Error dialing seed")
-	} else {
-		log.WithField("peer", peer).Info("Connected to seed")
+		log.Info("Error dialing seed:", addr.String())
 	}
 }
 
@@ -317,30 +321,30 @@ func (sw *Switch) filterConnByPeer(peer *Peer) error {
 	return nil
 }
 
-func (sw *Switch) DialPeerWithAddress(addr *NetAddress) (*Peer, error) {
+func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 	log.Debug("Dialing peer address:", addr)
 
 	if err := sw.filterConnByIP(addr.IP.String()); err != nil {
-		return nil, err
+		return err
 	}
 
 	sw.dialing.Set(addr.IP.String(), addr)
 	defer sw.dialing.Delete(addr.IP.String())
 
-	peer, err := newOutboundPeerWithConfig(addr, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, sw.peerConfig)
+	pc, err := newOutboundPeerConn(addr, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, sw.peerConfig)
 	if err != nil {
 		log.Debug("Failed to dial peer", " address:", addr, " error:", err)
-		return nil, err
+		return err
 	}
 
-	err = sw.AddPeer(peer)
+	err = sw.AddPeer(pc)
 	if err != nil {
 		log.Info("Failed to add peer:", addr, " err:", err)
-		peer.CloseConn()
-		return nil, err
+		pc.CloseConn()
+		return err
 	}
 	log.Info("Dialed and added peer:", addr)
-	return peer, nil
+	return nil
 }
 
 func (sw *Switch) IsDialing(addr *NetAddress) bool {
@@ -411,19 +415,18 @@ func (sw *Switch) listenerRoutine(l Listener) {
 }
 
 func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
-	peer, err := newInboundPeerConn(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, sw.config)
+	peerConn, err := newInboundPeerConn(conn, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, sw.nodePrivKey, sw.config)
 	if err != nil {
 		conn.Close()
 		return err
 	}
-	if err = sw.AddPeer(peer); err != nil {
+	if err = sw.AddPeer(peerConn); err != nil {
 		conn.Close()
 		return err
 	}
 
 	return nil
 }
-
 
 func (sw *Switch) AddBannedPeer(peer *Peer) error {
 	sw.mtx.Lock()
@@ -460,5 +463,3 @@ func (sw *Switch) checkBannedPeer(peer string) error {
 	}
 	return nil
 }
-
-
