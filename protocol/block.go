@@ -32,7 +32,7 @@ func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
 func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 	node := c.index.NodeByHeight(height)
 	if node == nil {
-		return nil, errors.New("can't find block in given hight")
+		return nil, errors.New("can't find block in given height")
 	}
 	return c.store.GetBlock(&node.Hash)
 }
