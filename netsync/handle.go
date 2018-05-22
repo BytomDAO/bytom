@@ -120,21 +120,8 @@ func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 }
 
 func (sm *SyncManager) netStart() error {
-	// Start the switch
 	_, err := sm.sw.Start()
-	if err != nil {
-		return err
-	}
-
-	// If seeds exist, add them to the address book and dial out
-	if sm.config.P2P.Seeds != "" {
-		// dial out
-		seeds := strings.Split(sm.config.P2P.Seeds, ",")
-		if err := sm.DialSeeds(seeds); err != nil {
-			return err
-		}
-	}
-	return nil
+	return err
 }
 
 //Start start sync manager service
@@ -223,11 +210,6 @@ func (sm *SyncManager) BlockKeeper() *blockKeeper {
 //Peers get sync manager peer set
 func (sm *SyncManager) Peers() *peerSet {
 	return sm.peers
-}
-
-//DialSeeds dial seed peers
-func (sm *SyncManager) DialSeeds(seeds []string) error {
-	return sm.sw.DialSeeds(seeds)
 }
 
 //Switch get sync manager switch

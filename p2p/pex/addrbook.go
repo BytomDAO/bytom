@@ -121,10 +121,15 @@ func (a *AddrBook) MarkGood(addr *p2p.NetAddress) {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 
-	if ka := a.addrLookup[addr.String()]; ka != nil {
-		ka.markGood()
-		if ka.isNew() {
-			a.moveToOld(ka)
+	ka := a.addrLookup[addr.String()]
+	if ka == nil {
+		return
+	}
+
+	ka.markGood()
+	if ka.isNew() {
+		if err := a.moveToOld(ka); err != nil {
+			log.WithField("err", err).Error("fail on move to old bucket")
 		}
 	}
 }

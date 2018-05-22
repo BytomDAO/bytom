@@ -3,7 +3,6 @@ package p2p
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net"
 	"sync"
 	"time"
@@ -240,37 +239,6 @@ func (sw *Switch) startInitPeer(peer *Peer) error {
 			return err
 		}
 	}
-	return nil
-}
-
-// DialSeeds a list of seeds asynchronously in random order
-func (sw *Switch) DialSeeds(seeds []string) error {
-	netAddrs, err := NewNetAddressStrings(seeds)
-	if err != nil {
-		return err
-	}
-
-	if sw.addrBook != nil {
-		// add seeds to `addrBook`
-		ourAddr, _ := NewNetAddressString(sw.nodeInfo.ListenAddr)
-		for _, netAddr := range netAddrs {
-			// do not add ourselves
-			if netAddr.Equals(ourAddr) {
-				continue
-			}
-			sw.addrBook.AddAddress(netAddr, ourAddr)
-		}
-
-		sw.addrBook.SaveToFile()
-	}
-
-	//permute the list, dial them in random order.
-	perm := rand.Perm(len(netAddrs))
-	for i := 0; i < len(perm); i += 2 {
-		j := perm[i]
-		sw.dialSeed(netAddrs[j])
-	}
-
 	return nil
 }
 

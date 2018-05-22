@@ -14,6 +14,7 @@ type addrBookJSON struct {
 	Addrs []*knownAddress
 }
 
+// SaveToFile will save the address book to a json file in disk
 func (a *AddrBook) SaveToFile() error {
 	a.mtx.RLock()
 	defer a.mtx.RUnlock()
