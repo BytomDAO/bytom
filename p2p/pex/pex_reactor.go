@@ -187,7 +187,10 @@ func (r *PEXReactor) dialSeeds() {
 			log.WithField("err", err).Warn("dialSeeds: fail to add address")
 		}
 	}
-	r.book.SaveToFile()
+
+	if err := r.book.SaveToFile(); err != nil {
+		log.WithField("err", err).Warn("dialSeeds: fail to save address book")
+	}
 
 	perm := rand.Perm(len(netAddrs))
 	for i := 0; i < len(perm); i += 2 {

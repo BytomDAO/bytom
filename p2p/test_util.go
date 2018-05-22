@@ -13,6 +13,35 @@ import (
 //PanicOnAddPeerErr add peer error
 var PanicOnAddPeerErr = false
 
+func CreateRandomPeer(outbound bool) *Peer {
+	_, netAddr := CreateRoutableAddr()
+	p := &Peer{
+		peerConn: &peerConn{
+			outbound: outbound,
+		},
+		NodeInfo: &NodeInfo{
+			ListenAddr: netAddr.DialString(),
+		},
+		mconn: &MConnection{},
+	}
+	return p
+}
+
+func CreateRoutableAddr() (addr string, netAddr *NetAddress) {
+	for {
+		var err error
+		addr = cmn.Fmt("%X@%v.%v.%v.%v:46656", cmn.RandBytes(20), cmn.RandInt()%256, cmn.RandInt()%256, cmn.RandInt()%256, cmn.RandInt()%256)
+		netAddr, err = NewNetAddressString(addr)
+		if err != nil {
+			panic(err)
+		}
+		if netAddr.Routable() {
+			break
+		}
+	}
+	return
+}
+
 // MakeConnectedSwitches switches connected via arbitrary net.Conn; useful for testing
 // Returns n switches, connected according to the connect func.
 // If connect==Connect2Switches, the switches will be fully connected.
@@ -21,7 +50,7 @@ var PanicOnAddPeerErr = false
 func MakeConnectedSwitches(cfg *cfg.P2PConfig, n int, initSwitch func(int, *Switch) *Switch, connect func([]*Switch, int, int)) []*Switch {
 	switches := make([]*Switch, n)
 	for i := 0; i < n; i++ {
-		switches[i] = makeSwitch(cfg, i, "testing", "123.123.123", initSwitch)
+		switches[i] = MakeSwitch(cfg, i, "testing", "123.123.123", initSwitch)
 	}
 
 	if err := startSwitches(switches); err != nil {
@@ -73,7 +102,7 @@ func startSwitches(switches []*Switch) error {
 	return nil
 }
 
-func makeSwitch(cfg *cfg.P2PConfig, i int, network, version string, initSwitch func(int, *Switch) *Switch) *Switch {
+func MakeSwitch(cfg *cfg.P2PConfig, i int, network, version string, initSwitch func(int, *Switch) *Switch) *Switch {
 	privKey := crypto.GenPrivKeyEd25519()
 	// new switch, add reactors
 	// TODO: let the config be passed in?
