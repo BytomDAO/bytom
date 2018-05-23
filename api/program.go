@@ -40,7 +40,7 @@ func (a *API) decodeProgram(ctx context.Context, ins struct {
 
 	var result string
 	for _, inst := range insts {
-		result = result + fmt.Sprintf("%s %s\n", inst.Op, hex.EncodeToString(inst.Data))
+		result += fmt.Sprintf("%s %s\n", inst.Op, hex.EncodeToString(inst.Data))
 	}
 	return NewSuccessResponse(DecodeProgResp{Instructions: result})
 }
