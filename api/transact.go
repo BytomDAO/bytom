@@ -149,7 +149,7 @@ func (a *API) submit(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	log.WithField("tx_id", ins.Tx.ID).Info("submit single tx")
+	log.WithField("tx_id", ins.Tx.ID.String()).Info("submit single tx")
 	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
 }
 
