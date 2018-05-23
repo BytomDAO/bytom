@@ -465,11 +465,7 @@ FOR_LOOP:
 			}
 			channel, ok := c.channelsIdx[pkt.ChannelID]
 			if !ok || channel == nil {
-				if pkt.ChannelID == PexChannel {
-					continue
-				} else {
-					cmn.PanicQ(cmn.Fmt("Unknown channel %X", pkt.ChannelID))
-				}
+				cmn.PanicQ(cmn.Fmt("Unknown channel %X", pkt.ChannelID))
 			}
 			msgBytes, err := channel.recvMsgPacket(pkt)
 			if err != nil {

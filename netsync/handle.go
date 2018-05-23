@@ -11,6 +11,7 @@ import (
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/pex"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/version"
@@ -54,11 +55,14 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	}
 
 	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-	manager.sw = p2p.NewSwitch(config.P2P, trustHistoryDB)
+	addrBook := pex.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
+	manager.sw = p2p.NewSwitch(config.P2P, addrBook, trustHistoryDB)
+
+	pexReactor := pex.NewPEXReactor(addrBook)
+	manager.sw.AddReactor("PEX", pexReactor)
 
 	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers, manager.dropPeerCh)
 	manager.fetcher = NewFetcher(chain, manager.sw, manager.peers)
-
 	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
@@ -116,21 +120,8 @@ func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 }
 
 func (sm *SyncManager) netStart() error {
-	// Start the switch
 	_, err := sm.sw.Start()
-	if err != nil {
-		return err
-	}
-
-	// If seeds exist, add them to the address book and dial out
-	if sm.config.P2P.Seeds != "" {
-		// dial out
-		seeds := strings.Split(sm.config.P2P.Seeds, ",")
-		if err := sm.DialSeeds(seeds); err != nil {
-			return err
-		}
-	}
-	return nil
+	return err
 }
 
 //Start start sync manager service
@@ -219,11 +210,6 @@ func (sm *SyncManager) BlockKeeper() *blockKeeper {
 //Peers get sync manager peer set
 func (sm *SyncManager) Peers() *peerSet {
 	return sm.peers
-}
-
-//DialSeeds dial seed peers
-func (sm *SyncManager) DialSeeds(seeds []string) error {
-	return sm.sw.DialSeeds(seeds)
 }
 
 //Switch get sync manager switch
