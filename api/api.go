@@ -235,6 +235,8 @@ func (a *API) buildHandler() {
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
+	m.Handle("/decode-program", jsonHandler(a.decodeProgram))
+
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 
