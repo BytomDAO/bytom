@@ -152,6 +152,7 @@ func AddCommands() {
 
 	BytomcliCmd.AddCommand(signMsgCmd)
 	BytomcliCmd.AddCommand(verifyMsgCmd)
+	BytomcliCmd.AddCommand(decodeProgCmd)
 
 	BytomcliCmd.AddCommand(createTransactionFeedCmd)
 	BytomcliCmd.AddCommand(listTransactionFeedsCmd)
