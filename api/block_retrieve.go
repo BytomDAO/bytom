@@ -31,7 +31,7 @@ type BlockTx struct {
 	Inputs     []*query.AnnotatedInput  `json:"inputs"`
 	Outputs    []*query.AnnotatedOutput `json:"outputs"`
 	StatusFail bool                     `json:"status_fail"`
-	SourceID   bc.Hash                  `json:"source_id"`
+	MuxID      bc.Hash                  `json:"mux_id"`
 }
 
 // BlockReq is used to handle getBlock req
@@ -108,13 +108,13 @@ func (a *API) getBlock(ins BlockReq) Response {
 			NewSuccessResponse(resp)
 		}
 
-		for id, e := range orig.Entries {
-			switch e.(type) {
-			case *bc.Mux:
-				tx.SourceID = id
-			default:
-				continue
-			}
+		resOutID := orig.ResultIds[0]
+		resOut, ok := orig.Entries[*resOutID].(*bc.Output)
+		if ok {
+			tx.MuxID = *resOut.Source.Ref
+		} else {
+			resRetire, _ := orig.Entries[*resOutID].(*bc.Retirement)
+			tx.MuxID = *resRetire.Source.Ref
 		}
 
 		for i := range orig.Inputs {
