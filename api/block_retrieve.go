@@ -8,6 +8,7 @@ import (
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/validation"
 )
 
 // return best block hash
@@ -50,6 +51,7 @@ type GetBlockResp struct {
 	Nonce                  uint64     `json:"nonce"`
 	Bits                   uint64     `json:"bits"`
 	Difficulty             string     `json:"difficulty"`
+	TotalGas               uint64     `json:"total_gas"`
 	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
 	TransactionStatusHash  *bc.Hash   `json:"transaction_status_hash"`
 	Transactions           []*BlockTx `json:"transactions"`
@@ -93,6 +95,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		Transactions:           []*BlockTx{},
 	}
 
+	blockTotalGas := uint64(0)
 	for i, orig := range block.Transactions {
 		tx := &BlockTx{
 			ID:        orig.ID,
@@ -114,7 +117,13 @@ func (a *API) getBlock(ins BlockReq) Response {
 			tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(orig, i))
 		}
 		resp.Transactions = append(resp.Transactions, tx)
+
+		// statistic block total gas, ValidateTx skip error handling because block has validated these transactions
+		bcBlock := types.MapBlock(block)
+		gasStatus, _ := validation.ValidateTx(orig.Tx, bcBlock)
+		blockTotalGas += uint64(gasStatus.GasUsed)
 	}
+	resp.TotalGas = blockTotalGas
 	return NewSuccessResponse(resp)
 }
 
