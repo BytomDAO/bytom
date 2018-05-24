@@ -224,7 +224,7 @@ func (r *PEXReactor) ensurePeers() {
 
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range r.Switch.Peers().List() {
-		connectedPeers[peer.RemoteAddr] = struct{}{}
+		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
 	}
 
 	for i := 0; i < maxAttempts && len(toDial) < numToDial; i++ {
@@ -238,7 +238,7 @@ func (r *PEXReactor) ensurePeers() {
 		if dialling := r.Switch.IsDialing(try); dialling {
 			continue
 		}
-		if _, ok := connectedPeers[try.String()]; ok {
+		if _, ok := connectedPeers[try.IP.String()]; ok {
 			continue
 		}
 

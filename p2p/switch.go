@@ -407,7 +407,7 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 func (sw *Switch) AddBannedPeer(peer *Peer) error {
 	sw.mtx.Lock()
 	defer sw.mtx.Unlock()
-	key := peer.RemoteAddr
+	key := peer.NodeInfo.RemoteAddrHost()
 	sw.bannedPeer[key] = time.Now().Add(defaultBanDuration)
 	datajson, err := json.Marshal(sw.bannedPeer)
 	if err != nil {

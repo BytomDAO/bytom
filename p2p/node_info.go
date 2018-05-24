@@ -73,6 +73,12 @@ func (info *NodeInfo) ListenPort() int {
 	return portInt
 }
 
+//RemoteAddrHost peer external ip address
+func (info *NodeInfo) RemoteAddrHost() string {
+	host, _, _ := net.SplitHostPort(info.RemoteAddr)
+	return host
+}
+
 //String representation
 func (info NodeInfo) String() string {
 	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [listen %v], version: %v (%v)}", info.PubKey, info.Moniker, info.Network, info.ListenAddr, info.Version, info.Other)
