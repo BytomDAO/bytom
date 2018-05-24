@@ -19,7 +19,7 @@ const (
 type (
 	// TxInput is the top level struct of tx input.
 	TxInput struct {
-		AssetVersion uint64
+		AssetVersion     uint64
 		TypedInput
 		CommitmentSuffix []byte
 		WitnessSuffix    []byte
@@ -37,11 +37,7 @@ var errBadAssetID = errors.New("asset ID does not match other issuance parameter
 func (t *TxInput) AssetAmount() bc.AssetAmount {
 	switch inp := t.TypedInput.(type) {
 	case *IssuanceInput:
-		assetID := inp.AssetID()
-		return bc.AssetAmount{
-			AssetId: &assetID,
-			Amount:  inp.Amount,
-		}
+		return inp.AssetAmount()
 	case *SpendInput:
 		return inp.AssetAmount
 	}
