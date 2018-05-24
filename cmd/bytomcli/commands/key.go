@@ -68,7 +68,7 @@ var listKeysCmd = &cobra.Command{
 
 var resetKeyPwdCmd = &cobra.Command{
 	Use:   "reset-key-password <xpub> <old-password> <new-password>",
-	Short: "Delete a key",
+	Short: "Reset key password",
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		xpub := new(chainkd.XPub)
