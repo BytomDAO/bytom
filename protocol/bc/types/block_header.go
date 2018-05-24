@@ -1,25 +1,25 @@
 package types
 
 import (
-	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/bytom/encoding/blockchain"
-	"github.com/bytom/encoding/bufpool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/encoding/bufpool"
+	"encoding/hex"
 )
 
 // BlockHeader defines information about a block and is used in the Bytom
 type BlockHeader struct {
-	Version           uint64  // The version of the block.
-	Height            uint64  // The height of the block.
-	PreviousBlockHash bc.Hash // The hash of the previous block.
-	Timestamp         uint64  // The time of the block in seconds.
-	Nonce             uint64  // Nonce used to generate the block.
-	Bits              uint64  // Difficulty target for the block.
+	Version           uint64  `json:"version"` // The version of the block.
+	Height            uint64  `json:"height"` // The height of the block.
+	PreviousBlockHash bc.Hash `json:"previous_block_hash"` // The hash of the previous block.
+	Timestamp         uint64  `json:"timestamp"` // The time of the block in seconds.
+	Nonce             uint64  `json:"nonce"` // Nonce used to generate the block.
+	Bits              uint64  `json:"bits"` // Difficulty target for the block.
 	BlockCommitment
 }
 
@@ -37,7 +37,7 @@ func (bh *BlockHeader) Hash() bc.Hash {
 // MarshalText fulfills the json.Marshaler interface. This guarantees that
 // block headers will get deserialized correctly when being parsed from HTTP
 // requests.
-func (bh *BlockHeader) MarshalText() ([]byte, error) {
+func (bh *BlockHeader) MarshalTextForStore() ([]byte, error) {
 	buf := bufpool.Get()
 	defer bufpool.Put(buf)
 
@@ -51,7 +51,7 @@ func (bh *BlockHeader) MarshalText() ([]byte, error) {
 }
 
 // UnmarshalText fulfills the encoding.TextUnmarshaler interface.
-func (bh *BlockHeader) UnmarshalText(text []byte) error {
+func (bh *BlockHeader) UnmarshalTextForStore(text []byte) error {
 	decoded := make([]byte, hex.DecodedLen(len(text)))
 	if _, err := hex.Decode(decoded, text); err != nil {
 		return err
