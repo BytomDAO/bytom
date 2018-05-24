@@ -160,7 +160,7 @@ func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duratio
 
 	// Remove deadline
 	pc.conn.SetDeadline(time.Time{})
-
+	peerNodeInfo.RemoteAddr = pc.conn.RemoteAddr().String()
 	return peerNodeInfo, nil
 }
 

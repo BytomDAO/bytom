@@ -17,6 +17,7 @@ type NodeInfo struct {
 	Moniker    string               `json:"moniker"`
 	Network    string               `json:"network"`
 	ListenAddr string               `json:"listen_addr"`
+	RemoteAddr string               `json:"remote_addr"`
 	Version    string               `json:"version"` // major.minor.revision
 	Other      []string             `json:"other"`   // other application specific data
 }

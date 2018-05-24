@@ -98,7 +98,7 @@ func (r *PEXReactor) AddPeer(p *p2p.Peer) error {
 
 // Receive implements Reactor by handling incoming PEX messages.
 func (r *PEXReactor) Receive(chID byte, p *p2p.Peer, rawMsg []byte) {
-	addrStr := p.Addr().String()
+	addrStr := p.RemoteAddr
 	r.incrementMsgCount(addrStr)
 	if r.reachedMaxMsgLimit(addrStr) {
 		log.WithField("peer", addrStr).Error("reached the max pex messages limit")
@@ -224,7 +224,7 @@ func (r *PEXReactor) ensurePeers() {
 
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range r.Switch.Peers().List() {
-		connectedPeers[peer.Addr().String()] = struct{}{}
+		connectedPeers[peer.RemoteAddr] = struct{}{}
 	}
 
 	for i := 0; i < maxAttempts && len(toDial) < numToDial; i++ {

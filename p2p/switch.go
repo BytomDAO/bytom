@@ -201,7 +201,7 @@ func (sw *Switch) OnStop() {
 func (sw *Switch) AddPeer(pc *peerConn) error {
 	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout*time.Second))
 	if err != nil {
-		return ErrConnectBannedPeer
+		return err
 	}
 	// Check version, chain id
 	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
@@ -277,7 +277,7 @@ func (sw *Switch) filterConnByIP(ip string) error {
 }
 
 func (sw *Switch) filterConnByPeer(peer *Peer) error {
-	if err := sw.checkBannedPeer(peer.Addr().String()); err != nil {
+	if err := sw.checkBannedPeer(peer.RemoteAddr); err != nil {
 		return ErrConnectBannedPeer
 	}
 
@@ -407,7 +407,7 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 func (sw *Switch) AddBannedPeer(peer *Peer) error {
 	sw.mtx.Lock()
 	defer sw.mtx.Unlock()
-	key := peer.Addr().String()
+	key := peer.RemoteAddr
 	sw.bannedPeer[key] = time.Now().Add(defaultBanDuration)
 	datajson, err := json.Marshal(sw.bannedPeer)
 	if err != nil {
