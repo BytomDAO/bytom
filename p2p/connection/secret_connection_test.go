@@ -1,6 +1,4 @@
-// +build !network
-
-package p2p
+package connection
 
 import (
 	"bytes"

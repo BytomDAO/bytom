@@ -12,6 +12,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/connection"
 )
 
 const (
@@ -59,8 +60,8 @@ func (r *PEXReactor) OnStop() {
 }
 
 // GetChannels implements Reactor
-func (r *PEXReactor) GetChannels() []*p2p.ChannelDescriptor {
-	return []*p2p.ChannelDescriptor{&p2p.ChannelDescriptor{
+func (r *PEXReactor) GetChannels() []*connection.ChannelDescriptor {
+	return []*connection.ChannelDescriptor{&connection.ChannelDescriptor{
 		ID:                PexChannel,
 		Priority:          1,
 		SendQueueCapacity: 10,
@@ -97,11 +98,10 @@ func (r *PEXReactor) AddPeer(p *p2p.Peer) error {
 
 // Receive implements Reactor by handling incoming PEX messages.
 func (r *PEXReactor) Receive(chID byte, p *p2p.Peer, rawMsg []byte) {
-	srcAddr := p.Connection().RemoteAddress
-	srcAddrStr := srcAddr.String()
-	r.incrementMsgCount(srcAddrStr)
-	if r.reachedMaxMsgLimit(srcAddrStr) {
-		log.WithField("peer", srcAddrStr).Error("reached the max pex messages limit")
+	addrStr := p.Addr().String()
+	r.incrementMsgCount(addrStr)
+	if r.reachedMaxMsgLimit(addrStr) {
+		log.WithField("peer", addrStr).Error("reached the max pex messages limit")
 		r.Switch.StopPeerGracefully(p)
 		return
 	}
@@ -120,6 +120,12 @@ func (r *PEXReactor) Receive(chID byte, p *p2p.Peer, rawMsg []byte) {
 		}
 
 	case *pexAddrsMessage:
+		srcAddr, err := p2p.NewNetAddressString(addrStr)
+		if err != nil {
+			log.WithField("error", err).Error("pex fail on create src address")
+			return
+		}
+
 		for _, addr := range msg.Addrs {
 			if err := r.book.AddAddress(addr, srcAddr); err != nil {
 				log.WithField("error", err).Error("pex fail on process pexAddrsMessage")
@@ -218,7 +224,7 @@ func (r *PEXReactor) ensurePeers() {
 
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range r.Switch.Peers().List() {
-		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
+		connectedPeers[peer.Addr().String()] = struct{}{}
 	}
 
 	for i := 0; i < maxAttempts && len(toDial) < numToDial; i++ {
@@ -232,7 +238,7 @@ func (r *PEXReactor) ensurePeers() {
 		if dialling := r.Switch.IsDialing(try); dialling {
 			continue
 		}
-		if _, ok := connectedPeers[try.IP.String()]; ok {
+		if _, ok := connectedPeers[try.String()]; ok {
 			continue
 		}
 

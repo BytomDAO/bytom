@@ -2,6 +2,8 @@ package p2p
 
 import (
 	cmn "github.com/tendermint/tmlibs/common"
+
+	"github.com/bytom/p2p/connection"
 )
 
 //Reactor is responsible for handling incoming messages of one or more `Channels`
@@ -12,7 +14,7 @@ type Reactor interface {
 	SetSwitch(*Switch)
 
 	// GetChannels returns the list of channel descriptors.
-	GetChannels() []*ChannelDescriptor
+	GetChannels() []*connection.ChannelDescriptor
 
 	// AddPeer is called by the switch when a new peer is added.
 	AddPeer(peer *Peer) error
@@ -50,13 +52,13 @@ func (br *BaseReactor) SetSwitch(sw *Switch) {
 }
 
 //GetChannels returns the list of channel descriptors
-func (*BaseReactor) GetChannels() []*ChannelDescriptor              { return nil }
+func (*BaseReactor) GetChannels() []*connection.ChannelDescriptor { return nil }
 
 //AddPeer is called by the switch when a new peer is added
-func (*BaseReactor) AddPeer(peer *Peer)                             {}
+func (*BaseReactor) AddPeer(peer *Peer) {}
 
 //RemovePeer is called by the switch when the peer is stopped (due to error or other reason)
-func (*BaseReactor) RemovePeer(peer *Peer, reason interface{})      {}
+func (*BaseReactor) RemovePeer(peer *Peer, reason interface{}) {}
 
 //Receive is called when msgBytes is received from peer
 func (*BaseReactor) Receive(chID byte, peer *Peer, msgBytes []byte) {}

@@ -14,6 +14,7 @@ import (
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
+	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/trust"
 )
 
@@ -51,7 +52,7 @@ type Switch struct {
 	peerConfig   *PeerConfig
 	listeners    []Listener
 	reactors     map[string]Reactor
-	chDescs      []*ChannelDescriptor
+	chDescs      []*connection.ChannelDescriptor
 	reactorsByCh map[byte]Reactor
 	peers        *PeerSet
 	dialing      *cmn.CMap
@@ -69,7 +70,7 @@ func NewSwitch(config *cfg.P2PConfig, addrBook AddrBook, trustHistoryDB dbm.DB) 
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config),
 		reactors:     make(map[string]Reactor),
-		chDescs:      make([]*ChannelDescriptor, 0),
+		chDescs:      make([]*connection.ChannelDescriptor, 0),
 		reactorsByCh: make(map[byte]Reactor),
 		peers:        NewPeerSet(),
 		dialing:      cmn.NewCMap(),
@@ -276,7 +277,7 @@ func (sw *Switch) filterConnByIP(ip string) error {
 }
 
 func (sw *Switch) filterConnByPeer(peer *Peer) error {
-	if err := sw.checkBannedPeer(peer.NodeInfo.RemoteAddrHost()); err != nil {
+	if err := sw.checkBannedPeer(peer.Addr().String()); err != nil {
 		return ErrConnectBannedPeer
 	}
 
@@ -406,7 +407,7 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 func (sw *Switch) AddBannedPeer(peer *Peer) error {
 	sw.mtx.Lock()
 	defer sw.mtx.Unlock()
-	key := peer.NodeInfo.RemoteAddrHost()
+	key := peer.Addr().String()
 	sw.bannedPeer[key] = time.Now().Add(defaultBanDuration)
 	datajson, err := json.Marshal(sw.bannedPeer)
 	if err != nil {

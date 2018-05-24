@@ -16,7 +16,6 @@ type NodeInfo struct {
 	PubKey     crypto.PubKeyEd25519 `json:"pub_key"`
 	Moniker    string               `json:"moniker"`
 	Network    string               `json:"network"`
-	RemoteAddr string               `json:"remote_addr"`
 	ListenAddr string               `json:"listen_addr"`
 	Version    string               `json:"version"` // major.minor.revision
 	Other      []string             `json:"other"`   // other application specific data
@@ -71,12 +70,6 @@ func (info *NodeInfo) ListenPort() int {
 		return -1
 	}
 	return portInt
-}
-
-//RemoteAddrHost peer external ip address
-func (info *NodeInfo) RemoteAddrHost() string {
-	host, _, _ := net.SplitHostPort(info.RemoteAddr)
-	return host
 }
 
 //String representation
