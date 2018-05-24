@@ -98,10 +98,9 @@ func (r *PEXReactor) AddPeer(p *p2p.Peer) error {
 
 // Receive implements Reactor by handling incoming PEX messages.
 func (r *PEXReactor) Receive(chID byte, p *p2p.Peer, rawMsg []byte) {
-	addrStr := p.RemoteAddr
-	r.incrementMsgCount(addrStr)
-	if r.reachedMaxMsgLimit(addrStr) {
-		log.WithField("peer", addrStr).Error("reached the max pex messages limit")
+	r.incrementMsgCount(p.RemoteAddr)
+	if r.reachedMaxMsgLimit(p.RemoteAddr) {
+		log.WithField("peer", p.RemoteAddr).Error("reached the max pex messages limit")
 		r.Switch.StopPeerGracefully(p)
 		return
 	}
@@ -120,7 +119,7 @@ func (r *PEXReactor) Receive(chID byte, p *p2p.Peer, rawMsg []byte) {
 		}
 
 	case *pexAddrsMessage:
-		srcAddr, err := p2p.NewNetAddressString(addrStr)
+		srcAddr, err := p2p.NewNetAddressString(p.RemoteAddr)
 		if err != nil {
 			log.WithField("error", err).Error("pex fail on create src address")
 			return

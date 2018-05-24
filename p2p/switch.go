@@ -277,7 +277,7 @@ func (sw *Switch) filterConnByIP(ip string) error {
 }
 
 func (sw *Switch) filterConnByPeer(peer *Peer) error {
-	if err := sw.checkBannedPeer(peer.RemoteAddr); err != nil {
+	if err := sw.checkBannedPeer(peer.RemoteAddrHost()); err != nil {
 		return ErrConnectBannedPeer
 	}
 
