@@ -12,9 +12,9 @@ import (
 
 // Info contains a set of error codes to send to the user.
 type Info struct {
-	HTTPStatus int    `json:"-"`
+	HTTPStatus int    `json:"status,omitempty"`
 	ChainCode  string `json:"code"`
-	Message    string `json:"message"`
+	Message    string `json:"msg,omitempty"`
 }
 
 // Response defines the error response for a Chain error.

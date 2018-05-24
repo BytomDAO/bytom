@@ -47,8 +47,9 @@ func TestAPIHandler(t *testing.T) {
 			}{Alias: "alice", Password: "123456"},
 			respWant: &httperror.Response{
 				Info: httperror.Info{
-					ChainCode: "BTM000",
-					Message:   "Bytom API Error",
+					HTTPStatus: 500,
+					ChainCode:  "BTM000",
+					Message:    "Bytom API Error",
 				},
 				Temporary: true,
 			},
@@ -58,8 +59,9 @@ func TestAPIHandler(t *testing.T) {
 			request: nil,
 			respWant: &httperror.Response{
 				Info: httperror.Info{
-					ChainCode: "BTM000",
-					Message:   "Bytom API Error",
+					HTTPStatus: 500,
+					ChainCode:  "BTM000",
+					Message:    "Bytom API Error",
 				},
 				Temporary: true,
 			},
