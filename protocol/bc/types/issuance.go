@@ -16,6 +16,14 @@ type IssuanceInput struct {
 	Arguments       [][]byte
 }
 
+func (ii *IssuanceInput) AssetAmount() bc.AssetAmount {
+	assetID := ii.AssetID()
+	return bc.AssetAmount{
+		AssetId: &assetID,
+		Amount:  ii.Amount,
+	}
+}
+
 // NewIssuanceInput create a new IssuanceInput struct.
 func NewIssuanceInput(nonce []byte, amount uint64, issuanceProgram []byte, arguments [][]byte, assetDefinition []byte) *TxInput {
 	return &TxInput{

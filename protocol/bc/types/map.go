@@ -53,123 +53,135 @@ func MapTx(oldTx *TxData) *bc.Tx {
 
 func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash]bc.Entry) {
 	entryMap = make(map[bc.Hash]bc.Entry)
-	addEntry := func(e bc.Entry) bc.Hash {
+	addEntry := func(e bc.Entry) *bc.Hash {
 		id := bc.EntryID(e)
 		entryMap[id] = e
-		return id
+		return &id
 	}
 
-	var (
-		spends    []*bc.Spend
-		issuances []*bc.Issuance
-		coinbase  *bc.Coinbase
-	)
+	spends, issuances, coinbase, muxSources := mapInputs(tx, addEntry)
+	muxID, mux := buildMux(muxSources, addEntry)
+	connectInputsToMux(spends, issuances, coinbase, entryMap, muxID, mux)
+	resultIDs := mapOutputs(tx, muxID, mux, addEntry)
 
-	muxSources := make([]*bc.ValueSource, len(tx.Inputs))
+	headerId, header := mapTxHeader(tx, resultIDs, addEntry)
+
+	return *headerId, header, entryMap
+}
+
+func mapInputs(tx *TxData, addEntry func(e bc.Entry) *bc.Hash) (spends []*bc.Spend, issuances []*bc.Issuance, coinbase *bc.Coinbase, muxSources []*bc.ValueSource) {
+	muxSources = make([]*bc.ValueSource, len(tx.Inputs))
 	for i, input := range tx.Inputs {
 		switch inp := input.TypedInput.(type) {
 		case *IssuanceInput:
-			nonceHash := inp.NonceHash()
-			assetDefHash := inp.AssetDefinitionHash()
-			value := input.AssetAmount()
-
-			issuance := bc.NewIssuance(&nonceHash, &value, uint64(i))
-			issuance.WitnessAssetDefinition = &bc.AssetDefinition{
-				Data: &assetDefHash,
-				IssuanceProgram: &bc.Program{
-					VmVersion: inp.VMVersion,
-					Code:      inp.IssuanceProgram,
-				},
-			}
-			issuance.WitnessArguments = inp.Arguments
+			issuance := mapIssuance(input, i)
 			issuanceID := addEntry(issuance)
-
-			muxSources[i] = &bc.ValueSource{
-				Ref:   &issuanceID,
-				Value: &value,
-			}
 			issuances = append(issuances, issuance)
-
+			muxSources[i] = buildValueSource(issuanceID, issuance.Value, 0)
 		case *SpendInput:
-			// create entry for prevout
-			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
-			src := &bc.ValueSource{
-				Ref:      &inp.SourceID,
-				Value:    &inp.AssetAmount,
-				Position: inp.SourcePosition,
-			}
-			prevout := bc.NewOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
-			prevoutID := addEntry(prevout)
+			// create entry for prevOut
+			prevOut := buildPrevOut(inp)
+			prevOutID := addEntry(prevOut)
 			// create entry for spend
-			spend := bc.NewSpend(&prevoutID, uint64(i))
-			spend.WitnessArguments = inp.Arguments
+			spend := mapSpend(prevOutID, i, inp)
 			spendID := addEntry(spend)
-			// setup mux
-			muxSources[i] = &bc.ValueSource{
-				Ref:   &spendID,
-				Value: &inp.AssetAmount,
-			}
 			spends = append(spends, spend)
-
+			muxSources[i] = buildValueSource(spendID, &inp.AssetAmount, 0)
 		case *CoinbaseInput:
 			coinbase = bc.NewCoinbase(inp.Arbitrary)
 			coinbaseID := addEntry(coinbase)
-
-			out := tx.Outputs[0]
-			muxSources[i] = &bc.ValueSource{
-				Ref:   &coinbaseID,
-				Value: &out.AssetAmount,
-			}
+			muxSources[i] = buildValueSource(coinbaseID, &tx.Outputs[0].AssetAmount, 0)
 		}
 	}
+	return
+}
 
-	mux := bc.NewMux(muxSources, &bc.Program{VmVersion: 1, Code: []byte{byte(vm.OP_TRUE)}})
-	muxID := addEntry(mux)
+func buildValueSource(ref *bc.Hash, amount *bc.AssetAmount, position uint64) *bc.ValueSource {
+	return &bc.ValueSource{Ref: ref, Value: amount, Position: position}
+}
 
-	// connect the inputs to the mux
+func mapIssuance(input *TxInput, ordinal int) *bc.Issuance {
+	inp := input.TypedInput.(*IssuanceInput)
+	nonceHash := inp.NonceHash()
+	assetDefHash := inp.AssetDefinitionHash()
+	value := input.AssetAmount()
+	args := inp.Arguments
+	assetDef := &bc.AssetDefinition{
+		Data: &assetDefHash,
+		IssuanceProgram: &bc.Program{
+			VmVersion: inp.VMVersion,
+			Code:      inp.IssuanceProgram,
+		},
+	}
+
+	issuance := bc.NewIssuance(&nonceHash, &value, uint64(ordinal))
+	issuance.WitnessArguments = args
+	issuance.WitnessAssetDefinition = assetDef
+	return issuance
+}
+
+func buildPrevOut(inp *SpendInput) *bc.Output {
+	prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
+	src := buildValueSource(&inp.SourceID, &inp.AssetAmount, inp.SourcePosition)
+	// ordinal doesn't matter for prevOuts, only for result outputs
+	prevOut := bc.NewOutput(src, prog, 0)
+	return prevOut
+}
+
+func mapSpend(prevOutID *bc.Hash, i int, inp *SpendInput) *bc.Spend {
+	spend := bc.NewSpend(prevOutID, uint64(i))
+	spend.WitnessArguments = inp.Arguments
+	return spend
+}
+
+func buildMux(muxSources []*bc.ValueSource, addEntry func(e bc.Entry) *bc.Hash) (muxID *bc.Hash, mux *bc.Mux) {
+	mux = bc.NewMux(muxSources, &bc.Program{VmVersion: 1, Code: []byte{byte(vm.OP_TRUE)}})
+	muxID = addEntry(mux)
+	return
+}
+
+func connectInputsToMux(spends []*bc.Spend, issuances []*bc.Issuance, coinbase *bc.Coinbase, entryMap map[bc.Hash]bc.Entry, muxID *bc.Hash, mux *bc.Mux) {
 	for _, spend := range spends {
 		spentOutput := entryMap[*spend.SpentOutputId].(*bc.Output)
-		spend.SetDestination(&muxID, spentOutput.Source.Value, spend.Ordinal)
+		spend.SetDestination(muxID, spentOutput.Source.Value, spend.Ordinal)
 	}
 	for _, issuance := range issuances {
-		issuance.SetDestination(&muxID, issuance.Value, issuance.Ordinal)
+		issuance.SetDestination(muxID, issuance.Value, issuance.Ordinal)
 	}
-
 	if coinbase != nil {
-		coinbase.SetDestination(&muxID, mux.Sources[0].Value, 0)
+		coinbase.SetDestination(muxID, mux.Sources[0].Value, 0)
 	}
+}
 
-	// convert types.outputs to the bc.output
+func mapOutputs(tx *TxData, muxID *bc.Hash, mux *bc.Mux, addEntry func(e bc.Entry) *bc.Hash) []*bc.Hash {
 	var resultIDs []*bc.Hash
 	for i, out := range tx.Outputs {
-		src := &bc.ValueSource{
-			Ref:      &muxID,
-			Value:    &out.AssetAmount,
-			Position: uint64(i),
-		}
-		var resultID bc.Hash
+		src := buildValueSource(muxID, &out.AssetAmount, uint64(i))
+
+		var resultID *bc.Hash
 		if vmutil.IsUnspendable(out.ControlProgram) {
 			// retirement
 			r := bc.NewRetirement(src, uint64(i))
 			resultID = addEntry(r)
 		} else {
 			// non-retirement
-			prog := &bc.Program{out.VMVersion, out.ControlProgram}
+			prog := &bc.Program{VmVersion: out.VMVersion, Code: out.ControlProgram}
 			o := bc.NewOutput(src, prog, uint64(i))
 			resultID = addEntry(o)
 		}
 
-		dest := &bc.ValueDestination{
-			Value:    src.Value,
-			Ref:      &resultID,
-			Position: 0,
-		}
-		resultIDs = append(resultIDs, &resultID)
+		dest := &bc.ValueDestination{Value: src.Value, Ref: resultID, Position: 0}
 		mux.WitnessDestinations = append(mux.WitnessDestinations, dest)
-	}
 
-	h := bc.NewTxHeader(tx.Version, tx.SerializedSize, tx.TimeRange, resultIDs)
-	return addEntry(h), h, entryMap
+		resultIDs = append(resultIDs, resultID)
+	}
+	return resultIDs
+}
+
+func mapTxHeader(tx *TxData, resultIDs []*bc.Hash, addEntry func(e bc.Entry) *bc.Hash) (headerID *bc.Hash, header *bc.TxHeader) {
+	header = bc.NewTxHeader(tx.Version, tx.SerializedSize, tx.TimeRange, resultIDs)
+	headerID = addEntry(header)
+	return
 }
 
 func mapBlockHeader(old *BlockHeader) (bc.Hash, *bc.BlockHeader) {
