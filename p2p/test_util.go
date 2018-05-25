@@ -8,6 +8,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/bytom/config"
+	"github.com/bytom/p2p/connection"
 )
 
 //PanicOnAddPeerErr add peer error
@@ -22,7 +23,7 @@ func CreateRandomPeer(outbound bool) *Peer {
 		NodeInfo: &NodeInfo{
 			ListenAddr: netAddr.DialString(),
 		},
-		mconn: &MConnection{},
+		mconn: &connection.MConnection{},
 	}
 	return p
 }
@@ -112,7 +113,6 @@ func MakeSwitch(cfg *cfg.P2PConfig, i int, network, version string, initSwitch f
 		Moniker:    cmn.Fmt("switch%d", i),
 		Network:    network,
 		Version:    version,
-		RemoteAddr: cmn.Fmt("%v:%v", network, rand.Intn(64512)+1023),
 		ListenAddr: cmn.Fmt("%v:%v", network, rand.Intn(64512)+1023),
 	})
 	s.SetNodePrivKey(privKey)

@@ -14,6 +14,7 @@ import (
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
+	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/trust"
 )
 
@@ -51,7 +52,7 @@ type Switch struct {
 	peerConfig   *PeerConfig
 	listeners    []Listener
 	reactors     map[string]Reactor
-	chDescs      []*ChannelDescriptor
+	chDescs      []*connection.ChannelDescriptor
 	reactorsByCh map[byte]Reactor
 	peers        *PeerSet
 	dialing      *cmn.CMap
@@ -69,7 +70,7 @@ func NewSwitch(config *cfg.P2PConfig, addrBook AddrBook, trustHistoryDB dbm.DB) 
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config),
 		reactors:     make(map[string]Reactor),
-		chDescs:      make([]*ChannelDescriptor, 0),
+		chDescs:      make([]*connection.ChannelDescriptor, 0),
 		reactorsByCh: make(map[byte]Reactor),
 		peers:        NewPeerSet(),
 		dialing:      cmn.NewCMap(),
@@ -200,7 +201,7 @@ func (sw *Switch) OnStop() {
 func (sw *Switch) AddPeer(pc *peerConn) error {
 	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout*time.Second))
 	if err != nil {
-		return ErrConnectBannedPeer
+		return err
 	}
 	// Check version, chain id
 	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
@@ -276,7 +277,7 @@ func (sw *Switch) filterConnByIP(ip string) error {
 }
 
 func (sw *Switch) filterConnByPeer(peer *Peer) error {
-	if err := sw.checkBannedPeer(peer.NodeInfo.RemoteAddrHost()); err != nil {
+	if err := sw.checkBannedPeer(peer.RemoteAddrHost()); err != nil {
 		return ErrConnectBannedPeer
 	}
 

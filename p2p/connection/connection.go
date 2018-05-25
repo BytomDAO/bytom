@@ -1,4 +1,4 @@
-package p2p
+package connection
 
 import (
 	"bufio"
@@ -81,9 +81,6 @@ type MConnection struct {
 	flushTimer   *cmn.ThrottleTimer // flush writes as necessary but throttled.
 	pingTimer    *time.Ticker       // send pings periodically
 	chStatsTimer *time.Ticker       // update channel stats periodically
-
-	LocalAddress  *NetAddress
-	RemoteAddress *NetAddress
 }
 
 // MConnConfig is a MConnection configuration.
@@ -126,9 +123,6 @@ func NewMConnectionWithConfig(conn net.Conn, chDescs []*ChannelDescriptor, onRec
 
 		pingTimer:    time.NewTicker(pingTimeout),
 		chStatsTimer: time.NewTicker(updateState),
-
-		LocalAddress:  NewNetAddress(conn.LocalAddr()),
-		RemoteAddress: NewNetAddress(conn.RemoteAddr()),
 	}
 
 	// Create channels
