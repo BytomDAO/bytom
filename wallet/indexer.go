@@ -449,42 +449,6 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error
 	return annotatedTxs, nil
 }
 
-// GetTransactionsSummary get transactions summary
-func (w *Wallet) GetTransactionsSummary(transactions []*query.AnnotatedTx) []TxSummary {
-	Txs := []TxSummary{}
-
-	for _, annotatedTx := range transactions {
-		tmpTxSummary := TxSummary{
-			Inputs:    make([]Summary, len(annotatedTx.Inputs)),
-			Outputs:   make([]Summary, len(annotatedTx.Outputs)),
-			ID:        annotatedTx.ID,
-			Timestamp: annotatedTx.Timestamp,
-		}
-
-		for i, input := range annotatedTx.Inputs {
-			tmpTxSummary.Inputs[i].Type = input.Type
-			tmpTxSummary.Inputs[i].AccountID = input.AccountID
-			tmpTxSummary.Inputs[i].AccountAlias = input.AccountAlias
-			tmpTxSummary.Inputs[i].AssetID = input.AssetID
-			tmpTxSummary.Inputs[i].AssetAlias = input.AssetAlias
-			tmpTxSummary.Inputs[i].Amount = input.Amount
-			tmpTxSummary.Inputs[i].Arbitrary = input.Arbitrary
-		}
-		for j, output := range annotatedTx.Outputs {
-			tmpTxSummary.Outputs[j].Type = output.Type
-			tmpTxSummary.Outputs[j].AccountID = output.AccountID
-			tmpTxSummary.Outputs[j].AccountAlias = output.AccountAlias
-			tmpTxSummary.Outputs[j].AssetID = output.AssetID
-			tmpTxSummary.Outputs[j].AssetAlias = output.AssetAlias
-			tmpTxSummary.Outputs[j].Amount = output.Amount
-		}
-
-		Txs = append(Txs, tmpTxSummary)
-	}
-
-	return Txs
-}
-
 func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string) bool {
 	for _, input := range annotatedTx.Inputs {
 		if input.AccountID == accountID {

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"math"
 
 	log "github.com/sirupsen/logrus"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
+
+const pageSize = 25
 
 // POST /list-accounts
 func (a *API) listAccounts(ctx context.Context, filter struct {
@@ -80,11 +83,17 @@ func (a *API) getTransaction(ctx context.Context, txInfo struct {
 	return NewSuccessResponse(transaction)
 }
 
+type Page struct {
+	Items     interface{} `json:"items"`
+	TotalPage int         `json:"total_page"`
+	Page      int         `json:"page"`
+}
+
 // POST /list-transactions
 func (a *API) listTransactions(ctx context.Context, filter struct {
 	ID        string `json:"id"`
 	AccountID string `json:"account_id"`
-	Detail    bool   `json:"detail"`
+	Page      int    `json:"page"`
 }) Response {
 	transactions := []*query.AnnotatedTx{}
 	var err error
@@ -95,16 +104,30 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 		transactions, err = a.wallet.GetTransactionsByTxID(filter.ID)
 	}
 
+	page := filter.Page
+	if page == 0 {
+		page = 1
+	}
+	start := (page - 1) * pageSize
+	if start > len(transactions) || start < 0 {
+		return NewErrorResponse(fmt.Errorf("Invalid page(page=%v) ", filter.Page))
+	}
+	end := start + pageSize
+	if end > len(transactions) {
+		end = len(transactions)
+	}
+	filteredTransactions := transactions[start: end]
+
 	if err != nil {
 		log.Errorf("listTransactions: %v", err)
 		return NewErrorResponse(err)
 	}
 
-	if filter.Detail == false {
-		txSummary := a.wallet.GetTransactionsSummary(transactions)
-		return NewSuccessResponse(txSummary)
-	}
-	return NewSuccessResponse(transactions)
+	return NewSuccessResponse(Page{
+		Items:     filteredTransactions,
+		Page:      page,
+		TotalPage: int(math.Ceil(float64(len(transactions)) / pageSize)),
+	})
 }
 
 // POST /get-unconfirmed-transaction
