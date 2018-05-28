@@ -192,8 +192,6 @@ func AddTemplateFunc() {
 
 		buildTransactionCmd.Name(),
 		signTransactionCmd.Name(),
-		submitTransactionCmd.Name(),
-		estimateTransactionGasCmd.Name(),
 
 		getTransactionCmd.Name(),
 		listTransactionsCmd.Name(),
