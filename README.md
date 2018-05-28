@@ -481,7 +481,7 @@ Ensure your [Docker](https://www.docker.com/) version is 17.05 or higher.
 $ docker build -t bytom .
 ```
 
-For the usage please refer to [here].
+For the usage please refer to [here](https://github.com/Bytom/bytom/wiki/Running-in-Docker).
 
 ## Contributing
 
