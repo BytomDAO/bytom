@@ -71,7 +71,7 @@ func (g *TxGenerator) createAccount(name string, keys []string, quorum int) erro
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := g.AccountManager.Create(nil, xpubs, quorum, name, nil)
+	_, err := g.AccountManager.Create(nil, xpubs, quorum, name)
 	return err
 }
 
@@ -80,11 +80,11 @@ func (g *TxGenerator) createAsset(accountAlias string, assetAlias string) (*asse
 	if err != nil {
 		return nil, err
 	}
-	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
+	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias)
 }
 
 func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (*account.UTXO, error) {
-	ctrlProg, err := g.createControlProgram(accountAlias)
+	ctrlProg, err := g.createControlProgram(accountAlias, false)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (g *TxGenerator) assetAmount(assetAlias string, amount uint64) (*bc.AssetAm
 		return a, nil
 	}
 
-	asset, err := g.Assets.FindByAlias(nil, assetAlias)
+	asset, err := g.Assets.FindByAlias(assetAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -127,12 +127,12 @@ func (g *TxGenerator) assetAmount(assetAlias string, amount uint64) (*bc.AssetAm
 	}, nil
 }
 
-func (g *TxGenerator) createControlProgram(accountAlias string) (*account.CtrlProgram, error) {
+func (g *TxGenerator) createControlProgram(accountAlias string, change bool) (*account.CtrlProgram, error) {
 	acc, err := g.AccountManager.FindByAlias(nil, accountAlias)
 	if err != nil {
 		return nil, err
 	}
-	return g.AccountManager.CreateAddress(nil, acc.ID)
+	return g.AccountManager.CreateAddress(nil, acc.ID, change)
 }
 
 // AddSpendInput add a spend input
@@ -184,7 +184,7 @@ func (g *TxGenerator) AddTxInputFromUtxo(utxo *account.UTXO, accountAlias string
 
 // AddIssuanceInput add a issue input
 func (g *TxGenerator) AddIssuanceInput(assetAlias string, amount uint64) error {
-	asset, err := g.Assets.FindByAlias(nil, assetAlias)
+	asset, err := g.Assets.FindByAlias(assetAlias)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (g *TxGenerator) AddTxOutput(accountAlias, assetAlias string, amount uint64
 	if err != nil {
 		return err
 	}
-	controlProgram, err := g.createControlProgram(accountAlias)
+	controlProgram, err := g.createControlProgram(accountAlias, false)
 	if err != nil {
 		return err
 	}
@@ -296,7 +296,7 @@ func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signe
 	cp := account.CtrlProgram{}
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], input.ControlProgram)
-	bytes := db.Get(account.CPKey(hash))
+	bytes := db.Get(account.ContractKey(hash))
 	if bytes == nil {
 		return nil, fmt.Errorf("can't find CtrlProgram for the SpendInput")
 	}

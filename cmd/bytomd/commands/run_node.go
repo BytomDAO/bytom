@@ -22,7 +22,8 @@ func init() {
 	runNodeCmd.Flags().Bool("auth.disable", config.Auth.Disable, "Disable rpc access authenticate")
 
 	runNodeCmd.Flags().Bool("wallet.disable", config.Wallet.Disable, "Disable wallet")
-
+	runNodeCmd.Flags().Bool("wallet.rescan", config.Wallet.Rescan, "Rescan wallet")
+	runNodeCmd.Flags().Bool("vault_mode", config.VaultMode, "Run in the offline enviroment")
 	runNodeCmd.Flags().Bool("web.closed", config.Web.Closed, "Lanch web browser or not")
 	runNodeCmd.Flags().String("chain_id", config.ChainID, "Select network type")
 
@@ -35,6 +36,9 @@ func init() {
 	runNodeCmd.Flags().Int("p2p.handshake_timeout", config.P2P.HandshakeTimeout, "Set handshake timeout")
 	runNodeCmd.Flags().Int("p2p.dial_timeout", config.P2P.DialTimeout, "Set dial timeout")
 
+	// log flags
+	runNodeCmd.Flags().String("log_file", config.LogFile, "Log output file")
+
 	RootCmd.AddCommand(runNodeCmd)
 }
 
@@ -44,7 +48,7 @@ func runNode(cmd *cobra.Command, args []string) error {
 	if _, err := n.Start(); err != nil {
 		return fmt.Errorf("Failed to start node: %v", err)
 	} else {
-		log.WithField("nodeInfo", n.SyncManager().Switch().NodeInfo()).Info("Started node")
+		log.Info("Start node ", n.SyncManager().NodeInfo())
 	}
 
 	// Trap signal, run forever.

@@ -1,7 +1,10 @@
 package config
 
 import (
+	"os"
+	"os/user"
 	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -78,7 +81,12 @@ type BaseConfig struct {
 
 	ApiAddress string `mapstructure:"api_addr"`
 
+	VaultMode bool `mapstructure:"vault_mode"`
+
 	Time time.Time
+
+	// log file name
+	LogFile string `mapstructure:"log_file"`
 }
 
 // Default configurable base parameters.
@@ -140,6 +148,7 @@ func (p *P2PConfig) AddrBookFile() string {
 //-----------------------------------------------------------------------------
 type WalletConfig struct {
 	Disable bool `mapstructure:"disable"`
+	Rescan  bool `mapstructure:"rescan"`
 }
 
 type RPCAuthConfig struct {
@@ -168,6 +177,7 @@ func DefaultWebConfig() *WebConfig {
 func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
 		Disable: false,
+		Rescan:  false,
 	}
 }
 
@@ -180,4 +190,32 @@ func rootify(path, root string) string {
 		return path
 	}
 	return filepath.Join(root, path)
+}
+
+// DefaultDataDir is the default data directory to use for the databases and other
+// persistence requirements.
+func DefaultDataDir() string {
+	// Try to place the data folder in the user's home dir
+	home := homeDir()
+	if home == "" {
+		return "./.bytom"
+	}
+	switch runtime.GOOS {
+	case "darwin":
+		return filepath.Join(home, "Library", "Bytom")
+	case "windows":
+		return filepath.Join(home, "AppData", "Roaming", "Bytom")
+	default:
+		return filepath.Join(home, ".bytom")
+	}
+}
+
+func homeDir() string {
+	if home := os.Getenv("HOME"); home != "" {
+		return home
+	}
+	if usr, err := user.Current(); err == nil {
+		return usr.HomeDir
+	}
+	return ""
 }

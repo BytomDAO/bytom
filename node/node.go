@@ -2,10 +2,14 @@ package node
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	_ "net/http/pprof"
+	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -18,7 +22,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/consensus"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
 	"github.com/bytom/mining/cpuminer"
@@ -58,18 +62,21 @@ type Node struct {
 
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
-
+	if err := lockDataDirectory(config); err != nil {
+		cmn.Exit("Error: " + err.Error())
+	}
+	initLogFile(config)
+	initActiveNetParams(config)
 	// Get store
-	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
-	store := leveldb.NewStore(txDB)
+	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
+	store := leveldb.NewStore(coreDB)
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
 
 	// Make event switch
 	eventSwitch := types.NewEventSwitch()
-	_, err := eventSwitch.Start()
-	if err != nil {
+	if _, err := eventSwitch.Start(); err != nil {
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
 
@@ -106,8 +113,9 @@ func NewNode(config *cfg.Config) *Node {
 			log.WithField("error", err).Error("init NewWallet")
 		}
 
-		if err := initOrRecoverAccount(hsm, wallet); err != nil {
-			log.WithField("error", err).Error("initialize or recover account")
+		// trigger rescan wallet
+		if config.Wallet.Rescan {
+			wallet.RescanBlocks()
 		}
 
 		// Clean up expired UTXO reservations periodically.
@@ -146,38 +154,39 @@ func NewNode(config *cfg.Config) *Node {
 	return node
 }
 
-func initOrRecoverAccount(hsm *pseudohsm.HSM, wallet *w.Wallet) error {
-	xpubs := hsm.ListKeys()
-
-	if len(xpubs) == 0 {
-		xpub, err := hsm.XCreate("default", "123456")
-		if err != nil {
-			return err
-		}
-
-		wallet.AccountMgr.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "default", nil)
-		return nil
-	}
-
-	accounts, err := wallet.AccountMgr.ListAccounts("")
+// Lock data directory after daemonization
+func lockDataDirectory(config *cfg.Config) error {
+	_, _, err := flock.New(filepath.Join(config.RootDir, "LOCK"))
 	if err != nil {
-		return err
-	}
-
-	if len(accounts) > 0 {
-		return nil
-	}
-
-	for i, xPub := range xpubs {
-		if err := wallet.ImportAccountXpubKey(i, xPub, w.RecoveryIndex); err != nil {
-			return err
-		}
+		return errors.New("datadir already used by another process")
 	}
 	return nil
 }
 
+func initActiveNetParams(config *cfg.Config) {
+	var exist bool
+	consensus.ActiveNetParams, exist = consensus.NetParams[config.ChainID]
+	if !exist {
+		cmn.Exit(cmn.Fmt("chain_id[%v] don't exist", config.ChainID))
+	}
+}
+
+func initLogFile(config *cfg.Config) {
+	if config.LogFile == "" {
+		return
+	}
+	cmn.EnsureDir(filepath.Dir(config.LogFile), 0700)
+	file, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err == nil {
+		log.SetOutput(file)
+	} else {
+		log.WithField("err", err).Info("using default")
+	}
+
+}
+
 // Lanch web broser or not
-func lanchWebBroser() {
+func launchWebBrowser() {
 	log.Info("Launching System Browser with :", webAddress)
 	if err := browser.Open(webAddress); err != nil {
 		log.Error(err.Error())
@@ -189,6 +198,7 @@ func (n *Node) initAndstartApiServer() {
 	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
+	env.Parse()
 	n.api.StartServer(*listenAddr)
 }
 
@@ -196,10 +206,12 @@ func (n *Node) OnStart() error {
 	if n.miningEnable {
 		n.cpuMiner.Start()
 	}
-	n.syncManager.Start()
+	if !n.config.VaultMode {
+		n.syncManager.Start()
+	}
 	n.initAndstartApiServer()
 	if !n.config.Web.Closed {
-		lanchWebBroser()
+		launchWebBrowser()
 	}
 
 	return nil
@@ -210,9 +222,9 @@ func (n *Node) OnStop() {
 	if n.miningEnable {
 		n.cpuMiner.Stop()
 	}
-	n.syncManager.Stop()
-	log.Info("Stopping Node")
-	// TODO: gracefully disconnect from peers.
+	if !n.config.VaultMode {
+		n.syncManager.Stop()
+	}
 }
 
 func (n *Node) RunForever() {
@@ -233,5 +245,3 @@ func (n *Node) SyncManager() *netsync.SyncManager {
 func (n *Node) MiningPool() *miningpool.MiningPool {
 	return n.miningPool
 }
-
-//------------------------------------------------------------------------------

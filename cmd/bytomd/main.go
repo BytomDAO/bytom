@@ -10,6 +10,7 @@ import (
 	"github.com/tendermint/tmlibs/cli"
 
 	"github.com/bytom/cmd/bytomd/commands"
+	"github.com/bytom/config"
 )
 
 // ContextHook is a hook for logrus.
@@ -51,6 +52,6 @@ func init() {
 }
 
 func main() {
-	cmd := cli.PrepareBaseCmd(commands.RootCmd, "TM", os.ExpandEnv("./.bytomd"))
+	cmd := cli.PrepareBaseCmd(commands.RootCmd, "TM", os.ExpandEnv(config.DefaultDataDir()))
 	cmd.Execute()
 }

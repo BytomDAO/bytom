@@ -49,7 +49,7 @@ func (c *blockCache) lookup(hash *bc.Hash) (*types.Block, error) {
 
 func (c *blockCache) get(hash *bc.Hash) (*types.Block, bool) {
 	c.mu.Lock()
-	block, ok := c.lru.Get(hash)
+	block, ok := c.lru.Get(*hash)
 	c.mu.Unlock()
 	if block == nil {
 		return nil, ok

@@ -61,10 +61,11 @@ func (tr *TestReactor) GetChannels() []*ChannelDescriptor {
 	return tr.channels
 }
 
-func (tr *TestReactor) AddPeer(peer *Peer) {
+func (tr *TestReactor) AddPeer(peer *Peer) error {
 	tr.mtx.Lock()
 	defer tr.mtx.Unlock()
 	tr.peersAdded = append(tr.peersAdded, peer)
+	return nil
 }
 
 func (tr *TestReactor) RemovePeer(peer *Peer, reason interface{}) {
@@ -102,12 +103,12 @@ func makeSwitchPair(t testing.TB, initSwitch func(int, *Switch) *Switch) (*Switc
 func initSwitchFunc(i int, sw *Switch) *Switch {
 	// Make two reactors of two channels each
 	sw.AddReactor("foo", NewTestReactor([]*ChannelDescriptor{
-		&ChannelDescriptor{ID: byte(0x00), Priority: 10},
-		&ChannelDescriptor{ID: byte(0x01), Priority: 10},
+		{ID: byte(0x00), Priority: 10},
+		{ID: byte(0x01), Priority: 10},
 	}, true))
 	sw.AddReactor("bar", NewTestReactor([]*ChannelDescriptor{
-		&ChannelDescriptor{ID: byte(0x02), Priority: 10},
-		&ChannelDescriptor{ID: byte(0x03), Priority: 10},
+		{ID: byte(0x02), Priority: 10},
+		{ID: byte(0x03), Priority: 10},
 	}, true))
 	return sw
 }
@@ -180,10 +181,12 @@ func TestConnAddrFilter(t *testing.T) {
 
 	// connect to good peer
 	go func() {
-		s1.addPeerWithConnection(c1)
+		err := s1.addPeerWithConnection(c1)
+		assert.NotNil(t, err, "expected err")
 	}()
 	go func() {
-		s2.addPeerWithConnection(c2)
+		err := s2.addPeerWithConnection(c2)
+		assert.NotNil(t, err, "expected err")
 	}()
 
 	// Wait for things to happen, peers to get added...
@@ -215,10 +218,12 @@ func TestConnPubKeyFilter(t *testing.T) {
 
 	// connect to good peer
 	go func() {
-		s1.addPeerWithConnection(c1)
+		err := s1.addPeerWithConnection(c1)
+		assert.NotNil(t, err, "expected err")
 	}()
 	go func() {
-		s2.addPeerWithConnection(c2)
+		err := s2.addPeerWithConnection(c2)
+		assert.NotNil(t, err, "expected err")
 	}()
 
 	// Wait for things to happen, peers to get added...
@@ -294,12 +299,12 @@ func BenchmarkSwitches(b *testing.B) {
 	s1, s2 := makeSwitchPair(b, func(i int, sw *Switch) *Switch {
 		// Make bar reactors of bar channels each
 		sw.AddReactor("foo", NewTestReactor([]*ChannelDescriptor{
-			&ChannelDescriptor{ID: byte(0x00), Priority: 10},
-			&ChannelDescriptor{ID: byte(0x01), Priority: 10},
+			{ID: byte(0x00), Priority: 10},
+			{ID: byte(0x01), Priority: 10},
 		}, false))
 		sw.AddReactor("bar", NewTestReactor([]*ChannelDescriptor{
-			&ChannelDescriptor{ID: byte(0x02), Priority: 10},
-			&ChannelDescriptor{ID: byte(0x03), Priority: 10},
+			{ID: byte(0x02), Priority: 10},
+			{ID: byte(0x03), Priority: 10},
 		}, false))
 		return sw
 	})

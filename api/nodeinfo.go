@@ -1,5 +1,10 @@
 package api
 
+import (
+	"github.com/bytom/version"
+)
+
+// NetInfo indicate net information
 type NetInfo struct {
 	Listening    bool   `json:"listening"`
 	Syncing      bool   `json:"syncing"`
@@ -7,8 +12,11 @@ type NetInfo struct {
 	PeerCount    int    `json:"peer_count"`
 	CurrentBlock uint64 `json:"current_block"`
 	HighestBlock uint64 `json:"highest_block"`
+	NetWorkID    string `json:"network_id"`
+	Version      string `json:"version"`
 }
 
+// GetNodeInfo return net information
 func (a *API) GetNodeInfo() *NetInfo {
 	info := &NetInfo{
 		Listening:    a.sync.Switch().IsListening(),
@@ -16,6 +24,8 @@ func (a *API) GetNodeInfo() *NetInfo {
 		Mining:       a.cpuMiner.IsMining(),
 		PeerCount:    len(a.sync.Switch().Peers().List()),
 		CurrentBlock: a.chain.BestBlockHeight(),
+		NetWorkID:    a.sync.NodeInfo().Network,
+		Version:      version.Version,
 	}
 	_, info.HighestBlock = a.sync.Peers().BestPeer()
 	if info.CurrentBlock > info.HighestBlock {
@@ -24,17 +34,18 @@ func (a *API) GetNodeInfo() *NetInfo {
 	return info
 }
 
-// return network infomation
+// getNetInfo return network infomation
 func (a *API) getNetInfo() Response {
 	return NewSuccessResponse(a.GetNodeInfo())
 }
 
-// return is in mining or not
+// isMining return is in mining or not
 func (a *API) isMining() Response {
-	IsMining := map[string]bool{"isMining": a.IsMining()}
+	IsMining := map[string]bool{"is_mining": a.IsMining()}
 	return NewSuccessResponse(IsMining)
 }
 
+// IsMining return mining status
 func (a *API) IsMining() bool {
 	return a.cpuMiner.IsMining()
 }

@@ -54,7 +54,7 @@ func (a *API) pseudohsmSignTemplates(ctx context.Context, x struct {
 	Password string             `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
-	if err := txbuilder.Sign(ctx, &x.Txs, nil, x.Password, a.pseudohsmSignTemplate); err != nil {
+	if err := txbuilder.Sign(ctx, &x.Txs, x.Password, a.pseudohsmSignTemplate); err != nil {
 		log.WithField("build err", err).Error("fail on sign transaction.")
 		return NewErrorResponse(err)
 	}
@@ -66,6 +66,7 @@ func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path
 	return a.wallet.Hsm.XSign(xpub, path, data[:], password)
 }
 
+// ResetPasswordResp is response for reset password password
 type ResetPasswordResp struct {
 	Changed bool `json:"changed"`
 }

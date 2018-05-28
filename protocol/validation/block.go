@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	errBadTimestamp          = errors.New("block timestamp is not in the vaild range")
-	errBadBits               = errors.New("block bits is invaild")
+	errBadTimestamp          = errors.New("block timestamp is not in the valid range")
+	errBadBits               = errors.New("block bits is invalid")
 	errMismatchedBlock       = errors.New("mismatched block")
 	errMismatchedMerkleRoot  = errors.New("mismatched merkle root")
 	errMisorderedBlockHeight = errors.New("misordered block height")
@@ -84,7 +84,7 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 
 	for i, tx := range b.Transactions {
 		gasStatus, err := ValidateTx(tx, b)
-		if !gasStatus.GasVaild {
+		if !gasStatus.GasValid {
 			return errors.Wrapf(err, "validate of transaction %d of %d", i, len(b.Transactions))
 		}
 

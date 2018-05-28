@@ -3,6 +3,7 @@ package netsync
 import (
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -10,7 +11,7 @@ import (
 
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
-	"github.com/bytom/p2p/trust"
+	"github.com/bytom/p2p/connection"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -20,11 +21,14 @@ const (
 	// BlockchainChannel is a channel for blocks and status updates
 	BlockchainChannel        = byte(0x40)
 	protocolHandshakeTimeout = time.Second * 10
+	handshakeRetryTicker     = 4 * time.Second
 )
 
 var (
 	//ErrProtocolHandshakeTimeout peers handshake timeout
 	ErrProtocolHandshakeTimeout = errors.New("Protocol handshake timeout")
+	ErrStatusRequest            = errors.New("Status request error")
+	ErrDiffGenesisHash          = errors.New("Different genesis hash")
 )
 
 // Response describes the response standard.
@@ -35,9 +39,10 @@ type Response struct {
 }
 
 type initalPeerStatus struct {
-	peerID string
-	height uint64
-	hash   *bc.Hash
+	peerID      string
+	height      uint64
+	hash        *bc.Hash
+	genesisHash *bc.Hash
 }
 
 //ProtocolReactor handles new coming protocol message.
@@ -50,6 +55,8 @@ type ProtocolReactor struct {
 	sw          *p2p.Switch
 	fetcher     *Fetcher
 	peers       *peerSet
+	handshakeMu sync.Mutex
+	genesisHash bc.Hash
 
 	newPeerCh      chan struct{}
 	quitReqBlockCh chan *string
@@ -72,13 +79,16 @@ func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.
 		peerStatusCh:   make(chan *initalPeerStatus),
 	}
 	pr.BaseReactor = *p2p.NewBaseReactor("ProtocolReactor", pr)
+	genesisBlock, _ := pr.chain.GetBlockByHeight(0)
+	pr.genesisHash = genesisBlock.Hash()
+
 	return pr
 }
 
 // GetChannels implements Reactor
-func (pr *ProtocolReactor) GetChannels() []*p2p.ChannelDescriptor {
-	return []*p2p.ChannelDescriptor{
-		&p2p.ChannelDescriptor{
+func (pr *ProtocolReactor) GetChannels() []*connection.ChannelDescriptor {
+	return []*connection.ChannelDescriptor{
+		&connection.ChannelDescriptor{
 			ID:                BlockchainChannel,
 			Priority:          5,
 			SendQueueCapacity: 100,
@@ -99,6 +109,9 @@ func (pr *ProtocolReactor) OnStop() {
 
 // syncTransactions starts sending all currently pending transactions to the given peer.
 func (pr *ProtocolReactor) syncTransactions(p *peer) {
+	if p == nil {
+		return
+	}
 	pending := pr.txPool.GetTransactions()
 	if len(pending) == 0 {
 		return
@@ -112,17 +125,40 @@ func (pr *ProtocolReactor) syncTransactions(p *peer) {
 
 // AddPeer implements Reactor by sending our state to peer.
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
-	peer.Send(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}})
+	pr.handshakeMu.Lock()
+	defer pr.handshakeMu.Unlock()
+	if peer == nil {
+		return errPeerDropped
+	}
+	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
+		return ErrStatusRequest
+	}
+	retryTicker := time.Tick(handshakeRetryTicker)
 	handshakeWait := time.NewTimer(protocolHandshakeTimeout)
 	for {
 		select {
 		case status := <-pr.peerStatusCh:
-			if strings.Compare(status.peerID, peer.Key) == 0 {
+			if status.peerID == peer.Key {
+				if strings.Compare(pr.genesisHash.String(), status.genesisHash.String()) != 0 {
+					log.Info("Remote peer genesis block hash:", status.genesisHash.String(), " local hash:", pr.genesisHash.String())
+					return ErrDiffGenesisHash
+				}
 				pr.peers.AddPeer(peer)
 				pr.peers.SetPeerStatus(status.peerID, status.height, status.hash)
-				pr.syncTransactions(pr.peers.Peer(peer.Key))
+				prPeer, ok := pr.peers.Peer(peer.Key)
+				if !ok {
+					return errPeerDropped
+				}
+				pr.syncTransactions(prPeer)
 				pr.newPeerCh <- struct{}{}
 				return nil
+			}
+		case <-retryTicker:
+			if peer == nil {
+				return errPeerDropped
+			}
+			if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
+				return ErrStatusRequest
 			}
 		case <-handshakeWait.C:
 			return ErrProtocolHandshakeTimeout
@@ -132,22 +168,19 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 
 // RemovePeer implements Reactor by removing peer from the pool.
 func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
-	pr.quitReqBlockCh <- &peer.Key
+	select {
+	case pr.quitReqBlockCh <- &peer.Key:
+	default:
+		log.Warning("quitReqBlockCh is full")
+	}
 	pr.peers.RemovePeer(peer.Key)
 }
 
 // Receive implements Reactor by handling 4 types of messages (look below).
 func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
-	var tm *trust.TrustMetric
-	key := src.Connection().RemoteAddress.IP.String()
-	if tm = pr.sw.TrustMetricStore.GetPeerTrustMetric(key); tm == nil {
-		log.Errorf("Can't get peer trust metric")
-		return
-	}
-
 	_, msg, err := DecodeMessage(msgBytes)
 	if err != nil {
-		log.Errorf("Error decoding messagek %v", err)
+		log.Errorf("Error decoding message %v", err)
 		return
 	}
 	log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Receive request")
@@ -167,7 +200,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		}
 		response, err := NewBlockResponseMessage(block)
 		if err != nil {
-			log.Errorf("Fail on BlockRequestMessage create resoinse: %v", err)
+			log.Errorf("Fail on BlockRequestMessage create response: %v", err)
 			return
 		}
 		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{response})
@@ -178,13 +211,14 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 
 	case *StatusRequestMessage:
 		blockHeader := pr.chain.BestBlockHeader()
-		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(blockHeader)})
+		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(blockHeader, &pr.genesisHash)})
 
 	case *StatusResponseMessage:
 		peerStatus := &initalPeerStatus{
-			peerID: src.Key,
-			height: msg.Height,
-			hash:   msg.GetHash(),
+			peerID:      src.Key,
+			height:      msg.Height,
+			hash:        msg.GetHash(),
+			genesisHash: msg.GetGenesisHash(),
 		}
 		pr.peerStatusCh <- peerStatus
 

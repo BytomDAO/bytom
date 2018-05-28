@@ -11,6 +11,7 @@ import (
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/pex"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/version"
@@ -20,7 +21,6 @@ import (
 type SyncManager struct {
 	networkID uint64
 	sw        *p2p.Switch
-	addrBook  *p2p.AddrBook // known peers
 
 	privKey     crypto.PrivKeyEd25519 // local node's p2p key
 	chain       *core.Chain
@@ -55,21 +55,27 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	}
 
 	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-	manager.sw = p2p.NewSwitch(config.P2P, trustHistoryDB)
+	addrBook := pex.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
+	manager.sw = p2p.NewSwitch(config.P2P, addrBook, trustHistoryDB)
+
+	pexReactor := pex.NewPEXReactor(addrBook)
+	manager.sw.AddReactor("PEX", pexReactor)
 
 	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers, manager.dropPeerCh)
 	manager.fetcher = NewFetcher(chain, manager.sw, manager.peers)
-
 	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
-	// Optionally, start the pex reactor
-	//var addrBook *p2p.AddrBook
-	if config.P2P.PexReactor {
-		manager.addrBook = p2p.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
-		pexReactor := p2p.NewPEXReactor(manager.addrBook)
-		manager.sw.AddReactor("PEX", pexReactor)
+	// Create & add listener
+	var listenerStatus bool
+	var l p2p.Listener
+	if !config.VaultMode {
+		p, address := protocolAndAddress(manager.config.P2P.ListenAddress)
+		l, listenerStatus = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP)
+		manager.sw.AddListener(l)
 	}
+	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
+	manager.sw.SetNodePrivKey(manager.privKey)
 
 	return manager, nil
 }
@@ -84,7 +90,7 @@ func protocolAndAddress(listenAddr string) (string, string) {
 	return p, address
 }
 
-func (sm *SyncManager) makeNodeInfo() *p2p.NodeInfo {
+func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 	nodeInfo := &p2p.NodeInfo{
 		PubKey:  sm.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
 		Moniker: sm.config.Moniker,
@@ -101,47 +107,26 @@ func (sm *SyncManager) makeNodeInfo() *p2p.NodeInfo {
 	}
 
 	p2pListener := sm.sw.Listeners()[0]
-	p2pHost := p2pListener.ExternalAddress().IP.String()
-	p2pPort := p2pListener.ExternalAddress().Port
 
 	// We assume that the rpcListener has the same ExternalAddress.
 	// This is probably true because both P2P and RPC listeners use UPnP,
 	// except of course if the rpc is only bound to localhost
-	nodeInfo.ListenAddr = cmn.Fmt("%v:%v", p2pHost, p2pPort)
+	if listenerStatus {
+		nodeInfo.ListenAddr = cmn.Fmt("%v:%v", p2pListener.ExternalAddress().IP.String(), p2pListener.ExternalAddress().Port)
+	} else {
+		nodeInfo.ListenAddr = cmn.Fmt("%v:%v", p2pListener.InternalAddress().IP.String(), p2pListener.InternalAddress().Port)
+	}
 	return nodeInfo
 }
 
 func (sm *SyncManager) netStart() error {
-	// Create & add listener
-	p, address := protocolAndAddress(sm.config.P2P.ListenAddress)
-
-	l := p2p.NewDefaultListener(p, address, sm.config.P2P.SkipUPNP, nil)
-
-	sm.sw.AddListener(l)
-
-	// Start the switch
-	sm.sw.SetNodeInfo(sm.makeNodeInfo())
-	sm.sw.SetNodePrivKey(sm.privKey)
 	_, err := sm.sw.Start()
-	if err != nil {
-		return err
-	}
-
-	// If seeds exist, add them to the address book and dial out
-	if sm.config.P2P.Seeds != "" {
-		// dial out
-		seeds := strings.Split(sm.config.P2P.Seeds, ",")
-		if err := sm.DialSeeds(seeds); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return err
 }
 
 //Start start sync manager service
 func (sm *SyncManager) Start() {
-	sm.netStart()
+	go sm.netStart()
 	// broadcast transactions
 	go sm.txBroadcastLoop()
 
@@ -165,8 +150,19 @@ func (sm *SyncManager) txBroadcastLoop() {
 	for {
 		select {
 		case newTx := <-newTxCh:
-			sm.peers.BroadcastTx(newTx)
-
+			peers, err := sm.peers.BroadcastTx(newTx)
+			if err != nil {
+				log.Errorf("Broadcast new tx error. %v", err)
+				return
+			}
+			for _, smPeer := range peers {
+				if smPeer == nil {
+					continue
+				}
+				swPeer := smPeer.getPeer()
+				log.Info("Tx broadcast error. Stop Peer.")
+				sm.sw.StopPeerGracefully(swPeer)
+			}
 		case <-sm.quitSync:
 			return
 		}
@@ -182,7 +178,19 @@ func (sm *SyncManager) minedBroadcastLoop() {
 				log.Errorf("Failed on mined broadcast loop get block %v", err)
 				return
 			}
-			sm.peers.BroadcastMinedBlock(block)
+			peers, err := sm.peers.BroadcastMinedBlock(block)
+			if err != nil {
+				log.Errorf("Broadcast mine block error. %v", err)
+				return
+			}
+			for _, smPeer := range peers {
+				if smPeer == nil {
+					continue
+				}
+				swPeer := smPeer.getPeer()
+				log.Info("New mined block broadcast error. Stop Peer.")
+				sm.sw.StopPeerGracefully(swPeer)
+			}
 		case <-sm.quitSync:
 			return
 		}
@@ -202,11 +210,6 @@ func (sm *SyncManager) BlockKeeper() *blockKeeper {
 //Peers get sync manager peer set
 func (sm *SyncManager) Peers() *peerSet {
 	return sm.peers
-}
-
-//DialSeeds dial seed peers
-func (sm *SyncManager) DialSeeds(seeds []string) error {
-	return sm.sw.DialSeeds(sm.addrBook, seeds)
 }
 
 //Switch get sync manager switch

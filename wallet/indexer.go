@@ -36,6 +36,7 @@ type accountOutput struct {
 	AccountID string
 	Address   string
 	keyIndex  uint64
+	change    bool
 }
 
 const (
@@ -155,8 +156,8 @@ func saveExternalAssetDefinition(b *types.Block, walletDB db.DB) {
 			if ii, ok := orig.TypedInput.(*types.IssuanceInput); ok {
 				if isValidJSON(ii.AssetDefinition) {
 					assetID := ii.AssetID()
-					if assetExist := walletDB.Get(asset.CalcExtAssetKey(&assetID)); assetExist == nil {
-						storeBatch.Set(asset.CalcExtAssetKey(&assetID), ii.AssetDefinition)
+					if assetExist := walletDB.Get(asset.ExtAssetKey(&assetID)); assetExist == nil {
+						storeBatch.Set(asset.ExtAssetKey(&assetID), ii.AssetDefinition)
 					}
 				}
 			}
@@ -187,7 +188,6 @@ type TxSummary struct {
 func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
-	annotateTxsAsset(w, annotatedTxs)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
 	for _, tx := range annotatedTxs {
@@ -298,6 +298,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 			for _, out := range outsByScript[s] {
 				newOut := &accountOutput{
 					rawOutput: *out,
+					change:    false,
 				}
 				result = append(result, newOut)
 			}
@@ -306,7 +307,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 		}
 
 		sha3pool.Sum256(hash[:], []byte(s))
-		bytes := w.DB.Get(account.CPKey(hash))
+		bytes := w.DB.Get(account.ContractKey(hash))
 		if bytes == nil {
 			continue
 		}
@@ -327,6 +328,7 @@ func loadAccountInfo(outs []*rawOutput, w *Wallet) []*accountOutput {
 				AccountID: cp.AccountID,
 				Address:   cp.Address,
 				keyIndex:  cp.KeyIndex,
+				change:    cp.Change,
 			}
 			result = append(result, newOut)
 		}
@@ -353,6 +355,7 @@ func upsertConfirmedAccountOutputs(outs []*accountOutput, batch db.Batch) error 
 			AccountID:           out.AccountID,
 			Address:             out.Address,
 			ValidHeight:         out.ValidHeight,
+			Change:              out.change,
 		}
 
 		data, err := json.Marshal(u)
@@ -382,7 +385,7 @@ transactionLoop:
 		for _, v := range tx.Outputs {
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], v.ControlProgram)
-			if bytes := w.DB.Get(account.CPKey(hash)); bytes != nil {
+			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
@@ -421,7 +424,7 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 
 // GetTransactionsByTxID get account txs by account tx ID
 func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
-	var annotatedTxs []*query.AnnotatedTx
+	annotatedTxs := []*query.AnnotatedTx{}
 	formatKey := ""
 
 	if txID != "" {
@@ -439,6 +442,7 @@ func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error
 		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
 			return nil, err
 		}
+		annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 		annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
 	}
 
@@ -499,7 +503,7 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 
 // GetTransactionsByAccountID get account txs by account ID
 func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
-	var annotatedTxs []*query.AnnotatedTx
+	annotatedTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
@@ -510,6 +514,7 @@ func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.Annotate
 		}
 
 		if findTransactionsByAccount(annotatedTx, accountID) {
+			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 			annotatedTxs = append(annotatedTxs, annotatedTx)
 		}
 	}
@@ -537,23 +542,23 @@ func (w *Wallet) GetAccountUTXOs(id string) []account.UTXO {
 }
 
 // GetAccountBalances return all account balances
-func (w *Wallet) GetAccountBalances(id string) []AccountBalance {
+func (w *Wallet) GetAccountBalances(id string) ([]AccountBalance, error) {
 	return w.indexBalances(w.GetAccountUTXOs(""))
 }
 
 // AccountBalance account balance
 type AccountBalance struct {
-	AccountID  string `json:"account_id"`
-	Alias      string `json:"account_alias"`
-	AssetAlias string `json:"asset_alias"`
-	AssetID    string `json:"asset_id"`
-	Amount     uint64 `json:"amount"`
+	AccountID       string                 `json:"account_id"`
+	Alias           string                 `json:"account_alias"`
+	AssetAlias      string                 `json:"asset_alias"`
+	AssetID         string                 `json:"asset_id"`
+	Amount          uint64                 `json:"amount"`
+	AssetDefinition map[string]interface{} `json:"asset_definition"`
 }
 
-func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) []AccountBalance {
+func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) ([]AccountBalance, error) {
 	accBalance := make(map[string]map[string]uint64)
 	balances := make([]AccountBalance, 0)
-	tmpBalance := AccountBalance{}
 
 	for _, accountUTXO := range accountUTXOs {
 		assetID := accountUTXO.AssetID.String()
@@ -583,15 +588,22 @@ func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) []AccountBalance {
 
 		for _, assetID := range sortedAsset {
 			alias := w.AccountMgr.GetAliasByID(id)
-			assetAlias := w.AssetReg.GetAliasByID(assetID)
-			tmpBalance.Alias = alias
-			tmpBalance.AccountID = id
-			tmpBalance.AssetID = assetID
-			tmpBalance.AssetAlias = assetAlias
-			tmpBalance.Amount = accBalance[id][assetID]
-			balances = append(balances, tmpBalance)
+			targetAsset, err := w.AssetReg.GetAsset(assetID)
+			if err != nil {
+				return nil, err
+			}
+
+			assetAlias := *targetAsset.Alias
+			balances = append(balances, AccountBalance{
+				Alias: alias,
+				AccountID: id,
+				AssetID: assetID,
+				AssetAlias: assetAlias,
+				Amount: accBalance[id][assetID],
+				AssetDefinition: targetAsset.DefinitionMap,
+			})
 		}
 	}
 
-	return balances
+	return balances, nil
 }

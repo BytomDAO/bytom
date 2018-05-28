@@ -93,7 +93,7 @@ func (node *BlockNode) CalcPastMedianTime() uint64 {
 	return timestamps[len(timestamps)/2]
 }
 
-// CalcNextBits calculate the seed for next block
+// CalcNextBits calculate the bits for next block
 func (node *BlockNode) CalcNextBits() uint64 {
 	if node.Height%consensus.BlocksPerRetarget != 0 || node.Height == 0 {
 		return node.Bits
@@ -108,6 +108,9 @@ func (node *BlockNode) CalcNextBits() uint64 {
 
 // CalcNextSeed calculate the seed for next block
 func (node *BlockNode) CalcNextSeed() *bc.Hash {
+	if node.Height == 0 {
+		return consensus.InitialSeed
+	}
 	if node.Height%consensus.SeedPerRetarget == 0 {
 		return &node.Hash
 	}

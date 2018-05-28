@@ -2,7 +2,6 @@ package commands
 
 import (
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -14,9 +13,6 @@ import (
 func init() {
 	createAccountCmd.PersistentFlags().IntVarP(&accountQuorum, "quorom", "q", 1, "quorum must be greater than 0 and less than or equal to the number of signers")
 	createAccountCmd.PersistentFlags().StringVarP(&accountToken, "access", "a", "", "access token")
-	createAccountCmd.PersistentFlags().StringVarP(&accountTags, "tags", "t", "", "tags")
-
-	updateAccountTagsCmd.PersistentFlags().StringVarP(&accountUpdateTags, "tags", "t", "", "tags to add, delete or update")
 
 	listAccountsCmd.PersistentFlags().StringVar(&accountID, "id", "", "ID of account")
 
@@ -27,13 +23,11 @@ func init() {
 }
 
 var (
-	accountID         = ""
-	accountAlias      = ""
-	accountQuorum     = 1
-	accountToken      = ""
-	accountTags       = ""
-	accountUpdateTags = ""
-	outputID          = ""
+	accountID     = ""
+	accountAlias  = ""
+	accountQuorum = 1
+	accountToken  = ""
+	outputID      = ""
 )
 
 var createAccountCmd = &cobra.Command{
@@ -54,15 +48,6 @@ var createAccountCmd = &cobra.Command{
 
 		ins.Quorum = accountQuorum
 		ins.Alias = args[0]
-		if len(accountTags) != 0 {
-			tags := strings.Split(accountTags, ":")
-			if len(tags) != 2 {
-				jww.ERROR.Println("Invalid tags")
-				os.Exit(util.ErrLocalExe)
-			}
-			ins.Tags = map[string]interface{}{tags[0]: tags[1]}
-		}
-
 		ins.AccessToken = accountToken
 
 		data, exitCode := util.ClientCall("/create-account", &ins)
@@ -109,38 +94,6 @@ var deleteAccountCmd = &cobra.Command{
 	},
 }
 
-var updateAccountTagsCmd = &cobra.Command{
-	Use:   "update-account-tags <accountID|alias>",
-	Short: "Update the account tags",
-	Args:  cobra.ExactArgs(1),
-	PreRun: func(cmd *cobra.Command, args []string) {
-		cmd.MarkFlagRequired("tags")
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		var updateTag = struct {
-			AccountInfo string                 `json:"account_info"`
-			Tags        map[string]interface{} `json:"tags"`
-		}{}
-
-		if len(accountUpdateTags) != 0 {
-			tags := strings.Split(accountUpdateTags, ":")
-			if len(tags) != 2 {
-				jww.ERROR.Println("Invalid tags")
-				os.Exit(util.ErrLocalExe)
-			}
-			updateTag.Tags = map[string]interface{}{tags[0]: tags[1]}
-		}
-
-		updateTag.AccountInfo = args[0]
-
-		if _, exitCode := util.ClientCall("/update-account-tags", &updateTag); exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-
-		jww.FEEDBACK.Println("Successfully update account tags")
-	},
-}
-
 var createAccountReceiverCmd = &cobra.Command{
 	Use:   "create-account-receiver <accountAlias> [accountID]",
 	Short: "Create an account receiver",
@@ -184,7 +137,7 @@ var listAddressesCmd = &cobra.Command{
 }
 
 var validateAddressCmd = &cobra.Command{
-	Use:   "validate-address",
+	Use:   "validate-address <address>",
 	Short: "validate the account addresses",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

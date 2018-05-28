@@ -42,16 +42,15 @@ type (
 var ErrEmptyProgram = errors.New("empty signature program")
 
 // Sign populates sw.Sigs with as many signatures of the predicate in
-// sw.Program as it can from the overlapping set of keys in sw.Keys
-// and xpubs.
+// sw.Program as it can from the overlapping set of keys in sw.Keys.
 //
 // If sw.Program is empty, it is populated with an _inferred_ predicate:
 // a program committing to aspects of the current
 // transaction. Specifically, the program commits to:
 //  - the mintime and maxtime of the transaction (if non-zero)
-//  - the outputID and (if non-empty) reference data of the current input
-//  - the assetID, amount, control program, and (if non-empty) reference data of each output.
-func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint32, xpubs []chainkd.XPub, auth string, signFn SignFunc) error {
+//  - the outputID of the current input
+//  - the assetID, amount, control program of each output.
+func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint32, auth string, signFn SignFunc) error {
 	// Compute the predicate to sign. This is either a
 	// txsighash program if tpl.AllowAdditional is false (i.e., the tx is complete
 	// and no further changes are allowed) or a program enforcing
@@ -81,17 +80,7 @@ func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint3
 			// Already have a signature for this key
 			continue
 		}
-		var found bool
-		for _, xpub := range xpubs {
-			if keyID.XPub == xpub {
-				found = true
-				break
-			}
-		}
-		if xpubs != nil && !found {
-			continue
-		}
-		path := make([]([]byte), len(keyID.DerivationPath))
+		path := make([][]byte, len(keyID.DerivationPath))
 		for i, p := range keyID.DerivationPath {
 			path[i] = p
 		}

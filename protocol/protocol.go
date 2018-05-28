@@ -60,7 +60,7 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 }
 
 func (c *Chain) initChainStatus() error {
-	genesisBlock := config.GenerateGenesisBlock()
+	genesisBlock := config.GenesisBlock()
 	txStatus := bc.NewTransactionStatus()
 	for i := range genesisBlock.Transactions {
 		txStatus.SetStatus(i, false)
@@ -156,4 +156,9 @@ func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
 	}()
 
 	return ch
+}
+
+// GetTxPool return chain txpool.
+func (c *Chain) GetTxPool() *TxPool {
+	return c.txPool
 }

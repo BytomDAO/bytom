@@ -60,10 +60,10 @@ type TxFeed struct {
 }
 
 type filter struct {
-	assetID          string `json:"assetid,omitempty"`
-	amountLowerLimit uint64 `json:"lowerlimit,omitempty"`
-	amountUpperLimit uint64 `json:"upperlimit,omitempty"`
-	transType        string `json:"transtype,omitempty"`
+	AssetID          string `json:"assetid,omitempty"`
+	AmountLowerLimit uint64 `json:"lowerlimit,omitempty"`
+	AmountUpperLimit uint64 `json:"upperlimit,omitempty"`
+	TransType        string `json:"transtype,omitempty"`
 }
 
 //NewTracker create new txfeed tracker.
@@ -107,18 +107,18 @@ func parseFilter(ft string) (filter, error) {
 			continue
 		}
 		if strings.Contains(value, "asset_id") {
-			res.assetID = param
+			res.AssetID = param
 		}
 		if strings.Contains(value, "amount_lower_limit") {
 			tmp, _ := strconv.ParseInt(param, 10, 64)
-			res.amountLowerLimit = uint64(tmp)
+			res.AmountLowerLimit = uint64(tmp)
 		}
 		if strings.Contains(value, "amount_upper_limit") {
 			tmp, _ := strconv.ParseInt(param, 10, 64)
-			res.amountUpperLimit = uint64(tmp)
+			res.AmountUpperLimit = uint64(tmp)
 		}
 		if strings.Contains(value, "trans_type") {
-			res.transType = param
+			res.TransType = param
 		}
 	}
 	return res, nil
@@ -154,18 +154,18 @@ func parseTxfeed(db dbm.DB, filters []filter) error {
 				continue
 			}
 			if strings.Contains(value, "asset_id") {
-				filters[index].assetID = param
+				filters[index].AssetID = param
 			}
 			if strings.Contains(value, "amount_lower_limit") {
 				tmp, _ := strconv.ParseInt(param, 10, 64)
-				filters[index].amountLowerLimit = uint64(tmp)
+				filters[index].AmountLowerLimit = uint64(tmp)
 			}
 			if strings.Contains(value, "amount_upper_limit") {
 				tmp, _ := strconv.ParseInt(param, 10, 64)
-				filters[index].amountUpperLimit = uint64(tmp)
+				filters[index].AmountUpperLimit = uint64(tmp)
 			}
 			if strings.Contains(value, "trans_type") {
-				filters[index].transType = param
+				filters[index].TransType = param
 			}
 		}
 		index++
@@ -282,16 +282,16 @@ func (t *Tracker) Delete(ctx context.Context, alias string) error {
 func outputFilter(txfeed *TxFeed, value *query.AnnotatedOutput) bool {
 	assetidstr := value.AssetID.String()
 
-	if 0 != strings.Compare(txfeed.Param.assetID, assetidstr) && txfeed.Param.assetID != "" {
+	if txfeed.Param.AssetID != assetidstr && txfeed.Param.AssetID != "" {
 		return false
 	}
-	if 0 != strings.Compare(txfeed.Param.transType, value.Type) && txfeed.Param.transType != "" {
+	if txfeed.Param.TransType != value.Type && txfeed.Param.TransType != "" {
 		return false
 	}
-	if txfeed.Param.amountLowerLimit > value.Amount && txfeed.Param.amountLowerLimit != 0 {
+	if txfeed.Param.AmountLowerLimit > value.Amount && txfeed.Param.AmountLowerLimit != 0 {
 		return false
 	}
-	if txfeed.Param.amountUpperLimit < value.Amount && txfeed.Param.amountUpperLimit != 0 {
+	if txfeed.Param.AmountUpperLimit < value.Amount && txfeed.Param.AmountUpperLimit != 0 {
 		return false
 	}
 

@@ -83,7 +83,7 @@ func (cfg *TxTestConfig) Run() error {
 		}
 
 		gasOnlyTx := false
-		if err != nil && status.GasVaild {
+		if err != nil && status.GasValid {
 			gasOnlyTx = true
 		}
 		if gasOnlyTx != t.GasOnly {
@@ -172,6 +172,10 @@ func TestCoinbaseMature(t *testing.T) {
 	chain, _, _, _ := MockChain(db)
 
 	defaultCtrlProg := []byte{byte(vm.OP_TRUE)}
+	if err := AppendBlocks(chain, 1); err != nil {
+		t.Fatal(err)
+	}
+
 	height := chain.BestBlockHeight()
 	block, err := chain.GetBlockByHeight(height)
 	if err != nil {
@@ -237,17 +241,19 @@ func TestCoinbaseTx(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	coinbaseTx, err := CreateCoinbaseTx(defaultCtrlProg, block.Height, 100000)
-	if err != nil {
-		t.Fatal(err)
-	}
+	txFees := []uint64{100000, 5000000000000}
+	for _, txFee := range txFees {
+		coinbaseTx, err := CreateCoinbaseTx(defaultCtrlProg, block.Height, txFee)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	if err := ReplaceCoinbase(block, coinbaseTx); err != nil {
-		t.Fatal(err)
-	}
+		if err := ReplaceCoinbase(block, coinbaseTx); err != nil {
+			t.Fatal(err)
+		}
 
-	err = SolveAndUpdate(chain, block)
-	if err == nil {
-		t.Fatalf("invalid coinbase tx validate success")
+		if err := SolveAndUpdate(chain, block); err == nil {
+			t.Fatalf("invalid coinbase tx validate success")
+		}
 	}
 }

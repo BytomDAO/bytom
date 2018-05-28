@@ -168,7 +168,6 @@ func (a *API) buildHandler() {
 		walletEnable = true
 
 		m.Handle("/create-account", jsonHandler(a.createAccount))
-		m.Handle("/update-account-tags", jsonHandler(a.updateAccountTags))
 		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
 		m.Handle("/delete-account", jsonHandler(a.deleteAccount))
 
@@ -178,36 +177,34 @@ func (a *API) buildHandler() {
 
 		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
-		m.Handle("/update-asset-tags", jsonHandler(a.updateAssetTags))
+		m.Handle("/get-asset", jsonHandler(a.getAsset))
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
 		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
 		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
-
-		m.Handle("/export-private-key", jsonHandler(a.walletExportKey))
-		m.Handle("/import-private-key", jsonHandler(a.walletImportKey))
-		m.Handle("/import-key-progress", jsonHandler(a.keyImportProgress))
+		m.Handle("/sign-message", jsonHandler(a.signMessage))
 
 		m.Handle("/build-transaction", jsonHandler(a.build))
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
 		m.Handle("/submit-transaction", jsonHandler(a.submit))
-		// TODO remove this api, separate sign and submit process
-		m.Handle("/sign-submit-transaction", jsonHandler(a.signSubmit))
+		m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
+
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
+
+		m.Handle("/backup-wallet", jsonHandler(a.backupWalletImage))
+		m.Handle("/restore-wallet", jsonHandler(a.restoreWalletImage))
 	} else {
 		log.Warn("Please enable wallet")
 	}
 
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/error", jsonHandler(a.walletError))
-
-	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 
 	m.Handle("/create-access-token", jsonHandler(a.createAccessToken))
 	m.Handle("/list-access-tokens", jsonHandler(a.listAccessTokens))
@@ -220,19 +217,28 @@ func (a *API) buildHandler() {
 	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
 	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
 
-	m.Handle("/block-hash", jsonHandler(a.getBestBlockHash))
-	m.Handle("/get-block-header-by-hash", jsonHandler(a.getBlockHeaderByHash))
-	m.Handle("/get-block-header-by-height", jsonHandler(a.getBlockHeaderByHeight))
+	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
+	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
+	m.Handle("/decode-raw-transaction", jsonHandler(a.decodeRawTransaction))
+
+	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
+	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
 	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
-	m.Handle("/get-block-transactions-count-by-hash", jsonHandler(a.getBlockTransactionsCountByHash))
-	m.Handle("/get-block-transactions-count-by-height", jsonHandler(a.getBlockTransactionsCountByHeight))
+	m.Handle("/get-difficulty", jsonHandler(a.getDifficulty))
+	m.Handle("/get-hash-rate", jsonHandler(a.getHashRate))
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
-	m.Handle("/gas-rate", jsonHandler(a.gasRate))
+	m.Handle("/set-mining", jsonHandler(a.setMining))
+
 	m.Handle("/get-work", jsonHandler(a.getWork))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
-	m.Handle("/set-mining", jsonHandler(a.setMining))
+
+	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
+	m.Handle("/decode-program", jsonHandler(a.decodeProgram))
+
+	m.Handle("/gas-rate", jsonHandler(a.gasRate))
+	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 
 	handler := latencyHandler(m, walletEnable)
 	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux

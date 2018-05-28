@@ -1,7 +1,6 @@
 package netsync
 
 import (
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -30,6 +29,7 @@ var (
 	errGetBlockByHash  = errors.New("Get block by hash error")
 	errBroadcastStatus = errors.New("Broadcast new status block error")
 	errReqBlock        = errors.New("Request block error")
+	errPeerNotRegister = errors.New("peer is not registered")
 )
 
 //TODO: add retry mechanism
@@ -75,7 +75,13 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 	orphanNum := uint64(0)
 	reqNum := uint64(0)
 	isOrphan := false
-	for num <= maxPeerHeight && num > 0 {
+	bkPeer, ok := bk.peers.Peer(peerID)
+	if !ok {
+		log.Info("peer is not registered")
+		return errPeerNotRegister
+	}
+	swPeer := bkPeer.getPeer()
+	for 0 < num && num <= maxPeerHeight {
 		if isOrphan {
 			reqNum = orphanNum
 		} else {
@@ -84,18 +90,24 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 		block, err := bk.BlockRequest(peerID, reqNum)
 		if errors.Root(err) == errPeerDropped || errors.Root(err) == errGetBlockTimeout || errors.Root(err) == errReqBlock {
 			log.WithField("Peer abnormality. PeerID: ", peerID).Info(err)
-			peer := bk.peers.Peer(peerID)
-			if peer == nil {
+			if bkPeer == nil {
 				log.Info("peer is not registered")
 				break
 			}
-			log.Info("Peer communication abnormality")
-			bk.sw.StopPeerGracefully(peer.Peer)
+			log.Info("Block keeper request block error. Stop peer.")
+			bk.sw.StopPeerGracefully(swPeer)
 			break
 		}
 		isOrphan, err = bk.chain.ProcessBlock(block)
 		if err != nil {
-			bk.sw.AddScamPeer(bk.peers.Peer(peerID).getPeer())
+			if bkPeer == nil {
+				log.Info("peer is deleted")
+				break
+			}
+			if ban := bkPeer.addBanScore(20, 0, "block process error"); ban {
+				bk.sw.AddBannedPeer(swPeer)
+				bk.sw.StopPeerGracefully(swPeer)
+			}
 			log.WithField("hash:", block.Hash()).Errorf("blockKeeper fail process block %v ", err)
 			break
 		}
@@ -107,7 +119,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 	}
 	bestHash := bk.chain.BestBlockHash()
 	log.Info("Block sync complete. height:", bk.chain.BestBlockHeight(), " hash:", bestHash)
-	if strings.Compare(currentHash.String(), bestHash.String()) != 0 {
+	if currentHash.String() != bestHash.String() {
 		log.Info("Broadcast new chain status.")
 
 		block, err := bk.chain.GetBlockByHash(bestHash)
@@ -116,9 +128,18 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 			return errGetBlockByHash
 		}
 
-		if err := bk.peers.BroadcastNewStatus(block); err != nil {
+		peers, err := bk.peers.BroadcastNewStatus(block)
+		if err != nil {
 			log.Errorf("Failed on broadcast new status block %v", err)
 			return errBroadcastStatus
+		}
+		for _, peer := range peers {
+			if peer == nil {
+				return errPeerNotRegister
+			}
+			swPeer := peer.getPeer()
+			log.Info("Block keeper broadcast block error. Stop peer.")
+			bk.sw.StopPeerGracefully(swPeer)
 		}
 	}
 	return nil
@@ -141,7 +162,7 @@ func (bk *blockKeeper) BlockRequest(peerID string, height uint64) (*types.Block,
 		select {
 		case pendingResponse := <-bk.pendingProcessCh:
 			block = pendingResponse.block
-			if strings.Compare(pendingResponse.peerID, peerID) != 0 {
+			if pendingResponse.peerID != peerID {
 				log.Warning("From different peer")
 				continue
 			}
@@ -158,7 +179,7 @@ func (bk *blockKeeper) BlockRequest(peerID string, height uint64) (*types.Block,
 			log.Warning("Request block timeout")
 			return nil, errGetBlockTimeout
 		case peerid := <-bk.quitReqBlockCh:
-			if strings.Compare(*peerid, peerID) == 0 {
+			if *peerid == peerID {
 				log.Info("Quite block request worker")
 				return nil, errPeerDropped
 			}
@@ -172,7 +193,13 @@ func (bk *blockKeeper) txsProcessWorker() {
 		log.Info("Receive new tx from remote peer. TxID:", tx.ID.String())
 		bk.peers.MarkTransaction(txsResponse.peerID, &tx.ID)
 		if isOrphan, err := bk.chain.ValidateTx(tx); err != nil && isOrphan == false {
-			bk.sw.AddScamPeer(bk.peers.Peer(txsResponse.peerID).getPeer())
+			if bkPeer, ok := bk.peers.Peer(txsResponse.peerID); ok {
+				swPeer := bkPeer.getPeer()
+				if ban := bkPeer.addBanScore(10, 0, "tx error"); ban {
+					bk.sw.AddBannedPeer(swPeer)
+					bk.sw.StopPeerGracefully(swPeer)
+				}
+			}
 		}
 	}
 }

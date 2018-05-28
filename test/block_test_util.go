@@ -1,10 +1,7 @@
 package test
 
 import (
-	"time"
-
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/difficulty"
+	"github.com/bytom/mining/tensority"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -21,9 +18,10 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	txStatus.SetStatus(0, false)
 
 	preBlockHeader := chain.BestBlockHeader()
-	var compareDiffBH *types.BlockHeader
-	if compareDiffBlock, err := chain.GetBlockByHeight(preBlockHeader.Height - consensus.BlocksPerRetarget); err == nil {
-		compareDiffBH = &compareDiffBlock.BlockHeader
+	preBlockHash := preBlockHeader.Hash()
+	nextBits, err := chain.CalcNextBits(&preBlockHash)
+	if err != nil {
+		return nil, err
 	}
 
 	b := &types.Block{
@@ -31,9 +29,9 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 			Version:           1,
 			Height:            preBlockHeader.Height + 1,
 			PreviousBlockHash: preBlockHeader.Hash(),
-			Timestamp:         uint64(time.Now().Unix()),
+			Timestamp:         preBlockHeader.Timestamp + 1,
 			BlockCommitment:   types.BlockCommitment{},
-			Bits:              difficulty.CalcNextRequiredDifficulty(preBlockHeader, compareDiffBH),
+			Bits:              nextBits,
 		},
 		Transactions: []*types.Tx{nil},
 	}
@@ -43,7 +41,7 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 		gasOnlyTx := false
 		gasStatus, err := validation.ValidateTx(tx.Tx, bcBlock)
 		if err != nil {
-			if !gasStatus.GasVaild {
+			if !gasStatus.GasValid {
 				continue
 			}
 			gasOnlyTx = true
@@ -109,15 +107,8 @@ func SolveAndUpdate(chain *protocol.Chain, block *types.Block) error {
 	return err
 }
 
-// Solve solve difficulty
-func Solve(seed *bc.Hash, block *types.Block) error {
-	header := &block.BlockHeader
-	for i := uint64(0); i < maxNonce; i++ {
-		header.Nonce = i
-		headerHash := header.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, seed, header.Bits) {
-			return nil
-		}
-	}
-	return nil
+// Solve simulate solve difficulty by add result to cache
+func Solve(seed *bc.Hash, block *types.Block) {
+	hash := block.BlockHeader.Hash()
+	tensority.AIHash.AddCache(&hash, seed, &bc.Hash{})
 }

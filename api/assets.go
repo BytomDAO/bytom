@@ -16,14 +16,12 @@ func (a *API) createAsset(ctx context.Context, ins struct {
 	RootXPubs  []chainkd.XPub         `json:"root_xpubs"`
 	Quorum     int                    `json:"quorum"`
 	Definition map[string]interface{} `json:"definition"`
-	Tags       map[string]interface{} `json:"tags"`
 }) Response {
 	ass, err := a.wallet.AssetReg.Define(
 		ins.RootXPubs,
 		ins.Quorum,
 		ins.Definition,
 		strings.ToUpper(strings.TrimSpace(ins.Alias)),
-		ins.Tags,
 	)
 	if err != nil {
 		return NewErrorResponse(err)
@@ -39,25 +37,12 @@ func (a *API) createAsset(ctx context.Context, ins struct {
 	return NewSuccessResponse(annotatedAsset)
 }
 
-// POST /update-asset-tags
-func (a *API) updateAssetTags(ctx context.Context, updateTag struct {
-	AssetInfo string                 `json:"asset_info"`
-	Tags      map[string]interface{} `json:"tags"`
-}) Response {
-	err := a.wallet.AssetReg.UpdateTags(nil, updateTag.AssetInfo, updateTag.Tags)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	return NewSuccessResponse(nil)
-}
-
 // POST /update-asset-alias
 func (a *API) updateAssetAlias(updateAlias struct {
-	OldAlias string `json:"old_alias"`
-	NewAlias string `json:"new_alias"`
+	ID       string `json:"id"`
+	NewAlias string `json:"alias"`
 }) Response {
-	if err := a.wallet.AssetReg.UpdateAssetAlias(updateAlias.OldAlias, updateAlias.NewAlias); err != nil {
+	if err := a.wallet.AssetReg.UpdateAssetAlias(updateAlias.ID, updateAlias.NewAlias); err != nil {
 		return NewErrorResponse(err)
 	}
 

@@ -127,13 +127,13 @@ type walletTestContext struct {
 	Chain  *protocol.Chain
 }
 
-func (ctx *walletTestContext) createControlProgram(accountName string) (*account.CtrlProgram, error) {
+func (ctx *walletTestContext) createControlProgram(accountName string, change bool) (*account.CtrlProgram, error) {
 	acc, err := ctx.Wallet.AccountMgr.FindByAlias(nil, accountName)
 	if err != nil {
 		return nil, err
 	}
 
-	return ctx.Wallet.AccountMgr.CreateAddress(nil, acc.ID)
+	return ctx.Wallet.AccountMgr.CreateAddress(nil, acc.ID, change)
 }
 
 func (ctx *walletTestContext) getPubkey(keyAlias string) *chainkd.XPub {
@@ -151,11 +151,11 @@ func (ctx *walletTestContext) createAsset(accountAlias string, assetAlias string
 	if err != nil {
 		return nil, err
 	}
-	return ctx.Wallet.AssetReg.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
+	return ctx.Wallet.AssetReg.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias)
 }
 
 func (ctx *walletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) (*types.Block, error) {
-	controlProgram, err := ctx.createControlProgram(coinbaseAccount)
+	controlProgram, err := ctx.createControlProgram(coinbaseAccount, true)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (ctx *walletTestContext) createAccount(name string, keys []string, quorum i
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := ctx.Wallet.AccountMgr.Create(nil, xpubs, quorum, name, nil)
+	_, err := ctx.Wallet.AccountMgr.Create(nil, xpubs, quorum, name)
 	return err
 }
 
@@ -191,7 +191,7 @@ func (ctx *walletTestContext) update(block *types.Block) error {
 }
 
 func (ctx *walletTestContext) getBalance(accountAlias string, assetAlias string) (uint64, error) {
-	balances := ctx.Wallet.GetAccountBalances("")
+	balances, _ := ctx.Wallet.GetAccountBalances("")
 	for _, balance := range balances {
 		if balance.Alias == accountAlias && balance.AssetAlias == assetAlias {
 			return balance.Amount, nil
@@ -202,7 +202,7 @@ func (ctx *walletTestContext) getBalance(accountAlias string, assetAlias string)
 
 func (ctx *walletTestContext) getAccBalances() map[string]map[string]uint64 {
 	accBalances := make(map[string]map[string]uint64)
-	balances := ctx.Wallet.GetAccountBalances("")
+	balances, _ := ctx.Wallet.GetAccountBalances("")
 	for _, balance := range balances {
 		if accBalance, ok := accBalances[balance.Alias]; ok {
 			if _, ok := accBalance[balance.AssetAlias]; ok {

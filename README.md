@@ -63,7 +63,7 @@ $ go env GOROOT GOPATH
 #### Get the source code
 
 ``` bash
-$ git clone https://github.com/Bytom/bytom $GOPATH/src/github.com/bytom
+$ git clone https://github.com/Bytom/bytom.git $GOPATH/src/github.com/bytom
 ```
 
 #### Build
@@ -86,15 +86,16 @@ First of all, initialize the node:
 
 ```bash
 $ cd ./cmd/bytomd
-$ ./bytomd init --chain_id testnet
+$ ./bytomd init --chain_id mainnet
 ```
 
-There are two options for the flag `--chain_id`:
+There are three options for the flag `--chain_id`:
 
-- `testnet`: connect to the testnet.
-- `mainnet`: standalone mode.
+- `mainnet`: connect to the mainnet.
+- `testnet`: connect to the testnet wisdom.
+- `solonet`: standalone mode.
 
-After that, you'll see `.bytomd` generated in current directory, then launch the node.
+After that, you'll see `config.toml` generated, then launch the node.
 
 ### launch
 
@@ -106,16 +107,20 @@ available flags for `bytomd node`:
 
 ```
       --auth.disable                Disable rpc access authenticate
+      --chain_id string             Select network type
+  -h, --help                        help for node
       --mining                      Enable mining
       --p2p.dial_timeout int        Set dial timeout (default 3)
       --p2p.handshake_timeout int   Set handshake timeout (default 30)
       --p2p.laddr string            Node listen address.
       --p2p.max_num_peers int       Set max num peers (default 50)
-      --p2p.pex                     Enable Peer-Exchange
+      --p2p.pex                     Enable Peer-Exchange  (default true)
       --p2p.seeds string            Comma delimited host:port seed nodes
       --p2p.skip_upnp               Skip UPNP configuration
       --prof_laddr string           Use http to profile bytomd programs
+      --vault_mode                  Run in the offline enviroment
       --wallet.disable              Disable wallet
+      --wallet.rescan               Rescan wallet
       --web.closed                  Lanch web browser or not
 ```
 
@@ -141,8 +146,7 @@ You can create a key with the following command:
 $ ./bytomcli create-key alice 123
 {
   "alias": "alice",
-  "file": "/Users/xlc/go/src/github.com/bytom/cmd/bytomd/.bytomd/keystore/UTC--2018-01-02T07-40-49.900440000Z--b6700ba3-befd-4750-9e58-df91eba15e25",
-  "xpub": "674b0d709c5c2f6eb49e5f205c4393e91f1fa745ff62954b67be546925480af57f12a20b2f963a489a71c61b40d5fa08e8c522c8f2d49eaa1213dcb0a4350afb"
+  "xpub": "d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"
 }
 ```
 
@@ -157,21 +161,15 @@ $ ./bytomcli list-keys
 Create an account named `alice`:
 
 ```bash
-$ ./bytomcli create-account alice 674b0d709c5c2f6eb49e5f205c4393e91f1fa745ff62954b67be546925480af57f12a20b2f963a489a71c61b40d5fa08e8c522c8f2d49eaa1213dcb0a4350afb
+$ ./bytomcli create-account alice d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb
 {
   "alias": "alice",
-  "id": "08FTNE7000A02",
-  "keys": [
-    {
-      "account_derivation_path": [
-        "010100000000000000"
-      ],
-      "account_xpub": "f78fa93f009b7baba1b42dca21d06a7902c41ce5fd8f16db625ca41b95a60116cb3bf87c7a098fad9172db5e7481cd4225bb6032b56a310462677fd030243e48",
-      "root_xpub": "674b0d709c5c2f6eb49e5f205c4393e91f1fa745ff62954b67be546925480af57f12a20b2f963a489a71c61b40d5fa08e8c522c8f2d49eaa1213dcb0a4350afb"
-    }
-  ],
+  "id": "0CIT3OI100A04",
+  "key_index": 1,
   "quorum": 1,
-  "tags": null
+  "xpubs": [
+    "d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"
+  ]
 }
 ```
 
@@ -187,66 +185,56 @@ $ ./bytomcli list-accounts
 $ ./bytomcli list-keys
 0 :
 {
-  "alias": "alice",
-  "file": "/Users/xlc/go/src/github.com/bytom/cmd/bytomd/.bytomd/keystore/UTC--2018-01-02T07-40-49.900440000Z--b6700ba3-befd-4750-9e58-df91eba15e25",
-  "xpub": "674b0d709c5c2f6eb49e5f205c4393e91f1fa745ff62954b67be546925480af57f12a20b2f963a489a71c61b40d5fa08e8c522c8f2d49eaa1213dcb0a4350afb"
+  "alias": "default",
+  "xpub": "336150c3a63411f597d94aa26fe714a348b2e93f2c303d526bb225e5804466e366e58cff81fddaed7879586b92132d63c68b419856f85ca06abfc490a9990c38"
 }
 1 :
 {
+  "alias": "alice",
+  "xpub": "d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"
+}
+2 :
+{
   "alias": "bob",
-  "file": "/Users/xlc/go/src/github.com/bytom/cmd/bytomd/.bytomd/keystore/UTC--2018-01-02T07-41-35.458581000Z--7115fa1c-a5cd-4374-a747-75d038c402a9",
-  "xpub": "db0abf717c37fb01cb89d06a01d087f24a15d07e99d297b3c02642c46166e2103a7525ec85a2c8050a02b5864fd295ee933c09ca341b296a55e0f804ecb9d9a3"
+  "xpub": "cb6057b683c5a341ea29e02ec5bb1e53691eb3b14c285138175d42b07d0551798977fc50203bde1dc2827a07f6f26237fa8ec3c6a2ef272ed80f9211f9c6ac64"
 }
 ```
 
 ```bash
-$ ./bytomcli create-account multi_account 674b0d709c5c2f6eb49e5f205c4393e91f1fa745ff62954b67be546925480af57f12a20b2f963a489a71c61b40d5fa08e8c522c8f2d49eaa1213dcb0a4350afb db0abf717c37fb01cb89d06a01d087f24a15d07e99d297b3c02642c46166e2103a7525ec85a2c8050a02b5864fd295ee933c09ca341b296a55e0f804ecb9d9a3 -q 2
+$ ./bytomcli create-account multi_account d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb cb6057b683c5a341ea29e02ec5bb1e53691eb3b14c285138175d42b07d0551798977fc50203bde1dc2827a07f6f26237fa8ec3c6a2ef272ed80f9211f9c6ac64 -q 2
 {
   "alias": "multi_account",
-  "id": "08FR9JDE00A02",
-  "keys": [
-    {
-      "account_derivation_path": [
-        "010100000000000000"
-      ],
-      "account_xpub": "f78fa93f009b7baba1b42dca21d06a7902c41ce5fd8f16db625ca41b95a60116cb3bf87c7a098fad9172db5e7481cd4225bb6032b56a310462677fd030243e48",
-      "root_xpub": "674b0d709c5c2f6eb49e5f205c4393e91f1fa745ff62954b67be546925480af57f12a20b2f963a489a71c61b40d5fa08e8c522c8f2d49eaa1213dcb0a4350afb"
-    },
-    {
-      "account_derivation_path": [
-        "010100000000000000"
-      ],
-      "account_xpub": "b29be450d0b5b1e233bfa61cc4312c64287a9179d2981510c660fcb4e978fbb8a1d4e4c00882f77b492733e477c19dc2d617ff34216821106078c05ef888c274",
-      "root_xpub": "db0abf717c37fb01cb89d06a01d087f24a15d07e99d297b3c02642c46166e2103a7525ec85a2c8050a02b5864fd295ee933c09ca341b296a55e0f804ecb9d9a3"
-    }
-  ],
+  "id": "0CIT6J0QG0A06",
+  "key_index": 1,
   "quorum": 2,
-  "tags": null
+  "xpubs": [
+    "cb6057b683c5a341ea29e02ec5bb1e53691eb3b14c285138175d42b07d0551798977fc50203bde1dc2827a07f6f26237fa8ec3c6a2ef272ed80f9211f9c6ac64",
+    "d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"
+  ]
 }
 ```
 
 ### Create asset
 
-Create an asset named `gold`:
+Create an asset named `GOLD`:
 
 ```bash
-$ ./bytomcli create-asset gold 674b0d709c5c2f6eb49e5f205c4393e91f1fa745ff62954b67be546925480af57f12a20b2f963a489a71c61b40d5fa08e8c522c8f2d49eaa1213dcb0a4350afb
+$ ./bytomcli create-asset GOLD d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb
 {
-  "alias": "gold",
+  "alias": "GOLD",
   "definition": {},
-  "id": "ff34b6aea66cbd13bfaf918294e0d45fe5ac89854875aadcabb54d92bffebb27",
-  "issuance_program": "766baa200677273bad4aecb9fb90f99d41dda6bb233a138e1a6ad4aeb334241171c5df075151ad696c00c0",
+  "id": "43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397",
+  "issuance_program": "ae2035b53ed466a40e3d1073ffdcf1c7d0c4ffc439391f9ef5999b365ea467c96a3c5151ad",
   "keys": [
     {
       "asset_derivation_path": [
-        "000200000000000000"
+        "000100000000000000"
       ],
-      "asset_pubkey": "0677273bad4aecb9fb90f99d41dda6bb233a138e1a6ad4aeb334241171c5df07df57895f7e9c2adb909db2299dd061e60b365c0d008a1a2a14b97f56f19642d7",
-      "root_xpub": "674b0d709c5c2f6eb49e5f205c4393e91f1fa745ff62954b67be546925480af57f12a20b2f963a489a71c61b40d5fa08e8c522c8f2d49eaa1213dcb0a4350afb"
+      "asset_pubkey": "35b53ed466a40e3d1073ffdcf1c7d0c4ffc439391f9ef5999b365ea467c96a3c0e8b6d5a67bd5fc66d7a19d4754df6de6cbf3b40fc6b02a75f140d77a1dbcda8",
+      "root_xpub": "d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"
     }
   ],
-  "quorum": 1,
-  "tags": {}
+  "quorum": 1
 }
 ```
 
@@ -259,30 +247,29 @@ $ ./bytomcli list-assets
 #### Multi-signature asset
 
 ```bash
-$ ./bytomcli create-asset silver 674b0d709c5c2f6eb49e5f205c4393e91f1fa745ff62954b67be546925480af57f12a20b2f963a489a71c61b40d5fa08e8c522c8f2d49eaa1213dcb0a4350afb db0abf717c37fb01cb89d06a01d087f24a15d07e99d297b3c02642c46166e2103a7525ec85a2c8050a02b5864fd295ee933c09ca341b296a55e0f804ecb9d9a3
+$ ./bytomcli create-asset SILVER d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb cb6057b683c5a341ea29e02ec5bb1e53691eb3b14c285138175d42b07d0551798977fc50203bde1dc2827a07f6f26237fa8ec3c6a2ef272ed80f9211f9c6ac64
 {
-  "alias": "silver",
+  "alias": "SILVER",
   "definition": {},
-  "id": "6465c855881d2add50769242c0e85e4c9ef5ba8b258e6933cb41fcbb17a88b26",
-  "issuance_program": "766baa207a40f1fa20149154b0c4092f151685cdf5a6bec93a8d5c9b00299730476436c6206b4bb7ee5bf3d4ab4a0c625d3dd36b42fbe21e3f3e6f972a6b0590de022960b55152ad696c00c0",
+  "id": "50cd5b0ecfdfe388fc0bc6b74df6becd94f1e52e1913a449a473bba87745fe30",
+  "issuance_program": "ae20936178877c2a3a2df9c3733e2ac6f7e99477314c54e214348abb0d4cbdace810208d064a125805493cb99be9c19ed6a356c97753fdfe52fade337fa598c3c59b8c5152ad",
   "keys": [
     {
       "asset_derivation_path": [
-        "000300000000000000"
+        "000200000000000000"
       ],
-      "asset_pubkey": "7a40f1fa20149154b0c4092f151685cdf5a6bec93a8d5c9b00299730476436c65434ac760f1b3ee35776e50ff13503079981c16263c2eaa4d3548b7cd936b533",
-      "root_xpub": "674b0d709c5c2f6eb49e5f205c4393e91f1fa745ff62954b67be546925480af57f12a20b2f963a489a71c61b40d5fa08e8c522c8f2d49eaa1213dcb0a4350afb"
+      "asset_pubkey": "936178877c2a3a2df9c3733e2ac6f7e99477314c54e214348abb0d4cbdace810f9ef97f8edd43707069426ff1ac1d2fe96d23c5e005ac5cb52be2a7de82d2a92",
+      "root_xpub": "cb6057b683c5a341ea29e02ec5bb1e53691eb3b14c285138175d42b07d0551798977fc50203bde1dc2827a07f6f26237fa8ec3c6a2ef272ed80f9211f9c6ac64"
     },
     {
       "asset_derivation_path": [
-        "000300000000000000"
+        "000200000000000000"
       ],
-      "asset_pubkey": "6b4bb7ee5bf3d4ab4a0c625d3dd36b42fbe21e3f3e6f972a6b0590de022960b5e70f2162d1a5314d140139da7947680289ad961e25266d5631b0de3732a547c3",
-      "root_xpub": "db0abf717c37fb01cb89d06a01d087f24a15d07e99d297b3c02642c46166e2103a7525ec85a2c8050a02b5864fd295ee933c09ca341b296a55e0f804ecb9d9a3"
+      "asset_pubkey": "8d064a125805493cb99be9c19ed6a356c97753fdfe52fade337fa598c3c59b8c4eb0b479d566c0efe72ab69f2273ab4b6a6dce9e1e3657839698be6c53e9d04a",
+      "root_xpub": "d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"
     }
   ],
-  "quorum": 1,
-  "tags": {}
+  "quorum": 1
 }
 ```
 
@@ -294,12 +281,19 @@ Every asset-related action is trigger via sending a transaction, which requires 
 
 ##### `build-transaction`
 
-Let's say, issue 10000 gold to alice:
+Let's say, issue 10000 GOLD to alice:
+```bash
+$ ./bytomcli create-account-receiver alice
+{
+  "address": "bm1q7s24rra4j05yhec9chry2c9trd6qa8gjr6cue3",
+  "control_program": "0014f415518fb593e84be705c5c64560ab1b740e9d12"
+}
+```
 
 ```bash
-$ ./bytomcli build-transaction -t issue alice gold 10000 --alias
+$ ./bytomcli build-transaction -t issue alice GOLD 10000 -a bm1q7s24rra4j05yhec9chry2c9trd6qa8gjr6cue3 --alias
 Template Type: issue
-{"allow_additional_actions":false,"local":true,"raw_transaction":"07010002019c01019901fb77ab11fafc5cf0446d552724aed272b71cfc7ac7d032d2b1de8890e482d0beffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80c0b1ca9412000130cd016ea069766baa2074615605ef8fd37176bb5a75ec3d51d080a2e3a5441e84e255a339ea9ee117805151ad696c00c0a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a000100012c00088fccd0ad39658582ab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60904e004f64eaa1cae4cf14f775251c5eb786376d2cf218e488dcea79826b9ce56d0a000000012b766baa20279bdb8c0925d3bbf27f3262e40567d176ade2a64ee0201217651f278a4133405151ad696c00c000020153ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80e6ecc09412012b766baa2017a127adf137d75730fa7098028204ea04e20a6ceb415961a6d0def86bc1015d5151ad696c00c00000014fab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60904e012b766baa201f7c723946d2a49af4e069b8df25c98d347d9e720e440a32131c07f7aecf930a5151ad696c00c0000000","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","4d00000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["000300000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]}]}
+{"allow_additional_actions":false,"raw_transaction":"070100020160015ee56e4d688e98160067fa25be520d3a5a90e63838b5ff6363997c7c9b962796daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8094ebdc030501160014f415518fb593e84be705c5c64560ab1b740e9d120100012c000887c3aad437888d0143e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397904e29000125ae2035b53ed466a40e3d1073ffdcf1c7d0c4ffc439391f9ef5999b365ea467c96a3c5151ad0002013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80baa6d30301160014c0c4fb15dd132be34e6dcaea3c38df1869ebcdbf00013a43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397904e01160014f415518fb593e84be705c5c64560ab1b740e9d1200","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","0200000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"},{"type":"data","value":"4dc1e7f4e9710378cb80f180e159005a5ca8934d68df6136b782fe08d23d7b0a"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["000100000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"}]}]}
 ```
 
 The response of `build-transaction` will be used in the following `sign-submit-transaction` command.
@@ -307,38 +301,47 @@ The response of `build-transaction` will be used in the following `sign-submit-t
 ##### `sign-submit-transaction`
 
 ```bash
-$ ./bytomcli sign-submit-transaction '{"allow_additional_actions":false,"local":true,"raw_transaction":"07010002019c01019901fb77ab11fafc5cf0446d552724aed272b71cfc7ac7d032d2b1de8890e482d0beffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80c0b1ca9412000130cd016ea069766baa2074615605ef8fd37176bb5a75ec3d51d080a2e3a5441e84e255a339ea9ee117805151ad696c00c0a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a000100012c00088fccd0ad39658582ab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60904e004f64eaa1cae4cf14f775251c5eb786376d2cf218e488dcea79826b9ce56d0a000000012b766baa20279bdb8c0925d3bbf27f3262e40567d176ade2a64ee0201217651f278a4133405151ad696c00c000020153ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80e6ecc09412012b766baa2017a127adf137d75730fa7098028204ea04e20a6ceb415961a6d0def86bc1015d5151ad696c00c00000014fab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60904e012b766baa201f7c723946d2a49af4e069b8df25c98d347d9e720e440a32131c07f7aecf930a5151ad696c00c0000000","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","4d00000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["000300000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]}]}'
+$ ./bytomcli sign-submit-transaction '{"allow_additional_actions":false,"raw_transaction":"070100020160015ee56e4d688e98160067fa25be520d3a5a90e63838b5ff6363997c7c9b962796daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8094ebdc030501160014f415518fb593e84be705c5c64560ab1b740e9d120100012c000887c3aad437888d0143e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397904e29000125ae2035b53ed466a40e3d1073ffdcf1c7d0c4ffc439391f9ef5999b365ea467c96a3c5151ad0002013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80baa6d30301160014c0c4fb15dd132be34e6dcaea3c38df1869ebcdbf00013a43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397904e01160014f415518fb593e84be705c5c64560ab1b740e9d1200","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","0200000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"},{"type":"data","value":"4dc1e7f4e9710378cb80f180e159005a5ca8934d68df6136b782fe08d23d7b0a"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["000100000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"}]}]}' -p 123 
+
 {
-  "txid": "69eb0c8f7622c350e0b253a55bfbdc2ec06a396ca488ea34a104696c6cf9adda"
+  "tx_id": "62fe1716f2b8fe012578a3a8f6b02bd2fa548fef5bba792ea78673e07b38198d"
 }
 ```
 
 When the transaction is on-chain, query the balances:
 
 ```bash
-# alice should have 10000 gold now
+# alice should have 10000 GOLD now
 $ ./bytomcli list-balances
 0 :
 {
-  "account_alias": "alice",
-  "account_id": "08FU3M22G0A02",
-  "amount": 10000,
-  "asset_alias": "gold",
-  "asset_id": "ab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60"
+  "account_alias": "default",
+  "account_id": "0CIT2D2O00A02",
+  "amount": 2098770000000,
+  "asset_alias": "BTM",
+  "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 }
 1 :
 {
   "account_alias": "alice",
-  "account_id": "08FU3M22G0A02",
-  "amount": 135408000000000,
-  "asset_alias": "btm",
+  "account_id": "0CIT3OI100A04",
+  "amount": 10000,
+  "asset_alias": "GOLD",
+  "asset_id": "43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397"
+}
+2 :
+{
+  "account_alias": "alice",
+  "account_id": "0CIT3OI100A04",
+  "amount": 4980000000,
+  "asset_alias": "BTM",
   "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 }
 ```
 
 #### Spend
 
-Alice pays Bob `<payment_amount>`, e.g., 1000, `gold`:
+Alice pays Bob `<payment_amount>`, e.g., 1000, `GOLD`:
 
 ##### `create-account-receiver`
 
@@ -347,8 +350,8 @@ Before you transfer an asset to another account, you have to know his `control_p
 ```bash
 $ ./bytomcli create-account-receiver bob
 {
-  "control_program": "766baa20510e0df72e4e01363fdb07d57b8417a19c6517aad8cd6129f495c52188c246f25151ad696c00c0",
-  "expires_at": "2018-02-01T17:55:10.895099+08:00"
+  "address": "bm1qhurffd3gqkc3pttqfqpsz8w04jnl5z97798tpt",
+  "control_program": "0014bf0694b62805b110ad604803011dcfaca7fa08be"
 }
 ```
 
@@ -356,19 +359,19 @@ $ ./bytomcli create-account-receiver bob
 
 ```bash
 # ./bytomcli build-transaction -t spend <sender_account> <asset> <amount> --alias -r <receiver_control_program>
-$ ./bytomcli build-transaction -t spend alice gold 1000 --alias -r 766baa2012ba2491f96011afe9ad1ad6423887b1f2b904e5e8185cdb47d14fb2f7aa19615151ad696c00c0
+$ ./bytomcli build-transaction -t spend alice GOLD 1000 --alias -r 0014bf0694b62805b110ad604803011dcfaca7fa08be
 Template Type: spend
-{"allow_additional_actions":false,"local":true,"raw_transaction":"07010002019d01019a01fb77ab11fafc5cf0446d552724aed272b71cfc7ac7d032d2b1de8890e482d0beffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80c0b1ca9412000131cd029301a069766baa2033400ee7b1c93955b4c6d9532141e1bca263c3f546f409b1b75984f2fe8a1ba05151ad696c00c0a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a0001000193010190011fd6fe88a17024f66671e32147fb42c6f8a8f48e7c3af1f7ff79df4d80388bf1ab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60904e01012b766baa201f7c723946d2a49af4e069b8df25c98d347d9e720e440a32131c07f7aecf930a5151ad696c00c0a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a000100030153ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80e6ecc09412012b766baa2018c27de38474915cd491bedd21625506629d1d09437536932f697d62663034e05151ad696c00c00000014fab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60a846012b766baa202b39e0425fab029c4dfa48dea8e17aa0a89eae22c1fe357d015b233d5facd0e05151ad696c00c00000014fab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60e807012b766baa2012ba2491f96011afe9ad1ad6423887b1f2b904e5e8185cdb47d14fb2f7aa19615151ad696c00c0000000","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","7501000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","6500000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]}]}
+{"allow_additional_actions":false,"raw_transaction":"070100020160015eba7bbf304b94623b1efb414845f701e64e6c63011984e65dcf214d560f505e28ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80baa6d3030001160014c0c4fb15dd132be34e6dcaea3c38df1869ebcdbf0100015d015bba7bbf304b94623b1efb414845f701e64e6c63011984e65dcf214d560f505e2843e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397904e0101160014f415518fb593e84be705c5c64560ab1b740e9d12010003013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80e0e1c903011600144457a5103dc682327fe2ef662f812dce3f97ffae00013a43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397a846011600147460e50dc0b0313d22796c899c28f795872b229600013a43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397e80701160014bf0694b62805b110ad604803011dcfaca7fa08be00","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","0300000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"},{"type":"data","value":"eef67105644a1f146ba313a7ea98ceac2534a9f4cf1aa3775b726476db9c3dc0"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","0200000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"},{"type":"data","value":"4dc1e7f4e9710378cb80f180e159005a5ca8934d68df6136b782fe08d23d7b0a"}]}]}
 ```
 
 ##### `sign-submit-transaction`
 
 ```bash
-$ ./bytomcli sign-submit-transaction '{"allow_additional_actions":false,"local":true,"raw_transaction":"07010002019d01019a01fb77ab11fafc5cf0446d552724aed272b71cfc7ac7d032d2b1de8890e482d0beffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80c0b1ca9412000131cd029301a069766baa2033400ee7b1c93955b4c6d9532141e1bca263c3f546f409b1b75984f2fe8a1ba05151ad696c00c0a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a0001000193010190011fd6fe88a17024f66671e32147fb42c6f8a8f48e7c3af1f7ff79df4d80388bf1ab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60904e01012b766baa201f7c723946d2a49af4e069b8df25c98d347d9e720e440a32131c07f7aecf930a5151ad696c00c0a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a000100030153ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80e6ecc09412012b766baa2018c27de38474915cd491bedd21625506629d1d09437536932f697d62663034e05151ad696c00c00000014fab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60a846012b766baa202b39e0425fab029c4dfa48dea8e17aa0a89eae22c1fe357d015b233d5facd0e05151ad696c00c00000014fab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60e807012b766baa2012ba2491f96011afe9ad1ad6423887b1f2b904e5e8185cdb47d14fb2f7aa19615151ad696c00c0000000","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","7501000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","6500000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]}]}'
+$ ./bytomcli sign-submit-transaction '{"allow_additional_actions":false,"raw_transaction":"070100020160015eba7bbf304b94623b1efb414845f701e64e6c63011984e65dcf214d560f505e28ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80baa6d3030001160014c0c4fb15dd132be34e6dcaea3c38df1869ebcdbf0100015d015bba7bbf304b94623b1efb414845f701e64e6c63011984e65dcf214d560f505e2843e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397904e0101160014f415518fb593e84be705c5c64560ab1b740e9d12010003013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80e0e1c903011600144457a5103dc682327fe2ef662f812dce3f97ffae00013a43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397a846011600147460e50dc0b0313d22796c899c28f795872b229600013a43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397e80701160014bf0694b62805b110ad604803011dcfaca7fa08be00","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","0300000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"},{"type":"data","value":"eef67105644a1f146ba313a7ea98ceac2534a9f4cf1aa3775b726476db9c3dc0"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","0200000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"},{"type":"data","value":"4dc1e7f4e9710378cb80f180e159005a5ca8934d68df6136b782fe08d23d7b0a"}]}]}'
 
 
 {
-  "txid": "a07a2289682d66de2affd7d2aa5bb4420171a2c4edb91d6bada3021af2214872"
+  "txid": "3bf01bd21d7bbf3eb1c6e27e5646be1c4a7bd5602125eebf28f430246b08c226"
 }
 ```
 
@@ -376,27 +379,35 @@ $ ./bytomcli sign-submit-transaction '{"allow_additional_actions":false,"local":
 $./bytomcli list-balances
 0 :
 {
-  "account_alias": "alice",
-  "account_id": "08FU3M22G0A02",
-  "amount": 9000,
-  "asset_alias": "gold",
-  "asset_id": "ab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60"
+  "account_alias": "default",
+  "account_id": "0CIT2D2O00A02",
+  "amount": 2758790000000,
+  "asset_alias": "BTM",
+  "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 }
 1 :
 {
   "account_alias": "alice",
-  "account_id": "08FU3M22G0A02",
-  "amount": 310752000000000,
-  "asset_alias": "btm",
-  "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  "account_id": "0CIT3OI100A04",
+  "amount": 9000,
+  "asset_alias": "GOLD",
+  "asset_id": "43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397"
 }
 2 :
 {
+  "account_alias": "alice",
+  "account_id": "0CIT3OI100A04",
+  "amount": 4960000000,
+  "asset_alias": "BTM",
+  "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+}
+3 :
+{
   "account_alias": "bob",
-  "account_id": "08FU3U04G0A04",
+  "account_id": "0CITLN2KG0A08",
   "amount": 1000,
-  "asset_alias": "gold",
-  "asset_id": "ab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60"
+  "asset_alias": "GOLD",
+  "asset_id": "43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397"
 }
 ```
 
@@ -404,17 +415,17 @@ $./bytomcli list-balances
 
 ```bash
 # ./bytomcli build-transaction -t spend <sender_account> <asset> <amount> --alias -r <receiver_control_program>
-$ ./bytomcli build-transaction -t spend alice btm 100000000000 --alias -r 766baa2012ba2491f96011afe9ad1ad6423887b1f2b904e5e8185cdb47d14fb2f7aa19615151ad696c00c0
+$ ./bytomcli build-transaction -t spend alice BTM 1000000000 --alias -r 0014bf0694b62805b110ad604803011dcfaca7fa08be
 Template Type: spend
-{"allow_additional_actions":false,"local":true,"raw_transaction":"07010002019d01019a01fb77ab11fafc5cf0446d552724aed272b71cfc7ac7d032d2b1de8890e482d0beffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80c0b1ca9412000131cd02d601a069766baa20b06f9f698226dd2ba4e6d9db2d32db68ce3c9b2a35ad5b5570d2159e01d394af5151ad696c00c0a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a000100019d01019a01fb77ab11fafc5cf0446d552724aed272b71cfc7ac7d032d2b1de8890e482d0beffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80c0b1ca9412000131cd024801a069766baa2068ea529208b33a5294ee96f7ee0ce43609addd7a89f1b4c0ed1ded25841948d15151ad696c00c0a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a000100030153ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80e6ecc09412012b766baa20c37b4dfcabed2ef74fb05122f10729629c15b71914d151730f933e5a4d4a271d5151ad696c00c000000153ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80f0d586a00f012b766baa206e58e27b81bef8c5c993491859ee35572515ad048db8147146ed590ac95c1daa5151ad696c00c000000153ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80d0dbc3f402012b766baa2012ba2491f96011afe9ad1ad6423887b1f2b904e5e8185cdb47d14fb2f7aa19615151ad696c00c0000000","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","ba01000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","2901000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]}]}
+{"allow_additional_actions":false,"raw_transaction":"070100020160015ee56e4d688e98160067fa25be520d3a5a90e63838b5ff6363997c7c9b962796daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8094ebdc030201160014f415518fb593e84be705c5c64560ab1b740e9d1201000160015e5685c051b6a7f1631e0505ea99a61997c1b8322148321eb864435c8516a5a8eaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80e0e1c90300011600144457a5103dc682327fe2ef662f812dce3f97ffae010002013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80869dc003011600146026f938bbcf6b6b90eb9d8fbb8c1725e0ae3d0b00013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8094ebdc0301160014bf0694b62805b110ad604803011dcfaca7fa08be00","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","0200000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"},{"type":"data","value":"4dc1e7f4e9710378cb80f180e159005a5ca8934d68df6136b782fe08d23d7b0a"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","0400000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"},{"type":"data","value":"2cfbc821a459ef53b9ee4a170b735e54f968f239bf9155712f4b88256f97d54a"}]}]}
 ```
 
 ```bash
-$ ./bytomcli sign-submit-transaction '{"allow_additional_actions":false,"local":true,"raw_transaction":"07010002019d01019a01fb77ab11fafc5cf0446d552724aed272b71cfc7ac7d032d2b1de8890e482d0beffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80c0b1ca9412000131cd02d601a069766baa20b06f9f698226dd2ba4e6d9db2d32db68ce3c9b2a35ad5b5570d2159e01d394af5151ad696c00c0a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a000100019d01019a01fb77ab11fafc5cf0446d552724aed272b71cfc7ac7d032d2b1de8890e482d0beffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80c0b1ca9412000131cd024801a069766baa2068ea529208b33a5294ee96f7ee0ce43609addd7a89f1b4c0ed1ded25841948d15151ad696c00c0a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a000100030153ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80e6ecc09412012b766baa20c37b4dfcabed2ef74fb05122f10729629c15b71914d151730f933e5a4d4a271d5151ad696c00c000000153ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80f0d586a00f012b766baa206e58e27b81bef8c5c993491859ee35572515ad048db8147146ed590ac95c1daa5151ad696c00c000000153ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80d0dbc3f402012b766baa2012ba2491f96011afe9ad1ad6423887b1f2b904e5e8185cdb47d14fb2f7aa19615151ad696c00c0000000","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","ba01000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","2901000000000000"],"xpub":"f6f2a78fa8242bf09d073af8c0272272d4b53b3f8469ec2906fe9eae513bd7236653f4227aec2bafc6a301a35dda53e824ae7d4f7db25f83d4666d6e3e30628f"}],"quorum":1,"signatures":null,"type":"signature"}]}]}'
+$ ./bytomcli sign-submit-transaction '{"allow_additional_actions":false,"raw_transaction":"070100020160015ee56e4d688e98160067fa25be520d3a5a90e63838b5ff6363997c7c9b962796daffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8094ebdc030201160014f415518fb593e84be705c5c64560ab1b740e9d1201000160015e5685c051b6a7f1631e0505ea99a61997c1b8322148321eb864435c8516a5a8eaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80e0e1c90300011600144457a5103dc682327fe2ef662f812dce3f97ffae010002013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80869dc003011600146026f938bbcf6b6b90eb9d8fbb8c1725e0ae3d0b00013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8094ebdc0301160014bf0694b62805b110ad604803011dcfaca7fa08be00","signing_instructions":[{"position":0,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","0200000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"},{"type":"data","value":"4dc1e7f4e9710378cb80f180e159005a5ca8934d68df6136b782fe08d23d7b0a"}]},{"position":1,"witness_components":[{"keys":[{"derivation_path":["010100000000000000","0400000000000000"],"xpub":"d91df216da6c5641ef454c8da1e56362f86ed80d8b8fc26ab77746e1b92d6d3aa8023fe300e4c74036460d01349e4eb25cb3d7379bad855879017bc1c76165bb"}],"quorum":1,"signatures":null,"type":"raw_tx_signature"},{"type":"data","value":"2cfbc821a459ef53b9ee4a170b735e54f968f239bf9155712f4b88256f97d54a"}]}]}' -p 123
 
 
 {
-  "txid": "91a265de33ffd709bb7135bd6c7a0e4e487e771d553a07f0b5513185ee79d3e0"
+  "tx_id": "1c84c8d8dae7675114f9de970e221ec9e07e1787f6e72ac6e95a03fced7d22cb"
 }
 ```
 
@@ -422,34 +433,42 @@ $ ./bytomcli sign-submit-transaction '{"allow_additional_actions":false,"local":
 $ ./bytomcli list-balances
 0 :
 {
-  "account_alias": "alice",
-  "account_id": "08FU3M22G0A02",
-  "amount": 9000,
-  "asset_alias": "gold",
-  "asset_id": "ab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60"
+  "account_alias": "default",
+  "account_id": "0CIT2D2O00A02",
+  "amount": 3212560000000,
+  "asset_alias": "BTM",
+  "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 }
 1 :
 {
   "account_alias": "alice",
-  "account_id": "08FU3M22G0A02",
-  "amount": 530924000000000,
-  "asset_alias": "btm",
-  "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  "account_id": "0CIT3OI100A04",
+  "amount": 9000,
+  "asset_alias": "GOLD",
+  "asset_id": "43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397"
 }
 2 :
 {
-  "account_alias": "bob",
-  "account_id": "08FU3U04G0A04",
-  "amount": 1000,
-  "asset_alias": "gold",
-  "asset_id": "ab9df804775507462b17cdcdf101feb2ab4fc049092e8557a3a70a67cc2f0d60"
+  "account_alias": "alice",
+  "account_id": "0CIT3OI100A04",
+  "amount": 3940000000,
+  "asset_alias": "BTM",
+  "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 }
 3 :
 {
   "account_alias": "bob",
-  "account_id": "08FU3U04G0A04",
-  "amount": 100000000000,
-  "asset_alias": "btm",
+  "account_id": "0CITLN2KG0A08",
+  "amount": 1000,
+  "asset_alias": "GOLD",
+  "asset_id": "43e89d8a5d8f4bb2fcd92621ace61d476c8237075ada6a9e80db931bbdb6c397"
+}
+4 :
+{
+  "account_alias": "bob",
+  "account_id": "0CITLN2KG0A08",
+  "amount": 1000000000,
+  "asset_alias": "BTM",
   "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 }
 ```

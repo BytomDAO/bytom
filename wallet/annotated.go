@@ -35,7 +35,7 @@ func annotateTxsAsset(w *Wallet, txs []*query.AnnotatedTx) {
 }
 
 func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
-	definitionByte := w.DB.Get(asset.CalcExtAssetKey(assetID))
+	definitionByte := w.DB.Get(asset.ExtAssetKey(assetID))
 	if definitionByte == nil {
 		return nil
 	}
@@ -45,24 +45,18 @@ func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
 		return nil
 	}
 
-	saveAlias := assetID.String()
-	storeBatch := w.DB.NewBatch()
-
+	alias := assetID.String()
 	externalAsset := &asset.Asset{
 		AssetID:           *assetID,
-		Alias:             &saveAlias,
+		Alias:             &alias,
 		DefinitionMap:     definitionMap,
 		RawDefinitionByte: definitionByte,
 		Signer:            &signers.Signer{Type: "external"},
 	}
 
-	if rawAsset, err := json.Marshal(externalAsset); err == nil {
-		log.WithFields(log.Fields{"assetID": assetID.String(), "alias": saveAlias}).Info("index external asset")
-		storeBatch.Set(asset.Key(assetID), rawAsset)
+	if err := w.AssetReg.SaveAsset(externalAsset, alias); err != nil {
+		log.WithFields(log.Fields{"err": err, "assetID": alias}).Warning("fail on save external asset to internal asset DB")
 	}
-	storeBatch.Set(asset.AliasKey(saveAlias), []byte(assetID.String()))
-	storeBatch.Write()
-
 	return definitionByte
 }
 
@@ -147,7 +141,7 @@ func getAccountFromACP(program []byte, walletDB db.DB) (*account.Account, error)
 
 	sha3pool.Sum256(hash[:], program)
 
-	rawProgram := walletDB.Get(account.CPKey(hash))
+	rawProgram := walletDB.Get(account.ContractKey(hash))
 	if rawProgram == nil {
 		return nil, fmt.Errorf("failed get account control program:%x ", hash)
 	}
@@ -187,6 +181,7 @@ func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statu
 		Inputs:                 make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
 		StatusFail:             statusFail,
+		Size:                   orig.SerializedSize,
 	}
 	for i := range orig.Inputs {
 		tx.Inputs = append(tx.Inputs, w.BuildAnnotatedInput(orig, uint32(i)))
@@ -241,7 +236,7 @@ func (w *Wallet) getAddressFromControlProgram(prog []byte) string {
 }
 
 func buildP2PKHAddress(pubHash []byte) string {
-	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.MainNetParams)
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
 	if err != nil {
 		return ""
 	}
@@ -250,7 +245,7 @@ func buildP2PKHAddress(pubHash []byte) string {
 }
 
 func buildP2SHAddress(scriptHash []byte) string {
-	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.MainNetParams)
+	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
 	if err != nil {
 		return ""
 	}

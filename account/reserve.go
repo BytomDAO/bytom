@@ -52,6 +52,7 @@ type UTXO struct {
 	Address             string
 	ControlProgramIndex uint64
 	ValidHeight         uint64
+	Change              bool
 }
 
 func (u *UTXO) source() source {
@@ -95,9 +96,11 @@ func newReserver(c *protocol.Chain, walletdb dbm.DB) *reserver {
 // reserver ensures idempotency of reservations until the reservation
 // expiration.
 type reserver struct {
+	// `sync/atomic` expects the first word in an allocated struct to be 64-bit
+	// aligned on both ARM and x86-32. See https://goo.gl/zW7dgq for more details.
+	nextReservationID uint64
 	c                 *protocol.Chain
 	db                dbm.DB
-	nextReservationID uint64
 	idempotency       idempotency.Group
 
 	reservationsMu sync.Mutex

@@ -14,21 +14,16 @@ import (
 func init() {
 	createAssetCmd.PersistentFlags().IntVarP(&assetQuorum, "quorom", "q", 1, "quorum must be greater than 0 and less than or equal to the number of signers")
 	createAssetCmd.PersistentFlags().StringVarP(&assetToken, "access", "a", "", "access token")
-	createAssetCmd.PersistentFlags().StringVarP(&assetTags, "tags", "t", "", "tags")
 	createAssetCmd.PersistentFlags().StringVarP(&assetDefiniton, "definition", "d", "", "definition for the asset")
-
-	updateAssetTagsCmd.PersistentFlags().StringVarP(&assetUpdateTags, "tags", "t", "", "tags to add, delete or update")
 
 	listAssetsCmd.PersistentFlags().StringVar(&assetID, "id", "", "ID of asset")
 }
 
 var (
-	assetID         = ""
-	assetQuorum     = 1
-	assetToken      = ""
-	assetTags       = ""
-	assetDefiniton  = ""
-	assetUpdateTags = ""
+	assetID        = ""
+	assetQuorum    = 1
+	assetToken     = ""
+	assetDefiniton = ""
 )
 
 var createAssetCmd = &cobra.Command{
@@ -52,15 +47,6 @@ var createAssetCmd = &cobra.Command{
 		ins.Alias = args[0]
 		ins.AccessToken = assetToken
 
-		if len(assetTags) != 0 {
-			tags := strings.Split(assetTags, ":")
-			if len(tags) != 2 {
-				jww.ERROR.Println("Invalid tags")
-				os.Exit(util.ErrLocalExe)
-			}
-			ins.Tags = map[string]interface{}{tags[0]: tags[1]}
-		}
-
 		if len(assetDefiniton) != 0 {
 			definition := strings.Split(assetDefiniton, ":")
 			if len(definition) != 2 {
@@ -71,6 +57,24 @@ var createAssetCmd = &cobra.Command{
 		}
 
 		data, exitCode := util.ClientCall("/create-asset", &ins)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
+var getAssetCmd = &cobra.Command{
+	Use:   "get-asset <assetID>",
+	Short: "get asset by assetID",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		filter := struct {
+			ID string `json:"id"`
+		}{ID: args[0]}
+
+		data, exitCode := util.ClientCall("/get-asset", &filter)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
@@ -97,46 +101,15 @@ var listAssetsCmd = &cobra.Command{
 	},
 }
 
-var updateAssetTagsCmd = &cobra.Command{
-	Use:   "update-asset-tags <assetID|alias>",
-	Short: "Update the asset tags",
-	Args:  cobra.ExactArgs(1),
-	PreRun: func(cmd *cobra.Command, args []string) {
-		cmd.MarkFlagRequired("tags")
-	},
-	Run: func(cmd *cobra.Command, args []string) {
-		var updateTag = struct {
-			AssetInfo string                 `json:"asset_info"`
-			Tags      map[string]interface{} `json:"tags"`
-		}{}
-
-		if len(assetUpdateTags) != 0 {
-			tags := strings.Split(assetUpdateTags, ":")
-			if len(tags) != 2 {
-				jww.ERROR.Println("Invalid tags")
-				os.Exit(util.ErrLocalExe)
-			}
-			updateTag.Tags = map[string]interface{}{tags[0]: tags[1]}
-		}
-
-		updateTag.AssetInfo = args[0]
-		if _, exitCode := util.ClientCall("/update-asset-tags", &updateTag); exitCode != util.Success {
-			os.Exit(exitCode)
-		}
-
-		jww.FEEDBACK.Println("Successfully update asset tags")
-	},
-}
-
 var updateAssetAliasCmd = &cobra.Command{
-	Use:   "update-asset-alias <oldAlias> <newAlias>",
+	Use:   "update-asset-alias <assetID> <newAlias>",
 	Short: "Update the asset alias",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		var updateAlias = struct {
-			OldAlias string `json:"old_alias"`
-			NewAlias string `json:"new_alias"`
-		}{OldAlias: args[0], NewAlias: args[1]}
+			ID       string `json:"id"`
+			NewAlias string `json:"alias"`
+		}{ID: args[0], NewAlias: args[1]}
 
 		if _, exitCode := util.ClientCall("/update-asset-alias", &updateAlias); exitCode != util.Success {
 			os.Exit(exitCode)

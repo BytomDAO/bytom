@@ -19,6 +19,7 @@ type AnnotatedTx struct {
 	Inputs                 []*AnnotatedInput  `json:"inputs"`
 	Outputs                []*AnnotatedOutput `json:"outputs"`
 	StatusFail             bool               `json:"status_fail"`
+	Size                   uint64             `json:"size"`
 }
 
 //AnnotatedInput means an annotated transaction input.
@@ -55,12 +56,11 @@ type AnnotatedOutput struct {
 
 //AnnotatedAccount means an annotated account.
 type AnnotatedAccount struct {
-	ID       string           `json:"id"`
-	Alias    string           `json:"alias,omitempty"`
-	XPubs    []chainkd.XPub   `json:"xpubs"`
-	Quorum   int              `json:"quorum"`
-	Tags     *json.RawMessage `json:"tags"`
-	KeyIndex uint64           `json:"key_index"`
+	ID       string         `json:"id"`
+	Alias    string         `json:"alias,omitempty"`
+	XPubs    []chainkd.XPub `json:"xpubs"`
+	Quorum   int            `json:"quorum"`
+	KeyIndex uint64         `json:"key_index"`
 }
 
 //AnnotatedAsset means an annotated asset.
@@ -71,7 +71,6 @@ type AnnotatedAsset struct {
 	Keys            []*AssetKey        `json:"keys"`
 	Quorum          int                `json:"quorum"`
 	Definition      *json.RawMessage   `json:"definition"`
-	Tags            *json.RawMessage   `json:"tags"`
 }
 
 //AssetKey means an asset key.
@@ -81,6 +80,7 @@ type AssetKey struct {
 	AssetDerivationPath []chainjson.HexBytes `json:"asset_derivation_path"`
 }
 
+//AnnotatedUTXO means an annotated utxo.
 type AnnotatedUTXO struct {
 	Alias               string `json:"account_alias"`
 	OutputID            string `json:"id"`
@@ -94,4 +94,5 @@ type AnnotatedUTXO struct {
 	SourceID            string `json:"source_id"`
 	SourcePos           uint64 `json:"source_pos"`
 	ValidHeight         uint64 `json:"valid_height"`
+	Change              bool   `json:"change"`
 }

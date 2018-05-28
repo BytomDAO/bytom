@@ -82,12 +82,22 @@ func (sm *SyncManager) synchronise() {
 		return
 	}
 	defer atomic.StoreInt32(&sm.synchronising, 0)
+	for len(sm.dropPeerCh) > 0 {
+		<-sm.dropPeerCh
+	}
 
 	peer, bestHeight := sm.peers.BestPeer()
 	// Short circuit if no peers are available
 	if peer == nil {
 		return
 	}
+
+	if ok := sm.Switch().Peers().Has(peer.Key); !ok {
+		log.Info("Peer disconnected")
+		sm.sw.StopPeerGracefully(peer)
+		return
+	}
+
 	if bestHeight > sm.chain.BestBlockHeight() {
 		log.Info("sync peer:", peer.Addr(), " height:", bestHeight)
 		sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
@@ -119,7 +129,7 @@ func (sm *SyncManager) txsyncLoop() {
 		// Remove the transactions that will be sent.
 		s.txs = s.txs[:copy(s.txs, s.txs[len(pack.txs):])]
 		if len(s.txs) == 0 {
-			delete(pending, s.p.Key)
+			delete(pending, s.p.swPeer.Key)
 		}
 		// Send the pack in the background.
 		log.Info("Sending batch of transactions. ", "count:", len(pack.txs), " bytes:", size)
@@ -144,7 +154,7 @@ func (sm *SyncManager) txsyncLoop() {
 	for {
 		select {
 		case s := <-sm.txSyncCh:
-			pending[s.p.Key] = s
+			pending[s.p.swPeer.Key] = s
 			if !sending {
 				send(s)
 			}
@@ -153,7 +163,7 @@ func (sm *SyncManager) txsyncLoop() {
 			// Stop tracking peers that cause send failures.
 			if err != nil {
 				log.Info("Transaction send failed", "err", err)
-				delete(pending, pack.p.Key)
+				delete(pending, pack.p.swPeer.Key)
 			}
 			// Schedule the next send.
 			if s := pick(); s != nil {
