@@ -188,8 +188,6 @@ func (a *API) buildHandler() {
 
 		m.Handle("/build-transaction", jsonHandler(a.build))
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
-		m.Handle("/submit-transaction", jsonHandler(a.submit))
-		m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
 
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
@@ -216,6 +214,9 @@ func (a *API) buildHandler() {
 	m.Handle("/update-transaction-feed", jsonHandler(a.updateTxFeed))
 	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
 	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
+
+	m.Handle("/submit-transaction", jsonHandler(a.submit))
+	m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
 
 	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
 	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
