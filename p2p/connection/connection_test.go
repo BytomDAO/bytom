@@ -22,7 +22,7 @@ func createMConnection(conn net.Conn) *MConnection {
 
 func createMConnectionWithCallbacks(conn net.Conn, onReceive func(chID byte, msgBytes []byte), onError func(r interface{})) *MConnection {
 	chDescs := []*ChannelDescriptor{&ChannelDescriptor{ID: 0x01, Priority: 1, SendQueueCapacity: 1}}
-	c := NewMConnection(conn, chDescs, onReceive, onError)
+	c := NewMConnectionWithConfig(conn, chDescs, onReceive, onError, DefaultMConnConfig())
 	c.SetLogger(log.TestingLogger())
 	return c
 }
@@ -90,23 +90,6 @@ func TestMConnectionReceive(t *testing.T) {
 	case <-time.After(500 * time.Millisecond):
 		t.Fatalf("Did not receive %s message in 500ms", msg)
 	}
-}
-
-func TestMConnectionStatus(t *testing.T) {
-	assert, require := assert.New(t), require.New(t)
-
-	server, client := net.Pipe()
-	defer server.Close()
-	defer client.Close()
-
-	mconn := createMConnection(client)
-	_, err := mconn.Start()
-	require.Nil(err)
-	defer mconn.Stop()
-
-	status := mconn.Status()
-	assert.NotNil(status)
-	assert.Zero(status.Channels[0].SendQueueSize)
 }
 
 func TestMConnectionStopsAndReturnsError(t *testing.T) {
