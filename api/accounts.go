@@ -85,15 +85,11 @@ type addressResp struct {
 	AccountID    string `json:"account_id"`
 	Address      string `json:"address"`
 	Change       bool   `json:"change"`
+	KeyIndex     uint64 `json:"-"`
 }
 
-type addressRespIndex struct {
-	KeyIndex    uint64
-	AddressResp addressResp
-}
-
-// SortByIndex implements sort.Interface for addressRespIndex slices
-type SortByIndex []addressRespIndex
+// SortByIndex implements sort.Interface for addressResp slices
+type SortByIndex []addressResp
 
 func (a SortByIndex) Len() int           { return len(a) }
 func (a SortByIndex) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
@@ -124,30 +120,21 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	addressRespIndexes := []addressRespIndex{}
+	addresses := []addressResp{}
 	for _, cp := range cps {
 		if cp.Address == "" || cp.AccountID != target.ID {
 			continue
 		}
-
-		addressIndex := addressRespIndex{
-			KeyIndex: cp.KeyIndex,
-			AddressResp: addressResp{
-				AccountAlias: target.Alias,
-				AccountID:    cp.AccountID,
-				Address:      cp.Address,
-				Change:       cp.Change,
-			},
-		}
-		addressRespIndexes = append(addressRespIndexes, addressIndex)
+		addresses = append(addresses, addressResp{
+			AccountAlias: target.Alias,
+			AccountID:    cp.AccountID,
+			Address:      cp.Address,
+			Change:       cp.Change,
+			KeyIndex:     cp.KeyIndex,
+		})
 	}
 
 	// sort AddressResp by KeyIndex
-	addresses := []addressResp{}
-	sort.Sort(SortByIndex(addressRespIndexes))
-	for _, addr := range addressRespIndexes {
-		addresses = append(addresses, addr.AddressResp)
-	}
-
+	sort.Sort(SortByIndex(addresses))
 	return NewSuccessResponse(addresses)
 }
