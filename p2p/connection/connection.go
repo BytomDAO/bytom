@@ -118,7 +118,7 @@ func NewMConnectionWithConfig(conn net.Conn, chDescs []*ChannelDescriptor, onRec
 		sendMonitor: flow.New(0, 0),
 		recvMonitor: flow.New(0, 0),
 		send:        make(chan struct{}, 1),
-		pong:        make(chan struct{}),
+		pong:        make(chan struct{}, 1),
 		channelsIdx: map[byte]*channel{},
 		channels:    []*channel{},
 		onReceive:   onReceive,
@@ -268,7 +268,10 @@ func (c *MConnection) recvRoutine() {
 		switch pktType {
 		case packetTypePing:
 			log.Debug("receive Ping")
-			c.pong <- struct{}{}
+			select {
+			case c.pong <- struct{}{}:
+			default:
+			}
 
 		case packetTypePong:
 			log.Debug("receive Pong")
