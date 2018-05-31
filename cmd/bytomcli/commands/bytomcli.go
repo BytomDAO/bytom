@@ -128,6 +128,9 @@ func AddCommands() {
 
 	BytomcliCmd.AddCommand(getUnconfirmedTransactionCmd)
 	BytomcliCmd.AddCommand(listUnconfirmedTransactionsCmd)
+
+	BytomcliCmd.AddCommand(getMemPoolTransactionCmd)
+	BytomcliCmd.AddCommand(listMemPoolTransactionsCmd)
 	BytomcliCmd.AddCommand(decodeRawTransactionCmd)
 
 	BytomcliCmd.AddCommand(listUnspentOutputsCmd)

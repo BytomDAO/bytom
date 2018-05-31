@@ -30,6 +30,8 @@ func init() {
 	listTransactionsCmd.PersistentFlags().StringVar(&txID, "id", "", "transaction id")
 	listTransactionsCmd.PersistentFlags().StringVar(&account, "account_id", "", "account id")
 	listTransactionsCmd.PersistentFlags().BoolVar(&detail, "detail", false, "list transactions details")
+
+	listUnconfirmedTransactionsCmd.PersistentFlags().StringVar(&account, "account_id", "", "account id")
 }
 
 var (
@@ -366,7 +368,49 @@ var listUnconfirmedTransactionsCmd = &cobra.Command{
 	Short: "list unconfirmed transactions hashes",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/list-unconfirmed-transactions")
+		filter := struct {
+			AccountID string `json:"account_id"`
+		}{AccountID: account}
+
+		data, exitCode := util.ClientCall("/list-unconfirmed-transactions", &filter)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
+var getMemPoolTransactionCmd = &cobra.Command{
+	Use:   "get-mempool-transaction <hash>",
+	Short: "get mempool transaction by matching the given transaction hash",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		txID, err := hex.DecodeString(args[0])
+		if err != nil {
+			jww.ERROR.Println(err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		txInfo := &struct {
+			TxID chainjson.HexBytes `json:"tx_id"`
+		}{TxID: txID}
+
+		data, exitCode := util.ClientCall("/get-mempool-transaction", txInfo)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
+var listMemPoolTransactionsCmd = &cobra.Command{
+	Use:   "list-mempool-transactions",
+	Short: "list mempool transactions hashes",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		data, exitCode := util.ClientCall("/list-mempool-transactions")
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}

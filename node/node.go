@@ -124,6 +124,19 @@ func NewNode(config *cfg.Config) *Node {
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 
 	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, newBlockCh)
+	go func() {
+		newTxCh := txPool.GetNewTxCh()
+		for {
+			select {
+			case newTx := <-newTxCh:
+				syncManager.SetTxCh(newTx)
+				if wallet != nil {
+					wallet.SetTxCh(newTx)
+				}
+			default:
+			}
+		}
+	}()
 
 	// run the profile server
 	profileHost := config.ProfListenAddress

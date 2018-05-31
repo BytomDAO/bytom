@@ -192,6 +192,9 @@ func (a *API) buildHandler() {
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
 
+		m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
+		m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
+
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
 
@@ -218,8 +221,8 @@ func (a *API) buildHandler() {
 	m.Handle("/submit-transaction", jsonHandler(a.submit))
 	m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
 
-	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
-	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
+	m.Handle("/get-mempool-transaction", jsonHandler(a.getMemPoolTx))
+	m.Handle("/list-mempool-transactions", jsonHandler(a.listMemPoolTxs))
 	m.Handle("/decode-raw-transaction", jsonHandler(a.decodeRawTransaction))
 
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
