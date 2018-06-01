@@ -124,6 +124,8 @@ func NewNode(config *cfg.Config) *Node {
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 
 	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, newBlockCh)
+
+	// get transaction from txPool and send it to syncManager and wallet
 	go func() {
 		newTxCh := txPool.GetNewTxCh()
 		for {

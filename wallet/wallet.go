@@ -61,6 +61,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	go w.walletUpdater()
+	go w.walletTxPoolUpdater()
 
 	return w, nil
 }
@@ -152,7 +153,7 @@ func (w *Wallet) walletUpdater() {
 			}
 
 			if err := w.DetachBlock(block); err != nil {
-				log.WithField("err", err).Error("walletUpdater detachBlock")
+				log.WithField("err", err).Error("walletUpdater detachBlock stop")
 				return
 			}
 		}
@@ -164,13 +165,9 @@ func (w *Wallet) walletUpdater() {
 		}
 
 		if err := w.AttachBlock(block); err != nil {
-			log.WithField("err", err).Error("walletUpdater stop")
+			log.WithField("err", err).Error("walletUpdater AttachBlock stop")
 			return
 		}
-
-		// rescan txpool transaction and delete unconfirmed transactions from database
-		txIDs := w.RescanWalletTxPool()
-		w.DeleteUnconfirmedTxs(txIDs)
 	}
 }
 
@@ -189,10 +186,25 @@ func (w *Wallet) getRescanNotification() {
 		block, _ := w.chain.GetBlockByHeight(0)
 		w.status.WorkHash = bc.Hash{}
 		w.AttachBlock(block)
-	case newTx := <-w.txCh:
-		w.SaveUnconfirmedTx(newTx)
 	default:
-		return
+		//return
+	}
+}
+
+func (w *Wallet) walletTxPoolUpdater() {
+	for {
+		// rescan txpool transaction and delete unconfirmed transactions from database
+		txIDs := w.RescanWalletTxPool()
+		if err := w.DeleteUnconfirmedTxs(txIDs); err != nil {
+			log.WithField("err", err).Error("DeleteUnconfirmedTxs unmarshal error")
+			return
+		}
+
+		select {
+		case newTx := <-w.txCh:
+			w.SaveUnconfirmedTx(newTx)
+		default:
+		}
 	}
 }
 
