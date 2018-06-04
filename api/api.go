@@ -233,9 +233,9 @@ func (a *API) buildHandler() {
 	m.Handle("/set-mining", jsonHandler(a.setMining))
 
 	m.Handle("/get-work", jsonHandler(a.getWork))
-	m.Handle("/get-work-json", jsonHandler(a.getWork))
+	m.Handle("/get-work-json", jsonHandler(a.getWorkJSON))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
-	m.Handle("/submit-work-json", jsonHandler(a.submitWork))
+	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/decode-program", jsonHandler(a.decodeProgram))

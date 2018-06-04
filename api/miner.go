@@ -16,12 +16,27 @@ func (a *API) getWork() Response {
 	return NewSuccessResponse(work)
 }
 
+func (a *API) getWorkJSON() Response {
+	work, err := a.GetWork()
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(work)
+}
+
 // SubmitWorkReq used to submitWork req
 type SubmitWorkReq struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
 }
 
 func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
+	if err := a.SubmitWork(req.BlockHeader); err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(true)
+}
+
+func (a *API) submitWorkJSON(ctx context.Context, req *SubmitWorkReq) Response {
 	if err := a.SubmitWork(req.BlockHeader); err != nil {
 		return NewErrorResponse(err)
 	}
