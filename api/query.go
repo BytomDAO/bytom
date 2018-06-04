@@ -127,7 +127,7 @@ func (a *API) listUnconfirmedTxs(ctx context.Context, filter struct {
 	transactions := []*query.AnnotatedTx{}
 	var err error
 
-	transactions, err = a.wallet.GetUnconfirmedTxsByAccountID(filter.AccountID)
+	transactions, err = a.wallet.GetUnconfirmedTxs(filter.AccountID)
 	if err != nil {
 		log.Errorf("listTransactions: %v", err)
 		return NewErrorResponse(err)

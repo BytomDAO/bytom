@@ -103,9 +103,10 @@ func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error)
 	return annotatedTx, nil
 }
 
-// GetUnconfirmedTxsByAccountID get account unconfirmed txs by account ID
-func (w *Wallet) GetUnconfirmedTxsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
+// GetUnconfirmedTxs get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
+func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
+	annotatedAccTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(unconfirmedTxPrefix))
 	defer txIter.Release()
@@ -115,15 +116,14 @@ func (w *Wallet) GetUnconfirmedTxsByAccountID(accountID string) ([]*query.Annota
 			return nil, err
 		}
 
-		if accountID == "" {
-			annotatedTxs = append(annotatedTxs, annotatedTx)
-			continue
-		}
-
-		if findTransactionsByAccount(annotatedTx, accountID) {
-			annotatedTxs = append(annotatedTxs, annotatedTx)
+		annotatedTxs = append(annotatedTxs, annotatedTx)
+		if accountID != "" && findTransactionsByAccount(annotatedTx, accountID) {
+			annotatedAccTxs = append(annotatedAccTxs, annotatedTx)
 		}
 	}
 
+	if accountID != "" {
+		return annotatedAccTxs, nil
+	}
 	return annotatedTxs, nil
 }

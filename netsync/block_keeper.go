@@ -22,8 +22,7 @@ const (
 	maxtxsPending    = 32768
 	maxQuitReq       = 256
 
-	// txChanSize is the size of channel listening to Txpool newTxCh.
-	maxTxChanSize = 1000
+	maxTxChanSize = 1000 // txChanSize is the size of channel listening to Txpool newTxCh
 )
 
 var (

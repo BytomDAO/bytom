@@ -18,8 +18,7 @@ const (
 	//SINGLE single sign
 	SINGLE = 1
 
-	// txChanSize is the size of channel listening to Txpool newTxCh.
-	maxTxChanSize = 1000
+	maxTxChanSize = 1000 // txChanSize is the size of channel listening to Txpool newTxCh
 )
 
 var walletKey = []byte("walletInfo")
@@ -187,8 +186,13 @@ func (w *Wallet) getRescanNotification() {
 		w.status.WorkHash = bc.Hash{}
 		w.AttachBlock(block)
 	default:
-		//return
+		return
 	}
+}
+
+//SetTxCh set wallet txCh
+func (w *Wallet) SetTxCh(txCh *types.Tx) {
+	w.txCh <- txCh
 }
 
 func (w *Wallet) walletTxPoolUpdater() {
@@ -215,9 +219,4 @@ func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, i
 		}
 	}
 	return nil
-}
-
-//SetTxCh set wallet txCh
-func (w *Wallet) SetTxCh(txCh *types.Tx) {
-	w.txCh <- txCh
 }

@@ -377,7 +377,7 @@ var listUnconfirmedTransactionsCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		printJSON(data)
+		printJSONList(data)
 	},
 }
 

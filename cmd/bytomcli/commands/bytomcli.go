@@ -198,6 +198,10 @@ func AddTemplateFunc() {
 
 		getTransactionCmd.Name(),
 		listTransactionsCmd.Name(),
+
+		getUnconfirmedTransactionCmd.Name(),
+		listUnconfirmedTransactionsCmd.Name(),
+
 		listUnspentOutputsCmd.Name(),
 		listBalancesCmd.Name(),
 	}
