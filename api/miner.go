@@ -17,7 +17,7 @@ func (a *API) getWork() Response {
 }
 
 func (a *API) getWorkJSON() Response {
-	work, err := a.GetWork()
+	work, err := a.GetWorkJSON()
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -63,6 +63,53 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 
 	return &GetWorkResp{
 		BlockHeader: bh,
+		Seed:        seed,
+	}, nil
+}
+
+type BlockHeaderJSON struct {
+	Version           uint64 				`json:"version"`  // The version of the block.
+	Height            uint64 				`json:"height"`  // The height of the block.
+	PreviousBlockHash bc.Hash 				`json:"previous_block_hash"` // The hash of the previous block.
+	Timestamp         uint64  				`json:"timestamp"` // The time of the block in seconds.
+	Nonce             uint64 				`json:"nonce"` // Nonce used to generate the block.
+	Bits              uint64 				`json:"bits"` // Difficulty target for the block.
+	BlockCommitment   *types.BlockCommitment `json:"block_commitment"` //Block commitment
+}
+
+// GetWorkResp is resp struct for API get-work-json
+type GetWorkJSONResp struct {
+	BlockHeader *BlockHeaderJSON 	`json:"block_header"`
+	Seed        *bc.Hash           	`json:"seed"`
+}
+
+// GetWorkJSON get work in json
+func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
+	bh, err := a.miningPool.GetWork()
+	if err != nil {
+		return nil, err
+	}
+
+	seed, err := a.chain.CalcNextSeed(&bh.PreviousBlockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	blockCommitment := &types.BlockCommitment{
+							TransactionsMerkleRoot: bh.BlockCommitment.TransactionsMerkleRoot,
+							TransactionStatusHash:  bh.BlockCommitment.TransactionStatusHash,
+						}
+
+	return &GetWorkJSONResp{
+		BlockHeader: &BlockHeaderJSON{
+			Version:			bh.Version,
+			Height:				bh.Height,
+			PreviousBlockHash:	bh.PreviousBlockHash,
+			Timestamp:         	bh.Timestamp,
+			Nonce:             	bh.Nonce,
+			Bits:              	bh.Bits,
+			BlockCommitment:	blockCommitment,
+		},
 		Seed:        seed,
 	}, nil
 }
