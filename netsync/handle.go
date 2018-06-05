@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/p2p/pex"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/version"
 )
 
@@ -29,6 +30,7 @@ type SyncManager struct {
 	blockKeeper *blockKeeper
 	peers       *peerSet
 
+	newTxCh       chan *types.Tx
 	newBlockCh    chan *bc.Hash
 	newPeerCh     chan struct{}
 	txSyncCh      chan *txsync
@@ -45,13 +47,14 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		txPool:     txPool,
 		chain:      chain,
 		privKey:    crypto.GenPrivKeyEd25519(),
-		config:     config,
-		quitSync:   make(chan struct{}),
+		peers:      newPeerSet(),
+		newTxCh:    make(chan *types.Tx, maxTxChanSize),
 		newBlockCh: newBlockCh,
 		newPeerCh:  make(chan struct{}),
 		txSyncCh:   make(chan *txsync),
 		dropPeerCh: make(chan *string, maxQuitReq),
-		peers:      newPeerSet(),
+		quitSync:   make(chan struct{}),
+		config:     config,
 	}
 
 	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
@@ -146,10 +149,9 @@ func (sm *SyncManager) Stop() {
 }
 
 func (sm *SyncManager) txBroadcastLoop() {
-	newTxCh := sm.txPool.GetNewTxCh()
 	for {
 		select {
-		case newTx := <-newTxCh:
+		case newTx := <-sm.newTxCh:
 			peers, err := sm.peers.BroadcastTx(newTx)
 			if err != nil {
 				log.Errorf("Broadcast new tx error. %v", err)
@@ -215,4 +217,9 @@ func (sm *SyncManager) Peers() *peerSet {
 //Switch get sync manager switch
 func (sm *SyncManager) Switch() *p2p.Switch {
 	return sm.sw
+}
+
+// GetNewTxCh return a unconfirmed transaction feed channel
+func (sm *SyncManager) GetNewTxCh() chan *types.Tx {
+	return sm.newTxCh
 }

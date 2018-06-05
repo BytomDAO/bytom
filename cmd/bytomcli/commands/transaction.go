@@ -30,6 +30,7 @@ func init() {
 	listTransactionsCmd.PersistentFlags().StringVar(&txID, "id", "", "transaction id")
 	listTransactionsCmd.PersistentFlags().StringVar(&account, "account_id", "", "account id")
 	listTransactionsCmd.PersistentFlags().BoolVar(&detail, "detail", false, "list transactions details")
+	listTransactionsCmd.PersistentFlags().BoolVar(&unconfirmed, "unconfirmed", false, "list unconfirmed transactions")
 }
 
 var (
@@ -43,6 +44,7 @@ var (
 	txID            = ""
 	account         = ""
 	detail          = false
+	unconfirmed     = false
 )
 
 var buildIssueReqFmt = `
@@ -323,10 +325,11 @@ var listTransactionsCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		filter := struct {
-			ID        string `json:"id"`
-			AccountID string `json:"account_id"`
-			Detail    bool   `json:"detail"`
-		}{ID: txID, AccountID: account, Detail: detail}
+			ID          string `json:"id"`
+			AccountID   string `json:"account_id"`
+			Detail      bool   `json:"detail"`
+			Unconfirmed bool   `json:"unconfirmed"`
+		}{ID: txID, AccountID: account, Detail: detail, Unconfirmed: unconfirmed}
 
 		data, exitCode := util.ClientCall("/list-transactions", &filter)
 		if exitCode != util.Success {
