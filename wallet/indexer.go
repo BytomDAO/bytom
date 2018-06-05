@@ -418,15 +418,18 @@ transactionLoop:
 // GetTransaction search confirmed or unconfirmed transaction by txID
 func (w *Wallet) GetTransaction(txID string) (*query.AnnotatedTx, error) {
 	annotatedTx, err := w.GetTransactionByTxID(txID)
-	if errors.Root(err) != ErrNotFoundTx {
-		return nil, err
+	if errors.Root(err) == ErrNotFoundTx {
+		// transaction not found in blockchain db, search it from unconfirmed db
+		annotatedTx, err = w.GetUnconfirmedTxByTxID(txID)
+		if err != nil {
+			return nil, err
+		}
+		return annotatedTx, nil
 	}
 
-	annotatedTx, err = w.GetUnconfirmedTxByTxID(txID)
 	if err != nil {
 		return nil, err
 	}
-
 	return annotatedTx, nil
 }
 
