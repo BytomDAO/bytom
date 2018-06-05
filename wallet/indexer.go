@@ -20,6 +20,11 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
+var (
+	// ErrNotFoundTx means errors occurred in actions
+	ErrNotFoundTx = errors.New("not found transaction in the wallet db")
+)
+
 type rawOutput struct {
 	OutputID bc.Hash
 	bc.AssetAmount
@@ -406,11 +411,26 @@ transactionLoop:
 	return annotatedTxs
 }
 
+// GetTransaction search confirmed or unconfirmed transaction by txID
+func (w *Wallet) GetTransaction(txID string) (*query.AnnotatedTx, error) {
+	annotatedTx, err := w.GetTransactionByTxID(txID)
+	if errors.Root(err) != ErrNotFoundTx {
+		return nil, err
+	}
+
+	annotatedTx, err = w.GetUnconfirmedTxByTxID(txID)
+	if err != nil {
+		return nil, err
+	}
+
+	return annotatedTx, nil
+}
+
 // GetTransactionByTxID get transaction by txID
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 	formatKey := w.DB.Get(calcTxIndexKey(txID))
 	if formatKey == nil {
-		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
+		return nil, errors.WithData(ErrNotFoundTx, "not found tx=%s from blockchain", txID)
 	}
 
 	annotatedTx := &query.AnnotatedTx{}
@@ -420,33 +440,6 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 	}
 
 	return annotatedTx, nil
-}
-
-// GetTransactionsByTxID get account txs by account tx ID
-func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
-	annotatedTxs := []*query.AnnotatedTx{}
-	formatKey := ""
-
-	if txID != "" {
-		rawFormatKey := w.DB.Get(calcTxIndexKey(txID))
-		if rawFormatKey == nil {
-			return nil, fmt.Errorf("No transaction(txid=%s) ", txID)
-		}
-		formatKey = string(rawFormatKey)
-	}
-
-	txIter := w.DB.IteratorPrefix(calcAnnotatedKey(formatKey))
-	defer txIter.Release()
-	for txIter.Next() {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
-			return nil, err
-		}
-		annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-		annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
-	}
-
-	return annotatedTxs, nil
 }
 
 // GetTransactionsSummary get transactions summary
@@ -501,9 +494,10 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 	return false
 }
 
-// GetTransactionsByAccountID get account txs by account ID
-func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
+// GetTransactions get all walletDB transactions, and filter transactions by accountID optional
+func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
+	annotatedAccTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
@@ -513,12 +507,16 @@ func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.Annotate
 			return nil, err
 		}
 
+		annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+		annotatedTxs = append(annotatedTxs, annotatedTx)
 		if findTransactionsByAccount(annotatedTx, accountID) {
-			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-			annotatedTxs = append(annotatedTxs, annotatedTx)
+			annotatedAccTxs = append(annotatedAccTxs, annotatedTx)
 		}
 	}
 
+	if accountID != "" {
+		return annotatedAccTxs, nil
+	}
 	return annotatedTxs, nil
 }
 
@@ -595,11 +593,11 @@ func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) ([]AccountBalance, e
 
 			assetAlias := *targetAsset.Alias
 			balances = append(balances, AccountBalance{
-				Alias: alias,
-				AccountID: id,
-				AssetID: assetID,
-				AssetAlias: assetAlias,
-				Amount: accBalance[id][assetID],
+				Alias:           alias,
+				AccountID:       id,
+				AssetID:         assetID,
+				AssetAlias:      assetAlias,
+				Amount:          accBalance[id][assetID],
 				AssetDefinition: targetAsset.DefinitionMap,
 			})
 		}

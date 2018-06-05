@@ -71,7 +71,7 @@ func (a *API) listBalances(ctx context.Context) Response {
 func (a *API) getTransaction(ctx context.Context, txInfo struct {
 	TxID string `json:"tx_id"`
 }) Response {
-	transaction, err := a.wallet.GetTransactionByTxID(txInfo.TxID)
+	transaction, err := a.wallet.GetTransaction(txInfo.TxID)
 	if err != nil {
 		log.Errorf("getTransaction error: %v", err)
 		return NewErrorResponse(err)
@@ -82,17 +82,33 @@ func (a *API) getTransaction(ctx context.Context, txInfo struct {
 
 // POST /list-transactions
 func (a *API) listTransactions(ctx context.Context, filter struct {
-	ID        string `json:"id"`
-	AccountID string `json:"account_id"`
-	Detail    bool   `json:"detail"`
+	ID          string `json:"id"`
+	AccountID   string `json:"account_id"`
+	Detail      bool   `json:"detail"`
+	Unconfirmed bool   `json:"unconfirmed"`
 }) Response {
 	transactions := []*query.AnnotatedTx{}
 	var err error
+	var transaction *query.AnnotatedTx
 
-	if filter.AccountID != "" {
-		transactions, err = a.wallet.GetTransactionsByAccountID(filter.AccountID)
+	if filter.ID != "" {
+		if filter.Unconfirmed {
+			transaction, err = a.wallet.GetUnconfirmedTxByTxID(filter.ID)
+		} else {
+			transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
+		}
+
+		if err != nil {
+			log.Errorf("GetTransaction: %v", err)
+			return NewErrorResponse(err)
+		}
+		transactions = []*query.AnnotatedTx{transaction}
 	} else {
-		transactions, err = a.wallet.GetTransactionsByTxID(filter.ID)
+		if filter.Unconfirmed {
+			transactions, err = a.wallet.GetUnconfirmedTxs(filter.AccountID)
+		} else {
+			transactions, err = a.wallet.GetTransactions(filter.AccountID)
+		}
 	}
 
 	if err != nil {
@@ -108,36 +124,7 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 }
 
 // POST /get-unconfirmed-transaction
-func (a *API) getUnconfirmedTx(ctx context.Context, txInfo struct {
-	TxID string `json:"tx_id"`
-}) Response {
-	transaction, err := a.wallet.GetUnconfirmedTxByTxID(txInfo.TxID)
-	if err != nil {
-		log.Errorf("getTransaction error: %v", err)
-		return NewErrorResponse(err)
-	}
-
-	return NewSuccessResponse(transaction)
-}
-
-// POST /list-unconfirmed-transactions
-func (a *API) listUnconfirmedTxs(ctx context.Context, filter struct {
-	AccountID string `json:"account_id"`
-}) Response {
-	transactions := []*query.AnnotatedTx{}
-	var err error
-
-	transactions, err = a.wallet.GetUnconfirmedTxs(filter.AccountID)
-	if err != nil {
-		log.Errorf("listTransactions: %v", err)
-		return NewErrorResponse(err)
-	}
-
-	return NewSuccessResponse(transactions)
-}
-
-// POST /get-mempool-transaction
-func (a *API) getMemPoolTx(ctx context.Context, filter struct {
+func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 	TxID chainjson.HexBytes `json:"tx_id"`
 }) Response {
 	var tmpTxID [32]byte
@@ -175,8 +162,8 @@ type unconfirmedTxsResp struct {
 	TxIDs []bc.Hash `json:"tx_ids"`
 }
 
-// POST /list-mempool-transactions
-func (a *API) listMemPoolTxs(ctx context.Context) Response {
+// POST /list-unconfirmed-transactions
+func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
 	txIDs := []bc.Hash{}
 
 	txPool := a.chain.GetTxPool()

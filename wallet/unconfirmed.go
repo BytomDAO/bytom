@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -96,6 +97,10 @@ func (w *Wallet) RescanWalletTxPool() []string {
 func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	annotatedTx := &query.AnnotatedTx{}
 	txInfo := w.DB.Get(calcUnconfirmedKey(txID))
+	if txInfo == nil {
+		return nil, errors.WithData(ErrNotFoundTx, "not found tx=%s from txpool", txID)
+	}
+
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
