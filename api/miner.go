@@ -8,16 +8,16 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-// BlockHeaderJSON struct provides support for get work in json format, when it also follows 
-// protocol/bc/types.BlockHeader
+// BlockHeaderJSON struct provides support for get work in json format, when it also follows
+// protocol/bc/types.BlockHeader structure
 type BlockHeaderJSON struct {
-	Version           uint64 					`json:"version"`  // The version of the block.
-	Height            uint64 					`json:"height"`  // The height of the block.
-	PreviousBlockHash bc.Hash 					`json:"previous_block_hash"` // The hash of the previous block.
-	Timestamp         uint64  					`json:"timestamp"` // The time of the block in seconds.
-	Nonce             uint64 					`json:"nonce"` // Nonce used to generate the block.
-	Bits              uint64 					`json:"bits"` // Difficulty target for the block.
-	BlockCommitment   *types.BlockCommitment 	`json:"block_commitment"` //Block commitment
+	Version           uint64                 `json:"version"`             // The version of the block.
+	Height            uint64                 `json:"height"`              // The height of the block.
+	PreviousBlockHash bc.Hash                `json:"previous_block_hash"` // The hash of the previous block.
+	Timestamp         uint64                 `json:"timestamp"`           // The time of the block in seconds.
+	Nonce             uint64                 `json:"nonce"`               // Nonce used to generate the block.
+	Bits              uint64                 `json:"bits"`                // Difficulty target for the block.
+	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    //Block commitment
 }
 
 // getWork gets work in compressed protobuf format
@@ -53,25 +53,25 @@ func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
 
 // SubmitWorkJSONReq is req struct for submit-work-json API
 type SubmitWorkJSONReq struct {
-	BlockHeader *BlockHeaderJSON 	`json:"block_header"`
+	BlockHeader *BlockHeaderJSON `json:"block_header"`
 }
 
 // submitWorkJSON submits work in json format
 func (a *API) submitWorkJSON(ctx context.Context, req *SubmitWorkJSONReq) Response {
 	blockCommitment := types.BlockCommitment{
-							TransactionsMerkleRoot: req.BlockHeader.BlockCommitment.TransactionsMerkleRoot,
-							TransactionStatusHash:  req.BlockHeader.BlockCommitment.TransactionStatusHash,
-						}
+		TransactionsMerkleRoot: req.BlockHeader.BlockCommitment.TransactionsMerkleRoot,
+		TransactionStatusHash:  req.BlockHeader.BlockCommitment.TransactionStatusHash,
+	}
 
 	bh := &types.BlockHeader{
-			Version:			req.BlockHeader.Version,
-			Height:				req.BlockHeader.Height,
-			PreviousBlockHash:	req.BlockHeader.PreviousBlockHash,
-			Timestamp:         	req.BlockHeader.Timestamp,
-			Nonce:             	req.BlockHeader.Nonce,
-			Bits:              	req.BlockHeader.Bits,
-			BlockCommitment:	blockCommitment,
-		}
+		Version:           req.BlockHeader.Version,
+		Height:            req.BlockHeader.Height,
+		PreviousBlockHash: req.BlockHeader.PreviousBlockHash,
+		Timestamp:         req.BlockHeader.Timestamp,
+		Nonce:             req.BlockHeader.Nonce,
+		Bits:              req.BlockHeader.Bits,
+		BlockCommitment:   blockCommitment,
+	}
 
 	if err := a.SubmitWork(bh); err != nil {
 		return NewErrorResponse(err)
@@ -105,8 +105,8 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 
 // GetWorkJSONResp is resp struct for get-work-json API
 type GetWorkJSONResp struct {
-	BlockHeader *BlockHeaderJSON 	`json:"block_header"`
-	Seed        *bc.Hash           	`json:"seed"`
+	BlockHeader *BlockHeaderJSON `json:"block_header"`
+	Seed        *bc.Hash         `json:"seed"`
 }
 
 // GetWorkJSON gets work in json format
@@ -122,21 +122,21 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 	}
 
 	blockCommitment := &types.BlockCommitment{
-							TransactionsMerkleRoot: bh.BlockCommitment.TransactionsMerkleRoot,
-							TransactionStatusHash:  bh.BlockCommitment.TransactionStatusHash,
-						}
+		TransactionsMerkleRoot: bh.BlockCommitment.TransactionsMerkleRoot,
+		TransactionStatusHash:  bh.BlockCommitment.TransactionStatusHash,
+	}
 
 	return &GetWorkJSONResp{
 		BlockHeader: &BlockHeaderJSON{
-			Version:			bh.Version,
-			Height:				bh.Height,
-			PreviousBlockHash:	bh.PreviousBlockHash,
-			Timestamp:         	bh.Timestamp,
-			Nonce:             	bh.Nonce,
-			Bits:              	bh.Bits,
-			BlockCommitment:	blockCommitment,
+			Version:           bh.Version,
+			Height:            bh.Height,
+			PreviousBlockHash: bh.PreviousBlockHash,
+			Timestamp:         bh.Timestamp,
+			Nonce:             bh.Nonce,
+			Bits:              bh.Bits,
+			BlockCommitment:   blockCommitment,
 		},
-		Seed:        seed,
+		Seed: seed,
 	}, nil
 }
 
