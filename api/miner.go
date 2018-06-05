@@ -8,6 +8,16 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
+type BlockHeaderJSON struct {
+	Version           uint64 					`json:"version"`  // The version of the block.
+	Height            uint64 					`json:"height"`  // The height of the block.
+	PreviousBlockHash bc.Hash 					`json:"previous_block_hash"` // The hash of the previous block.
+	Timestamp         uint64  					`json:"timestamp"` // The time of the block in seconds.
+	Nonce             uint64 					`json:"nonce"` // Nonce used to generate the block.
+	Bits              uint64 					`json:"bits"` // Difficulty target for the block.
+	BlockCommitment   *types.BlockCommitment 	`json:"block_commitment"` //Block commitment
+}
+
 func (a *API) getWork() Response {
 	work, err := a.GetWork()
 	if err != nil {
@@ -36,8 +46,28 @@ func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
 	return NewSuccessResponse(true)
 }
 
-func (a *API) submitWorkJSON(ctx context.Context, req *SubmitWorkReq) Response {
-	if err := a.SubmitWork(req.BlockHeader); err != nil {
+// SubmitWorkJSONReq used to submitWork req
+type SubmitWorkJSONReq struct {
+	BlockHeader *BlockHeaderJSON 	`json:"block_header"`
+}
+
+func (a *API) submitWorkJSON(ctx context.Context, req *SubmitWorkJSONReq) Response {
+	blockCommitment := types.BlockCommitment{
+							TransactionsMerkleRoot: req.BlockHeader.BlockCommitment.TransactionsMerkleRoot,
+							TransactionStatusHash:  req.BlockHeader.BlockCommitment.TransactionStatusHash,
+						}
+
+	bh := &types.BlockHeader{
+			Version:			req.BlockHeader.Version,
+			Height:				req.BlockHeader.Height,
+			PreviousBlockHash:	req.BlockHeader.PreviousBlockHash,
+			Timestamp:         	req.BlockHeader.Timestamp,
+			Nonce:             	req.BlockHeader.Nonce,
+			Bits:              	req.BlockHeader.Bits,
+			BlockCommitment:	blockCommitment,
+		}
+
+	if err := a.SubmitWork(bh); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(true)
@@ -67,17 +97,7 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 	}, nil
 }
 
-type BlockHeaderJSON struct {
-	Version           uint64 				`json:"version"`  // The version of the block.
-	Height            uint64 				`json:"height"`  // The height of the block.
-	PreviousBlockHash bc.Hash 				`json:"previous_block_hash"` // The hash of the previous block.
-	Timestamp         uint64  				`json:"timestamp"` // The time of the block in seconds.
-	Nonce             uint64 				`json:"nonce"` // Nonce used to generate the block.
-	Bits              uint64 				`json:"bits"` // Difficulty target for the block.
-	BlockCommitment   *types.BlockCommitment `json:"block_commitment"` //Block commitment
-}
-
-// GetWorkResp is resp struct for API get-work-json
+// GetWorkJSONResp is resp struct for API get-work-json
 type GetWorkJSONResp struct {
 	BlockHeader *BlockHeaderJSON 	`json:"block_header"`
 	Seed        *bc.Hash           	`json:"seed"`
@@ -114,7 +134,7 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 	}, nil
 }
 
-// SubmitWork submit work
+// SubmitWork submit work to the miningpool
 func (a *API) SubmitWork(bh *types.BlockHeader) error {
 	return a.miningPool.SubmitWork(bh)
 }
