@@ -7,7 +7,7 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"chain/testutil"
+	"github.com/bytom/testutil"
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
