@@ -30,7 +30,6 @@ import (
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/types"
 	w "github.com/bytom/wallet"
 )

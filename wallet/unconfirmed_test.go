@@ -7,7 +7,6 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/testutil"
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
@@ -15,6 +14,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/testutil"
 )
 
 func TestWalletUnconfirmedTxs(t *testing.T) {
@@ -61,30 +61,23 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
 	utxos = append(utxos, btmUtxo)
 
+	OtherUtxo := mockUTXO(controlProg, &asset.AssetID)
+	utxos = append(utxos, OtherUtxo)
 	_, txData, err := mockTxData(utxos, testAccount)
 	if err != nil {
 		t.Fatal(err)
 	}
-	testTx1 := types.NewTx(*txData)
-	w.SaveUnconfirmedTx(testTx1)
+	testTx := types.NewTx(*txData)
+	w.SaveUnconfirmedTx(testTx)
 
-	OtherUtxo := mockUTXO(controlProg, &asset.AssetID)
-	utxos = append(utxos, OtherUtxo)
-	_, txData, err = mockTxData(utxos, testAccount)
-	if err != nil {
-		t.Fatal(err)
-	}
-	testTx2 := types.NewTx(*txData)
-	w.SaveUnconfirmedTx(testTx2)
-
-	txs := AnnotatedTxs([]*types.Tx{testTx1}, w)
+	txs := AnnotatedTxs([]*types.Tx{testTx}, w)
 	wantTx := txs[0]
-	gotTx, err := w.GetUnconfirmedTxByTxID(testTx1.ID.String())
+	gotTx, err := w.GetUnconfirmedTxByTxID(testTx.ID.String())
 	if !testutil.DeepEqual(gotTx.ID, wantTx.ID) {
 		t.Errorf(`transaction got=%#v; want=%#v`, gotTx.ID, wantTx.ID)
 	}
 
-	wantTxs := AnnotatedTxs([]*types.Tx{testTx1, testTx2}, w)
+	wantTxs := AnnotatedTxs([]*types.Tx{testTx}, w)
 	gotTxs, err := w.GetUnconfirmedTxs("")
 	for i, want := range wantTxs {
 		if !testutil.DeepEqual(gotTxs[i].ID, want.ID) {

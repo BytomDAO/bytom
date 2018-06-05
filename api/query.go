@@ -103,7 +103,6 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 		} else {
 			transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
 		}
-
 		if err != nil {
 			return NewErrorResponse(err)
 		}
