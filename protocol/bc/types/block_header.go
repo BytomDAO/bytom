@@ -23,6 +23,18 @@ type BlockHeader struct {
 	BlockCommitment
 }
 
+// BlockHeaderJSON struct provides support for get work in json format, when it also follows
+// BlockHeader structure
+type BlockHeaderJSON struct {
+	Version           uint64                    `json:"version"`             // The version of the block.
+	Height            uint64                    `json:"height"`              // The height of the block.
+	PreviousBlockHash bc.Hash                   `json:"previous_block_hash"` // The hash of the previous block.
+	Timestamp         uint64                    `json:"timestamp"`           // The time of the block in seconds.
+	Nonce             uint64                    `json:"nonce"`               // Nonce used to generate the block.
+	Bits              uint64                    `json:"bits"`                // Difficulty target for the block.
+	BlockCommitment   `json:"block_commitment"` //Block commitment
+}
+
 // Time returns the time represented by the Timestamp in block header.
 func (bh *BlockHeader) Time() time.Time {
 	return time.Unix(int64(bh.Timestamp), 0).UTC()
