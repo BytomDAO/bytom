@@ -30,6 +30,7 @@ import (
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/types"
 	w "github.com/bytom/wallet"
 )
@@ -161,12 +162,12 @@ func NewNode(config *cfg.Config) *Node {
 func newPoolTxListener(txPool *protocol.TxPool, syncManager *netsync.SyncManager, wallet *w.Wallet) {
 	newTxCh := txPool.GetNewTxCh()
 	syncManagerTxCh := syncManager.GetNewTxCh()
-	walletTxCh := wallet.GetNewTxCh()
+
 	for {
 		newTx := <-newTxCh
 		syncManagerTxCh <- newTx
 		if wallet != nil {
-			walletTxCh <- newTx
+			wallet.GetNewTxCh() <- newTx
 		}
 	}
 }
