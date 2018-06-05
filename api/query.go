@@ -103,18 +103,24 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 		} else {
 			transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
 		}
+
+		if err != nil {
+			return NewErrorResponse(err)
+		}
 		transactions = []*query.AnnotatedTx{transaction}
 	} else {
-		if filter.Unconfirmed {
-			transactions, err = a.wallet.GetUnconfirmedTxs(filter.AccountID)
-		} else {
-			transactions, err = a.wallet.GetTransactions(filter.AccountID)
+		transactions, err = a.wallet.GetTransactions(filter.AccountID)
+		if err != nil {
+			return NewErrorResponse(err)
 		}
-	}
 
-	if err != nil {
-		log.Errorf("listTransactions: %v", err)
-		return NewErrorResponse(err)
+		if filter.Unconfirmed {
+			unconfirmedTxs, err := a.wallet.GetUnconfirmedTxs(filter.AccountID)
+			if err != nil {
+				return NewErrorResponse(err)
+			}
+			transactions = append(unconfirmedTxs, transactions...)
+		}
 	}
 
 	if filter.Detail == false {
