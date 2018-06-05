@@ -30,7 +30,7 @@ type SyncManager struct {
 	blockKeeper *blockKeeper
 	peers       *peerSet
 
-	txCh          chan *types.Tx
+	newTxCh       chan *types.Tx
 	newBlockCh    chan *bc.Hash
 	newPeerCh     chan struct{}
 	txSyncCh      chan *txsync
@@ -48,7 +48,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		chain:      chain,
 		privKey:    crypto.GenPrivKeyEd25519(),
 		peers:      newPeerSet(),
-		txCh:       make(chan *types.Tx, maxTxChanSize),
+		newTxCh:    make(chan *types.Tx, maxTxChanSize),
 		newBlockCh: newBlockCh,
 		newPeerCh:  make(chan struct{}),
 		txSyncCh:   make(chan *txsync),
@@ -151,7 +151,7 @@ func (sm *SyncManager) Stop() {
 func (sm *SyncManager) txBroadcastLoop() {
 	for {
 		select {
-		case newTx := <-sm.txCh:
+		case newTx := <-sm.newTxCh:
 			peers, err := sm.peers.BroadcastTx(newTx)
 			if err != nil {
 				log.Errorf("Broadcast new tx error. %v", err)
@@ -219,7 +219,7 @@ func (sm *SyncManager) Switch() *p2p.Switch {
 	return sm.sw
 }
 
-//SetTxCh set SyncManager txCh
-func (sm *SyncManager) SetTxCh(txCh *types.Tx) {
-	sm.txCh <- txCh
+// GetNewTxCh return a unconfirmed transaction feed channel
+func (sm *SyncManager) GetNewTxCh() chan *types.Tx {
+	return sm.newTxCh
 }

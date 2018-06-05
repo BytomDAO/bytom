@@ -204,6 +204,9 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 
 		batch.Set(calcAnnotatedKey(formatKey(b.Height, uint32(tx.Position))), rawTx)
 		batch.Set(calcTxIndexKey(tx.ID.String()), []byte(formatKey(b.Height, uint32(tx.Position))))
+
+		// delete unconfirmed transaction
+		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
 	}
 	return nil
 }
@@ -509,7 +512,7 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 
 		annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 		annotatedTxs = append(annotatedTxs, annotatedTx)
-		if findTransactionsByAccount(annotatedTx, accountID) {
+		if accountID != "" && findTransactionsByAccount(annotatedTx, accountID) {
 			annotatedAccTxs = append(annotatedAccTxs, annotatedTx)
 		}
 	}

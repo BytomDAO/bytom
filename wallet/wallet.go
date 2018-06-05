@@ -18,7 +18,7 @@ const (
 	//SINGLE single sign
 	SINGLE = 1
 
-	maxTxChanSize = 1000 // txChanSize is the size of channel listening to Txpool newTxCh
+	maxTxChanSize = 10000 // txChanSize is the size of channel listening to Txpool newTxCh
 )
 
 var walletKey = []byte("walletInfo")
@@ -40,7 +40,7 @@ type Wallet struct {
 	Hsm        *pseudohsm.HSM
 	chain      *protocol.Chain
 	rescanCh   chan struct{}
-	txCh       chan *types.Tx
+	newTxCh    chan *types.Tx
 }
 
 //NewWallet return a new wallet instance
@@ -52,7 +52,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		chain:      chain,
 		Hsm:        hsm,
 		rescanCh:   make(chan struct{}, 1),
-		txCh:       make(chan *types.Tx, maxTxChanSize),
+		newTxCh:    make(chan *types.Tx, maxTxChanSize),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -60,7 +60,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	go w.walletUpdater()
-	go w.walletTxPoolUpdater()
+	go w.UnconfirmedTxCollector()
 
 	return w, nil
 }
@@ -190,25 +190,14 @@ func (w *Wallet) getRescanNotification() {
 	}
 }
 
-//SetTxCh set wallet txCh
-func (w *Wallet) SetTxCh(txCh *types.Tx) {
-	w.txCh <- txCh
+// GetNewTxCh return a unconfirmed transaction feed channel
+func (w *Wallet) GetNewTxCh() chan *types.Tx {
+	return w.newTxCh
 }
 
-func (w *Wallet) walletTxPoolUpdater() {
+func (w *Wallet) UnconfirmedTxCollector() {
 	for {
-		// rescan txpool transaction and delete unconfirmed transactions from database
-		txIDs := w.RescanWalletTxPool()
-		if err := w.DeleteUnconfirmedTxs(txIDs); err != nil {
-			log.WithField("err", err).Error("DeleteUnconfirmedTxs unmarshal error")
-			return
-		}
-
-		select {
-		case newTx := <-w.txCh:
-			w.SaveUnconfirmedTx(newTx)
-		default:
-		}
+		w.SaveUnconfirmedTx(<-w.newTxCh)
 	}
 }
 

@@ -126,19 +126,7 @@ func NewNode(config *cfg.Config) *Node {
 	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, newBlockCh)
 
 	// get transaction from txPool and send it to syncManager and wallet
-	go func() {
-		newTxCh := txPool.GetNewTxCh()
-		for {
-			select {
-			case newTx := <-newTxCh:
-				syncManager.SetTxCh(newTx)
-				if wallet != nil {
-					wallet.SetTxCh(newTx)
-				}
-			default:
-			}
-		}
-	}()
+	go syncTxPoolTransaction(txPool, syncManager, wallet)
 
 	// run the profile server
 	profileHost := config.ProfListenAddress
@@ -167,6 +155,23 @@ func NewNode(config *cfg.Config) *Node {
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
 	return node
+}
+
+// syncTxPoolTransaction sync transaction from txPool, and send it to syncManager and wallet
+func syncTxPoolTransaction(txPool *protocol.TxPool, syncManager *netsync.SyncManager, wallet *w.Wallet) {
+	newTxCh := txPool.GetNewTxCh()
+	for {
+		select {
+		case newTx := <-newTxCh:
+			txCh := syncManager.GetNewTxCh()
+			txCh <- newTx
+			if wallet != nil {
+				txCh := wallet.GetNewTxCh()
+				txCh <- newTx
+			}
+		default:
+		}
+	}
 }
 
 // Lock data directory after daemonization
