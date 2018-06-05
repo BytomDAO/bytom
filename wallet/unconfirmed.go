@@ -3,8 +3,6 @@ package wallet
 import (
 	"encoding/json"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc/types"
@@ -47,7 +45,6 @@ func (w *Wallet) SaveUnconfirmedTx(tx *types.Tx) error {
 	}
 
 	w.DB.Set(calcUnconfirmedTxKey(tx.ID.String()), rawTx)
-	log.Debugf("insert unconfirmed tx=%s into db", tx.ID.String())
 	return nil
 }
 
@@ -69,7 +66,6 @@ func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error)
 // GetUnconfirmedTxs get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
 func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	annotatedAccTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(unconfirmedTxPrefix))
 	defer txIter.Release()
@@ -79,14 +75,15 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 			return nil, err
 		}
 
-		annotatedTxs = append(annotatedTxs, annotatedTx)
-		if accountID != "" && findTransactionsByAccount(annotatedTx, accountID) {
-			annotatedAccTxs = append(annotatedAccTxs, annotatedTx)
+		if accountID == "" {
+			annotatedTxs = append(annotatedTxs, annotatedTx)
+			continue
+		}
+
+		if findTransactionsByAccount(annotatedTx, accountID) {
+			annotatedTxs = append(annotatedTxs, annotatedTx)
 		}
 	}
 
-	if accountID != "" {
-		return annotatedAccTxs, nil
-	}
 	return annotatedTxs, nil
 }

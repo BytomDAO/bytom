@@ -194,6 +194,7 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
+	annotateTxsAsset(w, annotatedTxs)
 
 	for _, tx := range annotatedTxs {
 		rawTx, err := json.Marshal(tx)
@@ -500,7 +501,6 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 // GetTransactions get all walletDB transactions, and filter transactions by accountID optional
 func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
-	annotatedAccTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
@@ -510,16 +510,16 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 			return nil, err
 		}
 
-		annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-		annotatedTxs = append(annotatedTxs, annotatedTx)
-		if accountID != "" && findTransactionsByAccount(annotatedTx, accountID) {
-			annotatedAccTxs = append(annotatedAccTxs, annotatedTx)
+		if accountID == "" {
+			annotatedTxs = append(annotatedTxs, annotatedTx)
+			continue
+		}
+
+		if findTransactionsByAccount(annotatedTx, accountID) {
+			annotatedTxs = append(annotatedTxs, annotatedTx)
 		}
 	}
 
-	if accountID != "" {
-		return annotatedAccTxs, nil
-	}
 	return annotatedTxs, nil
 }
 
