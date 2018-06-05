@@ -20,11 +20,6 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-var (
-	// ErrNotFoundTx means errors occurred in actions
-	ErrNotFoundTx = errors.New("not found transaction in the wallet db")
-)
-
 type rawOutput struct {
 	OutputID bc.Hash
 	bc.AssetAmount
@@ -194,7 +189,6 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
-	annotateTxsAsset(w, annotatedTxs)
 
 	for _, tx := range annotatedTxs {
 		rawTx, err := json.Marshal(tx)
@@ -415,29 +409,11 @@ transactionLoop:
 	return annotatedTxs
 }
 
-// GetTransaction search confirmed or unconfirmed transaction by txID
-func (w *Wallet) GetTransaction(txID string) (*query.AnnotatedTx, error) {
-	annotatedTx, err := w.GetTransactionByTxID(txID)
-	if errors.Root(err) == ErrNotFoundTx {
-		// transaction not found in blockchain db, search it from unconfirmed db
-		annotatedTx, err = w.GetUnconfirmedTxByTxID(txID)
-		if err != nil {
-			return nil, err
-		}
-		return annotatedTx, nil
-	}
-
-	if err != nil {
-		return nil, err
-	}
-	return annotatedTx, nil
-}
-
 // GetTransactionByTxID get transaction by txID
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 	formatKey := w.DB.Get(calcTxIndexKey(txID))
 	if formatKey == nil {
-		return nil, errors.WithData(ErrNotFoundTx, "not found tx=%s from blockchain", txID)
+		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
 	}
 
 	annotatedTx := &query.AnnotatedTx{}
@@ -513,12 +489,8 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 			return nil, err
 		}
 
-		if accountID == "" {
-			annotatedTxs = append(annotatedTxs, annotatedTx)
-			continue
-		}
-
-		if findTransactionsByAccount(annotatedTx, accountID) {
+		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+			annotateTxsAsset(w, annotatedTxs)
 			annotatedTxs = append(annotatedTxs, annotatedTx)
 		}
 	}

@@ -126,7 +126,7 @@ func NewNode(config *cfg.Config) *Node {
 	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, newBlockCh)
 
 	// get transaction from txPool and send it to syncManager and wallet
-	go syncTxPoolTransaction(txPool, syncManager, wallet)
+	go newPoolTxListener(txPool, syncManager, wallet)
 
 	// run the profile server
 	profileHost := config.ProfListenAddress
@@ -157,19 +157,16 @@ func NewNode(config *cfg.Config) *Node {
 	return node
 }
 
-// syncTxPoolTransaction sync transaction from txPool, and send it to syncManager and wallet
-func syncTxPoolTransaction(txPool *protocol.TxPool, syncManager *netsync.SyncManager, wallet *w.Wallet) {
+// newPoolTxListener listener transaction from txPool, and send it to syncManager and wallet
+func newPoolTxListener(txPool *protocol.TxPool, syncManager *netsync.SyncManager, wallet *w.Wallet) {
 	newTxCh := txPool.GetNewTxCh()
+	syncManagerTxCh := syncManager.GetNewTxCh()
+	walletTxCh := wallet.GetNewTxCh()
 	for {
-		select {
-		case newTx := <-newTxCh:
-			txCh := syncManager.GetNewTxCh()
-			txCh <- newTx
-			if wallet != nil {
-				txCh := wallet.GetNewTxCh()
-				txCh <- newTx
-			}
-		default:
+		newTx := <-newTxCh
+		syncManagerTxCh <- newTx
+		if wallet != nil {
+			walletTxCh <- newTx
 		}
 	}
 }

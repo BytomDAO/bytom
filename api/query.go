@@ -71,13 +71,19 @@ func (a *API) listBalances(ctx context.Context) Response {
 func (a *API) getTransaction(ctx context.Context, txInfo struct {
 	TxID string `json:"tx_id"`
 }) Response {
-	transaction, err := a.wallet.GetTransaction(txInfo.TxID)
+	var annotatedTx *query.AnnotatedTx
+	var err error
+
+	annotatedTx, err = a.wallet.GetTransactionByTxID(txInfo.TxID)
 	if err != nil {
-		log.Errorf("getTransaction error: %v", err)
-		return NewErrorResponse(err)
+		// transaction not found in blockchain db, search it from unconfirmed db
+		annotatedTx, err = a.wallet.GetUnconfirmedTxByTxID(txInfo.TxID)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
 	}
 
-	return NewSuccessResponse(transaction)
+	return NewSuccessResponse(annotatedTx)
 }
 
 // POST /list-transactions
@@ -96,11 +102,6 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 			transaction, err = a.wallet.GetUnconfirmedTxByTxID(filter.ID)
 		} else {
 			transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
-		}
-
-		if err != nil {
-			log.Errorf("GetTransaction: %v", err)
-			return NewErrorResponse(err)
 		}
 		transactions = []*query.AnnotatedTx{transaction}
 	} else {

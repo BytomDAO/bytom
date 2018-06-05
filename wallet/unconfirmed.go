@@ -2,9 +2,9 @@ package wallet
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -37,7 +37,6 @@ func (w *Wallet) SaveUnconfirmedTx(tx *types.Tx) error {
 	annotatedTxs := []*query.AnnotatedTx{}
 	annotatedTxs = append(annotatedTxs, annotatedTx)
 	annotateTxsAccount(annotatedTxs, w.DB)
-	annotateTxsAsset(w, annotatedTxs)
 
 	rawTx, err := json.Marshal(annotatedTxs[0])
 	if err != nil {
@@ -53,7 +52,7 @@ func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error)
 	annotatedTx := &query.AnnotatedTx{}
 	txInfo := w.DB.Get(calcUnconfirmedTxKey(txID))
 	if txInfo == nil {
-		return nil, errors.WithData(ErrNotFoundTx, "not found tx=%s from txpool", txID)
+		return nil, fmt.Errorf("No transaction(tx_id=%s) from txpool", txID)
 	}
 
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
@@ -75,12 +74,8 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 			return nil, err
 		}
 
-		if accountID == "" {
-			annotatedTxs = append(annotatedTxs, annotatedTx)
-			continue
-		}
-
-		if findTransactionsByAccount(annotatedTx, accountID) {
+		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+			annotateTxsAsset(w, annotatedTxs)
 			annotatedTxs = append(annotatedTxs, annotatedTx)
 		}
 	}
