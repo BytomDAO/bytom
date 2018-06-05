@@ -8,6 +8,8 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
+// BlockHeaderJSON struct provides support for get work in json format, when it also follows 
+// protocol/bc/types.BlockHeader
 type BlockHeaderJSON struct {
 	Version           uint64 					`json:"version"`  // The version of the block.
 	Height            uint64 					`json:"height"`  // The height of the block.
@@ -18,6 +20,7 @@ type BlockHeaderJSON struct {
 	BlockCommitment   *types.BlockCommitment 	`json:"block_commitment"` //Block commitment
 }
 
+// getWork gets work in compressed protobuf format
 func (a *API) getWork() Response {
 	work, err := a.GetWork()
 	if err != nil {
@@ -26,6 +29,7 @@ func (a *API) getWork() Response {
 	return NewSuccessResponse(work)
 }
 
+// getWorkJSON gets work in json format
 func (a *API) getWorkJSON() Response {
 	work, err := a.GetWorkJSON()
 	if err != nil {
@@ -34,11 +38,12 @@ func (a *API) getWorkJSON() Response {
 	return NewSuccessResponse(work)
 }
 
-// SubmitWorkReq used to submitWork req
+// SubmitWorkJSONReq is req struct for submit-work API
 type SubmitWorkReq struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
 }
 
+// submitWork submits work in compressed protobuf format
 func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
 	if err := a.SubmitWork(req.BlockHeader); err != nil {
 		return NewErrorResponse(err)
@@ -46,11 +51,12 @@ func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
 	return NewSuccessResponse(true)
 }
 
-// SubmitWorkJSONReq used to submitWork req
+// SubmitWorkJSONReq is req struct for submit-work-json API
 type SubmitWorkJSONReq struct {
 	BlockHeader *BlockHeaderJSON 	`json:"block_header"`
 }
 
+// submitWorkJSON submits work in json format
 func (a *API) submitWorkJSON(ctx context.Context, req *SubmitWorkJSONReq) Response {
 	blockCommitment := types.BlockCommitment{
 							TransactionsMerkleRoot: req.BlockHeader.BlockCommitment.TransactionsMerkleRoot,
@@ -73,13 +79,13 @@ func (a *API) submitWorkJSON(ctx context.Context, req *SubmitWorkJSONReq) Respon
 	return NewSuccessResponse(true)
 }
 
-// GetWorkResp is resp struct for API
+// GetWorkResp is resp struct for get-work API
 type GetWorkResp struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
 	Seed        *bc.Hash           `json:"seed"`
 }
 
-// GetWork get work
+// GetWork gets work in compressed protobuf format
 func (a *API) GetWork() (*GetWorkResp, error) {
 	bh, err := a.miningPool.GetWork()
 	if err != nil {
@@ -97,13 +103,13 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 	}, nil
 }
 
-// GetWorkJSONResp is resp struct for API get-work-json
+// GetWorkJSONResp is resp struct for get-work-json API
 type GetWorkJSONResp struct {
 	BlockHeader *BlockHeaderJSON 	`json:"block_header"`
 	Seed        *bc.Hash           	`json:"seed"`
 }
 
-// GetWorkJSON get work in json
+// GetWorkJSON gets work in json format
 func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 	bh, err := a.miningPool.GetWork()
 	if err != nil {
@@ -134,7 +140,7 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 	}, nil
 }
 
-// SubmitWork submit work to the miningpool
+// SubmitWork tries to submit work to the chain
 func (a *API) SubmitWork(bh *types.BlockHeader) error {
 	return a.miningPool.SubmitWork(bh)
 }
