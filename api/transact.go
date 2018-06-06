@@ -26,26 +26,17 @@ var (
 )
 
 func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
-	var decoder func([]byte) (txbuilder.Action, error)
-	switch action {
-	case "control_address":
-		decoder = txbuilder.DecodeControlAddressAction
-	case "control_program":
-		decoder = txbuilder.DecodeControlProgramAction
-	case "control_receiver":
-		decoder = txbuilder.DecodeControlReceiverAction
-	case "issue":
-		decoder = a.wallet.AssetReg.DecodeIssueAction
-	case "retire":
-		decoder = txbuilder.DecodeRetireAction
-	case "spend_account":
-		decoder = a.wallet.AccountMgr.DecodeSpendAction
-	case "spend_account_unspent_output":
-		decoder = a.wallet.AccountMgr.DecodeSpendUTXOAction
-	default:
-		return nil, false
+	decoders := map[string]func([]byte) (txbuilder.Action, error){
+		"control_address":              txbuilder.DecodeControlAddressAction,
+		"control_program":              txbuilder.DecodeControlProgramAction,
+		"control_receiver":             txbuilder.DecodeControlReceiverAction,
+		"issue":                        a.wallet.AssetReg.DecodeIssueAction,
+		"retire":                       txbuilder.DecodeRetireAction,
+		"spend_account":                a.wallet.AccountMgr.DecodeSpendAction,
+		"spend_account_unspent_output": a.wallet.AccountMgr.DecodeSpendUTXOAction,
 	}
-	return decoder, true
+	decoder, ok := decoders[action]
+	return decoder, ok
 }
 
 func onlyHaveSpendActions(req *BuildRequest) bool {
@@ -60,8 +51,7 @@ func onlyHaveSpendActions(req *BuildRequest) bool {
 }
 
 func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
-	err := a.filterAliases(ctx, req)
-	if err != nil {
+	if err := a.completeMissingIds(ctx, req); err != nil {
 		return nil, err
 	}
 
@@ -150,7 +140,7 @@ func (a *API) submit(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	log.WithField("tx_id", ins.Tx.ID).Info("submit single tx")
+	log.WithField("tx_id", ins.Tx.ID.String()).Info("submit single tx")
 	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
 }
 

@@ -152,6 +152,7 @@ func AddCommands() {
 
 	BytomcliCmd.AddCommand(signMsgCmd)
 	BytomcliCmd.AddCommand(verifyMsgCmd)
+	BytomcliCmd.AddCommand(decodeProgCmd)
 
 	BytomcliCmd.AddCommand(createTransactionFeedCmd)
 	BytomcliCmd.AddCommand(listTransactionFeedsCmd)
@@ -191,8 +192,6 @@ func AddTemplateFunc() {
 
 		buildTransactionCmd.Name(),
 		signTransactionCmd.Name(),
-		submitTransactionCmd.Name(),
-		estimateTransactionGasCmd.Name(),
 
 		getTransactionCmd.Name(),
 		listTransactionsCmd.Name(),

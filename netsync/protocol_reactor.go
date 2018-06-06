@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/connection"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -85,9 +86,9 @@ func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.
 }
 
 // GetChannels implements Reactor
-func (pr *ProtocolReactor) GetChannels() []*p2p.ChannelDescriptor {
-	return []*p2p.ChannelDescriptor{
-		&p2p.ChannelDescriptor{
+func (pr *ProtocolReactor) GetChannels() []*connection.ChannelDescriptor {
+	return []*connection.ChannelDescriptor{
+		&connection.ChannelDescriptor{
 			ID:                BlockchainChannel,
 			Priority:          5,
 			SendQueueCapacity: 100,

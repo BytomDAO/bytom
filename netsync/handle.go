@@ -11,8 +11,10 @@ import (
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/pex"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/version"
 )
 
@@ -20,7 +22,6 @@ import (
 type SyncManager struct {
 	networkID uint64
 	sw        *p2p.Switch
-	addrBook  *p2p.AddrBook // known peers
 
 	privKey     crypto.PrivKeyEd25519 // local node's p2p key
 	chain       *core.Chain
@@ -29,6 +30,7 @@ type SyncManager struct {
 	blockKeeper *blockKeeper
 	peers       *peerSet
 
+	newTxCh       chan *types.Tx
 	newBlockCh    chan *bc.Hash
 	newPeerCh     chan struct{}
 	txSyncCh      chan *txsync
@@ -45,21 +47,25 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		txPool:     txPool,
 		chain:      chain,
 		privKey:    crypto.GenPrivKeyEd25519(),
-		config:     config,
-		quitSync:   make(chan struct{}),
+		peers:      newPeerSet(),
+		newTxCh:    make(chan *types.Tx, maxTxChanSize),
 		newBlockCh: newBlockCh,
 		newPeerCh:  make(chan struct{}),
 		txSyncCh:   make(chan *txsync),
 		dropPeerCh: make(chan *string, maxQuitReq),
-		peers:      newPeerSet(),
+		quitSync:   make(chan struct{}),
+		config:     config,
 	}
 
 	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-	manager.sw = p2p.NewSwitch(config.P2P, trustHistoryDB)
+	addrBook := pex.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
+	manager.sw = p2p.NewSwitch(config.P2P, addrBook, trustHistoryDB)
+
+	pexReactor := pex.NewPEXReactor(addrBook)
+	manager.sw.AddReactor("PEX", pexReactor)
 
 	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers, manager.dropPeerCh)
 	manager.fetcher = NewFetcher(chain, manager.sw, manager.peers)
-
 	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
@@ -68,18 +74,11 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	var l p2p.Listener
 	if !config.VaultMode {
 		p, address := protocolAndAddress(manager.config.P2P.ListenAddress)
-		l, listenerStatus = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP, nil)
+		l, listenerStatus = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP)
 		manager.sw.AddListener(l)
 	}
 	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
 	manager.sw.SetNodePrivKey(manager.privKey)
-	// Optionally, start the pex reactor
-	//var addrBook *p2p.AddrBook
-	if config.P2P.PexReactor {
-		manager.addrBook = p2p.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
-		pexReactor := p2p.NewPEXReactor(manager.addrBook, manager.sw)
-		manager.sw.AddReactor("PEX", pexReactor)
-	}
 
 	return manager, nil
 }
@@ -124,21 +123,8 @@ func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 }
 
 func (sm *SyncManager) netStart() error {
-	// Start the switch
 	_, err := sm.sw.Start()
-	if err != nil {
-		return err
-	}
-
-	// If seeds exist, add them to the address book and dial out
-	if sm.config.P2P.Seeds != "" {
-		// dial out
-		seeds := strings.Split(sm.config.P2P.Seeds, ",")
-		if err := sm.DialSeeds(seeds); err != nil {
-			return err
-		}
-	}
-	return nil
+	return err
 }
 
 //Start start sync manager service
@@ -163,10 +149,9 @@ func (sm *SyncManager) Stop() {
 }
 
 func (sm *SyncManager) txBroadcastLoop() {
-	newTxCh := sm.txPool.GetNewTxCh()
 	for {
 		select {
-		case newTx := <-newTxCh:
+		case newTx := <-sm.newTxCh:
 			peers, err := sm.peers.BroadcastTx(newTx)
 			if err != nil {
 				log.Errorf("Broadcast new tx error. %v", err)
@@ -229,12 +214,12 @@ func (sm *SyncManager) Peers() *peerSet {
 	return sm.peers
 }
 
-//DialSeeds dial seed peers
-func (sm *SyncManager) DialSeeds(seeds []string) error {
-	return sm.sw.DialSeeds(sm.addrBook, seeds)
-}
-
 //Switch get sync manager switch
 func (sm *SyncManager) Switch() *p2p.Switch {
 	return sm.sw
+}
+
+// GetNewTxCh return a unconfirmed transaction feed channel
+func (sm *SyncManager) GetNewTxCh() chan *types.Tx {
+	return sm.newTxCh
 }

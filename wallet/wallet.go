@@ -14,8 +14,12 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-//SINGLE single sign
-const SINGLE = 1
+const (
+	//SINGLE single sign
+	SINGLE = 1
+
+	maxTxChanSize = 10000 // txChanSize is the size of channel listening to Txpool newTxCh
+)
 
 var walletKey = []byte("walletInfo")
 
@@ -36,6 +40,7 @@ type Wallet struct {
 	Hsm        *pseudohsm.HSM
 	chain      *protocol.Chain
 	rescanCh   chan struct{}
+	newTxCh    chan *types.Tx
 }
 
 //NewWallet return a new wallet instance
@@ -47,6 +52,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		chain:      chain,
 		Hsm:        hsm,
 		rescanCh:   make(chan struct{}, 1),
+		newTxCh:    make(chan *types.Tx, maxTxChanSize),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -54,6 +60,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	go w.walletUpdater()
+	go w.UnconfirmedTxCollector()
 
 	return w, nil
 }
@@ -145,7 +152,7 @@ func (w *Wallet) walletUpdater() {
 			}
 
 			if err := w.DetachBlock(block); err != nil {
-				log.WithField("err", err).Error("walletUpdater detachBlock")
+				log.WithField("err", err).Error("walletUpdater detachBlock stop")
 				return
 			}
 		}
@@ -157,12 +164,13 @@ func (w *Wallet) walletUpdater() {
 		}
 
 		if err := w.AttachBlock(block); err != nil {
-			log.WithField("err", err).Error("walletUpdater stop")
+			log.WithField("err", err).Error("walletUpdater AttachBlock stop")
 			return
 		}
 	}
 }
 
+//RescanBlocks provide a trigger to rescan blocks
 func (w *Wallet) RescanBlocks() {
 	select {
 	case w.rescanCh <- struct{}{}:
@@ -179,6 +187,17 @@ func (w *Wallet) getRescanNotification() {
 		w.AttachBlock(block)
 	default:
 		return
+	}
+}
+
+// GetNewTxCh return a unconfirmed transaction feed channel
+func (w *Wallet) GetNewTxCh() chan *types.Tx {
+	return w.newTxCh
+}
+
+func (w *Wallet) UnconfirmedTxCollector() {
+	for {
+		w.SaveUnconfirmedTx(<-w.newTxCh)
 	}
 }
 

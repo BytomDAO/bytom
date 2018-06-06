@@ -46,7 +46,6 @@ func NewFetcher(chain *core.Chain, sw *p2p.Switch, peers *peerSet) *Fetcher {
 		newMinedBlock: make(chan *blockPending),
 		quit:          make(chan struct{}),
 		queue:         prque.New(),
-		queues:        make(map[string]int),
 		queued:        make(map[bc.Hash]*blockPending),
 	}
 }
@@ -181,10 +180,6 @@ func (f *Fetcher) insert(peerID string, block *types.Block) {
 // state.
 func (f *Fetcher) forgetBlock(hash bc.Hash) {
 	if insert := f.queued[hash]; insert != nil {
-		f.queues[insert.peerID]--
-		if f.queues[insert.peerID] == 0 {
-			delete(f.queues, insert.peerID)
-		}
 		delete(f.queued, hash)
 	}
 }
