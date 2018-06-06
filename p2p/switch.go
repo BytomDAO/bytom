@@ -7,14 +7,16 @@ import (
 	"sync"
 	"time"
 
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	log "github.com/sirupsen/logrus"
-	crypto "github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
+	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/trust"
 )
 
@@ -39,7 +41,21 @@ type AddrBook interface {
 	SaveToFile() error
 }
 
-//-----------------------------------------------------------------------------
+// sharedUDPConn implements a shared connection. Write sends messages to the underlying connection while read returns
+// messages that were found unprocessable and sent to the unhandled channel by the primary listener.
+type sharedUDPConn struct {
+	*net.UDPConn
+	unhandled chan discover.ReadPacket
+}
+
+// DiscoveryV5Bootnodes are the enode URLs of the P2P bootstrap nodes for the
+// experimental RLPx v5 topic-discovery network.
+var DiscoveryBootnodes = []string{
+	"enode://06051a5573c81934c9554ef2898eb13b33a34b94cf36b202b69fde139ca17a85051979867720d4bdae4323d4943ddf9aeeb6643633aa656e0be843659795007a@35.177.226.168:30303",
+	"enode://0cc5f5ffb5d9098c8b8c62325f3797f56509bff942704687b6530992ac706e2cb946b90a34f1f19548cd3c7baccbcaea354531e5983c7d1bc0dee16ce4b6440b@40.118.3.223:30304",
+	"enode://1c7a64d76c0334b0418c004af2f67c50e36a3be60b5e4790bdac0439d21603469a85fad36f2473c9a80eb043ae60936df905fa28f1ff614c3e5dc34f15dcd2dc@40.118.3.223:30306",
+	"enode://85c85d7143ae8bb96924f2b54f1b3e70d8c4d367af305325d30a61385a432f247d2c75c45c6b4a60335060d072d7f5b35dd1d4c45f76941f62a4f83b6e75daaf@40.118.3.223:30307",
+}
 
 // Switch handles peer connections and exposes an API to receive incoming messages
 // on `Reactors`.  Each `Reactor` is responsible for handling incoming messages of one
@@ -61,22 +77,49 @@ type Switch struct {
 	addrBook     AddrBook
 	bannedPeer   map[string]time.Time
 	db           dbm.DB
-	mtx          sync.Mutex
+	// NodeDatabase is the path to the database containing the previously seen
+	// live nodes in the network.
+	NodeDatabasePath string
+
+	// NoDiscovery can be used to disable the peer discovery mechanism.
+	// Disabling is useful for protocol debugging (manual topology).
+	NoDiscovery bool
+	// BootstrapNodes are used to establish connectivity
+	// with the rest of the network.
+	BootstrapNodes []*discover.Node
+	Discv          *discover.Network
+
+	mtx sync.Mutex
+}
+
+// Enodes represents a slice of accounts.
+type Enodes struct{ nodes []*discover.Node }
+
+// FoundationBootnodes returns the enode URLs of the P2P bootstrap nodes operated
+// by the foundation running the V5 discovery protocol.
+func FoundationBootnodes() *Enodes {
+	nodes := &Enodes{nodes: make([]*discover.Node, len(DiscoveryBootnodes))}
+	for i, url := range DiscoveryBootnodes {
+		nodes.nodes[i] = discover.MustParseNode(url)
+	}
+	return nodes
 }
 
 // NewSwitch creates a new Switch with the given config.
-func NewSwitch(config *cfg.P2PConfig, addrBook AddrBook, trustHistoryDB dbm.DB) *Switch {
+func NewSwitch(config *cfg.P2PConfig, addrBook AddrBook, trustHistoryDB dbm.DB, nodeDatabasePath string) *Switch {
 	sw := &Switch{
-		Config:       config,
-		peerConfig:   DefaultPeerConfig(config),
-		reactors:     make(map[string]Reactor),
-		chDescs:      make([]*connection.ChannelDescriptor, 0),
-		reactorsByCh: make(map[byte]Reactor),
-		peers:        NewPeerSet(),
-		dialing:      cmn.NewCMap(),
-		nodeInfo:     nil,
-		addrBook:     addrBook,
-		db:           trustHistoryDB,
+		Config:           config,
+		peerConfig:       DefaultPeerConfig(config),
+		reactors:         make(map[string]Reactor),
+		chDescs:          make([]*connection.ChannelDescriptor, 0),
+		reactorsByCh:     make(map[byte]Reactor),
+		peers:            NewPeerSet(),
+		dialing:          cmn.NewCMap(),
+		nodeInfo:         nil,
+		addrBook:         addrBook,
+		db:               trustHistoryDB,
+		NodeDatabasePath: nodeDatabasePath,
+		BootstrapNodes:   FoundationBootnodes().nodes,
 	}
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	sw.bannedPeer = make(map[string]time.Time)
@@ -91,6 +134,41 @@ func NewSwitch(config *cfg.P2PConfig, addrBook AddrBook, trustHistoryDB dbm.DB) 
 
 // OnStart implements BaseService. It starts all the reactors, peers, and listeners.
 func (sw *Switch) OnStart() error {
+	var (
+		sconn     *sharedUDPConn
+		realaddr  *net.UDPAddr
+		unhandled chan discover.ReadPacket
+		ntab      *discover.Network
+	)
+
+	if !sw.NoDiscovery {
+		addr, err := net.ResolveUDPAddr("udp", sw.nodeInfo.ListenAddr)
+		if err != nil {
+			return err
+		}
+		conn, err := net.ListenUDP("udp", addr)
+		if err != nil {
+			return err
+		}
+		realaddr = conn.LocalAddr().(*net.UDPAddr)
+		unhandled = make(chan discover.ReadPacket, 100)
+		sconn = &sharedUDPConn{conn, unhandled}
+	}
+
+	nodeKey, err := ethcrypto.GenerateKey()
+	if err != nil {
+		return err
+	}
+	ntab, err = discover.ListenUDP(nodeKey, sconn, realaddr, sw.NodeDatabasePath, nil) //srv.NodeDatabase)
+	if err != nil {
+		return err
+	}
+	if err := ntab.SetFallbackNodes(sw.BootstrapNodes); err != nil {
+		return err
+	}
+	sw.Discv = ntab
+
+	// Start reactors
 	for _, reactor := range sw.reactors {
 		if _, err := reactor.Start(); err != nil {
 			return err
