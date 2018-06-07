@@ -23,8 +23,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/aristanetworks/goarista/monotime"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -36,11 +36,17 @@ const (
 
 type Topic string
 
+type AbsTime time.Duration // absolute monotonic time
+
+func Now() AbsTime {
+	return AbsTime(monotime.Now())
+}
+
 type topicEntry struct {
 	topic   Topic
 	fifoIdx uint64
 	node    *Node
-	expire  mclock.AbsTime
+	expire  AbsTime
 }
 
 type topicInfo struct {
@@ -64,7 +70,7 @@ type nodeInfo struct {
 	entries                          map[Topic]*topicEntry
 	lastIssuedTicket, lastUsedTicket uint32
 	// you can't register a ticket newer than lastUsedTicket before noRegUntil (absolute time)
-	noRegUntil mclock.AbsTime
+	noRegUntil AbsTime
 }
 
 type topicTable struct {
@@ -75,7 +81,7 @@ type topicTable struct {
 	globalEntries         uint64
 	requested             topicRequestQueue
 	requestCnt            uint64
-	lastGarbageCollection mclock.AbsTime
+	lastGarbageCollection AbsTime
 }
 
 func newTopicTable(db *nodeDB, self *Node) *topicTable {
@@ -137,7 +143,7 @@ func (t *topicTable) getOrNewNode(node *Node) *nodeInfo {
 }
 
 func (t *topicTable) checkDeleteNode(node *Node) {
-	if n, ok := t.nodes[node]; ok && len(n.entries) == 0 && n.noRegUntil < mclock.Now() {
+	if n, ok := t.nodes[node]; ok && len(n.entries) == 0 && n.noRegUntil < Now() {
 		//fmt.Printf("deleteNode %016x %016x\n", t.self.sha[:8], node.sha[:8])
 		delete(t.nodes, node)
 	}
@@ -177,7 +183,7 @@ func (t *topicTable) addEntry(node *Node, topic Topic) {
 	// ***
 	n = t.getOrNewNode(node)
 
-	tm := mclock.Now()
+	tm := Now()
 	te := t.getOrNewTopic(topic)
 
 	if len(te.entries) == maxEntriesPerTopic {
@@ -194,7 +200,7 @@ func (t *topicTable) addEntry(node *Node, topic Topic) {
 		topic:   topic,
 		fifoIdx: fifoIdx,
 		node:    node,
-		expire:  tm + mclock.AbsTime(fallbackRegistrationExpiry),
+		expire:  tm + AbsTime(fallbackRegistrationExpiry),
 	}
 	if printTestImgLogs {
 		fmt.Printf("*+ %d %v %016x %016x\n", tm/1000000, topic, t.self.sha[:8], node.sha[:8])
@@ -219,7 +225,7 @@ func (t *topicTable) leastRequested() *topicEntry {
 // entry should exist
 func (t *topicTable) deleteEntry(e *topicEntry) {
 	if printTestImgLogs {
-		fmt.Printf("*- %d %v %016x %016x\n", mclock.Now()/1000000, e.topic, t.self.sha[:8], e.node.sha[:8])
+		fmt.Printf("*- %d %v %016x %016x\n", Now()/1000000, e.topic, t.self.sha[:8], e.node.sha[:8])
 	}
 	ne := t.nodes[e.node].entries
 	delete(ne, e.topic)
@@ -245,17 +251,17 @@ func (t *topicTable) useTicket(node *Node, serialNo uint32, topics []Topic, idx 
 		return false
 	}
 
-	tm := mclock.Now()
+	tm := Now()
 	if serialNo > n.lastUsedTicket && tm < n.noRegUntil {
 		return false
 	}
 	if serialNo != n.lastUsedTicket {
 		n.lastUsedTicket = serialNo
-		n.noRegUntil = tm + mclock.AbsTime(noRegTimeout())
+		n.noRegUntil = tm + AbsTime(noRegTimeout())
 		t.storeTicketCounters(node)
 	}
 
-	currTime := uint64(tm / mclock.AbsTime(time.Second))
+	currTime := uint64(tm / AbsTime(time.Second))
 	regTime := issueTime + uint64(waitPeriods[idx])
 	relTime := int64(currTime - regTime)
 	if relTime >= -1 && relTime <= regTimeWindow+1 { // give clients a little security margin on both ends
@@ -263,7 +269,7 @@ func (t *topicTable) useTicket(node *Node, serialNo uint32, topics []Topic, idx 
 			t.addEntry(node, topics[idx])
 		} else {
 			// if there is an active entry, don't move to the front of the FIFO but prolong expire time
-			e.expire = tm + mclock.AbsTime(fallbackRegistrationExpiry)
+			e.expire = tm + AbsTime(fallbackRegistrationExpiry)
 		}
 		return true
 	}
@@ -274,7 +280,7 @@ func (t *topicTable) useTicket(node *Node, serialNo uint32, topics []Topic, idx 
 func (topictab *topicTable) getTicket(node *Node, topics []Topic) *ticket {
 	topictab.collectGarbage()
 
-	now := mclock.Now()
+	now := Now()
 	n := topictab.getOrNewNode(node)
 	n.lastIssuedTicket++
 	topictab.storeTicketCounters(node)
@@ -283,7 +289,7 @@ func (topictab *topicTable) getTicket(node *Node, topics []Topic) *ticket {
 		issueTime: now,
 		topics:    topics,
 		serial:    n.lastIssuedTicket,
-		regTime:   make([]mclock.AbsTime, len(topics)),
+		regTime:   make([]AbsTime, len(topics)),
 	}
 	for i, topic := range topics {
 		var waitPeriod time.Duration
@@ -293,7 +299,7 @@ func (topictab *topicTable) getTicket(node *Node, topics []Topic) *ticket {
 			waitPeriod = minWaitPeriod
 		}
 
-		t.regTime[i] = now + mclock.AbsTime(waitPeriod)
+		t.regTime[i] = now + AbsTime(waitPeriod)
 	}
 	return t
 }
@@ -301,7 +307,7 @@ func (topictab *topicTable) getTicket(node *Node, topics []Topic) *ticket {
 const gcInterval = time.Minute
 
 func (t *topicTable) collectGarbage() {
-	tm := mclock.Now()
+	tm := Now()
 	if time.Duration(tm-t.lastGarbageCollection) < gcInterval {
 		return
 	}
@@ -334,16 +340,16 @@ const (
 
 // initialization is not required, will set to minWaitPeriod at first registration
 type waitControlLoop struct {
-	lastIncoming mclock.AbsTime
+	lastIncoming AbsTime
 	waitPeriod   time.Duration
 }
 
-func (w *waitControlLoop) registered(tm mclock.AbsTime) {
+func (w *waitControlLoop) registered(tm AbsTime) {
 	w.waitPeriod = w.nextWaitPeriod(tm)
 	w.lastIncoming = tm
 }
 
-func (w *waitControlLoop) nextWaitPeriod(tm mclock.AbsTime) time.Duration {
+func (w *waitControlLoop) nextWaitPeriod(tm AbsTime) time.Duration {
 	period := tm - w.lastIncoming
 	wp := time.Duration(float64(w.waitPeriod) * math.Exp((float64(wcTargetRegInterval)-float64(period))/float64(wcTimeConst)))
 	if wp < minWaitPeriod {
@@ -353,7 +359,7 @@ func (w *waitControlLoop) nextWaitPeriod(tm mclock.AbsTime) time.Duration {
 }
 
 func (w *waitControlLoop) hasMinimumWaitPeriod() bool {
-	return w.nextWaitPeriod(mclock.Now()) == minWaitPeriod
+	return w.nextWaitPeriod(Now()) == minWaitPeriod
 }
 
 func noRegTimeout() time.Duration {

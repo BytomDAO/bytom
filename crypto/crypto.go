@@ -20,6 +20,10 @@ import (
 	"github.com/bytom/common"
 	"golang.org/x/crypto/ripemd160"
 	"golang.org/x/crypto/sha3"
+	bytomsha3 "github.com/bytom/crypto/sha3"
+
+	"crypto/ecdsa"
+	"crypto/rand"
 )
 
 func DoubleSha256(b []byte) []byte {
@@ -56,4 +60,34 @@ func Ripemd160(data []byte) []byte {
 	ripemd.Write(data)
 
 	return ripemd.Sum(nil)
+}
+
+// Keccak256Hash calculates and returns the Keccak256 hash of the input data,
+// converting it to an internal Hash data structure.
+func Keccak256Hash(data ...[]byte) (h common.Hash) {
+	d := bytomsha3.NewKeccak256()
+	for _, b := range data {
+		d.Write(b)
+	}
+	d.Sum(h[:0])
+	return h
+}
+
+// Keccak256 calculates and returns the Keccak256 hash of the input data.
+func Keccak256(data ...[]byte) []byte {
+	d := bytomsha3.NewKeccak256()
+	for _, b := range data {
+		d.Write(b)
+	}
+	return d.Sum(nil)
+}
+
+func zeroBytes(bytes []byte) {
+	for i := range bytes {
+		bytes[i] = 0
+	}
+}
+
+func GenerateKey() (*ecdsa.PrivateKey, error) {
+	return ecdsa.GenerateKey(S256(), rand.Reader)
 }

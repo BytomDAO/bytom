@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
-
+	bytomcrypto "github.com/bytom/crypto"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
@@ -154,8 +154,7 @@ func (sw *Switch) OnStart() error {
 		unhandled = make(chan discover.ReadPacket, 100)
 		sconn = &sharedUDPConn{conn, unhandled}
 	}
-
-	nodeKey, err := ethcrypto.GenerateKey()
+	nodeKey, err := bytomcrypto.GenerateKey()
 	if err != nil {
 		return err
 	}
