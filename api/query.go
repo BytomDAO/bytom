@@ -98,13 +98,12 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	var transaction *query.AnnotatedTx
 
 	if filter.ID != "" {
-		if filter.Unconfirmed {
+		transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
+		if err != nil && filter.Unconfirmed {
 			transaction, err = a.wallet.GetUnconfirmedTxByTxID(filter.ID)
-		} else {
-			transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
-		}
-		if err != nil {
-			return NewErrorResponse(err)
+			if err != nil {
+				return NewErrorResponse(err)
+			}
 		}
 		transactions = []*query.AnnotatedTx{transaction}
 	} else {
