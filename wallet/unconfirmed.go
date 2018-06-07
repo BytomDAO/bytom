@@ -58,6 +58,7 @@ func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error)
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
+	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 
 	return annotatedTx, nil
 }
