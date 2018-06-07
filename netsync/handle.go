@@ -1,6 +1,7 @@
 package netsync
 
 import (
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -10,6 +11,7 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
+	"github.com/bytom/consensus"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/pex"
 	core "github.com/bytom/protocol"
@@ -100,6 +102,7 @@ func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 		Network: sm.config.ChainID,
 		Version: version.Version,
 		Other: []string{
+			cmn.Fmt("service_flag=%v", strconv.FormatUint(uint64(consensus.DefaultServices), 10)),
 			cmn.Fmt("wire_version=%v", wire.Version),
 			cmn.Fmt("p2p_version=%v", p2p.Version),
 		},
