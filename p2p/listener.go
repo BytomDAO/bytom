@@ -118,8 +118,10 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 
 	// Determine external address...
 	var extAddr *NetAddress
+	var upnpMap bool
 	if !skipUPNP && (lAddrIP == "" || lAddrIP == "0.0.0.0") {
 		extAddr, err = getUPNPExternalAddress(lAddrPort, listenerPort)
+		upnpMap = err == nil
 		log.WithField("err", err).Info("get UPNP external address")
 	}
 
@@ -132,7 +134,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 		extAddr = getNaiveExternalAddress(listenerPort, false)
 	}
 	if extAddr == nil {
-		cmn.PanicCrisis("Could not determine external address!")
+		cmn.PanicCrisis("could not determine external address!")
 	}
 
 	dl := &DefaultListener{
@@ -143,6 +145,9 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 	}
 	dl.BaseService = *cmn.NewBaseService(nil, "DefaultListener", dl)
 	dl.Start() // Started upon construction
+	if upnpMap {
+		return dl, true
+	}
 
 	conn, err := net.DialTimeout("tcp", extAddr.String(), 3*time.Second)
 	if err != nil {
