@@ -24,12 +24,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
+	log "github.com/sirupsen/logrus"
 	"github.com/ethereum/go-ethereum/rlp"
+	//"github.com/ethereum/go-ethereum/p2p/nat"
+	"github.com/bytom/common"
+	"github.com/bytom/p2p/netutil"
+	bytomcrypto "github.com/bytom/crypto"
 )
 
 const Version = 4
@@ -252,7 +252,7 @@ type udp struct {
 	conn        conn
 	priv        *ecdsa.PrivateKey
 	ourEndpoint rpcEndpoint
-	nat         nat.Interface
+	//nat         nat.Interface
 	net         *Network
 }
 
@@ -322,7 +322,7 @@ func (t *udp) sendNeighbours(remote *Node, results []*Node) {
 
 func (t *udp) sendFindnodeHash(remote *Node, target common.Hash) {
 	t.sendPacket(remote.ID, remote.addr(), byte(findnodeHashPacket), findnodeHash{
-		Target:     target,
+		Target:     common.Hash(target),
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 	})
 }
@@ -360,9 +360,9 @@ func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req inter
 		//fmt.Println(err)
 		return hash, err
 	}
-	log.Trace(fmt.Sprintf(">>> %v to %x@%v", nodeEvent(ptype), toid[:8], toaddr))
+	log.Info(fmt.Sprintf(">>> %v to %x@%v", nodeEvent(ptype), toid[:8], toaddr))
 	if _, err = t.conn.WriteToUDP(packet, toaddr); err != nil {
-		log.Trace(fmt.Sprint("UDP send failed:", err))
+		log.Info(fmt.Sprint("UDP send failed:", err))
 	}
 	//fmt.Println(err)
 	return hash, err
@@ -380,14 +380,14 @@ func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) (p, hash 
 		return nil, nil, err
 	}
 	packet := b.Bytes()
-	sig, err := crypto.Sign(crypto.Keccak256(packet[headSize:]), priv)
+	sig, err := bytomcrypto.Sign(bytomcrypto.Keccak256(packet[headSize:]), priv)
 	if err != nil {
 		log.Error(fmt.Sprint("could not sign packet:", err))
 		return nil, nil, err
 	}
 	copy(packet, versionPrefix)
 	copy(packet[versionPrefixSize:], sig)
-	hash = crypto.Keccak256(packet[versionPrefixSize:])
+	hash = bytomcrypto.Keccak256(packet[versionPrefixSize:])
 	return packet, hash, nil
 }
 
@@ -435,12 +435,12 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 	if !bytes.Equal(prefix, versionPrefix) {
 		return errBadPrefix
 	}
-	fromID, err := recoverNodeID(crypto.Keccak256(buf[headSize:]), sig)
+	fromID, err := recoverNodeID(bytomcrypto.Keccak256(buf[headSize:]), sig)
 	if err != nil {
 		return err
 	}
 	pkt.rawData = buf
-	pkt.hash = crypto.Keccak256(buf[versionPrefixSize:])
+	pkt.hash = bytomcrypto.Keccak256(buf[versionPrefixSize:])
 	pkt.remoteID = fromID
 	switch pkt.ev = nodeEvent(sigdata[0]); pkt.ev {
 	case pingPacket:

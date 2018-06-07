@@ -29,7 +29,8 @@ import (
 	"net"
 	"sort"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/bytom/common"
+	"github.com/bytom/crypto"
 )
 
 const (
@@ -81,6 +82,7 @@ func (tab *Table) chooseBucketRefreshTarget() common.Hash {
 	entries := 0
 	if printTable {
 		fmt.Println()
+		fmt.Println("self ", "id:", tab.self.ID, " hex:", crypto.Keccak256Hash(tab.self.ID[:]).Hex())
 	}
 	for i, b := range tab.buckets {
 		entries += len(b.entries)

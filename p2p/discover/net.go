@@ -23,13 +23,12 @@ import (
 	"fmt"
 	"net"
 	"time"
+	"github.com/bytom/common"
+	"github.com/bytom/p2p/netutil"
+	"github.com/bytom/crypto"
+	"github.com/bytom/crypto/sha3"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/mclock"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
 	log "github.com/sirupsen/logrus"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -584,7 +583,7 @@ loop:
 				fmt.Printf("(%x) topics:%d radius:%d tickets:%d @ %v\n", net.tab.self.ID[:8], topics, rad, tickets, time.Now())
 			}*/
 
-			tm := mclock.Now()
+			tm := Now()
 			for topic, r := range net.ticketStore.radius {
 				if printTestImgLogs {
 					rad := r.radius / (maxRadius/1000000 + 1)
@@ -1135,7 +1134,7 @@ func (net *Network) handlePing(n *Node, pkt *ingressPacket) {
 func (net *Network) handleKnownPong(n *Node, pkt *ingressPacket) error {
 	log.Info("Handling known pong", "node", n.ID)
 	net.abortTimedEvent(n, pongTimeout)
-	now := mclock.Now()
+	now := Now()
 	ticket, err := pongToTicket(now, n.pingTopics, n, pkt)
 	if err == nil {
 		// fmt.Printf("(%x) ticket: %+v\n", net.tab.self.ID[:8], pkt.data)
