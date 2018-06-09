@@ -257,11 +257,11 @@ func (n *Node) UnmarshalText(text []byte) error {
 // 	*nl = append(slice[:i], slice[i+1:]...)
 // }
 
-const nodeIDBits = 512
+const nodeIDBits = 32
 
 // NodeID is a unique identifier for each node.
 // The node identifier is a marshaled elliptic curve public key.
-type NodeID [nodeIDBits / 8]byte
+type NodeID [32]byte
 
 // NodeID prints as a long hexadecimal number.
 func (n NodeID) String() string {
@@ -290,6 +290,15 @@ func HexID(in string) (NodeID, error) {
 	}
 	copy(id[:], b)
 	return id, nil
+}
+
+// ByteID converts a []byte to a NodeID.
+func ByteID(in []byte) NodeID {
+	var id NodeID
+	for i := range id {
+		id[i] = in[i]
+	}
+	return id
 }
 
 // MustHexID converts a hex string to a NodeID.

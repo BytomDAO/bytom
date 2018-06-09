@@ -24,11 +24,12 @@ import (
 	"net"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/bytom/p2p/rlp"
 	"github.com/bytom/common"
 	"github.com/bytom/p2p/netutil"
-	bytomcrypto "github.com/bytom/crypto"
+	"github.com/bytom/p2p/rlp"
+	log "github.com/sirupsen/logrus"
+	//bytomcrypto "github.com/bytom/crypto"
+	"github.com/tendermint/go-crypto"
 )
 
 const Version = 4
@@ -164,10 +165,11 @@ type (
 )
 
 var (
-	versionPrefix     = []byte("temporary discovery v5")
+	versionPrefix     = []byte("bytom discovery")
 	versionPrefixSize = len(versionPrefix)
+	nodeIDSize        = 32
 	sigSize           = 520 / 8
-	headSize          = versionPrefixSize + sigSize // space of packet frame data
+	headSize          = versionPrefixSize + nodeIDSize + sigSize // space of packet frame data
 )
 
 // Neighbors replies are sent across multiple packets to
@@ -249,19 +251,19 @@ type conn interface {
 // udp implements the RPC protocol.
 type udp struct {
 	conn        conn
-	priv        *ecdsa.PrivateKey
+	priv        *crypto.PrivKeyEd25519
 	ourEndpoint rpcEndpoint
 	//nat         nat.Interface
-	net         *Network
+	net *Network
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
-func ListenUDP(priv *ecdsa.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist) (*Network, error) {
+func ListenUDP(priv *crypto.PrivKeyEd25519, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist) (*Network, error) {
 	transport, err := listenUDP(priv, conn, realaddr)
 	if err != nil {
 		return nil, err
 	}
-	net, err := newNetwork(transport, priv.PublicKey, nodeDBPath, netrestrict)
+	net, err := newNetwork(transport, priv.PubKey().Unwrap().(crypto.PubKeyEd25519), nodeDBPath, netrestrict)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +273,7 @@ func ListenUDP(priv *ecdsa.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDBP
 	return net, nil
 }
 
-func listenUDP(priv *ecdsa.PrivateKey, conn conn, realaddr *net.UDPAddr) (*udp, error) {
+func listenUDP(priv *crypto.PrivKeyEd25519, conn conn, realaddr *net.UDPAddr) (*udp, error) {
 	return &udp{conn: conn, priv: priv, ourEndpoint: makeEndpoint(realaddr, uint16(realaddr.Port))}, nil
 }
 
@@ -370,7 +372,7 @@ func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req inter
 // zeroed padding space for encodePacket.
 var headSpace = make([]byte, headSize)
 
-func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) (p, hash []byte, err error) {
+func encodePacket(priv *crypto.PrivKeyEd25519, ptype byte, req interface{}) (p, hash []byte, err error) {
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(ptype)
@@ -379,14 +381,17 @@ func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) (p, hash 
 		return nil, nil, err
 	}
 	packet := b.Bytes()
-	sig, err := bytomcrypto.Sign(bytomcrypto.Keccak256(packet[headSize:]), priv)
-	if err != nil {
-		log.Error(fmt.Sprint("could not sign packet:", err))
-		return nil, nil, err
-	}
+	nodeID := priv.PubKey().Unwrap().(crypto.PubKeyEd25519)
+	sig := priv.Sign(common.BytesToHash(packet[headSize:]).Bytes())
+	//if err != nil {
+	//	log.Error(fmt.Sprint("could not sign packet:", err))
+	//	return nil, nil, err
+	//}
 	copy(packet, versionPrefix)
-	copy(packet[versionPrefixSize:], sig)
-	hash = bytomcrypto.Keccak256(packet[versionPrefixSize:])
+	copy(packet[versionPrefixSize:], nodeID.Bytes())
+	copy(packet[versionPrefixSize+nodeIDSize:], sig.Bytes())
+
+	hash = common.BytesToHash(packet[versionPrefixSize:]).Bytes()
 	return packet, hash, nil
 }
 
@@ -430,17 +435,20 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 	}
 	buf := make([]byte, len(buffer))
 	copy(buf, buffer)
-	prefix, sig, sigdata := buf[:versionPrefixSize], buf[versionPrefixSize:headSize], buf[headSize:]
+//	prefix, fromID, sig, sigdata := buf[:versionPrefixSize], buf[versionPrefixSize:versionPrefixSize+nodeIDSize], buf[versionPrefixSize+nodeIDSize:headSize], buf[headSize:]
+	prefix, fromID,  sigdata := buf[:versionPrefixSize], buf[versionPrefixSize:versionPrefixSize+nodeIDSize], buf[headSize:]
+
 	if !bytes.Equal(prefix, versionPrefix) {
 		return errBadPrefix
 	}
-	fromID, err := recoverNodeID(bytomcrypto.Keccak256(buf[headSize:]), sig)
-	if err != nil {
-		return err
-	}
+	//crypto.PubKeyEd25519.
+	//fromID, err := recoverNodeID(common.BytesToHash(buf[headSize:]).Bytes(), sig)
+	//if err != nil {
+	//	return err
+	//}
 	pkt.rawData = buf
-	pkt.hash = bytomcrypto.Keccak256(buf[versionPrefixSize:])
-	pkt.remoteID = fromID
+	pkt.hash = common.BytesToHash(buf[versionPrefixSize:]).Bytes()
+	pkt.remoteID = ByteID(fromID)
 	switch pkt.ev = nodeEvent(sigdata[0]); pkt.ev {
 	case pingPacket:
 		pkt.data = new(ping)
@@ -462,6 +470,6 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 		return fmt.Errorf("unknown packet type: %d", sigdata[0])
 	}
 	s := rlp.NewStream(bytes.NewReader(sigdata[1:]), 0)
-	err = s.Decode(pkt.data)
+	err := s.Decode(pkt.data)
 	return err
 }
