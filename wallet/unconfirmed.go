@@ -3,27 +3,39 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/protocol/bc/types"
 )
 
 const (
-	//unconfirmedTxPrefix is txpool unconfirmed transactions prefix
-	unconfirmedTxPrefix = "UTXS:"
+	//UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
+	UnconfirmedTxPrefix = "UTXS:"
+	//UnconfirmedTxIndexPrefix is txpool unconfirmed tx index prefix
+	UnconfirmedTxIndexPrefix = "UTID:"
 )
 
+func formatUnconfirmedKey(timeStamp uint64) string {
+	return fmt.Sprintf("%016x", timeStamp)
+}
+
 func calcUnconfirmedTxKey(formatKey string) []byte {
-	return []byte(unconfirmedTxPrefix + formatKey)
+	return []byte(UnconfirmedTxPrefix + formatKey)
+}
+
+func calcUnconfirmedTxIndexKey(txID string) []byte {
+	return []byte(UnconfirmedTxIndexPrefix + txID)
 }
 
 // SaveUnconfirmedTx save unconfirmed annotated transaction to the database
 func (w *Wallet) SaveUnconfirmedTx(tx *types.Tx) error {
 	annotatedTx := &query.AnnotatedTx{
-		ID:      tx.ID,
-		Inputs:  make([]*query.AnnotatedInput, 0, len(tx.Inputs)),
-		Outputs: make([]*query.AnnotatedOutput, 0, len(tx.Outputs)),
-		Size:    tx.SerializedSize,
+		ID:        tx.ID,
+		Timestamp: uint64(time.Now().Unix()),
+		Inputs:    make([]*query.AnnotatedInput, 0, len(tx.Inputs)),
+		Outputs:   make([]*query.AnnotatedOutput, 0, len(tx.Outputs)),
+		Size:      tx.SerializedSize,
 	}
 
 	for i := range tx.Inputs {
@@ -43,18 +55,21 @@ func (w *Wallet) SaveUnconfirmedTx(tx *types.Tx) error {
 		return err
 	}
 
-	w.DB.Set(calcUnconfirmedTxKey(tx.ID.String()), rawTx)
+	w.DB.Set(calcUnconfirmedTxKey(formatUnconfirmedKey(annotatedTx.Timestamp)), rawTx)
+	w.DB.Set(calcUnconfirmedTxIndexKey(tx.ID.String()), []byte(formatUnconfirmedKey(annotatedTx.Timestamp)))
+
 	return nil
 }
 
 // GetUnconfirmedTxByTxID get unconfirmed transaction by txID
 func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	annotatedTx := &query.AnnotatedTx{}
-	txInfo := w.DB.Get(calcUnconfirmedTxKey(txID))
-	if txInfo == nil {
+	formatKey := w.DB.Get(calcUnconfirmedTxIndexKey(txID))
+	if formatKey == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) from txpool", txID)
 	}
 
+	annotatedTx := &query.AnnotatedTx{}
+	txInfo := w.DB.Get(calcUnconfirmedTxKey(string(formatKey)))
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
@@ -67,7 +82,7 @@ func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error)
 func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 
-	txIter := w.DB.IteratorPrefix([]byte(unconfirmedTxPrefix))
+	txIter := w.DB.IteratorPrefix([]byte(UnconfirmedTxPrefix))
 	defer txIter.Release()
 	for txIter.Next() {
 		annotatedTx := &query.AnnotatedTx{}
