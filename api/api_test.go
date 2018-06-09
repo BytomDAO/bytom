@@ -48,8 +48,9 @@ func TestAPIHandler(t *testing.T) {
 			respWant: &httperror.Response{
 				Info: httperror.Info{
 					ChainCode: "BTM000",
-					Message:   "",
+					Message:   "wallet not found, please check that the wallet is open",
 				},
+				Detail: "wallet not found, please check that the wallet is open",
 				Status: "fail",
 			},
 		},
@@ -59,8 +60,9 @@ func TestAPIHandler(t *testing.T) {
 			respWant: &httperror.Response{
 				Info: httperror.Info{
 					ChainCode: "BTM000",
-					Message:   "",
+					Message:   "wallet not found, please check that the wallet is open",
 				},
+				Detail: "wallet not found, please check that the wallet is open",
 				Status: "fail",
 			},
 		},
