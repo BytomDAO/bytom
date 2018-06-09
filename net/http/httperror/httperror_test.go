@@ -11,11 +11,7 @@ import (
 var (
 	errNotFound   = errors.New("not found")
 	testFormatter = Formatter{
-		Default:     Info{500, "CH000", "Internal server error"},
-		IsTemporary: func(Info, error) bool { return false },
-		Errors: map[error]Info{
-			errNotFound: {400, "CH002", "Not found"},
-		},
+		errNotFound.Error(): {400, "CH002", "Not found"},
 	}
 )
 

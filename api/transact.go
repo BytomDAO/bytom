@@ -103,7 +103,7 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		for _, innerErr := range errors.Data(err)["actions"].([]error) {
 			Errs = Errs + "<" + innerErr.Error() + ">"
 		}
-		err = errors.New(err.Error() + "-" + Errs)
+		err = errors.WithDetail(err, Errs)
 	}
 	if err != nil {
 		return nil, err

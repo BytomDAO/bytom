@@ -27,13 +27,13 @@ var (
 	coreURL = env.String("BYTOM_URL", "http://localhost:9888")
 )
 
-// Wraper rpc's client
+// MustRPCClient init rpc client base url.
 func MustRPCClient() *rpc.Client {
 	env.Parse()
 	return &rpc.Client{BaseURL: *coreURL}
 }
 
-// Wrapper rpc call api.
+// ClientCall wrap rpc call api.
 func ClientCall(path string, req ...interface{}) (interface{}, int) {
 
 	var response = &api.Response{}
@@ -44,7 +44,17 @@ func ClientCall(path string, req ...interface{}) (interface{}, int) {
 	}
 
 	client := MustRPCClient()
-	client.Call(context.Background(), path, request, response)
+	if err := client.Call(context.Background(), path, request, response); err != nil {
+		if msgErr, ok := err.(rpc.ErrStatusCode); ok && msgErr.ErrorData != nil {
+			jww.ERROR.Println("RPC error:", msgErr.ErrorData.ChainCode, msgErr.ErrorData.Message)
+			if msgErr.ErrorData.Detail != "" {
+				jww.ERROR.Println("Detail:", msgErr.ErrorData.Detail)
+			}
+		} else {
+			jww.ERROR.Println("RPC error:", err)
+		}
+		return nil, ErrConnect
+	}
 
 	switch response.Status {
 	case api.FAIL:

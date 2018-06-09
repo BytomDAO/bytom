@@ -113,7 +113,10 @@ func WithDetailf(err error, format string, v ...interface{}) error {
 // An error has a detail message if it was made by WithDetail
 // or WithDetailf.
 func Detail(err error) string {
-	wrapper, _ := err.(wrapperError)
+	wrapper, ok := err.(wrapperError)
+	if !ok {
+		return err.Error()
+	}
 	return strings.Join(wrapper.detail, "; ")
 }
 

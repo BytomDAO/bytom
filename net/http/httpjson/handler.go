@@ -26,6 +26,20 @@ type handler struct {
 	errFunc ErrorWriter
 }
 
+// Response describes the response standard.
+type Response struct {
+	Status string      `json:"status,omitempty"`
+	Msg    string      `json:"msg,omitempty"`
+	Data   interface{} `json:"data,omitempty"`
+}
+
+const (
+	// SUCCESS indicates the rpc calling is successful.
+	SUCCESS = "success"
+	// FAIL indicated the rpc calling is failed.
+	FAIL = "fail"
+)
+
 // Handler returns an HTTP handler for function f.
 // See the package doc for details on allowed signatures for f.
 // If f returns a non-nil error, the handler will call errFunc.
@@ -66,12 +80,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	switch n := len(rv); {
 	case n == 0:
 		res = &DefaultResponse
-	case n == 1 && !h.fv.Type().Out(0).Implements(errorType):
+	case n == 1:
 		res = rv[0].Interface()
-	case n == 1 && h.fv.Type().Out(0).Implements(errorType):
-		// out param is of type error; its value can still be nil
-		res = &DefaultResponse
-		err, _ = rv[0].Interface().(error)
 	case n == 2:
 		res = rv[0].Interface()
 		err, _ = rv[1].Interface().(error)
