@@ -7,25 +7,16 @@ import (
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/protocol/bc/types"
+	"sort"
 )
 
 const (
 	//UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
 	UnconfirmedTxPrefix = "UTXS:"
-	//UnconfirmedTxIndexPrefix is txpool unconfirmed tx index prefix
-	UnconfirmedTxIndexPrefix = "UTID:"
 )
-
-func formatUnconfirmedKey(timeStamp uint64) string {
-	return fmt.Sprintf("%016x", timeStamp)
-}
 
 func calcUnconfirmedTxKey(formatKey string) []byte {
 	return []byte(UnconfirmedTxPrefix + formatKey)
-}
-
-func calcUnconfirmedTxIndexKey(txID string) []byte {
-	return []byte(UnconfirmedTxIndexPrefix + txID)
 }
 
 // SaveUnconfirmedTx save unconfirmed annotated transaction to the database
@@ -55,21 +46,18 @@ func (w *Wallet) SaveUnconfirmedTx(tx *types.Tx) error {
 		return err
 	}
 
-	w.DB.Set(calcUnconfirmedTxKey(formatUnconfirmedKey(annotatedTx.Timestamp)), rawTx)
-	w.DB.Set(calcUnconfirmedTxIndexKey(tx.ID.String()), []byte(formatUnconfirmedKey(annotatedTx.Timestamp)))
-
+	w.DB.Set(calcUnconfirmedTxKey(tx.ID.String()), rawTx)
 	return nil
 }
 
 // GetUnconfirmedTxByTxID get unconfirmed transaction by txID
 func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	formatKey := w.DB.Get(calcUnconfirmedTxIndexKey(txID))
-	if formatKey == nil {
+	annotatedTx := &query.AnnotatedTx{}
+	txInfo := w.DB.Get(calcUnconfirmedTxKey(txID))
+	if txInfo == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) from txpool", txID)
 	}
 
-	annotatedTx := &query.AnnotatedTx{}
-	txInfo := w.DB.Get(calcUnconfirmedTxKey(string(formatKey)))
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
@@ -77,6 +65,13 @@ func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error)
 
 	return annotatedTx, nil
 }
+
+// SortByTimestamp implements sort.Interface for AnnotatedTx slices
+type SortByTimestamp []*query.AnnotatedTx
+
+func (a SortByTimestamp) Len() int           { return len(a) }
+func (a SortByTimestamp) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a SortByTimestamp) Less(i, j int) bool { return a[i].Timestamp > a[j].Timestamp }
 
 // GetUnconfirmedTxs get account unconfirmed transactions, filter transactions by accountID when accountID is not empty
 func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, error) {
@@ -96,5 +91,7 @@ func (w *Wallet) GetUnconfirmedTxs(accountID string) ([]*query.AnnotatedTx, erro
 		}
 	}
 
+	// sort SortByTimestamp by timestamp
+	sort.Sort(SortByTimestamp(annotatedTxs))
 	return annotatedTxs, nil
 }
