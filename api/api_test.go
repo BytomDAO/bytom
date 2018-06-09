@@ -48,7 +48,7 @@ func TestAPIHandler(t *testing.T) {
 			respWant: &httperror.Response{
 				Info: httperror.Info{
 					ChainCode: "BTM000",
-					Message:   "Bytom API Error",
+					Message:   "",
 				},
 				Status: "fail",
 			},
@@ -59,7 +59,7 @@ func TestAPIHandler(t *testing.T) {
 			respWant: &httperror.Response{
 				Info: httperror.Info{
 					ChainCode: "BTM000",
-					Message:   "Bytom API Error",
+					Message:   "",
 				},
 				Status: "fail",
 			},

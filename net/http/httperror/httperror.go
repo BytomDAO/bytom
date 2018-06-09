@@ -27,13 +27,10 @@ type Response struct {
 
 // Formatter defines rules for mapping errors to the Chain error
 // response format.
-type Formatter struct {
-	Default Info
-	Errors  map[string]Info
-}
+type Formatter map[string]Info
 
 // Format builds an error Response body describing err by consulting
-// the f.Errors lookup table. If no entry is found, it returns f.Default.
+// the f lookup table. If no entry is found, it returns f.Default.
 func (f Formatter) Format(err error) (body Response) {
 	root := errors.Root(err)
 	// Some types cannot be used as map keys, for example slices.
@@ -41,12 +38,12 @@ func (f Formatter) Format(err error) (body Response) {
 	// Just treat it like any other missing entry.
 	defer func() {
 		if err := recover(); err != nil {
-			body = Response{f.Default, "fail", "", nil}
+			body = Response{Info{500, "BTM000", "API error"}, "fail", "", nil}
 		}
 	}()
-	info, ok := f.Errors[root.Error()]
+	info, ok := f[root.Error()]
 	if !ok {
-		info = f.Default
+		info = Info{500, "BTM000", errors.Detail(err)}
 	}
 
 	body = Response{

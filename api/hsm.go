@@ -13,11 +13,11 @@ import (
 
 func init() {
 	//Error code 050 represents alias of key duplicated
-	errorFormatter.Errors[pseudohsm.ErrDuplicateKeyAlias.Error()] = httperror.Info{400, "BTM050", "Alias already exists"}
+	errorFormatter[pseudohsm.ErrDuplicateKeyAlias.Error()] = httperror.Info{400, "BTM050", "Alias already exists"}
 	//Error code 801 represents query request format error
-	errorFormatter.Errors[pseudohsm.ErrInvalidAfter.Error()] = httperror.Info{400, "BTM801", "Invalid `after` in query"}
+	errorFormatter[pseudohsm.ErrInvalidAfter.Error()] = httperror.Info{400, "BTM801", "Invalid `after` in query"}
 	//Error code 802 represents query reponses too many
-	errorFormatter.Errors[pseudohsm.ErrTooManyAliasesToList.Error()] = httperror.Info{400, "BTM802", "Too many aliases to list"}
+	errorFormatter[pseudohsm.ErrTooManyAliasesToList.Error()] = httperror.Info{400, "BTM802", "Too many aliases to list"}
 }
 
 func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
