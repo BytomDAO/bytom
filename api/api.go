@@ -43,9 +43,11 @@ const (
 
 // Response describes the response standard.
 type Response struct {
-	Status string      `json:"status,omitempty"`
-	Msg    string      `json:"msg,omitempty"`
-	Data   interface{} `json:"data,omitempty"`
+	Status      string      `json:"status,omitempty"`
+	Code        string      `json:"code,omitempty"`
+	Msg         string      `json:"msg,omitempty"`
+	ErrorDetail string      `json:"error_detail,omitempty"`
+	Data        interface{} `json:"data,omitempty"`
 }
 
 //NewSuccessResponse success response
@@ -55,7 +57,20 @@ func NewSuccessResponse(data interface{}) Response {
 
 //NewErrorResponse error response
 func NewErrorResponse(err error) Response {
-	return Response{Status: FAIL, Msg: err.Error()}
+	root := errors.Root(err)
+	if info, ok := respErrFormatter[root]; ok {
+		return Response{
+			Status:      FAIL,
+			Code:        info.ChainCode,
+			Msg:         info.Message,
+			ErrorDetail: errors.Detail(err),
+		}
+	}
+	return Response{
+		Status:      FAIL,
+		Msg:         errors.Detail(err),
+		ErrorDetail: errors.Detail(err),
+	}
 }
 
 type waitHandler struct {

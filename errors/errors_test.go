@@ -78,7 +78,7 @@ func TestDetail(t *testing.T) {
 		detail  string
 		message string
 	}{
-		{root, "", "foo"},
+		{root, "foo", "foo"},
 		{WithDetail(root, "bar"), "bar", "bar: foo"},
 		{WithDetail(WithDetail(root, "bar"), "baz"), "bar; baz", "baz: bar: foo"},
 		{Wrap(WithDetail(root, "bar"), "baz"), "bar", "baz: bar: foo"},
