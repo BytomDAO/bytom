@@ -20,18 +20,16 @@ type Info struct {
 // Response defines the error response for a Chain error.
 type Response struct {
 	Info
-	Status    string                 `json:"status,omitempty"`
-	Detail    string                 `json:"detail,omitempty"`
-	Data      map[string]interface{} `json:"data,omitempty"`
-	Temporary bool                   `json:"temporary"`
+	Status string                 `json:"status,omitempty"`
+	Detail string                 `json:"detail,omitempty"`
+	Data   map[string]interface{} `json:"data,omitempty"`
 }
 
 // Formatter defines rules for mapping errors to the Chain error
 // response format.
 type Formatter struct {
-	Default     Info
-	IsTemporary func(info Info, err error) bool
-	Errors      map[string]Info
+	Default Info
+	Errors  map[string]Info
 }
 
 // Format builds an error Response body describing err by consulting
@@ -43,7 +41,7 @@ func (f Formatter) Format(err error) (body Response) {
 	// Just treat it like any other missing entry.
 	defer func() {
 		if err := recover(); err != nil {
-			body = Response{f.Default, "fail", "", nil, true}
+			body = Response{f.Default, "fail", "", nil}
 		}
 	}()
 	info, ok := f.Errors[root.Error()]
@@ -52,11 +50,10 @@ func (f Formatter) Format(err error) (body Response) {
 	}
 
 	body = Response{
-		Info:      info,
-		Status:    "fail",
-		Detail:    errors.Detail(err),
-		Data:      errors.Data(err),
-		Temporary: f.IsTemporary(info, err),
+		Info:   info,
+		Status: "fail",
+		Detail: errors.Detail(err),
+		Data:   errors.Data(err),
 	}
 	return body
 }

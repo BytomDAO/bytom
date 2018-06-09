@@ -14,29 +14,13 @@ import (
 	"github.com/bytom/protocol"
 )
 
-func isTemporary(info httperror.Info, err error) bool {
-	switch info.ChainCode {
-	case "BTM000": // internal server error
-		return true
-	case "BTM001": // request timed out
-		return true
-	case "BTM761": // outputs currently reserved
-		return true
-	case "BTM706": // 1 or more action errors
-		return true
-	default:
-		return false
-	}
-}
-
 // Map error values to standard bytom error codes. Missing entries
 // will map to internalErrInfo.
 //
 // TODO(jackson): Share one error table across Chain
 // products/services so that errors are consistent.
 var errorFormatter = httperror.Formatter{
-	Default:     httperror.Info{500, "BTM000", "Bytom API Error"},
-	IsTemporary: isTemporary,
+	Default: httperror.Info{500, "BTM000", "Bytom API Error"},
 	Errors: map[string]httperror.Info{
 		// General error namespace (0xx)
 		context.DeadlineExceeded.Error():     {408, "BTM001", "Request timed out"},

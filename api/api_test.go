@@ -50,8 +50,7 @@ func TestAPIHandler(t *testing.T) {
 					ChainCode: "BTM000",
 					Message:   "Bytom API Error",
 				},
-				Status:    "fail",
-				Temporary: true,
+				Status: "fail",
 			},
 		},
 		{
@@ -62,8 +61,7 @@ func TestAPIHandler(t *testing.T) {
 					ChainCode: "BTM000",
 					Message:   "Bytom API Error",
 				},
-				Status:    "fail",
-				Temporary: true,
+				Status: "fail",
 			},
 		},
 		{
