@@ -22,8 +22,6 @@ import (
 	"golang.org/x/crypto/sha3"
 	bytomsha3 "github.com/bytom/crypto/sha3"
 
-	"crypto/ecdsa"
-	"crypto/rand"
 )
 
 func DoubleSha256(b []byte) []byte {
@@ -88,6 +86,6 @@ func zeroBytes(bytes []byte) {
 	}
 }
 
-func GenerateKey() (*ecdsa.PrivateKey, error) {
-	return ecdsa.GenerateKey(S256(), rand.Reader)
-}
+//func GenerateKey() (*ecdsa.PrivateKey, error) {
+//	return ecdsa.GenerateKey(S256(), rand.Reader)
+//}

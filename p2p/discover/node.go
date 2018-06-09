@@ -22,7 +22,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math/big"
 	"math/rand"
 	"net"
 	"net/url"
@@ -102,8 +101,8 @@ func (n *Node) validateComplete() error {
 	if n.IP.IsMulticast() || n.IP.IsUnspecified() {
 		return errors.New("invalid IP (multicast/unspecified)")
 	}
-	_, err := n.ID.Pubkey() // validate the key (on curve, etc.)
-	return err
+	//_, err := n.ID.Pubkey() // validate the key (on curve, etc.)
+	return nil
 }
 
 // The string representation of a Node is a URL.
@@ -322,42 +321,42 @@ func PubkeyID(pub *ecdsa.PublicKey) NodeID {
 	return id
 }
 
-// Pubkey returns the public key represented by the node ID.
-// It returns an error if the ID is not a point on the curve.
-func (id NodeID) Pubkey() (*ecdsa.PublicKey, error) {
-	p := &ecdsa.PublicKey{Curve: crypto.S256(), X: new(big.Int), Y: new(big.Int)}
-	half := len(id) / 2
-	p.X.SetBytes(id[:half])
-	p.Y.SetBytes(id[half:])
-	if !p.Curve.IsOnCurve(p.X, p.Y) {
-		return nil, errors.New("id is invalid secp256k1 curve point")
-	}
-	return p, nil
-}
+//// Pubkey returns the public key represented by the node ID.
+////// It returns an error if the ID is not a point on the curve.
+//func (id NodeID) Pubkey() (*ecdsa.PublicKey, error) {
+//	p := &ecdsa.PublicKey{Curve: crypto.S256(), X: new(big.Int), Y: new(big.Int)}
+//	half := len(id) / 2
+//	p.X.SetBytes(id[:half])
+//	p.Y.SetBytes(id[half:])
+//	if !p.Curve.IsOnCurve(p.X, p.Y) {
+//		return nil, errors.New("id is invalid secp256k1 curve point")
+//	}
+//	return p, nil
+//}
 
-func (id NodeID) mustPubkey() ecdsa.PublicKey {
-	pk, err := id.Pubkey()
-	if err != nil {
-		panic(err)
-	}
-	return *pk
-}
+//func (id NodeID) mustPubkey() ecdsa.PublicKey {
+//	pk, err := id.Pubkey()
+//	if err != nil {
+//		panic(err)
+//	}
+//	return *pk
+//}
 
 // recoverNodeID computes the public key used to sign the
 // given hash from the signature.
-func recoverNodeID(hash, sig []byte) (id NodeID, err error) {
-	pubkey, err := crypto.Ecrecover(hash, sig)
-	if err != nil {
-		return id, err
-	}
-	if len(pubkey)-1 != len(id) {
-		return id, fmt.Errorf("recovered pubkey has %d bits, want %d bits", len(pubkey)*8, (len(id)+1)*8)
-	}
-	for i := range id {
-		id[i] = pubkey[i+1]
-	}
-	return id, nil
-}
+//func recoverNodeID(hash, sig []byte) (id NodeID, err error) {
+//	pubkey, err := crypto.Ecrecover(hash, sig)
+//	if err != nil {
+//		return id, err
+//	}
+//	if len(pubkey)-1 != len(id) {
+//		return id, fmt.Errorf("recovered pubkey has %d bits, want %d bits", len(pubkey)*8, (len(id)+1)*8)
+//	}
+//	for i := range id {
+//		id[i] = pubkey[i+1]
+//	}
+//	return id, nil
+//}
 
 // distcmp compares the distances a->target and b->target.
 // Returns -1 if a is closer to target, 1 if b is closer to target
