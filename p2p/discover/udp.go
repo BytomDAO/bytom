@@ -407,13 +407,14 @@ func (t *udp) readLoop() {
 		nbytes, from, err := t.conn.ReadFromUDP(buf)
 		if netutil.IsTemporaryError(err) {
 			// Ignore temporary read errors.
-			log.Debug(fmt.Sprintf("Temporary read error: %v", err))
+			log.Info(fmt.Sprintf("Temporary read error: %v", err))
 			continue
 		} else if err != nil {
 			// Shut down the loop for permament errors.
-			log.Debug(fmt.Sprintf("Read error: %v", err))
+			log.Info(fmt.Sprintf("Read error: %v", err))
 			return
 		}
+		log.Info("readLoop:", nbytes, from, buf[:nbytes])
 		t.handlePacket(from, buf[:nbytes])
 	}
 }
