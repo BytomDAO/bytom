@@ -35,7 +35,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"github.com/bytom/common"
 	"github.com/bytom/crypto"
 	"github.com/bytom/p2p/rlp"
 )
@@ -204,7 +203,7 @@ func (db *nodeDB) node(id NodeID) *Node {
 	if err := db.fetchRLP(makeKey(id, nodeDBDiscoverRoot), &node); err != nil {
 		return nil
 	}
-	node.sha = common.Hash(crypto.Keccak256Hash(node.ID[:]))
+	node.sha = crypto.Sha256Hash(node.ID[:])
 	return &node
 }
 

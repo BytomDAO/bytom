@@ -24,11 +24,12 @@ import (
 	"time"
 	"github.com/bytom/common"
 	"github.com/bytom/p2p/netutil"
-	"github.com/bytom/crypto/sha3"
+	//"github.com/bytom/crypto/sha3"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/bytom/p2p/rlp"
 	"github.com/tendermint/go-crypto"
+	"golang.org/x/crypto/sha3"
 
 )
 
@@ -1236,7 +1237,7 @@ func (net *Network) checkTopicRegister(data *topicRegister) (*pong, error) {
 }
 
 func rlpHash(x interface{}) (h common.Hash) {
-	hw := sha3.NewKeccak256()
+	hw := sha3.New256()
 	rlp.Encode(hw, x)
 	hw.Sum(h[:0])
 	return h
