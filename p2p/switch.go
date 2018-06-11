@@ -37,19 +37,8 @@ type sharedUDPConn struct {
 	unhandled chan discover.ReadPacket
 }
 
-// DiscoveryV5Bootnodes are the enode URLs of the P2P bootstrap nodes for the
-// experimental RLPx v5 topic-discovery network.
-//var DiscoveryBootnodes = []string{
-//	"enode://06051a5573c81934c9554ef2898eb13b33a34b94cf36b202b69fde139ca17a85051979867720d4bdae4323d4943ddf9aeeb6643633aa656e0be843659795007a@35.177.226.168:30303",
-//	"enode://0cc5f5ffb5d9098c8b8c62325f3797f56509bff942704687b6530992ac706e2cb946b90a34f1f19548cd3c7baccbcaea354531e5983c7d1bc0dee16ce4b6440b@40.118.3.223:30304",
-//	"enode://1c7a64d76c0334b0418c004af2f67c50e36a3be60b5e4790bdac0439d21603469a85fad36f2473c9a80eb043ae60936df905fa28f1ff614c3e5dc34f15dcd2dc@40.118.3.223:30306",
-//	"enode://85c85d7143ae8bb96924f2b54f1b3e70d8c4d367af305325d30a61385a432f247d2c75c45c6b4a60335060d072d7f5b35dd1d4c45f76941f62a4f83b6e75daaf@40.118.3.223:30307",
-//}
 var DiscoveryBootnodes = []string{
-	"enode://00881078C74284000439B00B697EACF072FFF759C79264CC67398191E32956C1@139.198.177.231:46657", //test
-	//"enode://0cc5f5ffb5d9098c8b8c62325f3797f56509bff942704687b6530992ac706e2c@40.118.3.223:30304",
-	//"enode://1c7a64d76c0334b0418c004af2f67c50e36a3be60b5e4790bdac0439d2160346@40.118.3.223:30306",
-	//"enode://85c85d7143ae8bb96924f2b54f1b3e70d8c4d367af305325d30a61385a432f24@40.118.3.223:30307",
+	"enode://00881078C74284000439B00B697EACF072FFF759C79264CC67398191E32956C1@52.83.138.208:46657", //test
 }
 
 // Switch handles peer connections and exposes an API to receive incoming messages
@@ -59,7 +48,7 @@ var DiscoveryBootnodes = []string{
 type Switch struct {
 	cmn.BaseService
 
-	Config       *cfg.P2PConfig
+	Config       *cfg.Config
 	peerConfig   *PeerConfig
 	listeners    []Listener
 	reactors     map[string]Reactor
@@ -71,16 +60,8 @@ type Switch struct {
 	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
 	bannedPeer   map[string]time.Time
 	db           dbm.DB
-	// NodeDatabase is the path to the database containing the previously seen
-	// live nodes in the network.
-	NodeDatabasePath string
-
-	// BootstrapNodes are used to establish connectivity
-	// with the rest of the network.
-	BootstrapNodes []*discover.Node
-	Discv          *discover.Network
-
-	mtx sync.Mutex
+	Discv        *discover.Network
+	mtx          sync.Mutex
 }
 
 // Enodes represents a slice of accounts.
@@ -97,19 +78,17 @@ func FoundationBootnodes() *Enodes {
 }
 
 // NewSwitch creates a new Switch with the given config.
-func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB, nodeDatabasePath string) *Switch {
+func NewSwitch(config *cfg.Config) *Switch {
 	sw := &Switch{
-		Config:           config,
-		peerConfig:       DefaultPeerConfig(config),
-		reactors:         make(map[string]Reactor),
-		chDescs:          make([]*connection.ChannelDescriptor, 0),
-		reactorsByCh:     make(map[byte]Reactor),
-		peers:            NewPeerSet(),
-		dialing:          cmn.NewCMap(),
-		nodeInfo:         nil,
-		db:               trustHistoryDB,
-		NodeDatabasePath: nodeDatabasePath,
-		BootstrapNodes:   FoundationBootnodes().nodes,
+		Config:       config,
+		peerConfig:   DefaultPeerConfig(config.P2P),
+		reactors:     make(map[string]Reactor),
+		chDescs:      make([]*connection.ChannelDescriptor, 0),
+		reactorsByCh: make(map[byte]Reactor),
+		peers:        NewPeerSet(),
+		dialing:      cmn.NewCMap(),
+		nodeInfo:     nil,
+		db:           dbm.NewDB("trusthistory", config.DBBackend, config.DBDir()),
 	}
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	sw.bannedPeer = make(map[string]time.Time)
@@ -143,7 +122,7 @@ func (sw *Switch) OnStart() error {
 	realaddr = conn.LocalAddr().(*net.UDPAddr)
 	unhandled = make(chan discover.ReadPacket, 100)
 	sconn = &sharedUDPConn{conn, unhandled}
-	ntab, err = discover.ListenUDP(&sw.nodePrivKey, sconn, realaddr, sw.NodeDatabasePath, nil)
+	ntab, err = discover.ListenUDP(&sw.nodePrivKey, sconn, realaddr, sw.Config.DBDir(), nil)
 	if err != nil {
 		return err
 	}
@@ -343,7 +322,7 @@ func (sw *Switch) StopPeerGracefully(peer *Peer) {
 }
 
 func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
-	peerConn, err := newInboundPeerConn(conn, sw.nodePrivKey, sw.Config)
+	peerConn, err := newInboundPeerConn(conn, sw.nodePrivKey, sw.Config.P2P)
 	if err != nil {
 		conn.Close()
 		return err
@@ -415,7 +394,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		// disconnect if we alrady have 2 * MaxNumPeers, we do this because we wanna address book get exchanged even if
 		// the connect is full. The pex will disconnect the peer after address exchange, the max connected peer won't
 		// be double of MaxNumPeers
-		if sw.peers.Size() >= sw.Config.MaxNumPeers*2 {
+		if sw.peers.Size() >= sw.Config.P2P.MaxNumPeers*2 {
 			inConn.Close()
 			log.Info("Ignoring inbound connection: already have enough peers.")
 			continue

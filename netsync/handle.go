@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
@@ -58,8 +57,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		config:     config,
 	}
 
-	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-	manager.sw = p2p.NewSwitch(config.P2P, trustHistoryDB, config.DBDir())
+	manager.sw = p2p.NewSwitch(config)
 
 	pexReactor := pex.NewPEXReactor()
 	manager.sw.AddReactor("PEX", pexReactor)

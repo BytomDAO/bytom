@@ -2,9 +2,7 @@ package pex
 
 import (
 	"errors"
-	"math/rand"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 
@@ -64,7 +62,7 @@ func (r *PEXReactor) GetChannels() []*connection.ChannelDescriptor {
 
 // AddPeer adding peer to the address book
 func (r *PEXReactor) AddPeer(p *p2p.Peer) error {
-	if r.Switch.Peers().Size() <= r.Switch.Config.MaxNumPeers {
+	if r.Switch.Peers().Size() <= r.Switch.Config.P2P.MaxNumPeers {
 		return nil
 	}
 
@@ -137,25 +135,6 @@ func (r *PEXReactor) dialPeerWorker(a *p2p.NetAddress, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (r *PEXReactor) dialSeeds() {
-	if r.Switch.Config.Seeds == "" {
-		return
-	}
-
-	seeds := strings.Split(r.Switch.Config.Seeds, ",")
-	netAddrs, err := p2p.NewNetAddressStrings(seeds)
-	if err != nil {
-		log.WithField("err", err).Error("dialSeeds: fail to decode net address strings")
-	}
-
-	perm := rand.Perm(len(netAddrs))
-	for i := 0; i < len(perm); i += 2 {
-		if err := r.Switch.DialPeerWithAddress(netAddrs[perm[i]]); err != nil {
-			log.WithField("err", err).Warn("dialSeeds: fail to dial seed")
-		}
-	}
-}
-
 func (r *PEXReactor) ensurePeers() {
 	numOutPeers, _, numDialing := r.Switch.NumPeers()
 	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing)) * 3
@@ -206,10 +185,6 @@ func (r *PEXReactor) ensurePeers() {
 
 func (r *PEXReactor) ensurePeersRoutine() {
 	r.ensurePeers()
-	if r.Switch.Peers().Size() < 3 {
-		r.dialSeeds()
-	}
-
 	ticker := time.NewTicker(120 * time.Second)
 	quickTicker := time.NewTicker(3 * time.Second)
 
