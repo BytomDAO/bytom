@@ -7,15 +7,16 @@ import (
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/go-crypto"
+	cmn "github.com/tendermint/tmlibs/common"
+	dbm "github.com/tendermint/tmlibs/db"
+
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/trust"
-	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
-	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const (
@@ -64,15 +65,12 @@ type Switch struct {
 	mtx          sync.Mutex
 }
 
-// Enodes represents a slice of accounts.
-type Enodes struct{ nodes []*discover.Node }
-
 // FoundationBootnodes returns the enode URLs of the P2P bootstrap nodes operated
 // by the foundation running the V5 discovery protocol.
-func FoundationBootnodes() *Enodes {
-	nodes := &Enodes{nodes: make([]*discover.Node, len(DiscoveryBootnodes))}
+func FoundationBootnodes() []*discover.Node {
+	nodes := make([]*discover.Node, len(DiscoveryBootnodes))
 	for i, url := range DiscoveryBootnodes {
-		nodes.nodes[i] = discover.MustParseNode(url)
+		nodes[i] = discover.MustParseNode(url)
 	}
 	return nodes
 }
@@ -126,7 +124,7 @@ func (sw *Switch) OnStart() error {
 	if err != nil {
 		return err
 	}
-	if err = ntab.SetFallbackNodes(sw.BootstrapNodes); err != nil {
+	if err = ntab.SetFallbackNodes(FoundationBootnodes()); err != nil {
 		return err
 	}
 	sw.Discv = ntab
