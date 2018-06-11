@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-
 	"golang.org/x/crypto/sha3"
 
+	"github.com/bytom/common"
+	"github.com/bytom/consensus"
+	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
@@ -247,5 +249,80 @@ func TestCheckBlankCheck(t *testing.T) {
 		if errors.Root(got) != c.want {
 			t.Errorf("checkUnsafe(%+v) err = %v want %v", c.tx, errors.Root(got), c.want)
 		}
+	}
+}
+
+func TestCreateTxByUtxo(t *testing.T) {
+	xprv, xpub, err := chainkd.NewXKeys(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pub := xpub.PublicKey()
+	pubHash := crypto.Ripemd160(pub)
+	program, err := vmutil.P2WPKHProgram([]byte(pubHash))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	address, err := common.NewAddressWitnessPubKeyHash(pubHash, &consensus.ActiveNetParams)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	muxID := testutil.MustDecodeHash("1e673900965623ec3305cead5a78dfb68a34599f8bc078460f3f202256c3dfa6")
+	utxo := struct {
+		SourceID       bc.Hash
+		AssetID        bc.AssetID
+		Amount         uint64
+		SourcePos      uint64
+		ControlProgram []byte
+		Address        string
+	}{
+		SourceID:       muxID,
+		AssetID:        *consensus.BTMAssetID,
+		Amount:         20000000000,
+		SourcePos:      1,
+		ControlProgram: program,
+		Address:        address.EncodeAddress(),
+	}
+
+	recvProg := mustDecodeHex("00145056532ecd3621c9ce8adde5505c058610b287cf")
+	tx := types.NewTx(types.TxData{
+		Version: 1,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(nil, utxo.SourceID, utxo.AssetID, utxo.Amount, utxo.SourcePos, utxo.ControlProgram),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(*consensus.BTMAssetID, 10000000000, recvProg),
+		},
+	})
+
+	tpl := &Template{
+		Transaction:     tx,
+		AllowAdditional: false,
+	}
+
+	h := tpl.Hash(0).Byte32()
+	sig := xprv.Sign(h[:])
+	data := []byte(pub)
+
+	// Test with more signatures than required, in correct order
+	tpl.SigningInstructions = []*SigningInstruction{{
+		WitnessComponents: []witnessComponent{
+			&RawTxSigWitness{
+				Quorum: 1,
+				Sigs:   []json.HexBytes{sig},
+			},
+			DataWitness(data),
+		},
+	}}
+
+	if err = materializeWitnesses(tpl); err != nil {
+		t.Fatal(err)
+	}
+
+	if !testutil.DeepEqual(tx, tpl.Transaction) {
+		t.Errorf("tx:%v result is equal to want:%v", tx, tpl.Transaction)
 	}
 }
