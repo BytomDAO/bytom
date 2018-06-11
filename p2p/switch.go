@@ -7,16 +7,15 @@ import (
 	"sync"
 	"time"
 
-
-	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
-	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/trust"
+	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/go-crypto"
+	cmn "github.com/tendermint/tmlibs/common"
+	dbm "github.com/tendermint/tmlibs/db"
 )
 
 const (
@@ -30,15 +29,6 @@ var (
 	ErrConnectSelf       = errors.New("Connect self")
 	ErrConnectBannedPeer = errors.New("Connect banned peer")
 )
-
-// An AddrBook represents an address book from the pex package, which is used to store peer addresses.
-type AddrBook interface {
-	AddAddress(*NetAddress, *NetAddress) error
-	AddOurAddress(*NetAddress)
-	MarkGood(*NetAddress)
-	RemoveAddress(*NetAddress)
-	SaveToFile() error
-}
 
 // sharedUDPConn implements a shared connection. Write sends messages to the underlying connection while read returns
 // messages that were found unprocessable and sent to the unhandled channel by the primary listener.
@@ -79,7 +69,6 @@ type Switch struct {
 	dialing      *cmn.CMap
 	nodeInfo     *NodeInfo             // our node info
 	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
-	addrBook     AddrBook
 	bannedPeer   map[string]time.Time
 	db           dbm.DB
 	// NodeDatabase is the path to the database containing the previously seen
@@ -111,7 +100,7 @@ func FoundationBootnodes() *Enodes {
 }
 
 // NewSwitch creates a new Switch with the given config.
-func NewSwitch(config *cfg.P2PConfig, addrBook AddrBook, trustHistoryDB dbm.DB, nodeDatabasePath string) *Switch {
+func NewSwitch(config *cfg.P2PConfig, trustHistoryDB dbm.DB, nodeDatabasePath string) *Switch {
 	sw := &Switch{
 		Config:           config,
 		peerConfig:       DefaultPeerConfig(config),
@@ -121,7 +110,6 @@ func NewSwitch(config *cfg.P2PConfig, addrBook AddrBook, trustHistoryDB dbm.DB, 
 		peers:            NewPeerSet(),
 		dialing:          cmn.NewCMap(),
 		nodeInfo:         nil,
-		addrBook:         addrBook,
 		db:               trustHistoryDB,
 		NodeDatabasePath: nodeDatabasePath,
 		BootstrapNodes:   FoundationBootnodes().nodes,
@@ -376,17 +364,6 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 	return nil
 }
 
-func (sw *Switch) addrBookDelSelf() error {
-	addr, err := NewNetAddressString(sw.nodeInfo.ListenAddr)
-	if err != nil {
-		return err
-	}
-
-	sw.addrBook.RemoveAddress(addr)
-	sw.addrBook.AddOurAddress(addr)
-	return nil
-}
-
 func (sw *Switch) checkBannedPeer(peer string) error {
 	sw.mtx.Lock()
 	defer sw.mtx.Unlock()
@@ -416,7 +393,6 @@ func (sw *Switch) delBannedPeer(addr string) error {
 
 func (sw *Switch) filterConnByIP(ip string) error {
 	if ip == sw.nodeInfo.ListenHost() {
-		sw.addrBookDelSelf()
 		return ErrConnectSelf
 	}
 	return sw.checkBannedPeer(ip)
@@ -428,7 +404,6 @@ func (sw *Switch) filterConnByPeer(peer *Peer) error {
 	}
 
 	if sw.nodeInfo.PubKey.Equals(peer.PubKey().Wrap()) {
-		sw.addrBookDelSelf()
 		return ErrConnectSelf
 	}
 
