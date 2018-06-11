@@ -120,12 +120,7 @@ func (r *PEXReactor) RemovePeer(p *p2p.Peer, reason interface{}) {}
 func (r *PEXReactor) SendAddrs(p *p2p.Peer, nodes []*discover.Node) bool {
 	addrs := []*p2p.NetAddress{}
 	for _, node := range nodes {
-		addr, err := p2p.NewNetAddressString(node.IP.String() + ":" + string(node.TCP))
-		if err != nil {
-			log.WithField("err", err).Error("fail on convert discover node to net address")
-			continue
-		}
-		addrs = append(addrs, addr)
+		addrs = append(addrs, p2p.NewNetAddressIPPort(node.IP, node.TCP))
 	}
 
 	ok := p.TrySend(PexChannel, struct{ PexMessage }{&pexAddrsMessage{Addrs: addrs}})
@@ -186,12 +181,7 @@ func (r *PEXReactor) ensurePeers() {
 		if n := r.Switch.Discv.ReadRandomNodes(nodes); n != 1 {
 			return
 		}
-		try, err := p2p.NewNetAddressString(nodes[0].IP.String() + ":" + string(nodes[0].TCP))
-		if err != nil {
-			log.WithField("err", err).Error("fail on convert discover node to net address")
-			continue
-		}
-
+		try := p2p.NewNetAddressIPPort(nodes[0].IP, nodes[0].TCP)
 		if _, selected := toDial[try.IP.String()]; selected {
 			continue
 		}

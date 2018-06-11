@@ -427,7 +427,7 @@ loop:
 			if err := net.handle(n, pkt.ev, &pkt); err != nil {
 				status = err.Error()
 			}
-			log.Info("", "msg", net.tab.count, pkt.ev, pkt.remoteID[:8], pkt.remoteAddr, prestate, n.state, status)
+			log.Debug("", "msg", net.tab.count, pkt.ev, pkt.remoteID[:8], pkt.remoteAddr, prestate, n.state, status)
 
 			// TODO: persist state if n.state goes >= known, delete if it goes <= known
 
@@ -444,7 +444,7 @@ loop:
 			if err := net.handle(timeout.node, timeout.ev, nil); err != nil {
 				status = err.Error()
 			}
-			log.Info("", "msg", net.tab.count, timeout.ev, timeout.node.ID[:8], timeout.node.addr(), prestate, timeout.node.state, status)
+			log.Debug("", "msg", net.tab.count, timeout.ev, timeout.node.ID[:8], timeout.node.addr(), prestate, timeout.node.state, status)
 
 		// Querying.
 		case q := <-net.queryReq:
