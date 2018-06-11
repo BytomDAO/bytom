@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-crypto"
-	"github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
@@ -101,11 +100,7 @@ func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 		Moniker: sm.config.Moniker,
 		Network: sm.config.ChainID,
 		Version: version.Version,
-		Other: []string{
-			cmn.Fmt("service_flag=%v", strconv.FormatUint(uint64(consensus.DefaultServices), 10)),
-			cmn.Fmt("wire_version=%v", wire.Version),
-			cmn.Fmt("p2p_version=%v", p2p.Version),
-		},
+		Other:   []string{strconv.FormatUint(uint64(consensus.DefaultServices), 10)},
 	}
 
 	if !sm.sw.IsListening() {

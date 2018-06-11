@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/hex"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -28,8 +29,7 @@ func genesisTx() *types.Tx {
 	return types.NewTx(txData)
 }
 
-// GenesisBlock will return genesis block
-func GenesisBlock() *types.Block {
+func mainNetGenesisBlock() *types.Block {
 	tx := genesisTx()
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
@@ -58,4 +58,75 @@ func GenesisBlock() *types.Block {
 		Transactions: []*types.Tx{tx},
 	}
 	return block
+}
+
+func testNetGenesisBlock() *types.Block {
+	tx := genesisTx()
+	txStatus := bc.NewTransactionStatus()
+	txStatus.SetStatus(0, false)
+	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	if err != nil {
+		log.Panicf("fail on calc genesis tx status merkle root")
+	}
+
+	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx{tx.Tx})
+	if err != nil {
+		log.Panicf("fail on calc genesis tx merkel root")
+	}
+
+	block := &types.Block{
+		BlockHeader: types.BlockHeader{
+			Version:   1,
+			Height:    0,
+			Nonce:     9253507043297,
+			Timestamp: 1528455800,
+			Bits:      2233785415178221890,
+			BlockCommitment: types.BlockCommitment{
+				TransactionsMerkleRoot: merkleRoot,
+				TransactionStatusHash:  txStatusHash,
+			},
+		},
+		Transactions: []*types.Tx{tx},
+	}
+	return block
+}
+
+func soloNetGenesisBlock() *types.Block {
+	tx := genesisTx()
+	txStatus := bc.NewTransactionStatus()
+	txStatus.SetStatus(0, false)
+	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	if err != nil {
+		log.Panicf("fail on calc genesis tx status merkle root")
+	}
+
+	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx{tx.Tx})
+	if err != nil {
+		log.Panicf("fail on calc genesis tx merkel root")
+	}
+
+	block := &types.Block{
+		BlockHeader: types.BlockHeader{
+			Version:   1,
+			Height:    0,
+			Nonce:     9253507043297,
+			Timestamp: uint64(time.Now().Unix()),
+			Bits:      2305843009214532812,
+			BlockCommitment: types.BlockCommitment{
+				TransactionsMerkleRoot: merkleRoot,
+				TransactionStatusHash:  txStatusHash,
+			},
+		},
+		Transactions: []*types.Tx{tx},
+	}
+	return block
+}
+
+// GenesisBlock will return genesis block
+func GenesisBlock() *types.Block {
+	return map[string]func() *types.Block{
+		"main": mainNetGenesisBlock,
+		"test": testNetGenesisBlock,
+		"solo": soloNetGenesisBlock,
+	}[consensus.ActiveNetParams.Name]()
 }
