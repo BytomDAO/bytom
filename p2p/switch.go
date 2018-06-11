@@ -39,7 +39,7 @@ type sharedUDPConn struct {
 }
 
 var DiscoveryBootnodes = []string{
-	"enode://00881078C74284000439B00B697EACF072FFF759C79264CC67398191E32956C1@52.83.138.208:46657", //test
+	"enode://00881078C74284000439B00B697EACF072FFF759C79264CC67398191E32956C1@52.83.138.208:46658", //test
 }
 
 // Switch handles peer connections and exposes an API to receive incoming messages

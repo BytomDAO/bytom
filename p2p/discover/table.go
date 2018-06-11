@@ -66,7 +66,7 @@ func newTable(ourID NodeID, ourAddr *net.UDPAddr) *Table {
 	return tab
 }
 
-const printTable = true
+const printTable = false
 
 // chooseBucketRefreshTarget selects random refresh targets to keep all Kademlia
 // buckets filled with live connections and keep the network topology healthy.

@@ -130,7 +130,7 @@ func (r *PEXReactor) SendAddrs(p *p2p.Peer, nodes []*discover.Node) bool {
 
 func (r *PEXReactor) dialPeerWorker(a *p2p.NetAddress, wg *sync.WaitGroup) {
 	if err := r.Switch.DialPeerWithAddress(a); err != nil {
-		log.WithField("addr", a).Error("dialPeerWorker fail on dial peer")
+		log.WithFields(log.Fields{"addr": a, "err": err}).Error("dialPeerWorker fail on dial peer")
 	}
 	wg.Done()
 }
