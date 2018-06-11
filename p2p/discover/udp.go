@@ -24,12 +24,12 @@ import (
 	"net"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
+
 	"github.com/bytom/common"
 	"github.com/bytom/p2p/netutil"
-	"github.com/bytom/p2p/rlp"
-	log "github.com/sirupsen/logrus"
-	//bytomcrypto "github.com/bytom/crypto"
-	"github.com/tendermint/go-crypto"
 )
 
 const Version = 4
@@ -87,7 +87,7 @@ type (
 		Topics []Topic
 
 		// Ignore additional fields (for forward compatibility).
-		Rest []rlp.RawValue `rlp:"tail"`
+		Rest []byte
 	}
 
 	// pong is the reply to ping.
@@ -106,7 +106,7 @@ type (
 		WaitPeriods  []uint32
 
 		// Ignore additional fields (for forward compatibility).
-		Rest []rlp.RawValue `rlp:"tail"`
+		Rest []byte
 	}
 
 	// findnode is a query for nodes close to the given target.
@@ -114,7 +114,7 @@ type (
 		Target     NodeID // doesn't need to be an actual public key
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
-		Rest []rlp.RawValue `rlp:"tail"`
+		Rest []byte
 	}
 
 	// findnode is a query for nodes close to the given target.
@@ -122,7 +122,7 @@ type (
 		Target     common.Hash
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
-		Rest []rlp.RawValue `rlp:"tail"`
+		Rest []byte
 	}
 
 	// reply to findnode
@@ -130,7 +130,7 @@ type (
 		Nodes      []rpcNode
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
-		Rest []rlp.RawValue `rlp:"tail"`
+		Rest []byte
 	}
 
 	topicRegister struct {
@@ -180,7 +180,10 @@ var maxNeighbors = func() int {
 	maxSizeNode := rpcNode{IP: make(net.IP, 16), UDP: ^uint16(0), TCP: ^uint16(0)}
 	for n := 0; ; n++ {
 		p.Nodes = append(p.Nodes, maxSizeNode)
-		size, _, err := rlp.EncodeToReader(p)
+		var size int
+		var err error
+		b := new(bytes.Buffer)
+		wire.WriteJSON(p, b, &size, &err)
 		if err != nil {
 			// If this ever happens, it will be caught by the unit tests.
 			panic("cannot encode: " + err.Error())
@@ -196,7 +199,10 @@ var maxTopicNodes = func() int {
 	maxSizeNode := rpcNode{IP: make(net.IP, 16), UDP: ^uint16(0), TCP: ^uint16(0)}
 	for n := 0; ; n++ {
 		p.Nodes = append(p.Nodes, maxSizeNode)
-		size, _, err := rlp.EncodeToReader(p)
+		var size int
+		var err error
+		b := new(bytes.Buffer)
+		wire.WriteJSON(p, b, &size, &err)
 		if err != nil {
 			// If this ever happens, it will be caught by the unit tests.
 			panic("cannot encode: " + err.Error())
@@ -365,7 +371,6 @@ func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req inter
 	if _, err = t.conn.WriteToUDP(packet, toaddr); err != nil {
 		log.Info(fmt.Sprint("UDP send failed:", err))
 	}
-	//fmt.Println(err)
 	return hash, err
 }
 
@@ -376,17 +381,15 @@ func encodePacket(priv *crypto.PrivKeyEd25519, ptype byte, req interface{}) (p, 
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(ptype)
-	if err := rlp.Encode(b, req); err != nil {
+	var size int
+	wire.WriteJSON(req, b, &size, &err)
+	if err != nil {
 		log.Error(fmt.Sprint("error encoding packet:", err))
 		return nil, nil, err
 	}
 	packet := b.Bytes()
 	nodeID := priv.PubKey().Unwrap().(crypto.PubKeyEd25519)
 	sig := priv.Sign(common.BytesToHash(packet[headSize:]).Bytes())
-	//if err != nil {
-	//	log.Error(fmt.Sprint("could not sign packet:", err))
-	//	return nil, nil, err
-	//}
 	copy(packet, versionPrefix)
 	copy(packet[versionPrefixSize:], nodeID.Bytes())
 	copy(packet[versionPrefixSize+nodeIDSize:], sig.Bytes())
@@ -414,7 +417,6 @@ func (t *udp) readLoop() {
 			log.Debug(fmt.Sprintf("Read error: %v", err))
 			return
 		}
-		log.Debug("readLoop:", nbytes, from, buf[:nbytes])
 		t.handlePacket(from, buf[:nbytes])
 	}
 }
@@ -436,17 +438,10 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 	}
 	buf := make([]byte, len(buffer))
 	copy(buf, buffer)
-	//	prefix, fromID, sig, sigdata := buf[:versionPrefixSize], buf[versionPrefixSize:versionPrefixSize+nodeIDSize], buf[versionPrefixSize+nodeIDSize:headSize], buf[headSize:]
 	prefix, fromID, sigdata := buf[:versionPrefixSize], buf[versionPrefixSize:versionPrefixSize+nodeIDSize], buf[headSize:]
-
 	if !bytes.Equal(prefix, versionPrefix) {
 		return errBadPrefix
 	}
-	//crypto.PubKeyEd25519.
-	//fromID, err := recoverNodeID(common.BytesToHash(buf[headSize:]).Bytes(), sig)
-	//if err != nil {
-	//	return err
-	//}
 	pkt.rawData = buf
 	pkt.hash = common.BytesToHash(buf[versionPrefixSize:]).Bytes()
 	pkt.remoteID = ByteID(fromID)
@@ -470,7 +465,11 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 	default:
 		return fmt.Errorf("unknown packet type: %d", sigdata[0])
 	}
-	s := rlp.NewStream(bytes.NewReader(sigdata[1:]), 0)
-	err := s.Decode(pkt.data)
+	var err error
+	wire.ReadJSON(pkt.data, sigdata[1:], &err)
+	if err != nil {
+		log.Error("wire readjson err:", err)
+	}
+
 	return err
 }

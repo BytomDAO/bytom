@@ -46,10 +46,10 @@ type sharedUDPConn struct {
 //	"enode://85c85d7143ae8bb96924f2b54f1b3e70d8c4d367af305325d30a61385a432f247d2c75c45c6b4a60335060d072d7f5b35dd1d4c45f76941f62a4f83b6e75daaf@40.118.3.223:30307",
 //}
 var DiscoveryBootnodes = []string{
-	"enode://06051a5573c81934c9554ef2898eb13b33a34b94cf36b202b69fde139ca17a85@35.177.226.168:30303",
-	"enode://0cc5f5ffb5d9098c8b8c62325f3797f56509bff942704687b6530992ac706e2c@40.118.3.223:30304",
-	"enode://1c7a64d76c0334b0418c004af2f67c50e36a3be60b5e4790bdac0439d2160346@40.118.3.223:30306",
-	"enode://85c85d7143ae8bb96924f2b54f1b3e70d8c4d367af305325d30a61385a432f24@40.118.3.223:30307",
+	"enode://00881078C74284000439B00B697EACF072FFF759C79264CC67398191E32956C1@139.198.177.231:46657", //test
+	//"enode://0cc5f5ffb5d9098c8b8c62325f3797f56509bff942704687b6530992ac706e2c@40.118.3.223:30304",
+	//"enode://1c7a64d76c0334b0418c004af2f67c50e36a3be60b5e4790bdac0439d2160346@40.118.3.223:30306",
+	//"enode://85c85d7143ae8bb96924f2b54f1b3e70d8c4d367af305325d30a61385a432f24@40.118.3.223:30307",
 }
 
 // Switch handles peer connections and exposes an API to receive incoming messages
@@ -139,14 +139,11 @@ func (sw *Switch) OnStart() error {
 	if err != nil {
 		return err
 	}
+
 	realaddr = conn.LocalAddr().(*net.UDPAddr)
 	unhandled = make(chan discover.ReadPacket, 100)
 	sconn = &sharedUDPConn{conn, unhandled}
-	//nodeKey, err := bytomcrypto.GenerateKey()
-	//if err != nil {
-	//	return err
-	//}
-	ntab, err = discover.ListenUDP(&sw.nodePrivKey, sconn, realaddr, sw.NodeDatabasePath, nil) //srv.NodeDatabase)
+	ntab, err = discover.ListenUDP(&sw.nodePrivKey, sconn, realaddr, sw.NodeDatabasePath, nil)
 	if err != nil {
 		return err
 	}
