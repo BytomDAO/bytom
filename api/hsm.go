@@ -5,20 +5,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/net/http/httperror"
 )
-
-func init() {
-	//Error code 050 represents alias of key duplicated
-	errorFormatter.Errors[pseudohsm.ErrDuplicateKeyAlias] = httperror.Info{400, "BTM050", "Alias already exists"}
-	//Error code 801 represents query request format error
-	errorFormatter.Errors[pseudohsm.ErrInvalidAfter] = httperror.Info{400, "BTM801", "Invalid `after` in query"}
-	//Error code 802 represents query reponses too many
-	errorFormatter.Errors[pseudohsm.ErrTooManyAliasesToList] = httperror.Info{400, "BTM802", "Too many aliases to list"}
-}
 
 func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	Alias    string `json:"alias"`

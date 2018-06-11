@@ -421,6 +421,7 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
+	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 
 	return annotatedTx, nil
 }
@@ -490,8 +491,8 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 		}
 
 		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
-			annotateTxsAsset(w, annotatedTxs)
-			annotatedTxs = append(annotatedTxs, annotatedTx)
+			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
 		}
 	}
 
