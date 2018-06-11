@@ -24,8 +24,10 @@ import (
 	"math/rand"
 	"sort"
 	"time"
-	"github.com/bytom/common"
+
 	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/common"
 	"github.com/bytom/crypto"
 )
 
@@ -92,7 +94,11 @@ func pongToTicket(localTime AbsTime, topics []Topic, node *Node, p *ingressPacke
 	if len(topics) != len(wps) {
 		return nil, fmt.Errorf("bad wait period list: got %d values, want %d", len(topics), len(wps))
 	}
-	if rlpHash(topics) != p.data.(*pong).TopicHash {
+	hash, _, err := wireHash(topics)
+	if err != nil {
+		return nil, err
+	}
+	if hash != p.data.(*pong).TopicHash {
 		return nil, fmt.Errorf("bad topic hash")
 	}
 	t := &ticket{
@@ -110,8 +116,12 @@ func pongToTicket(localTime AbsTime, topics []Topic, node *Node, p *ingressPacke
 }
 
 func ticketToPong(t *ticket, pong *pong) {
+	var err error
 	pong.Expiration = uint64(t.issueTime / AbsTime(time.Second))
-	pong.TopicHash = rlpHash(t.topics)
+	pong.TopicHash, _, err = wireHash(t.topics)
+	if err != nil {
+		log.Error("wireHash err:", err)
+	}
 	pong.TicketSerial = t.serial
 	pong.WaitPeriods = make([]uint32, len(t.regTime))
 	for i, regTime := range t.regTime {

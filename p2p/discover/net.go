@@ -22,15 +22,14 @@ import (
 	"fmt"
 	"net"
 	"time"
-	"github.com/bytom/common"
-	"github.com/bytom/p2p/netutil"
-	//"github.com/bytom/crypto/sha3"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/bytom/p2p/rlp"
 	"github.com/tendermint/go-crypto"
 	"golang.org/x/crypto/sha3"
+	"github.com/tendermint/go-wire"
 
+	"github.com/bytom/common"
+	"github.com/bytom/p2p/netutil"
 )
 
 var (
@@ -446,7 +445,6 @@ loop:
 				status = err.Error()
 			}
 			log.Info("", "msg", net.tab.count, timeout.ev, timeout.node.ID[:8], timeout.node.addr(), prestate, timeout.node.state, status)
-
 
 		// Querying.
 		case q := <-net.queryReq:
@@ -1227,7 +1225,8 @@ func (net *Network) checkTopicRegister(data *topicRegister) (*pong, error) {
 	}
 	// check that we previously authorised all topics
 	// that the other side is trying to register.
-	if rlpHash(data.Topics) != pongpkt.data.(*pong).TopicHash {
+	hash, _, _ := wireHash(data.Topics)
+	if hash != pongpkt.data.(*pong).TopicHash {
 		return nil, errors.New("topic hash mismatch")
 	}
 	if data.Idx < 0 || int(data.Idx) >= len(data.Topics) {
@@ -1236,11 +1235,11 @@ func (net *Network) checkTopicRegister(data *topicRegister) (*pong, error) {
 	return pongpkt.data.(*pong), nil
 }
 
-func rlpHash(x interface{}) (h common.Hash) {
+func wireHash(x interface{}) (h common.Hash, n int, err error) {
 	hw := sha3.New256()
-	rlp.Encode(hw, x)
+	wire.WriteBinary(x, hw, &n, &err)
 	hw.Sum(h[:0])
-	return h
+	return h, n, err
 }
 
 func (net *Network) handleNeighboursPacket(n *Node, pkt *ingressPacket) error {

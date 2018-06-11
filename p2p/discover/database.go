@@ -28,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytom/crypto"
 	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -35,8 +36,7 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"github.com/bytom/crypto"
-	"github.com/bytom/p2p/rlp"
+	"github.com/tendermint/go-wire"
 )
 
 var (
@@ -177,40 +177,40 @@ func (db *nodeDB) storeInt64(key []byte, n int64) error {
 	return db.lvl.Put(key, blob, nil)
 }
 
-func (db *nodeDB) storeRLP(key []byte, val interface{}) error {
-	blob, err := rlp.EncodeToBytes(val)
-	if err != nil {
-		return err
-	}
-	return db.lvl.Put(key, blob, nil)
-}
+//func (db *nodeDB) storeRLP(key []byte, val interface{}) error {
+//	blob, err := wire.WriteBinary(val,)
+//	if err != nil {
+//		return err
+//	}
+//	return db.lvl.Put(key, blob, nil)
+//}
 
-func (db *nodeDB) fetchRLP(key []byte, val interface{}) error {
-	blob, err := db.lvl.Get(key, nil)
-	if err != nil {
-		return err
-	}
-	err = rlp.DecodeBytes(blob, val)
-	if err != nil {
-		log.Warn(fmt.Sprintf("key %x (%T) %v", key, val, err))
-	}
-	return err
-}
+//func (db *nodeDB) fetchRLP(key []byte, val interface{}) error {
+//	blob, err := db.lvl.Get(key, nil)
+//	if err != nil {
+//		return err
+//	}
+//	err = rlp.DecodeBytes(blob, val)
+//	if err != nil {
+//		log.Warn(fmt.Sprintf("key %x (%T) %v", key, val, err))
+//	}
+//	return err
+//}
 
 // node retrieves a node with a given id from the database.
 func (db *nodeDB) node(id NodeID) *Node {
 	var node Node
-	if err := db.fetchRLP(makeKey(id, nodeDBDiscoverRoot), &node); err != nil {
-		return nil
-	}
+	//if err := db.fetchRLP(makeKey(id, nodeDBDiscoverRoot), &node); err != nil {
+	//	return nil
+	//}
 	node.sha = crypto.Sha256Hash(node.ID[:])
 	return &node
 }
 
 // updateNode inserts - potentially overwriting - a node into the peer database.
-func (db *nodeDB) updateNode(node *Node) error {
-	return db.storeRLP(makeKey(node.ID, nodeDBDiscoverRoot), node)
-}
+//func (db *nodeDB) updateNode(node *Node) error {
+//	return db.storeRLP(makeKey(node.ID, nodeDBDiscoverRoot), node)
+//}
 
 // deleteNode deletes all information/keys associated with a node.
 func (db *nodeDB) deleteNode(id NodeID) error {
@@ -313,17 +313,17 @@ func (db *nodeDB) updateFindFails(id NodeID, fails int) error {
 
 // localEndpoint returns the last local endpoint communicated to the
 // given remote node.
-func (db *nodeDB) localEndpoint(id NodeID) *rpcEndpoint {
-	var ep rpcEndpoint
-	if err := db.fetchRLP(makeKey(id, nodeDBDiscoverLocalEndpoint), &ep); err != nil {
-		return nil
-	}
-	return &ep
-}
+//func (db *nodeDB) localEndpoint(id NodeID) *rpcEndpoint {
+//	var ep rpcEndpoint
+//	if err := db.fetchRLP(makeKey(id, nodeDBDiscoverLocalEndpoint), &ep); err != nil {
+//		return nil
+//	}
+//	return &ep
+//}
 
-func (db *nodeDB) updateLocalEndpoint(id NodeID, ep rpcEndpoint) error {
-	return db.storeRLP(makeKey(id, nodeDBDiscoverLocalEndpoint), &ep)
-}
+//func (db *nodeDB) updateLocalEndpoint(id NodeID, ep rpcEndpoint) error {
+//	return db.storeRLP(makeKey(id, nodeDBDiscoverLocalEndpoint), &ep)
+//}
 
 // querySeeds retrieves random nodes to be used as potential seed nodes
 // for bootstrapping.
@@ -395,10 +395,14 @@ func nextNode(it iterator.Iterator) *Node {
 			continue
 		}
 		var n Node
-		if err := rlp.DecodeBytes(it.Value(), &n); err != nil {
-			log.Warn(fmt.Sprintf("invalid node %x: %v", id, err))
+		if err := wire.ReadBinaryBytes(it.Value(), &n); err != nil {
+			log.Error("invalid node:", id, err)
 			continue
 		}
+		//if err := rlp.DecodeBytes(it.Value(), &n); err != nil {
+		//	log.Warn(fmt.Sprintf("invalid node %x: %v", id, err))
+		//	continue
+		//}
 		return &n
 	}
 	return nil
