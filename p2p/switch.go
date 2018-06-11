@@ -75,9 +75,6 @@ type Switch struct {
 	// live nodes in the network.
 	NodeDatabasePath string
 
-	// NoDiscovery can be used to disable the peer discovery mechanism.
-	// Disabling is useful for protocol debugging (manual topology).
-	NoDiscovery bool
 	// BootstrapNodes are used to establish connectivity
 	// with the rest of the network.
 	BootstrapNodes []*discover.Node
@@ -134,28 +131,26 @@ func (sw *Switch) OnStart() error {
 		ntab      *discover.Network
 	)
 
-	if !sw.NoDiscovery {
-		addr, err := net.ResolveUDPAddr("udp", sw.nodeInfo.ListenAddr)
-		if err != nil {
-			return err
-		}
-		conn, err := net.ListenUDP("udp", addr)
-		if err != nil {
-			return err
-		}
-		realaddr = conn.LocalAddr().(*net.UDPAddr)
-		unhandled = make(chan discover.ReadPacket, 100)
-		sconn = &sharedUDPConn{conn, unhandled}
+	addr, err := net.ResolveUDPAddr("udp", sw.nodeInfo.ListenAddr)
+	if err != nil {
+		return err
 	}
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return err
+	}
+	realaddr = conn.LocalAddr().(*net.UDPAddr)
+	unhandled = make(chan discover.ReadPacket, 100)
+	sconn = &sharedUDPConn{conn, unhandled}
 	//nodeKey, err := bytomcrypto.GenerateKey()
 	//if err != nil {
 	//	return err
 	//}
-	ntab, err := discover.ListenUDP(&sw.nodePrivKey, sconn, realaddr, sw.NodeDatabasePath, nil) //srv.NodeDatabase)
+	ntab, err = discover.ListenUDP(&sw.nodePrivKey, sconn, realaddr, sw.NodeDatabasePath, nil) //srv.NodeDatabase)
 	if err != nil {
 		return err
 	}
-	if err := ntab.SetFallbackNodes(sw.BootstrapNodes); err != nil {
+	if err = ntab.SetFallbackNodes(sw.BootstrapNodes); err != nil {
 		return err
 	}
 	sw.Discv = ntab

@@ -28,6 +28,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytom/crypto"
+	"github.com/bytom/p2p/rlp"
 	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"
@@ -35,8 +37,6 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/storage"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"github.com/bytom/crypto"
-	"github.com/bytom/p2p/rlp"
 )
 
 var (

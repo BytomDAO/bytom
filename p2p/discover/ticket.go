@@ -24,9 +24,10 @@ import (
 	"math/rand"
 	"sort"
 	"time"
+
 	"github.com/bytom/common"
-	log "github.com/sirupsen/logrus"
 	"github.com/bytom/crypto"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -174,7 +175,7 @@ func newTicketStore() *ticketStore {
 // addTopic starts tracking a topic. If register is true,
 // the local node will register the topic and tickets will be collected.
 func (s *ticketStore) addTopic(topic Topic, register bool) {
-	log.Info("Adding discovery topic", "topic", topic, "register", register)
+	log.Debug("Adding discovery topic", "topic", topic, "register", register)
 	if s.radius[topic] == nil {
 		s.radius[topic] = newTopicRadius(topic)
 	}
@@ -198,7 +199,7 @@ func (s *ticketStore) removeSearchTopic(t Topic) {
 
 // removeRegisterTopic deletes all tickets for the given topic.
 func (s *ticketStore) removeRegisterTopic(topic Topic) {
-	log.Info("Removing discovery topic", "topic", topic)
+	log.Debug("Removing discovery topic", "topic", topic)
 	if s.tickets[topic] == nil {
 		log.Warn("Removing non-existent discovery topic", "topic", topic)
 		return
@@ -245,13 +246,13 @@ func (s *ticketStore) nextRegisterLookup() (lookupInfo, time.Duration) {
 		// If the topic needs more tickets, return it
 		if s.tickets[topic].nextLookup < Now() {
 			next, delay := s.radius[topic].nextTarget(false), 100*time.Millisecond
-			log.Info("Found discovery topic to register", "topic", topic, "target", next.target, "delay", delay)
+			log.Debug("Found discovery topic to register", "topic", topic, "target", next.target, "delay", delay)
 			return next, delay
 		}
 	}
 	// No registration topics found or all exhausted, sleep
 	delay := 40 * time.Second
-	log.Info("No topic found to register", "delay", delay)
+	log.Debug("No topic found to register", "delay", delay)
 	return lookupInfo{}, delay
 }
 
@@ -280,7 +281,7 @@ func (s *ticketStore) ticketsInWindow(topic Topic) []ticketRef {
 	for idx := timeBucket(0); idx < timeWindow; idx++ {
 		tickets = append(tickets, buckets[s.lastBucketFetched+idx]...)
 	}
-	log.Info("Retrieved discovery registration tickets", "topic", topic, "from", s.lastBucketFetched, "tickets", len(tickets))
+	log.Debug("Retrieved discovery registration tickets", "topic", topic, "from", s.lastBucketFetched, "tickets", len(tickets))
 	return tickets
 }
 
@@ -344,7 +345,6 @@ func (s *ticketStore) nextFilteredTicket() (*ticketRef, time.Duration) {
 		if ticket == nil {
 			return ticket, wait
 		}
-		log.Info("Found discovery ticket to register", "node", ticket.t.node, "serial", ticket.t.serial, "wait", wait)
 
 		regTime := now + AbsTime(wait)
 		topic := ticket.t.topics[ticket.idx]
@@ -416,7 +416,7 @@ func (s *ticketStore) nextRegisterableTicket() (*ticketRef, time.Duration) {
 
 // removeTicket removes a ticket from the ticket store
 func (s *ticketStore) removeTicketRef(ref ticketRef) {
-	log.Info("Removing discovery ticket reference", "node", ref.t.node.ID, "serial", ref.t.serial)
+	log.Debug("Removing discovery ticket reference", "node", ref.t.node.ID, "serial", ref.t.serial)
 
 	// Make nextRegisterableTicket return the next available ticket.
 	s.nextTicketCached = nil
@@ -425,7 +425,7 @@ func (s *ticketStore) removeTicketRef(ref ticketRef) {
 	tickets := s.tickets[topic]
 
 	if tickets == nil {
-		log.Info("Removing tickets from unknown topic", "topic", topic)
+		log.Debug("Removing tickets from unknown topic", "topic", topic)
 		return
 	}
 	bucket := timeBucket(ref.t.regTime[ref.idx] / AbsTime(ticketTimeBucketLen))
@@ -521,7 +521,7 @@ func (s *ticketStore) adjustWithTicket(now AbsTime, targetHash common.Hash, t *t
 }
 
 func (s *ticketStore) addTicket(localTime AbsTime, pingHash []byte, ticket *ticket) {
-	log.Info("Adding discovery ticket", "node", ticket.node.ID, "serial", ticket.serial)
+	log.Debug("Adding discovery ticket", "node", ticket.node.ID, "serial", ticket.serial)
 
 	lastReq, ok := s.nodeLastReq[ticket.node]
 	if !(ok && bytes.Equal(pingHash, lastReq.pingHash)) {
@@ -565,9 +565,9 @@ func (s *ticketStore) addTicket(localTime AbsTime, pingHash []byte, ticket *tick
 
 func (s *ticketStore) getNodeTicket(node *Node) *ticket {
 	if s.nodes[node] == nil {
-		log.Info("Retrieving node ticket", "node", node.ID, "serial", nil)
+		log.Debug("Retrieving node ticket", "node", node.ID, "serial", nil)
 	} else {
-		log.Info("Retrieving node ticket", "node", node.ID, "serial", s.nodes[node].serial)
+		log.Debug("Retrieving node ticket", "node", node.ID, "serial", s.nodes[node].serial)
 	}
 	return s.nodes[node]
 }

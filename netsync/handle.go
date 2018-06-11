@@ -61,7 +61,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 	manager.sw = p2p.NewSwitch(config.P2P, trustHistoryDB, config.DBDir())
 
-	pexReactor := pex.NewPEXReactor(manager.sw.Discv)
+	pexReactor := pex.NewPEXReactor()
 	manager.sw.AddReactor("PEX", pexReactor)
 
 	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers, manager.dropPeerCh)

@@ -22,15 +22,15 @@ import (
 	"fmt"
 	"net"
 	"time"
+
 	"github.com/bytom/common"
 	"github.com/bytom/p2p/netutil"
 	//"github.com/bytom/crypto/sha3"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/bytom/p2p/rlp"
+	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-crypto"
 	"golang.org/x/crypto/sha3"
-
 )
 
 var (
@@ -415,13 +415,13 @@ loop:
 
 		select {
 		case <-net.closeReq:
-			log.Info("<-net.closeReq")
+			log.Debug("<-net.closeReq")
 			break loop
 
 		// Ingress packet handling.
 		case pkt := <-net.read:
 			//fmt.Println("read", pkt.ev)
-			log.Info("<-net.read")
+			log.Debug("<-net.read")
 			n := net.internNode(&pkt)
 			prestate := n.state
 			status := "ok"
@@ -434,7 +434,7 @@ loop:
 
 		// State transition timeouts.
 		case timeout := <-net.timeout:
-			log.Info("<-net.timeout")
+			log.Debug("<-net.timeout")
 			if net.timeoutTimers[timeout] == nil {
 				// Stale timer (was aborted).
 				continue
@@ -447,23 +447,22 @@ loop:
 			}
 			log.Info("", "msg", net.tab.count, timeout.ev, timeout.node.ID[:8], timeout.node.addr(), prestate, timeout.node.state, status)
 
-
 		// Querying.
 		case q := <-net.queryReq:
-			log.Info("<-net.queryReq")
+			log.Debug("<-net.queryReq")
 			if !q.start(net) {
 				q.remote.deferQuery(q)
 			}
 
 		// Interacting with the table.
 		case f := <-net.tableOpReq:
-			log.Info("<-net.tableOpReq")
+			log.Debug("<-net.tableOpReq")
 			f()
 			net.tableOpResp <- struct{}{}
 
 		// Topic registration stuff.
 		case req := <-net.topicRegisterReq:
-			log.Info("<-net.topicRegisterReq")
+			log.Debug("<-net.topicRegisterReq")
 			if !req.add {
 				net.ticketStore.removeRegisterTopic(req.topic)
 				continue
@@ -474,7 +473,7 @@ loop:
 			// determination for new topics.
 			// if topicRegisterLookupDone == nil {
 			if topicRegisterLookupTarget.target == (common.Hash{}) {
-				log.Info("topicRegisterLookupTarget == null")
+				log.Debug("topicRegisterLookupTarget == null")
 				if topicRegisterLookupTick.Stop() {
 					<-topicRegisterLookupTick.C
 				}
@@ -484,7 +483,7 @@ loop:
 			}
 
 		case nodes := <-topicRegisterLookupDone:
-			log.Info("<-topicRegisterLookupDone")
+			log.Debug("<-topicRegisterLookupDone")
 			net.ticketStore.registerLookupDone(topicRegisterLookupTarget, nodes, func(n *Node) []byte {
 				net.ping(n, n.addr())
 				return n.pingEcho
@@ -495,7 +494,7 @@ loop:
 			topicRegisterLookupDone = nil
 
 		case <-topicRegisterLookupTick.C:
-			log.Info("<-topicRegisterLookupTick")
+			log.Debug("<-topicRegisterLookupTick")
 			if (topicRegisterLookupTarget.target == common.Hash{}) {
 				target, delay := net.ticketStore.nextRegisterLookup()
 				topicRegisterLookupTarget = target
@@ -508,14 +507,14 @@ loop:
 			}
 
 		case <-nextRegisterTime:
-			log.Info("<-nextRegisterTime")
+			log.Debug("<-nextRegisterTime")
 			net.ticketStore.ticketRegistered(*nextTicket)
 			//fmt.Println("sendTopicRegister", nextTicket.t.node.addr().String(), nextTicket.t.topics, nextTicket.idx, nextTicket.t.pong)
 			net.conn.sendTopicRegister(nextTicket.t.node, nextTicket.t.topics, nextTicket.idx, nextTicket.t.pong)
 
 		case req := <-net.topicSearchReq:
 			if refreshDone == nil {
-				log.Info("<-net.topicSearchReq")
+				log.Debug("<-net.topicSearchReq")
 				info, ok := searchInfo[req.topic]
 				if ok {
 					if req.delay == time.Duration(0) {
@@ -573,7 +572,7 @@ loop:
 			})
 
 		case <-statsDump.C:
-			log.Info("<-statsDump.C")
+			log.Debug("<-statsDump.C")
 			/*r, ok := net.ticketStore.radius[testTopic]
 			if !ok {
 				fmt.Printf("(%x) no radius @ %v\n", net.tab.self.ID[:8], time.Now())
@@ -602,7 +601,7 @@ loop:
 
 		// Periodic / lookup-initiated bucket refresh.
 		case <-refreshTimer.C:
-			log.Info("<-refreshTimer.C")
+			log.Debug("<-refreshTimer.C")
 			// TODO: ideally we would start the refresh timer after
 			// fallback nodes have been set for the first time.
 			if refreshDone == nil {
@@ -616,7 +615,7 @@ loop:
 				bucketRefreshTimer.Reset(bucketRefreshInterval)
 			}()
 		case newNursery := <-net.refreshReq:
-			log.Info("<-net.refreshReq")
+			log.Debug("<-net.refreshReq")
 			if newNursery != nil {
 				net.nursery = newNursery
 			}
@@ -626,7 +625,7 @@ loop:
 			}
 			net.refreshResp <- refreshDone
 		case <-refreshDone:
-			log.Info("<-net.refreshDone", "table size", net.tab.count)
+			log.Debug("<-net.refreshDone", "table size", net.tab.count)
 			if net.tab.count != 0 {
 				refreshDone = nil
 				list := searchReqWhenRefreshDone
@@ -642,9 +641,9 @@ loop:
 			}
 		}
 	}
-	log.Info("loop stopped")
+	log.Debug("loop stopped")
 
-	log.Info(fmt.Sprintf("shutting down"))
+	log.Debug(fmt.Sprintf("shutting down"))
 	if net.conn != nil {
 		net.conn.Close()
 	}
@@ -674,20 +673,11 @@ func (net *Network) refresh(done chan<- struct{}) {
 		seeds = net.nursery
 	}
 	if len(seeds) == 0 {
-		log.Info("no seed nodes found")
+		log.Debug("no seed nodes found")
 		close(done)
 		return
 	}
 	for _, n := range seeds {
-		//log.Info("", "msg", log.Lazy{Fn: func() string {
-		//	var age string
-		//	if net.db != nil {
-		//		age = time.Since(net.db.lastPong(n.ID)).String()
-		//	} else {
-		//		age = "unknown"
-		//	}
-		//	return fmt.Sprintf("seed node (age %s): %v", age, n)
-		//}})
 		n = net.internNodeFromDB(n)
 		if n.state == unknown {
 			net.transition(n, verifyinit)
@@ -798,14 +788,14 @@ func (n *nodeNetGuts) startNextQuery(net *Network) {
 func (q *findnodeQuery) start(net *Network) bool {
 	// Satisfy queries against the local node directly.
 	if q.remote == net.tab.self {
-		log.Info("findnodeQuery self")
+		log.Debug("findnodeQuery self")
 		closest := net.tab.closest(common.BytesToHash(q.target[:]), bucketSize)
 
 		q.reply <- closest.entries
 		return true
 	}
 	if q.remote.state.canQuery && q.remote.pendingNeighbours == nil {
-		log.Info("findnodeQuery", "remote peer:", q.remote.ID, "targetID:", q.target)
+		log.Debug("findnodeQuery", "remote peer:", q.remote.ID, "targetID:", q.target)
 		net.conn.sendFindnodeHash(q.remote, q.target)
 		net.timedEvent(respTimeout, q.remote, neighboursTimeout)
 		q.remote.pendingNeighbours = q
@@ -815,7 +805,7 @@ func (q *findnodeQuery) start(net *Network) bool {
 	// Initiate the transition to known.
 	// The request will be sent later when the node reaches known state.
 	if q.remote.state == unknown {
-		log.Info("findnodeQuery", "id:", q.remote.ID, "status:", "unknown->verifyinit")
+		log.Debug("findnodeQuery", "id:", q.remote.ID, "status:", "unknown->verifyinit")
 		net.transition(q.remote, verifyinit)
 	}
 	return false
@@ -1111,14 +1101,14 @@ func (net *Network) ping(n *Node, addr *net.UDPAddr) {
 		//fmt.Println(" not sent")
 		return
 	}
-	log.Info("Pinging remote node", "node", n.ID)
+	log.Debug("Pinging remote node", "node", n.ID)
 	n.pingTopics = net.ticketStore.regTopicSet()
 	n.pingEcho = net.conn.sendPing(n, addr, n.pingTopics)
 	net.timedEvent(respTimeout, n, pongTimeout)
 }
 
 func (net *Network) handlePing(n *Node, pkt *ingressPacket) {
-	log.Info("Handling remote ping", "node", n.ID)
+	log.Debug("Handling remote ping", "node", n.ID)
 	ping := pkt.data.(*ping)
 	n.TCP = ping.From.TCP
 	t := net.topictab.getTicket(n, ping.Topics)
@@ -1133,7 +1123,7 @@ func (net *Network) handlePing(n *Node, pkt *ingressPacket) {
 }
 
 func (net *Network) handleKnownPong(n *Node, pkt *ingressPacket) error {
-	log.Info("Handling known pong", "node", n.ID)
+	log.Debug("Handling known pong", "node", n.ID)
 	net.abortTimedEvent(n, pongTimeout)
 	now := Now()
 	ticket, err := pongToTicket(now, n.pingTopics, n, pkt)
@@ -1141,7 +1131,7 @@ func (net *Network) handleKnownPong(n *Node, pkt *ingressPacket) error {
 		// fmt.Printf("(%x) ticket: %+v\n", net.tab.self.ID[:8], pkt.data)
 		net.ticketStore.addTicket(now, pkt.data.(*pong).ReplyTok, ticket)
 	} else {
-		log.Info("Failed to convert pong to ticket", "err", err)
+		log.Debug("Failed to convert pong to ticket", "err", err)
 	}
 	n.pingEcho = nil
 	n.pingTopics = nil
@@ -1252,10 +1242,9 @@ func (net *Network) handleNeighboursPacket(n *Node, pkt *ingressPacket) error {
 	req := pkt.data.(*neighbors)
 	nodes := make([]*Node, len(req.Nodes))
 	for i, rn := range req.Nodes {
-		log.Info("handleNeighboursPacket", "node:", rn.ID)
 		nn, err := net.internNodeFromNeighbours(pkt.remoteAddr, rn)
 		if err != nil {
-			log.Info(fmt.Sprintf("invalid neighbour (%v) from %x@%v: %v", rn.IP, n.ID[:8], pkt.remoteAddr, err))
+			log.Debug(fmt.Sprintf("invalid neighbour (%v) from %x@%v: %v", rn.IP, n.ID[:8], pkt.remoteAddr, err))
 			continue
 		}
 		nodes[i] = nn
