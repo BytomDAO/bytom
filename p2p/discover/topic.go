@@ -23,7 +23,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/aristanetworks/goarista/monotime"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -39,7 +38,7 @@ type Topic string
 type AbsTime time.Duration // absolute monotonic time
 
 func Now() AbsTime {
-	return AbsTime(monotime.Now())
+	return AbsTime(uint64(time.Now().UnixNano()))
 }
 
 type topicEntry struct {
