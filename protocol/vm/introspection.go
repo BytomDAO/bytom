@@ -80,6 +80,19 @@ func opProgram(vm *virtualMachine) error {
 	return vm.push(vm.context.Code, true)
 }
 
+func opBlockTime(vm *virtualMachine) error {
+	err := vm.applyCost(1)
+	if err != nil {
+		return err
+	}
+
+	if vm.context.Time == nil {
+		return ErrContext
+	}
+
+	return vm.pushInt64(int64(*vm.context.Time), true)
+}
+
 func opIndex(vm *virtualMachine) error {
 	err := vm.applyCost(1)
 	if err != nil {
