@@ -51,7 +51,7 @@ func getBlockHeaderByHeight(height uint64) {
 		Reward      uint64             `json:"reward"`
 	}
 
-	data, _ := util.ClientCall("/get-block-header-by-height", Req{BlockHeight: height})
+	data, _ := util.ClientCall("/get-block-header", Req{BlockHeight: height})
 	rawData, err := json.Marshal(data)
 	if err != nil {
 		log.Fatalln(err)

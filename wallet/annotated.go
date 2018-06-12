@@ -181,6 +181,7 @@ func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statu
 		Inputs:                 make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
 		StatusFail:             statusFail,
+		Size:                   orig.SerializedSize,
 	}
 	for i := range orig.Inputs {
 		tx.Inputs = append(tx.Inputs, w.BuildAnnotatedInput(orig, uint32(i)))

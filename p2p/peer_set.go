@@ -27,6 +27,7 @@ type peerSetItem struct {
 	index int
 }
 
+// NewPeerSet creates a new peerSet with a list of initial capacity of 256 items.
 func NewPeerSet() *PeerSet {
 	return &PeerSet{
 		lookup: make(map[string]*peerSetItem),
@@ -34,22 +35,34 @@ func NewPeerSet() *PeerSet {
 	}
 }
 
+// Add adds the peer to the PeerSet.
 // Returns false if peer with key (PubKeyEd25519) is already set
 func (ps *PeerSet) Add(peer *Peer) error {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
+
 	if ps.lookup[peer.Key] != nil {
-		return ErrSwitchDuplicatePeer
+		return ErrDuplicatePeer
 	}
 
-	index := len(ps.list)
-	// Appending is safe even with other goroutines
-	// iterating over the ps.list slice.
+	ps.lookup[peer.Key] = &peerSetItem{peer, len(ps.list)}
 	ps.list = append(ps.list, peer)
-	ps.lookup[peer.Key] = &peerSetItem{peer, index}
 	return nil
 }
 
+// Get looks up a peer by the provided peerKey.
+func (ps *PeerSet) Get(peerKey string) *Peer {
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
+	item, ok := ps.lookup[peerKey]
+	if ok {
+		return item.peer
+	}
+	return nil
+}
+
+// Has returns true if the PeerSet contains
+// the peer referred to by this peerKey.
 func (ps *PeerSet) Has(peerKey string) bool {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
@@ -57,17 +70,14 @@ func (ps *PeerSet) Has(peerKey string) bool {
 	return ok
 }
 
-func (ps *PeerSet) Get(peerKey string) *Peer {
+// List threadsafe list of peers.
+func (ps *PeerSet) List() []*Peer {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
-	item, ok := ps.lookup[peerKey]
-	if ok {
-		return item.peer
-	} else {
-		return nil
-	}
+	return ps.list
 }
 
+// Remove discards peer if the peer was previously memoized.
 func (ps *PeerSet) Remove(peer *Peer) {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
@@ -96,18 +106,11 @@ func (ps *PeerSet) Remove(peer *Peer) {
 	lastPeerItem.index = index
 	ps.list = newList
 	delete(ps.lookup, peer.Key)
-
 }
 
+// Size returns the number of unique items in the peerSet.
 func (ps *PeerSet) Size() int {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
 	return len(ps.list)
-}
-
-// threadsafe list of peers.
-func (ps *PeerSet) List() []*Peer {
-	ps.mtx.Lock()
-	defer ps.mtx.Unlock()
-	return ps.list
 }

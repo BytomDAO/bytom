@@ -71,33 +71,54 @@ func (a *API) listBalances(ctx context.Context) Response {
 func (a *API) getTransaction(ctx context.Context, txInfo struct {
 	TxID string `json:"tx_id"`
 }) Response {
-	transaction, err := a.wallet.GetTransactionByTxID(txInfo.TxID)
+	var annotatedTx *query.AnnotatedTx
+	var err error
+
+	annotatedTx, err = a.wallet.GetTransactionByTxID(txInfo.TxID)
 	if err != nil {
-		log.Errorf("getTransaction error: %v", err)
-		return NewErrorResponse(err)
+		// transaction not found in blockchain db, search it from unconfirmed db
+		annotatedTx, err = a.wallet.GetUnconfirmedTxByTxID(txInfo.TxID)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
 	}
 
-	return NewSuccessResponse(transaction)
+	return NewSuccessResponse(annotatedTx)
 }
 
 // POST /list-transactions
 func (a *API) listTransactions(ctx context.Context, filter struct {
-	ID        string `json:"id"`
-	AccountID string `json:"account_id"`
-	Detail    bool   `json:"detail"`
+	ID          string `json:"id"`
+	AccountID   string `json:"account_id"`
+	Detail      bool   `json:"detail"`
+	Unconfirmed bool   `json:"unconfirmed"`
 }) Response {
 	transactions := []*query.AnnotatedTx{}
 	var err error
+	var transaction *query.AnnotatedTx
 
-	if filter.AccountID != "" {
-		transactions, err = a.wallet.GetTransactionsByAccountID(filter.AccountID)
+	if filter.ID != "" {
+		transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
+		if err != nil && filter.Unconfirmed {
+			transaction, err = a.wallet.GetUnconfirmedTxByTxID(filter.ID)
+			if err != nil {
+				return NewErrorResponse(err)
+			}
+		}
+		transactions = []*query.AnnotatedTx{transaction}
 	} else {
-		transactions, err = a.wallet.GetTransactionsByTxID(filter.ID)
-	}
+		transactions, err = a.wallet.GetTransactions(filter.AccountID)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
 
-	if err != nil {
-		log.Errorf("listTransactions: %v", err)
-		return NewErrorResponse(err)
+		if filter.Unconfirmed {
+			unconfirmedTxs, err := a.wallet.GetUnconfirmedTxs(filter.AccountID)
+			if err != nil {
+				return NewErrorResponse(err)
+			}
+			transactions = append(unconfirmedTxs, transactions...)
+		}
 	}
 
 	if filter.Detail == false {

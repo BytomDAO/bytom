@@ -34,12 +34,8 @@ type CPUMiner struct {
 	numWorkers        uint64
 	started           bool
 	discreteMining    bool
-	wg                sync.WaitGroup
 	workerWg          sync.WaitGroup
 	updateNumWorkers  chan struct{}
-	queryHashesPerSec chan float64
-	updateHashes      chan uint64
-	speedMonitorQuit  chan struct{}
 	quit              chan struct{}
 	newBlockCh        chan *bc.Hash
 }
@@ -110,7 +106,7 @@ out:
 				blockHash := block.Hash()
 				m.newBlockCh <- &blockHash
 			} else {
-				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock %v", err)
+				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
 			}
 		}
 	}
@@ -173,11 +169,7 @@ out:
 		}
 	}
 
-	// Wait until all workers shut down to stop the speed monitor since
-	// they rely on being able to send updates to it.
 	m.workerWg.Wait()
-	close(m.speedMonitorQuit)
-	m.wg.Done()
 }
 
 // Start begins the CPU mining process as well as the speed monitor used to
@@ -189,15 +181,12 @@ func (m *CPUMiner) Start() {
 	m.Lock()
 	defer m.Unlock()
 
-	// Nothing to do if the miner is already running or if running in
-	// discrete mode (using GenerateNBlocks).
-	if m.started || m.discreteMining {
+	// Nothing to do if the miner is already running
+	if m.started {
 		return
 	}
 
 	m.quit = make(chan struct{})
-	m.speedMonitorQuit = make(chan struct{})
-	m.wg.Add(1)
 	go m.miningWorkerController()
 
 	m.started = true
@@ -213,14 +202,12 @@ func (m *CPUMiner) Stop() {
 	m.Lock()
 	defer m.Unlock()
 
-	// Nothing to do if the miner is not currently running or if running in
-	// discrete mode (using GenerateNBlocks).
-	if !m.started || m.discreteMining {
+	// Nothing to do if the miner is not currently running
+	if !m.started {
 		return
 	}
 
 	close(m.quit)
-	m.wg.Wait()
 	m.started = false
 	log.Info("CPU miner stopped")
 }
@@ -286,8 +273,6 @@ func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *pro
 		txPool:            txPool,
 		numWorkers:        defaultNumWorkers,
 		updateNumWorkers:  make(chan struct{}),
-		queryHashesPerSec: make(chan float64),
-		updateHashes:      make(chan uint64),
 		newBlockCh:        newBlockCh,
 	}
 }
