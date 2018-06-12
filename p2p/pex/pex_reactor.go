@@ -139,7 +139,7 @@ func (r *PEXReactor) dialPeerWorker(a *p2p.NetAddress, wg *sync.WaitGroup) {
 
 func (r *PEXReactor) ensurePeers() {
 	numOutPeers, _, numDialing := r.Switch.NumPeers()
-	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing)) * 3
+	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing))
 	log.WithFields(log.Fields{
 		"numOutPeers": numOutPeers,
 		"numDialing":  numDialing,
@@ -150,14 +150,12 @@ func (r *PEXReactor) ensurePeers() {
 	}
 
 	toDial := make(map[string]*p2p.NetAddress)
-	maxAttempts := numToDial * 3
-
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range r.Switch.Peers().List() {
 		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
 	}
 
-	nodes := make([]*discover.Node, maxAttempts)
+	nodes := make([]*discover.Node, numToDial)
 	n := r.discv.ReadRandomNodes(nodes)
 	for i := 0; i < n && len(toDial) < numToDial; i++ {
 		try := p2p.NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
