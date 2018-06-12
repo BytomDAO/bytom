@@ -167,6 +167,9 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 	}
 
 	// add the seeds node to the discover table
+	if config.P2P.Seeds == "" {
+		return ntab, nil
+	}
 	nodes := []*discover.Node{}
 	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
 		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
