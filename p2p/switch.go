@@ -101,35 +101,29 @@ func NewSwitch(config *cfg.Config) *Switch {
 
 // OnStart implements BaseService. It starts all the reactors, peers, and listeners.
 func (sw *Switch) OnStart() error {
-	var (
-		sconn     *sharedUDPConn
-		realaddr  *net.UDPAddr
-		unhandled chan discover.ReadPacket
-		ntab      *discover.Network
-	)
-
-	addr, err := net.ResolveUDPAddr("udp", sw.nodeInfo.ListenAddr)
+	addr, err := net.ResolveUDPAddr("udp", sw.Config.P2P.ListenAddress)
 	if err != nil {
 		return err
 	}
+
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
 		return err
 	}
 
-	realaddr = conn.LocalAddr().(*net.UDPAddr)
-	unhandled = make(chan discover.ReadPacket, 100)
-	sconn = &sharedUDPConn{conn, unhandled}
-	ntab, err = discover.ListenUDP(&sw.nodePrivKey, sconn, realaddr, sw.Config.DBDir(), nil)
+	realaddr := conn.LocalAddr().(*net.UDPAddr)
+	unhandled := make(chan discover.ReadPacket, 100)
+	sconn := &sharedUDPConn{conn, unhandled}
+	ntab, err := discover.ListenUDP(&sw.nodePrivKey, sconn, realaddr, sw.Config.DBDir(), nil)
 	if err != nil {
 		return err
 	}
+
 	if err = ntab.SetFallbackNodes(FoundationBootnodes()); err != nil {
 		return err
 	}
-	sw.Discv = ntab
 
-	// Start reactors
+	sw.Discv = ntab
 	for _, reactor := range sw.reactors {
 		if _, err := reactor.Start(); err != nil {
 			return err
@@ -156,6 +150,7 @@ func (sw *Switch) OnStop() {
 	for _, reactor := range sw.reactors {
 		reactor.Stop()
 	}
+	sw.Discv.Close()
 }
 
 //AddBannedPeer add peer to blacklist
