@@ -32,30 +32,35 @@ type spendAction struct {
 }
 
 // MergeSpendAction merge common assetID and accountID spend action
-func MergeSpendAction(spendActions []txbuilder.Action) []txbuilder.Action {
-	actions := []txbuilder.Action{}
-	actionMap := make(map[string]*spendAction)
+func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
+	resultActions := []txbuilder.Action{}
+	spendActionMap := make(map[string]*spendAction)
+	spendCountMap := make(map[string]int32)
+	spendPositionMap := make(map[string]int)
 
-	for _, act := range spendActions {
+	for _, act := range actions {
 		switch act := act.(type) {
 		case *spendAction:
 			actionKey := act.AssetId.String() + act.AccountID
-			if tmpAct, ok := actionMap[actionKey]; ok {
+			if tmpAct, ok := spendActionMap[actionKey]; ok {
 				tmpAct.Amount += act.Amount
 			} else {
-				actionMap[actionKey] = act
+				spendActionMap[actionKey] = act
+			}
+			spendCountMap[actionKey]++
+
+			if spendCountMap[actionKey] == 1 {
+				resultActions = append(resultActions, spendActionMap[actionKey])
+				spendPositionMap[actionKey] = len(resultActions) - 1
+			} else {
+				resultActions[spendPositionMap[actionKey]] = spendActionMap[actionKey]
 			}
 		default:
-			actions = append(actions, act)
+			resultActions = append(resultActions, act)
 		}
 	}
 
-	for actKey := range actionMap {
-		spend := actionMap[actKey]
-		actions = append(actions, txbuilder.Action(spend))
-	}
-
-	return actions
+	return resultActions
 }
 
 func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {

@@ -252,6 +252,9 @@ func TestMergeSpendAction(t *testing.T) {
 		},
 		{
 			testActions: []txbuilder.Action{
+				txbuilder.Action(&spendUTXOAction{
+					OutputID: &bc.Hash{V0: 128},
+				}),
 				txbuilder.Action(&spendAction{
 					AssetAmount: bc.AssetAmount{
 						AssetId: testBTM,
@@ -265,6 +268,9 @@ func TestMergeSpendAction(t *testing.T) {
 						Amount:  200,
 					},
 					AccountID: "test_account1",
+				}),
+				txbuilder.Action(&spendUTXOAction{
+					OutputID: &bc.Hash{V0: 256},
 				}),
 				txbuilder.Action(&spendAction{
 					AssetAmount: bc.AssetAmount{
@@ -275,6 +281,9 @@ func TestMergeSpendAction(t *testing.T) {
 				}),
 			},
 			wantActions: []txbuilder.Action{
+				txbuilder.Action(&spendUTXOAction{
+					OutputID: &bc.Hash{V0: 128},
+				}),
 				txbuilder.Action(&spendAction{
 					AssetAmount: bc.AssetAmount{
 						AssetId: testBTM,
@@ -289,6 +298,9 @@ func TestMergeSpendAction(t *testing.T) {
 					},
 					AccountID: "test_account1",
 				}),
+				txbuilder.Action(&spendUTXOAction{
+					OutputID: &bc.Hash{V0: 256},
+				}),
 				txbuilder.Action(&spendAction{
 					AssetAmount: bc.AssetAmount{
 						AssetId: testAssetID2,
@@ -297,8 +309,8 @@ func TestMergeSpendAction(t *testing.T) {
 					AccountID: "test_account2",
 				}),
 			},
-			testActionCount: 3,
-			wantActionCount: 3,
+			testActionCount: 5,
+			wantActionCount: 5,
 		},
 	}
 
