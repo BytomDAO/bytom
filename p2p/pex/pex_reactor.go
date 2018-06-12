@@ -2,9 +2,7 @@ package pex
 
 import (
 	"errors"
-	"math/rand"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 
@@ -13,6 +11,7 @@ import (
 
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/connection"
+	"github.com/bytom/p2p/discover"
 )
 
 const (
@@ -27,14 +26,14 @@ const (
 // PEXReactor handles peer exchange and ensures that an adequate number of peers are connected to the switch.
 type PEXReactor struct {
 	p2p.BaseReactor
-	book           *AddrBook
+	discv          *discover.Network
 	msgCountByPeer *cmn.CMap
 }
 
 // NewPEXReactor creates new PEX reactor.
-func NewPEXReactor(b *AddrBook) *PEXReactor {
+func NewPEXReactor(discv *discover.Network) *PEXReactor {
 	r := &PEXReactor{
-		book:           b,
+		discv:          discv,
 		msgCountByPeer: cmn.NewCMap(),
 	}
 	r.BaseReactor = *p2p.NewBaseReactor("PEXReactor", r)
@@ -44,10 +43,6 @@ func NewPEXReactor(b *AddrBook) *PEXReactor {
 // OnStart implements BaseService
 func (r *PEXReactor) OnStart() error {
 	r.BaseReactor.OnStart()
-	if _, err := r.book.Start(); err != nil {
-		return err
-	}
-
 	go r.ensurePeersRoutine()
 	go r.flushMsgCountByPeer()
 	return nil
@@ -56,7 +51,6 @@ func (r *PEXReactor) OnStart() error {
 // OnStop implements BaseService
 func (r *PEXReactor) OnStop() {
 	r.BaseReactor.OnStop()
-	r.book.Stop()
 }
 
 // GetChannels implements Reactor
@@ -70,30 +64,20 @@ func (r *PEXReactor) GetChannels() []*connection.ChannelDescriptor {
 
 // AddPeer adding peer to the address book
 func (r *PEXReactor) AddPeer(p *p2p.Peer) error {
-	if p.IsOutbound() {
-		if r.book.NeedMoreAddrs() && !r.RequestAddrs(p) {
-			return errors.New("Send pex message fail")
-		}
+	if r.Switch.Peers().Size() <= r.Switch.Config.P2P.MaxNumPeers {
 		return nil
 	}
 
-	addr, err := p2p.NewNetAddressString(p.ListenAddr)
-	if err != nil {
-		return errors.New("addPeer: invalid peer address")
+	nodes := make([]*discover.Node, 20)
+	if n := r.discv.ReadRandomNodes(nodes); n == 0 {
+		return nil
 	}
 
-	if err := r.book.AddAddress(addr, addr); err != nil {
-		return err
+	if r.SendAddrs(p, nodes) {
+		<-time.After(1 * time.Second)
+		r.Switch.StopPeerGracefully(p)
 	}
-
-	if r.Switch.Peers().Size() >= r.Switch.Config.MaxNumPeers {
-		if r.SendAddrs(p, r.book.GetSelection()) {
-			<-time.After(1 * time.Second)
-			r.Switch.StopPeerGracefully(p)
-		}
-		return errors.New("addPeer: reach the max peer, exchange then close")
-	}
-	return nil
+	return errors.New("addPeer: reach the max peer, exchange then close")
 }
 
 // Receive implements Reactor by handling incoming PEX messages.
@@ -114,25 +98,16 @@ func (r *PEXReactor) Receive(chID byte, p *p2p.Peer, rawMsg []byte) {
 
 	switch msg := msg.(type) {
 	case *pexRequestMessage:
-		if !r.SendAddrs(p, r.book.GetSelection()) {
+		nodes := make([]*discover.Node, 20)
+		if n := r.discv.ReadRandomNodes(nodes); n == 0 {
+			return
+		}
+
+		if !r.SendAddrs(p, nodes) {
 			log.Error("failed to send pex address message")
 		}
 
 	case *pexAddrsMessage:
-		srcAddr, err := p2p.NewNetAddressString(p.RemoteAddr)
-		if err != nil {
-			log.WithField("error", err).Error("pex fail on create src address")
-			return
-		}
-
-		for _, addr := range msg.Addrs {
-			if err := r.book.AddAddress(addr, srcAddr); err != nil {
-				log.WithField("error", err).Error("pex fail on process pexAddrsMessage")
-				r.Switch.StopPeerGracefully(p)
-				return
-			}
-		}
-
 	default:
 		log.WithField("type", reflect.TypeOf(msg)).Error("Unknown message type")
 	}
@@ -141,17 +116,13 @@ func (r *PEXReactor) Receive(chID byte, p *p2p.Peer, rawMsg []byte) {
 // RemovePeer implements Reactor.
 func (r *PEXReactor) RemovePeer(p *p2p.Peer, reason interface{}) {}
 
-// RequestAddrs asks peer for more addresses.
-func (r *PEXReactor) RequestAddrs(p *p2p.Peer) bool {
-	ok := p.TrySend(PexChannel, struct{ PexMessage }{&pexRequestMessage{}})
-	if !ok {
-		r.Switch.StopPeerGracefully(p)
-	}
-	return ok
-}
-
 // SendAddrs sends addrs to the peer.
-func (r *PEXReactor) SendAddrs(p *p2p.Peer, addrs []*p2p.NetAddress) bool {
+func (r *PEXReactor) SendAddrs(p *p2p.Peer, nodes []*discover.Node) bool {
+	addrs := []*p2p.NetAddress{}
+	for _, node := range nodes {
+		addrs = append(addrs, p2p.NewNetAddressIPPort(node.IP, node.TCP))
+	}
+
 	ok := p.TrySend(PexChannel, struct{ PexMessage }{&pexAddrsMessage{Addrs: addrs}})
 	if !ok {
 		r.Switch.StopPeerGracefully(p)
@@ -161,53 +132,14 @@ func (r *PEXReactor) SendAddrs(p *p2p.Peer, addrs []*p2p.NetAddress) bool {
 
 func (r *PEXReactor) dialPeerWorker(a *p2p.NetAddress, wg *sync.WaitGroup) {
 	if err := r.Switch.DialPeerWithAddress(a); err != nil {
-		r.book.MarkAttempt(a)
-	} else {
-		r.book.MarkGood(a)
+		log.WithFields(log.Fields{"addr": a, "err": err}).Error("dialPeerWorker fail on dial peer")
 	}
 	wg.Done()
 }
 
-func (r *PEXReactor) dialSeeds() {
-	if r.Switch.Config.Seeds == "" {
-		return
-	}
-
-	seeds := strings.Split(r.Switch.Config.Seeds, ",")
-	netAddrs, err := p2p.NewNetAddressStrings(seeds)
-	if err != nil {
-		log.WithField("err", err).Error("dialSeeds: fail to decode net address strings")
-	}
-
-	ourAddr, err := p2p.NewNetAddressString(r.Switch.NodeInfo().ListenAddr)
-	if err != nil {
-		log.WithField("err", err).Error("dialSeeds: fail to get our address")
-	}
-
-	for _, netAddr := range netAddrs {
-		if netAddr.Equals(ourAddr) {
-			continue
-		}
-		if err := r.book.AddAddress(netAddr, ourAddr); err != nil {
-			log.WithField("err", err).Warn("dialSeeds: fail to add address")
-		}
-	}
-
-	if err := r.book.SaveToFile(); err != nil {
-		log.WithField("err", err).Warn("dialSeeds: fail to save address book")
-	}
-
-	perm := rand.Perm(len(netAddrs))
-	for i := 0; i < len(perm); i += 2 {
-		if err := r.Switch.DialPeerWithAddress(netAddrs[perm[i]]); err != nil {
-			log.WithField("err", err).Warn("dialSeeds: fail to dial seed")
-		}
-	}
-}
-
 func (r *PEXReactor) ensurePeers() {
 	numOutPeers, _, numDialing := r.Switch.NumPeers()
-	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing)) * 3
+	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing))
 	log.WithFields(log.Fields{
 		"numOutPeers": numOutPeers,
 		"numDialing":  numDialing,
@@ -217,20 +149,16 @@ func (r *PEXReactor) ensurePeers() {
 		return
 	}
 
-	newBias := cmn.MinInt(numOutPeers, 8)*10 + 10
 	toDial := make(map[string]*p2p.NetAddress)
-	maxAttempts := numToDial * 3
-
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range r.Switch.Peers().List() {
 		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
 	}
 
-	for i := 0; i < maxAttempts && len(toDial) < numToDial; i++ {
-		try := r.book.PickAddress(newBias)
-		if try == nil {
-			continue
-		}
+	nodes := make([]*discover.Node, numToDial)
+	n := r.discv.ReadRandomNodes(nodes)
+	for i := 0; i < n && len(toDial) < numToDial; i++ {
+		try := p2p.NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
 		if _, selected := toDial[try.IP.String()]; selected {
 			continue
 		}
@@ -251,21 +179,10 @@ func (r *PEXReactor) ensurePeers() {
 		go r.dialPeerWorker(item, &wg)
 	}
 	wg.Wait()
-
-	if r.book.NeedMoreAddrs() {
-		if peers := r.Switch.Peers().List(); len(peers) > 0 {
-			peer := peers[rand.Int()%len(peers)]
-			r.RequestAddrs(peer)
-		}
-	}
 }
 
 func (r *PEXReactor) ensurePeersRoutine() {
 	r.ensurePeers()
-	if r.Switch.Peers().Size() < 3 {
-		r.dialSeeds()
-	}
-
 	ticker := time.NewTicker(120 * time.Second)
 	quickTicker := time.NewTicker(3 * time.Second)
 

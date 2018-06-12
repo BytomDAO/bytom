@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/hex"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -110,7 +109,7 @@ func soloNetGenesisBlock() *types.Block {
 			Version:   1,
 			Height:    0,
 			Nonce:     9253507043297,
-			Timestamp: uint64(time.Now().Unix()),
+			Timestamp: 1528455800,
 			Bits:      2305843009214532812,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
