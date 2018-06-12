@@ -15,7 +15,6 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
-	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/trust"
 )
 
@@ -30,17 +29,6 @@ var (
 	ErrConnectSelf       = errors.New("Connect self")
 	ErrConnectBannedPeer = errors.New("Connect banned peer")
 )
-
-// sharedUDPConn implements a shared connection. Write sends messages to the underlying connection while read returns
-// messages that were found unprocessable and sent to the unhandled channel by the primary listener.
-type sharedUDPConn struct {
-	*net.UDPConn
-	unhandled chan discover.ReadPacket
-}
-
-var DiscoveryBootnodes = []string{
-	"enode://00881078C74284000439B00B697EACF072FFF759C79264CC67398191E32956C1@52.83.138.208:46658", //test
-}
 
 // Switch handles peer connections and exposes an API to receive incoming messages
 // on `Reactors`.  Each `Reactor` is responsible for handling incoming messages of one
@@ -61,18 +49,7 @@ type Switch struct {
 	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
 	bannedPeer   map[string]time.Time
 	db           dbm.DB
-	Discv        *discover.Network
 	mtx          sync.Mutex
-}
-
-// FoundationBootnodes returns the enode URLs of the P2P bootstrap nodes operated
-// by the foundation running the V5 discovery protocol.
-func FoundationBootnodes() []*discover.Node {
-	nodes := make([]*discover.Node, len(DiscoveryBootnodes))
-	for i, url := range DiscoveryBootnodes {
-		nodes[i] = discover.MustParseNode(url)
-	}
-	return nodes
 }
 
 // NewSwitch creates a new Switch with the given config.
@@ -101,29 +78,6 @@ func NewSwitch(config *cfg.Config) *Switch {
 
 // OnStart implements BaseService. It starts all the reactors, peers, and listeners.
 func (sw *Switch) OnStart() error {
-	addr, err := net.ResolveUDPAddr("udp", sw.Config.P2P.ListenAddress)
-	if err != nil {
-		return err
-	}
-
-	conn, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		return err
-	}
-
-	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	unhandled := make(chan discover.ReadPacket, 100)
-	sconn := &sharedUDPConn{conn, unhandled}
-	ntab, err := discover.ListenUDP(&sw.nodePrivKey, sconn, realaddr, sw.Config.DBDir(), nil)
-	if err != nil {
-		return err
-	}
-
-	if err = ntab.SetFallbackNodes(FoundationBootnodes()); err != nil {
-		return err
-	}
-
-	sw.Discv = ntab
 	for _, reactor := range sw.reactors {
 		if _, err := reactor.Start(); err != nil {
 			return err
@@ -150,7 +104,6 @@ func (sw *Switch) OnStop() {
 	for _, reactor := range sw.reactors {
 		reactor.Stop()
 	}
-	sw.Discv.Close()
 }
 
 //AddBannedPeer add peer to blacklist

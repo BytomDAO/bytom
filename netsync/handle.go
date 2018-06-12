@@ -1,6 +1,9 @@
 package netsync
 
 import (
+	"encoding/hex"
+	"net"
+	"path"
 	"strconv"
 	"strings"
 
@@ -11,6 +14,7 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/pex"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -42,28 +46,26 @@ type SyncManager struct {
 
 //NewSyncManager create a sync manager
 func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
-	// Create the protocol manager with the base fields
+	sw := p2p.NewSwitch(config)
+	peers := newPeerSet()
+	dropPeerCh := make(chan *string, maxQuitReq)
 	manager := &SyncManager{
-		txPool:     txPool,
-		chain:      chain,
-		privKey:    crypto.GenPrivKeyEd25519(),
-		peers:      newPeerSet(),
-		newTxCh:    make(chan *types.Tx, maxTxChanSize),
-		newBlockCh: newBlockCh,
-		newPeerCh:  make(chan struct{}),
-		txSyncCh:   make(chan *txsync),
-		dropPeerCh: make(chan *string, maxQuitReq),
-		quitSync:   make(chan struct{}),
-		config:     config,
+		sw:          sw,
+		txPool:      txPool,
+		chain:       chain,
+		privKey:     crypto.GenPrivKeyEd25519(),
+		fetcher:     NewFetcher(chain, sw, peers),
+		blockKeeper: newBlockKeeper(chain, sw, peers, dropPeerCh),
+		peers:       peers,
+		newTxCh:     make(chan *types.Tx, maxTxChanSize),
+		newBlockCh:  newBlockCh,
+		newPeerCh:   make(chan struct{}),
+		txSyncCh:    make(chan *txsync),
+		dropPeerCh:  dropPeerCh,
+		quitSync:    make(chan struct{}),
+		config:      config,
 	}
 
-	manager.sw = p2p.NewSwitch(config)
-
-	pexReactor := pex.NewPEXReactor()
-	manager.sw.AddReactor("PEX", pexReactor)
-
-	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers, manager.dropPeerCh)
-	manager.fetcher = NewFetcher(chain, manager.sw, manager.peers)
 	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
@@ -74,10 +76,17 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		p, address := protocolAndAddress(manager.config.P2P.ListenAddress)
 		l, listenerStatus = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP)
 		manager.sw.AddListener(l)
+
+		discv, err := initDiscover(config, &manager.privKey, l.ExternalAddress().Port)
+		if err != nil {
+			return nil, err
+		}
+
+		pexReactor := pex.NewPEXReactor(discv)
+		manager.sw.AddReactor("PEX", pexReactor)
 	}
 	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
 	manager.sw.SetNodePrivKey(manager.privKey)
-
 	return manager, nil
 }
 
@@ -119,8 +128,7 @@ func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 
 //Start start sync manager service
 func (sm *SyncManager) Start() {
-	_, err := sm.sw.Start()
-	if err != nil {
+	if _, err := sm.sw.Start(); err != nil {
 		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
 	}
 	// broadcast transactions
@@ -139,6 +147,35 @@ func (sm *SyncManager) Start() {
 func (sm *SyncManager) Stop() {
 	close(sm.quitSync)
 	sm.sw.Stop()
+}
+
+func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) (*discover.Network, error) {
+	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	realaddr := conn.LocalAddr().(*net.UDPAddr)
+	ntab, err := discover.ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover.db"), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// add the seeds node to the discover table
+	nodes := []*discover.Node{}
+	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
+		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
+		nodes = append(nodes, discover.MustParseNode(url))
+	}
+	if err = ntab.SetFallbackNodes(nodes); err != nil {
+		return nil, err
+	}
+	return ntab, nil
 }
 
 func (sm *SyncManager) txBroadcastLoop() {

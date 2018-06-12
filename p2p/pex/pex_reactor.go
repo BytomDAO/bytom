@@ -26,12 +26,14 @@ const (
 // PEXReactor handles peer exchange and ensures that an adequate number of peers are connected to the switch.
 type PEXReactor struct {
 	p2p.BaseReactor
+	discv          *discover.Network
 	msgCountByPeer *cmn.CMap
 }
 
 // NewPEXReactor creates new PEX reactor.
-func NewPEXReactor() *PEXReactor {
+func NewPEXReactor(discv *discover.Network) *PEXReactor {
 	r := &PEXReactor{
+		discv:          discv,
 		msgCountByPeer: cmn.NewCMap(),
 	}
 	r.BaseReactor = *p2p.NewBaseReactor("PEXReactor", r)
@@ -67,7 +69,7 @@ func (r *PEXReactor) AddPeer(p *p2p.Peer) error {
 	}
 
 	nodes := make([]*discover.Node, 20)
-	if n := r.Switch.Discv.ReadRandomNodes(nodes); n == 0 {
+	if n := r.discv.ReadRandomNodes(nodes); n == 0 {
 		return nil
 	}
 
@@ -97,7 +99,7 @@ func (r *PEXReactor) Receive(chID byte, p *p2p.Peer, rawMsg []byte) {
 	switch msg := msg.(type) {
 	case *pexRequestMessage:
 		nodes := make([]*discover.Node, 20)
-		if n := r.Switch.Discv.ReadRandomNodes(nodes); n == 0 {
+		if n := r.discv.ReadRandomNodes(nodes); n == 0 {
 			return
 		}
 
@@ -157,7 +159,7 @@ func (r *PEXReactor) ensurePeers() {
 
 	for i := 0; i < maxAttempts && len(toDial) < numToDial; i++ {
 		nodes := make([]*discover.Node, 1)
-		if n := r.Switch.Discv.ReadRandomNodes(nodes); n != 1 {
+		if n := r.discv.ReadRandomNodes(nodes); n != 1 {
 			return
 		}
 		try := p2p.NewNetAddressIPPort(nodes[0].IP, nodes[0].TCP)
