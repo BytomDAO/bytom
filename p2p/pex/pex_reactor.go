@@ -157,12 +157,10 @@ func (r *PEXReactor) ensurePeers() {
 		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
 	}
 
-	for i := 0; i < maxAttempts && len(toDial) < numToDial; i++ {
-		nodes := make([]*discover.Node, 1)
-		if n := r.discv.ReadRandomNodes(nodes); n != 1 {
-			return
-		}
-		try := p2p.NewNetAddressIPPort(nodes[0].IP, nodes[0].TCP)
+	nodes := make([]*discover.Node, maxAttempts)
+	n := r.discv.ReadRandomNodes(nodes)
+	for i := 0; i < n && len(toDial) < numToDial; i++ {
+		try := p2p.NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
 		if _, selected := toDial[try.IP.String()]; selected {
 			continue
 		}
