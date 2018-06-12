@@ -117,14 +117,12 @@ func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 	return nodeInfo
 }
 
-func (sm *SyncManager) netStart() error {
-	_, err := sm.sw.Start()
-	return err
-}
-
 //Start start sync manager service
 func (sm *SyncManager) Start() {
-	go sm.netStart()
+	_, err := sm.sw.Start()
+	if err != nil {
+		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
+	}
 	// broadcast transactions
 	go sm.txBroadcastLoop()
 

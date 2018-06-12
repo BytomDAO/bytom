@@ -230,7 +230,6 @@ func (n *Node) OnStart() error {
 	if !n.config.Web.Closed {
 		launchWebBrowser()
 	}
-
 	return nil
 }
 
