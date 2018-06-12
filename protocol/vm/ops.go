@@ -205,6 +205,7 @@ const (
 	OP_ASSET       Op = 0xc2
 	OP_AMOUNT      Op = 0xc3
 	OP_PROGRAM     Op = 0xc4
+	OP_BLOCKTIME   Op = 0xc5
 	OP_INDEX       Op = 0xc9
 	OP_ENTRYID     Op = 0xca
 	OP_OUTPUTID    Op = 0xcb
@@ -311,6 +312,7 @@ var (
 		OP_ASSET:       {OP_ASSET, "ASSET", opAsset},
 		OP_AMOUNT:      {OP_AMOUNT, "AMOUNT", opAmount},
 		OP_PROGRAM:     {OP_PROGRAM, "PROGRAM", opProgram},
+		OP_BLOCKTIME:   {OP_BLOCKTIME, "BLOCKTIME", opBlockTime},
 		OP_INDEX:       {OP_INDEX, "INDEX", opIndex},
 		OP_ENTRYID:     {OP_ENTRYID, "ENTRYID", opEntryID},
 		OP_OUTPUTID:    {OP_OUTPUTID, "OUTPUTID", opOutputID},

@@ -77,6 +77,7 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 		NumResults:    &numResults,
 		AssetID:       assetID,
 		Amount:        amount,
+		Time:          &vs.block.Timestamp,
 		DestPos:       destPos,
 		SpentOutputID: spentOutputID,
 		CheckOutput:   ec.checkOutput,
