@@ -84,6 +84,9 @@ func (p *peer) SendTransactions(txs []*types.Tx) error {
 		}
 		hash := &tx.ID
 		p.knownTxs.Add(hash.String())
+		if p.swPeer == nil {
+			return errPeerDropped
+		}
 		p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	}
 	return nil
@@ -192,11 +195,11 @@ func (ps *peerSet) Unregister(id string) error {
 }
 
 // Peer retrieves the registered peer with the given id.
-func (ps *peerSet) Peer(id string) *peer {
+func (ps *peerSet) Peer(id string) (*peer, bool) {
 	ps.lock.RLock()
 	defer ps.lock.RUnlock()
-
-	return ps.peers[id]
+	p, ok := ps.peers[id]
+	return p, ok
 }
 
 // Len returns if the current number of peers in the set.
@@ -319,10 +322,7 @@ func (ps *peerSet) SetPeerStatus(peerID string, height uint64, hash *bc.Hash) {
 }
 
 func (ps *peerSet) requestBlockByHash(peerID string, hash *bc.Hash) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	peer, ok := ps.peers[peerID]
+	peer, ok := ps.Peer(peerID)
 	if !ok {
 		return errors.New("Can't find peer. ")
 	}
@@ -330,10 +330,7 @@ func (ps *peerSet) requestBlockByHash(peerID string, hash *bc.Hash) error {
 }
 
 func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	peer, ok := ps.peers[peerID]
+	peer, ok := ps.Peer(peerID)
 	if !ok {
 		return errors.New("Can't find peer. ")
 	}
@@ -349,11 +346,11 @@ func (ps *peerSet) BroadcastMinedBlock(block *types.Block) ([]*peer, error) {
 	peers := ps.PeersWithoutBlock(&hash)
 	abnormalPeers := make([]*peer, 0)
 	for _, peer := range peers {
-		if ok := peer.swPeer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+		if ok := peer.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			abnormalPeers = append(abnormalPeers, peer)
 			continue
 		}
-		if p, ok := ps.peers[peer.id]; ok {
+		if p, ok := ps.Peer(peer.id); ok {
 			p.MarkBlock(&hash)
 		}
 	}
@@ -372,11 +369,11 @@ func (ps *peerSet) BroadcastTx(tx *types.Tx) ([]*peer, error) {
 	peers := ps.PeersWithoutTx(&tx.ID)
 	abnormalPeers := make([]*peer, 0)
 	for _, peer := range peers {
-		if ok := peer.swPeer.Send(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+		if ok := peer.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			abnormalPeers = append(abnormalPeers, peer)
 			continue
 		}
-		if p, ok := ps.peers[peer.id]; ok {
+		if p, ok := ps.Peer(peer.id); ok {
 			p.MarkTransaction(&tx.ID)
 		}
 	}

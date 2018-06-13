@@ -42,6 +42,16 @@ func TestCreateAccountWithSpaceTrimed(t *testing.T) {
 	if account.Alias != strings.TrimSpace(alias) {
 		t.Fatal("created account alias should be lowercase")
 	}
+
+	nilAccount, err := m.FindByAlias(nil, alias)
+	if nilAccount != nil {
+		t.Fatal("expected nil")
+	}
+
+	target, err := m.FindByAlias(nil, strings.ToLower(strings.TrimSpace(alias)))
+	if target == nil {
+		t.Fatal("expected Account, but got nil")
+	}
 }
 
 func TestCreateAccount(t *testing.T) {

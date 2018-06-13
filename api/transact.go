@@ -3,12 +3,13 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"math"
 	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/account"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/segwit"
@@ -19,56 +20,23 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-var defaultTxTTL = 5 * time.Minute
+var (
+	defaultTxTTL    = 5 * time.Minute
+	defaultBaseRate = float64(100000)
+)
 
 func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
-	var decoder func([]byte) (txbuilder.Action, error)
-	switch action {
-	case "control_address":
-		decoder = txbuilder.DecodeControlAddressAction
-	case "control_program":
-		decoder = txbuilder.DecodeControlProgramAction
-	case "control_receiver":
-		decoder = txbuilder.DecodeControlReceiverAction
-	case "issue":
-		decoder = a.wallet.AssetReg.DecodeIssueAction
-	case "retire":
-		decoder = txbuilder.DecodeRetireAction
-	case "spend_account":
-		decoder = a.wallet.AccountMgr.DecodeSpendAction
-	case "spend_account_unspent_output":
-		decoder = a.wallet.AccountMgr.DecodeSpendUTXOAction
-	default:
-		return nil, false
+	decoders := map[string]func([]byte) (txbuilder.Action, error){
+		"control_address":              txbuilder.DecodeControlAddressAction,
+		"control_program":              txbuilder.DecodeControlProgramAction,
+		"control_receiver":             txbuilder.DecodeControlReceiverAction,
+		"issue":                        a.wallet.AssetReg.DecodeIssueAction,
+		"retire":                       txbuilder.DecodeRetireAction,
+		"spend_account":                a.wallet.AccountMgr.DecodeSpendAction,
+		"spend_account_unspent_output": a.wallet.AccountMgr.DecodeSpendUTXOAction,
 	}
-	return decoder, true
-}
-
-func mergeActions(req *BuildRequest) []map[string]interface{} {
-	var actions []map[string]interface{}
-	actionMap := make(map[string]map[string]interface{})
-
-	for _, m := range req.Actions {
-		if actionType := m["type"].(string); actionType != "spend_account" {
-			actions = append(actions, m)
-			continue
-		}
-
-		actionKey := m["asset_id"].(string) + m["account_id"].(string)
-		amountNumber := m["amount"].(json.Number)
-		amount, _ := amountNumber.Int64()
-
-		if tmpM, ok := actionMap[actionKey]; ok {
-			tmpNumber, _ := tmpM["amount"].(json.Number)
-			tmpAmount, _ := tmpNumber.Int64()
-			tmpM["amount"] = json.Number(fmt.Sprintf("%v", tmpAmount+amount))
-		} else {
-			actionMap[actionKey] = m
-			actions = append(actions, m)
-		}
-	}
-
-	return actions
+	decoder, ok := decoders[action]
+	return decoder, ok
 }
 
 func onlyHaveSpendActions(req *BuildRequest) bool {
@@ -83,8 +51,7 @@ func onlyHaveSpendActions(req *BuildRequest) bool {
 }
 
 func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
-	err := a.filterAliases(ctx, req)
-	if err != nil {
+	if err := a.completeMissingIds(ctx, req); err != nil {
 		return nil, err
 	}
 
@@ -92,9 +59,9 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		return nil, errors.New("transaction only contain spend actions, didn't have output actions")
 	}
 
-	reqActions := mergeActions(req)
-	actions := make([]txbuilder.Action, 0, len(reqActions))
-	for i, act := range reqActions {
+	spendActions := []txbuilder.Action{}
+	actions := make([]txbuilder.Action, 0, len(req.Actions))
+	for i, act := range req.Actions {
 		typ, ok := act["type"].(string)
 		if !ok {
 			return nil, errors.WithDetailf(errBadActionType, "no action type provided on action %d", i)
@@ -114,8 +81,14 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		if err != nil {
 			return nil, errors.WithDetailf(errBadAction, "%s on action %d", err.Error(), i)
 		}
-		actions = append(actions, action)
+
+		if typ == "spend_account" {
+			spendActions = append(spendActions, action)
+		} else {
+			actions = append(actions, action)
+		}
 	}
+	actions = append(account.MergeSpendAction(spendActions), actions...)
 
 	ttl := req.TTL.Duration
 	if ttl == 0 {
@@ -167,7 +140,7 @@ func (a *API) submit(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	log.WithField("tx_id", ins.Tx.ID).Info("submit single tx")
+	log.WithField("tx_id", ins.Tx.ID.String()).Info("submit single tx")
 	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
 }
 
@@ -178,26 +151,24 @@ type EstimateTxGasResp struct {
 	VMNeu      int64 `json:"vm_neu"`
 }
 
-// POST /estimate-transaction-gas
-func (a *API) estimateTxGas(ctx context.Context, in struct {
-	TxTemplate txbuilder.Template `json:"transaction_template"`
-}) Response {
+// EstimateTxGas estimate consumed neu for transaction
+func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	// base tx size and not include sign
-	data, err := in.TxTemplate.Transaction.TxData.MarshalText()
+	data, err := template.Transaction.TxData.MarshalText()
 	if err != nil {
-		return NewErrorResponse(err)
+		return nil, err
 	}
 	baseTxSize := int64(len(data))
 
 	// extra tx size for sign witness parts
 	baseWitnessSize := int64(300)
-	lenSignInst := int64(len(in.TxTemplate.SigningInstructions))
+	lenSignInst := int64(len(template.SigningInstructions))
 	signSize := baseWitnessSize * lenSignInst
 
 	// total gas for tx storage
 	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+signSize, consensus.StorageGasRate)
 	if !ok {
-		return NewErrorResponse(errors.New("calculate txsize gas got a math error"))
+		return nil, errors.New("calculate txsize gas got a math error")
 	}
 
 	// consume gas for run VM
@@ -206,13 +177,13 @@ func (a *API) estimateTxGas(ctx context.Context, in struct {
 	baseP2WPKHGas := int64(1419)
 	baseP2WSHGas := int64(2499)
 
-	for _, inpID := range in.TxTemplate.Transaction.Tx.InputIDs {
-		sp, err := in.TxTemplate.Transaction.Spend(inpID)
+	for _, inpID := range template.Transaction.Tx.InputIDs {
+		sp, err := template.Transaction.Spend(inpID)
 		if err != nil {
 			continue
 		}
 
-		resOut, err := in.TxTemplate.Transaction.Output(*sp.SpentOutputId)
+		resOut, err := template.Transaction.Output(*sp.SpentOutputId)
 		if err != nil {
 			continue
 		}
@@ -227,11 +198,25 @@ func (a *API) estimateTxGas(ctx context.Context, in struct {
 	// total estimate gas
 	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
 
-	txGasResp := &EstimateTxGasResp{
-		TotalNeu:   totalGas * consensus.VMGasRate,
+	// rounding totalNeu with base rate 100000
+	totalNeu := float64(totalGas*consensus.VMGasRate) / defaultBaseRate
+	roundingNeu := math.Ceil(totalNeu)
+	estimateNeu := int64(roundingNeu) * int64(defaultBaseRate)
+
+	return &EstimateTxGasResp{
+		TotalNeu:   estimateNeu,
 		StorageNeu: totalTxSizeGas * consensus.VMGasRate,
 		VMNeu:      (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
-	}
+	}, nil
+}
 
+// POST /estimate-transaction-gas
+func (a *API) estimateTxGas(ctx context.Context, in struct {
+	TxTemplate txbuilder.Template `json:"transaction_template"`
+}) Response {
+	txGasResp, err := EstimateTxGas(in.TxTemplate)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
 	return NewSuccessResponse(txGasResp)
 }

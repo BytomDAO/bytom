@@ -10,7 +10,7 @@ import (
 
 func TestCalcReorganizeNodes(t *testing.T) {
 	c := &Chain{index: state.NewBlockIndex()}
-	header := config.GenerateGenesisBlock().BlockHeader
+	header := config.GenesisBlock().BlockHeader
 	initNode, err := state.NewBlockNode(&header, nil)
 	if err != nil {
 		t.Fatal(err)

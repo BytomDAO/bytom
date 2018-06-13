@@ -22,6 +22,15 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+func DoubleSha256(b []byte) []byte {
+	hasher := sha3.New256()
+	hasher.Write(b)
+	sum := hasher.Sum(nil)
+	hasher.Reset()
+	hasher.Write(sum)
+	return hasher.Sum(nil)
+}
+
 func Sha256(data ...[]byte) []byte {
 	d := sha3.New256()
 	for _, b := range data {

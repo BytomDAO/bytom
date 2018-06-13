@@ -15,7 +15,7 @@
       "post_states": [
         {"name": "alice", "asset": "BTM", "amount": 41250000000}
       ],
-      "append": 6
+      "append": 100
     },
     {
       "coinbase_account": "bob",

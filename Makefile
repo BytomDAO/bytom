@@ -9,7 +9,7 @@ $(error "$$GOOS is not defined. If you are using Windows, try to re-make using '
 endif
 endif
 
-PACKAGES    := $(shell go list ./... | grep -v '/vendor/')
+PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd')
 BUILD_FLAGS := -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`"
 
 MINER_BINARY32 := miner-$(GOOS)_386
@@ -112,7 +112,7 @@ benchmark:
 	go test -bench $(PACKAGES)
 
 functional-tests:
-	@go test -v -timeout=30m -tags=functional ./test
+	@go test -v -timeout=5m -tags=functional ./test
 
 ci: test functional-tests
 
