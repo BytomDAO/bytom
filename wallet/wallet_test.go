@@ -89,11 +89,12 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := w.GetTransactionByTxID(tx.ID.String()); err != nil {
+	want, err := w.GetTransactionsByTxID(tx.ID.String())
+	if len(want) != 1 {
 		t.Fatal(err)
 	}
 
-	wants, err := w.GetTransactions("")
+	wants, err := w.GetTransactionsByTxID("")
 	if len(wants) != 1 {
 		t.Fatal(err)
 	}
@@ -137,10 +138,10 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 
 func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) *Wallet {
 	wallet := &Wallet{
-		DB:         walletDB,
-		AccountMgr: account,
-		AssetReg:   asset,
-		chain:      chain,
+		DB:                  walletDB,
+		AccountMgr:          account,
+		AssetReg:            asset,
+		chain:               chain,
 	}
 	return wallet
 }

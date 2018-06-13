@@ -15,7 +15,7 @@ func TestLoadBlockIndex(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	store := NewStore(testDB)
 
-	block := config.GenesisBlock()
+	block := config.GenerateGenesisBlock()
 	txStatus := bc.NewTransactionStatus()
 
 	if err := store.SaveBlock(block, txStatus); err != nil {

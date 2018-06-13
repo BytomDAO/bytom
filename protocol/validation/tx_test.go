@@ -66,7 +66,7 @@ func TestGasStatus(t *testing.T) {
 				BTMValue: 0,
 			},
 			output: &GasState{
-				GasLeft:  200000,
+				GasLeft:  100000,
 				GasUsed:  0,
 				BTMValue: 80000000000,
 			},
@@ -116,93 +116,6 @@ func TestGasStatus(t *testing.T) {
 			t.Errorf("case %d: got error %s, want %s", i, err, c.err)
 		} else if *c.input != *c.output {
 			t.Errorf("case %d: gasStatus %v, want %v;", i, c.input, c.output)
-		}
-	}
-}
-
-func TestOverflow(t *testing.T) {
-	sourceID := &bc.Hash{V0: 9999}
-	ctrlProgram := []byte{byte(vm.OP_TRUE)}
-	newTx := func(inputs []uint64, outputs []uint64) *bc.Tx {
-		txInputs := make([]*types.TxInput, 0, len(inputs))
-		txOutputs := make([]*types.TxOutput, 0, len(outputs))
-
-		for _, amount := range inputs {
-			txInput := types.NewSpendInput(nil, *sourceID, *consensus.BTMAssetID, amount, 0, ctrlProgram)
-			txInputs = append(txInputs, txInput)
-		}
-
-		for _, amount := range outputs {
-			txOutput := types.NewTxOutput(*consensus.BTMAssetID, amount, ctrlProgram)
-			txOutputs = append(txOutputs, txOutput)
-		}
-
-		txData := &types.TxData{
-			Version:        1,
-			SerializedSize: 100,
-			TimeRange:      0,
-			Inputs:         txInputs,
-			Outputs:        txOutputs,
-		}
-		return types.MapTx(txData)
-	}
-
-	cases := []struct {
-		inputs  []uint64
-		outputs []uint64
-		err     error
-	}{
-		{
-			inputs:  []uint64{math.MaxUint64, 1},
-			outputs: []uint64{0},
-			err:     errOverflow,
-		},
-		{
-			inputs:  []uint64{math.MaxUint64, math.MaxUint64},
-			outputs: []uint64{0},
-			err:     errOverflow,
-		},
-		{
-			inputs:  []uint64{math.MaxUint64, math.MaxUint64 - 1},
-			outputs: []uint64{0},
-			err:     errOverflow,
-		},
-		{
-			inputs:  []uint64{math.MaxInt64, 1},
-			outputs: []uint64{0},
-			err:     errOverflow,
-		},
-		{
-			inputs:  []uint64{math.MaxInt64, math.MaxInt64},
-			outputs: []uint64{0},
-			err:     errOverflow,
-		},
-		{
-			inputs:  []uint64{math.MaxInt64, math.MaxInt64 - 1},
-			outputs: []uint64{0},
-			err:     errOverflow,
-		},
-		{
-			inputs:  []uint64{0},
-			outputs: []uint64{math.MaxUint64},
-			err:     errOverflow,
-		},
-		{
-			inputs:  []uint64{0},
-			outputs: []uint64{math.MaxInt64},
-			err:     errGasCalculate,
-		},
-		{
-			inputs:  []uint64{math.MaxInt64 - 1},
-			outputs: []uint64{math.MaxInt64},
-			err:     errGasCalculate,
-		},
-	}
-
-	for i, c := range cases {
-		tx := newTx(c.inputs, c.outputs)
-		if _, err := ValidateTx(tx, mockBlock()); rootErr(err) != c.err {
-			t.Fatalf("case %d test failed, want %s, have %s", i, c.err, rootErr(err))
 		}
 	}
 }
@@ -405,6 +318,13 @@ func TestTxValidation(t *testing.T) {
 			err: errOverGasCredit,
 		},
 		{
+			desc: "overflowing storage gas",
+			f: func() {
+				vs.tx.SerializedSize = math.MaxInt64
+			},
+			err: errGasCalculate,
+		},
+		{
 			desc: "can't find gas spend input in entries",
 			f: func() {
 				spendID := mux.Sources[len(mux.Sources)-1].Ref
@@ -536,7 +456,7 @@ func TestTxValidation(t *testing.T) {
 		},
 	}
 
-	for i, c := range cases {
+	for _, c := range cases {
 		t.Run(c.desc, func(t *testing.T) {
 			fixture = sample(t, nil)
 			tx = types.NewTx(*fixture.tx).Tx
@@ -559,7 +479,7 @@ func TestTxValidation(t *testing.T) {
 			err := checkValid(vs, tx.TxHeader)
 
 			if rootErr(err) != c.err {
-				t.Errorf("case #%d (%s) got error %s, want %s; validationState is:\n%s", i, c.desc, err, c.err, spew.Sdump(vs))
+				t.Errorf("got error %s, want %s; validationState is:\n%s", err, c.err, spew.Sdump(vs))
 			}
 		})
 	}
@@ -618,6 +538,10 @@ func TestTimeRange(t *testing.T) {
 		{
 			timeRange: 1521625824,
 			err:       false,
+		},
+		{
+			timeRange: 1421625824,
+			err:       true,
 		},
 	}
 

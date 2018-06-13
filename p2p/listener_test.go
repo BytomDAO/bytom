@@ -5,11 +5,13 @@ package p2p
 import (
 	"bytes"
 	"testing"
+
+	"github.com/tendermint/tmlibs/log"
 )
 
 func TestListener(t *testing.T) {
 	// Create a listener
-	l, _ := NewDefaultListener("tcp", ":8001", true)
+	l := NewDefaultListener("tcp", ":8001", true, log.TestingLogger())
 
 	// Dial the listener
 	lAddr := l.ExternalAddress()

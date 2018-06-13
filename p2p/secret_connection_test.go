@@ -1,4 +1,6 @@
-package connection
+// +build !network
+
+package p2p
 
 import (
 	"bytes"
@@ -145,7 +147,7 @@ func TestSecretConnectionReadWrite(t *testing.T) {
 			var readCount = 0
 			for _, readChunk := range reads {
 				read += readChunk
-				readCount++
+				readCount += 1
 				if len(write) <= len(read) {
 					break
 				}

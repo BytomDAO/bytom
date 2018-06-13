@@ -46,6 +46,7 @@ func NewFetcher(chain *core.Chain, sw *p2p.Switch, peers *peerSet) *Fetcher {
 		newMinedBlock: make(chan *blockPending),
 		quit:          make(chan struct{}),
 		queue:         prque.New(),
+		queues:        make(map[string]int),
 		queued:        make(map[bc.Hash]*blockPending),
 	}
 }
@@ -148,14 +149,10 @@ func (f *Fetcher) insert(peerID string, block *types.Block) {
 	// Run the actual import and log any issues
 	if _, err := f.chain.ProcessBlock(block); err != nil {
 		log.Info("Propagated block import failed", " from peer: ", peerID, " height: ", block.Height, "err: ", err)
-		fPeer, ok := f.peers.Peer(peerID)
-		if !ok {
-			return
-		}
-		swPeer := fPeer.getPeer()
-		if ban := fPeer.addBanScore(20, 0, "block process error"); ban {
-			f.sw.AddBannedPeer(swPeer)
-			f.sw.StopPeerGracefully(swPeer)
+		peer := f.peers.Peer(peerID)
+		if ban := peer.addBanScore(50, 0, "block process error"); ban {
+			f.sw.AddBannedPeer(peer.getPeer())
+			f.sw.StopPeerGracefully(peer.getPeer())
 		}
 		return
 	}
@@ -166,13 +163,12 @@ func (f *Fetcher) insert(peerID string, block *types.Block) {
 		log.Errorf("Broadcast mine block error. %v", err)
 		return
 	}
-	for _, fPeer := range peers {
-		if fPeer == nil {
-			continue
+	for _, peer := range peers {
+		if ban := peer.addBanScore(0, 50, "Broadcast block error"); ban {
+			peer := f.peers.Peer(peer.id).getPeer()
+			f.sw.AddBannedPeer(peer)
+			f.sw.StopPeerGracefully(peer)
 		}
-		swPeer := fPeer.getPeer()
-		log.Info("Fetcher broadcast block error. Stop peer.")
-		f.sw.StopPeerGracefully(swPeer)
 	}
 }
 
@@ -180,6 +176,10 @@ func (f *Fetcher) insert(peerID string, block *types.Block) {
 // state.
 func (f *Fetcher) forgetBlock(hash bc.Hash) {
 	if insert := f.queued[hash]; insert != nil {
+		f.queues[insert.peerID]--
+		if f.queues[insert.peerID] == 0 {
+			delete(f.queues, insert.peerID)
+		}
 		delete(f.queued, hash)
 	}
 }

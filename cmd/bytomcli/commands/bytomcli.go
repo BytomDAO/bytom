@@ -10,37 +10,6 @@ import (
 	"github.com/bytom/util"
 )
 
-// bytomcli usage template
-var usageTemplate = `Usage:{{if .Runnable}}
-  {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
-  {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
-
-Aliases:
-  {{.NameAndAliases}}{{end}}{{if .HasExample}}
-
-Examples:
-{{.Example}}{{end}}{{if .HasAvailableSubCommands}}
-
-Available Commands:
-    {{range .Commands}}{{if (and .IsAvailableCommand (.Name | WalletDisable))}}
-    {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}
-
-  available with wallet enable:
-    {{range .Commands}}{{if (and .IsAvailableCommand (.Name | WalletEnable))}}
-    {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
-
-Flags:
-{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
-
-Global Flags:
-{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
-
-Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
-  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
-
-Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
-`
-
 // commandError is an error used to signal different error situations in command handling.
 type commandError struct {
 	s         string
@@ -87,7 +56,6 @@ var BytomcliCmd = &cobra.Command{
 	Short: "Bytomcli is a commond line client for bytom core (a.k.a. bytomd)",
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) < 1 {
-			cmd.SetUsageTemplate(usageTemplate)
 			cmd.Usage()
 		}
 	},
@@ -97,7 +65,6 @@ var BytomcliCmd = &cobra.Command{
 func Execute() {
 
 	AddCommands()
-	AddTemplateFunc()
 
 	if _, err := BytomcliCmd.ExecuteC(); err != nil {
 		os.Exit(util.ErrLocalExe)
@@ -128,7 +95,6 @@ func AddCommands() {
 
 	BytomcliCmd.AddCommand(getUnconfirmedTransactionCmd)
 	BytomcliCmd.AddCommand(listUnconfirmedTransactionsCmd)
-	BytomcliCmd.AddCommand(decodeRawTransactionCmd)
 
 	BytomcliCmd.AddCommand(listUnspentOutputsCmd)
 	BytomcliCmd.AddCommand(listBalancesCmd)
@@ -141,18 +107,21 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(getBlockCountCmd)
 	BytomcliCmd.AddCommand(getBlockHashCmd)
 	BytomcliCmd.AddCommand(getBlockCmd)
-	BytomcliCmd.AddCommand(getBlockHeaderCmd)
-	BytomcliCmd.AddCommand(getDifficultyCmd)
-	BytomcliCmd.AddCommand(getHashRateCmd)
+	BytomcliCmd.AddCommand(getBlockHeaderByHashCmd)
 
 	BytomcliCmd.AddCommand(createKeyCmd)
 	BytomcliCmd.AddCommand(deleteKeyCmd)
 	BytomcliCmd.AddCommand(listKeysCmd)
 	BytomcliCmd.AddCommand(resetKeyPwdCmd)
 
-	BytomcliCmd.AddCommand(signMsgCmd)
-	BytomcliCmd.AddCommand(verifyMsgCmd)
-	BytomcliCmd.AddCommand(decodeProgCmd)
+	BytomcliCmd.AddCommand(isMiningCmd)
+
+	BytomcliCmd.AddCommand(netInfoCmd)
+	BytomcliCmd.AddCommand(netListeningCmd)
+	BytomcliCmd.AddCommand(peerCountCmd)
+	BytomcliCmd.AddCommand(netSyncingCmd)
+
+	BytomcliCmd.AddCommand(gasRateCmd)
 
 	BytomcliCmd.AddCommand(createTransactionFeedCmd)
 	BytomcliCmd.AddCommand(listTransactionFeedsCmd)
@@ -160,60 +129,5 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(getTransactionFeedCmd)
 	BytomcliCmd.AddCommand(updateTransactionFeedCmd)
 
-	BytomcliCmd.AddCommand(isMiningCmd)
-	BytomcliCmd.AddCommand(setMiningCmd)
-
-	BytomcliCmd.AddCommand(netInfoCmd)
-	BytomcliCmd.AddCommand(gasRateCmd)
-
 	BytomcliCmd.AddCommand(versionCmd)
-}
-
-// AddTemplateFunc adds usage template to the root command BytomcliCmd.
-func AddTemplateFunc() {
-	walletEnableCmd := []string{
-		createAccountCmd.Name(),
-		listAccountsCmd.Name(),
-		deleteAccountCmd.Name(),
-		createAccountReceiverCmd.Name(),
-		listAddressesCmd.Name(),
-		validateAddressCmd.Name(),
-
-		createAssetCmd.Name(),
-		getAssetCmd.Name(),
-		listAssetsCmd.Name(),
-		updateAssetAliasCmd.Name(),
-
-		createKeyCmd.Name(),
-		deleteKeyCmd.Name(),
-		listKeysCmd.Name(),
-		resetKeyPwdCmd.Name(),
-		signMsgCmd.Name(),
-
-		buildTransactionCmd.Name(),
-		signTransactionCmd.Name(),
-
-		getTransactionCmd.Name(),
-		listTransactionsCmd.Name(),
-		listUnspentOutputsCmd.Name(),
-		listBalancesCmd.Name(),
-	}
-
-	cobra.AddTemplateFunc("WalletEnable", func(cmdName string) bool {
-		for _, name := range walletEnableCmd {
-			if name == cmdName {
-				return true
-			}
-		}
-		return false
-	})
-
-	cobra.AddTemplateFunc("WalletDisable", func(cmdName string) bool {
-		for _, name := range walletEnableCmd {
-			if name == cmdName {
-				return false
-			}
-		}
-		return true
-	})
 }

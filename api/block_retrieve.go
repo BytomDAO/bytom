@@ -1,7 +1,7 @@
 package api
 
 import (
-	"math/big"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus/difficulty"
@@ -16,10 +16,27 @@ func (a *API) getBestBlockHash() Response {
 	return NewSuccessResponse(blockHash)
 }
 
-// return current block count
-func (a *API) getBlockCount() Response {
-	blockHeight := map[string]uint64{"block_count": a.chain.BestBlockHeight()}
-	return NewSuccessResponse(blockHeight)
+// return block header by hash
+func (a *API) getBlockHeaderByHash(req struct {
+	BlockHash string `json:"block_hash"`
+}) Response {
+	hash := bc.Hash{}
+	if err := hash.UnmarshalText([]byte(req.BlockHash)); err != nil {
+		log.WithField("error", err).Error("Error occurs when transforming string hash to hash struct")
+		return NewErrorResponse(err)
+	}
+	block, err := a.chain.GetBlockByHash(&hash)
+	if err != nil {
+		log.WithField("error", err).Error("Fail to get block by hash")
+		return NewErrorResponse(err)
+	}
+
+	resp := &BlockHeaderByHeight{
+		BlockHeader: &block.BlockHeader,
+		Reward:      block.Transactions[0].Outputs[0].Amount,
+	}
+
+	return NewSuccessResponse(resp)
 }
 
 // BlockTx is the tx struct for getBlock func
@@ -31,11 +48,10 @@ type BlockTx struct {
 	Inputs     []*query.AnnotatedInput  `json:"inputs"`
 	Outputs    []*query.AnnotatedOutput `json:"outputs"`
 	StatusFail bool                     `json:"status_fail"`
-	MuxID      bc.Hash                  `json:"mux_id"`
 }
 
-// BlockReq is used to handle getBlock req
-type BlockReq struct {
+// GetBlockReq is used to handle getBlock req
+type GetBlockReq struct {
 	BlockHeight uint64             `json:"block_height"`
 	BlockHash   chainjson.HexBytes `json:"block_hash"`
 }
@@ -57,7 +73,7 @@ type GetBlockResp struct {
 }
 
 // return block by hash
-func (a *API) getBlock(ins BlockReq) Response {
+func (a *API) getBlock(ins GetBlockReq) Response {
 	var err error
 	block := &types.Block{}
 	if len(ins.BlockHash) == 32 {
@@ -88,7 +104,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		Timestamp:              block.Timestamp,
 		Nonce:                  block.Nonce,
 		Bits:                   block.Bits,
-		Difficulty:             difficulty.CalcWork(block.Bits).String(),
+		Difficulty:             difficulty.CompactToBig(block.Bits).String(),
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
 		TransactionStatusHash:  &block.TransactionStatusHash,
 		Transactions:           []*BlockTx{},
@@ -108,15 +124,6 @@ func (a *API) getBlock(ins BlockReq) Response {
 			NewSuccessResponse(resp)
 		}
 
-		resOutID := orig.ResultIds[0]
-		resOut, ok := orig.Entries[*resOutID].(*bc.Output)
-		if ok {
-			tx.MuxID = *resOut.Source.Ref
-		} else {
-			resRetire, _ := orig.Entries[*resOutID].(*bc.Retirement)
-			tx.MuxID = *resRetire.Source.Ref
-		}
-
 		for i := range orig.Inputs {
 			tx.Inputs = append(tx.Inputs, a.wallet.BuildAnnotatedInput(orig, uint32(i)))
 		}
@@ -128,113 +135,8 @@ func (a *API) getBlock(ins BlockReq) Response {
 	return NewSuccessResponse(resp)
 }
 
-// GetBlockHeaderResp is resp struct for getBlockHeader API
-type GetBlockHeaderResp struct {
-	BlockHeader *types.BlockHeader `json:"block_header"`
-	Reward      uint64             `json:"reward"`
-}
-
-func (a *API) getBlockHeader(ins BlockReq) Response {
-	var err error
-	block := &types.Block{}
-	if len(ins.BlockHash) == 32 {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	}
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	resp := &GetBlockHeaderResp{
-		BlockHeader: &block.BlockHeader,
-		Reward:      block.Transactions[0].Outputs[0].Amount,
-	}
-	return NewSuccessResponse(resp)
-}
-
-// GetDifficultyResp is resp struct for getDifficulty API
-type GetDifficultyResp struct {
-	BlockHash   *bc.Hash `json:"hash"`
-	BlockHeight uint64   `json:"height"`
-	Bits        uint64   `json:"bits"`
-	Difficulty  string   `json:"difficulty"`
-}
-
-func (a *API) getDifficulty(ins *BlockReq) Response {
-	var err error
-	block := &types.Block{}
-
-	if len(ins.BlockHash) == 32 && ins.BlockHash != nil {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else if ins.BlockHeight > 0 {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	} else {
-		hash := a.chain.BestBlockHash()
-		block, err = a.chain.GetBlockByHash(hash)
-	}
-
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	blockHash := block.Hash()
-	resp := &GetDifficultyResp{
-		BlockHash:   &blockHash,
-		BlockHeight: block.Height,
-		Bits:        block.Bits,
-		Difficulty:  difficulty.CalcWork(block.Bits).String(),
-	}
-	return NewSuccessResponse(resp)
-}
-
-// getHashRateResp is resp struct for getHashRate API
-type getHashRateResp struct {
-	BlockHash   *bc.Hash `json:"hash"`
-	BlockHeight uint64   `json:"height"`
-	HashRate    uint64   `json:"hash_rate"`
-}
-
-func (a *API) getHashRate(ins BlockReq) Response {
-	var err error
-	block := &types.Block{}
-
-	if len(ins.BlockHash) == 32 && ins.BlockHash != nil {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else if ins.BlockHeight > 0 {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	} else {
-		hash := a.chain.BestBlockHash()
-		block, err = a.chain.GetBlockByHash(hash)
-	}
-
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	preBlock, err := a.chain.GetBlockByHash(&block.PreviousBlockHash)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	diffTime := block.Timestamp - preBlock.Timestamp
-	hashCount := difficulty.CalcWork(block.Bits)
-	hashRate := new(big.Int).Div(hashCount, big.NewInt(int64(diffTime)))
-
-	blockHash := block.Hash()
-	resp := &getHashRateResp{
-		BlockHash:   &blockHash,
-		BlockHeight: block.Height,
-		HashRate:    hashRate.Uint64(),
-	}
-	return NewSuccessResponse(resp)
+// return current block count
+func (a *API) getBlockCount() Response {
+	blockHeight := map[string]uint64{"block_count": a.chain.BestBlockHeight()}
+	return NewSuccessResponse(blockHeight)
 }

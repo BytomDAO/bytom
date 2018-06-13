@@ -1,13 +1,11 @@
 {
   "keys": [
     {"name": "alice", "password": "alice"},
-    {"name": "bob", "password": "bob"},
-    {"name": "none", "password": "none"}
+    {"name": "bob", "password": "bob"}
   ],
   "accounts": [
     {"name": "alice", "keys": ["alice"], "quorum": 1},
-    {"name": "bob", "keys": ["bob"], "quorum": 1},
-    {"name": "none", "keys": ["none"], "quorum": 1}
+    {"name": "bob", "keys": ["bob"], "quorum": 1}
   ],
   "blocks": [
     {
@@ -15,10 +13,10 @@
       "post_states": [
         {"name": "alice", "asset": "BTM", "amount": 41250000000}
       ],
-      "append": 100
+      "append": 6
     },
     {
-      "coinbase_account": "none",
+      "coinbase_account": "bob",
       "transactions": [
         {
           "passwords": ["alice"],
@@ -26,20 +24,19 @@
             {"type": "spend_account", "name": "alice", "amount": 6000000000, "asset": "BTM"}
           ],
           "outputs": [
-            {"type": "output", "name": "bob", "amount": 500000000, "asset": "BTM"},
-            {"type": "output", "name": "bob", "amount": 500000000, "asset": "BTM"},
-            {"type": "output", "name": "alice", "amount": 2000000000, "asset": "BTM"},
-            {"type": "output", "name": "alice", "amount": 2000000000, "asset": "BTM"}
+            {"type": "output", "name": "bob", "amount": 1000000000, "asset": "BTM"},
+            {"type": "output", "name": "alice", "amount": 4000000000, "asset": "BTM"}
           ]
         }
       ],
       "post_states": [
         {"name": "alice", "asset": "BTM", "amount": 39250000000},
-        {"name": "bob", "asset": "BTM", "amount": 1000000000}
-      ]
+        {"name": "bob", "asset": "BTM", "amount": 43250000000}
+      ],
+      "append": 6
     },
     {
-      "coinbase_account": "none",
+      "coinbase_account": "bob",
       "transactions": [
         {
           "passwords": ["alice"],
@@ -55,40 +52,42 @@
       "post_states": [
         {"name": "alice", "asset": "BTM", "amount": 38250000000},
         {"name": "alice", "asset": "GOLD", "amount": 100},
-        {"name": "bob", "asset": "BTM", "amount": 1000000000}
-      ]
+        {"name": "bob", "asset": "BTM", "amount": 85500000000}
+      ],
+      "append": 6
     },
     {
-      "coinbase_account": "none",
+      "coinbase_account": "bob",
       "transactions": [
         {
           "passwords": ["bob"],
           "inputs": [
-            {"type": "spend_account", "name": "bob", "amount": 400000000, "asset": "BTM"}
+            {"type": "spend_account", "name": "bob", "amount": 6000000000, "asset": "BTM"}
           ],
           "outputs": [
-            {"type": "output", "name": "alice", "amount": 100000000, "asset": "BTM"},
-            {"type": "output", "name": "bob", "amount": 200000000, "asset": "BTM"}
+            {"type": "output", "name": "alice", "amount": 1000000000, "asset": "BTM"},
+            {"type": "output", "name": "bob", "amount": 4000000000, "asset": "BTM"}
           ]
         },
         {
           "passwords": ["alice", "bob"],
           "inputs": [
-            {"type": "spend_account", "name": "bob", "amount": 200000000, "asset": "BTM"},
+            {"type": "spend_account", "name": "bob", "amount": 2000000000, "asset": "BTM"},
             {"type": "spend_account", "name": "alice", "amount": 50, "asset": "GOLD"}
           ],
           "outputs": [
             {"type": "output", "name": "bob", "amount": 50, "asset": "GOLD"},
-            {"type": "output", "name": "alice", "amount": 100000000, "asset": "BTM"}
+            {"type": "output", "name": "alice", "amount": 1000000000, "asset": "BTM"}
           ]
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 38450000000},
+        {"name": "alice", "asset": "BTM", "amount": 40250000000},
         {"name": "alice", "asset": "GOLD", "amount": 50},
-        {"name": "bob", "asset": "BTM", "amount": 600000000},
+        {"name": "bob", "asset": "BTM", "amount": 124750000000},
         {"name": "bob", "asset": "GOLD", "amount": 50}
-      ]
+      ],
+      "append": 0
     }
   ]
 }
