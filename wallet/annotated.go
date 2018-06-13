@@ -45,18 +45,24 @@ func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
 		return nil
 	}
 
-	alias := assetID.String()
+	saveAlias := assetID.String()
+	storeBatch := w.DB.NewBatch()
+
 	externalAsset := &asset.Asset{
 		AssetID:           *assetID,
-		Alias:             &alias,
+		Alias:             &saveAlias,
 		DefinitionMap:     definitionMap,
 		RawDefinitionByte: definitionByte,
 		Signer:            &signers.Signer{Type: "external"},
 	}
 
-	if err := w.AssetReg.SaveAsset(externalAsset, alias); err != nil {
-		log.WithFields(log.Fields{"err": err, "assetID": alias}).Warning("fail on save external asset to internal asset DB")
+	if rawAsset, err := json.Marshal(externalAsset); err == nil {
+		log.WithFields(log.Fields{"assetID": assetID.String(), "alias": saveAlias}).Info("index external asset")
+		storeBatch.Set(asset.Key(assetID), rawAsset)
 	}
+	storeBatch.Set(asset.AliasKey(saveAlias), []byte(assetID.String()))
+	storeBatch.Write()
+
 	return definitionByte
 }
 
@@ -181,7 +187,6 @@ func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statu
 		Inputs:                 make([]*query.AnnotatedInput, 0, len(orig.Inputs)),
 		Outputs:                make([]*query.AnnotatedOutput, 0, len(orig.Outputs)),
 		StatusFail:             statusFail,
-		Size:                   orig.SerializedSize,
 	}
 	for i := range orig.Inputs {
 		tx.Inputs = append(tx.Inputs, w.BuildAnnotatedInput(orig, uint32(i)))

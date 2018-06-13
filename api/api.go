@@ -43,11 +43,9 @@ const (
 
 // Response describes the response standard.
 type Response struct {
-	Status      string      `json:"status,omitempty"`
-	Code        string      `json:"code,omitempty"`
-	Msg         string      `json:"msg,omitempty"`
-	ErrorDetail string      `json:"error_detail,omitempty"`
-	Data        interface{} `json:"data,omitempty"`
+	Status string      `json:"status,omitempty"`
+	Msg    string      `json:"msg,omitempty"`
+	Data   interface{} `json:"data,omitempty"`
 }
 
 //NewSuccessResponse success response
@@ -57,20 +55,7 @@ func NewSuccessResponse(data interface{}) Response {
 
 //NewErrorResponse error response
 func NewErrorResponse(err error) Response {
-	root := errors.Root(err)
-	if info, ok := respErrFormatter[root]; ok {
-		return Response{
-			Status:      FAIL,
-			Code:        info.ChainCode,
-			Msg:         info.Message,
-			ErrorDetail: errors.Detail(err),
-		}
-	}
-	return Response{
-		Status:      FAIL,
-		Msg:         errors.Detail(err),
-		ErrorDetail: errors.Detail(err),
-	}
+	return Response{Status: FAIL, Msg: err.Error()}
 }
 
 type waitHandler struct {
@@ -199,15 +184,17 @@ func (a *API) buildHandler() {
 		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
-		m.Handle("/sign-message", jsonHandler(a.signMessage))
 
 		m.Handle("/build-transaction", jsonHandler(a.build))
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
+		m.Handle("/submit-transaction", jsonHandler(a.submit))
+		m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
 
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
+		m.Handle("/list-balances-from-chain", jsonHandler(a.listBalancesFromChain))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
 
 		m.Handle("/backup-wallet", jsonHandler(a.backupWalletImage))
@@ -218,6 +205,8 @@ func (a *API) buildHandler() {
 
 	m.Handle("/", alwaysError(errors.New("not Found")))
 	m.Handle("/error", jsonHandler(a.walletError))
+
+	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 
 	m.Handle("/create-access-token", jsonHandler(a.createAccessToken))
 	m.Handle("/list-access-tokens", jsonHandler(a.listAccessTokens))
@@ -230,33 +219,20 @@ func (a *API) buildHandler() {
 	m.Handle("/delete-transaction-feed", jsonHandler(a.deleteTxFeed))
 	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
 
-	m.Handle("/submit-transaction", jsonHandler(a.submit))
-	m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
-
 	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
 	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
-	m.Handle("/decode-raw-transaction", jsonHandler(a.decodeRawTransaction))
 
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
-	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
+	m.Handle("/get-block-header-by-hash", jsonHandler(a.getBlockHeaderByHash))
+	m.Handle("/get-block-header-by-height", jsonHandler(a.getBlockHeaderByHeight))
 	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
-	m.Handle("/get-difficulty", jsonHandler(a.getDifficulty))
-	m.Handle("/get-hash-rate", jsonHandler(a.getHashRate))
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
-	m.Handle("/set-mining", jsonHandler(a.setMining))
-
-	m.Handle("/get-work", jsonHandler(a.getWork))
-	m.Handle("/get-work-json", jsonHandler(a.getWorkJSON))
-	m.Handle("/submit-work", jsonHandler(a.submitWork))
-	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
-
-	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
-	m.Handle("/decode-program", jsonHandler(a.decodeProgram))
-
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
-	m.Handle("/net-info", jsonHandler(a.getNetInfo))
+	m.Handle("/get-work", jsonHandler(a.getWork))
+	m.Handle("/submit-work", jsonHandler(a.submitWork))
+	m.Handle("/set-mining", jsonHandler(a.setMining))
 
 	handler := latencyHandler(m, walletEnable)
 	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux

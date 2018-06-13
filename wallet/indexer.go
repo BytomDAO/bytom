@@ -199,9 +199,6 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 
 		batch.Set(calcAnnotatedKey(formatKey(b.Height, uint32(tx.Position))), rawTx)
 		batch.Set(calcTxIndexKey(tx.ID.String()), []byte(formatKey(b.Height, uint32(tx.Position))))
-
-		// delete unconfirmed transaction
-		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
 	}
 	return nil
 }
@@ -421,9 +418,35 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
-	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 
 	return annotatedTx, nil
+}
+
+// GetTransactionsByTxID get account txs by account tx ID
+func (w *Wallet) GetTransactionsByTxID(txID string) ([]*query.AnnotatedTx, error) {
+	annotatedTxs := []*query.AnnotatedTx{}
+	formatKey := ""
+
+	if txID != "" {
+		rawFormatKey := w.DB.Get(calcTxIndexKey(txID))
+		if rawFormatKey == nil {
+			return nil, fmt.Errorf("No transaction(txid=%s) ", txID)
+		}
+		formatKey = string(rawFormatKey)
+	}
+
+	txIter := w.DB.IteratorPrefix(calcAnnotatedKey(formatKey))
+	defer txIter.Release()
+	for txIter.Next() {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), annotatedTx); err != nil {
+			return nil, err
+		}
+		annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+		annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+	}
+
+	return annotatedTxs, nil
 }
 
 // GetTransactionsSummary get transactions summary
@@ -478,8 +501,8 @@ func findTransactionsByAccount(annotatedTx *query.AnnotatedTx, accountID string)
 	return false
 }
 
-// GetTransactions get all walletDB transactions, and filter transactions by accountID optional
-func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error) {
+// GetTransactionsByAccountID get account txs by account ID
+func (w *Wallet) GetTransactionsByAccountID(accountID string) ([]*query.AnnotatedTx, error) {
 	annotatedTxs := []*query.AnnotatedTx{}
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
@@ -490,9 +513,9 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 			return nil, err
 		}
 
-		if accountID == "" || findTransactionsByAccount(annotatedTx, accountID) {
+		if findTransactionsByAccount(annotatedTx, accountID) {
 			annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-			annotatedTxs = append([]*query.AnnotatedTx{annotatedTx}, annotatedTxs...)
+			annotatedTxs = append(annotatedTxs, annotatedTx)
 		}
 	}
 
@@ -521,6 +544,44 @@ func (w *Wallet) GetAccountUTXOs(id string) []account.UTXO {
 // GetAccountBalances return all account balances
 func (w *Wallet) GetAccountBalances(id string) ([]AccountBalance, error) {
 	return w.indexBalances(w.GetAccountUTXOs(""))
+}
+
+// GetAccountBalances return address balances from chain
+func (w *Wallet) GetAccountBalancesFromChain(address string) ([]AddressBalance, error) {
+	addBalance := make(map[string]uint64)
+	addressBalance := make([]AddressBalance, 0)
+	bcHash := w.chain.BestBlockHash()
+	height := w.chain.BestBlockHeight()
+
+	for i := height; i > 0; i-- {
+		block, err := w.store.GetBlock(bcHash)
+		if err != nil {
+			return addressBalance, err
+		}
+
+		for _, tx := range block.Transactions {
+			for _, txo := range tx.Outputs {
+				addBalance[txo.AssetId.String()] += txo.Amount
+			}
+		}
+		bcHash = &block.PreviousBlockHash
+	}
+
+	for k, v := range addBalance {
+		balance := AddressBalance{
+			AssetID: k,
+			Amount:  v,
+		}
+		addressBalance = append(addressBalance, balance)
+	}
+
+	return addressBalance, nil
+}
+
+// AddressBalance address balance
+type AddressBalance struct {
+	AssetID string `json:"asset_id"`
+	Amount  uint64 `json:"amount"`
 }
 
 // AccountBalance account balance
@@ -572,11 +633,11 @@ func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) ([]AccountBalance, e
 
 			assetAlias := *targetAsset.Alias
 			balances = append(balances, AccountBalance{
-				Alias:           alias,
-				AccountID:       id,
-				AssetID:         assetID,
-				AssetAlias:      assetAlias,
-				Amount:          accBalance[id][assetID],
+				Alias: alias,
+				AccountID: id,
+				AssetID: assetID,
+				AssetAlias: assetAlias,
+				Amount: accBalance[id][assetID],
 				AssetDefinition: targetAsset.DefinitionMap,
 			})
 		}

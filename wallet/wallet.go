@@ -9,17 +9,14 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/database/leveldb"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
-const (
-	//SINGLE single sign
-	SINGLE = 1
-
-	maxTxChanSize = 10000 // txChanSize is the size of channel listening to Txpool newTxCh
-)
+//SINGLE single sign
+const SINGLE = 1
 
 var walletKey = []byte("walletInfo")
 
@@ -39,20 +36,20 @@ type Wallet struct {
 	AssetReg   *asset.Registry
 	Hsm        *pseudohsm.HSM
 	chain      *protocol.Chain
+	store      *leveldb.Store
 	rescanCh   chan struct{}
-	newTxCh    chan *types.Tx
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain) (*Wallet, error) {
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, store *leveldb.Store) (*Wallet, error) {
 	w := &Wallet{
 		DB:         walletDB,
 		AccountMgr: account,
 		AssetReg:   asset,
 		chain:      chain,
+		store:      store,
 		Hsm:        hsm,
 		rescanCh:   make(chan struct{}, 1),
-		newTxCh:    make(chan *types.Tx, maxTxChanSize),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -60,7 +57,6 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	go w.walletUpdater()
-	go w.UnconfirmedTxCollector()
 
 	return w, nil
 }
@@ -152,7 +148,7 @@ func (w *Wallet) walletUpdater() {
 			}
 
 			if err := w.DetachBlock(block); err != nil {
-				log.WithField("err", err).Error("walletUpdater detachBlock stop")
+				log.WithField("err", err).Error("walletUpdater detachBlock")
 				return
 			}
 		}
@@ -164,13 +160,12 @@ func (w *Wallet) walletUpdater() {
 		}
 
 		if err := w.AttachBlock(block); err != nil {
-			log.WithField("err", err).Error("walletUpdater AttachBlock stop")
+			log.WithField("err", err).Error("walletUpdater stop")
 			return
 		}
 	}
 }
 
-//RescanBlocks provide a trigger to rescan blocks
 func (w *Wallet) RescanBlocks() {
 	select {
 	case w.rescanCh <- struct{}{}:
@@ -182,22 +177,11 @@ func (w *Wallet) RescanBlocks() {
 func (w *Wallet) getRescanNotification() {
 	select {
 	case <-w.rescanCh:
-		block, _ := w.chain.GetBlockByHeight(0)
-		w.status.WorkHash = bc.Hash{}
-		w.AttachBlock(block)
+		w.status.WorkHeight = 0
+		block, _ := w.chain.GetBlockByHeight(w.status.WorkHeight)
+		w.status.WorkHash = block.Hash()
 	default:
 		return
-	}
-}
-
-// GetNewTxCh return a unconfirmed transaction feed channel
-func (w *Wallet) GetNewTxCh() chan *types.Tx {
-	return w.newTxCh
-}
-
-func (w *Wallet) UnconfirmedTxCollector() {
-	for {
-		w.SaveUnconfirmedTx(<-w.newTxCh)
 	}
 }
 

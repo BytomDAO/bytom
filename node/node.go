@@ -2,14 +2,10 @@ package node
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
@@ -62,21 +58,18 @@ type Node struct {
 
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
-	if err := lockDataDirectory(config); err != nil {
-		cmn.Exit("Error: " + err.Error())
-	}
-	initLogFile(config)
 	initActiveNetParams(config)
 	// Get store
-	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
-	store := leveldb.NewStore(coreDB)
+	txDB := dbm.NewDB("txdb", config.DBBackend, config.DBDir())
+	store := leveldb.NewStore(txDB)
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
 
 	// Make event switch
 	eventSwitch := types.NewEventSwitch()
-	if _, err := eventSwitch.Start(); err != nil {
+	_, err := eventSwitch.Start()
+	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
 	}
 
@@ -108,14 +101,9 @@ func NewNode(config *cfg.Config) *Node {
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain)
+		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain, store)
 		if err != nil {
 			log.WithField("error", err).Error("init NewWallet")
-		}
-
-		// trigger rescan wallet
-		if config.Wallet.Rescan {
-			wallet.RescanBlocks()
 		}
 
 		// Clean up expired UTXO reservations periodically.
@@ -124,9 +112,6 @@ func NewNode(config *cfg.Config) *Node {
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 
 	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, newBlockCh)
-
-	// get transaction from txPool and send it to syncManager and wallet
-	go newPoolTxListener(txPool, syncManager, wallet)
 
 	// run the profile server
 	profileHost := config.ProfListenAddress
@@ -157,29 +142,6 @@ func NewNode(config *cfg.Config) *Node {
 	return node
 }
 
-// newPoolTxListener listener transaction from txPool, and send it to syncManager and wallet
-func newPoolTxListener(txPool *protocol.TxPool, syncManager *netsync.SyncManager, wallet *w.Wallet) {
-	newTxCh := txPool.GetNewTxCh()
-	syncManagerTxCh := syncManager.GetNewTxCh()
-
-	for {
-		newTx := <-newTxCh
-		syncManagerTxCh <- newTx
-		if wallet != nil {
-			wallet.GetNewTxCh() <- newTx
-		}
-	}
-}
-
-// Lock data directory after daemonization
-func lockDataDirectory(config *cfg.Config) error {
-	_, _, err := flock.New(filepath.Join(config.RootDir, "LOCK"))
-	if err != nil {
-		return errors.New("datadir already used by another process")
-	}
-	return nil
-}
-
 func initActiveNetParams(config *cfg.Config) {
 	var exist bool
 	consensus.ActiveNetParams, exist = consensus.NetParams[config.ChainID]
@@ -188,22 +150,8 @@ func initActiveNetParams(config *cfg.Config) {
 	}
 }
 
-func initLogFile(config *cfg.Config) {
-	if config.LogFile == "" {
-		return
-	}
-	cmn.EnsureDir(filepath.Dir(config.LogFile), 0700)
-	file, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err == nil {
-		log.SetOutput(file)
-	} else {
-		log.WithField("err", err).Info("using default")
-	}
-
-}
-
 // Lanch web broser or not
-func launchWebBrowser() {
+func lanchWebBroser() {
 	log.Info("Launching System Browser with :", webAddress)
 	if err := browser.Open(webAddress); err != nil {
 		log.Error(err.Error())
@@ -223,12 +171,10 @@ func (n *Node) OnStart() error {
 	if n.miningEnable {
 		n.cpuMiner.Start()
 	}
-	if !n.config.VaultMode {
-		n.syncManager.Start()
-	}
+	n.syncManager.Start()
 	n.initAndstartApiServer()
 	if !n.config.Web.Closed {
-		launchWebBrowser()
+		lanchWebBroser()
 	}
 
 	return nil
@@ -239,9 +185,9 @@ func (n *Node) OnStop() {
 	if n.miningEnable {
 		n.cpuMiner.Stop()
 	}
-	if !n.config.VaultMode {
-		n.syncManager.Stop()
-	}
+	n.syncManager.Stop()
+	log.Info("Stopping Node")
+	// TODO: gracefully disconnect from peers.
 }
 
 func (n *Node) RunForever() {

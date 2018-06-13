@@ -1,9 +1,6 @@
 package config
 
 import (
-	"encoding/hex"
-	"time"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
@@ -11,122 +8,60 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-func genesisTx() *types.Tx {
-	contract, err := hex.DecodeString("00148c9d063ff74ee6d9ffa88d83aeb038068366c4c4")
-	if err != nil {
-		log.Panicf("fail on decode genesis tx output control program")
-	}
-
+// GenerateGenesisTx will return genesis transaction
+func GenerateGenesisTx() *types.Tx {
 	txData := types.TxData{
-		Version: 1,
+		Version:        1,
+		SerializedSize: 63,
 		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput([]byte("Information is power. -- Jan/11/2013. Computing is power. -- Apr/24/2018.")),
+			types.NewCoinbaseInput([]byte("May 4th Be With You")),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, consensus.InitialBlockSubsidy, contract),
+			&types.TxOutput{
+				AssetVersion: 1,
+				OutputCommitment: types.OutputCommitment{
+					AssetAmount: bc.AssetAmount{
+						AssetId: consensus.BTMAssetID,
+						Amount:  consensus.InitialBlockSubsidy,
+					},
+					VMVersion:      1,
+					ControlProgram: []byte{81},
+				},
+			},
 		},
 	}
+
 	return types.NewTx(txData)
 }
 
-func mainNetGenesisBlock() *types.Block {
-	tx := genesisTx()
+// GenerateGenesisBlock will return genesis block
+func GenerateGenesisBlock() *types.Block {
+	genesisCoinbaseTx := GenerateGenesisTx()
+	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx{genesisCoinbaseTx.Tx})
+	if err != nil {
+		log.Panicf("Fatal create tx merkelRoot")
+	}
+
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
 	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	if err != nil {
-		log.Panicf("fail on calc genesis tx status merkle root")
-	}
-
-	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx{tx.Tx})
-	if err != nil {
-		log.Panicf("fail on calc genesis tx merkel root")
+		log.Panicf("Fatal create tx status gmerkelRoot")
 	}
 
 	block := &types.Block{
 		BlockHeader: types.BlockHeader{
 			Version:   1,
 			Height:    0,
-			Nonce:     9253507043297,
-			Timestamp: 1524549600,
-			Bits:      2161727821137910632,
+			Nonce:     4216236,
+			Timestamp: 1524202000,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
 				TransactionStatusHash:  txStatusHash,
 			},
+			Bits: 2089670227111054243,
 		},
-		Transactions: []*types.Tx{tx},
+		Transactions: []*types.Tx{genesisCoinbaseTx},
 	}
 	return block
-}
-
-func testNetGenesisBlock() *types.Block {
-	tx := genesisTx()
-	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
-	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	if err != nil {
-		log.Panicf("fail on calc genesis tx status merkle root")
-	}
-
-	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx{tx.Tx})
-	if err != nil {
-		log.Panicf("fail on calc genesis tx merkel root")
-	}
-
-	block := &types.Block{
-		BlockHeader: types.BlockHeader{
-			Version:   1,
-			Height:    0,
-			Nonce:     9253507043297,
-			Timestamp: 1528455800,
-			Bits:      2233785415178221890,
-			BlockCommitment: types.BlockCommitment{
-				TransactionsMerkleRoot: merkleRoot,
-				TransactionStatusHash:  txStatusHash,
-			},
-		},
-		Transactions: []*types.Tx{tx},
-	}
-	return block
-}
-
-func soloNetGenesisBlock() *types.Block {
-	tx := genesisTx()
-	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
-	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	if err != nil {
-		log.Panicf("fail on calc genesis tx status merkle root")
-	}
-
-	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx{tx.Tx})
-	if err != nil {
-		log.Panicf("fail on calc genesis tx merkel root")
-	}
-
-	block := &types.Block{
-		BlockHeader: types.BlockHeader{
-			Version:   1,
-			Height:    0,
-			Nonce:     9253507043297,
-			Timestamp: uint64(time.Now().Unix()),
-			Bits:      2305843009214532812,
-			BlockCommitment: types.BlockCommitment{
-				TransactionsMerkleRoot: merkleRoot,
-				TransactionStatusHash:  txStatusHash,
-			},
-		},
-		Transactions: []*types.Tx{tx},
-	}
-	return block
-}
-
-// GenesisBlock will return genesis block
-func GenesisBlock() *types.Block {
-	return map[string]func() *types.Block{
-		"main": mainNetGenesisBlock,
-		"test": testNetGenesisBlock,
-		"solo": soloNetGenesisBlock,
-	}[consensus.ActiveNetParams.Name]()
 }

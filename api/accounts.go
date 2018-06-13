@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"sort"
 
 	log "github.com/sirupsen/logrus"
 
@@ -30,7 +29,7 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 	return NewSuccessResponse(annotatedAccount)
 }
 
-// AccountInfo is request struct for deleteAccount
+// AccountInfo
 type AccountInfo struct {
 	Info string `json:"account_info"`
 }
@@ -85,15 +84,7 @@ type addressResp struct {
 	AccountID    string `json:"account_id"`
 	Address      string `json:"address"`
 	Change       bool   `json:"change"`
-	KeyIndex     uint64 `json:"-"`
 }
-
-// SortByIndex implements sort.Interface for addressResp slices
-type SortByIndex []addressResp
-
-func (a SortByIndex) Len() int           { return len(a) }
-func (a SortByIndex) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a SortByIndex) Less(i, j int) bool { return a[i].KeyIndex < a[j].KeyIndex }
 
 func (a *API) listAddresses(ctx context.Context, ins struct {
 	AccountID    string `json:"account_id"`
@@ -120,21 +111,17 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	addresses := []addressResp{}
+	addresses := []*addressResp{}
 	for _, cp := range cps {
 		if cp.Address == "" || cp.AccountID != target.ID {
 			continue
 		}
-		addresses = append(addresses, addressResp{
+		addresses = append(addresses, &addressResp{
 			AccountAlias: target.Alias,
 			AccountID:    cp.AccountID,
 			Address:      cp.Address,
 			Change:       cp.Change,
-			KeyIndex:     cp.KeyIndex,
 		})
 	}
-
-	// sort AddressResp by KeyIndex
-	sort.Sort(SortByIndex(addresses))
 	return NewSuccessResponse(addresses)
 }

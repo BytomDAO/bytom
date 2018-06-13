@@ -126,7 +126,9 @@ func CheckProofOfWork(hash, seed *bc.Hash, bits uint64) bool {
 // for next block, when a lower difficulty Int actually reflects a more difficult
 // mining progress.
 func CalcNextRequiredDifficulty(lastBH, compareBH *types.BlockHeader) uint64 {
-	if (lastBH.Height)%consensus.BlocksPerRetarget != 0 || lastBH.Height == 0 {
+	if lastBH == nil {
+		return consensus.PowMinBits
+	} else if (lastBH.Height)%consensus.BlocksPerRetarget != 0 || lastBH.Height == 0 {
 		return lastBH.Bits
 	}
 

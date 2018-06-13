@@ -9,22 +9,19 @@ import (
 //consensus variables
 const (
 	// Max gas that one block contains
-	MaxBlockGas      = uint64(10000000)
-	VMGasRate        = int64(200)
-	StorageGasRate   = int64(1)
-	MaxGasAmount     = int64(200000)
-	DefaultGasCredit = int64(30000)
+	MaxBlockGas = uint64(100000000)
 
 	//config parameter for coinbase reward
-	CoinbasePendingBlockNumber = uint64(100)
+	CoinbasePendingBlockNumber = uint64(6)
 	subsidyReductionInterval   = uint64(840000)
 	baseSubsidy                = uint64(41250000000)
-	InitialBlockSubsidy        = uint64(140700041250000000)
+	InitialBlockSubsidy        = uint64(1470000000000000000)
 
 	// config for pow mining
-	BlocksPerRetarget     = uint64(2016)
-	TargetSecondsPerBlock = uint64(150)
-	SeedPerRetarget       = uint64(256)
+	PowMinBits            = uint64(2305843009213861724)
+	BlocksPerRetarget     = uint64(128)
+	TargetSecondsPerBlock = uint64(60)
+	SeedPerRetarget       = uint64(128)
 
 	// MaxTimeOffsetSeconds is the maximum number of seconds a block time is allowed to be ahead of the current time
 	MaxTimeOffsetSeconds = uint64(60 * 60)
@@ -32,7 +29,13 @@ const (
 
 	PayToWitnessPubKeyHashDataSize = 20
 	PayToWitnessScriptHashDataSize = 32
-	CoinbaseArbitrarySizeLimit     = 128
+
+	CoinbaseArbitrarySizeLimit = 128
+
+	VMGasRate        = int64(100)
+	StorageGasRate   = int64(2)
+	MaxGasAmount     = int64(100000)
+	DefaultGasCredit = int64(80000)
 
 	BTMAlias = "BTM"
 )
@@ -84,14 +87,12 @@ type Params struct {
 	Bech32HRPSegwit string
 }
 
-// ActiveNetParams is ...
 var ActiveNetParams = MainNetParams
 
 // NetParams is the correspondence between chain_id and Params
 var NetParams = map[string]Params{
 	"mainnet": MainNetParams,
 	"testnet": TestNetParams,
-	"solonet": SoloNetParams,
 }
 
 // MainNetParams is the config for production
@@ -104,10 +105,4 @@ var MainNetParams = Params{
 var TestNetParams = Params{
 	Name:            "test",
 	Bech32HRPSegwit: "tm",
-}
-
-// TestNetParams is the config for test-net
-var SoloNetParams = Params{
-	Name:            "solo",
-	Bech32HRPSegwit: "sm",
 }

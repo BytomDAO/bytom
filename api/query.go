@@ -11,14 +11,11 @@ import (
 	"github.com/bytom/consensus"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
 )
 
 // POST /list-accounts
-func (a *API) listAccounts(ctx context.Context, filter struct {
-	ID string `json:"id"`
-}) Response {
-	accounts, err := a.wallet.AccountMgr.ListAccounts(filter.ID)
+func (a *API) listAccounts(ctx context.Context) Response {
+	accounts, err := a.wallet.AccountMgr.ListAccounts()
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
 		return NewErrorResponse(err)
@@ -46,10 +43,8 @@ func (a *API) getAsset(ctx context.Context, filter struct {
 }
 
 // POST /list-assets
-func (a *API) listAssets(ctx context.Context, filter struct {
-	ID string `json:"id"`
-}) Response {
-	assets, err := a.wallet.AssetReg.ListAssets(filter.ID)
+func (a *API) listAssets(ctx context.Context) Response {
+	assets, err := a.wallet.AssetReg.ListAssets()
 	if err != nil {
 		log.Errorf("listAssets: %v", err)
 		return NewErrorResponse(err)
@@ -67,58 +62,48 @@ func (a *API) listBalances(ctx context.Context) Response {
 	return NewSuccessResponse(balances)
 }
 
-// POST /get-transaction
+// POST /list-balances
+func (a *API) listBalancesFromChain(ctx context.Context, filter struct {
+	Address string `json:"address"`
+}) Response {
+	balances, err := a.wallet.GetAccountBalancesFromChain(filter.Address)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(balances)
+}
+
+// POST /get-transaction-from-chain
 func (a *API) getTransaction(ctx context.Context, txInfo struct {
 	TxID string `json:"tx_id"`
 }) Response {
-	var annotatedTx *query.AnnotatedTx
-	var err error
-
-	annotatedTx, err = a.wallet.GetTransactionByTxID(txInfo.TxID)
+	transaction, err := a.wallet.GetTransactionByTxID(txInfo.TxID)
 	if err != nil {
-		// transaction not found in blockchain db, search it from unconfirmed db
-		annotatedTx, err = a.wallet.GetUnconfirmedTxByTxID(txInfo.TxID)
-		if err != nil {
-			return NewErrorResponse(err)
-		}
+		log.Errorf("getTransaction error: %v", err)
+		return NewErrorResponse(err)
 	}
 
-	return NewSuccessResponse(annotatedTx)
+	return NewSuccessResponse(transaction)
 }
 
 // POST /list-transactions
 func (a *API) listTransactions(ctx context.Context, filter struct {
-	ID          string `json:"id"`
-	AccountID   string `json:"account_id"`
-	Detail      bool   `json:"detail"`
-	Unconfirmed bool   `json:"unconfirmed"`
+	ID        string `json:"id"`
+	AccountID string `json:"account_id"`
+	Detail    bool   `json:"detail"`
 }) Response {
 	transactions := []*query.AnnotatedTx{}
 	var err error
-	var transaction *query.AnnotatedTx
 
-	if filter.ID != "" {
-		transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
-		if err != nil && filter.Unconfirmed {
-			transaction, err = a.wallet.GetUnconfirmedTxByTxID(filter.ID)
-			if err != nil {
-				return NewErrorResponse(err)
-			}
-		}
-		transactions = []*query.AnnotatedTx{transaction}
+	if filter.AccountID != "" {
+		transactions, err = a.wallet.GetTransactionsByAccountID(filter.AccountID)
 	} else {
-		transactions, err = a.wallet.GetTransactions(filter.AccountID)
-		if err != nil {
-			return NewErrorResponse(err)
-		}
+		transactions, err = a.wallet.GetTransactionsByTxID(filter.ID)
+	}
 
-		if filter.Unconfirmed {
-			unconfirmedTxs, err := a.wallet.GetUnconfirmedTxs(filter.AccountID)
-			if err != nil {
-				return NewErrorResponse(err)
-			}
-			transactions = append(unconfirmedTxs, transactions...)
-		}
+	if err != nil {
+		log.Errorf("listTransactions: %v", err)
+		return NewErrorResponse(err)
 	}
 
 	if filter.Detail == false {
@@ -181,53 +166,6 @@ func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
 		Total: uint64(len(txIDs)),
 		TxIDs: txIDs,
 	})
-}
-
-// RawTx is the tx struct for getRawTransaction
-type RawTx struct {
-	Version   uint64                   `json:"version"`
-	Size      uint64                   `json:"size"`
-	TimeRange uint64                   `json:"time_range"`
-	Inputs    []*query.AnnotatedInput  `json:"inputs"`
-	Outputs   []*query.AnnotatedOutput `json:"outputs"`
-	Fee       int64                    `json:"fee"`
-}
-
-// POST /decode-raw-transaction
-func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
-	Tx types.Tx `json:"raw_transaction"`
-}) Response {
-	tx := &RawTx{
-		Version:   ins.Tx.Version,
-		Size:      ins.Tx.SerializedSize,
-		TimeRange: ins.Tx.TimeRange,
-		Inputs:    []*query.AnnotatedInput{},
-		Outputs:   []*query.AnnotatedOutput{},
-	}
-
-	for i := range ins.Tx.Inputs {
-		tx.Inputs = append(tx.Inputs, a.wallet.BuildAnnotatedInput(&ins.Tx, uint32(i)))
-	}
-	for i := range ins.Tx.Outputs {
-		tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(&ins.Tx, i))
-	}
-
-	totalInputBtm := uint64(0)
-	totalOutputBtm := uint64(0)
-	for _, input := range tx.Inputs {
-		if input.AssetID.String() == consensus.BTMAssetID.String() {
-			totalInputBtm += input.Amount
-		}
-	}
-
-	for _, output := range tx.Outputs {
-		if output.AssetID.String() == consensus.BTMAssetID.String() {
-			totalOutputBtm += output.Amount
-		}
-	}
-
-	tx.Fee = int64(totalInputBtm) - int64(totalOutputBtm)
-	return NewSuccessResponse(tx)
 }
 
 // POST /list-unspent-outputs

@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
-	"sync/atomic"
 
 	"github.com/bytom/api"
 	"github.com/bytom/blockchain/txbuilder"
@@ -22,7 +20,6 @@ const (
 	CreateAsset    = "create_asset"
 	CreateReceiver = "CreateReceiver"
 	BuildTx        = "build_tx"
-	BuildMulTx     = "build_mul_tx"
 	BuildSpend     = "spend"
 	BuildIssue     = "issue"
 	BuildCtlAddr   = "address"
@@ -52,15 +49,9 @@ var buildControlAddressReqFmt = `
 		{"type": "control_address", "asset_id": "%s", "amount": %s,"address": "%s"}
 	]}`
 
-var actions = `{"actions": [%s]}`
-var feesFmt = `{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"}`
-var inputFmt = `{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"}`
-var issueInputFmt = `{"type": "issue", "asset_id": "%s", "amount": %s}`
-var outputFmt = `{"type": "control_address", "asset_id": "%s", "amount": %s,"address": "%s"}`
-
 var (
 	buildType     = ""
-	btmGas        = "200000000"
+	btmGas        = "20000000"
 	accountQuorum = 1
 	passwd        = "123456"
 )
@@ -150,48 +141,6 @@ func SendReq(method string, args []string) (interface{}, bool) {
 		}
 		param = ins
 		methodPath = "/build-transaction"
-	case BuildMulTx:
-		accountInfo := args[0]
-		assetInfo := args[1]
-		amount := args[2]
-		receiverProgram := args[3]
-		buildType := args[4]
-		var (
-			input  string
-			fees   string
-			output string
-		)
-		fees += fmt.Sprintf(feesFmt, btmGas, accountInfo) + ","
-		switch buildType {
-		case BuildIssue:
-			amountInt, _ := strconv.Atoi(amount)
-			amountTmp := strconv.Itoa(amountInt * mulOutput)
-			input += fmt.Sprintf(issueInputFmt, assetInfo, amountTmp)
-			input += ","
-		case BuildCtlAddr:
-			amountInt, _ := strconv.Atoi(amount)
-			amountTmp := strconv.Itoa(amountInt * mulOutput)
-			input += fmt.Sprintf(inputFmt, assetInfo, amountTmp, accountInfo)
-			input += ","
-		default:
-			fmt.Println("buildType:[", buildType, "] do not implemented")
-			os.Exit(1)
-		}
-		for i := 0; i < mulOutput; i++ {
-			output += fmt.Sprintf(outputFmt, assetInfo, amount, receiverProgram)
-			if i < mulOutput-1 {
-				output += ","
-			}
-		}
-		buildReqStr := fmt.Sprintf(actions, fees+input+output)
-		var ins api.BuildRequest
-		if err := json.Unmarshal([]byte(buildReqStr), &ins); err != nil {
-			fmt.Println("generate build mul tx is error: ", err)
-			os.Exit(util.ErrLocalExe)
-		}
-		param = ins
-		methodPath = "/build-transaction"
-
 	case SignTx:
 		template := txbuilder.Template{}
 
@@ -228,7 +177,7 @@ func SendReq(method string, args []string) (interface{}, bool) {
 	default:
 		return "", false
 	}
-	data, exitCode := ClientCall(methodPath, &param)
+	data, exitCode := util.ClientCall(methodPath, &param)
 	if exitCode != util.Success {
 		return "", false
 	}
@@ -236,7 +185,7 @@ func SendReq(method string, args []string) (interface{}, bool) {
 }
 
 // Sendbulktx send asset tx
-func Sendbulktx(threadTxNum int, txBtmNum string, sendAcct string, sendasset string, controlPrograms []string, txidChan chan string, index *uint64) {
+func Sendbulktx(threadTxNum int, txBtmNum string, sendAcct string, sendasset string, controlPrograms []string, txidChan chan string) {
 	arrayLen := len(controlPrograms)
 	for i := 0; i < threadTxNum; i++ {
 		//build tx
@@ -245,16 +194,9 @@ func Sendbulktx(threadTxNum int, txBtmNum string, sendAcct string, sendasset str
 			txidChan <- ""
 			continue
 		}
-		var (
-			resp interface{}
-			b    bool
-		)
+
 		param := []string{sendAcct, sendasset, txBtmNum, receiver, cfg.BuildType}
-		if mulOutput > 0 {
-			resp, b = SendReq(BuildMulTx, param)
-		} else {
-			resp, b = SendReq(BuildTx, param)
-		}
+		resp, b := SendReq(BuildTx, param)
 		if !b {
 			txidChan <- ""
 			continue
@@ -280,9 +222,6 @@ func Sendbulktx(threadTxNum int, txBtmNum string, sendAcct string, sendasset str
 			txidChan <- ""
 			continue
 		}
-
-		atomic.AddUint64(index, 1)
-		fmt.Println("tx num:", atomic.LoadUint64(index), " txid:", resp)
 		type txID struct {
 			Txid string `json:"tx_id"`
 		}

@@ -99,11 +99,7 @@ func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
 func (m *MiningPool) SubmitWork(bh *types.BlockHeader) error {
 	reply := make(chan error, 1)
 	m.submitCh <- &submitBlockMsg{blockHeader: bh, reply: reply}
-	err := <-reply
-	if err != nil {
-		log.WithFields(log.Fields{"err": err, "height": bh.Height}).Warning("submitWork failed")
-	}
-	return err
+	return <-reply
 }
 
 func (m *MiningPool) submitWork(bh *types.BlockHeader) error {

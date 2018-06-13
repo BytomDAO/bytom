@@ -81,12 +81,7 @@ type BaseConfig struct {
 
 	ApiAddress string `mapstructure:"api_addr"`
 
-	VaultMode bool `mapstructure:"vault_mode"`
-
 	Time time.Time
-
-	// log file name
-	LogFile string `mapstructure:"log_file"`
 }
 
 // Default configurable base parameters.
@@ -148,7 +143,6 @@ func (p *P2PConfig) AddrBookFile() string {
 //-----------------------------------------------------------------------------
 type WalletConfig struct {
 	Disable bool `mapstructure:"disable"`
-	Rescan  bool `mapstructure:"rescan"`
 }
 
 type RPCAuthConfig struct {
@@ -177,7 +171,6 @@ func DefaultWebConfig() *WebConfig {
 func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
 		Disable: false,
-		Rescan:  false,
 	}
 }
 
@@ -197,17 +190,18 @@ func rootify(path, root string) string {
 func DefaultDataDir() string {
 	// Try to place the data folder in the user's home dir
 	home := homeDir()
-	if home == "" {
-		return "./.bytom"
+	dataDir := "./.bytom"
+	if home != "" {
+		switch runtime.GOOS {
+		case "darwin":
+			dataDir = filepath.Join(home, "Library", "Bytom")
+		case "windows":
+			dataDir = filepath.Join(home, "AppData", "Roaming", "Bytom")
+		default:
+			dataDir = filepath.Join(home, ".bytom")
+		}
 	}
-	switch runtime.GOOS {
-	case "darwin":
-		return filepath.Join(home, "Library", "Bytom")
-	case "windows":
-		return filepath.Join(home, "AppData", "Roaming", "Bytom")
-	default:
-		return filepath.Join(home, ".bytom")
-	}
+	return dataDir
 }
 
 func homeDir() string {

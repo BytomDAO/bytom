@@ -60,7 +60,7 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 }
 
 func (c *Chain) initChainStatus() error {
-	genesisBlock := config.GenesisBlock()
+	genesisBlock := config.GenerateGenesisBlock()
 	txStatus := bc.NewTransactionStatus()
 	for i := range genesisBlock.Transactions {
 		txStatus.SetStatus(i, false)
