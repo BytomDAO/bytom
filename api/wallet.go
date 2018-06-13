@@ -56,3 +56,8 @@ func (a *API) backupWalletImage() Response {
 	}
 	return NewSuccessResponse(image)
 }
+
+func (a *API) rescanBlocks() Response {
+	a.wallet.RescanBlocks()
+	return NewSuccessResponse(nil)
+}
