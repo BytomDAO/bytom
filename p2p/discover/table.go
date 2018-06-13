@@ -147,10 +147,11 @@ func (tab *Table) readRandomNodes(buf []*Node) (n int) {
 			buckets = append(buckets[:j], buckets[j+1:]...)
 		}
 		if len(buckets) == 0 {
+			i++
 			break
 		}
 	}
-	return i + 1
+	return i
 }
 
 func randUint(max uint32) uint32 {
