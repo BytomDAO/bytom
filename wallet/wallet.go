@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/database/leveldb"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -39,17 +40,19 @@ type Wallet struct {
 	AssetReg   *asset.Registry
 	Hsm        *pseudohsm.HSM
 	chain      *protocol.Chain
+	store      *leveldb.Store
 	rescanCh   chan struct{}
 	newTxCh    chan *types.Tx
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain) (*Wallet, error) {
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, store *leveldb.Store) (*Wallet, error) {
 	w := &Wallet{
 		DB:         walletDB,
 		AccountMgr: account,
 		AssetReg:   asset,
 		chain:      chain,
+		store:      store,
 		Hsm:        hsm,
 		rescanCh:   make(chan struct{}, 1),
 		newTxCh:    make(chan *types.Tx, maxTxChanSize),

@@ -523,6 +523,44 @@ func (w *Wallet) GetAccountBalances(id string) ([]AccountBalance, error) {
 	return w.indexBalances(w.GetAccountUTXOs(""))
 }
 
+// GetAccountBalances return address balances from chain
+func (w *Wallet) GetAccountBalancesFromChain(address string) ([]AddressBalance, error) {
+	addBalance := make(map[string]uint64)
+	addressBalance := make([]AddressBalance, 0)
+	bcHash := w.chain.BestBlockHash()
+	height := w.chain.BestBlockHeight()
+
+	for i := height; i > 0; i-- {
+		block, err := w.store.GetBlock(bcHash)
+		if err != nil {
+			return addressBalance, err
+		}
+
+		for _, tx := range block.Transactions {
+			for _, txo := range tx.Outputs {
+				addBalance[txo.AssetId.String()] += txo.Amount
+			}
+		}
+		bcHash = &block.PreviousBlockHash
+	}
+
+	for k, v := range addBalance {
+		balance := AddressBalance{
+			AssetID: k,
+			Amount:  v,
+		}
+		addressBalance = append(addressBalance, balance)
+	}
+
+	return addressBalance, nil
+}
+
+// AddressBalance address balance
+type AddressBalance struct {
+	AssetID string `json:"asset_id"`
+	Amount  uint64 `json:"amount"`
+}
+
 // AccountBalance account balance
 type AccountBalance struct {
 	AccountID       string                 `json:"account_id"`

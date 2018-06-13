@@ -67,7 +67,18 @@ func (a *API) listBalances(ctx context.Context) Response {
 	return NewSuccessResponse(balances)
 }
 
-// POST /get-transaction
+// POST /list-balances
+func (a *API) listBalancesFromChain(ctx context.Context, filter struct {
+	Address string `json:"address"`
+}) Response {
+	balances, err := a.wallet.GetAccountBalancesFromChain(filter.Address)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(balances)
+}
+
+// POST /get-transaction-from-chain
 func (a *API) getTransaction(ctx context.Context, txInfo struct {
 	TxID string `json:"tx_id"`
 }) Response {

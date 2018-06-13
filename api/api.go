@@ -208,6 +208,7 @@ func (a *API) buildHandler() {
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
+		m.Handle("/list-balances-from-chain", jsonHandler(a.listBalancesFromChain))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
 
 		m.Handle("/backup-wallet", jsonHandler(a.backupWalletImage))
