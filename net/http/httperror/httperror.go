@@ -14,12 +14,13 @@ import (
 type Info struct {
 	HTTPStatus int    `json:"-"`
 	ChainCode  string `json:"code"`
-	Message    string `json:"message"`
+	Message    string `json:"msg"`
 }
 
 // Response defines the error response for a Chain error.
 type Response struct {
 	Info
+	Status    string                 `json:"status,omitempty"`
 	Detail    string                 `json:"detail,omitempty"`
 	Data      map[string]interface{} `json:"data,omitempty"`
 	Temporary bool                   `json:"temporary"`
@@ -42,7 +43,7 @@ func (f Formatter) Format(err error) (body Response) {
 	// Just treat it like any other missing entry.
 	defer func() {
 		if err := recover(); err != nil {
-			body = Response{f.Default, "", nil, true}
+			body = Response{f.Default, "fail", "", nil, true}
 		}
 	}()
 	info, ok := f.Errors[root]
@@ -52,6 +53,7 @@ func (f Formatter) Format(err error) (body Response) {
 
 	body = Response{
 		Info:      info,
+		Status:    "fail",
 		Detail:    errors.Detail(err),
 		Data:      errors.Data(err),
 		Temporary: f.IsTemporary(info, err),
