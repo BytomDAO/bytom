@@ -120,6 +120,9 @@ func (r *PEXReactor) RemovePeer(p *p2p.Peer, reason interface{}) {}
 func (r *PEXReactor) SendAddrs(p *p2p.Peer, nodes []*discover.Node) bool {
 	addrs := []*p2p.NetAddress{}
 	for _, node := range nodes {
+		if node == nil {
+			break
+		}
 		addrs = append(addrs, p2p.NewNetAddressIPPort(node.IP, node.TCP))
 	}
 
