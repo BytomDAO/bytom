@@ -162,10 +162,7 @@ func (r *PEXReactor) ensurePeers() {
 	n := r.discv.ReadRandomNodes(nodes)
 	for i := 0; i < n && len(toDial) < numToDial; i++ {
 		try := p2p.NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
-		if r.Switch.NodeInfo().RemoteAddr == try.String() {
-			continue
-		}
-		if _, selected := toDial[try.IP.String()]; selected {
+		if r.Switch.NodeInfo().ListenAddr == try.String() {
 			continue
 		}
 		if dialling := r.Switch.IsDialing(try); dialling {
