@@ -391,7 +391,7 @@ func encodePacket(priv *crypto.PrivKeyEd25519, ptype byte, req interface{}) (p, 
 	nodeID := priv.PubKey().Unwrap().(crypto.PubKeyEd25519)
 	sig := priv.Sign(common.BytesToHash(packet[headSize:]).Bytes())
 	copy(packet, versionPrefix)
-	copy(packet[versionPrefixSize:], nodeID.Bytes())
+	copy(packet[versionPrefixSize:], nodeID[:])
 	copy(packet[versionPrefixSize+nodeIDSize:], sig.Bytes())
 
 	hash = common.BytesToHash(packet[versionPrefixSize:]).Bytes()
