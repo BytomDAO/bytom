@@ -55,22 +55,34 @@ func NewSuccessResponse(data interface{}) Response {
 	return Response{Status: SUCCESS, Data: data}
 }
 
+//FormatErrResp format error response
+func FormatErrResp(err error) (response Response) {
+	response = Response{Status: FAIL}
+	root := errors.Root(err)
+	// Some types cannot be used as map keys, for example slices.
+	// If an error's underlying type is one of these, don't panic.
+	// Just treat it like any other missing entry.
+	defer func() {
+		if err := recover(); err != nil {
+			response.ErrorDetail = ""
+		}
+	}()
+
+	if info, ok := respErrFormatter[root]; ok {
+		response.Code = info.ChainCode
+		response.Msg = info.Message
+		response.ErrorDetail = errors.Detail(err)
+	}
+	return response
+}
+
 //NewErrorResponse error response
 func NewErrorResponse(err error) Response {
-	root := errors.Root(err)
-	if info, ok := respErrFormatter[root]; ok {
-		return Response{
-			Status:      FAIL,
-			Code:        info.ChainCode,
-			Msg:         info.Message,
-			ErrorDetail: errors.Detail(err),
-		}
+	response := FormatErrResp(err)
+	if response.Msg == "" {
+		response.Msg = err.Error()
 	}
-	return Response{
-		Status:      FAIL,
-		Msg:         errors.Detail(err),
-		ErrorDetail: errors.Detail(err),
-	}
+	return response
 }
 
 type waitHandler struct {

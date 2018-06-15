@@ -8,7 +8,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	crypto "github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
@@ -30,17 +30,6 @@ var (
 	ErrConnectBannedPeer = errors.New("Connect banned peer")
 )
 
-// An AddrBook represents an address book from the pex package, which is used to store peer addresses.
-type AddrBook interface {
-	AddAddress(*NetAddress, *NetAddress) error
-	AddOurAddress(*NetAddress)
-	MarkGood(*NetAddress)
-	RemoveAddress(*NetAddress)
-	SaveToFile() error
-}
-
-//-----------------------------------------------------------------------------
-
 // Switch handles peer connections and exposes an API to receive incoming messages
 // on `Reactors`.  Each `Reactor` is responsible for handling incoming messages of one
 // or more `Channels`.  So while sending outgoing messages is typically performed on the peer,
@@ -48,7 +37,7 @@ type AddrBook interface {
 type Switch struct {
 	cmn.BaseService
 
-	Config       *cfg.P2PConfig
+	Config       *cfg.Config
 	peerConfig   *PeerConfig
 	listeners    []Listener
 	reactors     map[string]Reactor
@@ -58,25 +47,23 @@ type Switch struct {
 	dialing      *cmn.CMap
 	nodeInfo     *NodeInfo             // our node info
 	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
-	addrBook     AddrBook
 	bannedPeer   map[string]time.Time
 	db           dbm.DB
 	mtx          sync.Mutex
 }
 
 // NewSwitch creates a new Switch with the given config.
-func NewSwitch(config *cfg.P2PConfig, addrBook AddrBook, trustHistoryDB dbm.DB) *Switch {
+func NewSwitch(config *cfg.Config) *Switch {
 	sw := &Switch{
 		Config:       config,
-		peerConfig:   DefaultPeerConfig(config),
+		peerConfig:   DefaultPeerConfig(config.P2P),
 		reactors:     make(map[string]Reactor),
 		chDescs:      make([]*connection.ChannelDescriptor, 0),
 		reactorsByCh: make(map[byte]Reactor),
 		peers:        NewPeerSet(),
 		dialing:      cmn.NewCMap(),
 		nodeInfo:     nil,
-		addrBook:     addrBook,
-		db:           trustHistoryDB,
+		db:           dbm.NewDB("trusthistory", config.DBBackend, config.DBDir()),
 	}
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	sw.bannedPeer = make(map[string]time.Time)
@@ -281,7 +268,7 @@ func (sw *Switch) StopPeerGracefully(peer *Peer) {
 }
 
 func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
-	peerConn, err := newInboundPeerConn(conn, sw.nodePrivKey, sw.Config)
+	peerConn, err := newInboundPeerConn(conn, sw.nodePrivKey, sw.Config.P2P)
 	if err != nil {
 		conn.Close()
 		return err
@@ -291,17 +278,6 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 		conn.Close()
 		return err
 	}
-	return nil
-}
-
-func (sw *Switch) addrBookDelSelf() error {
-	addr, err := NewNetAddressString(sw.nodeInfo.ListenAddr)
-	if err != nil {
-		return err
-	}
-
-	sw.addrBook.RemoveAddress(addr)
-	sw.addrBook.AddOurAddress(addr)
 	return nil
 }
 
@@ -334,7 +310,6 @@ func (sw *Switch) delBannedPeer(addr string) error {
 
 func (sw *Switch) filterConnByIP(ip string) error {
 	if ip == sw.nodeInfo.ListenHost() {
-		sw.addrBookDelSelf()
 		return ErrConnectSelf
 	}
 	return sw.checkBannedPeer(ip)
@@ -346,7 +321,6 @@ func (sw *Switch) filterConnByPeer(peer *Peer) error {
 	}
 
 	if sw.nodeInfo.PubKey.Equals(peer.PubKey().Wrap()) {
-		sw.addrBookDelSelf()
 		return ErrConnectSelf
 	}
 
@@ -366,7 +340,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		// disconnect if we alrady have 2 * MaxNumPeers, we do this because we wanna address book get exchanged even if
 		// the connect is full. The pex will disconnect the peer after address exchange, the max connected peer won't
 		// be double of MaxNumPeers
-		if sw.peers.Size() >= sw.Config.MaxNumPeers*2 {
+		if sw.peers.Size() >= sw.Config.P2P.MaxNumPeers*2 {
 			inConn.Close()
 			log.Info("Ignoring inbound connection: already have enough peers.")
 			continue
