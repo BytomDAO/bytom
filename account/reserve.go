@@ -299,7 +299,7 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, b
 	}
 	//sort  preReservedUTXOs
 	if preReservedUTXOs != nil && len(preReservedUTXOs) > 1 {
-		sort.SliceIsSorted(preReservedUTXOs, func(i, j int) bool {
+		sort.Slice(preReservedUTXOs, func(i, j int) bool {
 			return preReservedUTXOs[i].Amount < preReservedUTXOs[j].Amount
 		})
 	}
