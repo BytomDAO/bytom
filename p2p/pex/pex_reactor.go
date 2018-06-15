@@ -63,7 +63,7 @@ func (r *PEXReactor) AddPeer(p *p2p.Peer) error {
 		return nil
 	}
 
-	nodes := make([]*discover.Node, 20)
+	nodes := make([]*discover.Node, 10)
 	if n := r.discv.ReadRandomNodes(nodes); n == 0 {
 		return nil
 	}
@@ -86,7 +86,7 @@ func (r *PEXReactor) Receive(chID byte, p *p2p.Peer, rawMsg []byte) {
 
 	switch msg := msg.(type) {
 	case *pexRequestMessage:
-		nodes := make([]*discover.Node, 20)
+		nodes := make([]*discover.Node, 10)
 		if n := r.discv.ReadRandomNodes(nodes); n == 0 {
 			return
 		}
