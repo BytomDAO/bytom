@@ -132,6 +132,7 @@ func DecodeRetireAction(data []byte) (Action, error) {
 
 type retireAction struct {
 	bc.AssetAmount
+	Arbitrary string `json:"arbitrary"`
 }
 
 func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -144,6 +145,12 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	}
 	if len(missing) > 0 {
 		return MissingFieldsError(missing...)
+	}
+
+	in := types.NewRetireInput(a.Arbitrary)
+	err := b.AddInput(in, &SigningInstruction{})
+	if err != nil {
+		return err
 	}
 
 	out := types.NewTxOutput(*a.AssetId, a.Amount, retirementProgram)
