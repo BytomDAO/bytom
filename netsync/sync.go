@@ -75,7 +75,7 @@ func (sm *SyncManager) syncer() {
 
 // synchronise tries to sync up our local block chain with a remote peer.
 func (sm *SyncManager) synchronise() {
-	log.Info("bk peer num:", sm.blockKeeper.peers.Len(), " sw peer num:", sm.sw.Peers().Size(), " ", sm.sw.Peers().List())
+	log.Debug("bk peer num:", sm.blockKeeper.peers.Len(), " sw peer num:", sm.sw.Peers().Size(), " ", sm.sw.Peers().List())
 	// Make sure only one goroutine is ever allowed past this point at once
 	if !atomic.CompareAndSwapInt32(&sm.synchronising, 0, 1) {
 		log.Info("Synchronising ...")

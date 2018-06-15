@@ -48,7 +48,7 @@ func CreateRoutableAddr() (addr string, netAddr *NetAddress) {
 // If connect==Connect2Switches, the switches will be fully connected.
 // initSwitch defines how the ith switch should be initialized (ie. with what reactors).
 // NOTE: panics if any switch fails to start.
-func MakeConnectedSwitches(cfg *cfg.P2PConfig, n int, initSwitch func(int, *Switch) *Switch, connect func([]*Switch, int, int)) []*Switch {
+func MakeConnectedSwitches(cfg *cfg.Config, n int, initSwitch func(int, *Switch) *Switch, connect func([]*Switch, int, int)) []*Switch {
 	switches := make([]*Switch, n)
 	for i := 0; i < n; i++ {
 		switches[i] = MakeSwitch(cfg, i, "testing", "123.123.123", initSwitch)
@@ -103,11 +103,11 @@ func startSwitches(switches []*Switch) error {
 	return nil
 }
 
-func MakeSwitch(cfg *cfg.P2PConfig, i int, network, version string, initSwitch func(int, *Switch) *Switch) *Switch {
+func MakeSwitch(cfg *cfg.Config, i int, network, version string, initSwitch func(int, *Switch) *Switch) *Switch {
 	privKey := crypto.GenPrivKeyEd25519()
 	// new switch, add reactors
 	// TODO: let the config be passed in?
-	s := initSwitch(i, NewSwitch(cfg, nil, nil))
+	s := initSwitch(i, NewSwitch(cfg))
 	s.SetNodeInfo(&NodeInfo{
 		PubKey:     privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
 		Moniker:    cmn.Fmt("switch%d", i),
