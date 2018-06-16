@@ -297,12 +297,10 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, b
 		}
 		preReservedUTXOs = append(preReservedUTXOs, u)
 	}
-	//sort  preReservedUTXOs. UTXO.Amount is uint64 not int type,here should change code.
-	if preReservedUTXOs != nil && len(preReservedUTXOs) > 1 {
+	//sort  preReservedUTXOs
 		sort.Slice(preReservedUTXOs, func(i, j int) bool {
 			return preReservedUTXOs[i].Amount < preReservedUTXOs[j].Amount
 		})
-	}
 	for _, u := range preReservedUTXOs {
 		reserved += u.Amount
 		reservedUTXOs = append(reservedUTXOs, u)
