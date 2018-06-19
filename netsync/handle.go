@@ -1,17 +1,20 @@
 package netsync
 
 import (
+	"encoding/hex"
+	"net"
+	"path"
 	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/pex"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -43,30 +46,26 @@ type SyncManager struct {
 
 //NewSyncManager create a sync manager
 func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
-	// Create the protocol manager with the base fields
+	sw := p2p.NewSwitch(config)
+	peers := newPeerSet()
+	dropPeerCh := make(chan *string, maxQuitReq)
 	manager := &SyncManager{
-		txPool:     txPool,
-		chain:      chain,
-		privKey:    crypto.GenPrivKeyEd25519(),
-		peers:      newPeerSet(),
-		newTxCh:    make(chan *types.Tx, maxTxChanSize),
-		newBlockCh: newBlockCh,
-		newPeerCh:  make(chan struct{}),
-		txSyncCh:   make(chan *txsync),
-		dropPeerCh: make(chan *string, maxQuitReq),
-		quitSync:   make(chan struct{}),
-		config:     config,
+		sw:          sw,
+		txPool:      txPool,
+		chain:       chain,
+		privKey:     crypto.GenPrivKeyEd25519(),
+		fetcher:     NewFetcher(chain, sw, peers),
+		blockKeeper: newBlockKeeper(chain, sw, peers, dropPeerCh),
+		peers:       peers,
+		newTxCh:     make(chan *types.Tx, maxTxChanSize),
+		newBlockCh:  newBlockCh,
+		newPeerCh:   make(chan struct{}),
+		txSyncCh:    make(chan *txsync),
+		dropPeerCh:  dropPeerCh,
+		quitSync:    make(chan struct{}),
+		config:      config,
 	}
 
-	trustHistoryDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-	addrBook := pex.NewAddrBook(config.P2P.AddrBookFile(), config.P2P.AddrBookStrict)
-	manager.sw = p2p.NewSwitch(config.P2P, addrBook, trustHistoryDB)
-
-	pexReactor := pex.NewPEXReactor(addrBook)
-	manager.sw.AddReactor("PEX", pexReactor)
-
-	manager.blockKeeper = newBlockKeeper(manager.chain, manager.sw, manager.peers, manager.dropPeerCh)
-	manager.fetcher = NewFetcher(chain, manager.sw, manager.peers)
 	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
@@ -77,10 +76,17 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		p, address := protocolAndAddress(manager.config.P2P.ListenAddress)
 		l, listenerStatus = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP)
 		manager.sw.AddListener(l)
+
+		discv, err := initDiscover(config, &manager.privKey, l.ExternalAddress().Port)
+		if err != nil {
+			return nil, err
+		}
+
+		pexReactor := pex.NewPEXReactor(discv)
+		manager.sw.AddReactor("PEX", pexReactor)
 	}
 	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
 	manager.sw.SetNodePrivKey(manager.privKey)
-
 	return manager, nil
 }
 
@@ -120,14 +126,11 @@ func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 	return nodeInfo
 }
 
-func (sm *SyncManager) netStart() error {
-	_, err := sm.sw.Start()
-	return err
-}
-
 //Start start sync manager service
 func (sm *SyncManager) Start() {
-	go sm.netStart()
+	if _, err := sm.sw.Start(); err != nil {
+		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
+	}
 	// broadcast transactions
 	go sm.txBroadcastLoop()
 
@@ -144,6 +147,38 @@ func (sm *SyncManager) Start() {
 func (sm *SyncManager) Stop() {
 	close(sm.quitSync)
 	sm.sw.Stop()
+}
+
+func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) (*discover.Network, error) {
+	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	realaddr := conn.LocalAddr().(*net.UDPAddr)
+	ntab, err := discover.ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover.db"), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// add the seeds node to the discover table
+	if config.P2P.Seeds == "" {
+		return ntab, nil
+	}
+	nodes := []*discover.Node{}
+	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
+		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
+		nodes = append(nodes, discover.MustParseNode(url))
+	}
+	if err = ntab.SetFallbackNodes(nodes); err != nil {
+		return nil, err
+	}
+	return ntab, nil
 }
 
 func (sm *SyncManager) txBroadcastLoop() {
