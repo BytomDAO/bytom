@@ -3,11 +3,13 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
+	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc/types"
-	"sort"
 )
 
 const (
@@ -19,8 +21,7 @@ func calcUnconfirmedTxKey(formatKey string) []byte {
 	return []byte(UnconfirmedTxPrefix + formatKey)
 }
 
-// SaveUnconfirmedTx save unconfirmed annotated transaction to the database
-func (w *Wallet) SaveUnconfirmedTx(tx *types.Tx) error {
+func (w *Wallet) buildAnnotatedUnconfirmedTx(tx *types.Tx) *query.AnnotatedTx {
 	annotatedTx := &query.AnnotatedTx{
 		ID:        tx.ID,
 		Timestamp: uint64(time.Now().Unix()),
@@ -36,7 +37,40 @@ func (w *Wallet) SaveUnconfirmedTx(tx *types.Tx) error {
 		annotatedTx.Outputs = append(annotatedTx.Outputs, w.BuildAnnotatedOutput(tx, i))
 	}
 
+	return annotatedTx
+}
+
+// checkRelatedTransaction check related unconfirmed transaction.
+func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
+	for _, v := range tx.Outputs {
+		var hash [32]byte
+		sha3pool.Sum256(hash[:], v.ControlProgram)
+		if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
+			return true
+		}
+	}
+
+	for _, v := range tx.Inputs {
+		outid, err := v.SpentOutputID()
+		if err != nil {
+			continue
+		}
+		if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+// SaveUnconfirmedTx save unconfirmed annotated transaction to the database
+func (w *Wallet) SaveUnconfirmedTx(tx *types.Tx) error {
+	if !w.checkRelatedTransaction(tx) {
+		return nil
+	}
+
 	// annotate account and asset
+	annotatedTx := w.buildAnnotatedUnconfirmedTx(tx)
 	annotatedTxs := []*query.AnnotatedTx{}
 	annotatedTxs = append(annotatedTxs, annotatedTx)
 	annotateTxsAccount(annotatedTxs, w.DB)
