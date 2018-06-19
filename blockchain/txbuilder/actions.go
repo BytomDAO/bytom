@@ -132,11 +132,14 @@ func DecodeRetireAction(data []byte) (Action, error) {
 
 type retireAction struct {
 	bc.AssetAmount
-	Arbitrary string `json:"arbitrary"`
+	Program json.HexBytes `json:"control_program"`
 }
 
 func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	var missing []string
+	if len(a.Program) == 0 {
+		missing = append(missing, "control_program")
+	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
 	}
@@ -147,12 +150,6 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	in := types.NewRetireInput(a.Arbitrary)
-	err := b.AddInput(in, &SigningInstruction{})
-	if err != nil {
-		return err
-	}
-
-	out := types.NewTxOutput(*a.AssetId, a.Amount, retirementProgram)
+	out := types.NewTxOutput(*a.AssetId, a.Amount, a.Program)
 	return b.AddOutput(out)
 }
