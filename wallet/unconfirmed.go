@@ -40,8 +40,8 @@ func (w *Wallet) buildAnnotatedUnconfirmedTx(tx *types.Tx) *query.AnnotatedTx {
 	return annotatedTx
 }
 
-// checkRelatedUnconfirmedTx check related unconfirmed transaction.
-func (w *Wallet) checkRelatedUnconfirmedTx(tx *types.Tx) bool {
+// checkRelatedTransaction check related unconfirmed transaction.
+func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 	for _, v := range tx.Outputs {
 		var hash [32]byte
 		sha3pool.Sum256(hash[:], v.ControlProgram)
@@ -65,7 +65,7 @@ func (w *Wallet) checkRelatedUnconfirmedTx(tx *types.Tx) bool {
 
 // SaveUnconfirmedTx save unconfirmed annotated transaction to the database
 func (w *Wallet) SaveUnconfirmedTx(tx *types.Tx) error {
-	if !w.checkRelatedUnconfirmedTx(tx) {
+	if !w.checkRelatedTransaction(tx) {
 		return nil
 	}
 
