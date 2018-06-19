@@ -150,29 +150,45 @@ func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, 
 	defer m.accountMu.Unlock()
 
 	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
-	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
+	aliasKey := aliasKey(normalizedAlias)
+
+	if existedAccountId := m.db.Get(aliasKey); existedAccountId != nil {
 		return nil, ErrDuplicateAlias
 	}
 
-	signer, err := signers.Create("account", xpubs, quorum, m.getNextAccountIndex())
-	id := signers.IDGenerate()
+	account, err := m.newAccount(xpubs, quorum, normalizedAlias)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
-	account := &Account{Signer: signer, ID: id, Alias: normalizedAlias}
-	rawAccount, err := json.Marshal(account)
+	err = m.saveToDb(account, aliasKey)
 	if err != nil {
-		return nil, ErrMarshalAccount
+		return nil, err
 	}
-	storeBatch := m.db.NewBatch()
-
-	accountID := Key(id)
-	storeBatch.Set(accountID, rawAccount)
-	storeBatch.Set(aliasKey(normalizedAlias), []byte(id))
-	storeBatch.Write()
 
 	return account, nil
+}
+
+func (m *Manager) newAccount(xpubs []chainkd.XPub, quorum int, normalizedAlias string) (*Account, error) {
+	signer, err := signers.Create("account", xpubs, quorum, m.getNextAccountIndex())
+	if err != nil {
+		return nil, err
+	}
+	accountId := signers.IDGenerate()
+	account := &Account{Signer: signer, ID: accountId, Alias: normalizedAlias}
+	return account, nil
+}
+
+func (m *Manager) saveToDb(account *Account, aliasKey []byte) error {
+	storeBatch := m.db.NewBatch()
+	accountJson, err := json.Marshal(account)
+	if err != nil {
+		return ErrMarshalAccount
+	}
+	storeBatch.Set(Key(account.ID), accountJson)
+	storeBatch.Set(aliasKey, []byte(account.ID))
+	storeBatch.Write()
+	return nil
 }
 
 // FindByAlias retrieves an account's Signer record by its alias
