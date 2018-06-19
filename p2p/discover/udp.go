@@ -48,7 +48,7 @@ var (
 
 // Timeouts
 const (
-	respTimeout = 500 * time.Millisecond
+	respTimeout = 1 * time.Second
 	queryDelay  = 1000 * time.Millisecond
 	expiration  = 20 * time.Second
 
