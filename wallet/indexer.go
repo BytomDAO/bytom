@@ -500,19 +500,24 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 }
 
 // GetAccountUTXOs return all account unspent outputs
-func (w *Wallet) GetAccountUTXOs(id string) []account.UTXO {
-	var accountUTXOs []account.UTXO
+func (w *Wallet) GetAccountUTXOs(id string, isSmartContract bool) []account.UTXO {
+	accountUTXO := account.UTXO{}
+	accountUTXOs := []account.UTXO{}
 
-	accountUTXOIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix + id))
+	prefix := account.UTXOPreFix
+	if isSmartContract {
+		prefix = account.SUTXOPrefix
+	}
+	accountUTXOIter := w.DB.IteratorPrefix([]byte(prefix + id))
 	defer accountUTXOIter.Release()
 	for accountUTXOIter.Next() {
-		accountUTXO := account.UTXO{}
 		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {
-			hashKey := accountUTXOIter.Key()[len(account.UTXOPreFix):]
+			hashKey := accountUTXOIter.Key()[len(prefix):]
 			log.WithField("UTXO hash", string(hashKey)).Warn("get account UTXO")
-		} else {
-			accountUTXOs = append(accountUTXOs, accountUTXO)
+			continue
 		}
+
+		accountUTXOs = append(accountUTXOs, accountUTXO)
 	}
 
 	return accountUTXOs
@@ -520,7 +525,7 @@ func (w *Wallet) GetAccountUTXOs(id string) []account.UTXO {
 
 // GetAccountBalances return all account balances
 func (w *Wallet) GetAccountBalances(id string) ([]AccountBalance, error) {
-	return w.indexBalances(w.GetAccountUTXOs(""))
+	return w.indexBalances(w.GetAccountUTXOs("", false))
 }
 
 // AccountBalance account balance
@@ -535,7 +540,7 @@ type AccountBalance struct {
 
 func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) ([]AccountBalance, error) {
 	accBalance := make(map[string]map[string]uint64)
-	balances := make([]AccountBalance, 0)
+	balances := []AccountBalance{}
 
 	for _, accountUTXO := range accountUTXOs {
 		assetID := accountUTXO.AssetID.String()

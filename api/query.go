@@ -232,9 +232,10 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 
 // POST /list-unspent-outputs
 func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
-	ID string `json:"id"`
+	ID            string `json:"id"`
+	SmartContract bool   `json:"smart_contract"`
 }) Response {
-	accountUTXOs := a.wallet.GetAccountUTXOs(filter.ID)
+	accountUTXOs := a.wallet.GetAccountUTXOs(filter.ID, filter.SmartContract)
 
 	UTXOs := []query.AnnotatedUTXO{}
 	for _, utxo := range accountUTXOs {
