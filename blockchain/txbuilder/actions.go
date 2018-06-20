@@ -132,14 +132,11 @@ func DecodeRetireAction(data []byte) (Action, error) {
 
 type retireAction struct {
 	bc.AssetAmount
-	Address string `json:"address"`
+	Comment string `json:"comment"`
 }
 
 func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	var missing []string
-	if a.Address == "" {
-		missing = append(missing, "address")
-	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
 	}
@@ -150,25 +147,10 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	address, err := common.DecodeAddress(a.Address, &consensus.ActiveNetParams)
+	program, err := vmutil.RetireProgram([]byte(a.Comment))
 	if err != nil {
 		return err
 	}
-	redeemContract := address.ScriptAddress()
-	program := []byte{}
-
-	switch address.(type) {
-	case *common.AddressWitnessPubKeyHash:
-		program, err = vmutil.P2WPKHProgram(redeemContract)
-	case *common.AddressWitnessScriptHash:
-		program, err = vmutil.P2WSHProgram(redeemContract)
-	default:
-		return errors.New("unsupport address type")
-	}
-	if err != nil {
-		return err
-	}
-
 	out := types.NewTxOutput(*a.AssetId, a.Amount, program)
 	return b.AddOutput(out)
 }
