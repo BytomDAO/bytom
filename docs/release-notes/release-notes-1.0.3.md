@@ -17,7 +17,7 @@ You can operate according to the user manual.[(Bytom User Manual)](URL 'https://
 1.0.3 changelog
 ================
 #### Bytom Node
-- [`PR#969`](https://github.com/Bytom/bytom/pull/969) - Fix x86-32 system exeception on build transaction.
+- [`PR #969`](https://github.com/Bytom/bytom/pull/969) - Fix x86-32 system exeception on build transaction.
 - [`PR #983`](https://github.com/Bytom/bytom/pull/983) - API transaction json struct add tx_size field.
 - [`PR #987`](https://github.com/Bytom/bytom/pull/987) - API Get-block response's transaction struct add mux_id.
 - [`PR #988`](https://github.com/Bytom/bytom/pull/988) - Add API decode-program.
