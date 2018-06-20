@@ -59,7 +59,9 @@ func P2WSHProgram(hash []byte) ([]byte, error) {
 func RetireProgram(comment []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_FAIL)
-	builder.AddData(comment)
+	if len(comment) != 0 {
+		builder.AddData(comment)
+	}
 	return builder.Build()
 }
 
