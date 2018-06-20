@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"encoding/json"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,6 +34,9 @@ var (
 	ErrMatchUTXO = errors.New("can't match enough valid utxos")
 	// ErrReservation indicates the reserver doesn't found the reservation with the provided ID.
 	ErrReservation = errors.New("couldn't find reservation")
+
+	// Limit for Utox
+	LimitUtoxSize = 21
 )
 
 // UTXO describes an individual account utxo.
@@ -287,19 +291,33 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, b
 
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
-	for _, u := range utxos {
-		// If the UTXO is already reserved, skip it.
-		if _, ok := sr.reserved[u.OutputID]; ok {
-			unavailable += u.Amount
-			continue
-		}
+	// Sort utxos
+	sort.Slice(utxos, func(i, j int) bool {
+		return utxos[i].Amount < utxos[j].Amount
+	})
+	// Priority use of small balances in utxos
+	utxosLength := len(utxos)
+	for start := 0; start < utxosLength; start++ {
+		var reservedTmp uint64
+		var reservedUTXOsTmp []*UTXO
 
-		reserved += u.Amount
-		reservedUTXOs = append(reservedUTXOs, u)
-		if reserved >= amount {
-			break
+		for i := 0; i < Min(utxosLength, start+LimitUtoxSize); i++ {
+			// If the UTXO is already reserved, skip it.
+			if _, ok := sr.reserved[utxos[i].OutputID]; ok {
+				unavailable += utxos[i].Amount
+				continue
+			}
+
+			reservedTmp += utxos[i].Amount
+			reservedUTXOsTmp = append(reservedUTXOsTmp, utxos[i])
+			if reservedTmp >= amount {
+				reserved = reservedTmp
+				reservedUTXOs = reservedUTXOsTmp
+				break
+			}
 		}
 	}
+
 	if reserved+unavailable < amount {
 		// Even if everything was available, this account wouldn't have
 		// enough to satisfy the request.
