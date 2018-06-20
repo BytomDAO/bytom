@@ -9,6 +9,8 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"sort"
+
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -278,13 +280,13 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, b
 	var (
 		reserved, unavailable uint64
 		reservedUTXOs         []*UTXO
+		preReservedUTXOs      []*UTXO
 	)
 
 	utxos, isImmature, err := findMatchingUTXOs(sr.db, sr.src, sr.currentHeight)
 	if err != nil {
 		return nil, 0, isImmature, errors.Wrap(err)
 	}
-
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
 	for _, u := range utxos {
@@ -293,7 +295,13 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, b
 			unavailable += u.Amount
 			continue
 		}
-
+		preReservedUTXOs = append(preReservedUTXOs, u)
+	}
+	//sort  preReservedUTXOs
+		sort.Slice(preReservedUTXOs, func(i, j int) bool {
+			return preReservedUTXOs[i].Amount < preReservedUTXOs[j].Amount
+		})
+	for _, u := range preReservedUTXOs {
 		reserved += u.Amount
 		reservedUTXOs = append(reservedUTXOs, u)
 		if reserved >= amount {
