@@ -2,13 +2,16 @@ package api
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/consensus"
+	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -263,4 +266,47 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 func (a *API) gasRate() Response {
 	gasrate := map[string]int64{"gas_rate": consensus.VMGasRate}
 	return NewSuccessResponse(gasrate)
+}
+
+// AccountPubkey is structure of account pubkey
+type AccountPubkey struct {
+	Root   chainkd.XPub         `json:"xpub"`
+	Pubkey string               `json:"pubkey"`
+	Path   []chainjson.HexBytes `json:"derivation_path"`
+}
+
+// POST /list-pubkeys
+func (a *API) listPubKeys(ctx context.Context, ins struct {
+	AccountID string `json:"account_id"`
+}) Response {
+	accPubKeys := []AccountPubkey{}
+	if ins.AccountID == "" {
+		return NewSuccessResponse(accPubKeys)
+	}
+
+	account, err := a.wallet.AccountMgr.FindByID(ctx, ins.AccountID)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	idx := a.wallet.AccountMgr.GetCurrentContractIndex(ins.AccountID)
+	rootXPub := account.XPubs[0]
+	for i := uint64(1); i <= idx; i++ {
+		rawPath := signers.Path(account.Signer, signers.AccountKeySpace, i)
+		derivedXPub := rootXPub.Derive(rawPath)
+		pubkey := derivedXPub.PublicKey()
+
+		var path []chainjson.HexBytes
+		for _, p := range rawPath {
+			path = append(path, chainjson.HexBytes(p))
+		}
+
+		accPubKeys = append([]AccountPubkey{{
+			Root:   rootXPub,
+			Pubkey: hex.EncodeToString(pubkey),
+			Path:   path,
+		}}, accPubKeys...)
+	}
+
+	return NewSuccessResponse(accPubKeys)
 }
