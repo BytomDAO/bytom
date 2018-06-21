@@ -36,7 +36,7 @@ var (
 	ErrReservation = errors.New("couldn't find reservation")
 
 	// Limit for Utox
-	LimitUtoxSize = 21
+	LimitUtxoSize = 21
 )
 
 // UTXO describes an individual account utxo.
@@ -302,7 +302,7 @@ exit:
 		var reservedTmp uint64
 		var reservedUTXOsTmp []*UTXO
 
-		for i := 0; i < Min(utxosLength, start+LimitUtoxSize); i++ {
+		for i := 0; i < Min(start, utxosLength+LimitUtxoSize); i++ {
 			// If the UTXO is already reserved, skip it.
 			if _, ok := sr.reserved[utxos[i].OutputID]; ok {
 				unavailable += utxos[i].Amount
