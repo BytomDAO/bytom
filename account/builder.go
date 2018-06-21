@@ -35,8 +35,6 @@ type spendAction struct {
 func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 	resultActions := []txbuilder.Action{}
 	spendActionMap := make(map[string]*spendAction)
-	spendCountMap := make(map[string]int32)
-	spendPositionMap := make(map[string]int)
 
 	for _, act := range actions {
 		switch act := act.(type) {
@@ -46,20 +44,12 @@ func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 				tmpAct.Amount += act.Amount
 			} else {
 				spendActionMap[actionKey] = act
-			}
-			spendCountMap[actionKey]++
-
-			if spendCountMap[actionKey] == 1 {
-				resultActions = append(resultActions, spendActionMap[actionKey])
-				spendPositionMap[actionKey] = len(resultActions) - 1
-			} else {
-				resultActions[spendPositionMap[actionKey]] = spendActionMap[actionKey]
+				resultActions = append(resultActions, act)
 			}
 		default:
 			resultActions = append(resultActions, act)
 		}
 	}
-
 	return resultActions
 }
 
