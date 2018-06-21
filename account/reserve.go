@@ -297,6 +297,7 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, b
 	})
 	// Priority use of small balances in utxos
 	utxosLength := len(utxos)
+exit:
 	for start := 0; start < utxosLength; start++ {
 		var reservedTmp uint64
 		var reservedUTXOsTmp []*UTXO
@@ -313,7 +314,7 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, b
 			if reservedTmp >= amount {
 				reserved = reservedTmp
 				reservedUTXOs = reservedUTXOsTmp
-				break
+				break exit
 			}
 		}
 	}
