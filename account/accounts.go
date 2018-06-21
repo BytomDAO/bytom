@@ -144,14 +144,13 @@ func (m *Manager) getNextContractIndex(accountID string) uint64 {
 	return nextIndex
 }
 
-// GetCurrentContractIndex return the current index
-func (m *Manager) GetCurrentContractIndex(accountID string) uint64 {
+// GetContractIndex return the current index
+func (m *Manager) GetContractIndex(accountID string) uint64 {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 
 	index := uint64(1)
-	rawIndexBytes := m.db.Get(contractIndexKey(accountID))
-	if rawIndexBytes != nil {
+	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
 		index = common.BytesToUnit64(rawIndexBytes)
 	}
 	return index

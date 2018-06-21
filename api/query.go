@@ -268,32 +268,32 @@ func (a *API) gasRate() Response {
 	return NewSuccessResponse(gasrate)
 }
 
-// AccountPubkey is structure of account pubkey
-type AccountPubkey struct {
-	Root   chainkd.XPub         `json:"xpub"`
+// PubKeyInfo is structure of pubkey info
+type PubKeyInfo struct {
 	Pubkey string               `json:"pubkey"`
 	Path   []chainjson.HexBytes `json:"derivation_path"`
+}
+
+// AccountPubkey is detail of account pubkey info
+type AccountPubkey struct {
+	RootXPub    chainkd.XPub `json:"root_xpub"`
+	PubKeyInfos []PubKeyInfo `json:"pubkey_infos"`
 }
 
 // POST /list-pubkeys
 func (a *API) listPubKeys(ctx context.Context, ins struct {
 	AccountID string `json:"account_id"`
 }) Response {
-	accPubKeys := []AccountPubkey{}
-	if ins.AccountID == "" {
-		return NewSuccessResponse(accPubKeys)
-	}
-
 	account, err := a.wallet.AccountMgr.FindByID(ctx, ins.AccountID)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
-	idx := a.wallet.AccountMgr.GetCurrentContractIndex(ins.AccountID)
-	rootXPub := account.XPubs[0]
+	pubKeyInfos := []PubKeyInfo{}
+	idx := a.wallet.AccountMgr.GetContractIndex(ins.AccountID)
 	for i := uint64(1); i <= idx; i++ {
 		rawPath := signers.Path(account.Signer, signers.AccountKeySpace, i)
-		derivedXPub := rootXPub.Derive(rawPath)
+		derivedXPub := account.XPubs[0].Derive(rawPath)
 		pubkey := derivedXPub.PublicKey()
 
 		var path []chainjson.HexBytes
@@ -301,12 +301,14 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 			path = append(path, chainjson.HexBytes(p))
 		}
 
-		accPubKeys = append([]AccountPubkey{{
-			Root:   rootXPub,
+		pubKeyInfos = append([]PubKeyInfo{{
 			Pubkey: hex.EncodeToString(pubkey),
 			Path:   path,
-		}}, accPubKeys...)
+		}}, pubKeyInfos...)
 	}
 
-	return NewSuccessResponse(accPubKeys)
+	return NewSuccessResponse(&AccountPubkey{
+		RootXPub:    account.XPubs[0],
+		PubKeyInfos: pubKeyInfos,
+	})
 }
