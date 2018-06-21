@@ -144,6 +144,18 @@ func (m *Manager) getNextContractIndex(accountID string) uint64 {
 	return nextIndex
 }
 
+// GetContractIndex return the current index
+func (m *Manager) GetContractIndex(accountID string) uint64 {
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
+
+	index := uint64(1)
+	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
+		index = common.BytesToUnit64(rawIndexBytes)
+	}
+	return index
+}
+
 // Create creates a new Account.
 func (m *Manager) Create(ctx context.Context, xpubs []chainkd.XPub, quorum int, alias string) (*Account, error) {
 	m.accountMu.Lock()

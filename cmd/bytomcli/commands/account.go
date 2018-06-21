@@ -156,6 +156,24 @@ var validateAddressCmd = &cobra.Command{
 	},
 }
 
+var listPubKeysCmd = &cobra.Command{
+	Use:   "list-pubkeys <accountID>",
+	Short: "list the account pubkeys",
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		var ins = struct {
+			AccountID string `json:"account_id"`
+		}{AccountID: args[0]}
+
+		data, exitCode := util.ClientCall("/list-pubkeys", &ins)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
 var listBalancesCmd = &cobra.Command{
 	Use:   "list-balances",
 	Short: "List the accounts balances",
