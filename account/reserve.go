@@ -34,9 +34,6 @@ var (
 	ErrMatchUTXO = errors.New("can't match enough valid utxos")
 	// ErrReservation indicates the reserver doesn't found the reservation with the provided ID.
 	ErrReservation = errors.New("couldn't find reservation")
-
-	// Limit for Utox
-	LimitUtxoSize = 21
 )
 
 // UTXO describes an individual account utxo.
@@ -291,34 +288,7 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, b
 
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
-	// Sort utxos
-	sort.Slice(utxos, func(i, j int) bool {
-		return utxos[i].Amount < utxos[j].Amount
-	})
-	// Priority use of small balances in utxos
-	utxosLength := len(utxos)
-exit:
-	for start := 0; start < utxosLength; start++ {
-		var reservedTmp uint64
-		var reservedUTXOsTmp []*UTXO
-
-		for i := start; i < Min(utxosLength, start+LimitUtxoSize); i++ {
-			// If the UTXO is already reserved, skip it.
-			if _, ok := sr.reserved[utxos[i].OutputID]; ok {
-				unavailable += utxos[i].Amount
-				continue
-			}
-
-			reservedTmp += utxos[i].Amount
-			reservedUTXOsTmp = append(reservedUTXOsTmp, utxos[i])
-			if reservedTmp >= amount {
-				reserved = reservedTmp
-				reservedUTXOs = reservedUTXOsTmp
-				break exit
-			}
-		}
-	}
-
+	reserved, unavailable, reservedUTXOs = findTheBestUTXOs(utxos, 21, amount, sr.reserved)
 	if reserved+unavailable < amount {
 		// Even if everything was available, this account wouldn't have
 		// enough to satisfy the request.
@@ -357,6 +327,44 @@ func (sr *sourceReserver) cancel(res *reservation) {
 	for _, utxo := range res.UTXOs {
 		delete(sr.reserved, utxo.OutputID)
 	}
+}
+
+func findTheBestUTXOs(utxos []*UTXO, limit int, target uint64, filter map[bc.Hash]uint64) (uint64, uint64, []*UTXO) {
+	var (
+		reserved, unavailable uint64
+		reservedUTXOs         []*UTXO
+		utxosLength           = len(utxos)
+	)
+
+	// Sort utxos
+	sort.Slice(utxos, func(i, j int) bool {
+		return utxos[i].Amount < utxos[j].Amount
+	})
+	// Priority use of small balances in utxos
+exit:
+	for start := 0; start < utxosLength; start++ {
+		var reservedTmp uint64
+		var unavailableTmp uint64
+		var reservedUTXOsTmp []*UTXO
+
+		for i := start; i < Min(utxosLength, start+limit); i++ {
+			// If the UTXO is already reserved, skip it.
+			if _, ok := filter[utxos[i].OutputID]; ok {
+				unavailableTmp += utxos[i].Amount
+				continue
+			}
+
+			reservedTmp += utxos[i].Amount
+			reservedUTXOsTmp = append(reservedUTXOsTmp, utxos[i])
+			if reservedTmp >= target {
+				reserved = reservedTmp
+				reservedUTXOs = reservedUTXOsTmp
+				unavailable = unavailableTmp
+				break exit
+			}
+		}
+	}
+	return reserved, unavailable, reservedUTXOs
 }
 
 func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*UTXO, bool, error) {
