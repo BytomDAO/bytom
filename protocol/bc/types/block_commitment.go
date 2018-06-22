@@ -3,8 +3,8 @@ package types
 import (
 	"io"
 
-	"github.com/bytom/encoding/blockchain"
-	"github.com/bytom/protocol/bc"
+	"github.com/bytom/bytom/encoding/blockchain"
+	"github.com/bytom/bytom/protocol/bc"
 )
 
 // BlockCommitment store the TransactionsMerkleRoot && TransactionStatusHash

@@ -11,15 +11,15 @@ import (
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	cfg "github.com/bytom/config"
-	"github.com/bytom/consensus"
-	"github.com/bytom/p2p"
-	"github.com/bytom/p2p/discover"
-	"github.com/bytom/p2p/pex"
-	core "github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/version"
+	cfg "github.com/bytom/bytom/config"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/p2p"
+	"github.com/bytom/bytom/p2p/discover"
+	"github.com/bytom/bytom/p2p/pex"
+	core "github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/version"
 )
 
 //SyncManager Sync Manager is responsible for the business layer information synchronization

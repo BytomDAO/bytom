@@ -3,8 +3,8 @@ package tensority
 import (
 	"github.com/golang/groupcache/lru"
 
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/protocol/bc"
+	"github.com/bytom/bytom/crypto/sha3pool"
+	"github.com/bytom/bytom/protocol/bc"
 )
 
 const maxAIHashCached = 64

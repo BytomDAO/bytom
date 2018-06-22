@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/bytom/version"
+	"github.com/bytom/bytom/version"
 )
 
 // NetInfo indicate net information

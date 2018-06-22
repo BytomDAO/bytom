@@ -16,9 +16,9 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/bytom/crypto"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/crypto/randentropy"
+	"github.com/bytom/bytom/crypto"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/randentropy"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"

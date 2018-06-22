@@ -12,10 +12,10 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	cfg "github.com/bytom/config"
-	"github.com/bytom/errors"
-	"github.com/bytom/p2p/connection"
-	"github.com/bytom/p2p/trust"
+	cfg "github.com/bytom/bytom/config"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/p2p/connection"
+	"github.com/bytom/bytom/p2p/trust"
 )
 
 const (

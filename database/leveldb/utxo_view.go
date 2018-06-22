@@ -3,10 +3,10 @@ package leveldb
 import (
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/database/storage"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/state"
+	"github.com/bytom/bytom/database/storage"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/state"
 	"github.com/golang/protobuf/proto"
 )
 

@@ -8,11 +8,11 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/bytom/api"
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/util"
+	"github.com/bytom/bytom/api"
+	"github.com/bytom/bytom/blockchain/txbuilder"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/util"
 )
 
 const (

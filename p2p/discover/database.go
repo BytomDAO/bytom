@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bytom/crypto"
+	"github.com/bytom/bytom/crypto"
 	log "github.com/sirupsen/logrus"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/errors"

@@ -3,7 +3,7 @@ package filter
 import (
 	"fmt"
 
-	"github.com/bytom/errors"
+	"github.com/bytom/bytom/errors"
 )
 
 //Column describe a column

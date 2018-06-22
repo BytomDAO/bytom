@@ -8,16 +8,16 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/account"
-	"github.com/bytom/asset"
-	"github.com/bytom/blockchain/query"
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/segwit"
-	"github.com/bytom/crypto/sha3pool"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/account"
+	"github.com/bytom/bytom/asset"
+	"github.com/bytom/bytom/blockchain/query"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/consensus/segwit"
+	"github.com/bytom/bytom/crypto/sha3pool"
+	chainjson "github.com/bytom/bytom/encoding/json"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 type rawOutput struct {

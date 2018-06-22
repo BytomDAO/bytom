@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/bytom/errors"
+	"github.com/bytom/bytom/errors"
 	log "github.com/sirupsen/logrus"
 )
 

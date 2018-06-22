@@ -3,11 +3,11 @@ package api
 import (
 	"math/big"
 
-	"github.com/bytom/blockchain/query"
-	"github.com/bytom/consensus/difficulty"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/blockchain/query"
+	"github.com/bytom/bytom/consensus/difficulty"
+	chainjson "github.com/bytom/bytom/encoding/json"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 // return best block hash

@@ -6,10 +6,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/bytom/account"
-	"github.com/bytom/blockchain/query"
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/account"
+	"github.com/bytom/bytom/blockchain/query"
+	"github.com/bytom/bytom/crypto/sha3pool"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 const (

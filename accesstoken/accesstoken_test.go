@@ -8,7 +8,7 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/errors"
+	"github.com/bytom/bytom/errors"
 )
 
 func TestCreate(t *testing.T) {

@@ -6,11 +6,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/fatih/set.v0"
 
-	"github.com/bytom/errors"
-	"github.com/bytom/p2p"
-	"github.com/bytom/p2p/trust"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/p2p"
+	"github.com/bytom/bytom/p2p/trust"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 var (

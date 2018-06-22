@@ -9,8 +9,8 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/accesstoken"
-	"github.com/bytom/errors"
+	"github.com/bytom/bytom/accesstoken"
+	"github.com/bytom/bytom/errors"
 )
 
 func TestAuthenticate(t *testing.T) {

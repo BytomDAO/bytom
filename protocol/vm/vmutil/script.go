@@ -1,9 +1,9 @@
 package vmutil
 
 import (
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/vm"
+	"github.com/bytom/bytom/crypto/ed25519"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/vm"
 )
 
 // pre-define errors

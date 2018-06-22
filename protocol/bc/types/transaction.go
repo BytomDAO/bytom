@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bytom/encoding/blockchain"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
+	"github.com/bytom/bytom/encoding/blockchain"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc"
 )
 
 const serRequired = 0x7 // Bit mask accepted serialization flag.

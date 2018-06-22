@@ -20,7 +20,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/bytom/common"
+	"github.com/bytom/bytom/common"
 )
 
 func TestSet(t *testing.T) {

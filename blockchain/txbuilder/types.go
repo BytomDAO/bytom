@@ -3,9 +3,9 @@ package txbuilder
 import (
 	"context"
 
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	chainjson "github.com/bytom/bytom/encoding/json"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 // Template represents a partially- or fully-signed transaction.

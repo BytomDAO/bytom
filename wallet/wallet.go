@@ -6,12 +6,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/account"
-	"github.com/bytom/asset"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/account"
+	"github.com/bytom/bytom/asset"
+	"github.com/bytom/bytom/blockchain/pseudohsm"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 const (

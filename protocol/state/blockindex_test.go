@@ -4,10 +4,10 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/difficulty"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/consensus/difficulty"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 func TestCalcPastMedianTime(t *testing.T) {
