@@ -8,9 +8,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/p2p"
-	"github.com/bytom/p2p/connection"
-	"github.com/bytom/p2p/discover"
+	"github.com/bytom/bytom/p2p"
+	"github.com/bytom/bytom/p2p/connection"
+	"github.com/bytom/bytom/p2p/discover"
 )
 
 const (

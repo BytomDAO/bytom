@@ -6,8 +6,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/bytom/errors"
-	"github.com/bytom/net/http/httpjson"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/net/http/httpjson"
 )
 
 // Info contains a set of error codes to send to the user.

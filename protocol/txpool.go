@@ -8,11 +8,11 @@ import (
 
 	"github.com/golang/groupcache/lru"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/database/storage"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/database/storage"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
 	log "github.com/sirupsen/logrus"
 )
 

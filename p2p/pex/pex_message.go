@@ -6,7 +6,7 @@ import (
 
 	wire "github.com/tendermint/go-wire"
 
-	"github.com/bytom/p2p"
+	"github.com/bytom/bytom/p2p"
 )
 
 const (

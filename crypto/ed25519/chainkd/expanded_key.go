@@ -14,8 +14,8 @@ import (
 	"io"
 	"strconv"
 
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/crypto/ed25519/internal/edwards25519"
+	"github.com/bytom/bytom/crypto/ed25519"
+	"github.com/bytom/bytom/crypto/ed25519/internal/edwards25519"
 )
 
 const (

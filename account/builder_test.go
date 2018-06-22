@@ -3,8 +3,8 @@ package account
 import (
 	"testing"
 
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/protocol/bc"
+	"github.com/bytom/bytom/blockchain/txbuilder"
+	"github.com/bytom/bytom/protocol/bc"
 )
 
 func TestMergeSpendAction(t *testing.T) {

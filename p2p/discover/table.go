@@ -29,8 +29,8 @@ import (
 	"net"
 	"sort"
 
-	"github.com/bytom/common"
-	"github.com/bytom/crypto"
+	"github.com/bytom/bytom/common"
+	"github.com/bytom/bytom/crypto"
 )
 
 const (

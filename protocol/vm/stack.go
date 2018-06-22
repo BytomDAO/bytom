@@ -1,6 +1,6 @@
 package vm
 
-import "github.com/bytom/math/checked"
+import "github.com/bytom/bytom/math/checked"
 
 func opToAltStack(vm *virtualMachine) error {
 	err := vm.applyCost(2)

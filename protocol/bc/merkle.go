@@ -4,7 +4,7 @@ import (
 	"io"
 	"math"
 
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/bytom/crypto/sha3pool"
 )
 
 var (

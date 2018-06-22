@@ -5,10 +5,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/errors"
-	"github.com/bytom/p2p"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/p2p"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 const (

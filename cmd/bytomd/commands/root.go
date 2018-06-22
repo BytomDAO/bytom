@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	cfg "github.com/bytom/config"
+	cfg "github.com/bytom/bytom/config"
 )
 
 var (

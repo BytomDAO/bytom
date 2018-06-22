@@ -10,14 +10,14 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/database/leveldb"
-	"github.com/bytom/database/storage"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/state"
+	"github.com/bytom/bytom/blockchain/pseudohsm"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/database/leveldb"
+	"github.com/bytom/bytom/database/storage"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/state"
 )
 
 func TestCancelReservation(t *testing.T) {

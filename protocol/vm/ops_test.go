@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/bytom/errors"
-	"github.com/bytom/math/checked"
-	"github.com/bytom/testutil"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/math/checked"
+	"github.com/bytom/bytom/testutil"
 )
 
 func TestParseOp(t *testing.T) {

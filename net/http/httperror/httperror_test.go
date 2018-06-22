@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/bytom/errors"
+	"github.com/bytom/bytom/errors"
 )
 
 var (

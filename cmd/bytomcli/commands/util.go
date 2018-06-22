@@ -7,9 +7,9 @@ import (
 
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/encoding/json"
-	"github.com/bytom/util"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/encoding/json"
+	"github.com/bytom/bytom/util"
 )
 
 // accountIns is used for account related request.

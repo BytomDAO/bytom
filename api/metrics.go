@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bytom/metrics"
+	"github.com/bytom/bytom/metrics"
 )
 
 var (

@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/bytom/asset"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/asset"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 
 	log "github.com/sirupsen/logrus"
 )

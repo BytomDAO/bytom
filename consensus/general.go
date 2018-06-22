@@ -3,7 +3,7 @@ package consensus
 import (
 	"strings"
 
-	"github.com/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc"
 )
 
 //consensus variables

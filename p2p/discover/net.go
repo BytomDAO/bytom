@@ -28,8 +28,8 @@ import (
 	"github.com/tendermint/go-wire"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bytom/common"
-	"github.com/bytom/p2p/netutil"
+	"github.com/bytom/bytom/common"
+	"github.com/bytom/bytom/p2p/netutil"
 )
 
 var (

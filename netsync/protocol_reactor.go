@@ -9,12 +9,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	"github.com/bytom/errors"
-	"github.com/bytom/p2p"
-	"github.com/bytom/p2p/connection"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/p2p"
+	"github.com/bytom/bytom/p2p/connection"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 const (
