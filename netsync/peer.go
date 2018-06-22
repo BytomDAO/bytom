@@ -8,6 +8,7 @@ import (
 	"gopkg.in/fatih/set.v0"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/common"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
@@ -37,8 +38,14 @@ type peer struct {
 
 	swPeer *p2p.Peer
 
-	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
-	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+	knownTxs           *set.Set // Set of transaction hashes known to be known by this peer
+	knownBlocks        *set.Set // Set of block hashes known to be known by this peer
+	prevGetBlocksMtx   sync.Mutex
+	prevGetBlocksBegin *common.Hash
+	prevGetBlocksStop  *common.Hash
+	prevGetHdrsMtx     sync.Mutex
+	prevGetHdrsBegin   *common.Hash
+	prevGetHdrsStop    *common.Hash
 }
 
 func newPeer(height uint64, hash *bc.Hash, Peer *p2p.Peer) *peer {
@@ -103,6 +110,15 @@ func (p *peer) SendTransactions(txs []*types.Tx) error {
 	return nil
 }
 
+func (p *peer) SendHeaders(headers []*types.BlockHeader) error {
+	msg, err := NewHeadersMessage(headers)
+	if err != nil {
+		return errors.New("Failed construction headers msg")
+	}
+	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	return nil
+}
+
 func (p *peer) getPeer() *p2p.Peer {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
@@ -161,6 +177,50 @@ func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 		}
 	}
 	return false
+}
+
+// PushGetHeadersMsg sends a getblocks message for the provided block locator
+// and stop hash.  It will ignore back-to-back duplicate requests.
+//
+// This function is safe for concurrent access.
+func (p *peer) PushGetHeadersMsg(locator []*common.Hash, stopHash *common.Hash) error {
+	// Extract the begin hash from the block locator, if one was specified,
+	// to use for filtering duplicate getheaders requests.
+	var beginHash *common.Hash
+	if len(locator) > 0 {
+		beginHash = locator[0]
+	}
+
+	// Filter duplicate getheaders requests.
+	p.prevGetHdrsMtx.Lock()
+	isDuplicate := p.prevGetHdrsStop != nil && p.prevGetHdrsBegin != nil &&
+		beginHash != nil && stopHash.Str() == p.prevGetHdrsStop.Str() &&
+		beginHash.Str() == p.prevGetHdrsBegin.Str()
+	p.prevGetHdrsMtx.Unlock()
+
+	if isDuplicate {
+		log.Infof("Filtering duplicate [getheaders] with begin hash %v", beginHash)
+		return nil
+	}
+
+	// Construct the getheaders request and queue it to be sent.
+	msg := NewMsgGetHeaders()
+	msg.HashStop = *stopHash
+	for _, hash := range locator {
+		err := msg.AddBlockLocatorHash(hash)
+		if err != nil {
+			return err
+		}
+	}
+	//p.QueueMessage(msg, nil)
+	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	// Update the previous getheaders request information for filtering
+	// duplicates.
+	p.prevGetHdrsMtx.Lock()
+	p.prevGetHdrsBegin = beginHash
+	p.prevGetHdrsStop = stopHash
+	p.prevGetHdrsMtx.Unlock()
+	return nil
 }
 
 type peerSet struct {
@@ -346,6 +406,14 @@ func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
 		return errors.New("Can't find peer. ")
 	}
 	return peer.requestBlockByHeight(height)
+}
+
+func (ps *peerSet) SendHeaders(peerID string, headers []*types.BlockHeader) error {
+	peer, ok := ps.Peer(peerID)
+	if !ok {
+		return errors.New("Can't find peer. ")
+	}
+	return peer.SendHeaders(headers)
 }
 
 func (ps *peerSet) BroadcastMinedBlock(block *types.Block) ([]*peer, error) {

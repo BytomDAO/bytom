@@ -7,6 +7,7 @@ import (
 
 	"github.com/tendermint/go-wire"
 
+	"github.com/bytom/common"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -19,8 +20,17 @@ const (
 	StatusResponseByte = byte(0x21)
 	NewTransactionByte = byte(0x30)
 	NewMineBlockByte   = byte(0x40)
+	GetHeadersByte     = byte(0x50)
+	HeadersByte        = byte(0x51)
 
 	maxBlockchainResponseSize = 22020096 + 2
+
+	// MaxBlockLocatorsPerMsg is the maximum number of block locator hashes allowed
+	// per message.
+	MaxBlockLocatorsPerMsg = 500
+	// MaxBlockHeadersPerMsg is the maximum number of block headers that can be in
+	// a single bitcoin headers message.
+	MaxBlockHeadersPerMsg = 2000
 )
 
 // BlockchainMessage is a generic message for this reactor.
@@ -34,6 +44,8 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&StatusResponseMessage{}, StatusResponseByte},
 	wire.ConcreteType{&TransactionNotifyMessage{}, NewTransactionByte},
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
+	wire.ConcreteType{&GetHeadersMessage{}, GetHeadersByte},
+	wire.ConcreteType{&HeadersMessage{}, HeadersByte},
 )
 
 type blockPending struct {
@@ -205,4 +217,56 @@ func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
 //String convert msg to string
 func (m *MineBlockMessage) String() string {
 	return fmt.Sprintf("NewMineBlockMessage{Size: %d}", len(m.RawBlock))
+}
+
+// MsgGetHeaders implements the Message interface and represents a
+// getheaders message.  It is used to request a list of block headers for
+// blocks starting after the last known hash in the slice of block locator
+// hashes.  The list is returned via a headers message (MsgHeaders) and is
+// limited by a specific hash to stop at or the maximum number of block headers
+// per message, which is currently 2000.
+//
+// Set the HashStop field to the hash at which to stop and use
+// AddBlockLocatorHash to build up the list of block locator hashes.
+//
+// The algorithm for building the block locator hashes should be to add the
+// hashes in reverse order until you reach the genesis block.  In order to keep
+// the list of locator hashes to a resonable number of entries, first add the
+// most recent 10 block hashes, then double the step each loop iteration to
+// exponentially decrease the number of hashes the further away from head and
+// closer to the genesis block you get.
+type GetHeadersMessage struct {
+	BlockLocatorHashes []*common.Hash
+	HashStop           common.Hash
+}
+
+// NewMsgGetHeaders returns a new bitcoin getheaders message that conforms to
+// the Message interface.  See MsgGetHeaders for details.
+func NewMsgGetHeaders() *GetHeadersMessage {
+	return &GetHeadersMessage{
+		BlockLocatorHashes: make([]*common.Hash, 0, MaxBlockLocatorsPerMsg),
+	}
+}
+
+// AddBlockLocatorHash adds a new block locator hash to the message.
+func (msg *GetHeadersMessage) AddBlockLocatorHash(hash *common.Hash) error {
+	if len(msg.BlockLocatorHashes)+1 > MaxBlockLocatorsPerMsg {
+		return errors.New("AddBlockLocatorHash too many block locator hashes")
+	}
+	msg.BlockLocatorHashes = append(msg.BlockLocatorHashes, hash)
+	return nil
+}
+
+// MsgHeaders implements the Message interface and represents a bitcoin headers
+// message.  It is used to deliver block header information in response
+// to a getheaders message (MsgGetHeaders).  The maximum number of block headers
+// per message is currently 2000.  See MsgGetHeaders for details on requesting
+// the headers.
+type HeadersMessage struct {
+	Headers []*types.BlockHeader
+}
+
+//NewTransactionNotifyMessage construct notify new tx msg
+func NewHeadersMessage(bh []*types.BlockHeader) (*HeadersMessage, error) {
+	return &HeadersMessage{Headers: bh}, nil
 }

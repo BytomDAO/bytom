@@ -242,6 +242,11 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.fetcher.Enqueue(src.Key, block)
 		pr.peers.SetPeerStatus(src.Key, block.Height, &hash)
 
+	case *GetHeadersMessage:
+		pr.blockKeeper.GetHeadersWorker(src.Key, msg)
+
+	case *HeadersMessage:
+
 	default:
 		log.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
 	}

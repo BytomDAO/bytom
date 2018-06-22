@@ -11,6 +11,7 @@ import (
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
+	"github.com/bytom/common"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p"
@@ -21,6 +22,18 @@ import (
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/version"
 )
+
+// Checkpoint identifies a known good point in the block chain.  Using
+// checkpoints allows a few optimizations for old blocks during initial download
+// and also prevents forks from old blocks.
+//
+// Each checkpoint is selected based upon several factors.  See the
+// documentation for blockchain.IsCheckpointCandidate for details on the
+// selection criteria.
+type Checkpoint struct {
+	Height uint64
+	Hash   *common.Hash
+}
 
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
@@ -41,6 +54,7 @@ type SyncManager struct {
 	quitSync      chan struct{}
 	config        *cfg.Config
 	synchronising int32
+	//headersFirstMode bool
 }
 
 //NewSyncManager create a sync manager

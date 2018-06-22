@@ -62,7 +62,6 @@ func (sm *SyncManager) syncer() {
 				break
 			}
 			go sm.synchronise()
-
 		case <-forceSync.C:
 			// Force a sync even if not enough peers are present
 			go sm.synchronise()
@@ -99,8 +98,20 @@ func (sm *SyncManager) synchronise() {
 	}
 
 	if bestHeight > sm.chain.BestBlockHeight() {
-		log.Info("sync peer:", peer.Addr(), " height:", bestHeight)
-		sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
+		if sm.blockKeeper.nextCheckpoint != nil &&
+			sm.chain.BestBlockHeight() < sm.blockKeeper.nextCheckpoint().Height &&
+			bestHeight >= sm.blockKeeper.nextCheckpoint().Height {
+			locator := sm.blockKeeper.blockLocator(nil)
+			hash := common.BytesToHash(sm.blockKeeper.nextCheckpoint().Hash.Bytes())
+			sm.BlockKeeper().getHeaders(peer.Key, locator, &hash)
+			sm.blockKeeper.headersFirstMode = true
+			log.Infof("Downloading headers for blocks %d to "+
+				"%d from peer %s", sm.chain.BestBlockHeight()+1,
+				sm.blockKeeper.nextCheckpoint().Height, peer.Addr())
+		} else {
+			log.Info("normal sync peer:", peer.Addr(), " height:", bestHeight)
+			sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
+		}
 	}
 }
 
