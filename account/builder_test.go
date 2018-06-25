@@ -365,13 +365,13 @@ func TestSpendUTXOArguments(t *testing.T) {
 	var xpub chainkd.XPub
 	copy(xpub[:], hexXpub)
 
-	rawTxSig := RawTxSigArgument{RootXPub: xpub, Path: []chainjson.HexBytes{{1, 1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0}}}
+	rawTxSig := rawTxSigArgument{RootXPub: xpub, Path: []chainjson.HexBytes{{1, 1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0}}}
 	rawTxSigMsg, err := json.Marshal(rawTxSig)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	data := DataArgument{Value: "7468697320697320612074657374"}
+	data := dataArgument{Value: "7468697320697320612074657374"}
 	dataMsg, err := json.Marshal(data)
 	if err != nil {
 		t.Fatal(err)
@@ -387,7 +387,7 @@ func TestSpendUTXOArguments(t *testing.T) {
 	            "xpub": "ba76bb52574b3f40315f2c01f1818a9072ced56e9d4b68acbef56a4d0077d08e5e34837963e4cdc54eb251aa34aad01e6ae48b140f6a2743fbb0a0abd9cf8aac"}}]}`,
 			wantResult: &spendUTXOAction{
 				OutputID: &bc.Hash{16358444424161912038, 9575923798912607085, 5116523856555233011, 18125684290607480337},
-				Arguments: []ContractArgument{
+				Arguments: []contractArgument{
 					{
 						Type:    "raw_tx_signature",
 						RawData: rawTxSigMsg,
@@ -400,7 +400,7 @@ func TestSpendUTXOArguments(t *testing.T) {
 				"arguments": [{"type": "data", "raw_data": {"value": "7468697320697320612074657374"}}]}`,
 			wantResult: &spendUTXOAction{
 				OutputID: &bc.Hash{9685472322230689473, 14575281449155871985, 15417955650135936912, 5710139541391434768},
-				Arguments: []ContractArgument{
+				Arguments: []contractArgument{
 					{
 						Type:    "data",
 						RawData: dataMsg,
@@ -412,7 +412,7 @@ func TestSpendUTXOArguments(t *testing.T) {
 			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "8669b5c2e0701ec1ca45cd413e46c4f1d5f794f9d9144f904f3e7da8c68c6410",
 				"arguments": [{"type": "signature", "raw_data": {"value": "7468697320697320612074657374"}}]}`,
 			wantResult: &spendUTXOAction{
-				OutputID:  &bc.Hash{9685472322230689473, 14575281449155871985, 15417955650135936912, 5710139541391434768},
+				OutputID: &bc.Hash{9685472322230689473, 14575281449155871985, 15417955650135936912, 5710139541391434768},
 			},
 		},
 		{
@@ -444,33 +444,33 @@ func TestSpendUTXOArguments(t *testing.T) {
 		for _, arg := range spendUTXOReq.Arguments {
 			switch arg.Type {
 			case "raw_tx_signature":
-				rawTxSig := &RawTxSigArgument{}
+				rawTxSig := &rawTxSigArgument{}
 				if err := json.Unmarshal(arg.RawData, rawTxSig); err != nil {
-					t.Fatalf("unmarshal RawTxSigArgument error:%v", err)
+					t.Fatalf("unmarshal rawTxSigArgument error:%v", err)
 				}
 
-				wantRawTxSig := &RawTxSigArgument{}
+				wantRawTxSig := &rawTxSigArgument{}
 				if err := json.Unmarshal(c.wantResult.Arguments[0].RawData, wantRawTxSig); err != nil {
-					t.Fatalf("unmarshal want RawTxSigArgument error:%v", err)
+					t.Fatalf("unmarshal want rawTxSigArgument error:%v", err)
 				}
 
 				if !testutil.DeepEqual(rawTxSig, wantRawTxSig) {
-					t.Fatalf("RawTxSigArgument gotResult=%v, wantResult=%v", rawTxSig, wantRawTxSig)
+					t.Fatalf("rawTxSigArgument gotResult=%v, wantResult=%v", rawTxSig, wantRawTxSig)
 				}
 
 			case "data":
-				data := &DataArgument{}
+				data := &dataArgument{}
 				if err := json.Unmarshal(arg.RawData, data); err != nil {
-					t.Fatalf("unmarshal DataArgument error:%v", err)
+					t.Fatalf("unmarshal dataArgument error:%v", err)
 				}
 
-				wantData := &DataArgument{}
+				wantData := &dataArgument{}
 				if err := json.Unmarshal(c.wantResult.Arguments[0].RawData, wantData); err != nil {
-					t.Fatalf("unmarshal want DataArgument error:%v", err)
+					t.Fatalf("unmarshal want dataArgument error:%v", err)
 				}
 
 				if !testutil.DeepEqual(data, wantData) {
-					t.Fatalf("DataArgument gotResult=%v, wantResult=%v", data, wantData)
+					t.Fatalf("dataArgument gotResult=%v, wantResult=%v", data, wantData)
 				}
 
 			default:

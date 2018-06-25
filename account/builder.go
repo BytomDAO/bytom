@@ -122,24 +122,24 @@ func (m *Manager) DecodeSpendUTXOAction(data []byte) (txbuilder.Action, error) {
 type spendUTXOAction struct {
 	accounts    *Manager
 	OutputID    *bc.Hash           `json:"output_id"`
-	Arguments   []ContractArgument `json:"arguments"`
+	Arguments   []contractArgument `json:"arguments"`
 	ClientToken *string            `json:"client_token"`
 }
 
-// ContractArgument for smart contract
-type ContractArgument struct {
+// contractArgument for smart contract
+type contractArgument struct {
 	Type    string          `json:"type"`
 	RawData json.RawMessage `json:"raw_data"`
 }
 
-// RawTxSigArgument is signature-related argument for run contract
-type RawTxSigArgument struct {
+// rawTxSigArgument is signature-related argument for run contract
+type rawTxSigArgument struct {
 	RootXPub chainkd.XPub         `json:"xpub"`
 	Path     []chainjson.HexBytes `json:"derivation_path"`
 }
 
-// DataArgument is the other argument for run contract
-type DataArgument struct {
+// dataArgument is the other argument for run contract
+type dataArgument struct {
 	Value string `json:"value"`
 }
 
@@ -173,7 +173,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 		for _, arg := range a.Arguments {
 			switch arg.Type {
 			case "raw_tx_signature":
-				rawTxSig := &RawTxSigArgument{}
+				rawTxSig := &rawTxSigArgument{}
 				if err = json.Unmarshal(arg.RawData, rawTxSig); err != nil {
 					return err
 				}
@@ -186,7 +186,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 				sigInst.AddRawWitnessKeys([]chainkd.XPub{rawTxSig.RootXPub}, path, 1)
 
 			case "data":
-				data := &DataArgument{}
+				data := &dataArgument{}
 				if err = json.Unmarshal(arg.RawData, data); err != nil {
 					return err
 				}
