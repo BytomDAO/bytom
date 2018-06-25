@@ -106,7 +106,7 @@ var TestNetParams = Params{
 	Bech32HRPSegwit: "tm",
 }
 
-// TestNetParams is the config for test-net
+// SoloNetParams is the config for test-net
 var SoloNetParams = Params{
 	Name:            "solo",
 	Bech32HRPSegwit: "sm",

@@ -1,11 +1,13 @@
 package netsync
 
 import (
+	"strconv"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/fatih/set.v0"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
@@ -27,6 +29,7 @@ const (
 type peer struct {
 	mtx      sync.RWMutex
 	version  int // Protocol version negotiated
+	services consensus.ServiceFlag
 	id       string
 	height   uint64
 	hash     *bc.Hash
@@ -39,8 +42,16 @@ type peer struct {
 }
 
 func newPeer(height uint64, hash *bc.Hash, Peer *p2p.Peer) *peer {
+	services := consensus.SFFullNode
+	if len(Peer.Other) != 0 {
+		if serviceFlag, err := strconv.ParseUint(Peer.Other[0], 10, 64); err != nil {
+			services = consensus.ServiceFlag(serviceFlag)
+		}
+	}
+
 	return &peer{
 		version:     defaultVersion,
+		services:    services,
 		id:          Peer.Key,
 		height:      height,
 		hash:        hash,
