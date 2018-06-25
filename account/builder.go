@@ -121,9 +121,15 @@ func (m *Manager) DecodeSpendUTXOAction(data []byte) (txbuilder.Action, error) {
 
 type spendUTXOAction struct {
 	accounts    *Manager
-	OutputID    *bc.Hash                 `json:"output_id"`
-	Arguments   []map[string]interface{} `json:"arguments"`
-	ClientToken *string                  `json:"client_token"`
+	OutputID    *bc.Hash           `json:"output_id"`
+	Arguments   []ContractArgument `json:"arguments"`
+	ClientToken *string            `json:"client_token"`
+}
+
+// ContractArgument for smart contract
+type ContractArgument struct {
+	Type    string          `json:"type"`
+	RawData json.RawMessage `json:"raw_data"`
 }
 
 // RawTxSigArgument is signature-related argument for run contract
@@ -165,21 +171,10 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	if a.Arguments != nil {
 		sigInst = &txbuilder.SigningInstruction{}
 		for _, arg := range a.Arguments {
-			typ, ok := arg["type"].(string)
-			if !ok {
-				return errors.New("no action type provided on action")
-			}
-
-			// Remarshal to JSON, convert interface to byte.
-			argument, err := json.Marshal(arg)
-			if err != nil {
-				return err
-			}
-
-			switch typ {
+			switch arg.Type {
 			case "raw_tx_signature":
 				rawTxSig := &RawTxSigArgument{}
-				if err = json.Unmarshal(argument, rawTxSig); err != nil {
+				if err = json.Unmarshal(arg.RawData, rawTxSig); err != nil {
 					return err
 				}
 
@@ -192,7 +187,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 
 			case "data":
 				data := &DataArgument{}
-				if err = json.Unmarshal(argument, data); err != nil {
+				if err = json.Unmarshal(arg.RawData, data); err != nil {
 					return err
 				}
 
@@ -206,7 +201,6 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 				return errors.New("contract argument type is not exist")
 			}
 		}
-		return b.AddInput(txInput, sigInst)
 	}
 
 	return b.AddInput(txInput, sigInst)

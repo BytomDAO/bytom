@@ -1,8 +1,10 @@
 package account
 
 import (
+	"encoding/json"
 	"testing"
 
+	"encoding/hex"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/protocol/bc"
 )
@@ -347,6 +349,79 @@ func TestMergeSpendAction(t *testing.T) {
 
 		if len(gotActions) != c.wantActionCount {
 			t.Fatalf("number of gotActions=%d, wantActions=%d", len(gotActions), c.wantActionCount)
+		}
+	}
+}
+
+func TestSpendUTXOArguments(t *testing.T) {
+	cases := []struct {
+		rawAction  string
+		wantResult bool
+	}{
+		{
+			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "e304de887423e4e684e483f5ae65236d47018b56cac94ef3fb8b5dd40c897e11",
+				"arguments": [{"type": "raw_tx_signature", "raw_data": {"derivation_path": ["010100000000000000", "0100000000000000"],
+	            "xpub": "ba76bb52574b3f40315f2c01f1818a9072ced56e9d4b68acbef56a4d0077d08e5e34837963e4cdc54eb251aa34aad01e6ae48b140f6a2743fbb0a0abd9cf8aac"}}]}`,
+			wantResult: true,
+		},
+		{
+			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "8669b5c2e0701ec1ca45cd413e46c4f1d5f794f9d9144f904f3e7da8c68c6410",
+				"arguments": [{"type": "data", "raw_data": {"value": "7468697320697320612074657374"}}]}`,
+			wantResult: true,
+		},
+		{
+			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "8669b5c2e0701ec1ca45cd413e46c4f1d5f794f9d9144f904f3e7da8c68c6410",
+				"arguments": [{"type": "signature", "raw_data": {"value": "7468697320697320612074657374"}}]}`,
+			wantResult: false,
+		},
+	}
+
+	for _, c := range cases {
+		var spendUTXOReq spendUTXOAction
+		if err := json.Unmarshal([]byte(c.rawAction), &spendUTXOReq); err != nil {
+			t.Fatalf("unmarshal spendUTXOAction error:%v", err)
+		}
+
+		if spendUTXOReq.Arguments != nil {
+			for _, arg := range spendUTXOReq.Arguments {
+				switch arg.Type {
+				case "raw_tx_signature":
+					rawTxSig := &RawTxSigArgument{}
+					if err := json.Unmarshal(arg.RawData, rawTxSig); err != nil {
+						t.Fatalf("unmarshal RawTxSigArgument error:%v", err)
+					}
+
+					gotResult := false
+					if hex.EncodeToString(rawTxSig.RootXPub[:]) == "ba76bb52574b3f40315f2c01f1818a9072ced56e9d4b68acbef56a4d0077d08e5e34837963e4cdc54eb251aa34aad01e6ae48b140f6a2743fbb0a0abd9cf8aac" &&
+						hex.EncodeToString(rawTxSig.Path[0]) == "010100000000000000" && hex.EncodeToString(rawTxSig.Path[1]) == "0100000000000000" {
+						gotResult = true
+					}
+
+					if gotResult != c.wantResult {
+						t.Fatalf("Unmarshal RawTxSigArgument result is not right: %v", rawTxSig)
+					}
+
+				case "data":
+					data := &DataArgument{}
+					if err := json.Unmarshal(arg.RawData, data); err != nil {
+						t.Fatalf("unmarshal DataArgument error:%v", err)
+					}
+
+					gotResult := false
+					if data.Value == "7468697320697320612074657374" {
+						gotResult = true
+					}
+
+					if gotResult != c.wantResult {
+						t.Fatalf("Unmarshal DataArgument result is not right: %v", data)
+					}
+
+				default:
+					if c.wantResult {
+						t.Fatalf("contract argument type [%v] is not exist", arg.Type)
+					}
+				}
+			}
 		}
 	}
 }
