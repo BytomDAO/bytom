@@ -1,12 +1,15 @@
 package account
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"testing"
 
-	"encoding/hex"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/crypto/ed25519/chainkd"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/testutil"
 )
 
 func TestMergeSpendAction(t *testing.T) {
@@ -354,72 +357,125 @@ func TestMergeSpendAction(t *testing.T) {
 }
 
 func TestSpendUTXOArguments(t *testing.T) {
+	hexXpub, err := hex.DecodeString("ba76bb52574b3f40315f2c01f1818a9072ced56e9d4b68acbef56a4d0077d08e5e34837963e4cdc54eb251aa34aad01e6ae48b140f6a2743fbb0a0abd9cf8aac")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var xpub chainkd.XPub
+	copy(xpub[:], hexXpub)
+
+	rawTxSig := RawTxSigArgument{RootXPub: xpub, Path: []chainjson.HexBytes{{1, 1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0}}}
+	rawTxSigMsg, err := json.Marshal(rawTxSig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := DataArgument{Value: "7468697320697320612074657374"}
+	dataMsg, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	cases := []struct {
 		rawAction  string
-		wantResult bool
+		wantResult *spendUTXOAction
 	}{
 		{
 			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "e304de887423e4e684e483f5ae65236d47018b56cac94ef3fb8b5dd40c897e11",
 				"arguments": [{"type": "raw_tx_signature", "raw_data": {"derivation_path": ["010100000000000000", "0100000000000000"],
 	            "xpub": "ba76bb52574b3f40315f2c01f1818a9072ced56e9d4b68acbef56a4d0077d08e5e34837963e4cdc54eb251aa34aad01e6ae48b140f6a2743fbb0a0abd9cf8aac"}}]}`,
-			wantResult: true,
+			wantResult: &spendUTXOAction{
+				OutputID: &bc.Hash{16358444424161912038, 9575923798912607085, 5116523856555233011, 18125684290607480337},
+				Arguments: []ContractArgument{
+					{
+						Type:    "raw_tx_signature",
+						RawData: rawTxSigMsg,
+					},
+				},
+			},
 		},
 		{
 			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "8669b5c2e0701ec1ca45cd413e46c4f1d5f794f9d9144f904f3e7da8c68c6410",
 				"arguments": [{"type": "data", "raw_data": {"value": "7468697320697320612074657374"}}]}`,
-			wantResult: true,
+			wantResult: &spendUTXOAction{
+				OutputID: &bc.Hash{9685472322230689473, 14575281449155871985, 15417955650135936912, 5710139541391434768},
+				Arguments: []ContractArgument{
+					{
+						Type:    "data",
+						RawData: dataMsg,
+					},
+				},
+			},
 		},
 		{
 			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "8669b5c2e0701ec1ca45cd413e46c4f1d5f794f9d9144f904f3e7da8c68c6410",
 				"arguments": [{"type": "signature", "raw_data": {"value": "7468697320697320612074657374"}}]}`,
-			wantResult: false,
+			wantResult: &spendUTXOAction{
+				OutputID:  &bc.Hash{9685472322230689473, 14575281449155871985, 15417955650135936912, 5710139541391434768},
+			},
+		},
+		{
+			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "8669b5c2e0701ec1ca45cd413e46c4f1d5f794f9d9144f904f3e7da8c68c6410"}`,
+			wantResult: &spendUTXOAction{
+				OutputID:  &bc.Hash{9685472322230689473, 14575281449155871985, 15417955650135936912, 5710139541391434768},
+				Arguments: nil,
+			},
 		},
 	}
 
 	for _, c := range cases {
-		var spendUTXOReq spendUTXOAction
+		var spendUTXOReq *spendUTXOAction
 		if err := json.Unmarshal([]byte(c.rawAction), &spendUTXOReq); err != nil {
 			t.Fatalf("unmarshal spendUTXOAction error:%v", err)
 		}
 
-		if spendUTXOReq.Arguments != nil {
-			for _, arg := range spendUTXOReq.Arguments {
-				switch arg.Type {
-				case "raw_tx_signature":
-					rawTxSig := &RawTxSigArgument{}
-					if err := json.Unmarshal(arg.RawData, rawTxSig); err != nil {
-						t.Fatalf("unmarshal RawTxSigArgument error:%v", err)
-					}
+		if !testutil.DeepEqual(spendUTXOReq.OutputID, c.wantResult.OutputID) {
+			t.Fatalf("OutputID gotResult=%v, wantResult=%v", spendUTXOReq.OutputID, c.wantResult.OutputID)
+		}
 
-					gotResult := false
-					if hex.EncodeToString(rawTxSig.RootXPub[:]) == "ba76bb52574b3f40315f2c01f1818a9072ced56e9d4b68acbef56a4d0077d08e5e34837963e4cdc54eb251aa34aad01e6ae48b140f6a2743fbb0a0abd9cf8aac" &&
-						hex.EncodeToString(rawTxSig.Path[0]) == "010100000000000000" && hex.EncodeToString(rawTxSig.Path[1]) == "0100000000000000" {
-						gotResult = true
-					}
+		if spendUTXOReq.Arguments == nil {
+			if c.wantResult.Arguments != nil {
+				t.Fatalf("Arguments gotResult is nil, wantResult[%v] is not nil", c.wantResult.Arguments)
+			}
+			continue
+		}
 
-					if gotResult != c.wantResult {
-						t.Fatalf("Unmarshal RawTxSigArgument result is not right: %v", rawTxSig)
-					}
+		for _, arg := range spendUTXOReq.Arguments {
+			switch arg.Type {
+			case "raw_tx_signature":
+				rawTxSig := &RawTxSigArgument{}
+				if err := json.Unmarshal(arg.RawData, rawTxSig); err != nil {
+					t.Fatalf("unmarshal RawTxSigArgument error:%v", err)
+				}
 
-				case "data":
-					data := &DataArgument{}
-					if err := json.Unmarshal(arg.RawData, data); err != nil {
-						t.Fatalf("unmarshal DataArgument error:%v", err)
-					}
+				wantRawTxSig := &RawTxSigArgument{}
+				if err := json.Unmarshal(c.wantResult.Arguments[0].RawData, wantRawTxSig); err != nil {
+					t.Fatalf("unmarshal want RawTxSigArgument error:%v", err)
+				}
 
-					gotResult := false
-					if data.Value == "7468697320697320612074657374" {
-						gotResult = true
-					}
+				if !testutil.DeepEqual(rawTxSig, wantRawTxSig) {
+					t.Fatalf("RawTxSigArgument gotResult=%v, wantResult=%v", rawTxSig, wantRawTxSig)
+				}
 
-					if gotResult != c.wantResult {
-						t.Fatalf("Unmarshal DataArgument result is not right: %v", data)
-					}
+			case "data":
+				data := &DataArgument{}
+				if err := json.Unmarshal(arg.RawData, data); err != nil {
+					t.Fatalf("unmarshal DataArgument error:%v", err)
+				}
 
-				default:
-					if c.wantResult {
-						t.Fatalf("contract argument type [%v] is not exist", arg.Type)
-					}
+				wantData := &DataArgument{}
+				if err := json.Unmarshal(c.wantResult.Arguments[0].RawData, wantData); err != nil {
+					t.Fatalf("unmarshal want DataArgument error:%v", err)
+				}
+
+				if !testutil.DeepEqual(data, wantData) {
+					t.Fatalf("DataArgument gotResult=%v, wantResult=%v", data, wantData)
+				}
+
+			default:
+				if arg.Type == "raw_tx_signature" || arg.Type == "data" {
+					t.Fatalf("argument type [%v] is not exist", arg.Type)
 				}
 			}
 		}
