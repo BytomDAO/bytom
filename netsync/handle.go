@@ -24,8 +24,7 @@ import (
 
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
-	networkID uint64
-	sw        *p2p.Switch
+	sw *p2p.Switch
 
 	privKey     crypto.PrivKeyEd25519 // local node's p2p key
 	chain       *core.Chain
