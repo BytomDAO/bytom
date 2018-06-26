@@ -30,7 +30,7 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/tjfoc/gmsm/sm3"
+	"github.com/bytom/crypto/sm3"
 )
 
 const (
