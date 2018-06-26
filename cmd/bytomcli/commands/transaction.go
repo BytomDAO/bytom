@@ -176,7 +176,7 @@ var buildTransactionCmd = &cobra.Command{
 			switch contractName {
 			case "LockWithPublicKey":
 				if len(args) != 7 {
-					fmt.Println("%s <rootPub> <path1> <path2> [flags]\n", usage)
+					fmt.Printf("%s <rootPub> <path1> <path2> [flags]\n\n", usage)
 					os.Exit(util.ErrLocalExe)
 				}
 
@@ -190,6 +190,25 @@ var buildTransactionCmd = &cobra.Command{
 					break
 				}
 				buildReqStr = fmt.Sprintf(buildLockWithPublicKeyReqFmt, outputID, path1, path2, rootPub, assetInfo, amount, program, btmGas, accountInfo)
+
+			case "LockWithMultiSig":
+				if len(args) != 10 {
+					fmt.Printf("%s <rootPub1> <path11> <path12> <rootPub2> <path21> <path22> [flags]\n\n", usage)
+					os.Exit(util.ErrLocalExe)
+				}
+
+				outputID := args[3]
+				rootPub1 := args[4]
+				path11 := args[5]
+				path12 := args[6]
+				rootPub2 := args[7]
+				path21 := args[8]
+				path22 := args[9]
+				if alias {
+					buildReqStr = fmt.Sprintf(buildLockWithMultiSigReqFmtByAlias, outputID, path11, path12, rootPub1, path21, path22, rootPub2, assetInfo, amount, program, btmGas, accountInfo)
+					break
+				}
+				buildReqStr = fmt.Sprintf(buildLockWithMultiSigReqFmt, outputID, path11, path12, rootPub1, path21, path22, rootPub2, assetInfo, amount, program, btmGas, accountInfo)
 
 			default:
 				jww.ERROR.Println("Invalid Contract template")
