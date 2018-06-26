@@ -161,9 +161,10 @@ func (bk *blockKeeper) nextCheckpoint() *consensus.Checkpoint {
 
 	nextCheckpoint := &checkpoints[len(checkpoints)-1]
 	for i := len(checkpoints) - 2; i >= 0; i-- {
-		if height < checkpoints[i].Height {
-			nextCheckpoint = &checkpoints[i]
+		if height >= checkpoints[i].Height {
+			break
 		}
+		nextCheckpoint = &checkpoints[i]
 	}
 	return nextCheckpoint
 }
