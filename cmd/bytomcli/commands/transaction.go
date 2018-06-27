@@ -126,7 +126,7 @@ var buildControlProgramReqFmtByAlias = `
 	]}`
 
 var buildTransactionCmd = &cobra.Command{
-	Use:   "build-transaction <accountID|alias> <assetID|alias> <amount>",
+	Use:   "build-transaction <accountID|alias> <assetID|alias> <amount> [outputID]",
 	Short: "Build one transaction template,default use account id and asset id",
 	Args:  cobra.RangeArgs(3, 20),
 	PreRun: func(cmd *cobra.Command, args []string) {
@@ -172,32 +172,34 @@ var buildTransactionCmd = &cobra.Command{
 			}
 			buildReqStr = fmt.Sprintf(buildControlProgramReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, program)
 		case "unlock":
-			usage := "Usage:\n  bytomcli build-transaction <accountID|alias> <assetID|alias> <amount> -c <contractName> <outputID>"
+			usage := "Usage:\n  bytomcli build-transaction <accountID|alias> <assetID|alias> <amount> <outputID> -c <contractName>"
+			if len(args) <= 3 {
+				jww.ERROR.Printf("%s <contract_argument> ... [flags]\n\n", usage)
+				os.Exit(util.ErrLocalExe)
+			}
+			outputID := args[3]
 			switch contractName {
 			case "LockWithPublicKey":
 				if len(args) != 7 {
-					fmt.Printf("%s <rootPub> <path1> <path2> [flags]\n\n", usage)
+					jww.ERROR.Printf("%s <rootPub> <path1> <path2> [flags]\n\n", usage)
 					os.Exit(util.ErrLocalExe)
 				}
 
-				outputID := args[3]
 				rootPub := args[4]
 				path1 := args[5]
 				path2 := args[6]
-
 				if alias {
-					buildReqStr = fmt.Sprintf(buildLockWithPublicKeyReqFmtByAlias, outputID, path1, path2, rootPub, assetInfo, amount, program, btmGas, accountInfo)
+					buildReqStr = fmt.Sprintf(buildLockWithPublicKeyReqFmtByAlias, outputID, rootPub, path1, path2, assetInfo, amount, program, btmGas, accountInfo)
 					break
 				}
-				buildReqStr = fmt.Sprintf(buildLockWithPublicKeyReqFmt, outputID, path1, path2, rootPub, assetInfo, amount, program, btmGas, accountInfo)
+				buildReqStr = fmt.Sprintf(buildLockWithPublicKeyReqFmt, outputID, rootPub, path1, path2, assetInfo, amount, program, btmGas, accountInfo)
 
 			case "LockWithMultiSig":
 				if len(args) != 10 {
-					fmt.Printf("%s <rootPub1> <path11> <path12> <rootPub2> <path21> <path22> [flags]\n\n", usage)
+					jww.ERROR.Printf("%s <rootPub1> <path11> <path12> <rootPub2> <path21> <path22> [flags]\n\n", usage)
 					os.Exit(util.ErrLocalExe)
 				}
 
-				outputID := args[3]
 				rootPub1 := args[4]
 				path11 := args[5]
 				path12 := args[6]
@@ -205,13 +207,42 @@ var buildTransactionCmd = &cobra.Command{
 				path21 := args[8]
 				path22 := args[9]
 				if alias {
-					buildReqStr = fmt.Sprintf(buildLockWithMultiSigReqFmtByAlias, outputID, path11, path12, rootPub1, path21, path22, rootPub2, assetInfo, amount, program, btmGas, accountInfo)
+					buildReqStr = fmt.Sprintf(buildLockWithMultiSigReqFmtByAlias, outputID, rootPub1, path11, path12, rootPub2, path21, path22, assetInfo, amount, program, btmGas, accountInfo)
 					break
 				}
-				buildReqStr = fmt.Sprintf(buildLockWithMultiSigReqFmt, outputID, path11, path12, rootPub1, path21, path22, rootPub2, assetInfo, amount, program, btmGas, accountInfo)
+				buildReqStr = fmt.Sprintf(buildLockWithMultiSigReqFmt, outputID, rootPub1, path11, path12, rootPub2, path21, path22, assetInfo, amount, program, btmGas, accountInfo)
+
+			case "LockWithPublicKeyHash":
+				if len(args) != 8 {
+					jww.ERROR.Printf("%s <pubkey> <rootPub> <path1> <path2> [flags]\n\n", usage)
+					os.Exit(util.ErrLocalExe)
+				}
+
+				pubkey := args[4]
+				rootPub := args[5]
+				path1 := args[6]
+				path2 := args[7]
+				if alias {
+					buildReqStr = fmt.Sprintf(buildLockWithPublicKeyHashReqFmtByAlias, outputID, pubkey, rootPub, path1, path2, assetInfo, amount, program, btmGas, accountInfo)
+					break
+				}
+				buildReqStr = fmt.Sprintf(buildLockWithPublicKeyHashReqFmt, outputID, pubkey, rootPub, path1, path2, assetInfo, amount, program, btmGas, accountInfo)
+
+			case "RevealPreimage":
+				if len(args) != 5 {
+					jww.ERROR.Printf("%s <value> [flags]\n\n", usage)
+					os.Exit(util.ErrLocalExe)
+				}
+
+				value := args[4]
+				if alias {
+					buildReqStr = fmt.Sprintf(buildRevealPreimageReqFmtByAlias, outputID, value, assetInfo, amount, program, btmGas, accountInfo)
+					break
+				}
+				buildReqStr = fmt.Sprintf(buildRevealPreimageReqFmt, outputID, value, assetInfo, amount, program, btmGas, accountInfo)
 
 			default:
-				jww.ERROR.Println("Invalid Contract template")
+				jww.ERROR.Printf("Invalid Contract template: %s\n\n", contractName)
 				os.Exit(util.ErrLocalExe)
 			}
 
