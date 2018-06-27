@@ -629,8 +629,9 @@ func (bk *blockKeeper) blockLocator(node *types.BlockHeader) []*common.Hash {
 
 	step := uint64(1)
 	for node != nil {
-		fmt.Println("height:", node.Height)
 		hash := common.Hash(node.Hash().Byte32())
+		fmt.Println("height:", node.Height, " hash:", hash)
+
 		locator = append(locator, &hash)
 
 		// Nothing more to add once the genesis block has been added.
