@@ -98,12 +98,10 @@ func (sm *SyncManager) synchronise() {
 	}
 
 	if bestHeight > sm.chain.BestBlockHeight() {
-		if sm.blockKeeper.nextCheckpoint != nil &&
-			sm.chain.BestBlockHeight() < sm.blockKeeper.nextCheckpoint().Height &&
-			bestHeight >= sm.blockKeeper.nextCheckpoint().Height {
+		if sm.blockKeeper.nextCheckpoint() != nil {
 			locator := sm.blockKeeper.blockLocator(nil)
-			hash := common.BytesToHash(sm.blockKeeper.nextCheckpoint().Hash.Bytes())
-			sm.BlockKeeper().getHeaders(peer.Key, locator, &hash)
+			stopHash := common.BytesToHash(sm.blockKeeper.nextCheckpoint().Hash.Bytes())
+			sm.BlockKeeper().getHeaders(peer.Key, locator, &stopHash)
 			sm.blockKeeper.headersFirstMode = true
 			log.Infof("Downloading headers for blocks %d to "+
 				"%d from peer %s", sm.chain.BestBlockHeight()+1,

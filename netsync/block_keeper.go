@@ -636,7 +636,7 @@ func (bk *blockKeeper) blockLocator(node *types.BlockHeader) []*common.Hash {
 		// Calculate height of previous node to include ensuring the
 		// final node is the genesis block.
 		height := node.Height - step
-		if height < 0 {
+		if node.Height < step {
 			height = 0
 		}
 
