@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519"
+	"github.com/bytom/crypto/sm2"
 	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/math/checked"
 )
@@ -155,4 +156,42 @@ func opHash160(vm *virtualMachine) error {
 
 func opSm3(vm *virtualMachine) error {
 	return doHash(vm, sm3.New)
+}
+
+func opCheckSigSm2(vm *virtualMachine) error {
+	err := vm.applyCost(1024)
+	if err != nil {
+		return err
+	}
+	pubX, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+	pubY, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+	msg, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+	uid, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+	r, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+	s, err := vm.pop(true)
+	if err != nil {
+		return nil
+	}
+	if len(msg) != 32 {
+		return ErrBadValue
+	}
+	if len(pubX) != 32 || len(pubY) != 32 {
+		return vm.pushBool(false, true)
+	}
+	return vm.pushBool(sm2.VerifyBytes(pubX, pubY, msg, uid, r, s), true)
 }
