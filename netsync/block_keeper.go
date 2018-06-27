@@ -10,6 +10,7 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
+	"github.com/bytom/mining/tensority"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -128,6 +129,11 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 			log.Info("Block keeper request block error. Stop peer.")
 			bk.sw.StopPeerGracefully(swPeer)
 			break
+		}
+		if bk.headersFirstMode {
+			seed,_ := bk.chain.CalcNextSeed(&(block.PreviousBlockHash))
+			blockHash := block.Hash()
+			tensority.AIHash.AddCache(&blockHash, seed, &bc.Hash{})
 		}
 		isOrphan, err = bk.chain.ProcessBlock(block)
 		if err != nil {
@@ -513,6 +519,7 @@ func (bk *blockKeeper) handleHeadersMsg(hmsg *headersMsg) {
 			bk.headerList.Len())
 		//todo:
 		//sm.fetchHeaderBlocks()
+		go bk.BlockRequestWorker(hmsg.peerID, bk.nextCheckpoint().Height)
 		return
 	}
 
