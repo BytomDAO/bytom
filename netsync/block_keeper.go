@@ -54,6 +54,8 @@ type blockKeeper struct {
 }
 
 func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitReqBlockCh chan *string) *blockKeeper {
+	best := chain.BestBlockHeader()
+	bestHash := best.Hash()
 	bk := &blockKeeper{
 		chain:            chain,
 		sw:               sw,
@@ -62,8 +64,27 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitR
 		txsProcessCh:     make(chan *txsNotify, maxtxsPending),
 		quitReqBlockCh:   quitReqBlockCh,
 	}
+	if nextCheckPoint := bk.nextCheckpoint(); nextCheckPoint != nil {
+		bk.resetHeaderState(&bestHash, best.Height)
+	}
 	go bk.txsProcessWorker()
 	return bk
+}
+
+// resetHeaderState sets the headers-first mode state to values appropriate for
+// syncing from a new peer.
+func (bk *blockKeeper) resetHeaderState(newestHash *bc.Hash, newestHeight uint64) {
+	bk.headersFirstMode = false
+	bk.headerList = list.New()
+	bk.startHeader = nil
+
+	// When there is a next checkpoint, add an entry for the latest known
+	// block into the header pool.  This allows the next downloaded header
+	// to prove it links to the chain properly.
+	if bk.nextCheckpoint() != nil {
+		node := headerNode{height: newestHeight, hash: newestHash}
+		bk.headerList.PushBack(&node)
+	}
 }
 
 func (bk *blockKeeper) AddBlock(block *types.Block, peerID string) {
@@ -307,7 +328,7 @@ func (bk *blockKeeper) locateHeaders(locator []common.Hash, hashStop *common.Has
 	if total == 0 {
 		return nil
 	}
-	log.Info("start block:",node.Height, " total:", total)
+	log.Info("start block:", node.Height, " total:", total)
 	// Populate and return the found headers.
 	headers := make([]types.BlockHeader, 0, total)
 	for i := uint32(0); i < total; i++ {
@@ -403,8 +424,7 @@ func (bk *blockKeeper) getHeaders(peerID string, locator []*common.Hash, stopHas
 // handleHeadersMsg handles block header messages from all peers.  Headers are
 // requested when performing a headers-first sync.
 func (bk *blockKeeper) handleHeadersMsg(hmsg *headersMsg) {
-	peer := hmsg.peer
-	_, exists := bk.peers.Peer(peer.id) //sm.Peers().Peer(peer.id)
+	peer, exists := bk.peers.Peer(hmsg.peerID) //sm.Peers().Peer(peer.id)
 	if !exists {
 		log.Warnf("Received headers message from unknown peer %s", peer)
 		return
@@ -566,8 +586,8 @@ func (bk *blockKeeper) handleHeadersMsg(hmsg *headersMsg) {
 // headersMsg packages a bitcoin headers message and the peer it came from
 // together so the block handler has access to that information.
 type headersMsg struct {
-	headers []*types.BlockHeader
-	peer    *peer
+	headers []types.BlockHeader
+	peerID  string
 }
 
 // headerNode is used as a node in a list of headers that are linked together
