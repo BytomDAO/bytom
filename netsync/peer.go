@@ -110,7 +110,7 @@ func (p *peer) SendTransactions(txs []*types.Tx) error {
 	return nil
 }
 
-func (p *peer) SendHeaders(headers []*types.BlockHeader) error {
+func (p *peer) SendHeaders(headers []types.BlockHeader) error {
 	msg, err := NewHeadersMessage(headers)
 	if err != nil {
 		return errors.New("Failed construction headers msg")
@@ -408,7 +408,7 @@ func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
 	return peer.requestBlockByHeight(height)
 }
 
-func (ps *peerSet) SendHeaders(peerID string, headers []*types.BlockHeader) error {
+func (ps *peerSet) SendHeaders(peerID string, headers []types.BlockHeader) error {
 	peer, ok := ps.Peer(peerID)
 	if !ok {
 		return errors.New("Can't find peer. ")

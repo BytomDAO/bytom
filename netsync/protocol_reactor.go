@@ -247,7 +247,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.blockKeeper.GetHeadersWorker(src.Key, msg)
 
 	case *HeadersMessage:
-
+		log.Info("HeadersMessage")
 	default:
 		log.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
 	}

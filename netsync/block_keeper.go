@@ -231,7 +231,7 @@ func (bk *blockKeeper) txsProcessWorker() {
 	}
 }
 
-func (bk *blockKeeper) headersSend(peerID string, headers []*types.BlockHeader) error {
+func (bk *blockKeeper) headersSend(peerID string, headers []types.BlockHeader) error {
 	return bk.peers.SendHeaders(peerID, headers)
 }
 
@@ -263,12 +263,12 @@ func (bk *blockKeeper) GetHeadersWorker(peerID string, msg *GetHeadersMessage) {
 		return
 	}
 
-	// Send found headers to the requesting peer.
-	blockHeaders := make([]*types.BlockHeader, len(headers))
-	for i := range headers {
-		blockHeaders[i] = &headers[i]
-	}
-	bk.headersSend(peerID, blockHeaders)
+	//// Send found headers to the requesting peer.
+	//blockHeaders := make([]types.BlockHeader, len(headers))
+	//for i := range headers {
+	//	blockHeaders[i] = &headers[i]
+	//}
+	bk.headersSend(peerID, headers)
 	//sp.QueueMessage(&HeadersMessage{Headers: blockHeaders}, nil)
 }
 
@@ -307,7 +307,7 @@ func (bk *blockKeeper) locateHeaders(locator []common.Hash, hashStop *common.Has
 	if total == 0 {
 		return nil
 	}
-
+	log.Info("start block:",node.Height, " total:", total)
 	// Populate and return the found headers.
 	headers := make([]types.BlockHeader, 0, total)
 	for i := uint32(0); i < total; i++ {

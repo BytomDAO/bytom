@@ -263,10 +263,10 @@ func (msg *GetHeadersMessage) AddBlockLocatorHash(hash *common.Hash) error {
 // per message is currently 2000.  See MsgGetHeaders for details on requesting
 // the headers.
 type HeadersMessage struct {
-	Headers []*types.BlockHeader
+	Headers []types.BlockHeader
 }
 
 //NewTransactionNotifyMessage construct notify new tx msg
-func NewHeadersMessage(bh []*types.BlockHeader) (*HeadersMessage, error) {
+func NewHeadersMessage(bh []types.BlockHeader) (*HeadersMessage, error) {
 	return &HeadersMessage{Headers: bh}, nil
 }
