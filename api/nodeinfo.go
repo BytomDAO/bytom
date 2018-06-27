@@ -34,7 +34,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 	return info
 }
 
-// getNetInfo return network infomation
+// getNetInfo return network information
 func (a *API) getNetInfo() Response {
 	return NewSuccessResponse(a.GetNodeInfo())
 }
