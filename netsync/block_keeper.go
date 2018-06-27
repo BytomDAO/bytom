@@ -299,7 +299,7 @@ func (bk *blockKeeper) GetHeadersWorker(peerID string, msg *GetHeadersMessage) {
 // See the comment on the exported function for more details on special cases.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (bk *blockKeeper) locateHeaders(locator []*common.Hash, hashStop *common.Hash, maxHeaders uint32) []types.BlockHeader {
+func (bk *blockKeeper) locateHeaders(locator []common.Hash, hashStop *common.Hash, maxHeaders uint32) []types.BlockHeader {
 	// Find the node after the first known block in the locator and the
 	// total number of nodes after it needed while respecting the stop hash
 	// and max entries.
@@ -333,7 +333,7 @@ func (bk *blockKeeper) locateHeaders(locator []*common.Hash, hashStop *common.Ha
 // functions.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (bk *blockKeeper) locateInventory(locator []*common.Hash, hashStop *common.Hash, maxEntries uint32) (*types.Block, uint32) {
+func (bk *blockKeeper) locateInventory(locator []common.Hash, hashStop *common.Hash, maxEntries uint32) (*types.Block, uint32) {
 	// There are no block locators so a specific block is being requested
 	// as identified by the stop hash.
 	//stopNode := b.index.LookupNode(hashStop)

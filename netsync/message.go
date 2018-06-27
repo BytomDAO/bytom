@@ -236,7 +236,7 @@ func (m *MineBlockMessage) String() string {
 // exponentially decrease the number of hashes the further away from head and
 // closer to the genesis block you get.
 type GetHeadersMessage struct {
-	BlockLocatorHashes []*common.Hash
+	BlockLocatorHashes []common.Hash
 	HashStop           common.Hash
 }
 
@@ -244,7 +244,7 @@ type GetHeadersMessage struct {
 // the Message interface.  See MsgGetHeaders for details.
 func NewMsgGetHeaders() *GetHeadersMessage {
 	return &GetHeadersMessage{
-		BlockLocatorHashes: make([]*common.Hash, 0, MaxBlockLocatorsPerMsg),
+		BlockLocatorHashes: make([]common.Hash, 0, MaxBlockLocatorsPerMsg),
 	}
 }
 
@@ -253,7 +253,7 @@ func (msg *GetHeadersMessage) AddBlockLocatorHash(hash *common.Hash) error {
 	if len(msg.BlockLocatorHashes)+1 > MaxBlockLocatorsPerMsg {
 		return errors.New("AddBlockLocatorHash too many block locator hashes")
 	}
-	msg.BlockLocatorHashes = append(msg.BlockLocatorHashes, hash)
+	msg.BlockLocatorHashes = append(msg.BlockLocatorHashes, *hash)
 	return nil
 }
 
