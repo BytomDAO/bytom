@@ -252,9 +252,14 @@ func (bk *blockKeeper) GetHeadersWorker(peerID string, msg *GetHeadersMessage) {
 	// over with the genesis block if unknown block locators are provided.
 	//
 	// This mirrors the behavior in the reference implementation.
+	for i := range msg.BlockLocatorHashes {
+		log.Info("num:", i, "BlockLocatorHashes:", &msg.BlockLocatorHashes[i])
+	}
+	log.Info("HashStop:", msg.HashStop)
 	headers := bk.locateHeaders(msg.BlockLocatorHashes, &msg.HashStop, MaxBlockHeadersPerMsg)
 	if len(headers) == 0 {
 		// Nothing to send.
+		log.Info("Nothing to send.")
 		return
 	}
 

@@ -243,6 +243,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.peers.SetPeerStatus(src.Key, block.Height, &hash)
 
 	case *GetHeadersMessage:
+		log.Info("GetHeadersMessage")
 		pr.blockKeeper.GetHeadersWorker(src.Key, msg)
 
 	case *HeadersMessage:
