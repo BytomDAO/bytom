@@ -84,6 +84,62 @@ func TestCheckSig(t *testing.T) {
 	}
 }
 
+func TestCheckSigSm2(t *testing.T) {
+	cases := []struct {
+		prog    string
+		ok, err bool
+	}{
+		{
+			// This one's OK
+			"0xb1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3 0x31323334353637383132333435363738 0x6d65737361676520646967657374 0xccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13 0x09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 CHECKSIGSM2",
+			true, false,
+		},
+		{
+			// This one has a wrong-length pubX
+			"0xb1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbca 0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3 0x31323334353637383132333435363738 0x6d65737361676520646967657374 0xccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13 0x09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 CHECKSIGSM2",
+			false, false,
+		},
+		{
+			// This one has a wrong-length pubY
+			"0xb1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3 0x31323334353637383132333435363738 0x6d65737361676520646967657374 0xccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13 0x09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 CHECKSIGSM2",
+			false, false,
+		},
+		{
+			// This one has a wrong-length r
+			"0xb1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3 0x31323334353637383132333435363738 0x6d65737361676520646967657374 0xccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad 0x09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 CHECKSIGSM2",
+			false, false,
+		},
+		{
+			// This one has a wrong-length s
+			"0xb1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3 0x31323334353637383132333435363738 0x6d65737361676520646967657374 0xccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13 0x09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350 CHECKSIGSM2",
+			false, false,
+		},
+	}
+
+	for i, c := range cases {
+		prog, err := Assemble(c.prog)
+		if err != nil {
+			t.Fatalf("case %d: %s", i, err)
+		}
+		vm := &virtualMachine{
+			program:  prog,
+			runLimit: 50000,
+		}
+		err = vm.run()
+		if c.err {
+			if err == nil {
+				t.Errorf("case %d: expected error, got ok result", i)
+			}
+		} else if c.ok {
+			if err != nil {
+				t.Errorf("case %d: expected ok result, got error %s", i, err)
+			}
+		} else if !vm.falseResult() {
+			t.Errorf("case %d: expected false VM result, got error %s", i, err)
+		}
+	}
+}
+
 func TestCryptoOps(t *testing.T) {
 	type testStruct struct {
 		op      Op
