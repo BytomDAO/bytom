@@ -185,7 +185,7 @@ func opCheckSigSm2(vm *virtualMachine) error {
 	}
 	s, err := vm.pop(true)
 	if err != nil {
-		return nil
+		return err
 	}
 	if len(msg) != 32 {
 		return ErrBadValue
