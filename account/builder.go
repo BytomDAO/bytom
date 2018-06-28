@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
@@ -11,6 +12,7 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -118,10 +120,27 @@ func (m *Manager) DecodeSpendUTXOAction(data []byte) (txbuilder.Action, error) {
 }
 
 type spendUTXOAction struct {
-	accounts *Manager
-	OutputID *bc.Hash `json:"output_id"`
+	accounts    *Manager
+	OutputID    *bc.Hash           `json:"output_id"`
+	Arguments   []contractArgument `json:"arguments"`
+	ClientToken *string            `json:"client_token"`
+}
 
-	ClientToken *string `json:"client_token"`
+// contractArgument for smart contract
+type contractArgument struct {
+	Type    string          `json:"type"`
+	RawData json.RawMessage `json:"raw_data"`
+}
+
+// rawTxSigArgument is signature-related argument for run contract
+type rawTxSigArgument struct {
+	RootXPub chainkd.XPub         `json:"xpub"`
+	Path     []chainjson.HexBytes `json:"derivation_path"`
+}
+
+// dataArgument is the other argument for run contract
+type dataArgument struct {
+	Value string `json:"value"`
 }
 
 func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
@@ -148,6 +167,42 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	if err != nil {
 		return err
 	}
+
+	if a.Arguments != nil {
+		sigInst = &txbuilder.SigningInstruction{}
+		for _, arg := range a.Arguments {
+			switch arg.Type {
+			case "raw_tx_signature":
+				rawTxSig := &rawTxSigArgument{}
+				if err = json.Unmarshal(arg.RawData, rawTxSig); err != nil {
+					return err
+				}
+
+				// convert path form chainjson.HexBytes to byte
+				var path [][]byte
+				for _, p := range rawTxSig.Path {
+					path = append(path, []byte(p))
+				}
+				sigInst.AddRawWitnessKeys([]chainkd.XPub{rawTxSig.RootXPub}, path, 1)
+
+			case "data":
+				data := &dataArgument{}
+				if err = json.Unmarshal(arg.RawData, data); err != nil {
+					return err
+				}
+
+				value, err := hex.DecodeString(data.Value)
+				if err != nil {
+					return err
+				}
+				sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness(value))
+
+			default:
+				return errors.New("contract argument type is not exist")
+			}
+		}
+	}
+
 	return b.AddInput(txInput, sigInst)
 }
 
