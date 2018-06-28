@@ -59,6 +59,12 @@ func (a *API) backupWalletImage() Response {
 
 func (a *API) rescanWallet() Response {
 	a.wallet.RescanBlocks()
+	for {
+		walletStatus := a.wallet.GetWalletStatusInfo()
+		if walletStatus.RescanStatus {
+			break
+		}
+	}
 	return NewSuccessResponse(nil)
 }
 
