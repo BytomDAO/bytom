@@ -26,11 +26,10 @@ var walletKey = []byte("walletInfo")
 
 //StatusInfo is base valid block info to handle orphan block rollback
 type StatusInfo struct {
-	WorkHeight   uint64
-	WorkHash     bc.Hash
-	BestHeight   uint64
-	BestHash     bc.Hash
-	RescanStatus bool
+	WorkHeight uint64
+	WorkHash   bc.Hash
+	BestHeight uint64
+	BestHash   bc.Hash
 }
 
 //Wallet is related to storing account unspent outputs
@@ -168,7 +167,6 @@ func (w *Wallet) walletUpdater() {
 
 		block, _ := w.chain.GetBlockByHeight(w.status.WorkHeight + 1)
 		if block == nil {
-			w.status.RescanStatus = false
 			<-w.chain.BlockWaiter(w.status.WorkHeight + 1)
 			continue
 		}
@@ -194,7 +192,6 @@ func (w *Wallet) getRescanNotification() {
 	case <-w.rescanCh:
 		block, _ := w.chain.GetBlockByHeight(0)
 		w.status.WorkHash = bc.Hash{}
-		w.status.RescanStatus = true
 		w.AttachBlock(block)
 	default:
 		return

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"time"
 
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
@@ -60,8 +61,9 @@ func (a *API) backupWalletImage() Response {
 func (a *API) rescanWallet() Response {
 	a.wallet.RescanBlocks()
 	for {
+		time.Sleep(50 * time.Microsecond)
 		walletStatus := a.wallet.GetWalletStatusInfo()
-		if walletStatus.RescanStatus {
+		if walletStatus.WorkHeight >= walletStatus.BestHeight {
 			break
 		}
 	}
