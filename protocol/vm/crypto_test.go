@@ -252,6 +252,194 @@ func TestCryptoOps(t *testing.T) {
 		},
 		wantErr: ErrRunLimitExceeded,
 	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3"),
+				mustDecodeHex("31323334353637383132333435363738"),
+				mustDecodeHex("6d65737361676520646967657374"),
+				mustDecodeHex("ccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13"),
+				mustDecodeHex("09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -197,
+			runLimit:     48976,
+			dataStack:    [][]byte{{1}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("ab3220d065dc875c6a5b4ecc39809b5f24eb0a605e9eef5190457edbf1e3b866"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3"),
+				mustDecodeHex("31323334353637383132333435363738"),
+				mustDecodeHex("6d65737361676520646967657374"),
+				mustDecodeHex("ccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13"),
+				mustDecodeHex("09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -198,
+			runLimit:     48976,
+			dataStack:    [][]byte{{}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("ab3220d065dc875c6a5b4ecc39809b5f24eb0a605e9eef5190457edbf1e3b866"),
+				mustDecodeHex("31323334353637383132333435363738"),
+				mustDecodeHex("6d65737361676520646967657374"),
+				mustDecodeHex("ccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13"),
+				mustDecodeHex("09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -198,
+			runLimit:     48976,
+			dataStack:    [][]byte{{}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3"),
+				mustDecodeHex("31323334353637383132333435363730"),
+				mustDecodeHex("6d65737361676520646967657374"),
+				mustDecodeHex("ccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13"),
+				mustDecodeHex("09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -198,
+			runLimit:     48976,
+			dataStack:    [][]byte{{}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3"),
+				mustDecodeHex("31323334353637383132333435363738"),
+				mustDecodeHex("6d65737361676520646967657371"),
+				mustDecodeHex("ccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13"),
+				mustDecodeHex("09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -198,
+			runLimit:     48976,
+			dataStack:    [][]byte{{}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3"),
+				mustDecodeHex("31323334353637383132333435363738"),
+				mustDecodeHex("6d65737361676520646967657374"),
+				mustDecodeHex("916f0027a575074ce72a331777c3478d6513f786a591bd892da1a577bf2335f9"),
+				mustDecodeHex("09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -198,
+			runLimit:     48976,
+			dataStack:    [][]byte{{}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3"),
+				mustDecodeHex("31323334353637383132333435363738"),
+				mustDecodeHex("6d65737361676520646967657374"),
+				mustDecodeHex("ccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13"),
+				mustDecodeHex("ab3220d065dc875c6a5b4ecc39809b5f24eb0a605e9eef5190457edbf1e3b866"),
+			},
+		},
+		wantVM: &virtualMachine{
+			deferredCost: -198,
+			runLimit:     48976,
+			dataStack:    [][]byte{{}},
+		},
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("badbad"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3"),
+				mustDecodeHex("31323334353637383132333435363738"),
+				mustDecodeHex("6d65737361676520646967657374"),
+				mustDecodeHex("ccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13"),
+				mustDecodeHex("09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+			},
+		},
+		wantErr: ErrBadValue,
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("babbad"),
+				mustDecodeHex("31323334353637383132333435363738"),
+				mustDecodeHex("6d65737361676520646967657374"),
+				mustDecodeHex("ccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13"),
+				mustDecodeHex("09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+			},
+		},
+		wantErr: ErrBadValue,
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3"),
+				mustDecodeHex("31323334353637383132333435363730"),
+				mustDecodeHex("6d65737361676520646967657374"),
+				mustDecodeHex("badbad"),
+				mustDecodeHex("09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+			},
+		},
+		wantErr: ErrBadValue,
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 50000,
+			dataStack: [][]byte{
+				mustDecodeHex("b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3"),
+				mustDecodeHex("31323334353637383132333435363738"),
+				mustDecodeHex("6d65737361676520646967657371"),
+				mustDecodeHex("ccea490ce26775a52dc6ea718cc1aa600aed05fbf35e084a6632f6072da9ad13"),
+				mustDecodeHex("badbad"),
+			},
+		},
+		wantErr: ErrBadValue,
+	}, {
+		op: OP_CHECKSIGSM2,
+		startVM: &virtualMachine{
+			runLimit: 0,
+		},
+		wantErr: ErrRunLimitExceeded,
+	}, {
 		op: OP_CHECKMULTISIG,
 		startVM: &virtualMachine{
 			runLimit: 50000,

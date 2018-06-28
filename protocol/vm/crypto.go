@@ -187,11 +187,8 @@ func opCheckSigSm2(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	if len(msg) != 32 {
+	if len(pubX) != 32 || len(pubY) != 32 || len(r) != 32 || len(s) != 32 {
 		return ErrBadValue
-	}
-	if len(pubX) != 32 || len(pubY) != 32 {
-		return vm.pushBool(false, true)
 	}
 	return vm.pushBool(sm2.VerifyBytes(pubX, pubY, msg, uid, r, s), true)
 }
