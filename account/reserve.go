@@ -12,7 +12,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/sync/idempotency"
 )
 
 var (
@@ -37,17 +36,12 @@ var (
 
 // UTXO describes an individual account utxo.
 type UTXO struct {
-	OutputID bc.Hash
-	SourceID bc.Hash
-
-	// Avoiding AssetAmount here so that new(utxo) doesn't produce an
-	// AssetAmount with a nil AssetId.
-	AssetID bc.AssetID
-	Amount  uint64
-
-	SourcePos      uint64
-	ControlProgram []byte
-
+	OutputID            bc.Hash
+	SourceID            bc.Hash
+	AssetID             bc.AssetID
+	Amount              uint64
+	SourcePos           uint64
+	ControlProgram      []byte
 	AccountID           string
 	Address             string
 	ControlProgramIndex uint64
@@ -68,12 +62,11 @@ type source struct {
 // reservation describes a reservation of a set of UTXOs belonging
 // to a particular account. Reservations are immutable.
 type reservation struct {
-	ID          uint64
-	Source      source
-	UTXOs       []*UTXO
-	Change      uint64
-	Expiry      time.Time
-	ClientToken *string
+	ID     uint64
+	Source source
+	UTXOs  []*UTXO
+	Change uint64
+	Expiry time.Time
 }
 
 func newReserver(c *protocol.Chain, walletdb dbm.DB) *reserver {
@@ -92,16 +85,12 @@ func newReserver(c *protocol.Chain, walletdb dbm.DB) *reserver {
 //
 // To reduce latency and prevent deadlock, no two mutexes (either on
 // reserver or sourceReserver) should be held at the same time
-//
-// reserver ensures idempotency of reservations until the reservation
-// expiration.
 type reserver struct {
 	// `sync/atomic` expects the first word in an allocated struct to be 64-bit
 	// aligned on both ARM and x86-32. See https://goo.gl/zW7dgq for more details.
 	nextReservationID uint64
 	c                 *protocol.Chain
 	db                dbm.DB
-	idempotency       idempotency.Group
 
 	reservationsMu sync.Mutex
 	reservations   map[uint64]*reservation
@@ -112,19 +101,7 @@ type reserver struct {
 
 // Reserve selects and reserves UTXOs according to the criteria provided
 // in source. The resulting reservation expires at exp.
-func (re *reserver) Reserve(src source, amount uint64, clientToken *string, exp time.Time) (*reservation, error) {
-
-	if clientToken == nil {
-		return re.reserve(src, amount, clientToken, exp)
-	}
-
-	untypedRes, err := re.idempotency.Once(*clientToken, func() (interface{}, error) {
-		return re.reserve(src, amount, clientToken, exp)
-	})
-	return untypedRes.(*reservation), err
-}
-
-func (re *reserver) reserve(src source, amount uint64, clientToken *string, exp time.Time) (res *reservation, err error) {
+func (re *reserver) Reserve(src source, amount uint64, exp time.Time) (res *reservation, err error) {
 	sourceReserver := re.source(src)
 
 	// Try to reserve the right amount.
@@ -138,11 +115,10 @@ func (re *reserver) reserve(src source, amount uint64, clientToken *string, exp 
 	}
 
 	res = &reservation{
-		ID:          rid,
-		Source:      src,
-		UTXOs:       reserved,
-		Expiry:      exp,
-		ClientToken: clientToken,
+		ID:     rid,
+		Source: src,
+		UTXOs:  reserved,
+		Expiry: exp,
 	}
 
 	// Save the successful reservation.
@@ -159,18 +135,7 @@ func (re *reserver) reserve(src source, amount uint64, clientToken *string, exp 
 
 // ReserveUTXO reserves a specific utxo for spending. The resulting
 // reservation expires at exp.
-func (re *reserver) ReserveUTXO(ctx context.Context, out bc.Hash, clientToken *string, exp time.Time) (*reservation, error) {
-	if clientToken == nil {
-		return re.reserveUTXO(ctx, out, exp, nil)
-	}
-
-	untypedRes, err := re.idempotency.Once(*clientToken, func() (interface{}, error) {
-		return re.reserveUTXO(ctx, out, exp, clientToken)
-	})
-	return untypedRes.(*reservation), err
-}
-
-func (re *reserver) reserveUTXO(ctx context.Context, out bc.Hash, exp time.Time, clientToken *string) (*reservation, error) {
+func (re *reserver) ReserveUTXO(ctx context.Context, out bc.Hash, exp time.Time) (*reservation, error) {
 	u, err := findSpecificUTXO(re.db, out)
 	if err != nil {
 		return nil, err
@@ -188,11 +153,10 @@ func (re *reserver) reserveUTXO(ctx context.Context, out bc.Hash, exp time.Time,
 	}
 
 	res := &reservation{
-		ID:          rid,
-		Source:      u.source(),
-		UTXOs:       []*UTXO{u},
-		Expiry:      exp,
-		ClientToken: clientToken,
+		ID:     rid,
+		Source: u.source(),
+		UTXOs:  []*UTXO{u},
+		Expiry: exp,
 	}
 	re.reservationsMu.Lock()
 	re.reservations[rid] = res
@@ -232,18 +196,9 @@ func (re *reserver) ExpireReservations(ctx context.Context) error {
 	}
 	re.reservationsMu.Unlock()
 
-	// If we removed any expired reservations, update the corresponding
-	// source reservers.
 	for _, res := range canceled {
 		re.source(res.Source).cancel(res)
-		/*if res.ClientToken != nil {
-			re.idempotency.Forget(*res.ClientToken)
-		}*/
 	}
-
-	// TODO(jackson): Cleanup any source reservers that don't have
-	// anything reserved. It'll be a little tricky because of our
-	// locking scheme.
 	return nil
 }
 

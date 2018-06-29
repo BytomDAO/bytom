@@ -29,8 +29,7 @@ func (m *Manager) DecodeSpendAction(data []byte) (txbuilder.Action, error) {
 type spendAction struct {
 	accounts *Manager
 	bc.AssetAmount
-	AccountID   string  `json:"account_id"`
-	ClientToken *string `json:"client_token"`
+	AccountID string `json:"account_id"`
 }
 
 // MergeSpendAction merge common assetID and accountID spend action
@@ -76,7 +75,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 		AssetID:   *a.AssetId,
 		AccountID: a.AccountID,
 	}
-	res, err := a.accounts.utxoDB.Reserve(src, a.Amount, a.ClientToken, b.MaxTime())
+	res, err := a.accounts.utxoDB.Reserve(src, a.Amount, b.MaxTime())
 	if err != nil {
 		return errors.Wrap(err, "reserving utxos")
 	}
@@ -120,10 +119,9 @@ func (m *Manager) DecodeSpendUTXOAction(data []byte) (txbuilder.Action, error) {
 }
 
 type spendUTXOAction struct {
-	accounts    *Manager
-	OutputID    *bc.Hash           `json:"output_id"`
-	Arguments   []contractArgument `json:"arguments"`
-	ClientToken *string            `json:"client_token"`
+	accounts  *Manager
+	OutputID  *bc.Hash           `json:"output_id"`
+	Arguments []contractArgument `json:"arguments"`
 }
 
 // contractArgument for smart contract
@@ -148,7 +146,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 		return txbuilder.MissingFieldsError("output_id")
 	}
 
-	res, err := a.accounts.utxoDB.ReserveUTXO(ctx, *a.OutputID, a.ClientToken, b.MaxTime())
+	res, err := a.accounts.utxoDB.ReserveUTXO(ctx, *a.OutputID, b.MaxTime())
 	if err != nil {
 		return err
 	}
@@ -168,41 +166,42 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 		return err
 	}
 
-	if a.Arguments != nil {
-		sigInst = &txbuilder.SigningInstruction{}
-		for _, arg := range a.Arguments {
-			switch arg.Type {
-			case "raw_tx_signature":
-				rawTxSig := &rawTxSigArgument{}
-				if err = json.Unmarshal(arg.RawData, rawTxSig); err != nil {
-					return err
-				}
-
-				// convert path form chainjson.HexBytes to byte
-				var path [][]byte
-				for _, p := range rawTxSig.Path {
-					path = append(path, []byte(p))
-				}
-				sigInst.AddRawWitnessKeys([]chainkd.XPub{rawTxSig.RootXPub}, path, 1)
-
-			case "data":
-				data := &dataArgument{}
-				if err = json.Unmarshal(arg.RawData, data); err != nil {
-					return err
-				}
-
-				value, err := hex.DecodeString(data.Value)
-				if err != nil {
-					return err
-				}
-				sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness(value))
-
-			default:
-				return errors.New("contract argument type is not exist")
-			}
-		}
+	if a.Arguments == nil {
+		return b.AddInput(txInput, sigInst)
 	}
 
+	sigInst = &txbuilder.SigningInstruction{}
+	for _, arg := range a.Arguments {
+		switch arg.Type {
+		case "raw_tx_signature":
+			rawTxSig := &rawTxSigArgument{}
+			if err = json.Unmarshal(arg.RawData, rawTxSig); err != nil {
+				return err
+			}
+
+			// convert path form chainjson.HexBytes to byte
+			var path [][]byte
+			for _, p := range rawTxSig.Path {
+				path = append(path, []byte(p))
+			}
+			sigInst.AddRawWitnessKeys([]chainkd.XPub{rawTxSig.RootXPub}, path, 1)
+
+		case "data":
+			data := &dataArgument{}
+			if err = json.Unmarshal(arg.RawData, data); err != nil {
+				return err
+			}
+
+			value, err := hex.DecodeString(data.Value)
+			if err != nil {
+				return err
+			}
+			sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness(value))
+
+		default:
+			return errors.New("contract argument type is not exist")
+		}
+	}
 	return b.AddInput(txInput, sigInst)
 }
 
