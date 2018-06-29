@@ -167,7 +167,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	}
 
 	if a.Arguments == nil {
-		b.AddInput(txInput, sigInst)
+		return b.AddInput(txInput, sigInst)
 	}
 
 	sigInst = &txbuilder.SigningInstruction{}
