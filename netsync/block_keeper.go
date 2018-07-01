@@ -131,11 +131,15 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 			break
 		}
 		if bk.headersFirstMode {
+			log.Info("CalcSeed start:", time.Now())
 			seed,_ := bk.chain.CalcNextSeed(&(block.PreviousBlockHash))
 			blockHash := block.Hash()
 			tensority.AIHash.AddCache(&blockHash, seed, &bc.Hash{})
+			log.Info("Add Cache end:", time.Now())
 		}
+		log.Info("Process block start:", time.Now())
 		isOrphan, err = bk.chain.ProcessBlock(block)
+		log.Info("Process block end:", time.Now())
 		if err != nil {
 			if bkPeer == nil {
 				log.Info("peer is deleted")
