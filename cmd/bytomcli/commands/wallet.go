@@ -11,7 +11,7 @@ import (
 
 var walletInfoCmd = &cobra.Command{
 	Use:   "wallet-info",
-	Short: "Print the block information for wallet",
+	Short: "Print the information of wallet",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		data, exitCode := util.ClientCall("/wallet-info")
@@ -24,13 +24,13 @@ var walletInfoCmd = &cobra.Command{
 
 var rescanWalletCmd = &cobra.Command{
 	Use:   "rescan-wallet",
-	Short: "Print the block information for wallet",
+	Short: "Trigger to rescan block information into related wallet",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		if _, exitCode := util.ClientCall("/rescan-wallet"); exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 
-		jww.FEEDBACK.Println("Successfully trigger rescan wallet")
+		jww.FEEDBACK.Println("Successfully trigger rescanning wallet")
 	},
 }
