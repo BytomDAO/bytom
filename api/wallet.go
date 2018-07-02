@@ -63,7 +63,7 @@ func (a *API) rescanWallet() Response {
 	for {
 		time.Sleep(50 * time.Microsecond)
 		walletStatus := a.wallet.GetWalletStatusInfo()
-		if walletStatus.RescanStatus {
+		if walletStatus.WorkHeight != walletStatus.BestHeight {
 			break
 		}
 	}
