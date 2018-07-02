@@ -241,6 +241,61 @@ var buildTransactionCmd = &cobra.Command{
 				}
 				buildReqStr = fmt.Sprintf(buildRevealPreimageReqFmt, outputID, value, assetInfo, amount, program, btmGas, accountInfo)
 
+			case "TradeOffer":
+				clauseTrade := "00000000"
+				clauseCancel := "13000000"
+				tradeOfferEnding := "1a000000"
+
+				switch {
+				case len(args) <= 4:
+					jww.ERROR.Printf("%s <clauseSelector> (<innerAccountID|alias> <innerAssetID|alias> <innerAmount> <innerProgram>) | (<rootPub> <path1> <path2>) [flags]\n\n", usage)
+					os.Exit(util.ErrLocalExe)
+				case args[4] == clauseTrade:
+					if len(args) != 9 {
+						jww.ERROR.Printf("%s <clauseSelector> <innerAccountID|alias> <innerAssetID|alias> <innerAmount> <innerProgram> [flags]\n\n", usage)
+						os.Exit(util.ErrLocalExe)
+					}
+
+					innerAccountInfo := args[5]
+					innerAssetInfo := args[6]
+					innerAmount := args[7]
+					innerProgram := args[8]
+					if alias {
+						buildReqStr = fmt.Sprintf(buildTradeOfferClauseTradeReqFmtByAlias, outputID, clauseTrade,
+							innerAssetInfo, innerAmount, innerProgram,
+							innerAssetInfo, innerAmount, innerAccountInfo,
+							btmGas, accountInfo,
+							assetInfo, amount, program)
+					} else {
+						buildReqStr = fmt.Sprintf(buildTradeOfferClauseTradeReqFmt, outputID, clauseTrade,
+							innerAssetInfo, innerAmount, innerProgram,
+							innerAssetInfo, innerAmount, innerAccountInfo,
+							btmGas, accountInfo,
+							assetInfo, amount, program)
+					}
+				case args[4] == clauseCancel:
+					if len(args) != 8 {
+						jww.ERROR.Printf("%s <clauseSelector> <rootPub> <path1> <path2> [flags]\n\n", usage)
+						os.Exit(util.ErrLocalExe)
+					}
+
+					rootPub := args[5]
+					path1 := args[6]
+					path2 := args[7]
+					if alias {
+						buildReqStr = fmt.Sprintf(buildTradeOfferClauseCancelReqFmtByAlias, outputID, rootPub, path1, path2, clauseCancel, assetInfo, amount, program, btmGas, accountInfo)
+					} else {
+						buildReqStr = fmt.Sprintf(buildTradeOfferClauseCancelReqFmt, outputID, rootPub, path1, path2, clauseCancel, assetInfo, amount, program, btmGas, accountInfo)
+					}
+				case args[4] == tradeOfferEnding:
+					jww.ERROR.Printf("Clause ending was selected in contract %s, ending exit!\n\n", contractName)
+					os.Exit(util.ErrLocalExe)
+				default:
+					jww.ERROR.Printf("selected clause [%s] error, contract %s's clause must in set:[%s, %s, %s]\n\n",
+						args[4], contractName, clauseTrade, clauseCancel, tradeOfferEnding)
+					os.Exit(util.ErrLocalExe)
+				}
+
 			default:
 				jww.ERROR.Printf("Invalid Contract template: %s\n\n", contractName)
 				os.Exit(util.ErrLocalExe)
