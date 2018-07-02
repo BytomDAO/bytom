@@ -40,6 +40,9 @@ func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) e
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
 	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
+	}
 	if len(missing) > 0 {
 		return MissingFieldsError(missing...)
 	}
@@ -67,6 +70,9 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
+	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
 	}
 	if len(missing) > 0 {
 		return MissingFieldsError(missing...)
@@ -114,6 +120,9 @@ func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) er
 	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
+	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
 	}
 	if len(missing) > 0 {
 		return MissingFieldsError(missing...)
