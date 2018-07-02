@@ -163,11 +163,8 @@ func opCheckSigSm2(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	pubX, err := vm.pop(true)
-	if err != nil {
-		return err
-	}
-	pubY, err := vm.pop(true)
+
+	publicKey, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
@@ -175,20 +172,13 @@ func opCheckSigSm2(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	uid, err := vm.pop(true)
+	sig, err := vm.pop(true)
 	if err != nil {
 		return err
 	}
-	r, err := vm.pop(true)
-	if err != nil {
-		return err
-	}
-	s, err := vm.pop(true)
-	if err != nil {
-		return err
-	}
-	if len(pubX) != 32 || len(pubY) != 32 || len(r) != 32 || len(s) != 32 {
+
+	if len(publicKey) != 65 || len(msg) != 32 || len(sig) != 64 {
 		return ErrBadValue
 	}
-	return vm.pushBool(sm2.VerifyBytes(pubX, pubY, msg, uid, r, s), true)
+	return vm.pushBool(sm2.Sm2VerifyBytes(publicKey, msg, sig), true)
 }
