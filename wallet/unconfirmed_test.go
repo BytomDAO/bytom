@@ -68,7 +68,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 		t.Fatal(err)
 	}
 	testTx := types.NewTx(*txData)
-	w.SaveUnconfirmedTx(testTx)
+	w.saveUnconfirmedTx(testTx)
 
 	txs := AnnotatedTxs([]*types.Tx{testTx}, w)
 	wantTx := txs[0]

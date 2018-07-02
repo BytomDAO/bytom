@@ -6,9 +6,12 @@ import (
 	"sort"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -19,6 +22,20 @@ const (
 
 func calcUnconfirmedTxKey(formatKey string) []byte {
 	return []byte(UnconfirmedTxPrefix + formatKey)
+}
+
+func (w *Wallet) AddUnconfirmedTx(txD *protocol.TxDesc) {
+	if err := w.saveUnconfirmedTx(txD.Tx); err != nil {
+		log.WithField("err", err).Error("wallet fail on saveUnconfirmedTx")
+	}
+
+	utxos := txoutUtxos(txD.Tx, txD.StatusFail, 0)
+	utxos = w.filterAccountUtxo(utxos)
+	w.AccountMgr.AddUnconfirmedUtxo(utxos)
+}
+
+func (w *Wallet) RemoveUnconfirmedTx(txD *protocol.TxDesc) {
+	w.AccountMgr.RemoveUnconfirmedUtxo(txD.Tx.ResultIds)
 }
 
 func (w *Wallet) buildAnnotatedUnconfirmedTx(tx *types.Tx) *query.AnnotatedTx {
@@ -36,7 +53,6 @@ func (w *Wallet) buildAnnotatedUnconfirmedTx(tx *types.Tx) *query.AnnotatedTx {
 	for i := range tx.Outputs {
 		annotatedTx.Outputs = append(annotatedTx.Outputs, w.BuildAnnotatedOutput(tx, i))
 	}
-
 	return annotatedTx
 }
 
@@ -64,7 +80,7 @@ func (w *Wallet) checkRelatedTransaction(tx *types.Tx) bool {
 }
 
 // SaveUnconfirmedTx save unconfirmed annotated transaction to the database
-func (w *Wallet) SaveUnconfirmedTx(tx *types.Tx) error {
+func (w *Wallet) saveUnconfirmedTx(tx *types.Tx) error {
 	if !w.checkRelatedTransaction(tx) {
 		return nil
 	}
@@ -96,7 +112,6 @@ func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error)
 		return nil, err
 	}
 	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
-
 	return annotatedTx, nil
 }
 

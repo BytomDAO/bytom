@@ -191,7 +191,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 }
 
 func processNewTxch(txPool *protocol.TxPool) {
-	newTxCh := txPool.GetNewTxCh()
+	newTxCh := txPool.GetMsgCh()
 	for tx := range newTxCh {
 		if tx == nil {
 		}

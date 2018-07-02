@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
@@ -21,6 +20,7 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
@@ -69,7 +69,7 @@ func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
 	return &Manager{
 		db:          walletDB,
 		chain:       chain,
-		utxoDB:      newReserver(chain, walletDB),
+		utxoKeeper:  newUtxoKeeper(chain, walletDB),
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
 		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),
@@ -78,9 +78,9 @@ func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
 
 // Manager stores accounts and their associated control programs.
 type Manager struct {
-	db     dbm.DB
-	chain  *protocol.Chain
-	utxoDB *reserver
+	db         dbm.DB
+	chain      *protocol.Chain
+	utxoKeeper *utxoKeeper
 
 	cacheMu    sync.Mutex
 	cache      *lru.Cache
@@ -91,24 +91,6 @@ type Manager struct {
 
 	accIndexMu sync.Mutex
 	accountMu  sync.Mutex
-}
-
-// ExpireReservations removes reservations that have expired periodically.
-// It blocks until the context is canceled.
-func (m *Manager) ExpireReservations(ctx context.Context, period time.Duration) {
-	ticks := time.Tick(period)
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info("Deposed, ExpireReservations exiting")
-			return
-		case <-ticks:
-			err := m.utxoDB.ExpireReservations(ctx)
-			if err != nil {
-				log.WithField("error", err).Error("Expire reservations")
-			}
-		}
-	}
 }
 
 // Account is structure of Bytom account
@@ -503,4 +485,12 @@ func (m *Manager) GetAccountByProgram(program *CtrlProgram) (*Account, error) {
 	}
 
 	return account, nil
+}
+
+func (m *Manager) AddUnconfirmedUtxo(utxos []*UTXO) {
+	m.utxoKeeper.AddUnconfirmedUtxo(utxos)
+}
+
+func (m *Manager) RemoveUnconfirmedUtxo(hashes []*bc.Hash) {
+	m.utxoKeeper.RemoveUnconfirmedUtxo(hashes)
 }

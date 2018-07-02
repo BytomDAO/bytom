@@ -42,7 +42,6 @@ type Wallet struct {
 	Hsm        *pseudohsm.HSM
 	chain      *protocol.Chain
 	rescanCh   chan struct{}
-	newTxCh    chan *types.Tx
 }
 
 //NewWallet return a new wallet instance
@@ -54,7 +53,6 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		chain:      chain,
 		Hsm:        hsm,
 		rescanCh:   make(chan struct{}, 1),
-		newTxCh:    make(chan *types.Tx, maxTxChanSize),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -62,8 +60,6 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	go w.walletUpdater()
-	go w.UnconfirmedTxCollector()
-
 	return w, nil
 }
 
@@ -195,18 +191,6 @@ func (w *Wallet) getRescanNotification() {
 		w.AttachBlock(block)
 	default:
 		return
-	}
-}
-
-// GetNewTxCh return a unconfirmed transaction feed channel
-func (w *Wallet) GetNewTxCh() chan *types.Tx {
-	return w.newTxCh
-}
-
-// UnconfirmedTxCollector collector unconfirmed transaction
-func (w *Wallet) UnconfirmedTxCollector() {
-	for {
-		w.SaveUnconfirmedTx(<-w.newTxCh)
 	}
 }
 

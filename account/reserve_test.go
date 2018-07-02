@@ -1,7 +1,6 @@
 package account
 
 import (
-	"context"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -76,7 +75,7 @@ func TestCancelReservation(t *testing.T) {
 	leveldb.SaveUtxoView(batch, view)
 	batch.Write()
 
-	utxoDB := newReserver(chain, testDB)
+	utxoDB := newUtxoKeeper(chain, testDB)
 
 	batch = utxoDB.db.NewBatch()
 
@@ -90,26 +89,21 @@ func TestCancelReservation(t *testing.T) {
 
 	outid := utxo.OutputID
 
-	ctx := context.Background()
-	res, err := utxoDB.ReserveUTXO(ctx, outid, time.Now())
+	res, err := utxoDB.ReserveParticular(outid, false, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Verify that the UTXO is reserved.
-	_, err = utxoDB.ReserveUTXO(ctx, outid, time.Now())
+	_, err = utxoDB.ReserveParticular(outid, false, time.Now())
 	if err != ErrReserved {
 		t.Fatalf("got=%s want=%s", err, ErrReserved)
 	}
 
-	// Cancel the reservation.
-	err = utxoDB.Cancel(ctx, res.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	utxoDB.Cancel(res.id)
 
 	// Reserving again should succeed.
-	_, err = utxoDB.ReserveUTXO(ctx, outid, time.Now())
+	_, err = utxoDB.ReserveParticular(outid, false, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}

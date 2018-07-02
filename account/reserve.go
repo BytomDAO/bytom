@@ -1,12 +1,12 @@
 package account
 
 import (
-	"context"
 	"encoding/json"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/errors"
@@ -15,23 +15,11 @@ import (
 )
 
 var (
-	// ErrInsufficient indicates the account doesn't contain enough
-	// units of the requested asset to satisfy the reservation.
-	// New units must be deposited into the account in order to
-	// satisfy the request; change will not be sufficient.
 	ErrInsufficient = errors.New("reservation found insufficient funds")
-
-	// ErrReserved indicates that a reservation could not be
-	// satisfied because some of the outputs were already reserved.
-	// When those reservations are finalized into a transaction
-	// (and no other transaction spends funds from the account),
-	// new change outputs will be created
-	// in sufficient amounts to satisfy the request.
-	ErrReserved = errors.New("reservation found outputs already reserved")
-	// ErrMatchUTXO indicates the account doesn't contain enough utxo to satisfy the reservation.
-	ErrMatchUTXO = errors.New("can't match enough valid utxos")
-	// ErrReservation indicates the reserver doesn't found the reservation with the provided ID.
-	ErrReservation = errors.New("couldn't find reservation")
+	ErrImmature     = errors.New("reservation found immature funds")
+	ErrReserved     = errors.New("reservation found outputs already reserved")
+	ErrMatchUTXO    = errors.New("can't find utxo with given hash")
+	ErrReservation  = errors.New("couldn't find reservation")
 )
 
 // UTXO describes an individual account utxo.
@@ -49,289 +37,210 @@ type UTXO struct {
 	Change              bool
 }
 
-func (u *UTXO) source() source {
-	return source{AssetID: u.AssetID, AccountID: u.AccountID}
-}
-
-// source describes the criteria to use when selecting UTXOs.
-type source struct {
-	AssetID   bc.AssetID
-	AccountID string
-}
-
-// reservation describes a reservation of a set of UTXOs belonging
-// to a particular account. Reservations are immutable.
+// reservation describes a reservation of a set of UTXOs
 type reservation struct {
-	ID     uint64
-	Source source
-	UTXOs  []*UTXO
-	Change uint64
-	Expiry time.Time
+	id     uint64
+	utxos  []*UTXO
+	change uint64
+	expiry time.Time
 }
 
-func newReserver(c *protocol.Chain, walletdb dbm.DB) *reserver {
-	return &reserver{
-		c:            c,
-		db:           walletdb,
-		reservations: make(map[uint64]*reservation),
-		sources:      make(map[source]*sourceReserver),
-	}
-}
-
-// reserver implements a utxo reserver that stores reservations
-// in-memory. It relies on the account_utxos table for the source of
-// truth of valid UTXOs but tracks which of those UTXOs are reserved
-// in-memory.
-//
-// To reduce latency and prevent deadlock, no two mutexes (either on
-// reserver or sourceReserver) should be held at the same time
-type reserver struct {
+type utxoKeeper struct {
 	// `sync/atomic` expects the first word in an allocated struct to be 64-bit
 	// aligned on both ARM and x86-32. See https://goo.gl/zW7dgq for more details.
-	nextReservationID uint64
-	c                 *protocol.Chain
-	db                dbm.DB
+	nextIndex     uint64
+	db            dbm.DB
+	mtx           sync.RWMutex
+	currentHeight func() uint64
 
-	reservationsMu sync.Mutex
-	reservations   map[uint64]*reservation
-
-	sourcesMu sync.Mutex
-	sources   map[source]*sourceReserver
+	unconfirmed  map[bc.Hash]*UTXO
+	reserved     map[bc.Hash]uint64
+	reservations map[uint64]*reservation
 }
 
-// Reserve selects and reserves UTXOs according to the criteria provided
-// in source. The resulting reservation expires at exp.
-func (re *reserver) Reserve(src source, amount uint64, exp time.Time) (res *reservation, err error) {
-	sourceReserver := re.source(src)
+func newUtxoKeeper(chain *protocol.Chain, walletdb dbm.DB) *utxoKeeper {
+	uk := &utxoKeeper{
+		db:            walletdb,
+		currentHeight: chain.BestBlockHeight,
+		unconfirmed:   make(map[bc.Hash]*UTXO),
+		reserved:      make(map[bc.Hash]uint64),
+		reservations:  make(map[uint64]*reservation),
+	}
+	go uk.expireWorker()
+	return uk
+}
 
-	// Try to reserve the right amount.
-	rid := atomic.AddUint64(&re.nextReservationID, 1)
-	reserved, total, isImmature, err := sourceReserver.reserve(rid, amount)
+func (uk *utxoKeeper) AddUnconfirmedUtxo(utxos []*UTXO) {
+	uk.mtx.Lock()
+	defer uk.mtx.Unlock()
+
+	for _, utxo := range utxos {
+		uk.unconfirmed[utxo.OutputID] = utxo
+	}
+}
+
+func (uk *utxoKeeper) RemoveUnconfirmedUtxo(hashes []*bc.Hash) {
+	uk.mtx.Lock()
+	defer uk.mtx.Unlock()
+
+	for _, hash := range hashes {
+		delete(uk.unconfirmed, *hash)
+	}
+}
+
+// Cancel makes a best-effort attempt at canceling the reservation with the provided ID.
+func (uk *utxoKeeper) Cancel(rid uint64) {
+	uk.mtx.Lock()
+	uk.cancel(rid)
+	uk.mtx.Unlock()
+}
+
+func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint64, useUnconfirmed bool, exp time.Time) (*reservation, error) {
+	uk.mtx.Lock()
+	defer uk.mtx.Unlock()
+
+	utxos, immatureAmount := uk.findUTXOs(accountID, assetID, useUnconfirmed)
+	optUtxos, optAmount, reservedAmount := uk.optUTXOs(utxos, amount)
+	if optAmount+reservedAmount+immatureAmount < amount {
+		return nil, ErrInsufficient
+	}
+	if optAmount+reservedAmount < amount {
+		return nil, ErrImmature
+	}
+	if optAmount < amount {
+		return nil, ErrReserved
+	}
+
+	result := &reservation{
+		id:     atomic.AddUint64(&uk.nextIndex, 1),
+		utxos:  optUtxos,
+		change: amount - optAmount,
+		expiry: exp,
+	}
+
+	uk.reservations[result.id] = result
+	for _, u := range optUtxos {
+		uk.reserved[u.OutputID] = result.id
+	}
+	return result, nil
+}
+
+func (uk *utxoKeeper) ReserveParticular(outHash bc.Hash, useUnconfirmed bool, exp time.Time) (*reservation, error) {
+	uk.mtx.Lock()
+	defer uk.mtx.Unlock()
+
+	if _, ok := uk.reserved[outHash]; ok {
+		return nil, ErrReserved
+	}
+
+	u, err := uk.findUTXO(outHash, useUnconfirmed)
 	if err != nil {
-		if isImmature {
-			return nil, errors.WithDetail(err, "some coinbase utxos are immature")
-		}
 		return nil, err
 	}
 
-	res = &reservation{
-		ID:     rid,
-		Source: src,
-		UTXOs:  reserved,
-		Expiry: exp,
-	}
-
-	// Save the successful reservation.
-	re.reservationsMu.Lock()
-	defer re.reservationsMu.Unlock()
-	re.reservations[rid] = res
-
-	// Make change if necessary
-	if total > amount {
-		res.Change = total - amount
-	}
-	return res, nil
-}
-
-// ReserveUTXO reserves a specific utxo for spending. The resulting
-// reservation expires at exp.
-func (re *reserver) ReserveUTXO(ctx context.Context, out bc.Hash, exp time.Time) (*reservation, error) {
-	u, err := findSpecificUTXO(re.db, out)
-	if err != nil {
-		return nil, err
-	}
-
-	//u.ValidHeight > 0 means coinbase utxo
-	if u.ValidHeight > 0 && u.ValidHeight > re.c.BestBlockHeight() {
+	if u.ValidHeight > uk.currentHeight() {
 		return nil, errors.WithDetail(ErrMatchUTXO, "this coinbase utxo is immature")
 	}
 
-	rid := atomic.AddUint64(&re.nextReservationID, 1)
-	err = re.source(u.source()).reserveUTXO(rid, u)
-	if err != nil {
-		return nil, err
+	result := &reservation{
+		id:     atomic.AddUint64(&uk.nextIndex, 1),
+		utxos:  []*UTXO{u},
+		expiry: exp,
 	}
-
-	res := &reservation{
-		ID:     rid,
-		Source: u.source(),
-		UTXOs:  []*UTXO{u},
-		Expiry: exp,
-	}
-	re.reservationsMu.Lock()
-	re.reservations[rid] = res
-	re.reservationsMu.Unlock()
-	return res, nil
+	uk.reservations[result.id] = result
+	uk.reserved[u.OutputID] = result.id
+	return result, nil
 }
 
-// Cancel makes a best-effort attempt at canceling the reservation with
-// the provided ID.
-func (re *reserver) Cancel(ctx context.Context, rid uint64) error {
-	re.reservationsMu.Lock()
-	res, ok := re.reservations[rid]
-	delete(re.reservations, rid)
-	re.reservationsMu.Unlock()
+func (uk *utxoKeeper) cancel(rid uint64) {
+	res, ok := uk.reservations[rid]
 	if !ok {
-		return errors.Wrapf(ErrReservation, "rid=%d", rid)
+		return
 	}
-	re.source(res.Source).cancel(res)
-	/*if res.ClientToken != nil {
-		re.idempotency.Forget(*res.ClientToken)
-	}*/
-	return nil
+
+	delete(uk.reservations, rid)
+	for _, utxo := range res.utxos {
+		delete(uk.reserved, utxo.OutputID)
+	}
 }
 
-// ExpireReservations cleans up all reservations that have expired,
-// making their UTXOs available for reservation again.
-func (re *reserver) ExpireReservations(ctx context.Context) error {
-	// Remove records of any reservations that have expired.
-	now := time.Now()
-	var canceled []*reservation
-	re.reservationsMu.Lock()
-	for rid, res := range re.reservations {
-		if res.Expiry.Before(now) {
-			canceled = append(canceled, res)
-			delete(re.reservations, rid)
+func (uk *utxoKeeper) expireWorker() {
+	ticker := time.NewTicker(1000 * time.Millisecond)
+	for now := range ticker.C {
+		uk.mtx.Lock()
+		for rid, res := range uk.reservations {
+			if res.expiry.Before(now) {
+				uk.cancel(rid)
+			}
 		}
+		uk.mtx.Unlock()
 	}
-	re.reservationsMu.Unlock()
-
-	for _, res := range canceled {
-		re.source(res.Source).cancel(res)
-	}
-	return nil
 }
 
-func (re *reserver) source(src source) *sourceReserver {
-	re.sourcesMu.Lock()
-	defer re.sourcesMu.Unlock()
-
-	sr, ok := re.sources[src]
-	if ok {
-		return sr
-	}
-
-	sr = &sourceReserver{
-		db:            re.db,
-		src:           src,
-		reserved:      make(map[bc.Hash]uint64),
-		currentHeight: re.c.BestBlockHeight,
-	}
-	re.sources[src] = sr
-	return sr
-}
-
-type sourceReserver struct {
-	db            dbm.DB
-	src           source
-	currentHeight func() uint64
-	mu            sync.Mutex
-	reserved      map[bc.Hash]uint64
-}
-
-func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, bool, error) {
-	var (
-		reserved, unavailable uint64
-		reservedUTXOs         []*UTXO
-	)
-
-	utxos, isImmature, err := findMatchingUTXOs(sr.db, sr.src, sr.currentHeight)
-	if err != nil {
-		return nil, 0, isImmature, errors.Wrap(err)
-	}
-
-	sr.mu.Lock()
-	defer sr.mu.Unlock()
+func (uk *utxoKeeper) optUTXOs(utxos []*UTXO, amount uint64) ([]*UTXO, uint64, uint64) {
+	var optAmount, reservedAmount uint64
+	optUtxos := []*UTXO{}
 	for _, u := range utxos {
-		// If the UTXO is already reserved, skip it.
-		if _, ok := sr.reserved[u.OutputID]; ok {
-			unavailable += u.Amount
+		if _, ok := uk.reserved[u.OutputID]; ok {
+			reservedAmount += u.Amount
 			continue
 		}
 
-		reserved += u.Amount
-		reservedUTXOs = append(reservedUTXOs, u)
-		if reserved >= amount {
+		optAmount += u.Amount
+		optUtxos = append(optUtxos, u)
+		if optAmount >= amount {
 			break
 		}
 	}
-	if reserved+unavailable < amount {
-		// Even if everything was available, this account wouldn't have
-		// enough to satisfy the request.
-		return nil, 0, isImmature, ErrInsufficient
-	}
-	if reserved < amount {
-		// The account has enough for the request, but some is tied up in
-		// other reservations.
-		return nil, 0, isImmature, ErrReserved
-	}
-
-	// We've found enough to satisfy the request.
-	for _, u := range reservedUTXOs {
-		sr.reserved[u.OutputID] = rid
-	}
-
-	return reservedUTXOs, reserved, isImmature, nil
+	return optUtxos, optAmount, reservedAmount
 }
 
-func (sr *sourceReserver) reserveUTXO(rid uint64, utxo *UTXO) error {
-	sr.mu.Lock()
-	defer sr.mu.Unlock()
-
-	_, isReserved := sr.reserved[utxo.OutputID]
-	if isReserved {
-		return ErrReserved
-	}
-
-	sr.reserved[utxo.OutputID] = rid
-	return nil
-}
-
-func (sr *sourceReserver) cancel(res *reservation) {
-	sr.mu.Lock()
-	defer sr.mu.Unlock()
-	for _, utxo := range res.UTXOs {
-		delete(sr.reserved, utxo.OutputID)
-	}
-}
-
-func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*UTXO, bool, error) {
+func (uk *utxoKeeper) findUTXOs(accountID string, assetID *bc.AssetID, useUnconfirmed bool) ([]*UTXO, uint64) {
+	immatureAmount := uint64(0)
+	currentHeight := uk.currentHeight()
 	utxos := []*UTXO{}
-	isImmature := false
-	utxoIter := db.IteratorPrefix([]byte(UTXOPreFix))
-	defer utxoIter.Release()
-
-	for utxoIter.Next() {
-		u := &UTXO{}
-		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
-			return nil, false, errors.Wrap(err)
+	appendUtxo := func(u *UTXO) {
+		if u.AccountID != accountID || u.AssetID != *assetID {
+			return
 		}
-
-		//u.ValidHeight > 0 means coinbase utxo
-		if u.ValidHeight > 0 && u.ValidHeight > currentHeight() {
-			isImmature = true
-			continue
-		}
-
-		if u.AccountID == src.AccountID && u.AssetID == src.AssetID {
+		if u.ValidHeight > currentHeight {
+			immatureAmount += u.Amount
+		} else {
 			utxos = append(utxos, u)
 		}
 	}
 
-	if len(utxos) == 0 {
-		return nil, isImmature, ErrMatchUTXO
+	utxoIter := uk.db.IteratorPrefix([]byte(UTXOPreFix))
+	defer utxoIter.Release()
+	for utxoIter.Next() {
+		u := &UTXO{}
+		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
+			log.WithField("err", err).Error("utxoKeeper findUTXOs fail on unmarshal utxo")
+			continue
+		}
+		appendUtxo(u)
 	}
-	return utxos, isImmature, nil
+	if !useUnconfirmed {
+		return utxos, immatureAmount
+	}
+
+	for _, u := range uk.unconfirmed {
+		appendUtxo(u)
+	}
+	return utxos, immatureAmount
 }
 
-func findSpecificUTXO(db dbm.DB, outHash bc.Hash) (*UTXO, error) {
-	u := &UTXO{}
-
-	data := db.Get(StandardUTXOKey(outHash))
-	if data == nil {
-		if data = db.Get(ContractUTXOKey(outHash)); data == nil {
-			return nil, errors.Wrapf(ErrMatchUTXO, "output_id = %s", outHash.String())
-		}
+func (uk *utxoKeeper) findUTXO(outHash bc.Hash, useUnconfirmed bool) (*UTXO, error) {
+	if u, ok := uk.unconfirmed[outHash]; useUnconfirmed && ok {
+		return u, nil
 	}
-	return u, json.Unmarshal(data, u)
+
+	u := &UTXO{}
+	if data := uk.db.Get(StandardUTXOKey(outHash)); data != nil {
+		return u, json.Unmarshal(data, u)
+	}
+	if data := uk.db.Get(ContractUTXOKey(outHash)); data != nil {
+		return u, json.Unmarshal(data, u)
+	}
+	return nil, errors.Wrapf(ErrMatchUTXO, "output_id = %s", outHash.String())
 }
