@@ -33,7 +33,6 @@ type Fetcher struct {
 
 	// Block cache
 	queue  *prque.Prque              // Queue containing the import operations (block number sorted)
-	queues map[string]int            // Per peer block counts to prevent memory exhaustion
 	queued map[bc.Hash]*blockPending // Set of already queued blocks (to dedup imports)
 }
 

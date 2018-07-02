@@ -201,6 +201,7 @@ func (a *API) buildHandler() {
 		m.Handle("/create-account-receiver", jsonHandler(a.createAccountReceiver))
 		m.Handle("/list-addresses", jsonHandler(a.listAddresses))
 		m.Handle("/validate-address", jsonHandler(a.validateAddress))
+		m.Handle("/list-pubkeys", jsonHandler(a.listPubKeys))
 
 		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
@@ -225,6 +226,7 @@ func (a *API) buildHandler() {
 		m.Handle("/backup-wallet", jsonHandler(a.backupWalletImage))
 		m.Handle("/restore-wallet", jsonHandler(a.restoreWalletImage))
 		m.Handle("/rescan-wallet", jsonHandler(a.rescanWallet))
+		m.Handle("/wallet-info", jsonHandler(a.getWalletInfo))
 	} else {
 		log.Warn("Please enable wallet")
 	}

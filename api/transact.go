@@ -59,7 +59,6 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		return nil, errors.New("transaction only contain spend actions, didn't have output actions")
 	}
 
-	spendActions := []txbuilder.Action{}
 	actions := make([]txbuilder.Action, 0, len(req.Actions))
 	for i, act := range req.Actions {
 		typ, ok := act["type"].(string)
@@ -81,14 +80,9 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		if err != nil {
 			return nil, errors.WithDetailf(errBadAction, "%s on action %d", err.Error(), i)
 		}
-
-		if typ == "spend_account" {
-			spendActions = append(spendActions, action)
-		} else {
-			actions = append(actions, action)
-		}
+		actions = append(actions, action)
 	}
-	actions = append(account.MergeSpendAction(spendActions), actions...)
+	actions = account.MergeSpendAction(actions)
 
 	ttl := req.TTL.Duration
 	if ttl == 0 {

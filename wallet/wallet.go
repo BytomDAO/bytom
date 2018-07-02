@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/json"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -34,6 +35,7 @@ type StatusInfo struct {
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
 	DB         db.DB
+	rw         sync.RWMutex
 	status     StatusInfo
 	AccountMgr *account.Manager
 	AssetReg   *asset.Registry
@@ -93,6 +95,9 @@ func (w *Wallet) commitWalletInfo(batch db.Batch) error {
 
 // AttachBlock attach a new block
 func (w *Wallet) AttachBlock(block *types.Block) error {
+	w.rw.Lock()
+	defer w.rw.Unlock()
+
 	if block.PreviousBlockHash != w.status.WorkHash {
 		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
 		return nil
@@ -119,6 +124,9 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 
 // DetachBlock detach a block and rollback state
 func (w *Wallet) DetachBlock(block *types.Block) error {
+	w.rw.Lock()
+	defer w.rw.Unlock()
+
 	blockHash := block.Hash()
 	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
 	if err != nil {
@@ -159,7 +167,7 @@ func (w *Wallet) walletUpdater() {
 
 		block, _ := w.chain.GetBlockByHeight(w.status.WorkHeight + 1)
 		if block == nil {
-			<-w.chain.BlockWaiter(w.status.WorkHeight + 1)
+			w.walletBlockWaiter()
 			continue
 		}
 
@@ -182,11 +190,23 @@ func (w *Wallet) RescanBlocks() {
 func (w *Wallet) getRescanNotification() {
 	select {
 	case <-w.rescanCh:
-		block, _ := w.chain.GetBlockByHeight(0)
-		w.status.WorkHash = bc.Hash{}
-		w.AttachBlock(block)
+		w.setRescanStatus()
 	default:
 		return
+	}
+}
+
+func (w *Wallet) setRescanStatus() {
+	block, _ := w.chain.GetBlockByHeight(0)
+	w.status.WorkHash = bc.Hash{}
+	w.AttachBlock(block)
+}
+
+func (w *Wallet) walletBlockWaiter() {
+	select {
+	case <-w.chain.BlockWaiter(w.status.WorkHeight + 1):
+	case <-w.rescanCh:
+		w.setRescanStatus()
 	}
 }
 
@@ -195,10 +215,19 @@ func (w *Wallet) GetNewTxCh() chan *types.Tx {
 	return w.newTxCh
 }
 
+// UnconfirmedTxCollector collector unconfirmed transaction
 func (w *Wallet) UnconfirmedTxCollector() {
 	for {
 		w.SaveUnconfirmedTx(<-w.newTxCh)
 	}
+}
+
+// GetWalletStatusInfo return current wallet StatusInfo
+func (w *Wallet) GetWalletStatusInfo() StatusInfo {
+	w.rw.RLock()
+	defer w.rw.RUnlock()
+
+	return w.status
 }
 
 func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {

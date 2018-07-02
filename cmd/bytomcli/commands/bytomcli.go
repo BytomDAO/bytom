@@ -117,6 +117,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(createAccountReceiverCmd)
 	BytomcliCmd.AddCommand(listAddressesCmd)
 	BytomcliCmd.AddCommand(validateAddressCmd)
+	BytomcliCmd.AddCommand(listPubKeysCmd)
 
 	BytomcliCmd.AddCommand(createAssetCmd)
 	BytomcliCmd.AddCommand(getAssetCmd)
@@ -132,6 +133,9 @@ func AddCommands() {
 
 	BytomcliCmd.AddCommand(listUnspentOutputsCmd)
 	BytomcliCmd.AddCommand(listBalancesCmd)
+
+	BytomcliCmd.AddCommand(rescanWalletCmd)
+	BytomcliCmd.AddCommand(walletInfoCmd)
 
 	BytomcliCmd.AddCommand(buildTransactionCmd)
 	BytomcliCmd.AddCommand(signTransactionCmd)
@@ -178,6 +182,7 @@ func AddTemplateFunc() {
 		createAccountReceiverCmd.Name(),
 		listAddressesCmd.Name(),
 		validateAddressCmd.Name(),
+		listPubKeysCmd.Name(),
 
 		createAssetCmd.Name(),
 		getAssetCmd.Name(),
@@ -197,6 +202,9 @@ func AddTemplateFunc() {
 		listTransactionsCmd.Name(),
 		listUnspentOutputsCmd.Name(),
 		listBalancesCmd.Name(),
+
+		rescanWalletCmd.Name(),
+		walletInfoCmd.Name(),
 	}
 
 	cobra.AddTemplateFunc("WalletEnable", func(cmdName string) bool {

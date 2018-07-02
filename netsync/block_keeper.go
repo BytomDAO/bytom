@@ -5,6 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
@@ -149,6 +150,23 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 
 func (bk *blockKeeper) blockRequest(peerID string, height uint64) error {
 	return bk.peers.requestBlockByHeight(peerID, height)
+}
+
+func (bk *blockKeeper) nextCheckpoint() *consensus.Checkpoint {
+	height := bk.chain.BestBlockHeader().Height
+	checkpoints := consensus.ActiveNetParams.Checkpoints
+	if len(checkpoints) == 0 || height >= checkpoints[len(checkpoints)-1].Height {
+		return nil
+	}
+
+	nextCheckpoint := &checkpoints[len(checkpoints)-1]
+	for i := len(checkpoints) - 2; i >= 0; i-- {
+		if height >= checkpoints[i].Height {
+			break
+		}
+		nextCheckpoint = &checkpoints[i]
+	}
+	return nextCheckpoint
 }
 
 func (bk *blockKeeper) BlockRequest(peerID string, height uint64) (*types.Block, error) {

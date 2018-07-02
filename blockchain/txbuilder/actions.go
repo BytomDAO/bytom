@@ -40,6 +40,9 @@ func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) e
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
 	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
+	}
 	if len(missing) > 0 {
 		return MissingFieldsError(missing...)
 	}
@@ -67,6 +70,9 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 	}
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
+	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
 	}
 	if len(missing) > 0 {
 		return MissingFieldsError(missing...)
@@ -115,6 +121,9 @@ func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) er
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
 	}
+	if a.Amount == 0 {
+		missing = append(missing, "amount")
+	}
 	if len(missing) > 0 {
 		return MissingFieldsError(missing...)
 	}
@@ -132,6 +141,7 @@ func DecodeRetireAction(data []byte) (Action, error) {
 
 type retireAction struct {
 	bc.AssetAmount
+	Arbitrary json.HexBytes `json:"arbitrary"`
 }
 
 func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -146,6 +156,10 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	out := types.NewTxOutput(*a.AssetId, a.Amount, retirementProgram)
+	program, err := vmutil.RetireProgram(a.Arbitrary)
+	if err != nil {
+		return err
+	}
+	out := types.NewTxOutput(*a.AssetId, a.Amount, program)
 	return b.AddOutput(out)
 }

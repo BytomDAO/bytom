@@ -2,13 +2,16 @@ package api
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
+	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/consensus"
+	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -232,9 +235,10 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 
 // POST /list-unspent-outputs
 func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
-	ID string `json:"id"`
+	ID            string `json:"id"`
+	SmartContract bool   `json:"smart_contract"`
 }) Response {
-	accountUTXOs := a.wallet.GetAccountUTXOs(filter.ID)
+	accountUTXOs := a.wallet.GetAccountUTXOs(filter.ID, filter.SmartContract)
 
 	UTXOs := []query.AnnotatedUTXO{}
 	for _, utxo := range accountUTXOs {
@@ -262,4 +266,49 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 func (a *API) gasRate() Response {
 	gasrate := map[string]int64{"gas_rate": consensus.VMGasRate}
 	return NewSuccessResponse(gasrate)
+}
+
+// PubKeyInfo is structure of pubkey info
+type PubKeyInfo struct {
+	Pubkey string               `json:"pubkey"`
+	Path   []chainjson.HexBytes `json:"derivation_path"`
+}
+
+// AccountPubkey is detail of account pubkey info
+type AccountPubkey struct {
+	RootXPub    chainkd.XPub `json:"root_xpub"`
+	PubKeyInfos []PubKeyInfo `json:"pubkey_infos"`
+}
+
+// POST /list-pubkeys
+func (a *API) listPubKeys(ctx context.Context, ins struct {
+	AccountID string `json:"account_id"`
+}) Response {
+	account, err := a.wallet.AccountMgr.FindByID(ctx, ins.AccountID)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	pubKeyInfos := []PubKeyInfo{}
+	idx := a.wallet.AccountMgr.GetContractIndex(ins.AccountID)
+	for i := uint64(1); i <= idx; i++ {
+		rawPath := signers.Path(account.Signer, signers.AccountKeySpace, i)
+		derivedXPub := account.XPubs[0].Derive(rawPath)
+		pubkey := derivedXPub.PublicKey()
+
+		var path []chainjson.HexBytes
+		for _, p := range rawPath {
+			path = append(path, chainjson.HexBytes(p))
+		}
+
+		pubKeyInfos = append([]PubKeyInfo{{
+			Pubkey: hex.EncodeToString(pubkey),
+			Path:   path,
+		}}, pubKeyInfos...)
+	}
+
+	return NewSuccessResponse(&AccountPubkey{
+		RootXPub:    account.XPubs[0],
+		PubKeyInfos: pubKeyInfos,
+	})
 }
