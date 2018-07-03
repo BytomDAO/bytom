@@ -70,7 +70,7 @@ func NewTxPool() *TxPool {
 }
 
 // GetNewTxCh return a unconfirmed transaction feed channel
-func (tp *TxPool) GetMsgCh() chan *TxPoolMsg {
+func (tp *TxPool) GetMsgCh() <-chan *TxPoolMsg {
 	return tp.msgCh
 }
 

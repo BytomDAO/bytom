@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
+// pre-define error types
 var (
 	ErrInsufficient = errors.New("reservation found insufficient funds")
 	ErrImmature     = errors.New("reservation found immature funds")
@@ -79,6 +80,13 @@ func (uk *utxoKeeper) AddUnconfirmedUtxo(utxos []*UTXO) {
 	}
 }
 
+// Cancel canceling the reservation with the provided ID.
+func (uk *utxoKeeper) Cancel(rid uint64) {
+	uk.mtx.Lock()
+	uk.cancel(rid)
+	uk.mtx.Unlock()
+}
+
 func (uk *utxoKeeper) RemoveUnconfirmedUtxo(hashes []*bc.Hash) {
 	uk.mtx.Lock()
 	defer uk.mtx.Unlock()
@@ -86,13 +94,6 @@ func (uk *utxoKeeper) RemoveUnconfirmedUtxo(hashes []*bc.Hash) {
 	for _, hash := range hashes {
 		delete(uk.unconfirmed, *hash)
 	}
-}
-
-// Cancel makes a best-effort attempt at canceling the reservation with the provided ID.
-func (uk *utxoKeeper) Cancel(rid uint64) {
-	uk.mtx.Lock()
-	uk.cancel(rid)
-	uk.mtx.Unlock()
 }
 
 func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint64, useUnconfirmed bool, exp time.Time) (*reservation, error) {
@@ -104,9 +105,11 @@ func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint
 	if optAmount+reservedAmount+immatureAmount < amount {
 		return nil, ErrInsufficient
 	}
+
 	if optAmount+reservedAmount < amount {
 		return nil, ErrImmature
 	}
+
 	if optAmount < amount {
 		return nil, ErrReserved
 	}
@@ -177,24 +180,6 @@ func (uk *utxoKeeper) expireWorker() {
 	}
 }
 
-func (uk *utxoKeeper) optUTXOs(utxos []*UTXO, amount uint64) ([]*UTXO, uint64, uint64) {
-	var optAmount, reservedAmount uint64
-	optUtxos := []*UTXO{}
-	for _, u := range utxos {
-		if _, ok := uk.reserved[u.OutputID]; ok {
-			reservedAmount += u.Amount
-			continue
-		}
-
-		optAmount += u.Amount
-		optUtxos = append(optUtxos, u)
-		if optAmount >= amount {
-			break
-		}
-	}
-	return optUtxos, optAmount, reservedAmount
-}
-
 func (uk *utxoKeeper) findUTXOs(accountID string, assetID *bc.AssetID, useUnconfirmed bool) ([]*UTXO, uint64) {
 	immatureAmount := uint64(0)
 	currentHeight := uk.currentHeight()
@@ -243,4 +228,22 @@ func (uk *utxoKeeper) findUTXO(outHash bc.Hash, useUnconfirmed bool) (*UTXO, err
 		return u, json.Unmarshal(data, u)
 	}
 	return nil, errors.Wrapf(ErrMatchUTXO, "output_id = %s", outHash.String())
+}
+
+func (uk *utxoKeeper) optUTXOs(utxos []*UTXO, amount uint64) ([]*UTXO, uint64, uint64) {
+	var optAmount, reservedAmount uint64
+	optUtxos := []*UTXO{}
+	for _, u := range utxos {
+		if _, ok := uk.reserved[u.OutputID]; ok {
+			reservedAmount += u.Amount
+			continue
+		}
+
+		optAmount += u.Amount
+		optUtxos = append(optUtxos, u)
+		if optAmount >= amount {
+			break
+		}
+	}
+	return optUtxos, optAmount, reservedAmount
 }

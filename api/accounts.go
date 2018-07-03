@@ -19,7 +19,7 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 	Quorum    int            `json:"quorum"`
 	Alias     string         `json:"alias"`
 }) Response {
-	acc, err := a.wallet.AccountMgr.Create(ctx, ins.RootXPubs, ins.Quorum, ins.Alias)
+	acc, err := a.wallet.AccountMgr.Create(ins.RootXPubs, ins.Quorum, ins.Alias)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -102,13 +102,13 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 	accountID := ins.AccountID
 	var target *account.Account
 	if ins.AccountAlias != "" {
-		acc, err := a.wallet.AccountMgr.FindByAlias(ctx, ins.AccountAlias)
+		acc, err := a.wallet.AccountMgr.FindByAlias(ins.AccountAlias)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
 		target = acc
 	} else {
-		acc, err := a.wallet.AccountMgr.FindByID(ctx, accountID)
+		acc, err := a.wallet.AccountMgr.FindByID(accountID)
 		if err != nil {
 			return NewErrorResponse(err)
 		}

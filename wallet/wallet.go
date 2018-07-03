@@ -18,8 +18,6 @@ import (
 const (
 	//SINGLE single sign
 	SINGLE = 1
-
-	maxTxChanSize = 10000 // txChanSize is the size of channel listening to Txpool newTxCh
 )
 
 var walletKey = []byte("walletInfo")
@@ -107,7 +105,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 
 	storeBatch := w.DB.NewBatch()
 	w.indexTransactions(storeBatch, block, txStatus)
-	w.buildAccountUTXOs(storeBatch, block, txStatus)
+	w.attachUtxos(storeBatch, block, txStatus)
 
 	w.status.WorkHeight = block.Height
 	w.status.WorkHash = block.Hash()
@@ -130,7 +128,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 	}
 
 	storeBatch := w.DB.NewBatch()
-	w.reverseAccountUTXOs(storeBatch, block, txStatus)
+	w.detachUtxos(storeBatch, block, txStatus)
 	w.deleteTransactions(storeBatch, w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1
@@ -212,13 +210,4 @@ func (w *Wallet) GetWalletStatusInfo() StatusInfo {
 	defer w.rw.RUnlock()
 
 	return w.status
-}
-
-func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
-	for i := uint64(0); i < index; i++ {
-		if _, err := w.AccountMgr.CreateAddress(nil, account.ID, false); err != nil {
-			return err
-		}
-	}
-	return nil
 }

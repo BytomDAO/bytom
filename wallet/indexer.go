@@ -11,11 +11,8 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto/sha3pool"
 	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -46,76 +43,14 @@ func calcTxIndexKey(txID string) []byte {
 // deleteTransaction delete transactions when orphan block rollback
 func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
 	tmpTx := query.AnnotatedTx{}
-
 	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
 
 	for txIter.Next() {
 		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
-			// delete index
 			batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
 		}
-
 		batch.Delete(txIter.Key())
-	}
-}
-
-// ReverseAccountUTXOs process the invalid blocks when orphan block rollback
-func (w *Wallet) reverseAccountUTXOs(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
-	utxos := []*account.UTXO{}
-	for txIndex, tx := range b.Transactions {
-		for _, inpID := range tx.Tx.InputIDs {
-			// spend and retire
-			sp, err := tx.Spend(inpID)
-			if err != nil {
-				continue
-			}
-
-			resOut, ok := tx.Entries[*sp.SpentOutputId].(*bc.Output)
-			if !ok {
-				continue
-			}
-
-			statusFail, _ := txStatus.GetStatus(txIndex)
-			if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
-				continue
-			}
-
-			utxos = append(utxos, &account.UTXO{
-				OutputID:       *sp.SpentOutputId,
-				AssetID:        *resOut.Source.Value.AssetId,
-				Amount:         resOut.Source.Value.Amount,
-				ControlProgram: resOut.ControlProgram.Code,
-				SourceID:       *resOut.Source.Ref,
-				SourcePos:      resOut.Source.Position,
-			})
-		}
-	}
-
-	accOuts := w.filterAccountUtxo(utxos)
-	if err := upsertConfirmedAccountOutputs(accOuts, batch); err != nil {
-		log.WithField("err", err).Error("reversing account spent and retire outputs")
-		return
-	}
-
-	// handle new UTXOs
-	for _, tx := range b.Transactions {
-		for j := range tx.Outputs {
-			resOutID := tx.ResultIds[j]
-			resOut, ok := tx.Entries[*resOutID].(*bc.Output)
-			if !ok {
-				// retirement
-				continue
-			}
-
-			if segwit.IsP2WScript(resOut.ControlProgram.Code) {
-				// delete standard UTXOs
-				batch.Delete(account.StandardUTXOKey(*resOutID))
-			} else {
-				// delete contract UTXOs
-				batch.Delete(account.ContractUTXOKey(*resOutID))
-			}
-		}
 	}
 }
 
@@ -177,152 +112,6 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 
 		// delete unconfirmed transaction
 		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
-	}
-	return nil
-}
-
-func txoutUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.UTXO {
-	utxos := []*account.UTXO{}
-	for i, out := range tx.Outputs {
-		bcOut, err := tx.Output(*tx.ResultIds[i])
-		if err != nil {
-			continue
-		}
-
-		if statusFail && *out.AssetAmount.AssetId != *consensus.BTMAssetID {
-			continue
-		}
-
-		utxos = append(utxos, &account.UTXO{
-			OutputID:       *tx.OutputID(i),
-			AssetID:        *out.AssetAmount.AssetId,
-			Amount:         out.Amount,
-			ControlProgram: out.ControlProgram,
-			SourceID:       *bcOut.Source.Ref,
-			SourcePos:      bcOut.Source.Position,
-			ValidHeight:    vaildHeight,
-		})
-	}
-	return utxos
-}
-
-// buildAccountUTXOs process valid blocks to build account unspent outputs db
-func (w *Wallet) buildAccountUTXOs(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
-	// get the spent UTXOs and delete the UTXOs from DB
-	prevoutDBKeys(batch, b, txStatus)
-
-	utxos := []*account.UTXO{}
-	for txIndex, tx := range b.Transactions {
-		statusFail, err := txStatus.GetStatus(txIndex)
-		if err != nil {
-			log.WithField("err", err).Error("buildAccountUTXOs fail on get txStatus")
-			continue
-		}
-
-		validHeight := uint64(0)
-		if txIndex == 0 {
-			validHeight = b.Height + consensus.CoinbasePendingBlockNumber
-		}
-		txUtxos := txoutUtxos(tx, statusFail, validHeight)
-		utxos = append(utxos, txUtxos...)
-	}
-
-	accOuts := w.filterAccountUtxo(utxos)
-	if err := upsertConfirmedAccountOutputs(accOuts, batch); err != nil {
-		log.WithField("err", err).Error("building new account outputs")
-	}
-}
-
-func prevoutDBKeys(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
-	for txIndex, tx := range b.Transactions {
-		for _, inpID := range tx.Tx.InputIDs {
-			sp, err := tx.Spend(inpID)
-			if err != nil {
-				continue
-			}
-
-			statusFail, _ := txStatus.GetStatus(txIndex)
-			if statusFail && *sp.WitnessDestination.Value.AssetId != *consensus.BTMAssetID {
-				continue
-			}
-
-			resOut, ok := tx.Entries[*sp.SpentOutputId].(*bc.Output)
-			if !ok {
-				// retirement
-				log.WithField("SpentOutputId", *sp.SpentOutputId).Info("the OutputId is retirement")
-				continue
-			}
-
-			if segwit.IsP2WScript(resOut.ControlProgram.Code) {
-				// delete standard UTXOs
-				batch.Delete(account.StandardUTXOKey(*sp.SpentOutputId))
-			} else {
-				// delete contract UTXOs
-				batch.Delete(account.ContractUTXOKey(*sp.SpentOutputId))
-			}
-		}
-	}
-	return
-}
-
-func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
-	outsByScript := make(map[string][]*account.UTXO, len(utxos))
-	for _, utxo := range utxos {
-		scriptStr := string(utxo.ControlProgram)
-		outsByScript[scriptStr] = append(outsByScript[scriptStr], utxo)
-	}
-
-	result := make([]*account.UTXO, 0, len(utxos))
-	cp := account.CtrlProgram{}
-
-	var hash [32]byte
-	for s := range outsByScript {
-		// smart contract UTXO
-		if !segwit.IsP2WScript([]byte(s)) {
-			for _, utxo := range outsByScript[s] {
-				result = append(result, utxo)
-			}
-			continue
-		}
-
-		sha3pool.Sum256(hash[:], []byte(s))
-		bytes := w.DB.Get(account.ContractKey(hash))
-		if bytes == nil {
-			continue
-		}
-		if err := json.Unmarshal(bytes, &cp); err != nil {
-			continue
-		}
-		if w.DB.Get(account.Key(cp.AccountID)) == nil {
-			continue
-		}
-
-		for _, utxo := range outsByScript[s] {
-			utxo.AccountID = cp.AccountID
-			utxo.Address = cp.Address
-			utxo.ControlProgramIndex = cp.KeyIndex
-			utxo.Change = cp.Change
-			result = append(result, utxo)
-		}
-	}
-	return result
-}
-
-// upsertConfirmedAccountOutputs records the account data for confirmed utxos.
-// If the account utxo already exists (because it's from a local tx), the
-// block confirmation data will in the row will be updated.
-func upsertConfirmedAccountOutputs(utxos []*account.UTXO, batch db.Batch) error {
-	for _, utxo := range utxos {
-		data, err := json.Marshal(utxo)
-		if err != nil {
-			return errors.Wrap(err, "failed marshal accountutxo")
-		}
-
-		if segwit.IsP2WScript(utxo.ControlProgram) {
-			batch.Set(account.StandardUTXOKey(utxo.OutputID), data)
-		} else {
-			batch.Set(account.ContractUTXOKey(utxo.OutputID), data)
-		}
 	}
 	return nil
 }
@@ -448,33 +237,9 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 	return annotatedTxs, nil
 }
 
-// GetAccountUTXOs return all account unspent outputs
-func (w *Wallet) GetAccountUTXOs(id string, isSmartContract bool) []account.UTXO {
-	accountUTXO := account.UTXO{}
-	accountUTXOs := []account.UTXO{}
-
-	prefix := account.UTXOPreFix
-	if isSmartContract {
-		prefix = account.SUTXOPrefix
-	}
-	accountUTXOIter := w.DB.IteratorPrefix([]byte(prefix + id))
-	defer accountUTXOIter.Release()
-	for accountUTXOIter.Next() {
-		if err := json.Unmarshal(accountUTXOIter.Value(), &accountUTXO); err != nil {
-			hashKey := accountUTXOIter.Key()[len(prefix):]
-			log.WithField("UTXO hash", string(hashKey)).Warn("get account UTXO")
-			continue
-		}
-
-		accountUTXOs = append(accountUTXOs, accountUTXO)
-	}
-
-	return accountUTXOs
-}
-
 // GetAccountBalances return all account balances
 func (w *Wallet) GetAccountBalances(id string) ([]AccountBalance, error) {
-	return w.indexBalances(w.GetAccountUTXOs("", false))
+	return w.indexBalances(w.GetAccountUtxos("", false))
 }
 
 // AccountBalance account balance
@@ -487,7 +252,7 @@ type AccountBalance struct {
 	AssetDefinition map[string]interface{} `json:"asset_definition"`
 }
 
-func (w *Wallet) indexBalances(accountUTXOs []account.UTXO) ([]AccountBalance, error) {
+func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, error) {
 	accBalance := make(map[string]map[string]uint64)
 	balances := []AccountBalance{}
 

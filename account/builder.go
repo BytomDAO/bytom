@@ -20,8 +20,7 @@ import (
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
 func (m *Manager) DecodeSpendAction(data []byte) (txbuilder.Action, error) {
 	a := &spendAction{accounts: m}
-	err := json.Unmarshal(data, a)
-	return a, err
+	return a, json.Unmarshal(data, a)
 }
 
 type spendAction struct {
@@ -66,7 +65,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 		return txbuilder.MissingFieldsError(missing...)
 	}
 
-	acct, err := a.accounts.FindByID(ctx, a.AccountID)
+	acct, err := a.accounts.FindByID(a.AccountID)
 	if err != nil {
 		return errors.Wrap(err, "get account info")
 	}
@@ -78,26 +77,25 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 
 	// Cancel the reservation if the build gets rolled back.
 	b.OnRollback(func() { a.accounts.utxoKeeper.Cancel(res.id) })
-
 	for _, r := range res.utxos {
 		txInput, sigInst, err := UtxoToInputs(acct.Signer, r)
 		if err != nil {
 			return errors.Wrap(err, "creating inputs")
 		}
-		err = b.AddInput(txInput, sigInst)
-		if err != nil {
+
+		if err = b.AddInput(txInput, sigInst); err != nil {
 			return errors.Wrap(err, "adding inputs")
 		}
 	}
 
 	if res.change > 0 {
-		acp, err := a.accounts.CreateAddress(ctx, a.AccountID, true)
+		acp, err := a.accounts.CreateAddress(a.AccountID, true)
 		if err != nil {
 			return errors.Wrap(err, "creating control program")
 		}
 
 		// Don't insert the control program until callbacks are executed.
-		a.accounts.insertControlProgramDelayed(ctx, b, acp)
+		a.accounts.insertControlProgramDelayed(b, acp)
 		if err = b.AddOutput(types.NewTxOutput(*a.AssetId, res.change, acp.ControlProgram)); err != nil {
 			return errors.Wrap(err, "adding change output")
 		}
@@ -108,8 +106,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 //DecodeSpendUTXOAction unmarshal JSON-encoded data of spend utxo action
 func (m *Manager) DecodeSpendUTXOAction(data []byte) (txbuilder.Action, error) {
 	a := &spendUTXOAction{accounts: m}
-	err := json.Unmarshal(data, a)
-	return a, err
+	return a, json.Unmarshal(data, a)
 }
 
 type spendUTXOAction struct {
@@ -145,14 +142,15 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	if err != nil {
 		return err
 	}
-	b.OnRollback(func() { a.accounts.utxoKeeper.Cancel(res.id) })
 
+	b.OnRollback(func() { a.accounts.utxoKeeper.Cancel(res.id) })
 	var accountSigner *signers.Signer
 	if len(res.utxos[0].AccountID) != 0 {
-		account, err := a.accounts.FindByID(ctx, res.utxos[0].AccountID)
+		account, err := a.accounts.FindByID(res.utxos[0].AccountID)
 		if err != nil {
 			return err
 		}
+
 		accountSigner = account.Signer
 	}
 
@@ -249,7 +247,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 // registers callbacks on the TemplateBuilder so that all of the template's
 // account control programs are batch inserted if building the rest of
 // the template is successful.
-func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.TemplateBuilder, acp *CtrlProgram) {
+func (m *Manager) insertControlProgramDelayed(b *txbuilder.TemplateBuilder, acp *CtrlProgram) {
 	m.delayedACPsMu.Lock()
 	m.delayedACPs[b] = append(m.delayedACPs[b], acp)
 	m.delayedACPsMu.Unlock()
@@ -269,6 +267,6 @@ func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.
 		if len(acps) == 0 {
 			return nil
 		}
-		return m.insertAccountControlProgram(ctx, acps...)
+		return m.insertControlPrograms(acps...)
 	})
 }
