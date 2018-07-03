@@ -46,6 +46,9 @@ type BaseConfig struct {
 	//The ID of the network to json
 	ChainID string `mapstructure:"chain_id"`
 
+	//log level to set
+	LogLevel string `mapstructure:"log_level"`
+
 	// A JSON file containing the private key to use as a validator in the consensus protocol
 	PrivateKey string `mapstructure:"private_key"`
 
