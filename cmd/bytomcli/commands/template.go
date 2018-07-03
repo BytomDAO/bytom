@@ -6,11 +6,19 @@ import (
 	"github.com/bytom/errors"
 )
 
-var (
+const (
+	// contract TradeOffer's clause
 	clauseTrade      = "00000000"
 	clauseCancel     = "13000000"
 	tradeOfferEnding = "1a000000"
 
+	// contract Escrow's clause
+	clauseApprove = "00000000"
+	clauseReject  = "1b000000"
+	escrowEnding  = "2a000000"
+)
+
+var (
 	errBadContractArguments = errors.New("bad contract arguments")
 )
 
@@ -109,6 +117,23 @@ var buildTradeOfferClauseCancelReqFmt = `
 var buildTradeOfferClauseCancelReqFmtByAlias = `
 	{"actions": [
 		{"type": "spend_account_unspent_output", "output_id": "%s", "arguments": [{"type": "raw_tx_signature", "raw_data": {"xpub": "%s", "derivation_path": ["%s", "%s"]}},
+				{"type": "data", "raw_data": {"value": "%s"}}]},
+		{"type": "control_program", "asset_alias": "%s", "amount": %s, "control_program": "%s"},
+		{"type": "spend_account", "asset_alias": "BTM", "amount": %s, "account_alias": "%s"}
+	]}`
+
+// contract is Escrow
+var buildEscrowReqFmt = `
+	{"actions": [
+		{"type": "spend_account_unspent_output", "output_id": "%s", "arguments": [{"type": "raw_tx_signature", "raw_data": {"xpub": "%s", "derivation_path": ["%s", "%s"]}},
+				{"type": "data", "raw_data": {"value": "%s"}}]},
+		{"type": "control_program", "asset_id": "%s", "amount": %s, "control_program": "%s"},
+		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"}
+	]}`
+
+var buildEscrowReqFmtByAlias = `
+	{"actions": [
+		{"type": "spend_account_unspent_output", "output_id":"%s", "arguments": [{"type": "raw_tx_signature", "raw_data": {"xpub": "%s", "derivation_path": ["%s", "%s"]}},
 				{"type": "data", "raw_data": {"value": "%s"}}]},
 		{"type": "control_program", "asset_alias": "%s", "amount": %s, "control_program": "%s"},
 		{"type": "spend_account", "asset_alias": "BTM", "amount": %s, "account_alias": "%s"}
@@ -234,6 +259,32 @@ func addContractArgs(contractName string, baseArg baseContractArg, specArgs []st
 			err = errors.WithDetailf(errBadContractArguments, "selected clause [%s] error, contract %s's clause must in set [%s, %s, %s]\n",
 				specArgs[0], contractName, clauseTrade, clauseCancel, tradeOfferEnding)
 		}
+
+	case "Escrow":
+		switch {
+		case len(specArgs) <= 0:
+			err = errors.WithDetailf(errBadContractArguments, "%s <clauseSelector> <rootPub> <path1> <path2> <controlProgram> [flags]\n", usage)
+		case specArgs[0] == clauseApprove || specArgs[0] == clauseReject:
+			if len(specArgs) != 5 {
+				err = errors.WithDetailf(errBadContractArguments, "%s <clauseSelector> <rootPub> <path1> <path2> <controlProgram> [flags]\n", usage)
+				return
+			}
+
+			pubInfo := &basePubInfo{
+				rootPub: specArgs[1],
+				path1:   specArgs[2],
+				path2:   specArgs[3],
+			}
+			controlProgram := specArgs[4]
+			buildReqStr, err = addEscrowArg(baseArg, specArgs[0], pubInfo, controlProgram)
+
+		case specArgs[0] == escrowEnding:
+			err = errors.WithDetailf(errBadContractArguments, "Clause ending was selected in contract %s, ending exit\n", contractName)
+		default:
+			err = errors.WithDetailf(errBadContractArguments, "selected clause [%s] error, contract %s's clause must in set [%s, %s, %s]\n",
+				specArgs[0], contractName, clauseApprove, clauseReject, escrowEnding)
+		}
+
 	default:
 		err = errors.WithDetailf(errBadContractArguments, "Invalid contract template name [%s]", contractName)
 	}
@@ -319,6 +370,28 @@ func addTradeOfferArg(baseArg baseContractArg, selector string, innerArg *innerC
 		if baseArg.alias {
 			buildReqStr = fmt.Sprintf(buildTradeOfferClauseCancelReqFmtByAlias, baseArg.outputID, pubInfo.rootPub, pubInfo.path1, pubInfo.path2, clauseCancel,
 				baseArg.assetInfo, baseArg.amount, baseArg.program, baseArg.btmGas, baseArg.accountInfo)
+		}
+
+	default:
+		err = errors.New("Invalid contract clause selector")
+	}
+
+	return
+}
+
+func addEscrowArg(baseArg baseContractArg, selector string, pubInfo *basePubInfo, controlProgram string) (buildReqStr string, err error) {
+	switch selector {
+	case clauseApprove, clauseReject:
+		if pubInfo == nil {
+			err = errors.New("Contract Escrow's clause argument is nil")
+			return
+		}
+
+		buildReqStr = fmt.Sprintf(buildEscrowReqFmt, baseArg.outputID, pubInfo.rootPub, pubInfo.path1, pubInfo.path2, selector,
+			baseArg.assetInfo, baseArg.amount, controlProgram, baseArg.btmGas, baseArg.accountInfo)
+		if baseArg.alias {
+			buildReqStr = fmt.Sprintf(buildEscrowReqFmtByAlias, baseArg.outputID, pubInfo.rootPub, pubInfo.path1, pubInfo.path2, selector,
+				baseArg.assetInfo, baseArg.amount, controlProgram, baseArg.btmGas, baseArg.accountInfo)
 		}
 
 	default:
