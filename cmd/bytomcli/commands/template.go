@@ -1,5 +1,19 @@
 package commands
 
+import (
+	"fmt"
+
+	"github.com/bytom/errors"
+)
+
+var (
+	clauseTrade      = "00000000"
+	clauseCancel     = "13000000"
+	tradeOfferEnding = "1a000000"
+
+	errBadContractArguments = errors.New("bad contract arguments")
+)
+
 // contract is LockWithPublicKey
 var buildLockWithPublicKeyReqFmt = `
 	{"actions": [
@@ -99,3 +113,211 @@ var buildTradeOfferClauseCancelReqFmtByAlias = `
 		{"type": "control_program", "asset_alias": "%s", "amount": %s, "control_program": "%s"},
 		{"type": "spend_account", "asset_alias": "BTM", "amount": %s, "account_alias": "%s"}
 	]}`
+
+// contract arguments
+type baseContractArg struct {
+	accountInfo string
+	assetInfo   string
+	amount      string
+	alias       bool
+	program     string
+	btmGas      string
+	outputID    string
+}
+
+type basePubInfo struct {
+	rootPub string
+	path1   string
+	path2   string
+}
+
+type innerContractArg struct {
+	innerAccountInfo string
+	innerAssetInfo   string
+	innerAmount      string
+	innerProgram     string
+}
+
+// addContractArgs add arguments for template contracts
+func addContractArgs(contractName string, baseArg baseContractArg, specArgs []string, usage string) (buildReqStr string, err error) {
+	switch contractName {
+	case "LockWithPublicKey":
+		if len(specArgs) != 3 {
+			err = errors.WithDetailf(errBadContractArguments, "%s <rootPub> <path1> <path2> [flags]\n", usage)
+		}
+
+		pubInfo := basePubInfo{
+			rootPub: specArgs[0],
+			path1:   specArgs[1],
+			path2:   specArgs[2],
+		}
+		buildReqStr = addLockWithPublicKeyArg(baseArg, pubInfo)
+
+	case "LockWithMultiSig":
+		if len(specArgs) != 6 {
+			err = errors.WithDetailf(errBadContractArguments, "%s <rootPub1> <path11> <path12> <rootPub2> <path21> <path22> [flags]\n", usage)
+		}
+
+		pubInfos := [2]basePubInfo{
+			{
+				rootPub: specArgs[0],
+				path1:   specArgs[1],
+				path2:   specArgs[2],
+			},
+			{
+				rootPub: specArgs[3],
+				path1:   specArgs[4],
+				path2:   specArgs[5],
+			},
+		}
+		buildReqStr = addLockWithMultiSigArg(baseArg, pubInfos)
+
+	case "LockWithPublicKeyHash":
+		if len(specArgs) != 4 {
+			err = errors.WithDetailf(errBadContractArguments, "%s <pubKey> <rootPub> <path1> <path2> [flags]\n", usage)
+		}
+
+		pubkey := specArgs[0]
+		pubInfo := basePubInfo{
+			rootPub: specArgs[1],
+			path1:   specArgs[2],
+			path2:   specArgs[3],
+		}
+		buildReqStr = addLockWithPublicKeyHashArg(baseArg, pubInfo, pubkey)
+
+	case "RevealPreimage":
+		if len(specArgs) != 1 {
+			err = errors.WithDetailf(errBadContractArguments, "%s <value> [flags]\n", usage)
+		}
+
+		value := specArgs[0]
+		buildReqStr = addRevealPreimageArg(baseArg, value)
+
+	case "TradeOffer":
+		switch {
+		case len(specArgs) <= 0:
+			err = errors.WithDetailf(errBadContractArguments, "%s <clauseSelector> (<innerAccountID|alias> <innerAssetID|alias> <innerAmount> <innerProgram>) | (<rootPub> <path1> <path2>) [flags]\n", usage)
+		case specArgs[0] == clauseTrade:
+			if len(specArgs) != 5 {
+				err = errors.WithDetailf(errBadContractArguments, "%s <clauseSelector> <innerAccountID|alias> <innerAssetID|alias> <innerAmount> <innerProgram> [flags]\n", usage)
+			}
+
+			inner := &innerContractArg{
+				innerAccountInfo: specArgs[1],
+				innerAssetInfo:   specArgs[2],
+				innerAmount:      specArgs[3],
+				innerProgram:     specArgs[4],
+			}
+			buildReqStr, err = addTradeOfferArg(baseArg, clauseTrade, inner, nil)
+
+		case specArgs[0] == clauseCancel:
+			if len(specArgs) != 4 {
+				err = errors.WithDetailf(errBadContractArguments, "%s <clauseSelector> <rootPub> <path1> <path2> [flags]\n", usage)
+			}
+
+			pubInfo := &basePubInfo{
+				rootPub: specArgs[1],
+				path1:   specArgs[2],
+				path2:   specArgs[3],
+			}
+			buildReqStr, err = addTradeOfferArg(baseArg, clauseTrade, nil, pubInfo)
+
+		case specArgs[0] == tradeOfferEnding:
+			err = errors.WithDetailf(errBadContractArguments, "Clause ending was selected in contract %s, ending exit!", contractName)
+		default:
+			err = errors.WithDetailf(errBadContractArguments, "selected clause [%s] error, contract %s's clause must in set:[%s, %s, %s]",
+				specArgs[0], contractName, clauseTrade, clauseCancel, tradeOfferEnding)
+		}
+	default:
+		err = errors.WithDetailf(errBadContractArguments, "Invalid contract template name:%s", contractName)
+	}
+
+	return
+}
+
+func addLockWithPublicKeyArg(baseArg baseContractArg, pubInfo basePubInfo) (buildReqStr string) {
+	buildReqStr = fmt.Sprintf(buildLockWithPublicKeyReqFmt, baseArg.outputID, pubInfo.rootPub, pubInfo.path1, pubInfo.path2,
+		baseArg.assetInfo, baseArg.amount, baseArg.program, baseArg.btmGas, baseArg.accountInfo)
+	if baseArg.alias {
+		buildReqStr = fmt.Sprintf(buildLockWithPublicKeyReqFmtByAlias, baseArg.outputID, pubInfo.rootPub, pubInfo.path1, pubInfo.path2,
+			baseArg.assetInfo, baseArg.amount, baseArg.program, baseArg.btmGas, baseArg.accountInfo)
+	}
+
+	return
+}
+
+func addLockWithMultiSigArg(baseArg baseContractArg, pubInfos [2]basePubInfo) (buildReqStr string) {
+	buildReqStr = fmt.Sprintf(buildLockWithMultiSigReqFmt, baseArg.outputID, pubInfos[0].rootPub, pubInfos[0].path1, pubInfos[0].path2,
+		pubInfos[1].rootPub, pubInfos[1].path1, pubInfos[1].path2,
+		baseArg.assetInfo, baseArg.amount, baseArg.program, baseArg.btmGas, baseArg.accountInfo)
+	if baseArg.alias {
+		buildReqStr = fmt.Sprintf(buildLockWithMultiSigReqFmtByAlias, baseArg.outputID, pubInfos[0].rootPub, pubInfos[0].path1, pubInfos[0].path2,
+			pubInfos[1].rootPub, pubInfos[1].path1, pubInfos[1].path2,
+			baseArg.assetInfo, baseArg.amount, baseArg.program, baseArg.btmGas, baseArg.accountInfo)
+	}
+
+	return
+}
+
+func addLockWithPublicKeyHashArg(baseArg baseContractArg, pubInfo basePubInfo, pubkey string) (buildReqStr string) {
+	buildReqStr = fmt.Sprintf(buildLockWithPublicKeyHashReqFmt, baseArg.outputID, pubkey, pubInfo.rootPub, pubInfo.path1, pubInfo.path2,
+		baseArg.assetInfo, baseArg.amount, baseArg.program, baseArg.btmGas, baseArg.accountInfo)
+	if alias {
+		buildReqStr = fmt.Sprintf(buildLockWithPublicKeyHashReqFmtByAlias, baseArg.outputID, pubkey, pubInfo.rootPub, pubInfo.path1, pubInfo.path2,
+			baseArg.assetInfo, baseArg.amount, baseArg.program, baseArg.btmGas, baseArg.accountInfo)
+	}
+
+	return
+}
+
+func addRevealPreimageArg(baseArg baseContractArg, value string) (buildReqStr string) {
+	buildReqStr = fmt.Sprintf(buildRevealPreimageReqFmt, baseArg.outputID, value,
+		baseArg.assetInfo, baseArg.amount, baseArg.program, baseArg.btmGas, baseArg.accountInfo)
+	if baseArg.alias {
+		buildReqStr = fmt.Sprintf(buildRevealPreimageReqFmtByAlias, baseArg.outputID, value,
+			baseArg.assetInfo, baseArg.amount, baseArg.program, baseArg.btmGas, baseArg.accountInfo)
+	}
+
+	return
+}
+
+func addTradeOfferArg(baseArg baseContractArg, selector string, innerArg *innerContractArg, pubInfo *basePubInfo) (buildReqStr string, err error) {
+	switch selector {
+	case clauseTrade:
+		if innerArg == nil {
+			err = errors.New("Contract TradeOffer's clause trade argument is nil")
+			return
+		}
+
+		buildReqStr = fmt.Sprintf(buildTradeOfferClauseTradeReqFmt, baseArg.outputID, clauseTrade,
+			innerArg.innerAssetInfo, innerArg.innerAmount, innerArg.innerProgram,
+			innerArg.innerAssetInfo, innerArg.innerAmount, innerArg.innerAccountInfo,
+			baseArg.btmGas, baseArg.accountInfo,
+			baseArg.assetInfo, baseArg.amount, baseArg.program)
+		if baseArg.alias {
+			buildReqStr = fmt.Sprintf(buildTradeOfferClauseTradeReqFmtByAlias, baseArg.outputID, clauseTrade,
+				innerArg.innerAssetInfo, innerArg.innerAmount, innerArg.innerProgram,
+				innerArg.innerAssetInfo, innerArg.innerAmount, innerArg.innerAccountInfo,
+				baseArg.btmGas, baseArg.accountInfo,
+				baseArg.assetInfo, baseArg.amount, baseArg.program)
+		}
+
+	case clauseCancel:
+		if pubInfo == nil {
+			err = errors.New("Contract TradeOffer's clause cancel argument is nil")
+			return
+		}
+
+		buildReqStr = fmt.Sprintf(buildTradeOfferClauseCancelReqFmt, baseArg.outputID, pubInfo.rootPub, pubInfo.path1, pubInfo.path2, clauseCancel,
+			baseArg.assetInfo, baseArg.amount, baseArg.program, baseArg.btmGas, baseArg.accountInfo)
+		if baseArg.alias {
+			buildReqStr = fmt.Sprintf(buildTradeOfferClauseCancelReqFmtByAlias, baseArg.outputID, pubInfo.rootPub, pubInfo.path1, pubInfo.path2, clauseCancel,
+				baseArg.assetInfo, baseArg.amount, baseArg.program, baseArg.btmGas, baseArg.accountInfo)
+		}
+
+	default:
+		err = errors.New("Invalid contract clause selector")
+	}
+
+	return
+}
