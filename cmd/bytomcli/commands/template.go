@@ -144,6 +144,7 @@ func addContractArgs(contractName string, baseArg baseContractArg, specArgs []st
 	case "LockWithPublicKey":
 		if len(specArgs) != 3 {
 			err = errors.WithDetailf(errBadContractArguments, "%s <rootPub> <path1> <path2> [flags]\n", usage)
+			return
 		}
 
 		pubInfo := basePubInfo{
@@ -156,6 +157,7 @@ func addContractArgs(contractName string, baseArg baseContractArg, specArgs []st
 	case "LockWithMultiSig":
 		if len(specArgs) != 6 {
 			err = errors.WithDetailf(errBadContractArguments, "%s <rootPub1> <path11> <path12> <rootPub2> <path21> <path22> [flags]\n", usage)
+			return
 		}
 
 		pubInfos := [2]basePubInfo{
@@ -175,6 +177,7 @@ func addContractArgs(contractName string, baseArg baseContractArg, specArgs []st
 	case "LockWithPublicKeyHash":
 		if len(specArgs) != 4 {
 			err = errors.WithDetailf(errBadContractArguments, "%s <pubKey> <rootPub> <path1> <path2> [flags]\n", usage)
+			return
 		}
 
 		pubkey := specArgs[0]
@@ -188,6 +191,7 @@ func addContractArgs(contractName string, baseArg baseContractArg, specArgs []st
 	case "RevealPreimage":
 		if len(specArgs) != 1 {
 			err = errors.WithDetailf(errBadContractArguments, "%s <value> [flags]\n", usage)
+			return
 		}
 
 		value := specArgs[0]
@@ -200,6 +204,7 @@ func addContractArgs(contractName string, baseArg baseContractArg, specArgs []st
 		case specArgs[0] == clauseTrade:
 			if len(specArgs) != 5 {
 				err = errors.WithDetailf(errBadContractArguments, "%s <clauseSelector> <innerAccountID|alias> <innerAssetID|alias> <innerAmount> <innerProgram> [flags]\n", usage)
+				return
 			}
 
 			inner := &innerContractArg{
@@ -213,6 +218,7 @@ func addContractArgs(contractName string, baseArg baseContractArg, specArgs []st
 		case specArgs[0] == clauseCancel:
 			if len(specArgs) != 4 {
 				err = errors.WithDetailf(errBadContractArguments, "%s <clauseSelector> <rootPub> <path1> <path2> [flags]\n", usage)
+				return
 			}
 
 			pubInfo := &basePubInfo{
@@ -220,16 +226,16 @@ func addContractArgs(contractName string, baseArg baseContractArg, specArgs []st
 				path1:   specArgs[2],
 				path2:   specArgs[3],
 			}
-			buildReqStr, err = addTradeOfferArg(baseArg, clauseTrade, nil, pubInfo)
+			buildReqStr, err = addTradeOfferArg(baseArg, clauseCancel, nil, pubInfo)
 
 		case specArgs[0] == tradeOfferEnding:
-			err = errors.WithDetailf(errBadContractArguments, "Clause ending was selected in contract %s, ending exit!", contractName)
+			err = errors.WithDetailf(errBadContractArguments, "Clause ending was selected in contract %s, ending exit\n", contractName)
 		default:
-			err = errors.WithDetailf(errBadContractArguments, "selected clause [%s] error, contract %s's clause must in set:[%s, %s, %s]",
+			err = errors.WithDetailf(errBadContractArguments, "selected clause [%s] error, contract %s's clause must in set [%s, %s, %s]\n",
 				specArgs[0], contractName, clauseTrade, clauseCancel, tradeOfferEnding)
 		}
 	default:
-		err = errors.WithDetailf(errBadContractArguments, "Invalid contract template name:%s", contractName)
+		err = errors.WithDetailf(errBadContractArguments, "Invalid contract template name [%s]", contractName)
 	}
 
 	return
