@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bytom/node"
+	"strings"
 )
 
 var runNodeCmd = &cobra.Command{
@@ -46,7 +47,7 @@ func init() {
 }
 
 func getLogLevel(level string) log.Level {
-	switch level {
+	switch strings.ToLower(level) {
 	case "debug":
 		return log.DebugLevel
 	case "info":
@@ -58,7 +59,7 @@ func getLogLevel(level string) log.Level {
 	case "fatal":
 		return log.FatalLevel
 	default:
-		return log.DebugLevel
+		return log.InfoLevel
 	}
 }
 
