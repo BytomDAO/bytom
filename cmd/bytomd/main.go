@@ -47,7 +47,6 @@ func init() {
 	// then add the hook to logrus and set the log level to DEBUG
 	if os.Getenv("BYTOM_DEBUG") != "" {
 		log.AddHook(ContextHook{})
-		log.SetLevel(log.DebugLevel)
 	}
 }
 
