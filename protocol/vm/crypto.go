@@ -233,14 +233,6 @@ func opCheckMultiSigSm2(vm *virtualMachine) error {
 		sigs = append(sigs, sig)
 	}
 
-	// pubkeys := make([]ed25519.PublicKey, 0, numPubkeys)
-	// for _, p := range pubkeyByteses {
-	// 	if len(p) != ed25519.PublicKeySize {
-	// 		return vm.pushBool(false, true)
-	// 	}
-	// 	pubkeys = append(pubkeys, ed25519.PublicKey(p))
-	// }
-
 	for len(sigs) > 0 && len(pubkeyByteses) > 0 {
 		if sm2.Sm2VerifyBytes(pubkeyByteses[0], msg, sigs[0]) {
 			sigs = sigs[1:]
