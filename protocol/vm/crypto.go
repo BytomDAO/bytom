@@ -177,8 +177,75 @@ func opCheckSigSm2(vm *virtualMachine) error {
 		return err
 	}
 
-	if len(publicKey) != 65 || len(msg) != 32 || len(sig) != 64 {
+	if len(msg) != 32 || len(sig) != 64 {
 		return ErrBadValue
 	}
+	if len(publicKey) != 65 {
+		return vm.pushBool(false, true)
+	}
 	return vm.pushBool(sm2.Sm2VerifyBytes(publicKey, msg, sig), true)
+}
+
+func opCheckMultiSigSm2(vm *virtualMachine) error {
+	numPubkeys, err := vm.popInt64(true)
+	if err != nil {
+		return err
+	}
+	pubCost, ok := checked.MulInt64(numPubkeys, 1024)
+	if numPubkeys < 0 || !ok {
+		return ErrBadValue
+	}
+	err = vm.applyCost(pubCost)
+	if err != nil {
+		return err
+	}
+	numSigs, err := vm.popInt64(true)
+	if err != nil {
+		return err
+	}
+	if numSigs < 0 || numSigs > numPubkeys || (numPubkeys > 0 && numSigs == 0) {
+		return ErrBadValue
+	}
+	pubkeyByteses := make([][]byte, 0, numPubkeys)
+	for i := int64(0); i < numPubkeys; i++ {
+		pubkeyBytes, err := vm.pop(true)
+		if err != nil {
+			return err
+		}
+		if len(pubkeyBytes) != 65 {
+			return vm.pushBool(false, true)
+		}
+		pubkeyByteses = append(pubkeyByteses, pubkeyBytes)
+	}
+	msg, err := vm.pop(true)
+	if err != nil {
+		return err
+	}
+	if len(msg) != 32 {
+		return ErrBadValue
+	}
+	sigs := make([][]byte, 0, numSigs)
+	for i := int64(0); i < numSigs; i++ {
+		sig, err := vm.pop(true)
+		if err != nil {
+			return err
+		}
+		sigs = append(sigs, sig)
+	}
+
+	// pubkeys := make([]ed25519.PublicKey, 0, numPubkeys)
+	// for _, p := range pubkeyByteses {
+	// 	if len(p) != ed25519.PublicKeySize {
+	// 		return vm.pushBool(false, true)
+	// 	}
+	// 	pubkeys = append(pubkeys, ed25519.PublicKey(p))
+	// }
+
+	for len(sigs) > 0 && len(pubkeyByteses) > 0 {
+		if sm2.Sm2VerifyBytes(pubkeyByteses[0], msg, sigs[0]) {
+			sigs = sigs[1:]
+		}
+		pubkeyByteses = pubkeyByteses[1:]
+	}
+	return vm.pushBool(len(sigs) == 0, true)
 }
