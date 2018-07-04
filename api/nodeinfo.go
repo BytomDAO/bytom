@@ -1,12 +1,13 @@
 package api
 
 import (
+	"net"
+	"context"
+
 	"github.com/bytom/version"
 	"github.com/bytom/netsync"
-	"context"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
-	"net"
 )
 
 // NetInfo indicate net information
