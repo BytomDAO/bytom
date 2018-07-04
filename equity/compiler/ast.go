@@ -67,14 +67,6 @@ type Clause struct {
 
 	statements []statement
 
-	// MinTimes is the list of expressions passed to after() in this
-	// clause.
-	//MinTimes []string `json:"mintimes,omitempty"`
-
-	// MaxTimes is the list of expressions passed to before() in this
-	// clause.
-	//MaxTimes []string `json:"maxtimes,omitempty"`
-
 	// BlockHeight is the list of expressions passed to greater()/less() in this
 	// clause.
 	BlockHeight []string `json:"blockheight,omitempty"`

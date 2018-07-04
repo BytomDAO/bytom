@@ -123,7 +123,6 @@ func Instantiate(body []byte, params []*Param, recursive bool, args []ContractAr
 		arg := args[i]
 		switch param.Type {
 		case amountType, intType:
-			//case amountType, intType, timeType:
 			if arg.I == nil {
 				return nil, fmt.Errorf("type mismatch in arg %d (want integer)", i)
 			}
@@ -349,10 +348,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 			if c, ok := stmt.expr.(*callExpr); ok && len(c.args) == 1 {
 				if b := referencedBuiltin(c.fn); b != nil {
 					switch b.name {
-					//case "before":
-					//	clause.MaxTimes = append(clause.MaxTimes, c.args[0].String())
-					//case "after":
-					//	clause.MinTimes = append(clause.MinTimes, c.args[0].String())
 					case "greater":
 						clause.BlockHeight = append(clause.BlockHeight, c.args[0].String())
 					case "less":
