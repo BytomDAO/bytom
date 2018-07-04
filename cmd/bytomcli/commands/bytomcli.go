@@ -170,6 +170,9 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(netInfoCmd)
 	BytomcliCmd.AddCommand(gasRateCmd)
 
+	BytomcliCmd.AddCommand(sha3Cmd)
+	BytomcliCmd.AddCommand(sha256Cmd)
+
 	BytomcliCmd.AddCommand(versionCmd)
 }
 
