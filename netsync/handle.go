@@ -193,7 +193,7 @@ func (sm *SyncManager) txBroadcastLoop() {
 				if smPeer == nil {
 					continue
 				}
-				swPeer := smPeer.getPeer()
+				swPeer := smPeer.GetPeer()
 				log.Info("Tx broadcast error. Stop Peer.")
 				sm.sw.StopPeerGracefully(swPeer)
 			}
@@ -221,7 +221,7 @@ func (sm *SyncManager) minedBroadcastLoop() {
 				if smPeer == nil {
 					continue
 				}
-				swPeer := smPeer.getPeer()
+				swPeer := smPeer.GetPeer()
 				log.Info("New mined block broadcast error. Stop Peer.")
 				sm.sw.StopPeerGracefully(swPeer)
 			}
