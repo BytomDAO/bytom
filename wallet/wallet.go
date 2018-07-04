@@ -167,7 +167,7 @@ func (w *Wallet) walletUpdater() {
 
 		block, _ := w.chain.GetBlockByHeight(w.status.WorkHeight + 1)
 		if block == nil {
-			<-w.chain.BlockWaiter(w.status.WorkHeight + 1)
+			w.walletBlockWaiter()
 			continue
 		}
 
@@ -190,11 +190,23 @@ func (w *Wallet) RescanBlocks() {
 func (w *Wallet) getRescanNotification() {
 	select {
 	case <-w.rescanCh:
-		block, _ := w.chain.GetBlockByHeight(0)
-		w.status.WorkHash = bc.Hash{}
-		w.AttachBlock(block)
+		w.setRescanStatus()
 	default:
 		return
+	}
+}
+
+func (w *Wallet) setRescanStatus() {
+	block, _ := w.chain.GetBlockByHeight(0)
+	w.status.WorkHash = bc.Hash{}
+	w.AttachBlock(block)
+}
+
+func (w *Wallet) walletBlockWaiter() {
+	select {
+	case <-w.chain.BlockWaiter(w.status.WorkHeight + 1):
+	case <-w.rescanCh:
+		w.setRescanStatus()
 	}
 }
 
