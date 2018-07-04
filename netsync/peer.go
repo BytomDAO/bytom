@@ -41,6 +41,14 @@ type peer struct {
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 }
 
+// PeerInfo indicate peer information
+type PeerInfo struct {
+	Id         string
+	RemoteAddr string
+	Height     uint64
+	delay      uint32
+}
+
 func newPeer(height uint64, hash *bc.Hash, Peer *p2p.Peer) *peer {
 	services := consensus.SFFullNode
 	if len(Peer.Other) != 0 {
@@ -110,13 +118,6 @@ func (p *peer) GetPeer() *p2p.Peer {
 	return p.swPeer
 }
 
-// PeerInfo indicate peer information
-type PeerInfo struct {
-	Id         string
-	RemoteAddr string
-	Height     uint64
-	delay      uint32
-}
 
 func (p *peer) GetPeerInfo() *PeerInfo {
 	p.mtx.RLock()
@@ -232,20 +233,11 @@ func (ps *peerSet) Peer(id string) (*peer, bool) {
 	return p, ok
 }
 
-// return all peers with it's id
-func (ps *peerSet) Peers() map[string]*peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-	return ps.peers
-}
 
 // getPeerInfos return all peer information of current node
 func (ps *peerSet) GetPeerInfos() []*PeerInfo {
-	peers := ps.Peers()
-
 	var peerInfos []*PeerInfo
-
-	for _, peer := range peers {
+	for _, peer := range ps.peers {
 		peerInfos = append(peerInfos, peer.GetPeerInfo())
 	}
 	return peerInfos

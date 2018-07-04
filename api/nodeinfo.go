@@ -57,9 +57,8 @@ func (a *API) disconnectPeerById(peerId string) error {
 		swPeer := peer.GetPeer()
 		a.sync.Switch().StopPeerGracefully(swPeer)
 		return nil
-	} else {
-		return errors.New("peerId not exist")
 	}
+	return errors.New("peerId not exist")
 }
 
 // connect peer b y net address
