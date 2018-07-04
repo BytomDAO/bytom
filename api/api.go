@@ -273,6 +273,9 @@ func (a *API) buildHandler() {
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 
+	m.Handle("/sha3", jsonHandler(a.calculateSha3))
+	m.Handle("/sha256", jsonHandler(a.calculateSha256))
+
 	m.Handle("/list-peers", jsonHandler(a.listPeers))
 	m.Handle("/disconnect-peer", jsonHandler(a.disconnectPeer))
 	m.Handle("/connect-peer", jsonHandler(a.connectPeer))
