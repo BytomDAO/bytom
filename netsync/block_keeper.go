@@ -83,7 +83,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 		log.Info("peer is not registered")
 		return errPeerNotRegister
 	}
-	swPeer := bkPeer.getPeer()
+	swPeer := bkPeer.GetPeer()
 	for 0 < num && num <= maxPeerHeight {
 		if isOrphan {
 			reqNum = orphanNum
@@ -140,7 +140,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 			if peer == nil {
 				return errPeerNotRegister
 			}
-			swPeer := peer.getPeer()
+			swPeer := peer.GetPeer()
 			log.Info("Block keeper broadcast block error. Stop peer.")
 			bk.sw.StopPeerGracefully(swPeer)
 		}
@@ -214,7 +214,7 @@ func (bk *blockKeeper) txsProcessWorker() {
 		bk.peers.MarkTransaction(txsResponse.peerID, &tx.ID)
 		if isOrphan, err := bk.chain.ValidateTx(tx); err != nil && isOrphan == false {
 			if bkPeer, ok := bk.peers.Peer(txsResponse.peerID); ok {
-				swPeer := bkPeer.getPeer()
+				swPeer := bkPeer.GetPeer()
 				if ban := bkPeer.addBanScore(10, 0, "tx error"); ban {
 					bk.sw.AddBannedPeer(swPeer)
 					bk.sw.StopPeerGracefully(swPeer)

@@ -103,11 +103,30 @@ func (p *peer) SendTransactions(txs []*types.Tx) error {
 	return nil
 }
 
-func (p *peer) getPeer() *p2p.Peer {
+func (p *peer) GetPeer() *p2p.Peer {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
 
 	return p.swPeer
+}
+
+// PeerInfo indicate peer information
+type PeerInfo struct {
+	Id         string
+	RemoteAddr string
+	Height     uint64
+	delay      uint32
+}
+
+func (p *peer) GetPeerInfo() *PeerInfo {
+	p.mtx.RLock()
+	defer p.mtx.RUnlock()
+	return &PeerInfo{
+		Id:         p.id,
+		RemoteAddr: p.swPeer.RemoteAddr,
+		Height:     p.height,
+		delay:      0, // TODO
+	}
 }
 
 // MarkTransaction marks a transaction as known for the peer, ensuring that it
@@ -211,6 +230,13 @@ func (ps *peerSet) Peer(id string) (*peer, bool) {
 	defer ps.lock.RUnlock()
 	p, ok := ps.peers[id]
 	return p, ok
+}
+
+// return all peers with it's id
+func (ps *peerSet) Peers() map[string]*peer {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+	return ps.peers
 }
 
 // Len returns if the current number of peers in the set.
