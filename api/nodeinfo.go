@@ -42,13 +42,14 @@ func (a *API) GetNodeInfo() *NetInfo {
 
 
 // return the currently connected peers with net address
-func (a *API) connectedPeers() map[string]*netsync.PeerInfo {
+func (a *API) getPeerInfoByAddr(addr string) *netsync.PeerInfo {
 	peerInfos := a.sync.Peers().GetPeerInfos()
-	connectedPeers := make(map[string]*netsync.PeerInfo, len(peerInfos))
 	for _, peerInfo := range peerInfos {
-		connectedPeers[peerInfo.RemoteAddr] = peerInfo
+		if peerInfo.RemoteAddr == addr {
+			return peerInfo
+		}
 	}
-	return connectedPeers
+	return nil
 }
 
 // disconnect peer by the peer id
@@ -74,7 +75,11 @@ func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*netsync.PeerInfo,
 	if err := sw.DialPeerWithAddress(addr); err != nil {
 		return nil, errors.Wrap(err, "can not connect to the address")
 	}
-	return a.connectedPeers()[addr.String()], nil
+	peer := a.getPeerInfoByAddr(addr.String())
+	if peer == nil {
+		return nil, errors.New("the peer is disconnected again")
+	}
+	return peer, nil
 }
 
 // getNetInfo return network information
