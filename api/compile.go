@@ -34,7 +34,7 @@ type (
 	}
 )
 
-func (a *API) compileEquity(req compileReq) Response {
+func compileEquity(req compileReq) (compileResp, error) {
 	var resp compileResp
 	compiled, err := compiler.Compile(strings.NewReader(req.Contract))
 	if err != nil {
@@ -59,7 +59,7 @@ func (a *API) compileEquity(req compileReq) Response {
 
 		resp.Opcodes, err = vm.Disassemble(resp.Program)
 		if err != nil {
-			return NewErrorResponse(err)
+			return resp, err
 		}
 	}
 
@@ -93,5 +93,13 @@ func (a *API) compileEquity(req compileReq) Response {
 		resp.Clauses = append(resp.Clauses, info)
 	}
 
+	return resp, nil
+}
+
+func (a *API) compileEquity(req compileReq) Response {
+	resp, err := compileEquity(req)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
 	return NewSuccessResponse(resp)
 }
