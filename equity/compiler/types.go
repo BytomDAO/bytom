@@ -16,8 +16,8 @@ var (
 	pubkeyType   = typeDesc("PublicKey")
 	sigType      = typeDesc("Signature")
 	strType      = typeDesc("String")
-	timeType     = typeDesc("Time")
-	valueType    = typeDesc("Value")
+	//timeType     = typeDesc("Time")
+	valueType = typeDesc("Value")
 
 	sha3StrType      = typeDesc("Sha3(String)")
 	sha3PubkeyType   = typeDesc("Sha3(PublicKey)")
@@ -38,8 +38,8 @@ var types = map[string]typeDesc{
 	string(pubkeyType): pubkeyType,
 	string(sigType):    sigType,
 	string(strType):    strType,
-	string(timeType):   timeType,
-	string(valueType):  valueType,
+	//string(timeType):   timeType,
+	string(valueType): valueType,
 
 	string(sha3StrType):      sha3StrType,
 	string(sha3PubkeyType):   sha3PubkeyType,
