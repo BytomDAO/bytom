@@ -101,7 +101,7 @@ func NewManager(walletDB dbm.DB, chain *protocol.Chain) *Manager {
 	return &Manager{
 		db:          walletDB,
 		chain:       chain,
-		utxoKeeper:  newUtxoKeeper(chain, walletDB),
+		utxoKeeper:  newUtxoKeeper(chain.BestBlockHeight, walletDB),
 		cache:       lru.New(maxAccountCache),
 		aliasCache:  lru.New(maxAccountCache),
 		delayedACPs: make(map[*txbuilder.TemplateBuilder][]*CtrlProgram),

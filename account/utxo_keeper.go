@@ -10,7 +10,6 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/errors"
-	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -59,10 +58,10 @@ type utxoKeeper struct {
 	reservations map[uint64]*reservation
 }
 
-func newUtxoKeeper(chain *protocol.Chain, walletdb dbm.DB) *utxoKeeper {
+func newUtxoKeeper(f func() uint64, walletdb dbm.DB) *utxoKeeper {
 	uk := &utxoKeeper{
 		db:            walletdb,
-		currentHeight: chain.BestBlockHeight,
+		currentHeight: f,
 		unconfirmed:   make(map[bc.Hash]*UTXO),
 		reserved:      make(map[bc.Hash]uint64),
 		reservations:  make(map[uint64]*reservation),
@@ -100,7 +99,7 @@ func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint
 	uk.mtx.Lock()
 	defer uk.mtx.Unlock()
 
-	utxos, immatureAmount := uk.findUTXOs(accountID, assetID, useUnconfirmed)
+	utxos, immatureAmount := uk.findUtxos(accountID, assetID, useUnconfirmed)
 	optUtxos, optAmount, reservedAmount := uk.optUTXOs(utxos, amount)
 	if optAmount+reservedAmount+immatureAmount < amount {
 		return nil, ErrInsufficient
@@ -117,7 +116,7 @@ func (uk *utxoKeeper) Reserve(accountID string, assetID *bc.AssetID, amount uint
 	result := &reservation{
 		id:     atomic.AddUint64(&uk.nextIndex, 1),
 		utxos:  optUtxos,
-		change: amount - optAmount,
+		change: optAmount - amount,
 		expiry: exp,
 	}
 
@@ -136,13 +135,13 @@ func (uk *utxoKeeper) ReserveParticular(outHash bc.Hash, useUnconfirmed bool, ex
 		return nil, ErrReserved
 	}
 
-	u, err := uk.findUTXO(outHash, useUnconfirmed)
+	u, err := uk.findUtxo(outHash, useUnconfirmed)
 	if err != nil {
 		return nil, err
 	}
 
 	if u.ValidHeight > uk.currentHeight() {
-		return nil, errors.WithDetail(ErrMatchUTXO, "this coinbase utxo is immature")
+		return nil, ErrImmature
 	}
 
 	result := &reservation{
@@ -170,17 +169,21 @@ func (uk *utxoKeeper) cancel(rid uint64) {
 func (uk *utxoKeeper) expireWorker() {
 	ticker := time.NewTicker(1000 * time.Millisecond)
 	for now := range ticker.C {
-		uk.mtx.Lock()
-		for rid, res := range uk.reservations {
-			if res.expiry.Before(now) {
-				uk.cancel(rid)
-			}
+		uk.expireReservation(now)
+	}
+}
+func (uk *utxoKeeper) expireReservation(t time.Time) {
+	uk.mtx.Lock()
+	defer uk.mtx.Unlock()
+
+	for rid, res := range uk.reservations {
+		if res.expiry.Before(t) {
+			uk.cancel(rid)
 		}
-		uk.mtx.Unlock()
 	}
 }
 
-func (uk *utxoKeeper) findUTXOs(accountID string, assetID *bc.AssetID, useUnconfirmed bool) ([]*UTXO, uint64) {
+func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconfirmed bool) ([]*UTXO, uint64) {
 	immatureAmount := uint64(0)
 	currentHeight := uk.currentHeight()
 	utxos := []*UTXO{}
@@ -200,7 +203,7 @@ func (uk *utxoKeeper) findUTXOs(accountID string, assetID *bc.AssetID, useUnconf
 	for utxoIter.Next() {
 		u := &UTXO{}
 		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
-			log.WithField("err", err).Error("utxoKeeper findUTXOs fail on unmarshal utxo")
+			log.WithField("err", err).Error("utxoKeeper findUtxos fail on unmarshal utxo")
 			continue
 		}
 		appendUtxo(u)
@@ -215,7 +218,7 @@ func (uk *utxoKeeper) findUTXOs(accountID string, assetID *bc.AssetID, useUnconf
 	return utxos, immatureAmount
 }
 
-func (uk *utxoKeeper) findUTXO(outHash bc.Hash, useUnconfirmed bool) (*UTXO, error) {
+func (uk *utxoKeeper) findUtxo(outHash bc.Hash, useUnconfirmed bool) (*UTXO, error) {
 	if u, ok := uk.unconfirmed[outHash]; useUnconfirmed && ok {
 		return u, nil
 	}
@@ -227,7 +230,7 @@ func (uk *utxoKeeper) findUTXO(outHash bc.Hash, useUnconfirmed bool) (*UTXO, err
 	if data := uk.db.Get(ContractUTXOKey(outHash)); data != nil {
 		return u, json.Unmarshal(data, u)
 	}
-	return nil, errors.Wrapf(ErrMatchUTXO, "output_id = %s", outHash.String())
+	return nil, ErrMatchUTXO
 }
 
 func (uk *utxoKeeper) optUTXOs(utxos []*UTXO, amount uint64) ([]*UTXO, uint64, uint64) {
