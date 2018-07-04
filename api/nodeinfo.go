@@ -40,22 +40,10 @@ func (a *API) GetNodeInfo() *NetInfo {
 	return info
 }
 
-// getPeerInfos return all peer information of current node
-func (a *API) getPeerInfos() []*netsync.PeerInfo {
-	peerSet := a.sync.Peers()
-	peers := peerSet.Peers()
 
-	var peerInfos []*netsync.PeerInfo
-
-	for _, peer := range peers {
-		peerInfos = append(peerInfos, peer.GetPeerInfo())
-	}
-	return peerInfos
-}
-
-// return the currently connected peers
+// return the currently connected peers with net address
 func (a *API) connectedPeers() map[string]*netsync.PeerInfo {
-	peerInfos := a.getPeerInfos()
+	peerInfos := a.sync.Peers().GetPeerInfos()
 	connectedPeers := make(map[string]*netsync.PeerInfo, len(peerInfos))
 	for _, peerInfo := range peerInfos {
 		connectedPeers[peerInfo.RemoteAddr] = peerInfo
@@ -76,7 +64,6 @@ func (a *API) disconnectPeerById(peerId string) error {
 
 // connect peer b y net address
 func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*netsync.PeerInfo, error) {
-
 	netIp := net.ParseIP(ip)
 	if netIp == nil {
 		return nil, errors.New("invalid ip address")
@@ -85,15 +72,6 @@ func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*netsync.PeerInfo,
 	addr := p2p.NewNetAddressIPPort(netIp, port)
 	sw := a.sync.Switch()
 
-	if sw.NodeInfo().ListenAddr == addr.String() {
-		return nil, errors.New("the dialing address is equals current node's address")
-	}
-	if dialling := sw.IsDialing(addr); dialling {
-		return nil, errors.New("the address is dialing...")
-	}
-	if _, ok := a.connectedPeers()[addr.String()]; ok {
-		return nil, errors.New("the address is already connected")
-	}
 	if err := sw.DialPeerWithAddress(addr); err != nil {
 		return nil, errors.Wrap(err, "can not connect to the address")
 	}
@@ -118,7 +96,7 @@ func (a *API) IsMining() bool {
 
 // return the peers of current node
 func (a *API) listPeers() Response {
-	return NewSuccessResponse(a.getPeerInfos())
+	return NewSuccessResponse(a.sync.Peers().GetPeerInfos())
 }
 
 // disconnect peer

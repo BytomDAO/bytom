@@ -239,6 +239,18 @@ func (ps *peerSet) Peers() map[string]*peer {
 	return ps.peers
 }
 
+// getPeerInfos return all peer information of current node
+func (ps *peerSet) GetPeerInfos() []*PeerInfo {
+	peers := ps.Peers()
+
+	var peerInfos []*PeerInfo
+
+	for _, peer := range peers {
+		peerInfos = append(peerInfos, peer.GetPeerInfo())
+	}
+	return peerInfos
+}
+
 // Len returns if the current number of peers in the set.
 func (ps *peerSet) Len() int {
 	ps.lock.RLock()
