@@ -27,6 +27,7 @@ import (
 	"github.com/bytom/env"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
+	"github.com/bytom/mining/tensority"
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -153,6 +154,14 @@ func NewNode(config *cfg.Config) *Node {
 	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, newBlockCh)
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
+
+	if config.Simd.Enable {
+		if tensority.CanSimd() {
+			tensority.UseSIMD = true
+		} else {
+			log.Warn("CPU doesn't support SIMD, disable SIMD again.")
+		}
+	}
 
 	return node
 }
