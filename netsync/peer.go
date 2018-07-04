@@ -43,10 +43,10 @@ type peer struct {
 
 // PeerInfo indicate peer information
 type PeerInfo struct {
-	Id         string
-	RemoteAddr string
-	Height     uint64
-	delay      uint32
+	Id         string `json:"id"`
+	RemoteAddr string `json:"remote_addr"`
+	Height     uint64 `json:"height"`
+	Delay      uint32 `json:"delay"`
 }
 
 func newPeer(height uint64, hash *bc.Hash, Peer *p2p.Peer) *peer {
@@ -126,7 +126,7 @@ func (p *peer) GetPeerInfo() *PeerInfo {
 		Id:         p.id,
 		RemoteAddr: p.swPeer.RemoteAddr,
 		Height:     p.height,
-		delay:      0, // TODO
+		Delay:      0, // TODO
 	}
 }
 
