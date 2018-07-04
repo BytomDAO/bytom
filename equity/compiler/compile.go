@@ -349,9 +349,9 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 				if b := referencedBuiltin(c.fn); b != nil {
 					switch b.name {
 					case "greater":
-						clause.BlockHeight = append(clause.BlockHeight, c.args[0].String())
+						clause.BlockHeights = append(clause.BlockHeights, c.args[0].String())
 					case "less":
-						clause.BlockHeight = append(clause.BlockHeight, c.args[0].String())
+						clause.BlockHeights = append(clause.BlockHeights, c.args[0].String())
 					}
 				}
 			}

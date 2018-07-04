@@ -270,7 +270,7 @@ func (a *API) buildHandler() {
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/decode-program", jsonHandler(a.decodeProgram))
 
-	m.Handle("/compile", jsonHandler(compileEquity))
+	m.Handle("/compile", jsonHandler(a.compileEquity))
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
 

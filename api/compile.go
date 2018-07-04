@@ -26,16 +26,15 @@ type (
 	}
 
 	clauseInfo struct {
-		Name      string               `json:"name"`
-		Args      []compiler.Param     `json:"args"`
-		Values    []compiler.ValueInfo `json:"value_info"`
-		Mintimes  []string             `json:"mintimes"`
-		Maxtimes  []string             `json:"maxtimes"`
-		HashCalls []compiler.HashCall  `json:"hash_calls"`
+		Name         string               `json:"name"`
+		Args         []compiler.Param     `json:"args"`
+		Values       []compiler.ValueInfo `json:"value_info"`
+		BlockHeights []string             `json:"block_heights"`
+		HashCalls    []compiler.HashCall  `json:"hash_calls"`
 	}
 )
 
-func compileEquity(req compileReq) (compileResp, error) {
+func (a *API) compileEquity(req compileReq) Response {
 	var resp compileResp
 	compiled, err := compiler.Compile(strings.NewReader(req.Contract))
 	if err != nil {
@@ -60,7 +59,7 @@ func compileEquity(req compileReq) (compileResp, error) {
 
 		resp.Opcodes, err = vm.Disassemble(resp.Program)
 		if err != nil {
-			return resp, err
+			return NewErrorResponse(err)
 		}
 	}
 
@@ -74,17 +73,13 @@ func compileEquity(req compileReq) (compileResp, error) {
 
 	for _, clause := range contract.Clauses {
 		info := clauseInfo{
-			Name:      clause.Name,
-			Args:      []compiler.Param{},
-			Mintimes:  clause.MinTimes,
-			Maxtimes:  clause.MaxTimes,
-			HashCalls: clause.HashCalls,
+			Name:         clause.Name,
+			Args:         []compiler.Param{},
+			BlockHeights: clause.BlockHeights,
+			HashCalls:    clause.HashCalls,
 		}
-		if info.Mintimes == nil {
-			info.Mintimes = []string{}
-		}
-		if info.Maxtimes == nil {
-			info.Maxtimes = []string{}
+		if info.BlockHeights == nil {
+			info.BlockHeights = []string{}
 		}
 
 		for _, p := range clause.Params {
@@ -98,5 +93,5 @@ func compileEquity(req compileReq) (compileResp, error) {
 		resp.Clauses = append(resp.Clauses, info)
 	}
 
-	return resp, nil
+	return NewSuccessResponse(resp)
 }
