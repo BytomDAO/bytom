@@ -17,8 +17,8 @@ var builtins = []builtin{
 	{"checkTxSig", "TXSIGHASH SWAP CHECKSIG", []typeDesc{pubkeyType, sigType}, boolType},
 	{"concat", "CAT", []typeDesc{nilType, nilType}, strType},
 	{"concatpush", "CATPUSHDATA", []typeDesc{nilType, nilType}, strType},
-	{"before", "MAXTIME GREATERTHAN", []typeDesc{timeType}, boolType},
-	{"after", "MINTIME LESSTHAN", []typeDesc{timeType}, boolType},
+	{"greater", "BLOCKHEIGHT GREATERTHAN", []typeDesc{intType}, boolType},
+	{"less", "BLOCKHEIGHT LESSTHAN", []typeDesc{intType}, boolType},
 	{"checkTxMultiSig", "", []typeDesc{listType, listType}, boolType}, // WARNING WARNING WOOP WOOP special case
 }
 

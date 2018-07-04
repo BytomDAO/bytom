@@ -46,7 +46,7 @@ type Param struct {
 	Name string `json:"name"`
 
 	// Type is the declared parameter type.
-	Type typeDesc `json:"declared_type"`
+	Type typeDesc `json:"type"`
 
 	// InferredType, if available, is a more-specific type than Type,
 	// inferred from the logic of the contract.
@@ -67,13 +67,9 @@ type Clause struct {
 
 	statements []statement
 
-	// MinTimes is the list of expressions passed to after() in this
+	// BlockHeight is the list of expressions passed to greater()/less() in this
 	// clause.
-	MinTimes []string `json:"mintimes,omitempty"`
-
-	// MaxTimes is the list of expressions passed to before() in this
-	// clause.
-	MaxTimes []string `json:"maxtimes,omitempty"`
+	BlockHeight []string `json:"blockheight,omitempty"`
 
 	// HashCalls is the list of hash functions and their arguments used
 	// in this clause.
