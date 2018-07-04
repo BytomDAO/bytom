@@ -22,6 +22,8 @@ const (
 	NewMineBlockByte   = byte(0x40)
 	GetHeadersByte     = byte(0x50)
 	HeadersByte        = byte(0x51)
+	GetBlocksByte      = byte(0x60)
+	BlocksByte         = byte(0x61)
 
 	maxBlockchainResponseSize = 22020096 + 2
 
@@ -46,9 +48,16 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
 	wire.ConcreteType{&GetHeadersMessage{}, GetHeadersByte},
 	wire.ConcreteType{&HeadersMessage{}, HeadersByte},
+	wire.ConcreteType{&GetBlocksMessage{}, GetBlocksByte},
+	wire.ConcreteType{&BlocksMessage{}, BlocksByte},
 )
 
 type blockPending struct {
+	block  *types.Block
+	peerID string
+}
+
+type headersPending struct {
 	block  *types.Block
 	peerID string
 }
@@ -269,4 +278,34 @@ type HeadersMessage struct {
 //NewTransactionNotifyMessage construct notify new tx msg
 func NewHeadersMessage(bh []types.BlockHeader) (*HeadersMessage, error) {
 	return &HeadersMessage{Headers: bh}, nil
+}
+
+// MsgGetBlocks implements the Message interface and represents a getblocks message.
+type GetBlocksMessage struct {
+	beginHash common.Hash
+	num       int
+}
+
+// NewMsgGetBlocks returns a new getblocks message that conforms to the
+// Message interface using the passed parameters and defaults for the remaining fields.
+func NewGetBlocksMessage(beginHash *common.Hash, num int) *GetBlocksMessage {
+	return &GetBlocksMessage{
+		beginHash: *beginHash,
+		num:       num,
+	}
+}
+
+type blockMsg struct {
+	Hash     common.Hash
+	RawBlock []byte
+}
+
+// MsgHeaders implements the Message interface and represents a blocks message.
+type BlocksMessage struct {
+	blocks []blockMsg
+}
+
+//NewTransactionNotifyMessage construct notify new tx msg
+func NewBlocksMessage() (*BlocksMessage, error) {
+	return &BlocksMessage{blocks: make([]blockMsg, 0)}, nil
 }

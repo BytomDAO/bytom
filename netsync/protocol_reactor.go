@@ -249,7 +249,19 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	case *HeadersMessage:
 		log.Info("HeadersMessage")
 		hmsg := &headersMsg{headers: msg.Headers, peerID: src.Key}
-		pr.blockKeeper.handleHeadersMsg(hmsg)
+		pr.blockKeeper.headersProcessCh <- hmsg
+
+	case *GetBlocksMessage:
+		log.Info("GetBlocksMessage")
+		pr.blockKeeper.GetBlocksWorker(src.Key, msg)
+
+	case *BlocksMessage:
+		log.Info("blocksMessage")
+		peer, _ := pr.blockKeeper.peers.Peer(src.Key)
+		if peer != nil {
+			peer.blocksProcessCh <- msg
+		}
+
 	default:
 		log.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
 	}

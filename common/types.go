@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"reflect"
 	"strings"
+
+	"github.com/bytom/protocol/bc"
 )
 
 const (
@@ -27,6 +29,13 @@ func BytesToHash(b []byte) Hash {
 	h.SetBytes(b)
 	return h
 }
+
+func CoreHashToHash(hash *bc.Hash) *Hash {
+	var h Hash
+	h.SetBytes(hash.Bytes())
+	return &h
+}
+
 func StringToHash(s string) Hash { return BytesToHash([]byte(s)) }
 func BigToHash(b *big.Int) Hash  { return BytesToHash(b.Bytes()) }
 func HexToHash(s string) Hash    { return BytesToHash(FromHex(s)) }

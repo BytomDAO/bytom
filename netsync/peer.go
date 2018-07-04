@@ -7,8 +7,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/fatih/set.v0"
 
-	"github.com/bytom/consensus"
 	"github.com/bytom/common"
+	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
@@ -36,6 +36,8 @@ type peer struct {
 	hash     *bc.Hash
 	banScore trust.DynamicBanScore
 
+	blocksProcessCh chan *BlocksMessage
+
 	swPeer *p2p.Peer
 
 	knownTxs           *set.Set // Set of transaction hashes known to be known by this peer
@@ -57,14 +59,15 @@ func newPeer(height uint64, hash *bc.Hash, Peer *p2p.Peer) *peer {
 	}
 
 	return &peer{
-		version:     defaultVersion,
-		services:    services,
-		id:          Peer.Key,
-		height:      height,
-		hash:        hash,
-		swPeer:      Peer,
-		knownTxs:    set.New(),
-		knownBlocks: set.New(),
+		version:         defaultVersion,
+		services:        services,
+		id:              Peer.Key,
+		height:          height,
+		hash:            hash,
+		swPeer:          Peer,
+		knownTxs:        set.New(),
+		knownBlocks:     set.New(),
+		blocksProcessCh: make(chan *BlocksMessage, 0),
 	}
 }
 
@@ -94,6 +97,12 @@ func (p *peer) requestBlockByHeight(height uint64) error {
 	return nil
 }
 
+func (p *peer) requestBlocksByHash(beginHash *common.Hash, num int) error {
+	msg := NewGetBlocksMessage(beginHash, num)
+	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	return nil
+}
+
 func (p *peer) SendTransactions(txs []*types.Tx) error {
 	for _, tx := range txs {
 		msg, err := NewTransactionNotifyMessage(tx)
@@ -115,6 +124,11 @@ func (p *peer) SendHeaders(headers []types.BlockHeader) error {
 	if err != nil {
 		return errors.New("Failed construction headers msg")
 	}
+	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	return nil
+}
+
+func (p *peer) SendBlocks(msg BlocksMessage) error {
 	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
 }
@@ -408,12 +422,28 @@ func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
 	return peer.requestBlockByHeight(height)
 }
 
+func (ps *peerSet) requestBlocksByHash(peerID string, beginHash *common.Hash, num int) error {
+	peer, ok := ps.Peer(peerID)
+	if !ok {
+		return errors.New("Can't find peer. ")
+	}
+	return peer.requestBlocksByHash(beginHash, num)
+}
+
 func (ps *peerSet) SendHeaders(peerID string, headers []types.BlockHeader) error {
 	peer, ok := ps.Peer(peerID)
 	if !ok {
 		return errors.New("Can't find peer. ")
 	}
 	return peer.SendHeaders(headers)
+}
+
+func (ps *peerSet) SendBlocks(peerID string, Blocks BlocksMessage) error {
+	peer, ok := ps.Peer(peerID)
+	if !ok {
+		return errors.New("Can't find peer. ")
+	}
+	return peer.SendBlocks(Blocks)
 }
 
 func (ps *peerSet) BroadcastMinedBlock(block *types.Block) ([]*peer, error) {
