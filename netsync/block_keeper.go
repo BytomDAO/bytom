@@ -124,6 +124,13 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 	}
 	swPeer := bkPeer.getPeer()
 	for 0 < num && num <= maxPeerHeight {
+		if nextCheckPoint := bk.nextCheckpoint(); nextCheckPoint != nil {
+			_, bestHeight := bk.peers.BestPeer()
+			if bestHeight > nextCheckPoint.Height {
+				log.Info("Switch to fast sync mode")
+				return nil
+			}
+		}
 		if isOrphan {
 			reqNum = orphanNum
 		} else {
@@ -140,16 +147,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 			bk.sw.StopPeerGracefully(swPeer)
 			break
 		}
-		if bk.headersFirstMode {
-			log.Info("CalcSeed start:", time.Now())
-			seed, _ := bk.chain.CalcNextSeed(&(block.PreviousBlockHash))
-			blockHash := block.Hash()
-			tensority.AIHash.AddCache(&blockHash, seed, &bc.Hash{})
-			log.Info("Add Cache end:", time.Now())
-		}
-		log.Info("Process block start:", time.Now())
 		isOrphan, err = bk.chain.ProcessBlock(block)
-		log.Info("Process block end:", time.Now())
 		if err != nil {
 			if bkPeer == nil {
 				log.Info("peer is deleted")
@@ -234,7 +232,7 @@ func (bk *blockKeeper) HeadersRequest(peerID string, locator []*common.Hash) ([]
 }
 
 func (bk *blockKeeper) BlockFastSyncWorker() error {
-	//request block headers
+	//request blocks header
 	bestPeer, bestHeight := bk.peers.BestPeer()
 	nextCheckPoint := bk.nextCheckpoint()
 	totalHeaders := make([]types.BlockHeader, 0)
@@ -265,17 +263,15 @@ func (bk *blockKeeper) BlockFastSyncWorker() error {
 	}
 
 	for e := bk.headerList.Front(); e != nil; {
-		headersHash := list.New()
-
-		for i := 0; i < MaxRequestBlocksPerMsg; i++ {
-			e := bk.headerList.Front()
+		headerList := list.New()
+		for num := 0; num < MaxRequestBlocksPerMsg; num++ {
 			if e == nil {
 				break
 			}
-			headersHash.PushBack(e)
-			bk.headerList.Remove(e)
+			headerList.PushBack(e)
+			e = e.Next()
 		}
-		blocks, err := bk.BlocksRequestWorker(bestPeer.Key, headersHash, headersHash.Len())
+		blocks, err := bk.BlocksRequestWorker(bestPeer.Key, headerList, headerList.Len())
 		if err != nil {
 			return err
 		}
@@ -285,59 +281,71 @@ func (bk *blockKeeper) BlockFastSyncWorker() error {
 			tensority.AIHash.AddCache(&blockHash, seed, &bc.Hash{})
 			isOrphan, err := bk.chain.ProcessBlock(block)
 			if err != nil {
-				if bestPeer == nil {
-					log.Info("peer is deleted")
-					break
-				}
 				log.WithField("hash:", block.Hash()).Errorf("blockKeeper fail process block %v ", err)
-				break
+				return err
 			}
 
 			if isOrphan {
-				continue
+				return errors.New("block order error")
 			}
 		}
 	}
-	//sm.blockKeeper.headersFirstMode = true
+
+	height := bk.chain.BestBlockHeight()
+	block, _ := bk.chain.GetBlockByHeight(height)
+	peers, err := bk.peers.BroadcastNewStatus(block)
+	if err != nil {
+		log.Errorf("Failed on broadcast new status block %v", err)
+		return errBroadcastStatus
+	}
+	for _, peer := range peers {
+		if peer == nil {
+			return errPeerNotRegister
+		}
+		swPeer := peer.getPeer()
+		log.Info("Block keeper broadcast block error. Stop peer.")
+		bk.sw.StopPeerGracefully(swPeer)
+	}
+
 	return nil
 }
 
-func blocksCollect(headersHash *list.List, num int, blocks []blockMsg, totalBlock *[]*types.Block) (bool, error) {
+func blocksCollect(headerList *list.List, beginHeight uint64, num int, blocks []blockMsg, totalBlocks *[]*types.Block) (bool, error) {
 	if len(blocks) > num {
 		return false, errors.New("blocks length error")
 	}
-	for index := 0; index < num; index++ {
-		e := headersHash.Front()
-		header := e.Value.(*headerNode)
-		for i := 0; i < len(blocks); i++ {
-			if blocks[i].Hash.Str() == header.hash.Str() {
+
+	for i := 0; i < len(blocks); i++ {
+		for e := headerList.Front(); e != nil; e = e.Next() {
+			if blocks[i].Hash.Str() == e.Value.(*headerNode).hash.Str() {
 				block := &types.Block{
 					BlockHeader:  types.BlockHeader{},
 					Transactions: []*types.Tx{},
 				}
 				block.UnmarshalText(blocks[i].RawBlock)
 				//todo: add txs merkle check
-				(*totalBlock)[i] = block
+				(*totalBlocks)[e.Value.(*headerNode).height-beginHeight] = block
+				headerList.Remove(e)
+				break
 			}
 		}
-		e = e.Next()
 	}
 
-	for index := 0; index < num; index++ {
-		if (*totalBlock)[index] == nil {
-			return false, nil
-		}
+	if headerList.Len() == 0 {
+		return true, nil
 	}
-	return true, nil
+
+	return false, nil
 }
 
-func (bk *blockKeeper) BlocksRequestWorker(peerID string, headersHash *list.List, num int) ([]*types.Block, error) {
+func (bk *blockKeeper) BlocksRequestWorker(peerID string, headerList *list.List, num int) ([]*types.Block, error) {
 	peer, _ := bk.peers.Peer(peerID)
 	if peer == nil {
 		return nil, errPeerDropped
 	}
 
-	beginHash := headersHash.Front().Value.(*headerNode).hash
+	beginHash := headerList.Front().Value.(*headerNode).hash
+	beginHeight := headerList.Front().Value.(*headerNode).height
 
 	if err := bk.peers.requestBlocksByHash(peerID, beginHash, num); err != nil {
 		return nil, err
@@ -350,7 +358,7 @@ func (bk *blockKeeper) BlocksRequestWorker(peerID string, headersHash *list.List
 		select {
 		case pendingResponse := <-peer.blocksProcessCh:
 			blocks := pendingResponse.blocks
-			ok, err := blocksCollect(headersHash, num, blocks, &totalBlocks)
+			ok, err := blocksCollect(headerList, beginHeight, num, blocks, &totalBlocks)
 			if err != nil {
 				return nil, err
 			}
@@ -639,13 +647,10 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 	// previous and that checkpoints match.
 	receivedCheckpoint := false
 	//var finalHash *bc.Hash
-	for _, blockHeader := range headers {
-		blockHash := blockHeader.Hash()
-		//finalHash = &blockHash
-
+	for _, header := range headers {
 		// Ensure there is a previous header to compare against.
-		prevNodeEl := bk.headerList.Back()
-		if prevNodeEl == nil {
+		prevBlockHeader := bk.headerList.Back()
+		if prevBlockHeader == nil {
 			log.Warnf("Header list does not contain a previous" +
 				"element as expected -- disconnecting peer")
 			peer.swPeer.CloseConn()
@@ -654,9 +659,10 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 
 		// Ensure the header properly connects to the previous one and
 		// add it to the list of headers.
+		blockHash := header.Hash()
 		node := headerNode{hash: common.CoreHashToHash(&blockHash)}
-		prevNode := prevNodeEl.Value.(*headerNode)
-		if prevNode.hash.Str() == blockHeader.PreviousBlockHash.String() {
+		prevNode := prevBlockHeader.Value.(*headerNode)
+		if prevNode.hash.Str() == header.PreviousBlockHash.String() {
 			node.height = prevNode.height + 1
 			e := bk.headerList.PushBack(&node)
 			if bk.startHeader == nil {
@@ -701,24 +707,8 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 		bk.headerList.Remove(bk.headerList.Front())
 		log.Infof("Received %v block headers: Fetching blocks",
 			bk.headerList.Len())
-		//todo:
-		//sm.fetchHeaderBlocks()
-		//go bk.BlockRequestWorker(hmsg.peerID, bk.nextCheckpoint().Height)
-		//startHeader, ok := bk.startHeader.Value.(*headerNode)
-		//if !ok {
-		//	log.Warn("Header list node type is not a headerNode")
-		//	return
-		//}
-		//
-		//go bk.BodiesRequestWorker(peerID, startHeader.hash, 10)
-		return nil, receivedCheckpoint
 	}
 
-	// This header is not a checkpoint, so request the next batch of
-	// headers starting from the latest known header and ending with the
-	// next checkpoint.
-	//hash := common.Hash(finalHash.Byte32())
-	//locator := []*common.Hash{&hash}
 	return nil, receivedCheckpoint
 }
 

@@ -96,16 +96,19 @@ func (sm *SyncManager) synchronise() {
 		sm.sw.StopPeerGracefully(peer)
 		return
 	}
-
+	//todo: how to select peer
 	if bestHeight > sm.chain.BestBlockHeight() {
-		nextCheckPoint := sm.blockKeeper.nextCheckpoint()
-		if nextCheckPoint != nil {
-			log.Info("fast sync")
-			sm.blockKeeper.BlockFastSyncWorker()
-		} else {
-			log.Info("normal sync peer:", peer.Addr(), " height:", bestHeight)
-			sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
+		if nextCheckPoint := sm.blockKeeper.nextCheckpoint(); nextCheckPoint != nil {
+			if bestHeight > nextCheckPoint.Height {
+				log.Info("fast sync peer:", peer.Addr(), " height:", bestHeight)
+				if err := sm.blockKeeper.BlockFastSyncWorker(); err != nil {
+					log.Info("fast sync err:", err)
+					return
+				}
+			}
 		}
+		log.Info("normal sync peer:", peer.Addr(), " height:", bestHeight)
+		sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
 	}
 }
 
