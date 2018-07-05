@@ -116,7 +116,7 @@ func TestGetAccountUtxos(t *testing.T) {
 			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 		}
 
-		for k, _ := range c.dbUtxos {
+		for k := range c.dbUtxos {
 			testDB.Delete([]byte(k))
 		}
 	}
@@ -282,7 +282,7 @@ func TestFilterAccountUtxo(t *testing.T) {
 		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
 			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 		}
-		for s, _ := range c.dbPrograms {
+		for s := range c.dbPrograms {
 			key, err := hex.DecodeString(s)
 			if err != nil {
 				t.Error(err)

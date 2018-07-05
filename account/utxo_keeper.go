@@ -2,6 +2,7 @@ package account
 
 import (
 	"encoding/json"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -234,6 +235,10 @@ func (uk *utxoKeeper) findUtxo(outHash bc.Hash, useUnconfirmed bool) (*UTXO, err
 }
 
 func (uk *utxoKeeper) optUTXOs(utxos []*UTXO, amount uint64) ([]*UTXO, uint64, uint64) {
+	sort.Slice(utxos, func(i, j int) bool {
+		return utxos[i].Amount < utxos[j].Amount
+	})
+
 	var optAmount, reservedAmount uint64
 	optUtxos := []*UTXO{}
 	for _, u := range utxos {

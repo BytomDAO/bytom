@@ -81,6 +81,7 @@ func TestWalletUpdate(t *testing.T) {
 	tx := types.NewTx(*txData)
 	block := mockSingleBlock(tx)
 	txStatus := bc.NewTransactionStatus()
+	txStatus.SetStatus(0, false)
 	store.SaveBlock(block, txStatus)
 
 	w := mockWallet(testDB, accountManager, reg, chain)
