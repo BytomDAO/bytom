@@ -3,6 +3,7 @@ package account
 import (
 	"context"
 	"encoding/json"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -242,19 +243,7 @@ func (sr *sourceReserver) reserve(rid uint64, amount uint64) ([]*UTXO, uint64, b
 
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
-	for _, u := range utxos {
-		// If the UTXO is already reserved, skip it.
-		if _, ok := sr.reserved[u.OutputID]; ok {
-			unavailable += u.Amount
-			continue
-		}
-
-		reserved += u.Amount
-		reservedUTXOs = append(reservedUTXOs, u)
-		if reserved >= amount {
-			break
-		}
-	}
+	reserved, unavailable, reservedUTXOs = findTheBestUTXOs(utxos, 21, amount, sr.reserved)
 	if reserved+unavailable < amount {
 		// Even if everything was available, this account wouldn't have
 		// enough to satisfy the request.
@@ -293,6 +282,44 @@ func (sr *sourceReserver) cancel(res *reservation) {
 	for _, utxo := range res.UTXOs {
 		delete(sr.reserved, utxo.OutputID)
 	}
+}
+
+func findTheBestUTXOs(utxos []*UTXO, limit int, target uint64, filter map[bc.Hash]uint64) (uint64, uint64, []*UTXO) {
+	var (
+		reserved, unavailable uint64
+		reservedUTXOs         []*UTXO
+		utxosLength           = len(utxos)
+	)
+
+	// Sort utxos
+	sort.Slice(utxos, func(i, j int) bool {
+		return utxos[i].Amount < utxos[j].Amount
+	})
+	// Priority use of small balances in utxos
+exit:
+	for start := 0; start < utxosLength; start++ {
+		var reservedTmp uint64
+		var unavailableTmp uint64
+		var reservedUTXOsTmp []*UTXO
+
+		for i := start; i < Min(utxosLength, start+limit); i++ {
+			// If the UTXO is already reserved, skip it.
+			if _, ok := filter[utxos[i].OutputID]; ok {
+				unavailableTmp += utxos[i].Amount
+				continue
+			}
+
+			reservedTmp += utxos[i].Amount
+			reservedUTXOsTmp = append(reservedUTXOsTmp, utxos[i])
+			if reservedTmp >= target {
+				reserved = reservedTmp
+				reservedUTXOs = reservedUTXOsTmp
+				unavailable = unavailableTmp
+				break exit
+			}
+		}
+	}
+	return reserved, unavailable, reservedUTXOs
 }
 
 func findMatchingUTXOs(db dbm.DB, src source, currentHeight func() uint64) ([]*UTXO, bool, error) {

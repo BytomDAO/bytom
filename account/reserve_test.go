@@ -138,3 +138,50 @@ func mockUTXO(controlProg *CtrlProgram) *UTXO {
 	utxo.ControlProgramIndex = controlProg.KeyIndex
 	return utxo
 }
+
+func TestFindTheBestUTXOs(t *testing.T) {
+	var (
+		limit  int    = 3
+		target uint64 = 9
+	)
+
+	utxos := []*UTXO{
+		{
+			OutputID: bc.Hash{V0: 1},
+			Amount:   1,
+		},
+		{
+			OutputID: bc.Hash{V0: 2},
+			Amount:   2,
+		},
+		{
+			OutputID: bc.Hash{V0: 3},
+			Amount:   3,
+		},
+		{
+			OutputID: bc.Hash{V0: 4},
+			Amount:   4,
+		},
+		{
+			OutputID: bc.Hash{V0: 5},
+			Amount:   5,
+		},
+		{
+			OutputID: bc.Hash{V0: 6},
+			Amount:   6,
+		},
+	}
+
+	filter := map[bc.Hash]uint64{
+		bc.Hash{V0: 3}: 3,
+	}
+	reserved, unavailable, reservedUTXOs := findTheBestUTXOs(utxos, limit, target, filter)
+	var amount uint64
+	for _, v := range reservedUTXOs {
+		amount += v.Amount
+	}
+
+	if reserved != target && reserved != 3 && amount != target {
+		t.Fatal("unexpected result")
+	}
+}
