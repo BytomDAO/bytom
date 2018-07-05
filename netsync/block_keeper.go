@@ -56,11 +56,10 @@ type blockKeeper struct {
 	pendingProcessCh chan *blockPending
 	headersProcessCh chan *headersMsg
 
-	txsProcessCh     chan *txsNotify
-	quitReqBlockCh   chan *string
-	headersFirstMode bool
-	headerList       *list.List
-	startHeader      *list.Element
+	txsProcessCh   chan *txsNotify
+	quitReqBlockCh chan *string
+	headerList     *list.List
+	startHeader    *list.Element
 }
 
 func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitReqBlockCh chan *string) *blockKeeper {
@@ -85,7 +84,6 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitR
 // resetHeaderState sets the headers-first mode state to values appropriate for
 // syncing from a new peer.
 func (bk *blockKeeper) resetHeaderState(newestHash *common.Hash, newestHeight uint64) {
-	bk.headersFirstMode = false
 	bk.headerList = list.New()
 	bk.startHeader = nil
 
@@ -629,15 +627,7 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 	}
 
 	// The remote peer is misbehaving if we didn't request headers.
-	//msg := hmsg.headers
 	numHeaders := len(headers)
-	if !bk.headersFirstMode {
-		log.Warnf("Got %d unrequested headers from %s -- "+
-			"disconnecting", numHeaders, peer.id)
-		peer.swPeer.CloseConn()
-		return errPeerMisbehave, false
-	}
-
 	// Nothing to do for an empty headers message.
 	if numHeaders == 0 {
 		return errEmptyHeaders, false
