@@ -359,7 +359,7 @@ func (bk *blockKeeper) BlocksRequestWorker(peerID string, headerList *list.List,
 	for {
 		select {
 		case pendingResponse := <-peer.blocksProcessCh:
-			blocks := pendingResponse.blocks
+			blocks := pendingResponse.Blocks
 			ok, err := blocksCollect(headerList, beginHeight, num, blocks, &totalBlocks)
 			if err != nil {
 				return nil, err
@@ -875,7 +875,7 @@ func (bk *blockKeeper) GetBlocksWorker(peerID string, bmsg *GetBlocksMessage) {
 	}
 	var beginBlock *types.Block
 	beginHash := bc.NewHash(bmsg.BeginHash)
-	if beginBlock, _ = bk.chain.GetBlockByHash(&beginHash); beginBlock != nil {
+	if beginBlock, _ = bk.chain.GetBlockByHash(&beginHash); beginBlock == nil {
 		log.Error("GetBlocks Worker can't find begin Hash")
 		return
 	}
@@ -886,11 +886,11 @@ func (bk *blockKeeper) GetBlocksWorker(peerID string, bmsg *GetBlocksMessage) {
 		hash := block.Hash().Byte32()
 		rawBlock, _ := block.MarshalText()
 		blockMsg := blockMsg{Hash: hash, RawBlock: rawBlock}
-		msg.blocks = append(msg.blocks, blockMsg)
+		msg.Blocks = append(msg.Blocks, blockMsg)
 	}
-	bk.blocksSend(peerID, *msg)
+	bk.blocksSend(peerID, msg)
 }
 
-func (bk *blockKeeper) blocksSend(peerID string, msg BlocksMessage) error {
+func (bk *blockKeeper) blocksSend(peerID string, msg *BlocksMessage) error {
 	return bk.peers.SendBlocks(peerID, msg)
 }

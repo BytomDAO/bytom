@@ -302,10 +302,10 @@ type blockMsg struct {
 
 // MsgHeaders implements the Message interface and represents a blocks message.
 type BlocksMessage struct {
-	blocks []blockMsg
+	Blocks []blockMsg
 }
 
 //NewTransactionNotifyMessage construct notify new tx msg
 func NewBlocksMessage() (*BlocksMessage, error) {
-	return &BlocksMessage{blocks: make([]blockMsg, 0)}, nil
+	return &BlocksMessage{Blocks: make([]blockMsg, 0)}, nil
 }

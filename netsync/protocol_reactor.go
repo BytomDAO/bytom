@@ -183,7 +183,6 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		log.Errorf("Error decoding message %v", err)
 		return
 	}
-	log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Receive request")
 
 	switch msg := msg.(type) {
 	case *BlockRequestMessage:

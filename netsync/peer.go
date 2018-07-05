@@ -128,7 +128,7 @@ func (p *peer) SendHeaders(headers []types.BlockHeader) error {
 	return nil
 }
 
-func (p *peer) SendBlocks(msg BlocksMessage) error {
+func (p *peer) SendBlocks(msg *BlocksMessage) error {
 	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
 }
@@ -422,7 +422,7 @@ func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
 }
 
 func (ps *peerSet) requestBlocksByHash(peerID string, beginHash *common.Hash, num int) error {
-	log.Info("begin hash:", beginHash.Str())
+	log.Info("begin hash:", beginHash.Bytes())
 	log.Info("num:", num)
 	peer, ok := ps.Peer(peerID)
 	if !ok {
@@ -440,7 +440,7 @@ func (ps *peerSet) SendHeaders(peerID string, headers []types.BlockHeader) error
 	return peer.SendHeaders(headers)
 }
 
-func (ps *peerSet) SendBlocks(peerID string, Blocks BlocksMessage) error {
+func (ps *peerSet) SendBlocks(peerID string, Blocks *BlocksMessage) error {
 	peer, ok := ps.Peer(peerID)
 	if !ok {
 		return errors.New("Can't find peer. ")
