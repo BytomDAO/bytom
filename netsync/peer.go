@@ -226,7 +226,6 @@ func (p *peer) PushGetHeadersMsg(locator []*common.Hash, stopHash *common.Hash) 
 			return err
 		}
 	}
-	//p.QueueMessage(msg, nil)
 	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	// Update the previous getheaders request information for filtering
 	// duplicates.
@@ -423,8 +422,11 @@ func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
 }
 
 func (ps *peerSet) requestBlocksByHash(peerID string, beginHash *common.Hash, num int) error {
+	log.Info("begin hash:", beginHash.Str())
+	log.Info("num:", num)
 	peer, ok := ps.Peer(peerID)
 	if !ok {
+		log.Info("Can't find peer.")
 		return errors.New("Can't find peer. ")
 	}
 	return peer.requestBlocksByHash(beginHash, num)

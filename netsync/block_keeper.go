@@ -266,7 +266,7 @@ func (bk *blockKeeper) BlockFastSyncWorker() error {
 			if e == nil {
 				break
 			}
-			headerList.PushBack(e)
+			headerList.PushBack(e.Value)
 			e = e.Next()
 		}
 		blocks, err := bk.BlocksRequestWorker(bestPeer.Key, headerList, headerList.Len())
@@ -341,10 +341,14 @@ func (bk *blockKeeper) BlocksRequestWorker(peerID string, headerList *list.List,
 	if peer == nil {
 		return nil, errPeerDropped
 	}
-
-	beginHash := headerList.Front().Value.(*headerNode).hash
-	beginHeight := headerList.Front().Value.(*headerNode).height
-
+	e := headerList.Front()
+	node, ok := e.Value.(*headerNode)
+	if !ok {
+		log.Warn("Header list node type is not a headerNode")
+		return nil, errors.New("var type error")
+	}
+	beginHash := node.hash
+	beginHeight := node.height
 	if err := bk.peers.requestBlocksByHash(peerID, beginHash, num); err != nil {
 		return nil, err
 	}
@@ -870,14 +874,14 @@ func (bk *blockKeeper) GetBlocksWorker(peerID string, bmsg *GetBlocksMessage) {
 		return
 	}
 	var beginBlock *types.Block
-	beginHash := bc.NewHash(bmsg.beginHash)
+	beginHash := bc.NewHash(bmsg.BeginHash)
 	if beginBlock, _ = bk.chain.GetBlockByHash(&beginHash); beginBlock != nil {
 		log.Error("GetBlocks Worker can't find begin Hash")
 		return
 	}
 
 	msg, _ := NewBlocksMessage()
-	for height := beginBlock.Height; height < beginBlock.Height+uint64(bmsg.num); height++ {
+	for height := beginBlock.Height; height < beginBlock.Height+uint64(bmsg.Num); height++ {
 		block, _ := bk.chain.GetBlockByHeight(height)
 		hash := block.Hash().Byte32()
 		rawBlock, _ := block.MarshalText()

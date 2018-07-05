@@ -282,16 +282,16 @@ func NewHeadersMessage(bh []types.BlockHeader) (*HeadersMessage, error) {
 
 // MsgGetBlocks implements the Message interface and represents a getblocks message.
 type GetBlocksMessage struct {
-	beginHash common.Hash
-	num       int
+	BeginHash common.Hash
+	Num       uint64
 }
 
 // NewMsgGetBlocks returns a new getblocks message that conforms to the
 // Message interface using the passed parameters and defaults for the remaining fields.
 func NewGetBlocksMessage(beginHash *common.Hash, num int) *GetBlocksMessage {
 	return &GetBlocksMessage{
-		beginHash: *beginHash,
-		num:       num,
+		BeginHash: *beginHash,
+		Num:       uint64(num),
 	}
 }
 

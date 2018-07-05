@@ -252,7 +252,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.blockKeeper.headersProcessCh <- hmsg
 
 	case *GetBlocksMessage:
-		log.Info("GetBlocksMessage")
+		log.Info("GetBlocksMessage hash:", msg.BeginHash, " num:", msg.Num)
 		pr.blockKeeper.GetBlocksWorker(src.Key, msg)
 
 	case *BlocksMessage:
