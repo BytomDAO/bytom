@@ -170,6 +170,7 @@ func newPoolTxListener(txPool *protocol.TxPool, syncManager *netsync.SyncManager
 				wallet.RemoveUnconfirmedTx(msg.TxDesc)
 			}
 		default:
+			log.Warn("got unknow message type from the txPool channel")
 		}
 	}
 }
