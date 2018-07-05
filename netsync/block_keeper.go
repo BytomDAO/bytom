@@ -652,7 +652,7 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 		blockHash := header.Hash()
 		node := headerNode{hash: common.CoreHashToHash(&blockHash)}
 		prevNode := prevBlockHeader.Value.(*headerNode)
-		if prevNode.hash.Str() == header.PreviousBlockHash.String() {
+		if prevNode.hash.Str() == common.CoreHashToHash(&(header.PreviousBlockHash)).Str() {
 			node.height = prevNode.height + 1
 			e := bk.headerList.PushBack(&node)
 			if bk.startHeader == nil {
@@ -668,7 +668,7 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 
 		// Verify the header at the next checkpoint height matches.
 		if node.height == bk.nextCheckpoint().Height {
-			if node.hash.Str() == bk.nextCheckpoint().Hash.String() {
+			if node.hash.Str() == common.CoreHashToHash(&(bk.nextCheckpoint().Hash)).Str() {
 				receivedCheckpoint = true
 				log.Infof("Verified downloaded block "+
 					"header against checkpoint at height "+
