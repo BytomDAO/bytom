@@ -16,41 +16,6 @@ import (
 
 var retirementProgram = []byte{byte(vm.OP_FAIL)}
 
-// DecodeControlReceiverAction convert input data to action struct
-func DecodeControlReceiverAction(data []byte) (Action, error) {
-	a := new(controlReceiverAction)
-	err := stdjson.Unmarshal(data, a)
-	return a, err
-}
-
-type controlReceiverAction struct {
-	bc.AssetAmount
-	Receiver *Receiver `json:"receiver"`
-}
-
-func (a *controlReceiverAction) Build(ctx context.Context, b *TemplateBuilder) error {
-	var missing []string
-	if a.Receiver == nil {
-		missing = append(missing, "receiver")
-	} else {
-		if len(a.Receiver.ControlProgram) == 0 {
-			missing = append(missing, "receiver.control_program")
-		}
-	}
-	if a.AssetId.IsZero() {
-		missing = append(missing, "asset_id")
-	}
-	if a.Amount == 0 {
-		missing = append(missing, "amount")
-	}
-	if len(missing) > 0 {
-		return MissingFieldsError(missing...)
-	}
-
-	out := types.NewTxOutput(*a.AssetId, a.Amount, a.Receiver.ControlProgram)
-	return b.AddOutput(out)
-}
-
 // DecodeControlAddressAction convert input data to action struct
 func DecodeControlAddressAction(data []byte) (Action, error) {
 	a := new(controlAddressAction)
