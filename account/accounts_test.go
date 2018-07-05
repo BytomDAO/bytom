@@ -1,7 +1,6 @@
 package account
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -19,7 +18,7 @@ import (
 func TestCreateAccountWithUppercase(t *testing.T) {
 	m := mockAccountManager(t)
 	alias := "UPPER"
-	account, err := m.Create(nil, []chainkd.XPub{testutil.TestXPub}, 1, alias)
+	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias)
 
 	if err != nil {
 		t.Fatal(err)
@@ -33,7 +32,7 @@ func TestCreateAccountWithUppercase(t *testing.T) {
 func TestCreateAccountWithSpaceTrimed(t *testing.T) {
 	m := mockAccountManager(t)
 	alias := " with space "
-	account, err := m.Create(nil, []chainkd.XPub{testutil.TestXPub}, 1, alias)
+	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias)
 
 	if err != nil {
 		t.Fatal(err)
@@ -43,12 +42,12 @@ func TestCreateAccountWithSpaceTrimed(t *testing.T) {
 		t.Fatal("created account alias should be lowercase")
 	}
 
-	nilAccount, err := m.FindByAlias(nil, alias)
+	nilAccount, err := m.FindByAlias(alias)
 	if nilAccount != nil {
 		t.Fatal("expected nil")
 	}
 
-	target, err := m.FindByAlias(nil, strings.ToLower(strings.TrimSpace(alias)))
+	target, err := m.FindByAlias(strings.ToLower(strings.TrimSpace(alias)))
 	if target == nil {
 		t.Fatal("expected Account, but got nil")
 	}
@@ -56,14 +55,12 @@ func TestCreateAccountWithSpaceTrimed(t *testing.T) {
 
 func TestCreateAccount(t *testing.T) {
 	m := mockAccountManager(t)
-	ctx := context.Background()
-
-	account, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias")
+	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias")
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err := m.FindByID(ctx, account.ID)
+	found, err := m.FindByID(account.ID)
 	if err != nil {
 		t.Errorf("unexpected error %v", err)
 	}
@@ -74,10 +71,9 @@ func TestCreateAccount(t *testing.T) {
 
 func TestCreateAccountReusedAlias(t *testing.T) {
 	m := mockAccountManager(t)
-	ctx := context.Background()
-	m.createTestAccount(ctx, t, "test-alias", nil)
+	m.createTestAccount(t, "test-alias", nil)
 
-	_, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias")
+	_, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias")
 	if errors.Root(err) != ErrDuplicateAlias {
 		t.Errorf("expected %s when reusing an alias, got %v", ErrDuplicateAlias, err)
 	}
@@ -85,14 +81,13 @@ func TestCreateAccountReusedAlias(t *testing.T) {
 
 func TestDeleteAccount(t *testing.T) {
 	m := mockAccountManager(t)
-	ctx := context.Background()
 
-	account1, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias1")
+	account1, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias1")
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	account2, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, "test-alias2")
+	account2, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias2")
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -101,7 +96,7 @@ func TestDeleteAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err := m.FindByID(ctx, account1.ID)
+	found, err := m.FindByID(account1.ID)
 	if err != nil {
 		t.Errorf("expected account %v should be deleted", found)
 	}
@@ -110,7 +105,7 @@ func TestDeleteAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	found, err = m.FindByID(ctx, account2.ID)
+	found, err = m.FindByID(account2.ID)
 	if err != nil {
 		t.Errorf("expected account %v should be deleted", found)
 	}
@@ -118,10 +113,9 @@ func TestDeleteAccount(t *testing.T) {
 
 func TestFindByID(t *testing.T) {
 	m := mockAccountManager(t)
-	ctx := context.Background()
-	account := m.createTestAccount(ctx, t, "", nil)
+	account := m.createTestAccount(t, "", nil)
 
-	found, err := m.FindByID(ctx, account.ID)
+	found, err := m.FindByID(account.ID)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -133,10 +127,9 @@ func TestFindByID(t *testing.T) {
 
 func TestFindByAlias(t *testing.T) {
 	m := mockAccountManager(t)
-	ctx := context.Background()
-	account := m.createTestAccount(ctx, t, "some-alias", nil)
+	account := m.createTestAccount(t, "some-alias", nil)
 
-	found, err := m.FindByAlias(ctx, "some-alias")
+	found, err := m.FindByAlias("some-alias")
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -166,8 +159,8 @@ func mockAccountManager(t *testing.T) *Manager {
 	return NewManager(testDB, chain)
 }
 
-func (m *Manager) createTestAccount(ctx context.Context, t testing.TB, alias string, tags map[string]interface{}) *Account {
-	account, err := m.Create(ctx, []chainkd.XPub{testutil.TestXPub}, 1, alias)
+func (m *Manager) createTestAccount(t testing.TB, alias string, tags map[string]interface{}) *Account {
+	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}

@@ -128,12 +128,12 @@ type walletTestContext struct {
 }
 
 func (ctx *walletTestContext) createControlProgram(accountName string, change bool) (*account.CtrlProgram, error) {
-	acc, err := ctx.Wallet.AccountMgr.FindByAlias(nil, accountName)
+	acc, err := ctx.Wallet.AccountMgr.FindByAlias(accountName)
 	if err != nil {
 		return nil, err
 	}
 
-	return ctx.Wallet.AccountMgr.CreateAddress(nil, acc.ID, change)
+	return ctx.Wallet.AccountMgr.CreateAddress(acc.ID, change)
 }
 
 func (ctx *walletTestContext) getPubkey(keyAlias string) *chainkd.XPub {
@@ -147,7 +147,7 @@ func (ctx *walletTestContext) getPubkey(keyAlias string) *chainkd.XPub {
 }
 
 func (ctx *walletTestContext) createAsset(accountAlias string, assetAlias string) (*asset.Asset, error) {
-	acc, err := ctx.Wallet.AccountMgr.FindByAlias(nil, accountAlias)
+	acc, err := ctx.Wallet.AccountMgr.FindByAlias(accountAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (ctx *walletTestContext) createAccount(name string, keys []string, quorum i
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := ctx.Wallet.AccountMgr.Create(nil, xpubs, quorum, name)
+	_, err := ctx.Wallet.AccountMgr.Create(xpubs, quorum, name)
 	return err
 }
 

@@ -16,9 +16,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	MsgNewTx = iota
+	MsgRemoveTx
+)
+
 var (
 	maxCachedErrTxs = 1000
-	maxNewTxChSize  = 1000
+	maxMsgChSize    = 1000
 	maxNewTxNum     = 10000
 
 	// ErrTransactionNotExist is the pre-defined error message
@@ -29,12 +34,18 @@ var (
 
 // TxDesc store tx and related info for mining strategy
 type TxDesc struct {
-	Tx       *types.Tx
-	Added    time.Time
-	Height   uint64
-	Weight   uint64
-	Fee      uint64
-	FeePerKB uint64
+	Tx         *types.Tx
+	Added      time.Time
+	StatusFail bool
+	Height     uint64
+	Weight     uint64
+	Fee        uint64
+	FeePerKB   uint64
+}
+
+type TxPoolMsg struct {
+	*TxDesc
+	MsgType int
 }
 
 // TxPool is use for store the unconfirmed transaction
@@ -44,7 +55,7 @@ type TxPool struct {
 	pool        map[bc.Hash]*TxDesc
 	utxo        map[bc.Hash]bc.Hash
 	errCache    *lru.Cache
-	newTxCh     chan *types.Tx
+	msgCh       chan *TxPoolMsg
 }
 
 // NewTxPool init a new TxPool
@@ -54,17 +65,17 @@ func NewTxPool() *TxPool {
 		pool:        make(map[bc.Hash]*TxDesc),
 		utxo:        make(map[bc.Hash]bc.Hash),
 		errCache:    lru.New(maxCachedErrTxs),
-		newTxCh:     make(chan *types.Tx, maxNewTxChSize),
+		msgCh:       make(chan *TxPoolMsg, maxMsgChSize),
 	}
 }
 
 // GetNewTxCh return a unconfirmed transaction feed channel
-func (tp *TxPool) GetNewTxCh() chan *types.Tx {
-	return tp.newTxCh
+func (tp *TxPool) GetMsgCh() <-chan *TxPoolMsg {
+	return tp.msgCh
 }
 
 // AddTransaction add a verified transaction to pool
-func (tp *TxPool) AddTransaction(tx *types.Tx, gasOnlyTx bool, height, fee uint64) (*TxDesc, error) {
+func (tp *TxPool) AddTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (*TxDesc, error) {
 	tp.mtx.Lock()
 	defer tp.mtx.Unlock()
 
@@ -73,12 +84,13 @@ func (tp *TxPool) AddTransaction(tx *types.Tx, gasOnlyTx bool, height, fee uint6
 	}
 
 	txD := &TxDesc{
-		Tx:       tx,
-		Added:    time.Now(),
-		Weight:   tx.TxData.SerializedSize,
-		Height:   height,
-		Fee:      fee,
-		FeePerKB: fee * 1000 / tx.TxHeader.SerializedSize,
+		Tx:         tx,
+		Added:      time.Now(),
+		StatusFail: statusFail,
+		Weight:     tx.TxData.SerializedSize,
+		Height:     height,
+		Fee:        fee,
+		FeePerKB:   fee * 1000 / tx.TxHeader.SerializedSize,
 	}
 
 	tp.pool[tx.Tx.ID] = txD
@@ -90,12 +102,12 @@ func (tp *TxPool) AddTransaction(tx *types.Tx, gasOnlyTx bool, height, fee uint6
 			// error due to it's a retirement, utxo doesn't care this output type so skip it
 			continue
 		}
-		if !gasOnlyTx || *output.Source.Value.AssetId == *consensus.BTMAssetID {
+		if !statusFail || *output.Source.Value.AssetId == *consensus.BTMAssetID {
 			tp.utxo[*id] = tx.Tx.ID
 		}
 	}
 
-	tp.newTxCh <- tx
+	tp.msgCh <- &TxPoolMsg{TxDesc: txD, MsgType: MsgNewTx}
 	log.WithField("tx_id", tx.Tx.ID.String()).Debug("Add tx to mempool")
 	return txD, nil
 }
@@ -136,6 +148,7 @@ func (tp *TxPool) RemoveTransaction(txHash *bc.Hash) {
 	delete(tp.pool, *txHash)
 	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())
 
+	tp.msgCh <- &TxPoolMsg{TxDesc: txD, MsgType: MsgRemoveTx}
 	log.WithField("tx_id", txHash).Debug("remove tx from mempool")
 }
 

@@ -38,12 +38,12 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub}, 1, "testAccount")
+	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 		t.Fatal(err)
 	}
 	testTx := types.NewTx(*txData)
-	w.SaveUnconfirmedTx(testTx)
+	w.saveUnconfirmedTx(testTx)
 
 	txs := AnnotatedTxs([]*types.Tx{testTx}, w)
 	wantTx := txs[0]

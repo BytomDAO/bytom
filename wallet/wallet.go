@@ -18,8 +18,6 @@ import (
 const (
 	//SINGLE single sign
 	SINGLE = 1
-
-	maxTxChanSize = 10000 // txChanSize is the size of channel listening to Txpool newTxCh
 )
 
 var walletKey = []byte("walletInfo")
@@ -42,7 +40,6 @@ type Wallet struct {
 	Hsm        *pseudohsm.HSM
 	chain      *protocol.Chain
 	rescanCh   chan struct{}
-	newTxCh    chan *types.Tx
 }
 
 //NewWallet return a new wallet instance
@@ -54,7 +51,6 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		chain:      chain,
 		Hsm:        hsm,
 		rescanCh:   make(chan struct{}, 1),
-		newTxCh:    make(chan *types.Tx, maxTxChanSize),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -62,8 +58,6 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	go w.walletUpdater()
-	go w.UnconfirmedTxCollector()
-
 	return w, nil
 }
 
@@ -111,7 +105,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 
 	storeBatch := w.DB.NewBatch()
 	w.indexTransactions(storeBatch, block, txStatus)
-	w.buildAccountUTXOs(storeBatch, block, txStatus)
+	w.attachUtxos(storeBatch, block, txStatus)
 
 	w.status.WorkHeight = block.Height
 	w.status.WorkHash = block.Hash()
@@ -134,7 +128,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 	}
 
 	storeBatch := w.DB.NewBatch()
-	w.reverseAccountUTXOs(storeBatch, block, txStatus)
+	w.detachUtxos(storeBatch, block, txStatus)
 	w.deleteTransactions(storeBatch, w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1
@@ -210,31 +204,10 @@ func (w *Wallet) walletBlockWaiter() {
 	}
 }
 
-// GetNewTxCh return a unconfirmed transaction feed channel
-func (w *Wallet) GetNewTxCh() chan *types.Tx {
-	return w.newTxCh
-}
-
-// UnconfirmedTxCollector collector unconfirmed transaction
-func (w *Wallet) UnconfirmedTxCollector() {
-	for {
-		w.SaveUnconfirmedTx(<-w.newTxCh)
-	}
-}
-
 // GetWalletStatusInfo return current wallet StatusInfo
 func (w *Wallet) GetWalletStatusInfo() StatusInfo {
 	w.rw.RLock()
 	defer w.rw.RUnlock()
 
 	return w.status
-}
-
-func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
-	for i := uint64(0); i < index; i++ {
-		if _, err := w.AccountMgr.CreateAddress(nil, account.ID, false); err != nil {
-			return err
-		}
-	}
-	return nil
 }
