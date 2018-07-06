@@ -155,9 +155,7 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	baseTxSize := int64(len(data))
 
 	// extra tx size for sign witness parts
-	baseWitnessSize := int64(300)
-	lenSignInst := int64(len(template.SigningInstructions))
-	signSize := baseWitnessSize * lenSignInst
+	signSize := estimateSignSize(template.SigningInstructions)
 
 	// total gas for tx storage
 	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+signSize, consensus.StorageGasRate)
@@ -202,6 +200,26 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 		StorageNeu: totalTxSizeGas * consensus.VMGasRate,
 		VMNeu:      (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
 	}, nil
+}
+
+// estimate signature part size.
+// if need multi-sign, calculate the size according to the length of keys.
+func estimateSignSize(signingInstructions []*txbuilder.SigningInstruction) int64 {
+
+	signSize := int64(0)
+	baseWitnessSize := int64(300)
+
+	for _, sigInst := range signingInstructions {
+		for _, witness := range sigInst.WitnessComponents {
+			switch t := witness.(type) {
+			case txbuilder.SignatureWitness:
+				signSize += int64(len(t.Keys)) * baseWitnessSize
+			case txbuilder.RawTxSigWitness:
+				signSize += int64(len(t.Keys)) * baseWitnessSize
+			}
+		}
+	}
+	return signSize
 }
 
 // POST /estimate-transaction-gas
