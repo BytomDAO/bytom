@@ -360,9 +360,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 			// index
 			stk = b.addInt64(stk, stmt.index)
 
-			// refdatahash
-			stk = b.addData(stk, nil)
-
 			// TODO: permit more complex expressions for locked,
 			// like "lock x+y with foo" (?)
 
