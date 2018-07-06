@@ -194,6 +194,8 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	roundingNeu := math.Ceil(totalNeu)
 	estimateNeu := int64(roundingNeu) * int64(defaultBaseRate)
 
+	// TODO add priority
+
 	return &EstimateTxGasResp{
 		TotalNeu:   estimateNeu,
 		StorageNeu: totalTxSizeGas * consensus.VMGasRate,
@@ -211,9 +213,9 @@ func estimateSignSize(signingInstructions []*txbuilder.SigningInstruction) int64
 	for _, sigInst := range signingInstructions {
 		for _, witness := range sigInst.WitnessComponents {
 			switch t := witness.(type) {
-			case txbuilder.SignatureWitness:
+			case *txbuilder.SignatureWitness:
 				signSize += int64(len(t.Keys)) * baseWitnessSize
-			case txbuilder.RawTxSigWitness:
+			case *txbuilder.RawTxSigWitness:
 				signSize += int64(len(t.Keys)) * baseWitnessSize
 			}
 		}
