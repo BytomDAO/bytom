@@ -29,7 +29,6 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 	decoders := map[string]func([]byte) (txbuilder.Action, error){
 		"control_address":              txbuilder.DecodeControlAddressAction,
 		"control_program":              txbuilder.DecodeControlProgramAction,
-		"control_receiver":             txbuilder.DecodeControlReceiverAction,
 		"issue":                        a.wallet.AssetReg.DecodeIssueAction,
 		"retire":                       txbuilder.DecodeRetireAction,
 		"spend_account":                a.wallet.AccountMgr.DecodeSpendAction,
