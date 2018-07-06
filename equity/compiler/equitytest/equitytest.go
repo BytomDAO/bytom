@@ -1,4 +1,4 @@
-package ivytest
+package equitytest
 
 const TrivialLock = `
 contract TrivialLock() locks locked {
