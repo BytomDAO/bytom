@@ -366,7 +366,7 @@ func (m *Manager) ListUnconfirmedUtxo(isSmartContract bool) []*UTXO {
 	utxos := m.utxoKeeper.ListUnconfirmed()
 	result := []*UTXO{}
 	for _, utxo := range utxos {
-		if segwit.IsP2WScript(utxo.ControlProgram) == isSmartContract {
+		if segwit.IsP2WScript(utxo.ControlProgram) != isSmartContract {
 			result = append(result, utxo)
 		}
 	}
