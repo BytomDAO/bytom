@@ -207,16 +207,15 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 // OP_CHECKMULTISIG consume (984 * a - 72 * b - 63) gas,
 // where a represent the num of public keys, and b represent the num of quorum.
 func estimateP2WSHGas(sigInst *txbuilder.SigningInstruction) int64 {
-
 	P2WSHGas := int64(0)
 	baseP2WSHGas := int64(738)
 
 	for _, witness := range sigInst.WitnessComponents {
 		switch t := witness.(type) {
 		case *txbuilder.SignatureWitness:
-			P2WSHGas += baseP2WSHGas + (984 * int64(len(t.Keys)) - 72 * int64(t.Quorum) - 63)
+			P2WSHGas += baseP2WSHGas + (984*int64(len(t.Keys)) - 72*int64(t.Quorum) - 63)
 		case *txbuilder.RawTxSigWitness:
-			P2WSHGas += baseP2WSHGas + (984 * int64(len(t.Keys)) - 72 * int64(t.Quorum) - 63)
+			P2WSHGas += baseP2WSHGas + (984*int64(len(t.Keys)) - 72*int64(t.Quorum) - 63)
 		}
 	}
 	return P2WSHGas
@@ -225,7 +224,6 @@ func estimateP2WSHGas(sigInst *txbuilder.SigningInstruction) int64 {
 // estimate signature part size.
 // if need multi-sign, calculate the size according to the length of keys.
 func estimateSignSize(signingInstructions []*txbuilder.SigningInstruction) int64 {
-
 	signSize := int64(0)
 	baseWitnessSize := int64(300)
 
@@ -233,9 +231,9 @@ func estimateSignSize(signingInstructions []*txbuilder.SigningInstruction) int64
 		for _, witness := range sigInst.WitnessComponents {
 			switch t := witness.(type) {
 			case *txbuilder.SignatureWitness:
-				signSize += int64(len(t.Keys)) * baseWitnessSize
+				signSize += int64(t.Quorum) * baseWitnessSize
 			case *txbuilder.RawTxSigWitness:
-				signSize += int64(len(t.Keys)) * baseWitnessSize
+				signSize += int64(t.Quorum) * baseWitnessSize
 			}
 		}
 	}
