@@ -71,12 +71,12 @@ func (g *TxGenerator) createAccount(name string, keys []string, quorum int) erro
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := g.AccountManager.Create(nil, xpubs, quorum, name)
+	_, err := g.AccountManager.Create(xpubs, quorum, name)
 	return err
 }
 
 func (g *TxGenerator) createAsset(accountAlias string, assetAlias string) (*asset.Asset, error) {
-	acc, err := g.AccountManager.FindByAlias(nil, accountAlias)
+	acc, err := g.AccountManager.FindByAlias(accountAlias)
 	if err != nil {
 		return nil, err
 	}
@@ -128,11 +128,11 @@ func (g *TxGenerator) assetAmount(assetAlias string, amount uint64) (*bc.AssetAm
 }
 
 func (g *TxGenerator) createControlProgram(accountAlias string, change bool) (*account.CtrlProgram, error) {
-	acc, err := g.AccountManager.FindByAlias(nil, accountAlias)
+	acc, err := g.AccountManager.FindByAlias(accountAlias)
 	if err != nil {
 		return nil, err
 	}
-	return g.AccountManager.CreateAddress(nil, acc.ID, change)
+	return g.AccountManager.CreateAddress(acc.ID, change)
 }
 
 // AddSpendInput add a spend input
@@ -142,7 +142,7 @@ func (g *TxGenerator) AddSpendInput(accountAlias, assetAlias string, amount uint
 		return err
 	}
 
-	acc, err := g.AccountManager.FindByAlias(nil, accountAlias)
+	acc, err := g.AccountManager.FindByAlias(accountAlias)
 	if err != nil {
 		return err
 	}
@@ -170,7 +170,7 @@ func (g *TxGenerator) AddTxInput(txInput *types.TxInput, signInstruction *txbuil
 
 // AddTxInputFromUtxo add a tx input which spent the utxo
 func (g *TxGenerator) AddTxInputFromUtxo(utxo *account.UTXO, accountAlias string) error {
-	acc, err := g.AccountManager.FindByAlias(nil, accountAlias)
+	acc, err := g.AccountManager.FindByAlias(accountAlias)
 	if err != nil {
 		return err
 	}

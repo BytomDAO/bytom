@@ -1,5 +1,5 @@
 /*
-Package ivy provides a compiler for Chain's Ivy contract language.
+Package equity provides a compiler for Chain's Equity contract language.
 
 A contract is a means to lock some payment in the output of a
 transaction. It contains a number of clauses, each describing a way to
@@ -73,7 +73,7 @@ of late May 2017.
 
   call_expr = expr "(" [args] ")"
 
-    If expr is the name of an Ivy contract, then calling it (with
+    If expr is the name of an Equity contract, then calling it (with
     the appropriate arguments) produces a program suitable for use
     in "lock" statements.
 

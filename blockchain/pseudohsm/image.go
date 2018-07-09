@@ -4,6 +4,7 @@ package pseudohsm
 import (
 	"encoding/json"
 	"io/ioutil"
+	"path/filepath"
 )
 
 // KeyImage is the struct for hold export key data
@@ -46,7 +47,8 @@ func (h *HSM) Restore(image *KeyImage) error {
 			return err
 		}
 
-		file := h.keyStore.JoinPath(keyFileName(xKey.ID))
+		_, fileName := filepath.Split(xKey.ID)
+		file := h.keyStore.JoinPath(keyFileName(fileName))
 		if err := writeKeyFile(file, rawKey); err != nil {
 			return nil
 		}
