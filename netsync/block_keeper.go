@@ -6,6 +6,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/go-wire"
 
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
@@ -32,6 +33,7 @@ const (
 
 	maxTxChanSize          = 10000 // txChanSize is the size of channel listening to Txpool newTxCh
 	MaxRequestBlocksPerMsg = 20
+	MaxMsgPackageSize      = 10 * 1024 * 1024
 )
 
 var (
@@ -887,8 +889,15 @@ func (bk *blockKeeper) GetBlocksWorker(peerID string, bmsg *GetBlocksMessage) {
 		rawBlock, _ := block.MarshalText()
 		blockMsg := blockMsg{Hash: hash, RawBlock: rawBlock}
 		msg.Blocks = append(msg.Blocks, blockMsg)
+		binmsg := wire.BinaryBytes(msg)
+		if len(binmsg) > MaxMsgPackageSize {
+			bk.blocksSend(peerID, msg)
+			msg, _ = NewBlocksMessage()
+		}
 	}
-	bk.blocksSend(peerID, msg)
+	if len(msg.Blocks) != 0 {
+		bk.blocksSend(peerID, msg)
+	}
 }
 
 func (bk *blockKeeper) blocksSend(peerID string, msg *BlocksMessage) error {
