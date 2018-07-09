@@ -1,4 +1,4 @@
-package ivytest
+package equitytest
 
 const TrivialLock = `
 contract TrivialLock() locks locked {
@@ -71,13 +71,13 @@ contract EscrowedTransfer(agent: PublicKey, sender: Program, recipient: Program)
 `
 
 const CollateralizedLoan = `
-contract CollateralizedLoan(balanceAsset: Asset, balanceAmount: Amount, blockHeight: Integer, lender: Program, borrower: Program) locks collateral {
+contract CollateralizedLoan(balanceAsset: Asset, balanceAmount: Amount, finalHeight: Integer, lender: Program, borrower: Program) locks collateral {
   clause repay() requires payment: balanceAmount of balanceAsset {
     lock payment with lender
     lock collateral with borrower
   }
   clause default() {
-    verify greater(blockHeight)
+    verify above(finalHeight)
     lock collateral with lender
   }
 }
@@ -111,16 +111,16 @@ contract CallOptionWithSettlement(strikePrice: Amount,
                     sellerProgram: Program,
                     sellerKey: PublicKey,
                     buyerKey: PublicKey,
-                    blockHeight: Integer) locks underlying {
+                    finalHeight: Integer) locks underlying {
   clause exercise(buyerSig: Signature)
                  requires payment: strikePrice of strikeCurrency {
-    verify less(blockHeight)
+    verify below(finalHeight)
     verify checkTxSig(buyerKey, buyerSig)
     lock payment with sellerProgram
     unlock underlying
   }
   clause expire() {
-    verify greater(blockHeight)
+    verify above(finalHeight)
     lock underlying with sellerProgram
   }
   clause settle(sellerSig: Signature, buyerSig: Signature) {
@@ -132,23 +132,23 @@ contract CallOptionWithSettlement(strikePrice: Amount,
 `
 
 const OneTwo = `
-contract Two(b, c: Program, blockHeight: Integer) locks value {
+contract Two(b, c: Program, expirationHeight: Integer) locks value {
   clause redeem() {
-    verify less(blockHeight)
+    verify below(expirationHeight)
     lock value with b
   }
   clause default() {
-    verify greater(blockHeight)
+    verify above(expirationHeight)
     lock value with c
   }
 }
 contract One(a, b, c: Program, switchHeight, blockHeight: Integer) locks value {
   clause redeem() {
-    verify less(switchHeight)
+    verify below(switchHeight)
     lock value with a
   }
   clause switch() {
-    verify greater(switchHeight)
+    verify above(switchHeight)
     lock value with Two(b, c, blockHeight)
   }
 }
