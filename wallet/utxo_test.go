@@ -111,7 +111,7 @@ func TestGetAccountUtxos(t *testing.T) {
 			testDB.Set([]byte(k), data)
 		}
 
-		gotUtxos := w.GetAccountUtxos(c.id, c.isSmartContract)
+		gotUtxos := w.GetAccountUtxos(c.id, false, c.isSmartContract)
 		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
 			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 		}
