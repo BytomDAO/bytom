@@ -86,7 +86,6 @@ func (sm *SyncManager) synchronise() {
 	}
 
 	peer, bestHeight := sm.peers.BestPeer()
-	// Short circuit if no peers are available
 	if peer == nil {
 		return
 	}
@@ -96,19 +95,24 @@ func (sm *SyncManager) synchronise() {
 		sm.sw.StopPeerGracefully(peer)
 		return
 	}
-	//todo: how to select peer
-	if bestHeight > sm.chain.BestBlockHeight() {
+	for bestHeight > sm.chain.BestBlockHeight() {
 		if nextCheckPoint := sm.blockKeeper.nextCheckpoint(); nextCheckPoint != nil {
-			if bestHeight > nextCheckPoint.Height {
+			if fastSyncPeer, bestFastSyncHeight := sm.peers.BestFastSyncPeer(); bestFastSyncHeight > nextCheckPoint.Height {
 				log.Info("fast sync peer:", peer.Addr(), " height:", bestHeight)
-				if err := sm.blockKeeper.BlockFastSyncWorker(); err != nil {
+				if err := sm.blockKeeper.BlockFastSyncWorker(fastSyncPeer.Key, nextCheckPoint); err != nil {
 					log.Info("fast sync err:", err)
-					return
 				}
+				if peer, bestHeight = sm.peers.BestPeer(); peer == nil {
+					break
+				}
+				continue
 			}
 		}
 		log.Info("normal sync peer:", peer.Addr(), " height:", bestHeight)
 		sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
+		if peer, bestHeight = sm.peers.BestPeer(); peer == nil {
+			break
+		}
 	}
 }
 

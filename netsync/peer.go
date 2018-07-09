@@ -53,9 +53,12 @@ type peer struct {
 func newPeer(height uint64, hash *bc.Hash, Peer *p2p.Peer) *peer {
 	services := consensus.SFFullNode
 	if len(Peer.Other) != 0 {
-		if serviceFlag, err := strconv.ParseUint(Peer.Other[0], 10, 64); err != nil {
-			services = consensus.ServiceFlag(serviceFlag)
+		serviceFlag, err := strconv.ParseUint(Peer.Other[0], 10, 64)
+		if err != nil {
+			log.Error("err:", err)
+			return nil
 		}
+		services = consensus.ServiceFlag(serviceFlag)
 	}
 
 	return &peer{
@@ -363,6 +366,27 @@ func (ps *peerSet) BestPeer() (*p2p.Peer, uint64) {
 	return bestPeer, bestHeight
 }
 
+// BestPeer retrieves the known peer with the currently highest total difficulty.
+func (ps *peerSet) BestFastSyncPeer() (*p2p.Peer, uint64) {
+	ps.lock.RLock()
+	defer ps.lock.RUnlock()
+
+	var bestPeer *p2p.Peer
+	var bestHeight uint64
+
+	for _, p := range ps.peers {
+		if p.services.IsEnable(consensus.SFFastSync) {
+			if bestPeer == nil || p.height > bestHeight {
+				bestPeer, bestHeight = p.swPeer, p.height
+			}
+		} else {
+			log.Info("p.services:", p.services)
+		}
+	}
+
+	return bestPeer, bestHeight
+}
+
 // Close disconnects all peers.
 // No new peers can be registered after Close has returned.
 func (ps *peerSet) Close() {
@@ -381,6 +405,9 @@ func (ps *peerSet) AddPeer(peer *p2p.Peer) {
 
 	if _, ok := ps.peers[peer.Key]; !ok {
 		keeperPeer := newPeer(0, nil, peer)
+		if keeperPeer == nil {
+			return
+		}
 		ps.peers[peer.Key] = keeperPeer
 		log.WithFields(log.Fields{"ID": peer.Key}).Info("Add new peer to blockKeeper")
 		return
