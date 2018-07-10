@@ -60,7 +60,7 @@ func (a *API) completeMissingAccountId(m map[string]interface{}, index int, ctx 
 	id, _ := m["account_id"].(string)
 	alias, _ := m["account_alias"].(string)
 	if id == "" && alias != "" {
-		acc, err := a.wallet.AccountMgr.FindByAlias(ctx, alias)
+		acc, err := a.wallet.AccountMgr.FindByAlias(alias)
 		if err != nil {
 			return errors.WithDetailf(err, "invalid account alias %s on action %d", alias, index)
 		}

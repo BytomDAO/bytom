@@ -12,7 +12,7 @@ func (a *API) createAccountReceiver(ctx context.Context, ins struct {
 }) Response {
 	accountID := ins.AccountID
 	if ins.AccountAlias != "" {
-		account, err := a.wallet.AccountMgr.FindByAlias(ctx, ins.AccountAlias)
+		account, err := a.wallet.AccountMgr.FindByAlias(ins.AccountAlias)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
@@ -20,7 +20,7 @@ func (a *API) createAccountReceiver(ctx context.Context, ins struct {
 		accountID = account.ID
 	}
 
-	program, err := a.wallet.AccountMgr.CreateAddress(ctx, accountID, false)
+	program, err := a.wallet.AccountMgr.CreateAddress(accountID, false)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

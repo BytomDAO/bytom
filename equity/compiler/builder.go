@@ -94,7 +94,7 @@ func (b *builder) addAsset(stk stack) stack {
 }
 
 func (b *builder) addCheckOutput(stk stack, desc string) stack {
-	return b.add("CHECKOUTPUT", stk.dropN(6).add(desc))
+	return b.add("CHECKOUTPUT", stk.dropN(5).add(desc))
 }
 
 func (b *builder) addBoolean(stk stack, val bool) stack {

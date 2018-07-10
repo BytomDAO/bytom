@@ -236,9 +236,10 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 // POST /list-unspent-outputs
 func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	ID            string `json:"id"`
+	Unconfirmed   bool   `json:"unconfirmed"`
 	SmartContract bool   `json:"smart_contract"`
 }) Response {
-	accountUTXOs := a.wallet.GetAccountUTXOs(filter.ID, filter.SmartContract)
+	accountUTXOs := a.wallet.GetAccountUtxos(filter.ID, filter.Unconfirmed, filter.SmartContract)
 
 	UTXOs := []query.AnnotatedUTXO{}
 	for _, utxo := range accountUTXOs {
@@ -284,7 +285,7 @@ type AccountPubkey struct {
 func (a *API) listPubKeys(ctx context.Context, ins struct {
 	AccountID string `json:"account_id"`
 }) Response {
-	account, err := a.wallet.AccountMgr.FindByID(ctx, ins.AccountID)
+	account, err := a.wallet.AccountMgr.FindByID(ins.AccountID)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

@@ -41,12 +41,12 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub.XPub}, 1, "testAccount")
+	testAccount, err := accountManager.Create([]chainkd.XPub{xpub.XPub}, 1, "testAccount")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,12 +98,12 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, "testAccount")
+	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, "testAccount")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,12 +155,12 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, "testAccount")
+	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, "testAccount")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}

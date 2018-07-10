@@ -49,12 +49,12 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub}, 1, "testAccount")
+	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,6 +81,7 @@ func TestWalletUpdate(t *testing.T) {
 	tx := types.NewTx(*txData)
 	block := mockSingleBlock(tx)
 	txStatus := bc.NewTransactionStatus()
+	txStatus.SetStatus(0, false)
 	store.SaveBlock(block, txStatus)
 
 	w := mockWallet(testDB, accountManager, reg, chain)
