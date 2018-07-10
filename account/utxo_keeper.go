@@ -87,6 +87,18 @@ func (uk *utxoKeeper) Cancel(rid uint64) {
 	uk.mtx.Unlock()
 }
 
+// ListUnconfirmed return all the unconfirmed utxos
+func (uk *utxoKeeper) ListUnconfirmed() []*UTXO {
+	uk.mtx.Lock()
+	defer uk.mtx.Unlock()
+
+	utxos := []*UTXO{}
+	for _, utxo := range uk.unconfirmed {
+		utxos = append(utxos, utxo)
+	}
+	return utxos
+}
+
 func (uk *utxoKeeper) RemoveUnconfirmedUtxo(hashes []*bc.Hash) {
 	uk.mtx.Lock()
 	defer uk.mtx.Unlock()
