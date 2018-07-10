@@ -42,12 +42,6 @@ type peer struct {
 
 	knownTxs           *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks        *set.Set // Set of block hashes known to be known by this peer
-	prevGetBlocksMtx   sync.Mutex
-	prevGetBlocksBegin *common.Hash
-	prevGetBlocksStop  *common.Hash
-	prevGetHdrsMtx     sync.Mutex
-	prevGetHdrsBegin   *common.Hash
-	prevGetHdrsStop    *common.Hash
 }
 
 func newPeer(height uint64, hash *bc.Hash, Peer *p2p.Peer) *peer {
@@ -201,25 +195,6 @@ func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 //
 // This function is safe for concurrent access.
 func (p *peer) PushGetHeadersMsg(locator []*common.Hash, stopHash *common.Hash) error {
-	// Extract the begin hash from the block locator, if one was specified,
-	// to use for filtering duplicate getheaders requests.
-	var beginHash *common.Hash
-	if len(locator) > 0 {
-		beginHash = locator[0]
-	}
-
-	// Filter duplicate getheaders requests.
-	p.prevGetHdrsMtx.Lock()
-	isDuplicate := p.prevGetHdrsStop != nil && p.prevGetHdrsBegin != nil &&
-		beginHash != nil && stopHash.Str() == p.prevGetHdrsStop.Str() &&
-		beginHash.Str() == p.prevGetHdrsBegin.Str()
-	p.prevGetHdrsMtx.Unlock()
-
-	if isDuplicate {
-		log.Infof("Filtering duplicate [getheaders] with begin hash %v", beginHash)
-		return nil
-	}
-
 	// Construct the getheaders request and queue it to be sent.
 	msg := NewMsgGetHeaders()
 	msg.HashStop = *stopHash
@@ -230,12 +205,6 @@ func (p *peer) PushGetHeadersMsg(locator []*common.Hash, stopHash *common.Hash) 
 		}
 	}
 	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	// Update the previous getheaders request information for filtering
-	// duplicates.
-	p.prevGetHdrsMtx.Lock()
-	p.prevGetHdrsBegin = beginHash
-	p.prevGetHdrsStop = stopHash
-	p.prevGetHdrsMtx.Unlock()
 	return nil
 }
 
