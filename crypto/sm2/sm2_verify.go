@@ -49,6 +49,7 @@ func VerifyBytes(pubX, pubY, msg, uid, r, s []byte) bool {
 
 // Sm2VerifyBytes verify sigature is valid.
 // The parameters is bytes.
+// PublicKey length is 64 bytes, it is uncompressed.
 func Sm2VerifyBytes(publicKey, hash, signature []byte) bool {
 	pub := &PublicKey{
 		Curve: P256Sm2(),
@@ -86,6 +87,7 @@ func Sm2VerifyBytes(publicKey, hash, signature []byte) bool {
 }
 
 // VerifyCompressedPubkey verify sigature is valid.
+// The parameters is bytes.
 // The publickey is compressed, the length is 33 bytes.
 func VerifyCompressedPubkey(compressedPublicKey, hash, signature []byte) bool {
 	var aa, xx, xx3 sm2P256FieldElement

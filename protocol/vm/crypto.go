@@ -180,10 +180,10 @@ func opCheckSigSm2(vm *virtualMachine) error {
 	if len(msg) != 32 || len(sig) != 64 {
 		return ErrBadValue
 	}
-	if len(publicKey) != 65 {
+	if len(publicKey) != 33 {
 		return vm.pushBool(false, true)
 	}
-	return vm.pushBool(sm2.Sm2VerifyBytes(publicKey, msg, sig), true)
+	return vm.pushBool(sm2.VerifyCompressedPubkey(publicKey, msg, sig), true)
 }
 
 func opCheckMultiSigSm2(vm *virtualMachine) error {
@@ -212,7 +212,7 @@ func opCheckMultiSigSm2(vm *virtualMachine) error {
 		if err != nil {
 			return err
 		}
-		if len(pubkeyBytes) != 65 {
+		if len(pubkeyBytes) != 33 {
 			return vm.pushBool(false, true)
 		}
 		pubkeyByteses = append(pubkeyByteses, pubkeyBytes)
@@ -234,7 +234,7 @@ func opCheckMultiSigSm2(vm *virtualMachine) error {
 	}
 
 	for len(sigs) > 0 && len(pubkeyByteses) > 0 {
-		if sm2.Sm2VerifyBytes(pubkeyByteses[0], msg, sigs[0]) {
+		if sm2.VerifyCompressedPubkey(pubkeyByteses[0], msg, sigs[0]) {
 			sigs = sigs[1:]
 		}
 		pubkeyByteses = pubkeyByteses[1:]
