@@ -40,7 +40,6 @@ func compileEquity(req compileReq) (compileResp, error) {
 		Name:    contract.Name,
 		Source:  req.Contract,
 		Program: contract.Body,
-		Params:  contract.Params,
 		Value:   contract.Value,
 		Clauses: contract.Clauses,
 		Opcodes: contract.Opcodes,
@@ -56,6 +55,14 @@ func compileEquity(req compileReq) (compileResp, error) {
 		if err != nil {
 			return resp, err
 		}
+	}
+
+	for _, param := range contract.Params {
+		if param.InferredType != "" {
+			param.Type = param.InferredType
+			param.InferredType = ""
+		}
+		resp.Params = append(resp.Params, param)
 	}
 
 	return resp, nil
