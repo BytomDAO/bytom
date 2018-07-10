@@ -58,6 +58,14 @@ func compileEquity(req compileReq) (compileResp, error) {
 		}
 	}
 
+	for _, param := range contract.Params {
+		if param.InferredType != "" {
+			param.Type = param.InferredType
+			param.InferredType = ""
+		}
+		resp.Params = append(resp.Params, param)
+	}
+
 	return resp, nil
 }
 
