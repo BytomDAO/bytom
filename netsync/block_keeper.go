@@ -76,16 +76,14 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitR
 		headersProcessCh: make(chan *headersMsg, maxHeadersPending),
 		quitReqBlockCh:   quitReqBlockCh,
 	}
-	if nextCheckPoint := bk.nextCheckpoint(); nextCheckPoint != nil {
-		bk.resetHeaderState(common.CoreHashToHash(&bestHash), best.Height)
-	}
+	bk.resetHeaderState(common.CoreHashToHash(&bestHash), best.Height)
 	go bk.txsProcessWorker()
 	return bk
 }
 
 // resetHeaderState sets the headers-first mode state to values appropriate for
 // syncing from a new peer.
-func (bk *blockKeeper) resetHeaderState(newestHash *common.Hash, newestHeight uint64) {
+func (bk *blockKeeper) resetHeaderState(bestHash *common.Hash, bestHeight uint64) {
 	bk.headerList = list.New()
 	bk.startHeader = nil
 
@@ -93,7 +91,7 @@ func (bk *blockKeeper) resetHeaderState(newestHash *common.Hash, newestHeight ui
 	// block into the header pool.  This allows the next downloaded header
 	// to prove it links to the chain properly.
 	if bk.nextCheckpoint() != nil {
-		node := headerNode{height: newestHeight, hash: newestHash}
+		node := headerNode{height: bestHeight, hash: bestHash}
 		bk.headerList.PushBack(&node)
 	}
 }
@@ -231,30 +229,37 @@ func (bk *blockKeeper) HeadersRequest(peerID string, locator []*common.Hash) ([]
 }
 
 func (bk *blockKeeper) BlockFastSyncWorker(peerID string, nextCheckPoint *consensus.Checkpoint) error {
-	//request blocks header
-	totalHeaders := make([]types.BlockHeader, 0)
-	locator := bk.blockLocator(nil)
-	for {
-		headers, err := bk.HeadersRequest(peerID, locator)
-		if err != nil {
-			log.Info("HeadersRequest err")
-			return err
-		}
-		err, receivedCheckpoint := bk.handleHeadersMsg(peerID, headers)
-		if err != nil {
-			log.Info("handleHeadersMsg err")
-			return err
-		}
-		totalHeaders = append(totalHeaders, headers...)
-		if receivedCheckpoint {
-			break
-		}
-		finalHash := headers[len(headers)-1].Hash()
-		locator = []*common.Hash{common.CoreHashToHash(&finalHash)}
-	}
-	log.Infof("Downloading headers for blocks %d to "+"%d from peer %s", bk.chain.BestBlockHeight()+1, bk.nextCheckpoint().Height, peerID)
+	best := bk.chain.BestBlockHeader()
+	bestHash := best.Hash()
+	lastHead := bk.headerList.Back()
 
-	for e := bk.headerList.Front(); e != nil; {
+	if (bk.startHeader != nil && (bk.startHeader.Prev().Value.(*headerNode).hash.Str() != common.CoreHashToHash(&bestHash).Str())) || (lastHead == nil || (lastHead != nil && (lastHead.Value.(*headerNode).hash.Str() != common.CoreHashToHash(&nextCheckPoint.Hash).Str()))) {
+		bk.resetHeaderState(common.CoreHashToHash(&bestHash), best.Height)
+		//request blocks header
+		totalHeaders := make([]types.BlockHeader, 0)
+		locator := bk.blockLocator(nil)
+		for {
+			headers, err := bk.HeadersRequest(peerID, locator)
+			if err != nil {
+				log.Info("HeadersRequest err")
+				return err
+			}
+			err, receivedCheckpoint := bk.handleHeadersMsg(peerID, headers)
+			if err != nil {
+				log.Info("handleHeadersMsg err")
+				return err
+			}
+			totalHeaders = append(totalHeaders, headers...)
+			if receivedCheckpoint {
+				break
+			}
+			finalHash := headers[len(headers)-1].Hash()
+			locator = []*common.Hash{common.CoreHashToHash(&finalHash)}
+		}
+		log.Infof("Downloading headers for blocks %d to "+"%d from peer %s", bk.chain.BestBlockHeight()+1, bk.nextCheckpoint().Height, peerID)
+	}
+
+	for e := bk.startHeader; e != nil; {
 		headerList := list.New()
 		for num := 0; num < MaxRequestBlocksPerMsg; num++ {
 			if e == nil {
@@ -280,6 +285,7 @@ func (bk *blockKeeper) BlockFastSyncWorker(peerID string, nextCheckPoint *consen
 			if isOrphan {
 				return errors.New("block order error")
 			}
+			bk.startHeader = e
 		}
 	}
 
@@ -638,9 +644,9 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 		if node.height == bk.nextCheckpoint().Height {
 			if node.hash.Str() == common.CoreHashToHash(&(bk.nextCheckpoint().Hash)).Str() {
 				receivedCheckpoint = true
-				log.Infof("Verified downloaded block "+"header against checkpoint at height "+"%d/hash %s", node.height, node.hash)
+				log.Infof("Verified downloaded block "+"header against checkpoint at height "+"%d/hash %x", node.height, node.hash.Bytes())
 			} else {
-				log.Warnf("Block header at height %d/hash "+"%s from peer %s does NOT match "+"expected checkpoint hash of %s -- "+"disconnecting", node.height, node.hash, peer.id, bk.nextCheckpoint().Hash.String())
+				log.Warnf("Block header at height %d/hash "+"%x from peer %s does NOT match "+"expected checkpoint hash of %s -- "+"disconnecting", node.height, node.hash.Bytes(), peer.id, bk.nextCheckpoint().Hash.String())
 				peer.swPeer.CloseConn()
 				return errPeerMisbehave, receivedCheckpoint
 			}
