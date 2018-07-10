@@ -320,8 +320,17 @@ func blocksCollect(headerList *list.List, beginHeight uint64, num int, blocks []
 					BlockHeader:  types.BlockHeader{},
 					Transactions: []*types.Tx{},
 				}
-				block.UnmarshalText(blocks[i].RawBlock)
-				//todo: add txs merkle check
+				if err := block.UnmarshalText(blocks[i].RawBlock); err != nil {
+					return false, errors.New("unmarshal block error")
+				}
+				bcBlock := types.MapBlock(block)
+				txRoot, err := bc.TxMerkleRoot(bcBlock.Transactions)
+				if err != nil {
+					return false, errors.New("computing transaction merkle root error")
+				}
+				if block.TransactionsMerkleRoot != txRoot {
+					return false, errors.New("transaction merkle root mismatch")
+				}
 				(*totalBlocks)[e.Value.(*headerNode).height-beginHeight] = block
 				headerList.Remove(e)
 				break
