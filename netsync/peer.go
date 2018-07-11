@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/fatih/set.v0"
 
-	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
@@ -94,7 +93,7 @@ func (p *peer) requestBlockByHeight(height uint64) error {
 	return nil
 }
 
-func (p *peer) requestBlocksByHash(beginHash *common.Hash, num int) error {
+func (p *peer) requestBlocksByHash(beginHash *bc.Hash, num int) error {
 	msg := NewGetBlocksMessage(beginHash, num)
 	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
@@ -194,10 +193,10 @@ func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 // and stop hash.  It will ignore back-to-back duplicate requests.
 //
 // This function is safe for concurrent access.
-func (p *peer) PushGetHeadersMsg(locator []*common.Hash, stopHash *common.Hash) error {
+func (p *peer) PushGetHeadersMsg(locator []*bc.Hash, stopHash *bc.Hash) error {
 	// Construct the getheaders request and queue it to be sent.
 	msg := NewMsgGetHeaders()
-	msg.HashStop = *stopHash
+	msg.HashStop = stopHash.Byte32()
 	for _, hash := range locator {
 		err := msg.AddBlockLocatorHash(hash)
 		if err != nil {
@@ -417,7 +416,7 @@ func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
 	return peer.requestBlockByHeight(height)
 }
 
-func (ps *peerSet) requestBlocksByHash(peerID string, beginHash *common.Hash, num int) error {
+func (ps *peerSet) requestBlocksByHash(peerID string, beginHash *bc.Hash, num int) error {
 	log.Info("begin hash:", beginHash.Bytes())
 	log.Info("num:", num)
 	peer, ok := ps.Peer(peerID)

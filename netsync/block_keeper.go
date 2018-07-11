@@ -2,13 +2,12 @@ package netsync
 
 import (
 	"container/list"
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-wire"
 
-	"github.com/bytom/common"
+	"bytes"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/tensority"
@@ -77,14 +76,14 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitR
 		quitReqBlockCh:   quitReqBlockCh,
 		headerList:       list.New(),
 	}
-	bk.resetHeaderState(common.CoreHashToHash(&bestHash), best.Height)
+	bk.resetHeaderState(bestHash, best.Height)
 	go bk.txsProcessWorker()
 	return bk
 }
 
 // resetHeaderState sets the headers-first mode state to values appropriate for
 // syncing from a new peer.
-func (bk *blockKeeper) resetHeaderState(bestHash *common.Hash, bestHeight uint64) {
+func (bk *blockKeeper) resetHeaderState(bestHash bc.Hash, bestHeight uint64) {
 	bk.headerList.Init()
 	bk.startHeader = nil
 
@@ -92,7 +91,7 @@ func (bk *blockKeeper) resetHeaderState(bestHash *common.Hash, bestHeight uint64
 	// block into the header pool.  This allows the next downloaded header
 	// to prove it links to the chain properly.
 	if bk.nextCheckpoint() != nil {
-		node := headerNode{height: bestHeight, hash: bestHash}
+		node := headerNode{height: bestHeight, hash: &bestHash}
 		bk.headerList.PushBack(&node)
 	}
 }
@@ -192,10 +191,9 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 	return nil
 }
 
-func (bk *blockKeeper) HeadersRequest(peerID string, locator []*common.Hash) ([]types.BlockHeader, error) {
-	nextCheckPoint := bk.nextCheckpoint()
-	stopHash := common.CoreHashToHash(&nextCheckPoint.Hash)
-	if err := bk.getHeaders(peerID, locator, stopHash); err != nil {
+func (bk *blockKeeper) HeadersRequest(peerID string, locator []*bc.Hash) ([]types.BlockHeader, error) {
+	stopHash := bk.nextCheckpoint().Hash
+	if err := bk.getHeaders(peerID, locator, &stopHash); err != nil {
 		log.Info("getHeaders err")
 		return nil, errReqHeaders
 	}
@@ -214,7 +212,7 @@ func (bk *blockKeeper) HeadersRequest(peerID string, locator []*common.Hash) ([]
 
 			return headers, nil
 		case <-retryTicker:
-			if err := bk.getHeaders(peerID, locator, stopHash); err != nil {
+			if err := bk.getHeaders(peerID, locator, &stopHash); err != nil {
 				return nil, errReqHeaders
 			}
 		case <-syncWait.C:
@@ -234,8 +232,8 @@ func (bk *blockKeeper) BlockFastSyncWorker(peerID string, nextCheckPoint *consen
 	currentHash := current.Hash()
 	lastHead := bk.headerList.Back()
 
-	if (bk.startHeader != nil && (bk.startHeader.Prev().Value.(*headerNode).hash.Str() != common.CoreHashToHash(&currentHash).Str())) || (lastHead == nil || (lastHead != nil && (lastHead.Value.(*headerNode).hash.Str() != common.CoreHashToHash(&nextCheckPoint.Hash).Str()))) {
-		bk.resetHeaderState(common.CoreHashToHash(&currentHash), current.Height)
+	if (bk.startHeader != nil && (bk.startHeader.Prev().Value.(*headerNode).hash.String() != currentHash.String())) || (lastHead == nil || (lastHead != nil && (lastHead.Value.(*headerNode).hash.String() != nextCheckPoint.Hash.String()))) {
+		bk.resetHeaderState(currentHash, current.Height)
 		//request blocks header
 		totalHeaders := make([]types.BlockHeader, 0)
 		locator := bk.blockLocator(nil)
@@ -255,7 +253,7 @@ func (bk *blockKeeper) BlockFastSyncWorker(peerID string, nextCheckPoint *consen
 				break
 			}
 			finalHash := headers[len(headers)-1].Hash()
-			locator = []*common.Hash{common.CoreHashToHash(&finalHash)}
+			locator = []*bc.Hash{&finalHash}
 		}
 		log.Infof("Downloading headers for blocks %d to "+"%d from peer %s", bk.chain.BestBlockHeight()+1, bk.nextCheckpoint().Height, peerID)
 	}
@@ -326,7 +324,7 @@ func blocksCollect(headerList *list.List, beginHeight uint64, num int, blocks []
 
 	for i := 0; i < len(blocks); i++ {
 		for e := headerList.Front(); e != nil; e = e.Next() {
-			if blocks[i].Hash.Str() == e.Value.(*headerNode).hash.Str() {
+			if bytes.Compare(blocks[i].Hash[:], e.Value.(*headerNode).hash.Bytes()) == 0 {
 				block := &types.Block{
 					BlockHeader:  types.BlockHeader{},
 					Transactions: []*types.Tx{},
@@ -499,7 +497,13 @@ func (bk *blockKeeper) GetHeadersWorker(peerID string, msg *GetHeadersMessage) {
 		log.Info("num:", i, "BlockLocatorHashes:", &msg.BlockLocatorHashes[i])
 	}
 	log.Info("HashStop:", msg.HashStop)
-	headers := bk.locateHeaders(msg.BlockLocatorHashes, &msg.HashStop, MaxBlockHeadersPerMsg)
+	locatorHashes, err := msg.GetBlockLocatorHashes()
+	if err != nil {
+		log.Info("GetBlockLocatorHashes:", err)
+		return
+	}
+	stopHash := msg.GetStopHash()
+	headers := bk.locateHeaders(locatorHashes, stopHash, MaxBlockHeadersPerMsg)
 	if len(headers) == 0 {
 		log.Info("Nothing to send.")
 		return
@@ -514,7 +518,7 @@ func (bk *blockKeeper) GetHeadersWorker(peerID string, msg *GetHeadersMessage) {
 // See the comment on the exported function for more details on special cases.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (bk *blockKeeper) locateHeaders(locator []common.Hash, hashStop *common.Hash, maxHeaders uint32) []types.BlockHeader {
+func (bk *blockKeeper) locateHeaders(locator *[]bc.Hash, hashStop *bc.Hash, maxHeaders uint32) []types.BlockHeader {
 	// Find the node after the first known block in the locator and the
 	// total number of nodes after it needed while respecting the stop hash
 	// and max entries.
@@ -548,7 +552,7 @@ func (bk *blockKeeper) locateHeaders(locator []common.Hash, hashStop *common.Has
 // functions.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (bk *blockKeeper) locateInventory(locator []common.Hash, hashStop *common.Hash, maxEntries uint32) (*types.Block, uint32) {
+func (bk *blockKeeper) locateInventory(locator *[]bc.Hash, hashStop *bc.Hash, maxEntries uint32) (*types.Block, uint32) {
 	// There are no block locators so a specific block is being requested
 	// as identified by the stop hash.
 	//stopNode := b.index.LookupNode(hashStop)
@@ -559,7 +563,7 @@ func (bk *blockKeeper) locateInventory(locator []common.Hash, hashStop *common.H
 	if err != nil {
 		log.Info("Can not find stop node!")
 	}
-	if len(locator) == 0 {
+	if len(*locator) == 0 {
 		if stopNode == nil {
 			// No blocks with the stop hash were found so there is
 			// nothing to do.
@@ -572,7 +576,7 @@ func (bk *blockKeeper) locateInventory(locator []common.Hash, hashStop *common.H
 	// case none of the hashes in the locator are in the main chain, fall
 	// back to the genesis block.
 	startNode, err := bk.chain.GetBlockByHeight(0)
-	for _, hash := range locator {
+	for _, hash := range *locator {
 		b32 := [32]byte{}
 		copy(b32[:], hash.Bytes())
 		bchash := bc.NewHash(b32)
@@ -606,7 +610,7 @@ func (bk *blockKeeper) locateInventory(locator []common.Hash, hashStop *common.H
 	return startNode, total
 }
 
-func (bk *blockKeeper) getHeaders(peerID string, locator []*common.Hash, stopHash *common.Hash) error {
+func (bk *blockKeeper) getHeaders(peerID string, locator []*bc.Hash, stopHash *bc.Hash) error {
 	bkPeer, ok := bk.peers.Peer(peerID)
 	if !ok {
 		log.Info("peer is not registered")
@@ -646,9 +650,9 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 		// Ensure the header properly connects to the previous one and
 		// add it to the list of headers.
 		blockHash := header.Hash()
-		node := headerNode{hash: common.CoreHashToHash(&blockHash)}
+		node := headerNode{hash: &blockHash}
 		prevNode := prevBlockHeader.Value.(*headerNode)
-		if prevNode.hash.Str() == common.CoreHashToHash(&(header.PreviousBlockHash)).Str() {
+		if prevNode.hash.String() == header.PreviousBlockHash.String() {
 			node.height = prevNode.height + 1
 			e := bk.headerList.PushBack(&node)
 			if bk.startHeader == nil {
@@ -662,7 +666,7 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 
 		// Verify the header at the next checkpoint height matches.
 		if node.height == bk.nextCheckpoint().Height {
-			if node.hash.Str() == common.CoreHashToHash(&(bk.nextCheckpoint().Hash)).Str() {
+			if node.hash.String() == bk.nextCheckpoint().Hash.String() {
 				receivedCheckpoint = true
 				log.Infof("Verified downloaded block "+"header against checkpoint at height "+"%d/hash %x", node.height, node.hash.Bytes())
 			} else {
@@ -700,7 +704,7 @@ type headersMsg struct {
 // between checkpoints.
 type headerNode struct {
 	height uint64
-	hash   *common.Hash
+	hash   *bc.Hash
 }
 
 // log2FloorMasks defines the masks to use when quickly calculating
@@ -730,7 +734,7 @@ func fastLog2Floor(n uint32) uint8 {
 // See the exported BlockLocator function comments for more details.
 //
 // This function MUST be called with the view mutex locked (for reads).
-func (bk *blockKeeper) blockLocator(node *types.BlockHeader) []*common.Hash {
+func (bk *blockKeeper) blockLocator(node *types.BlockHeader) []*bc.Hash {
 	// Use the current tip if requested.
 	if node == nil {
 		node = bk.chain.BestBlockHeader()
@@ -751,12 +755,12 @@ func (bk *blockKeeper) blockLocator(node *types.BlockHeader) []*common.Hash {
 		adjustedHeight := uint32(node.Height) - 10
 		maxEntries = 12 + fastLog2Floor(adjustedHeight)
 	}
-	locator := make([]*common.Hash, 0, maxEntries)
+	locator := make([]*bc.Hash, 0, maxEntries)
 
 	step := uint64(1)
 	for node != nil {
-		hash := common.Hash(node.Hash().Byte32())
-		fmt.Println("height:", node.Height, " hash:", hash)
+		hash := node.Hash()
+		log.Info("height:", node.Height, " hash:", hash)
 
 		locator = append(locator, &hash)
 

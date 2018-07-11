@@ -11,7 +11,6 @@ import (
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	"github.com/bytom/common"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p"
@@ -32,7 +31,7 @@ import (
 // selection criteria.
 type Checkpoint struct {
 	Height uint64
-	Hash   *common.Hash
+	Hash   *bc.Hash
 }
 
 //SyncManager Sync Manager is responsible for the business layer information synchronization

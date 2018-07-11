@@ -7,7 +7,6 @@ import (
 
 	"github.com/tendermint/go-wire"
 
-	"github.com/bytom/common"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -245,25 +244,41 @@ func (m *MineBlockMessage) String() string {
 // exponentially decrease the number of hashes the further away from head and
 // closer to the genesis block you get.
 type GetHeadersMessage struct {
-	BlockLocatorHashes []common.Hash
-	HashStop           common.Hash
+	BlockLocatorHashes [][32]byte
+	HashStop           [32]byte
 }
 
 // NewMsgGetHeaders returns a new bitcoin getheaders message that conforms to
 // the Message interface.  See MsgGetHeaders for details.
 func NewMsgGetHeaders() *GetHeadersMessage {
 	return &GetHeadersMessage{
-		BlockLocatorHashes: make([]common.Hash, 0, MaxBlockLocatorsPerMsg),
+		BlockLocatorHashes: make([][32]byte, 0, MaxBlockLocatorsPerMsg),
 	}
 }
 
 // AddBlockLocatorHash adds a new block locator hash to the message.
-func (msg *GetHeadersMessage) AddBlockLocatorHash(hash *common.Hash) error {
+func (msg *GetHeadersMessage) AddBlockLocatorHash(hash *bc.Hash) error {
 	if len(msg.BlockLocatorHashes)+1 > MaxBlockLocatorsPerMsg {
 		return errors.New("AddBlockLocatorHash too many block locator hashes")
 	}
-	msg.BlockLocatorHashes = append(msg.BlockLocatorHashes, *hash)
+	msg.BlockLocatorHashes = append(msg.BlockLocatorHashes, hash.Byte32())
 	return nil
+}
+
+func (msg *GetHeadersMessage) GetBlockLocatorHashes() (*[]bc.Hash, error) {
+	if len(msg.BlockLocatorHashes) == 0 {
+		return nil, errors.New("LocatorHashes length error")
+	}
+	locatorHashes := make([]bc.Hash, 0)
+	for _, hash := range msg.BlockLocatorHashes {
+		locatorHashes = append(locatorHashes, bc.NewHash(hash))
+	}
+	return &locatorHashes, nil
+}
+
+func (msg *GetHeadersMessage) GetStopHash() *bc.Hash {
+	hash := bc.NewHash(msg.HashStop)
+	return &hash
 }
 
 // MsgHeaders implements the Message interface and represents a bitcoin headers
@@ -282,21 +297,21 @@ func NewHeadersMessage(bh []types.BlockHeader) (*HeadersMessage, error) {
 
 // MsgGetBlocks implements the Message interface and represents a getblocks message.
 type GetBlocksMessage struct {
-	BeginHash common.Hash
+	BeginHash [32]byte
 	Num       uint64
 }
 
 // NewMsgGetBlocks returns a new getblocks message that conforms to the
 // Message interface using the passed parameters and defaults for the remaining fields.
-func NewGetBlocksMessage(beginHash *common.Hash, num int) *GetBlocksMessage {
+func NewGetBlocksMessage(beginHash *bc.Hash, num int) *GetBlocksMessage {
 	return &GetBlocksMessage{
-		BeginHash: *beginHash,
+		BeginHash: beginHash.Byte32(),
 		Num:       uint64(num),
 	}
 }
 
 type blockMsg struct {
-	Hash     common.Hash
+	Hash     [32]byte
 	RawBlock []byte
 }
 
