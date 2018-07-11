@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"github.com/bytom/account"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/blockchain/signers"
@@ -42,15 +43,16 @@ var respErrFormatter = map[error]httperror.Info{
 	signers.ErrDupeXPub:  {400, "BTM204", "Root XPubs cannot contain the same key more than once"},
 
 	// Transaction error namespace (7xx)
-	// Build error namespace (70x)
-	txbuilder.ErrBadAmount: {400, "BTM704", "Invalid asset amount"},
+	account.ErrInsufficient: {400, "BTM701", "Funds of account are insufficient"},
+	account.ErrImmature:     {400, "BTM702", "Available funds of account are immature"},
+	account.ErrReserved:     {400, "BTM703", "Available UTXOs of account have been reserved"},
+	account.ErrMatchUTXO:    {400, "BTM704", "Not found UTXO with given hash"},
+	txbuilder.ErrBadAmount:  {400, "BTM705", "Invalid asset amount"},
 
-	//Error code 050 represents alias of key duplicated
-	pseudohsm.ErrDuplicateKeyAlias: {400, "BTM050", "Alias already exists"},
-	//Error code 801 represents query request format error
-	pseudohsm.ErrInvalidAfter: httperror.Info{400, "BTM801", "Invalid `after` in query"},
-	//Error code 802 represents query reponses too many
+	// Mock HSM error namespace (8xx)
+	pseudohsm.ErrInvalidAfter:         {400, "BTM801", "Invalid `after` in query"},
 	pseudohsm.ErrTooManyAliasesToList: {400, "BTM802", "Too many aliases to list"},
+	pseudohsm.ErrDuplicateKeyAlias:    {400, "BTM803", "Key Alias already exists"},
 }
 
 // Map error values to standard bytom error codes. Missing entries

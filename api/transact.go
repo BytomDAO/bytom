@@ -93,10 +93,14 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 	if errors.Root(err) == txbuilder.ErrAction {
 		// append each of the inner errors contained in the data.
 		var Errs string
-		for _, innerErr := range errors.Data(err)["actions"].([]error) {
-			Errs = Errs + "<" + innerErr.Error() + ">"
+		var rootErr error
+		for i, innerErr := range errors.Data(err)["actions"].([]error) {
+			if i == 0 {
+				rootErr = errors.Root(innerErr)
+			}
+			Errs = Errs + innerErr.Error()
 		}
-		err = errors.New(err.Error() + "-" + Errs)
+		err = errors.WithDetail(rootErr, Errs)
 	}
 	if err != nil {
 		return nil, err
