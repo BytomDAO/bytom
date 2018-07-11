@@ -402,7 +402,7 @@ func TestTxValidation(t *testing.T) {
 			f: func() {
 				vs.tx.SerializedSize = 10000000
 			},
-			err: errOverGasCredit,
+			err: ErrOverGasCredit,
 		},
 		{
 			desc: "can't find gas spend input in entries",

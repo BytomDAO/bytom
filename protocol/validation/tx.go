@@ -12,8 +12,29 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
-// timeRangeGash is the block height we will reach after 100 years
-const timeRangeGash = uint64(21024000)
+// validate transaction error
+var (
+	ErrOverGasCredit = errors.New("all gas credit has been spend")
+	ErrNotStandardTx = errors.New("gas transaction is not standard transaction")
+
+	errBadTimeRange              = errors.New("tx time range is invalid")
+	errCoinbaseArbitraryOversize = errors.New("coinbase arbitrary size is larger than limit")
+	errGasCalculate              = errors.New("gas usage calculate got a math error")
+	errEmptyResults              = errors.New("transaction has no results")
+	errMismatchedAssetID         = errors.New("mismatched asset id")
+	errMismatchedPosition        = errors.New("mismatched value source/dest positions")
+	errMismatchedReference       = errors.New("mismatched reference")
+	errMismatchedValue           = errors.New("mismatched value")
+	errMissingField              = errors.New("missing required field")
+	errNoSource                  = errors.New("no source for value")
+	errOverflow                  = errors.New("arithmetic overflow/underflow")
+	errPosition                  = errors.New("invalid source or destination position")
+	errTxVersion                 = errors.New("invalid transaction version")
+	errUnbalanced                = errors.New("unbalanced")
+	errWrongTransactionSize      = errors.New("transaction size is not in valid range")
+	errWrongCoinbaseTransaction  = errors.New("wrong coinbase transaction")
+	errWrongCoinbaseAsset        = errors.New("wrong coinbase asset id")
+)
 
 // GasState record the gas usage status
 type GasState struct {
@@ -73,7 +94,7 @@ func (g *GasState) updateUsage(gasLeft int64) error {
 	}
 
 	if !g.GasValid && (g.GasUsed > consensus.DefaultGasCredit || g.StorageGas > g.GasLeft) {
-		return errOverGasCredit
+		return ErrOverGasCredit
 	}
 	return nil
 }
@@ -89,28 +110,6 @@ type validationState struct {
 	destPos   uint64            // The destination position, for validate ValueDestinations
 	cache     map[bc.Hash]error // Memoized per-entry validation results
 }
-
-var (
-	errBadTimeRange              = errors.New("tx time range is invalid")
-	errCoinbaseArbitraryOversize = errors.New("coinbase arbitrary size is larger than limit")
-	errGasCalculate              = errors.New("gas usage calculate got a math error")
-	errEmptyResults              = errors.New("transaction has no results")
-	errMismatchedAssetID         = errors.New("mismatched asset id")
-	errMismatchedPosition        = errors.New("mismatched value source/dest positions")
-	errMismatchedReference       = errors.New("mismatched reference")
-	errMismatchedValue           = errors.New("mismatched value")
-	errMissingField              = errors.New("missing required field")
-	errNoSource                  = errors.New("no source for value")
-	errOverflow                  = errors.New("arithmetic overflow/underflow")
-	errOverGasCredit             = errors.New("all gas credit has been spend")
-	errPosition                  = errors.New("invalid source or destination position")
-	errTxVersion                 = errors.New("invalid transaction version")
-	errUnbalanced                = errors.New("unbalanced")
-	errWrongTransactionSize      = errors.New("transaction size is not in valid range")
-	errWrongCoinbaseTransaction  = errors.New("wrong coinbase transaction")
-	errWrongCoinbaseAsset        = errors.New("wrong coinbase asset id")
-	errNotStandardTx             = errors.New("gas transaction is not standard transaction")
-)
 
 func checkValid(vs *validationState, e bc.Entry) (err error) {
 	var ok bool
@@ -454,7 +453,7 @@ func checkStandardTx(tx *bc.Tx) error {
 		}
 
 		if !segwit.IsP2WScript(spentOutput.ControlProgram.Code) {
-			return errNotStandardTx
+			return ErrNotStandardTx
 		}
 	}
 
@@ -470,7 +469,7 @@ func checkStandardTx(tx *bc.Tx) error {
 		}
 
 		if !segwit.IsP2WScript(output.ControlProgram.Code) {
-			return errNotStandardTx
+			return ErrNotStandardTx
 		}
 	}
 	return nil

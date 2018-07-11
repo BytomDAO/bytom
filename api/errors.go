@@ -12,6 +12,8 @@ import (
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/validation"
+	"github.com/bytom/protocol/vm"
 )
 
 func isTemporary(info httperror.Info, err error) bool {
@@ -43,11 +45,19 @@ var respErrFormatter = map[error]httperror.Info{
 	signers.ErrDupeXPub:  {400, "BTM204", "Root XPubs cannot contain the same key more than once"},
 
 	// Transaction error namespace (7xx)
-	account.ErrInsufficient: {400, "BTM701", "Funds of account are insufficient"},
-	account.ErrImmature:     {400, "BTM702", "Available funds of account are immature"},
-	account.ErrReserved:     {400, "BTM703", "Available UTXOs of account have been reserved"},
-	account.ErrMatchUTXO:    {400, "BTM704", "Not found UTXO with given hash"},
-	txbuilder.ErrBadAmount:  {400, "BTM705", "Invalid asset amount"},
+	// Build transaction error namespace (70x)
+	account.ErrInsufficient: {400, "BTM700", "Funds of account are insufficient"},
+	account.ErrImmature:     {400, "BTM701", "Available funds of account are immature"},
+	account.ErrReserved:     {400, "BTM702", "Available UTXOs of account have been reserved"},
+	account.ErrMatchUTXO:    {400, "BTM703", "Not found UTXO with given hash"},
+	txbuilder.ErrBadAmount:  {400, "BTM704", "Invalid asset amount"},
+
+	// Submit transaction error namespace (73x)
+	vm.ErrRunLimitExceeded:      {400, "BTM730", "The BTM Fee is insufficient"},
+	vm.ErrDataStackUnderflow:    {400, "BTM731", "Data stack underflow"},
+	vm.ErrFalseVMResult:         {400, "BTM732", "Execution of virtual machine failure"},
+	validation.ErrNotStandardTx: {400, "BTM733", "Not standard transaction"},
+	validation.ErrOverGasCredit: {400, "BTM734", "Gas credit has been spent"},
 
 	// Mock HSM error namespace (8xx)
 	pseudohsm.ErrInvalidAfter:         {400, "BTM801", "Invalid `after` in query"},
