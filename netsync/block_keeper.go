@@ -75,6 +75,7 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitR
 		txsProcessCh:     make(chan *txsNotify, maxtxsPending),
 		headersProcessCh: make(chan *headersMsg, maxHeadersPending),
 		quitReqBlockCh:   quitReqBlockCh,
+		headerList:       list.New(),
 	}
 	bk.resetHeaderState(common.CoreHashToHash(&bestHash), best.Height)
 	go bk.txsProcessWorker()
@@ -84,7 +85,7 @@ func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitR
 // resetHeaderState sets the headers-first mode state to values appropriate for
 // syncing from a new peer.
 func (bk *blockKeeper) resetHeaderState(bestHash *common.Hash, bestHeight uint64) {
-	bk.headerList = list.New()
+	bk.headerList.Init()
 	bk.startHeader = nil
 
 	// When there is a next checkpoint, add an entry for the latest known
@@ -229,12 +230,12 @@ func (bk *blockKeeper) HeadersRequest(peerID string, locator []*common.Hash) ([]
 }
 
 func (bk *blockKeeper) BlockFastSyncWorker(peerID string, nextCheckPoint *consensus.Checkpoint) error {
-	best := bk.chain.BestBlockHeader()
-	bestHash := best.Hash()
+	current := bk.chain.BestBlockHeader()
+	currentHash := current.Hash()
 	lastHead := bk.headerList.Back()
 
-	if (bk.startHeader != nil && (bk.startHeader.Prev().Value.(*headerNode).hash.Str() != common.CoreHashToHash(&bestHash).Str())) || (lastHead == nil || (lastHead != nil && (lastHead.Value.(*headerNode).hash.Str() != common.CoreHashToHash(&nextCheckPoint.Hash).Str()))) {
-		bk.resetHeaderState(common.CoreHashToHash(&bestHash), best.Height)
+	if (bk.startHeader != nil && (bk.startHeader.Prev().Value.(*headerNode).hash.Str() != common.CoreHashToHash(&currentHash).Str())) || (lastHead == nil || (lastHead != nil && (lastHead.Value.(*headerNode).hash.Str() != common.CoreHashToHash(&nextCheckPoint.Hash).Str()))) {
+		bk.resetHeaderState(common.CoreHashToHash(&currentHash), current.Height)
 		//request blocks header
 		totalHeaders := make([]types.BlockHeader, 0)
 		locator := bk.blockLocator(nil)
@@ -289,20 +290,30 @@ func (bk *blockKeeper) BlockFastSyncWorker(peerID string, nextCheckPoint *consen
 		}
 	}
 
-	height := bk.chain.BestBlockHeight()
-	block, _ := bk.chain.GetBlockByHeight(height)
-	peers, err := bk.peers.BroadcastNewStatus(block)
-	if err != nil {
-		log.Errorf("Failed on broadcast new status block %v", err)
-		return errBroadcastStatus
-	}
-	for _, peer := range peers {
-		if peer == nil {
-			return errPeerNotRegister
+	bestHash := bk.chain.BestBlockHash()
+	log.Info("Block fast sync complete. height:", bk.chain.BestBlockHeight(), " hash:", bestHash)
+	if currentHash.String() != bestHash.String() {
+		log.Info("Broadcast new chain status.")
+
+		block, err := bk.chain.GetBlockByHash(bestHash)
+		if err != nil {
+			log.Errorf("Failed on fast sync complete broadcast status get block %v", err)
+			return errGetBlockByHash
 		}
-		swPeer := peer.getPeer()
-		log.Info("Block keeper broadcast block error. Stop peer.")
-		bk.sw.StopPeerGracefully(swPeer)
+
+		peers, err := bk.peers.BroadcastNewStatus(block)
+		if err != nil {
+			log.Errorf("Failed on broadcast new status block %v", err)
+			return errBroadcastStatus
+		}
+		for _, peer := range peers {
+			if peer == nil {
+				return errPeerNotRegister
+			}
+			swPeer := peer.getPeer()
+			log.Info("Block keeper broadcast block error. Stop peer.")
+			bk.sw.StopPeerGracefully(swPeer)
+		}
 	}
 
 	return nil
