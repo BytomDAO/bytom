@@ -188,6 +188,7 @@ func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
 
 // RawTx is the tx struct for getRawTransaction
 type RawTx struct {
+	ID        bc.Hash                  `json:"tx_id"`
 	Version   uint64                   `json:"version"`
 	Size      uint64                   `json:"size"`
 	TimeRange uint64                   `json:"time_range"`
@@ -201,6 +202,7 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 	Tx types.Tx `json:"raw_transaction"`
 }) Response {
 	tx := &RawTx{
+		ID:        ins.Tx.ID,
 		Version:   ins.Tx.Version,
 		Size:      ins.Tx.SerializedSize,
 		TimeRange: ins.Tx.TimeRange,
