@@ -13,16 +13,18 @@ import (
 
 //protocol msg
 const (
-	BlockRequestByte   = byte(0x10)
-	BlockResponseByte  = byte(0x11)
+	BlockRequestByte    = byte(0x10)
+	BlockResponseByte   = byte(0x11)
+	HeadersRequestByte  = byte(0x12)
+	HeadersResponseByte = byte(0x13)
+	BlocksRequestByte   = byte(0x14)
+	BlocksResponseByte  = byte(0x15)
+
 	StatusRequestByte  = byte(0x20)
 	StatusResponseByte = byte(0x21)
+
 	NewTransactionByte = byte(0x30)
 	NewMineBlockByte   = byte(0x40)
-	GetHeadersByte     = byte(0x50)
-	HeadersByte        = byte(0x51)
-	GetBlocksByte      = byte(0x60)
-	BlocksByte         = byte(0x61)
 
 	maxBlockchainResponseSize = 22020096 + 2
 
@@ -41,14 +43,14 @@ var _ = wire.RegisterInterface(
 	struct{ BlockchainMessage }{},
 	wire.ConcreteType{&BlockRequestMessage{}, BlockRequestByte},
 	wire.ConcreteType{&BlockResponseMessage{}, BlockResponseByte},
+	wire.ConcreteType{&GetHeadersMessage{}, HeadersRequestByte},
+	wire.ConcreteType{&HeadersMessage{}, HeadersResponseByte},
+	wire.ConcreteType{&GetBlocksMessage{}, BlockRequestByte},
+	wire.ConcreteType{&BlocksMessage{}, BlocksResponseByte},
 	wire.ConcreteType{&StatusRequestMessage{}, StatusRequestByte},
 	wire.ConcreteType{&StatusResponseMessage{}, StatusResponseByte},
 	wire.ConcreteType{&TransactionNotifyMessage{}, NewTransactionByte},
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
-	wire.ConcreteType{&GetHeadersMessage{}, GetHeadersByte},
-	wire.ConcreteType{&HeadersMessage{}, HeadersByte},
-	wire.ConcreteType{&GetBlocksMessage{}, GetBlocksByte},
-	wire.ConcreteType{&BlocksMessage{}, BlocksByte},
 )
 
 type blockPending struct {
