@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bytom/account"
+	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/rpc"
 	"github.com/bytom/blockchain/signers"
@@ -46,11 +47,17 @@ var respErrFormatter = map[error]httperror.Info{
 
 	// Transaction error namespace (7xx)
 	// Build transaction error namespace (70x)
-	account.ErrInsufficient: {400, "BTM700", "Funds of account are insufficient"},
-	account.ErrImmature:     {400, "BTM701", "Available funds of account are immature"},
-	account.ErrReserved:     {400, "BTM702", "Available UTXOs of account have been reserved"},
-	account.ErrMatchUTXO:    {400, "BTM703", "Not found UTXO with given hash"},
-	txbuilder.ErrBadAmount:  {400, "BTM704", "Invalid asset amount"},
+	account.ErrInsufficient:    {400, "BTM700", "Funds of account are insufficient"},
+	account.ErrImmature:        {400, "BTM701", "Available funds of account are immature"},
+	account.ErrReserved:        {400, "BTM702", "Available UTXOs of account have been reserved"},
+	account.ErrMatchUTXO:       {400, "BTM703", "Not found UTXO with given hash"},
+	ErrBadActionType:           {400, "BTM704", "Invalid action type"},
+	ErrBadAction:               {400, "BTM705", "Invalid action object"},
+	ErrBadActionConstruction:   {400, "BTM706", "Invalid action construction"},
+	txbuilder.ErrMissingFields: {400, "BTM707", "One or more fields are missing"},
+	txbuilder.ErrBadAmount:     {400, "BTM708", "Invalid asset amount"},
+	account.ErrFindAccount:     {400, "BTM709", "Not found account"},
+	asset.ErrFindAsset:         {400, "BTM710", "Not found asset"},
 
 	// Submit transaction error namespace (73x)
 	vm.ErrRunLimitExceeded:      {400, "BTM730", "The BTM Fee is insufficient"},
@@ -77,7 +84,6 @@ var errorFormatter = httperror.Formatter{
 		// General error namespace (0xx)
 		context.DeadlineExceeded:     {408, "BTM001", "Request timed out"},
 		httpjson.ErrBadRequest:       {400, "BTM003", "Invalid request body"},
-		txbuilder.ErrMissingFields:   {400, "BTM010", "One or more fields are missing"},
 		rpc.ErrWrongNetwork:          {502, "BTM104", "A peer core is operating on a different blockchain network"},
 		protocol.ErrTheDistantFuture: {400, "BTM105", "Requested height is too far ahead"},
 
