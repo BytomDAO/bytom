@@ -10,8 +10,6 @@ import (
 
 const maxAIHashCached = 64
 
-var UseSIMD = false
-
 func legacyAlgorithm(bh, seed *bc.Hash) *bc.Hash {
 	cache := calcSeedCache(seed.Bytes())
 	data := mulMatrix(bh.Bytes(), cache)
@@ -60,6 +58,8 @@ func (a *Cache) Hash(hash, seed *bc.Hash) *bc.Hash {
 
 // AIHash is created for let different package share same cache
 var AIHash = NewCache()
+
+var UseSIMD = false
 
 func CanSimd() bool {
 	return cpuid.CPU.AVX2()
