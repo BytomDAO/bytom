@@ -26,8 +26,8 @@ func main() {
 		"bytes":        true,
 		"encoding/hex": true,
 		"fmt":          true,
-		"github.com/bytom/exp/ivy/compiler": true,
-		"github.com/bytom/protocol/vm":      true,
+		"github.com/bytom/equity/compiler": true,
+		"github.com/bytom/protocol/vm":     true,
 	}
 
 	buf := new(bytes.Buffer)
@@ -87,9 +87,6 @@ func main() {
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{S: &%s})\n", param.Name)
 			case "Integer":
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{I: &%s})\n", param.Name)
-			case "Time":
-				fmt.Fprintf(buf, "\t_%s := %s.UnixNano() / time.Millisecond\n", param.Name, param.Name)
-				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{I: &_%s})\n", param.Name)
 			}
 		}
 		fmt.Fprintf(buf, "\treturn compiler.Instantiate(_contractParams, %s_body_bytes, %v, _contractArgs)\n", contract.Name, contract.Recursive)
@@ -206,9 +203,6 @@ func asGoParams(params []*compiler.Param) (goParams string, imports []string) {
 			typ = "[]byte"
 		case "String":
 			typ = "[]byte"
-		case "Time":
-			typ = "time.Time"
-			imports = append(imports, "time")
 		}
 		strs = append(strs, fmt.Sprintf("%s %s", p.Name, typ))
 	}

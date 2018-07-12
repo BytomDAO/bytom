@@ -191,7 +191,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 }
 
 func processNewTxch(txPool *protocol.TxPool) {
-	newTxCh := txPool.GetNewTxCh()
+	newTxCh := txPool.GetMsgCh()
 	for tx := range newTxCh {
 		if tx == nil {
 		}
@@ -407,12 +407,12 @@ func MockTxsP2PKH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int)
 	txs := []*types.Tx{}
 	for i := 0; i < txNumber; i++ {
 		testAccountAlias := fmt.Sprintf("testAccount%d", i)
-		testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub.XPub}, 1, testAccountAlias)
+		testAccount, err := accountManager.Create([]chainkd.XPub{xpub.XPub}, 1, testAccountAlias)
 		if err != nil {
 			return nil, err
 		}
 
-		controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+		controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 		if err != nil {
 			return nil, err
 		}
@@ -454,12 +454,12 @@ func MockTxsP2SH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) 
 	txs := []*types.Tx{}
 	for i := 0; i < txNumber; i++ {
 		testAccountAlias := fmt.Sprintf("testAccount%d", i)
-		testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias)
+		testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias)
 		if err != nil {
 			return nil, err
 		}
 
-		controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+		controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 		if err != nil {
 			return nil, err
 		}
@@ -500,12 +500,12 @@ func MockTxsMultiSign(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum 
 	txs := []*types.Tx{}
 	for i := 0; i < txNumber; i++ {
 		testAccountAlias := fmt.Sprintf("testAccount%d", i)
-		testAccount, err := accountManager.Create(nil, []chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias)
+		testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias)
 		if err != nil {
 			return nil, err
 		}
 
-		controlProg, err := accountManager.CreateAddress(nil, testAccount.ID, false)
+		controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 		if err != nil {
 			return nil, err
 		}

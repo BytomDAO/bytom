@@ -1,7 +1,13 @@
 package api
 
 import (
+	"net"
+	"context"
+
 	"github.com/bytom/version"
+	"github.com/bytom/netsync"
+	"github.com/bytom/errors"
+	"github.com/bytom/p2p"
 )
 
 // NetInfo indicate net information
@@ -34,6 +40,48 @@ func (a *API) GetNodeInfo() *NetInfo {
 	return info
 }
 
+
+// return the currently connected peers with net address
+func (a *API) getPeerInfoByAddr(addr string) *netsync.PeerInfo {
+	peerInfos := a.sync.Peers().GetPeerInfos()
+	for _, peerInfo := range peerInfos {
+		if peerInfo.RemoteAddr == addr {
+			return peerInfo
+		}
+	}
+	return nil
+}
+
+// disconnect peer by the peer id
+func (a *API) disconnectPeerById(peerId string) error {
+	if peer, ok := a.sync.Peers().Peer(peerId); ok {
+		swPeer := peer.GetPeer()
+		a.sync.Switch().StopPeerGracefully(swPeer)
+		return nil
+	}
+	return errors.New("peerId not exist")
+}
+
+// connect peer b y net address
+func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*netsync.PeerInfo, error) {
+	netIp := net.ParseIP(ip)
+	if netIp == nil {
+		return nil, errors.New("invalid ip address")
+	}
+
+	addr := p2p.NewNetAddressIPPort(netIp, port)
+	sw := a.sync.Switch()
+
+	if err := sw.DialPeerWithAddress(addr); err != nil {
+		return nil, errors.Wrap(err, "can not connect to the address")
+	}
+	peer := a.getPeerInfoByAddr(addr.String())
+	if peer == nil {
+		return nil, errors.New("the peer is disconnected again")
+	}
+	return peer, nil
+}
+
 // getNetInfo return network information
 func (a *API) getNetInfo() Response {
 	return NewSuccessResponse(a.GetNodeInfo())
@@ -48,4 +96,31 @@ func (a *API) isMining() Response {
 // IsMining return mining status
 func (a *API) IsMining() bool {
 	return a.cpuMiner.IsMining()
+}
+
+// return the peers of current node
+func (a *API) listPeers() Response {
+	return NewSuccessResponse(a.sync.Peers().GetPeerInfos())
+}
+
+// disconnect peer
+func (a *API) disconnectPeer(ctx context.Context, ins struct {
+	PeerId string `json:"peerId"`
+}) Response {
+	if err := a.disconnectPeerById(ins.PeerId); err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(nil)
+}
+
+// connect peer by ip and port
+func (a *API) connectPeer(ctx context.Context, ins struct {
+	Ip   string `json:"ip"`
+	Port uint16 `json:"port"`
+}) Response {
+	if peer, err := a.connectPeerByIpAndPort(ins.Ip, ins.Port); err != nil {
+		return NewErrorResponse(err)
+	} else {
+		return NewSuccessResponse(peer)
+	}
 }

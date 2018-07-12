@@ -5,8 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
@@ -22,14 +20,14 @@ import (
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
 func (m *Manager) DecodeSpendAction(data []byte) (txbuilder.Action, error) {
 	a := &spendAction{accounts: m}
-	err := json.Unmarshal(data, a)
-	return a, err
+	return a, json.Unmarshal(data, a)
 }
 
 type spendAction struct {
 	accounts *Manager
 	bc.AssetAmount
-	AccountID string `json:"account_id"`
+	AccountID      string `json:"account_id"`
+	UseUnconfirmed bool   `json:"use_unconfirmed"`
 }
 
 // MergeSpendAction merge common assetID and accountID spend action
@@ -43,6 +41,7 @@ func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 			actionKey := act.AssetId.String() + act.AccountID
 			if tmpAct, ok := spendActionMap[actionKey]; ok {
 				tmpAct.Amount += act.Amount
+				tmpAct.UseUnconfirmed = tmpAct.UseUnconfirmed || act.UseUnconfirmed
 			} else {
 				spendActionMap[actionKey] = act
 				resultActions = append(resultActions, act)
@@ -66,45 +65,38 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 		return txbuilder.MissingFieldsError(missing...)
 	}
 
-	acct, err := a.accounts.FindByID(ctx, a.AccountID)
+	acct, err := a.accounts.FindByID(a.AccountID)
 	if err != nil {
 		return errors.Wrap(err, "get account info")
 	}
 
-	src := source{
-		AssetID:   *a.AssetId,
-		AccountID: a.AccountID,
-	}
-	res, err := a.accounts.utxoDB.Reserve(src, a.Amount, b.MaxTime())
+	res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, a.Amount, a.UseUnconfirmed, b.MaxTime())
 	if err != nil {
 		return errors.Wrap(err, "reserving utxos")
 	}
 
 	// Cancel the reservation if the build gets rolled back.
-	b.OnRollback(canceler(ctx, a.accounts, res.ID))
-
-	for _, r := range res.UTXOs {
+	b.OnRollback(func() { a.accounts.utxoKeeper.Cancel(res.id) })
+	for _, r := range res.utxos {
 		txInput, sigInst, err := UtxoToInputs(acct.Signer, r)
 		if err != nil {
 			return errors.Wrap(err, "creating inputs")
 		}
-		err = b.AddInput(txInput, sigInst)
-		if err != nil {
+
+		if err = b.AddInput(txInput, sigInst); err != nil {
 			return errors.Wrap(err, "adding inputs")
 		}
 	}
 
-	if res.Change > 0 {
-		acp, err := a.accounts.CreateAddress(ctx, a.AccountID, true)
+	if res.change > 0 {
+		acp, err := a.accounts.CreateAddress(a.AccountID, true)
 		if err != nil {
 			return errors.Wrap(err, "creating control program")
 		}
 
 		// Don't insert the control program until callbacks are executed.
-		a.accounts.insertControlProgramDelayed(ctx, b, acp)
-
-		err = b.AddOutput(types.NewTxOutput(*a.AssetId, res.Change, acp.ControlProgram))
-		if err != nil {
+		a.accounts.insertControlProgramDelayed(b, acp)
+		if err = b.AddOutput(types.NewTxOutput(*a.AssetId, res.change, acp.ControlProgram)); err != nil {
 			return errors.Wrap(err, "adding change output")
 		}
 	}
@@ -114,14 +106,14 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 //DecodeSpendUTXOAction unmarshal JSON-encoded data of spend utxo action
 func (m *Manager) DecodeSpendUTXOAction(data []byte) (txbuilder.Action, error) {
 	a := &spendUTXOAction{accounts: m}
-	err := json.Unmarshal(data, a)
-	return a, err
+	return a, json.Unmarshal(data, a)
 }
 
 type spendUTXOAction struct {
-	accounts  *Manager
-	OutputID  *bc.Hash           `json:"output_id"`
-	Arguments []contractArgument `json:"arguments"`
+	accounts       *Manager
+	OutputID       *bc.Hash           `json:"output_id"`
+	UseUnconfirmed bool               `json:"use_unconfirmed"`
+	Arguments      []contractArgument `json:"arguments"`
 }
 
 // contractArgument for smart contract
@@ -146,22 +138,23 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 		return txbuilder.MissingFieldsError("output_id")
 	}
 
-	res, err := a.accounts.utxoDB.ReserveUTXO(ctx, *a.OutputID, b.MaxTime())
+	res, err := a.accounts.utxoKeeper.ReserveParticular(*a.OutputID, a.UseUnconfirmed, b.MaxTime())
 	if err != nil {
 		return err
 	}
-	b.OnRollback(canceler(ctx, a.accounts, res.ID))
 
+	b.OnRollback(func() { a.accounts.utxoKeeper.Cancel(res.id) })
 	var accountSigner *signers.Signer
-	if len(res.Source.AccountID) != 0 {
-		account, err := a.accounts.FindByID(ctx, res.Source.AccountID)
+	if len(res.utxos[0].AccountID) != 0 {
+		account, err := a.accounts.FindByID(res.utxos[0].AccountID)
 		if err != nil {
 			return err
 		}
+
 		accountSigner = account.Signer
 	}
 
-	txInput, sigInst, err := UtxoToInputs(accountSigner, res.UTXOs[0])
+	txInput, sigInst, err := UtxoToInputs(accountSigner, res.utxos[0])
 	if err != nil {
 		return err
 	}
@@ -203,15 +196,6 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 		}
 	}
 	return b.AddInput(txInput, sigInst)
-}
-
-// Best-effort cancellation attempt to put in txbuilder.BuildResult.Rollback.
-func canceler(ctx context.Context, m *Manager, rid uint64) func() {
-	return func() {
-		if err := m.utxoDB.Cancel(ctx, rid); err != nil {
-			log.WithField("error", err).Error("Best-effort cancellation attempt to put in txbuilder.BuildResult.Rollback")
-		}
-	}
 }
 
 // UtxoToInputs convert an utxo to the txinput
@@ -263,7 +247,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 // registers callbacks on the TemplateBuilder so that all of the template's
 // account control programs are batch inserted if building the rest of
 // the template is successful.
-func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.TemplateBuilder, acp *CtrlProgram) {
+func (m *Manager) insertControlProgramDelayed(b *txbuilder.TemplateBuilder, acp *CtrlProgram) {
 	m.delayedACPsMu.Lock()
 	m.delayedACPs[b] = append(m.delayedACPs[b], acp)
 	m.delayedACPsMu.Unlock()
@@ -283,6 +267,6 @@ func (m *Manager) insertControlProgramDelayed(ctx context.Context, b *txbuilder.
 		if len(acps) == 0 {
 			return nil
 		}
-		return m.insertAccountControlProgram(ctx, acps...)
+		return m.insertControlPrograms(acps...)
 	})
 }
