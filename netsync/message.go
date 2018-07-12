@@ -45,7 +45,7 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&BlockResponseMessage{}, BlockResponseByte},
 	wire.ConcreteType{&GetHeadersMessage{}, HeadersRequestByte},
 	wire.ConcreteType{&HeadersMessage{}, HeadersResponseByte},
-	wire.ConcreteType{&GetBlocksMessage{}, BlockRequestByte},
+	wire.ConcreteType{&GetBlocksMessage{}, BlocksRequestByte},
 	wire.ConcreteType{&BlocksMessage{}, BlocksResponseByte},
 	wire.ConcreteType{&StatusRequestMessage{}, StatusRequestByte},
 	wire.ConcreteType{&StatusResponseMessage{}, StatusResponseByte},
