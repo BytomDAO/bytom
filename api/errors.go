@@ -46,7 +46,7 @@ var respErrFormatter = map[error]httperror.Info{
 	signers.ErrDupeXPub:  {400, "BTM204", "Root XPubs cannot contain the same key more than once"},
 
 	// Transaction error namespace (7xx)
-	// Build transaction error namespace (70x)
+	// Build transaction error namespace (70x ~ 72x)
 	account.ErrInsufficient:    {400, "BTM700", "Funds of account are insufficient"},
 	account.ErrImmature:        {400, "BTM701", "Available funds of account are immature"},
 	account.ErrReserved:        {400, "BTM702", "Available UTXOs of account have been reserved"},
@@ -59,7 +59,7 @@ var respErrFormatter = map[error]httperror.Info{
 	account.ErrFindAccount:     {400, "BTM709", "Not found account"},
 	asset.ErrFindAsset:         {400, "BTM710", "Not found asset"},
 
-	// Submit transaction error namespace (73x)
+	// Submit transaction error namespace (73x ~ 79x)
 	// Validation error (73x ~ 75x)
 	validation.ErrTxVersion:                 {400, "BTM730", "Invalid transaction version"},
 	validation.ErrWrongTransactionSize:      {400, "BTM731", "Invalid transaction size"},
@@ -81,10 +81,23 @@ var respErrFormatter = map[error]httperror.Info{
 	validation.ErrOverGasCredit:             {400, "BTM747", "Gas credit has been spent"},
 	validation.ErrGasCalculate:              {400, "BTM748", "Gas usage calculate got a math error"},
 
-	// VM error (76x)
-	vm.ErrRunLimitExceeded:   {400, "BTM760", "The BTM Fee is insufficient"},
-	vm.ErrDataStackUnderflow: {400, "BTM761", "Data stack underflow"},
-	vm.ErrFalseVMResult:      {400, "BTM762", "Execution of virtual machine failure"},
+	// VM error (76x ~ 78x)
+	vm.ErrAltStackUnderflow:  {400, "BTM760", "Alt stack underflow"},
+	vm.ErrBadValue:           {400, "BTM761", "Bad value"},
+	vm.ErrContext:            {400, "BTM762", "Wrong context"},
+	vm.ErrDataStackUnderflow: {400, "BTM763", "Data stack underflow"},
+	vm.ErrDisallowedOpcode:   {400, "BTM764", "Disallowed opcode"},
+	vm.ErrDivZero:            {400, "BTM765", "Division by zero"},
+	vm.ErrFalseVMResult:      {400, "BTM766", "False result for executing VM"},
+	vm.ErrLongProgram:        {400, "BTM767", "Program size exceeds max int32"},
+	vm.ErrRange:              {400, "BTM768", "Arithmetic range error"},
+	vm.ErrReturn:             {400, "BTM769", "RETURN executed"},
+	vm.ErrRunLimitExceeded:   {400, "BTM770", "Run limit exceeded because the BTM Fee is insufficient"},
+	vm.ErrShortProgram:       {400, "BTM771", "Unexpected end of program"},
+	vm.ErrToken:              {400, "BTM772", "Unrecognized token"},
+	vm.ErrUnexpected:         {400, "BTM773", "Unexpected error"},
+	vm.ErrUnsupportedVM:      {400, "BTM774", "Unsupported VM because the version of VM is mismatched"},
+	vm.ErrVerifyFailed:       {400, "BTM775", "VERIFY failed"},
 
 	// Mock HSM error namespace (8xx)
 	pseudohsm.ErrInvalidAfter:         {400, "BTM801", "Invalid `after` in query"},
