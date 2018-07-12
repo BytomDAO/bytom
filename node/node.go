@@ -159,7 +159,7 @@ func NewNode(config *cfg.Config) *Node {
 		if tensority.CanSimd() {
 			tensority.UseSIMD = true
 		} else {
-			log.Warn("CPU doesn't support SIMD, disable SIMD again.")
+			log.Warn("CPU doesn't support SIMD, disable SIMD by default.")
 		}
 	}
 

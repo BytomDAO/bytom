@@ -6,7 +6,6 @@ import (
 
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
-	log "github.com/sirupsen/logrus"
 )
 
 const maxAIHashCached = 64
@@ -17,11 +16,6 @@ func legacyAlgorithm(bh, seed *bc.Hash) *bc.Hash {
 	cache := calcSeedCache(seed.Bytes())
 	data := mulMatrix(bh.Bytes(), cache)
 	return hashMatrix(data)
-}
-
-func simdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
-	log.Warn("SIMD hasn't been implemented yet, disable SIMD by default.")
-	return legacyAlgorithm(bh, seed)
 }
 
 func algorithm(bh, seed *bc.Hash) *bc.Hash {
