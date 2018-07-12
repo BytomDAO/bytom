@@ -236,9 +236,11 @@ func wrapErr(err error, vm *virtualMachine, args [][]byte) error {
 	if err == nil {
 		return nil
 	}
-	return Error{
+
+	errMsg := Error{
 		Err:  err,
 		Prog: vm.program,
 		Args: args,
 	}
+	return errors.Wrap(err, errMsg.Error())
 }
