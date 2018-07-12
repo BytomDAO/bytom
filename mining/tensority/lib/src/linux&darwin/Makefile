@@ -1,16 +1,35 @@
 TARGET = cSimdTs
-CXX = g++
 CXXFLAGS = -std=c++11 -pthread -mavx2 -O3 -fopenmp -fPIC
 
-OS = linux
-ARCH = amd64
+ifeq ($(OS),Windows_NT)
+	$(error "Windows is not supported")
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Linux)
+		OS = linux
+		CXX = g++
+	endif
+	ifeq ($(UNAME_S),Darwin)
+		OS = darwin
+	endif
+	UNAME_P := $(shell uname -p)
+	ifeq ($(UNAME_P),x86_64)
+		ARCH = amd64
+	endif
+	ifneq ($(filter %86,$(UNAME_P)),)
+		ARCH = 386
+	endif
+	ifneq ($(filter arm%,$(UNAME_P)),)
+		$(error "ARM is not supported")
+	endif
+endif
 
 .PHONY: clean
 
-all: cSimdTs_$(OS)_$(ARCH)
+all: $(TARGET)_$(OS)_$(ARCH)
 	go build -buildmode=plugin -o simd_plugin_$(OS)_$(ARCH).so main.go
 
-cSimdTs_$(OS)_$(ARCH): $(TARGET).cpp
+$(TARGET)_$(OS)_$(ARCH): $(TARGET).cpp
 	$(CXX) -o $@.o -c $^ $(CXXFLAGS)
 
 clean:
