@@ -100,9 +100,11 @@ var respErrFormatter = map[error]httperror.Info{
 	vm.ErrVerifyFailed:       {400, "BTM775", "VERIFY failed"},
 
 	// Mock HSM error namespace (8xx)
+	pseudohsm.ErrDuplicateKeyAlias:    {400, "BTM800", "Key Alias already exists"},
 	pseudohsm.ErrInvalidAfter:         {400, "BTM801", "Invalid `after` in query"},
-	pseudohsm.ErrTooManyAliasesToList: {400, "BTM802", "Too many aliases to list"},
-	pseudohsm.ErrDuplicateKeyAlias:    {400, "BTM803", "Key Alias already exists"},
+	pseudohsm.ErrLoadKey:              {400, "BTM802", "Key not found or wrong password"},
+	pseudohsm.ErrTooManyAliasesToList: {400, "BTM803", "Requested key aliases exceeds limit"},
+	pseudohsm.ErrDecrypt:              {400, "BTM804", "Could not decrypt key with given passphrase"},
 }
 
 // Map error values to standard bytom error codes. Missing entries
@@ -116,9 +118,9 @@ var errorFormatter = httperror.Formatter{
 	Errors: map[error]httperror.Info{
 		// General error namespace (0xx)
 		context.DeadlineExceeded:     {408, "BTM001", "Request timed out"},
-		httpjson.ErrBadRequest:       {400, "BTM003", "Invalid request body"},
-		rpc.ErrWrongNetwork:          {502, "BTM104", "A peer core is operating on a different blockchain network"},
-		protocol.ErrTheDistantFuture: {400, "BTM105", "Requested height is too far ahead"},
+		httpjson.ErrBadRequest:       {400, "BTM002", "Invalid request body"},
+		rpc.ErrWrongNetwork:          {502, "BTM103", "A peer core is operating on a different blockchain network"},
+		protocol.ErrTheDistantFuture: {400, "BTM104", "Requested height is too far ahead"},
 
 		//accesstoken authz err namespace (86x)
 		errNotAuthenticated: {401, "BTM860", "Request could not be authenticated"},
