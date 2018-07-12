@@ -787,14 +787,7 @@ func mockGasTxInput() *types.TxInput {
 
 // Like errors.Root, but also unwraps vm.Error objects.
 func rootErr(e error) error {
-	for {
-		e = errors.Root(e)
-		if e2, ok := e.(vm.Error); ok {
-			e = e2.Err
-			continue
-		}
-		return e
-	}
+	return errors.Root(e)
 }
 
 func hashData(data []byte) bc.Hash {
