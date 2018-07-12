@@ -21,6 +21,9 @@ BYTOMD_BINARY64 := bytomd-$(GOOS)_amd64
 BYTOMCLI_BINARY32 := bytomcli-$(GOOS)_386
 BYTOMCLI_BINARY64 := bytomcli-$(GOOS)_amd64
 
+SIMDPLUGIN_BINARY32 := simd_plugin_$(GOOS)_386.so
+SIMDPLUGIN_BINARY64 := simd_plugin_$(GOOS)_amd64.so
+
 VERSION := $(shell awk -F= '/Version =/ {print $$2}' version/version.go | tr -d "\" ")
 
 MINER_RELEASE32 := miner-$(VERSION)-$(GOOS)_386
@@ -44,6 +47,7 @@ simd_plugin:
 
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
+	cp mining/tensority/lib/src/'linux&darwin'/*.so cmd/bytomd/
 	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 
 bytomcli:
@@ -69,7 +73,8 @@ release: binary
 	cd target && md5sum $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe >$(BYTOM_RELEASE64).md5
 	cd target && zip $(BYTOM_RELEASE64).zip $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
 	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
-else
+endif
+ifeq ($(GOOS),linux)
 release: binary
 	cd target && md5sum $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) >$(BYTOM_RELEASE32).md5
 	cd target && tar -czf $(BYTOM_RELEASE32).tgz $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(BYTOM_RELEASE32).md5
@@ -77,6 +82,17 @@ release: binary
 	cd target && md5sum $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) >$(BYTOM_RELEASE64).md5
 	cd target && tar -czf $(BYTOM_RELEASE64).tgz $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
 	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
+endif
+ifeq ($(GOOS),darwin)
+release: binary
+	cp mining/tensority/lib/src/'linux&darwin'/$(SIMDPLUGIN_BINARY32) target/
+	cd target && md5sum $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(SIMDPLUGIN_BINARY32)>$(BYTOM_RELEASE32).md5
+	cd target && tar -czf $(BYTOM_RELEASE32).tgz $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(SIMDPLUGIN_BINARY32) $(BYTOM_RELEASE32).md5
+	cd target && rm -f $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(SIMDPLUGIN_BINARY32) $(BYTOM_RELEASE32).md5
+	cp mining/tensority/lib/src/'linux&darwin'/$(SIMDPLUGIN_BINARY64) target/
+	cd target && md5sum $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(SIMDPLUGIN_BINARY64)>$(BYTOM_RELEASE64).md5
+	cd target && tar -czf $(BYTOM_RELEASE64).tgz $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(SIMDPLUGIN_BINARY64) $(BYTOM_RELEASE64).md5
+	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(SIMDPLUGIN_BINARY64) $(BYTOM_RELEASE64).md5
 endif
 
 release-all: clean
