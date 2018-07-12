@@ -10,7 +10,7 @@ import (
     log "github.com/sirupsen/logrus"
 )
 
-var pluginPath = fmt.Sprintf("simd_%v_%v.dll", runtime.GOOS, runtime.GOARCH)
+var dllPath = fmt.Sprintf("simd_%v_%v.dll", runtime.GOOS, runtime.GOARCH)
 
 func simdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
     log.Warn("SIMD on windows hasn't been implemented yet, disable SIMD by default.")
@@ -19,4 +19,13 @@ func simdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
 
 func hasSimdLib() bool {
     return false
+}
+
+func hasSimdLib() bool {
+    if _, err := os.Stat(dllPath); os.IsNotExist(err) {
+        log.Warnf("SIMD plugin (%v) doesn't exist, disable SIMD by default.", dllPath)
+        return false
+    } else {
+        return true
+    }
 }
