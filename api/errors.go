@@ -60,11 +60,31 @@ var respErrFormatter = map[error]httperror.Info{
 	asset.ErrFindAsset:         {400, "BTM710", "Not found asset"},
 
 	// Submit transaction error namespace (73x)
-	vm.ErrRunLimitExceeded:      {400, "BTM730", "The BTM Fee is insufficient"},
-	vm.ErrDataStackUnderflow:    {400, "BTM731", "Data stack underflow"},
-	vm.ErrFalseVMResult:         {400, "BTM732", "Execution of virtual machine failure"},
-	validation.ErrNotStandardTx: {400, "BTM733", "Not standard transaction"},
-	validation.ErrOverGasCredit: {400, "BTM734", "Gas credit has been spent"},
+	// Validation error (73x ~ 75x)
+	validation.ErrTxVersion:                 {400, "BTM730", "Invalid transaction version"},
+	validation.ErrWrongTransactionSize:      {400, "BTM731", "Invalid transaction size"},
+	validation.ErrBadTimeRange:              {400, "BTM732", "Invalid transaction time range"},
+	validation.ErrNotStandardTx:             {400, "BTM733", "Not standard transaction"},
+	validation.ErrWrongCoinbaseTransaction:  {400, "BTM734", "Invalid coinbase transaction"},
+	validation.ErrWrongCoinbaseAsset:        {400, "BTM735", "Invalid coinbase assetID"},
+	validation.ErrCoinbaseArbitraryOversize: {400, "BTM736", "Invalid coinbase arbitrary size"},
+	validation.ErrEmptyResults:              {400, "BTM737", "No results in the transaction"},
+	validation.ErrMismatchedAssetID:         {400, "BTM738", "Mismatched assetID"},
+	validation.ErrMismatchedPosition:        {400, "BTM739", "Mismatched value source/dest position"},
+	validation.ErrMismatchedReference:       {400, "BTM740", "Mismatched reference"},
+	validation.ErrMismatchedValue:           {400, "BTM741", "Mismatched value"},
+	validation.ErrMissingField:              {400, "BTM742", "Missing required field"},
+	validation.ErrNoSource:                  {400, "BTM743", "No source for value"},
+	validation.ErrOverflow:                  {400, "BTM744", "Arithmetic overflow/underflow"},
+	validation.ErrPosition:                  {400, "BTM745", "Invalid source or destination position"},
+	validation.ErrUnbalanced:                {400, "BTM746", "Unbalanced asset amount between input and output"},
+	validation.ErrOverGasCredit:             {400, "BTM747", "Gas credit has been spent"},
+	validation.ErrGasCalculate:              {400, "BTM748", "Gas usage calculate got a math error"},
+
+	// VM error (76x)
+	vm.ErrRunLimitExceeded:   {400, "BTM760", "The BTM Fee is insufficient"},
+	vm.ErrDataStackUnderflow: {400, "BTM761", "Data stack underflow"},
+	vm.ErrFalseVMResult:      {400, "BTM762", "Execution of virtual machine failure"},
 
 	// Mock HSM error namespace (8xx)
 	pseudohsm.ErrInvalidAfter:         {400, "BTM801", "Invalid `after` in query"},

@@ -72,12 +72,12 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 				}),
 			},
 			amount: 6000,
-			err:    errWrongCoinbaseTransaction,
+			err:    ErrWrongCoinbaseTransaction,
 		},
 		{
 			txs:    []*types.Tx{},
 			amount: 5000,
-			err:    errWrongCoinbaseTransaction,
+			err:    ErrWrongCoinbaseTransaction,
 		},
 	}
 
