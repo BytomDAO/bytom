@@ -23,8 +23,8 @@ func CgoAlgorithm() {
     // type conversion
     bhBytes := BH.Bytes()
     sdBytes := SEED.Bytes()
-    bhPtr := (*C.uchar)(unsafe.Pointer(&bhBytes[0]))
-    seedPtr := (*C.uchar)(unsafe.Pointer(&sdBytes[0]))
+    bhPtr := (*C.uint8_t)(unsafe.Pointer(&bhBytes[0]))
+    seedPtr := (*C.uint8_t)(unsafe.Pointer(&sdBytes[0]))
     
     // invoke c func
     resPtr := C.SimdTs(bhPtr, seedPtr)
