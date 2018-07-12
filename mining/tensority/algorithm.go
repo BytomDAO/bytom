@@ -11,7 +11,7 @@ import (
 const maxAIHashCached = 64
 
 var (
-	AIHash = NewCache() // AIHash is created for let different package share same cache
+	AIHash  = NewCache() // AIHash is created for let different package share same cache
 	UseSIMD = false
 )
 

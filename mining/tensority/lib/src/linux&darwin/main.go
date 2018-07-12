@@ -10,9 +10,9 @@ package main
 import "C"
 
 import (
-    "unsafe"
+	"unsafe"
 
-    "github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc"
 )
 
 var BH bc.Hash
@@ -20,15 +20,15 @@ var SEED bc.Hash
 var RES bc.Hash
 
 func CgoAlgorithm() {
-    // type conversion
-    bhBytes := BH.Bytes()
-    sdBytes := SEED.Bytes()
-    bhPtr := (*C.uint8_t)(unsafe.Pointer(&bhBytes[0]))
-    seedPtr := (*C.uint8_t)(unsafe.Pointer(&sdBytes[0]))
-    
-    // invoke c func
-    resPtr := C.SimdTs(bhPtr, seedPtr)
+	// type conversion
+	bhBytes := BH.Bytes()
+	sdBytes := SEED.Bytes()
+	bhPtr := (*C.uint8_t)(unsafe.Pointer(&bhBytes[0]))
+	seedPtr := (*C.uint8_t)(unsafe.Pointer(&sdBytes[0]))
 
-    // type conversion
-    RES = bc.NewHash(*(*[32]byte)(unsafe.Pointer(resPtr)))
+	// invoke c func
+	resPtr := C.SimdTs(bhPtr, seedPtr)
+
+	// type conversion
+	RES = bc.NewHash(*(*[32]byte)(unsafe.Pointer(resPtr)))
 }
