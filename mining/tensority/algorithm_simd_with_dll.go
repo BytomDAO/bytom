@@ -4,6 +4,7 @@ package tensority
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 
 	"github.com/bytom/protocol/bc"
