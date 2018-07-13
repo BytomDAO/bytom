@@ -19,10 +19,9 @@ else
 	UNAME_M := $(shell uname -m)
 	ifeq ($(UNAME_M),x86_64)
 		ARCH = amd64
-	else
-		ifneq ($(filter %86,$(UNAME_P)),)
-			ARCH = 386
-		endif
+	endif
+	ifneq ($(filter %86,$(UNAME_P)),)
+		ARCH = 386
 	endif
 endif
 
