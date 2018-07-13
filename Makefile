@@ -1,12 +1,14 @@
 ifndef GOOS
-UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Darwin)
-	GOOS := darwin
-else ifeq ($(UNAME_S),Linux)
-	GOOS := linux
-else
-$(error "$$GOOS is not defined. If you are using Windows, try to re-make using 'GOOS=windows make ...' ")
-endif
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Darwin)
+        GOOS := darwin
+    else
+        ifeq ($(UNAME_S),Linux)
+            GOOS := linux
+        else
+            $(error "$$GOOS is not defined. If you are using Windows, try to re-make using 'GOOS=windows make ...' ")
+        endif
+    endif
 endif
 
 PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v '/mining/tensority/lib/src/')

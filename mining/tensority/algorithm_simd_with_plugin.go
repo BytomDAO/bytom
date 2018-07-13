@@ -22,22 +22,22 @@ func simdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
 	}
 	bh_v_sym, err := p.Lookup("BH")
 	if err != nil {
-		log.Warnf("BH symbol lookup error, disable SIMD by default.")
+		log.Warn("BH symbol lookup error, disable SIMD by default.")
 		return legacyAlgorithm(bh, seed)
 	}
 	seed_v_sym, err := p.Lookup("SEED")
 	if err != nil {
-		log.Warnf("SEED symbol lookup error, disable SIMD by default.")
+		log.Warn("SEED symbol lookup error, disable SIMD by default.")
 		return legacyAlgorithm(bh, seed)
 	}
 	res_v_sym, err := p.Lookup("RES")
 	if err != nil {
-		log.Warnf("RES symbol lookup error, disable SIMD by default.")
+		log.Warn("RES symbol lookup error, disable SIMD by default.")
 		return legacyAlgorithm(bh, seed)
 	}
 	cgoAlgorithm_f_sym, err := p.Lookup("CgoAlgorithm")
 	if err != nil {
-		log.Warnf("CgoAlgorithm symbol lookup error, disable SIMD by default.")
+		log.Warn("CgoAlgorithm symbol lookup error, disable SIMD by default.")
 		return legacyAlgorithm(bh, seed)
 	}
 	*bh_v_sym.(*bc.Hash) = *bh
