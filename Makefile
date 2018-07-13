@@ -41,9 +41,9 @@ BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
 all: test target release-all
 
 simd_plugin:
-	@cd mining/tensority/lib/src/'linux&darwin'/ && make
-	cp mining/tensority/lib/src/'linux&darwin'/*.so cmd/bytomd/
-	cp mining/tensority/lib/src/'linux&darwin'/*.so cmd/miner/
+	@cd mining/tensority/lib/src/plugin/ && make
+	cp mining/tensority/lib/src/plugin/*.so cmd/bytomd/
+	cp mining/tensority/lib/src/plugin/*.so cmd/miner/
 
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
