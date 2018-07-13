@@ -19,7 +19,7 @@ func simdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
 
 func hasSimdLib() bool {
 	if _, err := os.Stat(dllPath); os.IsNotExist(err) {
-		log.Warnf("SIMD plugin (%v) doesn't exist, disable SIMD by default.", dllPath)
+		log.Warnf("SIMD lib (%v) doesn't exist, disable SIMD by default.", dllPath)
 		return false
 	} else {
 		return true
