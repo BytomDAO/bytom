@@ -30,10 +30,14 @@ CXXFLAGS = -std=c++11 -pthread -mavx2 -O3 -fopenmp -fPIC
 .PHONY: clean
 
 all: $(TARGET)_$(OS)_$(ARCH)
-	go build -buildmode=plugin -o simd_plugin_$(OS)_$(ARCH).so main.go
+	go build -buildmode=plugin -o simd_plugin_$(OS)_$(ARCH).so plugin.go
 
 $(TARGET)_$(OS)_$(ARCH): $(TARGET).cpp
 	$(CXX) -o $@.o -c $^ $(CXXFLAGS)
+
+test: all
+	cp simd_plugin_$(OS)_$(ARCH).so  ../../../
+	cd ../../../ && go test -v && go test -bench=. && rm simd_plugin_$(OS)_$(ARCH).so
 
 clean:
 	rm -f *.o *.so *.a
