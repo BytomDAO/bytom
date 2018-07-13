@@ -37,7 +37,7 @@ $(TARGET)_$(OS)_$(ARCH): $(TARGET).cpp
 
 test: all
 	cp simd_plugin_$(OS)_$(ARCH).so  ../../../
-	cd ../../../ && go test -v && go test -bench=. && rm simd_plugin_$(OS)_$(ARCH).so
+	cd ../../../ && go test -v && go test -bench=. && rm -f simd_plugin_$(OS)_$(ARCH).so
 
 clean:
 	rm -f *.o *.so *.a
