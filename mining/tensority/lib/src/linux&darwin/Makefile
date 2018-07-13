@@ -20,7 +20,7 @@ else
 	ifeq ($(UNAME_M),x86_64)
 		ARCH = amd64
 	endif
-	ifneq ($(filter %86,$(UNAME_P)),)
+	ifneq ($(filter %86,$(UNAME_M)),)
 		ARCH = 386
 	endif
 endif
