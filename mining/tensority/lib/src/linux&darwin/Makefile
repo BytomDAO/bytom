@@ -13,14 +13,16 @@ else
 		CXX = /usr/local/opt/llvm/bin/clang++
 	endif
 	UNAME_P := $(shell uname -p)
-	ifeq ($(UNAME_P),x86_64)
-		ARCH = amd64
-	endif
-	ifneq ($(filter %86,$(UNAME_P)),)
-		ARCH = 386
-	endif
 	ifneq ($(filter arm%,$(UNAME_P)),)
 		$(error "ARM is not supported")
+	endif
+	UNAME_M := $(shell uname -m)
+	ifeq ($(UNAME_M),x86_64)
+		ARCH = amd64
+	else
+		ifneq ($(filter %86,$(UNAME_P)),)
+			ARCH = 386
+		endif
 	endif
 endif
 
