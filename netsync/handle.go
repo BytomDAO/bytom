@@ -59,15 +59,15 @@ type SyncManager struct {
 //NewSyncManager create a sync manager
 func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
 	sw := p2p.NewSwitch(config)
-	peers := newPeerSet()
+	peers := newPeerSet(sw)
 	dropPeerCh := make(chan *string, maxQuitReq)
 	manager := &SyncManager{
 		sw:          sw,
 		txPool:      txPool,
 		chain:       chain,
 		privKey:     crypto.GenPrivKeyEd25519(),
-		fetcher:     NewFetcher(chain, sw, peers),
-		blockKeeper: newBlockKeeper(chain, sw, peers, dropPeerCh),
+		fetcher:     NewFetcher(chain, peers),
+		blockKeeper: newBlockKeeper(chain, peers, dropPeerCh),
 		peers:       peers,
 		newTxCh:     make(chan *types.Tx, maxTxChanSize),
 		newBlockCh:  newBlockCh,
@@ -197,18 +197,9 @@ func (sm *SyncManager) txBroadcastLoop() {
 	for {
 		select {
 		case newTx := <-sm.newTxCh:
-			peers, err := sm.peers.BroadcastTx(newTx)
-			if err != nil {
+			if err := sm.peers.broadcastTx(newTx); err != nil {
 				log.Errorf("Broadcast new tx error. %v", err)
 				return
-			}
-			for _, smPeer := range peers {
-				if smPeer == nil {
-					continue
-				}
-				swPeer := smPeer.getPeer()
-				log.Info("Tx broadcast error. Stop Peer.")
-				sm.sw.StopPeerGracefully(swPeer)
 			}
 		case <-sm.quitSync:
 			return
@@ -225,18 +216,9 @@ func (sm *SyncManager) minedBroadcastLoop() {
 				log.Errorf("Failed on mined broadcast loop get block %v", err)
 				return
 			}
-			peers, err := sm.peers.BroadcastMinedBlock(block)
-			if err != nil {
+			if err := sm.peers.broadcastMinedBlock(block); err != nil {
 				log.Errorf("Broadcast mine block error. %v", err)
 				return
-			}
-			for _, smPeer := range peers {
-				if smPeer == nil {
-					continue
-				}
-				swPeer := smPeer.getPeer()
-				log.Info("New mined block broadcast error. Stop Peer.")
-				sm.sw.StopPeerGracefully(swPeer)
 			}
 		case <-sm.quitSync:
 			return

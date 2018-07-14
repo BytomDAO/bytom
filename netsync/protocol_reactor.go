@@ -27,16 +27,9 @@ const (
 var (
 	//ErrProtocolHandshakeTimeout peers handshake timeout
 	ErrProtocolHandshakeTimeout = errors.New("Protocol handshake timeout")
-	ErrStatusRequest            = errors.New("Status request error")
-	ErrDiffGenesisHash          = errors.New("Different genesis hash")
+	errStatusRequest            = errors.New("Status request error")
+	errDiffGenesisHash          = errors.New("Different genesis hash")
 )
-
-// Response describes the response standard.
-type Response struct {
-	Status string      `json:"status,omitempty"`
-	Msg    string      `json:"msg,omitempty"`
-	Data   interface{} `json:"data,omitempty"`
-}
 
 type initalPeerStatus struct {
 	peerID      string
@@ -131,7 +124,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 		return errPeerDropped
 	}
 	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
-		return ErrStatusRequest
+		return errStatusRequest
 	}
 	retryTicker := time.Tick(handshakeRetryTicker)
 	handshakeWait := time.NewTimer(protocolHandshakeTimeout)
@@ -141,15 +134,10 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 			if status.peerID == peer.Key {
 				if strings.Compare(pr.genesisHash.String(), status.genesisHash.String()) != 0 {
 					log.Info("Remote peer genesis block hash:", status.genesisHash.String(), " local hash:", pr.genesisHash.String())
-					return ErrDiffGenesisHash
+					return errDiffGenesisHash
 				}
-				pr.peers.AddPeer(peer)
-				pr.peers.SetPeerStatus(status.peerID, status.height, status.hash)
-				prPeer, ok := pr.peers.Peer(peer.Key)
-				if !ok {
-					return errPeerDropped
-				}
-				pr.syncTransactions(prPeer)
+				pr.blockKeeper.peers.addPeer(peer, status.height, status.hash)
+				pr.syncTransactions(pr.blockKeeper.peers.getPeer(peer.Key))
 				pr.newPeerCh <- struct{}{}
 				return nil
 			}
@@ -158,7 +146,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 				return errPeerDropped
 			}
 			if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
-				return ErrStatusRequest
+				return errStatusRequest
 			}
 		case <-handshakeWait.C:
 			return ErrProtocolHandshakeTimeout
@@ -173,7 +161,7 @@ func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
 	default:
 		log.Warning("quitReqBlockCh is full")
 	}
-	pr.peers.RemovePeer(peer.Key)
+	pr.peers.removePeer(peer.Key)
 }
 
 // Receive implements Reactor by handling 4 types of messages (look below).
@@ -224,7 +212,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		}
 		pr.peerStatusCh <- peerStatus
 
-	case *TransactionNotifyMessage:
+	case *TransactionMessage:
 		log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Receive request")
 		tx, err := msg.GetTransaction()
 		if err != nil {
@@ -242,9 +230,14 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		}
 		// Mark the peer as owning the block and schedule it for import
 		hash := block.Hash()
-		pr.peers.MarkBlock(src.Key, &hash)
+		peer := pr.blockKeeper.peers.getPeer(src.Key)
+		if peer == nil {
+			return
+		}
+
+		peer.markBlock(&hash)
 		pr.fetcher.Enqueue(src.Key, block)
-		pr.peers.SetPeerStatus(src.Key, block.Height, &hash)
+		peer.setStatus(block.Height, &hash)
 
 	case *GetHeadersMessage:
 		log.WithFields(log.Fields{"peerID": src.Key, "msg": "Get Headers"}).Info("Receive request")
@@ -252,7 +245,11 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 
 	case *HeadersMessage:
 		log.WithFields(log.Fields{"peerID": src.Key, "msg": "Headers Message"}).Info("Response Message")
-		hmsg := &headersMsg{headers: msg.Headers, peerID: src.Key}
+		headers, err := msg.GetHeaders()
+		if err != nil {
+			return
+		}
+		hmsg := &headersMsg{headers: headers, peerID: src.Key}
 		pr.blockKeeper.headersProcessCh <- hmsg
 
 	case *GetBlocksMessage:
@@ -261,9 +258,9 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 
 	case *BlocksMessage:
 		log.WithFields(log.Fields{"peerID": src.Key, "msg": "Blocks Message"}).Info("Response Message")
-		peer, _ := pr.blockKeeper.peers.Peer(src.Key)
+		peer := pr.blockKeeper.peers.getPeer(src.Key)
 		if peer != nil {
-			peer.blocksProcessCh <- msg
+			pr.blockKeeper.blocksProcessCh <- msg
 		}
 
 	default:

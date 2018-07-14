@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
-	"github.com/bytom/p2p"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -24,28 +23,26 @@ var (
 // and scheduling them for retrieval.
 type Fetcher struct {
 	chain *core.Chain
-	sw    *p2p.Switch
 	peers *peerSet
 
 	// Various event channels
-	newMinedBlock chan *blockPending
+	newMinedBlock chan *blockMsg
 	quit          chan struct{}
 
 	// Block cache
-	queue  *prque.Prque              // Queue containing the import operations (block number sorted)
-	queued map[bc.Hash]*blockPending // Set of already queued blocks (to dedup imports)
+	queue  *prque.Prque          // Queue containing the import operations (block number sorted)
+	queued map[bc.Hash]*blockMsg // Set of already queued blocks (to dedup imports)
 }
 
 //NewFetcher New creates a block fetcher to retrieve blocks of the new mined.
-func NewFetcher(chain *core.Chain, sw *p2p.Switch, peers *peerSet) *Fetcher {
+func NewFetcher(chain *core.Chain, peers *peerSet) *Fetcher {
 	return &Fetcher{
 		chain:         chain,
-		sw:            sw,
 		peers:         peers,
-		newMinedBlock: make(chan *blockPending),
+		newMinedBlock: make(chan *blockMsg),
 		quit:          make(chan struct{}),
 		queue:         prque.New(),
-		queued:        make(map[bc.Hash]*blockPending),
+		queued:        make(map[bc.Hash]*blockMsg),
 	}
 }
 
@@ -63,7 +60,7 @@ func (f *Fetcher) Stop() {
 
 // Enqueue tries to fill gaps the the fetcher's future import queue.
 func (f *Fetcher) Enqueue(peer string, block *types.Block) error {
-	op := &blockPending{
+	op := &blockMsg{
 		peerID: peer,
 		block:  block,
 	}
@@ -82,7 +79,7 @@ func (f *Fetcher) loop() {
 		// Import any queued blocks that could potentially fit
 		height := f.chain.BestBlockHeight()
 		for !f.queue.Empty() {
-			op := f.queue.PopItem().(*blockPending)
+			op := f.queue.PopItem().(*blockMsg)
 			// If too high up the chain or phase, continue later
 			number := op.block.Height
 			if number > height+1 {
@@ -128,7 +125,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 	}
 	// Schedule the block for future importing
 	if _, ok := f.queued[hash]; !ok {
-		op := &blockPending{
+		op := &blockMsg{
 			peerID: peer,
 			block:  block,
 		}
@@ -147,31 +144,21 @@ func (f *Fetcher) insert(peerID string, block *types.Block) {
 	// Run the actual import and log any issues
 	if _, err := f.chain.ProcessBlock(block); err != nil {
 		log.Info("Propagated block import failed", " from peer: ", peerID, " height: ", block.Height, "err: ", err)
-		fPeer, ok := f.peers.Peer(peerID)
-		if !ok {
+		fPeer := f.peers.getPeer(peerID)
+		if fPeer == nil {
 			return
 		}
-		swPeer := fPeer.getPeer()
 		if ban := fPeer.addBanScore(20, 0, "block process error"); ban {
-			f.sw.AddBannedPeer(swPeer)
-			f.sw.StopPeerGracefully(swPeer)
+			f.peers.AddBannedPeer(peerID)
+			f.peers.StopPeerGracefully(peerID)
 		}
 		return
 	}
 	// If import succeeded, broadcast the block
 	log.Info("success process a block from new mined blocks cache. block height: ", block.Height)
-	peers, err := f.peers.BroadcastMinedBlock(block)
-	if err != nil {
+	if err := f.peers.broadcastMinedBlock(block); err != nil {
 		log.Errorf("Broadcast mine block error. %v", err)
 		return
-	}
-	for _, fPeer := range peers {
-		if fPeer == nil {
-			continue
-		}
-		swPeer := fPeer.getPeer()
-		log.Info("Fetcher broadcast block error. Stop peer.")
-		f.sw.StopPeerGracefully(swPeer)
 	}
 }
 

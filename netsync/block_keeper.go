@@ -5,13 +5,12 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-wire"
 
 	"bytes"
+
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/tensority"
-	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -48,31 +47,41 @@ var (
 	errEmptyHeaders     = errors.New("headers is empty")
 )
 
+type blockMsg struct {
+	block  *types.Block
+	peerID string
+}
+
+type txMsg struct {
+	tx     *types.Tx
+	peerID string
+}
+
 //TODO: add retry mechanism
 type blockKeeper struct {
 	chain *protocol.Chain
-	sw    *p2p.Switch
 	peers *peerSet
 
-	pendingProcessCh chan *blockPending
+	pendingProcessCh chan *blockMsg
+	blocksProcessCh  chan *BlocksMessage
 	headersProcessCh chan *headersMsg
 
-	txsProcessCh   chan *txsNotify
+	txsProcessCh   chan *txMsg
 	quitReqBlockCh chan *string
 	headerList     *list.List
 	startHeader    *list.Element
 }
 
-func newBlockKeeper(chain *protocol.Chain, sw *p2p.Switch, peers *peerSet, quitReqBlockCh chan *string) *blockKeeper {
+func newBlockKeeper(chain *protocol.Chain, peers *peerSet, quitReqBlockCh chan *string) *blockKeeper {
 	best := chain.BestBlockHeader()
 	bestHash := best.Hash()
 	bk := &blockKeeper{
 		chain:            chain,
-		sw:               sw,
 		peers:            peers,
-		pendingProcessCh: make(chan *blockPending, maxBlocksPending),
-		txsProcessCh:     make(chan *txsNotify, maxtxsPending),
+		pendingProcessCh: make(chan *blockMsg, maxBlocksPending),
+		txsProcessCh:     make(chan *txMsg, maxtxsPending),
 		headersProcessCh: make(chan *headersMsg, maxHeadersPending),
+		blocksProcessCh:  make(chan *BlocksMessage, 0),
 		quitReqBlockCh:   quitReqBlockCh,
 		headerList:       list.New(),
 	}
@@ -97,16 +106,16 @@ func (bk *blockKeeper) resetHeaderState(bestHash bc.Hash, bestHeight uint64) {
 }
 
 func (bk *blockKeeper) AddBlock(block *types.Block, peerID string) {
-	bk.pendingProcessCh <- &blockPending{block: block, peerID: peerID}
+	bk.pendingProcessCh <- &blockMsg{block: block, peerID: peerID}
 }
 
 func (bk *blockKeeper) AddTx(tx *types.Tx, peerID string) {
-	bk.txsProcessCh <- &txsNotify{tx: tx, peerID: peerID}
+	bk.txsProcessCh <- &txMsg{tx: tx, peerID: peerID}
 }
 
 func (bk *blockKeeper) IsCaughtUp() bool {
-	_, height := bk.peers.BestPeer()
-	return bk.chain.BestBlockHeight() < height
+	peer := bk.peers.BestPeer(consensus.SFFullNode)
+	return peer == nil || bk.chain.BestBlockHeight() >= peer.Height()
 }
 
 func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) error {
@@ -115,15 +124,14 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 	orphanNum := uint64(0)
 	reqNum := uint64(0)
 	isOrphan := false
-	bkPeer, ok := bk.peers.Peer(peerID)
-	if !ok {
+	bkPeer := bk.peers.getPeer(peerID)
+	if bkPeer == nil {
 		log.Info("peer is not registered")
 		return errPeerNotRegister
 	}
-	swPeer := bkPeer.getPeer()
 	for 0 < num && num <= maxPeerHeight {
 		if nextCheckPoint := bk.nextCheckpoint(); nextCheckPoint != nil {
-			if _, bestFastSyncHeight := bk.peers.BestFastSyncPeer(); bestFastSyncHeight > nextCheckPoint.Height {
+			if fastPeer := bk.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode); fastPeer != nil && fastPeer.Height() > nextCheckPoint.Height {
 				log.Info("Switch to fast sync mode")
 				return nil
 			}
@@ -141,7 +149,7 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 				break
 			}
 			log.Info("Block keeper request block error. Stop peer.")
-			bk.sw.StopPeerGracefully(swPeer)
+			bk.peers.StopPeerGracefully(peerID)
 			break
 		}
 		isOrphan, err = bk.chain.ProcessBlock(block)
@@ -151,8 +159,8 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 				break
 			}
 			if ban := bkPeer.addBanScore(20, 0, "block process error"); ban {
-				bk.sw.AddBannedPeer(swPeer)
-				bk.sw.StopPeerGracefully(swPeer)
+				bk.peers.AddBannedPeer(peerID)
+				bk.peers.StopPeerGracefully(peerID)
 			}
 			log.WithField("hash:", block.Hash()).Errorf("blockKeeper fail process block %v ", err)
 			break
@@ -174,32 +182,25 @@ func (bk *blockKeeper) BlockRequestWorker(peerID string, maxPeerHeight uint64) e
 			return errGetBlockByHash
 		}
 
-		peers, err := bk.peers.BroadcastNewStatus(block)
-		if err != nil {
+		if err := bk.peers.broadcastMinedBlock(block); err != nil {
 			log.Errorf("Failed on broadcast new status block %v", err)
 			return errBroadcastStatus
-		}
-		for _, peer := range peers {
-			if peer == nil {
-				return errPeerNotRegister
-			}
-			swPeer := peer.getPeer()
-			log.Info("Block keeper broadcast block error. Stop peer.")
-			bk.sw.StopPeerGracefully(swPeer)
 		}
 	}
 	return nil
 }
 
-func (bk *blockKeeper) HeadersRequest(peerID string, locator []*bc.Hash) ([]types.BlockHeader, error) {
+func (bk *blockKeeper) HeadersRequest(peerID string, locator []*bc.Hash) ([]*types.BlockHeader, error) {
 	stopHash := bk.nextCheckpoint().Hash
-	if err := bk.getHeaders(peerID, locator, &stopHash); err != nil {
-		log.Info("getHeaders err")
-		return nil, errReqHeaders
+
+	bkPeer := bk.peers.getPeer(peerID)
+	if bkPeer == nil {
+		return nil, errPeerDropped
 	}
+	bkPeer.getHeaders(locator, &stopHash)
 	retryTicker := time.Tick(requestRetryTicker)
 	syncWait := time.NewTimer(syncTimeout)
-	var headers []types.BlockHeader
+	var headers []*types.BlockHeader
 
 	for {
 		select {
@@ -212,9 +213,7 @@ func (bk *blockKeeper) HeadersRequest(peerID string, locator []*bc.Hash) ([]type
 
 			return headers, nil
 		case <-retryTicker:
-			if err := bk.getHeaders(peerID, locator, &stopHash); err != nil {
-				return nil, errReqHeaders
-			}
+			bkPeer.getHeaders(locator, &stopHash)
 		case <-syncWait.C:
 			log.Warning("Request block timeout")
 			return nil, errGetBlockTimeout
@@ -235,7 +234,7 @@ func (bk *blockKeeper) BlockFastSyncWorker(peerID string, nextCheckPoint *consen
 	if (bk.startHeader != nil && (bk.startHeader.Prev().Value.(*headerNode).hash.String() != currentHash.String())) || (lastHead == nil || (lastHead != nil && (lastHead.Value.(*headerNode).hash.String() != nextCheckPoint.Hash.String()))) {
 		bk.resetHeaderState(currentHash, current.Height)
 		//request blocks header
-		totalHeaders := make([]types.BlockHeader, 0)
+		totalHeaders := make([]*types.BlockHeader, 0)
 		locator := bk.blockLocator(nil)
 		for {
 			headers, err := bk.HeadersRequest(peerID, locator)
@@ -299,48 +298,24 @@ func (bk *blockKeeper) BlockFastSyncWorker(peerID string, nextCheckPoint *consen
 			return errGetBlockByHash
 		}
 
-		peers, err := bk.peers.BroadcastNewStatus(block)
-		if err != nil {
+		if bk.peers.broadcastMinedBlock(block); err != nil {
 			log.Errorf("Failed on broadcast new status block %v", err)
 			return errBroadcastStatus
-		}
-		for _, peer := range peers {
-			if peer == nil {
-				return errPeerNotRegister
-			}
-			swPeer := peer.getPeer()
-			log.Info("Block keeper broadcast block error. Stop peer.")
-			bk.sw.StopPeerGracefully(swPeer)
 		}
 	}
 
 	return nil
 }
 
-func blocksCollect(headerList *list.List, beginHeight uint64, num int, blocks []blockMsg, totalBlocks *[]*types.Block) (bool, error) {
+func blocksCollect(headerList *list.List, beginHeight uint64, num int, blocks []*types.Block, totalBlocks *[]*types.Block) (bool, error) {
 	if len(blocks) > num {
 		return false, errors.New("blocks length error")
 	}
 
 	for i := 0; i < len(blocks); i++ {
 		for e := headerList.Front(); e != nil; e = e.Next() {
-			if bytes.Compare(blocks[i].Hash[:], e.Value.(*headerNode).hash.Bytes()) == 0 {
-				block := &types.Block{
-					BlockHeader:  types.BlockHeader{},
-					Transactions: []*types.Tx{},
-				}
-				if err := block.UnmarshalText(blocks[i].RawBlock); err != nil {
-					return false, errors.New("unmarshal block error")
-				}
-				bcBlock := types.MapBlock(block)
-				txRoot, err := bc.TxMerkleRoot(bcBlock.Transactions)
-				if err != nil {
-					return false, errors.New("computing transaction merkle root error")
-				}
-				if block.TransactionsMerkleRoot != txRoot {
-					return false, errors.New("transaction merkle root mismatch")
-				}
-				(*totalBlocks)[e.Value.(*headerNode).height-beginHeight] = block
+			if bytes.Compare(blocks[i].Hash().Bytes(), e.Value.(*headerNode).hash.Bytes()) == 0 {
+				(*totalBlocks)[e.Value.(*headerNode).height-beginHeight] = blocks[i]
 				headerList.Remove(e)
 				break
 			}
@@ -355,7 +330,7 @@ func blocksCollect(headerList *list.List, beginHeight uint64, num int, blocks []
 }
 
 func (bk *blockKeeper) BlocksRequestWorker(peerID string, headerList *list.List, num int) ([]*types.Block, error) {
-	peer, _ := bk.peers.Peer(peerID)
+	peer := bk.peers.getPeer(peerID)
 	if peer == nil {
 		return nil, errPeerDropped
 	}
@@ -367,17 +342,15 @@ func (bk *blockKeeper) BlocksRequestWorker(peerID string, headerList *list.List,
 	}
 	beginHash := node.hash
 	beginHeight := node.height
-	if err := bk.peers.requestBlocksByHash(peerID, beginHash, num); err != nil {
-		return nil, err
-	}
+	peer.getBlocksByHash(beginHash, num)
 	retryTicker := time.Tick(requestRetryTicker)
 	syncWait := time.NewTimer(syncTimeout)
 	totalBlocks := make([]*types.Block, num)
 
 	for {
 		select {
-		case pendingResponse := <-peer.blocksProcessCh:
-			blocks := pendingResponse.Blocks
+		case pendingResponse := <-bk.blocksProcessCh:
+			blocks, _ := pendingResponse.GetBlocks()
 			ok, err := blocksCollect(headerList, beginHeight, num, blocks, &totalBlocks)
 			if err != nil {
 				return nil, err
@@ -386,9 +359,7 @@ func (bk *blockKeeper) BlocksRequestWorker(peerID string, headerList *list.List,
 				return totalBlocks, nil
 			}
 		case <-retryTicker:
-			if err := bk.peers.requestBlocksByHash(peerID, beginHash, num); err != nil {
-				return nil, err
-			}
+			peer.getBlocksByHash(beginHash, num)
 		case <-syncWait.C:
 			log.Warning("Request blocks timeout")
 			return nil, errGetBlocksTimeout
@@ -399,10 +370,6 @@ func (bk *blockKeeper) BlocksRequestWorker(peerID string, headerList *list.List,
 			}
 		}
 	}
-}
-
-func (bk *blockKeeper) blockRequest(peerID string, height uint64) error {
-	return bk.peers.requestBlockByHeight(peerID, height)
 }
 
 func (bk *blockKeeper) nextCheckpoint() *consensus.Checkpoint {
@@ -424,10 +391,12 @@ func (bk *blockKeeper) nextCheckpoint() *consensus.Checkpoint {
 
 func (bk *blockKeeper) BlockRequest(peerID string, height uint64) (*types.Block, error) {
 	var block *types.Block
-
-	if err := bk.blockRequest(peerID, height); err != nil {
-		return nil, errReqBlock
+	peer := bk.peers.getPeer(peerID)
+	if peer == nil {
+		return nil, errPeerDropped
 	}
+
+	peer.getBlockByHeight(height)
 	retryTicker := time.Tick(requestRetryTicker)
 	syncWait := time.NewTimer(syncTimeout)
 
@@ -445,9 +414,7 @@ func (bk *blockKeeper) BlockRequest(peerID string, height uint64) (*types.Block,
 			}
 			return block, nil
 		case <-retryTicker:
-			if err := bk.blockRequest(peerID, height); err != nil {
-				return nil, errReqBlock
-			}
+			peer.getBlockByHeight(height)
 		case <-syncWait.C:
 			log.Warning("Request block timeout")
 			return nil, errGetBlockTimeout
@@ -463,22 +430,20 @@ func (bk *blockKeeper) BlockRequest(peerID string, height uint64) (*types.Block,
 func (bk *blockKeeper) txsProcessWorker() {
 	for txsResponse := range bk.txsProcessCh {
 		tx := txsResponse.tx
-		log.Info("Receive new tx from remote peer. TxID:", tx.ID.String())
-		bk.peers.MarkTransaction(txsResponse.peerID, &tx.ID)
+
+		bkPeer := bk.peers.getPeer(txsResponse.peerID)
+		if bkPeer == nil {
+			continue
+		}
+
+		bkPeer.markTransaction(&tx.ID)
 		if isOrphan, err := bk.chain.ValidateTx(tx); err != nil && isOrphan == false {
-			if bkPeer, ok := bk.peers.Peer(txsResponse.peerID); ok {
-				swPeer := bkPeer.getPeer()
-				if ban := bkPeer.addBanScore(10, 0, "tx error"); ban {
-					bk.sw.AddBannedPeer(swPeer)
-					bk.sw.StopPeerGracefully(swPeer)
-				}
+			if ban := bkPeer.addBanScore(10, 0, "tx error"); ban {
+				bk.peers.AddBannedPeer(txsResponse.peerID)
+				bk.peers.StopPeerGracefully(txsResponse.peerID)
 			}
 		}
 	}
-}
-
-func (bk *blockKeeper) headersSend(peerID string, headers []types.BlockHeader) error {
-	return bk.peers.SendHeaders(peerID, headers)
 }
 
 // OnGetHeaders is invoked when a peer receives a headersMessage message.
@@ -493,22 +458,16 @@ func (bk *blockKeeper) GetHeadersWorker(peerID string, msg *GetHeadersMessage) {
 	// over with the genesis block if unknown block locators are provided.
 	//
 	// This mirrors the behavior in the reference implementation.
-	for i := range msg.BlockLocatorHashes {
-		log.Info("num:", i, "BlockLocatorHashes:", &msg.BlockLocatorHashes[i])
-	}
-	log.Info("HashStop:", msg.HashStop)
-	locatorHashes, err := msg.GetBlockLocatorHashes()
-	if err != nil {
-		log.Info("GetBlockLocatorHashes:", err)
-		return
-	}
+	locatorHashes := msg.GetBlockLocator()
 	stopHash := msg.GetStopHash()
 	headers := bk.locateHeaders(locatorHashes, stopHash, MaxBlockHeadersPerMsg)
 	if len(headers) == 0 {
 		log.Info("Nothing to send.")
 		return
 	}
-	bk.headersSend(peerID, headers)
+
+	peer := bk.peers.getPeer(peerID)
+	peer.sendHeaders(headers)
 }
 
 // locateHeaders returns the headers of the blocks after the first known block
@@ -518,7 +477,7 @@ func (bk *blockKeeper) GetHeadersWorker(peerID string, msg *GetHeadersMessage) {
 // See the comment on the exported function for more details on special cases.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (bk *blockKeeper) locateHeaders(locator *[]bc.Hash, hashStop *bc.Hash, maxHeaders uint32) []types.BlockHeader {
+func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, hashStop *bc.Hash, maxHeaders uint32) []*types.BlockHeader {
 	// Find the node after the first known block in the locator and the
 	// total number of nodes after it needed while respecting the stop hash
 	// and max entries.
@@ -528,9 +487,9 @@ func (bk *blockKeeper) locateHeaders(locator *[]bc.Hash, hashStop *bc.Hash, maxH
 	}
 	log.Info("start block:", node.Height, " total:", total)
 	// Populate and return the found headers.
-	headers := make([]types.BlockHeader, 0, total)
+	headers := make([]*types.BlockHeader, 0, total)
 	for i := uint32(0); i < total; i++ {
-		headers = append(headers, node.BlockHeader)
+		headers = append(headers, &node.BlockHeader)
 		node, _ = bk.chain.GetBlockByHeight(node.Height + 1) //Next(node)
 	}
 	return headers
@@ -552,7 +511,7 @@ func (bk *blockKeeper) locateHeaders(locator *[]bc.Hash, hashStop *bc.Hash, maxH
 // functions.
 //
 // This function MUST be called with the chain state lock held (for reads).
-func (bk *blockKeeper) locateInventory(locator *[]bc.Hash, hashStop *bc.Hash, maxEntries uint32) (*types.Block, uint32) {
+func (bk *blockKeeper) locateInventory(locator []*bc.Hash, hashStop *bc.Hash, maxEntries uint32) (*types.Block, uint32) {
 	// There are no block locators so a specific block is being requested
 	// as identified by the stop hash.
 	//stopNode := b.index.LookupNode(hashStop)
@@ -563,7 +522,7 @@ func (bk *blockKeeper) locateInventory(locator *[]bc.Hash, hashStop *bc.Hash, ma
 	if err != nil {
 		log.Info("Can not find stop node!")
 	}
-	if len(*locator) == 0 {
+	if len(locator) == 0 {
 		if stopNode == nil {
 			// No blocks with the stop hash were found so there is
 			// nothing to do.
@@ -576,7 +535,7 @@ func (bk *blockKeeper) locateInventory(locator *[]bc.Hash, hashStop *bc.Hash, ma
 	// case none of the hashes in the locator are in the main chain, fall
 	// back to the genesis block.
 	startNode, err := bk.chain.GetBlockByHeight(0)
-	for _, hash := range *locator {
+	for _, hash := range locator {
 		b32 := [32]byte{}
 		copy(b32[:], hash.Bytes())
 		bchash := bc.NewHash(b32)
@@ -610,20 +569,11 @@ func (bk *blockKeeper) locateInventory(locator *[]bc.Hash, hashStop *bc.Hash, ma
 	return startNode, total
 }
 
-func (bk *blockKeeper) getHeaders(peerID string, locator []*bc.Hash, stopHash *bc.Hash) error {
-	bkPeer, ok := bk.peers.Peer(peerID)
-	if !ok {
-		log.Info("peer is not registered")
-		return errPeerNotRegister
-	}
-	return bkPeer.PushGetHeadersMsg(locator, stopHash)
-}
-
 // handleHeadersMsg handles block header messages from all peers.  Headers are
 // requested when performing a headers-first sync.
-func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHeader) (error, bool) {
-	peer, exists := bk.peers.Peer(peerID)
-	if !exists {
+func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []*types.BlockHeader) (error, bool) {
+	peer := bk.peers.getPeer(peerID)
+	if peer == nil {
 		log.Warnf("Received headers message from unknown peer %s", peer)
 		return errPeerDropped, false
 	}
@@ -643,7 +593,7 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 		prevBlockHeader := bk.headerList.Back()
 		if prevBlockHeader == nil {
 			log.Warnf("Header list does not contain a previous" + "element as expected -- disconnecting peer")
-			peer.swPeer.CloseConn()
+			peer.CloseConn()
 			return errPeerMisbehave, receivedCheckpoint
 		}
 
@@ -659,8 +609,8 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 				bk.startHeader = e
 			}
 		} else {
-			log.Warnf("Received block header that does not "+"properly connect to the chain from peer %s "+"-- disconnecting", peer.id)
-			peer.swPeer.CloseConn()
+			log.Warnf("Received block header that does not "+"properly connect to the chain from peer %s "+"-- disconnecting", peerID)
+			peer.CloseConn()
 			return errPeerMisbehave, receivedCheckpoint
 		}
 
@@ -670,8 +620,8 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 				receivedCheckpoint = true
 				log.Infof("Verified downloaded block "+"header against checkpoint at height "+"%d/hash %x", node.height, node.hash.Bytes())
 			} else {
-				log.Warnf("Block header at height %d/hash "+"%x from peer %s does NOT match "+"expected checkpoint hash of %s -- "+"disconnecting", node.height, node.hash.Bytes(), peer.id, bk.nextCheckpoint().Hash.String())
-				peer.swPeer.CloseConn()
+				log.Warnf("Block header at height %d/hash "+"%x from peer %s does NOT match "+"expected checkpoint hash of %s -- "+"disconnecting", node.height, node.hash.Bytes(), peerID, bk.nextCheckpoint().Hash.String())
+				peer.CloseConn()
 				return errPeerMisbehave, receivedCheckpoint
 			}
 			break
@@ -696,7 +646,7 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []types.BlockHead
 // headersMsg packages a bitcoin headers message and the peer it came from
 // together so the block handler has access to that information.
 type headersMsg struct {
-	headers []types.BlockHeader
+	headers []*types.BlockHeader
 	peerID  string
 }
 
@@ -801,8 +751,8 @@ func (bk *blockKeeper) blockLocator(node *types.BlockHeader) []*bc.Hash {
 // handleHeadersMsg handles block header messages from all peers.  Headers are
 // requested when performing a headers-first sync.
 func (bk *blockKeeper) GetBlocksWorker(peerID string, bmsg *GetBlocksMessage) {
-	peer, exists := bk.peers.Peer(peerID) //sm.Peers().Peer(peer.id)
-	if !exists {
+	peer := bk.peers.getPeer(peerID) //sm.Peers().Peer(peer.id)
+	if peer == nil {
 		log.Warnf("Received blocks message from unknown peer %s", peer)
 		return
 	}
@@ -813,24 +763,12 @@ func (bk *blockKeeper) GetBlocksWorker(peerID string, bmsg *GetBlocksMessage) {
 		return
 	}
 
-	msg, _ := NewBlocksMessage()
+	blocks := []*types.Block{}
 	for height := beginBlock.Height; height < beginBlock.Height+uint64(bmsg.Num); height++ {
 		block, _ := bk.chain.GetBlockByHeight(height)
-		hash := block.Hash().Byte32()
-		rawBlock, _ := block.MarshalText()
-		blockMsg := blockMsg{Hash: hash, RawBlock: rawBlock}
-		msg.Blocks = append(msg.Blocks, blockMsg)
-		binmsg := wire.BinaryBytes(msg)
-		if len(binmsg) > MaxMsgPackageSize {
-			bk.blocksSend(peerID, msg)
-			msg, _ = NewBlocksMessage()
-		}
+		blocks = append(blocks, block)
 	}
-	if len(msg.Blocks) != 0 {
-		bk.blocksSend(peerID, msg)
+	if len(blocks) != 0 {
+		peer.sendBlocks(blocks)
 	}
-}
-
-func (bk *blockKeeper) blocksSend(peerID string, msg *BlocksMessage) error {
-	return bk.peers.SendBlocks(peerID, msg)
 }

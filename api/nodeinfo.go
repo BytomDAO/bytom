@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/bytom/consensus"
 	"github.com/bytom/version"
 )
 
@@ -27,7 +28,9 @@ func (a *API) GetNodeInfo() *NetInfo {
 		NetWorkID:    a.sync.NodeInfo().Network,
 		Version:      version.Version,
 	}
-	_, info.HighestBlock = a.sync.Peers().BestPeer()
+	if peer := a.sync.Peers().BestPeer(consensus.SFFullNode); peer != nil {
+		info.HighestBlock = peer.Height()
+	}
 	if info.CurrentBlock > info.HighestBlock {
 		info.HighestBlock = info.CurrentBlock
 	}

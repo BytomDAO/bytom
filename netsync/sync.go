@@ -24,6 +24,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/common"
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -74,7 +75,7 @@ func (sm *SyncManager) syncer() {
 
 // synchronise tries to sync up our local block chain with a remote peer.
 func (sm *SyncManager) synchronise() {
-	log.Debug("bk peer num:", sm.blockKeeper.peers.Len(), " sw peer num:", sm.sw.Peers().Size(), " ", sm.sw.Peers().List())
+	log.Debug("bk peer num:", sm.blockKeeper.peers.len(), " sw peer num:", sm.sw.Peers().Size(), " ", sm.sw.Peers().List())
 	// Make sure only one goroutine is ever allowed past this point at once
 	if !atomic.CompareAndSwapInt32(&sm.synchronising, 0, 1) {
 		log.Info("Synchronising ...")
@@ -85,32 +86,33 @@ func (sm *SyncManager) synchronise() {
 		<-sm.dropPeerCh
 	}
 
-	peer, bestHeight := sm.peers.BestPeer()
+	peer := sm.peers.BestPeer(consensus.SFFullNode)
 	if peer == nil {
 		return
 	}
 
-	if ok := sm.Switch().Peers().Has(peer.Key); !ok {
+	if ok := sm.Switch().Peers().Has(peer.ID()); !ok {
 		log.Info("Peer disconnected")
-		sm.sw.StopPeerGracefully(peer)
+		sm.sw.StopPeerGracefully(peer.ID())
 		return
 	}
+	bestHeight := peer.Height()
 	for bestHeight > sm.chain.BestBlockHeight() {
 		if nextCheckPoint := sm.blockKeeper.nextCheckpoint(); nextCheckPoint != nil {
-			if fastSyncPeer, bestFastSyncHeight := sm.peers.BestFastSyncPeer(); bestFastSyncHeight > nextCheckPoint.Height {
-				log.Info("fast sync peer:", peer.Addr(), " height:", bestHeight)
-				if err := sm.blockKeeper.BlockFastSyncWorker(fastSyncPeer.Key, nextCheckPoint); err != nil {
+			if fastPeer := sm.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode); fastPeer != nil && fastPeer.height > nextCheckPoint.Height {
+				log.Info("fast sync peer:", peer, " height:", bestHeight)
+				if err := sm.blockKeeper.BlockFastSyncWorker(fastPeer.ID(), nextCheckPoint); err != nil {
 					log.Info("fast sync err:", err)
 				}
-				if peer, bestHeight = sm.peers.BestPeer(); peer == nil {
+				if peer = sm.peers.BestPeer(consensus.SFFullNode); peer == nil {
 					break
 				}
 				continue
 			}
 		}
-		log.Info("normal sync peer:", peer.Addr(), " height:", bestHeight)
-		sm.blockKeeper.BlockRequestWorker(peer.Key, bestHeight)
-		if peer, bestHeight = sm.peers.BestPeer(); peer == nil {
+		log.Info("normal sync peer:", peer, " height:", bestHeight)
+		sm.blockKeeper.BlockRequestWorker(peer.ID(), bestHeight)
+		if peer = sm.peers.BestPeer(consensus.SFFullNode); peer == nil {
 			break
 		}
 	}
@@ -141,12 +143,12 @@ func (sm *SyncManager) txsyncLoop() {
 		// Remove the transactions that will be sent.
 		s.txs = s.txs[:copy(s.txs, s.txs[len(pack.txs):])]
 		if len(s.txs) == 0 {
-			delete(pending, s.p.swPeer.Key)
+			delete(pending, s.p.ID())
 		}
 		// Send the pack in the background.
 		log.Info("Sending batch of transactions. ", "count:", len(pack.txs), " bytes:", size)
 		sending = true
-		go func() { done <- pack.p.SendTransactions(pack.txs) }()
+		go func() { done <- pack.p.sendTransactions(pack.txs) }()
 	}
 
 	// pick chooses the next pending sync.
@@ -166,7 +168,7 @@ func (sm *SyncManager) txsyncLoop() {
 	for {
 		select {
 		case s := <-sm.txSyncCh:
-			pending[s.p.swPeer.Key] = s
+			pending[s.p.ID()] = s
 			if !sending {
 				send(s)
 			}
@@ -175,7 +177,7 @@ func (sm *SyncManager) txsyncLoop() {
 			// Stop tracking peers that cause send failures.
 			if err != nil {
 				log.Info("Transaction send failed", "err", err)
-				delete(pending, pack.p.swPeer.Key)
+				delete(pending, pack.p.ID())
 			}
 			// Schedule the next send.
 			if s := pick(); s != nil {
