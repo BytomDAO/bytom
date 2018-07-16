@@ -2,8 +2,6 @@
 
 package tensority
 
-import "C"
-
 import (
 	"fmt"
 	"os"
@@ -15,19 +13,20 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var dllPath = fmt.Sprintf("simd_%v_%v.dll", runtime.GOOS, runtime.GOARCH)
+var dllPath = fmt.Sprintf("simd_windows_%v.dll", runtime.GOARCH)
 
 func simdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
 	bhBytes := bh.Bytes()
 	sdBytes := seed.Bytes()
-	bhPtr := (*C.uint8_t)(unsafe.Pointer(&bhBytes[0]))
-	seedPtr := (*C.uint8_t)(unsafe.Pointer(&sdBytes[0]))
+	bhPtr := uintptr(unsafe.Pointer(&bhBytes[0]))
+	seedPtr := uintptr(unsafe.Pointer(&sdBytes[0]))
 
 	var mod = syscall.NewLazyDLL(dllPath)
 	var proc = mod.NewProc("SimdTs")
 	resPtr, _, _ := proc.Call(bhPtr, seedPtr)
 
-	return bc.NewHash(*(*[32]byte)(unsafe.Pointer(resPtr)))
+	res := bc.NewHash(*(*[32]byte)(unsafe.Pointer(resPtr)))
+	return &res
 }
 
 func hasSimdLib() bool {
