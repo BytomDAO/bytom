@@ -9,12 +9,6 @@ import (
 
 const maxAIHashCached = 64
 
-func algorithm(hash, seed *bc.Hash) *bc.Hash {
-	cache := calcSeedCache(seed.Bytes())
-	data := mulMatrix(hash.Bytes(), cache)
-	return hashMatrix(data)
-}
-
 func calcCacheKey(hash, seed *bc.Hash) *bc.Hash {
 	var b32 [32]byte
 	sha3pool.Sum256(b32[:], append(hash.Bytes(), seed.Bytes()...))
