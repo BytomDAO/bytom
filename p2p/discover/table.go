@@ -211,7 +211,7 @@ func (tab *Table) add(n *Node) (contested *Node) {
 	default:
 		// b has no space left, add to replacement cache
 		// and revalidate the last entry.
-		// TODO: drop previous node
+		tab.deleteFromReplacement(b, n)
 		b.replacements = append(b.replacements, n)
 		if len(b.replacements) > bucketSize {
 			copy(b.replacements, b.replacements[1:])
@@ -245,6 +245,16 @@ outer:
 	}
 }
 
+func (tab *Table) deleteFromReplacement(bucket *bucket, node *Node) {
+	for i := 0; i < len(bucket.replacements); {
+		if bucket.replacements[i].ID == node.ID {
+			bucket.replacements = append(bucket.replacements[:i], bucket.replacements[i+1:]...)
+		} else {
+			i++
+		}
+	}
+}
+
 // delete removes an entry from the node table (used to evacuate
 // failed/non-bonded discovery peers).
 func (tab *Table) delete(node *Node) {
@@ -257,6 +267,8 @@ func (tab *Table) delete(node *Node) {
 			return
 		}
 	}
+
+	tab.deleteFromReplacement(bucket, node)
 }
 
 func (tab *Table) deleteReplace(node *Node) {
@@ -270,6 +282,8 @@ func (tab *Table) deleteReplace(node *Node) {
 			i++
 		}
 	}
+
+	tab.deleteFromReplacement(b, node)
 	// refill from replacement cache
 	// TODO: maybe use random index
 	if len(b.entries) < bucketSize && len(b.replacements) > 0 {
