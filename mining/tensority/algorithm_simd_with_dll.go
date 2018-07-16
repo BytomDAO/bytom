@@ -2,6 +2,8 @@
 
 package tensority
 
+import "C"
+
 import (
 	"fmt"
 	"os"
@@ -16,8 +18,8 @@ import (
 var dllPath = fmt.Sprintf("simd_%v_%v.dll", runtime.GOOS, runtime.GOARCH)
 
 func simdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
-	bhBytes := BH.Bytes()
-	sdBytes := SEED.Bytes()
+	bhBytes := bh.Bytes()
+	sdBytes := seed.Bytes()
 	bhPtr := (*C.uint8_t)(unsafe.Pointer(&bhBytes[0]))
 	seedPtr := (*C.uint8_t)(unsafe.Pointer(&sdBytes[0]))
 
