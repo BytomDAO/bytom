@@ -10,20 +10,19 @@ package tensority
 import "C"
 
 import (
-    "unsafe"
+	"unsafe"
 
-    "github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc"
 )
 
-
 func algorithm(bh, seed *bc.Hash) *bc.Hash {
-    bhBytes := bh.Bytes()
-    sdBytes := seed.Bytes()
-    bhPtr := (*C.uint8_t)(unsafe.Pointer(&bhBytes[0]))
-    seedPtr := (*C.uint8_t)(unsafe.Pointer(&sdBytes[0]))
+	bhBytes := bh.Bytes()
+	sdBytes := seed.Bytes()
+	bhPtr := (*C.uint8_t)(unsafe.Pointer(&bhBytes[0]))
+	seedPtr := (*C.uint8_t)(unsafe.Pointer(&sdBytes[0]))
 
-    resPtr := C.SimdTs(bhPtr, seedPtr)
-    resHash := bc.NewHash(*(*[32]byte)(unsafe.Pointer(resPtr)))
+	resPtr := C.SimdTs(bhPtr, seedPtr)
+	resHash := bc.NewHash(*(*[32]byte)(unsafe.Pointer(resPtr)))
 
-    return &resHash
+	return &resHash
 }
