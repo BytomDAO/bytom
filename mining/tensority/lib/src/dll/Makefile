@@ -20,7 +20,7 @@ CXXFLAGS = -std=c++11 -pthread -mavx2 -O3 -fopenmp -fPIC
 
 .PHONY: clean
 
-all: $(TARGET)_plugin_win_$(ARCH)
+all: $(TARGET)_win_$(ARCH)
 
 # $(TARGET)_win_$(ARCH): cSimdTs.o
 	# $(CXX) -o $@.dll $^
