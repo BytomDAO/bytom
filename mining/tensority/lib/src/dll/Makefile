@@ -22,11 +22,11 @@ CXXFLAGS = -std=c++11 -pthread -mavx2 -O3 -fopenmp -fPIC
 
 all: $(TARGET)_plugin_win_$(ARCH)
 
-$(TARGET)_win_$(ARCH): dllEntryPoint.o c$(TARGET)Ts.o
-	$(CXX) -o $@.dll $^
+# $(TARGET)_win_$(ARCH): cSimdTs.o
+	# $(CXX) -o $@.dll $^
 
-*.o: *.cpp
-	$(CXX) -o $@.o -c $^ $(CXXFLAGS)
+$(TARGET)_win_$(ARCH): cSimdTs.cpp
+	$(CXX) --shared -o $@.dll $^ $(CXXFLAGS)
 
 test: all
 	cp $(TARGET)_win_$(ARCH).dll  ../../../
