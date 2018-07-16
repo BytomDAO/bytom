@@ -1,15 +1,17 @@
 ifndef GOOS
-UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Darwin)
-	GOOS := darwin
-else ifeq ($(UNAME_S),Linux)
-	GOOS := linux
-else
-$(error "$$GOOS is not defined. If you are using Windows, try to re-make using 'GOOS=windows make ...' ")
-endif
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Darwin)
+        GOOS := darwin
+    else
+        ifeq ($(UNAME_S),Linux)
+            GOOS := linux
+        else
+            $(error "$$GOOS is not defined. If you are using Windows, try to re-make using 'GOOS=windows make ...' ")
+        endif
+    endif
 endif
 
-PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd')
+PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v '/mining/tensority/lib/src/')
 BUILD_FLAGS := -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`"
 
 MINER_BINARY32 := miner-$(GOOS)_386
@@ -20,6 +22,9 @@ BYTOMD_BINARY64 := bytomd-$(GOOS)_amd64
 
 BYTOMCLI_BINARY32 := bytomcli-$(GOOS)_386
 BYTOMCLI_BINARY64 := bytomcli-$(GOOS)_amd64
+
+SIMDPLUGIN_BINARY32 := simd_plugin_$(GOOS)_386.so
+SIMDPLUGIN_BINARY64 := simd_plugin_$(GOOS)_amd64.so
 
 VERSION := $(shell awk -F= '/Version =/ {print $$2}' version/version.go | tr -d "\" ")
 
@@ -37,8 +42,14 @@ BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
 
 all: test target release-all
 
+simd_plugin:
+	@cd mining/tensority/lib/src/plugin/ && make
+	cp mining/tensority/lib/src/plugin/*.so cmd/bytomd/
+	cp mining/tensority/lib/src/plugin/*.so cmd/miner/
+
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
+	cp mining/tensority/lib/bin/*.so cmd/bytomd/
 	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 
 bytomcli:
@@ -64,14 +75,27 @@ release: binary
 	cd target && md5sum $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe >$(BYTOM_RELEASE64).md5
 	cd target && zip $(BYTOM_RELEASE64).zip $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
 	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(MINER_BINARY64).exe $(BYTOMD_BINARY64).exe $(BYTOMCLI_BINARY64).exe $(BYTOM_RELEASE64).md5
-else
+endif
+ifeq ($(GOOS),linux)
+release: binary
+	cp mining/tensority/lib/bin/$(SIMDPLUGIN_BINARY32) target/
+	cd target && md5sum $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(SIMDPLUGIN_BINARY32) >$(BYTOM_RELEASE32).md5
+	cd target && tar -czf $(BYTOM_RELEASE32).tgz $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(SIMDPLUGIN_BINARY32) $(BYTOM_RELEASE32).md5
+	cd target && rm -f $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(SIMDPLUGIN_BINARY32) $(BYTOM_RELEASE32).md5
+	cp mining/tensority/lib/bin/$(SIMDPLUGIN_BINARY64) target/
+	cd target && md5sum $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(SIMDPLUGIN_BINARY64) >$(BYTOM_RELEASE64).md5
+	cd target && tar -czf $(BYTOM_RELEASE64).tgz $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(SIMDPLUGIN_BINARY64) $(BYTOM_RELEASE64).md5
+	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(SIMDPLUGIN_BINARY64) $(BYTOM_RELEASE64).md5
+endif
+ifeq ($(GOOS),darwin)
 release: binary
 	cd target && md5sum $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) >$(BYTOM_RELEASE32).md5
 	cd target && tar -czf $(BYTOM_RELEASE32).tgz $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(BYTOM_RELEASE32).md5
 	cd target && rm -f $(MINER_BINARY32) $(BYTOMD_BINARY32) $(BYTOMCLI_BINARY32) $(BYTOM_RELEASE32).md5
-	cd target && md5sum $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) >$(BYTOM_RELEASE64).md5
-	cd target && tar -czf $(BYTOM_RELEASE64).tgz $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
-	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(BYTOM_RELEASE64).md5
+	cp mining/tensority/lib/bin/$(SIMDPLUGIN_BINARY64) target/
+	cd target && md5sum $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(SIMDPLUGIN_BINARY64) >$(BYTOM_RELEASE64).md5
+	cd target && tar -czf $(BYTOM_RELEASE64).tgz $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(SIMDPLUGIN_BINARY64) $(BYTOM_RELEASE64).md5
+	cd target && rm -f $(MINER_BINARY64) $(BYTOMD_BINARY64) $(BYTOMCLI_BINARY64) $(SIMDPLUGIN_BINARY64) $(BYTOM_RELEASE64).md5
 endif
 
 release-all: clean

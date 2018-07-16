@@ -2,6 +2,7 @@ package tensority
 
 import (
 	"github.com/golang/groupcache/lru"
+	"github.com/klauspost/cpuid"
 
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/protocol/bc"
@@ -9,10 +10,23 @@ import (
 
 const maxAIHashCached = 64
 
-func algorithm(hash, seed *bc.Hash) *bc.Hash {
+var (
+	AIHash  = NewCache() // AIHash is created for let different package share same cache
+	UseSIMD = false
+)
+
+func legacyAlgorithm(bh, seed *bc.Hash) *bc.Hash {
 	cache := calcSeedCache(seed.Bytes())
-	data := mulMatrix(hash.Bytes(), cache)
+	data := mulMatrix(bh.Bytes(), cache)
 	return hashMatrix(data)
+}
+
+func algorithm(bh, seed *bc.Hash) *bc.Hash {
+	if UseSIMD {
+		return simdAlgorithm(bh, seed)
+	} else {
+		return legacyAlgorithm(bh, seed)
+	}
 }
 
 func calcCacheKey(hash, seed *bc.Hash) *bc.Hash {
@@ -47,5 +61,6 @@ func (a *Cache) Hash(hash, seed *bc.Hash) *bc.Hash {
 	return algorithm(hash, seed)
 }
 
-// AIHash is created for let different package share same cache
-var AIHash = NewCache()
+func CanSimd() bool {
+	return cpuid.CPU.AVX2()
+}
