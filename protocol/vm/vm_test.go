@@ -2,6 +2,7 @@ package vm
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"testing/quick"
 
 	"github.com/bytom/errors"
+	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/testutil"
 )
 
@@ -170,6 +172,43 @@ func doOKNotOK(t *testing.T, expectOK bool) {
 	}
 }
 
+func doOKNotOK(t *testing.T, expectOK bool) {
+	cases := []struct {
+		prog []byte
+		args [][]byte
+	}{
+		{vmutil.P2PKHSigSm2Program(hex.DecodeString("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640")), [][]byte{data1, data2, data3, data4, data5}},
+	}
+	for i, c := range cases {
+		progSrc := c.prog
+		if !expectOK {
+			progSrc += " NOT"
+		}
+		prog, err := Assemble(progSrc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Printf("* case %d, prog [%s] [%x]\n", i, progSrc, prog)
+		trace := new(tracebuf)
+		TraceOut = trace
+		vm := &virtualMachine{
+			program:   prog,
+			runLimit:  int64(10000),
+			dataStack: append([][]byte{}, c.args...),
+		}
+		err = vm.run()
+		if err == nil && vm.falseResult() {
+			err = ErrFalseVMResult
+		}
+		if expectOK && err != nil {
+			trace.dump()
+			t.Errorf("case %d [%s]: expected success, got error %s", i, progSrc, err)
+		} else if !expectOK && err != ErrFalseVMResult {
+			trace.dump()
+			t.Errorf("case %d [%s]: expected ErrFalseVMResult, got %s", i, progSrc, err)
+		}
+	}
+}
 func TestVerifyTxInput(t *testing.T) {
 	cases := []struct {
 		vctx    *Context
