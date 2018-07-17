@@ -14,7 +14,11 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-const defaultBanThreshold = uint64(100)
+const (
+	maxKnownTxs         = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
+	maxKnownBlocks      = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
+	defaultBanThreshold = uint64(100)
+)
 
 type peer struct {
 	BasePeer
@@ -64,7 +68,7 @@ func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 }
 
 func (p *peer) getBlockByHeight(height uint64) {
-	msg := struct{ BlockchainMessage }{&BlockRequestMessage{Height: height}}
+	msg := struct{ BlockchainMessage }{&GetBlockMessage{Height: height}}
 	p.TrySend(BlockchainChannel, msg)
 }
 
@@ -98,10 +102,20 @@ func (p *peer) markTransaction(hash *bc.Hash) {
 	p.knownTxs.Add(hash.String())
 }
 
+func (p *peer) sendBlock(block *types.Block) error {
+	msg, err := NewBlockMessage(block)
+	if err != nil {
+		return errors.Wrap(err, "fail on NewBlockMessage")
+	}
+
+	p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	return nil
+}
+
 func (p *peer) sendBlocks(blocks []*types.Block) error {
 	msg, err := NewBlocksMessage(blocks)
 	if err != nil {
-		return errors.New("fail on NewBlocksMessage")
+		return errors.Wrap(err, "fail on NewBlocksMessage")
 	}
 
 	p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
@@ -116,6 +130,11 @@ func (p *peer) sendHeaders(headers []*types.BlockHeader) error {
 
 	p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return nil
+}
+
+func (p *peer) sendStatus(blockHeader *types.BlockHeader, genesis *bc.Hash) {
+	msg := NewStatusResponseMessage(blockHeader, genesis)
+	p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 }
 
 func (p *peer) sendTransactions(txs []*types.Tx) error {

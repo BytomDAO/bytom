@@ -14,8 +14,8 @@ import (
 
 //protocol msg
 const (
-	BlockRequestByte    = byte(0x10)
-	BlockResponseByte   = byte(0x11)
+	GetBlockByte        = byte(0x10)
+	BlockByte           = byte(0x11)
 	HeadersRequestByte  = byte(0x12)
 	HeadersResponseByte = byte(0x13)
 	BlocksRequestByte   = byte(0x14)
@@ -42,8 +42,8 @@ type BlockchainMessage interface{}
 
 var _ = wire.RegisterInterface(
 	struct{ BlockchainMessage }{},
-	wire.ConcreteType{&BlockRequestMessage{}, BlockRequestByte},
-	wire.ConcreteType{&BlockResponseMessage{}, BlockResponseByte},
+	wire.ConcreteType{&GetBlockMessage{}, GetBlockByte},
+	wire.ConcreteType{&BlockMessage{}, BlockByte},
 	wire.ConcreteType{&GetHeadersMessage{}, HeadersRequestByte},
 	wire.ConcreteType{&HeadersMessage{}, HeadersResponseByte},
 	wire.ConcreteType{&GetBlocksMessage{}, BlocksRequestByte},
@@ -66,43 +66,43 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	return
 }
 
-//BlockRequestMessage request blocks from remote peers by height/hash
-type BlockRequestMessage struct {
+//GetBlockMessage request blocks from remote peers by height/hash
+type GetBlockMessage struct {
 	Height  uint64
 	RawHash [32]byte
 }
 
 //GetHash get hash
-func (m *BlockRequestMessage) GetHash() *bc.Hash {
+func (m *GetBlockMessage) GetHash() *bc.Hash {
 	hash := bc.NewHash(m.RawHash)
 	return &hash
 }
 
 //String convert msg to string
-func (m *BlockRequestMessage) String() string {
+func (m *GetBlockMessage) String() string {
 	if m.Height > 0 {
-		return fmt.Sprintf("BlockRequestMessage{Height: %d}", m.Height)
+		return fmt.Sprintf("GetBlockMessage{Height: %d}", m.Height)
 	}
 	hash := m.GetHash()
-	return fmt.Sprintf("BlockRequestMessage{Hash: %s}", hash.String())
+	return fmt.Sprintf("GetBlockMessage{Hash: %s}", hash.String())
 }
 
-//BlockResponseMessage response get block msg
-type BlockResponseMessage struct {
+//BlockMessage response get block msg
+type BlockMessage struct {
 	RawBlock []byte
 }
 
-//NewBlockResponseMessage construct bock response msg
-func NewBlockResponseMessage(block *types.Block) (*BlockResponseMessage, error) {
+//NewBlockMessage construct bock response msg
+func NewBlockMessage(block *types.Block) (*BlockMessage, error) {
 	rawBlock, err := block.MarshalText()
 	if err != nil {
 		return nil, err
 	}
-	return &BlockResponseMessage{RawBlock: rawBlock}, nil
+	return &BlockMessage{RawBlock: rawBlock}, nil
 }
 
 //GetBlock get block from msg
-func (m *BlockResponseMessage) GetBlock() *types.Block {
+func (m *BlockMessage) GetBlock() *types.Block {
 	block := &types.Block{
 		BlockHeader:  types.BlockHeader{},
 		Transactions: []*types.Tx{},
@@ -112,8 +112,8 @@ func (m *BlockResponseMessage) GetBlock() *types.Block {
 }
 
 //String convert msg to string
-func (m *BlockResponseMessage) String() string {
-	return fmt.Sprintf("BlockResponseMessage{Size: %d}", len(m.RawBlock))
+func (m *BlockMessage) String() string {
+	return fmt.Sprintf("BlockMessage{Size: %d}", len(m.RawBlock))
 }
 
 //TransactionMessage notify new tx msg
@@ -290,6 +290,11 @@ func NewGetBlocksMessage(beginHash *bc.Hash, num int) *GetBlocksMessage {
 		BeginHash: beginHash.Byte32(),
 		Num:       uint64(num),
 	}
+}
+
+func (msg *GetBlocksMessage) GetBeginHash() *bc.Hash {
+	hash := bc.NewHash(msg.BeginHash)
+	return &hash
 }
 
 type BlocksMessage struct {

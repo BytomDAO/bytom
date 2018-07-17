@@ -22,18 +22,6 @@ import (
 	"github.com/bytom/version"
 )
 
-// Checkpoint identifies a known good point in the block chain.  Using
-// checkpoints allows a few optimizations for old blocks during initial download
-// and also prevents forks from old blocks.
-//
-// Each checkpoint is selected based upon several factors.  See the
-// documentation for blockchain.IsCheckpointCandidate for details on the
-// selection criteria.
-type Checkpoint struct {
-	Height uint64
-	Hash   *bc.Hash
-}
-
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
 	sw *p2p.Switch
@@ -53,7 +41,6 @@ type SyncManager struct {
 	quitSync      chan struct{}
 	config        *cfg.Config
 	synchronising int32
-	//headersFirstMode bool
 }
 
 //NewSyncManager create a sync manager
@@ -78,7 +65,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		config:      config,
 	}
 
-	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
+	protocolReactor := NewProtocolReactor(manager, chain, txPool, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
 	// Create & add listener
@@ -100,6 +87,65 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
 	manager.sw.SetNodePrivKey(manager.privKey)
 	return manager, nil
+}
+
+func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
+	var block *types.Block
+	var err error
+	if msg.Height != 0 {
+		block, err = sm.chain.GetBlockByHeight(msg.Height)
+	} else {
+		block, err = sm.chain.GetBlockByHash(msg.GetHash())
+	}
+	if err != nil {
+		log.WithField("err", err).Warning("fail on handleGetBlockMsg get block from chain")
+		return
+	}
+
+	if err := peer.sendBlock(block); err != nil {
+		log.WithField("err", err).Warning("fail on handleGetBlockMsg sentBlock")
+	}
+}
+
+func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
+	if msg.Num > maxRequestBlocksPerMsg {
+		peer.addBanScore(0, 5, "request block amount bigger than maxRequestBlocksPerMsg")
+		return
+	}
+
+	beginBlock, err := sm.chain.GetBlockByHash(msg.GetBeginHash())
+	if err != nil {
+		log.WithField("err", err).Warning("fail on handleGetBlocksMsg get begin block")
+		return
+	}
+
+	blocks := []*types.Block{}
+	for i := uint64(0); i < msg.Num; i++ {
+		block, err := sm.chain.GetBlockByHeight(beginBlock.Height + i)
+		if err != nil {
+			log.WithField("err", err).Warning("fail on handleGetBlocksMsg get block list")
+			return
+		}
+
+		if block.PreviousBlockHash != blocks[len(blocks)-1].Hash() {
+			log.Warning("fail on handleGetBlocksMsg append blocks due to not in main chain")
+			return
+		}
+
+		blocks = append(blocks, block)
+	}
+	peer.sendBlocks(blocks)
+}
+
+func (sm *SyncManager) handleStatusRequestMsg(peer *peer) {
+	bestHeader := sm.chain.BestBlockHeader()
+	genesisBlock, err := sm.chain.GetBlockByHeight(0)
+	if err != nil {
+		log.WithField("err", err).Error("fail on handleStatusRequestMsg get genesis")
+	}
+
+	genesisHash := genesisBlock.Hash()
+	peer.sendStatus(bestHeader, &genesisHash)
 }
 
 // Defaults to tcp

@@ -17,9 +17,6 @@ import (
 )
 
 const (
-	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
-	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
-
 	syncTimeout        = 30 * time.Second
 	requestRetryTicker = 15 * time.Second
 
@@ -30,7 +27,7 @@ const (
 	maxQuitReq = 256
 
 	maxTxChanSize          = 10000 // txChanSize is the size of channel listening to Txpool newTxCh
-	MaxRequestBlocksPerMsg = 20
+	maxRequestBlocksPerMsg = 20
 	MaxMsgPackageSize      = 10 * 1024 * 1024
 )
 
@@ -47,13 +44,13 @@ var (
 	errEmptyHeaders     = errors.New("headers is empty")
 )
 
-type blockMsg struct {
-	block  *types.Block
-	peerID string
+type headersMsg struct {
+	headers []*types.BlockHeader
+	peerID  string
 }
 
-type txMsg struct {
-	tx     *types.Tx
+type blockMsg struct {
+	block  *types.Block
 	peerID string
 }
 
@@ -259,7 +256,7 @@ func (bk *blockKeeper) BlockFastSyncWorker(peerID string, nextCheckPoint *consen
 
 	for e := bk.startHeader; e != nil; {
 		headerList := list.New()
-		for num := 0; num < MaxRequestBlocksPerMsg; num++ {
+		for num := 0; num < maxRequestBlocksPerMsg; num++ {
 			if e == nil {
 				break
 			}
@@ -643,13 +640,6 @@ func (bk *blockKeeper) handleHeadersMsg(peerID string, headers []*types.BlockHea
 	return nil, receivedCheckpoint
 }
 
-// headersMsg packages a bitcoin headers message and the peer it came from
-// together so the block handler has access to that information.
-type headersMsg struct {
-	headers []*types.BlockHeader
-	peerID  string
-}
-
 // headerNode is used as a node in a list of headers that are linked together
 // between checkpoints.
 type headerNode struct {
@@ -746,29 +736,4 @@ func (bk *blockKeeper) blockLocator(node *types.BlockHeader) []*bc.Hash {
 	}
 
 	return locator
-}
-
-// handleHeadersMsg handles block header messages from all peers.  Headers are
-// requested when performing a headers-first sync.
-func (bk *blockKeeper) GetBlocksWorker(peerID string, bmsg *GetBlocksMessage) {
-	peer := bk.peers.getPeer(peerID) //sm.Peers().Peer(peer.id)
-	if peer == nil {
-		log.Warnf("Received blocks message from unknown peer %s", peer)
-		return
-	}
-	var beginBlock *types.Block
-	beginHash := bc.NewHash(bmsg.BeginHash)
-	if beginBlock, _ = bk.chain.GetBlockByHash(&beginHash); beginBlock == nil {
-		log.Error("GetBlocks Worker can't find begin Hash")
-		return
-	}
-
-	blocks := []*types.Block{}
-	for height := beginBlock.Height; height < beginBlock.Height+uint64(bmsg.Num); height++ {
-		block, _ := bk.chain.GetBlockByHeight(height)
-		blocks = append(blocks, block)
-	}
-	if len(blocks) != 0 {
-		peer.sendBlocks(blocks)
-	}
 }

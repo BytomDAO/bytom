@@ -42,10 +42,10 @@ type initalPeerStatus struct {
 type ProtocolReactor struct {
 	p2p.BaseReactor
 
+	sm          *SyncManager
 	chain       *protocol.Chain
 	blockKeeper *blockKeeper
 	txPool      *protocol.TxPool
-	sw          *p2p.Switch
 	fetcher     *Fetcher
 	peers       *peerSet
 	handshakeMu sync.Mutex
@@ -58,12 +58,12 @@ type ProtocolReactor struct {
 }
 
 // NewProtocolReactor returns the reactor of whole blockchain.
-func NewProtocolReactor(chain *protocol.Chain, txPool *protocol.TxPool, sw *p2p.Switch, blockPeer *blockKeeper, fetcher *Fetcher, peers *peerSet, newPeerCh chan struct{}, txSyncCh chan *txsync, quitReqBlockCh chan *string) *ProtocolReactor {
+func NewProtocolReactor(sm *SyncManager, chain *protocol.Chain, txPool *protocol.TxPool, blockPeer *blockKeeper, fetcher *Fetcher, peers *peerSet, newPeerCh chan struct{}, txSyncCh chan *txsync, quitReqBlockCh chan *string) *ProtocolReactor {
 	pr := &ProtocolReactor{
+		sm:             sm,
 		chain:          chain,
 		blockKeeper:    blockPeer,
 		txPool:         txPool,
-		sw:             sw,
 		fetcher:        fetcher,
 		peers:          peers,
 		newPeerCh:      newPeerCh,
@@ -120,9 +120,6 @@ func (pr *ProtocolReactor) syncTransactions(p *peer) {
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	pr.handshakeMu.Lock()
 	defer pr.handshakeMu.Unlock()
-	if peer == nil {
-		return errPeerDropped
-	}
 	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
 		return errStatusRequest
 	}
@@ -172,38 +169,22 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		return
 	}
 
-	switch msg := msg.(type) {
-	case *BlockRequestMessage:
-		log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Receive request")
-		var block *types.Block
-		var err error
-		if msg.Height != 0 {
-			block, err = pr.chain.GetBlockByHeight(msg.Height)
-		} else {
-			block, err = pr.chain.GetBlockByHash(msg.GetHash())
-		}
-		if err != nil {
-			log.Errorf("Fail on BlockRequestMessage get block: %v", err)
-			return
-		}
-		response, err := NewBlockResponseMessage(block)
-		if err != nil {
-			log.Errorf("Fail on BlockRequestMessage create response: %v", err)
-			return
-		}
-		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{response})
+	peer := pr.peers.getPeer(src.Key)
+	if peer == nil {
+		return
+	}
 
-	case *BlockResponseMessage:
-		log.WithFields(log.Fields{"peerID": src.Key, "BlockResponseMessage height": msg.GetBlock().Height}).Info("Response Message")
+	switch msg := msg.(type) {
+	case *GetBlockMessage:
+		pr.sm.handleGetBlockMsg(peer, msg)
+
+	case *BlockMessage:
 		pr.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
 
 	case *StatusRequestMessage:
-		log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Receive request")
-		blockHeader := pr.chain.BestBlockHeader()
-		src.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(blockHeader, &pr.genesisHash)})
+		pr.sm.handleStatusRequestMsg(peer)
 
 	case *StatusResponseMessage:
-		log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Response Message")
 		peerStatus := &initalPeerStatus{
 			peerID:      src.Key,
 			height:      msg.Height,
@@ -213,7 +194,6 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.peerStatusCh <- peerStatus
 
 	case *TransactionMessage:
-		log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Receive request")
 		tx, err := msg.GetTransaction()
 		if err != nil {
 			log.Errorf("Error decoding new tx %v", err)
@@ -222,7 +202,6 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.blockKeeper.AddTx(tx, src.Key)
 
 	case *MineBlockMessage:
-		log.WithFields(log.Fields{"peerID": src.Key, "msg": msg}).Info("Response Message")
 		block, err := msg.GetMineBlock()
 		if err != nil {
 			log.Errorf("Error decoding mined block %v", err)
@@ -240,11 +219,9 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		peer.setStatus(block.Height, &hash)
 
 	case *GetHeadersMessage:
-		log.WithFields(log.Fields{"peerID": src.Key, "msg": "Get Headers"}).Info("Receive request")
 		pr.blockKeeper.GetHeadersWorker(src.Key, msg)
 
 	case *HeadersMessage:
-		log.WithFields(log.Fields{"peerID": src.Key, "msg": "Headers Message"}).Info("Response Message")
 		headers, err := msg.GetHeaders()
 		if err != nil {
 			return
@@ -253,11 +230,9 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.blockKeeper.headersProcessCh <- hmsg
 
 	case *GetBlocksMessage:
-		log.WithFields(log.Fields{"peerID": src.Key, "msg": "Get Blocks"}).Info("Receive request")
-		pr.blockKeeper.GetBlocksWorker(src.Key, msg)
+		pr.sm.handleGetBlocksMsg(peer, msg)
 
 	case *BlocksMessage:
-		log.WithFields(log.Fields{"peerID": src.Key, "msg": "Blocks Message"}).Info("Response Message")
 		peer := pr.blockKeeper.peers.getPeer(src.Key)
 		if peer != nil {
 			pr.blockKeeper.blocksProcessCh <- msg
