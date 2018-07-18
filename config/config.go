@@ -16,7 +16,7 @@ type Config struct {
 	Wallet *WalletConfig  `mapstructure:"wallet"`
 	Auth   *RPCAuthConfig `mapstructure:"auth"`
 	Web    *WebConfig     `mapstructure:"web"`
-	Simd    *SimdConfig   `mapstructure:"simd"`
+	Simd   *SimdConfig    `mapstructure:"simd"`
 }
 
 // Default configurable parameters.

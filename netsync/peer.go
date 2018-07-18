@@ -118,7 +118,6 @@ func (p *peer) GetPeer() *p2p.Peer {
 	return p.swPeer
 }
 
-
 func (p *peer) GetPeerInfo() *PeerInfo {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
@@ -232,7 +231,6 @@ func (ps *peerSet) Peer(id string) (*peer, bool) {
 	p, ok := ps.peers[id]
 	return p, ok
 }
-
 
 // getPeerInfos return all peer information of current node
 func (ps *peerSet) GetPeerInfos() []*PeerInfo {
