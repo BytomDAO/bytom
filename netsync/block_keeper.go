@@ -367,7 +367,7 @@ func (bk *blockKeeper) startSync() bool {
 	}
 
 	peer = bk.peers.BestPeer(consensus.SFFullNode)
-	if peer.Height() > bk.chain.BestBlockHeight() {
+	if peer != nil && peer.Height() > bk.chain.BestBlockHeight() {
 		bk.syncPeer = peer
 		if err := bk.regularBlockSync(peer.Height()); err != nil {
 			bk.peers.StopPeerGracefully(peer.ID())

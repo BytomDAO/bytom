@@ -21,7 +21,7 @@ type NetInfo struct {
 func (a *API) GetNodeInfo() *NetInfo {
 	info := &NetInfo{
 		Listening:    a.sync.Switch().IsListening(),
-		Syncing:      a.sync.BlockKeeper().IsCaughtUp(),
+		Syncing:      a.sync.IsCaughtUp(),
 		Mining:       a.cpuMiner.IsMining(),
 		PeerCount:    len(a.sync.Switch().Peers().List()),
 		CurrentBlock: a.chain.BestBlockHeight(),

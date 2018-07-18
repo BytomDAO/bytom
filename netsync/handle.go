@@ -90,6 +90,11 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	return manager, nil
 }
 
+func (sm *SyncManager) IsCaughtUp() bool {
+	peer := sm.peers.BestPeer(consensus.SFFullNode)
+	return peer == nil || peer.Height() <= sm.chain.BestBlockHeight()
+}
+
 func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
 	var block *types.Block
 	var err error
