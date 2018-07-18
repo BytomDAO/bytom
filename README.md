@@ -76,11 +76,12 @@ $ make bytomcli  # build bytomcli
 
 When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytomd` and `cmd/bytomcli` directory, respectively.
 
-__SIMD__:
+##### SIMD feature
 
-if you wanna enable the simd feature for CheckPoW (so that you can speed up the mining or block verification), please compile the simd lib in `mining/tensority/lib/` (See MakeFile for more detail).
+if you wanna enable the simd feature for _CheckPoW_ (so that you can speed up mining or block verification), please compile the simd lib in `mining/tensority/lib/` (See Makefile for more detail).
 
 Prerequisites:
+
 + Mac: `brew install llvm`
 + Windows: mingw-w64
 
