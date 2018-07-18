@@ -48,24 +48,22 @@ type ProtocolReactor struct {
 	handshakeMu sync.Mutex
 	genesisHash bc.Hash
 
-	newPeerCh      chan struct{}
-	quitReqBlockCh chan *string
-	txSyncCh       chan *txsync
-	peerStatusCh   chan *initalPeerStatus
+	newPeerCh    chan struct{}
+	txSyncCh     chan *txsync
+	peerStatusCh chan *initalPeerStatus
 }
 
 // NewProtocolReactor returns the reactor of whole blockchain.
-func NewProtocolReactor(sm *SyncManager, chain *protocol.Chain, txPool *protocol.TxPool, blockPeer *blockKeeper, peers *peerSet, newPeerCh chan struct{}, txSyncCh chan *txsync, quitReqBlockCh chan *string) *ProtocolReactor {
+func NewProtocolReactor(sm *SyncManager, chain *protocol.Chain, txPool *protocol.TxPool, blockPeer *blockKeeper, peers *peerSet, newPeerCh chan struct{}, txSyncCh chan *txsync) *ProtocolReactor {
 	pr := &ProtocolReactor{
-		sm:             sm,
-		chain:          chain,
-		blockKeeper:    blockPeer,
-		txPool:         txPool,
-		peers:          peers,
-		newPeerCh:      newPeerCh,
-		txSyncCh:       txSyncCh,
-		quitReqBlockCh: quitReqBlockCh,
-		peerStatusCh:   make(chan *initalPeerStatus),
+		sm:           sm,
+		chain:        chain,
+		blockKeeper:  blockPeer,
+		txPool:       txPool,
+		peers:        peers,
+		newPeerCh:    newPeerCh,
+		txSyncCh:     txSyncCh,
+		peerStatusCh: make(chan *initalPeerStatus),
 	}
 	pr.BaseReactor = *p2p.NewBaseReactor("ProtocolReactor", pr)
 	genesisBlock, _ := pr.chain.GetBlockByHeight(0)
@@ -149,11 +147,6 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 
 // RemovePeer implements Reactor by removing peer from the pool.
 func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
-	select {
-	case pr.quitReqBlockCh <- &peer.Key:
-	default:
-		log.Warning("quitReqBlockCh is full")
-	}
 	pr.peers.removePeer(peer.Key)
 }
 
@@ -190,12 +183,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.peerStatusCh <- peerStatus
 
 	case *TransactionMessage:
-		tx, err := msg.GetTransaction()
-		if err != nil {
-			log.Errorf("Error decoding new tx %v", err)
-			return
-		}
-		pr.blockKeeper.AddTx(tx, src.Key)
+		pr.sm.handleTransactionMsg(peer, msg)
 
 	case *MineBlockMessage:
 		pr.sm.handleMineBlockMsg(peer, msg)

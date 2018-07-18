@@ -54,7 +54,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		chain:       chain,
 		privKey:     crypto.GenPrivKeyEd25519(),
 		fetcher:     NewFetcher(chain, peers),
-		blockKeeper: newBlockKeeper(chain, peers, dropPeerCh),
+		blockKeeper: newBlockKeeper(chain, peers),
 		peers:       peers,
 		newTxCh:     make(chan *types.Tx, maxTxChanSize),
 		newBlockCh:  newBlockCh,
@@ -65,7 +65,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		config:      config,
 	}
 
-	protocolReactor := NewProtocolReactor(manager, chain, txPool, manager.blockKeeper, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
+	protocolReactor := NewProtocolReactor(manager, chain, txPool, manager.blockKeeper, manager.peers, manager.newPeerCh, manager.txSyncCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
 	// Create & add listener
@@ -147,6 +147,21 @@ func (sm *SyncManager) handleStatusRequestMsg(peer *peer) {
 
 	genesisHash := genesisBlock.Hash()
 	peer.sendStatus(bestHeader, &genesisHash)
+}
+
+func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage) {
+	tx, err := msg.GetTransaction()
+	if err != nil {
+		peer.addBanScore(0, 10, "fail on get tx from message")
+		return
+	}
+
+	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && isOrphan == false {
+		if ban := peer.addBanScore(10, 0, "fail on validate tx transaction"); ban {
+			sm.peers.AddBannedPeer(peer.Addr().String())
+			sm.peers.StopPeerGracefully(peer.ID())
+		}
+	}
 }
 
 // Defaults to tcp

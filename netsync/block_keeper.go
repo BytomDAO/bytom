@@ -13,32 +13,23 @@ import (
 )
 
 const (
-	syncTimeout        = 30 * time.Second
-	requestRetryTicker = 15 * time.Second
+	syncTimeout = 30 * time.Second
 
 	maxBlocksPending      = 1024
-	maxtxsPending         = 32768
 	maxHeadersPending     = 32
 	maxBlockHeadersPerMsg = 2000
 
 	maxQuitReq = 256
 
-	maxTxChanSize          = 10000 // txChanSize is the size of channel listening to Txpool newTxCh
-	maxRequestBlocksPerMsg = 20
-	MaxMsgPackageSize      = 10 * 1024 * 1024
+	maxTxChanSize     = 10000 // txChanSize is the size of channel listening to Txpool newTxCh
+	MaxMsgPackageSize = 10 * 1024 * 1024
 )
 
 var (
 	errRequestTimeout   = errors.New("request timeout")
 	errGetBlocksTimeout = errors.New("Get blocks Timeout")
 	errPeerDropped      = errors.New("Peer dropped")
-	errGetBlockByHash   = errors.New("Get block by hash error")
-	errBroadcastStatus  = errors.New("Broadcast new status block error")
-	errReqBlock         = errors.New("Request block error")
-	errReqHeaders       = errors.New("Request block headers error")
-	errPeerNotRegister  = errors.New("peer is not registered")
 	errPeerMisbehave    = errors.New("peer is misbehave")
-	errEmptyHeaders     = errors.New("headers is empty")
 )
 
 type blockMsg struct {
@@ -66,26 +57,21 @@ type blockKeeper struct {
 	blocksProcessCh  chan *blocksMsg
 	headersProcessCh chan *headersMsg
 
-	txsProcessCh   chan *txMsg
-	quitReqBlockCh chan *string
-	headerList     *list.List
-	startHeader    *list.Element
+	headerList  *list.List
+	startHeader *list.Element
 }
 
-func newBlockKeeper(chain *protocol.Chain, peers *peerSet, quitReqBlockCh chan *string) *blockKeeper {
+func newBlockKeeper(chain *protocol.Chain, peers *peerSet) *blockKeeper {
 	best := chain.BestBlockHeader()
 	bk := &blockKeeper{
 		chain:            chain,
 		peers:            peers,
 		blockProcessCh:   make(chan *blockMsg, maxBlocksPending),
-		txsProcessCh:     make(chan *txMsg, maxtxsPending),
 		headersProcessCh: make(chan *headersMsg, maxHeadersPending),
 		blocksProcessCh:  make(chan *blocksMsg, 0),
-		quitReqBlockCh:   quitReqBlockCh,
 		headerList:       list.New(),
 	}
 	bk.resetHeaderState(best)
-	go bk.txsProcessWorker()
 	return bk
 }
 
@@ -105,10 +91,6 @@ func (bk *blockKeeper) resetHeaderState(header *types.BlockHeader) {
 
 func (bk *blockKeeper) AddBlock(block *types.Block, peerID string) {
 	bk.blockProcessCh <- &blockMsg{block: block, peerID: peerID}
-}
-
-func (bk *blockKeeper) AddTx(tx *types.Tx, peerID string) {
-	bk.txsProcessCh <- &txMsg{tx: tx, peerID: peerID}
 }
 
 func (bk *blockKeeper) IsCaughtUp() bool {
@@ -304,25 +286,6 @@ func (bk *blockKeeper) nextCheckpoint() *consensus.Checkpoint {
 		nextCheckpoint = &checkpoints[i]
 	}
 	return nextCheckpoint
-}
-
-func (bk *blockKeeper) txsProcessWorker() {
-	for txsResponse := range bk.txsProcessCh {
-		tx := txsResponse.tx
-
-		bkPeer := bk.peers.getPeer(txsResponse.peerID)
-		if bkPeer == nil {
-			continue
-		}
-
-		bkPeer.markTransaction(&tx.ID)
-		if isOrphan, err := bk.chain.ValidateTx(tx); err != nil && isOrphan == false {
-			if ban := bkPeer.addBanScore(10, 0, "tx error"); ban {
-				bk.peers.AddBannedPeer(txsResponse.peerID)
-				bk.peers.StopPeerGracefully(txsResponse.peerID)
-			}
-		}
-	}
 }
 
 func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {

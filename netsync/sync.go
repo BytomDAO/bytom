@@ -36,11 +36,6 @@ const (
 	txsyncPackSize = 100 * 1024
 )
 
-type txMsg struct {
-	tx     *types.Tx
-	peerID string
-}
-
 type txsync struct {
 	p   *peer
 	txs []*types.Tx
