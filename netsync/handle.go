@@ -23,7 +23,6 @@ import (
 )
 
 const (
-	maxQuitReq    = 256
 	maxTxChanSize = 10000
 )
 
@@ -40,7 +39,6 @@ type SyncManager struct {
 
 	newTxCh    chan *types.Tx
 	newBlockCh chan *bc.Hash
-	newPeerCh  chan struct{}
 	txSyncCh   chan *txsync
 	quitSync   chan struct{}
 	config     *cfg.Config
@@ -55,18 +53,17 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		txPool:       txPool,
 		chain:        chain,
 		privKey:      crypto.GenPrivKeyEd25519(),
-		blockFetcher: NewBlockFetcher(chain, peers),
+		blockFetcher: newBlockFetcher(chain, peers),
 		blockKeeper:  newBlockKeeper(chain, peers),
 		peers:        peers,
 		newTxCh:      make(chan *types.Tx, maxTxChanSize),
 		newBlockCh:   newBlockCh,
-		newPeerCh:    make(chan struct{}),
 		txSyncCh:     make(chan *txsync),
 		quitSync:     make(chan struct{}),
 		config:       config,
 	}
 
-	protocolReactor := NewProtocolReactor(manager, manager.peers, manager.newPeerCh, manager.txSyncCh)
+	protocolReactor := NewProtocolReactor(manager, manager.peers, manager.txSyncCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
 	// Create & add listener

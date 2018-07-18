@@ -11,14 +11,12 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/connection"
-	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
 const (
 	protocolHandshakeTimeout = time.Second * 10
-	handshakeRetryTicker     = 4 * time.Second
 )
 
 var (
@@ -40,22 +38,19 @@ type ProtocolReactor struct {
 	p2p.BaseReactor
 
 	sm          *SyncManager
-	chain       *protocol.Chain
 	peers       *peerSet
 	handshakeMu sync.Mutex
 	genesisHash bc.Hash
 
-	newPeerCh    chan struct{}
 	txSyncCh     chan *txsync
 	peerStatusCh chan *initalPeerStatus
 }
 
 // NewProtocolReactor returns the reactor of whole blockchain.
-func NewProtocolReactor(sm *SyncManager, peers *peerSet, newPeerCh chan struct{}, txSyncCh chan *txsync) *ProtocolReactor {
+func NewProtocolReactor(sm *SyncManager, peers *peerSet, txSyncCh chan *txsync) *ProtocolReactor {
 	pr := &ProtocolReactor{
 		sm:           sm,
 		peers:        peers,
-		newPeerCh:    newPeerCh,
 		txSyncCh:     txSyncCh,
 		peerStatusCh: make(chan *initalPeerStatus),
 	}
@@ -111,7 +106,6 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
 		return errStatusRequest
 	}
-	retryTicker := time.Tick(handshakeRetryTicker)
 	handshakeWait := time.NewTimer(protocolHandshakeTimeout)
 	for {
 		select {
@@ -123,15 +117,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 				}
 				pr.peers.addPeer(peer, status.height, status.hash)
 				pr.syncTransactions(pr.peers.getPeer(peer.Key))
-				pr.newPeerCh <- struct{}{}
 				return nil
-			}
-		case <-retryTicker:
-			if peer == nil {
-				return errPeerDropped
-			}
-			if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
-				return errStatusRequest
 			}
 		case <-handshakeWait.C:
 			return ErrProtocolHandshakeTimeout

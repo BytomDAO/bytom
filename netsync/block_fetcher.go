@@ -25,8 +25,8 @@ type blockFetcher struct {
 	msgSet     map[bc.Hash]*blockMsg
 }
 
-//NewBlockFetchercreates a block fetcher to retrieve blocks of the new mined.
-func NewBlockFetcher(chain *protocol.Chain, peers *peerSet) *blockFetcher {
+//NewBlockFetcher creates a block fetcher to retrieve blocks of the new mined.
+func newBlockFetcher(chain *protocol.Chain, peers *peerSet) *blockFetcher {
 	f := &blockFetcher{
 		chain:      chain,
 		peers:      peers,
