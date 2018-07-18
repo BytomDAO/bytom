@@ -170,12 +170,9 @@ func (w *Wallet) delUnconfirmedTx() {
 	ticker := time.NewTicker(UnconfirmedTxCheckPeriod)
 	defer ticker.Stop()
 	for {
-		select {
-		case <-ticker.C:
-			if err := w.delExpiredTxs(); err != nil {
-				log.WithField("err", err).Error("wallet fail on delUnconfirmedTx")
-				return
-			}
+		<-ticker.C
+		if err := w.delExpiredTxs(); err != nil {
+			log.WithField("err", err).Error("wallet fail on delUnconfirmedTx")
 		}
 	}
 }
