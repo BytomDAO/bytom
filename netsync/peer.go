@@ -9,7 +9,6 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
-	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -24,7 +23,6 @@ const (
 //BasePeer is the interface for connection level peer
 type BasePeer interface {
 	Addr() net.Addr
-	CloseConn()
 	ID() string
 	ServiceFlag() consensus.ServiceFlag
 	TrySend(byte, interface{}) bool
@@ -155,6 +153,9 @@ func (p *peer) sendTransactions(txs []*types.Tx) error {
 			return errors.Wrap(err, "failed to tx msg")
 		}
 
+		if p.knownTxs.Has(tx.ID.String()) {
+			continue
+		}
 		p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 		p.knownTxs.Add(tx.ID.String())
 	}
@@ -198,15 +199,15 @@ func (ps *peerSet) BestPeer(flag consensus.ServiceFlag) *peer {
 	return bestPeer
 }
 
-func (ps *peerSet) addPeer(peer *p2p.Peer, height uint64, hash *bc.Hash) {
+func (ps *peerSet) addPeer(peer BasePeer, height uint64, hash *bc.Hash) {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
 
-	if _, ok := ps.peers[peer.Key]; !ok {
-		ps.peers[peer.Key] = newPeer(height, hash, peer)
+	if _, ok := ps.peers[peer.ID()]; !ok {
+		ps.peers[peer.ID()] = newPeer(height, hash, peer)
 		return
 	}
-	log.WithField("ID", peer.Key).Warning("add existing peer to blockKeeper")
+	log.WithField("ID", peer.ID()).Warning("add existing peer to blockKeeper")
 }
 
 func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {

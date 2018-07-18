@@ -28,7 +28,8 @@ const (
 
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
-	sw *p2p.Switch
+	sw          *p2p.Switch
+	genesisHash bc.Hash
 
 	privKey      crypto.PrivKeyEd25519 // local node's p2p key
 	chain        *core.Chain
@@ -39,17 +40,23 @@ type SyncManager struct {
 
 	newTxCh    chan *types.Tx
 	newBlockCh chan *bc.Hash
-	txSyncCh   chan *txsync
+	txSyncCh   chan *txSyncMsg
 	quitSync   chan struct{}
 	config     *cfg.Config
 }
 
 //NewSyncManager create a sync manager
 func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
+	genesisHeader, err := chain.GetHeaderByHeight(0)
+	if err != nil {
+		return nil, err
+	}
+
 	sw := p2p.NewSwitch(config)
 	peers := newPeerSet(sw)
 	manager := &SyncManager{
 		sw:           sw,
+		genesisHash:  genesisHeader.Hash(),
 		txPool:       txPool,
 		chain:        chain,
 		privKey:      crypto.GenPrivKeyEd25519(),
@@ -58,12 +65,12 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		peers:        peers,
 		newTxCh:      make(chan *types.Tx, maxTxChanSize),
 		newBlockCh:   newBlockCh,
-		txSyncCh:     make(chan *txsync),
+		txSyncCh:     make(chan *txSyncMsg),
 		quitSync:     make(chan struct{}),
 		config:       config,
 	}
 
-	protocolReactor := NewProtocolReactor(manager, manager.peers, manager.txSyncCh)
+	protocolReactor := NewProtocolReactor(manager, manager.peers)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
 	// Create & add listener
@@ -90,6 +97,19 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 func (sm *SyncManager) IsCaughtUp() bool {
 	peer := sm.peers.BestPeer(consensus.SFFullNode)
 	return peer == nil || peer.Height() <= sm.chain.BestBlockHeight()
+}
+
+func (sm *SyncManager) handleBlockMsg(peer *peer, msg *BlockMessage) {
+	sm.blockKeeper.processBlock(peer.ID(), msg.GetBlock())
+}
+
+func (sm *SyncManager) handleBlocksMsg(peer *peer, msg *BlocksMessage) {
+	blocks, err := msg.GetBlocks()
+	if err != nil {
+		return
+	}
+
+	sm.blockKeeper.processBlocks(peer.ID(), blocks)
 }
 
 func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
@@ -128,6 +148,15 @@ func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
 	peer.sendHeaders(headers)
 }
 
+func (sm *SyncManager) handleHeadersMsg(peer *peer, msg *HeadersMessage) {
+	headers, err := msg.GetHeaders()
+	if err != nil {
+		return
+	}
+
+	sm.blockKeeper.processHeaders(peer.ID(), headers)
+}
+
 func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
 	block, err := msg.GetMineBlock()
 	if err != nil {
@@ -150,6 +179,24 @@ func (sm *SyncManager) handleStatusRequestMsg(peer *peer) {
 
 	genesisHash := genesisBlock.Hash()
 	peer.sendStatus(bestHeader, &genesisHash)
+}
+
+func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusResponseMessage) {
+	if peer := sm.peers.getPeer(basePeer.ID()); peer != nil {
+		peer.setStatus(msg.Height, msg.GetHash())
+		return
+	}
+
+	if genesisHash := msg.GetGenesisHash(); sm.genesisHash != *genesisHash {
+		log.WithFields(log.Fields{
+			"remote genesis": genesisHash.String(),
+			"local genesis":  sm.genesisHash.String(),
+		}).Warn("fail hand shake due to differnt genesis")
+		return
+	}
+
+	sm.peers.addPeer(basePeer, msg.Height, msg.GetHash())
+	sm.syncTransactions(basePeer.ID())
 }
 
 func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage) {
@@ -210,11 +257,8 @@ func (sm *SyncManager) Start() {
 	}
 	// broadcast transactions
 	go sm.txBroadcastLoop()
-
-	// broadcast mined blocks
 	go sm.minedBroadcastLoop()
-
-	go sm.txsyncLoop()
+	go sm.txSyncLoop()
 }
 
 //Stop stop sync manager
@@ -253,20 +297,6 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 		return nil, err
 	}
 	return ntab, nil
-}
-
-func (sm *SyncManager) txBroadcastLoop() {
-	for {
-		select {
-		case newTx := <-sm.newTxCh:
-			if err := sm.peers.broadcastTx(newTx); err != nil {
-				log.Errorf("Broadcast new tx error. %v", err)
-				return
-			}
-		case <-sm.quitSync:
-			return
-		}
-	}
 }
 
 func (sm *SyncManager) minedBroadcastLoop() {

@@ -2,8 +2,6 @@ package netsync
 
 import (
 	"reflect"
-	"strings"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -11,53 +9,33 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/connection"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
 )
 
 const (
-	protocolHandshakeTimeout = time.Second * 10
+	handshakeTimeout    = 10 * time.Second
+	handshakeCheckPerid = 500 * time.Millisecond
 )
 
 var (
-	//ErrProtocolHandshakeTimeout peers handshake timeout
-	ErrProtocolHandshakeTimeout = errors.New("Protocol handshake timeout")
+	errProtocolHandshakeTimeout = errors.New("Protocol handshake timeout")
 	errStatusRequest            = errors.New("Status request error")
-	errDiffGenesisHash          = errors.New("Different genesis hash")
 )
-
-type initalPeerStatus struct {
-	peerID      string
-	height      uint64
-	hash        *bc.Hash
-	genesisHash *bc.Hash
-}
 
 //ProtocolReactor handles new coming protocol message.
 type ProtocolReactor struct {
 	p2p.BaseReactor
 
-	sm          *SyncManager
-	peers       *peerSet
-	handshakeMu sync.Mutex
-	genesisHash bc.Hash
-
-	txSyncCh     chan *txsync
-	peerStatusCh chan *initalPeerStatus
+	sm    *SyncManager
+	peers *peerSet
 }
 
 // NewProtocolReactor returns the reactor of whole blockchain.
-func NewProtocolReactor(sm *SyncManager, peers *peerSet, txSyncCh chan *txsync) *ProtocolReactor {
+func NewProtocolReactor(sm *SyncManager, peers *peerSet) *ProtocolReactor {
 	pr := &ProtocolReactor{
-		sm:           sm,
-		peers:        peers,
-		txSyncCh:     txSyncCh,
-		peerStatusCh: make(chan *initalPeerStatus),
+		sm:    sm,
+		peers: peers,
 	}
 	pr.BaseReactor = *p2p.NewBaseReactor("ProtocolReactor", pr)
-	genesisBlock, _ := pr.sm.chain.GetBlockByHeight(0)
-	pr.genesisHash = genesisBlock.Hash()
-
 	return pr
 }
 
@@ -83,44 +61,23 @@ func (pr *ProtocolReactor) OnStop() {
 	pr.BaseReactor.OnStop()
 }
 
-// syncTransactions starts sending all currently pending transactions to the given peer.
-func (pr *ProtocolReactor) syncTransactions(p *peer) {
-	if p == nil {
-		return
-	}
-	pending := pr.sm.txPool.GetTransactions()
-	if len(pending) == 0 {
-		return
-	}
-	txs := make([]*types.Tx, len(pending))
-	for i, batch := range pending {
-		txs[i] = batch.Tx
-	}
-	pr.txSyncCh <- &txsync{p, txs}
-}
-
 // AddPeer implements Reactor by sending our state to peer.
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
-	pr.handshakeMu.Lock()
-	defer pr.handshakeMu.Unlock()
 	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
 		return errStatusRequest
 	}
-	handshakeWait := time.NewTimer(protocolHandshakeTimeout)
+
+	checkTicker := time.NewTimer(handshakeCheckPerid)
+	timeoutTicker := time.NewTimer(handshakeTimeout)
 	for {
 		select {
-		case status := <-pr.peerStatusCh:
-			if status.peerID == peer.Key {
-				if strings.Compare(pr.genesisHash.String(), status.genesisHash.String()) != 0 {
-					log.Info("Remote peer genesis block hash:", status.genesisHash.String(), " local hash:", pr.genesisHash.String())
-					return errDiffGenesisHash
-				}
-				pr.peers.addPeer(peer, status.height, status.hash)
-				pr.syncTransactions(pr.peers.getPeer(peer.Key))
+		case <-checkTicker.C:
+			if exist := pr.peers.getPeer(peer.Key); exist != nil {
 				return nil
 			}
-		case <-handshakeWait.C:
-			return ErrProtocolHandshakeTimeout
+
+		case <-timeoutTicker.C:
+			return errProtocolHandshakeTimeout
 		}
 	}
 }
@@ -132,14 +89,14 @@ func (pr *ProtocolReactor) RemovePeer(peer *p2p.Peer, reason interface{}) {
 
 // Receive implements Reactor by handling 4 types of messages (look below).
 func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
-	_, msg, err := DecodeMessage(msgBytes)
+	msgType, msg, err := DecodeMessage(msgBytes)
 	if err != nil {
-		log.Errorf("Error decoding message %v", err)
+		log.WithField("err", err).Errorf("fail on reactor decoding message")
 		return
 	}
 
 	peer := pr.peers.getPeer(src.Key)
-	if peer == nil {
+	if peer == nil && msgType != StatusResponseByte {
 		return
 	}
 
@@ -148,19 +105,13 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.sm.handleGetBlockMsg(peer, msg)
 
 	case *BlockMessage:
-		pr.sm.blockKeeper.processBlock(src.Key, msg.GetBlock())
+		pr.sm.handleBlockMsg(peer, msg)
 
 	case *StatusRequestMessage:
 		pr.sm.handleStatusRequestMsg(peer)
 
 	case *StatusResponseMessage:
-		peerStatus := &initalPeerStatus{
-			peerID:      src.Key,
-			height:      msg.Height,
-			hash:        msg.GetHash(),
-			genesisHash: msg.GetGenesisHash(),
-		}
-		pr.peerStatusCh <- peerStatus
+		pr.sm.handleStatusResponseMsg(src, msg)
 
 	case *TransactionMessage:
 		pr.sm.handleTransactionMsg(peer, msg)
@@ -172,19 +123,13 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.sm.handleGetHeadersMsg(peer, msg)
 
 	case *HeadersMessage:
-		headers, err := msg.GetHeaders()
-		if err != nil {
-			return
-		}
-
-		pr.sm.blockKeeper.processHeaders(src.Key, headers)
+		pr.sm.handleHeadersMsg(peer, msg)
 
 	case *GetBlocksMessage:
 		pr.sm.handleGetBlocksMsg(peer, msg)
 
 	case *BlocksMessage:
-		blocks, _ := msg.GetBlocks()
-		pr.sm.blockKeeper.processBlocks(src.Key, blocks)
+		pr.sm.handleBlocksMsg(peer, msg)
 
 	default:
 		log.Errorf("unknown message type %v", reflect.TypeOf(msg))
