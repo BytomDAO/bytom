@@ -94,13 +94,8 @@ clean:
 target/$(BYTOMD_BINARY32):
 	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
 
-ifeq ($(GOOS),linux)
-target/$(BYTOMD_BINARY64):
-	CGO_ENABLED=1 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
-else
 target/$(BYTOMD_BINARY64):
 	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
-endif
 
 target/$(BYTOMCLI_BINARY32):
 	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/bytomcli/main.go
