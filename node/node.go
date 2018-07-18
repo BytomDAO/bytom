@@ -151,11 +151,7 @@ func NewNode(config *cfg.Config) *Node {
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
 	if config.Simd.Enable {
-		if tensority.CanSimd() {
-			tensority.UseSIMD = true
-		} else {
-			log.Warn("CPU doesn't support SIMD, disable SIMD by default.")
-		}
+		tensority.UseSIMD = true
 	}
 
 	return node

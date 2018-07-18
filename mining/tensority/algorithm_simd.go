@@ -15,7 +15,7 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
-func algorithm(bh, seed *bc.Hash) *bc.Hash {
+func simdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
 	bhBytes := bh.Bytes()
 	sdBytes := seed.Bytes()
 	bhPtr := (*C.uint8_t)(unsafe.Pointer(&bhBytes[0]))

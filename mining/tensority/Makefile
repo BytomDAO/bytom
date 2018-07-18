@@ -1,4 +1,3 @@
 test:
-	cp lib/bin/* .
+	cd lib && make
 	go test -v && go test -bench=.
-	rm -f *.so *.dll
