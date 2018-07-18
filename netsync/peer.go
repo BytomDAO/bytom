@@ -67,19 +67,19 @@ func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 	return false
 }
 
-func (p *peer) getBlockByHeight(height uint64) {
+func (p *peer) getBlockByHeight(height uint64) bool {
 	msg := struct{ BlockchainMessage }{&GetBlockMessage{Height: height}}
-	p.TrySend(BlockchainChannel, msg)
+	return p.TrySend(BlockchainChannel, msg)
 }
 
-func (p *peer) getBlocksByHash(beginHash *bc.Hash, num int) {
-	msg := struct{ BlockchainMessage }{NewGetBlocksMessage(beginHash, num)}
-	p.TrySend(BlockchainChannel, msg)
+func (p *peer) getBlocks(locator []*bc.Hash, stopHash *bc.Hash) bool {
+	msg := struct{ BlockchainMessage }{NewGetBlocksMessage(locator, stopHash)}
+	return p.TrySend(BlockchainChannel, msg)
 }
 
-func (p *peer) getHeaders(locator []*bc.Hash, stopHash *bc.Hash) {
+func (p *peer) getHeaders(locator []*bc.Hash, stopHash *bc.Hash) bool {
 	msg := struct{ BlockchainMessage }{NewGetHeadersMessage(locator, stopHash)}
-	p.TrySend(BlockchainChannel, msg)
+	return p.TrySend(BlockchainChannel, msg)
 }
 
 func (p *peer) markBlock(hash *bc.Hash) {

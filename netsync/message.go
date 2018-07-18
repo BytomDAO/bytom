@@ -14,27 +14,20 @@ import (
 
 //protocol msg
 const (
+	BlockchainChannel = byte(0x40)
+
 	GetBlockByte        = byte(0x10)
 	BlockByte           = byte(0x11)
 	HeadersRequestByte  = byte(0x12)
 	HeadersResponseByte = byte(0x13)
 	BlocksRequestByte   = byte(0x14)
 	BlocksResponseByte  = byte(0x15)
-
-	StatusRequestByte  = byte(0x20)
-	StatusResponseByte = byte(0x21)
-
-	NewTransactionByte = byte(0x30)
-	NewMineBlockByte   = byte(0x40)
+	StatusRequestByte   = byte(0x20)
+	StatusResponseByte  = byte(0x21)
+	NewTransactionByte  = byte(0x30)
+	NewMineBlockByte    = byte(0x40)
 
 	maxBlockchainResponseSize = 22020096 + 2
-
-	// MaxBlockLocatorsPerMsg is the maximum number of block locator hashes allowed
-	// per message.
-	MaxBlockLocatorsPerMsg = 500
-	// MaxBlockHeadersPerMsg is the maximum number of block headers that can be in
-	// a single bitcoin headers message.
-	MaxBlockHeadersPerMsg = 2000
 )
 
 // BlockchainMessage is a generic message for this reactor.
@@ -277,23 +270,32 @@ func (msg *HeadersMessage) GetHeaders() ([]*types.BlockHeader, error) {
 	return headers, json.Unmarshal(msg.rawHeaders, headers)
 }
 
-// MsgGetBlocks implements the Message interface and represents a getblocks message.
 type GetBlocksMessage struct {
-	BeginHash [32]byte
-	Num       uint64
+	RawBlockLocator [][32]byte
+	RawStopHash     [32]byte
 }
 
-// NewMsgGetBlocks returns a new getblocks message that conforms to the
-// Message interface using the passed parameters and defaults for the remaining fields.
-func NewGetBlocksMessage(beginHash *bc.Hash, num int) *GetBlocksMessage {
-	return &GetBlocksMessage{
-		BeginHash: beginHash.Byte32(),
-		Num:       uint64(num),
+func NewGetBlocksMessage(blockLocator []*bc.Hash, stopHash *bc.Hash) *GetBlocksMessage {
+	msg := &GetBlocksMessage{
+		RawStopHash: stopHash.Byte32(),
 	}
+	for _, hash := range blockLocator {
+		msg.RawBlockLocator = append(msg.RawBlockLocator, hash.Byte32())
+	}
+	return msg
 }
 
-func (msg *GetBlocksMessage) GetBeginHash() *bc.Hash {
-	hash := bc.NewHash(msg.BeginHash)
+func (msg *GetBlocksMessage) GetBlockLocator() []*bc.Hash {
+	blockLocator := []*bc.Hash{}
+	for _, rawHash := range msg.RawBlockLocator {
+		hash := bc.NewHash(rawHash)
+		blockLocator = append(blockLocator, &hash)
+	}
+	return blockLocator
+}
+
+func (msg *GetBlocksMessage) GetStopHash() *bc.Hash {
+	hash := bc.NewHash(msg.RawStopHash)
 	return &hash
 }
 

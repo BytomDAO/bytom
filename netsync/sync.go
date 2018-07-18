@@ -24,7 +24,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/common"
-	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -87,40 +86,7 @@ func (sm *SyncManager) synchronise() {
 		return
 	}
 	defer atomic.StoreInt32(&sm.synchronising, 0)
-	for len(sm.dropPeerCh) > 0 {
-		<-sm.dropPeerCh
-	}
-
-	peer := sm.peers.BestPeer(consensus.SFFullNode)
-	if peer == nil {
-		return
-	}
-
-	if ok := sm.Switch().Peers().Has(peer.ID()); !ok {
-		log.Info("Peer disconnected")
-		sm.sw.StopPeerGracefully(peer.ID())
-		return
-	}
-	bestHeight := peer.Height()
-	for bestHeight > sm.chain.BestBlockHeight() {
-		if nextCheckPoint := sm.blockKeeper.nextCheckpoint(); nextCheckPoint != nil {
-			if fastPeer := sm.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode); fastPeer != nil && fastPeer.height > nextCheckPoint.Height {
-				log.Info("fast sync peer:", peer, " height:", bestHeight)
-				if err := sm.blockKeeper.BlockFastSyncWorker(fastPeer.ID(), nextCheckPoint); err != nil {
-					log.Info("fast sync err:", err)
-				}
-				if peer = sm.peers.BestPeer(consensus.SFFullNode); peer == nil {
-					break
-				}
-				continue
-			}
-		}
-		log.Info("normal sync peer:", peer, " height:", bestHeight)
-		sm.blockKeeper.BlockRequestWorker(peer.ID(), bestHeight)
-		if peer = sm.peers.BestPeer(consensus.SFFullNode); peer == nil {
-			break
-		}
-	}
+	sm.blockKeeper.startSync()
 }
 
 // txsyncLoop takes care of the initial transaction sync for each new

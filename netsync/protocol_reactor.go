@@ -18,8 +18,6 @@ import (
 )
 
 const (
-	// BlockchainChannel is a channel for blocks and status updates
-	BlockchainChannel        = byte(0x40)
 	protocolHandshakeTimeout = time.Second * 10
 	handshakeRetryTicker     = 4 * time.Second
 )
@@ -46,7 +44,6 @@ type ProtocolReactor struct {
 	chain       *protocol.Chain
 	blockKeeper *blockKeeper
 	txPool      *protocol.TxPool
-	fetcher     *Fetcher
 	peers       *peerSet
 	handshakeMu sync.Mutex
 	genesisHash bc.Hash
@@ -58,13 +55,12 @@ type ProtocolReactor struct {
 }
 
 // NewProtocolReactor returns the reactor of whole blockchain.
-func NewProtocolReactor(sm *SyncManager, chain *protocol.Chain, txPool *protocol.TxPool, blockPeer *blockKeeper, fetcher *Fetcher, peers *peerSet, newPeerCh chan struct{}, txSyncCh chan *txsync, quitReqBlockCh chan *string) *ProtocolReactor {
+func NewProtocolReactor(sm *SyncManager, chain *protocol.Chain, txPool *protocol.TxPool, blockPeer *blockKeeper, peers *peerSet, newPeerCh chan struct{}, txSyncCh chan *txsync, quitReqBlockCh chan *string) *ProtocolReactor {
 	pr := &ProtocolReactor{
 		sm:             sm,
 		chain:          chain,
 		blockKeeper:    blockPeer,
 		txPool:         txPool,
-		fetcher:        fetcher,
 		peers:          peers,
 		newPeerCh:      newPeerCh,
 		txSyncCh:       txSyncCh,
@@ -202,24 +198,10 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.blockKeeper.AddTx(tx, src.Key)
 
 	case *MineBlockMessage:
-		block, err := msg.GetMineBlock()
-		if err != nil {
-			log.Errorf("Error decoding mined block %v", err)
-			return
-		}
-		// Mark the peer as owning the block and schedule it for import
-		hash := block.Hash()
-		peer := pr.blockKeeper.peers.getPeer(src.Key)
-		if peer == nil {
-			return
-		}
-
-		peer.markBlock(&hash)
-		pr.fetcher.Enqueue(src.Key, block)
-		peer.setStatus(block.Height, &hash)
+		pr.sm.handleMineBlockMsg(peer, msg)
 
 	case *GetHeadersMessage:
-		pr.blockKeeper.GetHeadersWorker(src.Key, msg)
+		pr.sm.handleGetHeadersMsg(peer, msg)
 
 	case *HeadersMessage:
 		headers, err := msg.GetHeaders()
@@ -234,8 +216,9 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 
 	case *BlocksMessage:
 		peer := pr.blockKeeper.peers.getPeer(src.Key)
+		blocks, _ := msg.GetBlocks()
 		if peer != nil {
-			pr.blockKeeper.blocksProcessCh <- msg
+			pr.blockKeeper.blocksProcessCh <- &blocksMsg{blocks: blocks, peerID: peer.ID()}
 		}
 
 	default:

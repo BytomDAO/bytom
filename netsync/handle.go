@@ -65,7 +65,7 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 		config:      config,
 	}
 
-	protocolReactor := NewProtocolReactor(manager, chain, txPool, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
+	protocolReactor := NewProtocolReactor(manager, chain, txPool, manager.blockKeeper, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
 	// Create & add listener
@@ -108,33 +108,34 @@ func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
 }
 
 func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
-	if msg.Num > maxRequestBlocksPerMsg {
-		peer.addBanScore(0, 5, "request block amount bigger than maxRequestBlocksPerMsg")
+	blocks, err := sm.blockKeeper.locateBlocks(msg.GetBlockLocator(), msg.GetStopHash())
+	if err != nil || len(blocks) == 0 {
 		return
 	}
 
-	beginBlock, err := sm.chain.GetBlockByHash(msg.GetBeginHash())
-	if err != nil {
-		log.WithField("err", err).Warning("fail on handleGetBlocksMsg get begin block")
-		return
-	}
-
-	blocks := []*types.Block{}
-	for i := uint64(0); i < msg.Num; i++ {
-		block, err := sm.chain.GetBlockByHeight(beginBlock.Height + i)
-		if err != nil {
-			log.WithField("err", err).Warning("fail on handleGetBlocksMsg get block list")
-			return
-		}
-
-		if block.PreviousBlockHash != blocks[len(blocks)-1].Hash() {
-			log.Warning("fail on handleGetBlocksMsg append blocks due to not in main chain")
-			return
-		}
-
-		blocks = append(blocks, block)
-	}
 	peer.sendBlocks(blocks)
+}
+
+func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
+	headers, err := sm.blockKeeper.locateHeaders(msg.GetBlockLocator(), msg.GetStopHash())
+	if err != nil || len(headers) == 0 {
+		return
+	}
+
+	peer.sendHeaders(headers)
+}
+
+func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
+	block, err := msg.GetMineBlock()
+	if err != nil {
+		log.WithField("err", err).Warning("fail on handleMineBlockMsg GetMineBlock")
+		return
+	}
+
+	hash := block.Hash()
+	peer.markBlock(&hash)
+	sm.fetcher.Enqueue(peer.ID(), block)
+	peer.setStatus(block.Height, &hash)
 }
 
 func (sm *SyncManager) handleStatusRequestMsg(peer *peer) {
