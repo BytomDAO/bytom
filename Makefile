@@ -111,13 +111,13 @@ target/$(MINER_BINARY64):
 
 test:
 	@echo "====> Running go test"
-	@go test -tags "network" $(PACKAGES)
+	@CGO_ENABLED=0 go test -tags "network" $(PACKAGES)
 
 benchmark:
-	go test -bench $(PACKAGES)
+	@CGO_ENABLED=0 go test -bench $(PACKAGES)
 
 functional-tests:
-	@go test -v -timeout=5m -tags=functional ./test
+	@CGO_ENABLED=0 go test -v -timeout=5m -tags=functional ./test
 
 ci: test functional-tests
 
