@@ -2,6 +2,7 @@ package vm
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"testing/quick"
 
 	"github.com/bytom/errors"
+	"github.com/bytom/protocol/vm"
 	"github.com/bytom/testutil"
 )
 
@@ -168,6 +170,71 @@ func doOKNotOK(t *testing.T, expectOK bool) {
 			t.Errorf("case %d [%s]: expected ErrFalseVMResult, got %s", i, progSrc, err)
 		}
 	}
+}
+
+// Programs that run without error.
+func TestProgramOKSm2(t *testing.T) {
+	doOKNotOKSm2(t, true)
+}
+
+// Programs that return an ErrFalseVMResult.
+func TestProgramNotOKSm2(t *testing.T) {
+	doOKNotOKSm2(t, false)
+}
+
+func doOKNotOKSm2(t *testing.T, expectOK bool) {
+	cases := []struct {
+		prog []byte
+		args [][]byte
+	}{
+		{
+			prog: tP2PKHSigSm2Program(decodeString("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640")),
+			args: [][]byte{},
+		},
+	}
+	for i, c := range cases {
+		progSrc := c.prog
+		if !expectOK {
+			// progSrc += " NOT"
+			progSrc = append(progSrc, []byte(" NOT")...)
+		}
+		// prog, err := vm.Assemble(progSrc)
+		prog := Builder
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Printf("* case %d, prog [%s] [%x]\n", i, progSrc, prog)
+		trace := new(tracebuf)
+		vm.TraceOut = trace
+		vm := &virtualMachine{
+			program:   prog,
+			runLimit:  int64(10000),
+			dataStack: append([][]byte{}, c.args...),
+		}
+		err = vm.run()
+		if err == nil && vm.falseResult() {
+			err = ErrFalseVMResult
+		}
+		if expectOK && err != nil {
+			trace.dump()
+			t.Errorf("case %d [%s]: expected success, got error %s", i, progSrc, err)
+		} else if !expectOK && err != ErrFalseVMResult {
+			trace.dump()
+			t.Errorf("case %d [%s]: expected ErrFalseVMResult, got %s", i, progSrc, err)
+		}
+	}
+}
+
+func decodeString(s string) []byte {
+	data, _ := hex.DecodeString(s)
+
+	return data
+}
+
+func tP2PKHSigSm2Program(pubkeyHash []byte) []byte {
+	b, _ := P2PKHSigSm2Program(pubkeyHash)
+
+	return b
 }
 
 func TestVerifyTxInput(t *testing.T) {
