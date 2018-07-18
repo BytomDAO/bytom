@@ -199,6 +199,23 @@ func (ps *peerSet) BestPeer(flag consensus.ServiceFlag) *peer {
 	return bestPeer
 }
 
+func (ps *peerSet) addBanScore(peerID string, persistent, transient uint64, reason string) {
+	ps.mtx.Lock()
+	peer := ps.peers[peerID]
+	ps.mtx.Unlock()
+
+	if peer == nil {
+		return
+	}
+	if ban := peer.addBanScore(persistent, transient, reason); !ban {
+		return
+	}
+	if err := ps.AddBannedPeer(peer.Addr().String()); err != nil {
+		log.WithField("err", err).Error("fail on add ban peer")
+	}
+	ps.removePeer(peerID)
+}
+
 func (ps *peerSet) addPeer(peer BasePeer, height uint64, hash *bc.Hash) {
 	ps.mtx.Lock()
 	defer ps.mtx.Unlock()
@@ -220,7 +237,7 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 	peers := ps.peersWithoutBlock(&hash)
 	for _, peer := range peers {
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
-			ps.StopPeerGracefully(peer.ID())
+			ps.removePeer(peer.ID())
 			continue
 		}
 		peer.markBlock(&hash)
@@ -237,7 +254,7 @@ func (ps *peerSet) broadcastTx(tx *types.Tx) error {
 	peers := ps.peersWithoutTx(&tx.ID)
 	for _, peer := range peers {
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
-			ps.StopPeerGracefully(peer.ID())
+			ps.removePeer(peer.ID())
 			continue
 		}
 		peer.markTransaction(&tx.ID)
@@ -280,6 +297,7 @@ func (ps *peerSet) peersWithoutTx(hash *bc.Hash) []*peer {
 
 func (ps *peerSet) removePeer(peerID string) {
 	ps.mtx.Lock()
-	defer ps.mtx.Unlock()
 	delete(ps.peers, peerID)
+	ps.mtx.Unlock()
+	ps.StopPeerGracefully(peerID)
 }

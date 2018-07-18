@@ -202,15 +202,12 @@ func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusRes
 func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage) {
 	tx, err := msg.GetTransaction()
 	if err != nil {
-		peer.addBanScore(0, 10, "fail on get tx from message")
+		sm.peers.addBanScore(peer.ID(), 0, 10, "fail on get tx from message")
 		return
 	}
 
 	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && isOrphan == false {
-		if ban := peer.addBanScore(10, 0, "fail on validate tx transaction"); ban {
-			sm.peers.AddBannedPeer(peer.Addr().String())
-			sm.peers.StopPeerGracefully(peer.ID())
-		}
+		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
 	}
 }
 

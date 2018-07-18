@@ -115,8 +115,7 @@ func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
 	bk.resetHeaderState()
 	for lastHeader := bk.headerList.Back().Value.(*types.BlockHeader); lastHeader.Hash() != checkPoint.Hash; {
 		if lastHeader.Height >= checkPoint.Height {
-			bk.syncPeer.addBanScore(0, 20, "peer is not in the checkpoint branch")
-			return errPeerMisbehave
+			return errors.Wrap(errPeerMisbehave, "peer is not in the checkpoint branch")
 		}
 
 		lastHash := lastHeader.Hash()
@@ -126,12 +125,10 @@ func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
 		}
 
 		if len(headers) == 0 {
-			bk.syncPeer.addBanScore(0, 10, "requireHeaders return empty list")
-			return errPeerMisbehave
+			return errors.Wrap(errPeerMisbehave, "requireHeaders return empty list")
 		}
 
 		if err := bk.appendHeaderList(headers); err != nil {
-			bk.syncPeer.addBanScore(0, 10, err.Error())
 			return err
 		}
 	}
@@ -145,8 +142,7 @@ func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
 		}
 
 		if len(blocks) == 0 {
-			bk.syncPeer.addBanScore(0, 10, "requireBlocks return empty list")
-			return errPeerMisbehave
+			return errors.Wrap(errPeerMisbehave, "requireBlocks return empty list")
 		}
 
 		for _, block := range blocks {
@@ -161,15 +157,14 @@ func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
 
 			seed, err := bk.chain.CalcNextSeed(&block.PreviousBlockHash)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "fail on fastBlockSync calculate seed")
 			}
 
 			tensority.AIHash.AddCache(&blockHash, seed, &bc.Hash{})
 			_, err = bk.chain.ProcessBlock(block)
 			tensority.AIHash.RemoveCache(&blockHash, seed)
 			if err != nil {
-				bk.syncPeer.addBanScore(0, 20, err.Error())
-				return errPeerMisbehave
+				return errors.Wrap(err, "fail on fastBlockSync process block")
 			}
 		}
 	}
@@ -270,7 +265,6 @@ func (bk *blockKeeper) regularBlockSync(wantHeight uint64) error {
 
 		isOrphan, err := bk.chain.ProcessBlock(block)
 		if err != nil {
-			bk.syncPeer.addBanScore(0, 20, err.Error())
 			return err
 		}
 
@@ -296,7 +290,6 @@ func (bk *blockKeeper) requireBlock(height uint64) (*types.Block, error) {
 				continue
 			}
 			if msg.block.Height != height {
-				bk.syncPeer.addBanScore(0, 2, "require block got different height")
 				continue
 			}
 			return msg.block, nil
@@ -360,7 +353,7 @@ func (bk *blockKeeper) startSync() bool {
 	if peer != nil && checkPoint != nil && peer.Height() >= checkPoint.Height {
 		bk.syncPeer = peer
 		if err := bk.fastBlockSync(checkPoint); err != nil {
-			bk.peers.StopPeerGracefully(peer.ID())
+			bk.peers.addBanScore(peer.ID(), 0, 40, err.Error())
 			return false
 		}
 		return true
@@ -370,7 +363,7 @@ func (bk *blockKeeper) startSync() bool {
 	if peer != nil && peer.Height() > bk.chain.BestBlockHeight() {
 		bk.syncPeer = peer
 		if err := bk.regularBlockSync(peer.Height()); err != nil {
-			bk.peers.StopPeerGracefully(peer.ID())
+			bk.peers.addBanScore(peer.ID(), 0, 40, err.Error())
 			return false
 		}
 		return true

@@ -76,10 +76,7 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 			return
 		}
 
-		if ban := peer.addBanScore(20, 0, err.Error()); ban {
-			f.peers.AddBannedPeer(msg.peerID)
-			f.peers.StopPeerGracefully(msg.peerID)
-		}
+		f.peers.addBanScore(msg.peerID, 20, 0, err.Error())
 		return
 	}
 
