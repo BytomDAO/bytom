@@ -7,7 +7,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	cmn "github.com/tendermint/tmlibs/common"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
@@ -210,6 +209,6 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		}
 
 	default:
-		log.Error(cmn.Fmt("Unknown message type %v", reflect.TypeOf(msg)))
+		log.Errorf("unknown message type %v", reflect.TypeOf(msg))
 	}
 }

@@ -12,12 +12,12 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-//protocol msg
+//protocol msg byte
 const (
 	BlockchainChannel = byte(0x40)
 
-	GetBlockByte        = byte(0x10)
-	BlockByte           = byte(0x11)
+	BlockRequestByte    = byte(0x10)
+	BlockResponseByte   = byte(0x11)
 	HeadersRequestByte  = byte(0x12)
 	HeadersResponseByte = byte(0x13)
 	BlocksRequestByte   = byte(0x14)
@@ -30,13 +30,13 @@ const (
 	maxBlockchainResponseSize = 22020096 + 2
 )
 
-// BlockchainMessage is a generic message for this reactor.
+//BlockchainMessage is a generic message for this reactor.
 type BlockchainMessage interface{}
 
 var _ = wire.RegisterInterface(
 	struct{ BlockchainMessage }{},
-	wire.ConcreteType{&GetBlockMessage{}, GetBlockByte},
-	wire.ConcreteType{&BlockMessage{}, BlockByte},
+	wire.ConcreteType{&GetBlockMessage{}, BlockRequestByte},
+	wire.ConcreteType{&BlockMessage{}, BlockResponseByte},
 	wire.ConcreteType{&GetHeadersMessage{}, HeadersRequestByte},
 	wire.ConcreteType{&HeadersMessage{}, HeadersResponseByte},
 	wire.ConcreteType{&GetBlocksMessage{}, BlocksRequestByte},
@@ -65,7 +65,7 @@ type GetBlockMessage struct {
 	RawHash [32]byte
 }
 
-//GetHash get hash
+//GetHash reutrn the hash of the request
 func (m *GetBlockMessage) GetHash() *bc.Hash {
 	hash := bc.NewHash(m.RawHash)
 	return &hash
@@ -109,32 +109,110 @@ func (m *BlockMessage) String() string {
 	return fmt.Sprintf("BlockMessage{Size: %d}", len(m.RawBlock))
 }
 
-//TransactionMessage notify new tx msg
-type TransactionMessage struct {
-	RawTx []byte
+//GetHeadersMessage is one of the bytom msg type
+type GetHeadersMessage struct {
+	RawBlockLocator [][32]byte
+	RawStopHash     [32]byte
 }
 
-//NewTransactionMessage construct notify new tx msg
-func NewTransactionMessage(tx *types.Tx) (*TransactionMessage, error) {
-	rawTx, err := tx.TxData.MarshalText()
+//NewGetHeadersMessage return a new GetHeadersMessage
+func NewGetHeadersMessage(blockLocator []*bc.Hash, stopHash *bc.Hash) *GetHeadersMessage {
+	msg := &GetHeadersMessage{
+		RawStopHash: stopHash.Byte32(),
+	}
+	for _, hash := range blockLocator {
+		msg.RawBlockLocator = append(msg.RawBlockLocator, hash.Byte32())
+	}
+	return msg
+}
+
+//GetBlockLocator return the locator of the msg
+func (msg *GetHeadersMessage) GetBlockLocator() []*bc.Hash {
+	blockLocator := []*bc.Hash{}
+	for _, rawHash := range msg.RawBlockLocator {
+		hash := bc.NewHash(rawHash)
+		blockLocator = append(blockLocator, &hash)
+	}
+	return blockLocator
+}
+
+//GetStopHash return the stop hash of the msg
+func (msg *GetHeadersMessage) GetStopHash() *bc.Hash {
+	hash := bc.NewHash(msg.RawStopHash)
+	return &hash
+}
+
+//HeadersMessage is one of the bytom msg type
+type HeadersMessage struct {
+	rawHeaders []byte
+}
+
+//NewHeadersMessage create a new HeadersMessage
+func NewHeadersMessage(headers []*types.BlockHeader) (*HeadersMessage, error) {
+	data, err := json.Marshal(headers)
 	if err != nil {
 		return nil, err
 	}
-	return &TransactionMessage{RawTx: rawTx}, nil
+	return &HeadersMessage{rawHeaders: data}, nil
 }
 
-//GetTransaction get tx from msg
-func (m *TransactionMessage) GetTransaction() (*types.Tx, error) {
-	tx := &types.Tx{}
-	if err := tx.UnmarshalText(m.RawTx); err != nil {
+//GetHeaders return the headers in the msg
+func (msg *HeadersMessage) GetHeaders() ([]*types.BlockHeader, error) {
+	headers := []*types.BlockHeader{}
+	return headers, json.Unmarshal(msg.rawHeaders, headers)
+}
+
+//GetBlocksMessage is one of the bytom msg type
+type GetBlocksMessage struct {
+	RawBlockLocator [][32]byte
+	RawStopHash     [32]byte
+}
+
+//NewGetBlocksMessage create a new GetBlocksMessage
+func NewGetBlocksMessage(blockLocator []*bc.Hash, stopHash *bc.Hash) *GetBlocksMessage {
+	msg := &GetBlocksMessage{
+		RawStopHash: stopHash.Byte32(),
+	}
+	for _, hash := range blockLocator {
+		msg.RawBlockLocator = append(msg.RawBlockLocator, hash.Byte32())
+	}
+	return msg
+}
+
+//GetBlockLocator return the locator of the msg
+func (msg *GetBlocksMessage) GetBlockLocator() []*bc.Hash {
+	blockLocator := []*bc.Hash{}
+	for _, rawHash := range msg.RawBlockLocator {
+		hash := bc.NewHash(rawHash)
+		blockLocator = append(blockLocator, &hash)
+	}
+	return blockLocator
+}
+
+//GetStopHash return the stop hash of the msg
+func (msg *GetBlocksMessage) GetStopHash() *bc.Hash {
+	hash := bc.NewHash(msg.RawStopHash)
+	return &hash
+}
+
+//BlocksMessage is one of the bytom msg type
+type BlocksMessage struct {
+	RawBlocks []byte
+}
+
+//NewBlocksMessage create a new BlocksMessage
+func NewBlocksMessage(blocks []*types.Block) (*BlocksMessage, error) {
+	data, err := json.Marshal(blocks)
+	if err != nil {
 		return nil, err
 	}
-	return tx, nil
+	return &BlocksMessage{RawBlocks: data}, nil
 }
 
-//String
-func (m *TransactionMessage) String() string {
-	return fmt.Sprintf("TransactionMessage{Size: %d}", len(m.RawTx))
+//GetBlocks returns the blocks in the msg
+func (msg *BlocksMessage) GetBlocks() ([]*types.Block, error) {
+	blocks := []*types.Block{}
+	return blocks, json.Unmarshal(msg.RawBlocks, blocks)
 }
 
 //StatusRequestMessage status request msg
@@ -180,6 +258,34 @@ func (m *StatusResponseMessage) String() string {
 	return fmt.Sprintf("StatusResponseMessage{Height: %d, Best hash: %s, Genesis hash: %s}", m.Height, hash.String(), genesisHash.String())
 }
 
+//TransactionMessage notify new tx msg
+type TransactionMessage struct {
+	RawTx []byte
+}
+
+//NewTransactionMessage construct notify new tx msg
+func NewTransactionMessage(tx *types.Tx) (*TransactionMessage, error) {
+	rawTx, err := tx.TxData.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	return &TransactionMessage{RawTx: rawTx}, nil
+}
+
+//GetTransaction get tx from msg
+func (m *TransactionMessage) GetTransaction() (*types.Tx, error) {
+	tx := &types.Tx{}
+	if err := tx.UnmarshalText(m.RawTx); err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
+//String
+func (m *TransactionMessage) String() string {
+	return fmt.Sprintf("TransactionMessage{Size: %d}", len(m.RawTx))
+}
+
 //MineBlockMessage new mined block msg
 type MineBlockMessage struct {
 	RawBlock []byte
@@ -206,112 +312,4 @@ func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
 //String convert msg to string
 func (m *MineBlockMessage) String() string {
 	return fmt.Sprintf("NewMineBlockMessage{Size: %d}", len(m.RawBlock))
-}
-
-// MsgGetHeaders implements the Message interface and represents a
-// getheaders message.  It is used to request a list of block headers for
-// blocks starting after the last known hash in the slice of block locator
-// hashes.  The list is returned via a headers message (MsgHeaders) and is
-// limited by a specific hash to stop at or the maximum number of block headers
-// per message, which is currently 2000.
-//
-// Set the HashStop field to the hash at which to stop and use
-// AddBlockLocatorHash to build up the list of block locator hashes.
-//
-// The algorithm for building the block locator hashes should be to add the
-// hashes in reverse order until you reach the genesis block.  In order to keep
-// the list of locator hashes to a resonable number of entries, first add the
-// most recent 10 block hashes, then double the step each loop iteration to
-// exponentially decrease the number of hashes the further away from head and
-// closer to the genesis block you get.
-type GetHeadersMessage struct {
-	RawBlockLocator [][32]byte
-	RawStopHash     [32]byte
-}
-
-func NewGetHeadersMessage(blockLocator []*bc.Hash, stopHash *bc.Hash) *GetHeadersMessage {
-	msg := &GetHeadersMessage{
-		RawStopHash: stopHash.Byte32(),
-	}
-	for _, hash := range blockLocator {
-		msg.RawBlockLocator = append(msg.RawBlockLocator, hash.Byte32())
-	}
-	return msg
-}
-
-func (msg *GetHeadersMessage) GetBlockLocator() []*bc.Hash {
-	blockLocator := []*bc.Hash{}
-	for _, rawHash := range msg.RawBlockLocator {
-		hash := bc.NewHash(rawHash)
-		blockLocator = append(blockLocator, &hash)
-	}
-	return blockLocator
-}
-
-func (msg *GetHeadersMessage) GetStopHash() *bc.Hash {
-	hash := bc.NewHash(msg.RawStopHash)
-	return &hash
-}
-
-type HeadersMessage struct {
-	rawHeaders []byte
-}
-
-func NewHeadersMessage(headers []*types.BlockHeader) (*HeadersMessage, error) {
-	data, err := json.Marshal(headers)
-	if err != nil {
-		return nil, err
-	}
-	return &HeadersMessage{rawHeaders: data}, nil
-}
-
-func (msg *HeadersMessage) GetHeaders() ([]*types.BlockHeader, error) {
-	headers := []*types.BlockHeader{}
-	return headers, json.Unmarshal(msg.rawHeaders, headers)
-}
-
-type GetBlocksMessage struct {
-	RawBlockLocator [][32]byte
-	RawStopHash     [32]byte
-}
-
-func NewGetBlocksMessage(blockLocator []*bc.Hash, stopHash *bc.Hash) *GetBlocksMessage {
-	msg := &GetBlocksMessage{
-		RawStopHash: stopHash.Byte32(),
-	}
-	for _, hash := range blockLocator {
-		msg.RawBlockLocator = append(msg.RawBlockLocator, hash.Byte32())
-	}
-	return msg
-}
-
-func (msg *GetBlocksMessage) GetBlockLocator() []*bc.Hash {
-	blockLocator := []*bc.Hash{}
-	for _, rawHash := range msg.RawBlockLocator {
-		hash := bc.NewHash(rawHash)
-		blockLocator = append(blockLocator, &hash)
-	}
-	return blockLocator
-}
-
-func (msg *GetBlocksMessage) GetStopHash() *bc.Hash {
-	hash := bc.NewHash(msg.RawStopHash)
-	return &hash
-}
-
-type BlocksMessage struct {
-	RawBlocks []byte
-}
-
-func NewBlocksMessage(blocks []*types.Block) (*BlocksMessage, error) {
-	data, err := json.Marshal(blocks)
-	if err != nil {
-		return nil, err
-	}
-	return &BlocksMessage{RawBlocks: data}, nil
-}
-
-func (msg *BlocksMessage) GetBlocks() ([]*types.Block, error) {
-	blocks := []*types.Block{}
-	return blocks, json.Unmarshal(msg.RawBlocks, blocks)
 }
