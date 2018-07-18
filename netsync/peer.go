@@ -251,13 +251,6 @@ func (ps *peerSet) getPeer(id string) *peer {
 	return ps.peers[id]
 }
 
-// Len returns if the current number of peers in the set.
-func (ps *peerSet) len() int {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
-	return len(ps.peers)
-}
-
 func (ps *peerSet) peersWithoutBlock(hash *bc.Hash) []*peer {
 	ps.mtx.RLock()
 	defer ps.mtx.RUnlock()

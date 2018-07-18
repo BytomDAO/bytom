@@ -22,6 +22,11 @@ import (
 	"github.com/bytom/version"
 )
 
+const (
+	maxQuitReq    = 256
+	maxTxChanSize = 10000
+)
+
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
 	sw *p2p.Switch
@@ -33,14 +38,13 @@ type SyncManager struct {
 	blockKeeper *blockKeeper
 	peers       *peerSet
 
-	newTxCh       chan *types.Tx
-	newBlockCh    chan *bc.Hash
-	newPeerCh     chan struct{}
-	txSyncCh      chan *txsync
-	dropPeerCh    chan *string
-	quitSync      chan struct{}
-	config        *cfg.Config
-	synchronising int32
+	newTxCh    chan *types.Tx
+	newBlockCh chan *bc.Hash
+	newPeerCh  chan struct{}
+	txSyncCh   chan *txsync
+	dropPeerCh chan *string
+	quitSync   chan struct{}
+	config     *cfg.Config
 }
 
 //NewSyncManager create a sync manager

@@ -4,6 +4,8 @@ import (
 	"container/list"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/tensority"
@@ -13,23 +15,18 @@ import (
 )
 
 const (
-	syncTimeout = 30 * time.Second
-
-	maxBlocksPending      = 1024
-	maxHeadersPending     = 32
-	maxBlockHeadersPerMsg = 2000
-
-	maxQuitReq = 256
-
-	maxTxChanSize     = 10000 // txChanSize is the size of channel listening to Txpool newTxCh
-	MaxMsgPackageSize = 10 * 1024 * 1024
+	syncTimeout           = 30 * time.Second
+	syncCycle             = 5 * time.Second
+	blockProcessChSize    = 1024
+	blocksProcessChSize   = 128
+	headersProcessChSize  = 1024
+	maxBlockHeadersPerMsg = 2048
 )
 
 var (
-	errRequestTimeout   = errors.New("request timeout")
-	errGetBlocksTimeout = errors.New("Get blocks Timeout")
-	errPeerDropped      = errors.New("Peer dropped")
-	errPeerMisbehave    = errors.New("peer is misbehave")
+	errRequestTimeout = errors.New("request timeout")
+	errPeerDropped    = errors.New("Peer dropped")
+	errPeerMisbehave  = errors.New("peer is misbehave")
 )
 
 type blockMsg struct {
@@ -47,64 +44,38 @@ type headersMsg struct {
 	peerID  string
 }
 
-//TODO: add retry mechanism
 type blockKeeper struct {
-	chain    *protocol.Chain
-	peers    *peerSet
-	syncPeer *peer
+	chain *protocol.Chain
+	peers *peerSet
 
+	syncPeer         *peer
 	blockProcessCh   chan *blockMsg
 	blocksProcessCh  chan *blocksMsg
 	headersProcessCh chan *headersMsg
 
-	headerList  *list.List
-	startHeader *list.Element
+	headerList *list.List
 }
 
 func newBlockKeeper(chain *protocol.Chain, peers *peerSet) *blockKeeper {
-	best := chain.BestBlockHeader()
 	bk := &blockKeeper{
 		chain:            chain,
 		peers:            peers,
-		blockProcessCh:   make(chan *blockMsg, maxBlocksPending),
-		headersProcessCh: make(chan *headersMsg, maxHeadersPending),
-		blocksProcessCh:  make(chan *blocksMsg, 0),
+		blockProcessCh:   make(chan *blockMsg, blockProcessChSize),
+		blocksProcessCh:  make(chan *blocksMsg, blocksProcessChSize),
+		headersProcessCh: make(chan *headersMsg, headersProcessChSize),
 		headerList:       list.New(),
 	}
-	bk.resetHeaderState(best)
+	bk.resetHeaderState()
+	go bk.syncWorker()
 	return bk
-}
-
-// resetHeaderState sets the headers-first mode state to values appropriate for
-// syncing from a new peer.
-func (bk *blockKeeper) resetHeaderState(header *types.BlockHeader) {
-	bk.headerList.Init()
-	bk.startHeader = nil
-
-	// When there is a next checkpoint, add an entry for the latest known
-	// block into the header pool.  This allows the next downloaded header
-	// to prove it links to the chain properly.
-	if bk.nextCheckpoint() != nil {
-		bk.headerList.PushBack(header)
-	}
-}
-
-func (bk *blockKeeper) AddBlock(block *types.Block, peerID string) {
-	bk.blockProcessCh <- &blockMsg{block: block, peerID: peerID}
-}
-
-func (bk *blockKeeper) IsCaughtUp() bool {
-	peer := bk.peers.BestPeer(consensus.SFFullNode)
-	return peer == nil || bk.chain.BestBlockHeight() >= peer.Height()
 }
 
 func (bk *blockKeeper) appendHeaderList(headers []*types.BlockHeader) error {
 	for _, header := range headers {
 		prevHeader := bk.headerList.Back().Value.(*types.BlockHeader)
 		if prevHeader.Hash() != header.PreviousBlockHash {
-			return errPeerMisbehave
+			return errors.New("fail to append list due to order dismatch")
 		}
-
 		bk.headerList.PushBack(header)
 	}
 	return nil
@@ -122,10 +93,15 @@ func (bk *blockKeeper) blockLocator() []*bc.Hash {
 			break
 		}
 
+		var err error
 		if header.Height < step {
-			header, _ = bk.chain.GetHeaderByHeight(0)
+			header, err = bk.chain.GetHeaderByHeight(0)
 		} else {
-			header, _ = bk.chain.GetHeaderByHeight(header.Height - step)
+			header, err = bk.chain.GetHeaderByHeight(header.Height - step)
+		}
+		if err != nil {
+			log.WithField("err", err).Error("blockKeeper fail on get blockLocator")
+			break
 		}
 
 		if len(locator) > 10 {
@@ -136,18 +112,31 @@ func (bk *blockKeeper) blockLocator() []*bc.Hash {
 }
 
 func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
-	for bk.headerList.Back().Value.(*types.BlockHeader).Hash() != checkPoint.Hash {
-		locator := bk.blockLocator()
-		headers, err := bk.requireHeaders(locator)
+	bk.resetHeaderState()
+	for lastHeader := bk.headerList.Back().Value.(*types.BlockHeader); lastHeader.Hash() != checkPoint.Hash; {
+		if lastHeader.Height >= checkPoint.Height {
+			bk.syncPeer.addBanScore(0, 20, "peer is not in the checkpoint branch")
+			return errPeerMisbehave
+		}
+
+		lastHash := lastHeader.Hash()
+		headers, err := bk.requireHeaders([]*bc.Hash{&lastHash}, &checkPoint.Hash)
 		if err != nil {
 			return err
 		}
 
+		if len(headers) == 0 {
+			bk.syncPeer.addBanScore(0, 10, "requireHeaders return empty list")
+			return errPeerMisbehave
+		}
+
 		if err := bk.appendHeaderList(headers); err != nil {
+			bk.syncPeer.addBanScore(0, 10, err.Error())
 			return err
 		}
 	}
 
+	fastHeader := bk.headerList.Front()
 	for bk.chain.BestBlockHeight() < checkPoint.Height {
 		locator := bk.blockLocator()
 		blocks, err := bk.requireBlocks(locator, &checkPoint.Hash)
@@ -155,137 +144,36 @@ func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
 			return err
 		}
 
+		if len(blocks) == 0 {
+			bk.syncPeer.addBanScore(0, 10, "requireBlocks return empty list")
+			return errPeerMisbehave
+		}
+
 		for _, block := range blocks {
+			if fastHeader = fastHeader.Next(); fastHeader == nil {
+				return errors.New("get block than is higher than checkpoint")
+			}
+
 			blockHash := block.Hash()
-			if blockHash != bk.startHeader.Value.(*types.BlockHeader).Hash() {
+			if blockHash != fastHeader.Value.(*types.BlockHeader).Hash() {
 				return errPeerMisbehave
 			}
 
-			seed, err := bk.chain.CalcNextSeed(&(block.PreviousBlockHash))
+			seed, err := bk.chain.CalcNextSeed(&block.PreviousBlockHash)
 			if err != nil {
 				return err
 			}
 
 			tensority.AIHash.AddCache(&blockHash, seed, &bc.Hash{})
-			isOrphan, err := bk.chain.ProcessBlock(block)
+			_, err = bk.chain.ProcessBlock(block)
 			tensority.AIHash.RemoveCache(&blockHash, seed)
-			if err != nil || isOrphan {
+			if err != nil {
+				bk.syncPeer.addBanScore(0, 20, err.Error())
 				return errPeerMisbehave
 			}
 		}
 	}
 	return nil
-}
-
-func (bk *blockKeeper) requireBlock(height uint64) (*types.Block, error) {
-	if ok := bk.syncPeer.getBlockByHeight(height); !ok {
-		return nil, errPeerDropped
-	}
-
-	waitTicker := time.NewTimer(syncTimeout)
-	for {
-		select {
-		case msg := <-bk.blockProcessCh:
-			if msg.block.Height != height {
-				bk.syncPeer.addBanScore(0, 2, "require block got different height")
-				continue
-			}
-			return msg.block, nil
-		case <-waitTicker.C:
-			return nil, errRequestTimeout
-		}
-	}
-}
-
-func (bk *blockKeeper) requireBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
-	if ok := bk.syncPeer.getBlocks(locator, stopHash); !ok {
-		return nil, errPeerDropped
-	}
-
-	waitTicker := time.NewTimer(syncTimeout)
-	for {
-		select {
-		case msg := <-bk.blocksProcessCh:
-			return msg.blocks, nil
-		case <-waitTicker.C:
-			return nil, errGetBlocksTimeout
-		}
-	}
-}
-
-func (bk *blockKeeper) requireHeaders(locator []*bc.Hash) ([]*types.BlockHeader, error) {
-	stopHash := bk.nextCheckpoint().Hash
-	bk.syncPeer.getHeaders(locator, &stopHash)
-
-	waitTicker := time.NewTimer(syncTimeout)
-	for {
-		select {
-		case msg := <-bk.headersProcessCh:
-			return msg.headers, nil
-		case <-waitTicker.C:
-			return nil, errRequestTimeout
-		}
-	}
-}
-
-func (bk *blockKeeper) regularBlockSync(wantHeight uint64) error {
-	i := bk.chain.BestBlockHeight() + 1
-	for i <= wantHeight {
-		block, err := bk.requireBlock(i)
-		if err != nil {
-			return err
-		}
-
-		isOrphan, err := bk.chain.ProcessBlock(block)
-		if err != nil {
-			return err
-		}
-
-		if isOrphan {
-			i--
-			continue
-		}
-		i = bk.chain.BestBlockHeight() + 1
-	}
-	return nil
-}
-
-func (bk *blockKeeper) startSync() {
-	checkPoint := bk.nextCheckpoint()
-	peer := bk.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode)
-	if peer != nil && checkPoint != nil && peer.Height() >= checkPoint.Height {
-		bk.syncPeer = peer
-		if err := bk.fastBlockSync(checkPoint); err != nil {
-			bk.peers.StopPeerGracefully(peer.ID())
-		}
-		return
-	}
-
-	peer = bk.peers.BestPeer(consensus.SFFullNode)
-	if peer.Height() > bk.chain.BestBlockHeight() {
-		bk.syncPeer = peer
-		if err := bk.regularBlockSync(peer.Height()); err != nil {
-			bk.peers.StopPeerGracefully(peer.ID())
-		}
-		return
-	}
-}
-
-func (bk *blockKeeper) nextCheckpoint() *consensus.Checkpoint {
-	height := bk.chain.BestBlockHeader().Height
-	checkpoints := consensus.ActiveNetParams.Checkpoints
-	if len(checkpoints) == 0 || height >= checkpoints[len(checkpoints)-1].Height {
-		return nil
-	}
-
-	nextCheckpoint := &checkpoints[len(checkpoints)-1]
-	for i := len(checkpoints) - 2; i >= 0; i-- {
-		if height >= checkpoints[i].Height {
-			break
-		}
-		nextCheckpoint = &checkpoints[i]
-	}
-	return nextCheckpoint
 }
 
 func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
@@ -295,8 +183,9 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 	}
 
 	blocks := []*types.Block{}
-	for _, headers := range headers {
-		block, err := bk.chain.GetBlockByHeight(headers.Height)
+	for _, header := range headers {
+		headerHash := header.Hash()
+		block, err := bk.chain.GetBlockByHash(&headerHash)
 		if err != nil {
 			return nil, err
 		}
@@ -340,4 +229,156 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash) ([]*
 		headers = append(headers, header)
 	}
 	return headers, nil
+}
+
+func (bk *blockKeeper) nextCheckpoint() *consensus.Checkpoint {
+	height := bk.chain.BestBlockHeader().Height
+	checkpoints := consensus.ActiveNetParams.Checkpoints
+	if len(checkpoints) == 0 || height >= checkpoints[len(checkpoints)-1].Height {
+		return nil
+	}
+
+	nextCheckpoint := &checkpoints[len(checkpoints)-1]
+	for i := len(checkpoints) - 2; i >= 0; i-- {
+		if height >= checkpoints[i].Height {
+			break
+		}
+		nextCheckpoint = &checkpoints[i]
+	}
+	return nextCheckpoint
+}
+
+func (bk *blockKeeper) processBlock(peerID string, block *types.Block) {
+	bk.blockProcessCh <- &blockMsg{block: block, peerID: peerID}
+}
+
+func (bk *blockKeeper) processBlocks(peerID string, blocks []*types.Block) {
+	bk.blocksProcessCh <- &blocksMsg{blocks: blocks, peerID: peerID}
+}
+
+func (bk *blockKeeper) processHeaders(peerID string, headers []*types.BlockHeader) {
+	bk.headersProcessCh <- &headersMsg{headers: headers, peerID: peerID}
+}
+
+func (bk *blockKeeper) regularBlockSync(wantHeight uint64) error {
+	i := bk.chain.BestBlockHeight() + 1
+	for i <= wantHeight {
+		block, err := bk.requireBlock(i)
+		if err != nil {
+			return err
+		}
+
+		isOrphan, err := bk.chain.ProcessBlock(block)
+		if err != nil {
+			bk.syncPeer.addBanScore(0, 20, err.Error())
+			return err
+		}
+
+		if isOrphan {
+			i--
+			continue
+		}
+		i = bk.chain.BestBlockHeight() + 1
+	}
+	return nil
+}
+
+func (bk *blockKeeper) requireBlock(height uint64) (*types.Block, error) {
+	if ok := bk.syncPeer.getBlockByHeight(height); !ok {
+		return nil, errPeerDropped
+	}
+
+	waitTicker := time.NewTimer(syncTimeout)
+	for {
+		select {
+		case msg := <-bk.blockProcessCh:
+			if msg.peerID != bk.syncPeer.ID() {
+				continue
+			}
+			if msg.block.Height != height {
+				bk.syncPeer.addBanScore(0, 2, "require block got different height")
+				continue
+			}
+			return msg.block, nil
+		case <-waitTicker.C:
+			return nil, errRequestTimeout
+		}
+	}
+}
+
+func (bk *blockKeeper) requireBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.Block, error) {
+	if ok := bk.syncPeer.getBlocks(locator, stopHash); !ok {
+		return nil, errPeerDropped
+	}
+
+	waitTicker := time.NewTimer(syncTimeout)
+	for {
+		select {
+		case msg := <-bk.blocksProcessCh:
+			if msg.peerID != bk.syncPeer.ID() {
+				continue
+			}
+			return msg.blocks, nil
+		case <-waitTicker.C:
+			return nil, errRequestTimeout
+		}
+	}
+}
+
+func (bk *blockKeeper) requireHeaders(locator []*bc.Hash, stopHash *bc.Hash) ([]*types.BlockHeader, error) {
+	if ok := bk.syncPeer.getHeaders(locator, stopHash); !ok {
+		return nil, errPeerDropped
+	}
+
+	waitTicker := time.NewTimer(syncTimeout)
+	for {
+		select {
+		case msg := <-bk.headersProcessCh:
+			if msg.peerID != bk.syncPeer.ID() {
+				continue
+			}
+			return msg.headers, nil
+		case <-waitTicker.C:
+			return nil, errRequestTimeout
+		}
+	}
+}
+
+// resetHeaderState sets the headers-first mode state to values appropriate for
+// syncing from a new peer.
+func (bk *blockKeeper) resetHeaderState() {
+	header := bk.chain.BestBlockHeader()
+	bk.headerList.Init()
+	if bk.nextCheckpoint() != nil {
+		bk.headerList.PushBack(header)
+	}
+}
+
+func (bk *blockKeeper) startSync() {
+	checkPoint := bk.nextCheckpoint()
+	peer := bk.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode)
+	if peer != nil && checkPoint != nil && peer.Height() >= checkPoint.Height {
+		bk.syncPeer = peer
+		if err := bk.fastBlockSync(checkPoint); err != nil {
+			bk.peers.StopPeerGracefully(peer.ID())
+		}
+		return
+	}
+
+	peer = bk.peers.BestPeer(consensus.SFFullNode)
+	if peer.Height() > bk.chain.BestBlockHeight() {
+		bk.syncPeer = peer
+		if err := bk.regularBlockSync(peer.Height()); err != nil {
+			bk.peers.StopPeerGracefully(peer.ID())
+		}
+		return
+	}
+}
+
+func (bk *blockKeeper) syncWorker() {
+	syncTicker := time.NewTicker(syncCycle)
+	for {
+		<-syncTicker.C
+		bk.startSync()
+	}
 }

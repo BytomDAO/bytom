@@ -2,8 +2,6 @@ package netsync
 
 import (
 	"math/rand"
-	"sync/atomic"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -12,9 +10,6 @@ import (
 )
 
 const (
-	forceSyncCycle      = 10 * time.Second // Time interval to force syncs, even if few peers are available
-	minDesiredPeerCount = 5                // Amount of peers desired to start syncing
-
 	// This is the target size for the packs of transactions sent by txsyncLoop.
 	// A pack can get larger than this if a single transactions exceeds this size.
 	txsyncPackSize = 100 * 1024
@@ -30,42 +25,6 @@ type txsync struct {
 func (sm *SyncManager) syncer() {
 	// Start and ensure cleanup of sync mechanisms
 	sm.fetcher.Start()
-	defer sm.fetcher.Stop()
-	//defer sm.downloader.Terminate()
-
-	// Wait for different events to fire synchronisation operations
-	forceSync := time.NewTicker(forceSyncCycle)
-	defer forceSync.Stop()
-
-	for {
-		select {
-		case <-sm.newPeerCh:
-			log.Info("New peer connected.")
-			// Make sure we have peers to select from, then sync
-			if sm.sw.Peers().Size() < minDesiredPeerCount {
-				break
-			}
-			go sm.synchronise()
-		case <-forceSync.C:
-			// Force a sync even if not enough peers are present
-			go sm.synchronise()
-
-		case <-sm.quitSync:
-			return
-		}
-	}
-}
-
-// synchronise tries to sync up our local block chain with a remote peer.
-func (sm *SyncManager) synchronise() {
-	log.Debug("bk peer num:", sm.blockKeeper.peers.len(), " sw peer num:", sm.sw.Peers().Size(), " ", sm.sw.Peers().List())
-	// Make sure only one goroutine is ever allowed past this point at once
-	if !atomic.CompareAndSwapInt32(&sm.synchronising, 0, 1) {
-		log.Info("Synchronising ...")
-		return
-	}
-	defer atomic.StoreInt32(&sm.synchronising, 0)
-	sm.blockKeeper.startSync()
 }
 
 // txsyncLoop takes care of the initial transaction sync for each new

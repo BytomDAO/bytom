@@ -167,7 +167,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.sm.handleGetBlockMsg(peer, msg)
 
 	case *BlockMessage:
-		pr.blockKeeper.AddBlock(msg.GetBlock(), src.Key)
+		pr.blockKeeper.processBlock(src.Key, msg.GetBlock())
 
 	case *StatusRequestMessage:
 		pr.sm.handleStatusRequestMsg(peer)
@@ -195,18 +195,15 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		if err != nil {
 			return
 		}
-		hmsg := &headersMsg{headers: headers, peerID: src.Key}
-		pr.blockKeeper.headersProcessCh <- hmsg
+
+		pr.blockKeeper.processHeaders(src.Key, headers)
 
 	case *GetBlocksMessage:
 		pr.sm.handleGetBlocksMsg(peer, msg)
 
 	case *BlocksMessage:
-		peer := pr.blockKeeper.peers.getPeer(src.Key)
 		blocks, _ := msg.GetBlocks()
-		if peer != nil {
-			pr.blockKeeper.blocksProcessCh <- &blocksMsg{blocks: blocks, peerID: peer.ID()}
-		}
+		pr.sm.blockKeeper.processBlocks(src.Key, blocks)
 
 	default:
 		log.Errorf("unknown message type %v", reflect.TypeOf(msg))
