@@ -1,6 +1,7 @@
 package netsync
 
 import (
+	"net"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -19,6 +20,21 @@ const (
 	maxKnownBlocks      = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
 	defaultBanThreshold = uint64(100)
 )
+
+//BasePeer is the interface for connection level peer
+type BasePeer interface {
+	Addr() net.Addr
+	CloseConn()
+	ID() string
+	ServiceFlag() consensus.ServiceFlag
+	TrySend(byte, interface{}) bool
+}
+
+//BasePeerSet is the intergace for connection level peer manager
+type BasePeerSet interface {
+	AddBannedPeer(string) error
+	StopPeerGracefully(string)
+}
 
 type peer struct {
 	BasePeer
@@ -48,11 +64,6 @@ func (p *peer) Height() uint64 {
 	return p.height
 }
 
-// addBanScore increases the persistent and decaying ban score fields by the
-// values passed as parameters. If the resulting score exceeds half of the ban
-// threshold, a warning is logged including the reason provided. Further, if
-// the score is above the ban threshold, the peer will be banned and
-// disconnected.
 func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 	score := p.banScore.Increase(persistent, transient)
 	if score > defaultBanThreshold {
@@ -132,9 +143,9 @@ func (p *peer) sendHeaders(headers []*types.BlockHeader) error {
 	return nil
 }
 
-func (p *peer) sendStatus(blockHeader *types.BlockHeader, genesis *bc.Hash) {
+func (p *peer) sendStatus(blockHeader *types.BlockHeader, genesis *bc.Hash) bool {
 	msg := NewStatusResponseMessage(blockHeader, genesis)
-	p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	return p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 }
 
 func (p *peer) sendTransactions(txs []*types.Tx) error {
@@ -159,8 +170,8 @@ func (p *peer) setStatus(height uint64, hash *bc.Hash) {
 
 type peerSet struct {
 	BasePeerSet
-	peers map[string]*peer
 	mtx   sync.RWMutex
+	peers map[string]*peer
 }
 
 // newPeerSet creates a new peer set to track the active participants.
