@@ -9,6 +9,6 @@ import (
 )
 
 func simdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
-	log.Warn("The SIMD-version is not supported on releases, please compile by your yourself to enable this feature.")
+	log.Warn("The SIMD-version is not supported on releases, please compile the lib according to README to enable this feature.")
 	return legacyAlgorithm(bh, seed)
 }
