@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
+	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
@@ -359,6 +360,17 @@ func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
 		cps = append(cps, cp)
 	}
 	return cps, nil
+}
+
+func (m *Manager) ListUnconfirmedUtxo(isSmartContract bool) []*UTXO {
+	utxos := m.utxoKeeper.ListUnconfirmed()
+	result := []*UTXO{}
+	for _, utxo := range utxos {
+		if segwit.IsP2WScript(utxo.ControlProgram) != isSmartContract {
+			result = append(result, utxo)
+		}
+	}
+	return result
 }
 
 // RemoveUnconfirmedUtxo remove utxos from the utxoKeeper

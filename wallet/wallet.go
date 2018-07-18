@@ -58,6 +58,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	go w.walletUpdater()
+	go w.delUnconfirmedTx()
 	return w, nil
 }
 
