@@ -20,13 +20,6 @@ type txsync struct {
 	txs []*types.Tx
 }
 
-// syncer is responsible for periodically synchronising with the network, both
-// downloading hashes and blocks as well as handling the announcement handler.
-func (sm *SyncManager) syncer() {
-	// Start and ensure cleanup of sync mechanisms
-	sm.fetcher.Start()
-}
-
 // txsyncLoop takes care of the initial transaction sync for each new
 // connection. When a new peer appears, we relay all currently pending
 // transactions. In order to minimise egress bandwidth usage, we send

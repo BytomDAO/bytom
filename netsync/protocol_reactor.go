@@ -41,8 +41,6 @@ type ProtocolReactor struct {
 
 	sm          *SyncManager
 	chain       *protocol.Chain
-	blockKeeper *blockKeeper
-	txPool      *protocol.TxPool
 	peers       *peerSet
 	handshakeMu sync.Mutex
 	genesisHash bc.Hash
@@ -53,19 +51,16 @@ type ProtocolReactor struct {
 }
 
 // NewProtocolReactor returns the reactor of whole blockchain.
-func NewProtocolReactor(sm *SyncManager, chain *protocol.Chain, txPool *protocol.TxPool, blockPeer *blockKeeper, peers *peerSet, newPeerCh chan struct{}, txSyncCh chan *txsync) *ProtocolReactor {
+func NewProtocolReactor(sm *SyncManager, peers *peerSet, newPeerCh chan struct{}, txSyncCh chan *txsync) *ProtocolReactor {
 	pr := &ProtocolReactor{
 		sm:           sm,
-		chain:        chain,
-		blockKeeper:  blockPeer,
-		txPool:       txPool,
 		peers:        peers,
 		newPeerCh:    newPeerCh,
 		txSyncCh:     txSyncCh,
 		peerStatusCh: make(chan *initalPeerStatus),
 	}
 	pr.BaseReactor = *p2p.NewBaseReactor("ProtocolReactor", pr)
-	genesisBlock, _ := pr.chain.GetBlockByHeight(0)
+	genesisBlock, _ := pr.sm.chain.GetBlockByHeight(0)
 	pr.genesisHash = genesisBlock.Hash()
 
 	return pr
@@ -98,7 +93,7 @@ func (pr *ProtocolReactor) syncTransactions(p *peer) {
 	if p == nil {
 		return
 	}
-	pending := pr.txPool.GetTransactions()
+	pending := pr.sm.txPool.GetTransactions()
 	if len(pending) == 0 {
 		return
 	}
@@ -126,8 +121,8 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 					log.Info("Remote peer genesis block hash:", status.genesisHash.String(), " local hash:", pr.genesisHash.String())
 					return errDiffGenesisHash
 				}
-				pr.blockKeeper.peers.addPeer(peer, status.height, status.hash)
-				pr.syncTransactions(pr.blockKeeper.peers.getPeer(peer.Key))
+				pr.peers.addPeer(peer, status.height, status.hash)
+				pr.syncTransactions(pr.peers.getPeer(peer.Key))
 				pr.newPeerCh <- struct{}{}
 				return nil
 			}
@@ -167,7 +162,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.sm.handleGetBlockMsg(peer, msg)
 
 	case *BlockMessage:
-		pr.blockKeeper.processBlock(src.Key, msg.GetBlock())
+		pr.sm.blockKeeper.processBlock(src.Key, msg.GetBlock())
 
 	case *StatusRequestMessage:
 		pr.sm.handleStatusRequestMsg(peer)
@@ -196,7 +191,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 			return
 		}
 
-		pr.blockKeeper.processHeaders(src.Key, headers)
+		pr.sm.blockKeeper.processHeaders(src.Key, headers)
 
 	case *GetBlocksMessage:
 		pr.sm.handleGetBlocksMsg(peer, msg)

@@ -31,18 +31,17 @@ const (
 type SyncManager struct {
 	sw *p2p.Switch
 
-	privKey     crypto.PrivKeyEd25519 // local node's p2p key
-	chain       *core.Chain
-	txPool      *core.TxPool
-	fetcher     *Fetcher
-	blockKeeper *blockKeeper
-	peers       *peerSet
+	privKey      crypto.PrivKeyEd25519 // local node's p2p key
+	chain        *core.Chain
+	txPool       *core.TxPool
+	blockFetcher *blockFetcher
+	blockKeeper  *blockKeeper
+	peers        *peerSet
 
 	newTxCh    chan *types.Tx
 	newBlockCh chan *bc.Hash
 	newPeerCh  chan struct{}
 	txSyncCh   chan *txsync
-	dropPeerCh chan *string
 	quitSync   chan struct{}
 	config     *cfg.Config
 }
@@ -51,25 +50,23 @@ type SyncManager struct {
 func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
 	sw := p2p.NewSwitch(config)
 	peers := newPeerSet(sw)
-	dropPeerCh := make(chan *string, maxQuitReq)
 	manager := &SyncManager{
-		sw:          sw,
-		txPool:      txPool,
-		chain:       chain,
-		privKey:     crypto.GenPrivKeyEd25519(),
-		fetcher:     NewFetcher(chain, peers),
-		blockKeeper: newBlockKeeper(chain, peers),
-		peers:       peers,
-		newTxCh:     make(chan *types.Tx, maxTxChanSize),
-		newBlockCh:  newBlockCh,
-		newPeerCh:   make(chan struct{}),
-		txSyncCh:    make(chan *txsync),
-		dropPeerCh:  dropPeerCh,
-		quitSync:    make(chan struct{}),
-		config:      config,
+		sw:           sw,
+		txPool:       txPool,
+		chain:        chain,
+		privKey:      crypto.GenPrivKeyEd25519(),
+		blockFetcher: NewBlockFetcher(chain, peers),
+		blockKeeper:  newBlockKeeper(chain, peers),
+		peers:        peers,
+		newTxCh:      make(chan *types.Tx, maxTxChanSize),
+		newBlockCh:   newBlockCh,
+		newPeerCh:    make(chan struct{}),
+		txSyncCh:     make(chan *txsync),
+		quitSync:     make(chan struct{}),
+		config:       config,
 	}
 
-	protocolReactor := NewProtocolReactor(manager, chain, txPool, manager.blockKeeper, manager.peers, manager.newPeerCh, manager.txSyncCh)
+	protocolReactor := NewProtocolReactor(manager, manager.peers, manager.newPeerCh, manager.txSyncCh)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
 	// Create & add listener
@@ -138,7 +135,7 @@ func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
 
 	hash := block.Hash()
 	peer.markBlock(&hash)
-	sm.fetcher.Enqueue(peer.ID(), block)
+	sm.blockFetcher.processNewBlock(&blockMsg{peerID: peer.ID(), block: block})
 	peer.setStatus(block.Height, &hash)
 }
 
@@ -214,9 +211,6 @@ func (sm *SyncManager) Start() {
 
 	// broadcast mined blocks
 	go sm.minedBroadcastLoop()
-
-	// start sync handlers
-	go sm.syncer()
 
 	go sm.txsyncLoop()
 }
@@ -295,11 +289,6 @@ func (sm *SyncManager) minedBroadcastLoop() {
 //NodeInfo get P2P peer node info
 func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
 	return sm.sw.NodeInfo()
-}
-
-//BlockKeeper get block keeper
-func (sm *SyncManager) BlockKeeper() *blockKeeper {
-	return sm.blockKeeper
 }
 
 //Peers get sync manager peer set

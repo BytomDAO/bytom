@@ -354,15 +354,16 @@ func (bk *blockKeeper) resetHeaderState() {
 	}
 }
 
-func (bk *blockKeeper) startSync() {
+func (bk *blockKeeper) startSync() bool {
 	checkPoint := bk.nextCheckpoint()
 	peer := bk.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode)
 	if peer != nil && checkPoint != nil && peer.Height() >= checkPoint.Height {
 		bk.syncPeer = peer
 		if err := bk.fastBlockSync(checkPoint); err != nil {
 			bk.peers.StopPeerGracefully(peer.ID())
+			return false
 		}
-		return
+		return true
 	}
 
 	peer = bk.peers.BestPeer(consensus.SFFullNode)
@@ -370,15 +371,28 @@ func (bk *blockKeeper) startSync() {
 		bk.syncPeer = peer
 		if err := bk.regularBlockSync(peer.Height()); err != nil {
 			bk.peers.StopPeerGracefully(peer.ID())
+			return false
 		}
-		return
+		return true
 	}
+	return false
 }
 
 func (bk *blockKeeper) syncWorker() {
 	syncTicker := time.NewTicker(syncCycle)
 	for {
 		<-syncTicker.C
-		bk.startSync()
+		if update := bk.startSync(); !update {
+			continue
+		}
+
+		block, err := bk.chain.GetBlockByHeight(bk.chain.BestBlockHeight())
+		if err != nil {
+			log.WithField("err", err).Error("fail on syncWorker get best block")
+		}
+
+		if err := bk.peers.broadcastMinedBlock(block); err != nil {
+			log.WithField("err", err).Error("fail on syncWorker broadcast new block")
+		}
 	}
 }
