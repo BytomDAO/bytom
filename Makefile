@@ -97,7 +97,7 @@ target/$(BYTOMD_BINARY32):
 ifeq ($(GOOS),linux)
 target/$(BYTOMD_BINARY64):
 	CGO_ENABLED=1 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
-else ($(UNAME_S),Linux)
+else
 target/$(BYTOMD_BINARY64):
 	CGO_ENABLED=0 GOARCH=amd64 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
 endif
