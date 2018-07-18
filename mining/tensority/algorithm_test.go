@@ -282,7 +282,3 @@ func BenchmarkAlgorithmParallel(b *testing.B) {
 		}
 	})
 }
-
-func init() {
-	UseSIMD = true
-}
