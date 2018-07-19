@@ -220,7 +220,7 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash) ([]*
 	}
 
 	headers := []*types.BlockHeader{}
-	for i := uint64(0); i < totalHeaders; i++ {
+	for i := uint64(1); i <= totalHeaders; i++ {
 		header, err := bk.chain.GetHeaderByHeight(startHeader.Height + i)
 		if err != nil {
 			return nil, err
