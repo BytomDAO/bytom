@@ -97,7 +97,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	}
 
 	peer := pr.peers.getPeer(src.Key)
-	if peer == nil && (msgType != StatusResponseByte || msgType != StatusRequestByte) {
+	if peer == nil && msgType != StatusResponseByte && msgType != StatusRequestByte {
 		return
 	}
 
