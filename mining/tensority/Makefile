@@ -1,3 +1,3 @@
 test:
-	cd lib && make
+	cd cgo_algorithm/lib/ && make
 	go test -v && go test -bench=.

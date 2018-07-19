@@ -1,6 +1,6 @@
 // +build cgo
 
-package tensority
+package cgo_algorithm
 
 // #cgo !darwin CFLAGS: -I.
 // #cgo !darwin LDFLAGS: -L. -l:./lib/cSimdTs.o -lstdc++ -lgomp -lpthread
@@ -15,7 +15,7 @@ import (
 	"github.com/bytom/protocol/bc"
 )
 
-func simdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
+func SimdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
 	bhBytes := bh.Bytes()
 	sdBytes := seed.Bytes()
 	bhPtr := (*C.uint8_t)(unsafe.Pointer(&bhBytes[0]))

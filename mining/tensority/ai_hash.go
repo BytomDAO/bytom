@@ -4,6 +4,8 @@ import (
 	"github.com/golang/groupcache/lru"
 
 	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/mining/tensority/cgo_algorithm"
+	"github.com/bytom/mining/tensority/go_algorithm"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -47,5 +49,15 @@ func (a *Cache) Hash(hash, seed *bc.Hash) *bc.Hash {
 	return algorithm(hash, seed)
 }
 
-// AIHash is created for let different package share same cache
-var AIHash = NewCache()
+func algorithm(bh, seed *bc.Hash) *bc.Hash {
+	if UseSIMD {
+		return cgo_algorithm.SimdAlgorithm(bh, seed)
+	} else {
+		return go_algorithm.LegacyAlgorithm(bh, seed)
+	}
+}
+
+var (
+	AIHash  = NewCache() // AIHash is created for let different package share same cache
+	UseSIMD = false
+)
