@@ -180,7 +180,23 @@ func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
 		return
 	}
 
-	ok, err := peer.sendBlocks(blocks)
+	totalSize := 0
+	sendBlocks := []*types.Block{}
+	for _, block := range blocks {
+		rawData, err := block.MarshalText()
+		if err != nil {
+			log.WithField("err", err).Error("fail on handleGetBlocksMsg marshal block")
+			continue
+		}
+
+		if totalSize+len(rawData) > maxBlockchainResponseSize-16 {
+			break
+		}
+		totalSize += len(rawData)
+		sendBlocks = append(sendBlocks, block)
+	}
+
+	ok, err := peer.sendBlocks(sendBlocks)
 	if !ok {
 		sm.peers.removePeer(peer.ID())
 	}
