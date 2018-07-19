@@ -125,7 +125,11 @@ func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
 		return
 	}
 
-	if err := peer.sendBlock(block); err != nil {
+	ok, err := peer.sendBlock(block)
+	if !ok {
+		sm.peers.removePeer(peer.ID())
+	}
+	if err != nil {
 		log.WithField("err", err).Warning("fail on handleGetBlockMsg sentBlock")
 	}
 }

@@ -111,34 +111,45 @@ func (p *peer) markTransaction(hash *bc.Hash) {
 	p.knownTxs.Add(hash.String())
 }
 
-func (p *peer) sendBlock(block *types.Block) error {
+func (p *peer) sendBlock(block *types.Block) (bool, error) {
 	msg, err := NewBlockMessage(block)
 	if err != nil {
-		return errors.Wrap(err, "fail on NewBlockMessage")
+		return false, errors.Wrap(err, "fail on NewBlockMessage")
 	}
 
-	p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	return nil
+	ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	if ok {
+		blcokHash := block.Hash()
+		p.knownBlocks.Add(blcokHash.String())
+	}
+	return ok, nil
 }
 
-func (p *peer) sendBlocks(blocks []*types.Block) error {
+func (p *peer) sendBlocks(blocks []*types.Block) (bool, error) {
 	msg, err := NewBlocksMessage(blocks)
 	if err != nil {
-		return errors.Wrap(err, "fail on NewBlocksMessage")
+		return false, errors.Wrap(err, "fail on NewBlocksMessage")
 	}
 
-	p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	return nil
+	if ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+		return ok, nil
+	}
+
+	for _, block := range blocks {
+		blcokHash := block.Hash()
+		p.knownBlocks.Add(blcokHash.String())
+	}
+	return true, nil
 }
 
-func (p *peer) sendHeaders(headers []*types.BlockHeader) error {
+func (p *peer) sendHeaders(headers []*types.BlockHeader) (bool, error) {
 	msg, err := NewHeadersMessage(headers)
 	if err != nil {
-		return errors.New("fail on NewHeadersMessage")
+		return false, errors.New("fail on NewHeadersMessage")
 	}
 
-	p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	return nil
+	ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	return ok, nil
 }
 
 func (p *peer) sendStatus(blockHeader *types.BlockHeader, genesis *bc.Hash) bool {
@@ -146,20 +157,22 @@ func (p *peer) sendStatus(blockHeader *types.BlockHeader, genesis *bc.Hash) bool
 	return p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 }
 
-func (p *peer) sendTransactions(txs []*types.Tx) error {
+func (p *peer) sendTransactions(txs []*types.Tx) (bool, error) {
 	for _, tx := range txs {
 		msg, err := NewTransactionMessage(tx)
 		if err != nil {
-			return errors.Wrap(err, "failed to tx msg")
+			return false, errors.Wrap(err, "failed to tx msg")
 		}
 
 		if p.knownTxs.Has(tx.ID.String()) {
 			continue
 		}
-		p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+		if ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+			return ok, nil
+		}
 		p.knownTxs.Add(tx.ID.String())
 	}
-	return nil
+	return true, nil
 }
 
 func (p *peer) setStatus(height uint64, hash *bc.Hash) {

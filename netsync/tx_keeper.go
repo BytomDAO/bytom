@@ -81,7 +81,13 @@ func (sm *SyncManager) txSyncLoop() {
 			"peer":  msg.peerID,
 		}).Debug("txSyncLoop sending transactions")
 		sending = true
-		go func() { done <- peer.sendTransactions(sendTxs) }()
+		go func() {
+			ok, err := peer.sendTransactions(sendTxs)
+			if !ok {
+				sm.peers.removePeer(msg.peerID)
+			}
+			done <- err
+		}()
 	}
 
 	// pick chooses the next pending sync.

@@ -366,9 +366,9 @@ func (sw *Switch) startInitPeer(peer *Peer) error {
 }
 
 func (sw *Switch) stopAndRemovePeer(peer *Peer, reason interface{}) {
+	sw.peers.Remove(peer)
 	for _, reactor := range sw.reactors {
 		reactor.RemovePeer(peer, reason)
 	}
-	sw.peers.Remove(peer)
 	peer.Stop()
 }
