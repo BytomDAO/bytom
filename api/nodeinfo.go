@@ -4,7 +4,6 @@ import (
 	"context"
 	"net"
 
-	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/netsync"
 	"github.com/bytom/p2p"
@@ -34,8 +33,8 @@ func (a *API) GetNodeInfo() *NetInfo {
 		NetWorkID:    a.sync.NodeInfo().Network,
 		Version:      version.Version,
 	}
-	if peer := a.sync.Peers().BestPeer(consensus.SFFullNode); peer != nil {
-		info.HighestBlock = peer.Height()
+	if bestPeer := a.sync.BestPeer(); bestPeer != nil {
+		info.HighestBlock = bestPeer.Height
 	}
 	if info.CurrentBlock > info.HighestBlock {
 		info.HighestBlock = info.CurrentBlock

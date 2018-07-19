@@ -95,13 +95,48 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	return manager, nil
 }
 
+//BestPeer return the highest p2p peerInfo
+func (sm *SyncManager) BestPeer() *PeerInfo {
+	bestPeer := sm.peers.bestPeer(consensus.SFFullNode)
+	if bestPeer != nil {
+		return bestPeer.getPeerInfo()
+	}
+	return nil
+}
+
+// GetNewTxCh return a unconfirmed transaction feed channel
+func (sm *SyncManager) GetNewTxCh() chan *types.Tx {
+	return sm.newTxCh
+}
+
+//GetPeerInfos return peer info of all peers
 func (sm *SyncManager) GetPeerInfos() []*PeerInfo {
 	return sm.peers.getPeerInfos()
 }
 
+//IsCaughtUp check wheather the peer finish the sync
 func (sm *SyncManager) IsCaughtUp() bool {
-	peer := sm.peers.BestPeer(consensus.SFFullNode)
+	peer := sm.peers.bestPeer(consensus.SFFullNode)
 	return peer == nil || peer.Height() <= sm.chain.BestBlockHeight()
+}
+
+//NodeInfo get P2P peer node info
+func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
+	return sm.sw.NodeInfo()
+}
+
+//StopPeer try to stop peer by given ID
+func (sm *SyncManager) StopPeer(peerID string) error {
+	if peer := sm.peers.getPeer(peerID); peer == nil {
+		return errors.New("peerId not exist")
+	}
+	sm.peers.removePeer(peerID)
+	return nil
+}
+
+//Switch get sync manager switch
+func (sm *SyncManager) Switch() *p2p.Switch {
+	return sm.sw
 }
 
 func (sm *SyncManager) handleBlockMsg(peer *peer, msg *BlockMessage) {
@@ -335,32 +370,4 @@ func (sm *SyncManager) minedBroadcastLoop() {
 			return
 		}
 	}
-}
-
-//NodeInfo get P2P peer node info
-func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
-	return sm.sw.NodeInfo()
-}
-
-//Peers get sync manager peer set
-func (sm *SyncManager) Peers() *peerSet {
-	return sm.peers
-}
-
-func (sm *SyncManager) StopPeer(peerID string) error {
-	if peer := sm.Peers().getPeer(peerID); peer == nil {
-		return errors.New("peerId not exist")
-	}
-	sm.peers.removePeer(peerID)
-	return nil
-}
-
-//Switch get sync manager switch
-func (sm *SyncManager) Switch() *p2p.Switch {
-	return sm.sw
-}
-
-// GetNewTxCh return a unconfirmed transaction feed channel
-func (sm *SyncManager) GetNewTxCh() chan *types.Tx {
-	return sm.newTxCh
 }

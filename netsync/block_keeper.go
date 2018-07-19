@@ -349,7 +349,7 @@ func (bk *blockKeeper) resetHeaderState() {
 
 func (bk *blockKeeper) startSync() bool {
 	checkPoint := bk.nextCheckpoint()
-	peer := bk.peers.BestPeer(consensus.SFFastSync | consensus.SFFullNode)
+	peer := bk.peers.bestPeer(consensus.SFFastSync | consensus.SFFullNode)
 	if peer != nil && checkPoint != nil && peer.Height() >= checkPoint.Height {
 		bk.syncPeer = peer
 		if err := bk.fastBlockSync(checkPoint); err != nil {
@@ -359,7 +359,7 @@ func (bk *blockKeeper) startSync() bool {
 		return true
 	}
 
-	peer = bk.peers.BestPeer(consensus.SFFullNode)
+	peer = bk.peers.bestPeer(consensus.SFFullNode)
 	if peer != nil && peer.Height() > bk.chain.BestBlockHeight() {
 		bk.syncPeer = peer
 		if err := bk.regularBlockSync(peer.Height()); err != nil {

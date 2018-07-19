@@ -36,7 +36,7 @@ type BasePeerSet interface {
 
 // PeerInfo indicate peer status snap
 type PeerInfo struct {
-	Id         string `json:"id"`
+	ID         string `json:"id"`
 	RemoteAddr string `json:"remote_addr"`
 	Height     uint64 `json:"height"`
 	Delay      uint32 `json:"delay"`
@@ -103,7 +103,7 @@ func (p *peer) getPeerInfo() *PeerInfo {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
 	return &PeerInfo{
-		Id:         p.ID(),
+		ID:         p.ID(),
 		RemoteAddr: p.Addr().String(),
 		Height:     p.height,
 	}
@@ -214,22 +214,6 @@ func newPeerSet(basePeerSet BasePeerSet) *peerSet {
 	}
 }
 
-func (ps *peerSet) BestPeer(flag consensus.ServiceFlag) *peer {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
-
-	var bestPeer *peer
-	for _, p := range ps.peers {
-		if !p.services.IsEnable(flag) {
-			continue
-		}
-		if bestPeer == nil || p.height > bestPeer.height {
-			bestPeer = p
-		}
-	}
-	return bestPeer
-}
-
 func (ps *peerSet) addBanScore(peerID string, persistent, transient uint64, reason string) {
 	ps.mtx.Lock()
 	peer := ps.peers[peerID]
@@ -256,6 +240,22 @@ func (ps *peerSet) addPeer(peer BasePeer, height uint64, hash *bc.Hash) {
 		return
 	}
 	log.WithField("ID", peer.ID()).Warning("add existing peer to blockKeeper")
+}
+
+func (ps *peerSet) bestPeer(flag consensus.ServiceFlag) *peer {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	var bestPeer *peer
+	for _, p := range ps.peers {
+		if !p.services.IsEnable(flag) {
+			continue
+		}
+		if bestPeer == nil || p.height > bestPeer.height {
+			bestPeer = p
+		}
+	}
+	return bestPeer
 }
 
 func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
