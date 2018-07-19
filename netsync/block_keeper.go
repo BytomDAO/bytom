@@ -20,6 +20,7 @@ const (
 	blockProcessChSize    = 1024
 	blocksProcessChSize   = 128
 	headersProcessChSize  = 1024
+	maxBlockPerMsg        = 128
 	maxBlockHeadersPerMsg = 2048
 )
 
@@ -178,7 +179,11 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 	}
 
 	blocks := []*types.Block{}
-	for _, header := range headers {
+	for i, header := range headers {
+		if i > maxBlockPerMsg {
+			break
+		}
+
 		headerHash := header.Hash()
 		block, err := bk.chain.GetBlockByHash(&headerHash)
 		if err != nil {
