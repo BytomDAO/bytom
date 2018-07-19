@@ -70,6 +70,10 @@ func (a *API) Authenticate(req *http.Request) (*http.Request, error) {
 	if strings.HasPrefix(req.URL.Path, "/dashboard/") || req.URL.Path == "/dashboard" {
 		return req.WithContext(ctx), nil
 	}
+	// Adding this workaround for Equity Playground.
+	if strings.HasPrefix(req.URL.Path, "/equity/") || req.URL.Path == "/equity" {
+		return req.WithContext(ctx), nil
+	}
 	if loopbackOn && local {
 		return req.WithContext(ctx), nil
 	}

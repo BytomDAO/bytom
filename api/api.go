@@ -15,6 +15,7 @@ import (
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/dashboard"
+	"github.com/bytom/equity"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
@@ -269,6 +270,7 @@ func (a *API) buildHandler() {
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/decode-program", jsonHandler(a.decodeProgram))
+	m.Handle("/compile", jsonHandler(a.compileEquity))
 
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
@@ -315,6 +317,10 @@ func webAssetsHandler(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/dashboard/", http.StripPrefix("/dashboard/", static.Handler{
 		Assets:  dashboard.Files,
+		Default: "index.html",
+	}))
+	mux.Handle("/equity/", http.StripPrefix("/equity/", static.Handler{
+		Assets:  equity.Files,
 		Default: "index.html",
 	}))
 	mux.Handle("/", next)
