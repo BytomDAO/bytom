@@ -498,14 +498,14 @@ func TestReserve(t *testing.T) {
 						id: 2,
 						utxos: []*UTXO{
 							&UTXO{
-								OutputID:  bc.NewHash([32]byte{0x02}),
-								AccountID: "testAccount",
-								Amount:    5,
-							},
-							&UTXO{
 								OutputID:  bc.NewHash([32]byte{0x03}),
 								AccountID: "testAccount",
 								Amount:    7,
+							},
+							&UTXO{
+								OutputID:  bc.NewHash([32]byte{0x02}),
+								AccountID: "testAccount",
+								Amount:    5,
 							},
 						},
 						change: 4,
@@ -1050,6 +1050,31 @@ func TestOptUTXOs(t *testing.T) {
 			inputAmount: 13,
 			wantUtxos: []*UTXO{
 				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x03}),
+					Amount:   5,
+				},
+				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x02}),
+					Amount:   3,
+				},
+			},
+			optAmount:      8,
+			reservedAmount: 1,
+		},
+		{
+			uk: utxoKeeper{
+				reserved: map[bc.Hash]uint64{
+					bc.NewHash([32]byte{0x01}): 1,
+					bc.NewHash([32]byte{0x02}): 2,
+					bc.NewHash([32]byte{0x03}): 3,
+				},
+			},
+			input: []*UTXO{
+				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x01}),
+					Amount:   1,
+				},
+				&UTXO{
 					OutputID: bc.NewHash([32]byte{0x02}),
 					Amount:   3,
 				},
@@ -1058,8 +1083,66 @@ func TestOptUTXOs(t *testing.T) {
 					Amount:   5,
 				},
 			},
-			optAmount:      8,
-			reservedAmount: 1,
+			inputAmount:    1,
+			wantUtxos:      []*UTXO{},
+			optAmount:      0,
+			reservedAmount: 9,
+		},
+		{
+			uk: utxoKeeper{},
+			input: []*UTXO{
+				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x01}),
+					Amount:   1,
+				},
+				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x02}),
+					Amount:   3,
+				},
+				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x03}),
+					Amount:   5,
+				},
+			},
+			inputAmount: 1,
+			wantUtxos: []*UTXO{
+				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x01}),
+					Amount:   1,
+				},
+			},
+			optAmount:      1,
+			reservedAmount: 0,
+		},
+		{
+			uk: utxoKeeper{},
+			input: []*UTXO{
+				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x02}),
+					Amount:   2,
+				},
+				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x03}),
+					Amount:   3,
+				},
+				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x05}),
+					Amount:   5,
+				},
+			},
+			inputAmount: 5,
+			wantUtxos: []*UTXO{
+				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x03}),
+					Amount:   3,
+				},
+				&UTXO{
+					OutputID: bc.NewHash([32]byte{0x02}),
+					Amount:   2,
+				},
+			},
+			optAmount:      5,
+			reservedAmount: 0,
 		},
 	}
 
