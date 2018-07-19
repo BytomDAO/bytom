@@ -6,7 +6,6 @@ import (
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/protocol/validation"
-	log "github.com/sirupsen/logrus"
 )
 
 // ErrBadTx is returned for transactions failing validation
@@ -42,10 +41,6 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 	}
 
 	gasStatus, err := validation.ValidateTx(tx.Tx, block)
-	if err != nil {
-		log.WithField("error info", err).Debug("validate transaction")
-	}
-
 	if gasStatus.GasValid == false {
 		c.txPool.AddErrCache(&tx.ID, err)
 		return false, err
