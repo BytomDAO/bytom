@@ -208,7 +208,7 @@ func (bk *blockKeeper) locateHeaders(locator []*bc.Hash, stopHash *bc.Hash) ([]*
 
 	for _, hash := range locator {
 		header, err := bk.chain.GetHeaderByHash(hash)
-		if err != nil && bk.chain.InMainChain(header.Hash()) {
+		if err == nil && bk.chain.InMainChain(header.Hash()) {
 			startHeader = header
 			break
 		}
