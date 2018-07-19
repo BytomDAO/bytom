@@ -208,6 +208,7 @@ func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
 func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
 	headers, err := sm.blockKeeper.locateHeaders(msg.GetBlockLocator(), msg.GetStopHash())
 	if err != nil || len(headers) == 0 {
+		log.WithField("err", err).Info("fail on handleGetHeadersMsg locateHeaders")
 		return
 	}
 

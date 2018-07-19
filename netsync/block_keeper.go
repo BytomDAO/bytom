@@ -299,7 +299,7 @@ func (bk *blockKeeper) requireBlock(height uint64) (*types.Block, error) {
 			}
 			return msg.block, nil
 		case <-waitTicker.C:
-			return nil, errRequestTimeout
+			return nil, errors.Wrap(errRequestTimeout, "requireBlock")
 		}
 	}
 }
@@ -318,7 +318,7 @@ func (bk *blockKeeper) requireBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*
 			}
 			return msg.blocks, nil
 		case <-waitTicker.C:
-			return nil, errRequestTimeout
+			return nil, errors.Wrap(errRequestTimeout, "requireBlocks")
 		}
 	}
 }
@@ -337,7 +337,7 @@ func (bk *blockKeeper) requireHeaders(locator []*bc.Hash, stopHash *bc.Hash) ([]
 			}
 			return msg.headers, nil
 		case <-waitTicker.C:
-			return nil, errRequestTimeout
+			return nil, errors.Wrap(errRequestTimeout, "requireHeaders")
 		}
 	}
 }
@@ -358,6 +358,7 @@ func (bk *blockKeeper) startSync() bool {
 	if peer != nil && checkPoint != nil && peer.Height() >= checkPoint.Height {
 		bk.syncPeer = peer
 		if err := bk.fastBlockSync(checkPoint); err != nil {
+			log.WithField("err", err).Warning("fail on fastBlockSync")
 			bk.peers.addBanScore(peer.ID(), 0, 40, err.Error())
 			return false
 		}
@@ -368,6 +369,7 @@ func (bk *blockKeeper) startSync() bool {
 	if peer != nil && peer.Height() > bk.chain.BestBlockHeight() {
 		bk.syncPeer = peer
 		if err := bk.regularBlockSync(peer.Height()); err != nil {
+			log.WithField("err", err).Warning("fail on regularBlockSync")
 			bk.peers.addBanScore(peer.ID(), 0, 40, err.Error())
 			return false
 		}
