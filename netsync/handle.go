@@ -2,6 +2,7 @@ package netsync
 
 import (
 	"encoding/hex"
+	"errors"
 	"net"
 	"path"
 	"strconv"
@@ -92,6 +93,10 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
 	manager.sw.SetNodePrivKey(manager.privKey)
 	return manager, nil
+}
+
+func (sm *SyncManager) GetPeerInfos() []*PeerInfo {
+	return sm.peers.getPeerInfos()
 }
 
 func (sm *SyncManager) IsCaughtUp() bool {
@@ -340,6 +345,14 @@ func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
 //Peers get sync manager peer set
 func (sm *SyncManager) Peers() *peerSet {
 	return sm.peers
+}
+
+func (sm *SyncManager) StopPeer(peerID string) error {
+	if peer := sm.Peers().getPeer(peerID); peer == nil {
+		return errors.New("peerId not exist")
+	}
+	sm.peers.removePeer(peerID)
+	return nil
 }
 
 //Switch get sync manager switch

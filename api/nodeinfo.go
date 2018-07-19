@@ -45,7 +45,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 
 // return the currently connected peers with net address
 func (a *API) getPeerInfoByAddr(addr string) *netsync.PeerInfo {
-	peerInfos := a.sync.Peers().GetPeerInfos()
+	peerInfos := a.sync.GetPeerInfos()
 	for _, peerInfo := range peerInfos {
 		if peerInfo.RemoteAddr == addr {
 			return peerInfo
@@ -55,13 +55,8 @@ func (a *API) getPeerInfoByAddr(addr string) *netsync.PeerInfo {
 }
 
 // disconnect peer by the peer id
-func (a *API) disconnectPeerById(peerId string) error {
-	if peer, ok := a.sync.Peers().Peer(peerId); ok {
-		swPeer := peer.GetPeer()
-		a.sync.Switch().StopPeerGracefully(swPeer)
-		return nil
-	}
-	return errors.New("peerId not exist")
+func (a *API) disconnectPeerById(peerID string) error {
+	return a.sync.StopPeer(peerID)
 }
 
 // connect peer b y net address
@@ -102,7 +97,7 @@ func (a *API) IsMining() bool {
 
 // return the peers of current node
 func (a *API) listPeers() Response {
-	return NewSuccessResponse(a.sync.Peers().GetPeerInfos())
+	return NewSuccessResponse(a.sync.GetPeerInfos())
 }
 
 // disconnect peer

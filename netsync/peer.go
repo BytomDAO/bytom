@@ -34,6 +34,14 @@ type BasePeerSet interface {
 	StopPeerGracefully(string)
 }
 
+// PeerInfo indicate peer status snap
+type PeerInfo struct {
+	Id         string `json:"id"`
+	RemoteAddr string `json:"remote_addr"`
+	Height     uint64 `json:"height"`
+	Delay      uint32 `json:"delay"`
+}
+
 type peer struct {
 	BasePeer
 	mtx         sync.RWMutex
@@ -89,6 +97,16 @@ func (p *peer) getBlocks(locator []*bc.Hash, stopHash *bc.Hash) bool {
 func (p *peer) getHeaders(locator []*bc.Hash, stopHash *bc.Hash) bool {
 	msg := struct{ BlockchainMessage }{NewGetHeadersMessage(locator, stopHash)}
 	return p.TrySend(BlockchainChannel, msg)
+}
+
+func (p *peer) getPeerInfo() *PeerInfo {
+	p.mtx.RLock()
+	defer p.mtx.RUnlock()
+	return &PeerInfo{
+		Id:         p.ID(),
+		RemoteAddr: p.Addr().String(),
+		Height:     p.height,
+	}
 }
 
 func (p *peer) markBlock(hash *bc.Hash) {
@@ -280,6 +298,17 @@ func (ps *peerSet) getPeer(id string) *peer {
 	ps.mtx.RLock()
 	defer ps.mtx.RUnlock()
 	return ps.peers[id]
+}
+
+func (ps *peerSet) getPeerInfos() []*PeerInfo {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	result := []*PeerInfo{}
+	for _, peer := range ps.peers {
+		result = append(result, peer.getPeerInfo())
+	}
+	return result
 }
 
 func (ps *peerSet) peersWithoutBlock(hash *bc.Hash) []*peer {
