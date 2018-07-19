@@ -114,7 +114,8 @@ func (bk *blockKeeper) blockLocator() []*bc.Hash {
 
 func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
 	bk.resetHeaderState()
-	for lastHeader := bk.headerList.Back().Value.(*types.BlockHeader); lastHeader.Hash() != checkPoint.Hash; {
+	lastHeader := bk.headerList.Back().Value.(*types.BlockHeader)
+	for ; lastHeader.Hash() != checkPoint.Hash; lastHeader = bk.headerList.Back().Value.(*types.BlockHeader) {
 		if lastHeader.Height >= checkPoint.Height {
 			return errors.Wrap(errPeerMisbehave, "peer is not in the checkpoint branch")
 		}
