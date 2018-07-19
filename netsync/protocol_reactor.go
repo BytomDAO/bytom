@@ -73,6 +73,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 		select {
 		case <-checkTicker.C:
 			if exist := pr.peers.getPeer(peer.Key); exist != nil {
+				pr.sm.syncTransactions(peer.Key)
 				return nil
 			}
 

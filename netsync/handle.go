@@ -196,7 +196,6 @@ func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusRes
 	}
 
 	sm.peers.addPeer(basePeer, msg.Height, msg.GetHash())
-	sm.syncTransactions(basePeer.ID())
 }
 
 func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage) {
