@@ -144,22 +144,35 @@ func (msg *GetHeadersMessage) GetStopHash() *bc.Hash {
 
 //HeadersMessage is one of the bytom msg type
 type HeadersMessage struct {
-	rawHeaders []byte
+	rawHeaders [][]byte
 }
 
 //NewHeadersMessage create a new HeadersMessage
 func NewHeadersMessage(headers []*types.BlockHeader) (*HeadersMessage, error) {
-	data, err := json.Marshal(headers)
-	if err != nil {
-		return nil, err
+	rawHeaders := [][]byte{}
+	for _, header := range headers {
+		data, err := json.Marshal(header)
+		if err != nil {
+			return nil, err
+		}
+
+		rawHeaders = append(rawHeaders, data)
 	}
-	return &HeadersMessage{rawHeaders: data}, nil
+	return &HeadersMessage{rawHeaders: rawHeaders}, nil
 }
 
 //GetHeaders return the headers in the msg
 func (msg *HeadersMessage) GetHeaders() ([]*types.BlockHeader, error) {
 	headers := []*types.BlockHeader{}
-	return headers, json.Unmarshal(msg.rawHeaders, headers)
+	for _, data := range msg.rawHeaders {
+		header := &types.BlockHeader{}
+		if err := json.Unmarshal(data, header); err != nil {
+			return nil, err
+		}
+
+		headers = append(headers, header)
+	}
+	return headers, nil
 }
 
 //GetBlocksMessage is one of the bytom msg type
@@ -197,22 +210,35 @@ func (msg *GetBlocksMessage) GetStopHash() *bc.Hash {
 
 //BlocksMessage is one of the bytom msg type
 type BlocksMessage struct {
-	RawBlocks []byte
+	RawBlocks [][]byte
 }
 
 //NewBlocksMessage create a new BlocksMessage
 func NewBlocksMessage(blocks []*types.Block) (*BlocksMessage, error) {
-	data, err := json.Marshal(blocks)
-	if err != nil {
-		return nil, err
+	rawBlocks := [][]byte{}
+	for _, block := range blocks {
+		data, err := json.Marshal(block)
+		if err != nil {
+			return nil, err
+		}
+
+		rawBlocks = append(rawBlocks, data)
 	}
-	return &BlocksMessage{RawBlocks: data}, nil
+	return &BlocksMessage{RawBlocks: rawBlocks}, nil
 }
 
 //GetBlocks returns the blocks in the msg
 func (msg *BlocksMessage) GetBlocks() ([]*types.Block, error) {
 	blocks := []*types.Block{}
-	return blocks, json.Unmarshal(msg.RawBlocks, blocks)
+	for _, data := range msg.RawBlocks {
+		block := &types.Block{}
+		if err := json.Unmarshal(data, block); err != nil {
+			return nil, err
+		}
+
+		blocks = append(blocks, block)
+	}
+	return blocks, nil
 }
 
 //StatusRequestMessage status request msg

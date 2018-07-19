@@ -146,6 +146,7 @@ func (sm *SyncManager) handleBlockMsg(peer *peer, msg *BlockMessage) {
 func (sm *SyncManager) handleBlocksMsg(peer *peer, msg *BlocksMessage) {
 	blocks, err := msg.GetBlocks()
 	if err != nil {
+		log.WithField("err", err).Debug("fail on handleBlocksMsg GetBlocks")
 		return
 	}
 
@@ -208,7 +209,7 @@ func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
 func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
 	headers, err := sm.blockKeeper.locateHeaders(msg.GetBlockLocator(), msg.GetStopHash())
 	if err != nil || len(headers) == 0 {
-		log.WithField("err", err).Info("fail on handleGetHeadersMsg locateHeaders")
+		log.WithField("err", err).Debug("fail on handleGetHeadersMsg locateHeaders")
 		return
 	}
 
@@ -224,6 +225,7 @@ func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
 func (sm *SyncManager) handleHeadersMsg(peer *peer, msg *HeadersMessage) {
 	headers, err := msg.GetHeaders()
 	if err != nil {
+		log.WithField("err", err).Debug("fail on handleHeadersMsg GetHeaders")
 		return
 	}
 
