@@ -185,7 +185,7 @@ func (p *Peer) Send(chID byte, msg interface{}) bool {
 
 func (p *Peer) ServiceFlag() consensus.ServiceFlag {
 	services := consensus.SFFullNode
-	if len(p.Other) != 0 {
+	if len(p.Other) == 0 {
 		return services
 	}
 
