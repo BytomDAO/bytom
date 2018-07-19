@@ -17,7 +17,9 @@ import (
 
 const (
 	//UnconfirmedTxPrefix is txpool unconfirmed transactions prefix
-	UnconfirmedTxPrefix = "UTXS:"
+	UnconfirmedTxPrefix      = "UTXS:"
+	UnconfirmedTxCheckPeriod = 30 * time.Minute
+	MaxUnconfirmedTxDuration = 24 * time.Hour
 )
 
 func calcUnconfirmedTxKey(formatKey string) []byte {
@@ -144,4 +146,33 @@ func (w *Wallet) saveUnconfirmedTx(tx *types.Tx) error {
 
 	w.DB.Set(calcUnconfirmedTxKey(tx.ID.String()), rawTx)
 	return nil
+}
+
+func (w *Wallet) delExpiredTxs() error {
+	AnnotatedTx, err := w.GetUnconfirmedTxs("")
+	if err != nil {
+		return err
+	}
+	for _, tx := range AnnotatedTx {
+		if time.Now().After(time.Unix(int64(tx.Timestamp), 0).Add(MaxUnconfirmedTxDuration)) {
+			w.DB.Delete(calcUnconfirmedTxKey(tx.ID.String()))
+		}
+	}
+	return nil
+}
+
+//delUnconfirmedTx periodically delete locally stored timeout did not confirm txs
+func (w *Wallet) delUnconfirmedTx() {
+	if err := w.delExpiredTxs(); err != nil {
+		log.WithField("err", err).Error("wallet fail on delUnconfirmedTx")
+		return
+	}
+	ticker := time.NewTicker(UnconfirmedTxCheckPeriod)
+	defer ticker.Stop()
+	for {
+		<-ticker.C
+		if err := w.delExpiredTxs(); err != nil {
+			log.WithField("err", err).Error("wallet fail on delUnconfirmedTx")
+		}
+	}
 }
