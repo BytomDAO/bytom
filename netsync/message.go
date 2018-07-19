@@ -144,27 +144,27 @@ func (msg *GetHeadersMessage) GetStopHash() *bc.Hash {
 
 //HeadersMessage is one of the bytom msg type
 type HeadersMessage struct {
-	rawHeaders [][]byte
+	RawHeaders [][]byte
 }
 
 //NewHeadersMessage create a new HeadersMessage
 func NewHeadersMessage(headers []*types.BlockHeader) (*HeadersMessage, error) {
-	rawHeaders := [][]byte{}
+	RawHeaders := [][]byte{}
 	for _, header := range headers {
 		data, err := json.Marshal(header)
 		if err != nil {
 			return nil, err
 		}
 
-		rawHeaders = append(rawHeaders, data)
+		RawHeaders = append(RawHeaders, data)
 	}
-	return &HeadersMessage{rawHeaders: rawHeaders}, nil
+	return &HeadersMessage{RawHeaders: RawHeaders}, nil
 }
 
 //GetHeaders return the headers in the msg
 func (msg *HeadersMessage) GetHeaders() ([]*types.BlockHeader, error) {
 	headers := []*types.BlockHeader{}
-	for _, data := range msg.rawHeaders {
+	for _, data := range msg.RawHeaders {
 		header := &types.BlockHeader{}
 		if err := json.Unmarshal(data, header); err != nil {
 			return nil, err
