@@ -76,6 +76,15 @@ $ make bytomcli  # build bytomcli
 
 When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytomd` and `cmd/bytomcli` directory, respectively.
 
+##### SIMD feature
+
+if you wanna enable the simd feature for _CheckPoW_ (so that you can speed up mining or block verification), please compile the simd lib in `mining/tensority/lib/` (See Makefile for more detail).
+
+Prerequisites:
+
++ Mac: `brew install llvm`
++ Windows: mingw-w64
+
 ## Example
 
 Currently, bytom is still in active development and a ton of work needs to be done, but we also provide the following content for these eager to do something with `bytom`. This section won't cover all the commands of `bytomd` and `bytomcli` at length, for more information, please the help of every command, e.g., `bytomcli help`.
@@ -122,6 +131,7 @@ available flags for `bytomd node`:
       --wallet.disable              Disable wallet
       --wallet.rescan               Rescan wallet
       --web.closed                  Lanch web browser or not
+      --simd.enable                 Enable the SIMD feature
 ```
 
 Given the `bytomd` node is running, the general workflow is as follows:
