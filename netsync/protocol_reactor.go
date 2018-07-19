@@ -97,7 +97,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 	}
 
 	peer := pr.peers.getPeer(src.Key)
-	if peer == nil && msgType != StatusResponseByte {
+	if peer == nil && (msgType != StatusResponseByte || msgType != StatusRequestByte) {
 		return
 	}
 
@@ -109,7 +109,7 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		pr.sm.handleBlockMsg(peer, msg)
 
 	case *StatusRequestMessage:
-		pr.sm.handleStatusRequestMsg(peer)
+		pr.sm.handleStatusRequestMsg(src)
 
 	case *StatusResponseMessage:
 		pr.sm.handleStatusResponseMsg(src, msg)

@@ -242,7 +242,7 @@ func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
 	peer.setStatus(block.Height, &hash)
 }
 
-func (sm *SyncManager) handleStatusRequestMsg(peer *peer) {
+func (sm *SyncManager) handleStatusRequestMsg(peer BasePeer) {
 	bestHeader := sm.chain.BestBlockHeader()
 	genesisBlock, err := sm.chain.GetBlockByHeight(0)
 	if err != nil {
@@ -250,7 +250,8 @@ func (sm *SyncManager) handleStatusRequestMsg(peer *peer) {
 	}
 
 	genesisHash := genesisBlock.Hash()
-	if ok := peer.sendStatus(bestHeader, &genesisHash); !ok {
+	msg := NewStatusResponseMessage(bestHeader, &genesisHash)
+	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 		sm.peers.removePeer(peer.ID())
 	}
 }

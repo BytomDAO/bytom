@@ -170,11 +170,6 @@ func (p *peer) sendHeaders(headers []*types.BlockHeader) (bool, error) {
 	return ok, nil
 }
 
-func (p *peer) sendStatus(blockHeader *types.BlockHeader, genesis *bc.Hash) bool {
-	msg := NewStatusResponseMessage(blockHeader, genesis)
-	return p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-}
-
 func (p *peer) sendTransactions(txs []*types.Tx) (bool, error) {
 	for _, tx := range txs {
 		msg, err := NewTransactionMessage(tx)
