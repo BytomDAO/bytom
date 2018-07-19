@@ -268,7 +268,7 @@ func (uk *utxoKeeper) optUTXOs(utxos []*UTXO, amount uint64) ([]*UTXO, uint64, u
 
 	optList := list.New()
 	for node := utxoList.Front(); node != nil; node = node.Next() {
-		//append utxo due to we didn't reach the require amount
+		//append utxo due to we didn't reach the required amount
 		if optAmount < amount {
 			optList.PushBack(node.Value)
 			optAmount += node.Value.(*UTXO).Amount
@@ -289,7 +289,7 @@ func (uk *utxoKeeper) optUTXOs(utxos []*UTXO, amount uint64) ([]*UTXO, uint64, u
 			}
 		}
 
-		//largestNode keep same means there is nothing to be replace
+		//largestNode keep same means there is nothing to be replaced
 		if largestNode == optList.Front() {
 			break
 		}
