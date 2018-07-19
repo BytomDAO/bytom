@@ -130,7 +130,7 @@ func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
 		sm.peers.removePeer(peer.ID())
 	}
 	if err != nil {
-		log.WithField("err", err).Warning("fail on handleGetBlockMsg sentBlock")
+		log.WithField("err", err).Error("fail on handleGetBlockMsg sentBlock")
 	}
 }
 
@@ -140,7 +140,13 @@ func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
 		return
 	}
 
-	peer.sendBlocks(blocks)
+	ok, err := peer.sendBlocks(blocks)
+	if !ok {
+		sm.peers.removePeer(peer.ID())
+	}
+	if err != nil {
+		log.WithField("err", err).Error("fail on handleGetBlocksMsg sentBlock")
+	}
 }
 
 func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
@@ -149,7 +155,13 @@ func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
 		return
 	}
 
-	peer.sendHeaders(headers)
+	ok, err := peer.sendHeaders(headers)
+	if !ok {
+		sm.peers.removePeer(peer.ID())
+	}
+	if err != nil {
+		log.WithField("err", err).Error("fail on handleGetHeadersMsg sentBlock")
+	}
 }
 
 func (sm *SyncManager) handleHeadersMsg(peer *peer, msg *HeadersMessage) {
@@ -182,7 +194,9 @@ func (sm *SyncManager) handleStatusRequestMsg(peer *peer) {
 	}
 
 	genesisHash := genesisBlock.Hash()
-	peer.sendStatus(bestHeader, &genesisHash)
+	if ok := peer.sendStatus(bestHeader, &genesisHash); !ok {
+		sm.peers.removePeer(peer.ID())
+	}
 }
 
 func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusResponseMessage) {
