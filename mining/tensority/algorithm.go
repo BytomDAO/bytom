@@ -38,6 +38,12 @@ func (a *Cache) AddCache(hash, seed, result *bc.Hash) {
 	a.lruCache.Add(*key, result)
 }
 
+// RemoveCache clean the cached result
+func (a *Cache) RemoveCache(hash, seed *bc.Hash) {
+	key := calcCacheKey(hash, seed)
+	a.lruCache.Remove(key)
+}
+
 // Hash is the real entry for call tensority algorithm
 func (a *Cache) Hash(hash, seed *bc.Hash) *bc.Hash {
 	key := calcCacheKey(hash, seed)
