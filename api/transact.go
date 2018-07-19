@@ -38,35 +38,42 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 	return decoder, ok
 }
 
-func onlyHaveSpendActions(req *BuildRequest) bool {
+func onlyHaveInputActions(req *BuildRequest) (bool, error) {
 	count := 0
-	for _, m := range req.Actions {
-		if actionType := m["type"].(string); strings.HasPrefix(actionType, "spend") {
+	for i, act := range req.Actions {
+		actionType, ok := act["type"].(string)
+		if !ok {
+			return false, errors.WithDetailf(ErrBadActionType, "no action type provided on action %d", i)
+		}
+
+		if strings.HasPrefix(actionType, "spend") || actionType == "issue" {
 			count++
 		}
 	}
 
-	return count == len(req.Actions)
+	return count == len(req.Actions), nil
 }
 
 func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
-	if err := a.completeMissingIds(ctx, req); err != nil {
+	if err := a.completeMissingIDs(ctx, req); err != nil {
 		return nil, err
 	}
 
-	if onlyHaveSpendActions(req) {
-		return nil, errors.New("transaction only contain spend actions, didn't have output actions")
+	if ok, err := onlyHaveInputActions(req); err != nil {
+		return nil, err
+	} else if ok {
+		return nil, errors.WithDetail(ErrBadActionConstruction, "transaction contains only input actions and no output actions")
 	}
 
 	actions := make([]txbuilder.Action, 0, len(req.Actions))
 	for i, act := range req.Actions {
 		typ, ok := act["type"].(string)
 		if !ok {
-			return nil, errors.WithDetailf(errBadActionType, "no action type provided on action %d", i)
+			return nil, errors.WithDetailf(ErrBadActionType, "no action type provided on action %d", i)
 		}
 		decoder, ok := a.actionDecoder(typ)
 		if !ok {
-			return nil, errors.WithDetailf(errBadActionType, "unknown action type %q on action %d", typ, i)
+			return nil, errors.WithDetailf(ErrBadActionType, "unknown action type %q on action %d", typ, i)
 		}
 
 		// Remarshal to JSON, the action may have been modified when we
@@ -77,7 +84,7 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		}
 		action, err := decoder(b)
 		if err != nil {
-			return nil, errors.WithDetailf(errBadAction, "%s on action %d", err.Error(), i)
+			return nil, errors.WithDetailf(ErrBadAction, "%s on action %d", err.Error(), i)
 		}
 		actions = append(actions, action)
 	}
@@ -93,10 +100,14 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 	if errors.Root(err) == txbuilder.ErrAction {
 		// append each of the inner errors contained in the data.
 		var Errs string
-		for _, innerErr := range errors.Data(err)["actions"].([]error) {
-			Errs = Errs + "<" + innerErr.Error() + ">"
+		var rootErr error
+		for i, innerErr := range errors.Data(err)["actions"].([]error) {
+			if i == 0 {
+				rootErr = errors.Root(innerErr)
+			}
+			Errs = Errs + innerErr.Error()
 		}
-		err = errors.New(err.Error() + "-" + Errs)
+		err = errors.WithDetail(rootErr, Errs)
 	}
 	if err != nil {
 		return nil, err
