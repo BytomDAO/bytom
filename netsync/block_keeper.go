@@ -360,7 +360,7 @@ func (bk *blockKeeper) startSync() bool {
 		bk.syncPeer = peer
 		if err := bk.fastBlockSync(checkPoint); err != nil {
 			log.WithField("err", err).Warning("fail on fastBlockSync")
-			bk.peers.addBanScore(peer.ID(), 0, 40, err.Error())
+			bk.peers.errorHandler(peer.ID(), err)
 			return false
 		}
 		return true
@@ -371,7 +371,7 @@ func (bk *blockKeeper) startSync() bool {
 		bk.syncPeer = peer
 		if err := bk.regularBlockSync(peer.Height()); err != nil {
 			log.WithField("err", err).Warning("fail on regularBlockSync")
-			bk.peers.addBanScore(peer.ID(), 0, 40, err.Error())
+			bk.peers.errorHandler(peer.ID(), err)
 			return false
 		}
 		return true
