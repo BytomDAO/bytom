@@ -288,6 +288,14 @@ func (ps *peerSet) broadcastTx(tx *types.Tx) error {
 	return nil
 }
 
+func (ps *peerSet) errorHandler(peerID string, err error) {
+	if errors.Root(err) == errPeerMisbehave {
+		ps.addBanScore(peerID, 20, 0, err.Error())
+	} else {
+		ps.removePeer(peerID)
+	}
+}
+
 // Peer retrieves the registered peer with the given id.
 func (ps *peerSet) getPeer(id string) *peer {
 	ps.mtx.RLock()
