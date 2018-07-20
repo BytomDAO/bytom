@@ -3,6 +3,7 @@ package vmutil
 import (
 	"encoding/hex"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/bytom/protocol/vm"
@@ -54,16 +55,17 @@ func doOKNotOKSm2(t *testing.T, expectOK bool) {
 	cases := []struct {
 		prog        []byte
 		args        [][]byte
+		txSigHash   []byte
 		wantGasLeft int64
 		wantErr     error
 	}{
 		{
-			prog: tP2PKHSigSm2Program(decodeString("21b045d0d3fbf8a095a19b3e8c52dc909ca62f32")), // f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640
+			prog: tP2PKHSigSm2Program(decodeString("21b045d0d3fbf8a095a19b3e8c52dc909ca62f32")), // bx  ripemd160 0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020
 			args: [][]byte{
-				// decodeString("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
 				decodeString("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
 				decodeString("01" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
 			},
+			txSigHash:   decodeString("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
 			wantGasLeft: 98590,
 		},
 	}
@@ -72,7 +74,7 @@ func doOKNotOKSm2(t *testing.T, expectOK bool) {
 		context.Code = c.prog
 		context.Arguments = c.args
 		context.VMVersion = 1
-		context.TxSigHash = func() []byte { return decodeString("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640") }
+		context.TxSigHash = func() []byte { return c.txSigHash }
 		gasLimit := int64(100000)
 
 		gasLeft, err := vm.Verify(context, gasLimit)
@@ -80,7 +82,9 @@ func doOKNotOKSm2(t *testing.T, expectOK bool) {
 			fmt.Println(err)
 		}
 
-		fmt.Println(i, " : ", gasLeft, " , wantGasLeft is:", c.wantGasLeft)
+		if !reflect.DeepEqual(gasLeft, c.wantGasLeft) {
+			t.Errorf("GasLeft %d: content mismatch: have %v, want %v", i, gasLeft, c.wantGasLeft)
+		}
 	}
 }
 

@@ -2,8 +2,6 @@ package vm
 
 import (
 	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
 	"hash"
 
 	"golang.org/x/crypto/sha3"
@@ -170,10 +168,6 @@ func opCheckSigSm2(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("publickey len is:", len(publicKey))
-	fmt.Println("publickey is:", hex.EncodeToString(publicKey))
-
 	msg, err := vm.pop(true)
 	if err != nil {
 		return err
@@ -184,9 +178,6 @@ func opCheckSigSm2(vm *virtualMachine) error {
 	}
 
 	if len(msg) != 32 || len(sig) != 64 {
-		fmt.Println("msg len is:", len(msg), " sig len is:", len(sig))
-		fmt.Println("msg is: ", hex.EncodeToString(msg))
-		fmt.Println("sig is:", hex.EncodeToString(sig))
 		return ErrBadValue
 	}
 	if len(publicKey) != 33 {
