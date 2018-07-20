@@ -60,6 +60,7 @@ func (sm *SyncManager) txSyncLoop() {
 		peer := sm.peers.getPeer(msg.peerID)
 		if peer == nil {
 			delete(pending, msg.peerID)
+			return
 		}
 
 		totalSize := uint64(0)
@@ -69,9 +70,10 @@ func (sm *SyncManager) txSyncLoop() {
 			totalSize += msg.txs[i].SerializedSize
 		}
 
-		copy(msg.txs, msg.txs[len(sendTxs):])
-		if len(msg.txs) == 0 {
+		if len(msg.txs) == len(sendTxs) {
 			delete(pending, msg.peerID)
+		} else {
+			msg.txs = msg.txs[len(sendTxs):]
 		}
 
 		// Send the pack in the background.
