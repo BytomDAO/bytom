@@ -979,6 +979,7 @@ func init() {
 		name:     "contested",
 		canQuery: true,
 		enter: func(net *Network, n *Node) {
+			n.pingEcho = nil
 			net.ping(n, n.addr())
 		},
 		handle: func(net *Network, n *Node, ev nodeEvent, pkt *ingressPacket) (*nodeState, error) {
