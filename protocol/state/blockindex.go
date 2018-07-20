@@ -14,7 +14,7 @@ import (
 )
 
 // approxNodesPerDay is an approximation of the number of new blocks there are
-// in a week on average.
+// in a day on average.
 const approxNodesPerDay = 24 * 24
 
 // BlockNode represents a block within the block chain and is primarily used to
