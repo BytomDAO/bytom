@@ -117,7 +117,88 @@ func TestBlockLocator(t *testing.T) {
 			want = append(want, &hash)
 		}
 
-		got := bk.blockLocator()
+		if got := bk.blockLocator(); !testutil.DeepEqual(got, want) {
+			t.Errorf("case %d: got %v want %v", i, got, want)
+		}
+	}
+}
+
+func TestLocateHeaders(t *testing.T) {
+	maxBlockHeadersPerMsg = 10
+	blocks := mockBlocks(150)
+	cases := []struct {
+		chainHeight uint64
+		locator     []uint64
+		stopHash    bc.Hash
+		wantHeight  []uint64
+		err         bool
+	}{
+		{
+			chainHeight: 100,
+			locator:     []uint64{},
+			stopHash:    blocks[100].Hash(),
+			wantHeight:  []uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			err:         false,
+		},
+		{
+			chainHeight: 100,
+			locator:     []uint64{20},
+			stopHash:    blocks[100].Hash(),
+			wantHeight:  []uint64{21, 22, 23, 24, 25, 26, 27, 28, 29, 30},
+			err:         false,
+		},
+		{
+			chainHeight: 100,
+			locator:     []uint64{20},
+			stopHash:    blocks[24].Hash(),
+			wantHeight:  []uint64{21, 22, 23, 24},
+			err:         false,
+		},
+		{
+			chainHeight: 100,
+			locator:     []uint64{20},
+			stopHash:    blocks[20].Hash(),
+			wantHeight:  []uint64{},
+			err:         false,
+		},
+		{
+			chainHeight: 100,
+			locator:     []uint64{20},
+			stopHash:    bc.Hash{},
+			wantHeight:  []uint64{},
+			err:         true,
+		},
+		{
+			chainHeight: 100,
+			locator:     []uint64{120, 70},
+			stopHash:    blocks[78].Hash(),
+			wantHeight:  []uint64{71, 72, 73, 74, 75, 76, 77, 78},
+			err:         false,
+		},
+	}
+
+	for i, c := range cases {
+		mockChain := mock.NewChain()
+		bk := &blockKeeper{chain: mockChain}
+		for i := uint64(0); i <= c.chainHeight; i++ {
+			mockChain.SetBlockByHeight(i, blocks[i])
+		}
+
+		locator := []*bc.Hash{}
+		for _, i := range c.locator {
+			hash := blocks[i].Hash()
+			locator = append(locator, &hash)
+		}
+
+		want := []*types.BlockHeader{}
+		for _, i := range c.wantHeight {
+			want = append(want, &blocks[i].BlockHeader)
+		}
+
+		got, err := bk.locateHeaders(locator, &c.stopHash)
+		if err != nil != c.err {
+			t.Errorf("case %d: got %v want err = %v", i, err, c.err)
+		}
 		if !testutil.DeepEqual(got, want) {
 			t.Errorf("case %d: got %v want %v", i, got, want)
 		}
