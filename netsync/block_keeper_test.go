@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"testing"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/test/mock"
@@ -241,6 +242,65 @@ func TestLocateHeaders(t *testing.T) {
 		}
 		if !testutil.DeepEqual(got, want) {
 			t.Errorf("case %d: got %v want %v", i, got, want)
+		}
+	}
+}
+
+func TestNextCheckpoint(t *testing.T) {
+	cases := []struct {
+		checkPoints []consensus.Checkpoint
+		bestHeight  uint64
+		want        *consensus.Checkpoint
+	}{
+		{
+			checkPoints: []consensus.Checkpoint{},
+			bestHeight:  5000,
+			want:        nil,
+		},
+		{
+			checkPoints: []consensus.Checkpoint{
+				{10000, bc.Hash{V0: 1}},
+			},
+			bestHeight: 5000,
+			want:       &consensus.Checkpoint{10000, bc.Hash{V0: 1}},
+		},
+		{
+			checkPoints: []consensus.Checkpoint{
+				{10000, bc.Hash{V0: 1}},
+				{20000, bc.Hash{V0: 2}},
+				{30000, bc.Hash{V0: 3}},
+			},
+			bestHeight: 15000,
+			want:       &consensus.Checkpoint{20000, bc.Hash{V0: 2}},
+		},
+		{
+			checkPoints: []consensus.Checkpoint{
+				{10000, bc.Hash{V0: 1}},
+				{20000, bc.Hash{V0: 2}},
+				{30000, bc.Hash{V0: 3}},
+			},
+			bestHeight: 10000,
+			want:       &consensus.Checkpoint{20000, bc.Hash{V0: 2}},
+		},
+		{
+			checkPoints: []consensus.Checkpoint{
+				{10000, bc.Hash{V0: 1}},
+				{20000, bc.Hash{V0: 2}},
+				{30000, bc.Hash{V0: 3}},
+			},
+			bestHeight: 35000,
+			want:       nil,
+		},
+	}
+
+	mockChain := mock.NewChain()
+	for i, c := range cases {
+		consensus.ActiveNetParams.Checkpoints = c.checkPoints
+		mockChain.SetBestBlockHeader(&types.BlockHeader{Height: c.bestHeight})
+		bk := &blockKeeper{chain: mockChain}
+
+		if got := bk.nextCheckpoint(); !testutil.DeepEqual(got, c.want) {
+			t.Errorf("case %d: got %v want %v", i, got, c.want)
 		}
 	}
 }
