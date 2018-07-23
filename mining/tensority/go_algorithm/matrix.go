@@ -1,4 +1,4 @@
-package tensority
+package go_algorithm
 
 import (
 	"reflect"

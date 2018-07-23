@@ -105,7 +105,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		}
 		tx.StatusFail, err = txStatus.GetStatus(i)
 		if err != nil {
-			NewSuccessResponse(resp)
+			return NewSuccessResponse(resp)
 		}
 
 		resOutID := orig.ResultIds[0]

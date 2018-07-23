@@ -29,7 +29,6 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 	decoders := map[string]func([]byte) (txbuilder.Action, error){
 		"control_address":              txbuilder.DecodeControlAddressAction,
 		"control_program":              txbuilder.DecodeControlProgramAction,
-		"control_receiver":             txbuilder.DecodeControlReceiverAction,
 		"issue":                        a.wallet.AssetReg.DecodeIssueAction,
 		"retire":                       txbuilder.DecodeRetireAction,
 		"spend_account":                a.wallet.AccountMgr.DecodeSpendAction,
@@ -39,36 +38,42 @@ func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, erro
 	return decoder, ok
 }
 
-func onlyHaveSpendActions(req *BuildRequest) bool {
+func onlyHaveInputActions(req *BuildRequest) (bool, error) {
 	count := 0
-	for _, m := range req.Actions {
-		if actionType := m["type"].(string); strings.HasPrefix(actionType, "spend") {
+	for i, act := range req.Actions {
+		actionType, ok := act["type"].(string)
+		if !ok {
+			return false, errors.WithDetailf(ErrBadActionType, "no action type provided on action %d", i)
+		}
+
+		if strings.HasPrefix(actionType, "spend") || actionType == "issue" {
 			count++
 		}
 	}
 
-	return count == len(req.Actions)
+	return count == len(req.Actions), nil
 }
 
 func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
-	if err := a.completeMissingIds(ctx, req); err != nil {
+	if err := a.completeMissingIDs(ctx, req); err != nil {
 		return nil, err
 	}
 
-	if onlyHaveSpendActions(req) {
-		return nil, errors.New("transaction only contain spend actions, didn't have output actions")
+	if ok, err := onlyHaveInputActions(req); err != nil {
+		return nil, err
+	} else if ok {
+		return nil, errors.WithDetail(ErrBadActionConstruction, "transaction contains only input actions and no output actions")
 	}
 
-	spendActions := []txbuilder.Action{}
 	actions := make([]txbuilder.Action, 0, len(req.Actions))
 	for i, act := range req.Actions {
 		typ, ok := act["type"].(string)
 		if !ok {
-			return nil, errors.WithDetailf(errBadActionType, "no action type provided on action %d", i)
+			return nil, errors.WithDetailf(ErrBadActionType, "no action type provided on action %d", i)
 		}
 		decoder, ok := a.actionDecoder(typ)
 		if !ok {
-			return nil, errors.WithDetailf(errBadActionType, "unknown action type %q on action %d", typ, i)
+			return nil, errors.WithDetailf(ErrBadActionType, "unknown action type %q on action %d", typ, i)
 		}
 
 		// Remarshal to JSON, the action may have been modified when we
@@ -79,16 +84,11 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		}
 		action, err := decoder(b)
 		if err != nil {
-			return nil, errors.WithDetailf(errBadAction, "%s on action %d", err.Error(), i)
+			return nil, errors.WithDetailf(ErrBadAction, "%s on action %d", err.Error(), i)
 		}
-
-		if typ == "spend_account" {
-			spendActions = append(spendActions, action)
-		} else {
-			actions = append(actions, action)
-		}
+		actions = append(actions, action)
 	}
-	actions = append(account.MergeSpendAction(spendActions), actions...)
+	actions = account.MergeSpendAction(actions)
 
 	ttl := req.TTL.Duration
 	if ttl == 0 {
@@ -100,10 +100,14 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 	if errors.Root(err) == txbuilder.ErrAction {
 		// append each of the inner errors contained in the data.
 		var Errs string
-		for _, innerErr := range errors.Data(err)["actions"].([]error) {
-			Errs = Errs + "<" + innerErr.Error() + ">"
+		var rootErr error
+		for i, innerErr := range errors.Data(err)["actions"].([]error) {
+			if i == 0 {
+				rootErr = errors.Root(innerErr)
+			}
+			Errs = Errs + innerErr.Error()
 		}
-		err = errors.New(err.Error() + "-" + Errs)
+		err = errors.WithDetail(rootErr, Errs)
 	}
 	if err != nil {
 		return nil, err
@@ -161,9 +165,7 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	baseTxSize := int64(len(data))
 
 	// extra tx size for sign witness parts
-	baseWitnessSize := int64(300)
-	lenSignInst := int64(len(template.SigningInstructions))
-	signSize := baseWitnessSize * lenSignInst
+	signSize := estimateSignSize(template.SigningInstructions)
 
 	// total gas for tx storage
 	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+signSize, consensus.StorageGasRate)
@@ -175,9 +177,8 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	totalP2WPKHGas := int64(0)
 	totalP2WSHGas := int64(0)
 	baseP2WPKHGas := int64(1419)
-	baseP2WSHGas := int64(2499)
 
-	for _, inpID := range template.Transaction.Tx.InputIDs {
+	for pos, inpID := range template.Transaction.Tx.InputIDs {
 		sp, err := template.Transaction.Spend(inpID)
 		if err != nil {
 			continue
@@ -191,7 +192,8 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 		if segwit.IsP2WPKHScript(resOut.ControlProgram.Code) {
 			totalP2WPKHGas += baseP2WPKHGas
 		} else if segwit.IsP2WSHScript(resOut.ControlProgram.Code) {
-			totalP2WSHGas += baseP2WSHGas
+			sigInst := template.SigningInstructions[pos]
+			totalP2WSHGas += estimateP2WSHGas(sigInst)
 		}
 	}
 
@@ -203,11 +205,50 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	roundingNeu := math.Ceil(totalNeu)
 	estimateNeu := int64(roundingNeu) * int64(defaultBaseRate)
 
+	// TODO add priority
+
 	return &EstimateTxGasResp{
 		TotalNeu:   estimateNeu,
 		StorageNeu: totalTxSizeGas * consensus.VMGasRate,
 		VMNeu:      (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
 	}, nil
+}
+
+// estimate p2wsh gas.
+// OP_CHECKMULTISIG consume (984 * a - 72 * b - 63) gas,
+// where a represent the num of public keys, and b represent the num of quorum.
+func estimateP2WSHGas(sigInst *txbuilder.SigningInstruction) int64 {
+	P2WSHGas := int64(0)
+	baseP2WSHGas := int64(738)
+
+	for _, witness := range sigInst.WitnessComponents {
+		switch t := witness.(type) {
+		case *txbuilder.SignatureWitness:
+			P2WSHGas += baseP2WSHGas + (984*int64(len(t.Keys)) - 72*int64(t.Quorum) - 63)
+		case *txbuilder.RawTxSigWitness:
+			P2WSHGas += baseP2WSHGas + (984*int64(len(t.Keys)) - 72*int64(t.Quorum) - 63)
+		}
+	}
+	return P2WSHGas
+}
+
+// estimate signature part size.
+// if need multi-sign, calculate the size according to the length of keys.
+func estimateSignSize(signingInstructions []*txbuilder.SigningInstruction) int64 {
+	signSize := int64(0)
+	baseWitnessSize := int64(300)
+
+	for _, sigInst := range signingInstructions {
+		for _, witness := range sigInst.WitnessComponents {
+			switch t := witness.(type) {
+			case *txbuilder.SignatureWitness:
+				signSize += int64(t.Quorum) * baseWitnessSize
+			case *txbuilder.RawTxSigWitness:
+				signSize += int64(t.Quorum) * baseWitnessSize
+			}
+		}
+	}
+	return signSize
 }
 
 // POST /estimate-transaction-gas

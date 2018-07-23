@@ -35,6 +35,7 @@ type virtualMachine struct {
 // execution.
 var TraceOut io.Writer
 
+// Verify program by running VM
 func Verify(context *Context, gasLimit int64) (gasLeft int64, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -212,33 +213,20 @@ func stackCost(stack [][]byte) int64 {
 	return result
 }
 
-type Error struct {
-	Err  error
-	Prog []byte
-	Args [][]byte
-}
-
-func (e Error) Error() string {
-	dis, err := Disassemble(e.Prog)
-	if err != nil {
-		dis = "???"
-	}
-
-	args := make([]string, 0, len(e.Args))
-	for _, a := range e.Args {
-		args = append(args, hex.EncodeToString(a))
-	}
-
-	return fmt.Sprintf("%s [prog %x = %s; args %s]", e.Err.Error(), e.Prog, dis, strings.Join(args, " "))
-}
-
 func wrapErr(err error, vm *virtualMachine, args [][]byte) error {
 	if err == nil {
 		return nil
 	}
-	return Error{
-		Err:  err,
-		Prog: vm.program,
-		Args: args,
+
+	dis, errDis := Disassemble(vm.program)
+	if errDis != nil {
+		dis = "???"
 	}
+
+	dataArgs := make([]string, 0, len(args))
+	for _, a := range args {
+		dataArgs = append(dataArgs, hex.EncodeToString(a))
+	}
+
+	return errors.Wrap(err, fmt.Sprintf("%s [prog %x = %s; args %s]", err.Error(), vm.program, dis, strings.Join(dataArgs, " ")))
 }

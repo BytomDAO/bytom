@@ -6,6 +6,7 @@ package mining
 
 import (
 	"sort"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -39,7 +40,9 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	}
 
 	builder := txbuilder.NewBuilder(time.Now())
-	if err = builder.AddInput(types.NewCoinbaseInput([]byte(string(blockHeight))), &txbuilder.SigningInstruction{}); err != nil {
+	if err = builder.AddInput(types.NewCoinbaseInput(
+		append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...),
+	), &txbuilder.SigningInstruction{}); err != nil {
 		return
 	}
 	if err = builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, amount, script)); err != nil {
@@ -95,7 +98,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	b.Transactions = []*types.Tx{nil}
 
 	txs := txPool.GetTransactions()
-	sort.Sort(ByTime(txs))
+	sort.Sort(byTime(txs))
 	for _, txDesc := range txs {
 		tx := txDesc.Tx.Tx
 		gasOnlyTx := false

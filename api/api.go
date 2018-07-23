@@ -15,6 +15,7 @@ import (
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/dashboard"
+	"github.com/bytom/equity"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
@@ -201,6 +202,7 @@ func (a *API) buildHandler() {
 		m.Handle("/create-account-receiver", jsonHandler(a.createAccountReceiver))
 		m.Handle("/list-addresses", jsonHandler(a.listAddresses))
 		m.Handle("/validate-address", jsonHandler(a.validateAddress))
+		m.Handle("/list-pubkeys", jsonHandler(a.listPubKeys))
 
 		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
@@ -225,6 +227,7 @@ func (a *API) buildHandler() {
 		m.Handle("/backup-wallet", jsonHandler(a.backupWalletImage))
 		m.Handle("/restore-wallet", jsonHandler(a.restoreWalletImage))
 		m.Handle("/rescan-wallet", jsonHandler(a.rescanWallet))
+		m.Handle("/wallet-info", jsonHandler(a.getWalletInfo))
 	} else {
 		log.Warn("Please enable wallet")
 	}
@@ -267,9 +270,14 @@ func (a *API) buildHandler() {
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/decode-program", jsonHandler(a.decodeProgram))
+	m.Handle("/compile", jsonHandler(a.compileEquity))
 
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
 	m.Handle("/net-info", jsonHandler(a.getNetInfo))
+
+	m.Handle("/list-peers", jsonHandler(a.listPeers))
+	m.Handle("/disconnect-peer", jsonHandler(a.disconnectPeer))
+	m.Handle("/connect-peer", jsonHandler(a.connectPeer))
 
 	handler := latencyHandler(m, walletEnable)
 	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux
@@ -309,6 +317,10 @@ func webAssetsHandler(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/dashboard/", http.StripPrefix("/dashboard/", static.Handler{
 		Assets:  dashboard.Files,
+		Default: "index.html",
+	}))
+	mux.Handle("/equity/", http.StripPrefix("/equity/", static.Handler{
+		Assets:  equity.Files,
 		Default: "index.html",
 	}))
 	mux.Handle("/", next)

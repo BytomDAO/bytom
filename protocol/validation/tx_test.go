@@ -57,7 +57,7 @@ func TestGasStatus(t *testing.T) {
 			f: func(input *GasState) error {
 				return input.setGas(-10000, 0)
 			},
-			err: errGasCalculate,
+			err: ErrGasCalculate,
 		},
 		{
 			input: &GasState{
@@ -89,7 +89,7 @@ func TestGasStatus(t *testing.T) {
 			f: func(input *GasState) error {
 				return input.updateUsage(-1)
 			},
-			err: errGasCalculate,
+			err: ErrGasCalculate,
 		},
 		{
 			input: &GasState{
@@ -155,47 +155,47 @@ func TestOverflow(t *testing.T) {
 		{
 			inputs:  []uint64{math.MaxUint64, 1},
 			outputs: []uint64{0},
-			err:     errOverflow,
+			err:     ErrOverflow,
 		},
 		{
 			inputs:  []uint64{math.MaxUint64, math.MaxUint64},
 			outputs: []uint64{0},
-			err:     errOverflow,
+			err:     ErrOverflow,
 		},
 		{
 			inputs:  []uint64{math.MaxUint64, math.MaxUint64 - 1},
 			outputs: []uint64{0},
-			err:     errOverflow,
+			err:     ErrOverflow,
 		},
 		{
 			inputs:  []uint64{math.MaxInt64, 1},
 			outputs: []uint64{0},
-			err:     errOverflow,
+			err:     ErrOverflow,
 		},
 		{
 			inputs:  []uint64{math.MaxInt64, math.MaxInt64},
 			outputs: []uint64{0},
-			err:     errOverflow,
+			err:     ErrOverflow,
 		},
 		{
 			inputs:  []uint64{math.MaxInt64, math.MaxInt64 - 1},
 			outputs: []uint64{0},
-			err:     errOverflow,
+			err:     ErrOverflow,
 		},
 		{
 			inputs:  []uint64{0},
 			outputs: []uint64{math.MaxUint64},
-			err:     errOverflow,
+			err:     ErrOverflow,
 		},
 		{
 			inputs:  []uint64{0},
 			outputs: []uint64{math.MaxInt64},
-			err:     errGasCalculate,
+			err:     ErrGasCalculate,
 		},
 		{
 			inputs:  []uint64{math.MaxInt64 - 1},
 			outputs: []uint64{math.MaxInt64},
-			err:     errGasCalculate,
+			err:     ErrGasCalculate,
 		},
 	}
 
@@ -265,14 +265,14 @@ func TestTxValidation(t *testing.T) {
 				iss := tx.Entries[*mux.Sources[0].Ref].(*bc.Issuance)
 				iss.WitnessDestination.Value.Amount++
 			},
-			err: errUnbalanced,
+			err: ErrUnbalanced,
 		},
 		{
 			desc: "unbalanced mux amounts",
 			f: func() {
 				mux.WitnessDestinations[0].Value.Amount++
 			},
-			err: errUnbalanced,
+			err: ErrUnbalanced,
 		},
 		{
 			desc: "balanced mux amounts",
@@ -289,7 +289,7 @@ func TestTxValidation(t *testing.T) {
 				iss := tx.Entries[*mux.Sources[0].Ref].(*bc.Issuance)
 				iss.WitnessDestination.Value.Amount = math.MaxInt64
 			},
-			err: errOverflow,
+			err: ErrOverflow,
 		},
 		{
 			desc: "underflowing mux destination amounts",
@@ -301,7 +301,7 @@ func TestTxValidation(t *testing.T) {
 				out = tx.Entries[*mux.WitnessDestinations[1].Ref].(*bc.Output)
 				out.Source.Value.Amount = math.MaxInt64
 			},
-			err: errOverflow,
+			err: ErrOverflow,
 		},
 		{
 			desc: "unbalanced mux assets",
@@ -310,14 +310,14 @@ func TestTxValidation(t *testing.T) {
 				sp := tx.Entries[*mux.Sources[1].Ref].(*bc.Spend)
 				sp.WitnessDestination.Value.AssetId = newAssetID(255)
 			},
-			err: errUnbalanced,
+			err: ErrUnbalanced,
 		},
 		{
 			desc: "mismatched output source / mux dest position",
 			f: func() {
 				tx.Entries[*tx.ResultIds[0]].(*bc.Output).Source.Position = 1
 			},
-			err: errMismatchedPosition,
+			err: ErrMismatchedPosition,
 		},
 		{
 			desc: "mismatched output source and mux dest",
@@ -333,14 +333,14 @@ func TestTxValidation(t *testing.T) {
 				tx.Entries[*out2ID] = out2
 				mux.WitnessDestinations[0].Ref = out2ID
 			},
-			err: errMismatchedReference,
+			err: ErrMismatchedReference,
 		},
 		{
 			desc: "invalid mux destination position",
 			f: func() {
 				mux.WitnessDestinations[0].Position = 1
 			},
-			err: errPosition,
+			err: ErrPosition,
 		},
 		{
 			desc: "mismatched mux dest value / output source value",
@@ -353,14 +353,14 @@ func TestTxValidation(t *testing.T) {
 				}
 				mux.Sources[0].Value.Amount++ // the mux must still balance
 			},
-			err: errMismatchedValue,
+			err: ErrMismatchedValue,
 		},
 		{
 			desc: "empty tx results",
 			f: func() {
 				tx.ResultIds = nil
 			},
-			err: errEmptyResults,
+			err: ErrEmptyResults,
 		},
 		{
 			desc: "empty tx results, but that's OK",
@@ -395,14 +395,14 @@ func TestTxValidation(t *testing.T) {
 					Amount:  spend.WitnessDestination.Value.Amount + 1,
 				}
 			},
-			err: errMismatchedValue,
+			err: ErrMismatchedValue,
 		},
 		{
 			desc: "gas out of limit",
 			f: func() {
 				vs.tx.SerializedSize = 10000000
 			},
-			err: errOverGasCredit,
+			err: ErrOverGasCredit,
 		},
 		{
 			desc: "can't find gas spend input in entries",
@@ -444,7 +444,7 @@ func TestTxValidation(t *testing.T) {
 					Amount:  spend.WitnessDestination.Value.Amount + 1,
 				}
 			},
-			err: errMismatchedValue,
+			err: ErrMismatchedValue,
 		},
 		{
 			desc: "mismatched witness asset destination",
@@ -453,7 +453,7 @@ func TestTxValidation(t *testing.T) {
 				issuance := tx.Entries[*issuanceID].(*bc.Issuance)
 				issuance.WitnessAssetDefinition.Data = &bc.Hash{V0: 9999}
 			},
-			err: errMismatchedAssetID,
+			err: ErrMismatchedAssetID,
 		},
 		{
 			desc: "issuance witness position greater than length of mux sources",
@@ -462,7 +462,7 @@ func TestTxValidation(t *testing.T) {
 				issuance := tx.Entries[*issuanceID].(*bc.Issuance)
 				issuance.WitnessDestination.Position = uint64(len(mux.Sources) + 1)
 			},
-			err: errPosition,
+			err: ErrPosition,
 		},
 		{
 			desc: "normal coinbase tx",
@@ -476,7 +476,7 @@ func TestTxValidation(t *testing.T) {
 			f: func() {
 				addCoinbase(&bc.AssetID{V1: 100}, 100000, nil)
 			},
-			err: errWrongCoinbaseAsset,
+			err: ErrWrongCoinbaseAsset,
 		},
 		{
 			desc: "coinbase tx is not first tx in block",
@@ -484,7 +484,7 @@ func TestTxValidation(t *testing.T) {
 				addCoinbase(consensus.BTMAssetID, 100000, nil)
 				vs.block.Transactions[0] = nil
 			},
-			err: errWrongCoinbaseTransaction,
+			err: ErrWrongCoinbaseTransaction,
 		},
 		{
 			desc: "coinbase arbitrary size out of limit",
@@ -492,7 +492,7 @@ func TestTxValidation(t *testing.T) {
 				arbitrary := make([]byte, consensus.CoinbaseArbitrarySizeLimit+1)
 				addCoinbase(consensus.BTMAssetID, 100000, arbitrary)
 			},
-			err: errCoinbaseArbitraryOversize,
+			err: ErrCoinbaseArbitraryOversize,
 		},
 		{
 			desc: "normal retirement output",
@@ -532,7 +532,7 @@ func TestTxValidation(t *testing.T) {
 				}
 				mux.WitnessDestinations = append(mux.WitnessDestinations, dest)
 			},
-			err: errNoSource,
+			err: ErrNoSource,
 		},
 	}
 
@@ -787,14 +787,7 @@ func mockGasTxInput() *types.TxInput {
 
 // Like errors.Root, but also unwraps vm.Error objects.
 func rootErr(e error) error {
-	for {
-		e = errors.Root(e)
-		if e2, ok := e.(vm.Error); ok {
-			e = e2.Err
-			continue
-		}
-		return e
-	}
+	return errors.Root(e)
 }
 
 func hashData(data []byte) bc.Hash {

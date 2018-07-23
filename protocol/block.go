@@ -28,13 +28,31 @@ func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
 	return c.store.GetBlock(hash)
 }
 
-// GetBlockByHeight return a block by given height
+// GetBlockByHeight return a block header by given height
 func (c *Chain) GetBlockByHeight(height uint64) (*types.Block, error) {
 	node := c.index.NodeByHeight(height)
 	if node == nil {
 		return nil, errors.New("can't find block in given height")
 	}
 	return c.store.GetBlock(&node.Hash)
+}
+
+// GetHeaderByHash return a block header by given hash
+func (c *Chain) GetHeaderByHash(hash *bc.Hash) (*types.BlockHeader, error) {
+	node := c.index.GetNode(hash)
+	if node == nil {
+		return nil, errors.New("can't find block header in given hash")
+	}
+	return node.BlockHeader(), nil
+}
+
+// GetHeaderByHeight return a block header by given height
+func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
+	node := c.index.NodeByHeight(height)
+	if node == nil {
+		return nil, errors.New("can't find block header in given height")
+	}
+	return node.BlockHeader(), nil
 }
 
 func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, []*state.BlockNode) {

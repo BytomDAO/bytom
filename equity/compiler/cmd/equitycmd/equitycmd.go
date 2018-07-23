@@ -67,9 +67,8 @@ func main() {
 		"bytes":        true,
 		"encoding/hex": true,
 		"fmt":          true,
-		"github.com/bytom/exp/ivy/compiler": true,
-		"github.com/bytom/protocol/vm":      true,
-		"github.com/bytom/encoding/json":    true,
+		"github.com/bytom/equity/compiler": true,
+		"github.com/bytom/protocol/vm":     true,
 	}
 
 	buf := new(bytes.Buffer)
@@ -130,9 +129,6 @@ func main() {
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{B: &%s})\n", param.Name)
 			case "Integer":
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{I: &%s})\n", param.Name)
-			case "Time":
-				fmt.Fprintf(buf, "\t_%s := %s.UnixNano() / int64(time.Millisecond)\n", param.Name, param.Name)
-				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{I: &_%s})\n", param.Name)
 			case "Hash", "Program", "PublicKey", "Signature", "String":
 				fmt.Fprintf(buf, "\t_contractArgs = append(_contractArgs, compiler.ContractArg{S: (*json.HexBytes)(&%s)})\n", param.Name)
 			}
@@ -274,9 +270,6 @@ func asGoParams(params []*compiler.Param) (goParams string, imports []string) {
 			typ = "[]byte"
 		case "String":
 			typ = "[]byte"
-		case "Time":
-			typ = "time.Time"
-			imports = append(imports, "time")
 		}
 		strs = append(strs, fmt.Sprintf("%s %s", p.Name, typ))
 	}

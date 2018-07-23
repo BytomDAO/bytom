@@ -94,7 +94,7 @@ func (b *builder) addAsset(stk stack) stack {
 }
 
 func (b *builder) addCheckOutput(stk stack, desc string) stack {
-	return b.add("CHECKOUTPUT", stk.dropN(6).add(desc))
+	return b.add("CHECKOUTPUT", stk.dropN(5).add(desc))
 }
 
 func (b *builder) addBoolean(stk stack, val bool) stack {
@@ -182,7 +182,7 @@ func (b *builder) opcodes() string {
 // $default          |  [... borrower lender deadline balanceAmount balanceAsset]
 // 2                 |  [... borrower lender deadline balanceAmount balanceAsset 2]
 // ROLL              |  [... borrower lender balanceAmount balanceAsset deadline]
-// BLOCKTIME LESSTHAN|  [... borrower lender balanceAmount balanceAsset after(deadline)]
+// BLOCKHEIGHT LESSTHAN|  [... borrower lender balanceAmount balanceAsset after(deadline)]
 // VERIFY            |  [... borrower lender balanceAmount balanceAsset]
 // 0                 |  [... borrower lender balanceAmount balanceAsset 0]
 // 0                 |  [... borrower lender balanceAmount balanceAsset 0 0]

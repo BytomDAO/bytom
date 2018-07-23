@@ -9,7 +9,7 @@ import (
 	chainjson "github.com/bytom/encoding/json"
 )
 
-// Contract is a compiled Ivy contract.
+// Contract is a compiled Equity contract.
 type Contract struct {
 	// Name is the contract name.
 	Name string `json:"name"`
@@ -70,13 +70,9 @@ type Clause struct {
 
 	statements []statement
 
-	// MinTimes is the list of expressions passed to after() in this
+	// BlockHeight is the list of expressions passed to greater()/less() in this
 	// clause.
-	MinTimes []string `json:"mintimes,omitempty"`
-
-	// MaxTimes is the list of expressions passed to before() in this
-	// clause.
-	MaxTimes []string `json:"maxtimes,omitempty"`
+	BlockHeight []string `json:"blockheight,omitempty"`
 
 	// HashCalls is the list of hash functions and their arguments used
 	// in this clause.

@@ -7,7 +7,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
@@ -27,6 +26,7 @@ import (
 	"github.com/bytom/env"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
+	"github.com/bytom/mining/tensority"
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -35,9 +35,8 @@ import (
 )
 
 const (
-	webAddress               = "http://127.0.0.1:9888"
-	expireReservationsPeriod = time.Second
-	maxNewBlockChSize        = 1024
+	webAddress        = "http://127.0.0.1:9888"
+	maxNewBlockChSize = 1024
 )
 
 type Node struct {
@@ -117,9 +116,6 @@ func NewNode(config *cfg.Config) *Node {
 		if config.Wallet.Rescan {
 			wallet.RescanBlocks()
 		}
-
-		// Clean up expired UTXO reservations periodically.
-		go accounts.ExpireReservations(ctx, expireReservationsPeriod)
 	}
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 
@@ -154,19 +150,32 @@ func NewNode(config *cfg.Config) *Node {
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
+	if config.Simd.Enable {
+		tensority.UseSIMD = true
+	}
+
 	return node
 }
 
 // newPoolTxListener listener transaction from txPool, and send it to syncManager and wallet
 func newPoolTxListener(txPool *protocol.TxPool, syncManager *netsync.SyncManager, wallet *w.Wallet) {
-	newTxCh := txPool.GetNewTxCh()
+	txMsgCh := txPool.GetMsgCh()
 	syncManagerTxCh := syncManager.GetNewTxCh()
 
 	for {
-		newTx := <-newTxCh
-		syncManagerTxCh <- newTx
-		if wallet != nil {
-			wallet.GetNewTxCh() <- newTx
+		msg := <-txMsgCh
+		switch msg.MsgType {
+		case protocol.MsgNewTx:
+			syncManagerTxCh <- msg.Tx
+			if wallet != nil {
+				wallet.AddUnconfirmedTx(msg.TxDesc)
+			}
+		case protocol.MsgRemoveTx:
+			if wallet != nil {
+				wallet.RemoveUnconfirmedTx(msg.TxDesc)
+			}
+		default:
+			log.Warn("got unknow message type from the txPool channel")
 		}
 	}
 }

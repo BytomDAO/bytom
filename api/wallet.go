@@ -61,3 +61,19 @@ func (a *API) rescanWallet() Response {
 	a.wallet.RescanBlocks()
 	return NewSuccessResponse(nil)
 }
+
+// WalletInfo return wallet information
+type WalletInfo struct {
+	BestBlockHeight uint64 `json:"best_block_height"`
+	WalletHeight    uint64 `json:"wallet_height"`
+}
+
+func (a *API) getWalletInfo() Response {
+	bestBlockHeight := a.chain.BestBlockHeight()
+	walletStatus := a.wallet.GetWalletStatusInfo()
+
+	return NewSuccessResponse(&WalletInfo{
+		BestBlockHeight: bestBlockHeight,
+		WalletHeight:    walletStatus.WorkHeight,
+	})
+}

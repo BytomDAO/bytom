@@ -2,6 +2,7 @@ package netsync
 
 import (
 	"encoding/hex"
+	"errors"
 	"net"
 	"path"
 	"strconv"
@@ -22,51 +23,55 @@ import (
 	"github.com/bytom/version"
 )
 
+const (
+	maxTxChanSize = 10000
+)
+
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
-	networkID uint64
-	sw        *p2p.Switch
+	sw          *p2p.Switch
+	genesisHash bc.Hash
 
-	privKey     crypto.PrivKeyEd25519 // local node's p2p key
-	chain       *core.Chain
-	txPool      *core.TxPool
-	fetcher     *Fetcher
-	blockKeeper *blockKeeper
-	peers       *peerSet
+	privKey      crypto.PrivKeyEd25519 // local node's p2p key
+	chain        *core.Chain
+	txPool       *core.TxPool
+	blockFetcher *blockFetcher
+	blockKeeper  *blockKeeper
+	peers        *peerSet
 
-	newTxCh       chan *types.Tx
-	newBlockCh    chan *bc.Hash
-	newPeerCh     chan struct{}
-	txSyncCh      chan *txsync
-	dropPeerCh    chan *string
-	quitSync      chan struct{}
-	config        *cfg.Config
-	synchronising int32
+	newTxCh    chan *types.Tx
+	newBlockCh chan *bc.Hash
+	txSyncCh   chan *txSyncMsg
+	quitSync   chan struct{}
+	config     *cfg.Config
 }
 
 //NewSyncManager create a sync manager
 func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
-	sw := p2p.NewSwitch(config)
-	peers := newPeerSet()
-	dropPeerCh := make(chan *string, maxQuitReq)
-	manager := &SyncManager{
-		sw:          sw,
-		txPool:      txPool,
-		chain:       chain,
-		privKey:     crypto.GenPrivKeyEd25519(),
-		fetcher:     NewFetcher(chain, sw, peers),
-		blockKeeper: newBlockKeeper(chain, sw, peers, dropPeerCh),
-		peers:       peers,
-		newTxCh:     make(chan *types.Tx, maxTxChanSize),
-		newBlockCh:  newBlockCh,
-		newPeerCh:   make(chan struct{}),
-		txSyncCh:    make(chan *txsync),
-		dropPeerCh:  dropPeerCh,
-		quitSync:    make(chan struct{}),
-		config:      config,
+	genesisHeader, err := chain.GetHeaderByHeight(0)
+	if err != nil {
+		return nil, err
 	}
 
-	protocolReactor := NewProtocolReactor(chain, txPool, manager.sw, manager.blockKeeper, manager.fetcher, manager.peers, manager.newPeerCh, manager.txSyncCh, manager.dropPeerCh)
+	sw := p2p.NewSwitch(config)
+	peers := newPeerSet(sw)
+	manager := &SyncManager{
+		sw:           sw,
+		genesisHash:  genesisHeader.Hash(),
+		txPool:       txPool,
+		chain:        chain,
+		privKey:      crypto.GenPrivKeyEd25519(),
+		blockFetcher: newBlockFetcher(chain, peers),
+		blockKeeper:  newBlockKeeper(chain, peers),
+		peers:        peers,
+		newTxCh:      make(chan *types.Tx, maxTxChanSize),
+		newBlockCh:   newBlockCh,
+		txSyncCh:     make(chan *txSyncMsg),
+		quitSync:     make(chan struct{}),
+		config:       config,
+	}
+
+	protocolReactor := NewProtocolReactor(manager, manager.peers)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
 
 	// Create & add listener
@@ -88,6 +93,199 @@ func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, 
 	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
 	manager.sw.SetNodePrivKey(manager.privKey)
 	return manager, nil
+}
+
+//BestPeer return the highest p2p peerInfo
+func (sm *SyncManager) BestPeer() *PeerInfo {
+	bestPeer := sm.peers.bestPeer(consensus.SFFullNode)
+	if bestPeer != nil {
+		return bestPeer.getPeerInfo()
+	}
+	return nil
+}
+
+// GetNewTxCh return a unconfirmed transaction feed channel
+func (sm *SyncManager) GetNewTxCh() chan *types.Tx {
+	return sm.newTxCh
+}
+
+//GetPeerInfos return peer info of all peers
+func (sm *SyncManager) GetPeerInfos() []*PeerInfo {
+	return sm.peers.getPeerInfos()
+}
+
+//IsCaughtUp check wheather the peer finish the sync
+func (sm *SyncManager) IsCaughtUp() bool {
+	peer := sm.peers.bestPeer(consensus.SFFullNode)
+	return peer == nil || peer.Height() <= sm.chain.BestBlockHeight()
+}
+
+//NodeInfo get P2P peer node info
+func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
+	return sm.sw.NodeInfo()
+}
+
+//StopPeer try to stop peer by given ID
+func (sm *SyncManager) StopPeer(peerID string) error {
+	if peer := sm.peers.getPeer(peerID); peer == nil {
+		return errors.New("peerId not exist")
+	}
+	sm.peers.removePeer(peerID)
+	return nil
+}
+
+//Switch get sync manager switch
+func (sm *SyncManager) Switch() *p2p.Switch {
+	return sm.sw
+}
+
+func (sm *SyncManager) handleBlockMsg(peer *peer, msg *BlockMessage) {
+	sm.blockKeeper.processBlock(peer.ID(), msg.GetBlock())
+}
+
+func (sm *SyncManager) handleBlocksMsg(peer *peer, msg *BlocksMessage) {
+	blocks, err := msg.GetBlocks()
+	if err != nil {
+		log.WithField("err", err).Debug("fail on handleBlocksMsg GetBlocks")
+		return
+	}
+
+	sm.blockKeeper.processBlocks(peer.ID(), blocks)
+}
+
+func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
+	var block *types.Block
+	var err error
+	if msg.Height != 0 {
+		block, err = sm.chain.GetBlockByHeight(msg.Height)
+	} else {
+		block, err = sm.chain.GetBlockByHash(msg.GetHash())
+	}
+	if err != nil {
+		log.WithField("err", err).Warning("fail on handleGetBlockMsg get block from chain")
+		return
+	}
+
+	ok, err := peer.sendBlock(block)
+	if !ok {
+		sm.peers.removePeer(peer.ID())
+	}
+	if err != nil {
+		log.WithField("err", err).Error("fail on handleGetBlockMsg sentBlock")
+	}
+}
+
+func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
+	blocks, err := sm.blockKeeper.locateBlocks(msg.GetBlockLocator(), msg.GetStopHash())
+	if err != nil || len(blocks) == 0 {
+		return
+	}
+
+	totalSize := 0
+	sendBlocks := []*types.Block{}
+	for _, block := range blocks {
+		rawData, err := block.MarshalText()
+		if err != nil {
+			log.WithField("err", err).Error("fail on handleGetBlocksMsg marshal block")
+			continue
+		}
+
+		if totalSize+len(rawData) > maxBlockchainResponseSize-16 {
+			break
+		}
+		totalSize += len(rawData)
+		sendBlocks = append(sendBlocks, block)
+	}
+
+	ok, err := peer.sendBlocks(sendBlocks)
+	if !ok {
+		sm.peers.removePeer(peer.ID())
+	}
+	if err != nil {
+		log.WithField("err", err).Error("fail on handleGetBlocksMsg sentBlock")
+	}
+}
+
+func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
+	headers, err := sm.blockKeeper.locateHeaders(msg.GetBlockLocator(), msg.GetStopHash())
+	if err != nil || len(headers) == 0 {
+		log.WithField("err", err).Debug("fail on handleGetHeadersMsg locateHeaders")
+		return
+	}
+
+	ok, err := peer.sendHeaders(headers)
+	if !ok {
+		sm.peers.removePeer(peer.ID())
+	}
+	if err != nil {
+		log.WithField("err", err).Error("fail on handleGetHeadersMsg sentBlock")
+	}
+}
+
+func (sm *SyncManager) handleHeadersMsg(peer *peer, msg *HeadersMessage) {
+	headers, err := msg.GetHeaders()
+	if err != nil {
+		log.WithField("err", err).Debug("fail on handleHeadersMsg GetHeaders")
+		return
+	}
+
+	sm.blockKeeper.processHeaders(peer.ID(), headers)
+}
+
+func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
+	block, err := msg.GetMineBlock()
+	if err != nil {
+		log.WithField("err", err).Warning("fail on handleMineBlockMsg GetMineBlock")
+		return
+	}
+
+	hash := block.Hash()
+	peer.markBlock(&hash)
+	sm.blockFetcher.processNewBlock(&blockMsg{peerID: peer.ID(), block: block})
+	peer.setStatus(block.Height, &hash)
+}
+
+func (sm *SyncManager) handleStatusRequestMsg(peer BasePeer) {
+	bestHeader := sm.chain.BestBlockHeader()
+	genesisBlock, err := sm.chain.GetBlockByHeight(0)
+	if err != nil {
+		log.WithField("err", err).Error("fail on handleStatusRequestMsg get genesis")
+	}
+
+	genesisHash := genesisBlock.Hash()
+	msg := NewStatusResponseMessage(bestHeader, &genesisHash)
+	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+		sm.peers.removePeer(peer.ID())
+	}
+}
+
+func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusResponseMessage) {
+	if peer := sm.peers.getPeer(basePeer.ID()); peer != nil {
+		peer.setStatus(msg.Height, msg.GetHash())
+		return
+	}
+
+	if genesisHash := msg.GetGenesisHash(); sm.genesisHash != *genesisHash {
+		log.WithFields(log.Fields{
+			"remote genesis": genesisHash.String(),
+			"local genesis":  sm.genesisHash.String(),
+		}).Warn("fail hand shake due to differnt genesis")
+		return
+	}
+
+	sm.peers.addPeer(basePeer, msg.Height, msg.GetHash())
+}
+
+func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage) {
+	tx, err := msg.GetTransaction()
+	if err != nil {
+		sm.peers.addBanScore(peer.ID(), 0, 10, "fail on get tx from message")
+		return
+	}
+
+	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && isOrphan == false {
+		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
+	}
 }
 
 // Defaults to tcp
@@ -133,14 +331,8 @@ func (sm *SyncManager) Start() {
 	}
 	// broadcast transactions
 	go sm.txBroadcastLoop()
-
-	// broadcast mined blocks
 	go sm.minedBroadcastLoop()
-
-	// start sync handlers
-	go sm.syncer()
-
-	go sm.txsyncLoop()
+	go sm.txSyncLoop()
 }
 
 //Stop stop sync manager
@@ -181,29 +373,6 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 	return ntab, nil
 }
 
-func (sm *SyncManager) txBroadcastLoop() {
-	for {
-		select {
-		case newTx := <-sm.newTxCh:
-			peers, err := sm.peers.BroadcastTx(newTx)
-			if err != nil {
-				log.Errorf("Broadcast new tx error. %v", err)
-				return
-			}
-			for _, smPeer := range peers {
-				if smPeer == nil {
-					continue
-				}
-				swPeer := smPeer.getPeer()
-				log.Info("Tx broadcast error. Stop Peer.")
-				sm.sw.StopPeerGracefully(swPeer)
-			}
-		case <-sm.quitSync:
-			return
-		}
-	}
-}
-
 func (sm *SyncManager) minedBroadcastLoop() {
 	for {
 		select {
@@ -213,46 +382,12 @@ func (sm *SyncManager) minedBroadcastLoop() {
 				log.Errorf("Failed on mined broadcast loop get block %v", err)
 				return
 			}
-			peers, err := sm.peers.BroadcastMinedBlock(block)
-			if err != nil {
+			if err := sm.peers.broadcastMinedBlock(block); err != nil {
 				log.Errorf("Broadcast mine block error. %v", err)
 				return
-			}
-			for _, smPeer := range peers {
-				if smPeer == nil {
-					continue
-				}
-				swPeer := smPeer.getPeer()
-				log.Info("New mined block broadcast error. Stop Peer.")
-				sm.sw.StopPeerGracefully(swPeer)
 			}
 		case <-sm.quitSync:
 			return
 		}
 	}
-}
-
-//NodeInfo get P2P peer node info
-func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
-	return sm.sw.NodeInfo()
-}
-
-//BlockKeeper get block keeper
-func (sm *SyncManager) BlockKeeper() *blockKeeper {
-	return sm.blockKeeper
-}
-
-//Peers get sync manager peer set
-func (sm *SyncManager) Peers() *peerSet {
-	return sm.peers
-}
-
-//Switch get sync manager switch
-func (sm *SyncManager) Switch() *p2p.Switch {
-	return sm.sw
-}
-
-// GetNewTxCh return a unconfirmed transaction feed channel
-func (sm *SyncManager) GetNewTxCh() chan *types.Tx {
-	return sm.newTxCh
 }
