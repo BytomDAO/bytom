@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"errors"
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
@@ -303,42 +304,14 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 
 	pubKeyInfos := []PubKeyInfo{}
 	idx := a.wallet.AccountMgr.GetContractIndex(account.ID)
-
-	if ins.PublicKey != "" {
-		for i := uint64(1); i <= idx; i++ {
-			rawPath := signers.Path(account.Signer, signers.AccountKeySpace, i)
-			derivedXPub := account.XPubs[0].Derive(rawPath)
-			pubkey := derivedXPub.PublicKey()
-
-			if ins.PublicKey != hex.EncodeToString(pubkey) {
-				continue
-			}
-
-			var path []chainjson.HexBytes
-			for _, p := range rawPath {
-				path = append(path, chainjson.HexBytes(p))
-			}
-
-			pubKeyInfos = append([]PubKeyInfo{{
-				Pubkey: hex.EncodeToString(pubkey),
-				Path:   path,
-			}}, pubKeyInfos...)
-		}
-
-		if len(pubKeyInfos) == 0 {
-			return NewSuccessResponse(nil)
-		}
-
-		return NewSuccessResponse(&AccountPubkey{
-			RootXPub:    account.XPubs[0],
-			PubKeyInfos: pubKeyInfos,
-		})
-	}
-
 	for i := uint64(1); i <= idx; i++ {
 		rawPath := signers.Path(account.Signer, signers.AccountKeySpace, i)
 		derivedXPub := account.XPubs[0].Derive(rawPath)
 		pubkey := derivedXPub.PublicKey()
+
+		if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(pubkey) {
+			continue
+		}
 
 		var path []chainjson.HexBytes
 		for _, p := range rawPath {
@@ -349,6 +322,10 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 			Pubkey: hex.EncodeToString(pubkey),
 			Path:   path,
 		}}, pubKeyInfos...)
+	}
+
+	if len(pubKeyInfos) == 0 {
+		return NewErrorResponse(errors.New("Not found publickey for the account"))
 	}
 
 	return NewSuccessResponse(&AccountPubkey{

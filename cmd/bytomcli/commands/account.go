@@ -183,11 +183,7 @@ var listPubKeysCmd = &cobra.Command{
 			os.Exit(exitCode)
 		}
 
-		if data == nil {
-			jww.FEEDBACK.Println("Not found publicKey for the account")
-		} else {
-			printJSON(data)
-		}
+		printJSON(data)
 	},
 }
 
