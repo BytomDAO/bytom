@@ -2,6 +2,7 @@ package commands
 
 import (
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
@@ -14,7 +15,7 @@ func init() {
 	createAccountCmd.PersistentFlags().IntVarP(&accountQuorum, "quorom", "q", 1, "quorum must be greater than 0 and less than or equal to the number of signers")
 	createAccountCmd.PersistentFlags().StringVarP(&accountToken, "access", "a", "", "access token")
 
-	listAccountsCmd.PersistentFlags().StringVar(&accountID, "id", "", "ID of account")
+	listAccountsCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
 
 	listAddressesCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
 	listAddressesCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
@@ -157,13 +158,25 @@ var validateAddressCmd = &cobra.Command{
 }
 
 var listPubKeysCmd = &cobra.Command{
-	Use:   "list-pubkeys <accountID>",
+	Use:   "list-pubkeys <accountInfo> [publicKey]",
 	Short: "list the account pubkeys",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.RangeArgs(1, 2),
 	Run: func(cmd *cobra.Command, args []string) {
 		var ins = struct {
-			AccountID string `json:"account_id"`
-		}{AccountID: args[0]}
+			AccountID    string `json:"account_id"`
+			AccountAlias string `json:"account_alias"`
+			PublicKey    string `json:"public_key"`
+		}{}
+
+		if len(args[0]) == 13 && strings.HasPrefix(args[0], "0") {
+			ins.AccountID = args[0]
+		} else {
+			ins.AccountAlias = args[0]
+		}
+
+		if len(args) == 2 {
+			ins.PublicKey = args[1]
+		}
 
 		data, exitCode := util.ClientCall("/list-pubkeys", &ins)
 		if exitCode != util.Success {
