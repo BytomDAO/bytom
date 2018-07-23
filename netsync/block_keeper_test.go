@@ -6,6 +6,7 @@ import (
 
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/test/mock"
 	"github.com/bytom/testutil"
 )
 
@@ -103,7 +104,7 @@ func TestBlockLocator(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		mockChain := testutil.NewMockChain()
+		mockChain := mock.NewChain()
 		bk := &blockKeeper{chain: mockChain}
 		mockChain.SetBestBlockHeader(&blocks[c.bestHeight].BlockHeader)
 		for i := uint64(0); i <= c.bestHeight; i++ {
