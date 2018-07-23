@@ -34,7 +34,7 @@ func checkBlockTime(b *bc.Block, parent *state.BlockNode) error {
 
 func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
 	if len(b.Transactions) == 0 {
-		return errors.Wrap(errWrongCoinbaseTransaction, "block is empty")
+		return errors.Wrap(ErrWrongCoinbaseTransaction, "block is empty")
 	}
 
 	tx := b.Transactions[0]
@@ -44,7 +44,7 @@ func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
 	}
 
 	if output.Source.Value.Amount != amount {
-		return errors.Wrap(errWrongCoinbaseTransaction, "dismatch output amount")
+		return errors.Wrap(ErrWrongCoinbaseTransaction, "dismatch output amount")
 	}
 	return nil
 }

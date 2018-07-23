@@ -38,5 +38,4 @@ func initFiles(cmd *cobra.Command, args []string) {
 	}
 
 	log.WithField("config", configFilePath).Info("Initialized bytom")
-
 }

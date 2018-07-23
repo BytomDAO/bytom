@@ -22,14 +22,17 @@ func TestGetAccountUtxos(t *testing.T) {
 	defer os.RemoveAll("temp")
 
 	cases := []struct {
-		dbUtxos         map[string]*account.UTXO
-		id              string
-		isSmartContract bool
-		wantUtxos       []*account.UTXO
+		dbUtxos          map[string]*account.UTXO
+		unconfirmedUtxos []*account.UTXO
+		id               string
+		unconfirmed      bool
+		isSmartContract  bool
+		wantUtxos        []*account.UTXO
 	}{
 		{
 			dbUtxos:         map[string]*account.UTXO{},
 			id:              "",
+			unconfirmed:     false,
 			isSmartContract: false,
 			wantUtxos:       []*account.UTXO{},
 		},
@@ -48,8 +51,9 @@ func TestGetAccountUtxos(t *testing.T) {
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
-			id:              "",
-			isSmartContract: false,
+			unconfirmedUtxos: []*account.UTXO{},
+			id:               "",
+			isSmartContract:  false,
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{OutputID: bc.Hash{V0: 1}},
 				&account.UTXO{OutputID: bc.Hash{V0: 2}},
@@ -71,7 +75,14 @@ func TestGetAccountUtxos(t *testing.T) {
 					OutputID: bc.Hash{V0: 4},
 				},
 			},
+			unconfirmedUtxos: []*account.UTXO{
+				&account.UTXO{
+					OutputID:       bc.Hash{V0: 5},
+					ControlProgram: []byte("smart contract"),
+				},
+			},
 			id:              "",
+			unconfirmed:     false,
 			isSmartContract: true,
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{OutputID: bc.Hash{V0: 4}},
@@ -92,11 +103,82 @@ func TestGetAccountUtxos(t *testing.T) {
 					OutputID: bc.Hash{V0: 2, V1: 2},
 				},
 			},
+			unconfirmedUtxos: []*account.UTXO{
+				&account.UTXO{
+					OutputID:       bc.Hash{V0: 6},
+					ControlProgram: []byte{0x51},
+				},
+			},
 			id:              "0000000000000002",
+			unconfirmed:     false,
 			isSmartContract: false,
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{OutputID: bc.Hash{V0: 2}},
 				&account.UTXO{OutputID: bc.Hash{V0: 2, V1: 2}},
+			},
+		},
+		{
+			dbUtxos: map[string]*account.UTXO{
+				string(account.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+					OutputID: bc.Hash{V0: 3},
+				},
+				string(account.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+					OutputID: bc.Hash{V0: 4},
+				},
+			},
+			unconfirmedUtxos: []*account.UTXO{
+				&account.UTXO{
+					OutputID:       bc.Hash{V0: 5},
+					ControlProgram: []byte("smart contract"),
+				},
+				&account.UTXO{
+					OutputID:       bc.Hash{V0: 6},
+					ControlProgram: []byte{0x51},
+				},
+			},
+			id:              "",
+			unconfirmed:     true,
+			isSmartContract: true,
+			wantUtxos: []*account.UTXO{
+				&account.UTXO{
+					OutputID:       bc.Hash{V0: 5},
+					ControlProgram: []byte("smart contract"),
+				},
+				&account.UTXO{
+					OutputID: bc.Hash{V0: 4},
+				},
+			},
+		},
+		{
+			dbUtxos: map[string]*account.UTXO{
+				string(account.StandardUTXOKey(bc.Hash{V0: 3})): &account.UTXO{
+					OutputID: bc.Hash{V0: 3},
+				},
+				string(account.ContractUTXOKey(bc.Hash{V0: 4})): &account.UTXO{
+					OutputID: bc.Hash{V0: 4},
+				},
+			},
+			unconfirmedUtxos: []*account.UTXO{
+				&account.UTXO{
+					OutputID:       bc.Hash{V0: 5},
+					ControlProgram: []byte("smart contract"),
+				},
+				&account.UTXO{
+					OutputID:       bc.Hash{V0: 6},
+					ControlProgram: []byte{0x51},
+				},
+			},
+			id:              "",
+			unconfirmed:     true,
+			isSmartContract: false,
+			wantUtxos: []*account.UTXO{
+				&account.UTXO{
+					OutputID:       bc.Hash{V0: 6},
+					ControlProgram: []byte{0x51},
+				},
+				&account.UTXO{
+					OutputID: bc.Hash{V0: 3},
+				},
 			},
 		},
 	}
@@ -111,7 +193,9 @@ func TestGetAccountUtxos(t *testing.T) {
 			testDB.Set([]byte(k), data)
 		}
 
-		gotUtxos := w.GetAccountUtxos(c.id, c.isSmartContract)
+		w.AccountMgr = account.NewManager(testDB, nil)
+		w.AccountMgr.AddUnconfirmedUtxo(c.unconfirmedUtxos)
+		gotUtxos := w.GetAccountUtxos(c.id, c.unconfirmed, c.isSmartContract)
 		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
 			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 		}

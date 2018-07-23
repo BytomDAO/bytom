@@ -40,7 +40,7 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 		return errors.Sub(ErrRejected, err)
 	}
 	if err != nil {
-		return errors.Wrap(err, "tx rejected")
+		return errors.WithDetail(err, "tx rejected: "+err.Error())
 	}
 
 	return errors.Wrap(err)

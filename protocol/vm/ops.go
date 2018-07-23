@@ -202,9 +202,6 @@ const (
 	OP_CHECKMULTISIG Op = 0xad
 	OP_TXSIGHASH     Op = 0xae
 
-	// support sm3
-	OP_SM3 Op = 0xb0
-
 	OP_CHECKOUTPUT Op = 0xc1
 	OP_ASSET       Op = 0xc2
 	OP_AMOUNT      Op = 0xc3
@@ -310,8 +307,6 @@ var (
 		OP_CHECKSIG:      {OP_CHECKSIG, "CHECKSIG", opCheckSig},
 		OP_CHECKMULTISIG: {OP_CHECKMULTISIG, "CHECKMULTISIG", opCheckMultiSig},
 		OP_TXSIGHASH:     {OP_TXSIGHASH, "TXSIGHASH", opTxSigHash},
-
-		OP_SM3: {OP_SM3, "SM3", opSm3},
 
 		OP_CHECKOUTPUT: {OP_CHECKOUTPUT, "CHECKOUTPUT", opCheckOutput},
 		OP_ASSET:       {OP_ASSET, "ASSET", opAsset},

@@ -9,7 +9,7 @@ $(error "$$GOOS is not defined. If you are using Windows, try to re-make using '
 endif
 endif
 
-PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd')
+PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v '/mining/tensority')
 BUILD_FLAGS := -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`"
 
 MINER_BINARY32 := miner-$(GOOS)_386
@@ -39,7 +39,12 @@ all: test target release-all
 
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
-	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+	@CGO_ENABLED=0 go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+
+bytomd-simd:
+	@echo "Building SIMD version bytomd to cmd/bytomd/bytomd"
+	@cd mining/tensority/cgo_algorithm/lib/ && make
+	@CGO_ENABLED=1 go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 
 bytomcli:
 	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
@@ -106,13 +111,13 @@ target/$(MINER_BINARY64):
 
 test:
 	@echo "====> Running go test"
-	@go test -tags "network" $(PACKAGES)
+	@CGO_ENABLED=0 go test -tags "network" $(PACKAGES)
 
 benchmark:
-	go test -bench $(PACKAGES)
+	@CGO_ENABLED=0 go test -bench $(PACKAGES)
 
 functional-tests:
-	@go test -v -timeout=5m -tags=functional ./test
+	@CGO_ENABLED=0 go test -v -timeout=5m -tags=functional ./test
 
 ci: test functional-tests
 

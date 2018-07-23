@@ -98,7 +98,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	b.Transactions = []*types.Tx{nil}
 
 	txs := txPool.GetTransactions()
-	sort.Sort(ByTime(txs))
+	sort.Sort(byTime(txs))
 	for _, txDesc := range txs {
 		tx := txDesc.Tx.Tx
 		gasOnlyTx := false

@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/bytom/errors"
@@ -172,7 +173,7 @@ func TestIsPushData(t *testing.T) {
 		} else if c.wantErr != nil {
 			t.Logf("check err success")
 		} else {
-			t.Errorf("check false: %v -- %v", ops[OP_1].fn, ops[c.want.Op].fn)
+			t.Errorf("check false: %v -- %v", reflect.ValueOf(ops[OP_1].fn), reflect.ValueOf(ops[c.want.Op].fn))
 		}
 	}
 }
