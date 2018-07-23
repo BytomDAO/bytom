@@ -9,7 +9,7 @@ $(error "$$GOOS is not defined. If you are using Windows, try to re-make using '
 endif
 endif
 
-PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v '/mining/tensority')
+PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd')
 BUILD_FLAGS := -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`"
 
 MINER_BINARY32 := miner-$(GOOS)_386
@@ -37,13 +37,15 @@ BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
 
 all: test target release-all
 
+simd-lib:
+	@cd mining/tensority/cgo_algorithm/lib/ && make
+
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
 	@CGO_ENABLED=0 go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 
-bytomd-simd:
+bytomd-simd: simd-lib
 	@echo "Building SIMD version bytomd to cmd/bytomd/bytomd"
-	@cd mining/tensority/cgo_algorithm/lib/ && make
 	@CGO_ENABLED=1 go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 
 bytomcli:
@@ -119,6 +121,6 @@ benchmark:
 functional-tests:
 	@CGO_ENABLED=0 go test -v -timeout=5m -tags=functional ./test
 
-ci: test functional-tests
+ci: test functional-tests simd-lib
 
 .PHONY: all target release-all clean test benchmark
