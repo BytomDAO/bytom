@@ -23,7 +23,7 @@ func parsePath(p *parser) []*Contract {
 	inputReader := bufio.NewReader(inputFile)
 	inp, err := ioutil.ReadAll(inputReader)
 	if err != nil {
-		errmsg := fmt.Sprintf("reading input error:[%v]\n", filename, err)
+		errmsg := fmt.Sprintf("reading input file[%v] error:[%v]\n", filename, err)
 		panic(errmsg)
 	}
 

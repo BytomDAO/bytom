@@ -345,8 +345,7 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 
 		// Statistic the number of add(+) signs for lockStatement
 		count := 0
-		switch stmt := s.(type) {
-		case *lockStatement:
+		if stmt, ok := s.(*lockStatement); ok {
 			lockedValue := []byte(stmt.locked.String())
 			for i := 1; i < len(lockedValue)-1; i++ {
 				if lockedValue[i] == '+' {
@@ -381,9 +380,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 			}
 
 		case *lockStatement:
-			// index
-			stk = b.addInt64(stk, stmt.index)
-
 			// TODO: permit more complex expressions for locked,
 			// like "lock x+y with foo" (?) , this suggestion has been adopted and modified
 			var lockArr []string
@@ -420,9 +416,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 				// index
 				stk = b.addInt64(stk, stmt.index)
 
-				// refdatahash
-				//stk = b.addData(stk, nil)
-
 				stk = b.addAmount(stk)
 				stk = b.addAsset(stk)
 
@@ -446,9 +439,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 
 							// index
 							stk = b.addInt64(stk, stmt.index+int64(i))
-
-							// refdatahash
-							//stk = b.addData(stk, nil)
 
 							// amount
 							stk, err = compileExpr(b, stk, contract, clause, env, counts, req.amountExpr)

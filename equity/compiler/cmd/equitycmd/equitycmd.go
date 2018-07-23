@@ -11,15 +11,14 @@ import (
 	"github.com/bytom/equity/compiler"
 )
 
-const (
-	// GenerateInstPath is the directory (need to combine with GOPATH) for store generated contract instance
-	GenerateInstPath string = "/src/github.com/bytom/equity/exp/instance/"
+var (
+	// generateInstPath is the directory (need to combine with GOPATH) for store generated contract instance
+	generateInstPath = "/src/github.com/bytom/equity/exp/instance/"
 )
 
 func main() {
 	if len(os.Args) != 2 {
-		fmt.Println("command args: [command] [contract file_path]")
-		fmt.Println("\n")
+		fmt.Println("command args: [command] [contract file_path]\n")
 		os.Exit(0)
 	}
 
@@ -214,7 +213,7 @@ func main() {
 
 	//get the Environment variables of GOPATH
 	gopath := os.Getenv("GOPATH")
-	path := gopath + GenerateInstPath
+	path := gopath + generateInstPath
 
 	//if the directory is not exist, create it
 	_, err = os.Stat(path)
