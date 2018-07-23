@@ -285,15 +285,56 @@ type AccountPubkey struct {
 
 // POST /list-pubkeys
 func (a *API) listPubKeys(ctx context.Context, ins struct {
-	AccountID string `json:"account_id"`
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+	PublicKey    string `json:"public_key"`
 }) Response {
-	account, err := a.wallet.AccountMgr.FindByID(ins.AccountID)
+	var err error
+	account := &account.Account{}
+	if ins.AccountAlias != "" {
+		account, err = a.wallet.AccountMgr.FindByAlias(ins.AccountAlias)
+	} else {
+		account, err = a.wallet.AccountMgr.FindByID(ins.AccountID)
+	}
+
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	pubKeyInfos := []PubKeyInfo{}
-	idx := a.wallet.AccountMgr.GetContractIndex(ins.AccountID)
+	idx := a.wallet.AccountMgr.GetContractIndex(account.ID)
+
+	if ins.PublicKey != "" {
+		for i := uint64(1); i <= idx; i++ {
+			rawPath := signers.Path(account.Signer, signers.AccountKeySpace, i)
+			derivedXPub := account.XPubs[0].Derive(rawPath)
+			pubkey := derivedXPub.PublicKey()
+
+			if ins.PublicKey != hex.EncodeToString(pubkey) {
+				continue
+			}
+
+			var path []chainjson.HexBytes
+			for _, p := range rawPath {
+				path = append(path, chainjson.HexBytes(p))
+			}
+
+			pubKeyInfos = append([]PubKeyInfo{{
+				Pubkey: hex.EncodeToString(pubkey),
+				Path:   path,
+			}}, pubKeyInfos...)
+		}
+
+		if len(pubKeyInfos) == 0 {
+			return NewSuccessResponse(nil)
+		}
+
+		return NewSuccessResponse(&AccountPubkey{
+			RootXPub:    account.XPubs[0],
+			PubKeyInfos: pubKeyInfos,
+		})
+	}
+
 	for i := uint64(1); i <= idx; i++ {
 		rawPath := signers.Path(account.Signer, signers.AccountKeySpace, i)
 		derivedXPub := account.XPubs[0].Derive(rawPath)
