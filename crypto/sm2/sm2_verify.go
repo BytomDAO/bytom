@@ -92,8 +92,8 @@ func Sm2VerifyBytes(publicKey, hash, signature []byte) bool {
 func VerifyCompressedPubkey(compressedPublicKey, hash, signature []byte) bool {
 	var aa, xx, xx3 sm2P256FieldElement
 
+	P256Sm2()
 	x := new(big.Int).SetBytes(compressedPublicKey[1:])
-	initP256Sm2()
 	curve := sm2P256
 	sm2P256FromBig(&xx, x)
 	sm2P256Square(&xx3, &xx)       // x3 = x ^ 2

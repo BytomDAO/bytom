@@ -30,7 +30,7 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/bytom/crypto/sm3"
+	"github.com/tjfoc/gmsm/sm3"
 )
 
 const (
@@ -501,6 +501,7 @@ func Compress(a *PublicKey) []byte {
 func Decompress(a []byte) *PublicKey {
 	var aa, xx, xx3 sm2P256FieldElement
 
+	P256Sm2()
 	x := new(big.Int).SetBytes(a[1:])
 	curve := sm2P256
 	sm2P256FromBig(&xx, x)
