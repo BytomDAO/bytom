@@ -4,13 +4,13 @@ import (
 	"github.com/Masterminds/semver"
 )
 
-const ivyVersion string = "1.9.9"
+const equityVersion string = "1.9.9"
 
 func parseVersion(p *parser) bool {
 	if peekKeyword(p) == "pragma" {
 		consumeKeyword(p, "pragma")
-		if peekKeyword(p) == "ivy" {
-			consumeKeyword(p, "ivy")
+		if peekKeyword(p) == "equity" {
+			consumeKeyword(p, "equity")
 			strliteral, newOffset := scanVersionStr(p.buf, p.pos)
 			if newOffset < 0 {
 				p.errorf("Invalid version character format!")
@@ -37,7 +37,7 @@ func checkVersion(version string) bool {
 		panic(err)
 	}
 
-	v, err := semver.NewVersion(ivyVersion)
+	v, err := semver.NewVersion(equityVersion)
 	if err != nil {
 		panic(err)
 	}
