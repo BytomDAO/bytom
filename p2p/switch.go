@@ -107,12 +107,11 @@ func (sw *Switch) OnStop() {
 }
 
 //AddBannedPeer add peer to blacklist
-func (sw *Switch) AddBannedPeer(peer *Peer) error {
+func (sw *Switch) AddBannedPeer(ip string) error {
 	sw.mtx.Lock()
 	defer sw.mtx.Unlock()
 
-	key := peer.NodeInfo.RemoteAddrHost()
-	sw.bannedPeer[key] = time.Now().Add(defaultBanDuration)
+	sw.bannedPeer[ip] = time.Now().Add(defaultBanDuration)
 	datajson, err := json.Marshal(sw.bannedPeer)
 	if err != nil {
 		return err
@@ -263,8 +262,10 @@ func (sw *Switch) StopPeerForError(peer *Peer, reason interface{}) {
 }
 
 // StopPeerGracefully disconnect from a peer gracefully.
-func (sw *Switch) StopPeerGracefully(peer *Peer) {
-	sw.stopAndRemovePeer(peer, nil)
+func (sw *Switch) StopPeerGracefully(peerID string) {
+	if peer := sw.peers.Get(peerID); peer != nil {
+		sw.stopAndRemovePeer(peer, nil)
+	}
 }
 
 func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
@@ -365,9 +366,9 @@ func (sw *Switch) startInitPeer(peer *Peer) error {
 }
 
 func (sw *Switch) stopAndRemovePeer(peer *Peer, reason interface{}) {
+	sw.peers.Remove(peer)
 	for _, reactor := range sw.reactors {
 		reactor.RemovePeer(peer, reason)
 	}
-	sw.peers.Remove(peer)
 	peer.Stop()
 }

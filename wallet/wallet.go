@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"encoding/json"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -17,8 +18,6 @@ import (
 const (
 	//SINGLE single sign
 	SINGLE = 1
-
-	maxTxChanSize = 10000 // txChanSize is the size of channel listening to Txpool newTxCh
 )
 
 var walletKey = []byte("walletInfo")
@@ -34,13 +33,13 @@ type StatusInfo struct {
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
 	DB         db.DB
+	rw         sync.RWMutex
 	status     StatusInfo
 	AccountMgr *account.Manager
 	AssetReg   *asset.Registry
 	Hsm        *pseudohsm.HSM
 	chain      *protocol.Chain
 	rescanCh   chan struct{}
-	newTxCh    chan *types.Tx
 }
 
 //NewWallet return a new wallet instance
@@ -52,7 +51,6 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		chain:      chain,
 		Hsm:        hsm,
 		rescanCh:   make(chan struct{}, 1),
-		newTxCh:    make(chan *types.Tx, maxTxChanSize),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -60,8 +58,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	go w.walletUpdater()
-	go w.UnconfirmedTxCollector()
-
+	go w.delUnconfirmedTx()
 	return w, nil
 }
 
@@ -93,6 +90,9 @@ func (w *Wallet) commitWalletInfo(batch db.Batch) error {
 
 // AttachBlock attach a new block
 func (w *Wallet) AttachBlock(block *types.Block) error {
+	w.rw.Lock()
+	defer w.rw.Unlock()
+
 	if block.PreviousBlockHash != w.status.WorkHash {
 		log.Warn("wallet skip attachBlock due to status hash not equal to previous hash")
 		return nil
@@ -106,7 +106,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 
 	storeBatch := w.DB.NewBatch()
 	w.indexTransactions(storeBatch, block, txStatus)
-	w.buildAccountUTXOs(storeBatch, block, txStatus)
+	w.attachUtxos(storeBatch, block, txStatus)
 
 	w.status.WorkHeight = block.Height
 	w.status.WorkHash = block.Hash()
@@ -119,6 +119,9 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 
 // DetachBlock detach a block and rollback state
 func (w *Wallet) DetachBlock(block *types.Block) error {
+	w.rw.Lock()
+	defer w.rw.Unlock()
+
 	blockHash := block.Hash()
 	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
 	if err != nil {
@@ -126,7 +129,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 	}
 
 	storeBatch := w.DB.NewBatch()
-	w.reverseAccountUTXOs(storeBatch, block, txStatus)
+	w.detachUtxos(storeBatch, block, txStatus)
 	w.deleteTransactions(storeBatch, w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1
@@ -159,7 +162,7 @@ func (w *Wallet) walletUpdater() {
 
 		block, _ := w.chain.GetBlockByHeight(w.status.WorkHeight + 1)
 		if block == nil {
-			<-w.chain.BlockWaiter(w.status.WorkHeight + 1)
+			w.walletBlockWaiter()
 			continue
 		}
 
@@ -182,30 +185,30 @@ func (w *Wallet) RescanBlocks() {
 func (w *Wallet) getRescanNotification() {
 	select {
 	case <-w.rescanCh:
-		block, _ := w.chain.GetBlockByHeight(0)
-		w.status.WorkHash = bc.Hash{}
-		w.AttachBlock(block)
+		w.setRescanStatus()
 	default:
 		return
 	}
 }
 
-// GetNewTxCh return a unconfirmed transaction feed channel
-func (w *Wallet) GetNewTxCh() chan *types.Tx {
-	return w.newTxCh
+func (w *Wallet) setRescanStatus() {
+	block, _ := w.chain.GetBlockByHeight(0)
+	w.status.WorkHash = bc.Hash{}
+	w.AttachBlock(block)
 }
 
-func (w *Wallet) UnconfirmedTxCollector() {
-	for {
-		w.SaveUnconfirmedTx(<-w.newTxCh)
+func (w *Wallet) walletBlockWaiter() {
+	select {
+	case <-w.chain.BlockWaiter(w.status.WorkHeight + 1):
+	case <-w.rescanCh:
+		w.setRescanStatus()
 	}
 }
 
-func (w *Wallet) createProgram(account *account.Account, XPub *pseudohsm.XPub, index uint64) error {
-	for i := uint64(0); i < index; i++ {
-		if _, err := w.AccountMgr.CreateAddress(nil, account.ID, false); err != nil {
-			return err
-		}
-	}
-	return nil
+// GetWalletStatusInfo return current wallet StatusInfo
+func (w *Wallet) GetWalletStatusInfo() StatusInfo {
+	w.rw.RLock()
+	defer w.rw.RUnlock()
+
+	return w.status
 }

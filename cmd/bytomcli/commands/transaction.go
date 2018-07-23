@@ -17,10 +17,15 @@ import (
 )
 
 func init() {
-	buildTransactionCmd.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend'")
-	buildTransactionCmd.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r", "", "program of receiver")
-	buildTransactionCmd.PersistentFlags().StringVarP(&address, "address", "a", "", "address of receiver")
+	buildTransactionCmd.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend', 'address', 'retire', 'program', 'unlock'")
+	buildTransactionCmd.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r", "", "program of receiver when type is spend")
+	buildTransactionCmd.PersistentFlags().StringVarP(&address, "address", "a", "", "address of receiver when type is address")
+	buildTransactionCmd.PersistentFlags().StringVarP(&program, "program", "p", "", "program of receiver when type is program")
+	buildTransactionCmd.PersistentFlags().StringVarP(&arbitrary, "arbitrary", "v", "", "additional arbitrary data when type is retire")
 	buildTransactionCmd.PersistentFlags().StringVarP(&btmGas, "gas", "g", "20000000", "gas of this transaction")
+	buildTransactionCmd.PersistentFlags().StringVarP(&contractName, "contract-name", "c", "",
+		"name of template contract, currently supported: 'LockWithPublicKey', 'LockWithMultiSig', 'LockWithPublicKeyHash',"+
+			"\n\t\t\t       'RevealPreimage', 'TradeOffer', 'Escrow', 'CallOption', 'LoanCollateral'")
 	buildTransactionCmd.PersistentFlags().BoolVar(&pretty, "pretty", false, "pretty print json result")
 	buildTransactionCmd.PersistentFlags().BoolVar(&alias, "alias", false, "use alias build transaction")
 
@@ -45,6 +50,9 @@ var (
 	account         = ""
 	detail          = false
 	unconfirmed     = false
+	arbitrary       = ""
+	program         = ""
+	contractName    = ""
 )
 
 var buildIssueReqFmt = `
@@ -78,15 +86,15 @@ var buildSpendReqFmtByAlias = `
 var buildRetireReqFmt = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
-		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
-		{"type": "retire", "asset_id": "%s","amount": %s,"account_id": "%s"}
+		{"type": "spend_account", "asset_id": "%s", "amount": %s, "account_id": "%s"},
+		{"type": "retire", "asset_id": "%s", "amount": %s, "arbitrary": "%s"}
 	]}`
 
 var buildRetireReqFmtByAlias = `
 	{"actions": [
 		{"type": "spend_account", "asset_alias": "BTM", "amount":%s, "account_alias": "%s"},
-		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
-		{"type": "retire", "asset_alias": "%s","amount": %s,"account_alias": "%s"}
+		{"type": "spend_account", "asset_alias": "%s", "amount": %s, "account_alias": "%s"},
+		{"type": "retire", "asset_alias": "%s", "amount": %s, "arbitrary": "%s"}
 	]}`
 
 var buildControlAddressReqFmt = `
@@ -103,10 +111,24 @@ var buildControlAddressReqFmtByAlias = `
 		{"type": "control_address", "asset_alias": "%s", "amount": %s,"address": "%s"}
 	]}`
 
+var buildControlProgramReqFmt = `
+	{"actions": [
+		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
+		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
+		{"type": "control_program", "asset_id": "%s", "amount": %s, "control_program": "%s"}
+	]}`
+
+var buildControlProgramReqFmtByAlias = `
+	{"actions": [
+		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
+		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
+		{"type": "control_program", "asset_alias": "%s", "amount": %s, "control_program": "%s"}
+	]}`
+
 var buildTransactionCmd = &cobra.Command{
-	Use:   "build-transaction <accountID|alias> <assetID|alias> <amount>",
+	Use:   "build-transaction <accountID|alias> <assetID|alias> <amount> [outputID]",
 	Short: "Build one transaction template,default use account id and asset id",
-	Args:  cobra.RangeArgs(3, 4),
+	Args:  cobra.RangeArgs(3, 20),
 	PreRun: func(cmd *cobra.Command, args []string) {
 		cmd.MarkFlagRequired("type")
 		if buildType == "spend" {
@@ -133,16 +155,47 @@ var buildTransactionCmd = &cobra.Command{
 			buildReqStr = fmt.Sprintf(buildSpendReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, receiverProgram)
 		case "retire":
 			if alias {
-				buildReqStr = fmt.Sprintf(buildRetireReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
+				buildReqStr = fmt.Sprintf(buildRetireReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, arbitrary)
 				break
 			}
-			buildReqStr = fmt.Sprintf(buildRetireReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, accountInfo)
+			buildReqStr = fmt.Sprintf(buildRetireReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, arbitrary)
 		case "address":
 			if alias {
 				buildReqStr = fmt.Sprintf(buildControlAddressReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
 				break
 			}
 			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
+		case "program":
+			if alias {
+				buildReqStr = fmt.Sprintf(buildControlProgramReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, program)
+				break
+			}
+			buildReqStr = fmt.Sprintf(buildControlProgramReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, program)
+		case "unlock":
+			var err error
+			usage := "Usage:\n  bytomcli build-transaction <accountID|alias> <assetID|alias> <amount> <outputID> -c <contractName>"
+			baseCount := 4
+			if len(args) < baseCount {
+				jww.ERROR.Printf("%s <contract_argument> ... [flags]\n\n", usage)
+				os.Exit(util.ErrLocalExe)
+			}
+
+			baseArg := baseContractArg{
+				accountInfo: accountInfo,
+				assetInfo:   assetInfo,
+				amount:      amount,
+				alias:       alias,
+				program:     program,
+				btmGas:      btmGas,
+				outputID:    args[baseCount-1],
+			}
+			specArgs := args[baseCount:]
+
+			if buildReqStr, err = addContractArgs(contractName, baseArg, specArgs, usage); err != nil {
+				jww.ERROR.Println(err)
+				os.Exit(util.ErrLocalExe)
+			}
+
 		default:
 			jww.ERROR.Println("Invalid transaction template type")
 			os.Exit(util.ErrLocalExe)

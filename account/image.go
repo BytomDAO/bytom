@@ -77,7 +77,7 @@ func (m *Manager) Restore(image *Image) error {
 
 	for _, slice := range image.Slice {
 		for i := uint64(1); i <= slice.ContractIndex; i++ {
-			if _, err := m.createAddress(nil, slice.Account, false); err != nil {
+			if _, err := m.createAddress(slice.Account, false); err != nil {
 				return err
 			}
 		}

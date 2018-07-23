@@ -55,6 +55,16 @@ func P2WSHProgram(hash []byte) ([]byte, error) {
 	return builder.Build()
 }
 
+// RetireProgram generates the script for retire output
+func RetireProgram(comment []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_FAIL)
+	if len(comment) != 0 {
+		builder.AddData(comment)
+	}
+	return builder.Build()
+}
+
 // P2PKHSigProgram generates the script for control with pubkey hash
 func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
 	builder := NewBuilder()

@@ -3,6 +3,7 @@ package p2p
 import (
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -12,6 +13,7 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/bytom/config"
+	"github.com/bytom/consensus"
 	"github.com/bytom/p2p/connection"
 )
 
@@ -158,6 +160,10 @@ func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duratio
 	return peerNodeInfo, nil
 }
 
+func (p *Peer) ID() string {
+	return p.Key
+}
+
 // IsOutbound returns true if the connection is outbound, false otherwise.
 func (p *Peer) IsOutbound() bool {
 	return p.outbound
@@ -175,6 +181,18 @@ func (p *Peer) Send(chID byte, msg interface{}) bool {
 		return false
 	}
 	return p.mconn.Send(chID, msg)
+}
+
+func (p *Peer) ServiceFlag() consensus.ServiceFlag {
+	services := consensus.SFFullNode
+	if len(p.Other) == 0 {
+		return services
+	}
+
+	if serviceFlag, err := strconv.ParseUint(p.Other[0], 10, 64); err == nil {
+		services = consensus.ServiceFlag(serviceFlag)
+	}
+	return services
 }
 
 // String representation.

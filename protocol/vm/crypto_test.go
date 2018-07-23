@@ -85,6 +85,9 @@ func TestCheckSig(t *testing.T) {
 }
 
 func TestCryptoOps(t *testing.T) {
+	OP_SM3 := Op(0xb0)
+	ops[OP_SM3] = opInfo{OP_SM3, "SM3", opSm3}
+
 	type testStruct struct {
 		op      Op
 		startVM *virtualMachine
@@ -141,6 +144,32 @@ func TestCryptoOps(t *testing.T) {
 			dataStack: [][]byte{{
 				65, 106, 167, 181, 192, 224, 101, 48, 102, 167, 198, 77, 189, 208, 0, 157,
 				190, 132, 56, 97, 81, 254, 3, 159, 217, 66, 250, 162, 219, 97, 114, 235,
+			}},
+		},
+	}, {
+		op: OP_SM3,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{{1}},
+		},
+		wantVM: &virtualMachine{
+			runLimit: 49905,
+			dataStack: [][]byte{{
+				121, 155, 113, 154, 192, 49, 252, 137, 198, 216, 146, 90, 72, 125, 173, 7,
+				48, 143, 131, 123, 122, 183, 187, 199, 206, 189, 58, 65, 24, 253, 47, 56,
+			}},
+		},
+	}, {
+		op: OP_SM3,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{make([]byte, 65)},
+		},
+		wantVM: &virtualMachine{
+			runLimit: 49968,
+			dataStack: [][]byte{{
+				177, 247, 110, 45, 29, 65, 214, 241, 187, 59, 9, 192, 155, 130, 25, 218,
+				251, 173, 112, 13, 242, 72, 34, 32, 200, 146, 190, 65, 68, 90, 34, 255,
 			}},
 		},
 	}, {
@@ -397,7 +426,7 @@ func TestCryptoOps(t *testing.T) {
 		wantErr: ErrRunLimitExceeded,
 	}}
 
-	hashOps := []Op{OP_SHA256, OP_SHA3}
+	hashOps := []Op{OP_SHA256, OP_SHA3, OP_SM3}
 	for _, op := range hashOps {
 		cases = append(cases, testStruct{
 			op: op,

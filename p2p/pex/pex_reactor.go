@@ -70,7 +70,7 @@ func (r *PEXReactor) AddPeer(p *p2p.Peer) error {
 
 	if r.SendAddrs(p, nodes) {
 		<-time.After(1 * time.Second)
-		r.Switch.StopPeerGracefully(p)
+		r.Switch.StopPeerGracefully(p.Key)
 	}
 	return errors.New("addPeer: reach the max peer, exchange then close")
 }
@@ -80,7 +80,7 @@ func (r *PEXReactor) Receive(chID byte, p *p2p.Peer, rawMsg []byte) {
 	_, msg, err := DecodeMessage(rawMsg)
 	if err != nil {
 		log.WithField("error", err).Error("failed to decoding pex message")
-		r.Switch.StopPeerGracefully(p)
+		r.Switch.StopPeerGracefully(p.Key)
 		return
 	}
 
@@ -116,7 +116,7 @@ func (r *PEXReactor) SendAddrs(p *p2p.Peer, nodes []*discover.Node) bool {
 
 	ok := p.TrySend(PexChannel, struct{ PexMessage }{&pexAddrsMessage{Addrs: addrs}})
 	if !ok {
-		r.Switch.StopPeerGracefully(p)
+		r.Switch.StopPeerGracefully(p.Key)
 	}
 	return ok
 }

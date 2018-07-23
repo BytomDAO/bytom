@@ -10,11 +10,11 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
+// action error
 var (
-	errBadActionType = errors.New("bad action type")
-	errBadAction     = errors.New("bad action object")
-	errEmptyAmount   = errors.New("nil amount in the request actions")
-	errBadAmount     = errors.New("bad amount in the request actions")
+	ErrBadActionType         = errors.New("bad action type")
+	ErrBadAction             = errors.New("bad action object")
+	ErrBadActionConstruction = errors.New("bad action construction")
 )
 
 // BuildRequest is main struct when building transactions
@@ -25,19 +25,19 @@ type BuildRequest struct {
 	TimeRange uint64                   `json:"time_range"`
 }
 
-func (a *API) completeMissingIds(ctx context.Context, br *BuildRequest) error {
+func (a *API) completeMissingIDs(ctx context.Context, br *BuildRequest) error {
 	for i, m := range br.Actions {
-		if err := a.completeMissingAssetId(m, i); err != nil {
+		if err := a.completeMissingAssetID(m, i); err != nil {
 			return err
 		}
-		if err := a.completeMissingAccountId(m, i, ctx); err != nil {
+		if err := a.completeMissingAccountID(m, i, ctx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (a *API) completeMissingAssetId(m map[string]interface{}, index int) error {
+func (a *API) completeMissingAssetID(m map[string]interface{}, index int) error {
 	id, _ := m["asset_id"].(string)
 	alias, _ := m["asset_alias"].(string)
 	if id == "" && alias != "" {
@@ -56,11 +56,11 @@ func (a *API) completeMissingAssetId(m map[string]interface{}, index int) error 
 	return nil
 }
 
-func (a *API) completeMissingAccountId(m map[string]interface{}, index int, ctx context.Context) error {
+func (a *API) completeMissingAccountID(m map[string]interface{}, index int, ctx context.Context) error {
 	id, _ := m["account_id"].(string)
 	alias, _ := m["account_alias"].(string)
 	if id == "" && alias != "" {
-		acc, err := a.wallet.AccountMgr.FindByAlias(ctx, alias)
+		acc, err := a.wallet.AccountMgr.FindByAlias(alias)
 		if err != nil {
 			return errors.WithDetailf(err, "invalid account alias %s on action %d", alias, index)
 		}

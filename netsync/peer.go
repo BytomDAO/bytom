@@ -1,381 +1,348 @@
 package netsync
 
 import (
+	"net"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/fatih/set.v0"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
-	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
-var (
-	errClosed            = errors.New("peer set is closed")
-	errAlreadyRegistered = errors.New("peer is already registered")
-	errNotRegistered     = errors.New("peer is not registered")
-)
-
 const (
-	defaultVersion      = 1
+	maxKnownTxs         = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
+	maxKnownBlocks      = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
 	defaultBanThreshold = uint64(100)
 )
 
+//BasePeer is the interface for connection level peer
+type BasePeer interface {
+	Addr() net.Addr
+	ID() string
+	ServiceFlag() consensus.ServiceFlag
+	TrySend(byte, interface{}) bool
+}
+
+//BasePeerSet is the intergace for connection level peer manager
+type BasePeerSet interface {
+	AddBannedPeer(string) error
+	StopPeerGracefully(string)
+}
+
+// PeerInfo indicate peer status snap
+type PeerInfo struct {
+	ID         string `json:"id"`
+	RemoteAddr string `json:"remote_addr"`
+	Height     uint64 `json:"height"`
+	Delay      uint32 `json:"delay"`
+}
+
 type peer struct {
-	mtx      sync.RWMutex
-	version  int // Protocol version negotiated
-	id       string
-	height   uint64
-	hash     *bc.Hash
-	banScore trust.DynamicBanScore
-
-	swPeer *p2p.Peer
-
+	BasePeer
+	mtx         sync.RWMutex
+	services    consensus.ServiceFlag
+	height      uint64
+	hash        *bc.Hash
+	banScore    trust.DynamicBanScore
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 }
 
-func newPeer(height uint64, hash *bc.Hash, Peer *p2p.Peer) *peer {
+func newPeer(height uint64, hash *bc.Hash, basePeer BasePeer) *peer {
 	return &peer{
-		version:     defaultVersion,
-		id:          Peer.Key,
+		BasePeer:    basePeer,
+		services:    basePeer.ServiceFlag(),
 		height:      height,
 		hash:        hash,
-		swPeer:      Peer,
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 	}
 }
 
-func (p *peer) GetStatus() (height uint64, hash *bc.Hash) {
+func (p *peer) Height() uint64 {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
-	return p.height, p.hash
+	return p.height
 }
 
-func (p *peer) SetStatus(height uint64, hash *bc.Hash) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-
-	p.height = height
-	p.hash = hash
-}
-
-func (p *peer) requestBlockByHash(hash *bc.Hash) error {
-	msg := &BlockRequestMessage{RawHash: hash.Byte32()}
-	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	return nil
-}
-
-func (p *peer) requestBlockByHeight(height uint64) error {
-	msg := &BlockRequestMessage{Height: height}
-	p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
-	return nil
-}
-
-func (p *peer) SendTransactions(txs []*types.Tx) error {
-	for _, tx := range txs {
-		msg, err := NewTransactionNotifyMessage(tx)
-		if err != nil {
-			return errors.New("Failed construction tx msg")
-		}
-		hash := &tx.ID
-		p.knownTxs.Add(hash.String())
-		if p.swPeer == nil {
-			return errPeerDropped
-		}
-		p.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
+	score := p.banScore.Increase(persistent, transient)
+	if score > defaultBanThreshold {
+		log.WithFields(log.Fields{"address": p.Addr(), "score": score, "reason": reason}).Errorf("banning and disconnecting")
+		return true
 	}
-	return nil
+
+	warnThreshold := defaultBanThreshold >> 1
+	if score > warnThreshold {
+		log.WithFields(log.Fields{"address": p.Addr(), "score": score, "reason": reason}).Warning("ban score increasing")
+	}
+	return false
 }
 
-func (p *peer) getPeer() *p2p.Peer {
+func (p *peer) getBlockByHeight(height uint64) bool {
+	msg := struct{ BlockchainMessage }{&GetBlockMessage{Height: height}}
+	return p.TrySend(BlockchainChannel, msg)
+}
+
+func (p *peer) getBlocks(locator []*bc.Hash, stopHash *bc.Hash) bool {
+	msg := struct{ BlockchainMessage }{NewGetBlocksMessage(locator, stopHash)}
+	return p.TrySend(BlockchainChannel, msg)
+}
+
+func (p *peer) getHeaders(locator []*bc.Hash, stopHash *bc.Hash) bool {
+	msg := struct{ BlockchainMessage }{NewGetHeadersMessage(locator, stopHash)}
+	return p.TrySend(BlockchainChannel, msg)
+}
+
+func (p *peer) getPeerInfo() *PeerInfo {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
-
-	return p.swPeer
-}
-
-// MarkTransaction marks a transaction as known for the peer, ensuring that it
-// will never be propagated to this particular peer.
-func (p *peer) MarkTransaction(hash *bc.Hash) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-
-	// If we reached the memory allowance, drop a previously known transaction hash
-	for p.knownTxs.Size() >= maxKnownTxs {
-		p.knownTxs.Pop()
+	return &PeerInfo{
+		ID:         p.ID(),
+		RemoteAddr: p.Addr().String(),
+		Height:     p.height,
 	}
-	p.knownTxs.Add(hash.String())
 }
 
-// MarkBlock marks a block as known for the peer, ensuring that the block will
-// never be propagated to this particular peer.
-func (p *peer) MarkBlock(hash *bc.Hash) {
+func (p *peer) markBlock(hash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
-	// If we reached the memory allowance, drop a previously known block hash
 	for p.knownBlocks.Size() >= maxKnownBlocks {
 		p.knownBlocks.Pop()
 	}
 	p.knownBlocks.Add(hash.String())
 }
 
-// addBanScore increases the persistent and decaying ban score fields by the
-// values passed as parameters. If the resulting score exceeds half of the ban
-// threshold, a warning is logged including the reason provided. Further, if
-// the score is above the ban threshold, the peer will be banned and
-// disconnected.
-func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
-	warnThreshold := defaultBanThreshold >> 1
-	if transient == 0 && persistent == 0 {
-		// The score is not being increased, but a warning message is still
-		// logged if the score is above the warn threshold.
-		score := p.banScore.Int()
-		if score > warnThreshold {
-			log.Infof("Misbehaving peer %s: %s -- ban score is %d, "+"it was not increased this time", p.id, reason, score)
-		}
-		return false
+func (p *peer) markTransaction(hash *bc.Hash) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
+	for p.knownTxs.Size() >= maxKnownTxs {
+		p.knownTxs.Pop()
 	}
-	score := p.banScore.Increase(persistent, transient)
-	if score > warnThreshold {
-		log.Infof("Misbehaving peer %s: %s -- ban score increased to %d", p.id, reason, score)
-		if score > defaultBanThreshold {
-			log.Errorf("Misbehaving peer %s -- banning and disconnecting", p.id)
-			return true
-		}
+	p.knownTxs.Add(hash.String())
+}
+
+func (p *peer) sendBlock(block *types.Block) (bool, error) {
+	msg, err := NewBlockMessage(block)
+	if err != nil {
+		return false, errors.Wrap(err, "fail on NewBlockMessage")
 	}
-	return false
+
+	ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	if ok {
+		blcokHash := block.Hash()
+		p.knownBlocks.Add(blcokHash.String())
+	}
+	return ok, nil
+}
+
+func (p *peer) sendBlocks(blocks []*types.Block) (bool, error) {
+	msg, err := NewBlocksMessage(blocks)
+	if err != nil {
+		return false, errors.Wrap(err, "fail on NewBlocksMessage")
+	}
+
+	if ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+		return ok, nil
+	}
+
+	for _, block := range blocks {
+		blcokHash := block.Hash()
+		p.knownBlocks.Add(blcokHash.String())
+	}
+	return true, nil
+}
+
+func (p *peer) sendHeaders(headers []*types.BlockHeader) (bool, error) {
+	msg, err := NewHeadersMessage(headers)
+	if err != nil {
+		return false, errors.New("fail on NewHeadersMessage")
+	}
+
+	ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	return ok, nil
+}
+
+func (p *peer) sendTransactions(txs []*types.Tx) (bool, error) {
+	for _, tx := range txs {
+		msg, err := NewTransactionMessage(tx)
+		if err != nil {
+			return false, errors.Wrap(err, "failed to tx msg")
+		}
+
+		if p.knownTxs.Has(tx.ID.String()) {
+			continue
+		}
+		if ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+			return ok, nil
+		}
+		p.knownTxs.Add(tx.ID.String())
+	}
+	return true, nil
+}
+
+func (p *peer) setStatus(height uint64, hash *bc.Hash) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	p.height = height
+	p.hash = hash
 }
 
 type peerSet struct {
-	peers  map[string]*peer
-	lock   sync.RWMutex
-	closed bool
+	BasePeerSet
+	mtx   sync.RWMutex
+	peers map[string]*peer
 }
 
 // newPeerSet creates a new peer set to track the active participants.
-func newPeerSet() *peerSet {
+func newPeerSet(basePeerSet BasePeerSet) *peerSet {
 	return &peerSet{
-		peers: make(map[string]*peer),
+		BasePeerSet: basePeerSet,
+		peers:       make(map[string]*peer),
 	}
 }
 
-// Register injects a new peer into the working set, or returns an error if the
-// peer is already known.
-func (ps *peerSet) Register(p *peer) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
+func (ps *peerSet) addBanScore(peerID string, persistent, transient uint64, reason string) {
+	ps.mtx.Lock()
+	peer := ps.peers[peerID]
+	ps.mtx.Unlock()
 
-	if ps.closed {
-		return errClosed
+	if peer == nil {
+		return
 	}
-	if _, ok := ps.peers[p.id]; ok {
-		return errAlreadyRegistered
+	if ban := peer.addBanScore(persistent, transient, reason); !ban {
+		return
 	}
-	ps.peers[p.id] = p
+	if err := ps.AddBannedPeer(peer.Addr().String()); err != nil {
+		log.WithField("err", err).Error("fail on add ban peer")
+	}
+	ps.removePeer(peerID)
+}
+
+func (ps *peerSet) addPeer(peer BasePeer, height uint64, hash *bc.Hash) {
+	ps.mtx.Lock()
+	defer ps.mtx.Unlock()
+
+	if _, ok := ps.peers[peer.ID()]; !ok {
+		ps.peers[peer.ID()] = newPeer(height, hash, peer)
+		return
+	}
+	log.WithField("ID", peer.ID()).Warning("add existing peer to blockKeeper")
+}
+
+func (ps *peerSet) bestPeer(flag consensus.ServiceFlag) *peer {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	var bestPeer *peer
+	for _, p := range ps.peers {
+		if !p.services.IsEnable(flag) {
+			continue
+		}
+		if bestPeer == nil || p.height > bestPeer.height {
+			bestPeer = p
+		}
+	}
+	return bestPeer
+}
+
+func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
+	msg, err := NewMinedBlockMessage(block)
+	if err != nil {
+		return errors.Wrap(err, "fail on broadcast mined block")
+	}
+
+	hash := block.Hash()
+	peers := ps.peersWithoutBlock(&hash)
+	for _, peer := range peers {
+		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+			ps.removePeer(peer.ID())
+			continue
+		}
+		peer.markBlock(&hash)
+	}
 	return nil
 }
 
-// Unregister removes a remote peer from the active set, disabling any further
-// actions to/from that particular entity.
-func (ps *peerSet) Unregister(id string) error {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	if _, ok := ps.peers[id]; !ok {
-		return errNotRegistered
+func (ps *peerSet) broadcastTx(tx *types.Tx) error {
+	msg, err := NewTransactionMessage(tx)
+	if err != nil {
+		return errors.Wrap(err, "fail on broadcast tx")
 	}
-	delete(ps.peers, id)
+
+	peers := ps.peersWithoutTx(&tx.ID)
+	for _, peer := range peers {
+		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+			ps.removePeer(peer.ID())
+			continue
+		}
+		peer.markTransaction(&tx.ID)
+	}
 	return nil
+}
+
+func (ps *peerSet) errorHandler(peerID string, err error) {
+	if errors.Root(err) == errPeerMisbehave {
+		ps.addBanScore(peerID, 20, 0, err.Error())
+	} else {
+		ps.removePeer(peerID)
+	}
 }
 
 // Peer retrieves the registered peer with the given id.
-func (ps *peerSet) Peer(id string) (*peer, bool) {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-	p, ok := ps.peers[id]
-	return p, ok
+func (ps *peerSet) getPeer(id string) *peer {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+	return ps.peers[id]
 }
 
-// Len returns if the current number of peers in the set.
-func (ps *peerSet) Len() int {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
+func (ps *peerSet) getPeerInfos() []*PeerInfo {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
 
-	return len(ps.peers)
-}
-
-// MarkTransaction marks a transaction as known for the peer, ensuring that it
-// will never be propagated to this particular peer.
-func (ps *peerSet) MarkTransaction(peerID string, hash *bc.Hash) {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	if peer, ok := ps.peers[peerID]; ok {
-		peer.MarkTransaction(hash)
+	result := []*PeerInfo{}
+	for _, peer := range ps.peers {
+		result = append(result, peer.getPeerInfo())
 	}
+	return result
 }
 
-// MarkBlock marks a block as known for the peer, ensuring that the block will
-// never be propagated to this particular peer.
-func (ps *peerSet) MarkBlock(peerID string, hash *bc.Hash) {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
+func (ps *peerSet) peersWithoutBlock(hash *bc.Hash) []*peer {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
 
-	if peer, ok := ps.peers[peerID]; ok {
-		peer.MarkBlock(hash)
-	}
-}
-
-// PeersWithoutBlock retrieves a list of peers that do not have a given block in
-// their set of known hashes.
-func (ps *peerSet) PeersWithoutBlock(hash *bc.Hash) []*peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	list := make([]*peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if !p.knownBlocks.Has(hash.String()) {
-			list = append(list, p)
+	peers := []*peer{}
+	for _, peer := range ps.peers {
+		if !peer.knownBlocks.Has(hash.String()) {
+			peers = append(peers, peer)
 		}
 	}
-	return list
+	return peers
 }
 
-// PeersWithoutTx retrieves a list of peers that do not have a given transaction
-// in their set of known hashes.
-func (ps *peerSet) PeersWithoutTx(hash *bc.Hash) []*peer {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
+func (ps *peerSet) peersWithoutTx(hash *bc.Hash) []*peer {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
 
-	list := make([]*peer, 0, len(ps.peers))
-	for _, p := range ps.peers {
-		if !p.knownTxs.Has(hash.String()) {
-			list = append(list, p)
+	peers := []*peer{}
+	for _, peer := range ps.peers {
+		if !peer.knownTxs.Has(hash.String()) {
+			peers = append(peers, peer)
 		}
 	}
-	return list
+	return peers
 }
 
-// BestPeer retrieves the known peer with the currently highest total difficulty.
-func (ps *peerSet) BestPeer() (*p2p.Peer, uint64) {
-	ps.lock.RLock()
-	defer ps.lock.RUnlock()
-
-	var bestPeer *p2p.Peer
-	var bestHeight uint64
-
-	for _, p := range ps.peers {
-		if bestPeer == nil || p.height > bestHeight {
-			bestPeer, bestHeight = p.swPeer, p.height
-		}
-	}
-
-	return bestPeer, bestHeight
-}
-
-// Close disconnects all peers.
-// No new peers can be registered after Close has returned.
-func (ps *peerSet) Close() {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	for _, p := range ps.peers {
-		p.swPeer.CloseConn()
-	}
-	ps.closed = true
-}
-
-func (ps *peerSet) AddPeer(peer *p2p.Peer) {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	if _, ok := ps.peers[peer.Key]; !ok {
-		keeperPeer := newPeer(0, nil, peer)
-		ps.peers[peer.Key] = keeperPeer
-		log.WithFields(log.Fields{"ID": peer.Key}).Info("Add new peer to blockKeeper")
-		return
-	}
-	log.WithField("ID", peer.Key).Warning("Add existing peer to blockKeeper")
-}
-
-func (ps *peerSet) RemovePeer(peerID string) {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
+func (ps *peerSet) removePeer(peerID string) {
+	ps.mtx.Lock()
 	delete(ps.peers, peerID)
-	log.WithField("ID", peerID).Info("Delete peer from peerset")
-}
-
-func (ps *peerSet) SetPeerStatus(peerID string, height uint64, hash *bc.Hash) {
-	ps.lock.Lock()
-	defer ps.lock.Unlock()
-
-	if peer, ok := ps.peers[peerID]; ok {
-		peer.SetStatus(height, hash)
-	}
-}
-
-func (ps *peerSet) requestBlockByHash(peerID string, hash *bc.Hash) error {
-	peer, ok := ps.Peer(peerID)
-	if !ok {
-		return errors.New("Can't find peer. ")
-	}
-	return peer.requestBlockByHash(hash)
-}
-
-func (ps *peerSet) requestBlockByHeight(peerID string, height uint64) error {
-	peer, ok := ps.Peer(peerID)
-	if !ok {
-		return errors.New("Can't find peer. ")
-	}
-	return peer.requestBlockByHeight(height)
-}
-
-func (ps *peerSet) BroadcastMinedBlock(block *types.Block) ([]*peer, error) {
-	msg, err := NewMinedBlockMessage(block)
-	if err != nil {
-		return nil, errors.New("Failed construction block msg")
-	}
-	hash := block.Hash()
-	peers := ps.PeersWithoutBlock(&hash)
-	abnormalPeers := make([]*peer, 0)
-	for _, peer := range peers {
-		if ok := peer.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
-			abnormalPeers = append(abnormalPeers, peer)
-			continue
-		}
-		if p, ok := ps.Peer(peer.id); ok {
-			p.MarkBlock(&hash)
-		}
-	}
-	return abnormalPeers, nil
-}
-
-func (ps *peerSet) BroadcastNewStatus(block *types.Block) ([]*peer, error) {
-	return ps.BroadcastMinedBlock(block)
-}
-
-func (ps *peerSet) BroadcastTx(tx *types.Tx) ([]*peer, error) {
-	msg, err := NewTransactionNotifyMessage(tx)
-	if err != nil {
-		return nil, errors.New("Failed construction tx msg")
-	}
-	peers := ps.PeersWithoutTx(&tx.ID)
-	abnormalPeers := make([]*peer, 0)
-	for _, peer := range peers {
-		if ok := peer.swPeer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
-			abnormalPeers = append(abnormalPeers, peer)
-			continue
-		}
-		if p, ok := ps.Peer(peer.id); ok {
-			p.MarkTransaction(&tx.ID)
-		}
-	}
-	return abnormalPeers, nil
+	ps.mtx.Unlock()
+	ps.StopPeerGracefully(peerID)
 }
