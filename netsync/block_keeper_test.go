@@ -123,6 +123,46 @@ func TestBlockLocator(t *testing.T) {
 	}
 }
 
+func TestLocateBlocks(t *testing.T) {
+	maxBlockPerMsg = 5
+	blocks := mockBlocks(100)
+	cases := []struct {
+		locator    []uint64
+		stopHash   bc.Hash
+		wantHeight []uint64
+	}{
+		{
+			locator:    []uint64{20},
+			stopHash:   blocks[100].Hash(),
+			wantHeight: []uint64{21, 22, 23, 24, 25},
+		},
+	}
+
+	mockChain := mock.NewChain()
+	bk := &blockKeeper{chain: mockChain}
+	for _, block := range blocks {
+		mockChain.SetBlockByHeight(block.Height, block)
+	}
+
+	for i, c := range cases {
+		locator := []*bc.Hash{}
+		for _, i := range c.locator {
+			hash := blocks[i].Hash()
+			locator = append(locator, &hash)
+		}
+
+		want := []*types.Block{}
+		for _, i := range c.wantHeight {
+			want = append(want, blocks[i])
+		}
+
+		got, _ := bk.locateBlocks(locator, &c.stopHash)
+		if !testutil.DeepEqual(got, want) {
+			t.Errorf("case %d: got %v want %v", i, got, want)
+		}
+	}
+}
+
 func TestLocateHeaders(t *testing.T) {
 	maxBlockHeadersPerMsg = 10
 	blocks := mockBlocks(150)

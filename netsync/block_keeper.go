@@ -182,7 +182,7 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 
 	blocks := []*types.Block{}
 	for i, header := range headers {
-		if i > maxBlockPerMsg {
+		if i >= maxBlockPerMsg {
 			break
 		}
 
