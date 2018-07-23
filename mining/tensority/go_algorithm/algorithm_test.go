@@ -1,4 +1,4 @@
-package tensority
+package go_algorithm
 
 import (
 	"reflect"
@@ -237,13 +237,13 @@ var tests = []struct {
 }
 
 // Tests that tensority hash result is correct.
-func TestAlgorithm(t *testing.T) {
+func TestLegacyAlgorithm(t *testing.T) {
 	startT := time.Now()
 	for i, tt := range tests {
 		sT := time.Now()
 		bhhash := bc.NewHash(tt.blockHeader)
 		sdhash := bc.NewHash(tt.seed)
-		result := algorithm(&bhhash, &sdhash).Bytes()
+		result := LegacyAlgorithm(&bhhash, &sdhash).Bytes()
 		var resArr [32]byte
 		copy(resArr[:], result)
 		eT := time.Now()
@@ -263,26 +263,22 @@ func TestAlgorithm(t *testing.T) {
 	t.Log("Avg time:", time.Duration(int(endT.Sub(startT))/len(tests)))
 }
 
-func BenchmarkAlgorithm(b *testing.B) {
+func BenchmarkLegacyAlgorithm(b *testing.B) {
 	bhhash := bc.NewHash(tests[0].blockHeader)
 	sdhash := bc.NewHash(tests[0].seed)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		algorithm(&bhhash, &sdhash)
+		LegacyAlgorithm(&bhhash, &sdhash)
 	}
 }
 
-func BenchmarkAlgorithmParallel(b *testing.B) {
+func BenchmarkLegacyAlgorithmParallel(b *testing.B) {
 	bhhash := bc.NewHash(tests[0].blockHeader)
 	sdhash := bc.NewHash(tests[0].seed)
 	b.SetParallelism(runtime.NumCPU())
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			algorithm(&bhhash, &sdhash)
+			LegacyAlgorithm(&bhhash, &sdhash)
 		}
 	})
-}
-
-func init() {
-	UseSIMD = true
 }
