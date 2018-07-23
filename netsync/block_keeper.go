@@ -9,7 +9,6 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/tensority"
-	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -25,6 +24,7 @@ const (
 )
 
 var (
+	errAppendHeaders  = errors.New("fail to append list due to order dismatch")
 	errRequestTimeout = errors.New("request timeout")
 	errPeerDropped    = errors.New("Peer dropped")
 	errPeerMisbehave  = errors.New("peer is misbehave")
@@ -46,7 +46,7 @@ type headersMsg struct {
 }
 
 type blockKeeper struct {
-	chain *protocol.Chain
+	chain Chain
 	peers *peerSet
 
 	syncPeer         *peer
@@ -57,7 +57,7 @@ type blockKeeper struct {
 	headerList *list.List
 }
 
-func newBlockKeeper(chain *protocol.Chain, peers *peerSet) *blockKeeper {
+func newBlockKeeper(chain Chain, peers *peerSet) *blockKeeper {
 	bk := &blockKeeper{
 		chain:            chain,
 		peers:            peers,
@@ -75,7 +75,7 @@ func (bk *blockKeeper) appendHeaderList(headers []*types.BlockHeader) error {
 	for _, header := range headers {
 		prevHeader := bk.headerList.Back().Value.(*types.BlockHeader)
 		if prevHeader.Hash() != header.PreviousBlockHash {
-			return errors.New("fail to append list due to order dismatch")
+			return errAppendHeaders
 		}
 		bk.headerList.PushBack(header)
 	}
@@ -105,7 +105,7 @@ func (bk *blockKeeper) blockLocator() []*bc.Hash {
 			break
 		}
 
-		if len(locator) > 10 {
+		if len(locator) >= 9 {
 			step *= 2
 		}
 	}

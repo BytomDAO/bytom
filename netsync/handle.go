@@ -27,13 +27,26 @@ const (
 	maxTxChanSize = 10000
 )
 
+type Chain interface {
+	BestBlockHeader() *types.BlockHeader
+	BestBlockHeight() uint64
+	CalcNextSeed(*bc.Hash) (*bc.Hash, error)
+	GetBlockByHash(*bc.Hash) (*types.Block, error)
+	GetBlockByHeight(uint64) (*types.Block, error)
+	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
+	GetHeaderByHeight(uint64) (*types.BlockHeader, error)
+	InMainChain(bc.Hash) bool
+	ProcessBlock(*types.Block) (bool, error)
+	ValidateTx(*types.Tx) (bool, error)
+}
+
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
 	sw          *p2p.Switch
 	genesisHash bc.Hash
 
 	privKey      crypto.PrivKeyEd25519 // local node's p2p key
-	chain        *core.Chain
+	chain        Chain
 	txPool       *core.TxPool
 	blockFetcher *blockFetcher
 	blockKeeper  *blockKeeper
@@ -47,7 +60,7 @@ type SyncManager struct {
 }
 
 //NewSyncManager create a sync manager
-func NewSyncManager(config *cfg.Config, chain *core.Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
+func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
 	genesisHeader, err := chain.GetHeaderByHeight(0)
 	if err != nil {
 		return nil, err
