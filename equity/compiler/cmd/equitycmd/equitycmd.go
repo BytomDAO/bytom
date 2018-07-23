@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	// GenerateIvyPath is the directory (need to combine with GOPATH) for store generated contract instance
-	GenerateIvyPath string = "/src/github.com/bytom/exp/ivy/instance/"
+	// GenerateInstPath is the directory (need to combine with GOPATH) for store generated contract instance
+	GenerateInstPath string = "/src/github.com/bytom/equity/exp/instance/"
 )
 
 func main() {
@@ -69,6 +69,7 @@ func main() {
 		"fmt":          true,
 		"github.com/bytom/equity/compiler": true,
 		"github.com/bytom/protocol/vm":     true,
+		"github.com/bytom/encoding/json":   true,
 	}
 
 	buf := new(bytes.Buffer)
@@ -213,13 +214,13 @@ func main() {
 
 	//get the Environment variables of GOPATH
 	gopath := os.Getenv("GOPATH")
-	path := gopath + GenerateIvyPath
+	path := gopath + GenerateInstPath
 
 	//if the directory is not exist, create it
 	_, err = os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			direrr := os.Mkdir(path, os.ModePerm)
+			direrr := os.MkdirAll(path, os.ModePerm)
 			if direrr != nil {
 				log.Fatal(direrr)
 			}
