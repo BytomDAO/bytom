@@ -11,12 +11,15 @@ type Chain struct {
 	bestBlockHeader *types.BlockHeader
 	heightMap       map[uint64]*types.Block
 	blockMap        map[bc.Hash]*types.Block
+
+	prevOrphans map[bc.Hash]*types.Block
 }
 
 func NewChain() *Chain {
 	return &Chain{
-		heightMap: map[uint64]*types.Block{},
-		blockMap:  map[bc.Hash]*types.Block{},
+		heightMap:   map[uint64]*types.Block{},
+		blockMap:    map[bc.Hash]*types.Block{},
+		prevOrphans: make(map[bc.Hash]*types.Block),
 	}
 }
 
@@ -25,11 +28,11 @@ func (c *Chain) BestBlockHeader() *types.BlockHeader {
 }
 
 func (c *Chain) BestBlockHeight() uint64 {
-	return 0
+	return c.bestBlockHeader.Height
 }
 
-func (c *Chain) CalcNextSeed(*bc.Hash) (*bc.Hash, error) {
-	return nil, nil
+func (c *Chain) CalcNextSeed(hash *bc.Hash) (*bc.Hash, error) {
+	return &bc.Hash{V0: hash.V1, V1: hash.V2, V2: hash.V3, V3: hash.V0}, nil
 }
 
 func (c *Chain) GetBlockByHash(hash *bc.Hash) (*types.Block, error) {
@@ -64,9 +67,42 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 	return &block.BlockHeader, nil
 }
 
-func (c *Chain) InMainChain(bc.Hash) bool { return true }
+func (c *Chain) InMainChain(hash bc.Hash) bool {
+	block, ok := c.blockMap[hash]
+	if !ok {
+		return false
+	}
+	return c.heightMap[block.Height] == block
+}
 
-func (c *Chain) ProcessBlock(*types.Block) (bool, error) {
+func (c *Chain) ProcessBlock(block *types.Block) (bool, error) {
+	if c.bestBlockHeader.Hash() == block.PreviousBlockHash {
+		c.heightMap[block.Height] = block
+		c.blockMap[block.Hash()] = block
+		c.bestBlockHeader = &block.BlockHeader
+		return false, nil
+	}
+
+	if _, ok := c.blockMap[block.PreviousBlockHash]; !ok {
+		c.prevOrphans[block.PreviousBlockHash] = block
+		return true, nil
+	}
+
+	c.blockMap[block.Hash()] = block
+	for c.prevOrphans[block.Hash()] != nil {
+		block = c.prevOrphans[block.Hash()]
+		c.blockMap[block.Hash()] = block
+	}
+
+	if block.Height < c.bestBlockHeader.Height {
+		return false, nil
+	}
+
+	c.bestBlockHeader = &block.BlockHeader
+	for !c.InMainChain(block.Hash()) {
+		c.heightMap[block.Height] = block
+		block = c.blockMap[block.PreviousBlockHash]
+	}
 	return false, nil
 }
 

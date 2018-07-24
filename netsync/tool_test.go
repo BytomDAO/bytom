@@ -2,12 +2,12 @@ package netsync
 
 import (
 	"errors"
+	"math/rand"
 	"net"
 
 	wire "github.com/tendermint/go-wire"
 
 	"github.com/bytom/consensus"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/test/mock"
 )
@@ -19,13 +19,17 @@ type P2PPeer struct {
 
 	srcPeer    *P2PPeer
 	remoteNode *SyncManager
+	msgCh      chan []byte
+	async      bool
 }
 
 func NewP2PPeer(addr, id string, flag consensus.ServiceFlag) *P2PPeer {
 	return &P2PPeer{
-		id:   id,
-		ip:   &net.IPAddr{IP: net.ParseIP(addr)},
-		flag: flag,
+		id:    id,
+		ip:    &net.IPAddr{IP: net.ParseIP(addr)},
+		flag:  flag,
+		msgCh: make(chan []byte),
+		async: false,
 	}
 }
 
@@ -48,9 +52,24 @@ func (p *P2PPeer) SetConnection(srcPeer *P2PPeer, node *SyncManager) {
 
 func (p *P2PPeer) TrySend(b byte, msg interface{}) bool {
 	msgBytes := wire.BinaryBytes(msg)
-	msgType, msg, _ := DecodeMessage(msgBytes)
-	p.remoteNode.processMsg(p.srcPeer, msgType, msg)
+	if p.async {
+		p.msgCh <- msgBytes
+	} else {
+		msgType, msg, _ := DecodeMessage(msgBytes)
+		p.remoteNode.processMsg(p.srcPeer, msgType, msg)
+	}
 	return true
+}
+
+func (p *P2PPeer) setAsync(b bool) {
+	p.async = b
+}
+
+func (p *P2PPeer) postMan() {
+	for msgBytes := range p.msgCh {
+		msgType, msg, _ := DecodeMessage(msgBytes)
+		p.remoteNode.processMsg(p.srcPeer, msgType, msg)
+	}
 }
 
 type PeerSet struct{}
@@ -85,26 +104,39 @@ func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) error {
 		return errors.New("can't find nodeB's p2p peer on network")
 	}
 
-	B2A.SetConnection(&A2B, nodeA)
 	A2B.SetConnection(&B2A, nodeB)
+	B2A.SetConnection(&A2B, nodeA)
+	go A2B.postMan()
+	go B2A.postMan()
 
 	nodeA.handleStatusRequestMsg(&A2B)
 	nodeB.handleStatusRequestMsg(&B2A)
+
+	A2B.setAsync(true)
+	B2A.setAsync(true)
 	return nil
 }
 
-func mockBlocks(height uint64) []*types.Block {
+func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 	blocks := []*types.Block{}
-	preHash := bc.Hash{}
-	for i := uint64(0); i <= height; i++ {
+	indexBlock := &types.Block{}
+	if startBlock == nil {
+		indexBlock = &types.Block{BlockHeader: types.BlockHeader{Nonce: uint64(rand.Uint32())}}
+		blocks = append(blocks, indexBlock)
+	} else {
+		indexBlock = startBlock
+	}
+
+	for indexBlock.Height < height {
 		block := &types.Block{
 			BlockHeader: types.BlockHeader{
-				Height:            i,
-				PreviousBlockHash: preHash,
+				Height:            indexBlock.Height + 1,
+				PreviousBlockHash: indexBlock.Hash(),
+				Nonce:             uint64(rand.Uint32()),
 			},
 		}
 		blocks = append(blocks, block)
-		preHash = block.Hash()
+		indexBlock = block
 	}
 	return blocks
 }

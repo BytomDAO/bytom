@@ -14,7 +14,7 @@ import (
 )
 
 func TestAppendHeaderList(t *testing.T) {
-	blocks := mockBlocks(7)
+	blocks := mockBlocks(nil, 7)
 	cases := []struct {
 		originalHeaders []*types.BlockHeader
 		inputHeaders    []*types.BlockHeader
@@ -75,7 +75,7 @@ func TestAppendHeaderList(t *testing.T) {
 }
 
 func TestBlockLocator(t *testing.T) {
-	blocks := mockBlocks(500)
+	blocks := mockBlocks(nil, 500)
 	cases := []struct {
 		bestHeight uint64
 		wantHeight []uint64
@@ -128,7 +128,7 @@ func TestBlockLocator(t *testing.T) {
 
 func TestLocateBlocks(t *testing.T) {
 	maxBlockPerMsg = 5
-	blocks := mockBlocks(100)
+	blocks := mockBlocks(nil, 100)
 	cases := []struct {
 		locator    []uint64
 		stopHash   bc.Hash
@@ -168,7 +168,7 @@ func TestLocateBlocks(t *testing.T) {
 
 func TestLocateHeaders(t *testing.T) {
 	maxBlockHeadersPerMsg = 10
-	blocks := mockBlocks(150)
+	blocks := mockBlocks(nil, 150)
 	cases := []struct {
 		chainHeight uint64
 		locator     []uint64
@@ -307,8 +307,85 @@ func TestNextCheckpoint(t *testing.T) {
 	}
 }
 
+func TestRegularBlockSync(t *testing.T) {
+	baseChain := mockBlocks(nil, 50)
+	chainX := append(baseChain, mockBlocks(baseChain[50], 60)...)
+	chainY := append(baseChain, mockBlocks(baseChain[50], 70)...)
+	cases := []struct {
+		syncTimeout time.Duration
+		aBlocks     []*types.Block
+		bBlocks     []*types.Block
+		syncHeight  uint64
+		want        []*types.Block
+		err         error
+	}{
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     baseChain[:20],
+			bBlocks:     baseChain[:50],
+			syncHeight:  45,
+			want:        baseChain[:46],
+			err:         nil,
+		},
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     chainX,
+			bBlocks:     chainY,
+			syncHeight:  70,
+			want:        chainY,
+			err:         nil,
+		},
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     chainX[:52],
+			bBlocks:     chainY[:53],
+			syncHeight:  52,
+			want:        chainY[:53],
+			err:         nil,
+		},
+		{
+			syncTimeout: 1 * time.Millisecond,
+			aBlocks:     baseChain,
+			bBlocks:     baseChain,
+			syncHeight:  52,
+			want:        baseChain,
+			err:         errRequestTimeout,
+		},
+	}
+
+	for i, c := range cases {
+		syncTimeout = c.syncTimeout
+		a := mockSync(c.aBlocks)
+		b := mockSync(c.bBlocks)
+		netWork := NewNetWork()
+		netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)
+		netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode)
+		if err := netWork.HandsShake(a, b); err != nil {
+			t.Errorf("fail on peer hands shake %v", err)
+		}
+
+		a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
+		if err := a.blockKeeper.regularBlockSync(c.syncHeight); errors.Root(err) != c.err {
+			t.Errorf("case %d: got %v want %v", i, err, c.err)
+		}
+
+		got := []*types.Block{}
+		for i := uint64(0); i <= a.chain.BestBlockHeight(); i++ {
+			block, err := a.chain.GetBlockByHeight(i)
+			if err != nil {
+				t.Error("case %d got err %v", err)
+			}
+			got = append(got, block)
+		}
+
+		if !testutil.DeepEqual(got, c.want) {
+			t.Errorf("case %d: got %v want %v", i, got, c.want)
+		}
+	}
+}
+
 func TestRequireBlock(t *testing.T) {
-	blocks := mockBlocks(5)
+	blocks := mockBlocks(nil, 5)
 	a := mockSync(blocks[:1])
 	b := mockSync(blocks[:5])
 	netWork := NewNetWork()
@@ -318,22 +395,24 @@ func TestRequireBlock(t *testing.T) {
 		t.Errorf("fail on peer hands shake %v", err)
 	}
 
-	syncTimeout = 10 * time.Millisecond
 	a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
 	b.blockKeeper.syncPeer = b.peers.getPeer("test node A")
 	cases := []struct {
+		syncTimeout   time.Duration
 		testNode      *SyncManager
 		requireHeight uint64
 		want          *types.Block
 		err           error
 	}{
 		{
+			syncTimeout:   30 * time.Second,
 			testNode:      a,
 			requireHeight: 4,
 			want:          blocks[4],
 			err:           nil,
 		},
 		{
+			syncTimeout:   1 * time.Millisecond,
 			testNode:      b,
 			requireHeight: 4,
 			want:          nil,
@@ -342,6 +421,7 @@ func TestRequireBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
+		syncTimeout = c.syncTimeout
 		got, err := c.testNode.blockKeeper.requireBlock(c.requireHeight)
 		if !testutil.DeepEqual(got, c.want) {
 			t.Errorf("case %d: got %v want %v", i, got, c.want)
