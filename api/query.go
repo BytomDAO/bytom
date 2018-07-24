@@ -318,10 +318,10 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 			path = append(path, chainjson.HexBytes(p))
 		}
 
-		pubKeyInfos = append([]PubKeyInfo{{
+		pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
 			Pubkey: hex.EncodeToString(pubkey),
 			Path:   path,
-		}}, pubKeyInfos...)
+		})
 	}
 
 	if len(pubKeyInfos) == 0 {
