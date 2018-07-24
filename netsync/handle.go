@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"path"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -298,6 +299,48 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 
 	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && isOrphan == false {
 		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
+	}
+}
+
+func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg BlockchainMessage) {
+	peer := sm.peers.getPeer(basePeer.ID())
+	if peer == nil && msgType != StatusResponseByte && msgType != StatusRequestByte {
+		return
+	}
+
+	switch msg := msg.(type) {
+	case *GetBlockMessage:
+		sm.handleGetBlockMsg(peer, msg)
+
+	case *BlockMessage:
+		sm.handleBlockMsg(peer, msg)
+
+	case *StatusRequestMessage:
+		sm.handleStatusRequestMsg(basePeer)
+
+	case *StatusResponseMessage:
+		sm.handleStatusResponseMsg(basePeer, msg)
+
+	case *TransactionMessage:
+		sm.handleTransactionMsg(peer, msg)
+
+	case *MineBlockMessage:
+		sm.handleMineBlockMsg(peer, msg)
+
+	case *GetHeadersMessage:
+		sm.handleGetHeadersMsg(peer, msg)
+
+	case *HeadersMessage:
+		sm.handleHeadersMsg(peer, msg)
+
+	case *GetBlocksMessage:
+		sm.handleGetBlocksMsg(peer, msg)
+
+	case *BlocksMessage:
+		sm.handleBlocksMsg(peer, msg)
+
+	default:
+		log.Errorf("unknown message type %v", reflect.TypeOf(msg))
 	}
 }
 

@@ -3,8 +3,10 @@ package netsync
 import (
 	"container/list"
 	"testing"
+	"time"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/test/mock"
@@ -305,18 +307,47 @@ func TestNextCheckpoint(t *testing.T) {
 	}
 }
 
-func mockBlocks(height uint64) []*types.Block {
-	blocks := []*types.Block{}
-	preHash := bc.Hash{}
-	for i := uint64(0); i <= height; i++ {
-		block := &types.Block{
-			BlockHeader: types.BlockHeader{
-				Height:            i,
-				PreviousBlockHash: preHash,
-			},
-		}
-		blocks = append(blocks, block)
-		preHash = block.Hash()
+func TestRequireBlock(t *testing.T) {
+	blocks := mockBlocks(5)
+	a := mockSync(blocks[:1])
+	b := mockSync(blocks[:5])
+	netWork := NewNetWork()
+	netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)
+	netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode)
+	if err := netWork.HandsShake(a, b); err != nil {
+		t.Errorf("fail on peer hands shake %v", err)
 	}
-	return blocks
+
+	syncTimeout = 10 * time.Millisecond
+	a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
+	b.blockKeeper.syncPeer = b.peers.getPeer("test node A")
+	cases := []struct {
+		testNode      *SyncManager
+		requireHeight uint64
+		want          *types.Block
+		err           error
+	}{
+		{
+			testNode:      a,
+			requireHeight: 4,
+			want:          blocks[4],
+			err:           nil,
+		},
+		{
+			testNode:      b,
+			requireHeight: 4,
+			want:          nil,
+			err:           errRequestTimeout,
+		},
+	}
+
+	for i, c := range cases {
+		got, err := c.testNode.blockKeeper.requireBlock(c.requireHeight)
+		if !testutil.DeepEqual(got, c.want) {
+			t.Errorf("case %d: got %v want %v", i, got, c.want)
+		}
+		if errors.Root(err) != c.err {
+			t.Errorf("case %d: got %v want %v", i, err, c.err)
+		}
+	}
 }

@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	syncTimeout          = 30 * time.Second
 	syncCycle            = 5 * time.Second
 	blockProcessChSize   = 1024
 	blocksProcessChSize  = 128
@@ -24,6 +23,7 @@ const (
 var (
 	maxBlockPerMsg        = 128
 	maxBlockHeadersPerMsg = uint64(2048)
+	syncTimeout           = 30 * time.Second
 
 	errAppendHeaders  = errors.New("fail to append list due to order dismatch")
 	errRequestTimeout = errors.New("request timeout")
