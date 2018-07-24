@@ -126,6 +126,85 @@ func TestBlockLocator(t *testing.T) {
 	}
 }
 
+func TestFastBlockSync(t *testing.T) {
+	maxBlockPerMsg = 5
+	maxBlockHeadersPerMsg = 10
+	baseChain := mockBlocks(nil, 300)
+
+	cases := []struct {
+		syncTimeout time.Duration
+		aBlocks     []*types.Block
+		bBlocks     []*types.Block
+		checkPoint  *consensus.Checkpoint
+		want        []*types.Block
+		err         error
+	}{
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     baseChain[:100],
+			bBlocks:     baseChain[:301],
+			checkPoint: &consensus.Checkpoint{
+				Height: baseChain[250].Height,
+				Hash:   baseChain[250].Hash(),
+			},
+			want: baseChain[:251],
+			err:  nil,
+		},
+		{
+			syncTimeout: 30 * time.Second,
+			aBlocks:     baseChain[:100],
+			bBlocks:     baseChain[:301],
+			checkPoint: &consensus.Checkpoint{
+				Height: baseChain[100].Height,
+				Hash:   baseChain[100].Hash(),
+			},
+			want: baseChain[:101],
+			err:  nil,
+		},
+		{
+			syncTimeout: 1 * time.Millisecond,
+			aBlocks:     baseChain[:100],
+			bBlocks:     baseChain[:100],
+			checkPoint: &consensus.Checkpoint{
+				Height: baseChain[200].Height,
+				Hash:   baseChain[200].Hash(),
+			},
+			want: baseChain[:100],
+			err:  errRequestTimeout,
+		},
+	}
+
+	for i, c := range cases {
+		syncTimeout = c.syncTimeout
+		a := mockSync(c.aBlocks)
+		b := mockSync(c.bBlocks)
+		netWork := NewNetWork()
+		netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)
+		netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode)
+		if err := netWork.HandsShake(a, b); err != nil {
+			t.Errorf("fail on peer hands shake %v", err)
+		}
+
+		a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
+		if err := a.blockKeeper.fastBlockSync(c.checkPoint); errors.Root(err) != c.err {
+			t.Errorf("case %d: got %v want %v", i, err, c.err)
+		}
+
+		got := []*types.Block{}
+		for i := uint64(0); i <= a.chain.BestBlockHeight(); i++ {
+			block, err := a.chain.GetBlockByHeight(i)
+			if err != nil {
+				t.Error("case %d got err %v", err)
+			}
+			got = append(got, block)
+		}
+
+		if !testutil.DeepEqual(got, c.want) {
+			t.Errorf("case %d: got %v want %v", i, got, c.want)
+		}
+	}
+}
+
 func TestLocateBlocks(t *testing.T) {
 	maxBlockPerMsg = 5
 	blocks := mockBlocks(nil, 100)
