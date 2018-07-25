@@ -76,6 +76,20 @@ $ make bytomcli  # build bytomcli
 
 When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytomd` and `cmd/bytomcli` directory, respectively.
 
+__simd feature:__
+
+You could enable the _simd_ feature to speed up the _PoW_ verification (e.g., during mining and block verification) by simply:
+```
+bytomd node --simd.enable
+```
+
+To enable this feature you will need to compile from the source code by yourself, and `make bytomd-simd`. 
+
+What is more,
+
++ if you are using _Mac_, please make sure _llvm_ is installed by `brew install llvm`.
++ if you are using _Windows_, please make sure _mingw-w64_ is installed and set up the _PATH_ environment variable accordingly.
+
 ## Example
 
 Currently, bytom is still in active development and a ton of work needs to be done, but we also provide the following content for these eager to do something with `bytom`. This section won't cover all the commands of `bytomd` and `bytomcli` at length, for more information, please the help of every command, e.g., `bytomcli help`.

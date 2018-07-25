@@ -9,22 +9,23 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/tensority"
-	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
 const (
-	syncTimeout           = 30 * time.Second
-	syncCycle             = 5 * time.Second
-	blockProcessChSize    = 1024
-	blocksProcessChSize   = 128
-	headersProcessChSize  = 1024
-	maxBlockPerMsg        = 128
-	maxBlockHeadersPerMsg = 2048
+	syncCycle            = 5 * time.Second
+	blockProcessChSize   = 1024
+	blocksProcessChSize  = 128
+	headersProcessChSize = 1024
 )
 
 var (
+	maxBlockPerMsg        = uint64(128)
+	maxBlockHeadersPerMsg = uint64(2048)
+	syncTimeout           = 30 * time.Second
+
+	errAppendHeaders  = errors.New("fail to append list due to order dismatch")
 	errRequestTimeout = errors.New("request timeout")
 	errPeerDropped    = errors.New("Peer dropped")
 	errPeerMisbehave  = errors.New("peer is misbehave")
@@ -46,7 +47,7 @@ type headersMsg struct {
 }
 
 type blockKeeper struct {
-	chain *protocol.Chain
+	chain Chain
 	peers *peerSet
 
 	syncPeer         *peer
@@ -57,7 +58,7 @@ type blockKeeper struct {
 	headerList *list.List
 }
 
-func newBlockKeeper(chain *protocol.Chain, peers *peerSet) *blockKeeper {
+func newBlockKeeper(chain Chain, peers *peerSet) *blockKeeper {
 	bk := &blockKeeper{
 		chain:            chain,
 		peers:            peers,
@@ -75,7 +76,7 @@ func (bk *blockKeeper) appendHeaderList(headers []*types.BlockHeader) error {
 	for _, header := range headers {
 		prevHeader := bk.headerList.Back().Value.(*types.BlockHeader)
 		if prevHeader.Hash() != header.PreviousBlockHash {
-			return errors.New("fail to append list due to order dismatch")
+			return errAppendHeaders
 		}
 		bk.headerList.PushBack(header)
 	}
@@ -105,7 +106,7 @@ func (bk *blockKeeper) blockLocator() []*bc.Hash {
 			break
 		}
 
-		if len(locator) > 10 {
+		if len(locator) >= 9 {
 			step *= 2
 		}
 	}
@@ -181,7 +182,7 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 
 	blocks := []*types.Block{}
 	for i, header := range headers {
-		if i > maxBlockPerMsg {
+		if uint64(i) >= maxBlockPerMsg {
 			break
 		}
 
@@ -366,10 +367,16 @@ func (bk *blockKeeper) startSync() bool {
 		return true
 	}
 
+	blockHeight := bk.chain.BestBlockHeight()
 	peer = bk.peers.bestPeer(consensus.SFFullNode)
-	if peer != nil && peer.Height() > bk.chain.BestBlockHeight() {
+	if peer != nil && peer.Height() > blockHeight {
 		bk.syncPeer = peer
-		if err := bk.regularBlockSync(peer.Height()); err != nil {
+		targetHeight := blockHeight + maxBlockPerMsg
+		if targetHeight > peer.Height() {
+			targetHeight = peer.Height()
+		}
+
+		if err := bk.regularBlockSync(targetHeight); err != nil {
 			log.WithField("err", err).Warning("fail on regularBlockSync")
 			bk.peers.errorHandler(peer.ID(), err)
 			return false
