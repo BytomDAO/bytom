@@ -21,7 +21,7 @@ const (
 )
 
 var (
-	maxBlockPerMsg        = 128
+	maxBlockPerMsg        = uint64(128)
 	maxBlockHeadersPerMsg = uint64(2048)
 	syncTimeout           = 30 * time.Second
 
@@ -182,7 +182,7 @@ func (bk *blockKeeper) locateBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*t
 
 	blocks := []*types.Block{}
 	for i, header := range headers {
-		if i >= maxBlockPerMsg {
+		if uint64(i) >= maxBlockPerMsg {
 			break
 		}
 
