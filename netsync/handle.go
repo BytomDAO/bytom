@@ -205,7 +205,7 @@ func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
 			continue
 		}
 
-		if totalSize+len(rawData) > maxBlockchainResponseSize-16 {
+		if totalSize+len(rawData) > maxBlockchainResponseSize/2 {
 			break
 		}
 		totalSize += len(rawData)
