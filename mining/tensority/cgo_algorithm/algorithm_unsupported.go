@@ -1,4 +1,4 @@
-// +build !cgo
+// +build !simd
 
 package cgo_algorithm
 
