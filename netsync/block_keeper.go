@@ -367,10 +367,16 @@ func (bk *blockKeeper) startSync() bool {
 		return true
 	}
 
+	blockHeight := bk.chain.BestBlockHeight()
 	peer = bk.peers.bestPeer(consensus.SFFullNode)
-	if peer != nil && peer.Height() > bk.chain.BestBlockHeight() {
+	if peer != nil && peer.Height() > blockHeight {
 		bk.syncPeer = peer
-		if err := bk.regularBlockSync(peer.Height()); err != nil {
+		targetHeight := blockHeight + maxBlockPerMsg
+		if targetHeight > peer.Height() {
+			targetHeight = peer.Height()
+		}
+
+		if err := bk.regularBlockSync(targetHeight); err != nil {
 			log.WithField("err", err).Warning("fail on regularBlockSync")
 			bk.peers.errorHandler(peer.ID(), err)
 			return false
