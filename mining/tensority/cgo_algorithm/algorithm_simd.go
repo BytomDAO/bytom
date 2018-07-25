@@ -1,11 +1,11 @@
-// +build cgo
+// +build simd
 
 package cgo_algorithm
 
 // #cgo !darwin CFLAGS: -I.
 // #cgo !darwin LDFLAGS: -L. -l:./lib/cSimdTs.o -lstdc++ -lgomp -lpthread
 // #cgo darwin CFLAGS: -I. -I/usr/local/opt/llvm/include
-// #cgo darwin LDFLAGS: -L. -l:./lib/cSimdTs.o -lstdc++ -lomp -L/usr/local/opt/llvm/lib
+// #cgo darwin LDFLAGS: -L. -l./lib/cSimdTs.o -lstdc++ -lomp -L/usr/local/opt/llvm/lib
 // #include "./lib/cSimdTs.h"
 import "C"
 
