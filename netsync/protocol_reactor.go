@@ -1,7 +1,6 @@
 package netsync
 
 import (
-	"reflect"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -96,43 +95,5 @@ func (pr *ProtocolReactor) Receive(chID byte, src *p2p.Peer, msgBytes []byte) {
 		return
 	}
 
-	peer := pr.peers.getPeer(src.Key)
-	if peer == nil && msgType != StatusResponseByte && msgType != StatusRequestByte {
-		return
-	}
-
-	switch msg := msg.(type) {
-	case *GetBlockMessage:
-		pr.sm.handleGetBlockMsg(peer, msg)
-
-	case *BlockMessage:
-		pr.sm.handleBlockMsg(peer, msg)
-
-	case *StatusRequestMessage:
-		pr.sm.handleStatusRequestMsg(src)
-
-	case *StatusResponseMessage:
-		pr.sm.handleStatusResponseMsg(src, msg)
-
-	case *TransactionMessage:
-		pr.sm.handleTransactionMsg(peer, msg)
-
-	case *MineBlockMessage:
-		pr.sm.handleMineBlockMsg(peer, msg)
-
-	case *GetHeadersMessage:
-		pr.sm.handleGetHeadersMsg(peer, msg)
-
-	case *HeadersMessage:
-		pr.sm.handleHeadersMsg(peer, msg)
-
-	case *GetBlocksMessage:
-		pr.sm.handleGetBlocksMsg(peer, msg)
-
-	case *BlocksMessage:
-		pr.sm.handleBlocksMsg(peer, msg)
-
-	default:
-		log.Errorf("unknown message type %v", reflect.TypeOf(msg))
-	}
+	pr.sm.processMsg(src, msgType, msg)
 }
