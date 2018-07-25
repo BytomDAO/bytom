@@ -79,7 +79,7 @@ After that, you'll see `config.toml` generated, then launch the node.
 ### launch
 
 ``` bash
-$ ./bytomd node --mining
+$ ./bytomd node
 ```
 
 available flags for `bytomd node`:
