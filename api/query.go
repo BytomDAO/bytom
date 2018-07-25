@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -285,29 +286,46 @@ type AccountPubkey struct {
 
 // POST /list-pubkeys
 func (a *API) listPubKeys(ctx context.Context, ins struct {
-	AccountID string `json:"account_id"`
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+	PublicKey    string `json:"public_key"`
 }) Response {
-	account, err := a.wallet.AccountMgr.FindByID(ins.AccountID)
+	var err error
+	account := &account.Account{}
+	if ins.AccountAlias != "" {
+		account, err = a.wallet.AccountMgr.FindByAlias(ins.AccountAlias)
+	} else {
+		account, err = a.wallet.AccountMgr.FindByID(ins.AccountID)
+	}
+
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	pubKeyInfos := []PubKeyInfo{}
-	idx := a.wallet.AccountMgr.GetContractIndex(ins.AccountID)
+	idx := a.wallet.AccountMgr.GetContractIndex(account.ID)
 	for i := uint64(1); i <= idx; i++ {
 		rawPath := signers.Path(account.Signer, signers.AccountKeySpace, i)
 		derivedXPub := account.XPubs[0].Derive(rawPath)
 		pubkey := derivedXPub.PublicKey()
+
+		if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(pubkey) {
+			continue
+		}
 
 		var path []chainjson.HexBytes
 		for _, p := range rawPath {
 			path = append(path, chainjson.HexBytes(p))
 		}
 
-		pubKeyInfos = append([]PubKeyInfo{{
+		pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
 			Pubkey: hex.EncodeToString(pubkey),
 			Path:   path,
-		}}, pubKeyInfos...)
+		})
+	}
+
+	if len(pubKeyInfos) == 0 {
+		return NewErrorResponse(errors.New("Not found publickey for the account"))
 	}
 
 	return NewSuccessResponse(&AccountPubkey{
