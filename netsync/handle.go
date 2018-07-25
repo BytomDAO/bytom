@@ -28,6 +28,7 @@ const (
 	maxTxChanSize = 10000
 )
 
+// Chain is the interface for Bytom core
 type Chain interface {
 	BestBlockHeader() *types.BlockHeader
 	BestBlockHeight() uint64
