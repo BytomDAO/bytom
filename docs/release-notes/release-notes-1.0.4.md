@@ -42,17 +42,11 @@ Bytom Node
 `PR #1124`
   - Fix a security bug that might attack Bytom server.
 
-<<<<<<< Updated upstream
-`PR #1126`  - Optimize the gas estimation for the multi-signed transaction.
+`PR #1126`  
+  - Optimize the gas estimation for the multi-signed transaction.
 
-`PR #1130`  - Add tx_id and input_id to the decode-raw-transaction API response.
-=======
-`PR #1126`
-  - Optimize the gas estimate for the multi-signed transaction.
-
-`PR #1130`
-  - API decode-raw-transaction response add tx_id and input_id.
->>>>>>> Stashed changes
+`PR #1130`  
+  - Add tx_id and input_id to the decode-raw-transaction API response.
 
 `PR #1133`
   - Reorganize error codes and messages
