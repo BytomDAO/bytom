@@ -100,9 +100,9 @@ Thanks to everyone who directly contributed to this release:
 - RockerFlower
 - shanhuhai5739
 - shenao78
+- successli
 - yahtoo
 - zcc0721
 - ZhitingLin
-- successli
 
 And everyone who helped test.
