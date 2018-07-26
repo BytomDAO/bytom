@@ -10,6 +10,8 @@ endif
 endif
 
 PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v '/mining/tensority')
+PACKAGES += 'github.com/bytom/mining/tensority/go_algorithm'
+
 BUILD_FLAGS := -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`"
 
 MINER_BINARY32 := miner-$(GOOS)_386
@@ -39,12 +41,12 @@ all: test target release-all
 
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
-	@CGO_ENABLED=0 go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+	@go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 
 bytomd-simd:
 	@echo "Building SIMD version bytomd to cmd/bytomd/bytomd"
 	@cd mining/tensority/cgo_algorithm/lib/ && make
-	@CGO_ENABLED=1 go build $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
+	@go build -tags="simd" $(BUILD_FLAGS) -o cmd/bytomd/bytomd cmd/bytomd/main.go
 
 bytomcli:
 	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
@@ -111,13 +113,13 @@ target/$(MINER_BINARY64):
 
 test:
 	@echo "====> Running go test"
-	@CGO_ENABLED=0 go test -tags "network" $(PACKAGES)
+	@go test -tags "network" $(PACKAGES)
 
 benchmark:
-	@CGO_ENABLED=0 go test -bench $(PACKAGES)
+	@go test -bench $(PACKAGES)
 
 functional-tests:
-	@CGO_ENABLED=0 go test -v -timeout=5m -tags=functional ./test
+	@go test -v -timeout=5m -tags="functional" ./test 
 
 ci: test functional-tests
 
