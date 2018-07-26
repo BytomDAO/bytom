@@ -17,20 +17,35 @@ You can operate according to the user manual.[(Bytom User Manual)](https://bytom
 1.0.4 changelog
 ================
 Bytom Node
+
 `PR #1104`  - Add block fast sync function.
+
 `PR #1048`  - Sort actions by original list for function MergeSpendAction.
+
 `PR #1081`  - Add API list-pubkeys.
+
 `PR #1098`  - Add API wallet-info to acquire rescanning wallet schedule.
+
 `PR #1112`  - Wallet support spends unconfirmed utxo.
+
 `PR #1115`  - Add bytomd command line parameter `--log_level` to set log level.
+
 `PR #1118`  - Add network access control api, include list-peers,connect-peer,disconnect-peer.
+
 `PR #1124`  - Fix a security bug that might attack Bytom server.
+
 `PR #1126`  - Optimize the gas estimate for the multi-signed transaction.
+
 `PR #1130`  - API decode-raw-transaction response add tx_id and input_id.
+
 `PR #1133`  - Reorganize error codes and messages
+
 `PR #1139`  - Fix p2p node discover table delete bug
+
 `PR #1141`  - Delete unconfirmed transaction from the dashboard if it has been double spend 
+
 `PR #1142`  - Add simd support for tensority, including compilation option and command line flag (`--simd.enable`).
+
 `PR #1149`  - Optimize wallet utxo select algorithm on build transaction.
 
 Bytom Dashboard
@@ -59,7 +74,7 @@ Thanks to everyone who directly contributed to this release:
 - Colt-Z
 - HAOYUatHZ
 - langyu
-- oyshengg
+- oysheng
 - Paladz
 - RockerFlower
 - shanhuhai5739
