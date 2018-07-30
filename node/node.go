@@ -230,7 +230,9 @@ func (n *Node) initAndstartApiServer() {
 
 func (n *Node) OnStart() error {
 	if n.miningEnable {
-		n.cpuMiner.Start()
+		if _, err := n.wallet.AccountMgr.GetCoinbaseControlProgram(); err != nil {
+			n.cpuMiner.Start()
+		}
 	}
 	if !n.config.VaultMode {
 		n.syncManager.Start()
