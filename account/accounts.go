@@ -278,7 +278,6 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	return program.ControlProgram, nil
 }
 
-
 // GetMiningAddress will return the mining address
 func (m *Manager) GetMiningAddress() (string, error) {
 	if data := m.db.Get(miningAddressKey); data != nil {
@@ -317,7 +316,7 @@ func (m *Manager) SetMiningAddress(miningAddr string) (string, error) {
 	program, err := m.GetProgramByAddress(miningAddr)
 	if err != nil {
 		return "", err
-	} 
+	}
 
 	rawCP, err := json.Marshal(program)
 	if err != nil {

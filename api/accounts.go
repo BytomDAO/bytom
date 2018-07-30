@@ -140,7 +140,7 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 }
 
 type minigAddressResp struct {
-	MiningAddress      string `json:"mining-address"`
+	MiningAddress string `json:"mining-address"`
 }
 
 func (a *API) getMiningAddress(ctx context.Context) Response {
@@ -148,7 +148,7 @@ func (a *API) getMiningAddress(ctx context.Context) Response {
 		return NewErrorResponse(err)
 	} else {
 		return NewSuccessResponse(minigAddressResp{
-			MiningAddress: 	miningAddress,
+			MiningAddress: miningAddress,
 		})
 	}
 }
@@ -161,7 +161,7 @@ func (a *API) setMiningAddress(ctx context.Context, in struct {
 		return NewErrorResponse(err)
 	} else {
 		return NewSuccessResponse(minigAddressResp{
-			MiningAddress: 	miningAddress,
+			MiningAddress: miningAddress,
 		})
 	}
 }
