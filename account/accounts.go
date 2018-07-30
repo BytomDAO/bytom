@@ -314,6 +314,17 @@ func (m *Manager) GetMiningAddress() (string, error) {
 
 // SetMiningAddress will set the mining address
 func (m *Manager) SetMiningAddress(miningAddr string) (string, error) {
+	program, err := m.GetProgramByAddress(miningAddr)
+	if err != nil {
+		return "", err
+	} 
+
+	rawCP, err := json.Marshal(program)
+	if err != nil {
+		return "", err
+	}
+
+	m.db.Set(miningAddressKey, rawCP)
 	return m.GetMiningAddress()
 }
 
