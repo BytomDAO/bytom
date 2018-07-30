@@ -278,6 +278,45 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	return program.ControlProgram, nil
 }
 
+
+// GetMiningAddress will return the mining address
+func (m *Manager) GetMiningAddress() (string, error) {
+	if data := m.db.Get(miningAddressKey); data != nil {
+		cp := &CtrlProgram{}
+		return cp.Address, json.Unmarshal(data, cp)
+	}
+
+	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
+	defer accountIter.Release()
+	if !accountIter.Next() {
+		log.Warningf("GetMiningAddress: can't find any account in db")
+		return "", ErrFindAccount
+	}
+
+	account := &Account{}
+	if err := json.Unmarshal(accountIter.Value(), account); err != nil {
+		return "", err
+	}
+
+	program, err := m.createAddress(account, false)
+	if err != nil {
+		return "", err
+	}
+
+	rawCP, err := json.Marshal(program)
+	if err != nil {
+		return "", err
+	}
+
+	m.db.Set(miningAddressKey, rawCP)
+	return program.Address, nil
+}
+
+// SetMiningAddress will set the mining address
+func (m *Manager) SetMiningAddress(miningAddr string) (string, error) {
+	return m.GetMiningAddress()
+}
+
 // GetContractIndex return the current index
 func (m *Manager) GetContractIndex(accountID string) uint64 {
 	m.accIndexMu.Lock()

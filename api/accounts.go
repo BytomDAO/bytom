@@ -138,3 +138,30 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 	sort.Sort(SortByIndex(addresses))
 	return NewSuccessResponse(addresses)
 }
+
+type minigAddressResp struct {
+	MiningAddress      string `json:"mining-address"`
+}
+
+func (a *API) getMiningAddress(ctx context.Context) Response {
+	if miningAddress, err := a.wallet.AccountMgr.GetMiningAddress(); err != nil {
+		return NewErrorResponse(err)
+	} else {
+		return NewSuccessResponse(minigAddressResp{
+			MiningAddress: 	miningAddress,
+		})
+	}
+}
+
+// POST /set-mining-address
+func (a *API) setMiningAddress(ctx context.Context, in struct {
+	MiningAddress string `json:"mining-address"`
+}) Response {
+	if miningAddress, err := a.wallet.AccountMgr.SetMiningAddress(in.MiningAddress); err != nil {
+		return NewErrorResponse(err)
+	} else {
+		return NewSuccessResponse(minigAddressResp{
+			MiningAddress: 	miningAddress,
+		})
+	}
+}
