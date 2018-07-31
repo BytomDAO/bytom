@@ -293,10 +293,6 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 // GetMiningAddress will return the mining address
 func (m *Manager) GetMiningAddress() (string, error) {
 	cp, err := m.GetCoinbaseCtrlProgram()
-	if err == ErrFindAccount {
-		log.Warningf("GetMiningAddress: can't find any account in db")
-		return "", err
-	}
 	if err != nil {
 		return "", err
 	}
