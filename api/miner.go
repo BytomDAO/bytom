@@ -139,8 +139,7 @@ func (a *API) setMining(in struct {
 	IsMining bool `json:"is_mining"`
 }) Response {
 	if in.IsMining {
-		_, err := a.wallet.AccountMgr.GetMiningAddress()
-		if err != nil {
+		if _, err := a.wallet.AccountMgr.GetMiningAddress(); err != nil {
 			return NewErrorResponse(errors.New("Mining address does not exist"))
 		}
 		return a.startMining()
