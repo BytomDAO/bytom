@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/bytom/errors"
@@ -135,6 +136,44 @@ func TestParseProgram(t *testing.T) {
 
 		if !testutil.DeepEqual(got, c.want) {
 			t.Errorf("ParseProgram(%x) = %+v want %+v", c.prog, got, c.want)
+		}
+	}
+}
+
+func TestIsPushData(t *testing.T) {
+	cases := []struct {
+		want    Instruction
+		wantErr error
+	}{
+		{
+			want: Instruction{Op: OP_16, Data: []byte{16}, Len: 1},
+		},
+		{
+			want: Instruction{Op: OP_DATA_32, Data: []byte{16}, Len: 1},
+		},
+		{
+			want: Instruction{Op: OP_FALSE, Data: []byte{}, Len: 1},
+		},
+		{
+			want: Instruction{Op: OP_TRUE, Data: []byte{1}, Len: 1},
+		},
+		{
+			want:    Instruction{Op: OP_JUMP, Data: []byte{0x00000000}, Len: 1},
+			wantErr: ErrShortProgram,
+		},
+		{
+			want:    Instruction{Op: OP_ADD, Data: []byte{0x12, 0x56}, Len: 2},
+			wantErr: ErrShortProgram,
+		},
+	}
+
+	for _, c := range cases {
+		if c.want.IsPushdata() {
+			t.Logf("check success")
+		} else if c.wantErr != nil {
+			t.Logf("check err success")
+		} else {
+			t.Errorf("check false: %v -- %v", reflect.ValueOf(ops[OP_1].fn), reflect.ValueOf(ops[c.want.Op].fn))
 		}
 	}
 }

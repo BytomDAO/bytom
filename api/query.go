@@ -8,11 +8,13 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/account"
+	"github.com/bytom/wallet"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -95,6 +97,8 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	AccountID   string `json:"account_id"`
 	Detail      bool   `json:"detail"`
 	Unconfirmed bool   `json:"unconfirmed"`
+	PageSize    int    `json:"page_size"`
+	CurrentPage int    `json:"current_page"`
 }) Response {
 	transactions := []*query.AnnotatedTx{}
 	var err error
@@ -126,9 +130,44 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 
 	if filter.Detail == false {
 		txSummary := a.wallet.GetTransactionsSummary(transactions)
-		return NewSuccessResponse(txSummary)
+		summaryPageResult, err := createTxSummaryPageResult(txSummary, filter.PageSize, filter.CurrentPage)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		return NewSuccessResponse(summaryPageResult)
 	}
-	return NewSuccessResponse(transactions)
+	txPageResult, err := createTxPageResult(transactions, filter.PageSize, filter.CurrentPage)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(txPageResult)
+}
+
+type transactionPageResult struct {
+	Transactions interface{} `json:"transactions"`
+	Total        int         `json:"total"`
+}
+
+// Paging the transactions obtained from the query
+func createTxPageResult(txs []*query.AnnotatedTx, pageSize int, currentPage int) (*transactionPageResult, error) {
+	total := len(txs)
+	start, end, err := getPageRange(total, pageSize, currentPage)
+	if err != nil {
+		return nil, err
+	}
+	pageResult := transactionPageResult {txs[start:end], total}
+	return &pageResult, nil
+}
+
+// Paging the transaction summaries obtained from the query
+func createTxSummaryPageResult(txs []wallet.TxSummary, pageSize int, currentPage int) (*transactionPageResult, error) {
+	total := len(txs)
+	start, end, err := getPageRange(total, pageSize, currentPage)
+	if err != nil {
+		return nil, err
+	}
+	pageResult := transactionPageResult {txs[start:end], total}
+	return &pageResult, nil
 }
 
 // POST /get-unconfirmed-transaction
@@ -188,6 +227,7 @@ func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
 
 // RawTx is the tx struct for getRawTransaction
 type RawTx struct {
+	ID        bc.Hash                  `json:"tx_id"`
 	Version   uint64                   `json:"version"`
 	Size      uint64                   `json:"size"`
 	TimeRange uint64                   `json:"time_range"`
@@ -201,6 +241,7 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 	Tx types.Tx `json:"raw_transaction"`
 }) Response {
 	tx := &RawTx{
+		ID:        ins.Tx.ID,
 		Version:   ins.Tx.Version,
 		Size:      ins.Tx.SerializedSize,
 		TimeRange: ins.Tx.TimeRange,
@@ -236,9 +277,12 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 // POST /list-unspent-outputs
 func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	ID            string `json:"id"`
+	Unconfirmed   bool   `json:"unconfirmed"`
 	SmartContract bool   `json:"smart_contract"`
+	PageSize    int    `json:"page_size"`
+	CurrentPage int    `json:"current_page"`
 }) Response {
-	accountUTXOs := a.wallet.GetAccountUtxos(filter.ID, filter.SmartContract)
+	accountUTXOs := a.wallet.GetAccountUtxos(filter.ID, filter.Unconfirmed, filter.SmartContract)
 
 	UTXOs := []query.AnnotatedUTXO{}
 	for _, utxo := range accountUTXOs {
@@ -258,8 +302,26 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 			Change:              utxo.Change,
 		}}, UTXOs...)
 	}
+	pageResult, err := createUTXOPageResult(UTXOs, filter.PageSize, filter.CurrentPage)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(pageResult)
+}
 
-	return NewSuccessResponse(UTXOs)
+type utxoPageResult struct {
+	UTXOs []query.AnnotatedUTXO `json:"utxos"`
+	Total        int      `json:"total"`
+}
+
+// Paging the utxos obtained from the query
+func createUTXOPageResult(UTXOs []query.AnnotatedUTXO, pageSize int, currentPage int) (*utxoPageResult, error) {
+	total := len(UTXOs)
+	start, end, err := getPageRange(total, pageSize, currentPage)
+	if err != nil {
+		return nil, err
+	}
+	return &utxoPageResult{UTXOs[start:end], total}, nil
 }
 
 // return gasRate
@@ -282,29 +344,46 @@ type AccountPubkey struct {
 
 // POST /list-pubkeys
 func (a *API) listPubKeys(ctx context.Context, ins struct {
-	AccountID string `json:"account_id"`
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+	PublicKey    string `json:"public_key"`
 }) Response {
-	account, err := a.wallet.AccountMgr.FindByID(ins.AccountID)
+	var err error
+	account := &account.Account{}
+	if ins.AccountAlias != "" {
+		account, err = a.wallet.AccountMgr.FindByAlias(ins.AccountAlias)
+	} else {
+		account, err = a.wallet.AccountMgr.FindByID(ins.AccountID)
+	}
+
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
 	pubKeyInfos := []PubKeyInfo{}
-	idx := a.wallet.AccountMgr.GetContractIndex(ins.AccountID)
+	idx := a.wallet.AccountMgr.GetContractIndex(account.ID)
 	for i := uint64(1); i <= idx; i++ {
 		rawPath := signers.Path(account.Signer, signers.AccountKeySpace, i)
 		derivedXPub := account.XPubs[0].Derive(rawPath)
 		pubkey := derivedXPub.PublicKey()
+
+		if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(pubkey) {
+			continue
+		}
 
 		var path []chainjson.HexBytes
 		for _, p := range rawPath {
 			path = append(path, chainjson.HexBytes(p))
 		}
 
-		pubKeyInfos = append([]PubKeyInfo{{
+		pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
 			Pubkey: hex.EncodeToString(pubkey),
 			Path:   path,
-		}}, pubKeyInfos...)
+		})
+	}
+
+	if len(pubKeyInfos) == 0 {
+		return NewErrorResponse(errors.New("Not found publickey for the account"))
 	}
 
 	return NewSuccessResponse(&AccountPubkey{

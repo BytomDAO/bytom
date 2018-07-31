@@ -26,8 +26,8 @@ func main() {
 		"bytes":        true,
 		"encoding/hex": true,
 		"fmt":          true,
-		"github.com/bytom/exp/ivy/compiler": true,
-		"github.com/bytom/protocol/vm":      true,
+		"github.com/bytom/equity/compiler": true,
+		"github.com/bytom/protocol/vm":     true,
 	}
 
 	buf := new(bytes.Buffer)

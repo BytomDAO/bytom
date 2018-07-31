@@ -9,7 +9,7 @@ import (
 	chainjson "github.com/bytom/encoding/json"
 )
 
-// Contract is a compiled Ivy contract.
+// Contract is a compiled Equity contract.
 type Contract struct {
 	// Name is the contract name.
 	Name string `json:"name"`

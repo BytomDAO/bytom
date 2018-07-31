@@ -16,12 +16,17 @@ import (
 )
 
 // GetAccountUtxos return all account unspent outputs
-func (w *Wallet) GetAccountUtxos(id string, isSmartContract bool) []*account.UTXO {
+func (w *Wallet) GetAccountUtxos(id string, unconfirmed, isSmartContract bool) []*account.UTXO {
 	prefix := account.UTXOPreFix
 	if isSmartContract {
 		prefix = account.SUTXOPrefix
 	}
+
 	accountUtxos := []*account.UTXO{}
+	if unconfirmed {
+		accountUtxos = w.AccountMgr.ListUnconfirmedUtxo(isSmartContract)
+	}
+
 	accountUtxoIter := w.DB.IteratorPrefix([]byte(prefix + id))
 	defer accountUtxoIter.Release()
 

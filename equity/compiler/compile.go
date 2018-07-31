@@ -42,7 +42,7 @@ type ContractArg struct {
 	S *chainjson.HexBytes `json:"string,omitempty"`
 }
 
-// Compile parses a sequence of Ivy contracts from the supplied reader
+// Compile parses a sequence of Equity contracts from the supplied reader
 // and produces Contract objects containing the compiled bytecode and
 // other analysis. If argMap is non-nil, it maps contract names to
 // lists of arguments with which to instantiate them as programs, with
@@ -319,7 +319,7 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 	var stk stack
 	for _, p := range clause.Params {
 		// NOTE: the order of clause params is not reversed, unlike
-		// contract params (and also unlike the arguments to Ivy
+		// contract params (and also unlike the arguments to Equity
 		// function-calls).
 		stk = stk.add(p.Name)
 	}
@@ -348,9 +348,9 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 			if c, ok := stmt.expr.(*callExpr); ok && len(c.args) == 1 {
 				if b := referencedBuiltin(c.fn); b != nil {
 					switch b.name {
-					case "greater":
+					case "below":
 						clause.BlockHeight = append(clause.BlockHeight, c.args[0].String())
-					case "less":
+					case "above":
 						clause.BlockHeight = append(clause.BlockHeight, c.args[0].String())
 					}
 				}
@@ -359,9 +359,6 @@ func compileClause(b *builder, contractStk stack, contract *Contract, env *envir
 		case *lockStatement:
 			// index
 			stk = b.addInt64(stk, stmt.index)
-
-			// refdatahash
-			stk = b.addData(stk, nil)
 
 			// TODO: permit more complex expressions for locked,
 			// like "lock x+y with foo" (?)

@@ -85,6 +85,9 @@ func TestCheckSig(t *testing.T) {
 }
 
 func TestCryptoOps(t *testing.T) {
+	OP_SM3 := Op(0xb0)
+	ops[OP_SM3] = opInfo{OP_SM3, "SM3", opSm3}
+
 	type testStruct struct {
 		op      Op
 		startVM *virtualMachine

@@ -204,6 +204,7 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 	}
 
 	id := tx.Tx.InputIDs[i]
+	in.InputID = id
 	e := tx.Entries[id]
 	switch e := e.(type) {
 	case *bc.Spend:

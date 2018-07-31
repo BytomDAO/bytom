@@ -98,6 +98,8 @@ func (a SortByIndex) Less(i, j int) bool { return a[i].KeyIndex < a[j].KeyIndex 
 func (a *API) listAddresses(ctx context.Context, ins struct {
 	AccountID    string `json:"account_id"`
 	AccountAlias string `json:"account_alias"`
+	PageSize    int    `json:"page_size"`
+	CurrentPage int    `json:"current_page"`
 }) Response {
 	accountID := ins.AccountID
 	var target *account.Account
@@ -136,5 +138,24 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 
 	// sort AddressResp by KeyIndex
 	sort.Sort(SortByIndex(addresses))
-	return NewSuccessResponse(addresses)
+	pageResult, err := createAddressPageResult(addresses, ins.PageSize, ins.CurrentPage)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(pageResult)
+}
+
+type addressPageResult struct {
+	Addresses []addressResp `json:"addresses"`
+	Total        int      `json:"total"`
+}
+
+// Paging the addresses obtained from the query
+func createAddressPageResult(addresses []addressResp, pageSize int, currentPage int) (*addressPageResult, error) {
+	total := len(addresses)
+	start, end, err := getPageRange(total, pageSize, currentPage)
+	if err != nil {
+		return nil, err
+	}
+	return &addressPageResult{addresses[start:end], total}, nil
 }
