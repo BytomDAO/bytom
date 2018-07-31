@@ -144,8 +144,7 @@ type minigAddressResp struct {
 }
 
 func (a *API) getMiningAddress(ctx context.Context) Response {
-	miningAddress, err := a.wallet.AccountMgr.GetMiningAddress()
-	if err != nil {
+	if miningAddress, err := a.wallet.AccountMgr.GetMiningAddress(); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(minigAddressResp{
@@ -157,8 +156,7 @@ func (a *API) getMiningAddress(ctx context.Context) Response {
 func (a *API) setMiningAddress(ctx context.Context, in struct {
 	MiningAddress string `json:"mining_address"`
 }) Response {
-	miningAddress, err := a.wallet.AccountMgr.SetMiningAddress(in.MiningAddress)
-	if err != nil {
+	if miningAddress, err := a.wallet.AccountMgr.SetMiningAddress(in.MiningAddress); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(minigAddressResp{
