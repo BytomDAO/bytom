@@ -46,7 +46,7 @@ var (
 	mulOutput  int
 	cfg        config
 	m          sync.Mutex
-	sucess     = 0
+	success     = 0
 	fail       = 0
 )
 
@@ -112,7 +112,7 @@ var sendTxCmd = &cobra.Command{
 				}
 
 			}
-			if num >= sucess && (sucess+fail) >= thdTxNum*thdNum {
+			if num >= success && (success+fail) >= thdTxNum*thdNum {
 				end := time.Now()
 				fmt.Printf("tx num: %d, use time: %v\n", num, end.Sub(start))
 				var keys []uint64
@@ -143,7 +143,7 @@ func recvTxID(txs *list.List, txidChan chan string) {
 			if strings.EqualFold(txid, "") {
 				fail++
 			} else {
-				sucess++
+				success++
 				m.Lock()
 				txs.PushBack(txid)
 				m.Unlock()
@@ -154,7 +154,7 @@ func recvTxID(txs *list.List, txidChan chan string) {
 			if fail >= (thdTxNum * thdNum) {
 				os.Exit(1)
 			}
-			if (sucess + fail) >= (thdTxNum * thdNum) {
+			if (success + fail) >= (thdTxNum * thdNum) {
 				file.Close()
 				return
 			}

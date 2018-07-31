@@ -4,7 +4,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
-	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -17,7 +16,7 @@ const (
 // blockFetcher is responsible for accumulating block announcements from various peers
 // and scheduling them for retrieval.
 type blockFetcher struct {
-	chain *protocol.Chain
+	chain Chain
 	peers *peerSet
 
 	newBlockCh chan *blockMsg
@@ -26,7 +25,7 @@ type blockFetcher struct {
 }
 
 //NewBlockFetcher creates a block fetcher to retrieve blocks of the new mined.
-func newBlockFetcher(chain *protocol.Chain, peers *peerSet) *blockFetcher {
+func newBlockFetcher(chain Chain, peers *peerSet) *blockFetcher {
 	f := &blockFetcher{
 		chain:      chain,
 		peers:      peers,

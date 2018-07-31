@@ -101,9 +101,9 @@ func (a *API) listPeers() Response {
 
 // disconnect peer
 func (a *API) disconnectPeer(ctx context.Context, ins struct {
-	PeerId string `json:"peerId"`
+	PeerID string `json:"peer_id"`
 }) Response {
-	if err := a.disconnectPeerById(ins.PeerId); err != nil {
+	if err := a.disconnectPeerById(ins.PeerID); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
