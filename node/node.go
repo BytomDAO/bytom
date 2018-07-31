@@ -230,7 +230,8 @@ func (n *Node) initAndstartApiServer() {
 
 func (n *Node) OnStart() error {
 	if n.miningEnable {
-		if _, err := n.wallet.AccountMgr.GetMiningAddress(); err != nil {
+		_, err := n.wallet.AccountMgr.GetMiningAddress()
+		if err != nil {
 			n.miningEnable = false
 			log.Error(err)
 		} else {
