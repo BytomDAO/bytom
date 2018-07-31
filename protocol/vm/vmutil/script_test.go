@@ -1,12 +1,12 @@
 package vmutil
 
 import (
-	"encoding/hex"
 	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/bytom/protocol/vm"
+	"github.com/bytom/testutil"
 )
 
 // TestIsUnspendable ensures the IsUnspendable function returns the expected
@@ -41,14 +41,10 @@ func TestIsUnspendable(t *testing.T) {
 	}
 }
 
-// Programs that run without error.
-func TestProgramOKSm2(t *testing.T) {
-	doOKNotOKSm2(t, true)
-}
-
 // Programs that return an ErrFalseVMResult.
-func TestProgramNotOKSm2(t *testing.T) {
+func TestProgramSm2(t *testing.T) {
 	doOKNotOKSm2(t, false)
+	doOKNotOKSm2(t, true)
 }
 
 func doOKNotOKSm2(t *testing.T, expectOK bool) {
@@ -60,12 +56,12 @@ func doOKNotOKSm2(t *testing.T, expectOK bool) {
 		wantErr     error
 	}{
 		{
-			prog: tP2PKHSigSm2Program(decodeString("21b045d0d3fbf8a095a19b3e8c52dc909ca62f32")), // bx  ripemd160 0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020
+			prog: tP2PKHSigSm2Program(testutil.MustDecode("21b045d0d3fbf8a095a19b3e8c52dc909ca62f32")), // bx  ripemd160 0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020
 			args: [][]byte{
-				decodeString("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
-				decodeString("01" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				testutil.MustDecode("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				testutil.MustDecode("01" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
 			},
-			txSigHash:   decodeString("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"), // msg
+			txSigHash:   testutil.MustDecode("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"), // msg
 			wantGasLeft: 98590,
 		},
 	}
@@ -86,12 +82,6 @@ func doOKNotOKSm2(t *testing.T, expectOK bool) {
 			t.Errorf("GasLeft %d: content mismatch: have %v, want %v", i, gasLeft, c.wantGasLeft)
 		}
 	}
-}
-
-func decodeString(s string) []byte {
-	data, _ := hex.DecodeString(s)
-
-	return data
 }
 
 func tP2PKHSigSm2Program(pubkeyHash []byte) []byte {

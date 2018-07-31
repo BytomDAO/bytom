@@ -159,8 +159,7 @@ func opSm3(vm *virtualMachine) error {
 }
 
 func opCheckSigSm2(vm *virtualMachine) error {
-	err := vm.applyCost(1024)
-	if err != nil {
+	if err := vm.applyCost(1024); err != nil {
 		return err
 	}
 
@@ -195,8 +194,7 @@ func opCheckMultiSigSm2(vm *virtualMachine) error {
 	if numPubkeys < 0 || !ok {
 		return ErrBadValue
 	}
-	err = vm.applyCost(pubCost)
-	if err != nil {
+	if err = vm.applyCost(pubCost); err != nil {
 		return err
 	}
 	numSigs, err := vm.popInt64(true)
@@ -229,6 +227,9 @@ func opCheckMultiSigSm2(vm *virtualMachine) error {
 		sig, err := vm.pop(true)
 		if err != nil {
 			return err
+		}
+		if len(sig) != 64 {
+			return ErrBadValue
 		}
 		sigs = append(sigs, sig)
 	}

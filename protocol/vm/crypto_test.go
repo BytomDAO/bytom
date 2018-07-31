@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"encoding/hex"
 	"testing"
 
 	"github.com/bytom/testutil"
@@ -86,61 +87,67 @@ func TestCheckSig(t *testing.T) {
 
 func TestCheckSigSm2(t *testing.T) {
 	cases := []struct {
-		prog    string
+		srcProg string
+		desProg string
 		ok, err bool
 	}{
 		{
 			// This one's OK
 			"0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 CHECKSIGSM2",
+			"40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa20f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020b1",
 			true, false,
 		},
 		{
 			// This one has a wrong-length publicKey
 			"0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350 CHECKSIGSM2",
+			"40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa20f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640200109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350b1",
 			false, false,
 		},
 		{
 			// This one has a wrong-length hash
 			"0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d286 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 CHECKSIGSM2",
+			"40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa1ff0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d286210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020b1",
 			false, false,
 		},
 		{
 			// This one has a wrong-length signature
 			"0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 CHECKSIGSM2",
+			"3ff5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc120f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020b1",
 			false, false,
 		},
 		{
 			// This one's OK.
 			"0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 1 1 CHECKMULTISIGSM2",
+			"40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa20f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350205151b2",
 			true, false,
 		},
 		{
 			// This one has a wrong-length publicKey
 			"0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350 1 1 CHECKMULTISIGSM2",
+			"40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa20f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640200109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f3505151b2",
 			false, false,
 		},
 		{
 			// This one has a wrong-length hash
 			"0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d286 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 1 1 CHECKMULTISIGSM2",
+			"40f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa1ff0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d286210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350205151b2",
 			false, true,
 		},
 		{
 			// This one has a wrong-length signature
 			"0xf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1 0xf0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640 0x0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020 1 1 CHECKMULTISIGSM2",
+			"3ff5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc120f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640210109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f350205151b2",
 			false, false,
 		},
 	}
 
 	for i, c := range cases {
-		prog, err := Assemble(c.prog)
-		if err != nil {
-			t.Fatalf("case %d: %s", i, err)
-		}
+		prog, _ := hex.DecodeString(c.desProg)
 		vm := &virtualMachine{
 			program:  prog,
 			runLimit: 50000,
 		}
-		err = vm.run()
+		err := vm.run()
 		if c.err {
 			if err == nil {
 				t.Errorf("case %d: expected error, got ok result", i)
@@ -157,7 +164,12 @@ func TestCheckSigSm2(t *testing.T) {
 
 func TestCryptoOps(t *testing.T) {
 	OP_SM3 := Op(0xb0)
+	OP_CHECKSIGSM2 := Op(0xb1)
+	OP_CHECKMULTISIGSM2 := Op(0xb2)
+
 	ops[OP_SM3] = opInfo{OP_SM3, "SM3", opSm3}
+	ops[OP_CHECKSIGSM2] = opInfo{OP_CHECKSIGSM2, "CHECKSIGSM2", opCheckSigSm2}
+	ops[OP_CHECKMULTISIGSM2] = opInfo{OP_CHECKMULTISIGSM2, "CHECKMULTISIGSM2", opCheckMultiSigSm2}
 
 	type testStruct struct {
 		op      Op
@@ -589,7 +601,7 @@ func TestCryptoOps(t *testing.T) {
 		startVM: &virtualMachine{
 			runLimit: 50000,
 			dataStack: [][]byte{
-				mustDecodeHex("baf5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("5fa03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
 				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
 				mustDecodeHex("0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
 				{1},
@@ -597,7 +609,7 @@ func TestCryptoOps(t *testing.T) {
 			},
 		},
 		wantVM: &virtualMachine{
-			deferredCost: -164,
+			deferredCost: -163,
 			runLimit:     48976,
 			dataStack:    [][]byte{{}},
 		},

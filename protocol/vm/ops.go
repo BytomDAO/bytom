@@ -202,7 +202,7 @@ const (
 	OP_CHECKMULTISIG Op = 0xad
 	OP_TXSIGHASH     Op = 0xae
 
-	// support gmsm
+	// // support gmsm
 	OP_SM3              Op = 0xb0
 	OP_CHECKSIGSM2      Op = 0xb1
 	OP_CHECKMULTISIGSM2 Op = 0xb2
