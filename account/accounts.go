@@ -299,7 +299,7 @@ func (m *Manager) GetMiningAddress() (string, error) {
 	return cp.Address, nil
 }
 
-func (m *Manager) GetProgramByAddress(address string) ([]byte, error) {
+func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 	addr, err := common.DecodeAddress(address, &consensus.ActiveNetParams)
 	if err != nil {
 		return nil, err
@@ -323,7 +323,7 @@ func (m *Manager) GetProgramByAddress(address string) ([]byte, error) {
 
 // SetMiningAddress will set the mining address
 func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
-	program, err := m.GetProgramByAddress(miningAddress)
+	program, err := m.getProgramByAddress(miningAddress)
 	if err != nil {
 		return "", err
 	}
@@ -355,7 +355,7 @@ func (m *Manager) GetContractIndex(accountID string) uint64 {
 
 // GetLocalCtrlProgramByAddress return CtrlProgram by given address
 func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, error) {
-	program, err := m.GetProgramByAddress(address)
+	program, err := m.getProgramByAddress(address)
 	if err != nil {
 		return nil, err
 	}
