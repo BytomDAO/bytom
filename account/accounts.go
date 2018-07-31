@@ -299,11 +299,10 @@ func (m *Manager) GetMiningAddress() (string, error) {
 	return cp.Address, nil
 }
 
-// SetMiningAddress will set the mining address
-func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
-	addr, err := common.DecodeAddress(miningAddress, &consensus.ActiveNetParams)
+func (m *Manager) GetProgramByAddress(address string) ([]byte, error) {
+	addr, err := common.DecodeAddress(address, &consensus.ActiveNetParams)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	redeemContract := addr.ScriptAddress()
@@ -314,16 +313,25 @@ func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
 	case *common.AddressWitnessScriptHash:
 		program, err = vmutil.P2WSHProgram(redeemContract)
 	default:
-		return "", ErrInvalidAddress
+		return nil, ErrInvalidAddress
 	}
+	if err != nil {
+		return nil, err
+	}
+	return program, nil
+}
+
+// SetMiningAddress will set the mining address
+func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
+	program, err := m.GetProgramByAddress(miningAddress)
 	if err != nil {
 		return "", err
 	}
+
 	cp := &CtrlProgram{
 		Address: miningAddress,
 		ControlProgram: program,
 	}
-
 	rawCP, err := json.Marshal(cp)
 	if err != nil {
 		return "", err
@@ -345,23 +353,9 @@ func (m *Manager) GetContractIndex(accountID string) uint64 {
 	return index
 }
 
-// GetProgramByAddress return CtrlProgram by given address
-func (m *Manager) GetProgramByAddress(address string) (*CtrlProgram, error) {
-	addr, err := common.DecodeAddress(address, &consensus.ActiveNetParams)
-	if err != nil {
-		return nil, err
-	}
-
-	redeemContract := addr.ScriptAddress()
-	program := []byte{}
-	switch addr.(type) {
-	case *common.AddressWitnessPubKeyHash:
-		program, err = vmutil.P2WPKHProgram(redeemContract)
-	case *common.AddressWitnessScriptHash:
-		program, err = vmutil.P2WSHProgram(redeemContract)
-	default:
-		return nil, ErrInvalidAddress
-	}
+// GetLocalCtrlProgramByAddress return CtrlProgram by given address
+func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, error) {
+	program, err := m.GetProgramByAddress(address)
 	if err != nil {
 		return nil, err
 	}
