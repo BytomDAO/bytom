@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/account"
+	"github.com/bytom/wallet"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/consensus"
@@ -96,6 +97,8 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	AccountID   string `json:"account_id"`
 	Detail      bool   `json:"detail"`
 	Unconfirmed bool   `json:"unconfirmed"`
+	PageSize    int    `json:"page_size"`
+	CurrentPage int    `json:"current_page"`
 }) Response {
 	transactions := []*query.AnnotatedTx{}
 	var err error
@@ -127,9 +130,44 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 
 	if filter.Detail == false {
 		txSummary := a.wallet.GetTransactionsSummary(transactions)
-		return NewSuccessResponse(txSummary)
+		summaryPageResult, err := createTxSummaryPageResult(txSummary, filter.PageSize, filter.CurrentPage)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		return NewSuccessResponse(summaryPageResult)
 	}
-	return NewSuccessResponse(transactions)
+	txPageResult, err := createTxPageResult(transactions, filter.PageSize, filter.CurrentPage)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(txPageResult)
+}
+
+type transactionPageResult struct {
+	Transactions interface{} `json:"transactions"`
+	Total        int         `json:"total"`
+}
+
+// Paging the transactions obtained from the query
+func createTxPageResult(txs []*query.AnnotatedTx, pageSize int, currentPage int) (*transactionPageResult, error) {
+	total := len(txs)
+	start, end, err := getPageRange(total, pageSize, currentPage)
+	if err != nil {
+		return nil, err
+	}
+	pageResult := transactionPageResult {txs[start:end], total}
+	return &pageResult, nil
+}
+
+// Paging the transaction summaries obtained from the query
+func createTxSummaryPageResult(txs []wallet.TxSummary, pageSize int, currentPage int) (*transactionPageResult, error) {
+	total := len(txs)
+	start, end, err := getPageRange(total, pageSize, currentPage)
+	if err != nil {
+		return nil, err
+	}
+	pageResult := transactionPageResult {txs[start:end], total}
+	return &pageResult, nil
 }
 
 // POST /get-unconfirmed-transaction
@@ -241,6 +279,8 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	ID            string `json:"id"`
 	Unconfirmed   bool   `json:"unconfirmed"`
 	SmartContract bool   `json:"smart_contract"`
+	PageSize    int    `json:"page_size"`
+	CurrentPage int    `json:"current_page"`
 }) Response {
 	accountUTXOs := a.wallet.GetAccountUtxos(filter.ID, filter.Unconfirmed, filter.SmartContract)
 
@@ -262,8 +302,26 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 			Change:              utxo.Change,
 		}}, UTXOs...)
 	}
+	pageResult, err := createUTXOPageResult(UTXOs, filter.PageSize, filter.CurrentPage)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(pageResult)
+}
 
-	return NewSuccessResponse(UTXOs)
+type utxoPageResult struct {
+	UTXOs []query.AnnotatedUTXO `json:"utxos"`
+	Total        int      `json:"total"`
+}
+
+// Paging the utxos obtained from the query
+func createUTXOPageResult(UTXOs []query.AnnotatedUTXO, pageSize int, currentPage int) (*utxoPageResult, error) {
+	total := len(UTXOs)
+	start, end, err := getPageRange(total, pageSize, currentPage)
+	if err != nil {
+		return nil, err
+	}
+	return &utxoPageResult{UTXOs[start:end], total}, nil
 }
 
 // return gasRate
