@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"encoding/hex"
 	"testing"
 
 	"github.com/bytom/testutil"
@@ -142,7 +141,7 @@ func TestCheckSigSm2(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		prog, _ := hex.DecodeString(c.desProg)
+		prog := testutil.MustDecode(c.desProg)
 		vm := &virtualMachine{
 			program:  prog,
 			runLimit: 50000,
