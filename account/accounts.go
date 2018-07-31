@@ -301,12 +301,30 @@ func (m *Manager) GetMiningAddress() (string, error) {
 
 // SetMiningAddress will set the mining address
 func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
-	program, err := m.GetProgramByAddress(miningAddress)
+	addr, err := common.DecodeAddress(miningAddress, &consensus.ActiveNetParams)
 	if err != nil {
 		return "", err
 	}
 
-	rawCP, err := json.Marshal(program)
+	redeemContract := addr.ScriptAddress()
+	program := []byte{}
+	switch addr.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		program, err = vmutil.P2WPKHProgram(redeemContract)
+	case *common.AddressWitnessScriptHash:
+		program, err = vmutil.P2WSHProgram(redeemContract)
+	default:
+		return "", ErrInvalidAddress
+	}
+	if err != nil {
+		return "", err
+	}
+	cp := &CtrlProgram{
+		Address: miningAddress,
+		ControlProgram: program,
+	}
+
+	rawCP, err := json.Marshal(cp)
 	if err != nil {
 		return "", err
 	}
