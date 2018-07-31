@@ -283,7 +283,7 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	if err == ErrFindAccount {
 		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
 		return vmutil.DefaultCoinbaseProgram()
-	} 
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +296,7 @@ func (m *Manager) GetMiningAddress() (string, error) {
 	if err == ErrFindAccount {
 		log.Warningf("GetMiningAddress: can't find any account in db")
 		return "", err
-	} 
+	}
 	if err != nil {
 		return "", err
 	}
