@@ -140,7 +140,7 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 }
 
 type minigAddressResp struct {
-	MiningAddress string `json:"mining-address"`
+	MiningAddress string `json:"mining_address"`
 }
 
 func (a *API) getMiningAddress(ctx context.Context) Response {
@@ -155,7 +155,7 @@ func (a *API) getMiningAddress(ctx context.Context) Response {
 
 // POST /set-mining-address
 func (a *API) setMiningAddress(ctx context.Context, in struct {
-	MiningAddress string `json:"mining-address"`
+	MiningAddress string `json:"mining_address"`
 }) Response {
 	miningAddress, err := a.wallet.AccountMgr.SetMiningAddress(in.MiningAddress)
 	if err != nil {

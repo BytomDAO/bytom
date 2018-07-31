@@ -245,18 +245,17 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
-// GetCoinbaseControlProgram will return a coinbase script
-func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
+// GetCoinbaseCtrlProgram will return the coinbase CtrlProgram
+func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 	if data := m.db.Get(miningAddressKey); data != nil {
 		cp := &CtrlProgram{}
-		return cp.ControlProgram, json.Unmarshal(data, cp)
+		return cp, json.Unmarshal(data, cp)
 	}
 
 	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
 	defer accountIter.Release()
 	if !accountIter.Next() {
-		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
-		return vmutil.DefaultCoinbaseProgram()
+		return nil, ErrFindAccount
 	}
 
 	account := &Account{}
@@ -275,45 +274,38 @@ func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
 	}
 
 	m.db.Set(miningAddressKey, rawCP)
-	return program.ControlProgram, nil
+	return program, nil
+}
+
+// GetCoinbaseControlProgram will return a coinbase script
+func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
+	cp, err := m.GetCoinbaseCtrlProgram()
+	if err == ErrFindAccount {
+		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
+		return vmutil.DefaultCoinbaseProgram()
+	} 
+	if err != nil {
+		return nil, err
+	}
+	return cp.ControlProgram, nil
 }
 
 // GetMiningAddress will return the mining address
 func (m *Manager) GetMiningAddress() (string, error) {
-	if data := m.db.Get(miningAddressKey); data != nil {
-		cp := &CtrlProgram{}
-		return cp.Address, json.Unmarshal(data, cp)
-	}
-
-	accountIter := m.db.IteratorPrefix([]byte(accountPrefix))
-	defer accountIter.Release()
-	if !accountIter.Next() {
+	cp, err := m.GetCoinbaseCtrlProgram()
+	if err == ErrFindAccount {
 		log.Warningf("GetMiningAddress: can't find any account in db")
-		return "", ErrFindAccount
-	}
-
-	account := &Account{}
-	if err := json.Unmarshal(accountIter.Value(), account); err != nil {
 		return "", err
-	}
-
-	program, err := m.createAddress(account, false)
+	} 
 	if err != nil {
 		return "", err
 	}
-
-	rawCP, err := json.Marshal(program)
-	if err != nil {
-		return "", err
-	}
-
-	m.db.Set(miningAddressKey, rawCP)
-	return program.Address, nil
+	return cp.Address, nil
 }
 
 // SetMiningAddress will set the mining address
-func (m *Manager) SetMiningAddress(miningAddr string) (string, error) {
-	program, err := m.GetProgramByAddress(miningAddr)
+func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
+	program, err := m.GetProgramByAddress(miningAddress)
 	if err != nil {
 		return "", err
 	}
