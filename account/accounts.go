@@ -329,7 +329,7 @@ func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
 	}
 
 	cp := &CtrlProgram{
-		Address: miningAddress,
+		Address:        miningAddress,
 		ControlProgram: program,
 	}
 	rawCP, err := json.Marshal(cp)
