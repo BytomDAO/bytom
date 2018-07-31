@@ -45,7 +45,6 @@ func TestSm3(t *testing.T) {
 	hw.Write(msg)
 	hash := hw.Sum(nil)
 	fmt.Println(hash)
-	fmt.Printf("hash = %d\n", len(hash))
 	fmt.Printf("%s\n", byteToString(hash))
 	hash1 := Sm3Sum(msg)
 	fmt.Println(hash1)
