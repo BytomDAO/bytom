@@ -41,13 +41,7 @@ func TestIsUnspendable(t *testing.T) {
 	}
 }
 
-// Programs that return an ErrFalseVMResult.
 func TestProgramSm2(t *testing.T) {
-	doOKNotOKSm2(t, false)
-	doOKNotOKSm2(t, true)
-}
-
-func doOKNotOKSm2(t *testing.T, expectOK bool) {
 	cases := []struct {
 		prog        []byte
 		args        [][]byte
