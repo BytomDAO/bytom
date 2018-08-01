@@ -156,6 +156,38 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 	return NewSuccessResponse(resp)
 }
 
+type GetCoinbaseArbitraryResp struct {
+	BlockHash   *bc.Hash `json:"hash"`
+	BlockHeight uint64   `json:"height"`
+	Arbitrary string   `json:"arbitrary"`
+}
+
+func (a *API) getCoinbaseArbitrary(ins BlockReq) Response {
+	var err error
+	block := &types.Block{}
+	if len(ins.BlockHash) == 32 {
+		b32 := [32]byte{}
+		copy(b32[:], ins.BlockHash)
+		hash := bc.NewHash(b32)
+		block, err = a.chain.GetBlockByHash(&hash)
+	} else {
+		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
+	}
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	blockHash := block.Hash()
+	ab := block.Transactions[0].TxData.Inputs[0].TypedInput.(*types.CoinbaseInput).Arbitrary
+	abStr := string(ab[:])
+	resp := &GetCoinbaseArbitraryResp{
+		BlockHash:                   &blockHash,
+		BlockHeight:                 block.Height,
+		Arbitrary: abStr,
+	}
+	return NewSuccessResponse(resp)
+}
+
 // GetDifficultyResp is resp struct for getDifficulty API
 type GetDifficultyResp struct {
 	BlockHash   *bc.Hash `json:"hash"`
