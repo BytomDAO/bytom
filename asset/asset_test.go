@@ -142,7 +142,7 @@ func TestListAssets(t *testing.T) {
 
 func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
 	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool()
+	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		return nil, err

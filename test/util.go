@@ -25,13 +25,13 @@ const (
 
 // MockTxPool mock transaction pool
 func MockTxPool() *protocol.TxPool {
-	return protocol.NewTxPool()
+	return protocol.NewTxPool(nil)
 }
 
 // MockChain mock chain with genesis block
 func MockChain(testDB dbm.DB) (*protocol.Chain, *leveldb.Store, *protocol.TxPool, error) {
 	store := leveldb.NewStore(testDB)
-	txPool := MockTxPool()
+	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	return chain, store, txPool, err
 }
