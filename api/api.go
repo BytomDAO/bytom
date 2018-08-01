@@ -262,6 +262,9 @@ func (a *API) buildHandler() {
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
 	m.Handle("/get-difficulty", jsonHandler(a.getDifficulty))
 	m.Handle("/get-hash-rate", jsonHandler(a.getHashRate))
+	
+	m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
+	m.Handle("/set-coinbase-arbitrary", jsonHandler(a.setCoinbaseArbitrary))
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/set-mining", jsonHandler(a.setMining))

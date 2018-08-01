@@ -1,11 +1,13 @@
 package api
 
 import (
+	"encoding/hex"
 	"math/big"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus/difficulty"
 	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/mining"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -36,8 +38,9 @@ type BlockTx struct {
 
 // BlockReq is used to handle getBlock req
 type BlockReq struct {
-	BlockHeight uint64             `json:"block_height"`
-	BlockHash   chainjson.HexBytes `json:"block_hash"`
+	BlockHeight       uint64             `json:"block_height"`
+	BlockHash         chainjson.HexBytes `json:"block_hash"`
+	CoinbaseArbitrary string             `json:"coinbase_arbitrary"`
 }
 
 // GetBlockResp is the resp for getBlock api
@@ -56,18 +59,9 @@ type GetBlockResp struct {
 	Transactions           []*BlockTx `json:"transactions"`
 }
 
-// return block by hash
+// return block by hash/height
 func (a *API) getBlock(ins BlockReq) Response {
-	var err error
-	block := &types.Block{}
-	if len(ins.BlockHash) == 32 {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	}
+	block, err := a.getBlockHelper(ins, true)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -135,16 +129,7 @@ type GetBlockHeaderResp struct {
 }
 
 func (a *API) getBlockHeader(ins BlockReq) Response {
-	var err error
-	block := &types.Block{}
-	if len(ins.BlockHash) == 32 {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	}
+	block, err := a.getBlockHelper(ins, true)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -152,6 +137,51 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 	resp := &GetBlockHeaderResp{
 		BlockHeader: &block.BlockHeader,
 		Reward:      block.Transactions[0].Outputs[0].Amount,
+	}
+	return NewSuccessResponse(resp)
+}
+
+func (a *API) getBlockHelper(ins BlockReq, includeGenesis bool) (*types.Block, error) {
+	var err error
+	block := &types.Block{}
+	if len(ins.BlockHash) == 32 {
+		b32 := [32]byte{}
+		copy(b32[:], ins.BlockHash)
+		hash := bc.NewHash(b32)
+		block, err = a.chain.GetBlockByHash(&hash)
+	} else if includeGenesis {
+		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
+	} else if ins.BlockHeight > 0 {
+		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
+	} else {
+		hash := a.chain.BestBlockHash()
+		block, err = a.chain.GetBlockByHash(hash)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return block, err
+}
+
+type GetCoinbaseArbitraryResp struct {
+	BlockHash         *bc.Hash `json:"hash"`
+	BlockHeight       uint64   `json:"height"`
+	CoinbaseArbitrary string   `json:"coinbase_arbitrary"`
+}
+
+func (a *API) getCoinbaseArbitrary(ins BlockReq) Response {
+	block, err := a.getBlockHelper(ins, true)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	blockHash := block.Hash()
+	ab := block.Transactions[0].TxData.Inputs[0].TypedInput.(*types.CoinbaseInput).Arbitrary
+	abHexStr := hex.EncodeToString(ab)
+	resp := &GetCoinbaseArbitraryResp{
+		BlockHash:         &blockHash,
+		BlockHeight:       block.Height,
+		CoinbaseArbitrary: abHexStr,
 	}
 	return NewSuccessResponse(resp)
 }
@@ -164,22 +194,8 @@ type GetDifficultyResp struct {
 	Difficulty  string   `json:"difficulty"`
 }
 
-func (a *API) getDifficulty(ins *BlockReq) Response {
-	var err error
-	block := &types.Block{}
-
-	if len(ins.BlockHash) == 32 && ins.BlockHash != nil {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else if ins.BlockHeight > 0 {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	} else {
-		hash := a.chain.BestBlockHash()
-		block, err = a.chain.GetBlockByHash(hash)
-	}
-
+func (a *API) getDifficulty(ins BlockReq) Response {
+	block, err := a.getBlockHelper(ins, false)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -202,21 +218,7 @@ type getHashRateResp struct {
 }
 
 func (a *API) getHashRate(ins BlockReq) Response {
-	var err error
-	block := &types.Block{}
-
-	if len(ins.BlockHash) == 32 && ins.BlockHash != nil {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else if ins.BlockHeight > 0 {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	} else {
-		hash := a.chain.BestBlockHash()
-		block, err = a.chain.GetBlockByHash(hash)
-	}
-
+	block, err := a.getBlockHelper(ins, false)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -235,6 +237,24 @@ func (a *API) getHashRate(ins BlockReq) Response {
 		BlockHash:   &blockHash,
 		BlockHeight: block.Height,
 		HashRate:    hashRate.Uint64(),
+	}
+	return NewSuccessResponse(resp)
+}
+
+type SetCoinbaseArbitraryResp struct {
+	CoinbaseArbitrary string `json:"coinbase_arbitrary"`
+}
+
+func (a *API) setCoinbaseArbitrary(ins BlockReq) Response {
+	ab, err := hex.DecodeString(ins.CoinbaseArbitrary)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	mining.CoinbaseArbitrary = ab
+	abHexStr := hex.EncodeToString(mining.CoinbaseArbitrary)
+	resp := &SetCoinbaseArbitraryResp{
+		CoinbaseArbitrary: abHexStr,
 	}
 	return NewSuccessResponse(resp)
 }
