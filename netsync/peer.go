@@ -17,7 +17,6 @@ import (
 const (
 	maxKnownTxs         = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 	maxKnownBlocks      = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
-	maxKnownStatus      = 1024  // Maximum status hashes to keep in the known list
 	defaultBanThreshold = uint64(100)
 )
 
@@ -52,7 +51,6 @@ type peer struct {
 	banScore    trust.DynamicBanScore
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
-	knownStatus *set.Set // Set of status hashes known to be known by this peer
 }
 
 func newPeer(height uint64, hash *bc.Hash, basePeer BasePeer) *peer {
@@ -63,7 +61,6 @@ func newPeer(height uint64, hash *bc.Hash, basePeer BasePeer) *peer {
 		hash:        hash,
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
-		knownStatus: set.New(),
 	}
 }
 
@@ -110,16 +107,6 @@ func (p *peer) getPeerInfo() *PeerInfo {
 		RemoteAddr: p.Addr().String(),
 		Height:     p.height,
 	}
-}
-
-func (p *peer) markStatus(hash *bc.Hash) {
-	p.mtx.Lock()
-	defer p.mtx.Unlock()
-
-	for p.knownStatus.Size() >= maxKnownStatus {
-		p.knownStatus.Pop()
-	}
-	p.knownStatus.Add(hash.String())
 }
 
 func (p *peer) markBlock(hash *bc.Hash) {
@@ -287,14 +274,11 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 func (ps *peerSet) broadcastNewStatus(bestBlock, genesisBlock *types.Block) error {
 	genesisHash := genesisBlock.Hash()
 	msg := NewStatusResponseMessage(&bestBlock.BlockHeader, &genesisHash)
-	hash := bestBlock.Hash()
-	peers := ps.peersWithoutStatus(&hash)
-	for _, peer := range peers {
+	for _, peer := range ps.peers {
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			ps.removePeer(peer.ID())
 			continue
 		}
-		peer.markStatus(&hash)
 	}
 	return nil
 }
@@ -349,19 +333,6 @@ func (ps *peerSet) peersWithoutBlock(hash *bc.Hash) []*peer {
 	peers := []*peer{}
 	for _, peer := range ps.peers {
 		if !peer.knownBlocks.Has(hash.String()) {
-			peers = append(peers, peer)
-		}
-	}
-	return peers
-}
-
-func (ps *peerSet) peersWithoutStatus(hash *bc.Hash) []*peer {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
-
-	peers := []*peer{}
-	for _, peer := range ps.peers {
-		if !peer.knownStatus.Has(hash.String()) {
 			peers = append(peers, peer)
 		}
 	}
