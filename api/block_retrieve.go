@@ -2,6 +2,7 @@ package api
 
 import (
 	"math/big"
+	"encoding/hex"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus/difficulty"
@@ -181,20 +182,25 @@ func (a *API) getCoinbaseArbitrary(ins BlockReq) Response {
 
 	blockHash := block.Hash()
 	ab := block.Transactions[0].TxData.Inputs[0].TypedInput.(*types.CoinbaseInput).Arbitrary
-	abStr := string(ab[:])
+	abHexStr := hex.EncodeToString(ab)
 	resp := &CoinbaseArbitraryResp{
 		BlockHash:                   &blockHash,
 		BlockHeight:                 block.Height,
-		CoinbaseArbitrary: abStr,
+		CoinbaseArbitrary: 	abHexStr,
 	}
 	return NewSuccessResponse(resp)
 }
 
 func (a *API) setCoinbaseArbitrary(ins BlockReq) Response {
-	mining.CoinbaseArbitrary = ins.CoinbaseArbitrary
+	ab, err := hex.DecodeString(ins.CoinbaseArbitrary)
+	if err != nil {
+		return NewErrorResponse(err)		
+	}
 
+	mining.CoinbaseArbitrary = ab
+	abHexStr := hex.EncodeToString(mining.CoinbaseArbitrary)
 	resp := &CoinbaseArbitraryResp{
-		CoinbaseArbitrary: mining.CoinbaseArbitrary,
+		CoinbaseArbitrary: abHexStr,
 	}
 	return NewSuccessResponse(resp)
 }
