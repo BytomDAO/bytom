@@ -23,6 +23,8 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+var CoinbaseArbitrary string
+
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
