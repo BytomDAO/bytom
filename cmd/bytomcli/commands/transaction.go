@@ -17,7 +17,7 @@ import (
 )
 
 func init() {
-	buildTransactionCmd.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend', 'address', 'retire', 'program', 'unlock'")
+	buildTransactionCmd.PersistentFlags().StringVarP(&buildType, "type", "t", "", "transaction type, valid types: 'issue', 'spend', 'address', 'retire', 'unlock'")
 	buildTransactionCmd.PersistentFlags().StringVarP(&receiverProgram, "receiver", "r", "", "program of receiver when type is spend")
 	buildTransactionCmd.PersistentFlags().StringVarP(&address, "address", "a", "", "address of receiver when type is address")
 	buildTransactionCmd.PersistentFlags().StringVarP(&program, "program", "p", "", "program of receiver when type is program")
@@ -73,14 +73,14 @@ var buildSpendReqFmt = `
 	{"actions": [
 		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
 		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
-		{"type": "control_receiver", "asset_id": "%s", "amount": %s, "receiver":{"control_program": "%s"}}
+		{"type": "control_program", "asset_id": "%s", "amount": %s, "control_program": "%s"}
 	]}`
 
 var buildSpendReqFmtByAlias = `
 	{"actions": [
 		{"type": "spend_account", "asset_alias": "BTM", "amount":%s, "account_alias": "%s"},
 		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
-		{"type": "control_receiver", "asset_alias": "%s", "amount": %s, "receiver":{"control_program": "%s"}}
+		{"type": "control_program", "asset_alias": "%s", "amount": %s, "control_program": "%s"}
 	]}`
 
 var buildRetireReqFmt = `
@@ -109,20 +109,6 @@ var buildControlAddressReqFmtByAlias = `
 		{"type": "spend_account", "asset_alias": "BTM", "amount":%s, "account_alias": "%s"},
 		{"type": "spend_account", "asset_alias": "%s","amount": %s, "account_alias": "%s"},
 		{"type": "control_address", "asset_alias": "%s", "amount": %s,"address": "%s"}
-	]}`
-
-var buildControlProgramReqFmt = `
-	{"actions": [
-		{"type": "spend_account", "asset_id": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "amount":%s, "account_id": "%s"},
-		{"type": "spend_account", "asset_id": "%s","amount": %s,"account_id": "%s"},
-		{"type": "control_program", "asset_id": "%s", "amount": %s, "control_program": "%s"}
-	]}`
-
-var buildControlProgramReqFmtByAlias = `
-	{"actions": [
-		{"type": "spend_account", "asset_alias": "btm", "amount":%s, "account_alias": "%s"},
-		{"type": "spend_account", "asset_alias": "%s","amount": %s,"account_alias": "%s"},
-		{"type": "control_program", "asset_alias": "%s", "amount": %s, "control_program": "%s"}
 	]}`
 
 var buildTransactionCmd = &cobra.Command{
@@ -165,12 +151,6 @@ var buildTransactionCmd = &cobra.Command{
 				break
 			}
 			buildReqStr = fmt.Sprintf(buildControlAddressReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, address)
-		case "program":
-			if alias {
-				buildReqStr = fmt.Sprintf(buildControlProgramReqFmtByAlias, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, program)
-				break
-			}
-			buildReqStr = fmt.Sprintf(buildControlProgramReqFmt, btmGas, accountInfo, assetInfo, amount, accountInfo, assetInfo, amount, program)
 		case "unlock":
 			var err error
 			usage := "Usage:\n  bytomcli build-transaction <accountID|alias> <assetID|alias> <amount> <outputID> -c <contractName>"
