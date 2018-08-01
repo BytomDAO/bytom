@@ -5,23 +5,23 @@ import (
 )
 
 var (
-	errInvalidPageSize = errors.New("invalid page size")
-	errInvalidCurrentPage = errors.New("invalid current page")
+	errInvalidFromPosition = errors.New("invalid from position")
+	errInvalidCountNum = errors.New("invalid count num")
 )
 
 // Get the start and end of the page.
-func getPageRange(total int, pageSize int, currentPage int) (int, int, error) {
-	if pageSize == 0 && currentPage == 0 {
+func getPageRange(total int, from int, count int) (int, int, error) {
+	if from == 0 && count == 0 {
 		return 0, total, nil
 	}
-	if pageSize <= 0 {
-		return 0, 0, errInvalidPageSize
+	if from < 0 {
+		return 0, 0, errInvalidFromPosition
 	}
-	if currentPage <= 0 {
-		return 0, 0, errInvalidCurrentPage
+	if count <= 0 {
+		return 0, 0, errInvalidCountNum
 	}
-	start := pageSize * (currentPage - 1)
-	end := start + pageSize
+	start := from
+	end := from + count
 	if start > total {start = total}
 	if end > total {end = total}
 	return start, end, nil

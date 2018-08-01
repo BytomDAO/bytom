@@ -97,8 +97,8 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	AccountID   string `json:"account_id"`
 	Detail      bool   `json:"detail"`
 	Unconfirmed bool   `json:"unconfirmed"`
-	PageSize    int    `json:"page_size"`
-	CurrentPage int    `json:"current_page"`
+	From        int    `json:"from"`
+	Count       int    `json:"count"`
 }) Response {
 	transactions := []*query.AnnotatedTx{}
 	var err error
@@ -130,44 +130,37 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 
 	if filter.Detail == false {
 		txSummary := a.wallet.GetTransactionsSummary(transactions)
-		summaryPageResult, err := createTxSummaryPageResult(txSummary, filter.PageSize, filter.CurrentPage)
+		summaryPageResult, err := createTxSummaryPageResult(txSummary, filter.From, filter.Count)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
 		return NewSuccessResponse(summaryPageResult)
 	}
-	txPageResult, err := createTxPageResult(transactions, filter.PageSize, filter.CurrentPage)
+	txPageResult, err := createTxPageResult(transactions, filter.From, filter.Count)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(txPageResult)
 }
 
-type transactionPageResult struct {
-	Transactions interface{} `json:"transactions"`
-	Total        int         `json:"total"`
-}
-
 // Paging the transactions obtained from the query
-func createTxPageResult(txs []*query.AnnotatedTx, pageSize int, currentPage int) (*transactionPageResult, error) {
+func createTxPageResult(txs []*query.AnnotatedTx, from int, count int) ([]*query.AnnotatedTx, error) {
 	total := len(txs)
-	start, end, err := getPageRange(total, pageSize, currentPage)
+	start, end, err := getPageRange(total, from, count)
 	if err != nil {
 		return nil, err
 	}
-	pageResult := transactionPageResult {txs[start:end], total}
-	return &pageResult, nil
+	return txs[start:end], nil
 }
 
 // Paging the transaction summaries obtained from the query
-func createTxSummaryPageResult(txs []wallet.TxSummary, pageSize int, currentPage int) (*transactionPageResult, error) {
+func createTxSummaryPageResult(txs []wallet.TxSummary, from int, count int) ([]wallet.TxSummary, error) {
 	total := len(txs)
-	start, end, err := getPageRange(total, pageSize, currentPage)
+	start, end, err := getPageRange(total, from, count)
 	if err != nil {
 		return nil, err
 	}
-	pageResult := transactionPageResult {txs[start:end], total}
-	return &pageResult, nil
+	return txs[start:end], nil
 }
 
 // POST /get-unconfirmed-transaction
@@ -279,8 +272,8 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	ID            string `json:"id"`
 	Unconfirmed   bool   `json:"unconfirmed"`
 	SmartContract bool   `json:"smart_contract"`
-	PageSize    int    `json:"page_size"`
-	CurrentPage int    `json:"current_page"`
+	From          int    `json:"from"`
+	Count         int    `json:"count"`
 }) Response {
 	accountUTXOs := a.wallet.GetAccountUtxos(filter.ID, filter.Unconfirmed, filter.SmartContract)
 
@@ -302,26 +295,21 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 			Change:              utxo.Change,
 		}}, UTXOs...)
 	}
-	pageResult, err := createUTXOPageResult(UTXOs, filter.PageSize, filter.CurrentPage)
+	pageResult, err := createUTXOPageResult(UTXOs, filter.From, filter.Count)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(pageResult)
 }
 
-type utxoPageResult struct {
-	UTXOs []query.AnnotatedUTXO `json:"utxos"`
-	Total        int      `json:"total"`
-}
-
 // Paging the utxos obtained from the query
-func createUTXOPageResult(UTXOs []query.AnnotatedUTXO, pageSize int, currentPage int) (*utxoPageResult, error) {
+func createUTXOPageResult(UTXOs []query.AnnotatedUTXO, from int, count int) ([]query.AnnotatedUTXO, error) {
 	total := len(UTXOs)
-	start, end, err := getPageRange(total, pageSize, currentPage)
+	start, end, err := getPageRange(total, from, count)
 	if err != nil {
 		return nil, err
 	}
-	return &utxoPageResult{UTXOs[start:end], total}, nil
+	return UTXOs[start:end], nil
 }
 
 // return gasRate
