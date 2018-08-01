@@ -163,9 +163,9 @@ func (a *API) getBlockHelper(ins BlockReq, includeGenesis bool) (*types.Block, e
 	return block, err
 }
 
-type CoinbaseArbitraryResp struct {
-	BlockHash         *bc.Hash `json:"hash,omitempty"`
-	BlockHeight       uint64   `json:"height,omitempty"`
+type GetCoinbaseArbitraryResp struct {
+	BlockHash         *bc.Hash `json:"hash"`
+	BlockHeight       uint64   `json:"height"`
 	CoinbaseArbitrary string   `json:"coinbase_arbitrary"`
 }
 
@@ -178,7 +178,7 @@ func (a *API) getCoinbaseArbitrary(ins BlockReq) Response {
 	blockHash := block.Hash()
 	ab := block.Transactions[0].TxData.Inputs[0].TypedInput.(*types.CoinbaseInput).Arbitrary
 	abHexStr := hex.EncodeToString(ab)
-	resp := &CoinbaseArbitraryResp{
+	resp := &GetCoinbaseArbitraryResp{
 		BlockHash:         &blockHash,
 		BlockHeight:       block.Height,
 		CoinbaseArbitrary: abHexStr,
@@ -241,6 +241,10 @@ func (a *API) getHashRate(ins BlockReq) Response {
 	return NewSuccessResponse(resp)
 }
 
+type SetCoinbaseArbitraryResp struct {
+	CoinbaseArbitrary string `json:"coinbase_arbitrary"`
+}
+
 func (a *API) setCoinbaseArbitrary(ins BlockReq) Response {
 	ab, err := hex.DecodeString(ins.CoinbaseArbitrary)
 	if err != nil {
@@ -249,7 +253,7 @@ func (a *API) setCoinbaseArbitrary(ins BlockReq) Response {
 
 	mining.CoinbaseArbitrary = ab
 	abHexStr := hex.EncodeToString(mining.CoinbaseArbitrary)
-	resp := &CoinbaseArbitraryResp{
+	resp := &SetCoinbaseArbitraryResp{
 		CoinbaseArbitrary: abHexStr,
 	}
 	return NewSuccessResponse(resp)
