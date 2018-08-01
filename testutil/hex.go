@@ -31,7 +31,7 @@ func Serialize(t *testing.T, wt io.WriterTo) []byte {
 	return b.Bytes()
 }
 
-func MustDecode(str string) []byte {
+func MustDecodeHex(str string) []byte {
 	data, err := hex.DecodeString(str)
 	if err != nil {
 		panic(err)
