@@ -46,8 +46,9 @@ var (
 	ErrFindCtrlProgram = errors.New("fail to find account control program")
 )
 
-func aliasKey(name string) []byte {
-	return append(aliasPrefix, []byte(name)...)
+// ContractKey account control promgram store prefix
+func ContractKey(hash common.Hash) []byte {
+	return append(contractPrefix, hash[:]...)
 }
 
 // Key account store prefix
@@ -55,9 +56,8 @@ func Key(name string) []byte {
 	return append(accountPrefix, []byte(name)...)
 }
 
-// ContractKey account control promgram store prefix
-func ContractKey(hash common.Hash) []byte {
-	return append(contractPrefix, hash[:]...)
+func aliasKey(name string) []byte {
+	return append(aliasPrefix, []byte(name)...)
 }
 
 func contractIndexKey(accountID string) []byte {
@@ -245,6 +245,19 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
+// GetCoinbaseControlProgram will return a coinbase script
+func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
+	cp, err := m.GetCoinbaseCtrlProgram()
+	if err == ErrFindAccount {
+		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
+		return vmutil.DefaultCoinbaseProgram()
+	}
+	if err != nil {
+		return nil, err
+	}
+	return cp.ControlProgram, nil
+}
+
 // GetCoinbaseCtrlProgram will return the coinbase CtrlProgram
 func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 	if data := m.db.Get(miningAddressKey); data != nil {
@@ -277,70 +290,6 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 	return program, nil
 }
 
-// GetCoinbaseControlProgram will return a coinbase script
-func (m *Manager) GetCoinbaseControlProgram() ([]byte, error) {
-	cp, err := m.GetCoinbaseCtrlProgram()
-	if err == ErrFindAccount {
-		log.Warningf("GetCoinbaseControlProgram: can't find any account in db")
-		return vmutil.DefaultCoinbaseProgram()
-	}
-	if err != nil {
-		return nil, err
-	}
-	return cp.ControlProgram, nil
-}
-
-// GetMiningAddress will return the mining address
-func (m *Manager) GetMiningAddress() (string, error) {
-	cp, err := m.GetCoinbaseCtrlProgram()
-	if err != nil {
-		return "", err
-	}
-	return cp.Address, nil
-}
-
-func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
-	addr, err := common.DecodeAddress(address, &consensus.ActiveNetParams)
-	if err != nil {
-		return nil, err
-	}
-
-	redeemContract := addr.ScriptAddress()
-	program := []byte{}
-	switch addr.(type) {
-	case *common.AddressWitnessPubKeyHash:
-		program, err = vmutil.P2WPKHProgram(redeemContract)
-	case *common.AddressWitnessScriptHash:
-		program, err = vmutil.P2WSHProgram(redeemContract)
-	default:
-		return nil, ErrInvalidAddress
-	}
-	if err != nil {
-		return nil, err
-	}
-	return program, nil
-}
-
-// SetMiningAddress will set the mining address
-func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
-	program, err := m.getProgramByAddress(miningAddress)
-	if err != nil {
-		return "", err
-	}
-
-	cp := &CtrlProgram{
-		Address:        miningAddress,
-		ControlProgram: program,
-	}
-	rawCP, err := json.Marshal(cp)
-	if err != nil {
-		return "", err
-	}
-
-	m.db.Set(miningAddressKey, rawCP)
-	return m.GetMiningAddress()
-}
-
 // GetContractIndex return the current index
 func (m *Manager) GetContractIndex(accountID string) uint64 {
 	m.accIndexMu.Lock()
@@ -369,6 +318,15 @@ func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, er
 
 	cp := &CtrlProgram{}
 	return cp, json.Unmarshal(rawProgram, cp)
+}
+
+// GetMiningAddress will return the mining address
+func (m *Manager) GetMiningAddress() (string, error) {
+	cp, err := m.GetCoinbaseCtrlProgram()
+	if err != nil {
+		return "", err
+	}
+	return cp.Address, nil
 }
 
 // IsLocalControlProgram check is the input control program belong to local
@@ -425,6 +383,26 @@ func (m *Manager) ListUnconfirmedUtxo(isSmartContract bool) []*UTXO {
 // RemoveUnconfirmedUtxo remove utxos from the utxoKeeper
 func (m *Manager) RemoveUnconfirmedUtxo(hashes []*bc.Hash) {
 	m.utxoKeeper.RemoveUnconfirmedUtxo(hashes)
+}
+
+// SetMiningAddress will set the mining address
+func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
+	program, err := m.getProgramByAddress(miningAddress)
+	if err != nil {
+		return "", err
+	}
+
+	cp := &CtrlProgram{
+		Address:        miningAddress,
+		ControlProgram: program,
+	}
+	rawCP, err := json.Marshal(cp)
+	if err != nil {
+		return "", err
+	}
+
+	m.db.Set(miningAddressKey, rawCP)
+	return m.GetMiningAddress()
 }
 
 // CreateAddress generate an address for the select account
@@ -518,6 +496,28 @@ func (m *Manager) getNextContractIndex(accountID string) uint64 {
 	}
 	m.db.Set(contractIndexKey(accountID), common.Unit64ToBytes(nextIndex))
 	return nextIndex
+}
+
+func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
+	addr, err := common.DecodeAddress(address, &consensus.ActiveNetParams)
+	if err != nil {
+		return nil, err
+	}
+
+	redeemContract := addr.ScriptAddress()
+	program := []byte{}
+	switch addr.(type) {
+	case *common.AddressWitnessPubKeyHash:
+		program, err = vmutil.P2WPKHProgram(redeemContract)
+	case *common.AddressWitnessScriptHash:
+		program, err = vmutil.P2WSHProgram(redeemContract)
+	default:
+		return nil, ErrInvalidAddress
+	}
+	if err != nil {
+		return nil, err
+	}
+	return program, nil
 }
 
 func (m *Manager) insertControlPrograms(progs ...*CtrlProgram) error {
