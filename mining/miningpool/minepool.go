@@ -86,9 +86,6 @@ func (m *MiningPool) generateBlock() {
 
 // GetWork will return a block header for p2p mining
 func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
-	if _, err := m.accountManager.GetMiningAddress(); err != nil {
-		return nil, err
-	}
 	if m.block != nil {
 		m.mutex.RLock()
 		defer m.mutex.RUnlock()
