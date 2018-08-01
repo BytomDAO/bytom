@@ -78,6 +78,19 @@ func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
 	return builder.Build()
 }
 
+// P2PKHSigSm2Program generates the script for control with pubkey hash
+func P2PKHSigSm2Program(pubkeyHash []byte) ([]byte, error) {
+	builder := NewBuilder()
+	builder.AddOp(vm.OP_DUP)
+	builder.AddOp(vm.OP_HASH160)
+	builder.AddData(pubkeyHash)
+	builder.AddOp(vm.OP_EQUALVERIFY)
+	builder.AddOp(vm.OP_TXSIGHASH)
+	builder.AddOp(vm.OP_SWAP)
+	builder.AddOp(vm.OP_CHECKSIGSM2)
+	return builder.Build()
+}
+
 // P2SHProgram generates the script for control with script hash
 func P2SHProgram(scriptHash []byte) ([]byte, error) {
 	builder := NewBuilder()
