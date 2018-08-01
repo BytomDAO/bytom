@@ -62,7 +62,7 @@ func doOKNotOKSm2(t *testing.T, expectOK bool) {
 				testutil.MustDecodeHex("01" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
 			},
 			txSigHash:   testutil.MustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"), // msg
-			wantGasLeft: 99469,
+			wantGasLeft: 98590,
 		},
 	}
 	for i, c := range cases {
