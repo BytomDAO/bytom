@@ -162,7 +162,6 @@ func opCheckSigSm2(vm *virtualMachine) error {
 	if err := vm.applyCost(1024); err != nil {
 		return err
 	}
-
 	publicKey, err := vm.pop(true)
 	if err != nil {
 		return err
