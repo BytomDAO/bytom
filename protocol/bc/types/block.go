@@ -26,6 +26,14 @@ type Block struct {
 	Transactions []*Tx
 }
 
+func (b *Block) CoinbaseAbHexStr() (string, error) {
+	arbitrary, err := b.CoinbaseArbitrary()
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(arbitrary), nil
+}
+
 func (b *Block) CoinbaseArbitrary() ([]byte, error) {
 	for _, tx := range b.Transactions {
 		for _, e := range tx.Tx.Entries {
@@ -36,15 +44,7 @@ func (b *Block) CoinbaseArbitrary() ([]byte, error) {
 			}
 		}
 	}
-    return []byte{}, errors.New("Can't find coinbase tx in block.")
-}
-
-func (b *Block) CoinbaseAbHexStr() (string, error) {
-	arbitrary, err := b.CoinbaseArbitrary()
-	if err != nil {
-		return "", err
-	}
-    return hex.EncodeToString(arbitrary), nil
+	return []byte{}, errors.New("Can't find coinbase tx in block.")
 }
 
 // MarshalText fulfills the json.Marshaler interface. This guarantees that

@@ -69,7 +69,7 @@ func (m *MiningPool) blockUpdater() {
 	}
 }
 
-func (m *MiningPool) RenewBlkTplWithArbitrary(coinbaseAb []byte) (error){
+func (m *MiningPool) RenewBlkTplWithArbitrary(coinbaseAb []byte) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
