@@ -24,7 +24,7 @@ func (a *API) signMessage(ctx context.Context, ins struct {
 	Message  string `json:"message"`
 	Password string `json:"password"`
 }) Response {
-	cp, err := a.wallet.AccountMgr.GetProgramByAddress(ins.Address)
+	cp, err := a.wallet.AccountMgr.GetLocalCtrlProgramByAddress(ins.Address)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
