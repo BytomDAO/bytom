@@ -69,7 +69,7 @@ func (m *MiningPool) blockUpdater() {
 	}
 }
 
-func (m *MiningPool) RenewBlkTplWithArbitrary(coinbaseAb []byte) {
+func (m *MiningPool) RenewBlkTplWithArbitrary(coinbaseAb []byte) (err error){
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	if m.block != nil {
@@ -88,6 +88,7 @@ func (m *MiningPool) RenewBlkTplWithArbitrary(coinbaseAb []byte) {
 	}
 
 	m.block = block
+	return
 }
 
 // generateBlock generates a block template to mine

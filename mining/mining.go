@@ -38,6 +38,10 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 	builder := txbuilder.NewBuilder(time.Now())
 	ab := append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...)
 	ab = append(ab, coinbaseAb...)
+	if len(ab) > consensus.CoinbaseArbitrarySizeLimit {
+		err = validation.ErrCoinbaseArbitraryOversize
+		return
+	}
 	if err = builder.AddInput(types.NewCoinbaseInput(ab), &txbuilder.SigningInstruction{}); err != nil {
 		return
 	}

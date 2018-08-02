@@ -22,7 +22,9 @@ func (a *API) getBlockTemplate(ins GetBlockTemplateReq) Response {
 		if err != nil {
 			return NewErrorResponse(errors.New("Coinbase arbitrary data must be hexadecimal string."))
 		}
-		a.miningPool.RenewBlkTplWithArbitrary(ab)
+		if err := a.miningPool.RenewBlkTplWithArbitrary(ab); err != nil {
+			return NewErrorResponse(err)
+		}
 	case "template":
 	default:
 		return NewErrorResponse(errors.New("getBlockTemplate: Unknow mode."))
