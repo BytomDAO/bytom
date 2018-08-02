@@ -67,7 +67,16 @@ func saveExternalAssetDefinition(b *types.Block, walletDB db.DB) {
 				if isValidJSON(ii.AssetDefinition) {
 					assetID := ii.AssetID()
 					if assetExist := walletDB.Get(asset.ExtAssetKey(&assetID)); assetExist == nil {
-						storeBatch.Set(asset.ExtAssetKey(&assetID), ii.AssetDefinition)
+						ass := &asset.Asset{AssetID: assetID, RawDefinitionByte: ii.AssetDefinition}
+						definitionMap := make(map[string]interface{})
+						if err := json.Unmarshal(ii.AssetDefinition, &definitionMap); err == nil {
+							ass.DefinitionMap = definitionMap
+						}
+						rawAss, err := json.Marshal(ass)
+						if err != nil {
+							continue
+						}
+						storeBatch.Set(asset.ExtAssetKey(&assetID), rawAss)
 					}
 				}
 			}
