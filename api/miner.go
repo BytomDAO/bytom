@@ -13,7 +13,7 @@ import (
 // SubmitWorkJSONReq is req struct for submit-work API
 type GetBlockTemplateReq struct {
 	Mode string `json:"mode"`
-	Data	string 	`json:"data"`
+	Data string `json:"data"`
 }
 
 func (a *API) getBlockTemplate(ins GetBlockTemplateReq) Response {
@@ -120,9 +120,9 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 
 // GetWorkJSONResp is resp struct for get-work-json API
 type GetWorkJSONResp struct {
-	BlockHeader *BlockHeaderJSON `json:"block_header"`
-	Seed        *bc.Hash         `json:"seed"`
-	CoinbaseArbitrary string   `json:"coinbase_arbitrary"`
+	BlockHeader       *BlockHeaderJSON `json:"block_header"`
+	Seed              *bc.Hash         `json:"seed"`
+	CoinbaseArbitrary string           `json:"coinbase_arbitrary"`
 }
 
 // GetWorkJSON gets work in json format
@@ -137,11 +137,11 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 		return nil, err
 	}
 
-	abHexStr,err := mining.ExtractCoinbaseArbitrary(block)
+	abHexStr, err := mining.ExtractCoinbaseArbitrary(block)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &GetWorkJSONResp{
 		BlockHeader: &BlockHeaderJSON{
 			Version:           bh.Version,
@@ -152,7 +152,7 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 			Bits:              bh.Bits,
 			BlockCommitment:   &bh.BlockCommitment,
 		},
-		Seed: seed,
+		Seed:              seed,
 		CoinbaseArbitrary: abHexStr,
 	}, nil
 }

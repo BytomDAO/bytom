@@ -37,8 +37,8 @@ type BlockTx struct {
 
 // BlockReq is used to handle getBlock req
 type BlockReq struct {
-	BlockHeight       uint64             `json:"block_height"`
-	BlockHash         chainjson.HexBytes `json:"block_hash"`
+	BlockHeight uint64             `json:"block_height"`
+	BlockHash   chainjson.HexBytes `json:"block_hash"`
 }
 
 // GetBlockResp is the resp for getBlock api
@@ -52,7 +52,7 @@ type GetBlockResp struct {
 	Nonce                  uint64     `json:"nonce"`
 	Bits                   uint64     `json:"bits"`
 	Difficulty             string     `json:"difficulty"`
-	CoinbaseArbitrary 		string   `json:"coinbase_arbitrary"`
+	CoinbaseArbitrary      string     `json:"coinbase_arbitrary"`
 	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
 	TransactionStatusHash  *bc.Hash   `json:"transaction_status_hash"`
 	Transactions           []*BlockTx `json:"transactions"`
@@ -72,7 +72,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
-	abHexStr,err := mining.ExtractCoinbaseArbitrary(block)
+	abHexStr, err := mining.ExtractCoinbaseArbitrary(block)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -90,7 +90,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
 		TransactionStatusHash:  &block.TransactionStatusHash,
 		Transactions:           []*BlockTx{},
-		CoinbaseArbitrary: abHexStr,
+		CoinbaseArbitrary:      abHexStr,
 	}
 
 	for i, orig := range block.Transactions {

@@ -264,7 +264,6 @@ func (a *API) buildHandler() {
 	m.Handle("/get-difficulty", jsonHandler(a.getDifficulty))
 	m.Handle("/get-hash-rate", jsonHandler(a.getHashRate))
 
-
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/set-mining", jsonHandler(a.setMining))
 
