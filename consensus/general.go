@@ -39,10 +39,10 @@ const (
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
 var BTMAssetID = &bc.AssetID{
-	V0: uint64(18446744073709551615),
-	V1: uint64(18446744073709551615),
-	V2: uint64(18446744073709551615),
-	V3: uint64(18446744073709551615),
+	V0: uint64(0xffffffffffffffff),
+	V1: uint64(0xffffffffffffffff),
+	V2: uint64(0xffffffffffffffff),
+	V3: uint64(0xffffffffffffffff),
 }
 
 // InitialSeed is SHA3-256 of Byte[0^32]
