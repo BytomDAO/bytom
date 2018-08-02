@@ -76,16 +76,10 @@ func (m *MiningPool) RenewBlkTplWithArbitrary(coinbaseAb []byte) {
 		abUsing := m.block.CoinbaseArbitrary()
 		abToUse := append([]byte{0x00}, []byte(strconv.FormatUint(m.block.BlockHeader.Height, 10))...)
 		abToUse = append(abToUse, coinbaseAb...)
-
-		log.Info(abUsing)
-		log.Info(abToUse)
 		if bytes.Equal(abUsing, abToUse) {
-			log.Info("equal")
 			return
 		}
 	}
-
-	log.Info("not equal")
 
 	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, coinbaseAb)
 	if err != nil {
