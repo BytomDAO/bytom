@@ -1,7 +1,9 @@
 package miningpool
 
 import (
+	"bytes"
 	"errors"
+	"strconv"
 	"sync"
 	"time"
 
@@ -67,6 +69,33 @@ func (m *MiningPool) blockUpdater() {
 	}
 }
 
+func (m *MiningPool) RenewBlkTplWithArbitrary(coinbaseAb []byte) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	if m.block != nil {
+		abUsing := m.block.CoinbaseArbitrary()
+		abToUse := append([]byte{0x00}, []byte(strconv.FormatUint(m.block.BlockHeader.Height, 10))...)
+		abToUse = append(abToUse, coinbaseAb...)
+
+		log.Info(abUsing)
+		log.Info(abToUse)
+		if bytes.Equal(abUsing, abToUse) {
+			log.Info("equal")
+			return
+		}
+	}
+
+	log.Info("not equal")
+
+	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, coinbaseAb)
+	if err != nil {
+		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
+		return
+	}
+
+	m.block = block
+}
+
 // generateBlock generates a block template to mine
 func (m *MiningPool) generateBlock() {
 	m.mutex.Lock()
@@ -76,7 +105,7 @@ func (m *MiningPool) generateBlock() {
 		return
 	}
 
-	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
+	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, []byte{})
 	if err != nil {
 		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
 		return

@@ -25,6 +25,14 @@ type Block struct {
 	Transactions []*Tx
 }
 
+func (b *Block) CoinbaseArbitrary() []byte {
+    return b.Transactions[0].TxData.Inputs[0].TypedInput.(*CoinbaseInput).Arbitrary
+}
+
+func (b *Block) CoinbaseAbHexStr() string {
+    return hex.EncodeToString(b.CoinbaseArbitrary())
+}
+
 // MarshalText fulfills the json.Marshaler interface. This guarantees that
 // blocks will get deserialized correctly when being parsed from HTTP requests.
 func (b *Block) MarshalText() ([]byte, error) {

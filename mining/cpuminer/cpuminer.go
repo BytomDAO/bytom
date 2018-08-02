@@ -89,7 +89,7 @@ out:
 		default:
 		}
 
-		block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
+		block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, []byte{})
 		if err != nil {
 			log.Errorf("Mining: failed on create NewBlockTemplate: %v", err)
 			continue

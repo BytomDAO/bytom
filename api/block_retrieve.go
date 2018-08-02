@@ -6,7 +6,6 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus/difficulty"
 	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/mining"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -52,7 +51,6 @@ type GetBlockResp struct {
 	Nonce                  uint64     `json:"nonce"`
 	Bits                   uint64     `json:"bits"`
 	Difficulty             string     `json:"difficulty"`
-	CoinbaseArbitrary      string     `json:"coinbase_arbitrary"`
 	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
 	TransactionStatusHash  *bc.Hash   `json:"transaction_status_hash"`
 	Transactions           []*BlockTx `json:"transactions"`
@@ -72,11 +70,6 @@ func (a *API) getBlock(ins BlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
-	abHexStr, err := mining.ExtractCoinbaseArbitrary(block)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
 	resp := &GetBlockResp{
 		Hash:                   &blockHash,
 		Size:                   uint64(len(rawBlock)),
@@ -90,7 +83,6 @@ func (a *API) getBlock(ins BlockReq) Response {
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
 		TransactionStatusHash:  &block.TransactionStatusHash,
 		Transactions:           []*BlockTx{},
-		CoinbaseArbitrary:      abHexStr,
 	}
 
 	for i, orig := range block.Transactions {
