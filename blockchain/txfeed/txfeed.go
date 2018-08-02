@@ -78,7 +78,7 @@ func NewTracker(db dbm.DB, chain *protocol.Chain) *Tracker {
 	return s
 }
 
-func loadTxFeed(db dbm.DB, txFeeds []*TxFeed) ([]*TxFeed, error) {
+func loadTxFeed(db dbm.DB) (txFeeds []*TxFeed, err error) {
 	iter := db.Iterator()
 	defer iter.Release()
 
@@ -174,9 +174,8 @@ func parseTxfeed(db dbm.DB, filters []filter) error {
 }
 
 //Prepare load and parse filters.
-func (t *Tracker) Prepare(ctx context.Context) error {
-	var err error
-	t.TxFeeds, err = loadTxFeed(t.DB, t.TxFeeds)
+func (t *Tracker) Prepare(ctx context.Context) (err error) {
+	t.TxFeeds, err = loadTxFeed(t.DB)
 	return err
 }
 
