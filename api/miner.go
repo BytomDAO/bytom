@@ -141,6 +141,7 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 	if err != nil {
 		return nil, err
 	}
+	
 	return &GetWorkJSONResp{
 		BlockHeader: &BlockHeaderJSON{
 			Version:           bh.Version,

@@ -52,6 +52,7 @@ type GetBlockResp struct {
 	Nonce                  uint64     `json:"nonce"`
 	Bits                   uint64     `json:"bits"`
 	Difficulty             string     `json:"difficulty"`
+	CoinbaseArbitrary 		string   `json:"coinbase_arbitrary"`
 	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
 	TransactionStatusHash  *bc.Hash   `json:"transaction_status_hash"`
 	Transactions           []*BlockTx `json:"transactions"`
@@ -71,6 +72,11 @@ func (a *API) getBlock(ins BlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
+	abHexStr,err := mining.ExtractCoinbaseArbitrary(block)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
 	resp := &GetBlockResp{
 		Hash:                   &blockHash,
 		Size:                   uint64(len(rawBlock)),
@@ -84,6 +90,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
 		TransactionStatusHash:  &block.TransactionStatusHash,
 		Transactions:           []*BlockTx{},
+		CoinbaseArbitrary: abHexStr,
 	}
 
 	for i, orig := range block.Transactions {
@@ -159,31 +166,6 @@ func (a *API) getBlockHelper(ins BlockReq, includeGenesis bool) (*types.Block, e
 		return nil, err
 	}
 	return block, nil
-}
-
-type GetCoinbaseArbitraryResp struct {
-	BlockHash         *bc.Hash `json:"hash"`
-	BlockHeight       uint64   `json:"height"`
-	CoinbaseArbitrary string   `json:"coinbase_arbitrary"`
-}
-
-func (a *API) getCoinbaseArbitrary(ins BlockReq) Response {
-	block, err := a.getBlockHelper(ins, true)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	blockHash := block.Hash()
-	abHexStr,err := mining.ExtractCoinbaseArbitrary(block)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-	resp := &GetCoinbaseArbitraryResp{
-		BlockHash:         &blockHash,
-		BlockHeight:       block.Height,
-		CoinbaseArbitrary: abHexStr,
-	}
-	return NewSuccessResponse(resp)
 }
 
 // GetDifficultyResp is resp struct for getDifficulty API
