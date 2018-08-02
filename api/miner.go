@@ -2,11 +2,31 @@ package api
 
 import (
 	"context"
+	"encoding/hex"
 
 	"github.com/bytom/errors"
+	"github.com/bytom/mining"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
+
+// SubmitWorkJSONReq is req struct for submit-work API
+type GetBlockTemplateReq struct {
+	Mode string `json:"mode"`
+	Data	string 	`json:"data"`
+}
+
+func (a *API) getBlockTemplate(ins GetBlockTemplateReq) Response {
+	switch ins.Mode {
+	case "proposal":
+		_, err := hex.DecodeString(ins.Data)
+		if err != nil {
+			return NewErrorResponse(errors.New("Coinbase arbitrary data must be hexadecimal string."))
+		}
+	default:
+	}
+	return a.getWorkJSON()
+}
 
 // BlockHeaderJSON struct provides support for get work in json format, when it also follows
 // BlockHeader structure
@@ -82,7 +102,7 @@ type GetWorkResp struct {
 
 // GetWork gets work in compressed protobuf format
 func (a *API) GetWork() (*GetWorkResp, error) {
-	bh, err := a.miningPool.GetWork()
+	bh, _, err := a.miningPool.GetWork()
 	if err != nil {
 		return nil, err
 	}
@@ -102,11 +122,12 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 type GetWorkJSONResp struct {
 	BlockHeader *BlockHeaderJSON `json:"block_header"`
 	Seed        *bc.Hash         `json:"seed"`
+	CoinbaseArbitrary string   `json:"coinbase_arbitrary"`
 }
 
 // GetWorkJSON gets work in json format
 func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
-	bh, err := a.miningPool.GetWork()
+	bh, block, err := a.miningPool.GetWork()
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +137,10 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 		return nil, err
 	}
 
+	abHexStr,err := mining.ExtractCoinbaseArbitrary(block)
+	if err != nil {
+		return nil, err
+	}
 	return &GetWorkJSONResp{
 		BlockHeader: &BlockHeaderJSON{
 			Version:           bh.Version,
@@ -127,6 +152,7 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 			BlockCommitment:   &bh.BlockCommitment,
 		},
 		Seed: seed,
+		CoinbaseArbitrary: abHexStr,
 	}, nil
 }
 

@@ -1,10 +1,7 @@
-// Copyright (c) 2014-2016 The btcsuite developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
-
 package mining
 
 import (
+	"encoding/hex"
 	"sort"
 	"strconv"
 	"time"
@@ -24,6 +21,14 @@ import (
 )
 
 var CoinbaseArbitrary []byte
+
+func ExtractCoinbaseArbitrary(block *types.Block) (string, error) {
+	if block == nil {
+		return "", errors.New("ExtractCoinbaseArbitrary: nil block")
+	}
+	ab := block.Transactions[0].TxData.Inputs[0].TypedInput.(*types.CoinbaseInput).Arbitrary
+	return hex.EncodeToString(ab), nil
+}
 
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address

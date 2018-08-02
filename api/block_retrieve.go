@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/hex"
 	"math/big"
 
 	"github.com/bytom/blockchain/query"
@@ -40,7 +39,6 @@ type BlockTx struct {
 type BlockReq struct {
 	BlockHeight       uint64             `json:"block_height"`
 	BlockHash         chainjson.HexBytes `json:"block_hash"`
-	CoinbaseArbitrary string             `json:"coinbase_arbitrary"`
 }
 
 // GetBlockResp is the resp for getBlock api
@@ -160,7 +158,7 @@ func (a *API) getBlockHelper(ins BlockReq, includeGenesis bool) (*types.Block, e
 	if err != nil {
 		return nil, err
 	}
-	return block, err
+	return block, nil
 }
 
 type GetCoinbaseArbitraryResp struct {
@@ -176,8 +174,10 @@ func (a *API) getCoinbaseArbitrary(ins BlockReq) Response {
 	}
 
 	blockHash := block.Hash()
-	ab := block.Transactions[0].TxData.Inputs[0].TypedInput.(*types.CoinbaseInput).Arbitrary
-	abHexStr := hex.EncodeToString(ab)
+	abHexStr,err := mining.ExtractCoinbaseArbitrary(block)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
 	resp := &GetCoinbaseArbitraryResp{
 		BlockHash:         &blockHash,
 		BlockHeight:       block.Height,
@@ -237,24 +237,6 @@ func (a *API) getHashRate(ins BlockReq) Response {
 		BlockHash:   &blockHash,
 		BlockHeight: block.Height,
 		HashRate:    hashRate.Uint64(),
-	}
-	return NewSuccessResponse(resp)
-}
-
-type SetCoinbaseArbitraryResp struct {
-	CoinbaseArbitrary string `json:"coinbase_arbitrary"`
-}
-
-func (a *API) setCoinbaseArbitrary(ins BlockReq) Response {
-	ab, err := hex.DecodeString(ins.CoinbaseArbitrary)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	mining.CoinbaseArbitrary = ab
-	abHexStr := hex.EncodeToString(mining.CoinbaseArbitrary)
-	resp := &SetCoinbaseArbitraryResp{
-		CoinbaseArbitrary: abHexStr,
 	}
 	return NewSuccessResponse(resp)
 }

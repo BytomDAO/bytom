@@ -86,14 +86,14 @@ func (m *MiningPool) generateBlock() {
 }
 
 // GetWork will return a block header for p2p mining
-func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
+func (m *MiningPool) GetWork() (*types.BlockHeader, *types.Block, error) {
 	if m.block != nil {
 		m.mutex.RLock()
 		defer m.mutex.RUnlock()
 		bh := m.block.BlockHeader
-		return &bh, nil
+		return &bh, m.block, nil
 	}
-	return nil, errors.New("no block is ready for mining")
+	return nil, nil, errors.New("no block is ready for mining")
 }
 
 // SubmitWork will try to submit the result to the blockchain

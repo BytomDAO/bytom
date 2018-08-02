@@ -260,11 +260,11 @@ func (a *API) buildHandler() {
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
 	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
+	m.Handle("/get-block-template", jsonHandler(a.getBlockTemplate))
+	m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
 	m.Handle("/get-difficulty", jsonHandler(a.getDifficulty))
 	m.Handle("/get-hash-rate", jsonHandler(a.getHashRate))
-	
-	m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
-	m.Handle("/set-coinbase-arbitrary", jsonHandler(a.setCoinbaseArbitrary))
+
 
 	m.Handle("/is-mining", jsonHandler(a.isMining))
 	m.Handle("/set-mining", jsonHandler(a.setMining))
