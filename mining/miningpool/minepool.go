@@ -69,32 +69,6 @@ func (m *MiningPool) blockUpdater() {
 	}
 }
 
-func (m *MiningPool) RenewBlkTplWithArbitrary(coinbaseAb []byte) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if m.block != nil {
-		abUsing, err := m.block.CoinbaseArbitrary()
-		if err != nil {
-			return err
-		}
-		abToUse := append([]byte{0x00}, []byte(strconv.FormatUint(m.block.BlockHeader.Height, 10))...)
-		abToUse = append(abToUse, coinbaseAb...)
-		if bytes.Equal(abUsing, abToUse) {
-			return nil
-		}
-	}
-
-	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, coinbaseAb)
-	if err != nil {
-		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
-		return err
-	}
-
-	m.block = block
-	return nil
-}
-
 // generateBlock generates a block template to mine
 func (m *MiningPool) generateBlock() {
 	m.mutex.Lock()
@@ -122,6 +96,32 @@ func (m *MiningPool) GetWork() (*types.BlockHeader, *types.Block, error) {
 		return &bh, m.block, nil
 	}
 	return nil, nil, errors.New("no block is ready for mining")
+}
+
+func (m *MiningPool) RenewBlkTplWithArbitrary(coinbaseAb []byte) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if m.block != nil {
+		abUsing, err := m.block.CoinbaseArbitrary()
+		if err != nil {
+			return err
+		}
+		abToUse := append([]byte{0x00}, []byte(strconv.FormatUint(m.block.BlockHeader.Height, 10))...)
+		abToUse = append(abToUse, coinbaseAb...)
+		if bytes.Equal(abUsing, abToUse) {
+			return nil
+		}
+	}
+
+	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, coinbaseAb)
+	if err != nil {
+		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
+		return err
+	}
+
+	m.block = block
+	return nil
 }
 
 // SubmitWork will try to submit the result to the blockchain

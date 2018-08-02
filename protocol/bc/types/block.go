@@ -26,14 +26,6 @@ type Block struct {
 	Transactions []*Tx
 }
 
-func (b *Block) CoinbaseAbHexStr() (string, error) {
-	arbitrary, err := b.CoinbaseArbitrary()
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(arbitrary), nil
-}
-
 func (b *Block) CoinbaseArbitrary() ([]byte, error) {
 	for _, tx := range b.Transactions {
 		for _, e := range tx.Tx.Entries {

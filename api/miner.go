@@ -2,27 +2,23 @@ package api
 
 import (
 	"context"
-	"encoding/hex"
 
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
-// SubmitWorkJSONReq is req struct for submit-work API
+// GetBlockTemplateReq is req struct for get-block-template-work API
 type GetBlockTemplateReq struct {
-	Mode string `json:"mode"`
-	Data string `json:"data"`
+	Mode string             `json:"mode"`
+	Data chainjson.HexBytes `json:"data"`
 }
 
 func (a *API) getBlockTemplate(ins GetBlockTemplateReq) Response {
 	switch ins.Mode {
 	case "proposal":
-		ab, err := hex.DecodeString(ins.Data)
-		if err != nil {
-			return NewErrorResponse(errors.New("Coinbase arbitrary data must be hexadecimal string."))
-		}
-		if err := a.miningPool.RenewBlkTplWithArbitrary(ab); err != nil {
+		if err := a.miningPool.RenewBlkTplWithArbitrary(ins.Data); err != nil {
 			return NewErrorResponse(err)
 		}
 	case "template":
@@ -124,9 +120,9 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 
 // GetWorkJSONResp is resp struct for get-work-json API
 type GetWorkJSONResp struct {
-	BlockHeader       *BlockHeaderJSON `json:"block_header"`
-	Seed              *bc.Hash         `json:"seed"`
-	CoinbaseArbitrary string           `json:"coinbase_arbitrary"`
+	BlockHeader       *BlockHeaderJSON   `json:"block_header"`
+	Seed              *bc.Hash           `json:"seed"`
+	CoinbaseArbitrary chainjson.HexBytes `json:"coinbase_arbitrary"`
 }
 
 // GetWorkJSON gets work in json format
@@ -141,7 +137,7 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 		return nil, err
 	}
 
-	abHexStr, err := block.CoinbaseAbHexStr()
+	arbitrary, err := block.CoinbaseArbitrary()
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +153,7 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 			BlockCommitment:   &bh.BlockCommitment,
 		},
 		Seed:              seed,
-		CoinbaseArbitrary: abHexStr,
+		CoinbaseArbitrary: arbitrary,
 	}, nil
 }
 
