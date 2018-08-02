@@ -69,26 +69,30 @@ func (m *MiningPool) blockUpdater() {
 	}
 }
 
-func (m *MiningPool) RenewBlkTplWithArbitrary(coinbaseAb []byte) (err error){
+func (m *MiningPool) RenewBlkTplWithArbitrary(coinbaseAb []byte) (error){
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+
 	if m.block != nil {
-		abUsing := m.block.CoinbaseArbitrary()
+		abUsing, err := m.block.CoinbaseArbitrary()
+		if err != nil {
+			return err
+		}
 		abToUse := append([]byte{0x00}, []byte(strconv.FormatUint(m.block.BlockHeader.Height, 10))...)
 		abToUse = append(abToUse, coinbaseAb...)
 		if bytes.Equal(abUsing, abToUse) {
-			return
+			return nil
 		}
 	}
 
 	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager, coinbaseAb)
 	if err != nil {
 		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
-		return
+		return err
 	}
 
 	m.block = block
-	return
+	return nil
 }
 
 // generateBlock generates a block template to mine

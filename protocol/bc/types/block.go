@@ -8,6 +8,7 @@ import (
 	"github.com/bytom/encoding/blockchain"
 	"github.com/bytom/encoding/bufpool"
 	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
 )
 
 // serflag variables, start with 1
@@ -25,12 +26,25 @@ type Block struct {
 	Transactions []*Tx
 }
 
-func (b *Block) CoinbaseArbitrary() []byte {
-    return b.Transactions[0].TxData.Inputs[0].TypedInput.(*CoinbaseInput).Arbitrary
+func (b *Block) CoinbaseArbitrary() ([]byte, error) {
+	for _, tx := range b.Transactions {
+		for _, e := range tx.Tx.Entries {
+			switch e := e.(type) {
+			case *bc.Coinbase:
+				return e.Arbitrary, nil
+			default:
+			}
+		}
+	}
+    return []byte{}, errors.New("Can't find coinbase tx in block.")
 }
 
-func (b *Block) CoinbaseAbHexStr() string {
-    return hex.EncodeToString(b.CoinbaseArbitrary())
+func (b *Block) CoinbaseAbHexStr() (string, error) {
+	arbitrary, err := b.CoinbaseArbitrary()
+	if err != nil {
+		return "", err
+	}
+    return hex.EncodeToString(arbitrary), nil
 }
 
 // MarshalText fulfills the json.Marshaler interface. This guarantees that
