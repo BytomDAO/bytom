@@ -13,10 +13,6 @@ matrix:
       env: CI_MODE=functional
     - go: 1.9
       env: CI_MODE=test
-    - go: tip
-      env: CI_MODE=functional
-    - go: tip
-      env: CI_MODE=test
 
 branches:
   only:
