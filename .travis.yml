@@ -7,19 +7,21 @@ sudo: false
 matrix:
   include:
     - go: 1.8.3
+      env: CI_MODE=functional
+    - go: 1.8.3
+      env: CI_MODE=test
     - go: 1.9
-    - go: tip
+      env: CI_MODE=functional
+    - go: 1.9
+      env: CI_MODE=test
   allow_failures:
-    - go: tip
 
 branches:
   only:
     - master
     - dev
 
-script:
-  - CI_MODE=functional make ci
-  - CI_MODE=test make ci
+script: make ci
 
 # dist: trusty
 # language: node_js
