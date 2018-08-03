@@ -17,11 +17,6 @@ matrix:
       env: CI_MODE=functional
     - go: tip
       env: CI_MODE=test
-  allow_failures:
-    - go: tip
-      env: CI_MODE=functional
-    - go: tip
-      env: CI_MODE=test
 
 branches:
   only:
