@@ -5,8 +5,9 @@ sudo: false
 # sudo: required
 
 matrix:
-  - "make test"
-  - "make functional-tests"
+  script:
+    - "make test"
+    - "make functional-tests"
   include:
     - go: 1.8.3
     - go: 1.9
