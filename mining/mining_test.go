@@ -33,7 +33,7 @@ func TestCreateCoinbaseTx(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		coinbaseTx, err := createCoinbaseTx(nil, c.txFee, c.height, []byte{})
+		coinbaseTx, err := createCoinbaseTx(nil, c.txFee, c.height)
 		if err != nil {
 			t.Fatal(err)
 		}
