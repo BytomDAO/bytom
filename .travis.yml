@@ -5,9 +5,6 @@ sudo: false
 # sudo: required
 
 matrix:
-  script:
-    - "make test"
-    - "make functional-tests"
   include:
     - go: 1.8.3
     - go: 1.9
@@ -20,6 +17,12 @@ branches:
     - master
     - dev
 
+script:
+  - make ci
+env:
+  matrix:
+    - CI_MODE=functional
+    - CI_MODE=test
 
 # dist: trusty
 # language: node_js
