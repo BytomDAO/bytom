@@ -2,7 +2,6 @@ language: go
 go_import_path: github.com/bytom
 dist: trusty
 sudo: false
-# sudo: required
 
 matrix:
   include:
@@ -22,38 +21,3 @@ branches:
     - dev
 
 script: make ci
-
-# dist: trusty
-# language: node_js
-# node_js:
-  # - "5.5"
-  # - "4.2"
-# python:
-  # - "3.4"
-
-
-# addons:
-#   apt:
-#     sources:
-#       - ubuntu-toolchain-r-test
-#     packages:
-#       - g++-5
-
-
-# before_install:
-  # - sudo apt-get -y install python3-pip python-dev
-  # - sudo pip3 install -U setuptools
-  # - sudo pip3 install -U virtualenvwrapper
-  # - python3 -V
-  # - pip3 -V
-  # install Neo4j locally:
-  # - wget dist.neo4j.org/neo4j-community-2.3.2-unix.tar.gz
-  # - tar -xzf neo4j-community-2.3.2-unix.tar.gz
-  # - sed -i.bak s/dbms.security.auth_enabled=true/dbms.security.auth_enabled=false/g neo4j-community-2.3.2/conf/neo4j-server.properties
-  # - neo4j-community-2.3.2/bin/neo4j start
-# install:
-  # - npm install
-  # - sudo pip3 install -r requirements.txt
-# env:
-#   global:
-#     - CXX=g++-5
