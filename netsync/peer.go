@@ -36,7 +36,7 @@ type BasePeerSet interface {
 
 // PeerInfo indicate peer status snap
 type PeerInfo struct {
-	ID         string `json:"id"`
+	ID         string `json:"peer_id"`
 	RemoteAddr string `json:"remote_addr"`
 	Height     uint64 `json:"height"`
 	Delay      uint32 `json:"delay"`
@@ -267,6 +267,18 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 			continue
 		}
 		peer.markBlock(&hash)
+	}
+	return nil
+}
+
+func (ps *peerSet) broadcastNewStatus(bestBlock, genesisBlock *types.Block) error {
+	genesisHash := genesisBlock.Hash()
+	msg := NewStatusResponseMessage(&bestBlock.BlockHeader, &genesisHash)
+	for _, peer := range ps.peers {
+		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+			ps.removePeer(peer.ID())
+			continue
+		}
 	}
 	return nil
 }

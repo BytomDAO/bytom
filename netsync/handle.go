@@ -17,7 +17,6 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/discover"
-	"github.com/bytom/p2p/pex"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -101,9 +100,7 @@ func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, newBlo
 		if err != nil {
 			return nil, err
 		}
-
-		pexReactor := pex.NewPEXReactor(discv)
-		manager.sw.AddReactor("PEX", pexReactor)
+		manager.sw.SetDiscv(discv)
 	}
 	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
 	manager.sw.SetNodePrivKey(manager.privKey)

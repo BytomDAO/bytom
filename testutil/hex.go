@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"bytes"
+	"encoding/hex"
 	"io"
 	"testing"
 
@@ -28,4 +29,12 @@ func Serialize(t *testing.T, wt io.WriterTo) []byte {
 		t.Fatal(err)
 	}
 	return b.Bytes()
+}
+
+func MustDecodeHex(str string) []byte {
+	data, err := hex.DecodeString(str)
+	if err != nil {
+		panic(err)
+	}
+	return data
 }
