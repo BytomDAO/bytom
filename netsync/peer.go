@@ -271,6 +271,18 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 	return nil
 }
 
+func (ps *peerSet) broadcastNewStatus(bestBlock, genesisBlock *types.Block) error {
+	genesisHash := genesisBlock.Hash()
+	msg := NewStatusResponseMessage(&bestBlock.BlockHeader, &genesisHash)
+	for _, peer := range ps.peers {
+		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+			ps.removePeer(peer.ID())
+			continue
+		}
+	}
+	return nil
+}
+
 func (ps *peerSet) broadcastTx(tx *types.Tx) error {
 	msg, err := NewTransactionMessage(tx)
 	if err != nil {

@@ -96,6 +96,8 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	AccountID   string `json:"account_id"`
 	Detail      bool   `json:"detail"`
 	Unconfirmed bool   `json:"unconfirmed"`
+	From        uint    `json:"from"`
+	Count       uint    `json:"count"`
 }) Response {
 	transactions := []*query.AnnotatedTx{}
 	var err error
@@ -127,9 +129,11 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 
 	if filter.Detail == false {
 		txSummary := a.wallet.GetTransactionsSummary(transactions)
-		return NewSuccessResponse(txSummary)
+		start, end := getPageRange(len(txSummary), filter.From, filter.Count)
+		return NewSuccessResponse(txSummary[start:end])
 	}
-	return NewSuccessResponse(transactions)
+	start, end := getPageRange(len(transactions), filter.From, filter.Count)
+	return NewSuccessResponse(transactions[start:end])
 }
 
 // POST /get-unconfirmed-transaction
@@ -241,6 +245,8 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	ID            string `json:"id"`
 	Unconfirmed   bool   `json:"unconfirmed"`
 	SmartContract bool   `json:"smart_contract"`
+	From          uint    `json:"from"`
+	Count         uint    `json:"count"`
 }) Response {
 	accountUTXOs := a.wallet.GetAccountUtxos(filter.ID, filter.Unconfirmed, filter.SmartContract)
 
@@ -262,8 +268,8 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 			Change:              utxo.Change,
 		}}, UTXOs...)
 	}
-
-	return NewSuccessResponse(UTXOs)
+	start, end := getPageRange(len(UTXOs), filter.From, filter.Count)
+	return NewSuccessResponse(UTXOs[start:end])
 }
 
 // return gasRate
