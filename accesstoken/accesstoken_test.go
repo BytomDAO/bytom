@@ -29,7 +29,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		_, err := cs.Create(ctx, c.id, c.typ)
+		_, err := cs.Create(c.id, c.typ)
 		if errors.Root(err) != c.want {
 			t.Errorf("Create(%s, %s) error = %s want %s", c.id, c.typ, err, c.want)
 		}
@@ -47,7 +47,7 @@ func TestList(t *testing.T) {
 	tokenMap["bc"] = mustCreateToken(ctx, t, cs, "bc", "test")
 	tokenMap["cd"] = mustCreateToken(ctx, t, cs, "cd", "test")
 
-	got, err := cs.List(ctx)
+	got, err := cs.List()
 	if err != nil {
 		t.Errorf("List errored: get list error")
 	}
@@ -72,11 +72,11 @@ func TestCheck(t *testing.T) {
 	token := mustCreateToken(ctx, t, cs, "x", "client")
 	tokenParts := strings.Split(token.Token, ":")
 
-	if err := cs.Check(ctx, tokenParts[0], tokenParts[1]); err != nil {
+	if err := cs.Check(tokenParts[0], tokenParts[1]); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := cs.Check(ctx, "x", "badsecret"); err != ErrInvalidToken {
+	if err := cs.Check("x", "badsecret"); err != ErrInvalidToken {
 		t.Fatal("invalid token check passed")
 	}
 }
@@ -90,7 +90,7 @@ func TestDelete(t *testing.T) {
 	const id = "Y"
 	mustCreateToken(ctx, t, cs, id, "client")
 
-	err := cs.Delete(ctx, id)
+	err := cs.Delete(id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,14 +107,14 @@ func TestDeleteWithInvalidId(t *testing.T) {
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
 
-	err := cs.Delete(ctx, "@")
+	err := cs.Delete("@")
 	if errors.Root(err) != ErrBadID {
 		t.Errorf("Deletion with invalid id success, while it should not")
 	}
 }
 
 func mustCreateToken(ctx context.Context, t *testing.T, cs *CredentialStore, id, typ string) *Token {
-	token, err := cs.Create(ctx, id, typ)
+	token, err := cs.Create(id, typ)
 	if err != nil {
 		t.Fatal(err)
 	}
