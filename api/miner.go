@@ -25,7 +25,7 @@ type CoinbaseArbitrary struct {
 	Arbitrary chainjson.HexBytes `json:"arbitrary"`
 }
 
-func (a *API) getNxCoinbaseAb() Response {
+func (a *API) getNxCoinbaseArbitrary() Response {
 	arbitrary := a.wallet.AccountMgr.GetNxCoinbaseArbitrary()
 	resp := &CoinbaseArbitrary{
 		Arbitrary: arbitrary,
