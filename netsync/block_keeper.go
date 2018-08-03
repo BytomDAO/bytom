@@ -387,6 +387,11 @@ func (bk *blockKeeper) startSync() bool {
 }
 
 func (bk *blockKeeper) syncWorker() {
+	genesisBlock, err := bk.chain.GetBlockByHeight(0)
+	if err != nil {
+		log.WithField("err", err).Error("fail on handleStatusRequestMsg get genesis")
+		return
+	}
 	syncTicker := time.NewTicker(syncCycle)
 	for {
 		<-syncTicker.C
@@ -401,6 +406,10 @@ func (bk *blockKeeper) syncWorker() {
 
 		if err := bk.peers.broadcastMinedBlock(block); err != nil {
 			log.WithField("err", err).Error("fail on syncWorker broadcast new block")
+		}
+
+		if err = bk.peers.broadcastNewStatus(block, genesisBlock); err != nil {
+			log.WithField("err", err).Error("fail on syncWorker broadcast new status")
 		}
 	}
 }
