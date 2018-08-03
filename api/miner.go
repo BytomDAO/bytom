@@ -135,6 +135,11 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 		return nil, err
 	}
 
+	arbitrary, err := block.CoinbaseArbitrary()
+	if err != nil {
+		return nil, err
+	}
+
 	return &GetWorkJSONResp{
 		BlockHeader: &BlockHeaderJSON{
 			Version:           bh.Version,
@@ -146,7 +151,7 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 			BlockCommitment:   &bh.BlockCommitment,
 		},
 		Seed:              seed,
-		CoinbaseArbitrary: block.CoinbaseArbitrary(),
+		CoinbaseArbitrary: arbitrary,
 	}, nil
 }
 
