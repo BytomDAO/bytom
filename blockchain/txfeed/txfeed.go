@@ -78,23 +78,23 @@ func NewTracker(db dbm.DB, chain *protocol.Chain) *Tracker {
 	return s
 }
 
-func loadTxFeed(db dbm.DB, txFeeds []*TxFeed) error {
+func loadTxFeed(db dbm.DB, txFeeds []*TxFeed) ([]*TxFeed, error) {
 	iter := db.Iterator()
 	defer iter.Release()
 
 	for iter.Next() {
 		txFeed := &TxFeed{}
 		if err := json.Unmarshal(iter.Value(), &txFeed); err != nil {
-			return err
+			return nil, err
 		}
 		filter, err := parseFilter(txFeed.Filter)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		txFeed.Param = filter
 		txFeeds = append(txFeeds, txFeed)
 	}
-	return nil
+	return txFeeds, nil
 }
 
 func parseFilter(ft string) (filter, error) {
@@ -175,7 +175,9 @@ func parseTxfeed(db dbm.DB, filters []filter) error {
 
 //Prepare load and parse filters.
 func (t *Tracker) Prepare(ctx context.Context) error {
-	return loadTxFeed(t.DB, t.TxFeeds)
+	var err error
+	t.TxFeeds, err = loadTxFeed(t.DB, t.TxFeeds)
+	return err
 }
 
 //GetTxfeedCh return a txfeed channel.
