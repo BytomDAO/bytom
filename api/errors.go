@@ -17,6 +17,11 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
+var (
+	// ErrDefault is default Bytom API Error
+	ErrDefault = errors.New("Bytom API Error")
+)
+
 func isTemporary(info httperror.Info, err error) bool {
 	switch info.ChainCode {
 	case "BTM000": // internal server error
@@ -38,6 +43,8 @@ func isTemporary(info httperror.Info, err error) bool {
 }
 
 var respErrFormatter = map[error]httperror.Info{
+	ErrDefault: {500, "BTM000", "Bytom API Error"},
+
 	// Signers error namespace (2xx)
 	signers.ErrBadQuorum: {400, "BTM200", "Quorum must be greater than 1 and less than or equal to the length of xpubs"},
 	signers.ErrBadXPub:   {400, "BTM201", "Invalid xpub format"},
