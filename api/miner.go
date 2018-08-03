@@ -35,7 +35,7 @@ func (a *API) getCoinbaseArbitrary() Response {
 
 func (a *API) setCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) Response {
 	a.wallet.AccountMgr.SetNextCoinbaseArbitrary(req.Arbitrary)
-	return getCoinbaseArbitrary()
+	return a.getCoinbaseArbitrary()
 }
 
 // getWork gets work in compressed protobuf format
