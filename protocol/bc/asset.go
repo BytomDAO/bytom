@@ -1,10 +1,10 @@
 package bc
 
 import (
+	"encoding/binary"
 	"errors"
 	"io"
 
-	"encoding/binary"
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/encoding/blockchain"
 )

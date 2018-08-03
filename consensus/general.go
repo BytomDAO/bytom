@@ -1,9 +1,9 @@
 package consensus
 
 import (
+	"encoding/binary"
 	"strings"
 
-	"encoding/binary"
 	"github.com/bytom/protocol/bc"
 )
 
