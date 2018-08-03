@@ -18,7 +18,10 @@ matrix:
     - go: tip
       env: CI_MODE=test
   allow_failures:
-    go: tip
+    - go: tip
+      env: CI_MODE=functional
+    - go: tip
+      env: CI_MODE=test
 
 branches:
   only:
