@@ -98,6 +98,8 @@ func (a SortByIndex) Less(i, j int) bool { return a[i].KeyIndex < a[j].KeyIndex 
 func (a *API) listAddresses(ctx context.Context, ins struct {
 	AccountID    string `json:"account_id"`
 	AccountAlias string `json:"account_alias"`
+	From         uint    `json:"from"`
+	Count        uint    `json:"count"`
 }) Response {
 	accountID := ins.AccountID
 	var target *account.Account
@@ -136,7 +138,8 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 
 	// sort AddressResp by KeyIndex
 	sort.Sort(SortByIndex(addresses))
-	return NewSuccessResponse(addresses)
+	start, end := getPageRange(len(addresses), ins.From, ins.Count)
+	return NewSuccessResponse(addresses[start:end])
 }
 
 type minigAddressResp struct {
