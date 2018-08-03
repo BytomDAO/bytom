@@ -290,9 +290,12 @@ func (reg *Registry) GetAsset(id string) (*Asset, error) {
 	}
 
 	if extAsset := reg.db.Get(ExtAssetKey(&assetID)); extAsset != nil {
-		if err := json.Unmarshal(extAsset, asset); err != nil {
+		definitionMap := make(map[string]interface{})
+		if err := json.Unmarshal(extAsset, &definitionMap); err != nil {
 			return nil, err
 		}
+		asset.AssetID = assetID
+		asset.DefinitionMap = definitionMap
 		return asset, nil
 	}
 
@@ -348,7 +351,7 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	if def == nil {
 		def = make(map[string]interface{}, 0)
-	}
+	}  
 	return json.MarshalIndent(def, "", "  ")
 }
 
