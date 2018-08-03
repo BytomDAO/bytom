@@ -5,6 +5,8 @@ sudo: false
 # sudo: required
 
 matrix:
+  - "make test"
+  - "make functional-tests"
   include:
     - go: 1.8.3
     - go: 1.9
@@ -13,13 +15,9 @@ matrix:
     - go: tip
 
 branches:
-    only:
-        - master
-        - dev
-
-script:
-    - "make test"
-    - "make functional-tests"
+  only:
+    - master
+    - dev
 
 
 # dist: trusty
