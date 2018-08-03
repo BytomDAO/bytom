@@ -125,7 +125,7 @@ type GetWorkJSONResp struct {
 
 // GetWorkJSON gets work in json format
 func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
-	bh, _, err := a.miningPool.GetWork()
+	bh, block, err := a.miningPool.GetWork()
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 			BlockCommitment:   &bh.BlockCommitment,
 		},
 		Seed:              seed,
-		CoinbaseArbitrary: a.wallet.AccountMgr.GetNxCoinbaseArbitrary(),
+		CoinbaseArbitrary: block.CoinbaseArbitrary(),
 	}, nil
 }
 
