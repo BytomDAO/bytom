@@ -351,7 +351,7 @@ func (reg *Registry) ListAssets(id string) ([]*Asset, error) {
 func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	if def == nil {
 		def = make(map[string]interface{}, 0)
-	}  
+	}
 	return json.MarshalIndent(def, "", "  ")
 }
 
