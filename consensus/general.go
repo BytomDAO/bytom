@@ -3,6 +3,7 @@ package consensus
 import (
 	"strings"
 
+	"encoding/binary"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -39,10 +40,10 @@ const (
 
 // BTMAssetID is BTM's asset id, the soul asset of Bytom
 var BTMAssetID = &bc.AssetID{
-	V0: uint64(0xffffffffffffffff),
-	V1: uint64(0xffffffffffffffff),
-	V2: uint64(0xffffffffffffffff),
-	V3: uint64(0xffffffffffffffff),
+	V0: binary.BigEndian.Uint64([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}),
+	V1: binary.BigEndian.Uint64([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}),
+	V2: binary.BigEndian.Uint64([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}),
+	V3: binary.BigEndian.Uint64([]byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}),
 }
 
 // InitialSeed is SHA3-256 of Byte[0^32]
