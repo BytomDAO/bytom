@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	maxAccountCache          = 1000
+	maxAccountCache = 1000
 )
 
 var (
@@ -246,15 +246,11 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
-func (m *Manager) GetNextCoinbaseArbitrary() []byte {
+func (m *Manager) GetNxCoinbaseArbitrary() []byte {
 	if arbitrary := m.db.Get(nxCoinbaseAbKey); arbitrary != nil {
 		return arbitrary
 	}
 	return []byte{}
-}
-
-func (m *Manager) SetNextCoinbaseArbitrary(arbitrary []byte) {
-	m.db.Set(nxCoinbaseAbKey, arbitrary)
 }
 
 // GetCoinbaseControlProgram will return a coinbase script
@@ -415,6 +411,10 @@ func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
 
 	m.db.Set(miningAddressKey, rawCP)
 	return m.GetMiningAddress()
+}
+
+func (m *Manager) SetNxCoinbaseArbitrary(arbitrary []byte) {
+	m.db.Set(nxCoinbaseAbKey, arbitrary)
 }
 
 // CreateAddress generate an address for the select account

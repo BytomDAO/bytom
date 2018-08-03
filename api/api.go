@@ -271,8 +271,8 @@ func (a *API) buildHandler() {
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
 	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
 
-	m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
-	m.Handle("/set-coinbase-arbitrary", jsonHandler(a.setCoinbaseArbitrary))
+	m.Handle("/get-next-coinbase-arbitrary", jsonHandler(a.getNxCoinbaseArbitrary))
+	m.Handle("/set-next-coinbase-arbitrary", jsonHandler(a.setNxCoinbaseArbitrary))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/decode-program", jsonHandler(a.decodeProgram))

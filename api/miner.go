@@ -25,17 +25,17 @@ type CoinbaseArbitrary struct {
 	Arbitrary chainjson.HexBytes `json:"arbitrary"`
 }
 
-func (a *API) getCoinbaseArbitrary() Response {
-	arbitrary := a.wallet.AccountMgr.GetNextCoinbaseArbitrary()
+func (a *API) getNxCoinbaseAb() Response {
+	arbitrary := a.wallet.AccountMgr.GetNxCoinbaseArbitrary()
 	resp := &CoinbaseArbitrary{
 		Arbitrary: arbitrary,
 	}
 	return NewSuccessResponse(resp)
 }
 
-func (a *API) setCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) Response {
-	a.wallet.AccountMgr.SetNextCoinbaseArbitrary(req.Arbitrary)
-	return a.getCoinbaseArbitrary()
+func (a *API) setNxCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) Response {
+	a.wallet.AccountMgr.SetNxCoinbaseArbitrary(req.Arbitrary)
+	return a.getNxCoinbaseArbitrary()
 }
 
 // getWork gets work in compressed protobuf format

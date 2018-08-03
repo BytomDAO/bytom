@@ -31,17 +31,18 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 		script, err = vmutil.DefaultCoinbaseProgram()
 	} else {
 		script, err = accountManager.GetCoinbaseControlProgram()
-		arbitrary = append(arbitrary, accountManager.GetNextCoinbaseArbitrary()...)
+		arbitrary = append(arbitrary, accountManager.GetNxCoinbaseArbitrary()...)
 	}
 	if err != nil {
 		return
 	}
 
-	builder := txbuilder.NewBuilder(time.Now())
 	if len(arbitrary) > consensus.CoinbaseArbitrarySizeLimit {
 		err = validation.ErrCoinbaseArbitraryOversize
 		return
 	}
+
+	builder := txbuilder.NewBuilder(time.Now())
 	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
 		return
 	}
