@@ -187,6 +187,7 @@ func (uk *utxoKeeper) expireWorker() {
 	for now := range ticker.C {
 		uk.expireReservation(now)
 	}
+	ticker.Stop()
 }
 func (uk *utxoKeeper) expireReservation(t time.Time) {
 	uk.mtx.Lock()
