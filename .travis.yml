@@ -7,20 +7,11 @@ sudo: false
 matrix:
   include:
     - go: 1.8.3
-        env:
-          matrix:
-            - CI_MODE=functional
-            - CI_MODE=test
+        env: CI_MODE=functional
     - go: 1.9
-        env:
-          matrix:
-            - CI_MODE=functional
-            - CI_MODE=test
+        env: CI_MODE=functional
     - go: tip
-        env:
-          matrix:
-            - CI_MODE=functional
-            - CI_MODE=test
+        env: CI_MODE=functional
   allow_failures:
     - go: tip
 
