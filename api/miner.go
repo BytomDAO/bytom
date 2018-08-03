@@ -135,9 +135,6 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 		return nil, err
 	}
 
-	// coinbasearbitrary
-	arbitrary := []byte{}
-
 	return &GetWorkJSONResp{
 		BlockHeader: &BlockHeaderJSON{
 			Version:           bh.Version,
@@ -149,7 +146,7 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 			BlockCommitment:   &bh.BlockCommitment,
 		},
 		Seed:              seed,
-		CoinbaseArbitrary: arbitrary,
+		CoinbaseArbitrary: a.wallet.AccountMgr.GetNxCoinbaseArbitrary(),
 	}, nil
 }
 
