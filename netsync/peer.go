@@ -36,7 +36,7 @@ type BasePeerSet interface {
 
 // PeerInfo indicate peer status snap
 type PeerInfo struct {
-	ID         string `json:"id"`
+	ID         string `json:"peer_id"`
 	RemoteAddr string `json:"remote_addr"`
 	Height     uint64 `json:"height"`
 	Delay      uint32 `json:"delay"`

@@ -232,7 +232,12 @@ func (n *Node) initAndstartApiServer() {
 
 func (n *Node) OnStart() error {
 	if n.miningEnable {
-		n.cpuMiner.Start()
+		if _, err := n.wallet.AccountMgr.GetMiningAddress(); err != nil {
+			n.miningEnable = false
+			log.Error(err)
+		} else {
+			n.cpuMiner.Start()
+		}
 	}
 	if !n.config.VaultMode {
 		n.syncManager.Start()
