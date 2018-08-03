@@ -6,15 +6,23 @@ sudo: false
 matrix:
   include:
     - go: 1.8.3
+      env: CI_MODE=functional
+    - go: 1.8.3
+      env: CI_MODE=test
     - go: 1.9
+      env: CI_MODE=functional
+    - go: 1.9
+      env: CI_MODE=test
     - go: tip
+      env: CI_MODE=functional
+    - go: tip
+      env: CI_MODE=test
   allow_failures:
-    - go: tip
+    go: tip
 
 branches:
-    only:
-        - master
-        - dev
+  only:
+    - master
+    - dev
 
-script:
-    - make ci
+script: make ci

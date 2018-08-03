@@ -125,8 +125,16 @@ benchmark:
 	@go test -bench $(PACKAGES)
 
 functional-tests:
-	@go test -v -timeout=5m -tags="functional" ./test 
+	@go test -timeout=5m -tags="functional" ./test 
 
-ci: test functional-tests
+ifndef CI_MODE
+ci: functional-tests test
+else ifeq ($(CI_MODE),functional)
+ci: functional-tests
+else ifeq ($(CI_MODE),test)
+ci:  test
+else
+ci: functional-tests test
+endif
 
 .PHONY: all target release-all clean test benchmark
