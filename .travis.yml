@@ -29,12 +29,16 @@ script:
   # - "4.2"
 # python:
   # - "3.4"
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - g++-5
+
+
+# addons:
+#   apt:
+#     sources:
+#       - ubuntu-toolchain-r-test
+#     packages:
+#       - g++-5
+
+
 # before_install:
   # - sudo apt-get -y install python3-pip python-dev
   # - sudo pip3 install -U setuptools
