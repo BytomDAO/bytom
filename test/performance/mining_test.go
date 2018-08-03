@@ -26,6 +26,6 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mining.NewBlockTemplate(chain, txPool, accountManager, []byte{})
+		mining.NewBlockTemplate(chain, txPool, accountManager)
 	}
 }

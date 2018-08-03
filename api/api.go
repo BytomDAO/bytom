@@ -260,7 +260,6 @@ func (a *API) buildHandler() {
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
 	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
-	m.Handle("/get-block-template", jsonHandler(a.getBlockTemplate))
 	m.Handle("/get-difficulty", jsonHandler(a.getDifficulty))
 	m.Handle("/get-hash-rate", jsonHandler(a.getHashRate))
 
@@ -271,6 +270,9 @@ func (a *API) buildHandler() {
 	m.Handle("/get-work-json", jsonHandler(a.getWorkJSON))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
 	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
+
+	m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
+	m.Handle("/set-coinbase-arbitrary", jsonHandler(a.setCoinbaseArbitrary))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/decode-program", jsonHandler(a.decodeProgram))

@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	maxAccountCache = 1000
+	maxAccountCache          = 1000
 )
 
 var (
@@ -35,6 +35,7 @@ var (
 	contractIndexPrefix = []byte("ContractIndex")
 	contractPrefix      = []byte("Contract:")
 	miningAddressKey    = []byte("MiningAddress")
+	nxCoinbaseAbKey     = []byte("nxCoinbaseArbitrary")
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -243,6 +244,17 @@ func (m *Manager) GetAliasByID(id string) string {
 		log.Warn(err)
 	}
 	return account.Alias
+}
+
+func (m *Manager) GetNextCoinbaseArbitrary() []byte {
+	if arbitrary := m.db.Get(nxCoinbaseAbKey); arbitrary != nil {
+		return arbitrary
+	}
+	return []byte{}
+}
+
+func (m *Manager) SetNextCoinbaseArbitrary(arbitrary []byte) {
+	m.db.Set(nxCoinbaseAbKey, arbitrary)
 }
 
 // GetCoinbaseControlProgram will return a coinbase script

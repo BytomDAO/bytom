@@ -22,27 +22,27 @@ import (
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
-func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64, coinbaseAb []byte) (tx *types.Tx, err error) {
+func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64) (tx *types.Tx, err error) {
 	amount += consensus.BlockSubsidy(blockHeight)
+	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...)
 
 	var script []byte
 	if accountManager == nil {
 		script, err = vmutil.DefaultCoinbaseProgram()
 	} else {
 		script, err = accountManager.GetCoinbaseControlProgram()
+		arbitrary = append(arbitrary, accountManager.GetNextCoinbaseArbitrary()...)
 	}
 	if err != nil {
 		return
 	}
 
 	builder := txbuilder.NewBuilder(time.Now())
-	ab := append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...)
-	ab = append(ab, coinbaseAb...)
-	if len(ab) > consensus.CoinbaseArbitrarySizeLimit {
+	if len(arbitrary) > consensus.CoinbaseArbitrarySizeLimit {
 		err = validation.ErrCoinbaseArbitraryOversize
 		return
 	}
-	if err = builder.AddInput(types.NewCoinbaseInput(ab), &txbuilder.SigningInstruction{}); err != nil {
+	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
 		return
 	}
 	if err = builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, amount, script)); err != nil {
@@ -67,7 +67,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
-func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager, coinbaseAb []byte) (b *types.Block, err error) {
+func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (b *types.Block, err error) {
 	view := state.NewUtxoViewpoint()
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
@@ -141,7 +141,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	}
 
 	// creater coinbase transaction
-	b.Transactions[0], err = createCoinbaseTx(accountManager, txFee, nextBlockHeight, coinbaseAb)
+	b.Transactions[0], err = createCoinbaseTx(accountManager, txFee, nextBlockHeight)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail on createCoinbaseTx")
 	}

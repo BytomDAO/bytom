@@ -9,25 +9,6 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-// GetBlockTemplateReq is req struct for get-block-template-work API
-type GetBlockTemplateReq struct {
-	Mode string             `json:"mode"`
-	Data chainjson.HexBytes `json:"data"`
-}
-
-func (a *API) getBlockTemplate(ins GetBlockTemplateReq) Response {
-	switch ins.Mode {
-	case "proposal":
-		if err := a.miningPool.RenewBlkTplWithArbitrary(ins.Data); err != nil {
-			return NewErrorResponse(err)
-		}
-	case "template":
-	default:
-		return NewErrorResponse(errors.New("getBlockTemplate: Unknow mode."))
-	}
-	return a.getWorkJSON()
-}
-
 // BlockHeaderJSON struct provides support for get work in json format, when it also follows
 // BlockHeader structure
 type BlockHeaderJSON struct {
@@ -38,6 +19,23 @@ type BlockHeaderJSON struct {
 	Nonce             uint64                 `json:"nonce"`               // Nonce used to generate the block.
 	Bits              uint64                 `json:"bits"`                // Difficulty target for the block.
 	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    //Block commitment
+}
+
+type CoinbaseArbitrary struct {
+	Arbitrary chainjson.HexBytes `json:"arbitrary"`
+}
+
+func (a *API) getCoinbaseArbitrary() Response {
+	arbitrary := a.wallet.AccountMgr.GetNextCoinbaseArbitrary()
+	resp := &CoinbaseArbitrary{
+		Arbitrary: arbitrary,
+	}
+	return NewSuccessResponse(resp)
+}
+
+func (a *API) setCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) Response {
+	a.wallet.AccountMgr.SetNextCoinbaseArbitrary(req.Arbitrary)
+	return getCoinbaseArbitrary()
 }
 
 // getWork gets work in compressed protobuf format
@@ -127,7 +125,7 @@ type GetWorkJSONResp struct {
 
 // GetWorkJSON gets work in json format
 func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
-	bh, block, err := a.miningPool.GetWork()
+	bh, _, err := a.miningPool.GetWork()
 	if err != nil {
 		return nil, err
 	}
@@ -137,10 +135,8 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 		return nil, err
 	}
 
-	arbitrary, err := block.CoinbaseArbitrary()
-	if err != nil {
-		return nil, err
-	}
+	// coinbasearbitrary
+	arbitrary := []byte{}
 
 	return &GetWorkJSONResp{
 		BlockHeader: &BlockHeaderJSON{

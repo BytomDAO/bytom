@@ -157,7 +157,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		}
 	}
 
-	block, err := mining.NewBlockTemplate(chain, txPool, nil, []byte{})
+	block, err := mining.NewBlockTemplate(chain, txPool, nil)
 	if err != nil {
 		return err
 	}
