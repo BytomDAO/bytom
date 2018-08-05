@@ -27,7 +27,8 @@ var (
 	maxNewTxNum     = 10000
 	maxOrphanNum    = 2000
 
-	orphanTTL = 5 * time.Minute
+	orphanTTL                = 10 * time.Minute
+	orphanExpireScanInterval = 3 * time.Minute
 
 	// ErrTransactionNotExist is the pre-defined error message
 	ErrTransactionNotExist = errors.New("transaction are not existed in the mempool")
@@ -71,7 +72,7 @@ type TxPool struct {
 
 // NewTxPool init a new TxPool
 func NewTxPool(store Store) *TxPool {
-	return &TxPool{
+	tp := &TxPool{
 		lastUpdated:   time.Now().Unix(),
 		store:         store,
 		pool:          make(map[bc.Hash]*TxDesc),
@@ -81,11 +82,8 @@ func NewTxPool(store Store) *TxPool {
 		errCache:      lru.New(maxCachedErrTxs),
 		msgCh:         make(chan *TxPoolMsg, maxMsgChSize),
 	}
-}
-
-// GetMsgCh return a unconfirmed transaction feed channel
-func (tp *TxPool) GetMsgCh() <-chan *TxPoolMsg {
-	return tp.msgCh
+	go tp.orphanExpireWorker()
+	return tp
 }
 
 // AddErrCache add a failed transaction record to lru cache
@@ -96,13 +94,16 @@ func (tp *TxPool) AddErrCache(txHash *bc.Hash, err error) {
 	tp.errCache.Add(txHash, err)
 }
 
-// Count return number of transcation in pool
-func (tp *TxPool) Count() int {
+// ExpireOrphan expire all the orphans that before the input time range
+func (tp *TxPool) ExpireOrphan(now time.Time) {
 	tp.mtx.RLock()
 	defer tp.mtx.RUnlock()
 
-	count := len(tp.pool)
-	return count
+	for hash, orphan := range tp.orphans {
+		if orphan.expiration.Before(now) {
+			delete(tp.orphans, hash)
+		}
+	}
 }
 
 // GetErrCache return the error of the transaction
@@ -117,6 +118,11 @@ func (tp *TxPool) GetErrCache(txHash *bc.Hash) error {
 	return v.(error)
 }
 
+// GetMsgCh return a unconfirmed transaction feed channel
+func (tp *TxPool) GetMsgCh() <-chan *TxPoolMsg {
+	return tp.msgCh
+}
+
 // RemoveTransaction remove a transaction from the pool
 func (tp *TxPool) RemoveTransaction(txHash *bc.Hash) {
 	tp.mtx.Lock()
@@ -127,12 +133,12 @@ func (tp *TxPool) RemoveTransaction(txHash *bc.Hash) {
 		return
 	}
 
-	for _, output := range txD.Tx.TxHeader.ResultIds {
+	for _, output := range txD.Tx.ResultIds {
 		delete(tp.utxo, *output)
 	}
 	delete(tp.pool, *txHash)
-	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())
 
+	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())
 	tp.msgCh <- &TxPoolMsg{TxDesc: txD, MsgType: MsgRemoveTx}
 	log.WithField("tx_id", txHash).Debug("remove tx from mempool")
 }
@@ -145,7 +151,6 @@ func (tp *TxPool) GetTransaction(txHash *bc.Hash) (*TxDesc, error) {
 	if txD, ok := tp.pool[*txHash]; ok {
 		return txD, nil
 	}
-
 	return nil, ErrTransactionNotExist
 }
 
@@ -168,10 +173,8 @@ func (tp *TxPool) IsTransactionInPool(txHash *bc.Hash) bool {
 	tp.mtx.RLock()
 	defer tp.mtx.RUnlock()
 
-	if _, ok := tp.pool[*txHash]; ok {
-		return true
-	}
-	return false
+	_, ok := tp.pool[*txHash]
+	return ok
 }
 
 // IsTransactionInErrCache check wheather a transaction in errCache or not
@@ -193,34 +196,35 @@ func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee 
 	tp.mtx.RLock()
 	defer tp.mtx.RUnlock()
 
-	if len(tp.pool) >= maxNewTxNum {
-		return false, ErrPoolIsFull
+	txD := &TxDesc{
+		Tx:         tx,
+		StatusFail: statusFail,
+		Weight:     tx.SerializedSize,
+		Height:     height,
+		Fee:        fee,
 	}
-
-	requireParents, err := tp.checkOrphanUtxos(tx.Tx)
+	requireParents, err := tp.checkOrphanUtxos(tx)
 	if err != nil {
 		return false, err
 	}
 
-	txD := &TxDesc{
-		Tx:         tx,
-		StatusFail: statusFail,
-		Weight:     tx.TxData.SerializedSize,
-		Height:     height,
-		Fee:        fee,
-	}
-
 	if len(requireParents) > 0 {
-		tp.addOrphan(txD, requireParents)
-		return true, nil
+		return true, tp.addOrphan(txD, requireParents)
 	}
 
-	tp.addTransaction(txD)
+	if err := tp.addTransaction(txD); err != nil {
+		return false, err
+	}
+
 	tp.processOrphans(txD)
 	return false, nil
 }
 
-func (tp *TxPool) addOrphan(txD *TxDesc, requireParents []*bc.Hash) {
+func (tp *TxPool) addOrphan(txD *TxDesc, requireParents []*bc.Hash) error {
+	if len(tp.orphans) >= maxOrphanNum {
+		return ErrPoolIsFull
+	}
+
 	orphan := &orphanTx{txD, time.Now().Add(orphanTTL)}
 	tp.orphans[txD.Tx.ID] = orphan
 	for _, hash := range requireParents {
@@ -229,13 +233,18 @@ func (tp *TxPool) addOrphan(txD *TxDesc, requireParents []*bc.Hash) {
 		}
 		tp.orphansByPrev[*hash][txD.Tx.ID] = orphan
 	}
+	return nil
 }
 
-func (tp *TxPool) addTransaction(txD *TxDesc) (*TxDesc, error) {
+func (tp *TxPool) addTransaction(txD *TxDesc) error {
+	if len(tp.pool) >= maxNewTxNum {
+		return ErrPoolIsFull
+	}
+
 	tx := txD.Tx
 	txD.Added = time.Now()
 	tp.pool[tx.ID] = txD
-	for _, id := range tx.TxHeader.ResultIds {
+	for _, id := range tx.ResultIds {
 		output, err := tx.Output(*id)
 		if err != nil {
 			// error due to it's a retirement, utxo doesn't care this output type so skip it
@@ -249,12 +258,12 @@ func (tp *TxPool) addTransaction(txD *TxDesc) (*TxDesc, error) {
 	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())
 	tp.msgCh <- &TxPoolMsg{TxDesc: txD, MsgType: MsgNewTx}
 	log.WithField("tx_id", tx.ID.String()).Debug("Add tx to mempool")
-	return txD, nil
+	return nil
 }
 
-func (tp *TxPool) checkOrphanUtxos(tx *bc.Tx) ([]*bc.Hash, error) {
+func (tp *TxPool) checkOrphanUtxos(tx *types.Tx) ([]*bc.Hash, error) {
 	view := state.NewUtxoViewpoint()
-	if err := tp.store.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
+	if err := tp.store.GetTransactionsUtxo(view, []*bc.Tx{tx.Tx}); err != nil {
 		return nil, err
 	}
 
@@ -265,6 +274,13 @@ func (tp *TxPool) checkOrphanUtxos(tx *bc.Tx) ([]*bc.Hash, error) {
 		}
 	}
 	return hashes, nil
+}
+
+func (tp *TxPool) orphanExpireWorker() {
+	ticker := time.NewTicker(orphanExpireScanInterval)
+	for now := range ticker.C {
+		tp.ExpireOrphan(now)
+	}
 }
 
 func (tp *TxPool) processOrphans(txD *TxDesc) {
@@ -284,10 +300,9 @@ func (tp *TxPool) processOrphans(txD *TxDesc) {
 	}
 
 	addRely(txD.Tx)
-	for len(processOrphans) > 0 {
+	for ; len(processOrphans) > 0; processOrphans = processOrphans[1:] {
 		processOrphan := processOrphans[0]
-		processOrphans = processOrphans[1:]
-		requireParents, err := tp.checkOrphanUtxos(processOrphan.Tx.Tx)
+		requireParents, err := tp.checkOrphanUtxos(processOrphan.Tx)
 		if err != nil {
 			log.WithField("err", err).Error("processOrphans got unexpect error")
 			continue

@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"testing"
+	"time"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
@@ -9,6 +10,29 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 	"github.com/bytom/testutil"
 )
+
+var testTxs = []*types.Tx{
+	types.NewTx(types.TxData{
+		SerializedSize: 100,
+		TimeRange:      0,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
+		},
+	}),
+	types.NewTx(types.TxData{
+		SerializedSize: 100,
+		TimeRange:      0,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
+		},
+	}),
+}
 
 /*func TestTxPool(t *testing.T) {
 	p := NewTxPool(nil)
@@ -57,7 +81,94 @@ func TestRemoveOrphan(t *testing.T) {
 		before       *TxPool
 		after        *TxPool
 		removeHashes []*bc.Hash
-	}{}
+	}{
+		{
+			before: &TxPool{
+				orphans: map[bc.Hash]*orphanTx{
+					testTxs[0].ID: &orphanTx{
+						expiration: time.Unix(1533489701, 0),
+						TxDesc: &TxDesc{
+							Tx: testTxs[0],
+						},
+					},
+				},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
+					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
+						testTxs[0].ID: &orphanTx{
+							expiration: time.Unix(1533489701, 0),
+							TxDesc: &TxDesc{
+								Tx: testTxs[0],
+							},
+						},
+					},
+				},
+			},
+			after: &TxPool{
+				orphans:       map[bc.Hash]*orphanTx{},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{},
+			},
+			removeHashes: []*bc.Hash{
+				&testTxs[0].ID,
+			},
+		},
+		{
+			before: &TxPool{
+				orphans: map[bc.Hash]*orphanTx{
+					testTxs[0].ID: &orphanTx{
+						expiration: time.Unix(1533489701, 0),
+						TxDesc: &TxDesc{
+							Tx: testTxs[0],
+						},
+					},
+					testTxs[1].ID: &orphanTx{
+						expiration: time.Unix(1533489701, 0),
+						TxDesc: &TxDesc{
+							Tx: testTxs[1],
+						},
+					},
+				},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
+					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
+						testTxs[0].ID: &orphanTx{
+							expiration: time.Unix(1533489701, 0),
+							TxDesc: &TxDesc{
+								Tx: testTxs[0],
+							},
+						},
+						testTxs[1].ID: &orphanTx{
+							expiration: time.Unix(1533489701, 0),
+							TxDesc: &TxDesc{
+								Tx: testTxs[1],
+							},
+						},
+					},
+				},
+			},
+			after: &TxPool{
+				orphans: map[bc.Hash]*orphanTx{
+					testTxs[0].ID: &orphanTx{
+						expiration: time.Unix(1533489701, 0),
+						TxDesc: &TxDesc{
+							Tx: testTxs[0],
+						},
+					},
+				},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
+					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
+						testTxs[0].ID: &orphanTx{
+							expiration: time.Unix(1533489701, 0),
+							TxDesc: &TxDesc{
+								Tx: testTxs[0],
+							},
+						},
+					},
+				},
+			},
+			removeHashes: []*bc.Hash{
+				&testTxs[1].ID,
+			},
+		},
+	}
 
 	for i, c := range cases {
 		for _, hash := range c.removeHashes {
