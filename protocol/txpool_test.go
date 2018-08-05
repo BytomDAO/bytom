@@ -37,10 +37,11 @@ var testTxs = []*types.Tx{
 		TimeRange:      0,
 		Inputs: []*types.TxInput{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
-			types.NewSpendInput(nil, bc.NewHash([32]byte{0x02}), *consensus.BTMAssetID, 3, 1, []byte{0x51}),
+			types.NewSpendInput(nil, bc.NewHash([32]byte{0x02}), bc.NewAssetID([32]byte{0xa1}), 3, 1, []byte{0x51}),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 4, []byte{0x6b}),
+			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
+			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 3, []byte{0x6b}),
 		},
 	}),
 }
@@ -210,6 +211,73 @@ func TestAddOrphan(t *testing.T) {
 		}
 		if !testutil.DeepEqual(c.before, c.after) {
 			t.Errorf("case %d: got %v want %v", i, c.before, c.after)
+		}
+	}
+}
+
+func TestAddTransaction(t *testing.T) {
+	cases := []struct {
+		before *TxPool
+		after  *TxPool
+		addTx  *TxDesc
+	}{
+		{
+			before: &TxPool{
+				pool:  map[bc.Hash]*TxDesc{},
+				utxo:  map[bc.Hash]*types.Tx{},
+				msgCh: make(chan *TxPoolMsg, 1),
+			},
+			after: &TxPool{
+				pool: map[bc.Hash]*TxDesc{
+					testTxs[2].ID: &TxDesc{
+						Tx:         testTxs[2],
+						StatusFail: false,
+					},
+				},
+				utxo: map[bc.Hash]*types.Tx{
+					*testTxs[2].ResultIds[0]: testTxs[2],
+					*testTxs[2].ResultIds[1]: testTxs[2],
+				},
+			},
+			addTx: &TxDesc{
+				Tx:         testTxs[2],
+				StatusFail: false,
+			},
+		},
+		{
+			before: &TxPool{
+				pool:  map[bc.Hash]*TxDesc{},
+				utxo:  map[bc.Hash]*types.Tx{},
+				msgCh: make(chan *TxPoolMsg, 1),
+			},
+			after: &TxPool{
+				pool: map[bc.Hash]*TxDesc{
+					testTxs[2].ID: &TxDesc{
+						Tx:         testTxs[2],
+						StatusFail: true,
+					},
+				},
+				utxo: map[bc.Hash]*types.Tx{
+					*testTxs[2].ResultIds[0]: testTxs[2],
+				},
+			},
+			addTx: &TxDesc{
+				Tx:         testTxs[2],
+				StatusFail: true,
+			},
+		},
+	}
+
+	for i, c := range cases {
+		c.before.addTransaction(c.addTx)
+		for _, txD := range c.before.pool {
+			txD.Added = time.Time{}
+		}
+		if !testutil.DeepEqual(c.before.pool, c.after.pool) {
+			t.Errorf("case %d: got %v want %v", i, c.before.pool, c.after.pool)
+		}
+		if !testutil.DeepEqual(c.before.utxo, c.after.utxo) {
+			t.Errorf("case %d: got %v want %v", i, c.before.utxo, c.after.utxo)
 		}
 	}
 }
