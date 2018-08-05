@@ -32,6 +32,17 @@ var testTxs = []*types.Tx{
 			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
 		},
 	}),
+	types.NewTx(types.TxData{
+		SerializedSize: 150,
+		TimeRange:      0,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
+			types.NewSpendInput(nil, bc.NewHash([32]byte{0x02}), *consensus.BTMAssetID, 3, 1, []byte{0x51}),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(*consensus.BTMAssetID, 4, []byte{0x6b}),
+		},
+	}),
 }
 
 /*func TestTxPool(t *testing.T) {
@@ -75,6 +86,133 @@ var testTxs = []*types.Tx{
 		t.Errorf("shouldn find txC in tx err cache")
 	}
 }*/
+
+func TestAddOrphan(t *testing.T) {
+	cases := []struct {
+		before         *TxPool
+		after          *TxPool
+		addOrphan      *TxDesc
+		requireParents []*bc.Hash
+	}{
+		{
+			before: &TxPool{
+				orphans:       map[bc.Hash]*orphanTx{},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{},
+			},
+			after: &TxPool{
+				orphans: map[bc.Hash]*orphanTx{
+					testTxs[0].ID: &orphanTx{
+						TxDesc: &TxDesc{
+							Tx: testTxs[0],
+						},
+					},
+				},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
+					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
+						testTxs[0].ID: &orphanTx{
+							TxDesc: &TxDesc{
+								Tx: testTxs[0],
+							},
+						},
+					},
+				},
+			},
+			addOrphan:      &TxDesc{Tx: testTxs[0]},
+			requireParents: []*bc.Hash{&testTxs[0].SpentOutputIDs[0]},
+		},
+		{
+			before: &TxPool{
+				orphans: map[bc.Hash]*orphanTx{
+					testTxs[0].ID: &orphanTx{
+						TxDesc: &TxDesc{
+							Tx: testTxs[0],
+						},
+					},
+				},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
+					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
+						testTxs[0].ID: &orphanTx{
+							TxDesc: &TxDesc{
+								Tx: testTxs[0],
+							},
+						},
+					},
+				},
+			},
+			after: &TxPool{
+				orphans: map[bc.Hash]*orphanTx{
+					testTxs[0].ID: &orphanTx{
+						TxDesc: &TxDesc{
+							Tx: testTxs[0],
+						},
+					},
+					testTxs[1].ID: &orphanTx{
+						TxDesc: &TxDesc{
+							Tx: testTxs[1],
+						},
+					},
+				},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
+					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
+						testTxs[0].ID: &orphanTx{
+							TxDesc: &TxDesc{
+								Tx: testTxs[0],
+							},
+						},
+						testTxs[1].ID: &orphanTx{
+							TxDesc: &TxDesc{
+								Tx: testTxs[1],
+							},
+						},
+					},
+				},
+			},
+			addOrphan:      &TxDesc{Tx: testTxs[1]},
+			requireParents: []*bc.Hash{&testTxs[1].SpentOutputIDs[0]},
+		},
+		{
+			before: &TxPool{
+				orphans:       map[bc.Hash]*orphanTx{},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{},
+			},
+			after: &TxPool{
+				orphans: map[bc.Hash]*orphanTx{
+					testTxs[2].ID: &orphanTx{
+						TxDesc: &TxDesc{
+							Tx: testTxs[2],
+						},
+					},
+				},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
+					testTxs[2].SpentOutputIDs[1]: map[bc.Hash]*orphanTx{
+						testTxs[2].ID: &orphanTx{
+							TxDesc: &TxDesc{
+								Tx: testTxs[2],
+							},
+						},
+					},
+				},
+			},
+			addOrphan:      &TxDesc{Tx: testTxs[2]},
+			requireParents: []*bc.Hash{&testTxs[2].SpentOutputIDs[1]},
+		},
+	}
+
+	for i, c := range cases {
+		c.before.addOrphan(c.addOrphan, c.requireParents)
+		for _, orphan := range c.before.orphans {
+			orphan.expiration = time.Time{}
+		}
+		for _, orphans := range c.before.orphansByPrev {
+			for _, orphan := range orphans {
+				orphan.expiration = time.Time{}
+			}
+		}
+		if !testutil.DeepEqual(c.before, c.after) {
+			t.Errorf("case %d: got %v want %v", i, c.before, c.after)
+		}
+	}
+}
 
 func TestRemoveOrphan(t *testing.T) {
 	cases := []struct {
