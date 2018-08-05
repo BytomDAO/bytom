@@ -1,9 +1,13 @@
 package protocol
 
 import (
+	"testing"
+
 	"github.com/bytom/consensus"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/bytom/testutil"
 )
 
 /*func TestTxPool(t *testing.T) {
@@ -47,6 +51,23 @@ import (
 		t.Errorf("shouldn find txC in tx err cache")
 	}
 }*/
+
+func TestRemoveOrphan(t *testing.T) {
+	cases := []struct {
+		before       *TxPool
+		after        *TxPool
+		removeHashes []*bc.Hash
+	}{}
+
+	for i, c := range cases {
+		for _, hash := range c.removeHashes {
+			c.before.removeOrphan(hash)
+		}
+		if !testutil.DeepEqual(c.before, c.after) {
+			t.Errorf("case %d: got %v want %v", i, c.before, c.after)
+		}
+	}
+}
 
 func mockCoinbaseTx(serializedSize uint64, amount uint64) *types.Tx {
 	cp, _ := vmutil.DefaultCoinbaseProgram()

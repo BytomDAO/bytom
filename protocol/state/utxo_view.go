@@ -75,6 +75,11 @@ func (view *UtxoViewpoint) ApplyBlock(block *bc.Block, txStatus *bc.TransactionS
 	return nil
 }
 
+func (view *UtxoViewpoint) CanSpend(hash *bc.Hash) bool {
+	entry := view.Entries[*hash]
+	return entry != nil && !entry.Spent
+}
+
 func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	for _, prevout := range tx.SpentOutputIDs {
 		spentOutput, err := tx.Output(prevout)
@@ -127,9 +132,4 @@ func (view *UtxoViewpoint) DetachBlock(block *bc.Block, txStatus *bc.Transaction
 func (view *UtxoViewpoint) HasUtxo(hash *bc.Hash) bool {
 	_, ok := view.Entries[*hash]
 	return ok
-}
-
-func (view *UtxoViewpoint) CanSpend(hash *bc.Hash) bool {
-	entry := view.Entries[*hash]
-	return entry != nil && !entry.Spent
 }

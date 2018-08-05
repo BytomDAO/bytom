@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	"blockchain/consensus"
 	"errors"
 	"sync"
 	"sync/atomic"
@@ -10,6 +9,7 @@ import (
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
@@ -96,6 +96,15 @@ func (tp *TxPool) AddErrCache(txHash *bc.Hash, err error) {
 	tp.errCache.Add(txHash, err)
 }
 
+// Count return number of transcation in pool
+func (tp *TxPool) Count() int {
+	tp.mtx.RLock()
+	defer tp.mtx.RUnlock()
+
+	count := len(tp.pool)
+	return count
+}
+
 // GetErrCache return the error of the transaction
 func (tp *TxPool) GetErrCache(txHash *bc.Hash) error {
 	tp.mtx.Lock()
@@ -177,15 +186,6 @@ func (tp *TxPool) IsTransactionInErrCache(txHash *bc.Hash) bool {
 // HaveTransaction IsTransactionInErrCache check is  transaction in errCache or pool
 func (tp *TxPool) HaveTransaction(txHash *bc.Hash) bool {
 	return tp.IsTransactionInPool(txHash) || tp.IsTransactionInErrCache(txHash)
-}
-
-// Count return number of transcation in pool
-func (tp *TxPool) Count() int {
-	tp.mtx.RLock()
-	defer tp.mtx.RUnlock()
-
-	count := len(tp.pool)
-	return count
 }
 
 // ProcessTransaction is the main entry for txpool handle new tx
