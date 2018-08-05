@@ -101,7 +101,7 @@ func (tp *TxPool) ExpireOrphan(now time.Time) {
 
 	for hash, orphan := range tp.orphans {
 		if orphan.expiration.Before(now) {
-			delete(tp.orphans, hash)
+			tp.removeOrphan(&hash)
 		}
 	}
 }

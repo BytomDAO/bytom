@@ -282,6 +282,67 @@ func TestAddTransaction(t *testing.T) {
 	}
 }
 
+func TestExpireOrphan(t *testing.T) {
+	before := &TxPool{
+		orphans: map[bc.Hash]*orphanTx{
+			testTxs[0].ID: &orphanTx{
+				expiration: time.Unix(1533489701, 0),
+				TxDesc: &TxDesc{
+					Tx: testTxs[0],
+				},
+			},
+			testTxs[1].ID: &orphanTx{
+				expiration: time.Unix(1633489701, 0),
+				TxDesc: &TxDesc{
+					Tx: testTxs[1],
+				},
+			},
+		},
+		orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
+			testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
+				testTxs[0].ID: &orphanTx{
+					expiration: time.Unix(1533489701, 0),
+					TxDesc: &TxDesc{
+						Tx: testTxs[0],
+					},
+				},
+				testTxs[1].ID: &orphanTx{
+					expiration: time.Unix(1633489701, 0),
+					TxDesc: &TxDesc{
+						Tx: testTxs[1],
+					},
+				},
+			},
+		},
+	}
+
+	want := &TxPool{
+		orphans: map[bc.Hash]*orphanTx{
+			testTxs[1].ID: &orphanTx{
+				expiration: time.Unix(1633489701, 0),
+				TxDesc: &TxDesc{
+					Tx: testTxs[1],
+				},
+			},
+		},
+		orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
+			testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
+				testTxs[1].ID: &orphanTx{
+					expiration: time.Unix(1633489701, 0),
+					TxDesc: &TxDesc{
+						Tx: testTxs[1],
+					},
+				},
+			},
+		},
+	}
+
+	before.ExpireOrphan(time.Unix(1633479701, 0))
+	if !testutil.DeepEqual(before, want) {
+		t.Errorf("got %v want %v", before, want)
+	}
+}
+
 func TestRemoveOrphan(t *testing.T) {
 	cases := []struct {
 		before       *TxPool
