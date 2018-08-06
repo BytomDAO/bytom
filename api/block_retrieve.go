@@ -58,7 +58,7 @@ type GetBlockResp struct {
 
 // return block by hash/height
 func (a *API) getBlock(ins BlockReq) Response {
-	block, err := a.getBlockHelper(ins, true)
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -126,7 +126,7 @@ type GetBlockHeaderResp struct {
 }
 
 func (a *API) getBlockHeader(ins BlockReq) Response {
-	block, err := a.getBlockHelper(ins, true)
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -138,7 +138,7 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 	return NewSuccessResponse(resp)
 }
 
-func (a *API) getBlockHelper(ins BlockReq, includeGenesis bool) (*types.Block, error) {
+func (a *API) getBlockHelper(ins BlockReq) (*types.Block, error) {
 	var err error
 	block := &types.Block{}
 	if len(ins.BlockHash) == 32 {
@@ -146,8 +146,6 @@ func (a *API) getBlockHelper(ins BlockReq, includeGenesis bool) (*types.Block, e
 		copy(b32[:], ins.BlockHash)
 		hash := bc.NewHash(b32)
 		block, err = a.chain.GetBlockByHash(&hash)
-	} else if includeGenesis {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
 	} else if ins.BlockHeight > 0 {
 		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
 	} else {
@@ -169,7 +167,7 @@ type GetDifficultyResp struct {
 }
 
 func (a *API) getDifficulty(ins BlockReq) Response {
-	block, err := a.getBlockHelper(ins, false)
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -192,7 +190,12 @@ type getHashRateResp struct {
 }
 
 func (a *API) getHashRate(ins BlockReq) Response {
-	block, err := a.getBlockHelper(ins, false)
+	if len(ins.BlockHash) != 32 && ins.BlockHeight == 0 {
+		err := errors.New("Request format error.")
+		return NewErrorResponse(err)
+	}
+
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
