@@ -5,16 +5,16 @@ import (
 	"time"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/database/storage"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/bytom/protocol/state"
 	"github.com/bytom/testutil"
 )
 
 var testTxs = []*types.Tx{
 	types.NewTx(types.TxData{
 		SerializedSize: 100,
-		TimeRange:      0,
 		Inputs: []*types.TxInput{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
 		},
@@ -24,7 +24,6 @@ var testTxs = []*types.Tx{
 	}),
 	types.NewTx(types.TxData{
 		SerializedSize: 100,
-		TimeRange:      0,
 		Inputs: []*types.TxInput{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
 		},
@@ -37,56 +36,46 @@ var testTxs = []*types.Tx{
 		TimeRange:      0,
 		Inputs: []*types.TxInput{
 			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
-			types.NewSpendInput(nil, bc.NewHash([32]byte{0x02}), bc.NewAssetID([32]byte{0xa1}), 3, 1, []byte{0x51}),
+			types.NewSpendInput(nil, bc.NewHash([32]byte{0x02}), bc.NewAssetID([32]byte{0xa1}), 4, 1, []byte{0x51}),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 3, []byte{0x6b}),
+			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 4, []byte{0x61}),
+		},
+	}),
+	types.NewTx(types.TxData{
+		SerializedSize: 100,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(nil, testutil.MustDecodeHash("dbea684b5c5153ed7729669a53d6c59574f26015a3e1eb2a0e8a1c645425a764"), bc.NewAssetID([32]byte{0xa1}), 4, 1, []byte{0x61}),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 3, []byte{0x62}),
+			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x63}),
+		},
+	}),
+	types.NewTx(types.TxData{
+		SerializedSize: 100,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(nil, testutil.MustDecodeHash("d84d0be0fd08e7341f2d127749bb0d0844d4560f53bd54861cee9981fd922cad"), bc.NewAssetID([32]byte{0xa1}), 3, 0, []byte{0x62}),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 2, []byte{0x64}),
+			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x65}),
 		},
 	}),
 }
 
-/*func TestTxPool(t *testing.T) {
-	p := NewTxPool(nil)
+type mockStore struct{}
 
-	txA := mockCoinbaseTx(1000, 6543)
-	txB := mockCoinbaseTx(2000, 2324)
-	txC := mockCoinbaseTx(3000, 9322)
-
-	p.addTransaction(txA, false, 1000, 5000000000)
-	if !p.IsTransactionInPool(&txA.ID) {
-		t.Errorf("fail to find added txA in tx pool")
-	} else {
-		i, _ := p.GetTransaction(&txA.ID)
-		if i.Height != 1000 || i.Fee != 5000000000 || i.FeePerKB != 5000000000 {
-			t.Errorf("incorrect data of TxDesc structure")
-		}
-	}
-
-	if p.IsTransactionInPool(&txB.ID) {
-		t.Errorf("shouldn't find txB in tx pool")
-	}
-	p.addTransaction(txB, false, 1, 5000000000)
-	if !p.IsTransactionInPool(&txB.ID) {
-		t.Errorf("shouldn find txB in tx pool")
-	}
-
-	if p.Count() != 2 {
-		t.Errorf("get wrong number of tx in the pool")
-	}
-	p.RemoveTransaction(&txB.ID)
-	if p.IsTransactionInPool(&txB.ID) {
-		t.Errorf("shouldn't find txB in tx pool")
-	}
-
-	p.AddErrCache(&txC.ID, nil)
-	if !p.IsTransactionInErrCache(&txC.ID) {
-		t.Errorf("shouldn find txC in tx err cache")
-	}
-	if !p.HaveTransaction(&txC.ID) {
-		t.Errorf("shouldn find txC in tx err cache")
-	}
-}*/
+func (s *mockStore) BlockExist(hash *bc.Hash) bool                                { return false }
+func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
+func (s *mockStore) GetStoreStatus() *BlockStoreState                             { return nil }
+func (s *mockStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
+func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
+func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
+func (s *mockStore) LoadBlockIndex() (*state.BlockIndex, error)                   { return nil, nil }
+func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
+func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error { return nil }
 
 func TestAddOrphan(t *testing.T) {
 	cases := []struct {
@@ -343,6 +332,126 @@ func TestExpireOrphan(t *testing.T) {
 	}
 }
 
+func TestProcessOrphans(t *testing.T) {
+	cases := []struct {
+		before    *TxPool
+		after     *TxPool
+		processTx *TxDesc
+	}{
+		{
+			before: &TxPool{
+				pool: map[bc.Hash]*TxDesc{},
+				utxo: map[bc.Hash]*types.Tx{},
+				orphans: map[bc.Hash]*orphanTx{
+					testTxs[3].ID: &orphanTx{
+						TxDesc: &TxDesc{
+							Tx: testTxs[3],
+						},
+					},
+				},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
+					testTxs[3].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
+						testTxs[3].ID: &orphanTx{
+							TxDesc: &TxDesc{
+								Tx: testTxs[3],
+							},
+						},
+					},
+				},
+				msgCh: make(chan *TxPoolMsg, 10),
+			},
+			after: &TxPool{
+				pool: map[bc.Hash]*TxDesc{
+					testTxs[3].ID: &TxDesc{
+						Tx:         testTxs[3],
+						StatusFail: false,
+					},
+				},
+				utxo: map[bc.Hash]*types.Tx{
+					*testTxs[3].ResultIds[0]: testTxs[3],
+					*testTxs[3].ResultIds[1]: testTxs[3],
+				},
+				orphans:       map[bc.Hash]*orphanTx{},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{},
+			},
+			processTx: &TxDesc{Tx: testTxs[2]},
+		},
+		{
+			before: &TxPool{
+				pool: map[bc.Hash]*TxDesc{},
+				utxo: map[bc.Hash]*types.Tx{},
+				orphans: map[bc.Hash]*orphanTx{
+					testTxs[3].ID: &orphanTx{
+						TxDesc: &TxDesc{
+							Tx: testTxs[3],
+						},
+					},
+					testTxs[4].ID: &orphanTx{
+						TxDesc: &TxDesc{
+							Tx: testTxs[4],
+						},
+					},
+				},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
+					testTxs[3].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
+						testTxs[3].ID: &orphanTx{
+							TxDesc: &TxDesc{
+								Tx: testTxs[3],
+							},
+						},
+					},
+					testTxs[4].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
+						testTxs[4].ID: &orphanTx{
+							TxDesc: &TxDesc{
+								Tx: testTxs[4],
+							},
+						},
+					},
+				},
+				msgCh: make(chan *TxPoolMsg, 10),
+			},
+			after: &TxPool{
+				pool: map[bc.Hash]*TxDesc{
+					testTxs[3].ID: &TxDesc{
+						Tx:         testTxs[3],
+						StatusFail: false,
+					},
+					testTxs[4].ID: &TxDesc{
+						Tx:         testTxs[4],
+						StatusFail: false,
+					},
+				},
+				utxo: map[bc.Hash]*types.Tx{
+					*testTxs[3].ResultIds[0]: testTxs[3],
+					*testTxs[3].ResultIds[1]: testTxs[3],
+					*testTxs[4].ResultIds[0]: testTxs[4],
+					*testTxs[4].ResultIds[1]: testTxs[4],
+				},
+				orphans:       map[bc.Hash]*orphanTx{},
+				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{},
+			},
+			processTx: &TxDesc{Tx: testTxs[2]},
+		},
+	}
+
+	for i, c := range cases {
+		c.before.store = &mockStore{}
+		c.before.addTransaction(c.processTx)
+		c.before.processOrphans(c.processTx)
+		c.before.RemoveTransaction(&c.processTx.Tx.ID)
+		c.before.store = nil
+		c.before.msgCh = nil
+		c.before.lastUpdated = 0
+		for _, txD := range c.before.pool {
+			txD.Added = time.Time{}
+		}
+
+		if !testutil.DeepEqual(c.before, c.after) {
+			t.Errorf("case %d: got %v want %v", i, c.before, c.after)
+		}
+	}
+}
+
 func TestRemoveOrphan(t *testing.T) {
 	cases := []struct {
 		before       *TxPool
@@ -444,22 +553,5 @@ func TestRemoveOrphan(t *testing.T) {
 		if !testutil.DeepEqual(c.before, c.after) {
 			t.Errorf("case %d: got %v want %v", i, c.before, c.after)
 		}
-	}
-}
-
-func mockCoinbaseTx(serializedSize uint64, amount uint64) *types.Tx {
-	cp, _ := vmutil.DefaultCoinbaseProgram()
-	oldTx := &types.TxData{
-		SerializedSize: serializedSize,
-		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput(nil),
-		},
-		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, amount, cp),
-		},
-	}
-	return &types.Tx{
-		TxData: *oldTx,
-		Tx:     types.MapTx(oldTx),
 	}
 }
