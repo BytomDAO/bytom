@@ -8,7 +8,6 @@ import (
 	"github.com/bytom/encoding/blockchain"
 	"github.com/bytom/encoding/bufpool"
 	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
 )
 
 // serflag variables, start with 1

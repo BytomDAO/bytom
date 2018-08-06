@@ -25,17 +25,17 @@ type CoinbaseArbitrary struct {
 	Arbitrary chainjson.HexBytes `json:"arbitrary"`
 }
 
-func (a *API) getNxCoinbaseArbitrary() Response {
-	arbitrary := a.wallet.AccountMgr.GetNxCoinbaseArbitrary()
+func (a *API) getCoinbaseArbitrary() Response {
+	arbitrary := a.wallet.AccountMgr.GetCoinbaseArbitrary()
 	resp := &CoinbaseArbitrary{
 		Arbitrary: arbitrary,
 	}
 	return NewSuccessResponse(resp)
 }
 
-func (a *API) setNxCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) Response {
-	a.wallet.AccountMgr.SetNxCoinbaseArbitrary(req.Arbitrary)
-	return a.getNxCoinbaseArbitrary()
+func (a *API) setCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) Response {
+	a.wallet.AccountMgr.SetCoinbaseArbitrary(req.Arbitrary)
+	return a.getCoinbaseArbitrary()
 }
 
 // getWork gets work in compressed protobuf format
@@ -118,8 +118,8 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 
 // GetWorkJSONResp is resp struct for get-work-json API
 type GetWorkJSONResp struct {
-	BlockHeader       *BlockHeaderJSON   `json:"block_header"`
-	Seed              *bc.Hash           `json:"seed"`
+	BlockHeader *BlockHeaderJSON `json:"block_header"`
+	Seed        *bc.Hash         `json:"seed"`
 }
 
 // GetWorkJSON gets work in json format
@@ -134,10 +134,6 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 		return nil, err
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	return &GetWorkJSONResp{
 		BlockHeader: &BlockHeaderJSON{
 			Version:           bh.Version,
@@ -148,7 +144,7 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 			Bits:              bh.Bits,
 			BlockCommitment:   &bh.BlockCommitment,
 		},
-		Seed:              seed,
+		Seed: seed,
 	}, nil
 }
 

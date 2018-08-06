@@ -35,7 +35,7 @@ var (
 	contractIndexPrefix = []byte("ContractIndex")
 	contractPrefix      = []byte("Contract:")
 	miningAddressKey    = []byte("MiningAddress")
-	nxCoinbaseAbKey     = []byte("nxCoinbaseArbitrary")
+	CoinbaseAbKey       = []byte("CoinbaseArbitrary")
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -246,8 +246,8 @@ func (m *Manager) GetAliasByID(id string) string {
 	return account.Alias
 }
 
-func (m *Manager) GetNxCoinbaseArbitrary() []byte {
-	if arbitrary := m.db.Get(nxCoinbaseAbKey); arbitrary != nil {
+func (m *Manager) GetCoinbaseArbitrary() []byte {
+	if arbitrary := m.db.Get(CoinbaseAbKey); arbitrary != nil {
 		return arbitrary
 	}
 	return []byte{}
@@ -413,8 +413,8 @@ func (m *Manager) SetMiningAddress(miningAddress string) (string, error) {
 	return m.GetMiningAddress()
 }
 
-func (m *Manager) SetNxCoinbaseArbitrary(arbitrary []byte) {
-	m.db.Set(nxCoinbaseAbKey, arbitrary)
+func (m *Manager) SetCoinbaseArbitrary(arbitrary []byte) {
+	m.db.Set(CoinbaseAbKey, arbitrary)
 }
 
 // CreateAddress generate an address for the select account

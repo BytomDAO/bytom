@@ -31,32 +31,31 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 		script, err = vmutil.DefaultCoinbaseProgram()
 	} else {
 		script, err = accountManager.GetCoinbaseControlProgram()
-		arbitrary = append(arbitrary, accountManager.GetNxCoinbaseArbitrary()...)
+		arbitrary = append(arbitrary, accountManager.GetCoinbaseArbitrary()...)
 	}
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if len(arbitrary) > consensus.CoinbaseArbitrarySizeLimit {
-		err = validation.ErrCoinbaseArbitraryOversize
-		return
+		return nil, validation.ErrCoinbaseArbitraryOversize
 	}
 
 	builder := txbuilder.NewBuilder(time.Now())
 	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
-		return
+		return nil, err
 	}
 	if err = builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, amount, script)); err != nil {
-		return
+		return nil, err
 	}
 	_, txData, err := builder.Build()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	byteData, err := txData.MarshalText()
 	if err != nil {
-		return
+		return nil, err
 	}
 	txData.SerializedSize = uint64(len(byteData))
 
@@ -64,7 +63,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 		TxData: *txData,
 		Tx:     types.MapTx(txData),
 	}
-	return
+	return tx, nil
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
