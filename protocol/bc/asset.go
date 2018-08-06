@@ -1,6 +1,7 @@
 package bc
 
 import (
+	"encoding/binary"
 	"errors"
 	"io"
 
@@ -10,7 +11,12 @@ import (
 
 // NewAssetID convert byte array to aseet id
 func NewAssetID(b [32]byte) (a AssetID) {
-	return AssetID(NewHash(b))
+	return AssetID{
+		V0: binary.BigEndian.Uint64(b[0:8]),
+		V1: binary.BigEndian.Uint64(b[8:16]),
+		V2: binary.BigEndian.Uint64(b[16:24]),
+		V3: binary.BigEndian.Uint64(b[24:32]),
+	}
 }
 
 // Byte32 return the byte array representation

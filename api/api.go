@@ -72,7 +72,11 @@ func FormatErrResp(err error) (response Response) {
 	if info, ok := respErrFormatter[root]; ok {
 		response.Code = info.ChainCode
 		response.Msg = info.Message
-		response.ErrorDetail = errors.Detail(err)
+		response.ErrorDetail = err.Error()
+	} else {
+		response.Code = respErrFormatter[ErrDefault].ChainCode
+		response.Msg = respErrFormatter[ErrDefault].Message
+		response.ErrorDetail = err.Error()
 	}
 	return response
 }
@@ -80,9 +84,6 @@ func FormatErrResp(err error) (response Response) {
 //NewErrorResponse error response
 func NewErrorResponse(err error) Response {
 	response := FormatErrResp(err)
-	if response.Msg == "" {
-		response.Msg = err.Error()
-	}
 	return response
 }
 
