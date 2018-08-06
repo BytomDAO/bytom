@@ -23,11 +23,6 @@ const (
 	assetVersion = 1
 )
 
-// MockTxPool mock transaction pool
-func MockTxPool() *protocol.TxPool {
-	return protocol.NewTxPool(nil)
-}
-
 // MockChain mock chain with genesis block
 func MockChain(testDB dbm.DB) (*protocol.Chain, *leveldb.Store, *protocol.TxPool, error) {
 	store := leveldb.NewStore(testDB)

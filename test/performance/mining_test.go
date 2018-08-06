@@ -16,13 +16,11 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	chain, _, _, err := test.MockChain(testDB)
+	chain, _, txPool, err := test.MockChain(testDB)
 	if err != nil {
 		b.Fatal(err)
 	}
 	accountManager := account.NewManager(testDB, chain)
-
-	txPool := test.MockTxPool()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
