@@ -147,11 +147,8 @@ func (a *API) getBlockHelper(ins BlockReq) (*types.Block, error) {
 		copy(b32[:], ins.BlockHash)
 		hash := bc.NewHash(b32)
 		block, err = a.chain.GetBlockByHash(&hash)
-	} else if ins.BlockHeight > 0 {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
 	} else {
-		hash := a.chain.BestBlockHash()
-		block, err = a.chain.GetBlockByHash(hash)
+		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
 	}
 	if err != nil {
 		return nil, err
