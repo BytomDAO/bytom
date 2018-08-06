@@ -96,8 +96,13 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	AccountID   string `json:"account_id"`
 	Detail      bool   `json:"detail"`
 	Unconfirmed bool   `json:"unconfirmed"`
+<<<<<<< HEAD
 	From        uint    `json:"from"`
 	Count       uint    `json:"count"`
+=======
+	From        uint   `json:"from"`
+	Count       uint   `json:"count"`
+>>>>>>> dev
 }) Response {
 	transactions := []*query.AnnotatedTx{}
 	var err error
@@ -245,8 +250,13 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	ID            string `json:"id"`
 	Unconfirmed   bool   `json:"unconfirmed"`
 	SmartContract bool   `json:"smart_contract"`
+<<<<<<< HEAD
 	From          uint    `json:"from"`
 	Count         uint    `json:"count"`
+=======
+	From          uint   `json:"from"`
+	Count         uint   `json:"count"`
+>>>>>>> dev
 }) Response {
 	accountUTXOs := a.wallet.GetAccountUtxos(filter.ID, filter.Unconfirmed, filter.SmartContract)
 
