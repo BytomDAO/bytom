@@ -1,11 +1,11 @@
 package types
 
-// CoinbaseInput is record the coinbase message
+// CoinbaseInput records the coinbase message
 type CoinbaseInput struct {
 	Arbitrary []byte
 }
 
-// NewCoinbaseInput create a new coinbase input struct
+// NewCoinbaseInput creates a new coinbase input struct
 func NewCoinbaseInput(arbitrary []byte) *TxInput {
 	return &TxInput{
 		AssetVersion: 1,
