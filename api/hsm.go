@@ -55,7 +55,7 @@ func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path
 	return a.wallet.Hsm.XSign(xpub, path, data[:], password)
 }
 
-// ResetPasswordResp is response for reset password password
+// ResetPasswordResp is response for reset key password
 type ResetPasswordResp struct {
 	Changed bool `json:"changed"`
 }
@@ -70,5 +70,22 @@ func (a *API) pseudohsmResetPassword(ctx context.Context, ins struct {
 		return NewSuccessResponse(resp)
 	}
 	resp.Changed = true
+	return NewSuccessResponse(resp)
+}
+
+// CheckPasswordResp is response for check key password
+type CheckPasswordResp struct {
+	CheckResult bool `json:"check_result"`
+}
+
+func (a *API) pseudohsmCheckPassword(ctx context.Context, ins struct {
+	XPub     chainkd.XPub `json:"xpub"`
+	Password string       `json:"password"`
+}) Response {
+	resp := &CheckPasswordResp{CheckResult: false}
+	if _, err := a.wallet.Hsm.LoadChainKDKey(ins.XPub, ins.Password); err != nil {
+		return NewSuccessResponse(resp)
+	}
+	resp.CheckResult = true
 	return NewSuccessResponse(resp)
 }

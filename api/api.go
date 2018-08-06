@@ -217,6 +217,7 @@ func (a *API) buildHandler() {
 		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
+		m.Handle("/check-key-password", jsonHandler(a.pseudohsmCheckPassword))
 		m.Handle("/sign-message", jsonHandler(a.signMessage))
 
 		m.Handle("/build-transaction", jsonHandler(a.build))
