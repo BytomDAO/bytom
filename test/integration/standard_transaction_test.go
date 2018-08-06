@@ -114,6 +114,10 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// the number of sign transaction is equal to the count of xpub for account
+	if _, err := test.MockSign(tpl, hsm, "password"); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := test.MockSign(tpl, hsm, "password"); err != nil {
 		t.Fatal(err)
 	}
