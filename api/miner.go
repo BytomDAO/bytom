@@ -100,7 +100,7 @@ type GetWorkResp struct {
 
 // GetWork gets work in compressed protobuf format
 func (a *API) GetWork() (*GetWorkResp, error) {
-	bh, _, err := a.miningPool.GetWork()
+	bh, err := a.miningPool.GetWork()
 	if err != nil {
 		return nil, err
 	}
@@ -120,12 +120,11 @@ func (a *API) GetWork() (*GetWorkResp, error) {
 type GetWorkJSONResp struct {
 	BlockHeader       *BlockHeaderJSON   `json:"block_header"`
 	Seed              *bc.Hash           `json:"seed"`
-	CoinbaseArbitrary chainjson.HexBytes `json:"coinbase_arbitrary"`
 }
 
 // GetWorkJSON gets work in json format
 func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
-	bh, block, err := a.miningPool.GetWork()
+	bh, err := a.miningPool.GetWork()
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +134,6 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 		return nil, err
 	}
 
-	arbitrary, err := block.CoinbaseArbitrary()
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +149,6 @@ func (a *API) GetWorkJSON() (*GetWorkJSONResp, error) {
 			BlockCommitment:   &bh.BlockCommitment,
 		},
 		Seed:              seed,
-		CoinbaseArbitrary: arbitrary,
 	}, nil
 }
 
