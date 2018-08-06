@@ -140,20 +140,14 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 }
 
 func (a *API) getBlockHelper(ins BlockReq) (*types.Block, error) {
-	var err error
-	block := &types.Block{}
 	if len(ins.BlockHash) == 32 {
 		b32 := [32]byte{}
 		copy(b32[:], ins.BlockHash)
 		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
+		return a.chain.GetBlockByHash(&hash)
 	} else {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
+		return a.chain.GetBlockByHeight(ins.BlockHeight)
 	}
-	if err != nil {
-		return nil, err
-	}
-	return block, nil
 }
 
 // GetDifficultyResp is resp struct for getDifficulty API
