@@ -73,9 +73,17 @@ func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint3
 		copy(newSigs, sw.Sigs)
 		sw.Sigs = newSigs
 	}
+
+	// The flag is ordered to avoid signing transaction successfully only once for a multiple-sign account
+	// that consist of different keys by the same password. Exit immediately when the flag it true,
+	// it means that only one signature will be successful in the loop for this multiple-sign account.
+	signFlag := false
 	var h [32]byte
 	sha3pool.Sum256(h[:], sw.Program)
 	for i, keyID := range sw.Keys {
+		if signFlag {
+			break
+		}
 		if len(sw.Sigs[i]) > 0 {
 			// Already have a signature for this key
 			continue
@@ -89,6 +97,7 @@ func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint3
 			log.WithField("err", err).Warningf("computing signature %d", i)
 			continue
 		}
+		signFlag = true
 		sw.Sigs[i] = sigBytes
 	}
 	return nil
