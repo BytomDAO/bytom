@@ -43,7 +43,12 @@ func (sw *RawTxSigWitness) sign(ctx context.Context, tpl *Template, index uint32
 			log.WithField("err", err).Warningf("computing signature %d", i)
 			continue
 		}
+
+		// This break is ordered to avoid signing transaction successfully only once for a multiple-sign account
+		// that consist of different keys by the same password. Exit immediately when the signature is success,
+		// it means that only one signature will be successful in the loop for this multiple-sign account.
 		sw.Sigs[i] = sigBytes
+		break
 	}
 	return nil
 }
