@@ -26,19 +26,6 @@ type Block struct {
 	Transactions []*Tx
 }
 
-func (b *Block) CoinbaseArbitrary() ([]byte, error) {
-	for _, tx := range b.Transactions {
-		for _, e := range tx.Tx.Entries {
-			switch e := e.(type) {
-			case *bc.Coinbase:
-				return e.Arbitrary, nil
-			default:
-			}
-		}
-	}
-	return []byte{}, errors.New("Can't find coinbase tx in block.")
-}
-
 // MarshalText fulfills the json.Marshaler interface. This guarantees that
 // blocks will get deserialized correctly when being parsed from HTTP requests.
 func (b *Block) MarshalText() ([]byte, error) {
