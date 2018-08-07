@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/hex"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
@@ -81,11 +82,12 @@ func (a *API) validateAddress(ctx context.Context, ins struct {
 }
 
 type addressResp struct {
-	AccountAlias string `json:"account_alias"`
-	AccountID    string `json:"account_id"`
-	Address      string `json:"address"`
-	Change       bool   `json:"change"`
-	KeyIndex     uint64 `json:"-"`
+	AccountAlias   string `json:"account_alias"`
+	AccountID      string `json:"account_id"`
+	Address        string `json:"address"`
+	ControlProgram string `json:"control_program"`
+	Change         bool   `json:"change"`
+	KeyIndex       uint64 `json:"-"`
 }
 
 // SortByIndex implements sort.Interface for addressResp slices
@@ -128,11 +130,12 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 			continue
 		}
 		addresses = append(addresses, addressResp{
-			AccountAlias: target.Alias,
-			AccountID:    cp.AccountID,
-			Address:      cp.Address,
-			Change:       cp.Change,
-			KeyIndex:     cp.KeyIndex,
+			AccountAlias:   target.Alias,
+			AccountID:      cp.AccountID,
+			Address:        cp.Address,
+			ControlProgram: hex.EncodeToString(cp.ControlProgram),
+			Change:         cp.Change,
+			KeyIndex:       cp.KeyIndex,
 		})
 	}
 
