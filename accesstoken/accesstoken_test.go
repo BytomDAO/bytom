@@ -15,7 +15,6 @@ func TestCreate(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
-	ctx := context.Background()
 
 	cases := []struct {
 		id, typ string
@@ -102,7 +101,6 @@ func TestDelete(t *testing.T) {
 }
 
 func TestDeleteWithInvalidId(t *testing.T) {
-	ctx := context.Background()
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	cs := NewStore(testDB)
