@@ -30,7 +30,6 @@ import (
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/types"
 	w "github.com/bytom/wallet"
 )
 
@@ -47,7 +46,6 @@ type Node struct {
 
 	syncManager *netsync.SyncManager
 
-	evsw types.EventSwitch // pub/sub for services
 	//bcReactor    *bc.BlockchainReactor
 	wallet       *w.Wallet
 	accessTokens *accesstoken.CredentialStore
@@ -72,12 +70,6 @@ func NewNode(config *cfg.Config) *Node {
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
-
-	// Make event switch
-	eventSwitch := types.NewEventSwitch()
-	if _, err := eventSwitch.Start(); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
-	}
 
 	txPool := protocol.NewTxPool()
 	chain, err := protocol.NewChain(store, txPool)
@@ -257,10 +249,6 @@ func (n *Node) RunForever() {
 	cmn.TrapSignal(func() {
 		n.Stop()
 	})
-}
-
-func (n *Node) EventSwitch() types.EventSwitch {
-	return n.evsw
 }
 
 func (n *Node) SyncManager() *netsync.SyncManager {
