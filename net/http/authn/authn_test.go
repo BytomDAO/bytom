@@ -1,7 +1,6 @@
 package authn
 
 import (
-	"context"
 	"net/http"
 	"os"
 	"strings"
@@ -14,8 +13,6 @@ import (
 )
 
 func TestAuthenticate(t *testing.T) {
-	ctx := context.Background()
-
 	tokenDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 	tokenStore := accesstoken.NewStore(tokenDB)
