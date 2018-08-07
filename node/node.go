@@ -129,7 +129,6 @@ func NewNode(config *cfg.Config) *Node {
 	node := &Node{
 		config:       config,
 		syncManager:  syncManager,
-		evsw:         eventSwitch,
 		accessTokens: accessTokens,
 		wallet:       wallet,
 		chain:        chain,
