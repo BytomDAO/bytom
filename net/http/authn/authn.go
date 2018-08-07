@@ -140,7 +140,7 @@ func (a *API) cachedTokenAuthnCheck(ctx context.Context, user, pw string) error 
 	res, ok := a.tokenMap[user+pw]
 	a.tokenMu.Unlock()
 	if !ok || time.Now().After(res.lastLookup.Add(tokenExpiry)) {
-		err := a.tokens.Check(ctx, user, pw)
+		err := a.tokens.Check(user, pw)
 		if err != nil {
 			return ErrInvalidToken
 		}

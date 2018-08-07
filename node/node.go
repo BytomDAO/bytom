@@ -1,6 +1,7 @@
 package node
 
 import (
+	"strings"
 	"context"
 	"errors"
 	"net/http"
@@ -35,7 +36,7 @@ import (
 )
 
 const (
-	webAddress        = "http://127.0.0.1:9888"
+	webHost           = "http://127.0.0.1"
 	maxNewBlockChSize = 1024
 )
 
@@ -212,7 +213,8 @@ func initLogFile(config *cfg.Config) {
 }
 
 // Lanch web broser or not
-func launchWebBrowser() {
+func launchWebBrowser(port string) {
+	webAddress := webHost + ":" + port
 	log.Info("Launching System Browser with :", webAddress)
 	if err := browser.Open(webAddress); err != nil {
 		log.Error(err.Error())
@@ -242,7 +244,11 @@ func (n *Node) OnStart() error {
 	}
 	n.initAndstartApiServer()
 	if !n.config.Web.Closed {
-		launchWebBrowser()
+		s :=  strings.Split(n.config.ApiAddress, ":")
+		if len(s) != 2 {
+			log.Error("Invalid api address")
+		}
+		launchWebBrowser(s[1])
 	}
 	return nil
 }
