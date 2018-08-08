@@ -38,24 +38,6 @@ func NewOrphanManage() *OrphanManage {
 	return o
 }
 
-func (o *OrphanManage) orphanExpireWorker() {
-	ticker := time.NewTicker(orphanExpireScanInterval)
-	for now := range ticker.C {
-		o.orphanExpire(now)
-	}
-	ticker.Stop()
-}
-
-func (o *OrphanManage) orphanExpire(now time.Time) {
-	o.mtx.Lock()
-	defer o.mtx.Unlock()
-	for hash, orphan := range o.orphan {
-		if orphan.expiration.Before(now) {
-			o.delete(&hash)
-		}
-	}
-}
-
 // BlockExist check is the block in OrphanManage
 func (o *OrphanManage) BlockExist(hash *bc.Hash) bool {
 	o.mtx.RLock()
@@ -80,27 +62,6 @@ func (o *OrphanManage) Add(block *types.Block) {
 	log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
 }
 
-func (o *OrphanManage) delete(hash *bc.Hash) {
-	block, ok := o.orphan[*hash]
-	if !ok {
-		return
-	}
-	delete(o.orphan, *hash)
-
-	prevOrphans, ok := o.prevOrphans[block.Block.PreviousBlockHash]
-	if !ok || len(prevOrphans) == 1 {
-		delete(o.prevOrphans, block.Block.PreviousBlockHash)
-		return
-	}
-
-	for i, preOrphan := range prevOrphans {
-		if preOrphan == hash {
-			o.prevOrphans[block.Block.PreviousBlockHash] = append(prevOrphans[:i], prevOrphans[i+1:]...)
-			return
-		}
-	}
-}
-
 // Delete will delete the block from OrphanManage
 func (o *OrphanManage) Delete(hash *bc.Hash) {
 	o.mtx.Lock()
@@ -122,4 +83,43 @@ func (o *OrphanManage) GetPrevOrphans(hash *bc.Hash) ([]*bc.Hash, bool) {
 	prevOrphans, ok := o.prevOrphans[*hash]
 	o.mtx.RUnlock()
 	return prevOrphans, ok
+}
+
+func (o *OrphanManage) orphanExpireWorker() {
+	ticker := time.NewTicker(orphanExpireScanInterval)
+	for now := range ticker.C {
+		o.orphanExpire(now)
+	}
+	ticker.Stop()
+}
+
+func (o *OrphanManage) orphanExpire(now time.Time) {
+	o.mtx.Lock()
+	defer o.mtx.Unlock()
+	for hash, orphan := range o.orphan {
+		if orphan.expiration.Before(now) {
+			o.delete(&hash)
+		}
+	}
+}
+
+func (o *OrphanManage) delete(hash *bc.Hash) {
+	block, ok := o.orphan[*hash]
+	if !ok {
+		return
+	}
+	delete(o.orphan, *hash)
+
+	prevOrphans, ok := o.prevOrphans[block.Block.PreviousBlockHash]
+	if !ok || len(prevOrphans) == 1 {
+		delete(o.prevOrphans, block.Block.PreviousBlockHash)
+		return
+	}
+
+	for i, preOrphan := range prevOrphans {
+		if preOrphan == hash {
+			o.prevOrphans[block.Block.PreviousBlockHash] = append(prevOrphans[:i], prevOrphans[i+1:]...)
+			return
+		}
+	}
 }
