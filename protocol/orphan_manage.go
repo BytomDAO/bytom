@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	orphanTTL                = 10 * time.Minute
+	orphanBlockTTL           = 60 * time.Minute
 	orphanExpireScanInterval = 3 * time.Minute
 )
 
@@ -47,18 +47,12 @@ func (o *OrphanManage) orphanExpireWorker() {
 }
 
 func (o *OrphanManage) orphanExpire(now time.Time) {
-	var orphans []bc.Hash
-
-	o.mtx.RLock()
+	o.mtx.Lock()
+	defer o.mtx.Unlock()
 	for hash, orphan := range o.orphan {
 		if orphan.expiration.Before(now) {
-			orphans = append(orphans, hash)
+			o.delete(&hash)
 		}
-	}
-	o.mtx.RUnlock()
-
-	for _, hash := range orphans {
-		o.Delete(&hash)
 	}
 }
 
@@ -80,16 +74,13 @@ func (o *OrphanManage) Add(block *types.Block) {
 		return
 	}
 
-	o.orphan[blockHash] = &OrphanBlock{block, time.Now().Add(orphanTTL)}
+	o.orphan[blockHash] = &OrphanBlock{block, time.Now().Add(orphanBlockTTL)}
 	o.prevOrphans[block.PreviousBlockHash] = append(o.prevOrphans[block.PreviousBlockHash], &blockHash)
 
 	log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
 }
 
-// Delete will delete the block from OrphanManage
-func (o *OrphanManage) Delete(hash *bc.Hash) {
-	o.mtx.Lock()
-	defer o.mtx.Unlock()
+func (o *OrphanManage) delete(hash *bc.Hash) {
 	block, ok := o.orphan[*hash]
 	if !ok {
 		return
@@ -108,6 +99,13 @@ func (o *OrphanManage) Delete(hash *bc.Hash) {
 			return
 		}
 	}
+}
+
+// Delete will delete the block from OrphanManage
+func (o *OrphanManage) Delete(hash *bc.Hash) {
+	o.mtx.Lock()
+	defer o.mtx.Unlock()
+	o.delete(hash)
 }
 
 // Get return the orphan block by hash
