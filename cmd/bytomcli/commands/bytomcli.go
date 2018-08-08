@@ -153,6 +153,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(deleteKeyCmd)
 	BytomcliCmd.AddCommand(listKeysCmd)
 	BytomcliCmd.AddCommand(resetKeyPwdCmd)
+	BytomcliCmd.AddCommand(checkKeyPwdCmd)
 
 	BytomcliCmd.AddCommand(signMsgCmd)
 	BytomcliCmd.AddCommand(verifyMsgCmd)
@@ -193,6 +194,7 @@ func AddTemplateFunc() {
 		deleteKeyCmd.Name(),
 		listKeysCmd.Name(),
 		resetKeyPwdCmd.Name(),
+		checkKeyPwdCmd.Name(),
 		signMsgCmd.Name(),
 
 		buildTransactionCmd.Name(),

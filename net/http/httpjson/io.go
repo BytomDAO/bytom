@@ -24,7 +24,7 @@ func Read(r io.Reader, v interface{}) error {
 	err := dec.Decode(v)
 	if err != nil {
 		detail := errors.Detail(err)
-		if detail == "" {
+		if detail == "" || detail == err.Error() {
 			detail = "check request parameters for missing and/or incorrect values"
 		}
 		return errors.WithDetail(ErrBadRequest, err.Error()+": "+detail)

@@ -125,7 +125,7 @@ benchmark:
 	@go test -bench $(PACKAGES)
 
 functional-tests:
-	@go test -v -timeout=5m -tags="functional" ./test 
+	@go test -timeout=5m -tags="functional" ./test 
 
 ci: test functional-tests
 

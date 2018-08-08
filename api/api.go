@@ -72,7 +72,11 @@ func FormatErrResp(err error) (response Response) {
 	if info, ok := respErrFormatter[root]; ok {
 		response.Code = info.ChainCode
 		response.Msg = info.Message
-		response.ErrorDetail = errors.Detail(err)
+		response.ErrorDetail = err.Error()
+	} else {
+		response.Code = respErrFormatter[ErrDefault].ChainCode
+		response.Msg = respErrFormatter[ErrDefault].Message
+		response.ErrorDetail = err.Error()
 	}
 	return response
 }
@@ -80,9 +84,6 @@ func FormatErrResp(err error) (response Response) {
 //NewErrorResponse error response
 func NewErrorResponse(err error) Response {
 	response := FormatErrResp(err)
-	if response.Msg == "" {
-		response.Msg = err.Error()
-	}
 	return response
 }
 
@@ -216,6 +217,7 @@ func (a *API) buildHandler() {
 		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
+		m.Handle("/check-key-password", jsonHandler(a.pseudohsmCheckPassword))
 		m.Handle("/sign-message", jsonHandler(a.signMessage))
 
 		m.Handle("/build-transaction", jsonHandler(a.build))
@@ -270,6 +272,9 @@ func (a *API) buildHandler() {
 	m.Handle("/get-work-json", jsonHandler(a.getWorkJSON))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
 	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
+
+	m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
+	m.Handle("/set-coinbase-arbitrary", jsonHandler(a.setCoinbaseArbitrary))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/decode-program", jsonHandler(a.decodeProgram))
