@@ -32,7 +32,7 @@ func TestIsEnable(t *testing.T) {
 
 	for i, c := range cases {
 		if c.baseFlag.IsEnable(c.checkFlage) != c.result {
-			t.Errorf("test case #%b got %b, want %b", i, c.baseFlag.IsEnable(c.checkFlage), c.result)
+			t.Errorf("test case #%d got %t, want %t", i, c.baseFlag.IsEnable(c.checkFlage), c.result)
 		}
 	}
 }

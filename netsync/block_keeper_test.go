@@ -194,7 +194,7 @@ func TestFastBlockSync(t *testing.T) {
 		for i := uint64(0); i <= a.chain.BestBlockHeight(); i++ {
 			block, err := a.chain.GetBlockByHeight(i)
 			if err != nil {
-				t.Error("case %d got err %v", err)
+				t.Errorf("case %d got err %v", i, err)
 			}
 			got = append(got, block)
 		}
@@ -452,7 +452,7 @@ func TestRegularBlockSync(t *testing.T) {
 		for i := uint64(0); i <= a.chain.BestBlockHeight(); i++ {
 			block, err := a.chain.GetBlockByHeight(i)
 			if err != nil {
-				t.Error("case %d got err %v", err)
+				t.Errorf("case %d got err %v", i, err)
 			}
 			got = append(got, block)
 		}
