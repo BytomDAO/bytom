@@ -15,14 +15,14 @@ var (
 	orphanExpireScanInterval = 3 * time.Minute
 )
 
-type OrphanTx struct {
+type OrphanBlock struct {
 	orphanBlock *types.Block
 	expiration  time.Time
 }
 
 // OrphanManage is use to handle all the orphan block
 type OrphanManage struct {
-	orphan      map[bc.Hash]*OrphanTx
+	orphan      map[bc.Hash]*OrphanBlock
 	prevOrphans map[bc.Hash][]*bc.Hash
 	mtx         sync.RWMutex
 }
@@ -30,7 +30,7 @@ type OrphanManage struct {
 // NewOrphanManage return a new orphan block
 func NewOrphanManage() *OrphanManage {
 	o := &OrphanManage{
-		orphan:      make(map[bc.Hash]*OrphanTx),
+		orphan:      make(map[bc.Hash]*OrphanBlock),
 		prevOrphans: make(map[bc.Hash][]*bc.Hash),
 	}
 
@@ -80,7 +80,7 @@ func (o *OrphanManage) Add(block *types.Block) {
 		return
 	}
 
-	o.orphan[blockHash] = &OrphanTx{block, time.Now().Add(orphanTTL)}
+	o.orphan[blockHash] = &OrphanBlock{block, time.Now().Add(orphanTTL)}
 	o.prevOrphans[block.PreviousBlockHash] = append(o.prevOrphans[block.PreviousBlockHash], &blockHash)
 
 	log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
