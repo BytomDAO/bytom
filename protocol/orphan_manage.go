@@ -16,8 +16,8 @@ var (
 )
 
 type OrphanBlock struct {
-	orphanBlock *types.Block
-	expiration  time.Time
+	*types.Block
+	expiration time.Time
 }
 
 // OrphanManage is use to handle all the orphan block
@@ -87,15 +87,15 @@ func (o *OrphanManage) delete(hash *bc.Hash) {
 	}
 	delete(o.orphan, *hash)
 
-	prevOrphans, ok := o.prevOrphans[block.orphanBlock.PreviousBlockHash]
+	prevOrphans, ok := o.prevOrphans[block.Block.PreviousBlockHash]
 	if !ok || len(prevOrphans) == 1 {
-		delete(o.prevOrphans, block.orphanBlock.PreviousBlockHash)
+		delete(o.prevOrphans, block.Block.PreviousBlockHash)
 		return
 	}
 
 	for i, preOrphan := range prevOrphans {
 		if preOrphan == hash {
-			o.prevOrphans[block.orphanBlock.PreviousBlockHash] = append(prevOrphans[:i], prevOrphans[i+1:]...)
+			o.prevOrphans[block.Block.PreviousBlockHash] = append(prevOrphans[:i], prevOrphans[i+1:]...)
 			return
 		}
 	}
@@ -113,7 +113,7 @@ func (o *OrphanManage) Get(hash *bc.Hash) (*types.Block, bool) {
 	o.mtx.RLock()
 	block, ok := o.orphan[*hash]
 	o.mtx.RUnlock()
-	return block.orphanBlock, ok
+	return block.Block, ok
 }
 
 // GetPrevOrphans return the list of child orphans
