@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -111,26 +110,9 @@ func (m *Manager) DecodeSpendUTXOAction(data []byte) (txbuilder.Action, error) {
 
 type spendUTXOAction struct {
 	accounts       *Manager
-	OutputID       *bc.Hash           `json:"output_id"`
-	UseUnconfirmed bool               `json:"use_unconfirmed"`
-	Arguments      []contractArgument `json:"arguments"`
-}
-
-// contractArgument for smart contract
-type contractArgument struct {
-	Type    string          `json:"type"`
-	RawData json.RawMessage `json:"raw_data"`
-}
-
-// rawTxSigArgument is signature-related argument for run contract
-type rawTxSigArgument struct {
-	RootXPub chainkd.XPub         `json:"xpub"`
-	Path     []chainjson.HexBytes `json:"derivation_path"`
-}
-
-// dataArgument is the other argument for run contract
-type dataArgument struct {
-	Value string `json:"value"`
+	OutputID       *bc.Hash                     `json:"output_id"`
+	UseUnconfirmed bool                         `json:"use_unconfirmed"`
+	Arguments      []txbuilder.ContractArgument `json:"arguments"`
 }
 
 func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
@@ -167,7 +149,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	for _, arg := range a.Arguments {
 		switch arg.Type {
 		case "raw_tx_signature":
-			rawTxSig := &rawTxSigArgument{}
+			rawTxSig := &txbuilder.RawTxSigArgument{}
 			if err = json.Unmarshal(arg.RawData, rawTxSig); err != nil {
 				return err
 			}
@@ -180,7 +162,7 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 			sigInst.AddRawWitnessKeys([]chainkd.XPub{rawTxSig.RootXPub}, path, 1)
 
 		case "data":
-			data := &dataArgument{}
+			data := &txbuilder.DataArgument{}
 			if err = json.Unmarshal(arg.RawData, data); err != nil {
 				return err
 			}

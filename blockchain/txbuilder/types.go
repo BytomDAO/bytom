@@ -2,7 +2,9 @@ package txbuilder
 
 import (
 	"context"
+	"encoding/json"
 
+	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -35,4 +37,21 @@ type Action interface {
 type Receiver struct {
 	ControlProgram chainjson.HexBytes `json:"control_program,omitempty"`
 	Address        string             `json:"address,omitempty"`
+}
+
+// ContractArgument for smart contract
+type ContractArgument struct {
+	Type    string          `json:"type"`
+	RawData json.RawMessage `json:"raw_data"`
+}
+
+// RawTxSigArgument is signature-related argument for run contract
+type RawTxSigArgument struct {
+	RootXPub chainkd.XPub         `json:"xpub"`
+	Path     []chainjson.HexBytes `json:"derivation_path"`
+}
+
+// DataArgument is the other argument for run contract
+type DataArgument struct {
+	Value string `json:"value"`
 }
