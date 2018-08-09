@@ -85,24 +85,6 @@ func (o *OrphanManage) GetPrevOrphans(hash *bc.Hash) ([]*bc.Hash, bool) {
 	return prevOrphans, ok
 }
 
-func (o *OrphanManage) orphanExpireWorker() {
-	ticker := time.NewTicker(orphanExpireWorkInterval)
-	for now := range ticker.C {
-		o.orphanExpire(now)
-	}
-	ticker.Stop()
-}
-
-func (o *OrphanManage) orphanExpire(now time.Time) {
-	o.mtx.Lock()
-	defer o.mtx.Unlock()
-	for hash, orphan := range o.orphan {
-		if orphan.expiration.Before(now) {
-			o.delete(&hash)
-		}
-	}
-}
-
 func (o *OrphanManage) delete(hash *bc.Hash) {
 	block, ok := o.orphan[*hash]
 	if !ok {
@@ -120,6 +102,24 @@ func (o *OrphanManage) delete(hash *bc.Hash) {
 		if preOrphan == hash {
 			o.prevOrphans[block.Block.PreviousBlockHash] = append(prevOrphans[:i], prevOrphans[i+1:]...)
 			return
+		}
+	}
+}
+
+func (o *OrphanManage) orphanExpireWorker() {
+	ticker := time.NewTicker(orphanExpireWorkInterval)
+	for now := range ticker.C {
+		o.orphanExpire(now)
+	}
+	ticker.Stop()
+}
+
+func (o *OrphanManage) orphanExpire(now time.Time) {
+	o.mtx.Lock()
+	defer o.mtx.Unlock()
+	for hash, orphan := range o.orphan {
+		if orphan.expiration.Before(now) {
+			o.delete(&hash)
 		}
 	}
 }
