@@ -2,27 +2,27 @@ package protocol
 
 import (
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	"time"
 )
 
 var (
 	orphanBlockTTL           = 60 * time.Minute
-	orphanExpireScanInterval = 3 * time.Minute
+	orphanExpireWorkInterval = 3 * time.Minute
 )
 
-type OrphanBlock struct {
+type orphanBlock struct {
 	*types.Block
 	expiration time.Time
 }
 
 // OrphanManage is use to handle all the orphan block
 type OrphanManage struct {
-	orphan      map[bc.Hash]*OrphanBlock
+	orphan      map[bc.Hash]*orphanBlock
 	prevOrphans map[bc.Hash][]*bc.Hash
 	mtx         sync.RWMutex
 }
@@ -30,7 +30,7 @@ type OrphanManage struct {
 // NewOrphanManage return a new orphan block
 func NewOrphanManage() *OrphanManage {
 	o := &OrphanManage{
-		orphan:      make(map[bc.Hash]*OrphanBlock),
+		orphan:      make(map[bc.Hash]*orphanBlock),
 		prevOrphans: make(map[bc.Hash][]*bc.Hash),
 	}
 
@@ -56,7 +56,7 @@ func (o *OrphanManage) Add(block *types.Block) {
 		return
 	}
 
-	o.orphan[blockHash] = &OrphanBlock{block, time.Now().Add(orphanBlockTTL)}
+	o.orphan[blockHash] = &orphanBlock{block, time.Now().Add(orphanBlockTTL)}
 	o.prevOrphans[block.PreviousBlockHash] = append(o.prevOrphans[block.PreviousBlockHash], &blockHash)
 
 	log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
@@ -86,7 +86,7 @@ func (o *OrphanManage) GetPrevOrphans(hash *bc.Hash) ([]*bc.Hash, bool) {
 }
 
 func (o *OrphanManage) orphanExpireWorker() {
-	ticker := time.NewTicker(orphanExpireScanInterval)
+	ticker := time.NewTicker(orphanExpireWorkInterval)
 	for now := range ticker.C {
 		o.orphanExpire(now)
 	}
