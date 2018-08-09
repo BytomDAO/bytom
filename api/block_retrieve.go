@@ -182,9 +182,12 @@ type getHashRateResp struct {
 }
 
 func (a *API) getHashRate(ins BlockReq) Response {
-	if len(ins.BlockHash) != 32 && ins.BlockHeight == 0 {
-		err := errors.New("Request format error.")
+	if len(ins.BlockHash) != 32 && len(ins.BlockHash) != 0 {
+		err := errors.New("Block hash format error.")
 		return NewErrorResponse(err)
+	}
+	if ins.BlockHeight == 0 {
+		ins.BlockHeight = a.chain.BestBlockHeight()
 	}
 
 	block, err := a.getBlockHelper(ins)
