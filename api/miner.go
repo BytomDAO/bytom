@@ -18,7 +18,7 @@ type BlockHeaderJSON struct {
 	Timestamp         uint64                 `json:"timestamp"`           // The time of the block in seconds.
 	Nonce             uint64                 `json:"nonce"`               // Nonce used to generate the block.
 	Bits              uint64                 `json:"bits"`                // Difficulty target for the block.
-	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    //Block commitment
+	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    // Block commitment
 }
 
 type CoinbaseArbitrary struct {
