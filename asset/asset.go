@@ -127,6 +127,9 @@ func (reg *Registry) getNextAssetIndex() uint64 {
 
 // Define defines a new Asset.
 func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
+	var err error
+	var assetSigner *signers.Signer
+
 	alias = strings.ToUpper(strings.TrimSpace(alias))
 	if alias == "" {
 		return nil, errors.Wrap(ErrNullAlias)
@@ -141,7 +144,6 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, ErrSerializing
 	}
 
-	var assetSigner *signers.Signer
 	vmver := uint64(1)
 	if len(issuanceProgram) == 0 {
 		if len(xpubs) == 0 {
@@ -149,7 +151,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		}
 
 		nextAssetIndex := reg.getNextAssetIndex()
-		assetSigner, err := signers.Create("asset", xpubs, quorum, nextAssetIndex)
+		assetSigner, err = signers.Create("asset", xpubs, quorum, nextAssetIndex)
 		if err != nil {
 			return nil, err
 		}
