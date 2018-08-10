@@ -72,7 +72,6 @@ Credits
 --------
 
 Thanks to everyone who directly contributed to this release:
-
 - Broadroad
 - Colt-Z
 - HAOYUatHZ
