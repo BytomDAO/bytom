@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"reflect"
 
 	dbm "github.com/tendermint/tmlibs/db"
@@ -249,11 +250,9 @@ func (cfg *walletTestConfig) Run() error {
 		return err
 	}
 
-	db := dbm.NewDB("wallet_test_db", "leveldb", "wallet_test_db")
-	defer os.RemoveAll("wallet_test_db")
+	db := dbm.NewDB("wallet_test_db", "leveldb", path.Join(dirPath, "wallet_test_db"))
 	chain, _, _, _ := MockChain(db)
-	walletDB := dbm.NewDB("wallet", "leveldb", "wallet_db")
-	defer os.RemoveAll("wallet_db")
+	walletDB := dbm.NewDB("wallet", "leveldb", path.Join(dirPath, "wallet_db"))
 	accountManager := account.NewManager(walletDB, chain)
 	assets := asset.NewRegistry(walletDB, chain)
 	wallet, err := w.NewWallet(walletDB, accountManager, assets, hsm, chain)
@@ -309,8 +308,13 @@ func (cfg *walletTestConfig) Run() error {
 		return err
 	}
 
-	forkedChain, err := declChain("forked_chain", ctx.Chain, rollbackBlock.Height, ctx.Chain.BestBlockHeight()+1)
-	defer os.RemoveAll("forked_chain")
+	forkPath, err := ioutil.TempDir(".", "forked_chain")
+	if err != nil {
+		return err
+	}
+
+	forkedChain, err := declChain(forkPath, ctx.Chain, rollbackBlock.Height, ctx.Chain.BestBlockHeight()+1)
+	defer os.RemoveAll(forkPath)
 	if err != nil {
 		return err
 	}

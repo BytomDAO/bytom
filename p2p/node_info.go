@@ -26,22 +26,18 @@ type NodeInfo struct {
 // CONTRACT: two nodes are compatible if the major version matches and network match
 // and they have at least one channel in common.
 func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
-	iMajor, iMinor, _, err := splitVersion(info.Version)
+	iMajor, _, _, err := splitVersion(info.Version)
 	if err != nil {
 		return err
 	}
-
-	oMajor, oMinor, _, err := splitVersion(other.Version)
+	oMajor, _, _, err := splitVersion(other.Version)
 	if err != nil {
 		return err
 	}
-
 	if iMajor != oMajor {
 		return fmt.Errorf("Peer is on a different major version. Got %v, expected %v", oMajor, iMajor)
 	}
-	if iMinor != oMinor {
-		return fmt.Errorf("Peer is on a different minor version. Got %v, expected %v", oMinor, iMinor)
-	}
+
 	if info.Network != other.Network {
 		return fmt.Errorf("Peer is on a different network. Got %v, expected %v", other.Network, info.Network)
 	}

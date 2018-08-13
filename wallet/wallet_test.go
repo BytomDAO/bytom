@@ -31,7 +31,7 @@ func TestWalletUpdate(t *testing.T) {
 	defer os.RemoveAll("temp")
 
 	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool()
+	txPool := protocol.NewTxPool(store)
 
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {

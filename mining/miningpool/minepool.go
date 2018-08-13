@@ -67,6 +67,7 @@ func (m *MiningPool) blockUpdater() {
 	}
 }
 
+// generateBlock generates a block template to mine
 func (m *MiningPool) generateBlock() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
