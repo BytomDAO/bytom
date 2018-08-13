@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
@@ -20,6 +21,10 @@ import (
 	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm"
 )
+
+func init() {
+	log.SetLevel(log.ErrorLevel)
+}
 
 type TxTestConfig struct {
 	Keys         []*keyInfo       `json:"keys"`

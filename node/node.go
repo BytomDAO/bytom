@@ -1,13 +1,13 @@
 package node
 
 import (
-	"strings"
 	"context"
 	"errors"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
@@ -72,7 +72,7 @@ func NewNode(config *cfg.Config) *Node {
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
 
-	txPool := protocol.NewTxPool()
+	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
@@ -235,7 +235,7 @@ func (n *Node) OnStart() error {
 	}
 	n.initAndstartApiServer()
 	if !n.config.Web.Closed {
-		s :=  strings.Split(n.config.ApiAddress, ":")
+		s := strings.Split(n.config.ApiAddress, ":")
 		if len(s) != 2 {
 			log.Error("Invalid api address")
 		}
