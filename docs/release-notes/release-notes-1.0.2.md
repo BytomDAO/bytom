@@ -16,16 +16,26 @@ You can operate according to the user manual.[(Bytom User Manual)](URL 'https://
 
 1.0.2 changelog
 ================
-- `9769427` Added vault mode to support offline signature support. 
-- `b4f4163` Add system log to save to file.
-- `a96d25a` Lock data directory after daemonization.
-- `32d392b` add sign-message and verify-message API.
-- `993192a` Add decode-raw-transaction API.
-- `f9fa26e` Reconstruction build transaction's MergeSpendAction when spendAction contains common asset.
-- `b037ca0` Add wallet rescan option.
-- `7070fde` Accelerate node access to the mainnet.
-- `1b55497` Fix block sync routine lock bug.
-- `6808e24` Added tensority algorithm benchmark test. 
+- `9769427`
+    + Added vault mode to support offline signature support. 
+- `b4f4163`
+    + Add system log to save to file.
+- `a96d25a`
+    + Lock data directory after daemonization.
+- `32d392b`
+    + add sign-message and verify-message API.
+- `993192a`
+    + Add decode-raw-transaction API.
+- `f9fa26e`
+    + Reconstruction build transaction's `MergeSpendAction` when spendAction contains common asset.
+- `b037ca0`
+    + Add wallet rescan option.
+- `7070fde`
+    + Accelerate node access to the mainnet.
+- `1b55497`
+    + Fix block sync routine lock bug.
+- `6808e24`
+    + Added tensority algorithm benchmark test. 
 
 Credits
 --------
