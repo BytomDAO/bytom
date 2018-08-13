@@ -23,14 +23,14 @@ var RootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		paths := strings.SplitN(config.RootDir, "/", 2)
-		if len(paths) == 2 && (paths[0] == "~" || paths[0] == "$HOME") {
+		pathParts := strings.SplitN(config.RootDir, "/", 2)
+		if len(pathParts) == 2 && (pathParts[0] == "~" || pathParts[0] == "$HOME") {
 			usr, err := user.Current()
 			if err != nil {
 				cmn.Exit("Error: " + err.Error())
 			}
-			paths[0] = usr.HomeDir
-			config.RootDir = paths[0] + "/" + paths[1]
+			pathParts[0] = usr.HomeDir
+			config.RootDir = strings.Join(pathParts, "/")
 		}
 		config.SetRoot(config.RootDir)
 		return nil
