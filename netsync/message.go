@@ -350,7 +350,7 @@ func (m *MineBlockMessage) String() string {
 
 //FilterLoadMessage tells the receiving peer to filter the transactions according to address.
 type FilterLoadMessage struct {
-	Addresses [][42]byte
+	Addresses [][]byte
 }
 
 //FilterClearMessage tells the receiving peer to remove a previously-set filter. 
