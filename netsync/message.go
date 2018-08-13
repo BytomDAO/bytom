@@ -364,5 +364,12 @@ type GetMerkleBlockMessage struct {
 
 //MerkleBlockMessage return the merkle block to client
 type MerkleBlockMessage struct {
-	RawMerkleBlock []byte
+	RawBlockHeader []byte
+	TransactionCount uint32
+	TxHashes [][]byte
+	TxFlags []byte
+	RawTxDatas [][]byte
+	StatusHashes [][]byte
+	StatusFlags []byte
+	TxStatuses [][]byte
 }
