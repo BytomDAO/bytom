@@ -2,7 +2,6 @@ package account
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 
 	"github.com/bytom/blockchain/signers"
@@ -146,37 +145,10 @@ func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilde
 	}
 
 	sigInst = &txbuilder.SigningInstruction{}
-	for _, arg := range a.Arguments {
-		switch arg.Type {
-		case "raw_tx_signature":
-			rawTxSig := &txbuilder.RawTxSigArgument{}
-			if err = json.Unmarshal(arg.RawData, rawTxSig); err != nil {
-				return err
-			}
-
-			// convert path form chainjson.HexBytes to byte
-			var path [][]byte
-			for _, p := range rawTxSig.Path {
-				path = append(path, []byte(p))
-			}
-			sigInst.AddRawWitnessKeys([]chainkd.XPub{rawTxSig.RootXPub}, path, 1)
-
-		case "data":
-			data := &txbuilder.DataArgument{}
-			if err = json.Unmarshal(arg.RawData, data); err != nil {
-				return err
-			}
-
-			value, err := hex.DecodeString(data.Value)
-			if err != nil {
-				return err
-			}
-			sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness(value))
-
-		default:
-			return errors.New("contract argument type is not exist")
-		}
+	if err := txbuilder.AddContractArgs(sigInst, a.Arguments); err != nil {
+		return err
 	}
+
 	return b.AddInput(txInput, sigInst)
 }
 
