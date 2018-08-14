@@ -1,9 +1,12 @@
 package sm3
 
 // Sum256 returns the SM3 digest of the data.
-func Sum256(data []byte) (digest []byte) {
-	h := New()
-	h.Write(data)
-	h.Sum(digest[:0])
+func Sum256(data []byte) (digest [32]byte) {
+	hash := Sm3Sum(data)
+	copy(digest[:], hash)
 	return
+}
+
+func Sum(hash, data []byte) {
+	hash = Sm3Sum(data)
 }
