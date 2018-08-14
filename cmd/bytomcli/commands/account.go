@@ -16,6 +16,7 @@ func init() {
 	createAccountCmd.PersistentFlags().StringVarP(&accountToken, "access", "a", "", "access token")
 
 	listAccountsCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
+	listAccountsCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
 
 	listAddressesCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
 	listAddressesCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
@@ -68,8 +69,9 @@ var listAccountsCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		filter := struct {
-			ID string `json:"id"`
-		}{ID: accountID}
+			ID    string `json:"id"`
+			Alias string `json:"alias"`
+		}{ID: accountID, Alias: accountAlias}
 
 		data, exitCode := util.ClientCall("/list-accounts", &filter)
 		if exitCode != util.Success {
