@@ -20,9 +20,19 @@ import (
 
 // POST /list-accounts
 func (a *API) listAccounts(ctx context.Context, filter struct {
-	ID string `json:"id"`
+	ID    string `json:"id"`
+	Alias string `json:"alias"`
 }) Response {
-	accounts, err := a.wallet.AccountMgr.ListAccounts(filter.ID)
+	accountID := filter.ID
+	if filter.Alias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.Alias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+
+	accounts, err := a.wallet.AccountMgr.ListAccounts(accountID)
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
 		return NewErrorResponse(err)
