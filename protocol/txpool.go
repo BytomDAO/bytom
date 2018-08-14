@@ -193,8 +193,8 @@ func (tp *TxPool) HaveTransaction(txHash *bc.Hash) bool {
 
 // ProcessTransaction is the main entry for txpool handle new tx
 func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {
-	tp.mtx.RLock()
-	defer tp.mtx.RUnlock()
+	tp.mtx.Lock()
+	defer tp.mtx.Unlock()
 
 	txD := &TxDesc{
 		Tx:         tx,
