@@ -26,6 +26,10 @@ const (
 	StatusResponseByte  = byte(0x21)
 	NewTransactionByte  = byte(0x30)
 	NewMineBlockByte    = byte(0x40)
+	FilterLoadByte      = byte(0x50)
+	FilterClearByte     = byte(0x51)
+	MerkleRequestByte   = byte(0x60)
+	MerkleResponseByte  = byte(0x61) 
 
 	maxBlockchainResponseSize = 22020096 + 2
 )
@@ -45,6 +49,10 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&StatusResponseMessage{}, StatusResponseByte},
 	wire.ConcreteType{&TransactionMessage{}, NewTransactionByte},
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
+	wire.ConcreteType{&FilterLoadMessage{}, FilterLoadByte},
+	wire.ConcreteType{&FilterClearMessage{}, FilterClearByte},
+	wire.ConcreteType{&GetMerkleBlockMessage{}, MerkleRequestByte},
+	wire.ConcreteType{&MerkleBlockMessage{}, MerkleResponseByte},
 )
 
 //DecodeMessage decode msg
@@ -338,4 +346,30 @@ func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
 //String convert msg to string
 func (m *MineBlockMessage) String() string {
 	return fmt.Sprintf("NewMineBlockMessage{Size: %d}", len(m.RawBlock))
+}
+
+//FilterLoadMessage tells the receiving peer to filter the transactions according to address.
+type FilterLoadMessage struct {
+	Addresses [][]byte
+}
+
+//FilterClearMessage tells the receiving peer to remove a previously-set filter. 
+type FilterClearMessage struct {}
+
+//GetMerkleBlockMessage request merkle blocks from remote peers by height/hash
+type GetMerkleBlockMessage struct {
+	Height  uint64
+	RawHash [32]byte 
+}
+
+//MerkleBlockMessage return the merkle block to client
+type MerkleBlockMessage struct {
+	RawBlockHeader []byte
+	TransactionCount uint64
+	TxHashes [][32]byte
+	TxFlags []byte
+	RawTxDatas [][]byte
+	StatusHashes [][32]byte
+	StatusFlags []byte
+	RawTxStatuses [][]byte
 }
