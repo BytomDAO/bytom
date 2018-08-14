@@ -51,6 +51,7 @@ type peer struct {
 	banScore    trust.DynamicBanScore
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+	filterAdds  *set.Set // Set of addresses that the spv node cares about.
 }
 
 func newPeer(height uint64, hash *bc.Hash, basePeer BasePeer) *peer {
@@ -61,6 +62,7 @@ func newPeer(height uint64, hash *bc.Hash, basePeer BasePeer) *peer {
 		hash:        hash,
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
+		filterAdds:  set.New(),
 	}
 }
 
@@ -172,6 +174,9 @@ func (p *peer) sendHeaders(headers []*types.BlockHeader) (bool, error) {
 
 func (p *peer) sendTransactions(txs []*types.Tx) (bool, error) {
 	for _, tx := range txs {
+		if p.isSPVNode() && !p.isRelatedTx(tx) {
+			continue
+		}
 		msg, err := NewTransactionMessage(tx)
 		if err != nil {
 			return false, errors.Wrap(err, "failed to tx msg")
@@ -186,6 +191,27 @@ func (p *peer) sendTransactions(txs []*types.Tx) (bool, error) {
 		p.knownTxs.Add(tx.ID.String())
 	}
 	return true, nil
+}
+
+func (p *peer) isSPVNode() bool {
+	return p.services.IsEnable(consensus.SFSPVNode)
+}
+
+func (p *peer) isRelatedTx(tx *types.Tx) bool {
+	for _, input := range(tx.Inputs) {
+		switch inp := input.TypedInput.(type) {
+		case *types.SpendInput:
+			if p.filterAdds.Has(string(inp.ControlProgram)) {
+				return true
+			}
+		}
+	}
+	for _, output := range(tx.Outputs) {
+		if p.filterAdds.Has(string(output.ControlProgram)) {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *peer) setStatus(height uint64, hash *bc.Hash) {
@@ -291,6 +317,9 @@ func (ps *peerSet) broadcastTx(tx *types.Tx) error {
 
 	peers := ps.peersWithoutTx(&tx.ID)
 	for _, peer := range peers {
+		if peer.isSPVNode() && !peer.isRelatedTx(tx) {
+			continue
+		}
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			ps.removePeer(peer.ID())
 			continue

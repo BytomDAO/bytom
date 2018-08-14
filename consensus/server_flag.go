@@ -9,6 +9,8 @@ const (
 	SFFullNode ServiceFlag = 1 << iota
 	// SFFastSync indicate peer support header first mode
 	SFFastSync
+	// SFSPVNode is a flag used to indicate a peer is a spv node.
+	SFSPVNode
 	// DefaultServices is the server that this node support
 	DefaultServices = SFFullNode | SFFastSync
 )

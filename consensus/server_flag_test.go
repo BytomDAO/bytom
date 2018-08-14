@@ -28,6 +28,16 @@ func TestIsEnable(t *testing.T) {
 			checkFlage: SFFastSync,
 			result:     true,
 		},
+		{
+			baseFlag:   SFSPVNode | SFFastSync,
+			checkFlage: SFSPVNode,
+			result:     true,
+		},
+		{
+			baseFlag:   SFFullNode | SFFastSync,
+			checkFlage: SFSPVNode,
+			result:     false,
+		},
 	}
 
 	for i, c := range cases {
