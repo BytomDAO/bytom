@@ -96,8 +96,8 @@ func (tp *TxPool) AddErrCache(txHash *bc.Hash, err error) {
 
 // ExpireOrphan expire all the orphans that before the input time range
 func (tp *TxPool) ExpireOrphan(now time.Time) {
-	tp.mtx.RLock()
-	defer tp.mtx.RUnlock()
+	tp.mtx.Lock()
+	defer tp.mtx.Unlock()
 
 	for hash, orphan := range tp.orphans {
 		if orphan.expiration.Before(now) {
@@ -193,8 +193,8 @@ func (tp *TxPool) HaveTransaction(txHash *bc.Hash) bool {
 
 // ProcessTransaction is the main entry for txpool handle new tx
 func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {
-	tp.mtx.RLock()
-	defer tp.mtx.RUnlock()
+	tp.mtx.Lock()
+	defer tp.mtx.Unlock()
 
 	txD := &TxDesc{
 		Tx:         tx,

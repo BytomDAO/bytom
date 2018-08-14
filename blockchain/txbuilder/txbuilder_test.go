@@ -3,6 +3,7 @@ package txbuilder
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"math"
 	"testing"
 	"time"
@@ -15,7 +16,7 @@ import (
 	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/encoding/json"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -138,19 +139,19 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 				Keys: []keyID{
 					{
 						XPub:           pubkey1,
-						DerivationPath: []json.HexBytes{{0, 0, 0, 0}},
+						DerivationPath: []chainjson.HexBytes{{0, 0, 0, 0}},
 					},
 					{
 						XPub:           pubkey2,
-						DerivationPath: []json.HexBytes{{0, 0, 0, 0}},
+						DerivationPath: []chainjson.HexBytes{{0, 0, 0, 0}},
 					},
 					{
 						XPub:           pubkey3,
-						DerivationPath: []json.HexBytes{{0, 0, 0, 0}},
+						DerivationPath: []chainjson.HexBytes{{0, 0, 0, 0}},
 					},
 				},
 				Program: prog,
-				Sigs:    []json.HexBytes{sig1, sig2, sig3},
+				Sigs:    []chainjson.HexBytes{sig1, sig2, sig3},
 			},
 		},
 	}}
@@ -165,7 +166,7 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 
 	// Test with exact amount of signatures required, in correct order
 	component := tpl.SigningInstructions[0].WitnessComponents[0].(*SignatureWitness)
-	component.Sigs = []json.HexBytes{sig1, sig2}
+	component.Sigs = []chainjson.HexBytes{sig1, sig2}
 	err = materializeWitnesses(tpl)
 	if err != nil {
 		testutil.FatalErr(t, err)
@@ -312,7 +313,7 @@ func TestCreateTxByUtxo(t *testing.T) {
 		WitnessComponents: []witnessComponent{
 			&RawTxSigWitness{
 				Quorum: 1,
-				Sigs:   []json.HexBytes{sig},
+				Sigs:   []chainjson.HexBytes{sig},
 			},
 			DataWitness(data),
 		},
@@ -324,5 +325,80 @@ func TestCreateTxByUtxo(t *testing.T) {
 
 	if !testutil.DeepEqual(tx, tpl.Transaction) {
 		t.Errorf("tx:%v result is equal to want:%v", tx, tpl.Transaction)
+	}
+}
+
+func TestAddContractArgs(t *testing.T) {
+	hexXpub, err := hex.DecodeString("ba76bb52574b3f40315f2c01f1818a9072ced56e9d4b68acbef56a4d0077d08e5e34837963e4cdc54eb251aa34aad01e6ae48b140f6a2743fbb0a0abd9cf8aac")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var xpub chainkd.XPub
+	copy(xpub[:], hexXpub)
+
+	rawTxSig := RawTxSigArgument{RootXPub: xpub, Path: []chainjson.HexBytes{{1, 1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0}}}
+	rawTxSigMsg, err := json.Marshal(rawTxSig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data := DataArgument{Value: "7468697320697320612074657374"}
+	dataMsg, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		arguments  []ContractArgument
+		wantResult error
+	}{
+		{
+			arguments: []ContractArgument{
+				{
+					Type:    "raw_tx_signature",
+					RawData: rawTxSigMsg,
+				},
+				{
+					Type:    "data",
+					RawData: dataMsg,
+				},
+			},
+			wantResult: nil,
+		},
+		{
+			arguments: []ContractArgument{
+				{
+					Type:    "data",
+					RawData: dataMsg,
+				},
+				{
+					Type:    "raw_tx_signature",
+					RawData: rawTxSigMsg,
+				},
+			},
+			wantResult: nil,
+		},
+		{
+			arguments: []ContractArgument{
+				{
+					Type:    "data",
+					RawData: dataMsg,
+				},
+				{
+					Type:    "err_data",
+					RawData: rawTxSigMsg,
+				},
+			},
+			wantResult: ErrBadContractArgType,
+		},
+	}
+
+	sigInst := &SigningInstruction{}
+	for _, c := range cases {
+		err := AddContractArgs(sigInst, c.arguments)
+		if err != c.wantResult {
+			t.Fatalf("got result=%v, want result=%v", err, c.wantResult)
+		}
 	}
 }
