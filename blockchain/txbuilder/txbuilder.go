@@ -4,10 +4,13 @@ package txbuilder
 
 import (
 	"context"
+	"encoding/hex"
+	"encoding/json"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
@@ -30,6 +33,8 @@ var (
 	ErrAction = errors.New("errors occurred in one or more actions")
 	//ErrMissingFields means missing required fields
 	ErrMissingFields = errors.New("required field is missing")
+	//ErrBadContractArgType means invalid contract argument type
+	ErrBadContractArgType = errors.New("invalid contract argument type")
 )
 
 // Build builds or adds on to a transaction.
@@ -149,4 +154,41 @@ func checkBlankCheck(tx *types.TxData) error {
 // with a data item containing the given field names.
 func MissingFieldsError(name ...string) error {
 	return errors.WithData(ErrMissingFields, "missing_fields", name)
+}
+
+// AddContractArgs add contract arguments
+func AddContractArgs(sigInst *SigningInstruction, arguments []ContractArgument) error {
+	for _, arg := range arguments {
+		switch arg.Type {
+		case "raw_tx_signature":
+			rawTxSig := &RawTxSigArgument{}
+			if err := json.Unmarshal(arg.RawData, rawTxSig); err != nil {
+				return err
+			}
+
+			// convert path form chainjson.HexBytes to byte
+			var path [][]byte
+			for _, p := range rawTxSig.Path {
+				path = append(path, []byte(p))
+			}
+			sigInst.AddRawWitnessKeys([]chainkd.XPub{rawTxSig.RootXPub}, path, 1)
+
+		case "data":
+			data := &DataArgument{}
+			if err := json.Unmarshal(arg.RawData, data); err != nil {
+				return err
+			}
+
+			value, err := hex.DecodeString(data.Value)
+			if err != nil {
+				return err
+			}
+			sigInst.WitnessComponents = append(sigInst.WitnessComponents, DataWitness(value))
+
+		default:
+			return ErrBadContractArgType
+		}
+	}
+
+	return nil
 }
