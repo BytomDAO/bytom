@@ -194,6 +194,7 @@ func (p *peer) sendTransactions(txs []*types.Tx) (bool, error) {
 }
 
 func (p *peer) isSPVNode() bool {
+	log.Info("it's spv node.%s //delete", p.Addr().String())
 	return p.services.IsEnable(consensus.SFSPVNode)
 }
 
@@ -202,15 +203,18 @@ func (p *peer) isRelatedTx(tx *types.Tx) bool {
 		switch inp := input.TypedInput.(type) {
 		case *types.SpendInput:
 			if p.filterAdds.Has(string(inp.ControlProgram)) {
+				log.Info("it's related tx. %s //delete", tx.ID)
 				return true
 			}
 		}
 	}
 	for _, output := range(tx.Outputs) {
 		if p.filterAdds.Has(string(output.ControlProgram)) {
+			log.Info("it's related tx. %s //delete", tx.ID)
 			return true
 		}
 	}
+	log.Info("it's not related tx. %s //delete", tx.ID)
 	return false
 }
 

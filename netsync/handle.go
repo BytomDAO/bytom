@@ -301,6 +301,7 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 }
 
 func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
+	log.Info("receive filter load message. // delete")
 	if (len(msg.Addresses) == 0) {
 		log.Info("the addresses is empty from filter load message")
 	}
@@ -313,6 +314,7 @@ func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
 	for _, address := range msg.Addresses {
 		peer.filterAdds.Add(string(address))
 	}
+	log.Info("filter adds://delete", peer.filterAdds)
 }
 
 func (sm *SyncManager) handleFilterClearMsg(peer *peer) {
