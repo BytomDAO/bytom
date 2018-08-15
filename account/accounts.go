@@ -17,7 +17,7 @@ import (
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -318,7 +318,7 @@ func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, er
 	}
 
 	var hash [32]byte
-	sha3pool.Sum256(hash[:], program)
+	sm3.Sum(hash[:], program)
 	rawProgram := m.db.Get(ContractKey(hash))
 	if rawProgram == nil {
 		return nil, ErrFindCtrlProgram
@@ -340,7 +340,7 @@ func (m *Manager) GetMiningAddress() (string, error) {
 // IsLocalControlProgram check is the input control program belong to local
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash common.Hash
-	sha3pool.Sum256(hash[:], prog)
+	sm3.Sum(hash[:], prog)
 	bytes := m.db.Get(ContractKey(hash))
 	return bytes != nil
 }
@@ -540,7 +540,7 @@ func (m *Manager) insertControlPrograms(progs ...*CtrlProgram) error {
 			return err
 		}
 
-		sha3pool.Sum256(hash[:], prog.ControlProgram)
+		sm3.Sum(hash[:], prog.ControlProgram)
 		m.db.Set(ContractKey(hash), accountCP)
 	}
 	return nil
