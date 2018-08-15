@@ -465,7 +465,7 @@ func (m *Manager) createP2SH(account *Account, change bool) (*CtrlProgram, error
 	if err != nil {
 		return nil, err
 	}
-	scriptHash := crypto.Sha256(signScript)
+	scriptHash := crypto.Sm3(signScript)
 
 	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
 	if err != nil {
