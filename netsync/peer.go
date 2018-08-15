@@ -3,6 +3,7 @@ package netsync
 import (
 	"net"
 	"sync"
+	"encoding/hex"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/fatih/set.v0"
@@ -194,7 +195,6 @@ func (p *peer) sendTransactions(txs []*types.Tx) (bool, error) {
 }
 
 func (p *peer) isSPVNode() bool {
-	log.Info("it's spv node.%s //delete", p.Addr().String())
 	return p.services.IsEnable(consensus.SFSPVNode)
 }
 
@@ -202,19 +202,16 @@ func (p *peer) isRelatedTx(tx *types.Tx) bool {
 	for _, input := range(tx.Inputs) {
 		switch inp := input.TypedInput.(type) {
 		case *types.SpendInput:
-			if p.filterAdds.Has(string(inp.ControlProgram)) {
-				log.Info("it's related tx. %s //delete", tx.ID)
+			if p.filterAdds.Has(hex.EncodeToString(inp.ControlProgram)) {
 				return true
 			}
 		}
 	}
 	for _, output := range(tx.Outputs) {
-		if p.filterAdds.Has(string(output.ControlProgram)) {
-			log.Info("it's related tx. %s //delete", tx.ID)
+		if p.filterAdds.Has(hex.EncodeToString(output.ControlProgram)) {
 			return true
 		}
 	}
-	log.Info("it's not related tx. %s //delete", tx.ID)
 	return false
 }
 
