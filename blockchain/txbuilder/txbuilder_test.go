@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm3"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
@@ -120,7 +120,7 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 	builder.AddData(h.Bytes())
 	builder.AddOp(vm.OP_TXSIGHASH).AddOp(vm.OP_EQUAL)
 	prog, _ := builder.Build()
-	msg := sha3.Sum256(prog)
+	msg := sm3.Sum256(prog)
 	sig1 := privkey1.Sign(msg[:])
 	sig2 := privkey2.Sign(msg[:])
 	sig3 := privkey3.Sign(msg[:])
