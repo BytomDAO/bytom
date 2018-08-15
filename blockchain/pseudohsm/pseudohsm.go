@@ -14,12 +14,9 @@ import (
 
 // pre-define errors for supporting bytom errorFormatter
 var (
-	ErrDuplicateKeyAlias    = errors.New("duplicate key alias")
-	ErrDuplicateKey         = errors.New("duplicate key")
-	ErrInvalidAfter         = errors.New("invalid after")
-	ErrLoadKey              = errors.New("key not found or wrong password ")
-	ErrTooManyAliasesToList = errors.New("requested aliases exceeds limit")
-	ErrDecrypt              = errors.New("could not decrypt key with given passphrase")
+	ErrDuplicateKeyAlias = errors.New("duplicate key alias")
+	ErrLoadKey           = errors.New("key not found or wrong password ")
+	ErrDecrypt           = errors.New("could not decrypt key with given passphrase")
 )
 
 // HSM type for storing pubkey and privatekey
