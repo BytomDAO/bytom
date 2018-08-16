@@ -311,7 +311,7 @@ func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
 		peer.filterAdds.Clear()
 	}
 	for _, address := range msg.Addresses {
-		peer.filterAdds.Add(string(address))
+		peer.filterAdds.Add(hex.EncodeToString(address))
 	}
 }
 
