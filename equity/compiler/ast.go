@@ -38,6 +38,9 @@ type Contract struct {
 
 	// Pre-optimized list of instruction steps, with stack snapshots.
 	Steps []Step `json:"-"`
+
+	// Inheritance is the name of Inherited contract
+	Inheritance []string
 }
 
 // Param is a contract or clause parameter.
