@@ -304,8 +304,8 @@ func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
 	if (len(msg.Addresses) == 0) {
 		log.Info("the addresses is empty from filter load message")
 	}
-	peer.mtx.RLock()
-	defer peer.mtx.RUnlock()
+	peer.mtx.Lock()
+	defer peer.mtx.Unlock()
 	
 	if (!peer.filterAdds.IsEmpty()) {
 		peer.filterAdds.Clear()
