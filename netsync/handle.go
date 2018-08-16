@@ -174,15 +174,7 @@ func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
 		log.Info("the addresses is empty from filter load message")
 		return
 	}
-	peer.mtx.Lock()
-	defer peer.mtx.Unlock()
-	
-	if (!peer.filterAdds.IsEmpty()) {
-		peer.filterAdds.Clear()
-	}
-	for _, address := range msg.Addresses {
-		peer.filterAdds.Add(hex.EncodeToString(address))
-	}
+	peer.addFilterAddresses(msg.Addresses)
 }
 
 func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {

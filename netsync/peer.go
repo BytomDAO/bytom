@@ -87,6 +87,18 @@ func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 	return false
 }
 
+func (p *peer) addFilterAddresses(addresses [][]byte) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	
+	if (!p.filterAdds.IsEmpty()) {
+		p.filterAdds.Clear()
+	}
+	for _, address := range addresses {
+		p.filterAdds.Add(hex.EncodeToString(address))
+	}
+}
+
 func (p *peer) getBlockByHeight(height uint64) bool {
 	msg := struct{ BlockchainMessage }{&GetBlockMessage{Height: height}}
 	return p.TrySend(BlockchainChannel, msg)
