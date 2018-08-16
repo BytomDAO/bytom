@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -42,8 +42,8 @@ func (ii *IssuanceInput) AssetID() bc.AssetID {
 
 // AssetDefinitionHash return the hash of the issuance asset definition.
 func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
-	sha := sha3pool.Get256()
-	defer sha3pool.Put256(sha)
+	sha := sm3.Get256()
+	defer sm3.Put256(sha)
 	sha.Write(ii.AssetDefinition)
 	defhash.ReadFrom(sha)
 	return defhash
@@ -51,8 +51,8 @@ func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
 
 // NonceHash return the hash of the issuance asset definition.
 func (ii *IssuanceInput) NonceHash() (hash bc.Hash) {
-	sha := sha3pool.Get256()
-	defer sha3pool.Put256(sha)
+	sha := sm3.Get256()
+	defer sm3.Put256(sha)
 	sha.Write(ii.Nonce)
 	hash.ReadFrom(sha)
 	return hash

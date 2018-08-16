@@ -4,7 +4,7 @@ import (
 	"bytes"
 
 	"github.com/bytom/consensus/segwit"
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm"
@@ -44,8 +44,8 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 	var txSigHash *[]byte
 	txSigHashFn := func() []byte {
 		if txSigHash == nil {
-			hasher := sha3pool.Get256()
-			defer sha3pool.Put256(hasher)
+			hasher := sm3.Get256()
+			defer sm3.Put256(hasher)
 
 			entryID.WriteTo(hasher)
 			tx.ID.WriteTo(hasher)

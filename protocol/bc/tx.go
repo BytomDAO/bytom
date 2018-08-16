@@ -1,7 +1,7 @@
 package bc
 
 import (
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/errors"
 )
 
@@ -18,8 +18,8 @@ type Tx struct {
 
 // SigHash ...
 func (tx *Tx) SigHash(n uint32) (hash Hash) {
-	hasher := sha3pool.Get256()
-	defer sha3pool.Put256(hasher)
+	hasher := sm3.Get256()
+	defer sm3.Put256(hasher)
 
 	tx.InputIDs[n].WriteTo(hasher)
 	tx.ID.WriteTo(hasher)
