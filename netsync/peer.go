@@ -112,6 +112,27 @@ func (p *peer) getPeerInfo() *PeerInfo {
 	}
 }
 
+func (p *peer) isRelatedTx(tx *types.Tx) bool {
+	for _, input := range(tx.Inputs) {
+		switch inp := input.TypedInput.(type) {
+		case *types.SpendInput:
+			if p.filterAdds.Has(hex.EncodeToString(inp.ControlProgram)) {
+				return true
+			}
+		}
+	}
+	for _, output := range(tx.Outputs) {
+		if p.filterAdds.Has(hex.EncodeToString(output.ControlProgram)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *peer) isSPVNode() bool {
+	return !p.services.IsEnable(consensus.SFFullNode)
+}
+
 func (p *peer) markBlock(hash *bc.Hash) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
@@ -192,27 +213,6 @@ func (p *peer) sendTransactions(txs []*types.Tx) (bool, error) {
 		p.knownTxs.Add(tx.ID.String())
 	}
 	return true, nil
-}
-
-func (p *peer) isSPVNode() bool {
-	return p.services.IsEnable(consensus.SFSPVNode)
-}
-
-func (p *peer) isRelatedTx(tx *types.Tx) bool {
-	for _, input := range(tx.Inputs) {
-		switch inp := input.TypedInput.(type) {
-		case *types.SpendInput:
-			if p.filterAdds.Has(hex.EncodeToString(inp.ControlProgram)) {
-				return true
-			}
-		}
-	}
-	for _, output := range(tx.Outputs) {
-		if p.filterAdds.Has(hex.EncodeToString(output.ControlProgram)) {
-			return true
-		}
-	}
-	return false
 }
 
 func (p *peer) setStatus(height uint64, hash *bc.Hash) {

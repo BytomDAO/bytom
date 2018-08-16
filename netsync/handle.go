@@ -165,6 +165,26 @@ func (sm *SyncManager) handleBlocksMsg(peer *peer, msg *BlocksMessage) {
 	sm.blockKeeper.processBlocks(peer.ID(), blocks)
 }
 
+func (sm *SyncManager) handleFilterClearMsg(peer *peer) {
+	peer.filterAdds.Clear()
+}
+
+func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
+	if (len(msg.Addresses) == 0) {
+		log.Info("the addresses is empty from filter load message")
+		return
+	}
+	peer.mtx.Lock()
+	defer peer.mtx.Unlock()
+	
+	if (!peer.filterAdds.IsEmpty()) {
+		peer.filterAdds.Clear()
+	}
+	for _, address := range msg.Addresses {
+		peer.filterAdds.Add(hex.EncodeToString(address))
+	}
+}
+
 func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
 	var block *types.Block
 	var err error
@@ -234,6 +254,8 @@ func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
 	}
 }
 
+func (sm *SyncManager) handleGetMerkleBlockMsg(peer *peer, msg *GetMerkleBlockMessage) {}
+
 func (sm *SyncManager) handleHeadersMsg(peer *peer, msg *HeadersMessage) {
 	headers, err := msg.GetHeaders()
 	if err != nil {
@@ -299,27 +321,6 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
 	}
 }
-
-func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
-	if (len(msg.Addresses) == 0) {
-		log.Info("the addresses is empty from filter load message")
-	}
-	peer.mtx.Lock()
-	defer peer.mtx.Unlock()
-	
-	if (!peer.filterAdds.IsEmpty()) {
-		peer.filterAdds.Clear()
-	}
-	for _, address := range msg.Addresses {
-		peer.filterAdds.Add(hex.EncodeToString(address))
-	}
-}
-
-func (sm *SyncManager) handleFilterClearMsg(peer *peer) {
-	peer.filterAdds.Clear()
-}
-
-func (sm *SyncManager) handleGetMerkleBlockMsg(peer *peer, msg *GetMerkleBlockMessage) {}
 
 func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg BlockchainMessage) {
 	peer := sm.peers.getPeer(basePeer.ID())
