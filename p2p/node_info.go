@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"strings"
 
+	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
+
+	"github.com/bytom/version"
 )
 
 const maxNodeInfoSize = 10240 // 10Kb
@@ -26,16 +28,21 @@ type NodeInfo struct {
 // CONTRACT: two nodes are compatible if the major version matches and network match
 // and they have at least one channel in common.
 func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
-	iMajor, _, _, err := splitVersion(info.Version)
+	iVer, err := version.Parse(info.Version)
 	if err != nil {
 		return err
 	}
-	oMajor, _, _, err := splitVersion(other.Version)
+	oVer, err := version.Parse(other.Version)
 	if err != nil {
 		return err
 	}
-	if iMajor != oMajor {
-		return fmt.Errorf("Peer is on a different major version. Got %v, expected %v", oMajor, iMajor)
+
+	if oVer.GreaterThan(iVer) {
+		log.Info("Peer is on a higher version.")
+	}
+
+	if iVer.Major != oVer.Major {
+		return fmt.Errorf("Peer is on a different major version. Got %v, expected %v", oVer.Major, iVer.Major)
 	}
 
 	if info.Network != other.Network {
@@ -69,12 +76,4 @@ func (info *NodeInfo) RemoteAddrHost() string {
 //String representation
 func (info NodeInfo) String() string {
 	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [listen %v], version: %v (%v)}", info.PubKey, info.Moniker, info.Network, info.ListenAddr, info.Version, info.Other)
-}
-
-func splitVersion(version string) (string, string, string, error) {
-	spl := strings.Split(version, ".")
-	if len(spl) != 3 {
-		return "", "", "", fmt.Errorf("Invalid version format %v", version)
-	}
-	return spl[0], spl[1], spl[2], nil
 }
