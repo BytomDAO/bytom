@@ -20,7 +20,7 @@ type ShakeHash interface {
 	io.Reader
 
 	// Clone returns a copy of the ShakeHash in its current state.
-	// Clone() ShakeHash
+	Clone() ShakeHash
 
 	// Reset resets the ShakeHash to its initial state.
 	Reset()
