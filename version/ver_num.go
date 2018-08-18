@@ -6,12 +6,6 @@ import (
 	"strings"
 )
 
-var maxVerSeen = &VerNum{
-	major:    uint64(0),
-	minor:    uint64(0),
-	revision: uint64(0),
-}
-
 type VerNum struct {
 	major    uint64
 	minor    uint64
@@ -70,19 +64,11 @@ func (v1 *VerNum) greaterThan(v2 *VerNum) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	v2_l2, err := v1.last2()
+	v2_l2, err := v2.last2()
 	if err != nil {
 		return false, err
 	}
 
 	greaterThanV2 := (v1_f2 > v2_f2) || ((v1_f2 == v2_f2) && (v1_l2 > v2_l2))
-	if greaterThanV2 {
-		if greaterThanMax, err := v1.greaterThan(maxVerSeen); err != nil {
-			return false, err
-		} else if greaterThanMax {
-			maxVerSeen = v1
-			notifiedTimes = uint16(0)
-		}
-	}
 	return greaterThanV2, nil
 }
