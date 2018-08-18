@@ -159,7 +159,7 @@ func (sm *SyncManager) Switch() *p2p.Switch {
 // and CheckUpdateResponseMessage sent from nodes other than seeds will be ignored.
 func (sm *SyncManager) handleCheckUpdateRequestMsg(peer BasePeer, msg *CheckUpdateRequestMessage) {
 	remoteVer := sm.sw.Peers().Get(peer.ID()).NodeInfo.Version
-	if deprecated, err := version.Deprecate(remoteVer); deprecated && (err == nil) {
+	if deprecated, err := version.Deprecate(remoteVer); (err == nil) && deprecated {
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&CheckUpdateResponseMessage{}}); !ok {
 			log.Error("fail on handleCheckUpdateRequestMsg sentCheckUpdateResponse")
 		}

@@ -142,10 +142,10 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 		return err
 	}
 
-	if outdated, err := version.OlderThan(peerNodeInfo.Version); !outdated && (err == nil) {
-		// TODO: use PubKey
-		for _, seed := range strings.Split(sw.Config.P2P.Seeds, ",") {
-			if peerNodeInfo.RemoteAddr == seed && version.ShouldNotify("bytomd") {
+	// TODO: use PubKey
+	for _, seed := range strings.Split(sw.Config.P2P.Seeds, ",") {
+		if peerNodeInfo.RemoteAddr == seed {
+			if outdated, err := version.OlderThan(peerNodeInfo.Version); (err == nil) && outdated && version.ShouldNotify("bytomd") {
 				log.Warn("Current version is: ", version.Version,
 					", but a higher version ", peerNodeInfo.Version,
 					" is seen from seed ", peerNodeInfo.RemoteAddr,
