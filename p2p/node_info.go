@@ -5,7 +5,6 @@ import (
 	"net"
 	"strconv"
 
-	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
 
 	"github.com/bytom/version"
@@ -28,25 +27,15 @@ type NodeInfo struct {
 // CONTRACT: two nodes are compatible if the major version matches and network match
 // and they have at least one channel in common.
 func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
-	iVer, err := version.Parse(info.Version)
+	compatible, err := version.CompatibleWith(other.Version)
 	if err != nil {
 		return err
-	}
-	oVer, err := version.Parse(other.Version)
-	if err != nil {
-		return err
-	}
-
-	if oVer.GreaterThan(iVer) {
-		log.Info("Peer is on a higher version.")
-	}
-
-	if iVer.Major != oVer.Major {
-		return fmt.Errorf("Peer is on a different major version. Got %v, expected %v", oVer.Major, iVer.Major)
+	} else if !compatible {
+		return fmt.Errorf("Peer is on a different major version. Peer version: %v, node version: %v.", other.Version, info.Version)
 	}
 
 	if info.Network != other.Network {
-		return fmt.Errorf("Peer is on a different network. Got %v, expected %v", other.Network, info.Network)
+		return fmt.Errorf("Peer is on a different network. Peer network: %v, node network: %v.", other.Network, info.Network)
 	}
 	return nil
 }

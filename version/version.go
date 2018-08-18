@@ -1,17 +1,16 @@
 package version
 
-import (
-	"fmt"
-	"strconv"
-	"strings"
+const (
+	deprecateBelow = "1.0.0"
+	notifyLimit    = uint16(3)
 )
 
 var (
 	// The full version string
 	Version = "1.0.4"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
-	GitCommit string
-	Checked   = false
+	GitCommit     string
+	notifiedTimes = uint16(0)
 )
 
 func init() {
@@ -20,42 +19,74 @@ func init() {
 	}
 }
 
-type VerNum struct {
-	Major  uint64
-	Middle uint64
-	Minor  uint64
-}
+/* 						Functions for version-control					*/
+// -------------------------------start----------------------------------
 
-func Parse(verStr string) (*VerNum, error) {
-	spl := strings.Split(verStr, ".")
-	if len(spl) != 3 {
-		return nil, fmt.Errorf("Invalid version format %v", verStr)
+// CompatibleWith checks whether the remote peer version is compatible with the
+// node itself.
+// RULES:
+// | local |       remote        |
+// |   -   |         -           |
+// | 1.0.4 | same major version. |
+func CompatibleWith(remoteVer string) (bool, error) {
+	localVerNum, err := parse(Version)
+	if err != nil {
+		return false, err
 	}
-	spl[2] = strings.Split(spl[2], "-")[0]
+	remoteVerNum, err := parse(remoteVer)
+	if err != nil {
+		return false, err
+	}
+	return (localVerNum.major == remoteVerNum.major), nil
+}
 
-	vMajor, err0 := strconv.ParseUint(spl[0], 10, 64)
-	vMiddle, err1 := strconv.ParseUint(spl[1], 10, 64)
-	vMinor, err2 := strconv.ParseUint(spl[2], 10, 64)
-	if err0 != nil || err1 != nil || err2 != nil {
-		return nil, fmt.Errorf("Invalid version format %v", verStr)
+// Deprecate checks whether a remote peer version is too old and should be
+// deprecated.
+// It aims at providing support for CheckUpdateRequestMessage & CheckUpdateResponseMessage,
+// and should only serve on bytomd seed nodes.
+// RULES:
+// | local |       remote        |
+// |   -   |         -           |
+// | 1.0.4 |      below 1.0.0    |
+func Deprecate(remoteVer string) (bool, error) {
+	limitVerNum, err := parse(deprecateBelow)
+	if err != nil {
+		return false, err
+	}
+	remoteVerNum, err := parse(remoteVer)
+	if err != nil {
+		return false, err
 	}
 
-	return &VerNum{
-		Major:  vMajor,
-		Middle: vMiddle,
-		Minor:  vMinor,
-	}, nil
+	return limitVerNum.greaterThan(remoteVerNum)
 }
 
-func (v1 *VerNum) first2() (float64, error) {
-	fmt.Sprintf("%d.%d", Major, Middle)
+// OlderThan checks whether the node version is older than a remote peer.
+func OlderThan(remoteVer string) (bool, error) {
+	localVerNum, err := parse(Version)
+	if err != nil {
+		return false, err
+	}
+	remoteVerNum, err := parse(remoteVer)
+	if err != nil {
+		return false, err
+	}
+	return remoteVerNum.greaterThan(localVerNum)
 }
 
-func (v1 *VerNum) last2() (float64, error) {
-	fmt.Sprintf("%d.%d", Major, Middle)
-}
+/* 						Functions for version-control					*/
+// --------------------------------end-----------------------------------
 
-func (v1 *VerNum) GreaterThan(v2 *VerNum) bool {
-
-	return true
+// ShouldNotify tells whether bytomd or dashboard should notify the bytomd
+// version is out of date.
+func ShouldNotify(end string) bool {
+	switch end {
+	case "bytomd":
+		notifiedTimes++
+		return notifiedTimes <= notifyLimit
+	case "dashboard":
+		return notifiedTimes > 0
+	default:
+		return false
+	}
 }

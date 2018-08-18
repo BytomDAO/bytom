@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/trust"
+	"github.com/bytom/version"
 )
 
 const (
@@ -138,6 +140,19 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 
 	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
 		return err
+	}
+
+	if outdated, err := version.OlderThan(peerNodeInfo.Version); !outdated && (err == nil) {
+		// TODO: use PubKey
+		for _, seed := range strings.Split(sw.Config.P2P.Seeds, ",") {
+			if peerNodeInfo.RemoteAddr == seed && version.ShouldNotify("bytomd") {
+				log.Warn("Current version is: ", version.Version,
+					", but a higher version ", peerNodeInfo.Version,
+					" is seen from seed ", peerNodeInfo.RemoteAddr,
+					". Please update your bytomd via ",
+					"https://github.com/Bytom/bytom/releases or http://bytom.io/wallet/.")
+			}
+		}
 	}
 
 	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)

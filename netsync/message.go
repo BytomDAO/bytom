@@ -16,20 +16,22 @@ import (
 const (
 	BlockchainChannel = byte(0x40)
 
-	BlockRequestByte    = byte(0x10)
-	BlockResponseByte   = byte(0x11)
-	HeadersRequestByte  = byte(0x12)
-	HeadersResponseByte = byte(0x13)
-	BlocksRequestByte   = byte(0x14)
-	BlocksResponseByte  = byte(0x15)
-	StatusRequestByte   = byte(0x20)
-	StatusResponseByte  = byte(0x21)
-	NewTransactionByte  = byte(0x30)
-	NewMineBlockByte    = byte(0x40)
-	FilterLoadByte      = byte(0x50)
-	FilterClearByte     = byte(0x51)
-	MerkleRequestByte   = byte(0x60)
-	MerkleResponseByte  = byte(0x61) 
+	BlockRequestByte        = byte(0x10)
+	BlockResponseByte       = byte(0x11)
+	HeadersRequestByte      = byte(0x12)
+	HeadersResponseByte     = byte(0x13)
+	BlocksRequestByte       = byte(0x14)
+	BlocksResponseByte      = byte(0x15)
+	StatusRequestByte       = byte(0x20)
+	StatusResponseByte      = byte(0x21)
+	NewTransactionByte      = byte(0x30)
+	NewMineBlockByte        = byte(0x40)
+	FilterLoadByte          = byte(0x50)
+	FilterClearByte         = byte(0x51)
+	MerkleRequestByte       = byte(0x60)
+	MerkleResponseByte      = byte(0x61)
+	CheckUpdateRequestByte  = byte(0x70)
+	CheckUpdateResponseByte = byte(0x71)
 
 	maxBlockchainResponseSize = 22020096 + 2
 )
@@ -53,6 +55,8 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&FilterClearMessage{}, FilterClearByte},
 	wire.ConcreteType{&GetMerkleBlockMessage{}, MerkleRequestByte},
 	wire.ConcreteType{&MerkleBlockMessage{}, MerkleResponseByte},
+	wire.ConcreteType{&CheckUpdateRequestMessage{}, CheckUpdateRequestByte},
+	wire.ConcreteType{&CheckUpdateResponseMessage{}, CheckUpdateResponseByte},
 )
 
 //DecodeMessage decode msg
@@ -66,6 +70,16 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 	}
 	return
 }
+
+// CheckUpdateRequestMessage & CheckUpdateResponseMessage aim at providing
+// support for checking whether node version is too old and should be deprecated.
+// If it is, the node will be terminated.
+// NOTE:
+// CheckUpdateRequestMessage should only be sent to bytomd seed nodes,
+// and CheckUpdateResponseMessage sent from nodes other than seeds will be ignored.
+type CheckUpdateRequestMessage struct{}
+
+type CheckUpdateResponseMessage struct{}
 
 //GetBlockMessage request blocks from remote peers by height/hash
 type GetBlockMessage struct {
@@ -353,23 +367,23 @@ type FilterLoadMessage struct {
 	Addresses [][]byte
 }
 
-//FilterClearMessage tells the receiving peer to remove a previously-set filter. 
-type FilterClearMessage struct {}
+//FilterClearMessage tells the receiving peer to remove a previously-set filter.
+type FilterClearMessage struct{}
 
 //GetMerkleBlockMessage request merkle blocks from remote peers by height/hash
 type GetMerkleBlockMessage struct {
 	Height  uint64
-	RawHash [32]byte 
+	RawHash [32]byte
 }
 
 //MerkleBlockMessage return the merkle block to client
 type MerkleBlockMessage struct {
-	RawBlockHeader []byte
+	RawBlockHeader   []byte
 	TransactionCount uint64
-	TxHashes [][32]byte
-	TxFlags []byte
-	RawTxDatas [][]byte
-	StatusHashes [][32]byte
-	StatusFlags []byte
-	RawTxStatuses [][]byte
+	TxHashes         [][32]byte
+	TxFlags          []byte
+	RawTxDatas       [][]byte
+	StatusHashes     [][32]byte
+	StatusFlags      []byte
+	RawTxStatuses    [][]byte
 }
