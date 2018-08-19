@@ -27,9 +27,10 @@ func init() {
 // CompatibleWith checks whether the remote peer version is compatible with the
 // node itself.
 // RULES:
-// | local |       remote        |
-// |   -   |         -           |
-// | 1.0.4 | same major version. |
+// | local |           remote           |
+// |   -   |             -              |
+// | 1.0.3 | same major&moinor version. |
+// | 1.0.4 |     same major version.    |
 func CompatibleWith(remoteVer string) (bool, error) {
 	localVerNum, err := parse(Version)
 	if err != nil {
