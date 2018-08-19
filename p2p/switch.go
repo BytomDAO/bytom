@@ -150,7 +150,7 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 					", but a higher version ", peerNodeInfo.Version,
 					" is seen from seed ", peerNodeInfo.RemoteAddr,
 					". Please update your bytomd via ",
-					"https://github.com/Bytom/bytom/releases or http://bytom.io/wallet/.")
+					"https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/.")
 			}
 		}
 	}

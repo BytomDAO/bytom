@@ -11,12 +11,14 @@ var (
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit     string
 	notifiedTimes = uint16(0)
+	maxVerSeen    *VerNum
 )
 
 func init() {
 	if GitCommit != "" {
 		Version += "-" + GitCommit[:8]
 	}
+	maxVerSeen, _ = parse(Version)
 }
 
 /* 						Functions for version-control					*/
@@ -62,6 +64,7 @@ func Deprecate(remoteVer string) (bool, error) {
 }
 
 // OlderThan checks whether the node version is older than a remote peer.
+// remoteVer is supposed to always be corresponding to a seed
 func OlderThan(remoteVer string) (bool, error) {
 	localVerNum, err := parse(Version)
 	if err != nil {
@@ -71,6 +74,13 @@ func OlderThan(remoteVer string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
+	// Reset notifiedTimes
+	if greaterThanMax, err := remoteVerNum.greaterThan(maxVerSeen); (err == nil) && greaterThanMax {
+		maxVerSeen = remoteVerNum
+		notifiedTimes = uint16(0)
+	}
+
 	return remoteVerNum.greaterThan(localVerNum)
 }
 

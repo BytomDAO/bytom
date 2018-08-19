@@ -176,7 +176,7 @@ func (sm *SyncManager) handleCheckUpdateResponseMsg(peer BasePeer, msg *CheckUpd
 				"Current version: " + version.Version +
 				". Newer version " + newVer + " seen from seed " + peerAddr +
 				". Please update your bytomd via " +
-				"https://github.com/Bytom/bytom/releases or http://bytom.io/wallet/.")
+				"https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/.")
 		}
 	}
 }
