@@ -1,7 +1,6 @@
 package version
 
 import (
-	// "fmt"
 	gover "github.com/hashicorp/go-version"
 )
 
@@ -16,15 +15,14 @@ var (
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit     string
 	notifiedTimes = uint16(0)
-	maxVerSeen    *VerNum
+	maxVerSeen    *gover.Version
 )
 
 func init() {
 	if GitCommit != "" {
-		Version += "-" + GitCommit[:8]
+		Version += "+" + GitCommit[:8]
 	}
-	// maxVerSeen, _ = gover.NewVersion(Version)
-	maxVerSeen, _ = parse(Version)
+	maxVerSeen, _ = gover.NewVersion(Version)
 }
 
 /* 						Functions for version-control					*/
@@ -37,17 +35,16 @@ func init() {
 // |   -   |             -              |
 // | 1.0.3 | same major&moinor version. |
 // | 1.0.4 |     same major version.    |
-func CompatibleWith(remoteVer string) (bool, error) {
-	// localVersion, err := gover.NewVersion(Version)
-	// if err != nil {
-	// 	return false, err
-	// }
-	// remoteVersion, err := gover.NewVersion(remoteVer)
-	// if err != nil {
-	// 	return false, err
-	// }
-	// return (localVerNum.major == remoteVerNum.major), nil
-	return true, nil
+func CompatibleWith(remoteVerStr string) (bool, error) {
+	localVersion, err := gover.NewVersion(Version)
+	if err != nil {
+		return false, err
+	}
+	remoteVersion, err := gover.NewVersion(remoteVerStr)
+	if err != nil {
+		return false, err
+	}
+	return (localVersion.Segments()[0] == remoteVersion.Segments()[0]), nil
 }
 
 // Deprecate checks whether a remote peer version is too old and should be
@@ -58,40 +55,37 @@ func CompatibleWith(remoteVer string) (bool, error) {
 // | local |       remote        |
 // |   -   |         -           |
 // | 1.0.4 |      below 1.0.0    |
-func Deprecate(remoteVer string) (bool, error) {
-	// limit, err := gover.NewVersion(deprecateBelow)
-	_, err := gover.NewVersion(deprecateBelow)
+func Deprecate(remoteVerStr string) (bool, error) {
+	limitVersion, err := gover.NewVersion(deprecateBelow)
 	if err != nil {
 		return false, err
 	}
-	// remote, err := gover.NewVersion(remoteVer)
-	_, err = gover.NewVersion(remoteVer)
+	remoteVersion, err := gover.NewVersion(remoteVerStr)
 	if err != nil {
 		return false, err
 	}
-
-	return true, nil
+	return limitVersion.GreaterThan(remoteVersion), nil
 }
 
 // OlderThan checks whether the node version is older than a remote peer.
 // remoteVer is supposed to always be corresponding to a seed
-func OlderThan(remoteVer string) (bool, error) {
-	localVerNum, err := parse(Version)
+func OlderThan(remoteVerStr string) (bool, error) {
+	localVersion, err := gover.NewVersion(Version)
 	if err != nil {
 		return false, err
 	}
-	remoteVerNum, err := parse(remoteVer)
+	remoteVersion, err := gover.NewVersion(remoteVerStr)
 	if err != nil {
 		return false, err
 	}
 
 	// Reset notifiedTimes
-	if greaterThanMax, err := remoteVerNum.greaterThan(maxVerSeen); (err == nil) && greaterThanMax {
-		maxVerSeen = remoteVerNum
+	if remoteVersion.GreaterThan(maxVerSeen) {
+		maxVerSeen = remoteVersion
 		notifiedTimes = uint16(0)
 	}
 
-	return remoteVerNum.greaterThan(localVerNum)
+	return localVersion.LessThan(remoteVersion), nil
 }
 
 /* 						Functions for version-control					*/
