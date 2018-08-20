@@ -20,7 +20,7 @@ var (
 
 func init() {
 	if GitCommit != "" {
-		Version += "+" + GitCommit[:8]
+		Version += "-" + GitCommit[:8]
 	}
 	maxVerSeen, _ = gover.NewVersion(Version)
 }
