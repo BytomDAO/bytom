@@ -25,7 +25,6 @@ type NodeInfo struct {
 
 // CompatibleWith checks if two NodeInfo are compatible with eachother.
 // CONTRACT: two nodes are compatible if the major version matches and network match
-// and they have at least one channel in common.
 func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
 	compatible, err := version.CompatibleWith(other.Version)
 	if err != nil {
@@ -38,6 +37,10 @@ func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
 		return fmt.Errorf("Peer is on a different network. Peer network: %v, node network: %v.", other.Network, info.Network)
 	}
 	return nil
+}
+
+func (info *NodeInfo) CheckUpdate(other *NodeInfo) {
+	version.CheckUpdate(info, other)
 }
 
 //ListenHost peer listener ip address

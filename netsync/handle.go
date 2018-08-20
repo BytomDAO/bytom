@@ -320,10 +320,6 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 		return
 	}
 
-	log.Info(basePeer.ID())
-	log.Info(sm.sw.Peers().List())
-	log.Info(sm.sw.Peers().Get(peer.ID()))
-
 	switch msg := msg.(type) {
 	case *GetBlockMessage:
 		sm.handleGetBlockMsg(peer, msg)
@@ -445,7 +441,9 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 	}
 	nodes := []*discover.Node{}
 	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
-		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
+		pubKey := hex.EncodeToString(crypto.Sha256([]byte(seed)))
+		version.SeedSet.Add(pubKey)
+		url := "enode://" + pubKey + "@" + seed
 		nodes = append(nodes, discover.MustParseNode(url))
 	}
 	if err = ntab.SetFallbackNodes(nodes); err != nil {

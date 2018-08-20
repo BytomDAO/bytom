@@ -140,6 +140,8 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 		return err
 	}
 
+	version.CheckUpdate(sw.nodeInfo, peerNodeInfo)
+
 	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)
 	if err := sw.filterConnByPeer(peer); err != nil {
 		return err
