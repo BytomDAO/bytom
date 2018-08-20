@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"strings"
 	"sync"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/trust"
-	"github.com/bytom/version"
 )
 
 const (
