@@ -77,9 +77,33 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 // NOTE:
 // CheckUpdateRequestMessage should only be sent to bytomd seed nodes,
 // and CheckUpdateResponseMessage sent from nodes other than seeds will be ignored.
-type CheckUpdateRequestMessage struct{}
+type CheckUpdateRequestMessage struct {
+	QueryVersion string // Version of the local node itself
+}
 
-type CheckUpdateResponseMessage struct{}
+// RawHeaders := [][]byte{}
+// for _, header := range headers {
+// 	data, err := json.Marshal(header)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	RawHeaders = append(RawHeaders, data)
+// }
+// return &HeadersMessage{RawHeaders: RawHeaders}, nil
+
+func (m *CheckUpdateRequestMessage) String() string {
+	return fmt.Sprintf("CheckUpdateRequestMessage{QueryVersion: %s}", string(m.QueryVersion))
+}
+
+type CheckUpdateResponseMessage struct {
+	SeedVersion  string
+	QueryVersion string
+}
+
+func (m *CheckUpdateResponseMessage) String() string {
+	return fmt.Sprintf("CheckUpdateResponseMessage{SeedVersion: %s, QueryVersion: %s}", m.SeedVersion, m.QueryVersion)
+}
 
 //GetBlockMessage request blocks from remote peers by height/hash
 type GetBlockMessage struct {

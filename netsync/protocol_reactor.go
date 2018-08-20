@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/connection"
+	"github.com/bytom/version"
 )
 
 const (
@@ -71,7 +72,8 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	// TODO: use pubKey
 	for _, seed := range strings.Split(pr.sm.config.P2P.Seeds, ",") {
 		if peer.NodeInfo.RemoteAddr == seed {
-			if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&CheckUpdateRequestMessage{}}); !ok {
+			msg := &CheckUpdateRequestMessage{QueryVersion: version.Version}
+			if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 				return errCheckUpdateRequest
 			}
 		}

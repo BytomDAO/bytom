@@ -158,16 +158,17 @@ func (sm *SyncManager) Switch() *p2p.Switch {
 // CheckUpdateRequestMessage should only be sent to bytomd seed nodes,
 // and CheckUpdateResponseMessage sent from nodes other than seeds will be ignored.
 func (sm *SyncManager) handleCheckUpdateRequestMsg(peer BasePeer, msg *CheckUpdateRequestMessage) {
-	remoteVer := sm.sw.Peers().Get(peer.ID()).NodeInfo.Version
+	remoteVer := msg.QueryVersion
 	if deprecated, err := version.Deprecate(remoteVer); (err == nil) && deprecated {
-		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&CheckUpdateResponseMessage{}}); !ok {
+		msg := &CheckUpdateResponseMessage{SeedVersion: version.Version, QueryVersion: remoteVer}
+		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			log.Error("fail on handleCheckUpdateRequestMsg sentCheckUpdateResponse")
 		}
 	}
 }
 
 func (sm *SyncManager) handleCheckUpdateResponseMsg(peer BasePeer, msg *CheckUpdateResponseMessage) {
-	newVer := sm.sw.Peers().Get(peer.ID()).NodeInfo.Version
+	newVer := msg.SeedVersion
 	peerAddr := peer.Addr().String()
 	// TODO: use PubKey
 	for _, seed := range strings.Split(sm.config.P2P.Seeds, ",") {
@@ -346,7 +347,7 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 
 func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg BlockchainMessage) {
 	peer := sm.peers.getPeer(basePeer.ID())
-	if peer == nil && msgType != StatusResponseByte && msgType != StatusRequestByte {
+	if peer == nil && msgType != StatusResponseByte && msgType != StatusRequestByte && msgType != CheckUpdateRequestByte && msgType != CheckUpdateResponseByte {
 		return
 	}
 
