@@ -12,28 +12,30 @@ import (
 
 // NetInfo indicate net information
 type NetInfo struct {
-	Listening       bool   `json:"listening"`
-	Syncing         bool   `json:"syncing"`
-	Mining          bool   `json:"mining"`
-	PeerCount       int    `json:"peer_count"`
-	CurrentBlock    uint64 `json:"current_block"`
-	HighestBlock    uint64 `json:"highest_block"`
-	NetWorkID       string `json:"network_id"`
-	Version         string `json:"version"`
-	VersionOutdated bool   `json:"version_outdated"`
+	Listening    bool   `json:"listening"`
+	Syncing      bool   `json:"syncing"`
+	Mining       bool   `json:"mining"`
+	PeerCount    int    `json:"peer_count"`
+	CurrentBlock uint64 `json:"current_block"`
+	HighestBlock uint64 `json:"highest_block"`
+	NetWorkID    string `json:"network_id"`
+	Version      string `json:"version"`
+	Update       bool   `json:"update"`
+	SUpdate      bool   `json:"significant_update"`
 }
 
 // GetNodeInfo return net information
 func (a *API) GetNodeInfo() *NetInfo {
 	info := &NetInfo{
-		Listening:       a.sync.Switch().IsListening(),
-		Syncing:         !a.sync.IsCaughtUp(),
-		Mining:          a.cpuMiner.IsMining(),
-		PeerCount:       len(a.sync.Switch().Peers().List()),
-		CurrentBlock:    a.chain.BestBlockHeight(),
-		NetWorkID:       a.sync.NodeInfo().Network,
-		Version:         version.Version,
-		VersionOutdated: version.ShouldNotify("dashboard"),
+		Listening:    a.sync.Switch().IsListening(),
+		Syncing:      !a.sync.IsCaughtUp(),
+		Mining:       a.cpuMiner.IsMining(),
+		PeerCount:    len(a.sync.Switch().Peers().List()),
+		CurrentBlock: a.chain.BestBlockHeight(),
+		NetWorkID:    a.sync.NodeInfo().Network,
+		Version:      version.Version,
+		Update:       version.ShouldNotify("dashboard"),
+		SUpdate:      version.SUpdate,
 	}
 	if bestPeer := a.sync.BestPeer(); bestPeer != nil {
 		info.HighestBlock = bestPeer.Height

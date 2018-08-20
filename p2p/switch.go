@@ -342,9 +342,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 			break
 		}
 
-		// disconnect if we alrady have 2 * MaxNumPeers, we do this because we wanna address book get exchanged even if
-		// the connect is full. The pex will disconnect the peer after address exchange, the max connected peer won't
-		// be double of MaxNumPeers
+		// disconnect if we alrady have MaxNumPeers
 		if sw.peers.Size() >= sw.Config.P2P.MaxNumPeers {
 			inConn.Close()
 			log.Info("Ignoring inbound connection: already have enough peers.")

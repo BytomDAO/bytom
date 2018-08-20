@@ -16,6 +16,7 @@ var (
 	GitCommit     string
 	notifiedTimes = uint16(0)
 	maxVerSeen    *gover.Version
+	SUpdate       bool
 )
 
 func init() {
@@ -45,26 +46,6 @@ func CompatibleWith(remoteVerStr string) (bool, error) {
 		return false, err
 	}
 	return (localVersion.Segments()[0] == remoteVersion.Segments()[0]), nil
-}
-
-// Deprecate checks whether a remote peer version is too old and should be
-// deprecated.
-// It aims at providing support for CheckUpdateRequestMessage & CheckUpdateResponseMessage,
-// and should only serve on bytomd seed nodes.
-// RULES:
-// | local |       remote        |
-// |   -   |         -           |
-// | 1.0.4 |      below 1.0.0    |
-func Deprecate(remoteVerStr string) (bool, error) {
-	limitVersion, err := gover.NewVersion(deprecateBelow)
-	if err != nil {
-		return false, err
-	}
-	remoteVersion, err := gover.NewVersion(remoteVerStr)
-	if err != nil {
-		return false, err
-	}
-	return limitVersion.GreaterThan(remoteVersion), nil
 }
 
 // OlderThan checks whether the node version is older than a remote peer.

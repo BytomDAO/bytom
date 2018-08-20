@@ -320,6 +320,10 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 		return
 	}
 
+	log.Info(basePeer.ID())
+	log.Info(sm.sw.Peers().List())
+	log.Info(sm.sw.Peers().Get(peer.ID()))
+
 	switch msg := msg.(type) {
 	case *GetBlockMessage:
 		sm.handleGetBlockMsg(peer, msg)
