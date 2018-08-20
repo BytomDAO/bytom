@@ -9,7 +9,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/connection"
-	"github.com/bytom/version"
 )
 
 const (
@@ -20,7 +19,6 @@ const (
 var (
 	errProtocolHandshakeTimeout = errors.New("Protocol handshake timeout")
 	errStatusRequest            = errors.New("Status request error")
-	errCheckUpdateRequest       = errors.New("Check update request error")
 )
 
 //ProtocolReactor handles new coming protocol message.
@@ -67,16 +65,6 @@ func (pr *ProtocolReactor) OnStop() {
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{&StatusRequestMessage{}}); !ok {
 		return errStatusRequest
-	}
-
-	// TODO: use pubKey
-	for _, seed := range strings.Split(pr.sm.config.P2P.Seeds, ",") {
-		if peer.NodeInfo.RemoteAddr == seed {
-			msg := &CheckUpdateRequestMessage{QueryVersion: version.Version}
-			if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
-				return errCheckUpdateRequest
-			}
-		}
 	}
 
 	checkTicker := time.NewTimer(handshakeCheckPerid)

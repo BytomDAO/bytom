@@ -16,22 +16,20 @@ import (
 const (
 	BlockchainChannel = byte(0x40)
 
-	BlockRequestByte        = byte(0x10)
-	BlockResponseByte       = byte(0x11)
-	HeadersRequestByte      = byte(0x12)
-	HeadersResponseByte     = byte(0x13)
-	BlocksRequestByte       = byte(0x14)
-	BlocksResponseByte      = byte(0x15)
-	StatusRequestByte       = byte(0x20)
-	StatusResponseByte      = byte(0x21)
-	NewTransactionByte      = byte(0x30)
-	NewMineBlockByte        = byte(0x40)
-	FilterLoadByte          = byte(0x50)
-	FilterClearByte         = byte(0x51)
-	MerkleRequestByte       = byte(0x60)
-	MerkleResponseByte      = byte(0x61)
-	CheckUpdateRequestByte  = byte(0x70)
-	CheckUpdateResponseByte = byte(0x71)
+	BlockRequestByte    = byte(0x10)
+	BlockResponseByte   = byte(0x11)
+	HeadersRequestByte  = byte(0x12)
+	HeadersResponseByte = byte(0x13)
+	BlocksRequestByte   = byte(0x14)
+	BlocksResponseByte  = byte(0x15)
+	StatusRequestByte   = byte(0x20)
+	StatusResponseByte  = byte(0x21)
+	NewTransactionByte  = byte(0x30)
+	NewMineBlockByte    = byte(0x40)
+	FilterLoadByte      = byte(0x50)
+	FilterClearByte     = byte(0x51)
+	MerkleRequestByte   = byte(0x60)
+	MerkleResponseByte  = byte(0x61)
 
 	maxBlockchainResponseSize = 22020096 + 2
 )
@@ -55,8 +53,6 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&FilterClearMessage{}, FilterClearByte},
 	wire.ConcreteType{&GetMerkleBlockMessage{}, MerkleRequestByte},
 	wire.ConcreteType{&MerkleBlockMessage{}, MerkleResponseByte},
-	wire.ConcreteType{&CheckUpdateRequestMessage{}, CheckUpdateRequestByte},
-	wire.ConcreteType{&CheckUpdateResponseMessage{}, CheckUpdateResponseByte},
 )
 
 //DecodeMessage decode msg
@@ -69,29 +65,6 @@ func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
 		err = errors.New("DecodeMessage() had bytes left over")
 	}
 	return
-}
-
-// CheckUpdateRequestMessage & CheckUpdateResponseMessage aim at providing
-// support for checking whether node version is too old and should be deprecated.
-// If it is, the node will be terminated.
-// NOTE:
-// CheckUpdateRequestMessage should only be sent to bytomd seed nodes,
-// and CheckUpdateResponseMessage sent from nodes other than seeds will be ignored.
-type CheckUpdateRequestMessage struct {
-	QueryVersion string // Version of the local node itself
-}
-
-func (m *CheckUpdateRequestMessage) String() string {
-	return fmt.Sprintf("CheckUpdateRequestMessage{QueryVersion: %s}", string(m.QueryVersion))
-}
-
-type CheckUpdateResponseMessage struct {
-	SeedVersion  string
-	QueryVersion string
-}
-
-func (m *CheckUpdateResponseMessage) String() string {
-	return fmt.Sprintf("CheckUpdateResponseMessage{SeedVersion: %s, QueryVersion: %s}", m.SeedVersion, m.QueryVersion)
 }
 
 //GetBlockMessage request blocks from remote peers by height/hash

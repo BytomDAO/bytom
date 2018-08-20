@@ -151,37 +151,6 @@ func (sm *SyncManager) Switch() *p2p.Switch {
 	return sm.sw
 }
 
-// CheckUpdateRequestMessage & CheckUpdateResponseMessage aim at providing
-// support for checking whether node version is too old and should be deprecated.
-// If it is, the node will be terminated.
-// NOTE:
-// CheckUpdateRequestMessage should only be sent to bytomd seed nodes,
-// and CheckUpdateResponseMessage sent from nodes other than seeds will be ignored.
-func (sm *SyncManager) handleCheckUpdateRequestMsg(peer BasePeer, msg *CheckUpdateRequestMessage) {
-	remoteVer := msg.QueryVersion
-	if deprecated, err := version.Deprecate(remoteVer); (err == nil) && deprecated {
-		msg := &CheckUpdateResponseMessage{SeedVersion: version.Version, QueryVersion: remoteVer}
-		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
-			log.Error("fail on handleCheckUpdateRequestMsg sentCheckUpdateResponse")
-		}
-	}
-}
-
-func (sm *SyncManager) handleCheckUpdateResponseMsg(peer BasePeer, msg *CheckUpdateResponseMessage) {
-	newVer := msg.SeedVersion
-	peerAddr := peer.Addr().String()
-	// TODO: use PubKey
-	for _, seed := range strings.Split(sm.config.P2P.Seeds, ",") {
-		if peerAddr == seed {
-			cmn.Exit("Current version is too old. " +
-				"Current version: " + version.Version +
-				". Newer version " + newVer + " seen from seed " + peerAddr +
-				". Please update your bytomd via " +
-				"https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/.")
-		}
-	}
-}
-
 func (sm *SyncManager) handleBlockMsg(peer *peer, msg *BlockMessage) {
 	sm.blockKeeper.processBlock(peer.ID(), msg.GetBlock())
 }
@@ -347,23 +316,11 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 
 func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg BlockchainMessage) {
 	peer := sm.peers.getPeer(basePeer.ID())
-	if peer == nil && msgType != StatusResponseByte && msgType != StatusRequestByte && msgType != CheckUpdateRequestByte && msgType != CheckUpdateResponseByte {
+	if peer == nil && msgType != StatusResponseByte && msgType != StatusRequestByte {
 		return
 	}
 
 	switch msg := msg.(type) {
-	// CheckUpdateRequestMessage & CheckUpdateResponseMessage aim at providing
-	// support for checking whether node version is too old and should be deprecated.
-	// If it is, the node will be terminated.
-	// NOTE:
-	// CheckUpdateRequestMessage should only be sent to bytomd seed nodes,
-	// and CheckUpdateResponseMessage sent from nodes other than seeds will be ignored.
-	case *CheckUpdateRequestMessage:
-		sm.handleCheckUpdateRequestMsg(basePeer, msg)
-
-	case *CheckUpdateResponseMessage:
-		sm.handleCheckUpdateResponseMsg(basePeer, msg)
-
 	case *GetBlockMessage:
 		sm.handleGetBlockMsg(peer, msg)
 

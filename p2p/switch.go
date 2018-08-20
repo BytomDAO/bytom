@@ -142,19 +142,6 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 		return err
 	}
 
-	// TODO: use PubKey
-	for _, seed := range strings.Split(sw.Config.P2P.Seeds, ",") {
-		if peerNodeInfo.RemoteAddr == seed {
-			if outdated, err := version.OlderThan(peerNodeInfo.Version); (err == nil) && outdated && version.ShouldNotify("bytomd") {
-				log.Warn("Current version is: ", version.Version,
-					", but a higher version ", peerNodeInfo.Version,
-					" is seen from seed ", peerNodeInfo.RemoteAddr,
-					". Please update your bytomd via ",
-					"https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/.")
-			}
-		}
-	}
-
 	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)
 	if err := sw.filterConnByPeer(peer); err != nil {
 		return err
