@@ -165,6 +165,18 @@ func (sm *SyncManager) handleBlocksMsg(peer *peer, msg *BlocksMessage) {
 	sm.blockKeeper.processBlocks(peer.ID(), blocks)
 }
 
+func (sm *SyncManager) handleFilterClearMsg(peer *peer) {
+	peer.filterAdds.Clear()
+}
+
+func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
+	if (len(msg.Addresses) == 0) {
+		log.Info("the addresses is empty from filter load message")
+		return
+	}
+	peer.addFilterAddresses(msg.Addresses)
+}
+
 func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
 	var block *types.Block
 	var err error
@@ -233,6 +245,8 @@ func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
 		log.WithField("err", err).Error("fail on handleGetHeadersMsg sentBlock")
 	}
 }
+
+func (sm *SyncManager) handleGetMerkleBlockMsg(peer *peer, msg *GetMerkleBlockMessage) {}
 
 func (sm *SyncManager) handleHeadersMsg(peer *peer, msg *HeadersMessage) {
 	headers, err := msg.GetHeaders()
@@ -336,6 +350,15 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 
 	case *BlocksMessage:
 		sm.handleBlocksMsg(peer, msg)
+
+	case *FilterLoadMessage:
+		sm.handleFilterLoadMsg(peer, msg)
+
+	case *FilterClearMessage:
+		sm.handleFilterClearMsg(peer)
+		
+	case *GetMerkleBlockMessage:
+		sm.handleGetMerkleBlockMsg(peer, msg)
 
 	default:
 		log.Errorf("unknown message type %v", reflect.TypeOf(msg))
