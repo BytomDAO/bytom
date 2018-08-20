@@ -81,17 +81,6 @@ type CheckUpdateRequestMessage struct {
 	QueryVersion string // Version of the local node itself
 }
 
-// RawHeaders := [][]byte{}
-// for _, header := range headers {
-// 	data, err := json.Marshal(header)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	RawHeaders = append(RawHeaders, data)
-// }
-// return &HeadersMessage{RawHeaders: RawHeaders}, nil
-
 func (m *CheckUpdateRequestMessage) String() string {
 	return fmt.Sprintf("CheckUpdateRequestMessage{QueryVersion: %s}", string(m.QueryVersion))
 }
