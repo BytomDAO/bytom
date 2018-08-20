@@ -17,6 +17,7 @@ import (
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/trust"
+	"github.com/bytom/version"
 )
 
 const (
@@ -136,11 +137,10 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 		return err
 	}
 
+	version.CheckUpdate(sw.nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr)
 	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
 		return err
 	}
-
-	version.CheckUpdate(sw.nodeInfo, peerNodeInfo)
 
 	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)
 	if err := sw.filterConnByPeer(peer); err != nil {

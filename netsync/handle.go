@@ -441,9 +441,8 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 	}
 	nodes := []*discover.Node{}
 	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
-		pubKey := hex.EncodeToString(crypto.Sha256([]byte(seed)))
-		version.SeedSet.Add(pubKey)
-		url := "enode://" + pubKey + "@" + seed
+		version.SeedSet.Add(seed)
+		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
 		nodes = append(nodes, discover.MustParseNode(url))
 	}
 	if err = ntab.SetFallbackNodes(nodes); err != nil {

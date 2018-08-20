@@ -39,10 +39,6 @@ func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
 	return nil
 }
 
-func (info *NodeInfo) CheckUpdate(other *NodeInfo) {
-	version.CheckUpdate(info, other)
-}
-
 //ListenHost peer listener ip address
 func (info *NodeInfo) ListenHost() string {
 	host, _, _ := net.SplitHostPort(info.ListenAddr)

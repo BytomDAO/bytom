@@ -2,9 +2,8 @@ package version
 
 import (
 	gover "github.com/hashicorp/go-version"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/fatih/set.v0"
-
-	"github.com/bytom/p2p"
 )
 
 var (
@@ -14,12 +13,40 @@ var (
 	GitCommit string
 	Update    bool
 	SUpdate   bool
-	SeedSet   *set.Set
+	notified  bool
+	SeedSet   = set.New()
 )
 
 func init() {
 	if GitCommit != "" {
 		Version += "-" + GitCommit[:8]
+	}
+}
+
+func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) {
+	if SeedSet.Has(remoteAddr) {
+		localVersion, _ := gover.NewVersion(localVerStr)
+		remoteVersion, _ := gover.NewVersion(remoteVerStr)
+
+		times := uint16(0)
+		if remoteVersion.GreaterThan(localVersion) {
+			Update = true
+			times = uint16(1)
+		}
+		if remoteVersion.Segments()[0] > localVersion.Segments()[0] {
+			SUpdate = true
+			times = uint16(3)
+		}
+		if (Update || SUpdate) && !notified {
+			for i := uint16(0); i < times; i++ {
+				log.Info("Current version: " + localVerStr +
+					". Newer version: " + remoteVerStr + " seen from seed: " + remoteAddr +
+					". Please update your bytomd via " +
+					"https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/.")
+
+			}
+			notified = true
+		}
 	}
 }
 
@@ -40,29 +67,4 @@ func CompatibleWith(remoteVerStr string) (bool, error) {
 		return false, err
 	}
 	return (localVersion.Segments()[0] == remoteVersion.Segments()[0]), nil
-}
-
-func CheckUpdate(local *NodeInfo, remote *NodeInfo) {
-	if SeedSet.Has(remote.PubKey) {
-		localVersion, _ := gover.NewVersion(local.Version)
-		remoteVersion, _ := gover.NewVersion(remote.Version)
-
-		if remoteVersion.GreaterThan(localVersion) {
-			Update = true
-			log.Info("[Current version is out-dated.] " +
-				"Current version: " + local.Version +
-				". Newer version " + remote.Version + " seen from seed " + remote.RemoteAddr +
-				". Please update your bytomd via " +
-				"https://github.com/Bytom/bytom/releases or http://bytom.io/wallet/.")
-		}
-
-		if remoteVersion.Segments()[0] > localVersion.Segments()[0] {
-			SUpdate = true
-			log.Info("[Current version is too old.] " +
-				"Current version: " + local.Version +
-				". Newer version " + remote.Version + " seen from seed " + remote.RemoteAddr +
-				". Please update your bytomd via " +
-				"https://github.com/Bytom/bytom/releases or http://bytom.io/wallet/.")
-		}
-	}
 }
