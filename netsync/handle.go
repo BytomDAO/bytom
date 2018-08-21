@@ -170,7 +170,7 @@ func (sm *SyncManager) handleFilterClearMsg(peer *peer) {
 }
 
 func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
-	if (len(msg.Addresses) == 0) {
+	if len(msg.Addresses) == 0 {
 		log.Info("the addresses is empty from filter load message")
 		return
 	}
@@ -356,7 +356,7 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 
 	case *FilterClearMessage:
 		sm.handleFilterClearMsg(peer)
-		
+
 	case *GetMerkleBlockMessage:
 		sm.handleGetMerkleBlockMsg(peer, msg)
 
@@ -441,6 +441,7 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 	}
 	nodes := []*discover.Node{}
 	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
+		version.Status.AddSeed(seed)
 		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
 		nodes = append(nodes, discover.MustParseNode(url))
 	}
