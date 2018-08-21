@@ -11,7 +11,7 @@ var (
 	Version = "1.0.4"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
-	Update    uint16
+	Update    uint16 // 0: no update; 1: small update; 2: significant update
 	notified  bool
 	SeedSet   = set.New()
 )
@@ -22,6 +22,15 @@ func init() {
 	}
 }
 
+// CheckUpdate checks whether there is a newer version to update.
+// If there is, it set the "Update" variable to a proper value.
+// 	params:
+// 		localVerStr: the version of the node itself
+// 		remoteVerStr: the version received from a seed node.
+// 		remoteAddr: the version received from a seed node.
+// current rule:
+// 		1. small update: seed version is higher than the node itself
+// 		2. significant update: seed mojor version is higher than the node itself
 func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) error {
 	if !SeedSet.Has(remoteAddr) || notified {
 		return nil

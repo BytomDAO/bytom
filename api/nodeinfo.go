@@ -20,7 +20,7 @@ type NetInfo struct {
 	HighestBlock uint64 `json:"highest_block"`
 	NetWorkID    string `json:"network_id"`
 	Version      string `json:"version"`
-	Update       uint16 `json:"update"` // 0 for no update, 1 for small update, 2 for significant update
+	Update       uint16 `json:"update"` // 0: no update; 1: small update; 2: significant update
 }
 
 // GetNodeInfo return net information
