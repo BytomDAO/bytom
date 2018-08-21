@@ -4,7 +4,7 @@ import (
 	"io"
 	"math"
 
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm3"
 )
 
 var (
@@ -22,12 +22,20 @@ func merkleRoot(nodes []merkleNode) (root Hash, err error) {
 		return EmptyStringHash, nil
 
 	case len(nodes) == 1:
-		h := sha3pool.Get256()
-		defer sha3pool.Put256(h)
+		// h := sha3pool.Get256()
+		// defer sha3pool.Put256(h)
 
-		h.Write(leafPrefix)
-		nodes[0].WriteTo(h)
-		root.ReadFrom(h)
+		// h.Write(leafPrefix)
+		// nodes[0].WriteTo(h)
+		// root.ReadFrom(h)
+		// return root, nil
+
+		hasher := sm3.New()
+		hasher.Write(leafPrefix)
+		nodes[0].WriteTo(hasher)
+		var b32 [32]byte
+		copy(b32[:], hasher.Sum(nil))
+		root = NewHash(b32)
 		return root, nil
 
 	default:
@@ -42,12 +50,21 @@ func merkleRoot(nodes []merkleNode) (root Hash, err error) {
 			return root, err
 		}
 
-		h := sha3pool.Get256()
-		defer sha3pool.Put256(h)
-		h.Write(interiorPrefix)
-		left.WriteTo(h)
-		right.WriteTo(h)
-		root.ReadFrom(h)
+		// h := sha3pool.Get256()
+		// defer sha3pool.Put256(h)
+		// h.Write(interiorPrefix)
+		// left.WriteTo(h)
+		// right.WriteTo(h)
+		// root.ReadFrom(h)
+		// return root, nil
+
+		hasher := sm3.New()
+		hasher.Write(interiorPrefix)
+		left.WriteTo(hasher)
+		right.WriteTo(hasher)
+		var b32 [32]byte
+		copy(b32[:], hasher.Sum(nil))
+		root = NewHash(b32)
 		return root, nil
 	}
 }
