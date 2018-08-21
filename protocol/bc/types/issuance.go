@@ -51,9 +51,16 @@ func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
 
 // NonceHash return the hash of the issuance asset definition.
 func (ii *IssuanceInput) NonceHash() (hash bc.Hash) {
-	sha := sm3.Get256()
-	defer sm3.Put256(sha)
+	// sha := sm3.Get256()
+	// defer sm3.Put256(sha)
+	// sha.Write(ii.Nonce)
+	// hash.ReadFrom(sha)
+	// return hash
+
+	sha := sm3.New()
 	sha.Write(ii.Nonce)
-	hash.ReadFrom(sha)
+	var h [32]byte
+	copy(h[:], sha.Sum(nil))
+	hash = bc.NewHash(h)
 	return hash
 }
