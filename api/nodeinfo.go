@@ -20,6 +20,7 @@ type NetInfo struct {
 	HighestBlock uint64 `json:"highest_block"`
 	NetWorkID    string `json:"network_id"`
 	Version      string `json:"version"`
+	Update       uint16 `json:"update"` // 0: no update; 1: small update; 2: significant update
 }
 
 // GetNodeInfo return net information
@@ -32,6 +33,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 		CurrentBlock: a.chain.BestBlockHeight(),
 		NetWorkID:    a.sync.NodeInfo().Network,
 		Version:      version.Version,
+		Update:       version.Status.VersionStatus(),
 	}
 	if bestPeer := a.sync.BestPeer(); bestPeer != nil {
 		info.HighestBlock = bestPeer.Height
