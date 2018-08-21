@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	noUpdate   uint16 = iota
-	hasUpdate  uint16 = iota
-	hasMUpdate uint16 = iota
+	noUpdate uint16 = iota
+	hasUpdate
+	hasMUpdate
 )
 
 var (
@@ -18,7 +18,6 @@ var (
 	Version = "1.0.4"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
-	SeedSet   = set.New()
 	Status    *UpdateStatus
 )
 
@@ -29,6 +28,7 @@ func init() {
 	Status = &UpdateStatus{
 		notified:      false,
 		versionStatus: noUpdate,
+		seedSet:       set.New(),
 	}
 }
 
@@ -36,12 +36,13 @@ type UpdateStatus struct {
 	sync.RWMutex
 	notified      bool
 	versionStatus uint16
+	seedSet       *set.Set
 }
 
-func (s *UpdateStatus) VersionStatus() uint16 {
-	s.RLock()
-	defer s.RUnlock()
-	return s.versionStatus
+func (s *UpdateStatus) AddSeed(seedAddr string) {
+	s.Lock()
+	defer s.Unlock()
+	s.seedSet.Add(seedAddr)
 }
 
 // CheckUpdate checks whether there is a newer version to update.
@@ -53,11 +54,11 @@ func (s *UpdateStatus) VersionStatus() uint16 {
 // current rule:
 // 		1. small update: seed version is higher than the node itself
 // 		2. significant update: seed mojor version is higher than the node itself
-func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) error {
-	Status.Lock()
-	defer Status.Unlock()
+func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) error {
+	s.Lock()
+	defer s.Unlock()
 
-	if Status.notified || !SeedSet.Has(remoteAddr) {
+	if s.notified || !s.seedSet.Has(remoteAddr) {
 		return nil
 	}
 
@@ -69,21 +70,31 @@ func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) err
 	if err != nil {
 		return err
 	}
+
+	log.Info(s.versionStatus)
 	if remoteVersion.GreaterThan(localVersion) {
-		Status.versionStatus = hasUpdate
+		s.versionStatus = hasUpdate
 	}
+	log.Info(s.versionStatus)
 	if remoteVersion.Segments()[0] > localVersion.Segments()[0] {
-		Status.versionStatus = hasMUpdate
+		s.versionStatus = hasMUpdate
 	}
-	if Status.versionStatus != noUpdate {
+	log.Info(s.versionStatus)
+	if s.versionStatus != noUpdate {
 		log.WithFields(log.Fields{
 			"Current version": localVerStr,
 			"Newer version":   remoteVerStr,
-			"seed":            remoteAddr}).
-			Warn("Please update your bytomd via https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/")
-		Status.notified = true
+			"seed":            remoteAddr,
+		}).Warn("Please update your bytomd via https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/")
+		s.notified = true
 	}
 	return nil
+}
+
+func (s *UpdateStatus) VersionStatus() uint16 {
+	s.RLock()
+	defer s.RUnlock()
+	return s.versionStatus
 }
 
 // CompatibleWith checks whether the remote peer version is compatible with the

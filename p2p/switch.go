@@ -137,7 +137,7 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 		return err
 	}
 
-	if err := version.CheckUpdate(sw.nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
+	if err := version.Status.CheckUpdate(sw.nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
 		return err
 	}
 	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
