@@ -19,29 +19,29 @@ var (
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
 	SeedSet   = set.New()
-	Status    *State
+	Status    *UpdateStatus
 )
 
 func init() {
 	if GitCommit != "" {
 		Version += "-" + GitCommit[:8]
 	}
-	Status = &State{
+	Status = &UpdateStatus{
 		notified:      false,
-		VersionStatus: noUpdate,
+		versionStatus: noUpdate,
 	}
 }
 
-type State struct {
+type UpdateStatus struct {
 	sync.RWMutex
 	notified      bool
-	VersionStatus uint16
+	versionStatus uint16
 }
 
-func (s *State) GetVersionStatus() uint16 {
+func (s *UpdateStatus) VersionStatus() uint16 {
 	s.RLock()
 	defer s.RUnlock()
-	return s.VersionStatus
+	return s.versionStatus
 }
 
 // CheckUpdate checks whether there is a newer version to update.
@@ -70,12 +70,12 @@ func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) err
 		return err
 	}
 	if remoteVersion.GreaterThan(localVersion) {
-		Status.VersionStatus = hasUpdate
+		Status.versionStatus = hasUpdate
 	}
 	if remoteVersion.Segments()[0] > localVersion.Segments()[0] {
-		Status.VersionStatus = hasMUpdate
+		Status.versionStatus = hasMUpdate
 	}
-	if Status.VersionStatus != noUpdate {
+	if Status.versionStatus != noUpdate {
 		log.WithFields(log.Fields{
 			"Current version": localVerStr,
 			"Newer version":   remoteVerStr,

@@ -33,7 +33,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 		CurrentBlock: a.chain.BestBlockHeight(),
 		NetWorkID:    a.sync.NodeInfo().Network,
 		Version:      version.Version,
-		Update:       version.Status.GetVersionStatus(),
+		Update:       version.Status.VersionStatus(),
 	}
 	if bestPeer := a.sync.BestPeer(); bestPeer != nil {
 		info.HighestBlock = bestPeer.Height
