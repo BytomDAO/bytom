@@ -26,10 +26,10 @@ func init() {
 		Version += "-" + GitCommit[:8]
 	}
 	Status = &UpdateStatus{
-		notified:      false,
-		versionStatus: noUpdate,
-		seedSet:       set.New(),
 		maxVerSeen:    Version,
+		notified:      false,
+		seedSet:       set.New(),
+		versionStatus: noUpdate,
 	}
 }
 
