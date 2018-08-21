@@ -6,8 +6,6 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/bytom/protocol/bc"
-
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bytom/crypto/sm3"
@@ -92,17 +90,10 @@ func EntryID(e Entry) (hash Hash) {
 	hasher.Write(innerHash[:])
 	var b32 [32]byte
 	copy(b32[:], hasher.Sum(nil))
-	hash = bc.NewHash(b32)
+	hash = NewHash(b32)
 
 	return hash
 }
-
-// h := sm3.New()
-// h.Write(ii.Nonce)
-// var b32 [32]byte
-// copy(b32[:], h.Sum(nil))
-// hash = bc.NewHash(b32)
-// return hash
 
 var byte32zero [32]byte
 

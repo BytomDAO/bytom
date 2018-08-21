@@ -18,14 +18,29 @@ type Tx struct {
 
 // SigHash ...
 func (tx *Tx) SigHash(n uint32) (hash Hash) {
-	hasher := sm3.Get256()
-	defer sm3.Put256(hasher)
+	// hasher := sm3.Get256()
+	// defer sm3.Put256(hasher)
 
+	// tx.InputIDs[n].WriteTo(hasher)
+	// tx.ID.WriteTo(hasher)
+	// hash.ReadFrom(hasher)
+	// return hash
+
+	hasher := sm3.New()
 	tx.InputIDs[n].WriteTo(hasher)
 	tx.ID.WriteTo(hasher)
-	hash.ReadFrom(hasher)
+	var b32 [32]byte
+	copy(b32[:], hasher.Sum(nil))
+	hash = NewHash(b32)
 	return hash
 }
+
+// h := sm3.New()
+// h.Write(ii.Nonce)
+// var b32 [32]byte
+// copy(b32[:], h.Sum(nil))
+// hash = bc.NewHash(b32)
+// return hash
 
 // Convenience routines for accessing entries of specific types by ID.
 var (
