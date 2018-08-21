@@ -29,7 +29,8 @@ func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
 	compatible, err := version.CompatibleWith(other.Version)
 	if err != nil {
 		return err
-	} else if !compatible {
+	}
+	if !compatible {
 		return fmt.Errorf("Peer is on a different major version. Peer version: %v, node version: %v.", other.Version, info.Version)
 	}
 
