@@ -3,6 +3,8 @@ package bc_test
 import (
 	"testing"
 	"time"
+	"math/rand"
+	"reflect"
 
 	. "github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -140,5 +142,75 @@ func TestAllDuplicateLeaves(t *testing.T) {
 
 	if root1 == root2 {
 		t.Error("forged merkle tree with all duplicate leaves")
+	}
+}
+
+func TestTxMerkleProof(t *testing.T) {
+	var txs []*Tx
+	trueProg := []byte{byte(vm.OP_TRUE)}
+	assetID := ComputeAssetID(trueProg, 1, &EmptyStringHash)
+	for i := 0; i < 10; i++ {
+		now := []byte(time.Now().String())
+		issuanceInp := types.NewIssuanceInput(now, 1, trueProg, nil, nil)
+		tx := types.NewTx(types.TxData{
+			Version: 1,
+			Inputs:  []*types.TxInput{issuanceInp},
+			Outputs: []*types.TxOutput{types.NewTxOutput(assetID, 1, trueProg)},
+		}).Tx
+		txs = append(txs, tx)
+	}
+	root, err := TxMerkleRoot(txs)
+	if err != nil {
+		t.Fatalf("unexpected error %s", err)
+	}
+	var txIDs []Hash
+	var nodes []MerkleNode
+	for _, tx := range txs {
+		txIDs = append(txIDs, tx.ID)
+		nodes = append(nodes, &tx.ID)
+	}
+	tree := BuildMerkleTree(nodes)
+	if *tree.MerkleHash != root {
+		t.Fatal(err)
+	}
+
+	relatedTx := []Hash{txs[0].ID, txs[3].ID, txs[7].ID, txs[8].ID}
+	find, proofHashes, flags := GetTxMerkleTreeProof(txIDs, relatedTx)
+	if !find {
+		t.Error("Can not find any tx id in the merkle tree")
+	}
+	expectFlags := []uint8{1, 1, 1, 1, 2, 0, 1, 0, 2, 1, 0, 1, 0, 2, 1, 2, 0}
+	if !reflect.DeepEqual(flags, expectFlags) {
+		t.Error("The flags is not equals expect flags")
+	}
+	if len(proofHashes) != 9 {
+		t.Error("The length proof hashes is not equals expect length")
+	}
+	ids := []Hash{txs[0].ID, txs[3].ID, txs[7].ID, txs[8].ID}
+	if !ValidateTxMerkleTreeProof(proofHashes, flags, ids, root) {
+		t.Error("Merkle tree validate fail")
+	}
+}
+
+func TestStatusMerkleProof(t *testing.T) {
+	var statuses []*TxVerifyResult
+	for i := 0; i < 10; i++ {
+		status := &TxVerifyResult{}
+		fail := rand.Intn(2)
+		if fail == 0 {
+			status.StatusFail = true
+		} else {
+			status.StatusFail = false
+		}
+		statuses = append(statuses, status)
+	}
+	relatedStatuses := []*TxVerifyResult{statuses[3], statuses[6], statuses[8]}
+	find, hashes, flags := GetStatusMerkleTreeProof(statuses, relatedStatuses)
+	if !find {
+		t.Error("Can not find any status in the merkle tree")
+	}
+	root, _ := TxStatusMerkleRoot(statuses)
+	if !ValidateStatusMerkleTreeProof(hashes, flags, relatedStatuses, root) {
+		t.Error("Merkle tree validate fail")
 	}
 }

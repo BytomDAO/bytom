@@ -27,9 +27,10 @@ const (
 	NewTransactionByte  = byte(0x30)
 	NewMineBlockByte    = byte(0x40)
 	FilterLoadByte      = byte(0x50)
-	FilterClearByte     = byte(0x51)
+	FilterAddByte       = byte(0x51)
+	FilterClearByte     = byte(0x52)
 	MerkleRequestByte   = byte(0x60)
-	MerkleResponseByte  = byte(0x61) 
+	MerkleResponseByte  = byte(0x61)
 
 	maxBlockchainResponseSize = 22020096 + 2
 )
@@ -50,6 +51,7 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&TransactionMessage{}, NewTransactionByte},
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
 	wire.ConcreteType{&FilterLoadMessage{}, FilterLoadByte},
+	wire.ConcreteType{&FilterAddMessage{}, FilterAddByte},
 	wire.ConcreteType{&FilterClearMessage{}, FilterClearByte},
 	wire.ConcreteType{&GetMerkleBlockMessage{}, MerkleRequestByte},
 	wire.ConcreteType{&MerkleBlockMessage{}, MerkleResponseByte},
@@ -353,23 +355,34 @@ type FilterLoadMessage struct {
 	Addresses [][]byte
 }
 
-//FilterClearMessage tells the receiving peer to remove a previously-set filter. 
-type FilterClearMessage struct {}
+// FilterAddMessage tells the receiving peer to add address to the filter.
+type FilterAddMessage struct {
+	Address [][]byte
+}
+
+//FilterClearMessage tells the receiving peer to remove a previously-set filter.
+type FilterClearMessage struct{}
 
 //GetMerkleBlockMessage request merkle blocks from remote peers by height/hash
 type GetMerkleBlockMessage struct {
 	Height  uint64
-	RawHash [32]byte 
+	RawHash [32]byte
+}
+
+//GetHash reutrn the hash of the request
+func (m *GetMerkleBlockMessage) GetHash() *bc.Hash {
+	hash := bc.NewHash(m.RawHash)
+	return &hash
 }
 
 //MerkleBlockMessage return the merkle block to client
 type MerkleBlockMessage struct {
-	RawBlockHeader []byte
+	RawBlockHeader   []byte
 	TransactionCount uint64
-	TxHashes [][32]byte
-	TxFlags []byte
-	RawTxDatas [][]byte
-	StatusHashes [][32]byte
-	StatusFlags []byte
-	RawTxStatuses [][]byte
+	TxHashes         [][32]byte
+	TxFlags          []byte
+	RawTxDatas       [][]byte
+	StatusHashes     [][32]byte
+	StatusFlags      []byte
+	RawTxStatuses    [][]byte
 }

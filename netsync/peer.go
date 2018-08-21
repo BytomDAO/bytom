@@ -4,6 +4,7 @@ import (
 	"net"
 	"sync"
 	"encoding/hex"
+	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/fatih/set.v0"
@@ -124,6 +125,18 @@ func (p *peer) getPeerInfo() *PeerInfo {
 	}
 }
 
+func (p *peer) getRelatedTxAndStatus(txs []*types.Tx, txStatuses *bc.TransactionStatus) ([]*types.Tx, []*bc.TxVerifyResult) {
+	var relatedTxs []*types.Tx
+	var relatedStatuses []*bc.TxVerifyResult
+	for i, tx := range(txs) {
+		if p.isRelatedTx(tx) {
+			relatedTxs = append(relatedTxs, tx)
+			relatedStatuses = append(relatedStatuses, txStatuses.VerifyStatus[i])
+		}
+	}
+	return relatedTxs, relatedStatuses
+}
+
 func (p *peer) isRelatedTx(tx *types.Tx) bool {
 	for _, input := range(tx.Inputs) {
 		switch inp := input.TypedInput.(type) {
@@ -203,6 +216,62 @@ func (p *peer) sendHeaders(headers []*types.BlockHeader) (bool, error) {
 	}
 
 	ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
+	return ok, nil
+}
+
+func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionStatus) (bool, error) {
+	responseMsg := &MerkleBlockMessage{}
+	
+	rawHeader, err := block.BlockHeader.MarshalText()
+	if err != nil {
+		return false, err
+	}
+	responseMsg.RawBlockHeader = rawHeader
+	responseMsg.TransactionCount = uint64(len(block.Transactions))
+
+	relatedTxs, relatedStatuses := p.getRelatedTxAndStatus(block.Transactions, txStatuses)
+	if len(relatedTxs) == 0 {
+		log.Info("Can not find any transaction in the block")
+		return true, nil
+	}
+	
+	var txIDs []bc.Hash
+	for _, tx := range(block.Transactions) {
+		txIDs = append(txIDs, tx.ID)
+	}
+	
+	var rawTxDatas [][]byte
+	var rawStatusDatas [][]byte
+	var relatedTxIDs []bc.Hash
+	for i, tx := range(relatedTxs) {
+		relatedTxIDs = append(relatedTxIDs, tx.ID)
+		rawTxData, err := tx.MarshalText()
+		if err != nil {
+			return false, err
+		}
+		rawTxDatas = append(rawTxDatas, rawTxData)
+		rawStatusData, err := json.Marshal(relatedStatuses[i])
+		if err != nil {
+			return false, err
+		}
+		rawStatusDatas = append(rawStatusDatas, rawStatusData)
+	}
+	responseMsg.RawTxDatas = rawTxDatas
+	responseMsg.RawTxStatuses = rawStatusDatas
+
+	_, txHashes, txFlags := bc.GetTxMerkleTreeProof(txIDs, relatedTxIDs)
+	responseMsg.TxFlags = bc.NewMerkleFlags(txFlags).Bytes()
+	for _, txHash := range(txHashes) {
+		responseMsg.TxHashes = append(responseMsg.TxHashes, txHash.Byte32())
+	}
+
+	_, statusHashes, statusFlags := bc.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, relatedStatuses)
+	responseMsg.StatusFlags = bc.NewMerkleFlags(statusFlags).Bytes()
+	for _, statusHash := range(statusHashes) {
+		responseMsg.TxHashes = append(responseMsg.TxHashes, statusHash.Byte32())
+	}
+	
+	ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{responseMsg})
 	return ok, nil
 }
 
