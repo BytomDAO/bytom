@@ -44,17 +44,24 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 	var txSigHash *[]byte
 	txSigHashFn := func() []byte {
 		if txSigHash == nil {
-			hasher := sm3.Get256()
-			defer sm3.Put256(hasher)
+			// hasher := sm3.Get256()
+			// defer sm3.Put256(hasher)
 
+			// entryID.WriteTo(hasher)
+			// tx.ID.WriteTo(hasher)
+
+			// var hash bc.Hash
+			// hash.ReadFrom(hasher)
+			// hashBytes := hash.Bytes()
+			// txSigHash = &hashBytes
+
+			hasher := sm3.New()
 			entryID.WriteTo(hasher)
 			tx.ID.WriteTo(hasher)
-
-			var hash bc.Hash
-			hash.ReadFrom(hasher)
-			hashBytes := hash.Bytes()
+			hashBytes := hasher.Sum(nil)
 			txSigHash = &hashBytes
 		}
+
 		return *txSigHash
 	}
 

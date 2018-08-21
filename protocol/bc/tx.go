@@ -35,13 +35,6 @@ func (tx *Tx) SigHash(n uint32) (hash Hash) {
 	return hash
 }
 
-// h := sm3.New()
-// h.Write(ii.Nonce)
-// var b32 [32]byte
-// copy(b32[:], h.Sum(nil))
-// hash = bc.NewHash(b32)
-// return hash
-
 // Convenience routines for accessing entries of specific types by ID.
 var (
 	ErrEntryType    = errors.New("invalid entry type")
