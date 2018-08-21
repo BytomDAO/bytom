@@ -29,7 +29,7 @@ const (
 	FilterLoadByte      = byte(0x50)
 	FilterClearByte     = byte(0x51)
 	MerkleRequestByte   = byte(0x60)
-	MerkleResponseByte  = byte(0x61) 
+	MerkleResponseByte  = byte(0x61)
 
 	maxBlockchainResponseSize = 22020096 + 2
 )
@@ -353,23 +353,23 @@ type FilterLoadMessage struct {
 	Addresses [][]byte
 }
 
-//FilterClearMessage tells the receiving peer to remove a previously-set filter. 
-type FilterClearMessage struct {}
+//FilterClearMessage tells the receiving peer to remove a previously-set filter.
+type FilterClearMessage struct{}
 
 //GetMerkleBlockMessage request merkle blocks from remote peers by height/hash
 type GetMerkleBlockMessage struct {
 	Height  uint64
-	RawHash [32]byte 
+	RawHash [32]byte
 }
 
 //MerkleBlockMessage return the merkle block to client
 type MerkleBlockMessage struct {
-	RawBlockHeader []byte
+	RawBlockHeader   []byte
 	TransactionCount uint64
-	TxHashes [][32]byte
-	TxFlags []byte
-	RawTxDatas [][]byte
-	StatusHashes [][32]byte
-	StatusFlags []byte
-	RawTxStatuses [][]byte
+	TxHashes         [][32]byte
+	TxFlags          []byte
+	RawTxDatas       [][]byte
+	StatusHashes     [][32]byte
+	StatusFlags      []byte
+	RawTxStatuses    [][]byte
 }
