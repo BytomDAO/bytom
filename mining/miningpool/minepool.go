@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	blockUpdateMS   = 1000
 	maxSubmitChSize = 50
 )
 
@@ -45,16 +44,16 @@ func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *p
 		txPool:         txPool,
 		newBlockCh:     newBlockCh,
 	}
+	m.generateBlock()
 	go m.blockUpdater()
 	return m
 }
 
 // blockUpdater is the goroutine for keep update mining block
 func (m *MiningPool) blockUpdater() {
-	ticker := time.NewTicker(time.Millisecond * blockUpdateMS)
 	for {
 		select {
-		case <-ticker.C:
+		case <-m.chain.BlockWaiter(m.chain.BestBlockHeight() + 1):
 			m.generateBlock()
 
 		case submitMsg := <-m.submitCh:
