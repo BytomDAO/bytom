@@ -24,29 +24,24 @@ func init() {
 }
 
 func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) {
-	if SeedSet.Has(remoteAddr) {
-		localVersion, _ := gover.NewVersion(localVerStr)
-		remoteVersion, _ := gover.NewVersion(remoteVerStr)
+	if !SeedSet.Has(remoteAddr) {
+		return
+	}
 
-		times := uint16(0)
-		if remoteVersion.GreaterThan(localVersion) {
-			Update = true
-			times = uint16(1)
-		}
-		if remoteVersion.Segments()[0] > localVersion.Segments()[0] {
-			SUpdate = true
-			times = uint16(3)
-		}
-		if (Update || SUpdate) && !notified {
-			for i := uint16(0); i < times; i++ {
-				log.Info("Current version: " + localVerStr +
-					". Newer version: " + remoteVerStr + " seen from seed: " + remoteAddr +
-					". Please update your bytomd via " +
-					"https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/.")
-
-			}
-			notified = true
-		}
+	localVersion, _ := gover.NewVersion(localVerStr)
+	remoteVersion, _ := gover.NewVersion(remoteVerStr)
+	if remoteVersion.GreaterThan(localVersion) {
+		Update = true
+	}
+	if remoteVersion.Segments()[0] > localVersion.Segments()[0] {
+		SUpdate = true
+	}
+	if (Update || SUpdate) && !notified {
+		log.Info("Current version: " + localVerStr +
+			". Newer version: " + remoteVerStr + " seen from seed: " + remoteAddr +
+			". Please update your bytomd via " +
+			"https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/.")
+		notified = true
 	}
 }
 
