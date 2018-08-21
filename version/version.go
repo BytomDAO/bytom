@@ -22,13 +22,19 @@ func init() {
 	}
 }
 
-func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) {
+func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) error {
 	if !SeedSet.Has(remoteAddr) || notified {
-		return
+		return nil
 	}
 
-	localVersion, _ := gover.NewVersion(localVerStr)
-	remoteVersion, _ := gover.NewVersion(remoteVerStr)
+	localVersion, err := gover.NewVersion(localVerStr)
+	if err != nil {
+		return err
+	}
+	remoteVersion, err := gover.NewVersion(remoteVerStr)
+	if err != nil {
+		return err
+	}
 	if remoteVersion.GreaterThan(localVersion) {
 		Update++
 	}
@@ -43,6 +49,7 @@ func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) {
 			Warn("Please update your bytomd via https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/")
 	}
 	notified = true
+	return nil
 }
 
 // CompatibleWith checks whether the remote peer version is compatible with the
