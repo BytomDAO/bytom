@@ -36,7 +36,7 @@ type Chain interface {
 	GetBlockByHeight(uint64) (*types.Block, error)
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)
 	GetHeaderByHeight(uint64) (*types.BlockHeader, error)
-	GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error)
+	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)
 	InMainChain(bc.Hash) bool
 	ProcessBlock(*types.Block) (bool, error)
 	ValidateTx(*types.Tx) (bool, error)
@@ -263,18 +263,21 @@ func (sm *SyncManager) handleGetMerkleBlockMsg(peer *peer, msg *GetMerkleBlockMe
 		log.WithField("err", err).Warning("fail on handleGetMerkleBlockMsg get block from chain")
 		return
 	}
+
 	blockHash := block.Hash()
 	txStatus, err := sm.chain.GetTransactionStatus(&blockHash)
 	if err != nil {
 		log.WithField("err", err).Warning("fail on handleGetMerkleBlockMsg get transaction status")
 		return
 	}
+
 	ok, err := peer.sendMerkleBlock(block, txStatus)
-	if !ok {
-		sm.peers.removePeer(peer.ID())
-	}
 	if err != nil {
 		log.WithField("err", err).Error("fail on handleGetMerkleBlockMsg sentMerkleBlock")
+	}
+
+	if !ok {
+		sm.peers.removePeer(peer.ID())
 	}
 }
 

@@ -103,7 +103,7 @@ func (node *merkleTreeNode) getMerkleTreeProof(rawHashSet multiset.Multiset) (bo
 		if rawHashSet.Contains(key, 1) {
 			hashes = append(hashes, *node.MerkleHash)
 			flags = append(flags, FlagTxLeaf)
-			rawHashSet.AssignCount(key, rawHashSet[key] - 1)
+			rawHashSet.AssignCount(key, rawHashSet[key]-1)
 			return true, hashes, flags
 		}
 		return false, hashes, flags
@@ -116,6 +116,8 @@ func (node *merkleTreeNode) getMerkleTreeProof(rawHashSet multiset.Multiset) (bo
 		flags = append(flags, FlagTxParent)
 	} else {
 		flags = append(flags, FlagAssist)
+		hashes = append(hashes, *node.MerkleHash)
+		return false, hashes, flags
 	}
 
 	if leftFind {
@@ -142,7 +144,7 @@ func getMerkleTreeProof(rawDatas []MerkleNode, relatedRawDatas []MerkleNode) (bo
 		return false, nil, nil
 	}
 	rawHashSet := multiset.Multiset{}
-	for _, data := range(relatedRawDatas) {
+	for _, data := range relatedRawDatas {
 		rawHashSet.AddElements(data.String())
 	}
 	return merkleTree.getMerkleTreeProof(rawHashSet)
@@ -153,11 +155,11 @@ func getMerkleTreeProof(rawDatas []MerkleNode, relatedRawDatas []MerkleNode) (bo
 func GetTxMerkleTreeProof(txIDs []Hash, relatedTxIDs []Hash) (bool, []Hash, []uint8) {
 	var rawDatas []MerkleNode
 	var relatedRawDatas []MerkleNode
-	for _, txID := range(txIDs) {
+	for _, txID := range txIDs {
 		temp := txID
 		rawDatas = append(rawDatas, &temp)
 	}
-	for _, txID := range(relatedTxIDs) {
+	for _, txID := range relatedTxIDs {
 		temp := txID
 		relatedRawDatas = append(relatedRawDatas, &temp)
 	}
@@ -168,10 +170,10 @@ func GetTxMerkleTreeProof(txIDs []Hash, relatedTxIDs []Hash) (bool, []Hash, []ui
 func GetStatusMerkleTreeProof(statuses []*TxVerifyResult, relatedStatuses []*TxVerifyResult) (bool, []Hash, []uint8) {
 	var rawDatas []MerkleNode
 	var relatedRawDatas []MerkleNode
-	for _, status := range(statuses) {
+	for _, status := range statuses {
 		rawDatas = append(rawDatas, status)
 	}
-	for _, status := range(relatedStatuses) {
+	for _, status := range relatedStatuses {
 		relatedRawDatas = append(relatedRawDatas, status)
 	}
 	return getMerkleTreeProof(rawDatas, relatedRawDatas)
@@ -197,7 +199,7 @@ func getMerkleRootByProof(hashesPtr *[]Hash, flagsPtr *[]uint8, merkleHashes mul
 		if len(hashes) != 0 && merkleHashes.Contains(key, 1) {
 			nextHashes := hashes[1:]
 			*hashesPtr = nextHashes
-			merkleHashes.AssignCount(key, merkleHashes[key] - 1)
+			merkleHashes.AssignCount(key, merkleHashes[key]-1)
 			return hashes[0]
 		}
 		return EmptyStringHash
@@ -209,12 +211,12 @@ func getMerkleRootByProof(hashesPtr *[]Hash, flagsPtr *[]uint8, merkleHashes mul
 }
 
 func newMerkleTreeNode(merkleHash *Hash, rawData MerkleNode, left *merkleTreeNode, right *merkleTreeNode) *merkleTreeNode {
-	node := &merkleTreeNode{}
-	node.MerkleHash = merkleHash
-	node.rawData = rawData
-	node.left = left
-	node.right = right
-	return node
+	return &merkleTreeNode{
+		MerkleHash: merkleHash,
+		rawData:    rawData,
+		left:       left,
+		right:      right,
+	}
 }
 
 // ValidateMerkleTreeProof caculate the merkle root according to the hash of node and the flags

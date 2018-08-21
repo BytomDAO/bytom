@@ -1,10 +1,10 @@
 package netsync
 
 import (
-	"net"
-	"sync"
 	"encoding/hex"
 	"encoding/json"
+	"net"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/fatih/set.v0"
@@ -91,8 +91,8 @@ func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 func (p *peer) addFilterAddresses(addresses [][]byte) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
-	
-	if (!p.filterAdds.IsEmpty()) {
+
+	if !p.filterAdds.IsEmpty() {
 		p.filterAdds.Clear()
 	}
 	for _, address := range addresses {
@@ -128,7 +128,7 @@ func (p *peer) getPeerInfo() *PeerInfo {
 func (p *peer) getRelatedTxAndStatus(txs []*types.Tx, txStatuses *bc.TransactionStatus) ([]*types.Tx, []*bc.TxVerifyResult) {
 	var relatedTxs []*types.Tx
 	var relatedStatuses []*bc.TxVerifyResult
-	for i, tx := range(txs) {
+	for i, tx := range txs {
 		if p.isRelatedTx(tx) {
 			relatedTxs = append(relatedTxs, tx)
 			relatedStatuses = append(relatedStatuses, txStatuses.VerifyStatus[i])
@@ -138,7 +138,7 @@ func (p *peer) getRelatedTxAndStatus(txs []*types.Tx, txStatuses *bc.Transaction
 }
 
 func (p *peer) isRelatedTx(tx *types.Tx) bool {
-	for _, input := range(tx.Inputs) {
+	for _, input := range tx.Inputs {
 		switch inp := input.TypedInput.(type) {
 		case *types.SpendInput:
 			if p.filterAdds.Has(hex.EncodeToString(inp.ControlProgram)) {
@@ -146,7 +146,7 @@ func (p *peer) isRelatedTx(tx *types.Tx) bool {
 			}
 		}
 	}
-	for _, output := range(tx.Outputs) {
+	for _, output := range tx.Outputs {
 		if p.filterAdds.Has(hex.EncodeToString(output.ControlProgram)) {
 			return true
 		}
@@ -220,58 +220,61 @@ func (p *peer) sendHeaders(headers []*types.BlockHeader) (bool, error) {
 }
 
 func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionStatus) (bool, error) {
-	responseMsg := &MerkleBlockMessage{}
-	
 	rawHeader, err := block.BlockHeader.MarshalText()
 	if err != nil {
 		return false, err
 	}
-	responseMsg.RawBlockHeader = rawHeader
-	responseMsg.TransactionCount = uint64(len(block.Transactions))
-
-	relatedTxs, relatedStatuses := p.getRelatedTxAndStatus(block.Transactions, txStatuses)
-	if len(relatedTxs) == 0 {
-		log.Info("Can not find any transaction in the block")
-		return true, nil
-	}
 	
+	relatedTxs, relatedStatuses := p.getRelatedTxAndStatus(block.Transactions, txStatuses)
+
 	var txIDs []bc.Hash
-	for _, tx := range(block.Transactions) {
+	for _, tx := range block.Transactions {
 		txIDs = append(txIDs, tx.ID)
 	}
-	
+
 	var rawTxDatas [][]byte
 	var rawStatusDatas [][]byte
 	var relatedTxIDs []bc.Hash
-	for i, tx := range(relatedTxs) {
+	for i, tx := range relatedTxs {
 		relatedTxIDs = append(relatedTxIDs, tx.ID)
 		rawTxData, err := tx.MarshalText()
 		if err != nil {
 			return false, err
 		}
+
 		rawTxDatas = append(rawTxDatas, rawTxData)
 		rawStatusData, err := json.Marshal(relatedStatuses[i])
 		if err != nil {
 			return false, err
 		}
+
 		rawStatusDatas = append(rawStatusDatas, rawStatusData)
 	}
-	responseMsg.RawTxDatas = rawTxDatas
-	responseMsg.RawTxStatuses = rawStatusDatas
 
+	var rawTxHashes [][32]byte
 	_, txHashes, txFlags := bc.GetTxMerkleTreeProof(txIDs, relatedTxIDs)
-	responseMsg.TxFlags = bc.NewMerkleFlags(txFlags).Bytes()
-	for _, txHash := range(txHashes) {
-		responseMsg.TxHashes = append(responseMsg.TxHashes, txHash.Byte32())
+	for _, txHash := range txHashes {
+		rawTxHashes = append(rawTxHashes, txHash.Byte32())
 	}
 
+	var rawStatusHashes [][32]byte
 	_, statusHashes, statusFlags := bc.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, relatedStatuses)
-	responseMsg.StatusFlags = bc.NewMerkleFlags(statusFlags).Bytes()
-	for _, statusHash := range(statusHashes) {
-		responseMsg.TxHashes = append(responseMsg.TxHashes, statusHash.Byte32())
+	for _, statusHash := range statusHashes {
+		rawStatusHashes = append(rawStatusHashes, statusHash.Byte32())
 	}
-	
-	ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{responseMsg})
+
+	msg := &MerkleBlockMessage{
+		RawBlockHeader:   rawHeader,
+		TransactionCount: uint64(len(block.Transactions)),
+		TxHashes:         rawTxHashes,
+		TxFlags:          txFlags,
+		RawTxDatas:       rawTxDatas,
+		StatusHashes:     rawStatusHashes,
+		StatusFlags:      statusFlags,
+		RawTxStatuses:    rawStatusDatas,
+	}
+
+	ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return ok, nil
 }
 
