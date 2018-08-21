@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	blockUpdateMS   = 1000
 	maxSubmitChSize = 50
 )
 
