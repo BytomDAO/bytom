@@ -70,16 +70,12 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 	if err != nil {
 		return err
 	}
-
-	log.Info(s.versionStatus)
 	if remoteVersion.GreaterThan(localVersion) {
 		s.versionStatus = hasUpdate
 	}
-	log.Info(s.versionStatus)
 	if remoteVersion.Segments()[0] > localVersion.Segments()[0] {
 		s.versionStatus = hasMUpdate
 	}
-	log.Info(s.versionStatus)
 	if s.versionStatus != noUpdate {
 		log.WithFields(log.Fields{
 			"Current version": localVerStr,
