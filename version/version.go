@@ -11,8 +11,7 @@ var (
 	Version = "1.0.4"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
-	Update    bool
-	SUpdate   bool
+	Update    uint16
 	notified  bool
 	SeedSet   = set.New()
 )
@@ -24,25 +23,25 @@ func init() {
 }
 
 func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) {
-	if !SeedSet.Has(remoteAddr) {
+	if !SeedSet.Has(remoteAddr) || notified {
 		return
 	}
 
 	localVersion, _ := gover.NewVersion(localVerStr)
 	remoteVersion, _ := gover.NewVersion(remoteVerStr)
 	if remoteVersion.GreaterThan(localVersion) {
-		Update = true
+		Update++
 	}
 	if remoteVersion.Segments()[0] > localVersion.Segments()[0] {
-		SUpdate = true
+		Update++
 	}
-	if (Update || SUpdate) && !notified {
+	if Update > 0 {
 		log.Info("Current version: " + localVerStr +
 			". Newer version: " + remoteVerStr + " seen from seed: " + remoteAddr +
 			". Please update your bytomd via " +
 			"https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/.")
-		notified = true
 	}
+	notified = true
 }
 
 // CompatibleWith checks whether the remote peer version is compatible with the
