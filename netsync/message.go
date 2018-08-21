@@ -357,7 +357,7 @@ type FilterLoadMessage struct {
 
 // FilterAddMessage tells the receiving peer to add address to the filter.
 type FilterAddMessage struct {
-	Address [][]byte
+	Address []byte
 }
 
 //FilterClearMessage tells the receiving peer to remove a previously-set filter.
