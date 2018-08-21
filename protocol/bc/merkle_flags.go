@@ -27,7 +27,7 @@ type MerkleFlags struct {
 // NewMerkleFlags initialization the bit flags
 func NewMerkleFlags(flags []uint8) *MerkleFlags {
 	merkleFlags := &MerkleFlags{}
-	bitArray := common.NewBitArray(len(flags))
+	bitArray := common.NewBitArray(len(flags) * 2)
 	for i, flag := range flags {
 		firstIdx, secondIdx := i*2, i*2+1
 		switch flag {

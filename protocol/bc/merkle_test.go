@@ -214,3 +214,16 @@ func TestStatusMerkleProof(t *testing.T) {
 		t.Error("Merkle tree validate fail")
 	}
 }
+
+func TestMerkleFlag(t *testing.T) {
+	var flags []uint8
+	flags = append(flags, FlagAssist)
+	flags = append(flags, FlagTxParent)
+	flags = append(flags, FlagTxParent)
+	flags = append(flags, FlagTxLeaf)
+	merkleFlags := NewMerkleFlags(flags)
+	bytes := merkleFlags.Bytes()
+	if bytes[0] != 0x68 {
+		t.Error("Invalid merkle flags", bytes[0])
+	}
+}
