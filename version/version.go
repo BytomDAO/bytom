@@ -36,10 +36,11 @@ func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) {
 		Update++
 	}
 	if Update > 0 {
-		log.Info("Current version: " + localVerStr +
-			". Newer version: " + remoteVerStr + " seen from seed: " + remoteAddr +
-			". Please update your bytomd via " +
-			"https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/.")
+		log.WithFields(log.Fields{
+			"Current version": localVerStr,
+			"Newer version":   remoteVerStr,
+			"seed":            remoteAddr}).
+			Warn("Please update your bytomd via https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/")
 	}
 	notified = true
 }
