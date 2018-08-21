@@ -6,14 +6,20 @@ import (
 	"gopkg.in/fatih/set.v0"
 )
 
+const (
+	noUpdate   uint16 = iota
+	hasUpdate  uint16 = iota
+	hasSUpdate uint16 = iota
+)
+
 var (
 	// The full version string
 	Version = "1.0.4"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
-	Update    uint16 // 0: no update; 1: small update; 2: significant update
 	notified  bool
 	SeedSet   = set.New()
+	Status    = noUpdate
 )
 
 func init() {
@@ -23,7 +29,7 @@ func init() {
 }
 
 // CheckUpdate checks whether there is a newer version to update.
-// If there is, it set the "Update" variable to a proper value.
+// If there is, it set the "Status" variable to a proper value.
 // 	params:
 // 		localVerStr: the version of the node itself
 // 		remoteVerStr: the version received from a seed node.
@@ -32,7 +38,7 @@ func init() {
 // 		1. small update: seed version is higher than the node itself
 // 		2. significant update: seed mojor version is higher than the node itself
 func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) error {
-	if !SeedSet.Has(remoteAddr) || notified {
+	if notified || !SeedSet.Has(remoteAddr) {
 		return nil
 	}
 
@@ -45,19 +51,19 @@ func CheckUpdate(localVerStr string, remoteVerStr string, remoteAddr string) err
 		return err
 	}
 	if remoteVersion.GreaterThan(localVersion) {
-		Update++
+		Status = hasUpdate
 	}
 	if remoteVersion.Segments()[0] > localVersion.Segments()[0] {
-		Update++
+		Status = hasSUpdate
 	}
-	if Update > 0 {
+	if Status != noUpdate {
 		log.WithFields(log.Fields{
 			"Current version": localVerStr,
 			"Newer version":   remoteVerStr,
 			"seed":            remoteAddr}).
 			Warn("Please update your bytomd via https://github.com/Bytom/bytom/releases/ or http://bytom.io/wallet/")
+		notified = true
 	}
-	notified = true
 	return nil
 }
 
