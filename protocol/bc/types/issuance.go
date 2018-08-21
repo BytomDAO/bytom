@@ -57,10 +57,10 @@ func (ii *IssuanceInput) NonceHash() (hash bc.Hash) {
 	// hash.ReadFrom(sha)
 	// return hash
 
-	sha := sm3.New()
-	sha.Write(ii.Nonce)
-	var h [32]byte
-	copy(h[:], sha.Sum(nil))
-	hash = bc.NewHash(h)
+	h := sm3.New()
+	h.Write(ii.Nonce)
+	var b32 [32]byte
+	copy(b32[:], h.Sum(nil))
+	hash = bc.NewHash(b32)
 	return hash
 }

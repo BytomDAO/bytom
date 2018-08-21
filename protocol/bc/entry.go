@@ -6,6 +6,8 @@ import (
 	"io"
 	"reflect"
 
+	"github.com/bytom/protocol/bc"
+
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bytom/crypto/sm3"
@@ -32,6 +34,38 @@ var errInvalidValue = errors.New("invalid value")
 // EntryID computes the identifier of an entry, as the hash of its
 // body plus some metadata.
 func EntryID(e Entry) (hash Hash) {
+	// if e == nil {
+	// 	return hash
+	// }
+
+	// // Nil pointer; not the same as nil interface above. (See
+	// // https://golang.org/doc/faq#nil_error.)
+	// if v := reflect.ValueOf(e); v.Kind() == reflect.Ptr && v.IsNil() {
+	// 	return hash
+	// }
+
+	// hasher := sm3.Get256()
+	// defer sm3.Put256(hasher)
+
+	// hasher.Write([]byte("entryid:"))
+	// hasher.Write([]byte(e.typ()))
+	// hasher.Write([]byte{':'})
+
+	// bh := sm3.Get256()
+	// defer sm3.Put256(bh)
+
+	// e.writeForHash(bh)
+
+	// var innerHash [32]byte
+	// bh.Read(innerHash[:])
+
+	// hasher.Write(innerHash[:])
+
+	// hash.ReadFrom(hasher)
+	// return hash
+
+	/////////////////
+
 	if e == nil {
 		return hash
 	}
@@ -42,26 +76,33 @@ func EntryID(e Entry) (hash Hash) {
 		return hash
 	}
 
-	hasher := sm3.Get256()
-	defer sm3.Put256(hasher)
+	hasher := sm3.New()
 
 	hasher.Write([]byte("entryid:"))
 	hasher.Write([]byte(e.typ()))
 	hasher.Write([]byte{':'})
 
-	bh := sm3.Get256()
-	defer sm3.Put256(bh)
+	bh := sm3.New()
 
 	e.writeForHash(bh)
 
 	var innerHash [32]byte
-	bh.Read(innerHash[:])
+	copy(innerHash[:], bh.Sum(nil))
 
 	hasher.Write(innerHash[:])
+	var b32 [32]byte
+	copy(b32[:], hasher.Sum(nil))
+	hash = bc.NewHash(b32)
 
-	hash.ReadFrom(hasher)
 	return hash
 }
+
+// h := sm3.New()
+// h.Write(ii.Nonce)
+// var b32 [32]byte
+// copy(b32[:], h.Sum(nil))
+// hash = bc.NewHash(b32)
+// return hash
 
 var byte32zero [32]byte
 
