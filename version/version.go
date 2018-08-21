@@ -26,17 +26,19 @@ func init() {
 		Version += "-" + GitCommit[:8]
 	}
 	Status = &UpdateStatus{
+		maxVerSeen:    Version,
 		notified:      false,
-		versionStatus: noUpdate,
 		seedSet:       set.New(),
+		versionStatus: noUpdate,
 	}
 }
 
 type UpdateStatus struct {
 	sync.RWMutex
+	maxVerSeen    string
 	notified      bool
-	versionStatus uint16
 	seedSet       *set.Set
+	versionStatus uint16
 }
 
 func (s *UpdateStatus) AddSeed(seedAddr string) {
@@ -72,6 +74,7 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 	}
 	if remoteVersion.GreaterThan(localVersion) {
 		s.versionStatus = hasUpdate
+		s.maxVerSeen = remoteVerStr
 	}
 	if remoteVersion.Segments()[0] > localVersion.Segments()[0] {
 		s.versionStatus = hasMUpdate
@@ -85,6 +88,12 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 		s.notified = true
 	}
 	return nil
+}
+
+func (s *UpdateStatus) MaxVerSeen() string {
+	s.RLock()
+	defer s.RUnlock()
+	return s.maxVerSeen
 }
 
 func (s *UpdateStatus) VersionStatus() uint16 {

@@ -10,17 +10,22 @@ import (
 	"github.com/bytom/version"
 )
 
+type VersionInfo struct {
+	Version string `json:"version"`
+	Update  uint16 `json:"update"` // 0: no update; 1: small update; 2: significant update
+	NewVer  string `json:"new_version"`
+}
+
 // NetInfo indicate net information
 type NetInfo struct {
-	Listening    bool   `json:"listening"`
-	Syncing      bool   `json:"syncing"`
-	Mining       bool   `json:"mining"`
-	PeerCount    int    `json:"peer_count"`
-	CurrentBlock uint64 `json:"current_block"`
-	HighestBlock uint64 `json:"highest_block"`
-	NetWorkID    string `json:"network_id"`
-	Version      string `json:"version"`
-	Update       uint16 `json:"update"` // 0: no update; 1: small update; 2: significant update
+	Listening    bool         `json:"listening"`
+	Syncing      bool         `json:"syncing"`
+	Mining       bool         `json:"mining"`
+	PeerCount    int          `json:"peer_count"`
+	CurrentBlock uint64       `json:"current_block"`
+	HighestBlock uint64       `json:"highest_block"`
+	NetWorkID    string       `json:"network_id"`
+	Version      *VersionInfo `json:"version_info"`
 }
 
 // GetNodeInfo return net information
@@ -32,8 +37,11 @@ func (a *API) GetNodeInfo() *NetInfo {
 		PeerCount:    len(a.sync.Switch().Peers().List()),
 		CurrentBlock: a.chain.BestBlockHeight(),
 		NetWorkID:    a.sync.NodeInfo().Network,
-		Version:      version.Version,
-		Update:       version.Status.VersionStatus(),
+		Version: &VersionInfo{
+			Version: version.Version,
+			Update:  version.Status.VersionStatus(),
+			NewVer:  version.Status.MaxVerSeen(),
+		},
 	}
 	if bestPeer := a.sync.BestPeer(); bestPeer != nil {
 		info.HighestBlock = bestPeer.Height
