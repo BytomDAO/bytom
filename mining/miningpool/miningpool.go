@@ -3,7 +3,6 @@ package miningpool
 import (
 	"errors"
 	"sync"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -70,17 +69,12 @@ func (m *MiningPool) blockUpdater() {
 func (m *MiningPool) generateBlock() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	if m.block != nil && *m.chain.BestBlockHash() == m.block.PreviousBlockHash {
-		m.block.Timestamp = uint64(time.Now().Unix())
-		return
-	}
 
 	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
 	if err != nil {
 		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
 		return
 	}
-
 	m.block = block
 }
 
