@@ -97,6 +97,7 @@ func (vm *virtualMachine) step() error {
 	for i, data := range vm.dataStack {
 		fmt.Println("i:", i, "vm.dataStack:", hex.EncodeToString(data))
 	}
+	fmt.Println("--------------------------")
 	/////
 	if err != nil {
 		return err
@@ -135,6 +136,7 @@ func (vm *virtualMachine) step() error {
 		for i, data := range vm.dataStack {
 			fmt.Println("i:", i, "vm.dataStack:", hex.EncodeToString(data))
 		}
+		fmt.Println("---------------------")
 
 		///
 		return err
