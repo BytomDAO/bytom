@@ -145,7 +145,8 @@ func TestAllDuplicateLeaves(t *testing.T) {
 }
 
 func TestTxMerkleProof(t *testing.T) {
-	var txs []*bc.Tx
+	var txs []*Tx
+	var bcTxs []*bc.Tx
 	trueProg := []byte{byte(vm.OP_TRUE)}
 	assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
 	for i := 0; i < 10; i++ {
@@ -155,20 +156,17 @@ func TestTxMerkleProof(t *testing.T) {
 			Version: 1,
 			Inputs:  []*TxInput{issuanceInp},
 			Outputs: []*TxOutput{NewTxOutput(assetID, 1, trueProg)},
-		}).Tx
+		})
 		txs = append(txs, tx)
+		bcTxs = append(bcTxs, tx.Tx)
 	}
-	root, err := TxMerkleRoot(txs)
+	root, err := TxMerkleRoot(bcTxs)
 	if err != nil {
 		t.Fatalf("unexpected error %s", err)
 	}
-	var txIDs []bc.Hash
-	for _, tx := range txs {
-		txIDs = append(txIDs, tx.ID)
-	}
 
-	relatedTx := []bc.Hash{txs[0].ID, txs[3].ID, txs[7].ID, txs[8].ID}
-	proofHashes, flags := GetTxMerkleTreeProof(txIDs, relatedTx)
+	relatedTx := []*Tx{txs[0], txs[3], txs[7], txs[8]}
+	proofHashes, flags := GetTxMerkleTreeProof(txs, relatedTx)
 	if len(proofHashes) <= 0 {
 		t.Error("Can not find any tx id in the merkle tree")
 	}

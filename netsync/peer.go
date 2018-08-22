@@ -227,15 +227,7 @@ func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionSta
 		return false, err
 	}
 
-	var txIDs []bc.Hash
-	for _, tx := range block.Transactions {
-		txIDs = append(txIDs, tx.ID)
-	}
-	var relatedTxIDs []bc.Hash
-	for _, tx := range relatedTxs {
-		relatedTxIDs = append(relatedTxIDs, tx.ID)
-	}
-	txHashes, txFlags := types.GetTxMerkleTreeProof(txIDs, relatedTxIDs)
+	txHashes, txFlags := types.GetTxMerkleTreeProof(block.Transactions, relatedTxs)
 	msg.setTxInfo(txHashes, txFlags, relatedTxs)
 	if err != nil {
 		return false, nil
