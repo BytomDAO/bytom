@@ -93,11 +93,11 @@ func (vm *virtualMachine) run() error {
 func (vm *virtualMachine) step() error {
 	inst, err := ParseOp(vm.program, vm.pc)
 	/////
-	fmt.Println("instruction:", inst.Op)
+	fmt.Println("--------------------------")
 	for i, data := range vm.dataStack {
 		fmt.Println("i:", i, "vm.dataStack:", hex.EncodeToString(data))
 	}
-	fmt.Println("--------------------------")
+	fmt.Println("instruction:", inst.Op)
 	/////
 	if err != nil {
 		return err
@@ -131,14 +131,12 @@ func (vm *virtualMachine) step() error {
 	err = vm.applyCost(vm.deferredCost)
 	if err != nil {
 		/////
-
-		fmt.Println("instruction and data:", inst.Op, inst.Data)
+		fmt.Println("---------------------")
 		for i, data := range vm.dataStack {
 			fmt.Println("i:", i, "vm.dataStack:", hex.EncodeToString(data))
 		}
-		fmt.Println("---------------------")
-
-		///
+		fmt.Println("instruction and data:", inst.Op, inst.Data)
+		/////
 		return err
 	}
 	vm.pc = vm.nextPC
