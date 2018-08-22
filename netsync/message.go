@@ -383,6 +383,5 @@ type MerkleBlockMessage struct {
 	RawTxDatas       [][]byte
 	StatusHashes     [][32]byte
 	Flags            []byte
-	StatusFlags      []byte
 	RawTxStatuses    [][]byte
 }

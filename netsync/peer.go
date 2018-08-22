@@ -227,13 +227,16 @@ func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionSta
 	
 	relatedTxs, relatedStatuses := p.getRelatedTxAndStatus(block.Transactions, txStatuses)
 
+	msg := &MerkleBlockMessage{
+		RawBlockHeader:   rawHeader,
+		TransactionCount: uint64(len(block.Transactions)),
+	}
+
 	var txIDs []bc.Hash
 	for _, tx := range block.Transactions {
 		txIDs = append(txIDs, tx.ID)
 	}
 
-	var rawTxDatas [][]byte
-	var rawStatusDatas [][]byte
 	var relatedTxIDs []bc.Hash
 	for i, tx := range relatedTxs {
 		relatedTxIDs = append(relatedTxIDs, tx.ID)
@@ -242,36 +245,25 @@ func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionSta
 			return false, err
 		}
 
-		rawTxDatas = append(rawTxDatas, rawTxData)
+		msg.RawTxDatas = append(msg.RawTxDatas, rawTxData)
 		rawStatusData, err := json.Marshal(relatedStatuses[i])
 		if err != nil {
 			return false, err
 		}
 
-		rawStatusDatas = append(rawStatusDatas, rawStatusData)
+		msg.RawTxStatuses = append(msg.RawTxStatuses, rawStatusData)
 	}
 
-	var rawTxHashes [][32]byte
 	txHashes, txFlags := bc.GetTxMerkleTreeProof(txIDs, relatedTxIDs)
 	for _, txHash := range txHashes {
-		rawTxHashes = append(rawTxHashes, txHash.Byte32())
+		msg.TxHashes = append(msg.TxHashes, txHash.Byte32())
 	}
 
-	var rawStatusHashes [][32]byte
 	statusHashes := bc.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, txFlags)
 	for _, statusHash := range statusHashes {
-		rawStatusHashes = append(rawStatusHashes, statusHash.Byte32())
+		msg.StatusHashes = append(msg.StatusHashes, statusHash.Byte32())
 	}
-
-	msg := &MerkleBlockMessage{
-		RawBlockHeader:   rawHeader,
-		TransactionCount: uint64(len(block.Transactions)),
-		TxHashes:         rawTxHashes,
-		RawTxDatas:       rawTxDatas,
-		StatusHashes:     rawStatusHashes,
-		Flags:            txFlags,
-		RawTxStatuses:    rawStatusDatas,
-	}
+	msg.Flags = txFlags
 
 	ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
 	return ok, nil
