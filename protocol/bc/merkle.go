@@ -244,16 +244,17 @@ func getMerkleRootByProof(hashList *list.List, flagList *list.List, merkleHashes
 		return hash.Value.(Hash)
 	}
 	if flag == FlagTxLeaf {
-		if hashList.Len() != 0 && merkleHashes.Len() != 0 {
-			hashEle := hashList.Front()
-			hash := hashEle.Value.(Hash)
-			relatedHashEle := merkleHashes.Front()
-			relatedHash := relatedHashEle.Value.(Hash)
-			if hash == relatedHash {
-				hashList.Remove(hashEle)
-				merkleHashes.Remove(relatedHashEle)
-				return hash
-			}
+		if hashList.Len() == 0 || merkleHashes.Len() == 0 {
+			return EmptyStringHash
+		}
+		hashEle := hashList.Front()
+		hash := hashEle.Value.(Hash)
+		relatedHashEle := merkleHashes.Front()
+		relatedHash := relatedHashEle.Value.(Hash)
+		if hash == relatedHash {
+			hashList.Remove(hashEle)
+			merkleHashes.Remove(relatedHashEle)
+			return hash
 		}
 		return EmptyStringHash
 	}
