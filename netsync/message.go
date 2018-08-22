@@ -418,12 +418,12 @@ func NewMerkleBlockMessage(block *types.Block, txStatuses *bc.TransactionStatus,
 		msg.RawTxStatuses = append(msg.RawTxStatuses, rawStatusData)
 	}
 
-	txHashes, txFlags := bc.GetTxMerkleTreeProof(txIDs, relatedTxIDs)
+	txHashes, txFlags := types.GetTxMerkleTreeProof(txIDs, relatedTxIDs)
 	for _, txHash := range txHashes {
 		msg.TxHashes = append(msg.TxHashes, txHash.Byte32())
 	}
 
-	statusHashes := bc.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, txFlags)
+	statusHashes := types.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, txFlags)
 	for _, statusHash := range statusHashes {
 		msg.StatusHashes = append(msg.StatusHashes, statusHash.Byte32())
 	}

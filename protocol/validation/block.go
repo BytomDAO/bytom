@@ -7,6 +7,7 @@ import (
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
 )
 
@@ -99,7 +100,7 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 		return err
 	}
 
-	txMerkleRoot, err := bc.TxMerkleRoot(b.Transactions)
+	txMerkleRoot, err := types.TxMerkleRoot(b.Transactions)
 	if err != nil {
 		return errors.Wrap(err, "computing transaction id merkle root")
 	}
@@ -107,7 +108,7 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction id merkle root")
 	}
 
-	txStatusHash, err := bc.TxStatusMerkleRoot(b.TransactionStatus.VerifyStatus)
+	txStatusHash, err := types.TxStatusMerkleRoot(b.TransactionStatus.VerifyStatus)
 	if err != nil {
 		return errors.Wrap(err, "computing transaction status merkle root")
 	}
