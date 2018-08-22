@@ -164,19 +164,13 @@ func TestTxMerkleProof(t *testing.T) {
 		t.Fatalf("unexpected error %s", err)
 	}
 	var txIDs []Hash
-	var nodes []MerkleNode
 	for _, tx := range txs {
 		txIDs = append(txIDs, tx.ID)
-		nodes = append(nodes, &tx.ID)
-	}
-	tree := BuildMerkleTree(nodes)
-	if *tree.MerkleHash != root {
-		t.Fatal(err)
 	}
 
 	relatedTx := []Hash{txs[0].ID, txs[3].ID, txs[7].ID, txs[8].ID}
-	find, proofHashes, flags := GetTxMerkleTreeProof(txIDs, relatedTx)
-	if !find {
+	proofHashes, flags := GetTxMerkleTreeProof(txIDs, relatedTx)
+	if len(proofHashes) <= 0 {
 		t.Error("Can not find any tx id in the merkle tree")
 	}
 	expectFlags := []uint8{1, 1, 1, 1, 2, 0, 1, 0, 2, 1, 0, 1, 0, 2, 1, 2, 0}
@@ -204,26 +198,14 @@ func TestStatusMerkleProof(t *testing.T) {
 		}
 		statuses = append(statuses, status)
 	}
-	relatedStatuses := []*TxVerifyResult{statuses[3], statuses[6], statuses[8]}
-	find, hashes, flags := GetStatusMerkleTreeProof(statuses, relatedStatuses)
-	if !find {
-		t.Error("Can not find any status in the merkle tree")
+	relatedStatuses := []*TxVerifyResult{statuses[0], statuses[3], statuses[7], statuses[8]}
+	flags := []uint8{1, 1, 1, 1, 2, 0, 1, 0, 2, 1, 0, 1, 0, 2, 1, 2, 0}
+	hashes := GetStatusMerkleTreeProof(statuses, flags)
+	if len(hashes) != 9 {
+		t.Error("The length proof hashes is not equals expect length")
 	}
 	root, _ := TxStatusMerkleRoot(statuses)
 	if !ValidateStatusMerkleTreeProof(hashes, flags, relatedStatuses, root) {
 		t.Error("Merkle tree validate fail")
-	}
-}
-
-func TestMerkleFlag(t *testing.T) {
-	var flags []uint8
-	flags = append(flags, FlagAssist)
-	flags = append(flags, FlagTxParent)
-	flags = append(flags, FlagTxParent)
-	flags = append(flags, FlagTxLeaf)
-	merkleFlags := NewMerkleFlags(flags)
-	bytes := merkleFlags.Bytes()
-	if bytes[0] != 0x68 {
-		t.Error("Invalid merkle flags", bytes[0])
 	}
 }

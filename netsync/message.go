@@ -380,9 +380,9 @@ type MerkleBlockMessage struct {
 	RawBlockHeader   []byte
 	TransactionCount uint64
 	TxHashes         [][32]byte
-	TxFlags          []byte
 	RawTxDatas       [][]byte
 	StatusHashes     [][32]byte
+	Flags            []byte
 	StatusFlags      []byte
 	RawTxStatuses    [][]byte
 }

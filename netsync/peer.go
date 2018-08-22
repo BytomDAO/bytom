@@ -252,13 +252,13 @@ func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionSta
 	}
 
 	var rawTxHashes [][32]byte
-	_, txHashes, txFlags := bc.GetTxMerkleTreeProof(txIDs, relatedTxIDs)
+	txHashes, txFlags := bc.GetTxMerkleTreeProof(txIDs, relatedTxIDs)
 	for _, txHash := range txHashes {
 		rawTxHashes = append(rawTxHashes, txHash.Byte32())
 	}
 
 	var rawStatusHashes [][32]byte
-	_, statusHashes, statusFlags := bc.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, relatedStatuses)
+	statusHashes := bc.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, txFlags)
 	for _, statusHash := range statusHashes {
 		rawStatusHashes = append(rawStatusHashes, statusHash.Byte32())
 	}
@@ -267,10 +267,9 @@ func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionSta
 		RawBlockHeader:   rawHeader,
 		TransactionCount: uint64(len(block.Transactions)),
 		TxHashes:         rawTxHashes,
-		TxFlags:          txFlags,
 		RawTxDatas:       rawTxDatas,
 		StatusHashes:     rawStatusHashes,
-		StatusFlags:      statusFlags,
+		Flags:            txFlags,
 		RawTxStatuses:    rawStatusDatas,
 	}
 

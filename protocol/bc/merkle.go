@@ -1,12 +1,27 @@
 package bc
 
 import (
+	"gopkg.in/fatih/set.v0"
+	"container/list"
 	"io"
 	"math"
 
-	"github.com/soniakeys/multiset"
-
 	"github.com/bytom/crypto/sha3pool"
+)
+
+// MerkleFlag represent the type of merkle tree node, it's used to generate the structure of merkle tree
+// Bitcoin has only two flags, which zero means the hash of assist node. And one means the hash of the related
+// transaction node or it's parents, which distinguish them according to the height of the tree. But in the bytom,
+// the height of transaction node is not fixed, so we need three flags to distinguish these nodes.
+type MerkleFlag uint8
+
+const (
+	// FlagAssist represent assist node
+	FlagAssist = iota
+	// FlagTxParent represent the parent of transaction of node
+	FlagTxParent
+	// FlagTxLeaf represent transaction of node
+	FlagTxLeaf
 )
 
 var (
@@ -14,12 +29,12 @@ var (
 	interiorPrefix = []byte{0x01}
 )
 
-type MerkleNode interface {
+type merkleNode interface {
 	WriteTo(io.Writer) (int64, error)
 	String() string
 }
 
-func merkleRoot(nodes []MerkleNode) (root Hash, err error) {
+func merkleRoot(nodes []merkleNode) (root Hash, err error) {
 	switch {
 	case len(nodes) == 0:
 		return EmptyStringHash, nil
@@ -45,7 +60,7 @@ func merkleRoot(nodes []MerkleNode) (root Hash, err error) {
 	}
 }
 
-func interiorMerkleHash(left MerkleNode, right MerkleNode) (hash Hash) {
+func interiorMerkleHash(left merkleNode, right merkleNode) (hash Hash) {
 	h := sha3pool.Get256()
 	defer sha3pool.Put256(h)
 	h.Write(interiorPrefix)
@@ -55,7 +70,7 @@ func interiorMerkleHash(left MerkleNode, right MerkleNode) (hash Hash) {
 	return hash
 }
 
-func leafMerkleHash(node MerkleNode) (hash Hash) {
+func leafMerkleHash(node merkleNode) (hash Hash) {
 	h := sha3pool.Get256()
 	defer sha3pool.Put256(h)
 	h.Write(leafPrefix)
@@ -65,63 +80,69 @@ func leafMerkleHash(node MerkleNode) (hash Hash) {
 }
 
 type merkleTreeNode struct {
-	MerkleHash *Hash
-	rawData    MerkleNode
+	MerkleHash Hash
 	left       *merkleTreeNode
 	right      *merkleTreeNode
 }
 
-// BuildMerkleTree construct a merkle tree based on the provide node data
-func BuildMerkleTree(rawDatas []MerkleNode) *merkleTreeNode {
+// buildMerkleTree construct a merkle tree based on the provide node data
+func buildMerkleTree(rawDatas []merkleNode) *merkleTreeNode {
 	switch len(rawDatas) {
 	case 0:
 		return nil
 	case 1:
 		rawData := rawDatas[0]
 		merkleHash := leafMerkleHash(rawData)
-		node := newMerkleTreeNode(&merkleHash, rawData, nil, nil)
+		node := newMerkleTreeNode(merkleHash, nil, nil)
 		return node
 	default:
 		k := prevPowerOfTwo(len(rawDatas))
-		left := BuildMerkleTree(rawDatas[:k])
-		right := BuildMerkleTree(rawDatas[k:])
-		merkleHash := interiorMerkleHash(left.MerkleHash, right.MerkleHash)
-		node := newMerkleTreeNode(&merkleHash, nil, left, right)
+		left := buildMerkleTree(rawDatas[:k])
+		right := buildMerkleTree(rawDatas[k:])
+		merkleHash := interiorMerkleHash(&left.MerkleHash, &right.MerkleHash)
+		node := newMerkleTreeNode(merkleHash, left, right)
 		return node
 	}
 }
 
-func (node *merkleTreeNode) getMerkleTreeProof(rawHashSet multiset.Multiset) (bool, []Hash, []uint8) {
+func (node *merkleTreeNode) getMerkleTreeProof(merkleHashSet *set.Set) ([]Hash, []uint8) {
 	var hashes []Hash
 	var flags []uint8
 
 	if node.left == nil && node.right == nil {
-		key := node.rawData.String()
-		if rawHashSet.Contains(key, 1) {
-			hashes = append(hashes, *node.MerkleHash)
+		key := node.MerkleHash.String()
+		if merkleHashSet.Has(key) {
+			hashes = append(hashes, node.MerkleHash)
 			flags = append(flags, FlagTxLeaf)
-			rawHashSet.AssignCount(key, rawHashSet[key]-1)
-			return true, hashes, flags
+			merkleHashSet.Remove(key)
+			return hashes, flags
 		}
-		return false, hashes, flags
+		return hashes, flags
 	}
-	leftFind, leftHashes, leftFlags := node.left.getMerkleTreeProof(rawHashSet)
-	rightFind, rightHashes, rightFlags := node.right.getMerkleTreeProof(rawHashSet)
+	var leftHashes, rightHashes []Hash
+	var leftFlags, rightFlags []uint8
+	if node.left != nil {
+		leftHashes, leftFlags = node.left.getMerkleTreeProof(merkleHashSet)
+	}
+	if node.right != nil {
+		rightHashes, rightFlags = node.right.getMerkleTreeProof(merkleHashSet)
+	}
+	leftFind, rightFind := len(leftHashes) > 0, len(rightHashes) > 0
 
 	find := leftFind || rightFind
 	if find {
 		flags = append(flags, FlagTxParent)
 	} else {
 		flags = append(flags, FlagAssist)
-		hashes = append(hashes, *node.MerkleHash)
-		return false, hashes, flags
+		hashes = append(hashes, node.MerkleHash)
+		return hashes, flags
 	}
 
 	if leftFind {
 		hashes = append(hashes, leftHashes...)
 		flags = append(flags, leftFlags...)
 	} else {
-		hashes = append(hashes, *node.left.MerkleHash)
+		hashes = append(hashes, node.left.MerkleHash)
 		flags = append(flags, FlagAssist)
 	}
 
@@ -129,29 +150,61 @@ func (node *merkleTreeNode) getMerkleTreeProof(rawHashSet multiset.Multiset) (bo
 		hashes = append(hashes, rightHashes...)
 		flags = append(flags, rightFlags...)
 	} else {
-		hashes = append(hashes, *node.right.MerkleHash)
+		hashes = append(hashes, node.right.MerkleHash)
 		flags = append(flags, FlagAssist)
 	}
-	return find, hashes, flags
+	return hashes, flags
 }
 
-func getMerkleTreeProof(rawDatas []MerkleNode, relatedRawDatas []MerkleNode) (bool, []Hash, []uint8) {
-	merkleTree := BuildMerkleTree(rawDatas)
+func getMerkleTreeProof(rawDatas []merkleNode, relatedRawDatas []merkleNode) ([]Hash, []uint8) {
+	merkleTree := buildMerkleTree(rawDatas)
 	if merkleTree == nil {
-		return false, nil, nil
+		return nil, nil
 	}
-	rawHashSet := multiset.Multiset{}
+	merkleHashSet := set.New()
 	for _, data := range relatedRawDatas {
-		rawHashSet.AddElements(data.String())
+		merkleHash := leafMerkleHash(data)
+		merkleHashSet.Add(merkleHash.String())
 	}
-	return merkleTree.getMerkleTreeProof(rawHashSet)
+	return merkleTree.getMerkleTreeProof(merkleHashSet)
+}
+
+func (node *merkleTreeNode) getMerkleTreeProofByFlags(flagList *list.List) []Hash {
+	var hashes []Hash
+
+	if flagList.Len() == 0 {
+		return hashes
+	}
+	flagEle := flagList.Front()
+	flag := flagEle.Value.(uint8)
+	flagList.Remove(flagEle)
+
+	if flag == FlagTxLeaf || flag == FlagAssist {
+		hashes = append(hashes, node.MerkleHash)
+		return hashes
+	}
+	var leftHashes, rightHashes []Hash
+	if node.left != nil {
+		leftHashes = node.left.getMerkleTreeProofByFlags(flagList)
+	}
+	if node.right != nil {
+	rightHashes = node.right.getMerkleTreeProofByFlags(flagList)
+	}
+	hashes = append(hashes, leftHashes...)
+	hashes = append(hashes, rightHashes...)
+	return hashes
+}
+
+func getMerkleTreeProofByFlags(rawDatas []merkleNode, flagList *list.List) []Hash {
+	tree := buildMerkleTree(rawDatas)
+	return tree.getMerkleTreeProofByFlags(flagList)
 }
 
 // GetTxMerkleTreeProof return a proof of merkle tree, which used to proof the transaction does
 // exist in the merkle tree
-func GetTxMerkleTreeProof(txIDs []Hash, relatedTxIDs []Hash) (bool, []Hash, []uint8) {
-	var rawDatas []MerkleNode
-	var relatedRawDatas []MerkleNode
+func GetTxMerkleTreeProof(txIDs []Hash, relatedTxIDs []Hash) ([]Hash, []uint8) {
+	var rawDatas []merkleNode
+	var relatedRawDatas []merkleNode
 	for _, txID := range txIDs {
 		temp := txID
 		rawDatas = append(rawDatas, &temp)
@@ -164,53 +217,54 @@ func GetTxMerkleTreeProof(txIDs []Hash, relatedTxIDs []Hash) (bool, []Hash, []ui
 }
 
 // GetStatusMerkleTreeProof return a proof of merkle tree, which used to proof the status of transaction is valid
-func GetStatusMerkleTreeProof(statuses []*TxVerifyResult, relatedStatuses []*TxVerifyResult) (bool, []Hash, []uint8) {
-	var rawDatas []MerkleNode
-	var relatedRawDatas []MerkleNode
+func GetStatusMerkleTreeProof(statuses []*TxVerifyResult, flags []uint8) []Hash {
+	var rawDatas []merkleNode
 	for _, status := range statuses {
 		rawDatas = append(rawDatas, status)
 	}
-	for _, status := range relatedStatuses {
-		relatedRawDatas = append(relatedRawDatas, status)
+	flagList := list.New()
+	for _, flag := range flags {
+		flagList.PushBack(flag)
 	}
-	return getMerkleTreeProof(rawDatas, relatedRawDatas)
+	return getMerkleTreeProofByFlags(rawDatas, flagList)
 }
 
 // getMerkleRootByProof caculate the merkle root hash according to the proof
-func getMerkleRootByProof(hashesPtr *[]Hash, flagsPtr *[]uint8, merkleHashes multiset.Multiset) Hash {
-	hashes := *hashesPtr
-	flags := *flagsPtr
-	if len(flags) == 0 {
+func getMerkleRootByProof(hashList *list.List, flagList *list.List, merkleHashes *list.List) Hash {
+	if flagList.Len() == 0 {
 		return EmptyStringHash
 	}
-	flag := flags[0]
-	nextFlags := flags[1:]
-	*flagsPtr = nextFlags
+	flagEle := flagList.Front()
+	flag := flagEle.Value.(uint8)
+	flagList.Remove(flagEle)
 	if flag == FlagAssist {
-		nextHashes := hashes[1:]
-		*hashesPtr = nextHashes
-		return hashes[0]
+		hash := hashList.Front()
+		hashList.Remove(hash)
+		return hash.Value.(Hash)
 	}
 	if flag == FlagTxLeaf {
-		key := hashes[0].String()
-		if len(hashes) != 0 && merkleHashes.Contains(key, 1) {
-			nextHashes := hashes[1:]
-			*hashesPtr = nextHashes
-			merkleHashes.AssignCount(key, merkleHashes[key]-1)
-			return hashes[0]
+		if hashList.Len() != 0 && merkleHashes.Len() != 0 {
+			hashEle := hashList.Front()
+			hash := hashEle.Value.(Hash)
+			relatedHashEle := merkleHashes.Front()
+			relatedHash := relatedHashEle.Value.(Hash)
+			if hash == relatedHash {
+				hashList.Remove(hashEle)
+				merkleHashes.Remove(relatedHashEle)
+				return hash
+			}
 		}
 		return EmptyStringHash
 	}
-	leftHash := getMerkleRootByProof(hashesPtr, flagsPtr, merkleHashes)
-	rightHash := getMerkleRootByProof(hashesPtr, flagsPtr, merkleHashes)
+	leftHash := getMerkleRootByProof(hashList, flagList, merkleHashes)
+	rightHash := getMerkleRootByProof(hashList, flagList, merkleHashes)
 	hash := interiorMerkleHash(&leftHash, &rightHash)
 	return hash
 }
 
-func newMerkleTreeNode(merkleHash *Hash, rawData MerkleNode, left *merkleTreeNode, right *merkleTreeNode) *merkleTreeNode {
+func newMerkleTreeNode(merkleHash Hash, left *merkleTreeNode, right *merkleTreeNode) *merkleTreeNode {
 	return &merkleTreeNode{
 		MerkleHash: merkleHash,
-		rawData:    rawData,
 		left:       left,
 		right:      right,
 	}
@@ -219,19 +273,26 @@ func newMerkleTreeNode(merkleHash *Hash, rawData MerkleNode, left *merkleTreeNod
 // ValidateMerkleTreeProof caculate the merkle root according to the hash of node and the flags
 // only if the merkle root by caculated equals to the specify merkle root, and the merkle tree
 // contains all of the related raw datas, the validate result will be true.
-func validateMerkleTreeProof(hashes []Hash, flags []uint8, relatedNodes []MerkleNode, merkleRoot Hash) bool {
-	merkleHashes := multiset.Multiset{}
+func validateMerkleTreeProof(hashes []Hash, flags []uint8, relatedNodes []merkleNode, merkleRoot Hash) bool {
+	merkleHashes := list.New()
 	for _, relatedNode := range relatedNodes {
-		merkleHash := leafMerkleHash(relatedNode)
-		merkleHashes.AddElements(merkleHash.String())
+		merkleHashes.PushBack(leafMerkleHash(relatedNode))
 	}
-	root := getMerkleRootByProof(&hashes, &flags, merkleHashes)
-	return root.String() == merkleRoot.String() && len(merkleHashes) == 0
+	hashList := list.New()
+	for _, hash := range hashes {
+		hashList.PushBack(hash)
+	}
+	flagList := list.New()
+	for _, flag := range flags {
+		flagList.PushBack(flag)
+	}
+	root := getMerkleRootByProof(hashList, flagList, merkleHashes)
+	return root == merkleRoot && merkleHashes.Len() == 0
 }
 
 // ValidateTxMerkleTreeProof validate the merkle tree of transactions
 func ValidateTxMerkleTreeProof(hashes []Hash, flags []uint8, relatedHashes []Hash, merkleRoot Hash) bool {
-	var relatedNodes []MerkleNode
+	var relatedNodes []merkleNode
 	for _, hash := range relatedHashes {
 		temp := hash
 		relatedNodes = append(relatedNodes, &temp)
@@ -241,7 +302,7 @@ func ValidateTxMerkleTreeProof(hashes []Hash, flags []uint8, relatedHashes []Has
 
 // ValidateStatusMerkleTreeProof validate the merkle tree of transaction status
 func ValidateStatusMerkleTreeProof(hashes []Hash, flags []uint8, relatedStatus []*TxVerifyResult, merkleRoot Hash) bool {
-	var relatedNodes []MerkleNode
+	var relatedNodes []merkleNode
 	for _, result := range relatedStatus {
 		relatedNodes = append(relatedNodes, result)
 	}
@@ -250,7 +311,7 @@ func ValidateStatusMerkleTreeProof(hashes []Hash, flags []uint8, relatedStatus [
 
 // TxStatusMerkleRoot creates a merkle tree from a slice of TxVerifyResult
 func TxStatusMerkleRoot(tvrs []*TxVerifyResult) (root Hash, err error) {
-	nodes := []MerkleNode{}
+	nodes := []merkleNode{}
 	for _, tvr := range tvrs {
 		nodes = append(nodes, tvr)
 	}
@@ -260,7 +321,7 @@ func TxStatusMerkleRoot(tvrs []*TxVerifyResult) (root Hash, err error) {
 // TxMerkleRoot creates a merkle tree from a slice of transactions
 // and returns the root hash of the tree.
 func TxMerkleRoot(transactions []*Tx) (root Hash, err error) {
-	nodes := []MerkleNode{}
+	nodes := []merkleNode{}
 	for _, tx := range transactions {
 		nodes = append(nodes, &tx.ID)
 	}
