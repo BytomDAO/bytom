@@ -2,7 +2,6 @@ package netsync
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"net"
 	"sync"
 
