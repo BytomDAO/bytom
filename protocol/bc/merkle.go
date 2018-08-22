@@ -1,10 +1,11 @@
 package bc
 
 import (
-	"gopkg.in/fatih/set.v0"
 	"container/list"
 	"io"
 	"math"
+
+	"gopkg.in/fatih/set.v0"
 
 	"github.com/bytom/crypto/sha3pool"
 )
@@ -188,7 +189,7 @@ func (node *merkleTreeNode) getMerkleTreeProofByFlags(flagList *list.List) []Has
 		leftHashes = node.left.getMerkleTreeProofByFlags(flagList)
 	}
 	if node.right != nil {
-	rightHashes = node.right.getMerkleTreeProofByFlags(flagList)
+		rightHashes = node.right.getMerkleTreeProofByFlags(flagList)
 	}
 	hashes = append(hashes, leftHashes...)
 	hashes = append(hashes, rightHashes...)
