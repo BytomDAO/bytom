@@ -50,7 +50,7 @@ func (ctx *chainTestContext) validateStatus(block *types.Block) error {
 		return err
 	}
 
-	txStatusMerkleRoot, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	txStatusMerkleRoot, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	if err != nil {
 		return err
 	}

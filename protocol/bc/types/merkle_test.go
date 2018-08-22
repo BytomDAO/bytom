@@ -1,13 +1,12 @@
-package bc_test
+package types
 
 import (
-	"testing"
-	"time"
 	"math/rand"
 	"reflect"
+	"testing"
+	"time"
 
-	. "github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/testutil"
 )
@@ -15,7 +14,7 @@ import (
 func TestMerkleRoot(t *testing.T) {
 	cases := []struct {
 		witnesses [][][]byte
-		want      Hash
+		want      bc.Hash
 	}{{
 		witnesses: [][][]byte{
 			{
@@ -52,17 +51,17 @@ func TestMerkleRoot(t *testing.T) {
 	}}
 
 	for _, c := range cases {
-		var txs []*Tx
+		var txs []*bc.Tx
 		for _, wit := range c.witnesses {
-			txs = append(txs, types.NewTx(types.TxData{
-				Inputs: []*types.TxInput{
-					&types.TxInput{
+			txs = append(txs, NewTx(TxData{
+				Inputs: []*TxInput{
+					&TxInput{
 						AssetVersion: 1,
-						TypedInput: &types.SpendInput{
+						TypedInput: &SpendInput{
 							Arguments: wit,
-							SpendCommitment: types.SpendCommitment{
-								AssetAmount: AssetAmount{
-									AssetId: &AssetID{V0: 0},
+							SpendCommitment: SpendCommitment{
+								AssetAmount: bc.AssetAmount{
+									AssetId: &bc.AssetID{V0: 0},
 								},
 							},
 						},
@@ -83,26 +82,26 @@ func TestMerkleRoot(t *testing.T) {
 
 func TestDuplicateLeaves(t *testing.T) {
 	trueProg := []byte{byte(vm.OP_TRUE)}
-	assetID := ComputeAssetID(trueProg, 1, &EmptyStringHash)
-	txs := make([]*Tx, 6)
+	assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
+	txs := make([]*bc.Tx, 6)
 	for i := uint64(0); i < 6; i++ {
 		now := []byte(time.Now().String())
-		txs[i] = types.NewTx(types.TxData{
+		txs[i] = NewTx(TxData{
 			Version: 1,
-			Inputs:  []*types.TxInput{types.NewIssuanceInput(now, i, trueProg, nil, nil)},
-			Outputs: []*types.TxOutput{types.NewTxOutput(assetID, i, trueProg)},
+			Inputs:  []*TxInput{NewIssuanceInput(now, i, trueProg, nil, nil)},
+			Outputs: []*TxOutput{NewTxOutput(assetID, i, trueProg)},
 		}).Tx
 	}
 
 	// first, get the root of an unbalanced tree
-	txns := []*Tx{txs[5], txs[4], txs[3], txs[2], txs[1], txs[0]}
+	txns := []*bc.Tx{txs[5], txs[4], txs[3], txs[2], txs[1], txs[0]}
 	root1, err := TxMerkleRoot(txns)
 	if err != nil {
 		t.Fatalf("unexpected error %s", err)
 	}
 
 	// now, get the root of a balanced tree that repeats leaves 0 and 1
-	txns = []*Tx{txs[5], txs[4], txs[3], txs[2], txs[1], txs[0], txs[1], txs[0]}
+	txns = []*bc.Tx{txs[5], txs[4], txs[3], txs[2], txs[1], txs[0], txs[1], txs[0]}
 	root2, err := TxMerkleRoot(txns)
 	if err != nil {
 		t.Fatalf("unexpected error %s", err)
@@ -115,26 +114,26 @@ func TestDuplicateLeaves(t *testing.T) {
 
 func TestAllDuplicateLeaves(t *testing.T) {
 	trueProg := []byte{byte(vm.OP_TRUE)}
-	assetID := ComputeAssetID(trueProg, 1, &EmptyStringHash)
+	assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
 	now := []byte(time.Now().String())
-	issuanceInp := types.NewIssuanceInput(now, 1, trueProg, nil, nil)
+	issuanceInp := NewIssuanceInput(now, 1, trueProg, nil, nil)
 
-	tx := types.NewTx(types.TxData{
+	tx := NewTx(TxData{
 		Version: 1,
-		Inputs:  []*types.TxInput{issuanceInp},
-		Outputs: []*types.TxOutput{types.NewTxOutput(assetID, 1, trueProg)},
+		Inputs:  []*TxInput{issuanceInp},
+		Outputs: []*TxOutput{NewTxOutput(assetID, 1, trueProg)},
 	}).Tx
 	tx1, tx2, tx3, tx4, tx5, tx6 := tx, tx, tx, tx, tx, tx
 
 	// first, get the root of an unbalanced tree
-	txs := []*Tx{tx6, tx5, tx4, tx3, tx2, tx1}
+	txs := []*bc.Tx{tx6, tx5, tx4, tx3, tx2, tx1}
 	root1, err := TxMerkleRoot(txs)
 	if err != nil {
 		t.Fatalf("unexpected error %s", err)
 	}
 
 	// now, get the root of a balanced tree that repeats leaves 5 and 6
-	txs = []*Tx{tx6, tx5, tx6, tx5, tx4, tx3, tx2, tx1}
+	txs = []*bc.Tx{tx6, tx5, tx6, tx5, tx4, tx3, tx2, tx1}
 	root2, err := TxMerkleRoot(txs)
 	if err != nil {
 		t.Fatalf("unexpected error %s", err)
@@ -146,16 +145,16 @@ func TestAllDuplicateLeaves(t *testing.T) {
 }
 
 func TestTxMerkleProof(t *testing.T) {
-	var txs []*Tx
+	var txs []*bc.Tx
 	trueProg := []byte{byte(vm.OP_TRUE)}
-	assetID := ComputeAssetID(trueProg, 1, &EmptyStringHash)
+	assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
 	for i := 0; i < 10; i++ {
 		now := []byte(time.Now().String())
-		issuanceInp := types.NewIssuanceInput(now, 1, trueProg, nil, nil)
-		tx := types.NewTx(types.TxData{
+		issuanceInp := NewIssuanceInput(now, 1, trueProg, nil, nil)
+		tx := NewTx(TxData{
 			Version: 1,
-			Inputs:  []*types.TxInput{issuanceInp},
-			Outputs: []*types.TxOutput{types.NewTxOutput(assetID, 1, trueProg)},
+			Inputs:  []*TxInput{issuanceInp},
+			Outputs: []*TxOutput{NewTxOutput(assetID, 1, trueProg)},
 		}).Tx
 		txs = append(txs, tx)
 	}
@@ -163,12 +162,12 @@ func TestTxMerkleProof(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error %s", err)
 	}
-	var txIDs []Hash
+	var txIDs []bc.Hash
 	for _, tx := range txs {
 		txIDs = append(txIDs, tx.ID)
 	}
 
-	relatedTx := []Hash{txs[0].ID, txs[3].ID, txs[7].ID, txs[8].ID}
+	relatedTx := []bc.Hash{txs[0].ID, txs[3].ID, txs[7].ID, txs[8].ID}
 	proofHashes, flags := GetTxMerkleTreeProof(txIDs, relatedTx)
 	if len(proofHashes) <= 0 {
 		t.Error("Can not find any tx id in the merkle tree")
@@ -180,16 +179,16 @@ func TestTxMerkleProof(t *testing.T) {
 	if len(proofHashes) != 9 {
 		t.Error("The length proof hashes is not equals expect length")
 	}
-	ids := []Hash{txs[0].ID, txs[3].ID, txs[7].ID, txs[8].ID}
+	ids := []bc.Hash{txs[0].ID, txs[3].ID, txs[7].ID, txs[8].ID}
 	if !ValidateTxMerkleTreeProof(proofHashes, flags, ids, root) {
 		t.Error("Merkle tree validate fail")
 	}
 }
 
 func TestStatusMerkleProof(t *testing.T) {
-	var statuses []*TxVerifyResult
+	var statuses []*bc.TxVerifyResult
 	for i := 0; i < 10; i++ {
-		status := &TxVerifyResult{}
+		status := &bc.TxVerifyResult{}
 		fail := rand.Intn(2)
 		if fail == 0 {
 			status.StatusFail = true
@@ -198,7 +197,7 @@ func TestStatusMerkleProof(t *testing.T) {
 		}
 		statuses = append(statuses, status)
 	}
-	relatedStatuses := []*TxVerifyResult{statuses[0], statuses[3], statuses[7], statuses[8]}
+	relatedStatuses := []*bc.TxVerifyResult{statuses[0], statuses[3], statuses[7], statuses[8]}
 	flags := []uint8{1, 1, 1, 1, 2, 0, 1, 0, 2, 1, 0, 1, 0, 2, 1, 2, 0}
 	hashes := GetStatusMerkleTreeProof(statuses, flags)
 	if len(hashes) != 9 {
