@@ -377,11 +377,56 @@ func (m *GetMerkleBlockMessage) GetHash() *bc.Hash {
 
 //MerkleBlockMessage return the merkle block to client
 type MerkleBlockMessage struct {
-	RawBlockHeader   []byte
-	TransactionCount uint64
-	TxHashes         [][32]byte
-	RawTxDatas       [][]byte
-	StatusHashes     [][32]byte
-	Flags            []byte
-	RawTxStatuses    [][]byte
+	RawBlockHeader []byte
+	TxHashes       [][32]byte
+	RawTxDatas     [][]byte
+	StatusHashes   [][32]byte
+	RawTxStatuses  [][]byte
+	Flags          []byte
+}
+
+//NewMerkleBlockMessage construct merkle block message
+func NewMerkleBlockMessage(block *types.Block, txStatuses *bc.TransactionStatus, relatedTxs []*types.Tx, relatedStatuses []*bc.TxVerifyResult) (*MerkleBlockMessage, error) {
+	rawHeader, err := block.BlockHeader.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+
+	msg := &MerkleBlockMessage{
+		RawBlockHeader: rawHeader,
+	}
+
+	var txIDs []bc.Hash
+	for _, tx := range block.Transactions {
+		txIDs = append(txIDs, tx.ID)
+	}
+
+	var relatedTxIDs []bc.Hash
+	for i, tx := range relatedTxs {
+		relatedTxIDs = append(relatedTxIDs, tx.ID)
+		rawTxData, err := tx.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+
+		msg.RawTxDatas = append(msg.RawTxDatas, rawTxData)
+		rawStatusData, err := json.Marshal(relatedStatuses[i])
+		if err != nil {
+			return nil, err
+		}
+
+		msg.RawTxStatuses = append(msg.RawTxStatuses, rawStatusData)
+	}
+
+	txHashes, txFlags := bc.GetTxMerkleTreeProof(txIDs, relatedTxIDs)
+	for _, txHash := range txHashes {
+		msg.TxHashes = append(msg.TxHashes, txHash.Byte32())
+	}
+
+	statusHashes := bc.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, txFlags)
+	for _, statusHash := range statusHashes {
+		msg.StatusHashes = append(msg.StatusHashes, statusHash.Byte32())
+	}
+	msg.Flags = txFlags
+	return msg, nil
 }
