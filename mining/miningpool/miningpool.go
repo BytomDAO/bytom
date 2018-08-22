@@ -3,7 +3,6 @@ package miningpool
 import (
 	"errors"
 	"sync"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
