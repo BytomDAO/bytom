@@ -337,6 +337,9 @@ func (ps *peerSet) broadcastNewStatus(bestBlock, genesisBlock *types.Block) erro
 	genesisHash := genesisBlock.Hash()
 	msg := NewStatusResponseMessage(&bestBlock.BlockHeader, &genesisHash)
 	for _, peer := range ps.peers {
+		if peer.isSPVNode() {
+			continue
+		}
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			ps.removePeer(peer.ID())
 			continue
