@@ -95,9 +95,6 @@ func (node *merkleTreeNode) getMerkleTreeProof(rawHashSet multiset.Multiset) (bo
 	var hashes []Hash
 	var flags []uint8
 
-	if node == nil {
-		return false, hashes, flags
-	}
 	if node.left == nil && node.right == nil {
 		key := node.rawData.String()
 		if rawHashSet.Contains(key, 1) {
