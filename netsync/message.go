@@ -385,48 +385,48 @@ type MerkleBlockMessage struct {
 	Flags          []byte
 }
 
-//NewMerkleBlockMessage construct merkle block message
-func NewMerkleBlockMessage(block *types.Block, txStatuses *bc.TransactionStatus, relatedTxs []*types.Tx, relatedStatuses []*bc.TxVerifyResult) (*MerkleBlockMessage, error) {
-	rawHeader, err := block.BlockHeader.MarshalText()
+func (msg *MerkleBlockMessage) setRawBlockHeader(bh types.BlockHeader) error {
+	rawHeader, err := bh.MarshalText()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	msg := &MerkleBlockMessage{
-		RawBlockHeader: rawHeader,
-	}
+	msg.RawBlockHeader = rawHeader
+	return nil
+}
 
-	var txIDs []bc.Hash
-	for _, tx := range block.Transactions {
-		txIDs = append(txIDs, tx.ID)
-	}
-
-	var relatedTxIDs []bc.Hash
-	for i, tx := range relatedTxs {
-		relatedTxIDs = append(relatedTxIDs, tx.ID)
-		rawTxData, err := tx.MarshalText()
-		if err != nil {
-			return nil, err
-		}
-
-		msg.RawTxDatas = append(msg.RawTxDatas, rawTxData)
-		rawStatusData, err := json.Marshal(relatedStatuses[i])
-		if err != nil {
-			return nil, err
-		}
-
-		msg.RawTxStatuses = append(msg.RawTxStatuses, rawStatusData)
-	}
-
-	txHashes, txFlags := types.GetTxMerkleTreeProof(txIDs, relatedTxIDs)
+func (msg *MerkleBlockMessage) setTxInfo(txHashes []bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
 	for _, txHash := range txHashes {
 		msg.TxHashes = append(msg.TxHashes, txHash.Byte32())
 	}
+	for _, tx := range relatedTxs {
+		rawTxData, err := tx.MarshalText()
+		if err != nil {
+			return err
+		}
 
-	statusHashes := types.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, txFlags)
+		msg.RawTxDatas = append(msg.RawTxDatas, rawTxData)
+	}
+	msg.Flags = txFlags
+	return nil
+}
+
+func (msg *MerkleBlockMessage) setStatusInfo(statusHashes []bc.Hash, txFlags []uint8, relatedStatuses []*bc.TxVerifyResult) error {
 	for _, statusHash := range statusHashes {
 		msg.StatusHashes = append(msg.StatusHashes, statusHash.Byte32())
 	}
-	msg.Flags = txFlags
-	return msg, nil
+
+	for _, status := range relatedStatuses {
+		rawStatusData, err := json.Marshal(status)
+		if err != nil {
+			return err
+		}
+		msg.RawTxStatuses = append(msg.RawTxStatuses, rawStatusData)
+	}
+	return nil
+}
+
+//NewMerkleBlockMessage construct merkle block message
+func NewMerkleBlockMessage() *MerkleBlockMessage {
+	return &MerkleBlockMessage{}
 }

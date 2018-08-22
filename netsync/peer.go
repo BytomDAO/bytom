@@ -220,9 +220,31 @@ func (p *peer) sendHeaders(headers []*types.BlockHeader) (bool, error) {
 
 func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionStatus) (bool, error) {
 	relatedTxs, relatedStatuses := p.getRelatedTxAndStatus(block.Transactions, txStatuses)
-	msg, err := NewMerkleBlockMessage(block, txStatuses, relatedTxs, relatedStatuses)
+	
+	msg := NewMerkleBlockMessage()
+	err := msg.setRawBlockHeader(block.BlockHeader)
 	if err != nil {
 		return false, err
+	}
+
+	var txIDs []bc.Hash
+	for _, tx := range block.Transactions {
+		txIDs = append(txIDs, tx.ID)
+	}
+	var relatedTxIDs []bc.Hash
+	for _, tx := range relatedTxs {
+		relatedTxIDs = append(relatedTxIDs, tx.ID)
+	}
+	txHashes, txFlags := types.GetTxMerkleTreeProof(txIDs, relatedTxIDs)
+	msg.setTxInfo(txHashes, txFlags, relatedTxs)
+	if err != nil {
+		return false, nil
+	}
+	
+	statusHashes := types.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, txFlags)
+	err = msg.setStatusInfo(statusHashes, txFlags, relatedStatuses)
+	if err != nil {
+		return false, nil
 	}
 
 	ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg})
@@ -324,6 +346,9 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 	hash := block.Hash()
 	peers := ps.peersWithoutBlock(&hash)
 	for _, peer := range peers {
+		if peer.isSPVNode() {
+			continue
+		}
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			ps.removePeer(peer.ID())
 			continue
@@ -337,9 +362,6 @@ func (ps *peerSet) broadcastNewStatus(bestBlock, genesisBlock *types.Block) erro
 	genesisHash := genesisBlock.Hash()
 	msg := NewStatusResponseMessage(&bestBlock.BlockHeader, &genesisHash)
 	for _, peer := range ps.peers {
-		if peer.isSPVNode() {
-			continue
-		}
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			ps.removePeer(peer.ID())
 			continue

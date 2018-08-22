@@ -274,6 +274,7 @@ func (sm *SyncManager) handleGetMerkleBlockMsg(peer *peer, msg *GetMerkleBlockMe
 	ok, err := peer.sendMerkleBlock(block, txStatus)
 	if err != nil {
 		log.WithField("err", err).Error("fail on handleGetMerkleBlockMsg sentMerkleBlock")
+		return
 	}
 
 	if !ok {
