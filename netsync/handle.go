@@ -167,7 +167,7 @@ func (sm *SyncManager) handleBlocksMsg(peer *peer, msg *BlocksMessage) {
 }
 
 func (sm *SyncManager) handleFilterAddMsg(peer *peer, msg *FilterAddMessage) {
-	peer.filterAdds.Add(msg.Address)
+	peer.filterAdds.Add(hex.EncodeToString(msg.Address))
 }
 
 func (sm *SyncManager) handleFilterClearMsg(peer *peer) {
