@@ -395,7 +395,7 @@ func (msg *MerkleBlockMessage) setRawBlockHeader(bh types.BlockHeader) error {
 	return nil
 }
 
-func (msg *MerkleBlockMessage) setTxInfo(txHashes []bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
+func (msg *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
 	for _, txHash := range txHashes {
 		msg.TxHashes = append(msg.TxHashes, txHash.Byte32())
 	}
@@ -411,7 +411,7 @@ func (msg *MerkleBlockMessage) setTxInfo(txHashes []bc.Hash, txFlags []uint8, re
 	return nil
 }
 
-func (msg *MerkleBlockMessage) setStatusInfo(statusHashes []bc.Hash, txFlags []uint8, relatedStatuses []*bc.TxVerifyResult) error {
+func (msg *MerkleBlockMessage) setStatusInfo(statusHashes []*bc.Hash, txFlags []uint8, relatedStatuses []*bc.TxVerifyResult) error {
 	for _, statusHash := range statusHashes {
 		msg.StatusHashes = append(msg.StatusHashes, statusHash.Byte32())
 	}
@@ -421,6 +421,7 @@ func (msg *MerkleBlockMessage) setStatusInfo(statusHashes []bc.Hash, txFlags []u
 		if err != nil {
 			return err
 		}
+
 		msg.RawTxStatuses = append(msg.RawTxStatuses, rawStatusData)
 	}
 	return nil

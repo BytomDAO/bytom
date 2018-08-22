@@ -219,23 +219,20 @@ func (p *peer) sendHeaders(headers []*types.BlockHeader) (bool, error) {
 }
 
 func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionStatus) (bool, error) {
-	relatedTxs, relatedStatuses := p.getRelatedTxAndStatus(block.Transactions, txStatuses)
-	
 	msg := NewMerkleBlockMessage()
-	err := msg.setRawBlockHeader(block.BlockHeader)
-	if err != nil {
+	if err := msg.setRawBlockHeader(block.BlockHeader); err != nil {
 		return false, err
 	}
 
+	relatedTxs, relatedStatuses := p.getRelatedTxAndStatus(block.Transactions, txStatuses)
+
 	txHashes, txFlags := types.GetTxMerkleTreeProof(block.Transactions, relatedTxs)
-	msg.setTxInfo(txHashes, txFlags, relatedTxs)
-	if err != nil {
+	if err := msg.setTxInfo(txHashes, txFlags, relatedTxs); err != nil {
 		return false, nil
 	}
 	
 	statusHashes := types.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, txFlags)
-	err = msg.setStatusInfo(statusHashes, txFlags, relatedStatuses)
-	if err != nil {
+	if err := msg.setStatusInfo(statusHashes, txFlags, relatedStatuses); err != nil {
 		return false, nil
 	}
 

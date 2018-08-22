@@ -177,7 +177,7 @@ func TestTxMerkleProof(t *testing.T) {
 	if len(proofHashes) != 9 {
 		t.Error("The length proof hashes is not equals expect length")
 	}
-	ids := []bc.Hash{txs[0].ID, txs[3].ID, txs[7].ID, txs[8].ID}
+	ids := []*bc.Hash{&txs[0].ID, &txs[3].ID, &txs[7].ID, &txs[8].ID}
 	if !ValidateTxMerkleTreeProof(proofHashes, flags, ids, root) {
 		t.Error("Merkle tree validate fail")
 	}
