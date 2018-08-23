@@ -12,7 +12,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/httpjson"
-	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm"
 )
@@ -49,8 +48,7 @@ var respErrFormatter = map[error]httperror.Info{
 	signers.ErrBadQuorum: {400, "BTM200", "Quorum must be greater than 1 and less than or equal to the length of xpubs"},
 	signers.ErrBadXPub:   {400, "BTM201", "Invalid xpub format"},
 	signers.ErrNoXPubs:   {400, "BTM202", "At least one xpub is required"},
-	signers.ErrBadType:   {400, "BTM203", "Retrieved type does not match expected type"},
-	signers.ErrDupeXPub:  {400, "BTM204", "Root XPubs cannot contain the same key more than once"},
+	signers.ErrDupeXPub:  {400, "BTM203", "Root XPubs cannot contain the same key more than once"},
 
 	// Transaction error namespace (7xx)
 	// Build transaction error namespace (70x ~ 72x)
@@ -108,11 +106,9 @@ var respErrFormatter = map[error]httperror.Info{
 	vm.ErrVerifyFailed:       {400, "BTM775", "VERIFY failed"},
 
 	// Mock HSM error namespace (8xx)
-	pseudohsm.ErrDuplicateKeyAlias:    {400, "BTM800", "Key Alias already exists"},
-	pseudohsm.ErrInvalidAfter:         {400, "BTM801", "Invalid `after` in query"},
-	pseudohsm.ErrLoadKey:              {400, "BTM802", "Key not found or wrong password"},
-	pseudohsm.ErrTooManyAliasesToList: {400, "BTM803", "Requested key aliases exceeds limit"},
-	pseudohsm.ErrDecrypt:              {400, "BTM804", "Could not decrypt key with given passphrase"},
+	pseudohsm.ErrDuplicateKeyAlias: {400, "BTM800", "Key Alias already exists"},
+	pseudohsm.ErrLoadKey:           {400, "BTM801", "Key not found or wrong password"},
+	pseudohsm.ErrDecrypt:           {400, "BTM802", "Could not decrypt key with given passphrase"},
 }
 
 // Map error values to standard bytom error codes. Missing entries
@@ -125,10 +121,9 @@ var errorFormatter = httperror.Formatter{
 	IsTemporary: isTemporary,
 	Errors: map[error]httperror.Info{
 		// General error namespace (0xx)
-		context.DeadlineExceeded:     {408, "BTM001", "Request timed out"},
-		httpjson.ErrBadRequest:       {400, "BTM002", "Invalid request body"},
-		rpc.ErrWrongNetwork:          {502, "BTM103", "A peer core is operating on a different blockchain network"},
-		protocol.ErrTheDistantFuture: {400, "BTM104", "Requested height is too far ahead"},
+		context.DeadlineExceeded: {408, "BTM001", "Request timed out"},
+		httpjson.ErrBadRequest:   {400, "BTM002", "Invalid request body"},
+		rpc.ErrWrongNetwork:      {502, "BTM103", "A peer core is operating on a different blockchain network"},
 
 		//accesstoken authz err namespace (86x)
 		errNotAuthenticated: {401, "BTM860", "Request could not be authenticated"},
