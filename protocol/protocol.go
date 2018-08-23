@@ -14,10 +14,6 @@ import (
 
 const maxProcessBlockChSize = 1024
 
-// ErrTheDistantFuture is returned when waiting for a blockheight too far in
-// excess of the tip of the blockchain.
-var ErrTheDistantFuture = errors.New("block height too far in future")
-
 // Chain provides functions for working with the Bytom block chain.
 type Chain struct {
 	index          *state.BlockIndex
