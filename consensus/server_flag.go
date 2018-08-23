@@ -9,8 +9,10 @@ const (
 	SFFullNode ServiceFlag = 1 << iota
 	// SFFastSync indicate peer support header first mode
 	SFFastSync
+	// SFSPV indicate peer support spv mode
+	SFSPV
 	// DefaultServices is the server that this node support
-	DefaultServices = SFFullNode | SFFastSync
+	DefaultServices = SFFullNode | SFFastSync | SFSPV
 )
 
 // IsEnable check does the flag support the input flag function
