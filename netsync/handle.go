@@ -169,11 +169,7 @@ func (sm *SyncManager) handleBlocksMsg(peer *peer, msg *BlocksMessage) {
 }
 
 func (sm *SyncManager) handleFilterAddMsg(peer *peer, msg *FilterAddMessage) {
-	if len(msg.Address) > maxFilterAddressSize {
-		log.Debug("the size of filter address is greater than limit")
-		return
-	}
-	peer.filterAdds.Add(hex.EncodeToString(msg.Address))
+	peer.addFilterAddress(msg.Address)
 }
 
 func (sm *SyncManager) handleFilterClearMsg(peer *peer) {
@@ -181,10 +177,6 @@ func (sm *SyncManager) handleFilterClearMsg(peer *peer) {
 }
 
 func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
-	if len(msg.Addresses) > maxFilterAddressCount {
-		log.Debug("the count of filter addresses is greater than limit")
-		return
-	}
 	peer.addFilterAddresses(msg.Addresses)
 }
 
