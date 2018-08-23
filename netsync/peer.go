@@ -95,6 +95,10 @@ func (p *peer) addFilterAddresses(addresses [][]byte) {
 		p.filterAdds.Clear()
 	}
 	for _, address := range addresses {
+		if len(address) > maxFilterAddressSize {
+			log.Debug("the size of filter address is greater than limit")
+			continue
+		}
 		p.filterAdds.Add(hex.EncodeToString(address))
 	}
 }
