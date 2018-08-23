@@ -172,7 +172,7 @@ func TestTxMerkleProof(t *testing.T) {
 	}
 	expectFlags := []uint8{1, 1, 1, 1, 2, 0, 1, 0, 2, 1, 0, 1, 0, 2, 1, 2, 0}
 	if !reflect.DeepEqual(flags, expectFlags) {
-		t.Error("The flags is not equals expect flags")
+		t.Error("The flags is not equals expect flags", flags)
 	}
 	if len(proofHashes) != 9 {
 		t.Error("The length proof hashes is not equals expect length")

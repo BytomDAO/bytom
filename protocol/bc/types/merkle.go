@@ -129,8 +129,6 @@ func (node *merkleTreeNode) getMerkleTreeProof(merkleHashSet *set.Set) ([]*bc.Ha
 	if leftFind || rightFind {
 		flags = append(flags, FlagTxParent)
 	} else {
-		flags = append(flags, FlagAssist)
-		hashes = append(hashes, &node.hash)
 		return hashes, flags
 	}
 
