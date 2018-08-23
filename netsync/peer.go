@@ -87,15 +87,27 @@ func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 	return false
 }
 
-func (p *peer) addFilterAddresses(addresses [][]byte) {
+func (p *peer) addFilterAddress(address []byte) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
+	if p.filterAdds.Size() >= maxFilterAddressCount {
+		log.Warn("the count of filter addresses is greater than limit")
+		return
+	}
+	if len(address) > maxFilterAddressSize {
+		log.Warn("the size of filter address is greater than limit")
+		return
+	}
+	p.filterAdds.Add(hex.EncodeToString(address))
+}
+
+func (p *peer) addFilterAddresses(addresses [][]byte) {
 	if !p.filterAdds.IsEmpty() {
 		p.filterAdds.Clear()
 	}
 	for _, address := range addresses {
-		p.filterAdds.Add(hex.EncodeToString(address))
+		p.addFilterAddress(address)
 	}
 }
 
