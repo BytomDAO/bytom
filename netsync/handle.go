@@ -24,7 +24,9 @@ import (
 )
 
 const (
-	maxTxChanSize = 10000
+	maxTxChanSize         = 10000
+	maxFilterAddressSize  = 50
+	maxFilterAddressCount = 1000
 )
 
 // Chain is the interface for Bytom core
@@ -167,7 +169,7 @@ func (sm *SyncManager) handleBlocksMsg(peer *peer, msg *BlocksMessage) {
 }
 
 func (sm *SyncManager) handleFilterAddMsg(peer *peer, msg *FilterAddMessage) {
-	peer.filterAdds.Add(hex.EncodeToString(msg.Address))
+	peer.addFilterAddress(msg.Address)
 }
 
 func (sm *SyncManager) handleFilterClearMsg(peer *peer) {
@@ -175,10 +177,6 @@ func (sm *SyncManager) handleFilterClearMsg(peer *peer) {
 }
 
 func (sm *SyncManager) handleFilterLoadMsg(peer *peer, msg *FilterLoadMessage) {
-	if len(msg.Addresses) == 0 {
-		log.Info("the addresses is empty from filter load message")
-		return
-	}
 	peer.addFilterAddresses(msg.Addresses)
 }
 
@@ -253,7 +251,7 @@ func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
 
 func (sm *SyncManager) handleGetMerkleBlockMsg(peer *peer, msg *GetMerkleBlockMessage) {
 	var err error
-	var block *types.Block 
+	var block *types.Block
 	if msg.Height != 0 {
 		block, err = sm.chain.GetBlockByHeight(msg.Height)
 	} else {
