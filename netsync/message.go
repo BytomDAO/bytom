@@ -411,7 +411,7 @@ func (msg *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, r
 	return nil
 }
 
-func (msg *MerkleBlockMessage) setStatusInfo(statusHashes []*bc.Hash, txFlags []uint8, relatedStatuses []*bc.TxVerifyResult) error {
+func (msg *MerkleBlockMessage) setStatusInfo(statusHashes []*bc.Hash, relatedStatuses []*bc.TxVerifyResult) error {
 	for _, statusHash := range statusHashes {
 		msg.StatusHashes = append(msg.StatusHashes, statusHash.Byte32())
 	}

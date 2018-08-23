@@ -199,12 +199,10 @@ func GetTxMerkleTreeProof(txs []*Tx, relatedTxs []*Tx) ([]*bc.Hash, []uint8) {
 	var rawDatas []merkleNode
 	var relatedRawDatas []merkleNode
 	for _, tx := range txs {
-		temp := tx.ID
-		rawDatas = append(rawDatas, &temp)
+		rawDatas = append(rawDatas, &tx.ID)
 	}
 	for _, relatedTx := range relatedTxs {
-		temp := relatedTx.ID
-		relatedRawDatas = append(relatedRawDatas, &temp)
+		relatedRawDatas = append(relatedRawDatas, &relatedTx.ID)
 	}
 	return getMerkleTreeProof(rawDatas, relatedRawDatas)
 }
