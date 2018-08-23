@@ -1,7 +1,6 @@
 package sm3
 
 import (
-	"fmt"
 	"io"
 	"sync"
 )
@@ -44,20 +43,10 @@ func Put256(h ShakeHash) {
 func Sum256(data []byte) (digest [32]byte) {
 	hash := Sm3Sum(data)
 	copy(digest[:], hash)
-	fmt.Printf("=================Sum256:%x\n", digest[:])
-	fmt.Printf("=================Sum256:%x\n", hash[:])
 	return
 }
 
 func Sum(hash, data []byte) {
-	// hasher:=New()
-	// hasher.Write(data)
-
 	tmp := Sm3Sum(data)
 	copy(hash, tmp[:])
-
-	// hash = Sm3Sum(data)
-	// // fmt.Printf("Sum:---====%x\n", hash)
-	// // copy(hash, tmp[:])
-	// return
 }
