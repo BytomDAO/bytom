@@ -1,10 +1,11 @@
 package version
 
 import (
+	"sync"
+
 	gover "github.com/hashicorp/go-version"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/fatih/set.v0"
-	"sync"
 )
 
 const (
@@ -15,7 +16,7 @@ const (
 
 var (
 	// The full version string
-	Version = "1.0.4"
+	Version = "1.0.5"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
 	Status    *UpdateStatus

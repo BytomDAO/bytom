@@ -242,7 +242,7 @@ func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionSta
 	if err := msg.setTxInfo(txHashes, txFlags, relatedTxs); err != nil {
 		return false, nil
 	}
-	
+
 	statusHashes := types.GetStatusMerkleTreeProof(txStatuses.VerifyStatus, txFlags)
 	if err := msg.setStatusInfo(statusHashes, relatedStatuses); err != nil {
 		return false, nil
