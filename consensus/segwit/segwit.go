@@ -2,7 +2,6 @@ package segwit
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/vm"
@@ -58,7 +57,6 @@ func ConvertP2PKHSigProgram(prog []byte) ([]byte, error) {
 		return nil, err
 	}
 	if insts[0].Op == vm.OP_0 {
-		fmt.Printf("ConvertP2PKHSigProgram:%x\n", insts[1].Data)
 		return vmutil.P2PKHSigProgram(insts[1].Data)
 	}
 	return nil, errors.New("unknow P2PKH version number")

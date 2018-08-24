@@ -3,7 +3,6 @@ package account
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -542,8 +541,6 @@ func (m *Manager) insertControlPrograms(progs ...*CtrlProgram) error {
 		}
 
 		sm3.Sum(hash[:], prog.ControlProgram)
-		fmt.Printf("=============================\ninsertControlPrograms: %x\n", hash.Bytes())
-		fmt.Printf("=============================\ninsertControlPrograms: %x\n", prog.ControlProgram)
 		m.db.Set(ContractKey(hash), accountCP)
 	}
 	return nil

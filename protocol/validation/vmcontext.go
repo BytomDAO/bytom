@@ -2,7 +2,6 @@ package validation
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto/sm3"
@@ -95,7 +94,6 @@ func NewTxVMContext(vs *validationState, entry bc.Entry, prog *bc.Program, args 
 
 func witnessProgram(prog []byte) []byte {
 	if segwit.IsP2WPKHScript(prog) {
-		fmt.Printf("witnessProgram:%x\n", prog)
 		if witnessProg, err := segwit.ConvertP2PKHSigProgram([]byte(prog)); err == nil {
 			return witnessProg
 		}

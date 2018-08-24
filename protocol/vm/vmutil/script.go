@@ -1,8 +1,6 @@
 package vmutil
 
 import (
-	"fmt"
-
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/vm"
@@ -72,7 +70,6 @@ func P2PKHSigProgram(pubkeyHash []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_DUP)
 	builder.AddOp(vm.OP_HASH160)
-	fmt.Printf("P2PKHSigProgram:%x\n", pubkeyHash)
 	builder.AddData(pubkeyHash)
 	builder.AddOp(vm.OP_EQUALVERIFY)
 	builder.AddOp(vm.OP_TXSIGHASH)
