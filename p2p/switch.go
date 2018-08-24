@@ -150,9 +150,11 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 	if err := sw.filterConnByPeer(peer); err != nil {
 		return err
 	}
+
 	if !peer.ServiceFlag().IsEnable(consensus.SFFullNode) {
 		return ErrConnectSpvPeer
 	}
+	
 	// Start peer
 	if sw.IsRunning() {
 		if err := sw.startInitPeer(peer); err != nil {
