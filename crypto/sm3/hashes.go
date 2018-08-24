@@ -48,5 +48,5 @@ func Sum256(data []byte) (digest [32]byte) {
 
 func Sum(hash, data []byte) {
 	tmp := Sm3Sum(data)
-	copy(hash, tmp[:])
+	copy(hash, tmp)
 }
