@@ -32,7 +32,7 @@ var (
 	ErrDuplicatePeer     = errors.New("Duplicate peer")
 	ErrConnectSelf       = errors.New("Connect self")
 	ErrConnectBannedPeer = errors.New("Connect banned peer")
-	ErrConnectSpvPeer    = errors.New("Connect spv peer")
+	ErrConnectSpvPeer    = errors.New("Outbound connect spv peer")
 )
 
 // Switch handles peer connections and exposes an API to receive incoming messages
@@ -151,7 +151,7 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 		return err
 	}
 
-	if !pc.outbound && !peer.ServiceFlag().IsEnable(consensus.SFFullNode) {
+	if pc.outbound && !peer.ServiceFlag().IsEnable(consensus.SFFullNode) {
 		return ErrConnectSpvPeer
 	}
 
