@@ -42,18 +42,32 @@ func (ii *IssuanceInput) AssetID() bc.AssetID {
 
 // AssetDefinitionHash return the hash of the issuance asset definition.
 func (ii *IssuanceInput) AssetDefinitionHash() (defhash bc.Hash) {
-	sha := sm3.Get256()
-	defer sm3.Put256(sha)
-	sha.Write(ii.AssetDefinition)
-	defhash.ReadFrom(sha)
+	// sha := sm3.Get256()
+	// defer sm3.Put256(sha)
+	// sha.Write(ii.AssetDefinition)
+	// defhash.ReadFrom(sha)
+	// return defhash
+
+	hasher := sm3.New()
+	hasher.Write(ii.AssetDefinition)
+	var b32 [32]byte
+	copy(b32[:], hasher.Sum(nil))
+	defhash = bc.NewHash(b32)
 	return defhash
 }
 
 // NonceHash return the hash of the issuance asset definition.
 func (ii *IssuanceInput) NonceHash() (hash bc.Hash) {
-	sha := sm3.Get256()
-	defer sm3.Put256(sha)
-	sha.Write(ii.Nonce)
-	hash.ReadFrom(sha)
+	// sha := sm3.Get256()
+	// defer sm3.Put256(sha)
+	// sha.Write(ii.Nonce)
+	// hash.ReadFrom(sha)
+	// return hash
+
+	h := sm3.New()
+	h.Write(ii.Nonce)
+	var b32 [32]byte
+	copy(b32[:], h.Sum(nil))
+	hash = bc.NewHash(b32)
 	return hash
 }
