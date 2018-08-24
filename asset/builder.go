@@ -32,6 +32,7 @@ func (reg *Registry) DecodeIssueAction(data []byte) (txbuilder.Action, error) {
 type issueAction struct {
 	assets *Registry
 	bc.AssetAmount
+	Arguments []txbuilder.ContractArgument `json:"arguments"`
 }
 
 func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
@@ -50,13 +51,16 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 		return err
 	}
 
-	assetDef := asset.RawDefinitionByte
-
-	txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, assetDef)
-
+	txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
 	tplIn := &txbuilder.SigningInstruction{}
-	path := signers.Path(asset.Signer, signers.AssetKeySpace)
-	tplIn.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
+	if a.Arguments == nil {
+		path := signers.Path(asset.Signer, signers.AssetKeySpace)
+		tplIn.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
+	} else {
+		if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
+			return err
+		}
+	}
 
 	log.Info("Issue action build")
 	builder.RestrictMinTime(time.Now())

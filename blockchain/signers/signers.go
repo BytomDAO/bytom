@@ -31,10 +31,6 @@ var (
 	// slice provided is empty.
 	ErrNoXPubs = errors.New("at least one xpub is required")
 
-	// ErrBadType is returned when a find operation
-	// retrieves a signer that is not the expected type.
-	ErrBadType = errors.New("retrieved type does not match expected type")
-
 	// ErrDupeXPub is returned by create when the same xpub
 	// appears twice in a single call.
 	ErrDupeXPub = errors.New("xpubs cannot contain the same key more than once")

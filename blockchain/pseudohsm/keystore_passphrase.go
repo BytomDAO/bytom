@@ -96,7 +96,7 @@ func EncryptKey(key *XKey, auth string, scryptN, scryptP int) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	mac := crypto.Sha256(derivedKey[16:32], cipherText)
+	mac := crypto.Sm3(derivedKey[16:32], cipherText)
 	scryptParamsJSON := make(map[string]interface{}, 5)
 	scryptParamsJSON["n"] = scryptN
 	scryptParamsJSON["r"] = scryptR
@@ -196,7 +196,7 @@ func decryptKey(keyProtected *encryptedKeyJSON, auth string) (keyBytes []byte, k
 		return nil, nil, err
 	}
 
-	calculatedMAC := crypto.Sha256(derivedKey[16:32], cipherText)
+	calculatedMAC := crypto.Sm3(derivedKey[16:32], cipherText)
 
 	if !bytes.Equal(calculatedMAC, mac) {
 		return nil, nil, ErrDecrypt
