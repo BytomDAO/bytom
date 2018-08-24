@@ -72,7 +72,11 @@ func FormatErrResp(err error) (response Response) {
 	if info, ok := respErrFormatter[root]; ok {
 		response.Code = info.ChainCode
 		response.Msg = info.Message
-		response.ErrorDetail = errors.Detail(err)
+		response.ErrorDetail = err.Error()
+	} else {
+		response.Code = respErrFormatter[ErrDefault].ChainCode
+		response.Msg = respErrFormatter[ErrDefault].Message
+		response.ErrorDetail = err.Error()
 	}
 	return response
 }
@@ -80,9 +84,6 @@ func FormatErrResp(err error) (response Response) {
 //NewErrorResponse error response
 func NewErrorResponse(err error) Response {
 	response := FormatErrResp(err)
-	if response.Msg == "" {
-		response.Msg = err.Error()
-	}
 	return response
 }
 
@@ -204,6 +205,12 @@ func (a *API) buildHandler() {
 		m.Handle("/validate-address", jsonHandler(a.validateAddress))
 		m.Handle("/list-pubkeys", jsonHandler(a.listPubKeys))
 
+		m.Handle("/get-mining-address", jsonHandler(a.getMiningAddress))
+		m.Handle("/set-mining-address", jsonHandler(a.setMiningAddress))
+
+		m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
+		m.Handle("/set-coinbase-arbitrary", jsonHandler(a.setCoinbaseArbitrary))
+
 		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
 		m.Handle("/get-asset", jsonHandler(a.getAsset))
@@ -213,6 +220,7 @@ func (a *API) buildHandler() {
 		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
+		m.Handle("/check-key-password", jsonHandler(a.pseudohsmCheckPassword))
 		m.Handle("/sign-message", jsonHandler(a.signMessage))
 
 		m.Handle("/build-transaction", jsonHandler(a.build))
@@ -253,9 +261,9 @@ func (a *API) buildHandler() {
 	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
 	m.Handle("/decode-raw-transaction", jsonHandler(a.decodeRawTransaction))
 
+	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
-	m.Handle("/get-block", jsonHandler(a.getBlock))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
 	m.Handle("/get-difficulty", jsonHandler(a.getDifficulty))
 	m.Handle("/get-hash-rate", jsonHandler(a.getHashRate))

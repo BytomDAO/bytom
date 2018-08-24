@@ -6,6 +6,7 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus/difficulty"
 	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -56,18 +57,9 @@ type GetBlockResp struct {
 	Transactions           []*BlockTx `json:"transactions"`
 }
 
-// return block by hash
+// return block by hash/height
 func (a *API) getBlock(ins BlockReq) Response {
-	var err error
-	block := &types.Block{}
-	if len(ins.BlockHash) == 32 {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	}
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -135,16 +127,7 @@ type GetBlockHeaderResp struct {
 }
 
 func (a *API) getBlockHeader(ins BlockReq) Response {
-	var err error
-	block := &types.Block{}
-	if len(ins.BlockHash) == 32 {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	}
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -156,6 +139,17 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 	return NewSuccessResponse(resp)
 }
 
+func (a *API) getBlockHelper(ins BlockReq) (*types.Block, error) {
+	if len(ins.BlockHash) == 32 {
+		b32 := [32]byte{}
+		copy(b32[:], ins.BlockHash)
+		hash := bc.NewHash(b32)
+		return a.chain.GetBlockByHash(&hash)
+	} else {
+		return a.chain.GetBlockByHeight(ins.BlockHeight)
+	}
+}
+
 // GetDifficultyResp is resp struct for getDifficulty API
 type GetDifficultyResp struct {
 	BlockHash   *bc.Hash `json:"hash"`
@@ -164,22 +158,8 @@ type GetDifficultyResp struct {
 	Difficulty  string   `json:"difficulty"`
 }
 
-func (a *API) getDifficulty(ins *BlockReq) Response {
-	var err error
-	block := &types.Block{}
-
-	if len(ins.BlockHash) == 32 && ins.BlockHash != nil {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else if ins.BlockHeight > 0 {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	} else {
-		hash := a.chain.BestBlockHash()
-		block, err = a.chain.GetBlockByHash(hash)
-	}
-
+func (a *API) getDifficulty(ins BlockReq) Response {
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -202,21 +182,15 @@ type getHashRateResp struct {
 }
 
 func (a *API) getHashRate(ins BlockReq) Response {
-	var err error
-	block := &types.Block{}
-
-	if len(ins.BlockHash) == 32 && ins.BlockHash != nil {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else if ins.BlockHeight > 0 {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	} else {
-		hash := a.chain.BestBlockHash()
-		block, err = a.chain.GetBlockByHash(hash)
+	if len(ins.BlockHash) != 32 && len(ins.BlockHash) != 0 {
+		err := errors.New("Block hash format error.")
+		return NewErrorResponse(err)
+	}
+	if ins.BlockHeight == 0 {
+		ins.BlockHeight = a.chain.BestBlockHeight()
 	}
 
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

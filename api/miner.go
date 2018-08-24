@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -17,7 +18,24 @@ type BlockHeaderJSON struct {
 	Timestamp         uint64                 `json:"timestamp"`           // The time of the block in seconds.
 	Nonce             uint64                 `json:"nonce"`               // Nonce used to generate the block.
 	Bits              uint64                 `json:"bits"`                // Difficulty target for the block.
-	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    //Block commitment
+	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    // Block commitment
+}
+
+type CoinbaseArbitrary struct {
+	Arbitrary chainjson.HexBytes `json:"arbitrary"`
+}
+
+func (a *API) getCoinbaseArbitrary() Response {
+	arbitrary := a.wallet.AccountMgr.GetCoinbaseArbitrary()
+	resp := &CoinbaseArbitrary{
+		Arbitrary: arbitrary,
+	}
+	return NewSuccessResponse(resp)
+}
+
+func (a *API) setCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) Response {
+	a.wallet.AccountMgr.SetCoinbaseArbitrary(req.Arbitrary)
+	return a.getCoinbaseArbitrary()
 }
 
 // getWork gets work in compressed protobuf format
@@ -139,6 +157,9 @@ func (a *API) setMining(in struct {
 	IsMining bool `json:"is_mining"`
 }) Response {
 	if in.IsMining {
+		if _, err := a.wallet.AccountMgr.GetMiningAddress(); err != nil {
+			return NewErrorResponse(errors.New("Mining address does not exist"))
+		}
 		return a.startMining()
 	}
 	return a.stopMining()

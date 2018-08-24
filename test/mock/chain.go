@@ -67,6 +67,10 @@ func (c *Chain) GetHeaderByHeight(height uint64) (*types.BlockHeader, error) {
 	return &block.BlockHeader, nil
 }
 
+func (c *Chain) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
+	return nil, nil
+}
+
 func (c *Chain) InMainChain(hash bc.Hash) bool {
 	block, ok := c.blockMap[hash]
 	if !ok {

@@ -20,7 +20,7 @@ import (
 func TestDefineAssetWithLowercase(t *testing.T) {
 	reg := mockNewRegistry(t)
 	alias := "lower"
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias)
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestDefineAssetWithLowercase(t *testing.T) {
 func TestDefineAssetWithSpaceTrimed(t *testing.T) {
 	reg := mockNewRegistry(t)
 	alias := " WITH SPACE "
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias)
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, alias, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestDefineAssetWithSpaceTrimed(t *testing.T) {
 func TestDefineAsset(t *testing.T) {
 	ctx := context.Background()
 	reg := mockNewRegistry(t)
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, "asset-alias")
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, "asset-alias", nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -61,7 +61,7 @@ func TestDefineAsset(t *testing.T) {
 
 func TestDefineBtmAsset(t *testing.T) {
 	reg := mockNewRegistry(t)
-	_, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, consensus.BTMAlias)
+	_, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, consensus.BTMAlias, nil)
 	if err == nil {
 		testutil.FatalErr(t, err)
 	}
@@ -71,7 +71,7 @@ func TestFindAssetByID(t *testing.T) {
 	ctx := context.Background()
 	reg := mockNewRegistry(t)
 	keys := []chainkd.XPub{testutil.TestXPub}
-	asset, err := reg.Define(keys, 1, nil, "TESTASSET")
+	asset, err := reg.Define(keys, 1, nil, "TESTASSET", nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 
@@ -92,7 +92,7 @@ func TestUpdateAssetAlias(t *testing.T) {
 	oldAlias := "OLD_ALIAS"
 	newAlias := "NEW_ALIAS"
 
-	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, oldAlias)
+	asset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, oldAlias, nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -118,12 +118,12 @@ func TestListAssets(t *testing.T) {
 	firstAlias := "FIRST_ALIAS"
 	secondAlias := "SECOND_ALIAS"
 
-	firstAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, firstAlias)
+	firstAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, firstAlias, nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	secondAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, secondAlias)
+	secondAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, secondAlias, nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -142,7 +142,7 @@ func TestListAssets(t *testing.T) {
 
 func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
 	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool()
+	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		return nil, err
