@@ -13,6 +13,7 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
+	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
@@ -31,6 +32,7 @@ var (
 	ErrDuplicatePeer     = errors.New("Duplicate peer")
 	ErrConnectSelf       = errors.New("Connect self")
 	ErrConnectBannedPeer = errors.New("Connect banned peer")
+	ErrConnectSpvPeer    = errors.New("Connect spv peer")
 )
 
 // Switch handles peer connections and exposes an API to receive incoming messages
@@ -148,7 +150,9 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 	if err := sw.filterConnByPeer(peer); err != nil {
 		return err
 	}
-
+	if !peer.ServiceFlag().IsEnable(consensus.SFFullNode) {
+		return ErrConnectSpvPeer
+	}
 	// Start peer
 	if sw.IsRunning() {
 		if err := sw.startInitPeer(peer); err != nil {
