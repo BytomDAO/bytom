@@ -20,7 +20,7 @@ type ShakeHash interface {
 	io.Reader
 
 	// Clone returns a copy of the ShakeHash in its current state.
-	// Clone() ShakeHash
+	Clone() ShakeHash
 
 	// Reset resets the ShakeHash to its initial state.
 	Reset()
@@ -47,5 +47,6 @@ func Sum256(data []byte) (digest [32]byte) {
 }
 
 func Sum(hash, data []byte) {
-	hash = Sm3Sum(data)
+	tmp := Sm3Sum(data)
+	copy(hash, tmp)
 }
