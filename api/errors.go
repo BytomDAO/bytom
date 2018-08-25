@@ -113,6 +113,7 @@ var respErrFormatter = map[error]httperror.Info{
 	pseudohsm.ErrLoadKey:              {400, "BTM802", "Key not found or wrong password"},
 	pseudohsm.ErrTooManyAliasesToList: {400, "BTM803", "Requested key aliases exceeds limit"},
 	pseudohsm.ErrDecrypt:              {400, "BTM804", "Could not decrypt key with given passphrase"},
+	pseudohsm.ErrMissingOrVoidAlias:   {400, "BTM805", "missing or void alias"},
 }
 
 // Map error values to standard bytom error codes. Missing entries
