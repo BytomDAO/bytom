@@ -20,6 +20,7 @@ var (
 	ErrLoadKey              = errors.New("key not found or wrong password ")
 	ErrTooManyAliasesToList = errors.New("requested aliases exceeds limit")
 	ErrDecrypt              = errors.New("could not decrypt key with given passphrase")
+	ErrMissingOrVoidAlias   = errors.New("missing or void alias")
 )
 
 // HSM type for storing pubkey and privatekey
@@ -53,6 +54,9 @@ func (h *HSM) XCreate(alias string, auth string) (*XPub, error) {
 	defer h.cacheMu.Unlock()
 
 	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
+	if normalizedAlias == "" {
+		return nil, ErrMissingOrVoidAlias
+	}
 	if ok := h.cache.hasAlias(normalizedAlias); ok {
 		return nil, ErrDuplicateKeyAlias
 	}
