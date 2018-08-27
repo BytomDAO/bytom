@@ -18,7 +18,7 @@ var (
 	// ErrBadInstructionCount means too many signing instructions compare with inputs
 	ErrBadInstructionCount = errors.New("too many signing instructions in template")
 	// ErrOrphanTx means submit transaction is orphan
-	ErrOrphanTx = errors.New("transaction input")
+	ErrOrphanTx = errors.New("finalize can't find transaction input utxo")
 )
 
 // FinalizeTx validates a transaction signature template,
