@@ -64,6 +64,7 @@ var respErrFormatter = map[error]httperror.Info{
 	account.ErrFindAccount:          {400, "BTM709", "Not found account"},
 	asset.ErrFindAsset:              {400, "BTM710", "Not found asset"},
 	txbuilder.ErrBadContractArgType: {400, "BTM711", "Invalid contract argument type"},
+	asset.ErrMissingIssueArgs:       {400, "BTM712", "Missing issue contract arguments"},
 
 	// Submit transaction error namespace (73x ~ 79x)
 	// Validation error (73x ~ 75x)
