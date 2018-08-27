@@ -102,7 +102,6 @@ func (w *Wallet) detachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 			return
 		}
 	}
-
 }
 
 func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
