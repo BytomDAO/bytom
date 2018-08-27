@@ -74,7 +74,8 @@ func (w *Wallet) attachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 }
 
 func (w *Wallet) detachUtxos(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
-	for txIndex, tx := range b.Transactions {
+	for txIndex := len(b.Transactions) - 1; txIndex >= 0; txIndex-- {
+		tx := b.Transactions[txIndex]
 		for j := range tx.Outputs {
 			resOut, err := tx.Output(*tx.ResultIds[j])
 			if err != nil {
