@@ -61,14 +61,12 @@ func (w *Wallet) attachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 		}
 
 		//hand update the transaction output utxos
-		utxos := []*account.UTXO{}
 		validHeight := uint64(0)
 		if txIndex == 0 {
 			validHeight = b.Height + consensus.CoinbasePendingBlockNumber
 		}
 		outputUtxos := txOutToUtxos(tx, statusFail, validHeight)
-		utxos = append(utxos, outputUtxos...)
-		utxos = w.filterAccountUtxo(utxos)
+		utxos := w.filterAccountUtxo(outputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
 			log.WithField("err", err).Error("attachUtxos fail on batchSaveUtxos")
 		}
@@ -96,8 +94,8 @@ func (w *Wallet) detachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 			continue
 		}
 
-		utxos := txInToUtxos(tx, statusFail)
-		utxos = w.filterAccountUtxo(utxos)
+		inputUtxos := txInToUtxos(tx, statusFail)
+		utxos := w.filterAccountUtxo(inputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
 			log.WithField("err", err).Error("detachUtxos fail on batchSaveUtxos")
 			return
