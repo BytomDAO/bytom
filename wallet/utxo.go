@@ -50,6 +50,7 @@ func (w *Wallet) attachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 			continue
 		}
 
+		//hand update the transaction input utxos
 		inputUtxos := txInToUtxos(tx, statusFail)
 		for _, inputUtxo := range inputUtxos {
 			if segwit.IsP2WScript(inputUtxo.ControlProgram) {
@@ -58,50 +59,24 @@ func (w *Wallet) attachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 				batch.Delete(account.ContractUTXOKey(inputUtxo.OutputID))
 			}
 		}
-	}
 
-	utxos := []*account.UTXO{}
-	for txIndex, tx := range b.Transactions {
-		statusFail, err := txStatus.GetStatus(txIndex)
-		if err != nil {
-			log.WithField("err", err).Error("attachUtxos fail on get txStatus")
-			continue
-		}
-
+		//hand update the transaction output utxos
+		utxos := []*account.UTXO{}
 		validHeight := uint64(0)
 		if txIndex == 0 {
 			validHeight = b.Height + consensus.CoinbasePendingBlockNumber
 		}
 		outputUtxos := txOutToUtxos(tx, statusFail, validHeight)
 		utxos = append(utxos, outputUtxos...)
-	}
-
-	utxos = w.filterAccountUtxo(utxos)
-	if err := batchSaveUtxos(utxos, batch); err != nil {
-		log.WithField("err", err).Error("attachUtxos fail on batchSaveUtxos")
+		utxos = w.filterAccountUtxo(utxos)
+		if err := batchSaveUtxos(utxos, batch); err != nil {
+			log.WithField("err", err).Error("attachUtxos fail on batchSaveUtxos")
+		}
 	}
 }
 
 func (w *Wallet) detachUtxos(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
-	utxos := []*account.UTXO{}
 	for txIndex, tx := range b.Transactions {
-		statusFail, err := txStatus.GetStatus(txIndex)
-		if err != nil {
-			log.WithField("err", err).Error("detachUtxos fail on get tx status")
-			continue
-		}
-
-		inputUtxos := txInToUtxos(tx, statusFail)
-		utxos = append(utxos, inputUtxos...)
-	}
-
-	utxos = w.filterAccountUtxo(utxos)
-	if err := batchSaveUtxos(utxos, batch); err != nil {
-		log.WithField("err", err).Error("detachUtxos fail on batchSaveUtxos")
-		return
-	}
-
-	for _, tx := range b.Transactions {
 		for j := range tx.Outputs {
 			resOut, err := tx.Output(*tx.ResultIds[j])
 			if err != nil {
@@ -114,7 +89,21 @@ func (w *Wallet) detachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 				batch.Delete(account.ContractUTXOKey(*tx.ResultIds[j]))
 			}
 		}
+
+		statusFail, err := txStatus.GetStatus(txIndex)
+		if err != nil {
+			log.WithField("err", err).Error("detachUtxos fail on get tx status")
+			continue
+		}
+
+		utxos := txInToUtxos(tx, statusFail)
+		utxos = w.filterAccountUtxo(utxos)
+		if err := batchSaveUtxos(utxos, batch); err != nil {
+			log.WithField("err", err).Error("detachUtxos fail on batchSaveUtxos")
+			return
+		}
 	}
+
 }
 
 func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
