@@ -4,9 +4,11 @@ import (
 	"errors"
 	"math/rand"
 	"net"
+	"time"
 
 	wire "github.com/tendermint/go-wire"
 
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/test/mock"
@@ -82,16 +84,16 @@ func (ps *PeerSet) AddBannedPeer(string) error { return nil }
 func (ps *PeerSet) StopPeerGracefully(string)  {}
 
 type NetWork struct {
-	nodes map[*SyncManager]P2PPeer
+	nodes map[*SyncManager]*P2PPeer
 }
 
 func NewNetWork() *NetWork {
-	return &NetWork{map[*SyncManager]P2PPeer{}}
+	return &NetWork{map[*SyncManager]*P2PPeer{}}
 }
 
 func (nw *NetWork) Register(node *SyncManager, addr, id string, flag consensus.ServiceFlag) {
 	peer := NewP2PPeer(addr, id, flag)
-	nw.nodes[node] = *peer
+	nw.nodes[node] = peer
 }
 
 func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) error {
@@ -104,13 +106,11 @@ func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) error {
 		return errors.New("can't find nodeB's p2p peer on network")
 	}
 
-	A2B.SetConnection(&B2A, nodeB)
-	B2A.SetConnection(&A2B, nodeA)
-	go A2B.postMan()
-	go B2A.postMan()
+	A2B.SetConnection(B2A, nodeB)
+	B2A.SetConnection(A2B, nodeA)
 
-	nodeA.handleStatusRequestMsg(&A2B)
-	nodeB.handleStatusRequestMsg(&B2A)
+	nodeA.handleStatusRequestMsg(A2B)
+	nodeB.handleStatusRequestMsg(B2A)
 
 	A2B.setAsync(true)
 	B2A.setAsync(true)
@@ -156,4 +156,31 @@ func mockSync(blocks []*types.Block) *SyncManager {
 		blockKeeper: newBlockKeeper(chain, peers),
 		peers:       peers,
 	}
+}
+
+func mockTxs(txCount int) ([]*types.Tx, []*bc.Tx) {
+	var txs []*types.Tx
+	var bcTxs []*bc.Tx
+	for i := 0; i < txCount; i++ {
+		trueProg := randControlProgram(60)
+		assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
+		now := []byte(time.Now().String())
+		issuanceInp := types.NewIssuanceInput(now, 1, trueProg, nil, nil)
+		tx := types.NewTx(types.TxData{
+			Version: 1,
+			Inputs:  []*types.TxInput{issuanceInp},
+			Outputs: []*types.TxOutput{types.NewTxOutput(assetID, 1, trueProg)},
+		})
+		txs = append(txs, tx)
+		bcTxs = append(bcTxs, tx.Tx)
+	}
+	return txs, bcTxs
+}
+
+func randControlProgram(length int) []byte {
+	var cp []byte
+	for i := 0; i < length; i++ {
+		cp = append(cp, byte(rand.Intn(1 << 8)))
+	}
+	return cp
 }

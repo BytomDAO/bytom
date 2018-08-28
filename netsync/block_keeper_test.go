@@ -2,8 +2,11 @@ package netsync
 
 import (
 	"container/list"
+	"encoding/json"
 	"testing"
 	"time"
+
+	"encoding/hex"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
@@ -184,6 +187,11 @@ func TestFastBlockSync(t *testing.T) {
 		if err := netWork.HandsShake(a, b); err != nil {
 			t.Errorf("fail on peer hands shake %v", err)
 		}
+
+		B2A, _ := netWork.nodes[a]
+		A2B, _ := netWork.nodes[b]
+		go B2A.postMan()
+		go A2B.postMan()
 
 		a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
 		if err := a.blockKeeper.fastBlockSync(c.checkPoint); errors.Root(err) != c.err {
@@ -443,6 +451,11 @@ func TestRegularBlockSync(t *testing.T) {
 			t.Errorf("fail on peer hands shake %v", err)
 		}
 
+		B2A, _ := netWork.nodes[a]
+		A2B, _ := netWork.nodes[b]
+		go B2A.postMan()
+		go A2B.postMan()
+
 		a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
 		if err := a.blockKeeper.regularBlockSync(c.syncHeight); errors.Root(err) != c.err {
 			t.Errorf("case %d: got %v want %v", i, err, c.err)
@@ -473,6 +486,11 @@ func TestRequireBlock(t *testing.T) {
 	if err := netWork.HandsShake(a, b); err != nil {
 		t.Errorf("fail on peer hands shake %v", err)
 	}
+
+	B2A, _ := netWork.nodes[a]
+	A2B, _ := netWork.nodes[b]
+	go B2A.postMan()
+	go A2B.postMan()
 
 	a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
 	b.blockKeeper.syncPeer = b.peers.getPeer("test node A")
@@ -507,6 +525,111 @@ func TestRequireBlock(t *testing.T) {
 		}
 		if errors.Root(err) != c.err {
 			t.Errorf("case %d: got %v want %v", i, err, c.err)
+		}
+	}
+}
+
+func TestSendMerkleBlock(t *testing.T) {
+	cases := []struct {
+		txCount        int
+		relatedTxIndex []int
+	}{
+		{
+			txCount:        10,
+			relatedTxIndex: []int{0, 2, 5},
+		},
+		{
+			txCount:        0,
+			relatedTxIndex: []int{},
+		},
+		{
+			txCount:        5,
+			relatedTxIndex: []int{0, 1, 2, 3, 4},
+		},
+		{
+			txCount:        20,
+			relatedTxIndex: []int{1, 6, 3, 9, 10, 19},
+		},
+	}
+
+	for _, c := range cases {
+		blocks := mockBlocks(nil, 2)
+		targetBlock := blocks[1]
+		txs, bcTxs := mockTxs(c.txCount)
+		
+		targetBlock.Transactions = txs
+		targetBlock.TransactionsMerkleRoot, _ = types.TxMerkleRoot(bcTxs)
+
+		spvNode := mockSync(blocks)
+		blockHash := targetBlock.Hash()
+		statusResult, _ := spvNode.chain.GetTransactionStatus(&blockHash)
+		targetBlock.TransactionStatusHash, _ = types.TxStatusMerkleRoot(statusResult.VerifyStatus)
+		fullNode := mockSync(blocks)
+
+		netWork := NewNetWork()
+		netWork.Register(spvNode, "192.168.0.1", "spv_node", consensus.SFFastSync)
+		netWork.Register(fullNode, "192.168.0.2", "full_node", consensus.DefaultServices)
+		if err := netWork.HandsShake(spvNode, fullNode); err != nil {
+			t.Errorf("fail on peer hands shake %v", err)
+		}
+
+		F2S := netWork.nodes[spvNode]
+		complated := make(chan error)
+		go func() {
+			select {
+			case msgBytes := <-F2S.msgCh:
+				_, msg, _ := DecodeMessage(msgBytes)
+				switch m := msg.(type) {
+				case *MerkleBlockMessage:
+					var relatedTxIDs []*bc.Hash
+					for _, rawTx := range m.RawTxDatas {
+						tx := &types.Tx{}
+						err := tx.UnmarshalText(rawTx)
+						if err != nil {
+							t.Fatal(err)
+						}
+						relatedTxIDs = append(relatedTxIDs, &tx.ID)
+					}
+					var txHashes []*bc.Hash
+					for _, hashByte := range m.TxHashes {
+						hash := bc.NewHash(hashByte)
+						txHashes = append(txHashes, &hash)
+					}
+					ok := types.ValidateTxMerkleTreeProof(txHashes, m.Flags, relatedTxIDs, targetBlock.TransactionsMerkleRoot)
+					if !ok {
+						complated <- errors.New("validate tx fail")
+					}
+					var statusHashes []*bc.Hash
+					for _, statusByte := range m.StatusHashes {
+						hash := bc.NewHash(statusByte)
+						statusHashes = append(statusHashes, &hash)
+					}
+					var relatedStatuses []*bc.TxVerifyResult
+					for _, statusByte := range m.RawTxStatuses {
+						status := &bc.TxVerifyResult{}
+						err := json.Unmarshal(statusByte, status)
+						if err != nil {
+							complated <- err
+						}
+						relatedStatuses = append(relatedStatuses, status)
+					}
+					ok = types.ValidateStatusMerkleTreeProof(statusHashes, m.Flags, relatedStatuses, targetBlock.TransactionStatusHash)
+					if !ok {
+						complated <- errors.New("validate status fail")
+					}
+					complated <- nil
+				}
+			}
+		}()
+
+		spvPeer := fullNode.peers.getPeer("spv_node")
+		for i := 0; i < c.txCount; i++ {
+			spvPeer.filterAdds.Add(hex.EncodeToString(txs[i].Outputs[0].ControlProgram))
+		}
+		msg := &GetMerkleBlockMessage{RawHash: targetBlock.Hash().Byte32()}
+		fullNode.handleGetMerkleBlockMsg(spvPeer, msg)
+		if err := <-complated; err != nil {
+			t.Fatal(err)
 		}
 	}
 }
