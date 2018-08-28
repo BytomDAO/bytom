@@ -30,8 +30,7 @@ var (
 func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 	// maxTxFee means max transaction fee, maxTxFee = 0.4BTM * 25 = 10BTM
 	maxTxFee := consensus.MaxGasAmount * consensus.VMGasRate * 25
-	fee := calculateTxFee(tx)
-	if fee > uint64(maxTxFee) {
+	if fee := calculateTxFee(tx); fee > uint64(maxTxFee) {
 		return ErrExtTxFee
 	}
 
@@ -152,7 +151,7 @@ func calculateTxFee(tx *types.Tx) (fee uint64) {
 	}
 
 	for _, output := range tx.Outputs {
-		if output.AssetId.String() == consensus.BTMAssetID.String() {
+		if *output.AssetId == *consensus.BTMAssetID {
 			totalOutputBTM += output.Amount
 		}
 	}
