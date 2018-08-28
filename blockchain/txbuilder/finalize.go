@@ -17,6 +17,8 @@ var (
 	ErrMissingRawTx = errors.New("missing raw tx")
 	// ErrBadInstructionCount means too many signing instructions compare with inputs
 	ErrBadInstructionCount = errors.New("too many signing instructions in template")
+	// ErrOrphanTx means submit transaction is orphan
+	ErrOrphanTx = errors.New("finalize can't find transaction input utxo")
 )
 
 // FinalizeTx validates a transaction signature template,
@@ -35,15 +37,17 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 	tx.TxData.SerializedSize = uint64(len(data))
 	tx.Tx.SerializedSize = uint64(len(data))
 
-	_, err = c.ValidateTx(tx)
+	isOrphan, err := c.ValidateTx(tx)
 	if errors.Root(err) == protocol.ErrBadTx {
 		return errors.Sub(ErrRejected, err)
 	}
 	if err != nil {
 		return errors.WithDetail(err, "tx rejected: "+err.Error())
 	}
-
-	return errors.Wrap(err)
+	if isOrphan {
+		return ErrOrphanTx
+	}
+	return nil
 }
 
 var (
