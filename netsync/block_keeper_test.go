@@ -573,52 +573,50 @@ func TestSendMerkleBlock(t *testing.T) {
 		}
 
 		F2S := netWork.nodes[spvNode]
-		complated := make(chan error)
+		completed := make(chan error)
 		go func() {
-			select {
-			case msgBytes := <-F2S.msgCh:
-				_, msg, _ := DecodeMessage(msgBytes)
-				switch m := msg.(type) {
-				case *MerkleBlockMessage:
-					var relatedTxIDs []*bc.Hash
-					for _, rawTx := range m.RawTxDatas {
-						tx := &types.Tx{}
-						err := tx.UnmarshalText(rawTx)
-						if err != nil {
-							t.Fatal(err)
-						}
-						
-						relatedTxIDs = append(relatedTxIDs, &tx.ID)
-					}
-					var txHashes []*bc.Hash
-					for _, hashByte := range m.TxHashes {
-						hash := bc.NewHash(hashByte)
-						txHashes = append(txHashes, &hash)
-					}
-					if ok := types.ValidateTxMerkleTreeProof(txHashes, m.Flags, relatedTxIDs, targetBlock.TransactionsMerkleRoot); !ok {
-						complated <- errors.New("validate tx fail")
+			msgBytes := <-F2S.msgCh
+			_, msg, _ := DecodeMessage(msgBytes)
+			switch m := msg.(type) {
+			case *MerkleBlockMessage:
+				var relatedTxIDs []*bc.Hash
+				for _, rawTx := range m.RawTxDatas {
+					tx := &types.Tx{}
+					err := tx.UnmarshalText(rawTx)
+					if err != nil {
+						t.Fatal(err)
 					}
 
-					var statusHashes []*bc.Hash
-					for _, statusByte := range m.StatusHashes {
-						hash := bc.NewHash(statusByte)
-						statusHashes = append(statusHashes, &hash)
-					}
-					var relatedStatuses []*bc.TxVerifyResult
-					for _, statusByte := range m.RawTxStatuses {
-						status := &bc.TxVerifyResult{}
-						err := json.Unmarshal(statusByte, status)
-						if err != nil {
-							complated <- err
-						}
-						relatedStatuses = append(relatedStatuses, status)
-					}
-					if ok := types.ValidateStatusMerkleTreeProof(statusHashes, m.Flags, relatedStatuses, targetBlock.TransactionStatusHash); !ok {
-						complated <- errors.New("validate status fail")
-					}
-
-					complated <- nil
+					relatedTxIDs = append(relatedTxIDs, &tx.ID)
 				}
+				var txHashes []*bc.Hash
+				for _, hashByte := range m.TxHashes {
+					hash := bc.NewHash(hashByte)
+					txHashes = append(txHashes, &hash)
+				}
+				if ok := types.ValidateTxMerkleTreeProof(txHashes, m.Flags, relatedTxIDs, targetBlock.TransactionsMerkleRoot); !ok {
+					completed <- errors.New("validate tx fail")
+				}
+
+				var statusHashes []*bc.Hash
+				for _, statusByte := range m.StatusHashes {
+					hash := bc.NewHash(statusByte)
+					statusHashes = append(statusHashes, &hash)
+				}
+				var relatedStatuses []*bc.TxVerifyResult
+				for _, statusByte := range m.RawTxStatuses {
+					status := &bc.TxVerifyResult{}
+					err := json.Unmarshal(statusByte, status)
+					if err != nil {
+						completed <- err
+					}
+					relatedStatuses = append(relatedStatuses, status)
+				}
+				if ok := types.ValidateStatusMerkleTreeProof(statusHashes, m.Flags, relatedStatuses, targetBlock.TransactionStatusHash); !ok {
+					completed <- errors.New("validate status fail")
+				}
+
+				completed <- nil
 			}
 		}()
 
@@ -628,7 +626,7 @@ func TestSendMerkleBlock(t *testing.T) {
 		}
 		msg := &GetMerkleBlockMessage{RawHash: targetBlock.Hash().Byte32()}
 		fullNode.handleGetMerkleBlockMsg(spvPeer, msg)
-		if err := <-complated; err != nil {
+		if err := <-completed; err != nil {
 			t.Fatal(err)
 		}
 	}
