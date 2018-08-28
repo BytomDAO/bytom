@@ -2,11 +2,10 @@ package netsync
 
 import (
 	"container/list"
+	"encoding/hex"
 	"encoding/json"
 	"testing"
 	"time"
-
-	"encoding/hex"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
@@ -556,7 +555,7 @@ func TestSendMerkleBlock(t *testing.T) {
 		blocks := mockBlocks(nil, 2)
 		targetBlock := blocks[1]
 		txs, bcTxs := mockTxs(c.txCount)
-		
+
 		targetBlock.Transactions = txs
 		targetBlock.TransactionsMerkleRoot, _ = types.TxMerkleRoot(bcTxs)
 

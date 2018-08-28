@@ -8,8 +8,8 @@ import (
 
 	wire "github.com/tendermint/go-wire"
 
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/consensus"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/test/mock"
 )
@@ -180,7 +180,7 @@ func mockTxs(txCount int) ([]*types.Tx, []*bc.Tx) {
 func randControlProgram(length int) []byte {
 	var cp []byte
 	for i := 0; i < length; i++ {
-		cp = append(cp, byte(rand.Intn(1 << 8)))
+		cp = append(cp, byte(rand.Intn(1<<8)))
 	}
 	return cp
 }
