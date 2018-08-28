@@ -587,6 +587,7 @@ func TestSendMerkleBlock(t *testing.T) {
 						if err != nil {
 							t.Fatal(err)
 						}
+						
 						relatedTxIDs = append(relatedTxIDs, &tx.ID)
 					}
 					var txHashes []*bc.Hash
@@ -594,10 +595,10 @@ func TestSendMerkleBlock(t *testing.T) {
 						hash := bc.NewHash(hashByte)
 						txHashes = append(txHashes, &hash)
 					}
-					ok := types.ValidateTxMerkleTreeProof(txHashes, m.Flags, relatedTxIDs, targetBlock.TransactionsMerkleRoot)
-					if !ok {
+					if ok := types.ValidateTxMerkleTreeProof(txHashes, m.Flags, relatedTxIDs, targetBlock.TransactionsMerkleRoot); !ok {
 						complated <- errors.New("validate tx fail")
 					}
+
 					var statusHashes []*bc.Hash
 					for _, statusByte := range m.StatusHashes {
 						hash := bc.NewHash(statusByte)
@@ -612,10 +613,10 @@ func TestSendMerkleBlock(t *testing.T) {
 						}
 						relatedStatuses = append(relatedStatuses, status)
 					}
-					ok = types.ValidateStatusMerkleTreeProof(statusHashes, m.Flags, relatedStatuses, targetBlock.TransactionStatusHash)
-					if !ok {
+					if ok := types.ValidateStatusMerkleTreeProof(statusHashes, m.Flags, relatedStatuses, targetBlock.TransactionStatusHash); !ok {
 						complated <- errors.New("validate status fail")
 					}
+
 					complated <- nil
 				}
 			}
