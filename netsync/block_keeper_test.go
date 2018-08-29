@@ -536,6 +536,10 @@ func TestSendMerkleBlock(t *testing.T) {
 			relatedTxIndex: []int{},
 		},
 		{
+			txCount:        10,
+			relatedTxIndex: []int{},
+		},
+		{
 			txCount:        5,
 			relatedTxIndex: []int{0, 1, 2, 3, 4},
 		},
