@@ -1,0 +1,78 @@
+Bytom version 1.0.5 is now available from:
+
+  https://github.com/Bytom/bytom/releases/tag/v1.0.5
+
+
+Please report bugs using the issue tracker at github:
+
+  https://github.com/Bytom/bytom/issues
+
+How to Upgrade
+===============
+
+If you are running an older version, shut it down. Wait until it has completely, then run the new version Bytom.
+You can operate according to the user manual.[(Bytom User Manual)](https://bytom.io/wp-content/themes/freddo/images/wallet/BytomUsermanualV1.0_en.pdf)
+
+
+1.0.5 changelog
+================
+__Bytom Node__
+
++ `PR #1196`
+    - Remove old p2p tcp peer exchange module.
++ `PR #1204`
+    - Add pagging to the three apis of list-unspent-outputs,list-transactions and list-addresses.
++ `PR #1208`
+    - Add sync completion status broadcast function.
++ `PR #1218`
+    - Fix the Unmarshal bug at get exteranl asset.
++ `PR #1233`
+    - Add check-key-password API.
++ `PR #1219`
+    - Add get-coinbase-arbitrary, set-coinbase-arbitrary API.
++ `PR #1232`
+    - Fix multi-sign process that will be signed only once by the same password.
++ `PR #1228`
+    - Upgrade txpool for prevent drop orphan transaction.
++ `PR #1241`
+    - Add function for delete expire orphan block.
++ `PR #1253`
+    - API list-accounts support filter by alias.
++ `PR #1245`
+    - API create-asset support user custom smart contract.
++ `PR #1258`
+    - Add node upgrade notification mechanism
++ `PR #1264`
+    - Improve miningpool new block updating mechanism.
++ `PR #1262`
+    - Full node support spv，which mainly include filter address and send merkle block.
+
+__Bytom Dashboard__
+
+    - Add the Chinese translation to equity contract.
+    - Fixed the 5mins password frozen when the password is wrong.
+    - Add the transaction details before advanced transaction.
+    - Add the version tag and the version update warning.
+
+__Equity Contract frontend__
+
+    - The contract template of RevealPreimage support for entering any character
+    - Asset selection box support BTM，expect when locking value
+
+Credits
+--------
+
+Thanks to everyone who directly contributed to this release:
+- Colt-Z
+- HAOYUatHZ
+- langyu
+- oysheng
+- Paladz
+- shanhuhai5739
+- shenao78
+- successli
+- yahtoo
+- zcc0721
+- ZhitingLin
+
+And everyone who helped test.
