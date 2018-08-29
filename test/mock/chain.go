@@ -78,8 +78,7 @@ func (c *Chain) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, erro
 	rand.Seed(int64(block.Height))
 	for i := 0; i < txCount; i++ {
 		status := &bc.TxVerifyResult{}
-		fail := rand.Intn(2)
-		if fail == 0 {
+		if fail := rand.Intn(2); fail == 0 {
 			status.StatusFail = true
 		} else {
 			status.StatusFail = false
