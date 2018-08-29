@@ -49,20 +49,21 @@ __Bytom Node__
 
 __Bytom Dashboard__
 
-    - Add the Chinese translation to equity contract.
-    - Fixed the 5mins password frozen when the password is wrong.
-    - Add the transaction details before sign the advanced transaction.
-    - Add the version tag and the version update warning.
+- Add the Chinese translation to equity contract.
+- Fixed the 5mins password frozen when the password is wrong.
+- Add the transaction details before sign the advanced transaction.
+- Add the version tag and the version update warning.
 
 __Equity Contract frontend__
 
-    - The contract template of RevealPreimage support for entering any character
-    - Asset selection box support BTM，expect when locking value
+- The contract template of RevealPreimage support for entering any character
+- Asset selection box support BTM，expect when locking value
 
 Credits
 --------
 
 Thanks to everyone who directly contributed to this release:
+
 - Colt-Z
 - HAOYUatHZ
 - langyu
