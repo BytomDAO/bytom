@@ -161,7 +161,7 @@ func getMerkleTreeProof(rawDatas []merkleNode, relatedRawDatas []merkleNode) ([]
 		merkleHashSet.Add(merkleHash.String())
 	}
 	if merkleHashSet.Size() == 0 {
-		return []*bc.Hash{&merkleTree.hash}, []uint8{0}
+		return []*bc.Hash{&merkleTree.hash}, []uint8{FlagAssist}
 	}
 	return merkleTree.getMerkleTreeProof(merkleHashSet)
 }
@@ -240,6 +240,9 @@ func getMerkleRootByProof(hashList *list.List, flagList *list.List, merkleHashes
 		}
 	case FlagTxLeaf:
 		{
+			if merkleHashes.Len() == 0 {
+				return bc.EmptyStringHash
+			}
 			hashEle := hashList.Front()
 			hash := hashEle.Value.(bc.Hash)
 			relatedHashEle := merkleHashes.Front()

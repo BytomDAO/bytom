@@ -1,6 +1,8 @@
 package types
 
 import (
+	"encoding/hex"
+
 	"math/rand"
 	"testing"
 	"time"
@@ -263,135 +265,163 @@ func TestStatusMerkleProof(t *testing.T) {
 
 func TestUglyValidateTxMerkleProof(t *testing.T) {
 	cases := []struct {
-		hashes        [][32]byte
+		hashes        []string
 		flags         []uint8
-		relatedHashes [][32]byte
-		root          [32]byte
+		relatedHashes []string
+		root          string
 		expectResult  bool
 	}{
 		{
-			hashes:        [][32]byte{},
+			hashes:        []string{},
 			flags:         []uint8{},
-			relatedHashes: [][32]byte{},
-			root:          [32]byte{},
+			relatedHashes: []string{},
+			root:          "",
 			expectResult:  false,
 		},
 		{
-			hashes:        [][32]byte{},
+			hashes:        []string{},
 			flags:         []uint8{1, 1, 1, 1, 2, 0, 1, 0, 2, 1, 0, 1, 0, 2, 1, 2, 0},
-			relatedHashes: [][32]byte{},
-			root:          [32]byte{},
+			relatedHashes: []string{},
+			root:          "",
 			expectResult:  false,
 		},
 		{
-			hashes:        [][32]byte{},
-			flags:         []uint8{1, 1, 1, 3, 2, 0, 5, 0, 2, 1, 2, 1, 0, 2, 1, 2, 0},
-			relatedHashes: [][32]byte{},
-			root:          [32]byte{},
-			expectResult:  false,
-		},
-		{
-			hashes: [][32]byte{
-				{0, 147, 55, 10, 142, 25, 248, 241, 49, 253, 126, 117, 197, 118, 97, 89, 80, 213, 103, 46, 229, 225, 140, 99, 241, 5, 169, 91, 202, 180, 51, 44},
-				{201, 183, 119, 152, 71, 251, 122, 183, 76, 244, 177, 231, 244, 85, 113, 51, 145, 143, 170, 43, 193, 48, 4, 39, 83, 65, 125, 251, 98, 177, 45, 250},
+			hashes: []string{
+				"0093370a8e19f8f131fd7e75c576615950d5672ee5e18c63f105a95bcab4332c",
+				"c9b7779847fb7ab74cf4b1e7f4557133918faa2bc130042753417dfb62b12dfa",
 			},
 			flags:         []uint8{},
-			relatedHashes: [][32]byte{},
-			root:          [32]byte{},
+			relatedHashes: []string{},
+			root:          "",
 			expectResult:  false,
 		},
 		{
-			hashes: [][32]byte{},
+			hashes: []string{},
 			flags:  []uint8{},
-			relatedHashes: [][32]byte{
-				{0, 147, 55, 10, 142, 25, 248, 241, 49, 253, 126, 117, 197, 118, 97, 89, 80, 213, 103, 46, 229, 225, 140, 99, 241, 5, 169, 91, 202, 180, 51, 44},
-				{103, 218, 115, 138, 183, 208, 116, 2, 184, 29, 61, 136, 235, 37, 47, 96, 188, 58, 243, 180, 148, 86, 68, 212, 130, 145, 120, 148, 225, 155, 116, 234},
+			relatedHashes: []string{
+				"0093370a8e19f8f131fd7e75c576615950d5672ee5e18c63f105a95bcab4332c",
+				"c9b7779847fb7ab74cf4b1e7f4557133918faa2bc130042753417dfb62b12dfa",
 			},
-			root:         [32]byte{},
+			root:         "",
 			expectResult: false,
 		},
 		{
-			hashes: [][32]byte{},
+			hashes: []string{},
 			flags:  []uint8{1, 1, 0, 2, 1, 2, 1, 0, 1},
-			relatedHashes: [][32]byte{
-				{0, 147, 55, 10, 142, 25, 248, 241, 49, 253, 126, 117, 197, 118, 97, 89, 80, 213, 103, 46, 229, 225, 140, 99, 241, 5, 169, 91, 202, 180, 51, 44},
-				{103, 218, 115, 138, 183, 208, 116, 2, 184, 29, 61, 136, 235, 37, 47, 96, 188, 58, 243, 180, 148, 86, 68, 212, 130, 145, 120, 148, 225, 155, 116, 234},
+			relatedHashes: []string{
+				"0093370a8e19f8f131fd7e75c576615950d5672ee5e18c63f105a95bcab4332c",
+				"c9b7779847fb7ab74cf4b1e7f4557133918faa2bc130042753417dfb62b12dfa",
 			},
-			root:         [32]byte{40, 17, 56, 224, 169, 234, 25, 80, 88, 68, 189, 97, 162, 245, 132, 55, 135, 3, 87, 130, 192, 147, 218, 116, 209, 43, 95, 186, 115, 238, 235, 7},
-			expectResult: false,
+			root: "281138e0a9ea19505844bd61a2f5843787035782c093da74d12b5fba73eeeb07",
 		},
 		{
-			hashes: [][32]byte{
-				{104, 240, 62, 162, 176, 42, 33, 173, 148, 77, 26, 67, 173, 97, 82, 167, 250, 106, 126, 212, 16, 29, 89, 190, 98, 89, 77, 211, 14, 242, 165, 88},
+			hashes: []string{
+				"68f03ea2b02a21ad944d1a43ad6152a7fa6a7ed4101d59be62594dd30ef2a558",
 			},
 			flags: []uint8{},
-			relatedHashes: [][32]byte{
-				{0, 147, 55, 10, 142, 25, 248, 241, 49, 253, 126, 117, 197, 118, 97, 89, 80, 213, 103, 46, 229, 225, 140, 99, 241, 5, 169, 91, 202, 180, 51, 44},
-				{103, 218, 115, 138, 183, 208, 116, 2, 184, 29, 61, 136, 235, 37, 47, 96, 188, 58, 243, 180, 148, 86, 68, 212, 130, 145, 120, 148, 225, 155, 116, 234},
+			relatedHashes: []string{
+				"0093370a8e19f8f131fd7e75c576615950d5672ee5e18c63f105a95bcab4332c",
+				"c9b7779847fb7ab74cf4b1e7f4557133918faa2bc130042753417dfb62b12dfa",
 			},
-			root:         [32]byte{40, 17, 56, 224, 169, 234, 25, 80, 88, 68, 189, 97, 162, 245, 132, 55, 135, 3, 87, 130, 192, 147, 218, 116, 209, 43, 95, 186, 115, 238, 235, 7},
+			root:         "281138e0a9ea19505844bd61a2f5843787035782c093da74d12b5fba73eeeb07",
 			expectResult: false,
 		},
 		{
-			hashes: [][32]byte{
-				{142, 195, 238, 117, 137, 249, 94, 238, 155, 83, 79, 113, 252, 211, 113, 66, 188, 200, 57, 160, 219, 254, 120, 18, 77, 249, 102, 56, 39, 185, 12, 53},
-				{1, 27, 211, 56, 8, 82, 178, 148, 109, 245, 7, 224, 198, 35, 66, 34, 197, 89, 238, 200, 245, 69, 228, 188, 88, 168, 158, 150, 8, 146, 37, 155},
-				{194, 5, 152, 141, 156, 134, 64, 131, 66, 31, 27, 219, 149, 230, 207, 139, 82, 7, 15, 172, 252, 200, 126, 70, 166, 232, 25, 127, 83, 137, 252, 162},
+			hashes: []string{
+				"8ec3ee7589f95eee9b534f71fcd37142bcc839a0dbfe78124df9663827b90c35",
+				"011bd3380852b2946df507e0c6234222c559eec8f545e4bc58a89e960892259b",
+				"c205988d9c864083421f1bdb95e6cf8b52070facfcc87e46a6e8197f5389fca2",
 			},
 			flags: []uint8{1, 1, 0, 2, 0},
-			relatedHashes: [][32]byte{
-				{80, 74, 244, 85, 227, 40, 231, 221, 57, 187, 192, 89, 82, 152, 81, 148, 109, 84, 238, 139, 69, 155, 17, 179, 170, 196, 160, 254, 235, 71, 68, 135},
+			relatedHashes: []string{
+				"504af455e328e7dd39bbc059529851946d54ee8b459b11b3aac4a0feeb474487",
 			},
-			root:         [32]byte{175, 248, 26, 70, 254, 121, 32, 78, 249, 0, 114, 67, 243, 116, 213, 65, 4, 165, 151, 98, 185, 247, 77, 128, 213, 107, 82, 145, 117, 61, 182, 251},
+			root:         "aff81a46fe79204ef9007243f374d54104a59762b9f74d80d56b5291753db6fb",
 			expectResult: true,
 		},
 		// flags and hashes is correct, but relatedHashes has hash that does not exist
 		{
-			hashes: [][32]byte{
-				{142, 195, 238, 117, 137, 249, 94, 238, 155, 83, 79, 113, 252, 211, 113, 66, 188, 200, 57, 160, 219, 254, 120, 18, 77, 249, 102, 56, 39, 185, 12, 53},
-				{1, 27, 211, 56, 8, 82, 178, 148, 109, 245, 7, 224, 198, 35, 66, 34, 197, 89, 238, 200, 245, 69, 228, 188, 88, 168, 158, 150, 8, 146, 37, 155},
-				{194, 5, 152, 141, 156, 134, 64, 131, 66, 31, 27, 219, 149, 230, 207, 139, 82, 7, 15, 172, 252, 200, 126, 70, 166, 232, 25, 127, 83, 137, 252, 162},
+			hashes: []string{
+				"8ec3ee7589f95eee9b534f71fcd37142bcc839a0dbfe78124df9663827b90c35",
+				"011bd3380852b2946df507e0c6234222c559eec8f545e4bc58a89e960892259b",
+				"c205988d9c864083421f1bdb95e6cf8b52070facfcc87e46a6e8197f5389fca2",
 			},
 			flags: []uint8{1, 1, 0, 2, 0},
-			relatedHashes: [][32]byte{
-				{80, 74, 244, 85, 227, 40, 231, 221, 57, 187, 192, 89, 82, 152, 81, 148, 109, 84, 238, 139, 69, 155, 17, 179, 170, 196, 160, 254, 235, 71, 68, 135},
-				{40, 17, 56, 224, 169, 234, 25, 80, 88, 68, 189, 97, 162, 245, 132, 55, 135, 3, 87, 130, 192, 147, 218, 116, 209, 43, 95, 186, 115, 238, 235, 7},
+			relatedHashes: []string{
+				"504af455e328e7dd39bbc059529851946d54ee8b459b11b3aac4a0feeb474487",
+				"281138e0a9ea19505844bd61a2f5843787035782c093da74d12b5fba73eeeb07",
 			},
-			root:         [32]byte{175, 248, 26, 70, 254, 121, 32, 78, 249, 0, 114, 67, 243, 116, 213, 65, 4, 165, 151, 98, 185, 247, 77, 128, 213, 107, 82, 145, 117, 61, 182, 251},
+			root:         "aff81a46fe79204ef9007243f374d54104a59762b9f74d80d56b5291753db6fb",
 			expectResult: false,
 		},
-		// flags is correct, but hashes has additional hash at the end 
+		// flags and hashes is correct, but relatedHashes is not enough
 		{
-			hashes: [][32]byte{
-				{142, 195, 238, 117, 137, 249, 94, 238, 155, 83, 79, 113, 252, 211, 113, 66, 188, 200, 57, 160, 219, 254, 120, 18, 77, 249, 102, 56, 39, 185, 12, 53},
-				{1, 27, 211, 56, 8, 82, 178, 148, 109, 245, 7, 224, 198, 35, 66, 34, 197, 89, 238, 200, 245, 69, 228, 188, 88, 168, 158, 150, 8, 146, 37, 155},
-				{194, 5, 152, 141, 156, 134, 64, 131, 66, 31, 27, 219, 149, 230, 207, 139, 82, 7, 15, 172, 252, 200, 126, 70, 166, 232, 25, 127, 83, 137, 252, 162},
-				{90, 6, 201, 1, 54, 232, 28, 15, 156, 173, 41, 114, 94, 105, 237, 198, 210, 27, 214, 251, 6, 65, 38, 95, 156, 75, 107, 182, 132, 11, 55, 221},
+			hashes: []string{
+				"8ec3ee7589f95eee9b534f71fcd37142bcc839a0dbfe78124df9663827b90c35",
+				"011bd3380852b2946df507e0c6234222c559eec8f545e4bc58a89e960892259b",
+				"c205988d9c864083421f1bdb95e6cf8b52070facfcc87e46a6e8197f5389fca2",
+			},
+			flags:         []uint8{1, 1, 0, 2, 0},
+			relatedHashes: []string{},
+			root:          "aff81a46fe79204ef9007243f374d54104a59762b9f74d80d56b5291753db6fb",
+			expectResult:  false,
+		},
+		// flags is correct, but hashes has additional hash at the end
+		{
+			hashes: []string{
+				"8ec3ee7589f95eee9b534f71fcd37142bcc839a0dbfe78124df9663827b90c35",
+				"011bd3380852b2946df507e0c6234222c559eec8f545e4bc58a89e960892259b",
+				"c205988d9c864083421f1bdb95e6cf8b52070facfcc87e46a6e8197f5389fca2",
+				"5a06c90136e81c0f9cad29725e69edc6d21bd6fb0641265f9c4b6bb6840b37dd",
 			},
 			flags: []uint8{1, 1, 0, 2, 0},
-			relatedHashes: [][32]byte{
-				{80, 74, 244, 85, 227, 40, 231, 221, 57, 187, 192, 89, 82, 152, 81, 148, 109, 84, 238, 139, 69, 155, 17, 179, 170, 196, 160, 254, 235, 71, 68, 135},
+			relatedHashes: []string{
+				"504af455e328e7dd39bbc059529851946d54ee8b459b11b3aac4a0feeb474487",
 			},
-			root:         [32]byte{175, 248, 26, 70, 254, 121, 32, 78, 249, 0, 114, 67, 243, 116, 213, 65, 4, 165, 151, 98, 185, 247, 77, 128, 213, 107, 82, 145, 117, 61, 182, 251},
+			root:         "aff81a46fe79204ef9007243f374d54104a59762b9f74d80d56b5291753db6fb",
 			expectResult: true,
 		},
 	}
 
 	for _, c := range cases {
 		var hashes, relatedHashes []*bc.Hash
-		for _, hashByte := range c.hashes {
-			hash := bc.NewHash(hashByte)
+		var hashBytes, rootBytes [32]byte
+		var err error
+		for _, hashStr := range c.hashes {
+			if hashBytes, err = convertHashStr2Bytes(hashStr); err != nil {
+				t.Fatal(err)
+			}
+
+			hash := bc.NewHash(hashBytes)
 			hashes = append(hashes, &hash)
 		}
-		for _, hashByte := range c.relatedHashes {
-			hash := bc.NewHash(hashByte)
+		for _, hashStr := range c.relatedHashes {
+			if hashBytes, err = convertHashStr2Bytes(hashStr); err != nil {
+				t.Fatal(err)
+			}
+
+			hash := bc.NewHash(hashBytes)
 			relatedHashes = append(relatedHashes, &hash)
 		}
-		root := bc.NewHash(c.root)
+		if rootBytes, err = convertHashStr2Bytes(c.root); err != nil {
+			t.Fatal(err)
+		}
+
+		root := bc.NewHash(rootBytes)
 		if ValidateTxMerkleTreeProof(hashes, c.flags, relatedHashes, root) != c.expectResult {
 			t.Error("Validate merkle tree proof fail")
 		}
 	}
+}
+
+func convertHashStr2Bytes(hashStr string) ([32]byte, error) {
+	var result [32]byte
+	hashBytes, err := hex.DecodeString(hashStr)
+	if err != nil {
+		return result, err
+	}
+	copy(result[:], hashBytes)
+	return result, nil
 }
 
 func mockTransactions(txCount int) ([]*Tx, []*bc.Tx) {
