@@ -27,3 +27,15 @@ func TestCompare(t *testing.T) {
 		t.Error("Version comparison error.")
 	}
 }
+
+func TestFlag(t *testing.T) {
+	if noUpdate != 0 {
+		t.Error("noUpdate value error")
+	}
+	if hasUpdate != 1 {
+		t.Error("hasUpdate value error")
+	}
+	if hasMUpdate != 2 {
+		t.Error("noUpdate value error")
+	}
+}
