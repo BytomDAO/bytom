@@ -12,7 +12,8 @@ import (
 func TestCompare(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 	i := rand.Int63n(0xffffffff)
-	rev := fmt.Sprintf("%8x", i)
+	verb := fmt.Sprintf("%%%dx", revLen)
+	rev := fmt.Sprintf(verb, i)
 
 	v1, err := gover.NewVersion(Version)
 	if err != nil {

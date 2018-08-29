@@ -12,6 +12,7 @@ const (
 	noUpdate uint16 = iota
 	hasUpdate
 	hasMUpdate
+	revLen = 8
 )
 
 var (
@@ -24,7 +25,7 @@ var (
 
 func init() {
 	if GitCommit != "" {
-		Version += "+" + GitCommit[:8]
+		Version += "+" + GitCommit[:revLen]
 	}
 	Status = &UpdateStatus{
 		maxVerSeen:    Version,
