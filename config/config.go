@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+var (
+	// ConfigMaxTxFee means config maxTxFee
+	ConfigMaxTxFee uint64
+)
+
 type Config struct {
 	// Top level options use an anonymous struct
 	BaseConfig `mapstructure:",squash"`
@@ -92,6 +97,9 @@ type BaseConfig struct {
 
 	// log file name
 	LogFile string `mapstructure:"log_file"`
+
+	// max transaction fee
+	MaxTxFee uint64 `mapstructure:"max_tx_fee"`
 }
 
 // Default configurable base parameters.
@@ -107,6 +115,7 @@ func DefaultBaseConfig() BaseConfig {
 		DBPath:            "data",
 		KeysPath:          "keystore",
 		HsmUrl:            "",
+		MaxTxFee:          uint64(1000000000),
 	}
 }
 
