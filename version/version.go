@@ -17,7 +17,7 @@ const (
 	hasUpdate
 	hasMUpdate
 
-	revisionLen = 8
+	revisionLen = 8 // should falls in [1:16]
 )
 
 var (
