@@ -19,13 +19,13 @@ You can operate according to the user manual.[(Bytom User Manual)](https://bytom
 __Bytom Node__
 
 + `PR #1196`
-    - Remove old p2p tcp peer exchange module.
+    - Remove the old p2p TCP peer exchange module.
 + `PR #1204`
-    - Add pagging to the three apis of list-unspent-outputs,list-transactions and list-addresses.
+    - Add paging to the three APIs of list-unspent-outputs,list-transactions, and list-addresses.
 + `PR #1208`
     - Add sync completion status broadcast function.
 + `PR #1218`
-    - Fix the Unmarshal bug at get exteranl asset.
+    - Fix the Unmarshal bug at getting the external asset.
 + `PR #1233`
     - Add check-key-password API.
 + `PR #1219`
@@ -37,21 +37,21 @@ __Bytom Node__
 + `PR #1241`
     - Add function for delete expire orphan block.
 + `PR #1253`
-    - API list-accounts support filter by alias.
+    - API list-accounts support to filter by alias.
 + `PR #1245`
-    - API create-asset support user custom smart contract.
+    - API create-asset supports user custom smart contract.
 + `PR #1258`
     - Add node upgrade notification mechanism
 + `PR #1264`
-    - Improve miningpool new block updating mechanism.
+    - Improve the mining pool new block updating mechanism.
 + `PR #1262`
-    - Full node support spv，which mainly include filter address and send merkle block.
+    - Full node support spv，which mainly include filter address and send Merkle block.
 
 __Bytom Dashboard__
 
     - Add the Chinese translation to equity contract.
     - Fixed the 5mins password frozen when the password is wrong.
-    - Add the transaction details before advanced transaction.
+    - Add the transaction details before sign the advanced transaction.
     - Add the version tag and the version update warning.
 
 __Equity Contract frontend__
