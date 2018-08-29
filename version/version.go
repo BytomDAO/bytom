@@ -24,7 +24,7 @@ var (
 
 func init() {
 	if GitCommit != "" {
-		Version += "-" + GitCommit[:8]
+		Version += "+" + GitCommit[:8]
 	}
 	Status = &UpdateStatus{
 		maxVerSeen:    Version,
