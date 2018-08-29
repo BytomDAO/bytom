@@ -156,7 +156,7 @@ func TestTxMerkleProof(t *testing.T) {
 			expectHashLen:    9,
 			expectFlags:      []uint8{1, 1, 1, 1, 2, 0, 1, 0, 2, 1, 0, 1, 0, 2, 1, 2, 0},
 		},
-		{ 
+		{
 			txCount:          1,
 			relatedTxIndexes: []int{0},
 			expectHashLen:    1,
@@ -245,6 +245,88 @@ func TestStatusMerkleProof(t *testing.T) {
 		root, _ := TxStatusMerkleRoot(statuses)
 		if !ValidateStatusMerkleTreeProof(hashes, c.flags, relatedStatuses, root) {
 			t.Error("Merkle tree validate fail")
+		}
+	}
+}
+
+func TestUglyValidateTxMerkleProof(t *testing.T) {
+	cases := []struct {
+		hashes        [][32]byte
+		flags         []uint8
+		relatedHashes [][32]byte
+		root          [32]byte
+	}{
+		{
+			hashes:        [][32]byte{},
+			flags:         []uint8{},
+			relatedHashes: [][32]byte{},
+			root:          [32]byte{},
+		},
+		{
+			hashes:        [][32]byte{},
+			flags:         []uint8{1, 1, 1, 1, 2, 0, 1, 0, 2, 1, 0, 1, 0, 2, 1, 2, 0},
+			relatedHashes: [][32]byte{},
+			root:          [32]byte{},
+		},
+		{
+			hashes:        [][32]byte{},
+			flags:         []uint8{1, 1, 1, 3, 2, 0, 5, 0, 2, 1, 2, 1, 0, 2, 1, 2, 0},
+			relatedHashes: [][32]byte{},
+			root:          [32]byte{},
+		},
+		{
+			hashes: [][32]byte{
+				{0, 147, 55, 10, 142, 25, 248, 241, 49, 253, 126, 117, 197, 118, 97, 89, 80, 213, 103, 46, 229, 225, 140, 99, 241, 5, 169, 91, 202, 180, 51, 44},
+				{201, 183, 119, 152, 71, 251, 122, 183, 76, 244, 177, 231, 244, 85, 113, 51, 145, 143, 170, 43, 193, 48, 4, 39, 83, 65, 125, 251, 98, 177, 45, 250},
+			},
+			flags:         []uint8{},
+			relatedHashes: [][32]byte{},
+			root:          [32]byte{},
+		},
+		{
+			hashes: [][32]byte{},
+			flags:  []uint8{},
+			relatedHashes: [][32]byte{
+				{0, 147, 55, 10, 142, 25, 248, 241, 49, 253, 126, 117, 197, 118, 97, 89, 80, 213, 103, 46, 229, 225, 140, 99, 241, 5, 169, 91, 202, 180, 51, 44},
+				{103, 218, 115, 138, 183, 208, 116, 2, 184, 29, 61, 136, 235, 37, 47, 96, 188, 58, 243, 180, 148, 86, 68, 212, 130, 145, 120, 148, 225, 155, 116, 234},
+			},
+			root: [32]byte{},
+		},
+		{
+			hashes: [][32]byte{},
+			flags:  []uint8{1, 1, 0, 2, 1, 2, 1, 0, 1},
+			relatedHashes: [][32]byte{
+				{0, 147, 55, 10, 142, 25, 248, 241, 49, 253, 126, 117, 197, 118, 97, 89, 80, 213, 103, 46, 229, 225, 140, 99, 241, 5, 169, 91, 202, 180, 51, 44},
+				{103, 218, 115, 138, 183, 208, 116, 2, 184, 29, 61, 136, 235, 37, 47, 96, 188, 58, 243, 180, 148, 86, 68, 212, 130, 145, 120, 148, 225, 155, 116, 234},
+			},
+			root: [32]byte{40, 17, 56, 224, 169, 234, 25, 80, 88, 68, 189, 97, 162, 245, 132, 55, 135, 3, 87, 130, 192, 147, 218, 116, 209, 43, 95, 186, 115, 238, 235, 7},
+		},
+		{
+			hashes: [][32]byte{
+				{104, 240, 62, 162, 176, 42, 33, 173, 148, 77, 26, 67, 173, 97, 82, 167, 250, 106, 126, 212, 16, 29, 89, 190, 98, 89, 77, 211, 14, 242, 165, 88},
+			},
+			flags: []uint8{},
+			relatedHashes: [][32]byte{
+				{0, 147, 55, 10, 142, 25, 248, 241, 49, 253, 126, 117, 197, 118, 97, 89, 80, 213, 103, 46, 229, 225, 140, 99, 241, 5, 169, 91, 202, 180, 51, 44},
+				{103, 218, 115, 138, 183, 208, 116, 2, 184, 29, 61, 136, 235, 37, 47, 96, 188, 58, 243, 180, 148, 86, 68, 212, 130, 145, 120, 148, 225, 155, 116, 234},
+			},
+			root: [32]byte{},
+		},
+	}
+
+	for _, c := range cases {
+		var hashes, relatedHashes []*bc.Hash
+		for _, hashByte := range c.hashes {
+			hash := bc.NewHash(hashByte)
+			hashes = append(hashes, &hash)
+		}
+		for _, hashByte := range c.relatedHashes {
+			hash := bc.NewHash(hashByte)
+			relatedHashes = append(relatedHashes, &hash)
+		}
+		root := bc.NewHash(c.root)
+		if ValidateTxMerkleTreeProof(hashes, c.flags, relatedHashes, root) != false {
+			t.Error("Validate merkle tree proof fail")
 		}
 	}
 }

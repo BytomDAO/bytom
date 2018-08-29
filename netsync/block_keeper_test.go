@@ -555,13 +555,20 @@ func TestSendMerkleBlock(t *testing.T) {
 		blocks := mockBlocks(nil, 2)
 		targetBlock := blocks[1]
 		txs, bcTxs := mockTxs(c.txCount)
+		var err error
 
 		targetBlock.Transactions = txs
-		targetBlock.TransactionsMerkleRoot, _ = types.TxMerkleRoot(bcTxs)
+		if targetBlock.TransactionsMerkleRoot, err = types.TxMerkleRoot(bcTxs); err != nil {
+			t.Fatal(err)
+		}
 
 		spvNode := mockSync(blocks)
 		blockHash := targetBlock.Hash()
-		statusResult, _ := spvNode.chain.GetTransactionStatus(&blockHash)
+		var statusResult *bc.TransactionStatus
+		if statusResult, err = spvNode.chain.GetTransactionStatus(&blockHash); err != nil {
+			t.Fatal(err)
+		}
+		
 		targetBlock.TransactionStatusHash, _ = types.TxStatusMerkleRoot(statusResult.VerifyStatus)
 		fullNode := mockSync(blocks)
 
@@ -582,8 +589,7 @@ func TestSendMerkleBlock(t *testing.T) {
 				var relatedTxIDs []*bc.Hash
 				for _, rawTx := range m.RawTxDatas {
 					tx := &types.Tx{}
-					err := tx.UnmarshalText(rawTx)
-					if err != nil {
+					if err := tx.UnmarshalText(rawTx); err != nil {
 						t.Fatal(err)
 					}
 

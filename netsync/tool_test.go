@@ -162,7 +162,7 @@ func mockTxs(txCount int) ([]*types.Tx, []*bc.Tx) {
 	var txs []*types.Tx
 	var bcTxs []*bc.Tx
 	for i := 0; i < txCount; i++ {
-		trueProg := randControlProgram(60)
+		trueProg := mockControlProgram(60)
 		assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
 		now := []byte(time.Now().String())
 		issuanceInp := types.NewIssuanceInput(now, 1, trueProg, nil, nil)
@@ -177,7 +177,7 @@ func mockTxs(txCount int) ([]*types.Tx, []*bc.Tx) {
 	return txs, bcTxs
 }
 
-func randControlProgram(length int) []byte {
+func mockControlProgram(length int) []byte {
 	var cp []byte
 	for i := 0; i < length; i++ {
 		cp = append(cp, byte(rand.Intn(1<<8)))
