@@ -2,7 +2,9 @@ package api
 
 import (
 	"context"
+	"strconv"
 
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -17,7 +19,35 @@ type BlockHeaderJSON struct {
 	Timestamp         uint64                 `json:"timestamp"`           // The time of the block in seconds.
 	Nonce             uint64                 `json:"nonce"`               // Nonce used to generate the block.
 	Bits              uint64                 `json:"bits"`                // Difficulty target for the block.
-	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    //Block commitment
+	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    // Block commitment
+}
+
+type CoinbaseArbitrary struct {
+	Arbitrary chainjson.HexBytes `json:"arbitrary"`
+}
+
+func (a *API) getCoinbaseArbitrary() Response {
+	arbitrary := a.wallet.AccountMgr.GetCoinbaseArbitrary()
+	resp := &CoinbaseArbitrary{
+		Arbitrary: arbitrary,
+	}
+	return NewSuccessResponse(resp)
+}
+
+// setCoinbaseArbitrary add arbitary data to the reserved coinbase data.
+// check function createCoinbaseTx in mining/mining.go for detail.
+// arbitraryLenLimit is 107 and can be calculated by:
+// 	maxHeight := ^uint64(0)
+// 	reserved := append([]byte{0x00}, []byte(strconv.FormatUint(maxHeight, 10))...)
+// 	arbitraryLenLimit := consensus.CoinbaseArbitrarySizeLimit - len(reserved)
+func (a *API) setCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) Response {
+	arbitraryLenLimit := 107
+	if len(req.Arbitrary) > arbitraryLenLimit {
+		err := errors.New("Arbitrary exceeds limit: " + strconv.FormatUint(uint64(arbitraryLenLimit), 10))
+		return NewErrorResponse(err)
+	}
+	a.wallet.AccountMgr.SetCoinbaseArbitrary(req.Arbitrary)
+	return a.getCoinbaseArbitrary()
 }
 
 // getWork gets work in compressed protobuf format
@@ -139,6 +169,9 @@ func (a *API) setMining(in struct {
 	IsMining bool `json:"is_mining"`
 }) Response {
 	if in.IsMining {
+		if _, err := a.wallet.AccountMgr.GetMiningAddress(); err != nil {
+			return NewErrorResponse(errors.New("Mining address does not exist"))
+		}
 		return a.startMining()
 	}
 	return a.stopMining()

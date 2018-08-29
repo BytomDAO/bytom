@@ -80,7 +80,7 @@ func (g *TxGenerator) createAsset(accountAlias string, assetAlias string) (*asse
 	if err != nil {
 		return nil, err
 	}
-	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias)
+	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
 }
 
 func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (*account.UTXO, error) {

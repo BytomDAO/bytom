@@ -126,10 +126,9 @@ func (reg *Registry) getNextAssetIndex() uint64 {
 }
 
 // Define defines a new Asset.
-func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string) (*Asset, error) {
-	if len(xpubs) == 0 {
-		return nil, errors.Wrap(signers.ErrNoXPubs)
-	}
+func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
+	var err error
+	var assetSigner *signers.Signer
 
 	alias = strings.ToUpper(strings.TrimSpace(alias))
 	if alias == "" {
@@ -140,23 +139,30 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		return nil, ErrInternalAsset
 	}
 
-	nextAssetIndex := reg.getNextAssetIndex()
-	assetSigner, err := signers.Create("asset", xpubs, quorum, nextAssetIndex)
-	if err != nil {
-		return nil, err
-	}
-
 	rawDefinition, err := serializeAssetDef(definition)
 	if err != nil {
 		return nil, ErrSerializing
 	}
 
-	path := signers.Path(assetSigner, signers.AssetKeySpace)
-	derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
-	derivedPKs := chainkd.XPubKeys(derivedXPubs)
-	issuanceProgram, vmver, err := multisigIssuanceProgram(derivedPKs, assetSigner.Quorum)
-	if err != nil {
-		return nil, err
+	vmver := uint64(1)
+	if len(issuanceProgram) == 0 {
+		if len(xpubs) == 0 {
+			return nil, errors.Wrap(signers.ErrNoXPubs)
+		}
+
+		nextAssetIndex := reg.getNextAssetIndex()
+		assetSigner, err = signers.Create("asset", xpubs, quorum, nextAssetIndex)
+		if err != nil {
+			return nil, err
+		}
+
+		path := signers.Path(assetSigner, signers.AssetKeySpace)
+		derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
+		derivedPKs := chainkd.XPubKeys(derivedXPubs)
+		issuanceProgram, vmver, err = multisigIssuanceProgram(derivedPKs, assetSigner.Quorum)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	defHash := bc.NewHash(sha3.Sum256(rawDefinition))
@@ -290,9 +296,12 @@ func (reg *Registry) GetAsset(id string) (*Asset, error) {
 	}
 
 	if extAsset := reg.db.Get(ExtAssetKey(&assetID)); extAsset != nil {
-		if err := json.Unmarshal(extAsset, asset); err != nil {
+		definitionMap := make(map[string]interface{})
+		if err := json.Unmarshal(extAsset, &definitionMap); err != nil {
 			return nil, err
 		}
+		asset.AssetID = assetID
+		asset.DefinitionMap = definitionMap
 		return asset, nil
 	}
 

@@ -26,6 +26,11 @@ const (
 	StatusResponseByte  = byte(0x21)
 	NewTransactionByte  = byte(0x30)
 	NewMineBlockByte    = byte(0x40)
+	FilterLoadByte      = byte(0x50)
+	FilterAddByte       = byte(0x51)
+	FilterClearByte     = byte(0x52)
+	MerkleRequestByte   = byte(0x60)
+	MerkleResponseByte  = byte(0x61)
 
 	maxBlockchainResponseSize = 22020096 + 2
 )
@@ -45,6 +50,11 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&StatusResponseMessage{}, StatusResponseByte},
 	wire.ConcreteType{&TransactionMessage{}, NewTransactionByte},
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
+	wire.ConcreteType{&FilterLoadMessage{}, FilterLoadByte},
+	wire.ConcreteType{&FilterAddMessage{}, FilterAddByte},
+	wire.ConcreteType{&FilterClearMessage{}, FilterClearByte},
+	wire.ConcreteType{&GetMerkleBlockMessage{}, MerkleRequestByte},
+	wire.ConcreteType{&MerkleBlockMessage{}, MerkleResponseByte},
 )
 
 //DecodeMessage decode msg
@@ -338,4 +348,86 @@ func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
 //String convert msg to string
 func (m *MineBlockMessage) String() string {
 	return fmt.Sprintf("NewMineBlockMessage{Size: %d}", len(m.RawBlock))
+}
+
+//FilterLoadMessage tells the receiving peer to filter the transactions according to address.
+type FilterLoadMessage struct {
+	Addresses [][]byte
+}
+
+// FilterAddMessage tells the receiving peer to add address to the filter.
+type FilterAddMessage struct {
+	Address []byte
+}
+
+//FilterClearMessage tells the receiving peer to remove a previously-set filter.
+type FilterClearMessage struct{}
+
+//GetMerkleBlockMessage request merkle blocks from remote peers by height/hash
+type GetMerkleBlockMessage struct {
+	Height  uint64
+	RawHash [32]byte
+}
+
+//GetHash reutrn the hash of the request
+func (m *GetMerkleBlockMessage) GetHash() *bc.Hash {
+	hash := bc.NewHash(m.RawHash)
+	return &hash
+}
+
+//MerkleBlockMessage return the merkle block to client
+type MerkleBlockMessage struct {
+	RawBlockHeader []byte
+	TxHashes       [][32]byte
+	RawTxDatas     [][]byte
+	StatusHashes   [][32]byte
+	RawTxStatuses  [][]byte
+	Flags          []byte
+}
+
+func (msg *MerkleBlockMessage) setRawBlockHeader(bh types.BlockHeader) error {
+	rawHeader, err := bh.MarshalText()
+	if err != nil {
+		return err
+	}
+
+	msg.RawBlockHeader = rawHeader
+	return nil
+}
+
+func (msg *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
+	for _, txHash := range txHashes {
+		msg.TxHashes = append(msg.TxHashes, txHash.Byte32())
+	}
+	for _, tx := range relatedTxs {
+		rawTxData, err := tx.MarshalText()
+		if err != nil {
+			return err
+		}
+
+		msg.RawTxDatas = append(msg.RawTxDatas, rawTxData)
+	}
+	msg.Flags = txFlags
+	return nil
+}
+
+func (msg *MerkleBlockMessage) setStatusInfo(statusHashes []*bc.Hash, relatedStatuses []*bc.TxVerifyResult) error {
+	for _, statusHash := range statusHashes {
+		msg.StatusHashes = append(msg.StatusHashes, statusHash.Byte32())
+	}
+
+	for _, status := range relatedStatuses {
+		rawStatusData, err := json.Marshal(status)
+		if err != nil {
+			return err
+		}
+
+		msg.RawTxStatuses = append(msg.RawTxStatuses, rawStatusData)
+	}
+	return nil
+}
+
+//NewMerkleBlockMessage construct merkle block message
+func NewMerkleBlockMessage() *MerkleBlockMessage {
+	return &MerkleBlockMessage{}
 }

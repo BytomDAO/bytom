@@ -92,6 +92,31 @@ var resetKeyPwdCmd = &cobra.Command{
 	},
 }
 
+var checkKeyPwdCmd = &cobra.Command{
+	Use:   "check-key-password <xpub> <password>",
+	Short: "check key password",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		xpub := new(chainkd.XPub)
+		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
+			jww.ERROR.Println("check-key-password args not valid:", err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		ins := struct {
+			XPub     chainkd.XPub `json:"xpub"`
+			Password string       `json:"password"`
+		}{XPub: *xpub, Password: args[1]}
+
+		data, exitCode := util.ClientCall("/check-key-password", &ins)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		printJSON(data)
+	},
+}
+
 var signMsgCmd = &cobra.Command{
 	Use:   "sign-message <address> <message> <password>",
 	Short: "sign message to generate signature",

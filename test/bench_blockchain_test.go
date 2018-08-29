@@ -138,8 +138,8 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 		return nil, nil, nil, err
 	}
 
-	txPool := protocol.NewTxPool()
 	store := leveldb.NewStore(testDB)
+	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		return nil, nil, nil, err

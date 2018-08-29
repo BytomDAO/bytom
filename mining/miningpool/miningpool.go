@@ -3,7 +3,6 @@ package miningpool
 import (
 	"errors"
 	"sync"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -15,7 +14,6 @@ import (
 )
 
 const (
-	blockUpdateMS   = 1000
 	maxSubmitChSize = 50
 )
 
@@ -45,16 +43,16 @@ func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *p
 		txPool:         txPool,
 		newBlockCh:     newBlockCh,
 	}
+	m.generateBlock()
 	go m.blockUpdater()
 	return m
 }
 
 // blockUpdater is the goroutine for keep update mining block
 func (m *MiningPool) blockUpdater() {
-	ticker := time.NewTicker(time.Millisecond * blockUpdateMS)
 	for {
 		select {
-		case <-ticker.C:
+		case <-m.chain.BlockWaiter(m.chain.BestBlockHeight() + 1):
 			m.generateBlock()
 
 		case submitMsg := <-m.submitCh:
@@ -67,20 +65,16 @@ func (m *MiningPool) blockUpdater() {
 	}
 }
 
+// generateBlock generates a block template to mine
 func (m *MiningPool) generateBlock() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	if m.block != nil && *m.chain.BestBlockHash() == m.block.PreviousBlockHash {
-		m.block.Timestamp = uint64(time.Now().Unix())
-		return
-	}
 
 	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
 	if err != nil {
 		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
 		return
 	}
-
 	m.block = block
 }
 

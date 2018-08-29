@@ -1,7 +1,3 @@
-// Copyright (c) 2014-2016 The btcsuite developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
-
 package mining
 
 import (
@@ -28,34 +24,38 @@ import (
 // is nil, the coinbase transaction will instead be redeemable by anyone.
 func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeight uint64) (tx *types.Tx, err error) {
 	amount += consensus.BlockSubsidy(blockHeight)
+	arbitrary := append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...)
 
 	var script []byte
 	if accountManager == nil {
 		script, err = vmutil.DefaultCoinbaseProgram()
 	} else {
 		script, err = accountManager.GetCoinbaseControlProgram()
+		arbitrary = append(arbitrary, accountManager.GetCoinbaseArbitrary()...)
 	}
 	if err != nil {
-		return
+		return nil, err
+	}
+
+	if len(arbitrary) > consensus.CoinbaseArbitrarySizeLimit {
+		return nil, validation.ErrCoinbaseArbitraryOversize
 	}
 
 	builder := txbuilder.NewBuilder(time.Now())
-	if err = builder.AddInput(types.NewCoinbaseInput(
-		append([]byte{0x00}, []byte(strconv.FormatUint(blockHeight, 10))...),
-	), &txbuilder.SigningInstruction{}); err != nil {
-		return
+	if err = builder.AddInput(types.NewCoinbaseInput(arbitrary), &txbuilder.SigningInstruction{}); err != nil {
+		return nil, err
 	}
 	if err = builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, amount, script)); err != nil {
-		return
+		return nil, err
 	}
 	_, txData, err := builder.Build()
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	byteData, err := txData.MarshalText()
 	if err != nil {
-		return
+		return nil, err
 	}
 	txData.SerializedSize = uint64(len(byteData))
 
@@ -63,7 +63,7 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 		TxData: *txData,
 		Tx:     types.MapTx(txData),
 	}
-	return
+	return tx, nil
 }
 
 // NewBlockTemplate returns a new block template that is ready to be solved
@@ -147,11 +147,11 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	}
 	txEntries[0] = b.Transactions[0].Tx
 
-	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = bc.TxMerkleRoot(txEntries)
+	b.BlockHeader.BlockCommitment.TransactionsMerkleRoot, err = types.TxMerkleRoot(txEntries)
 	if err != nil {
 		return nil, err
 	}
 
-	b.BlockHeader.BlockCommitment.TransactionStatusHash, err = bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	b.BlockHeader.BlockCommitment.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	return b, err
 }

@@ -51,7 +51,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, nil)
-	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, "TESTASSET")
+	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, "TESTASSET", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,26 +81,26 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	gotTxs, err := w.GetUnconfirmedTxs("")
 	for i, want := range wantTxs {
 		if !testutil.DeepEqual(gotTxs[i].ID, want.ID) {
-			t.Errorf(`the NO %i transaction, tx got=%#v; want=%#v`, i, gotTxs[i].ID.String(), want.ID.String())
+			t.Errorf(`the NO %d transaction, tx got=%#v; want=%#v`, i, gotTxs[i].ID.String(), want.ID.String())
 		}
 
 		for j, input := range want.Inputs {
 			if !testutil.DeepEqual(gotTxs[i].Inputs[j].AccountID, input.AccountID) {
-				t.Errorf(`the NO %i transaction input, accountID got=%#v; want=%#v`, j, gotTxs[i].Inputs[j].AccountID, input.AccountID)
+				t.Errorf(`the NO %d transaction input, accountID got=%#v; want=%#v`, j, gotTxs[i].Inputs[j].AccountID, input.AccountID)
 			}
 
 			if !testutil.DeepEqual(gotTxs[i].Inputs[j].AssetID, input.AssetID) {
-				t.Errorf(`the NO %i transaction input, assetID got=%#v; want=%#v`, j, gotTxs[i].Inputs[j].AssetID, input.AssetID)
+				t.Errorf(`the NO %d transaction input, assetID got=%#v; want=%#v`, j, gotTxs[i].Inputs[j].AssetID, input.AssetID)
 			}
 		}
 
 		for k, output := range want.Outputs {
 			if !testutil.DeepEqual(gotTxs[i].Outputs[k].AccountID, output.AccountID) {
-				t.Errorf(`the NO %i transaction input, accountID got=%#v; want=%#v`, k, gotTxs[i].Inputs[k].AccountID, output.AccountID)
+				t.Errorf(`the NO %d transaction input, accountID got=%#v; want=%#v`, k, gotTxs[i].Inputs[k].AccountID, output.AccountID)
 			}
 
 			if !testutil.DeepEqual(gotTxs[i].Outputs[k].AssetID, output.AssetID) {
-				t.Errorf(`the NO %i transaction input, assetID got=%#v; want=%#v`, k, gotTxs[i].Inputs[k].AssetID, output.AssetID)
+				t.Errorf(`the NO %d transaction input, assetID got=%#v; want=%#v`, k, gotTxs[i].Inputs[k].AssetID, output.AssetID)
 			}
 		}
 	}

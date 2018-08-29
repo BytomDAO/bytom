@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
@@ -30,12 +31,11 @@ import (
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/types"
 	w "github.com/bytom/wallet"
 )
 
 const (
-	webAddress        = "http://127.0.0.1:9888"
+	webHost           = "http://127.0.0.1"
 	maxNewBlockChSize = 1024
 )
 
@@ -47,7 +47,6 @@ type Node struct {
 
 	syncManager *netsync.SyncManager
 
-	evsw types.EventSwitch // pub/sub for services
 	//bcReactor    *bc.BlockchainReactor
 	wallet       *w.Wallet
 	accessTokens *accesstoken.CredentialStore
@@ -73,13 +72,7 @@ func NewNode(config *cfg.Config) *Node {
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
 
-	// Make event switch
-	eventSwitch := types.NewEventSwitch()
-	if _, err := eventSwitch.Start(); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
-	}
-
-	txPool := protocol.NewTxPool()
+	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
@@ -137,7 +130,6 @@ func NewNode(config *cfg.Config) *Node {
 	node := &Node{
 		config:       config,
 		syncManager:  syncManager,
-		evsw:         eventSwitch,
 		accessTokens: accessTokens,
 		wallet:       wallet,
 		chain:        chain,
@@ -212,7 +204,8 @@ func initLogFile(config *cfg.Config) {
 }
 
 // Lanch web broser or not
-func launchWebBrowser() {
+func launchWebBrowser(port string) {
+	webAddress := webHost + ":" + port
 	log.Info("Launching System Browser with :", webAddress)
 	if err := browser.Open(webAddress); err != nil {
 		log.Error(err.Error())
@@ -230,14 +223,23 @@ func (n *Node) initAndstartApiServer() {
 
 func (n *Node) OnStart() error {
 	if n.miningEnable {
-		n.cpuMiner.Start()
+		if _, err := n.wallet.AccountMgr.GetMiningAddress(); err != nil {
+			n.miningEnable = false
+			log.Error(err)
+		} else {
+			n.cpuMiner.Start()
+		}
 	}
 	if !n.config.VaultMode {
 		n.syncManager.Start()
 	}
 	n.initAndstartApiServer()
 	if !n.config.Web.Closed {
-		launchWebBrowser()
+		s := strings.Split(n.config.ApiAddress, ":")
+		if len(s) != 2 {
+			log.Error("Invalid api address")
+		}
+		launchWebBrowser(s[1])
 	}
 	return nil
 }
@@ -257,10 +259,6 @@ func (n *Node) RunForever() {
 	cmn.TrapSignal(func() {
 		n.Stop()
 	})
-}
-
-func (n *Node) EventSwitch() types.EventSwitch {
-	return n.evsw
 }
 
 func (n *Node) SyncManager() *netsync.SyncManager {

@@ -87,11 +87,17 @@ release-all: clean
 	GOOS=windows make release
 
 clean:
-	@echo "Cleaning binaries built"
+	@echo "Cleaning binaries built..."
 	@rm -rf cmd/bytomd/bytomd
 	@rm -rf cmd/bytomcli/bytomcli
 	@rm -rf cmd/miner/miner
 	@rm -rf target
+	@echo "Cleaning temp test data..."
+	@rm -rf test/pseudo_hsm*
+	@rm -rf blockchain/pseudohsm/testdata/pseudo/
+	@echo "Cleaning sm2 pem files..."
+	@rm -rf crypto/sm2/*.pem
+	@echo "Done."
 
 target/$(BYTOMD_BINARY32):
 	CGO_ENABLED=0 GOARCH=386 go build $(BUILD_FLAGS) -o $@ cmd/bytomd/main.go
@@ -119,7 +125,7 @@ benchmark:
 	@go test -bench $(PACKAGES)
 
 functional-tests:
-	@go test -v -timeout=5m -tags="functional" ./test 
+	@go test -timeout=5m -tags="functional" ./test 
 
 ci: test functional-tests
 
