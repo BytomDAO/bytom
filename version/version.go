@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	// If edit the iota, please ensure the following:
+	// If needing to edit the iota, please ensure the following:
 	// noUpdate = 0
 	// hasUpdate = 1
 	// hasMUpdate = 2
