@@ -84,37 +84,37 @@ func (ps *PeerSet) AddBannedPeer(string) error { return nil }
 func (ps *PeerSet) StopPeerGracefully(string)  {}
 
 type NetWork struct {
-	nodes map[*SyncManager]*P2PPeer
+	nodes map[*SyncManager]P2PPeer
 }
 
 func NewNetWork() *NetWork {
-	return &NetWork{map[*SyncManager]*P2PPeer{}}
+	return &NetWork{map[*SyncManager]P2PPeer{}}
 }
 
 func (nw *NetWork) Register(node *SyncManager, addr, id string, flag consensus.ServiceFlag) {
 	peer := NewP2PPeer(addr, id, flag)
-	nw.nodes[node] = peer
+	nw.nodes[node] = *peer
 }
 
-func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) error {
+func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) (*P2PPeer, *P2PPeer, error) {
 	B2A, ok := nw.nodes[nodeA]
 	if !ok {
-		return errors.New("can't find nodeA's p2p peer on network")
+		return nil, nil, errors.New("can't find nodeA's p2p peer on network")
 	}
 	A2B, ok := nw.nodes[nodeB]
 	if !ok {
-		return errors.New("can't find nodeB's p2p peer on network")
+		return nil, nil, errors.New("can't find nodeB's p2p peer on network")
 	}
 
-	A2B.SetConnection(B2A, nodeB)
-	B2A.SetConnection(A2B, nodeA)
+	A2B.SetConnection(&B2A, nodeB)
+	B2A.SetConnection(&A2B, nodeA)
 
-	nodeA.handleStatusRequestMsg(A2B)
-	nodeB.handleStatusRequestMsg(B2A)
+	nodeA.handleStatusRequestMsg(&A2B)
+	nodeB.handleStatusRequestMsg(&B2A)
 
 	A2B.setAsync(true)
 	B2A.setAsync(true)
-	return nil
+	return &B2A, &A2B, nil
 }
 
 func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {

@@ -183,14 +183,12 @@ func TestFastBlockSync(t *testing.T) {
 		netWork := NewNetWork()
 		netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)
 		netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode)
-		if err := netWork.HandsShake(a, b); err != nil {
+		if B2A, A2B, err := netWork.HandsShake(a, b); err != nil {
 			t.Errorf("fail on peer hands shake %v", err)
+		} else {
+			go B2A.postMan()
+			go A2B.postMan()
 		}
-
-		B2A, _ := netWork.nodes[a]
-		A2B, _ := netWork.nodes[b]
-		go B2A.postMan()
-		go A2B.postMan()
 
 		a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
 		if err := a.blockKeeper.fastBlockSync(c.checkPoint); errors.Root(err) != c.err {
@@ -446,14 +444,12 @@ func TestRegularBlockSync(t *testing.T) {
 		netWork := NewNetWork()
 		netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)
 		netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode)
-		if err := netWork.HandsShake(a, b); err != nil {
+		if B2A, A2B, err := netWork.HandsShake(a, b); err != nil {
 			t.Errorf("fail on peer hands shake %v", err)
+		} else {
+			go B2A.postMan()
+			go A2B.postMan()
 		}
-
-		B2A, _ := netWork.nodes[a]
-		A2B, _ := netWork.nodes[b]
-		go B2A.postMan()
-		go A2B.postMan()
 
 		a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
 		if err := a.blockKeeper.regularBlockSync(c.syncHeight); errors.Root(err) != c.err {
@@ -482,14 +478,12 @@ func TestRequireBlock(t *testing.T) {
 	netWork := NewNetWork()
 	netWork.Register(a, "192.168.0.1", "test node A", consensus.SFFullNode)
 	netWork.Register(b, "192.168.0.2", "test node B", consensus.SFFullNode)
-	if err := netWork.HandsShake(a, b); err != nil {
+	if B2A, A2B, err := netWork.HandsShake(a, b); err != nil {
 		t.Errorf("fail on peer hands shake %v", err)
+	} else {
+		go B2A.postMan()
+		go A2B.postMan()
 	}
-
-	B2A, _ := netWork.nodes[a]
-	A2B, _ := netWork.nodes[b]
-	go B2A.postMan()
-	go A2B.postMan()
 
 	a.blockKeeper.syncPeer = a.peers.getPeer("test node B")
 	b.blockKeeper.syncPeer = b.peers.getPeer("test node A")
@@ -569,17 +563,20 @@ func TestSendMerkleBlock(t *testing.T) {
 			t.Fatal(err)
 		}
 		
-		targetBlock.TransactionStatusHash, _ = types.TxStatusMerkleRoot(statusResult.VerifyStatus)
+		if targetBlock.TransactionStatusHash, err = types.TxStatusMerkleRoot(statusResult.VerifyStatus); err != nil {
+			t.Fatal(err)
+		}
+		
 		fullNode := mockSync(blocks)
-
 		netWork := NewNetWork()
 		netWork.Register(spvNode, "192.168.0.1", "spv_node", consensus.SFFastSync)
 		netWork.Register(fullNode, "192.168.0.2", "full_node", consensus.DefaultServices)
-		if err := netWork.HandsShake(spvNode, fullNode); err != nil {
+
+		var F2S *P2PPeer
+		if F2S, _, err = netWork.HandsShake(spvNode, fullNode); err != nil {
 			t.Errorf("fail on peer hands shake %v", err)
 		}
 
-		F2S := netWork.nodes[spvNode]
 		completed := make(chan error)
 		go func() {
 			msgBytes := <-F2S.msgCh
