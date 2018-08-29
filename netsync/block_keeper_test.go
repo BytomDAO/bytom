@@ -587,7 +587,7 @@ func TestSendMerkleBlock(t *testing.T) {
 				for _, rawTx := range m.RawTxDatas {
 					tx := &types.Tx{}
 					if err := tx.UnmarshalText(rawTx); err != nil {
-						t.Fatal(err)
+						completed <- err
 					}
 
 					relatedTxIDs = append(relatedTxIDs, &tx.ID)
