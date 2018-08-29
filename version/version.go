@@ -9,10 +9,15 @@ import (
 )
 
 const (
+	// If edit the iota, please ensure the following:
+	// noUpdate = 0
+	// hasUpdate = 1
+	// hasMUpdate = 2
 	noUpdate uint16 = iota
 	hasUpdate
 	hasMUpdate
-	revLen = 8
+
+	revisionLen = 8
 )
 
 var (
@@ -25,7 +30,7 @@ var (
 
 func init() {
 	if GitCommit != "" {
-		Version += "+" + GitCommit[:revLen]
+		Version += "+" + GitCommit[:revisionLen]
 	}
 	Status = &UpdateStatus{
 		maxVerSeen:    Version,

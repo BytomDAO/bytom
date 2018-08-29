@@ -9,11 +9,16 @@ import (
 	gover "github.com/hashicorp/go-version"
 )
 
+func TestRevisionLen(t *testing.T) {
+	if revisionLen > 16 {
+		t.Error("revisionLen too long")
+	}
+}
+
 func TestCompare(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
-	i := rand.Int63n(0xffffffff)
-	verb := fmt.Sprintf("%%%dx", revLen)
-	rev := fmt.Sprintf(verb, i)
+	i := rand.Uint64()
+	rev := fmt.Sprintf("%16x", i)[:revisionLen]
 
 	v1, err := gover.NewVersion(Version)
 	if err != nil {
@@ -28,6 +33,10 @@ func TestCompare(t *testing.T) {
 	}
 }
 
+// In case someone edit the iota part and have the mapping changed:
+// noUpdate: 0
+// hasUpdate: 1
+// hasMUpdate: 2
 func TestFlag(t *testing.T) {
 	if noUpdate != 0 {
 		t.Error("noUpdate value error")
