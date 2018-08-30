@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strconv"
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
@@ -33,7 +34,18 @@ func (a *API) getCoinbaseArbitrary() Response {
 	return NewSuccessResponse(resp)
 }
 
+// setCoinbaseArbitrary add arbitary data to the reserved coinbase data.
+// check function createCoinbaseTx in mining/mining.go for detail.
+// arbitraryLenLimit is 107 and can be calculated by:
+// 	maxHeight := ^uint64(0)
+// 	reserved := append([]byte{0x00}, []byte(strconv.FormatUint(maxHeight, 10))...)
+// 	arbitraryLenLimit := consensus.CoinbaseArbitrarySizeLimit - len(reserved)
 func (a *API) setCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) Response {
+	arbitraryLenLimit := 107
+	if len(req.Arbitrary) > arbitraryLenLimit {
+		err := errors.New("Arbitrary exceeds limit: " + strconv.FormatUint(uint64(arbitraryLenLimit), 10))
+		return NewErrorResponse(err)
+	}
 	a.wallet.AccountMgr.SetCoinbaseArbitrary(req.Arbitrary)
 	return a.getCoinbaseArbitrary()
 }
