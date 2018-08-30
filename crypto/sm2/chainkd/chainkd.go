@@ -5,6 +5,9 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"io"
+	"math/big"
+
+	"github.com/bytom/crypto/sm2"
 )
 
 type (
@@ -30,16 +33,32 @@ type (
 
 // NewXPrv takes a source of random bytes and produces a new XPrv.
 // If r is nil, crypto/rand.Reader is used.
-func NewXPrv(r io.Reader) (xprv XPrv, err error) {
+func NewXPrv(r io.Reader) (xprv XPrv, xpub XPub, err error) {
 	if r == nil {
 		r = rand.Reader
 	}
 	var entropy [32]byte
 	_, err = io.ReadFull(r, entropy[:])
 	if err != nil {
-		return xprv, err
+		return xprv, xpub, err
 	}
-	return RootXPrv(entropy[:]), nil
+	h := hmac.New(sha512.New, []byte{'R', 'o', 'o', 't'})
+	h.Write(entropy[:])
+	h.Sum(xprv[:0])
+
+	c := sm2.P256Sm2()
+	k := new(big.Int).SetBytes(xprv[:32])
+	priv := new(sm2.PrivateKey)
+	priv.PublicKey.Curve = c
+	priv.D = k
+	priv.PublicKey.X, priv.PublicKey.Y = c.ScalarBaseMult(k.Bytes())
+
+	pubkey := priv.Public().(*(sm2.PublicKey))
+	compPubkey := sm2.Compress(pubkey)
+	copy(xpub[:33], compPubkey[:])
+	copy(xpub[33:], xprv[32:])
+
+	return xprv, xpub, nil
 }
 
 // // RootXPrv takes a seed binary string and produces a new xprv.
@@ -50,14 +69,6 @@ func NewXPrv(r io.Reader) (xprv XPrv, err error) {
 // 	pruneRootScalar(xprv[:32])
 // 	return
 // }
-
-// RootXPrv takes a seed binary string and produces a new xprv.
-func RootXPrv(seed []byte) (xprv XPrv) {
-	h := hmac.New(sha512.New, []byte{'R', 'o', 'o', 't'})
-	h.Write(seed)
-	h.Sum(xprv[:0])
-	return
-}
 
 // // XPub derives an extended public key from a given xprv.
 // func (xprv XPrv) XPub() (xpub XPub) {

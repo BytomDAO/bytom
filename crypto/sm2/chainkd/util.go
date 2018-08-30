@@ -1,5 +1,9 @@
 package chainkd
 
+import (
+	"io"
+)
+
 // Utility functions
 
 // func NewXKeys(r io.Reader) (xprv XPrv, xpub XPub, err error) {
@@ -10,13 +14,13 @@ package chainkd
 // 	return xprv, xprv.XPub(), nil
 // }
 
-// func NewXKeys(r io.Reader) (xprv XPrv, xpub XPub, err error) {
-// 	xprv, err = NewXPrv(r)
-// 	if err != nil {
-// 		return
-// 	}
-// 	return xprv, xprv.XPub(), nil
-// }
+func NewXKeys(r io.Reader) (xprv XPrv, xpub XPub, err error) {
+	xprv, err = NewXPrv(r)
+	if err != nil {
+		return
+	}
+	return xprv, xprv.XPub(), nil
+}
 
 // func XPubKeys(xpubs []XPub) []ed25519.PublicKey {
 // 	res := make([]ed25519.PublicKey, 0, len(xpubs))
