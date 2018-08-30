@@ -6,7 +6,6 @@ import (
 
 // Utility functions
 
-// NewXKeys create new xprv and xpub
 func NewXKeys(r io.Reader) (xprv XPrv, xpub XPub, err error) {
 	xprv, err = NewXPrv(r)
 	if err != nil {
