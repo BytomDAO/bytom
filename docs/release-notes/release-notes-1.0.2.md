@@ -10,7 +10,7 @@ Please report bugs using the issue tracker at github:
 How to Upgrade
 ===============
 
-If you are running an older version, shut it down. Wait until it has completely, then run the new version Bytom.
+If you are running an older version, shut it down. Wait until it has quited completely, and then run the new version Bytom.
 You can operate according to the user manual.[(Bytom User Manual)](URL 'https://bytom.io/wp-content/themes/freddo/images/wallet/BytomUsermanualV1.0_en.pdf')
 
 

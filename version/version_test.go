@@ -1,10 +1,7 @@
 package version
 
 import (
-	"fmt"
-	"math/rand"
 	"testing"
-	"time"
 
 	gover "github.com/hashicorp/go-version"
 )
@@ -16,17 +13,13 @@ func TestRevisionLen(t *testing.T) {
 }
 
 func TestCompare(t *testing.T) {
-	rand.Seed(time.Now().UnixNano())
-	i := rand.Uint64()
-	rev := fmt.Sprintf("%16x", i)[:revisionLen]
-
 	v1, err := gover.NewVersion(Version)
 	if err != nil {
-		t.Error("Version 1 format error.")
+		t.Fatal("Version 1 format error.")
 	}
-	v2, err := gover.NewVersion(Version + "+" + rev)
+	v2, err := gover.NewVersion(Version + "+f873dfca")
 	if err != nil {
-		t.Error("Version 2 format error.")
+		t.Fatal("Version 2 format error.")
 	}
 	if v1.GreaterThan(v2) || v1.GreaterThan(v2) {
 		t.Error("Version comparison error.")
