@@ -27,6 +27,7 @@ import (
 	"encoding/asn1"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 
@@ -496,11 +497,20 @@ func Compress(a *PublicKey) []byte {
 	if n := len(a.X.Bytes()); n < 32 {
 		buf = append(zeroByteSlice()[:(32-n)], buf...)
 	}
-	buf = append([]byte{byte(yp)}, buf...)
+	// RFC: GB/T 32918.1-2016 4.2.9
+	// if yp = 0, buf = 02||x
+	// if yp = 0, buf = 03||x
+	if yp == uint(0) {
+		buf = append([]byte{byte(2)}, buf...)
+	}
+	if yp == uint(1) {
+		buf = append([]byte{byte(3)}, buf...)
+	}
 	return buf
 }
 
 func Decompress(a []byte) *PublicKey {
+	fmt.Printf("a : %x\n", a)
 	var aa, xx, xx3 sm2P256FieldElement
 
 	P256Sm2()
@@ -515,7 +525,12 @@ func Decompress(a []byte) *PublicKey {
 
 	y2 := sm2P256ToBig(&xx3)
 	y := new(big.Int).ModSqrt(y2, sm2P256.P)
-	if getLastBit(y) != uint(a[0]) {
+
+	// RFC: GB/T 32918.1-2016 4.2.10
+	// if a[0] = 02, getLastBit(y) = 0
+	// if a[0] = 03, getLastBit(y) = 1
+	// if yp = 0, buf = 03||x
+	if getLastBit(y) != uint(a[0])-2 {
 		y.Sub(sm2P256.P, y)
 	}
 	return &PublicKey{
