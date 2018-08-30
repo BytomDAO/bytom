@@ -160,6 +160,9 @@ func getMerkleTreeProof(rawDatas []merkleNode, relatedRawDatas []merkleNode) ([]
 		merkleHash := leafMerkleHash(data)
 		merkleHashSet.Add(merkleHash.String())
 	}
+	if merkleHashSet.Size() == 0 {
+		return []*bc.Hash{&merkleTree.hash}, []uint8{FlagAssist}
+	}
 	return merkleTree.getMerkleTreeProof(merkleHashSet)
 }
 
@@ -222,36 +225,43 @@ func GetStatusMerkleTreeProof(statuses []*bc.TxVerifyResult, flags []uint8) []*b
 
 // getMerkleRootByProof caculate the merkle root hash according to the proof
 func getMerkleRootByProof(hashList *list.List, flagList *list.List, merkleHashes *list.List) bc.Hash {
-	if flagList.Len() == 0 {
+	if flagList.Len() == 0 || hashList.Len() == 0 {
 		return bc.EmptyStringHash
 	}
 	flagEle := flagList.Front()
 	flag := flagEle.Value.(uint8)
 	flagList.Remove(flagEle)
-	if flag == FlagAssist {
-		hash := hashList.Front()
-		hashList.Remove(hash)
-		return hash.Value.(bc.Hash)
-	}
-	if flag == FlagTxLeaf {
-		if hashList.Len() == 0 || merkleHashes.Len() == 0 {
-			return bc.EmptyStringHash
+	switch flag {
+	case FlagAssist:
+		{
+			hash := hashList.Front()
+			hashList.Remove(hash)
+			return hash.Value.(bc.Hash)
 		}
-		hashEle := hashList.Front()
-		hash := hashEle.Value.(bc.Hash)
-		relatedHashEle := merkleHashes.Front()
-		relatedHash := relatedHashEle.Value.(bc.Hash)
-		if hash == relatedHash {
-			hashList.Remove(hashEle)
-			merkleHashes.Remove(relatedHashEle)
+	case FlagTxLeaf:
+		{
+			if merkleHashes.Len() == 0 {
+				return bc.EmptyStringHash
+			}
+			hashEle := hashList.Front()
+			hash := hashEle.Value.(bc.Hash)
+			relatedHashEle := merkleHashes.Front()
+			relatedHash := relatedHashEle.Value.(bc.Hash)
+			if hash == relatedHash {
+				hashList.Remove(hashEle)
+				merkleHashes.Remove(relatedHashEle)
+				return hash
+			}
+		}
+	case FlagTxParent:
+		{
+			leftHash := getMerkleRootByProof(hashList, flagList, merkleHashes)
+			rightHash := getMerkleRootByProof(hashList, flagList, merkleHashes)
+			hash := interiorMerkleHash(&leftHash, &rightHash)
 			return hash
 		}
-		return bc.EmptyStringHash
 	}
-	leftHash := getMerkleRootByProof(hashList, flagList, merkleHashes)
-	rightHash := getMerkleRootByProof(hashList, flagList, merkleHashes)
-	hash := interiorMerkleHash(&leftHash, &rightHash)
-	return hash
+	return bc.EmptyStringHash
 }
 
 func newMerkleTreeNode(merkleHash bc.Hash, left *merkleTreeNode, right *merkleTreeNode) *merkleTreeNode {
