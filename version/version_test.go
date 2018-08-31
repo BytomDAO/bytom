@@ -20,6 +20,57 @@ func TestCompare(t *testing.T) {
 	}
 }
 
+func TestCompatibleWith(t *testing.T) {
+	cases := []struct {
+		a      string
+		b      string
+		result bool
+	}{
+		{
+			"1.0.4",
+			"1.0.4",
+			true,
+		},
+		{
+			"1.0.4",
+			"1.0.5",
+			true,
+		},
+		{
+			"1.0.4",
+			"1.1.5",
+			true,
+		},
+		{
+			"1.0.5",
+			"1.0.5-90825109",
+			true,
+		},
+		{
+			"1.0.5",
+			"1.0.5+90825109",
+			true,
+		},
+		{
+			"1.0.5",
+			"2.0.5",
+			false,
+		},
+		{
+			"1.0.5-90825109",
+			"1.0.5+90825109",
+			true,
+		},
+	}
+
+	for i, c := range cases {
+		Version = c.a
+		if result, _ := CompatibleWith(c.b); c.result != result {
+			t.Errorf("case %d: got %b want %b", i, c.result, result)
+		}
+	}
+}
+
 // In case someone edit the iota part and have the mapping changed:
 // noUpdate: 0
 // hasUpdate: 1
