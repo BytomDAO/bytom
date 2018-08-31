@@ -6,12 +6,6 @@ import (
 	gover "github.com/hashicorp/go-version"
 )
 
-func TestRevisionLen(t *testing.T) {
-	if revisionLen > 16 {
-		t.Error("revisionLen too long")
-	}
-}
-
 func TestCompare(t *testing.T) {
 	v1, err := gover.NewVersion(Version)
 	if err != nil {
