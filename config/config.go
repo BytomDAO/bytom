@@ -97,9 +97,6 @@ type BaseConfig struct {
 
 	// log file name
 	LogFile string `mapstructure:"log_file"`
-
-	// max transaction fee
-	MaxTxFee uint64 `mapstructure:"max_tx_fee"`
 }
 
 // Default configurable base parameters.
@@ -115,7 +112,6 @@ func DefaultBaseConfig() BaseConfig {
 		DBPath:            "data",
 		KeysPath:          "keystore",
 		HsmUrl:            "",
-		MaxTxFee:          uint64(1000000000),
 	}
 }
 
@@ -161,8 +157,9 @@ func (p *P2PConfig) AddrBookFile() string {
 
 //-----------------------------------------------------------------------------
 type WalletConfig struct {
-	Disable bool `mapstructure:"disable"`
-	Rescan  bool `mapstructure:"rescan"`
+	Disable  bool   `mapstructure:"disable"`
+	Rescan   bool   `mapstructure:"rescan"`
+	MaxTxFee uint64 `mapstructure:"max_tx_fee"`
 }
 
 type RPCAuthConfig struct {
@@ -194,8 +191,9 @@ func DefaultWebConfig() *WebConfig {
 // Default configurable wallet parameters.
 func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
-		Disable: false,
-		Rescan:  false,
+		Disable:  false,
+		Rescan:   false,
+		MaxTxFee: uint64(1000000000),
 	}
 }
 

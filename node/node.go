@@ -206,7 +206,7 @@ func initLogFile(config *cfg.Config) {
 }
 
 func initCommonConfig(config *cfg.Config) {
-	cfg.ConfigMaxTxFee = config.MaxTxFee
+	cfg.ConfigMaxTxFee = config.Wallet.MaxTxFee
 }
 
 // Lanch web broser or not
