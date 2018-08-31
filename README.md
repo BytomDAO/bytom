@@ -103,6 +103,7 @@ available flags for `bytomd node`:
       --wallet.disable              Disable wallet
       --wallet.rescan               Rescan wallet
       --web.closed                  Lanch web browser or not
+      --simd.enable                 Enable the _simd_ feature to speed up the _PoW_ verification (e.g., during mining and block verification)
 ```
 
 Given the `bytomd` node is running, the general workflow is as follows:
