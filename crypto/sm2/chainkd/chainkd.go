@@ -1,5 +1,9 @@
 package chainkd
 
+import (
+	"github.com/bytom/crypto/sm2"
+)
+
 type (
 	//XPrv external private key
 	XPrv [64]byte
@@ -246,6 +250,11 @@ type (
 // func (xpub XPub) PublicKey() ed25519.PublicKey {
 // 	return ed25519.PublicKey(xpub[:32])
 // }
+
+// PublicKey extracts the sm2 public key from an xpub.
+func (xpub XPub) PublicKey() sm2.PubKey {
+	return sm2.PubKey(xpub[:33])
+}
 
 // // s must be >= 32 bytes long and gets rewritten in place.
 // // This is NOT the same pruning as in Ed25519: it additionally clears the third
