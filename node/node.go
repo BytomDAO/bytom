@@ -123,7 +123,9 @@ func NewNode(config *cfg.Config) *Node {
 		// Profiling bytomd programs.see (https://blog.golang.org/profiling-go-programs)
 		// go tool pprof http://profileHose/debug/pprof/heap
 		go func() {
-			http.ListenAndServe(profileHost, nil)
+			if err = http.ListenAndServe(profileHost, nil); err != nil {
+				cmn.Exit(cmn.Fmt("Failed to register tcp profileHost: %v", err))
+			}
 		}()
 	}
 
