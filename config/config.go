@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	// ConfigMaxTxFee means config maxTxFee
-	ConfigMaxTxFee uint64
+	// CommonConfig means config object
+	CommonConfig *Config
 )
 
 type Config struct {

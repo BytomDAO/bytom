@@ -29,7 +29,7 @@ var (
 // assembles a fully signed tx, and stores the effects of
 // its changes on the UTXO set.
 func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
-	if fee := calculateTxFee(tx); fee > cfg.ConfigMaxTxFee {
+	if fee := calculateTxFee(tx); fee > cfg.CommonConfig.Wallet.MaxTxFee {
 		return ErrExtTxFee
 	}
 
