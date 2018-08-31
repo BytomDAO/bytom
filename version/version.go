@@ -1,3 +1,29 @@
+// package version provide the version info for the node, and also provide
+// support for version compatibility check and update notification.
+//
+// The version format should follow Semantic Versioning (https://semver.org/):
+// MAJOR.MINOR.PATCH
+//  1. MAJOR version when you make incompatible API changes,
+//  2. MINOR version when you add functionality in a backwards-compatible manner, and
+// 	3. PATCH version when you make backwards-compatible bug fixes.
+//
+// A pre-release version MAY be denoted by appending a hyphen and a series of
+// dot separated identifiers immediately following the patch version.
+// Examples:
+// 1.0.0-alpha, 1.0.0-alpha.1, 1.0.0-0.3.7, 1.0.0-x.7.z.92.
+// Precedence:
+// 1. Pre-release versions have a lower precedence than the associated normal version!
+//    Numeric identifiers always have lower precedence than non-numeric identifiers.
+// 2. A larger set of pre-release fields has a higher precedence than a smaller set,
+//    if all of the preceding identifiers are equal.
+// 3. Example:
+//    1.0.0-alpha < 1.0.0-alpha.1 < 1.0.0-alpha.beta < 1.0.0-beta < 1.0.0-beta.2 < 1.0.0-beta.11 < 1.0.0-rc.1 < 1.0.0.
+//
+// Build metadata MAY be denoted by appending a plus sign and a series of dot
+// separated identifiers immediately following the patch or pre-release version.
+// Build metadata SHOULD be ignored when determining version precedence. Thus
+// two versions that differ only in the build metadata, have the same precedence.
+
 package version
 
 import (
@@ -16,8 +42,6 @@ const (
 	noUpdate uint16 = iota
 	hasUpdate
 	hasMUpdate
-
-	revisionLen = 8 // should falls in [1:16]
 )
 
 var (
@@ -30,7 +54,7 @@ var (
 
 func init() {
 	if GitCommit != "" {
-		Version += "+" + GitCommit[:revisionLen]
+		Version += "+" + GitCommit[:8]
 	}
 	Status = &UpdateStatus{
 		maxVerSeen:    Version,
