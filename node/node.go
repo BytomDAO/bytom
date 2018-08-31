@@ -65,6 +65,8 @@ func NewNode(config *cfg.Config) *Node {
 	}
 	initLogFile(config)
 	initActiveNetParams(config)
+	initCommonConfig(config)
+
 	// Get store
 	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
 	store := leveldb.NewStore(coreDB)
@@ -203,6 +205,10 @@ func initLogFile(config *cfg.Config) {
 		log.WithField("err", err).Info("using default")
 	}
 
+}
+
+func initCommonConfig(config *cfg.Config) {
+	cfg.CommonConfig = config
 }
 
 // Lanch web broser or not
