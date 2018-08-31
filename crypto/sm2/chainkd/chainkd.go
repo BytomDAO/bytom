@@ -1,6 +1,10 @@
 package chainkd
 
 import (
+	"crypto/hmac"
+	"crypto/sha512"
+	"math/big"
+
 	"github.com/bytom/crypto/sm2"
 )
 
@@ -10,29 +14,6 @@ type (
 	//XPub external public key
 	XPub [65]byte
 )
-
-// // NewXPrv takes a source of random bytes and produces a new XPrv.
-// // If r is nil, crypto/rand.Reader is used.
-// func NewXPrv(r io.Reader) (xprv XPrv, err error) {
-// 	if r == nil {
-// 		r = rand.Reader
-// 	}
-// 	var entropy [32]byte
-// 	_, err = io.ReadFull(r, entropy[:])
-// 	if err != nil {
-// 		return xprv, err
-// 	}
-// 	return RootXPrv(entropy[:]), nil
-// }
-
-// // RootXPrv takes a seed binary string and produces a new xprv.
-// func RootXPrv(seed []byte) (xprv XPrv) {
-// 	h := hmac.New(sha512.New, []byte{'R', 'o', 'o', 't'})
-// 	h.Write(seed)
-// 	h.Sum(xprv[:0])
-// 	pruneRootScalar(xprv[:32])
-// 	return
-// }
 
 // // XPub derives an extended public key from a given xprv.
 // func (xprv XPrv) XPub() (xpub XPub) {
@@ -199,6 +180,37 @@ type (
 // 	return
 // }
 
+// Child derives a child xpub based on `selector` string.
+// The corresponding child xprv can be derived from the parent xprv
+// using non-hardened derivation: `parentxprv.Child(sel, false)`.
+func (xpub XPub) Child(sel []byte) (xpubkey XPub) {
+	res := make([]byte, 64)
+	h := hmac.New(sha512.New, xpub[33:])
+	h.Write([]byte{'N'})
+	h.Write(xpub[:33])
+	h.Write(sel)
+	h.Sum(res[:0])
+
+	k := new(big.Int).SetBytes(res[:32])
+	c := sm2.P256Sm2()
+	priv := new(sm2.PrivateKey)
+	priv.PublicKey.Curve = c
+	priv.D = k
+	// child pubkey point x and y
+	priv.PublicKey.X, priv.PublicKey.Y = c.ScalarBaseMult(k.Bytes())
+
+	parPubkey := sm2.Decompress(xpub[:33])
+	newPubkey := new(sm2.PublicKey)
+	newPubkey.Curve = c
+	newPubkey.X, newPubkey.Y = c.Add(priv.PublicKey.X, priv.PublicKey.Y, parPubkey.X, parPubkey.Y)
+	compPubkey := sm2.Compress(newPubkey)
+
+	copy(xpubkey[:33], compPubkey[:])
+	copy(xpubkey[33:], res[32:])
+
+	return
+}
+
 // // Derive generates a child xprv by recursively deriving
 // // non-hardened child xprvs over the list of selectors:
 // // `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
@@ -220,6 +232,17 @@ type (
 // 	}
 // 	return res
 // }
+
+// Derive generates a child xpub by recursively deriving
+// non-hardened child xpubs over the list of selectors:
+// `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
+func (xpub XPub) Derive(path [][]byte) XPub {
+	res := xpub
+	for _, p := range path {
+		res = res.Child(p)
+	}
+	return res
+}
 
 // // Sign creates an EdDSA signature using expanded private key
 // // derived from the xprv.
