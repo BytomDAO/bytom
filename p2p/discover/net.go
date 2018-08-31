@@ -1221,7 +1221,7 @@ func (net *Network) checkTopicRegister(data *topicRegister) (*pong, error) {
 	if hash != pongpkt.data.(*pong).TopicHash {
 		return nil, errors.New("topic hash mismatch")
 	}
-	if data.Idx < 0 || int(data.Idx) >= len(data.Topics) {
+	if int(data.Idx) < 0 || int(data.Idx) >= len(data.Topics) {
 		return nil, errors.New("topic index out of range")
 	}
 	return pongpkt.data.(*pong), nil
