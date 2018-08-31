@@ -287,7 +287,7 @@ func (a *API) buildHandler() {
 	m.Handle("/disconnect-peer", jsonHandler(a.disconnectPeer))
 	m.Handle("/connect-peer", jsonHandler(a.connectPeer))
 
-	m.Handle("/get-tx-out-proof", jsonHandler(a.getTxOutProof))
+	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
 
 	handler := latencyHandler(m, walletEnable)
 	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux

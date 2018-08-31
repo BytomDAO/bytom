@@ -234,7 +234,7 @@ type GetMerkleBlockResp struct {
 	MatchedTxIDs []*bc.Hash        `json:"matched_tx_ids"`
 }
 
-func (a *API) getTxOutProof(ins MerkleBlockReq) Response {
+func (a *API) getMerkleProof(ins MerkleBlockReq) Response {
 	blockReq := BlockReq{BlockHash: ins.BlockHash}
 	block, err := a.getBlockHelper(blockReq)
 	if err != nil {
