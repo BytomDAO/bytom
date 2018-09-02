@@ -657,7 +657,7 @@ func (net *Network) refresh(done chan<- struct{}) {
 	}
 	if len(seeds) == 0 {
 		log.Debug("no seed nodes found")
-		close(done)
+		time.AfterFunc(time.Second*10, func() { close(done) })
 		return
 	}
 	for _, n := range seeds {
