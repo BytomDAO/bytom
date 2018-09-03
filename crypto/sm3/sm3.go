@@ -33,14 +33,9 @@ func (sm3 *SM3) pad() []byte {
 		msg = append(msg, 0x00)
 	}
 	// append message length
-	msg = append(msg, uint8(sm3.length>>56&0xff))
-	msg = append(msg, uint8(sm3.length>>48&0xff))
-	msg = append(msg, uint8(sm3.length>>40&0xff))
-	msg = append(msg, uint8(sm3.length>>32&0xff))
-	msg = append(msg, uint8(sm3.length>>24&0xff))
-	msg = append(msg, uint8(sm3.length>>16&0xff))
-	msg = append(msg, uint8(sm3.length>>8&0xff))
-	msg = append(msg, uint8(sm3.length>>0&0xff))
+	for offset := 56; offset >= 0; offset -= 8 {
+		msg = append(msg, uint8(sm3.length>>offset&0xff))
+	}
 
 	if len(msg)%64 != 0 {
 		panic("------SM3 Pad: error msgLen =")
