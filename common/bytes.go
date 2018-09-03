@@ -124,11 +124,14 @@ func Hex2Bytes(str string) []byte {
 
 func Hex2BytesFixed(str string, flen int) []byte {
 	h, _ := hex.DecodeString(str)
-	if len(h) == flen {
+
+	hlen := len(h)
+	switch {
+	case hlen == flen:
 		return h
-	} else if len(h) > flen {
+	case hlen > flen:
 		return h[len(h)-flen : len(h)]
-	} else {
+	default:
 		hh := make([]byte, flen)
 		copy(hh[flen-len(h):flen], h[:])
 		return hh
@@ -227,16 +230,16 @@ func RightPadString(str string, l int) string {
 }
 
 func ToAddress(slice []byte) (addr []byte) {
-	if len(slice) < 20 {
+	length := len(slice)
+	switch {
+	case length < 20:
 		addr = LeftPadBytes(slice, 20)
-	} else if len(slice) > 20 {
+	case length > 20:
 		addr = slice[len(slice)-20:]
-	} else {
+	default:
 		addr = slice
 	}
-
 	addr = CopyBytes(addr)
-
 	return
 }
 
