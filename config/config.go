@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+var (
+	// CommonConfig means config object
+	CommonConfig *Config
+)
+
 type Config struct {
 	// Top level options use an anonymous struct
 	BaseConfig `mapstructure:",squash"`
@@ -152,8 +157,9 @@ func (p *P2PConfig) AddrBookFile() string {
 
 //-----------------------------------------------------------------------------
 type WalletConfig struct {
-	Disable bool `mapstructure:"disable"`
-	Rescan  bool `mapstructure:"rescan"`
+	Disable  bool   `mapstructure:"disable"`
+	Rescan   bool   `mapstructure:"rescan"`
+	MaxTxFee uint64 `mapstructure:"max_tx_fee"`
 }
 
 type RPCAuthConfig struct {
@@ -185,8 +191,9 @@ func DefaultWebConfig() *WebConfig {
 // Default configurable wallet parameters.
 func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
-		Disable: false,
-		Rescan:  false,
+		Disable:  false,
+		Rescan:   false,
+		MaxTxFee: uint64(1000000000),
 	}
 }
 
