@@ -234,7 +234,7 @@ func ToAddress(slice []byte) (addr []byte) {
 	case length < 20:
 		addr = LeftPadBytes(slice, 20)
 	case length > 20:
-		addr = slice[len(slice)-20:]
+		addr = slice[length-20:]
 	default:
 		addr = slice
 	}
