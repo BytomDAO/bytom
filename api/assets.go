@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/bytom/asset"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 
 	log "github.com/sirupsen/logrus"

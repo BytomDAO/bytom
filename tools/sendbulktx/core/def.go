@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
 )
 
 type keyIns struct {

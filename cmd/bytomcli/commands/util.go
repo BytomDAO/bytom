@@ -7,7 +7,7 @@ import (
 
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/encoding/json"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/util"

@@ -13,8 +13,8 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto"
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2"
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/crypto/sm3"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
@@ -99,7 +99,7 @@ func TestSignatureWitnessMaterialize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	issuanceProg, _ := vmutil.P2SPMultiSigProgram([]ed25519.PublicKey{pubkey1.PublicKey(), pubkey2.PublicKey(), pubkey3.PublicKey()}, 2)
+	issuanceProg, _ := vmutil.P2SPMultiSigProgram([]sm2.PubKey{pubkey1.PublicKey(), pubkey2.PublicKey(), pubkey3.PublicKey()}, 2)
 	assetID := bc.ComputeAssetID(issuanceProg, 1, &bc.EmptyStringHash)
 	outscript := mustDecodeHex("76a914c5d128911c28776f56baaac550963f7b88501dc388c0")
 	unsigned := types.NewTx(types.TxData{

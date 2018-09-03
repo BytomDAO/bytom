@@ -17,8 +17,8 @@ import (
 	"path/filepath"
 
 	"github.com/bytom/crypto"
-	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/randentropy"
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"

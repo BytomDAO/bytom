@@ -8,7 +8,8 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 
 	"encoding/hex"
-	"github.com/bytom/crypto/ed25519/chainkd"
+
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/util"
 )
 
