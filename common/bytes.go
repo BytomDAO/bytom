@@ -124,16 +124,15 @@ func Hex2Bytes(str string) []byte {
 
 func Hex2BytesFixed(str string, flen int) []byte {
 	h, _ := hex.DecodeString(str)
-
 	hlen := len(h)
 	switch {
 	case hlen == flen:
 		return h
 	case hlen > flen:
-		return h[len(h)-flen : len(h)]
+		return h[hlen-flen : hlen]
 	default:
 		hh := make([]byte, flen)
-		copy(hh[flen-len(h):flen], h[:])
+		copy(hh[flen-hlen:flen], h[:])
 		return hh
 	}
 }
