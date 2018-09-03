@@ -104,16 +104,14 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		gasOnlyTx := false
 
 		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
-			log.WithField("error", err).Error("mining block generate skip tx due to")
-			txPool.RemoveTransaction(&tx.ID)
+			bGenSkipTxForErr(txPool, &tx.ID, err)
 			continue
 		}
 
 		gasStatus, err := validation.ValidateTx(tx, bcBlock)
 		if err != nil {
 			if !gasStatus.GasValid {
-				log.WithField("error", err).Error("mining block generate skip tx due to")
-				txPool.RemoveTransaction(&tx.ID)
+				bGenSkipTxForErr(txPool, &tx.ID, err)
 				continue
 			}
 			gasOnlyTx = true
@@ -124,8 +122,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		}
 
 		if err := view.ApplyTransaction(bcBlock, tx, gasOnlyTx); err != nil {
-			log.WithField("error", err).Error("mining block generate skip tx due to")
-			txPool.RemoveTransaction(&tx.ID)
+			bGenSkipTxForErr(txPool, &tx.ID, err)
 			continue
 		}
 
@@ -154,4 +151,9 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	b.BlockHeader.BlockCommitment.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	return b, err
+}
+
+func bGenSkipTxForErr(txPool *protocol.TxPool, txHash *bc.Hash, err error) {
+	log.WithField("error", err).Error("mining block generation: skip tx due to")
+	txPool.RemoveTransaction(txHash)
 }
