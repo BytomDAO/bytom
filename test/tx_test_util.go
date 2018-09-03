@@ -388,10 +388,10 @@ func CreateTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64, c
 	output := types.NewTxOutput(*consensus.BTMAssetID, outputAmount, ctrlProgram)
 	builder := txbuilder.NewBuilder(time.Now())
 	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
-		return err
+		return nil, err
 	}
 	if err := builder.AddOutput(output); err != nil {
-		return err
+		return nil, err
 	}
 
 	tpl, _, err := builder.Build()
