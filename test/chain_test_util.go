@@ -64,7 +64,10 @@ func (ctx *chainTestContext) validateStatus(block *types.Block) error {
 func (ctx *chainTestContext) validateExecution(block *types.Block) error {
 	for _, tx := range block.Transactions {
 		for _, spentOutputID := range tx.SpentOutputIDs {
-			utxoEntry, _ := ctx.Store.GetUtxo(&spentOutputID)
+			utxoEntry, err := ctx.Store.GetUtxo(&spentOutputID)
+			if err != nil {
+				return err
+			}
 			if utxoEntry == nil {
 				continue
 			}
@@ -77,7 +80,10 @@ func (ctx *chainTestContext) validateExecution(block *types.Block) error {
 		}
 
 		for _, outputID := range tx.ResultIds {
-			utxoEntry, _ := ctx.Store.GetUtxo(outputID)
+			utxoEntry, err := ctx.Store.GetUtxo(outputID)
+			if err != nil {
+				return err
+			}
 			if utxoEntry == nil && isSpent(outputID, block) {
 				continue
 			}
@@ -202,12 +208,17 @@ func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx
 		if err != nil {
 			return nil, err
 		}
-		builder.AddInput(txInput, sigInst)
+		err = builder.AddInput(txInput, sigInst)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for _, amount := range t.Outputs {
 		output := types.NewTxOutput(*consensus.BTMAssetID, amount, []byte{byte(vm.OP_TRUE)})
-		builder.AddOutput(output)
+		if err := builder.AddOutput(output); err != nil {
+			return nil, err
+		}
 	}
 
 	tpl, _, err := builder.Build()
@@ -228,7 +239,10 @@ func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx
 func (cfg *chainTestConfig) Run() error {
 	db := dbm.NewDB("chain_test_db", "leveldb", "chain_test_db")
 	defer os.RemoveAll("chain_test_db")
-	chain, store, _, _ := MockChain(db)
+	chain, store, _, err := MockChain(db)
+	if err != nil {
+		return err
+	}
 	ctx := &chainTestContext{
 		Chain: chain,
 		DB:    db,

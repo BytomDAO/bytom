@@ -105,7 +105,9 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	}
 
 	storeBatch := w.DB.NewBatch()
-	w.indexTransactions(storeBatch, block, txStatus)
+	if err := w.indexTransactions(storeBatch, block, txStatus); err != nil {
+		return err
+	}
 	w.attachUtxos(storeBatch, block, txStatus)
 
 	w.status.WorkHeight = block.Height
