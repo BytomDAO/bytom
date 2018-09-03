@@ -1378,7 +1378,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 					return nil, errors.New("x509: trailing data after X.509 CRL distribution point")
 				}
 
-				for _, dp := range &cdp {
+				for _, dp := range cdp {
 					// Per RFC 5280, 4.2.1.13, one of distributionPoint or cRLIssuer may be empty.
 					if len(dp.DistributionPoint.FullName.Bytes) == 0 {
 						continue
