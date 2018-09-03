@@ -461,7 +461,6 @@ func compileExpr(b *builder, stk stack, contract *Contract, clause *Clause, env 
 			if lType != rType {
 				// Maybe one is Hash and the other is (more-specific-Hash subtype).
 				// TODO(bobg): generalize this mechanism
-
 				switch {
 				case lType == hashType && isHashSubtype(rType):
 					propagateType(contract, clause, env, rType, e.left)
