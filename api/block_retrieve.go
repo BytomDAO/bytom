@@ -3,6 +3,8 @@ package api
 import (
 	"math/big"
 
+	"gopkg.in/fatih/set.v0"
+
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus/difficulty"
 	chainjson "github.com/bytom/encoding/json"
@@ -141,13 +143,17 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 
 func (a *API) getBlockHelper(ins BlockReq) (*types.Block, error) {
 	if len(ins.BlockHash) == 32 {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
+		hash := hexBytesToHash(ins.BlockHash)
 		return a.chain.GetBlockByHash(&hash)
 	} else {
 		return a.chain.GetBlockByHeight(ins.BlockHeight)
 	}
+}
+
+func hexBytesToHash(hexBytes chainjson.HexBytes) bc.Hash {
+	b32 := [32]byte{}
+	copy(b32[:], hexBytes)
+	return bc.NewHash(b32)
 }
 
 // GetDifficultyResp is resp struct for getDifficulty API
@@ -211,4 +217,73 @@ func (a *API) getHashRate(ins BlockReq) Response {
 		HashRate:    hashRate.Uint64(),
 	}
 	return NewSuccessResponse(resp)
+}
+
+// MerkleBlockReq is used to handle getTxOutProof req
+type MerkleBlockReq struct {
+	TxIDs     []chainjson.HexBytes `json:"tx_ids"`
+	BlockHash chainjson.HexBytes   `json:"block_hash"`
+}
+
+// GetMerkleBlockResp is resp struct for GetTxOutProof API
+type GetMerkleBlockResp struct {
+	BlockHeader  types.BlockHeader `json:"block_header"`
+	TxHashes     []*bc.Hash        `json:"tx_hashes"`
+	StatusHashes []*bc.Hash        `json:"status_hashes"`
+	Flags        []uint32          `json:"flags"`
+	MatchedTxIDs []*bc.Hash        `json:"matched_tx_ids"`
+}
+
+func (a *API) getMerkleProof(ins MerkleBlockReq) Response {
+	blockReq := BlockReq{BlockHash: ins.BlockHash}
+	block, err := a.getBlockHelper(blockReq)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	matchedTxs := getMatchedTx(block.Transactions, ins.TxIDs)
+	var matchedTxIDs []*bc.Hash
+	for _, tx := range matchedTxs {
+		matchedTxIDs = append(matchedTxIDs, &tx.ID)
+	}
+
+	hashes, compactFlags := types.GetTxMerkleTreeProof(block.Transactions, matchedTxs)
+	flags := make([]uint32, len(compactFlags))
+	for i, flag := range compactFlags {
+		flags[i] = uint32(flag)
+	}
+
+	blockHash := block.Hash()
+	statuses, err := a.chain.GetTransactionStatus(&blockHash)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	statusHashes := types.GetStatusMerkleTreeProof(statuses.VerifyStatus, compactFlags)
+
+	resp := &GetMerkleBlockResp{
+		BlockHeader:  block.BlockHeader,
+		TxHashes:     hashes,
+		StatusHashes: statusHashes,
+		Flags:        flags,
+		MatchedTxIDs: matchedTxIDs,
+	}
+	return NewSuccessResponse(resp)
+}
+
+func getMatchedTx(txs []*types.Tx, filterTxIDs []chainjson.HexBytes) []*types.Tx {
+	txIDSet := set.New()
+	for _, txID := range filterTxIDs {
+		hash := hexBytesToHash(txID)
+		txIDSet.Add(hash.String())
+	}
+
+	var matchedTxs []*types.Tx
+	for _, tx := range txs {
+		hashStr := tx.ID.String()
+		if txIDSet.Has(hashStr) {
+			matchedTxs = append(matchedTxs, tx)
+		}
+	}
+	return matchedTxs
 }
