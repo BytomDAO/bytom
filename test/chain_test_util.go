@@ -64,10 +64,7 @@ func (ctx *chainTestContext) validateStatus(block *types.Block) error {
 func (ctx *chainTestContext) validateExecution(block *types.Block) error {
 	for _, tx := range block.Transactions {
 		for _, spentOutputID := range tx.SpentOutputIDs {
-			utxoEntry, err := ctx.Store.GetUtxo(&spentOutputID)
-			if err != nil {
-				return err
-			}
+			utxoEntry, _ := ctx.Store.GetUtxo(&spentOutputID)
 			if utxoEntry == nil {
 				continue
 			}
@@ -80,10 +77,7 @@ func (ctx *chainTestContext) validateExecution(block *types.Block) error {
 		}
 
 		for _, outputID := range tx.ResultIds {
-			utxoEntry, err := ctx.Store.GetUtxo(outputID)
-			if err != nil {
-				return err
-			}
+			utxoEntry, _ := ctx.Store.GetUtxo(outputID)
 			if utxoEntry == nil && isSpent(outputID, block) {
 				continue
 			}
