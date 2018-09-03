@@ -34,7 +34,7 @@ func (sm3 *SM3) pad() []byte {
 	}
 	// append message length
 	for offset := 56; offset >= 0; offset -= 8 {
-		msg = append(msg, uint8(sm3.length>>offset&0xff))
+		msg = append(msg, uint8(sm3.length>>uint8(offset)&0xff))
 	}
 
 	if len(msg)%64 != 0 {
