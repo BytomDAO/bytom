@@ -15,6 +15,36 @@ type (
 	XPub [65]byte
 )
 
+// XPub derives an extended public key from a given xprv.
+func (xprv XPrv) XPub() (xpub XPub) {
+	// var scalar ecmath.Scalar
+	// copy(scalar[:], xprv[:32])
+
+	// var P ecmath.Point
+	// P.ScMulBase(&scalar)
+	// buf := P.Encode()
+
+	// copy(xpub[:32], buf[:])
+	// copy(xpub[32:], xprv[32:])
+
+	// return
+
+	privkey := make([]byte, 32)
+	copy(privkey, xprv[:32])
+	k := new(big.Int).SetBytes(privkey)
+	c := sm2.P256Sm2()
+	priv := new(sm2.PrivateKey)
+	priv.PublicKey.Curve = c
+	priv.D = k
+	priv.PublicKey.X, priv.PublicKey.Y = c.ScalarBaseMult(k.Bytes())
+	compPubkey := sm2.Compress(&priv.PublicKey)
+
+	copy(xpub[:33], compPubkey[:])
+	copy(xpub[33:], xprv[32:])
+
+	return
+}
+
 // Child derives a child xpub based on `selector` string.
 // The corresponding child xprv can be derived from the parent xprv
 // using non-hardened derivation: `parentxprv.Child(sel, false)`.
