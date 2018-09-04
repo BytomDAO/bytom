@@ -228,7 +228,7 @@ type MerkleBlockReq struct {
 // GetMerkleBlockResp is resp struct for GetTxOutProof API
 type GetMerkleBlockResp struct {
 	BlockHeader  types.BlockHeader `json:"block_header"`
-	Seed         *bc.Hash           `json:"seed"`
+	Seed         *bc.Hash          `json:"seed"`
 	TxHashes     []*bc.Hash        `json:"tx_hashes"`
 	StatusHashes []*bc.Hash        `json:"status_hashes"`
 	Flags        []uint32          `json:"flags"`
