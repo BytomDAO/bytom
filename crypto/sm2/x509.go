@@ -1379,6 +1379,7 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				}
 
 				for i := range cdp {
+					// use index & pointer here to avoid value copy (each iteration copies 200 bytes)
 					dp := &cdp[i]
 					// Per RFC 5280, 4.2.1.13, one of distributionPoint or cRLIssuer may be empty.
 					if len(dp.DistributionPoint.FullName.Bytes) == 0 {
