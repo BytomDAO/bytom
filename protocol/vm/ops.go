@@ -465,7 +465,7 @@ func init() {
 	ops[OP_CHECKPREDICATE] = opInfo{OP_CHECKPREDICATE, "CHECKPREDICATE", opCheckPredicate}
 
 	opsByName = make(map[string]opInfo)
-	for _, info := range &ops { // use pointer here to avoid copy of ops (8192 bytes)
+	for _, info := range ops {
 		opsByName[info.name] = info
 	}
 	opsByName["0"] = ops[OP_FALSE]
