@@ -99,10 +99,10 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
 	b.Transactions = []*types.Tx{nil}
 
-	txInfos := make([]*txInfo, 0)
+	txInfos := make([]TxInfo, 0)
 	txDescs := txPool.GetTransactions()
 
-	// get gas&fee info for all txs
+	// get gas&fee&timestamp info for all txs
 	for _, txDesc := range txDescs {
 		tx := txDesc.Tx.Tx
 		gasOnlyTx := false
@@ -121,16 +121,17 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			gasOnlyTx = true
 		}
 
-		txInfos = append(txInfos, &txInfo{
+		txInfos = append(txInfos, TxInfo{
 			tx:          txDesc.Tx,
 			gasUsed:     uint64(gasStatus.GasUsed),
 			isGasOnlyTx: gasOnlyTx,
 			fee:         txDesc.Fee,
+			timestamp:   txDesc.Added,
 		})
 	}
 
 	// sort & append txs into the block, until gas reaches limit
-	// sort
+	OrderedBy(gasUsedLessThan, timeLessThan).Sort(txInfos)
 	for _, txInfo := range txInfos {
 		tx := txInfo.tx.Tx
 

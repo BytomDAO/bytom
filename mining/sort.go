@@ -1,37 +1,40 @@
 package mining
 
 import (
-	"github.com/bytom/protocol"
+	"sort"
+	"time"
+
 	"github.com/bytom/protocol/bc/types"
 )
 
-type byTime []*protocol.TxDesc
-
-func (a byTime) Len() int           { return len(a) }
-func (a byTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byTime) Less(i, j int) bool { return a[i].Added.Unix() < a[j].Added.Unix() }
-
-type txInfo struct {
+// A TxInfo is a record of a tx, recording gas & fee information
+type TxInfo struct {
 	tx          *types.Tx
 	gasUsed     uint64
 	isGasOnlyTx bool
 	fee         uint64
+	timestamp   time.Time
 }
 
-/*
-// A Change is a record of source code changes, recording user, language, and delta size.
+func gasUsedLessThan(tx1Info, txInfo2 *TxInfo) bool {
+	return tx1Info.gasUsed < txInfo2.gasUsed
+}
 
-type lessFunc func(p1, p2 *Change) bool
+func timeLessThan(tx1Info, txInfo2 *TxInfo) bool {
+	return tx1Info.timestamp.Unix() < txInfo2.timestamp.Unix()
+}
 
-// multiSorter implements the Sort interface, sorting the changes within.
+type lessFunc func(txInfo1, txInfo2 *TxInfo) bool
+
+// multiSorter implements the Sort interface, sorting the txInfos within.
 type multiSorter struct {
-	changes []Change
+	txInfos []TxInfo
 	less    []lessFunc
 }
 
 // Sort sorts the argument slice according to the less functions passed to OrderedBy.
-func (ms *multiSorter) Sort(changes []Change) {
-	ms.changes = changes
+func (ms *multiSorter) Sort(txInfos []TxInfo) {
+	ms.txInfos = txInfos
 	sort.Sort(ms)
 }
 
@@ -45,12 +48,12 @@ func OrderedBy(less ...lessFunc) *multiSorter {
 
 // Len is part of sort.Interface.
 func (ms *multiSorter) Len() int {
-	return len(ms.changes)
+	return len(ms.txInfos)
 }
 
 // Swap is part of sort.Interface.
 func (ms *multiSorter) Swap(i, j int) {
-	ms.changes[i], ms.changes[j] = ms.changes[j], ms.changes[i]
+	ms.txInfos[i], ms.txInfos[j] = ms.txInfos[j], ms.txInfos[i]
 }
 
 // Less is part of sort.Interface. It is implemented by looping along the
@@ -60,7 +63,7 @@ func (ms *multiSorter) Swap(i, j int) {
 // -1, 0, 1 and reduce the number of calls for greater efficiency: an
 // exercise for the reader.
 func (ms *multiSorter) Less(i, j int) bool {
-	p, q := &ms.changes[i], &ms.changes[j]
+	p, q := &ms.txInfos[i], &ms.txInfos[j]
 	// Try all but the last comparison.
 	var k int
 	for k = 0; k < len(ms.less)-1; k++ {
@@ -79,54 +82,3 @@ func (ms *multiSorter) Less(i, j int) bool {
 	// the final comparison reports.
 	return ms.less[k](p, q)
 }
-
-// var changes = []Change{
-//     {"gri", "Go", 100},
-//     {"ken", "C", 150},
-//     {"glenda", "Go", 200},
-//     {"rsc", "Go", 200},
-//     {"r", "Go", 100},
-//     {"ken", "Go", 200},
-//     {"dmr", "C", 100},
-//     {"r", "C", 150},
-//     {"gri", "Smalltalk", 80},
-// }
-
-// ExampleMultiKeys demonstrates a technique for sorting a struct type using different
-// sets of multiple fields in the comparison. We chain together "Less" functions, each of
-// which compares a single field.
-func main() {
-	// // Closures that order the Change structure.
-	// user := func(c1, c2 *Change) bool {
-	//     return c1.user < c2.user
-	// }
-	// language := func(c1, c2 *Change) bool {
-	//     return c1.language < c2.language
-	// }
-	// increasingLines := func(c1, c2 *Change) bool {
-	//     return c1.lines < c2.lines
-	// }
-	// decreasingLines := func(c1, c2 *Change) bool {
-	//     return c1.lines > c2.lines // Note: > orders downwards.
-	// }
-
-	// // Simple use: Sort by user.
-	// OrderedBy(user).Sort(changes)
-	// fmt.Println("By user:", changes)
-
-	// // More examples.
-	// OrderedBy(user, increasingLines).Sort(changes)
-	// fmt.Println("By user,<lines:", changes)
-
-	// OrderedBy(user, decreasingLines).Sort(changes)
-	// fmt.Println("By user,>lines:", changes)
-
-	// OrderedBy(language, increasingLines).Sort(changes)
-	// fmt.Println("By language,<lines:", changes)
-
-	// OrderedBy(language, increasingLines, user).Sort(changes)
-	// fmt.Println("By language,<lines,user:", changes)
-
-}
-
-*/
