@@ -131,7 +131,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	}
 
 	// sort & append txs into the block, until gas reaches limit
-	OrderedBy(gasUsedLessThan, timeLessThan).Sort(txInfos)
+	OrderedBy(feeLessThan, timeLessThan).Sort(txInfos)
 	for _, txInfo := range txInfos {
 		tx := txInfo.tx.Tx
 

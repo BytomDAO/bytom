@@ -16,8 +16,8 @@ type TxInfo struct {
 	timestamp   time.Time
 }
 
-func gasUsedLessThan(tx1Info, txInfo2 *TxInfo) bool {
-	return tx1Info.gasUsed < txInfo2.gasUsed
+func feeLessThan(tx1Info, txInfo2 *TxInfo) bool {
+	return tx1Info.fee < txInfo2.fee
 }
 
 func timeLessThan(tx1Info, txInfo2 *TxInfo) bool {
