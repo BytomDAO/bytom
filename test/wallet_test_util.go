@@ -251,7 +251,10 @@ func (cfg *walletTestConfig) Run() error {
 	}
 
 	db := dbm.NewDB("wallet_test_db", "leveldb", path.Join(dirPath, "wallet_test_db"))
-	chain, _, _, _ := MockChain(db)
+	chain, _, _, err := MockChain(db)
+	if err != nil {
+		return err
+	}
 	walletDB := dbm.NewDB("wallet", "leveldb", path.Join(dirPath, "wallet_db"))
 	accountManager := account.NewManager(walletDB, chain)
 	assets := asset.NewRegistry(walletDB, chain)
