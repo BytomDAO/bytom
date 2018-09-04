@@ -1,12 +1,13 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -230,9 +231,10 @@ func DefaultDataDir() string {
 		// copy the data from the old path to the new path
 		oldPath := filepath.Join(home, "Library", "Bytom")
 		newPath := filepath.Join(home, "Library", "Application Support", "Bytom")
-		if exists(oldPath) && !exists(newPath) {
+		if isFolderExists(oldPath) && !isFolderExists(newPath) {
 			if err := os.Rename(oldPath, newPath); err != nil {
-				fmt.Println(err)
+				log.Errorf("DefaultDataDir: %v", err)
+				return oldPath
 			}
 		}
 		return newPath
@@ -243,15 +245,9 @@ func DefaultDataDir() string {
 	}
 }
 
-func exists(path string) bool {
+func isFolderExists(path string) bool {
 	_, err := os.Stat(path)
-	if err != nil {
-		if os.IsExist(err) {
-			return true
-		}
-		return false
-	}
-	return true
+	return os.IsExist(err)
 }
 
 
