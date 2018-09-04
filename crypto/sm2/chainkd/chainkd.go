@@ -99,93 +99,22 @@ func (xprv XPrv) hardenedChild(sel []byte) (res XPrv) {
 func (xprv XPrv) nonhardenedChild(sel []byte) (res XPrv) {
 	xpub := xprv.XPub()
 
-	h := hmac.New(sha512.New, xpub[32:])
+	h := hmac.New(sha512.New, xpub[33:])
 	h.Write([]byte{'N'})
-	h.Write(xpub[:32])
+	h.Write(xpub[:33])
 	h.Write(sel)
 	h.Sum(res[:0])
 
-	pruneIntermediateScalar(res[:32])
+	left := new(big.Int).SetBytes(res[:32])
+	k := new(big.Int).SetBytes(xprv[:32])
+	r := new(big.Int)
+	r.Add(left, k)
+	N := sm2.P256Sm2().Params().N
+	r.Mod(r, N)
+	priv := r.Bytes()
 
-	// Unrolled the following loop:
-	// var carry int
-	// carry = 0
-	// for i := 0; i < 32; i++ {
-	//         sum := int(xprv[i]) + int(res[i]) + carry
-	//         res[i] = byte(sum & 0xff)
-	//         carry = (sum >> 8)
-	// }
+	copy(res[:32], priv[:32])
 
-	sum := int(0)
-
-	sum = int(xprv[0]) + int(res[0]) + (sum >> 8)
-	res[0] = byte(sum & 0xff)
-	sum = int(xprv[1]) + int(res[1]) + (sum >> 8)
-	res[1] = byte(sum & 0xff)
-	sum = int(xprv[2]) + int(res[2]) + (sum >> 8)
-	res[2] = byte(sum & 0xff)
-	sum = int(xprv[3]) + int(res[3]) + (sum >> 8)
-	res[3] = byte(sum & 0xff)
-	sum = int(xprv[4]) + int(res[4]) + (sum >> 8)
-	res[4] = byte(sum & 0xff)
-	sum = int(xprv[5]) + int(res[5]) + (sum >> 8)
-	res[5] = byte(sum & 0xff)
-	sum = int(xprv[6]) + int(res[6]) + (sum >> 8)
-	res[6] = byte(sum & 0xff)
-	sum = int(xprv[7]) + int(res[7]) + (sum >> 8)
-	res[7] = byte(sum & 0xff)
-	sum = int(xprv[8]) + int(res[8]) + (sum >> 8)
-	res[8] = byte(sum & 0xff)
-	sum = int(xprv[9]) + int(res[9]) + (sum >> 8)
-	res[9] = byte(sum & 0xff)
-	sum = int(xprv[10]) + int(res[10]) + (sum >> 8)
-	res[10] = byte(sum & 0xff)
-	sum = int(xprv[11]) + int(res[11]) + (sum >> 8)
-	res[11] = byte(sum & 0xff)
-	sum = int(xprv[12]) + int(res[12]) + (sum >> 8)
-	res[12] = byte(sum & 0xff)
-	sum = int(xprv[13]) + int(res[13]) + (sum >> 8)
-	res[13] = byte(sum & 0xff)
-	sum = int(xprv[14]) + int(res[14]) + (sum >> 8)
-	res[14] = byte(sum & 0xff)
-	sum = int(xprv[15]) + int(res[15]) + (sum >> 8)
-	res[15] = byte(sum & 0xff)
-	sum = int(xprv[16]) + int(res[16]) + (sum >> 8)
-	res[16] = byte(sum & 0xff)
-	sum = int(xprv[17]) + int(res[17]) + (sum >> 8)
-	res[17] = byte(sum & 0xff)
-	sum = int(xprv[18]) + int(res[18]) + (sum >> 8)
-	res[18] = byte(sum & 0xff)
-	sum = int(xprv[19]) + int(res[19]) + (sum >> 8)
-	res[19] = byte(sum & 0xff)
-	sum = int(xprv[20]) + int(res[20]) + (sum >> 8)
-	res[20] = byte(sum & 0xff)
-	sum = int(xprv[21]) + int(res[21]) + (sum >> 8)
-	res[21] = byte(sum & 0xff)
-	sum = int(xprv[22]) + int(res[22]) + (sum >> 8)
-	res[22] = byte(sum & 0xff)
-	sum = int(xprv[23]) + int(res[23]) + (sum >> 8)
-	res[23] = byte(sum & 0xff)
-	sum = int(xprv[24]) + int(res[24]) + (sum >> 8)
-	res[24] = byte(sum & 0xff)
-	sum = int(xprv[25]) + int(res[25]) + (sum >> 8)
-	res[25] = byte(sum & 0xff)
-	sum = int(xprv[26]) + int(res[26]) + (sum >> 8)
-	res[26] = byte(sum & 0xff)
-	sum = int(xprv[27]) + int(res[27]) + (sum >> 8)
-	res[27] = byte(sum & 0xff)
-	sum = int(xprv[28]) + int(res[28]) + (sum >> 8)
-	res[28] = byte(sum & 0xff)
-	sum = int(xprv[29]) + int(res[29]) + (sum >> 8)
-	res[29] = byte(sum & 0xff)
-	sum = int(xprv[30]) + int(res[30]) + (sum >> 8)
-	res[30] = byte(sum & 0xff)
-	sum = int(xprv[31]) + int(res[31]) + (sum >> 8)
-	res[31] = byte(sum & 0xff)
-
-	if (sum >> 8) != 0 {
-		panic("sum does not fit in 256-bit int")
-	}
 	return
 }
 
