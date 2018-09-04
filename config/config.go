@@ -231,7 +231,7 @@ func DefaultDataDir() string {
 		// copy the data from the old path to the new path
 		oldPath := filepath.Join(home, "Library", "Bytom")
 		newPath := filepath.Join(home, "Library", "Application Support", "Bytom")
-		if isFolderExists(oldPath) && !isFolderExists(newPath) {
+		if !isFolderNotExists(oldPath) && isFolderNotExists(newPath) {
 			if err := os.Rename(oldPath, newPath); err != nil {
 				log.Errorf("DefaultDataDir: %v", err)
 				return oldPath
@@ -245,9 +245,9 @@ func DefaultDataDir() string {
 	}
 }
 
-func isFolderExists(path string) bool {
+func isFolderNotExists(path string) bool {
 	_, err := os.Stat(path)
-	return os.IsExist(err)
+	return os.IsNotExist(err)
 }
 
 
