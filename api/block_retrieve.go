@@ -243,8 +243,8 @@ func (a *API) getMerkleProof(ins MerkleBlockReq) Response {
 	}
 
 	var seed *bc.Hash
-	if node := a.chain.GetIndex().GetNode(&block.PreviousBlockHash); node != nil {
-		seed = node.CalcNextSeed()
+	if seed, err = a.chain.CalcNextSeed(&block.PreviousBlockHash); err != nil {
+		return NewErrorResponse(err)
 	}
 
 	matchedTxs := getMatchedTx(block.Transactions, ins.TxIDs)
