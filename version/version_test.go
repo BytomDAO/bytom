@@ -66,7 +66,7 @@ func TestCompatibleWith(t *testing.T) {
 	for i, c := range cases {
 		Version = c.a
 		if result, _ := CompatibleWith(c.b); c.result != result {
-			t.Errorf("case %d: got %b want %b", i, c.result, result)
+			t.Errorf("case %d: got %t want %t", i, c.result, result)
 		}
 	}
 }

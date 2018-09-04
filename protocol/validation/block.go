@@ -89,7 +89,9 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 			return errors.Wrapf(err, "validate of transaction %d of %d", i, len(b.Transactions))
 		}
 
-		b.TransactionStatus.SetStatus(i, err != nil)
+		if err := b.TransactionStatus.SetStatus(i, err != nil); err != nil {
+			return err
+		}
 		coinbaseAmount += gasStatus.BTMValue
 		if blockGasSum += uint64(gasStatus.GasUsed); blockGasSum > consensus.MaxBlockGas {
 			return errOverBlockLimit

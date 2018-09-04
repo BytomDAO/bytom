@@ -133,7 +133,9 @@ func (p *Peer) Equals(other *Peer) bool {
 // NOTE: blocking
 func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duration) (*NodeInfo, error) {
 	// Set deadline for handshake so we don't block forever on conn.ReadFull
-	pc.conn.SetDeadline(time.Now().Add(timeout))
+	if err := pc.conn.SetDeadline(time.Now().Add(timeout)); err != nil {
+		return nil, err
+	}
 
 	var peerNodeInfo = new(NodeInfo)
 	var err1, err2 error
@@ -155,7 +157,9 @@ func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duratio
 	}
 
 	// Remove deadline
-	pc.conn.SetDeadline(time.Time{})
+	if err := pc.conn.SetDeadline(time.Time{}); err != nil {
+		return nil, err
+	}
 	peerNodeInfo.RemoteAddr = pc.conn.RemoteAddr().String()
 	return peerNodeInfo, nil
 }

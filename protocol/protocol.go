@@ -59,7 +59,9 @@ func (c *Chain) initChainStatus() error {
 	genesisBlock := config.GenesisBlock()
 	txStatus := bc.NewTransactionStatus()
 	for i := range genesisBlock.Transactions {
-		txStatus.SetStatus(i, false)
+		if err := txStatus.SetStatus(i, false); err != nil {
+			return err
+		}
 	}
 
 	if err := c.store.SaveBlock(genesisBlock, txStatus); err != nil {

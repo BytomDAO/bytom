@@ -254,7 +254,6 @@ func isFolderExists(path string) bool {
 		return false
 	}
 	return true
-
 }
 
 

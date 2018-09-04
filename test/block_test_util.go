@@ -15,7 +15,9 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	txsFee := uint64(0)
 	txEntries := []*bc.Tx{nil}
 	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
+	if err := txStatus.SetStatus(0, false); err != nil {
+		return nil, err
+	}
 
 	preBlockHeader := chain.BestBlockHeader()
 	preBlockHash := preBlockHeader.Hash()
