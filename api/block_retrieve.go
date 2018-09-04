@@ -242,8 +242,8 @@ func (a *API) getMerkleProof(ins MerkleBlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
-	var seed *bc.Hash
-	if seed, err = a.chain.CalcNextSeed(&block.PreviousBlockHash); err != nil {
+	seed, err := a.chain.CalcNextSeed(&block.PreviousBlockHash)
+	if err != nil {
 		return NewErrorResponse(err)
 	}
 
