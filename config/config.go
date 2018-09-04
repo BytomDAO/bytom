@@ -247,7 +247,14 @@ func DefaultDataDir() string {
 
 func isFolderExists(path string) bool {
 	_, err := os.Stat(path)
-	return os.IsExist(err)
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+
 }
 
 
