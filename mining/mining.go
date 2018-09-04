@@ -1,7 +1,6 @@
 package mining
 
 import (
-	// "sort"
 	"strconv"
 	"time"
 
