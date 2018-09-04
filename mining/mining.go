@@ -99,8 +99,10 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
 	b.Transactions = []*types.Tx{nil}
 
+	txInfos := make([]*txInfo, 0)
 	txDescs := txPool.GetTransactions()
-	// sort.Sort(byTime(txDescs))
+
+	// get gas&fee info for all txs
 	for _, txDesc := range txDescs {
 		tx := txDesc.Tx.Tx
 		gasOnlyTx := false
@@ -119,24 +121,36 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			gasOnlyTx = true
 		}
 
-		// for _, txDesc := range txs {
-		if gasUsed+uint64(gasStatus.GasUsed) > consensus.MaxBlockGas {
+		txInfos = append(txInfos, &txInfo{
+			tx:          txDesc.Tx,
+			gasUsed:     uint64(gasStatus.GasUsed),
+			isGasOnlyTx: gasOnlyTx,
+			fee:         txDesc.Fee,
+		})
+	}
+
+	// sort & append txs into the block, until gas reaches limit
+	// sort
+	for _, txInfo := range txInfos {
+		tx := txInfo.tx.Tx
+
+		if gasUsed+txInfo.gasUsed > consensus.MaxBlockGas {
 			break
 		}
 
-		if err := view.ApplyTransaction(bcBlock, tx, gasOnlyTx); err != nil {
+		if err := view.ApplyTransaction(bcBlock, tx, txInfo.isGasOnlyTx); err != nil {
 			blkGenSkipTxForErr(txPool, &tx.ID, err)
 			continue
 		}
 
-		if err := txStatus.SetStatus(len(b.Transactions), gasOnlyTx); err != nil {
+		if err := txStatus.SetStatus(len(b.Transactions), txInfo.isGasOnlyTx); err != nil {
 			return nil, err
 		}
 
-		b.Transactions = append(b.Transactions, txDesc.Tx)
+		b.Transactions = append(b.Transactions, txInfo.tx)
 		txEntries = append(txEntries, tx)
-		gasUsed += uint64(gasStatus.GasUsed)
-		txFee += txDesc.Fee
+		gasUsed += txInfo.gasUsed
+		txFee += txInfo.fee
 
 		if gasUsed == consensus.MaxBlockGas {
 			break

@@ -1,6 +1,9 @@
 package mining
 
-import "github.com/bytom/protocol"
+import (
+	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc/types"
+)
 
 type byTime []*protocol.TxDesc
 
@@ -8,10 +11,11 @@ func (a byTime) Len() int           { return len(a) }
 func (a byTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byTime) Less(i, j int) bool { return a[i].Added.Unix() < a[j].Added.Unix() }
 
-type txWithGas struct {
-	*protocol.TxDesc
-	gasUsed   uint64
-	gasOnlyTx bool
+type txInfo struct {
+	tx          *types.Tx
+	gasUsed     uint64
+	isGasOnlyTx bool
+	fee         uint64
 }
 
 /*
