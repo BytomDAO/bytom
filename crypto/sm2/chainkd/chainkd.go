@@ -15,6 +15,14 @@ type (
 	XPub [65]byte
 )
 
+const (
+	// ExpandedPrivateKeySize is the size, in bytes, of a "secret key" as defined in NaCl.
+	ExpandedPrivateKeySize = 64
+)
+
+// ExpandedPrivateKey is the type of NaCl secret keys. It implements crypto.Signer.
+type ExpandedPrivateKey []byte
+
 // XPub derives an extended public key from a given xprv.
 func (xprv XPrv) XPub() (xpub XPub) {
 	privkey := make([]byte, 32)
@@ -144,3 +152,83 @@ func (xpub XPub) Derive(path [][]byte) XPub {
 func (xpub XPub) PublicKey() sm2.PubKey {
 	return sm2.PubKey(xpub[:33])
 }
+
+// Sign creates an EdDSA signature using expanded private key
+// derived from the xprv.
+func (xprv XPrv) Sign(msg []byte) []byte {
+	// return Ed25519InnerSign(xprv.ExpandedPrivateKey(), msg)
+	priv := new(sm2.PrivateKey)
+	k := new(big.Int).SetBytes(xprv[:32])
+	c := sm2.P256Sm2()
+	priv.D = k
+	priv.PublicKey.Curve = c
+	priv.PublicKey.X, priv.PublicKey.Y = c.ScalarBaseMult(k.Bytes())
+
+	r, s, err := sm2.Sign(priv, msg)
+	if err != nil {
+		panic(err)
+	}
+	R := r.Bytes()
+	S := s.Bytes()
+	sig := make([]byte, 64)
+	copy(sig[:32], R)
+	copy(sig[32:], S)
+
+	return sig
+}
+
+// // ExpandedPrivateKey generates a 64-byte key where
+// // the first half is the scalar copied from xprv,
+// // and the second half is the `prefix` is generated via PRF
+// // from the xprv.
+// func (xprv XPrv) ExpandedPrivateKey() ExpandedPrivateKey {
+// 	var res [64]byte
+// 	h := hmac.New(sha512.New, []byte{'E', 'x', 'p', 'a', 'n', 'd'})
+// 	h.Write(xprv[:])
+// 	h.Sum(res[:0])
+// 	copy(res[:32], xprv[:32])
+// 	return res[:]
+// }
+
+// // Ed25519InnerSign signs the message with expanded private key and returns a signature.
+// // It will panic if len(privateKey) is not ExpandedPrivateKeySize.
+// func Ed25519InnerSign(privateKey ExpandedPrivateKey, message []byte) []byte {
+// 	if l := len(privateKey); l != ExpandedPrivateKeySize {
+// 		panic("ed25519: bad private key length: " + strconv.Itoa(l))
+// 	}
+
+// 	var messageDigest, hramDigest [64]byte
+
+// 	h := sha512.New()
+// 	h.Write(privateKey[32:])
+// 	h.Write(message)
+// 	h.Sum(messageDigest[:0])
+
+// 	var messageDigestReduced [32]byte
+// 	edwards25519.ScReduce(&messageDigestReduced, &messageDigest)
+// 	var R edwards25519.ExtendedGroupElement
+// 	edwards25519.GeScalarMultBase(&R, &messageDigestReduced)
+
+// 	var encodedR [32]byte
+// 	R.ToBytes(&encodedR)
+
+// 	publicKey := privateKey.Public().(ed25519.PublicKey)
+// 	h.Reset()
+// 	h.Write(encodedR[:])
+// 	h.Write(publicKey[:])
+// 	h.Write(message)
+// 	h.Sum(hramDigest[:0])
+// 	var hramDigestReduced [32]byte
+// 	edwards25519.ScReduce(&hramDigestReduced, &hramDigest)
+
+// 	var sk [32]byte
+// 	copy(sk[:], privateKey[:32])
+// 	var s [32]byte
+// 	edwards25519.ScMulAdd(&s, &hramDigestReduced, &sk, &messageDigestReduced)
+
+// 	signature := make([]byte, ed25519.SignatureSize)
+// 	copy(signature[:], encodedR[:])
+// 	copy(signature[32:], s[:])
+
+// 	return signature
+// }
