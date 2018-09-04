@@ -1,7 +1,7 @@
 package mining
 
 import (
-	"sort"
+	// "sort"
 	"strconv"
 	"time"
 
@@ -99,9 +99,9 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	bcBlock := &bc.Block{BlockHeader: &bc.BlockHeader{Height: nextBlockHeight}}
 	b.Transactions = []*types.Tx{nil}
 
-	txs := txPool.GetTransactions()
-	sort.Sort(byTime(txs))
-	for _, txDesc := range txs {
+	txDescs := txPool.GetTransactions()
+	// sort.Sort(byTime(txDescs))
+	for _, txDesc := range txDescs {
 		tx := txDesc.Tx.Tx
 		gasOnlyTx := false
 
@@ -119,6 +119,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			gasOnlyTx = true
 		}
 
+		// for _, txDesc := range txs {
 		if gasUsed+uint64(gasStatus.GasUsed) > consensus.MaxBlockGas {
 			break
 		}

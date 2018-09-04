@@ -8,13 +8,14 @@ func (a byTime) Len() int           { return len(a) }
 func (a byTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byTime) Less(i, j int) bool { return a[i].Added.Unix() < a[j].Added.Unix() }
 
+type txWithGas struct {
+	*protocol.TxDesc
+	gasUsed   uint64
+	gasOnlyTx bool
+}
+
 /*
 // A Change is a record of source code changes, recording user, language, and delta size.
-type Change struct {
-	user     string
-	language string
-	lines    int
-}
 
 type lessFunc func(p1, p2 *Change) bool
 
