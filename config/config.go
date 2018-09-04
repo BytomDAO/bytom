@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -225,13 +226,34 @@ func DefaultDataDir() string {
 	}
 	switch runtime.GOOS {
 	case "darwin":
-		return filepath.Join(home, "Library", "Bytom")
+		// In order to be compatible with old data path,
+		// copy the data from the old path to the new path
+		oldPath := filepath.Join(home, "Library", "Bytom")
+		newPath := filepath.Join(home, "Library", "Application Support", "Bytom")
+		if exists(oldPath) && !exists(newPath) {
+			if err := os.Rename(oldPath, newPath); err != nil {
+				fmt.Println(err)
+			}
+		}
+		return newPath
 	case "windows":
 		return filepath.Join(home, "AppData", "Roaming", "Bytom")
 	default:
 		return filepath.Join(home, ".bytom")
 	}
 }
+
+func exists(path string) bool {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
 
 func homeDir() string {
 	if home := os.Getenv("HOME"); home != "" {
