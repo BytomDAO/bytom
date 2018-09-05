@@ -45,7 +45,7 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 	}
 
 	var err error
-	if c.index, err = store.LoadBlockIndex(); err != nil {
+	if c.index, err = store.LoadBlockIndex(storeStatus.Height); err != nil {
 		return nil, err
 	}
 
