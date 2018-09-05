@@ -153,10 +153,9 @@ func (xpub XPub) PublicKey() sm2.PubKey {
 	return sm2.PubKey(xpub[:33])
 }
 
-// Sign creates an EdDSA signature using expanded private key
+// Sign creates an sm2 signature using expanded private key
 // derived from the xprv.
 func (xprv XPrv) Sign(msg []byte) []byte {
-	// return Ed25519InnerSign(xprv.ExpandedPrivateKey(), msg)
 	priv := new(sm2.PrivateKey)
 	k := new(big.Int).SetBytes(xprv[:32])
 	c := sm2.P256Sm2()
