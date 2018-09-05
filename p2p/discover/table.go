@@ -162,13 +162,13 @@ func (tab *Table) closest(target common.Hash, nresults int) *nodesByDistance {
 	// This is a very wasteful way to find the closest nodes but
 	// obviously correct. I believe that tree-based buckets would make
 	// this easier to implement efficiently.
-	close := &nodesByDistance{target: target}
+	closest := &nodesByDistance{target: target}
 	for _, b := range &tab.buckets {
 		for _, n := range b.entries {
-			close.push(n, nresults)
+			closest.push(n, nresults)
 		}
 	}
-	return close
+	return closest
 }
 
 // add attempts to add the given node its corresponding bucket. If the

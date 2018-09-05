@@ -118,23 +118,7 @@ func Bytes2Hex(d []byte) string {
 
 func Hex2Bytes(str string) []byte {
 	h, _ := hex.DecodeString(str)
-
 	return h
-}
-
-func Hex2BytesFixed(str string, flen int) []byte {
-	h, _ := hex.DecodeString(str)
-	if len(h) == flen {
-		return h
-	} else {
-		if len(h) > flen {
-			return h[len(h)-flen : len(h)]
-		} else {
-			hh := make([]byte, flen)
-			copy(hh[flen-len(h):flen], h[:])
-			return hh
-		}
-	}
 }
 
 func StringToByteFunc(str string, cb func(str string) []byte) (ret []byte) {
@@ -225,21 +209,6 @@ func RightPadString(str string, l int) string {
 	zeros := Bytes2Hex(make([]byte, (l-len(str))/2))
 
 	return str + zeros
-
-}
-
-func ToAddress(slice []byte) (addr []byte) {
-	if len(slice) < 20 {
-		addr = LeftPadBytes(slice, 20)
-	} else if len(slice) > 20 {
-		addr = slice[len(slice)-20:]
-	} else {
-		addr = slice
-	}
-
-	addr = CopyBytes(addr)
-
-	return
 }
 
 func ByteSliceToInterface(slice [][]byte) (ret []interface{}) {

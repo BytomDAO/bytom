@@ -202,12 +202,17 @@ func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx
 		if err != nil {
 			return nil, err
 		}
-		builder.AddInput(txInput, sigInst)
+		err = builder.AddInput(txInput, sigInst)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for _, amount := range t.Outputs {
 		output := types.NewTxOutput(*consensus.BTMAssetID, amount, []byte{byte(vm.OP_TRUE)})
-		builder.AddOutput(output)
+		if err := builder.AddOutput(output); err != nil {
+			return nil, err
+		}
 	}
 
 	tpl, _, err := builder.Build()
@@ -228,7 +233,10 @@ func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx
 func (cfg *chainTestConfig) Run() error {
 	db := dbm.NewDB("chain_test_db", "leveldb", "chain_test_db")
 	defer os.RemoveAll("chain_test_db")
-	chain, store, _, _ := MockChain(db)
+	chain, store, _, err := MockChain(db)
+	if err != nil {
+		return err
+	}
 	ctx := &chainTestContext{
 		Chain: chain,
 		DB:    db,

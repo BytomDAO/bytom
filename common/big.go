@@ -25,7 +25,6 @@ var (
 func BigPow(a, b int) *big.Int {
 	c := new(big.Int)
 	c.Exp(big.NewInt(int64(a)), big.NewInt(int64(b)), big.NewInt(0))
-
 	return c
 }
 
@@ -35,7 +34,6 @@ func BigPow(a, b int) *big.Int {
 func Big(num string) *big.Int {
 	n := new(big.Int)
 	n.SetString(num, 0)
-
 	return n
 }
 
@@ -44,11 +42,12 @@ func Big(num string) *big.Int {
 func BytesToBig(data []byte) *big.Int {
 	n := new(big.Int)
 	n.SetBytes(data)
-
 	return n
 }
+
 func Bytes2Big(data []byte) *big.Int { return BytesToBig(data) }
-func BigD(data []byte) *big.Int      { return BytesToBig(data) }
+
+func BigD(data []byte) *big.Int { return BytesToBig(data) }
 
 func String2Big(num string) *big.Int {
 	n := new(big.Int)
@@ -73,7 +72,6 @@ func U256(x *big.Int) *big.Int {
 	//	}
 
 	x.And(x, tt256m1)
-
 	return x
 }
 
@@ -92,7 +90,6 @@ func FirstBitSet(v *big.Int) int {
 			return i
 		}
 	}
-
 	return v.BitLen()
 }
 
@@ -124,7 +121,6 @@ func BigMax(x, y *big.Int) *big.Int {
 	if x.Cmp(y) < 0 {
 		return y
 	}
-
 	return x
 }
 
@@ -135,6 +131,5 @@ func BigMin(x, y *big.Int) *big.Int {
 	if x.Cmp(y) > 0 {
 		return y
 	}
-
 	return x
 }
