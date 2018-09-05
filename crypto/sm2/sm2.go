@@ -475,6 +475,7 @@ func getLastBit(a *big.Int) uint {
 	return a.Bit(0)
 }
 
+// Compress transform  publickey point struct to 33 bytes publickey.
 func Compress(a *PublicKey) []byte {
 	buf := []byte{}
 	yp := getLastBit(a.Y)
@@ -494,8 +495,10 @@ func Compress(a *PublicKey) []byte {
 	return buf
 }
 
+// Decompress transform  33 bytes publickey to publickey point struct.
 func Decompress(a []byte) *PublicKey {
-	fmt.Printf("a : %x\n", a)
+	fmt.Printf("====function Decompress: \npublickey : %x\n", a)
+
 	var aa, xx, xx3 sm2P256FieldElement
 
 	P256Sm2()
