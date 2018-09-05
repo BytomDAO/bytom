@@ -2,13 +2,13 @@ package pseudohsm
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/errors"
-	"io/ioutil"
-	"os"
 )
 
 const dirPath = "testdata/pseudo"
