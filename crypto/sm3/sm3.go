@@ -33,6 +33,7 @@ func (sm3 *SM3) pad() []byte {
 		msg = append(msg, 0x00)
 	}
 	// append message length
+	// not using loops so that compiler might benefit from it
 	msg = append(msg, uint8(sm3.length>>56&0xff))
 	msg = append(msg, uint8(sm3.length>>48&0xff))
 	msg = append(msg, uint8(sm3.length>>40&0xff))
