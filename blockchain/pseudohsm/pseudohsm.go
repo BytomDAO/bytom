@@ -7,9 +7,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pborman/uuid"
+
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
-	"github.com/pborman/uuid"
+	mnem "github.com/bytom/wallet/mnemonic"
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -45,7 +47,25 @@ func New(keypath string) (*HSM, error) {
 }
 
 // XCreate produces a new random xprv and stores it in the db.
-func (h *HSM) XCreate(alias string, auth string) (*XPub, error) {
+func (h *HSM) XCreate(alias string, auth string) (*XPub, *string, error) {
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+
+	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
+	if ok := h.cache.hasAlias(normalizedAlias); ok {
+		return nil, nil, ErrDuplicateKeyAlias
+	}
+
+	xpub, mnemonic, _, err := h.createChainKDKey(auth, normalizedAlias, false)
+	if err != nil {
+		return nil, nil, err
+	}
+	h.cache.add(*xpub)
+	return xpub, mnemonic, err
+}
+
+// ImportFromMnemonic produces a xprv from mnemonic and stores it in the db.
+func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string) (*XPub, error) {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
 
@@ -54,7 +74,7 @@ func (h *HSM) XCreate(alias string, auth string) (*XPub, error) {
 		return nil, ErrDuplicateKeyAlias
 	}
 
-	xpub, _, err := h.createChainKDKey(auth, normalizedAlias, false)
+	xpub, _, err := h.importChainKDKey(normalizedAlias, auth, mnemonic, false)
 	if err != nil {
 		return nil, err
 	}
@@ -62,11 +82,18 @@ func (h *HSM) XCreate(alias string, auth string) (*XPub, error) {
 	return xpub, err
 }
 
-func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool, error) {
-	xprv, xpub, err := chainkd.NewXKeys(nil)
-	if err != nil {
-		return nil, false, err
+func (h *HSM) importChainKDKey(alias string, auth string, mnemonic string, get bool) (*XPub, bool, error) {
+	// Pre validate that the mnemonic is well formed and only contains words that
+	// are present in the word list
+	if !mnem.IsMnemonicValid(mnemonic) {
+		return nil, false, mnem.ErrInvalidMnemonic
 	}
+	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
+	seed := mnem.NewSeed(mnemonic, "")
+
+	xprv := chainkd.RootXPrv(seed)
+	xpub := xprv.XPub()
+
 	id := uuid.NewRandom()
 	key := &XKey{
 		ID:      id,
@@ -80,6 +107,37 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, bool
 		return nil, false, errors.Wrap(err, "storing keys")
 	}
 	return &XPub{XPub: xpub, Alias: alias, File: file}, true, nil
+}
+
+func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, *string, bool, error) {
+	// Generate a mnemonic for memorization or user-friendly seeds
+	entropy, err := mnem.NewEntropy(256)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	mnemonic, err := mnem.NewMnemonic(entropy)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
+	seed := mnem.NewSeed(mnemonic, "")
+
+	xprv := chainkd.RootXPrv(seed)
+	xpub := xprv.XPub()
+
+	id := uuid.NewRandom()
+	key := &XKey{
+		ID:      id,
+		KeyType: "bytom_kd",
+		XPub:    xpub,
+		XPrv:    xprv,
+		Alias:   alias,
+	}
+	file := h.keyStore.JoinPath(keyFileName(key.ID.String()))
+	if err := h.keyStore.StoreKey(file, key, auth); err != nil {
+		return nil, nil, false, errors.Wrap(err, "storing keys")
+	}
+	return &XPub{XPub: xpub, Alias: alias, File: file}, &mnemonic, true, nil
 }
 
 // ListKeys returns a list of all xpubs from the store

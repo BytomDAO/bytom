@@ -5,19 +5,41 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 )
+
+type createKeyResp struct {
+	Xpub     *pseudohsm.XPub `json:"xpub"`
+	Mnemonic *string         `json:"mnemonic"`
+}
 
 func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	Alias    string `json:"alias"`
 	Password string `json:"password"`
 }) Response {
-	xpub, err := a.wallet.Hsm.XCreate(in.Alias, in.Password)
+	xpub, mnemonic, err := a.wallet.Hsm.XCreate(in.Alias, in.Password)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-	return NewSuccessResponse(xpub)
+	return NewSuccessResponse(&createKeyResp{Xpub: xpub, Mnemonic: mnemonic})
+}
+
+type importKeyResp struct {
+	Xpub *pseudohsm.XPub `json:"xpub"`
+}
+
+func (a *API) pseudohsmImportKey(ctx context.Context, in struct {
+	Alias    string `json:"alias"`
+	Password string `json:"password"`
+	Mnemonic string `json:"nnemonic"`
+}) Response {
+	xpub, err := a.wallet.Hsm.ImportKeyFromMnemonic(in.Alias, in.Password, in.Mnemonic)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(&importKeyResp{Xpub: xpub})
 }
 
 func (a *API) pseudohsmListKeys(ctx context.Context) Response {
