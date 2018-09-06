@@ -18,7 +18,15 @@ type createKeyResp struct {
 func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	Alias    string `json:"alias"`
 	Password string `json:"password"`
+	Mnemonic string `json:"nnemonic"`
 }) Response {
+	if len(in.Mnemonic) > 0 {
+		xpub, err := a.wallet.Hsm.ImportKeyFromMnemonic(in.Alias, in.Password, in.Mnemonic)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		return NewSuccessResponse(&createKeyResp{Xpub: xpub})
+	}
 	xpub, mnemonic, err := a.wallet.Hsm.XCreate(in.Alias, in.Password)
 	if err != nil {
 		return NewErrorResponse(err)
@@ -28,18 +36,6 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 
 type importKeyResp struct {
 	Xpub *pseudohsm.XPub `json:"xpub"`
-}
-
-func (a *API) pseudohsmImportKey(ctx context.Context, in struct {
-	Alias    string `json:"alias"`
-	Password string `json:"password"`
-	Mnemonic string `json:"nnemonic"`
-}) Response {
-	xpub, err := a.wallet.Hsm.ImportKeyFromMnemonic(in.Alias, in.Password, in.Mnemonic)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-	return NewSuccessResponse(&importKeyResp{Xpub: xpub})
 }
 
 func (a *API) pseudohsmListKeys(ctx context.Context) Response {

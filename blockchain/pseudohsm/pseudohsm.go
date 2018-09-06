@@ -56,7 +56,7 @@ func (h *HSM) XCreate(alias string, auth string) (*XPub, *string, error) {
 		return nil, nil, ErrDuplicateKeyAlias
 	}
 
-	xpub, mnemonic, err := h.createChainKDKey(auth, normalizedAlias, false)
+	xpub, mnemonic, err := h.createChainKDKey(normalizedAlias, auth, false)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -74,20 +74,22 @@ func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string) 
 		return nil, ErrDuplicateKeyAlias
 	}
 
-	xpub, _, err := h.importChainKDKey(normalizedAlias, auth, mnemonic, false)
-	if err != nil {
-		return nil, err
-	}
-	h.cache.add(*xpub)
-	return xpub, err
-}
-
-func (h *HSM) importChainKDKey(alias string, auth string, mnemonic string, get bool) (*XPub, bool, error) {
 	// Pre validate that the mnemonic is well formed and only contains words that
 	// are present in the word list
 	if !mnem.IsMnemonicValid(mnemonic) {
-		return nil, false, mnem.ErrInvalidMnemonic
+		return nil, mnem.ErrInvalidMnemonic
 	}
+
+	xpub, err := h.createKeyFromSeed(alias, auth, mnemonic)
+	if err != nil {
+		return nil, err
+	}
+
+	h.cache.add(*xpub)
+	return xpub, nil
+}
+
+func (h *HSM) createKeyFromSeed(alias string, auth string, mnemonic string) (*XPub, error) {
 	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
 	seed := mnem.NewSeed(mnemonic, "")
 
@@ -104,12 +106,12 @@ func (h *HSM) importChainKDKey(alias string, auth string, mnemonic string, get b
 	}
 	file := h.keyStore.JoinPath(keyFileName(key.ID.String()))
 	if err := h.keyStore.StoreKey(file, key, auth); err != nil {
-		return nil, false, errors.Wrap(err, "storing keys")
+		return nil, errors.Wrap(err, "storing keys")
 	}
-	return &XPub{XPub: xpub, Alias: alias, File: file}, true, nil
+	return &XPub{XPub: xpub, Alias: alias, File: file}, nil
 }
 
-func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, *string, error) {
+func (h *HSM) createChainKDKey(alias string, auth string, get bool) (*XPub, *string, error) {
 	// Generate a mnemonic for memorization or user-friendly seeds
 	entropy, err := mnem.NewEntropy(256)
 	if err != nil {
@@ -119,25 +121,11 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, *str
 	if err != nil {
 		return nil, nil, err
 	}
-	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
-	seed := mnem.NewSeed(mnemonic, "")
-
-	xprv := chainkd.RootXPrv(seed)
-	xpub := xprv.XPub()
-
-	id := uuid.NewRandom()
-	key := &XKey{
-		ID:      id,
-		KeyType: "bytom_kd",
-		XPub:    xpub,
-		XPrv:    xprv,
-		Alias:   alias,
+	xpub, err := h.createKeyFromSeed(alias, auth, mnemonic)
+	if err != nil {
+		return nil, nil, err
 	}
-	file := h.keyStore.JoinPath(keyFileName(key.ID.String()))
-	if err := h.keyStore.StoreKey(file, key, auth); err != nil {
-		return nil, nil, errors.Wrap(err, "storing keys")
-	}
-	return &XPub{XPub: xpub, Alias: alias, File: file}, &mnemonic, nil
+	return xpub, &mnemonic, nil
 }
 
 // ListKeys returns a list of all xpubs from the store
