@@ -56,7 +56,7 @@ func (h *HSM) XCreate(alias string, auth string) (*XPub, *string, error) {
 		return nil, nil, ErrDuplicateKeyAlias
 	}
 
-	xpub, mnemonic, _, err := h.createChainKDKey(auth, normalizedAlias, false)
+	xpub, mnemonic, err := h.createChainKDKey(auth, normalizedAlias, false)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -109,15 +109,15 @@ func (h *HSM) importChainKDKey(alias string, auth string, mnemonic string, get b
 	return &XPub{XPub: xpub, Alias: alias, File: file}, true, nil
 }
 
-func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, *string, bool, error) {
+func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, *string, error) {
 	// Generate a mnemonic for memorization or user-friendly seeds
 	entropy, err := mnem.NewEntropy(256)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, err
 	}
 	mnemonic, err := mnem.NewMnemonic(entropy)
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, err
 	}
 	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
 	seed := mnem.NewSeed(mnemonic, "")
@@ -135,9 +135,9 @@ func (h *HSM) createChainKDKey(auth string, alias string, get bool) (*XPub, *str
 	}
 	file := h.keyStore.JoinPath(keyFileName(key.ID.String()))
 	if err := h.keyStore.StoreKey(file, key, auth); err != nil {
-		return nil, nil, false, errors.Wrap(err, "storing keys")
+		return nil, nil, errors.Wrap(err, "storing keys")
 	}
-	return &XPub{XPub: xpub, Alias: alias, File: file}, &mnemonic, true, nil
+	return &XPub{XPub: xpub, Alias: alias, File: file}, &mnemonic, nil
 }
 
 // ListKeys returns a list of all xpubs from the store
