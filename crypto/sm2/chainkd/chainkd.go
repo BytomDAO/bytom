@@ -15,13 +15,13 @@ type (
 	XPub [65]byte
 )
 
-const (
-	// ExpandedPrivateKeySize is the size, in bytes, of a "secret key" as defined in NaCl.
-	ExpandedPrivateKeySize = 64
-)
+// const (
+// 	// ExpandedPrivateKeySize is the size, in bytes, of a "secret key" as defined in NaCl.
+// 	ExpandedPrivateKeySize = 64
+// )
 
-// ExpandedPrivateKey is the type of NaCl secret keys. It implements crypto.Signer.
-type ExpandedPrivateKey []byte
+// // ExpandedPrivateKey is the type of NaCl secret keys. It implements crypto.Signer.
+// type ExpandedPrivateKey []byte
 
 // XPub derives an extended public key from a given xprv.
 func (xprv XPrv) XPub() (xpub XPub) {
