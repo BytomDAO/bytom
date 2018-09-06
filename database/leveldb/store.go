@@ -133,9 +133,11 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 		if err := bh.UnmarshalText(bhIter.Value()); err != nil {
 			return nil, err
 		}
-
+		
+		// If a block with a height greater than the best height of state is added to the index,
+		// It may cause a bug that the new block cant not be process properly.
 		if bh.Height > stateBestHeight {
-			continue
+			break
 		}
 
 		var parent *state.BlockNode
