@@ -178,7 +178,7 @@ func BenchmarkSign(b *testing.B) {
 	auth := "nowpasswd"
 
 	hsm, _ := New(dirPath)
-	xpub, _, err := hsm.XCreate(auth, "")
+	xpub, _, err := hsm.XCreate("TESTKEY", auth)
 	if err != nil {
 		b.Fatal(err)
 	}

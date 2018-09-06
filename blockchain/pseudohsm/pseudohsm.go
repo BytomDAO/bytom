@@ -2,6 +2,7 @@
 package pseudohsm
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,7 +57,7 @@ func (h *HSM) XCreate(alias string, auth string) (*XPub, *string, error) {
 		return nil, nil, ErrDuplicateKeyAlias
 	}
 
-	xpub, mnemonic, err := h.createChainKDKey(normalizedAlias, auth, false)
+	xpub, mnemonic, err := h.createChainKDKey(normalizedAlias, auth)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -80,7 +81,7 @@ func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string) 
 		return nil, mnem.ErrInvalidMnemonic
 	}
 
-	xpub, err := h.createKeyFromSeed(alias, auth, mnemonic)
+	xpub, err := h.createKeyFromMnemonic(alias, auth, mnemonic)
 	if err != nil {
 		return nil, err
 	}
@@ -89,13 +90,13 @@ func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string) 
 	return xpub, nil
 }
 
-func (h *HSM) createKeyFromSeed(alias string, auth string, mnemonic string) (*XPub, error) {
+func (h *HSM) createKeyFromMnemonic(alias string, auth string, mnemonic string) (*XPub, error) {
 	// Generate a Bip32 HD wallet for the mnemonic and a user supplied password
 	seed := mnem.NewSeed(mnemonic, "")
-
-	xprv := chainkd.RootXPrv(seed)
-	xpub := xprv.XPub()
-
+	xprv, xpub, err := chainkd.NewXKeys(bytes.NewBuffer(seed))
+	if err != nil {
+		return nil, err
+	}
 	id := uuid.NewRandom()
 	key := &XKey{
 		ID:      id,
@@ -111,7 +112,7 @@ func (h *HSM) createKeyFromSeed(alias string, auth string, mnemonic string) (*XP
 	return &XPub{XPub: xpub, Alias: alias, File: file}, nil
 }
 
-func (h *HSM) createChainKDKey(alias string, auth string, get bool) (*XPub, *string, error) {
+func (h *HSM) createChainKDKey(alias string, auth string) (*XPub, *string, error) {
 	// Generate a mnemonic for memorization or user-friendly seeds
 	entropy, err := mnem.NewEntropy(256)
 	if err != nil {
@@ -121,7 +122,7 @@ func (h *HSM) createChainKDKey(alias string, auth string, get bool) (*XPub, *str
 	if err != nil {
 		return nil, nil, err
 	}
-	xpub, err := h.createKeyFromSeed(alias, auth, mnemonic)
+	xpub, err := h.createKeyFromMnemonic(alias, auth, mnemonic)
 	if err != nil {
 		return nil, nil, err
 	}
