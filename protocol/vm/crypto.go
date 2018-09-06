@@ -2,6 +2,7 @@ package vm
 
 import (
 	"crypto/sha256"
+	"fmt"
 	"hash"
 
 	"golang.org/x/crypto/sha3"
@@ -64,6 +65,11 @@ func opCheckSig(vm *virtualMachine) error {
 	if len(pubkeyBytes) != sm2.PubKeySize {
 		return vm.pushBool(false, true)
 	}
+	fmt.Println("=====opCheckSig=====")
+	fmt.Printf("pubkeyBytes: %x\n", pubkeyBytes)
+	fmt.Printf("msg: %x\n", msg)
+	fmt.Printf("sig: %x\n", sig)
+	fmt.Printf("result: %v\n", sm2.VerifyCompressedPubkey(sm2.PubKey(pubkeyBytes), msg, sig))
 	return vm.pushBool(sm2.VerifyCompressedPubkey(sm2.PubKey(pubkeyBytes), msg, sig), true)
 }
 
