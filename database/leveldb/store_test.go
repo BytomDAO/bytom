@@ -6,6 +6,7 @@ import (
 
 	"github.com/bytom/config"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
 
 	dbm "github.com/tendermint/tmlibs/db"
 )
@@ -42,7 +43,59 @@ func TestLoadBlockIndex(t *testing.T) {
 		}
 	}
 
-	if _, err := store.LoadBlockIndex(); err != nil {
+	if _, err := store.LoadBlockIndex(128); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestLoadBlockIndexBestHeight(t *testing.T) {
+	cases := []struct {
+		blockBestHeight uint64
+		stateBestHeight uint64
+	}{
+		{
+			blockBestHeight: 100,
+			stateBestHeight: 90,
+		},
+		{
+			blockBestHeight: 100,
+			stateBestHeight: 0,
+		},
+		{
+			blockBestHeight: 100,
+			stateBestHeight: 100,
+		},
+	}
+
+	defer os.RemoveAll("temp")
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	store := NewStore(testDB)
+	var savedBlocks []types.Block
+
+	for _, c := range cases {
+		block := config.GenesisBlock()
+		txStatus := bc.NewTransactionStatus()
+
+		for i := uint64(0); i < c.blockBestHeight; i++ {
+			if err := store.SaveBlock(block, txStatus); err != nil {
+				t.Fatal(err)
+			}
+
+			savedBlocks = append(savedBlocks, *block)
+			block.PreviousBlockHash = block.Hash()
+			block.Height++
+		}
+
+		index, err := store.LoadBlockIndex(c.stateBestHeight)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for _, block := range savedBlocks {
+			blockHash := block.Hash()
+			if block.Height <= c.stateBestHeight != index.BlockExist(&blockHash) {
+				t.Errorf("Error in load block index")
+			}
+		}
 	}
 }

@@ -105,13 +105,15 @@ func NewBlockMessage(block *types.Block) (*BlockMessage, error) {
 }
 
 //GetBlock get block from msg
-func (m *BlockMessage) GetBlock() *types.Block {
+func (m *BlockMessage) GetBlock() (*types.Block, error) {
 	block := &types.Block{
 		BlockHeader:  types.BlockHeader{},
 		Transactions: []*types.Tx{},
 	}
-	block.UnmarshalText(m.RawBlock)
-	return block
+	if err := block.UnmarshalText(m.RawBlock); err != nil {
+		return nil, err
+	}
+	return block, nil
 }
 
 //String convert msg to string
