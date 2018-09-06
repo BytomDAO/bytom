@@ -32,9 +32,9 @@ func NewXKeys(r io.Reader) (xprv XPrv, xpub XPub, err error) {
 	priv.PublicKey.Curve = c
 	priv.D = k
 	priv.PublicKey.X, priv.PublicKey.Y = c.ScalarBaseMult(k.Bytes())
-
 	pubkey := priv.Public().(*(sm2.PublicKey))
 	compPubkey := sm2.Compress(pubkey)
+
 	copy(xpub[:33], compPubkey[:])
 	copy(xpub[33:], xprv[32:])
 
