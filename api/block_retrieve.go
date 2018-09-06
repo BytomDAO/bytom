@@ -228,6 +228,7 @@ type MerkleBlockReq struct {
 // GetMerkleBlockResp is resp struct for GetTxOutProof API
 type GetMerkleBlockResp struct {
 	BlockHeader  types.BlockHeader `json:"block_header"`
+	Seed         *bc.Hash          `json:"seed"`
 	TxHashes     []*bc.Hash        `json:"tx_hashes"`
 	StatusHashes []*bc.Hash        `json:"status_hashes"`
 	Flags        []uint32          `json:"flags"`
@@ -237,6 +238,11 @@ type GetMerkleBlockResp struct {
 func (a *API) getMerkleProof(ins MerkleBlockReq) Response {
 	blockReq := BlockReq{BlockHash: ins.BlockHash}
 	block, err := a.getBlockHelper(blockReq)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	seed, err := a.chain.CalcNextSeed(&block.PreviousBlockHash)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -263,6 +269,7 @@ func (a *API) getMerkleProof(ins MerkleBlockReq) Response {
 
 	resp := &GetMerkleBlockResp{
 		BlockHeader:  block.BlockHeader,
+		Seed:         seed,
 		TxHashes:     hashes,
 		StatusHashes: statusHashes,
 		Flags:        flags,
