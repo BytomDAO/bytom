@@ -164,7 +164,7 @@ func (ctx *walletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) 
 }
 
 func (ctx *walletTestContext) createKey(name string, password string) error {
-	_, err := ctx.Wallet.Hsm.XCreate(name, password)
+	_, _, err := ctx.Wallet.Hsm.XCreate(name, password)
 	return err
 }
 

@@ -48,7 +48,7 @@ func (g *TxGenerator) Reset() {
 }
 
 func (g *TxGenerator) createKey(alias string, auth string) error {
-	_, err := g.Hsm.XCreate(alias, auth)
+	_, _, err := g.Hsm.XCreate(alias, auth)
 	return err
 }
 

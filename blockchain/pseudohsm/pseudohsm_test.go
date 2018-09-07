@@ -2,6 +2,8 @@ package pseudohsm
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -16,7 +18,7 @@ func TestCreateKeyWithUpperCase(t *testing.T) {
 
 	alias := "UPPER"
 
-	xpub, err := hsm.XCreate(alias, "password")
+	xpub, _, err := hsm.XCreate(alias, "password")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +38,7 @@ func TestCreateKeyWithWhiteSpaceTrimed(t *testing.T) {
 
 	alias := " with space surrounding "
 
-	xpub, err := hsm.XCreate(alias, "password")
+	xpub, _, err := hsm.XCreate(alias, "password")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,12 +56,12 @@ func TestCreateKeyWithWhiteSpaceTrimed(t *testing.T) {
 func TestPseudoHSMChainKDKeys(t *testing.T) {
 
 	hsm, _ := New(dirPath)
-	xpub, err := hsm.XCreate("bbs", "password")
+	xpub, _, err := hsm.XCreate("bbs", "password")
 
 	if err != nil {
 		t.Fatal(err)
 	}
-	xpub2, err := hsm.XCreate("bytom", "nopassword")
+	xpub2, _, err := hsm.XCreate("bytom", "nopassword")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +109,7 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 func TestKeyWithEmptyAlias(t *testing.T) {
 	hsm, _ := New(dirPath)
 	for i := 0; i < 2; i++ {
-		xpub, err := hsm.XCreate(fmt.Sprintf("xx%d", i), "xx")
+		xpub, _, err := hsm.XCreate(fmt.Sprintf("xx%d", i), "xx")
 		if errors.Root(err) != nil {
 			t.Fatal(err)
 		}
@@ -120,7 +122,7 @@ func TestKeyWithEmptyAlias(t *testing.T) {
 
 func TestSignAndVerifyMessage(t *testing.T) {
 	hsm, _ := New(dirPath)
-	xpub, err := hsm.XCreate("TESTKEY", "password")
+	xpub, _, err := hsm.XCreate("TESTKEY", "password")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,12 +152,33 @@ func TestSignAndVerifyMessage(t *testing.T) {
 	}
 }
 
+func TestImportKeyFromMnemonic(t *testing.T) {
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	hsm, _ := New(dirPath)
+	xpub, mnemonic, err := hsm.XCreate("TESTKEY", "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	newXPub, err := hsm.ImportKeyFromMnemonic("TESTKEY1", "password", *mnemonic)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if xpub.XPub != newXPub.XPub {
+		t.Fatal("import key from mnemonic failed")
+	}
+}
+
 func BenchmarkSign(b *testing.B) {
 	b.StopTimer()
 	auth := "nowpasswd"
 
 	hsm, _ := New(dirPath)
-	xpub, err := hsm.XCreate(auth, "")
+	xpub, _, err := hsm.XCreate("TESTKEY", auth)
 	if err != nil {
 		b.Fatal(err)
 	}
