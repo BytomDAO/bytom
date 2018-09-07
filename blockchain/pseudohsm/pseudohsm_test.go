@@ -9,6 +9,7 @@ import (
 
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/errors"
+	mnem "github.com/bytom/wallet/mnemonic"
 )
 
 const dirPath = "testdata/pseudo"
@@ -18,7 +19,7 @@ func TestCreateKeyWithUpperCase(t *testing.T) {
 
 	alias := "UPPER"
 
-	xpub, _, err := hsm.XCreate(alias, "password")
+	xpub, _, err := hsm.XCreate(alias, "password", mnem.English)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +39,7 @@ func TestCreateKeyWithWhiteSpaceTrimed(t *testing.T) {
 
 	alias := " with space surrounding "
 
-	xpub, _, err := hsm.XCreate(alias, "password")
+	xpub, _, err := hsm.XCreate(alias, "password", mnem.English)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,12 +57,12 @@ func TestCreateKeyWithWhiteSpaceTrimed(t *testing.T) {
 func TestPseudoHSMChainKDKeys(t *testing.T) {
 
 	hsm, _ := New(dirPath)
-	xpub, _, err := hsm.XCreate("bbs", "password")
+	xpub, _, err := hsm.XCreate("bbs", "password", mnem.English)
 
 	if err != nil {
 		t.Fatal(err)
 	}
-	xpub2, _, err := hsm.XCreate("bytom", "nopassword")
+	xpub2, _, err := hsm.XCreate("bytom", "nopassword", mnem.English)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +110,7 @@ func TestPseudoHSMChainKDKeys(t *testing.T) {
 func TestKeyWithEmptyAlias(t *testing.T) {
 	hsm, _ := New(dirPath)
 	for i := 0; i < 2; i++ {
-		xpub, _, err := hsm.XCreate(fmt.Sprintf("xx%d", i), "xx")
+		xpub, _, err := hsm.XCreate(fmt.Sprintf("xx%d", i), "xx", mnem.English)
 		if errors.Root(err) != nil {
 			t.Fatal(err)
 		}
@@ -122,7 +123,7 @@ func TestKeyWithEmptyAlias(t *testing.T) {
 
 func TestSignAndVerifyMessage(t *testing.T) {
 	hsm, _ := New(dirPath)
-	xpub, _, err := hsm.XCreate("TESTKEY", "password")
+	xpub, _, err := hsm.XCreate("TESTKEY", "password", mnem.English)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,16 +161,20 @@ func TestImportKeyFromMnemonic(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	hsm, _ := New(dirPath)
-	xpub, mnemonic, err := hsm.XCreate("TESTKEY", "password")
-	if err != nil {
-		t.Fatal(err)
-	}
-	newXPub, err := hsm.ImportKeyFromMnemonic("TESTKEY1", "password", *mnemonic)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if xpub.XPub != newXPub.XPub {
-		t.Fatal("import key from mnemonic failed")
+	for index := 0; index < mnem.MaxSupportLanguage; index++ {
+		key := fmt.Sprintf("TESTKEY%x", index)
+		xpub, mnemonic, err := hsm.XCreate(key, "password", index)
+		if err != nil {
+			t.Fatal(err)
+		}
+		importKey := fmt.Sprintf("IMPORTKEY%x", index)
+		newXPub, err := hsm.ImportKeyFromMnemonic(importKey, "password", *mnemonic, index)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if xpub.XPub != newXPub.XPub {
+			t.Fatal("import key from mnemonic failed")
+		}
 	}
 }
 
@@ -178,7 +183,7 @@ func BenchmarkSign(b *testing.B) {
 	auth := "nowpasswd"
 
 	hsm, _ := New(dirPath)
-	xpub, _, err := hsm.XCreate("TESTKEY", auth)
+	xpub, _, err := hsm.XCreate("TESTKEY", auth, mnem.English)
 	if err != nil {
 		b.Fatal(err)
 	}

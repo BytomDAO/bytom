@@ -16,6 +16,7 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
 	w "github.com/bytom/wallet"
+	mnem "github.com/bytom/wallet/mnemonic"
 )
 
 type walletTestConfig struct {
@@ -164,7 +165,7 @@ func (ctx *walletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) 
 }
 
 func (ctx *walletTestContext) createKey(name string, password string) error {
-	_, _, err := ctx.Wallet.Hsm.XCreate(name, password)
+	_, _, err := ctx.Wallet.Hsm.XCreate(name, password, mnem.English)
 	return err
 }
 

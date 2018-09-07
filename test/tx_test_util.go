@@ -22,6 +22,7 @@ import (
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
+	mnem "github.com/bytom/wallet/mnemonic"
 )
 
 // TxGenerator used to generate new tx
@@ -48,7 +49,7 @@ func (g *TxGenerator) Reset() {
 }
 
 func (g *TxGenerator) createKey(alias string, auth string) error {
-	_, _, err := g.Hsm.XCreate(alias, auth)
+	_, _, err := g.Hsm.XCreate(alias, auth, mnem.English)
 	return err
 }
 

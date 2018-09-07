@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	mnem "github.com/bytom/wallet/mnemonic"
 )
 
 func TestWalletUpdate(t *testing.T) {
@@ -44,7 +45,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpub1, _, err := hsm.XCreate("test_pub1", "password")
+	xpub1, _, err := hsm.XCreate("test_pub1", "password", mnem.English)
 	if err != nil {
 		t.Fatal(err)
 	}
