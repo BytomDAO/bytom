@@ -23,7 +23,6 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
-	mnem "github.com/bytom/wallet/mnemonic"
 )
 
 func BenchmarkChain_CoinBaseTx_NoAsset(b *testing.B) {
@@ -400,7 +399,7 @@ func MockTxsP2PKH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int)
 		return nil, err
 	}
 
-	xpub, _, err := hsm.XCreate("TestP2PKH", "password", mnem.English)
+	xpub, _, err := hsm.XCreate("TestP2PKH", "password", "en")
 	if err != nil {
 		return nil, err
 	}
@@ -442,12 +441,12 @@ func MockTxsP2SH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) 
 		return nil, err
 	}
 
-	xpub1, _, err := hsm.XCreate("TestP2SH1", "password", mnem.English)
+	xpub1, _, err := hsm.XCreate("TestP2SH1", "password", "en")
 	if err != nil {
 		return nil, err
 	}
 
-	xpub2, _, err := hsm.XCreate("TestP2SH2", "password", mnem.English)
+	xpub2, _, err := hsm.XCreate("TestP2SH2", "password", "en")
 	if err != nil {
 		return nil, err
 	}
@@ -489,12 +488,12 @@ func MockTxsMultiSign(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum 
 		return nil, err
 	}
 
-	xpub1, _, err := hsm.XCreate("TestMultilNodeSign1", "password1", mnem.English)
+	xpub1, _, err := hsm.XCreate("TestMultilNodeSign1", "password1", "en")
 	if err != nil {
 		return nil, err
 	}
 
-	xpub2, _, err := hsm.XCreate("TestMultilNodeSign2", "password2", mnem.English)
+	xpub2, _, err := hsm.XCreate("TestMultilNodeSign2", "password2", "en")
 	if err != nil {
 		return nil, err
 	}

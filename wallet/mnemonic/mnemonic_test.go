@@ -26,56 +26,70 @@ type vector struct {
 
 func TestNewMnemonic(t *testing.T) {
 	for _, vector := range testVectors() {
-		testMnem := []string{vector.mnemChineseSimplified, vector.mnemChineseTraditional, vector.mnemEnglish, vector.mnemItalian,
-			vector.mnemJapanese, vector.mnemKorean, vector.mnemSpanish}
-		testSeed := []string{vector.seedChineseSimplified, vector.seedChineseTraditional, vector.seedEnglish, vector.seedItalian,
-			vector.seedJapanese, vector.seedKorean, vector.seedSpanish}
-		for index := 0; index < MaxSupportLanguage; index++ {
+		testMnem := map[string]string{
+			"zh_CN": vector.mnemChineseSimplified,
+			"zh_TW": vector.mnemChineseTraditional,
+			"en":    vector.mnemEnglish,
+			"it":    vector.mnemItalian,
+			"ja":    vector.mnemJapanese,
+			"ko":    vector.mnemKorean,
+			"es":    vector.mnemSpanish,
+		}
+		testSeed := map[string]string{
+			"zh_CN": vector.seedChineseSimplified,
+			"zh_TW": vector.seedChineseTraditional,
+			"en":    vector.seedEnglish,
+			"it":    vector.seedItalian,
+			"ja":    vector.seedJapanese,
+			"ko":    vector.seedKorean,
+			"es":    vector.seedSpanish,
+		}
+		for key, _ := range wordList {
 			entropy, err := hex.DecodeString(vector.entropy)
 			assertNil(t, err)
 
-			mnemonic, err := NewMnemonic(entropy, index)
+			mnemonic, err := NewMnemonic(entropy, key)
 			assertNil(t, err)
-			assertEqualString(t, testMnem[index], mnemonic)
+			assertEqualString(t, testMnem[key], mnemonic)
 
-			_, err = NewSeedWithErrorChecking(mnemonic, "TREZOR", index)
+			_, err = NewSeedWithErrorChecking(mnemonic, "TREZOR", key)
 			assertNil(t, err)
 
 			seed := NewSeed(mnemonic, "TREZOR")
-			assertEqualString(t, testSeed[index], hex.EncodeToString(seed))
+			assertEqualString(t, testSeed[key], hex.EncodeToString(seed))
 		}
 	}
 }
 
 func TestNewMnemonicInvalidEntropy(t *testing.T) {
-	_, err := NewMnemonic([]byte{}, English)
+	_, err := NewMnemonic([]byte{}, "en")
 	assertNotNil(t, err)
 }
 
 func TestNewSeedWithErrorCheckingInvalidMnemonics(t *testing.T) {
 	for _, vector := range badMnemonicSentences() {
-		_, err := NewSeedWithErrorChecking(vector.mnemEnglish, "TREZOR", English)
+		_, err := NewSeedWithErrorChecking(vector.mnemEnglish, "TREZOR", "en")
 		assertNotNil(t, err)
 	}
 }
 
 func TestIsMnemonicValid(t *testing.T) {
 	for _, vector := range badMnemonicSentences() {
-		assertFalse(t, IsMnemonicValid(vector.mnemEnglish, English))
+		assertFalse(t, IsMnemonicValid(vector.mnemEnglish, "en"))
 	}
 
 	for _, vector := range testVectors() {
-		assertTrue(t, IsMnemonicValid(vector.mnemEnglish, English))
+		assertTrue(t, IsMnemonicValid(vector.mnemEnglish, "en"))
 	}
 }
 
 func TestInvalidMnemonicFails(t *testing.T) {
 	for _, vector := range badMnemonicSentences() {
-		_, err := MnemonicToByteArray(vector.mnemEnglish, English)
+		_, err := MnemonicToByteArray(vector.mnemEnglish, "en")
 		assertNotNil(t, err)
 	}
 
-	_, err := MnemonicToByteArray("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon yellow", English)
+	_, err := MnemonicToByteArray("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon yellow", "en")
 	assertNotNil(t, err)
 	assertEqual(t, err, ErrChecksumIncorrect)
 }
@@ -107,12 +121,12 @@ func TestMnemonicToByteArrayForDifferentArrayLangths(t *testing.T) {
 			t.Errorf("Wrong number of bytes read: %d", n)
 		}
 
-		mnemonic, err := NewMnemonic(seed, English)
+		mnemonic, err := NewMnemonic(seed, "en")
 		if err != nil {
 			t.Errorf("%v", err)
 		}
 
-		_, err = MnemonicToByteArray(mnemonic, English)
+		_, err = MnemonicToByteArray(mnemonic, "en")
 		if err != nil {
 			t.Errorf("Failed for %x - %v", seed, mnemonic)
 		}
@@ -265,12 +279,12 @@ func TestMnemonicToByteArrayForZeroLeadingSeeds(t *testing.T) {
 	for _, m := range ms {
 		seed, _ := hex.DecodeString(m)
 
-		mnemonic, err := NewMnemonic(seed, English)
+		mnemonic, err := NewMnemonic(seed, "en")
 		if err != nil {
 			t.Errorf("%v", err)
 		}
 
-		_, err = MnemonicToByteArray(mnemonic, English)
+		_, err = MnemonicToByteArray(mnemonic, "en")
 		if err != nil {
 			t.Errorf("Failed for %x - %v", seed, mnemonic)
 		}
@@ -736,11 +750,11 @@ func testEntropyFromMnemonic(t *testing.T, bitSize int) {
 		assertNil(t, err)
 		assertTrue(t, len(entropy) != 0)
 
-		mnemonic, err := NewMnemonic(entropy, English)
+		mnemonic, err := NewMnemonic(entropy, "en")
 		assertNil(t, err)
 		assertTrue(t, len(mnemonic) != 0)
 
-		outEntropy, err := EntropyFromMnemonic(mnemonic, English)
+		outEntropy, err := EntropyFromMnemonic(mnemonic, "en")
 		assertNil(t, err)
 		assertEqualByteSlices(t, entropy, outEntropy)
 	}

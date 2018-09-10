@@ -15,7 +15,6 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/testutil"
-	mnem "github.com/bytom/wallet/mnemonic"
 )
 
 func TestWalletUnconfirmedTxs(t *testing.T) {
@@ -34,7 +33,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpub1, _, err := hsm.XCreate("test_pub1", "password", mnem.English)
+	xpub1, _, err := hsm.XCreate("test_pub1", "password", "en")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -48,7 +48,7 @@ func New(keypath string) (*HSM, error) {
 }
 
 // XCreate produces a new random xprv and stores it in the db.
-func (h *HSM) XCreate(alias string, auth string, language int) (*XPub, *string, error) {
+func (h *HSM) XCreate(alias string, auth string, language string) (*XPub, *string, error) {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
 
@@ -66,7 +66,7 @@ func (h *HSM) XCreate(alias string, auth string, language int) (*XPub, *string, 
 }
 
 // ImportFromMnemonic produces a xprv from mnemonic and stores it in the db.
-func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string, language int) (*XPub, error) {
+func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string, language string) (*XPub, error) {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
 
@@ -112,7 +112,7 @@ func (h *HSM) createKeyFromMnemonic(alias string, auth string, mnemonic string) 
 	return &XPub{XPub: xpub, Alias: alias, File: file}, nil
 }
 
-func (h *HSM) createChainKDKey(alias string, auth string, language int) (*XPub, *string, error) {
+func (h *HSM) createChainKDKey(alias string, auth string, language string) (*XPub, *string, error) {
 	// Generate a mnemonic for memorization or user-friendly seeds
 	entropy, err := mnem.NewEntropy(256)
 	if err != nil {
