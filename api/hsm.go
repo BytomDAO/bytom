@@ -19,15 +19,16 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	Alias    string `json:"alias"`
 	Password string `json:"password"`
 	Mnemonic string `json:"nnemonic"`
+	Language string    `json:"language"`
 }) Response {
 	if len(in.Mnemonic) > 0 {
-		xpub, err := a.wallet.Hsm.ImportKeyFromMnemonic(in.Alias, in.Password, in.Mnemonic)
+		xpub, err := a.wallet.Hsm.ImportKeyFromMnemonic(in.Alias, in.Password, in.Mnemonic, in.Language)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
 		return NewSuccessResponse(&createKeyResp{Xpub: xpub})
 	}
-	xpub, mnemonic, err := a.wallet.Hsm.XCreate(in.Alias, in.Password)
+	xpub, mnemonic, err := a.wallet.Hsm.XCreate(in.Alias, in.Password, in.Language)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
