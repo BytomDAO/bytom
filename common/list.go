@@ -46,9 +46,7 @@ func (self *List) Get(i int) interface{} {
 
 func (self *List) GetAsJson(i int) interface{} {
 	e := self.Get(i)
-
 	r, _ := json.Marshal(e)
-
 	return string(r)
 }
 
@@ -74,8 +72,6 @@ func (self *List) ToJSON() string {
 	for i := 0; i < self.Length; i++ {
 		list = append(list, self.Get(i))
 	}
-
 	data, _ := json.Marshal(list)
-
 	return string(data)
 }

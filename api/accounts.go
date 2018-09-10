@@ -87,7 +87,7 @@ type addressResp struct {
 	Address        string `json:"address"`
 	ControlProgram string `json:"control_program"`
 	Change         bool   `json:"change"`
-	KeyIndex       uint64 `json:"-"`
+	KeyIndex       uint64 `json:"key_index"`
 }
 
 // SortByIndex implements sort.Interface for addressResp slices

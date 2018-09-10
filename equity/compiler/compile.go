@@ -461,11 +461,12 @@ func compileExpr(b *builder, stk stack, contract *Contract, clause *Clause, env 
 			if lType != rType {
 				// Maybe one is Hash and the other is (more-specific-Hash subtype).
 				// TODO(bobg): generalize this mechanism
-				if lType == hashType && isHashSubtype(rType) {
+				switch {
+				case lType == hashType && isHashSubtype(rType):
 					propagateType(contract, clause, env, rType, e.left)
-				} else if rType == hashType && isHashSubtype(lType) {
+				case rType == hashType && isHashSubtype(lType):
 					propagateType(contract, clause, env, lType, e.right)
-				} else {
+				default:
 					return stk, fmt.Errorf("type mismatch in \"%s\": left operand has type \"%s\", right operand has type \"%s\"", e, lType, rType)
 				}
 			}

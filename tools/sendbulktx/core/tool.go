@@ -46,7 +46,7 @@ var (
 	mulOutput  int
 	cfg        config
 	m          sync.Mutex
-	success     = 0
+	success    = 0
 	fail       = 0
 )
 
@@ -131,10 +131,9 @@ var sendTxCmd = &cobra.Command{
 }
 
 func recvTxID(txs *list.List, txidChan chan string) {
-
-	file, error := os.OpenFile("./txid.txt", os.O_RDWR|os.O_CREATE, 0766)
-	if error != nil {
-		fmt.Println(error)
+	file, err := os.OpenFile("./txid.txt", os.O_RDWR|os.O_CREATE, 0766)
+	if err != nil {
+		fmt.Println(err)
 	}
 
 	for {

@@ -24,10 +24,8 @@ func ExpandHomePath(p string) (path string) {
 	if len(p) > 1 && p[:1+len(sep)] == "~"+sep {
 		usr, _ := user.Current()
 		dir := usr.HomeDir
-
 		path = strings.Replace(p, "~", dir, 1)
 	}
-
 	return
 }
 

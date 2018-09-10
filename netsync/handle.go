@@ -155,7 +155,11 @@ func (sm *SyncManager) Switch() *p2p.Switch {
 }
 
 func (sm *SyncManager) handleBlockMsg(peer *peer, msg *BlockMessage) {
-	sm.blockKeeper.processBlock(peer.ID(), msg.GetBlock())
+	block, err := msg.GetBlock()
+	if err != nil {
+		return
+	}
+	sm.blockKeeper.processBlock(peer.ID(), block)
 }
 
 func (sm *SyncManager) handleBlocksMsg(peer *peer, msg *BlocksMessage) {
