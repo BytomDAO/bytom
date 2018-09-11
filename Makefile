@@ -97,6 +97,8 @@ clean:
 	@rm -rf blockchain/pseudohsm/testdata/pseudo/
 	@echo "Cleaning sm2 pem files..."
 	@rm -rf crypto/sm2/*.pem
+	@rm crypto/sm2/ifile
+	@rm crypto/sm2/ofile
 	@echo "Done."
 
 target/$(BYTOMD_BINARY32):
