@@ -19,8 +19,11 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	Alias    string `json:"alias"`
 	Password string `json:"password"`
 	Mnemonic string `json:"nnemonic"`
-	Language string    `json:"language"`
+	Language string `json:"language"`
 }) Response {
+	if in.Language == "" {
+		in.Language = "en"
+	}
 	if len(in.Mnemonic) > 0 {
 		xpub, err := a.wallet.Hsm.ImportKeyFromMnemonic(in.Alias, in.Password, in.Mnemonic, in.Language)
 		if err != nil {
