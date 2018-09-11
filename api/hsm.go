@@ -11,28 +11,33 @@ import (
 )
 
 type createKeyResp struct {
-	Xpub     *pseudohsm.XPub `json:"xpub"`
-	Mnemonic *string         `json:"mnemonic"`
+	Alias    string       `json:"alias"`
+	XPub     chainkd.XPub `json:"xpub"`
+	File     string       `json:"file"`
+	Mnemonic string       `json:"mnemonic"`
 }
 
 func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	Alias    string `json:"alias"`
 	Password string `json:"password"`
 	Mnemonic string `json:"nnemonic"`
-	Language string    `json:"language"`
+	Language string `json:"language"`
 }) Response {
+	if in.Language == "" {
+		in.Language = "en"
+	}
 	if len(in.Mnemonic) > 0 {
 		xpub, err := a.wallet.Hsm.ImportKeyFromMnemonic(in.Alias, in.Password, in.Mnemonic, in.Language)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
-		return NewSuccessResponse(&createKeyResp{Xpub: xpub})
+		return NewSuccessResponse(&createKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File})
 	}
 	xpub, mnemonic, err := a.wallet.Hsm.XCreate(in.Alias, in.Password, in.Language)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-	return NewSuccessResponse(&createKeyResp{Xpub: xpub, Mnemonic: mnemonic})
+	return NewSuccessResponse(&createKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File, Mnemonic: *mnemonic})
 }
 
 type importKeyResp struct {
