@@ -7,6 +7,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
@@ -30,12 +31,11 @@ import (
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/types"
 	w "github.com/bytom/wallet"
 )
 
 const (
-	webAddress        = "http://127.0.0.1:9888"
+	webHost           = "http://127.0.0.1"
 	maxNewBlockChSize = 1024
 )
 
@@ -47,7 +47,6 @@ type Node struct {
 
 	syncManager *netsync.SyncManager
 
-	evsw types.EventSwitch // pub/sub for services
 	//bcReactor    *bc.BlockchainReactor
 	wallet       *w.Wallet
 	accessTokens *accesstoken.CredentialStore
@@ -66,20 +65,19 @@ func NewNode(config *cfg.Config) *Node {
 	}
 	initLogFile(config)
 	initActiveNetParams(config)
+	initCommonConfig(config)
+
 	// Get store
+	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
+		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))
+	}
 	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
 	store := leveldb.NewStore(coreDB)
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
 
-	// Make event switch
-	eventSwitch := types.NewEventSwitch()
-	if _, err := eventSwitch.Start(); err != nil {
-		cmn.Exit(cmn.Fmt("Failed to start switch: %v", err))
-	}
-
-	txPool := protocol.NewTxPool()
+	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
@@ -130,14 +128,15 @@ func NewNode(config *cfg.Config) *Node {
 		// Profiling bytomd programs.see (https://blog.golang.org/profiling-go-programs)
 		// go tool pprof http://profileHose/debug/pprof/heap
 		go func() {
-			http.ListenAndServe(profileHost, nil)
+			if err = http.ListenAndServe(profileHost, nil); err != nil {
+				cmn.Exit(cmn.Fmt("Failed to register tcp profileHost: %v", err))
+			}
 		}()
 	}
 
 	node := &Node{
 		config:       config,
 		syncManager:  syncManager,
-		evsw:         eventSwitch,
 		accessTokens: accessTokens,
 		wallet:       wallet,
 		chain:        chain,
@@ -211,8 +210,13 @@ func initLogFile(config *cfg.Config) {
 
 }
 
+func initCommonConfig(config *cfg.Config) {
+	cfg.CommonConfig = config
+}
+
 // Lanch web broser or not
-func launchWebBrowser() {
+func launchWebBrowser(port string) {
+	webAddress := webHost + ":" + port
 	log.Info("Launching System Browser with :", webAddress)
 	if err := browser.Open(webAddress); err != nil {
 		log.Error(err.Error())
@@ -242,7 +246,11 @@ func (n *Node) OnStart() error {
 	}
 	n.initAndstartApiServer()
 	if !n.config.Web.Closed {
-		launchWebBrowser()
+		s := strings.Split(n.config.ApiAddress, ":")
+		if len(s) != 2 {
+			log.Error("Invalid api address")
+		}
+		launchWebBrowser(s[1])
 	}
 	return nil
 }
@@ -262,10 +270,6 @@ func (n *Node) RunForever() {
 	cmn.TrapSignal(func() {
 		n.Stop()
 	})
-}
-
-func (n *Node) EventSwitch() types.EventSwitch {
-	return n.evsw
 }
 
 func (n *Node) SyncManager() *netsync.SyncManager {

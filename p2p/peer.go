@@ -34,8 +34,8 @@ type PeerConfig struct {
 // DefaultPeerConfig returns the default config.
 func DefaultPeerConfig(config *cfg.P2PConfig) *PeerConfig {
 	return &PeerConfig{
-		HandshakeTimeout: time.Duration(config.HandshakeTimeout), // * time.Second,
-		DialTimeout:      time.Duration(config.DialTimeout),      // * time.Second,
+		HandshakeTimeout: time.Duration(config.HandshakeTimeout) * time.Second, // * time.Second,
+		DialTimeout:      time.Duration(config.DialTimeout) * time.Second,      // * time.Second,
 		MConfig:          connection.DefaultMConnConfig(),
 	}
 }
@@ -93,7 +93,7 @@ func newInboundPeerConn(conn net.Conn, ourNodePrivKey crypto.PrivKeyEd25519, con
 }
 
 func newPeerConn(rawConn net.Conn, outbound bool, ourNodePrivKey crypto.PrivKeyEd25519, config *PeerConfig) (*peerConn, error) {
-	rawConn.SetDeadline(time.Now().Add(config.HandshakeTimeout * time.Second))
+	rawConn.SetDeadline(time.Now().Add(config.HandshakeTimeout))
 	conn, err := connection.MakeSecretConnection(rawConn, ourNodePrivKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error creating peer")
@@ -133,7 +133,9 @@ func (p *Peer) Equals(other *Peer) bool {
 // NOTE: blocking
 func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duration) (*NodeInfo, error) {
 	// Set deadline for handshake so we don't block forever on conn.ReadFull
-	pc.conn.SetDeadline(time.Now().Add(timeout))
+	if err := pc.conn.SetDeadline(time.Now().Add(timeout)); err != nil {
+		return nil, err
+	}
 
 	var peerNodeInfo = new(NodeInfo)
 	var err1, err2 error
@@ -155,7 +157,9 @@ func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duratio
 	}
 
 	// Remove deadline
-	pc.conn.SetDeadline(time.Time{})
+	if err := pc.conn.SetDeadline(time.Time{}); err != nil {
+		return nil, err
+	}
 	peerNodeInfo.RemoteAddr = pc.conn.RemoteAddr().String()
 	return peerNodeInfo, nil
 }
@@ -228,7 +232,7 @@ func createMConnection(conn net.Conn, p *Peer, reactorsByCh map[byte]Reactor, ch
 }
 
 func dial(addr *NetAddress, config *PeerConfig) (net.Conn, error) {
-	conn, err := addr.DialTimeout(config.DialTimeout * time.Second)
+	conn, err := addr.DialTimeout(config.DialTimeout)
 	if err != nil {
 		return nil, err
 	}

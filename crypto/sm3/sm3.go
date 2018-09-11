@@ -1,18 +1,3 @@
-/*
-Copyright Suzhou Tongji Fintech Research Institute 2017 All Rights Reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-                 http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package sm3
 
 import (
@@ -48,6 +33,7 @@ func (sm3 *SM3) pad() []byte {
 		msg = append(msg, 0x00)
 	}
 	// append message length
+	// not using loops so that compiler might benefit from it
 	msg = append(msg, uint8(sm3.length>>56&0xff))
 	msg = append(msg, uint8(sm3.length>>48&0xff))
 	msg = append(msg, uint8(sm3.length>>40&0xff))

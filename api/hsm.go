@@ -5,19 +5,43 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 )
 
+type createKeyResp struct {
+	Alias    string       `json:"alias"`
+	XPub     chainkd.XPub `json:"xpub"`
+	File     string       `json:"file"`
+	Mnemonic string       `json:"mnemonic"`
+}
+
 func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	Alias    string `json:"alias"`
 	Password string `json:"password"`
+	Mnemonic string `json:"nnemonic"`
+	Language string `json:"language"`
 }) Response {
-	xpub, err := a.wallet.Hsm.XCreate(in.Alias, in.Password)
+	if in.Language == "" {
+		in.Language = "en"
+	}
+	if len(in.Mnemonic) > 0 {
+		xpub, err := a.wallet.Hsm.ImportKeyFromMnemonic(in.Alias, in.Password, in.Mnemonic, in.Language)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		return NewSuccessResponse(&createKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File})
+	}
+	xpub, mnemonic, err := a.wallet.Hsm.XCreate(in.Alias, in.Password, in.Language)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-	return NewSuccessResponse(xpub)
+	return NewSuccessResponse(&createKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File, Mnemonic: *mnemonic})
+}
+
+type importKeyResp struct {
+	Xpub *pseudohsm.XPub `json:"xpub"`
 }
 
 func (a *API) pseudohsmListKeys(ctx context.Context) Response {
@@ -55,7 +79,7 @@ func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path
 	return a.wallet.Hsm.XSign(xpub, path, data[:], password)
 }
 
-// ResetPasswordResp is response for reset password password
+// ResetPasswordResp is response for reset key password
 type ResetPasswordResp struct {
 	Changed bool `json:"changed"`
 }
@@ -70,5 +94,22 @@ func (a *API) pseudohsmResetPassword(ctx context.Context, ins struct {
 		return NewSuccessResponse(resp)
 	}
 	resp.Changed = true
+	return NewSuccessResponse(resp)
+}
+
+// CheckPasswordResp is response for check key password
+type CheckPasswordResp struct {
+	CheckResult bool `json:"check_result"`
+}
+
+func (a *API) pseudohsmCheckPassword(ctx context.Context, ins struct {
+	XPub     chainkd.XPub `json:"xpub"`
+	Password string       `json:"password"`
+}) Response {
+	resp := &CheckPasswordResp{CheckResult: false}
+	if _, err := a.wallet.Hsm.LoadChainKDKey(ins.XPub, ins.Password); err != nil {
+		return NewSuccessResponse(resp)
+	}
+	resp.CheckResult = true
 	return NewSuccessResponse(resp)
 }

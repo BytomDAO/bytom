@@ -31,7 +31,7 @@ func TestWalletUpdate(t *testing.T) {
 	defer os.RemoveAll("temp")
 
 	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool()
+	txPool := protocol.NewTxPool(store)
 
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
@@ -44,7 +44,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpub1, err := hsm.XCreate("test_pub1", "password")
+	xpub1, _, err := hsm.XCreate("test_pub1", "password", "en")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestWalletUpdate(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, chain)
-	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, "TESTASSET")
+	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, "TESTASSET", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

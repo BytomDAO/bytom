@@ -1,7 +1,3 @@
-// Copyright (c) 2014-2016 The btcsuite developers
-// Use of this source code is governed by an ISC
-// license that can be found in the LICENSE file.
-
 package cpuminer
 
 import (
@@ -28,16 +24,16 @@ const (
 // a concurrency-safe manner.
 type CPUMiner struct {
 	sync.Mutex
-	chain             *protocol.Chain
-	accountManager    *account.Manager
-	txPool            *protocol.TxPool
-	numWorkers        uint64
-	started           bool
-	discreteMining    bool
-	workerWg          sync.WaitGroup
-	updateNumWorkers  chan struct{}
-	quit              chan struct{}
-	newBlockCh        chan *bc.Hash
+	chain            *protocol.Chain
+	accountManager   *account.Manager
+	txPool           *protocol.TxPool
+	numWorkers       uint64
+	started          bool
+	discreteMining   bool
+	workerWg         sync.WaitGroup
+	updateNumWorkers chan struct{}
+	quit             chan struct{}
+	newBlockCh       chan *bc.Hash
 }
 
 // solveBlock attempts to find some combination of a nonce, extra nonce, and
@@ -268,11 +264,11 @@ func (m *CPUMiner) NumWorkers() int32 {
 // type for more details.
 func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash) *CPUMiner {
 	return &CPUMiner{
-		chain:             c,
-		accountManager:    accountManager,
-		txPool:            txPool,
-		numWorkers:        defaultNumWorkers,
-		updateNumWorkers:  make(chan struct{}),
-		newBlockCh:        newBlockCh,
+		chain:            c,
+		accountManager:   accountManager,
+		txPool:           txPool,
+		numWorkers:       defaultNumWorkers,
+		updateNumWorkers: make(chan struct{}),
+		newBlockCh:       newBlockCh,
 	}
 }

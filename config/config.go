@@ -6,6 +6,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+)
+
+var (
+	// CommonConfig means config object
+	CommonConfig *Config
 )
 
 type Config struct {
@@ -152,8 +159,9 @@ func (p *P2PConfig) AddrBookFile() string {
 
 //-----------------------------------------------------------------------------
 type WalletConfig struct {
-	Disable bool `mapstructure:"disable"`
-	Rescan  bool `mapstructure:"rescan"`
+	Disable  bool   `mapstructure:"disable"`
+	Rescan   bool   `mapstructure:"rescan"`
+	MaxTxFee uint64 `mapstructure:"max_tx_fee"`
 }
 
 type RPCAuthConfig struct {
@@ -185,8 +193,9 @@ func DefaultWebConfig() *WebConfig {
 // Default configurable wallet parameters.
 func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
-		Disable: false,
-		Rescan:  false,
+		Disable:  false,
+		Rescan:   false,
+		MaxTxFee: uint64(1000000000),
 	}
 }
 
@@ -218,13 +227,29 @@ func DefaultDataDir() string {
 	}
 	switch runtime.GOOS {
 	case "darwin":
-		return filepath.Join(home, "Library", "Bytom")
+		// In order to be compatible with old data path,
+		// copy the data from the old path to the new path
+		oldPath := filepath.Join(home, "Library", "Bytom")
+		newPath := filepath.Join(home, "Library", "Application Support", "Bytom")
+		if !isFolderNotExists(oldPath) && isFolderNotExists(newPath) {
+			if err := os.Rename(oldPath, newPath); err != nil {
+				log.Errorf("DefaultDataDir: %v", err)
+				return oldPath
+			}
+		}
+		return newPath
 	case "windows":
 		return filepath.Join(home, "AppData", "Roaming", "Bytom")
 	default:
 		return filepath.Join(home, ".bytom")
 	}
 }
+
+func isFolderNotExists(path string) bool {
+	_, err := os.Stat(path)
+	return os.IsNotExist(err)
+}
+
 
 func homeDir() string {
 	if home := os.Getenv("HOME"); home != "" {

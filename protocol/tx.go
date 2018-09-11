@@ -29,23 +29,13 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 		return false, c.txPool.GetErrCache(&tx.ID)
 	}
 
-	view := c.txPool.GetTransactionUTXO(tx.Tx)
-	if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx.Tx}); err != nil {
-		return true, err
-	}
-
 	bh := c.BestBlockHeader()
 	block := types.MapBlock(&types.Block{BlockHeader: *bh})
-	if err := view.ApplyTransaction(block, tx.Tx, false); err != nil {
-		return true, err
-	}
-
 	gasStatus, err := validation.ValidateTx(tx.Tx, block)
 	if gasStatus.GasValid == false {
 		c.txPool.AddErrCache(&tx.ID, err)
 		return false, err
 	}
 
-	_, err = c.txPool.AddTransaction(tx, err != nil, block.BlockHeader.Height, gasStatus.BTMValue)
-	return false, err
+	return c.txPool.ProcessTransaction(tx, err != nil, block.BlockHeader.Height, gasStatus.BTMValue)
 }

@@ -1,19 +1,3 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package common
 
 import "math/big"
@@ -41,7 +25,6 @@ var (
 func BigPow(a, b int) *big.Int {
 	c := new(big.Int)
 	c.Exp(big.NewInt(int64(a)), big.NewInt(int64(b)), big.NewInt(0))
-
 	return c
 }
 
@@ -51,7 +34,6 @@ func BigPow(a, b int) *big.Int {
 func Big(num string) *big.Int {
 	n := new(big.Int)
 	n.SetString(num, 0)
-
 	return n
 }
 
@@ -60,11 +42,12 @@ func Big(num string) *big.Int {
 func BytesToBig(data []byte) *big.Int {
 	n := new(big.Int)
 	n.SetBytes(data)
-
 	return n
 }
+
 func Bytes2Big(data []byte) *big.Int { return BytesToBig(data) }
-func BigD(data []byte) *big.Int      { return BytesToBig(data) }
+
+func BigD(data []byte) *big.Int { return BytesToBig(data) }
 
 func String2Big(num string) *big.Int {
 	n := new(big.Int)
@@ -89,7 +72,6 @@ func U256(x *big.Int) *big.Int {
 	//	}
 
 	x.And(x, tt256m1)
-
 	return x
 }
 
@@ -108,7 +90,6 @@ func FirstBitSet(v *big.Int) int {
 			return i
 		}
 	}
-
 	return v.BitLen()
 }
 
@@ -140,7 +121,6 @@ func BigMax(x, y *big.Int) *big.Int {
 	if x.Cmp(y) < 0 {
 		return y
 	}
-
 	return x
 }
 
@@ -151,6 +131,5 @@ func BigMin(x, y *big.Int) *big.Int {
 	if x.Cmp(y) > 0 {
 		return y
 	}
-
 	return x
 }

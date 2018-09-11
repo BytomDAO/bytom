@@ -31,13 +31,15 @@ func genesisTx() *types.Tx {
 func mainNetGenesisBlock() *types.Block {
 	tx := genesisTx()
 	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
-	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	if err := txStatus.SetStatus(0, false); err != nil {
+		log.Panicf(err.Error())
+	}
+	txStatusHash, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	if err != nil {
 		log.Panicf("fail on calc genesis tx status merkle root")
 	}
 
-	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx{tx.Tx})
+	merkleRoot, err := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
 	if err != nil {
 		log.Panicf("fail on calc genesis tx merkel root")
 	}
@@ -62,13 +64,15 @@ func mainNetGenesisBlock() *types.Block {
 func testNetGenesisBlock() *types.Block {
 	tx := genesisTx()
 	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
-	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	if err := txStatus.SetStatus(0, false); err != nil {
+		log.Panicf(err.Error())
+	}
+	txStatusHash, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	if err != nil {
 		log.Panicf("fail on calc genesis tx status merkle root")
 	}
 
-	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx{tx.Tx})
+	merkleRoot, err := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
 	if err != nil {
 		log.Panicf("fail on calc genesis tx merkel root")
 	}
@@ -93,13 +97,15 @@ func testNetGenesisBlock() *types.Block {
 func soloNetGenesisBlock() *types.Block {
 	tx := genesisTx()
 	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
-	txStatusHash, err := bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	if err := txStatus.SetStatus(0, false); err != nil {
+		log.Panicf(err.Error())
+	}
+	txStatusHash, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	if err != nil {
 		log.Panicf("fail on calc genesis tx status merkle root")
 	}
 
-	merkleRoot, err := bc.TxMerkleRoot([]*bc.Tx{tx.Tx})
+	merkleRoot, err := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
 	if err != nil {
 		log.Panicf("fail on calc genesis tx merkel root")
 	}

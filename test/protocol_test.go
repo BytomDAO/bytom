@@ -134,8 +134,7 @@ func TestDoubleSpentInDiffBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = chain.ValidateTx(tx)
-	if err == nil {
+	if isOrphan, err := chain.ValidateTx(tx); isOrphan == false && err == nil {
 		t.Fatal("validate double spent tx success")
 	}
 	if txPool.HaveTransaction(&tx.ID) {

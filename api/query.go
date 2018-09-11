@@ -20,9 +20,19 @@ import (
 
 // POST /list-accounts
 func (a *API) listAccounts(ctx context.Context, filter struct {
-	ID string `json:"id"`
+	ID    string `json:"id"`
+	Alias string `json:"alias"`
 }) Response {
-	accounts, err := a.wallet.AccountMgr.ListAccounts(filter.ID)
+	accountID := filter.ID
+	if filter.Alias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.Alias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+
+	accounts, err := a.wallet.AccountMgr.ListAccounts(accountID)
 	if err != nil {
 		log.Errorf("listAccounts: %v", err)
 		return NewErrorResponse(err)
@@ -96,8 +106,8 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 	AccountID   string `json:"account_id"`
 	Detail      bool   `json:"detail"`
 	Unconfirmed bool   `json:"unconfirmed"`
-	From        uint    `json:"from"`
-	Count       uint    `json:"count"`
+	From        uint   `json:"from"`
+	Count       uint   `json:"count"`
 }) Response {
 	transactions := []*query.AnnotatedTx{}
 	var err error
@@ -245,8 +255,8 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 	ID            string `json:"id"`
 	Unconfirmed   bool   `json:"unconfirmed"`
 	SmartContract bool   `json:"smart_contract"`
-	From          uint    `json:"from"`
-	Count         uint    `json:"count"`
+	From          uint   `json:"from"`
+	Count         uint   `json:"count"`
 }) Response {
 	accountUTXOs := a.wallet.GetAccountUtxos(filter.ID, filter.Unconfirmed, filter.SmartContract)
 

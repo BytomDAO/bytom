@@ -150,7 +150,7 @@ func mockAccountManager(t *testing.T) *Manager {
 	defer os.RemoveAll("temp")
 
 	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool()
+	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		t.Fatal(err)

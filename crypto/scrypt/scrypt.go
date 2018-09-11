@@ -1,7 +1,3 @@
-// Copyright 2012 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 // Package scrypt implements the scrypt key derivation function as defined in
 // Colin Percival's paper "Stronger Key Derivation via Sequential Memory-Hard
 // Functions" (https://www.tarsnap.com/scrypt/scrypt.pdf).

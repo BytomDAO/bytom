@@ -23,15 +23,10 @@ const (
 	assetVersion = 1
 )
 
-// MockTxPool mock transaction pool
-func MockTxPool() *protocol.TxPool {
-	return protocol.NewTxPool()
-}
-
 // MockChain mock chain with genesis block
 func MockChain(testDB dbm.DB) (*protocol.Chain, *leveldb.Store, *protocol.TxPool, error) {
 	store := leveldb.NewStore(testDB)
-	txPool := MockTxPool()
+	txPool := protocol.NewTxPool(store)
 	chain, err := protocol.NewChain(store, txPool)
 	return chain, store, txPool, err
 }
@@ -59,9 +54,13 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 	}
 
 	b := txbuilder.NewBuilder(time.Now())
-	b.AddInput(txInput, sigInst)
+	if err := b.AddInput(txInput, sigInst); err != nil {
+		return nil, nil, err
+	}
 	out := types.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)})
-	b.AddOutput(out)
+	if err := b.AddOutput(out); err != nil {
+		return nil, nil, err
+	}
 	return b.Build()
 }
 

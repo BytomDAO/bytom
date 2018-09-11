@@ -3,9 +3,12 @@ package api
 import (
 	"math/big"
 
+	"gopkg.in/fatih/set.v0"
+
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus/difficulty"
 	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -56,18 +59,9 @@ type GetBlockResp struct {
 	Transactions           []*BlockTx `json:"transactions"`
 }
 
-// return block by hash
+// return block by hash/height
 func (a *API) getBlock(ins BlockReq) Response {
-	var err error
-	block := &types.Block{}
-	if len(ins.BlockHash) == 32 {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	}
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -135,16 +129,7 @@ type GetBlockHeaderResp struct {
 }
 
 func (a *API) getBlockHeader(ins BlockReq) Response {
-	var err error
-	block := &types.Block{}
-	if len(ins.BlockHash) == 32 {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	}
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -156,6 +141,21 @@ func (a *API) getBlockHeader(ins BlockReq) Response {
 	return NewSuccessResponse(resp)
 }
 
+func (a *API) getBlockHelper(ins BlockReq) (*types.Block, error) {
+	if len(ins.BlockHash) == 32 {
+		hash := hexBytesToHash(ins.BlockHash)
+		return a.chain.GetBlockByHash(&hash)
+	} else {
+		return a.chain.GetBlockByHeight(ins.BlockHeight)
+	}
+}
+
+func hexBytesToHash(hexBytes chainjson.HexBytes) bc.Hash {
+	b32 := [32]byte{}
+	copy(b32[:], hexBytes)
+	return bc.NewHash(b32)
+}
+
 // GetDifficultyResp is resp struct for getDifficulty API
 type GetDifficultyResp struct {
 	BlockHash   *bc.Hash `json:"hash"`
@@ -164,22 +164,8 @@ type GetDifficultyResp struct {
 	Difficulty  string   `json:"difficulty"`
 }
 
-func (a *API) getDifficulty(ins *BlockReq) Response {
-	var err error
-	block := &types.Block{}
-
-	if len(ins.BlockHash) == 32 && ins.BlockHash != nil {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else if ins.BlockHeight > 0 {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	} else {
-		hash := a.chain.BestBlockHash()
-		block, err = a.chain.GetBlockByHash(hash)
-	}
-
+func (a *API) getDifficulty(ins BlockReq) Response {
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -202,21 +188,15 @@ type getHashRateResp struct {
 }
 
 func (a *API) getHashRate(ins BlockReq) Response {
-	var err error
-	block := &types.Block{}
-
-	if len(ins.BlockHash) == 32 && ins.BlockHash != nil {
-		b32 := [32]byte{}
-		copy(b32[:], ins.BlockHash)
-		hash := bc.NewHash(b32)
-		block, err = a.chain.GetBlockByHash(&hash)
-	} else if ins.BlockHeight > 0 {
-		block, err = a.chain.GetBlockByHeight(ins.BlockHeight)
-	} else {
-		hash := a.chain.BestBlockHash()
-		block, err = a.chain.GetBlockByHash(hash)
+	if len(ins.BlockHash) != 32 && len(ins.BlockHash) != 0 {
+		err := errors.New("Block hash format error.")
+		return NewErrorResponse(err)
+	}
+	if ins.BlockHeight == 0 {
+		ins.BlockHeight = a.chain.BestBlockHeight()
 	}
 
+	block, err := a.getBlockHelper(ins)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -237,4 +217,73 @@ func (a *API) getHashRate(ins BlockReq) Response {
 		HashRate:    hashRate.Uint64(),
 	}
 	return NewSuccessResponse(resp)
+}
+
+// MerkleBlockReq is used to handle getTxOutProof req
+type MerkleBlockReq struct {
+	TxIDs     []chainjson.HexBytes `json:"tx_ids"`
+	BlockHash chainjson.HexBytes   `json:"block_hash"`
+}
+
+// GetMerkleBlockResp is resp struct for GetTxOutProof API
+type GetMerkleBlockResp struct {
+	BlockHeader  types.BlockHeader `json:"block_header"`
+	TxHashes     []*bc.Hash        `json:"tx_hashes"`
+	StatusHashes []*bc.Hash        `json:"status_hashes"`
+	Flags        []uint32          `json:"flags"`
+	MatchedTxIDs []*bc.Hash        `json:"matched_tx_ids"`
+}
+
+func (a *API) getMerkleProof(ins MerkleBlockReq) Response {
+	blockReq := BlockReq{BlockHash: ins.BlockHash}
+	block, err := a.getBlockHelper(blockReq)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	matchedTxs := getMatchedTx(block.Transactions, ins.TxIDs)
+	var matchedTxIDs []*bc.Hash
+	for _, tx := range matchedTxs {
+		matchedTxIDs = append(matchedTxIDs, &tx.ID)
+	}
+
+	hashes, compactFlags := types.GetTxMerkleTreeProof(block.Transactions, matchedTxs)
+	flags := make([]uint32, len(compactFlags))
+	for i, flag := range compactFlags {
+		flags[i] = uint32(flag)
+	}
+
+	blockHash := block.Hash()
+	statuses, err := a.chain.GetTransactionStatus(&blockHash)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	statusHashes := types.GetStatusMerkleTreeProof(statuses.VerifyStatus, compactFlags)
+
+	resp := &GetMerkleBlockResp{
+		BlockHeader:  block.BlockHeader,
+		TxHashes:     hashes,
+		StatusHashes: statusHashes,
+		Flags:        flags,
+		MatchedTxIDs: matchedTxIDs,
+	}
+	return NewSuccessResponse(resp)
+}
+
+func getMatchedTx(txs []*types.Tx, filterTxIDs []chainjson.HexBytes) []*types.Tx {
+	txIDSet := set.New()
+	for _, txID := range filterTxIDs {
+		hash := hexBytesToHash(txID)
+		txIDSet.Add(hash.String())
+	}
+
+	var matchedTxs []*types.Tx
+	for _, tx := range txs {
+		hashStr := tx.ID.String()
+		if txIDSet.Has(hashStr) {
+			matchedTxs = append(matchedTxs, tx)
+		}
+	}
+	return matchedTxs
 }
