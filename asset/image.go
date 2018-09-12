@@ -53,7 +53,7 @@ func (reg *Registry) Restore(image *Image) error {
 		if asset.Signer.KeyIndex > maxAssetIndex {
 			maxAssetIndex = asset.Signer.KeyIndex
 		}
-		storeBatch.Set(aliasKey(*asset.Alias), asset.AssetID.Bytes())
+		storeBatch.Set(aliasKey(*asset.Alias), []byte(asset.AssetID.String()))
 		storeBatch.Set(Key(&asset.AssetID), rawAsset)
 	}
 
