@@ -124,7 +124,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 
 // GetRawBlockResp is resp struct for getRawBlock API
 type GetRawBlockResp struct {
-	RawBlock []byte `json:"raw_block"`
+	RawBlock *types.Block `json:"raw_block"`
 }
 
 func (a *API) getRawBlock(ins BlockReq) Response {
@@ -133,12 +133,7 @@ func (a *API) getRawBlock(ins BlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
-	rawBlock, err := block.MarshalText()
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	resp := GetRawBlockResp{RawBlock: rawBlock}
+	resp := GetRawBlockResp{RawBlock: block}
 	return NewSuccessResponse(resp)
 }
 
