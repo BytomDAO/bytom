@@ -65,6 +65,9 @@ func opCheckSig(vm *virtualMachine) error {
 	if len(pubkeyBytes) != sm2.PubKeySize {
 		return vm.pushBool(false, true)
 	}
+	if len(sig) != sm2.SignatureSize {
+		return vm.pushBool(false, true)
+	}
 	fmt.Println("=====opCheckSig=====")
 	fmt.Printf("pubkeyBytes: %x\n", pubkeyBytes)
 	fmt.Printf("msg: %x\n", msg)
@@ -180,12 +183,13 @@ func opCheckSigSm2(vm *virtualMachine) error {
 		return err
 	}
 
-	if len(msg) != 32 || len(sig) != 64 {
+	if len(msg) != 32 || len(sig) != sm2.SignatureSize {
 		return ErrBadValue
 	}
-	if len(publicKey) != 33 {
+	if len(publicKey) != sm2.PubKeySize {
 		return vm.pushBool(false, true)
 	}
+	fmt.Println("=====opCheckSigSm2=====")
 	return vm.pushBool(sm2.VerifyCompressedPubkey(publicKey, msg, sig), true)
 }
 

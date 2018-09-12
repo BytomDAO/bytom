@@ -3,6 +3,7 @@ package pseudohsm
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -146,6 +147,12 @@ func (h *HSM) XSign(xpub chainkd.XPub, path [][]byte, msg []byte, auth string) (
 	if len(path) > 0 {
 		xprv = xprv.Derive(path)
 	}
+
+	fmt.Printf("====XSign====\n")
+	s := xprv.Sign(msg)
+	fmt.Printf("msg: %x\n", msg[:])
+	fmt.Printf("sign: %x\n", s[:])
+
 	return xprv.Sign(msg), nil
 }
 

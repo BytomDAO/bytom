@@ -3,6 +3,7 @@ package chainkd
 import (
 	"crypto/hmac"
 	"crypto/sha512"
+	"fmt"
 	"math/big"
 
 	"github.com/bytom/crypto/sm2"
@@ -27,7 +28,7 @@ type (
 func (xprv XPrv) XPub() (xpub XPub) {
 	privkey := make([]byte, 32)
 	copy(privkey, xprv[:32])
-	k := new(big.Int).SetBytes(privkey)
+	k := new(big.Int).SetBytes(privkey[:32])
 	c := sm2.P256Sm2()
 	priv := new(sm2.PrivateKey)
 	priv.PublicKey.Curve = c
@@ -37,6 +38,10 @@ func (xprv XPrv) XPub() (xpub XPub) {
 
 	copy(xpub[:33], compPubkey[:])
 	copy(xpub[33:], xprv[32:])
+
+	fmt.Printf("\n====XPub()====\n")
+	fmt.Printf("xprv: %x\n", xprv[:])
+	fmt.Printf("xpub: %x\n", xpub[:])
 
 	return
 }
@@ -68,6 +73,11 @@ func (xpub XPub) Child(sel []byte) (xpubkey XPub) {
 
 	copy(xpubkey[:33], compPubkey[:])
 	copy(xpubkey[33:], res[32:])
+
+	fmt.Printf("\n====XPub()====\n")
+	fmt.Printf("xpub: %x\n", xpub[:])
+	fmt.Printf("sel: %x\n", sel)
+	fmt.Printf("xpubkey: %x\n", xpubkey[:])
 
 	return
 }
@@ -123,6 +133,11 @@ func (xprv XPrv) nonhardenedChild(sel []byte) (res XPrv) {
 
 	copy(res[:32], priv[:32])
 
+	fmt.Printf("\n====nonhardenedChild====\n")
+	fmt.Printf("xprv: %x\n", xprv[:])
+	fmt.Printf("sel: %x\n", sel[:])
+	fmt.Printf("res: %x\n", res[:])
+
 	return
 }
 
@@ -130,10 +145,17 @@ func (xprv XPrv) nonhardenedChild(sel []byte) (res XPrv) {
 // non-hardened child xprvs over the list of selectors:
 // `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
 func (xprv XPrv) Derive(path [][]byte) XPrv {
+	fmt.Printf("\n====Derive====\n")
+	fmt.Printf("xprv: %x\n", xprv[:])
+	fmt.Printf("path: %v\n", path[:])
+
 	res := xprv
 	for _, p := range path {
 		res = res.Child(p, false)
 	}
+
+	fmt.Printf("res: %x\n", res[:])
+
 	return res
 }
 
@@ -141,15 +163,27 @@ func (xprv XPrv) Derive(path [][]byte) XPrv {
 // non-hardened child xpubs over the list of selectors:
 // `Derive([a,b,c,...]) == Child(a).Child(b).Child(c)...`
 func (xpub XPub) Derive(path [][]byte) XPub {
+	fmt.Printf("\n====Derive====\n")
+	fmt.Printf("xpub: %x\n", xpub[:])
+	fmt.Printf("path: %v\n", path[:])
+
 	res := xpub
 	for _, p := range path {
 		res = res.Child(p)
 	}
+
+	fmt.Printf("res: %x\n", res[:])
+
 	return res
 }
 
 // PublicKey extracts the sm2 public key from an xpub.
 func (xpub XPub) PublicKey() sm2.PubKey {
+	fmt.Printf("\n====PublicKey()====\n")
+	fmt.Printf("xpub: %x\n", xpub[:])
+	r := sm2.PubKey(xpub[:33])
+	fmt.Printf("sm2.PubKey: %x\n", r[:])
+
 	return sm2.PubKey(xpub[:33])
 }
 
@@ -170,8 +204,14 @@ func (xprv XPrv) Sign(msg []byte) []byte {
 	R := r.Bytes()
 	S := s.Bytes()
 	sig := make([]byte, 64)
-	copy(sig[:32], R)
-	copy(sig[32:], S)
+	copy(sig[:32], R[:])
+	copy(sig[32:], S[:])
+
+	fmt.Printf("\n====(xprv XPrv) Sign(msg []byte)====\n")
+	fmt.Printf("xprv: %x\n", xprv[:])
+	newPubkey := sm2.Compress(&priv.PublicKey)
+	fmt.Printf("publickey: %x\n", newPubkey[:])
+	fmt.Printf("sig: %x\n", sig[:])
 
 	return sig
 }

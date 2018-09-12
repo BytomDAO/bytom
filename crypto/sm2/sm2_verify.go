@@ -1,6 +1,7 @@
 package sm2
 
 import (
+	"fmt"
 	"math/big"
 )
 
@@ -141,5 +142,12 @@ func VerifyCompressedPubkey(compressedPublicKey, hash, signature []byte) bool {
 	e := new(big.Int).SetBytes(hash)
 	bigx.Add(bigx, e)
 	bigx.Mod(bigx, N)
+
+	fmt.Println("====VerifyCompressedPubkey====")
+	fmt.Printf("publickey: %x\n", compressedPublicKey[:])
+	fmt.Printf("msg: %x\n", hash[:])
+	fmt.Printf("signature: %x\n", signature[:32])
+	fmt.Printf("result: %v\n", bigx.Cmp(bigR) == 0)
+
 	return bigx.Cmp(bigR) == 0
 }
