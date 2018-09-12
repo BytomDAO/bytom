@@ -360,6 +360,9 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 }
 
 func (ps *peerSet) broadcastNewStatus(bestBlock, genesisBlock *types.Block) error {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
 	genesisHash := genesisBlock.Hash()
 	msg := NewStatusResponseMessage(&bestBlock.BlockHeader, &genesisHash)
 	for _, peer := range ps.peers {
