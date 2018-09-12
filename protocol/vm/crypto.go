@@ -68,11 +68,7 @@ func opCheckSig(vm *virtualMachine) error {
 	if len(sig) != sm2.SignatureSize {
 		return vm.pushBool(false, true)
 	}
-	fmt.Println("=====opCheckSig=====")
-	fmt.Printf("pubkeyBytes: %x\n", pubkeyBytes)
-	fmt.Printf("msg: %x\n", msg)
-	fmt.Printf("sig: %x\n", sig)
-	fmt.Printf("result: %v\n", sm2.VerifyCompressedPubkey(sm2.PubKey(pubkeyBytes), msg, sig))
+
 	return vm.pushBool(sm2.VerifyCompressedPubkey(sm2.PubKey(pubkeyBytes), msg, sig), true)
 }
 

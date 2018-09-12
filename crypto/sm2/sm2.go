@@ -12,7 +12,6 @@ import (
 	"encoding/asn1"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 	"math/big"
 
@@ -497,8 +496,6 @@ func Compress(a *PublicKey) []byte {
 
 // Decompress transform  33 bytes publickey to publickey point struct.
 func Decompress(a []byte) *PublicKey {
-	fmt.Printf("====function Decompress: \npublickey : %x\n", a)
-
 	var aa, xx, xx3 sm2P256FieldElement
 
 	P256Sm2()
