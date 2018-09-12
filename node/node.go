@@ -216,7 +216,7 @@ func initCommonConfig(config *cfg.Config) {
 
 // Lanch web broser or not
 func launchWebBrowser(port string) {
-	webAddress := net.JoinHostPort(webHost, port)
+	webAddress := webHost + ":" + port
 	log.Info("Launching System Browser with :", webAddress)
 	if err := browser.Open(webAddress); err != nil {
 		log.Error(err.Error())
