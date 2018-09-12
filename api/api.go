@@ -262,6 +262,7 @@ func (a *API) buildHandler() {
 	m.Handle("/decode-raw-transaction", jsonHandler(a.decodeRawTransaction))
 
 	m.Handle("/get-block", jsonHandler(a.getBlock))
+	m.Handle("/get-raw-block", jsonHandler(a.getRawBlock))
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))
