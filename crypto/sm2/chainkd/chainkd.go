@@ -213,5 +213,15 @@ func (xprv XPrv) Sign(msg []byte) []byte {
 	fmt.Printf("publickey: %x\n", newPubkey[:])
 	fmt.Printf("sig: %x\n", sig[:])
 
+	fmt.Println("==verify sig using sm2.Verify")
+	vr := sm2.Verify(&priv.PublicKey, msg, r, s)
+	fmt.Printf("msg: %x\n", msg[:])
+	fmt.Println("vr is:", vr)
+
+	fmt.Println("==verify sig using sm2.VerifyCompressedPubkey")
+	vr2 := sm2.VerifyCompressedPubkey(newPubkey, msg, sig)
+	fmt.Printf("msg: %x\n", msg[:])
+	fmt.Println("vr2 is:", vr2)
+
 	return sig
 }
