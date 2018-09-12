@@ -122,6 +122,26 @@ func (a *API) getBlock(ins BlockReq) Response {
 	return NewSuccessResponse(resp)
 }
 
+// GetRawBlockResp is resp struct for getRawBlock API
+type GetRawBlockResp struct {
+	RawBlock []byte `json:"raw_block"`
+}
+
+func (a *API) getRawBlock(ins BlockReq) Response {
+	block, err := a.getBlockHelper(ins)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	rawBlock, err := block.MarshalText()
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	resp := GetRawBlockResp{RawBlock: rawBlock}
+	return NewSuccessResponse(resp)
+}
+
 // GetBlockHeaderResp is resp struct for getBlockHeader API
 type GetBlockHeaderResp struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
