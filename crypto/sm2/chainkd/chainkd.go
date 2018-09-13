@@ -169,3 +169,10 @@ func (xprv XPrv) Sign(msg []byte) []byte {
 
 	return sig
 }
+
+// Verify checks an sm2 signature using public key
+// extracted from the first 33 bytes of the xpub.
+func (xpub XPub) Verify(msg []byte, sig []byte) bool {
+	// return ed25519.Verify(xpub.PublicKey(), msg, sig)
+	return sm2.VerifyCompressedPubkey(xpub.PublicKey(), msg, sig)
+}
