@@ -36,7 +36,7 @@ func TestTransaction(t *testing.T) {
 				"00", // inputs count
 				"00", // outputs count
 			}, ""),
-			hash: testutil.MustDecodeHash("8e88b9cb4615128c7209dff695f68b8de5b38648bf3d44d2d0e6a674848539c9"),
+			hash: testutil.MustDecodeHash("e6f62659988c34379b89b68e6f410770943567d3ae8ff061ea636e59cd4b0b81"),
 		},
 		{
 			tx: NewTx(TxData{
