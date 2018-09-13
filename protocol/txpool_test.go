@@ -447,7 +447,7 @@ func TestProcessOrphans(t *testing.T) {
 		}
 
 		if !testutil.DeepEqual(c.before, c.after) {
-			t.Errorf("case %d: got %v want %v", i, c.before, c.after)
+			t.Errorf("case %d: \ngot:  %v \nwant %v", i, c.before, c.after)
 		}
 	}
 }
