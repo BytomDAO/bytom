@@ -53,6 +53,9 @@ func (a *API) completeMissingAssetID(m map[string]interface{}, index int) error 
 			m["asset_id"] = asset.AssetID.String()
 		}
 	}
+	if id == "" && alias == "" {
+		m["asset_id"] = consensus.BTMAssetID.String()
+	}
 	return nil
 }
 
@@ -65,6 +68,9 @@ func (a *API) completeMissingAccountID(m map[string]interface{}, index int, ctx 
 			return errors.WithDetailf(err, "invalid account alias %s on action %d", alias, index)
 		}
 		m["account_id"] = acc.ID
+	}
+	if id == "" && alias == "" {
+		return errors.WithDetailf(err, "missing account id & alias on action %d", index)
 	}
 	return nil
 }
