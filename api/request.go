@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/bytom/consensus"
@@ -70,7 +71,7 @@ func (a *API) completeMissingAccountID(m map[string]interface{}, index int, ctx 
 		m["account_id"] = acc.ID
 	}
 	if id == "" && alias == "" {
-		return errors.WithDetailf(err, "missing account id & alias on action %d", index)
+		return fmt.Errorf("missing account id & alias on action %d", index)
 	}
 	return nil
 }
