@@ -117,7 +117,7 @@ func BenchmarkVerifyCompressedPubkey(b *testing.B) {
 		hash                []byte
 		signature           []byte
 	}{
-		compressedPublicKey: mustDecodeHex("01" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+		compressedPublicKey: mustDecodeHex("03" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
 		hash:                mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
 		signature:           mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
 	}
