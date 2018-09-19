@@ -328,6 +328,19 @@ func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, er
 	return cp, json.Unmarshal(rawProgram, cp)
 }
 
+// GetLocalCtrlProgramByProgram return CtrlProgram by given program
+func (m *Manager) GetLocalCtrlProgramByProgram(program []byte) (*CtrlProgram, error) {
+	var hash [32]byte
+	sha3pool.Sum256(hash[:], program)
+	rawProgram := m.db.Get(ContractKey(hash))
+	if rawProgram == nil {
+		return nil, ErrFindCtrlProgram
+	}
+
+	cp := &CtrlProgram{}
+	return cp, json.Unmarshal(rawProgram, cp)
+}
+
 // GetMiningAddress will return the mining address
 func (m *Manager) GetMiningAddress() (string, error) {
 	cp, err := m.GetCoinbaseCtrlProgram()

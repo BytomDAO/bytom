@@ -28,7 +28,11 @@ type controlAddressAction struct {
 	Address string `json:"address"`
 }
 
-func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) error {
+func NewControlAddressAction() *controlAddressAction {
+	return new(controlAddressAction)
+}
+
+func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder, preTxTemplate map[string][]*Template) error {
 	var missing []string
 	if a.Address == "" {
 		missing = append(missing, "address")
@@ -78,7 +82,7 @@ type controlProgramAction struct {
 	Program json.HexBytes `json:"control_program"`
 }
 
-func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) error {
+func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder, preTxTemplate map[string][]*Template) error {
 	var missing []string
 	if len(a.Program) == 0 {
 		missing = append(missing, "control_program")
@@ -109,7 +113,7 @@ type retireAction struct {
 	Arbitrary json.HexBytes `json:"arbitrary"`
 }
 
-func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
+func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder, preTxTemplate map[string][]*Template) error {
 	var missing []string
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")

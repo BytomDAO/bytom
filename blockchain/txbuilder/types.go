@@ -30,7 +30,7 @@ func (t *Template) Hash(idx uint32) bc.Hash {
 
 // Action is a interface
 type Action interface {
-	Build(context.Context, *TemplateBuilder) error
+	Build(context.Context, *TemplateBuilder, map[string][]*Template) error
 }
 
 // Receiver encapsulates information about where to send assets.
