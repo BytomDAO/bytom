@@ -500,8 +500,7 @@ func TestTxInToUtxos(t *testing.T) {
 				data, _ := json.Marshal(v)
 				fmt.Println(k, string(data))
 			}
-			t.Errorf("case %d: got %x want %x", i, gotUtxos[0].OutputID, c.wantUtxos[0].OutputID)
-			t.Errorf("case %d: got %x want %x", i, gotUtxos[1].OutputID, c.wantUtxos[1].OutputID)
+			t.Errorf("case %d: got %x want %x", i, gotUtxos, c.wantUtxos)
 		}
 	}
 }
