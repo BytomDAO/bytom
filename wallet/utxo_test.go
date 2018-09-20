@@ -364,7 +364,7 @@ func TestFilterAccountUtxo(t *testing.T) {
 		})
 
 		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
-			t.Errorf("case %d: got %x want %x", i, gotUtxos, c.wantUtxos)
+			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 		}
 		for s := range c.dbPrograms {
 			key, err := hex.DecodeString(s)
@@ -500,7 +500,7 @@ func TestTxInToUtxos(t *testing.T) {
 				data, _ := json.Marshal(v)
 				fmt.Println(k, string(data))
 			}
-			t.Errorf("case %d: got %x want %x", i, gotUtxos, c.wantUtxos)
+			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 		}
 	}
 }
@@ -623,7 +623,7 @@ func TestTxOutToUtxos(t *testing.T) {
 
 	for i, c := range cases {
 		if gotUtxos := txOutToUtxos(c.tx, c.statusFail, c.vaildHeight); !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
-			t.Errorf("case %d: got %x want %x", i, gotUtxos, c.wantUtxos)
+			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
 		}
 	}
 }
