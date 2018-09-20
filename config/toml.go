@@ -23,7 +23,7 @@ var defaultConfigTmpl = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 fast_sync = true
 db_backend = "leveldb"
-api_addr = "0.0.0.0:9888"
+api_addr = "0.0.0.0:9889"
 `
 
 // var mainNetConfigTmpl = `chain_id = "mainnet"
@@ -46,8 +46,8 @@ api_addr = "0.0.0.0:9888"
 
 var mainNetConfigTmpl = `chain_id = "mainnet"
 [p2p]
-laddr = "tcp://0.0.0.0:46657"
-seeds = "45.79.213.28:46657,198.74.61.131:46657,212.111.41.245:46657,47.100.214.154:46657,47.100.109.199:46657,47.100.105.165:46657"
+laddr = "tcp://0.0.0.0:46660"
+seeds = "52.83.251.197:46660"
 `
 
 var testNetConfigTmpl = `chain_id = "wisdom"
@@ -58,7 +58,7 @@ seeds = "52.83.251.197:46659"
 
 var soloNetConfigTmpl = `chain_id = "solonet"
 [p2p]
-laddr = "tcp://0.0.0.0:46658"
+laddr = "tcp://0.0.0.0:46661"
 seeds = ""
 `
 
