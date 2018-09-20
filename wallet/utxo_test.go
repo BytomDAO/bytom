@@ -243,7 +243,7 @@ func TestFilterAccountUtxo(t *testing.T) {
 			},
 			wantUtxos: []*account.UTXO{
 				&account.UTXO{
-					ControlProgram:      []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
+					ControlProgram:      []byte{0x91},
 					AssetID:             bc.AssetID{V0: 1},
 					Amount:              3,
 					AccountID:           "testAccount",
@@ -364,7 +364,7 @@ func TestFilterAccountUtxo(t *testing.T) {
 		})
 
 		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
-			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
+			t.Errorf("case %d: got %x want %x", i, gotUtxos, c.wantUtxos)
 		}
 		for s := range c.dbPrograms {
 			key, err := hex.DecodeString(s)
@@ -626,14 +626,4 @@ func TestTxOutToUtxos(t *testing.T) {
 			t.Errorf("case %d: got %x want %x", i, gotUtxos, c.wantUtxos)
 		}
 	}
-}
-
-func TestNo(t *testing.T) {
-	var s string
-	s = "865ffadab7f8ee8cbf28277e4aa2b783f1e0c3875c0d614f8681e0aa98f90d55"
-	var sum string
-	for i := 0; i < 32; i++ {
-		sum = sum + "0x" + string(s[2*i]) + string(s[2*i+1]) + ", "
-	}
-	fmt.Println(sum)
 }
