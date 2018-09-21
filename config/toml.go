@@ -25,7 +25,7 @@ var defaultConfigTmpl = `# This is a TOML config file.
 
 var mainNetConfigTmpl = `fast_sync = true
 db_backend = "leveldb"
-api_addr = "0.0.0.0:9890"
+api_addr = "0.0.0.0:9889"
 chain_id = "mainnet"
 [p2p]
 laddr = "tcp://0.0.0.0:46660"
@@ -43,7 +43,7 @@ seeds = "52.83.251.197:46659"
 
 var soloNetConfigTmpl = `fast_sync = true
 db_backend = "leveldb"
-api_addr = "0.0.0.0:9890"
+api_addr = "0.0.0.0:9891"
 chain_id = "solonet"
 [p2p]
 laddr = "tcp://0.0.0.0:46661"
