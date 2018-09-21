@@ -21,32 +21,33 @@ func EnsureRoot(rootDir string, network string) {
 
 var defaultConfigTmpl = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
-fast_sync = true
-db_backend = "leveldb"
 `
 
-var mainNetConfigTmpl = `chain_id = "mainnet"
+var mainNetConfigTmpl = `fast_sync = true
+db_backend = "leveldb"
+api_addr = "0.0.0.0:9890"
+chain_id = "mainnet"
 [p2p]
 laddr = "tcp://0.0.0.0:46660"
 seeds = "52.83.251.197:46660"
-
-api_addr = "0.0.0.0:9890"
 `
 
-var testNetConfigTmpl = `chain_id = "wisdom"
+var testNetConfigTmpl = `fast_sync = true
+db_backend = "leveldb"
+api_addr = "0.0.0.0:9890"
+chain_id = "wisdom"
 [p2p]
 laddr = "tcp://0.0.0.0:46659"
 seeds = "52.83.251.197:46659"
-
-api_addr = "0.0.0.0:9889"
 `
 
-var soloNetConfigTmpl = `chain_id = "solonet"
+var soloNetConfigTmpl = `fast_sync = true
+db_backend = "leveldb"
+api_addr = "0.0.0.0:9890"
+chain_id = "solonet"
 [p2p]
 laddr = "tcp://0.0.0.0:46661"
 seeds = ""
-
-api_addr = "0.0.0.0:9891"
 `
 
 // Select network seeds to merge a new string.
