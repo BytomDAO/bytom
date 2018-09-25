@@ -227,6 +227,10 @@ type submitTxResp struct {
 	TxID *bc.Hash `json:"tx_id"`
 }
 
+type submitChainTxResp struct {
+	TxID []*bc.Hash `json:"tx_id"`
+}
+
 // POST /submit-transaction
 func (a *API) submit(ctx context.Context, ins struct {
 	Tx types.Tx `json:"raw_transaction"`
@@ -237,6 +241,22 @@ func (a *API) submit(ctx context.Context, ins struct {
 
 	log.WithField("tx_id", ins.Tx.ID.String()).Info("submit single tx")
 	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
+}
+
+// POST /submit-chain-transactions
+func (a *API) submitChainTxs(ctx context.Context, ins struct {
+	Tx []types.Tx `json:"raw_transaction"`
+}) Response {
+	txHashs := []*bc.Hash{}
+	for i, v := range ins.Tx {
+		if err := txbuilder.FinalizeTx(ctx, a.chain, &v); err != nil {
+			return NewErrorResponse(err)
+		}
+		log.WithField("tx_id", ins.Tx[i].ID.String()).Info("submit single tx")
+		txHashs = append(txHashs, &ins.Tx[i].ID)
+	}
+
+	return NewSuccessResponse(&submitChainTxResp{TxID: txHashs})
 }
 
 // EstimateTxGasResp estimate transaction consumed gas
