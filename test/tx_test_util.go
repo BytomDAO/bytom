@@ -160,7 +160,7 @@ func (g *TxGenerator) AddSpendInput(accountAlias, assetAlias string, amount uint
 	if err != nil {
 		return err
 	}
-	return spendAction.Build(nil, g.Builder)
+	return spendAction.Build(nil, g.Builder, nil)
 }
 
 // AddTxInput add a tx input and signing instruction
