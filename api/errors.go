@@ -45,7 +45,7 @@ var respErrFormatter = map[error]httperror.Info{
 	ErrDefault: {500, "BTM000", "Bytom API Error"},
 
 	// Signers error namespace (2xx)
-	signers.ErrBadQuorum: {400, "BTM200", "Quorum must be greater than 1 and less than or equal to the length of xpubs"},
+	signers.ErrBadQuorum: {400, "BTM200", "Quorum must be greater than or equal to 1, and must be less than or equal to the length of xpubs"},
 	signers.ErrBadXPub:   {400, "BTM201", "Invalid xpub format"},
 	signers.ErrNoXPubs:   {400, "BTM202", "At least one xpub is required"},
 	signers.ErrDupeXPub:  {400, "BTM203", "Root XPubs cannot contain the same key more than once"},
