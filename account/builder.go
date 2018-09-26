@@ -75,6 +75,70 @@ func mergeSpendActionUTXO(act *spendAction, preTxTemplate *txbuilder.Template, t
 	if err != nil {
 		return err
 	}
+	if len(utxos) == 1 {
+		return nil
+	}
+	if len(utxos) > 1 && len(utxos) <= TxMaxInputUTXONum {
+		amount := uint64(0)
+		for i := 0; i < len(utxos); i++ {
+			amount += utxos[i].Amount
+		}
+		spendAct := new(spendAction)
+		spendAct.accounts = act.accounts
+		spendAct.Amount = amount
+		spendAct.AssetId = act.AssetId
+		spendAct.AccountID = act.AccountID
+		spendAct.UseUnconfirmed = act.UseUnconfirmed
+		newActions = append(newActions, spendAct)
+		controlAct := txbuilder.NewControlAddressAction()
+		controlAct.Amount = amount - 10000000
+		controlAct.AssetId = act.AssetId
+		acp, err := act.accounts.CreateAddress(act.AccountID, false)
+		if err != nil {
+			return err
+		}
+		controlAct.Address = acp.Address
+		newActions = append(newActions, controlAct)
+
+		tpl, builder, err := txbuilder.Build(nil, nil, newActions, txTemplates, maxTime, timeRange)
+		if errors.Root(err) == txbuilder.ErrAction {
+			// append each of the inner errors contained in the data.
+			var Errs string
+			var rootErr error
+			for i, innerErr := range errors.Data(err)["actions"].([]error) {
+				if i == 0 {
+					rootErr = errors.Root(innerErr)
+				}
+				Errs = Errs + innerErr.Error()
+			}
+			err = errors.WithDetail(rootErr, Errs)
+		}
+		if err != nil {
+			return err
+		}
+
+		// ensure null is never returned for signing instructions
+		if tpl.SigningInstructions == nil {
+			tpl.SigningInstructions = []*txbuilder.SigningInstruction{}
+		}
+		key := actTemplatesKey(act.AccountID, act.AssetId)
+		tpls, ok := txTemplates[key]
+		if !ok {
+			txTemplates[key] = []*txbuilder.Template{tpl}
+		} else {
+			tpls = append(tpls, tpl)
+			txTemplates[key] = tpls
+		}
+		builders, ok := txBuilders[key]
+		if !ok {
+			txBuilders[key] = []*txbuilder.TemplateBuilder{builder}
+		} else {
+			builders = append(builders, builder)
+			txBuilders[key] = builders
+		}
+
+		return nil
+	}
 
 	if len(utxos) > TxMaxInputUTXONum {
 		amount := uint64(0)
@@ -265,7 +329,37 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder, t
 			}
 		}
 	}
+	if preTxUTXOAmount >= a.Amount {
+		for _, r := range validPreTxUTXOs {
+			cp, err := a.accounts.GetLocalCtrlProgramByProgram(r.ControlProgram)
+			if err != nil {
+				return errors.Wrap(err, "get local ctrlProgram by address")
+			}
+			r.ControlProgramIndex = cp.KeyIndex
+			r.Address = cp.Address
+			txInput, sigInst, err := UtxoToInputs(acct.Signer, r)
+			if err != nil {
+				return errors.Wrap(err, "creating inputs")
+			}
 
+			if err = b.AddInput(txInput, sigInst); err != nil {
+				return errors.Wrap(err, "adding inputs")
+			}
+		}
+		if preTxUTXOAmount > a.Amount {
+			acp, err := a.accounts.CreateAddress(a.AccountID, true)
+			if err != nil {
+				return errors.Wrap(err, "creating control program")
+			}
+
+			// Don't insert the control program until callbacks are executed.
+			a.accounts.insertControlProgramDelayed(b, acp)
+			if err = b.AddOutput(types.NewTxOutput(*a.AssetId, preTxUTXOAmount-a.Amount, acp.ControlProgram)); err != nil {
+				return errors.Wrap(err, "adding change output")
+			}
+		}
+		return nil
+	}
 	res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, a.Amount-preTxUTXOAmount, a.UseUnconfirmed, b.MaxTime())
 	if err != nil {
 		return errors.Wrap(err, "reserving utxos")
