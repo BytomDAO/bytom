@@ -69,7 +69,7 @@ func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 	return resultActions
 }
 
-func mergeSpendAcionUTXO(act *spendAction, preTxTemplate *txbuilder.Template, txTemplates map[string][]*txbuilder.Template, maxTime time.Time, timeRange uint64) error {
+func mergeSpendActionUTXO(act *spendAction, preTxTemplate *txbuilder.Template, txTemplates map[string][]*txbuilder.Template, txBuilders map[string][]*txbuilder.TemplateBuilder, maxTime time.Time, timeRange uint64) error {
 	newActions := []txbuilder.Action{}
 	utxos, err := GetUTXO(act, preTxTemplate)
 	if err != nil {
@@ -98,7 +98,7 @@ func mergeSpendAcionUTXO(act *spendAction, preTxTemplate *txbuilder.Template, tx
 		controlAct.Address = acp.Address
 		newActions = append(newActions, controlAct)
 
-		tpl, err := txbuilder.Build(nil, nil, newActions, txTemplates, maxTime, timeRange)
+		tpl, builder, err := txbuilder.Build(nil, nil, newActions, txTemplates, maxTime, timeRange)
 		if errors.Root(err) == txbuilder.ErrAction {
 			// append each of the inner errors contained in the data.
 			var Errs string
@@ -127,7 +127,14 @@ func mergeSpendAcionUTXO(act *spendAction, preTxTemplate *txbuilder.Template, tx
 			tpls = append(tpls, tpl)
 			txTemplates[key] = tpls
 		}
-		err = mergeSpendAcionUTXO(act, tpl, txTemplates, maxTime, timeRange)
+		builders, ok := txBuilders[key]
+		if !ok {
+			txBuilders[key] = []*txbuilder.TemplateBuilder{builder}
+		} else {
+			builders = append(builders, builder)
+			txBuilders[key] = builders
+		}
+		err = mergeSpendActionUTXO(act, tpl, txTemplates, txBuilders, maxTime, timeRange)
 		if err != nil {
 			return err
 		}
@@ -170,14 +177,21 @@ func actTemplatesKey(accID string, assetId *bc.AssetID) string {
 }
 
 // MergeUTXO
-func MergeSpendAcionUTXO(ctx context.Context, actions []txbuilder.Action, maxTime time.Time, timeRange uint64) (map[string][]*txbuilder.Template, error) {
+func MergeSpendActionUTXO(ctx context.Context, actions []txbuilder.Action, maxTime time.Time, timeRange uint64) (map[string][]*txbuilder.Template, error) {
 	actionTxTemplates := make(map[string][]*txbuilder.Template)
+	actionTxBuilder := make(map[string][]*txbuilder.TemplateBuilder)
+
 	for _, act := range actions {
 		switch act := act.(type) {
 		case *spendAction:
 			preTxTemplate := new(txbuilder.Template)
-			err := mergeSpendAcionUTXO(act, preTxTemplate, actionTxTemplates, maxTime, timeRange)
+			err := mergeSpendActionUTXO(act, preTxTemplate, actionTxTemplates, actionTxBuilder, maxTime, timeRange)
 			if err != nil {
+				for _, builders := range actionTxBuilder {
+					for _, build := range builders {
+						build.Rollback()
+					}
+				}
 				return nil, err
 			}
 			// rollback reserved utxo

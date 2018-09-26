@@ -42,7 +42,7 @@ var (
 // Build partners then satisfy and consume inputs and destinations.
 // The final party must ensure that the transaction is
 // balanced before calling finalize.
-func Build(ctx context.Context, tx *types.TxData, actions []Action, txTemplates map[string][]*Template, maxTime time.Time, timeRange uint64) (*Template, error) {
+func Build(ctx context.Context, tx *types.TxData, actions []Action, txTemplates map[string][]*Template, maxTime time.Time, timeRange uint64) (*Template, *TemplateBuilder, error) {
 	builder := TemplateBuilder{
 		base:      tx,
 		maxTime:   maxTime,
@@ -61,15 +61,15 @@ func Build(ctx context.Context, tx *types.TxData, actions []Action, txTemplates 
 
 	// If there were any errors, rollback and return a composite error.
 	if len(errs) > 0 {
-		builder.rollback()
-		return nil, errors.WithData(ErrAction, "actions", errs)
+		builder.Rollback()
+		return nil, nil, errors.WithData(ErrAction, "actions", errs)
 	}
 
 	// Build the transaction template.
 	tpl, tx, err := builder.Build()
 	if err != nil {
-		builder.rollback()
-		return nil, err
+		builder.Rollback()
+		return nil, nil, err
 	}
 
 	/*TODO: This part is use for check the balance, but now we are using btm as gas fee
@@ -80,7 +80,7 @@ func Build(ctx context.Context, tx *types.TxData, actions []Action, txTemplates 
 		return nil, err
 	}*/
 
-	return tpl, nil
+	return tpl, &builder, nil
 }
 
 // Sign will try to sign all the witness
