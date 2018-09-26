@@ -383,7 +383,7 @@ func TestUglyValidateTxMerkleProof(t *testing.T) {
 		},
 	}
 
-	for _, c := range cases {
+	for i, c := range cases {
 		var hashes, relatedHashes []*bc.Hash
 		var hashBytes, rootBytes [32]byte
 		var err error
@@ -409,7 +409,7 @@ func TestUglyValidateTxMerkleProof(t *testing.T) {
 
 		root := bc.NewHash(rootBytes)
 		if ValidateTxMerkleTreeProof(hashes, c.flags, relatedHashes, root) != c.expectResult {
-			t.Error("Validate merkle tree proof fail")
+			t.Errorf("case %d: Validate merkle tree proof fail", i)
 			// t.Errorf("got merkle root = %x want %x", got.Bytes(), c.want.Bytes())
 		}
 	}

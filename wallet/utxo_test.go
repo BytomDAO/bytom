@@ -364,7 +364,27 @@ func TestFilterAccountUtxo(t *testing.T) {
 		})
 
 		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
-			t.Errorf("case %d: got %v want %v", i, gotUtxos, c.wantUtxos)
+			t.Errorf("case %d: got %x want %x", i, gotUtxos, c.wantUtxos)
+
+			if len(gotUtxos) != 0 {
+				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].ControlProgram, c.wantUtxos[0].ControlProgram)
+				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].AssetID, c.wantUtxos[0].AssetID)
+				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].Amount, c.wantUtxos[0].Amount)
+				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].AccountID, c.wantUtxos[0].AccountID)
+				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].Address, c.wantUtxos[0].Address)
+				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].ControlProgramIndex, c.wantUtxos[0].ControlProgramIndex)
+				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].Change, c.wantUtxos[0].Change)
+				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].ControlProgram, c.wantUtxos[1].ControlProgram)
+				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].AssetID, c.wantUtxos[1].AssetID)
+				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].Amount, c.wantUtxos[1].Amount)
+				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].AccountID, c.wantUtxos[1].AccountID)
+				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].Address, c.wantUtxos[1].Address)
+				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].ControlProgramIndex, c.wantUtxos[1].ControlProgramIndex)
+				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].Change, c.wantUtxos[1].Change)
+			} else {
+				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos, c.wantUtxos)
+			}
+
 		}
 		for s := range c.dbPrograms {
 			key, err := hex.DecodeString(s)
