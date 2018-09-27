@@ -253,8 +253,8 @@ func (a *API) submitChainTxs(ctx context.Context, ins struct {
 	Tx []types.Tx `json:"raw_transaction"`
 }) Response {
 	txHashs := []*bc.Hash{}
-	for i, v := range ins.Tx {
-		if err := txbuilder.FinalizeTx(ctx, a.chain, &v); err != nil {
+	for i := range ins.Tx {
+		if err := txbuilder.FinalizeTx(ctx, a.chain, &ins.Tx[i]); err != nil {
 			return NewErrorResponse(err)
 		}
 		log.WithField("tx_id", ins.Tx[i].ID.String()).Info("submit single tx")
