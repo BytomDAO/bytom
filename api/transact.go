@@ -167,11 +167,6 @@ func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Tem
 
 	actTemplates, actBuilders, err := account.MergeSpendActionUTXO(ctx, actions, maxTime, req.TimeRange)
 	if err != nil {
-		for _, builders := range actBuilders {
-			for _, build := range builders {
-				build.Rollback()
-			}
-		}
 		return nil, err
 	}
 
@@ -189,6 +184,11 @@ func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Tem
 		err = errors.WithDetail(rootErr, Errs)
 	}
 	if err != nil {
+		for _, builders := range actBuilders {
+			for _, build := range builders {
+				build.Rollback()
+			}
+		}
 		return nil, err
 	}
 
