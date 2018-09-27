@@ -375,6 +375,7 @@ func mockUTXO(controlProg *CtrlProgram, assetID *bc.AssetID, outputID uint64, am
 
 // Test the normal build chain transaction
 // Test build failed if the number of test assets is insufficient
+// Test utxo small asset merger
 func TestMergeSpendActionUTXO(t *testing.T) {
 	m := mockAccountManager(t)
 	alias1 := "TEST1"
@@ -384,10 +385,21 @@ func TestMergeSpendActionUTXO(t *testing.T) {
 	}
 	alias2 := "TEST2"
 	testAccount2, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias2)
-
 	if err != nil {
 		t.Fatal(err)
 	}
+	alias3 := "TEST3"
+	testAccount3, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	alias4 := "TEST4"
+	testAccount4, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias4)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	testBTM := &bc.AssetID{}
 	if err := testBTM.UnmarshalText([]byte("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")); err != nil {
 		t.Fatal(err)
@@ -422,8 +434,7 @@ func TestMergeSpendActionUTXO(t *testing.T) {
 				testAccount2.ID: {{9000000000, 8000000000, 7000000000, 6000000000, 6000000000, 5000000000, 4000000000, 4000000000, 3000000000, 2000000000}, {53990000000, 2000000000, 2000000000, 1000000000, 1000000000, 1000000000, 1000000000, 100000000, 100000000, 100000000}, {62280000000, 100000000, 100000000, 50000000}}},
 			wantError: nil,
 		},
-		{utxoAmount: map[string][]uint64{testAccount1.ID: {50000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 1000000000, 1000000000, 1000000000, 1000000000, 2000000000, 2000000000, 2000000000, 3000000000, 4000000000, 4000000000, 5000000000, 6000000000, 6000000000, 7000000000, 8000000000, 9000000000},
-			testAccount2.ID: {50000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 1000000000, 1000000000, 1000000000, 1000000000, 2000000000, 2000000000, 2000000000, 3000000000, 4000000000, 4000000000, 5000000000, 6000000000, 6000000000, 7000000000, 8000000000, 9000000000}},
+		{utxoAmount: map[string][]uint64{testAccount3.ID: {50000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 1000000000, 1000000000, 1000000000, 1000000000, 2000000000, 2000000000, 2000000000, 3000000000, 4000000000, 4000000000, 5000000000, 6000000000, 6000000000, 7000000000, 8000000000, 9000000000}},
 			testActions: []txbuilder.Action{
 				txbuilder.Action(&spendAction{
 					accounts: m,
@@ -431,9 +442,21 @@ func TestMergeSpendActionUTXO(t *testing.T) {
 						AssetId: consensus.BTMAssetID,
 						Amount:  63000000000,
 					},
-					AccountID: testAccount1.ID,
+					AccountID: testAccount3.ID,
 				})},
 			wantError: ErrInsufficient,
+		},
+		{utxoAmount: map[string][]uint64{testAccount4.ID: {1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000, 1000000}},
+			testActions: []txbuilder.Action{
+				txbuilder.Action(&spendAction{
+					accounts: m,
+					AssetAmount: bc.AssetAmount{
+						AssetId: consensus.BTMAssetID,
+						Amount:  12000000,
+					},
+					AccountID: testAccount4.ID,
+				})},
+			wantError: ErrReserved,
 		},
 	}
 
