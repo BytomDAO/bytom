@@ -96,7 +96,7 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 	}
 	maxTime := time.Now().Add(ttl)
 
-	tpl,_, err := txbuilder.Build(ctx, req.Tx, actions, nil, maxTime, req.TimeRange)
+	tpl, _, err := txbuilder.Build(ctx, req.Tx, actions, nil, maxTime, req.TimeRange)
 	if errors.Root(err) == txbuilder.ErrAction {
 		// append each of the inner errors contained in the data.
 		var Errs string
@@ -165,12 +165,17 @@ func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Tem
 	}
 	maxTime := time.Now().Add(ttl)
 
-	actTemplates, err := account.MergeSpendActionUTXO(ctx, actions, maxTime, req.TimeRange)
+	actTemplates, actBuilders, err := account.MergeSpendActionUTXO(ctx, actions, maxTime, req.TimeRange)
 	if err != nil {
+		for _, builders := range actBuilders {
+			for _, build := range builders {
+				build.Rollback()
+			}
+		}
 		return nil, err
 	}
 
-	tpl,_, err := txbuilder.Build(ctx, req.Tx, actions, actTemplates, maxTime, req.TimeRange)
+	tpl, _, err := txbuilder.Build(ctx, req.Tx, actions, actTemplates, maxTime, req.TimeRange)
 	if errors.Root(err) == txbuilder.ErrAction {
 		// append each of the inner errors contained in the data.
 		var Errs string

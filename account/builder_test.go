@@ -404,7 +404,7 @@ func TestMergeSpendActionUTXO(t *testing.T) {
 					},
 					AccountID: testAccount.ID,
 				})},
-			wantAmount: [][10]uint64{{9000000000, 8000000000, 7000000000, 6000000000, 6000000000, 5000000000, 4000000000, 4000000000, 3000000000, 2000000000}, {53990000000, 2000000000, 2000000000, 1000000000, 1000000000, 1000000000, 1000000000, 100000000, 100000000, 100000000}},
+			wantAmount: [][10]uint64{{9000000000, 8000000000, 7000000000, 6000000000, 6000000000, 5000000000, 4000000000, 4000000000, 3000000000, 2000000000}, {53990000000, 2000000000, 2000000000, 1000000000, 1000000000, 1000000000, 1000000000, 100000000, 100000000, 100000000}, {62280000000, 100000000, 100000000, 50000000}},
 			wantError:  nil,
 		},
 		{utxoAmount: []uint64{50000000, 100000000, 100000000, 100000000, 100000000, 100000000, 100000000, 1000000000, 1000000000, 1000000000, 1000000000, 2000000000, 2000000000, 2000000000, 3000000000, 4000000000, 4000000000, 5000000000, 6000000000, 6000000000, 7000000000, 8000000000, 9000000000},
@@ -435,7 +435,7 @@ func TestMergeSpendActionUTXO(t *testing.T) {
 			m.db.Set(StandardUTXOKey(utxo.OutputID), data)
 		}
 		maxTime := time.Now().Add(1000000)
-		tpls, err := MergeSpendActionUTXO(nil, test.testActions, maxTime, 0)
+		tpls, _, err := MergeSpendActionUTXO(nil, test.testActions, maxTime, 0)
 		if err != test.wantError {
 			t.Fatal(err)
 		}
@@ -506,7 +506,7 @@ func TestMergeSpendActionUTXOFailRollback(t *testing.T) {
 			m.db.Set(StandardUTXOKey(utxo.OutputID), data)
 		}
 		maxTime := time.Now().Add(1000000000)
-		_, err := MergeSpendActionUTXO(nil, test.testActions, maxTime, 0)
+		_, _, err := MergeSpendActionUTXO(nil, test.testActions, maxTime, 0)
 		if err != test.wantError {
 			t.Fatal(err)
 		}

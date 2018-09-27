@@ -241,7 +241,7 @@ func actTemplatesKey(accID string, assetId *bc.AssetID) string {
 }
 
 // MergeUTXO
-func MergeSpendActionUTXO(ctx context.Context, actions []txbuilder.Action, maxTime time.Time, timeRange uint64) (map[string][]*txbuilder.Template, error) {
+func MergeSpendActionUTXO(ctx context.Context, actions []txbuilder.Action, maxTime time.Time, timeRange uint64) (map[string][]*txbuilder.Template, map[string][]*txbuilder.TemplateBuilder, error) {
 	actionTxTemplates := make(map[string][]*txbuilder.Template)
 	actionTxBuilder := make(map[string][]*txbuilder.TemplateBuilder)
 
@@ -256,13 +256,12 @@ func MergeSpendActionUTXO(ctx context.Context, actions []txbuilder.Action, maxTi
 						build.Rollback()
 					}
 				}
-				return nil, err
+				return nil, nil, err
 			}
-			// rollback reserved utxo
 		default:
 		}
 	}
-	return actionTxTemplates, nil
+	return actionTxTemplates, actionTxBuilder, nil
 }
 
 // MergeSpendAction merge common assetID and accountID spend action
