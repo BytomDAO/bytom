@@ -185,7 +185,7 @@ func TestTransaction(t *testing.T) {
 
 func TestTransactionTrailingGarbage(t *testing.T) {
 	// validTxHex is a valid tx, we don't care what's inside as long as it's valid
-	validTxHex := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	validTxHex := `07010001015f015dc13b9d8825da2670520206333021315c9da170dab31cc517843a95ba229f9f5affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08c8e2e00011600148c27ef3898503fcf5fa4c812ab6738f3ec5f485c010002013cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcb1c924011600147c029de14786c0d5e47bddb61dfc430ac8eb3b7f000139ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff64011600146a0432d83785b4a1b48a173f135ab27dbfb25cbe00`
 	validTx := Tx{}
 	if err := validTx.UnmarshalText([]byte(validTxHex)); err != nil {
 		t.Fatal(err)
@@ -239,7 +239,7 @@ func TestInvalidIssuance(t *testing.T) {
 }
 
 func TestFuzzUnknownAssetVersion(t *testing.T) {
-	rawTx := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	rawTx := `07010001015f015dc13b9d8825da2670520206333021315c9da170dab31cc517843a95ba229f9f5affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08c8e2e00011600148c27ef3898503fcf5fa4c812ab6738f3ec5f485c010002013cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcb1c924011600147c029de14786c0d5e47bddb61dfc430ac8eb3b7f000139ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff64011600146a0432d83785b4a1b48a173f135ab27dbfb25cbe00`
 	want := Tx{}
 	if err := want.UnmarshalText([]byte(rawTx)); err != nil {
 		t.Fatal(err)
