@@ -115,6 +115,11 @@ func (m *Manager) AddUnconfirmedUtxo(utxos []*UTXO) {
 	m.utxoKeeper.AddUnconfirmedUtxo(utxos)
 }
 
+// GetUTXOKeeper get utxoKeeper
+func (m *Manager) GetUTXOKeeper() *utxoKeeper {
+	return m.utxoKeeper
+}
+
 // Create creates a new Account.
 func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Account, error) {
 	m.accountMu.Lock()
