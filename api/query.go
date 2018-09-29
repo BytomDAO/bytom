@@ -167,7 +167,16 @@ func (a *API) getUnconfirmedTx(ctx context.Context, filter struct {
 		TimeRange:  txDesc.Tx.TimeRange,
 		Inputs:     []*query.AnnotatedInput{},
 		Outputs:    []*query.AnnotatedOutput{},
-		StatusFail: false,
+		StatusFail: txDesc.StatusFail,
+	}
+
+	resOutID := txDesc.Tx.ResultIds[0]
+	resOut := txDesc.Tx.Entries[*resOutID]
+	switch out := resOut.(type) {
+	case *bc.Output:
+		tx.MuxID = *out.Source.Ref
+	case *bc.Retirement:
+		tx.MuxID = *out.Source.Ref
 	}
 
 	for i := range txDesc.Tx.Inputs {
