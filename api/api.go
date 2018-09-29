@@ -224,7 +224,10 @@ func (a *API) buildHandler() {
 		m.Handle("/sign-message", jsonHandler(a.signMessage))
 
 		m.Handle("/build-transaction", jsonHandler(a.build))
+		m.Handle("/build-chain-transactions", jsonHandler(a.buildChainTxs))
+
 		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
+		m.Handle("/sign-chain-transactions", jsonHandler(a.pseudohsmSignChainTxTemplates))
 
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
@@ -257,6 +260,8 @@ func (a *API) buildHandler() {
 	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
 
 	m.Handle("/submit-transaction", jsonHandler(a.submit))
+	m.Handle("/submit-chain-transactions", jsonHandler(a.submitChainTxs))
+
 	m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
 
 	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
@@ -264,7 +269,6 @@ func (a *API) buildHandler() {
 	m.Handle("/decode-raw-transaction", jsonHandler(a.decodeRawTransaction))
 
 	m.Handle("/get-block", jsonHandler(a.getBlock))
-	m.Handle("/get-raw-block", jsonHandler(a.getRawBlock))
 	m.Handle("/get-block-hash", jsonHandler(a.getBestBlockHash))
 	m.Handle("/get-block-header", jsonHandler(a.getBlockHeader))
 	m.Handle("/get-block-count", jsonHandler(a.getBlockCount))

@@ -35,7 +35,7 @@ type issueAction struct {
 	Arguments []txbuilder.ContractArgument `json:"arguments"`
 }
 
-func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder) error {
+func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuilder, preTxTemplate map[string][]*txbuilder.Template) error {
 	if a.AssetId.IsZero() {
 		return txbuilder.MissingFieldsError("asset_id")
 	}

@@ -27,7 +27,7 @@ import (
 
 type testAction bc.AssetAmount
 
-func (t testAction) Build(ctx context.Context, b *TemplateBuilder) error {
+func (t testAction) Build(ctx context.Context, b *TemplateBuilder, preTxTemplate map[string][]*Template) error {
 	in := types.NewSpendInput(nil, bc.NewHash([32]byte{0xff}), *t.AssetId, t.Amount, 0, nil)
 	tplIn := &SigningInstruction{}
 
@@ -56,7 +56,7 @@ func TestBuild(t *testing.T) {
 		testAction(bc.AssetAmount{AssetId: &assetID1, Amount: 5}),
 	}
 	expiryTime := time.Now().Add(time.Minute)
-	got, err := Build(ctx, nil, actions, expiryTime, 0)
+	got, _, err := Build(ctx, nil, actions, nil, expiryTime, 0)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
