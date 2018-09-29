@@ -40,7 +40,7 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 	}
 
 	if err != nil {
-		log.WithField("tx_id", tx.Tx.ID.String()).Info("transaction status fail with error: " + err.Error())
+		log.WithFields(log.Fields{"tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
 	}
 
 	return c.txPool.ProcessTransaction(tx, err != nil, block.BlockHeader.Height, gasStatus.BTMValue)
