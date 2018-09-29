@@ -232,6 +232,8 @@ func (a *API) buildHandler() {
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
 
+		m.Handle("/decode-program", jsonHandler(a.decodeProgram))
+
 		m.Handle("/backup-wallet", jsonHandler(a.backupWalletImage))
 		m.Handle("/restore-wallet", jsonHandler(a.restoreWalletImage))
 		m.Handle("/rescan-wallet", jsonHandler(a.rescanWallet))
@@ -278,7 +280,6 @@ func (a *API) buildHandler() {
 	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
-	m.Handle("/decode-program", jsonHandler(a.decodeProgram))
 	m.Handle("/compile", jsonHandler(a.compileEquity))
 
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
