@@ -73,34 +73,6 @@ func CheckActionsAssetType(actions []txbuilder.Action, assetType *bc.AssetID) bo
 	return true
 }
 
-func getProgramFromAddress(addr string) ([]byte, error) {
-	address, err := common.DecodeAddress(addr, &consensus.ActiveNetParams)
-	if err != nil {
-		return nil, err
-	}
-	redeemContract := address.ScriptAddress()
-	program := []byte{}
-
-	switch address.(type) {
-	case *common.AddressWitnessPubKeyHash:
-		program, err = vmutil.P2WPKHProgram(redeemContract)
-	case *common.AddressWitnessScriptHash:
-		program, err = vmutil.P2WSHProgram(redeemContract)
-	default:
-		return nil, errors.New("unsupport address type")
-	}
-	if err != nil {
-		return nil, err
-	}
-	return program, nil
-}
-
-func newTxOutput(assetId *bc.AssetID, amount uint64, address string) *types.TxOutput {
-	program, _ := getProgramFromAddress(address)
-	out := types.NewTxOutput(*assetId, amount, program)
-	return out
-}
-
 func txOutToUtxos(tx *types.Tx, cp *CtrlProgram, statusFail bool, vaildHeight uint64) []*UTXO {
 	utxos := []*UTXO{}
 	if tx == nil {
@@ -312,7 +284,7 @@ func (a *spendAction) mergeSpendActionUTXO(utxos []*UTXO, maxTime time.Time, tim
 	for index := 0; index < len(utxos); index++ {
 		if index != 0 && index%TxMaxInputUTXONum == 0 {
 			builderIndix := uint64(index/TxMaxInputUTXONum) - 1
-			output := newTxOutput(a.AssetId, assetAmount-MergeSpendActionUTXOGas, acp.Address)
+			output := types.NewTxOutput(*a.AssetId, assetAmount-MergeSpendActionUTXOGas, acp.ControlProgram)
 			if err := builders[builderIndix].AddOutput(output); err != nil {
 				return nil, nil, err
 			}
@@ -335,7 +307,7 @@ func (a *spendAction) mergeSpendActionUTXO(utxos []*UTXO, maxTime time.Time, tim
 		assetAmount += input.Amount()
 		if index == len(utxos)-1 {
 			builderIndix := mergeNum - 1
-			output := newTxOutput(a.AssetId, a.Amount, acp.Address)
+			output := types.NewTxOutput(*a.AssetId, a.Amount, acp.ControlProgram)
 			if err := builders[builderIndix].AddOutput(output); err != nil {
 				return nil, nil, err
 			}
@@ -343,7 +315,7 @@ func (a *spendAction) mergeSpendActionUTXO(utxos []*UTXO, maxTime time.Time, tim
 				return nil, nil, errors.New("mergeSpendActionUTXO amount err")
 			}
 			if change := assetAmount - MergeSpendActionUTXOGas - a.Amount; change > 0 {
-				changeOutput := newTxOutput(a.AssetId, change, acp.Address)
+				changeOutput := types.NewTxOutput(*a.AssetId, change, acp.ControlProgram)
 				builders[builderIndix].AddOutput(changeOutput)
 			}
 			tpl, _, err := builders[builderIndix].Build()
