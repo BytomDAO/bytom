@@ -131,6 +131,7 @@ func txOutToUtxos(tx *types.Tx, cp *CtrlProgram, statusFail bool, vaildHeight ui
 	return utxos
 }
 
+//calcMergeNum calculate the number of times that n utxos are merged into one
 func calcMergeNum(utxoNum uint64) uint64 {
 	num := uint64(0)
 	for utxoNum != 0 {
@@ -144,101 +145,57 @@ func calcMergeNum(utxoNum uint64) uint64 {
 	return num
 }
 
-func mergeSpendActionUTXO(act *spendAction, utxos []*UTXO, maxTime time.Time, timeRange uint64) ([]*txbuilder.Template, *UTXO, error) {
-	acct, err := act.accounts.FindByID(act.AccountID)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "get account info")
-	}
-	acp, err := act.accounts.CreateAddress(act.AccountID, false)
-	if err != nil {
-		return nil, nil, err
-	}
-	mergeNum := calcMergeNum(uint64(len(utxos)))
-	builders := make([]txbuilder.TemplateBuilder, mergeNum)
-	tpls := make([]*txbuilder.Template, 0)
-	var preTxUTXOs []*UTXO
-	amount := uint64(0)
-	for index := 0; index < len(utxos); index++ {
-		if index != 0 && index%TxMaxInputUTXONum == 0 {
-			outputIndix := uint64(index/TxMaxInputUTXONum) - 1
-			output := newTxOutput(act.AssetId, amount-MergeSpendActionUTXOGas, acp.Address)
-			builders[outputIndix].AddOutput(output)
-			tpl, _, err := builders[outputIndix].Build()
-			if err != nil {
-				return nil, nil, err
-			}
-			tpls = append(tpls, tpl)
-			preTxUTXOs = txOutToUtxos(tpl.Transaction, acp, false, 0)
-
-			utxos = append(utxos, preTxUTXOs[:]...)
-			amount = 0
-		}
-		txInput, sigInst, err := UtxoToInputs(acct.Signer, utxos[index])
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "creating inputs")
-		}
-		if err = builders[index/TxMaxInputUTXONum].AddInput(txInput, sigInst); err != nil {
-			return nil, nil, errors.Wrap(err, "adding inputs")
-		}
-		amount += txInput.Amount()
-		if index == len(utxos)-1 {
-			outputIndix := mergeNum - 1
-			output := newTxOutput(act.AssetId, act.Amount, acp.Address)
-			builders[outputIndix].AddOutput(output)
-			changeOutput := newTxOutput(act.AssetId, amount-MergeSpendActionUTXOGas-act.Amount, acp.Address)
-			builders[outputIndix].AddOutput(changeOutput)
-			tpl, _, err := builders[outputIndix].Build()
-			if err != nil {
-				return nil, nil, err
-			}
-			tpls = append(tpls, tpl)
-			preTxUTXOs = txOutToUtxos(tpl.Transaction, acp, false, 0)
-			break
-		}
-	}
-	return tpls, preTxUTXOs[0], nil
-}
-
 func actTemplatesKey(accID string, assetId *bc.AssetID) string {
 	key := accID + assetId.String()
 	return key
 }
 
 // MergeUTXO
-func MergeSpendActionUTXO(ctx context.Context, actions []txbuilder.Action, maxTime time.Time, timeRange uint64) (map[string][]*txbuilder.Template, []txbuilder.Action, []*reservedUTXO, error) {
-	actionTxTemplates := make(map[string][]*txbuilder.Template)
-	otherActions := make([]txbuilder.Action, 0)
-	reservedUTXOs := make([]*reservedUTXO, 0)
+func MergeSpendActionsUTXO(ctx context.Context, actions []txbuilder.Action, maxTime time.Time, timeRange uint64) ([]*txbuilder.Template, []*txbuilder.Action, *MergeActionsUTXOResult, error) {
+	actionTxTemplates := make([]*txbuilder.Template, 0)
+	otherActions := make([]*txbuilder.Action, 0)
+	mergeResult := &MergeActionsUTXOResult{ResIDs: []uint64{}, outputs: make([]*preTxOutput, 0)}
 	for _, act := range actions {
 		switch act := act.(type) {
 		case *spendAction:
-			reservedUTXO := newReservedUTXO()
+			reservedUTXO := newActionReservedUTXO()
 			if err := act.reserveUTXO(act.Amount, maxTime, reservedUTXO); err != nil {
-				return nil, nil, reservedUTXOs, err
+				return nil, nil, mergeResult, err
 			}
-			tpls, preTxUTXO, err := mergeSpendActionUTXO(act, reservedUTXO.utxos, maxTime, timeRange)
+			mergeResult.ResIDs = append(mergeResult.ResIDs, reservedUTXO.IDs[:]...)
+			tpls, preTxOutput, err := act.mergeSpendActionUTXO(reservedUTXO.utxos, maxTime, timeRange)
 			if err != nil {
-				reservedUTXOs = append(reservedUTXOs, reservedUTXO)
-				return nil, nil, reservedUTXOs, err
+				return nil, nil, mergeResult, err
 			}
 			acct, err := act.accounts.FindByID(act.AccountID)
 			if err != nil {
-				return nil, nil, reservedUTXOs, errors.Wrap(err, "get account info")
+				return nil, nil, mergeResult, err
 			}
-			txInput, sigInst, err := UtxoToInputs(acct.Signer, preTxUTXO)
+			input, sigInst, err := UtxoToInputs(acct.Signer, preTxOutput)
 			if err != nil {
-				return nil, nil, reservedUTXOs, errors.Wrap(err, "creating inputs")
+				return nil, nil, mergeResult, err
 			}
-			input := &preTxOutput{TxInput: txInput, Sign: sigInst}
-			reservedUTXO.PreTxOutputs = append(reservedUTXO.PreTxOutputs, input)
-
-			reservedUTXOs = append(reservedUTXOs, reservedUTXO)
-			actionTxTemplates[actTemplatesKey(act.AccountID, act.AssetId)] = tpls
+			output := &preTxOutput{TxInput: input, Sign: sigInst}
+			mergeResult.outputs = append(mergeResult.outputs, output)
+			actionTxTemplates = append(actionTxTemplates, tpls[:]...)
 		default:
-			otherActions = append(otherActions, act)
+			otherActions = append(otherActions, &act)
 		}
 	}
-	return actionTxTemplates, otherActions, reservedUTXOs, nil
+	return actionTxTemplates, otherActions, mergeResult, nil
+}
+
+type ActionReservedUTXO struct {
+	IDs         []uint64
+	totalAmount uint64
+	utxos       []*UTXO
+}
+
+func newActionReservedUTXO() *ActionReservedUTXO {
+	return &ActionReservedUTXO{
+		IDs:   []uint64{},
+		utxos: []*UTXO{},
+	}
 }
 
 type preTxOutput struct {
@@ -246,35 +203,26 @@ type preTxOutput struct {
 	Sign    *txbuilder.SigningInstruction
 }
 
-type reservedUTXO struct {
-	ID           []uint64
-	totalAmount  uint64
-	utxos        []*UTXO
-	PreTxOutputs []*preTxOutput
+type MergeActionsUTXOResult struct {
+	ResIDs  []uint64
+	outputs []*preTxOutput
 }
 
-func newReservedUTXO() *reservedUTXO {
-	return &reservedUTXO{
-		ID:           []uint64{},
-		utxos:        []*UTXO{},
-		PreTxOutputs: []*preTxOutput{},
-	}
-}
-func (a *spendAction) reserveUTXO(amount uint64, maxTime time.Time, resvutxo *reservedUTXO) error {
+func (a *spendAction) reserveUTXO(amount uint64, maxTime time.Time, resUTXO *ActionReservedUTXO) error {
 	res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, amount, a.UseUnconfirmed, maxTime)
 	if err != nil {
-		//rollback reserved utxo
-		for _, v := range resvutxo.ID {
-			a.accounts.utxoKeeper.Cancel(v)
+		//rollback action reserved utxo
+		for _, resID := range resUTXO.IDs {
+			a.accounts.utxoKeeper.Cancel(resID)
 		}
 		return err
 	}
-	resvutxo.ID = append(resvutxo.ID, res.id)
-	resvutxo.totalAmount += amount + res.change
-	resvutxo.utxos = append(resvutxo.utxos, res.utxos[:]...)
-	gasRequired := calcMergeNum(uint64(len(resvutxo.utxos))) * MergeSpendActionUTXOGas
-	if gasRequired+a.Amount > resvutxo.totalAmount {
-		if err := a.reserveUTXO(gasRequired+a.Amount-resvutxo.totalAmount, maxTime, resvutxo); err != nil {
+	resUTXO.IDs = append(resUTXO.IDs, res.id)
+	resUTXO.totalAmount += amount + res.change
+	resUTXO.utxos = append(resUTXO.utxos, res.utxos[:]...)
+	gasRequired := calcMergeNum(uint64(len(resUTXO.utxos))) * MergeSpendActionUTXOGas
+	if gasRequired+a.Amount > resUTXO.totalAmount {
+		if err := a.reserveUTXO(gasRequired+a.Amount-resUTXO.totalAmount, maxTime, resUTXO); err != nil {
 			return err
 		}
 	}
@@ -342,6 +290,72 @@ type spendUTXOAction struct {
 	OutputID       *bc.Hash                     `json:"output_id"`
 	UseUnconfirmed bool                         `json:"use_unconfirmed"`
 	Arguments      []txbuilder.ContractArgument `json:"arguments"`
+}
+
+//mergeSpendActionUTXO combine the n utxos required by SpendAction into 1
+func (a *spendAction) mergeSpendActionUTXO(utxos []*UTXO, maxTime time.Time, timeRange uint64) ([]*txbuilder.Template, *UTXO, error) {
+	if len(utxos) == 0 {
+		return nil, nil, errors.New("mergeSpendActionUTXO utxos num 0")
+	}
+	acct, err := a.accounts.FindByID(a.AccountID)
+	if err != nil {
+		return nil, nil, err
+	}
+	acp, err := a.accounts.GetLocalCtrlProgramByAddress(utxos[0].Address)
+	if err != nil {
+		return nil, nil, err
+	}
+	mergeNum := calcMergeNum(uint64(len(utxos)))
+	builders := make([]txbuilder.TemplateBuilder, mergeNum)
+	tpls := make([]*txbuilder.Template, 0)
+	assetAmount := uint64(0)
+	for index := 0; index < len(utxos); index++ {
+		if index != 0 && index%TxMaxInputUTXONum == 0 {
+			builderIndix := uint64(index/TxMaxInputUTXONum) - 1
+			output := newTxOutput(a.AssetId, assetAmount-MergeSpendActionUTXOGas, acp.Address)
+			if err := builders[builderIndix].AddOutput(output); err != nil {
+				return nil, nil, err
+			}
+			tpl, _, err := builders[builderIndix].Build()
+			if err != nil {
+				return nil, nil, err
+			}
+			tpls = append(tpls, tpl)
+			preTxOutputs := txOutToUtxos(tpl.Transaction, acp, false, 0)
+			utxos = append(utxos, preTxOutputs[:]...)
+			assetAmount = 0
+		}
+		input, sigInst, err := UtxoToInputs(acct.Signer, utxos[index])
+		if err != nil {
+			return nil, nil, err
+		}
+		if err = builders[index/TxMaxInputUTXONum].AddInput(input, sigInst); err != nil {
+			return nil, nil, err
+		}
+		assetAmount += input.Amount()
+		if index == len(utxos)-1 {
+			builderIndix := mergeNum - 1
+			output := newTxOutput(a.AssetId, a.Amount, acp.Address)
+			if err := builders[builderIndix].AddOutput(output); err != nil {
+				return nil, nil, err
+			}
+			if assetAmount < MergeSpendActionUTXOGas+a.Amount {
+				return nil, nil, errors.New("mergeSpendActionUTXO amount err")
+			}
+			if change := assetAmount - MergeSpendActionUTXOGas - a.Amount; change > 0 {
+				changeOutput := newTxOutput(a.AssetId, change, acp.Address)
+				builders[builderIndix].AddOutput(changeOutput)
+			}
+			tpl, _, err := builders[builderIndix].Build()
+			if err != nil {
+				return nil, nil, err
+			}
+			tpls = append(tpls, tpl)
+			preTxOutputs := txOutToUtxos(tpl.Transaction, acp, false, 0)
+			return tpls, preTxOutputs[0], nil
+		}
+	}
+	return nil, nil, errors.New("mergeSpendActionUTXO err")
 }
 
 func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
