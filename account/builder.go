@@ -145,11 +145,6 @@ func calcMergeNum(utxoNum uint64) uint64 {
 	return num
 }
 
-func actTemplatesKey(accID string, assetId *bc.AssetID) string {
-	key := accID + assetId.String()
-	return key
-}
-
 func RollbackResUTXO(utxoKeeper *utxoKeeper, resIDs []uint64) {
 	for _, resID := range resIDs {
 		utxoKeeper.Cancel(resID)
