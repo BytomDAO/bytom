@@ -159,10 +159,11 @@ func MergeSpendActionsUTXO(ctx context.Context, actions []txbuilder.Action, maxT
 	for _, act := range actions {
 		switch act := act.(type) {
 		case *spendAction:
-			reservedUTXO := newActionReservedUTXO()
-			if err := act.reserveUTXO(act.Amount, maxTime, reservedUTXO); err != nil {
+			reservedUTXO, err := act.reserveUTXO(maxTime)
+			if err != nil {
 				return nil, nil, mergeResult, err
 			}
+
 			mergeResult.ResIDs = append(mergeResult.ResIDs, reservedUTXO.IDs[:]...)
 			tpls, preTxOutput, err := act.mergeSpendActionUTXO(reservedUTXO.utxos, maxTime, timeRange)
 			if err != nil {
@@ -209,25 +210,23 @@ type MergeActionsUTXOResult struct {
 	Outputs []*PreTxOutput
 }
 
-func (a *spendAction) reserveUTXO(amount uint64, maxTime time.Time, resUTXO *ActionReservedUTXO) error {
-	res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, amount, a.UseUnconfirmed, maxTime)
-	if err != nil {
-		//rollback action reserved utxo
-		for _, resID := range resUTXO.IDs {
-			a.accounts.utxoKeeper.Cancel(resID)
+func (a *spendAction) reserveUTXO(maxTime time.Time) (*ActionReservedUTXO, error) {
+	resUtxo := newActionReservedUTXO()
+	for gasAmount := uint64(0); resUtxo.totalAmount <= gasAmount+a.Amount; gasAmount = calcMergeNum(uint64(len(resUtxo.utxos))) * MergeSpendActionUTXOGas {
+		reserveAmount := a.Amount + gasAmount - resUtxo.totalAmount
+		res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, reserveAmount, a.UseUnconfirmed, maxTime)
+		if err != nil {
+			for _, resID := range resUtxo.IDs {
+				a.accounts.utxoKeeper.Cancel(resID)
+			}
+			return nil, err
 		}
-		return err
+
+		resUtxo.IDs = append(resUtxo.IDs, res.id)
+		resUtxo.totalAmount += reserveAmount + res.change
+		resUtxo.utxos = append(resUtxo.utxos, res.utxos[:]...)
 	}
-	resUTXO.IDs = append(resUTXO.IDs, res.id)
-	resUTXO.totalAmount += amount + res.change
-	resUTXO.utxos = append(resUTXO.utxos, res.utxos[:]...)
-	gasRequired := calcMergeNum(uint64(len(resUTXO.utxos))) * MergeSpendActionUTXOGas
-	if gasRequired+a.Amount > resUTXO.totalAmount {
-		if err := a.reserveUTXO(gasRequired+a.Amount-resUTXO.totalAmount, maxTime, resUTXO); err != nil {
-			return err
-		}
-	}
-	return nil
+	return resUtxo, nil
 }
 
 func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
