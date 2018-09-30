@@ -55,40 +55,13 @@ func onlyHaveInputActions(req *BuildRequest) (bool, error) {
 }
 
 func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Template, error) {
-	if err := a.completeMissingIDs(ctx, req); err != nil {
+	if err := a.checkRequestValidity(ctx, req); err != nil {
 		return nil, err
 	}
-
-	if ok, err := onlyHaveInputActions(req); err != nil {
+	actions, err := a.mergeSpendActions(req)
+	if err != nil {
 		return nil, err
-	} else if ok {
-		return nil, errors.WithDetail(ErrBadActionConstruction, "transaction contains only input actions and no output actions")
 	}
-
-	actions := make([]txbuilder.Action, 0, len(req.Actions))
-	for i, act := range req.Actions {
-		typ, ok := act["type"].(string)
-		if !ok {
-			return nil, errors.WithDetailf(ErrBadActionType, "no action type provided on action %d", i)
-		}
-		decoder, ok := a.actionDecoder(typ)
-		if !ok {
-			return nil, errors.WithDetailf(ErrBadActionType, "unknown action type %q on action %d", typ, i)
-		}
-
-		// Remarshal to JSON, the action may have been modified when we
-		// filtered aliases.
-		b, err := json.Marshal(act)
-		if err != nil {
-			return nil, err
-		}
-		action, err := decoder(b)
-		if err != nil {
-			return nil, errors.WithDetailf(ErrBadAction, "%s on action %d", err.Error(), i)
-		}
-		actions = append(actions, action)
-	}
-	actions = account.MergeSpendAction(actions)
 
 	ttl := req.TTL.Duration
 	if ttl == 0 {
@@ -131,18 +104,20 @@ func (a *API) build(ctx context.Context, buildReqs *BuildRequest) Response {
 
 	return NewSuccessResponse(tmpl)
 }
-
-func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Template, error) {
+func (a *API) checkRequestValidity(ctx context.Context, req *BuildRequest) error {
 	if err := a.completeMissingIDs(ctx, req); err != nil {
-		return nil, err
+		return err
 	}
 
 	if ok, err := onlyHaveInputActions(req); err != nil {
-		return nil, err
+		return err
 	} else if ok {
-		return nil, errors.WithDetail(ErrBadActionConstruction, "transaction contains only input actions and no output actions")
+		return errors.WithDetail(ErrBadActionConstruction, "transaction contains only input actions and no output actions")
 	}
+	return nil
+}
 
+func (a *API) mergeSpendActions(req *BuildRequest) ([]txbuilder.Action, error) {
 	actions := make([]txbuilder.Action, 0, len(req.Actions))
 	for i, act := range req.Actions {
 		typ, ok := act["type"].(string)
@@ -170,6 +145,17 @@ func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Tem
 		return nil, errors.WithDetailf(ErrBadActionType, "Chain trading only supports BTM asset")
 	}
 	actions = account.MergeSpendAction(actions)
+	return actions, nil
+}
+
+func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Template, error) {
+	if err := a.checkRequestValidity(ctx, req); err != nil {
+		return nil, err
+	}
+	actions, err := a.mergeSpendActions(req)
+	if err != nil {
+		return nil, err
+	}
 
 	ttl := req.TTL.Duration
 	if ttl == 0 {
