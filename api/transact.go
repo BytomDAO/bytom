@@ -176,15 +176,11 @@ func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Tem
 		ttl = defaultTxTTL
 	}
 	maxTime := time.Now().Add(ttl)
+	utxoKeeper := a.wallet.AccountMgr.GetUTXOKeeper()
 
-	actTemplates, otherActions, reservedUTXOs, err := account.MergeSpendActionUTXO(ctx, actions, maxTime, req.TimeRange)
+	actTemplates, otherActions, mergeResult, err := account.MergeSpendActionsUTXO(ctx, actions, maxTime, req.TimeRange)
 	if err != nil {
-		UTXOKeeper := a.wallet.AccountMgr.GetUTXOKeeper()
-		for _, reservedUTXO := range reservedUTXOs {
-			for _, resvID := range reservedUTXO.ID {
-				UTXOKeeper.Cancel(resvID)
-			}
-		}
+		account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
 		return nil, err
 	}
 
@@ -202,39 +198,19 @@ func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Tem
 		err = errors.WithDetail(rootErr, Errs)
 	}
 	if err != nil {
-		//rockback
-		UTXOKeeper := a.wallet.AccountMgr.GetUTXOKeeper()
-		for _, reservedUTXO := range reservedUTXOs {
-			for _, resvID := range reservedUTXO.ID {
-				UTXOKeeper.Cancel(resvID)
-			}
-		}
+		account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
 		return nil, err
 	}
-	for _, reservedUTXO := range reservedUTXOs {
-		for _, input := range reservedUTXO.PreTxOutputs {
-			if err := builder.AddInput(input.TxInput, input.Sign); err != nil {
-				UTXOKeeper := a.wallet.AccountMgr.GetUTXOKeeper()
-				for _, reservedUTXO := range reservedUTXOs {
-					for _, resvID := range reservedUTXO.ID {
-						UTXOKeeper.Cancel(resvID)
-					}
-				}
-				return nil, err
-			}
+	for _, input := range mergeResult.Outputs {
+		if err := builder.AddInput(input.TxInput, input.Sign); err != nil {
+			account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
+			return nil, err
 		}
 	}
-
-	//// Build the transaction template.
+	// Build the transaction template.
 	tpl, _, err := builder.Build()
 	if err != nil {
-		//rockback
-		UTXOKeeper := a.wallet.AccountMgr.GetUTXOKeeper()
-		for _, reservedUTXO := range reservedUTXOs {
-			for _, resvID := range reservedUTXO.ID {
-				UTXOKeeper.Cancel(resvID)
-			}
-		}
+		account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
 		return nil, err
 	}
 	// ensure null is never returned for signing instructions
@@ -242,9 +218,7 @@ func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Tem
 		tpl.SigningInstructions = []*txbuilder.SigningInstruction{}
 	}
 	tpls := []*txbuilder.Template{}
-	for _, value := range actTemplates {
-		tpls = append(tpls, value[:]...)
-	}
+	tpls = append(tpls, actTemplates[:]...)
 	tpls = append(tpls, tpl)
 	return tpls, nil
 }

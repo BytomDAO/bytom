@@ -150,11 +150,17 @@ func actTemplatesKey(accID string, assetId *bc.AssetID) string {
 	return key
 }
 
+func RollbackResUTXO(utxoKeeper *utxoKeeper, resIDs []uint64) {
+	for _, resID := range resIDs {
+		utxoKeeper.Cancel(resID)
+	}
+}
+
 // MergeUTXO
 func MergeSpendActionsUTXO(ctx context.Context, actions []txbuilder.Action, maxTime time.Time, timeRange uint64) ([]*txbuilder.Template, []*txbuilder.Action, *MergeActionsUTXOResult, error) {
 	actionTxTemplates := make([]*txbuilder.Template, 0)
 	otherActions := make([]*txbuilder.Action, 0)
-	mergeResult := &MergeActionsUTXOResult{ResIDs: []uint64{}, outputs: make([]*preTxOutput, 0)}
+	mergeResult := &MergeActionsUTXOResult{ResIDs: []uint64{}, Outputs: make([]*PreTxOutput, 0)}
 	for _, act := range actions {
 		switch act := act.(type) {
 		case *spendAction:
@@ -175,8 +181,8 @@ func MergeSpendActionsUTXO(ctx context.Context, actions []txbuilder.Action, maxT
 			if err != nil {
 				return nil, nil, mergeResult, err
 			}
-			output := &preTxOutput{TxInput: input, Sign: sigInst}
-			mergeResult.outputs = append(mergeResult.outputs, output)
+			output := &PreTxOutput{TxInput: input, Sign: sigInst}
+			mergeResult.Outputs = append(mergeResult.Outputs, output)
 			actionTxTemplates = append(actionTxTemplates, tpls[:]...)
 		default:
 			otherActions = append(otherActions, &act)
@@ -198,14 +204,14 @@ func newActionReservedUTXO() *ActionReservedUTXO {
 	}
 }
 
-type preTxOutput struct {
+type PreTxOutput struct {
 	TxInput *types.TxInput
 	Sign    *txbuilder.SigningInstruction
 }
 
 type MergeActionsUTXOResult struct {
 	ResIDs  []uint64
-	outputs []*preTxOutput
+	Outputs []*PreTxOutput
 }
 
 func (a *spendAction) reserveUTXO(amount uint64, maxTime time.Time, resUTXO *ActionReservedUTXO) error {

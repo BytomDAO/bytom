@@ -83,7 +83,7 @@ func Build(ctx context.Context, tx *types.TxData, actions []Action, maxTime time
 	return tpl, nil
 }
 
-func BuildChainTxs(ctx context.Context, tx *types.TxData, actions []Action, maxTime time.Time, timeRange uint64) (*TemplateBuilder, error) {
+func BuildChainTxs(ctx context.Context, tx *types.TxData, actions []*Action, maxTime time.Time, timeRange uint64) (*TemplateBuilder, error) {
 	builder := TemplateBuilder{
 		base:      tx,
 		maxTime:   maxTime,
@@ -93,7 +93,7 @@ func BuildChainTxs(ctx context.Context, tx *types.TxData, actions []Action, maxT
 	// Build all of the actions, updating the builder.
 	var errs []error
 	for i, action := range actions {
-		err := action.Build(ctx, &builder)
+		err := (*action).Build(ctx, &builder)
 		if err != nil {
 			log.WithFields(log.Fields{"action index": i, "error": err}).Error("Loop tx's action")
 			errs = append(errs, errors.WithDetailf(err, "action index %v", i))
