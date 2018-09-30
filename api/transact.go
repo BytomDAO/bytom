@@ -23,6 +23,7 @@ import (
 var (
 	defaultTxTTL    = 5 * time.Minute
 	defaultBaseRate = float64(100000)
+	flexibleGas     = int64(1800)
 )
 
 func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
@@ -284,6 +285,7 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	totalP2WPKHGas := int64(0)
 	totalP2WSHGas := int64(0)
 	baseP2WPKHGas := int64(1419)
+	// flexible Gas is used for handle need extra utxo situation
 
 	for pos, inpID := range template.Transaction.Tx.InputIDs {
 		sp, err := template.Transaction.Spend(inpID)
@@ -305,7 +307,7 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	}
 
 	// total estimate gas
-	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
+	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas + flexibleGas
 
 	// rounding totalNeu with base rate 100000
 	totalNeu := float64(totalGas*consensus.VMGasRate) / defaultBaseRate
