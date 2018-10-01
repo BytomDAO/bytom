@@ -129,16 +129,6 @@ func newActionReservedUTXO() *ActionReservedUTXO {
 	}
 }
 
-type PreTxOutput struct {
-	TxInput *types.TxInput
-	Sign    *txbuilder.SigningInstruction
-}
-
-type MergeActionsUTXOResult struct {
-	ResIDs  []uint64
-	Outputs []*PreTxOutput
-}
-
 func (a *spendAction) reserveUTXO(maxTime time.Time) (*ActionReservedUTXO, error) {
 	resUtxo := newActionReservedUTXO()
 	for gasAmount := uint64(0); resUtxo.totalAmount <= gasAmount+a.Amount; gasAmount = calcMergeNum(uint64(len(resUtxo.utxos))) * MergeSpendActionUTXOGas {
