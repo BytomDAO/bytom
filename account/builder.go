@@ -89,7 +89,6 @@ func (m *Manager) reserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accoun
 	return utxos, nil
 }
 
-//mergeSpendActionUTXO combine the n utxos required by SpendAction into 1
 func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txbuilder.Template, *UTXO, error) {
 	if len(utxos) == 0 {
 		return nil, nil, errors.New("mergeSpendActionUTXO utxos num 0")
