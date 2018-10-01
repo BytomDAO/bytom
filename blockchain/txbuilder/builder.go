@@ -46,6 +46,11 @@ func (b *TemplateBuilder) AddOutput(o *types.TxOutput) error {
 	return nil
 }
 
+// InputCount return number of input in the template builder
+func (b *TemplateBuilder) InputCount() int {
+	return len(b.inputs)
+}
+
 // RestrictMinTime set minTime
 func (b *TemplateBuilder) RestrictMinTime(t time.Time) {
 	if t.After(b.minTime) {

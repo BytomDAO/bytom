@@ -73,36 +73,6 @@ func CheckActionsAssetType(actions []txbuilder.Action, assetType *bc.AssetID) bo
 	return true
 }
 
-func txOutToUtxos(tx *types.Tx, cp *CtrlProgram, statusFail bool, vaildHeight uint64) []*UTXO {
-	utxos := []*UTXO{}
-	if tx == nil {
-		return utxos
-	}
-	for i, out := range tx.Outputs {
-		bcOut, err := tx.Output(*tx.ResultIds[i])
-		if err != nil {
-			continue
-		}
-
-		if statusFail && *out.AssetAmount.AssetId != *consensus.BTMAssetID {
-			continue
-		}
-
-		utxos = append(utxos, &UTXO{
-			OutputID:            *tx.OutputID(i),
-			AssetID:             *out.AssetAmount.AssetId,
-			Amount:              out.Amount,
-			ControlProgram:      out.ControlProgram,
-			SourceID:            *bcOut.Source.Ref,
-			SourcePos:           bcOut.Source.Position,
-			ValidHeight:         vaildHeight,
-			Address:             cp.Address,
-			ControlProgramIndex: cp.KeyIndex,
-		})
-	}
-	return utxos
-}
-
 //calcMergeNum calculate the number of times that n utxos are merged into one
 func calcMergeNum(utxoNum uint64) uint64 {
 	num := uint64(0)
@@ -277,57 +247,62 @@ func (a *spendAction) mergeSpendActionUTXO(utxos []*UTXO, maxTime time.Time, tim
 	if err != nil {
 		return nil, nil, err
 	}
-	mergeNum := calcMergeNum(uint64(len(utxos)))
-	builders := make([]txbuilder.TemplateBuilder, mergeNum)
-	tpls := make([]*txbuilder.Template, 0)
-	assetAmount := uint64(0)
+
+	tpls := []*txbuilder.Template{}
+
+	buildAmount := uint64(0)
+	builder := &txbuilder.TemplateBuilder{}
 	for index := 0; index < len(utxos); index++ {
-		if index != 0 && index%TxMaxInputUTXONum == 0 {
-			builderIndix := uint64(index/TxMaxInputUTXONum) - 1
-			output := types.NewTxOutput(*a.AssetId, assetAmount-MergeSpendActionUTXOGas, acp.ControlProgram)
-			if err := builders[builderIndix].AddOutput(output); err != nil {
-				return nil, nil, err
-			}
-			tpl, _, err := builders[builderIndix].Build()
-			if err != nil {
-				return nil, nil, err
-			}
-			tpls = append(tpls, tpl)
-			preTxOutputs := txOutToUtxos(tpl.Transaction, acp, false, 0)
-			utxos = append(utxos, preTxOutputs[:]...)
-			assetAmount = 0
-		}
 		input, sigInst, err := UtxoToInputs(acct.Signer, utxos[index])
 		if err != nil {
 			return nil, nil, err
 		}
-		if err = builders[index/TxMaxInputUTXONum].AddInput(input, sigInst); err != nil {
+
+		if err = builder.AddInput(input, sigInst); err != nil {
 			return nil, nil, err
 		}
-		assetAmount += input.Amount()
-		if index == len(utxos)-1 {
-			builderIndix := mergeNum - 1
-			output := types.NewTxOutput(*a.AssetId, a.Amount, acp.ControlProgram)
-			if err := builders[builderIndix].AddOutput(output); err != nil {
-				return nil, nil, err
-			}
-			if assetAmount < MergeSpendActionUTXOGas+a.Amount {
-				return nil, nil, errors.New("mergeSpendActionUTXO amount err")
-			}
-			if change := assetAmount - MergeSpendActionUTXOGas - a.Amount; change > 0 {
-				changeOutput := types.NewTxOutput(*a.AssetId, change, acp.ControlProgram)
-				builders[builderIndix].AddOutput(changeOutput)
-			}
-			tpl, _, err := builders[builderIndix].Build()
-			if err != nil {
-				return nil, nil, err
-			}
-			tpls = append(tpls, tpl)
-			preTxOutputs := txOutToUtxos(tpl.Transaction, acp, false, 0)
-			return tpls, preTxOutputs[0], nil
+
+		buildAmount += input.Amount()
+		if builder.InputCount() != TxMaxInputUTXONum && index != len(utxos)-1 {
+			continue
 		}
+
+		outAmount := buildAmount - MergeSpendActionUTXOGas
+		output := types.NewTxOutput(*a.AssetId, outAmount, acp.ControlProgram)
+		if err := builder.AddOutput(output); err != nil {
+			return nil, nil, err
+		}
+
+		tpl, _, err := builder.Build()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		bcOut, err := tpl.Transaction.Output(*tpl.Transaction.ResultIds[0])
+		if err != nil {
+			return nil, nil, err
+		}
+
+		utxos = append(utxos, &UTXO{
+			OutputID:            *tpl.Transaction.ResultIds[0],
+			AssetID:             *a.AssetId,
+			Amount:              outAmount,
+			ControlProgram:      acp.ControlProgram,
+			SourceID:            *bcOut.Source.Ref,
+			SourcePos:           bcOut.Source.Position,
+			ControlProgramIndex: acp.KeyIndex,
+			Address:             acp.Address,
+		})
+
+		tpls = append(tpls, tpl)
+		if outAmount >= a.Amount {
+			break
+		}
+
+		buildAmount = 0
+		builder = &txbuilder.TemplateBuilder{}
 	}
-	return nil, nil, errors.New("mergeSpendActionUTXO err")
+	return tpls, utxos[len(utxos)-1], nil
 }
 
 func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
