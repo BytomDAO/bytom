@@ -14,13 +14,13 @@ type createKeyResp struct {
 	Alias    string       `json:"alias"`
 	XPub     chainkd.XPub `json:"xpub"`
 	File     string       `json:"file"`
-	Mnemonic string       `json:"mnemonic"`
+	Mnemonic string       `json:"mnemonic,omitempty"`
 }
 
 func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	Alias    string `json:"alias"`
 	Password string `json:"password"`
-	Mnemonic string `json:"nnemonic"`
+	Mnemonic string `json:"mnemonic"`
 	Language string `json:"language"`
 }) Response {
 	if in.Language == "" {
