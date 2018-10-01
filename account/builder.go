@@ -172,12 +172,12 @@ func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, 
 		return nil, err
 	}
 
-	tpls, preTxOutput, err := act.accounts.buildBtmChain(utxos, acct.Signer)
+	tpls, utxo, err := act.accounts.buildBtmChain(utxos, acct.Signer)
 	if err != nil {
 		return nil, err
 	}
 
-	input, sigInst, err := UtxoToInputs(acct.Signer, preTxOutput)
+	input, sigInst, err := UtxoToInputs(acct.Signer, utxo)
 	if err != nil {
 		return nil, err
 	}
@@ -186,6 +186,11 @@ func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, 
 		return nil, err
 	}
 
+	if utxo.Amount > act.Amount {
+		if err = builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, utxo.Amount-act.Amount, utxo.ControlProgram)); err != nil {
+			return nil, errors.Wrap(err, "adding change output")
+		}
+	}
 	return tpls, nil
 }
 
