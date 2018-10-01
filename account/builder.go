@@ -36,6 +36,10 @@ type spendAction struct {
 	UseUnconfirmed bool   `json:"use_unconfirmed"`
 }
 
+func (a *spendAction) ActionType() string {
+	return "spend_account"
+}
+
 // MergeSpendAction merge common assetID and accountID spend action
 func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 	resultActions := []txbuilder.Action{}
@@ -94,39 +98,42 @@ func RollbackResUTXO(utxoKeeper *utxoKeeper, resIDs []uint64) {
 }
 
 // MergeUTXO
-func MergeSpendActionsUTXO(ctx context.Context, actions []txbuilder.Action, maxTime time.Time, timeRange uint64) ([]*txbuilder.Template, []*txbuilder.Action, *MergeActionsUTXOResult, error) {
-	actionTxTemplates := make([]*txbuilder.Template, 0)
-	otherActions := make([]*txbuilder.Action, 0)
-	mergeResult := &MergeActionsUTXOResult{ResIDs: []uint64{}, Outputs: make([]*PreTxOutput, 0)}
-	for _, act := range actions {
-		switch act := act.(type) {
-		case *spendAction:
-			reservedUTXO, err := act.reserveUTXO(maxTime)
-			if err != nil {
-				return nil, nil, mergeResult, err
-			}
-
-			mergeResult.ResIDs = append(mergeResult.ResIDs, reservedUTXO.IDs[:]...)
-			tpls, preTxOutput, err := act.mergeSpendActionUTXO(reservedUTXO.utxos, maxTime, timeRange)
-			if err != nil {
-				return nil, nil, mergeResult, err
-			}
-			acct, err := act.accounts.FindByID(act.AccountID)
-			if err != nil {
-				return nil, nil, mergeResult, err
-			}
-			input, sigInst, err := UtxoToInputs(acct.Signer, preTxOutput)
-			if err != nil {
-				return nil, nil, mergeResult, err
-			}
-			output := &PreTxOutput{TxInput: input, Sign: sigInst}
-			mergeResult.Outputs = append(mergeResult.Outputs, output)
-			actionTxTemplates = append(actionTxTemplates, tpls[:]...)
-		default:
-			otherActions = append(otherActions, &act)
-		}
+func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, action txbuilder.Action) ([]*txbuilder.Template, error) {
+	tpls := []*txbuilder.Template{}
+	act, ok := action.(*spendAction)
+	if !ok {
+		return nil, errors.New("fail to get the spend action")
 	}
-	return actionTxTemplates, otherActions, mergeResult, nil
+
+	reservedUTXO, err := act.reserveUTXO(builder.MaxTime())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, resID := range reservedUTXO.IDs {
+		builder.OnRollback(func() { act.accounts.utxoKeeper.Cancel(resID) })
+	}
+
+	tpls, preTxOutput, err := act.mergeSpendActionUTXO(reservedUTXO.utxos, builder.MaxTime(), 0)
+	if err != nil {
+		return nil, err
+	}
+
+	acct, err := act.accounts.FindByID(act.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	input, sigInst, err := UtxoToInputs(acct.Signer, preTxOutput)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := builder.AddInput(input, sigInst); err != nil {
+		return nil, err
+	}
+
+	return tpls, nil
 }
 
 type ActionReservedUTXO struct {
@@ -232,6 +239,10 @@ type spendUTXOAction struct {
 	OutputID       *bc.Hash                     `json:"output_id"`
 	UseUnconfirmed bool                         `json:"use_unconfirmed"`
 	Arguments      []txbuilder.ContractArgument `json:"arguments"`
+}
+
+func (a *spendUTXOAction) ActionType() string {
+	return "spend_account_unspent_output"
 }
 
 //mergeSpendActionUTXO combine the n utxos required by SpendAction into 1

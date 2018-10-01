@@ -66,6 +66,10 @@ func (a *controlAddressAction) Build(ctx context.Context, b *TemplateBuilder) er
 	return b.AddOutput(out)
 }
 
+func (a *controlAddressAction) ActionType() string {
+	return "control_address"
+}
+
 // DecodeControlProgramAction convert input data to action struct
 func DecodeControlProgramAction(data []byte) (Action, error) {
 	a := new(controlProgramAction)
@@ -95,6 +99,10 @@ func (a *controlProgramAction) Build(ctx context.Context, b *TemplateBuilder) er
 
 	out := types.NewTxOutput(*a.AssetId, a.Amount, a.Program)
 	return b.AddOutput(out)
+}
+
+func (a *controlProgramAction) ActionType() string {
+	return "control_program"
 }
 
 // DecodeRetireAction convert input data to action struct
@@ -127,4 +135,8 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	}
 	out := types.NewTxOutput(*a.AssetId, a.Amount, program)
 	return b.AddOutput(out)
+}
+
+func (a *retireAction) ActionType() string {
+	return "retire"
 }

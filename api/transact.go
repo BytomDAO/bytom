@@ -162,50 +162,29 @@ func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Tem
 	if ttl == 0 {
 		ttl = defaultTxTTL
 	}
-	maxTime := time.Now().Add(ttl)
-	utxoKeeper := a.wallet.AccountMgr.GetUTXOKeeper()
 
-	actTemplates, otherActions, mergeResult, err := account.MergeSpendActionsUTXO(ctx, actions, maxTime, req.TimeRange)
-	if err != nil {
-		account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
-		return nil, err
-	}
+	builder := txbuilder.NewBuilder(time.Now())
 
-	builder, err := txbuilder.BuildChainTxs(ctx, req.Tx, otherActions, maxTime, req.TimeRange)
-	if errors.Root(err) == txbuilder.ErrAction {
-		// append each of the inner errors contained in the data.
-		var Errs string
-		var rootErr error
-		for i, innerErr := range errors.Data(err)["actions"].([]error) {
-			if i == 0 {
-				rootErr = errors.Root(innerErr)
-			}
-			Errs = Errs + innerErr.Error()
+	tpls := []*txbuilder.Template{}
+	for _, action := range actions {
+		if action.ActionType() == "spend_account" {
+			tpls, err = account.SpendAccountChain(ctx, builder, action)
+		} else {
+			err = action.Build(ctx, builder)
 		}
-		err = errors.WithDetail(rootErr, Errs)
-	}
-	if err != nil {
-		account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
-		return nil, err
-	}
-	for _, input := range mergeResult.Outputs {
-		if err := builder.AddInput(input.TxInput, input.Sign); err != nil {
-			account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
+
+		if err != nil {
+			builder.Rollback()
 			return nil, err
 		}
 	}
-	// Build the transaction template.
+
 	tpl, _, err := builder.Build()
 	if err != nil {
-		account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
+		builder.Rollback()
 		return nil, err
 	}
-	// ensure null is never returned for signing instructions
-	if tpl.SigningInstructions == nil {
-		tpl.SigningInstructions = []*txbuilder.SigningInstruction{}
-	}
-	tpls := []*txbuilder.Template{}
-	tpls = append(tpls, actTemplates[:]...)
+
 	tpls = append(tpls, tpl)
 	return tpls, nil
 }
