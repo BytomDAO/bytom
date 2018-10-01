@@ -63,7 +63,7 @@ func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 	return resultActions
 }
 
-//calcMergeNum calculate the number of times that n utxos are merged into one
+//calcMergeGas calculate the gas required that n utxos are merged into one
 func calcMergeGas(num int) uint64 {
 	gas := uint64(0)
 	for num > 1 {
@@ -73,24 +73,36 @@ func calcMergeGas(num int) uint64 {
 	return gas
 }
 
-// MergeUTXO
+func (m *Manager) reserveBtmChain(builder *txbuilder.TemplateBuilder, accountID string, amount uint64, useUnconfirmed bool) ([]*UTXO, error) {
+	reservedAmount := uint64(0)
+	utxos := []*UTXO{}
+	for gasAmount := uint64(0); reservedAmount <= gasAmount+amount; gasAmount = calcMergeGas(len(utxos)) {
+		reserveAmount := amount + gasAmount - reservedAmount
+		res, err := m.utxoKeeper.Reserve(accountID, consensus.BTMAssetID, reserveAmount, useUnconfirmed, builder.MaxTime())
+		if err != nil {
+			return nil, err
+		}
+
+		builder.OnRollback(func() { m.utxoKeeper.Cancel(res.id) })
+		reservedAmount += reserveAmount + res.change
+		utxos = append(utxos, res.utxos[:]...)
+	}
+	return utxos, nil
+}
+
+// SpendAccountChain build the spend action with auto merge utxo function
 func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, action txbuilder.Action) ([]*txbuilder.Template, error) {
-	tpls := []*txbuilder.Template{}
 	act, ok := action.(*spendAction)
 	if !ok {
 		return nil, errors.New("fail to get the spend action")
 	}
 
-	reservedUTXO, err := act.reserveUTXO(builder.MaxTime())
+	utxos, err := act.accounts.reserveBtmChain(builder, act.AccountID, act.Amount, act.UseUnconfirmed)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, resID := range reservedUTXO.IDs {
-		builder.OnRollback(func() { act.accounts.utxoKeeper.Cancel(resID) })
-	}
-
-	tpls, preTxOutput, err := act.mergeSpendActionUTXO(reservedUTXO.utxos, builder.MaxTime(), 0)
+	tpls, preTxOutput, err := act.mergeSpendActionUTXO(utxos, builder.MaxTime(), 0)
 	if err != nil {
 		return nil, err
 	}
@@ -123,25 +135,6 @@ func newActionReservedUTXO() *ActionReservedUTXO {
 		IDs:   []uint64{},
 		utxos: []*UTXO{},
 	}
-}
-
-func (a *spendAction) reserveUTXO(maxTime time.Time) (*ActionReservedUTXO, error) {
-	resUtxo := newActionReservedUTXO()
-	for gasAmount := uint64(0); resUtxo.totalAmount <= gasAmount+a.Amount; gasAmount = calcMergeGas(len(resUtxo.utxos)) {
-		reserveAmount := a.Amount + gasAmount - resUtxo.totalAmount
-		res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, reserveAmount, a.UseUnconfirmed, maxTime)
-		if err != nil {
-			for _, resID := range resUtxo.IDs {
-				a.accounts.utxoKeeper.Cancel(resID)
-			}
-			return nil, err
-		}
-
-		resUtxo.IDs = append(resUtxo.IDs, res.id)
-		resUtxo.totalAmount += reserveAmount + res.change
-		resUtxo.utxos = append(resUtxo.utxos, res.utxos[:]...)
-	}
-	return resUtxo, nil
 }
 
 func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
