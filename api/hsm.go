@@ -75,14 +75,14 @@ func (a *API) signTemplate(ctx context.Context, x struct {
 	return NewSuccessResponse(&signTemplateResp{Tx: &x.Txs, SignComplete: txbuilder.SignProgress(&x.Txs)})
 }
 
-type signTemplates struct {
+type signTemplatesResp struct {
 	Tx           []*txbuilder.Template `json:"transaction"`
 	SignComplete bool                  `json:"sign_complete"`
 }
 
 func (a *API) signTemplates(ctx context.Context, x struct {
 	Password string                `json:"password"`
-	Txs      []*txbuilder.Template `json:"transaction"`
+	Txs      []*txbuilder.Template `json:"transactions"`
 }) Response {
 	signComplete := true
 	for _, tx := range x.Txs {
@@ -94,7 +94,7 @@ func (a *API) signTemplates(ctx context.Context, x struct {
 	}
 
 	log.Info("Sign Chain Tx complete.")
-	return NewSuccessResponse(&signTemplates{Tx: x.Txs, SignComplete: signComplete})
+	return NewSuccessResponse(&signTemplatesResp{Tx: x.Txs, SignComplete: signComplete})
 }
 
 func (a *API) pseudohsmSignTemplate(ctx context.Context, xpub chainkd.XPub, path [][]byte, data [32]byte, password string) ([]byte, error) {

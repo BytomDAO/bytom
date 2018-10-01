@@ -210,7 +210,7 @@ type submitTxsResp struct {
 
 // POST /submit-transactions
 func (a *API) submitTxs(ctx context.Context, ins struct {
-	Tx []types.Tx `json:"raw_transaction"`
+	Tx []types.Tx `json:"raw_transactions"`
 }) Response {
 	txHashs := []*bc.Hash{}
 	for i := range ins.Tx {
