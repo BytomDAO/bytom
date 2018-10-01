@@ -1,16 +1,86 @@
 package account
 
 import (
-	//"encoding/json"
+	"encoding/json"
 	"testing"
-	//"time"
+	"time"
 
 	"github.com/bytom/blockchain/txbuilder"
-	//"github.com/bytom/consensus"
+	"github.com/bytom/consensus"
 	//"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol/bc"
-	//"github.com/bytom/testutil"
+	"github.com/bytom/testutil"
 )
+
+func TestReserveBtmUtxoChain(t *testing.T) {
+	chainTxMergeGas = 3
+	baseAmount := uint64(1000000)
+	utxos := []*UTXO{}
+	m := mockAccountManager(t)
+	for i := uint64(1); i <= 20; i++ {
+		utxo := &UTXO{
+			OutputID:  bc.Hash{V0: i},
+			AccountID: "TestAccountID",
+			AssetID:   *consensus.BTMAssetID,
+			Amount:    i * baseAmount,
+		}
+		utxos = append(utxos, utxo)
+
+		data, err := json.Marshal(utxo)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		m.db.Set(StandardUTXOKey(utxo.OutputID), data)
+	}
+
+	cases := []struct {
+		amount uint64
+		want   []uint64
+		err    bool
+	}{
+		{
+			amount: 1 * baseAmount,
+			want:   []uint64{1},
+		},
+		{
+			amount: 888888 * baseAmount,
+			want:   []uint64{},
+			err:    true,
+		},
+		{
+			amount: 7 * baseAmount,
+			want:   []uint64{4, 3, 1},
+		},
+		{
+			amount: 15 * baseAmount,
+			want:   []uint64{5, 4, 3, 2, 1, 6},
+		},
+		{
+			amount: 163 * baseAmount,
+			want:   []uint64{20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10},
+		},
+	}
+
+	for i, c := range cases {
+		m.utxoKeeper.expireReservation(time.Unix(999999999, 0))
+		utxos, err := m.reserveBtmUtxoChain(&txbuilder.TemplateBuilder{}, "TestAccountID", c.amount, false)
+
+		if err != nil != c.err {
+			t.Fatalf("case %d got err %v want err = %v", i, err, c.err)
+		}
+
+		got := []uint64{}
+		for _, utxo := range utxos {
+			got = append(got, utxo.Amount/baseAmount)
+		}
+
+		if !testutil.DeepEqual(got, c.want) {
+			t.Fatalf("case %d got %d want %d", i, got, c.want)
+		}
+	}
+
+}
 
 func TestMergeSpendAction(t *testing.T) {
 	testBTM := &bc.AssetID{}

@@ -15,11 +15,11 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
-const (
+var (
 	//chainTxUtxoNum maximum utxo quantity in a tx
 	chainTxUtxoNum = 10
 	//chainTxMergeGas chain tx gas
-	chainTxMergeGas = 10000000
+	chainTxMergeGas = uint64(10000000)
 )
 
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
@@ -75,7 +75,7 @@ func calcMergeGas(num int) uint64 {
 func (m *Manager) reserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accountID string, amount uint64, useUnconfirmed bool) ([]*UTXO, error) {
 	reservedAmount := uint64(0)
 	utxos := []*UTXO{}
-	for gasAmount := uint64(0); reservedAmount <= gasAmount+amount; gasAmount = calcMergeGas(len(utxos)) {
+	for gasAmount := uint64(0); reservedAmount < gasAmount+amount; gasAmount = calcMergeGas(len(utxos)) {
 		reserveAmount := amount + gasAmount - reservedAmount
 		res, err := m.utxoKeeper.Reserve(accountID, consensus.BTMAssetID, reserveAmount, useUnconfirmed, builder.MaxTime())
 		if err != nil {
