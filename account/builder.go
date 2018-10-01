@@ -64,17 +64,13 @@ func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 }
 
 //calcMergeNum calculate the number of times that n utxos are merged into one
-func calcMergeNum(utxoNum uint64) uint64 {
-	num := uint64(0)
-	for utxoNum != 0 {
-		num += utxoNum / chainTxUtxoNum
-		utxoNum = utxoNum/10 + utxoNum%10
-		if utxoNum > 0 && utxoNum < 10 {
-			num++
-			break
-		}
+func calcMergeGas(num int) uint64 {
+	gas := uint64(0)
+	for num > 1 {
+		gas += chainTxUtxoNum
+		num -= chainTxUtxoNum + 1
 	}
-	return num
+	return gas
 }
 
 // MergeUTXO
@@ -131,7 +127,7 @@ func newActionReservedUTXO() *ActionReservedUTXO {
 
 func (a *spendAction) reserveUTXO(maxTime time.Time) (*ActionReservedUTXO, error) {
 	resUtxo := newActionReservedUTXO()
-	for gasAmount := uint64(0); resUtxo.totalAmount <= gasAmount+a.Amount; gasAmount = calcMergeNum(uint64(len(resUtxo.utxos))) * chainTxMergeGas {
+	for gasAmount := uint64(0); resUtxo.totalAmount <= gasAmount+a.Amount; gasAmount = calcMergeGas(len(resUtxo.utxos)) {
 		reserveAmount := a.Amount + gasAmount - resUtxo.totalAmount
 		res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, reserveAmount, a.UseUnconfirmed, maxTime)
 		if err != nil {
