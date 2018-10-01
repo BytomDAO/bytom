@@ -77,12 +77,6 @@ func calcMergeNum(utxoNum uint64) uint64 {
 	return num
 }
 
-func RollbackResUTXO(utxoKeeper *utxoKeeper, resIDs []uint64) {
-	for _, resID := range resIDs {
-		utxoKeeper.Cancel(resID)
-	}
-}
-
 // MergeUTXO
 func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, action txbuilder.Action) ([]*txbuilder.Template, error) {
 	tpls := []*txbuilder.Template{}
