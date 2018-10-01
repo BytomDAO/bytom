@@ -355,8 +355,52 @@ func TestMergeSpendAction(t *testing.T) {
 		}
 	}
 }
-func getBlockHeight() uint64 {
-	return 100
+
+func TestCalcMergeGas(t *testing.T) {
+	cases := []struct {
+		utxoNum int
+		gas     uint64
+	}{
+		{
+			utxoNum: 0,
+			gas:     0,
+		},
+		{
+			utxoNum: 1,
+			gas:     0,
+		},
+		{
+			utxoNum: 9,
+			gas:     chainTxMergeGas,
+		},
+		{
+			utxoNum: 10,
+			gas:     chainTxMergeGas,
+		},
+		{
+			utxoNum: 11,
+			gas:     chainTxMergeGas * 2,
+		},
+		{
+			utxoNum: 20,
+			gas:     chainTxMergeGas * 3,
+		},
+		{
+			utxoNum: 21,
+			gas:     chainTxMergeGas * 3,
+		},
+		{
+			utxoNum: 74,
+			gas:     chainTxMergeGas * 9,
+		},
+	}
+
+	for i, c := range cases {
+		gas := calcMergeGas(c.utxoNum)
+		if gas != c.gas {
+			t.Fatalf("case %d got %d want %d", i, gas, c.gas)
+		}
+	}
 }
 
 func mockUTXO(controlProg *CtrlProgram, assetID *bc.AssetID, outputID uint64, amount uint64) *UTXO {

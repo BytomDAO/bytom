@@ -66,8 +66,8 @@ func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 func calcMergeGas(num int) uint64 {
 	gas := uint64(0)
 	for num > 1 {
-		gas += chainTxUtxoNum
-		num -= chainTxUtxoNum + 1
+		gas += chainTxMergeGas
+		num -= chainTxUtxoNum - 1
 	}
 	return gas
 }
