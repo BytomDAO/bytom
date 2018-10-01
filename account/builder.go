@@ -72,7 +72,7 @@ func calcMergeGas(num int) uint64 {
 	return gas
 }
 
-func (m *Manager) reserveBtmChain(builder *txbuilder.TemplateBuilder, accountID string, amount uint64, useUnconfirmed bool) ([]*UTXO, error) {
+func (m *Manager) reserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accountID string, amount uint64, useUnconfirmed bool) ([]*UTXO, error) {
 	reservedAmount := uint64(0)
 	utxos := []*UTXO{}
 	for gasAmount := uint64(0); reservedAmount <= gasAmount+amount; gasAmount = calcMergeGas(len(utxos)) {
@@ -90,9 +90,14 @@ func (m *Manager) reserveBtmChain(builder *txbuilder.TemplateBuilder, accountID 
 }
 
 //mergeSpendActionUTXO combine the n utxos required by SpendAction into 1
-func (m *Manager) buildBtmChain(utxos []*UTXO, signer *signers.Signer) ([]*txbuilder.Template, *UTXO, error) {
+func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txbuilder.Template, *UTXO, error) {
 	if len(utxos) == 0 {
 		return nil, nil, errors.New("mergeSpendActionUTXO utxos num 0")
+	}
+
+	tpls := []*txbuilder.Template{}
+	if len(utxos) == 1 {
+		return tpls, utxos[len(utxos)-1], nil
 	}
 
 	acp, err := m.GetLocalCtrlProgramByAddress(utxos[0].Address)
@@ -102,7 +107,6 @@ func (m *Manager) buildBtmChain(utxos []*UTXO, signer *signers.Signer) ([]*txbui
 
 	buildAmount := uint64(0)
 	builder := &txbuilder.TemplateBuilder{}
-	tpls := []*txbuilder.Template{}
 	for index := 0; index < len(utxos); index++ {
 		input, sigInst, err := UtxoToInputs(signer, utxos[index])
 		if err != nil {
@@ -159,10 +163,13 @@ func (m *Manager) buildBtmChain(utxos []*UTXO, signer *signers.Signer) ([]*txbui
 func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, action txbuilder.Action) ([]*txbuilder.Template, error) {
 	act, ok := action.(*spendAction)
 	if !ok {
-		return nil, errors.New("fail to get the spend action")
+		return nil, errors.New("fail to convert the spend action")
+	}
+	if *act.AssetId != *consensus.BTMAssetID {
+		return nil, errors.New("spend chain action only support BTM")
 	}
 
-	utxos, err := act.accounts.reserveBtmChain(builder, act.AccountID, act.Amount, act.UseUnconfirmed)
+	utxos, err := act.accounts.reserveBtmUtxoChain(builder, act.AccountID, act.Amount, act.UseUnconfirmed)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +179,7 @@ func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, 
 		return nil, err
 	}
 
-	tpls, utxo, err := act.accounts.buildBtmChain(utxos, acct.Signer)
+	tpls, utxo, err := act.accounts.buildBtmTxChain(utxos, acct.Signer)
 	if err != nil {
 		return nil, err
 	}

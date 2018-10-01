@@ -64,12 +64,7 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		return nil, err
 	}
 
-	ttl := req.TTL.Duration
-	if ttl == 0 {
-		ttl = defaultTxTTL
-	}
-	maxTime := time.Now().Add(ttl)
-
+	maxTime := time.Now().Add(req.TTL.Duration)
 	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime, req.TimeRange)
 	if errors.Root(err) == txbuilder.ErrAction {
 		// append each of the inner errors contained in the data.
@@ -97,7 +92,6 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 // POST /build-transaction
 func (a *API) build(ctx context.Context, buildReqs *BuildRequest) Response {
 	subctx := reqid.NewSubContext(ctx, reqid.New())
-
 	tmpl, err := a.buildSingle(subctx, buildReqs)
 	if err != nil {
 		return NewErrorResponse(err)
@@ -108,6 +102,10 @@ func (a *API) build(ctx context.Context, buildReqs *BuildRequest) Response {
 func (a *API) checkRequestValidity(ctx context.Context, req *BuildRequest) error {
 	if err := a.completeMissingIDs(ctx, req); err != nil {
 		return err
+	}
+
+	if req.TTL.Duration == 0 {
+		req.TTL.Duration = defaultTxTTL
 	}
 
 	if ok, err := onlyHaveInputActions(req); err != nil {
@@ -155,13 +153,7 @@ func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Tem
 		return nil, err
 	}
 
-	ttl := req.TTL.Duration
-	if ttl == 0 {
-		ttl = defaultTxTTL
-	}
-
-	builder := txbuilder.NewBuilder(time.Now())
-
+	builder := txbuilder.NewBuilder(time.Now().Add(req.TTL.Duration))
 	tpls := []*txbuilder.Template{}
 	for _, action := range actions {
 		if action.ActionType() == "spend_account" {
@@ -212,7 +204,7 @@ func (a *API) submit(ctx context.Context, ins struct {
 	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
 }
 
-type submitChainTxResp struct {
+type submitTxsResp struct {
 	TxID []*bc.Hash `json:"tx_id"`
 }
 
@@ -228,8 +220,7 @@ func (a *API) submitTxs(ctx context.Context, ins struct {
 		log.WithField("tx_id", ins.Tx[i].ID.String()).Info("submit single tx")
 		txHashs = append(txHashs, &ins.Tx[i].ID)
 	}
-
-	return NewSuccessResponse(&submitChainTxResp{TxID: txHashs})
+	return NewSuccessResponse(&submitTxsResp{TxID: txHashs})
 }
 
 // EstimateTxGasResp estimate transaction consumed gas
