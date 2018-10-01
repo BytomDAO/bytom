@@ -38,6 +38,10 @@ func (t testAction) Build(ctx context.Context, b *TemplateBuilder) error {
 	return b.AddOutput(types.NewTxOutput(*t.AssetId, t.Amount, []byte("change")))
 }
 
+func (t testAction) ActionType() string {
+	return "test-action"
+}
+
 func newControlProgramAction(assetAmt bc.AssetAmount, script []byte) *controlProgramAction {
 	return &controlProgramAction{
 		AssetAmount: assetAmt,

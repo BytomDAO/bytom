@@ -1,15 +1,15 @@
 package account
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"testing"
-	"time"
+	//"time"
 
 	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	//"github.com/bytom/consensus"
+	//"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol/bc"
-	"github.com/bytom/testutil"
+	//"github.com/bytom/testutil"
 )
 
 func TestMergeSpendAction(t *testing.T) {
@@ -376,7 +376,7 @@ func mockUTXO(controlProg *CtrlProgram, assetID *bc.AssetID, outputID uint64, am
 // Test the normal build chain transaction
 // Test build failed if the number of test assets is insufficient
 // Test utxo small asset merger
-func TestMergeSpendActionUTXO(t *testing.T) {
+/*func TestMergeSpendActionUTXO(t *testing.T) {
 	m := mockAccountManager(t)
 	alias1 := "TEST1"
 	testAccount1, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias1)
@@ -560,4 +560,4 @@ func TestMergeSpendActionUTXOFailRollback(t *testing.T) {
 			t.Fatal("Chain transaction rollback failed")
 		}
 	}
-}
+}*/

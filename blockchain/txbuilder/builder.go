@@ -87,6 +87,7 @@ func (b *TemplateBuilder) OnBuild(buildFn func() error) {
 	b.callbacks = append(b.callbacks, buildFn)
 }
 
+// Rollback action for handle fail build
 func (b *TemplateBuilder) Rollback() {
 	for _, f := range b.rollbacks {
 		f()

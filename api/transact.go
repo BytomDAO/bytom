@@ -216,8 +216,8 @@ type submitChainTxResp struct {
 	TxID []*bc.Hash `json:"tx_id"`
 }
 
-// POST /submit-chain-transactions
-func (a *API) submitChainTxs(ctx context.Context, ins struct {
+// POST /submit-transactions
+func (a *API) submitTxs(ctx context.Context, ins struct {
 	Tx []types.Tx `json:"raw_transaction"`
 }) Response {
 	txHashs := []*bc.Hash{}

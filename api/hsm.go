@@ -63,7 +63,7 @@ type signResp struct {
 	SignComplete bool                `json:"sign_complete"`
 }
 
-func (a *API) pseudohsmSignTemplates(ctx context.Context, x struct {
+func (a *API) signTemplate(ctx context.Context, x struct {
 	Password string             `json:"password"`
 	Txs      txbuilder.Template `json:"transaction"`
 }) Response {
@@ -80,7 +80,7 @@ type chainTxSignResp struct {
 	SignComplete bool                  `json:"sign_complete"`
 }
 
-func (a *API) pseudohsmSignChainTxTemplates(ctx context.Context, x struct {
+func (a *API) signTemplates(ctx context.Context, x struct {
 	Password string                `json:"password"`
 	Txs      []*txbuilder.Template `json:"transaction"`
 }) Response {
