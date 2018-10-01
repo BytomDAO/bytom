@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	//TxMaxInputUTXONum maximum utxo quantity in a tx
-	TxMaxInputUTXONum = 10
-	//MergeSpendActionUTXOGas chain tx gas
-	MergeSpendActionUTXOGas = 10000000
+	//chainTxUtxoNum maximum utxo quantity in a tx
+	chainTxUtxoNum = 10
+	//chainTxMergeGas chain tx gas
+	chainTxMergeGas = 10000000
 )
 
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
@@ -67,7 +67,7 @@ func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 func calcMergeNum(utxoNum uint64) uint64 {
 	num := uint64(0)
 	for utxoNum != 0 {
-		num += utxoNum / TxMaxInputUTXONum
+		num += utxoNum / chainTxUtxoNum
 		utxoNum = utxoNum/10 + utxoNum%10
 		if utxoNum > 0 && utxoNum < 10 {
 			num++
@@ -131,7 +131,7 @@ func newActionReservedUTXO() *ActionReservedUTXO {
 
 func (a *spendAction) reserveUTXO(maxTime time.Time) (*ActionReservedUTXO, error) {
 	resUtxo := newActionReservedUTXO()
-	for gasAmount := uint64(0); resUtxo.totalAmount <= gasAmount+a.Amount; gasAmount = calcMergeNum(uint64(len(resUtxo.utxos))) * MergeSpendActionUTXOGas {
+	for gasAmount := uint64(0); resUtxo.totalAmount <= gasAmount+a.Amount; gasAmount = calcMergeNum(uint64(len(resUtxo.utxos))) * chainTxMergeGas {
 		reserveAmount := a.Amount + gasAmount - resUtxo.totalAmount
 		res, err := a.accounts.utxoKeeper.Reserve(a.AccountID, a.AssetId, reserveAmount, a.UseUnconfirmed, maxTime)
 		if err != nil {
@@ -244,11 +244,11 @@ func (a *spendAction) mergeSpendActionUTXO(utxos []*UTXO, maxTime time.Time, tim
 		}
 
 		buildAmount += input.Amount()
-		if builder.InputCount() != TxMaxInputUTXONum && index != len(utxos)-1 {
+		if builder.InputCount() != chainTxUtxoNum && index != len(utxos)-1 {
 			continue
 		}
 
-		outAmount := buildAmount - MergeSpendActionUTXOGas
+		outAmount := buildAmount - chainTxMergeGas
 		output := types.NewTxOutput(*a.AssetId, outAmount, acp.ControlProgram)
 		if err := builder.AddOutput(output); err != nil {
 			return nil, nil, err
