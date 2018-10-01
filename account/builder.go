@@ -63,20 +63,6 @@ func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 	return resultActions
 }
 
-// CheckAssetType check actions asset type
-func CheckActionsAssetType(actions []txbuilder.Action, assetType *bc.AssetID) bool {
-	for _, act := range actions {
-		switch act := act.(type) {
-		case *spendAction:
-			if *act.AssetId != *assetType {
-				return false
-			}
-		default:
-		}
-	}
-	return true
-}
-
 //calcMergeNum calculate the number of times that n utxos are merged into one
 func calcMergeNum(utxoNum uint64) uint64 {
 	num := uint64(0)

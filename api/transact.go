@@ -142,9 +142,6 @@ func (a *API) mergeSpendActions(req *BuildRequest) ([]txbuilder.Action, error) {
 		}
 		actions = append(actions, action)
 	}
-	if account.CheckActionsAssetType(actions, consensus.BTMAssetID) == false {
-		return nil, errors.WithDetailf(ErrBadActionType, "Chain trading only supports BTM asset")
-	}
 	actions = account.MergeSpendAction(actions)
 	return actions, nil
 }
