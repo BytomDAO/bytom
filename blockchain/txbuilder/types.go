@@ -31,6 +31,7 @@ func (t *Template) Hash(idx uint32) bc.Hash {
 // Action is a interface
 type Action interface {
 	Build(context.Context, *TemplateBuilder) error
+	ActionType() string
 }
 
 // Receiver encapsulates information about where to send assets.
