@@ -1,19 +1,3 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 // Package common contains various helper functions.
 package common
 
@@ -134,23 +118,7 @@ func Bytes2Hex(d []byte) string {
 
 func Hex2Bytes(str string) []byte {
 	h, _ := hex.DecodeString(str)
-
 	return h
-}
-
-func Hex2BytesFixed(str string, flen int) []byte {
-	h, _ := hex.DecodeString(str)
-	if len(h) == flen {
-		return h
-	} else {
-		if len(h) > flen {
-			return h[len(h)-flen : len(h)]
-		} else {
-			hh := make([]byte, flen)
-			copy(hh[flen-len(h):flen], h[:])
-			return hh
-		}
-	}
 }
 
 func StringToByteFunc(str string, cb func(str string) []byte) (ret []byte) {
@@ -241,21 +209,6 @@ func RightPadString(str string, l int) string {
 	zeros := Bytes2Hex(make([]byte, (l-len(str))/2))
 
 	return str + zeros
-
-}
-
-func ToAddress(slice []byte) (addr []byte) {
-	if len(slice) < 20 {
-		addr = LeftPadBytes(slice, 20)
-	} else if len(slice) > 20 {
-		addr = slice[len(slice)-20:]
-	} else {
-		addr = slice
-	}
-
-	addr = CopyBytes(addr)
-
-	return
 }
 
 func ByteSliceToInterface(slice [][]byte) (ret []interface{}) {

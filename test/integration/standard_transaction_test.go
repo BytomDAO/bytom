@@ -36,7 +36,7 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpub, err := hsm.XCreate("TestP2PKH", "password")
+	xpub, _, err := hsm.XCreate("TestP2PKH", "password", "en")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,12 +88,12 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpub1, err := hsm.XCreate("TestP2SH1", "password")
+	xpub1, _, err := hsm.XCreate("TestP2SH1", "password", "en")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	xpub2, err := hsm.XCreate("TestP2SH2", "password")
+	xpub2, _, err := hsm.XCreate("TestP2SH2", "password", "en")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,12 +149,12 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpub1, err := hsm.XCreate("TestMutilNodeSign1", "password1")
+	xpub1, _, err := hsm.XCreate("TestMutilNodeSign1", "password1", "en")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	xpub2, err := hsm.XCreate("TestMutilNodeSign2", "password2")
+	xpub2, _, err := hsm.XCreate("TestMutilNodeSign2", "password2", "en")
 	if err != nil {
 		t.Fatal(err)
 	}

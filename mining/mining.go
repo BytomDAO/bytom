@@ -70,7 +70,9 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (b *types.Block, err error) {
 	view := state.NewUtxoViewpoint()
 	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
+	if err := txStatus.SetStatus(0, false); err != nil {
+		return nil, err
+	}
 	txEntries := []*bc.Tx{nil}
 	gasUsed := uint64(0)
 	txFee := uint64(0)
@@ -104,16 +106,14 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		gasOnlyTx := false
 
 		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
-			log.WithField("error", err).Error("mining block generate skip tx due to")
-			txPool.RemoveTransaction(&tx.ID)
+			blkGenSkipTxForErr(txPool, &tx.ID, err)
 			continue
 		}
 
 		gasStatus, err := validation.ValidateTx(tx, bcBlock)
 		if err != nil {
 			if !gasStatus.GasValid {
-				log.WithField("error", err).Error("mining block generate skip tx due to")
-				txPool.RemoveTransaction(&tx.ID)
+				blkGenSkipTxForErr(txPool, &tx.ID, err)
 				continue
 			}
 			gasOnlyTx = true
@@ -124,12 +124,14 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		}
 
 		if err := view.ApplyTransaction(bcBlock, tx, gasOnlyTx); err != nil {
-			log.WithField("error", err).Error("mining block generate skip tx due to")
-			txPool.RemoveTransaction(&tx.ID)
+			blkGenSkipTxForErr(txPool, &tx.ID, err)
 			continue
 		}
 
-		txStatus.SetStatus(len(b.Transactions), gasOnlyTx)
+		if err := txStatus.SetStatus(len(b.Transactions), gasOnlyTx); err != nil {
+			return nil, err
+		}
+
 		b.Transactions = append(b.Transactions, txDesc.Tx)
 		txEntries = append(txEntries, tx)
 		gasUsed += uint64(gasStatus.GasUsed)
@@ -154,4 +156,9 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 	b.BlockHeader.BlockCommitment.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	return b, err
+}
+
+func blkGenSkipTxForErr(txPool *protocol.TxPool, txHash *bc.Hash, err error) {
+	log.WithField("error", err).Error("mining block generation: skip tx due to")
+	txPool.RemoveTransaction(txHash)
 }

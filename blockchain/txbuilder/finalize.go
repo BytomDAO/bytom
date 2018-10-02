@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
@@ -28,9 +29,7 @@ var (
 // assembles a fully signed tx, and stores the effects of
 // its changes on the UTXO set.
 func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
-	// maxTxFee means max transaction fee, maxTxFee = 0.4BTM * 25 = 10BTM
-	maxTxFee := consensus.MaxGasAmount * consensus.VMGasRate * 25
-	if fee := calculateTxFee(tx); fee > uint64(maxTxFee) {
+	if fee := calculateTxFee(tx); fee > cfg.CommonConfig.Wallet.MaxTxFee {
 		return ErrExtTxFee
 	}
 

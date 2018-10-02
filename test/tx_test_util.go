@@ -48,7 +48,7 @@ func (g *TxGenerator) Reset() {
 }
 
 func (g *TxGenerator) createKey(alias string, auth string) error {
-	_, err := g.Hsm.XCreate(alias, auth)
+	_, _, err := g.Hsm.XCreate(alias, auth, "en")
 	return err
 }
 
@@ -387,8 +387,12 @@ func CreateTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64, c
 	}
 	output := types.NewTxOutput(*consensus.BTMAssetID, outputAmount, ctrlProgram)
 	builder := txbuilder.NewBuilder(time.Now())
-	builder.AddInput(txInput, &txbuilder.SigningInstruction{})
-	builder.AddOutput(output)
+	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
+		return nil, err
+	}
+	if err := builder.AddOutput(output); err != nil {
+		return nil, err
+	}
 
 	tpl, _, err := builder.Build()
 	if err != nil {

@@ -3,11 +3,11 @@ package node
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
@@ -65,7 +65,12 @@ func NewNode(config *cfg.Config) *Node {
 	}
 	initLogFile(config)
 	initActiveNetParams(config)
+	initCommonConfig(config)
+
 	// Get store
+	if config.DBBackend != "memdb" && config.DBBackend != "leveldb" {
+		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))
+	}
 	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
 	store := leveldb.NewStore(coreDB)
 
@@ -123,7 +128,9 @@ func NewNode(config *cfg.Config) *Node {
 		// Profiling bytomd programs.see (https://blog.golang.org/profiling-go-programs)
 		// go tool pprof http://profileHose/debug/pprof/heap
 		go func() {
-			http.ListenAndServe(profileHost, nil)
+			if err = http.ListenAndServe(profileHost, nil); err != nil {
+				cmn.Exit(cmn.Fmt("Failed to register tcp profileHost: %v", err))
+			}
 		}()
 	}
 
@@ -203,6 +210,10 @@ func initLogFile(config *cfg.Config) {
 
 }
 
+func initCommonConfig(config *cfg.Config) {
+	cfg.CommonConfig = config
+}
+
 // Lanch web broser or not
 func launchWebBrowser(port string) {
 	webAddress := webHost + ":" + port
@@ -235,11 +246,12 @@ func (n *Node) OnStart() error {
 	}
 	n.initAndstartApiServer()
 	if !n.config.Web.Closed {
-		s := strings.Split(n.config.ApiAddress, ":")
-		if len(s) != 2 {
+		_, port, err := net.SplitHostPort(n.config.ApiAddress)
+		if err != nil {
 			log.Error("Invalid api address")
+			return err
 		}
-		launchWebBrowser(s[1])
+		launchWebBrowser(port)
 	}
 	return nil
 }

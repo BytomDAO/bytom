@@ -1,18 +1,3 @@
-/*
-Copyright Suzhou Tongji Fintech Research Institute 2017 All Rights Reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 // crypto/x509 add sm2 support
 package sm2
 
@@ -1393,7 +1378,9 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 					return nil, errors.New("x509: trailing data after X.509 CRL distribution point")
 				}
 
-				for _, dp := range cdp {
+				for i := range cdp {
+					// use index & pointer here to avoid value copy (each iteration copies 200 bytes)
+					dp := &cdp[i]
 					// Per RFC 5280, 4.2.1.13, one of distributionPoint or cRLIssuer may be empty.
 					if len(dp.DistributionPoint.FullName.Bytes) == 0 {
 						continue

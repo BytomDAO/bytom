@@ -21,7 +21,7 @@ var (
 	// ErrBadQuorum is returned by Create when the quorum
 	// provided is less than 1 or greater than the number
 	// of xpubs provided.
-	ErrBadQuorum = errors.New("quorum must be greater than 1 and less than or equal to the length of xpubs")
+	ErrBadQuorum = errors.New("quorum must be greater than or equal to 1, and must be less than or equal to the length of xpubs")
 
 	// ErrBadXPub is returned by Create when the xpub
 	// provided isn't valid.

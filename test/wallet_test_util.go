@@ -164,7 +164,7 @@ func (ctx *walletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) 
 }
 
 func (ctx *walletTestContext) createKey(name string, password string) error {
-	_, err := ctx.Wallet.Hsm.XCreate(name, password)
+	_, _, err := ctx.Wallet.Hsm.XCreate(name, password, "en")
 	return err
 }
 
@@ -192,7 +192,7 @@ func (ctx *walletTestContext) update(block *types.Block) error {
 }
 
 func (ctx *walletTestContext) getBalance(accountAlias string, assetAlias string) (uint64, error) {
-	balances, _ := ctx.Wallet.GetAccountBalances("")
+	balances, _ := ctx.Wallet.GetAccountBalances("", "")
 	for _, balance := range balances {
 		if balance.Alias == accountAlias && balance.AssetAlias == assetAlias {
 			return balance.Amount, nil
@@ -203,7 +203,7 @@ func (ctx *walletTestContext) getBalance(accountAlias string, assetAlias string)
 
 func (ctx *walletTestContext) getAccBalances() map[string]map[string]uint64 {
 	accBalances := make(map[string]map[string]uint64)
-	balances, _ := ctx.Wallet.GetAccountBalances("")
+	balances, _ := ctx.Wallet.GetAccountBalances("", "")
 	for _, balance := range balances {
 		if accBalance, ok := accBalances[balance.Alias]; ok {
 			if _, ok := accBalance[balance.AssetAlias]; ok {
@@ -251,7 +251,10 @@ func (cfg *walletTestConfig) Run() error {
 	}
 
 	db := dbm.NewDB("wallet_test_db", "leveldb", path.Join(dirPath, "wallet_test_db"))
-	chain, _, _, _ := MockChain(db)
+	chain, _, _, err := MockChain(db)
+	if err != nil {
+		return err
+	}
 	walletDB := dbm.NewDB("wallet", "leveldb", path.Join(dirPath, "wallet_db"))
 	accountManager := account.NewManager(walletDB, chain)
 	assets := asset.NewRegistry(walletDB, chain)

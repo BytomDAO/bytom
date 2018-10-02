@@ -31,7 +31,9 @@ func genesisTx() *types.Tx {
 func mainNetGenesisBlock() *types.Block {
 	tx := genesisTx()
 	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
+	if err := txStatus.SetStatus(0, false); err != nil {
+		log.Panicf(err.Error())
+	}
 	txStatusHash, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	if err != nil {
 		log.Panicf("fail on calc genesis tx status merkle root")
@@ -62,7 +64,9 @@ func mainNetGenesisBlock() *types.Block {
 func testNetGenesisBlock() *types.Block {
 	tx := genesisTx()
 	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
+	if err := txStatus.SetStatus(0, false); err != nil {
+		log.Panicf(err.Error())
+	}
 	txStatusHash, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	if err != nil {
 		log.Panicf("fail on calc genesis tx status merkle root")
@@ -93,7 +97,9 @@ func testNetGenesisBlock() *types.Block {
 func soloNetGenesisBlock() *types.Block {
 	tx := genesisTx()
 	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
+	if err := txStatus.SetStatus(0, false); err != nil {
+		log.Panicf(err.Error())
+	}
 	txStatusHash, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	if err != nil {
 		log.Panicf("fail on calc genesis tx status merkle root")

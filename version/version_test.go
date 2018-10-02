@@ -6,12 +6,6 @@ import (
 	gover "github.com/hashicorp/go-version"
 )
 
-func TestRevisionLen(t *testing.T) {
-	if revisionLen > 16 {
-		t.Error("revisionLen too long")
-	}
-}
-
 func TestCompare(t *testing.T) {
 	v1, err := gover.NewVersion(Version)
 	if err != nil {
@@ -23,6 +17,57 @@ func TestCompare(t *testing.T) {
 	}
 	if v1.GreaterThan(v2) || v1.GreaterThan(v2) {
 		t.Error("Version comparison error.")
+	}
+}
+
+func TestCompatibleWith(t *testing.T) {
+	cases := []struct {
+		a      string
+		b      string
+		result bool
+	}{
+		{
+			"1.0.4",
+			"1.0.4",
+			true,
+		},
+		{
+			"1.0.4",
+			"1.0.5",
+			true,
+		},
+		{
+			"1.0.4",
+			"1.1.5",
+			true,
+		},
+		{
+			"1.0.5",
+			"1.0.5-90825109",
+			true,
+		},
+		{
+			"1.0.5",
+			"1.0.5+90825109",
+			true,
+		},
+		{
+			"1.0.5",
+			"2.0.5",
+			false,
+		},
+		{
+			"1.0.5-90825109",
+			"1.0.5+90825109",
+			true,
+		},
+	}
+
+	for i, c := range cases {
+		Version = c.a
+		if result, _ := CompatibleWith(c.b); c.result != result {
+			t.Errorf("case %d: got %t want %t", i, c.result, result)
+		}
 	}
 }
 

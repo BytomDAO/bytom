@@ -399,7 +399,7 @@ func MockTxsP2PKH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int)
 		return nil, err
 	}
 
-	xpub, err := hsm.XCreate("TestP2PKH", "password")
+	xpub, _, err := hsm.XCreate("TestP2PKH", "password", "en")
 	if err != nil {
 		return nil, err
 	}
@@ -441,12 +441,12 @@ func MockTxsP2SH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) 
 		return nil, err
 	}
 
-	xpub1, err := hsm.XCreate("TestP2SH1", "password")
+	xpub1, _, err := hsm.XCreate("TestP2SH1", "password", "en")
 	if err != nil {
 		return nil, err
 	}
 
-	xpub2, err := hsm.XCreate("TestP2SH2", "password")
+	xpub2, _, err := hsm.XCreate("TestP2SH2", "password", "en")
 	if err != nil {
 		return nil, err
 	}
@@ -488,12 +488,12 @@ func MockTxsMultiSign(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum 
 		return nil, err
 	}
 
-	xpub1, err := hsm.XCreate("TestMultilNodeSign1", "password1")
+	xpub1, _, err := hsm.XCreate("TestMultilNodeSign1", "password1", "en")
 	if err != nil {
 		return nil, err
 	}
 
-	xpub2, err := hsm.XCreate("TestMultilNodeSign2", "password2")
+	xpub2, _, err := hsm.XCreate("TestMultilNodeSign2", "password2", "en")
 	if err != nil {
 		return nil, err
 	}
