@@ -71,25 +71,3 @@ func SignProgress(txTemplate *Template) bool {
 	}
 	return true
 }
-
-// SignChainTxProgress check is all the sign requirement are satisfy
-func SignChainTxProgress(txTemplate []Template) bool {
-	for _, v := range txTemplate {
-		for _, sigInst := range v.SigningInstructions {
-			for _, wc := range sigInst.WitnessComponents {
-				switch sw := wc.(type) {
-				case *SignatureWitness:
-					if signedCount(sw.Sigs) < sw.Quorum {
-						return false
-					}
-				case *RawTxSigWitness:
-					if signedCount(sw.Sigs) < sw.Quorum {
-						return false
-					}
-				}
-			}
-		}
-	}
-
-	return true
-}

@@ -64,12 +64,7 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 		return nil, err
 	}
 
-	ttl := req.TTL.Duration
-	if ttl == 0 {
-		ttl = defaultTxTTL
-	}
-	maxTime := time.Now().Add(ttl)
-
+	maxTime := time.Now().Add(req.TTL.Duration)
 	tpl, err := txbuilder.Build(ctx, req.Tx, actions, maxTime, req.TimeRange)
 	if errors.Root(err) == txbuilder.ErrAction {
 		// append each of the inner errors contained in the data.
@@ -97,7 +92,6 @@ func (a *API) buildSingle(ctx context.Context, req *BuildRequest) (*txbuilder.Te
 // POST /build-transaction
 func (a *API) build(ctx context.Context, buildReqs *BuildRequest) Response {
 	subctx := reqid.NewSubContext(ctx, reqid.New())
-
 	tmpl, err := a.buildSingle(subctx, buildReqs)
 	if err != nil {
 		return NewErrorResponse(err)
@@ -108,6 +102,10 @@ func (a *API) build(ctx context.Context, buildReqs *BuildRequest) Response {
 func (a *API) checkRequestValidity(ctx context.Context, req *BuildRequest) error {
 	if err := a.completeMissingIDs(ctx, req); err != nil {
 		return err
+	}
+
+	if req.TTL.Duration == 0 {
+		req.TTL.Duration = defaultTxTTL
 	}
 
 	if ok, err := onlyHaveInputActions(req); err != nil {
@@ -142,9 +140,6 @@ func (a *API) mergeSpendActions(req *BuildRequest) ([]txbuilder.Action, error) {
 		}
 		actions = append(actions, action)
 	}
-	if account.CheckActionsAssetType(actions, consensus.BTMAssetID) == false {
-		return nil, errors.WithDetailf(ErrBadActionType, "Chain trading only supports BTM asset")
-	}
 	actions = account.MergeSpendAction(actions)
 	return actions, nil
 }
@@ -158,54 +153,27 @@ func (a *API) buildTxs(ctx context.Context, req *BuildRequest) ([]*txbuilder.Tem
 		return nil, err
 	}
 
-	ttl := req.TTL.Duration
-	if ttl == 0 {
-		ttl = defaultTxTTL
-	}
-	maxTime := time.Now().Add(ttl)
-	utxoKeeper := a.wallet.AccountMgr.GetUTXOKeeper()
-
-	actTemplates, otherActions, mergeResult, err := account.MergeSpendActionsUTXO(ctx, actions, maxTime, req.TimeRange)
-	if err != nil {
-		account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
-		return nil, err
-	}
-
-	builder, err := txbuilder.BuildChainTxs(ctx, req.Tx, otherActions, maxTime, req.TimeRange)
-	if errors.Root(err) == txbuilder.ErrAction {
-		// append each of the inner errors contained in the data.
-		var Errs string
-		var rootErr error
-		for i, innerErr := range errors.Data(err)["actions"].([]error) {
-			if i == 0 {
-				rootErr = errors.Root(innerErr)
-			}
-			Errs = Errs + innerErr.Error()
+	builder := txbuilder.NewBuilder(time.Now().Add(req.TTL.Duration))
+	tpls := []*txbuilder.Template{}
+	for _, action := range actions {
+		if action.ActionType() == "spend_account" {
+			tpls, err = account.SpendAccountChain(ctx, builder, action)
+		} else {
+			err = action.Build(ctx, builder)
 		}
-		err = errors.WithDetail(rootErr, Errs)
-	}
-	if err != nil {
-		account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
-		return nil, err
-	}
-	for _, input := range mergeResult.Outputs {
-		if err := builder.AddInput(input.TxInput, input.Sign); err != nil {
-			account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
+
+		if err != nil {
+			builder.Rollback()
 			return nil, err
 		}
 	}
-	// Build the transaction template.
+
 	tpl, _, err := builder.Build()
 	if err != nil {
-		account.RollbackResUTXO(utxoKeeper, mergeResult.ResIDs)
+		builder.Rollback()
 		return nil, err
 	}
-	// ensure null is never returned for signing instructions
-	if tpl.SigningInstructions == nil {
-		tpl.SigningInstructions = []*txbuilder.SigningInstruction{}
-	}
-	tpls := []*txbuilder.Template{}
-	tpls = append(tpls, actTemplates[:]...)
+
 	tpls = append(tpls, tpl)
 	return tpls, nil
 }
@@ -236,13 +204,13 @@ func (a *API) submit(ctx context.Context, ins struct {
 	return NewSuccessResponse(&submitTxResp{TxID: &ins.Tx.ID})
 }
 
-type submitChainTxResp struct {
+type submitTxsResp struct {
 	TxID []*bc.Hash `json:"tx_id"`
 }
 
-// POST /submit-chain-transactions
-func (a *API) submitChainTxs(ctx context.Context, ins struct {
-	Tx []types.Tx `json:"raw_transaction"`
+// POST /submit-transactions
+func (a *API) submitTxs(ctx context.Context, ins struct {
+	Tx []types.Tx `json:"raw_transactions"`
 }) Response {
 	txHashs := []*bc.Hash{}
 	for i := range ins.Tx {
@@ -252,8 +220,7 @@ func (a *API) submitChainTxs(ctx context.Context, ins struct {
 		log.WithField("tx_id", ins.Tx[i].ID.String()).Info("submit single tx")
 		txHashs = append(txHashs, &ins.Tx[i].ID)
 	}
-
-	return NewSuccessResponse(&submitChainTxResp{TxID: txHashs})
+	return NewSuccessResponse(&submitTxsResp{TxID: txHashs})
 }
 
 // EstimateTxGasResp estimate transaction consumed gas

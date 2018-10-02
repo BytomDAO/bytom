@@ -46,6 +46,11 @@ func (b *TemplateBuilder) AddOutput(o *types.TxOutput) error {
 	return nil
 }
 
+// InputCount return number of input in the template builder
+func (b *TemplateBuilder) InputCount() int {
+	return len(b.inputs)
+}
+
 // RestrictMinTime set minTime
 func (b *TemplateBuilder) RestrictMinTime(t time.Time) {
 	if t.After(b.minTime) {
@@ -82,7 +87,8 @@ func (b *TemplateBuilder) OnBuild(buildFn func() error) {
 	b.callbacks = append(b.callbacks, buildFn)
 }
 
-func (b *TemplateBuilder) rollback() {
+// Rollback action for handle fail build
+func (b *TemplateBuilder) Rollback() {
 	for _, f := range b.rollbacks {
 		f()
 	}

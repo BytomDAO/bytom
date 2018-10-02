@@ -61,14 +61,14 @@ func Build(ctx context.Context, tx *types.TxData, actions []Action, maxTime time
 
 	// If there were any errors, rollback and return a composite error.
 	if len(errs) > 0 {
-		builder.rollback()
+		builder.Rollback()
 		return nil, errors.WithData(ErrAction, "actions", errs)
 	}
 
 	// Build the transaction template.
 	tpl, tx, err := builder.Build()
 	if err != nil {
-		builder.rollback()
+		builder.Rollback()
 		return nil, err
 	}
 
@@ -81,30 +81,6 @@ func Build(ctx context.Context, tx *types.TxData, actions []Action, maxTime time
 	}*/
 
 	return tpl, nil
-}
-
-func BuildChainTxs(ctx context.Context, tx *types.TxData, actions []*Action, maxTime time.Time, timeRange uint64) (*TemplateBuilder, error) {
-	builder := TemplateBuilder{
-		base:      tx,
-		maxTime:   maxTime,
-		timeRange: timeRange,
-	}
-
-	// Build all of the actions, updating the builder.
-	var errs []error
-	for i, action := range actions {
-		err := (*action).Build(ctx, &builder)
-		if err != nil {
-			log.WithFields(log.Fields{"action index": i, "error": err}).Error("Loop tx's action")
-			errs = append(errs, errors.WithDetailf(err, "action index %v", i))
-		}
-	}
-
-	if len(errs) > 0 {
-		return nil, errors.WithData(ErrAction, "actions", errs)
-	}
-
-	return &builder, nil
 }
 
 // Sign will try to sign all the witness
