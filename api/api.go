@@ -278,6 +278,7 @@ func (a *API) buildHandler() {
 	m.Handle("/get-work-json", jsonHandler(a.getWorkJSON))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
 	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
+	m.Handle("/submit-block", jsonHandler(a.submitBlock))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/compile", jsonHandler(a.compileEquity))

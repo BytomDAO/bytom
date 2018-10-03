@@ -18,15 +18,21 @@ const (
 )
 
 type submitBlockMsg struct {
+	block *types.Block
+	reply chan error
+}
+
+type submitWorkMsg struct {
 	blockHeader *types.BlockHeader
 	reply       chan error
 }
 
 // MiningPool is the support struct for p2p mine pool
 type MiningPool struct {
-	mutex    sync.RWMutex
-	block    *types.Block
-	submitCh chan *submitBlockMsg
+	mutex         sync.RWMutex
+	block         *types.Block
+	submitBlockCh chan *submitBlockMsg
+	submitWorkCh  chan *submitWorkMsg
 
 	chain          *protocol.Chain
 	accountManager *account.Manager
@@ -37,7 +43,8 @@ type MiningPool struct {
 // NewMiningPool will create a new MiningPool
 func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash) *MiningPool {
 	m := &MiningPool{
-		submitCh:       make(chan *submitBlockMsg, maxSubmitChSize),
+		submitBlockCh:  make(chan *submitBlockMsg, maxSubmitChSize),
+		submitWorkCh:   make(chan *submitWorkMsg, maxSubmitChSize),
 		chain:          c,
 		accountManager: accountManager,
 		txPool:         txPool,
@@ -55,13 +62,20 @@ func (m *MiningPool) blockUpdater() {
 		case <-m.chain.BlockWaiter(m.chain.BestBlockHeight() + 1):
 			m.generateBlock()
 
-		case submitMsg := <-m.submitCh:
-			err := m.submitWork(submitMsg.blockHeader)
+		case submitBlockMsg := <-m.submitBlockCh:
+			err := m.submitBlock(submitBlockMsg.block)
 			if err == nil {
 				m.generateBlock()
 			}
-			submitMsg.reply <- err
+			submitBlockMsg.reply <- err
 		}
+
+		case submitWorkMsg := <-m.submitWorkCh:
+			err := m.submitWork(submitWorkMsg.blockHeader)
+			if err == nil {
+				m.generateBlock()
+			}
+			submitWorkMsg.reply <- err
 	}
 }
 
@@ -89,10 +103,43 @@ func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
 	return nil, errors.New("no block is ready for mining")
 }
 
-// SubmitWork will try to submit the result to the blockchain
+// SubmitWork will try to submit a raw block to the blockchain
+func (m *MiningPool) SubmitBlock(b *types.Block) error {
+	reply := make(chan error, 1)
+	m.submitBlockCh <- &submitBlockMsg{block: b, reply: reply}
+	err := <-reply
+	if err != nil {
+		log.WithFields(log.Fields{"err": err, "height": b.Height}).Warning("submitBlock failed")
+	}
+	return err
+}
+
+func (m *MiningPool) submitBlock(b *types.Block) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if m.block == nil || b.PreviousBlockHash != m.block.PreviousBlockHash {
+		return errors.New("pending mining block has been changed")
+	}
+
+	m.block = b
+	isOrphan, err := m.chain.ProcessBlock(m.block)
+	if err != nil {
+		return err
+	}
+	if isOrphan {
+		return errors.New("submit block: submit result is orphan")
+	}
+
+	blockHash := b.BlockHeader.Hash()
+	m.newBlockCh <- &blockHash
+	return nil
+}
+
+// SubmitWork will try to submit a work to the blockchain
 func (m *MiningPool) SubmitWork(bh *types.BlockHeader) error {
 	reply := make(chan error, 1)
-	m.submitCh <- &submitBlockMsg{blockHeader: bh, reply: reply}
+	m.submitWorkCh <- &submitWorkMsg{blockHeader: bh, reply: reply}
 	err := <-reply
 	if err != nil {
 		log.WithFields(log.Fields{"err": err, "height": bh.Height}).Warning("submitWork failed")
@@ -115,7 +162,7 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 		return err
 	}
 	if isOrphan {
-		return errors.New("submit result is orphan")
+		return errors.New("submit work: submit result is orphan")
 	}
 
 	blockHash := bh.Hash()
