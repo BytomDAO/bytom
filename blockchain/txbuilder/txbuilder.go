@@ -61,14 +61,14 @@ func Build(ctx context.Context, tx *types.TxData, actions []Action, maxTime time
 
 	// If there were any errors, rollback and return a composite error.
 	if len(errs) > 0 {
-		builder.rollback()
+		builder.Rollback()
 		return nil, errors.WithData(ErrAction, "actions", errs)
 	}
 
 	// Build the transaction template.
 	tpl, tx, err := builder.Build()
 	if err != nil {
-		builder.rollback()
+		builder.Rollback()
 		return nil, err
 	}
 

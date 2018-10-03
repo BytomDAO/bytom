@@ -81,6 +81,18 @@ func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
 	return NewSuccessResponse(true)
 }
 
+type SubmitBlockReq struct {
+	Block *types.Block `json:"raw_block"`
+}
+
+// submitWork submits a raw block to mining pool
+func (a *API) submitBlock(ctx context.Context, req *SubmitBlockReq) Response {
+	if err := a.miningPool.SubmitBlock(req.Block); err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(true)
+}
+
 // SubmitWorkJSONReq is req struct for submit-work-json API
 type SubmitWorkJSONReq struct {
 	BlockHeader *BlockHeaderJSON `json:"block_header"`

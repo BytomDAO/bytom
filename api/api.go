@@ -224,13 +224,17 @@ func (a *API) buildHandler() {
 		m.Handle("/sign-message", jsonHandler(a.signMessage))
 
 		m.Handle("/build-transaction", jsonHandler(a.build))
-		m.Handle("/sign-transaction", jsonHandler(a.pseudohsmSignTemplates))
+		m.Handle("/build-chain-transactions", jsonHandler(a.buildChainTxs))
+		m.Handle("/sign-transaction", jsonHandler(a.signTemplate))
+		m.Handle("/sign-transactions", jsonHandler(a.signTemplates))
 
 		m.Handle("/get-transaction", jsonHandler(a.getTransaction))
 		m.Handle("/list-transactions", jsonHandler(a.listTransactions))
 
 		m.Handle("/list-balances", jsonHandler(a.listBalances))
 		m.Handle("/list-unspent-outputs", jsonHandler(a.listUnspentOutputs))
+
+		m.Handle("/decode-program", jsonHandler(a.decodeProgram))
 
 		m.Handle("/backup-wallet", jsonHandler(a.backupWalletImage))
 		m.Handle("/restore-wallet", jsonHandler(a.restoreWalletImage))
@@ -255,6 +259,7 @@ func (a *API) buildHandler() {
 	m.Handle("/list-transaction-feeds", jsonHandler(a.listTxFeeds))
 
 	m.Handle("/submit-transaction", jsonHandler(a.submit))
+	m.Handle("/submit-transactions", jsonHandler(a.submitTxs))
 	m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
 
 	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
@@ -276,9 +281,9 @@ func (a *API) buildHandler() {
 	m.Handle("/get-work-json", jsonHandler(a.getWorkJSON))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
 	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
+	m.Handle("/submit-block", jsonHandler(a.submitBlock))
 
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
-	m.Handle("/decode-program", jsonHandler(a.decodeProgram))
 	m.Handle("/compile", jsonHandler(a.compileEquity))
 
 	m.Handle("/gas-rate", jsonHandler(a.gasRate))
