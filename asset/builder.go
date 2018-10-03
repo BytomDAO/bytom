@@ -66,3 +66,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 	builder.RestrictMinTime(time.Now())
 	return builder.AddInput(txin, tplIn)
 }
+
+func (a *issueAction) ActionType() string {
+	return "issue"
+}
