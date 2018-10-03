@@ -83,6 +83,9 @@ func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
 
 type SubmitBlockReq struct {
 	Block *types.Block `json:"raw_block"`
+
+	// must be provided if server provided a workid with template.
+	WorkID string `json:"workid,omitempty"`
 }
 
 // submitBlock submits a raw block to mining pool
