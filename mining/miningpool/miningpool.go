@@ -68,7 +68,6 @@ func (m *MiningPool) blockUpdater() {
 				m.generateBlock()
 			}
 			submitBlockMsg.reply <- err
-		}
 
 		case submitWorkMsg := <-m.submitWorkCh:
 			err := m.submitWork(submitWorkMsg.blockHeader)
@@ -76,6 +75,7 @@ func (m *MiningPool) blockUpdater() {
 				m.generateBlock()
 			}
 			submitWorkMsg.reply <- err
+		}
 	}
 }
 
