@@ -68,7 +68,27 @@ func (a *API) getWorkJSON() Response {
 	return NewSuccessResponse(work)
 }
 
-// SubmitWorkJSONReq is req struct for submit-work API
+// SubmitBlockReq is req struct for submit-block API
+type SubmitBlockReq struct {
+	Block *types.Block `json:"raw_block"`
+}
+
+// submitBlock trys to submit a raw block to the chain
+func (a *API) submitBlock(ctx context.Context, req *SubmitBlockReq) Response {
+	isOrphan, err := a.chain.ProcessBlock(req.Block)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	if isOrphan {
+		return NewErrorResponse(errors.New("block submitted is orphan"))
+	}
+
+	blockHash := req.Block.BlockHeader.Hash()
+	a.newBlockCh <- &blockHash
+	return NewSuccessResponse(true)
+}
+
+// SubmitWorkReq is req struct for submit-work API
 type SubmitWorkReq struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
 }

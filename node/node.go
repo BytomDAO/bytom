@@ -56,6 +56,8 @@ type Node struct {
 	cpuMiner     *cpuminer.CPUMiner
 	miningPool   *miningpool.MiningPool
 	miningEnable bool
+
+	newBlockCh chan *bc.Hash
 }
 
 func NewNode(config *cfg.Config) *Node {
@@ -142,6 +144,8 @@ func NewNode(config *cfg.Config) *Node {
 		chain:        chain,
 		txfeed:       txFeed,
 		miningEnable: config.Mining,
+
+		newBlockCh: newBlockCh,
 	}
 
 	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh)
@@ -225,7 +229,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartApiServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.newBlockCh)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()
