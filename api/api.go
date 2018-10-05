@@ -25,6 +25,7 @@ import (
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/wallet"
 )
 
@@ -113,6 +114,8 @@ type API struct {
 	txFeedTracker *txfeed.Tracker
 	cpuMiner      *cpuminer.CPUMiner
 	miningPool    *miningpool.MiningPool
+
+	newBlockCh chan *bc.Hash
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -169,7 +172,7 @@ func (a *API) StartServer(address string) {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore) *API {
+func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash) *API {
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,
@@ -178,6 +181,8 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		txFeedTracker: txfeeds,
 		cpuMiner:      cpuMiner,
 		miningPool:    miningPool,
+
+		newBlockCh: newBlockCh,
 	}
 	api.buildHandler()
 	api.initServer(config)
@@ -279,6 +284,7 @@ func (a *API) buildHandler() {
 
 	m.Handle("/get-work", jsonHandler(a.getWork))
 	m.Handle("/get-work-json", jsonHandler(a.getWorkJSON))
+	m.Handle("/submit-block", jsonHandler(a.submitBlock))
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
 	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
 
