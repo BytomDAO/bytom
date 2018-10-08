@@ -360,12 +360,12 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 }
 
 func (ps *peerSet) broadcastNewStatus(bestBlock, genesisBlock *types.Block) error {
-	ps.mtx.RLock()
-	defer ps.mtx.RUnlock()
+	bestBlockHash := bestBlock.Hash()
+	peers := ps.peersWithoutBlock(&bestBlockHash)
 
 	genesisHash := genesisBlock.Hash()
 	msg := NewStatusResponseMessage(&bestBlock.BlockHeader, &genesisHash)
-	for _, peer := range ps.peers {
+	for _, peer := range peers {
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			ps.removePeer(peer.ID())
 			continue

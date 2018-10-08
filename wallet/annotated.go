@@ -92,7 +92,7 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB db.DB) {
 			if input.SpentOutputID == nil {
 				continue
 			}
-			localAccount, err := getAccountFromUTXO(*input.SpentOutputID, walletDB)
+			localAccount, err := getAccountFromACP(input.ControlProgram, walletDB)
 			if localAccount == nil || err != nil {
 				continue
 			}
@@ -108,30 +108,6 @@ func annotateTxsAccount(txs []*query.AnnotatedTx, walletDB db.DB) {
 			txs[i].Outputs[j].AccountID = localAccount.ID
 		}
 	}
-}
-
-func getAccountFromUTXO(outputID bc.Hash, walletDB db.DB) (*account.Account, error) {
-	accountUTXO := account.UTXO{}
-	localAccount := account.Account{}
-
-	accountUTXOValue := walletDB.Get(account.StandardUTXOKey(outputID))
-	if accountUTXOValue == nil {
-		return nil, fmt.Errorf("failed get account utxo:%x ", outputID)
-	}
-
-	if err := json.Unmarshal(accountUTXOValue, &accountUTXO); err != nil {
-		return nil, err
-	}
-
-	accountValue := walletDB.Get(account.Key(accountUTXO.AccountID))
-	if accountValue == nil {
-		return nil, fmt.Errorf("failed get account:%s ", accountUTXO.AccountID)
-	}
-	if err := json.Unmarshal(accountValue, &localAccount); err != nil {
-		return nil, err
-	}
-
-	return &localAccount, nil
 }
 
 func getAccountFromACP(program []byte, walletDB db.DB) (*account.Account, error) {
