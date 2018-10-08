@@ -215,11 +215,11 @@ func TestFilterAccountUtxo(t *testing.T) {
 		input      []*account.UTXO
 		wantUtxos  []*account.UTXO
 	}{
-		// {
-		// 	dbPrograms: map[string]*account.CtrlProgram{},
-		// 	input:      []*account.UTXO{},
-		// 	wantUtxos:  []*account.UTXO{},
-		// },
+		{
+			dbPrograms: map[string]*account.CtrlProgram{},
+			input:      []*account.UTXO{},
+			wantUtxos:  []*account.UTXO{},
+		},
 		{
 			dbPrograms: map[string]*account.CtrlProgram{
 				"436f6e74726163743a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
@@ -258,28 +258,28 @@ func TestFilterAccountUtxo(t *testing.T) {
 				},
 			},
 		},
-		// {
-		// 	dbPrograms: map[string]*account.CtrlProgram{},
-		// 	input: []*account.UTXO{
-		// 		&account.UTXO{
-		// 			ControlProgram: []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
-		// 			AssetID:        bc.AssetID{V0: 1},
-		// 			Amount:         3,
-		// 		},
-		// 		&account.UTXO{
-		// 			ControlProgram: []byte{0x91},
-		// 			AssetID:        bc.AssetID{V0: 1},
-		// 			Amount:         3,
-		// 		},
-		// 	},
-		// 	wantUtxos: []*account.UTXO{
-		// 		&account.UTXO{
-		// 			ControlProgram: []byte{0x91},
-		// 			AssetID:        bc.AssetID{V0: 1},
-		// 			Amount:         3,
-		// 		},
-		// 	},
-		// },
+		{
+			dbPrograms: map[string]*account.CtrlProgram{},
+			input: []*account.UTXO{
+				&account.UTXO{
+					ControlProgram: []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         3,
+				},
+				&account.UTXO{
+					ControlProgram: []byte{0x91},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         3,
+				},
+			},
+			wantUtxos: []*account.UTXO{
+				&account.UTXO{
+					ControlProgram: []byte{0x91},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         3,
+				},
+			},
+		},
 		{
 			dbPrograms: map[string]*account.CtrlProgram{
 				"436f6e74726163743a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
@@ -366,24 +366,24 @@ func TestFilterAccountUtxo(t *testing.T) {
 		if !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
 			t.Errorf("case %d: got %x want %x", i, gotUtxos, c.wantUtxos)
 
-			if len(gotUtxos) != 0 {
-				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].ControlProgram, c.wantUtxos[0].ControlProgram)
-				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].AssetID, c.wantUtxos[0].AssetID)
-				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].Amount, c.wantUtxos[0].Amount)
-				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].AccountID, c.wantUtxos[0].AccountID)
-				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].Address, c.wantUtxos[0].Address)
-				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].ControlProgramIndex, c.wantUtxos[0].ControlProgramIndex)
-				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].Change, c.wantUtxos[0].Change)
-				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].ControlProgram, c.wantUtxos[1].ControlProgram)
-				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].AssetID, c.wantUtxos[1].AssetID)
-				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].Amount, c.wantUtxos[1].Amount)
-				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].AccountID, c.wantUtxos[1].AccountID)
-				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].Address, c.wantUtxos[1].Address)
-				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].ControlProgramIndex, c.wantUtxos[1].ControlProgramIndex)
-				// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].Change, c.wantUtxos[1].Change)
-			} else {
-				fmt.Printf("case %d: got %v want %v\n", i, gotUtxos, c.wantUtxos)
-			}
+			// if len(gotUtxos) != 0 {
+			// 	fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].ControlProgram, c.wantUtxos[0].ControlProgram)
+			// 	fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].AssetID, c.wantUtxos[0].AssetID)
+			// 	fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].Amount, c.wantUtxos[0].Amount)
+			// 	fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].AccountID, c.wantUtxos[0].AccountID)
+			// 	fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].Address, c.wantUtxos[0].Address)
+			// 	fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].ControlProgramIndex, c.wantUtxos[0].ControlProgramIndex)
+			// 	fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[0].Change, c.wantUtxos[0].Change)
+			// 	// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].ControlProgram, c.wantUtxos[1].ControlProgram)
+			// 	// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].AssetID, c.wantUtxos[1].AssetID)
+			// 	// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].Amount, c.wantUtxos[1].Amount)
+			// 	// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].AccountID, c.wantUtxos[1].AccountID)
+			// 	// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].Address, c.wantUtxos[1].Address)
+			// 	// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].ControlProgramIndex, c.wantUtxos[1].ControlProgramIndex)
+			// 	// fmt.Printf("case %d: got %v want %v\n", i, gotUtxos[1].Change, c.wantUtxos[1].Change)
+			// } else {
+			// 	fmt.Printf("case %d: got %v want %v\n", i, gotUtxos, c.wantUtxos)
+			// }
 
 		}
 		for s := range c.dbPrograms {

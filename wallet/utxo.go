@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/json"
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -125,7 +124,6 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 
 		var hash [32]byte
 		sm3.Sum(hash[:], []byte(s))
-		fmt.Printf("hash is: %x\n", hash[:])
 		data := w.DB.Get(account.ContractKey(hash))
 		if data == nil {
 			continue
