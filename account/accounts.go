@@ -377,11 +377,11 @@ func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
 	return cps, nil
 }
 
-func (m *Manager) ListUnconfirmedUtxo(isSmartContract bool) []*UTXO {
+func (m *Manager) ListUnconfirmedUtxo(accountID string, isSmartContract bool) []*UTXO {
 	utxos := m.utxoKeeper.ListUnconfirmed()
 	result := []*UTXO{}
 	for _, utxo := range utxos {
-		if segwit.IsP2WScript(utxo.ControlProgram) != isSmartContract {
+		if segwit.IsP2WScript(utxo.ControlProgram) != isSmartContract && (accountID == utxo.AccountID || accountID == "") {
 			result = append(result, utxo)
 		}
 	}

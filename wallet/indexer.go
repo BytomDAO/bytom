@@ -238,8 +238,8 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 }
 
 // GetAccountBalances return all account balances
-func (w *Wallet) GetAccountBalances(id string) ([]AccountBalance, error) {
-	return w.indexBalances(w.GetAccountUtxos("", false, false))
+func (w *Wallet) GetAccountBalances(accountID string, id string) ([]AccountBalance, error) {
+	return w.indexBalances(w.GetAccountUtxos(accountID, "", false, false))
 }
 
 // AccountBalance account balance

@@ -21,8 +21,16 @@ func init() {
 	listAddressesCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
 	listAddressesCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
 
+	listBalancesCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
+	listBalancesCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
+
+	listUnspentOutputsCmd.PersistentFlags().StringVar(&accountID, "account_id", "", "account ID")
+	listUnspentOutputsCmd.PersistentFlags().StringVar(&accountAlias, "account_alias", "", "account alias")
 	listUnspentOutputsCmd.PersistentFlags().StringVar(&outputID, "id", "", "ID of unspent output")
+	listUnspentOutputsCmd.PersistentFlags().BoolVar(&unconfirmed, "unconfirmed", false, "list unconfirmed unspent outputs")
 	listUnspentOutputsCmd.PersistentFlags().BoolVar(&smartContract, "contract", false, "list smart contract unspent outputs")
+	listUnspentOutputsCmd.PersistentFlags().IntVar(&from, "from", 0, "the starting position of a page")
+	listUnspentOutputsCmd.PersistentFlags().IntVar(&count, "count", 0, "the longest count per page")
 }
 
 var (
@@ -32,6 +40,8 @@ var (
 	accountToken  = ""
 	outputID      = ""
 	smartContract = false
+	from          = 0
+	count         = 0
 )
 
 var createAccountCmd = &cobra.Command{
@@ -194,7 +204,12 @@ var listBalancesCmd = &cobra.Command{
 	Short: "List the accounts balances",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		data, exitCode := util.ClientCall("/list-balances")
+		var filter = struct {
+			AccountID    string `json:"account_id"`
+			AccountAlias string `json:"account_alias"`
+		}{AccountID: accountID, AccountAlias: accountAlias}
+
+		data, exitCode := util.ClientCall("/list-balances", &filter)
 		if exitCode != util.Success {
 			os.Exit(exitCode)
 		}
@@ -209,9 +224,22 @@ var listUnspentOutputsCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		filter := struct {
+			AccountID     string `json:"account_id"`
+			AccountAlias  string `json:"account_alias"`
 			ID            string `json:"id"`
+			Unconfirmed   bool   `json:"unconfirmed"`
 			SmartContract bool   `json:"smart_contract"`
-		}{ID: outputID, SmartContract: smartContract}
+			From          uint   `json:"from"`
+			Count         uint   `json:"count"`
+		}{
+			AccountID:     accountID,
+			AccountAlias:  accountAlias,
+			ID:            outputID,
+			Unconfirmed:   unconfirmed,
+			SmartContract: smartContract,
+			From:          uint(from),
+			Count:         uint(count),
+		}
 
 		data, exitCode := util.ClientCall("/list-unspent-outputs", &filter)
 		if exitCode != util.Success {

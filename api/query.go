@@ -73,8 +73,20 @@ func (a *API) listAssets(ctx context.Context, filter struct {
 }
 
 // POST /list-balances
-func (a *API) listBalances(ctx context.Context) Response {
-	balances, err := a.wallet.GetAccountBalances("")
+func (a *API) listBalances(ctx context.Context, filter struct {
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+}) Response {
+	accountID := filter.AccountID
+	if filter.AccountAlias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+
+	balances, err := a.wallet.GetAccountBalances(accountID, "")
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -261,13 +273,23 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 
 // POST /list-unspent-outputs
 func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
+	AccountID     string `json:"account_id"`
+	AccountAlias  string `json:"account_alias"`
 	ID            string `json:"id"`
 	Unconfirmed   bool   `json:"unconfirmed"`
 	SmartContract bool   `json:"smart_contract"`
 	From          uint   `json:"from"`
 	Count         uint   `json:"count"`
 }) Response {
-	accountUTXOs := a.wallet.GetAccountUtxos(filter.ID, filter.Unconfirmed, filter.SmartContract)
+	accountID := filter.AccountID
+	if filter.AccountAlias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+	accountUTXOs := a.wallet.GetAccountUtxos(accountID, filter.ID, filter.Unconfirmed, filter.SmartContract)
 
 	UTXOs := []query.AnnotatedUTXO{}
 	for _, utxo := range accountUTXOs {

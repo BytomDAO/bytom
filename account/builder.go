@@ -15,6 +15,13 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+var (
+	//chainTxUtxoNum maximum utxo quantity in a tx
+	chainTxUtxoNum = 10
+	//chainTxMergeGas chain tx gas
+	chainTxMergeGas = uint64(10000000)
+)
+
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
 func (m *Manager) DecodeSpendAction(data []byte) (txbuilder.Action, error) {
 	a := &spendAction{accounts: m}
@@ -26,6 +33,10 @@ type spendAction struct {
 	bc.AssetAmount
 	AccountID      string `json:"account_id"`
 	UseUnconfirmed bool   `json:"use_unconfirmed"`
+}
+
+func (a *spendAction) ActionType() string {
+	return "spend_account"
 }
 
 // MergeSpendAction merge common assetID and accountID spend action
@@ -49,6 +60,144 @@ func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 		}
 	}
 	return resultActions
+}
+
+//calcMergeGas calculate the gas required that n utxos are merged into one
+func calcMergeGas(num int) uint64 {
+	gas := uint64(0)
+	for num > 1 {
+		gas += chainTxMergeGas
+		num -= chainTxUtxoNum - 1
+	}
+	return gas
+}
+
+func (m *Manager) reserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accountID string, amount uint64, useUnconfirmed bool) ([]*UTXO, error) {
+	reservedAmount := uint64(0)
+	utxos := []*UTXO{}
+	for gasAmount := uint64(0); reservedAmount < gasAmount+amount; gasAmount = calcMergeGas(len(utxos)) {
+		reserveAmount := amount + gasAmount - reservedAmount
+		res, err := m.utxoKeeper.Reserve(accountID, consensus.BTMAssetID, reserveAmount, useUnconfirmed, builder.MaxTime())
+		if err != nil {
+			return nil, err
+		}
+
+		builder.OnRollback(func() { m.utxoKeeper.Cancel(res.id) })
+		reservedAmount += reserveAmount + res.change
+		utxos = append(utxos, res.utxos[:]...)
+	}
+	return utxos, nil
+}
+
+func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txbuilder.Template, *UTXO, error) {
+	if len(utxos) == 0 {
+		return nil, nil, errors.New("mergeSpendActionUTXO utxos num 0")
+	}
+
+	tpls := []*txbuilder.Template{}
+	if len(utxos) == 1 {
+		return tpls, utxos[len(utxos)-1], nil
+	}
+
+	acp, err := m.GetLocalCtrlProgramByAddress(utxos[0].Address)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	buildAmount := uint64(0)
+	builder := &txbuilder.TemplateBuilder{}
+	for index := 0; index < len(utxos); index++ {
+		input, sigInst, err := UtxoToInputs(signer, utxos[index])
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if err = builder.AddInput(input, sigInst); err != nil {
+			return nil, nil, err
+		}
+
+		buildAmount += input.Amount()
+		if builder.InputCount() != chainTxUtxoNum && index != len(utxos)-1 {
+			continue
+		}
+
+		outAmount := buildAmount - chainTxMergeGas
+		output := types.NewTxOutput(*consensus.BTMAssetID, outAmount, acp.ControlProgram)
+		if err := builder.AddOutput(output); err != nil {
+			return nil, nil, err
+		}
+
+		tpl, _, err := builder.Build()
+		if err != nil {
+			return nil, nil, err
+		}
+
+		bcOut, err := tpl.Transaction.Output(*tpl.Transaction.ResultIds[0])
+		if err != nil {
+			return nil, nil, err
+		}
+
+		utxos = append(utxos, &UTXO{
+			OutputID:            *tpl.Transaction.ResultIds[0],
+			AssetID:             *consensus.BTMAssetID,
+			Amount:              outAmount,
+			ControlProgram:      acp.ControlProgram,
+			SourceID:            *bcOut.Source.Ref,
+			SourcePos:           bcOut.Source.Position,
+			ControlProgramIndex: acp.KeyIndex,
+			Address:             acp.Address,
+		})
+
+		tpls = append(tpls, tpl)
+		buildAmount = 0
+		builder = &txbuilder.TemplateBuilder{}
+		if index == len(utxos)-2 {
+			break
+		}
+	}
+	return tpls, utxos[len(utxos)-1], nil
+}
+
+// SpendAccountChain build the spend action with auto merge utxo function
+func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, action txbuilder.Action) ([]*txbuilder.Template, error) {
+	act, ok := action.(*spendAction)
+	if !ok {
+		return nil, errors.New("fail to convert the spend action")
+	}
+	if *act.AssetId != *consensus.BTMAssetID {
+		return nil, errors.New("spend chain action only support BTM")
+	}
+
+	utxos, err := act.accounts.reserveBtmUtxoChain(builder, act.AccountID, act.Amount, act.UseUnconfirmed)
+	if err != nil {
+		return nil, err
+	}
+
+	acct, err := act.accounts.FindByID(act.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	tpls, utxo, err := act.accounts.buildBtmTxChain(utxos, acct.Signer)
+	if err != nil {
+		return nil, err
+	}
+
+	input, sigInst, err := UtxoToInputs(acct.Signer, utxo)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := builder.AddInput(input, sigInst); err != nil {
+		return nil, err
+	}
+
+	if utxo.Amount > act.Amount {
+		if err = builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, utxo.Amount-act.Amount, utxo.ControlProgram)); err != nil {
+			return nil, errors.Wrap(err, "adding change output")
+		}
+	}
+	return tpls, nil
 }
 
 func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
@@ -112,6 +261,10 @@ type spendUTXOAction struct {
 	OutputID       *bc.Hash                     `json:"output_id"`
 	UseUnconfirmed bool                         `json:"use_unconfirmed"`
 	Arguments      []txbuilder.ContractArgument `json:"arguments"`
+}
+
+func (a *spendUTXOAction) ActionType() string {
+	return "spend_account_unspent_output"
 }
 
 func (a *spendUTXOAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) error {
