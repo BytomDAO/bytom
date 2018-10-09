@@ -355,7 +355,7 @@ func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore
 		req, err := authenticator.Authenticate(req)
 		if err != nil {
 			log.WithField("error", errors.Wrap(err, "Serve")).Error("Authenticate fail")
-			err = errors.Sub(errNotAuthenticated, err)
+			err = errors.WithDetail(errNotAuthenticated, err.Error())
 			errorFormatter.Write(req.Context(), rw, err)
 			return
 		}
