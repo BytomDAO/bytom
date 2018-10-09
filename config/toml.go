@@ -29,18 +29,18 @@ api_addr = "0.0.0.0:9888"
 var mainNetConfigTmpl = `chain_id = "mainnet"
 [p2p]
 laddr = "tcp://0.0.0.0:46657"
-seeds = "139.162.105.40:46657"
+seeds = "139.162.105.40:46660"
 `
 
 var testNetConfigTmpl = `chain_id = "wisdom"
 [p2p]
 laddr = "tcp://0.0.0.0:46656"
-seeds = "139.162.105.40:46656"
+seeds = "139.162.105.40:46659"
 `
 
 var soloNetConfigTmpl = `chain_id = "solonet"
 [p2p]
-laddr = "tcp://0.0.0.0:46658"
+laddr = "tcp://0.0.0.0:46661"
 seeds = ""
 `
 
