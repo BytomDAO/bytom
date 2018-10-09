@@ -29,7 +29,7 @@ func TestAuthenticate(t *testing.T) {
 		{"alice", "alice:abcsdsdfassdfsefsfsfesfesfefsefa", ErrInvalidToken},
 	}
 
-	api := NewAPI(tokenStore)
+	api := NewAPI(tokenStore, false)
 
 	for _, c := range cases {
 		var username, password string

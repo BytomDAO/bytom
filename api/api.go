@@ -128,10 +128,7 @@ func (a *API) initServer(config *cfg.Config) {
 	mux := http.NewServeMux()
 	mux.Handle("/", &coreHandler)
 
-	handler = mux
-	if config.Auth.Disable == false {
-		handler = AuthHandler(handler, a.accessTokens)
-	}
+	handler = AuthHandler(mux, a.accessTokens, config.Auth.Disable)
 	handler = RedirectHandler(handler)
 
 	secureheader.DefaultConfig.PermitClearLoopback = true
@@ -350,15 +347,15 @@ func webAssetsHandler(next http.Handler) http.Handler {
 }
 
 // AuthHandler access token auth Handler
-func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore) http.Handler {
-	authenticator := authn.NewAPI(accessTokens)
+func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore, authDisable bool) http.Handler {
+	authenticator := authn.NewAPI(accessTokens, authDisable)
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		// TODO(tessr): check that this path exists; return early if this path isn't legit
 		req, err := authenticator.Authenticate(req)
 		if err != nil {
 			log.WithField("error", errors.Wrap(err, "Serve")).Error("Authenticate fail")
-			err = errors.Sub(errNotAuthenticated, err)
+			err = errors.WithDetail(errNotAuthenticated, err.Error())
 			errorFormatter.Write(req.Context(), rw, err)
 			return
 		}
