@@ -35,7 +35,7 @@ seeds = "139.162.105.40:46660"
 var testNetConfigTmpl = `chain_id = "wisdom"
 [p2p]
 laddr = "tcp://0.0.0.0:46659"
-seeds = "139.162.105.40:46659"
+seeds = "139.162.105.40:46659,47.75.167.178:46659"
 `
 
 var soloNetConfigTmpl = `chain_id = "solonet"
