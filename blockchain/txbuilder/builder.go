@@ -133,5 +133,6 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 	}
 
 	tpl.Transaction = types.NewTx(*tx)
+	tpl.Fee = CalculateTxFee(tpl.Transaction)
 	return tpl, tx, nil
 }
