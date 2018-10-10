@@ -22,7 +22,6 @@ type TemplateBuilder struct {
 	minTime             time.Time
 	maxTime             time.Time
 	timeRange           uint64
-	referenceData       []byte
 	rollbacks           []func()
 	callbacks           []func() error
 }

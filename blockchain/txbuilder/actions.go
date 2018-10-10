@@ -10,11 +10,8 @@ import (
 	"github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
 )
-
-var retirementProgram = []byte{byte(vm.OP_FAIL)}
 
 // DecodeControlAddressAction convert input data to action struct
 func DecodeControlAddressAction(data []byte) (Action, error) {
