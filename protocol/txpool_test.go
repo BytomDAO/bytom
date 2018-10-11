@@ -73,7 +73,7 @@ func (s *mockStore) GetStoreStatus() *BlockStoreState                           
 func (s *mockStore) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
 func (s *mockStore) GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error     { return nil }
 func (s *mockStore) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
-func (s *mockStore) LoadBlockIndex() (*state.BlockIndex, error)                   { return nil, nil }
+func (s *mockStore) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
 func (s *mockStore) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
 func (s *mockStore) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error { return nil }
 

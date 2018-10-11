@@ -23,7 +23,7 @@ func NewXPrv(r io.Reader) (xprv XPrv, err error) {
 	if r == nil {
 		r = rand.Reader
 	}
-	var entropy [32]byte
+	var entropy [64]byte
 	_, err = io.ReadFull(r, entropy[:])
 	if err != nil {
 		return xprv, err

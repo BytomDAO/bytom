@@ -17,7 +17,7 @@ type Store interface {
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
 
-	LoadBlockIndex() (*state.BlockIndex, error)
+	LoadBlockIndex(uint64) (*state.BlockIndex, error)
 	SaveBlock(*types.Block, *bc.TransactionStatus) error
 	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error
 }

@@ -13,10 +13,12 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
+	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/trust"
+	"github.com/bytom/version"
 )
 
 const (
@@ -30,6 +32,7 @@ var (
 	ErrDuplicatePeer     = errors.New("Duplicate peer")
 	ErrConnectSelf       = errors.New("Connect self")
 	ErrConnectBannedPeer = errors.New("Connect banned peer")
+	ErrConnectSpvPeer    = errors.New("Outbound connect spv peer")
 )
 
 // Switch handles peer connections and exposes an API to receive incoming messages
@@ -136,6 +139,9 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 		return err
 	}
 
+	if err := version.Status.CheckUpdate(sw.nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
+		return err
+	}
 	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
 		return err
 	}
@@ -143,6 +149,10 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)
 	if err := sw.filterConnByPeer(peer); err != nil {
 		return err
+	}
+
+	if pc.outbound && !peer.ServiceFlag().IsEnable(consensus.SFFullNode) {
+		return ErrConnectSpvPeer
 	}
 
 	// Start peer
@@ -342,9 +352,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 			break
 		}
 
-		// disconnect if we alrady have 2 * MaxNumPeers, we do this because we wanna address book get exchanged even if
-		// the connect is full. The pex will disconnect the peer after address exchange, the max connected peer won't
-		// be double of MaxNumPeers
+		// disconnect if we alrady have MaxNumPeers
 		if sw.peers.Size() >= sw.Config.P2P.MaxNumPeers {
 			inConn.Close()
 			log.Info("Ignoring inbound connection: already have enough peers.")

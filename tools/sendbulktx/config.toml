@@ -1,7 +1,0 @@
-send_acct_id = "0CO2INHB00A02"
-password = "123456"
-send_asset_id = "f3891b6cdce683a559ae5087881db0d3164226d33d4b028083bd5e05db3ba203"
-#"issue", "spend", "address"
-build_type = "issue"
-asset_receiver = ["tm1q4g0mcfpxe9g2eh3qswj4qw6wdxdcg38v5szsr4"]
-#asset_receiver = ["bm1q678m0eac5xcxxvalynzjp5cl4wq06rp039svzs","bm1qhgpjl0f7hzyxj866v0ztllscw6uqmh5gfcuqgy"]
