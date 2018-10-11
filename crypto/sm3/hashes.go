@@ -7,6 +7,7 @@ func Sum256(data []byte) (digest [32]byte) {
 	return
 }
 
+// Sum calculate data into hash
 func Sum(hash, data []byte) {
 	tmp := Sm3Sum(data)
 	copy(hash, tmp)
