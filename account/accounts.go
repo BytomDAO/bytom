@@ -2,7 +2,9 @@
 package account
 
 import (
+	"bytes"
 	"encoding/json"
+	"sort"
 	"strings"
 	"sync"
 
@@ -29,13 +31,14 @@ const (
 )
 
 var (
-	accountIndexKey     = []byte("AccountIndex")
-	accountPrefix       = []byte("Account:")
-	aliasPrefix         = []byte("AccountAlias:")
-	contractIndexPrefix = []byte("ContractIndex")
-	contractPrefix      = []byte("Contract:")
-	miningAddressKey    = []byte("MiningAddress")
-	CoinbaseAbKey       = []byte("CoinbaseArbitrary")
+	accountIndexKey         = []byte("AccountIndex")
+	xPubsAccountIndexPrefix = []byte("XPubsAccountIndex:")
+	accountPrefix           = []byte("Account:")
+	aliasPrefix             = []byte("AccountAlias:")
+	contractIndexPrefix     = []byte("ContractIndex")
+	contractPrefix          = []byte("Contract:")
+	miningAddressKey        = []byte("MiningAddress")
+	CoinbaseAbKey           = []byte("CoinbaseArbitrary")
 )
 
 // pre-define errors for supporting bytom errorFormatter
@@ -63,6 +66,11 @@ func aliasKey(name string) []byte {
 
 func contractIndexKey(accountID string) []byte {
 	return append(contractIndexPrefix, []byte(accountID)...)
+}
+
+// xPubsAccountIndexKey account index created by the same XPub
+func xPubsAccountIndexKey(hash common.Hash) []byte {
+	return append(xPubsAccountIndexPrefix, hash[:]...)
 }
 
 // Account is structure of Bytom account
@@ -124,8 +132,11 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
-
-	signer, err := signers.Create("account", xpubs, quorum, m.getNextAccountIndex())
+	index, err := m.getXPubsNextAccountIndex(xpubs)
+	if err != nil {
+		return nil, err
+	}
+	signer, err := signers.Create("account", xpubs, quorum, index)
 	id := signers.IDGenerate()
 	if err != nil {
 		return nil, errors.Wrap(err)
@@ -496,6 +507,32 @@ func (m *Manager) getNextAccountIndex() uint64 {
 	}
 	m.db.Set(accountIndexKey, common.Unit64ToBytes(nextIndex))
 	return nextIndex
+}
+
+func (m *Manager) getXPubsNextAccountIndex(xpubs []chainkd.XPub) (uint64, error) {
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
+	var nextIndex uint64 = 1
+	if len(xpubs) == 0 {
+		return nextIndex, signers.ErrNoXPubs
+	}
+	sort.Sort(signers.SortKeys(xpubs))
+	for i := 1; i < len(xpubs); i++ {
+		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
+			return nextIndex, errors.WithDetailf(signers.ErrDupeXPub, "duplicated key=%x", xpubs[i])
+		}
+	}
+	var hash [32]byte
+	xPubs := []byte{}
+	for _, xpub := range xpubs {
+		xPubs = append(xPubs, xpub[:]...)
+	}
+	sha3pool.Sum256(hash[:], xPubs)
+	if rawIndexBytes := m.db.Get(xPubsAccountIndexKey(hash)); rawIndexBytes != nil {
+		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
+	}
+	m.db.Set(xPubsAccountIndexKey(hash), common.Unit64ToBytes(nextIndex))
+	return nextIndex, nil
 }
 
 func (m *Manager) getNextContractIndex(accountID string) uint64 {

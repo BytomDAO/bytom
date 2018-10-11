@@ -66,7 +66,7 @@ func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64
 		return nil, errors.Wrap(ErrNoXPubs)
 	}
 
-	sort.Sort(sortKeys(xpubs)) // this transforms the input slice
+	sort.Sort(SortKeys(xpubs)) // this transforms the input slice
 	for i := 1; i < len(xpubs); i++ {
 		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
 			return nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpubs[i])
@@ -85,8 +85,8 @@ func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64
 	}, nil
 }
 
-type sortKeys []chainkd.XPub
+type SortKeys []chainkd.XPub
 
-func (s sortKeys) Len() int           { return len(s) }
-func (s sortKeys) Less(i, j int) bool { return bytes.Compare(s[i][:], s[j][:]) < 0 }
-func (s sortKeys) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s SortKeys) Len() int           { return len(s) }
+func (s SortKeys) Less(i, j int) bool { return bytes.Compare(s[i][:], s[j][:]) < 0 }
+func (s SortKeys) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
