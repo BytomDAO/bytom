@@ -8,7 +8,7 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
@@ -146,7 +146,7 @@ func mockAccountManager(t *testing.T) *Manager {
 	}
 	defer os.RemoveAll(dirPath)
 
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	testDB := dbm.NewDB("testdb", "memdb", "temp")
 	defer os.RemoveAll("temp")
 
 	store := leveldb.NewStore(testDB)

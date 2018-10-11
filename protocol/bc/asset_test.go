@@ -3,7 +3,7 @@ package bc
 import (
 	"testing"
 
-	"golang.org/x/crypto/sha3"
+	"github.com/bytom/crypto/sm3"
 )
 
 func TestComputeAssetID(t *testing.T) {
@@ -16,7 +16,7 @@ func TestComputeAssetID(t *testing.T) {
 	unhashed = append(unhashed, issuanceScript...)
 	unhashed = append(unhashed, EmptyStringHash.Bytes()...)
 
-	if want := NewAssetID(sha3.Sum256(unhashed)); assetID != want {
+	if want := NewAssetID(sm3.Sum256(unhashed)); assetID != want {
 		t.Errorf("asset id = %x want %x", assetID.Bytes(), want.Bytes())
 	}
 }

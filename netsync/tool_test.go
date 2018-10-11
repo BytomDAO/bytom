@@ -4,10 +4,12 @@ import (
 	"errors"
 	"math/rand"
 	"net"
+	"time"
 
 	wire "github.com/tendermint/go-wire"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/test/mock"
 )
@@ -94,27 +96,25 @@ func (nw *NetWork) Register(node *SyncManager, addr, id string, flag consensus.S
 	nw.nodes[node] = *peer
 }
 
-func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) error {
+func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) (*P2PPeer, *P2PPeer, error) {
 	B2A, ok := nw.nodes[nodeA]
 	if !ok {
-		return errors.New("can't find nodeA's p2p peer on network")
+		return nil, nil, errors.New("can't find nodeA's p2p peer on network")
 	}
 	A2B, ok := nw.nodes[nodeB]
 	if !ok {
-		return errors.New("can't find nodeB's p2p peer on network")
+		return nil, nil, errors.New("can't find nodeB's p2p peer on network")
 	}
 
 	A2B.SetConnection(&B2A, nodeB)
 	B2A.SetConnection(&A2B, nodeA)
-	go A2B.postMan()
-	go B2A.postMan()
 
 	nodeA.handleStatusRequestMsg(&A2B)
 	nodeB.handleStatusRequestMsg(&B2A)
 
 	A2B.setAsync(true)
 	B2A.setAsync(true)
-	return nil
+	return &B2A, &A2B, nil
 }
 
 func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
@@ -156,4 +156,31 @@ func mockSync(blocks []*types.Block) *SyncManager {
 		blockKeeper: newBlockKeeper(chain, peers),
 		peers:       peers,
 	}
+}
+
+func mockTxs(txCount int) ([]*types.Tx, []*bc.Tx) {
+	var txs []*types.Tx
+	var bcTxs []*bc.Tx
+	for i := 0; i < txCount; i++ {
+		trueProg := mockControlProgram(60)
+		assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
+		now := []byte(time.Now().String())
+		issuanceInp := types.NewIssuanceInput(now, 1, trueProg, nil, nil)
+		tx := types.NewTx(types.TxData{
+			Version: 1,
+			Inputs:  []*types.TxInput{issuanceInp},
+			Outputs: []*types.TxOutput{types.NewTxOutput(assetID, 1, trueProg)},
+		})
+		txs = append(txs, tx)
+		bcTxs = append(bcTxs, tx.Tx)
+	}
+	return txs, bcTxs
+}
+
+func mockControlProgram(length int) []byte {
+	var cp []byte
+	for i := 0; i < length; i++ {
+		cp = append(cp, byte(rand.Intn(1<<8)))
+	}
+	return cp
 }

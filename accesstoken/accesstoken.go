@@ -12,7 +12,7 @@ import (
 
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/errors"
 )
 
@@ -72,7 +72,7 @@ func (cs *CredentialStore) Create(id, typ string) (*Token, error) {
 	}
 
 	hashedSecret := make([]byte, tokenSize)
-	sha3pool.Sum256(hashedSecret, secret)
+	sm3.Sum(hashedSecret, secret)
 
 	token := &Token{
 		ID:      id,

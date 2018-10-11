@@ -10,7 +10,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
@@ -87,7 +87,7 @@ type addressResp struct {
 	Address        string `json:"address"`
 	ControlProgram string `json:"control_program"`
 	Change         bool   `json:"change"`
-	KeyIndex       uint64 `json:"-"`
+	KeyIndex       uint64 `json:"key_index"`
 }
 
 // SortByIndex implements sort.Interface for addressResp slices

@@ -11,7 +11,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm3"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -125,7 +125,7 @@ transactionLoop:
 		statusFail, _ := txStatus.GetStatus(pos)
 		for _, v := range tx.Outputs {
 			var hash [32]byte
-			sha3pool.Sum256(hash[:], v.ControlProgram)
+			sm3.Sum(hash[:], v.ControlProgram)
 			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
@@ -238,8 +238,8 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 }
 
 // GetAccountBalances return all account balances
-func (w *Wallet) GetAccountBalances(id string) ([]AccountBalance, error) {
-	return w.indexBalances(w.GetAccountUtxos("", false, false))
+func (w *Wallet) GetAccountBalances(accountID string, id string) ([]AccountBalance, error) {
+	return w.indexBalances(w.GetAccountUtxos(accountID, "", false, false))
 }
 
 // AccountBalance account balance

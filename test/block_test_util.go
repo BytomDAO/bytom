@@ -15,7 +15,9 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	txsFee := uint64(0)
 	txEntries := []*bc.Tx{nil}
 	txStatus := bc.NewTransactionStatus()
-	txStatus.SetStatus(0, false)
+	if err := txStatus.SetStatus(0, false); err != nil {
+		return nil, err
+	}
 
 	preBlockHeader := chain.BestBlockHeader()
 	preBlockHash := preBlockHeader.Hash()
@@ -61,12 +63,12 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 
 	b.Transactions[0] = coinbaseTx
 	txEntries[0] = coinbaseTx.Tx
-	b.TransactionsMerkleRoot, err = bc.TxMerkleRoot(txEntries)
+	b.TransactionsMerkleRoot, err = types.TxMerkleRoot(txEntries)
 	if err != nil {
 		return nil, err
 	}
 
-	b.TransactionStatusHash, err = bc.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	b.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	return b, err
 }
 
@@ -78,7 +80,7 @@ func ReplaceCoinbase(block *types.Block, coinbaseTx *types.Tx) (err error) {
 		txEntires = append(txEntires, block.Transactions[i].Tx)
 	}
 
-	block.TransactionsMerkleRoot, err = bc.TxMerkleRoot(txEntires)
+	block.TransactionsMerkleRoot, err = types.TxMerkleRoot(txEntires)
 	return
 }
 

@@ -10,7 +10,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -54,9 +54,13 @@ func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Templa
 	}
 
 	b := txbuilder.NewBuilder(time.Now())
-	b.AddInput(txInput, sigInst)
+	if err := b.AddInput(txInput, sigInst); err != nil {
+		return nil, nil, err
+	}
 	out := types.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)})
-	b.AddOutput(out)
+	if err := b.AddOutput(out); err != nil {
+		return nil, nil, err
+	}
 	return b.Build()
 }
 

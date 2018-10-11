@@ -5,23 +5,26 @@ import (
 	"strings"
 
 	"github.com/bytom/asset"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
+	chainjson "github.com/bytom/encoding/json"
 
 	log "github.com/sirupsen/logrus"
 )
 
 // POST /create-asset
 func (a *API) createAsset(ctx context.Context, ins struct {
-	Alias      string                 `json:"alias"`
-	RootXPubs  []chainkd.XPub         `json:"root_xpubs"`
-	Quorum     int                    `json:"quorum"`
-	Definition map[string]interface{} `json:"definition"`
+	Alias           string                 `json:"alias"`
+	RootXPubs       []chainkd.XPub         `json:"root_xpubs"`
+	Quorum          int                    `json:"quorum"`
+	Definition      map[string]interface{} `json:"definition"`
+	IssuanceProgram chainjson.HexBytes     `json:"issuance_program"`
 }) Response {
 	ass, err := a.wallet.AssetReg.Define(
 		ins.RootXPubs,
 		ins.Quorum,
 		ins.Definition,
 		strings.ToUpper(strings.TrimSpace(ins.Alias)),
+		ins.IssuanceProgram,
 	)
 	if err != nil {
 		return NewErrorResponse(err)

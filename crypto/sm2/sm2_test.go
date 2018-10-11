@@ -25,6 +25,7 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -215,5 +216,20 @@ func BenchmarkSM2(t *testing.B) {
 		} else {
 			fmt.Printf("Verify ok\n")
 		}
+	}
+}
+
+func TestCompress(t *testing.T) {
+	privkey, _ := GenerateKey()
+	pubKey, _ := privkey.Public().(*PublicKey)
+	fmt.Printf("pubKey is:\n%x\n", pubKey)
+	pubkeyComp := Compress(pubKey)
+	fmt.Printf("pubkeyComp is:%x\n", pubkeyComp)
+
+	pubkeyDecomp := Decompress(pubkeyComp)
+	fmt.Printf("pubkeyDecomp is:\n%x\n", pubkeyDecomp)
+
+	if !reflect.DeepEqual(pubKey, pubkeyDecomp) {
+		t.Errorf("content mismatch: pubKey:\n%x, pubkeyDecomp:\n%x", pubKey, pubkeyDecomp)
 	}
 }

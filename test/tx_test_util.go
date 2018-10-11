@@ -15,8 +15,8 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm2/chainkd"
+	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -48,7 +48,7 @@ func (g *TxGenerator) Reset() {
 }
 
 func (g *TxGenerator) createKey(alias string, auth string) error {
-	_, err := g.Hsm.XCreate(alias, auth)
+	_, _, err := g.Hsm.XCreate(alias, auth, "en")
 	return err
 }
 
@@ -80,7 +80,7 @@ func (g *TxGenerator) createAsset(accountAlias string, assetAlias string) (*asse
 	if err != nil {
 		return nil, err
 	}
-	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias)
+	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
 }
 
 func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (*account.UTXO, error) {
@@ -295,7 +295,7 @@ func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, erro
 func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
 	cp := account.CtrlProgram{}
 	var hash [32]byte
-	sha3pool.Sum256(hash[:], input.ControlProgram)
+	sm3.Sum(hash[:], input.ControlProgram)
 	bytes := db.Get(account.ContractKey(hash))
 	if bytes == nil {
 		return nil, fmt.Errorf("can't find CtrlProgram for the SpendInput")
@@ -387,8 +387,12 @@ func CreateTxFromTx(baseTx *types.Tx, outputIndex uint64, outputAmount uint64, c
 	}
 	output := types.NewTxOutput(*consensus.BTMAssetID, outputAmount, ctrlProgram)
 	builder := txbuilder.NewBuilder(time.Now())
-	builder.AddInput(txInput, &txbuilder.SigningInstruction{})
-	builder.AddOutput(output)
+	if err := builder.AddInput(txInput, &txbuilder.SigningInstruction{}); err != nil {
+		return nil, err
+	}
+	if err := builder.AddOutput(output); err != nil {
+		return nil, err
+	}
 
 	tpl, _, err := builder.Build()
 	if err != nil {
