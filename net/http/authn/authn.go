@@ -2,7 +2,6 @@ package authn
 
 import (
 	"context"
-	"crypto/x509"
 	"net"
 	"net/http"
 	"strings"
@@ -26,10 +25,8 @@ var (
 
 //API describe the token authenticate.
 type API struct {
-	tokens             *accesstoken.CredentialStore
-	crosscoreRPCPrefix string
-	rootCAs            *x509.CertPool
-
+	disable  bool
+	tokens   *accesstoken.CredentialStore
 	tokenMu  sync.Mutex // protects the following
 	tokenMap map[string]tokenResult
 }
@@ -39,8 +36,9 @@ type tokenResult struct {
 }
 
 //NewAPI create a token authenticate object.
-func NewAPI(tokens *accesstoken.CredentialStore) *API {
+func NewAPI(tokens *accesstoken.CredentialStore, disable bool) *API {
 	return &API{
+		disable:  disable,
 		tokens:   tokens,
 		tokenMap: make(map[string]tokenResult),
 	}
@@ -56,9 +54,18 @@ func (a *API) Authenticate(req *http.Request) (*http.Request, error) {
 		// if this request was successfully authenticated with a token, pass the token along
 		ctx = newContextWithToken(ctx, token)
 	}
+
 	local := a.localhostAuthn(req)
 	if local {
 		ctx = newContextWithLocalhost(ctx)
+	}
+
+	if !local && strings.HasPrefix(req.URL.Path, "/backup-wallet") {
+		return req.WithContext(ctx), errors.New("only local can get access backup-wallets")
+	}
+
+	if !local && strings.HasPrefix(req.URL.Path, "/restore-wallet") {
+		return req.WithContext(ctx), errors.New("only local can get access restore-wallet")
 	}
 
 	if !local && strings.HasPrefix(req.URL.Path, "/list-access-tokens") {
@@ -81,40 +88,6 @@ func (a *API) Authenticate(req *http.Request) (*http.Request, error) {
 	return req.WithContext(ctx), err
 }
 
-// checks the request for a valid client cert list.
-// If found, it is added to the request's context.
-// Note that an *invalid* client cert is treated the
-// same as no client cert -- it is omitted from the
-// returned context, but the connection may proceed.
-func certAuthn(req *http.Request, rootCAs *x509.CertPool) context.Context {
-	if req.TLS != nil && len(req.TLS.PeerCertificates) > 0 {
-		certs := req.TLS.PeerCertificates
-
-		// Same logic as serverHandshakeState.processCertsFromClient
-		// in $GOROOT/src/crypto/tls/handshake_server.go.
-		opts := x509.VerifyOptions{
-			Roots:         rootCAs,
-			CurrentTime:   time.Now(),
-			Intermediates: x509.NewCertPool(),
-			KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-		}
-		for _, cert := range certs[1:] {
-			opts.Intermediates.AddCert(cert)
-		}
-
-		if _, err := certs[0].Verify(opts); err != nil {
-			// crypto/tls treats this as an error:
-			// errors.New("tls: failed to verify client's certificate: " + err.Error())
-			// For us, it is ok; we want to treat it the same as if there
-			// were no client cert presented.
-			return req.Context()
-		}
-
-		return context.WithValue(req.Context(), x509CertsKey, certs)
-	}
-	return req.Context()
-}
-
 // returns true if this request is coming from a loopback address
 func (a *API) localhostAuthn(req *http.Request) bool {
 	h, _, err := net.SplitHostPort(req.RemoteAddr)
@@ -128,6 +101,10 @@ func (a *API) localhostAuthn(req *http.Request) bool {
 }
 
 func (a *API) tokenAuthn(req *http.Request) (string, error) {
+	if a.disable {
+		return "", nil
+	}
+
 	user, pw, ok := req.BasicAuth()
 	if !ok {
 		return "", ErrNoToken

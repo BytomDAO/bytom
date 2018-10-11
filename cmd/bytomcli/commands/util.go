@@ -9,24 +9,26 @@ import (
 
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/encoding/json"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/util"
 )
 
 // accountIns is used for account related request.
 type accountIns struct {
-	RootXPubs   []chainkd.XPub         `json:"root_xpubs"`
-	Quorum      int                    `json:"quorum"`
-	Alias       string                 `json:"alias"`
-	AccessToken string                 `json:"access_token"`
+	RootXPubs   []chainkd.XPub `json:"root_xpubs"`
+	Quorum      int            `json:"quorum"`
+	Alias       string         `json:"alias"`
+	AccessToken string         `json:"access_token"`
 }
 
 // assetIns is used for asset related request.
 type assetIns struct {
-	RootXPubs   []chainkd.XPub         `json:"root_xpubs"`
-	Quorum      int                    `json:"quorum"`
-	Alias       string                 `json:"alias"`
-	Definition  map[string]interface{} `json:"definition"`
-	AccessToken string                 `json:"access_token"`
+	RootXPubs       []chainkd.XPub         `json:"root_xpubs"`
+	Quorum          int                    `json:"quorum"`
+	Alias           string                 `json:"alias"`
+	Definition      map[string]interface{} `json:"definition"`
+	IssuanceProgram chainjson.HexBytes     `json:"issuance_program"`
+	AccessToken     string                 `json:"access_token"`
 }
 
 type requestQuery struct {

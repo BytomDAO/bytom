@@ -22,7 +22,6 @@ type TemplateBuilder struct {
 	minTime             time.Time
 	maxTime             time.Time
 	timeRange           uint64
-	referenceData       []byte
 	rollbacks           []func()
 	callbacks           []func() error
 }
@@ -44,6 +43,11 @@ func (b *TemplateBuilder) AddOutput(o *types.TxOutput) error {
 	}
 	b.outputs = append(b.outputs, o)
 	return nil
+}
+
+// InputCount return number of input in the template builder
+func (b *TemplateBuilder) InputCount() int {
+	return len(b.inputs)
 }
 
 // RestrictMinTime set minTime
@@ -82,7 +86,8 @@ func (b *TemplateBuilder) OnBuild(buildFn func() error) {
 	b.callbacks = append(b.callbacks, buildFn)
 }
 
-func (b *TemplateBuilder) rollback() {
+// Rollback action for handle fail build
+func (b *TemplateBuilder) Rollback() {
 	for _, f := range b.rollbacks {
 		f()
 	}
@@ -127,5 +132,6 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 	}
 
 	tpl.Transaction = types.NewTx(*tx)
+	tpl.Fee = CalculateTxFee(tpl.Transaction)
 	return tpl, tx, nil
 }

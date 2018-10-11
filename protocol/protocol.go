@@ -14,10 +14,6 @@ import (
 
 const maxProcessBlockChSize = 1024
 
-// ErrTheDistantFuture is returned when waiting for a blockheight too far in
-// excess of the tip of the blockchain.
-var ErrTheDistantFuture = errors.New("block height too far in future")
-
 // Chain provides functions for working with the Bytom block chain.
 type Chain struct {
 	index          *state.BlockIndex
@@ -49,7 +45,7 @@ func NewChain(store Store, txPool *TxPool) (*Chain, error) {
 	}
 
 	var err error
-	if c.index, err = store.LoadBlockIndex(); err != nil {
+	if c.index, err = store.LoadBlockIndex(storeStatus.Height); err != nil {
 		return nil, err
 	}
 
@@ -63,7 +59,9 @@ func (c *Chain) initChainStatus() error {
 	genesisBlock := config.GenesisBlock()
 	txStatus := bc.NewTransactionStatus()
 	for i := range genesisBlock.Transactions {
-		txStatus.SetStatus(i, false)
+		if err := txStatus.SetStatus(i, false); err != nil {
+			return err
+		}
 	}
 
 	if err := c.store.SaveBlock(genesisBlock, txStatus); err != nil {

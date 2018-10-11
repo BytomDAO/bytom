@@ -122,7 +122,7 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 	return loadBlockStoreStateJSON(s.db)
 }
 
-func (s *Store) LoadBlockIndex() (*state.BlockIndex, error) {
+func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
 	blockIndex := state.NewBlockIndex()
 	bhIter := s.db.IteratorPrefix(blockHeaderPrefix)
 	defer bhIter.Release()
@@ -132,6 +132,12 @@ func (s *Store) LoadBlockIndex() (*state.BlockIndex, error) {
 		bh := &types.BlockHeader{}
 		if err := bh.UnmarshalText(bhIter.Value()); err != nil {
 			return nil, err
+		}
+		
+		// If a block with a height greater than the best height of state is added to the index,
+		// It may cause a bug that the new block cant not be process properly.
+		if bh.Height > stateBestHeight {
+			break
 		}
 
 		var parent *state.BlockNode

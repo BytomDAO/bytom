@@ -1,16 +1,198 @@
 package account
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/testutil"
 )
+
+func TestReserveBtmUtxoChain(t *testing.T) {
+	chainTxUtxoNum = 3
+	utxos := []*UTXO{}
+	m := mockAccountManager(t)
+	for i := uint64(1); i <= 20; i++ {
+		utxo := &UTXO{
+			OutputID:  bc.Hash{V0: i},
+			AccountID: "TestAccountID",
+			AssetID:   *consensus.BTMAssetID,
+			Amount:    i * chainTxMergeGas,
+		}
+		utxos = append(utxos, utxo)
+
+		data, err := json.Marshal(utxo)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		m.db.Set(StandardUTXOKey(utxo.OutputID), data)
+	}
+
+	cases := []struct {
+		amount uint64
+		want   []uint64
+		err    bool
+	}{
+		{
+			amount: 1 * chainTxMergeGas,
+			want:   []uint64{1},
+		},
+		{
+			amount: 888888 * chainTxMergeGas,
+			want:   []uint64{},
+			err:    true,
+		},
+		{
+			amount: 7 * chainTxMergeGas,
+			want:   []uint64{4, 3, 1},
+		},
+		{
+			amount: 15 * chainTxMergeGas,
+			want:   []uint64{5, 4, 3, 2, 1, 6},
+		},
+		{
+			amount: 163 * chainTxMergeGas,
+			want:   []uint64{20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 2, 1, 3},
+		},
+	}
+
+	for i, c := range cases {
+		m.utxoKeeper.expireReservation(time.Unix(999999999, 0))
+		utxos, err := m.reserveBtmUtxoChain(&txbuilder.TemplateBuilder{}, "TestAccountID", c.amount, false)
+
+		if err != nil != c.err {
+			t.Fatalf("case %d got err %v want err = %v", i, err, c.err)
+		}
+
+		got := []uint64{}
+		for _, utxo := range utxos {
+			got = append(got, utxo.Amount/chainTxMergeGas)
+		}
+
+		if !testutil.DeepEqual(got, c.want) {
+			t.Fatalf("case %d got %d want %d", i, got, c.want)
+		}
+	}
+
+}
+
+func TestBuildBtmTxChain(t *testing.T) {
+	chainTxUtxoNum = 3
+	m := mockAccountManager(t)
+	cases := []struct {
+		inputUtxo  []uint64
+		wantInput  [][]uint64
+		wantOutput [][]uint64
+		wantUtxo   uint64
+	}{
+		{
+			inputUtxo:  []uint64{5},
+			wantInput:  [][]uint64{},
+			wantOutput: [][]uint64{},
+			wantUtxo:   5 * chainTxMergeGas,
+		},
+		{
+			inputUtxo: []uint64{5, 4},
+			wantInput: [][]uint64{
+				[]uint64{5, 4},
+			},
+			wantOutput: [][]uint64{
+				[]uint64{8},
+			},
+			wantUtxo: 8 * chainTxMergeGas,
+		},
+		{
+			inputUtxo: []uint64{5, 4, 1, 1},
+			wantInput: [][]uint64{
+				[]uint64{5, 4, 1},
+				[]uint64{1, 9},
+			},
+			wantOutput: [][]uint64{
+				[]uint64{9},
+				[]uint64{9},
+			},
+			wantUtxo: 9 * chainTxMergeGas,
+		},
+		{
+			inputUtxo: []uint64{22, 123, 53, 234, 23, 4, 2423, 24, 23, 43, 34, 234, 234, 24},
+			wantInput: [][]uint64{
+				[]uint64{22, 123, 53},
+				[]uint64{234, 23, 4},
+				[]uint64{2423, 24, 23},
+				[]uint64{43, 34, 234},
+				[]uint64{234, 24, 197},
+				[]uint64{260, 2469, 310},
+				[]uint64{454, 3038},
+			},
+			wantOutput: [][]uint64{
+				[]uint64{197},
+				[]uint64{260},
+				[]uint64{2469},
+				[]uint64{310},
+				[]uint64{454},
+				[]uint64{3038},
+				[]uint64{3491},
+			},
+			wantUtxo: 3491 * chainTxMergeGas,
+		},
+	}
+
+	acct, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "testAccount")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	acp, err := m.CreateAddress(acct.ID, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for caseIndex, c := range cases {
+		utxos := []*UTXO{}
+		for _, amount := range c.inputUtxo {
+			utxos = append(utxos, &UTXO{
+				Amount:         amount * chainTxMergeGas,
+				AssetID:        *consensus.BTMAssetID,
+				Address:        acp.Address,
+				ControlProgram: acp.ControlProgram,
+			})
+		}
+
+		tpls, gotUtxo, err := m.buildBtmTxChain(utxos, acct.Signer)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		for i, tpl := range tpls {
+			gotInput := []uint64{}
+			for _, input := range tpl.Transaction.Inputs {
+				gotInput = append(gotInput, input.Amount()/chainTxMergeGas)
+			}
+
+			gotOutput := []uint64{}
+			for _, output := range tpl.Transaction.Outputs {
+				gotOutput = append(gotOutput, output.Amount/chainTxMergeGas)
+			}
+
+			if !testutil.DeepEqual(c.wantInput[i], gotInput) {
+				t.Fatalf("case %d tx %d input got %d want %d", caseIndex, i, gotInput, c.wantInput[i])
+			}
+			if !testutil.DeepEqual(c.wantOutput[i], gotOutput) {
+				t.Fatalf("case %d tx %d output got %d want %d", caseIndex, i, gotOutput, c.wantOutput[i])
+			}
+		}
+
+		if c.wantUtxo != gotUtxo.Amount {
+			t.Fatalf("case %d got utxo=%d want utxo=%d", caseIndex, gotUtxo.Amount, c.wantUtxo)
+		}
+	}
+
+}
 
 func TestMergeSpendAction(t *testing.T) {
 	testBTM := &bc.AssetID{}
@@ -356,128 +538,50 @@ func TestMergeSpendAction(t *testing.T) {
 	}
 }
 
-func TestSpendUTXOArguments(t *testing.T) {
-	hexXpub, err := hex.DecodeString("ba76bb52574b3f40315f2c01f1818a9072ced56e9d4b68acbef56a4d0077d08e5e34837963e4cdc54eb251aa34aad01e6ae48b140f6a2743fbb0a0abd9cf8aac")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var xpub chainkd.XPub
-	copy(xpub[:], hexXpub)
-
-	rawTxSig := rawTxSigArgument{RootXPub: xpub, Path: []chainjson.HexBytes{{1, 1, 0, 0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0, 0, 0}}}
-	rawTxSigMsg, err := json.Marshal(rawTxSig)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	data := dataArgument{Value: "7468697320697320612074657374"}
-	dataMsg, err := json.Marshal(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+func TestCalcMergeGas(t *testing.T) {
+	chainTxUtxoNum = 10
 	cases := []struct {
-		rawAction  string
-		wantResult *spendUTXOAction
+		utxoNum int
+		gas     uint64
 	}{
 		{
-			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "e304de887423e4e684e483f5ae65236d47018b56cac94ef3fb8b5dd40c897e11",
-				"arguments": [{"type": "raw_tx_signature", "raw_data": {"derivation_path": ["010100000000000000", "0100000000000000"],
-	            "xpub": "ba76bb52574b3f40315f2c01f1818a9072ced56e9d4b68acbef56a4d0077d08e5e34837963e4cdc54eb251aa34aad01e6ae48b140f6a2743fbb0a0abd9cf8aac"}}]}`,
-			wantResult: &spendUTXOAction{
-				OutputID: &bc.Hash{16358444424161912038, 9575923798912607085, 5116523856555233011, 18125684290607480337},
-				Arguments: []contractArgument{
-					{
-						Type:    "raw_tx_signature",
-						RawData: rawTxSigMsg,
-					},
-				},
-			},
+			utxoNum: 0,
+			gas:     0,
 		},
 		{
-			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "8669b5c2e0701ec1ca45cd413e46c4f1d5f794f9d9144f904f3e7da8c68c6410",
-				"arguments": [{"type": "data", "raw_data": {"value": "7468697320697320612074657374"}}]}`,
-			wantResult: &spendUTXOAction{
-				OutputID: &bc.Hash{9685472322230689473, 14575281449155871985, 15417955650135936912, 5710139541391434768},
-				Arguments: []contractArgument{
-					{
-						Type:    "data",
-						RawData: dataMsg,
-					},
-				},
-			},
+			utxoNum: 1,
+			gas:     0,
 		},
 		{
-			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "8669b5c2e0701ec1ca45cd413e46c4f1d5f794f9d9144f904f3e7da8c68c6410",
-				"arguments": [{"type": "signature", "raw_data": {"value": "7468697320697320612074657374"}}]}`,
-			wantResult: &spendUTXOAction{
-				OutputID: &bc.Hash{9685472322230689473, 14575281449155871985, 15417955650135936912, 5710139541391434768},
-			},
+			utxoNum: 9,
+			gas:     chainTxMergeGas,
 		},
 		{
-			rawAction: `{ "type": "spend_account_unspent_output", "output_id": "8669b5c2e0701ec1ca45cd413e46c4f1d5f794f9d9144f904f3e7da8c68c6410"}`,
-			wantResult: &spendUTXOAction{
-				OutputID:  &bc.Hash{9685472322230689473, 14575281449155871985, 15417955650135936912, 5710139541391434768},
-				Arguments: nil,
-			},
+			utxoNum: 10,
+			gas:     chainTxMergeGas,
+		},
+		{
+			utxoNum: 11,
+			gas:     chainTxMergeGas * 2,
+		},
+		{
+			utxoNum: 20,
+			gas:     chainTxMergeGas * 3,
+		},
+		{
+			utxoNum: 21,
+			gas:     chainTxMergeGas * 3,
+		},
+		{
+			utxoNum: 74,
+			gas:     chainTxMergeGas * 9,
 		},
 	}
 
-	for _, c := range cases {
-		var spendUTXOReq *spendUTXOAction
-		if err := json.Unmarshal([]byte(c.rawAction), &spendUTXOReq); err != nil {
-			t.Fatalf("unmarshal spendUTXOAction error:%v", err)
-		}
-
-		if !testutil.DeepEqual(spendUTXOReq.OutputID, c.wantResult.OutputID) {
-			t.Fatalf("OutputID gotResult=%v, wantResult=%v", spendUTXOReq.OutputID, c.wantResult.OutputID)
-		}
-
-		if spendUTXOReq.Arguments == nil {
-			if c.wantResult.Arguments != nil {
-				t.Fatalf("Arguments gotResult is nil, wantResult[%v] is not nil", c.wantResult.Arguments)
-			}
-			continue
-		}
-
-		for _, arg := range spendUTXOReq.Arguments {
-			switch arg.Type {
-			case "raw_tx_signature":
-				rawTxSig := &rawTxSigArgument{}
-				if err := json.Unmarshal(arg.RawData, rawTxSig); err != nil {
-					t.Fatalf("unmarshal rawTxSigArgument error:%v", err)
-				}
-
-				wantRawTxSig := &rawTxSigArgument{}
-				if err := json.Unmarshal(c.wantResult.Arguments[0].RawData, wantRawTxSig); err != nil {
-					t.Fatalf("unmarshal want rawTxSigArgument error:%v", err)
-				}
-
-				if !testutil.DeepEqual(rawTxSig, wantRawTxSig) {
-					t.Fatalf("rawTxSigArgument gotResult=%v, wantResult=%v", rawTxSig, wantRawTxSig)
-				}
-
-			case "data":
-				data := &dataArgument{}
-				if err := json.Unmarshal(arg.RawData, data); err != nil {
-					t.Fatalf("unmarshal dataArgument error:%v", err)
-				}
-
-				wantData := &dataArgument{}
-				if err := json.Unmarshal(c.wantResult.Arguments[0].RawData, wantData); err != nil {
-					t.Fatalf("unmarshal want dataArgument error:%v", err)
-				}
-
-				if !testutil.DeepEqual(data, wantData) {
-					t.Fatalf("dataArgument gotResult=%v, wantResult=%v", data, wantData)
-				}
-
-			default:
-				if arg.Type == "raw_tx_signature" || arg.Type == "data" {
-					t.Fatalf("argument type [%v] is not exist", arg.Type)
-				}
-			}
+	for i, c := range cases {
+		gas := calcMergeGas(c.utxoNum)
+		if gas != c.gas {
+			t.Fatalf("case %d got %d want %d", i, gas, c.gas)
 		}
 	}
 }
