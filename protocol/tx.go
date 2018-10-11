@@ -39,12 +39,9 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 		return false, err
 	}
 
-<<<<<<< HEAD
-=======
 	if err != nil {
 		log.WithFields(log.Fields{"tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
 	}
 
->>>>>>> dev
 	return c.txPool.ProcessTransaction(tx, err != nil, block.BlockHeader.Height, gasStatus.BTMValue)
 }

@@ -50,23 +50,6 @@ func (a *API) setCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) R
 	return a.getCoinbaseArbitrary()
 }
 
-type CoinbaseArbitrary struct {
-	Arbitrary chainjson.HexBytes `json:"arbitrary"`
-}
-
-func (a *API) getCoinbaseArbitrary() Response {
-	arbitrary := a.wallet.AccountMgr.GetCoinbaseArbitrary()
-	resp := &CoinbaseArbitrary{
-		Arbitrary: arbitrary,
-	}
-	return NewSuccessResponse(resp)
-}
-
-func (a *API) setCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) Response {
-	a.wallet.AccountMgr.SetCoinbaseArbitrary(req.Arbitrary)
-	return a.getCoinbaseArbitrary()
-}
-
 // getWork gets work in compressed protobuf format
 func (a *API) getWork() Response {
 	work, err := a.GetWork()
