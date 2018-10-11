@@ -71,3 +71,4 @@ blockchain/pseudohsm/UTC--2017-11-01T09-24-30.596579759Z--2178d885-aca6-4436-a86
 # gmsm test cache
 ifile
 ofile
+*.pem

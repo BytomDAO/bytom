@@ -349,7 +349,7 @@ func ZA(pub *PublicKey, uid []byte) ([]byte, error) {
 	xBuf := pub.X.Bytes()
 	yBuf := pub.Y.Bytes()
 	if n := len(xBuf); n < 32 {
-		xBuf = append(zeroByteSlice[:32-n], xBuf...)
+		xBuf = append(zeroByteSlice()[:32-n], xBuf...)
 	}
 	za.Write(xBuf)
 	za.Write(yBuf)
@@ -357,15 +357,17 @@ func ZA(pub *PublicKey, uid []byte) ([]byte, error) {
 }
 
 // 32byte
-var zeroByteSlice = []byte{
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
-	0, 0, 0, 0,
+func zeroByteSlice() []byte {
+	return []byte{
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+		0, 0, 0, 0,
+	}
 }
 
 /*
@@ -391,16 +393,16 @@ func Encrypt(pub *PublicKey, data []byte) ([]byte, error) {
 		x2Buf := x2.Bytes()
 		y2Buf := y2.Bytes()
 		if n := len(x1Buf); n < 32 {
-			x1Buf = append(zeroByteSlice[:32-n], x1Buf...)
+			x1Buf = append(zeroByteSlice()[:32-n], x1Buf...)
 		}
 		if n := len(y1Buf); n < 32 {
-			y1Buf = append(zeroByteSlice[:32-n], y1Buf...)
+			y1Buf = append(zeroByteSlice()[:32-n], y1Buf...)
 		}
 		if n := len(x2Buf); n < 32 {
-			x2Buf = append(zeroByteSlice[:32-n], x2Buf...)
+			x2Buf = append(zeroByteSlice()[:32-n], x2Buf...)
 		}
 		if n := len(y2Buf); n < 32 {
-			y2Buf = append(zeroByteSlice[:32-n], y2Buf...)
+			y2Buf = append(zeroByteSlice()[:32-n], y2Buf...)
 		}
 		c = append(c, x1Buf...) // x分量
 		c = append(c, y1Buf...) // y分量
@@ -432,10 +434,10 @@ func Decrypt(priv *PrivateKey, data []byte) ([]byte, error) {
 	x2Buf := x2.Bytes()
 	y2Buf := y2.Bytes()
 	if n := len(x2Buf); n < 32 {
-		x2Buf = append(zeroByteSlice[:32-n], x2Buf...)
+		x2Buf = append(zeroByteSlice()[:32-n], x2Buf...)
 	}
 	if n := len(y2Buf); n < 32 {
-		y2Buf = append(zeroByteSlice[:32-n], y2Buf...)
+		y2Buf = append(zeroByteSlice()[:32-n], y2Buf...)
 	}
 	c, ok := kdf(x2Buf, y2Buf, length)
 	if !ok {
@@ -477,7 +479,7 @@ func Compress(a *PublicKey) []byte {
 	yp := getLastBit(a.Y)
 	buf = append(buf, a.X.Bytes()...)
 	if n := len(a.X.Bytes()); n < 32 {
-		buf = append(zeroByteSlice[:(32-n)], buf...)
+		buf = append(zeroByteSlice()[:(32-n)], buf...)
 	}
 	buf = append([]byte{byte(yp)}, buf...)
 	return buf
