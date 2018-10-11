@@ -60,14 +60,6 @@ func merkleRoot(nodes []merkleNode) (root bc.Hash, err error) {
 }
 
 func interiorMerkleHash(left merkleNode, right merkleNode) (hash bc.Hash) {
-	// h := sha3pool.Get256()
-	// defer sha3pool.Put256(h)
-	// h.Write(interiorPrefix)
-	// left.WriteTo(h)
-	// right.WriteTo(h)
-	// hash.ReadFrom(h)
-	// return hash
-
 	hasher := sm3.New()
 	hasher.Write(interiorPrefix)
 	left.WriteTo(hasher)
@@ -79,13 +71,6 @@ func interiorMerkleHash(left merkleNode, right merkleNode) (hash bc.Hash) {
 }
 
 func leafMerkleHash(node merkleNode) (hash bc.Hash) {
-	// h := sha3pool.Get256()
-	// defer sha3pool.Put256(h)
-	// h.Write(leafPrefix)
-	// node.WriteTo(h)
-	// hash.ReadFrom(h)
-	// return hash
-
 	hasher := sm3.New()
 	hasher.Write(leafPrefix)
 	node.WriteTo(hasher)

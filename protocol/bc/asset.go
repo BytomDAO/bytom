@@ -45,13 +45,6 @@ func (a *AssetID) IsZero() bool { return (*Hash)(a).IsZero() }
 
 // ComputeAssetID calculate the asset id from AssetDefinition
 func (ad *AssetDefinition) ComputeAssetID() (assetID AssetID) {
-	// h := sm3.Get256()
-	// defer sm3.Put256(h)
-	// writeForHash(h, *ad) // error is impossible
-	// var b [32]byte
-	// h.Read(b[:]) // error is impossible
-	// return NewAssetID(b)
-
 	h := sm3.New()
 	writeForHash(h, *ad) // error is impossible
 	var b32 [32]byte
