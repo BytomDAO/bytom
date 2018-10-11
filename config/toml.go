@@ -28,29 +28,30 @@ api_addr = "0.0.0.0:9888"
 
 var mainNetConfigTmpl = `chain_id = "mainnet"
 [p2p]
-laddr = "tcp://0.0.0.0:46657"
-seeds = "45.79.213.28:46657,198.74.61.131:46657,212.111.41.245:46657,47.100.214.154:46657,47.100.109.199:46657,47.100.105.165:46657"
+laddr = "tcp://0.0.0.0:46660"
+seeds = "139.162.105.40:46660"
 `
 
 var testNetConfigTmpl = `chain_id = "wisdom"
 [p2p]
-laddr = "tcp://0.0.0.0:46656"
-seeds = "52.83.107.224:46656,52.83.107.224:46656,52.83.251.197:46656"
+laddr = "tcp://0.0.0.0:46659"
+seeds = "139.162.105.40:46659,139.224.132.186:46659"
 `
 
 var soloNetConfigTmpl = `chain_id = "solonet"
 [p2p]
-laddr = "tcp://0.0.0.0:46658"
+laddr = "tcp://0.0.0.0:46661"
 seeds = ""
 `
 
 // Select network seeds to merge a new string.
 func selectNetwork(network string) string {
-	if network == "testnet" {
-		return defaultConfigTmpl + testNetConfigTmpl
-	} else if network == "mainnet" {
+	switch network {
+	case "mainnet":
 		return defaultConfigTmpl + mainNetConfigTmpl
-	} else {
+	case "testnet":
+		return defaultConfigTmpl + testNetConfigTmpl
+	default:
 		return defaultConfigTmpl + soloNetConfigTmpl
 	}
 }

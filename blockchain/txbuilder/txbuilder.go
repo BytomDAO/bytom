@@ -4,10 +4,13 @@ package txbuilder
 
 import (
 	"context"
+	"encoding/hex"
+	"encoding/json"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/errors"
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
@@ -30,6 +33,8 @@ var (
 	ErrAction = errors.New("errors occurred in one or more actions")
 	//ErrMissingFields means missing required fields
 	ErrMissingFields = errors.New("required field is missing")
+	//ErrBadContractArgType means invalid contract argument type
+	ErrBadContractArgType = errors.New("invalid contract argument type")
 )
 
 // Build builds or adds on to a transaction.
@@ -56,14 +61,14 @@ func Build(ctx context.Context, tx *types.TxData, actions []Action, maxTime time
 
 	// If there were any errors, rollback and return a composite error.
 	if len(errs) > 0 {
-		builder.rollback()
+		builder.Rollback()
 		return nil, errors.WithData(ErrAction, "actions", errs)
 	}
 
 	// Build the transaction template.
 	tpl, tx, err := builder.Build()
 	if err != nil {
-		builder.rollback()
+		builder.Rollback()
 		return nil, err
 	}
 
@@ -106,7 +111,7 @@ func checkBlankCheck(tx *types.TxData) error {
 		asset := in.AssetID() // AssetID() is calculated for IssuanceInputs, so grab once
 		assetMap[asset], ok = checked.AddInt64(assetMap[asset], int64(in.Amount()))
 		if !ok {
-			return errors.WithDetailf(ErrBadAmount, "cumulative amounts for asset %s overflow the allowed asset amount 2^63", asset)
+			return errors.WithDetailf(ErrBadAmount, "cumulative amounts for asset %x overflow the allowed asset amount 2^63", asset)
 		}
 	}
 	for _, out := range tx.Outputs {
@@ -149,4 +154,41 @@ func checkBlankCheck(tx *types.TxData) error {
 // with a data item containing the given field names.
 func MissingFieldsError(name ...string) error {
 	return errors.WithData(ErrMissingFields, "missing_fields", name)
+}
+
+// AddContractArgs add contract arguments
+func AddContractArgs(sigInst *SigningInstruction, arguments []ContractArgument) error {
+	for _, arg := range arguments {
+		switch arg.Type {
+		case "raw_tx_signature":
+			rawTxSig := &RawTxSigArgument{}
+			if err := json.Unmarshal(arg.RawData, rawTxSig); err != nil {
+				return err
+			}
+
+			// convert path form chainjson.HexBytes to byte
+			var path [][]byte
+			for _, p := range rawTxSig.Path {
+				path = append(path, []byte(p))
+			}
+			sigInst.AddRawWitnessKeys([]chainkd.XPub{rawTxSig.RootXPub}, path, 1)
+
+		case "data":
+			data := &DataArgument{}
+			if err := json.Unmarshal(arg.RawData, data); err != nil {
+				return err
+			}
+
+			value, err := hex.DecodeString(data.Value)
+			if err != nil {
+				return err
+			}
+			sigInst.WitnessComponents = append(sigInst.WitnessComponents, DataWitness(value))
+
+		default:
+			return ErrBadContractArgType
+		}
+	}
+
+	return nil
 }

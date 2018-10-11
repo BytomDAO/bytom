@@ -50,7 +50,7 @@ func (h *HSM) Restore(image *KeyImage) error {
 		_, fileName := filepath.Split(xKey.ID)
 		file := h.keyStore.JoinPath(keyFileName(fileName))
 		if err := writeKeyFile(file, rawKey); err != nil {
-			return nil
+			return err
 		}
 	}
 	h.cache.maybeReload()

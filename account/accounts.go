@@ -16,8 +16,8 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm2/chainkd"
+	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -318,7 +318,7 @@ func (m *Manager) GetLocalCtrlProgramByAddress(address string) (*CtrlProgram, er
 	}
 
 	var hash [32]byte
-	sha3pool.Sum256(hash[:], program)
+	sm3.Sum(hash[:], program)
 	rawProgram := m.db.Get(ContractKey(hash))
 	if rawProgram == nil {
 		return nil, ErrFindCtrlProgram
@@ -340,7 +340,7 @@ func (m *Manager) GetMiningAddress() (string, error) {
 // IsLocalControlProgram check is the input control program belong to local
 func (m *Manager) IsLocalControlProgram(prog []byte) bool {
 	var hash common.Hash
-	sha3pool.Sum256(hash[:], prog)
+	sm3.Sum(hash[:], prog)
 	bytes := m.db.Get(ContractKey(hash))
 	return bytes != nil
 }
@@ -377,11 +377,11 @@ func (m *Manager) ListControlProgram() ([]*CtrlProgram, error) {
 	return cps, nil
 }
 
-func (m *Manager) ListUnconfirmedUtxo(isSmartContract bool) []*UTXO {
+func (m *Manager) ListUnconfirmedUtxo(accountID string, isSmartContract bool) []*UTXO {
 	utxos := m.utxoKeeper.ListUnconfirmed()
 	result := []*UTXO{}
 	for _, utxo := range utxos {
-		if segwit.IsP2WScript(utxo.ControlProgram) != isSmartContract {
+		if segwit.IsP2WScript(utxo.ControlProgram) != isSmartContract && (accountID == utxo.AccountID || accountID == "") {
 			result = append(result, utxo)
 		}
 	}
@@ -465,7 +465,7 @@ func (m *Manager) createP2SH(account *Account, change bool) (*CtrlProgram, error
 	if err != nil {
 		return nil, err
 	}
-	scriptHash := crypto.Sha256(signScript)
+	scriptHash := crypto.Sm3(signScript)
 
 	address, err := common.NewAddressWitnessScriptHash(scriptHash, &consensus.ActiveNetParams)
 	if err != nil {
@@ -540,7 +540,7 @@ func (m *Manager) insertControlPrograms(progs ...*CtrlProgram) error {
 			return err
 		}
 
-		sha3pool.Sum256(hash[:], prog.ControlProgram)
+		sm3.Sum(hash[:], prog.ControlProgram)
 		m.db.Set(ContractKey(hash), accountCP)
 	}
 	return nil

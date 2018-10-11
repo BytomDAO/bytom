@@ -1,7 +1,7 @@
 package vmutil
 
 import (
-	"github.com/bytom/crypto/ed25519"
+	"github.com/bytom/crypto/sm2"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/vm"
 )
@@ -17,7 +17,7 @@ func IsUnspendable(prog []byte) bool {
 	return len(prog) > 0 && prog[0] == byte(vm.OP_FAIL)
 }
 
-func (b *Builder) addP2SPMultiSig(pubkeys []ed25519.PublicKey, nrequired int) error {
+func (b *Builder) addP2SPMultiSig(pubkeys []sm2.PubKey, nrequired int) error {
 	if err := checkMultiSigParams(int64(nrequired), int64(len(pubkeys))); err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func P2PKHSigSm2Program(pubkeyHash []byte) ([]byte, error) {
 func P2SHProgram(scriptHash []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_DUP)
-	builder.AddOp(vm.OP_SHA3)
+	builder.AddOp(vm.OP_SM3)
 	builder.AddData(scriptHash)
 	builder.AddOp(vm.OP_EQUALVERIFY)
 	builder.AddInt64(-1)
@@ -106,7 +106,7 @@ func P2SHProgram(scriptHash []byte) ([]byte, error) {
 }
 
 // P2SPMultiSigProgram generates the script for contorl transaction output
-func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, error) {
+func P2SPMultiSigProgram(pubkeys []sm2.PubKey, nrequired int) ([]byte, error) {
 	builder := NewBuilder()
 	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, er
 }
 
 // ParseP2SPMultiSigProgram is unknow for us yet
-func ParseP2SPMultiSigProgram(program []byte) ([]ed25519.PublicKey, int, error) {
+func ParseP2SPMultiSigProgram(program []byte) ([]sm2.PubKey, int, error) {
 	pops, err := vm.ParseProgram(program)
 	if err != nil {
 		return nil, 0, err
@@ -146,12 +146,12 @@ func ParseP2SPMultiSigProgram(program []byte) ([]ed25519.PublicKey, int, error) 
 
 	firstPubkeyIndex := len(pops) - 7 - int(npubkeys)
 
-	pubkeys := make([]ed25519.PublicKey, 0, npubkeys)
+	pubkeys := make([]sm2.PubKey, 0, npubkeys)
 	for i := firstPubkeyIndex; i < firstPubkeyIndex+int(npubkeys); i++ {
-		if len(pops[i].Data) != ed25519.PublicKeySize {
+		if len(pops[i].Data) != sm2.PubKeySize {
 			return nil, 0, err
 		}
-		pubkeys = append(pubkeys, ed25519.PublicKey(pops[i].Data))
+		pubkeys = append(pubkeys, sm2.PubKey(pops[i].Data))
 	}
 	return pubkeys, int(nrequired), nil
 }

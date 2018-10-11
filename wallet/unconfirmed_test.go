@@ -12,7 +12,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/testutil"
 )
@@ -33,7 +33,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	xpub1, err := hsm.XCreate("test_pub1", "password")
+	xpub1, _, err := hsm.XCreate("test_pub1", "password", "en")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +51,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, nil)
-	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, "TESTASSET")
+	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, "TESTASSET", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

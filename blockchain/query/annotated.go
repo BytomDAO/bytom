@@ -3,7 +3,7 @@ package query
 import (
 	"encoding/json"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 )
@@ -24,19 +24,20 @@ type AnnotatedTx struct {
 
 //AnnotatedInput means an annotated transaction input.
 type AnnotatedInput struct {
-	Type            string             `json:"type"`
-	AssetID         bc.AssetID         `json:"asset_id"`
-	AssetAlias      string             `json:"asset_alias,omitempty"`
-	AssetDefinition *json.RawMessage   `json:"asset_definition,omitempty"`
-	Amount          uint64             `json:"amount"`
-	IssuanceProgram chainjson.HexBytes `json:"issuance_program,omitempty"`
-	ControlProgram  chainjson.HexBytes `json:"control_program,omitempty"`
-	Address         string             `json:"address,omitempty"`
-	SpentOutputID   *bc.Hash           `json:"spent_output_id,omitempty"`
-	AccountID       string             `json:"account_id,omitempty"`
-	AccountAlias    string             `json:"account_alias,omitempty"`
-	Arbitrary       chainjson.HexBytes `json:"arbitrary,omitempty"`
-	InputID         bc.Hash            `json:"input_id"`
+	Type             string               `json:"type"`
+	AssetID          bc.AssetID           `json:"asset_id"`
+	AssetAlias       string               `json:"asset_alias,omitempty"`
+	AssetDefinition  *json.RawMessage     `json:"asset_definition,omitempty"`
+	Amount           uint64               `json:"amount"`
+	IssuanceProgram  chainjson.HexBytes   `json:"issuance_program,omitempty"`
+	ControlProgram   chainjson.HexBytes   `json:"control_program,omitempty"`
+	Address          string               `json:"address,omitempty"`
+	SpentOutputID    *bc.Hash             `json:"spent_output_id,omitempty"`
+	AccountID        string               `json:"account_id,omitempty"`
+	AccountAlias     string               `json:"account_alias,omitempty"`
+	Arbitrary        chainjson.HexBytes   `json:"arbitrary,omitempty"`
+	InputID          bc.Hash              `json:"input_id"`
+	WitnessArguments []chainjson.HexBytes `json:"witness_arguments"`
 }
 
 //AnnotatedOutput means an annotated transaction output.

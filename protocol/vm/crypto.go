@@ -7,7 +7,6 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/crypto"
-	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/sm2"
 	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/math/checked"
@@ -62,10 +61,14 @@ func opCheckSig(vm *virtualMachine) error {
 	if len(msg) != 32 {
 		return ErrBadValue
 	}
-	if len(pubkeyBytes) != ed25519.PublicKeySize {
+	if len(pubkeyBytes) != sm2.PubKeySize {
 		return vm.pushBool(false, true)
 	}
-	return vm.pushBool(ed25519.Verify(ed25519.PublicKey(pubkeyBytes), msg, sig), true)
+	if len(sig) != sm2.SignatureSize {
+		return vm.pushBool(false, true)
+	}
+
+	return vm.pushBool(sm2.VerifyCompressedPubkey(sm2.PubKey(pubkeyBytes), msg, sig), true)
 }
 
 func opCheckMultiSig(vm *virtualMachine) error {
@@ -112,16 +115,16 @@ func opCheckMultiSig(vm *virtualMachine) error {
 		sigs = append(sigs, sig)
 	}
 
-	pubkeys := make([]ed25519.PublicKey, 0, numPubkeys)
+	pubkeys := make([]sm2.PubKey, 0, numPubkeys)
 	for _, p := range pubkeyByteses {
-		if len(p) != ed25519.PublicKeySize {
+		if len(p) != sm2.PubKeySize {
 			return vm.pushBool(false, true)
 		}
-		pubkeys = append(pubkeys, ed25519.PublicKey(p))
+		pubkeys = append(pubkeys, sm2.PubKey(p))
 	}
 
 	for len(sigs) > 0 && len(pubkeys) > 0 {
-		if ed25519.Verify(pubkeys[0], msg, sigs[0]) {
+		if sm2.VerifyCompressedPubkey(pubkeys[0], msg, sigs[0]) {
 			sigs = sigs[1:]
 		}
 		pubkeys = pubkeys[1:]
@@ -175,12 +178,13 @@ func opCheckSigSm2(vm *virtualMachine) error {
 		return err
 	}
 
-	if len(msg) != 32 || len(sig) != 64 {
+	if len(msg) != 32 || len(sig) != sm2.SignatureSize {
 		return ErrBadValue
 	}
-	if len(publicKey) != 33 {
+	if len(publicKey) != sm2.PubKeySize {
 		return vm.pushBool(false, true)
 	}
+
 	return vm.pushBool(sm2.VerifyCompressedPubkey(publicKey, msg, sig), true)
 }
 

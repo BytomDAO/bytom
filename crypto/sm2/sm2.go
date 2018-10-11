@@ -1,18 +1,3 @@
-/*
-Copyright Suzhou Tongji Fintech Research Institute 2017 All Rights Reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package sm2
 
 // reference to ecdsa
@@ -489,6 +474,7 @@ func getLastBit(a *big.Int) uint {
 	return a.Bit(0)
 }
 
+// Compress transform  publickey point struct to 33 bytes publickey.
 func Compress(a *PublicKey) []byte {
 	buf := []byte{}
 	yp := getLastBit(a.Y)
@@ -496,10 +482,19 @@ func Compress(a *PublicKey) []byte {
 	if n := len(a.X.Bytes()); n < 32 {
 		buf = append(zeroByteSlice()[:(32-n)], buf...)
 	}
-	buf = append([]byte{byte(yp)}, buf...)
+	// RFC: GB/T 32918.1-2016 4.2.9
+	// if yp = 0, buf = 02||x
+	// if yp = 0, buf = 03||x
+	if yp == uint(0) {
+		buf = append([]byte{byte(2)}, buf...)
+	}
+	if yp == uint(1) {
+		buf = append([]byte{byte(3)}, buf...)
+	}
 	return buf
 }
 
+// Decompress transform  33 bytes publickey to publickey point struct.
 func Decompress(a []byte) *PublicKey {
 	var aa, xx, xx3 sm2P256FieldElement
 
@@ -515,7 +510,12 @@ func Decompress(a []byte) *PublicKey {
 
 	y2 := sm2P256ToBig(&xx3)
 	y := new(big.Int).ModSqrt(y2, sm2P256.P)
-	if getLastBit(y) != uint(a[0]) {
+
+	// RFC: GB/T 32918.1-2016 4.2.10
+	// if a[0] = 02, getLastBit(y) = 0
+	// if a[0] = 03, getLastBit(y) = 1
+	// if yp = 0, buf = 03||x
+	if getLastBit(y) != uint(a[0])-2 {
 		y.Sub(sm2P256.P, y)
 	}
 	return &PublicKey{

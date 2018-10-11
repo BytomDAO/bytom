@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strconv"
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
@@ -18,7 +19,7 @@ type BlockHeaderJSON struct {
 	Timestamp         uint64                 `json:"timestamp"`           // The time of the block in seconds.
 	Nonce             uint64                 `json:"nonce"`               // Nonce used to generate the block.
 	Bits              uint64                 `json:"bits"`                // Difficulty target for the block.
-	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    //Block commitment
+	BlockCommitment   *types.BlockCommitment `json:"block_commitment"`    // Block commitment
 }
 
 type CoinbaseArbitrary struct {
@@ -33,7 +34,18 @@ func (a *API) getCoinbaseArbitrary() Response {
 	return NewSuccessResponse(resp)
 }
 
+// setCoinbaseArbitrary add arbitary data to the reserved coinbase data.
+// check function createCoinbaseTx in mining/mining.go for detail.
+// arbitraryLenLimit is 107 and can be calculated by:
+// 	maxHeight := ^uint64(0)
+// 	reserved := append([]byte{0x00}, []byte(strconv.FormatUint(maxHeight, 10))...)
+// 	arbitraryLenLimit := consensus.CoinbaseArbitrarySizeLimit - len(reserved)
 func (a *API) setCoinbaseArbitrary(ctx context.Context, req CoinbaseArbitrary) Response {
+	arbitraryLenLimit := 107
+	if len(req.Arbitrary) > arbitraryLenLimit {
+		err := errors.New("Arbitrary exceeds limit: " + strconv.FormatUint(uint64(arbitraryLenLimit), 10))
+		return NewErrorResponse(err)
+	}
 	a.wallet.AccountMgr.SetCoinbaseArbitrary(req.Arbitrary)
 	return a.getCoinbaseArbitrary()
 }
@@ -56,7 +68,27 @@ func (a *API) getWorkJSON() Response {
 	return NewSuccessResponse(work)
 }
 
-// SubmitWorkJSONReq is req struct for submit-work API
+// SubmitBlockReq is req struct for submit-block API
+type SubmitBlockReq struct {
+	Block *types.Block `json:"raw_block"`
+}
+
+// submitBlock trys to submit a raw block to the chain
+func (a *API) submitBlock(ctx context.Context, req *SubmitBlockReq) Response {
+	isOrphan, err := a.chain.ProcessBlock(req.Block)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	if isOrphan {
+		return NewErrorResponse(errors.New("block submitted is orphan"))
+	}
+
+	blockHash := req.Block.BlockHeader.Hash()
+	a.newBlockCh <- &blockHash
+	return NewSuccessResponse(true)
+}
+
+// SubmitWorkReq is req struct for submit-work API
 type SubmitWorkReq struct {
 	BlockHeader *types.BlockHeader `json:"block_header"`
 }

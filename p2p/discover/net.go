@@ -1,19 +1,3 @@
-// Copyright 2016 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package discover
 
 import (
@@ -673,7 +657,7 @@ func (net *Network) refresh(done chan<- struct{}) {
 	}
 	if len(seeds) == 0 {
 		log.Debug("no seed nodes found")
-		close(done)
+		time.AfterFunc(time.Second*10, func() { close(done) })
 		return
 	}
 	for _, n := range seeds {
@@ -1221,7 +1205,7 @@ func (net *Network) checkTopicRegister(data *topicRegister) (*pong, error) {
 	if hash != pongpkt.data.(*pong).TopicHash {
 		return nil, errors.New("topic hash mismatch")
 	}
-	if data.Idx < 0 || int(data.Idx) >= len(data.Topics) {
+	if int(data.Idx) < 0 || int(data.Idx) >= len(data.Topics) {
 		return nil, errors.New("topic index out of range")
 	}
 	return pongpkt.data.(*pong), nil
