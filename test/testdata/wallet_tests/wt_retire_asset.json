@@ -57,7 +57,7 @@
       ],
       "post_states": [
         {"name": "alice", "asset": "BTM", "amount": 24250000000},
-        {"name": "alice", "asset": "GOLD", "amount": 100},
+        {"name": "alice", "asset": "GOLD", "amount": 0},
         {"name": "bob", "asset": "BTM", "amount": 15000000000}
       ]
     },
