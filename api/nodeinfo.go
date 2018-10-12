@@ -39,7 +39,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 		NetWorkID:    a.sync.NodeInfo().Network,
 		Version: &VersionInfo{
 			Version: version.Version,
-			Update:  version.Status.VersionStatus(),
+			Update:  0,
 			NewVer:  version.Status.MaxVerSeen(),
 		},
 	}

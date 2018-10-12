@@ -10,7 +10,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/protocol/vm/vmutil"
 )
 

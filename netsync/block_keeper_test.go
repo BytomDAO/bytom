@@ -566,11 +566,11 @@ func TestSendMerkleBlock(t *testing.T) {
 		if statusResult, err = spvNode.chain.GetTransactionStatus(&blockHash); err != nil {
 			t.Fatal(err)
 		}
-		
+
 		if targetBlock.TransactionStatusHash, err = types.TxStatusMerkleRoot(statusResult.VerifyStatus); err != nil {
 			t.Fatal(err)
 		}
-		
+
 		fullNode := mockSync(blocks)
 		netWork := NewNetWork()
 		netWork.Register(spvNode, "192.168.0.1", "spv_node", consensus.SFFastSync)

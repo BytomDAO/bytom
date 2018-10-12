@@ -285,9 +285,6 @@ func (a *API) buildHandler() {
 	m.Handle("/submit-work", jsonHandler(a.submitWork))
 	m.Handle("/submit-work-json", jsonHandler(a.submitWorkJSON))
 
-	m.Handle("/get-coinbase-arbitrary", jsonHandler(a.getCoinbaseArbitrary))
-	m.Handle("/set-coinbase-arbitrary", jsonHandler(a.setCoinbaseArbitrary))
-
 	m.Handle("/verify-message", jsonHandler(a.verifyMessage))
 	m.Handle("/compile", jsonHandler(a.compileEquity))
 

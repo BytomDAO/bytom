@@ -23,7 +23,7 @@ func TestMerkleRoot(t *testing.T) {
 				[]byte("00000"),
 			},
 		},
-		want: testutil.MustDecodeHash("fe34dbd5da0ce3656f423fd7aad7fc7e879353174d33a6446c2ed0e3f3512101"),
+		want: testutil.MustDecodeHash("7b796833d01b092861681b937bde9b8a2c0c08721d4e12a9609e5827a4fffc54"),
 	}, {
 		witnesses: [][][]byte{
 			{
@@ -35,7 +35,7 @@ func TestMerkleRoot(t *testing.T) {
 				[]byte("111111"),
 			},
 		},
-		want: testutil.MustDecodeHash("0e4b4c1af18b8f59997804d69f8f66879ad5e30027346ee003ff7c7a512e5554"),
+		want: testutil.MustDecodeHash("d7e45ef3b47acaa13599d69a66896eed0bb713be4487efb512b0cd5bc5e2c349"),
 	}, {
 		witnesses: [][][]byte{
 			{
@@ -48,7 +48,7 @@ func TestMerkleRoot(t *testing.T) {
 				[]byte("222222"),
 			},
 		},
-		want: testutil.MustDecodeHash("0e4b4c1af18b8f59997804d69f8f66879ad5e30027346ee003ff7c7a512e5554"),
+		want: testutil.MustDecodeHash("d7e45ef3b47acaa13599d69a66896eed0bb713be4487efb512b0cd5bc5e2c349"),
 	}}
 
 	for _, c := range cases {
@@ -259,157 +259,6 @@ func TestStatusMerkleProof(t *testing.T) {
 		root, _ := TxStatusMerkleRoot(statuses)
 		if !ValidateStatusMerkleTreeProof(hashes, c.flags, relatedStatuses, root) {
 			t.Error("Merkle tree validate fail")
-		}
-	}
-}
-
-func TestUglyValidateTxMerkleProof(t *testing.T) {
-	cases := []struct {
-		hashes        []string
-		flags         []uint8
-		relatedHashes []string
-		root          string
-		expectResult  bool
-	}{
-		{
-			hashes:        []string{},
-			flags:         []uint8{},
-			relatedHashes: []string{},
-			root:          "",
-			expectResult:  false,
-		},
-		{
-			hashes:        []string{},
-			flags:         []uint8{1, 1, 1, 1, 2, 0, 1, 0, 2, 1, 0, 1, 0, 2, 1, 2, 0},
-			relatedHashes: []string{},
-			root:          "",
-			expectResult:  false,
-		},
-		{
-			hashes: []string{
-				"0093370a8e19f8f131fd7e75c576615950d5672ee5e18c63f105a95bcab4332c",
-				"c9b7779847fb7ab74cf4b1e7f4557133918faa2bc130042753417dfb62b12dfa",
-			},
-			flags:         []uint8{},
-			relatedHashes: []string{},
-			root:          "",
-			expectResult:  false,
-		},
-		{
-			hashes: []string{},
-			flags:  []uint8{},
-			relatedHashes: []string{
-				"0093370a8e19f8f131fd7e75c576615950d5672ee5e18c63f105a95bcab4332c",
-				"c9b7779847fb7ab74cf4b1e7f4557133918faa2bc130042753417dfb62b12dfa",
-			},
-			root:         "",
-			expectResult: false,
-		},
-		{
-			hashes: []string{},
-			flags:  []uint8{1, 1, 0, 2, 1, 2, 1, 0, 1},
-			relatedHashes: []string{
-				"0093370a8e19f8f131fd7e75c576615950d5672ee5e18c63f105a95bcab4332c",
-				"c9b7779847fb7ab74cf4b1e7f4557133918faa2bc130042753417dfb62b12dfa",
-			},
-			root: "281138e0a9ea19505844bd61a2f5843787035782c093da74d12b5fba73eeeb07",
-		},
-		{
-			hashes: []string{
-				"68f03ea2b02a21ad944d1a43ad6152a7fa6a7ed4101d59be62594dd30ef2a558",
-			},
-			flags: []uint8{},
-			relatedHashes: []string{
-				"0093370a8e19f8f131fd7e75c576615950d5672ee5e18c63f105a95bcab4332c",
-				"c9b7779847fb7ab74cf4b1e7f4557133918faa2bc130042753417dfb62b12dfa",
-			},
-			root:         "281138e0a9ea19505844bd61a2f5843787035782c093da74d12b5fba73eeeb07",
-			expectResult: false,
-		},
-		{
-			hashes: []string{
-				"8ec3ee7589f95eee9b534f71fcd37142bcc839a0dbfe78124df9663827b90c35",
-				"011bd3380852b2946df507e0c6234222c559eec8f545e4bc58a89e960892259b",
-				"c205988d9c864083421f1bdb95e6cf8b52070facfcc87e46a6e8197f5389fca2",
-			},
-			flags: []uint8{1, 1, 0, 2, 0},
-			relatedHashes: []string{
-				"504af455e328e7dd39bbc059529851946d54ee8b459b11b3aac4a0feeb474487",
-			},
-			root:         "aff81a46fe79204ef9007243f374d54104a59762b9f74d80d56b5291753db6fb",
-			expectResult: true,
-		},
-		// flags and hashes is correct, but relatedHashes has hash that does not exist
-		{
-			hashes: []string{
-				"8ec3ee7589f95eee9b534f71fcd37142bcc839a0dbfe78124df9663827b90c35",
-				"011bd3380852b2946df507e0c6234222c559eec8f545e4bc58a89e960892259b",
-				"c205988d9c864083421f1bdb95e6cf8b52070facfcc87e46a6e8197f5389fca2",
-			},
-			flags: []uint8{1, 1, 0, 2, 0},
-			relatedHashes: []string{
-				"504af455e328e7dd39bbc059529851946d54ee8b459b11b3aac4a0feeb474487",
-				"281138e0a9ea19505844bd61a2f5843787035782c093da74d12b5fba73eeeb07",
-			},
-			root:         "aff81a46fe79204ef9007243f374d54104a59762b9f74d80d56b5291753db6fb",
-			expectResult: false,
-		},
-		// flags and hashes is correct, but relatedHashes is not enough
-		{
-			hashes: []string{
-				"8ec3ee7589f95eee9b534f71fcd37142bcc839a0dbfe78124df9663827b90c35",
-				"011bd3380852b2946df507e0c6234222c559eec8f545e4bc58a89e960892259b",
-				"c205988d9c864083421f1bdb95e6cf8b52070facfcc87e46a6e8197f5389fca2",
-			},
-			flags:         []uint8{1, 1, 0, 2, 0},
-			relatedHashes: []string{},
-			root:          "aff81a46fe79204ef9007243f374d54104a59762b9f74d80d56b5291753db6fb",
-			expectResult:  false,
-		},
-		// flags is correct, but hashes has additional hash at the end
-		{
-			hashes: []string{
-				"8ec3ee7589f95eee9b534f71fcd37142bcc839a0dbfe78124df9663827b90c35",
-				"011bd3380852b2946df507e0c6234222c559eec8f545e4bc58a89e960892259b",
-				"c205988d9c864083421f1bdb95e6cf8b52070facfcc87e46a6e8197f5389fca2",
-				"5a06c90136e81c0f9cad29725e69edc6d21bd6fb0641265f9c4b6bb6840b37dd",
-			},
-			flags: []uint8{1, 1, 0, 2, 0},
-			relatedHashes: []string{
-				"504af455e328e7dd39bbc059529851946d54ee8b459b11b3aac4a0feeb474487",
-			},
-			root:         "aff81a46fe79204ef9007243f374d54104a59762b9f74d80d56b5291753db6fb",
-			expectResult: true,
-		},
-	}
-
-	for _, c := range cases {
-		var hashes, relatedHashes []*bc.Hash
-		var hashBytes, rootBytes [32]byte
-		var err error
-		for _, hashStr := range c.hashes {
-			if hashBytes, err = convertHashStr2Bytes(hashStr); err != nil {
-				t.Fatal(err)
-			}
-
-			hash := bc.NewHash(hashBytes)
-			hashes = append(hashes, &hash)
-		}
-		for _, hashStr := range c.relatedHashes {
-			if hashBytes, err = convertHashStr2Bytes(hashStr); err != nil {
-				t.Fatal(err)
-			}
-
-			hash := bc.NewHash(hashBytes)
-			relatedHashes = append(relatedHashes, &hash)
-		}
-		if rootBytes, err = convertHashStr2Bytes(c.root); err != nil {
-			t.Fatal(err)
-		}
-
-		root := bc.NewHash(rootBytes)
-		if ValidateTxMerkleTreeProof(hashes, c.flags, relatedHashes, root) != c.expectResult {
-			t.Error("Validate merkle tree proof fail")
 		}
 	}
 }

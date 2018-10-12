@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/encoding/blockchain"
 	"github.com/bytom/errors"
 )
@@ -42,24 +42,24 @@ func EntryID(e Entry) (hash Hash) {
 		return hash
 	}
 
-	hasher := sha3pool.Get256()
-	defer sha3pool.Put256(hasher)
+	hasher := sm3.New()
 
 	hasher.Write([]byte("entryid:"))
 	hasher.Write([]byte(e.typ()))
 	hasher.Write([]byte{':'})
 
-	bh := sha3pool.Get256()
-	defer sha3pool.Put256(bh)
+	bh := sm3.New()
 
 	e.writeForHash(bh)
 
 	var innerHash [32]byte
-	bh.Read(innerHash[:])
+	copy(innerHash[:], bh.Sum(nil))
 
 	hasher.Write(innerHash[:])
+	var b32 [32]byte
+	copy(b32[:], hasher.Sum(nil))
+	hash = NewHash(b32)
 
-	hash.ReadFrom(hasher)
 	return hash
 }
 

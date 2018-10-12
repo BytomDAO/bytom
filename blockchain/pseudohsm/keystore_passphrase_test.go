@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/pborman/uuid"
 )
 

@@ -197,8 +197,8 @@ func asGoParams(params []*compiler.Param) (goParams string, imports []string) {
 		case "Program":
 			typ = "[]byte"
 		case "PublicKey":
-			typ = "ed25519.PublicKey"
-			imports = append(imports, "github.com/bytom/crypto/ed25519")
+			typ = "sm2.PubKey"
+			imports = append(imports, "github.com/bytom/crypto/sm2")
 		case "Signature":
 			typ = "[]byte"
 		case "String":

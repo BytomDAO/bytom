@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytom/crypto/ed25519"
+	"github.com/bytom/crypto/sm2"
 	"github.com/bytom/errors"
 )
 
@@ -137,12 +137,12 @@ func TestSignAndVerifyMessage(t *testing.T) {
 	}
 
 	// derivedXPub verify success
-	if !ed25519.Verify(derivedXPub.PublicKey(), []byte(msg), sig) {
+	if !sm2.VerifyCompressedPubkey(derivedXPub.PublicKey(), []byte(msg), sig) {
 		t.Fatal("right derivedXPub verify sign failed")
 	}
 
 	// rootXPub verify failed
-	if ed25519.Verify(xpub.XPub.PublicKey(), []byte(msg), sig) {
+	if sm2.VerifyCompressedPubkey(xpub.XPub.PublicKey(), []byte(msg), sig) {
 		t.Fatal("right rootXPub verify derivedXPub sign succeed")
 	}
 

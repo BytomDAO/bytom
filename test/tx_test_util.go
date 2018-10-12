@@ -15,8 +15,8 @@ import (
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm2/chainkd"
+	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -295,7 +295,7 @@ func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, erro
 func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
 	cp := account.CtrlProgram{}
 	var hash [32]byte
-	sha3pool.Sum256(hash[:], input.ControlProgram)
+	sm3.Sum(hash[:], input.ControlProgram)
 	bytes := db.Get(account.ContractKey(hash))
 	if bytes == nil {
 		return nil, fmt.Errorf("can't find CtrlProgram for the SpendInput")

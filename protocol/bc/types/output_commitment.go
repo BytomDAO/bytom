@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/crypto/sm3"
 	"github.com/bytom/encoding/blockchain"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
@@ -64,9 +64,10 @@ func (oc *OutputCommitment) readFrom(r *blockchain.Reader, assetVersion uint64) 
 
 // Hash convert suffix && assetVersion to bc.Hash
 func (oc *OutputCommitment) Hash(suffix []byte, assetVersion uint64) (outputhash bc.Hash) {
-	h := sha3pool.Get256()
-	defer sha3pool.Put256(h)
+	h := sm3.New()
 	oc.writeExtensibleString(h, suffix, assetVersion)
-	outputhash.ReadFrom(h)
+	var b32 [32]byte
+	copy(b32[:], h.Sum(nil))
+	outputhash = bc.NewHash(b32)
 	return outputhash
 }

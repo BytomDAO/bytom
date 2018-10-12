@@ -259,14 +259,14 @@ func TestCryptoOps(t *testing.T) {
 		startVM: &virtualMachine{
 			runLimit: 50000,
 			dataStack: [][]byte{
-				mustDecodeHex("af5abdf4bbb34f4a089efc298234f84fd909def662a8df03b4d7d40372728851" +
-					"fbd3bf59920af5a7c361a4851967714271d1727e3be417a60053c30969d8860c"),
-				mustDecodeHex("916f0027a575074ce72a331777c3478d6513f786a591bd892da1a577bf2335f9"),
-				mustDecodeHex("ab3220d065dc875c6a5b4ecc39809b5f24eb0a605e9eef5190457edbf1e3b866"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" +
+					"b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("03" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
 			},
 		},
 		wantVM: &virtualMachine{
-			deferredCost: -143,
+			deferredCost: -144,
 			runLimit:     48976,
 			dataStack:    [][]byte{{1}},
 		},
@@ -343,7 +343,7 @@ func TestCryptoOps(t *testing.T) {
 			dataStack: [][]byte{
 				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
 				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
-				mustDecodeHex("01" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				mustDecodeHex("03" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
 			},
 		},
 		wantVM: &virtualMachine{
@@ -444,15 +444,15 @@ func TestCryptoOps(t *testing.T) {
 		startVM: &virtualMachine{
 			runLimit: 50000,
 			dataStack: [][]byte{
-				mustDecodeHex("af5abdf4bbb34f4a089efc298234f84fd909def662a8df03b4d7d40372728851fbd3bf59920af5a7c361a4851967714271d1727e3be417a60053c30969d8860c"),
-				mustDecodeHex("916f0027a575074ce72a331777c3478d6513f786a591bd892da1a577bf2335f9"),
-				mustDecodeHex("ab3220d065dc875c6a5b4ecc39809b5f24eb0a605e9eef5190457edbf1e3b866"),
+				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3" + "b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
+				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
+				mustDecodeHex("03" + "09f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
 				{1},
 				{1},
 			},
 		},
 		wantVM: &virtualMachine{
-			deferredCost: -161,
+			deferredCost: -162,
 			runLimit:     48976,
 			dataStack:    [][]byte{{1}},
 		},
@@ -585,7 +585,7 @@ func TestCryptoOps(t *testing.T) {
 			dataStack: [][]byte{
 				mustDecodeHex("f5a03b0648d2c4630eeac513e1bb81a15944da3827d5b74143ac7eaceee720b3b1b6aa29df212fd8763182bc0d421ca1bb9038fd1f7f42d4840b69c485bbc1aa"),
 				mustDecodeHex("f0b43e94ba45accaace692ed534382eb17e6ab5a19ce7b31f4486fdfc0d28640"),
-				mustDecodeHex("0109f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
+				mustDecodeHex("0309f9df311e5421a150dd7d161e4bc5c672179fad1833fc076bb08ff356f35020"),
 				{1},
 				{1},
 			},

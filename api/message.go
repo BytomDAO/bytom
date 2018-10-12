@@ -9,8 +9,8 @@ import (
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto"
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2"
+	"github.com/bytom/crypto/sm2/chainkd"
 )
 
 // SignMsgResp is response for sign message
@@ -75,7 +75,7 @@ func (a *API) verifyMessage(ctx context.Context, ins struct {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
 	}
 
-	if ed25519.Verify(ins.DerivedXPub.PublicKey(), []byte(ins.Message), sig) {
+	if sm2.VerifyCompressedPubkey(ins.DerivedXPub.PublicKey(), []byte(ins.Message), sig) {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
 	}
 	return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})

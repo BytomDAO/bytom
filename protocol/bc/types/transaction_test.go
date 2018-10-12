@@ -36,7 +36,7 @@ func TestTransaction(t *testing.T) {
 				"00", // inputs count
 				"00", // outputs count
 			}, ""),
-			hash: testutil.MustDecodeHash("8e88b9cb4615128c7209dff695f68b8de5b38648bf3d44d2d0e6a674848539c9"),
+			hash: testutil.MustDecodeHash("e6f62659988c34379b89b68e6f410770943567d3ae8ff061ea636e59cd4b0b81"),
 		},
 		{
 			tx: NewTx(TxData{
@@ -48,7 +48,7 @@ func TestTransaction(t *testing.T) {
 					NewSpendInput([][]byte{[]byte("arguments3"), []byte("arguments4")}, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 254354, 3, []byte("spendProgram")),
 				},
 				Outputs: []*TxOutput{
-					NewTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true")),
+					NewTxOutput(testutil.MustDecodeAsset("1bb6cd78d4dd0e175c9315cb386c3ff7411dbaf65888ef92e63e8e27120e60fb"), 254354, []byte("true")),
 				},
 			}),
 			hex: strings.Join([]string{
@@ -61,7 +61,7 @@ func TestTransaction(t *testing.T) {
 				"00",         // input 0: issuance type flag
 				"05",         // input 0: nonce length
 				"6e6f6e6365", // input 0: nonce
-				"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // input 0: assetID
+				"1bb6cd78d4dd0e175c9315cb386c3ff7411dbaf65888ef92e63e8e27120e60fb", // input 0: assetID
 				"92c30f", // input 0: amount
 				"38",     // input 0: input witness length
 				"0f",     // input 0: asset definition length
@@ -94,14 +94,14 @@ func TestTransaction(t *testing.T) {
 				"01", // outputs count
 				"01", // output 0: asset version
 				"29", // output 0: serialization length
-				"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // output 0: assetID
+				"1bb6cd78d4dd0e175c9315cb386c3ff7411dbaf65888ef92e63e8e27120e60fb", // output 0: assetID
 				"92c30f",   // output 0: amount
 				"01",       // output 0: version
 				"04",       // output 0: control program length
 				"74727565", // output 0: control program
 				"00",       // output 0: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("a0ece5ca48dca27708394852599cb4d04af22c36538c03cb72663f3091406c17"),
+			hash: testutil.MustDecodeHash("308f70863abdc16b08ff858a49d82b5a8a9622727f721f599d9a0764ce4b3fd1"),
 		},
 		{
 			tx: NewTx(TxData{
@@ -144,7 +144,7 @@ func TestTransaction(t *testing.T) {
 				"66616c7365", // output 1: control program
 				"00",         // output 1: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("c2e2f388706fc06cca6aba5e85e0e85029f772872e1b6e6c32a70da22d0309dc"),
+			hash: testutil.MustDecodeHash("5dcecec49224ec915456cc3eb684dcb85f4cacc263dce6eaa82a62a9479b5ce1"),
 		},
 	}
 	for i, test := range cases {
@@ -185,7 +185,7 @@ func TestTransaction(t *testing.T) {
 
 func TestTransactionTrailingGarbage(t *testing.T) {
 	// validTxHex is a valid tx, we don't care what's inside as long as it's valid
-	validTxHex := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	validTxHex := `07010001015f015dc13b9d8825da2670520206333021315c9da170dab31cc517843a95ba229f9f5affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08c8e2e00011600148c27ef3898503fcf5fa4c812ab6738f3ec5f485c010002013cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcb1c924011600147c029de14786c0d5e47bddb61dfc430ac8eb3b7f000139ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff64011600146a0432d83785b4a1b48a173f135ab27dbfb25cbe00`
 	validTx := Tx{}
 	if err := validTx.UnmarshalText([]byte(validTxHex)); err != nil {
 		t.Fatal(err)
@@ -239,7 +239,7 @@ func TestInvalidIssuance(t *testing.T) {
 }
 
 func TestFuzzUnknownAssetVersion(t *testing.T) {
-	rawTx := `07010001012b00030a0908916133a0d64d1d973b631e226ef95338ad4a536b95635f32f0d04708a6f2a26380a094a58d1d09000101010103010203010129000000000000000000000000000000000000000000000000000000000000000080a094a58d1d01010100`
+	rawTx := `07010001015f015dc13b9d8825da2670520206333021315c9da170dab31cc517843a95ba229f9f5affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe08c8e2e00011600148c27ef3898503fcf5fa4c812ab6738f3ec5f485c010002013cfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffcb1c924011600147c029de14786c0d5e47bddb61dfc430ac8eb3b7f000139ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff64011600146a0432d83785b4a1b48a173f135ab27dbfb25cbe00`
 	want := Tx{}
 	if err := want.UnmarshalText([]byte(rawTx)); err != nil {
 		t.Fatal(err)

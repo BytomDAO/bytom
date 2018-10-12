@@ -8,13 +8,13 @@ import (
 
 	"github.com/golang/groupcache/lru"
 	dbm "github.com/tendermint/tmlibs/db"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2"
+	"github.com/bytom/crypto/sm2/chainkd"
+	"github.com/bytom/crypto/sm3"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
@@ -165,7 +165,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		}
 	}
 
-	defHash := bc.NewHash(sha3.Sum256(rawDefinition))
+	defHash := bc.NewHash(sm3.Sum256(rawDefinition))
 	a := &Asset{
 		DefinitionMap:     definition,
 		RawDefinitionByte: rawDefinition,
@@ -361,7 +361,7 @@ func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	return json.MarshalIndent(def, "", "  ")
 }
 
-func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, vmversion uint64, err error) {
+func multisigIssuanceProgram(pubkeys []sm2.PubKey, nrequired int) (program []byte, vmversion uint64, err error) {
 	issuanceProg, err := vmutil.P2SPMultiSigProgram(pubkeys, nrequired)
 	if err != nil {
 		return nil, 0, err

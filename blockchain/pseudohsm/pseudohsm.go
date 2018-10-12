@@ -10,7 +10,7 @@ import (
 
 	"github.com/pborman/uuid"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/crypto/sm2/chainkd"
 	"github.com/bytom/errors"
 	mnem "github.com/bytom/wallet/mnemonic"
 )
@@ -146,6 +146,7 @@ func (h *HSM) XSign(xpub chainkd.XPub, path [][]byte, msg []byte, auth string) (
 	if len(path) > 0 {
 		xprv = xprv.Derive(path)
 	}
+
 	return xprv.Sign(msg), nil
 }
 
