@@ -1,6 +1,5 @@
 package sm2
 
-// reference to ecdsa
 import (
 	"bytes"
 	"crypto"
