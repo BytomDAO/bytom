@@ -85,8 +85,8 @@
         }
       ],
       "post_states": [
-        {"name": "multi-sig", "asset": "BTM", "amount": 14000000000},
-        {"name": "multi-sig", "asset": "GOLD", "amount": 100},
+        {"name": "multi-sig", "asset": "BTM", "amount": 33000000000},
+        {"name": "multi-sig", "asset": "GOLD", "amount": 60},
         {"name": "alice", "asset": "BTM", "amount": 250000000},
         {"name": "alice", "asset": "GOLD", "amount": 20},
         {"name": "bob", "asset": "BTM", "amount": 5000000000},
