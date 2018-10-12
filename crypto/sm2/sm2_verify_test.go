@@ -126,6 +126,7 @@ func BenchmarkVerifyCompressedPubkey(b *testing.B) {
 	}
 }
 
+// mustDecodeHex decode string to []byte
 func mustDecodeHex(str string) []byte {
 	data, err := hex.DecodeString(str)
 	if err != nil {
