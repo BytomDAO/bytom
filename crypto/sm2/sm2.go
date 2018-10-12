@@ -322,6 +322,7 @@ func Sm2Verify(pub *PublicKey, msg, uid []byte, r, s *big.Int) bool {
 	return x.Cmp(r) == 0
 }
 
+//
 func msgHash(za, msg []byte) (*big.Int, error) {
 	e := sm3.New()
 	e.Write(za)
