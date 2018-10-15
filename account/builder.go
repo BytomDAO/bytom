@@ -333,7 +333,6 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 
 	case *common.AddressWitnessScriptHash:
 		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
-		path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
 		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
 		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)
