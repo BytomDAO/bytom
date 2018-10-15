@@ -76,13 +76,23 @@ func (p *peer) Height() uint64 {
 func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
 	score := p.banScore.Increase(persistent, transient)
 	if score > defaultBanThreshold {
-		log.WithFields(log.Fields{"address": p.Addr(), "score": score, "reason": reason}).Errorf("banning and disconnecting")
+		log.WithFields(log.Fields{
+			"module":  logModule,
+			"address": p.Addr(),
+			"score":   score,
+			"reason":  reason,
+		}).Errorf("banning and disconnecting")
 		return true
 	}
 
 	warnThreshold := defaultBanThreshold >> 1
 	if score > warnThreshold {
-		log.WithFields(log.Fields{"address": p.Addr(), "score": score, "reason": reason}).Warning("ban score increasing")
+		log.WithFields(log.Fields{
+			"module":  logModule,
+			"address": p.Addr(),
+			"score":   score,
+			"reason":  reason,
+		}).Warning("ban score increasing")
 	}
 	return false
 }
@@ -92,11 +102,11 @@ func (p *peer) addFilterAddress(address []byte) {
 	defer p.mtx.Unlock()
 
 	if p.filterAdds.Size() >= maxFilterAddressCount {
-		log.Warn("the count of filter addresses is greater than limit")
+		log.WithField("module", logModule).Warn("the count of filter addresses is greater than limit")
 		return
 	}
 	if len(address) > maxFilterAddressSize {
-		log.Warn("the size of filter address is greater than limit")
+		log.WithField("module", logModule).Warn("the size of filter address is greater than limit")
 		return
 	}
 	p.filterAdds.Add(hex.EncodeToString(address))
@@ -306,7 +316,7 @@ func (ps *peerSet) addBanScore(peerID string, persistent, transient uint64, reas
 		return
 	}
 	if err := ps.AddBannedPeer(peer.Addr().String()); err != nil {
-		log.WithField("err", err).Error("fail on add ban peer")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on add ban peer")
 	}
 	ps.removePeer(peerID)
 }
@@ -319,7 +329,7 @@ func (ps *peerSet) addPeer(peer BasePeer, height uint64, hash *bc.Hash) {
 		ps.peers[peer.ID()] = newPeer(height, hash, peer)
 		return
 	}
-	log.WithField("ID", peer.ID()).Warning("add existing peer to blockKeeper")
+	log.WithField("module", logModule).Warning("add existing peer to blockKeeper")
 }
 
 func (ps *peerSet) bestPeer(flag consensus.ServiceFlag) *peer {

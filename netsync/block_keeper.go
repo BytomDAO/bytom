@@ -102,7 +102,7 @@ func (bk *blockKeeper) blockLocator() []*bc.Hash {
 			header, err = bk.chain.GetHeaderByHeight(header.Height - step)
 		}
 		if err != nil {
-			log.WithField("err", err).Error("blockKeeper fail on get blockLocator")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("blockKeeper fail on get blockLocator")
 			break
 		}
 
@@ -360,7 +360,7 @@ func (bk *blockKeeper) startSync() bool {
 	if peer != nil && checkPoint != nil && peer.Height() >= checkPoint.Height {
 		bk.syncPeer = peer
 		if err := bk.fastBlockSync(checkPoint); err != nil {
-			log.WithField("err", err).Warning("fail on fastBlockSync")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on fastBlockSync")
 			bk.peers.errorHandler(peer.ID(), err)
 			return false
 		}
@@ -377,7 +377,7 @@ func (bk *blockKeeper) startSync() bool {
 		}
 
 		if err := bk.regularBlockSync(targetHeight); err != nil {
-			log.WithField("err", err).Warning("fail on regularBlockSync")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on regularBlockSync")
 			bk.peers.errorHandler(peer.ID(), err)
 			return false
 		}
@@ -389,7 +389,7 @@ func (bk *blockKeeper) startSync() bool {
 func (bk *blockKeeper) syncWorker() {
 	genesisBlock, err := bk.chain.GetBlockByHeight(0)
 	if err != nil {
-		log.WithField("err", err).Error("fail on handleStatusRequestMsg get genesis")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleStatusRequestMsg get genesis")
 		return
 	}
 	syncTicker := time.NewTicker(syncCycle)
@@ -401,15 +401,15 @@ func (bk *blockKeeper) syncWorker() {
 
 		block, err := bk.chain.GetBlockByHeight(bk.chain.BestBlockHeight())
 		if err != nil {
-			log.WithField("err", err).Error("fail on syncWorker get best block")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker get best block")
 		}
 
 		if err := bk.peers.broadcastMinedBlock(block); err != nil {
-			log.WithField("err", err).Error("fail on syncWorker broadcast new block")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new block")
 		}
 
 		if err = bk.peers.broadcastNewStatus(block, genesisBlock); err != nil {
-			log.WithField("err", err).Error("fail on syncWorker broadcast new status")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 		}
 	}
 }
