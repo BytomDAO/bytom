@@ -29,7 +29,7 @@ var (
 // assembles a fully signed tx, and stores the effects of
 // its changes on the UTXO set.
 func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
-	if fee := calculateTxFee(tx); fee > cfg.CommonConfig.Wallet.MaxTxFee {
+	if fee := CalculateTxFee(tx); fee > cfg.CommonConfig.Wallet.MaxTxFee {
 		return ErrExtTxFee
 	}
 
@@ -124,22 +124,8 @@ func checkTxSighashCommitment(tx *types.Tx) error {
 	return lastError
 }
 
-// RemoteGenerator implements the Submitter interface and submits the
-// transaction to a remote generator.
-// TODO(jackson): This implementation maybe belongs elsewhere.
-/*type RemoteGenerator struct {
-	Peer *rpc.Client
-}
-
-func (rg *RemoteGenerator) Submit(ctx context.Context, tx *types.Tx) error {
-	err := rg.Peer.Call(ctx, "/rpc/submit", tx, nil)
-	err = errors.Wrap(err, "generator transaction notice")
-	return err
-}
-*/
-
-// calculateTxFee calculate transaction fee
-func calculateTxFee(tx *types.Tx) (fee uint64) {
+// CalculateTxFee calculate transaction fee
+func CalculateTxFee(tx *types.Tx) (fee uint64) {
 	totalInputBTM := uint64(0)
 	totalOutputBTM := uint64(0)
 

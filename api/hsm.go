@@ -5,7 +5,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
 )
@@ -38,10 +37,6 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(&createKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File, Mnemonic: *mnemonic})
-}
-
-type importKeyResp struct {
-	Xpub *pseudohsm.XPub `json:"xpub"`
 }
 
 func (a *API) pseudohsmListKeys(ctx context.Context) Response {

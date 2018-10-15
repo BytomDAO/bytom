@@ -24,6 +24,7 @@ import (
 )
 
 const (
+	logModule             = "netsync"
 	maxTxChanSize         = 10000
 	maxFilterAddressSize  = 50
 	maxFilterAddressCount = 1000
@@ -165,7 +166,7 @@ func (sm *SyncManager) handleBlockMsg(peer *peer, msg *BlockMessage) {
 func (sm *SyncManager) handleBlocksMsg(peer *peer, msg *BlocksMessage) {
 	blocks, err := msg.GetBlocks()
 	if err != nil {
-		log.WithField("err", err).Debug("fail on handleBlocksMsg GetBlocks")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Debug("fail on handleBlocksMsg GetBlocks")
 		return
 	}
 
@@ -193,7 +194,7 @@ func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
 		block, err = sm.chain.GetBlockByHash(msg.GetHash())
 	}
 	if err != nil {
-		log.WithField("err", err).Warning("fail on handleGetBlockMsg get block from chain")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on handleGetBlockMsg get block from chain")
 		return
 	}
 
@@ -202,7 +203,7 @@ func (sm *SyncManager) handleGetBlockMsg(peer *peer, msg *GetBlockMessage) {
 		sm.peers.removePeer(peer.ID())
 	}
 	if err != nil {
-		log.WithField("err", err).Error("fail on handleGetBlockMsg sentBlock")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetBlockMsg sentBlock")
 	}
 }
 
@@ -217,7 +218,7 @@ func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
 	for _, block := range blocks {
 		rawData, err := block.MarshalText()
 		if err != nil {
-			log.WithField("err", err).Error("fail on handleGetBlocksMsg marshal block")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetBlocksMsg marshal block")
 			continue
 		}
 
@@ -233,14 +234,14 @@ func (sm *SyncManager) handleGetBlocksMsg(peer *peer, msg *GetBlocksMessage) {
 		sm.peers.removePeer(peer.ID())
 	}
 	if err != nil {
-		log.WithField("err", err).Error("fail on handleGetBlocksMsg sentBlock")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetBlocksMsg sentBlock")
 	}
 }
 
 func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
 	headers, err := sm.blockKeeper.locateHeaders(msg.GetBlockLocator(), msg.GetStopHash())
 	if err != nil || len(headers) == 0 {
-		log.WithField("err", err).Debug("fail on handleGetHeadersMsg locateHeaders")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Debug("fail on handleGetHeadersMsg locateHeaders")
 		return
 	}
 
@@ -249,7 +250,7 @@ func (sm *SyncManager) handleGetHeadersMsg(peer *peer, msg *GetHeadersMessage) {
 		sm.peers.removePeer(peer.ID())
 	}
 	if err != nil {
-		log.WithField("err", err).Error("fail on handleGetHeadersMsg sentBlock")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetHeadersMsg sentBlock")
 	}
 }
 
@@ -262,20 +263,20 @@ func (sm *SyncManager) handleGetMerkleBlockMsg(peer *peer, msg *GetMerkleBlockMe
 		block, err = sm.chain.GetBlockByHash(msg.GetHash())
 	}
 	if err != nil {
-		log.WithField("err", err).Warning("fail on handleGetMerkleBlockMsg get block from chain")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on handleGetMerkleBlockMsg get block from chain")
 		return
 	}
 
 	blockHash := block.Hash()
 	txStatus, err := sm.chain.GetTransactionStatus(&blockHash)
 	if err != nil {
-		log.WithField("err", err).Warning("fail on handleGetMerkleBlockMsg get transaction status")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on handleGetMerkleBlockMsg get transaction status")
 		return
 	}
 
 	ok, err := peer.sendMerkleBlock(block, txStatus)
 	if err != nil {
-		log.WithField("err", err).Error("fail on handleGetMerkleBlockMsg sentMerkleBlock")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetMerkleBlockMsg sentMerkleBlock")
 		return
 	}
 
@@ -287,7 +288,7 @@ func (sm *SyncManager) handleGetMerkleBlockMsg(peer *peer, msg *GetMerkleBlockMe
 func (sm *SyncManager) handleHeadersMsg(peer *peer, msg *HeadersMessage) {
 	headers, err := msg.GetHeaders()
 	if err != nil {
-		log.WithField("err", err).Debug("fail on handleHeadersMsg GetHeaders")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Debug("fail on handleHeadersMsg GetHeaders")
 		return
 	}
 
@@ -297,7 +298,7 @@ func (sm *SyncManager) handleHeadersMsg(peer *peer, msg *HeadersMessage) {
 func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
 	block, err := msg.GetMineBlock()
 	if err != nil {
-		log.WithField("err", err).Warning("fail on handleMineBlockMsg GetMineBlock")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on handleMineBlockMsg GetMineBlock")
 		return
 	}
 
@@ -311,7 +312,7 @@ func (sm *SyncManager) handleStatusRequestMsg(peer BasePeer) {
 	bestHeader := sm.chain.BestBlockHeader()
 	genesisBlock, err := sm.chain.GetBlockByHeight(0)
 	if err != nil {
-		log.WithField("err", err).Error("fail on handleStatusRequestMsg get genesis")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleStatusRequestMsg get genesis")
 	}
 
 	genesisHash := genesisBlock.Hash()
@@ -329,6 +330,7 @@ func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusRes
 
 	if genesisHash := msg.GetGenesisHash(); sm.genesisHash != *genesisHash {
 		log.WithFields(log.Fields{
+			"module":         logModule,
 			"remote genesis": genesisHash.String(),
 			"local genesis":  sm.genesisHash.String(),
 		}).Warn("fail hand shake due to differnt genesis")
@@ -355,6 +357,13 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 	if peer == nil && msgType != StatusResponseByte && msgType != StatusRequestByte {
 		return
 	}
+
+	log.WithFields(log.Fields{
+		"module":  logModule,
+		"peer":    basePeer.Addr(),
+		"type":    reflect.TypeOf(msg),
+		"message": msg.String(),
+	}).Info("receive message from peer")
 
 	switch msg := msg.(type) {
 	case *GetBlockMessage:
@@ -400,7 +409,11 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 		sm.handleGetMerkleBlockMsg(peer, msg)
 
 	default:
-		log.Errorf("unknown message type %v", reflect.TypeOf(msg))
+		log.WithFields(log.Fields{
+			"module":       logModule,
+			"peer":         basePeer.Addr(),
+			"message_type": reflect.TypeOf(msg),
+		}).Error("unhandled message type")
 	}
 }
 
@@ -496,11 +509,11 @@ func (sm *SyncManager) minedBroadcastLoop() {
 		case blockHash := <-sm.newBlockCh:
 			block, err := sm.chain.GetBlockByHash(blockHash)
 			if err != nil {
-				log.Errorf("Failed on mined broadcast loop get block %v", err)
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on mined broadcast loop get block")
 				return
 			}
 			if err := sm.peers.broadcastMinedBlock(block); err != nil {
-				log.Errorf("Broadcast mine block error. %v", err)
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast mine block")
 				return
 			}
 		case <-sm.quitSync:

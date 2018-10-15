@@ -39,8 +39,7 @@ const (
 	// SUCCESS indicates the rpc calling is successful.
 	SUCCESS = "success"
 	// FAIL indicated the rpc calling is failed.
-	FAIL               = "fail"
-	crosscoreRPCPrefix = "/rpc/"
+	FAIL = "fail"
 )
 
 // Response describes the response standard.
@@ -128,10 +127,7 @@ func (a *API) initServer(config *cfg.Config) {
 	mux := http.NewServeMux()
 	mux.Handle("/", &coreHandler)
 
-	handler = mux
-	if config.Auth.Disable == false {
-		handler = AuthHandler(handler, a.accessTokens)
-	}
+	handler = AuthHandler(mux, a.accessTokens, config.Auth.Disable)
 	handler = RedirectHandler(handler)
 
 	secureheader.DefaultConfig.PermitClearLoopback = true
@@ -301,23 +297,10 @@ func (a *API) buildHandler() {
 	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
 
 	handler := latencyHandler(m, walletEnable)
-	handler = maxBytesHandler(handler) // TODO(tessr): consider moving this to non-core specific mux
 	handler = webAssetsHandler(handler)
 	handler = gzip.Handler{Handler: handler}
 
 	a.handler = handler
-}
-
-func maxBytesHandler(h http.Handler) http.Handler {
-	const maxReqSize = 1e7 // 10MB
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		// A block can easily be bigger than maxReqSize, but everything
-		// else should be pretty small.
-		if req.URL.Path != crosscoreRPCPrefix+"signer/sign-block" {
-			req.Body = http.MaxBytesReader(w, req.Body, maxReqSize)
-		}
-		h.ServeHTTP(w, req)
-	})
 }
 
 // json Handler
@@ -350,15 +333,15 @@ func webAssetsHandler(next http.Handler) http.Handler {
 }
 
 // AuthHandler access token auth Handler
-func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore) http.Handler {
-	authenticator := authn.NewAPI(accessTokens)
+func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore, authDisable bool) http.Handler {
+	authenticator := authn.NewAPI(accessTokens, authDisable)
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		// TODO(tessr): check that this path exists; return early if this path isn't legit
 		req, err := authenticator.Authenticate(req)
 		if err != nil {
 			log.WithField("error", errors.Wrap(err, "Serve")).Error("Authenticate fail")
-			err = errors.Sub(errNotAuthenticated, err)
+			err = errors.WithDetail(errNotAuthenticated, err.Error())
 			errorFormatter.Write(req.Context(), rw, err)
 			return
 		}

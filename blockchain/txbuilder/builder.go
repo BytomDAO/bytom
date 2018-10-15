@@ -22,7 +22,6 @@ type TemplateBuilder struct {
 	minTime             time.Time
 	maxTime             time.Time
 	timeRange           uint64
-	referenceData       []byte
 	rollbacks           []func()
 	callbacks           []func() error
 }
@@ -133,5 +132,6 @@ func (b *TemplateBuilder) Build() (*Template, *types.TxData, error) {
 	}
 
 	tpl.Transaction = types.NewTx(*tx)
+	tpl.Fee = CalculateTxFee(tpl.Transaction)
 	return tpl, tx, nil
 }
