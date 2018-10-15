@@ -413,7 +413,7 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 			"module":       logModule,
 			"peer":         basePeer.Addr(),
 			"message_type": reflect.TypeOf(msg),
-		}).Error("unknown message type")
+		}).Error("unhandled message type")
 	}
 }
 

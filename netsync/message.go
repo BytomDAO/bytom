@@ -266,7 +266,7 @@ func (m *BlocksMessage) GetBlocks() ([]*types.Block, error) {
 }
 
 func (m *BlocksMessage) String() string {
-	return fmt.Sprintf("{block_length: %d}", len(m.RawBlocks))
+	return fmt.Sprintf("{blocks_length: %d}", len(m.RawBlocks))
 }
 
 //StatusRequestMessage status request msg
@@ -332,7 +332,7 @@ func (m *TransactionMessage) GetTransaction() (*types.Tx, error) {
 }
 
 func (m *TransactionMessage) String() string {
-	return fmt.Sprintf("{hash: %s}", hex.EncodeToString(m.RawTx))
+	return fmt.Sprintf("{tx_size: %s}", len(m.RawTx))
 }
 
 //MineBlockMessage new mined block msg
