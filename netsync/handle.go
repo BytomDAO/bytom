@@ -363,7 +363,7 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 		"peer":    basePeer.Addr(),
 		"type":    reflect.TypeOf(msg),
 		"message": msg.String(),
-	}).Debug("receive message from peer")
+	}).Info("receive message from peer")
 
 	switch msg := msg.(type) {
 	case *GetBlockMessage:

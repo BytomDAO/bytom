@@ -332,7 +332,7 @@ func (m *TransactionMessage) GetTransaction() (*types.Tx, error) {
 }
 
 func (m *TransactionMessage) String() string {
-	return fmt.Sprintf("{tx_size: %s}", len(m.RawTx))
+	return fmt.Sprintf("{tx_size: %d}", len(m.RawTx))
 }
 
 //MineBlockMessage new mined block msg
