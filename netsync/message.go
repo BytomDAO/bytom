@@ -2,6 +2,7 @@ package netsync
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,7 +37,9 @@ const (
 )
 
 //BlockchainMessage is a generic message for this reactor.
-type BlockchainMessage interface{}
+type BlockchainMessage interface {
+	String() string
+}
 
 var _ = wire.RegisterInterface(
 	struct{ BlockchainMessage }{},
@@ -81,13 +84,11 @@ func (m *GetBlockMessage) GetHash() *bc.Hash {
 	return &hash
 }
 
-//String convert msg to string
 func (m *GetBlockMessage) String() string {
 	if m.Height > 0 {
-		return fmt.Sprintf("GetBlockMessage{Height: %d}", m.Height)
+		return fmt.Sprintf("{height: %d}", m.Height)
 	}
-	hash := m.GetHash()
-	return fmt.Sprintf("GetBlockMessage{Hash: %s}", hash.String())
+	return fmt.Sprintf("{hash: %s}", hex.EncodeToString(m.RawHash[:]))
 }
 
 //BlockMessage response get block msg
@@ -116,9 +117,8 @@ func (m *BlockMessage) GetBlock() (*types.Block, error) {
 	return block, nil
 }
 
-//String convert msg to string
 func (m *BlockMessage) String() string {
-	return fmt.Sprintf("BlockMessage{Size: %d}", len(m.RawBlock))
+	return fmt.Sprintf("{block_size: %d}", len(m.RawBlock))
 }
 
 //GetHeadersMessage is one of the bytom msg type
@@ -139,18 +139,22 @@ func NewGetHeadersMessage(blockLocator []*bc.Hash, stopHash *bc.Hash) *GetHeader
 }
 
 //GetBlockLocator return the locator of the msg
-func (msg *GetHeadersMessage) GetBlockLocator() []*bc.Hash {
+func (m *GetHeadersMessage) GetBlockLocator() []*bc.Hash {
 	blockLocator := []*bc.Hash{}
-	for _, rawHash := range msg.RawBlockLocator {
+	for _, rawHash := range m.RawBlockLocator {
 		hash := bc.NewHash(rawHash)
 		blockLocator = append(blockLocator, &hash)
 	}
 	return blockLocator
 }
 
+func (m *GetHeadersMessage) String() string {
+	return fmt.Sprintf("{stop_hash: %s}", hex.EncodeToString(m.RawStopHash[:]))
+}
+
 //GetStopHash return the stop hash of the msg
-func (msg *GetHeadersMessage) GetStopHash() *bc.Hash {
-	hash := bc.NewHash(msg.RawStopHash)
+func (m *GetHeadersMessage) GetStopHash() *bc.Hash {
+	hash := bc.NewHash(m.RawStopHash)
 	return &hash
 }
 
@@ -174,9 +178,9 @@ func NewHeadersMessage(headers []*types.BlockHeader) (*HeadersMessage, error) {
 }
 
 //GetHeaders return the headers in the msg
-func (msg *HeadersMessage) GetHeaders() ([]*types.BlockHeader, error) {
+func (m *HeadersMessage) GetHeaders() ([]*types.BlockHeader, error) {
 	headers := []*types.BlockHeader{}
-	for _, data := range msg.RawHeaders {
+	for _, data := range m.RawHeaders {
 		header := &types.BlockHeader{}
 		if err := json.Unmarshal(data, header); err != nil {
 			return nil, err
@@ -185,6 +189,10 @@ func (msg *HeadersMessage) GetHeaders() ([]*types.BlockHeader, error) {
 		headers = append(headers, header)
 	}
 	return headers, nil
+}
+
+func (m *HeadersMessage) String() string {
+	return fmt.Sprintf("{header_length: %d}", len(m.RawHeaders))
 }
 
 //GetBlocksMessage is one of the bytom msg type
@@ -205,9 +213,9 @@ func NewGetBlocksMessage(blockLocator []*bc.Hash, stopHash *bc.Hash) *GetBlocksM
 }
 
 //GetBlockLocator return the locator of the msg
-func (msg *GetBlocksMessage) GetBlockLocator() []*bc.Hash {
+func (m *GetBlocksMessage) GetBlockLocator() []*bc.Hash {
 	blockLocator := []*bc.Hash{}
-	for _, rawHash := range msg.RawBlockLocator {
+	for _, rawHash := range m.RawBlockLocator {
 		hash := bc.NewHash(rawHash)
 		blockLocator = append(blockLocator, &hash)
 	}
@@ -215,9 +223,13 @@ func (msg *GetBlocksMessage) GetBlockLocator() []*bc.Hash {
 }
 
 //GetStopHash return the stop hash of the msg
-func (msg *GetBlocksMessage) GetStopHash() *bc.Hash {
-	hash := bc.NewHash(msg.RawStopHash)
+func (m *GetBlocksMessage) GetStopHash() *bc.Hash {
+	hash := bc.NewHash(m.RawStopHash)
 	return &hash
+}
+
+func (m *GetBlocksMessage) String() string {
+	return fmt.Sprintf("{stop_hash: %s}", hex.EncodeToString(m.RawStopHash[:]))
 }
 
 //BlocksMessage is one of the bytom msg type
@@ -240,9 +252,9 @@ func NewBlocksMessage(blocks []*types.Block) (*BlocksMessage, error) {
 }
 
 //GetBlocks returns the blocks in the msg
-func (msg *BlocksMessage) GetBlocks() ([]*types.Block, error) {
+func (m *BlocksMessage) GetBlocks() ([]*types.Block, error) {
 	blocks := []*types.Block{}
-	for _, data := range msg.RawBlocks {
+	for _, data := range m.RawBlocks {
 		block := &types.Block{}
 		if err := json.Unmarshal(data, block); err != nil {
 			return nil, err
@@ -253,12 +265,15 @@ func (msg *BlocksMessage) GetBlocks() ([]*types.Block, error) {
 	return blocks, nil
 }
 
+func (m *BlocksMessage) String() string {
+	return fmt.Sprintf("{blocks_length: %d}", len(m.RawBlocks))
+}
+
 //StatusRequestMessage status request msg
 type StatusRequestMessage struct{}
 
-//String
 func (m *StatusRequestMessage) String() string {
-	return "StatusRequestMessage"
+	return "{}"
 }
 
 //StatusResponseMessage get status response msg
@@ -289,11 +304,8 @@ func (m *StatusResponseMessage) GetGenesisHash() *bc.Hash {
 	return &hash
 }
 
-//String convert msg to string
 func (m *StatusResponseMessage) String() string {
-	hash := m.GetHash()
-	genesisHash := m.GetGenesisHash()
-	return fmt.Sprintf("StatusResponseMessage{Height: %d, Best hash: %s, Genesis hash: %s}", m.Height, hash.String(), genesisHash.String())
+	return fmt.Sprintf("{height: %d, hash: %s}", m.Height, hex.EncodeToString(m.RawHash[:]))
 }
 
 //TransactionMessage notify new tx msg
@@ -319,9 +331,8 @@ func (m *TransactionMessage) GetTransaction() (*types.Tx, error) {
 	return tx, nil
 }
 
-//String
 func (m *TransactionMessage) String() string {
-	return fmt.Sprintf("TransactionMessage{Size: %d}", len(m.RawTx))
+	return fmt.Sprintf("{tx_size: %d}", len(m.RawTx))
 }
 
 //MineBlockMessage new mined block msg
@@ -347,9 +358,8 @@ func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
 	return block, nil
 }
 
-//String convert msg to string
 func (m *MineBlockMessage) String() string {
-	return fmt.Sprintf("NewMineBlockMessage{Size: %d}", len(m.RawBlock))
+	return fmt.Sprintf("{block_size: %d}", len(m.RawBlock))
 }
 
 //FilterLoadMessage tells the receiving peer to filter the transactions according to address.
@@ -357,13 +367,25 @@ type FilterLoadMessage struct {
 	Addresses [][]byte
 }
 
+func (m *FilterLoadMessage) String() string {
+	return fmt.Sprintf("{addresses_length: %d}", len(m.Addresses))
+}
+
 // FilterAddMessage tells the receiving peer to add address to the filter.
 type FilterAddMessage struct {
 	Address []byte
 }
 
+func (m *FilterAddMessage) String() string {
+	return fmt.Sprintf("{address: %s}", hex.EncodeToString(m.Address))
+}
+
 //FilterClearMessage tells the receiving peer to remove a previously-set filter.
 type FilterClearMessage struct{}
+
+func (m *FilterClearMessage) String() string {
+	return "{}"
+}
 
 //GetMerkleBlockMessage request merkle blocks from remote peers by height/hash
 type GetMerkleBlockMessage struct {
@@ -377,6 +399,13 @@ func (m *GetMerkleBlockMessage) GetHash() *bc.Hash {
 	return &hash
 }
 
+func (m *GetMerkleBlockMessage) String() string {
+	if m.Height > 0 {
+		return fmt.Sprintf("{height: %d}", m.Height)
+	}
+	return fmt.Sprintf("{hash: %s}", hex.EncodeToString(m.RawHash[:]))
+}
+
 //MerkleBlockMessage return the merkle block to client
 type MerkleBlockMessage struct {
 	RawBlockHeader []byte
@@ -387,19 +416,19 @@ type MerkleBlockMessage struct {
 	Flags          []byte
 }
 
-func (msg *MerkleBlockMessage) setRawBlockHeader(bh types.BlockHeader) error {
+func (m *MerkleBlockMessage) setRawBlockHeader(bh types.BlockHeader) error {
 	rawHeader, err := bh.MarshalText()
 	if err != nil {
 		return err
 	}
 
-	msg.RawBlockHeader = rawHeader
+	m.RawBlockHeader = rawHeader
 	return nil
 }
 
-func (msg *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
+func (m *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
 	for _, txHash := range txHashes {
-		msg.TxHashes = append(msg.TxHashes, txHash.Byte32())
+		m.TxHashes = append(m.TxHashes, txHash.Byte32())
 	}
 	for _, tx := range relatedTxs {
 		rawTxData, err := tx.MarshalText()
@@ -407,15 +436,15 @@ func (msg *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, r
 			return err
 		}
 
-		msg.RawTxDatas = append(msg.RawTxDatas, rawTxData)
+		m.RawTxDatas = append(m.RawTxDatas, rawTxData)
 	}
-	msg.Flags = txFlags
+	m.Flags = txFlags
 	return nil
 }
 
-func (msg *MerkleBlockMessage) setStatusInfo(statusHashes []*bc.Hash, relatedStatuses []*bc.TxVerifyResult) error {
+func (m *MerkleBlockMessage) setStatusInfo(statusHashes []*bc.Hash, relatedStatuses []*bc.TxVerifyResult) error {
 	for _, statusHash := range statusHashes {
-		msg.StatusHashes = append(msg.StatusHashes, statusHash.Byte32())
+		m.StatusHashes = append(m.StatusHashes, statusHash.Byte32())
 	}
 
 	for _, status := range relatedStatuses {
@@ -424,9 +453,13 @@ func (msg *MerkleBlockMessage) setStatusInfo(statusHashes []*bc.Hash, relatedSta
 			return err
 		}
 
-		msg.RawTxStatuses = append(msg.RawTxStatuses, rawStatusData)
+		m.RawTxStatuses = append(m.RawTxStatuses, rawStatusData)
 	}
 	return nil
+}
+
+func (m *MerkleBlockMessage) String() string {
+	return "{}"
 }
 
 //NewMerkleBlockMessage construct merkle block message
