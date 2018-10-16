@@ -10,6 +10,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
@@ -230,7 +231,7 @@ type RawTx struct {
 	TimeRange uint64                   `json:"time_range"`
 	Inputs    []*query.AnnotatedInput  `json:"inputs"`
 	Outputs   []*query.AnnotatedOutput `json:"outputs"`
-	Fee       int64                    `json:"fee"`
+	Fee       uint64                   `json:"fee"`
 }
 
 // POST /decode-raw-transaction
@@ -253,21 +254,7 @@ func (a *API) decodeRawTransaction(ctx context.Context, ins struct {
 		tx.Outputs = append(tx.Outputs, a.wallet.BuildAnnotatedOutput(&ins.Tx, i))
 	}
 
-	totalInputBtm := uint64(0)
-	totalOutputBtm := uint64(0)
-	for _, input := range tx.Inputs {
-		if input.AssetID.String() == consensus.BTMAssetID.String() {
-			totalInputBtm += input.Amount
-		}
-	}
-
-	for _, output := range tx.Outputs {
-		if output.AssetID.String() == consensus.BTMAssetID.String() {
-			totalOutputBtm += output.Amount
-		}
-	}
-
-	tx.Fee = int64(totalInputBtm) - int64(totalOutputBtm)
+	tx.Fee = txbuilder.CalculateTxFee(&ins.Tx)
 	return NewSuccessResponse(tx)
 }
 

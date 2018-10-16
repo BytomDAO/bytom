@@ -37,7 +37,7 @@ func (sm *SyncManager) txBroadcastLoop() {
 		select {
 		case newTx := <-sm.newTxCh:
 			if err := sm.peers.broadcastTx(newTx); err != nil {
-				log.Errorf("Broadcast new tx error. %v", err)
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast new tx.")
 				return
 			}
 		case <-sm.quitSync:
@@ -78,9 +78,10 @@ func (sm *SyncManager) txSyncLoop() {
 
 		// Send the pack in the background.
 		log.WithFields(log.Fields{
-			"count": len(sendTxs),
-			"bytes": totalSize,
-			"peer":  msg.peerID,
+			"module": logModule,
+			"count":  len(sendTxs),
+			"bytes":  totalSize,
+			"peer":   msg.peerID,
 		}).Debug("txSyncLoop sending transactions")
 		sending = true
 		go func() {
@@ -118,7 +119,7 @@ func (sm *SyncManager) txSyncLoop() {
 		case err := <-done:
 			sending = false
 			if err != nil {
-				log.WithField("err", err).Warning("fail on txSyncLoop sending")
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on txSyncLoop sending")
 			}
 
 			if s := pick(); s != nil {
