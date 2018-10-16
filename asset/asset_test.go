@@ -116,19 +116,13 @@ func TestListAssets(t *testing.T) {
 	reg := mockNewRegistry(t)
 
 	firstAlias := "FIRST_ALIAS"
-	secondAlias := "SECOND_ALIAS"
 
 	firstAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, firstAlias, nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	secondAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, secondAlias, nil)
-	if err != nil {
-		testutil.FatalErr(t, err)
-	}
-
-	wantAssets := []*Asset{DefaultNativeAsset, firstAsset, secondAsset}
+	wantAssets := []*Asset{DefaultNativeAsset, firstAsset}
 
 	gotAssets, err := reg.ListAssets("")
 	if err != nil {
