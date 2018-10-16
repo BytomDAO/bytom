@@ -43,12 +43,13 @@ var (
 
 // pre-define errors for supporting bytom errorFormatter
 var (
-	ErrDuplicateAlias  = errors.New("duplicate account alias")
-	ErrFindAccount     = errors.New("fail to find account")
-	ErrMarshalAccount  = errors.New("failed marshal account")
-	ErrInvalidAddress  = errors.New("invalid address")
-	ErrFindCtrlProgram = errors.New("fail to find account control program")
-	ErrPathType        = errors.New("invalid key derive path type")
+	ErrDuplicateAlias       = errors.New("duplicate account alias")
+	ErrFindAccount          = errors.New("fail to find account")
+	ErrMarshalAccount       = errors.New("failed marshal account")
+	ErrInvalidAddress       = errors.New("invalid address")
+	ErrFindCtrlProgram      = errors.New("fail to find account control program")
+	ErrPathType             = errors.New("invalid key derive path type")
+	ErrGetXPubsAccountIndex = errors.New("failed marshal account")
 )
 
 // ContractKey account control promgram store prefix
@@ -560,6 +561,53 @@ func (m *Manager) getXPubsNextAccountIndex(xpubs []chainkd.XPub) (uint64, error)
 	}
 	m.db.Set(xPubsAccountIndexKey(hash), common.Unit64ToBytes(nextIndex))
 	return nextIndex, nil
+}
+
+func (m *Manager) getXPubsAccountIndex(xpubs []chainkd.XPub) (uint64, error) {
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
+	var index uint64 = 0
+	if len(xpubs) == 0 {
+		return index, signers.ErrNoXPubs
+	}
+	sort.Sort(signers.SortKeys(xpubs))
+	for i := 1; i < len(xpubs); i++ {
+		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
+			return index, errors.WithDetailf(signers.ErrDupeXPub, "duplicated key=%x", xpubs[i])
+		}
+	}
+	var hash [32]byte
+	xPubs := []byte{}
+	for _, xpub := range xpubs {
+		xPubs = append(xPubs, xpub[:]...)
+	}
+	sha3pool.Sum256(hash[:], xPubs)
+	if rawIndexBytes := m.db.Get(xPubsAccountIndexKey(hash)); rawIndexBytes != nil {
+		index = common.BytesToUnit64(rawIndexBytes)
+	}
+	return index, nil
+}
+
+func (m *Manager) setXPubsAccountIndex(xpubs []chainkd.XPub, index uint64) error {
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
+	if len(xpubs) == 0 {
+		return signers.ErrNoXPubs
+	}
+	sort.Sort(signers.SortKeys(xpubs))
+	for i := 1; i < len(xpubs); i++ {
+		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
+			return errors.WithDetailf(signers.ErrDupeXPub, "duplicated key=%x", xpubs[i])
+		}
+	}
+	var hash [32]byte
+	xPubs := []byte{}
+	for _, xpub := range xpubs {
+		xPubs = append(xPubs, xpub[:]...)
+	}
+	sha3pool.Sum256(hash[:], xPubs)
+	m.db.Set(xPubsAccountIndexKey(hash), common.Unit64ToBytes(index))
+	return nil
 }
 
 func (m *Manager) getNextBip32ContractIndex(accountID string, pathType uint8, change bool) uint64 {

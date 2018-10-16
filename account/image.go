@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/blockchain/signers"
-	"github.com/bytom/common"
 )
 
 // ImageSlice record info of single account
@@ -71,13 +70,18 @@ func (m *Manager) Restore(image *Image) error {
 		if slice.Account.Signer.KeyIndex > maxAccountIndex {
 			maxAccountIndex = slice.Account.Signer.KeyIndex
 		}
+
 		storeBatch.Set(Key(slice.Account.ID), rawAccount)
 		storeBatch.Set(aliasKey(slice.Account.Alias), []byte(slice.Account.ID))
+		index, err := m.getXPubsAccountIndex(slice.Account.XPubs)
+		if err != nil {
+			return ErrGetXPubsAccountIndex
+		}
+		if index < slice.Account.KeyIndex {
+			m.setXPubsAccountIndex(slice.Account.XPubs, slice.Account.KeyIndex)
+		}
 	}
 
-	if localIndex := m.getNextAccountIndex(); localIndex < maxAccountIndex {
-		storeBatch.Set(accountIndexKey, common.Unit64ToBytes(maxAccountIndex))
-	}
 	storeBatch.Write()
 
 	for _, slice := range image.Slice {
