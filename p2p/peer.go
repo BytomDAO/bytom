@@ -147,7 +147,7 @@ func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duratio
 		func() {
 			var n int
 			wire.ReadBinary(peerNodeInfo, pc.conn, maxNodeInfoSize, &n, &err2)
-			log.WithField("peerNodeInfo", peerNodeInfo).Info("Peer handshake")
+			log.WithField("address", peerNodeInfo.ListenAddr).Info("Peer handshake")
 		})
 	if err1 != nil {
 		return peerNodeInfo, errors.Wrap(err1, "Error during handshake/write")

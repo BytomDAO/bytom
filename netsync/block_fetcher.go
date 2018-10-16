@@ -64,7 +64,11 @@ func (f *blockFetcher) add(msg *blockMsg) {
 	if _, ok := f.msgSet[blockHash]; !ok {
 		f.msgSet[blockHash] = msg
 		f.queue.Push(msg, -float32(msg.block.Height))
-		log.WithField("block height", msg.block.Height).Debug("fetcher receive mine block")
+		log.WithFields(log.Fields{
+			"module":       logModule,
+			"block height": msg.block.Height,
+			"block hash":   blockHash.String(),
+		}).Debug("blockFetcher receive mine block")
 	}
 }
 
@@ -80,7 +84,7 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 	}
 
 	if err := f.peers.broadcastMinedBlock(msg.block); err != nil {
-		log.WithField("err", err).Error("fail on fetcher broadcast new block")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("blockFetcher fail on broadcast new block")
 		return
 	}
 }
