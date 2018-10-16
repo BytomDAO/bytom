@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/common"
 )
 
@@ -13,6 +14,8 @@ import (
 type ImageSlice struct {
 	Account       *Account `json:"account"`
 	ContractIndex uint64   `json:"contract_index"`
+	Bip44IntIndex uint64   `json:"contract_internal"`
+	Bip44ExtIndex uint64   `json:"contract_external"`
 }
 
 // Image is the struct for hold export account data
@@ -36,7 +39,9 @@ func (m *Manager) Backup() (*Image, error) {
 
 		image.Slice = append(image.Slice, &ImageSlice{
 			Account:       a,
-			ContractIndex: m.getNextContractIndex(a.ID),
+			ContractIndex: m.GetContractIndex(a.ID),
+			Bip44IntIndex: m.GetBip44ContractIndex(a.ID, true),
+			Bip44ExtIndex: m.GetBip44ContractIndex(a.ID, false),
 		})
 	}
 	return image, nil
@@ -77,7 +82,17 @@ func (m *Manager) Restore(image *Image) error {
 
 	for _, slice := range image.Slice {
 		for i := uint64(1); i <= slice.ContractIndex; i++ {
-			if _, err := m.createAddress(slice.Account, false); err != nil {
+			if _, err := m.createAddress(signers.Bip32, slice.Account, false); err != nil {
+				return err
+			}
+		}
+		for i := uint64(1); i <= slice.Bip44IntIndex; i++ {
+			if _, err := m.createAddress(signers.Bip44, slice.Account, true); err != nil {
+				return err
+			}
+		}
+		for i := uint64(1); i <= slice.Bip44ExtIndex; i++ {
+			if _, err := m.createAddress(signers.Bip44, slice.Account, false); err != nil {
 				return err
 			}
 		}

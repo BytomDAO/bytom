@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
+	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
@@ -294,6 +295,7 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 			Alias:               a.wallet.AccountMgr.GetAliasByID(utxo.AccountID),
 			AssetAlias:          a.wallet.AssetReg.GetAliasByID(utxo.AssetID.String()),
 			Change:              utxo.Change,
+			PathType:            utxo.PathType,
 		}}, UTXOs...)
 	}
 	start, end := getPageRange(len(UTXOs), filter.From, filter.Count)
@@ -318,6 +320,21 @@ type AccountPubkey struct {
 	PubKeyInfos []PubKeyInfo `json:"pubkey_infos"`
 }
 
+func getPubkey(account *account.Account, PathType uint8, change bool, index uint64) (*ed25519.PublicKey, []chainjson.HexBytes, error) {
+	rawPath, err := signers.Path(PathType, account.Signer, signers.AccountKeySpace, change, index)
+	if err != nil {
+		return nil, nil, err
+	}
+	derivedXPub := account.XPubs[0].Derive(rawPath)
+	pubkey := derivedXPub.PublicKey()
+	var path []chainjson.HexBytes
+	for _, p := range rawPath {
+		path = append(path, chainjson.HexBytes(p))
+	}
+
+	return &pubkey, path, nil
+}
+
 // POST /list-pubkeys
 func (a *API) listPubKeys(ctx context.Context, ins struct {
 	AccountID    string `json:"account_id"`
@@ -339,21 +356,45 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 	pubKeyInfos := []PubKeyInfo{}
 	idx := a.wallet.AccountMgr.GetContractIndex(account.ID)
 	for i := uint64(1); i <= idx; i++ {
-		rawPath := signers.Path(account.Signer, signers.AccountKeySpace, i)
-		derivedXPub := account.XPubs[0].Derive(rawPath)
-		pubkey := derivedXPub.PublicKey()
-
-		if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(pubkey) {
+		pubkey, path, err := getPubkey(account, signers.Bip32, false, i)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
 			continue
 		}
-
-		var path []chainjson.HexBytes
-		for _, p := range rawPath {
-			path = append(path, chainjson.HexBytes(p))
-		}
-
 		pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
-			Pubkey: hex.EncodeToString(pubkey),
+			Pubkey: hex.EncodeToString(*pubkey),
+			Path:   path,
+		})
+	}
+
+	idx = a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, true)
+	for i := uint64(1); i <= idx; i++ {
+		pubkey, path, err := getPubkey(account, signers.Bip44, true, i)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
+			continue
+		}
+		pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
+			Pubkey: hex.EncodeToString(*pubkey),
+			Path:   path,
+		})
+	}
+
+	idx = a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, false)
+	for i := uint64(1); i <= idx; i++ {
+		pubkey, path, err := getPubkey(account, signers.Bip44, false, i)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
+			continue
+		}
+		pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
+			Pubkey: hex.EncodeToString(*pubkey),
 			Path:   path,
 		})
 	}

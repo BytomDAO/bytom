@@ -156,7 +156,10 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 			return nil, err
 		}
 
-		path := signers.Path(assetSigner, signers.AssetKeySpace)
+		path, err := signers.Path(signers.Bip32, assetSigner, signers.AssetKeySpace, false, nextAssetIndex)
+		if err != nil {
+			return nil, err
+		}
 		derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
 		issuanceProgram, vmver, err = multisigIssuanceProgram(derivedPKs, assetSigner.Quorum)

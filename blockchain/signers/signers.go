@@ -34,6 +34,13 @@ var (
 	// ErrDupeXPub is returned by create when the same xpub
 	// appears twice in a single call.
 	ErrDupeXPub = errors.New("xpubs cannot contain the same key more than once")
+
+	ErrPathType = errors.New("invalid key derive path type")
+)
+
+var (
+	BIP44Purpose = []byte{0x00, 0x00, 0x00, 0x2C}
+	BTMCoinType  = []byte{0x00, 0x00, 0x00, 0x99}
 )
 
 // Signer is the abstract concept of a signer,
@@ -46,18 +53,54 @@ type Signer struct {
 	KeyIndex uint64         `json:"key_index"`
 }
 
-// Path returns the complete path for derived keys
-func Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
+const (
+	//bip32 compatible previous derivation rule m/account/address_index
+	Bip32 uint8 = iota
+	//bip44 path derivation rule m/purpose'/coin_type'/account'/change/address_index
+	Bip44
+)
+
+func getBip32Path(pathType uint8, s *Signer, ks keySpace, change bool, addrIndex uint64) [][]byte {
 	var path [][]byte
 	signerPath := [9]byte{byte(ks)}
 	binary.LittleEndian.PutUint64(signerPath[1:], s.KeyIndex)
 	path = append(path, signerPath[:])
-	for _, idx := range itemIndexes {
-		var idxBytes [8]byte
-		binary.LittleEndian.PutUint64(idxBytes[:], idx)
-		path = append(path, idxBytes[:])
-	}
+	var idxBytes [8]byte
+	binary.LittleEndian.PutUint64(idxBytes[:], addrIndex)
+	path = append(path, idxBytes[:])
 	return path
+}
+
+// Path returns the complete path for derived keys
+func getBip44Path(pathType uint8, accountIndex uint64, change bool, addrIndex uint64) [][]byte {
+	var path [][]byte
+	path = append(path, BIP44Purpose[:]) //purpose
+	path = append(path, BTMCoinType[:])  //coin type
+	accIdxBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(accIdxBytes, uint64(accountIndex))
+	path = append(path, accIdxBytes) //account index
+	branchBytes := make([]byte, 8)
+	if change {
+		binary.LittleEndian.PutUint64(branchBytes, uint64(1))
+	} else {
+		binary.LittleEndian.PutUint64(branchBytes, uint64(0))
+	}
+	path = append(path, branchBytes) //change
+	addrIdxBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint64(addrIdxBytes[:], addrIndex)
+	path = append(path, addrIdxBytes[:]) //address index
+	return path
+}
+
+// Path returns the complete path for derived keys
+func Path(pathType uint8, s *Signer, ks keySpace, change bool, addrIndex uint64) ([][]byte, error) {
+	switch pathType {
+	case Bip32:
+		return getBip32Path(pathType, s, ks, change, addrIndex), nil
+	case Bip44:
+		return getBip44Path(pathType, s.KeyIndex, change, addrIndex), nil
+	}
+	return nil, ErrPathType
 }
 
 // Create creates and stores a Signer in the database

@@ -48,6 +48,7 @@ var (
 	ErrMarshalAccount  = errors.New("failed marshal account")
 	ErrInvalidAddress  = errors.New("invalid address")
 	ErrFindCtrlProgram = errors.New("fail to find account control program")
+	ErrPathType        = errors.New("invalid key derive path type")
 )
 
 // ContractKey account control promgram store prefix
@@ -66,6 +67,16 @@ func aliasKey(name string) []byte {
 
 func contractIndexKey(accountID string) []byte {
 	return append(contractIndexPrefix, []byte(accountID)...)
+}
+
+func bip44ContractIndexKey(accountID string, change bool) []byte {
+	var key []byte
+	key = append(key, contractIndexPrefix...)
+	key = append(key, accountID...)
+	if change {
+		return append(key, []byte{1}...)
+	}
+	return append(key, []byte{0}...)
 }
 
 // xPubsAccountIndexKey account index created by the same XPub
@@ -87,6 +98,7 @@ type CtrlProgram struct {
 	KeyIndex       uint64
 	ControlProgram []byte
 	Change         bool // Mark whether this control program is for UTXO change
+	PathType       uint8
 }
 
 // Manager stores accounts and their associated control programs.
@@ -162,7 +174,7 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 	if err != nil {
 		return nil, err
 	}
-	return m.createAddress(account, change)
+	return m.createAddress(signers.Bip44, account, change)
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.
@@ -295,7 +307,7 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 		return nil, err
 	}
 
-	program, err := m.createAddress(account, false)
+	program, err := m.createAddress(signers.Bip44, account, false)
 	if err != nil {
 		return nil, err
 	}
@@ -314,8 +326,20 @@ func (m *Manager) GetContractIndex(accountID string) uint64 {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 
-	index := uint64(1)
+	index := uint64(0)
 	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
+		index = common.BytesToUnit64(rawIndexBytes)
+	}
+	return index
+}
+
+// GetBip44ContractIndex return the current bip44 contract index
+func (m *Manager) GetBip44ContractIndex(accountID string, change bool) uint64 {
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
+
+	index := uint64(0)
+	if rawIndexBytes := m.db.Get(bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
 		index = common.BytesToUnit64(rawIndexBytes)
 	}
 	return index
@@ -429,21 +453,30 @@ func (m *Manager) SetCoinbaseArbitrary(arbitrary []byte) {
 }
 
 // CreateAddress generate an address for the select account
-func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram, err error) {
+func (m *Manager) createAddress(pathType uint8, account *Account, change bool) (cp *CtrlProgram, err error) {
+	addrIdx, err := m.getNextContractIndex(account.ID, pathType, change)
+	if err != nil {
+		return nil, err
+	}
+
+	path, err := signers.Path(pathType, account.Signer, signers.AccountKeySpace, change, addrIdx)
+	if err != nil {
+		return nil, err
+	}
+
 	if len(account.XPubs) == 1 {
-		cp, err = m.createP2PKH(account, change)
+		cp, err = m.createP2PKH(account, path)
 	} else {
-		cp, err = m.createP2SH(account, change)
+		cp, err = m.createP2SH(account, path)
 	}
 	if err != nil {
 		return nil, err
 	}
+	cp.PathType, cp.KeyIndex, cp.Change = pathType, addrIdx, change
 	return cp, m.insertControlPrograms(cp)
 }
 
-func (m *Manager) createP2PKH(account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.getNextContractIndex(account.ID)
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+func (m *Manager) createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
@@ -461,15 +494,11 @@ func (m *Manager) createP2PKH(account *Account, change bool) (*CtrlProgram, erro
 	return &CtrlProgram{
 		AccountID:      account.ID,
 		Address:        address.EncodeAddress(),
-		KeyIndex:       idx,
 		ControlProgram: control,
-		Change:         change,
 	}, nil
 }
 
-func (m *Manager) createP2SH(account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.getNextContractIndex(account.ID)
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+func (m *Manager) createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
@@ -491,9 +520,7 @@ func (m *Manager) createP2SH(account *Account, change bool) (*CtrlProgram, error
 	return &CtrlProgram{
 		AccountID:      account.ID,
 		Address:        address.EncodeAddress(),
-		KeyIndex:       idx,
 		ControlProgram: control,
-		Change:         change,
 	}, nil
 }
 
@@ -535,10 +562,9 @@ func (m *Manager) getXPubsNextAccountIndex(xpubs []chainkd.XPub) (uint64, error)
 	return nextIndex, nil
 }
 
-func (m *Manager) getNextContractIndex(accountID string) uint64 {
+func (m *Manager) getNextBip32ContractIndex(accountID string, pathType uint8, change bool) uint64 {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
-
 	nextIndex := uint64(1)
 	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
 		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
@@ -547,12 +573,32 @@ func (m *Manager) getNextContractIndex(accountID string) uint64 {
 	return nextIndex
 }
 
+func (m *Manager) getNextBip44ContractIndex(accountID string, pathType uint8, change bool) uint64 {
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
+	nextIndex := uint64(1)
+	if rawIndexBytes := m.db.Get(bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
+		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
+	}
+	m.db.Set(bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(nextIndex))
+	return nextIndex
+}
+
+func (m *Manager) getNextContractIndex(accountID string, pathType uint8, change bool) (uint64, error) {
+	switch pathType {
+	case signers.Bip32:
+		return m.getNextBip32ContractIndex(accountID, pathType, change), nil
+	case signers.Bip44:
+		return m.getNextBip44ContractIndex(accountID, pathType, change), nil
+	}
+	return 0, ErrPathType
+}
+
 func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 	addr, err := common.DecodeAddress(address, &consensus.ActiveNetParams)
 	if err != nil {
 		return nil, err
 	}
-
 	redeemContract := addr.ScriptAddress()
 	program := []byte{}
 	switch addr.(type) {

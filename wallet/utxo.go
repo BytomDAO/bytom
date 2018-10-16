@@ -140,6 +140,7 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 			utxo.Address = cp.Address
 			utxo.ControlProgramIndex = cp.KeyIndex
 			utxo.Change = cp.Change
+			utxo.PathType = cp.PathType
 			result = append(result, utxo)
 		}
 	}

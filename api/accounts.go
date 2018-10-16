@@ -88,6 +88,7 @@ type addressResp struct {
 	ControlProgram string `json:"control_program"`
 	Change         bool   `json:"change"`
 	KeyIndex       uint64 `json:"key_index"`
+	PathType       uint8  `json:"path_type"`
 }
 
 // SortByIndex implements sort.Interface for addressResp slices
@@ -136,6 +137,7 @@ func (a *API) listAddresses(ctx context.Context, ins struct {
 			ControlProgram: hex.EncodeToString(cp.ControlProgram),
 			Change:         cp.Change,
 			KeyIndex:       cp.KeyIndex,
+			PathType:       cp.PathType,
 		})
 	}
 

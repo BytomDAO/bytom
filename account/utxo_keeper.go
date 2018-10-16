@@ -39,6 +39,7 @@ type UTXO struct {
 	ControlProgramIndex uint64
 	ValidHeight         uint64
 	Change              bool
+	PathType            uint8
 }
 
 // reservation describes a reservation of a set of UTXOs
