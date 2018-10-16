@@ -28,39 +28,6 @@ func genesisTx() *types.Tx {
 	return types.NewTx(txData)
 }
 
-func mainNetGenesisBlock() *types.Block {
-	tx := genesisTx()
-	txStatus := bc.NewTransactionStatus()
-	if err := txStatus.SetStatus(0, false); err != nil {
-		log.Panicf(err.Error())
-	}
-	txStatusHash, err := types.TxStatusMerkleRoot(txStatus.VerifyStatus)
-	if err != nil {
-		log.Panicf("fail on calc genesis tx status merkle root")
-	}
-
-	merkleRoot, err := types.TxMerkleRoot([]*bc.Tx{tx.Tx})
-	if err != nil {
-		log.Panicf("fail on calc genesis tx merkel root")
-	}
-
-	block := &types.Block{
-		BlockHeader: types.BlockHeader{
-			Version:   1,
-			Height:    0,
-			Nonce:     9253507043297,
-			Timestamp: 1539572400,
-			Bits:      2305843009214532812,
-			BlockCommitment: types.BlockCommitment{
-				TransactionsMerkleRoot: merkleRoot,
-				TransactionStatusHash:  txStatusHash,
-			},
-		},
-		Transactions: []*types.Tx{tx},
-	}
-	return block
-}
-
 func testNetGenesisBlock() *types.Block {
 	tx := genesisTx()
 	txStatus := bc.NewTransactionStatus()
@@ -82,7 +49,7 @@ func testNetGenesisBlock() *types.Block {
 			Version:   1,
 			Height:    0,
 			Nonce:     9253507043297,
-			Timestamp: 1539572400,
+			Timestamp: 1539669600,
 			Bits:      2305843009214532812,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
@@ -115,7 +82,7 @@ func soloNetGenesisBlock() *types.Block {
 			Version:   1,
 			Height:    0,
 			Nonce:     9253507043297,
-			Timestamp: 1539572400,
+			Timestamp: 1539669600,
 			Bits:      2305843009214532812,
 			BlockCommitment: types.BlockCommitment{
 				TransactionsMerkleRoot: merkleRoot,
@@ -130,7 +97,6 @@ func soloNetGenesisBlock() *types.Block {
 // GenesisBlock will return genesis block
 func GenesisBlock() *types.Block {
 	return map[string]func() *types.Block{
-		"main": mainNetGenesisBlock,
 		"test": testNetGenesisBlock,
 		"solo": soloNetGenesisBlock,
 	}[consensus.ActiveNetParams.Name]()

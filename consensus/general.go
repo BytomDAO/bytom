@@ -95,11 +95,10 @@ type Params struct {
 }
 
 // ActiveNetParams is ...
-var ActiveNetParams = MainNetParams
+var ActiveNetParams = TestNetParams
 
 // NetParams is the correspondence between chain_id and Params
 var NetParams = map[string]Params{
-	"mainnet": MainNetParams,
 	"wisdom":  TestNetParams,
 	"solonet": SoloNetParams,
 }
@@ -125,7 +124,7 @@ var MainNetParams = Params{
 // TestNetParams is the config for test-net
 var TestNetParams = Params{
 	Name:            "test",
-	Bech32HRPSegwit: "tm",
+	Bech32HRPSegwit: "gm",
 	Checkpoints: []Checkpoint{
 		{12187, bc.NewHash([32]byte{0x76, 0xe7, 0x18, 0xd7, 0xa3, 0x61, 0xc1, 0x2c, 0x57, 0x88, 0xcd, 0x9d, 0x8a, 0xd8, 0xf2, 0x7f, 0xbc, 0x12, 0x4f, 0xdc, 0x11, 0x3b, 0xb6, 0x1f, 0x3b, 0x89, 0x48, 0x93, 0xbc, 0x95, 0xa7, 0xb1})},
 	},
