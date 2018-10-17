@@ -4,6 +4,7 @@ package account
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -552,19 +553,28 @@ func hashXPubs(xpubs []chainkd.XPub) (*[32]byte, error) {
 func (m *Manager) getXPubsNextAccountIndex(xpubs []chainkd.XPub) (uint64, error) {
 	index, err := m.getXPubsAccountIndex(xpubs)
 	if err != nil {
-		return 0, err
+		return index, err
 	}
 	nextIndex := index + 1
 	if nextIndex > MaxAccountsPerXPubs {
-		return 0, ErrAccountIndex
+		return index, ErrAccountIndex
 	}
-	hash, err := hashXPubs(xpubs)
+	accounts, err := m.ListAccounts("")
 	if err != nil {
-		return index, nil
+		return index, err
 	}
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-	m.db.Set(xPubsAccountIndexKey(*hash), common.Unit64ToBytes(nextIndex))
+	sort.Sort(signers.SortKeys(xpubs))
+	for _, account := range accounts {
+		sort.Sort(signers.SortKeys(account.XPubs))
+		if reflect.DeepEqual(account.XPubs, xpubs) {
+			if account.KeyIndex >= nextIndex {
+				nextIndex = account.KeyIndex + 1
+			}
+		}
+	}
+	if err := m.setXPubsAccountIndex(xpubs, nextIndex); err != nil {
+		return index, err
+	}
 	return nextIndex, nil
 }
 
