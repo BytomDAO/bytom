@@ -34,7 +34,7 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 		aa.Alias = *a.Alias
 	}
 	if a.Signer != nil {
-		path, err := signers.Path(0, a.Signer, signers.AssetKeySpace, false, a.Signer.KeyIndex)
+		path, err := signers.Path(signers.BIP0032, a.Signer, signers.AssetKeySpace, false, a.Signer.KeyIndex)
 		if err != nil {
 			return nil, err
 		}
