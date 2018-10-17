@@ -27,7 +27,9 @@ import (
 )
 
 const (
-	maxAccountCache = 1000
+	maxAccountCache        = 1000
+	HardenedKeyStart       = 0x80000000
+	MaxAddressesPerAccount = HardenedKeyStart - 1
 )
 
 var (
@@ -48,8 +50,9 @@ var (
 	ErrMarshalAccount       = errors.New("failed marshal account")
 	ErrInvalidAddress       = errors.New("invalid address")
 	ErrFindCtrlProgram      = errors.New("fail to find account control program")
-	ErrPathType             = errors.New("invalid key derive path type")
-	ErrGetXPubsAccountIndex = errors.New("failed marshal account")
+	ErrDeriveRule           = errors.New("invalid key derive rule")
+	ErrGetXPubsAccountIndex = errors.New("failed get xpubs account index")
+	ErrContractIndex        = errors.New("exceed the maximum addresses per account")
 )
 
 // ContractKey account control promgram store prefix
@@ -80,7 +83,7 @@ func bip44ContractIndexKey(accountID string, change bool) []byte {
 	return append(key, []byte{0}...)
 }
 
-// xPubsAccountIndexKey account index created by the same XPub
+// xPubsAccountIndexKey account index created by the same XPubs hash
 func xPubsAccountIndexKey(hash common.Hash) []byte {
 	return append(xPubsAccountIndexPrefix, hash[:]...)
 }
@@ -98,8 +101,8 @@ type CtrlProgram struct {
 	Address        string
 	KeyIndex       uint64
 	ControlProgram []byte
-	Change         bool // Mark whether this control program is for UTXO change
-	PathType       uint8
+	Change         bool  // Mark whether this control program is for UTXO change
+	KeyDeriveRule  uint8 // Hd wallet key derive rule
 }
 
 // Manager stores accounts and their associated control programs.
@@ -175,7 +178,7 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 	if err != nil {
 		return nil, err
 	}
-	return m.createAddress(signers.Bip44, account, change)
+	return m.createAddress(signers.BIP0044, account, change)
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.
@@ -308,7 +311,7 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 		return nil, err
 	}
 
-	program, err := m.createAddress(signers.Bip44, account, false)
+	program, err := m.createAddress(signers.BIP0044, account, false)
 	if err != nil {
 		return nil, err
 	}
@@ -454,13 +457,13 @@ func (m *Manager) SetCoinbaseArbitrary(arbitrary []byte) {
 }
 
 // CreateAddress generate an address for the select account
-func (m *Manager) createAddress(pathType uint8, account *Account, change bool) (cp *CtrlProgram, err error) {
-	addrIdx, err := m.getNextContractIndex(account.ID, pathType, change)
+func (m *Manager) createAddress(deriveRule uint8, account *Account, change bool) (cp *CtrlProgram, err error) {
+	addrIdx, err := m.getNextContractIndex(account.ID, deriveRule, change)
 	if err != nil {
 		return nil, err
 	}
 
-	path, err := signers.Path(pathType, account.Signer, signers.AccountKeySpace, change, addrIdx)
+	path, err := signers.Path(deriveRule, account.Signer, signers.AccountKeySpace, change, addrIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -473,7 +476,7 @@ func (m *Manager) createAddress(pathType uint8, account *Account, change bool) (
 	if err != nil {
 		return nil, err
 	}
-	cp.PathType, cp.KeyIndex, cp.Change = pathType, addrIdx, change
+	cp.KeyDeriveRule, cp.KeyIndex, cp.Change = deriveRule, addrIdx, change
 	return cp, m.insertControlPrograms(cp)
 }
 
@@ -610,7 +613,7 @@ func (m *Manager) setXPubsAccountIndex(xpubs []chainkd.XPub, index uint64) error
 	return nil
 }
 
-func (m *Manager) getNextBip32ContractIndex(accountID string, pathType uint8, change bool) uint64 {
+func (m *Manager) getNextBip32ContractIndex(accountID string, change bool) uint64 {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 	nextIndex := uint64(1)
@@ -621,25 +624,28 @@ func (m *Manager) getNextBip32ContractIndex(accountID string, pathType uint8, ch
 	return nextIndex
 }
 
-func (m *Manager) getNextBip44ContractIndex(accountID string, pathType uint8, change bool) uint64 {
+func (m *Manager) getNextBip44ContractIndex(accountID string, change bool) (uint64, error) {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 	nextIndex := uint64(1)
 	if rawIndexBytes := m.db.Get(bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
 		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
 	}
+	if nextIndex > MaxAddressesPerAccount {
+		return 0, ErrContractIndex
+	}
 	m.db.Set(bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(nextIndex))
-	return nextIndex
+	return nextIndex, nil
 }
 
-func (m *Manager) getNextContractIndex(accountID string, pathType uint8, change bool) (uint64, error) {
-	switch pathType {
-	case signers.Bip32:
-		return m.getNextBip32ContractIndex(accountID, pathType, change), nil
-	case signers.Bip44:
-		return m.getNextBip44ContractIndex(accountID, pathType, change), nil
+func (m *Manager) getNextContractIndex(accountID string, deriveRule uint8, change bool) (uint64, error) {
+	switch deriveRule {
+	case signers.BIP0032:
+		return m.getNextBip32ContractIndex(accountID, change), nil
+	case signers.BIP0044:
+		return m.getNextBip44ContractIndex(accountID, change)
 	}
-	return 0, ErrPathType
+	return 0, ErrDeriveRule
 }
 
 func (m *Manager) getProgramByAddress(address string) ([]byte, error) {

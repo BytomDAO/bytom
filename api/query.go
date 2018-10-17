@@ -295,7 +295,7 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 			Alias:               a.wallet.AccountMgr.GetAliasByID(utxo.AccountID),
 			AssetAlias:          a.wallet.AssetReg.GetAliasByID(utxo.AssetID.String()),
 			Change:              utxo.Change,
-			PathType:            utxo.PathType,
+			KeyDeriveRule:       utxo.KeyDeriveRule,
 		}}, UTXOs...)
 	}
 	start, end := getPageRange(len(UTXOs), filter.From, filter.Count)
@@ -320,8 +320,8 @@ type AccountPubkey struct {
 	PubKeyInfos []PubKeyInfo `json:"pubkey_infos"`
 }
 
-func getPubkey(account *account.Account, PathType uint8, change bool, index uint64) (*ed25519.PublicKey, []chainjson.HexBytes, error) {
-	rawPath, err := signers.Path(PathType, account.Signer, signers.AccountKeySpace, change, index)
+func getPubkey(account *account.Account, deriveRule uint8, change bool, index uint64) (*ed25519.PublicKey, []chainjson.HexBytes, error) {
+	rawPath, err := signers.Path(deriveRule, account.Signer, signers.AccountKeySpace, change, index)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -356,7 +356,7 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 	pubKeyInfos := []PubKeyInfo{}
 	idx := a.wallet.AccountMgr.GetContractIndex(account.ID)
 	for i := uint64(1); i <= idx; i++ {
-		pubkey, path, err := getPubkey(account, signers.Bip32, false, i)
+		pubkey, path, err := getPubkey(account, signers.BIP0032, false, i)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
@@ -371,7 +371,7 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 
 	idx = a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, true)
 	for i := uint64(1); i <= idx; i++ {
-		pubkey, path, err := getPubkey(account, signers.Bip44, true, i)
+		pubkey, path, err := getPubkey(account, signers.BIP0044, true, i)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
@@ -386,7 +386,7 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 
 	idx = a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, false)
 	for i := uint64(1); i <= idx; i++ {
-		pubkey, path, err := getPubkey(account, signers.Bip44, false, i)
+		pubkey, path, err := getPubkey(account, signers.BIP0044, false, i)
 		if err != nil {
 			return NewErrorResponse(err)
 		}

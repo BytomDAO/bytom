@@ -54,7 +54,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 	txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
 	tplIn := &txbuilder.SigningInstruction{}
 	if asset.Signer != nil {
-		path, err := signers.Path(signers.Bip32, asset.Signer, signers.AssetKeySpace, false, asset.Signer.KeyIndex)
+		path, err := signers.Path(signers.BIP0032, asset.Signer, signers.AssetKeySpace, false, asset.Signer.KeyIndex)
 		if err != nil {
 			return err
 		}

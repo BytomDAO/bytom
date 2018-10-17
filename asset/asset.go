@@ -156,7 +156,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 			return nil, err
 		}
 
-		path, err := signers.Path(signers.Bip32, assetSigner, signers.AssetKeySpace, false, nextAssetIndex)
+		path, err := signers.Path(signers.BIP0032, assetSigner, signers.AssetKeySpace, false, nextAssetIndex)
 		if err != nil {
 			return nil, err
 		}

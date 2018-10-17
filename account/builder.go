@@ -147,7 +147,7 @@ func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txb
 			ControlProgramIndex: acp.KeyIndex,
 			Address:             acp.Address,
 			Change:              acp.Change,
-			PathType:            acp.PathType,
+			KeyDeriveRule:       acp.KeyDeriveRule,
 		})
 
 		tpls = append(tpls, tpl)
@@ -315,7 +315,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 		return txInput, sigInst, nil
 	}
 
-	path, err := signers.Path(u.PathType, signer, signers.AccountKeySpace, u.Change, u.ControlProgramIndex)
+	path, err := signers.Path(u.KeyDeriveRule, signer, signers.AccountKeySpace, u.Change, u.ControlProgramIndex)
 	if err != nil {
 		return nil, nil, err
 	}

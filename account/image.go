@@ -86,17 +86,17 @@ func (m *Manager) Restore(image *Image) error {
 
 	for _, slice := range image.Slice {
 		for i := uint64(1); i <= slice.ContractIndex; i++ {
-			if _, err := m.createAddress(signers.Bip32, slice.Account, false); err != nil {
+			if _, err := m.createAddress(signers.BIP0032, slice.Account, false); err != nil {
 				return err
 			}
 		}
 		for i := uint64(1); i <= slice.Bip44IntIndex; i++ {
-			if _, err := m.createAddress(signers.Bip44, slice.Account, true); err != nil {
+			if _, err := m.createAddress(signers.BIP0044, slice.Account, true); err != nil {
 				return err
 			}
 		}
 		for i := uint64(1); i <= slice.Bip44ExtIndex; i++ {
-			if _, err := m.createAddress(signers.Bip44, slice.Account, false); err != nil {
+			if _, err := m.createAddress(signers.BIP0044, slice.Account, false); err != nil {
 				return err
 			}
 		}

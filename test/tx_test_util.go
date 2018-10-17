@@ -105,7 +105,7 @@ func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (
 		Address:             ctrlProg.Address,
 		ValidHeight:         0,
 		Change:              ctrlProg.Change,
-		PathType:            ctrlProg.PathType,
+		KeyDeriveRule:       ctrlProg.KeyDeriveRule,
 	}
 	return utxo, nil
 }
@@ -198,7 +198,7 @@ func (g *TxGenerator) AddIssuanceInput(assetAlias string, amount uint64) error {
 	}
 	issuanceInput := types.NewIssuanceInput(nonce[:], amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
 	signInstruction := &txbuilder.SigningInstruction{}
-	path, err := signers.Path(signers.Bip32, asset.Signer, signers.AssetKeySpace, false, asset.KeyIndex)
+	path, err := signers.Path(signers.BIP0032, asset.Signer, signers.AssetKeySpace, false, asset.KeyIndex)
 	if err != nil {
 		return err
 	}
@@ -317,7 +317,7 @@ func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signe
 	}
 
 	// FIXME: code duplicate with account/builder.go
-	path, err := signers.Path(cp.PathType, signer, signers.AccountKeySpace, cp.Change, cp.KeyIndex)
+	path, err := signers.Path(cp.KeyDeriveRule, signer, signers.AccountKeySpace, cp.Change, cp.KeyIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +341,7 @@ func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signe
 
 	case *common.AddressWitnessScriptHash:
 		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
-		path, err := signers.Path(cp.PathType, signer, signers.AccountKeySpace, cp.Change, cp.KeyIndex)
+		path, err := signers.Path(cp.KeyDeriveRule, signer, signers.AccountKeySpace, cp.Change, cp.KeyIndex)
 		if err != nil {
 			return nil, err
 		}
