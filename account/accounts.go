@@ -30,6 +30,7 @@ const (
 	maxAccountCache        = 1000
 	HardenedKeyStart       = 0x80000000
 	MaxAddressesPerAccount = HardenedKeyStart - 1
+	MaxAccountsPerXPubs    = HardenedKeyStart - 1
 )
 
 var (
@@ -53,6 +54,7 @@ var (
 	ErrDeriveRule           = errors.New("invalid key derive rule")
 	ErrGetXPubsAccountIndex = errors.New("failed get xpubs account index")
 	ErrContractIndex        = errors.New("exceed the maximum addresses per account")
+	ErrAccountIndex         = errors.New("exceed the maximum accounts per xpub")
 )
 
 // ContractKey account control promgram store prefix
@@ -528,29 +530,14 @@ func (m *Manager) createP2SH(account *Account, path [][]byte) (*CtrlProgram, err
 	}, nil
 }
 
-func (m *Manager) getNextAccountIndex() uint64 {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-
-	var nextIndex uint64 = 1
-	if rawIndexBytes := m.db.Get(accountIndexKey); rawIndexBytes != nil {
-		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
-	}
-	m.db.Set(accountIndexKey, common.Unit64ToBytes(nextIndex))
-	return nextIndex
-}
-
-func (m *Manager) getXPubsNextAccountIndex(xpubs []chainkd.XPub) (uint64, error) {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-	var nextIndex uint64 = 1
+func hashXPubs(xpubs []chainkd.XPub) (*[32]byte, error) {
 	if len(xpubs) == 0 {
-		return nextIndex, signers.ErrNoXPubs
+		return nil, signers.ErrNoXPubs
 	}
 	sort.Sort(signers.SortKeys(xpubs))
 	for i := 1; i < len(xpubs); i++ {
 		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
-			return nextIndex, errors.WithDetailf(signers.ErrDupeXPub, "duplicated key=%x", xpubs[i])
+			return nil, errors.WithDetailf(signers.ErrDupeXPub, "duplicated key=%x", xpubs[i])
 		}
 	}
 	var hash [32]byte
@@ -559,10 +546,25 @@ func (m *Manager) getXPubsNextAccountIndex(xpubs []chainkd.XPub) (uint64, error)
 		xPubs = append(xPubs, xpub[:]...)
 	}
 	sha3pool.Sum256(hash[:], xPubs)
-	if rawIndexBytes := m.db.Get(xPubsAccountIndexKey(hash)); rawIndexBytes != nil {
-		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
+	return &hash, nil
+}
+
+func (m *Manager) getXPubsNextAccountIndex(xpubs []chainkd.XPub) (uint64, error) {
+	index, err := m.getXPubsAccountIndex(xpubs)
+	if err != nil {
+		return 0, err
 	}
-	m.db.Set(xPubsAccountIndexKey(hash), common.Unit64ToBytes(nextIndex))
+	nextIndex := index + 1
+	if nextIndex > MaxAccountsPerXPubs {
+		return 0, ErrAccountIndex
+	}
+	hash, err := hashXPubs(xpubs)
+	if err != nil {
+		return index, nil
+	}
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
+	m.db.Set(xPubsAccountIndexKey(*hash), common.Unit64ToBytes(nextIndex))
 	return nextIndex, nil
 }
 
@@ -570,22 +572,11 @@ func (m *Manager) getXPubsAccountIndex(xpubs []chainkd.XPub) (uint64, error) {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 	var index uint64 = 0
-	if len(xpubs) == 0 {
-		return index, signers.ErrNoXPubs
+	hash, err := hashXPubs(xpubs)
+	if err != nil {
+		return index, nil
 	}
-	sort.Sort(signers.SortKeys(xpubs))
-	for i := 1; i < len(xpubs); i++ {
-		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
-			return index, errors.WithDetailf(signers.ErrDupeXPub, "duplicated key=%x", xpubs[i])
-		}
-	}
-	var hash [32]byte
-	xPubs := []byte{}
-	for _, xpub := range xpubs {
-		xPubs = append(xPubs, xpub[:]...)
-	}
-	sha3pool.Sum256(hash[:], xPubs)
-	if rawIndexBytes := m.db.Get(xPubsAccountIndexKey(hash)); rawIndexBytes != nil {
+	if rawIndexBytes := m.db.Get(xPubsAccountIndexKey(*hash)); rawIndexBytes != nil {
 		index = common.BytesToUnit64(rawIndexBytes)
 	}
 	return index, nil
@@ -594,34 +585,26 @@ func (m *Manager) getXPubsAccountIndex(xpubs []chainkd.XPub) (uint64, error) {
 func (m *Manager) setXPubsAccountIndex(xpubs []chainkd.XPub, index uint64) error {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
-	if len(xpubs) == 0 {
-		return signers.ErrNoXPubs
+	hash, err := hashXPubs(xpubs)
+	if err != nil {
+		return err
 	}
-	sort.Sort(signers.SortKeys(xpubs))
-	for i := 1; i < len(xpubs); i++ {
-		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
-			return errors.WithDetailf(signers.ErrDupeXPub, "duplicated key=%x", xpubs[i])
-		}
-	}
-	var hash [32]byte
-	xPubs := []byte{}
-	for _, xpub := range xpubs {
-		xPubs = append(xPubs, xpub[:]...)
-	}
-	sha3pool.Sum256(hash[:], xPubs)
-	m.db.Set(xPubsAccountIndexKey(hash), common.Unit64ToBytes(index))
+	m.db.Set(xPubsAccountIndexKey(*hash), common.Unit64ToBytes(index))
 	return nil
 }
 
-func (m *Manager) getNextBip32ContractIndex(accountID string, change bool) uint64 {
+func (m *Manager) getNextBip32ContractIndex(accountID string, change bool) (uint64, error) {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 	nextIndex := uint64(1)
 	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
 		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
 	}
+	if nextIndex > MaxAddressesPerAccount {
+		return 0, ErrContractIndex
+	}
 	m.db.Set(contractIndexKey(accountID), common.Unit64ToBytes(nextIndex))
-	return nextIndex
+	return nextIndex, nil
 }
 
 func (m *Manager) getNextBip44ContractIndex(accountID string, change bool) (uint64, error) {
@@ -641,7 +624,7 @@ func (m *Manager) getNextBip44ContractIndex(accountID string, change bool) (uint
 func (m *Manager) getNextContractIndex(accountID string, deriveRule uint8, change bool) (uint64, error) {
 	switch deriveRule {
 	case signers.BIP0032:
-		return m.getNextBip32ContractIndex(accountID, change), nil
+		return m.getNextBip32ContractIndex(accountID, change)
 	case signers.BIP0044:
 		return m.getNextBip44ContractIndex(accountID, change)
 	}
