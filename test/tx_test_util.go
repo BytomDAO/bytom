@@ -318,7 +318,7 @@ func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signe
 		return sigInst, nil
 	}
 
-	address, err := common.DecodeAddress(cp.Address, &consensus.MainNetParams)
+	address, err := common.DecodeAddress(cp.Address, &consensus.ActiveNetParams)
 	if err != nil {
 		return nil, err
 	}

@@ -13,7 +13,7 @@
     {
       "coinbase_account": "alice",
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 41250000000}
+        {"name": "alice", "asset": "BTM", "amount": 125000000000}
       ],
       "append": 100
     },
@@ -32,9 +32,9 @@
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 40250000000},
+        {"name": "alice", "asset": "BTM", "amount": 124000000000},
         {"name": "alice", "asset": "GOLD", "amount": 100},
-        {"name": "bob", "asset": "BTM", "amount": 42250000000}
+        {"name": "bob", "asset": "BTM", "amount": 126000000000}
       ],
       "append": 0
     },
@@ -63,9 +63,9 @@
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 39250000000},
+        {"name": "alice", "asset": "BTM", "amount": 123000000000},
         {"name": "alice", "asset": "GOLD", "amount": 0},
-        {"name": "bob", "asset": "BTM", "amount": 42250000000}
+        {"name": "bob", "asset": "BTM", "amount": 126000000000}
       ],
       "append": 0
     },
@@ -84,9 +84,9 @@
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 39250000000},
+        {"name": "alice", "asset": "BTM", "amount": 123000000000},
         {"name": "alice", "asset": "GOLD", "amount": 0},
-        {"name": "bob", "asset": "BTM", "amount": 42250000000},
+        {"name": "bob", "asset": "BTM", "amount": 126000000000},
         {"name": "bob", "asset": "GOLD", "amount": 0}
       ],
       "append": 0
@@ -102,9 +102,9 @@
         }
       ],
       "post_states": [
-        {"name": "alice", "asset": "BTM", "amount": 39250000000},
+        {"name": "alice", "asset": "BTM", "amount": 123000000000},
         {"name": "alice", "asset": "GOLD", "amount": 0},
-        {"name": "bob", "asset": "BTM", "amount": 42250000000},
+        {"name": "bob", "asset": "BTM", "amount": 126000000000},
         {"name": "bob", "asset": "GOLD", "amount": 0}
       ],
       "append": 0

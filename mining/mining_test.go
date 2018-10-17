@@ -4,7 +4,7 @@ import "testing"
 
 func TestCreateCoinbaseTx(t *testing.T) {
 	reductionInterval := uint64(840000)
-	baseSubsidy := uint64(41250000000)
+	baseSubsidy := uint64(125000000000)
 	cases := []struct {
 		height  uint64
 		txFee   uint64
