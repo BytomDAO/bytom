@@ -104,6 +104,8 @@ func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (
 		AccountID:           ctrlProg.AccountID,
 		Address:             ctrlProg.Address,
 		ValidHeight:         0,
+		Change:              ctrlProg.Change,
+		PathType:            ctrlProg.PathType,
 	}
 	return utxo, nil
 }
