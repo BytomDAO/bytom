@@ -134,7 +134,7 @@ func (g *TxGenerator) createControlProgram(accountAlias string, change bool) (*a
 	if err != nil {
 		return nil, err
 	}
-	return g.AccountManager.CreateAddress(acc.ID, change)
+	return g.AccountManager.CreateAddress(signers.BIP0044, acc.ID, change)
 }
 
 // AddSpendInput add a spend input

@@ -49,16 +49,20 @@ func MockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
 }
 
 // MockTx mock a tx
-func MockTx(utxo *account.UTXO, testAccount *account.Account) (*txbuilder.Template, *types.TxData, error) {
-	txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo)
-	if err != nil {
-		return nil, nil, err
+func MockTx(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder.Template, *types.TxData, error) {
+	b := txbuilder.NewBuilder(time.Now())
+
+	for _, utxo := range utxos {
+		txInput, sigInst, err := account.UtxoToInputs(testAccount.Signer, utxo)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if err := b.AddInput(txInput, sigInst); err != nil {
+			return nil, nil, err
+		}
 	}
 
-	b := txbuilder.NewBuilder(time.Now())
-	if err := b.AddInput(txInput, sigInst); err != nil {
-		return nil, nil, err
-	}
 	out := types.NewTxOutput(*consensus.BTMAssetID, 100, []byte{byte(vm.OP_FAIL)})
 	if err := b.AddOutput(out); err != nil {
 		return nil, nil, err

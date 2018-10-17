@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -54,7 +55,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(signers.BIP0044, testAccount.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}

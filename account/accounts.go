@@ -176,12 +176,12 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 }
 
 // CreateAddress generate an address for the select account
-func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram, err error) {
+func (m *Manager) CreateAddress(deriveRule uint8,accountID string, change bool) (cp *CtrlProgram, err error) {
 	account, err := m.FindByID(accountID)
 	if err != nil {
 		return nil, err
 	}
-	return m.createAddress(signers.BIP0044, account, change)
+	return m.createAddress(deriveRule, account, change)
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.

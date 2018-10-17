@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 )
 
@@ -20,7 +21,7 @@ func (a *API) createAccountReceiver(ctx context.Context, ins struct {
 		accountID = account.ID
 	}
 
-	program, err := a.wallet.AccountMgr.CreateAddress(accountID, false)
+	program, err := a.wallet.AccountMgr.CreateAddress(signers.BIP0044, accountID, false)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

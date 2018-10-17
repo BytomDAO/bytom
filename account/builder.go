@@ -238,7 +238,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	}
 
 	if res.change > 0 {
-		acp, err := a.accounts.CreateAddress(a.AccountID, true)
+		acp, err := a.accounts.CreateAddress(signers.BIP0044, a.AccountID, true)
 		if err != nil {
 			return errors.Wrap(err, "creating control program")
 		}
