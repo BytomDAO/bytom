@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"sort"
 )
 
 const (
@@ -242,13 +243,18 @@ func (ps *peerSet) bestPeer(flag consensus.ServiceFlag) *peer {
 	defer ps.mtx.RUnlock()
 
 	var bestPeer *peer
+	var peers []*peer
 	for _, p := range ps.peers {
 		if !p.services.IsEnable(flag) {
 			continue
 		}
-		if bestPeer == nil || p.height > bestPeer.height {
-			bestPeer = p
-		}
+		peers = append(peers, p)
+	}
+	sort.Slice(peers, func(i, j int) bool {
+		return peers[i].height > peers[j].height
+	})
+	if bestPeer == nil && len(peers) != 0 {
+		bestPeer = peers[0]
 	}
 	return bestPeer
 }
