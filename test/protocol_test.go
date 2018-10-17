@@ -267,7 +267,7 @@ func TestAddInvalidTxToTxPool(t *testing.T) {
 	}
 
 	//invalid tx, output amount greater than input
-	tx, err := CreateTxFromTx(block.Transactions[0], 0, 60000000000, []byte{byte(vm.OP_TRUE)})
+	tx, err := CreateTxFromTx(block.Transactions[0], 0, 600000000000, []byte{byte(vm.OP_TRUE)})
 	if err != nil {
 		t.Fatal(err)
 	}
