@@ -113,7 +113,7 @@ func (xprv XPrv) nonhardenedChild(sel []byte) (res XPrv) {
 	r.Mod(r, N)
 	priv := r.Bytes()
 
-	copy(res[:32], priv[:32])
+	copy(res[:32], priv[:])
 
 	return
 }
