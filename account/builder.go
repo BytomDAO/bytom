@@ -147,7 +147,6 @@ func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txb
 			ControlProgramIndex: acp.KeyIndex,
 			Address:             acp.Address,
 			Change:              acp.Change,
-			KeyDeriveRule:       acp.KeyDeriveRule,
 		})
 
 		tpls = append(tpls, tpl)
@@ -238,7 +237,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	}
 
 	if res.change > 0 {
-		acp, err := a.accounts.CreateAddress(signers.BIP0044, a.AccountID, true)
+		acp, err := a.accounts.CreateAddress(a.AccountID, true)
 		if err != nil {
 			return errors.Wrap(err, "creating control program")
 		}
@@ -315,7 +314,7 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 		return txInput, sigInst, nil
 	}
 
-	path, err := signers.Path(u.KeyDeriveRule, signer, signers.AccountKeySpace, u.Change, u.ControlProgramIndex)
+	path, err := signers.Path(signer, signers.AccountKeySpace, u.Change, u.ControlProgramIndex)
 	if err != nil {
 		return nil, nil, err
 	}

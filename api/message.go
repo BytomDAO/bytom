@@ -34,7 +34,7 @@ func (a *API) signMessage(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	path, err := signers.Path(cp.KeyDeriveRule, account.Signer, signers.AccountKeySpace, false, cp.KeyIndex)
+	path, err := signers.Path(account.Signer, signers.AccountKeySpace, false, cp.KeyIndex)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

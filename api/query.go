@@ -295,7 +295,6 @@ func (a *API) listUnspentOutputs(ctx context.Context, filter struct {
 			Alias:               a.wallet.AccountMgr.GetAliasByID(utxo.AccountID),
 			AssetAlias:          a.wallet.AssetReg.GetAliasByID(utxo.AssetID.String()),
 			Change:              utxo.Change,
-			KeyDeriveRule:       utxo.KeyDeriveRule,
 		}}, UTXOs...)
 	}
 	start, end := getPageRange(len(UTXOs), filter.From, filter.Count)
@@ -321,7 +320,7 @@ type AccountPubkey struct {
 }
 
 func getPubkey(account *account.Account, deriveRule uint8, change bool, index uint64) (*ed25519.PublicKey, []chainjson.HexBytes, error) {
-	rawPath, err := signers.Path(deriveRule, account.Signer, signers.AccountKeySpace, change, index)
+	rawPath, err := signers.Path(account.Signer, signers.AccountKeySpace, change, index)
 	if err != nil {
 		return nil, nil, err
 	}

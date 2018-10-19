@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/bytom/blockchain/signers"
 )
 
 // ImageSlice record info of single account
@@ -48,7 +46,6 @@ func (m *Manager) Backup() (*Image, error) {
 
 // Restore import the accountImages into account manage
 func (m *Manager) Restore(image *Image) error {
-	maxAccountIndex := uint64(0)
 	storeBatch := m.db.NewBatch()
 	for _, slice := range image.Slice {
 		if existed := m.db.Get(Key(slice.Account.ID)); existed != nil {
@@ -67,13 +64,9 @@ func (m *Manager) Restore(image *Image) error {
 			return ErrMarshalAccount
 		}
 
-		if slice.Account.Signer.KeyIndex > maxAccountIndex {
-			maxAccountIndex = slice.Account.Signer.KeyIndex
-		}
-
 		storeBatch.Set(Key(slice.Account.ID), rawAccount)
 		storeBatch.Set(aliasKey(slice.Account.Alias), []byte(slice.Account.ID))
-		index, err := m.getXPubsAccountIndex(slice.Account.XPubs)
+		index := m.getXPubsAccountIndex(slice.Account.XPubs)
 		if err != nil {
 			return ErrGetXPubsAccountIndex
 		}
@@ -86,17 +79,17 @@ func (m *Manager) Restore(image *Image) error {
 
 	for _, slice := range image.Slice {
 		for i := uint64(1); i <= slice.ContractIndex; i++ {
-			if _, err := m.createAddress(signers.BIP0032, slice.Account, false); err != nil {
+			if _, err := m.createAddress(slice.Account, false); err != nil {
 				return err
 			}
 		}
 		for i := uint64(1); i <= slice.Bip44IntIndex; i++ {
-			if _, err := m.createAddress(signers.BIP0044, slice.Account, true); err != nil {
+			if _, err := m.createAddress(slice.Account, true); err != nil {
 				return err
 			}
 		}
 		for i := uint64(1); i <= slice.Bip44ExtIndex; i++ {
-			if _, err := m.createAddress(signers.BIP0044, slice.Account, false); err != nil {
+			if _, err := m.createAddress(slice.Account, false); err != nil {
 				return err
 			}
 		}

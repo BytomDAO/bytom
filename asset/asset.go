@@ -151,12 +151,12 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		}
 
 		nextAssetIndex := reg.getNextAssetIndex()
-		assetSigner, err = signers.Create("asset", xpubs, quorum, nextAssetIndex)
+		assetSigner, err = signers.Create("asset", xpubs, quorum, nextAssetIndex, signers.BIP0032)
 		if err != nil {
 			return nil, err
 		}
 
-		path, err := signers.Path(signers.BIP0032, assetSigner, signers.AssetKeySpace, false, nextAssetIndex)
+		path, err := signers.Path(assetSigner, signers.AssetKeySpace, false, nextAssetIndex)
 		if err != nil {
 			return nil, err
 		}

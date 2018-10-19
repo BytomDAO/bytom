@@ -2,9 +2,7 @@
 package account
 
 import (
-	"bytes"
 	"encoding/json"
-	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -104,8 +102,7 @@ type CtrlProgram struct {
 	Address        string
 	KeyIndex       uint64
 	ControlProgram []byte
-	Change         bool  // Mark whether this control program is for UTXO change
-	KeyDeriveRule  uint8 // Hd wallet key derive rule
+	Change         bool // Mark whether this control program is for UTXO change
 }
 
 // Manager stores accounts and their associated control programs.
@@ -155,7 +152,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 	if err != nil {
 		return nil, err
 	}
-	signer, err := signers.Create("account", xpubs, quorum, index)
+	signer, err := signers.Create("account", xpubs, quorum, index, signers.BIP0044)
 	id := signers.IDGenerate()
 	if err != nil {
 		return nil, errors.Wrap(err)
@@ -169,6 +166,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 
 	accountID := Key(id)
 	storeBatch := m.db.NewBatch()
+	storeBatch.Set(hashXPubs(xpubs)[:], common.Unit64ToBytes(index))
 	storeBatch.Set(accountID, rawAccount)
 	storeBatch.Set(aliasKey(normalizedAlias), []byte(id))
 	storeBatch.Write()
@@ -176,12 +174,12 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 }
 
 // CreateAddress generate an address for the select account
-func (m *Manager) CreateAddress(deriveRule uint8,accountID string, change bool) (cp *CtrlProgram, err error) {
+func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram, err error) {
 	account, err := m.FindByID(accountID)
 	if err != nil {
 		return nil, err
 	}
-	return m.createAddress(deriveRule, account, change)
+	return m.createAddress(account, change)
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.
@@ -314,7 +312,7 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 		return nil, err
 	}
 
-	program, err := m.createAddress(signers.BIP0044, account, false)
+	program, err := m.createAddress(account, false)
 	if err != nil {
 		return nil, err
 	}
@@ -460,13 +458,13 @@ func (m *Manager) SetCoinbaseArbitrary(arbitrary []byte) {
 }
 
 // CreateAddress generate an address for the select account
-func (m *Manager) createAddress(deriveRule uint8, account *Account, change bool) (cp *CtrlProgram, err error) {
-	addrIdx, err := m.getNextContractIndex(account.ID, deriveRule, change)
+func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram, err error) {
+	addrIdx, err := m.getNextContractIndex(account.ID, account.DeriveRule, change)
 	if err != nil {
 		return nil, err
 	}
 
-	path, err := signers.Path(deriveRule, account.Signer, signers.AccountKeySpace, change, addrIdx)
+	path, err := signers.Path(account.Signer, signers.AccountKeySpace, change, addrIdx)
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +477,7 @@ func (m *Manager) createAddress(deriveRule uint8, account *Account, change bool)
 	if err != nil {
 		return nil, err
 	}
-	cp.KeyDeriveRule, cp.KeyIndex, cp.Change = deriveRule, addrIdx, change
+	cp.KeyIndex, cp.Change = addrIdx, change
 	return cp, m.insertControlPrograms(cp)
 }
 
@@ -531,75 +529,40 @@ func (m *Manager) createP2SH(account *Account, path [][]byte) (*CtrlProgram, err
 	}, nil
 }
 
-func hashXPubs(xpubs []chainkd.XPub) (*[32]byte, error) {
-	if len(xpubs) == 0 {
-		return nil, signers.ErrNoXPubs
-	}
-	sort.Sort(signers.SortKeys(xpubs))
-	for i := 1; i < len(xpubs); i++ {
-		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
-			return nil, errors.WithDetailf(signers.ErrDupeXPub, "duplicated key=%x", xpubs[i])
-		}
-	}
+func hashXPubs(xpubs []chainkd.XPub) *[32]byte {
 	var hash [32]byte
-	xPubs := []byte{}
+	var xPubs []byte
+	sort.Sort(signers.SortKeys(xpubs))
 	for _, xpub := range xpubs {
 		xPubs = append(xPubs, xpub[:]...)
 	}
 	sha3pool.Sum256(hash[:], xPubs)
-	return &hash, nil
+	return &hash
 }
 
 func (m *Manager) getXPubsNextAccountIndex(xpubs []chainkd.XPub) (uint64, error) {
-	index, err := m.getXPubsAccountIndex(xpubs)
-	if err != nil {
-		return index, err
-	}
-	nextIndex := index + 1
+	nextIndex := m.getXPubsAccountIndex(xpubs) + 1
 	if nextIndex > MaxAccountsPerXPubs {
-		return index, ErrAccountIndex
+		return 0, ErrAccountIndex
 	}
-	accounts, err := m.ListAccounts("")
-	if err != nil {
-		return index, err
-	}
-	sort.Sort(signers.SortKeys(xpubs))
-	for _, account := range accounts {
-		sort.Sort(signers.SortKeys(account.XPubs))
-		if reflect.DeepEqual(account.XPubs, xpubs) {
-			if account.KeyIndex >= nextIndex {
-				nextIndex = account.KeyIndex + 1
-			}
-		}
-	}
-	if err := m.setXPubsAccountIndex(xpubs, nextIndex); err != nil {
-		return index, err
-	}
+
 	return nextIndex, nil
 }
 
-func (m *Manager) getXPubsAccountIndex(xpubs []chainkd.XPub) (uint64, error) {
+func (m *Manager) getXPubsAccountIndex(xpubs []chainkd.XPub) uint64 {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 	var index uint64 = 0
-	hash, err := hashXPubs(xpubs)
-	if err != nil {
-		return index, nil
-	}
-	if rawIndexBytes := m.db.Get(xPubsAccountIndexKey(*hash)); rawIndexBytes != nil {
+	if rawIndexBytes := m.db.Get(hashXPubs(xpubs)[:]); rawIndexBytes != nil {
 		index = common.BytesToUnit64(rawIndexBytes)
 	}
-	return index, nil
+	return index
 }
 
 func (m *Manager) setXPubsAccountIndex(xpubs []chainkd.XPub, index uint64) error {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
-	hash, err := hashXPubs(xpubs)
-	if err != nil {
-		return err
-	}
-	m.db.Set(xPubsAccountIndexKey(*hash), common.Unit64ToBytes(index))
+	m.db.Set(hashXPubs(xpubs)[:], common.Unit64ToBytes(index))
 	return nil
 }
 

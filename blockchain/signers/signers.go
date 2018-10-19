@@ -54,10 +54,11 @@ var (
 // which is composed of a set of keys as well as
 // the amount of signatures needed for quorum.
 type Signer struct {
-	Type     string         `json:"type"`
-	XPubs    []chainkd.XPub `json:"xpubs"`
-	Quorum   int            `json:"quorum"`
-	KeyIndex uint64         `json:"key_index"`
+	Type       string         `json:"type"`
+	XPubs      []chainkd.XPub `json:"xpubs"`
+	Quorum     int            `json:"quorum"`
+	KeyIndex   uint64         `json:"key_index"`
+	DeriveRule uint8          `json:"derive_rule"`
 }
 
 func getBip0032Path(s *Signer, ks keySpace, change bool, addrIndex uint64) [][]byte {
@@ -93,8 +94,8 @@ func getBip0044Path(accountIndex uint64, change bool, addrIndex uint64) [][]byte
 }
 
 // Path returns the complete path for derived keys
-func Path(deriveRule uint8, s *Signer, ks keySpace, change bool, addrIndex uint64) ([][]byte, error) {
-	switch deriveRule {
+func Path(s *Signer, ks keySpace, change bool, addrIndex uint64) ([][]byte, error) {
+	switch s.DeriveRule {
 	case BIP0032:
 		return getBip0032Path(s, ks, change, addrIndex), nil
 	case BIP0044:
@@ -104,7 +105,7 @@ func Path(deriveRule uint8, s *Signer, ks keySpace, change bool, addrIndex uint6
 }
 
 // Create creates and stores a Signer in the database
-func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64) (*Signer, error) {
+func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64, deriveRule uint8) (*Signer, error) {
 	if len(xpubs) == 0 {
 		return nil, errors.Wrap(ErrNoXPubs)
 	}
@@ -121,10 +122,11 @@ func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64
 	}
 
 	return &Signer{
-		Type:     signerType,
-		XPubs:    xpubs,
-		Quorum:   quorum,
-		KeyIndex: keyIndex,
+		Type:       signerType,
+		XPubs:      xpubs,
+		Quorum:     quorum,
+		KeyIndex:   keyIndex,
+		DeriveRule: deriveRule,
 	}, nil
 }
 
