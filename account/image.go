@@ -4,6 +4,7 @@ package account
 import (
 	"encoding/json"
 
+	"github.com/bytom/blockchain/signers"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -67,10 +68,7 @@ func (m *Manager) Restore(image *Image) error {
 		storeBatch.Set(Key(slice.Account.ID), rawAccount)
 		storeBatch.Set(aliasKey(slice.Account.Alias), []byte(slice.Account.ID))
 		index := m.getXPubsAccountIndex(slice.Account.XPubs)
-		if err != nil {
-			return ErrGetXPubsAccountIndex
-		}
-		if index < slice.Account.KeyIndex {
+		if index < slice.Account.KeyIndex && slice.Account.DeriveRule == signers.BIP0044 {
 			m.setXPubsAccountIndex(slice.Account.XPubs, slice.Account.KeyIndex)
 		}
 	}
