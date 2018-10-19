@@ -97,8 +97,8 @@ clean:
 	@rm -rf cmd/bytomcli/bytomcli
 	@rm -rf cmd/miner/miner
 	@rm -rf target
-	@rm -fr $(GOPATH)/bin/bytomd
-	@rm -fr $(GOPATH)/bin/bytomcli
+	@rm -rf $(GOPATH)/bin/bytomd
+	@rm -rf $(GOPATH)/bin/bytomcli
 	@echo "Cleaning temp test data..."
 	@rm -rf test/pseudo_hsm*
 	@rm -rf blockchain/pseudohsm/testdata/pseudo/
