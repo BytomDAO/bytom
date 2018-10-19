@@ -558,13 +558,6 @@ func (m *Manager) getXPubsAccountIndex(xpubs []chainkd.XPub) uint64 {
 	return index
 }
 
-func (m *Manager) setXPubsAccountIndex(xpubs []chainkd.XPub, index uint64) error {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-	m.db.Set(hashXPubs(xpubs)[:], common.Unit64ToBytes(index))
-	return nil
-}
-
 func (m *Manager) getNextBip32ContractIndex(accountID string, change bool) (uint64, error) {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
