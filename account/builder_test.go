@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -148,7 +147,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	acp, err := m.CreateAddress(signers.BIP0044, acct.ID, false)
+	acp, err := m.CreateAddress(acct.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}

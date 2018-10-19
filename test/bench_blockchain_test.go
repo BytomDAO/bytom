@@ -412,7 +412,7 @@ func MockTxsP2PKH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int)
 			return nil, err
 		}
 
-		controlProg, err := accountManager.CreateAddress(signers.BIP0044, testAccount.ID, false)
+		controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 		if err != nil {
 			return nil, err
 		}
@@ -459,7 +459,7 @@ func MockTxsP2SH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) 
 			return nil, err
 		}
 
-		controlProg, err := accountManager.CreateAddress(signers.BIP0044, testAccount.ID, false)
+		controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 		if err != nil {
 			return nil, err
 		}
@@ -505,7 +505,7 @@ func MockTxsMultiSign(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum 
 			return nil, err
 		}
 
-		controlProg, err := accountManager.CreateAddress(signers.BIP0044, testAccount.ID, false)
+		controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 		if err != nil {
 			return nil, err
 		}

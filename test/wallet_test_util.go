@@ -12,7 +12,6 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
@@ -135,7 +134,7 @@ func (ctx *walletTestContext) createControlProgram(accountName string, change bo
 		return nil, err
 	}
 
-	return ctx.Wallet.AccountMgr.CreateAddress(signers.BIP0044, acc.ID, change)
+	return ctx.Wallet.AccountMgr.CreateAddress(acc.ID, change)
 }
 
 func (ctx *walletTestContext) getPubkey(keyAlias string) *chainkd.XPub {

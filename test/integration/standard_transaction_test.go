@@ -9,7 +9,6 @@ import (
 
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/validation"
@@ -47,18 +46,12 @@ func TestP2PKH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bip44ControlProg, err := accountManager.CreateAddress(signers.BIP0044, testAccount.ID, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	bip32ControlProg, err := accountManager.CreateAddress(signers.BIP0032, testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var utxos []*account.UTXO
-	utxos = append(utxos, test.MockUTXO(bip44ControlProg))
-	utxos = append(utxos, test.MockUTXO(bip32ControlProg))
+	utxos = append(utxos, test.MockUTXO(controlProg))
 	tpl, tx, err := test.MockTx(utxos, testAccount)
 	if err != nil {
 		t.Fatal(err)
@@ -110,18 +103,13 @@ func TestP2SH(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bip44ControlProg, err := accountManager.CreateAddress(signers.BIP0044, testAccount.ID, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bip32ControlProg, err := accountManager.CreateAddress(signers.BIP0032, testAccount.ID, false)
+	bip44ControlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var utxos []*account.UTXO
 
 	utxos = append(utxos, test.MockUTXO(bip44ControlProg))
-	utxos = append(utxos, test.MockUTXO(bip32ControlProg))
 
 	tpl, tx, err := test.MockTx(utxos, testAccount)
 	if err != nil {
@@ -178,18 +166,13 @@ func TestMutilNodeSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	bip44ControlProg, err := accountManager.CreateAddress(signers.BIP0044, testAccount.ID, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	bip32ControlProg, err := accountManager.CreateAddress(signers.BIP0032, testAccount.ID, false)
+	controlProg, err := accountManager.CreateAddress(testAccount.ID, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var utxos []*account.UTXO
 
-	utxos = append(utxos, test.MockUTXO(bip44ControlProg))
-	utxos = append(utxos, test.MockUTXO(bip32ControlProg))
+	utxos = append(utxos, test.MockUTXO(controlProg))
 
 	tpl, tx, err := test.MockTx(utxos, testAccount)
 	if err != nil {

@@ -44,7 +44,6 @@ func MockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
 	utxo.Address = controlProg.Address
 	utxo.ControlProgramIndex = controlProg.KeyIndex
 	utxo.Change = controlProg.Change
-	utxo.KeyDeriveRule = controlProg.KeyDeriveRule
 	return utxo
 }
 
