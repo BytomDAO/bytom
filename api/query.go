@@ -319,7 +319,7 @@ type AccountPubkey struct {
 	PubKeyInfos []PubKeyInfo `json:"pubkey_infos"`
 }
 
-func getPubkey(account *account.Account, deriveRule uint8, change bool, index uint64) (*ed25519.PublicKey, []chainjson.HexBytes, error) {
+func getPubkey(account *account.Account, change bool, index uint64) (*ed25519.PublicKey, []chainjson.HexBytes, error) {
 	rawPath, err := signers.Path(account.Signer, signers.AccountKeySpace, change, index)
 	if err != nil {
 		return nil, nil, err
@@ -353,49 +353,51 @@ func (a *API) listPubKeys(ctx context.Context, ins struct {
 	}
 
 	pubKeyInfos := []PubKeyInfo{}
-	idx := a.wallet.AccountMgr.GetContractIndex(account.ID)
-	for i := uint64(1); i <= idx; i++ {
-		pubkey, path, err := getPubkey(account, signers.BIP0032, false, i)
-		if err != nil {
-			return NewErrorResponse(err)
+	if account.DeriveRule == signers.BIP0032 {
+		idx := a.wallet.AccountMgr.GetContractIndex(account.ID)
+		for i := uint64(1); i <= idx; i++ {
+			pubkey, path, err := getPubkey(account, false, i)
+			if err != nil {
+				return NewErrorResponse(err)
+			}
+			if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
+				continue
+			}
+			pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
+				Pubkey: hex.EncodeToString(*pubkey),
+				Path:   path,
+			})
 		}
-		if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
-			continue
+	} else if account.DeriveRule == signers.BIP0044 {
+		idx := a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, true)
+		for i := uint64(1); i <= idx; i++ {
+			pubkey, path, err := getPubkey(account, true, i)
+			if err != nil {
+				return NewErrorResponse(err)
+			}
+			if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
+				continue
+			}
+			pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
+				Pubkey: hex.EncodeToString(*pubkey),
+				Path:   path,
+			})
 		}
-		pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
-			Pubkey: hex.EncodeToString(*pubkey),
-			Path:   path,
-		})
-	}
 
-	idx = a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, true)
-	for i := uint64(1); i <= idx; i++ {
-		pubkey, path, err := getPubkey(account, signers.BIP0044, true, i)
-		if err != nil {
-			return NewErrorResponse(err)
+		idx = a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, false)
+		for i := uint64(1); i <= idx; i++ {
+			pubkey, path, err := getPubkey(account, false, i)
+			if err != nil {
+				return NewErrorResponse(err)
+			}
+			if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
+				continue
+			}
+			pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
+				Pubkey: hex.EncodeToString(*pubkey),
+				Path:   path,
+			})
 		}
-		if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
-			continue
-		}
-		pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
-			Pubkey: hex.EncodeToString(*pubkey),
-			Path:   path,
-		})
-	}
-
-	idx = a.wallet.AccountMgr.GetBip44ContractIndex(account.ID, false)
-	for i := uint64(1); i <= idx; i++ {
-		pubkey, path, err := getPubkey(account, signers.BIP0044, false, i)
-		if err != nil {
-			return NewErrorResponse(err)
-		}
-		if ins.PublicKey != "" && ins.PublicKey != hex.EncodeToString(*pubkey) {
-			continue
-		}
-		pubKeyInfos = append(pubKeyInfos, PubKeyInfo{
-			Pubkey: hex.EncodeToString(*pubkey),
-			Path:   path,
-		})
 	}
 
 	if len(pubKeyInfos) == 0 {

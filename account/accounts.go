@@ -33,7 +33,6 @@ const (
 )
 
 var (
-	accountIndexKey         = []byte("AccountIndex")
 	xPubsAccountIndexPrefix = []byte("XPubsAccountIndex:")
 	accountPrefix           = []byte("Account:")
 	aliasPrefix             = []byte("AccountAlias:")
