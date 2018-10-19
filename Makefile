@@ -52,6 +52,11 @@ bytomcli:
 	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
 	@go build $(BUILD_FLAGS) -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
 
+install:
+	@echo "Installing bytomd and bytomcli to $(GOPATH)/bin"
+	@go install ./cmd/bytomd
+	@go install ./cmd/bytomcli
+
 target:
 	mkdir -p $@
 
