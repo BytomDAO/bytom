@@ -33,6 +33,7 @@ const (
 )
 
 var (
+	accountIndexPrefix  = []byte("AccountIndex:")
 	accountPrefix       = []byte("Account:")
 	aliasPrefix         = []byte("AccountAlias:")
 	contractIndexPrefix = []byte("ContractIndex")
@@ -139,7 +140,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 		return nil, ErrDuplicateAlias
 	}
 	index := uint64(0)
-	if rawIndexBytes := m.db.Get(hashXPubs(xpubs)[:]); rawIndexBytes != nil {
+	if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
 		index = common.BytesToUnit64(rawIndexBytes)
 	}
 	index++
@@ -160,7 +161,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 
 	accountID := Key(id)
 	storeBatch := m.db.NewBatch()
-	storeBatch.Set(hashXPubs(xpubs)[:], common.Unit64ToBytes(index))
+	storeBatch.Set(GetAccountIndexKey(xpubs), common.Unit64ToBytes(index))
 	storeBatch.Set(accountID, rawAccount)
 	storeBatch.Set(aliasKey(normalizedAlias), []byte(id))
 	storeBatch.Write()
@@ -523,7 +524,7 @@ func (m *Manager) createP2SH(account *Account, path [][]byte) (*CtrlProgram, err
 	}, nil
 }
 
-func hashXPubs(xpubs []chainkd.XPub) *[32]byte {
+func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
 	var hash [32]byte
 	var xPubs []byte
 	sort.Sort(signers.SortKeys(xpubs))
@@ -531,7 +532,7 @@ func hashXPubs(xpubs []chainkd.XPub) *[32]byte {
 		xPubs = append(xPubs, xpub[:]...)
 	}
 	sha3pool.Sum256(hash[:], xPubs)
-	return &hash
+	return append(accountIndexPrefix, hash[:]...)
 }
 
 func (m *Manager) getNextBip32ContractIndex(accountID string, change bool) (uint64, error) {

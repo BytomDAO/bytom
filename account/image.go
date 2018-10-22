@@ -74,11 +74,11 @@ func (m *Manager) Restore(image *Image) error {
 		storeBatch.Set(Key(slice.Account.ID), rawAccount)
 		storeBatch.Set(aliasKey(slice.Account.Alias), []byte(slice.Account.ID))
 		index := uint64(0)
-		if rawIndexBytes := m.db.Get(hashXPubs(slice.Account.XPubs)[:]); rawIndexBytes != nil {
+		if rawIndexBytes := m.db.Get(GetAccountIndexKey(slice.Account.XPubs)); rawIndexBytes != nil {
 			index = common.BytesToUnit64(rawIndexBytes)
 		}
 		if index < slice.Account.KeyIndex && slice.Account.DeriveRule == signers.BIP0044 {
-			storeBatch.Set(hashXPubs(slice.Account.XPubs)[:], common.Unit64ToBytes(slice.Account.KeyIndex))
+			storeBatch.Set(GetAccountIndexKey(slice.Account.XPubs), common.Unit64ToBytes(slice.Account.KeyIndex))
 		}
 	}
 
