@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -112,23 +113,38 @@ func TestUpdateAssetAlias(t *testing.T) {
 	}
 }
 
+type SortByAssetsAlias []*Asset
+
+func (a SortByAssetsAlias) Len() int { return len(a) }
+func (a SortByAssetsAlias) Less(i, j int) bool {
+	return strings.Compare(*a[i].Alias, *a[j].Alias) <= 0
+}
+func (a SortByAssetsAlias) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
 func TestListAssets(t *testing.T) {
 	reg := mockNewRegistry(t)
 
 	firstAlias := "FIRST_ALIAS"
+	secondAlias := "SECOND_ALIAS"
 
 	firstAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, firstAlias, nil)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	wantAssets := []*Asset{DefaultNativeAsset, firstAsset}
+	secondAsset, err := reg.Define([]chainkd.XPub{testutil.TestXPub}, 1, nil, secondAlias, nil)
+	if err != nil {
+		testutil.FatalErr(t, err)
+	}
+
+	wantAssets := []*Asset{DefaultNativeAsset, firstAsset, secondAsset}
 
 	gotAssets, err := reg.ListAssets("")
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
-
+	sort.Sort(SortByAssetsAlias(wantAssets))
+	sort.Sort(SortByAssetsAlias(gotAssets))
 	if !testutil.DeepEqual(gotAssets, wantAssets) {
 		t.Fatalf("got:\ngot:  %v\nwant: %v", gotAssets, wantAssets)
 	}
