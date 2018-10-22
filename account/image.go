@@ -4,9 +4,10 @@ package account
 import (
 	"encoding/json"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/common"
-	log "github.com/sirupsen/logrus"
 )
 
 // ImageSlice record info of single account

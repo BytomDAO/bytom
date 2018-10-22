@@ -61,10 +61,10 @@ type Signer struct {
 	DeriveRule uint8          `json:"derive_rule"`
 }
 
-func getBip0032Path(s *Signer, ks keySpace, change bool, addrIndex uint64) [][]byte {
+func getBip0032Path(accountIndex uint64, ks keySpace, addrIndex uint64) [][]byte {
 	var path [][]byte
 	signerPath := [9]byte{byte(ks)}
-	binary.LittleEndian.PutUint64(signerPath[1:], s.KeyIndex)
+	binary.LittleEndian.PutUint64(signerPath[1:], accountIndex)
 	path = append(path, signerPath[:])
 	var idxBytes [8]byte
 	binary.LittleEndian.PutUint64(idxBytes[:], addrIndex)
@@ -97,7 +97,7 @@ func getBip0044Path(accountIndex uint64, change bool, addrIndex uint64) [][]byte
 func Path(s *Signer, ks keySpace, change bool, addrIndex uint64) ([][]byte, error) {
 	switch s.DeriveRule {
 	case BIP0032:
-		return getBip0032Path(s, ks, change, addrIndex), nil
+		return getBip0032Path(s.KeyIndex, ks, addrIndex), nil
 	case BIP0044:
 		return getBip0044Path(s.KeyIndex, change, addrIndex), nil
 	}

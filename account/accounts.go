@@ -33,26 +33,24 @@ const (
 )
 
 var (
-	xPubsAccountIndexPrefix = []byte("XPubsAccountIndex:")
-	accountPrefix           = []byte("Account:")
-	aliasPrefix             = []byte("AccountAlias:")
-	contractIndexPrefix     = []byte("ContractIndex")
-	contractPrefix          = []byte("Contract:")
-	miningAddressKey        = []byte("MiningAddress")
-	CoinbaseAbKey           = []byte("CoinbaseArbitrary")
+	accountPrefix       = []byte("Account:")
+	aliasPrefix         = []byte("AccountAlias:")
+	contractIndexPrefix = []byte("ContractIndex")
+	contractPrefix      = []byte("Contract:")
+	miningAddressKey    = []byte("MiningAddress")
+	CoinbaseAbKey       = []byte("CoinbaseArbitrary")
 )
 
 // pre-define errors for supporting bytom errorFormatter
 var (
-	ErrDuplicateAlias       = errors.New("duplicate account alias")
-	ErrFindAccount          = errors.New("fail to find account")
-	ErrMarshalAccount       = errors.New("failed marshal account")
-	ErrInvalidAddress       = errors.New("invalid address")
-	ErrFindCtrlProgram      = errors.New("fail to find account control program")
-	ErrDeriveRule           = errors.New("invalid key derive rule")
-	ErrGetXPubsAccountIndex = errors.New("failed get xpubs account index")
-	ErrContractIndex        = errors.New("exceed the maximum addresses per account")
-	ErrAccountIndex         = errors.New("exceed the maximum accounts per xpub")
+	ErrDuplicateAlias  = errors.New("duplicate account alias")
+	ErrFindAccount     = errors.New("fail to find account")
+	ErrMarshalAccount  = errors.New("failed marshal account")
+	ErrInvalidAddress  = errors.New("invalid address")
+	ErrFindCtrlProgram = errors.New("fail to find account control program")
+	ErrDeriveRule      = errors.New("invalid key derive rule")
+	ErrContractIndex   = errors.New("exceed the maximum addresses per account")
+	ErrAccountIndex    = errors.New("exceed the maximum accounts per xpub")
 )
 
 // ContractKey account control promgram store prefix
@@ -74,18 +72,11 @@ func contractIndexKey(accountID string) []byte {
 }
 
 func bip44ContractIndexKey(accountID string, change bool) []byte {
-	var key []byte
-	key = append(key, contractIndexPrefix...)
-	key = append(key, accountID...)
+	key := append(contractIndexPrefix, accountID...)
 	if change {
 		return append(key, []byte{1}...)
 	}
 	return append(key, []byte{0}...)
-}
-
-// xPubsAccountIndexKey account index created by the same XPubs hash
-func xPubsAccountIndexKey(hash common.Hash) []byte {
-	return append(xPubsAccountIndexPrefix, hash[:]...)
 }
 
 // Account is structure of Bytom account
@@ -147,9 +138,9 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
-	index, err := m.getXPubsNextAccountIndex(xpubs)
-	if err != nil {
-		return nil, err
+	index := m.getXPubsAccountIndex(xpubs) + 1
+	if index > MaxAccountsPerXPubs {
+		return nil, ErrAccountIndex
 	}
 	signer, err := signers.Create("account", xpubs, quorum, index, signers.BIP0044)
 	id := signers.IDGenerate()
@@ -458,7 +449,7 @@ func (m *Manager) SetCoinbaseArbitrary(arbitrary []byte) {
 
 // CreateAddress generate an address for the select account
 func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram, err error) {
-	addrIdx, err := m.getNextContractIndex(account.ID, account.DeriveRule, change)
+	addrIdx, err := m.getNextContractIndex(account, change)
 	if err != nil {
 		return nil, err
 	}
@@ -539,15 +530,6 @@ func hashXPubs(xpubs []chainkd.XPub) *[32]byte {
 	return &hash
 }
 
-func (m *Manager) getXPubsNextAccountIndex(xpubs []chainkd.XPub) (uint64, error) {
-	nextIndex := m.getXPubsAccountIndex(xpubs) + 1
-	if nextIndex > MaxAccountsPerXPubs {
-		return 0, ErrAccountIndex
-	}
-
-	return nextIndex, nil
-}
-
 func (m *Manager) getXPubsAccountIndex(xpubs []chainkd.XPub) uint64 {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
@@ -586,12 +568,12 @@ func (m *Manager) getNextBip44ContractIndex(accountID string, change bool) (uint
 	return nextIndex, nil
 }
 
-func (m *Manager) getNextContractIndex(accountID string, deriveRule uint8, change bool) (uint64, error) {
-	switch deriveRule {
+func (m *Manager) getNextContractIndex(account *Account, change bool) (uint64, error) {
+	switch account.DeriveRule {
 	case signers.BIP0032:
-		return m.getNextBip32ContractIndex(accountID, change)
+		return m.getNextBip32ContractIndex(account.ID, change)
 	case signers.BIP0044:
-		return m.getNextBip44ContractIndex(accountID, change)
+		return m.getNextBip44ContractIndex(account.ID, change)
 	}
 	return 0, ErrDeriveRule
 }

@@ -63,7 +63,7 @@ type AnnotatedAccount struct {
 	XPubs      []chainkd.XPub `json:"xpubs"`
 	Quorum     int            `json:"quorum"`
 	KeyIndex   uint64         `json:"key_index"`
-	DeriveType uint8          `json:"derive_type"`
+	DeriveRule uint8          `json:"derive_rule"`
 }
 
 //AnnotatedAsset means an annotated asset.
@@ -98,5 +98,5 @@ type AnnotatedUTXO struct {
 	SourcePos           uint64 `json:"source_pos"`
 	ValidHeight         uint64 `json:"valid_height"`
 	Change              bool   `json:"change"`
-	KeyDeriveRule       uint8  `json:"derive_rule"`
+	DeriveRule          uint8  `json:"derive_rule"`
 }

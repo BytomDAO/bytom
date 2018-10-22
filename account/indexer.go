@@ -32,6 +32,6 @@ func Annotated(a *Account) *query.AnnotatedAccount {
 		Quorum:     a.Quorum,
 		XPubs:      a.XPubs,
 		KeyIndex:   a.KeyIndex,
-		DeriveType: a.DeriveRule,
+		DeriveRule: a.DeriveRule,
 	}
 }
