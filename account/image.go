@@ -25,6 +25,8 @@ type Image struct {
 
 // Backup export all the account info into image
 func (m *Manager) Backup() (*Image, error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
 	image := &Image{
 		Slice: []*ImageSlice{},
 	}
@@ -49,6 +51,8 @@ func (m *Manager) Backup() (*Image, error) {
 
 // Restore import the accountImages into account manage
 func (m *Manager) Restore(image *Image) error {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
 	storeBatch := m.db.NewBatch()
 	for _, slice := range image.Slice {
 		if existed := m.db.Get(Key(slice.Account.ID)); existed != nil {
@@ -69,7 +73,10 @@ func (m *Manager) Restore(image *Image) error {
 
 		storeBatch.Set(Key(slice.Account.ID), rawAccount)
 		storeBatch.Set(aliasKey(slice.Account.Alias), []byte(slice.Account.ID))
-		index := m.getXPubsAccountIndex(slice.Account.XPubs)
+		index := uint64(0)
+		if rawIndexBytes := m.db.Get(hashXPubs(slice.Account.XPubs)[:]); rawIndexBytes != nil {
+			index = common.BytesToUnit64(rawIndexBytes)
+		}
 		if index < slice.Account.KeyIndex && slice.Account.DeriveRule == signers.BIP0044 {
 			storeBatch.Set(hashXPubs(slice.Account.XPubs)[:], common.Unit64ToBytes(slice.Account.KeyIndex))
 		}

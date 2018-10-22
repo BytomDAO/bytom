@@ -138,7 +138,11 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
-	index := m.getXPubsAccountIndex(xpubs) + 1
+	index := uint64(0)
+	if rawIndexBytes := m.db.Get(hashXPubs(xpubs)[:]); rawIndexBytes != nil {
+		index = common.BytesToUnit64(rawIndexBytes)
+	}
+	index++
 	if index > MaxAccountsPerXPubs {
 		return nil, ErrAccountIndex
 	}
@@ -528,16 +532,6 @@ func hashXPubs(xpubs []chainkd.XPub) *[32]byte {
 	}
 	sha3pool.Sum256(hash[:], xPubs)
 	return &hash
-}
-
-func (m *Manager) getXPubsAccountIndex(xpubs []chainkd.XPub) uint64 {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-	var index uint64 = 0
-	if rawIndexBytes := m.db.Get(hashXPubs(xpubs)[:]); rawIndexBytes != nil {
-		index = common.BytesToUnit64(rawIndexBytes)
-	}
-	return index
 }
 
 func (m *Manager) getNextBip32ContractIndex(accountID string, change bool) (uint64, error) {
