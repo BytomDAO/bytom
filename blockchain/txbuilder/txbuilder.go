@@ -194,7 +194,7 @@ func AddContractArgs(sigInst *SigningInstruction, arguments []ContractArgument) 
 			}
 			sigInst.WitnessComponents = append(sigInst.WitnessComponents, DataWitness(vm.Int64Bytes(data.Value)))
 
-		case "bool":
+		case "boolean":
 			data := &BoolArgument{}
 			if err := json.Unmarshal(arg.RawData, data); err != nil {
 				return err
