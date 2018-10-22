@@ -61,18 +61,21 @@ type Signer struct {
 	DeriveRule uint8          `json:"derive_rule"`
 }
 
-func getBip0032Path(accountIndex uint64, ks keySpace, addrIndex uint64) [][]byte {
+// GetBip0032Path returns the complete path for bip0032 derived keys
+func GetBip0032Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
 	var path [][]byte
 	signerPath := [9]byte{byte(ks)}
-	binary.LittleEndian.PutUint64(signerPath[1:], accountIndex)
+	binary.LittleEndian.PutUint64(signerPath[1:], s.KeyIndex)
 	path = append(path, signerPath[:])
-	var idxBytes [8]byte
-	binary.LittleEndian.PutUint64(idxBytes[:], addrIndex)
-	path = append(path, idxBytes[:])
+	for _, idx := range itemIndexes {
+		var idxBytes [8]byte
+		binary.LittleEndian.PutUint64(idxBytes[:], idx)
+		path = append(path, idxBytes[:])
+	}
 	return path
 }
 
-// Path returns the complete path for derived keys
+// getBip0044Path returns the complete path for bip0044 derived keys
 func getBip0044Path(accountIndex uint64, change bool, addrIndex uint64) [][]byte {
 	var path [][]byte
 	path = append(path, BIP44Purpose[:]) //purpose
@@ -97,7 +100,7 @@ func getBip0044Path(accountIndex uint64, change bool, addrIndex uint64) [][]byte
 func Path(s *Signer, ks keySpace, change bool, addrIndex uint64) ([][]byte, error) {
 	switch s.DeriveRule {
 	case BIP0032:
-		return getBip0032Path(s.KeyIndex, ks, addrIndex), nil
+		return GetBip0032Path(s, ks, addrIndex), nil
 	case BIP0044:
 		return getBip0044Path(s.KeyIndex, change, addrIndex), nil
 	}
