@@ -16,6 +16,7 @@ func (a *API) createAccountReceiver(ctx context.Context, ins struct {
 		if err != nil {
 			return NewErrorResponse(err)
 		}
+
 		accountID = account.ID
 	}
 

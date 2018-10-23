@@ -4,8 +4,6 @@ package signers
 import (
 	"bytes"
 	"encoding/binary"
-	"sort"
-
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
 )
@@ -40,8 +38,7 @@ var (
 
 	// ErrDupeXPub is returned by create when the same xpub
 	// appears twice in a single call.
-	ErrDupeXPub = errors.New("xpubs cannot contain the same key more than once")
-
+	ErrDupeXPub   = errors.New("xpubs cannot contain the same key more than once")
 	ErrDeriveRule = errors.New("invalid key derive rule")
 )
 
@@ -113,10 +110,12 @@ func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64
 		return nil, errors.Wrap(ErrNoXPubs)
 	}
 
-	sort.Sort(SortKeys(xpubs)) // this transforms the input slice
-	for i := 1; i < len(xpubs); i++ {
-		if bytes.Equal(xpubs[i][:], xpubs[i-1][:]) {
-			return nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpubs[i])
+	xpubsMap := map[chainkd.XPub]byte{}
+	for _, xpub := range xpubs {
+		l := len(xpubsMap)
+		xpubsMap[xpub] = 0
+		if len(xpubsMap) == l {
+			return nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpub)
 		}
 	}
 

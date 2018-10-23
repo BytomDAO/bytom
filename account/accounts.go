@@ -26,10 +26,8 @@ import (
 )
 
 const (
-	maxAccountCache        = 1000
-	HardenedKeyStart       = 0x80000000
-	MaxAddressesPerAccount = HardenedKeyStart - 1
-	MaxAccountsPerXPubs    = HardenedKeyStart - 1
+	maxAccountCache  = 1000
+	HardenedKeyStart = 0x80000000
 )
 
 var (
@@ -68,16 +66,16 @@ func aliasKey(name string) []byte {
 	return append(aliasPrefix, []byte(name)...)
 }
 
-func contractIndexKey(accountID string) []byte {
-	return append(contractIndexPrefix, []byte(accountID)...)
-}
-
 func bip44ContractIndexKey(accountID string, change bool) []byte {
 	key := append(contractIndexPrefix, accountID...)
 	if change {
 		return append(key, []byte{1}...)
 	}
 	return append(key, []byte{0}...)
+}
+
+func contractIndexKey(accountID string) []byte {
+	return append(contractIndexPrefix, []byte(accountID)...)
 }
 
 // Account is structure of Bytom account
@@ -139,14 +137,15 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
 		return nil, ErrDuplicateAlias
 	}
-	index := uint64(0)
+
+	index := uint64(1)
 	if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
-		index = common.BytesToUnit64(rawIndexBytes)
+		index = common.BytesToUnit64(rawIndexBytes) + 1
 	}
-	index++
-	if index > MaxAccountsPerXPubs {
+	if index >= HardenedKeyStart {
 		return nil, ErrAccountIndex
 	}
+
 	signer, err := signers.Create("account", xpubs, quorum, index, signers.BIP0044)
 	id := signers.IDGenerate()
 	if err != nil {
@@ -335,9 +334,6 @@ func (m *Manager) GetContractIndex(accountID string) uint64 {
 
 // GetBip44ContractIndex return the current bip44 contract index
 func (m *Manager) GetBip44ContractIndex(accountID string, change bool) uint64 {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-
 	index := uint64(0)
 	if rawIndexBytes := m.db.Get(bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
 		index = common.BytesToUnit64(rawIndexBytes)
@@ -527,7 +523,7 @@ func (m *Manager) createP2SH(account *Account, path [][]byte) (*CtrlProgram, err
 func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
 	var hash [32]byte
 	var xPubs []byte
-	sort.Sort(signers.SortKeys(xpubs))
+	sort.Sort(signers.SortKeys(append([]chainkd.XPub{}, xpubs[:]...)))
 	for _, xpub := range xpubs {
 		xPubs = append(xPubs, xpub[:]...)
 	}
@@ -538,13 +534,15 @@ func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
 func (m *Manager) getNextBip32ContractIndex(accountID string, change bool) (uint64, error) {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
+
 	nextIndex := uint64(1)
 	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
 		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
 	}
-	if nextIndex > MaxAddressesPerAccount {
+	if nextIndex >= HardenedKeyStart {
 		return 0, ErrContractIndex
 	}
+
 	m.db.Set(contractIndexKey(accountID), common.Unit64ToBytes(nextIndex))
 	return nextIndex, nil
 }
@@ -552,11 +550,12 @@ func (m *Manager) getNextBip32ContractIndex(accountID string, change bool) (uint
 func (m *Manager) getNextBip44ContractIndex(accountID string, change bool) (uint64, error) {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
+
 	nextIndex := uint64(1)
 	if rawIndexBytes := m.db.Get(bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
 		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
 	}
-	if nextIndex > MaxAddressesPerAccount {
+	if nextIndex >= HardenedKeyStart {
 		return 0, ErrContractIndex
 	}
 	m.db.Set(bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(nextIndex))
