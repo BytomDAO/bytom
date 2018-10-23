@@ -3,6 +3,7 @@ package account
 
 import (
 	"encoding/json"
+	"sort"
 	"strings"
 	"sync"
 
@@ -25,11 +26,12 @@ import (
 )
 
 const (
-	maxAccountCache = 1000
+	maxAccountCache  = 1000
+	HardenedKeyStart = 0x80000000
 )
 
 var (
-	accountIndexKey     = []byte("AccountIndex")
+	accountIndexPrefix  = []byte("AccountIndex:")
 	accountPrefix       = []byte("Account:")
 	aliasPrefix         = []byte("AccountAlias:")
 	contractIndexPrefix = []byte("ContractIndex")
@@ -45,6 +47,9 @@ var (
 	ErrMarshalAccount  = errors.New("failed marshal account")
 	ErrInvalidAddress  = errors.New("invalid address")
 	ErrFindCtrlProgram = errors.New("fail to find account control program")
+	ErrDeriveRule      = errors.New("invalid key derive rule")
+	ErrContractIndex   = errors.New("exceed the maximum addresses per account")
+	ErrAccountIndex    = errors.New("exceed the maximum accounts per xpub")
 )
 
 // ContractKey account control promgram store prefix
@@ -59,6 +64,14 @@ func Key(name string) []byte {
 
 func aliasKey(name string) []byte {
 	return append(aliasPrefix, []byte(name)...)
+}
+
+func bip44ContractIndexKey(accountID string, change bool) []byte {
+	key := append(contractIndexPrefix, accountID...)
+	if change {
+		return append(key, []byte{1}...)
+	}
+	return append(key, []byte{0}...)
 }
 
 func contractIndexKey(accountID string) []byte {
@@ -125,7 +138,15 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 		return nil, ErrDuplicateAlias
 	}
 
-	signer, err := signers.Create("account", xpubs, quorum, m.getNextAccountIndex())
+	index := uint64(1)
+	if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
+		index = common.BytesToUnit64(rawIndexBytes) + 1
+	}
+	if index >= HardenedKeyStart {
+		return nil, ErrAccountIndex
+	}
+
+	signer, err := signers.Create("account", xpubs, quorum, index, signers.BIP0044)
 	id := signers.IDGenerate()
 	if err != nil {
 		return nil, errors.Wrap(err)
@@ -139,6 +160,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 
 	accountID := Key(id)
 	storeBatch := m.db.NewBatch()
+	storeBatch.Set(GetAccountIndexKey(xpubs), common.Unit64ToBytes(index))
 	storeBatch.Set(accountID, rawAccount)
 	storeBatch.Set(aliasKey(normalizedAlias), []byte(id))
 	storeBatch.Write()
@@ -303,8 +325,17 @@ func (m *Manager) GetContractIndex(accountID string) uint64 {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 
-	index := uint64(1)
+	index := uint64(0)
 	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
+		index = common.BytesToUnit64(rawIndexBytes)
+	}
+	return index
+}
+
+// GetBip44ContractIndex return the current bip44 contract index
+func (m *Manager) GetBip44ContractIndex(accountID string, change bool) uint64 {
+	index := uint64(0)
+	if rawIndexBytes := m.db.Get(bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
 		index = common.BytesToUnit64(rawIndexBytes)
 	}
 	return index
@@ -419,20 +450,29 @@ func (m *Manager) SetCoinbaseArbitrary(arbitrary []byte) {
 
 // CreateAddress generate an address for the select account
 func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram, err error) {
+	addrIdx, err := m.getNextContractIndex(account, change)
+	if err != nil {
+		return nil, err
+	}
+
+	path, err := signers.Path(account.Signer, signers.AccountKeySpace, change, addrIdx)
+	if err != nil {
+		return nil, err
+	}
+
 	if len(account.XPubs) == 1 {
-		cp, err = m.createP2PKH(account, change)
+		cp, err = m.createP2PKH(account, path)
 	} else {
-		cp, err = m.createP2SH(account, change)
+		cp, err = m.createP2SH(account, path)
 	}
 	if err != nil {
 		return nil, err
 	}
+	cp.KeyIndex, cp.Change = addrIdx, change
 	return cp, m.insertControlPrograms(cp)
 }
 
-func (m *Manager) createP2PKH(account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.getNextContractIndex(account.ID)
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+func (m *Manager) createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
@@ -450,15 +490,11 @@ func (m *Manager) createP2PKH(account *Account, change bool) (*CtrlProgram, erro
 	return &CtrlProgram{
 		AccountID:      account.ID,
 		Address:        address.EncodeAddress(),
-		KeyIndex:       idx,
 		ControlProgram: control,
-		Change:         change,
 	}, nil
 }
 
-func (m *Manager) createP2SH(account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.getNextContractIndex(account.ID)
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+func (m *Manager) createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
@@ -480,25 +516,23 @@ func (m *Manager) createP2SH(account *Account, change bool) (*CtrlProgram, error
 	return &CtrlProgram{
 		AccountID:      account.ID,
 		Address:        address.EncodeAddress(),
-		KeyIndex:       idx,
 		ControlProgram: control,
-		Change:         change,
 	}, nil
 }
 
-func (m *Manager) getNextAccountIndex() uint64 {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-
-	var nextIndex uint64 = 1
-	if rawIndexBytes := m.db.Get(accountIndexKey); rawIndexBytes != nil {
-		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
+func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
+	var hash [32]byte
+	var xPubs []byte
+	cpy := append([]chainkd.XPub{}, xpubs[:]...)
+	sort.Sort(signers.SortKeys(cpy))
+	for _, xpub := range cpy {
+		xPubs = append(xPubs, xpub[:]...)
 	}
-	m.db.Set(accountIndexKey, common.Unit64ToBytes(nextIndex))
-	return nextIndex
+	sha3pool.Sum256(hash[:], xPubs)
+	return append(accountIndexPrefix, hash[:]...)
 }
 
-func (m *Manager) getNextContractIndex(accountID string) uint64 {
+func (m *Manager) getNextBip32ContractIndex(accountID string, change bool) (uint64, error) {
 	m.accIndexMu.Lock()
 	defer m.accIndexMu.Unlock()
 
@@ -506,8 +540,37 @@ func (m *Manager) getNextContractIndex(accountID string) uint64 {
 	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
 		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
 	}
+	if nextIndex >= HardenedKeyStart {
+		return 0, ErrContractIndex
+	}
+
 	m.db.Set(contractIndexKey(accountID), common.Unit64ToBytes(nextIndex))
-	return nextIndex
+	return nextIndex, nil
+}
+
+func (m *Manager) getNextBip44ContractIndex(accountID string, change bool) (uint64, error) {
+	m.accIndexMu.Lock()
+	defer m.accIndexMu.Unlock()
+
+	nextIndex := uint64(1)
+	if rawIndexBytes := m.db.Get(bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
+		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
+	}
+	if nextIndex >= HardenedKeyStart {
+		return 0, ErrContractIndex
+	}
+	m.db.Set(bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(nextIndex))
+	return nextIndex, nil
+}
+
+func (m *Manager) getNextContractIndex(account *Account, change bool) (uint64, error) {
+	switch account.DeriveRule {
+	case signers.BIP0032:
+		return m.getNextBip32ContractIndex(account.ID, change)
+	case signers.BIP0044:
+		return m.getNextBip44ContractIndex(account.ID, change)
+	}
+	return 0, ErrDeriveRule
 }
 
 func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
@@ -515,7 +578,6 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	redeemContract := addr.ScriptAddress()
 	program := []byte{}
 	switch addr.(type) {

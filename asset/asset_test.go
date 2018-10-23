@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -112,6 +113,14 @@ func TestUpdateAssetAlias(t *testing.T) {
 	}
 }
 
+type SortByAssetsAlias []*Asset
+
+func (a SortByAssetsAlias) Len() int { return len(a) }
+func (a SortByAssetsAlias) Less(i, j int) bool {
+	return strings.Compare(*a[i].Alias, *a[j].Alias) <= 0
+}
+func (a SortByAssetsAlias) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
 func TestListAssets(t *testing.T) {
 	reg := mockNewRegistry(t)
 
@@ -134,7 +143,8 @@ func TestListAssets(t *testing.T) {
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
-
+	sort.Sort(SortByAssetsAlias(wantAssets))
+	sort.Sort(SortByAssetsAlias(gotAssets))
 	if !testutil.DeepEqual(gotAssets, wantAssets) {
 		t.Fatalf("got:\ngot:  %v\nwant: %v", gotAssets, wantAssets)
 	}

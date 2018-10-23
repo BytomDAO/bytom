@@ -43,6 +43,7 @@ func MockUTXO(controlProg *account.CtrlProgram) *account.UTXO {
 	utxo.AccountID = controlProg.AccountID
 	utxo.Address = controlProg.Address
 	utxo.ControlProgramIndex = controlProg.KeyIndex
+	utxo.Change = controlProg.Change
 	return utxo
 }
 
