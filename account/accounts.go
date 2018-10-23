@@ -523,8 +523,9 @@ func (m *Manager) createP2SH(account *Account, path [][]byte) (*CtrlProgram, err
 func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
 	var hash [32]byte
 	var xPubs []byte
-	sort.Sort(signers.SortKeys(append([]chainkd.XPub{}, xpubs[:]...)))
-	for _, xpub := range xpubs {
+	cpy := append([]chainkd.XPub{}, xpubs[:]...)
+	sort.Sort(signers.SortKeys(cpy))
+	for _, xpub := range cpy {
 		xPubs = append(xPubs, xpub[:]...)
 	}
 	sha3pool.Sum256(hash[:], xPubs)
