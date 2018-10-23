@@ -110,13 +110,12 @@ func Create(signerType string, xpubs []chainkd.XPub, quorum int, keyIndex uint64
 		return nil, errors.Wrap(ErrNoXPubs)
 	}
 
-	xpubsMap := map[chainkd.XPub]byte{}
+	xpubsMap := map[chainkd.XPub]bool{}
 	for _, xpub := range xpubs {
-		l := len(xpubsMap)
-		xpubsMap[xpub] = 0
-		if len(xpubsMap) == l {
+		if _, ok := xpubsMap[xpub]; ok {
 			return nil, errors.WithDetailf(ErrDupeXPub, "duplicated key=%x", xpub)
 		}
+		xpubsMap[xpub] = true
 	}
 
 	if quorum == 0 || quorum > len(xpubs) {
