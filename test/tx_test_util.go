@@ -197,10 +197,7 @@ func (g *TxGenerator) AddIssuanceInput(assetAlias string, amount uint64) error {
 	}
 	issuanceInput := types.NewIssuanceInput(nonce[:], amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
 	signInstruction := &txbuilder.SigningInstruction{}
-	path, err := signers.Path(asset.Signer, signers.AssetKeySpace, false, asset.KeyIndex)
-	if err != nil {
-		return err
-	}
+	path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
 	signInstruction.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
 	g.Builder.RestrictMinTime(time.Now())
 	return g.Builder.AddInput(issuanceInput, signInstruction)
