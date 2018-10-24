@@ -34,7 +34,10 @@ func (a *API) signMessage(ctx context.Context, ins struct {
 		return NewErrorResponse(err)
 	}
 
-	path := signers.Path(account.Signer, signers.AccountKeySpace, cp.KeyIndex)
+	path, err := signers.Path(account.Signer, signers.AccountKeySpace, cp.Change, cp.KeyIndex)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 
 	sig, err := a.wallet.Hsm.XSign(account.XPubs[0], path, []byte(ins.Message), ins.Password)
