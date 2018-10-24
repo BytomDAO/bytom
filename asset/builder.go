@@ -54,7 +54,7 @@ func (a *issueAction) Build(ctx context.Context, builder *txbuilder.TemplateBuil
 	txin := types.NewIssuanceInput(nonce[:], a.Amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
 	tplIn := &txbuilder.SigningInstruction{}
 	if asset.Signer != nil {
-		path := signers.Path(asset.Signer, signers.AssetKeySpace)
+		path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
 		tplIn.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
 	} else if a.Arguments != nil {
 		if err := txbuilder.AddContractArgs(tplIn, a.Arguments); err != nil {
