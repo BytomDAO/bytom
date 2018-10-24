@@ -146,6 +146,7 @@ func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txb
 			SourcePos:           bcOut.Source.Position,
 			ControlProgramIndex: acp.KeyIndex,
 			Address:             acp.Address,
+			Change:              acp.Change,
 		})
 
 		tpls = append(tpls, tpl)
@@ -313,7 +314,10 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 		return txInput, sigInst, nil
 	}
 
-	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
+	path, err := signers.Path(signer, signers.AccountKeySpace, u.Change, u.ControlProgramIndex)
+	if err != nil {
+		return nil, nil, err
+	}
 	if u.Address == "" {
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
 		return txInput, sigInst, nil

@@ -3,11 +3,13 @@ package account
 import (
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/errors"
@@ -136,6 +138,39 @@ func TestFindByAlias(t *testing.T) {
 
 	if !testutil.DeepEqual(account, found) {
 		t.Errorf("expected found account to be %v, instead found %v", account, found)
+	}
+}
+
+func TestGetAccountIndexKey(t *testing.T) {
+	dirPath, err := ioutil.TempDir(".", "TestAccount")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	hsm, err := pseudohsm.New(dirPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	xpub1, _, err := hsm.XCreate("TestAccountIndex1", "password", "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	xpub2, _, err := hsm.XCreate("TestAccountIndex2", "password", "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	xpubs1 := []chainkd.XPub{xpub1.XPub, xpub2.XPub}
+	xpubs2 := []chainkd.XPub{xpub2.XPub, xpub1.XPub}
+	if !reflect.DeepEqual(GetAccountIndexKey(xpubs1), GetAccountIndexKey(xpubs2)) {
+		t.Fatal("GetAccountIndexKey test err")
+	}
+	
+	if reflect.DeepEqual(xpubs1, xpubs2) {
+		t.Fatal("GetAccountIndexKey test err")
 	}
 }
 
