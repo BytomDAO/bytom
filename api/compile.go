@@ -5,7 +5,14 @@ import (
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/equity/compiler"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/vm"
+)
+
+// pre-define contract error types
+var (
+	ErrCompileContract = errors.New("compile contract failed")
+	ErrInstContract    = errors.New("instantiate contract failed")
 )
 
 type (
@@ -25,12 +32,12 @@ type (
 		Error   string             `json:"error"`
 	}
 )
-
+
 func compileEquity(req compileReq) (compileResp, error) {
 	var resp compileResp
 	compiled, err := compiler.Compile(strings.NewReader(req.Contract))
 	if err != nil {
-		resp.Error = err.Error()
+		return resp, errors.WithDetail(ErrCompileContract, err.Error())
 	}
 
 	// if source contract maybe contain import statement, multiple contract objects will be generated
@@ -48,7 +55,7 @@ func compileEquity(req compileReq) (compileResp, error) {
 	if req.Args != nil {
 		resp.Program, err = compiler.Instantiate(contract.Body, contract.Params, contract.Recursive, req.Args)
 		if err != nil {
-			resp.Error = err.Error()
+			return resp, errors.WithDetail(ErrInstContract, err.Error())
 		}
 
 		resp.Opcodes, err = vm.Disassemble(resp.Program)
