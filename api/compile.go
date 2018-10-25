@@ -32,7 +32,7 @@ type (
 		Error   string             `json:"error"`
 	}
 )
-
+
 func compileEquity(req compileReq) (compileResp, error) {
 	var resp compileResp
 	compiled, err := compiler.Compile(strings.NewReader(req.Contract))
