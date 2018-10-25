@@ -46,7 +46,7 @@ func compileEquity(req compileReq) (compileResp, error) {
 	}
 
 	if req.Args != nil {
-		resp.Program, err = compiler.Instantiate(contract.Body, contract.Params, false, req.Args)
+		resp.Program, err = compiler.Instantiate(contract.Body, contract.Params, contract.Recursive, req.Args)
 		if err != nil {
 			resp.Error = err.Error()
 		}
