@@ -54,5 +54,20 @@ type RawTxSigArgument struct {
 
 // DataArgument is the other argument for run contract
 type DataArgument struct {
+	Value chainjson.HexBytes `json:"value"`
+}
+
+// StrArgument is the string argument for run contract
+type StrArgument struct {
 	Value string `json:"value"`
+}
+
+// IntegerArgument is the integer argument for run contract
+type IntegerArgument struct {
+	Value int64 `json:"value"`
+}
+
+// BoolArgument is the boolean argument for run contract
+type BoolArgument struct {
+	Value bool `json:"value"`
 }
