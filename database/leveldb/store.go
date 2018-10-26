@@ -3,6 +3,7 @@ package leveldb
 import (
 	"encoding/binary"
 	"encoding/json"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
@@ -16,6 +17,8 @@ import (
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
 )
+
+const logModule = "leveldb"
 
 var (
 	blockStoreKey     = []byte("blockStore")
@@ -123,6 +126,7 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 }
 
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
+	startTime := time.Now()
 	blockIndex := state.NewBlockIndex()
 	bhIter := s.db.IteratorPrefix(blockHeaderPrefix)
 	defer bhIter.Release()
@@ -133,7 +137,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 		if err := bh.UnmarshalText(bhIter.Value()); err != nil {
 			return nil, err
 		}
-		
+
 		// If a block with a height greater than the best height of state is added to the index,
 		// It may cause a bug that the new block cant not be process properly.
 		if bh.Height > stateBestHeight {
@@ -156,11 +160,17 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 		lastNode = node
 	}
 
+	log.WithFields(log.Fields{
+		"module":   logModule,
+		"height":   stateBestHeight,
+		"duration": time.Since(startTime),
+	}).Debug("initialize load history block index from database")
 	return blockIndex, nil
 }
 
 // SaveBlock persists a new block in the protocol.
 func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
+	startTime := time.Now()
 	binaryBlock, err := block.MarshalText()
 	if err != nil {
 		return errors.Wrap(err, "Marshal block meta")
@@ -183,7 +193,12 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
 	batch.Write()
 
-	log.WithFields(log.Fields{"height": block.Height, "hash": blockHash.String()}).Info("block saved on disk")
+	log.WithFields(log.Fields{
+		"module":   logModule,
+		"height":   block.Height,
+		"hash":     blockHash.String(),
+		"duration": time.Since(startTime),
+	}).Info("block saved on disk")
 	return nil
 }
 
