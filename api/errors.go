@@ -50,6 +50,10 @@ var respErrFormatter = map[error]httperror.Info{
 	signers.ErrNoXPubs:   {400, "BTM202", "At least one xpub is required"},
 	signers.ErrDupeXPub:  {400, "BTM203", "Root XPubs cannot contain the same key more than once"},
 
+	// Contract error namespace (3xx)
+	ErrCompileContract: {400, "BTM300", "Compile contract failed"},
+	ErrInstContract:    {400, "BTM301", "Instantiate contract failed"},
+
 	// Transaction error namespace (7xx)
 	// Build transaction error namespace (70x ~ 72x)
 	account.ErrInsufficient:         {400, "BTM700", "Funds of account are insufficient"},

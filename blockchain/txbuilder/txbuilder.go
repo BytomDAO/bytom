@@ -4,7 +4,6 @@ package txbuilder
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/bytom/math/checked"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/protocol/vm"
 )
 
 // errors
@@ -178,12 +178,28 @@ func AddContractArgs(sigInst *SigningInstruction, arguments []ContractArgument) 
 			if err := json.Unmarshal(arg.RawData, data); err != nil {
 				return err
 			}
+			sigInst.WitnessComponents = append(sigInst.WitnessComponents, DataWitness(data.Value))
 
-			value, err := hex.DecodeString(data.Value)
-			if err != nil {
+		case "string":
+			data := &StrArgument{}
+			if err := json.Unmarshal(arg.RawData, data); err != nil {
 				return err
 			}
-			sigInst.WitnessComponents = append(sigInst.WitnessComponents, DataWitness(value))
+			sigInst.WitnessComponents = append(sigInst.WitnessComponents, DataWitness([]byte(data.Value)))
+
+		case "integer":
+			data := &IntegerArgument{}
+			if err := json.Unmarshal(arg.RawData, data); err != nil {
+				return err
+			}
+			sigInst.WitnessComponents = append(sigInst.WitnessComponents, DataWitness(vm.Int64Bytes(data.Value)))
+
+		case "boolean":
+			data := &BoolArgument{}
+			if err := json.Unmarshal(arg.RawData, data); err != nil {
+				return err
+			}
+			sigInst.WitnessComponents = append(sigInst.WitnessComponents, DataWitness(vm.BoolBytes(data.Value)))
 
 		default:
 			return ErrBadContractArgType
