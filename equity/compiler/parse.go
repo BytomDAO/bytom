@@ -48,6 +48,10 @@ func parse(buf []byte) (contracts []*Contract, err error) {
 
 func parseContracts(p *parser) []*Contract {
 	var result []*Contract
+	if pos := scanKeyword(p.buf, p.pos, "contract"); pos < 0 {
+		p.errorf("expected contract")
+	}
+
 	for peekKeyword(p) == "contract" {
 		contract := parseContract(p)
 		result = append(result, contract)

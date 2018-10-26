@@ -347,8 +347,27 @@ func TestAddContractArgs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data := DataArgument{Value: "7468697320697320612074657374"}
+	value, err := hex.DecodeString("7468697320697320612074657374")
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := DataArgument{value}
 	dataMsg, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	strMsg, err := json.Marshal(StrArgument{"this is a test string"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	integerMsg, err := json.Marshal(IntegerArgument{100})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	boolMsg, err := json.Marshal(BoolArgument{true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -357,6 +376,51 @@ func TestAddContractArgs(t *testing.T) {
 		arguments  []ContractArgument
 		wantResult error
 	}{
+		{
+			arguments: []ContractArgument{
+				{
+					Type:    "raw_tx_signature",
+					RawData: rawTxSigMsg,
+				},
+			},
+			wantResult: nil,
+		},
+		{
+			arguments: []ContractArgument{
+				{
+					Type:    "data",
+					RawData: dataMsg,
+				},
+			},
+			wantResult: nil,
+		},
+		{
+			arguments: []ContractArgument{
+				{
+					Type:    "string",
+					RawData: strMsg,
+				},
+			},
+			wantResult: nil,
+		},
+		{
+			arguments: []ContractArgument{
+				{
+					Type:    "integer",
+					RawData: integerMsg,
+				},
+			},
+			wantResult: nil,
+		},
+		{
+			arguments: []ContractArgument{
+				{
+					Type:    "boolean",
+					RawData: boolMsg,
+				},
+			},
+			wantResult: nil,
+		},
 		{
 			arguments: []ContractArgument{
 				{
@@ -379,6 +443,31 @@ func TestAddContractArgs(t *testing.T) {
 				{
 					Type:    "raw_tx_signature",
 					RawData: rawTxSigMsg,
+				},
+			},
+			wantResult: nil,
+		},
+		{
+			arguments: []ContractArgument{
+				{
+					Type:    "raw_tx_signature",
+					RawData: rawTxSigMsg,
+				},
+				{
+					Type:    "data",
+					RawData: dataMsg,
+				},
+				{
+					Type:    "string",
+					RawData: strMsg,
+				},
+				{
+					Type:    "integer",
+					RawData: integerMsg,
+				},
+				{
+					Type:    "boolean",
+					RawData: boolMsg,
 				},
 			},
 			wantResult: nil,
