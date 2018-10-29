@@ -367,6 +367,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 	}
 }
 
+// SetDiscv connect the discv model to the switch
 func (sw *Switch) SetDiscv(discv *discover.Network) {
 	sw.discv = discv
 }
@@ -444,4 +445,15 @@ func (sw *Switch) stopAndRemovePeer(peer *Peer, reason interface{}) {
 		reactor.RemovePeer(peer, reason)
 	}
 	peer.Stop()
+
+	sentStatus, receiveStatus := peer.TrafficStatus()
+	log.WithFields(log.Fields{
+		"address":              peer.Addr().String(),
+		"reason":               reason,
+		"duration":             sentStatus.Duration.String(),
+		"total_sent":           sentStatus.Bytes,
+		"total_receive":        receiveStatus.Bytes,
+		"average_sent_rate":    sentStatus.AvgRate,
+		"average_receive_rate": receiveStatus.AvgRate,
+	}).Info("disconnect with peer")
 }
