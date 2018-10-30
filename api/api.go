@@ -117,8 +117,9 @@ type API struct {
 
 	newBlockCh chan *bc.Hash
 
-	ntfnMgr       *wsNotificationManager
-	maxWebsockets int
+	ntfnMgr           *wsNotificationManager
+	maxWebsockets     int
+	maxConcurrentReqs int
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -200,8 +201,9 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		cpuMiner:      cpuMiner,
 		miningPool:    miningPool,
 
-		newBlockCh:    newBlockCh,
-		maxWebsockets: config.MaxWebsockets,
+		newBlockCh:        newBlockCh,
+		maxWebsockets:     config.MaxWebsockets,
+		maxConcurrentReqs: config.MaxConcurrentReqs,
 	}
 	api.ntfnMgr = newWsNotificationManager(api)
 	api.chain.Subscribe(api.handleBlockchainNotification)

@@ -31,6 +31,7 @@ func init() {
 	runNodeCmd.Flags().String("chain_id", config.ChainID, "Select network type")
 
 	runNodeCmd.Flags().Int("maxwebsockets", config.MaxWebsockets, "Max number of websocket connections")
+	runNodeCmd.Flags().Int("maxconcurrentreqs", config.MaxConcurrentReqs, "Max number of concurrent websocket requests that may be processed concurrently")
 
 	// log level
 	runNodeCmd.Flags().String("log_level", config.LogLevel, "Select log level(debug, info, warn, error or fatal")

@@ -45,7 +45,14 @@ type wsCommandHandler func(*wsClient, interface{}) (interface{}, error)
 // functions.  This is set by init because help references wsHandlers and thus
 // causes a dependency loop.
 var wsHandlers map[string]wsCommandHandler
-var wsHandlersBeforeInit map[string]wsCommandHandler
+var wsHandlersBeforeInit = map[string]wsCommandHandler{
+	"help":                      handleWebsocketHelp,
+	"notifyblocks":              handleNotifyBlocks,
+	"notifynewtransactions":     handleNotifyNewTransactions,
+	"notifyreceived":            handleNotifyReceived,
+	"stopnotifynewtransactions": handleStopNotifyNewTransactions,
+	"stopnotifyreceived":        handleStopNotifyReceived,
+}
 
 func (a *API) handleBlockchainNotification(notification *protocol.Notification) {
 	switch notification.Type {
@@ -377,7 +384,7 @@ func (m *wsNotificationManager) UnregisterBlockUpdates(wsc *wsClient) {
 // block updates when a block is connected to the main chain.
 func (*wsNotificationManager) notifyBlockConnected(clients map[chan struct{}]*wsClient, block *types.Block) {
 
-	resp, err := NewWSRequest(nil, "", block)
+	resp, err := NewWSRequest(nil, "notifyBlockConnected", block)
 	if err != nil {
 		log.Errorf("Failed to build websocket response: %v", err)
 		return
@@ -541,6 +548,7 @@ type wsClient struct {
 	sendChan          chan wsResponse
 	quit              chan struct{}
 	wg                sync.WaitGroup
+	api               *API
 }
 
 // inHandler handles all incoming messages for the websocket connection.  It
@@ -555,7 +563,6 @@ out:
 			break out
 		default:
 		}
-
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
@@ -581,7 +588,6 @@ out:
 			c.SendMessage(reply, nil)
 			continue
 		}
-		//log.Debugf("Received command <%s> from %s", request.Method, c.addr)
 		c.serviceRequestSem.acquire()
 		go func() {
 			c.serviceRequest(request.Method)
@@ -600,12 +606,11 @@ func (c *wsClient) serviceRequest(method string) {
 		result interface{}
 		err    error
 	)
-
 	wsHandler, ok := wsHandlers[method]
 	if ok {
 		result, err = wsHandler(c, method)
 	} else {
-		log.Errorf("There is this method.%v", method)
+		log.Errorf("There is not this method: %s", method)
 		return
 	}
 	var jsonErr *WSError
@@ -842,10 +847,11 @@ func (a *API) newWebsocketClient(conn *websocket.Conn,
 		sessionID:    sessionID,
 		addrRequests: make(map[string]struct{}),
 		//spentRequests:     make(map[wire.OutPoint]struct{}),
-		//serviceRequestSem: makeSemaphore(cfg.RPCMaxConcurrentReqs),
-		ntfnChan: make(chan []byte, 1), // nonblocking sync
-		sendChan: make(chan wsResponse, websocketSendBufferSize),
-		quit:     make(chan struct{}),
+		serviceRequestSem: makeSemaphore(a.maxConcurrentReqs),
+		ntfnChan:          make(chan []byte, 1), // nonblocking sync
+		sendChan:          make(chan wsResponse, websocketSendBufferSize),
+		quit:              make(chan struct{}),
+		api:               a,
 	}
 	return client, nil
 }
@@ -858,21 +864,14 @@ func handleWebsocketHelp(wsc *wsClient, icmd interface{}) (interface{}, error) {
 // handleNotifyBlocks implements the notifyblocks command extension for
 // websocket connections.
 func handleNotifyBlocks(wsc *wsClient, icmd interface{}) (interface{}, error) {
-	//wsc.server.ntfnMgr.RegisterBlockUpdates(wsc)
+	wsc.api.ntfnMgr.RegisterBlockUpdates(wsc)
 	return nil, nil
 }
 
 // handleStopNotifyBlocks implements the stopnotifyblocks command extension for
 // websocket connections.
 func handleStopNotifyBlocks(wsc *wsClient, icmd interface{}) (interface{}, error) {
-	//wsc.server.ntfnMgr.UnregisterBlockUpdates(wsc)
-	return nil, nil
-}
-
-// handleNotifySpent implements the notifyspent command extension for
-// websocket connections.
-func handleNotifySpent(wsc *wsClient, icmd interface{}) (interface{}, error) {
-
+	wsc.api.ntfnMgr.UnregisterBlockUpdates(wsc)
 	return nil, nil
 }
 
@@ -893,13 +892,6 @@ func handleStopNotifyNewTransactions(wsc *wsClient, icmd interface{}) (interface
 // handleNotifyReceived implements the notifyreceived command extension for
 // websocket connections.
 func handleNotifyReceived(wsc *wsClient, icmd interface{}) (interface{}, error) {
-
-	return nil, nil
-}
-
-// handleStopNotifySpent implements the stopnotifyspent command extension for
-// websocket connections.
-func handleStopNotifySpent(wsc *wsClient, icmd interface{}) (interface{}, error) {
 
 	return nil, nil
 }

@@ -80,7 +80,8 @@ type BaseConfig struct {
 	// log file name
 	LogFile string `mapstructure:"log_file"`
 
-	MaxWebsockets int `mapstructure:"maxwebsockets"`
+	MaxWebsockets     int `mapstructure:"maxwebsockets"`
+	MaxConcurrentReqs int `mapstructure:"maxconcurrentreqs"`
 }
 
 // Default configurable base parameters.
@@ -93,6 +94,7 @@ func DefaultBaseConfig() BaseConfig {
 		DBPath:            "data",
 		KeysPath:          "keystore",
 		MaxWebsockets:     25,
+		MaxConcurrentReqs: 20,
 	}
 }
 
