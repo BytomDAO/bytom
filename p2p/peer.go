@@ -213,7 +213,6 @@ func (p *Peer) String() string {
 // TrafficStatus return the in and out traffic status
 func (p *Peer) TrafficStatus() (*flowrate.Status, *flowrate.Status) {
 	return p.mconn.TrafficStatus()
-
 }
 
 // TrySend msg to the channel identified by chID byte. Immediately returns
