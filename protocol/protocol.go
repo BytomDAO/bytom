@@ -24,6 +24,11 @@ type Chain struct {
 
 	cond     sync.Cond
 	bestNode *state.BlockNode
+
+	// The notifications field stores a slice of callbacks to be executed on
+	// certain blockchain events.
+	notificationsLock sync.RWMutex
+	notifications     []NotificationCallback
 }
 
 // NewChain returns a new Chain using store as the underlying storage.

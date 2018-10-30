@@ -95,6 +95,11 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	for _, tx := range block.Transactions {
 		c.txPool.RemoveTransaction(&tx.Tx.ID)
 	}
+
+	c.cond.L.Lock()
+	c.sendNotification(NTBlockConnected, block)
+	c.cond.L.Unlock()
+
 	return nil
 }
 
