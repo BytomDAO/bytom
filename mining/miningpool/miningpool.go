@@ -3,6 +3,7 @@ package miningpool
 import (
 	"errors"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -83,6 +84,8 @@ func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
 	if m.block != nil {
 		m.mutex.RLock()
 		defer m.mutex.RUnlock()
+
+		m.block.BlockHeader.Timestamp = uint64(time.Now().Unix())
 		bh := m.block.BlockHeader
 		return &bh, nil
 	}

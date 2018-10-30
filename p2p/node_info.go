@@ -31,11 +31,11 @@ func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
 		return err
 	}
 	if !compatible {
-		return fmt.Errorf("Peer is on a different major version. Peer version: %v, node version: %v.", other.Version, info.Version)
+		return fmt.Errorf("Peer is on a different major version. Peer version: %v, node version: %v", other.Version, info.Version)
 	}
 
 	if info.Network != other.Network {
-		return fmt.Errorf("Peer is on a different network. Peer network: %v, node network: %v.", other.Network, info.Network)
+		return fmt.Errorf("Peer is on a different network. Peer network: %v, node network: %v", other.Network, info.Network)
 	}
 	return nil
 }

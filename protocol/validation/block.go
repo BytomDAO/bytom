@@ -3,6 +3,8 @@ package validation
 import (
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/errors"
@@ -10,6 +12,8 @@ import (
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
 )
+
+const logModule = "leveldb"
 
 var (
 	errBadTimestamp          = errors.New("block timestamp is not in the valid range")
@@ -75,6 +79,7 @@ func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
 
 // ValidateBlock validates a block and the transactions within.
 func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
+	startTime := time.Now()
 	if err := ValidateBlockHeader(b, parent); err != nil {
 		return err
 	}
@@ -117,5 +122,12 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 	if txStatusHash != *b.TransactionStatusHash {
 		return errors.WithDetailf(errMismatchedMerkleRoot, "transaction status merkle root")
 	}
+
+	log.WithFields(log.Fields{
+		"module":   logModule,
+		"height":   b.Height,
+		"hash":     b.ID.String(),
+		"duration": time.Since(startTime),
+	}).Debug("finish validate block")
 	return nil
 }
