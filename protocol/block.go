@@ -124,7 +124,9 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
 			return err
 		}
-
+		c.cond.L.Lock()
+		c.sendNotification(NTBlockDisconnected, b)
+		c.cond.L.Unlock()
 		log.WithFields(log.Fields{"height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
 	}
 
@@ -145,7 +147,9 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		if err := utxoView.ApplyBlock(attachBlock, txStatus); err != nil {
 			return err
 		}
-
+		c.cond.L.Lock()
+		c.sendNotification(NTBlockConnected, b)
+		c.cond.L.Unlock()
 		log.WithFields(log.Fields{"height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
