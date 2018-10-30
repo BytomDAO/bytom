@@ -11,6 +11,7 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tmlibs/flowrate"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
@@ -164,6 +165,7 @@ func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duratio
 	return peerNodeInfo, nil
 }
 
+// ID return the uuid of the peer
 func (p *Peer) ID() string {
 	return p.Key
 }
@@ -187,6 +189,7 @@ func (p *Peer) Send(chID byte, msg interface{}) bool {
 	return p.mconn.Send(chID, msg)
 }
 
+// ServiceFlag return the ServiceFlag of this peer
 func (p *Peer) ServiceFlag() consensus.ServiceFlag {
 	services := consensus.SFFullNode
 	if len(p.Other) == 0 {
@@ -205,6 +208,12 @@ func (p *Peer) String() string {
 		return fmt.Sprintf("Peer{%v %v out}", p.mconn, p.Key[:12])
 	}
 	return fmt.Sprintf("Peer{%v %v in}", p.mconn, p.Key[:12])
+}
+
+// TrafficStatus return the in and out traffic status
+func (p *Peer) TrafficStatus() (*flowrate.Status, *flowrate.Status) {
+	return p.mconn.TrafficStatus()
+
 }
 
 // TrySend msg to the channel identified by chID byte. Immediately returns
