@@ -24,6 +24,7 @@ import (
 	"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
+	ws "github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -117,7 +118,7 @@ type API struct {
 
 	newBlockCh chan *bc.Hash
 
-	ntfnMgr           *wsNotificationManager
+	NtfnMgr           *ws.WSNotificationManager
 	maxWebsockets     int
 	maxConcurrentReqs int
 }
@@ -187,7 +188,7 @@ func (a *API) StartServer(address string) {
 		}
 	}()
 
-	a.ntfnMgr.Start()
+	a.NtfnMgr.Start()
 }
 
 // NewAPI create and initialize the API
@@ -205,7 +206,7 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		maxWebsockets:     config.MaxWebsockets,
 		maxConcurrentReqs: config.MaxConcurrentReqs,
 	}
-	api.ntfnMgr = newWsNotificationManager(api)
+	api.NtfnMgr = ws.NewWsNotificationManager()
 	api.chain.Subscribe(api.handleBlockchainNotification)
 	api.buildHandler()
 	api.initServer(config)
