@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/kr/secureheader"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
@@ -115,6 +116,9 @@ type API struct {
 	miningPool    *miningpool.MiningPool
 
 	newBlockCh chan *bc.Hash
+
+	ntfnMgr       *wsNotificationManager
+	maxWebsockets int
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -129,7 +133,7 @@ func (a *API) initServer(config *cfg.Config) {
 
 	handler = AuthHandler(mux, a.accessTokens, config.Auth.Disable)
 	handler = RedirectHandler(handler)
-
+	a.initWSServer(mux)
 	secureheader.DefaultConfig.PermitClearLoopback = true
 	secureheader.DefaultConfig.HTTPSRedirect = false
 	secureheader.DefaultConfig.Next = handler
@@ -149,6 +153,22 @@ func (a *API) initServer(config *cfg.Config) {
 	coreHandler.Set(a)
 }
 
+func (a *API) initWSServer(mux *http.ServeMux) {
+	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		// Attempt to upgrade the connection to a websocket connection
+		// using the default size for read/write buffers.
+		ws, err := websocket.Upgrade(w, r, nil, 0, 0)
+		if err != nil {
+			if _, ok := err.(websocket.HandshakeError); !ok {
+				log.Printf("Unexpected websocket error: %v", err)
+			}
+			http.Error(w, "400 Bad Request.", http.StatusBadRequest)
+			return
+		}
+		a.buildWebsocketHandler(ws, r.RemoteAddr)
+	})
+}
+
 // StartServer start the server
 func (a *API) StartServer(address string) {
 	log.WithField("api address:", address).Info("Rpc listen")
@@ -165,6 +185,8 @@ func (a *API) StartServer(address string) {
 			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
 		}
 	}()
+
+	a.ntfnMgr.Start()
 }
 
 // NewAPI create and initialize the API
@@ -178,8 +200,11 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		cpuMiner:      cpuMiner,
 		miningPool:    miningPool,
 
-		newBlockCh: newBlockCh,
+		newBlockCh:    newBlockCh,
+		maxWebsockets: config.MaxWebsockets,
 	}
+	api.ntfnMgr = newWsNotificationManager(api)
+	api.chain.Subscribe(api.handleBlockchainNotification)
 	api.buildHandler()
 	api.initServer(config)
 

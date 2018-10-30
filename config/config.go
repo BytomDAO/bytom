@@ -79,6 +79,8 @@ type BaseConfig struct {
 
 	// log file name
 	LogFile string `mapstructure:"log_file"`
+
+	MaxWebsockets int `mapstructure:"maxwebsockets"`
 }
 
 // Default configurable base parameters.
@@ -90,6 +92,7 @@ func DefaultBaseConfig() BaseConfig {
 		DBBackend:         "leveldb",
 		DBPath:            "data",
 		KeysPath:          "keystore",
+		MaxWebsockets:     25,
 	}
 }
 

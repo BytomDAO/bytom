@@ -30,6 +30,8 @@ func init() {
 	runNodeCmd.Flags().Bool("web.closed", config.Web.Closed, "Lanch web browser or not")
 	runNodeCmd.Flags().String("chain_id", config.ChainID, "Select network type")
 
+	runNodeCmd.Flags().Int("maxwebsockets", config.MaxWebsockets, "Max number of websocket connections")
+
 	// log level
 	runNodeCmd.Flags().String("log_level", config.LogLevel, "Select log level(debug, info, warn, error or fatal")
 
