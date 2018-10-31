@@ -105,21 +105,17 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // API is the scheduling center for server
 type API struct {
-	sync          *netsync.SyncManager
-	wallet        *wallet.Wallet
-	accessTokens  *accesstoken.CredentialStore
-	chain         *protocol.Chain
-	server        *http.Server
-	handler       http.Handler
-	txFeedTracker *txfeed.Tracker
-	cpuMiner      *cpuminer.CPUMiner
-	miningPool    *miningpool.MiningPool
-
-	newBlockCh chan *bc.Hash
-
-	NtfnMgr           *websocket.WSNotificationManager
-	maxWebsockets     int
-	maxConcurrentReqs int
+	sync            *netsync.SyncManager
+	wallet          *wallet.Wallet
+	accessTokens    *accesstoken.CredentialStore
+	chain           *protocol.Chain
+	server          *http.Server
+	handler         http.Handler
+	txFeedTracker   *txfeed.Tracker
+	cpuMiner        *cpuminer.CPUMiner
+	miningPool      *miningpool.MiningPool
+	notificationMgr *websocket.WSNotificationManager
+	newBlockCh      chan *bc.Hash
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -134,7 +130,7 @@ func (a *API) initServer(config *cfg.Config) {
 
 	handler = AuthHandler(mux, a.accessTokens, config.Auth.Disable)
 	handler = RedirectHandler(handler)
-	a.initWSServer(mux)
+
 	secureheader.DefaultConfig.PermitClearLoopback = true
 	secureheader.DefaultConfig.HTTPSRedirect = false
 	secureheader.DefaultConfig.Next = handler
@@ -154,10 +150,6 @@ func (a *API) initServer(config *cfg.Config) {
 	coreHandler.Set(a)
 }
 
-func (a *API) initWSServer(mux *http.ServeMux) {
-	mux.HandleFunc("/ws", a.websocketHandler)
-}
-
 // StartServer start the server
 func (a *API) StartServer(address string) {
 	log.WithField("api address:", address).Info("Rpc listen")
@@ -174,13 +166,10 @@ func (a *API) StartServer(address string) {
 			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
 		}
 	}()
-
-	a.NtfnMgr.Start()
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash) *API {
-	ntfnMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs)
+func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,
@@ -190,10 +179,9 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		cpuMiner:      cpuMiner,
 		miningPool:    miningPool,
 
-		newBlockCh: newBlockCh,
-		NtfnMgr:    ntfnMgr,
+		newBlockCh:      newBlockCh,
+		notificationMgr: notificationMgr,
 	}
-
 	api.buildHandler()
 	api.initServer(config)
 
@@ -309,6 +297,8 @@ func (a *API) buildHandler() {
 	m.Handle("/connect-peer", jsonHandler(a.connectPeer))
 
 	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
+
+	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
 
 	handler := latencyHandler(m, walletEnable)
 	handler = webAssetsHandler(handler)

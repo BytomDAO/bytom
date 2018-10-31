@@ -1,29 +1,34 @@
 package websocket
 
+// WSRequest means the data structure of the request
 type WSRequest struct {
-	Method string      `json:"method"`
-	Data   interface{} `json:"data"`
+	Topic string `json:"topic"`
 }
 
-func NewWSRequest(method string, data interface{}) *WSRequest {
-
+// NewWSRequest creates a request data object
+func NewWSRequest(topic string) *WSRequest {
 	return &WSRequest{
-		Method: method,
-		Data:   data,
+		Topic: topic,
 	}
 }
 
+// WSResponse means the returned data structure
 type WSResponse struct {
-	Method string      `json:"method"`
-	Data   interface{} `json:"data"`
-	Error  string      `json:"error"`
+	NotificationType string      `json:"notification_type"`
+	Data             interface{} `json:"data"`
+	ErrorDetail      string      `json:"error_detail,omitempty"`
 }
 
-func NewWSResponse(method string, data interface{}, err string) *WSResponse {
-
-	return &WSResponse{
-		Method: method,
-		Data:   data,
-		Error:  err,
+// NewWSResponse creates a return data object
+func NewWSResponse(notificationType string, data interface{}, err error) *WSResponse {
+	wsResp := &WSResponse{
+		NotificationType: notificationType,
+		Data:             data,
 	}
+
+	if err != nil {
+		wsResp.ErrorDetail = err.Error()
+	}
+
+	return wsResp
 }

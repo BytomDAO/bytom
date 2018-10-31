@@ -7,7 +7,6 @@ import (
 
 	"github.com/bytom/config"
 	"github.com/bytom/errors"
-	"github.com/bytom/net/websocket"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
@@ -25,8 +24,6 @@ type Chain struct {
 
 	cond     sync.Cond
 	bestNode *state.BlockNode
-
-	NtfnMgr *websocket.WSNotificationManager
 }
 
 // NewChain returns a new Chain using store as the underlying storage.
