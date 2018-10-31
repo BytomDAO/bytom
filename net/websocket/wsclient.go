@@ -38,12 +38,10 @@ type wsCommandHandler func(*WSClient, interface{}) (interface{}, error)
 // causes a dependency loop.
 var wsHandlers map[string]wsCommandHandler
 var wsHandlersBeforeInit = map[string]wsCommandHandler{
-	"help":                      handleWebsocketHelp,
 	"notifyblocks":              handleNotifyBlocks,
 	"notifynewtransactions":     handleNotifyNewTransactions,
-	"notifyreceived":            handleNotifyReceived,
+	"stopnotifyblocks":          handleStopNotifyBlocks,
 	"stopnotifynewtransactions": handleStopNotifyNewTransactions,
-	"stopnotifyreceived":        handleStopNotifyReceived,
 }
 
 // newWebsocketClient returns a new websocket client given the notification
@@ -385,11 +383,6 @@ func (c *WSClient) WaitForShutdown() {
 	c.wg.Wait()
 }
 
-// handleWebsocketHelp implements the help command for websocket connections.
-func handleWebsocketHelp(wsc *WSClient, icmd interface{}) (interface{}, error) {
-	return nil, nil
-}
-
 // handleNotifyBlocks implements the notifyblocks command extension for
 // websocket connections.
 func handleNotifyBlocks(wsc *WSClient, icmd interface{}) (interface{}, error) {
@@ -407,28 +400,14 @@ func handleStopNotifyBlocks(wsc *WSClient, icmd interface{}) (interface{}, error
 // handleNotifyNewTransations implements the notifynewtransactions command
 // extension for websocket connections.
 func handleNotifyNewTransactions(wsc *WSClient, icmd interface{}) (interface{}, error) {
-
+	wsc.ntfnMgr.RegisterNewMempoolTxsUpdates(wsc)
 	return nil, nil
 }
 
 // handleStopNotifyNewTransations implements the stopnotifynewtransactions
 // command extension for websocket connections.
 func handleStopNotifyNewTransactions(wsc *WSClient, icmd interface{}) (interface{}, error) {
-	//wsc.server.ntfnMgr.UnregisterNewMempoolTxsUpdates(wsc)
-	return nil, nil
-}
-
-// handleNotifyReceived implements the notifyreceived command extension for
-// websocket connections.
-func handleNotifyReceived(wsc *WSClient, icmd interface{}) (interface{}, error) {
-
-	return nil, nil
-}
-
-// handleStopNotifyReceived implements the stopnotifyreceived command extension
-// for websocket connections.
-func handleStopNotifyReceived(wsc *WSClient, icmd interface{}) (interface{}, error) {
-
+	wsc.ntfnMgr.UnregisterNewMempoolTxsUpdates(wsc)
 	return nil, nil
 }
 

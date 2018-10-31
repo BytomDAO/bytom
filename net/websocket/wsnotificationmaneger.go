@@ -9,6 +9,31 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Notification types
+type notificationBlockConnected types.Block
+type notificationBlockDisconnected types.Block
+type notificationTxAcceptedByMempool struct {
+	isNew bool
+	tx    *types.Tx
+}
+
+// Notification control requests
+type notificationRegisterClient WSClient
+type notificationUnregisterClient WSClient
+type notificationRegisterBlocks WSClient
+type notificationUnregisterBlocks WSClient
+type notificationRegisterNewMempoolTxs WSClient
+type notificationUnregisterNewMempoolTxs WSClient
+
+type notificationRegisterAddr struct {
+	wsc   *WSClient
+	addrs []string
+}
+type notificationUnregisterAddr struct {
+	wsc  *WSClient
+	addr string
+}
+
 // NotificationType represents the type of a notification message.
 type NotificationType int
 
@@ -121,85 +146,6 @@ out:
 	close(out)
 }
 
-// queueHandler maintains a queue of notifications and notification handler
-// control messages.
-func (m *WSNotificationManager) queueHandler() {
-	queueHandler(m.queueNotification, m.notificationMsgs, m.quit)
-	m.wg.Done()
-}
-
-// NotifyBlockConnected passes a block newly-connected to the best chain
-// to the notification manager for block and transaction notification
-// processing.
-func (m *WSNotificationManager) NotifyBlockConnected(block *types.Block) {
-	// As NotifyBlockConnected will be called by the block manager
-	// and the RPC server may no longer be running, use a select
-	// statement to unblock enqueuing the notification once the RPC
-	// server has begun shutting down.
-	select {
-	case m.queueNotification <- (*notificationBlockConnected)(block):
-	case <-m.quit:
-	}
-}
-
-// NotifyBlockDisconnected passes a block disconnected from the best chain
-// to the notification manager for block notification processing.
-func (m *WSNotificationManager) NotifyBlockDisconnected(block *types.Block) {
-	// As NotifyBlockDisconnected will be called by the block manager
-	// and the RPC server may no longer be running, use a select
-	// statement to unblock enqueuing the notification once the RPC
-	// server has begun shutting down.
-	select {
-	case m.queueNotification <- (*notificationBlockDisconnected)(block):
-	case <-m.quit:
-	}
-}
-
-// NotifyMempoolTx passes a transaction accepted by mempool to the
-// notification manager for transaction notification processing.  If
-// isNew is true, the tx is is a new transaction, rather than one
-// added to the mempool during a reorg.
-func (m *WSNotificationManager) NotifyMempoolTx(tx *types.Tx, isNew bool) {
-	n := &notificationTxAcceptedByMempool{
-		isNew: isNew,
-		tx:    tx,
-	}
-
-	// As NotifyMempoolTx will be called by mempool and the RPC server
-	// may no longer be running, use a select statement to unblock
-	// enqueuing the notification once the RPC server has begun
-	// shutting down.
-	select {
-	case m.queueNotification <- n:
-	case <-m.quit:
-	}
-}
-
-// Notification types
-type notificationBlockConnected types.Block
-type notificationBlockDisconnected types.Block
-type notificationTxAcceptedByMempool struct {
-	isNew bool
-	tx    *types.Tx
-}
-
-// Notification control requests
-type notificationRegisterClient WSClient
-type notificationUnregisterClient WSClient
-type notificationRegisterBlocks WSClient
-type notificationUnregisterBlocks WSClient
-type notificationRegisterNewMempoolTxs WSClient
-type notificationUnregisterNewMempoolTxs WSClient
-
-type notificationRegisterAddr struct {
-	wsc   *WSClient
-	addrs []string
-}
-type notificationUnregisterAddr struct {
-	wsc  *WSClient
-	addr string
-}
-
 func (m *WSNotificationManager) SendNotification(typ NotificationType, data interface{}) {
 	switch typ {
 	case NTBlockConnected:
@@ -220,6 +166,48 @@ func (m *WSNotificationManager) SendNotification(typ NotificationType, data inte
 
 		// Notify registered websocket clients.
 		m.NotifyBlockDisconnected(block)
+	}
+}
+
+// queueHandler maintains a queue of notifications and notification handler
+// control messages.
+func (m *WSNotificationManager) queueHandler() {
+	queueHandler(m.queueNotification, m.notificationMsgs, m.quit)
+	m.wg.Done()
+}
+
+// NotifyBlockConnected passes a block newly-connected to the best chain
+// to the notification manager for block and transaction notification
+// processing.
+func (m *WSNotificationManager) NotifyBlockConnected(block *types.Block) {
+	select {
+	case m.queueNotification <- (*notificationBlockConnected)(block):
+	case <-m.quit:
+	}
+}
+
+// NotifyBlockDisconnected passes a block disconnected from the best chain
+// to the notification manager for block notification processing.
+func (m *WSNotificationManager) NotifyBlockDisconnected(block *types.Block) {
+	select {
+	case m.queueNotification <- (*notificationBlockDisconnected)(block):
+	case <-m.quit:
+	}
+}
+
+// NotifyMempoolTx passes a transaction accepted by mempool to the
+// notification manager for transaction notification processing.  If
+// isNew is true, the tx is is a new transaction, rather than one
+// added to the mempool during a reorg.
+func (m *WSNotificationManager) NotifyMempoolTx(tx *types.Tx, isNew bool) {
+	n := &notificationTxAcceptedByMempool{
+		isNew: isNew,
+		tx:    tx,
+	}
+
+	select {
+	case m.queueNotification <- n:
+	case <-m.quit:
 	}
 }
 
@@ -298,7 +286,6 @@ out:
 		case m.numClients <- len(clients):
 
 		case <-m.quit:
-			// RPC server shutting down.
 			break out
 		}
 	}
@@ -386,7 +373,20 @@ func (m *WSNotificationManager) UnregisterNewMempoolTxsUpdates(wsc *WSClient) {
 // notifyForNewTx notifies websocket clients that have registered for updates
 // when a new transaction is added to the memory pool.
 func (m *WSNotificationManager) notifyForNewTx(clients map[chan struct{}]*WSClient, tx *types.Tx) {
+	resp, err := NewWSRequest(nil, "", tx)
+	if err != nil {
+		log.Errorf("Failed to build websocket response: %v", err)
+		return
+	}
+	marshalledJSON, err := json.Marshal(resp)
+	if err != nil {
+		log.Errorf("Failed to marshal tx notification: %v", err)
+		return
+	}
 
+	for _, wsc := range clients {
+		wsc.QueueNotification(marshalledJSON)
+	}
 }
 
 // AddClient adds the passed websocket client to the notification manager.
