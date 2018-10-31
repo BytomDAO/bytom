@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/bytom/protocol/bc/types"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/protocol/bc/types"
 )
 
 // Notification types
 type notificationBlockConnected types.Block
 type notificationBlockDisconnected types.Block
-type notificationTxAcceptedByMempool struct {
-	isNew bool
-	tx    *types.Tx
-}
+type notificationTxAcceptedByMempool types.Tx
 
 // Notification control requests
 type notificationRegisterClient WSClient
@@ -42,6 +40,8 @@ const (
 	// NTBlockDisconnected indicates the associated block was disconnected
 	// from the main chain.
 	NTBlockDisconnected
+
+	NTTransaction
 )
 
 // notificationTypeStrings is a map of notification types back to their constant
@@ -49,6 +49,7 @@ const (
 var notificationTypeStrings = map[NotificationType]string{
 	NTBlockConnected:    "NTBlockConnected",
 	NTBlockDisconnected: "NTBlockDisconnected",
+	NTTransaction:       "NTTransaction",
 }
 
 // String returns the NotificationType in human-readable form.
@@ -85,8 +86,10 @@ type WSNotificationManager struct {
 	numClients chan int
 
 	// Shutdown handling
-	wg   sync.WaitGroup
-	quit chan struct{}
+	wg                   sync.WaitGroup
+	quit                 chan struct{}
+	MaxNumWebsockets     int
+	maxNumConcurrentReqs int
 }
 
 // queueHandler manages a queue of empty interfaces, reading from in and
@@ -94,10 +97,14 @@ type WSNotificationManager struct {
 // in or quit channels are closed, and closes out before returning, without
 // waiting to send any variables still remaining in the queue.
 func queueHandler(in <-chan interface{}, out chan<- interface{}, quit <-chan struct{}) {
-	var q []interface{}
-	var dequeue chan<- interface{}
+	var (
+		q       []interface{}
+		next    interface{}
+		dequeue chan<- interface{}
+	)
+
 	skipQueue := out
-	var next interface{}
+
 out:
 	for {
 		select {
@@ -142,7 +149,7 @@ func (m *WSNotificationManager) SendNotification(typ NotificationType, data inte
 	case NTBlockConnected:
 		block, ok := data.(*types.Block)
 		if !ok {
-			log.Errorf("Chain connected notification is not a block.")
+			log.Errorln("Chain connected notification is not a block.")
 			break
 		}
 
@@ -151,7 +158,7 @@ func (m *WSNotificationManager) SendNotification(typ NotificationType, data inte
 	case NTBlockDisconnected:
 		block, ok := data.(*types.Block)
 		if !ok {
-			log.Errorf("Chain disconnected notification is not a block.")
+			log.Errorln("Chain disconnected notification is not a block.")
 			break
 		}
 
@@ -191,13 +198,9 @@ func (m *WSNotificationManager) NotifyBlockDisconnected(block *types.Block) {
 // isNew is true, the tx is is a new transaction, rather than one
 // added to the mempool during a reorg.
 func (m *WSNotificationManager) NotifyMempoolTx(tx *types.Tx, isNew bool) {
-	n := &notificationTxAcceptedByMempool{
-		isNew: isNew,
-		tx:    tx,
-	}
 
 	select {
-	case m.queueNotification <- n:
+	case m.queueNotification <- (*notificationTxAcceptedByMempool)(tx):
 	case <-m.quit:
 	}
 }
@@ -207,14 +210,6 @@ func (m *WSNotificationManager) NotifyMempoolTx(tx *types.Tx, isNew bool) {
 func (m *WSNotificationManager) notificationHandler() {
 	// clients is a map of all currently connected websocket clients.
 	clients := make(map[chan struct{}]*WSClient)
-
-	// Maps used to hold lists of websocket clients to be notified on
-	// certain events.  Each websocket client also keeps maps for the events
-	// which have multiple triggers to make removal from these lists on
-	// connection close less horrendously expensive.
-	//
-	// Where possible, the quit channel is used as the unique id for a client
-	// since it is quite a bit more efficient than using the entire struct.
 	blockNotifications := make(map[chan struct{}]*WSClient)
 	txNotifications := make(map[chan struct{}]*WSClient)
 
@@ -233,16 +228,15 @@ out:
 				if len(blockNotifications) != 0 {
 					m.notifyBlockConnected(blockNotifications, block)
 				}
-
 			case *notificationBlockDisconnected:
 				block := (*types.Block)(n)
 				if len(blockNotifications) != 0 {
 					m.notifyBlockDisconnected(blockNotifications, block)
 				}
-
 			case *notificationTxAcceptedByMempool:
-				if n.isNew && len(txNotifications) != 0 {
-					m.notifyForNewTx(txNotifications, n.tx)
+				tx := (*types.Tx)(n)
+				if len(txNotifications) != 0 {
+					m.notifyForNewTx(txNotifications, tx)
 				}
 			case *notificationRegisterBlocks:
 				wsc := (*WSClient)(n)
@@ -251,29 +245,23 @@ out:
 			case *notificationUnregisterBlocks:
 				wsc := (*WSClient)(n)
 				delete(blockNotifications, wsc.quit)
-
 			case *notificationRegisterClient:
 				wsc := (*WSClient)(n)
 				clients[wsc.quit] = wsc
-
 			case *notificationUnregisterClient:
 				wsc := (*WSClient)(n)
 				delete(blockNotifications, wsc.quit)
 				delete(txNotifications, wsc.quit)
 				delete(clients, wsc.quit)
-
 			case *notificationRegisterNewMempoolTxs:
 				wsc := (*WSClient)(n)
 				txNotifications[wsc.quit] = wsc
-
 			case *notificationUnregisterNewMempoolTxs:
 				wsc := (*WSClient)(n)
 				delete(txNotifications, wsc.quit)
-
 			default:
 				log.Warnf("Unhandled notification type")
 			}
-
 		case m.numClients <- len(clients):
 
 		case <-m.quit:
@@ -296,6 +284,13 @@ func (m *WSNotificationManager) NumClients() (n int) {
 	return
 }
 
+func (m *WSNotificationManager) IsMaxConnect() bool {
+	if m.NumClients()+1 > m.MaxNumWebsockets {
+		return true
+	}
+	return false
+}
+
 // RegisterBlockUpdates requests block update notifications to the passed
 // websocket client.
 func (m *WSNotificationManager) RegisterBlockUpdates(wsc *WSClient) {
@@ -312,14 +307,10 @@ func (m *WSNotificationManager) UnregisterBlockUpdates(wsc *WSClient) {
 // block updates when a block is connected to the main chain.
 func (*WSNotificationManager) notifyBlockConnected(clients map[chan struct{}]*WSClient, block *types.Block) {
 
-	resp, err := NewWSRequest("blockconnected", block)
-	if err != nil {
-		log.Errorf("Failed to build websocket response: %v", err)
-		return
-	}
+	resp := NewWSResponse(NTBlockConnected.String(), block, "")
 	marshalledJSON, err := json.Marshal(resp)
 	if err != nil {
-		log.Errorf("Failed to marshal block connected notification: %v", err)
+		log.WithField("error", err).Error("Failed to marshal block connected notification")
 		return
 	}
 
@@ -332,14 +323,10 @@ func (*WSNotificationManager) notifyBlockConnected(clients map[chan struct{}]*WS
 // block updates when a block is disconnected from the main chain (due to a
 // reorganize).
 func (*WSNotificationManager) notifyBlockDisconnected(clients map[chan struct{}]*WSClient, block *types.Block) {
-	resp, err := NewWSRequest("blockdisconnected", block)
-	if err != nil {
-		log.Errorf("Failed to build websocket response: %v", err)
-		return
-	}
+	resp := NewWSResponse(NTBlockDisconnected.String(), block, "")
 	marshalledJSON, err := json.Marshal(resp)
 	if err != nil {
-		log.Errorf("Failed to marshal block connected notification: %v", err)
+		log.WithField("error", err).Error("Failed to marshal block Disconnected notification")
 		return
 	}
 
@@ -364,14 +351,10 @@ func (m *WSNotificationManager) UnregisterNewMempoolTxsUpdates(wsc *WSClient) {
 // notifyForNewTx notifies websocket clients that have registered for updates
 // when a new transaction is added to the memory pool.
 func (m *WSNotificationManager) notifyForNewTx(clients map[chan struct{}]*WSClient, tx *types.Tx) {
-	resp, err := NewWSRequest("transaction", tx)
-	if err != nil {
-		log.Errorf("Failed to build websocket response: %v", err)
-		return
-	}
+	resp := NewWSResponse(NTTransaction.String(), tx, "")
 	marshalledJSON, err := json.Marshal(resp)
 	if err != nil {
-		log.Errorf("Failed to marshal tx notification: %v", err)
+		log.WithField("error", err).Error("Failed to marshal tx notification")
 		return
 	}
 
@@ -416,11 +399,13 @@ func (m *WSNotificationManager) Shutdown() {
 
 // newWsNotificationManager returns a new notification manager ready for use.
 // See WSNotificationManager for more details.
-func NewWsNotificationManager() *WSNotificationManager {
+func NewWsNotificationManager(maxNumWebsockets int, maxNumConcurrentReqs int) *WSNotificationManager {
 	return &WSNotificationManager{
-		queueNotification: make(chan interface{}),
-		notificationMsgs:  make(chan interface{}),
-		numClients:        make(chan int),
-		quit:              make(chan struct{}),
+		queueNotification:    make(chan interface{}),
+		notificationMsgs:     make(chan interface{}),
+		numClients:           make(chan int),
+		quit:                 make(chan struct{}),
+		MaxNumWebsockets:     maxNumWebsockets,
+		maxNumConcurrentReqs: maxNumConcurrentReqs,
 	}
 }
