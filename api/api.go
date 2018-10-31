@@ -180,6 +180,7 @@ func (a *API) StartServer(address string) {
 
 // NewAPI create and initialize the API
 func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash) *API {
+	ntfnMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs)
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,
@@ -189,9 +190,8 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		cpuMiner:      cpuMiner,
 		miningPool:    miningPool,
 
-		newBlockCh:        newBlockCh,
-		maxWebsockets:     config.MaxWebsockets,
-		maxConcurrentReqs: config.MaxConcurrentReqs,
+		newBlockCh: newBlockCh,
+		NtfnMgr:    ntfnMgr,
 	}
 
 	api.buildHandler()

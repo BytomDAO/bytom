@@ -4,25 +4,30 @@ import (
 	"container/list"
 	"encoding/json"
 	"io"
+	"net/http"
 	"sync"
+	"time"
 
-	"github.com/bytom/errors"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/errors"
 )
 
-const (
-	// websocketSendBufferSize is the number of elements the send channel
-	// can queue before blocking.  Note that this only applies to requests
-	// handled directly in the websocket client input handler or the async
-	// handler since notifications have their own queuing mechanism
-	// independent of the send channel buffer.
-	websocketSendBufferSize = 50
-)
+// websocketSendBufferSize is the number of elements the send channel
+// can queue before blocking.  Note that this only applies to requests
+// handled directly in the websocket client input handler or the async
+// handler since notifications have their own queuing mechanism
+// independent of the send channel buffer.
+const websocketSendBufferSize = 50
 
 var (
 	ErrWSParse    = errors.New("Websocket request parsing error")
 	ErrWSInternal = errors.New("Websocket Internal error")
+
+	// timeZeroVal is simply the zero value for a time.Time and is used to avoid
+	// creating multiple instances.
+	timeZeroVal time.Time
 )
 
 type semaphore chan struct{}
@@ -49,18 +54,30 @@ var wsHandlersBeforeInit = map[string]wsCommandHandler{
 	"stopnotifynewtransactions": handleStopNotifyNewTransactions,
 }
 
-// newWebsocketClient returns a new websocket client given the notification
-// manager, websocket connection, remote address, and whether or not the client
-// has already been authenticated (via HTTP Basic access authentication).  The
-// returned client is ready to start.  Once started, the client will process
-// incoming and outgoing messages in separate goroutines complete with queuing
-// and asynchrous handling for long-running operations.
-func NewWebsocketClient(conn *websocket.Conn, remoteAddr string, ntfnMgr *WSNotificationManager, maxConcurrentReqs int) (*WSClient, error) {
+func NewWebsocketClient(w http.ResponseWriter, r *http.Request, ntfnMgr *WSNotificationManager) (*WSClient, error) {
+	// Attempt to upgrade the connection to a websocket connection
+	// using the default size for read/write buffers.
+	conn, err := websocket.Upgrade(w, r, nil, 0, 0)
+	if err != nil {
+		if _, ok := err.(websocket.HandshakeError); !ok {
+			log.WithField("error", err).Error("upgrade the connection to a websocket connection")
+		}
+		http.Error(w, "400 Bad Request.", http.StatusBadRequest)
+		return nil, errors.New("400 Bad Request.")
+	}
+	conn.SetReadDeadline(timeZeroVal)
 
+	// Limit max number of websocket clients.
+	log.WithField("address", r.RemoteAddr).Info("New websocket client")
+	if ntfnMgr.IsMaxConnect() {
+		log.WithFields(log.Fields{"numOfMaxWS": ntfnMgr.MaxNumWebsockets, "disconnecting": r.RemoteAddr}).Info("The number of connections has reached the maximum")
+		conn.Close()
+		return nil, errors.New("The number of connections has reached the maximum.")
+	}
 	client := &WSClient{
 		conn:              conn,
-		addr:              remoteAddr,
-		serviceRequestSem: makeSemaphore(maxConcurrentReqs),
+		addr:              r.RemoteAddr,
+		serviceRequestSem: makeSemaphore(ntfnMgr.maxNumConcurrentReqs),
 		ntfnChan:          make(chan []byte, 1), // nonblocking sync
 		sendChan:          make(chan wsResponse, websocketSendBufferSize),
 		quit:              make(chan struct{}),
@@ -128,25 +145,24 @@ out:
 		if err != nil {
 			// Log the error if it's not due to disconnecting.
 			if err != io.EOF {
-				log.Errorf("Websocket receive error from %s: %v", c.addr, err)
-
+				log.WithFields(log.Fields{"address": c.addr, "error": err}).Error("Websocket receive error")
 			}
 			break out
 		}
 		var request WSRequest
-		err = json.Unmarshal(msg, &request)
-		if err != nil {
+		if err = json.Unmarshal(msg, &request); err != nil {
 
 			respError := ErrWSParse.Error() + ": " + err.Error()
-			resp, _ := NewWSRequest("", respError)
+			resp := NewWSResponse("", nil, respError)
 			reply, err := json.Marshal(resp)
 			if err != nil {
-				log.Errorf("Failed to marshal parse failure reply: %v", err)
+				log.WithField("error", err).Error("Failed to marshal parse failure reply")
 				continue
 			}
 			c.SendMessage(reply, nil)
 			continue
 		}
+
 		c.serviceRequestSem.acquire()
 		go func() {
 			c.serviceRequest(request.Method)
@@ -157,28 +173,31 @@ out:
 	// Ensure the connection is closed.
 	c.Disconnect()
 	c.wg.Done()
-	log.Debugf("Websocket client input handler done for %s", c.addr)
+	log.WithField("address", c.addr).Debug("Websocket client input handler done")
 }
 
-func (c *WSClient) serviceRequest(method string) {
+func (c *WSClient) serviceRequest(topic string) {
 	var (
-		err error
+		err     error
+		respErr string
 	)
-	wsHandler, ok := wsHandlers[method]
+
+	wsHandler, ok := wsHandlers[topic]
 	if ok {
-		_, err = wsHandler(c, method)
+		_, err = wsHandler(c, topic)
 	} else {
-		log.Errorf("There is not this method: %s", method)
-		err = errors.New("There is not this method: " + method)
+		log.WithField("topic", topic).Debug("There is not this topic")
+		err = errors.New("There is not this method: " + topic)
 	}
-	var respErr string
+
 	if err != nil {
 		respErr = ErrWSParse.Error() + ": " + err.Error()
 	}
-	resp, _ := NewWSRequest("", respErr)
+
+	resp := NewWSResponse("", nil, respErr)
 	reply, err := json.Marshal(resp)
 	if err != nil {
-		log.Errorf("Failed to marshal parse failure reply: %v", err)
+		log.WithField("error", err).Debug("Failed to marshal parse failure reply")
 		return
 	}
 	c.SendMessage(reply, nil)
@@ -253,7 +272,7 @@ cleanup:
 		}
 	}
 	c.wg.Done()
-	log.Infof("Websocket client notification queue handler done for %s", c.addr)
+	log.WithField("address", c.addr).Debug("Websocket client notification queue handler done")
 }
 
 // outHandler handles all outgoing messages for the websocket connection.  It
@@ -295,7 +314,7 @@ cleanup:
 		}
 	}
 	c.wg.Done()
-	log.Infof("Websocket client output handler done for %s", c.addr)
+	log.WithField("address", c.addr).Debug("Websocket client output handler done")
 }
 
 // SendMessage sends the passed json to the websocket client.  It is backed
@@ -358,7 +377,7 @@ func (c *WSClient) Disconnect() {
 		return
 	}
 
-	log.Infof("Disconnecting websocket client %s", c.addr)
+	log.WithField("address", c.addr).Info("Disconnecting websocket client")
 	close(c.quit)
 	c.conn.Close()
 	c.disconnected = true
@@ -366,8 +385,7 @@ func (c *WSClient) Disconnect() {
 
 // Start begins processing input and output messages.
 func (c *WSClient) Start() {
-	log.Infof("Starting websocket client %s", c.addr)
-
+	log.WithField("address", c.addr).Info("Starting websocket client")
 	// Start processing input and output.
 	c.wg.Add(3)
 	go c.inHandler()
