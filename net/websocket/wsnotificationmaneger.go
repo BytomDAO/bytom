@@ -321,7 +321,7 @@ func (m *WSNotificationManager) UnregisterBlockUpdates(wsc *WSClient) {
 // block updates when a block is connected to the main chain.
 func (*WSNotificationManager) notifyBlockConnected(clients map[chan struct{}]*WSClient, block *types.Block) {
 
-	resp, err := NewWSRequest(nil, "notifyBlockConnected", block)
+	resp, err := NewWSRequest(nil, "blockconnected", block)
 	if err != nil {
 		log.Errorf("Failed to build websocket response: %v", err)
 		return
@@ -341,7 +341,7 @@ func (*WSNotificationManager) notifyBlockConnected(clients map[chan struct{}]*WS
 // block updates when a block is disconnected from the main chain (due to a
 // reorganize).
 func (*WSNotificationManager) notifyBlockDisconnected(clients map[chan struct{}]*WSClient, block *types.Block) {
-	resp, err := NewWSRequest(nil, "", block)
+	resp, err := NewWSRequest(nil, "blockdisconnected", block)
 	if err != nil {
 		log.Errorf("Failed to build websocket response: %v", err)
 		return
@@ -373,7 +373,7 @@ func (m *WSNotificationManager) UnregisterNewMempoolTxsUpdates(wsc *WSClient) {
 // notifyForNewTx notifies websocket clients that have registered for updates
 // when a new transaction is added to the memory pool.
 func (m *WSNotificationManager) notifyForNewTx(clients map[chan struct{}]*WSClient, tx *types.Tx) {
-	resp, err := NewWSRequest(nil, "", tx)
+	resp, err := NewWSRequest(nil, "transaction", tx)
 	if err != nil {
 		log.Errorf("Failed to build websocket response: %v", err)
 		return
