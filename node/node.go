@@ -28,6 +28,7 @@ import (
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/mining/tensority"
+	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -230,6 +231,10 @@ func launchWebBrowser(port string) {
 
 func (n *Node) initAndstartApiServer() {
 	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.newBlockCh)
+
+	ntfnMgr := websocket.NewWsNotificationManager()
+	n.api.NtfnMgr = ntfnMgr
+	n.chain.NtfnMgr = ntfnMgr
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()

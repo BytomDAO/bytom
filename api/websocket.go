@@ -1,11 +1,10 @@
 package api
 
 import (
+	"net/http"
 	"time"
 
 	ws "github.com/bytom/net/websocket"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/types"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 )
@@ -14,32 +13,21 @@ import (
 // creating multiple instances.
 var timeZeroVal time.Time
 
-func (a *API) handleBlockchainNotification(notification *protocol.Notification) {
-	switch notification.Type {
-	case protocol.NTBlockAccepted:
-
-	case protocol.NTBlockConnected:
-		block, ok := notification.Data.(*types.Block)
-		if !ok {
-			log.Errorf("Chain connected notification is not a block.")
-			break
+func (a *API) websocketHandler(w http.ResponseWriter, r *http.Request) {
+	// Attempt to upgrade the connection to a websocket connection
+	// using the default size for read/write buffers.
+	ws, err := websocket.Upgrade(w, r, nil, 0, 0)
+	if err != nil {
+		if _, ok := err.(websocket.HandshakeError); !ok {
+			log.Printf("Unexpected websocket error: %v", err)
 		}
-
-		// Notify registered websocket clients of incoming block.
-		a.NtfnMgr.NotifyBlockConnected(block)
-	case protocol.NTBlockDisconnected:
-		block, ok := notification.Data.(*types.Block)
-		if !ok {
-			log.Errorf("Chain disconnected notification is not a block.")
-			break
-		}
-
-		// Notify registered websocket clients.
-		a.NtfnMgr.NotifyBlockDisconnected(block)
+		http.Error(w, "400 Bad Request.", http.StatusBadRequest)
+		return
 	}
+	a.websocketClient(ws, r.RemoteAddr)
 }
 
-func (a *API) buildWebsocketHandler(conn *websocket.Conn, remoteAddr string) {
+func (a *API) websocketClient(conn *websocket.Conn, remoteAddr string) {
 
 	// Clear the read deadline that was set before the websocket hijacked
 	// the connection.
@@ -54,8 +42,8 @@ func (a *API) buildWebsocketHandler(conn *websocket.Conn, remoteAddr string) {
 		conn.Close()
 		return
 	}
+
 	client, err := ws.NewWebsocketClient(conn, remoteAddr, a.NtfnMgr, a.maxConcurrentReqs)
-	//client, err := a.newWebsocketClient(conn, remoteAddr)
 	if err != nil {
 		log.Errorf("Failed to serve client %s: %v", remoteAddr, err)
 		conn.Close()

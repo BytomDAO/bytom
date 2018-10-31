@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/errors"
+	"github.com/bytom/net/websocket"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
@@ -97,7 +98,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	c.cond.L.Lock()
-	c.sendNotification(NTBlockConnected, block)
+	c.NtfnMgr.SendNotification(websocket.NTBlockConnected, block)
 	c.cond.L.Unlock()
 
 	return nil
@@ -125,7 +126,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 		c.cond.L.Lock()
-		c.sendNotification(NTBlockDisconnected, b)
+		c.NtfnMgr.SendNotification(websocket.NTBlockDisconnected, b)
 		c.cond.L.Unlock()
 		log.WithFields(log.Fields{"height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
 	}
@@ -148,7 +149,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 		c.cond.L.Lock()
-		c.sendNotification(NTBlockConnected, b)
+		c.NtfnMgr.SendNotification(websocket.NTBlockConnected, b)
 		c.cond.L.Unlock()
 		log.WithFields(log.Fields{"height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
