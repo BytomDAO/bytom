@@ -1,29 +1,25 @@
 package websocket
 
 type WSRequest struct {
-	Method string      `json:"method"`
-	Data   interface{} `json:"data"`
+	Topic string `json:"topic"`
 }
 
-func NewWSRequest(method string, data interface{}) *WSRequest {
-
+func NewWSRequest(topic string) *WSRequest {
 	return &WSRequest{
-		Method: method,
-		Data:   data,
+		Topic: topic,
 	}
 }
 
 type WSResponse struct {
-	Method string      `json:"method"`
-	Data   interface{} `json:"data"`
-	Error  string      `json:"error"`
+	NotificationType string      `json:"notification_type"`
+	Data             interface{} `json:"data"`
+	Error            string      `json:"error"`
 }
 
-func NewWSResponse(method string, data interface{}, err string) *WSResponse {
-
+func NewWSResponse(notificationType string, data interface{}, err string) *WSResponse {
 	return &WSResponse{
-		Method: method,
-		Data:   data,
-		Error:  err,
+		NotificationType: notificationType,
+		Data:             data,
+		Error:            err,
 	}
 }

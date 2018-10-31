@@ -42,10 +42,6 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 	if err != nil {
 		log.WithFields(log.Fields{"tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
 	}
-	status, err := c.txPool.ProcessTransaction(tx, err != nil, block.BlockHeader.Height, gasStatus.BTMValue)
-	if err == nil {
-		c.NtfnMgr.NotifyMempoolTx(tx, true)
-	}
 
-	return status, err
+	return c.txPool.ProcessTransaction(tx, err != nil, block.BlockHeader.Height, gasStatus.BTMValue)
 }

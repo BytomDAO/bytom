@@ -12,7 +12,6 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/httperror"
 	"github.com/bytom/net/http/httpjson"
-	"github.com/bytom/net/websocket"
 	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm"
 )
@@ -116,10 +115,6 @@ var respErrFormatter = map[error]httperror.Info{
 	pseudohsm.ErrDuplicateKeyAlias: {400, "BTM800", "Key Alias already exists"},
 	pseudohsm.ErrLoadKey:           {400, "BTM801", "Key not found or wrong password"},
 	pseudohsm.ErrDecrypt:           {400, "BTM802", "Could not decrypt key with given passphrase"},
-
-	// websocket err
-	websocket.ErrWSParse:    {400, "BTM900", "Websocket request parsing error"},
-	websocket.ErrWSInternal: {400, "BTM901", "Websocket Internal error"},
 }
 
 // Map error values to standard bytom error codes. Missing entries

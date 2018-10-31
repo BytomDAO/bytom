@@ -117,9 +117,7 @@ type API struct {
 
 	newBlockCh chan *bc.Hash
 
-	NtfnMgr           *websocket.WSNotificationManager
-	maxWebsockets     int
-	maxConcurrentReqs int
+	NtfnMgr *websocket.WSNotificationManager
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -134,7 +132,7 @@ func (a *API) initServer(config *cfg.Config) {
 
 	handler = AuthHandler(mux, a.accessTokens, config.Auth.Disable)
 	handler = RedirectHandler(handler)
-	a.initWSServer(mux)
+
 	secureheader.DefaultConfig.PermitClearLoopback = true
 	secureheader.DefaultConfig.HTTPSRedirect = false
 	secureheader.DefaultConfig.Next = handler
@@ -152,10 +150,6 @@ func (a *API) initServer(config *cfg.Config) {
 	}
 
 	coreHandler.Set(a)
-}
-
-func (a *API) initWSServer(mux *http.ServeMux) {
-	mux.HandleFunc("/ws", a.websocketHandler)
 }
 
 // StartServer start the server
@@ -179,8 +173,7 @@ func (a *API) StartServer(address string) {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash) *API {
-	ntfnMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs)
+func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash, ntfnMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,
@@ -193,7 +186,6 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		newBlockCh: newBlockCh,
 		NtfnMgr:    ntfnMgr,
 	}
-
 	api.buildHandler()
 	api.initServer(config)
 
@@ -309,6 +301,8 @@ func (a *API) buildHandler() {
 	m.Handle("/connect-peer", jsonHandler(a.connectPeer))
 
 	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
+
+	m.HandleFunc("/ws", a.websocketHandler)
 
 	handler := latencyHandler(m, walletEnable)
 	handler = webAssetsHandler(handler)

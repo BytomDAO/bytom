@@ -46,8 +46,8 @@ func init() {
 	runNodeCmd.Flags().String("log_file", config.LogFile, "Log output file")
 
 	// websocket flags
-	runNodeCmd.Flags().Int("max_num_websockets", config.Websocket.MaxNumWebsockets, "Max number of websocket connections")
-	runNodeCmd.Flags().Int("max_num_concurrent_reqs", config.Websocket..MaxNumConcurrentReqs, "Max number of concurrent websocket requests that may be processed concurrently")
+	runNodeCmd.Flags().Int("ws.max_num_websockets", config.Websocket.MaxNumWebsockets, "Max number of websocket connections")
+	runNodeCmd.Flags().Int("ws.max_num_concurrent_reqs", config.Websocket.MaxNumConcurrentReqs, "Max number of concurrent websocket requests that may be processed concurrently")
 
 	RootCmd.AddCommand(runNodeCmd)
 }

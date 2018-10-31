@@ -28,6 +28,7 @@ import (
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/mining/tensority"
+	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -58,6 +59,7 @@ type Node struct {
 	miningEnable bool
 
 	newBlockCh chan *bc.Hash
+	NtfnMgr    *websocket.WSNotificationManager
 }
 
 func NewNode(config *cfg.Config) *Node {
@@ -121,8 +123,10 @@ func NewNode(config *cfg.Config) *Node {
 
 	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, newBlockCh)
 
+	ntfnMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
+
 	// get transaction from txPool and send it to syncManager and wallet
-	go newPoolTxListener(txPool, syncManager, wallet)
+	go newPoolTxListener(txPool, syncManager, wallet, ntfnMgr)
 
 	// run the profile server
 	profileHost := config.ProfListenAddress
@@ -146,6 +150,7 @@ func NewNode(config *cfg.Config) *Node {
 		miningEnable: config.Mining,
 
 		newBlockCh: newBlockCh,
+		NtfnMgr:    ntfnMgr,
 	}
 
 	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh)
@@ -161,7 +166,7 @@ func NewNode(config *cfg.Config) *Node {
 }
 
 // newPoolTxListener listener transaction from txPool, and send it to syncManager and wallet
-func newPoolTxListener(txPool *protocol.TxPool, syncManager *netsync.SyncManager, wallet *w.Wallet) {
+func newPoolTxListener(txPool *protocol.TxPool, syncManager *netsync.SyncManager, wallet *w.Wallet, ntfnMgr *websocket.WSNotificationManager) {
 	txMsgCh := txPool.GetMsgCh()
 	syncManagerTxCh := syncManager.GetNewTxCh()
 
@@ -173,6 +178,7 @@ func newPoolTxListener(txPool *protocol.TxPool, syncManager *netsync.SyncManager
 			if wallet != nil {
 				wallet.AddUnconfirmedTx(msg.TxDesc)
 			}
+			ntfnMgr.NotifyMempoolTx(msg.Tx)
 		case protocol.MsgRemoveTx:
 			if wallet != nil {
 				wallet.RemoveUnconfirmedTx(msg.TxDesc)
@@ -229,7 +235,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartApiServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.newBlockCh)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.newBlockCh, n.NtfnMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()
