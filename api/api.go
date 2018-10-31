@@ -23,7 +23,7 @@ import (
 	"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
-	ws "github.com/bytom/net/websocket"
+	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -117,7 +117,7 @@ type API struct {
 
 	newBlockCh chan *bc.Hash
 
-	NtfnMgr           *ws.WSNotificationManager
+	NtfnMgr           *websocket.WSNotificationManager
 	maxWebsockets     int
 	maxConcurrentReqs int
 }
