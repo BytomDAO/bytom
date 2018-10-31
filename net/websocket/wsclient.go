@@ -20,6 +20,11 @@ const (
 	websocketSendBufferSize = 50
 )
 
+var (
+	ErrWSParse    = errors.New("Websocket request parsing error")
+	ErrWSInternal = errors.New("Websocket Internal error")
+)
+
 type semaphore chan struct{}
 
 func makeSemaphore(n int) semaphore {
@@ -132,11 +137,9 @@ out:
 		err = json.Unmarshal(msg, &request)
 		if err != nil {
 
-			jsonErr := &WSError{
-				Code:    ErrWSParse.Code,
-				Message: "Failed to parse request: " + err.Error(),
-			}
-			reply, err := MarshalResponse(nil, nil, jsonErr)
+			respError := ErrWSParse.Error() + ": " + err.Error()
+			resp, _ := NewWSRequest("", respError)
+			reply, err := json.Marshal(resp)
 			if err != nil {
 				log.Errorf("Failed to marshal parse failure reply: %v", err)
 				continue
@@ -159,26 +162,21 @@ out:
 
 func (c *WSClient) serviceRequest(method string) {
 	var (
-		result interface{}
-		err    error
+		err error
 	)
 	wsHandler, ok := wsHandlers[method]
 	if ok {
-		result, err = wsHandler(c, method)
+		_, err = wsHandler(c, method)
 	} else {
 		log.Errorf("There is not this method: %s", method)
-		return
+		err = errors.New("There is not this method: " + method)
 	}
-	var jsonErr *WSError
+	var respErr string
 	if err != nil {
-		if jErr, ok := err.(*WSError); ok {
-			jsonErr = jErr
-		} else {
-			jsonErr = NewWSError(ErrWSInternal.Code, err.Error())
-		}
+		respErr = ErrWSParse.Error() + ": " + err.Error()
 	}
-
-	reply, err := MarshalResponse(nil, result, jsonErr)
+	resp, _ := NewWSRequest("", respErr)
+	reply, err := json.Marshal(resp)
 	if err != nil {
 		log.Errorf("Failed to marshal parse failure reply: %v", err)
 		return
