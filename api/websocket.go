@@ -24,10 +24,10 @@ func (a *API) websocketHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "400 Bad Request.", http.StatusBadRequest)
 		return
 	}
-	a.websocketClient(ws, r.RemoteAddr)
+	a.newWebsocketClient(ws, r.RemoteAddr)
 }
 
-func (a *API) websocketClient(conn *websocket.Conn, remoteAddr string) {
+func (a *API) newWebsocketClient(conn *websocket.Conn, remoteAddr string) {
 
 	// Clear the read deadline that was set before the websocket hijacked
 	// the connection.
