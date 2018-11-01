@@ -446,14 +446,14 @@ func (sw *Switch) stopAndRemovePeer(peer *Peer, reason interface{}) {
 	}
 	peer.Stop()
 
-	sentStatus, receiveStatus := peer.TrafficStatus()
+	sentStatus, receivedStatus := peer.TrafficStatus()
 	log.WithFields(log.Fields{
-		"address":              peer.Addr().String(),
-		"reason":               reason,
-		"duration":             sentStatus.Duration.String(),
-		"total_sent":           sentStatus.Bytes,
-		"total_receive":        receiveStatus.Bytes,
-		"average_sent_rate":    sentStatus.AvgRate,
-		"average_receive_rate": receiveStatus.AvgRate,
+		"address":               peer.Addr().String(),
+		"reason":                reason,
+		"duration":              sentStatus.Duration.String(),
+		"total_sent":            sentStatus.Bytes,
+		"total_received":        receivedStatus.Bytes,
+		"average_sent_rate":     sentStatus.AvgRate,
+		"average_received_rate": receivedStatus.AvgRate,
 	}).Info("disconnect with peer")
 }

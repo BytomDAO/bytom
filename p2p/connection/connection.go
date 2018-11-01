@@ -201,8 +201,8 @@ func (c *MConnection) Send(chID byte, msg interface{}) bool {
 // TrafficStatus return the in and out traffic status
 func (c *MConnection) TrafficStatus() (*flowrate.Status, *flowrate.Status) {
 	sentStatus := c.sendMonitor.Status()
-	receiveStatus := c.recvMonitor.Status()
-	return &sentStatus, &receiveStatus
+	receivedStatus := c.recvMonitor.Status()
+	return &sentStatus, &receivedStatus
 }
 
 // TrySend queues a message to be sent to channel(Nonblocking).
