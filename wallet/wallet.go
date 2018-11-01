@@ -32,29 +32,44 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB         db.DB
-	rw         sync.RWMutex
-	status     StatusInfo
-	AccountMgr *account.Manager
-	AssetReg   *asset.Registry
-	Hsm        *pseudohsm.HSM
-	chain      *protocol.Chain
-	rescanCh   chan struct{}
+	DB          db.DB
+	rw          sync.RWMutex
+	status      StatusInfo
+	AccountMgr  *account.Manager
+	AssetReg    *asset.Registry
+	Hsm         *pseudohsm.HSM
+	chain       *protocol.Chain
+	RecoveryMgr *RecoveryManager
+	rescanCh    chan struct{}
 }
 
 //NewWallet return a new wallet instance
 func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
-		DB:         walletDB,
-		AccountMgr: account,
-		AssetReg:   asset,
-		chain:      chain,
-		Hsm:        hsm,
-		rescanCh:   make(chan struct{}, 1),
+		DB:          walletDB,
+		AccountMgr:  account,
+		AssetReg:    asset,
+		chain:       chain,
+		Hsm:         hsm,
+		RecoveryMgr: NewRecoveryManager(walletDB),
+		rescanCh:    make(chan struct{}, 1),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
 		return nil, err
+	}
+
+	task, err := w.RecoveryMgr.loadStatusInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	if task && !w.RecoveryMgr.isFinished() {
+		if err:=w.RecoveryMgr.extendScanAddresses(true);err!=nil {
+			return nil, err
+		}
+
+		w.RecoveryMgr.Resurrect()
 	}
 
 	go w.walletUpdater()
@@ -104,12 +119,25 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		return err
 	}
 
+	if w.RecoveryMgr.IsStarted() {
+		if block.Time().After(w.RecoveryMgr.startTime()) {
+			if err := w.RecoveryMgr.resurrectFinished(); err != nil {
+				return err
+			}
+		} else {
+			err := w.filterRecoveryTxs(block)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	storeBatch := w.DB.NewBatch()
 	if err := w.indexTransactions(storeBatch, block, txStatus); err != nil {
 		return err
 	}
-	w.attachUtxos(storeBatch, block, txStatus)
 
+	w.attachUtxos(storeBatch, block, txStatus)
 	w.status.WorkHeight = block.Height
 	w.status.WorkHash = block.Hash()
 	if w.status.WorkHeight >= w.status.BestHeight {

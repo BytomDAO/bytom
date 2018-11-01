@@ -147,6 +147,47 @@ transactionLoop:
 	return annotatedTxs
 }
 
+// filterRecoveryTxs Filter transactions that meet the recovery address
+func (w *Wallet) filterRecoveryTxs(b *types.Block) error {
+	for _, tx := range b.Transactions {
+		for _, v := range tx.Outputs {
+			var hash [32]byte
+			sha3pool.Sum256(hash[:], v.ControlProgram)
+			if path, ok := w.RecoveryMgr.checkAddress(hash); ok {
+				storeBatch := w.DB.NewBatch()
+				accountID, ok := w.RecoveryMgr.checkAccount(path.acctIndex)
+				if !ok {
+					account, err := w.AccountMgr.CreateRecoveryAccount(storeBatch, w.RecoveryMgr.state.XPub, path.acctIndex)
+					if err != nil {
+						return err
+					}
+
+					accountID = account.ID
+					w.RecoveryMgr.setAccount(path.acctIndex, account.ID)
+				}
+
+				w.RecoveryMgr.ReportFound(path.acctIndex, path.change, path.addrIndex)
+				w.RecoveryMgr.extendScanAccounts()
+				if err := w.RecoveryMgr.extendScanAddresses(false); err != nil {
+					return err
+				}
+
+				if err := w.RecoveryMgr.commitStatusInfo(storeBatch); err != nil {
+					return err
+				}
+
+				storeBatch.Write()
+
+				if err := w.AccountMgr.CreateRecoveryAddresses(accountID, path.change, path.addrIndex); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 // GetTransactionByTxID get transaction by txID
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 	formatKey := w.DB.Get(calcTxIndexKey(txID))

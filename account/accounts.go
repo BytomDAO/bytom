@@ -3,12 +3,15 @@ package account
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/tmlibs/db"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/signers"
@@ -167,6 +170,40 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 	return account, nil
 }
 
+// Create creates a new Account.
+func (m *Manager) CreateRecoveryAccount(storeBatch db.Batch, xpub chainkd.XPub, acctIndex uint64) (*Account, error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
+	alias := fmt.Sprintf("%x:%x", xpub[:8], acctIndex)
+	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
+	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
+		return nil, ErrDuplicateAlias
+	}
+
+	if acctIndex >= HardenedKeyStart {
+		return nil, ErrAccountIndex
+	}
+
+	signer, err := signers.Create("account", []chainkd.XPub{xpub}, 1, acctIndex, signers.BIP0044)
+	id := signers.IDGenerate()
+	if err != nil {
+		return nil, errors.Wrap(err)
+	}
+
+	account := &Account{Signer: signer, ID: id, Alias: normalizedAlias}
+	rawAccount, err := json.Marshal(account)
+	if err != nil {
+		return nil, ErrMarshalAccount
+	}
+
+	accountID := Key(id)
+	storeBatch.Set(GetAccountIndexKey([]chainkd.XPub{xpub}), common.Unit64ToBytes(acctIndex))
+	storeBatch.Set(accountID, rawAccount)
+	storeBatch.Set(aliasKey(normalizedAlias), []byte(id))
+	return account, nil
+}
+
 // CreateAddress generate an address for the select account
 func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram, err error) {
 	account, err := m.FindByID(accountID)
@@ -174,6 +211,42 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 		return nil, err
 	}
 	return m.createAddress(account, change)
+}
+
+// CreateAddress generate an address for the select account
+func (m *Manager) CreateRecoveryAddresses(accountID string, change bool, stopIndex uint64) error {
+	account, err := m.FindByID(accountID)
+	if err != nil {
+		return err
+	}
+
+	for currentIndex := m.GetBip44ContractIndex(accountID, change); currentIndex < stopIndex; {
+		addrIdx, err := m.getNextContractIndex(account, change)
+		if err != nil {
+			return err
+		}
+
+		var cp *CtrlProgram
+		path, err := signers.Path(account.Signer, signers.AccountKeySpace, change, addrIdx)
+		if err != nil {
+			return err
+		}
+
+		if len(account.XPubs) == 1 {
+			cp, err = createP2PKH(account, path)
+		} else {
+			cp, err = createP2SH(account, path)
+		}
+		if err != nil {
+			return err
+		}
+
+		cp.KeyIndex, cp.Change = addrIdx, change
+		m.insertControlPrograms(cp)
+		currentIndex = m.GetBip44ContractIndex(accountID, change)
+	}
+
+	return nil
 }
 
 // DeleteAccount deletes the account's ID or alias matching accountInfo.
@@ -251,6 +324,26 @@ func (m *Manager) GetAccountByProgram(program *CtrlProgram) (*Account, error) {
 
 	account := &Account{}
 	return account, json.Unmarshal(rawAccount, account)
+}
+
+// GetAccountByXPubs return Account by given XPubs
+func (m *Manager) GetAccountByXPubs(XPubs []chainkd.XPub) (*Account, error) {
+	accounts, err := m.ListAccounts("")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, account := range accounts {
+		cpyA := append([]chainkd.XPub{}, account.XPubs[:]...)
+		sort.Sort(signers.SortKeys(cpyA))
+		cpyB := append([]chainkd.XPub{}, XPubs[:]...)
+		sort.Sort(signers.SortKeys(cpyB))
+		if reflect.DeepEqual(cpyA, cpyB) {
+			return account, nil
+		}
+	}
+
+	return nil, nil
 }
 
 // GetAliasByID return the account alias by given ID
@@ -461,9 +554,9 @@ func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram,
 	}
 
 	if len(account.XPubs) == 1 {
-		cp, err = m.createP2PKH(account, path)
+		cp, err = createP2PKH(account, path)
 	} else {
-		cp, err = m.createP2SH(account, path)
+		cp, err = createP2SH(account, path)
 	}
 	if err != nil {
 		return nil, err
@@ -472,7 +565,25 @@ func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram,
 	return cp, m.insertControlPrograms(cp)
 }
 
-func (m *Manager) createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
+// CreateAddress generate an address for the select account
+func CreateRecoveryAddress(XPubs []chainkd.XPub, purpose uint8, accountIndex uint64, change bool, addrIndex uint64) (cp *CtrlProgram, err error) {
+	signer := &signers.Signer{XPubs: XPubs, KeyIndex: accountIndex, DeriveRule: purpose}
+	path, err := signers.Path(signer, signers.AccountKeySpace, change, addrIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	account := &Account{ID: "", Signer: signer}
+	cp, err = createP2PKH(account, path)
+	if err != nil {
+		return nil, err
+	}
+
+	cp.KeyIndex, cp.Change = addrIndex, change
+	return cp, err
+}
+
+func createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
@@ -494,7 +605,7 @@ func (m *Manager) createP2PKH(account *Account, path [][]byte) (*CtrlProgram, er
 	}, nil
 }
 
-func (m *Manager) createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
+func createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
