@@ -138,10 +138,11 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 
 func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain) *Wallet {
 	wallet := &Wallet{
-		DB:         walletDB,
-		AccountMgr: account,
-		AssetReg:   asset,
-		chain:      chain,
+		DB:          walletDB,
+		AccountMgr:  account,
+		AssetReg:    asset,
+		chain:       chain,
+		RecoveryMgr: NewRecoveryManager(walletDB),
 	}
 	return wallet
 }
