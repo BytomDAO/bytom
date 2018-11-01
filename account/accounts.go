@@ -220,7 +220,12 @@ func (m *Manager) CreateRecoveryAddresses(accountID string, change bool, stopInd
 		return err
 	}
 
-	for currentIndex := m.GetBip44ContractIndex(accountID, change); currentIndex < stopIndex; {
+	currentIndex, err := m.getCurrentContractIndex(account, change)
+	if err != nil {
+		return err
+	}
+
+	for currentIndex < stopIndex {
 		addrIdx, err := m.getNextContractIndex(account, change)
 		if err != nil {
 			return err
@@ -243,7 +248,10 @@ func (m *Manager) CreateRecoveryAddresses(accountID string, change bool, stopInd
 
 		cp.KeyIndex, cp.Change = addrIdx, change
 		m.insertControlPrograms(cp)
-		currentIndex = m.GetBip44ContractIndex(accountID, change)
+		currentIndex, err = m.getCurrentContractIndex(account, change)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -672,6 +680,16 @@ func (m *Manager) getNextBip44ContractIndex(accountID string, change bool) (uint
 	}
 	m.db.Set(bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(nextIndex))
 	return nextIndex, nil
+}
+
+func (m *Manager) getCurrentContractIndex(account *Account, change bool) (uint64, error) {
+	switch account.DeriveRule {
+	case signers.BIP0032:
+		return m.GetContractIndex(account.ID), nil
+	case signers.BIP0044:
+		return m.GetBip44ContractIndex(account.ID, change), nil
+	}
+	return 0, ErrDeriveRule
 }
 
 func (m *Manager) getNextContractIndex(account *Account, change bool) (uint64, error) {
