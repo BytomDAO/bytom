@@ -251,7 +251,7 @@ func (uk *utxoKeeper) findUtxo(outHash bc.Hash, useUnconfirmed bool) (*UTXO, err
 func (uk *utxoKeeper) optUTXOs(utxos []*UTXO, amount uint64) ([]*UTXO, uint64, uint64) {
 	stategy := config.CommonConfig.Wallet.UTXOSelectStrategy
 	if _, ok := utxoSelectStrategyMap[stategy]; !ok {
-		stategy = defaultUTXOSelectStrategy
+		stategy = "default"
 	}
 	selectUTXO := utxoSelectStrategyMap[stategy]
 	return selectUTXO(uk, utxos, amount)

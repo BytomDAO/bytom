@@ -1,23 +1,17 @@
 package account
 
 import (
-	"sort"
 	"container/list"
+	"sort"
 )
 
 type selectUTXO func(uk *utxoKeeper, utxos []*UTXO, amount uint64) ([]*UTXO, uint64, uint64)
 
-const (
-	defaultUTXOSelectStrategy = "default"
-)
+var utxoSelectStrategyMap = map[string]selectUTXO{
+	"default": (*utxoKeeper).defaultSelectUTXO,
+}
 
-var (
-	utxoSelectStrategyMap = map[string]selectUTXO {
-		defaultUTXOSelectStrategy: defaultSelectUTXO,
-	}
-)
-
-func defaultSelectUTXO(uk *utxoKeeper, utxos []*UTXO, amount uint64) ([]*UTXO, uint64, uint64) {
+func (uk *utxoKeeper) defaultSelectUTXO(utxos []*UTXO, amount uint64) ([]*UTXO, uint64, uint64) {
 	//sort the utxo by amount, bigger amount in front
 	var optAmount, reservedAmount uint64
 	sort.Slice(utxos, func(i, j int) bool {
