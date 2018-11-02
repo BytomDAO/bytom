@@ -26,6 +26,7 @@ func init() {
 
 	runNodeCmd.Flags().Bool("wallet.disable", config.Wallet.Disable, "Disable wallet")
 	runNodeCmd.Flags().Bool("wallet.rescan", config.Wallet.Rescan, "Rescan wallet")
+	runNodeCmd.Flags().String("wallet.utxo_select_strategy", config.Wallet.UTXOSelectStrategy, "Set strategy for select utxo")
 	runNodeCmd.Flags().Bool("vault_mode", config.VaultMode, "Run in the offline enviroment")
 	runNodeCmd.Flags().Bool("web.closed", config.Web.Closed, "Lanch web browser or not")
 	runNodeCmd.Flags().String("chain_id", config.ChainID, "Select network type")
