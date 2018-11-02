@@ -6,6 +6,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
 )
 
@@ -76,4 +77,30 @@ func (a *API) getWalletInfo() Response {
 		BestBlockHeight: bestBlockHeight,
 		WalletHeight:    walletStatus.WorkHeight,
 	})
+}
+
+func (a *API) recoveryFromRootXPub(ctx context.Context, in struct {
+	Alias string       `json:"alias"`
+	XPub  chainkd.XPub `json:"xpub"`
+}) Response {
+	account, err := a.wallet.AccountMgr.GetAccountByXPubs([]chainkd.XPub{in.XPub})
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	if account != nil {
+		return NewErrorResponse(errors.New("This key derived account already exists in the wallet"))
+	}
+
+	if a.wallet.RecoveryMgr.IsStarted() {
+		return NewErrorResponse(errors.New("Recovery in progress"))
+	}
+
+	a.wallet.RecoveryMgr.StatusInit([]chainkd.XPub{in.XPub})
+	if err := a.wallet.RecoveryMgr.Resurrect(); err != nil {
+		return NewErrorResponse(err)
+	}
+
+	a.wallet.RescanBlocks()
+	return NewSuccessResponse(nil)
 }

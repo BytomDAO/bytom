@@ -65,7 +65,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	if task && !w.RecoveryMgr.isFinished() {
-		if err:=w.RecoveryMgr.extendScanAddresses(true);err!=nil {
+		if err := w.RecoveryMgr.extendScanAddresses(true); err != nil {
 			return nil, err
 		}
 
@@ -119,17 +119,8 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		return err
 	}
 
-	if w.RecoveryMgr.IsStarted() {
-		if block.Time().After(w.RecoveryMgr.startTime()) {
-			if err := w.RecoveryMgr.resurrectFinished(); err != nil {
-				return err
-			}
-		} else {
-			err := w.filterRecoveryTxs(block)
-			if err != nil {
-				return err
-			}
-		}
+	if err := w.RecoveryMgr.filterRecoveryTxs(block, w.AccountMgr); err != nil {
+		return err
 	}
 
 	storeBatch := w.DB.NewBatch()

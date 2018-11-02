@@ -7,7 +7,6 @@ import (
 
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/errors"
 )
 
 type createKeyResp struct {
@@ -38,32 +37,6 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(&createKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File, Mnemonic: *mnemonic})
-}
-
-func (a *API) recoveryFromRootXPub(ctx context.Context, in struct {
-	Alias string       `json:"alias"`
-	XPub  chainkd.XPub `json:"xpub"`
-}) Response {
-	account, err := a.wallet.AccountMgr.GetAccountByXPubs([]chainkd.XPub{in.XPub})
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	if account != nil {
-		return NewErrorResponse(errors.New("This key derived account already exists in the wallet"))
-	}
-
-	if a.wallet.RecoveryMgr.IsStarted() {
-		return NewErrorResponse(errors.New("Recovery in progress"))
-	}
-
-	a.wallet.RecoveryMgr.StatusInit(in.XPub)
-	if err := a.wallet.RecoveryMgr.Resurrect(); err != nil {
-		return NewErrorResponse(err)
-	}
-
-	a.wallet.RescanBlocks()
-	return NewSuccessResponse(nil)
 }
 
 func (a *API) pseudohsmListKeys(ctx context.Context) Response {

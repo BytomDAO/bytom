@@ -132,7 +132,7 @@ func (m *Manager) AddUnconfirmedUtxo(utxos []*UTXO) {
 }
 
 // Create creates a new Account.
-func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Account, error) {
+func (m *Manager) Create(storeBatch db.Batch, xpubs []chainkd.XPub, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
@@ -142,14 +142,19 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 	}
 
 	index := uint64(1)
-	if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
-		index = common.BytesToUnit64(rawIndexBytes) + 1
+	if acctIndex != 0 {
+		index = acctIndex
+	} else {
+		if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
+			index = common.BytesToUnit64(rawIndexBytes) + 1
+		}
 	}
+
 	if index >= HardenedKeyStart {
 		return nil, ErrAccountIndex
 	}
 
-	signer, err := signers.Create("account", xpubs, quorum, index, signers.BIP0044)
+	signer, err := signers.Create("account", xpubs, quorum, index, deriveRule)
 	id := signers.IDGenerate()
 	if err != nil {
 		return nil, errors.Wrap(err)
@@ -162,43 +167,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 	}
 
 	accountID := Key(id)
-	storeBatch := m.db.NewBatch()
 	storeBatch.Set(GetAccountIndexKey(xpubs), common.Unit64ToBytes(index))
-	storeBatch.Set(accountID, rawAccount)
-	storeBatch.Set(aliasKey(normalizedAlias), []byte(id))
-	storeBatch.Write()
-	return account, nil
-}
-
-// Create creates a new Account.
-func (m *Manager) CreateRecoveryAccount(storeBatch db.Batch, xpub chainkd.XPub, acctIndex uint64) (*Account, error) {
-	m.accountMu.Lock()
-	defer m.accountMu.Unlock()
-
-	alias := fmt.Sprintf("%x:%x", xpub[:8], acctIndex)
-	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
-	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
-		return nil, ErrDuplicateAlias
-	}
-
-	if acctIndex >= HardenedKeyStart {
-		return nil, ErrAccountIndex
-	}
-
-	signer, err := signers.Create("account", []chainkd.XPub{xpub}, 1, acctIndex, signers.BIP0044)
-	id := signers.IDGenerate()
-	if err != nil {
-		return nil, errors.Wrap(err)
-	}
-
-	account := &Account{Signer: signer, ID: id, Alias: normalizedAlias}
-	rawAccount, err := json.Marshal(account)
-	if err != nil {
-		return nil, ErrMarshalAccount
-	}
-
-	accountID := Key(id)
-	storeBatch.Set(GetAccountIndexKey([]chainkd.XPub{xpub}), common.Unit64ToBytes(acctIndex))
 	storeBatch.Set(accountID, rawAccount)
 	storeBatch.Set(aliasKey(normalizedAlias), []byte(id))
 	return account, nil
