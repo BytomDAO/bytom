@@ -106,6 +106,8 @@ clean:
 	@rm -rf crypto/sm2/*.pem
 	@rm -rf crypto/sm2/ifile
 	@rm -rf crypto/sm2/ofile
+	@echo "Cleaning go test cache..."
+	@go clean -testcache
 	@echo "Done."
 
 target/$(BYTOMD_BINARY32):
