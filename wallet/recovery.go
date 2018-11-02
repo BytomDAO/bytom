@@ -153,17 +153,30 @@ func (rm *RecoveryManager) checkAddress(hash common.Hash) (addrPath, bool) {
 	return path, ok
 }
 
-func (rm *RecoveryManager) checkAccount(xpub chainkd.XPub, acctIndex uint64) (string, bool) {
+func (rm *RecoveryManager) checkAccount(xpub chainkd.XPub, acctIndex uint64, accountMgr *account.Manager) (*string, error) {
 	rm.RWMutex.Lock()
 	defer rm.RWMutex.Unlock()
 
 	status, ok := rm.state.XPubsStatus[xpub]
-	if !ok {
-		return "", ok
+	if ok {
+		acctID, ok := status.FoundAccounts[acctIndex]
+		if ok {
+			return &acctID, nil
+		}
 	}
 
-	acctID, ok := status.FoundAccounts[acctIndex]
-	return acctID, ok
+	accounts, err := accountMgr.GetAccountByXPubs([]chainkd.XPub{xpub})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, account := range accounts {
+		if account.KeyIndex == acctIndex {
+			return &account.ID, nil
+		}
+	}
+
+	return nil, nil
 }
 
 func (rm *RecoveryManager) commitStatusInfo(storeBatch db.Batch) error {
@@ -248,19 +261,25 @@ func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], output.ControlProgram)
 			if path, ok := rm.checkAddress(hash); ok {
+				var accountID string
 				storeBatch := rm.db.NewBatch()
-				accountID, ok := rm.checkAccount(path.xpub, path.acctIndex)
-				if !ok {
+				acctID, err := rm.checkAccount(path.xpub, path.acctIndex, accountMgr)
+				if err != nil {
+					return err
+				}
+
+				if acctID == nil {
 					alias := fmt.Sprintf("%x:%x", path.xpub[:8], path.acctIndex)
 					account, err := accountMgr.Create([]chainkd.XPub{path.xpub}, 1, alias, path.acctIndex, path.deriveRule)
 					if err != nil {
 						return err
 					}
-
 					accountID = account.ID
-					rm.setAccount(path.xpub, path.acctIndex, account.ID)
+				} else {
+					accountID = *acctID
 				}
 
+				rm.setAccount(path.xpub, path.acctIndex, accountID)
 				rm.ReportFound(path.xpub, path.deriveRule, path.acctIndex, path.change, path.addrIndex)
 				rm.extendScanAccounts()
 				if err := rm.extendScanAddresses(); err != nil {

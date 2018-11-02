@@ -83,15 +83,6 @@ func (a *API) recoveryFromRootXPub(ctx context.Context, in struct {
 	Alias string       `json:"alias"`
 	XPub  chainkd.XPub `json:"xpub"`
 }) Response {
-	account, err := a.wallet.AccountMgr.GetAccountByXPubs([]chainkd.XPub{in.XPub})
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	if account != nil {
-		return NewErrorResponse(errors.New("This key derived account already exists in the wallet"))
-	}
-
 	if a.wallet.RecoveryMgr.IsStarted() {
 		return NewErrorResponse(errors.New("Recovery in progress"))
 	}

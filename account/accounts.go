@@ -286,23 +286,24 @@ func (m *Manager) GetAccountByProgram(program *CtrlProgram) (*Account, error) {
 }
 
 // GetAccountByXPubs return Account by given XPubs
-func (m *Manager) GetAccountByXPubs(XPubs []chainkd.XPub) (*Account, error) {
-	accounts, err := m.ListAccounts("")
+func (m *Manager) GetAccountByXPubs(XPubs []chainkd.XPub) ([]*Account, error) {
+	allAccounts, err := m.ListAccounts("")
 	if err != nil {
 		return nil, err
 	}
 
-	for _, account := range accounts {
+	accounts := make([]*Account, 0)
+	for _, account := range allAccounts {
 		cpyA := append([]chainkd.XPub{}, account.XPubs[:]...)
 		sort.Sort(signers.SortKeys(cpyA))
 		cpyB := append([]chainkd.XPub{}, XPubs[:]...)
 		sort.Sort(signers.SortKeys(cpyB))
 		if reflect.DeepEqual(cpyA, cpyB) {
-			return account, nil
+			accounts = append(accounts, account)
 		}
 	}
 
-	return nil, nil
+	return accounts, nil
 }
 
 // GetAliasByID return the account alias by given ID
