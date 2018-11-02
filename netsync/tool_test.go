@@ -7,6 +7,7 @@ import (
 	"time"
 
 	wire "github.com/tendermint/go-wire"
+	"github.com/tendermint/tmlibs/flowrate"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
@@ -50,6 +51,10 @@ func (p *P2PPeer) ServiceFlag() consensus.ServiceFlag {
 func (p *P2PPeer) SetConnection(srcPeer *P2PPeer, node *SyncManager) {
 	p.srcPeer = srcPeer
 	p.remoteNode = node
+}
+
+func (p *P2PPeer) TrafficStatus() (*flowrate.Status, *flowrate.Status) {
+	return nil, nil
 }
 
 func (p *P2PPeer) TrySend(b byte, msg interface{}) bool {

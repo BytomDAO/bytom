@@ -1,12 +1,11 @@
 package commands
 
 import (
-	"fmt"
+	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	"strings"
 
 	"github.com/bytom/node"
 )
@@ -48,37 +47,41 @@ func init() {
 	RootCmd.AddCommand(runNodeCmd)
 }
 
-func getLogLevel(level string) log.Level {
+func setLogLevel(level string) {
 	switch strings.ToLower(level) {
 	case "debug":
-		return log.DebugLevel
+		log.SetLevel(log.DebugLevel)
 	case "info":
-		return log.InfoLevel
+		log.SetLevel(log.InfoLevel)
 	case "warn":
-		return log.WarnLevel
+		log.SetLevel(log.WarnLevel)
 	case "error":
-		return log.ErrorLevel
+		log.SetLevel(log.ErrorLevel)
 	case "fatal":
-		return log.FatalLevel
+		log.SetLevel(log.FatalLevel)
 	default:
-		return log.InfoLevel
+		log.SetLevel(log.InfoLevel)
 	}
 }
 
 func runNode(cmd *cobra.Command, args []string) error {
-	// Set log level by config.LogLevel
-	log.SetLevel(getLogLevel(config.LogLevel))
+	startTime := time.Now()
+	setLogLevel(config.LogLevel)
 
 	// Create & start node
 	n := node.NewNode(config)
 	if _, err := n.Start(); err != nil {
-		return fmt.Errorf("Failed to start node: %v", err)
-	} else {
-		log.Info("Start node ", n.SyncManager().NodeInfo())
+		log.WithField("err", err).Fatal("failed to start node")
 	}
+
+	nodeInfo := n.SyncManager().NodeInfo()
+	log.WithFields(log.Fields{
+		"version":  nodeInfo.Version,
+		"network":  nodeInfo.Network,
+		"duration": time.Since(startTime),
+	}).Info("start node complete")
 
 	// Trap signal, run forever.
 	n.RunForever()
-
 	return nil
 }
