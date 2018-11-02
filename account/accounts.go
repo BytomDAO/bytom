@@ -10,7 +10,6 @@ import (
 
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/tmlibs/db"
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/signers"
@@ -131,7 +130,7 @@ func (m *Manager) AddUnconfirmedUtxo(utxos []*UTXO) {
 }
 
 // Create creates a new Account.
-func (m *Manager) Create(storeBatch db.Batch, xpubs []chainkd.XPub, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
+func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
@@ -166,9 +165,11 @@ func (m *Manager) Create(storeBatch db.Batch, xpubs []chainkd.XPub, quorum int, 
 	}
 
 	accountID := Key(id)
+	storeBatch := m.db.NewBatch()
 	storeBatch.Set(GetAccountIndexKey(xpubs), common.Unit64ToBytes(index))
 	storeBatch.Set(accountID, rawAccount)
 	storeBatch.Set(aliasKey(normalizedAlias), []byte(id))
+	storeBatch.Write()
 	return account, nil
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -49,7 +50,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount")
+	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount", 0, signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}

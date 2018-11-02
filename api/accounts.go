@@ -21,13 +21,11 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 	Quorum    int            `json:"quorum"`
 	Alias     string         `json:"alias"`
 }) Response {
-	storeBatch := a.wallet.DB.NewBatch()
-	acc, err := a.wallet.AccountMgr.Create(storeBatch, ins.RootXPubs, ins.Quorum, ins.Alias, 0, signers.BIP0044)
+	acc, err := a.wallet.AccountMgr.Create(ins.RootXPubs, ins.Quorum, ins.Alias, 0, signers.BIP0044)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
 
-	storeBatch.Write()
 	annotatedAccount := account.Annotated(acc)
 	log.WithField("account ID", annotatedAccount.ID).Info("Created account")
 

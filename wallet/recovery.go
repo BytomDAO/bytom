@@ -252,7 +252,7 @@ func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account
 				accountID, ok := rm.checkAccount(path.xpub, path.acctIndex)
 				if !ok {
 					alias := fmt.Sprintf("%x:%x", path.xpub[:8], path.acctIndex)
-					account, err := accountMgr.Create(storeBatch, []chainkd.XPub{path.xpub}, 1, alias, path.acctIndex, path.deriveRule)
+					account, err := accountMgr.Create([]chainkd.XPub{path.xpub}, 1, alias, path.acctIndex, path.deriveRule)
 					if err != nil {
 						return err
 					}
