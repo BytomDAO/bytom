@@ -133,7 +133,7 @@ For more details about using `bytomcli` command please refer to [API Reference](
 Access the dashboard:
 
 ```
-$ open http://localhost:9888/
+$ open http://localhost:9889/
 ```
 
 ### In Docker
