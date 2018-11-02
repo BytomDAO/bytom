@@ -73,7 +73,7 @@ func GetBip0032Path(s *Signer, ks keySpace, itemIndexes ...uint64) [][]byte {
 }
 
 // getBip0044Path returns the complete path for bip0044 derived keys
-func GetBip0044Path(accountIndex uint64, change bool, addrIndex uint64) [][]byte {
+func getBip0044Path(accountIndex uint64, change bool, addrIndex uint64) [][]byte {
 	var path [][]byte
 	path = append(path, BIP44Purpose[:]) //purpose
 	path = append(path, BTMCoinType[:])  //coin type
@@ -99,7 +99,7 @@ func Path(s *Signer, ks keySpace, change bool, addrIndex uint64) ([][]byte, erro
 	case BIP0032:
 		return GetBip0032Path(s, ks, addrIndex), nil
 	case BIP0044:
-		return GetBip0044Path(s.KeyIndex, change, addrIndex), nil
+		return getBip0044Path(s.KeyIndex, change, addrIndex), nil
 	}
 	return nil, ErrDeriveRule
 }
