@@ -59,17 +59,8 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		return nil, err
 	}
 
-	task, err := w.RecoveryMgr.loadStatusInfo()
-	if err != nil {
+	if err := w.RecoveryMgr.loadStatusInfo(); err != nil {
 		return nil, err
-	}
-
-	if task && !w.RecoveryMgr.isFinished() {
-		if err := w.RecoveryMgr.extendScanAddresses(true); err != nil {
-			return nil, err
-		}
-
-		w.RecoveryMgr.Resurrect()
 	}
 
 	go w.walletUpdater()

@@ -196,21 +196,13 @@ func (rm *RecoveryManager) extendScanAccounts() {
 	}
 }
 
-func (rm *RecoveryManager) extendScanAddresses(restore bool) error {
+func (rm *RecoveryManager) extendScanAddresses() error {
 	rm.RWMutex.Lock()
 	defer rm.RWMutex.Unlock()
-	for scope, state := range rm.state.AccountsStatus {
-		var start, stop uint64
 
-		if restore {
-			start = uint64(0)
-			stop = state.InternalBranch.Horizon + 1
-		} else {
-			curHorizon, delta := state.InternalBranch.ExtendHorizon()
-			start = curHorizon
-			stop = curHorizon + delta
-		}
-		for index := start; index < stop; index++ {
+	for scope, state := range rm.state.AccountsStatus {
+		curHorizon, delta := state.InternalBranch.ExtendHorizon()
+		for index := curHorizon; index < curHorizon+delta; index++ {
 			cp, err := account.CreateRecoveryAddress([]chainkd.XPub{scope.XPub}, scope.DeriveRule, scope.AccountIndex, true, index)
 			if err != nil {
 				return err
@@ -221,15 +213,8 @@ func (rm *RecoveryManager) extendScanAddresses(restore bool) error {
 			rm.addresses[hash] = addrPath{xpub: scope.XPub, acctIndex: scope.AccountIndex, change: true, addrIndex: cp.KeyIndex, deriveRule: scope.DeriveRule}
 		}
 
-		if restore {
-			start = uint64(0)
-			stop = state.ExternalBranch.Horizon + 1
-		} else {
-			curHorizon, delta := state.ExternalBranch.ExtendHorizon()
-			start = curHorizon
-			stop = curHorizon + delta
-		}
-		for index := start; index < stop; index++ {
+		curHorizon, delta = state.ExternalBranch.ExtendHorizon()
+		for index := curHorizon; index < curHorizon+delta; index++ {
 			cp, err := account.CreateRecoveryAddress([]chainkd.XPub{scope.XPub}, scope.DeriveRule, scope.AccountIndex, false, index)
 			if err != nil {
 				return err
@@ -238,6 +223,60 @@ func (rm *RecoveryManager) extendScanAddresses(restore bool) error {
 			var hash common.Hash
 			sha3pool.Sum256(hash[:], cp.ControlProgram)
 			rm.addresses[hash] = addrPath{xpub: scope.XPub, acctIndex: scope.AccountIndex, change: false, addrIndex: cp.KeyIndex, deriveRule: scope.DeriveRule}
+		}
+	}
+
+	return nil
+}
+
+// filterRecoveryTxs Filter transactions that meet the recovery address
+func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account.Manager) error {
+	if !rm.IsStarted() {
+		return nil
+	}
+
+	if b.Time().After(rm.startTime()) {
+		if err := rm.resurrectFinished(); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	for _, tx := range b.Transactions {
+		for _, output := range tx.Outputs {
+			var hash [32]byte
+			sha3pool.Sum256(hash[:], output.ControlProgram)
+			if path, ok := rm.checkAddress(hash); ok {
+				storeBatch := rm.db.NewBatch()
+				accountID, ok := rm.checkAccount(path.xpub, path.acctIndex)
+				if !ok {
+					alias := fmt.Sprintf("%x:%x", path.xpub[:8], path.acctIndex)
+					account, err := accountMgr.Create(storeBatch, []chainkd.XPub{path.xpub}, 1, alias, path.acctIndex, path.deriveRule)
+					if err != nil {
+						return err
+					}
+
+					accountID = account.ID
+					rm.setAccount(path.xpub, path.acctIndex, account.ID)
+				}
+
+				rm.ReportFound(path.xpub, path.deriveRule, path.acctIndex, path.change, path.addrIndex)
+				rm.extendScanAccounts()
+				if err := rm.extendScanAddresses(); err != nil {
+					return err
+				}
+
+				if err := rm.commitStatusInfo(storeBatch); err != nil {
+					return err
+				}
+
+				storeBatch.Write()
+
+				if err := accountMgr.CreateBatchAddresses(accountID, path.change, path.addrIndex); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
@@ -258,19 +297,57 @@ func (rm *RecoveryManager) IsStarted() bool {
 	return rm.started
 }
 
-func (rm *RecoveryManager) loadStatusInfo() (bool, error) {
+func (rm *RecoveryManager) loadStatusInfo() error {
 	rawStatus := rm.db.Get(recoveryKey)
 	if rawStatus == nil {
-		return false, nil
+		return nil
 	}
 
 	status := NewRecoveryState()
 	if err := json.Unmarshal(rawStatus, status); err != nil {
-		return false, err
+		return err
 	}
 
 	rm.state = status
-	return true, nil
+	if !rm.isFinished() {
+		if err := rm.restoreAddresses(); err != nil {
+			return err
+		}
+
+		rm.resurrectStart()
+	}
+
+	return nil
+}
+
+func (rm *RecoveryManager) restoreAddresses() error {
+	rm.RWMutex.Lock()
+	defer rm.RWMutex.Unlock()
+
+	for scope, state := range rm.state.AccountsStatus {
+		for index := uint64(0); index <= state.InternalBranch.Horizon; index++ {
+			cp, err := account.CreateRecoveryAddress([]chainkd.XPub{scope.XPub}, scope.DeriveRule, scope.AccountIndex, true, index)
+			if err != nil {
+				return err
+			}
+
+			var hash common.Hash
+			sha3pool.Sum256(hash[:], cp.ControlProgram)
+			rm.addresses[hash] = addrPath{xpub: scope.XPub, acctIndex: scope.AccountIndex, change: true, addrIndex: cp.KeyIndex, deriveRule: scope.DeriveRule}
+		}
+
+		for index := uint64(0); index <= state.ExternalBranch.Horizon; index++ {
+			cp, err := account.CreateRecoveryAddress([]chainkd.XPub{scope.XPub}, scope.DeriveRule, scope.AccountIndex, false, index)
+			if err != nil {
+				return err
+			}
+
+			var hash common.Hash
+			sha3pool.Sum256(hash[:], cp.ControlProgram)
+			rm.addresses[hash] = addrPath{xpub: scope.XPub, acctIndex: scope.AccountIndex, change: false, addrIndex: cp.KeyIndex, deriveRule: scope.DeriveRule}
+		}
+	}
+	return nil
 }
 
 func (rm *RecoveryManager) resurrectFinished() error {
@@ -299,7 +376,7 @@ func (rm *RecoveryManager) resurrectStart() {
 // attempt.
 func (rm *RecoveryManager) Resurrect() error {
 	rm.extendScanAccounts()
-	if err := rm.extendScanAddresses(false); err != nil {
+	if err := rm.extendScanAddresses(); err != nil {
 		return err
 	}
 
@@ -349,60 +426,6 @@ func (rm *RecoveryManager) startTime() time.Time {
 	defer rm.RWMutex.Unlock()
 
 	return rm.state.StartTime
-}
-
-// filterRecoveryTxs Filter transactions that meet the recovery address
-func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account.Manager) error {
-	if !rm.IsStarted() {
-		return nil
-	}
-
-	if b.Time().After(rm.startTime()) {
-		if err := rm.resurrectFinished(); err != nil {
-			return err
-		}
-
-		return nil
-	}
-
-	for _, tx := range b.Transactions {
-		for _, output := range tx.Outputs {
-			var hash [32]byte
-			sha3pool.Sum256(hash[:], output.ControlProgram)
-			if path, ok := rm.checkAddress(hash); ok {
-				storeBatch := rm.db.NewBatch()
-				accountID, ok := rm.checkAccount(path.xpub, path.acctIndex)
-				if !ok {
-					alias := fmt.Sprintf("%x:%x", path.xpub[:8], path.acctIndex)
-					account, err := accountMgr.Create(storeBatch, []chainkd.XPub{path.xpub}, 1, alias, path.acctIndex, path.deriveRule)
-					if err != nil {
-						return err
-					}
-
-					accountID = account.ID
-					rm.setAccount(path.xpub, path.acctIndex, account.ID)
-				}
-
-				rm.ReportFound(path.xpub, path.deriveRule, path.acctIndex, path.change, path.addrIndex)
-				rm.extendScanAccounts()
-				if err := rm.extendScanAddresses(false); err != nil {
-					return err
-				}
-
-				if err := rm.commitStatusInfo(storeBatch); err != nil {
-					return err
-				}
-
-				storeBatch.Write()
-
-				if err := accountMgr.CreateBatchAddresses(accountID, path.change, path.addrIndex); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	return nil
 }
 
 type RecoveryState struct {
