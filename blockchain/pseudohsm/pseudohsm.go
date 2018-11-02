@@ -135,6 +135,16 @@ func (h *HSM) ListKeys() []XPub {
 	return xpubs
 }
 
+// ListXPubs returns a list of all xpubs from the store
+func (h *HSM) ListXPubs() []chainkd.XPub {
+	keys := h.cache.keys()
+	XPubs := make([]chainkd.XPub, 0)
+	for _, key := range keys {
+		XPubs = append(XPubs, key.XPub)
+	}
+	return XPubs
+}
+
 // XSign looks up the xprv given the xpub, optionally derives a new
 // xprv with the given path (but does not store the new xprv), and
 // signs the given msg.

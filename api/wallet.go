@@ -32,6 +32,13 @@ func (a *API) restoreWalletImage(ctx context.Context, image WalletImage) Respons
 	if err := a.wallet.AccountMgr.Restore(image.AccountImage); err != nil {
 		return NewErrorResponse(errors.Wrap(err, "restore account image"))
 	}
+
+	XPubs := a.wallet.Hsm.ListXPubs()
+	a.wallet.RecoveryMgr.StatusInit(XPubs)
+	if err := a.wallet.RecoveryMgr.Resurrect(); err != nil {
+		return NewErrorResponse(err)
+	}
+
 	a.wallet.RescanBlocks()
 	return NewSuccessResponse(nil)
 }
@@ -59,6 +66,12 @@ func (a *API) backupWalletImage() Response {
 }
 
 func (a *API) rescanWallet() Response {
+	XPubs := a.wallet.Hsm.ListXPubs()
+	a.wallet.RecoveryMgr.StatusInit(XPubs)
+	if err := a.wallet.RecoveryMgr.Resurrect(); err != nil {
+		return NewErrorResponse(err)
+	}
+
 	a.wallet.RescanBlocks()
 	return NewSuccessResponse(nil)
 }
