@@ -395,7 +395,7 @@ func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account
 
 				storeBatch.Write()
 
-				if err := accountMgr.CreateRecoveryAddresses(accountID, path.change, path.addrIndex); err != nil {
+				if err := accountMgr.CreateBatchAddresses(accountID, path.change, path.addrIndex); err != nil {
 					return err
 				}
 			}

@@ -3,7 +3,6 @@ package account
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -182,8 +181,8 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 	return m.createAddress(account, change)
 }
 
-// CreateAddress generate an address for the select account
-func (m *Manager) CreateRecoveryAddresses(accountID string, change bool, stopIndex uint64) error {
+// CreateAddress generate a batch of addresses for the select account
+func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex uint64) error {
 	account, err := m.FindByID(accountID)
 	if err != nil {
 		return err
@@ -195,28 +194,10 @@ func (m *Manager) CreateRecoveryAddresses(accountID string, change bool, stopInd
 	}
 
 	for currentIndex < stopIndex {
-		addrIdx, err := m.getNextContractIndex(account, change)
-		if err != nil {
+		if _, err := m.createAddress(account, change); err != nil {
 			return err
 		}
 
-		var cp *CtrlProgram
-		path, err := signers.Path(account.Signer, signers.AccountKeySpace, change, addrIdx)
-		if err != nil {
-			return err
-		}
-
-		if len(account.XPubs) == 1 {
-			cp, err = createP2PKH(account, path)
-		} else {
-			cp, err = createP2SH(account, path)
-		}
-		if err != nil {
-			return err
-		}
-
-		cp.KeyIndex, cp.Change = addrIdx, change
-		m.insertControlPrograms(cp)
 		currentIndex, err = m.getCurrentContractIndex(account, change)
 		if err != nil {
 			return err
