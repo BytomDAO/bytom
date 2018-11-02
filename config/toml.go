@@ -23,7 +23,7 @@ var defaultConfigTmpl = `# This is a TOML config file.
 # For more information, see https://github.com/toml-lang/toml
 fast_sync = true
 db_backend = "leveldb"
-api_addr = "0.0.0.0:9888"
+api_addr = "0.0.0.0:9889"
 `
 
 var testNetConfigTmpl = `chain_id = "wisdom"
