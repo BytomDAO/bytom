@@ -249,11 +249,7 @@ func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account
 	}
 
 	if b.Time().After(rm.startTime()) {
-		if err := rm.resurrectFinished(); err != nil {
-			return err
-		}
-
-		return nil
+		return rm.resurrectFinished()
 	}
 
 	for _, tx := range b.Transactions {
