@@ -65,7 +65,7 @@ func (h *HSM) XCreate(alias string, auth string, language string) (*XPub, *strin
 	return xpub, mnemonic, err
 }
 
-// ImportFromMnemonic produces a xprv from mnemonic and stores it in the db.
+// ImportKeyFromMnemonic produces a xprv from mnemonic and stores it in the db.
 func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string, language string) (*XPub, error) {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
