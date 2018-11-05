@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"net"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/flowrate"
@@ -39,17 +40,17 @@ type BasePeerSet interface {
 
 // PeerInfo indicate peer status snap
 type PeerInfo struct {
-	ID                 string `json:"peer_id"`
-	RemoteAddr         string `json:"remote_addr"`
-	Height             uint64 `json:"height"`
-	Ping               string `json:"ping"`
-	Duration           string `json:"duration"`
-	TotalSent          int64  `json:"total_sent"`
-	TotalReceive       int64  `json:"total_receive"`
-	AverageSentRate    int64  `json:"average_sent_rate"`
-	AverageReceiveRate int64  `json:"average_receive_rate"`
-	CurrentSentRate    int64  `json:"current_sent_rate"`
-	CurrentReceiveRate int64  `json:"current_receive_rate"`
+	ID                  string        `json:"peer_id"`
+	RemoteAddr          string        `json:"remote_addr"`
+	Height              uint64        `json:"height"`
+	Ping                time.Duration `json:"ping"`
+	Duration            time.Duration `json:"duration"`
+	TotalSent           int64         `json:"total_sent"`
+	TotalReceived       int64         `json:"total_received"`
+	AverageSentRate     int64         `json:"average_sent_rate"`
+	AverageReceivedRate int64         `json:"average_received_rate"`
+	CurrentSentRate     int64         `json:"current_sent_rate"`
+	CurrentReceivedRate int64         `json:"current_received_rate"`
 }
 
 type peer struct {
@@ -149,24 +150,24 @@ func (p *peer) getPeerInfo() *PeerInfo {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
 
-	sentStatus, receiveStatus := p.TrafficStatus()
-	ping := sentStatus.Idle - receiveStatus.Idle
-	if receiveStatus.Idle > sentStatus.Idle {
+	sentStatus, receivedStatus := p.TrafficStatus()
+	ping := sentStatus.Idle - receivedStatus.Idle
+	if receivedStatus.Idle > sentStatus.Idle {
 		ping = -ping
 	}
 
 	return &PeerInfo{
-		ID:                 p.ID(),
-		RemoteAddr:         p.Addr().String(),
-		Height:             p.height,
-		Ping:               ping.String(),
-		Duration:           sentStatus.Duration.String(),
-		TotalSent:          sentStatus.Bytes,
-		TotalReceive:       receiveStatus.Bytes,
-		AverageSentRate:    sentStatus.AvgRate,
-		AverageReceiveRate: receiveStatus.AvgRate,
-		CurrentSentRate:    sentStatus.CurRate,
-		CurrentReceiveRate: receiveStatus.CurRate,
+		ID:                  p.ID(),
+		RemoteAddr:          p.Addr().String(),
+		Height:              p.height,
+		Ping:                ping,
+		Duration:            sentStatus.Duration,
+		TotalSent:           sentStatus.Bytes,
+		TotalReceived:       receivedStatus.Bytes,
+		AverageSentRate:     sentStatus.AvgRate,
+		AverageReceivedRate: receivedStatus.AvgRate,
+		CurrentSentRate:     sentStatus.CurRate,
+		CurrentReceivedRate: receivedStatus.CurRate,
 	}
 }
 

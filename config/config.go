@@ -18,11 +18,12 @@ type Config struct {
 	// Top level options use an anonymous struct
 	BaseConfig `mapstructure:",squash"`
 	// Options for services
-	P2P    *P2PConfig     `mapstructure:"p2p"`
-	Wallet *WalletConfig  `mapstructure:"wallet"`
-	Auth   *RPCAuthConfig `mapstructure:"auth"`
-	Web    *WebConfig     `mapstructure:"web"`
-	Simd   *SimdConfig    `mapstructure:"simd"`
+	P2P       *P2PConfig       `mapstructure:"p2p"`
+	Wallet    *WalletConfig    `mapstructure:"wallet"`
+	Auth      *RPCAuthConfig   `mapstructure:"auth"`
+	Web       *WebConfig       `mapstructure:"web"`
+	Simd      *SimdConfig      `mapstructure:"simd"`
+	Websocket *WebsocketConfig `mapstructure:"ws"`
 }
 
 // Default configurable parameters.
@@ -34,6 +35,7 @@ func DefaultConfig() *Config {
 		Auth:       DefaultRPCAuthConfig(),
 		Web:        DefaultWebConfig(),
 		Simd:       DefaultSimdConfig(),
+		Websocket:  DefaultWebsocketConfig(),
 	}
 }
 
@@ -141,6 +143,11 @@ type SimdConfig struct {
 	Enable bool `mapstructure:"enable"`
 }
 
+type WebsocketConfig struct {
+	MaxNumWebsockets     int `mapstructure:"max_num_websockets"`
+	MaxNumConcurrentReqs int `mapstructure:"max_num_concurrent_reqs"`
+}
+
 // Default configurable rpc's auth parameters.
 func DefaultRPCAuthConfig() *RPCAuthConfig {
 	return &RPCAuthConfig{
@@ -168,6 +175,13 @@ func DefaultWalletConfig() *WalletConfig {
 func DefaultSimdConfig() *SimdConfig {
 	return &SimdConfig{
 		Enable: false,
+	}
+}
+
+func DefaultWebsocketConfig() *WebsocketConfig {
+	return &WebsocketConfig{
+		MaxNumWebsockets:     25,
+		MaxNumConcurrentReqs: 20,
 	}
 }
 
