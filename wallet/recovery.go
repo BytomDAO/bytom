@@ -182,15 +182,10 @@ func (rm *RecoveryManager) checkAccount(xpub chainkd.XPub, acctIndex uint64, acc
 	return nil, nil
 }
 
-func (rm *RecoveryManager) commitStatusInfo(storeBatch db.Batch) error {
+func (rm *RecoveryManager) commitStatusInfo() error {
 	rawStatus, err := json.Marshal(rm.state)
 	if err != nil {
 		return err
-	}
-
-	if storeBatch != nil {
-		storeBatch.Set(recoveryKey, rawStatus)
-		return nil
 	}
 
 	rm.db.Set(recoveryKey, rawStatus)
@@ -261,7 +256,6 @@ func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account
 			sha3pool.Sum256(hash[:], output.ControlProgram)
 			if path, ok := rm.checkAddress(hash); ok {
 				var accountID string
-				storeBatch := rm.db.NewBatch()
 				acctID, err := rm.checkAccount(path.xpub, path.acctIndex, accountMgr)
 				if err != nil {
 					return err
@@ -285,11 +279,9 @@ func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account
 					return err
 				}
 
-				if err := rm.commitStatusInfo(storeBatch); err != nil {
+				if err := rm.commitStatusInfo(); err != nil {
 					return err
 				}
-
-				storeBatch.Write()
 
 				if err := accountMgr.CreateBatchAddresses(accountID, path.change, path.addrIndex); err != nil {
 					return err
@@ -374,7 +366,7 @@ func (rm *RecoveryManager) resurrectFinished() error {
 	defer rm.RWMutex.Unlock()
 
 	rm.state.Finished = true
-	if err := rm.commitStatusInfo(nil); err != nil {
+	if err := rm.commitStatusInfo(); err != nil {
 		return err
 	}
 
