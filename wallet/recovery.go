@@ -27,11 +27,11 @@ const (
 )
 
 var (
-	//recoveryKey key for db store recovery info
+	//recoveryKey key for db store recovery info.
 	recoveryKey = []byte("RecoveryInfo")
 
-	// DefaultKeyScopes is the set of default key scopes that will be
-	// created by the root manager upon initial creation.
+	// DefaultDeriveRules is the derived rule for getting the
+	// child key.
 	DefaultDeriveRules = []uint8{
 		signers.BIP0032,
 		signers.BIP0044,
@@ -46,6 +46,7 @@ type addrPath struct {
 	addrIndex  uint64
 }
 
+// AccountScope Is used to describe an account in a hierarchical deterministic wallets.
 type AccountScope struct {
 	XPub         chainkd.XPub
 	DeriveRule   uint8
@@ -116,6 +117,7 @@ func (xs *xpubStatus) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// RecoveryManager manage recovery wallet from key.
 type RecoveryManager struct {
 	RWMutex sync.RWMutex
 
@@ -137,7 +139,8 @@ type RecoveryManager struct {
 	addresses map[common.Hash]addrPath
 }
 
-func NewRecoveryManager(db db.DB) *RecoveryManager {
+// newRecoveryManager create recovery manger.
+func newRecoveryManager(db db.DB) *RecoveryManager {
 	return &RecoveryManager{
 		db:             db,
 		recoveryWindow: defaultAddrRecoveryWindow,
@@ -305,6 +308,7 @@ func (rm *RecoveryManager) isFinished() bool {
 	return rm.state.Finished
 }
 
+// IsStarted used to determine if recovery is in progress.
 func (rm *RecoveryManager) IsStarted() bool {
 	rm.RWMutex.Lock()
 	defer rm.RWMutex.Unlock()
@@ -318,7 +322,7 @@ func (rm *RecoveryManager) loadStatusInfo() error {
 		return nil
 	}
 
-	status := NewRecoveryState()
+	status := newRecoveryState()
 	if err := json.Unmarshal(rawStatus, status); err != nil {
 		return err
 	}
@@ -425,14 +429,15 @@ func (rm *RecoveryManager) setAccount(xpub chainkd.XPub, acctIndex uint64, acctI
 	rm.state.XPubsStatus[xpub].FoundAccounts[acctIndex] = acctID
 }
 
+// StatusInit init recovery status manager.
 func (rm *RecoveryManager) StatusInit(XPubs []chainkd.XPub) {
 	rm.RWMutex.Lock()
 	defer rm.RWMutex.Unlock()
 
-	rm.state = NewRecoveryState()
+	rm.state = newRecoveryState()
 	rm.state.XPubs = XPubs
 	for _, xpub := range XPubs {
-		rm.state.XPubsStatus[xpub] = NewAccountRecoveryState(defaultAcctRecoveryWindow)
+		rm.state.XPubsStatus[xpub] = newAccountRecoveryState(defaultAcctRecoveryWindow)
 	}
 }
 
@@ -443,6 +448,7 @@ func (rm *RecoveryManager) startTime() time.Time {
 	return rm.state.StartTime
 }
 
+// RecoveryState used to record the status of a recovery process.
 type RecoveryState struct {
 	Finished bool
 
@@ -467,7 +473,7 @@ type RecoveryState struct {
 	AccountsStatus accountStatus
 }
 
-func NewRecoveryState() *RecoveryState {
+func newRecoveryState() *RecoveryState {
 	return &RecoveryState{
 		AddrRecoveryWindow: defaultAddrRecoveryWindow,
 		XPubsStatus:        make(map[chainkd.XPub]*AccountRecoveryState),
@@ -488,7 +494,7 @@ func (rs *RecoveryState) StateForScope(accountScope AccountScope) *ScopeRecovery
 
 	// Otherwise, initialize the recovery state for this scope with the
 	// chosen recovery window.
-	rs.AccountsStatus[accountScope] = NewScopeRecoveryState(rs.AddrRecoveryWindow)
+	rs.AccountsStatus[accountScope] = newScopeRecoveryState(rs.AddrRecoveryWindow)
 
 	return rs.AccountsStatus[accountScope]
 }
@@ -506,7 +512,7 @@ type ScopeRecoveryState struct {
 	InternalBranch *BranchRecoveryState
 }
 
-func NewScopeRecoveryState(recoveryWindow uint64) *ScopeRecoveryState {
+func newScopeRecoveryState(recoveryWindow uint64) *ScopeRecoveryState {
 	return &ScopeRecoveryState{
 		ExternalBranch: NewBranchRecoveryState(recoveryWindow),
 		InternalBranch: NewBranchRecoveryState(recoveryWindow),
@@ -577,6 +583,7 @@ func (brs *BranchRecoveryState) ReportFound(index uint64) {
 	}
 }
 
+// AccountRecoveryState for recording key of the hd wallet account recovery status.
 type AccountRecoveryState struct {
 	BranchRecoveryState
 
@@ -585,9 +592,9 @@ type AccountRecoveryState struct {
 	FoundAccounts map[uint64]string
 }
 
-// NewBranchRecoveryState creates a new BranchRecoveryState that can be used to
-// track either the external or internal branch of an account's derivation path.
-func NewAccountRecoveryState(recoveryWindow uint64) *AccountRecoveryState {
+// newAccountRecoveryState creates a new AccountRecoveryState that can be used to
+// track account recovery status.
+func newAccountRecoveryState(recoveryWindow uint64) *AccountRecoveryState {
 	return &AccountRecoveryState{
 		BranchRecoveryState: BranchRecoveryState{RecoveryWindow: recoveryWindow},
 		FoundAccounts:       make(map[uint64]string),

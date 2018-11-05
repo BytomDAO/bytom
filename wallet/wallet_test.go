@@ -143,7 +143,7 @@ func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry
 		AccountMgr:  account,
 		AssetReg:    asset,
 		chain:       chain,
-		RecoveryMgr: NewRecoveryManager(walletDB),
+		RecoveryMgr: newRecoveryManager(walletDB),
 	}
 	return wallet
 }

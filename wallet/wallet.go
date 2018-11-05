@@ -51,7 +51,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		AssetReg:    asset,
 		chain:       chain,
 		Hsm:         hsm,
-		RecoveryMgr: NewRecoveryManager(walletDB),
+		RecoveryMgr: newRecoveryManager(walletDB),
 		rescanCh:    make(chan struct{}, 1),
 	}
 
