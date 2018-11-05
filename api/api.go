@@ -23,6 +23,7 @@ import (
 	"github.com/bytom/net/http/gzip"
 	"github.com/bytom/net/http/httpjson"
 	"github.com/bytom/net/http/static"
+	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -104,17 +105,17 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // API is the scheduling center for server
 type API struct {
-	sync          *netsync.SyncManager
-	wallet        *wallet.Wallet
-	accessTokens  *accesstoken.CredentialStore
-	chain         *protocol.Chain
-	server        *http.Server
-	handler       http.Handler
-	txFeedTracker *txfeed.Tracker
-	cpuMiner      *cpuminer.CPUMiner
-	miningPool    *miningpool.MiningPool
-
-	newBlockCh chan *bc.Hash
+	sync            *netsync.SyncManager
+	wallet          *wallet.Wallet
+	accessTokens    *accesstoken.CredentialStore
+	chain           *protocol.Chain
+	server          *http.Server
+	handler         http.Handler
+	txFeedTracker   *txfeed.Tracker
+	cpuMiner        *cpuminer.CPUMiner
+	miningPool      *miningpool.MiningPool
+	notificationMgr *websocket.WSNotificationManager
+	newBlockCh      chan *bc.Hash
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -168,7 +169,7 @@ func (a *API) StartServer(address string) {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash) *API {
+func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,
@@ -178,7 +179,8 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		cpuMiner:      cpuMiner,
 		miningPool:    miningPool,
 
-		newBlockCh: newBlockCh,
+		newBlockCh:      newBlockCh,
+		notificationMgr: notificationMgr,
 	}
 	api.buildHandler()
 	api.initServer(config)
@@ -295,6 +297,8 @@ func (a *API) buildHandler() {
 	m.Handle("/connect-peer", jsonHandler(a.connectPeer))
 
 	m.Handle("/get-merkle-proof", jsonHandler(a.getMerkleProof))
+
+	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
 
 	handler := latencyHandler(m, walletEnable)
 	handler = webAssetsHandler(handler)
