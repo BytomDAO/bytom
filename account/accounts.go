@@ -27,7 +27,10 @@ import (
 )
 
 const (
-	maxAccountCache  = 1000
+	maxAccountCache = 1000
+
+	// HardenedKeyStart bip32 hierarchical deterministic wallets
+	// keys with index ≥ 0x80000000 are hardened keys
 	HardenedKeyStart = 0x80000000
 )
 
@@ -182,7 +185,7 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 	return m.createAddress(account, change)
 }
 
-// CreateAddress generate a batch of addresses for the select account
+// CreateBatchAddresses generate a batch of addresses for the select account
 func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex uint64) error {
 	account, err := m.FindByID(accountID)
 	if err != nil {
@@ -525,7 +528,7 @@ func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram,
 	return cp, m.insertControlPrograms(cp)
 }
 
-// CreateAddress generate an address for the select account
+// CreateRecoveryAddress generate an address for the select account
 func CreateRecoveryAddress(XPubs []chainkd.XPub, purpose uint8, accountIndex uint64, change bool, addrIndex uint64) (cp *CtrlProgram, err error) {
 	signer := &signers.Signer{XPubs: XPubs, KeyIndex: accountIndex, DeriveRule: purpose}
 	path, err := signers.Path(signer, signers.AccountKeySpace, change, addrIndex)
