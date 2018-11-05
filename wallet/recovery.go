@@ -2,12 +2,12 @@ package wallet
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/tendermint/tmlibs/db"
 
-	"fmt"
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/common"
