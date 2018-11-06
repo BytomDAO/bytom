@@ -87,6 +87,14 @@ func (t *TxInput) IssuanceProgram() []byte {
 	return nil
 }
 
+// AssetDefinition return the asset definition of the issuance input
+func (t *TxInput) AssetDefinition() []byte {
+	if ii, ok := t.TypedInput.(*IssuanceInput); ok {
+		return ii.AssetDefinition
+	}
+	return nil
+}
+
 // Arguments get the args for the input
 func (t *TxInput) Arguments() [][]byte {
 	switch inp := t.TypedInput.(type) {
