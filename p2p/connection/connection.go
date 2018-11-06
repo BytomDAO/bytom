@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
-	flow "github.com/tendermint/tmlibs/flowrate"
+	"github.com/tendermint/tmlibs/flowrate"
 )
 
 const (
@@ -78,8 +78,8 @@ type MConnection struct {
 	conn        net.Conn
 	bufReader   *bufio.Reader
 	bufWriter   *bufio.Writer
-	sendMonitor *flow.Monitor
-	recvMonitor *flow.Monitor
+	sendMonitor *flowrate.Monitor
+	recvMonitor *flowrate.Monitor
 	send        chan struct{}
 	pong        chan struct{}
 	channels    []*channel
@@ -115,8 +115,8 @@ func NewMConnectionWithConfig(conn net.Conn, chDescs []*ChannelDescriptor, onRec
 		conn:        conn,
 		bufReader:   bufio.NewReaderSize(conn, minReadBufferSize),
 		bufWriter:   bufio.NewWriterSize(conn, minWriteBufferSize),
-		sendMonitor: flow.New(0, 0),
-		recvMonitor: flow.New(0, 0),
+		sendMonitor: flowrate.New(0, 0),
+		recvMonitor: flowrate.New(0, 0),
 		send:        make(chan struct{}, 1),
 		pong:        make(chan struct{}, 1),
 		channelsIdx: map[byte]*channel{},
@@ -196,6 +196,13 @@ func (c *MConnection) Send(chID byte, msg interface{}) bool {
 	default:
 	}
 	return true
+}
+
+// TrafficStatus return the in and out traffic status
+func (c *MConnection) TrafficStatus() (*flowrate.Status, *flowrate.Status) {
+	sentStatus := c.sendMonitor.Status()
+	receivedStatus := c.recvMonitor.Status()
+	return &sentStatus, &receivedStatus
 }
 
 // TrySend queues a message to be sent to channel(Nonblocking).
