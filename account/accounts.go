@@ -529,8 +529,8 @@ func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram,
 }
 
 // CreateRecoveryAddress generate an address for the select account
-func CreateRecoveryAddress(XPubs []chainkd.XPub, purpose uint8, accountIndex uint64, change bool, addrIndex uint64) (cp *CtrlProgram, err error) {
-	signer := &signers.Signer{Quorum: len(XPubs), XPubs: XPubs, KeyIndex: accountIndex, DeriveRule: purpose}
+func CreateRecoveryAddress(XPubs []chainkd.XPub, deriveRule uint8, accountIndex uint64, change bool, addrIndex uint64) (cp *CtrlProgram, err error) {
+	signer := &signers.Signer{Quorum: len(XPubs), XPubs: XPubs, KeyIndex: accountIndex, DeriveRule: deriveRule}
 	path, err := signers.Path(signer, signers.AccountKeySpace, change, addrIndex)
 	if err != nil {
 		return nil, err
