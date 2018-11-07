@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -63,7 +64,7 @@ func xPubsHash(xPubs []chainkd.XPub) string {
 	}
 	var hash common.Hash
 	sha3pool.Sum256(hash[:], slice)
-	return hash.Str()
+	return hex.EncodeToString(hash[:])
 }
 
 type accountStatus map[AccountScope]*ScopeRecoveryState
