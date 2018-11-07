@@ -530,14 +530,18 @@ func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram,
 
 // CreateRecoveryAddress generate an address for the select account
 func CreateRecoveryAddress(XPubs []chainkd.XPub, purpose uint8, accountIndex uint64, change bool, addrIndex uint64) (cp *CtrlProgram, err error) {
-	signer := &signers.Signer{XPubs: XPubs, KeyIndex: accountIndex, DeriveRule: purpose}
+	signer := &signers.Signer{Quorum: len(XPubs), XPubs: XPubs, KeyIndex: accountIndex, DeriveRule: purpose}
 	path, err := signers.Path(signer, signers.AccountKeySpace, change, addrIndex)
 	if err != nil {
 		return nil, err
 	}
 
 	account := &Account{ID: "", Signer: signer}
-	cp, err = createP2PKH(account, path)
+	if len(account.XPubs) == 1 {
+		cp, err = createP2PKH(account, path)
+	} else {
+		cp, err = createP2SH(account, path)
+	}
 	if err != nil {
 		return nil, err
 	}
