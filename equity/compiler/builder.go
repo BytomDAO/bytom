@@ -44,6 +44,14 @@ func (b *builder) addInt64(stk stack, n int64) stack {
 	return b.add(s, stk.add(s))
 }
 
+func (b *builder) addNot(stk stack, desc string) stack {
+	return b.add("NOT", stk.drop().add(desc))
+}
+
+func (b *builder) addEqual(stk stack, desc string) stack {
+	return b.add("EQUAL", stk.dropN(2).add(desc))
+}
+
 func (b *builder) addNumEqual(stk stack, desc string) stack {
 	return b.add("NUMEQUAL", stk.dropN(2).add(desc))
 }
@@ -85,12 +93,12 @@ func (b *builder) addData(stk stack, data []byte) stack {
 	return b.add(s, stk.add(s))
 }
 
-func (b *builder) addAmount(stk stack) stack {
-	return b.add("AMOUNT", stk.add("<amount>"))
+func (b *builder) addAmount(stk stack, desc string) stack {
+	return b.add("AMOUNT", stk.add(desc))
 }
 
-func (b *builder) addAsset(stk stack) stack {
-	return b.add("ASSET", stk.add("<asset>"))
+func (b *builder) addAsset(stk stack, desc string) stack {
+	return b.add("ASSET", stk.add(desc))
 }
 
 func (b *builder) addCheckOutput(stk stack, desc string) stack {
@@ -144,6 +152,10 @@ func (b *builder) addCatPushdata(stk stack, desc string) stack {
 
 func (b *builder) addCat(stk stack, desc string) stack {
 	return b.add("CAT", stk.dropN(2).add(desc))
+}
+
+func (b *builder) addNop(stk stack) stack {
+	return b.add("NOP", stk)
 }
 
 func (b *builder) opcodes() string {

@@ -21,7 +21,7 @@ type Contract struct {
 	Clauses []*Clause `json:"clauses"`
 
 	// Value is the name of the value locked by the contract.
-	Value string `json:"value"`
+	Value ValueInfo `json:"value"`
 
 	// Body is the optimized bytecode of the contract body. This is not
 	// a complete program!  Use instantiate to turn this (plus some
@@ -61,10 +61,6 @@ type Clause struct {
 	// Params is the list of clause parameters.
 	Params []*Param `json:"params,omitempty"`
 
-	// Reqs is the list of requirements (from the clause's "requires"
-	// section).
-	Reqs []*ClauseReq `json:"reqs,omitempty"`
-
 	statements []statement
 
 	// BlockHeight is the list of expressions passed to greater()/less() in this
@@ -94,22 +90,44 @@ type HashCall struct {
 	ArgType string `json:"arg_type"`
 }
 
-// ClauseReq describes a payment requirement of a clause (one of the
-// things after the "requires" keyword).
-type ClauseReq struct {
-	Name string `json:"name"`
+// IfBody describes a if ... else ... struct
+type IfStatmentBody struct {
+	// if statements body
+	trueBody []statement
 
-	assetExpr, amountExpr expression
-
-	// Asset is the expression describing the required asset.
-	Asset string `json:"asset"`
-
-	// Amount is the expression describing the required amount.
-	Amount string `json:"amount"`
+	// else statements body
+	falseBody []statement
 }
 
 type statement interface {
 	countVarRefs(map[string]int)
+}
+
+type defineStatement struct {
+	variable *Param
+	expr     expression
+}
+
+func (s defineStatement) countVarRefs(counts map[string]int) {
+	s.expr.countVarRefs(counts)
+}
+
+type assignStatement struct {
+	variable *Param
+	expr     expression
+}
+
+func (s assignStatement) countVarRefs(counts map[string]int) {
+	s.expr.countVarRefs(counts)
+}
+
+type ifStatement struct {
+	condition expression
+	body      *IfStatmentBody
+}
+
+func (s ifStatement) countVarRefs(counts map[string]int) {
+	s.condition.countVarRefs(counts)
 }
 
 type verifyStatement struct {
@@ -121,24 +139,28 @@ func (s verifyStatement) countVarRefs(counts map[string]int) {
 }
 
 type lockStatement struct {
-	locked  expression
-	program expression
+	lockedAmount expression
+	lockedAsset  expression
+	program      expression
 
 	// Added as a decoration, used by CHECKOUTPUT
 	index int64
 }
 
 func (s lockStatement) countVarRefs(counts map[string]int) {
-	s.locked.countVarRefs(counts)
+	s.lockedAmount.countVarRefs(counts)
+	s.lockedAsset.countVarRefs(counts)
 	s.program.countVarRefs(counts)
 }
 
 type unlockStatement struct {
-	expr expression
+	unlockedAmount expression
+	unlockedAsset  expression
 }
 
 func (s unlockStatement) countVarRefs(counts map[string]int) {
-	s.expr.countVarRefs(counts)
+	s.unlockedAmount.countVarRefs(counts)
+	s.unlockedAsset.countVarRefs(counts)
 }
 
 type expression interface {
