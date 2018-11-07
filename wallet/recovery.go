@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sort"
 	"sync"
 	"time"
@@ -150,7 +151,7 @@ func (rm *RecoveryManager) checkAccount(xPubs []chainkd.XPub, acctIndex uint64, 
 		}
 	}
 
-	accounts, err := accountMgr.GetAccountByXPubs(xPubs)
+	accounts, err := rm.GetAccountByXPubs(accountMgr, xPubs)
 	if err != nil {
 		return nil, err
 	}
@@ -277,6 +278,27 @@ func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account
 	}
 
 	return nil
+}
+
+// GetAccountByXPubs return Account by given XPubs
+func (rm *RecoveryManager) GetAccountByXPubs(accountMgr *account.Manager, XPubs []chainkd.XPub) ([]*account.Account, error) {
+	allAccounts, err := accountMgr.ListAccounts("")
+	if err != nil {
+		return nil, err
+	}
+
+	accounts := make([]*account.Account, 0)
+	for _, account := range allAccounts {
+		cpyA := append([]chainkd.XPub{}, account.XPubs[:]...)
+		sort.Sort(signers.SortKeys(cpyA))
+		cpyB := append([]chainkd.XPub{}, XPubs[:]...)
+		sort.Sort(signers.SortKeys(cpyB))
+		if reflect.DeepEqual(cpyA, cpyB) {
+			accounts = append(accounts, account)
+		}
+	}
+
+	return accounts, nil
 }
 
 func (rm *RecoveryManager) isFinished() bool {
