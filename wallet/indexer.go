@@ -289,10 +289,7 @@ func (w *Wallet) indexBalances(accountUTXOs []*account.UTXO) ([]AccountBalance, 
 				return nil, err
 			}
 
-			assetAlias := ""
-			if targetAsset.Alias != nil {
-				assetAlias = *targetAsset.Alias
-			}
+			assetAlias := *targetAsset.Alias
 			balances = append(balances, AccountBalance{
 				Alias:           alias,
 				AccountID:       id,
