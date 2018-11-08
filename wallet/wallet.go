@@ -59,7 +59,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		return nil, err
 	}
 
-	if err := w.RecoveryMgr.loadStatusInfo(); err != nil {
+	if err := w.RecoveryMgr.loadStatusInfo(w.AccountMgr); err != nil {
 		w.RecoveryMgr.UnLock()
 		return nil, err
 	}

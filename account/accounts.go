@@ -131,8 +131,8 @@ func (m *Manager) AddUnconfirmedUtxo(utxos []*UTXO) {
 	m.utxoKeeper.AddUnconfirmedUtxo(utxos)
 }
 
-// Create creates a new Account.
-func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
+// CreateAccount creates a new Account.
+func (m *Manager) CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
@@ -160,18 +160,36 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, acctInd
 		return nil, errors.Wrap(err)
 	}
 
-	account := &Account{Signer: signer, ID: id, Alias: normalizedAlias}
+	return &Account{Signer: signer, ID: id, Alias: normalizedAlias}, nil
+}
+
+// SaveAccount save a new account.
+func (m *Manager) SaveAccount(account *Account) error {
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
-		return nil, ErrMarshalAccount
+		return ErrMarshalAccount
 	}
 
-	accountID := Key(id)
+	accountID := Key(account.ID)
 	storeBatch := m.db.NewBatch()
-	storeBatch.Set(GetAccountIndexKey(xpubs), common.Unit64ToBytes(index))
+	storeBatch.Set(GetAccountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
 	storeBatch.Set(accountID, rawAccount)
-	storeBatch.Set(aliasKey(normalizedAlias), []byte(id))
+	storeBatch.Set(aliasKey(account.Alias), []byte(account.ID))
 	storeBatch.Write()
+	return nil
+}
+
+// Create creates and save a new Account.
+func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
+	account, err := m.CreateAccount(xpubs, quorum, alias, acctIndex, deriveRule)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := m.SaveAccount(account); err != nil {
+		return nil, err
+	}
+
 	return account, nil
 }
 
@@ -181,7 +199,12 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 	if err != nil {
 		return nil, err
 	}
-	return m.createAddress(account, change)
+	cp, err = m.CreateCtrlProgram(account, 0, change)
+	if err != nil {
+		return nil, err
+	}
+
+	return cp, m.insertControlPrograms(cp)
 }
 
 // CreateBatchAddresses generate a batch of addresses for the select account
@@ -196,13 +219,13 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 		return err
 	}
 
-	for currentIndex < stopIndex {
-		if _, err := m.createAddress(account, change); err != nil {
+	for ; currentIndex < stopIndex; currentIndex++ {
+		cp, err := m.CreateCtrlProgram(account, currentIndex+1, change)
+		if err != nil {
 			return err
 		}
 
-		currentIndex, err = m.getCurrentContractIndex(account, change)
-		if err != nil {
+		if err := m.insertControlPrograms(cp); err != nil {
 			return err
 		}
 	}
@@ -340,7 +363,7 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 		return nil, err
 	}
 
-	program, err := m.createAddress(account, false)
+	program, err := m.CreateAddress(account.ID, false)
 	if err != nil {
 		return nil, err
 	}
@@ -483,10 +506,15 @@ func (m *Manager) SetCoinbaseArbitrary(arbitrary []byte) {
 }
 
 // CreateAddress generate an address for the select account
-func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram, err error) {
-	addrIdx, err := m.getNextContractIndex(account, change)
-	if err != nil {
-		return nil, err
+func (m *Manager) CreateCtrlProgram(account *Account, index uint64, change bool) (cp *CtrlProgram, err error) {
+	addrIdx := uint64(1)
+	if index != 0 {
+		addrIdx = index
+	} else {
+		addrIdx, err = m.getNextContractIndex(account, change)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	path, err := signers.Path(account.Signer, signers.AccountKeySpace, change, addrIdx)
@@ -503,29 +531,7 @@ func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram,
 		return nil, err
 	}
 	cp.KeyIndex, cp.Change = addrIdx, change
-	return cp, m.insertControlPrograms(cp)
-}
-
-// CreateRecoveryAddress generate an address for the select account
-func CreateRecoveryAddress(XPubs []chainkd.XPub, deriveRule uint8, accountIndex uint64, change bool, addrIndex uint64) (cp *CtrlProgram, err error) {
-	signer := &signers.Signer{Quorum: len(XPubs), XPubs: XPubs, KeyIndex: accountIndex, DeriveRule: deriveRule}
-	path, err := signers.Path(signer, signers.AccountKeySpace, change, addrIndex)
-	if err != nil {
-		return nil, err
-	}
-
-	account := &Account{ID: "", Signer: signer}
-	if len(account.XPubs) == 1 {
-		cp, err = createP2PKH(account, path)
-	} else {
-		cp, err = createP2SH(account, path)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	cp.KeyIndex, cp.Change = addrIndex, change
-	return cp, err
+	return cp, nil
 }
 
 func createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {

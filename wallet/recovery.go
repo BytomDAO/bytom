@@ -1,11 +1,8 @@
 package wallet
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"reflect"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -15,9 +12,10 @@ import (
 
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/signers"
-	"github.com/bytom/common"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
+	"github.com/bytom/errors"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -29,73 +27,17 @@ const (
 	// defaultAddrRecoveryWindow defines the address derivation lookahead used when
 	// attempting to recover the set of used addresses.
 	defaultAddrRecoveryWindow = uint64(128)
+
+	LockedFlag   = int32(1)
+	UnlockedFlag = int32(0)
 )
 
 //recoveryKey key for db store recovery info.
 var recoveryKey = []byte("RecoveryInfo")
 
-type addrPath struct {
-	xPubs      []chainkd.XPub
-	deriveRule uint8
-	acctIndex  uint64
-	change     bool
-	addrIndex  uint64
-}
-
-// AccountScope Is used to describe an account in a hierarchical deterministic wallets.
-type AccountScope struct {
-	XPubsHash    string
-	DeriveRule   uint8
-	AccountIndex uint64
-}
-
-func xPubsHash(xPubs []chainkd.XPub) string {
-	cpy := append([]chainkd.XPub{}, xPubs[:]...)
-	sort.Sort(signers.SortKeys(cpy))
-	var slice []byte
-	for _, xPub := range xPubs {
-		slice = append(slice, xPub[:]...)
-	}
-	var hash common.Hash
-	sha3pool.Sum256(hash[:], slice)
-	return hex.EncodeToString(hash[:])
-}
-
-type accountStatus map[AccountScope]*ScopeRecoveryState
-
-func (as *accountStatus) MarshalText() ([]byte, error) {
-	scopes := make(map[string]*ScopeRecoveryState, len(*as))
-	for k, v := range *as {
-		key, err := json.Marshal(k)
-		if err != nil {
-			return nil, err
-		}
-
-		scopes[string(key)] = v
-	}
-	return json.Marshal(scopes)
-}
-
-func (as *accountStatus) UnmarshalText(text []byte) error {
-	var scopes map[string]*ScopeRecoveryState
-	if err := json.Unmarshal(text, &scopes); err != nil {
-		return err
-	}
-
-	for k, v := range scopes {
-		acctScope := &AccountScope{}
-		if err := json.Unmarshal([]byte(k), acctScope); err != nil {
-			return err
-		}
-
-		(*as)[*acctScope] = v
-	}
-	return nil
-}
-
 // RecoveryManager manage recovery wallet from key.
 type RecoveryManager struct {
-	mu sync.Mutex
+	mu *Mutex
 
 	db db.DB
 
@@ -111,53 +53,71 @@ type RecoveryManager struct {
 
 	//addresses all addresses derivation lookahead used when
 	// attempting to recover the set of used addresses.
-	addresses map[common.Hash]addrPath
+	addresses map[bc.Hash]*account.CtrlProgram
+}
+
+type Mutex struct {
+	in     sync.Mutex
+	status *int32
+}
+
+func NewMutex() *Mutex {
+	status := UnlockedFlag
+	return &Mutex{
+		status: &status,
+	}
+}
+
+func (m *Mutex) Unlock() {
+	m.in.Unlock()
+	atomic.AddInt32(m.status, UnlockedFlag)
+}
+
+func (m *Mutex) TryLock() bool {
+	if atomic.CompareAndSwapInt32((*int32)(unsafe.Pointer(&m.in)), UnlockedFlag, LockedFlag) {
+		atomic.AddInt32(m.status, LockedFlag)
+		return true
+	}
+	return false
 }
 
 // AcctStatusInit init recovery status for account address rescan.
 func (rm *RecoveryManager) AcctStatusInit(accts []*account.Account) {
 	rm.state = newRecoveryState()
 	for _, acct := range accts {
-		accountScope := AccountScope{XPubsHash: xPubsHash(acct.XPubs), AccountIndex: acct.KeyIndex, DeriveRule: acct.DeriveRule}
-		rm.state.StateForScope(accountScope, acct.XPubs)
+		rm.state.StateForScope(acct)
 	}
 }
 
 // newRecoveryManager create recovery manger.
 func newRecoveryManager(db db.DB) *RecoveryManager {
 	return &RecoveryManager{
+		mu:             NewMutex(),
 		db:             db,
 		recoveryWindow: defaultAddrRecoveryWindow,
-		addresses:      make(map[common.Hash]addrPath),
+		addresses:      make(map[bc.Hash]*account.CtrlProgram),
 	}
 }
 
-func (rm *RecoveryManager) checkAddress(hash common.Hash) (addrPath, bool) {
-	path, ok := rm.addresses[hash]
-	return path, ok
+func (rm *RecoveryManager) checkAddress(hash bc.Hash) (*account.CtrlProgram, bool) {
+	cp, ok := rm.addresses[hash]
+	return cp, ok
 }
 
-func (rm *RecoveryManager) checkAccount(xPubs []chainkd.XPub, acctIndex uint64, accountMgr *account.Manager) (*string, error) {
-	status, ok := rm.state.XPubsStatus[xPubsHash(xPubs)]
-	if ok {
-		acctID, ok := status.FoundAccounts[acctIndex]
-		if ok {
-			return &acctID, nil
+func (rm *RecoveryManager) saveAccount(accountMgr *account.Manager, accountID string) (*account.Account, error) {
+	account, err := accountMgr.FindByID(accountID)
+	if err == nil && account != nil {
+		return account, nil
+	}
+
+	if state, ok := rm.state.AccountsStatus[accountID]; ok {
+		if err := accountMgr.SaveAccount(state.Account); err != nil {
+			return nil, err
 		}
-	}
 
-	accounts, err := rm.GetAccountByXPubs(accountMgr, xPubs)
-	if err != nil {
-		return nil, err
+		return state.Account, nil
 	}
-
-	for _, account := range accounts {
-		if account.KeyIndex == acctIndex {
-			return &account.ID, nil
-		}
-	}
-
-	return nil, nil
+	return nil, errors.New("save account err")
 }
 
 func (rm *RecoveryManager) commitStatusInfo() error {
@@ -170,40 +130,62 @@ func (rm *RecoveryManager) commitStatusInfo() error {
 	return nil
 }
 
-func (rm *RecoveryManager) extendScanAccounts() {
-	for _, state := range rm.state.XPubsStatus {
-		curHorizon, delta := state.ExtendHorizon()
-		for index := curHorizon; index < curHorizon+delta; index++ {
-			accountScope := AccountScope{XPubsHash: xPubsHash(state.XPubs), AccountIndex: index, DeriveRule: signers.BIP0044}
-			rm.state.StateForScope(accountScope, state.XPubs)
-		}
+func genAcctAlias(xPubs []chainkd.XPub, index uint64) string {
+	var tmp []byte
+	for _, xPub := range xPubs {
+		tmp = append(tmp, xPub[:6]...)
 	}
+	return fmt.Sprintf("%x:%x", tmp, index)
 }
 
-func (rm *RecoveryManager) extendScanAddresses() error {
-	for scope, state := range rm.state.AccountsStatus {
+func (rm *RecoveryManager) extendScanAccounts(accountMgr *account.Manager) error {
+	if rm.state.XPubsStatus == nil {
+		return nil
+	}
+
+	curHorizon, delta := rm.state.XPubsStatus.AccountBranch.ExtendHorizon()
+	for index := curHorizon; index < curHorizon+delta; index++ {
+		alias := genAcctAlias(rm.state.XPubs, index)
+		account, err := accountMgr.CreateAccount(rm.state.XPubs, len(rm.state.XPubs), alias, index, signers.BIP0044)
+		if err != nil {
+			return err
+		}
+
+		rm.state.StateForScope(account)
+	}
+	return nil
+}
+
+func getCPHash(cp []byte) bc.Hash {
+	var h [32]byte
+	sha3pool.Sum256(h[:], cp)
+	return bc.NewHash(h)
+}
+
+func (rm *RecoveryManager) extendAddresses(accountMgr *account.Manager, account *account.Account, index uint64, change bool) error {
+	cp, err := accountMgr.CreateCtrlProgram(account, index, change)
+	if err != nil {
+		return err
+	}
+
+	rm.addresses[getCPHash(cp.ControlProgram)] = cp
+	return nil
+}
+
+func (rm *RecoveryManager) extendScanAddresses(accountMgr *account.Manager) error {
+	for _, state := range rm.state.AccountsStatus {
 		curHorizon, delta := state.InternalBranch.ExtendHorizon()
 		for index := curHorizon; index < curHorizon+delta; index++ {
-			cp, err := account.CreateRecoveryAddress(state.XPubs, scope.DeriveRule, scope.AccountIndex, true, index)
-			if err != nil {
+			if err := rm.extendAddresses(accountMgr, state.Account, index, true); err != nil {
 				return err
 			}
-
-			var hash common.Hash
-			sha3pool.Sum256(hash[:], cp.ControlProgram)
-			rm.addresses[hash] = addrPath{xPubs: state.XPubs, acctIndex: scope.AccountIndex, change: true, addrIndex: cp.KeyIndex, deriveRule: scope.DeriveRule}
 		}
 
 		curHorizon, delta = state.ExternalBranch.ExtendHorizon()
 		for index := curHorizon; index < curHorizon+delta; index++ {
-			cp, err := account.CreateRecoveryAddress(state.XPubs, scope.DeriveRule, scope.AccountIndex, false, index)
-			if err != nil {
+			if err := rm.extendAddresses(accountMgr, state.Account, index, false); err != nil {
 				return err
 			}
-
-			var hash common.Hash
-			sha3pool.Sum256(hash[:], cp.ControlProgram)
-			rm.addresses[hash] = addrPath{xPubs: state.XPubs, acctIndex: scope.AccountIndex, change: false, addrIndex: cp.KeyIndex, deriveRule: scope.DeriveRule}
 		}
 	}
 
@@ -222,34 +204,18 @@ func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account
 
 	for _, tx := range b.Transactions {
 		for _, output := range tx.Outputs {
-			var hash [32]byte
-			sha3pool.Sum256(hash[:], output.ControlProgram)
-			if path, ok := rm.checkAddress(hash); ok {
-				var accountID string
-				acctID, err := rm.checkAccount(path.xPubs, path.acctIndex, accountMgr)
+			if cp, ok := rm.checkAddress(getCPHash(output.ControlProgram)); ok {
+				account, err := rm.saveAccount(accountMgr, cp.AccountID)
 				if err != nil {
 					return err
 				}
 
-				if acctID == nil {
-					var tmp []byte
-					for _, xPub := range path.xPubs {
-						tmp = append(tmp, xPub[:6]...)
-					}
-					alias := fmt.Sprintf("%x:%x", tmp, path.acctIndex)
-					account, err := accountMgr.Create(path.xPubs, len(path.xPubs), alias, path.acctIndex, path.deriveRule)
-					if err != nil {
-						return err
-					}
-					accountID = account.ID
-				} else {
-					accountID = *acctID
+				rm.ReportFound(account, cp)
+				if err := rm.extendScanAccounts(accountMgr); err != nil {
+					return err
 				}
 
-				rm.setAccount(path.xPubs, path.acctIndex, accountID)
-				rm.ReportFound(path.xPubs, path.deriveRule, path.acctIndex, path.change, path.addrIndex)
-				rm.extendScanAccounts()
-				if err := rm.extendScanAddresses(); err != nil {
+				if err := rm.extendScanAddresses(accountMgr); err != nil {
 					return err
 				}
 
@@ -257,7 +223,7 @@ func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account
 					return err
 				}
 
-				if err := accountMgr.CreateBatchAddresses(accountID, path.change, path.addrIndex); err != nil {
+				if err := accountMgr.CreateBatchAddresses(account.ID, cp.Change, cp.KeyIndex); err != nil {
 					return err
 				}
 			}
@@ -265,27 +231,6 @@ func (rm *RecoveryManager) filterRecoveryTxs(b *types.Block, accountMgr *account
 	}
 
 	return nil
-}
-
-// GetAccountByXPubs return Account by given XPubs
-func (rm *RecoveryManager) GetAccountByXPubs(accountMgr *account.Manager, XPubs []chainkd.XPub) ([]*account.Account, error) {
-	allAccounts, err := accountMgr.ListAccounts("")
-	if err != nil {
-		return nil, err
-	}
-
-	accounts := make([]*account.Account, 0)
-	for _, account := range allAccounts {
-		cpyA := append([]chainkd.XPub{}, account.XPubs[:]...)
-		sort.Sort(signers.SortKeys(cpyA))
-		cpyB := append([]chainkd.XPub{}, XPubs[:]...)
-		sort.Sort(signers.SortKeys(cpyB))
-		if reflect.DeepEqual(cpyA, cpyB) {
-			accounts = append(accounts, account)
-		}
-	}
-
-	return accounts, nil
 }
 
 func (rm *RecoveryManager) isFinished() bool {
@@ -297,12 +242,13 @@ func (rm *RecoveryManager) IsStarted() bool {
 	return rm.started
 }
 
-func (rm *RecoveryManager) loadStatusInfo() error {
+func (rm *RecoveryManager) loadStatusInfo(accountMgr *account.Manager) error {
 	if !rm.TryLock() {
 		return nil
 	}
 	rawStatus := rm.db.Get(recoveryKey)
 	if rawStatus == nil {
+		rm.UnLock()
 		return nil
 	}
 
@@ -313,7 +259,7 @@ func (rm *RecoveryManager) loadStatusInfo() error {
 
 	rm.state = status
 	if !rm.isFinished() {
-		if err := rm.restoreAddresses(); err != nil {
+		if err := rm.restoreAddresses(accountMgr); err != nil {
 			return err
 		}
 
@@ -323,28 +269,18 @@ func (rm *RecoveryManager) loadStatusInfo() error {
 	return nil
 }
 
-func (rm *RecoveryManager) restoreAddresses() error {
-	for scope, state := range rm.state.AccountsStatus {
+func (rm *RecoveryManager) restoreAddresses(accountMgr *account.Manager) error {
+	for _, state := range rm.state.AccountsStatus {
 		for index := uint64(0); index <= state.InternalBranch.Horizon; index++ {
-			cp, err := account.CreateRecoveryAddress(state.XPubs, scope.DeriveRule, scope.AccountIndex, true, index)
-			if err != nil {
+			if err := rm.extendAddresses(accountMgr, state.Account, index, true); err != nil {
 				return err
 			}
-
-			var hash common.Hash
-			sha3pool.Sum256(hash[:], cp.ControlProgram)
-			rm.addresses[hash] = addrPath{xPubs: state.XPubs, acctIndex: scope.AccountIndex, change: true, addrIndex: cp.KeyIndex, deriveRule: scope.DeriveRule}
 		}
 
 		for index := uint64(0); index <= state.ExternalBranch.Horizon; index++ {
-			cp, err := account.CreateRecoveryAddress(state.XPubs, scope.DeriveRule, scope.AccountIndex, false, index)
-			if err != nil {
+			if err := rm.extendAddresses(accountMgr, state.Account, index, false); err != nil {
 				return err
 			}
-
-			var hash common.Hash
-			sha3pool.Sum256(hash[:], cp.ControlProgram)
-			rm.addresses[hash] = addrPath{xPubs: state.XPubs, acctIndex: scope.AccountIndex, change: false, addrIndex: cp.KeyIndex, deriveRule: scope.DeriveRule}
 		}
 	}
 	return nil
@@ -369,9 +305,9 @@ func (rm *RecoveryManager) resurrectStart() {
 // found in the walletdb namespace. This method ensures that the recovery state's
 // horizons properly start from the last found address of a prior recovery
 // attempt.
-func (rm *RecoveryManager) Resurrect() error {
-	rm.extendScanAccounts()
-	if err := rm.extendScanAddresses(); err != nil {
+func (rm *RecoveryManager) Resurrect(accountMgr *account.Manager) error {
+	rm.extendScanAccounts(accountMgr)
+	if err := rm.extendScanAddresses(accountMgr); err != nil {
 		rm.UnLock()
 		return err
 	}
@@ -382,34 +318,24 @@ func (rm *RecoveryManager) Resurrect() error {
 
 // ReportFound updates the last found index if the reported index exceeds the
 // current value.
-func (rm *RecoveryManager) ReportFound(xPubs []chainkd.XPub, deriveRule uint8, acctIndex uint64, change bool, addrIndex uint64) {
-	key := xPubsHash(xPubs)
-	acctScope := AccountScope{
-		XPubsHash:    key,
-		AccountIndex: acctIndex,
-		DeriveRule:   deriveRule,
-	}
-	if _, ok := rm.state.XPubsStatus[key]; ok {
-		rm.state.XPubsStatus[key].ReportFound(acctIndex)
-	}
-	if change {
-		rm.state.AccountsStatus[acctScope].InternalBranch.ReportFound(addrIndex)
-	} else {
-		rm.state.AccountsStatus[acctScope].ExternalBranch.ReportFound(addrIndex)
-	}
-}
-
-func (rm *RecoveryManager) setAccount(xPubs []chainkd.XPub, acctIndex uint64, acctID string) {
-	if _, ok := rm.state.XPubsStatus[xPubsHash(xPubs)]; !ok {
+func (rm *RecoveryManager) ReportFound(account *account.Account, cp *account.CtrlProgram) {
+	if rm.state.XPubsStatus == nil {
 		return
 	}
-	rm.state.XPubsStatus[xPubsHash(xPubs)].FoundAccounts[acctIndex] = acctID
+
+	rm.state.XPubsStatus.AccountBranch.ReportFound(account.KeyIndex)
+	if cp.Change {
+		rm.state.AccountsStatus[account.ID].InternalBranch.ReportFound(cp.KeyIndex)
+	} else {
+		rm.state.AccountsStatus[account.ID].ExternalBranch.ReportFound(cp.KeyIndex)
+	}
 }
 
 // StatusInit init recovery status manager.
 func (rm *RecoveryManager) StatusInit(xPubs []chainkd.XPub) {
 	rm.state = newRecoveryState()
-	rm.state.XPubsStatus[xPubsHash(xPubs)] = newAccountRecoveryState(defaultAcctRecoveryWindow, xPubs)
+	rm.state.XPubs = xPubs
+	rm.state.XPubsStatus = newAccountRecoveryState(defaultAcctRecoveryWindow)
 }
 
 func (rm *RecoveryManager) startTime() time.Time {
@@ -418,60 +344,55 @@ func (rm *RecoveryManager) startTime() time.Time {
 
 //TryLock try to lock recovery mgr, will not block
 func (rm *RecoveryManager) TryLock() bool {
-	// TryLock tries to lock m. It returns true in case of success, false otherwise.
-	return atomic.CompareAndSwapInt32((*int32)(unsafe.Pointer(&rm.mu)), 0, 1)
+	//return rm.mu.TryLock()
+	return true
 }
 
 func (rm *RecoveryManager) UnLock() {
-	// TryLock tries to lock m. It returns true in case of success, false otherwise.
-	rm.mu.Unlock()
+	//rm.mu.Unlock()
 }
 
 // RecoveryState used to record the status of a recovery process.
 type RecoveryState struct {
 	Finished bool
 
+	// XPubs recovery account xPubs
+	XPubs []chainkd.XPub
+
 	// The time to start the recovery task, used to determine whether
 	// recovery task is completed.
 	StartTime time.Time
 
-	// AddrRecoveryWindow defines the key-derivation lookahead used when
-	// attempting to recover the set of used addresses. This value will be
-	// used to instantiate a new RecoveryState for each requested scope.
-	AddrRecoveryWindow uint64
-
 	// XPubsStatus maintains a map of each requested XPub to its active
 	// account recovery state.
-	XPubsStatus map[string]*AccountRecoveryState
+	XPubsStatus *AccountRecoveryState
 
 	// AcctStatus maintains a map of each requested key scope to its active
 	// recovery state.
-	AccountsStatus accountStatus
+	AccountsStatus map[string]*ScopeRecoveryState
 }
 
 func newRecoveryState() *RecoveryState {
 	return &RecoveryState{
-		AddrRecoveryWindow: defaultAddrRecoveryWindow,
-		XPubsStatus:        make(map[string]*AccountRecoveryState),
-		AccountsStatus:     make(map[AccountScope]*ScopeRecoveryState),
-		StartTime:          time.Now(),
+		AccountsStatus: make(map[string]*ScopeRecoveryState),
+		StartTime:      time.Now(),
 	}
 }
 
 // StateForScope returns a ScopeRecoveryState for the provided key scope. If one
 // does not already exist, a new one will be generated with the RecoveryState's
 // recoveryWindow.
-func (rs *RecoveryState) StateForScope(accountScope AccountScope, xPubs []chainkd.XPub) *ScopeRecoveryState {
+func (rs *RecoveryState) StateForScope(account *account.Account) *ScopeRecoveryState {
 	// If the account recovery state already exists, return it.
-	if scopeState, ok := rs.AccountsStatus[accountScope]; ok {
+	if scopeState, ok := rs.AccountsStatus[account.ID]; ok {
 		return scopeState
 	}
 
 	// Otherwise, initialize the recovery state for this scope with the
 	// chosen recovery window.
-	rs.AccountsStatus[accountScope] = newScopeRecoveryState(rs.AddrRecoveryWindow, xPubs)
+	rs.AccountsStatus[account.ID] = newScopeRecoveryState(defaultAddrRecoveryWindow, account)
 
-	return rs.AccountsStatus[accountScope]
+	return rs.AccountsStatus[account.ID]
 }
 
 // ScopeRecoveryState is used to manage the recovery of addresses generated
@@ -486,15 +407,14 @@ type ScopeRecoveryState struct {
 	// internal use, i.e. change addresses.
 	InternalBranch *BranchRecoveryState
 
-	// XPubs account signer xPubs
-	XPubs []chainkd.XPub
+	Account *account.Account
 }
 
-func newScopeRecoveryState(recoveryWindow uint64, xPubs []chainkd.XPub) *ScopeRecoveryState {
+func newScopeRecoveryState(recoveryWindow uint64, account *account.Account) *ScopeRecoveryState {
 	return &ScopeRecoveryState{
 		ExternalBranch: NewBranchRecoveryState(recoveryWindow),
 		InternalBranch: NewBranchRecoveryState(recoveryWindow),
-		XPubs:          xPubs,
+		Account:        account,
 	}
 }
 
@@ -527,6 +447,8 @@ type BranchRecoveryState struct {
 func NewBranchRecoveryState(recoveryWindow uint64) *BranchRecoveryState {
 	return &BranchRecoveryState{
 		RecoveryWindow: recoveryWindow,
+		Horizon:        1,
+		NextUnfound:    1,
 	}
 }
 
@@ -564,22 +486,17 @@ func (brs *BranchRecoveryState) ReportFound(index uint64) {
 
 // AccountRecoveryState for recording key of the hd wallet account recovery status.
 type AccountRecoveryState struct {
-	BranchRecoveryState
+	AccountBranch *BranchRecoveryState
 
-	// addresses is a map of child index to address for all actively watched
-	// addresses belonging to this branch.
-	FoundAccounts map[uint64]string
-
-	// XPubs account signer xPubs
-	XPubs []chainkd.XPub
+	//// addresses is a map of child index to address for all actively watched
+	//// addresses belonging to this branch.
+	//FoundAccounts map[uint64]string
 }
 
 // newAccountRecoveryState creates a new AccountRecoveryState that can be used to
 // track account recovery status.
-func newAccountRecoveryState(recoveryWindow uint64, xPubs []chainkd.XPub) *AccountRecoveryState {
+func newAccountRecoveryState(recoveryWindow uint64) *AccountRecoveryState {
 	return &AccountRecoveryState{
-		BranchRecoveryState: BranchRecoveryState{RecoveryWindow: recoveryWindow},
-		FoundAccounts:       make(map[uint64]string),
-		XPubs:               xPubs,
+		AccountBranch: NewBranchRecoveryState(recoveryWindow),
 	}
 }
