@@ -37,6 +37,11 @@ func (a *API) restoreWalletImage(ctx context.Context, image WalletImage) Respons
 	for _, acctImage := range image.AccountImage.Slice {
 		allAccounts = append(allAccounts, acctImage.Account)
 	}
+
+	if !a.wallet.RecoveryMgr.TryLock() {
+		return NewErrorResponse(errors.New("Recovery in progress"))
+	}
+
 	a.wallet.RecoveryMgr.AcctStatusInit(allAccounts)
 	if err := a.wallet.RecoveryMgr.Resurrect(); err != nil {
 		return NewErrorResponse(err)
@@ -74,6 +79,10 @@ func (a *API) rescanWallet() Response {
 		return NewErrorResponse(err)
 	}
 
+	if !a.wallet.RecoveryMgr.TryLock() {
+		return NewErrorResponse(errors.New("Recovery in progress"))
+	}
+
 	a.wallet.RecoveryMgr.AcctStatusInit(allAccounts)
 	if err := a.wallet.RecoveryMgr.Resurrect(); err != nil {
 		return NewErrorResponse(err)
@@ -99,10 +108,10 @@ func (a *API) getWalletInfo() Response {
 	})
 }
 
-func (a *API) recoveryFromRootXPub(ctx context.Context, in struct {
+func (a *API) recoveryFromRootXPubs(ctx context.Context, in struct {
 	XPubs []chainkd.XPub `json:"xpubs"`
 }) Response {
-	if a.wallet.RecoveryMgr.IsStarted() {
+	if !a.wallet.RecoveryMgr.TryLock() {
 		return NewErrorResponse(errors.New("Recovery in progress"))
 	}
 

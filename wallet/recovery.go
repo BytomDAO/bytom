@@ -7,7 +7,9 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/tendermint/tmlibs/db"
 
@@ -29,17 +31,8 @@ const (
 	defaultAddrRecoveryWindow = uint64(128)
 )
 
-var (
-	//recoveryKey key for db store recovery info.
-	recoveryKey = []byte("RecoveryInfo")
-
-	// DefaultDeriveRules is the derived rule for getting the
-	// child key.
-	DefaultDeriveRules = []uint8{
-		signers.BIP0032,
-		signers.BIP0044,
-	}
-)
+//recoveryKey key for db store recovery info.
+var recoveryKey = []byte("RecoveryInfo")
 
 type addrPath struct {
 	xPubs      []chainkd.XPub
@@ -102,7 +95,7 @@ func (as *accountStatus) UnmarshalText(text []byte) error {
 
 // RecoveryManager manage recovery wallet from key.
 type RecoveryManager struct {
-	RWMutex sync.RWMutex
+	mu sync.Mutex
 
 	db db.DB
 
@@ -110,7 +103,6 @@ type RecoveryManager struct {
 	// attempting to recover the set of used addresses.
 	recoveryWindow uint64
 
-	// started is true after the first block has been added to the batch.
 	started bool
 
 	// state encapsulates and allocates the necessary recovery state for all
@@ -120,6 +112,15 @@ type RecoveryManager struct {
 	//addresses all addresses derivation lookahead used when
 	// attempting to recover the set of used addresses.
 	addresses map[common.Hash]addrPath
+}
+
+// AcctStatusInit init recovery status for account address rescan.
+func (rm *RecoveryManager) AcctStatusInit(accts []*account.Account) {
+	rm.state = newRecoveryState()
+	for _, acct := range accts {
+		accountScope := AccountScope{XPubsHash: xPubsHash(acct.XPubs), AccountIndex: acct.KeyIndex, DeriveRule: acct.DeriveRule}
+		rm.state.StateForScope(accountScope, acct.XPubs)
+	}
 }
 
 // newRecoveryManager create recovery manger.
@@ -132,17 +133,11 @@ func newRecoveryManager(db db.DB) *RecoveryManager {
 }
 
 func (rm *RecoveryManager) checkAddress(hash common.Hash) (addrPath, bool) {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
 	path, ok := rm.addresses[hash]
 	return path, ok
 }
 
 func (rm *RecoveryManager) checkAccount(xPubs []chainkd.XPub, acctIndex uint64, accountMgr *account.Manager) (*string, error) {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
 	status, ok := rm.state.XPubsStatus[xPubsHash(xPubs)]
 	if ok {
 		acctID, ok := status.FoundAccounts[acctIndex]
@@ -176,24 +171,16 @@ func (rm *RecoveryManager) commitStatusInfo() error {
 }
 
 func (rm *RecoveryManager) extendScanAccounts() {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
 	for _, state := range rm.state.XPubsStatus {
 		curHorizon, delta := state.ExtendHorizon()
 		for index := curHorizon; index < curHorizon+delta; index++ {
-			for _, deriveRule := range DefaultDeriveRules {
-				accountScope := AccountScope{XPubsHash: xPubsHash(state.XPubs), AccountIndex: index, DeriveRule: deriveRule}
-				rm.state.StateForScope(accountScope, state.XPubs)
-			}
+			accountScope := AccountScope{XPubsHash: xPubsHash(state.XPubs), AccountIndex: index, DeriveRule: signers.BIP0044}
+			rm.state.StateForScope(accountScope, state.XPubs)
 		}
 	}
 }
 
 func (rm *RecoveryManager) extendScanAddresses() error {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
 	for scope, state := range rm.state.AccountsStatus {
 		curHorizon, delta := state.InternalBranch.ExtendHorizon()
 		for index := curHorizon; index < curHorizon+delta; index++ {
@@ -302,21 +289,18 @@ func (rm *RecoveryManager) GetAccountByXPubs(accountMgr *account.Manager, XPubs 
 }
 
 func (rm *RecoveryManager) isFinished() bool {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
 	return rm.state.Finished
 }
 
 // IsStarted used to determine if recovery is in progress.
 func (rm *RecoveryManager) IsStarted() bool {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
 	return rm.started
 }
 
 func (rm *RecoveryManager) loadStatusInfo() error {
+	if !rm.TryLock() {
+		return nil
+	}
 	rawStatus := rm.db.Get(recoveryKey)
 	if rawStatus == nil {
 		return nil
@@ -340,9 +324,6 @@ func (rm *RecoveryManager) loadStatusInfo() error {
 }
 
 func (rm *RecoveryManager) restoreAddresses() error {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
 	for scope, state := range rm.state.AccountsStatus {
 		for index := uint64(0); index <= state.InternalBranch.Horizon; index++ {
 			cp, err := account.CreateRecoveryAddress(state.XPubs, scope.DeriveRule, scope.AccountIndex, true, index)
@@ -370,22 +351,17 @@ func (rm *RecoveryManager) restoreAddresses() error {
 }
 
 func (rm *RecoveryManager) resurrectFinished() error {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
 	rm.state.Finished = true
 	if err := rm.commitStatusInfo(); err != nil {
 		return err
 	}
 
 	rm.started = false
+	rm.UnLock()
 	return nil
 }
 
 func (rm *RecoveryManager) resurrectStart() {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
 	rm.started = true
 }
 
@@ -396,6 +372,7 @@ func (rm *RecoveryManager) resurrectStart() {
 func (rm *RecoveryManager) Resurrect() error {
 	rm.extendScanAccounts()
 	if err := rm.extendScanAddresses(); err != nil {
+		rm.UnLock()
 		return err
 	}
 
@@ -406,8 +383,6 @@ func (rm *RecoveryManager) Resurrect() error {
 // ReportFound updates the last found index if the reported index exceeds the
 // current value.
 func (rm *RecoveryManager) ReportFound(xPubs []chainkd.XPub, deriveRule uint8, acctIndex uint64, change bool, addrIndex uint64) {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
 	key := xPubsHash(xPubs)
 	acctScope := AccountScope{
 		XPubsHash:    key,
@@ -425,9 +400,6 @@ func (rm *RecoveryManager) ReportFound(xPubs []chainkd.XPub, deriveRule uint8, a
 }
 
 func (rm *RecoveryManager) setAccount(xPubs []chainkd.XPub, acctIndex uint64, acctID string) {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
 	if _, ok := rm.state.XPubsStatus[xPubsHash(xPubs)]; !ok {
 		return
 	}
@@ -436,30 +408,23 @@ func (rm *RecoveryManager) setAccount(xPubs []chainkd.XPub, acctIndex uint64, ac
 
 // StatusInit init recovery status manager.
 func (rm *RecoveryManager) StatusInit(xPubs []chainkd.XPub) {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
 	rm.state = newRecoveryState()
 	rm.state.XPubsStatus[xPubsHash(xPubs)] = newAccountRecoveryState(defaultAcctRecoveryWindow, xPubs)
 }
 
-// AcctStatusInit init recovery status for account address rescan.
-func (rm *RecoveryManager) AcctStatusInit(accts []*account.Account) {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
-
-	rm.state = newRecoveryState()
-	for _, acct := range accts {
-		accountScope := AccountScope{XPubsHash: xPubsHash(acct.XPubs), AccountIndex: acct.KeyIndex, DeriveRule: acct.DeriveRule}
-		rm.state.StateForScope(accountScope, acct.XPubs)
-	}
+func (rm *RecoveryManager) startTime() time.Time {
+	return rm.state.StartTime
 }
 
-func (rm *RecoveryManager) startTime() time.Time {
-	rm.RWMutex.Lock()
-	defer rm.RWMutex.Unlock()
+//TryLock try to lock recovery mgr, will not block
+func (rm *RecoveryManager) TryLock() bool {
+	// TryLock tries to lock m. It returns true in case of success, false otherwise.
+	return atomic.CompareAndSwapInt32((*int32)(unsafe.Pointer(&rm.mu)), 0, 1)
+}
 
-	return rm.state.StartTime
+func (rm *RecoveryManager) UnLock() {
+	// TryLock tries to lock m. It returns true in case of success, false otherwise.
+	rm.mu.Unlock()
 }
 
 // RecoveryState used to record the status of a recovery process.
