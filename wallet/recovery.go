@@ -27,9 +27,7 @@ const (
 	// defaultAddrRecoveryWindow defines the address derivation lookahead used when
 	// attempting to recover the set of used addresses.
 	defaultAddrRecoveryWindow = uint64(128)
-
-	LockedFlag   = int32(1)
-	UnlockedFlag = int32(0)
+	mutexLocked               = 1
 )
 
 //recoveryKey key for db store recovery info.
@@ -37,7 +35,7 @@ var recoveryKey = []byte("RecoveryInfo")
 
 // RecoveryManager manage recovery wallet from key.
 type RecoveryManager struct {
-	mu *Mutex
+	mu sync.Mutex
 
 	db db.DB
 
@@ -56,29 +54,12 @@ type RecoveryManager struct {
 	addresses map[bc.Hash]*account.CtrlProgram
 }
 
-type Mutex struct {
-	in     sync.Mutex
-	status *int32
+func (rm *RecoveryManager) TryLock() bool {
+	return atomic.CompareAndSwapInt32((*int32)(unsafe.Pointer(&rm.mu)), 0, mutexLocked)
 }
 
-func NewMutex() *Mutex {
-	status := UnlockedFlag
-	return &Mutex{
-		status: &status,
-	}
-}
-
-func (m *Mutex) Unlock() {
-	m.in.Unlock()
-	atomic.AddInt32(m.status, UnlockedFlag)
-}
-
-func (m *Mutex) TryLock() bool {
-	if atomic.CompareAndSwapInt32((*int32)(unsafe.Pointer(&m.in)), UnlockedFlag, LockedFlag) {
-		atomic.AddInt32(m.status, LockedFlag)
-		return true
-	}
-	return false
+func (rm *RecoveryManager) UnLock() {
+	rm.mu.Unlock()
 }
 
 // AcctStatusInit init recovery status for account address rescan.
@@ -92,7 +73,6 @@ func (rm *RecoveryManager) AcctStatusInit(accts []*account.Account) {
 // newRecoveryManager create recovery manger.
 func newRecoveryManager(db db.DB) *RecoveryManager {
 	return &RecoveryManager{
-		mu:             NewMutex(),
 		db:             db,
 		recoveryWindow: defaultAddrRecoveryWindow,
 		addresses:      make(map[bc.Hash]*account.CtrlProgram),
@@ -243,15 +223,12 @@ func (rm *RecoveryManager) IsStarted() bool {
 }
 
 func (rm *RecoveryManager) loadStatusInfo(accountMgr *account.Manager) error {
-	if !rm.TryLock() {
-		return nil
-	}
 	rawStatus := rm.db.Get(recoveryKey)
 	if rawStatus == nil {
-		rm.UnLock()
 		return nil
 	}
 
+	rm.TryLock()
 	status := newRecoveryState()
 	if err := json.Unmarshal(rawStatus, status); err != nil {
 		return err
@@ -264,8 +241,9 @@ func (rm *RecoveryManager) loadStatusInfo(accountMgr *account.Manager) error {
 		}
 
 		rm.resurrectStart()
+		return nil
 	}
-
+	rm.UnLock()
 	return nil
 }
 
@@ -306,9 +284,11 @@ func (rm *RecoveryManager) resurrectStart() {
 // horizons properly start from the last found address of a prior recovery
 // attempt.
 func (rm *RecoveryManager) Resurrect(accountMgr *account.Manager) error {
-	rm.extendScanAccounts(accountMgr)
+	if err := rm.extendScanAccounts(accountMgr); err != nil {
+		return err
+	}
+
 	if err := rm.extendScanAddresses(accountMgr); err != nil {
-		rm.UnLock()
 		return err
 	}
 
@@ -340,16 +320,6 @@ func (rm *RecoveryManager) StatusInit(xPubs []chainkd.XPub) {
 
 func (rm *RecoveryManager) startTime() time.Time {
 	return rm.state.StartTime
-}
-
-//TryLock try to lock recovery mgr, will not block
-func (rm *RecoveryManager) TryLock() bool {
-	//return rm.mu.TryLock()
-	return true
-}
-
-func (rm *RecoveryManager) UnLock() {
-	//rm.mu.Unlock()
 }
 
 // RecoveryState used to record the status of a recovery process.

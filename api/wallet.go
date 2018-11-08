@@ -44,6 +44,7 @@ func (a *API) restoreWalletImage(ctx context.Context, image WalletImage) Respons
 
 	a.wallet.RecoveryMgr.AcctStatusInit(allAccounts)
 	if err := a.wallet.RecoveryMgr.Resurrect(a.wallet.AccountMgr); err != nil {
+		a.wallet.RecoveryMgr.UnLock()
 		return NewErrorResponse(err)
 	}
 
@@ -85,6 +86,7 @@ func (a *API) rescanWallet() Response {
 
 	a.wallet.RecoveryMgr.AcctStatusInit(allAccounts)
 	if err := a.wallet.RecoveryMgr.Resurrect(a.wallet.AccountMgr); err != nil {
+		a.wallet.RecoveryMgr.UnLock()
 		return NewErrorResponse(err)
 	}
 
@@ -117,6 +119,7 @@ func (a *API) recoveryFromRootXPubs(ctx context.Context, in struct {
 
 	a.wallet.RecoveryMgr.StatusInit(in.XPubs)
 	if err := a.wallet.RecoveryMgr.Resurrect(a.wallet.AccountMgr); err != nil {
+		a.wallet.RecoveryMgr.UnLock()
 		return NewErrorResponse(err)
 	}
 
