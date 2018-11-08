@@ -249,15 +249,15 @@ func createMConnection(conn net.Conn, p *Peer, reactorsByCh map[byte]Reactor, ch
 func dial(addr *NetAddress, config *PeerConfig) (net.Conn, error) {
 	var conn net.Conn
 	var err error
-	proxy := &socks.Proxy{
-		Addr:         config.ProxyAddress,
-		Username:     config.ProxyUsername,
-		Password:     config.ProxyPassword,
-		TorIsolation: false,
-	}
-	if proxy.Addr == "" {
+	if config.ProxyAddress == "" {
 		conn, err = addr.DialTimeout(config.DialTimeout)
 	} else {
+		proxy := &socks.Proxy{
+			Addr:         config.ProxyAddress,
+			Username:     config.ProxyUsername,
+			Password:     config.ProxyPassword,
+			TorIsolation: false,
+		}
 		conn, err = addr.DialTimeoutWithProxy(proxy, config.DialTimeout)
 	}
 	if err != nil {
