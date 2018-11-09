@@ -26,6 +26,7 @@ type (
 		Source  string             `json:"source"`
 		Program chainjson.HexBytes `json:"program"`
 		Params  []*compiler.Param  `json:"params"`
+		Value   string             `json:"value"`
 		Clauses []*compiler.Clause `json:"clause_info"`
 		Opcodes string             `json:"opcodes"`
 		Error   string             `json:"error"`
@@ -45,6 +46,7 @@ func compileEquity(req compileReq) (*compileResp, error) {
 		Name:    contract.Name,
 		Source:  req.Contract,
 		Program: contract.Body,
+		Value:   contract.Value.Amount + " of " + contract.Value.Asset,
 		Clauses: contract.Clauses,
 		Opcodes: contract.Opcodes,
 	}
