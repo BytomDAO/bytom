@@ -60,7 +60,6 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 	}
 
 	if err := w.RecoveryMgr.loadStatusInfo(w.AccountMgr); err != nil {
-		w.RecoveryMgr.UnLock()
 		return nil, err
 	}
 
@@ -112,7 +111,6 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	}
 
 	if err := w.RecoveryMgr.filterRecoveryTxs(block, w.AccountMgr); err != nil {
-		w.RecoveryMgr.UnLock()
 		return err
 	}
 
