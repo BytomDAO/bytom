@@ -35,9 +35,9 @@ func TestLoadStatusInfo(t *testing.T) {
 	}
 
 	recoveryMgr := newRecoveryManager(testDB)
-	recoveryMgr.StatusInit([]chainkd.XPub{xpub.XPub})
+	recoveryMgr.statusInit([]chainkd.XPub{xpub.XPub})
 	acctMgr := account.NewManager(testDB, nil)
-	recoveryMgr.Resurrect(acctMgr)
+	recoveryMgr.resurrect(acctMgr)
 	recoveryMgr.state.StartTime = time.Now()
 	recoveryMgr.commitStatusInfo()
 
@@ -56,10 +56,6 @@ func TestLoadStatusInfo(t *testing.T) {
 		t.Fatalf("testLoadStatusInfo AccountsStatus reload err")
 	}
 
-	if recoveryMgrRestore.state.Finished != recoveryMgr.state.Finished {
-		t.Fatalf("testLoadStatusInfo Finished reload err")
-	}
-
 	if !recoveryMgrRestore.state.StartTime.Equal(recoveryMgr.state.StartTime) {
 		t.Fatalf("testLoadStatusInfo StartTime reload err")
 	}
@@ -76,17 +72,17 @@ func TestLock(t *testing.T) {
 	defer os.RemoveAll("temp")
 
 	recoveryMgr := newRecoveryManager(testDB)
-	if !recoveryMgr.TryLock() {
+	if !recoveryMgr.tryLock() {
 		t.Fatal("recovery manager try lock test err")
 	}
 
-	if recoveryMgr.TryLock() {
+	if recoveryMgr.tryLock() {
 		t.Fatal("recovery manager relock test err")
 	}
 
-	recoveryMgr.UnLock()
+	recoveryMgr.unLock()
 
-	if !recoveryMgr.TryLock() {
+	if !recoveryMgr.tryLock() {
 		t.Fatal("recovery manager try lock test err")
 	}
 }
