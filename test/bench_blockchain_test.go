@@ -407,7 +407,7 @@ func MockTxsP2PKH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int)
 	txs := []*types.Tx{}
 	for i := 0; i < txNumber; i++ {
 		testAccountAlias := fmt.Sprintf("testAccount%d", i)
-		testAccount, err := accountManager.Create([]chainkd.XPub{xpub.XPub}, 1, testAccountAlias, 0, signers.BIP0044)
+		testAccount, err := accountManager.Create([]chainkd.XPub{xpub.XPub}, 1, testAccountAlias, signers.BIP0044)
 		if err != nil {
 			return nil, err
 		}
@@ -454,7 +454,7 @@ func MockTxsP2SH(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum int) 
 	txs := []*types.Tx{}
 	for i := 0; i < txNumber; i++ {
 		testAccountAlias := fmt.Sprintf("testAccount%d", i)
-		testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias, 0, signers.BIP0044)
+		testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias, signers.BIP0044)
 		if err != nil {
 			return nil, err
 		}
@@ -500,7 +500,7 @@ func MockTxsMultiSign(keyDirPath string, testDB dbm.DB, txNumber, otherAssetNum 
 	txs := []*types.Tx{}
 	for i := 0; i < txNumber; i++ {
 		testAccountAlias := fmt.Sprintf("testAccount%d", i)
-		testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias, 0, signers.BIP0044)
+		testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub, xpub2.XPub}, 2, testAccountAlias, signers.BIP0044)
 		if err != nil {
 			return nil, err
 		}

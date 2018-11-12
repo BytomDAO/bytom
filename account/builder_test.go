@@ -143,7 +143,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 		},
 	}
 
-	acct, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "testAccount", 0, signers.BIP0044)
+	acct, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}

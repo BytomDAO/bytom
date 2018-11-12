@@ -132,39 +132,26 @@ func (m *Manager) AddUnconfirmedUtxo(utxos []*UTXO) {
 }
 
 // CreateAccount creates a new Account.
-func (m *Manager) CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
-	m.accountMu.Lock()
-	defer m.accountMu.Unlock()
-
-	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
-	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
-		return nil, ErrDuplicateAlias
-	}
-
-	index := uint64(1)
-	if acctIndex != 0 {
-		index = acctIndex
-	} else {
-		if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
-			index = common.BytesToUnit64(rawIndexBytes) + 1
-		}
-	}
-
-	if index >= HardenedKeyStart {
+func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
+	if acctIndex >= HardenedKeyStart {
 		return nil, ErrAccountIndex
 	}
 
-	signer, err := signers.Create("account", xpubs, quorum, index, deriveRule)
+	signer, err := signers.Create("account", xpubs, quorum, acctIndex, deriveRule)
 	id := signers.IDGenerate()
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
-	return &Account{Signer: signer, ID: id, Alias: normalizedAlias}, nil
+	return &Account{Signer: signer, ID: id, Alias: strings.ToLower(strings.TrimSpace(alias))}, nil
 }
 
 // SaveAccount save a new account.
 func (m *Manager) SaveAccount(account *Account) error {
+	if existed := m.db.Get(aliasKey(account.Alias)); existed != nil {
+		return ErrDuplicateAlias
+	}
+
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return ErrMarshalAccount
@@ -180,8 +167,12 @@ func (m *Manager) SaveAccount(account *Account) error {
 }
 
 // Create creates and save a new Account.
-func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
-	account, err := m.CreateAccount(xpubs, quorum, alias, acctIndex, deriveRule)
+func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveRule uint8) (*Account, error) {
+	acctIndex := uint64(1)
+	if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
+		acctIndex = common.BytesToUnit64(rawIndexBytes) + 1
+	}
+	account, err := CreateAccount(xpubs, quorum, alias, acctIndex, deriveRule)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +190,14 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 	if err != nil {
 		return nil, err
 	}
-	cp, err = m.CreateCtrlProgram(account, 0, change)
+
+	addrIdx := uint64(1)
+	addrIdx, err = m.getNextContractIndex(account, change)
+	if err != nil {
+		return nil, err
+	}
+
+	cp, err = CreateCtrlProgram(account, addrIdx, change)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +218,7 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 	}
 
 	for ; currentIndex < stopIndex; currentIndex++ {
-		cp, err := m.CreateCtrlProgram(account, currentIndex+1, change)
+		cp, err := CreateCtrlProgram(account, currentIndex+1, change)
 		if err != nil {
 			return err
 		}
@@ -506,17 +504,7 @@ func (m *Manager) SetCoinbaseArbitrary(arbitrary []byte) {
 }
 
 // CreateAddress generate an address for the select account
-func (m *Manager) CreateCtrlProgram(account *Account, index uint64, change bool) (cp *CtrlProgram, err error) {
-	addrIdx := uint64(1)
-	if index != 0 {
-		addrIdx = index
-	} else {
-		addrIdx, err = m.getNextContractIndex(account, change)
-		if err != nil {
-			return nil, err
-		}
-	}
-
+func CreateCtrlProgram(account *Account, addrIdx uint64, change bool) (cp *CtrlProgram, err error) {
 	path, err := signers.Path(account.Signer, signers.AccountKeySpace, change, addrIdx)
 	if err != nil {
 		return nil, err

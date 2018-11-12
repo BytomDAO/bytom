@@ -34,15 +34,18 @@ func TestLoadStatusInfo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	recoveryMgr := newRecoveryManager(testDB)
-	recoveryMgr.statusInit([]chainkd.XPub{xpub.XPub})
 	acctMgr := account.NewManager(testDB, nil)
-	recoveryMgr.resurrect(acctMgr)
+	recoveryMgr := newRecoveryManager(testDB, acctMgr)
+	// StatusInit init recovery status manager.
+	recoveryMgr.state = newRecoveryState()
+	recoveryMgr.state.XPubs = []chainkd.XPub{xpub.XPub}
+	recoveryMgr.state.XPubsStatus = NewBranchRecoveryState(AcctRecoveryWindow)
+
 	recoveryMgr.state.StartTime = time.Now()
 	recoveryMgr.commitStatusInfo()
 
-	recoveryMgrRestore := newRecoveryManager(testDB)
-	recoveryMgrRestore.loadStatusInfo(acctMgr)
+	recoveryMgrRestore := newRecoveryManager(testDB, acctMgr)
+	recoveryMgrRestore.loadStatusInfo()
 
 	if !reflect.DeepEqual(recoveryMgrRestore.state.XPubsStatus, recoveryMgr.state.XPubsStatus) {
 		t.Fatalf("testLoadStatusInfo XPubsStatus reload err")
@@ -71,18 +74,19 @@ func TestLock(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	recoveryMgr := newRecoveryManager(testDB)
-	if !recoveryMgr.tryLock() {
+	acctMgr := account.NewManager(testDB, nil)
+	recoveryMgr := newRecoveryManager(testDB, acctMgr)
+	if !recoveryMgr.tryStart() {
 		t.Fatal("recovery manager try lock test err")
 	}
 
-	if recoveryMgr.tryLock() {
+	if recoveryMgr.tryStart() {
 		t.Fatal("recovery manager relock test err")
 	}
 
-	recoveryMgr.unLock()
+	recoveryMgr.stop()
 
-	if !recoveryMgr.tryLock() {
+	if !recoveryMgr.tryStart() {
 		t.Fatal("recovery manager try lock test err")
 	}
 }

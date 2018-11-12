@@ -39,7 +39,7 @@ type Wallet struct {
 	AssetReg    *asset.Registry
 	Hsm         *pseudohsm.HSM
 	chain       *protocol.Chain
-	RecoveryMgr *RecoveryManager
+	RecoveryMgr *recoveryManager
 	rescanCh    chan struct{}
 }
 
@@ -51,7 +51,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		AssetReg:    asset,
 		chain:       chain,
 		Hsm:         hsm,
-		RecoveryMgr: newRecoveryManager(walletDB),
+		RecoveryMgr: newRecoveryManager(walletDB, account),
 		rescanCh:    make(chan struct{}, 1),
 	}
 
@@ -59,7 +59,7 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		return nil, err
 	}
 
-	if err := w.RecoveryMgr.loadStatusInfo(w.AccountMgr); err != nil {
+	if err := w.RecoveryMgr.loadStatusInfo(); err != nil {
 		return nil, err
 	}
 
@@ -110,7 +110,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		return err
 	}
 
-	if err := w.RecoveryMgr.filterRecoveryTxs(block, w.AccountMgr); err != nil {
+	if err := w.RecoveryMgr.filterRecoveryTxs(block); err != nil {
 		return err
 	}
 

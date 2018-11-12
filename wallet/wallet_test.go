@@ -50,7 +50,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount", 0, signers.BIP0044)
+	testAccount, err := accountManager.Create([]chainkd.XPub{xpub1.XPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry
 		AccountMgr:  account,
 		AssetReg:    asset,
 		chain:       chain,
-		RecoveryMgr: newRecoveryManager(walletDB),
+		RecoveryMgr: newRecoveryManager(walletDB, account),
 	}
 	return wallet
 }

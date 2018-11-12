@@ -38,7 +38,7 @@ func (a *API) restoreWalletImage(ctx context.Context, image WalletImage) Respons
 		allAccounts = append(allAccounts, acctImage.Account)
 	}
 
-	if err := a.wallet.RecoveryMgr.AddrResurrect(allAccounts, a.wallet.AccountMgr); err != nil {
+	if err := a.wallet.RecoveryMgr.AddrResurrect(allAccounts); err != nil {
 		return NewErrorResponse(err)
 	}
 
@@ -74,7 +74,7 @@ func (a *API) rescanWallet() Response {
 		return NewErrorResponse(err)
 	}
 
-	if err := a.wallet.RecoveryMgr.AddrResurrect(allAccounts, a.wallet.AccountMgr); err != nil {
+	if err := a.wallet.RecoveryMgr.AddrResurrect(allAccounts); err != nil {
 		return NewErrorResponse(err)
 	}
 
@@ -101,7 +101,7 @@ func (a *API) getWalletInfo() Response {
 func (a *API) recoveryFromRootXPubs(ctx context.Context, in struct {
 	XPubs []chainkd.XPub `json:"xpubs"`
 }) Response {
-	if err := a.wallet.RecoveryMgr.AcctResurrect(in.XPubs, a.wallet.AccountMgr); err != nil {
+	if err := a.wallet.RecoveryMgr.AcctResurrect(in.XPubs); err != nil {
 		return NewErrorResponse(err)
 	}
 
