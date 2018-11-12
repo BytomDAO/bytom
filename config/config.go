@@ -111,6 +111,9 @@ type P2PConfig struct {
 	MaxNumPeers      int    `mapstructure:"max_num_peers"`
 	HandshakeTimeout int    `mapstructure:"handshake_timeout"`
 	DialTimeout      int    `mapstructure:"dial_timeout"`
+	ProxyAddress     string `mapstructure:"proxy_address"`
+	ProxyUsername    string `mapstructure:"proxy_username"`
+	ProxyPassword    string `mapstructure:"proxy_password"`
 }
 
 // Default configurable p2p parameters.
@@ -121,6 +124,9 @@ func DefaultP2PConfig() *P2PConfig {
 		MaxNumPeers:      50,
 		HandshakeTimeout: 30,
 		DialTimeout:      3,
+		ProxyAddress:     "",
+		ProxyUsername:    "",
+		ProxyPassword:    "",
 	}
 }
 
