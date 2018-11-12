@@ -37,8 +37,20 @@ type AccountInfo struct {
 }
 
 // POST /delete-account
-func (a *API) deleteAccount(ctx context.Context, in AccountInfo) Response {
-	if err := a.wallet.AccountMgr.DeleteAccount(in.Info); err != nil {
+func (a *API) deleteAccount(ctx context.Context, filter struct {
+	ID    string `json:"id"`
+	Alias string `json:"alias"`
+}) Response {
+	accountID := filter.ID
+	if filter.Alias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.Alias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+
+	if err := a.wallet.AccountMgr.DeleteAccount(accountID); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)

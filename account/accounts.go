@@ -176,22 +176,34 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 	return m.createAddress(account, change)
 }
 
-// DeleteAccount deletes the account's ID or alias matching accountInfo.
-func (m *Manager) DeleteAccount(aliasOrID string) (err error) {
+// DeleteAccount deletes the account's ID or alias matching account ID.
+func (m *Manager) DeleteAccount(ID string) (err error) {
 	account := &Account{}
-	if account, err = m.FindByAlias(aliasOrID); err != nil {
-		if account, err = m.FindByID(aliasOrID); err != nil {
-			return err
+	if account, err = m.FindByID(ID); err != nil {
+		return err
+	}
+
+	cps, err := m.ListControlProgram()
+	if err != nil {
+		return err
+	}
+	cpCache := []byte{}
+	for _, cp := range cps {
+		if cp.AccountID == account.ID {
+			cpCache = append(cpCache, cp.ControlProgram...)
 		}
 	}
 
 	m.cacheMu.Lock()
 	m.aliasCache.Remove(account.Alias)
+	// 需不需要同时删除 account ID ？？
+	m.aliasCache.Remove(account.ID)
 	m.cacheMu.Unlock()
 
 	storeBatch := m.db.NewBatch()
 	storeBatch.Delete(aliasKey(account.Alias))
 	storeBatch.Delete(Key(account.ID))
+	storeBatch.Delete(cpCache)
 	storeBatch.Write()
 	return nil
 }

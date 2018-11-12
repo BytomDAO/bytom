@@ -94,10 +94,6 @@ func TestDeleteAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	if err = m.DeleteAccount(account1.Alias); err != nil {
-		testutil.FatalErr(t, err)
-	}
-
 	found, err := m.FindByID(account1.ID)
 	if err != nil {
 		t.Errorf("expected account %v should be deleted", found)
@@ -168,7 +164,7 @@ func TestGetAccountIndexKey(t *testing.T) {
 	if !reflect.DeepEqual(GetAccountIndexKey(xpubs1), GetAccountIndexKey(xpubs2)) {
 		t.Fatal("GetAccountIndexKey test err")
 	}
-	
+
 	if reflect.DeepEqual(xpubs1, xpubs2) {
 		t.Fatal("GetAccountIndexKey test err")
 	}
