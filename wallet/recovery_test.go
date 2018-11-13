@@ -39,7 +39,7 @@ func TestLoadStatusInfo(t *testing.T) {
 	// StatusInit init recovery status manager.
 	recoveryMgr.state = newRecoveryState()
 	recoveryMgr.state.XPubs = []chainkd.XPub{xpub.XPub}
-	recoveryMgr.state.XPubsStatus = NewBranchRecoveryState(AcctRecoveryWindow)
+	recoveryMgr.state.XPubsStatus = NewBranchRecoveryState(acctRecoveryWindow)
 
 	recoveryMgr.state.StartTime = time.Now()
 	recoveryMgr.commitStatusInfo()
