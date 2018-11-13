@@ -65,7 +65,7 @@ func (h *HSM) XCreate(alias string, auth string, language string) (*XPub, *strin
 	return xpub, mnemonic, err
 }
 
-// ImportFromMnemonic produces a xprv from mnemonic and stores it in the db.
+// ImportKeyFromMnemonic produces a xprv from mnemonic and stores it in the db.
 func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string, language string) (*XPub, error) {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
@@ -127,6 +127,30 @@ func (h *HSM) createChainKDKey(alias string, auth string, language string) (*XPu
 		return nil, nil, err
 	}
 	return xpub, &mnemonic, nil
+}
+
+// UpdateKeyAlias update key alias
+func (h *HSM) UpdateKeyAlias(xpub chainkd.XPub, auth string, newAlias string) error {
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+
+	xpb, xkey, err := h.loadDecryptedKey(xpub, auth)
+	if err != nil {
+		return err
+	}
+
+	normalizedAlias := strings.ToLower(strings.TrimSpace(newAlias))
+	if ok := h.cache.hasAlias(normalizedAlias); ok {
+		return ErrDuplicateKeyAlias
+	}
+
+	// update key alias
+	h.cache.delete(xpb)
+	xpb.Alias = normalizedAlias
+	h.cache.add(xpb)
+
+	xkey.Alias = normalizedAlias
+	return h.keyStore.StoreKey(xpb.File, xkey, auth)
 }
 
 // ListKeys returns a list of all xpubs from the store
