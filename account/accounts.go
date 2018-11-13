@@ -177,9 +177,9 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 }
 
 // DeleteAccount deletes the account's ID or alias matching account ID.
-func (m *Manager) DeleteAccount(ID string) (err error) {
+func (m *Manager) DeleteAccount(accountID string) (err error) {
 	account := &Account{}
-	if account, err = m.FindByID(ID); err != nil {
+	if account, err = m.FindByID(accountID); err != nil {
 		return err
 	}
 
@@ -187,23 +187,35 @@ func (m *Manager) DeleteAccount(ID string) (err error) {
 	if err != nil {
 		return err
 	}
-	cpCache := []byte{}
+	var hash common.Hash
 	for _, cp := range cps {
 		if cp.AccountID == account.ID {
-			cpCache = append(cpCache, cp.ControlProgram...)
+			sha3pool.Sum256(hash[:], cp.ControlProgram)
+			m.db.Delete(ContractKey(hash))
+		}
+	}
+
+	accountUtxoIter := m.db.IteratorPrefix([]byte(UTXOPreFix))
+	defer accountUtxoIter.Release()
+	for accountUtxoIter.Next() {
+		accountUtxo := &UTXO{}
+		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
+			log.WithField("err", err).Warn("GetAccountUtxos fail on unmarshal utxo")
+			continue
+		}
+
+		if accountID == accountUtxo.AccountID || accountID == "" {
+			m.db.Delete([]byte(UTXOPreFix + accountUtxo.OutputID.String()))
 		}
 	}
 
 	m.cacheMu.Lock()
 	m.aliasCache.Remove(account.Alias)
-	// 需不需要同时删除 account ID ？？
-	m.aliasCache.Remove(account.ID)
 	m.cacheMu.Unlock()
 
 	storeBatch := m.db.NewBatch()
 	storeBatch.Delete(aliasKey(account.Alias))
 	storeBatch.Delete(Key(account.ID))
-	storeBatch.Delete(cpCache)
 	storeBatch.Write()
 	return nil
 }

@@ -31,19 +31,14 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 	return NewSuccessResponse(annotatedAccount)
 }
 
-// AccountInfo is request struct for deleteAccount
-type AccountInfo struct {
-	Info string `json:"account_info"`
-}
-
 // POST /delete-account
 func (a *API) deleteAccount(ctx context.Context, filter struct {
-	ID    string `json:"id"`
-	Alias string `json:"alias"`
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
 }) Response {
-	accountID := filter.ID
-	if filter.Alias != "" {
-		acc, err := a.wallet.AccountMgr.FindByAlias(filter.Alias)
+	accountID := filter.AccountID
+	if filter.AccountAlias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
