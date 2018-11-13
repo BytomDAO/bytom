@@ -110,8 +110,9 @@ type Manager struct {
 	delayedACPsMu sync.Mutex
 	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
-	addressMu sync.Mutex
-	accountMu sync.Mutex
+	addressMu  sync.Mutex
+	accountMu  sync.Mutex
+	acctSaveMu sync.Mutex
 }
 
 // NewManager creates a new account manager
@@ -148,6 +149,9 @@ func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uin
 
 // SaveAccount save a new account.
 func (m *Manager) SaveAccount(account *Account) error {
+	m.acctSaveMu.Lock()
+	defer m.acctSaveMu.Unlock()
+
 	if existed := m.db.Get(aliasKey(account.Alias)); existed != nil {
 		return ErrDuplicateAlias
 	}
@@ -231,8 +235,8 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 		return err
 	}
 
-	for ; currentIndex < stopIndex; currentIndex++ {
-		cp, err := CreateCtrlProgram(account, currentIndex+1, change)
+	for currentIndex++; currentIndex <= stopIndex; currentIndex++ {
+		cp, err := CreateCtrlProgram(account, currentIndex, change)
 		if err != nil {
 			return err
 		}
@@ -629,10 +633,6 @@ func (m *Manager) insertControlPrograms(progs ...*CtrlProgram) error {
 
 	for _, prog := range progs {
 		sha3pool.Sum256(hash[:], prog.ControlProgram)
-		if cp := m.db.Get(ContractKey(hash)); cp != nil {
-			continue
-		}
-
 		acct, err := m.GetAccountByProgram(prog)
 		if err != nil {
 			return err

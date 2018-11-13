@@ -39,13 +39,13 @@ func TestLoadStatusInfo(t *testing.T) {
 	// StatusInit init recovery status manager.
 	recoveryMgr.state = newRecoveryState()
 	recoveryMgr.state.XPubs = []chainkd.XPub{xpub.XPub}
-	recoveryMgr.state.XPubsStatus = NewBranchRecoveryState(acctRecoveryWindow)
+	recoveryMgr.state.XPubsStatus = newBranchRecoveryState(acctRecoveryWindow)
 
 	recoveryMgr.state.StartTime = time.Now()
 	recoveryMgr.commitStatusInfo()
 
 	recoveryMgrRestore := newRecoveryManager(testDB, acctMgr)
-	recoveryMgrRestore.loadStatusInfo()
+	recoveryMgrRestore.LoadStatusInfo()
 
 	if !reflect.DeepEqual(recoveryMgrRestore.state.XPubsStatus, recoveryMgr.state.XPubsStatus) {
 		t.Fatalf("testLoadStatusInfo XPubsStatus reload err")
@@ -76,17 +76,17 @@ func TestLock(t *testing.T) {
 
 	acctMgr := account.NewManager(testDB, nil)
 	recoveryMgr := newRecoveryManager(testDB, acctMgr)
-	if !recoveryMgr.tryStart() {
+	if !recoveryMgr.tryStartXPubsRec() {
 		t.Fatal("recovery manager try lock test err")
 	}
 
-	if recoveryMgr.tryStart() {
+	if recoveryMgr.tryStartXPubsRec() {
 		t.Fatal("recovery manager relock test err")
 	}
 
-	recoveryMgr.stop()
+	recoveryMgr.stopXPubsRec()
 
-	if !recoveryMgr.tryStart() {
+	if !recoveryMgr.tryStartXPubsRec() {
 		t.Fatal("recovery manager try lock test err")
 	}
 }

@@ -40,7 +40,7 @@ var (
 	ErrInvalidAcctID = errors.New("invalid account id")
 )
 
-// BranchRecoveryState maintains the required state in-order to properly
+// branchRecoveryState maintains the required state in-order to properly
 // recover addresses derived from a particular account's internal or external
 // derivation branch.
 //
@@ -51,7 +51,7 @@ var (
 //  - Reporting that an address has been found.
 //  - Retrieving all currently derived addresses for the branch.
 //  - Looking up a particular address by its child index.
-type BranchRecoveryState struct {
+type branchRecoveryState struct {
 	// recoveryWindow defines the key-derivation lookahead used when
 	// attempting to recover the set of addresses on this branch.
 	RecoveryWindow uint64
@@ -64,10 +64,10 @@ type BranchRecoveryState struct {
 	NextUnfound uint64
 }
 
-// NewBranchRecoveryState creates a new BranchRecoveryState that can be used to
+// newBranchRecoveryState creates a new branchRecoveryState that can be used to
 // track either the external or internal branch of an account's derivation path.
-func NewBranchRecoveryState(recoveryWindow uint64) *BranchRecoveryState {
-	return &BranchRecoveryState{
+func newBranchRecoveryState(recoveryWindow uint64) *branchRecoveryState {
+	return &branchRecoveryState{
 		RecoveryWindow: recoveryWindow,
 		Horizon:        1,
 		NextUnfound:    1,
@@ -76,7 +76,7 @@ func NewBranchRecoveryState(recoveryWindow uint64) *BranchRecoveryState {
 
 // extendHorizon returns the current horizon and the number of addresses that
 // must be derived in order to maintain the desired recovery window.
-func (brs *BranchRecoveryState) extendHorizon() (uint64, uint64) {
+func (brs *branchRecoveryState) extendHorizon() (uint64, uint64) {
 	// Compute the new horizon, which should surpass our last found address
 	// by the recovery window.
 	curHorizon := brs.Horizon
@@ -99,37 +99,37 @@ func (brs *BranchRecoveryState) extendHorizon() (uint64, uint64) {
 
 // reportFound updates the last found index if the reported index exceeds the
 // current value.
-func (brs *BranchRecoveryState) reportFound(index uint64) {
+func (brs *branchRecoveryState) reportFound(index uint64) {
 	if index >= brs.NextUnfound {
 		brs.NextUnfound = index + 1
 	}
 }
 
-// AddressRecoveryState is used to manage the recovery of addresses generated
+// addressRecoveryState is used to manage the recovery of addresses generated
 // under a particular BIP32/BIP44 account. Each account tracks both an external and
 // internal branch recovery state, both of which use the same recovery window.
-type AddressRecoveryState struct {
+type addressRecoveryState struct {
 	// ExternalBranch is the recovery state of addresses generated for
 	// external use, i.e. receiving addresses.
-	ExternalBranch *BranchRecoveryState
+	ExternalBranch *branchRecoveryState
 
 	// InternalBranch is the recovery state of addresses generated for
 	// internal use, i.e. change addresses.
-	InternalBranch *BranchRecoveryState
+	InternalBranch *branchRecoveryState
 
 	Account *account.Account
 }
 
-func newAddressRecoveryState(recoveryWindow uint64, account *account.Account) *AddressRecoveryState {
-	return &AddressRecoveryState{
-		ExternalBranch: NewBranchRecoveryState(recoveryWindow),
-		InternalBranch: NewBranchRecoveryState(recoveryWindow),
+func newAddressRecoveryState(recoveryWindow uint64, account *account.Account) *addressRecoveryState {
+	return &addressRecoveryState{
+		ExternalBranch: newBranchRecoveryState(recoveryWindow),
+		InternalBranch: newBranchRecoveryState(recoveryWindow),
 		Account:        account,
 	}
 }
 
-// RecoveryState used to record the status of a recovery process.
-type RecoveryState struct {
+// recoveryState used to record the status of a recovery process.
+type recoveryState struct {
 	// XPubs recovery account xPubs
 	XPubs []chainkd.XPub
 
@@ -139,24 +139,24 @@ type RecoveryState struct {
 
 	// XPubsStatus maintains a map of each requested XPub to its active
 	// account recovery state.
-	XPubsStatus *BranchRecoveryState
+	XPubsStatus *branchRecoveryState
 
 	// AcctStatus maintains a map of each requested key scope to its active
 	// recovery state.
-	AccountsStatus map[string]*AddressRecoveryState
+	AccountsStatus map[string]*addressRecoveryState
 }
 
-func newRecoveryState() *RecoveryState {
-	return &RecoveryState{
-		AccountsStatus: make(map[string]*AddressRecoveryState),
+func newRecoveryState() *recoveryState {
+	return &recoveryState{
+		AccountsStatus: make(map[string]*addressRecoveryState),
 		StartTime:      time.Now(),
 	}
 }
 
-// StateForScope returns a ScopeRecoveryState for the provided key scope. If one
+// stateForScope returns a ScopeRecoveryState for the provided key scope. If one
 // does not already exist, a new one will be generated with the RecoveryState's
 // recoveryWindow.
-func (rs *RecoveryState) StateForScope(account *account.Account) {
+func (rs *recoveryState) stateForScope(account *account.Account) {
 	// If the account recovery state already exists, return it.
 	if _, ok := rs.AccountsStatus[account.ID]; ok {
 		return
@@ -180,7 +180,7 @@ type recoveryManager struct {
 
 	// state encapsulates and allocates the necessary recovery state for all
 	// key scopes and subsidiary derivation paths.
-	state *RecoveryState
+	state *recoveryState
 
 	//addresses all addresses derivation lookahead used when
 	// attempting to recover the set of used addresses.
@@ -201,10 +201,8 @@ func (m *recoveryManager) AddrResurrect(accts []*account.Account) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	//initialize the status of the recovery manager.
-	m.state = newRecoveryState()
 	for _, acct := range accts {
-		m.state.StateForScope(acct)
+		m.state.stateForScope(acct)
 		m.extendScanAddresses(acct.ID, true)
 		m.extendScanAddresses(acct.ID, false)
 	}
@@ -217,17 +215,15 @@ func (m *recoveryManager) AcctResurrect(xPubs []chainkd.XPub) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if !m.tryStart() {
+	if !m.tryStartXPubsRec() {
 		return ErrRecoveryBusy
 	}
 
-	//initialize the status of the recovery manager.
-	m.state = newRecoveryState()
 	m.state.XPubs = xPubs
-	m.state.XPubsStatus = NewBranchRecoveryState(acctRecoveryWindow)
+	m.state.XPubsStatus = newBranchRecoveryState(acctRecoveryWindow)
 
 	if err := m.extendScanAccounts(); err != nil {
-		m.stop()
+		m.stopXPubsRec()
 		return err
 	}
 	m.state.StartTime = time.Now()
@@ -266,7 +262,7 @@ func (m *recoveryManager) extendScanAccounts() error {
 			return err
 		}
 
-		m.state.StateForScope(account)
+		m.state.stateForScope(account)
 		//generate resurrect address for new account.
 		m.extendScanAddresses(account.ID, true)
 		m.extendScanAddresses(account.ID, false)
@@ -330,32 +326,30 @@ func (m *recoveryManager) processBlock(b *types.Block) error {
 	return nil
 }
 
-// filterRecoveryTxs Filter transactions that meet the recovery address
-func (m *recoveryManager) filterRecoveryTxs(b *types.Block) error {
+// FilterRecoveryTxs Filter transactions that meet the recovery address
+func (m *recoveryManager) FilterRecoveryTxs(b *types.Block) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if !m.started {
 		return nil
 	}
-
 	if b.Time().After(m.state.StartTime) {
-		m.db.Delete(recoveryKey)
-		m.started = false
-		m.stop()
-		m.state = newRecoveryState()
+		m.finished()
 		return nil
 	}
-
-	if err := m.processBlock(b); err != nil {
-		m.stop()
-		return err
-	}
-
-	return nil
+	return m.processBlock(b)
 }
 
-func (m *recoveryManager) loadStatusInfo() error {
+func (m *recoveryManager) finished() {
+	m.db.Delete(recoveryKey)
+	m.started = false
+	m.addresses = make(map[bc.Hash]*account.CtrlProgram)
+	m.state = newRecoveryState()
+	m.stopXPubsRec()
+}
+
+func (m *recoveryManager) LoadStatusInfo() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -368,14 +362,12 @@ func (m *recoveryManager) loadStatusInfo() error {
 		return err
 	}
 
-	if m.state.XPubs != nil {
-		if !m.tryStart() {
-			return ErrRecoveryBusy
-		}
+	if m.state.XPubs != nil && !m.tryStartXPubsRec() {
+		return ErrRecoveryBusy
 	}
 
 	if err := m.restoreAddresses(); err != nil {
-		m.stop()
+		m.stopXPubsRec()
 		return err
 	}
 
@@ -401,7 +393,7 @@ func (m *recoveryManager) restoreAddresses() error {
 	return nil
 }
 
-// ReportFound found your own address operation.
+// reportFound found your own address operation.
 func (m *recoveryManager) reportFound(account *account.Account, cp *account.CtrlProgram) error {
 	if m.state.XPubsStatus != nil && reflect.DeepEqual(m.state.XPubs, account.XPubs) {
 		//recovery from XPubs need save account to db.
@@ -444,12 +436,12 @@ func (m *recoveryManager) saveAccount(acct *account.Account) error {
 	return m.accountMgr.SaveAccount(acct)
 }
 
-//TryLock guarantee that only one xPubs recovery is in progress.
-func (m *recoveryManager) tryStart() bool {
+//tryStartXPubsRec guarantee that only one xPubs recovery is in progress.
+func (m *recoveryManager) tryStartXPubsRec() bool {
 	return atomic.CompareAndSwapInt32(&m.locked, 0, 1)
 }
 
-//UnLock release lock.
-func (m *recoveryManager) stop() {
+//stopXPubsRec release xPubs recovery lock.
+func (m *recoveryManager) stopXPubsRec() {
 	atomic.StoreInt32(&m.locked, 0)
 }
