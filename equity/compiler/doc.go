@@ -1,67 +1,70 @@
 /*
-Package equity provides a compiler for Chain's Equity contract language.
+Package equity provides a compiler for Bytom's Equity contract language.
 
 A contract is a means to lock some payment in the output of a
 transaction. It contains a number of clauses, each describing a way to
 unlock, or redeem, the payment in a subsequent transaction.  By
 executing the statements in a clause, using contract arguments
 supplied by the payer and clause arguments supplied by the redeemer,
-nodes in a Chain network can determine whether a proposed spend is
+nodes in a Bytom network can determine whether a proposed spend is
 valid.
 
 The language definition is in flux, but here's what's implemented as
-of late May 2017.
+of late Nov 2018.
 
   program = contract*
 
-  contract = "contract" identifier "(" [params] ")" "locks" identifier "{" clause+ "}"
+  contract = "contract" identifier "(" [params] ")" "locks" amount_identifier of asset_identifier "{" clause+ "}"
 
-    The identifier after "locks" is a name for the value locked by
-    the contract. It must be unlocked or re-locked (with "unlock"
+    The value(amount_identifier of asset_identifier) after "locks" is a name for
+    the value locked by the contract. It must be unlocked or re-locked (with "unlock"
     or "lock") in every clause.
 
-  clause = "clause" identifier "(" [params] ")" ["requires" requirements] "{" statement+ "}"
+  clause = "clause" identifier "(" [params] ")" "{" statement+ "}"
 
-    The requirements are blockchain values that must be present in
-    the spending transaction in order to spend the value locked by
-    the earlier transaction. Each such value must be re-locked
-    (with "lock") in its clause.
-
-  statement = verify | unlock | lock
+  statement = verify | unlock | lock | define | assign | if/else
 
   verify = "verify" expr
 
     Verifies that boolean expression expr produces a true result.
 
-  unlock = "unlock" expr
+  unlock = "unlock" expr "of" expr
 
-    Expr must evaluate to the contract value. This unlocks that
-    value for any use.
+    The first expr must be an amount, the second must be an asset.
+    the value(expr "of" expr) must evaluate to the contract value.
+    This unlocks that value for any use.
 
-  lock = "lock" expr "with" expr
+  lock = "lock" expr "of" expr "with" expr
 
-    The first expr must be a blockchain value (i.e., one named
-    with "locks" or "requires"). The second expr must be a
-    program. This unlocks expr and re-locks it with the new
-    program.
+    The first expr must be an amount, the second must be an asset.
+    The later expr after "with" must be a program. This expression describe that
+    the value(expr "of" expr) is unlocked and re-locks it with the new program immediately.
 
-  requirements = requirement | requirements "," requirement
+  define = "define" identifier : TypeName ["=" expr]
 
-  requirement = identifier ":" expr "of" expr
+    Define a temporary variable "identifier" with type "TypeName". the identifier can be defined only
+    or assigned with expr.
 
-    The first expr must be an amount, the second must be an
-    asset. This denotes that the named value must have the given
-    quantity and asset type.
+  assign = "assign" identifier "=" expr
+
+    Assign a temporary variable "identifier" with expr. Please note that
+    the "identifier" must be the defined variable with "define" expression.
+
+  if = "if" expr "{" statement+ "}" [else "{" statement+ "}"]
+
+    The check condition after "if" must be boolean expression. The if-else executes the statements
+    inside the body of if-statement when condition expression is true, otherwise executes the statements
+    inside the body of else-statement.
 
   params = param | params "," param
 
-  param = idlist ":" identifier
+  param = identifier ":" type
 
-    The identifiers in idlist are individual parameter names. The
-    identifier after the colon is their type. Available types are:
+    The identifier are individual parameter name. The identifier after the colon is their type.
+    Available types are:
 
-      Amount; Asset; Boolean; Hash; Integer; Program; PublicKey;
-      Signature; String; Time
+      Amount; Asset; Boolean; Hash; Integer; Program;
+      PublicKey; Signature; String
 
   idlist = identifier | idlist "," identifier
 
@@ -98,13 +101,13 @@ of late May 2017.
         The concatenation of x and y.
       concatpush(x, y)
         The concatenation of x with the bytecode sequence
-        needed to push y on the ChainVM stack.
-      before(x)
+        needed to push y on the BVM stack.
+      below(x)
         Whether the spending transaction is happening before
-        time x.
-      after(x)
+        blockHeight x.
+      above(x)
         Whether the spending transaction is happening after
-        time x.
+        blockHeight x.
       checkTxMultiSig([pubkey1, pubkey2, ...], [sig1, sig2, ...])
         Like checkTxSig, but for M-of-N signature checks.
         Every sig must match both the spending transaction and

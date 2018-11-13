@@ -12,6 +12,7 @@ import (
 	"time"
 
 	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/btcsuite/go-socks/socks"
 )
 
 // NetAddress defines information about a peer on the network
@@ -136,6 +137,15 @@ func (na *NetAddress) Dial() (net.Conn, error) {
 // DialTimeout calls net.DialTimeout on the address.
 func (na *NetAddress) DialTimeout(timeout time.Duration) (net.Conn, error) {
 	conn, err := net.DialTimeout("tcp", na.DialString(), timeout)
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
+}
+
+// DialTimeoutWithProxy calls socks.Proxy.DialTimeout on the address.
+func (na *NetAddress) DialTimeoutWithProxy(proxy *socks.Proxy, timeout time.Duration) (net.Conn, error) {
+	conn, err := proxy.DialTimeout("tcp", na.DialString(), timeout)
 	if err != nil {
 		return nil, err
 	}

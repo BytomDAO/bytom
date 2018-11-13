@@ -31,11 +31,8 @@ type binaryOp struct {
 }
 
 var binaryOps = []binaryOp{
-	// disjunctions disallowed (for now?)
-	// {"||", 1, "BOOLOR", "Boolean", "Boolean", "Boolean"},
-
-	// and disallow this too
-	// {"&&", 2, "BOOLAND", "Boolean", "Boolean", "Boolean"},
+	{"||", 1, "BOOLOR", "Boolean", "Boolean", "Boolean"},
+	{"&&", 2, "BOOLAND", "Boolean", "Boolean", "Boolean"},
 
 	{">", 3, "GREATERTHAN", "Integer", "Integer", "Boolean"},
 	{"<", 3, "LESSTHAN", "Integer", "Integer", "Boolean"},
@@ -72,8 +69,7 @@ type unaryOp struct {
 var unaryOps = []unaryOp{
 	{"-", "NEGATE", "Integer", "Integer"},
 
-	// not not allowed (for now?)
-	// {"!", "NOT", "Boolean", "Boolean"},
+	{"!", "NOT", "Boolean", "Boolean"},
 
 	{"~", "INVERT", "", ""},
 }
