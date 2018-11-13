@@ -110,8 +110,8 @@ type Manager struct {
 	delayedACPsMu sync.Mutex
 	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
-	accIndexMu sync.Mutex
-	accountMu  sync.Mutex
+	addressMu sync.Mutex
+	accountMu sync.Mutex
 }
 
 // NewManager creates a new account manager
@@ -159,7 +159,11 @@ func (m *Manager) SaveAccount(account *Account) error {
 
 	accountID := Key(account.ID)
 	storeBatch := m.db.NewBatch()
-	if account.KeyIndex > common.BytesToUnit64(m.db.Get(GetAccountIndexKey(account.XPubs))) {
+	acctIndex := uint64(0)
+	if rawIndexBytes := m.db.Get(GetAccountIndexKey(account.XPubs)); rawIndexBytes != nil {
+		acctIndex = common.BytesToUnit64(rawIndexBytes)
+	}
+	if account.KeyIndex > acctIndex {
 		storeBatch.Set(GetAccountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
 	}
 	storeBatch.Set(accountID, rawAccount)
@@ -170,6 +174,9 @@ func (m *Manager) SaveAccount(account *Account) error {
 
 // Create creates and save a new Account.
 func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveRule uint8) (*Account, error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
 	acctIndex := uint64(1)
 	if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
 		acctIndex = common.BytesToUnit64(rawIndexBytes) + 1
@@ -188,6 +195,9 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 
 // CreateAddress generate an address for the select account
 func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram, err error) {
+	m.addressMu.Lock()
+	defer m.addressMu.Unlock()
+
 	account, err := m.FindByID(accountID)
 	if err != nil {
 		return nil, err
@@ -208,6 +218,9 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 
 // CreateBatchAddresses generate a batch of addresses for the select account
 func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex uint64) error {
+	m.addressMu.Lock()
+	defer m.addressMu.Unlock()
+
 	account, err := m.FindByID(accountID)
 	if err != nil {
 		return err
