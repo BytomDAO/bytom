@@ -3,6 +3,7 @@ package wallet
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -173,10 +174,9 @@ type recoveryManager struct {
 	db         db.DB
 	accountMgr *account.Manager
 
-	started int32
+	locked int32
 
-	//check if ready to scan.
-	prepared bool
+	started bool
 
 	// state encapsulates and allocates the necessary recovery state for all
 	// key scopes and subsidiary derivation paths.
@@ -198,9 +198,8 @@ func newRecoveryManager(db db.DB, accountMgr *account.Manager) *recoveryManager 
 }
 
 func (m *recoveryManager) AddrResurrect(accts []*account.Account) error {
-	if !m.tryStart() {
-		return ErrRecoveryBusy
-	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	//initialize the status of the recovery manager.
 	m.state = newRecoveryState()
@@ -209,12 +208,15 @@ func (m *recoveryManager) AddrResurrect(accts []*account.Account) error {
 		m.extendScanAddresses(acct.ID, true)
 		m.extendScanAddresses(acct.ID, false)
 	}
-
-	m.Prepared()
+	m.state.StartTime = time.Now()
+	m.started = true
 	return nil
 }
 
 func (m *recoveryManager) AcctResurrect(xPubs []chainkd.XPub) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if !m.tryStart() {
 		return ErrRecoveryBusy
 	}
@@ -228,8 +230,8 @@ func (m *recoveryManager) AcctResurrect(xPubs []chainkd.XPub) error {
 		m.stop()
 		return err
 	}
-
-	m.Prepared()
+	m.state.StartTime = time.Now()
+	m.started = true
 	return nil
 }
 
@@ -330,13 +332,18 @@ func (m *recoveryManager) processBlock(b *types.Block) error {
 
 // filterRecoveryTxs Filter transactions that meet the recovery address
 func (m *recoveryManager) filterRecoveryTxs(b *types.Block) error {
-	if m.isPrepared() == false {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if !m.started {
 		return nil
 	}
 
 	if b.Time().After(m.state.StartTime) {
 		m.db.Delete(recoveryKey)
+		m.started = false
 		m.stop()
+		m.state = newRecoveryState()
 		return nil
 	}
 
@@ -349,18 +356,22 @@ func (m *recoveryManager) filterRecoveryTxs(b *types.Block) error {
 }
 
 func (m *recoveryManager) loadStatusInfo() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	rawStatus := m.db.Get(recoveryKey)
 	if rawStatus == nil {
 		return nil
 	}
 
-	if !m.tryStart() {
-		return ErrRecoveryBusy
+	if err := json.Unmarshal(rawStatus, m.state); err != nil {
+		return err
 	}
 
-	if err := json.Unmarshal(rawStatus, m.state); err != nil {
-		m.stop()
-		return err
+	if m.state.XPubs != nil {
+		if !m.tryStart() {
+			return ErrRecoveryBusy
+		}
 	}
 
 	if err := m.restoreAddresses(); err != nil {
@@ -368,7 +379,7 @@ func (m *recoveryManager) loadStatusInfo() error {
 		return err
 	}
 
-	m.Prepared()
+	m.started = true
 	return nil
 }
 
@@ -392,7 +403,7 @@ func (m *recoveryManager) restoreAddresses() error {
 
 // ReportFound found your own address operation.
 func (m *recoveryManager) reportFound(account *account.Account, cp *account.CtrlProgram) error {
-	if m.state.XPubsStatus != nil {
+	if m.state.XPubsStatus != nil && reflect.DeepEqual(m.state.XPubs, account.XPubs) {
 		//recovery from XPubs need save account to db.
 		if err := m.saveAccount(account); err != nil {
 			return err
@@ -433,29 +444,12 @@ func (m *recoveryManager) saveAccount(acct *account.Account) error {
 	return m.accountMgr.SaveAccount(acct)
 }
 
-//TryLock guarantee that only one recovery is in progress.
+//TryLock guarantee that only one xPubs recovery is in progress.
 func (m *recoveryManager) tryStart() bool {
-	return atomic.CompareAndSwapInt32(&m.started, 0, 1)
+	return atomic.CompareAndSwapInt32(&m.locked, 0, 1)
 }
 
 //UnLock release lock.
 func (m *recoveryManager) stop() {
-	m.mu.Lock()
-	m.prepared = false
-	m.mu.Unlock()
-	atomic.StoreInt32(&m.started, 0)
-}
-
-func (m *recoveryManager) isPrepared() bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	return m.prepared
-}
-
-func (m *recoveryManager) Prepared() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.prepared = true
+	atomic.StoreInt32(&m.locked, 0)
 }
