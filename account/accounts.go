@@ -138,11 +138,11 @@ func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uin
 	}
 
 	signer, err := signers.Create("account", xpubs, quorum, acctIndex, deriveRule)
-	id := signers.IDGenerate()
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
+	id := signers.IDGenerate()
 	return &Account{Signer: signer, ID: id, Alias: strings.ToLower(strings.TrimSpace(alias))}, nil
 }
 
@@ -159,7 +159,9 @@ func (m *Manager) SaveAccount(account *Account) error {
 
 	accountID := Key(account.ID)
 	storeBatch := m.db.NewBatch()
-	storeBatch.Set(GetAccountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
+	if account.KeyIndex > common.BytesToUnit64(m.db.Get(GetAccountIndexKey(account.XPubs))) {
+		storeBatch.Set(GetAccountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
+	}
 	storeBatch.Set(accountID, rawAccount)
 	storeBatch.Set(aliasKey(account.Alias), []byte(account.ID))
 	storeBatch.Write()
@@ -376,9 +378,6 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 
 // GetContractIndex return the current index
 func (m *Manager) GetContractIndex(accountID string) uint64 {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-
 	index := uint64(0)
 	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
 		index = common.BytesToUnit64(rawIndexBytes)

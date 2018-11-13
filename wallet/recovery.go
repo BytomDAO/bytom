@@ -19,13 +19,13 @@ import (
 )
 
 const (
-	// AcctRecoveryWindow defines the account derivation lookahead used when
+	// acctRecoveryWindow defines the account derivation lookahead used when
 	// attempting to recover the set of used accounts.
-	AcctRecoveryWindow = uint64(6)
+	acctRecoveryWindow = uint64(6)
 
-	// AddrRecoveryWindow defines the address derivation lookahead used when
+	// addrRecoveryWindow defines the address derivation lookahead used when
 	// attempting to recover the set of used addresses.
-	AddrRecoveryWindow = uint64(128)
+	addrRecoveryWindow = uint64(128)
 )
 
 //recoveryKey key for db store recovery info.
@@ -163,7 +163,7 @@ func (rs *RecoveryState) StateForScope(account *account.Account) {
 
 	// Otherwise, initialize the recovery state for this scope with the
 	// chosen recovery window.
-	rs.AccountsStatus[account.ID] = newAddressRecoveryState(AddrRecoveryWindow, account)
+	rs.AccountsStatus[account.ID] = newAddressRecoveryState(addrRecoveryWindow, account)
 }
 
 // recoveryManager manage recovery wallet from key.
@@ -222,7 +222,7 @@ func (m *recoveryManager) AcctResurrect(xPubs []chainkd.XPub) error {
 	//initialize the status of the recovery manager.
 	m.state = newRecoveryState()
 	m.state.XPubs = xPubs
-	m.state.XPubsStatus = NewBranchRecoveryState(AcctRecoveryWindow)
+	m.state.XPubsStatus = NewBranchRecoveryState(acctRecoveryWindow)
 
 	if err := m.extendScanAccounts(); err != nil {
 		m.stop()
@@ -414,22 +414,22 @@ func (m *recoveryManager) reportFound(account *account.Account, cp *account.Ctrl
 		return err
 	}
 
-	if err := m.commitStatusInfo(); err != nil {
+	if err := m.accountMgr.CreateBatchAddresses(account.ID, cp.Change, cp.KeyIndex); err != nil {
 		return err
 	}
 
-	return m.accountMgr.CreateBatchAddresses(account.ID, cp.Change, cp.KeyIndex)
+	return m.commitStatusInfo()
 }
 
 func (m *recoveryManager) saveAccount(acct *account.Account) error {
 	tmp, err := m.accountMgr.FindByID(acct.ID)
-	if tmp != nil {
-		return nil
-	}
-	if errors.Root(err) != account.ErrFindAccount {
+	if err != nil && errors.Root(err) != account.ErrFindAccount {
 		return err
 	}
 
+	if tmp != nil {
+		return nil
+	}
 	return m.accountMgr.SaveAccount(acct)
 }
 
