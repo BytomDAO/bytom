@@ -191,13 +191,12 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 		return nil, err
 	}
 
-	addrIdx := uint64(1)
-	addrIdx, err = m.getNextContractIndex(account, change)
+	addrIdx, err := m.getCurrentContractIndex(account, change)
 	if err != nil {
 		return nil, err
 	}
 
-	cp, err = CreateCtrlProgram(account, addrIdx, change)
+	cp, err = CreateCtrlProgram(account, addrIdx+1, change)
 	if err != nil {
 		return nil, err
 	}
@@ -582,53 +581,12 @@ func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
 	return append(accountIndexPrefix, hash[:]...)
 }
 
-func (m *Manager) getNextBip32ContractIndex(accountID string, change bool) (uint64, error) {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-
-	nextIndex := uint64(1)
-	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
-		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
-	}
-	if nextIndex >= HardenedKeyStart {
-		return 0, ErrContractIndex
-	}
-
-	m.db.Set(contractIndexKey(accountID), common.Unit64ToBytes(nextIndex))
-	return nextIndex, nil
-}
-
-func (m *Manager) getNextBip44ContractIndex(accountID string, change bool) (uint64, error) {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-
-	nextIndex := uint64(1)
-	if rawIndexBytes := m.db.Get(bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
-		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
-	}
-	if nextIndex >= HardenedKeyStart {
-		return 0, ErrContractIndex
-	}
-	m.db.Set(bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(nextIndex))
-	return nextIndex, nil
-}
-
 func (m *Manager) getCurrentContractIndex(account *Account, change bool) (uint64, error) {
 	switch account.DeriveRule {
 	case signers.BIP0032:
 		return m.GetContractIndex(account.ID), nil
 	case signers.BIP0044:
 		return m.GetBip44ContractIndex(account.ID, change), nil
-	}
-	return 0, ErrDeriveRule
-}
-
-func (m *Manager) getNextContractIndex(account *Account, change bool) (uint64, error) {
-	switch account.DeriveRule {
-	case signers.BIP0032:
-		return m.getNextBip32ContractIndex(account.ID, change)
-	case signers.BIP0044:
-		return m.getNextBip44ContractIndex(account.ID, change)
 	}
 	return 0, ErrDeriveRule
 }
@@ -656,14 +614,39 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 
 func (m *Manager) insertControlPrograms(progs ...*CtrlProgram) error {
 	var hash common.Hash
+
 	for _, prog := range progs {
+		sha3pool.Sum256(hash[:], prog.ControlProgram)
+		if cp := m.db.Get(ContractKey(hash)); cp != nil {
+			continue
+		}
+
+		acct, err := m.GetAccountByProgram(prog)
+		if err != nil {
+			return err
+		}
+
 		accountCP, err := json.Marshal(prog)
 		if err != nil {
 			return err
 		}
 
-		sha3pool.Sum256(hash[:], prog.ControlProgram)
-		m.db.Set(ContractKey(hash), accountCP)
+		storeBatch := m.db.NewBatch()
+		storeBatch.Set(ContractKey(hash), accountCP)
+		addrIndex, err := m.getCurrentContractIndex(acct, prog.Change)
+		if err != nil {
+			return err
+		}
+
+		if prog.KeyIndex > addrIndex {
+			switch acct.DeriveRule {
+			case signers.BIP0032:
+				storeBatch.Set(contractIndexKey(acct.ID), common.Unit64ToBytes(prog.KeyIndex))
+			case signers.BIP0044:
+				storeBatch.Set(bip44ContractIndexKey(acct.ID, prog.Change), common.Unit64ToBytes(prog.KeyIndex))
+			}
+		}
+		storeBatch.Write()
 	}
 	return nil
 }
