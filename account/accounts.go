@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
+	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
@@ -50,6 +51,7 @@ var (
 	ErrDeriveRule      = errors.New("invalid key derive rule")
 	ErrContractIndex   = errors.New("exceed the maximum addresses per account")
 	ErrAccountIndex    = errors.New("exceed the maximum accounts per xpub")
+	ErrFindTransaction = errors.New("no transaction")
 )
 
 // ContractKey account control promgram store prefix
@@ -183,6 +185,7 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 		return err
 	}
 
+	// delete control program matching accountID
 	cps, err := m.ListControlProgram()
 	if err != nil {
 		return err
@@ -195,6 +198,7 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 		}
 	}
 
+	// delete utxos matching accountID
 	accountUtxoIter := m.db.IteratorPrefix([]byte(UTXOPreFix))
 	defer accountUtxoIter.Release()
 	for accountUtxoIter.Next() {
@@ -204,8 +208,58 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 			continue
 		}
 
-		if accountID == accountUtxo.AccountID || accountID == "" {
+		if accountID == accountUtxo.AccountID {
 			m.db.Delete([]byte(UTXOPreFix + accountUtxo.OutputID.String()))
+		}
+	}
+
+	// delete tx matching accountID
+	txPrefix := "TXS:"
+	txIndexPrefix := "TID:"
+	txIter := m.db.IteratorPrefix([]byte(txPrefix))
+	defer txIter.Release()
+
+	allAccounts, err := m.ListAccounts("")
+	if err != nil {
+		return err
+	}
+	isRelatedSelf := false
+	isRelatedAll := false
+	for txIter.Next() {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
+			return err
+		}
+
+		for _, input := range annotatedTx.Inputs {
+			if input.AccountID == accountID {
+				isRelatedSelf = true
+			}
+			for _, acc := range allAccounts {
+				if input.AccountID == acc.ID {
+					isRelatedAll = true
+				}
+			}
+		}
+
+		for _, output := range annotatedTx.Outputs {
+			if output.AccountID == accountID {
+				isRelatedSelf = true
+			}
+			for _, acc := range allAccounts {
+				if output.AccountID == acc.ID {
+					isRelatedAll = true
+				}
+			}
+		}
+
+		if isRelatedSelf && !isRelatedAll {
+			formatKey := m.db.Get([]byte(txIndexPrefix + annotatedTx.ID.String()))
+			if formatKey == nil {
+				return ErrFindTransaction
+			}
+			m.db.Delete([]byte(txPrefix + string(formatKey)))
+			m.db.Delete([]byte(txIndexPrefix + annotatedTx.ID.String()))
 		}
 	}
 
