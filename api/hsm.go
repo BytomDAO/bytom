@@ -41,10 +41,9 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 
 func (a *API) pseudohsmUpdateKeyAlias(ctx context.Context, in struct {
 	XPub     chainkd.XPub `json:"xpub"`
-	Password string       `json:"password"`
 	NewAlias string       `json:"new_alias"`
 }) Response {
-	if err := a.wallet.Hsm.UpdateKeyAlias(in.XPub, in.Password, in.NewAlias); err != nil {
+	if err := a.wallet.Hsm.UpdateKeyAlias(in.XPub, in.NewAlias); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)

@@ -67,9 +67,9 @@ var listKeysCmd = &cobra.Command{
 }
 
 var updateKeyAliasCmd = &cobra.Command{
-	Use:   "update-key-alias <xpub> <password> <new-alias>",
+	Use:   "update-key-alias <xpub> <new-alias>",
 	Short: "Update key alias",
-	Args:  cobra.ExactArgs(3),
+	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		xpub := new(chainkd.XPub)
 		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
@@ -79,9 +79,8 @@ var updateKeyAliasCmd = &cobra.Command{
 
 		ins := struct {
 			XPub     chainkd.XPub `json:"xpub"`
-			Password string       `json:"password"`
 			NewAlias string       `json:"new_alias"`
-		}{XPub: *xpub, Password: args[1], NewAlias: args[2]}
+		}{XPub: *xpub, NewAlias: args[1]}
 
 		if _, exitCode := util.ClientCall("/update-key-alias", &ins); exitCode != util.Success {
 			os.Exit(exitCode)
