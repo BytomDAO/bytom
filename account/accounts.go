@@ -178,14 +178,13 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 	return m.createAddress(account, change)
 }
 
-// DeleteAccount deletes the account's ID or alias matching account ID.
-func (m *Manager) DeleteAccount(accountID string) (err error) {
+// DeleteControlProgramByAccountID deletes control program matching accountID
+func (m *Manager) DeleteControlProgramByAccountID(accountID string) (err error) {
 	account := &Account{}
 	if account, err = m.FindByID(accountID); err != nil {
 		return err
 	}
 
-	// delete control program matching accountID
 	cps, err := m.ListControlProgram()
 	if err != nil {
 		return err
@@ -197,8 +196,11 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 			m.db.Delete(ContractKey(hash))
 		}
 	}
+	return nil
+}
 
-	// delete utxos matching accountID
+// DeleteUtxosByAccountID deletes utxos matching accountID
+func (m *Manager) DeleteUtxosByAccountID(accountID string) (err error) {
 	accountUtxoIter := m.db.IteratorPrefix([]byte(UTXOPreFix))
 	defer accountUtxoIter.Release()
 	for accountUtxoIter.Next() {
@@ -212,8 +214,11 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 			m.db.Delete([]byte(UTXOPreFix + accountUtxo.OutputID.String()))
 		}
 	}
+	return nil
+}
 
-	// delete tx matching accountID
+// DeleteTxsByAccountID deletes txs matching accountID
+func (m *Manager) DeleteTxsByAccountID(accountID string) (err error) {
 	txPrefix := "TXS:"
 	txIndexPrefix := "TID:"
 	txIter := m.db.IteratorPrefix([]byte(txPrefix))
@@ -268,6 +273,15 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 			m.db.Delete([]byte(txPrefix + string(formatKey)))
 			m.db.Delete([]byte(txIndexPrefix + annotatedTx.ID.String()))
 		}
+	}
+	return nil
+}
+
+// DeleteAccount deletes the account's ID or alias matching account ID.
+func (m *Manager) DeleteAccount(accountID string) (err error) {
+	account := &Account{}
+	if account, err = m.FindByID(accountID); err != nil {
+		return err
 	}
 
 	m.cacheMu.Lock()
