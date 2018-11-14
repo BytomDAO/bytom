@@ -167,6 +167,39 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Accou
 	return account, nil
 }
 
+func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) (err error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
+	account, err := m.FindByID(accountID)
+	if err != nil {
+		return err
+	}
+	oldAlias := account.Alias
+
+	normalizedAlias := strings.ToLower(strings.TrimSpace(newAlias))
+	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
+		return ErrDuplicateAlias
+	}
+
+	m.cacheMu.Lock()
+	m.aliasCache.Remove(oldAlias)
+	m.cacheMu.Unlock()
+
+	account.Alias = normalizedAlias
+	rawAccount, err := json.Marshal(account)
+	if err != nil {
+		return ErrMarshalAccount
+	}
+
+	storeBatch := m.db.NewBatch()
+	storeBatch.Delete(aliasKey(oldAlias))
+	storeBatch.Set(Key(accountID), rawAccount)
+	storeBatch.Set(aliasKey(normalizedAlias), []byte(accountID))
+	storeBatch.Write()
+	return nil
+}
+
 // CreateAddress generate an address for the select account
 func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram, err error) {
 	account, err := m.FindByID(accountID)

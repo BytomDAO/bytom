@@ -81,6 +81,39 @@ func TestCreateAccountReusedAlias(t *testing.T) {
 	}
 }
 
+func TestUpdateAccountAlias(t *testing.T) {
+	oldAlias := "test-alias"
+	newAlias := "my-alias"
+
+	m := mockAccountManager(t)
+	account := m.createTestAccount(t, oldAlias, nil)
+	if err := m.UpdateAccountAlias("testID", newAlias); err == nil {
+		t.Fatal("expected error when using an invalid account id")
+	}
+
+	err := m.UpdateAccountAlias(account.ID, oldAlias)
+	if errors.Root(err) != ErrDuplicateAlias {
+		t.Errorf("expected %s when using a duplicate alias, got %v", ErrDuplicateAlias, err)
+	}
+
+	if err := m.UpdateAccountAlias(account.ID, newAlias); err != nil {
+		t.Errorf("expected account %v alias should be update", account)
+	}
+
+	updatedAccount, err := m.FindByID(account.ID)
+	if err != nil {
+		t.Errorf("unexpected error %v", err)
+	}
+
+	if updatedAccount.Alias != newAlias {
+		t.Fatalf("alias:\ngot:  %v\nwant: %v", updatedAccount.Alias, newAlias)
+	}
+
+	if _, err = m.FindByAlias(oldAlias); errors.Root(err) != ErrFindAccount {
+		t.Errorf("expected %s when using a old alias, got %v", ErrFindAccount, err)
+	}
+}
+
 func TestDeleteAccount(t *testing.T) {
 	m := mockAccountManager(t)
 
@@ -168,7 +201,7 @@ func TestGetAccountIndexKey(t *testing.T) {
 	if !reflect.DeepEqual(GetAccountIndexKey(xpubs1), GetAccountIndexKey(xpubs2)) {
 		t.Fatal("GetAccountIndexKey test err")
 	}
-	
+
 	if reflect.DeepEqual(xpubs1, xpubs2) {
 		t.Fatal("GetAccountIndexKey test err")
 	}
