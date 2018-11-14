@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
@@ -177,7 +178,7 @@ func (ctx *walletTestContext) createAccount(name string, keys []string, quorum i
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := ctx.Wallet.AccountMgr.Create(xpubs, quorum, name)
+	_, err := ctx.Wallet.AccountMgr.Create(xpubs, quorum, name, signers.BIP0044)
 	return err
 }
 
