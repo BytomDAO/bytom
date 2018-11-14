@@ -203,9 +203,15 @@ func (m *recoveryManager) AddrResurrect(accts []*account.Account) error {
 
 	for _, acct := range accts {
 		m.state.stateForScope(acct)
-		m.extendScanAddresses(acct.ID, true)
-		m.extendScanAddresses(acct.ID, false)
+		if err := m.extendScanAddresses(acct.ID, true); err != nil {
+			return err
+		}
+
+		if err := m.extendScanAddresses(acct.ID, false); err != nil {
+			return err
+		}
 	}
+
 	m.state.StartTime = time.Now()
 	m.started = true
 	return nil
@@ -264,8 +270,13 @@ func (m *recoveryManager) extendScanAccounts() error {
 
 		m.state.stateForScope(account)
 		//generate resurrect address for new account.
-		m.extendScanAddresses(account.ID, true)
-		m.extendScanAddresses(account.ID, false)
+		if err := m.extendScanAddresses(account.ID, true); err != nil {
+			return err
+		}
+
+		if err := m.extendScanAddresses(account.ID, false); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -378,13 +389,13 @@ func (m *recoveryManager) LoadStatusInfo() error {
 // restoreAddresses resume addresses for unfinished tasks
 func (m *recoveryManager) restoreAddresses() error {
 	for _, state := range m.state.AccountsStatus {
-		for index := uint64(0); index <= state.InternalBranch.Horizon; index++ {
+		for index := uint64(1); index <= state.InternalBranch.Horizon; index++ {
 			if err := m.extendAddress(state.Account, index, true); err != nil {
 				return err
 			}
 		}
 
-		for index := uint64(0); index <= state.ExternalBranch.Horizon; index++ {
+		for index := uint64(1); index <= state.ExternalBranch.Horizon; index++ {
 			if err := m.extendAddress(state.Account, index, false); err != nil {
 				return err
 			}
@@ -443,5 +454,6 @@ func (m *recoveryManager) tryStartXPubsRec() bool {
 
 //stopXPubsRec release xPubs recovery lock.
 func (m *recoveryManager) stopXPubsRec() {
+	m.state.XPubs = nil
 	atomic.StoreInt32(&m.locked, 0)
 }
