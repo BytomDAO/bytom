@@ -67,11 +67,11 @@ func TestUpdateKeyAlias(t *testing.T) {
 		t.Fatal("the created key alias should be lowercase")
 	}
 
-	if err = hsm.UpdateKeyAlias(xpub.XPub, "password", oldAlias); err != ErrDuplicateKeyAlias {
+	if err = hsm.UpdateKeyAlias(xpub.XPub, oldAlias); err != ErrDuplicateKeyAlias {
 		t.Fatal("got error:", err, "want error:", ErrDuplicateKeyAlias)
 	}
 
-	if err = hsm.UpdateKeyAlias(xpub.XPub, "password", newAlias); err != nil {
+	if err = hsm.UpdateKeyAlias(xpub.XPub, newAlias); err != nil {
 		t.Fatal(err)
 	}
 
