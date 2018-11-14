@@ -108,6 +108,10 @@ func TestUpdateAccountAlias(t *testing.T) {
 	if updatedAccount.Alias != newAlias {
 		t.Fatalf("alias:\ngot:  %v\nwant: %v", updatedAccount.Alias, newAlias)
 	}
+
+	if _, err = m.FindByAlias(oldAlias); errors.Root(err) != ErrFindAccount {
+		t.Errorf("expected %s when using a old alias, got %v", ErrFindAccount, err)
+	}
 }
 
 func TestDeleteAccount(t *testing.T) {

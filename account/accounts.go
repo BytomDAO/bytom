@@ -175,6 +175,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) (err err
 	if err != nil {
 		return err
 	}
+	oldAlias := account.Alias
 
 	normalizedAlias := strings.ToLower(strings.TrimSpace(newAlias))
 	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
@@ -182,7 +183,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) (err err
 	}
 
 	m.cacheMu.Lock()
-	m.aliasCache.Remove(account.Alias)
+	m.aliasCache.Remove(oldAlias)
 	m.cacheMu.Unlock()
 
 	account.Alias = normalizedAlias
@@ -192,6 +193,7 @@ func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) (err err
 	}
 
 	storeBatch := m.db.NewBatch()
+	storeBatch.Delete(aliasKey(oldAlias))
 	storeBatch.Set(Key(accountID), rawAccount)
 	storeBatch.Set(aliasKey(normalizedAlias), []byte(accountID))
 	storeBatch.Write()
