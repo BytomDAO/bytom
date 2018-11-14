@@ -234,7 +234,7 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 		return nil, err
 	}
 
-	return cp, m.saveControlProgram(true, cp)
+	return cp, m.saveControlProgram(cp, true)
 }
 
 // CreateBatchAddresses generate a batch of addresses for the select account
@@ -258,7 +258,7 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 			return err
 		}
 
-		if err := m.saveControlProgram(true, cp); err != nil {
+		if err := m.saveControlProgram(cp, true); err != nil {
 			return err
 		}
 	}
@@ -660,7 +660,7 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 	return program, nil
 }
 
-func (m *Manager) saveControlProgram(updateIndex bool, prog *CtrlProgram) error {
+func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error {
 	var hash common.Hash
 
 	sha3pool.Sum256(hash[:], prog.ControlProgram)
@@ -705,7 +705,7 @@ func (m *Manager) SaveControlPrograms(progs ...*CtrlProgram) error {
 			return err
 		}
 
-		m.saveControlProgram(prog.KeyIndex > currentIndex, prog)
+		m.saveControlProgram(prog, prog.KeyIndex > currentIndex)
 	}
 	return nil
 }
