@@ -376,6 +376,6 @@ func (m *Manager) insertControlProgramDelayed(b *txbuilder.TemplateBuilder, acp 
 		if len(acps) == 0 {
 			return nil
 		}
-		return m.insertControlPrograms(acps...)
+		return m.SaveControlPrograms(acps...)
 	})
 }

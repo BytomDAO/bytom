@@ -14,8 +14,9 @@ func TestRequireAllParamsUsedInClauses(t *testing.T) {
 					},
 				},
 				&lockStatement{
-					locked:  varRef("baz"),
-					program: varRef("foo"),
+					lockedAmount: varRef("10000"),
+					lockedAsset:  varRef("baz"),
+					program:      varRef("foo"),
 				},
 			},
 		},
@@ -29,8 +30,9 @@ func TestRequireAllParamsUsedInClauses(t *testing.T) {
 					},
 				},
 				&lockStatement{
-					locked:  varRef("xyzzy"),
-					program: varRef("foo"),
+					lockedAmount: varRef("20000"),
+					lockedAsset:  varRef("xyzzy"),
+					program:      varRef("foo"),
 				},
 			},
 		},

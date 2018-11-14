@@ -66,6 +66,29 @@ var listKeysCmd = &cobra.Command{
 	},
 }
 
+var updateKeyAliasCmd = &cobra.Command{
+	Use:   "update-key-alias <xpub> <new-alias>",
+	Short: "Update key alias",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		xpub := new(chainkd.XPub)
+		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
+			jww.ERROR.Println("update-key-alias xpub not valid:", err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		ins := struct {
+			XPub     chainkd.XPub `json:"xpub"`
+			NewAlias string       `json:"new_alias"`
+		}{XPub: *xpub, NewAlias: args[1]}
+
+		if _, exitCode := util.ClientCall("/update-key-alias", &ins); exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+		jww.FEEDBACK.Println("Successfully update key alias")
+	},
+}
+
 var resetKeyPwdCmd = &cobra.Command{
 	Use:   "reset-key-password <xpub> <old-password> <new-password>",
 	Short: "Reset key password",
