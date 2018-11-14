@@ -220,6 +220,7 @@ func (a *API) buildHandler() {
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
 		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
+		m.Handle("/update-key-alias", jsonHandler(a.pseudohsmUpdateKeyAlias))
 		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))

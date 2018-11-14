@@ -152,6 +152,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(createKeyCmd)
 	BytomcliCmd.AddCommand(deleteKeyCmd)
 	BytomcliCmd.AddCommand(listKeysCmd)
+	BytomcliCmd.AddCommand(updateKeyAliasCmd)
 	BytomcliCmd.AddCommand(resetKeyPwdCmd)
 	BytomcliCmd.AddCommand(checkKeyPwdCmd)
 
