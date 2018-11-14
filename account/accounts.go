@@ -316,7 +316,9 @@ func (m *Manager) DeleteControlProgramByAccountID(accountID string) (err error) 
 	for _, cp := range cps {
 		if cp.AccountID == account.ID {
 			sha3pool.Sum256(hash[:], cp.ControlProgram)
-			m.db.Delete(ContractKey(hash))
+			storeBatch := m.db.NewBatch()
+			storeBatch.Delete(ContractKey(hash))
+			storeBatch.Write()
 		}
 	}
 	return nil
@@ -334,7 +336,9 @@ func (m *Manager) DeleteUtxosByAccountID(accountID string) (err error) {
 		}
 
 		if accountID == accountUtxo.AccountID {
-			m.db.Delete([]byte(UTXOPreFix + accountUtxo.OutputID.String()))
+			storeBatch := m.db.NewBatch()
+			storeBatch.Delete([]byte(UTXOPreFix + accountUtxo.OutputID.String()))
+			storeBatch.Write()
 		}
 	}
 	return nil
@@ -393,8 +397,10 @@ func (m *Manager) DeleteTxsByAccountID(accountID string) (err error) {
 			if formatKey == nil {
 				return ErrFindTransaction
 			}
-			m.db.Delete([]byte(txPrefix + string(formatKey)))
-			m.db.Delete([]byte(txIndexPrefix + annotatedTx.ID.String()))
+			storeBatch := m.db.NewBatch()
+			storeBatch.Delete([]byte(txPrefix + string(formatKey)))
+			storeBatch.Delete([]byte(txIndexPrefix + annotatedTx.ID.String()))
+			storeBatch.Write()
 		}
 	}
 	return nil
@@ -404,6 +410,16 @@ func (m *Manager) DeleteTxsByAccountID(accountID string) (err error) {
 func (m *Manager) DeleteAccount(accountID string) (err error) {
 	account := &Account{}
 	if account, err = m.FindByID(accountID); err != nil {
+		return err
+	}
+
+	if err := m.DeleteControlProgramByAccountID(accountID); err != nil {
+		return err
+	}
+	if err := m.DeleteUtxosByAccountID(accountID); err != nil {
+		return err
+	}
+	if err := m.DeleteTxsByAccountID(accountID); err != nil {
 		return err
 	}
 
