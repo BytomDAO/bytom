@@ -223,6 +223,13 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 	if err != nil {
 		return err
 	}
+	for i, aa := range allAccounts {
+		if aa.ID == accountID {
+			allAccounts = append(allAccounts[:i], allAccounts[i+1:]...)
+			break
+		}
+	}
+
 	isRelatedSelf := false
 	isRelatedAll := false
 	for txIter.Next() {
