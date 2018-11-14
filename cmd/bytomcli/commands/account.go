@@ -73,6 +73,25 @@ var createAccountCmd = &cobra.Command{
 	},
 }
 
+var updateAccountAliasCmd = &cobra.Command{
+	Use:   "update-account-alias <account_id> <new_alias>",
+	Short: "update account alias",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		var ins = struct {
+			AccountID string `json:"account_id"`
+			NewAlias  string `json:"new_alias"`
+		}{AccountID: args[0], NewAlias: args[1]}
+
+		_, exitCode := util.ClientCall("/update-account-alias", &ins)
+		if exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+
+		jww.FEEDBACK.Println("Successfully update account alias")
+	},
+}
+
 var listAccountsCmd = &cobra.Command{
 	Use:   "list-accounts",
 	Short: "List the existing accounts",

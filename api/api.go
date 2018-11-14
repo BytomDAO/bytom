@@ -200,6 +200,7 @@ func (a *API) buildHandler() {
 		walletEnable = true
 
 		m.Handle("/create-account", jsonHandler(a.createAccount))
+		m.Handle("/update-account-alias", jsonHandler(a.updateAccountAlias))
 		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
 		m.Handle("/delete-account", jsonHandler(a.deleteAccount))
 

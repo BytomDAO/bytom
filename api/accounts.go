@@ -31,6 +31,17 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 	return NewSuccessResponse(annotatedAccount)
 }
 
+// POST update-account-alias
+func (a *API) updateAccountAlias(ctx context.Context, ins struct {
+	AccountID string `json:"account_id"`
+	NewAlias  string `json:"new_alias"`
+}) Response {
+	if err := a.wallet.AccountMgr.UpdateAccountAlias(ins.AccountID, ins.NewAlias); err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(nil)
+}
+
 // AccountInfo is request struct for deleteAccount
 type AccountInfo struct {
 	Info string `json:"account_info"`
