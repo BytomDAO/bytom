@@ -436,12 +436,12 @@ func (m *recoveryManager) reportFound(account *account.Account, cp *account.Ctrl
 }
 
 func (m *recoveryManager) saveAccount(acct *account.Account) error {
-	acct, err := m.accountMgr.FindByID(acct.ID)
+	tmp, err := m.accountMgr.FindByID(acct.ID)
 	if err != nil && errors.Root(err) != account.ErrFindAccount {
 		return err
 	}
 
-	if acct != nil {
+	if tmp != nil {
 		return nil
 	}
 	return m.accountMgr.SaveAccount(acct)
