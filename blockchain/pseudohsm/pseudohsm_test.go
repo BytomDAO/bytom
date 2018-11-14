@@ -47,8 +47,7 @@ func TestCreateKeyWithWhiteSpaceTrimed(t *testing.T) {
 		t.Fatal("the created key alias should be lowercase")
 	}
 
-	err = hsm.XDelete(xpub.XPub, "password")
-	if err != nil {
+	if err = hsm.XDelete(xpub.XPub, "password"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -75,8 +74,7 @@ func TestUpdateKeyAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = hsm.XDelete(xpub.XPub, "password")
-	if err != nil {
+	if err = hsm.XDelete(xpub.XPub, "password"); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -160,9 +160,12 @@ func (h *HSM) UpdateKeyAlias(xpub chainkd.XPub, newAlias string) error {
 	}
 
 	encrptKeyJSON.Alias = normalizedAlias
-	if keyJSON, err := json.Marshal(encrptKeyJSON); err != nil {
+	keyJSON, err := json.Marshal(encrptKeyJSON)
+	if err != nil {
 		return err
-	} else if err := writeKeyFile(xpb.File, keyJSON); err != nil {
+	}
+
+	if err := writeKeyFile(xpb.File, keyJSON); err != nil {
 		return err
 	}
 
