@@ -33,10 +33,19 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 
 // POST update-account-alias
 func (a *API) updateAccountAlias(ctx context.Context, ins struct {
-	AccountID string `json:"account_id"`
-	NewAlias  string `json:"new_alias"`
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+	NewAlias     string `json:"new_alias"`
 }) Response {
-	if err := a.wallet.AccountMgr.UpdateAccountAlias(ins.AccountID, ins.NewAlias); err != nil {
+	accountID := ins.AccountID
+	if ins.AccountAlias != "" {
+		foundAccount, err := a.wallet.AccountMgr.FindByAlias(ins.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = foundAccount.ID
+	}
+	if err := a.wallet.AccountMgr.UpdateAccountAlias(accountID, ins.NewAlias); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)

@@ -15,6 +15,9 @@ func init() {
 	createAccountCmd.PersistentFlags().IntVarP(&accountQuorum, "quorom", "q", 1, "quorum must be greater than 0 and less than or equal to the number of signers")
 	createAccountCmd.PersistentFlags().StringVarP(&accountToken, "access", "a", "", "access token")
 
+	updateAccountAliasCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
+	updateAccountAliasCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
+
 	listAccountsCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
 	listAccountsCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
 
@@ -74,14 +77,15 @@ var createAccountCmd = &cobra.Command{
 }
 
 var updateAccountAliasCmd = &cobra.Command{
-	Use:   "update-account-alias <account_id> <new_alias>",
+	Use:   "update-account-alias <newAlias>",
 	Short: "update account alias",
-	Args:  cobra.ExactArgs(2),
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		var ins = struct {
-			AccountID string `json:"account_id"`
-			NewAlias  string `json:"new_alias"`
-		}{AccountID: args[0], NewAlias: args[1]}
+			AccountID    string `json:"account_id"`
+			AccountAlias string `json:"account_alias"`
+			NewAlias     string `json:"new_alias"`
+		}{AccountID: accountID, AccountAlias: accountAlias, NewAlias: args[0]}
 
 		_, exitCode := util.ClientCall("/update-account-alias", &ins)
 		if exitCode != util.Success {

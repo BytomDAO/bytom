@@ -181,6 +181,7 @@ func AddTemplateFunc() {
 		createAccountCmd.Name(),
 		listAccountsCmd.Name(),
 		deleteAccountCmd.Name(),
+		updateAccountAliasCmd.Name(),
 		createAccountReceiverCmd.Name(),
 		listAddressesCmd.Name(),
 		validateAddressCmd.Name(),
