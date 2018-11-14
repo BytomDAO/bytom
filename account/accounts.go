@@ -3,6 +3,7 @@ package account
 
 import (
 	"encoding/json"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -46,6 +47,7 @@ var (
 // pre-define errors for supporting bytom errorFormatter
 var (
 	ErrDuplicateAlias  = errors.New("duplicate account alias")
+	ErrDuplicateIndex  = errors.New("duplicate account with same xPubs and index")
 	ErrFindAccount     = errors.New("fail to find account")
 	ErrMarshalAccount  = errors.New("failed marshal account")
 	ErrInvalidAddress  = errors.New("invalid address")
@@ -110,9 +112,8 @@ type Manager struct {
 	delayedACPsMu sync.Mutex
 	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
-	addressMu  sync.Mutex
-	accountMu  sync.Mutex
-	acctSaveMu sync.Mutex
+	addressMu sync.Mutex
+	accountMu sync.Mutex
 }
 
 // NewManager creates a new account manager
@@ -147,39 +148,55 @@ func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uin
 	return &Account{Signer: signer, ID: id, Alias: strings.ToLower(strings.TrimSpace(alias))}, nil
 }
 
-// SaveAccount save a new account.
-func (m *Manager) SaveAccount(account *Account) error {
-	m.acctSaveMu.Lock()
-	defer m.acctSaveMu.Unlock()
-
-	if existed := m.db.Get(aliasKey(account.Alias)); existed != nil {
-		return ErrDuplicateAlias
-	}
-
+func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
 		return ErrMarshalAccount
 	}
 
-	accountID := Key(account.ID)
 	storeBatch := m.db.NewBatch()
-	acctIndex := uint64(0)
-	if rawIndexBytes := m.db.Get(GetAccountIndexKey(account.XPubs)); rawIndexBytes != nil {
-		acctIndex = common.BytesToUnit64(rawIndexBytes)
-	}
-	if account.KeyIndex > acctIndex {
+	storeBatch.Set(Key(account.ID), rawAccount)
+	storeBatch.Set(aliasKey(account.Alias), []byte(account.ID))
+	if updateIndex {
 		storeBatch.Set(GetAccountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
 	}
-	storeBatch.Set(accountID, rawAccount)
-	storeBatch.Set(aliasKey(account.Alias), []byte(account.ID))
 	storeBatch.Write()
 	return nil
+}
+
+// SaveAccount save a new account.
+func (m *Manager) SaveAccount(account *Account) error {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
+	if existed := m.db.Get(aliasKey(account.Alias)); existed != nil {
+		return ErrDuplicateAlias
+	}
+
+	acct, err := m.GetAccountByXPubsIndex(account.XPubs, account.KeyIndex)
+	if err != nil {
+		return err
+	}
+
+	if acct != nil {
+		return ErrDuplicateIndex
+	}
+
+	currentIndex := uint64(0)
+	if rawIndexBytes := m.db.Get(GetAccountIndexKey(account.XPubs)); rawIndexBytes != nil {
+		currentIndex = common.BytesToUnit64(rawIndexBytes)
+	}
+	return m.saveAccount(account, account.KeyIndex > currentIndex)
 }
 
 // Create creates and save a new Account.
 func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveRule uint8) (*Account, error) {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
+
+	if existed := m.db.Get(aliasKey(alias)); existed != nil {
+		return nil, ErrDuplicateAlias
+	}
 
 	acctIndex := uint64(1)
 	if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
@@ -190,7 +207,7 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 		return nil, err
 	}
 
-	if err := m.SaveAccount(account); err != nil {
+	if err := m.saveAccount(account, true); err != nil {
 		return nil, err
 	}
 
@@ -207,17 +224,17 @@ func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram,
 		return nil, err
 	}
 
-	addrIdx, err := m.getCurrentContractIndex(account, change)
+	currentIdx, err := m.getCurrentContractIndex(account, change)
 	if err != nil {
 		return nil, err
 	}
 
-	cp, err = CreateCtrlProgram(account, addrIdx+1, change)
+	cp, err = CreateCtrlProgram(account, currentIdx+1, change)
 	if err != nil {
 		return nil, err
 	}
 
-	return cp, m.insertControlPrograms(cp)
+	return cp, m.saveControlProgram(true, cp)
 }
 
 // CreateBatchAddresses generate a batch of addresses for the select account
@@ -241,7 +258,7 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 			return err
 		}
 
-		if err := m.insertControlPrograms(cp); err != nil {
+		if err := m.saveControlProgram(true, cp); err != nil {
 			return err
 		}
 	}
@@ -324,6 +341,21 @@ func (m *Manager) GetAccountByProgram(program *CtrlProgram) (*Account, error) {
 
 	account := &Account{}
 	return account, json.Unmarshal(rawAccount, account)
+}
+
+// GetAccountByXPubsIndex get account by xPubs and index
+func (m *Manager) GetAccountByXPubsIndex(xPubs []chainkd.XPub, index uint64) (*Account, error) {
+	accounts, err := m.ListAccounts("")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, account := range accounts {
+		if reflect.DeepEqual(account.XPubs, xPubs) && account.KeyIndex == index {
+			return account, nil
+		}
+	}
+	return nil, nil
 }
 
 // GetAliasByID return the account alias by given ID
@@ -518,7 +550,7 @@ func (m *Manager) SetCoinbaseArbitrary(arbitrary []byte) {
 	m.db.Set(CoinbaseAbKey, arbitrary)
 }
 
-// CreateAddress generate an address for the select account
+// CreateCtrlProgram generate an address for the select account
 func CreateCtrlProgram(account *Account, addrIdx uint64, change bool) (cp *CtrlProgram, err error) {
 	path, err := signers.Path(account.Signer, signers.AccountKeySpace, change, addrIdx)
 	if err != nil {
@@ -628,37 +660,52 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 	return program, nil
 }
 
-func (m *Manager) insertControlPrograms(progs ...*CtrlProgram) error {
+func (m *Manager) saveControlProgram(updateIndex bool, prog *CtrlProgram) error {
 	var hash common.Hash
 
+	sha3pool.Sum256(hash[:], prog.ControlProgram)
+	acct, err := m.GetAccountByProgram(prog)
+	if err != nil {
+		return err
+	}
+
+	accountCP, err := json.Marshal(prog)
+	if err != nil {
+		return err
+	}
+
+	storeBatch := m.db.NewBatch()
+	storeBatch.Set(ContractKey(hash), accountCP)
+	if updateIndex {
+		switch acct.DeriveRule {
+		case signers.BIP0032:
+			storeBatch.Set(contractIndexKey(acct.ID), common.Unit64ToBytes(prog.KeyIndex))
+		case signers.BIP0044:
+			storeBatch.Set(bip44ContractIndexKey(acct.ID, prog.Change), common.Unit64ToBytes(prog.KeyIndex))
+		}
+	}
+	storeBatch.Write()
+
+	return nil
+}
+
+// SaveControlPrograms save account control programs
+func (m *Manager) SaveControlPrograms(progs ...*CtrlProgram) error {
+	m.addressMu.Lock()
+	defer m.addressMu.Unlock()
+
 	for _, prog := range progs {
-		sha3pool.Sum256(hash[:], prog.ControlProgram)
 		acct, err := m.GetAccountByProgram(prog)
 		if err != nil {
 			return err
 		}
 
-		accountCP, err := json.Marshal(prog)
+		currentIndex, err := m.getCurrentContractIndex(acct, prog.Change)
 		if err != nil {
 			return err
 		}
 
-		storeBatch := m.db.NewBatch()
-		storeBatch.Set(ContractKey(hash), accountCP)
-		addrIndex, err := m.getCurrentContractIndex(acct, prog.Change)
-		if err != nil {
-			return err
-		}
-
-		if prog.KeyIndex > addrIndex {
-			switch acct.DeriveRule {
-			case signers.BIP0032:
-				storeBatch.Set(contractIndexKey(acct.ID), common.Unit64ToBytes(prog.KeyIndex))
-			case signers.BIP0044:
-				storeBatch.Set(bip44ContractIndexKey(acct.ID, prog.Change), common.Unit64ToBytes(prog.KeyIndex))
-			}
-		}
-		storeBatch.Write()
+		m.saveControlProgram(prog.KeyIndex > currentIndex, prog)
 	}
 	return nil
 }
