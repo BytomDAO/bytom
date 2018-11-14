@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -142,7 +143,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 		},
 	}
 
-	acct, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "testAccount")
+	acct, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "testAccount", signers.BIP0044)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -245,6 +245,7 @@ func (a *API) buildHandler() {
 		m.Handle("/restore-wallet", jsonHandler(a.restoreWalletImage))
 		m.Handle("/rescan-wallet", jsonHandler(a.rescanWallet))
 		m.Handle("/wallet-info", jsonHandler(a.getWalletInfo))
+		m.Handle("/recovery-wallet", jsonHandler(a.recoveryFromRootXPubs))
 	} else {
 		log.Warn("Please enable wallet")
 	}

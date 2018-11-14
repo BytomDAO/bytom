@@ -10,6 +10,7 @@ import (
 	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/errors"
@@ -20,7 +21,7 @@ import (
 func TestCreateAccountWithUppercase(t *testing.T) {
 	m := mockAccountManager(t)
 	alias := "UPPER"
-	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias)
+	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias, signers.BIP0044)
 
 	if err != nil {
 		t.Fatal(err)
@@ -34,7 +35,7 @@ func TestCreateAccountWithUppercase(t *testing.T) {
 func TestCreateAccountWithSpaceTrimed(t *testing.T) {
 	m := mockAccountManager(t)
 	alias := " with space "
-	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias)
+	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias, signers.BIP0044)
 
 	if err != nil {
 		t.Fatal(err)
@@ -57,7 +58,7 @@ func TestCreateAccountWithSpaceTrimed(t *testing.T) {
 
 func TestCreateAccount(t *testing.T) {
 	m := mockAccountManager(t)
-	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias")
+	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias", signers.BIP0044)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -75,7 +76,7 @@ func TestCreateAccountReusedAlias(t *testing.T) {
 	m := mockAccountManager(t)
 	m.createTestAccount(t, "test-alias", nil)
 
-	_, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias")
+	_, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias", signers.BIP0044)
 	if errors.Root(err) != ErrDuplicateAlias {
 		t.Errorf("expected %s when reusing an alias, got %v", ErrDuplicateAlias, err)
 	}
@@ -117,12 +118,12 @@ func TestUpdateAccountAlias(t *testing.T) {
 func TestDeleteAccount(t *testing.T) {
 	m := mockAccountManager(t)
 
-	account1, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias1")
+	account1, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias1", signers.BIP0044)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
 
-	account2, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias2")
+	account2, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, "test-alias2", signers.BIP0044)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
@@ -228,7 +229,7 @@ func mockAccountManager(t *testing.T) *Manager {
 }
 
 func (m *Manager) createTestAccount(t testing.TB, alias string, tags map[string]interface{}) *Account {
-	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias)
+	account, err := m.Create([]chainkd.XPub{testutil.TestXPub}, 1, alias, signers.BIP0044)
 	if err != nil {
 		testutil.FatalErr(t, err)
 	}
