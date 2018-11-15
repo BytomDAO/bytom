@@ -196,18 +196,22 @@ func (w *Wallet) RescanBlocks() {
 
 // DeleteAccountTxs deletes all txs in wallet
 func (w *Wallet) DeleteAccountTxs() (err error) {
+	storeBatch := w.DB.NewBatch()
+
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
 
-	storeBatch := w.DB.NewBatch()
 	for txIter.Next() {
 		storeBatch.Delete(txIter.Key())
 	}
+
 	txIndexIter := w.DB.IteratorPrefix([]byte(TxIndexPrefix))
 	defer txIndexIter.Release()
+
 	for txIndexIter.Next() {
 		storeBatch.Delete(txIndexIter.Key())
 	}
+
 	storeBatch.Write()
 
 	return nil
