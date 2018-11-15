@@ -37,7 +37,7 @@ BYTOMCLI_RELEASE64 := bytomcli-$(VERSION)-$(GOOS)_amd64
 BYTOM_RELEASE32 := bytom-$(VERSION)-$(GOOS)_386
 BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
 
-all: test target release-all
+all: test target release-all install
 
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"
@@ -51,6 +51,11 @@ bytomd-simd:
 bytomcli:
 	@echo "Building bytomcli to cmd/bytomcli/bytomcli"
 	@go build $(BUILD_FLAGS) -o cmd/bytomcli/bytomcli cmd/bytomcli/main.go
+
+install:
+	@echo "Installing bytomd and bytomcli to $(GOPATH)/bin"
+	@go install ./cmd/bytomd
+	@go install ./cmd/bytomcli
 
 target:
 	mkdir -p $@
@@ -92,11 +97,15 @@ clean:
 	@rm -rf cmd/bytomcli/bytomcli
 	@rm -rf cmd/miner/miner
 	@rm -rf target
+	@rm -rf $(GOPATH)/bin/bytomd
+	@rm -rf $(GOPATH)/bin/bytomcli
 	@echo "Cleaning temp test data..."
 	@rm -rf test/pseudo_hsm*
 	@rm -rf blockchain/pseudohsm/testdata/pseudo/
 	@echo "Cleaning sm2 pem files..."
 	@rm -rf crypto/sm2/*.pem
+	@echo "Cleaning go test cache..."
+	@go clean -testcache
 	@echo "Done."
 
 target/$(BYTOMD_BINARY32):

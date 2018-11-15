@@ -58,11 +58,12 @@ type AnnotatedOutput struct {
 
 //AnnotatedAccount means an annotated account.
 type AnnotatedAccount struct {
-	ID       string         `json:"id"`
-	Alias    string         `json:"alias,omitempty"`
-	XPubs    []chainkd.XPub `json:"xpubs"`
-	Quorum   int            `json:"quorum"`
-	KeyIndex uint64         `json:"key_index"`
+	ID         string         `json:"id"`
+	Alias      string         `json:"alias,omitempty"`
+	XPubs      []chainkd.XPub `json:"xpubs"`
+	Quorum     int            `json:"quorum"`
+	KeyIndex   uint64         `json:"key_index"`
+	DeriveRule uint8          `json:"derive_rule"`
 }
 
 //AnnotatedAsset means an annotated asset.
@@ -97,4 +98,5 @@ type AnnotatedUTXO struct {
 	SourcePos           uint64 `json:"source_pos"`
 	ValidHeight         uint64 `json:"valid_height"`
 	Change              bool   `json:"change"`
+	DeriveRule          uint8  `json:"derive_rule"`
 }

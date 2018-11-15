@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
-
-	"github.com/bytom/common"
 )
 
 // ImageSlice record info of single account
@@ -22,6 +20,9 @@ type Image struct {
 
 // Backup export all the account info into image
 func (m *Manager) Backup() (*Image, error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
 	image := &Image{
 		Slice: []*ImageSlice{},
 	}
@@ -36,7 +37,7 @@ func (m *Manager) Backup() (*Image, error) {
 
 		image.Slice = append(image.Slice, &ImageSlice{
 			Account:       a,
-			ContractIndex: m.getNextContractIndex(a.ID),
+			ContractIndex: m.GetContractIndex(a.ID),
 		})
 	}
 	return image, nil
@@ -44,7 +45,9 @@ func (m *Manager) Backup() (*Image, error) {
 
 // Restore import the accountImages into account manage
 func (m *Manager) Restore(image *Image) error {
-	maxAccountIndex := uint64(0)
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
 	storeBatch := m.db.NewBatch()
 	for _, slice := range image.Slice {
 		if existed := m.db.Get(Key(slice.Account.ID)); existed != nil {
@@ -63,24 +66,10 @@ func (m *Manager) Restore(image *Image) error {
 			return ErrMarshalAccount
 		}
 
-		if slice.Account.Signer.KeyIndex > maxAccountIndex {
-			maxAccountIndex = slice.Account.Signer.KeyIndex
-		}
 		storeBatch.Set(Key(slice.Account.ID), rawAccount)
 		storeBatch.Set(aliasKey(slice.Account.Alias), []byte(slice.Account.ID))
 	}
 
-	if localIndex := m.getNextAccountIndex(); localIndex < maxAccountIndex {
-		storeBatch.Set(accountIndexKey, common.Unit64ToBytes(maxAccountIndex))
-	}
 	storeBatch.Write()
-
-	for _, slice := range image.Slice {
-		for i := uint64(1); i <= slice.ContractIndex; i++ {
-			if _, err := m.createAddress(slice.Account, false); err != nil {
-				return err
-			}
-		}
-	}
 	return nil
 }

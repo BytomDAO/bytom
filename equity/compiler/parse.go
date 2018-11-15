@@ -48,6 +48,10 @@ func parse(buf []byte) (contracts []*Contract, err error) {
 
 func parseContracts(p *parser) []*Contract {
 	var result []*Contract
+	if pos := scanKeyword(p.buf, p.pos, "contract"); pos < 0 {
+		p.errorf("expected contract")
+	}
+
 	for peekKeyword(p) == "contract" {
 		contract := parseContract(p)
 		result = append(result, contract)
@@ -60,8 +64,12 @@ func parseContract(p *parser) *Contract {
 	consumeKeyword(p, "contract")
 	name := consumeIdentifier(p)
 	params := parseParams(p)
+	// locks amount of asset
 	consumeKeyword(p, "locks")
-	value := consumeIdentifier(p)
+	value := ValueInfo{}
+	value.Amount = consumeIdentifier(p)
+	consumeKeyword(p, "of")
+	value.Asset = consumeIdentifier(p)
 	consumeTok(p, "{")
 	clauses := parseClauses(p)
 	consumeTok(p, "}")
@@ -120,36 +128,10 @@ func parseClause(p *parser) *Clause {
 	consumeKeyword(p, "clause")
 	c.Name = consumeIdentifier(p)
 	c.Params = parseParams(p)
-	if peekKeyword(p) == "requires" {
-		consumeKeyword(p, "requires")
-		c.Reqs = parseClauseRequirements(p)
-	}
 	consumeTok(p, "{")
 	c.statements = parseStatements(p)
 	consumeTok(p, "}")
 	return &c
-}
-
-func parseClauseRequirements(p *parser) []*ClauseReq {
-	var result []*ClauseReq
-	first := true
-	for {
-		switch {
-		case first:
-			first = false
-		case peekTok(p, ","):
-			consumeTok(p, ",")
-		default:
-			return result
-		}
-		var req ClauseReq
-		req.Name = consumeIdentifier(p)
-		consumeTok(p, ":")
-		req.amountExpr = parseExpr(p)
-		consumeKeyword(p, "of")
-		req.assetExpr = parseExpr(p)
-		result = append(result, &req)
-	}
 }
 
 func parseStatements(p *parser) []statement {
@@ -163,6 +145,12 @@ func parseStatements(p *parser) []statement {
 
 func parseStatement(p *parser) statement {
 	switch peekKeyword(p) {
+	case "if":
+		return parseIfStmt(p)
+	case "define":
+		return parseDefineStmt(p)
+	case "assign":
+		return parseAssignStmt(p)
 	case "verify":
 		return parseVerifyStmt(p)
 	case "lock":
@@ -173,6 +161,50 @@ func parseStatement(p *parser) statement {
 	panic(parseErr(p.buf, p.pos, "unknown keyword \"%s\"", peekKeyword(p)))
 }
 
+func parseIfStmt(p *parser) *ifStatement {
+	consumeKeyword(p, "if")
+	condition := parseExpr(p)
+	body := &IfStatmentBody{}
+	consumeTok(p, "{")
+	body.trueBody = parseStatements(p)
+	consumeTok(p, "}")
+	if peekKeyword(p) == "else" {
+		consumeKeyword(p, "else")
+		consumeTok(p, "{")
+		body.falseBody = parseStatements(p)
+		consumeTok(p, "}")
+	}
+	return &ifStatement{condition: condition, body: body}
+}
+
+func parseDefineStmt(p *parser) *defineStatement {
+	defineStat := &defineStatement{}
+	consumeKeyword(p, "define")
+	param := &Param{}
+	param.Name = consumeIdentifier(p)
+	consumeTok(p, ":")
+	variableType := consumeIdentifier(p)
+	if tdesc, ok := types[variableType]; ok {
+		param.Type = tdesc
+	} else {
+		p.errorf("unknown type %s", variableType)
+	}
+	defineStat.variable = param
+	if peekTok(p, "=") {
+		consumeTok(p, "=")
+		defineStat.expr = parseExpr(p)
+	}
+	return defineStat
+}
+
+func parseAssignStmt(p *parser) *assignStatement {
+	consumeKeyword(p, "assign")
+	varName := consumeIdentifier(p)
+	consumeTok(p, "=")
+	expr := parseExpr(p)
+	return &assignStatement{variable: &Param{Name: varName}, expr: expr}
+}
+
 func parseVerifyStmt(p *parser) *verifyStatement {
 	consumeKeyword(p, "verify")
 	expr := parseExpr(p)
@@ -181,16 +213,20 @@ func parseVerifyStmt(p *parser) *verifyStatement {
 
 func parseLockStmt(p *parser) *lockStatement {
 	consumeKeyword(p, "lock")
-	locked := parseExpr(p)
+	lockedAmount := parseExpr(p)
+	consumeKeyword(p, "of")
+	lockedAsset := parseExpr(p)
 	consumeKeyword(p, "with")
 	program := parseExpr(p)
-	return &lockStatement{locked: locked, program: program}
+	return &lockStatement{lockedAmount: lockedAmount, lockedAsset: lockedAsset, program: program}
 }
 
 func parseUnlockStmt(p *parser) *unlockStatement {
 	consumeKeyword(p, "unlock")
-	expr := parseExpr(p)
-	return &unlockStatement{expr}
+	unlockedAmount := parseExpr(p)
+	consumeKeyword(p, "of")
+	unlockedAsset := parseExpr(p)
+	return &unlockStatement{unlockedAmount: unlockedAmount, unlockedAsset: unlockedAsset}
 }
 
 func parseExpr(p *parser) expression {
@@ -316,8 +352,9 @@ func peekTok(p *parser, token string) bool {
 // consume functions
 
 var keywords = []string{
-	"contract", "clause", "verify", "output", "return",
-	"locks", "requires", "of", "lock", "with", "unlock",
+	"contract", "clause", "verify", "locks", "of",
+	"lock", "with", "unlock", "if", "else",
+	"define", "assign", "true", "false",
 }
 
 func consumeKeyword(p *parser, keyword string) {
@@ -394,6 +431,10 @@ func scanLiteralExpr(buf []byte, offset int) (expression, int) {
 	if newOffset >= 0 {
 		return bytesliteral, newOffset
 	}
+	booleanLiteral, newOffset := scanBoolLiteral(buf, offset) // true or false
+	if newOffset >= 0 {
+		return booleanLiteral, newOffset
+	}
 	return nil, -1
 }
 
@@ -436,6 +477,10 @@ func scanIntLiteral(buf []byte, offset int) (integerLiteral, int) {
 	}
 	i := offset
 	for ; i < len(buf) && unicode.IsDigit(rune(buf[i])); i++ {
+		// the literal is BytesLiteral when it starts with 0x/0X
+		if buf[i] == '0' && i < len(buf)-1 && (buf[i+1] == 'x' || buf[i+1] == 'X') {
+			return 0, -1
+		}
 	}
 	if i > offset {
 		n, err := strconv.ParseInt(string(buf[start:i]), 10, 64)
@@ -452,13 +497,19 @@ func scanStrLiteral(buf []byte, offset int) (bytesLiteral, int) {
 	if offset >= len(buf) || buf[offset] != '\'' {
 		return bytesLiteral{}, -1
 	}
+	var byteBuf bytesLiteral
 	for i := offset + 1; i < len(buf); i++ {
 		if buf[i] == '\'' {
-			return bytesLiteral(buf[offset : i+1]), i + 1
+			return byteBuf, i + 1
 		}
-		if buf[i] == '\\' {
-			i++
+		if buf[i] == '\\' && i < len(buf)-1 {
+			if c, ok := scanEscape(buf[i+1]); ok {
+				byteBuf = append(byteBuf, c)
+				i++
+				continue
+			}
 		}
+		byteBuf = append(byteBuf, buf[i])
 	}
 	panic(parseErr(buf, offset, "unterminated string literal"))
 }
@@ -492,6 +543,22 @@ func scanBytesLiteral(buf []byte, offset int) (bytesLiteral, int) {
 		return bytesLiteral{}, -1
 	}
 	return bytesLiteral(decoded), i
+}
+
+func scanBoolLiteral(buf []byte, offset int) (booleanLiteral, int) {
+	offset = skipWsAndComments(buf, offset)
+	if offset >= len(buf) {
+		return false, -1
+	}
+
+	newOffset := scanKeyword(buf, offset, "true")
+	if newOffset < 0 {
+		if newOffset = scanKeyword(buf, offset, "false"); newOffset < 0 {
+			return false, -1
+		}
+		return false, newOffset
+	}
+	return true, newOffset
 }
 
 func skipWsAndComments(buf []byte, offset int) int {
@@ -560,4 +627,26 @@ func (p parserErr) Error() string {
 	args := []interface{}{line, col}
 	args = append(args, p.args...)
 	return fmt.Sprintf("line %d, col %d: "+p.format, args...)
+}
+
+func scanEscape(c byte) (byte, bool) {
+	escapeFlag := true
+	switch c {
+	case '\'', '"', '\\':
+	case 'b':
+		c = '\b'
+	case 'f':
+		c = '\f'
+	case 'n':
+		c = '\n'
+	case 'r':
+		c = '\r'
+	case 't':
+		c = '\t'
+	case 'v':
+		c = '\v'
+	default:
+		escapeFlag = false
+	}
+	return c, escapeFlag
 }

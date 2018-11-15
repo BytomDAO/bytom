@@ -11,10 +11,12 @@ import (
 	crypto "github.com/tendermint/go-crypto"
 	wire "github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/tmlibs/flowrate"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p/connection"
+	"github.com/btcsuite/go-socks/socks"
 )
 
 // peerConn contains the raw connection and its config.
@@ -28,6 +30,9 @@ type peerConn struct {
 type PeerConfig struct {
 	HandshakeTimeout time.Duration           `mapstructure:"handshake_timeout"` // times are in seconds
 	DialTimeout      time.Duration           `mapstructure:"dial_timeout"`
+	ProxyAddress     string                  `mapstructure:"proxy_address"`
+	ProxyUsername    string                  `mapstructure:"proxy_username"`
+	ProxyPassword    string                  `mapstructure:"proxy_password"`
 	MConfig          *connection.MConnConfig `mapstructure:"connection"`
 }
 
@@ -36,6 +41,9 @@ func DefaultPeerConfig(config *cfg.P2PConfig) *PeerConfig {
 	return &PeerConfig{
 		HandshakeTimeout: time.Duration(config.HandshakeTimeout) * time.Second, // * time.Second,
 		DialTimeout:      time.Duration(config.DialTimeout) * time.Second,      // * time.Second,
+		ProxyAddress:     config.ProxyAddress,
+		ProxyUsername:    config.ProxyUsername,
+		ProxyPassword:    config.ProxyPassword,
 		MConfig:          connection.DefaultMConnConfig(),
 	}
 }
@@ -164,6 +172,7 @@ func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duratio
 	return peerNodeInfo, nil
 }
 
+// ID return the uuid of the peer
 func (p *Peer) ID() string {
 	return p.Key
 }
@@ -187,6 +196,7 @@ func (p *Peer) Send(chID byte, msg interface{}) bool {
 	return p.mconn.Send(chID, msg)
 }
 
+// ServiceFlag return the ServiceFlag of this peer
 func (p *Peer) ServiceFlag() consensus.ServiceFlag {
 	services := consensus.SFFullNode
 	if len(p.Other) == 0 {
@@ -205,6 +215,11 @@ func (p *Peer) String() string {
 		return fmt.Sprintf("Peer{%v %v out}", p.mconn, p.Key[:12])
 	}
 	return fmt.Sprintf("Peer{%v %v in}", p.mconn, p.Key[:12])
+}
+
+// TrafficStatus return the in and out traffic status
+func (p *Peer) TrafficStatus() (*flowrate.Status, *flowrate.Status) {
+	return p.mconn.TrafficStatus()
 }
 
 // TrySend msg to the channel identified by chID byte. Immediately returns
@@ -232,7 +247,19 @@ func createMConnection(conn net.Conn, p *Peer, reactorsByCh map[byte]Reactor, ch
 }
 
 func dial(addr *NetAddress, config *PeerConfig) (net.Conn, error) {
-	conn, err := addr.DialTimeout(config.DialTimeout)
+	var conn net.Conn
+	var err error
+	if config.ProxyAddress == "" {
+		conn, err = addr.DialTimeout(config.DialTimeout)
+	} else {
+		proxy := &socks.Proxy{
+			Addr:         config.ProxyAddress,
+			Username:     config.ProxyUsername,
+			Password:     config.ProxyPassword,
+			TorIsolation: false,
+		}
+		conn, err = addr.DialTimeoutWithProxy(proxy, config.DialTimeout)
+	}
 	if err != nil {
 		return nil, err
 	}

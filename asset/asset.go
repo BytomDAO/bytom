@@ -151,12 +151,12 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		}
 
 		nextAssetIndex := reg.getNextAssetIndex()
-		assetSigner, err = signers.Create("asset", xpubs, quorum, nextAssetIndex)
+		assetSigner, err = signers.Create("asset", xpubs, quorum, nextAssetIndex, signers.BIP0032)
 		if err != nil {
 			return nil, err
 		}
 
-		path := signers.Path(assetSigner, signers.AssetKeySpace)
+		path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
 		derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
 		issuanceProgram, vmver, err = multisigIssuanceProgram(derivedPKs, assetSigner.Quorum)
@@ -300,6 +300,8 @@ func (reg *Registry) GetAsset(id string) (*Asset, error) {
 		if err := json.Unmarshal(extAsset, &definitionMap); err != nil {
 			return nil, err
 		}
+		alias := assetID.String()
+		asset.Alias = &alias
 		asset.AssetID = assetID
 		asset.DefinitionMap = definitionMap
 		return asset, nil

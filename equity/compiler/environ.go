@@ -25,17 +25,19 @@ const (
 	roleClause
 	roleClauseParam
 	roleClauseValue
+	roleClauseVariable
 )
 
 var roleDesc = map[role]string{
-	roleKeyword:       "keyword",
-	roleBuiltin:       "built-in function",
-	roleContract:      "contract",
-	roleContractParam: "contract parameter",
-	roleContractValue: "contract value",
-	roleClause:        "clause",
-	roleClauseParam:   "clause parameter",
-	roleClauseValue:   "clause value",
+	roleKeyword:        "keyword",
+	roleBuiltin:        "built-in function",
+	roleContract:       "contract",
+	roleContractParam:  "contract parameter",
+	roleContractValue:  "contract value",
+	roleClause:         "clause",
+	roleClauseParam:    "clause parameter",
+	roleClauseValue:    "clause value",
+	roleClauseVariable: "clause variable",
 }
 
 func newEnviron(parent *environ) *environ {

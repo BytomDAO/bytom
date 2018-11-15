@@ -3,6 +3,8 @@ package account
 
 import (
 	"encoding/json"
+	"reflect"
+	"sort"
 	"strings"
 	"sync"
 
@@ -26,10 +28,14 @@ import (
 
 const (
 	maxAccountCache = 1000
+
+	// HardenedKeyStart bip32 hierarchical deterministic wallets
+	// keys with index ≥ 0x80000000 are hardened keys
+	HardenedKeyStart = 0x80000000
 )
 
 var (
-	accountIndexKey     = []byte("AccountIndex")
+	accountIndexPrefix  = []byte("AccountIndex:")
 	accountPrefix       = []byte("Account:")
 	aliasPrefix         = []byte("AccountAlias:")
 	contractIndexPrefix = []byte("ContractIndex")
@@ -41,10 +47,15 @@ var (
 // pre-define errors for supporting bytom errorFormatter
 var (
 	ErrDuplicateAlias  = errors.New("duplicate account alias")
+	ErrDuplicateIndex  = errors.New("duplicate account with same xPubs and index")
 	ErrFindAccount     = errors.New("fail to find account")
 	ErrMarshalAccount  = errors.New("failed marshal account")
 	ErrInvalidAddress  = errors.New("invalid address")
 	ErrFindCtrlProgram = errors.New("fail to find account control program")
+	ErrDeriveRule      = errors.New("invalid key derive rule")
+	ErrContractIndex   = errors.New("exceed the maximum addresses per account")
+	ErrAccountIndex    = errors.New("exceed the maximum accounts per xpub")
+	ErrFindTransaction = errors.New("no transaction")
 )
 
 // ContractKey account control promgram store prefix
@@ -59,6 +70,14 @@ func Key(name string) []byte {
 
 func aliasKey(name string) []byte {
 	return append(aliasPrefix, []byte(name)...)
+}
+
+func bip44ContractIndexKey(accountID string, change bool) []byte {
+	key := append(contractIndexPrefix, accountID...)
+	if change {
+		return append(key, []byte{1}...)
+	}
+	return append(key, []byte{0}...)
 }
 
 func contractIndexKey(accountID string) []byte {
@@ -94,8 +113,8 @@ type Manager struct {
 	delayedACPsMu sync.Mutex
 	delayedACPs   map[*txbuilder.TemplateBuilder][]*CtrlProgram
 
-	accIndexMu sync.Mutex
-	accountMu  sync.Mutex
+	addressMu sync.Mutex
+	accountMu sync.Mutex
 }
 
 // NewManager creates a new account manager
@@ -115,52 +134,221 @@ func (m *Manager) AddUnconfirmedUtxo(utxos []*UTXO) {
 	m.utxoKeeper.AddUnconfirmedUtxo(utxos)
 }
 
-// Create creates a new Account.
-func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string) (*Account, error) {
-	m.accountMu.Lock()
-	defer m.accountMu.Unlock()
-
-	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
-	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
-		return nil, ErrDuplicateAlias
+// CreateAccount creates a new Account.
+func CreateAccount(xpubs []chainkd.XPub, quorum int, alias string, acctIndex uint64, deriveRule uint8) (*Account, error) {
+	if acctIndex >= HardenedKeyStart {
+		return nil, ErrAccountIndex
 	}
 
-	signer, err := signers.Create("account", xpubs, quorum, m.getNextAccountIndex())
-	id := signers.IDGenerate()
+	signer, err := signers.Create("account", xpubs, quorum, acctIndex, deriveRule)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
 
-	account := &Account{Signer: signer, ID: id, Alias: normalizedAlias}
+	id := signers.IDGenerate()
+	return &Account{Signer: signer, ID: id, Alias: strings.ToLower(strings.TrimSpace(alias))}, nil
+}
+
+func (m *Manager) saveAccount(account *Account, updateIndex bool) error {
 	rawAccount, err := json.Marshal(account)
 	if err != nil {
-		return nil, ErrMarshalAccount
+		return ErrMarshalAccount
 	}
 
-	accountID := Key(id)
 	storeBatch := m.db.NewBatch()
-	storeBatch.Set(accountID, rawAccount)
-	storeBatch.Set(aliasKey(normalizedAlias), []byte(id))
+	storeBatch.Set(Key(account.ID), rawAccount)
+	storeBatch.Set(aliasKey(account.Alias), []byte(account.ID))
+	if updateIndex {
+		storeBatch.Set(GetAccountIndexKey(account.XPubs), common.Unit64ToBytes(account.KeyIndex))
+	}
 	storeBatch.Write()
+	return nil
+}
+
+// SaveAccount save a new account.
+func (m *Manager) SaveAccount(account *Account) error {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
+	if existed := m.db.Get(aliasKey(account.Alias)); existed != nil {
+		return ErrDuplicateAlias
+	}
+
+	acct, err := m.GetAccountByXPubsIndex(account.XPubs, account.KeyIndex)
+	if err != nil {
+		return err
+	}
+
+	if acct != nil {
+		return ErrDuplicateIndex
+	}
+
+	currentIndex := uint64(0)
+	if rawIndexBytes := m.db.Get(GetAccountIndexKey(account.XPubs)); rawIndexBytes != nil {
+		currentIndex = common.BytesToUnit64(rawIndexBytes)
+	}
+	return m.saveAccount(account, account.KeyIndex > currentIndex)
+}
+
+// Create creates and save a new Account.
+func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveRule uint8) (*Account, error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
+	if existed := m.db.Get(aliasKey(alias)); existed != nil {
+		return nil, ErrDuplicateAlias
+	}
+
+	acctIndex := uint64(1)
+	if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
+		acctIndex = common.BytesToUnit64(rawIndexBytes) + 1
+	}
+	account, err := CreateAccount(xpubs, quorum, alias, acctIndex, deriveRule)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := m.saveAccount(account, true); err != nil {
+		return nil, err
+	}
+
 	return account, nil
+}
+
+func (m *Manager) UpdateAccountAlias(accountID string, newAlias string) (err error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
+	account, err := m.FindByID(accountID)
+	if err != nil {
+		return err
+	}
+	oldAlias := account.Alias
+
+	normalizedAlias := strings.ToLower(strings.TrimSpace(newAlias))
+	if existed := m.db.Get(aliasKey(normalizedAlias)); existed != nil {
+		return ErrDuplicateAlias
+	}
+
+	m.cacheMu.Lock()
+	m.aliasCache.Remove(oldAlias)
+	m.cacheMu.Unlock()
+
+	account.Alias = normalizedAlias
+	rawAccount, err := json.Marshal(account)
+	if err != nil {
+		return ErrMarshalAccount
+	}
+
+	storeBatch := m.db.NewBatch()
+	storeBatch.Delete(aliasKey(oldAlias))
+	storeBatch.Set(Key(accountID), rawAccount)
+	storeBatch.Set(aliasKey(normalizedAlias), []byte(accountID))
+	storeBatch.Write()
+	return nil
 }
 
 // CreateAddress generate an address for the select account
 func (m *Manager) CreateAddress(accountID string, change bool) (cp *CtrlProgram, err error) {
+	m.addressMu.Lock()
+	defer m.addressMu.Unlock()
+
 	account, err := m.FindByID(accountID)
 	if err != nil {
 		return nil, err
 	}
-	return m.createAddress(account, change)
+
+	currentIdx, err := m.getCurrentContractIndex(account, change)
+	if err != nil {
+		return nil, err
+	}
+
+	cp, err = CreateCtrlProgram(account, currentIdx+1, change)
+	if err != nil {
+		return nil, err
+	}
+
+	return cp, m.saveControlProgram(cp, true)
 }
 
-// DeleteAccount deletes the account's ID or alias matching accountInfo.
-func (m *Manager) DeleteAccount(aliasOrID string) (err error) {
-	account := &Account{}
-	if account, err = m.FindByAlias(aliasOrID); err != nil {
-		if account, err = m.FindByID(aliasOrID); err != nil {
+// CreateBatchAddresses generate a batch of addresses for the select account
+func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex uint64) error {
+	m.addressMu.Lock()
+	defer m.addressMu.Unlock()
+
+	account, err := m.FindByID(accountID)
+	if err != nil {
+		return err
+	}
+
+	currentIndex, err := m.getCurrentContractIndex(account, change)
+	if err != nil {
+		return err
+	}
+
+	for currentIndex++; currentIndex <= stopIndex; currentIndex++ {
+		cp, err := CreateCtrlProgram(account, currentIndex, change)
+		if err != nil {
 			return err
 		}
+
+		if err := m.saveControlProgram(cp, true); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// deleteAccountControlPrograms deletes control program matching accountID
+func (m *Manager) deleteAccountControlPrograms(accountID string) error {
+	cps, err := m.ListControlProgram()
+	if err != nil {
+		return err
+	}
+
+	var hash common.Hash
+	for _, cp := range cps {
+		if cp.AccountID == accountID {
+			sha3pool.Sum256(hash[:], cp.ControlProgram)
+			m.db.Delete(ContractKey(hash))
+		}
+	}
+	return nil
+}
+
+// deleteAccountUtxos deletes utxos matching accountID
+func (m *Manager) deleteAccountUtxos(accountID string) error {
+	accountUtxoIter := m.db.IteratorPrefix([]byte(UTXOPreFix))
+	defer accountUtxoIter.Release()
+	for accountUtxoIter.Next() {
+		accountUtxo := &UTXO{}
+		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
+			return err
+		}
+
+		if accountID == accountUtxo.AccountID {
+			m.db.Delete(StandardUTXOKey(accountUtxo.OutputID))
+		}
+	}
+	return nil
+}
+
+// DeleteAccount deletes the account's ID or alias matching account ID.
+func (m *Manager) DeleteAccount(accountID string) (err error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
+	account, err := m.FindByID(accountID)
+	if err != nil {
+		return err
+	}
+
+	if err := m.deleteAccountControlPrograms(accountID); err != nil {
+		return err
+	}
+	if err := m.deleteAccountUtxos(accountID); err != nil {
+		return err
 	}
 
 	m.cacheMu.Lock()
@@ -231,6 +419,21 @@ func (m *Manager) GetAccountByProgram(program *CtrlProgram) (*Account, error) {
 	return account, json.Unmarshal(rawAccount, account)
 }
 
+// GetAccountByXPubsIndex get account by xPubs and index
+func (m *Manager) GetAccountByXPubsIndex(xPubs []chainkd.XPub, index uint64) (*Account, error) {
+	accounts, err := m.ListAccounts("")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, account := range accounts {
+		if reflect.DeepEqual(account.XPubs, xPubs) && account.KeyIndex == index {
+			return account, nil
+		}
+	}
+	return nil, nil
+}
+
 // GetAliasByID return the account alias by given ID
 func (m *Manager) GetAliasByID(id string) string {
 	rawAccount := m.db.Get(Key(id))
@@ -284,7 +487,7 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 		return nil, err
 	}
 
-	program, err := m.createAddress(account, false)
+	program, err := m.CreateAddress(account.ID, false)
 	if err != nil {
 		return nil, err
 	}
@@ -300,11 +503,17 @@ func (m *Manager) GetCoinbaseCtrlProgram() (*CtrlProgram, error) {
 
 // GetContractIndex return the current index
 func (m *Manager) GetContractIndex(accountID string) uint64 {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-
-	index := uint64(1)
+	index := uint64(0)
 	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
+		index = common.BytesToUnit64(rawIndexBytes)
+	}
+	return index
+}
+
+// GetBip44ContractIndex return the current bip44 contract index
+func (m *Manager) GetBip44ContractIndex(accountID string, change bool) uint64 {
+	index := uint64(0)
+	if rawIndexBytes := m.db.Get(bip44ContractIndexKey(accountID, change)); rawIndexBytes != nil {
 		index = common.BytesToUnit64(rawIndexBytes)
 	}
 	return index
@@ -417,22 +626,26 @@ func (m *Manager) SetCoinbaseArbitrary(arbitrary []byte) {
 	m.db.Set(CoinbaseAbKey, arbitrary)
 }
 
-// CreateAddress generate an address for the select account
-func (m *Manager) createAddress(account *Account, change bool) (cp *CtrlProgram, err error) {
+// CreateCtrlProgram generate an address for the select account
+func CreateCtrlProgram(account *Account, addrIdx uint64, change bool) (cp *CtrlProgram, err error) {
+	path, err := signers.Path(account.Signer, signers.AccountKeySpace, change, addrIdx)
+	if err != nil {
+		return nil, err
+	}
+
 	if len(account.XPubs) == 1 {
-		cp, err = m.createP2PKH(account, change)
+		cp, err = createP2PKH(account, path)
 	} else {
-		cp, err = m.createP2SH(account, change)
+		cp, err = createP2SH(account, path)
 	}
 	if err != nil {
 		return nil, err
 	}
-	return cp, m.insertControlPrograms(cp)
+	cp.KeyIndex, cp.Change = addrIdx, change
+	return cp, nil
 }
 
-func (m *Manager) createP2PKH(account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.getNextContractIndex(account.ID)
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+func createP2PKH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPK := derivedXPubs[0].PublicKey()
 	pubHash := crypto.Ripemd160(derivedPK)
@@ -450,15 +663,11 @@ func (m *Manager) createP2PKH(account *Account, change bool) (*CtrlProgram, erro
 	return &CtrlProgram{
 		AccountID:      account.ID,
 		Address:        address.EncodeAddress(),
-		KeyIndex:       idx,
 		ControlProgram: control,
-		Change:         change,
 	}, nil
 }
 
-func (m *Manager) createP2SH(account *Account, change bool) (*CtrlProgram, error) {
-	idx := m.getNextContractIndex(account.ID)
-	path := signers.Path(account.Signer, signers.AccountKeySpace, idx)
+func createP2SH(account *Account, path [][]byte) (*CtrlProgram, error) {
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 	derivedPKs := chainkd.XPubKeys(derivedXPubs)
 	signScript, err := vmutil.P2SPMultiSigProgram(derivedPKs, account.Quorum)
@@ -480,34 +689,30 @@ func (m *Manager) createP2SH(account *Account, change bool) (*CtrlProgram, error
 	return &CtrlProgram{
 		AccountID:      account.ID,
 		Address:        address.EncodeAddress(),
-		KeyIndex:       idx,
 		ControlProgram: control,
-		Change:         change,
 	}, nil
 }
 
-func (m *Manager) getNextAccountIndex() uint64 {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-
-	var nextIndex uint64 = 1
-	if rawIndexBytes := m.db.Get(accountIndexKey); rawIndexBytes != nil {
-		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
+func GetAccountIndexKey(xpubs []chainkd.XPub) []byte {
+	var hash [32]byte
+	var xPubs []byte
+	cpy := append([]chainkd.XPub{}, xpubs[:]...)
+	sort.Sort(signers.SortKeys(cpy))
+	for _, xpub := range cpy {
+		xPubs = append(xPubs, xpub[:]...)
 	}
-	m.db.Set(accountIndexKey, common.Unit64ToBytes(nextIndex))
-	return nextIndex
+	sha3pool.Sum256(hash[:], xPubs)
+	return append(accountIndexPrefix, hash[:]...)
 }
 
-func (m *Manager) getNextContractIndex(accountID string) uint64 {
-	m.accIndexMu.Lock()
-	defer m.accIndexMu.Unlock()
-
-	nextIndex := uint64(1)
-	if rawIndexBytes := m.db.Get(contractIndexKey(accountID)); rawIndexBytes != nil {
-		nextIndex = common.BytesToUnit64(rawIndexBytes) + 1
+func (m *Manager) getCurrentContractIndex(account *Account, change bool) (uint64, error) {
+	switch account.DeriveRule {
+	case signers.BIP0032:
+		return m.GetContractIndex(account.ID), nil
+	case signers.BIP0044:
+		return m.GetBip44ContractIndex(account.ID, change), nil
 	}
-	m.db.Set(contractIndexKey(accountID), common.Unit64ToBytes(nextIndex))
-	return nextIndex
+	return 0, ErrDeriveRule
 }
 
 func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
@@ -515,7 +720,6 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	redeemContract := addr.ScriptAddress()
 	program := []byte{}
 	switch addr.(type) {
@@ -532,16 +736,52 @@ func (m *Manager) getProgramByAddress(address string) ([]byte, error) {
 	return program, nil
 }
 
-func (m *Manager) insertControlPrograms(progs ...*CtrlProgram) error {
+func (m *Manager) saveControlProgram(prog *CtrlProgram, updateIndex bool) error {
 	var hash common.Hash
+
+	sha3pool.Sum256(hash[:], prog.ControlProgram)
+	acct, err := m.GetAccountByProgram(prog)
+	if err != nil {
+		return err
+	}
+
+	accountCP, err := json.Marshal(prog)
+	if err != nil {
+		return err
+	}
+
+	storeBatch := m.db.NewBatch()
+	storeBatch.Set(ContractKey(hash), accountCP)
+	if updateIndex {
+		switch acct.DeriveRule {
+		case signers.BIP0032:
+			storeBatch.Set(contractIndexKey(acct.ID), common.Unit64ToBytes(prog.KeyIndex))
+		case signers.BIP0044:
+			storeBatch.Set(bip44ContractIndexKey(acct.ID, prog.Change), common.Unit64ToBytes(prog.KeyIndex))
+		}
+	}
+	storeBatch.Write()
+
+	return nil
+}
+
+// SaveControlPrograms save account control programs
+func (m *Manager) SaveControlPrograms(progs ...*CtrlProgram) error {
+	m.addressMu.Lock()
+	defer m.addressMu.Unlock()
+
 	for _, prog := range progs {
-		accountCP, err := json.Marshal(prog)
+		acct, err := m.GetAccountByProgram(prog)
 		if err != nil {
 			return err
 		}
 
-		sha3pool.Sum256(hash[:], prog.ControlProgram)
-		m.db.Set(ContractKey(hash), accountCP)
+		currentIndex, err := m.getCurrentContractIndex(acct, prog.Change)
+		if err != nil {
+			return err
+		}
+
+		m.saveControlProgram(prog, prog.KeyIndex > currentIndex)
 	}
 	return nil
 }

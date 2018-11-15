@@ -1,12 +1,11 @@
 package commands
 
 import (
-	"fmt"
+	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	"strings"
 
 	"github.com/bytom/node"
 )
@@ -41,44 +40,55 @@ func init() {
 	runNodeCmd.Flags().Int("p2p.max_num_peers", config.P2P.MaxNumPeers, "Set max num peers")
 	runNodeCmd.Flags().Int("p2p.handshake_timeout", config.P2P.HandshakeTimeout, "Set handshake timeout")
 	runNodeCmd.Flags().Int("p2p.dial_timeout", config.P2P.DialTimeout, "Set dial timeout")
+	runNodeCmd.Flags().String("p2p.proxy_address", config.P2P.ProxyAddress, "Connect via SOCKS5 proxy (eg. 127.0.0.1:1086)")
+	runNodeCmd.Flags().String("p2p.proxy_username", config.P2P.ProxyUsername, "Username for proxy server")
+	runNodeCmd.Flags().String("p2p.proxy_password", config.P2P.ProxyPassword, "Password for proxy server")
 
 	// log flags
 	runNodeCmd.Flags().String("log_file", config.LogFile, "Log output file")
 
+	// websocket flags
+	runNodeCmd.Flags().Int("ws.max_num_websockets", config.Websocket.MaxNumWebsockets, "Max number of websocket connections")
+	runNodeCmd.Flags().Int("ws.max_num_concurrent_reqs", config.Websocket.MaxNumConcurrentReqs, "Max number of concurrent websocket requests that may be processed concurrently")
+
 	RootCmd.AddCommand(runNodeCmd)
 }
 
-func getLogLevel(level string) log.Level {
+func setLogLevel(level string) {
 	switch strings.ToLower(level) {
 	case "debug":
-		return log.DebugLevel
+		log.SetLevel(log.DebugLevel)
 	case "info":
-		return log.InfoLevel
+		log.SetLevel(log.InfoLevel)
 	case "warn":
-		return log.WarnLevel
+		log.SetLevel(log.WarnLevel)
 	case "error":
-		return log.ErrorLevel
+		log.SetLevel(log.ErrorLevel)
 	case "fatal":
-		return log.FatalLevel
+		log.SetLevel(log.FatalLevel)
 	default:
-		return log.InfoLevel
+		log.SetLevel(log.InfoLevel)
 	}
 }
 
 func runNode(cmd *cobra.Command, args []string) error {
-	// Set log level by config.LogLevel
-	log.SetLevel(getLogLevel(config.LogLevel))
+	startTime := time.Now()
+	setLogLevel(config.LogLevel)
 
 	// Create & start node
 	n := node.NewNode(config)
 	if _, err := n.Start(); err != nil {
-		return fmt.Errorf("Failed to start node: %v", err)
-	} else {
-		log.Info("Start node ", n.SyncManager().NodeInfo())
+		log.WithField("err", err).Fatal("failed to start node")
 	}
+
+	nodeInfo := n.SyncManager().NodeInfo()
+	log.WithFields(log.Fields{
+		"version":  nodeInfo.Version,
+		"network":  nodeInfo.Network,
+		"duration": time.Since(startTime),
+	}).Info("start node complete")
 
 	// Trap signal, run forever.
 	n.RunForever()
-
 	return nil
 }

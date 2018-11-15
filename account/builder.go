@@ -146,6 +146,7 @@ func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txb
 			SourcePos:           bcOut.Source.Position,
 			ControlProgramIndex: acp.KeyIndex,
 			Address:             acp.Address,
+			Change:              acp.Change,
 		})
 
 		tpls = append(tpls, tpl)
@@ -313,7 +314,10 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 		return txInput, sigInst, nil
 	}
 
-	path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
+	path, err := signers.Path(signer, signers.AccountKeySpace, u.Change, u.ControlProgramIndex)
+	if err != nil {
+		return nil, nil, err
+	}
 	if u.Address == "" {
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
 		return txInput, sigInst, nil
@@ -324,17 +328,15 @@ func UtxoToInputs(signer *signers.Signer, u *UTXO) (*types.TxInput, *txbuilder.S
 		return nil, nil, err
 	}
 
+	sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
+	derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
+
 	switch address.(type) {
 	case *common.AddressWitnessPubKeyHash:
-		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
-		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
 		derivedPK := derivedXPubs[0].PublicKey()
 		sigInst.WitnessComponents = append(sigInst.WitnessComponents, txbuilder.DataWitness([]byte(derivedPK)))
 
 	case *common.AddressWitnessScriptHash:
-		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
-		path := signers.Path(signer, signers.AccountKeySpace, u.ControlProgramIndex)
-		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
 		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)
 		if err != nil {
@@ -374,6 +376,6 @@ func (m *Manager) insertControlProgramDelayed(b *txbuilder.TemplateBuilder, acp 
 		if len(acps) == 0 {
 			return nil
 		}
-		return m.insertControlPrograms(acps...)
+		return m.SaveControlPrograms(acps...)
 	})
 }

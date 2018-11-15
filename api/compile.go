@@ -5,7 +5,14 @@ import (
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/equity/compiler"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/vm"
+)
+
+// pre-define contract error types
+var (
+	ErrCompileContract = errors.New("compile contract failed")
+	ErrInstContract    = errors.New("instantiate contract failed")
 )
 
 type (
@@ -26,34 +33,33 @@ type (
 	}
 )
 
-func compileEquity(req compileReq) (compileResp, error) {
-	var resp compileResp
+func compileEquity(req compileReq) (*compileResp, error) {
 	compiled, err := compiler.Compile(strings.NewReader(req.Contract))
 	if err != nil {
-		resp.Error = err.Error()
+		return nil, errors.WithDetail(ErrCompileContract, err.Error())
 	}
 
 	// if source contract maybe contain import statement, multiple contract objects will be generated
 	// after the compilation, and the last object is what we need.
 	contract := compiled[len(compiled)-1]
-	resp = compileResp{
+	resp := &compileResp{
 		Name:    contract.Name,
 		Source:  req.Contract,
 		Program: contract.Body,
-		Value:   contract.Value,
+		Value:   contract.Value.Amount + " of " + contract.Value.Asset,
 		Clauses: contract.Clauses,
 		Opcodes: contract.Opcodes,
 	}
 
 	if req.Args != nil {
-		resp.Program, err = compiler.Instantiate(contract.Body, contract.Params, false, req.Args)
+		resp.Program, err = compiler.Instantiate(contract.Body, contract.Params, contract.Recursive, req.Args)
 		if err != nil {
-			resp.Error = err.Error()
+			return nil, errors.WithDetail(ErrInstContract, err.Error())
 		}
 
 		resp.Opcodes, err = vm.Disassemble(resp.Program)
 		if err != nil {
-			return resp, err
+			return nil, err
 		}
 	}
 
@@ -73,5 +79,5 @@ func (a *API) compileEquity(req compileReq) Response {
 	if err != nil {
 		return NewErrorResponse(err)
 	}
-	return NewSuccessResponse(resp)
+	return NewSuccessResponse(&resp)
 }

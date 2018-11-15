@@ -39,6 +39,16 @@ func (a *API) pseudohsmCreateKey(ctx context.Context, in struct {
 	return NewSuccessResponse(&createKeyResp{Alias: xpub.Alias, XPub: xpub.XPub, File: xpub.File, Mnemonic: *mnemonic})
 }
 
+func (a *API) pseudohsmUpdateKeyAlias(ctx context.Context, in struct {
+	XPub     chainkd.XPub `json:"xpub"`
+	NewAlias string       `json:"new_alias"`
+}) Response {
+	if err := a.wallet.Hsm.UpdateKeyAlias(in.XPub, in.NewAlias); err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(nil)
+}
+
 func (a *API) pseudohsmListKeys(ctx context.Context) Response {
 	return NewSuccessResponse(a.wallet.Hsm.ListKeys())
 }

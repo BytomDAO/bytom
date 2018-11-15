@@ -71,7 +71,7 @@ func (g *TxGenerator) createAccount(name string, keys []string, quorum int) erro
 		}
 		xpubs = append(xpubs, *xpub)
 	}
-	_, err := g.AccountManager.Create(xpubs, quorum, name)
+	_, err := g.AccountManager.Create(xpubs, quorum, name, signers.BIP0044)
 	return err
 }
 
@@ -104,6 +104,7 @@ func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (
 		AccountID:           ctrlProg.AccountID,
 		Address:             ctrlProg.Address,
 		ValidHeight:         0,
+		Change:              ctrlProg.Change,
 	}
 	return utxo, nil
 }
@@ -196,7 +197,7 @@ func (g *TxGenerator) AddIssuanceInput(assetAlias string, amount uint64) error {
 	}
 	issuanceInput := types.NewIssuanceInput(nonce[:], amount, asset.IssuanceProgram, nil, asset.RawDefinitionByte)
 	signInstruction := &txbuilder.SigningInstruction{}
-	path := signers.Path(asset.Signer, signers.AssetKeySpace)
+	path := signers.GetBip0032Path(asset.Signer, signers.AssetKeySpace)
 	signInstruction.AddRawWitnessKeys(asset.Signer.XPubs, path, asset.Signer.Quorum)
 	g.Builder.RestrictMinTime(time.Now())
 	return g.Builder.AddInput(issuanceInput, signInstruction)
@@ -312,7 +313,11 @@ func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signe
 	}
 
 	// FIXME: code duplicate with account/builder.go
-	path := signers.Path(signer, signers.AccountKeySpace, cp.KeyIndex)
+	path, err := signers.Path(signer, signers.AccountKeySpace, cp.Change, cp.KeyIndex)
+	if err != nil {
+		return nil, err
+	}
+
 	if cp.Address == "" {
 		sigInst.AddWitnessKeys(signer.XPubs, path, signer.Quorum)
 		return sigInst, nil
@@ -332,7 +337,10 @@ func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signe
 
 	case *common.AddressWitnessScriptHash:
 		sigInst.AddRawWitnessKeys(signer.XPubs, path, signer.Quorum)
-		path := signers.Path(signer, signers.AccountKeySpace, cp.KeyIndex)
+		path, err := signers.Path(signer, signers.AccountKeySpace, cp.Change, cp.KeyIndex)
+		if err != nil {
+			return nil, err
+		}
 		derivedXPubs := chainkd.DeriveXPubs(signer.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
 		script, err := vmutil.P2SPMultiSigProgram(derivedPKs, signer.Quorum)

@@ -6,6 +6,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
 )
 
@@ -31,6 +32,16 @@ func (a *API) restoreWalletImage(ctx context.Context, image WalletImage) Respons
 	if err := a.wallet.AccountMgr.Restore(image.AccountImage); err != nil {
 		return NewErrorResponse(errors.Wrap(err, "restore account image"))
 	}
+
+	var allAccounts []*account.Account
+	for _, acctImage := range image.AccountImage.Slice {
+		allAccounts = append(allAccounts, acctImage.Account)
+	}
+
+	if err := a.wallet.RecoveryMgr.AddrResurrect(allAccounts); err != nil {
+		return NewErrorResponse(err)
+	}
+
 	a.wallet.RescanBlocks()
 	return NewSuccessResponse(nil)
 }
@@ -58,6 +69,15 @@ func (a *API) backupWalletImage() Response {
 }
 
 func (a *API) rescanWallet() Response {
+	allAccounts, err := a.wallet.AccountMgr.ListAccounts("")
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	if err := a.wallet.RecoveryMgr.AddrResurrect(allAccounts); err != nil {
+		return NewErrorResponse(err)
+	}
+
 	a.wallet.RescanBlocks()
 	return NewSuccessResponse(nil)
 }
@@ -76,4 +96,15 @@ func (a *API) getWalletInfo() Response {
 		BestBlockHeight: bestBlockHeight,
 		WalletHeight:    walletStatus.WorkHeight,
 	})
+}
+
+func (a *API) recoveryFromRootXPubs(ctx context.Context, in struct {
+	XPubs []chainkd.XPub `json:"xpubs"`
+}) Response {
+	if err := a.wallet.RecoveryMgr.AcctResurrect(in.XPubs); err != nil {
+		return NewErrorResponse(err)
+	}
+
+	a.wallet.RescanBlocks()
+	return NewSuccessResponse(nil)
 }

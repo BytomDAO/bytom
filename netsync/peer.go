@@ -4,8 +4,10 @@ import (
 	"encoding/hex"
 	"net"
 	"sync"
+	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/tmlibs/flowrate"
 	"gopkg.in/fatih/set.v0"
 
 	"github.com/bytom/consensus"
@@ -26,6 +28,7 @@ type BasePeer interface {
 	Addr() net.Addr
 	ID() string
 	ServiceFlag() consensus.ServiceFlag
+	TrafficStatus() (*flowrate.Status, *flowrate.Status)
 	TrySend(byte, interface{}) bool
 }
 
@@ -37,10 +40,17 @@ type BasePeerSet interface {
 
 // PeerInfo indicate peer status snap
 type PeerInfo struct {
-	ID         string `json:"peer_id"`
-	RemoteAddr string `json:"remote_addr"`
-	Height     uint64 `json:"height"`
-	Delay      uint32 `json:"delay"`
+	ID                  string        `json:"peer_id"`
+	RemoteAddr          string        `json:"remote_addr"`
+	Height              uint64        `json:"height"`
+	Ping                time.Duration `json:"ping"`
+	Duration            time.Duration `json:"duration"`
+	TotalSent           int64         `json:"total_sent"`
+	TotalReceived       int64         `json:"total_received"`
+	AverageSentRate     int64         `json:"average_sent_rate"`
+	AverageReceivedRate int64         `json:"average_received_rate"`
+	CurrentSentRate     int64         `json:"current_sent_rate"`
+	CurrentReceivedRate int64         `json:"current_received_rate"`
 }
 
 type peer struct {
@@ -139,10 +149,25 @@ func (p *peer) getHeaders(locator []*bc.Hash, stopHash *bc.Hash) bool {
 func (p *peer) getPeerInfo() *PeerInfo {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
+
+	sentStatus, receivedStatus := p.TrafficStatus()
+	ping := sentStatus.Idle - receivedStatus.Idle
+	if receivedStatus.Idle > sentStatus.Idle {
+		ping = -ping
+	}
+
 	return &PeerInfo{
-		ID:         p.ID(),
-		RemoteAddr: p.Addr().String(),
-		Height:     p.height,
+		ID:                  p.ID(),
+		RemoteAddr:          p.Addr().String(),
+		Height:              p.height,
+		Ping:                ping,
+		Duration:            sentStatus.Duration,
+		TotalSent:           sentStatus.Bytes,
+		TotalReceived:       receivedStatus.Bytes,
+		AverageSentRate:     sentStatus.AvgRate,
+		AverageReceivedRate: receivedStatus.AvgRate,
+		CurrentSentRate:     sentStatus.CurRate,
+		CurrentReceivedRate: receivedStatus.CurRate,
 	}
 }
 
