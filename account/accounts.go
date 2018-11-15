@@ -310,9 +310,7 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) (err error) {
 	for _, cp := range cps {
 		if cp.AccountID == accountID {
 			sha3pool.Sum256(hash[:], cp.ControlProgram)
-			storeBatch := m.db.NewBatch()
-			storeBatch.Delete(ContractKey(hash))
-			storeBatch.Write()
+			m.db.Delete(ContractKey(hash))
 		}
 	}
 	return nil
@@ -330,9 +328,7 @@ func (m *Manager) deleteAccountUtxos(accountID string) (err error) {
 		}
 
 		if accountID == accountUtxo.AccountID {
-			storeBatch := m.db.NewBatch()
-			storeBatch.Delete([]byte(UTXOPreFix + accountUtxo.OutputID.String()))
-			storeBatch.Write()
+			m.db.Delete([]byte(UTXOPreFix + accountUtxo.OutputID.String()))
 		}
 	}
 	return nil
