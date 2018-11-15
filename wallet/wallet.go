@@ -194,8 +194,8 @@ func (w *Wallet) RescanBlocks() {
 	}
 }
 
-// DeleteAccountTxs deletes all txs in wallet
-func (w *Wallet) DeleteAccountTxs() error {
+// deleteAccountTxs deletes all txs in wallet
+func (w *Wallet) deleteAccountTxs() {
 	storeBatch := w.DB.NewBatch()
 
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
@@ -213,8 +213,6 @@ func (w *Wallet) DeleteAccountTxs() error {
 	}
 
 	storeBatch.Write()
-
-	return nil
 }
 
 // DeleteAccount deletes account matching accountID, then rescan wallet
@@ -222,9 +220,8 @@ func (w *Wallet) DeleteAccount(accountID string) (err error) {
 	w.rw.Lock()
 	defer w.rw.Unlock()
 
-	if err := w.DeleteAccountTxs(); err != nil {
-		return err
-	}
+	w.deleteAccountTxs()
+
 	if err := w.AccountMgr.DeleteAccount(accountID); err != nil {
 		return err
 	}
