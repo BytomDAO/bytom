@@ -194,6 +194,42 @@ func (w *Wallet) RescanBlocks() {
 	}
 }
 
+// deleteAccountTxs deletes all txs in wallet
+func (w *Wallet) deleteAccountTxs() {
+	storeBatch := w.DB.NewBatch()
+
+	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
+	defer txIter.Release()
+
+	for txIter.Next() {
+		storeBatch.Delete(txIter.Key())
+	}
+
+	txIndexIter := w.DB.IteratorPrefix([]byte(TxIndexPrefix))
+	defer txIndexIter.Release()
+
+	for txIndexIter.Next() {
+		storeBatch.Delete(txIndexIter.Key())
+	}
+
+	storeBatch.Write()
+}
+
+// DeleteAccount deletes account matching accountID, then rescan wallet
+func (w *Wallet) DeleteAccount(accountID string) (err error) {
+	w.rw.Lock()
+	defer w.rw.Unlock()
+
+	w.deleteAccountTxs()
+
+	if err := w.AccountMgr.DeleteAccount(accountID); err != nil {
+		return err
+	}
+
+	w.RescanBlocks()
+	return nil
+}
+
 func (w *Wallet) getRescanNotification() {
 	select {
 	case <-w.rescanCh:
