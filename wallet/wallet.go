@@ -220,12 +220,24 @@ func (w *Wallet) DeleteAccount(accountID string) (err error) {
 	w.rw.Lock()
 	defer w.rw.Unlock()
 
-	w.deleteAccountTxs()
-
 	if err := w.AccountMgr.DeleteAccount(accountID); err != nil {
 		return err
 	}
 
+	w.deleteAccountTxs()
+	w.RescanBlocks()
+	return nil
+}
+
+func (w *Wallet) UpdateAccountAlias(accountID string, newAlias string) (err error) {
+	w.rw.Lock()
+	defer w.rw.Unlock()
+
+	if err := w.AccountMgr.UpdateAccountAlias(accountID, newAlias); err != nil {
+		return err
+	}
+
+	w.deleteAccountTxs()
 	w.RescanBlocks()
 	return nil
 }

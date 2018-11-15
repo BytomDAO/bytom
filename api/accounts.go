@@ -46,7 +46,7 @@ func (a *API) updateAccountAlias(ctx context.Context, ins struct {
 		}
 		accountID = foundAccount.ID
 	}
-	if err := a.wallet.AccountMgr.UpdateAccountAlias(accountID, ins.NewAlias); err != nil {
+	if err := a.wallet.UpdateAccountAlias(accountID, ins.NewAlias); err != nil {
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
