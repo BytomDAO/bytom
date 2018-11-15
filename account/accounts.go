@@ -301,7 +301,7 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 }
 
 // deleteAccountControlPrograms deletes control program matching accountID
-func (m *Manager) deleteAccountControlPrograms(accountID string) (err error) {
+func (m *Manager) deleteAccountControlPrograms(accountID string) error {
 	cps, err := m.ListControlProgram()
 	if err != nil {
 		return err
@@ -317,14 +317,13 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) (err error) {
 }
 
 // deleteAccountUtxos deletes utxos matching accountID
-func (m *Manager) deleteAccountUtxos(accountID string) (err error) {
+func (m *Manager) deleteAccountUtxos(accountID string) error {
 	accountUtxoIter := m.db.IteratorPrefix([]byte(UTXOPreFix))
 	defer accountUtxoIter.Release()
 	for accountUtxoIter.Next() {
 		accountUtxo := &UTXO{}
 		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
-			log.WithField("err", err).Warn("GetAccountUtxos fail on unmarshal utxo")
-			continue
+			return err
 		}
 
 		if accountID == accountUtxo.AccountID {
@@ -339,8 +338,8 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
-	account := &Account{}
-	if account, err = m.FindByID(accountID); err != nil {
+	account, err := m.FindByID(accountID)
+	if err != nil {
 		return err
 	}
 
