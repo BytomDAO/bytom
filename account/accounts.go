@@ -320,9 +320,6 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) (err error) {
 
 // deleteAccountUtxos deletes utxos matching accountID
 func (m *Manager) deleteAccountUtxos(accountID string) (err error) {
-	m.accountMu.Lock()
-	defer m.accountMu.Unlock()
-
 	accountUtxoIter := m.db.IteratorPrefix([]byte(UTXOPreFix))
 	defer accountUtxoIter.Release()
 	for accountUtxoIter.Next() {
@@ -343,6 +340,9 @@ func (m *Manager) deleteAccountUtxos(accountID string) (err error) {
 
 // DeleteAccount deletes the account's ID or alias matching account ID.
 func (m *Manager) DeleteAccount(accountID string) (err error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
 	account := &Account{}
 	if account, err = m.FindByID(accountID); err != nil {
 		return err
