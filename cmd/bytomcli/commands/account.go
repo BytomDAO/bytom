@@ -21,6 +21,9 @@ func init() {
 	listAccountsCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
 	listAccountsCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
 
+	deleteAccountCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
+	deleteAccountCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
+
 	listAddressesCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
 	listAddressesCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
 
@@ -116,15 +119,16 @@ var listAccountsCmd = &cobra.Command{
 }
 
 var deleteAccountCmd = &cobra.Command{
-	Use:   "delete-account <accountID|alias>",
+	Use:   "delete-account <[accountAlias]|[accountID]>",
 	Short: "Delete the existing account",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		accountInfo := &struct {
-			AccountInfo string `json:"account_info"`
-		}{AccountInfo: args[0]}
+		var ins = struct {
+			AccountID    string `json:"account_id"`
+			AccountAlias string `json:"account_alias"`
+		}{AccountID: accountID, AccountAlias: accountAlias}
 
-		if _, exitCode := util.ClientCall("/delete-account", accountInfo); exitCode != util.Success {
+		if _, exitCode := util.ClientCall("/delete-account", &ins); exitCode != util.Success {
 			os.Exit(exitCode)
 		}
 

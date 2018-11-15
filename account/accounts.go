@@ -55,6 +55,7 @@ var (
 	ErrDeriveRule      = errors.New("invalid key derive rule")
 	ErrContractIndex   = errors.New("exceed the maximum addresses per account")
 	ErrAccountIndex    = errors.New("exceed the maximum accounts per xpub")
+	ErrFindTransaction = errors.New("no transaction")
 )
 
 // ContractKey account control promgram store prefix
@@ -299,13 +300,55 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 	return nil
 }
 
-// DeleteAccount deletes the account's ID or alias matching accountInfo.
-func (m *Manager) DeleteAccount(aliasOrID string) (err error) {
-	account := &Account{}
-	if account, err = m.FindByAlias(aliasOrID); err != nil {
-		if account, err = m.FindByID(aliasOrID); err != nil {
+// deleteAccountControlPrograms deletes control program matching accountID
+func (m *Manager) deleteAccountControlPrograms(accountID string) error {
+	cps, err := m.ListControlProgram()
+	if err != nil {
+		return err
+	}
+
+	var hash common.Hash
+	for _, cp := range cps {
+		if cp.AccountID == accountID {
+			sha3pool.Sum256(hash[:], cp.ControlProgram)
+			m.db.Delete(ContractKey(hash))
+		}
+	}
+	return nil
+}
+
+// deleteAccountUtxos deletes utxos matching accountID
+func (m *Manager) deleteAccountUtxos(accountID string) error {
+	accountUtxoIter := m.db.IteratorPrefix([]byte(UTXOPreFix))
+	defer accountUtxoIter.Release()
+	for accountUtxoIter.Next() {
+		accountUtxo := &UTXO{}
+		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
 			return err
 		}
+
+		if accountID == accountUtxo.AccountID {
+			m.db.Delete(StandardUTXOKey(accountUtxo.OutputID))
+		}
+	}
+	return nil
+}
+
+// DeleteAccount deletes the account's ID or alias matching account ID.
+func (m *Manager) DeleteAccount(accountID string) (err error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
+	account, err := m.FindByID(accountID)
+	if err != nil {
+		return err
+	}
+
+	if err := m.deleteAccountControlPrograms(accountID); err != nil {
+		return err
+	}
+	if err := m.deleteAccountUtxos(accountID); err != nil {
+		return err
 	}
 
 	m.cacheMu.Lock()

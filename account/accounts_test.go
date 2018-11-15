@@ -128,10 +128,6 @@ func TestDeleteAccount(t *testing.T) {
 		testutil.FatalErr(t, err)
 	}
 
-	if err = m.DeleteAccount(account1.Alias); err != nil {
-		testutil.FatalErr(t, err)
-	}
-
 	found, err := m.FindByID(account1.ID)
 	if err != nil {
 		t.Errorf("expected account %v should be deleted", found)
