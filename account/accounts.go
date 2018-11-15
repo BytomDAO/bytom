@@ -302,21 +302,13 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 
 // deleteAccountControlPrograms deletes control program matching accountID
 func (m *Manager) deleteAccountControlPrograms(accountID string) (err error) {
-	m.accountMu.Lock()
-	defer m.accountMu.Unlock()
-
-	account := &Account{}
-	if account, err = m.FindByID(accountID); err != nil {
-		return err
-	}
-
 	cps, err := m.ListControlProgram()
 	if err != nil {
 		return err
 	}
 	var hash common.Hash
 	for _, cp := range cps {
-		if cp.AccountID == account.ID {
+		if cp.AccountID == accountID {
 			sha3pool.Sum256(hash[:], cp.ControlProgram)
 			storeBatch := m.db.NewBatch()
 			storeBatch.Delete(ContractKey(hash))
