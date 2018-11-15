@@ -85,24 +85,32 @@ func CreateTxBuilder(baseUtxo *account.UTXO, signer *signers.Signer) (*txbuilder
 func MockTxsP2PKH(acctMgr *account.Manager, xPub chainkd.XPub, multiTypeAccount bool) ([]*types.Tx, error) {
 	txs := []*types.Tx{}
 	accts := []*account.Account{}
-	for i := uint32(0); i < 32; i = i + 1 + rand.Uint32()%5 {
+	for i := uint32(1); i < 32; i = i + 1 + rand.Uint32()%5 {
 		alias := fmt.Sprintf("testAccount%d", i)
 		deriveRule := signers.BIP0044
 		if multiTypeAccount {
 			deriveRule = uint8(rand.Uint32() % 2)
 		}
-		acct, err := acctMgr.Create([]chainkd.XPub{xPub}, 1, alias, deriveRule)
+		acct, err := account.CreateAccount([]chainkd.XPub{xPub}, 1, alias, uint64(i), deriveRule)
 		if err != nil {
 			return nil, err
 		}
+
+		if err := acctMgr.SaveAccount(acct); err != nil {
+			return nil, err
+		}
+
 		accts = append(accts, acct)
 	}
 
 	for _, acct := range accts {
-		num := rand.Uint32() % 256
-		for i := uint32(0); i < num; i = i + 1 + rand.Uint32()%16 {
-			controlProg, err := acctMgr.CreateAddress(acct.ID, false)
+		for i := uint32(1); i < 256; i = i + 1 + rand.Uint32()%16 {
+			controlProg, err := account.CreateCtrlProgram(acct, uint64(i), false)
 			if err != nil {
+				return nil, err
+			}
+
+			if err := acctMgr.SaveControlPrograms(controlProg); err != nil {
 				return nil, err
 			}
 
@@ -117,6 +125,61 @@ func MockTxsP2PKH(acctMgr *account.Manager, xPub chainkd.XPub, multiTypeAccount 
 	}
 
 	return txs, nil
+}
+
+func TestExtendScanAddresses(t *testing.T) {
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	hsm, err := pseudohsm.New(dirPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	xpub, _, err := hsm.XCreate("test_pub", "password", "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	acctMgr := account.NewManager(testDB, nil)
+	recoveryMgr := newRecoveryManager(testDB, acctMgr)
+	acc1 := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
+	acc2 := &account.Account{ID: "testB", Alias: "test2"}
+	acc3 := &account.Account{ID: "testC", Alias: "test3", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 2, DeriveRule: 3}}
+	acc4 := &account.Account{ID: "testD", Alias: "test4", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub.XPub}, KeyIndex: 3, DeriveRule: signers.BIP0032}}
+
+	recoveryMgr.state.stateForScope(acc1)
+	recoveryMgr.state.stateForScope(acc3)
+	recoveryMgr.state.stateForScope(acc4)
+
+	cases := []struct {
+		acct       *account.Account
+		err        error
+		addressLen uint64
+	}{
+		{acc1, nil, addrRecoveryWindow * 2},
+		{acc2, ErrInvalidAcctID, addrRecoveryWindow * 2},
+		{acc3, signers.ErrDeriveRule, addrRecoveryWindow * 2},
+		{acc4, nil, addrRecoveryWindow * 3},
+	}
+
+	for _, c := range cases {
+		if err := recoveryMgr.extendScanAddresses(c.acct.ID, true); err != c.err {
+			t.Fatal("extend scan addresses err:", err)
+		}
+
+		if err := recoveryMgr.extendScanAddresses(c.acct.ID, false); err != c.err {
+			t.Fatal("extend scan addresses err:", err)
+		}
+
+		if uint64(len(recoveryMgr.addresses)) != c.addressLen {
+			t.Fatalf("extend scan addresses err: len:%d,want:%d", len(recoveryMgr.addresses), c.addressLen)
+		}
+	}
 }
 
 func TestRecoveryFromXPubs(t *testing.T) {
@@ -317,5 +380,27 @@ func TestLock(t *testing.T) {
 
 	if !recoveryMgr.tryStartXPubsRec() {
 		t.Fatal("recovery manager try lock test err")
+	}
+}
+
+func TestStateForScope(t *testing.T) {
+	state := newRecoveryState()
+	acc1 := &account.Account{ID: "test1", Alias: "testA"}
+	state.stateForScope(acc1)
+	if !reflect.DeepEqual(state.AccountsStatus[acc1.ID].Account, acc1) {
+		t.Fatal("state for scope test err")
+	}
+
+	acc2 := &account.Account{ID: "test1", Alias: "testB"}
+	state.stateForScope(acc2)
+
+	if reflect.DeepEqual(state.AccountsStatus[acc2.ID].Account, acc2) {
+		t.Fatal("state for scope test err")
+	}
+
+	acc3 := &account.Account{ID: "test2", Alias: "testC"}
+	state.stateForScope(acc3)
+	if !reflect.DeepEqual(state.AccountsStatus[acc3.ID].Account, acc3) {
+		t.Fatal("state for scope test err")
 	}
 }
