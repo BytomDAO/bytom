@@ -10,6 +10,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/blockchain/query"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -194,32 +195,25 @@ func (w *Wallet) RescanBlocks() {
 	}
 }
 
-// DeleteTxs deletes all txs in wallet
-func (w *Wallet) DeleteTxs() (err error) {
+// DeleteAccountTxs deletes all txs in wallet
+func (w *Wallet) DeleteAccountTxs() (err error) {
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
 
-	allAccounts, err := w.AccountMgr.ListAccounts("")
-	if err != nil {
-		return err
-	}
-	for _, aa := range allAccounts {
-		annotatedTxs, err := w.GetTransactions(aa.ID)
-		if err != nil {
+	for txIter.Next() {
+		annotatedTx := &query.AnnotatedTx{}
+		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
 			return err
 		}
-
-		for _, annTx := range annotatedTxs {
-			formatKey := w.DB.Get(calcTxIndexKey(annTx.ID.String()))
-			if formatKey == nil {
-				continue
-			}
-
-			storeBatch := w.DB.NewBatch()
-			storeBatch.Delete(calcAnnotatedKey(string(formatKey)))
-			storeBatch.Delete(calcTxIndexKey(annTx.ID.String()))
-			storeBatch.Write()
+		formatKey := w.DB.Get(calcTxIndexKey(annotatedTx.ID.String()))
+		if formatKey == nil {
+			continue
 		}
+
+		storeBatch := w.DB.NewBatch()
+		storeBatch.Delete(calcAnnotatedKey(string(formatKey)))
+		storeBatch.Delete(calcTxIndexKey(annotatedTx.ID.String()))
+		storeBatch.Write()
 	}
 
 	return nil
@@ -230,13 +224,7 @@ func (w *Wallet) DeleteAccount(accountID string) (err error) {
 	w.rw.Lock()
 	defer w.rw.Unlock()
 
-	if err := w.AccountMgr.DeleteAccountControlPrograms(accountID); err != nil {
-		return err
-	}
-	if err := w.AccountMgr.DeleteAccountUtxos(accountID); err != nil {
-		return err
-	}
-	if err := w.DeleteTxs(); err != nil {
+	if err := w.DeleteAccountTxs(); err != nil {
 		return err
 	}
 	if err := w.AccountMgr.DeleteAccount(accountID); err != nil {

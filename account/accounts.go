@@ -12,7 +12,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	dbm "github.com/tendermint/tmlibs/db"
 
-	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/common"
@@ -301,8 +300,8 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 	return nil
 }
 
-// DeleteAccountControlPrograms deletes control program matching accountID
-func (m *Manager) DeleteAccountControlPrograms(accountID string) (err error) {
+// deleteAccountControlPrograms deletes control program matching accountID
+func (m *Manager) deleteAccountControlPrograms(accountID string) (err error) {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
@@ -327,8 +326,8 @@ func (m *Manager) DeleteAccountControlPrograms(accountID string) (err error) {
 	return nil
 }
 
-// DeleteAccountUtxos deletes utxos matching accountID
-func (m *Manager) DeleteAccountUtxos(accountID string) (err error) {
+// deleteAccountUtxos deletes utxos matching accountID
+func (m *Manager) deleteAccountUtxos(accountID string) (err error) {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
@@ -350,75 +349,17 @@ func (m *Manager) DeleteAccountUtxos(accountID string) (err error) {
 	return nil
 }
 
-// DeleteAccountTxs deletes txs matching accountID
-func (m *Manager) DeleteAccountTxs(accountID string) (err error) {
-	m.accountMu.Lock()
-	defer m.accountMu.Unlock()
-
-	txPrefix := "TXS:"
-	txIndexPrefix := "TID:"
-	txIter := m.db.IteratorPrefix([]byte(txPrefix))
-	defer txIter.Release()
-
-	allAccounts, err := m.ListAccounts("")
-	if err != nil {
-		return err
-	}
-	for i, aa := range allAccounts {
-		if aa.ID == accountID {
-			allAccounts = append(allAccounts[:i], allAccounts[i+1:]...)
-			break
-		}
-	}
-
-	isRelatedSelf := false
-	isRelatedAll := false
-	for txIter.Next() {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-			return err
-		}
-
-		for _, input := range annotatedTx.Inputs {
-			if input.AccountID == accountID {
-				isRelatedSelf = true
-			}
-			for _, acc := range allAccounts {
-				if input.AccountID == acc.ID {
-					isRelatedAll = true
-				}
-			}
-		}
-
-		for _, output := range annotatedTx.Outputs {
-			if output.AccountID == accountID {
-				isRelatedSelf = true
-			}
-			for _, acc := range allAccounts {
-				if output.AccountID == acc.ID {
-					isRelatedAll = true
-				}
-			}
-		}
-
-		if isRelatedSelf && !isRelatedAll {
-			formatKey := m.db.Get([]byte(txIndexPrefix + annotatedTx.ID.String()))
-			if formatKey == nil {
-				return ErrFindTransaction
-			}
-			storeBatch := m.db.NewBatch()
-			storeBatch.Delete([]byte(txPrefix + string(formatKey)))
-			storeBatch.Delete([]byte(txIndexPrefix + annotatedTx.ID.String()))
-			storeBatch.Write()
-		}
-	}
-	return nil
-}
-
 // DeleteAccount deletes the account's ID or alias matching account ID.
 func (m *Manager) DeleteAccount(accountID string) (err error) {
 	account := &Account{}
 	if account, err = m.FindByID(accountID); err != nil {
+		return err
+	}
+
+	if err := m.deleteAccountControlPrograms(accountID); err != nil {
+		return err
+	}
+	if err := m.deleteAccountUtxos(accountID); err != nil {
 		return err
 	}
 
