@@ -200,6 +200,7 @@ func (w *Wallet) DeleteAccountTxs() (err error) {
 	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
 	defer txIter.Release()
 
+	storeBatch := w.DB.NewBatch()
 	for txIter.Next() {
 		annotatedTx := &query.AnnotatedTx{}
 		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
@@ -210,11 +211,10 @@ func (w *Wallet) DeleteAccountTxs() (err error) {
 			continue
 		}
 
-		storeBatch := w.DB.NewBatch()
 		storeBatch.Delete(calcAnnotatedKey(string(formatKey)))
 		storeBatch.Delete(calcTxIndexKey(annotatedTx.ID.String()))
-		storeBatch.Write()
 	}
+	storeBatch.Write()
 
 	return nil
 }
