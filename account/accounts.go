@@ -422,13 +422,6 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 		return err
 	}
 
-	// if err := m.DeleteAccountControlPrograms(accountID); err != nil {
-	// 	return err
-	// }
-	// if err := m.DeleteAccountUtxos(accountID); err != nil {
-	// 	return err
-	// }
-
 	m.cacheMu.Lock()
 	m.aliasCache.Remove(account.Alias)
 	m.cacheMu.Unlock()
