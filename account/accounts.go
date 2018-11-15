@@ -328,7 +328,7 @@ func (m *Manager) deleteAccountUtxos(accountID string) error {
 		}
 
 		if accountID == accountUtxo.AccountID {
-			m.db.Delete([]byte(StandardUTXOKey(accountUtxo.OutputID)))
+			m.db.Delete(StandardUTXOKey(accountUtxo.OutputID))
 		}
 	}
 	return nil
