@@ -310,7 +310,7 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) error {
 	var hash common.Hash
 	for _, cp := range cps {
 		if cp.AccountID == accountID {
-			sha3pool.Sum256(hash[:], cp.ControlProgram)
+			sm3.Sum(hash[:], cp.ControlProgram)
 			m.db.Delete(ContractKey(hash))
 		}
 	}
