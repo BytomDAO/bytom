@@ -306,6 +306,7 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) error {
 	if err != nil {
 		return err
 	}
+
 	var hash common.Hash
 	for _, cp := range cps {
 		if cp.AccountID == accountID {
