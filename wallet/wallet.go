@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/query"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -202,17 +201,12 @@ func (w *Wallet) DeleteAccountTxs() (err error) {
 
 	storeBatch := w.DB.NewBatch()
 	for txIter.Next() {
-		annotatedTx := &query.AnnotatedTx{}
-		if err := json.Unmarshal(txIter.Value(), &annotatedTx); err != nil {
-			return err
-		}
-		formatKey := w.DB.Get(calcTxIndexKey(annotatedTx.ID.String()))
-		if formatKey == nil {
-			continue
-		}
-
-		storeBatch.Delete(calcAnnotatedKey(string(formatKey)))
-		storeBatch.Delete(calcTxIndexKey(annotatedTx.ID.String()))
+		storeBatch.Delete(txIter.Key())
+	}
+	txIndexIter := w.DB.IteratorPrefix([]byte(TxIndexPrefix))
+	defer txIndexIter.Release()
+	for txIndexIter.Next() {
+		storeBatch.Delete(txIndexIter.Key())
 	}
 	storeBatch.Write()
 
