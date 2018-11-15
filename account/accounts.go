@@ -301,8 +301,11 @@ func (m *Manager) CreateBatchAddresses(accountID string, change bool, stopIndex 
 	return nil
 }
 
-// DeleteControlProgramByAccountID deletes control program matching accountID
-func (m *Manager) DeleteControlProgramByAccountID(accountID string) (err error) {
+// DeleteAccountControlPrograms deletes control program matching accountID
+func (m *Manager) DeleteAccountControlPrograms(accountID string) (err error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
 	account := &Account{}
 	if account, err = m.FindByID(accountID); err != nil {
 		return err
@@ -324,8 +327,11 @@ func (m *Manager) DeleteControlProgramByAccountID(accountID string) (err error) 
 	return nil
 }
 
-// DeleteUtxosByAccountID deletes utxos matching accountID
-func (m *Manager) DeleteUtxosByAccountID(accountID string) (err error) {
+// DeleteAccountUtxos deletes utxos matching accountID
+func (m *Manager) DeleteAccountUtxos(accountID string) (err error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
 	accountUtxoIter := m.db.IteratorPrefix([]byte(UTXOPreFix))
 	defer accountUtxoIter.Release()
 	for accountUtxoIter.Next() {
@@ -344,8 +350,11 @@ func (m *Manager) DeleteUtxosByAccountID(accountID string) (err error) {
 	return nil
 }
 
-// DeleteTxsByAccountID deletes txs matching accountID
-func (m *Manager) DeleteTxsByAccountID(accountID string) (err error) {
+// DeleteAccountTxs deletes txs matching accountID
+func (m *Manager) DeleteAccountTxs(accountID string) (err error) {
+	m.accountMu.Lock()
+	defer m.accountMu.Unlock()
+
 	txPrefix := "TXS:"
 	txIndexPrefix := "TID:"
 	txIter := m.db.IteratorPrefix([]byte(txPrefix))
@@ -413,15 +422,12 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 		return err
 	}
 
-	if err := m.DeleteControlProgramByAccountID(accountID); err != nil {
-		return err
-	}
-	if err := m.DeleteUtxosByAccountID(accountID); err != nil {
-		return err
-	}
-	if err := m.DeleteTxsByAccountID(accountID); err != nil {
-		return err
-	}
+	// if err := m.DeleteAccountControlPrograms(accountID); err != nil {
+	// 	return err
+	// }
+	// if err := m.DeleteAccountUtxos(accountID); err != nil {
+	// 	return err
+	// }
 
 	m.cacheMu.Lock()
 	m.aliasCache.Remove(account.Alias)

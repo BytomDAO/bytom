@@ -194,6 +194,59 @@ func (w *Wallet) RescanBlocks() {
 	}
 }
 
+// DeleteTxs deletes all txs in wallet
+func (w *Wallet) DeleteTxs() (err error) {
+	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
+	defer txIter.Release()
+
+	allAccounts, err := w.AccountMgr.ListAccounts("")
+	if err != nil {
+		return err
+	}
+	for _, aa := range allAccounts {
+		annotatedTxs, err := w.GetTransactions(aa.ID)
+		if err != nil {
+			return err
+		}
+
+		for _, annTx := range annotatedTxs {
+			formatKey := w.DB.Get(calcTxIndexKey(annTx.ID.String()))
+			if formatKey == nil {
+				continue
+			}
+
+			storeBatch := w.DB.NewBatch()
+			storeBatch.Delete(calcAnnotatedKey(string(formatKey)))
+			storeBatch.Delete(calcTxIndexKey(annTx.ID.String()))
+			storeBatch.Write()
+		}
+	}
+
+	return nil
+}
+
+// DeleteAccount deletes account matching accountID, then rescan wallet
+func (w *Wallet) DeleteAccount(accountID string) (err error) {
+	w.rw.Lock()
+	defer w.rw.Unlock()
+
+	if err := w.AccountMgr.DeleteAccountControlPrograms(accountID); err != nil {
+		return err
+	}
+	if err := w.AccountMgr.DeleteAccountUtxos(accountID); err != nil {
+		return err
+	}
+	if err := w.DeleteTxs(); err != nil {
+		return err
+	}
+	if err := w.AccountMgr.DeleteAccount(accountID); err != nil {
+		return err
+	}
+
+	w.RescanBlocks()
+	return nil
+}
+
 func (w *Wallet) getRescanNotification() {
 	select {
 	case <-w.rescanCh:

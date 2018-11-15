@@ -70,10 +70,10 @@ func (a *API) deleteAccount(ctx context.Context, filter struct {
 		}
 		accountID = acc.ID
 	}
-
-	if err := a.wallet.AccountMgr.DeleteAccount(accountID); err != nil {
+	if err := a.wallet.DeleteAccount(accountID); err != nil {
 		return NewErrorResponse(err)
 	}
+
 	return NewSuccessResponse(nil)
 }
 
