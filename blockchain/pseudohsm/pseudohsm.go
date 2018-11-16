@@ -22,7 +22,11 @@ var (
 	ErrDuplicateKeyAlias = errors.New("duplicate key alias")
 	ErrLoadKey           = errors.New("key not found or wrong password ")
 	ErrDecrypt           = errors.New("could not decrypt key with given passphrase")
+	ErrMnemonicLength    = errors.New("mnemonic length error")
 )
+
+// EntropyLength random entropy length to generate mnemonics.
+const EntropyLength = 128
 
 // HSM type for storing pubkey and privatekey
 type HSM struct {
@@ -72,6 +76,12 @@ func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string, 
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
 
+	// checksum length = entropy length /32
+	// mnemonic length = (entropy length + checksum length)/11
+	if len(strings.Fields(mnemonic)) != (EntropyLength+EntropyLength/32)/11 {
+		return nil, ErrMnemonicLength
+	}
+
 	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
 	if ok := h.cache.hasAlias(normalizedAlias); ok {
 		return nil, ErrDuplicateKeyAlias
@@ -116,7 +126,7 @@ func (h *HSM) createKeyFromMnemonic(alias string, auth string, mnemonic string) 
 
 func (h *HSM) createChainKDKey(alias string, auth string, language string) (*XPub, *string, error) {
 	// Generate a mnemonic for memorization or user-friendly seeds
-	entropy, err := mnem.NewEntropy(256)
+	entropy, err := mnem.NewEntropy(EntropyLength)
 	if err != nil {
 		return nil, nil, err
 	}
