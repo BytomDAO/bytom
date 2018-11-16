@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"net"
 	"sync"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/flowrate"
@@ -40,17 +39,17 @@ type BasePeerSet interface {
 
 // PeerInfo indicate peer status snap
 type PeerInfo struct {
-	ID                  string        `json:"peer_id"`
-	RemoteAddr          string        `json:"remote_addr"`
-	Height              uint64        `json:"height"`
-	Ping                time.Duration `json:"ping"`
-	Duration            time.Duration `json:"duration"`
-	TotalSent           int64         `json:"total_sent"`
-	TotalReceived       int64         `json:"total_received"`
-	AverageSentRate     int64         `json:"average_sent_rate"`
-	AverageReceivedRate int64         `json:"average_received_rate"`
-	CurrentSentRate     int64         `json:"current_sent_rate"`
-	CurrentReceivedRate int64         `json:"current_received_rate"`
+	ID                  string `json:"peer_id"`
+	RemoteAddr          string `json:"remote_addr"`
+	Height              uint64 `json:"height"`
+	Ping                string `json:"ping"`
+	Duration            string `json:"duration"`
+	TotalSent           int64  `json:"total_sent"`
+	TotalReceived       int64  `json:"total_received"`
+	AverageSentRate     int64  `json:"average_sent_rate"`
+	AverageReceivedRate int64  `json:"average_received_rate"`
+	CurrentSentRate     int64  `json:"current_sent_rate"`
+	CurrentReceivedRate int64  `json:"current_received_rate"`
 }
 
 type peer struct {
@@ -160,8 +159,8 @@ func (p *peer) getPeerInfo() *PeerInfo {
 		ID:                  p.ID(),
 		RemoteAddr:          p.Addr().String(),
 		Height:              p.height,
-		Ping:                ping,
-		Duration:            sentStatus.Duration,
+		Ping:                ping.String(),
+		Duration:            sentStatus.Duration.String(),
 		TotalSent:           sentStatus.Bytes,
 		TotalReceived:       receivedStatus.Bytes,
 		AverageSentRate:     sentStatus.AvgRate,

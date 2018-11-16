@@ -43,8 +43,10 @@ var (
 )
 
 var (
-	BIP44Purpose = []byte{0x00, 0x00, 0x00, 0x2C}
-	BTMCoinType  = []byte{0x00, 0x00, 0x00, 0x99}
+	// BIP44Purpose purpose field 0x0000002c little-endian mode.
+	BIP44Purpose = []byte{0x2C, 0x00, 0x00, 0x00}
+	// BTMCoinType coin type field 0x00000099 little-endian mode.
+	BTMCoinType = []byte{0x99, 0x00, 0x00, 0x00}
 )
 
 // Signer is the abstract concept of a signer,
@@ -77,18 +79,18 @@ func getBip0044Path(accountIndex uint64, change bool, addrIndex uint64) [][]byte
 	var path [][]byte
 	path = append(path, BIP44Purpose[:]) //purpose
 	path = append(path, BTMCoinType[:])  //coin type
-	accIdxBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(accIdxBytes, uint64(accountIndex))
+	accIdxBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(accIdxBytes, uint32(accountIndex))
 	path = append(path, accIdxBytes) //account index
-	branchBytes := make([]byte, 8)
+	branchBytes := make([]byte, 4)
 	if change {
-		binary.LittleEndian.PutUint64(branchBytes, uint64(1))
+		binary.LittleEndian.PutUint32(branchBytes, uint32(1))
 	} else {
-		binary.LittleEndian.PutUint64(branchBytes, uint64(0))
+		binary.LittleEndian.PutUint32(branchBytes, uint32(0))
 	}
 	path = append(path, branchBytes) //change
-	addrIdxBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(addrIdxBytes[:], addrIndex)
+	addrIdxBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(addrIdxBytes[:], uint32(addrIndex))
 	path = append(path, addrIdxBytes[:]) //address index
 	return path
 }
