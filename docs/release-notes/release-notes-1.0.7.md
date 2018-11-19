@@ -37,7 +37,7 @@ __Bytom Node__
 + `PR #1462`
     - Fixed wrong balance display after deleting the account.
 + `PR #1466`
-    - Add update account API.
+    - Add update account alias API.
 + `PR #1473`
     - Support Mac using brew to install Bytom.
 
