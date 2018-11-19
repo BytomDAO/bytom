@@ -104,8 +104,6 @@ clean:
 	@rm -rf blockchain/pseudohsm/testdata/pseudo/
 	@echo "Cleaning sm2 pem files..."
 	@rm -rf crypto/sm2/*.pem
-	@echo "Cleaning go test cache..."
-	@go clean -testcache
 	@echo "Done."
 
 target/$(BYTOMD_BINARY32):
