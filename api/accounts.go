@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/account"
+	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -20,7 +21,7 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 	Quorum    int            `json:"quorum"`
 	Alias     string         `json:"alias"`
 }) Response {
-	acc, err := a.wallet.AccountMgr.Create(ins.RootXPubs, ins.Quorum, ins.Alias)
+	acc, err := a.wallet.AccountMgr.Create(ins.RootXPubs, ins.Quorum, ins.Alias, signers.BIP0044)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -31,16 +32,48 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 	return NewSuccessResponse(annotatedAccount)
 }
 
+// POST update-account-alias
+func (a *API) updateAccountAlias(ctx context.Context, ins struct {
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+	NewAlias     string `json:"new_alias"`
+}) Response {
+	accountID := ins.AccountID
+	if ins.AccountAlias != "" {
+		foundAccount, err := a.wallet.AccountMgr.FindByAlias(ins.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = foundAccount.ID
+	}
+	if err := a.wallet.UpdateAccountAlias(accountID, ins.NewAlias); err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(nil)
+}
+
 // AccountInfo is request struct for deleteAccount
 type AccountInfo struct {
 	Info string `json:"account_info"`
 }
 
 // POST /delete-account
-func (a *API) deleteAccount(ctx context.Context, in AccountInfo) Response {
-	if err := a.wallet.AccountMgr.DeleteAccount(in.Info); err != nil {
+func (a *API) deleteAccount(ctx context.Context, filter struct {
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+}) Response {
+	accountID := filter.AccountID
+	if filter.AccountAlias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		accountID = acc.ID
+	}
+	if err := a.wallet.DeleteAccount(accountID); err != nil {
 		return NewErrorResponse(err)
 	}
+
 	return NewSuccessResponse(nil)
 }
 

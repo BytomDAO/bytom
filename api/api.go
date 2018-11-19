@@ -14,8 +14,8 @@ import (
 	"github.com/bytom/accesstoken"
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
-	"github.com/bytom/dashboard"
-	"github.com/bytom/equity"
+	"github.com/bytom/dashboard/dashboard"
+	"github.com/bytom/dashboard/equity"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
@@ -200,6 +200,7 @@ func (a *API) buildHandler() {
 		walletEnable = true
 
 		m.Handle("/create-account", jsonHandler(a.createAccount))
+		m.Handle("/update-account-alias", jsonHandler(a.updateAccountAlias))
 		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
 		m.Handle("/delete-account", jsonHandler(a.deleteAccount))
 
@@ -220,6 +221,7 @@ func (a *API) buildHandler() {
 		m.Handle("/list-assets", jsonHandler(a.listAssets))
 
 		m.Handle("/create-key", jsonHandler(a.pseudohsmCreateKey))
+		m.Handle("/update-key-alias", jsonHandler(a.pseudohsmUpdateKeyAlias))
 		m.Handle("/list-keys", jsonHandler(a.pseudohsmListKeys))
 		m.Handle("/delete-key", jsonHandler(a.pseudohsmDeleteKey))
 		m.Handle("/reset-key-password", jsonHandler(a.pseudohsmResetPassword))
@@ -243,6 +245,7 @@ func (a *API) buildHandler() {
 		m.Handle("/restore-wallet", jsonHandler(a.restoreWalletImage))
 		m.Handle("/rescan-wallet", jsonHandler(a.rescanWallet))
 		m.Handle("/wallet-info", jsonHandler(a.getWalletInfo))
+		m.Handle("/recovery-wallet", jsonHandler(a.recoveryFromRootXPubs))
 	} else {
 		log.Warn("Please enable wallet")
 	}

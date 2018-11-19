@@ -3,6 +3,8 @@ package pseudohsm
 
 import (
 	"bytes"
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,7 +22,11 @@ var (
 	ErrDuplicateKeyAlias = errors.New("duplicate key alias")
 	ErrLoadKey           = errors.New("key not found or wrong password ")
 	ErrDecrypt           = errors.New("could not decrypt key with given passphrase")
+	ErrMnemonicLength    = errors.New("mnemonic length error")
 )
+
+// EntropyLength random entropy length to generate mnemonics.
+const EntropyLength = 128
 
 // HSM type for storing pubkey and privatekey
 type HSM struct {
@@ -65,10 +71,16 @@ func (h *HSM) XCreate(alias string, auth string, language string) (*XPub, *strin
 	return xpub, mnemonic, err
 }
 
-// ImportFromMnemonic produces a xprv from mnemonic and stores it in the db.
+// ImportKeyFromMnemonic produces a xprv from mnemonic and stores it in the db.
 func (h *HSM) ImportKeyFromMnemonic(alias string, auth string, mnemonic string, language string) (*XPub, error) {
 	h.cacheMu.Lock()
 	defer h.cacheMu.Unlock()
+
+	// checksum length = entropy length /32
+	// mnemonic length = (entropy length + checksum length)/11
+	if len(strings.Fields(mnemonic)) != (EntropyLength+EntropyLength/32)/11 {
+		return nil, ErrMnemonicLength
+	}
 
 	normalizedAlias := strings.ToLower(strings.TrimSpace(alias))
 	if ok := h.cache.hasAlias(normalizedAlias); ok {
@@ -114,7 +126,7 @@ func (h *HSM) createKeyFromMnemonic(alias string, auth string, mnemonic string) 
 
 func (h *HSM) createChainKDKey(alias string, auth string, language string) (*XPub, *string, error) {
 	// Generate a mnemonic for memorization or user-friendly seeds
-	entropy, err := mnem.NewEntropy(256)
+	entropy, err := mnem.NewEntropy(EntropyLength)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -127,6 +139,52 @@ func (h *HSM) createChainKDKey(alias string, auth string, language string) (*XPu
 		return nil, nil, err
 	}
 	return xpub, &mnemonic, nil
+}
+
+// UpdateKeyAlias update key alias
+func (h *HSM) UpdateKeyAlias(xpub chainkd.XPub, newAlias string) error {
+	h.cacheMu.Lock()
+	defer h.cacheMu.Unlock()
+
+	h.cache.maybeReload()
+	h.cache.mu.Lock()
+	xpb, err := h.cache.find(XPub{XPub: xpub})
+	h.cache.mu.Unlock()
+	if err != nil {
+		return err
+	}
+
+	keyjson, err := ioutil.ReadFile(xpb.File)
+	if err != nil {
+		return err
+	}
+
+	encrptKeyJSON := new(encryptedKeyJSON)
+	if err := json.Unmarshal(keyjson, encrptKeyJSON); err != nil {
+		return err
+	}
+
+	normalizedAlias := strings.ToLower(strings.TrimSpace(newAlias))
+	if ok := h.cache.hasAlias(normalizedAlias); ok {
+		return ErrDuplicateKeyAlias
+	}
+
+	encrptKeyJSON.Alias = normalizedAlias
+	keyJSON, err := json.Marshal(encrptKeyJSON)
+	if err != nil {
+		return err
+	}
+
+	if err := writeKeyFile(xpb.File, keyJSON); err != nil {
+		return err
+	}
+
+	// update key alias
+	h.cache.delete(xpb)
+	xpb.Alias = normalizedAlias
+	h.cache.add(xpb)
+
+	return nil
 }
 
 // ListKeys returns a list of all xpubs from the store
