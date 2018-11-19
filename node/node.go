@@ -128,18 +128,6 @@ func NewNode(config *cfg.Config) *Node {
 	// get transaction from txPool and send it to syncManager and wallet
 	go newPoolTxListener(txPool, syncManager, wallet, notificationMgr)
 
-	// run the profile server
-	profileHost := config.ProfListenAddress
-	if profileHost != "" {
-		// Profiling bytomd programs.see (https://blog.golang.org/profiling-go-programs)
-		// go tool pprof http://profileHose/debug/pprof/heap
-		go func() {
-			if err = http.ListenAndServe(profileHost, nil); err != nil {
-				cmn.Exit(cmn.Fmt("Failed to register tcp profileHost: %v", err))
-			}
-		}()
-	}
-
 	node := &Node{
 		config:       config,
 		syncManager:  syncManager,
@@ -162,6 +150,16 @@ func NewNode(config *cfg.Config) *Node {
 		tensority.UseSIMD = true
 	}
 
+	// run the profile server
+	if profileHost := config.ProfListenAddress; profileHost != "" {
+		// Profiling bytomd programs.see (https://blog.golang.org/profiling-go-programs)
+		// go tool pprof http://profileHose/debug/pprof/heap
+		go func() {
+			if err = http.ListenAndServe(profileHost, nil); err != nil {
+				cmn.Exit(cmn.Fmt("Failed to register tcp profileHost: %v", err))
+			}
+		}()
+	}
 	return node
 }
 
