@@ -1,6 +1,6 @@
 Bytom version 1.0.6 is now available from:
 
-  https://github.com/Bytom/bytom/releases/tag/v1.0.6
+  https://github.com/Bytom/bytom/releases/tag/v1.0.6rc1
 
 
 Please report bugs using the issue tracker at github:
