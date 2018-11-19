@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"net/http"
 	"strings"
+
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -87,6 +89,17 @@ func runNode(cmd *cobra.Command, args []string) error {
 		"network":  nodeInfo.Network,
 		"duration": time.Since(startTime),
 	}).Info("start node complete")
+
+	// run the profile server
+	if profileHost := config.ProfListenAddress; profileHost != "" {
+		// Profiling bytomd programs.see (https://blog.golang.org/profiling-go-programs)
+		// go tool pprof http://profileHose/debug/pprof/heap
+		go func() {
+			if err := http.ListenAndServe(profileHost, nil); err != nil {
+				log.WithField("err", err).Fatal("failed to register tcp profileHost")
+			}
+		}()
+	}
 
 	// Trap signal, run forever.
 	n.RunForever()
