@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
@@ -126,6 +127,18 @@ func NewNode(config *cfg.Config) *Node {
 
 	// get transaction from txPool and send it to syncManager and wallet
 	go newPoolTxListener(txPool, syncManager, wallet, notificationMgr)
+
+	// run the profile server
+	profileHost := config.ProfListenAddress
+	if profileHost != "" {
+		// Profiling bytomd programs.see (https://blog.golang.org/profiling-go-programs)
+		// go tool pprof http://profileHose/debug/pprof/heap
+		go func() {
+			if err = http.ListenAndServe(profileHost, nil); err != nil {
+				cmn.Exit(cmn.Fmt("Failed to register tcp profileHost: %v", err))
+			}
+		}()
+	}
 
 	node := &Node{
 		config:       config,
