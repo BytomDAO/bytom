@@ -3,20 +3,19 @@ package p2p
 import (
 	"fmt"
 	"net"
-	"strconv"
 	"time"
 
+	"github.com/btcsuite/go-socks/socks"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	crypto "github.com/tendermint/go-crypto"
-	wire "github.com/tendermint/go-wire"
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/flowrate"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p/connection"
-	"github.com/btcsuite/go-socks/socks"
 )
 
 // peerConn contains the raw connection and its config.
@@ -105,6 +104,11 @@ func newPeerConn(rawConn net.Conn, outbound bool, ourNodePrivKey crypto.PrivKeyE
 	conn, err := connection.MakeSecretConnection(rawConn, ourNodePrivKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error creating peer")
+	}
+
+	// Remove deadline
+	if err := rawConn.SetDeadline(time.Time{}); err != nil {
+		return nil, err
 	}
 
 	return &peerConn{
@@ -198,15 +202,7 @@ func (p *Peer) Send(chID byte, msg interface{}) bool {
 
 // ServiceFlag return the ServiceFlag of this peer
 func (p *Peer) ServiceFlag() consensus.ServiceFlag {
-	services := consensus.SFFullNode
-	if len(p.Other) == 0 {
-		return services
-	}
-
-	if serviceFlag, err := strconv.ParseUint(p.Other[0], 10, 64); err == nil {
-		services = consensus.ServiceFlag(serviceFlag)
-	}
-	return services
+	return p.NodeInfo.ServiceFlag
 }
 
 // String representation.
