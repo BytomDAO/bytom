@@ -278,29 +278,21 @@ func (m *StatusRequestMessage) String() string {
 
 //StatusResponseMessage get status response msg
 type StatusResponseMessage struct {
-	Height      uint64
-	RawHash     [32]byte
-	GenesisHash [32]byte
+	Height  uint64
+	RawHash [32]byte
 }
 
 //NewStatusResponseMessage construct get status response msg
-func NewStatusResponseMessage(blockHeader *types.BlockHeader, hash *bc.Hash) *StatusResponseMessage {
+func NewStatusResponseMessage(blockHeader *types.BlockHeader) *StatusResponseMessage {
 	return &StatusResponseMessage{
-		Height:      blockHeader.Height,
-		RawHash:     blockHeader.Hash().Byte32(),
-		GenesisHash: hash.Byte32(),
+		Height:  blockHeader.Height,
+		RawHash: blockHeader.Hash().Byte32(),
 	}
 }
 
 //GetHash get hash from msg
 func (m *StatusResponseMessage) GetHash() *bc.Hash {
 	hash := bc.NewHash(m.RawHash)
-	return &hash
-}
-
-//GetGenesisHash get hash from msg
-func (m *StatusResponseMessage) GetGenesisHash() *bc.Hash {
-	hash := bc.NewHash(m.GenesisHash)
 	return &hash
 }
 

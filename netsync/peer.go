@@ -19,6 +19,7 @@ import (
 const (
 	maxKnownTxs         = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 	maxKnownBlocks      = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
+	maxKnownStatus      = 1024  // Maximum status hashes to keep in the known list (prevent DOS)
 	defaultBanThreshold = uint64(100)
 )
 
@@ -61,6 +62,7 @@ type peer struct {
 	banScore    trust.DynamicBanScore
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+	knownStatus *set.Set // Set of chain status known to be known by this peer
 	filterAdds  *set.Set // Set of addresses that the spv node cares about.
 }
 
@@ -72,6 +74,7 @@ func newPeer(height uint64, hash *bc.Hash, basePeer BasePeer) *peer {
 		hash:        hash,
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
+		knownStatus: set.New(),
 		filterAdds:  set.New(),
 	}
 }
@@ -211,6 +214,16 @@ func (p *peer) markBlock(hash *bc.Hash) {
 		p.knownBlocks.Pop()
 	}
 	p.knownBlocks.Add(hash.String())
+}
+
+func (p *peer) markNewStatus(hash *bc.Hash) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
+	for p.knownStatus.Size() >= maxKnownStatus {
+		p.knownStatus.Pop()
+	}
+	p.knownStatus.Add(hash.String())
 }
 
 func (p *peer) markTransaction(hash *bc.Hash) {
@@ -393,17 +406,16 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 	return nil
 }
 
-func (ps *peerSet) broadcastNewStatus(bestBlock, genesisBlock *types.Block) error {
-	bestBlockHash := bestBlock.Hash()
-	peers := ps.peersWithoutBlock(&bestBlockHash)
-
-	genesisHash := genesisBlock.Hash()
-	msg := NewStatusResponseMessage(&bestBlock.BlockHeader, &genesisHash)
+func (ps *peerSet) broadcastNewStatus(bestBlock *types.Block) error {
+	bestHash := bestBlock.Hash()
+	peers := ps.peersWithoutNewStatus(&bestHash)
 	for _, peer := range peers {
-		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(&bestBlock.BlockHeader)}); !ok {
 			ps.removePeer(peer.ID())
 			continue
 		}
+
+		peer.markNewStatus(&bestHash)
 	}
 	return nil
 }
@@ -461,6 +473,19 @@ func (ps *peerSet) peersWithoutBlock(hash *bc.Hash) []*peer {
 	peers := []*peer{}
 	for _, peer := range ps.peers {
 		if !peer.knownBlocks.Has(hash.String()) {
+			peers = append(peers, peer)
+		}
+	}
+	return peers
+}
+
+func (ps *peerSet) peersWithoutNewStatus(hash *bc.Hash) []*peer {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	var peers []*peer
+	for _, peer := range ps.peers {
+		if !peer.knownStatus.Has(hash.String()) {
 			peers = append(peers, peer)
 		}
 	}
