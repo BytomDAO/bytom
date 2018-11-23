@@ -87,6 +87,10 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("blockFetcher fail on broadcast new block")
 		return
 	}
+
+	if err := f.peers.broadcastNewStatus(msg.block); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
+	}
 }
 
 func (f *blockFetcher) processNewBlock(msg *blockMsg) {
