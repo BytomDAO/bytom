@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tendermint/tmlibs/log"
 )
 
 func createMConnection(conn net.Conn) *MConnection {
@@ -16,14 +15,12 @@ func createMConnection(conn net.Conn) *MConnection {
 	onError := func(r interface{}) {
 	}
 	c := createMConnectionWithCallbacks(conn, onReceive, onError)
-	c.SetLogger(log.TestingLogger())
 	return c
 }
 
 func createMConnectionWithCallbacks(conn net.Conn, onReceive func(chID byte, msgBytes []byte), onError func(r interface{})) *MConnection {
 	chDescs := []*ChannelDescriptor{&ChannelDescriptor{ID: 0x01, Priority: 1, SendQueueCapacity: 1}}
 	c := NewMConnectionWithConfig(conn, chDescs, onReceive, onError, DefaultMConnConfig())
-	c.SetLogger(log.TestingLogger())
 	return c
 }
 
