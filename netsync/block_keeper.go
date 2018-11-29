@@ -54,17 +54,18 @@ type blockKeeper struct {
 	blockProcessCh   chan *blockMsg
 	blocksProcessCh  chan *blocksMsg
 	headersProcessCh chan *headersMsg
-
-	headerList *list.List
+	newStateCh       chan *status
+	headerList       *list.List
 }
 
-func newBlockKeeper(chain Chain, peers *peerSet) *blockKeeper {
+func newBlockKeeper(chain Chain, peers *peerSet, newStateCh chan *status) *blockKeeper {
 	bk := &blockKeeper{
 		chain:            chain,
 		peers:            peers,
 		blockProcessCh:   make(chan *blockMsg, blockProcessChSize),
 		blocksProcessCh:  make(chan *blocksMsg, blocksProcessChSize),
 		headersProcessCh: make(chan *headersMsg, headersProcessChSize),
+		newStateCh:       newStateCh,
 		headerList:       list.New(),
 	}
 	bk.resetHeaderState()
@@ -402,5 +403,7 @@ func (bk *blockKeeper) syncWorker() {
 		if err = bk.peers.broadcastNewStatus(block); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 		}
+
+		bk.newStateCh <- &status{bestHeight: block.Height, bestHash: block.Hash()}
 	}
 }

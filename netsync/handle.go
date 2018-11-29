@@ -1,31 +1,23 @@
 package netsync
 
 import (
-	"encoding/hex"
 	"errors"
-	"net"
-	"path"
 	"reflect"
-	"strconv"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
-	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p"
-	"github.com/bytom/p2p/discover"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/version"
 )
 
 const (
 	logModule             = "netsync"
 	maxTxChanSize         = 10000
+	maxStateChanSize      = 1000
 	maxFilterAddressSize  = 50
 	maxFilterAddressCount = 1000
 )
@@ -45,12 +37,21 @@ type Chain interface {
 	ValidateTx(*types.Tx) (bool, error)
 }
 
+type Switch interface {
+	AddReactor(name string, reactor p2p.Reactor) p2p.Reactor
+	UpdateNodeInfoHeight(bestHeight uint64, bestHash bc.Hash)
+	AddBannedPeer(string) error
+	StopPeerGracefully(string)
+}
+
+type status struct {
+	bestHeight uint64
+	bestHash   bc.Hash
+}
+
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
-	sw          *p2p.Switch
-	genesisHash bc.Hash
-
-	privKey      crypto.PrivKeyEd25519 // local node's p2p key
+	sw           Switch
 	chain        Chain
 	txPool       *core.TxPool
 	blockFetcher *blockFetcher
@@ -60,54 +61,31 @@ type SyncManager struct {
 	newTxCh    chan *types.Tx
 	newBlockCh chan *bc.Hash
 	txSyncCh   chan *txSyncMsg
+	newStateCh chan *status
 	quitSync   chan struct{}
 	config     *cfg.Config
 }
 
 //NewSyncManager create a sync manager
-func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
-	genesisHeader, err := chain.GetHeaderByHeight(0)
-	if err != nil {
-		return nil, err
-	}
-
-	sw := p2p.NewSwitch(config)
+func NewSyncManager(config *cfg.Config, sw Switch, chain Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
 	peers := newPeerSet(sw)
+	newStateCh := make(chan *status, maxStateChanSize)
 	manager := &SyncManager{
 		sw:           sw,
-		genesisHash:  genesisHeader.Hash(),
 		txPool:       txPool,
 		chain:        chain,
-		privKey:      crypto.GenPrivKeyEd25519(),
-		blockFetcher: newBlockFetcher(chain, peers),
-		blockKeeper:  newBlockKeeper(chain, peers),
+		blockKeeper:  newBlockKeeper(chain, peers, newStateCh),
+		blockFetcher: newBlockFetcher(chain, peers, newStateCh),
 		peers:        peers,
 		newTxCh:      make(chan *types.Tx, maxTxChanSize),
 		newBlockCh:   newBlockCh,
 		txSyncCh:     make(chan *txSyncMsg),
+		newStateCh:   newStateCh,
 		quitSync:     make(chan struct{}),
 		config:       config,
 	}
-
-	protocolReactor := NewProtocolReactor(manager, manager.peers)
+	protocolReactor := NewProtocolReactor(manager, peers)
 	manager.sw.AddReactor("PROTOCOL", protocolReactor)
-
-	// Create & add listener
-	var listenerStatus bool
-	var l p2p.Listener
-	if !config.VaultMode {
-		p, address := protocolAndAddress(manager.config.P2P.ListenAddress)
-		l, listenerStatus = p2p.NewDefaultListener(p, address, manager.config.P2P.SkipUPNP)
-		manager.sw.AddListener(l)
-
-		discv, err := initDiscover(config, &manager.privKey, l.ExternalAddress().Port)
-		if err != nil {
-			return nil, err
-		}
-		manager.sw.SetDiscv(discv)
-	}
-	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus, chain.BestBlockHeader()))
-	manager.sw.SetNodePrivKey(manager.privKey)
 	return manager, nil
 }
 
@@ -136,11 +114,6 @@ func (sm *SyncManager) IsCaughtUp() bool {
 	return peer == nil || peer.Height() <= sm.chain.BestBlockHeight()
 }
 
-//NodeInfo get P2P peer node info
-func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
-	return sm.sw.NodeInfo()
-}
-
 //StopPeer try to stop peer by given ID
 func (sm *SyncManager) StopPeer(peerID string) error {
 	if peer := sm.peers.getPeer(peerID); peer == nil {
@@ -150,9 +123,21 @@ func (sm *SyncManager) StopPeer(peerID string) error {
 	return nil
 }
 
+//updateNodeInfoBestHeight update nodeinfo when chain best block change
+func (sm *SyncManager) updateNodeInfoBestHeight() {
+	for {
+		select {
+		case state := <-sm.newStateCh:
+			sm.sw.UpdateNodeInfoHeight(state.bestHeight, state.bestHash)
+		case <-sm.quitSync:
+			return
+		}
+	}
+}
+
 //Switch get sync manager switch
 func (sm *SyncManager) Switch() *p2p.Switch {
-	return sm.sw
+	return sm.sw.(*p2p.Switch)
 }
 
 func (sm *SyncManager) handleBlockMsg(peer *peer, msg *BlockMessage) {
@@ -399,91 +384,18 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 	}
 }
 
-// Defaults to tcp
-func protocolAndAddress(listenAddr string) (string, string) {
-	p, address := "tcp", listenAddr
-	parts := strings.SplitN(address, "://", 2)
-	if len(parts) == 2 {
-		p, address = parts[0], parts[1]
-	}
-	return p, address
-}
-
-func (sm *SyncManager) makeNodeInfo(listenerStatus bool, bestBlockHeader *types.BlockHeader) *p2p.NodeInfo {
-	nodeInfo := &p2p.NodeInfo{
-		PubKey:      sm.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
-		Moniker:     sm.config.Moniker,
-		Network:     sm.config.ChainID,
-		Version:     version.Version,
-		GenesisHash: sm.genesisHash,
-		BestHeight:  bestBlockHeader.Height,
-		BestHash:    bestBlockHeader.Hash(),
-		ServiceFlag: consensus.DefaultServices,
-	}
-	if !sm.sw.IsListening() {
-		return nodeInfo
-	}
-	p2pListener := sm.sw.Listeners()[0]
-
-	// We assume that the rpcListener has the same ExternalAddress.
-	// This is probably true because both P2P and RPC listeners use UPnP,
-	// except of course if the rpc is only bound to localhost
-	if listenerStatus {
-		nodeInfo.ListenAddr = cmn.Fmt("%v:%v", p2pListener.ExternalAddress().IP.String(), p2pListener.ExternalAddress().Port)
-	} else {
-		nodeInfo.ListenAddr = cmn.Fmt("%v:%v", p2pListener.InternalAddress().IP.String(), p2pListener.InternalAddress().Port)
-	}
-	return nodeInfo
-}
-
 //Start start sync manager service
 func (sm *SyncManager) Start() {
-	if _, err := sm.sw.Start(); err != nil {
-		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
-	}
 	// broadcast transactions
 	go sm.txBroadcastLoop()
 	go sm.minedBroadcastLoop()
 	go sm.txSyncLoop()
+	go sm.updateNodeInfoBestHeight()
 }
 
 //Stop stop sync manager
 func (sm *SyncManager) Stop() {
 	close(sm.quitSync)
-	sm.sw.Stop()
-}
-
-func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) (*discover.Network, error) {
-	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
-	if err != nil {
-		return nil, err
-	}
-
-	conn, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		return nil, err
-	}
-
-	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	ntab, err := discover.ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover.db"), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// add the seeds node to the discover table
-	if config.P2P.Seeds == "" {
-		return ntab, nil
-	}
-	nodes := []*discover.Node{}
-	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
-		version.Status.AddSeed(seed)
-		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
-		nodes = append(nodes, discover.MustParseNode(url))
-	}
-	if err = ntab.SetFallbackNodes(nodes); err != nil {
-		return nil, err
-	}
-	return ntab, nil
 }
 
 func (sm *SyncManager) minedBroadcastLoop() {

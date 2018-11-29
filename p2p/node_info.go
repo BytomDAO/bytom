@@ -6,9 +6,12 @@ import (
 
 	"github.com/tendermint/go-crypto"
 
+	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/version"
 )
 
 const maxNodeInfoSize = 10240 // 10Kb
@@ -36,9 +39,23 @@ type NodeInfo struct {
 
 type VersionCompatibleWith func(remoteVerStr string) (bool, error)
 
+func newNodeInfo(config *cfg.Config, privKey crypto.PrivKeyEd25519, genesisHash bc.Hash, bestBlockHeader types.BlockHeader, listenAddr string) *NodeInfo {
+	return &NodeInfo{
+		PubKey:      privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
+		Moniker:     config.Moniker,
+		Network:     config.ChainID,
+		ListenAddr:  listenAddr,
+		Version:     version.Version,
+		GenesisHash: genesisHash,
+		BestHeight:  bestBlockHeader.Height,
+		BestHash:    bestBlockHeader.Hash(),
+		ServiceFlag: consensus.DefaultServices,
+	}
+}
+
 // CompatibleWith checks if two NodeInfo are compatible with eachother.
 // CONTRACT: two nodes are compatible if the major version matches and network match
-func (info *NodeInfo) CompatibleWith(other *NodeInfo, versionCompatibleWith VersionCompatibleWith) error {
+func (info *NodeInfo) compatibleWith(other *NodeInfo, versionCompatibleWith VersionCompatibleWith) error {
 	compatible, err := versionCompatibleWith(other.Version)
 	if err != nil {
 		return err
@@ -59,19 +76,36 @@ func (info *NodeInfo) CompatibleWith(other *NodeInfo, versionCompatibleWith Vers
 	return nil
 }
 
+func (info *NodeInfo) getPubkey() crypto.PubKeyEd25519 {
+	return info.PubKey
+}
+
 //ListenHost peer listener ip address
-func (info *NodeInfo) ListenHost() string {
+func (info *NodeInfo) listenHost() string {
 	host, _, _ := net.SplitHostPort(info.ListenAddr)
 	return host
 }
 
 //RemoteAddrHost peer external ip address
-func (info *NodeInfo) RemoteAddrHost() string {
+func (info *NodeInfo) remoteAddrHost() string {
 	host, _, _ := net.SplitHostPort(info.RemoteAddr)
 	return host
 }
 
+func (info *NodeInfo) setPubkey(pubkey crypto.PubKeyEd25519) {
+	info.PubKey = pubkey
+}
+
 //String representation
-func (info NodeInfo) String() string {
+func (info *NodeInfo) String() string {
 	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [listen %v], version: %v service: %v bestHeight: %v, bestHash: %v}", info.PubKey, info.Moniker, info.Network, info.ListenAddr, info.Version, info.ServiceFlag, info.BestHeight, info.BestHash)
+}
+
+func (info *NodeInfo) updateBestHeight(bestHeight uint64, bestHash bc.Hash) {
+	info.BestHeight = bestHeight
+	info.BestHash = bestHash
+}
+
+func (info *NodeInfo) version() string {
+	return info.Version
 }

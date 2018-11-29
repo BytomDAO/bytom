@@ -1,9 +1,13 @@
 package p2p
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
+	"path"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,6 +22,8 @@ import (
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/trust"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/version"
 )
 
@@ -56,10 +62,80 @@ type Switch struct {
 	bannedPeer   map[string]time.Time
 	db           dbm.DB
 	mtx          sync.Mutex
+	nodeInfoMu   sync.Mutex
+}
+
+func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) (*discover.Network, error) {
+	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	realaddr := conn.LocalAddr().(*net.UDPAddr)
+	ntab, err := discover.ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover.db"), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// add the seeds node to the discover table
+	if config.P2P.Seeds == "" {
+		return ntab, nil
+	}
+	nodes := []*discover.Node{}
+	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
+		version.Status.AddSeed(seed)
+		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
+		nodes = append(nodes, discover.MustParseNode(url))
+	}
+	if err = ntab.SetFallbackNodes(nodes); err != nil {
+		return nil, err
+	}
+	return ntab, nil
+}
+
+// Defaults to tcp
+func protocolAndAddress(listenAddr string) (string, string) {
+	p, address := "tcp", listenAddr
+	parts := strings.SplitN(address, "://", 2)
+	if len(parts) == 2 {
+		p, address = parts[0], parts[1]
+	}
+	return p, address
 }
 
 // NewSwitch creates a new Switch with the given config.
-func NewSwitch(config *cfg.Config) *Switch {
+func NewSwitch(config *cfg.Config, genesisHash bc.Hash, bestBlockHeader types.BlockHeader) (*Switch, error) {
+	// Create & add listener
+	var l Listener
+	var discv *discover.Network
+	var listenAddr string
+
+	privKey := crypto.GenPrivKeyEd25519()
+	if !config.VaultMode {
+		var listenerStatus bool
+		p, address := protocolAndAddress(config.P2P.ListenAddress)
+		l, listenerStatus = NewDefaultListener(p, address, config.P2P.SkipUPNP)
+		var err error
+		discv, err = initDiscover(config, &privKey, l.ExternalAddress().Port)
+		if err != nil {
+			return nil, err
+		}
+
+		// We assume that the rpcListener has the same ExternalAddress.
+		// This is probably true because both P2P and RPC listeners use UPnP,
+		// except of course if the rpc is only bound to localhost
+		if listenerStatus {
+			listenAddr = cmn.Fmt("%v:%v", l.ExternalAddress().IP.String(), l.ExternalAddress().Port)
+		} else {
+			listenAddr = cmn.Fmt("%v:%v", l.InternalAddress().IP.String(), l.InternalAddress().Port)
+		}
+	}
+
 	sw := &Switch{
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config.P2P),
@@ -68,18 +144,21 @@ func NewSwitch(config *cfg.Config) *Switch {
 		reactorsByCh: make(map[byte]Reactor),
 		peers:        NewPeerSet(),
 		dialing:      cmn.NewCMap(),
-		nodeInfo:     nil,
 		db:           dbm.NewDB("trusthistory", config.DBBackend, config.DBDir()),
 	}
+	sw.AddListener(l)
+	sw.SetDiscv(discv)
+	sw.nodeInfo = newNodeInfo(config, privKey, genesisHash, bestBlockHeader, listenAddr)
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	sw.bannedPeer = make(map[string]time.Time)
 	if datajson := sw.db.Get([]byte(bannedPeerKey)); datajson != nil {
 		if err := json.Unmarshal(datajson, &sw.bannedPeer); err != nil {
-			return nil
+			return nil, err
 		}
 	}
+
 	trust.Init()
-	return sw
+	return sw, nil
 }
 
 // OnStart implements BaseService. It starts all the reactors, peers, and listeners.
@@ -134,15 +213,16 @@ func (sw *Switch) AddBannedPeer(ip string) error {
 // NOTE: This performs a blocking handshake before the peer is added.
 // CONTRACT: If error is returned, peer is nil, and conn is immediately closed.
 func (sw *Switch) AddPeer(pc *peerConn) error {
-	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout))
+	peerNodeInfo, err := pc.HandshakeTimeout(sw.NodeInfo(), time.Duration(sw.peerConfig.HandshakeTimeout))
 	if err != nil {
 		return err
 	}
 
-	if err := version.Status.CheckUpdate(sw.nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
+	if err := version.Status.CheckUpdate(sw.nodeInfo.version(), peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
 		return err
 	}
-	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo,version.CompatibleWith); err != nil {
+
+	if err := sw.nodeInfo.compatibleWith(peerNodeInfo, version.CompatibleWith); err != nil {
 		return err
 	}
 
@@ -161,6 +241,7 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 			return err
 		}
 	}
+
 	return sw.peers.Add(peer)
 }
 
@@ -245,8 +326,11 @@ func (sw *Switch) NumPeers() (outbound, inbound, dialing int) {
 
 // NodeInfo returns the switch's NodeInfo.
 // NOTE: Not goroutine safe.
-func (sw *Switch) NodeInfo() *NodeInfo {
-	return sw.nodeInfo
+func (sw *Switch) NodeInfo() NodeInfo {
+	sw.nodeInfoMu.Lock()
+	defer sw.nodeInfoMu.Unlock()
+
+	return *sw.nodeInfo
 }
 
 //Peers return switch peerset
@@ -254,19 +338,11 @@ func (sw *Switch) Peers() *PeerSet {
 	return sw.peers
 }
 
-// SetNodeInfo sets the switch's NodeInfo for checking compatibility and handshaking with other nodes.
-// NOTE: Not goroutine safe.
-func (sw *Switch) SetNodeInfo(nodeInfo *NodeInfo) {
-	sw.nodeInfo = nodeInfo
-}
+func (sw *Switch) UpdateNodeInfoHeight(bestHeight uint64, bestHash bc.Hash) {
+	sw.nodeInfoMu.Lock()
+	defer sw.nodeInfoMu.Unlock()
 
-// SetNodePrivKey sets the switch's private key for authenticated encryption.
-// NOTE: Not goroutine safe.
-func (sw *Switch) SetNodePrivKey(nodePrivKey crypto.PrivKeyEd25519) {
-	sw.nodePrivKey = nodePrivKey
-	if sw.nodeInfo != nil {
-		sw.nodeInfo.PubKey = nodePrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
-	}
+	sw.nodeInfo.updateBestHeight(bestHeight, bestHash)
 }
 
 // StopPeerForError disconnects from a peer due to external error.
@@ -324,18 +400,18 @@ func (sw *Switch) delBannedPeer(addr string) error {
 }
 
 func (sw *Switch) filterConnByIP(ip string) error {
-	if ip == sw.nodeInfo.ListenHost() {
+	if ip == sw.nodeInfo.listenHost() {
 		return ErrConnectSelf
 	}
 	return sw.checkBannedPeer(ip)
 }
 
 func (sw *Switch) filterConnByPeer(peer *Peer) error {
-	if err := sw.checkBannedPeer(peer.RemoteAddrHost()); err != nil {
+	if err := sw.checkBannedPeer(peer.remoteAddrHost()); err != nil {
 		return err
 	}
 
-	if sw.nodeInfo.PubKey.Equals(peer.PubKey().Wrap()) {
+	if sw.nodeInfo.getPubkey().Equals(peer.PubKey().Wrap()) {
 		return ErrConnectSelf
 	}
 
@@ -389,7 +465,7 @@ func (sw *Switch) ensureOutboundPeers() {
 
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range sw.Peers().List() {
-		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
+		connectedPeers[peer.remoteAddrHost()] = struct{}{}
 	}
 
 	var wg sync.WaitGroup
