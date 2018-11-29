@@ -1,12 +1,14 @@
 package commands
 
 import (
+	"encoding/hex"
 	"os"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/bytom/crypto/ed25519/chainkd"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/util"
 )
 
@@ -145,11 +147,17 @@ var signMsgCmd = &cobra.Command{
 	Short: "sign message to generate signature",
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
+		message, err := hex.DecodeString(args[1])
+		if err != nil {
+			jww.ERROR.Println("sign-message args not valid:", err)
+			os.Exit(util.ErrLocalExe)
+		}
+
 		var req = struct {
-			Address  string `json:"address"`
-			Message  string `json:"message"`
-			Password string `json:"password"`
-		}{Address: args[0], Message: args[1], Password: args[2]}
+			Address  string             `json:"address"`
+			Message  chainjson.HexBytes `json:"message"`
+			Password string             `json:"password"`
+		}{Address: args[0], Message: message, Password: args[2]}
 
 		data, exitCode := util.ClientCall("/sign-message", &req)
 		if exitCode != util.Success {
@@ -170,12 +178,18 @@ var verifyMsgCmd = &cobra.Command{
 			os.Exit(util.ErrLocalExe)
 		}
 
+		message, err := hex.DecodeString(args[2])
+		if err != nil {
+			jww.ERROR.Println("sign-message args not valid:", err)
+			os.Exit(util.ErrLocalExe)
+		}
+
 		var req = struct {
-			Address     string       `json:"address"`
-			DerivedXPub chainkd.XPub `json:"derived_xpub"`
-			Message     string       `json:"message"`
-			Signature   string       `json:"signature"`
-		}{Address: args[0], DerivedXPub: xpub, Message: args[2], Signature: args[3]}
+			Address     string             `json:"address"`
+			DerivedXPub chainkd.XPub       `json:"derived_xpub"`
+			Message     chainjson.HexBytes `json:"message"`
+			Signature   string             `json:"signature"`
+		}{Address: args[0], DerivedXPub: xpub, Message: message, Signature: args[3]}
 
 		data, exitCode := util.ClientCall("/verify-message", &req)
 		if exitCode != util.Success {
