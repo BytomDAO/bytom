@@ -3,9 +3,13 @@ package discover
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
+	"path"
+	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -13,7 +17,9 @@ import (
 	"github.com/tendermint/go-wire"
 
 	"github.com/bytom/common"
+	cfg "github.com/bytom/config"
 	"github.com/bytom/p2p/netutil"
+	"github.com/bytom/version"
 )
 
 const Version = 4
@@ -245,6 +251,39 @@ type udp struct {
 	ourEndpoint rpcEndpoint
 	//nat         nat.Interface
 	net *Network
+}
+
+func NewDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) (*Network, error) {
+	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	realaddr := conn.LocalAddr().(*net.UDPAddr)
+	ntab, err := ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover.db"), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// add the seeds node to the discover table
+	if config.P2P.Seeds == "" {
+		return ntab, nil
+	}
+	nodes := []*Node{}
+	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
+		version.Status.AddSeed(seed)
+		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
+		nodes = append(nodes, MustParseNode(url))
+	}
+	if err = ntab.SetFallbackNodes(nodes); err != nil {
+		return nil, err
+	}
+	return ntab, nil
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.

@@ -143,7 +143,7 @@ func (p *Peer) Equals(other *Peer) bool {
 
 // HandshakeTimeout performs a handshake between a given node and the peer.
 // NOTE: blocking
-func (pc *peerConn) HandshakeTimeout(ourNodeInfo NodeInfo, timeout time.Duration) (*NodeInfo, error) {
+func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duration) (*NodeInfo, error) {
 	// Set deadline for handshake so we don't block forever on conn.ReadFull
 	if err := pc.conn.SetDeadline(time.Now().Add(timeout)); err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func (pc *peerConn) HandshakeTimeout(ourNodeInfo NodeInfo, timeout time.Duration
 		func() {
 			var n int
 			wire.ReadBinary(peerNodeInfo, pc.conn, maxNodeInfoSize, &n, &err2)
-			log.WithField("address", peerNodeInfo.ListenAddr).Info("Peer handshake")
+			log.WithField("nodeInfo", peerNodeInfo).Info("Peer handshake")
 		})
 	if err1 != nil {
 		return peerNodeInfo, errors.Wrap(err1, "Error during handshake/write")
