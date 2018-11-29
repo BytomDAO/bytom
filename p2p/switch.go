@@ -1,12 +1,9 @@
 package p2p
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
-	"path"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -41,6 +38,10 @@ var (
 	ErrConnectSpvPeer    = errors.New("Outbound connect spv peer")
 )
 
+type Discv interface {
+	ReadRandomNodes(buf []*discover.Node) (n int)
+}
+
 // Switch handles peer connections and exposes an API to receive incoming messages
 // on `Reactors`.  Each `Reactor` is responsible for handling incoming messages of one
 // or more `Channels`.  So while sending outgoing messages is typically performed on the peer,
@@ -58,44 +59,11 @@ type Switch struct {
 	dialing      *cmn.CMap
 	nodeInfo     *NodeInfo             // our node info
 	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
-	discv        *discover.Network
+	discv        Discv
 	bannedPeer   map[string]time.Time
 	db           dbm.DB
 	mtx          sync.Mutex
 	nodeInfoMu   sync.Mutex
-}
-
-func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) (*discover.Network, error) {
-	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
-	if err != nil {
-		return nil, err
-	}
-
-	conn, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		return nil, err
-	}
-
-	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	ntab, err := discover.ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover.db"), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// add the seeds node to the discover table
-	if config.P2P.Seeds == "" {
-		return ntab, nil
-	}
-	nodes := []*discover.Node{}
-	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
-		version.Status.AddSeed(seed)
-		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
-		nodes = append(nodes, discover.MustParseNode(url))
-	}
-	if err = ntab.SetFallbackNodes(nodes); err != nil {
-		return nil, err
-	}
-	return ntab, nil
 }
 
 // Defaults to tcp
@@ -108,8 +76,10 @@ func protocolAndAddress(listenAddr string) (string, string) {
 	return p, address
 }
 
+type InitDiscover func(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) (*discover.Network, error)
+
 // NewSwitch creates a new Switch with the given config.
-func NewSwitch(config *cfg.Config, genesisHash bc.Hash, bestBlockHeader types.BlockHeader) (*Switch, error) {
+func NewSwitch(config *cfg.Config, genesisHash bc.Hash, bestBlockHeader types.BlockHeader, blacklistDB dbm.DB, initDiscover InitDiscover) (*Switch, error) {
 	// Create & add listener
 	var l Listener
 	var discv *discover.Network
@@ -144,10 +114,11 @@ func NewSwitch(config *cfg.Config, genesisHash bc.Hash, bestBlockHeader types.Bl
 		reactorsByCh: make(map[byte]Reactor),
 		peers:        NewPeerSet(),
 		dialing:      cmn.NewCMap(),
-		db:           dbm.NewDB("trusthistory", config.DBBackend, config.DBDir()),
+		nodePrivKey:  privKey,
+		discv:        discv,
+		db:           blacklistDB,
 	}
 	sw.AddListener(l)
-	sw.SetDiscv(discv)
 	sw.nodeInfo = newNodeInfo(config, privKey, genesisHash, bestBlockHeader, listenAddr)
 	sw.BaseService = *cmn.NewBaseService(nil, "P2P Switch", sw)
 	sw.bannedPeer = make(map[string]time.Time)
@@ -326,11 +297,11 @@ func (sw *Switch) NumPeers() (outbound, inbound, dialing int) {
 
 // NodeInfo returns the switch's NodeInfo.
 // NOTE: Not goroutine safe.
-func (sw *Switch) NodeInfo() NodeInfo {
+func (sw *Switch) NodeInfo() *NodeInfo {
 	sw.nodeInfoMu.Lock()
 	defer sw.nodeInfoMu.Unlock()
 
-	return *sw.nodeInfo
+	return sw.nodeInfo
 }
 
 //Peers return switch peerset
@@ -441,11 +412,6 @@ func (sw *Switch) listenerRoutine(l Listener) {
 			continue
 		}
 	}
-}
-
-// SetDiscv connect the discv model to the switch
-func (sw *Switch) SetDiscv(discv *discover.Network) {
-	sw.discv = discv
 }
 
 func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {

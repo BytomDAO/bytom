@@ -29,12 +29,12 @@ type NodeInfo struct {
 	Network     string                `json:"network"`
 	RemoteAddr  string                `json:"remote_addr"`
 	ListenAddr  string                `json:"listen_addr"`
+	Version     string                `json:"version"` // major.minor.revision
+	Other       []string              `json:"other"`   // other application specific data
 	GenesisHash bc.Hash               `json:"genesis_hash"`
 	BestHeight  uint64                `json:"best_height"`
 	BestHash    bc.Hash               `json:"best_hash"`
-	Version     string                `json:"version"` // major.minor.revision
 	ServiceFlag consensus.ServiceFlag `json:"service_flag"`
-	Other       []string              `json:"other"` // other application specific data
 }
 
 type VersionCompatibleWith func(remoteVerStr string) (bool, error)
@@ -98,7 +98,7 @@ func (info *NodeInfo) setPubkey(pubkey crypto.PubKeyEd25519) {
 
 //String representation
 func (info *NodeInfo) String() string {
-	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [listen %v], version: %v service: %v bestHeight: %v, bestHash: %v}", info.PubKey, info.Moniker, info.Network, info.ListenAddr, info.Version, info.ServiceFlag, info.BestHeight, info.BestHash)
+	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [listen %v], version: %v service: %v genesisHash:%v bestHeight: %v bestHash: %v}", info.PubKey, info.Moniker, info.Network, info.ListenAddr, info.Version, info.ServiceFlag, info.BestHash.String(), info.BestHeight, info.BestHash.String())
 }
 
 func (info *NodeInfo) updateBestHeight(bestHeight uint64, bestHash bc.Hash) {

@@ -31,6 +31,7 @@ import (
 	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/discover"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	w "github.com/bytom/wallet"
@@ -128,7 +129,8 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to get genesis block header: %v", err))
 	}
 
-	sw, err := p2p.NewSwitch(config, genesisHeader.Hash(), *chain.BestBlockHeader())
+	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
+	sw, err := p2p.NewSwitch(config, genesisHeader.Hash(), *chain.BestBlockHeader(), blacklistDB, discover.NewDiscover)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create p2p switch: %v", err))
 	}

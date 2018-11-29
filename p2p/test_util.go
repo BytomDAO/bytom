@@ -1,13 +1,18 @@
 package p2p
 
 import (
+	"fmt"
 	"net"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
+	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
+	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
+	"github.com/bytom/p2p/discover"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -49,10 +54,13 @@ func CreateRoutableAddr() (addr string, netAddr *NetAddress) {
 // If connect==Connect2Switches, the switches will be fully connected.
 // initSwitch defines how the ith switch should be initialized (ie. with what reactors).
 // NOTE: panics if any switch fails to start.
-func MakeConnectedSwitches(cfg *cfg.Config, n int, initSwitch func(int, *Switch) *Switch, connect func([]*Switch, int, int)) []*Switch {
+func MakeConnectedSwitches(cfg []*cfg.Config, n int, testDB dbm.DB, initSwitch func(int, *Switch) *Switch, connect func([]*Switch, int, int)) []*Switch {
+	if len(cfg) != n {
+		panic(errors.New("cfg number error"))
+	}
 	switches := make([]*Switch, n)
 	for i := 0; i < n; i++ {
-		switches[i] = MakeSwitch(cfg, i, "testing", "123.123.123", initSwitch)
+		switches[i] = MakeSwitch(cfg[i], i, testDB, initSwitch)
 	}
 
 	if err := startSwitches(switches); err != nil {
@@ -78,6 +86,7 @@ func Connect2Switches(switches []*Switch, i, j int) {
 	doneCh := make(chan struct{})
 	go func() {
 		err := switchI.addPeerWithConnection(c1)
+		fmt.Println(err)
 		if PanicOnAddPeerErr && err != nil {
 			panic(err)
 		}
@@ -85,6 +94,7 @@ func Connect2Switches(switches []*Switch, i, j int) {
 	}()
 	go func() {
 		err := switchJ.addPeerWithConnection(c2)
+		fmt.Println(err)
 		if PanicOnAddPeerErr && err != nil {
 			panic(err)
 		}
@@ -104,12 +114,24 @@ func startSwitches(switches []*Switch) error {
 	return nil
 }
 
-func MakeSwitch(cfg *cfg.Config, i int, network, version string, initSwitch func(int, *Switch) *Switch) *Switch {
+type mockDiscv struct {
+}
+
+func (m *mockDiscv) ReadRandomNodes(buf []*discover.Node) (n int) {
+	return 0
+}
+
+func mockInitDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) (*discover.Network, error) {
+	return &discover.Network{}, nil
+}
+
+func MakeSwitch(cfg *cfg.Config, i int, testdb dbm.DB, initSwitch func(int, *Switch) *Switch) *Switch {
 	var genesisHash bc.Hash
 	var bestBlockHeader types.BlockHeader
+
 	// new switch, add reactors
 	// TODO: let the config be passed in?
-	sw, err := NewSwitch(cfg, genesisHash, bestBlockHeader)
+	sw, err := NewSwitch(cfg, genesisHash, bestBlockHeader, testdb, mockInitDiscover)
 	if err != nil {
 		log.Errorf("create switch error:", err)
 		return nil
