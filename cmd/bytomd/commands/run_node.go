@@ -81,7 +81,7 @@ func runNode(cmd *cobra.Command, args []string) error {
 		log.WithField("err", err).Fatal("failed to start node")
 	}
 
-	nodeInfo := n.SyncManager().NodeInfo()
+	nodeInfo := n.SyncManager().Switch().NodeInfo()
 	log.WithFields(log.Fields{
 		"version":  nodeInfo.Version,
 		"network":  nodeInfo.Network,

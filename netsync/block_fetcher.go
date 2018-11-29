@@ -22,16 +22,18 @@ type blockFetcher struct {
 	newBlockCh chan *blockMsg
 	queue      *prque.Prque
 	msgSet     map[bc.Hash]*blockMsg
+	newStateCh chan *status
 }
 
 //NewBlockFetcher creates a block fetcher to retrieve blocks of the new mined.
-func newBlockFetcher(chain Chain, peers *peerSet) *blockFetcher {
+func newBlockFetcher(chain Chain, peers *peerSet, newStateCh chan *status) *blockFetcher {
 	f := &blockFetcher{
 		chain:      chain,
 		peers:      peers,
 		newBlockCh: make(chan *blockMsg, newBlockChSize),
 		queue:      prque.New(),
 		msgSet:     make(map[bc.Hash]*blockMsg),
+		newStateCh: newStateCh,
 	}
 	go f.blockProcessor()
 	return f
@@ -73,6 +75,11 @@ func (f *blockFetcher) add(msg *blockMsg) {
 }
 
 func (f *blockFetcher) insert(msg *blockMsg) {
+	preInsertBestBlock, err := f.chain.GetBlockByHeight(f.chain.BestBlockHeight())
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker get best block")
+	}
+
 	if _, err := f.chain.ProcessBlock(msg.block); err != nil {
 		peer := f.peers.getPeer(msg.peerID)
 		if peer == nil {
@@ -80,6 +87,15 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 		}
 
 		f.peers.addBanScore(msg.peerID, 20, 0, err.Error())
+		return
+	}
+
+	currentBestBlock, err := f.chain.GetBlockByHeight(f.chain.BestBlockHeight())
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker get best block")
+	}
+
+	if currentBestBlock.Height == preInsertBestBlock.Height && currentBestBlock.Hash() == preInsertBestBlock.Hash() {
 		return
 	}
 
@@ -91,6 +107,8 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 	if err := f.peers.broadcastNewStatus(msg.block); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
 	}
+
+	f.newStateCh <- &status{bestHeight: currentBestBlock.Height, bestHash: currentBestBlock.Hash()}
 }
 
 func (f *blockFetcher) processNewBlock(msg *blockMsg) {

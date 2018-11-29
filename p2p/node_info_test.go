@@ -30,7 +30,7 @@ func TestCompatibleWith(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		if err := nodeInfo.CompatibleWith(c.other, c.versionCompatibleWith); errors.Root(err) != c.err {
+		if err := nodeInfo.compatibleWith(c.other, c.versionCompatibleWith); errors.Root(err) != c.err {
 			t.Fatalf("node info compatible test err want:%s result:%s", c.err, err)
 		}
 	}

@@ -30,6 +30,7 @@ import (
 	"github.com/bytom/mining/tensority"
 	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
+	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	w "github.com/bytom/wallet"
@@ -45,7 +46,8 @@ type Node struct {
 
 	// config
 	config *cfg.Config
-
+	//switch
+	sw          *p2p.Switch
 	syncManager *netsync.SyncManager
 
 	//bcReactor    *bc.BlockchainReactor
@@ -121,7 +123,17 @@ func NewNode(config *cfg.Config) *Node {
 	}
 	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
 
-	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, newBlockCh)
+	genesisHeader, err := chain.GetHeaderByHeight(0)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("Failed to get genesis block header: %v", err))
+	}
+
+	sw, err := p2p.NewSwitch(config, genesisHeader.Hash(), *chain.BestBlockHeader())
+	if err != nil {
+		cmn.Exit(cmn.Fmt("Failed to create p2p switch: %v", err))
+	}
+
+	syncManager, _ := netsync.NewSyncManager(config, sw, chain, txPool, newBlockCh)
 
 	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
 
@@ -142,6 +154,7 @@ func NewNode(config *cfg.Config) *Node {
 
 	node := &Node{
 		config:       config,
+		sw:           sw,
 		syncManager:  syncManager,
 		accessTokens: accessTokens,
 		wallet:       wallet,
@@ -251,6 +264,12 @@ func (n *Node) OnStart() error {
 			n.cpuMiner.Start()
 		}
 	}
+
+	if _, err := n.sw.Start(); err != nil {
+		log.Error("switch start err")
+		return err
+	}
+
 	if !n.config.VaultMode {
 		n.syncManager.Start()
 	}
@@ -277,6 +296,7 @@ func (n *Node) OnStop() {
 	if !n.config.VaultMode {
 		n.syncManager.Stop()
 	}
+	n.sw.Stop()
 }
 
 func (n *Node) RunForever() {

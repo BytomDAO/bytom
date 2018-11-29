@@ -1,14 +1,15 @@
 package p2p
 
 import (
-	"math/rand"
 	"net"
 
-	"github.com/tendermint/go-crypto"
+	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/p2p/connection"
+	"github.com/bytom/protocol/bc"
+	"github.com/bytom/protocol/bc/types"
 )
 
 //PanicOnAddPeerErr add peer error
@@ -104,17 +105,15 @@ func startSwitches(switches []*Switch) error {
 }
 
 func MakeSwitch(cfg *cfg.Config, i int, network, version string, initSwitch func(int, *Switch) *Switch) *Switch {
-	privKey := crypto.GenPrivKeyEd25519()
+	var genesisHash bc.Hash
+	var bestBlockHeader types.BlockHeader
 	// new switch, add reactors
 	// TODO: let the config be passed in?
-	s := initSwitch(i, NewSwitch(cfg))
-	s.SetNodeInfo(&NodeInfo{
-		PubKey:     privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
-		Moniker:    cmn.Fmt("switch%d", i),
-		Network:    network,
-		Version:    version,
-		ListenAddr: cmn.Fmt("%v:%v", network, rand.Intn(64512)+1023),
-	})
-	s.SetNodePrivKey(privKey)
+	sw, err := NewSwitch(cfg, genesisHash, bestBlockHeader)
+	if err != nil {
+		log.Errorf("create switch error:", err)
+		return nil
+	}
+	s := initSwitch(i, sw)
 	return s
 }

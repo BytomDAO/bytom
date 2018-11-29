@@ -154,11 +154,9 @@ func mockSync(blocks []*types.Block) *SyncManager {
 		chain.SetBlockByHeight(block.Height, block)
 	}
 
-	genesis, _ := chain.GetHeaderByHeight(0)
 	return &SyncManager{
-		genesisHash: genesis.Hash(),
 		chain:       chain,
-		blockKeeper: newBlockKeeper(chain, peers),
+		blockKeeper: newBlockKeeper(chain, peers, nil),
 		peers:       peers,
 	}
 }
