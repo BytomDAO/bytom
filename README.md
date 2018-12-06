@@ -67,12 +67,11 @@ First of all, initialize the node:
 
 ```bash
 $ cd ./cmd/bytomd
-$ ./bytomd init --chain_id mainnet
+$ ./bytomd init --chain_id testnet
 ```
 
 There are three options for the flag `--chain_id`:
 
-- `mainnet`: connect to the mainnet.
 - `testnet`: connect to the testnet wisdom.
 - `solonet`: standalone mode.
 
