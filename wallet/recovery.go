@@ -203,11 +203,15 @@ func (m *recoveryManager) AddrResurrect(accts []*account.Account) error {
 
 	for _, acct := range accts {
 		m.state.stateForScope(acct)
-		if err := m.extendScanAddresses(acct.ID, true); err != nil {
+		if err := m.extendScanAddresses(acct.ID, false); err != nil {
 			return err
 		}
 
-		if err := m.extendScanAddresses(acct.ID, false); err != nil {
+		//Bip32 path no change field, no need to create addresses repeatedly.
+		if acct.DeriveRule == signers.BIP0032 {
+			continue
+		}
+		if err := m.extendScanAddresses(acct.ID, true); err != nil {
 			return err
 		}
 	}
