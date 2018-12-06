@@ -75,7 +75,7 @@ $ cd ./cmd/bytomd
 $ ./bytomd init --chain_id testnet
 ```
 
-There are three options for the flag `--chain_id`:
+There are two options for the flag `--chain_id`:
 
 - `testnet`: connect to the testnet wisdom.
 - `solonet`: standalone mode.
