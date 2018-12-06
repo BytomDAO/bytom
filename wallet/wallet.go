@@ -32,28 +32,34 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB         db.DB
-	rw         sync.RWMutex
-	status     StatusInfo
-	AccountMgr *account.Manager
-	AssetReg   *asset.Registry
-	Hsm        *pseudohsm.HSM
-	chain      *protocol.Chain
-	rescanCh   chan struct{}
+	DB          db.DB
+	rw          sync.RWMutex
+	status      StatusInfo
+	AccountMgr  *account.Manager
+	AssetReg    *asset.Registry
+	Hsm         *pseudohsm.HSM
+	chain       *protocol.Chain
+	RecoveryMgr *recoveryManager
+	rescanCh    chan struct{}
 }
 
 //NewWallet return a new wallet instance
 func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain) (*Wallet, error) {
 	w := &Wallet{
-		DB:         walletDB,
-		AccountMgr: account,
-		AssetReg:   asset,
-		chain:      chain,
-		Hsm:        hsm,
-		rescanCh:   make(chan struct{}, 1),
+		DB:          walletDB,
+		AccountMgr:  account,
+		AssetReg:    asset,
+		chain:       chain,
+		Hsm:         hsm,
+		RecoveryMgr: newRecoveryManager(walletDB, account),
+		rescanCh:    make(chan struct{}, 1),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
+		return nil, err
+	}
+
+	if err := w.RecoveryMgr.LoadStatusInfo(); err != nil {
 		return nil, err
 	}
 
@@ -104,12 +110,16 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		return err
 	}
 
+	if err := w.RecoveryMgr.FilterRecoveryTxs(block); err != nil {
+		return err
+	}
+
 	storeBatch := w.DB.NewBatch()
 	if err := w.indexTransactions(storeBatch, block, txStatus); err != nil {
 		return err
 	}
-	w.attachUtxos(storeBatch, block, txStatus)
 
+	w.attachUtxos(storeBatch, block, txStatus)
 	w.status.WorkHeight = block.Height
 	w.status.WorkHash = block.Hash()
 	if w.status.WorkHeight >= w.status.BestHeight {
@@ -182,6 +192,54 @@ func (w *Wallet) RescanBlocks() {
 	default:
 		return
 	}
+}
+
+// deleteAccountTxs deletes all txs in wallet
+func (w *Wallet) deleteAccountTxs() {
+	storeBatch := w.DB.NewBatch()
+
+	txIter := w.DB.IteratorPrefix([]byte(TxPrefix))
+	defer txIter.Release()
+
+	for txIter.Next() {
+		storeBatch.Delete(txIter.Key())
+	}
+
+	txIndexIter := w.DB.IteratorPrefix([]byte(TxIndexPrefix))
+	defer txIndexIter.Release()
+
+	for txIndexIter.Next() {
+		storeBatch.Delete(txIndexIter.Key())
+	}
+
+	storeBatch.Write()
+}
+
+// DeleteAccount deletes account matching accountID, then rescan wallet
+func (w *Wallet) DeleteAccount(accountID string) (err error) {
+	w.rw.Lock()
+	defer w.rw.Unlock()
+
+	if err := w.AccountMgr.DeleteAccount(accountID); err != nil {
+		return err
+	}
+
+	w.deleteAccountTxs()
+	w.RescanBlocks()
+	return nil
+}
+
+func (w *Wallet) UpdateAccountAlias(accountID string, newAlias string) (err error) {
+	w.rw.Lock()
+	defer w.rw.Unlock()
+
+	if err := w.AccountMgr.UpdateAccountAlias(accountID, newAlias); err != nil {
+		return err
+	}
+
+	w.deleteAccountTxs()
+	w.RescanBlocks()
+	return nil
 }
 
 func (w *Wallet) getRescanNotification() {

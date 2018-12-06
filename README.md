@@ -1,5 +1,5 @@
 Bytom
-====
+======
 
 [![Build Status](https://travis-ci.org/Bytom/bytom.svg)](https://travis-ci.org/Bytom/bytom) [![AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-brightgreen.svg)](./LICENSE)
 
@@ -16,6 +16,11 @@ In the current state `bytom` is able to:
 - Manage key, account as well as asset
 - Send transactions, i.e., issue, spend and retire asset
 
+## Installing with Homebrew
+
+```
+brew tap bytom/bytom && brew install bytom
+```
 
 ## Building from source
 

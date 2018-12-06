@@ -46,7 +46,7 @@ func compileEquity(req compileReq) (*compileResp, error) {
 		Name:    contract.Name,
 		Source:  req.Contract,
 		Program: contract.Body,
-		Value:   contract.Value,
+		Value:   contract.Value.Amount + " of " + contract.Value.Asset,
 		Clauses: contract.Clauses,
 		Opcodes: contract.Opcodes,
 	}

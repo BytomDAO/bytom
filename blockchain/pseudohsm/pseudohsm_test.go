@@ -47,8 +47,34 @@ func TestCreateKeyWithWhiteSpaceTrimed(t *testing.T) {
 		t.Fatal("the created key alias should be lowercase")
 	}
 
-	err = hsm.XDelete(xpub.XPub, "password")
+	if err = hsm.XDelete(xpub.XPub, "password"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestUpdateKeyAlias(t *testing.T) {
+	hsm, _ := New(dirPath)
+	oldAlias := "old_alias"
+	newAlias := "new_alias"
+
+	xpub, _, err := hsm.XCreate(oldAlias, "password", "en")
 	if err != nil {
+		t.Fatal(err)
+	}
+
+	if xpub.Alias != strings.TrimSpace(oldAlias) {
+		t.Fatal("the created key alias should be lowercase")
+	}
+
+	if err = hsm.UpdateKeyAlias(xpub.XPub, oldAlias); err != ErrDuplicateKeyAlias {
+		t.Fatal("got error:", err, "want error:", ErrDuplicateKeyAlias)
+	}
+
+	if err = hsm.UpdateKeyAlias(xpub.XPub, newAlias); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = hsm.XDelete(xpub.XPub, "password"); err != nil {
 		t.Fatal(err)
 	}
 }
