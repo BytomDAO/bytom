@@ -170,7 +170,8 @@ func (m *WSNotificationManager) sendNotification(typ NotificationType, data inte
 			log.WithField("module", logModule).Error("Chain connected notification is not a block")
 			break
 		}
-
+		m.status.BestHeight = block.Height
+		m.status.BestHash = block.Hash()
 		// Notify registered websocket clients of incoming block.
 		m.NotifyBlockConnected(block)
 
@@ -180,7 +181,8 @@ func (m *WSNotificationManager) sendNotification(typ NotificationType, data inte
 			log.WithField("module", logModule).Error("Chain disconnected notification is not a block")
 			break
 		}
-
+		m.status.BestHeight = block.Height - 1
+		m.status.BestHash = block.PreviousBlockHash
 		// Notify registered websocket clients.
 		m.NotifyBlockDisconnected(block)
 	}
@@ -407,7 +409,7 @@ out:
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("blockNotify GetBlockByHash")
 				return
 			}
-			m.updateStatus(block)
+
 			m.sendNotification(NTRawBlockDisconnected, block)
 		}
 
@@ -422,7 +424,6 @@ out:
 			continue
 		}
 
-		m.updateStatus(block)
 		m.sendNotification(NTRawBlockConnected, block)
 	}
 	m.wg.Done()
@@ -433,11 +434,6 @@ func (m *WSNotificationManager) blockWaiter() {
 	case <-m.chain.BlockWaiter(m.status.BestHeight + 1):
 	case <-m.quit:
 	}
-}
-
-func (m *WSNotificationManager) updateStatus(block *types.Block) {
-	m.status.BestHeight = block.Height
-	m.status.BestHash = block.Hash()
 }
 
 // Start starts the goroutines required for the manager to queue and process websocket client notifications.
