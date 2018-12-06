@@ -1,12 +1,14 @@
 package commands
 
 import (
+	"encoding/hex"
 	"os"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/bytom/crypto/sm2/chainkd"
+	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/util"
 )
 
@@ -66,6 +68,29 @@ var listKeysCmd = &cobra.Command{
 	},
 }
 
+var updateKeyAliasCmd = &cobra.Command{
+	Use:   "update-key-alias <xpub> <new-alias>",
+	Short: "Update key alias",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		xpub := new(chainkd.XPub)
+		if err := xpub.UnmarshalText([]byte(args[0])); err != nil {
+			jww.ERROR.Println("update-key-alias xpub not valid:", err)
+			os.Exit(util.ErrLocalExe)
+		}
+
+		ins := struct {
+			XPub     chainkd.XPub `json:"xpub"`
+			NewAlias string       `json:"new_alias"`
+		}{XPub: *xpub, NewAlias: args[1]}
+
+		if _, exitCode := util.ClientCall("/update-key-alias", &ins); exitCode != util.Success {
+			os.Exit(exitCode)
+		}
+		jww.FEEDBACK.Println("Successfully update key alias")
+	},
+}
+
 var resetKeyPwdCmd = &cobra.Command{
 	Use:   "reset-key-password <xpub> <old-password> <new-password>",
 	Short: "Reset key password",
@@ -122,11 +147,17 @@ var signMsgCmd = &cobra.Command{
 	Short: "sign message to generate signature",
 	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
+		message, err := hex.DecodeString(args[1])
+		if err != nil {
+			jww.ERROR.Println("sign-message args not valid:", err)
+			os.Exit(util.ErrLocalExe)
+		}
+
 		var req = struct {
-			Address  string `json:"address"`
-			Message  string `json:"message"`
-			Password string `json:"password"`
-		}{Address: args[0], Message: args[1], Password: args[2]}
+			Address  string             `json:"address"`
+			Message  chainjson.HexBytes `json:"message"`
+			Password string             `json:"password"`
+		}{Address: args[0], Message: message, Password: args[2]}
 
 		data, exitCode := util.ClientCall("/sign-message", &req)
 		if exitCode != util.Success {
@@ -147,12 +178,18 @@ var verifyMsgCmd = &cobra.Command{
 			os.Exit(util.ErrLocalExe)
 		}
 
+		message, err := hex.DecodeString(args[2])
+		if err != nil {
+			jww.ERROR.Println("sign-message args not valid:", err)
+			os.Exit(util.ErrLocalExe)
+		}
+
 		var req = struct {
-			Address     string       `json:"address"`
-			DerivedXPub chainkd.XPub `json:"derived_xpub"`
-			Message     string       `json:"message"`
-			Signature   string       `json:"signature"`
-		}{Address: args[0], DerivedXPub: xpub, Message: args[2], Signature: args[3]}
+			Address     string             `json:"address"`
+			DerivedXPub chainkd.XPub       `json:"derived_xpub"`
+			Message     chainjson.HexBytes `json:"message"`
+			Signature   string             `json:"signature"`
+		}{Address: args[0], DerivedXPub: xpub, Message: message, Signature: args[3]}
 
 		data, exitCode := util.ClientCall("/verify-message", &req)
 		if exitCode != util.Success {

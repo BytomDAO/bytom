@@ -114,6 +114,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(createAccountCmd)
 	BytomcliCmd.AddCommand(deleteAccountCmd)
 	BytomcliCmd.AddCommand(listAccountsCmd)
+	BytomcliCmd.AddCommand(updateAccountAliasCmd)
 	BytomcliCmd.AddCommand(createAccountReceiverCmd)
 	BytomcliCmd.AddCommand(listAddressesCmd)
 	BytomcliCmd.AddCommand(validateAddressCmd)
@@ -152,6 +153,7 @@ func AddCommands() {
 	BytomcliCmd.AddCommand(createKeyCmd)
 	BytomcliCmd.AddCommand(deleteKeyCmd)
 	BytomcliCmd.AddCommand(listKeysCmd)
+	BytomcliCmd.AddCommand(updateKeyAliasCmd)
 	BytomcliCmd.AddCommand(resetKeyPwdCmd)
 	BytomcliCmd.AddCommand(checkKeyPwdCmd)
 
@@ -180,6 +182,7 @@ func AddTemplateFunc() {
 		createAccountCmd.Name(),
 		listAccountsCmd.Name(),
 		deleteAccountCmd.Name(),
+		updateAccountAliasCmd.Name(),
 		createAccountReceiverCmd.Name(),
 		listAddressesCmd.Name(),
 		validateAddressCmd.Name(),

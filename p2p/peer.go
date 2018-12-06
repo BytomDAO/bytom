@@ -16,6 +16,7 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p/connection"
+	"github.com/btcsuite/go-socks/socks"
 )
 
 // peerConn contains the raw connection and its config.
@@ -29,6 +30,9 @@ type peerConn struct {
 type PeerConfig struct {
 	HandshakeTimeout time.Duration           `mapstructure:"handshake_timeout"` // times are in seconds
 	DialTimeout      time.Duration           `mapstructure:"dial_timeout"`
+	ProxyAddress     string                  `mapstructure:"proxy_address"`
+	ProxyUsername    string                  `mapstructure:"proxy_username"`
+	ProxyPassword    string                  `mapstructure:"proxy_password"`
 	MConfig          *connection.MConnConfig `mapstructure:"connection"`
 }
 
@@ -37,6 +41,9 @@ func DefaultPeerConfig(config *cfg.P2PConfig) *PeerConfig {
 	return &PeerConfig{
 		HandshakeTimeout: time.Duration(config.HandshakeTimeout) * time.Second, // * time.Second,
 		DialTimeout:      time.Duration(config.DialTimeout) * time.Second,      // * time.Second,
+		ProxyAddress:     config.ProxyAddress,
+		ProxyUsername:    config.ProxyUsername,
+		ProxyPassword:    config.ProxyPassword,
 		MConfig:          connection.DefaultMConnConfig(),
 	}
 }
@@ -240,7 +247,19 @@ func createMConnection(conn net.Conn, p *Peer, reactorsByCh map[byte]Reactor, ch
 }
 
 func dial(addr *NetAddress, config *PeerConfig) (net.Conn, error) {
-	conn, err := addr.DialTimeout(config.DialTimeout)
+	var conn net.Conn
+	var err error
+	if config.ProxyAddress == "" {
+		conn, err = addr.DialTimeout(config.DialTimeout)
+	} else {
+		proxy := &socks.Proxy{
+			Addr:         config.ProxyAddress,
+			Username:     config.ProxyUsername,
+			Password:     config.ProxyPassword,
+			TorIsolation: false,
+		}
+		conn, err = addr.DialTimeoutWithProxy(proxy, config.DialTimeout)
+	}
 	if err != nil {
 		return nil, err
 	}

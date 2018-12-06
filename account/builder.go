@@ -17,7 +17,7 @@ import (
 
 var (
 	//chainTxUtxoNum maximum utxo quantity in a tx
-	chainTxUtxoNum = 10
+	chainTxUtxoNum = 5
 	//chainTxMergeGas chain tx gas
 	chainTxMergeGas = uint64(10000000)
 )
@@ -376,6 +376,6 @@ func (m *Manager) insertControlProgramDelayed(b *txbuilder.TemplateBuilder, acp 
 		if len(acps) == 0 {
 			return nil
 		}
-		return m.insertControlPrograms(acps...)
+		return m.SaveControlPrograms(acps...)
 	})
 }

@@ -37,7 +37,7 @@ BYTOMCLI_RELEASE64 := bytomcli-$(VERSION)-$(GOOS)_amd64
 BYTOM_RELEASE32 := bytom-$(VERSION)-$(GOOS)_386
 BYTOM_RELEASE64 := bytom-$(VERSION)-$(GOOS)_amd64
 
-all: test target release-all
+all: test target release-all install
 
 bytomd:
 	@echo "Building bytomd to cmd/bytomd/bytomd"

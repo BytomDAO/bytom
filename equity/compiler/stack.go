@@ -52,18 +52,56 @@ func (stk stack) dropN(n int) stack {
 	return stk
 }
 
-func (stk stack) find(str string) int {
+func (stk stack) recurFind(str string) int {
 	if stk.isEmpty() {
 		return -1
 	}
 	if stk.str == str {
 		return 0
 	}
-	res := stk.drop().find(str)
+	res := stk.drop().recurFind(str)
 	if res < 0 {
 		return res
 	}
 	return res + 1
+}
+
+func (stk stack) count() map[string]int {
+	if stk.isEmpty() {
+		return nil
+	}
+	stackCounts := make(map[string]int)
+	for {
+		stackCounts[stk.str]++
+		stk = stack{stk.prev}
+		if stk.stackEntry == nil {
+			break
+		}
+	}
+	return stackCounts
+}
+
+func (stk stack) find(str string) int {
+	stackCounts := stk.count()
+	if stk.isEmpty() || stackCounts[str] == 0 {
+		return -1
+	}
+
+	var pos int
+	for {
+		if stk.str == str {
+			if stackCounts[str] == 1 {
+				break
+			}
+			stackCounts[str]--
+		}
+		stk = stack{stk.prev}
+		if stk.stackEntry == nil {
+			break
+		}
+		pos++
+	}
+	return pos
 }
 
 func (stk stack) roll(n int) stack {

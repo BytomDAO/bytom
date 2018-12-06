@@ -126,6 +126,7 @@ transactionLoop:
 		for _, v := range tx.Outputs {
 			var hash [32]byte
 			sm3.Sum(hash[:], v.ControlProgram)
+
 			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
 				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
