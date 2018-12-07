@@ -55,15 +55,23 @@ func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan
 				return false
 			}
 		default:
+			header.Nonce = i
+			headerHash := header.Hash()
+			time.Sleep(15 * time.Second)
+
+			log.WithFields(log.Fields{
+				"header":               header,
+				"nonce":                header.Nonce,
+				"headerHash":           headerHash,
+				"seed":                 seed,
+				"bits":                 header.Bits,
+				"RealCheckProofOfWork": difficulty.RealCheckProofOfWork(&headerHash, seed, header.Bits),
+			}).Info("solveBlock")
+			if difficulty.CheckProofOfWork(&headerHash, seed, header.Bits) {
+				return true
+			}
 		}
 
-		header.Nonce = i
-		headerHash := header.Hash()
-		time.Sleep(15 * time.Second)
-		if difficulty.CheckProofOfWork(&headerHash, seed, header.Bits) {
-			return true
-		}
-		log.Info(header, seed, header.Bits, difficulty.RealCheckProofOfWork(&headerHash, seed, header.Bits))
 	}
 	return false
 }
