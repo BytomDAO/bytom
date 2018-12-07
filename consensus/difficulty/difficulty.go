@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/mining/tensority"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -117,7 +118,8 @@ func BigToCompact(n *big.Int) uint64 {
 
 // CheckProofOfWork checks whether the hash is valid for a given difficulty.
 func CheckProofOfWork(hash, seed *bc.Hash, bits uint64) bool {
-	return true
+	compareHash := tensority.AIHash.Hash(hash, seed)
+	return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0
 }
 
 // CalcNextRequiredDifficulty return the difficulty using compact representation
