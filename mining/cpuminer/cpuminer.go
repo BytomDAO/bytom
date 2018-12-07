@@ -59,9 +59,11 @@ func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan
 
 		header.Nonce = i
 		headerHash := header.Hash()
+		time.Sleep(15 * time.Second)
 		if difficulty.CheckProofOfWork(&headerHash, seed, header.Bits) {
 			return true
 		}
+		log.Info(header, seed, header.Bits, difficulty.RealCheckProofOfWork(&headerHash, seed, header.Bits))
 	}
 	return false
 }
