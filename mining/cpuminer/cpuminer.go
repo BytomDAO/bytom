@@ -49,9 +49,11 @@ func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan
 	for i := uint64(0); i <= maxNonce; i++ {
 		select {
 		case <-quit:
+			log.Info("quit")
 			return false
 		case <-ticker.C:
 			if m.chain.BestBlockHeight() >= header.Height {
+				log.Info("m.chain.BestBlockHeight() >= header.Height")
 				return false
 			}
 		default:
