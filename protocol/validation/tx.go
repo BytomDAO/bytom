@@ -12,11 +12,14 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
+const ruleAA = 142500
+
 // validate transaction error
 var (
 	ErrTxVersion                 = errors.New("invalid transaction version")
 	ErrWrongTransactionSize      = errors.New("invalid transaction size")
 	ErrBadTimeRange              = errors.New("invalid transaction time range")
+	ErrEmptyInputIDs             = errors.New("got the empty InputIDs")
 	ErrNotStandardTx             = errors.New("not standard transaction")
 	ErrWrongCoinbaseTransaction  = errors.New("wrong coinbase transaction")
 	ErrWrongCoinbaseAsset        = errors.New("wrong coinbase assetID")
@@ -442,8 +445,8 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 
 func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 	for _, id := range tx.InputIDs {
-		if blockHeight >= 142500 && id.IsZero() {
-			return errors.New("got the empty InputIDs")
+		if blockHeight >= ruleAA && id.IsZero() {
+			return ErrEmptyInputIDs
 		}
 	}
 
