@@ -12,11 +12,14 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
+const ruleAA = 142500
+
 // validate transaction error
 var (
 	ErrTxVersion                 = errors.New("invalid transaction version")
 	ErrWrongTransactionSize      = errors.New("invalid transaction size")
 	ErrBadTimeRange              = errors.New("invalid transaction time range")
+	ErrEmptyInputIDs             = errors.New("got the empty InputIDs")
 	ErrNotStandardTx             = errors.New("not standard transaction")
 	ErrWrongCoinbaseTransaction  = errors.New("wrong coinbase transaction")
 	ErrWrongCoinbaseAsset        = errors.New("wrong coinbase assetID")
@@ -440,7 +443,13 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-func checkStandardTx(tx *bc.Tx) error {
+func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
+	for _, id := range tx.InputIDs {
+		if blockHeight >= ruleAA && id.IsZero() {
+			return ErrEmptyInputIDs
+		}
+	}
+
 	for _, id := range tx.GasInputIDs {
 		spend, err := tx.Spend(id)
 		if err != nil {
@@ -497,7 +506,7 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	if err := checkTimeRange(tx, block); err != nil {
 		return gasStatus, err
 	}
-	if err := checkStandardTx(tx); err != nil {
+	if err := checkStandardTx(tx, block.Height); err != nil {
 		return gasStatus, err
 	}
 
