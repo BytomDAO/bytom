@@ -440,7 +440,13 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-func checkStandardTx(tx *bc.Tx) error {
+func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
+	for _, id := range tx.InputIDs {
+		if blockHeight >= 142500 && id.IsZero() {
+			return errors.New("got the empty InputIDs")
+		}
+	}
+
 	for _, id := range tx.GasInputIDs {
 		spend, err := tx.Spend(id)
 		if err != nil {
@@ -497,7 +503,7 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	if err := checkTimeRange(tx, block); err != nil {
 		return gasStatus, err
 	}
-	if err := checkStandardTx(tx); err != nil {
+	if err := checkStandardTx(tx, block.Height); err != nil {
 		return gasStatus, err
 	}
 
