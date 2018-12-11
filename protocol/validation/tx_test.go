@@ -566,28 +566,143 @@ func TestTxValidation(t *testing.T) {
 }
 
 func TestCoinbase(t *testing.T) {
-	CbTx := mockCoinbaseTx(5000000000)
+	cp, _ := vmutil.DefaultCoinbaseProgram()
+	retire, _ := vmutil.RetireProgram([]byte{})
+	CbTx := types.MapTx(&types.TxData{
+		SerializedSize: 1,
+		Inputs: []*types.TxInput{
+			types.NewCoinbaseInput(nil),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+		},
+	})
+
 	cases := []struct {
 		block    *bc.Block
-		tx       *bc.Tx
+		txIndex  int
 		GasValid bool
 		err      error
 	}{
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					Height: 666,
-				},
+				BlockHeader:  &bc.BlockHeader{Height: 666},
 				Transactions: []*bc.Tx{CbTx},
 			},
-			tx:       CbTx,
+			txIndex:  0,
 			GasValid: true,
 			err:      nil,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Height: 666},
+				Transactions: []*bc.Tx{
+					CbTx,
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewCoinbaseInput(nil),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+						},
+					}),
+				},
+			},
+			txIndex:  1,
+			GasValid: false,
+			err:      ErrWrongCoinbaseTransaction,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Height: 666},
+				Transactions: []*bc.Tx{
+					CbTx,
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewCoinbaseInput(nil),
+							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+						},
+					}),
+				},
+			},
+			txIndex:  1,
+			GasValid: false,
+			err:      ErrWrongCoinbaseTransaction,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Height: 666},
+				Transactions: []*bc.Tx{
+					CbTx,
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+							types.NewCoinbaseInput(nil),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+						},
+					}),
+				},
+			},
+			txIndex:  1,
+			GasValid: false,
+			err:      ErrWrongCoinbaseTransaction,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Height: 666},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewCoinbaseInput(nil),
+							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+						},
+					}),
+				},
+			},
+			txIndex:  0,
+			GasValid: true,
+			err:      nil,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Height: 666},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewCoinbaseInput(nil),
+							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, retire),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+						},
+					}),
+				},
+			},
+			txIndex:  0,
+			GasValid: false,
+			err:      vm.ErrReturn,
 		},
 	}
 
 	for i, c := range cases {
-		gasStatus, err := ValidateTx(c.tx, c.block)
+		gasStatus, err := ValidateTx(c.block.Transactions[c.txIndex], c.block)
 
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
@@ -809,19 +924,6 @@ func mockBlock() *bc.Block {
 			Height: 666,
 		},
 	}
-}
-
-func mockCoinbaseTx(amount uint64) *bc.Tx {
-	cp, _ := vmutil.DefaultCoinbaseProgram()
-	return types.MapTx(&types.TxData{
-		SerializedSize: 1,
-		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput(nil),
-		},
-		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, amount, cp),
-		},
-	})
 }
 
 func mockGasTxInput() *types.TxInput {

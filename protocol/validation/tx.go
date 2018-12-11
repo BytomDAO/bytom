@@ -198,10 +198,8 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-		if len(vs.tx.GasInputIDs) > 0 {
-			if err := vs.gasStatus.setGasValid(); err != nil {
-				return err
-			}
+		if err := vs.gasStatus.setGasValid(); err != nil {
+			return err
 		}
 
 		for i, src := range e.Sources {
@@ -302,9 +300,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
 			return errors.Wrap(err, "checking coinbase destination")
 		}
-
-		// special case for coinbase transaction, it's valid unit all the verify has been passed
-		vs.gasStatus.GasValid = true
+		vs.gasStatus.StorageGas = 0
 
 	default:
 		return fmt.Errorf("entry has unexpected type %T", e)
@@ -453,7 +449,7 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 	for _, id := range tx.GasInputIDs {
 		spend, err := tx.Spend(id)
 		if err != nil {
-			return err
+			continue
 		}
 		spentOutput, err := tx.Output(*spend.SpentOutputId)
 		if err != nil {
