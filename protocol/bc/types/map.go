@@ -34,6 +34,7 @@ func MapTx(oldTx *TxData) *bc.Tx {
 
 		case *bc.Coinbase:
 			ord = 0
+			tx.GasInputIDs = append(tx.GasInputIDs, id)
 
 		default:
 			continue
