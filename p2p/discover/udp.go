@@ -361,7 +361,7 @@ func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req inter
 // zeroed padding space for encodePacket.
 var headSpace = make([]byte, headSize)
 
-func encodePacket(priv *crypto.PrivKeyEd25519, ptype byte, req interface{}) (p, hash []byte, err error) {
+func encodePacket(priv *crypto.PrivKeyEd25519, ptype byte, req interface{}) (p, h []byte, err error) {
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(ptype)
@@ -373,13 +373,13 @@ func encodePacket(priv *crypto.PrivKeyEd25519, ptype byte, req interface{}) (p, 
 	}
 	packet := b.Bytes()
 	nodeID := priv.PubKey().Unwrap().(crypto.PubKeyEd25519)
-	sig := priv.Sign(common.BytesToHash(packet[headSize:]).Bytes())
+	sig := priv.Sign(hash(packet[headSize:]).Bytes())
 	copy(packet, versionPrefix)
 	copy(packet[versionPrefixSize:], nodeID[:])
 	copy(packet[versionPrefixSize+nodeIDSize:], sig.Bytes())
 
-	hash = common.BytesToHash(packet[versionPrefixSize:]).Bytes()
-	return packet, hash, nil
+	h = hash(packet[versionPrefixSize:]).Bytes()
+	return packet, h, nil
 }
 
 // readLoop runs in its own goroutine. it injects ingress UDP packets
@@ -427,7 +427,7 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 		return errBadPrefix
 	}
 	pkt.rawData = buf
-	pkt.hash = common.BytesToHash(buf[versionPrefixSize:]).Bytes()
+	pkt.hash = hash(buf[versionPrefixSize:]).Bytes()
 	pkt.remoteID = ByteID(fromID)
 	switch pkt.ev = nodeEvent(sigdata[0]); pkt.ev {
 	case pingPacket:
