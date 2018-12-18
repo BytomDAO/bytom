@@ -1,5 +1,0 @@
-*.swp
-vendor
-.glide
-
-pubsub/query/fuzz_test/output
