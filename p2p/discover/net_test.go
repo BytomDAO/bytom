@@ -41,7 +41,6 @@ func TestNetwork_Lookup(t *testing.T) {
 	if !sortedByDistanceTo(lookupTestnet.targetSha, results) {
 		t.Errorf("result set not sorted by distance to target")
 	}
-	// TODO: check result nodes are actually closest
 }
 
 // This is the test network for the Lookup test.
