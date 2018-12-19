@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	webHost           = "http://127.0.0.1"
+	webHost           = "http://127.0.0.1" 
 	maxNewBlockChSize = 1024
 )
 
