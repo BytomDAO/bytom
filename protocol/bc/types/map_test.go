@@ -114,8 +114,8 @@ func TestMapCoinbaseTx(t *testing.T) {
 	if len(tx.SpentOutputIDs) != 0 {
 		t.Errorf("coinbase tx doesn't spend any utxo")
 	}
-	if len(tx.GasInputIDs) != 0 {
-		t.Errorf("coinbase tx doesn't spend any gas input")
+	if len(tx.GasInputIDs) != 1 {
+		t.Errorf("coinbase tx should have 1 gas input")
 	}
 	if len(tx.ResultIds) != 1 {
 		t.Errorf("expect to  only have one output")

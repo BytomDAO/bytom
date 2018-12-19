@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	chainjson "github.com/bytom/encoding/json"
 )
 
 // SignMsgResp is response for sign message
@@ -20,9 +21,9 @@ type SignMsgResp struct {
 }
 
 func (a *API) signMessage(ctx context.Context, ins struct {
-	Address  string `json:"address"`
-	Message  string `json:"message"`
-	Password string `json:"password"`
+	Address  string             `json:"address"`
+	Message  chainjson.HexBytes `json:"message"`
+	Password string             `json:"password"`
 }) Response {
 	cp, err := a.wallet.AccountMgr.GetLocalCtrlProgramByAddress(ins.Address)
 	if err != nil {
@@ -40,7 +41,7 @@ func (a *API) signMessage(ctx context.Context, ins struct {
 	}
 	derivedXPubs := chainkd.DeriveXPubs(account.XPubs, path)
 
-	sig, err := a.wallet.Hsm.XSign(account.XPubs[0], path, []byte(ins.Message), ins.Password)
+	sig, err := a.wallet.Hsm.XSign(account.XPubs[0], path, ins.Message, ins.Password)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
@@ -56,10 +57,10 @@ type VerifyMsgResp struct {
 }
 
 func (a *API) verifyMessage(ctx context.Context, ins struct {
-	Address     string       `json:"address"`
-	DerivedXPub chainkd.XPub `json:"derived_xpub"`
-	Message     string       `json:"message"`
-	Signature   string       `json:"signature"`
+	Address     string             `json:"address"`
+	DerivedXPub chainkd.XPub       `json:"derived_xpub"`
+	Message     chainjson.HexBytes `json:"message"`
+	Signature   string             `json:"signature"`
 }) Response {
 	sig, err := hex.DecodeString(ins.Signature)
 	if err != nil {
@@ -78,7 +79,7 @@ func (a *API) verifyMessage(ctx context.Context, ins struct {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
 	}
 
-	if ed25519.Verify(ins.DerivedXPub.PublicKey(), []byte(ins.Message), sig) {
+	if ed25519.Verify(ins.DerivedXPub.PublicKey(), ins.Message, sig) {
 		return NewSuccessResponse(VerifyMsgResp{VerifyResult: true})
 	}
 	return NewSuccessResponse(VerifyMsgResp{VerifyResult: false})
