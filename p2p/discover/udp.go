@@ -28,17 +28,14 @@ var (
 	errTimeout          = errors.New("RPC timeout")
 	errClockWarp        = errors.New("reply deadline too far in the future")
 	errClosed           = errors.New("socket closed")
+	errPacketType       = errors.New("unknown packet type")
 )
 
 // Timeouts
 const (
-	respTimeout = 1 * time.Second
-	queryDelay  = 1000 * time.Millisecond
-	expiration  = 20 * time.Second
-
-	ntpFailureThreshold = 32               // Continuous timeouts after which to check NTP
-	ntpWarningCooldown  = 10 * time.Minute // Minimum amount of time to pass before repeating NTP warning
-	driftThreshold      = 10 * time.Second // Allowed clock drift before warning user
+	respTimeout    = 1 * time.Second
+	expiration     = 20 * time.Second
+	driftThreshold = 10 * time.Second // Allowed clock drift before warning user
 )
 
 // ReadPacket is sent to the unhandled channel when it could not be processed
@@ -71,7 +68,7 @@ type (
 		Topics []Topic
 
 		// Ignore additional fields (for forward compatibility).
-		Rest []byte
+		Rest [][]byte
 	}
 
 	// pong is the reply to ping.
@@ -90,7 +87,7 @@ type (
 		WaitPeriods  []uint32
 
 		// Ignore additional fields (for forward compatibility).
-		Rest []byte
+		Rest [][]byte
 	}
 
 	// findnode is a query for nodes close to the given target.
@@ -98,7 +95,7 @@ type (
 		Target     NodeID // doesn't need to be an actual public key
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
-		Rest []byte
+		Rest [][]byte
 	}
 
 	// findnode is a query for nodes close to the given target.
@@ -106,7 +103,7 @@ type (
 		Target     common.Hash
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
-		Rest []byte
+		Rest [][]byte
 	}
 
 	// reply to findnode
@@ -114,7 +111,7 @@ type (
 		Nodes      []rpcNode
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
-		Rest []byte
+		Rest [][]byte
 	}
 
 	topicRegister struct {
@@ -238,13 +235,18 @@ type conn interface {
 	LocalAddr() net.Addr
 }
 
+type netWork interface {
+	reqReadPacket(pkt ingressPacket)
+	selfIP() net.IP
+}
+
 // udp implements the RPC protocol.
 type udp struct {
 	conn        conn
 	priv        *crypto.PrivKeyEd25519
 	ourEndpoint rpcEndpoint
 	//nat         nat.Interface
-	net *Network
+	net netWork
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
@@ -330,7 +332,7 @@ func (t *udp) sendTopicNodes(remote *Node, queryHash common.Hash, nodes []*Node)
 	p := topicNodes{Echo: queryHash}
 	var sent bool
 	for _, result := range nodes {
-		if result.IP.Equal(t.net.tab.self.IP) || netutil.CheckRelayIP(remote.IP, result.IP) == nil {
+		if result.IP.Equal(t.net.selfIP()) || netutil.CheckRelayIP(remote.IP, result.IP) == nil {
 			p.Nodes = append(p.Nodes, nodeToRPC(result))
 		}
 		if len(p.Nodes) == maxTopicNodes {
@@ -345,10 +347,8 @@ func (t *udp) sendTopicNodes(remote *Node, queryHash common.Hash, nodes []*Node)
 }
 
 func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req interface{}) (hash []byte, err error) {
-	//fmt.Println("sendPacket", nodeEvent(ptype), toaddr.String(), toid.String())
 	packet, hash, err := encodePacket(t.priv, ptype, req)
 	if err != nil {
-		//fmt.Println(err)
 		return hash, err
 	}
 	log.Debug(fmt.Sprintf(">>> %v to %x@%v", nodeEvent(ptype), toid[:8], toaddr))
@@ -447,7 +447,7 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 	case topicNodesPacket:
 		pkt.data = new(topicNodes)
 	default:
-		return fmt.Errorf("unknown packet type: %d", sigdata[0])
+		return errPacketType
 	}
 	var err error
 	wire.ReadJSON(pkt.data, sigdata[1:], &err)
