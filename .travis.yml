@@ -15,6 +15,7 @@ branches:
     only:
         - master
         - dev
+        - schrodinger_cat
 
 script:
     - make ci
