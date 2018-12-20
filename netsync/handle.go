@@ -34,6 +34,7 @@ const (
 type Chain interface {
 	BestBlockHeader() *types.BlockHeader
 	BestBlockHeight() uint64
+	BlockWaiter(height uint64) <-chan struct{}
 	CalcNextSeed(*bc.Hash) (*bc.Hash, error)
 	GetBlockByHash(*bc.Hash) (*types.Block, error)
 	GetBlockByHeight(uint64) (*types.Block, error)
@@ -43,6 +44,11 @@ type Chain interface {
 	InMainChain(bc.Hash) bool
 	ProcessBlock(*types.Block) (bool, error)
 	ValidateTx(*types.Tx) (bool, error)
+}
+
+type status struct {
+	bestHeight uint64
+	bestHash   bc.Hash
 }
 
 //SyncManager Sync Manager is responsible for the business layer information synchronization
@@ -137,7 +143,7 @@ func (sm *SyncManager) IsCaughtUp() bool {
 }
 
 //NodeInfo get P2P peer node info
-func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
+func (sm *SyncManager) NodeInfo() p2p.NodeInfo {
 	return sm.sw.NodeInfo()
 }
 
@@ -148,6 +154,48 @@ func (sm *SyncManager) StopPeer(peerID string) error {
 	}
 	sm.peers.removePeer(peerID)
 	return nil
+}
+
+func (sm *SyncManager) blockWaiter() {
+	select {
+	case <-sm.chain.BlockWaiter(sm.sw.GetBestHeight() + 1):
+	case <-sm.quitSync:
+	}
+}
+
+//updateNodeInfoBestHeight update nodeinfo when chain best block change
+func (sm *SyncManager) updateNodeInfoBestHeight() {
+	for {
+		select {
+		case <-sm.quitSync:
+			return
+
+		default:
+		}
+
+		for !sm.chain.InMainChain(sm.sw.GetBestHash()) {
+			nodeInfoHash := sm.sw.GetBestHash()
+			block, err := sm.chain.GetBlockByHash(&nodeInfoHash)
+			if err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("updateNodeInfo GetBlockByHash")
+				return
+			}
+			sm.sw.UpdateNodeInfoHeight(block.Height-1, block.PreviousBlockHash)
+		}
+
+		block, _ := sm.chain.GetBlockByHeight(sm.sw.GetBestHeight() + 1)
+		if block == nil {
+			sm.blockWaiter()
+			continue
+		}
+
+		if sm.sw.GetBestHash() != block.PreviousBlockHash {
+			log.WithFields(log.Fields{"module": logModule, "blockHeight": block.Height, "previousBlockHash": sm.sw.GetBestHash(), "rcvBlockPrevHash": block.PreviousBlockHash}).Warning("The previousBlockHash of the received block is not the same as the hash of the previous block")
+			continue
+		}
+
+		sm.sw.UpdateNodeInfoHeight(block.Height, block.Hash())
+	}
 }
 
 //Switch get sync manager switch
@@ -309,14 +357,7 @@ func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
 }
 
 func (sm *SyncManager) handleStatusRequestMsg(peer BasePeer) {
-	bestHeader := sm.chain.BestBlockHeader()
-	genesisBlock, err := sm.chain.GetBlockByHeight(0)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleStatusRequestMsg get genesis")
-	}
-
-	genesisHash := genesisBlock.Hash()
-	msg := NewStatusResponseMessage(bestHeader, &genesisHash)
+	msg := NewStatusResponseMessage(sm.chain.BestBlockHeader())
 	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 		sm.peers.removePeer(peer.ID())
 	}
@@ -327,17 +368,6 @@ func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusRes
 		peer.setStatus(msg.Height, msg.GetHash())
 		return
 	}
-
-	if genesisHash := msg.GetGenesisHash(); sm.genesisHash != *genesisHash {
-		log.WithFields(log.Fields{
-			"module":         logModule,
-			"remote genesis": genesisHash.String(),
-			"local genesis":  sm.genesisHash.String(),
-		}).Warn("fail hand shake due to differnt genesis")
-		return
-	}
-
-	sm.peers.addPeer(basePeer, msg.Height, msg.GetHash())
 }
 
 func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage) {
@@ -462,6 +492,7 @@ func (sm *SyncManager) Start() {
 	go sm.txBroadcastLoop()
 	go sm.minedBroadcastLoop()
 	go sm.txSyncLoop()
+	go sm.updateNodeInfoBestHeight()
 }
 
 //Stop stop sync manager
