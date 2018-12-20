@@ -15,6 +15,7 @@ import (
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
+	"github.com/bytom/event"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/discover"
 	core "github.com/bytom/protocol"
@@ -57,15 +58,17 @@ type SyncManager struct {
 	blockKeeper  *blockKeeper
 	peers        *peerSet
 
-	newTxCh    chan *types.Tx
-	newBlockCh chan *bc.Hash
-	txSyncCh   chan *txSyncMsg
-	quitSync   chan struct{}
-	config     *cfg.Config
+	newTxCh  chan *types.Tx
+	txSyncCh chan *txSyncMsg
+	quitSync chan struct{}
+	config   *cfg.Config
+
+	eventMux      *event.TypeMux
+	minedBlockSub *event.TypeMuxSubscription
 }
 
 //NewSyncManager create a sync manager
-func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
+func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, mux *event.TypeMux) (*SyncManager, error) {
 	genesisHeader, err := chain.GetHeaderByHeight(0)
 	if err != nil {
 		return nil, err
@@ -83,10 +86,10 @@ func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, newBlo
 		blockKeeper:  newBlockKeeper(chain, peers),
 		peers:        peers,
 		newTxCh:      make(chan *types.Tx, maxTxChanSize),
-		newBlockCh:   newBlockCh,
 		txSyncCh:     make(chan *txSyncMsg),
 		quitSync:     make(chan struct{}),
 		config:       config,
+		eventMux:     mux,
 	}
 
 	protocolReactor := NewProtocolReactor(manager, manager.peers)
@@ -460,12 +463,15 @@ func (sm *SyncManager) Start() {
 	}
 	// broadcast transactions
 	go sm.txBroadcastLoop()
+
+	sm.minedBlockSub = sm.eventMux.Subscribe(event.NewMinedBlockEvent{})
 	go sm.minedBroadcastLoop()
 	go sm.txSyncLoop()
 }
 
 //Stop stop sync manager
 func (sm *SyncManager) Stop() {
+	sm.minedBlockSub.Unsubscribe()
 	close(sm.quitSync)
 	sm.sw.Stop()
 }
@@ -506,18 +512,16 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 func (sm *SyncManager) minedBroadcastLoop() {
 	for {
 		select {
-		case blockHash := <-sm.newBlockCh:
-			block, err := sm.chain.GetBlockByHash(blockHash)
-			if err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on mined broadcast loop get block")
-				return
-			}
-			if err := sm.peers.broadcastMinedBlock(block); err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast mine block")
-				return
+		case obj := <-sm.minedBlockSub.Chan():
+			if ev, ok := obj.Data.(event.NewMinedBlockEvent); ok {
+				if err := sm.peers.broadcastMinedBlock(ev.Block); err != nil {
+					log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast mine block")
+					return
+				}
 			}
 		case <-sm.quitSync:
 			return
+		default:
 		}
 	}
 }

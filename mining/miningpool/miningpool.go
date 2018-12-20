@@ -8,9 +8,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/account"
+	"github.com/bytom/event"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -32,17 +32,17 @@ type MiningPool struct {
 	chain          *protocol.Chain
 	accountManager *account.Manager
 	txPool         *protocol.TxPool
-	newBlockCh     chan *bc.Hash
+	mux            *event.TypeMux
 }
 
 // NewMiningPool will create a new MiningPool
-func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash) *MiningPool {
+func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, mux *event.TypeMux) *MiningPool {
 	m := &MiningPool{
 		submitCh:       make(chan *submitBlockMsg, maxSubmitChSize),
 		chain:          c,
 		accountManager: accountManager,
 		txPool:         txPool,
-		newBlockCh:     newBlockCh,
+		mux:            mux,
 	}
 	m.generateBlock()
 	go m.blockUpdater()
@@ -120,8 +120,6 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 	if isOrphan {
 		return errors.New("submit result is orphan")
 	}
-
-	blockHash := bh.Hash()
-	m.newBlockCh <- &blockHash
+	m.mux.Post(event.NewMinedBlockEvent{Block: m.block})
 	return nil
 }

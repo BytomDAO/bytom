@@ -6,6 +6,7 @@ import (
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
+	"github.com/bytom/event"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -83,8 +84,7 @@ func (a *API) submitBlock(ctx context.Context, req *SubmitBlockReq) Response {
 		return NewErrorResponse(errors.New("block submitted is orphan"))
 	}
 
-	blockHash := req.Block.BlockHeader.Hash()
-	a.newBlockCh <- &blockHash
+	a.mux.Post(event.NewMinedBlockEvent{Block: req.Block})
 	return NewSuccessResponse(true)
 }
 
