@@ -29,8 +29,8 @@ type NodeInfo struct {
 	ListenAddr  string                `json:"listen_addr"`
 	Version     string                `json:"version"` // major.minor.revision
 	GenesisHash bc.Hash               `json:"genesis_hash"`
-	BestHeight  uint64                `json:"best_height"`
-	BestHash    bc.Hash               `json:"best_hash"`
+	BlockHeight uint64                `json:"block_height"`
+	BlockHash   bc.Hash               `json:"block_hash"`
 	ServiceFlag consensus.ServiceFlag `json:"service_flag"`
 	Other       []string              `json:"other"` // other application specific data
 }
@@ -88,12 +88,12 @@ func (info *NodeInfo) setPubKey(pubKey crypto.PubKeyEd25519) {
 
 //String representation
 func (info *NodeInfo) String() string {
-	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [listen %v], version: %v service: %v genesisHash:%v bestHeight: %v bestHash: %v}", info.PubKey, info.Moniker, info.Network, info.ListenAddr, info.Version, info.ServiceFlag, info.BestHash.String(), info.BestHeight, info.BestHash.String())
+	return fmt.Sprintf("NodeInfo{pk: %v, moniker: %v, network: %v [listen %v], version: %v service: %v genesisHash:%v bestHeight: %v bestHash: %v}", info.PubKey, info.Moniker, info.Network, info.ListenAddr, info.Version, info.ServiceFlag, info.GenesisHash.String(), info.BlockHeight, info.BlockHash.String())
 }
 
 func (info *NodeInfo) updateBestHeight(bestHeight uint64, bestHash bc.Hash) {
-	info.BestHeight = bestHeight
-	info.BestHash = bestHash
+	info.BlockHeight = bestHeight
+	info.BlockHash = bestHash
 }
 
 func (info NodeInfo) version() string {

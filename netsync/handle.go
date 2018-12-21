@@ -46,11 +46,6 @@ type Chain interface {
 	ValidateTx(*types.Tx) (bool, error)
 }
 
-type status struct {
-	bestHeight uint64
-	bestHash   bc.Hash
-}
-
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
 	sw          *p2p.Switch
@@ -156,45 +151,16 @@ func (sm *SyncManager) StopPeer(peerID string) error {
 	return nil
 }
 
-func (sm *SyncManager) blockWaiter() {
-	select {
-	case <-sm.chain.BlockWaiter(sm.sw.GetBestHeight() + 1):
-	case <-sm.quitSync:
-	}
-}
-
 //updateNodeInfoBestHeight update nodeinfo when chain best block change
 func (sm *SyncManager) updateNodeInfoBestHeight() {
 	for {
 		select {
+		case <-sm.chain.BlockWaiter(sm.chain.BestBlockHeight() + 1):
 		case <-sm.quitSync:
 			return
-
-		default:
 		}
-
-		for !sm.chain.InMainChain(sm.sw.GetBestHash()) {
-			nodeInfoHash := sm.sw.GetBestHash()
-			block, err := sm.chain.GetBlockByHash(&nodeInfoHash)
-			if err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("updateNodeInfo GetBlockByHash")
-				return
-			}
-			sm.sw.UpdateNodeInfoHeight(block.Height-1, block.PreviousBlockHash)
-		}
-
-		block, _ := sm.chain.GetBlockByHeight(sm.sw.GetBestHeight() + 1)
-		if block == nil {
-			sm.blockWaiter()
-			continue
-		}
-
-		if sm.sw.GetBestHash() != block.PreviousBlockHash {
-			log.WithFields(log.Fields{"module": logModule, "blockHeight": block.Height, "previousBlockHash": sm.sw.GetBestHash(), "rcvBlockPrevHash": block.PreviousBlockHash}).Warning("The previousBlockHash of the received block is not the same as the hash of the previous block")
-			continue
-		}
-
-		sm.sw.UpdateNodeInfoHeight(block.Height, block.Hash())
+		bestHeader := sm.chain.BestBlockHeader()
+		sm.sw.UpdateNodeInfoHeight(bestHeader.Height, bestHeader.Hash())
 	}
 }
 
@@ -464,8 +430,8 @@ func (sm *SyncManager) makeNodeInfo(listenerStatus bool, bestBlockHeader *types.
 		Network:     sm.config.ChainID,
 		Version:     version.Version,
 		GenesisHash: sm.genesisHash,
-		BestHeight:  bestBlockHeader.Height,
-		BestHash:    bestBlockHeader.Hash(),
+		BlockHeight: bestBlockHeader.Height,
+		BlockHash:   bestBlockHeader.Hash(),
 		ServiceFlag: consensus.DefaultServices,
 	}
 

@@ -55,7 +55,7 @@ func (pr *ProtocolReactor) OnStop() {
 
 // AddPeer implements Reactor by sending our state to peer.
 func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
-	pr.peers.addPeer(peer, peer.BestHeight, &peer.BestHash)
+	pr.peers.addPeer(peer, peer.BlockHeight, &peer.BlockHash)
 	pr.sm.syncTransactions(peer.Key)
 	return nil
 }

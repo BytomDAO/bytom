@@ -217,11 +217,11 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 }
 
 func (sw *Switch) GetBestHash() bc.Hash {
-	return sw.NodeInfo().BestHash
+	return sw.NodeInfo().BlockHash
 }
 
 func (sw *Switch) GetBestHeight() uint64 {
-	return sw.NodeInfo().BestHeight
+	return sw.NodeInfo().BlockHeight
 }
 
 //IsDialing prevent duplicate dialing
