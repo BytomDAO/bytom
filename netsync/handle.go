@@ -34,6 +34,7 @@ const (
 type Chain interface {
 	BestBlockHeader() *types.BlockHeader
 	BestBlockHeight() uint64
+	BlockWaiter(height uint64) <-chan struct{}
 	CalcNextSeed(*bc.Hash) (*bc.Hash, error)
 	GetBlockByHash(*bc.Hash) (*types.Block, error)
 	GetBlockByHeight(uint64) (*types.Block, error)
@@ -106,7 +107,7 @@ func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, newBlo
 		}
 		manager.sw.SetDiscv(discv)
 	}
-	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus))
+	manager.sw.SetNodeInfo(manager.makeNodeInfo(chain.BestBlockHeader(), listenerStatus))
 	manager.sw.SetNodePrivKey(manager.privKey)
 	return manager, nil
 }
@@ -137,7 +138,7 @@ func (sm *SyncManager) IsCaughtUp() bool {
 }
 
 //NodeInfo get P2P peer node info
-func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
+func (sm *SyncManager) NodeInfo() p2p.NodeInfo {
 	return sm.sw.NodeInfo()
 }
 
@@ -148,6 +149,19 @@ func (sm *SyncManager) StopPeer(peerID string) error {
 	}
 	sm.peers.removePeer(peerID)
 	return nil
+}
+
+//updateNodeInfoBestHeight update nodeinfo when chain best block change
+func (sm *SyncManager) updateNodeInfoBestHeight() {
+	for {
+		select {
+		case <-sm.chain.BlockWaiter(sm.chain.BestBlockHeight() + 1):
+		case <-sm.quitSync:
+			return
+		}
+		bestHeader := sm.chain.BestBlockHeader()
+		sm.sw.UpdateNodeInfo(bestHeader.Height, bestHeader.Hash())
+	}
 }
 
 //Switch get sync manager switch
@@ -309,14 +323,7 @@ func (sm *SyncManager) handleMineBlockMsg(peer *peer, msg *MineBlockMessage) {
 }
 
 func (sm *SyncManager) handleStatusRequestMsg(peer BasePeer) {
-	bestHeader := sm.chain.BestBlockHeader()
-	genesisBlock, err := sm.chain.GetBlockByHeight(0)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleStatusRequestMsg get genesis")
-	}
-
-	genesisHash := genesisBlock.Hash()
-	msg := NewStatusResponseMessage(bestHeader, &genesisHash)
+	msg := NewStatusResponseMessage(sm.chain.BestBlockHeader())
 	if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 		sm.peers.removePeer(peer.ID())
 	}
@@ -327,17 +334,6 @@ func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusRes
 		peer.setStatus(msg.Height, msg.GetHash())
 		return
 	}
-
-	if genesisHash := msg.GetGenesisHash(); sm.genesisHash != *genesisHash {
-		log.WithFields(log.Fields{
-			"module":         logModule,
-			"remote genesis": genesisHash.String(),
-			"local genesis":  sm.genesisHash.String(),
-		}).Warn("fail hand shake due to differnt genesis")
-		return
-	}
-
-	sm.peers.addPeer(basePeer, msg.Height, msg.GetHash())
 }
 
 func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage) {
@@ -427,13 +423,16 @@ func protocolAndAddress(listenAddr string) (string, string) {
 	return p, address
 }
 
-func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
+func (sm *SyncManager) makeNodeInfo(bestBlockHeader *types.BlockHeader, listenerStatus bool) *p2p.NodeInfo {
 	nodeInfo := &p2p.NodeInfo{
-		PubKey:  sm.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
-		Moniker: sm.config.Moniker,
-		Network: sm.config.ChainID,
-		Version: version.Version,
-		Other:   []string{strconv.FormatUint(uint64(consensus.DefaultServices), 10)},
+		PubKey:      sm.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
+		Moniker:     sm.config.Moniker,
+		Network:     sm.config.ChainID,
+		Version:     version.Version,
+		GenesisHash: sm.genesisHash,
+		BlockHeight: bestBlockHeader.Height,
+		BlockHash:   bestBlockHeader.Hash(),
+		ServiceFlag: consensus.DefaultServices,
 	}
 
 	if !sm.sw.IsListening() {
@@ -462,6 +461,7 @@ func (sm *SyncManager) Start() {
 	go sm.txBroadcastLoop()
 	go sm.minedBroadcastLoop()
 	go sm.txSyncLoop()
+	go sm.updateNodeInfoBestHeight()
 }
 
 //Stop stop sync manager

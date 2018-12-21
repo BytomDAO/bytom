@@ -61,6 +61,7 @@ type peer struct {
 	banScore    trust.DynamicBanScore
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
+	knownStatus uint64   // Set of chain status known to be known by this peer
 	filterAdds  *set.Set // Set of addresses that the spv node cares about.
 }
 
@@ -211,6 +212,13 @@ func (p *peer) markBlock(hash *bc.Hash) {
 		p.knownBlocks.Pop()
 	}
 	p.knownBlocks.Add(hash.String())
+}
+
+func (p *peer) markNewStatus(height uint64) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+
+	p.knownStatus = height
 }
 
 func (p *peer) markTransaction(hash *bc.Hash) {
@@ -393,17 +401,16 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 	return nil
 }
 
-func (ps *peerSet) broadcastNewStatus(bestBlock, genesisBlock *types.Block) error {
-	bestBlockHash := bestBlock.Hash()
-	peers := ps.peersWithoutBlock(&bestBlockHash)
-
-	genesisHash := genesisBlock.Hash()
-	msg := NewStatusResponseMessage(&bestBlock.BlockHeader, &genesisHash)
+func (ps *peerSet) broadcastNewStatus(bestBlock *types.Block) error {
+	msg := NewStatusResponseMessage(&bestBlock.BlockHeader)
+	peers := ps.peersWithoutNewStatus(bestBlock.Height)
 	for _, peer := range peers {
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			ps.removePeer(peer.ID())
 			continue
 		}
+
+		peer.markNewStatus(bestBlock.Height)
 	}
 	return nil
 }
@@ -461,6 +468,19 @@ func (ps *peerSet) peersWithoutBlock(hash *bc.Hash) []*peer {
 	peers := []*peer{}
 	for _, peer := range ps.peers {
 		if !peer.knownBlocks.Has(hash.String()) {
+			peers = append(peers, peer)
+		}
+	}
+	return peers
+}
+
+func (ps *peerSet) peersWithoutNewStatus(height uint64) []*peer {
+	ps.mtx.RLock()
+	defer ps.mtx.RUnlock()
+
+	var peers []*peer
+	for _, peer := range ps.peers {
+		if peer.knownStatus < height {
 			peers = append(peers, peer)
 		}
 	}

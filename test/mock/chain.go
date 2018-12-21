@@ -32,6 +32,10 @@ func (c *Chain) BestBlockHeight() uint64 {
 	return c.bestBlockHeader.Height
 }
 
+func (c *Chain) BlockWaiter(height uint64) <-chan struct{} {
+	return nil
+}
+
 func (c *Chain) CalcNextSeed(hash *bc.Hash) (*bc.Hash, error) {
 	return &bc.Hash{V0: hash.V1, V1: hash.V2, V2: hash.V3, V3: hash.V0}, nil
 }

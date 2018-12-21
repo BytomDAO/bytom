@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
 	"github.com/bytom/p2p/trust"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/version"
 )
 
@@ -56,6 +57,7 @@ type Switch struct {
 	bannedPeer   map[string]time.Time
 	db           dbm.DB
 	mtx          sync.Mutex
+	nodeInfoMux  sync.Mutex
 }
 
 // NewSwitch creates a new Switch with the given config.
@@ -134,15 +136,17 @@ func (sw *Switch) AddBannedPeer(ip string) error {
 // NOTE: This performs a blocking handshake before the peer is added.
 // CONTRACT: If error is returned, peer is nil, and conn is immediately closed.
 func (sw *Switch) AddPeer(pc *peerConn) error {
-	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout))
+	nodeInfo := sw.NodeInfo()
+	peerNodeInfo, err := pc.HandshakeTimeout(&nodeInfo, time.Duration(sw.peerConfig.HandshakeTimeout))
 	if err != nil {
 		return err
 	}
 
-	if err := version.Status.CheckUpdate(sw.nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
+	if err := version.Status.CheckUpdate(nodeInfo.Version, peerNodeInfo.Version, peerNodeInfo.RemoteAddr); err != nil {
 		return err
 	}
-	if err := sw.nodeInfo.CompatibleWith(peerNodeInfo); err != nil {
+
+	if err := nodeInfo.compatibleWith(peerNodeInfo, version.CompatibleWith); err != nil {
 		return err
 	}
 
@@ -245,8 +249,11 @@ func (sw *Switch) NumPeers() (outbound, inbound, dialing int) {
 
 // NodeInfo returns the switch's NodeInfo.
 // NOTE: Not goroutine safe.
-func (sw *Switch) NodeInfo() *NodeInfo {
-	return sw.nodeInfo
+func (sw *Switch) NodeInfo() NodeInfo {
+	sw.nodeInfoMux.Lock()
+	defer sw.nodeInfoMux.Unlock()
+
+	return *sw.nodeInfo
 }
 
 //Peers return switch peerset
@@ -254,18 +261,31 @@ func (sw *Switch) Peers() *PeerSet {
 	return sw.peers
 }
 
+func (sw *Switch) UpdateNodeInfo(bestHeight uint64, bestHash bc.Hash) {
+	sw.nodeInfoMux.Lock()
+	defer sw.nodeInfoMux.Unlock()
+
+	sw.nodeInfo.updateBestHeight(bestHeight, bestHash)
+}
+
 // SetNodeInfo sets the switch's NodeInfo for checking compatibility and handshaking with other nodes.
 // NOTE: Not goroutine safe.
 func (sw *Switch) SetNodeInfo(nodeInfo *NodeInfo) {
+	sw.nodeInfoMux.Lock()
+	defer sw.nodeInfoMux.Unlock()
+
 	sw.nodeInfo = nodeInfo
 }
 
 // SetNodePrivKey sets the switch's private key for authenticated encryption.
 // NOTE: Not goroutine safe.
 func (sw *Switch) SetNodePrivKey(nodePrivKey crypto.PrivKeyEd25519) {
+	sw.nodeInfoMux.Lock()
+	defer sw.nodeInfoMux.Unlock()
+
 	sw.nodePrivKey = nodePrivKey
 	if sw.nodeInfo != nil {
-		sw.nodeInfo.PubKey = nodePrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519)
+		sw.nodeInfo.setPubKey(nodePrivKey.PubKey().Unwrap().(crypto.PubKeyEd25519))
 	}
 }
 
@@ -324,7 +344,7 @@ func (sw *Switch) delBannedPeer(addr string) error {
 }
 
 func (sw *Switch) filterConnByIP(ip string) error {
-	if ip == sw.nodeInfo.ListenHost() {
+	if ip == sw.NodeInfo().ListenHost() {
 		return ErrConnectSelf
 	}
 	return sw.checkBannedPeer(ip)
@@ -335,7 +355,7 @@ func (sw *Switch) filterConnByPeer(peer *Peer) error {
 		return err
 	}
 
-	if sw.nodeInfo.PubKey.Equals(peer.PubKey().Wrap()) {
+	if sw.NodeInfo().PubKey.Equals(peer.PubKey().Wrap()) {
 		return ErrConnectSelf
 	}
 
