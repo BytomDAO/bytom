@@ -42,7 +42,7 @@ func TestCompatibleWith(t *testing.T) {
 }
 
 func TestNodeInfoWriteRead(t *testing.T) {
-	nodeInfo := &NodeInfo{PubKey: crypto.GenPrivKeyEd25519().PubKey().Unwrap().(crypto.PubKeyEd25519), Moniker: "bytomd", Network: "mainnet", ListenAddr: "127.0.0.1:0", GenesisHash: bc.Hash{V0: 2}, BestHeight: 1024, BestHash: bc.Hash{V0: 1}, Version: "1.1.0-test", ServiceFlag: 10, Other: []string{"abc", "bcd"}}
+	nodeInfo := &NodeInfo{PubKey: crypto.GenPrivKeyEd25519().PubKey().Unwrap().(crypto.PubKeyEd25519), Moniker: "bytomd", Network: "mainnet", ListenAddr: "127.0.0.1:0", GenesisHash: bc.Hash{V0: 2}, BlockHeight: 1024, BlockHash: bc.Hash{V0: 1}, Version: "1.1.0-test", ServiceFlag: 10, Other: []string{"abc", "bcd"}}
 	n, err, err1 := new(int), new(error), new(error)
 	buf := new(bytes.Buffer)
 

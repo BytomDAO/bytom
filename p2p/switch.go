@@ -57,7 +57,7 @@ type Switch struct {
 	bannedPeer   map[string]time.Time
 	db           dbm.DB
 	mtx          sync.Mutex
-	nodeInfoMu   sync.Mutex
+	nodeInfoMux  sync.Mutex
 }
 
 // NewSwitch creates a new Switch with the given config.
@@ -216,14 +216,6 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 	return nil
 }
 
-func (sw *Switch) GetBestHash() bc.Hash {
-	return sw.NodeInfo().BlockHash
-}
-
-func (sw *Switch) GetBestHeight() uint64 {
-	return sw.NodeInfo().BlockHeight
-}
-
 //IsDialing prevent duplicate dialing
 func (sw *Switch) IsDialing(addr *NetAddress) bool {
 	return sw.dialing.Has(addr.IP.String())
@@ -258,8 +250,8 @@ func (sw *Switch) NumPeers() (outbound, inbound, dialing int) {
 // NodeInfo returns the switch's NodeInfo.
 // NOTE: Not goroutine safe.
 func (sw *Switch) NodeInfo() NodeInfo {
-	sw.nodeInfoMu.Lock()
-	defer sw.nodeInfoMu.Unlock()
+	sw.nodeInfoMux.Lock()
+	defer sw.nodeInfoMux.Unlock()
 
 	return *sw.nodeInfo
 }
@@ -269,9 +261,9 @@ func (sw *Switch) Peers() *PeerSet {
 	return sw.peers
 }
 
-func (sw *Switch) UpdateNodeInfoHeight(bestHeight uint64, bestHash bc.Hash) {
-	sw.nodeInfoMu.Lock()
-	defer sw.nodeInfoMu.Unlock()
+func (sw *Switch) UpdateNodeInfo(bestHeight uint64, bestHash bc.Hash) {
+	sw.nodeInfoMux.Lock()
+	defer sw.nodeInfoMux.Unlock()
 
 	sw.nodeInfo.updateBestHeight(bestHeight, bestHash)
 }
@@ -279,8 +271,8 @@ func (sw *Switch) UpdateNodeInfoHeight(bestHeight uint64, bestHash bc.Hash) {
 // SetNodeInfo sets the switch's NodeInfo for checking compatibility and handshaking with other nodes.
 // NOTE: Not goroutine safe.
 func (sw *Switch) SetNodeInfo(nodeInfo *NodeInfo) {
-	sw.nodeInfoMu.Lock()
-	defer sw.nodeInfoMu.Unlock()
+	sw.nodeInfoMux.Lock()
+	defer sw.nodeInfoMux.Unlock()
 
 	sw.nodeInfo = nodeInfo
 }
@@ -288,8 +280,8 @@ func (sw *Switch) SetNodeInfo(nodeInfo *NodeInfo) {
 // SetNodePrivKey sets the switch's private key for authenticated encryption.
 // NOTE: Not goroutine safe.
 func (sw *Switch) SetNodePrivKey(nodePrivKey crypto.PrivKeyEd25519) {
-	sw.nodeInfoMu.Lock()
-	defer sw.nodeInfoMu.Unlock()
+	sw.nodeInfoMux.Lock()
+	defer sw.nodeInfoMux.Unlock()
 
 	sw.nodePrivKey = nodePrivKey
 	if sw.nodeInfo != nil {

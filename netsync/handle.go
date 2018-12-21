@@ -107,7 +107,7 @@ func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, newBlo
 		}
 		manager.sw.SetDiscv(discv)
 	}
-	manager.sw.SetNodeInfo(manager.makeNodeInfo(listenerStatus, chain.BestBlockHeader()))
+	manager.sw.SetNodeInfo(manager.makeNodeInfo(chain.BestBlockHeader(), listenerStatus))
 	manager.sw.SetNodePrivKey(manager.privKey)
 	return manager, nil
 }
@@ -160,7 +160,7 @@ func (sm *SyncManager) updateNodeInfoBestHeight() {
 			return
 		}
 		bestHeader := sm.chain.BestBlockHeader()
-		sm.sw.UpdateNodeInfoHeight(bestHeader.Height, bestHeader.Hash())
+		sm.sw.UpdateNodeInfo(bestHeader.Height, bestHeader.Hash())
 	}
 }
 
@@ -423,7 +423,7 @@ func protocolAndAddress(listenAddr string) (string, string) {
 	return p, address
 }
 
-func (sm *SyncManager) makeNodeInfo(listenerStatus bool, bestBlockHeader *types.BlockHeader) *p2p.NodeInfo {
+func (sm *SyncManager) makeNodeInfo(bestBlockHeader *types.BlockHeader, listenerStatus bool) *p2p.NodeInfo {
 	nodeInfo := &p2p.NodeInfo{
 		PubKey:      sm.privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
 		Moniker:     sm.config.Moniker,

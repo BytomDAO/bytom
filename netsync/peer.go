@@ -19,7 +19,6 @@ import (
 const (
 	maxKnownTxs         = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 	maxKnownBlocks      = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
-	maxKnownStatus      = 1024  // Maximum status hashes to keep in the known list (prevent DOS)
 	defaultBanThreshold = uint64(100)
 )
 
@@ -403,9 +402,10 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 }
 
 func (ps *peerSet) broadcastNewStatus(bestBlock *types.Block) error {
+	msg := NewStatusResponseMessage(&bestBlock.BlockHeader)
 	peers := ps.peersWithoutNewStatus(bestBlock.Height)
 	for _, peer := range peers {
-		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{NewStatusResponseMessage(&bestBlock.BlockHeader)}); !ok {
+		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
 			ps.removePeer(peer.ID())
 			continue
 		}
@@ -480,7 +480,7 @@ func (ps *peerSet) peersWithoutNewStatus(height uint64) []*peer {
 
 	var peers []*peer
 	for _, peer := range ps.peers {
-		if peer.knownStatus != height {
+		if peer.knownStatus < height {
 			peers = append(peers, peer)
 		}
 	}
