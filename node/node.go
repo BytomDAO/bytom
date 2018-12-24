@@ -11,6 +11,7 @@ import (
 
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 	browser "github.com/toqueteos/webbrowser"
@@ -31,6 +32,8 @@ import (
 	"github.com/bytom/mining/tensority"
 	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
+	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/discover"
 	"github.com/bytom/protocol"
 	w "github.com/bytom/wallet"
 )
@@ -117,10 +120,27 @@ func NewNode(config *cfg.Config) *Node {
 		}
 	}
 	dispatcher := event.NewDispatcher()
-	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher)
-	if err != nil {
-		cmn.Exit(cmn.Fmt("create sync manager failed: %v", err))
+	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
+	privKey := crypto.GenPrivKeyEd25519()
+	// Create & add listener
+	var l p2p.Listener
+	var listenAddr string
+
+	if !config.VaultMode {
+		l, listenAddr = p2p.GetListener(config.P2P)
 	}
+
+	discover, err := discover.NewDiscover(config, &privKey, l.ExternalAddress().Port)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("Failed to create p2p discover: %v", err))
+	}
+
+	sw, err := p2p.NewSwitch(config, blacklistDB, privKey, l, listenAddr, discover)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("Failed to create p2p switch: %v", err))
+	}
+
+	syncManager, _ := netsync.NewSyncManager(config, sw, chain, txPool, dispatcher)
 
 	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
 
@@ -251,8 +271,11 @@ func (n *Node) OnStart() error {
 		}
 	}
 	if !n.config.VaultMode {
-		n.syncManager.Start()
+		if err := n.syncManager.Start(); err != nil {
+			return err
+		}
 	}
+
 	n.initAndstartApiServer()
 	n.notificationMgr.Start()
 	if !n.config.Web.Closed {

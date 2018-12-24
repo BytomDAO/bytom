@@ -36,7 +36,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 		Mining:       a.cpuMiner.IsMining(),
 		PeerCount:    len(a.sync.Switch().Peers().List()),
 		CurrentBlock: a.chain.BestBlockHeight(),
-		NetWorkID:    a.sync.NodeInfo().Network,
+		NetWorkID:    a.sync.Switch().NodeInfo().GetNetwork(),
 		Version: &VersionInfo{
 			Version: version.Version,
 			Update:  version.Status.VersionStatus(),

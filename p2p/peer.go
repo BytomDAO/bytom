@@ -13,10 +13,10 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/flowrate"
 
+	"github.com/btcsuite/go-socks/socks"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p/connection"
-	"github.com/btcsuite/go-socks/socks"
 )
 
 // peerConn contains the raw connection and its config.

@@ -167,6 +167,10 @@ func (net *Network) Self() *Node {
 	return net.tab.self
 }
 
+func (net *Network) selfIP() net.IP {
+	return net.tab.self.IP
+}
+
 // ReadRandomNodes fills the given slice with random nodes from the
 // table. It will not write the same node more than once. The nodes in
 // the slice are copies and can be modified by the caller.
