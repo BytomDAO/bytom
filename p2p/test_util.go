@@ -121,7 +121,7 @@ func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, initSwitch func(*Switch) *Switch
 	// TODO: let the config be passed in?
 	privKey := crypto.GenPrivKeyEd25519()
 	l, listenAddr := GetListener(cfg.P2P)
-	sw, err := NewSwitch(cfg, testdb, privKey, l, listenAddr, new(mockDiscv))
+	sw, err := NewSwitch(new(mockDiscv), testdb, l, cfg, privKey, listenAddr)
 	if err != nil {
 		log.Errorf("create switch error:", err)
 		return nil

@@ -106,7 +106,7 @@ func (rp *remotePeer) Start() {
 
 	l, e := net.Listen("tcp", rp.listenAddr) // any available address
 	if e != nil {
-		fmt.Println("net.Listen tcp :0: %+v", e)
+		fmt.Println("net.Listen tcp :0:", e)
 	}
 	rp.addr = NewNetAddress(l.Addr())
 	rp.quit = make(chan struct{})
@@ -123,12 +123,12 @@ func (rp *remotePeer) accept(l net.Listener) {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			fmt.Println("Failed to accept conn: %+v", err)
+			fmt.Println("Failed to accept conn:", err)
 		}
 
 		pc, err := newInboundPeerConn(conn, rp.PrivKey, rp.Config.P2P)
 		if err != nil {
-			fmt.Println("Failed to create a peer: %+v", err)
+			fmt.Println("Failed to create a peer:", err)
 		}
 
 		_, err = pc.HandshakeTimeout(&NodeInfo{
@@ -139,7 +139,7 @@ func (rp *remotePeer) accept(l net.Listener) {
 			ListenAddr: l.Addr().String(),
 		}, 5*time.Second)
 		if err != nil {
-			fmt.Println("Failed to perform handshake: %+v", err)
+			fmt.Println("Failed to perform handshake:", err)
 		}
 		conns = append(conns, conn)
 		select {
@@ -175,7 +175,7 @@ func (ip *inboundPeer) dial(addr *NetAddress) error {
 		ListenAddr: addr.String(),
 	}, 5*time.Second)
 	if err != nil {
-		fmt.Println("Failed to perform handshake: %+v", err)
+		fmt.Println("Failed to perform handshake:", err)
 		return err
 	}
 

@@ -63,7 +63,7 @@ type Switch struct {
 }
 
 // NewSwitch creates a new Switch with the given config.
-func NewSwitch(config *cfg.Config, blacklistDB dbm.DB, priv crypto.PrivKeyEd25519, l Listener, listenAddr string, discv discv) (*Switch, error) {
+func NewSwitch(discv discv, blacklistDB dbm.DB, l Listener, config *cfg.Config, priv crypto.PrivKeyEd25519, listenAddr string) (*Switch, error) {
 	sw := &Switch{
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config.P2P),

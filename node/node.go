@@ -135,12 +135,12 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to create p2p discover: %v", err))
 	}
 
-	sw, err := p2p.NewSwitch(config, blacklistDB, privKey, l, listenAddr, discover)
+	sw, err := p2p.NewSwitch(discover, blacklistDB, l, config, privKey, listenAddr)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create p2p switch: %v", err))
 	}
 
-	syncManager, _ := netsync.NewSyncManager(config, sw, chain, txPool, dispatcher)
+	syncManager, _ := netsync.NewSyncManager(sw, chain, config, txPool, dispatcher)
 
 	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
 
