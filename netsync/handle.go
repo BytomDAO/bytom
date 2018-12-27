@@ -521,11 +521,12 @@ func (sm *SyncManager) minedBroadcastLoop() {
 			ev, ok := obj.Data.(event.NewMinedBlockEvent)
 			if !ok {
 				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
+				continue
 			}
 
 			if err := sm.peers.broadcastMinedBlock(ev.Block); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast mine block")
-				return
+				continue
 			}
 
 		case <-sm.quitSync:

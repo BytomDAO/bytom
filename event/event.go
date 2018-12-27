@@ -73,6 +73,7 @@ func (d *Dispatcher) Subscribe(types ...interface{}) (*Subscription, error) {
 			log.WithFields(log.Fields{"module": logModule}).Errorf("duplicate type %s in Subscribe", rtyp)
 			return nil, ErrDuplicateSubscribe
 		}
+
 		subs := make([]*Subscription, len(oldsubs)+1)
 		copy(subs, oldsubs)
 		subs[len(oldsubs)] = sub
@@ -94,6 +95,7 @@ func (d *Dispatcher) Post(ev interface{}) error {
 		d.mutex.RUnlock()
 		return ErrMuxClosed
 	}
+
 	subs := d.subm[rtyp]
 	d.mutex.RUnlock()
 	for _, sub := range subs {
@@ -149,11 +151,11 @@ func posdelete(slice []*Subscription, pos int) []*Subscription {
 
 // Subscription is a subscription established through TypeMux.
 type Subscription struct {
-	mux     *Dispatcher
-	created time.Time
-	closeMu sync.Mutex
-	closing chan struct{}
-	closed  bool
+	dispatcher *Dispatcher
+	created    time.Time
+	closeMu    sync.Mutex
+	closing    chan struct{}
+	closed     bool
 
 	// these two are the same channel. they are stored separately so
 	// postC can be set to nil without affecting the return value of
@@ -163,14 +165,14 @@ type Subscription struct {
 	postC  chan<- *TypeMuxEvent
 }
 
-func newSubscription(d *Dispatcher) *Subscription {
+func newSubscription(dispatcher *Dispatcher) *Subscription {
 	c := make(chan *TypeMuxEvent, maxEventChSize)
 	return &Subscription{
-		mux:     d,
-		created: time.Now(),
-		readC:   c,
-		postC:   c,
-		closing: make(chan struct{}),
+		dispatcher: dispatcher,
+		created:    time.Now(),
+		readC:      c,
+		postC:      c,
+		closing:    make(chan struct{}),
 	}
 }
 
@@ -179,7 +181,7 @@ func (s *Subscription) Chan() <-chan *TypeMuxEvent {
 }
 
 func (s *Subscription) Unsubscribe() {
-	s.mux.del(s)
+	s.dispatcher.del(s)
 	s.closewait()
 }
 
