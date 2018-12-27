@@ -276,6 +276,7 @@ func (n *Node) OnStop() {
 	if !n.config.VaultMode {
 		n.syncManager.Stop()
 	}
+	n.eventDispatcher.Stop()
 }
 
 func (n *Node) RunForever() {
