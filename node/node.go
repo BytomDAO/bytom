@@ -44,9 +44,9 @@ type Node struct {
 	cmn.BaseService
 
 	// config
-	config      *cfg.Config
-	eventMux    *event.TypeMux
-	syncManager *netsync.SyncManager
+	config          *cfg.Config
+	eventDispatcher *event.Dispatcher
+	syncManager     *netsync.SyncManager
 
 	wallet          *w.Wallet
 	accessTokens    *accesstoken.CredentialStore
@@ -116,8 +116,8 @@ func NewNode(config *cfg.Config) *Node {
 			wallet.RescanBlocks()
 		}
 	}
-	eventMux := event.NewTypeMux()
-	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, eventMux)
+	dispatcher := event.NewDispatcher()
+	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, dispatcher)
 
 	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
 
@@ -137,20 +137,20 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	node := &Node{
-		eventMux:     eventMux,
-		config:       config,
-		syncManager:  syncManager,
-		accessTokens: accessTokens,
-		wallet:       wallet,
-		chain:        chain,
-		txfeed:       txFeed,
-		miningEnable: config.Mining,
+		eventDispatcher: dispatcher,
+		config:          config,
+		syncManager:     syncManager,
+		accessTokens:    accessTokens,
+		wallet:          wallet,
+		chain:           chain,
+		txfeed:          txFeed,
+		miningEnable:    config.Mining,
 
 		notificationMgr: notificationMgr,
 	}
 
-	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, eventMux)
-	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, eventMux)
+	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, dispatcher)
+	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, dispatcher)
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
@@ -231,7 +231,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartApiServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.eventMux, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()

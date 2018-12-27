@@ -63,12 +63,12 @@ type SyncManager struct {
 	quitSync chan struct{}
 	config   *cfg.Config
 
-	eventMux      *event.TypeMux
-	minedBlockSub *event.Subscription
+	eventDispatcher *event.Dispatcher
+	minedBlockSub   *event.Subscription
 }
 
 //NewSyncManager create a sync manager
-func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, eventMux *event.TypeMux) (*SyncManager, error) {
+func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
 	genesisHeader, err := chain.GetHeaderByHeight(0)
 	if err != nil {
 		return nil, err
@@ -77,19 +77,19 @@ func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, eventM
 	sw := p2p.NewSwitch(config)
 	peers := newPeerSet(sw)
 	manager := &SyncManager{
-		sw:           sw,
-		genesisHash:  genesisHeader.Hash(),
-		txPool:       txPool,
-		chain:        chain,
-		privKey:      crypto.GenPrivKeyEd25519(),
-		blockFetcher: newBlockFetcher(chain, peers),
-		blockKeeper:  newBlockKeeper(chain, peers),
-		peers:        peers,
-		newTxCh:      make(chan *types.Tx, maxTxChanSize),
-		txSyncCh:     make(chan *txSyncMsg),
-		quitSync:     make(chan struct{}),
-		config:       config,
-		eventMux:     eventMux,
+		sw:              sw,
+		genesisHash:     genesisHeader.Hash(),
+		txPool:          txPool,
+		chain:           chain,
+		privKey:         crypto.GenPrivKeyEd25519(),
+		blockFetcher:    newBlockFetcher(chain, peers),
+		blockKeeper:     newBlockKeeper(chain, peers),
+		peers:           peers,
+		newTxCh:         make(chan *types.Tx, maxTxChanSize),
+		txSyncCh:        make(chan *txSyncMsg),
+		quitSync:        make(chan struct{}),
+		config:          config,
+		eventDispatcher: dispatcher,
 	}
 
 	protocolReactor := NewProtocolReactor(manager, manager.peers)
@@ -465,7 +465,7 @@ func (sm *SyncManager) Start() {
 	// broadcast transactions
 	go sm.txBroadcastLoop()
 
-	sm.minedBlockSub, err = sm.eventMux.Subscribe(event.NewMinedBlockEvent{})
+	sm.minedBlockSub, err = sm.eventDispatcher.Subscribe(event.NewMinedBlockEvent{})
 	if err != nil {
 		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
 	}

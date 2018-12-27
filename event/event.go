@@ -29,21 +29,21 @@ type TypeMuxEvent struct {
 	Data interface{}
 }
 
-// A TypeMux dispatches events to registered receivers. Receivers can be
+// A Dispatcher dispatches events to registered receivers. Receivers can be
 // registered to handle events of certain type. Any operation
 // called after mux is stopped will return ErrMuxClosed.
 //
 // The zero value is ready to use.
 //
 // Deprecated: use Feed
-type TypeMux struct {
+type Dispatcher struct {
 	mutex   sync.RWMutex
 	subm    map[reflect.Type][]*Subscription
 	stopped bool
 }
 
-func NewTypeMux() *TypeMux {
-	return &TypeMux{
+func NewDispatcher() *Dispatcher {
+	return &Dispatcher{
 		subm: make(map[reflect.Type][]*Subscription),
 	}
 }
@@ -51,11 +51,11 @@ func NewTypeMux() *TypeMux {
 // Subscribe creates a subscription for events of the given types. The
 // subscription's channel is closed when it is unsubscribed
 // or the mux is closed.
-func (mux *TypeMux) Subscribe(types ...interface{}) (*Subscription, error) {
-	sub := newSubscription(mux)
-	mux.mutex.Lock()
-	defer mux.mutex.Unlock()
-	if mux.stopped {
+func (d *Dispatcher) Subscribe(types ...interface{}) (*Subscription, error) {
+	sub := newSubscription(d)
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	if d.stopped {
 		// set the status to closed so that calling Unsubscribe after this
 		// call will short circuit.
 		sub.closed = true
@@ -65,7 +65,7 @@ func (mux *TypeMux) Subscribe(types ...interface{}) (*Subscription, error) {
 
 	for _, t := range types {
 		rtyp := reflect.TypeOf(t)
-		oldsubs := mux.subm[rtyp]
+		oldsubs := d.subm[rtyp]
 		if find(oldsubs, sub) != -1 {
 			log.WithFields(log.Fields{"module": logModule}).Warningf("duplicate type %s in Subscribe", rtyp)
 			return nil, ErrDuplicateSubscribe
@@ -73,26 +73,26 @@ func (mux *TypeMux) Subscribe(types ...interface{}) (*Subscription, error) {
 		subs := make([]*Subscription, len(oldsubs)+1)
 		copy(subs, oldsubs)
 		subs[len(oldsubs)] = sub
-		mux.subm[rtyp] = subs
+		d.subm[rtyp] = subs
 	}
 	return sub, nil
 }
 
 // Post sends an event to all receivers registered for the given type.
 // It returns ErrMuxClosed if the mux has been stopped.
-func (mux *TypeMux) Post(ev interface{}) error {
+func (d *Dispatcher) Post(ev interface{}) error {
 	event := &TypeMuxEvent{
 		Time: time.Now(),
 		Data: ev,
 	}
 	rtyp := reflect.TypeOf(ev)
-	mux.mutex.RLock()
-	if mux.stopped {
-		mux.mutex.RUnlock()
+	d.mutex.RLock()
+	if d.stopped {
+		d.mutex.RUnlock()
 		return ErrMuxClosed
 	}
-	subs := mux.subm[rtyp]
-	mux.mutex.RUnlock()
+	subs := d.subm[rtyp]
+	d.mutex.RUnlock()
 	for _, sub := range subs {
 		sub.deliver(event)
 	}
@@ -102,26 +102,26 @@ func (mux *TypeMux) Post(ev interface{}) error {
 // Stop closes a mux. The mux can no longer be used.
 // Future Post calls will fail with ErrMuxClosed.
 // Stop blocks until all current deliveries have finished.
-func (mux *TypeMux) Stop() {
-	mux.mutex.Lock()
-	for _, subs := range mux.subm {
+func (d *Dispatcher) Stop() {
+	d.mutex.Lock()
+	for _, subs := range d.subm {
 		for _, sub := range subs {
 			sub.closewait()
 		}
 	}
-	mux.subm = nil
-	mux.stopped = true
-	mux.mutex.Unlock()
+	d.subm = nil
+	d.stopped = true
+	d.mutex.Unlock()
 }
 
-func (mux *TypeMux) del(s *Subscription) {
-	mux.mutex.Lock()
-	for typ, subs := range mux.subm {
+func (d *Dispatcher) del(s *Subscription) {
+	d.mutex.Lock()
+	for typ, subs := range d.subm {
 		if pos := find(subs, s); pos >= 0 {
 			if len(subs) == 1 {
-				delete(mux.subm, typ)
+				delete(d.subm, typ)
 			} else {
-				mux.subm[typ] = posdelete(subs, pos)
+				d.subm[typ] = posdelete(subs, pos)
 			}
 		}
 	}
@@ -146,7 +146,7 @@ func posdelete(slice []*Subscription, pos int) []*Subscription {
 
 // Subscription is a subscription established through TypeMux.
 type Subscription struct {
-	mux     *TypeMux
+	mux     *Dispatcher
 	created time.Time
 	closeMu sync.Mutex
 	closing chan struct{}
@@ -160,10 +160,10 @@ type Subscription struct {
 	postC  chan<- *TypeMuxEvent
 }
 
-func newSubscription(mux *TypeMux) *Subscription {
+func newSubscription(d *Dispatcher) *Subscription {
 	c := make(chan *TypeMuxEvent)
 	return &Subscription{
-		mux:     mux,
+		mux:     d,
 		created: time.Now(),
 		readC:   c,
 		postC:   c,
