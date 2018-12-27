@@ -12,7 +12,10 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-const logModule = "event"
+const (
+	logModule      = "event"
+	maxEventChSize = 65536
+)
 
 var (
 	// ErrMuxClosed is returned when Posting on a closed TypeMux.
@@ -67,7 +70,7 @@ func (d *Dispatcher) Subscribe(types ...interface{}) (*Subscription, error) {
 		rtyp := reflect.TypeOf(t)
 		oldsubs := d.subm[rtyp]
 		if find(oldsubs, sub) != -1 {
-			log.WithFields(log.Fields{"module": logModule}).Warningf("duplicate type %s in Subscribe", rtyp)
+			log.WithFields(log.Fields{"module": logModule}).Errorf("duplicate type %s in Subscribe", rtyp)
 			return nil, ErrDuplicateSubscribe
 		}
 		subs := make([]*Subscription, len(oldsubs)+1)
@@ -161,7 +164,7 @@ type Subscription struct {
 }
 
 func newSubscription(d *Dispatcher) *Subscription {
-	c := make(chan *TypeMuxEvent)
+	c := make(chan *TypeMuxEvent, maxEventChSize)
 	return &Subscription{
 		mux:     d,
 		created: time.Now(),
@@ -213,5 +216,7 @@ func (s *Subscription) deliver(event *TypeMuxEvent) {
 	select {
 	case s.postC <- event:
 	case <-s.closing:
+	default:
+		log.WithFields(log.Fields{"module": logModule}).Errorf("deliver event err unread event size %d", len(s.postC))
 	}
 }
