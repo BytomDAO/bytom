@@ -125,7 +125,7 @@ func (d *Dispatcher) del(s *Subscription) {
 			}
 		}
 	}
-	s.mux.mutex.Unlock()
+	d.mutex.Unlock()
 }
 
 func find(slice []*Subscription, item *Subscription) int {

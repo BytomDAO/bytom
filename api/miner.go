@@ -80,11 +80,15 @@ func (a *API) submitBlock(ctx context.Context, req *SubmitBlockReq) Response {
 	if err != nil {
 		return NewErrorResponse(err)
 	}
+
 	if isOrphan {
 		return NewErrorResponse(errors.New("block submitted is orphan"))
 	}
 
-	a.eventDispatcher.Post(event.NewMinedBlockEvent{Block: req.Block})
+	if err = a.eventDispatcher.Post(event.NewMinedBlockEvent{Block: req.Block}); err != nil {
+		return NewErrorResponse(err)
+	}
+
 	return NewSuccessResponse(true)
 }
 

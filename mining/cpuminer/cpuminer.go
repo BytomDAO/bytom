@@ -100,7 +100,9 @@ out:
 				}).Info("Miner processed block")
 
 				// Broadcast the block and announce chain insertion event
-				m.eventDispatcher.Post(event.NewMinedBlockEvent{Block: block})
+				if err = m.eventDispatcher.Post(event.NewMinedBlockEvent{Block: block}); err != nil {
+					log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on post block, %v", err)
+				}
 			} else {
 				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
 			}
