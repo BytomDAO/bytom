@@ -11,14 +11,14 @@ type testEvent int
 
 func TestSubCloseUnsub(t *testing.T) {
 	// the point of this test is **not** to panic
-	var mux TypeMux
+	var mux Dispatcher
 	mux.Stop()
 	sub, _ := mux.Subscribe(int(0))
 	sub.Unsubscribe()
 }
 
 func TestSub(t *testing.T) {
-	mux := NewTypeMux()
+	mux := NewDispatcher()
 	defer mux.Stop()
 
 	sub, _ := mux.Subscribe(testEvent(0))
@@ -36,7 +36,7 @@ func TestSub(t *testing.T) {
 }
 
 func TestMuxErrorAfterStop(t *testing.T) {
-	mux := NewTypeMux()
+	mux := NewDispatcher()
 	mux.Stop()
 
 	sub, _ := mux.Subscribe(testEvent(0))
@@ -49,7 +49,7 @@ func TestMuxErrorAfterStop(t *testing.T) {
 }
 
 func TestUnsubscribeUnblockPost(t *testing.T) {
-	mux := NewTypeMux()
+	mux := NewDispatcher()
 	defer mux.Stop()
 
 	sub, _ := mux.Subscribe(testEvent(0))
@@ -69,7 +69,7 @@ func TestUnsubscribeUnblockPost(t *testing.T) {
 }
 
 func TestSubscribeDuplicateType(t *testing.T) {
-	mux := NewTypeMux()
+	mux := NewDispatcher()
 	if _, err := mux.Subscribe(testEvent(1), testEvent(2)); err != ErrDuplicateSubscribe {
 		t.Fatal("Subscribe didn't error for duplicate type")
 	}
@@ -77,7 +77,7 @@ func TestSubscribeDuplicateType(t *testing.T) {
 
 func TestMuxConcurrent(t *testing.T) {
 	rand.Seed(time.Now().Unix())
-	mux := NewTypeMux()
+	mux := NewDispatcher()
 	defer mux.Stop()
 
 	recv := make(chan int)
@@ -117,7 +117,7 @@ func TestMuxConcurrent(t *testing.T) {
 	}
 }
 
-func emptySubscriber(mux *TypeMux) {
+func emptySubscriber(mux *Dispatcher) {
 	s, _ := mux.Subscribe(testEvent(0))
 	go func() {
 		for range s.Chan() {
@@ -127,7 +127,7 @@ func emptySubscriber(mux *TypeMux) {
 
 func BenchmarkPost1000(b *testing.B) {
 	var (
-		mux              = NewTypeMux()
+		mux              = NewDispatcher()
 		subscribed, done sync.WaitGroup
 		nsubs            = 1000
 	)
@@ -156,7 +156,7 @@ func BenchmarkPost1000(b *testing.B) {
 }
 
 func BenchmarkPostConcurrent(b *testing.B) {
-	var mux = NewTypeMux()
+	var mux = NewDispatcher()
 	defer mux.Stop()
 	emptySubscriber(mux)
 	emptySubscriber(mux)
