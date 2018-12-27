@@ -17,6 +17,7 @@ import (
 	"github.com/bytom/dashboard/dashboard"
 	"github.com/bytom/dashboard/equity"
 	"github.com/bytom/errors"
+	"github.com/bytom/event"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/net/http/authn"
@@ -26,7 +27,6 @@ import (
 	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/wallet"
 )
 
@@ -115,7 +115,7 @@ type API struct {
 	cpuMiner        *cpuminer.CPUMiner
 	miningPool      *miningpool.MiningPool
 	notificationMgr *websocket.WSNotificationManager
-	newBlockCh      chan *bc.Hash
+	eventDispatcher *event.Dispatcher
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -169,7 +169,7 @@ func (a *API) StartServer(address string) {
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,
@@ -179,7 +179,7 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		cpuMiner:      cpuMiner,
 		miningPool:    miningPool,
 
-		newBlockCh:      newBlockCh,
+		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
 	}
 	api.buildHandler()

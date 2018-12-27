@@ -25,13 +25,13 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
+	"github.com/bytom/event"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/mining/tensority"
 	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	w "github.com/bytom/wallet"
 )
 
@@ -44,11 +44,10 @@ type Node struct {
 	cmn.BaseService
 
 	// config
-	config *cfg.Config
+	config          *cfg.Config
+	eventDispatcher *event.Dispatcher
+	syncManager     *netsync.SyncManager
 
-	syncManager *netsync.SyncManager
-
-	//bcReactor    *bc.BlockchainReactor
 	wallet          *w.Wallet
 	accessTokens    *accesstoken.CredentialStore
 	notificationMgr *websocket.WSNotificationManager
@@ -58,8 +57,6 @@ type Node struct {
 	cpuMiner        *cpuminer.CPUMiner
 	miningPool      *miningpool.MiningPool
 	miningEnable    bool
-
-	newBlockCh chan *bc.Hash
 }
 
 func NewNode(config *cfg.Config) *Node {
@@ -119,9 +116,11 @@ func NewNode(config *cfg.Config) *Node {
 			wallet.RescanBlocks()
 		}
 	}
-	newBlockCh := make(chan *bc.Hash, maxNewBlockChSize)
-
-	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, newBlockCh)
+	dispatcher := event.NewDispatcher()
+	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("create sync manager failed: %v", err))
+	}
 
 	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
 
@@ -141,20 +140,20 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	node := &Node{
-		config:       config,
-		syncManager:  syncManager,
-		accessTokens: accessTokens,
-		wallet:       wallet,
-		chain:        chain,
-		txfeed:       txFeed,
-		miningEnable: config.Mining,
+		eventDispatcher: dispatcher,
+		config:          config,
+		syncManager:     syncManager,
+		accessTokens:    accessTokens,
+		wallet:          wallet,
+		chain:           chain,
+		txfeed:          txFeed,
+		miningEnable:    config.Mining,
 
-		newBlockCh:      newBlockCh,
 		notificationMgr: notificationMgr,
 	}
 
-	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, newBlockCh)
-	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, newBlockCh)
+	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, dispatcher)
+	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, dispatcher)
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
@@ -235,7 +234,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartApiServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.newBlockCh, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()

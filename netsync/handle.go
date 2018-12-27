@@ -15,6 +15,7 @@ import (
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
+	"github.com/bytom/event"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/discover"
 	core "github.com/bytom/protocol"
@@ -57,15 +58,17 @@ type SyncManager struct {
 	blockKeeper  *blockKeeper
 	peers        *peerSet
 
-	newTxCh    chan *types.Tx
-	newBlockCh chan *bc.Hash
-	txSyncCh   chan *txSyncMsg
-	quitSync   chan struct{}
-	config     *cfg.Config
+	newTxCh  chan *types.Tx
+	txSyncCh chan *txSyncMsg
+	quitSync chan struct{}
+	config   *cfg.Config
+
+	eventDispatcher *event.Dispatcher
+	minedBlockSub   *event.Subscription
 }
 
 //NewSyncManager create a sync manager
-func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, newBlockCh chan *bc.Hash) (*SyncManager, error) {
+func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
 	genesisHeader, err := chain.GetHeaderByHeight(0)
 	if err != nil {
 		return nil, err
@@ -74,19 +77,19 @@ func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, newBlo
 	sw := p2p.NewSwitch(config)
 	peers := newPeerSet(sw)
 	manager := &SyncManager{
-		sw:           sw,
-		genesisHash:  genesisHeader.Hash(),
-		txPool:       txPool,
-		chain:        chain,
-		privKey:      crypto.GenPrivKeyEd25519(),
-		blockFetcher: newBlockFetcher(chain, peers),
-		blockKeeper:  newBlockKeeper(chain, peers),
-		peers:        peers,
-		newTxCh:      make(chan *types.Tx, maxTxChanSize),
-		newBlockCh:   newBlockCh,
-		txSyncCh:     make(chan *txSyncMsg),
-		quitSync:     make(chan struct{}),
-		config:       config,
+		sw:              sw,
+		genesisHash:     genesisHeader.Hash(),
+		txPool:          txPool,
+		chain:           chain,
+		privKey:         crypto.GenPrivKeyEd25519(),
+		blockFetcher:    newBlockFetcher(chain, peers),
+		blockKeeper:     newBlockKeeper(chain, peers),
+		peers:           peers,
+		newTxCh:         make(chan *types.Tx, maxTxChanSize),
+		txSyncCh:        make(chan *txSyncMsg),
+		quitSync:        make(chan struct{}),
+		config:          config,
+		eventDispatcher: dispatcher,
 	}
 
 	protocolReactor := NewProtocolReactor(manager, manager.peers)
@@ -455,17 +458,25 @@ func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 
 //Start start sync manager service
 func (sm *SyncManager) Start() {
-	if _, err := sm.sw.Start(); err != nil {
+	_, err := sm.sw.Start()
+	if err != nil {
 		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
 	}
 	// broadcast transactions
 	go sm.txBroadcastLoop()
+
+	sm.minedBlockSub, err = sm.eventDispatcher.Subscribe(event.NewMinedBlockEvent{})
+	if err != nil {
+		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
+	}
+
 	go sm.minedBroadcastLoop()
 	go sm.txSyncLoop()
 }
 
 //Stop stop sync manager
 func (sm *SyncManager) Stop() {
+	sm.minedBlockSub.Unsubscribe()
 	close(sm.quitSync)
 	sm.sw.Stop()
 }
@@ -506,16 +517,18 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 func (sm *SyncManager) minedBroadcastLoop() {
 	for {
 		select {
-		case blockHash := <-sm.newBlockCh:
-			block, err := sm.chain.GetBlockByHash(blockHash)
-			if err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on mined broadcast loop get block")
-				return
+		case obj := <-sm.minedBlockSub.Chan():
+			ev, ok := obj.Data.(event.NewMinedBlockEvent)
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
+				continue
 			}
-			if err := sm.peers.broadcastMinedBlock(block); err != nil {
+
+			if err := sm.peers.broadcastMinedBlock(ev.Block); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast mine block")
-				return
+				continue
 			}
+
 		case <-sm.quitSync:
 			return
 		}
