@@ -515,7 +515,6 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 }
 
 func (sm *SyncManager) minedBroadcastLoop() {
-
 	for {
 		select {
 		case obj := <-sm.minedBlockSub.Chan():
