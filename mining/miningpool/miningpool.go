@@ -32,17 +32,17 @@ type MiningPool struct {
 	chain          *protocol.Chain
 	accountManager *account.Manager
 	txPool         *protocol.TxPool
-	mux            *event.TypeMux
+	eventMux       *event.TypeMux
 }
 
 // NewMiningPool will create a new MiningPool
-func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, mux *event.TypeMux) *MiningPool {
+func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, eventMux *event.TypeMux) *MiningPool {
 	m := &MiningPool{
 		submitCh:       make(chan *submitBlockMsg, maxSubmitChSize),
 		chain:          c,
 		accountManager: accountManager,
 		txPool:         txPool,
-		mux:            mux,
+		eventMux:       eventMux,
 	}
 	m.generateBlock()
 	go m.blockUpdater()
@@ -120,6 +120,6 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 	if isOrphan {
 		return errors.New("submit result is orphan")
 	}
-	m.mux.Post(event.NewMinedBlockEvent{Block: m.block})
+	m.eventMux.Post(event.NewMinedBlockEvent{Block: m.block})
 	return nil
 }

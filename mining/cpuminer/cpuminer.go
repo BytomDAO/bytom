@@ -33,7 +33,7 @@ type CPUMiner struct {
 	workerWg         sync.WaitGroup
 	updateNumWorkers chan struct{}
 	quit             chan struct{}
-	mux              *event.TypeMux
+	eventMux         *event.TypeMux
 }
 
 // solveBlock attempts to find some combination of a nonce, extra nonce, and
@@ -100,7 +100,7 @@ out:
 				}).Info("Miner processed block")
 
 				// Broadcast the block and announce chain insertion event
-				m.mux.Post(event.NewMinedBlockEvent{Block: block})
+				m.eventMux.Post(event.NewMinedBlockEvent{Block: block})
 			} else {
 				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
 			}
@@ -262,13 +262,13 @@ func (m *CPUMiner) NumWorkers() int32 {
 // NewCPUMiner returns a new instance of a CPU miner for the provided configuration.
 // Use Start to begin the mining process.  See the documentation for CPUMiner
 // type for more details.
-func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, mux *event.TypeMux) *CPUMiner {
+func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, eventMux *event.TypeMux) *CPUMiner {
 	return &CPUMiner{
 		chain:            c,
 		accountManager:   accountManager,
 		txPool:           txPool,
 		numWorkers:       defaultNumWorkers,
 		updateNumWorkers: make(chan struct{}),
-		mux:              mux,
+		eventMux:         eventMux,
 	}
 }

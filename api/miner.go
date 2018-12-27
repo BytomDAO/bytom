@@ -84,7 +84,7 @@ func (a *API) submitBlock(ctx context.Context, req *SubmitBlockReq) Response {
 		return NewErrorResponse(errors.New("block submitted is orphan"))
 	}
 
-	a.mux.Post(event.NewMinedBlockEvent{Block: req.Block})
+	a.eventMux.Post(event.NewMinedBlockEvent{Block: req.Block})
 	return NewSuccessResponse(true)
 }
 

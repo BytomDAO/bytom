@@ -45,7 +45,7 @@ type Node struct {
 
 	// config
 	config      *cfg.Config
-	eventmux    *event.TypeMux
+	eventMux    *event.TypeMux
 	syncManager *netsync.SyncManager
 
 	wallet          *w.Wallet
@@ -116,7 +116,7 @@ func NewNode(config *cfg.Config) *Node {
 			wallet.RescanBlocks()
 		}
 	}
-	eventMux := new(event.TypeMux)
+	eventMux := event.NewTypeMux()
 	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, eventMux)
 
 	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
@@ -137,7 +137,7 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	node := &Node{
-		eventmux:     eventMux,
+		eventMux:     eventMux,
 		config:       config,
 		syncManager:  syncManager,
 		accessTokens: accessTokens,
@@ -231,7 +231,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartApiServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.eventmux, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.eventMux, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()

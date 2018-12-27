@@ -13,15 +13,15 @@ func TestSubCloseUnsub(t *testing.T) {
 	// the point of this test is **not** to panic
 	var mux TypeMux
 	mux.Stop()
-	sub := mux.Subscribe(int(0))
+	sub, _ := mux.Subscribe(int(0))
 	sub.Unsubscribe()
 }
 
 func TestSub(t *testing.T) {
-	mux := new(TypeMux)
+	mux := NewTypeMux()
 	defer mux.Stop()
 
-	sub := mux.Subscribe(testEvent(0))
+	sub, _ := mux.Subscribe(testEvent(0))
 	go func() {
 		if err := mux.Post(testEvent(5)); err != nil {
 			t.Errorf("Post returned unexpected error: %v", err)
@@ -36,10 +36,10 @@ func TestSub(t *testing.T) {
 }
 
 func TestMuxErrorAfterStop(t *testing.T) {
-	mux := new(TypeMux)
+	mux := NewTypeMux()
 	mux.Stop()
 
-	sub := mux.Subscribe(testEvent(0))
+	sub, _ := mux.Subscribe(testEvent(0))
 	if _, isopen := <-sub.Chan(); isopen {
 		t.Errorf("subscription channel was not closed")
 	}
@@ -49,10 +49,10 @@ func TestMuxErrorAfterStop(t *testing.T) {
 }
 
 func TestUnsubscribeUnblockPost(t *testing.T) {
-	mux := new(TypeMux)
+	mux := NewTypeMux()
 	defer mux.Stop()
 
-	sub := mux.Subscribe(testEvent(0))
+	sub, _ := mux.Subscribe(testEvent(0))
 	unblocked := make(chan bool)
 	go func() {
 		mux.Post(testEvent(5))
@@ -69,23 +69,15 @@ func TestUnsubscribeUnblockPost(t *testing.T) {
 }
 
 func TestSubscribeDuplicateType(t *testing.T) {
-	mux := new(TypeMux)
-	expected := "event: duplicate type event.testEvent in Subscribe"
-
-	defer func() {
-		err := recover()
-		if err == nil {
-			t.Errorf("Subscribe didn't panic for duplicate type")
-		} else if err != expected {
-			t.Errorf("panic mismatch: got %#v, expected %#v", err, expected)
-		}
-	}()
-	mux.Subscribe(testEvent(1), testEvent(2))
+	mux := NewTypeMux()
+	if _, err := mux.Subscribe(testEvent(1), testEvent(2)); err != ErrDuplicateSubscribe {
+		t.Fatal("Subscribe didn't error for duplicate type")
+	}
 }
 
 func TestMuxConcurrent(t *testing.T) {
 	rand.Seed(time.Now().Unix())
-	mux := new(TypeMux)
+	mux := NewTypeMux()
 	defer mux.Stop()
 
 	recv := make(chan int)
@@ -99,7 +91,7 @@ func TestMuxConcurrent(t *testing.T) {
 	}
 	sub := func(i int) {
 		time.Sleep(time.Duration(rand.Intn(99)) * time.Millisecond)
-		sub := mux.Subscribe(testEvent(0))
+		sub, _ := mux.Subscribe(testEvent(0))
 		<-sub.Chan()
 		sub.Unsubscribe()
 		recv <- i
@@ -126,7 +118,7 @@ func TestMuxConcurrent(t *testing.T) {
 }
 
 func emptySubscriber(mux *TypeMux) {
-	s := mux.Subscribe(testEvent(0))
+	s, _ := mux.Subscribe(testEvent(0))
 	go func() {
 		for range s.Chan() {
 		}
@@ -135,7 +127,7 @@ func emptySubscriber(mux *TypeMux) {
 
 func BenchmarkPost1000(b *testing.B) {
 	var (
-		mux              = new(TypeMux)
+		mux              = NewTypeMux()
 		subscribed, done sync.WaitGroup
 		nsubs            = 1000
 	)
@@ -143,7 +135,7 @@ func BenchmarkPost1000(b *testing.B) {
 	done.Add(nsubs)
 	for i := 0; i < nsubs; i++ {
 		go func() {
-			s := mux.Subscribe(testEvent(0))
+			s, _ := mux.Subscribe(testEvent(0))
 			subscribed.Done()
 			for range s.Chan() {
 			}
@@ -164,7 +156,7 @@ func BenchmarkPost1000(b *testing.B) {
 }
 
 func BenchmarkPostConcurrent(b *testing.B) {
-	var mux = new(TypeMux)
+	var mux = NewTypeMux()
 	defer mux.Stop()
 	emptySubscriber(mux)
 	emptySubscriber(mux)

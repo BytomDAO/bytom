@@ -3,12 +3,22 @@ package event
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"sync"
 	"time"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/protocol/bc/types"
+)
+
+const logModule = "event"
+
+var (
+	// ErrMuxClosed is returned when Posting on a closed TypeMux.
+	ErrMuxClosed = errors.New("event: mux closed")
+	//ErrDuplicateSubscribe is returned when subscribe duplicate type
+	ErrDuplicateSubscribe = errors.New("event: subscribe duplicate type")
 )
 
 type NewMinedBlockEvent struct{ Block *types.Block }
@@ -28,18 +38,21 @@ type TypeMuxEvent struct {
 // Deprecated: use Feed
 type TypeMux struct {
 	mutex   sync.RWMutex
-	subm    map[reflect.Type][]*TypeMuxSubscription
+	subm    map[reflect.Type][]*Subscription
 	stopped bool
 }
 
-// ErrMuxClosed is returned when Posting on a closed TypeMux.
-var ErrMuxClosed = errors.New("event: mux closed")
+func NewTypeMux() *TypeMux {
+	return &TypeMux{
+		subm: make(map[reflect.Type][]*Subscription),
+	}
+}
 
 // Subscribe creates a subscription for events of the given types. The
 // subscription's channel is closed when it is unsubscribed
 // or the mux is closed.
-func (mux *TypeMux) Subscribe(types ...interface{}) *TypeMuxSubscription {
-	sub := newsub(mux)
+func (mux *TypeMux) Subscribe(types ...interface{}) (*Subscription, error) {
+	sub := newSubscription(mux)
 	mux.mutex.Lock()
 	defer mux.mutex.Unlock()
 	if mux.stopped {
@@ -47,23 +60,22 @@ func (mux *TypeMux) Subscribe(types ...interface{}) *TypeMuxSubscription {
 		// call will short circuit.
 		sub.closed = true
 		close(sub.postC)
-	} else {
-		if mux.subm == nil {
-			mux.subm = make(map[reflect.Type][]*TypeMuxSubscription)
-		}
-		for _, t := range types {
-			rtyp := reflect.TypeOf(t)
-			oldsubs := mux.subm[rtyp]
-			if find(oldsubs, sub) != -1 {
-				panic(fmt.Sprintf("event: duplicate type %s in Subscribe", rtyp))
-			}
-			subs := make([]*TypeMuxSubscription, len(oldsubs)+1)
-			copy(subs, oldsubs)
-			subs[len(oldsubs)] = sub
-			mux.subm[rtyp] = subs
-		}
+		return sub, nil
 	}
-	return sub
+
+	for _, t := range types {
+		rtyp := reflect.TypeOf(t)
+		oldsubs := mux.subm[rtyp]
+		if find(oldsubs, sub) != -1 {
+			log.WithFields(log.Fields{"module": logModule}).Warningf("duplicate type %s in Subscribe", rtyp)
+			return nil, ErrDuplicateSubscribe
+		}
+		subs := make([]*Subscription, len(oldsubs)+1)
+		copy(subs, oldsubs)
+		subs[len(oldsubs)] = sub
+		mux.subm[rtyp] = subs
+	}
+	return sub, nil
 }
 
 // Post sends an event to all receivers registered for the given type.
@@ -102,7 +114,7 @@ func (mux *TypeMux) Stop() {
 	mux.mutex.Unlock()
 }
 
-func (mux *TypeMux) del(s *TypeMuxSubscription) {
+func (mux *TypeMux) del(s *Subscription) {
 	mux.mutex.Lock()
 	for typ, subs := range mux.subm {
 		if pos := find(subs, s); pos >= 0 {
@@ -116,7 +128,7 @@ func (mux *TypeMux) del(s *TypeMuxSubscription) {
 	s.mux.mutex.Unlock()
 }
 
-func find(slice []*TypeMuxSubscription, item *TypeMuxSubscription) int {
+func find(slice []*Subscription, item *Subscription) int {
 	for i, v := range slice {
 		if v == item {
 			return i
@@ -125,15 +137,15 @@ func find(slice []*TypeMuxSubscription, item *TypeMuxSubscription) int {
 	return -1
 }
 
-func posdelete(slice []*TypeMuxSubscription, pos int) []*TypeMuxSubscription {
-	news := make([]*TypeMuxSubscription, len(slice)-1)
+func posdelete(slice []*Subscription, pos int) []*Subscription {
+	news := make([]*Subscription, len(slice)-1)
 	copy(news[:pos], slice[:pos])
 	copy(news[pos:], slice[pos+1:])
 	return news
 }
 
-// TypeMuxSubscription is a subscription established through TypeMux.
-type TypeMuxSubscription struct {
+// Subscription is a subscription established through TypeMux.
+type Subscription struct {
 	mux     *TypeMux
 	created time.Time
 	closeMu sync.Mutex
@@ -148,9 +160,9 @@ type TypeMuxSubscription struct {
 	postC  chan<- *TypeMuxEvent
 }
 
-func newsub(mux *TypeMux) *TypeMuxSubscription {
+func newSubscription(mux *TypeMux) *Subscription {
 	c := make(chan *TypeMuxEvent)
-	return &TypeMuxSubscription{
+	return &Subscription{
 		mux:     mux,
 		created: time.Now(),
 		readC:   c,
@@ -159,22 +171,22 @@ func newsub(mux *TypeMux) *TypeMuxSubscription {
 	}
 }
 
-func (s *TypeMuxSubscription) Chan() <-chan *TypeMuxEvent {
+func (s *Subscription) Chan() <-chan *TypeMuxEvent {
 	return s.readC
 }
 
-func (s *TypeMuxSubscription) Unsubscribe() {
+func (s *Subscription) Unsubscribe() {
 	s.mux.del(s)
 	s.closewait()
 }
 
-func (s *TypeMuxSubscription) Closed() bool {
+func (s *Subscription) Closed() bool {
 	s.closeMu.Lock()
 	defer s.closeMu.Unlock()
 	return s.closed
 }
 
-func (s *TypeMuxSubscription) closewait() {
+func (s *Subscription) closewait() {
 	s.closeMu.Lock()
 	defer s.closeMu.Unlock()
 	if s.closed {
@@ -189,7 +201,7 @@ func (s *TypeMuxSubscription) closewait() {
 	s.postMu.Unlock()
 }
 
-func (s *TypeMuxSubscription) deliver(event *TypeMuxEvent) {
+func (s *Subscription) deliver(event *TypeMuxEvent) {
 	// Short circuit delivery if stale event
 	if s.created.After(event.Time) {
 		return

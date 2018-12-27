@@ -64,11 +64,11 @@ type SyncManager struct {
 	config   *cfg.Config
 
 	eventMux      *event.TypeMux
-	minedBlockSub *event.TypeMuxSubscription
+	minedBlockSub *event.Subscription
 }
 
 //NewSyncManager create a sync manager
-func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, mux *event.TypeMux) (*SyncManager, error) {
+func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, eventMux *event.TypeMux) (*SyncManager, error) {
 	genesisHeader, err := chain.GetHeaderByHeight(0)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, mux *e
 		txSyncCh:     make(chan *txSyncMsg),
 		quitSync:     make(chan struct{}),
 		config:       config,
-		eventMux:     mux,
+		eventMux:     eventMux,
 	}
 
 	protocolReactor := NewProtocolReactor(manager, manager.peers)
@@ -458,13 +458,18 @@ func (sm *SyncManager) makeNodeInfo(listenerStatus bool) *p2p.NodeInfo {
 
 //Start start sync manager service
 func (sm *SyncManager) Start() {
-	if _, err := sm.sw.Start(); err != nil {
+	_, err := sm.sw.Start()
+	if err != nil {
 		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
 	}
 	// broadcast transactions
 	go sm.txBroadcastLoop()
 
-	sm.minedBlockSub = sm.eventMux.Subscribe(event.NewMinedBlockEvent{})
+	sm.minedBlockSub, err = sm.eventMux.Subscribe(event.NewMinedBlockEvent{})
+	if err != nil {
+		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
+	}
+
 	go sm.minedBroadcastLoop()
 	go sm.txSyncLoop()
 }
@@ -513,12 +518,16 @@ func (sm *SyncManager) minedBroadcastLoop() {
 	for {
 		select {
 		case obj := <-sm.minedBlockSub.Chan():
-			if ev, ok := obj.Data.(event.NewMinedBlockEvent); ok {
-				if err := sm.peers.broadcastMinedBlock(ev.Block); err != nil {
-					log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast mine block")
-					return
-				}
+			ev, ok := obj.Data.(event.NewMinedBlockEvent)
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
 			}
+
+			if err := sm.peers.broadcastMinedBlock(ev.Block); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast mine block")
+				return
+			}
+
 		case <-sm.quitSync:
 			return
 		default:
