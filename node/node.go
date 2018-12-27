@@ -117,7 +117,10 @@ func NewNode(config *cfg.Config) *Node {
 		}
 	}
 	dispatcher := event.NewDispatcher()
-	syncManager, _ := netsync.NewSyncManager(config, chain, txPool, dispatcher)
+	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("create sync manager failed: %v", err))
+	}
 
 	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
 
