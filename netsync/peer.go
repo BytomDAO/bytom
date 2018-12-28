@@ -486,6 +486,17 @@ func (ps *peerSet) getPeerInfos() []*PeerInfo {
 	return result
 }
 
+func (ps *peerSet) markTx(peerID string, txHash bc.Hash) {
+	ps.mtx.Lock()
+	peer := ps.peers[peerID]
+	ps.mtx.Unlock()
+
+	if peer == nil {
+		return
+	}
+	peer.markTransaction(&txHash)
+}
+
 func (ps *peerSet) peersWithoutBlock(hash *bc.Hash) []*peer {
 	ps.mtx.RLock()
 	defer ps.mtx.RUnlock()

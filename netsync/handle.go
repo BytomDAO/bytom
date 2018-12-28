@@ -346,6 +346,7 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && !isOrphan {
 		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
 	}
+	sm.peers.markTx(peer.ID(), tx.ID)
 }
 
 func (sm *SyncManager) handleTransactionsMsg(peer *peer, msg *TransactionsMessage) {
@@ -362,9 +363,10 @@ func (sm *SyncManager) handleTransactionsMsg(peer *peer, msg *TransactionsMessag
 
 	for _, tx := range txs {
 		if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && !isOrphan {
-			sm.peers.addBanScore(peer.ID(), 20, 0, "fail on validate tx transaction")
+			sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
 			return
 		}
+		sm.peers.markTx(peer.ID(), tx.ID)
 	}
 }
 
