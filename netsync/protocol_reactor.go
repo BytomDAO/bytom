@@ -3,14 +3,8 @@ package netsync
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/errors"
 	"github.com/bytom/p2p"
 	"github.com/bytom/p2p/connection"
-)
-
-var (
-	errProtocolHandshakeTimeout = errors.New("Protocol handshake timeout")
-	errStatusRequest            = errors.New("Status request error")
 )
 
 //ProtocolReactor handles new coming protocol message.
@@ -34,7 +28,7 @@ func NewProtocolReactor(sm *SyncManager, peers *peerSet) *ProtocolReactor {
 // GetChannels implements Reactor
 func (pr *ProtocolReactor) GetChannels() []*connection.ChannelDescriptor {
 	return []*connection.ChannelDescriptor{
-		&connection.ChannelDescriptor{
+		{
 			ID:                BlockchainChannel,
 			Priority:          5,
 			SendQueueCapacity: 100,
@@ -44,8 +38,7 @@ func (pr *ProtocolReactor) GetChannels() []*connection.ChannelDescriptor {
 
 // OnStart implements BaseService
 func (pr *ProtocolReactor) OnStart() error {
-	pr.BaseReactor.OnStart()
-	return nil
+	return pr.BaseReactor.OnStart()
 }
 
 // OnStop implements BaseService

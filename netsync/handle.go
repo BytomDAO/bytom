@@ -343,8 +343,28 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 		return
 	}
 
-	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && isOrphan == false {
+	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && !isOrphan {
 		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
+	}
+}
+
+func (sm *SyncManager) handleTransactionsMsg(peer *peer, msg *TransactionsMessage) {
+	txs, err := msg.GetTransactions()
+	if err != nil {
+		sm.peers.addBanScore(peer.ID(), 0, 20, "fail on get txs from message")
+		return
+	}
+
+	if len(txs) > txsMsgMaxTxNum {
+		sm.peers.addBanScore(peer.ID(), 20, 0, "exceeded the maximum tx number limit")
+		return
+	}
+
+	for _, tx := range txs {
+		if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && !isOrphan {
+			sm.peers.addBanScore(peer.ID(), 20, 0, "fail on validate tx transaction")
+			return
+		}
 	}
 }
 
@@ -376,6 +396,9 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 
 	case *TransactionMessage:
 		sm.handleTransactionMsg(peer, msg)
+
+	case *TransactionsMessage:
+		sm.handleTransactionsMsg(peer, msg)
 
 	case *MineBlockMessage:
 		sm.handleMineBlockMsg(peer, msg)

@@ -85,8 +85,8 @@ func (sm *SyncManager) txSyncLoop() {
 		}).Debug("txSyncLoop sending transactions")
 		sending = true
 		go func() {
-			ok, err := peer.sendTransactions(sendTxs)
-			if !ok {
+			err := peer.sendTransactions(sendTxs)
+			if err != nil {
 				sm.peers.removePeer(msg.peerID)
 			}
 			done <- err

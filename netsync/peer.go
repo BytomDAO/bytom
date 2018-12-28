@@ -294,25 +294,50 @@ func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionSta
 	return ok, nil
 }
 
-func (p *peer) sendTransactions(txs []*types.Tx) (bool, error) {
-	for _, tx := range txs {
-		if p.isSPVNode() && !p.isRelatedTx(tx) {
-			continue
-		}
-		msg, err := NewTransactionMessage(tx)
-		if err != nil {
-			return false, errors.Wrap(err, "failed to tx msg")
-		}
+func (p *peer) sendMsgTxs(txs []*types.Tx) error {
+	msg, err := NewTransactionsMessage(txs)
+	if err != nil {
+		return err
+	}
 
-		if p.knownTxs.Has(tx.ID.String()) {
-			continue
-		}
-		if ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
-			return ok, nil
-		}
+	if ok := p.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+		return errors.New("failed to send txs msg")
+	}
+
+	for _, tx := range txs {
 		p.knownTxs.Add(tx.ID.String())
 	}
-	return true, nil
+	return nil
+}
+
+func (p *peer) sendTransactions(txs []*types.Tx) error {
+	if len(txs) == 0 {
+		return nil
+	}
+
+	validTxs := make([]*types.Tx, 0, len(txs))
+	for i, tx := range txs {
+		if p.isSPVNode() && !p.isRelatedTx(tx) || p.knownTxs.Has(tx.ID.String()) {
+			continue
+		}
+
+		validTxs = append(validTxs, tx)
+		if len(validTxs) == txsMsgMaxTxNum || i == len(txs)-1 {
+			if err := p.sendMsgTxs(validTxs); err != nil {
+				return err
+			}
+
+			validTxs = make([]*types.Tx, 0, len(txs))
+		}
+	}
+
+	if len(validTxs) != 0 {
+		if err := p.sendMsgTxs(validTxs); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (p *peer) setStatus(height uint64, hash *bc.Hash) {
