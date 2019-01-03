@@ -46,6 +46,11 @@ type Chain interface {
 	ValidateTx(*types.Tx) (bool, error)
 }
 
+type Subscription interface {
+	Chan() <-chan *event.TypeMuxEvent
+	Unsubscribe()
+}
+
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
 	sw          *p2p.Switch
@@ -350,7 +355,7 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 		return
 	}
 
-	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && isOrphan == false {
+	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && !isOrphan {
 		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
 	}
 }
@@ -470,13 +475,12 @@ func (sm *SyncManager) Start() {
 		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
 	}
 
-	go sm.minedBroadcastLoop()
+	go sm.minedBroadcastLoop(sm.minedBlockSub)
 	go sm.txSyncLoop()
 }
 
 //Stop stop sync manager
 func (sm *SyncManager) Stop() {
-	sm.minedBlockSub.Unsubscribe()
 	close(sm.quitSync)
 	sm.sw.Stop()
 }
@@ -514,10 +518,10 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 	return ntab, nil
 }
 
-func (sm *SyncManager) minedBroadcastLoop() {
+func (sm *SyncManager) minedBroadcastLoop(minedBlockSub Subscription) {
 	for {
 		select {
-		case obj := <-sm.minedBlockSub.Chan():
+		case obj := <-minedBlockSub.Chan():
 			ev, ok := obj.Data.(event.NewMinedBlockEvent)
 			if !ok {
 				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
@@ -530,6 +534,7 @@ func (sm *SyncManager) minedBroadcastLoop() {
 			}
 
 		case <-sm.quitSync:
+			minedBlockSub.Unsubscribe()
 			return
 		}
 	}
