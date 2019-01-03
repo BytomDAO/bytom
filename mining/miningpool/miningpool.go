@@ -140,7 +140,6 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 	return nil
 }
 
-// TODO: clean up map
 func (m *MiningPool) updateCommitMap() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
