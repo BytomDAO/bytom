@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-crypto"
@@ -66,8 +65,6 @@ type SyncManager struct {
 
 	eventDispatcher *event.Dispatcher
 	minedBlockSub   *event.Subscription
-
-	wg sync.WaitGroup
 }
 
 //NewSyncManager create a sync manager
@@ -353,7 +350,7 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 		return
 	}
 
-	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && !isOrphan {
+	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && isOrphan == false {
 		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
 	}
 }
@@ -466,22 +463,21 @@ func (sm *SyncManager) Start() {
 		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
 	}
 	// broadcast transactions
-	sm.wg.Add(3)
 	go sm.txBroadcastLoop()
 
 	sm.minedBlockSub, err = sm.eventDispatcher.Subscribe(event.NewMinedBlockEvent{})
 	if err != nil {
 		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
 	}
+
 	go sm.minedBroadcastLoop()
 	go sm.txSyncLoop()
 }
 
 //Stop stop sync manager
 func (sm *SyncManager) Stop() {
-	close(sm.quitSync)
-	sm.wg.Wait()
 	sm.minedBlockSub.Unsubscribe()
+	close(sm.quitSync)
 	sm.sw.Stop()
 }
 
@@ -519,7 +515,6 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 }
 
 func (sm *SyncManager) minedBroadcastLoop() {
-loop:
 	for {
 		select {
 		case obj := <-sm.minedBlockSub.Chan():
@@ -535,9 +530,7 @@ loop:
 			}
 
 		case <-sm.quitSync:
-			break loop
+			return
 		}
 	}
-
-	sm.wg.Done()
 }

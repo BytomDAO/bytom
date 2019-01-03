@@ -33,20 +33,17 @@ func (sm *SyncManager) syncTransactions(peerID string) {
 }
 
 func (sm *SyncManager) txBroadcastLoop() {
-loop:
 	for {
 		select {
 		case newTx := <-sm.newTxCh:
 			if err := sm.peers.broadcastTx(newTx); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast new tx.")
-				break loop
+				return
 			}
 		case <-sm.quitSync:
-			break loop
+			return
 		}
 	}
-
-	sm.wg.Done()
 }
 
 // txSyncLoop takes care of the initial transaction sync for each new
@@ -111,7 +108,6 @@ func (sm *SyncManager) txSyncLoop() {
 		return nil
 	}
 
-loop:
 	for {
 		select {
 		case msg := <-sm.txSyncCh:
@@ -129,11 +125,6 @@ loop:
 			if s := pick(); s != nil {
 				send(s)
 			}
-
-		case <-sm.quitSync:
-			break loop
 		}
 	}
-
-	sm.wg.Done()
 }
