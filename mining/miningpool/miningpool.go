@@ -73,14 +73,15 @@ func (m *MiningPool) generateBlock() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	// make a new commitMap, so that the expired map will be garbage-collected
-	m.commitMap = make(map[types.BlockCommitment]([]*types.Tx))
 	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
 	if err != nil {
 		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
 		return
 	}
+
 	m.block = block
+	// make a new commitMap, so that the expired map will be garbage-collected
+	m.commitMap = make(map[types.BlockCommitment]([]*types.Tx))
 }
 
 // GetWork will return a block header for p2p mining
