@@ -40,7 +40,7 @@ type MiningPool struct {
 func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, dispatcher *event.Dispatcher) *MiningPool {
 	m := &MiningPool{
 		submitCh:        make(chan *submitBlockMsg, maxSubmitChSize),
-		commitMap:       map[types.BlockCommitment]([]*types.Tx){},
+		commitMap:       make(map[types.BlockCommitment]([]*types.Tx)),
 		chain:           c,
 		accountManager:  accountManager,
 		txPool:          txPool,
@@ -73,6 +73,8 @@ func (m *MiningPool) generateBlock() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
+	// make a new commitMap, so that the expired map will be garbage-collected
+	m.commitMap = make(map[types.BlockCommitment]([]*types.Tx))
 	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
 	if err != nil {
 		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
@@ -113,7 +115,8 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 		return errors.New("pending mining block has been changed")
 	}
 
-	if txs, ok := commitMap[bh.BlockCommitment]; !ok {
+	txs, ok := m.commitMap[bh.BlockCommitment]
+	if !ok {
 		return errors.New("BlockCommitment not found in history")
 	}
 
@@ -121,6 +124,7 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 	m.block.BlockCommitment = bh.BlockCommitment
 	m.block.Nonce = bh.Nonce
 	m.block.Timestamp = bh.Timestamp
+
 	isOrphan, err := m.chain.ProcessBlock(m.block)
 	if err != nil {
 		return err
