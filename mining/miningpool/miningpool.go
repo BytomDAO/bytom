@@ -25,9 +25,10 @@ type submitBlockMsg struct {
 
 // MiningPool is the support struct for p2p mine pool
 type MiningPool struct {
-	mutex    sync.RWMutex
-	block    *types.Block
-	submitCh chan *submitBlockMsg
+	mutex     sync.RWMutex
+	block     *types.Block
+	submitCh  chan *submitBlockMsg
+	commitMap map[types.BlockCommitment]([]*types.Tx)
 
 	chain           *protocol.Chain
 	accountManager  *account.Manager
@@ -39,6 +40,7 @@ type MiningPool struct {
 func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, dispatcher *event.Dispatcher) *MiningPool {
 	m := &MiningPool{
 		submitCh:        make(chan *submitBlockMsg, maxSubmitChSize),
+		commitMap:       map[types.BlockCommitment]([]*types.Tx){},
 		chain:           c,
 		accountManager:  accountManager,
 		txPool:          txPool,
