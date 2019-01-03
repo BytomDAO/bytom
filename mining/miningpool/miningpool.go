@@ -129,3 +129,20 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 
 	return nil
 }
+
+func (m *MiningPool) createBlockSnapshot() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+	if m.block == nil {
+		return
+	}
+
+	// default snapshot if no BlockCommitment provided
+	if _, ok := m.commitMap[types.BlockCommitment{}]; !ok {
+		m.commitMap[types.BlockCommitment{}] = m.block.Transactions
+	}
+
+	m.commitMap[m.block.BlockCommitment] = m.block.Transactions
+}
+
+func (m *MiningPool) recoverBlockSnapshotByCommitment(commitment types.BlockCommitment) {}
