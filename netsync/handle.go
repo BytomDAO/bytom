@@ -475,13 +475,14 @@ func (sm *SyncManager) Start() {
 		cmn.Exit(cmn.Fmt("fail on start SyncManager: %v", err))
 	}
 
-	go sm.minedBroadcastLoop(sm.minedBlockSub)
+	go sm.minedBroadcastLoop()
 	go sm.txSyncLoop()
 }
 
 //Stop stop sync manager
 func (sm *SyncManager) Stop() {
 	close(sm.quitSync)
+	sm.minedBlockSub.Unsubscribe()
 	sm.sw.Stop()
 }
 
@@ -518,10 +519,15 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 	return ntab, nil
 }
 
-func (sm *SyncManager) minedBroadcastLoop(minedBlockSub Subscription) {
+func (sm *SyncManager) minedBroadcastLoop() {
 	for {
 		select {
-		case obj := <-minedBlockSub.Chan():
+		case obj, ok := <-sm.minedBlockSub.Chan():
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Warning("mined block subscription channel closed")
+				return
+			}
+
 			ev, ok := obj.Data.(event.NewMinedBlockEvent)
 			if !ok {
 				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
@@ -534,7 +540,6 @@ func (sm *SyncManager) minedBroadcastLoop(minedBlockSub Subscription) {
 			}
 
 		case <-sm.quitSync:
-			minedBlockSub.Unsubscribe()
 			return
 		}
 	}
