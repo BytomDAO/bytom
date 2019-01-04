@@ -18,6 +18,8 @@ const (
 	maxSubmitChSize = 50
 )
 
+var recommitTicker = time.NewTicker(15 * time.Second) // RecommitInterval for eth lies in [1s, 15s]
+
 type submitBlockMsg struct {
 	blockHeader *types.BlockHeader
 	reply       chan error
@@ -58,6 +60,9 @@ func (m *MiningPool) blockUpdater() {
 		case <-m.chain.BlockWaiter(m.chain.BestBlockHeight() + 1):
 			m.generateBlock()
 
+		case <-recommitTicker.C:
+			m.generateBlock()
+
 		case submitMsg := <-m.submitCh:
 			err := m.submitWork(submitMsg.blockHeader)
 			if err == nil {
@@ -80,7 +85,7 @@ func (m *MiningPool) generateBlock() {
 	}
 
 	m.block = block
-	// make a new commitMap, so that the expired map will be garbage-collected
+	// make a new commitMap, so that the expired map will be deleted(garbage-collected)
 	m.commitMap = make(map[types.BlockCommitment]([]*types.Tx))
 }
 
