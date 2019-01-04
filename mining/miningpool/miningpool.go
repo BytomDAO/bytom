@@ -18,6 +18,9 @@ const (
 	maxSubmitChSize = 50
 )
 
+// TODO:
+// 1. adjust recomit interval
+// 2. custom recomit interval
 var recommitTicker = time.NewTicker(15 * time.Second) // RecommitInterval for eth lies in [1s, 15s]
 
 type submitBlockMsg struct {
