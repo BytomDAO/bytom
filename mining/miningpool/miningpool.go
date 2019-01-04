@@ -18,11 +18,6 @@ const (
 	maxSubmitChSize = 50
 )
 
-// TODO:
-// 1. adjust recomit interval
-// 2. custom recomit interval
-var recommitTicker = time.NewTicker(3 * time.Second) // RecommitInterval for eth lies in [1s, 15s]
-
 type submitBlockMsg struct {
 	blockHeader *types.BlockHeader
 	reply       chan error
@@ -30,10 +25,11 @@ type submitBlockMsg struct {
 
 // MiningPool is the support struct for p2p mine pool
 type MiningPool struct {
-	mutex     sync.RWMutex
-	block     *types.Block
-	submitCh  chan *submitBlockMsg
-	commitMap map[types.BlockCommitment]([]*types.Tx)
+	mutex          sync.RWMutex
+	block          *types.Block
+	submitCh       chan *submitBlockMsg
+	commitMap      map[types.BlockCommitment]([]*types.Tx)
+	recommitTicker *time.Ticker
 
 	chain           *protocol.Chain
 	accountManager  *account.Manager
@@ -42,10 +38,11 @@ type MiningPool struct {
 }
 
 // NewMiningPool will create a new MiningPool
-func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, dispatcher *event.Dispatcher) *MiningPool {
+func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, dispatcher *event.Dispatcher, recommitIntervalSeconds uint64) *MiningPool {
 	m := &MiningPool{
 		submitCh:        make(chan *submitBlockMsg, maxSubmitChSize),
 		commitMap:       make(map[types.BlockCommitment]([]*types.Tx)),
+		recommitTicker:  time.NewTicker(time.Duration(recommitIntervalSeconds) * time.Second),
 		chain:           c,
 		accountManager:  accountManager,
 		txPool:          txPool,
@@ -60,7 +57,7 @@ func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *p
 func (m *MiningPool) blockUpdater() {
 	for {
 		select {
-		case <-recommitTicker.C:
+		case <-m.recommitTicker.C:
 			m.generateBlock()
 
 		case <-m.chain.BlockWaiter(m.chain.BestBlockHeight() + 1):

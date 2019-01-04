@@ -81,17 +81,20 @@ type BaseConfig struct {
 
 	// log file name
 	LogFile string `mapstructure:"log_file"`
+
+	RecommitIntervalSeconds uint64 `mapstructure:"recommit_interval_seconds"`
 }
 
 // Default configurable base parameters.
 func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
-		Moniker:           "anonymous",
-		ProfListenAddress: "",
-		Mining:            false,
-		DBBackend:         "leveldb",
-		DBPath:            "data",
-		KeysPath:          "keystore",
+		Moniker:                 "anonymous",
+		ProfListenAddress:       "",
+		Mining:                  false,
+		DBBackend:               "leveldb",
+		DBPath:                  "data",
+		KeysPath:                "keystore",
+		RecommitIntervalSeconds: 15,
 	}
 }
 
