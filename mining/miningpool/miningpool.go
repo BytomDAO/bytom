@@ -21,7 +21,7 @@ const (
 // TODO:
 // 1. adjust recomit interval
 // 2. custom recomit interval
-var recommitTicker = time.NewTicker(15 * time.Second) // RecommitInterval for eth lies in [1s, 15s]
+var recommitTicker = time.NewTicker(3 * time.Second) // RecommitInterval for eth lies in [1s, 15s]
 
 type submitBlockMsg struct {
 	blockHeader *types.BlockHeader
@@ -60,15 +60,19 @@ func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *p
 func (m *MiningPool) blockUpdater() {
 	for {
 		select {
-		case <-m.chain.BlockWaiter(m.chain.BestBlockHeight() + 1):
+		case <-recommitTicker.C:
 			m.generateBlock()
 
-		case <-recommitTicker.C:
+		case <-m.chain.BlockWaiter(m.chain.BestBlockHeight() + 1):
+			// make a new commitMap, so that the expired map will be deleted(garbage-collected)
+			m.commitMap = make(map[types.BlockCommitment]([]*types.Tx))
 			m.generateBlock()
 
 		case submitMsg := <-m.submitCh:
 			err := m.submitWork(submitMsg.blockHeader)
 			if err == nil {
+				// make a new commitMap, so that the expired map will be deleted(garbage-collected)
+				m.commitMap = make(map[types.BlockCommitment]([]*types.Tx))
 				m.generateBlock()
 			}
 			submitMsg.reply <- err
@@ -87,9 +91,9 @@ func (m *MiningPool) generateBlock() {
 		return
 	}
 
+	// block will not be nil here
 	m.block = block
-	// make a new commitMap, so that the expired map will be deleted(garbage-collected)
-	m.commitMap = make(map[types.BlockCommitment]([]*types.Tx))
+	m.commitMap[block.BlockCommitment] = block.Transactions
 }
 
 // GetWork will return a block header for p2p mining
@@ -147,15 +151,4 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 	}
 
 	return nil
-}
-
-func (m *MiningPool) updateCommitMap() {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if m.block == nil {
-		return
-	}
-
-	m.commitMap[m.block.BlockCommitment] = m.block.Transactions
 }
