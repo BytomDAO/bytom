@@ -46,11 +46,6 @@ type Chain interface {
 	ValidateTx(*types.Tx) (bool, error)
 }
 
-type Subscription interface {
-	Chan() <-chan *event.TypeMuxEvent
-	Unsubscribe()
-}
-
 //SyncManager Sync Manager is responsible for the business layer information synchronization
 type SyncManager struct {
 	sw          *p2p.Switch
