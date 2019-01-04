@@ -350,7 +350,7 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 		return
 	}
 
-	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && isOrphan == false {
+	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && !isOrphan {
 		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
 	}
 }
@@ -476,8 +476,8 @@ func (sm *SyncManager) Start() {
 
 //Stop stop sync manager
 func (sm *SyncManager) Stop() {
-	sm.minedBlockSub.Unsubscribe()
 	close(sm.quitSync)
+	sm.minedBlockSub.Unsubscribe()
 	sm.sw.Stop()
 }
 
@@ -517,7 +517,12 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 func (sm *SyncManager) minedBroadcastLoop() {
 	for {
 		select {
-		case obj := <-sm.minedBlockSub.Chan():
+		case obj, ok := <-sm.minedBlockSub.Chan():
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Warning("mined block subscription channel closed")
+				return
+			}
+
 			ev, ok := obj.Data.(event.NewMinedBlockEvent)
 			if !ok {
 				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
