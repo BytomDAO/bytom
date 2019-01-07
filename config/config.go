@@ -82,7 +82,7 @@ type BaseConfig struct {
 	// log file name
 	LogFile string `mapstructure:"log_file"`
 
-	RecommitInterval uint64 `mapstructure:"recommit_interval_seconds"`
+	RecommitInterval uint64 `mapstructure:"recommit_interval"`
 }
 
 // Default configurable base parameters.
