@@ -63,15 +63,11 @@ func (m *MiningPool) blockUpdater() {
 			m.generateBlock()
 
 		case <-m.chain.BlockWaiter(m.chain.BestBlockHeight() + 1):
-			// make a new commitMap, so that the expired map will be deleted(garbage-collected)
-			m.commitMap = make(map[bc.Hash]([]*types.Tx))
 			m.generateBlock()
 
 		case submitMsg := <-m.submitCh:
 			err := m.submitWork(submitMsg.blockHeader)
 			if err == nil {
-				// make a new commitMap, so that the expired map will be deleted(garbage-collected)
-				m.commitMap = make(map[bc.Hash]([]*types.Tx))
 				m.generateBlock()
 			}
 			submitMsg.reply <- err
@@ -84,6 +80,8 @@ func (m *MiningPool) generateBlock() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
+	// make a new commitMap, so that the expired map will be deleted(garbage-collected)
+	m.commitMap = make(map[bc.Hash]([]*types.Tx))
 	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
 	if err != nil {
 		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
