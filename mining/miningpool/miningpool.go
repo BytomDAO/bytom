@@ -49,7 +49,7 @@ func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *p
 		txPool:           txPool,
 		eventDispatcher:  dispatcher,
 	}
-	m.generateBlock()
+	m.generateBlock(true)
 	go m.blockUpdater()
 	return m
 }
@@ -60,15 +60,15 @@ func (m *MiningPool) blockUpdater() {
 	for {
 		select {
 		case <-recommitTicker.C:
-			m.generateBlock()
+			m.generateBlock(false)
 
 		case <-m.chain.BlockWaiter(m.chain.BestBlockHeight() + 1):
-			m.generateBlock()
+			m.generateBlock(true)
 
 		case submitMsg := <-m.submitCh:
 			err := m.submitWork(submitMsg.blockHeader)
 			if err == nil {
-				m.generateBlock()
+				m.generateBlock(true)
 			}
 			submitMsg.reply <- err
 		}
@@ -76,12 +76,15 @@ func (m *MiningPool) blockUpdater() {
 }
 
 // generateBlock generates a block template to mine
-func (m *MiningPool) generateBlock() {
+func (m *MiningPool) generateBlock(isNextHeight bool) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	// make a new commitMap, so that the expired map will be deleted(garbage-collected)
-	m.commitMap = make(map[bc.Hash]([]*types.Tx))
+	if isNextHeight {
+		// make a new commitMap, so that the expired map will be deleted(garbage-collected)
+		m.commitMap = make(map[bc.Hash]([]*types.Tx))
+	}
+
 	block, err := mining.NewBlockTemplate(m.chain, m.txPool, m.accountManager)
 	if err != nil {
 		log.Errorf("miningpool: failed on create NewBlockTemplate: %v", err)
