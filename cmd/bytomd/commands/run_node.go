@@ -18,11 +18,11 @@ var runNodeCmd = &cobra.Command{
 
 func init() {
 	runNodeCmd.Flags().String("prof_laddr", config.ProfListenAddress, "Use http to profile bytomd programs")
-	runNodeCmd.Flags().Bool("mining", config.Mining, "Enable mining")
+
+	runNodeCmd.Flags().Bool("mining.enable", config.Mining.Enable, "Enable mining")
+	runNodeCmd.Flags().Uint64("mining.recommit_interval", config.Mining.RecommitInterval, "Set mining pool recomit interval in seconds")
 
 	runNodeCmd.Flags().Bool("simd.enable", config.Simd.Enable, "Enable SIMD mechan for tensority")
-
-	runNodeCmd.Flags().Uint64("recommit_interval", config.RecommitInterval, "Set mining pool recomit interval in seconds")
 
 	runNodeCmd.Flags().Bool("auth.disable", config.Auth.Disable, "Disable rpc access authenticate")
 
