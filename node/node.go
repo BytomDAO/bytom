@@ -153,7 +153,7 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, dispatcher)
-	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, dispatcher, config.RecommitIntervalSeconds)
+	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, dispatcher, config.RecommitInterval)
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 

@@ -25,11 +25,11 @@ type submitBlockMsg struct {
 
 // MiningPool is the support struct for p2p mine pool
 type MiningPool struct {
-	mutex          sync.RWMutex
-	block          *types.Block
-	submitCh       chan *submitBlockMsg
-	commitMap      map[types.BlockCommitment]([]*types.Tx)
-	recommitTicker *time.Ticker
+	mutex            sync.RWMutex
+	block            *types.Block
+	submitCh         chan *submitBlockMsg
+	commitMap        map[types.BlockCommitment]([]*types.Tx)
+	recommitInterval uint64
 
 	chain           *protocol.Chain
 	accountManager  *account.Manager
@@ -38,15 +38,15 @@ type MiningPool struct {
 }
 
 // NewMiningPool will create a new MiningPool
-func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, dispatcher *event.Dispatcher, recommitIntervalSeconds uint64) *MiningPool {
+func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, dispatcher *event.Dispatcher, recommitInterval uint64) *MiningPool {
 	m := &MiningPool{
-		submitCh:        make(chan *submitBlockMsg, maxSubmitChSize),
-		commitMap:       make(map[types.BlockCommitment]([]*types.Tx)),
-		recommitTicker:  time.NewTicker(time.Duration(recommitIntervalSeconds) * time.Second),
-		chain:           c,
-		accountManager:  accountManager,
-		txPool:          txPool,
-		eventDispatcher: dispatcher,
+		submitCh:         make(chan *submitBlockMsg, maxSubmitChSize),
+		commitMap:        make(map[types.BlockCommitment]([]*types.Tx)),
+		recommitInterval: recommitInterval,
+		chain:            c,
+		accountManager:   accountManager,
+		txPool:           txPool,
+		eventDispatcher:  dispatcher,
 	}
 	m.generateBlock()
 	go m.blockUpdater()
@@ -55,9 +55,10 @@ func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *p
 
 // blockUpdater is the goroutine for keep update mining block
 func (m *MiningPool) blockUpdater() {
+	recommitTicker := time.NewTicker(time.Duration(m.recommitInterval) * time.Second)
 	for {
 		select {
-		case <-m.recommitTicker.C:
+		case <-recommitTicker.C:
 			m.generateBlock()
 
 		case <-m.chain.BlockWaiter(m.chain.BestBlockHeight() + 1):

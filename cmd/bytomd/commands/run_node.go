@@ -22,7 +22,7 @@ func init() {
 
 	runNodeCmd.Flags().Bool("simd.enable", config.Simd.Enable, "Enable SIMD mechan for tensority")
 
-	runNodeCmd.Flags().Uint64("recommit_interval_seconds", config.RecommitIntervalSeconds, "Set mining pool recomit interval in seconds")
+	runNodeCmd.Flags().Uint64("recommit_interval", config.RecommitInterval, "Set mining pool recomit interval in seconds")
 
 	runNodeCmd.Flags().Bool("auth.disable", config.Auth.Disable, "Disable rpc access authenticate")
 
