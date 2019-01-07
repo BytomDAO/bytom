@@ -140,9 +140,5 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 		return errors.New("submit result is orphan")
 	}
 
-	if err := m.eventDispatcher.Post(event.NewMinedBlockEvent{Block: block}); err != nil {
-		return err
-	}
-
-	return nil
+	return m.eventDispatcher.Post(event.NewMinedBlockEvent{Block: block})
 }
