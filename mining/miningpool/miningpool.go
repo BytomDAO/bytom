@@ -88,7 +88,7 @@ func (m *MiningPool) generateBlock() {
 		return
 	}
 
-	// TODO: will it be gc?
+	// The previous memory will be reclaimed by gc
 	m.blockHeader = &block.BlockHeader
 	m.commitMap[block.TransactionsMerkleRoot] = block.Transactions
 }
