@@ -29,7 +29,7 @@ type MiningPool struct {
 	block            *types.Block
 	submitCh         chan *submitBlockMsg
 	commitMap        map[types.BlockCommitment]([]*types.Tx)
-	recommitInterval uint64
+	recommitInterval time.Duration
 
 	chain           *protocol.Chain
 	accountManager  *account.Manager
@@ -42,7 +42,7 @@ func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *p
 	m := &MiningPool{
 		submitCh:         make(chan *submitBlockMsg, maxSubmitChSize),
 		commitMap:        make(map[types.BlockCommitment]([]*types.Tx)),
-		recommitInterval: recommitInterval,
+		recommitInterval: time.Duration(recommitInterval) * time.Second,
 		chain:            c,
 		accountManager:   accountManager,
 		txPool:           txPool,
@@ -55,7 +55,7 @@ func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *p
 
 // blockUpdater is the goroutine for keep update mining block
 func (m *MiningPool) blockUpdater() {
-	recommitTicker := time.NewTicker(time.Duration(m.recommitInterval) * time.Second)
+	recommitTicker := time.NewTicker(m.recommitInterval)
 	for {
 		select {
 		case <-recommitTicker.C:
