@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/event"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
+	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -26,9 +27,9 @@ type submitBlockMsg struct {
 // MiningPool is the support struct for p2p mine pool
 type MiningPool struct {
 	mutex            sync.RWMutex
-	block            *types.Block
+	blockHeader      *types.BlockHeader
 	submitCh         chan *submitBlockMsg
-	commitMap        map[types.BlockCommitment]([]*types.Tx)
+	commitMap        map[bc.Hash]([]*types.Tx)
 	recommitInterval time.Duration
 
 	chain           *protocol.Chain
@@ -41,7 +42,7 @@ type MiningPool struct {
 func NewMiningPool(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, dispatcher *event.Dispatcher, recommitInterval uint64) *MiningPool {
 	m := &MiningPool{
 		submitCh:         make(chan *submitBlockMsg, maxSubmitChSize),
-		commitMap:        make(map[types.BlockCommitment]([]*types.Tx)),
+		commitMap:        make(map[bc.Hash]([]*types.Tx)),
 		recommitInterval: time.Duration(recommitInterval) * time.Second,
 		chain:            c,
 		accountManager:   accountManager,
@@ -63,14 +64,14 @@ func (m *MiningPool) blockUpdater() {
 
 		case <-m.chain.BlockWaiter(m.chain.BestBlockHeight() + 1):
 			// make a new commitMap, so that the expired map will be deleted(garbage-collected)
-			m.commitMap = make(map[types.BlockCommitment]([]*types.Tx))
+			m.commitMap = make(map[bc.Hash]([]*types.Tx))
 			m.generateBlock()
 
 		case submitMsg := <-m.submitCh:
 			err := m.submitWork(submitMsg.blockHeader)
 			if err == nil {
 				// make a new commitMap, so that the expired map will be deleted(garbage-collected)
-				m.commitMap = make(map[types.BlockCommitment]([]*types.Tx))
+				m.commitMap = make(map[bc.Hash]([]*types.Tx))
 				m.generateBlock()
 			}
 			submitMsg.reply <- err
@@ -89,20 +90,19 @@ func (m *MiningPool) generateBlock() {
 		return
 	}
 
-	// block will not be nil here
-	m.block = block
-	m.commitMap[block.BlockCommitment] = block.Transactions
+	// TODO: will it be gc?
+	m.blockHeader = &block.BlockHeader
+	m.commitMap[block.TransactionsMerkleRoot] = block.Transactions
 }
 
 // GetWork will return a block header for p2p mining
 func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
-	if m.block != nil {
+	if m.blockHeader != nil {
 		m.mutex.RLock()
 		defer m.mutex.RUnlock()
 
-		m.block.BlockHeader.Timestamp = uint64(time.Now().Unix())
-		bh := m.block.BlockHeader
-		return &bh, nil
+		m.blockHeader.Timestamp = uint64(time.Now().Unix())
+		return m.blockHeader, nil
 	}
 	return nil, errors.New("no block is ready for mining")
 }
@@ -122,21 +122,17 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	if m.block == nil || bh.PreviousBlockHash != m.block.PreviousBlockHash {
+	if m.blockHeader == nil || bh.PreviousBlockHash != m.blockHeader.PreviousBlockHash {
 		return errors.New("pending mining block has been changed")
 	}
 
-	txs, ok := m.commitMap[bh.BlockCommitment]
+	txs, ok := m.commitMap[bh.TransactionsMerkleRoot]
 	if !ok {
-		return errors.New("BlockCommitment not found in history")
+		return errors.New("TransactionsMerkleRoot not found in history")
 	}
 
-	m.block.Transactions = txs
-	m.block.BlockCommitment = bh.BlockCommitment
-	m.block.Nonce = bh.Nonce
-	m.block.Timestamp = bh.Timestamp
-
-	isOrphan, err := m.chain.ProcessBlock(m.block)
+	block := &types.Block{*bh, txs}
+	isOrphan, err := m.chain.ProcessBlock(block)
 	if err != nil {
 		return err
 	}
@@ -144,7 +140,7 @@ func (m *MiningPool) submitWork(bh *types.BlockHeader) error {
 		return errors.New("submit result is orphan")
 	}
 
-	if err := m.eventDispatcher.Post(event.NewMinedBlockEvent{Block: m.block}); err != nil {
+	if err := m.eventDispatcher.Post(event.NewMinedBlockEvent{Block: block}); err != nil {
 		return err
 	}
 
