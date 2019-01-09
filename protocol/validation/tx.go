@@ -177,10 +177,27 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
+		contractFalg := false
 		for _, BTMInputID := range vs.tx.GasInputIDs {
 			e, ok := vs.tx.Entries[BTMInputID]
 			if !ok {
 				return errors.Wrapf(bc.ErrMissingEntry, "entry for bytom input %x not found", BTMInputID)
+			}
+
+			// check contract program
+			if res, ok := e.(*bc.Spend); ok {
+				if res.SpentOutputId == nil {
+					return errors.Wrap(ErrMissingField, "spend without spent output ID")
+				}
+
+				spentOutput, err := vs.tx.Output(*res.SpentOutputId)
+				if err != nil {
+					return errors.Wrap(err, "getting spend prevout")
+				}
+
+				if !segwit.IsP2WScript(spentOutput.ControlProgram.Code) {
+					contractFalg = true
+				}
 			}
 
 			vs2 := *vs
@@ -198,8 +215,10 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-		if err := vs.gasStatus.setGasValid(); err != nil {
-			return err
+		if !contractFalg {
+			if err := vs.gasStatus.setGasValid(); err != nil {
+				return err
+			}
 		}
 
 		for i, src := range e.Sources {
@@ -207,6 +226,12 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			vs2.sourcePos = uint64(i)
 			if err = checkValidSrc(&vs2, src); err != nil {
 				return errors.Wrapf(err, "checking mux source %d", i)
+			}
+		}
+
+		if contractFalg {
+			if err := vs.gasStatus.setGasValid(); err != nil {
+				return err
 			}
 		}
 
@@ -443,37 +468,6 @@ func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
 	for _, id := range tx.InputIDs {
 		if blockHeight >= ruleAA && id.IsZero() {
 			return ErrEmptyInputIDs
-		}
-	}
-
-	for _, id := range tx.GasInputIDs {
-		spend, err := tx.Spend(id)
-		if err != nil {
-			continue
-		}
-		spentOutput, err := tx.Output(*spend.SpentOutputId)
-		if err != nil {
-			return err
-		}
-
-		if !segwit.IsP2WScript(spentOutput.ControlProgram.Code) {
-			return ErrNotStandardTx
-		}
-	}
-
-	for _, id := range tx.ResultIds {
-		e, ok := tx.Entries[*id]
-		if !ok {
-			return errors.Wrapf(bc.ErrMissingEntry, "id %x", id.Bytes())
-		}
-
-		output, ok := e.(*bc.Output)
-		if !ok || *output.Source.Value.AssetId != *consensus.BTMAssetID {
-			continue
-		}
-
-		if !segwit.IsP2WScript(output.ControlProgram.Code) {
-			return ErrNotStandardTx
 		}
 	}
 	return nil

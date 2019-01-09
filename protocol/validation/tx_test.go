@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"encoding/hex"
 	"math"
 	"testing"
 
@@ -747,6 +748,94 @@ func TestRuleAA(t *testing.T) {
 
 	for i, c := range cases {
 		gasStatus, err := ValidateTx(tx.Tx, c.block)
+		if rootErr(err) != c.err {
+			t.Errorf("#%d got error %s, want %s", i, err, c.err)
+		}
+		if c.GasValid != gasStatus.GasValid {
+			t.Errorf("#%d got GasValid %t, want %t", i, gasStatus.GasValid, c.GasValid)
+		}
+	}
+
+}
+
+func TestBTMContract(t *testing.T) {
+	cp, _ := hex.DecodeString("160014dedfd406c591aa221a047a260107f877da92fec52022e829107201c6b975b1dc60b928117916285ceb4aa5c6d7b4b8cc48038083e0740a7baa8800c3c251547ac100c0")
+	sender, _ := hex.DecodeString("00140b8e03f0fc3fbbdf37be7468a4b71ed7aed98324")
+	receiver, _ := hex.DecodeString("0014dedfd406c591aa221a047a260107f877da92fec5")
+	arg, _ := hex.DecodeString("737472696e67")
+
+	cases := []struct {
+		block    *bc.Block
+		txIndex  int
+		GasValid bool
+		err      error
+	}{
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Height: 666},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{arg}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewTxOutput(*consensus.BTMAssetID, 80000000, receiver),
+						},
+					}),
+				},
+			},
+			txIndex:  0,
+			GasValid: false,
+			err:      vm.ErrFalseVMResult,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Height: 666},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{arg}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 20000000, 1, []byte{0x51}),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewTxOutput(*consensus.BTMAssetID, 100000000, receiver),
+						},
+					}),
+				},
+			},
+			txIndex:  0,
+			GasValid: true,
+			err:      nil,
+		},
+		{
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Height: 666},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs: []*types.TxInput{
+							types.NewSpendInput([][]byte{arg}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 20000000, 1, []byte{0x51}),
+							types.NewSpendInput([][]byte{}, *newHash(8), bc.AssetID{128, 128, 128, 128}, 300000000, 2, sender),
+						},
+						Outputs: []*types.TxOutput{
+							types.NewTxOutput(*consensus.BTMAssetID, 100000000, receiver),
+							types.NewTxOutput(bc.AssetID{128, 128, 128, 128}, 300000000, receiver),
+						},
+					}),
+				},
+			},
+			txIndex:  0,
+			GasValid: false,
+			err:      vm.ErrDataStackUnderflow,
+		},
+	}
+
+	for i, c := range cases {
+		gasStatus, err := ValidateTx(c.block.Transactions[c.txIndex], c.block)
+
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
 		}
