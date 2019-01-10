@@ -245,7 +245,7 @@ func TestPacketCodec(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(pkt.hash, h) {
-			t.Fatalf("packet hash err. got %x, want %x", hash(packet[versionPrefixSize:]).Bytes(), h)
+			t.Fatalf("packet hash err. got %x, want %x", hash(packet[msgPrefixSize:]).Bytes(), h)
 		}
 
 		if !reflect.DeepEqual(pkt.data, test.wantPacket) {

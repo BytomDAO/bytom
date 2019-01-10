@@ -141,12 +141,12 @@ type (
 )
 
 var (
-	msgPrefix         = "bytom disv"
-	versionPrefixSize = len(msgPrefix)
-	nodeIDSize        = 32
-	sigSize           = 520 / 8
-	chainIDSize       = 8
-	headSize          = versionPrefixSize + nodeIDSize + sigSize + chainIDSize // space of packet frame data
+	msgPrefix     = "bytom disv"
+	msgPrefixSize = len(msgPrefix)
+	nodeIDSize    = 32
+	sigSize       = 520 / 8
+	chainIDSize   = 8
+	headSize      = msgPrefixSize + nodeIDSize + sigSize + chainIDSize // space of packet frame data
 )
 
 // Neighbors replies are sent across multiple packets to
@@ -393,11 +393,11 @@ func encodePacket(priv *crypto.PrivKeyEd25519, chainID, msgPrefix string, ptype 
 	nodeID := priv.PubKey().Unwrap().(crypto.PubKeyEd25519)
 	sig := priv.Sign(hash(packet[headSize:]).Bytes())
 	copy(packet, msgPrefix)
-	copy(packet[versionPrefixSize:], nodeID[:])
-	copy(packet[versionPrefixSize+nodeIDSize:], sig.Bytes())
-	copy(packet[versionPrefixSize+nodeIDSize+sigSize:], chainID[0:int(math.Min(float64(len(chainID)), float64(chainIDSize)))])
+	copy(packet[msgPrefixSize:], nodeID[:])
+	copy(packet[msgPrefixSize+nodeIDSize:], sig.Bytes())
+	copy(packet[msgPrefixSize+nodeIDSize+sigSize:], chainID[:int(math.Min(float64(len(chainID)), float64(chainIDSize)))])
 
-	h = hash(packet[versionPrefixSize:]).Bytes()
+	h = hash(packet[msgPrefixSize:]).Bytes()
 	return packet, h, nil
 }
 
@@ -443,17 +443,17 @@ func decodePacket(id string, buffer []byte, pkt *ingressPacket) error {
 	}
 	buf := make([]byte, len(buffer))
 	copy(buf, buffer)
-	prefix, fromID, chainID, sigdata := buf[:versionPrefixSize], buf[versionPrefixSize:versionPrefixSize+nodeIDSize], buf[versionPrefixSize+nodeIDSize+sigSize:headSize], buf[headSize:]
+	prefix, fromID, chainID, sigdata := buf[:msgPrefixSize], buf[msgPrefixSize:msgPrefixSize+nodeIDSize], buf[msgPrefixSize+nodeIDSize+sigSize:headSize], buf[headSize:]
 	if !bytes.Equal(prefix, []byte(msgPrefix)) {
 		return errBadPrefix
 	}
 
-	if !bytes.Equal([]byte(id), chainID[:len(id)]) {
+	if !bytes.Equal([]byte(id), chainID[:int(math.Min(float64(len(id)), float64(chainIDSize)))]) {
 		return errChainIDMismatch
 	}
 
 	pkt.rawData = buf
-	pkt.hash = hash(buf[versionPrefixSize:]).Bytes()
+	pkt.hash = hash(buf[msgPrefixSize:]).Bytes()
 	pkt.remoteID = ByteID(fromID)
 	switch pkt.ev = nodeEvent(sigdata[0]); pkt.ev {
 	case pingPacket:
