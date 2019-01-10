@@ -14,28 +14,23 @@ import (
 
 	"github.com/bytom/common"
 	"github.com/bytom/p2p/netutil"
+	"math"
 )
 
 const Version = 4
 
 // Errors
 var (
-	errPacketTooSmall   = errors.New("too small")
-	errBadPrefix        = errors.New("bad prefix")
-	errExpired          = errors.New("expired")
-	errUnsolicitedReply = errors.New("unsolicited reply")
-	errUnknownNode      = errors.New("unknown node")
-	errTimeout          = errors.New("RPC timeout")
-	errClockWarp        = errors.New("reply deadline too far in the future")
-	errClosed           = errors.New("socket closed")
-	errPacketType       = errors.New("unknown packet type")
+	errPacketTooSmall  = errors.New("too small")
+	errBadPrefix       = errors.New("bad prefix")
+	errChainIDMismatch = errors.New("chainID does not match")
+	errPacketType      = errors.New("unknown packet type")
 )
 
 // Timeouts
 const (
-	respTimeout    = 1 * time.Second
-	expiration     = 20 * time.Second
-	driftThreshold = 10 * time.Second // Allowed clock drift before warning user
+	respTimeout = 1 * time.Second
+	expiration  = 20 * time.Second
 )
 
 // ReadPacket is sent to the unhandled channel when it could not be processed
@@ -146,11 +141,12 @@ type (
 )
 
 var (
-	versionPrefix     = []byte("bytom discovery")
-	versionPrefixSize = len(versionPrefix)
+	msgPrefix         = "bytom disv"
+	versionPrefixSize = len(msgPrefix)
 	nodeIDSize        = 32
 	sigSize           = 520 / 8
-	headSize          = versionPrefixSize + nodeIDSize + sigSize // space of packet frame data
+	chainIDSize       = 8
+	headSize          = versionPrefixSize + nodeIDSize + sigSize + chainIDSize // space of packet frame data
 )
 
 // Neighbors replies are sent across multiple packets to
@@ -202,10 +198,6 @@ func makeEndpoint(addr *net.UDPAddr, tcpPort uint16) rpcEndpoint {
 	return rpcEndpoint{IP: ip, UDP: uint16(addr.Port), TCP: tcpPort}
 }
 
-func (e1 rpcEndpoint) equal(e2 rpcEndpoint) bool {
-	return e1.UDP == e2.UDP && e1.TCP == e2.TCP && e1.IP.Equal(e2.IP)
-}
-
 func nodeFromRPC(sender *net.UDPAddr, rn rpcNode) (*Node, error) {
 	if err := netutil.CheckRelayIP(sender.IP, rn.IP); err != nil {
 		return nil, err
@@ -244,14 +236,15 @@ type netWork interface {
 type udp struct {
 	conn        conn
 	priv        *crypto.PrivKeyEd25519
+	chainID     string
 	ourEndpoint rpcEndpoint
 	//nat         nat.Interface
 	net netWork
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
-func ListenUDP(priv *crypto.PrivKeyEd25519, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist) (*Network, error) {
-	transport, err := listenUDP(priv, conn, realaddr)
+func ListenUDP(priv *crypto.PrivKeyEd25519, chainID string, conn conn, realaddr *net.UDPAddr, nodeDBPath string, netrestrict *netutil.Netlist) (*Network, error) {
+	transport, err := listenUDP(priv, chainID, conn, realaddr)
 	if err != nil {
 		return nil, err
 	}
@@ -265,39 +258,54 @@ func ListenUDP(priv *crypto.PrivKeyEd25519, conn conn, realaddr *net.UDPAddr, no
 	return net, nil
 }
 
-func listenUDP(priv *crypto.PrivKeyEd25519, conn conn, realaddr *net.UDPAddr) (*udp, error) {
-	return &udp{conn: conn, priv: priv, ourEndpoint: makeEndpoint(realaddr, uint16(realaddr.Port))}, nil
+func listenUDP(priv *crypto.PrivKeyEd25519, chainID string, conn conn, realaddr *net.UDPAddr) (*udp, error) {
+	return &udp{conn: conn, priv: priv, chainID: chainID, ourEndpoint: makeEndpoint(realaddr, uint16(realaddr.Port))}, nil
 }
 
 func (t *udp) localAddr() *net.UDPAddr {
 	return t.conn.LocalAddr().(*net.UDPAddr)
 }
 
+func (t *udp) getChainID() string {
+	return t.chainID
+}
+
 func (t *udp) Close() {
-	t.conn.Close()
+	if err := t.conn.Close(); err != nil {
+		log.Error("conn close err:", err)
+	}
 }
 
 func (t *udp) send(remote *Node, ptype nodeEvent, data interface{}) (hash []byte) {
-	hash, _ = t.sendPacket(remote.ID, remote.addr(), byte(ptype), data)
+	hash, err := t.sendPacket(remote.ID, remote.addr(), byte(ptype), data)
+	if err != nil {
+		log.Error("send packet err:", err)
+	}
+
 	return hash
 }
 
 func (t *udp) sendPing(remote *Node, toaddr *net.UDPAddr, topics []Topic) (hash []byte) {
-	hash, _ = t.sendPacket(remote.ID, toaddr, byte(pingPacket), ping{
+	hash, err := t.sendPacket(remote.ID, toaddr, byte(pingPacket), ping{
 		Version:    Version,
 		From:       t.ourEndpoint,
 		To:         makeEndpoint(toaddr, uint16(toaddr.Port)), // TODO: maybe use known TCP port from DB
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
 		Topics:     topics,
 	})
+	if err != nil {
+		log.Error("send ping packet err:", err)
+	}
 	return hash
 }
 
 func (t *udp) sendFindnode(remote *Node, target NodeID) {
-	t.sendPacket(remote.ID, remote.addr(), byte(findnodePacket), findnode{
+	if _, err := t.sendPacket(remote.ID, remote.addr(), byte(findnodePacket), findnode{
 		Target:     target,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
-	})
+	}); err != nil {
+		log.Error("send find node packet err:", err)
+	}
 }
 
 func (t *udp) sendNeighbours(remote *Node, results []*Node) {
@@ -307,25 +315,31 @@ func (t *udp) sendNeighbours(remote *Node, results []*Node) {
 	for i, result := range results {
 		p.Nodes = append(p.Nodes, nodeToRPC(result))
 		if len(p.Nodes) == maxNeighbors || i == len(results)-1 {
-			t.sendPacket(remote.ID, remote.addr(), byte(neighborsPacket), p)
+			if _, err := t.sendPacket(remote.ID, remote.addr(), byte(neighborsPacket), p); err != nil {
+				log.Error("send neighbours packet err:", err)
+			}
 			p.Nodes = p.Nodes[:0]
 		}
 	}
 }
 
 func (t *udp) sendFindnodeHash(remote *Node, target common.Hash) {
-	t.sendPacket(remote.ID, remote.addr(), byte(findnodeHashPacket), findnodeHash{
-		Target:     common.Hash(target),
+	if _, err := t.sendPacket(remote.ID, remote.addr(), byte(findnodeHashPacket), findnodeHash{
+		Target:     target,
 		Expiration: uint64(time.Now().Add(expiration).Unix()),
-	})
+	}); err != nil {
+		log.Error("send find node hash packet err:", err)
+	}
 }
 
 func (t *udp) sendTopicRegister(remote *Node, topics []Topic, idx int, pong []byte) {
-	t.sendPacket(remote.ID, remote.addr(), byte(topicRegisterPacket), topicRegister{
+	if _, err := t.sendPacket(remote.ID, remote.addr(), byte(topicRegisterPacket), topicRegister{
 		Topics: topics,
 		Idx:    uint(idx),
 		Pong:   pong,
-	})
+	}); err != nil {
+		log.Error("send topic register packet err:", err)
+	}
 }
 
 func (t *udp) sendTopicNodes(remote *Node, queryHash common.Hash, nodes []*Node) {
@@ -336,18 +350,22 @@ func (t *udp) sendTopicNodes(remote *Node, queryHash common.Hash, nodes []*Node)
 			p.Nodes = append(p.Nodes, nodeToRPC(result))
 		}
 		if len(p.Nodes) == maxTopicNodes {
-			t.sendPacket(remote.ID, remote.addr(), byte(topicNodesPacket), p)
+			if _, err := t.sendPacket(remote.ID, remote.addr(), byte(topicNodesPacket), p); err != nil {
+				log.Error("send topic nodes packet err:", err)
+			}
 			p.Nodes = p.Nodes[:0]
 			sent = true
 		}
 	}
 	if !sent || len(p.Nodes) > 0 {
-		t.sendPacket(remote.ID, remote.addr(), byte(topicNodesPacket), p)
+		if _, err := t.sendPacket(remote.ID, remote.addr(), byte(topicNodesPacket), p); err != nil {
+			log.Error("send topic nodes packet err:", err)
+		}
 	}
 }
 
 func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req interface{}) (hash []byte, err error) {
-	packet, hash, err := encodePacket(t.priv, ptype, req)
+	packet, hash, err := encodePacket(t.priv, t.chainID, msgPrefix, ptype, req)
 	if err != nil {
 		return hash, err
 	}
@@ -361,7 +379,7 @@ func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req inter
 // zeroed padding space for encodePacket.
 var headSpace = make([]byte, headSize)
 
-func encodePacket(priv *crypto.PrivKeyEd25519, ptype byte, req interface{}) (p, h []byte, err error) {
+func encodePacket(priv *crypto.PrivKeyEd25519, chainID, msgPrefix string, ptype byte, req interface{}) (p, h []byte, err error) {
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
 	b.WriteByte(ptype)
@@ -374,9 +392,10 @@ func encodePacket(priv *crypto.PrivKeyEd25519, ptype byte, req interface{}) (p, 
 	packet := b.Bytes()
 	nodeID := priv.PubKey().Unwrap().(crypto.PubKeyEd25519)
 	sig := priv.Sign(hash(packet[headSize:]).Bytes())
-	copy(packet, versionPrefix)
+	copy(packet, msgPrefix)
 	copy(packet[versionPrefixSize:], nodeID[:])
 	copy(packet[versionPrefixSize+nodeIDSize:], sig.Bytes())
+	copy(packet[versionPrefixSize+nodeIDSize+sigSize:], chainID[0:int(math.Min(float64(len(chainID)), float64(chainIDSize)))])
 
 	h = hash(packet[versionPrefixSize:]).Bytes()
 	return packet, h, nil
@@ -401,13 +420,15 @@ func (t *udp) readLoop() {
 			log.Debug(fmt.Sprintf("Read error: %v", err))
 			return
 		}
-		t.handlePacket(from, buf[:nbytes])
+		if err := t.handlePacket(from, buf[:nbytes]); err != nil {
+			log.Error("handle packet err:", err)
+		}
 	}
 }
 
 func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	pkt := ingressPacket{remoteAddr: from}
-	if err := decodePacket(buf, &pkt); err != nil {
+	if err := decodePacket(t.chainID, buf, &pkt); err != nil {
 		log.Debug(fmt.Sprintf("Bad packet from %v: %v", from, err))
 		//fmt.Println("bad packet", err)
 		return err
@@ -416,16 +437,21 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	return nil
 }
 
-func decodePacket(buffer []byte, pkt *ingressPacket) error {
+func decodePacket(id string, buffer []byte, pkt *ingressPacket) error {
 	if len(buffer) < headSize+1 {
 		return errPacketTooSmall
 	}
 	buf := make([]byte, len(buffer))
 	copy(buf, buffer)
-	prefix, fromID, sigdata := buf[:versionPrefixSize], buf[versionPrefixSize:versionPrefixSize+nodeIDSize], buf[headSize:]
-	if !bytes.Equal(prefix, versionPrefix) {
+	prefix, fromID, chainID, sigdata := buf[:versionPrefixSize], buf[versionPrefixSize:versionPrefixSize+nodeIDSize], buf[versionPrefixSize+nodeIDSize+sigSize:headSize], buf[headSize:]
+	if !bytes.Equal(prefix, []byte(msgPrefix)) {
 		return errBadPrefix
 	}
+
+	if !bytes.Equal([]byte(id), chainID[:len(id)]) {
+		return errChainIDMismatch
+	}
+
 	pkt.rawData = buf
 	pkt.hash = hash(buf[versionPrefixSize:]).Bytes()
 	pkt.remoteID = ByteID(fromID)

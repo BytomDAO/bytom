@@ -49,7 +49,7 @@ var lookupTestnet = &preminedTestnet{
 	target:    MustHexID("166aea4f556532c6d34e8b740e5d314af7e9ac0ca79833bd751d6b665f12dfd3"),
 	targetSha: common.Hash{0xe3, 0xc, 0xbb, 0xde, 0xa9, 0x91, 0xb1, 0x38, 0x2d, 0x15, 0xbd, 0x12, 0xf8, 0x18, 0xe6, 0xc0, 0x33, 0x92, 0x7a, 0x1d, 0x6b, 0x36, 0xf4, 0x90, 0xe4, 0x77, 0xe1, 0xcf, 0x2c, 0x86, 0x50, 0xde},
 	dists: [257][]NodeID{
-		247: []NodeID{
+		247: {
 			MustHexID("e3ac06c25e8af5355f239c6019aca85b34876725251f3b6295c7d86513a754e0"),
 			MustHexID("bb1cc114cc15693c697944c4055f8b6d703da38d66b80a6401235d5cbd2e3e1e"),
 			MustHexID("dea88a1dfdf0f69a1cf2d411aefa9594302c1e18e223ca6ebccad2e52ac8e881"),
@@ -64,7 +64,7 @@ var lookupTestnet = &preminedTestnet{
 			MustHexID("b2275e96ea4c05635f99895b84691b23678eb7e8998e510df8e0b74b40aeb591"),
 			MustHexID("bf467cc20784ef34fc11a707d03dc06bf6c7d86e85490e4393c30b36f6f41e00"),
 		},
-		248: []NodeID{
+		248: {
 			MustHexID("105b2a6bbe2958f52479bf1d7934fd49413e34dedc603bb0bbaa243758f9562e"),
 			MustHexID("9a7f062fa1b06804de63f6165d73fc76e21e158dbe2bba7c6697a1908b2726ad"),
 			MustHexID("df1c12d3ce36c7d0abba253dfe18619e86aa954bde02cba2dc95aa739484574b"),
@@ -82,7 +82,7 @@ var lookupTestnet = &preminedTestnet{
 			MustHexID("a0d37c0f4d03b4d321b75f0ecd3ea4708c84057898445ef5947b33f8ebbdb943"),
 			MustHexID("ff53836e466dd6465dbcb85ef085338a52314165cd5f931e82bbbe126719a013"),
 		},
-		249: []NodeID{
+		249: {
 			MustHexID("8787595b7224df8e031e718036194168baa3c11a10c9e219e90114803b45a163"),
 			MustHexID("df7ab187fe0af0320232b826e65e8c8ab6a9080c24bfa5fe7981233ab740a370"),
 			MustHexID("01954486ca9ddd1301f56cd2968652f1677520a417a3f0a353f10c58670196b7"),
@@ -100,7 +100,7 @@ var lookupTestnet = &preminedTestnet{
 			MustHexID("891a8e98efd8a33e875915611c2695699fe5a925f4c041f1a4fbf6943dcde583"),
 			MustHexID("29174c8a03f246883b4f3b1e35f65c632e90863207c0cb0a272cfdf107ffecac"),
 		},
-		250: []NodeID{
+		250: {
 			MustHexID("541291d1e532a584fbb7825ca5e674dea4b3a456852773730273a1d0e80a4eb8"),
 			MustHexID("bf3fb0836cf07ac4f6bc397052e72e07d8f88668d3a5a9f7acca30a2a1dfc53e"),
 			MustHexID("4c1f2323737bf1a53817287727c3e5b83cb58e80a62421bb79a4060940d2deeb"),
@@ -118,7 +118,7 @@ var lookupTestnet = &preminedTestnet{
 			MustHexID("f19cd22f29f588f9e977ac8577d12a99b670217a06bba223cd5fd74b167ae261"),
 			MustHexID("5d640859e0af433dbde4f87297274276d4951db6ed59e2971f9287f2f4cb1774"),
 		},
-		251: []NodeID{
+		251: {
 			MustHexID("7dd89e04f039efadec20f0e629b5e995be64a464785c141253513aee8030e854"),
 			MustHexID("4b2a0965985233682dd81c9206b6f23b79270b49a92802869f579821ba445d3e"),
 			MustHexID("bdd3ce95a92277d738ea0839b02979143ef9c4ba822e259d9dea04a4a2fa5d7a"),
@@ -136,7 +136,7 @@ var lookupTestnet = &preminedTestnet{
 			MustHexID("d15d401fd676381cdce76eb57d3d47aae88e52f511b8e7f3a35cbf5b83f3c107"),
 			MustHexID("89b5d694647bada3c83f24299ab09ac740b32705294c04d8dcf23d0fcfef0ae7"),
 		},
-		252: []NodeID{
+		252: {
 			MustHexID("f62aefe5b2b7d6a1493674cf3ec598e2a8e2ea37a6a191242f01174fcde56e74"),
 			MustHexID("7bb68333edff9b5208c74cfb0054ee2129c1659f25ef8125070c59db9726c76c"),
 			MustHexID("ff9c41477e139040733fb5c9b2a1742de9ef4706b9ed3a4ec07fc7114f801d6d"),
@@ -154,7 +154,7 @@ var lookupTestnet = &preminedTestnet{
 			MustHexID("2352d4fa972fae5ccb2028ec182abd8266babc3c90bbc752921e83832bc4f5e0"),
 			MustHexID("7458609038c1f430ed42c12bf7643c0eb9b48bb29359fc450b7201774c4148a8"),
 		},
-		253: []NodeID{
+		253: {
 			MustHexID("5286209f9d328a83b2a4d6124104006e352d6ae0ccf40a9f8f05ea8511c2928b"),
 			MustHexID("cc46b4c4169db2feed37a27f0de9150ce41544ab68740b8b0845d3b294072197"),
 			MustHexID("58811d7c84a77848aadf294e7b1faaebbc5b62e1f66782dd38789aea30ce59d5"),
@@ -172,7 +172,7 @@ var lookupTestnet = &preminedTestnet{
 			MustHexID("10c2b0cad6ce2a75e211926bf32461a2bcbe68d41d0afe84ba152159ca52ec80"),
 			MustHexID("eb1d4cf64b5590230268e2f5403f572186c8a8945806feb04e629628705d3cf8"),
 		},
-		254: []NodeID{
+		254: {
 			MustHexID("52d2d2ffbf55fa22700c9eaae974a670a76311b55ddb8992c1c0c94e6863625e"),
 			MustHexID("1154233ce268a44b0462df941dcc4a0cadbd262f792e7526d23e8aa0561b0f74"),
 			MustHexID("dad29746f0e947d65f3f9268b67cbeb1ad6aed5f41087f2b78f420424f8ee584"),
@@ -190,7 +190,7 @@ var lookupTestnet = &preminedTestnet{
 			MustHexID("7bee368d0b55f44f0295a737281832b249f4a52aeeadd1606bab7812088bf8dd"),
 			MustHexID("37c33c9afb263b3639fb7cff4f39751e6f4cfa784fc1f31bffe83d89862b451f"),
 		},
-		255: []NodeID{
+		255: {
 			MustHexID("788f7dcaeb4151867e23561ec57ed5126bdf1469171a20fe245d0f5cb736f656"),
 			MustHexID("90b9aa162353dd86d1b6386098035ed2f0730e804c6dcd7197a13e56387d2e37"),
 			MustHexID("406e5461e323d9f9da2b0a5bbe0e2bf17766080abe857cf301573729dcda9066"),
@@ -208,7 +208,7 @@ var lookupTestnet = &preminedTestnet{
 			MustHexID("9b7733ce725cb05fcaf6dcd2df15d56ea4a5075352d9e4ce97000746fb57c102"),
 			MustHexID("ef55aa4f38dd0bf1d176b97351f3ebcea3fdddac7d93f54c8a6b18ebcf607258"),
 		},
-		256: []NodeID{
+		256: {
 			MustHexID("c00d05248333e3240915f045b94662945d9e62db7da1d2a549d0c0dc52274a67"),
 			MustHexID("a0e93f7917510af0f2366104221c81c6c0b134f18e65af18f9f6bbac95890083"),
 			MustHexID("4ba54f05578400edc10454f7baca695855fb8cd9c7dbb41809e8ea2938b46a1b"),
@@ -233,6 +233,7 @@ type preminedTestnet struct {
 	target    NodeID
 	targetSha common.Hash // sha3(target)
 	dists     [hashBits + 1][]NodeID
+	chainID   string
 	net       *Network
 }
 
@@ -304,6 +305,10 @@ func (*preminedTestnet) Close() {}
 
 func (*preminedTestnet) localAddr() *net.UDPAddr {
 	return &net.UDPAddr{IP: net.ParseIP("10.0.1.1"), Port: 40000}
+}
+
+func (tn *preminedTestnet) getChainID() string {
+	return tn.chainID
 }
 
 func TestMine(t *testing.T) {

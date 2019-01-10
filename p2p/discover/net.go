@@ -20,7 +20,6 @@ import (
 var (
 	errInvalidEvent = errors.New("invalid in current state")
 	errNoQuery      = errors.New("no pending query")
-	errWrongAddress = errors.New("unknown sender address")
 )
 
 const (
@@ -30,8 +29,6 @@ const (
 	seedMaxAge            = 5 * 24 * time.Hour
 	lowPort               = 1024
 )
-
-const testTopic = "foo"
 
 const (
 	printTestImgLogs = false
@@ -62,14 +59,6 @@ type Network struct {
 	nursery       []*Node
 	nodes         map[NodeID]*Node // tracks active nodes with state != known
 	timeoutTimers map[timeoutEvent]*time.Timer
-
-	// Revalidation queues.
-	// Nodes put on these queues will be pinged eventually.
-	slowRevalidateQueue []*Node
-	fastRevalidateQueue []*Node
-
-	// Buffers for state transition.
-	sendBuf []*ingressPacket
 }
 
 // transport is implemented by the UDP transport.
@@ -85,14 +74,14 @@ type transport interface {
 	send(remote *Node, ptype nodeEvent, p interface{}) (hash []byte)
 
 	localAddr() *net.UDPAddr
+	getChainID() string
 	Close()
 }
 
 type findnodeQuery struct {
-	remote   *Node
-	target   common.Hash
-	reply    chan<- []*Node
-	nresults int // counter for received nodes
+	remote *Node
+	target common.Hash
+	reply  chan<- []*Node
 }
 
 type topicRegisterReq struct {
@@ -274,40 +263,6 @@ func (net *Network) lookup(target common.Hash, stopOnMatch bool) []*Node {
 		}
 	}
 	return result.entries
-}
-
-func (net *Network) RegisterTopic(topic Topic, stop <-chan struct{}) {
-	select {
-	case net.topicRegisterReq <- topicRegisterReq{true, topic}:
-	case <-net.closed:
-		return
-	}
-	select {
-	case <-net.closed:
-	case <-stop:
-		select {
-		case net.topicRegisterReq <- topicRegisterReq{false, topic}:
-		case <-net.closed:
-		}
-	}
-}
-
-func (net *Network) SearchTopic(topic Topic, setPeriod <-chan time.Duration, found chan<- *Node, lookup chan<- bool) {
-	for {
-		select {
-		case <-net.closed:
-			return
-		case delay, ok := <-setPeriod:
-			select {
-			case net.topicSearchReq <- topicSearchReq{topic: topic, found: found, lookup: lookup, delay: delay}:
-			case <-net.closed:
-				return
-			}
-			if !ok {
-				return
-			}
-		}
-	}
 }
 
 func (net *Network) reqRefresh(nursery []*Node) <-chan struct{} {
@@ -557,12 +512,11 @@ loop:
 			net.ticketStore.searchLookupDone(res.target, res.nodes, func(n *Node, topic Topic) []byte {
 				if n.state != nil && n.state.canQuery {
 					return net.conn.send(n, topicQueryPacket, topicQuery{Topic: topic}) // TODO: set expiration
-				} else {
-					if n.state == unknown {
-						net.ping(n, n.addr())
-					}
-					return nil
 				}
+				if n.state == unknown {
+					net.ping(n, n.addr())
+				}
+				return nil
 			})
 
 		case <-statsDump.C:
@@ -804,17 +758,14 @@ func (q *findnodeQuery) start(net *Network) bool {
 }
 
 // Node Events (the input to the state machine).
-
 type nodeEvent uint
 
 //go:generate stringer -type=nodeEvent
 
 const (
-	invalidEvent nodeEvent = iota // zero is reserved
-
 	// Packet type events.
 	// These correspond to packet types in the UDP protocol.
-	pingPacket
+	pingPacket = iota + 1
 	pongPacket
 	findnodePacket
 	neighborsPacket
@@ -1198,7 +1149,7 @@ func (net *Network) handleQueryEvent(n *Node, ev nodeEvent, pkt *ingressPacket) 
 
 func (net *Network) checkTopicRegister(data *topicRegister) (*pong, error) {
 	var pongpkt ingressPacket
-	if err := decodePacket(data.Pong, &pongpkt); err != nil {
+	if err := decodePacket(net.conn.getChainID(), data.Pong, &pongpkt); err != nil {
 		return nil, err
 	}
 	if pongpkt.ev != pongPacket {
@@ -1209,7 +1160,11 @@ func (net *Network) checkTopicRegister(data *topicRegister) (*pong, error) {
 	}
 	// check that we previously authorised all topics
 	// that the other side is trying to register.
-	hash, _, _ := wireHash(data.Topics)
+	hash, _, err := wireHash(data.Topics)
+	if err != nil {
+		return nil, err
+	}
+
 	if hash != pongpkt.data.(*pong).TopicHash {
 		return nil, errors.New("topic hash mismatch")
 	}

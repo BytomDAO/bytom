@@ -507,7 +507,7 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 	}
 
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	ntab, err := discover.ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover.db"), nil)
+	ntab, err := discover.ListenUDP(priv, config.BaseConfig.ChainID, conn, realaddr, path.Join(config.DBDir(), "discover.db"), nil)
 	if err != nil {
 		return nil, err
 	}

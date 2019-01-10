@@ -15,13 +15,19 @@ import (
 )
 
 var testPackets = []struct {
-	ptype      byte
-	wantErr    error
-	wantPacket interface{}
+	ptype         byte
+	remoteChainID string
+	localChainID  string
+	msgPrefix     string
+	wantErr       error
+	wantPacket    interface{}
 }{
 	{
-		ptype:   byte(pingPacket),
-		wantErr: nil,
+		ptype:         byte(pingPacket),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     msgPrefix,
+		wantErr:       nil,
 		wantPacket: &ping{
 			Version:    4,
 			From:       rpcEndpoint{net.ParseIP("127.0.0.1").To4(), 3322, 5544},
@@ -32,8 +38,11 @@ var testPackets = []struct {
 		},
 	},
 	{
-		ptype:   byte(pingPacket),
-		wantErr: nil,
+		ptype:         byte(pingPacket),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     msgPrefix,
+		wantErr:       nil,
 		wantPacket: &ping{
 			Version:    4,
 			From:       rpcEndpoint{net.ParseIP("127.0.0.1").To4(), 3322, 5544},
@@ -44,8 +53,11 @@ var testPackets = []struct {
 		},
 	},
 	{
-		ptype:   byte(pingPacket),
-		wantErr: nil,
+		ptype:         byte(pingPacket),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     msgPrefix,
+		wantErr:       nil,
 		wantPacket: &ping{
 			Version:    555,
 			From:       rpcEndpoint{net.ParseIP("2001:db8:3c4d:15::abcd:ef12"), 3322, 5544},
@@ -56,8 +68,11 @@ var testPackets = []struct {
 		},
 	},
 	{
-		ptype:   byte(pongPacket),
-		wantErr: nil,
+		ptype:         byte(pongPacket),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     msgPrefix,
+		wantErr:       nil,
 		wantPacket: &pong{
 			To:          rpcEndpoint{net.ParseIP("2001:db8:85a3:8d3:1319:8a2e:370:7348"), 2222, 33338},
 			ReplyTok:    []byte("fbc914b16819237dcd8801d7e53f69e9719adecb3cc0e790c57e91ca4461c954"),
@@ -67,8 +82,11 @@ var testPackets = []struct {
 		},
 	},
 	{
-		ptype:   byte(findnodePacket),
-		wantErr: nil,
+		ptype:         byte(findnodePacket),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     msgPrefix,
+		wantErr:       nil,
 		wantPacket: &findnode{
 			Target:     MustHexID("a2cb4c36765430f2e72564138c36f30fbc8af5a8bb91649822cd937dedbb8748"),
 			Expiration: 1136239445,
@@ -76,8 +94,11 @@ var testPackets = []struct {
 		},
 	},
 	{
-		ptype:   byte(neighborsPacket),
-		wantErr: nil,
+		ptype:         byte(neighborsPacket),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     msgPrefix,
+		wantErr:       nil,
 		wantPacket: &neighbors{
 			Nodes: []rpcNode{
 				{
@@ -110,8 +131,11 @@ var testPackets = []struct {
 		},
 	},
 	{
-		ptype:   byte(findnodeHashPacket),
-		wantErr: nil,
+		ptype:         byte(findnodeHashPacket),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     msgPrefix,
+		wantErr:       nil,
 		wantPacket: &findnodeHash{
 			Target:     common.Hash{0x0, 0x1, 0x2, 0x3},
 			Expiration: 1136239445,
@@ -119,8 +143,11 @@ var testPackets = []struct {
 		},
 	},
 	{
-		ptype:   byte(topicRegisterPacket),
-		wantErr: nil,
+		ptype:         byte(topicRegisterPacket),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     msgPrefix,
+		wantErr:       nil,
 		wantPacket: &topicRegister{
 			Topics: []Topic{"test topic"},
 			Idx:    uint(0x01),
@@ -128,16 +155,22 @@ var testPackets = []struct {
 		},
 	},
 	{
-		ptype:   byte(topicQueryPacket),
-		wantErr: nil,
+		ptype:         byte(topicQueryPacket),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     msgPrefix,
+		wantErr:       nil,
 		wantPacket: &topicQuery{
 			Topic:      "test topic",
 			Expiration: 1136239445,
 		},
 	},
 	{
-		ptype:   byte(topicNodesPacket),
-		wantErr: nil,
+		ptype:         byte(topicNodesPacket),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     msgPrefix,
+		wantErr:       nil,
 		wantPacket: &topicNodes{
 			Echo: common.Hash{0x00, 0x01, 0x02},
 			Nodes: []rpcNode{
@@ -169,9 +202,28 @@ var testPackets = []struct {
 		},
 	},
 	{
-		ptype:      byte(topicNodesPacket + 1),
-		wantErr:    errPacketType,
-		wantPacket: &topicNodes{},
+		ptype:         byte(topicNodesPacket + 1),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     msgPrefix,
+		wantErr:       errPacketType,
+		wantPacket:    &topicNodes{},
+	},
+	{
+		ptype:         byte(topicNodesPacket),
+		remoteChainID: "wisdom",
+		localChainID:  "mainnet",
+		msgPrefix:     msgPrefix,
+		wantErr:       errChainIDMismatch,
+		wantPacket:    &topicNodes{},
+	},
+	{
+		ptype:         byte(topicNodesPacket),
+		remoteChainID: "wisdom",
+		localChainID:  "wisdom",
+		msgPrefix:     "eth discv",
+		wantErr:       errBadPrefix,
+		wantPacket:    &topicNodes{},
 	},
 }
 
@@ -179,13 +231,13 @@ func TestPacketCodec(t *testing.T) {
 	priv := crypto.GenPrivKeyEd25519()
 
 	for _, test := range testPackets {
-		packet, h, err := encodePacket(&priv, test.ptype, test.wantPacket)
+		packet, h, err := encodePacket(&priv, test.remoteChainID, test.msgPrefix, test.ptype, test.wantPacket)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		var pkt ingressPacket
-		if err := decodePacket(packet, &pkt); err != nil {
+		if err := decodePacket(test.localChainID, packet, &pkt); err != nil {
 			if errors.Root(err) != test.wantErr {
 				t.Errorf("did not accept packet %s\n%v", packet, err)
 			}
@@ -198,6 +250,22 @@ func TestPacketCodec(t *testing.T) {
 
 		if !reflect.DeepEqual(pkt.data, test.wantPacket) {
 			t.Errorf("got %s\nwant %s", spew.Sdump(pkt.data), spew.Sdump(test.wantPacket))
+		}
+	}
+}
+
+func TestDecodeTooSmallPacket(t *testing.T) {
+	priv := crypto.GenPrivKeyEd25519()
+
+	packet, _, err := encodePacket(&priv, testPackets[0].remoteChainID, testPackets[0].msgPrefix, testPackets[0].ptype, testPackets[0].wantPacket)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var pkt ingressPacket
+	if err := decodePacket(testPackets[0].localChainID, packet[0:headSize], &pkt); err != nil {
+		if errors.Root(err) != errPacketTooSmall {
+			t.Errorf("did not accept packet %s\n%v", packet, err)
 		}
 	}
 }
@@ -243,8 +311,9 @@ func TestPacketTransport(t *testing.T) {
 	toAddr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 40000}
 	privKey := crypto.GenPrivKeyEd25519()
 	privKey1 := crypto.GenPrivKeyEd25519()
+	chainID := "wisdom"
 
-	udpInput, err := listenUDP(&privKey, inConn, realaddr)
+	udpInput, err := listenUDP(&privKey, chainID, inConn, realaddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,15 +327,14 @@ func TestPacketTransport(t *testing.T) {
 	go udpInput.readLoop()
 
 	outConn := &testConn{conn: c2}
-	udp, err := listenUDP(&privKey1, outConn, realaddr)
+	udp, err := listenUDP(&privKey1, chainID, outConn, realaddr)
 	if err != nil {
 		t.Fatal(err)
 	}
 	udp.net = &testNetWork{IP: node.IP}
-	var hash []byte
 
 	//test sendPing
-	hash = udp.sendPing(node, toAddr, nil)
+	hash := udp.sendPing(node, toAddr, nil)
 	pkts := receivePacket(udpInput)
 	if !bytes.Equal(pkts[0].hash, hash) {
 		t.Fatal("pingPacket transport err")
@@ -370,8 +438,9 @@ func TestSendTopicNodes(t *testing.T) {
 	realaddr := &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 40000}
 	privKey := crypto.GenPrivKeyEd25519()
 	privKey1 := crypto.GenPrivKeyEd25519()
+	chainID := "wisdom"
 
-	udpInput, err := listenUDP(&privKey, inConn, realaddr)
+	udpInput, err := listenUDP(&privKey, chainID, inConn, realaddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -385,7 +454,7 @@ func TestSendTopicNodes(t *testing.T) {
 	go udpInput.readLoop()
 
 	outConn := &testConn{conn: c2}
-	udp, err := listenUDP(&privKey1, outConn, realaddr)
+	udp, err := listenUDP(&privKey1, chainID, outConn, realaddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -433,12 +502,13 @@ func receivePacket(udpInput *udp) []ingressPacket {
 	waitTicker := time.NewTimer(10 * time.Millisecond)
 	defer waitTicker.Stop()
 	var msgs []ingressPacket
+loop:
 	for {
 		select {
 		case msg := <-udpInput.net.(*testNetWork).read:
 			msgs = append(msgs, msg)
 		case <-waitTicker.C:
-			return msgs
+			break loop
 		}
 	}
 	return msgs
