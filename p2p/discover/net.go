@@ -30,8 +30,6 @@ const (
 	lowPort               = 1024
 )
 
-const testTopic = "foo"
-
 const (
 	printTestImgLogs = false
 )
@@ -946,6 +944,10 @@ func init() {
 			}
 		},
 		handle: func(net *Network, n *Node, ev nodeEvent, pkt *ingressPacket) (*nodeState, error) {
+			if err := net.db.updateNode(n); err != nil {
+				return known, err
+			}
+
 			switch ev {
 			case pingPacket:
 				net.handlePing(n, pkt)
@@ -988,6 +990,10 @@ func init() {
 		name:     "unresponsive",
 		canQuery: true,
 		handle: func(net *Network, n *Node, ev nodeEvent, pkt *ingressPacket) (*nodeState, error) {
+			if err := net.db.deleteNode(n.ID); err != nil {
+				return known, err
+			}
+
 			switch ev {
 			case pingPacket:
 				net.handlePing(n, pkt)
@@ -1119,6 +1125,9 @@ func (net *Network) handleKnownPong(n *Node, pkt *ingressPacket) error {
 	}
 	n.pingEcho = nil
 	n.pingTopics = nil
+	if err = net.db.updateLastPong(n.ID, time.Now()); err != nil {
+		return err
+	}
 	return err
 }
 
