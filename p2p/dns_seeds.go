@@ -36,18 +36,6 @@ func QueryDNSSeeds(chainID string) ([]string, error) {
 
 	for _, seed := range dnsSeeds {
 		//TODO add proxy
-		//if pm.proxy != nil {
-		//	for i := 0; i < 5; i++ {
-		//		ips, err := TorLookupIP(host)
-		//		if err != nil {
-		//			wg.Done()
-		//			return
-		//		}
-		//		for _, ip := range ips {
-		//			addrs = append(addrs, ip.String())
-		//		}
-		//	}
-		//} else {
 		addrs, err := net.LookupHost(seed)
 		if err != nil {
 			return nil, err
