@@ -498,7 +498,7 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 		return nil, err
 	}
 
-	seeds, err := p2p.QueryDNSSeeds(config.ChainID)
+	seeds, err := p2p.QueryDNSSeeds(config.ChainID, net.LookupHost)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on query dns seeds")
 	}
