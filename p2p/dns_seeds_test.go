@@ -58,7 +58,7 @@ var testCases = []struct {
 	{
 		chainID:    "wisdom",
 		lookupHost: lookupHostErrIP,
-		wantErr:    errInvalidIP,
+		wantErr:    errDNSTimeout,
 		wantAddr:   nil,
 	},
 }
