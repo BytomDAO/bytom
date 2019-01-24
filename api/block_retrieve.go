@@ -124,7 +124,8 @@ func (a *API) getBlock(ins BlockReq) Response {
 
 // GetRawBlockResp is resp struct for getRawBlock API
 type GetRawBlockResp struct {
-	RawBlock *types.Block `json:"raw_block"`
+	RawBlock          *types.Block          `json:"raw_block"`
+	TransactionStatus *bc.TransactionStatus `json:"transaction_status"`
 }
 
 func (a *API) getRawBlock(ins BlockReq) Response {
@@ -133,7 +134,16 @@ func (a *API) getRawBlock(ins BlockReq) Response {
 		return NewErrorResponse(err)
 	}
 
-	resp := GetRawBlockResp{RawBlock: block}
+	blockHash := block.Hash()
+	txStatus, err := a.chain.GetTransactionStatus(&blockHash)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+
+	resp := GetRawBlockResp{
+		RawBlock:          block,
+		TransactionStatus: txStatus,
+	}
 	return NewSuccessResponse(resp)
 }
 
