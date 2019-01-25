@@ -12,11 +12,14 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
+const ruleAA = 142500
+
 // validate transaction error
 var (
 	ErrTxVersion                 = errors.New("invalid transaction version")
 	ErrWrongTransactionSize      = errors.New("invalid transaction size")
 	ErrBadTimeRange              = errors.New("invalid transaction time range")
+	ErrEmptyInputIDs             = errors.New("got the empty InputIDs")
 	ErrNotStandardTx             = errors.New("not standard transaction")
 	ErrWrongCoinbaseTransaction  = errors.New("wrong coinbase transaction")
 	ErrWrongCoinbaseAsset        = errors.New("wrong coinbase assetID")
@@ -195,10 +198,8 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			}
 		}
 
-		if len(vs.tx.GasInputIDs) > 0 {
-			if err := vs.gasStatus.setGasValid(); err != nil {
-				return err
-			}
+		if err := vs.gasStatus.setGasValid(); err != nil {
+			return err
 		}
 
 		for i, src := range e.Sources {
@@ -299,9 +300,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		if err = checkValidDest(&vs2, e.WitnessDestination); err != nil {
 			return errors.Wrap(err, "checking coinbase destination")
 		}
-
-		// special case for coinbase transaction, it's valid unit all the verify has been passed
-		vs.gasStatus.GasValid = true
+		vs.gasStatus.StorageGas = 0
 
 	default:
 		return fmt.Errorf("entry has unexpected type %T", e)
@@ -440,11 +439,17 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 	return nil
 }
 
-func checkStandardTx(tx *bc.Tx) error {
+func checkStandardTx(tx *bc.Tx, blockHeight uint64) error {
+	for _, id := range tx.InputIDs {
+		if blockHeight >= ruleAA && id.IsZero() {
+			return ErrEmptyInputIDs
+		}
+	}
+
 	for _, id := range tx.GasInputIDs {
 		spend, err := tx.Spend(id)
 		if err != nil {
-			return err
+			continue
 		}
 		spentOutput, err := tx.Output(*spend.SpentOutputId)
 		if err != nil {
@@ -497,7 +502,7 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	if err := checkTimeRange(tx, block); err != nil {
 		return gasStatus, err
 	}
-	if err := checkStandardTx(tx); err != nil {
+	if err := checkStandardTx(tx, block.Height); err != nil {
 		return gasStatus, err
 	}
 

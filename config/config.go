@@ -23,6 +23,7 @@ type Config struct {
 	Auth      *RPCAuthConfig   `mapstructure:"auth"`
 	Web       *WebConfig       `mapstructure:"web"`
 	Simd      *SimdConfig      `mapstructure:"simd"`
+	Mining    *MiningConfig    `mapstructure:"mining"`
 	Websocket *WebsocketConfig `mapstructure:"ws"`
 }
 
@@ -35,6 +36,7 @@ func DefaultConfig() *Config {
 		Auth:       DefaultRPCAuthConfig(),
 		Web:        DefaultWebConfig(),
 		Simd:       DefaultSimdConfig(),
+		Mining:     DefaultMiningConfig(),
 		Websocket:  DefaultWebsocketConfig(),
 	}
 }
@@ -64,8 +66,6 @@ type BaseConfig struct {
 	// TCP or UNIX socket address for the profiling server to listen on
 	ProfListenAddress string `mapstructure:"prof_laddr"`
 
-	Mining bool `mapstructure:"mining"`
-
 	// Database backend: leveldb | memdb
 	DBBackend string `mapstructure:"db_backend"`
 
@@ -88,7 +88,6 @@ func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
 		Moniker:           "anonymous",
 		ProfListenAddress: "",
-		Mining:            false,
 		DBBackend:         "leveldb",
 		DBPath:            "data",
 		KeysPath:          "keystore",
@@ -149,6 +148,11 @@ type SimdConfig struct {
 	Enable bool `mapstructure:"enable"`
 }
 
+type MiningConfig struct {
+	Enable           bool   `mapstructure:"enable"`
+	RecommitInterval uint64 `mapstructure:"recommit_interval"`
+}
+
 type WebsocketConfig struct {
 	MaxNumWebsockets     int `mapstructure:"max_num_websockets"`
 	MaxNumConcurrentReqs int `mapstructure:"max_num_concurrent_reqs"`
@@ -177,10 +181,18 @@ func DefaultWalletConfig() *WalletConfig {
 	}
 }
 
-// Default configurable web parameters.
+// Default configurable blockheader verification parameters.
 func DefaultSimdConfig() *SimdConfig {
 	return &SimdConfig{
 		Enable: false,
+	}
+}
+
+// Default configurable mining parameters.
+func DefaultMiningConfig() *MiningConfig {
+	return &MiningConfig{
+		Enable:           false,
+		RecommitInterval: 15,
 	}
 }
 

@@ -6,9 +6,12 @@ import (
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
+	"github.com/bytom/event"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
+
+var ErrEmptyWorkSubmission = errors.New("empty work submission")
 
 // BlockHeaderJSON struct provides support for get work in json format, when it also follows
 // BlockHeader structure
@@ -79,12 +82,15 @@ func (a *API) submitBlock(ctx context.Context, req *SubmitBlockReq) Response {
 	if err != nil {
 		return NewErrorResponse(err)
 	}
+
 	if isOrphan {
 		return NewErrorResponse(errors.New("block submitted is orphan"))
 	}
 
-	blockHash := req.Block.BlockHeader.Hash()
-	a.newBlockCh <- &blockHash
+	if err = a.eventDispatcher.Post(event.NewMinedBlockEvent{Block: req.Block}); err != nil {
+		return NewErrorResponse(err)
+	}
+
 	return NewSuccessResponse(true)
 }
 
@@ -95,6 +101,10 @@ type SubmitWorkReq struct {
 
 // submitWork submits work in compressed protobuf format
 func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
+	if req.BlockHeader == nil {
+		return NewErrorResponse(ErrEmptyWorkSubmission)
+	}
+
 	if err := a.SubmitWork(req.BlockHeader); err != nil {
 		return NewErrorResponse(err)
 	}
@@ -108,6 +118,10 @@ type SubmitWorkJSONReq struct {
 
 // submitWorkJSON submits work in json format
 func (a *API) submitWorkJSON(ctx context.Context, req *SubmitWorkJSONReq) Response {
+	if req.BlockHeader == nil {
+		return NewErrorResponse(ErrEmptyWorkSubmission)
+	}
+
 	bh := &types.BlockHeader{
 		Version:           req.BlockHeader.Version,
 		Height:            req.BlockHeader.Height,
