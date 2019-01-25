@@ -15,6 +15,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/common"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/errors"
@@ -602,5 +603,93 @@ func TestStateForScope(t *testing.T) {
 	state.stateForScope(acc3)
 	if !reflect.DeepEqual(state.AccountsStatus[acc3.ID].Account, acc3) {
 		t.Fatal("state for scope test err")
+	}
+}
+
+func bip44ContractIndexKey(accountID string, change bool) []byte {
+	contractIndexPrefix := []byte("ContractIndex")
+	key := append(contractIndexPrefix, accountID...)
+	if change {
+		return append(key, []byte{1}...)
+	}
+	return append(key, []byte{0}...)
+}
+
+func TestContractIndexResidue(t *testing.T) {
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	hsm, err := pseudohsm.New(dirPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	xpub1, _, err := hsm.XCreate("test_pub1", "password", "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	contractIndexResidue := uint64(5)
+	acctMgr := account.NewManager(testDB, nil)
+	recoveryMgr := newRecoveryManager(testDB, acctMgr)
+	acct := &account.Account{ID: "testA", Alias: "test1", Signer: &signers.Signer{XPubs: []chainkd.XPub{xpub1.XPub}, KeyIndex: 1, DeriveRule: signers.BIP0044}}
+
+	cp1 := &account.CtrlProgram{AccountID: acct.ID, Address: "address1", KeyIndex: 10, Change: false}
+
+	setContractIndexKey := func(acctMgr *account.Manager, accountID string, change bool) {
+		testDB.Set(bip44ContractIndexKey(accountID, change), common.Unit64ToBytes(contractIndexResidue))
+	}
+
+	delAccount := func(acctMgr *account.Manager, accountID string, change bool) {
+		acctMgr.DeleteAccount(accountID)
+	}
+
+	recoveryMgr.state.XPubsStatus = newBranchRecoveryState(acctRecoveryWindow)
+	recoveryMgr.state.XPubs = []chainkd.XPub{xpub1.XPub}
+	recoveryMgr.state.stateForScope(acct)
+
+	cases := []struct {
+		acct       *account.Account
+		cp         *account.CtrlProgram
+		preProcess func(acctMgr *account.Manager, accountID string, change bool)
+		err        error
+		wantCPNum  uint64
+	}{
+		{acct, cp1, setContractIndexKey, nil, 5},
+		{acct, cp1, delAccount, nil, 10},
+	}
+
+	for _, c := range cases {
+		if c.preProcess != nil {
+			c.preProcess(acctMgr, c.acct.ID, c.cp.Change)
+		}
+
+		if err := acctMgr.SaveAccount(acct); err != nil {
+			t.Fatal("ReportFound test err:", err)
+		}
+
+		if err := recoveryMgr.reportFound(c.acct, c.cp); err != c.err {
+			t.Fatal("ContractIndexResidue test err:", err, c.acct.ID)
+		}
+		cps, err := acctMgr.ListControlProgram()
+		if err != nil {
+			t.Fatal("list control program err:", err)
+		}
+
+		cpNum := uint64(0)
+		for _, cp := range cps {
+			if cp.Address == "" || cp.AccountID != c.acct.ID {
+				continue
+			}
+			cpNum++
+		}
+
+		if cpNum != c.wantCPNum {
+			t.Fatal("Test contract index residue cp num err want:", c.wantCPNum, " got:", cpNum)
+		}
 	}
 }
