@@ -315,6 +315,9 @@ func (m *Manager) deleteAccountControlPrograms(accountID string) error {
 			m.db.Delete(ContractKey(hash))
 		}
 	}
+	m.db.Delete(bip44ContractIndexKey(accountID, false))
+	m.db.Delete(bip44ContractIndexKey(accountID, true))
+	m.db.Delete(contractIndexKey(accountID))
 	return nil
 }
 
