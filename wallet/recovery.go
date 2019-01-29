@@ -217,6 +217,10 @@ func (m *recoveryManager) AddrResurrect(accts []*account.Account) error {
 	}
 
 	m.state.StartTime = time.Now()
+	if err := m.commitStatusInfo(); err != nil {
+		return err
+	}
+
 	m.started = true
 	return nil
 }
@@ -237,6 +241,10 @@ func (m *recoveryManager) AcctResurrect(xPubs []chainkd.XPub) error {
 		return err
 	}
 	m.state.StartTime = time.Now()
+	if err := m.commitStatusInfo(); err != nil {
+		return err
+	}
+
 	m.started = true
 	return nil
 }
