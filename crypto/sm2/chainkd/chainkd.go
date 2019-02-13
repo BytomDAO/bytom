@@ -3,6 +3,7 @@ package chainkd
 import (
 	"crypto/hmac"
 	"crypto/sha512"
+	"errors"
 	"math/big"
 
 	"github.com/bytom/crypto/sm2"
@@ -46,6 +47,10 @@ func (xpub XPub) Child(sel []byte) (xpubkey XPub) {
 
 	k := new(big.Int).SetBytes(res[:32])
 	c := sm2.P256Sm2()
+	if k.Cmp(c.Params().N) >= 0 || k.Sign() == 0 {
+		errors.New("Invalid Child")
+		return
+	}
 	priv := new(sm2.PrivateKey)
 	priv.PublicKey.Curve = c
 	priv.D = k
