@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/bytom/consensus"
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -13,9 +14,9 @@ var errAddr = []string{"a.b.ab.abc", "55.66.77.88"}
 
 func lookupHostNormal(host string) ([]string, error) {
 	switch host {
-	case mainnetSeeds[0]:
+	case consensus.MainNetParams.DNSSeeds[0]:
 		return mainnetAddr, nil
-	case testnetSeeds[0]:
+	case consensus.TestNetParams.DNSSeeds[0]:
 		return testnetAddr, nil
 	}
 	return nil, nil
@@ -50,12 +51,6 @@ var testCases = []struct {
 		wantAddr:   nil,
 	},
 	{
-		chainID:    "test",
-		lookupHost: lookupHostNormal,
-		wantErr:    errChainID,
-		wantAddr:   nil,
-	},
-	{
 		chainID:    "wisdom",
 		lookupHost: lookupHostErrIP,
 		wantErr:    errDNSTimeout,
@@ -64,9 +59,9 @@ var testCases = []struct {
 }
 
 func TestQueryDNSSeeds(t *testing.T) {
-
 	for i, tc := range testCases {
-		addresses, err := QueryDNSSeeds(tc.chainID, tc.lookupHost)
+		consensus.ActiveNetParams = consensus.NetParams[tc.chainID]
+		addresses, err := QueryDNSSeeds(tc.lookupHost)
 		if err != tc.wantErr {
 			t.Fatalf("test %d: error mismatch for query dns seed got %q want %q", i, err, tc.wantErr)
 		}

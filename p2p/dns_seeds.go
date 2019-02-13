@@ -6,50 +6,28 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 )
 
-const (
-	logModule = "p2p"
-
-	mainnetPort = "46657"
-	testnetPort = "46656"
-)
+const logModule = "p2p"
 
 var (
-	errChainID    = errors.New("unsupported chain id")
 	errInvalidIP  = errors.New("invalid ip address")
 	errDNSTimeout = errors.New("get dns seed timeout")
-)
-
-var (
-	mainnetSeeds = []string{"www.mainnetseed.yahtoo.fun"}
-	testnetSeeds = []string{"www.testnetseed.yahtoo.fun"}
 
 	dnsTimeout = 5 * time.Second
 )
 
 // QueryDNSSeeds Query the DNS seeds.
-func QueryDNSSeeds(chainID string, lookupHost func(host string) (addrs []string, err error)) ([]string, error) {
-	var dnsSeeds []string
-	var port string
-
-	switch chainID {
-	case "mainnet":
-		dnsSeeds = mainnetSeeds
-		port = mainnetPort
-	case "wisdom":
-		dnsSeeds = testnetSeeds
-		port = testnetPort
-	case "solonet":
+func QueryDNSSeeds(lookupHost func(host string) (addrs []string, err error)) ([]string, error) {
+	if len(consensus.ActiveNetParams.DNSSeeds) == 0 {
 		return nil, nil
-	default:
-		return nil, errChainID
 	}
 
 	resultCh := make(chan *[]string, 1)
-	for _, dnsSeed := range dnsSeeds {
-		go queryDNSSeeds(lookupHost, resultCh, dnsSeed, port)
+	for _, dnsSeed := range consensus.ActiveNetParams.DNSSeeds {
+		go queryDNSSeeds(lookupHost, resultCh, dnsSeed, consensus.ActiveNetParams.DefaultPort)
 	}
 
 	for {
@@ -80,6 +58,9 @@ func queryDNSSeeds(lookupHost func(host string) (addrs []string, err error), res
 
 		seeds = append(seeds, net.JoinHostPort(addr, port))
 	}
-
-	resultCh <- &seeds
+	//if channel is full, drop it
+	select {
+	case resultCh <- &seeds:
+	default:
+	}
 }
