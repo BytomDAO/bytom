@@ -503,11 +503,10 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on query dns seeds")
 	}
 
+	seeds = append(seeds, strings.Split(config.P2P.Seeds, ",")...)
+
 	if len(seeds) == 0 {
-		if config.P2P.Seeds == "" {
-			return ntab, nil
-		}
-		seeds = append(seeds, strings.Split(config.P2P.Seeds, ",")...)
+		return ntab, nil
 	}
 
 	var nodes []*discover.Node

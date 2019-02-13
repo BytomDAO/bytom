@@ -13,8 +13,9 @@ import (
 const logModule = "p2p"
 
 var (
-	errInvalidIP  = errors.New("invalid ip address")
-	errDNSTimeout = errors.New("get dns seed timeout")
+	errInvalidIP     = errors.New("invalid ip address")
+	errDNSTimeout    = errors.New("get dns seed timeout")
+	errDNSSeedsEmpty = errors.New("dns seeds is empty")
 
 	dnsTimeout = 5 * time.Second
 )
@@ -22,7 +23,7 @@ var (
 // QueryDNSSeeds Query the DNS seeds.
 func QueryDNSSeeds(lookupHost func(host string) (addrs []string, err error)) ([]string, error) {
 	if len(consensus.ActiveNetParams.DNSSeeds) == 0 {
-		return nil, nil
+		return nil, errDNSSeedsEmpty
 	}
 
 	resultCh := make(chan *[]string, 1)
@@ -30,13 +31,11 @@ func QueryDNSSeeds(lookupHost func(host string) (addrs []string, err error)) ([]
 		go queryDNSSeeds(lookupHost, resultCh, dnsSeed, consensus.ActiveNetParams.DefaultPort)
 	}
 
-	for {
-		select {
-		case result := <-resultCh:
-			return *result, nil
-		case <-time.After(dnsTimeout):
-			return nil, errDNSTimeout
-		}
+	select {
+	case result := <-resultCh:
+		return *result, nil
+	case <-time.After(dnsTimeout):
+		return nil, errDNSTimeout
 	}
 }
 
@@ -57,6 +56,9 @@ func queryDNSSeeds(lookupHost func(host string) (addrs []string, err error), res
 		}
 
 		seeds = append(seeds, net.JoinHostPort(addr, port))
+	}
+	if len(seeds) == 0 {
+		return
 	}
 	//if channel is full, drop it
 	select {

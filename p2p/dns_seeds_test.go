@@ -47,7 +47,7 @@ var testCases = []struct {
 	{
 		chainID:    "solonet",
 		lookupHost: lookupHostNormal,
-		wantErr:    nil,
+		wantErr:    errDNSSeedsEmpty,
 		wantAddr:   nil,
 	},
 	{
