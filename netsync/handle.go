@@ -498,16 +498,24 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 		return nil, err
 	}
 
-	// add the seeds node to the discover table
-	if config.P2P.Seeds == "" {
+	seeds, err := p2p.QueryDNSSeeds(net.LookupHost)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on query dns seeds")
+	}
+
+	seeds = append(seeds, strings.Split(config.P2P.Seeds, ",")...)
+
+	if len(seeds) == 0 {
 		return ntab, nil
 	}
-	nodes := []*discover.Node{}
-	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
+
+	var nodes []*discover.Node
+	for _, seed := range seeds {
 		version.Status.AddSeed(seed)
 		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
 		nodes = append(nodes, discover.MustParseNode(url))
 	}
+
 	if err = ntab.SetFallbackNodes(nodes); err != nil {
 		return nil, err
 	}
