@@ -1,4 +1,4 @@
-package p2p
+package discover
 
 import (
 	"net"
@@ -9,8 +9,6 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 )
-
-const logModule = "p2p"
 
 var (
 	errInvalidIP     = errors.New("invalid ip address")

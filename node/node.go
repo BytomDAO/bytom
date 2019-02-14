@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 
@@ -38,15 +37,12 @@ import (
 	w "github.com/bytom/wallet"
 )
 
-const (
-	webHost           = "http://127.0.0.1"
-	maxNewBlockChSize = 1024
-)
+const webHost = "http://127.0.0.1"
 
+// Node represent bytom node
 type Node struct {
 	cmn.BaseService
 
-	// config
 	config          *cfg.Config
 	eventDispatcher *event.Dispatcher
 	syncManager     *netsync.SyncManager
@@ -62,6 +58,7 @@ type Node struct {
 	miningEnable    bool
 }
 
+// NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 	if err := lockDataDirectory(config); err != nil {
@@ -87,10 +84,10 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
 
-	var accounts *account.Manager = nil
-	var assets *asset.Registry = nil
-	var wallet *w.Wallet = nil
-	var txFeed *txfeed.Tracker = nil
+	var accounts *account.Manager
+	var assets *asset.Registry
+	var wallet *w.Wallet
+	var txFeed *txfeed.Tracker
 
 	txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
 	txFeed = txfeed.NewTracker(txFeedDB, chain)
@@ -140,7 +137,10 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to create p2p switch: %v", err))
 	}
 
-	syncManager, _ := netsync.NewSyncManager(sw, chain, config, txPool, dispatcher)
+	syncManager, err := netsync.NewSyncManager(sw, chain, config, txPool, dispatcher)
+	if err != nil {
+		cmn.Exit(cmn.Fmt("Failed to create sync manager: %v", err))
+	}
 
 	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
 

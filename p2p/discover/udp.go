@@ -22,7 +22,10 @@ import (
 	"github.com/bytom/version"
 )
 
-const Version = 4
+const (
+	Version   = 4
+	logModule = "discover"
+)
 
 // Errors
 var (
@@ -34,6 +37,8 @@ var (
 	errTimeout          = errors.New("RPC timeout")
 	errClockWarp        = errors.New("reply deadline too far in the future")
 	errClosed           = errors.New("socket closed")
+	errInvalidSeedIP    = errors.New("seed ip is invalid")
+	errInvalidSeedPort  = errors.New("seed port is invalid")
 )
 
 // Timeouts
@@ -274,17 +279,42 @@ func NewDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) (
 	if err != nil {
 		return nil, err
 	}
+	seeds, err := QueryDNSSeeds(net.LookupHost)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on query dns seeds")
+	}
 
-	// add the seeds node to the discover table
-	if config.P2P.Seeds == "" {
+	if config.P2P.Seeds != "" {
+		codedSeeds := strings.Split(config.P2P.Seeds, ",")
+		for _, codedSeed := range codedSeeds {
+			ip, port, err := net.SplitHostPort(codedSeed)
+			if err != nil {
+				return nil, err
+			}
+
+			if validIP := net.ParseIP(ip); validIP == nil {
+				return nil, errInvalidSeedIP
+			}
+
+			if _, err := strconv.ParseUint(port, 10, 16); err != nil {
+				return nil, errInvalidSeedPort
+			}
+
+			seeds = append(seeds, codedSeed)
+		}
+	}
+
+	if len(seeds) == 0 {
 		return ntab, nil
 	}
-	nodes := []*Node{}
-	for _, seed := range strings.Split(config.P2P.Seeds, ",") {
+
+	var nodes []*Node
+	for _, seed := range seeds {
 		version.Status.AddSeed(seed)
 		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
 		nodes = append(nodes, MustParseNode(url))
 	}
+
 	if err = ntab.SetFallbackNodes(nodes); err != nil {
 		return nil, err
 	}
