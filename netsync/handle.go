@@ -31,6 +31,11 @@ const (
 	maxFilterAddressCount = 1000
 )
 
+var (
+	errInvalidSeedIP   = errors.New("seed ip is invalid")
+	errInvalidSeedPort = errors.New("seed port is invalid")
+)
+
 // Chain is the interface for Bytom core
 type Chain interface {
 	BestBlockHeader() *types.BlockHeader
@@ -503,7 +508,25 @@ func initDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) 
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on query dns seeds")
 	}
 
-	seeds = append(seeds, strings.Split(config.P2P.Seeds, ",")...)
+	if config.P2P.Seeds != "" {
+		codedSeeds := strings.Split(config.P2P.Seeds, ",")
+		for _, codedSeed := range codedSeeds {
+			ip, port, err := net.SplitHostPort(codedSeed)
+			if err != nil {
+				return nil, err
+			}
+
+			if validIP := net.ParseIP(ip); validIP == nil {
+				return nil, errInvalidSeedIP
+			}
+
+			if _, err := strconv.ParseUint(port, 10, 16); err != nil {
+				return nil, errInvalidSeedPort
+			}
+
+			seeds = append(seeds, codedSeed)
+		}
+	}
 
 	if len(seeds) == 0 {
 		return ntab, nil
