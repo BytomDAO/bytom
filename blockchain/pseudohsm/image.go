@@ -45,9 +45,6 @@ func (h *HSM) Restore(image *KeyImage) error {
 	for _, xKey := range image.XKeys {
 		data, err := hex.DecodeString(xKey.XPub)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"err": err,
-			}).Error("decode XPub err")
 			return ErrXPubFormat
 		}
 
