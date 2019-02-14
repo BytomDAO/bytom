@@ -107,6 +107,78 @@ func TestGasStatus(t *testing.T) {
 			},
 			err: nil,
 		},
+		{
+			input: &GasState{
+				GasLeft: 1000,
+				GasUsed: 10,
+				StorageGas: 1000,
+				GasValid: false,
+			},
+			output: &GasState{
+				GasLeft: 0,
+				GasUsed: 1010,
+				StorageGas: 1000,
+				GasValid: true,
+			},
+			f: func(input *GasState) error {
+				return input.setGasValid()
+			},
+			err: nil,
+		},
+		{
+			input: &GasState{
+				GasLeft: 900,
+				GasUsed: 10,
+				StorageGas: 1000,
+				GasValid: false,
+			},
+			output: &GasState{
+				GasLeft: -100,
+				GasUsed: 10,
+				StorageGas: 1000,
+				GasValid: false,
+			},
+			f: func(input *GasState) error {
+				return input.setGasValid()
+			},
+			err: ErrGasCalculate,
+		},
+		{
+			input: &GasState{
+				GasLeft: 1000,
+				GasUsed: math.MaxInt64,
+				StorageGas: 1000,
+				GasValid: false,
+			},
+			output: &GasState{
+				GasLeft: 0,
+				GasUsed: 0,
+				StorageGas: 1000,
+				GasValid: false,
+			},
+			f: func(input *GasState) error {
+				return input.setGasValid()
+			},
+			err: ErrGasCalculate,
+		},
+		{
+			input: &GasState{
+				GasLeft: math.MinInt64,
+				GasUsed: 0,
+				StorageGas: 1000,
+				GasValid: false,
+			},
+			output: &GasState{
+				GasLeft: 0,
+				GasUsed: 0,
+				StorageGas: 1000,
+				GasValid: false,
+			},
+			f: func(input *GasState) error {
+				return input.setGasValid()
+			},
+			err: ErrGasCalculate,
+		},
 	}
 
 	for i, c := range cases {
