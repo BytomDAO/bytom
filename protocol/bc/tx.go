@@ -67,7 +67,7 @@ func (tx *Tx) Issuance(id Hash) (*Issuance, error) {
 	}
 	iss, ok := e.(*Issuance)
 	if !ok {
-		return nil, errors.Wrapf(ErrEntryType, "entry %x has unexpected type %T", id.Bytes(), e)
+		return nil, errors.Wrapf(ErrEntryType, "entry %x has uPtnexpected type %T", id.Bytes(), e)
 	}
 	return iss, nil
 }
