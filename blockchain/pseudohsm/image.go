@@ -2,9 +2,14 @@
 package pseudohsm
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/crypto/ed25519/chainkd"
 )
 
 // KeyImage is the struct for hold export key data
@@ -38,6 +43,22 @@ func (h *HSM) Restore(image *KeyImage) error {
 	defer h.cacheMu.Unlock()
 
 	for _, xKey := range image.XKeys {
+		data, err := hex.DecodeString(xKey.XPub)
+		if err != nil {
+			return ErrXPubFormat
+		}
+
+		var xPub chainkd.XPub
+		copy(xPub[:], data)
+		if h.cache.hasKey(xPub) {
+			log.WithFields(log.Fields{
+				"alias": xKey.Alias,
+				"id":    xKey.ID,
+				"xPub":  xKey.XPub,
+			}).Warning("skip restore key due to already existed")
+			continue
+		}
+
 		if ok := h.cache.hasAlias(xKey.Alias); ok {
 			return ErrDuplicateKeyAlias
 		}
@@ -52,7 +73,8 @@ func (h *HSM) Restore(image *KeyImage) error {
 		if err := writeKeyFile(file, rawKey); err != nil {
 			return err
 		}
+
+		h.cache.reload()
 	}
-	h.cache.maybeReload()
 	return nil
 }
