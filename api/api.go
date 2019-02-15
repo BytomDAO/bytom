@@ -194,11 +194,8 @@ func (a *API) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 // buildHandler is in charge of all the rpc handling.
 func (a *API) buildHandler() {
-	walletEnable := false
 	m := http.NewServeMux()
 	if a.wallet != nil {
-		walletEnable = true
-
 		m.Handle("/create-account", jsonHandler(a.createAccount))
 		m.Handle("/update-account-alias", jsonHandler(a.updateAccountAlias))
 		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
@@ -303,8 +300,7 @@ func (a *API) buildHandler() {
 
 	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
 
-	handler := latencyHandler(m, walletEnable)
-	handler = webAssetsHandler(handler)
+	handler := webAssetsHandler(m)
 	handler = gzip.Handler{Handler: handler}
 
 	a.handler = handler
@@ -364,26 +360,6 @@ func RedirectHandler(next http.Handler) http.Handler {
 			return
 		}
 		next.ServeHTTP(w, req)
-	})
-}
-
-// latencyHandler take latency for the request url path, and redirect url path to wait-disable when wallet is closed
-func latencyHandler(m *http.ServeMux, walletEnable bool) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		// latency for the request url path
-		if l := latency(m, req); l != nil {
-			defer l.RecordSince(time.Now())
-		}
-
-		// when the wallet is not been opened and the url path is not been found, modify url path to error,
-		// and redirect handler to error
-		if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {
-			req.URL.Path = "/error"
-			walletRedirectHandler(w, req)
-			return
-		}
-
-		m.ServeHTTP(w, req)
 	})
 }
 
