@@ -23,8 +23,7 @@ const (
 )
 
 var (
-	errInvalidSeedIP   = errors.New("seed ip is invalid")
-	errInvalidSeedPort = errors.New("seed port is invalid")
+	errVaultModeDialPeer = errors.New("can't dial peer in vault mode")
 )
 
 // Chain is the interface for Bytom core
@@ -91,8 +90,11 @@ func NewSyncManager(sw Switch, chain Chain, config *cfg.Config, txPool *core.TxP
 		config:          config,
 		eventDispatcher: dispatcher,
 	}
-	protocolReactor := NewProtocolReactor(manager, peers)
-	manager.sw.AddReactor("PROTOCOL", protocolReactor)
+
+	if !config.VaultMode {
+		protocolReactor := NewProtocolReactor(manager, peers)
+		manager.sw.AddReactor("PROTOCOL", protocolReactor)
+	}
 	return manager, nil
 }
 
@@ -399,9 +401,11 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 
 func (sm *SyncManager) Start() error {
 	var err error
-	if _, err = sm.sw.Start(); err != nil {
-		log.Error("switch start err")
-		return err
+	if !sm.config.VaultMode {
+		if _, err = sm.sw.Start(); err != nil {
+			log.Error("switch start err")
+			return err
+		}
 	}
 
 	// broadcast transactions
@@ -422,7 +426,9 @@ func (sm *SyncManager) Start() error {
 func (sm *SyncManager) Stop() {
 	close(sm.quitSync)
 	sm.minedBlockSub.Unsubscribe()
-	sm.sw.Stop()
+	if !sm.config.VaultMode {
+		sm.sw.Stop()
+	}
 }
 
 func (sm *SyncManager) minedBroadcastLoop() {
@@ -449,4 +455,30 @@ func (sm *SyncManager) minedBroadcastLoop() {
 			return
 		}
 	}
+}
+
+func (sm *SyncManager) IsListening() bool {
+	if sm.config.VaultMode {
+		return false
+	}
+	return sm.Switch().IsListening()
+}
+
+func (sm *SyncManager) PeerCount() int {
+	if sm.config.VaultMode {
+		return 0
+	}
+	return len(sm.Switch().Peers().List())
+}
+
+func (sm *SyncManager) GetNetwork() string {
+	return sm.config.ChainID
+}
+
+func (sm *SyncManager) DialPeerWithAddress(addr *p2p.NetAddress) error {
+	if sm.config.VaultMode {
+		return errVaultModeDialPeer
+	}
+
+	return sm.Switch().DialPeerWithAddress(addr)
 }

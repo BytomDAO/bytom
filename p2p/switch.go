@@ -75,7 +75,7 @@ func NewSwitch(discv discv, blacklistDB dbm.DB, l Listener, config *cfg.Config, 
 		nodePrivKey:  priv,
 		discv:        discv,
 		db:           blacklistDB,
-		nodeInfo:     newNodeInfo(config, priv, listenAddr),
+		nodeInfo:     NewNodeInfo(config, priv, listenAddr),
 		bannedPeer:   make(map[string]time.Time),
 	}
 	if err := sw.loadBannedPeers(); err != nil {

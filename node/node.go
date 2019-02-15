@@ -116,25 +116,23 @@ func NewNode(config *cfg.Config) *Node {
 			wallet.RescanBlocks()
 		}
 	}
+
+	var sw *p2p.Switch
 	dispatcher := event.NewDispatcher()
-	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-	privKey := crypto.GenPrivKeyEd25519()
-	// Create & add listener
-	var l p2p.Listener
-	var listenAddr string
-
 	if !config.VaultMode {
-		l, listenAddr = p2p.GetListener(config.P2P)
-	}
+		blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
+		privKey := crypto.GenPrivKeyEd25519()
+		// Create listener
+		l, listenAddr := p2p.GetListener(config.P2P)
+		discover, err := discover.NewDiscover(config, &privKey, l.ExternalAddress().Port)
+		if err != nil {
+			cmn.Exit(cmn.Fmt("Failed to create p2p discover: %v", err))
+		}
 
-	discover, err := discover.NewDiscover(config, &privKey, l.ExternalAddress().Port)
-	if err != nil {
-		cmn.Exit(cmn.Fmt("Failed to create p2p discover: %v", err))
-	}
-
-	sw, err := p2p.NewSwitch(discover, blacklistDB, l, config, privKey, listenAddr)
-	if err != nil {
-		cmn.Exit(cmn.Fmt("Failed to create p2p switch: %v", err))
+		sw, err = p2p.NewSwitch(discover, blacklistDB, l, config, privKey, listenAddr)
+		if err != nil {
+			cmn.Exit(cmn.Fmt("Failed to create p2p switch: %v", err))
+		}
 	}
 
 	syncManager, err := netsync.NewSyncManager(sw, chain, config, txPool, dispatcher)
@@ -253,7 +251,7 @@ func launchWebBrowser(port string) {
 	}
 }
 
-func (n *Node) initAndstartApiServer() {
+func (n *Node) initAndstartAPIServer() {
 	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
@@ -276,7 +274,7 @@ func (n *Node) OnStart() error {
 		}
 	}
 
-	n.initAndstartApiServer()
+	n.initAndstartAPIServer()
 	n.notificationMgr.Start()
 	if !n.config.Web.Closed {
 		_, port, err := net.SplitHostPort(n.config.ApiAddress)
@@ -309,8 +307,11 @@ func (n *Node) RunForever() {
 	})
 }
 
-func (n *Node) SyncManager() *netsync.SyncManager {
-	return n.syncManager
+func (n *Node) NodeInfo() *p2p.NodeInfo {
+	if !n.config.VaultMode {
+		n.syncManager.Switch().NodeInfo()
+	}
+	return p2p.NewNodeInfo(n.config, crypto.GenPrivKeyEd25519(), "")
 }
 
 func (n *Node) MiningPool() *miningpool.MiningPool {
