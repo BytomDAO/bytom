@@ -13,6 +13,7 @@ import (
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/tendermint/go-crypto"
 )
 
 const (
@@ -48,6 +49,9 @@ type Switch interface {
 	NodeInfo() *p2p.NodeInfo
 	Start() (bool, error)
 	Stop() bool
+	IsListening() bool
+	DialPeerWithAddress(addr *p2p.NetAddress) error
+	Peers() *p2p.PeerSet
 }
 
 //SyncManager Sync Manager is responsible for the business layer information synchronization
@@ -130,11 +134,6 @@ func (sm *SyncManager) StopPeer(peerID string) error {
 	}
 	sm.peers.removePeer(peerID)
 	return nil
-}
-
-//Switch get sync manager switch
-func (sm *SyncManager) Switch() *p2p.Switch {
-	return sm.sw.(*p2p.Switch)
 }
 
 func (sm *SyncManager) handleBlockMsg(peer *peer, msg *BlockMessage) {
@@ -461,14 +460,14 @@ func (sm *SyncManager) IsListening() bool {
 	if sm.config.VaultMode {
 		return false
 	}
-	return sm.Switch().IsListening()
+	return sm.sw.IsListening()
 }
 
 func (sm *SyncManager) PeerCount() int {
 	if sm.config.VaultMode {
 		return 0
 	}
-	return len(sm.Switch().Peers().List())
+	return len(sm.sw.Peers().List())
 }
 
 func (sm *SyncManager) GetNetwork() string {
@@ -480,5 +479,12 @@ func (sm *SyncManager) DialPeerWithAddress(addr *p2p.NetAddress) error {
 		return errVaultModeDialPeer
 	}
 
-	return sm.Switch().DialPeerWithAddress(addr)
+	return sm.sw.DialPeerWithAddress(addr)
+}
+
+func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
+	if sm.config.VaultMode {
+		return p2p.NewNodeInfo(sm.config, crypto.PubKeyEd25519{}, "")
+	}
+	return sm.sw.NodeInfo()
 }

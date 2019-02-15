@@ -308,10 +308,7 @@ func (n *Node) RunForever() {
 }
 
 func (n *Node) NodeInfo() *p2p.NodeInfo {
-	if !n.config.VaultMode {
-		n.syncManager.Switch().NodeInfo()
-	}
-	return p2p.NewNodeInfo(n.config, crypto.GenPrivKeyEd25519(), "")
+	return n.syncManager.NodeInfo()
 }
 
 func (n *Node) MiningPool() *miningpool.MiningPool {

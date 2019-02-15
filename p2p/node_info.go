@@ -23,9 +23,9 @@ type NodeInfo struct {
 	Other      []string             `json:"other"`   // other application specific data
 }
 
-func NewNodeInfo(config *cfg.Config, privKey crypto.PrivKeyEd25519, listenAddr string) *NodeInfo {
+func NewNodeInfo(config *cfg.Config, pubkey crypto.PubKeyEd25519, listenAddr string) *NodeInfo {
 	return &NodeInfo{
-		PubKey:     privKey.PubKey().Unwrap().(crypto.PubKeyEd25519),
+		PubKey:     pubkey,
 		Moniker:    config.Moniker,
 		Network:    config.ChainID,
 		ListenAddr: listenAddr,
