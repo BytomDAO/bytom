@@ -415,6 +415,21 @@ func TestTxValidation(t *testing.T) {
 			err: ErrMismatchedReference,
 		},
 		{
+			desc: "mismatched input dest and mux source",
+			f: func() {
+				fixture2 := sample(t, fixture)
+				tx2 := types.NewTx(*fixture2.tx).Tx
+				input2ID := tx2.InputIDs[2]
+				input2 := tx2.Entries[input2ID].(*bc.Spend)
+				dest2Ref := input2.WitnessDestination.Ref
+				dest2 := tx2.Entries[*dest2Ref].(*bc.Mux)
+				tx.Entries[*dest2Ref] = dest2
+				tx.Entries[input2ID] = input2
+				mux.Sources[0].Ref = &input2ID
+			},
+			err: ErrMismatchedReference,
+		},
+		{
 			desc: "invalid mux destination position",
 			f: func() {
 				mux.WitnessDestinations[0].Position = 1
