@@ -62,8 +62,28 @@ type Switch struct {
 	mtx          sync.Mutex
 }
 
-// NewSwitch creates a new Switch with the given config.
-func NewSwitch(discv discv, blacklistDB dbm.DB, l Listener, config *cfg.Config, priv crypto.PrivKeyEd25519, listenAddr string) (*Switch, error) {
+// CreateSwitch create a new Switch and set discover.
+func CreateSwitch(config *cfg.Config) (*Switch, error) {
+	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
+	privKey := crypto.GenPrivKeyEd25519()
+	var l Listener
+	var listenAddr string
+	var err error
+	var discv *discover.Network
+	if !config.VaultMode {
+		// Create listener
+		l, listenAddr = GetListener(config.P2P)
+		discv, err = discover.NewDiscover(config, &privKey, l.ExternalAddress().Port)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return newSwitch(discv, blacklistDB, l, config, privKey, listenAddr)
+}
+
+// newSwitch creates a new Switch with the given config.
+func newSwitch(discv discv, blacklistDB dbm.DB, l Listener, config *cfg.Config, priv crypto.PrivKeyEd25519, listenAddr string) (*Switch, error) {
 	sw := &Switch{
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config.P2P),

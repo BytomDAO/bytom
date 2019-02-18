@@ -73,8 +73,18 @@ type SyncManager struct {
 	minedBlockSub   *event.Subscription
 }
 
+// CreateSyncManager create sync manager and set switch.
+func CreateSyncManager(chain Chain, config *cfg.Config, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
+	sw, err := p2p.CreateSwitch(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return newSyncManager(sw, chain, config, txPool, dispatcher)
+}
+
 //NewSyncManager create a sync manager
-func NewSyncManager(sw Switch, chain Chain, config *cfg.Config, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
+func newSyncManager(sw Switch, chain Chain, config *cfg.Config, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
 	genesisHeader, err := chain.GetHeaderByHeight(0)
 	if err != nil {
 		return nil, err

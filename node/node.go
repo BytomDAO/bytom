@@ -10,7 +10,6 @@ import (
 
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 	dbm "github.com/tendermint/tmlibs/db"
 	browser "github.com/toqueteos/webbrowser"
@@ -32,7 +31,6 @@ import (
 	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
 	"github.com/bytom/p2p"
-	"github.com/bytom/p2p/discover"
 	"github.com/bytom/protocol"
 	w "github.com/bytom/wallet"
 )
@@ -117,25 +115,8 @@ func NewNode(config *cfg.Config) *Node {
 		}
 	}
 
-	var sw *p2p.Switch
 	dispatcher := event.NewDispatcher()
-	if !config.VaultMode {
-		blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-		privKey := crypto.GenPrivKeyEd25519()
-		// Create listener
-		l, listenAddr := p2p.GetListener(config.P2P)
-		discover, err := discover.NewDiscover(config, &privKey, l.ExternalAddress().Port)
-		if err != nil {
-			cmn.Exit(cmn.Fmt("Failed to create p2p discover: %v", err))
-		}
-
-		sw, err = p2p.NewSwitch(discover, blacklistDB, l, config, privKey, listenAddr)
-		if err != nil {
-			cmn.Exit(cmn.Fmt("Failed to create p2p switch: %v", err))
-		}
-	}
-
-	syncManager, err := netsync.NewSyncManager(sw, chain, config, txPool, dispatcher)
+	syncManager, err := netsync.CreateSyncManager(chain, config, txPool, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create sync manager: %v", err))
 	}
