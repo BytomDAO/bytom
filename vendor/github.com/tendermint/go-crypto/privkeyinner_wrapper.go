@@ -52,11 +52,3 @@ func init() {
 func (hi PrivKeyEd25519) Wrap() PrivKey {
 	return PrivKey{hi}
 }
-
-func init() {
-	PrivKeyMapper.RegisterImplementation(PrivKeySecp256k1{}, "secp256k1", 0x2)
-}
-
-func (hi PrivKeySecp256k1) Wrap() PrivKey {
-	return PrivKey{hi}
-}
