@@ -2,11 +2,9 @@ package crypto
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/tendermint/go-wire"
 	data "github.com/tendermint/go-wire/data"
-	. "github.com/tendermint/tmlibs/common"
 )
 
 func SignatureFromBytes(sigBytes []byte) (sig Signature, err error) {
@@ -41,8 +39,6 @@ func (sig SignatureEd25519) Bytes() []byte {
 }
 
 func (sig SignatureEd25519) IsZero() bool { return len(sig) == 0 }
-
-func (sig SignatureEd25519) String() string { return fmt.Sprintf("/%X.../", Fingerprint(sig[:])) }
 
 func (sig SignatureEd25519) Equals(other Signature) bool {
 	if otherEd, ok := other.Unwrap().(SignatureEd25519); ok {
@@ -83,8 +79,6 @@ func (sig SignatureSecp256k1) Bytes() []byte {
 }
 
 func (sig SignatureSecp256k1) IsZero() bool { return len(sig) == 0 }
-
-func (sig SignatureSecp256k1) String() string { return fmt.Sprintf("/%X.../", Fingerprint(sig[:])) }
 
 func (sig SignatureSecp256k1) Equals(other Signature) bool {
 	if otherEd, ok := other.Unwrap().(SignatureSecp256k1); ok {
