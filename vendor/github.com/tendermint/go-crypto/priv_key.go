@@ -179,33 +179,10 @@ func (privKey PrivKeySecp256k1) String() string {
 	return Fmt("PrivKeySecp256k1{*****}")
 }
 
-/*
-// Deterministically generates new priv-key bytes from key.
-func (key PrivKeySecp256k1) Generate(index int) PrivKeySecp256k1 {
-	newBytes := wire.BinarySha256(struct {
-		PrivKey [64]byte
-		Index   int
-	}{key, index})
-	var newKey [64]byte
-	copy(newKey[:], newBytes)
-	return PrivKeySecp256k1(newKey)
-}
-*/
-
 func GenPrivKeySecp256k1() PrivKeySecp256k1 {
 	privKeyBytes := [32]byte{}
 	copy(privKeyBytes[:], CRandBytes(32))
 	priv, _ := secp256k1.PrivKeyFromBytes(secp256k1.S256(), privKeyBytes[:])
-	copy(privKeyBytes[:], priv.Serialize())
-	return PrivKeySecp256k1(privKeyBytes)
-}
-
-// NOTE: secret should be the output of a KDF like bcrypt,
-// if it's derived from user input.
-func GenPrivKeySecp256k1FromSecret(secret []byte) PrivKeySecp256k1 {
-	privKey32 := Sha256(secret) // Not Ripemd160 because we want 32 bytes.
-	priv, _ := secp256k1.PrivKeyFromBytes(secp256k1.S256(), privKey32)
-	privKeyBytes := [32]byte{}
 	copy(privKeyBytes[:], priv.Serialize())
 	return PrivKeySecp256k1(privKeyBytes)
 }
