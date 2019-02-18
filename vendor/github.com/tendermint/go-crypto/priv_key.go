@@ -3,7 +3,6 @@ package crypto
 import (
 	"bytes"
 
-	secp256k1 "github.com/btcsuite/btcd/btcec"
 	"github.com/tendermint/ed25519"
 	"github.com/tendermint/ed25519/extra25519"
 	"github.com/tendermint/go-wire"
@@ -125,64 +124,4 @@ func GenPrivKeyEd25519FromSecret(secret []byte) PrivKeyEd25519 {
 	copy(privKeyBytes[:32], privKey32)
 	ed25519.MakePublicKey(privKeyBytes)
 	return PrivKeyEd25519(*privKeyBytes)
-}
-
-//-------------------------------------
-
-var _ PrivKeyInner = PrivKeySecp256k1{}
-
-// Implements PrivKey
-type PrivKeySecp256k1 [32]byte
-
-func (privKey PrivKeySecp256k1) AssertIsPrivKeyInner() {}
-
-func (privKey PrivKeySecp256k1) Bytes() []byte {
-	return wire.BinaryBytes(PrivKey{privKey})
-}
-
-func (privKey PrivKeySecp256k1) Sign(msg []byte) Signature {
-	priv__, _ := secp256k1.PrivKeyFromBytes(secp256k1.S256(), privKey[:])
-	sig__, err := priv__.Sign(Sha256(msg))
-	if err != nil {
-		PanicSanity(err)
-	}
-	return SignatureSecp256k1(sig__.Serialize()).Wrap()
-}
-
-func (privKey PrivKeySecp256k1) PubKey() PubKey {
-	_, pub__ := secp256k1.PrivKeyFromBytes(secp256k1.S256(), privKey[:])
-	var pub PubKeySecp256k1
-	copy(pub[:], pub__.SerializeCompressed())
-	return pub.Wrap()
-}
-
-func (privKey PrivKeySecp256k1) Equals(other PrivKey) bool {
-	if otherSecp, ok := other.Unwrap().(PrivKeySecp256k1); ok {
-		return bytes.Equal(privKey[:], otherSecp[:])
-	} else {
-		return false
-	}
-}
-
-func (p PrivKeySecp256k1) MarshalJSON() ([]byte, error) {
-	return data.Encoder.Marshal(p[:])
-}
-
-func (p *PrivKeySecp256k1) UnmarshalJSON(enc []byte) error {
-	var ref []byte
-	err := data.Encoder.Unmarshal(&ref, enc)
-	copy(p[:], ref)
-	return err
-}
-
-func (privKey PrivKeySecp256k1) String() string {
-	return Fmt("PrivKeySecp256k1{*****}")
-}
-
-func GenPrivKeySecp256k1() PrivKeySecp256k1 {
-	privKeyBytes := [32]byte{}
-	copy(privKeyBytes[:], CRandBytes(32))
-	priv, _ := secp256k1.PrivKeyFromBytes(secp256k1.S256(), privKeyBytes[:])
-	copy(privKeyBytes[:], priv.Serialize())
-	return PrivKeySecp256k1(privKeyBytes)
 }

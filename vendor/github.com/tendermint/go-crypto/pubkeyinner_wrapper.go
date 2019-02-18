@@ -52,11 +52,3 @@ func init() {
 func (hi PubKeyEd25519) Wrap() PubKey {
 	return PubKey{hi}
 }
-
-func init() {
-	PubKeyMapper.RegisterImplementation(PubKeySecp256k1{}, "secp256k1", 0x2)
-}
-
-func (hi PubKeySecp256k1) Wrap() PubKey {
-	return PubKey{hi}
-}
