@@ -26,6 +26,7 @@ import (
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
+	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/wallet"
 )
@@ -105,7 +106,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // API is the scheduling center for server
 type API struct {
-	sync            *netsync.SyncManager
+	sync            NetSync
 	wallet          *wallet.Wallet
 	accessTokens    *accesstoken.CredentialStore
 	chain           *protocol.Chain
@@ -168,8 +169,19 @@ func (a *API) StartServer(address string) {
 	}()
 }
 
+type NetSync interface {
+	IsListening() bool
+	IsCaughtUp() bool
+	PeerCount() int
+	GetNetwork() string
+	BestPeer() *netsync.PeerInfo
+	DialPeerWithAddress(addr *p2p.NetAddress) error
+	GetPeerInfos() []*netsync.PeerInfo
+	StopPeer(peerID string) error
+}
+
 // NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,

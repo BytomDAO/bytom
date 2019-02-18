@@ -31,12 +31,12 @@ type NetInfo struct {
 // GetNodeInfo return net information
 func (a *API) GetNodeInfo() *NetInfo {
 	info := &NetInfo{
-		Listening:    a.sync.Switch().IsListening(),
+		Listening:    a.sync.IsListening(),
 		Syncing:      !a.sync.IsCaughtUp(),
 		Mining:       a.cpuMiner.IsMining(),
-		PeerCount:    len(a.sync.Switch().Peers().List()),
+		PeerCount:    a.sync.PeerCount(),
 		CurrentBlock: a.chain.BestBlockHeight(),
-		NetWorkID:    a.sync.NodeInfo().Network,
+		NetWorkID:    a.sync.GetNetwork(),
 		Version: &VersionInfo{
 			Version: version.Version,
 			Update:  version.Status.VersionStatus(),
@@ -76,9 +76,8 @@ func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*netsync.PeerInfo,
 	}
 
 	addr := p2p.NewNetAddressIPPort(netIp, port)
-	sw := a.sync.Switch()
 
-	if err := sw.DialPeerWithAddress(addr); err != nil {
+	if err := a.sync.DialPeerWithAddress(addr); err != nil {
 		return nil, errors.Wrap(err, "can not connect to the address")
 	}
 	peer := a.getPeerInfoByAddr(addr.String())

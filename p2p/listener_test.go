@@ -9,16 +9,15 @@ import (
 
 func TestListener(t *testing.T) {
 	// Create a listener
-	l, _ := NewDefaultListener("tcp", ":8001", true)
+	l, _ := NewDefaultListener("tcp", "localhost:8001", true)
 
 	// Dial the listener
-	lAddr := l.ExternalAddress()
+	lAddr := l.InternalAddress()
 	connOut, err := lAddr.Dial()
 	if err != nil {
 		t.Fatalf("Could not connect to listener address %v", lAddr)
-	} else {
-		t.Logf("Created a connection to listener address %v", lAddr)
 	}
+
 	connIn, ok := <-l.Connections()
 	if !ok {
 		t.Fatalf("Could not get inbound connection from listener")

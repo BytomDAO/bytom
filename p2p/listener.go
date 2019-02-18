@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
 
+	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/upnp"
 )
@@ -26,6 +28,31 @@ type Listener interface {
 	ExternalAddress() *NetAddress
 	String() string
 	Stop() bool
+}
+
+// Defaults to tcp
+func protocolAndAddress(listenAddr string) (string, string) {
+	p, address := "tcp", listenAddr
+	parts := strings.SplitN(address, "://", 2)
+	if len(parts) == 2 {
+		p, address = parts[0], parts[1]
+	}
+	return p, address
+}
+
+// GetListener get listener and listen address.
+func GetListener(config *cfg.P2PConfig) (Listener, string) {
+	p, address := protocolAndAddress(config.ListenAddress)
+	l, listenerStatus := NewDefaultListener(p, address, config.SkipUPNP)
+
+	// We assume that the rpcListener has the same ExternalAddress.
+	// This is probably true because both P2P and RPC listeners use UPnP,
+	// except of course if the rpc is only bound to localhost
+	if listenerStatus {
+		return l, cmn.Fmt("%v:%v", l.ExternalAddress().IP.String(), l.ExternalAddress().Port)
+	}
+
+	return l, cmn.Fmt("%v:%v", l.InternalAddress().IP.String(), l.InternalAddress().Port)
 }
 
 //getUPNPExternalAddress UPNP external address discovery & port mapping
