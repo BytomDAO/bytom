@@ -62,8 +62,8 @@ type Switch struct {
 	mtx          sync.Mutex
 }
 
-// CreateSwitch create a new Switch and set discover.
-func CreateSwitch(config *cfg.Config) (*Switch, error) {
+// NewSwitch create a new Switch and set discover.
+func NewSwitch(config *cfg.Config) (*Switch, error) {
 	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 	privKey := crypto.GenPrivKeyEd25519()
 	var l Listener

@@ -74,8 +74,8 @@ type SyncManager struct {
 }
 
 // CreateSyncManager create sync manager and set switch.
-func CreateSyncManager(chain Chain, config *cfg.Config, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
-	sw, err := p2p.CreateSwitch(config)
+func NewSyncManager(config *cfg.Config, chain Chain, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
+	sw, err := p2p.NewSwitch(config)
 	if err != nil {
 		return nil, err
 	}
@@ -121,9 +121,21 @@ func (sm *SyncManager) BestPeer() *PeerInfo {
 	return nil
 }
 
+func (sm *SyncManager) DialPeerWithAddress(addr *p2p.NetAddress) error {
+	if sm.config.VaultMode {
+		return errVaultModeDialPeer
+	}
+
+	return sm.sw.DialPeerWithAddress(addr)
+}
+
 // GetNewTxCh return a unconfirmed transaction feed channel
 func (sm *SyncManager) GetNewTxCh() chan *types.Tx {
 	return sm.newTxCh
+}
+
+func (sm *SyncManager) GetNetwork() string {
+	return sm.config.ChainID
 }
 
 //GetPeerInfos return peer info of all peers
@@ -343,6 +355,27 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 	}
 }
 
+func (sm *SyncManager) IsListening() bool {
+	if sm.config.VaultMode {
+		return false
+	}
+	return sm.sw.IsListening()
+}
+
+func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
+	if sm.config.VaultMode {
+		return p2p.NewNodeInfo(sm.config, crypto.PubKeyEd25519{}, "")
+	}
+	return sm.sw.NodeInfo()
+}
+
+func (sm *SyncManager) PeerCount() int {
+	if sm.config.VaultMode {
+		return 0
+	}
+	return len(sm.sw.Peers().List())
+}
+
 func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg BlockchainMessage) {
 	peer := sm.peers.getPeer(basePeer.ID())
 	if peer == nil && msgType != StatusResponseByte && msgType != StatusRequestByte {
@@ -410,11 +443,9 @@ func (sm *SyncManager) processMsg(basePeer BasePeer, msgType byte, msg Blockchai
 
 func (sm *SyncManager) Start() error {
 	var err error
-	if !sm.config.VaultMode {
-		if _, err = sm.sw.Start(); err != nil {
-			log.Error("switch start err")
-			return err
-		}
+	if _, err = sm.sw.Start(); err != nil {
+		log.Error("switch start err")
+		return err
 	}
 
 	// broadcast transactions
@@ -464,37 +495,4 @@ func (sm *SyncManager) minedBroadcastLoop() {
 			return
 		}
 	}
-}
-
-func (sm *SyncManager) IsListening() bool {
-	if sm.config.VaultMode {
-		return false
-	}
-	return sm.sw.IsListening()
-}
-
-func (sm *SyncManager) PeerCount() int {
-	if sm.config.VaultMode {
-		return 0
-	}
-	return len(sm.sw.Peers().List())
-}
-
-func (sm *SyncManager) GetNetwork() string {
-	return sm.config.ChainID
-}
-
-func (sm *SyncManager) DialPeerWithAddress(addr *p2p.NetAddress) error {
-	if sm.config.VaultMode {
-		return errVaultModeDialPeer
-	}
-
-	return sm.sw.DialPeerWithAddress(addr)
-}
-
-func (sm *SyncManager) NodeInfo() *p2p.NodeInfo {
-	if sm.config.VaultMode {
-		return p2p.NewNodeInfo(sm.config, crypto.PubKeyEd25519{}, "")
-	}
-	return sm.sw.NodeInfo()
 }

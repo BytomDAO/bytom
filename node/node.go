@@ -116,7 +116,7 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	dispatcher := event.NewDispatcher()
-	syncManager, err := netsync.CreateSyncManager(chain, config, txPool, dispatcher)
+	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create sync manager: %v", err))
 	}

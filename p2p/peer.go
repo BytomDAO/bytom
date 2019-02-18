@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/btcsuite/go-socks/socks"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
@@ -13,7 +14,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/flowrate"
 
-	"github.com/btcsuite/go-socks/socks"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p/connection"
