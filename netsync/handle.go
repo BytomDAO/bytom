@@ -80,11 +80,11 @@ func CreateSyncManager(chain Chain, config *cfg.Config, txPool *core.TxPool, dis
 		return nil, err
 	}
 
-	return newSyncManager(sw, chain, config, txPool, dispatcher)
+	return newSyncManager(config, sw, chain, txPool, dispatcher)
 }
 
 //NewSyncManager create a sync manager
-func newSyncManager(sw Switch, chain Chain, config *cfg.Config, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
+func newSyncManager(config *cfg.Config, sw Switch, chain Chain, txPool *core.TxPool, dispatcher *event.Dispatcher) (*SyncManager, error) {
 	genesisHeader, err := chain.GetHeaderByHeight(0)
 	if err != nil {
 		return nil, err
