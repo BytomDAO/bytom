@@ -30,14 +30,12 @@ func BytesToHash(b []byte) Hash {
 
 func StringToHash(s string) Hash { return BytesToHash([]byte(s)) }
 func BigToHash(b *big.Int) Hash  { return BytesToHash(b.Bytes()) }
-func HexToHash(s string) Hash    { return BytesToHash(FromHex(s)) }
 
 // Don't use the default 'String' method in case we want to overwrite
 
 // Get the string representation of the underlying hash
 func (h Hash) Str() string   { return string(h[:]) }
 func (h Hash) Bytes() []byte { return h[:] }
-func (h Hash) Big() *big.Int { return Bytes2Big(h[:]) }
 func (h Hash) Hex() string   { return "0x" + Bytes2Hex(h[:]) }
 
 // UnmarshalJSON parses a hash in its hex from to a hash.
@@ -72,9 +70,6 @@ func (h *Hash) SetBytes(b []byte) {
 
 	copy(h[HashLength-len(b):], b)
 }
-
-// Set string `s` to h. If s is larger than len(h) it will panic
-func (h *Hash) SetString(s string) { h.SetBytes([]byte(s)) }
 
 // Sets h to other
 func (h *Hash) Set(other Hash) {
