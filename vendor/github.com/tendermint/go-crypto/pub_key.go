@@ -4,7 +4,6 @@ import (
 	"bytes"
 
 	"github.com/tendermint/ed25519"
-	"github.com/tendermint/ed25519/extra25519"
 	"github.com/tendermint/go-wire"
 	data "github.com/tendermint/go-wire/data"
 	. "github.com/tendermint/tmlibs/common"
@@ -57,17 +56,6 @@ func (p *PubKeyEd25519) UnmarshalJSON(enc []byte) error {
 	err := data.Encoder.Unmarshal(&ref, enc)
 	copy(p[:], ref)
 	return err
-}
-
-// For use with golang/crypto/nacl/box
-// If error, returns nil.
-func (pubKey PubKeyEd25519) ToCurve25519() *[32]byte {
-	keyCurve25519, pubKeyBytes := new([32]byte), [32]byte(pubKey)
-	ok := extra25519.PublicKeyToCurve25519(keyCurve25519, &pubKeyBytes)
-	if !ok {
-		return nil
-	}
-	return keyCurve25519
 }
 
 func (pubKey PubKeyEd25519) String() string {

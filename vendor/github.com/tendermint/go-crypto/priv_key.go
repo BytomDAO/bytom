@@ -4,7 +4,6 @@ import (
 	"bytes"
 
 	"github.com/tendermint/ed25519"
-	"github.com/tendermint/ed25519/extra25519"
 	"github.com/tendermint/go-wire"
 	data "github.com/tendermint/go-wire/data"
 	. "github.com/tendermint/tmlibs/common"
@@ -35,7 +34,6 @@ type validatable interface {
 // You probably want to use PrivKey
 // +gen wrapper:"PrivKey,Impl[PrivKeyEd25519,PrivKeySecp256k1],ed25519,secp256k1"
 type PrivKeyInner interface {
-	AssertIsPrivKeyInner()
 	Bytes() []byte
 	Sign(msg []byte) Signature
 	PubKey() PubKey
@@ -49,8 +47,6 @@ var _ PrivKeyInner = PrivKeyEd25519{}
 
 // Implements PrivKey
 type PrivKeyEd25519 [64]byte
-
-func (privKey PrivKeyEd25519) AssertIsPrivKeyInner() {}
 
 func (privKey PrivKeyEd25519) Bytes() []byte {
 	return wire.BinaryBytes(PrivKey{privKey})
@@ -87,13 +83,6 @@ func (p *PrivKeyEd25519) UnmarshalJSON(enc []byte) error {
 	return err
 }
 
-func (privKey PrivKeyEd25519) ToCurve25519() *[32]byte {
-	keyCurve25519 := new([32]byte)
-	privKeyBytes := [64]byte(privKey)
-	extra25519.PrivateKeyToCurve25519(keyCurve25519, &privKeyBytes)
-	return keyCurve25519
-}
-
 func (privKey PrivKeyEd25519) String() string {
 	return Fmt("PrivKeyEd25519{*****}")
 }
@@ -112,16 +101,6 @@ func (privKey PrivKeyEd25519) Generate(index int) PrivKeyEd25519 {
 func GenPrivKeyEd25519() PrivKeyEd25519 {
 	privKeyBytes := new([64]byte)
 	copy(privKeyBytes[:32], CRandBytes(32))
-	ed25519.MakePublicKey(privKeyBytes)
-	return PrivKeyEd25519(*privKeyBytes)
-}
-
-// NOTE: secret should be the output of a KDF like bcrypt,
-// if it's derived from user input.
-func GenPrivKeyEd25519FromSecret(secret []byte) PrivKeyEd25519 {
-	privKey32 := Sha256(secret) // Not Ripemd160 because we want 32 bytes.
-	privKeyBytes := new([64]byte)
-	copy(privKeyBytes[:32], privKey32)
 	ed25519.MakePublicKey(privKeyBytes)
 	return PrivKeyEd25519(*privKeyBytes)
 }

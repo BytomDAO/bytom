@@ -52,11 +52,3 @@ func init() {
 func (hi SignatureEd25519) Wrap() Signature {
 	return Signature{hi}
 }
-
-func init() {
-	SignatureMapper.RegisterImplementation(SignatureSecp256k1{}, "secp256k1", 0x2)
-}
-
-func (hi SignatureSecp256k1) Wrap() Signature {
-	return Signature{hi}
-}
