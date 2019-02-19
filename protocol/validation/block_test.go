@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/testutil"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 func TestCheckBlockTime(t *testing.T) {
@@ -185,6 +186,87 @@ func TestValidateBlockHeader(t *testing.T) {
 	for i, c := range cases {
 		if err := ValidateBlockHeader(c.block, c.parent); rootErr(err) != c.err {
 			t.Errorf("case %d got error %s, want %s", i, err, c.err)
+		}
+	}
+}
+
+func TestValidateMerkleRoot(t *testing.T) {
+	// add (hash, seed) --> (tensority hash) to the  tensority cache for avoid
+	// real matrix calculate cost.
+	tensority.AIHash.AddCache(&bc.Hash{V0: 0}, &bc.Hash{}, testutil.MaxHash)
+	tensority.AIHash.AddCache(&bc.Hash{V0: 1}, &bc.Hash{}, testutil.MinHash)
+	tensority.AIHash.AddCache(&bc.Hash{V0: 1}, consensus.InitialSeed, testutil.MinHash)
+
+	cp, _ := vmutil.DefaultCoinbaseProgram()
+	cases := []struct {
+		desc   string
+		block  *bc.Block
+		parent *state.BlockNode
+		err    error
+	}{
+		{
+			desc: "The calculated transaction merkel root hash is not equals to the hash of the block header",
+			block: &bc.Block{
+				ID: bc.Hash{V0: 1},
+				BlockHeader: &bc.BlockHeader{
+					Height:          1,
+					Timestamp:       1523352601,
+					PreviousBlockId: &bc.Hash{V0: 0},
+					Bits:            2305843009214532812,
+					TransactionsRoot: &bc.Hash{V0: 1},
+				},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
+						Outputs: []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
+					}),
+				},
+			},
+			parent: &state.BlockNode{
+				Height:    0,
+				Timestamp: 1523352600,
+				Hash:      bc.Hash{V0: 0},
+				Seed:      &bc.Hash{V1: 1},
+				Bits:      2305843009214532812,
+			},
+			err: errMismatchedMerkleRoot,
+		},
+		{
+			desc: "The calculated transaction status merkel root hash is not equals to the hash of the block header",
+			block: &bc.Block{
+				ID: bc.Hash{V0: 1},
+				BlockHeader: &bc.BlockHeader{
+					Height:          1,
+					Timestamp:       1523352601,
+					PreviousBlockId: &bc.Hash{V0: 0},
+					Bits:            2305843009214532812,
+					TransactionsRoot: &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},
+					TransactionStatusHash: &bc.Hash{V0: 1},
+				},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						SerializedSize: 1,
+						Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
+						Outputs: []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
+					}),
+				},
+			},
+			parent: &state.BlockNode{
+				Height:    0,
+				Timestamp: 1523352600,
+				Hash:      bc.Hash{V0: 0},
+				Seed:      &bc.Hash{V1: 1},
+				Bits:      2305843009214532812,
+			},
+			err: errMismatchedMerkleRoot,
+		},
+	}
+
+	for i, c := range cases {
+		err := ValidateBlock(c.block, c.parent)
+		if rootErr(err) != c.err {
+			t.Errorf("case #%d (%s) got error %s, want %s", i, c.desc, err, c.err)
 		}
 	}
 }
