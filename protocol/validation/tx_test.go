@@ -107,6 +107,78 @@ func TestGasStatus(t *testing.T) {
 			},
 			err: nil,
 		},
+		{
+			input: &GasState{
+				GasLeft:    1000,
+				GasUsed:    10,
+				StorageGas: 1000,
+				GasValid:   false,
+			},
+			output: &GasState{
+				GasLeft:    0,
+				GasUsed:    1010,
+				StorageGas: 1000,
+				GasValid:   true,
+			},
+			f: func(input *GasState) error {
+				return input.setGasValid()
+			},
+			err: nil,
+		},
+		{
+			input: &GasState{
+				GasLeft:    900,
+				GasUsed:    10,
+				StorageGas: 1000,
+				GasValid:   false,
+			},
+			output: &GasState{
+				GasLeft:    -100,
+				GasUsed:    10,
+				StorageGas: 1000,
+				GasValid:   false,
+			},
+			f: func(input *GasState) error {
+				return input.setGasValid()
+			},
+			err: ErrGasCalculate,
+		},
+		{
+			input: &GasState{
+				GasLeft:    1000,
+				GasUsed:    math.MaxInt64,
+				StorageGas: 1000,
+				GasValid:   false,
+			},
+			output: &GasState{
+				GasLeft:    0,
+				GasUsed:    0,
+				StorageGas: 1000,
+				GasValid:   false,
+			},
+			f: func(input *GasState) error {
+				return input.setGasValid()
+			},
+			err: ErrGasCalculate,
+		},
+		{
+			input: &GasState{
+				GasLeft:    math.MinInt64,
+				GasUsed:    0,
+				StorageGas: 1000,
+				GasValid:   false,
+			},
+			output: &GasState{
+				GasLeft:    0,
+				GasUsed:    0,
+				StorageGas: 1000,
+				GasValid:   false,
+			},
+			f: func(input *GasState) error {
+				return input.setGasValid()
+			},
+			err: ErrGasCalculate,
+		},
 	}
 
 	for i, c := range cases {
@@ -320,6 +392,13 @@ func TestTxValidation(t *testing.T) {
 			err: ErrMismatchedPosition,
 		},
 		{
+			desc: "mismatched input dest / mux source position",
+			f: func() {
+				mux.Sources[0].Position = 1
+			},
+			err: ErrMismatchedPosition,
+		},
+		{
 			desc: "mismatched output source and mux dest",
 			f: func() {
 				// For this test, it's necessary to construct a mostly
@@ -332,6 +411,21 @@ func TestTxValidation(t *testing.T) {
 				out2 := tx2.Entries[*out2ID].(*bc.Output)
 				tx.Entries[*out2ID] = out2
 				mux.WitnessDestinations[0].Ref = out2ID
+			},
+			err: ErrMismatchedReference,
+		},
+		{
+			desc: "mismatched input dest and mux source",
+			f: func() {
+				fixture2 := sample(t, fixture)
+				tx2 := types.NewTx(*fixture2.tx).Tx
+				input2ID := tx2.InputIDs[2]
+				input2 := tx2.Entries[input2ID].(*bc.Spend)
+				dest2Ref := input2.WitnessDestination.Ref
+				dest2 := tx2.Entries[*dest2Ref].(*bc.Mux)
+				tx.Entries[*dest2Ref] = dest2
+				tx.Entries[input2ID] = input2
+				mux.Sources[0].Ref = &input2ID
 			},
 			err: ErrMismatchedReference,
 		},
@@ -802,6 +896,53 @@ func TestTimeRange(t *testing.T) {
 		tx.TimeRange = c.timeRange
 		if _, err := ValidateTx(tx, block); (err != nil) != c.err {
 			t.Errorf("#%d got error %t, want %t", i, !c.err, c.err)
+		}
+	}
+}
+
+func TestStandardTx(t *testing.T) {
+	fixture := sample(t, nil)
+	tx := types.NewTx(*fixture.tx).Tx
+	
+	cases := []struct {
+		desc string
+		f    func()
+		err  error
+	}{
+		{
+			desc: "normal standard tx",
+			err:  nil,
+		},
+		{
+			desc: "not standard tx in spend input",
+			f: func() {
+				inputID := tx.GasInputIDs[0]
+				spend := tx.Entries[inputID].(*bc.Spend)
+				spentOutput, err := tx.Output(*spend.SpentOutputId)
+				if err != nil {
+					t.Fatal(err)
+				}
+				spentOutput.ControlProgram = &bc.Program{Code: []byte{0}}
+			},
+			err: ErrNotStandardTx,
+		},
+		{
+			desc: "not standard tx in output",
+			f: func() {
+				outputID := tx.ResultIds[0]
+				output := tx.Entries[*outputID].(*bc.Output)
+				output.ControlProgram = &bc.Program{Code: []byte{0}}
+			},
+			err: ErrNotStandardTx,
+		},
+	}
+
+	for i, c := range cases {
+		if c.f != nil {
+			c.f()
+		}
+		if err := checkStandardTx(tx, 0); err != c.err {
+			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
 		}
 	}
 }
