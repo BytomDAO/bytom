@@ -39,19 +39,4 @@ func ReadByteSlice(r io.Reader, lmt int, n *int, err *error) []byte {
 	buf := make([]byte, length)
 	ReadFull(buf, r, n, err)
 	return buf
-
-}
-
-func PutByteSlice(buf []byte, bz []byte) (n int, err error) {
-	n_, err := PutVarint(buf, len(bz))
-	if err != nil {
-		return 0, err
-	}
-	buf = buf[n_:]
-	n += n_
-	if len(buf) < len(bz) {
-		return 0, ErrBinaryWriteOverflow
-	}
-	copy(buf, bz)
-	return n + len(bz), nil
 }

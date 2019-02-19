@@ -39,10 +39,6 @@ func (h PubKey) Unwrap() PubKeyInner {
 	return hi
 }
 
-func (h PubKey) Empty() bool {
-	return h.PubKeyInner == nil
-}
-
 /*** below are bindings for each implementation ***/
 
 func init() {
