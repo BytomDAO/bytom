@@ -115,6 +115,22 @@ func TestValidateTx(t *testing.T) {
 			gasValid: true, // TODO It's a bug, need hard fork solution
 			err: vm.ErrRunLimitExceeded,
 		},
+		{
+			desc: "input using the same utxo",
+			txData: &types.TxData{
+				Version:        1,
+				SerializedSize: 1,
+				Inputs: []*types.TxInput{
+					types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+					types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+				},
+				Outputs: []*types.TxOutput{
+					types.NewTxOutput(*consensus.BTMAssetID, 180000000, cp),
+				},
+			},
+			gasValid: true,
+			err: ErrMismatchedPosition,
+		},
 	}
 
 	for i, c := range cases {
