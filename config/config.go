@@ -59,12 +59,12 @@ func (cfg *Config) NodeKey() (string, error) {
 		return cfg.P2P.PrivateKey, nil
 	}
 
-	keyFile := cfg.NodeKeyFile()
+	keyFile := rootify(cfg.P2P.NodeKeyFile, cfg.BaseConfig.RootDir)
 	buf := make([]byte, len(crypto.PrivKeyEd25519{})*2)
 	fd, err := os.Open(keyFile)
 	defer fd.Close()
 	if err == nil {
-		if _, err := io.ReadFull(fd, buf); err == nil {
+		if _, err = io.ReadFull(fd, buf); err == nil {
 			return string(buf), nil
 		}
 	}
@@ -111,9 +111,6 @@ type BaseConfig struct {
 
 	// log file name
 	LogFile string `mapstructure:"log_file"`
-
-	// node key file directory
-	nodeKeyFile string `mapstructure:"node_key_file"`
 }
 
 // Default configurable base parameters.
@@ -124,7 +121,6 @@ func DefaultBaseConfig() BaseConfig {
 		DBBackend:         "leveldb",
 		DBPath:            "data",
 		KeysPath:          "keystore",
-		nodeKeyFile:       "nodekey",
 	}
 }
 
@@ -136,15 +132,12 @@ func (b BaseConfig) KeysDir() string {
 	return rootify(b.KeysPath, b.RootDir)
 }
 
-func (b BaseConfig) NodeKeyFile() string {
-	return rootify(b.nodeKeyFile, b.RootDir)
-}
-
 // P2PConfig
 type P2PConfig struct {
 	ListenAddress    string `mapstructure:"laddr"`
 	Seeds            string `mapstructure:"seeds"`
 	PrivateKey       string `mapstructure:"node_key"`
+	NodeKeyFile      string `mapstructure:"node_key_file"`
 	SkipUPNP         bool   `mapstructure:"skip_upnp"`
 	MaxNumPeers      int    `mapstructure:"max_num_peers"`
 	HandshakeTimeout int    `mapstructure:"handshake_timeout"`
@@ -158,6 +151,7 @@ type P2PConfig struct {
 func DefaultP2PConfig() *P2PConfig {
 	return &P2PConfig{
 		ListenAddress:    "tcp://0.0.0.0:46656",
+		NodeKeyFile:      "nodekey",
 		SkipUPNP:         false,
 		MaxNumPeers:      50,
 		HandshakeTimeout: 30,
