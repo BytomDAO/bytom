@@ -12,7 +12,6 @@ package ed25519
 import (
 	"crypto/sha512"
 	"crypto/subtle"
-	"io"
 
 	"github.com/tendermint/ed25519/edwards25519"
 )
@@ -22,18 +21,6 @@ const (
 	PrivateKeySize = 64
 	SignatureSize  = 64
 )
-
-// GenerateKey generates a public/private key pair using randomness from rand.
-func GenerateKey(rand io.Reader) (publicKey *[PublicKeySize]byte, privateKey *[PrivateKeySize]byte, err error) {
-	privateKey = new([64]byte)
-	_, err = io.ReadFull(rand, privateKey[:32])
-	if err != nil {
-		return nil, nil, err
-	}
-
-	publicKey = MakePublicKey(privateKey)
-	return
-}
 
 // MakePublicKey makes a publicKey from the first half of privateKey.
 func MakePublicKey(privateKey *[PrivateKeySize]byte) (publicKey *[PublicKeySize]byte) {

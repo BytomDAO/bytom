@@ -34,7 +34,6 @@ type validatable interface {
 // You probably want to use PrivKey
 // +gen wrapper:"PrivKey,Impl[PrivKeyEd25519,PrivKeySecp256k1],ed25519,secp256k1"
 type PrivKeyInner interface {
-	Bytes() []byte
 	Sign(msg []byte) Signature
 	PubKey() PubKey
 	Equals(PrivKey) bool
@@ -47,10 +46,6 @@ var _ PrivKeyInner = PrivKeyEd25519{}
 
 // Implements PrivKey
 type PrivKeyEd25519 [64]byte
-
-func (privKey PrivKeyEd25519) Bytes() []byte {
-	return wire.BinaryBytes(PrivKey{privKey})
-}
 
 func (privKey PrivKeyEd25519) Sign(msg []byte) Signature {
 	privKeyBytes := [64]byte(privKey)
@@ -85,17 +80,6 @@ func (p *PrivKeyEd25519) UnmarshalJSON(enc []byte) error {
 
 func (privKey PrivKeyEd25519) String() string {
 	return Fmt("PrivKeyEd25519{*****}")
-}
-
-// Deterministically generates new priv-key bytes from key.
-func (privKey PrivKeyEd25519) Generate(index int) PrivKeyEd25519 {
-	newBytes := wire.BinarySha256(struct {
-		PrivKey [64]byte
-		Index   int
-	}{privKey, index})
-	var newKey [64]byte
-	copy(newKey[:], newBytes)
-	return PrivKeyEd25519(newKey)
 }
 
 func GenPrivKeyEd25519() PrivKeyEd25519 {
