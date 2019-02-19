@@ -145,7 +145,7 @@ func TestFiltersOutItself(t *testing.T) {
 	}
 
 	//S1 dialing itself ip address
-	addr, err := NewNetAddressString(s1.NodeInfo().ListenAddr)
+	addr, err := NewNetAddressString("127.0.0.1:46656")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +203,7 @@ func TestDuplicatePeer(t *testing.T) {
 	}
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
-	addr, err := NewNetAddressString(s1.NodeInfo().ListenAddr)
+	addr, err := NewNetAddressString("127.0.0.1:46656")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,7 +239,7 @@ func TestAddInboundPeer(t *testing.T) {
 	defer s1.Stop()
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
-	addr, err := NewNetAddressString(s1.NodeInfo().ListenAddr)
+	addr, err := NewNetAddressString("127.0.0.1:46656")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,7 +280,7 @@ func TestStopPeer(t *testing.T) {
 	defer s1.Stop()
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
-	addr, err := NewNetAddressString(s1.NodeInfo().ListenAddr)
+	addr, err := NewNetAddressString("127.0.0.1:46656")
 	if err != nil {
 		t.Fatal(err)
 	}
