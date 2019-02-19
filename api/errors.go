@@ -70,6 +70,7 @@ var respErrFormatter = map[error]httperror.Info{
 	txbuilder.ErrBadContractArgType: {400, "BTM711", "Invalid contract argument type"},
 	txbuilder.ErrOrphanTx:           {400, "BTM712", "Not found transaction input utxo"},
 	txbuilder.ErrExtTxFee:           {400, "BTM713", "Transaction fee exceed max limit"},
+	txbuilder.ErrNoGasInput:         {400, "BTM714", "Transaction has no gas input"},
 
 	// Submit transaction error namespace (73x ~ 79x)
 	// Validation error (73x ~ 75x)
