@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 
@@ -31,19 +30,17 @@ import (
 	"github.com/bytom/mining/tensority"
 	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
+	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	w "github.com/bytom/wallet"
 )
 
-const (
-	webHost           = "http://127.0.0.1"
-	maxNewBlockChSize = 1024
-)
+const webHost = "http://127.0.0.1"
 
+// Node represent bytom node
 type Node struct {
 	cmn.BaseService
 
-	// config
 	config          *cfg.Config
 	eventDispatcher *event.Dispatcher
 	syncManager     *netsync.SyncManager
@@ -59,6 +56,7 @@ type Node struct {
 	miningEnable    bool
 }
 
+// NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 	if err := lockDataDirectory(config); err != nil {
@@ -84,10 +82,10 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
 
-	var accounts *account.Manager = nil
-	var assets *asset.Registry = nil
-	var wallet *w.Wallet = nil
-	var txFeed *txfeed.Tracker = nil
+	var accounts *account.Manager
+	var assets *asset.Registry
+	var wallet *w.Wallet
+	var txFeed *txfeed.Tracker
 
 	txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
 	txFeed = txfeed.NewTracker(txFeedDB, chain)
@@ -116,10 +114,11 @@ func NewNode(config *cfg.Config) *Node {
 			wallet.RescanBlocks()
 		}
 	}
+
 	dispatcher := event.NewDispatcher()
 	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher)
 	if err != nil {
-		cmn.Exit(cmn.Fmt("create sync manager failed: %v", err))
+		cmn.Exit(cmn.Fmt("Failed to create sync manager: %v", err))
 	}
 
 	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
@@ -233,7 +232,7 @@ func launchWebBrowser(port string) {
 	}
 }
 
-func (n *Node) initAndstartApiServer() {
+func (n *Node) initAndstartAPIServer() {
 	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
@@ -251,9 +250,12 @@ func (n *Node) OnStart() error {
 		}
 	}
 	if !n.config.VaultMode {
-		n.syncManager.Start()
+		if err := n.syncManager.Start(); err != nil {
+			return err
+		}
 	}
-	n.initAndstartApiServer()
+
+	n.initAndstartAPIServer()
 	n.notificationMgr.Start()
 	if !n.config.Web.Closed {
 		_, port, err := net.SplitHostPort(n.config.ApiAddress)
@@ -286,8 +288,8 @@ func (n *Node) RunForever() {
 	})
 }
 
-func (n *Node) SyncManager() *netsync.SyncManager {
-	return n.syncManager
+func (n *Node) NodeInfo() *p2p.NodeInfo {
+	return n.syncManager.NodeInfo()
 }
 
 func (n *Node) MiningPool() *miningpool.MiningPool {

@@ -3,9 +3,13 @@ package discover
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
+	"path"
+	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -13,10 +17,15 @@ import (
 	"github.com/tendermint/go-wire"
 
 	"github.com/bytom/common"
+	cfg "github.com/bytom/config"
 	"github.com/bytom/p2p/netutil"
+	"github.com/bytom/version"
 )
 
-const Version = 4
+const (
+	Version   = 4
+	logModule = "discover"
+)
 
 // Errors
 var (
@@ -28,6 +37,8 @@ var (
 	errTimeout          = errors.New("RPC timeout")
 	errClockWarp        = errors.New("reply deadline too far in the future")
 	errClosed           = errors.New("socket closed")
+	errInvalidSeedIP    = errors.New("seed ip is invalid")
+	errInvalidSeedPort  = errors.New("seed port is invalid")
 )
 
 // Timeouts
@@ -238,13 +249,76 @@ type conn interface {
 	LocalAddr() net.Addr
 }
 
+type netWork interface {
+	reqReadPacket(pkt ingressPacket)
+	selfIP() net.IP
+}
+
 // udp implements the RPC protocol.
 type udp struct {
 	conn        conn
 	priv        *crypto.PrivKeyEd25519
 	ourEndpoint rpcEndpoint
 	//nat         nat.Interface
-	net *Network
+	net netWork
+}
+
+func NewDiscover(config *cfg.Config, priv *crypto.PrivKeyEd25519, port uint16) (*Network, error) {
+	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
+	if err != nil {
+		return nil, err
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	realaddr := conn.LocalAddr().(*net.UDPAddr)
+	ntab, err := ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover.db"), nil)
+	if err != nil {
+		return nil, err
+	}
+	seeds, err := QueryDNSSeeds(net.LookupHost)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on query dns seeds")
+	}
+
+	if config.P2P.Seeds != "" {
+		codedSeeds := strings.Split(config.P2P.Seeds, ",")
+		for _, codedSeed := range codedSeeds {
+			ip, port, err := net.SplitHostPort(codedSeed)
+			if err != nil {
+				return nil, err
+			}
+
+			if validIP := net.ParseIP(ip); validIP == nil {
+				return nil, errInvalidSeedIP
+			}
+
+			if _, err := strconv.ParseUint(port, 10, 16); err != nil {
+				return nil, errInvalidSeedPort
+			}
+
+			seeds = append(seeds, codedSeed)
+		}
+	}
+
+	if len(seeds) == 0 {
+		return ntab, nil
+	}
+
+	var nodes []*Node
+	for _, seed := range seeds {
+		version.Status.AddSeed(seed)
+		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
+		nodes = append(nodes, MustParseNode(url))
+	}
+
+	if err = ntab.SetFallbackNodes(nodes); err != nil {
+		return nil, err
+	}
+	return ntab, nil
 }
 
 // ListenUDP returns a new table that listens for UDP packets on laddr.
@@ -330,7 +404,7 @@ func (t *udp) sendTopicNodes(remote *Node, queryHash common.Hash, nodes []*Node)
 	p := topicNodes{Echo: queryHash}
 	var sent bool
 	for _, result := range nodes {
-		if result.IP.Equal(t.net.tab.self.IP) || netutil.CheckRelayIP(remote.IP, result.IP) == nil {
+		if result.IP.Equal(t.net.selfIP()) || netutil.CheckRelayIP(remote.IP, result.IP) == nil {
 			p.Nodes = append(p.Nodes, nodeToRPC(result))
 		}
 		if len(p.Nodes) == maxTopicNodes {

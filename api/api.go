@@ -26,6 +26,7 @@ import (
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
+	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	"github.com/bytom/wallet"
 )
@@ -105,7 +106,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // API is the scheduling center for server
 type API struct {
-	sync            *netsync.SyncManager
+	sync            NetSync
 	wallet          *wallet.Wallet
 	accessTokens    *accesstoken.CredentialStore
 	chain           *protocol.Chain
@@ -168,8 +169,19 @@ func (a *API) StartServer(address string) {
 	}()
 }
 
+type NetSync interface {
+	IsListening() bool
+	IsCaughtUp() bool
+	PeerCount() int
+	GetNetwork() string
+	BestPeer() *netsync.PeerInfo
+	DialPeerWithAddress(addr *p2p.NetAddress) error
+	GetPeerInfos() []*netsync.PeerInfo
+	StopPeer(peerID string) error
+}
+
 // NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,
@@ -198,7 +210,6 @@ func (a *API) buildHandler() {
 	m := http.NewServeMux()
 	if a.wallet != nil {
 		walletEnable = true
-
 		m.Handle("/create-account", jsonHandler(a.createAccount))
 		m.Handle("/update-account-alias", jsonHandler(a.updateAccountAlias))
 		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
@@ -303,10 +314,9 @@ func (a *API) buildHandler() {
 
 	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
 
-	handler := latencyHandler(m, walletEnable)
+	handler := walletHandler(m, walletEnable)
 	handler = webAssetsHandler(handler)
 	handler = gzip.Handler{Handler: handler}
-
 	a.handler = handler
 }
 
@@ -367,14 +377,8 @@ func RedirectHandler(next http.Handler) http.Handler {
 	})
 }
 
-// latencyHandler take latency for the request url path, and redirect url path to wait-disable when wallet is closed
-func latencyHandler(m *http.ServeMux, walletEnable bool) http.Handler {
+func walletHandler(m *http.ServeMux, walletEnable bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		// latency for the request url path
-		if l := latency(m, req); l != nil {
-			defer l.RecordSince(time.Now())
-		}
-
 		// when the wallet is not been opened and the url path is not been found, modify url path to error,
 		// and redirect handler to error
 		if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {

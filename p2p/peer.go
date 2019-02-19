@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/btcsuite/go-socks/socks"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	crypto "github.com/tendermint/go-crypto"
@@ -16,7 +17,6 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p/connection"
-	"github.com/btcsuite/go-socks/socks"
 )
 
 // peerConn contains the raw connection and its config.

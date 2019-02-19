@@ -3,10 +3,10 @@ package p2p
 import (
 	"fmt"
 	"net"
-	"strconv"
 
-	crypto "github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-crypto"
 
+	cfg "github.com/bytom/config"
 	"github.com/bytom/version"
 )
 
@@ -21,6 +21,16 @@ type NodeInfo struct {
 	ListenAddr string               `json:"listen_addr"`
 	Version    string               `json:"version"` // major.minor.revision
 	Other      []string             `json:"other"`   // other application specific data
+}
+
+func NewNodeInfo(config *cfg.Config, pubkey crypto.PubKeyEd25519, listenAddr string) *NodeInfo {
+	return &NodeInfo{
+		PubKey:     pubkey,
+		Moniker:    config.Moniker,
+		Network:    config.ChainID,
+		ListenAddr: listenAddr,
+		Version:    version.Version,
+	}
 }
 
 // CompatibleWith checks if two NodeInfo are compatible with eachother.
@@ -40,26 +50,25 @@ func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
 	return nil
 }
 
+func (info *NodeInfo) getPubkey() crypto.PubKeyEd25519 {
+	return info.PubKey
+}
+
 //ListenHost peer listener ip address
-func (info *NodeInfo) ListenHost() string {
+func (info *NodeInfo) listenHost() string {
 	host, _, _ := net.SplitHostPort(info.ListenAddr)
 	return host
 }
 
-//ListenPort peer listener port
-func (info *NodeInfo) ListenPort() int {
-	_, port, _ := net.SplitHostPort(info.ListenAddr)
-	portInt, err := strconv.Atoi(port)
-	if err != nil {
-		return -1
-	}
-	return portInt
-}
-
 //RemoteAddrHost peer external ip address
-func (info *NodeInfo) RemoteAddrHost() string {
+func (info *NodeInfo) remoteAddrHost() string {
 	host, _, _ := net.SplitHostPort(info.RemoteAddr)
 	return host
+}
+
+//GetNetwork get node info network field
+func (info *NodeInfo) GetNetwork() string {
+	return info.Network
 }
 
 //String representation
