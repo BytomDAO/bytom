@@ -1,8 +1,6 @@
 package crypto
 
 import (
-	"bytes"
-
 	"github.com/tendermint/go-wire"
 	data "github.com/tendermint/go-wire/data"
 )
@@ -19,8 +17,6 @@ func SignatureFromBytes(sigBytes []byte) (sig Signature, err error) {
 // +gen wrapper:"Signature,Impl[SignatureEd25519,SignatureSecp256k1],ed25519,secp256k1"
 type SignatureInner interface {
 	Bytes() []byte
-	IsZero() bool
-	Equals(Signature) bool
 	Wrap() Signature
 }
 
@@ -35,16 +31,6 @@ func (sig SignatureEd25519) Bytes() []byte {
 	return wire.BinaryBytes(Signature{sig})
 }
 
-func (sig SignatureEd25519) IsZero() bool { return len(sig) == 0 }
-
-func (sig SignatureEd25519) Equals(other Signature) bool {
-	if otherEd, ok := other.Unwrap().(SignatureEd25519); ok {
-		return bytes.Equal(sig[:], otherEd[:])
-	} else {
-		return false
-	}
-}
-
 func (sig SignatureEd25519) MarshalJSON() ([]byte, error) {
 	return data.Encoder.Marshal(sig[:])
 }
@@ -54,10 +40,4 @@ func (sig *SignatureEd25519) UnmarshalJSON(enc []byte) error {
 	err := data.Encoder.Unmarshal(&ref, enc)
 	copy(sig[:], ref)
 	return err
-}
-
-func SignatureEd25519FromBytes(data []byte) Signature {
-	var sig SignatureEd25519
-	copy(sig[:], data)
-	return sig.Wrap()
 }

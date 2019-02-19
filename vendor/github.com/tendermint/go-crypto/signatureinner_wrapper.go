@@ -39,10 +39,6 @@ func (h Signature) Unwrap() SignatureInner {
 	return hi
 }
 
-func (h Signature) Empty() bool {
-	return h.SignatureInner == nil
-}
-
 /*** below are bindings for each implementation ***/
 
 func init() {

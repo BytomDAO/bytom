@@ -39,10 +39,6 @@ func (h PrivKey) Unwrap() PrivKeyInner {
 	return hi
 }
 
-func (h PrivKey) Empty() bool {
-	return h.PrivKeyInner == nil
-}
-
 /*** below are bindings for each implementation ***/
 
 func init() {

@@ -1,8 +1,6 @@
 package crypto
 
 import (
-	"bytes"
-
 	"github.com/tendermint/ed25519"
 	"github.com/tendermint/go-wire"
 	data "github.com/tendermint/go-wire/data"
@@ -36,7 +34,6 @@ type validatable interface {
 type PrivKeyInner interface {
 	Sign(msg []byte) Signature
 	PubKey() PubKey
-	Equals(PrivKey) bool
 	Wrap() PrivKey
 }
 
@@ -57,14 +54,6 @@ func (privKey PrivKeyEd25519) PubKey() PubKey {
 	privKeyBytes := [64]byte(privKey)
 	pubBytes := *ed25519.MakePublicKey(&privKeyBytes)
 	return PubKeyEd25519(pubBytes).Wrap()
-}
-
-func (privKey PrivKeyEd25519) Equals(other PrivKey) bool {
-	if otherEd, ok := other.Unwrap().(PrivKeyEd25519); ok {
-		return bytes.Equal(privKey[:], otherEd[:])
-	} else {
-		return false
-	}
 }
 
 func (p PrivKeyEd25519) MarshalJSON() ([]byte, error) {
