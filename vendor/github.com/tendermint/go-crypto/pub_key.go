@@ -4,7 +4,6 @@ import (
 	"bytes"
 
 	"github.com/tendermint/ed25519"
-	"github.com/tendermint/go-wire"
 	data "github.com/tendermint/go-wire/data"
 	. "github.com/tendermint/tmlibs/common"
 )
@@ -15,8 +14,6 @@ import (
 // You probably want to use PubKey
 // +gen wrapper:"PubKey,Impl[PubKeyEd25519,PubKeySecp256k1],ed25519,secp256k1"
 type PubKeyInner interface {
-	AssertIsPubKeyInner()
-	Bytes() []byte
 	KeyString() string
 	VerifyBytes(msg []byte, sig Signature) bool
 	Equals(PubKey) bool
@@ -29,12 +26,6 @@ var _ PubKeyInner = PubKeyEd25519{}
 
 // Implements PubKeyInner
 type PubKeyEd25519 [32]byte
-
-func (pubKey PubKeyEd25519) AssertIsPubKeyInner() {}
-
-func (pubKey PubKeyEd25519) Bytes() []byte {
-	return wire.BinaryBytes(PubKey{pubKey})
-}
 
 func (pubKey PubKeyEd25519) VerifyBytes(msg []byte, sig_ Signature) bool {
 	// make sure we use the same algorithm to sign
