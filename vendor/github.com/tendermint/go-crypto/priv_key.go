@@ -1,10 +1,11 @@
 package crypto
 
 import (
+	"encoding/hex"
+
 	"github.com/tendermint/ed25519"
 	"github.com/tendermint/go-wire"
-	data "github.com/tendermint/go-wire/data"
-	. "github.com/tendermint/tmlibs/common"
+	"github.com/tendermint/go-wire/data"
 )
 
 func PrivKeyFromBytes(privKeyBytes []byte) (privKey PrivKey, err error) {
@@ -68,7 +69,7 @@ func (p *PrivKeyEd25519) UnmarshalJSON(enc []byte) error {
 }
 
 func (privKey PrivKeyEd25519) String() string {
-	return Fmt("PrivKeyEd25519{*****}")
+	return hex.EncodeToString(privKey[:])
 }
 
 func GenPrivKeyEd25519() PrivKeyEd25519 {

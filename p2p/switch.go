@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -64,12 +65,25 @@ type Switch struct {
 
 // NewSwitch create a new Switch and set discover.
 func NewSwitch(config *cfg.Config) (*Switch, error) {
-	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
-	privKey := crypto.GenPrivKeyEd25519()
+	var err error
 	var l Listener
 	var listenAddr string
-	var err error
 	var discv *discover.Network
+
+	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
+	config.P2P.PrivateKey, err = config.NodeKey()
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := hex.DecodeString(config.P2P.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var newKey [64]byte
+	copy(newKey[:], bytes)
+	privKey := crypto.PrivKeyEd25519(newKey)
 	if !config.VaultMode {
 		// Create listener
 		l, listenAddr = GetListener(config.P2P)
@@ -79,11 +93,11 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 		}
 	}
 
-	return newSwitch(discv, blacklistDB, l, config, privKey, listenAddr)
+	return newSwitch(config, discv, blacklistDB, l, privKey, listenAddr)
 }
 
 // newSwitch creates a new Switch with the given config.
-func newSwitch(discv discv, blacklistDB dbm.DB, l Listener, config *cfg.Config, priv crypto.PrivKeyEd25519, listenAddr string) (*Switch, error) {
+func newSwitch(config *cfg.Config, discv discv, blacklistDB dbm.DB, l Listener, priv crypto.PrivKeyEd25519, listenAddr string) (*Switch, error) {
 	sw := &Switch{
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config.P2P),

@@ -1,14 +1,12 @@
 package p2p
 
 import (
+	"github.com/tendermint/go-crypto"
+	dbm "github.com/tendermint/tmlibs/db"
 	"io/ioutil"
 	"os"
 	"sync"
 	"testing"
-	"time"
-
-	"github.com/tendermint/go-crypto"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
@@ -145,7 +143,7 @@ func TestFiltersOutItself(t *testing.T) {
 	}
 
 	//S1 dialing itself ip address
-	addr, err := NewNetAddressString(s1.NodeInfo().ListenAddr)
+	addr, err := NewNetAddressString("0.0.0.0:46656")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +178,7 @@ func TestDialBannedPeer(t *testing.T) {
 	}
 }
 
-func TestDuplicatePeer(t *testing.T) {
+func TestDuplicateOutBoundPeer(t *testing.T) {
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -201,9 +199,22 @@ func TestDuplicatePeer(t *testing.T) {
 	if err = s1.DialPeerWithAddress(rp.addr); errors.Root(err) != ErrDuplicatePeer {
 		t.Fatal(err)
 	}
+}
+
+func TestDuplicateInBoundPeer(t *testing.T) {
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	s1 := MakeSwitch(testCfg, testDB, initSwitchFunc)
+	s1.Start()
+	defer s1.Stop()
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
-	addr, err := NewNetAddressString(s1.NodeInfo().ListenAddr)
+	addr, err := NewNetAddressString(s1.nodeInfo.ListenAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,9 +229,8 @@ func TestDuplicatePeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	time.Sleep(1 * time.Second)
-	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
-		t.Fatal("TestSwitchAddInboundPeer peer size error")
+	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 1 {
+		t.Fatal("TestSwitchAddInboundPeer peer size error", outbound, inbound, dialing)
 	}
 }
 
@@ -239,7 +249,7 @@ func TestAddInboundPeer(t *testing.T) {
 	defer s1.Stop()
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
-	addr, err := NewNetAddressString(s1.NodeInfo().ListenAddr)
+	addr, err := NewNetAddressString(s1.nodeInfo.ListenAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,7 +290,7 @@ func TestStopPeer(t *testing.T) {
 	defer s1.Stop()
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
-	addr, err := NewNetAddressString(s1.NodeInfo().ListenAddr)
+	addr, err := NewNetAddressString("127.0.0.1:46656")
 	if err != nil {
 		t.Fatal(err)
 	}
