@@ -69,6 +69,7 @@ func (cfg *Config) NodeKey() (string, error) {
 		}
 	}
 
+	log.WithField("err", err).Warning("key file access failed")
 	privKey := crypto.GenPrivKeyEd25519()
 	if err = ioutil.WriteFile(keyFile, []byte(privKey.String()), 0600); err != nil {
 		return "", err
