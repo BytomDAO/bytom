@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/errors"
+	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/testutil"
 )
@@ -211,11 +212,11 @@ func mockAccountManager(t *testing.T) *Manager {
 	}
 	defer os.RemoveAll(dirPath)
 
-	testDB := dbm.NewDB("testdb", "memdb", "temp")
-	defer os.RemoveAll("temp")
+	testDB := dbm.NewDB("testdb", "memdb", dirPath)
+	dispatcher := event.NewDispatcher()
 
 	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool(store)
+	txPool := protocol.NewTxPool(store, dispatcher)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		t.Fatal(err)

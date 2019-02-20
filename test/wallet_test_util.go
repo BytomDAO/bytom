@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
 	w "github.com/bytom/wallet"
@@ -259,7 +260,8 @@ func (cfg *walletTestConfig) Run() error {
 	walletDB := dbm.NewDB("wallet", "leveldb", path.Join(dirPath, "wallet_db"))
 	accountManager := account.NewManager(walletDB, chain)
 	assets := asset.NewRegistry(walletDB, chain)
-	wallet, err := w.NewWallet(walletDB, accountManager, assets, hsm, chain)
+	dispatcher := event.NewDispatcher()
+	wallet, err := w.NewWallet(walletDB, accountManager, assets, hsm, chain, dispatcher)
 	if err != nil {
 		return err
 	}

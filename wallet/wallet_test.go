@@ -16,6 +16,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
+	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -32,7 +33,8 @@ func TestWalletUpdate(t *testing.T) {
 	defer os.RemoveAll("temp")
 
 	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool(store)
+	dispatcher := event.NewDispatcher()
+	txPool := protocol.NewTxPool(store, dispatcher)
 
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
