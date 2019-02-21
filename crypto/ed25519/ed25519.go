@@ -37,7 +37,7 @@ type PublicKey []byte
 type PrivateKey []byte
 
 // Public returns the PublicKey corresponding to priv.
-func (priv PrivateKey) Public() crypto.PublicKey {
+func (priv PrivateKey) Public() PublicKey {
 	publicKey := make([]byte, PublicKeySize)
 	copy(publicKey, priv[32:])
 	return PublicKey(publicKey)
