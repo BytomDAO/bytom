@@ -251,3 +251,40 @@ func TestOrphanManageExpire(t *testing.T) {
 		}
 	}
 }
+
+func TestOrphanManageNumLimit(t *testing.T) {
+	cases := []struct{
+		addOrphanBlockNum int
+		expectOrphanBlockNum int
+	}{
+		{
+			addOrphanBlockNum: 10,
+			expectOrphanBlockNum: 10,
+		},
+		{
+			addOrphanBlockNum: numOrphanBlockLimit,
+			expectOrphanBlockNum: numOrphanBlockLimit,
+		},
+		{
+			addOrphanBlockNum: numOrphanBlockLimit + 1,
+			expectOrphanBlockNum: numOrphanBlockLimit,
+		},
+		{
+			addOrphanBlockNum: numOrphanBlockLimit + 10,
+			expectOrphanBlockNum: numOrphanBlockLimit,
+		},
+	}
+
+	for i, c := range cases {
+		orphanManage := &OrphanManage{
+			orphan:      map[bc.Hash]*orphanBlock{},
+			prevOrphans: map[bc.Hash][]*bc.Hash{},
+		}
+		for num := 0; num < c.addOrphanBlockNum; num++ {
+			orphanManage.Add(&types.Block{BlockHeader: types.BlockHeader{Height: uint64(num)}})
+		}
+		if (len(orphanManage.orphan) != c.expectOrphanBlockNum) {
+			t.Errorf("case %d: got %d want %d", i, len(orphanManage.orphan), c.expectOrphanBlockNum)
+		}
+	}
+}
