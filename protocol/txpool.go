@@ -38,12 +38,12 @@ var (
 
 // TxDesc store tx and related info for mining strategy
 type TxDesc struct {
-	Tx         *types.Tx
-	Added      time.Time
-	StatusFail bool
-	Height     uint64
-	Weight     uint64
-	Fee        uint64
+	Tx         *types.Tx `json:"transaction"`
+	Added      time.Time `json:"-"`
+	StatusFail bool      `json:"status_fail"`
+	Height     uint64    `json:"-"`
+	Weight     uint64    `json:"-"`
+	Fee        uint64    `json:"-"`
 }
 
 // TxPoolMsg is use for notify pool changes
