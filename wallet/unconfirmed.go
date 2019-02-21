@@ -84,6 +84,10 @@ func (w *Wallet) GetUnconfirmedTxByTxID(txID string) (*query.AnnotatedTx, error)
 
 // RemoveUnconfirmedTx handle wallet status update when tx removed from txpool
 func (w *Wallet) RemoveUnconfirmedTx(txD *protocol.TxDesc) {
+	if err := w.removeUnconfirmedTx(txD.Tx); err != nil {
+		log.WithField("err", err).Error("wallet fail on removeUnconfirmedTx")
+	}
+
 	w.AccountMgr.RemoveUnconfirmedUtxo(txD.Tx.ResultIds)
 }
 
@@ -145,6 +149,15 @@ func (w *Wallet) saveUnconfirmedTx(tx *types.Tx) error {
 	}
 
 	w.DB.Set(calcUnconfirmedTxKey(tx.ID.String()), rawTx)
+	return nil
+}
+
+func (w *Wallet) removeUnconfirmedTx(tx *types.Tx) error {
+	if !w.checkRelatedTransaction(tx) {
+		return nil
+	}
+
+	w.DB.Delete(calcUnconfirmedTxKey(tx.ID.String()))
 	return nil
 }
 
