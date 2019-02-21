@@ -176,7 +176,7 @@ func newPoolTxListener(txPool *protocol.TxPool, syncManager *netsync.SyncManager
 			if wallet != nil {
 				wallet.AddUnconfirmedTx(msg.TxDesc)
 			}
-			notificationMgr.NotifyMempoolTx(msg.Tx)
+			notificationMgr.NotifyMempoolTx(msg.TxDesc)
 		case protocol.MsgRemoveTx:
 			if wallet != nil {
 				wallet.RemoveUnconfirmedTx(msg.TxDesc)

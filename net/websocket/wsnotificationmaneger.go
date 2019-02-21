@@ -15,7 +15,7 @@ import (
 // Notification types
 type notificationBlockConnected types.Block
 type notificationBlockDisconnected types.Block
-type notificationTxAcceptedByMempool types.Tx
+type notificationTxDescAcceptedByMempool protocol.TxDesc
 
 // Notification control requests
 type notificationRegisterClient WSClient
@@ -214,13 +214,13 @@ func (m *WSNotificationManager) NotifyBlockDisconnected(block *types.Block) {
 	}
 }
 
-// NotifyMempoolTx passes a transaction accepted by mempool to the
+// NotifyMempoolTx passes a transaction desc accepted by mempool to the
 // notification manager for transaction notification processing.  If
 // isNew is true, the tx is is a new transaction, rather than one
 // added to the mempool during a reorg.
-func (m *WSNotificationManager) NotifyMempoolTx(tx *types.Tx) {
+func (m *WSNotificationManager) NotifyMempoolTx(txDesc *protocol.TxDesc) {
 	select {
-	case m.queueNotification <- (*notificationTxAcceptedByMempool)(tx):
+	case m.queueNotification <- (*notificationTxDescAcceptedByMempool)(txDesc):
 	case <-m.quit:
 	}
 }
@@ -252,10 +252,10 @@ out:
 					m.notifyBlockDisconnected(blockNotifications, block)
 				}
 
-			case *notificationTxAcceptedByMempool:
-				tx := (*types.Tx)(n)
+			case *notificationTxDescAcceptedByMempool:
+				txDesc := (*protocol.TxDesc)(n)
 				if len(txNotifications) != 0 {
-					m.notifyForNewTx(txNotifications, tx)
+					m.notifyForNewTx(txNotifications, txDesc)
 				}
 
 			case *notificationRegisterBlocks:
@@ -368,8 +368,8 @@ func (m *WSNotificationManager) UnregisterNewMempoolTxsUpdates(wsc *WSClient) {
 
 // notifyForNewTx notifies websocket clients that have registered for updates
 // when a new transaction is added to the memory pool.
-func (m *WSNotificationManager) notifyForNewTx(clients map[chan struct{}]*WSClient, tx *types.Tx) {
-	resp := NewWSResponse(NTNewTransaction.String(), tx, nil)
+func (m *WSNotificationManager) notifyForNewTx(clients map[chan struct{}]*WSClient, txDesc *protocol.TxDesc) {
+	resp := NewWSResponse(NTNewTransaction.String(), txDesc, nil)
 	marshalledJSON, err := json.Marshal(resp)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("Failed to marshal tx notification")
