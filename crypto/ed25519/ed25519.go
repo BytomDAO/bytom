@@ -13,6 +13,7 @@ import (
 	cryptorand "crypto/rand"
 	"crypto/sha512"
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"io"
 	"strconv"
@@ -40,6 +41,10 @@ func (priv PrivateKey) Public() crypto.PublicKey {
 	publicKey := make([]byte, PublicKeySize)
 	copy(publicKey, priv[32:])
 	return PublicKey(publicKey)
+}
+
+func (priv PrivateKey) String() string {
+	return hex.EncodeToString(priv)
 }
 
 // Sign signs the given message with priv.

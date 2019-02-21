@@ -9,7 +9,8 @@ import (
 	"runtime"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/go-crypto"
+
+	"github.com/bytom/crypto/ed25519"
 )
 
 var (
@@ -60,7 +61,7 @@ func (cfg *Config) NodeKey() (string, error) {
 	}
 
 	keyFile := rootify(cfg.P2P.NodeKeyFile, cfg.BaseConfig.RootDir)
-	buf := make([]byte, len(crypto.PrivKeyEd25519{})*2)
+	buf := make([]byte, ed25519.PrivateKeySize*2)
 	fd, err := os.Open(keyFile)
 	defer fd.Close()
 	if err == nil {
@@ -70,11 +71,14 @@ func (cfg *Config) NodeKey() (string, error) {
 	}
 
 	log.WithField("err", err).Warning("key file access failed")
-	privKey := crypto.GenPrivKeyEd25519()
-	if err = ioutil.WriteFile(keyFile, []byte(privKey.String()), 0600); err != nil {
+	_, privKey, err := ed25519.GenerateKey(nil)
+	if err != nil {
 		return "", err
 	}
 
+	if err = ioutil.WriteFile(keyFile, []byte(privKey.String()), 0600); err != nil {
+		return "", err
+	}
 	return privKey.String(), nil
 }
 
