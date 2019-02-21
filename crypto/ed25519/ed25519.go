@@ -9,12 +9,10 @@ package ed25519
 // from SUPERCOP.
 
 import (
-	"crypto"
 	cryptorand "crypto/rand"
 	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/hex"
-	"errors"
 	"io"
 	"strconv"
 
@@ -45,19 +43,6 @@ func (priv PrivateKey) Public() PublicKey {
 
 func (priv PrivateKey) String() string {
 	return hex.EncodeToString(priv)
-}
-
-// Sign signs the given message with priv.
-// Ed25519 performs two passes over messages to be signed and therefore cannot
-// handle pre-hashed messages. Thus opts.HashFunc() must return zero to
-// indicate the message hasn't been hashed. This can be achieved by passing
-// crypto.Hash(0) as the value for opts.
-func (priv PrivateKey) Sign(rand io.Reader, message []byte, opts crypto.SignerOpts) (signature []byte, err error) {
-	if opts.HashFunc() != crypto.Hash(0) {
-		return nil, errors.New("ed25519: cannot sign hashed message")
-	}
-
-	return Sign(priv, message), nil
 }
 
 // GenerateKey generates a public/private key pair using entropy from rand.
