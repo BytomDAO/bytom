@@ -15,6 +15,7 @@ import (
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
+	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
@@ -87,7 +88,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	if !config.VaultMode {
 		// Create listener
 		l, listenAddr = GetListener(config.P2P)
-		discv, err = discover.NewDiscover(config, &privKey, l.ExternalAddress().Port)
+		discv, err = discover.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port)
 		if err != nil {
 			return nil, err
 		}
