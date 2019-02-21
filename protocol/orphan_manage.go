@@ -13,6 +13,7 @@ import (
 var (
 	orphanBlockTTL           = 60 * time.Minute
 	orphanExpireWorkInterval = 3 * time.Minute
+	numOrphanBlockLimit      = 256
 )
 
 type orphanBlock struct {
@@ -53,6 +54,11 @@ func (o *OrphanManage) Add(block *types.Block) {
 	defer o.mtx.Unlock()
 
 	if _, ok := o.orphan[blockHash]; ok {
+		return
+	}
+
+	if len(o.orphan) >= numOrphanBlockLimit {
+		log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("the number of orphan blocks exceeds the limit")
 		return
 	}
 
