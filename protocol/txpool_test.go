@@ -6,6 +6,7 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/database/storage"
+	"github.com/bytom/event"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
@@ -91,15 +92,15 @@ func TestAddOrphan(t *testing.T) {
 			},
 			after: &TxPool{
 				orphans: map[bc.Hash]*orphanTx{
-					testTxs[0].ID: &orphanTx{
+					testTxs[0].ID: {
 						TxDesc: &TxDesc{
 							Tx: testTxs[0],
 						},
 					},
 				},
 				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
-					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
-						testTxs[0].ID: &orphanTx{
+					testTxs[0].SpentOutputIDs[0]: {
+						testTxs[0].ID: {
 							TxDesc: &TxDesc{
 								Tx: testTxs[0],
 							},
@@ -113,15 +114,15 @@ func TestAddOrphan(t *testing.T) {
 		{
 			before: &TxPool{
 				orphans: map[bc.Hash]*orphanTx{
-					testTxs[0].ID: &orphanTx{
+					testTxs[0].ID: {
 						TxDesc: &TxDesc{
 							Tx: testTxs[0],
 						},
 					},
 				},
 				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
-					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
-						testTxs[0].ID: &orphanTx{
+					testTxs[0].SpentOutputIDs[0]: {
+						testTxs[0].ID: {
 							TxDesc: &TxDesc{
 								Tx: testTxs[0],
 							},
@@ -131,25 +132,25 @@ func TestAddOrphan(t *testing.T) {
 			},
 			after: &TxPool{
 				orphans: map[bc.Hash]*orphanTx{
-					testTxs[0].ID: &orphanTx{
+					testTxs[0].ID: {
 						TxDesc: &TxDesc{
 							Tx: testTxs[0],
 						},
 					},
-					testTxs[1].ID: &orphanTx{
+					testTxs[1].ID: {
 						TxDesc: &TxDesc{
 							Tx: testTxs[1],
 						},
 					},
 				},
 				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
-					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
-						testTxs[0].ID: &orphanTx{
+					testTxs[0].SpentOutputIDs[0]: {
+						testTxs[0].ID: {
 							TxDesc: &TxDesc{
 								Tx: testTxs[0],
 							},
 						},
-						testTxs[1].ID: &orphanTx{
+						testTxs[1].ID: {
 							TxDesc: &TxDesc{
 								Tx: testTxs[1],
 							},
@@ -167,15 +168,15 @@ func TestAddOrphan(t *testing.T) {
 			},
 			after: &TxPool{
 				orphans: map[bc.Hash]*orphanTx{
-					testTxs[2].ID: &orphanTx{
+					testTxs[2].ID: {
 						TxDesc: &TxDesc{
 							Tx: testTxs[2],
 						},
 					},
 				},
 				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
-					testTxs[2].SpentOutputIDs[1]: map[bc.Hash]*orphanTx{
-						testTxs[2].ID: &orphanTx{
+					testTxs[2].SpentOutputIDs[1]: {
+						testTxs[2].ID: {
 							TxDesc: &TxDesc{
 								Tx: testTxs[2],
 							},
@@ -205,6 +206,7 @@ func TestAddOrphan(t *testing.T) {
 }
 
 func TestAddTransaction(t *testing.T) {
+	dispatcher := event.NewDispatcher()
 	cases := []struct {
 		before *TxPool
 		after  *TxPool
@@ -212,13 +214,13 @@ func TestAddTransaction(t *testing.T) {
 	}{
 		{
 			before: &TxPool{
-				pool:  map[bc.Hash]*TxDesc{},
-				utxo:  map[bc.Hash]*types.Tx{},
-				msgCh: make(chan *TxPoolMsg, 1),
+				pool:            map[bc.Hash]*TxDesc{},
+				utxo:            map[bc.Hash]*types.Tx{},
+				eventDispatcher: dispatcher,
 			},
 			after: &TxPool{
 				pool: map[bc.Hash]*TxDesc{
-					testTxs[2].ID: &TxDesc{
+					testTxs[2].ID: {
 						Tx:         testTxs[2],
 						StatusFail: false,
 					},
@@ -235,13 +237,13 @@ func TestAddTransaction(t *testing.T) {
 		},
 		{
 			before: &TxPool{
-				pool:  map[bc.Hash]*TxDesc{},
-				utxo:  map[bc.Hash]*types.Tx{},
-				msgCh: make(chan *TxPoolMsg, 1),
+				pool:            map[bc.Hash]*TxDesc{},
+				utxo:            map[bc.Hash]*types.Tx{},
+				eventDispatcher: dispatcher,
 			},
 			after: &TxPool{
 				pool: map[bc.Hash]*TxDesc{
-					testTxs[2].ID: &TxDesc{
+					testTxs[2].ID: {
 						Tx:         testTxs[2],
 						StatusFail: true,
 					},
@@ -274,13 +276,13 @@ func TestAddTransaction(t *testing.T) {
 func TestExpireOrphan(t *testing.T) {
 	before := &TxPool{
 		orphans: map[bc.Hash]*orphanTx{
-			testTxs[0].ID: &orphanTx{
+			testTxs[0].ID: {
 				expiration: time.Unix(1533489701, 0),
 				TxDesc: &TxDesc{
 					Tx: testTxs[0],
 				},
 			},
-			testTxs[1].ID: &orphanTx{
+			testTxs[1].ID: {
 				expiration: time.Unix(1633489701, 0),
 				TxDesc: &TxDesc{
 					Tx: testTxs[1],
@@ -288,14 +290,14 @@ func TestExpireOrphan(t *testing.T) {
 			},
 		},
 		orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
-			testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
-				testTxs[0].ID: &orphanTx{
+			testTxs[0].SpentOutputIDs[0]: {
+				testTxs[0].ID: {
 					expiration: time.Unix(1533489701, 0),
 					TxDesc: &TxDesc{
 						Tx: testTxs[0],
 					},
 				},
-				testTxs[1].ID: &orphanTx{
+				testTxs[1].ID: {
 					expiration: time.Unix(1633489701, 0),
 					TxDesc: &TxDesc{
 						Tx: testTxs[1],
@@ -307,7 +309,7 @@ func TestExpireOrphan(t *testing.T) {
 
 	want := &TxPool{
 		orphans: map[bc.Hash]*orphanTx{
-			testTxs[1].ID: &orphanTx{
+			testTxs[1].ID: {
 				expiration: time.Unix(1633489701, 0),
 				TxDesc: &TxDesc{
 					Tx: testTxs[1],
@@ -315,8 +317,8 @@ func TestExpireOrphan(t *testing.T) {
 			},
 		},
 		orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
-			testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
-				testTxs[1].ID: &orphanTx{
+			testTxs[0].SpentOutputIDs[0]: {
+				testTxs[1].ID: {
 					expiration: time.Unix(1633489701, 0),
 					TxDesc: &TxDesc{
 						Tx: testTxs[1],
@@ -333,6 +335,7 @@ func TestExpireOrphan(t *testing.T) {
 }
 
 func TestProcessOrphans(t *testing.T) {
+	dispatcher := event.NewDispatcher()
 	cases := []struct {
 		before    *TxPool
 		after     *TxPool
@@ -340,29 +343,29 @@ func TestProcessOrphans(t *testing.T) {
 	}{
 		{
 			before: &TxPool{
-				pool: map[bc.Hash]*TxDesc{},
-				utxo: map[bc.Hash]*types.Tx{},
+				pool:            map[bc.Hash]*TxDesc{},
+				utxo:            map[bc.Hash]*types.Tx{},
+				eventDispatcher: dispatcher,
 				orphans: map[bc.Hash]*orphanTx{
-					testTxs[3].ID: &orphanTx{
+					testTxs[3].ID: {
 						TxDesc: &TxDesc{
 							Tx: testTxs[3],
 						},
 					},
 				},
 				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
-					testTxs[3].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
-						testTxs[3].ID: &orphanTx{
+					testTxs[3].SpentOutputIDs[0]: {
+						testTxs[3].ID: {
 							TxDesc: &TxDesc{
 								Tx: testTxs[3],
 							},
 						},
 					},
 				},
-				msgCh: make(chan *TxPoolMsg, 10),
 			},
 			after: &TxPool{
 				pool: map[bc.Hash]*TxDesc{
-					testTxs[3].ID: &TxDesc{
+					testTxs[3].ID: {
 						Tx:         testTxs[3],
 						StatusFail: false,
 					},
@@ -371,52 +374,53 @@ func TestProcessOrphans(t *testing.T) {
 					*testTxs[3].ResultIds[0]: testTxs[3],
 					*testTxs[3].ResultIds[1]: testTxs[3],
 				},
-				orphans:       map[bc.Hash]*orphanTx{},
-				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{},
+				eventDispatcher: dispatcher,
+				orphans:         map[bc.Hash]*orphanTx{},
+				orphansByPrev:   map[bc.Hash]map[bc.Hash]*orphanTx{},
 			},
 			processTx: &TxDesc{Tx: testTxs[2]},
 		},
 		{
 			before: &TxPool{
-				pool: map[bc.Hash]*TxDesc{},
-				utxo: map[bc.Hash]*types.Tx{},
+				pool:            map[bc.Hash]*TxDesc{},
+				utxo:            map[bc.Hash]*types.Tx{},
+				eventDispatcher: dispatcher,
 				orphans: map[bc.Hash]*orphanTx{
-					testTxs[3].ID: &orphanTx{
+					testTxs[3].ID: {
 						TxDesc: &TxDesc{
 							Tx: testTxs[3],
 						},
 					},
-					testTxs[4].ID: &orphanTx{
+					testTxs[4].ID: {
 						TxDesc: &TxDesc{
 							Tx: testTxs[4],
 						},
 					},
 				},
 				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
-					testTxs[3].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
-						testTxs[3].ID: &orphanTx{
+					testTxs[3].SpentOutputIDs[0]: {
+						testTxs[3].ID: {
 							TxDesc: &TxDesc{
 								Tx: testTxs[3],
 							},
 						},
 					},
-					testTxs[4].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
-						testTxs[4].ID: &orphanTx{
+					testTxs[4].SpentOutputIDs[0]: {
+						testTxs[4].ID: {
 							TxDesc: &TxDesc{
 								Tx: testTxs[4],
 							},
 						},
 					},
 				},
-				msgCh: make(chan *TxPoolMsg, 10),
 			},
 			after: &TxPool{
 				pool: map[bc.Hash]*TxDesc{
-					testTxs[3].ID: &TxDesc{
+					testTxs[3].ID: {
 						Tx:         testTxs[3],
 						StatusFail: false,
 					},
-					testTxs[4].ID: &TxDesc{
+					testTxs[4].ID: {
 						Tx:         testTxs[4],
 						StatusFail: false,
 					},
@@ -427,8 +431,9 @@ func TestProcessOrphans(t *testing.T) {
 					*testTxs[4].ResultIds[0]: testTxs[4],
 					*testTxs[4].ResultIds[1]: testTxs[4],
 				},
-				orphans:       map[bc.Hash]*orphanTx{},
-				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{},
+				eventDispatcher: dispatcher,
+				orphans:         map[bc.Hash]*orphanTx{},
+				orphansByPrev:   map[bc.Hash]map[bc.Hash]*orphanTx{},
 			},
 			processTx: &TxDesc{Tx: testTxs[2]},
 		},
@@ -440,7 +445,6 @@ func TestProcessOrphans(t *testing.T) {
 		c.before.processOrphans(c.processTx)
 		c.before.RemoveTransaction(&c.processTx.Tx.ID)
 		c.before.store = nil
-		c.before.msgCh = nil
 		c.before.lastUpdated = 0
 		for _, txD := range c.before.pool {
 			txD.Added = time.Time{}
@@ -461,7 +465,7 @@ func TestRemoveOrphan(t *testing.T) {
 		{
 			before: &TxPool{
 				orphans: map[bc.Hash]*orphanTx{
-					testTxs[0].ID: &orphanTx{
+					testTxs[0].ID: {
 						expiration: time.Unix(1533489701, 0),
 						TxDesc: &TxDesc{
 							Tx: testTxs[0],
@@ -469,8 +473,8 @@ func TestRemoveOrphan(t *testing.T) {
 					},
 				},
 				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
-					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
-						testTxs[0].ID: &orphanTx{
+					testTxs[0].SpentOutputIDs[0]: {
+						testTxs[0].ID: {
 							expiration: time.Unix(1533489701, 0),
 							TxDesc: &TxDesc{
 								Tx: testTxs[0],
@@ -490,13 +494,13 @@ func TestRemoveOrphan(t *testing.T) {
 		{
 			before: &TxPool{
 				orphans: map[bc.Hash]*orphanTx{
-					testTxs[0].ID: &orphanTx{
+					testTxs[0].ID: {
 						expiration: time.Unix(1533489701, 0),
 						TxDesc: &TxDesc{
 							Tx: testTxs[0],
 						},
 					},
-					testTxs[1].ID: &orphanTx{
+					testTxs[1].ID: {
 						expiration: time.Unix(1533489701, 0),
 						TxDesc: &TxDesc{
 							Tx: testTxs[1],
@@ -504,14 +508,14 @@ func TestRemoveOrphan(t *testing.T) {
 					},
 				},
 				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
-					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
-						testTxs[0].ID: &orphanTx{
+					testTxs[0].SpentOutputIDs[0]: {
+						testTxs[0].ID: {
 							expiration: time.Unix(1533489701, 0),
 							TxDesc: &TxDesc{
 								Tx: testTxs[0],
 							},
 						},
-						testTxs[1].ID: &orphanTx{
+						testTxs[1].ID: {
 							expiration: time.Unix(1533489701, 0),
 							TxDesc: &TxDesc{
 								Tx: testTxs[1],
@@ -522,7 +526,7 @@ func TestRemoveOrphan(t *testing.T) {
 			},
 			after: &TxPool{
 				orphans: map[bc.Hash]*orphanTx{
-					testTxs[0].ID: &orphanTx{
+					testTxs[0].ID: {
 						expiration: time.Unix(1533489701, 0),
 						TxDesc: &TxDesc{
 							Tx: testTxs[0],
@@ -530,8 +534,8 @@ func TestRemoveOrphan(t *testing.T) {
 					},
 				},
 				orphansByPrev: map[bc.Hash]map[bc.Hash]*orphanTx{
-					testTxs[0].SpentOutputIDs[0]: map[bc.Hash]*orphanTx{
-						testTxs[0].ID: &orphanTx{
+					testTxs[0].SpentOutputIDs[0]: {
+						testTxs[0].ID: {
 							expiration: time.Unix(1533489701, 0),
 							TxDesc: &TxDesc{
 								Tx: testTxs[0],

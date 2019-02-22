@@ -76,7 +76,8 @@ func NewNode(config *cfg.Config) *Node {
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
 
-	txPool := protocol.NewTxPool(store)
+	dispatcher := event.NewDispatcher()
+	txPool := protocol.NewTxPool(store, dispatcher)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
@@ -104,7 +105,7 @@ func NewNode(config *cfg.Config) *Node {
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain)
+		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain, dispatcher)
 		if err != nil {
 			log.WithField("error", err).Error("init NewWallet")
 		}
@@ -115,16 +116,12 @@ func NewNode(config *cfg.Config) *Node {
 		}
 	}
 
-	dispatcher := event.NewDispatcher()
 	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create sync manager: %v", err))
 	}
 
-	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
-
-	// get transaction from txPool and send it to syncManager and wallet
-	go newPoolTxListener(txPool, syncManager, wallet, notificationMgr)
+	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain, dispatcher)
 
 	// run the profile server
 	profileHost := config.ProfListenAddress
@@ -161,30 +158,6 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	return node
-}
-
-// newPoolTxListener listener transaction from txPool, and send it to syncManager and wallet
-func newPoolTxListener(txPool *protocol.TxPool, syncManager *netsync.SyncManager, wallet *w.Wallet, notificationMgr *websocket.WSNotificationManager) {
-	txMsgCh := txPool.GetMsgCh()
-	syncManagerTxCh := syncManager.GetNewTxCh()
-
-	for {
-		msg := <-txMsgCh
-		switch msg.MsgType {
-		case protocol.MsgNewTx:
-			syncManagerTxCh <- msg.Tx
-			if wallet != nil {
-				wallet.AddUnconfirmedTx(msg.TxDesc)
-			}
-			notificationMgr.NotifyMempoolTx(msg.TxDesc)
-		case protocol.MsgRemoveTx:
-			if wallet != nil {
-				wallet.RemoveUnconfirmedTx(msg.TxDesc)
-			}
-		default:
-			log.Warn("got unknow message type from the txPool channel")
-		}
-	}
 }
 
 // Lock data directory after daemonization
@@ -256,7 +229,10 @@ func (n *Node) OnStart() error {
 	}
 
 	n.initAndstartAPIServer()
-	n.notificationMgr.Start()
+	if err := n.notificationMgr.Start(); err != nil {
+		return err
+	}
+
 	if !n.config.Web.Closed {
 		_, port, err := net.SplitHostPort(n.config.ApiAddress)
 		if err != nil {
