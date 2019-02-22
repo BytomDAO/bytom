@@ -230,7 +230,7 @@ func TestDuplicateInBoundPeer(t *testing.T) {
 	}
 
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 1 {
-		t.Fatal("TestSwitchAddInboundPeer peer size error", outbound, inbound, dialing)
+		t.Fatal("TestDuplicateInBoundPeer peer size error", outbound, inbound, dialing)
 	}
 }
 
@@ -266,12 +266,12 @@ func TestAddInboundPeer(t *testing.T) {
 	}
 
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
-		t.Fatal("TestSwitchAddInboundPeer peer size error")
+		t.Fatal("TestAddInboundPeer peer size error")
 	}
 	inp2 := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
 
 	if err := inp2.dial(addr); err == nil {
-		t.Fatal("TestSwitchAddInboundPeer MaxNumPeers limit error")
+		t.Fatal("TestAddInboundPeer MaxNumPeers limit error")
 	}
 }
 
@@ -307,16 +307,16 @@ func TestStopPeer(t *testing.T) {
 	}
 
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
-		t.Fatal("TestSwitchAddInboundPeer peer size error")
+		t.Fatal("TestStopPeer peer size error")
 	}
 
 	s1.StopPeerGracefully(s1.peers.list[0].Key)
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 1 {
-		t.Fatal("TestSwitchAddInboundPeer peer size error")
+		t.Fatal("TestStopPeer peer size error")
 	}
 
 	s1.StopPeerForError(s1.peers.list[0], "stop for test")
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 0 {
-		t.Fatal("TestSwitchAddInboundPeer peer size error")
+		t.Fatal("TestStopPeer peer size error")
 	}
 }
