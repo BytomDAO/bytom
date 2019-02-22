@@ -11,8 +11,6 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-var ErrEmptyWorkSubmission = errors.New("empty work submission")
-
 // BlockHeaderJSON struct provides support for get work in json format, when it also follows
 // BlockHeader structure
 type BlockHeaderJSON struct {
@@ -101,10 +99,6 @@ type SubmitWorkReq struct {
 
 // submitWork submits work in compressed protobuf format
 func (a *API) submitWork(ctx context.Context, req *SubmitWorkReq) Response {
-	if req.BlockHeader == nil {
-		return NewErrorResponse(ErrEmptyWorkSubmission)
-	}
-
 	if err := a.SubmitWork(req.BlockHeader); err != nil {
 		return NewErrorResponse(err)
 	}
@@ -118,10 +112,6 @@ type SubmitWorkJSONReq struct {
 
 // submitWorkJSON submits work in json format
 func (a *API) submitWorkJSON(ctx context.Context, req *SubmitWorkJSONReq) Response {
-	if req.BlockHeader == nil {
-		return NewErrorResponse(ErrEmptyWorkSubmission)
-	}
-
 	bh := &types.BlockHeader{
 		Version:           req.BlockHeader.Version,
 		Height:            req.BlockHeader.Height,
