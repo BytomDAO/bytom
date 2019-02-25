@@ -12,6 +12,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
+	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -26,7 +27,8 @@ const (
 // MockChain mock chain with genesis block
 func MockChain(testDB dbm.DB) (*protocol.Chain, *leveldb.Store, *protocol.TxPool, error) {
 	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool(store)
+	dispatcher := event.NewDispatcher()
+	txPool := protocol.NewTxPool(store, dispatcher)
 	chain, err := protocol.NewChain(store, txPool)
 	return chain, store, txPool, err
 }

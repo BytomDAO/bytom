@@ -18,9 +18,7 @@ var runNodeCmd = &cobra.Command{
 
 func init() {
 	runNodeCmd.Flags().String("prof_laddr", config.ProfListenAddress, "Use http to profile bytomd programs")
-
-	runNodeCmd.Flags().Bool("mining.enable", config.Mining.Enable, "Enable mining")
-	runNodeCmd.Flags().Uint64("mining.recommit_interval", config.Mining.RecommitInterval, "Set mining pool recomit interval in seconds")
+	runNodeCmd.Flags().Bool("mining", config.Mining, "Enable mining")
 
 	runNodeCmd.Flags().Bool("simd.enable", config.Simd.Enable, "Enable SIMD mechan for tensority")
 
@@ -38,6 +36,7 @@ func init() {
 	// p2p flags
 	runNodeCmd.Flags().String("p2p.laddr", config.P2P.ListenAddress, "Node listen address. (0.0.0.0:0 means any interface, any port)")
 	runNodeCmd.Flags().String("p2p.seeds", config.P2P.Seeds, "Comma delimited host:port seed nodes")
+	runNodeCmd.Flags().String("p2p.node_key", config.P2P.PrivateKey, "Node key for p2p communication")
 	runNodeCmd.Flags().Bool("p2p.skip_upnp", config.P2P.SkipUPNP, "Skip UPNP configuration")
 	runNodeCmd.Flags().Int("p2p.max_num_peers", config.P2P.MaxNumPeers, "Set max num peers")
 	runNodeCmd.Flags().Int("p2p.handshake_timeout", config.P2P.HandshakeTimeout, "Set handshake timeout")

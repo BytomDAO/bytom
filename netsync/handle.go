@@ -64,13 +64,13 @@ type SyncManager struct {
 	blockKeeper  *blockKeeper
 	peers        *peerSet
 
-	newTxCh  chan *types.Tx
 	txSyncCh chan *txSyncMsg
 	quitSync chan struct{}
 	config   *cfg.Config
 
 	eventDispatcher *event.Dispatcher
 	minedBlockSub   *event.Subscription
+	txMsgSub        *event.Subscription
 }
 
 // CreateSyncManager create sync manager and set switch.
@@ -98,7 +98,6 @@ func newSyncManager(config *cfg.Config, sw Switch, chain Chain, txPool *core.TxP
 		blockFetcher:    newBlockFetcher(chain, peers),
 		blockKeeper:     newBlockKeeper(chain, peers),
 		peers:           peers,
-		newTxCh:         make(chan *types.Tx, maxTxChanSize),
 		txSyncCh:        make(chan *txSyncMsg),
 		quitSync:        make(chan struct{}),
 		config:          config,
@@ -127,11 +126,6 @@ func (sm *SyncManager) DialPeerWithAddress(addr *p2p.NetAddress) error {
 	}
 
 	return sm.sw.DialPeerWithAddress(addr)
-}
-
-// GetNewTxCh return a unconfirmed transaction feed channel
-func (sm *SyncManager) GetNewTxCh() chan *types.Tx {
-	return sm.newTxCh
 }
 
 func (sm *SyncManager) GetNetwork() string {
@@ -448,14 +442,18 @@ func (sm *SyncManager) Start() error {
 		return err
 	}
 
-	// broadcast transactions
-	go sm.txBroadcastLoop()
-
 	sm.minedBlockSub, err = sm.eventDispatcher.Subscribe(event.NewMinedBlockEvent{})
 	if err != nil {
 		return err
 	}
 
+	sm.txMsgSub, err = sm.eventDispatcher.Subscribe(core.TxMsgEvent{})
+	if err != nil {
+		return err
+	}
+
+	// broadcast transactions
+	go sm.txBroadcastLoop()
 	go sm.minedBroadcastLoop()
 	go sm.txSyncLoop()
 

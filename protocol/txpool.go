@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/event"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
@@ -36,14 +37,16 @@ var (
 	ErrPoolIsFull = errors.New("transaction pool reach the max number")
 )
 
+type TxMsgEvent struct{ TxMsg *TxPoolMsg }
+
 // TxDesc store tx and related info for mining strategy
 type TxDesc struct {
-	Tx         *types.Tx
-	Added      time.Time
-	StatusFail bool
-	Height     uint64
-	Weight     uint64
-	Fee        uint64
+	Tx         *types.Tx `json:"transaction"`
+	Added      time.Time `json:"-"`
+	StatusFail bool      `json:"status_fail"`
+	Height     uint64    `json:"-"`
+	Weight     uint64    `json:"-"`
+	Fee        uint64    `json:"-"`
 }
 
 // TxPoolMsg is use for notify pool changes
@@ -59,28 +62,28 @@ type orphanTx struct {
 
 // TxPool is use for store the unconfirmed transaction
 type TxPool struct {
-	lastUpdated   int64
-	mtx           sync.RWMutex
-	store         Store
-	pool          map[bc.Hash]*TxDesc
-	utxo          map[bc.Hash]*types.Tx
-	orphans       map[bc.Hash]*orphanTx
-	orphansByPrev map[bc.Hash]map[bc.Hash]*orphanTx
-	errCache      *lru.Cache
-	msgCh         chan *TxPoolMsg
+	lastUpdated     int64
+	mtx             sync.RWMutex
+	store           Store
+	pool            map[bc.Hash]*TxDesc
+	utxo            map[bc.Hash]*types.Tx
+	orphans         map[bc.Hash]*orphanTx
+	orphansByPrev   map[bc.Hash]map[bc.Hash]*orphanTx
+	errCache        *lru.Cache
+	eventDispatcher *event.Dispatcher
 }
 
 // NewTxPool init a new TxPool
-func NewTxPool(store Store) *TxPool {
+func NewTxPool(store Store, dispatcher *event.Dispatcher) *TxPool {
 	tp := &TxPool{
-		lastUpdated:   time.Now().Unix(),
-		store:         store,
-		pool:          make(map[bc.Hash]*TxDesc),
-		utxo:          make(map[bc.Hash]*types.Tx),
-		orphans:       make(map[bc.Hash]*orphanTx),
-		orphansByPrev: make(map[bc.Hash]map[bc.Hash]*orphanTx),
-		errCache:      lru.New(maxCachedErrTxs),
-		msgCh:         make(chan *TxPoolMsg, maxMsgChSize),
+		lastUpdated:     time.Now().Unix(),
+		store:           store,
+		pool:            make(map[bc.Hash]*TxDesc),
+		utxo:            make(map[bc.Hash]*types.Tx),
+		orphans:         make(map[bc.Hash]*orphanTx),
+		orphansByPrev:   make(map[bc.Hash]map[bc.Hash]*orphanTx),
+		errCache:        lru.New(maxCachedErrTxs),
+		eventDispatcher: dispatcher,
 	}
 	go tp.orphanExpireWorker()
 	return tp
@@ -118,11 +121,6 @@ func (tp *TxPool) GetErrCache(txHash *bc.Hash) error {
 	return v.(error)
 }
 
-// GetMsgCh return a unconfirmed transaction feed channel
-func (tp *TxPool) GetMsgCh() <-chan *TxPoolMsg {
-	return tp.msgCh
-}
-
 // RemoveTransaction remove a transaction from the pool
 func (tp *TxPool) RemoveTransaction(txHash *bc.Hash) {
 	tp.mtx.Lock()
@@ -139,7 +137,7 @@ func (tp *TxPool) RemoveTransaction(txHash *bc.Hash) {
 	delete(tp.pool, *txHash)
 
 	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())
-	tp.msgCh <- &TxPoolMsg{TxDesc: txD, MsgType: MsgRemoveTx}
+	tp.eventDispatcher.Post(TxMsgEvent{TxMsg: &TxPoolMsg{TxDesc: txD, MsgType: MsgRemoveTx}})
 	log.WithField("tx_id", txHash).Debug("remove tx from mempool")
 }
 
@@ -256,7 +254,7 @@ func (tp *TxPool) addTransaction(txD *TxDesc) error {
 	}
 
 	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())
-	tp.msgCh <- &TxPoolMsg{TxDesc: txD, MsgType: MsgNewTx}
+	tp.eventDispatcher.Post(TxMsgEvent{TxMsg: &TxPoolMsg{TxDesc: txD, MsgType: MsgNewTx}})
 	log.WithField("tx_id", tx.ID.String()).Debug("Add tx to mempool")
 	return nil
 }
