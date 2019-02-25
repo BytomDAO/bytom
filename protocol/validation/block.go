@@ -60,7 +60,7 @@ func checkCoinbaseAmount(b *bc.Block, amount uint64) error {
 
 // ValidateBlockHeader check the block's header
 func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
-	if b.Version < parent.Version {
+	if b.Version != 1 {
 		return errors.WithDetailf(errVersionRegression, "previous block verson %d, current block version %d", parent.Version, b.Version)
 	}
 	if b.Height != parent.Height+1 {
