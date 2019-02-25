@@ -900,6 +900,11 @@ func TestTimeRange(t *testing.T) {
 	}
 }
 
+func TestAsset(t *testing.T) {
+	asset := bc.AssetID{V0: 0, V1: 1, V2: 2, V3: 3}
+	t.Error(asset.String())
+}
+
 func TestStandardTx(t *testing.T) {
 	fixture := sample(t, nil)
 	tx := types.NewTx(*fixture.tx).Tx

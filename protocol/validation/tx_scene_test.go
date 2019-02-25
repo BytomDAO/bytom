@@ -34,7 +34,7 @@ func TestValidateTx(t *testing.T) {
 				},
 			},
 			gasValid: false,
-			err: ErrEmptyResults,
+			err:      ErrEmptyResults,
 		},
 		{
 			desc: "sum of the output btm asset greater than input btm asset",
@@ -49,7 +49,7 @@ func TestValidateTx(t *testing.T) {
 				},
 			},
 			gasValid: false,
-			err: ErrGasCalculate,
+			err:      ErrGasCalculate,
 		},
 		{
 			desc: "sum of the input btm asset is overflow",
@@ -65,7 +65,7 @@ func TestValidateTx(t *testing.T) {
 				},
 			},
 			gasValid: false,
-			err: ErrOverflow,
+			err:      ErrOverflow,
 		},
 		{
 			desc: "issuance input has no corresponding output",
@@ -81,7 +81,7 @@ func TestValidateTx(t *testing.T) {
 				},
 			},
 			gasValid: false,
-			err: ErrUnbalanced,
+			err:      ErrUnbalanced,
 		},
 		{
 			desc: "issuance asset A, but output asset B",
@@ -98,7 +98,7 @@ func TestValidateTx(t *testing.T) {
 				},
 			},
 			gasValid: false,
-			err: ErrNoSource,
+			err:      ErrNoSource,
 		},
 		{
 			desc: "issuance transaction has no gas input",
@@ -113,7 +113,7 @@ func TestValidateTx(t *testing.T) {
 				},
 			},
 			gasValid: true, // TODO It's a bug, need hard fork solution
-			err: vm.ErrRunLimitExceeded,
+			err:      vm.ErrRunLimitExceeded,
 		},
 		{
 			desc: "input using the same utxo",
@@ -129,7 +129,39 @@ func TestValidateTx(t *testing.T) {
 				},
 			},
 			gasValid: true,
-			err: ErrMismatchedPosition,
+			err:      ErrMismatchedPosition,
+		},
+		{
+			desc: "output with over range amount but sum in equal",
+			txData: &types.TxData{
+				Version:        1,
+				SerializedSize: 1,
+				Inputs: []*types.TxInput{
+					types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
+				},
+				Outputs: []*types.TxOutput{
+					types.NewTxOutput(*consensus.BTMAssetID, 18446744073609551616, cp),
+					types.NewTxOutput(*consensus.BTMAssetID, 18446744073609551616, cp),
+					types.NewTxOutput(*consensus.BTMAssetID, 290000000, cp),
+				},
+			},
+			gasValid: false,
+			err:      ErrOverflow,
+		},
+		{
+			desc: "sum of output greater than sum of input",
+			txData: &types.TxData{
+				Version:        1,
+				SerializedSize: 1,
+				Inputs: []*types.TxInput{
+					types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 10, 0, cp),
+				},
+				Outputs: []*types.TxOutput{
+					types.NewTxOutput(*consensus.BTMAssetID, 20, cp),
+				},
+			},
+			gasValid: false,
+			err:      ErrGasCalculate,
 		},
 	}
 
