@@ -221,12 +221,13 @@ func (m *WSNotificationManager) NotifyBlockDisconnected(block *types.Block) {
 // memPoolTxQueryLoop constantly pass a transaction accepted by mempool to the
 // notification manager for transaction notification processing.
 func (m *WSNotificationManager) memPoolTxQueryLoop() {
+out:
 	for {
 		select {
 		case obj, ok := <-m.txMsgSub.Chan():
 			if !ok {
 				log.WithFields(log.Fields{"module": logModule}).Warning("tx pool tx msg subscription channel closed")
-				return
+				break out
 			}
 
 			ev, ok := obj.Data.(protocol.TxMsgEvent)
@@ -242,9 +243,11 @@ func (m *WSNotificationManager) memPoolTxQueryLoop() {
 				}
 			}
 		case <-m.quit:
-			return
+			break out
 		}
 	}
+
+	m.wg.Done()
 }
 
 // notificationHandler reads notifications and control messages from the queue handler and processes one at a time.
