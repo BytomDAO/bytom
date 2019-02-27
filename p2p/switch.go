@@ -24,7 +24,7 @@ import (
 const (
 	bannedPeerKey       = "BannedPeer"
 	defaultBanDuration  = time.Hour * 1
-	minNumOutboundPeers = 3
+	minNumOutboundPeers = 5
 )
 
 //pre-define errors for connecting fail
