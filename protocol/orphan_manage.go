@@ -58,14 +58,14 @@ func (o *OrphanManage) Add(block *types.Block) {
 	}
 
 	if len(o.orphan) >= numOrphanBlockLimit {
-		log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("the number of orphan blocks exceeds the limit")
+		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("the number of orphan blocks exceeds the limit")
 		return
 	}
 
 	o.orphan[blockHash] = &orphanBlock{block, time.Now().Add(orphanBlockTTL)}
 	o.prevOrphans[block.PreviousBlockHash] = append(o.prevOrphans[block.PreviousBlockHash], &blockHash)
 
-	log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
+	log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
 }
 
 // Delete will delete the block from OrphanManage

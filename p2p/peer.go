@@ -9,8 +9,8 @@ import (
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	crypto "github.com/tendermint/go-crypto"
-	wire "github.com/tendermint/go-wire"
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/flowrate"
 
@@ -155,7 +155,7 @@ func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duratio
 		func() {
 			var n int
 			wire.ReadBinary(peerNodeInfo, pc.conn, maxNodeInfoSize, &n, &err2)
-			log.WithField("address", peerNodeInfo.ListenAddr).Info("Peer handshake")
+			log.WithFields(log.Fields{"module": logModule, "address": peerNodeInfo.ListenAddr}).Info("Peer handshake")
 		})
 	if err1 != nil {
 		return peerNodeInfo, errors.Wrap(err1, "Error during handshake/write")
@@ -228,6 +228,12 @@ func (p *Peer) TrySend(chID byte, msg interface{}) bool {
 	if !p.IsRunning() {
 		return false
 	}
+
+	log.WithFields(log.Fields{
+		"module": logModule,
+		"peer":   p.Addr(),
+		"msg":    msg,
+	}).Info("send message to peer")
 	return p.mconn.TrySend(chID, msg)
 }
 

@@ -9,9 +9,10 @@ package discover
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
 	"net"
 	"sort"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/common"
 	"github.com/bytom/crypto"
@@ -50,8 +51,6 @@ func newTable(ourID NodeID, ourAddr *net.UDPAddr) *Table {
 	return tab
 }
 
-const printTable = false
-
 // chooseBucketRefreshTarget selects random refresh targets to keep all Kademlia
 // buckets filled with live connections and keep the network topology healthy.
 // This requires selecting addresses closer to our own with a higher probability
@@ -64,16 +63,11 @@ const printTable = false
 // used buckets.
 func (tab *Table) chooseBucketRefreshTarget() common.Hash {
 	entries := 0
-	if printTable {
-		fmt.Println()
-		fmt.Println("self ", "id:", tab.self.ID, " hex:", crypto.Sha256Hash(tab.self.ID[:]).Hex())
-	}
+	log.WithFields(log.Fields{"module": logModule, "self id:": tab.self.ID, "hex": crypto.Sha256Hash(tab.self.ID[:]).Hex()}).Debug()
 	for i, b := range &tab.buckets {
 		entries += len(b.entries)
-		if printTable {
-			for _, e := range b.entries {
-				fmt.Println(i, e.state, e.addr().String(), e.ID.String(), e.sha.Hex())
-			}
+		for _, e := range b.entries {
+			log.WithFields(log.Fields{"module": logModule, "bucket": i, "status": e.state, "addr": e.addr().String(), "id": e.ID.String(), "hex": e.sha.Hex()}).Debug()
 		}
 	}
 

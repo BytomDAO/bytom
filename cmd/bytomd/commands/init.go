@@ -25,7 +25,7 @@ func init() {
 func initFiles(cmd *cobra.Command, args []string) {
 	configFilePath := path.Join(config.RootDir, "config.toml")
 	if _, err := os.Stat(configFilePath); !os.IsNotExist(err) {
-		log.WithField("config", configFilePath).Info("Already exists config file.")
+		log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Info("Already exists config file.")
 		return
 	}
 
@@ -36,5 +36,5 @@ func initFiles(cmd *cobra.Command, args []string) {
 		cfg.EnsureRoot(config.RootDir, "solonet")
 	}
 
-	log.WithField("config", configFilePath).Info("Initialized bytom")
+	log.WithFields(log.Fields{"module": logModule, "config": configFilePath}).Info("Initialized bytom")
 }

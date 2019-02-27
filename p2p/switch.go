@@ -27,6 +27,7 @@ const (
 	bannedPeerKey       = "BannedPeer"
 	defaultBanDuration  = time.Hour * 1
 	minNumOutboundPeers = 3
+	logModule           = "p2p"
 )
 
 //pre-define errors for connecting fail
@@ -232,7 +233,7 @@ func (sw *Switch) AddListener(l Listener) {
 
 //DialPeerWithAddress dial node from net address
 func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
-	log.Debug("Dialing peer address:", addr)
+	log.WithFields(log.Fields{"module": logModule, "address": addr}).Debug("Dialing peer")
 	sw.dialing.Set(addr.IP.String(), addr)
 	defer sw.dialing.Delete(addr.IP.String())
 	if err := sw.filterConnByIP(addr.IP.String()); err != nil {
@@ -241,16 +242,16 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 
 	pc, err := newOutboundPeerConn(addr, sw.nodePrivKey, sw.peerConfig)
 	if err != nil {
-		log.WithFields(log.Fields{"address": addr, " err": err}).Error("DialPeer fail on newOutboundPeerConn")
+		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Error("DialPeer fail on newOutboundPeerConn")
 		return err
 	}
 
 	if err = sw.AddPeer(pc); err != nil {
-		log.WithFields(log.Fields{"address": addr, " err": err}).Error("DialPeer fail on switch AddPeer")
+		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Error("DialPeer fail on switch AddPeer")
 		pc.CloseConn()
 		return err
 	}
-	log.Debug("DialPeer added peer:", addr)
+	log.WithFields(log.Fields{"module": logModule, "address": addr, "peer num": sw.peers.Size()}).Debug("DialPeer added peer")
 	return nil
 }
 
@@ -309,7 +310,7 @@ func (sw *Switch) Peers() *PeerSet {
 
 // StopPeerForError disconnects from a peer due to external error.
 func (sw *Switch) StopPeerForError(peer *Peer, reason interface{}) {
-	log.WithFields(log.Fields{"peer": peer, " err": reason}).Debug("stopping peer for error")
+	log.WithFields(log.Fields{"module": logModule, "peer": peer, " err": reason}).Debug("stopping peer for error")
 	sw.stopAndRemovePeer(peer, reason)
 }
 
@@ -324,18 +325,19 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 	peerConn, err := newInboundPeerConn(conn, sw.nodePrivKey, sw.Config.P2P)
 	if err != nil {
 		if err := conn.Close(); err != nil {
-			log.WithFields(log.Fields{"remote peer:": conn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
+			log.WithFields(log.Fields{"module": logModule, "remote peer:": conn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
 		}
 		return err
 	}
 
 	if err = sw.AddPeer(peerConn); err != nil {
 		if err := conn.Close(); err != nil {
-			log.WithFields(log.Fields{"remote peer:": conn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
+			log.WithFields(log.Fields{"module": logModule, "remote peer:": conn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
 		}
 		return err
 	}
 
+	log.WithFields(log.Fields{"module": logModule, "address": conn.RemoteAddr().String(), "peer num": sw.peers.Size()}).Debug("add inbound peer")
 	return nil
 }
 
@@ -401,7 +403,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		// disconnect if we alrady have MaxNumPeers
 		if sw.peers.Size() >= sw.Config.P2P.MaxNumPeers {
 			if err := inConn.Close(); err != nil {
-				log.WithFields(log.Fields{"remote peer:": inConn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
+				log.WithFields(log.Fields{"module": logModule, "remote peer:": inConn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
 			}
 			log.Info("Ignoring inbound connection: already have enough peers.")
 			continue
@@ -417,7 +419,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 
 func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	if err := sw.DialPeerWithAddress(a); err != nil {
-		log.WithFields(log.Fields{"addr": a, "err": err}).Error("dialPeerWorker fail on dial peer")
+		log.WithFields(log.Fields{"module": logModule, "addr": a, "err": err}).Error("dialPeerWorker fail on dial peer")
 	}
 	wg.Done()
 }
@@ -425,7 +427,7 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 func (sw *Switch) ensureOutboundPeers() {
 	numOutPeers, _, numDialing := sw.NumPeers()
 	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing))
-	log.WithFields(log.Fields{"numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": numToDial}).Debug("ensure peers")
+	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": numToDial}).Debug("ensure peers")
 	if numToDial <= 0 {
 		return
 	}
@@ -475,7 +477,7 @@ func (sw *Switch) ensureOutboundPeersRoutine() {
 func (sw *Switch) startInitPeer(peer *Peer) error {
 	// spawn send/recv routines
 	if _, err := peer.Start(); err != nil {
-		log.WithFields(log.Fields{"remote peer:": peer.RemoteAddr, " err:": err}).Error("init peer err")
+		log.WithFields(log.Fields{"module": logModule, "remote peer:": peer.RemoteAddr, " err:": err}).Error("init peer err")
 	}
 
 	for _, reactor := range sw.reactors {
@@ -495,6 +497,7 @@ func (sw *Switch) stopAndRemovePeer(peer *Peer, reason interface{}) {
 
 	sentStatus, receivedStatus := peer.TrafficStatus()
 	log.WithFields(log.Fields{
+		"module":                logModule,
 		"address":               peer.Addr().String(),
 		"reason":                reason,
 		"duration":              sentStatus.Duration.String(),
@@ -502,5 +505,6 @@ func (sw *Switch) stopAndRemovePeer(peer *Peer, reason interface{}) {
 		"total_received":        receivedStatus.Bytes,
 		"average_sent_rate":     sentStatus.AvgRate,
 		"average_received_rate": receivedStatus.AvgRate,
+		"peer num":              sw.peers.Size(),
 	}).Info("disconnect with peer")
 }

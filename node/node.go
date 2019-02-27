@@ -35,7 +35,10 @@ import (
 	w "github.com/bytom/wallet"
 )
 
-const webHost = "http://127.0.0.1"
+const (
+	webHost   = "http://127.0.0.1"
+	logModule = "node"
+)
 
 // Node represent bytom node
 type Node struct {
@@ -92,7 +95,7 @@ func NewNode(config *cfg.Config) *Node {
 	txFeed = txfeed.NewTracker(txFeedDB, chain)
 
 	if err = txFeed.Prepare(ctx); err != nil {
-		log.WithField("error", err).Error("start txfeed")
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("start txfeed")
 		return nil
 	}
 
@@ -107,7 +110,7 @@ func NewNode(config *cfg.Config) *Node {
 		assets = asset.NewRegistry(walletDB, chain)
 		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain, dispatcher)
 		if err != nil {
-			log.WithField("error", err).Error("init NewWallet")
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}
 
 		// trigger rescan wallet
@@ -186,7 +189,7 @@ func initLogFile(config *cfg.Config) {
 	if err == nil {
 		log.SetOutput(file)
 	} else {
-		log.WithField("err", err).Info("using default")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Info("using default")
 	}
 
 }

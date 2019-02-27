@@ -20,6 +20,7 @@ import (
 const (
 	MsgNewTx = iota
 	MsgRemoveTx
+	logModule = "protocol"
 )
 
 var (
@@ -138,7 +139,7 @@ func (tp *TxPool) RemoveTransaction(txHash *bc.Hash) {
 
 	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())
 	tp.eventDispatcher.Post(TxMsgEvent{TxMsg: &TxPoolMsg{TxDesc: txD, MsgType: MsgRemoveTx}})
-	log.WithField("tx_id", txHash).Debug("remove tx from mempool")
+	log.WithFields(log.Fields{"module": logModule, "tx_id": txHash}).Debug("remove tx from mempool")
 }
 
 // GetTransaction return the TxDesc by hash
@@ -255,7 +256,7 @@ func (tp *TxPool) addTransaction(txD *TxDesc) error {
 
 	atomic.StoreInt64(&tp.lastUpdated, time.Now().Unix())
 	tp.eventDispatcher.Post(TxMsgEvent{TxMsg: &TxPoolMsg{TxDesc: txD, MsgType: MsgNewTx}})
-	log.WithField("tx_id", tx.ID.String()).Debug("Add tx to mempool")
+	log.WithFields(log.Fields{"module": logModule, "tx_id": tx.ID.String()}).Debug("Add tx to mempool")
 	return nil
 }
 
@@ -302,7 +303,7 @@ func (tp *TxPool) processOrphans(txD *TxDesc) {
 		processOrphan := processOrphans[0]
 		requireParents, err := tp.checkOrphanUtxos(processOrphan.Tx)
 		if err != nil {
-			log.WithField("err", err).Error("processOrphans got unexpect error")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("processOrphans got unexpect error")
 			continue
 		}
 

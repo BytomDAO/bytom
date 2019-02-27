@@ -19,6 +19,8 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+const logModule = "mining"
+
 // createCoinbaseTx returns a coinbase transaction paying an appropriate subsidy
 // based on the passed block height to the provided address.  When the address
 // is nil, the coinbase transaction will instead be redeemable by anyone.
@@ -159,6 +161,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 }
 
 func blkGenSkipTxForErr(txPool *protocol.TxPool, txHash *bc.Hash, err error) {
-	log.WithField("error", err).Error("mining block generation: skip tx due to")
+	log.WithFields(log.Fields{"module": logModule, "error": err}).Error("mining block generation: skip tx due to")
 	txPool.RemoveTransaction(txHash)
 }

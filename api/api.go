@@ -41,7 +41,8 @@ const (
 	// SUCCESS indicates the rpc calling is successful.
 	SUCCESS = "success"
 	// FAIL indicated the rpc calling is failed.
-	FAIL = "fail"
+	FAIL      = "fail"
+	logModule = "api"
 )
 
 // Response describes the response standard.
@@ -153,7 +154,7 @@ func (a *API) initServer(config *cfg.Config) {
 
 // StartServer start the server
 func (a *API) StartServer(address string) {
-	log.WithField("api address:", address).Info("Rpc listen")
+	log.WithFields(log.Fields{"module": logModule, "api address:": address}).Info("Rpc listen")
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to register tcp port: %v", err))
@@ -164,7 +165,7 @@ func (a *API) StartServer(address string) {
 	// we call it.
 	go func() {
 		if err := a.server.Serve(listener); err != nil {
-			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
+			log.WithFields(log.Fields{"module": logModule, "error": errors.Wrap(err, "Serve")}).Error("Rpc server")
 		}
 	}()
 }
@@ -357,7 +358,7 @@ func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore
 		// TODO(tessr): check that this path exists; return early if this path isn't legit
 		req, err := authenticator.Authenticate(req)
 		if err != nil {
-			log.WithField("error", errors.Wrap(err, "Serve")).Error("Authenticate fail")
+			log.WithFields(log.Fields{"module": logModule, "error": errors.Wrap(err, "Serve")}).Error("Authenticate fail")
 			err = errors.WithDetail(errNotAuthenticated, err.Error())
 			errorFormatter.Write(req.Context(), rw, err)
 			return
