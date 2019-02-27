@@ -73,13 +73,18 @@ func (f *blockFetcher) add(msg *blockMsg) {
 }
 
 func (f *blockFetcher) insert(msg *blockMsg) {
-	if _, err := f.chain.ProcessBlock(msg.block); err != nil {
+	isOrphan, err := f.chain.ProcessBlock(msg.block)
+	if err != nil {
 		peer := f.peers.getPeer(msg.peerID)
 		if peer == nil {
 			return
 		}
 
 		f.peers.addBanScore(msg.peerID, 20, 0, err.Error())
+		return
+	}
+
+	if isOrphan {
 		return
 	}
 
