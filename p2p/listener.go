@@ -153,7 +153,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 	if !skipUPNP && (lAddrIP == "" || lAddrIP == "0.0.0.0") {
 		extAddr, err = getUPNPExternalAddress(lAddrPort, listenerPort)
 		upnpMap = err == nil
-		log.WithField("err", err).Info("get UPNP external address")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Info("get UPNP external address")
 	}
 
 	if extAddr == nil {

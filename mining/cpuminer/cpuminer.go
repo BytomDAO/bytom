@@ -18,6 +18,7 @@ const (
 	maxNonce          = ^uint64(0) // 2^64 - 1
 	defaultNumWorkers = 1
 	hashUpdateSecs    = 1
+	logModule         = "cpuminer"
 )
 
 // CPUMiner provides facilities for solving blocks (mining) using the CPU in
@@ -94,6 +95,7 @@ out:
 		if m.solveBlock(block, ticker, quit) {
 			if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
 				log.WithFields(log.Fields{
+					"module":   logModule,
 					"height":   block.BlockHeader.Height,
 					"isOrphan": isOrphan,
 					"tx":       len(block.Transactions),
@@ -101,10 +103,10 @@ out:
 
 				// Broadcast the block and announce chain insertion event
 				if err = m.eventDispatcher.Post(event.NewMinedBlockEvent{Block: block}); err != nil {
-					log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on post block, %v", err)
+					log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "error": err}).Errorf("Miner fail on post block")
 				}
 			} else {
-				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
+				log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "error": err}).Errorf("Miner fail on ProcessBlock")
 			}
 		}
 	}

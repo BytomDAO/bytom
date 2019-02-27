@@ -52,8 +52,9 @@ func (m *Manager) Restore(image *Image) error {
 	for _, slice := range image.Slice {
 		if existed := m.db.Get(Key(slice.Account.ID)); existed != nil {
 			log.WithFields(log.Fields{
-				"alias": slice.Account.Alias,
-				"id":    slice.Account.ID,
+				"module": logModule,
+				"alias":  slice.Account.Alias,
+				"id":     slice.Account.ID,
 			}).Warning("skip restore account due to already existed")
 			continue
 		}

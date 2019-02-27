@@ -38,12 +38,12 @@ func checkClockDrift() {
 		howtofix := fmt.Sprintf("Please enable network time synchronisation in system settings")
 		separator := strings.Repeat("-", len(warning))
 
-		log.Warn(separator)
-		log.Warn(warning)
-		log.Warn(howtofix)
-		log.Warn(separator)
+		log.WithFields(log.Fields{"module": logModule}).Warn(separator)
+		log.WithFields(log.Fields{"module": logModule}).Warn(warning)
+		log.WithFields(log.Fields{"module": logModule}).Warn(howtofix)
+		log.WithFields(log.Fields{"module": logModule}).Warn(separator)
 	} else {
-		log.Debug(fmt.Sprintf("Sanity NTP check reported %v drift, all ok", drift))
+		log.WithFields(log.Fields{"module": logModule, "drift": drift}).Debug(fmt.Sprintf("Sanity NTP check reported all ok"))
 	}
 }
 

@@ -36,7 +36,7 @@ func (a SortByTimestamp) Less(i, j int) bool { return a[i].Timestamp > a[j].Time
 // AddUnconfirmedTx handle wallet status update when tx add into txpool
 func (w *Wallet) AddUnconfirmedTx(txD *protocol.TxDesc) {
 	if err := w.saveUnconfirmedTx(txD.Tx); err != nil {
-		log.WithField("err", err).Error("wallet fail on saveUnconfirmedTx")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("wallet fail on saveUnconfirmedTx")
 	}
 
 	utxos := txOutToUtxos(txD.Tx, txD.StatusFail, 0)
@@ -168,7 +168,7 @@ func (w *Wallet) delExpiredTxs() error {
 //delUnconfirmedTx periodically delete locally stored timeout did not confirm txs
 func (w *Wallet) delUnconfirmedTx() {
 	if err := w.delExpiredTxs(); err != nil {
-		log.WithField("err", err).Error("wallet fail on delUnconfirmedTx")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("wallet fail on delUnconfirmedTx")
 		return
 	}
 	ticker := time.NewTicker(UnconfirmedTxCheckPeriod)
@@ -176,7 +176,7 @@ func (w *Wallet) delUnconfirmedTx() {
 	for {
 		<-ticker.C
 		if err := w.delExpiredTxs(); err != nil {
-			log.WithField("err", err).Error("wallet fail on delUnconfirmedTx")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("wallet fail on delUnconfirmedTx")
 		}
 	}
 }

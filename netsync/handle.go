@@ -326,11 +326,7 @@ func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusRes
 	}
 
 	if genesisHash := msg.GetGenesisHash(); sm.genesisHash != *genesisHash {
-		log.WithFields(log.Fields{
-			"module":         logModule,
-			"remote genesis": genesisHash.String(),
-			"local genesis":  sm.genesisHash.String(),
-		}).Warn("fail hand shake due to differnt genesis")
+		log.WithFields(log.Fields{"module": logModule, "remote genesis": genesisHash.String(), "local genesis": sm.genesisHash.String()}).Warn("fail hand shake due to differnt genesis")
 		return
 	}
 

@@ -333,7 +333,7 @@ func ListenUDP(priv ed25519.PrivateKey, conn conn, realaddr *net.UDPAddr, nodeDB
 	if err != nil {
 		return nil, err
 	}
-	log.Info("UDP listener up v5", "net", net.tab.self)
+	log.WithFields(log.Fields{"module": logModule, "net": net.tab.self}).Info("UDP listener up v5")
 	transport.net = net
 	go transport.readLoop()
 	return net, nil
@@ -425,9 +425,9 @@ func (t *udp) sendPacket(toid NodeID, toaddr *net.UDPAddr, ptype byte, req inter
 	if err != nil {
 		return hash, err
 	}
-	log.Debug(fmt.Sprintf(">>> %v to %x@%v", nodeEvent(ptype), toid[:8], toaddr))
+	log.WithFields(log.Fields{"module": logModule, "event": nodeEvent(ptype), "to id": hex.EncodeToString(toid[:8]), "to addr": toaddr}).Debug("send packet")
 	if _, err = t.conn.WriteToUDP(packet, toaddr); err != nil {
-		log.Info(fmt.Sprint("UDP send failed:", err))
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Info(fmt.Sprint("UDP send failed"))
 	}
 	return hash, err
 }
@@ -442,7 +442,7 @@ func encodePacket(priv ed25519.PrivateKey, ptype byte, req interface{}) (p, hash
 	var size int
 	wire.WriteJSON(req, b, &size, &err)
 	if err != nil {
-		log.Error(fmt.Sprint("error encoding packet:", err))
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("error encoding packet")
 		return nil, nil, err
 	}
 	packet := b.Bytes()
@@ -468,11 +468,11 @@ func (t *udp) readLoop() {
 		nbytes, from, err := t.conn.ReadFromUDP(buf)
 		if netutil.IsTemporaryError(err) {
 			// Ignore temporary read errors.
-			log.Debug(fmt.Sprintf("Temporary read error: %v", err))
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Debug("Temporary read error")
 			continue
 		} else if err != nil {
 			// Shut down the loop for permament errors.
-			log.Debug(fmt.Sprintf("Read error: %v", err))
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Debug("Read error")
 			return
 		}
 		t.handlePacket(from, buf[:nbytes])
@@ -482,8 +482,7 @@ func (t *udp) readLoop() {
 func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	pkt := ingressPacket{remoteAddr: from}
 	if err := decodePacket(buf, &pkt); err != nil {
-		log.Debug(fmt.Sprintf("Bad packet from %v: %v", from, err))
-		//fmt.Println("bad packet", err)
+		log.WithFields(log.Fields{"module": logModule, "from": from, "error": err}).Error("Bad packet")
 		return err
 	}
 	t.net.reqReadPacket(pkt)
@@ -526,7 +525,7 @@ func decodePacket(buffer []byte, pkt *ingressPacket) error {
 	var err error
 	wire.ReadJSON(pkt.data, sigdata[1:], &err)
 	if err != nil {
-		log.Error("wire readjson err:", err)
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("wire readjson err")
 	}
 
 	return err

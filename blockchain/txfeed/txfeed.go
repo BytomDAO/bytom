@@ -20,6 +20,7 @@ import (
 const (
 	//FilterNumMax max txfeed filter amount.
 	FilterNumMax = 1024
+	logModule    = "txfeed"
 )
 
 var (
@@ -264,7 +265,7 @@ func (t *Tracker) Get(ctx context.Context, alias string) (*TxFeed, error) {
 
 //Delete delete txfeed with alias.
 func (t *Tracker) Delete(ctx context.Context, alias string) error {
-	log.WithField("delete", alias).Info("delete txfeed")
+	log.WithFields(log.Fields{"module": logModule, "delete": alias}).Info("delete txfeed")
 
 	if alias == "" {
 		return errors.WithDetail(ErrEmptyAlias, "del transaction feed with empty alias")
@@ -312,7 +313,7 @@ func (t *Tracker) TxFilter(tx *types.Tx) error {
 			if err != nil {
 				return err
 			}
-			log.WithField("filter", string(b)).Info("find new tx match filter")
+			log.WithFields(log.Fields{"module:": logModule, "filter": string(b)}).Info("find new tx match filter")
 			t.txfeedCh <- tx
 		}
 	}

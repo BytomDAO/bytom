@@ -103,7 +103,7 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 	for _, tx := range annotatedTxs {
 		rawTx, err := json.Marshal(tx)
 		if err != nil {
-			log.WithField("err", err).Error("inserting annotated_txs to db")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("inserting annotated_txs to db")
 			return err
 		}
 

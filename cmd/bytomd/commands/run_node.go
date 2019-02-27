@@ -10,6 +10,8 @@ import (
 	"github.com/bytom/node"
 )
 
+const logModule = "cmd"
+
 var runNodeCmd = &cobra.Command{
 	Use:   "node",
 	Short: "Run the bytomd",
@@ -79,11 +81,12 @@ func runNode(cmd *cobra.Command, args []string) error {
 	// Create & start node
 	n := node.NewNode(config)
 	if _, err := n.Start(); err != nil {
-		log.WithField("err", err).Fatal("failed to start node")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to start node")
 	}
 
 	nodeInfo := n.NodeInfo()
 	log.WithFields(log.Fields{
+		"module":   logModule,
 		"version":  nodeInfo.Version,
 		"network":  nodeInfo.Network,
 		"duration": time.Since(startTime),

@@ -12,6 +12,8 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 )
 
+const logModule = "pseudohsm"
+
 // KeyImage is the struct for hold export key data
 type KeyImage struct {
 	XKeys []*encryptedKeyJSON `json:"xkeys"`
@@ -52,9 +54,10 @@ func (h *HSM) Restore(image *KeyImage) error {
 		copy(xPub[:], data)
 		if h.cache.hasKey(xPub) {
 			log.WithFields(log.Fields{
-				"alias": xKey.Alias,
-				"id":    xKey.ID,
-				"xPub":  xKey.XPub,
+				"module": logModule,
+				"alias":  xKey.Alias,
+				"id":     xKey.ID,
+				"xPub":   xKey.XPub,
 			}).Warning("skip restore key due to already existed")
 			continue
 		}
