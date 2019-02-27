@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	defaultTxTTL    = 5 * time.Minute
+	defaultTxTTL    = 30 * time.Minute
 	defaultBaseRate = float64(100000)
 	flexibleGas     = int64(1800)
 )
