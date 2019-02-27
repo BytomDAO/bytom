@@ -73,7 +73,8 @@ func (f *blockFetcher) add(msg *blockMsg) {
 }
 
 func (f *blockFetcher) insert(msg *blockMsg) {
-	if _, err := f.chain.ProcessBlock(msg.block); err != nil {
+	isOrphan, err := f.chain.ProcessBlock(msg.block)
+	if err != nil {
 		peer := f.peers.getPeer(msg.peerID)
 		if peer == nil {
 			return
@@ -83,10 +84,25 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 		return
 	}
 
+	if isOrphan {
+		return
+	}
+
 	if err := f.peers.broadcastMinedBlock(msg.block); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("blockFetcher fail on broadcast new block")
 		return
 	}
+
+	genesisBlock, err := f.chain.GetBlockByHeight(0)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleStatusRequestMsg get genesis")
+		return
+	}
+
+	if err = f.peers.broadcastNewStatus(msg.block, genesisBlock); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on syncWorker broadcast new status")
+	}
+
 }
 
 func (f *blockFetcher) processNewBlock(msg *blockMsg) {
