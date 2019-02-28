@@ -17,6 +17,7 @@ import (
 
 func TestCheckBlockTime(t *testing.T) {
 	cases := []struct {
+		desc       string
 		blockTime  uint64
 		parentTime uint64
 		err        error
@@ -27,16 +28,19 @@ func TestCheckBlockTime(t *testing.T) {
 			err:        nil,
 		},
 		{
+			desc: "timestamp less than past median time (tapd1002477)",
 			blockTime:  1510000000,
 			parentTime: 1520000000,
 			err:        errBadTimestamp,
 		},
 		{
+			desc:       "timestamp greater than max limit (tapd1002477)",
 			blockTime:  9999999999,
 			parentTime: 1520000000,
 			err:        errBadTimestamp,
 		},
 		{
+			desc:       "timestamp of the block and the parent block are both greater than max limit (tapd1002477)",
 			blockTime:  uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 2,
 			parentTime: uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 1,
 			err:        errBadTimestamp,
@@ -129,6 +133,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errMisorderedBlockHeight,
 		},
 		{
+			desc: "the difficulty of the block is not equals to the next difficulty of parent block (tapd1002478)",
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{
 				Version: 1,
 				Height:  20,
@@ -142,6 +147,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errBadBits,
 		},
 		{
+			desc: "the prev block hash not equals to the hash of parent (tapd1002476)",
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{
 				Version:         1,
 				Height:          20,
@@ -155,6 +161,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errMismatchedBlock,
 		},
 		{
+			desc:  "check work proof fail (tapd1002481)",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 0},
 				BlockHeader: &bc.BlockHeader{
@@ -197,7 +204,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: nil,
 		},
 		{
-			desc: "version greater than 1",
+			desc: "version greater than 1 (tapd1002475)",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -210,7 +217,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errVersionRegression,
 		},
 		{
-			desc: "version equals 0",
+			desc: "version equals 0 (tapd1002475)",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -223,7 +230,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errVersionRegression,
 		},
 		{
-			desc: "version equals max uint64",
+			desc: "version equals max uint64 (tapd1002475)",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -244,6 +251,7 @@ func TestValidateBlockHeader(t *testing.T) {
 	}
 }
 
+// TestValidateMerkleRoot check the cacaulated merkle root is equals to the merkle hash of block header (tapd1002479)
 func TestValidateMerkleRoot(t *testing.T) {
 	iniTtensority()
 
@@ -327,6 +335,7 @@ func TestValidateMerkleRoot(t *testing.T) {
 	}
 }
 
+// TestGasOverBlockLimit check if the gas of the block has the max limit (tapd1002482)
 func TestGasOverBlockLimit(t *testing.T) {
 	iniTtensority()
 
@@ -377,6 +386,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 	}
 }
 
+// TestSetTransactionStatus verify the transaction status is set correctly (tapd1002480) 
 func TestSetTransactionStatus(t *testing.T) {
 	iniTtensority()
 
