@@ -24,10 +24,9 @@ import (
 )
 
 const (
-	bannedPeerKey      = "BannedPeer"
-	defaultBanDuration = time.Hour * 1
-	logModule          = "p2p"
-
+	bannedPeerKey       = "BannedPeer"
+	defaultBanDuration  = time.Hour * 1
+	logModule           = "p2p"
 	minNumOutboundPeers = 5
 )
 
