@@ -55,7 +55,7 @@ func (w *Wallet) getExternalDefinition(assetID *bc.AssetID) json.RawMessage {
 	}
 
 	if err := w.AssetReg.SaveAsset(externalAsset, alias); err != nil {
-		log.WithFields(log.Fields{"err": err, "assetID": alias}).Warning("fail on save external asset to internal asset DB")
+		log.WithFields(log.Fields{"module": logModule, "err": err, "assetID": alias}).Warning("fail on save external asset to internal asset DB")
 	}
 	return definitionByte
 }

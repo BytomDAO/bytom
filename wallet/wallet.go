@@ -10,6 +10,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -17,7 +18,8 @@ import (
 
 const (
 	//SINGLE single sign
-	SINGLE = 1
+	SINGLE    = 1
+	logModule = "wallet"
 )
 
 var walletKey = []byte("walletInfo")
@@ -32,27 +34,31 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB          db.DB
-	rw          sync.RWMutex
-	status      StatusInfo
-	AccountMgr  *account.Manager
-	AssetReg    *asset.Registry
-	Hsm         *pseudohsm.HSM
-	chain       *protocol.Chain
-	RecoveryMgr *recoveryManager
-	rescanCh    chan struct{}
+	DB              db.DB
+	rw              sync.RWMutex
+	status          StatusInfo
+	AccountMgr      *account.Manager
+	AssetReg        *asset.Registry
+	Hsm             *pseudohsm.HSM
+	chain           *protocol.Chain
+	RecoveryMgr     *recoveryManager
+	eventDispatcher *event.Dispatcher
+	txMsgSub        *event.Subscription
+
+	rescanCh chan struct{}
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain) (*Wallet, error) {
+func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher) (*Wallet, error) {
 	w := &Wallet{
-		DB:          walletDB,
-		AccountMgr:  account,
-		AssetReg:    asset,
-		chain:       chain,
-		Hsm:         hsm,
-		RecoveryMgr: newRecoveryManager(walletDB, account),
-		rescanCh:    make(chan struct{}, 1),
+		DB:              walletDB,
+		AccountMgr:      account,
+		AssetReg:        asset,
+		chain:           chain,
+		Hsm:             hsm,
+		RecoveryMgr:     newRecoveryManager(walletDB, account),
+		eventDispatcher: dispatcher,
+		rescanCh:        make(chan struct{}, 1),
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -63,9 +69,44 @@ func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, 
 		return nil, err
 	}
 
+	var err error
+	w.txMsgSub, err = w.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
+	if err != nil {
+		return nil, err
+	}
+
 	go w.walletUpdater()
 	go w.delUnconfirmedTx()
+	go w.memPoolTxQueryLoop()
 	return w, nil
+}
+
+// memPoolTxQueryLoop constantly pass a transaction accepted by mempool to the wallet.
+func (w *Wallet) memPoolTxQueryLoop() {
+	for {
+		select {
+		case obj, ok := <-w.txMsgSub.Chan():
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Warning("tx pool tx msg subscription channel closed")
+				return
+			}
+
+			ev, ok := obj.Data.(protocol.TxMsgEvent)
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
+				continue
+			}
+
+			switch ev.TxMsg.MsgType {
+			case protocol.MsgNewTx:
+				w.AddUnconfirmedTx(ev.TxMsg.TxDesc)
+			case protocol.MsgRemoveTx:
+				w.RemoveUnconfirmedTx(ev.TxMsg.TxDesc)
+			default:
+				log.WithFields(log.Fields{"module": logModule}).Warn("got unknow message type from the txPool channel")
+			}
+		}
+	}
 }
 
 //GetWalletInfo return stored wallet info and nil,if error,
@@ -85,7 +126,7 @@ func (w *Wallet) loadWalletInfo() error {
 func (w *Wallet) commitWalletInfo(batch db.Batch) error {
 	rawWallet, err := json.Marshal(w.status)
 	if err != nil {
-		log.WithField("err", err).Error("save wallet info")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("save wallet info")
 		return err
 	}
 
@@ -162,12 +203,12 @@ func (w *Wallet) walletUpdater() {
 		for !w.chain.InMainChain(w.status.BestHash) {
 			block, err := w.chain.GetBlockByHash(&w.status.BestHash)
 			if err != nil {
-				log.WithField("err", err).Error("walletUpdater GetBlockByHash")
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("walletUpdater GetBlockByHash")
 				return
 			}
 
 			if err := w.DetachBlock(block); err != nil {
-				log.WithField("err", err).Error("walletUpdater detachBlock stop")
+				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("walletUpdater detachBlock stop")
 				return
 			}
 		}
@@ -179,7 +220,7 @@ func (w *Wallet) walletUpdater() {
 		}
 
 		if err := w.AttachBlock(block); err != nil {
-			log.WithField("err", err).Error("walletUpdater AttachBlock stop")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("walletUpdater AttachBlock stop")
 			return
 		}
 	}

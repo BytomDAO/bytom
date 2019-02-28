@@ -136,7 +136,7 @@ func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint) error
 	c.index.SetMainChain(node)
 	c.bestNode = node
 
-	log.WithFields(log.Fields{"height": c.bestNode.Height, "hash": c.bestNode.Hash.String()}).Debug("chain best status has been update")
+	log.WithFields(log.Fields{"module": logModule, "height": c.bestNode.Height, "hash": c.bestNode.Hash.String()}).Debug("chain best status has been update")
 	c.cond.Broadcast()
 	return nil
 }

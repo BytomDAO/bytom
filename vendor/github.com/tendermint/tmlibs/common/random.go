@@ -3,7 +3,6 @@ package common
 import (
 	crand "crypto/rand"
 	"math/rand"
-	"time"
 )
 
 const (
@@ -44,77 +43,8 @@ MAIN_LOOP:
 	return string(chars)
 }
 
-func RandUint16() uint16 {
-	return uint16(rand.Uint32() & (1<<16 - 1))
-}
-
-func RandUint32() uint32 {
-	return rand.Uint32()
-}
-
-func RandUint64() uint64 {
-	return uint64(rand.Uint32())<<32 + uint64(rand.Uint32())
-}
-
-func RandUint() uint {
-	return uint(rand.Int())
-}
-
-func RandInt16() int16 {
-	return int16(rand.Uint32() & (1<<16 - 1))
-}
-
-func RandInt32() int32 {
-	return int32(rand.Uint32())
-}
-
-func RandInt64() int64 {
-	return int64(rand.Uint32())<<32 + int64(rand.Uint32())
-}
-
 func RandInt() int {
 	return rand.Int()
-}
-
-// Distributed pseudo-exponentially to test for various cases
-func RandUint16Exp() uint16 {
-	bits := rand.Uint32() % 16
-	if bits == 0 {
-		return 0
-	}
-	n := uint16(1 << (bits - 1))
-	n += uint16(rand.Int31()) & ((1 << (bits - 1)) - 1)
-	return n
-}
-
-// Distributed pseudo-exponentially to test for various cases
-func RandUint32Exp() uint32 {
-	bits := rand.Uint32() % 32
-	if bits == 0 {
-		return 0
-	}
-	n := uint32(1 << (bits - 1))
-	n += uint32(rand.Int31()) & ((1 << (bits - 1)) - 1)
-	return n
-}
-
-// Distributed pseudo-exponentially to test for various cases
-func RandUint64Exp() uint64 {
-	bits := rand.Uint32() % 64
-	if bits == 0 {
-		return 0
-	}
-	n := uint64(1 << (bits - 1))
-	n += uint64(rand.Int63()) & ((1 << (bits - 1)) - 1)
-	return n
-}
-
-func RandFloat32() float32 {
-	return rand.Float32()
-}
-
-func RandTime() time.Time {
-	return time.Unix(int64(RandUint64Exp()), 0)
 }
 
 func RandBytes(n int) []byte {

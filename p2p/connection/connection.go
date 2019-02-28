@@ -36,6 +36,7 @@ const (
 	defaultRecvMessageCapacity = 22020096      // 21MB
 	defaultRecvRate            = int64(512000) // 500KB/s
 	defaultSendTimeout         = 10 * time.Second
+	logModule                  = "p2p/conn"
 )
 
 type receiveCbFunc func(chID byte, msgBytes []byte)
@@ -182,12 +183,12 @@ func (c *MConnection) Send(chID byte, msg interface{}) bool {
 
 	channel, ok := c.channelsIdx[chID]
 	if !ok {
-		log.WithField("chID", chID).Error("cannot send bytes due to unknown channel")
+		log.WithFields(log.Fields{"module": logModule, "chID": chID}).Error("cannot send bytes due to unknown channel")
 		return false
 	}
 
 	if !channel.sendBytes(wire.BinaryBytes(msg)) {
-		log.WithFields(log.Fields{"chID": chID, "conn": c, "msg": msg}).Error("MConnection send failed")
+		log.WithFields(log.Fields{"module": logModule, "chID": chID, "conn": c, "msg": msg}).Error("MConnection send failed")
 		return false
 	}
 
@@ -213,7 +214,7 @@ func (c *MConnection) TrySend(chID byte, msg interface{}) bool {
 
 	channel, ok := c.channelsIdx[chID]
 	if !ok {
-		log.WithField("chID", chID).Error("cannot send bytes due to unknown channel")
+		log.WithFields(log.Fields{"module": logModule, "chID": chID}).Error("cannot send bytes due to unknown channel")
 		return false
 	}
 
@@ -233,7 +234,7 @@ func (c *MConnection) String() string {
 
 func (c *MConnection) flush() {
 	if err := c.bufWriter.Flush(); err != nil {
-		log.WithField("error", err).Error("MConnection flush failed")
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("MConnection flush failed")
 	}
 }
 
@@ -264,7 +265,7 @@ func (c *MConnection) recvRoutine() {
 		c.recvMonitor.Update(int(n))
 		if err != nil {
 			if c.IsRunning() {
-				log.WithFields(log.Fields{"conn": c, "error": err}).Error("Connection failed @ recvRoutine (reading byte)")
+				log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Error("Connection failed @ recvRoutine (reading byte)")
 				c.conn.Close()
 				c.stopForError(err)
 			}
@@ -274,14 +275,14 @@ func (c *MConnection) recvRoutine() {
 		// Read more depending on packet type.
 		switch pktType {
 		case packetTypePing:
-			log.Debug("receive Ping")
+			log.WithFields(log.Fields{"module": logModule, "conn": c}).Debug("receive Ping")
 			select {
 			case c.pong <- struct{}{}:
 			default:
 			}
 
 		case packetTypePong:
-			log.Debug("receive Pong")
+			log.WithFields(log.Fields{"module": logModule, "conn": c}).Debug("receive Pong")
 
 		case packetTypeMsg:
 			pkt, n, err := msgPacket{}, int(0), error(nil)
@@ -289,7 +290,7 @@ func (c *MConnection) recvRoutine() {
 			c.recvMonitor.Update(int(n))
 			if err != nil {
 				if c.IsRunning() {
-					log.WithFields(log.Fields{"conn": c, "error": err}).Error("failed on recvRoutine")
+					log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Error("failed on recvRoutine")
 					c.stopForError(err)
 				}
 				return
@@ -303,7 +304,7 @@ func (c *MConnection) recvRoutine() {
 			msgBytes, err := channel.recvMsgPacket(pkt)
 			if err != nil {
 				if c.IsRunning() {
-					log.WithFields(log.Fields{"conn": c, "error": err}).Error("failed on recvRoutine")
+					log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Error("failed on recvRoutine")
 					c.stopForError(err)
 				}
 				return
@@ -338,7 +339,7 @@ func (c *MConnection) sendMsgPacket() bool {
 
 	n, err := leastChannel.writeMsgPacketTo(c.bufWriter)
 	if err != nil {
-		log.WithField("error", err).Error("failed to write msgPacket")
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("failed to write msgPacket")
 		c.stopForError(err)
 		return true
 	}
@@ -362,12 +363,12 @@ func (c *MConnection) sendRoutine() {
 				channel.updateStats()
 			}
 		case <-c.pingTimer.C:
-			log.Debug("send Ping")
+			log.WithFields(log.Fields{"module": logModule, "conn": c}).Debug("send Ping")
 			wire.WriteByte(packetTypePing, c.bufWriter, &n, &err)
 			c.sendMonitor.Update(int(n))
 			c.flush()
 		case <-c.pong:
-			log.Debug("send Pong")
+			log.WithFields(log.Fields{"module": logModule, "conn": c}).Debug("send Pong")
 			wire.WriteByte(packetTypePong, c.bufWriter, &n, &err)
 			c.sendMonitor.Update(int(n))
 			c.flush()
@@ -386,7 +387,7 @@ func (c *MConnection) sendRoutine() {
 			return
 		}
 		if err != nil {
-			log.WithFields(log.Fields{"conn": c, "error": err}).Error("Connection failed @ sendRoutine")
+			log.WithFields(log.Fields{"module": logModule, "conn": c, "error": err}).Error("Connection failed @ sendRoutine")
 			c.stopForError(err)
 			return
 		}

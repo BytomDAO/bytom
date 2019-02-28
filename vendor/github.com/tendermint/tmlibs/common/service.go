@@ -171,18 +171,3 @@ func (bs *BaseService) Wait() {
 func (bs *BaseService) String() string {
 	return bs.name
 }
-
-//----------------------------------------
-
-type QuitService struct {
-	BaseService
-}
-
-func NewQuitService(logger log.Logger, name string, impl Service) *QuitService {
-	if logger != nil {
-		logger.Info("QuitService is deprecated, use BaseService instead")
-	}
-	return &QuitService{
-		BaseService: *NewBaseService(logger, name, impl),
-	}
-}

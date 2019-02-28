@@ -43,12 +43,11 @@ var (
 	nodeDBVersionKey = []byte("version") // Version of the database to flush if changes
 	nodeDBItemPrefix = []byte("n:")      // Identifier to prefix node entries with
 
-	nodeDBDiscoverRoot          = ":discover"
-	nodeDBDiscoverPing          = nodeDBDiscoverRoot + ":lastping"
-	nodeDBDiscoverPong          = nodeDBDiscoverRoot + ":lastpong"
-	nodeDBDiscoverFindFails     = nodeDBDiscoverRoot + ":findfail"
-	nodeDBDiscoverLocalEndpoint = nodeDBDiscoverRoot + ":localendpoint"
-	nodeDBTopicRegTickets       = ":tickets"
+	nodeDBDiscoverRoot      = ":discover"
+	nodeDBDiscoverPing      = nodeDBDiscoverRoot + ":lastping"
+	nodeDBDiscoverPong      = nodeDBDiscoverRoot + ":lastpong"
+	nodeDBDiscoverFindFails = nodeDBDiscoverRoot + ":findfail"
+	nodeDBTopicRegTickets   = ":tickets"
 )
 
 // newNodeDB creates a new node database for storing and retrieving infos about
@@ -95,15 +94,19 @@ func newPersistentNodeDB(path string, version int, self NodeID) (*nodeDB, error)
 	switch err {
 	case leveldb.ErrNotFound:
 		// Version not found (i.e. empty cache), insert it
-		if err := db.Put(nodeDBVersionKey, currentVer, nil); err != nil {
-			db.Close()
+		if err = db.Put(nodeDBVersionKey, currentVer, nil); err != nil {
+			if err := db.Close(); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "error": err}).Warn(fmt.Sprintf("db close err"))
+			}
 			return nil, err
 		}
 
 	case nil:
 		// Version present, flush if different
 		if !bytes.Equal(blob, currentVer) {
-			db.Close()
+			if err = db.Close(); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "error": err}).Warn(fmt.Sprintf("db close err"))
+			}
 			if err = os.RemoveAll(path); err != nil {
 				return nil, err
 			}
@@ -162,40 +165,45 @@ func (db *nodeDB) storeInt64(key []byte, n int64) error {
 	return db.lvl.Put(key, blob, nil)
 }
 
-//func (db *nodeDB) storeRLP(key []byte, val interface{}) error {
-//	blob, err := wire.WriteBinary(val,)
-//	if err != nil {
-//		return err
-//	}
-//	return db.lvl.Put(key, blob, nil)
-//}
-
-//func (db *nodeDB) fetchRLP(key []byte, val interface{}) error {
-//	blob, err := db.lvl.Get(key, nil)
-//	if err != nil {
-//		return err
-//	}
-//	err = rlp.DecodeBytes(blob, val)
-//	if err != nil {
-//		log.Warn(fmt.Sprintf("key %x (%T) %v", key, val, err))
-//	}
-//	return err
-//}
-
 // node retrieves a node with a given id from the database.
 func (db *nodeDB) node(id NodeID) *Node {
-	var node Node
-	//if err := db.fetchRLP(makeKey(id, nodeDBDiscoverRoot), &node); err != nil {
-	//	return nil
-	//}
+	var (
+		n    = int(0)
+		node = new(Node)
+	)
+
+	key := makeKey(id, nodeDBDiscoverRoot)
+	rawData, err := db.lvl.Get(key, nil)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Warn(fmt.Sprintf("get node rawdata err"))
+		return nil
+	}
+
+	wire.ReadBinary(node, bytes.NewReader(rawData), 0, &n, &err)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "key": key, "node": node, "error": err}).Warn("get node from db err")
+		return nil
+	}
+
 	node.sha = crypto.Sha256Hash(node.ID[:])
-	return &node
+	return node
 }
 
 // updateNode inserts - potentially overwriting - a node into the peer database.
-//func (db *nodeDB) updateNode(node *Node) error {
-//	return db.storeRLP(makeKey(node.ID, nodeDBDiscoverRoot), node)
-//}
+func (db *nodeDB) updateNode(node *Node) error {
+	var (
+		n    = int(0)
+		err  = error(nil)
+		blob = new(bytes.Buffer)
+	)
+
+	wire.WriteBinary(node, blob, &n, &err)
+	if err != nil {
+		return err
+	}
+
+	return db.lvl.Put(makeKey(node.ID, nodeDBDiscoverRoot), blob.Bytes(), nil)
+}
 
 // deleteNode deletes all information/keys associated with a node.
 func (db *nodeDB) deleteNode(id NodeID) error {
@@ -230,7 +238,7 @@ func (db *nodeDB) expirer() {
 		select {
 		case <-tick.C:
 			if err := db.expireNodes(); err != nil {
-				log.Error(fmt.Sprintf("Failed to expire nodedb items: %v", err))
+				log.WithFields(log.Fields{"module": logModule, "error": err}).Error("Failed to expire nodedb items")
 			}
 		case <-db.quit:
 			return
@@ -260,8 +268,11 @@ func (db *nodeDB) expireNodes() error {
 			}
 		}
 		// Otherwise delete all associated information
-		db.deleteNode(id)
+		if err := db.deleteNode(id); err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -296,20 +307,6 @@ func (db *nodeDB) updateFindFails(id NodeID, fails int) error {
 	return db.storeInt64(makeKey(id, nodeDBDiscoverFindFails), int64(fails))
 }
 
-// localEndpoint returns the last local endpoint communicated to the
-// given remote node.
-//func (db *nodeDB) localEndpoint(id NodeID) *rpcEndpoint {
-//	var ep rpcEndpoint
-//	if err := db.fetchRLP(makeKey(id, nodeDBDiscoverLocalEndpoint), &ep); err != nil {
-//		return nil
-//	}
-//	return &ep
-//}
-
-//func (db *nodeDB) updateLocalEndpoint(id NodeID, ep rpcEndpoint) error {
-//	return db.storeRLP(makeKey(id, nodeDBDiscoverLocalEndpoint), &ep)
-//}
-
 // querySeeds retrieves random nodes to be used as potential seed nodes
 // for bootstrapping.
 func (db *nodeDB) querySeeds(n int, maxAge time.Duration) []*Node {
@@ -327,7 +324,9 @@ seek:
 		// random amount each time in order to increase the likelihood
 		// of hitting all existing nodes in very small databases.
 		ctr := id[0]
-		rand.Read(id[:])
+		if _, err := rand.Read(id[:]); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Warn("get rand date")
+		}
 		id[0] = ctr + id[0]%16
 		it.Seek(makeKey(id, nodeDBDiscoverRoot))
 
@@ -354,7 +353,11 @@ seek:
 
 func (db *nodeDB) fetchTopicRegTickets(id NodeID) (issued, used uint32) {
 	key := makeKey(id, nodeDBTopicRegTickets)
-	blob, _ := db.lvl.Get(key, nil)
+	blob, err := db.lvl.Get(key, nil)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Warn("db get raw data")
+	}
+
 	if len(blob) != 8 {
 		return 0, 0
 	}
@@ -374,21 +377,25 @@ func (db *nodeDB) updateTopicRegTickets(id NodeID, issued, used uint32) error {
 // reads the next node record from the iterator, skipping over other
 // database entries.
 func nextNode(it iterator.Iterator) *Node {
+	var (
+		n    = int(0)
+		err  = error(nil)
+		node = new(Node)
+	)
+
 	for end := false; !end; end = !it.Next() {
 		id, field := splitKey(it.Key())
 		if field != nodeDBDiscoverRoot {
 			continue
 		}
-		var n Node
-		if err := wire.ReadBinaryBytes(it.Value(), &n); err != nil {
-			log.Error("invalid node:", id, err)
+
+		wire.ReadBinary(node, bytes.NewReader(it.Value()), 0, &n, &err)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "id": id, "error": err}).Error("invalid node")
 			continue
 		}
-		//if err := rlp.DecodeBytes(it.Value(), &n); err != nil {
-		//	log.Warn(fmt.Sprintf("invalid node %x: %v", id, err))
-		//	continue
-		//}
-		return &n
+
+		return node
 	}
 	return nil
 }
@@ -396,5 +403,7 @@ func nextNode(it iterator.Iterator) *Node {
 // close flushes and closes the database files.
 func (db *nodeDB) close() {
 	close(db.quit)
-	db.lvl.Close()
+	if err := db.lvl.Close(); err != nil {
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Warn("db close err")
+	}
 }

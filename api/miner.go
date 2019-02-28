@@ -6,6 +6,7 @@ import (
 
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
+	"github.com/bytom/event"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -79,12 +80,15 @@ func (a *API) submitBlock(ctx context.Context, req *SubmitBlockReq) Response {
 	if err != nil {
 		return NewErrorResponse(err)
 	}
+
 	if isOrphan {
 		return NewErrorResponse(errors.New("block submitted is orphan"))
 	}
 
-	blockHash := req.Block.BlockHeader.Hash()
-	a.newBlockCh <- &blockHash
+	if err = a.eventDispatcher.Post(event.NewMinedBlockEvent{Block: req.Block}); err != nil {
+		return NewErrorResponse(err)
+	}
+
 	return NewSuccessResponse(true)
 }
 

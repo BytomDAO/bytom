@@ -10,6 +10,8 @@ import (
 	"github.com/bytom/node"
 )
 
+const logModule = "cmd"
+
 var runNodeCmd = &cobra.Command{
 	Use:   "node",
 	Short: "Run the bytomd",
@@ -36,6 +38,7 @@ func init() {
 	// p2p flags
 	runNodeCmd.Flags().String("p2p.laddr", config.P2P.ListenAddress, "Node listen address. (0.0.0.0:0 means any interface, any port)")
 	runNodeCmd.Flags().String("p2p.seeds", config.P2P.Seeds, "Comma delimited host:port seed nodes")
+	runNodeCmd.Flags().String("p2p.node_key", config.P2P.PrivateKey, "Node key for p2p communication")
 	runNodeCmd.Flags().Bool("p2p.skip_upnp", config.P2P.SkipUPNP, "Skip UPNP configuration")
 	runNodeCmd.Flags().Int("p2p.max_num_peers", config.P2P.MaxNumPeers, "Set max num peers")
 	runNodeCmd.Flags().Int("p2p.handshake_timeout", config.P2P.HandshakeTimeout, "Set handshake timeout")
@@ -78,11 +81,12 @@ func runNode(cmd *cobra.Command, args []string) error {
 	// Create & start node
 	n := node.NewNode(config)
 	if _, err := n.Start(); err != nil {
-		log.WithField("err", err).Fatal("failed to start node")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to start node")
 	}
 
-	nodeInfo := n.SyncManager().NodeInfo()
+	nodeInfo := n.NodeInfo()
 	log.WithFields(log.Fields{
+		"module":   logModule,
 		"version":  nodeInfo.Version,
 		"network":  nodeInfo.Network,
 		"duration": time.Since(startTime),

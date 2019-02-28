@@ -8,9 +8,9 @@ import (
 
 	"github.com/bytom/account"
 	"github.com/bytom/consensus/difficulty"
+	"github.com/bytom/event"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -18,6 +18,7 @@ const (
 	maxNonce          = ^uint64(0) // 2^64 - 1
 	defaultNumWorkers = 1
 	hashUpdateSecs    = 1
+	logModule         = "cpuminer"
 )
 
 // CPUMiner provides facilities for solving blocks (mining) using the CPU in
@@ -33,7 +34,7 @@ type CPUMiner struct {
 	workerWg         sync.WaitGroup
 	updateNumWorkers chan struct{}
 	quit             chan struct{}
-	newBlockCh       chan *bc.Hash
+	eventDispatcher  *event.Dispatcher
 }
 
 // solveBlock attempts to find some combination of a nonce, extra nonce, and
@@ -94,15 +95,18 @@ out:
 		if m.solveBlock(block, ticker, quit) {
 			if isOrphan, err := m.chain.ProcessBlock(block); err == nil {
 				log.WithFields(log.Fields{
+					"module":   logModule,
 					"height":   block.BlockHeader.Height,
 					"isOrphan": isOrphan,
 					"tx":       len(block.Transactions),
 				}).Info("Miner processed block")
 
-				blockHash := block.Hash()
-				m.newBlockCh <- &blockHash
+				// Broadcast the block and announce chain insertion event
+				if err = m.eventDispatcher.Post(event.NewMinedBlockEvent{Block: block}); err != nil {
+					log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "error": err}).Errorf("Miner fail on post block")
+				}
 			} else {
-				log.WithField("height", block.BlockHeader.Height).Errorf("Miner fail on ProcessBlock, %v", err)
+				log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "error": err}).Errorf("Miner fail on ProcessBlock")
 			}
 		}
 	}
@@ -262,13 +266,13 @@ func (m *CPUMiner) NumWorkers() int32 {
 // NewCPUMiner returns a new instance of a CPU miner for the provided configuration.
 // Use Start to begin the mining process.  See the documentation for CPUMiner
 // type for more details.
-func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, newBlockCh chan *bc.Hash) *CPUMiner {
+func NewCPUMiner(c *protocol.Chain, accountManager *account.Manager, txPool *protocol.TxPool, dispatcher *event.Dispatcher) *CPUMiner {
 	return &CPUMiner{
 		chain:            c,
 		accountManager:   accountManager,
 		txPool:           txPool,
 		numWorkers:       defaultNumWorkers,
 		updateNumWorkers: make(chan struct{}),
-		newBlockCh:       newBlockCh,
+		eventDispatcher:  dispatcher,
 	}
 }

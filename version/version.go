@@ -42,6 +42,7 @@ const (
 	noUpdate uint16 = iota
 	hasUpdate
 	hasMUpdate
+	logModule = "version"
 )
 
 var (
@@ -112,6 +113,7 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 	}
 	if s.versionStatus != noUpdate {
 		log.WithFields(log.Fields{
+			"module":          logModule,
 			"Current version": localVerStr,
 			"Newer version":   remoteVerStr,
 			"seed":            remoteAddr,

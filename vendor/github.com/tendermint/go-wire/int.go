@@ -6,51 +6,6 @@ import (
 	"io"
 )
 
-// Bool
-
-func WriteBool(b bool, w io.Writer, n *int, err *error) {
-	var bb byte
-	if b {
-		bb = 0x01
-	} else {
-		bb = 0x00
-	}
-	WriteTo([]byte{bb}, w, n, err)
-}
-
-func ReadBool(r io.Reader, n *int, err *error) bool {
-	var buf [1]byte
-	ReadFull(buf[:], r, n, err)
-	switch buf[0] {
-	case 0x00:
-		return false
-	case 0x01:
-		return true
-	default:
-		setFirstErr(err, errors.New("Invalid bool"))
-		return false
-	}
-}
-
-func PutBool(buf []byte, b bool) {
-	if b {
-		buf[0] = 0x01
-	} else {
-		buf[0] = 0x00
-	}
-}
-
-func GetBool(buf []byte) (bool, error) {
-	switch buf[0] {
-	case 0x00:
-		return false, nil
-	case 0x01:
-		return true, nil
-	default:
-		return false, errors.New("Invalid bool")
-	}
-}
-
 // Byte
 
 func WriteByte(b byte, w io.Writer, n *int, err *error) {
@@ -127,34 +82,6 @@ func PutUint16(buf []byte, i uint16) {
 
 func GetUint16(buf []byte) uint16 {
 	return binary.BigEndian.Uint16(buf)
-}
-
-// []Uint16
-
-func WriteUint16s(iz []uint16, w io.Writer, n *int, err *error) {
-	WriteUint32(uint32(len(iz)), w, n, err)
-	for _, i := range iz {
-		WriteUint16(i, w, n, err)
-		if *err != nil {
-			return
-		}
-	}
-}
-
-func ReadUint16s(r io.Reader, n *int, err *error) []uint16 {
-	length := ReadUint32(r, n, err)
-	if *err != nil {
-		return nil
-	}
-	iz := make([]uint16, length)
-	for j := uint32(0); j < length; j++ {
-		ii := ReadUint16(r, n, err)
-		if *err != nil {
-			return nil
-		}
-		iz[j] = ii
-	}
-	return iz
 }
 
 // Int32
@@ -247,12 +174,6 @@ func PutUint64(buf []byte, i uint64) {
 
 func GetUint64(buf []byte) uint64 {
 	return binary.BigEndian.Uint64(buf)
-}
-
-// Varint
-
-func UvarintSize(i uint64) int {
-	return uvarintSize(i) + 1 // The first byte encodes uvarintSize(i)
 }
 
 func uvarintSize(i uint64) int {

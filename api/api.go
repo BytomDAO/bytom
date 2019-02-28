@@ -17,6 +17,7 @@ import (
 	"github.com/bytom/dashboard/dashboard"
 	"github.com/bytom/dashboard/equity"
 	"github.com/bytom/errors"
+	"github.com/bytom/event"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/net/http/authn"
@@ -25,8 +26,8 @@ import (
 	"github.com/bytom/net/http/static"
 	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
+	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
 	"github.com/bytom/wallet"
 )
 
@@ -40,7 +41,8 @@ const (
 	// SUCCESS indicates the rpc calling is successful.
 	SUCCESS = "success"
 	// FAIL indicated the rpc calling is failed.
-	FAIL = "fail"
+	FAIL      = "fail"
+	logModule = "api"
 )
 
 // Response describes the response standard.
@@ -105,7 +107,7 @@ func (wh *waitHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 // API is the scheduling center for server
 type API struct {
-	sync            *netsync.SyncManager
+	sync            NetSync
 	wallet          *wallet.Wallet
 	accessTokens    *accesstoken.CredentialStore
 	chain           *protocol.Chain
@@ -115,7 +117,7 @@ type API struct {
 	cpuMiner        *cpuminer.CPUMiner
 	miningPool      *miningpool.MiningPool
 	notificationMgr *websocket.WSNotificationManager
-	newBlockCh      chan *bc.Hash
+	eventDispatcher *event.Dispatcher
 }
 
 func (a *API) initServer(config *cfg.Config) {
@@ -152,7 +154,7 @@ func (a *API) initServer(config *cfg.Config) {
 
 // StartServer start the server
 func (a *API) StartServer(address string) {
-	log.WithField("api address:", address).Info("Rpc listen")
+	log.WithFields(log.Fields{"module": logModule, "api address:": address}).Info("Rpc listen")
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to register tcp port: %v", err))
@@ -163,13 +165,24 @@ func (a *API) StartServer(address string) {
 	// we call it.
 	go func() {
 		if err := a.server.Serve(listener); err != nil {
-			log.WithField("error", errors.Wrap(err, "Serve")).Error("Rpc server")
+			log.WithFields(log.Fields{"module": logModule, "error": errors.Wrap(err, "Serve")}).Error("Rpc server")
 		}
 	}()
 }
 
+type NetSync interface {
+	IsListening() bool
+	IsCaughtUp() bool
+	PeerCount() int
+	GetNetwork() string
+	BestPeer() *netsync.PeerInfo
+	DialPeerWithAddress(addr *p2p.NetAddress) error
+	GetPeerInfos() []*netsync.PeerInfo
+	StopPeer(peerID string) error
+}
+
 // NewAPI create and initialize the API
-func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, newBlockCh chan *bc.Hash, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, cpuMiner *cpuminer.CPUMiner, miningPool *miningpool.MiningPool, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
 		sync:          sync,
 		wallet:        wallet,
@@ -179,7 +192,7 @@ func NewAPI(sync *netsync.SyncManager, wallet *wallet.Wallet, txfeeds *txfeed.Tr
 		cpuMiner:      cpuMiner,
 		miningPool:    miningPool,
 
-		newBlockCh:      newBlockCh,
+		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
 	}
 	api.buildHandler()
@@ -198,7 +211,6 @@ func (a *API) buildHandler() {
 	m := http.NewServeMux()
 	if a.wallet != nil {
 		walletEnable = true
-
 		m.Handle("/create-account", jsonHandler(a.createAccount))
 		m.Handle("/update-account-alias", jsonHandler(a.updateAccountAlias))
 		m.Handle("/list-accounts", jsonHandler(a.listAccounts))
@@ -303,10 +315,9 @@ func (a *API) buildHandler() {
 
 	m.HandleFunc("/websocket-subscribe", a.websocketHandler)
 
-	handler := latencyHandler(m, walletEnable)
+	handler := walletHandler(m, walletEnable)
 	handler = webAssetsHandler(handler)
 	handler = gzip.Handler{Handler: handler}
-
 	a.handler = handler
 }
 
@@ -347,7 +358,7 @@ func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore
 		// TODO(tessr): check that this path exists; return early if this path isn't legit
 		req, err := authenticator.Authenticate(req)
 		if err != nil {
-			log.WithField("error", errors.Wrap(err, "Serve")).Error("Authenticate fail")
+			log.WithFields(log.Fields{"module": logModule, "error": errors.Wrap(err, "Serve")}).Error("Authenticate fail")
 			err = errors.WithDetail(errNotAuthenticated, err.Error())
 			errorFormatter.Write(req.Context(), rw, err)
 			return
@@ -367,14 +378,8 @@ func RedirectHandler(next http.Handler) http.Handler {
 	})
 }
 
-// latencyHandler take latency for the request url path, and redirect url path to wait-disable when wallet is closed
-func latencyHandler(m *http.ServeMux, walletEnable bool) http.Handler {
+func walletHandler(m *http.ServeMux, walletEnable bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		// latency for the request url path
-		if l := latency(m, req); l != nil {
-			defer l.RecordSince(time.Now())
-		}
-
 		// when the wallet is not been opened and the url path is not been found, modify url path to error,
 		// and redirect handler to error
 		if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {
