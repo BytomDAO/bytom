@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
+	"github.com/bytom/protocol/validation"
 )
 
 // msg type
@@ -36,6 +37,8 @@ var (
 	ErrTransactionNotExist = errors.New("transaction are not existed in the mempool")
 	// ErrPoolIsFull indicates the pool is full
 	ErrPoolIsFull = errors.New("transaction pool reach the max number")
+	errNoBtmInput = errors.New("transaction have no btm input")
+	errGasInvalid = errors.New("transaction gas invalid")
 )
 
 type TxMsgEvent struct{ TxMsg *TxPoolMsg }
@@ -332,4 +335,38 @@ func (tp *TxPool) removeOrphan(hash *bc.Hash) {
 		}
 	}
 	delete(tp.orphans, *hash)
+}
+
+type ValidateTx func(tx *bc.Tx, block *bc.Block) (*validation.GasState, error)
+
+func (tp *TxPool) ProcessTx(validateTxFun ValidateTx, tx *types.Tx, bh *types.BlockHeader) (bool, error) {
+	if ok := tp.HaveTransaction(&tx.ID); ok {
+		return false, tp.GetErrCache(&tx.ID)
+	}
+
+	var haveBTMInput bool
+	for _, input := range tx.TxData.Inputs {
+		if input.AssetID() == *consensus.BTMAssetID {
+			haveBTMInput = true
+			break
+		}
+	}
+	if !haveBTMInput {
+		tp.AddErrCache(&tx.ID, errNoBtmInput)
+		return false, errNoBtmInput
+	}
+
+	gasStatus, err := validateTxFun(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}))
+	if err != nil {
+		tp.AddErrCache(&tx.ID, err)
+		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
+		return false, err
+	}
+
+	if !gasStatus.GasValid {
+		tp.AddErrCache(&tx.ID, errGasInvalid)
+		return false, errGasInvalid
+	}
+
+	return tp.ProcessTransaction(tx, err != nil, bh.Height, gasStatus.BTMValue)
 }

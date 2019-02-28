@@ -1,8 +1,11 @@
 package protocol
 
 import (
+	"errors"
 	"testing"
 	"time"
+
+	"github.com/golang/groupcache/lru"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/database/storage"
@@ -10,6 +13,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
+	"github.com/bytom/protocol/validation"
 	"github.com/bytom/testutil"
 )
 
@@ -62,6 +66,16 @@ var testTxs = []*types.Tx{
 		Outputs: []*types.TxOutput{
 			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 2, []byte{0x64}),
 			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x65}),
+		},
+	}),
+	types.NewTx(types.TxData{
+		SerializedSize: 100,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(nil, testutil.MustDecodeHash("dbea684b5c5153ed7729669a53d6c59574f26015a3e1eb2a0e8a1c645425a764"), bc.NewAssetID([32]byte{0xa1}), 4, 1, []byte{0x61}),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 3, []byte{0x62}),
+			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x63}),
 		},
 	}),
 }
@@ -556,6 +570,87 @@ func TestRemoveOrphan(t *testing.T) {
 		}
 		if !testutil.DeepEqual(c.before, c.after) {
 			t.Errorf("case %d: got %v want %v", i, c.before, c.after)
+		}
+	}
+}
+
+func mockValidateTxOK(tx *bc.Tx, block *bc.Block) (*validation.GasState, error) {
+	return &validation.GasState{
+		GasValid: true,
+	}, nil
+}
+
+var errMockValidateErr = errors.New("transaction validate error")
+
+func mockValidateTxErr(tx *bc.Tx, block *bc.Block) (*validation.GasState, error) {
+	return &validation.GasState{
+		GasValid: true,
+	}, errMockValidateErr
+}
+
+func mockValidateTxGasInvalid(tx *bc.Tx, block *bc.Block) (*validation.GasState, error) {
+	return &validation.GasState{
+		GasValid: false,
+	}, nil
+}
+
+func TestValidateTx(t *testing.T) {
+	txpool := &TxPool{
+		pool:            map[bc.Hash]*TxDesc{},
+		store:           &mockStore{},
+		orphans:         map[bc.Hash]*orphanTx{},
+		orphansByPrev:   map[bc.Hash]map[bc.Hash]*orphanTx{},
+		utxo:            map[bc.Hash]*types.Tx{},
+		errCache:        lru.New(maxCachedErrTxs),
+		eventDispatcher: event.NewDispatcher(),
+	}
+
+	cases := []struct {
+		processTx *TxDesc
+		ValidateTx
+		wantErr error
+	}{
+		{
+			processTx:  &TxDesc{Tx: testTxs[2]},
+			ValidateTx: mockValidateTxOK,
+			wantErr:    nil,
+		},
+		{
+			processTx:  &TxDesc{Tx: testTxs[2]},
+			ValidateTx: mockValidateTxErr,
+			wantErr:    errMockValidateErr,
+		},
+		{
+			processTx:  &TxDesc{Tx: testTxs[2]},
+			ValidateTx: mockValidateTxOK,
+			wantErr:    errMockValidateErr,
+		},
+		{
+			processTx:  &TxDesc{Tx: testTxs[1]},
+			ValidateTx: mockValidateTxGasInvalid,
+			wantErr:    errGasInvalid,
+		},
+		{
+			processTx:  &TxDesc{Tx: testTxs[1]},
+			ValidateTx: mockValidateTxOK,
+			wantErr:    errGasInvalid,
+		},
+		{
+			processTx:  &TxDesc{Tx: testTxs[5]},
+			ValidateTx: mockValidateTxOK,
+			wantErr:    errNoBtmInput,
+		},
+		{
+			processTx:  &TxDesc{Tx: testTxs[5]},
+			ValidateTx: mockValidateTxOK,
+			wantErr:    errNoBtmInput,
+		},
+	}
+
+	for i, c := range cases {
+		_, err := txpool.ProcessTx(c.ValidateTx, c.processTx.Tx, &types.BlockHeader{Height: 0})
+		if err != c.wantErr {
+			t.Fatal("test txpool validateTx case:", i, "test error.", "want:", c.wantErr, "got:", err)
 		}
 	}
 }
