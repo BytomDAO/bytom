@@ -31,10 +31,14 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 		return false, c.txPool.GetErrCache(&tx.ID)
 	}
 
+	if c.txPool.IsDust(tx) {
+		c.txPool.AddErrCache(&tx.ID, ErrDustTx)
+		return false, ErrDustTx
+	}
+
 	bh := c.BestBlockHeader()
-	block := types.MapBlock(&types.Block{BlockHeader: *bh})
-	gasStatus, err := validation.ValidateTx(tx.Tx, block)
-	if gasStatus.GasValid == false {
+	gasStatus, err := validation.ValidateTx(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}))
+	if !gasStatus.GasValid {
 		c.txPool.AddErrCache(&tx.ID, err)
 		return false, err
 	}
@@ -43,5 +47,5 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
 	}
 
-	return c.txPool.ProcessTransaction(tx, err != nil, block.BlockHeader.Height, gasStatus.BTMValue)
+	return c.txPool.ProcessTransaction(tx, err != nil, bh.Height, gasStatus.BTMValue)
 }

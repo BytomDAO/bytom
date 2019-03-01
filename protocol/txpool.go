@@ -36,6 +36,8 @@ var (
 	ErrTransactionNotExist = errors.New("transaction are not existed in the mempool")
 	// ErrPoolIsFull indicates the pool is full
 	ErrPoolIsFull = errors.New("transaction pool reach the max number")
+	// ErrDustTx indicates transaction is dust tx
+	ErrDustTx = errors.New("transaction is dust tx")
 )
 
 type TxMsgEvent struct{ TxMsg *TxPoolMsg }
@@ -190,8 +192,20 @@ func (tp *TxPool) HaveTransaction(txHash *bc.Hash) bool {
 	return tp.IsTransactionInPool(txHash) || tp.IsTransactionInErrCache(txHash)
 }
 
-// ProcessTransaction is the main entry for txpool handle new tx
-func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {
+func isTransactionNoBtmInput(tx *types.Tx) bool {
+	for _, input := range tx.TxData.Inputs {
+		if input.AssetID() == *consensus.BTMAssetID {
+			return false
+		}
+	}
+	return true
+}
+
+func (tp *TxPool) IsDust(tx *types.Tx) bool {
+	return isTransactionNoBtmInput(tx)
+}
+
+func (tp *TxPool) processTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {
 	tp.mtx.Lock()
 	defer tp.mtx.Unlock()
 
@@ -217,6 +231,15 @@ func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee 
 
 	tp.processOrphans(txD)
 	return false, nil
+}
+
+// ProcessTransaction is the main entry for txpool handle new tx, ignore dust tx.
+func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {
+	if tp.IsDust(tx) {
+		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.ID.String()}).Warn("dust tx")
+		return false, nil
+	}
+	return tp.processTransaction(tx, statusFail, height, fee)
 }
 
 func (tp *TxPool) addOrphan(txD *TxDesc, requireParents []*bc.Hash) error {
