@@ -1,11 +1,8 @@
 package protocol
 
 import (
-	"errors"
 	"testing"
 	"time"
-
-	"github.com/golang/groupcache/lru"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/database/storage"
@@ -13,7 +10,6 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
-	"github.com/bytom/protocol/validation"
 	"github.com/bytom/testutil"
 )
 
@@ -66,16 +62,6 @@ var testTxs = []*types.Tx{
 		Outputs: []*types.TxOutput{
 			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 2, []byte{0x64}),
 			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x65}),
-		},
-	}),
-	types.NewTx(types.TxData{
-		SerializedSize: 100,
-		Inputs: []*types.TxInput{
-			types.NewSpendInput(nil, testutil.MustDecodeHash("dbea684b5c5153ed7729669a53d6c59574f26015a3e1eb2a0e8a1c645425a764"), bc.NewAssetID([32]byte{0xa1}), 4, 1, []byte{0x61}),
-		},
-		Outputs: []*types.TxOutput{
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 3, []byte{0x62}),
-			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x63}),
 		},
 	}),
 }
