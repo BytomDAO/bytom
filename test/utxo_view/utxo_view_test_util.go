@@ -100,10 +100,6 @@ func spendTx(hash string, amount, sourcePos uint64) *types.Tx {
 	})
 }
 
-var baseTx = &tx{
-	Tx: coinBaseTx(41250000000),
-}
-
 var mockTransaction = []*tx{
 	&tx{
 		Tx: coinBaseTx(41250000000),

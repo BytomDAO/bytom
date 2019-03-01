@@ -32,7 +32,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		{
 			desc:        "coinbase tx",
 			before:      make(map[bc.Hash]*storage.UtxoEntry),
-			want:        map[bc.Hash]*storage.UtxoEntry{*baseTx.OutputHash(0): storage.NewUtxoEntry(true, 100, false)},
+			want:        map[bc.Hash]*storage.UtxoEntry{*mockTransaction[0].OutputHash(0): storage.NewUtxoEntry(true, 100, false)},
 			attachBlock: types.MapBlock(&mockBlocks[0].Block),
 			txStatus: &bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
 				&bc.TxVerifyResult{StatusFail: true},
