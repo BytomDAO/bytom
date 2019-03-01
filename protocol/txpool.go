@@ -36,8 +36,8 @@ var (
 	ErrTransactionNotExist = errors.New("transaction are not existed in the mempool")
 	// ErrPoolIsFull indicates the pool is full
 	ErrPoolIsFull = errors.New("transaction pool reach the max number")
-	// ErrDustyTx indicates transaction is dusty tx
-	ErrDustyTx = errors.New("transaction is dusty tx")
+	// ErrDustTx indicates transaction is dust tx
+	ErrDustTx = errors.New("transaction is dust tx")
 )
 
 type TxMsgEvent struct{ TxMsg *TxPoolMsg }
@@ -201,7 +201,7 @@ func isTransactionNoBtmInput(tx *types.Tx) bool {
 	return true
 }
 
-func (tp *TxPool) isDusty(tx *types.Tx) bool {
+func (tp *TxPool) IsDust(tx *types.Tx) bool {
 	return isTransactionNoBtmInput(tx)
 }
 
@@ -235,8 +235,8 @@ func (tp *TxPool) processTransaction(tx *types.Tx, statusFail bool, height, fee 
 
 // ProcessTransaction is the main entry for txpool handle new tx, ignore dust tx.
 func (tp *TxPool) ProcessTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {
-	if tp.isDusty(tx) {
-		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.ID.String()}).Warn("dusty tx")
+	if tp.IsDust(tx) {
+		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.ID.String()}).Warn("dust tx")
 		return false, nil
 	}
 	return tp.processTransaction(tx, statusFail, height, fee)

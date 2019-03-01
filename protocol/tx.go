@@ -31,9 +31,9 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 		return false, c.txPool.GetErrCache(&tx.ID)
 	}
 
-	if c.txPool.isDusty(tx) {
-		c.txPool.AddErrCache(&tx.ID, ErrDustyTx)
-		return false, ErrDustyTx
+	if c.txPool.IsDust(tx) {
+		c.txPool.AddErrCache(&tx.ID, ErrDustTx)
+		return false, ErrDustTx
 	}
 
 	bh := c.BestBlockHeader()
@@ -47,5 +47,5 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
 	}
 
-	return c.txPool.processTransaction(tx, err != nil, bh.Height, gasStatus.BTMValue)
+	return c.txPool.ProcessTransaction(tx, err != nil, bh.Height, gasStatus.BTMValue)
 }
