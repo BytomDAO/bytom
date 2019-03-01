@@ -38,8 +38,6 @@ var (
 	ErrPoolIsFull = errors.New("transaction pool reach the max number")
 	// ErrDustyTx indicates transaction is dusty tx
 	ErrDustyTx = errors.New("transaction is dusty tx")
-
-	errGasInvalid = errors.New("transaction gas invalid")
 )
 
 type TxMsgEvent struct{ TxMsg *TxPoolMsg }
