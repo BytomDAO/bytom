@@ -3,6 +3,7 @@ package p2p
 import (
 	"fmt"
 	"net"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -233,6 +234,7 @@ func (p *Peer) TrySend(chID byte, msg interface{}) bool {
 		"module": logModule,
 		"peer":   p.Addr(),
 		"msg":    msg,
+		"type":   reflect.TypeOf(msg),
 	}).Info("send message to peer")
 	return p.mconn.TrySend(chID, msg)
 }
