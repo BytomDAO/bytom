@@ -19,30 +19,30 @@ func TestCheckBlockTime(t *testing.T) {
 	cases := []struct {
 		desc       string
 		blockTime  uint64
-		parentTime uint64
+		parentTime []uint64
 		err        error
 	}{
 		{
 			blockTime:  1520000001,
-			parentTime: 1520000000,
+			parentTime: []uint64{1520000000},
 			err:        nil,
 		},
 		{
 			desc: "timestamp less than past median time (blocktest#1005)",
-			blockTime:  1510000000,
-			parentTime: 1520000000,
+			blockTime:  1510000094,
+			parentTime: []uint64{1520000000, 1510000099, 1510000098, 1510000097, 1510000096, 1510000095, 1510000094, 1510000093, 1510000092, 1510000091, 1510000090},
 			err:        errBadTimestamp,
 		},
 		{
 			desc:       "timestamp greater than max limit (blocktest#1006)",
 			blockTime:  9999999999,
-			parentTime: 1520000000,
+			parentTime: []uint64{1520000000},
 			err:        errBadTimestamp,
 		},
 		{
 			desc:       "timestamp of the block and the parent block are both greater than max limit (blocktest#1007)",
 			blockTime:  uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 2,
-			parentTime: uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 1,
+			parentTime: []uint64{uint64(time.Now().Unix()) + consensus.MaxTimeOffsetSeconds + 1},
 			err:        errBadTimestamp,
 		},
 	}
@@ -53,7 +53,13 @@ func TestCheckBlockTime(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		parent.Timestamp = c.parentTime
+		parent.Timestamp = c.parentTime[0]
+		parentSuccessor := parent
+		for i := 1; i < len(c.parentTime); i++ {
+			parentSuccessor.Parent = &state.BlockNode{Version: 1, Timestamp: c.parentTime[i]}
+			parentSuccessor = parentSuccessor.Parent
+		}
+
 		block.Timestamp = c.blockTime
 		if err := checkBlockTime(block, parent); rootErr(err) != c.err {
 			t.Errorf("case %d got error %s, want %s", i, err, c.err)
