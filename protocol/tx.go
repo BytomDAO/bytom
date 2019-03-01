@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	log "github.com/sirupsen/logrus"
+
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -25,5 +27,27 @@ func (c *Chain) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 // per-transaction validation results and is consulted before
 // performing full validation.
 func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
-	return c.txPool.ProcessTx(validation.ValidateTx, tx, c.BestBlockHeader())
+	if ok := c.txPool.HaveTransaction(&tx.ID); ok {
+		return false, c.txPool.GetErrCache(&tx.ID)
+	}
+
+	if c.txPool.isDusty(tx) {
+		c.txPool.AddErrCache(&tx.ID, ErrDustyTx)
+		return false, ErrDustyTx
+	}
+
+	bh := c.BestBlockHeader()
+	gasStatus, err := validation.ValidateTx(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}))
+	if err != nil {
+		c.txPool.AddErrCache(&tx.ID, err)
+		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
+		return false, err
+	}
+
+	if !gasStatus.GasValid {
+		c.txPool.AddErrCache(&tx.ID, errGasInvalid)
+		return false, errGasInvalid
+	}
+
+	return c.txPool.processTransaction(tx, err != nil, bh.Height, gasStatus.BTMValue)
 }
