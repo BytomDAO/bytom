@@ -103,7 +103,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			},
 		},
 		{
-			desc: "detach block 5, attach block 6",
+			desc: "detach block 5, attach block 2",
 			before: map[bc.Hash]*storage.UtxoEntry{
 				*newTx(mockBlocks[5].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[5].Height, false),
 				*newTx(mockBlocks[5].Transactions[1]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[5].Height, false),
@@ -224,7 +224,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			},
 		},
 		{
-			desc: "detach block 5, attach block 6. Other asset deals failed.",
+			desc: "detach block 5, attach block 2. Other asset deals failed.",
 			before: map[bc.Hash]*storage.UtxoEntry{
 				*newTx(mockBlocks[5].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[5].Height, false),
 				*newTx(mockBlocks[5].Transactions[1]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[5].Height, false),
@@ -340,6 +340,64 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 					&bc.TxVerifyResult{StatusFail: true},
 				}},
 				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+				}},
+			},
+		},
+		{
+			desc: "detach block 2, attach block 1. Chain trading",
+			before: map[bc.Hash]*storage.UtxoEntry{
+				// coinbase tx
+				*newTx(mockBlocks[12].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[12].Height, false),
+				*newTx(mockBlocks[12].Transactions[1]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[12].Height, false),
+				*newTx(mockBlocks[12].Transactions[2]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[12].Height, false),
+				*newTx(mockBlocks[12].Transactions[3]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[12].Height, false),
+				*newTx(mockBlocks[12].Transactions[4]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[12].Height, false),
+
+				*newTx(mockBlocks[13].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[13].Height, false),
+				*newTx(mockBlocks[13].Transactions[1]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[13].Height, false),
+				*newTx(mockBlocks[13].Transactions[2]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[13].Height, false),
+				*newTx(mockBlocks[13].Transactions[2]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[13].Height, false),
+			},
+			want: map[bc.Hash]*storage.UtxoEntry{
+				newTx(mockBlocks[12].Transactions[1]).getSpentOutputID(0): storage.NewUtxoEntry(false, 0, false),
+				*newTx(mockBlocks[14].Transactions[0]).OutputHash(0):      storage.NewUtxoEntry(true, mockBlocks[14].Height, false),
+			},
+			attachBlock: []*bc.Block{
+				types.MapBlock(&mockBlocks[14].Block),
+			},
+			detachBlock: []*bc.Block{
+				types.MapBlock(&mockBlocks[13].Block),
+				types.MapBlock(&mockBlocks[12].Block),
+			},
+			attachTxStatus: []*bc.TransactionStatus{
+				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+				}},
+				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+				}},
+				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+				}},
+			},
+			detachTxStatus: []*bc.TransactionStatus{
+				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+				}},
+				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
 					&bc.TxVerifyResult{StatusFail: false},
 					&bc.TxVerifyResult{StatusFail: false},
 				}},
