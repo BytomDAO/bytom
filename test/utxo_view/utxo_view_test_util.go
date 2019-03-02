@@ -74,10 +74,10 @@ func mustDecodeHex(str string) []byte {
 	return data
 }
 
-func coinBaseTx(amount uint64) *types.Tx {
+func coinBaseTx(amount uint64, arbitrary string) *types.Tx {
 	return types.NewTx(types.TxData{
 		Inputs: []*types.TxInput{
-			types.NewCoinbaseInput([]byte("arbitrary")),
+			types.NewCoinbaseInput([]byte(arbitrary)),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewTxOutput(*consensus.BTMAssetID, amount, mustDecodeHex("00144431c4278632c6e35dd2870faa1a4b8e0a275cbc")),
@@ -85,77 +85,89 @@ func coinBaseTx(amount uint64) *types.Tx {
 	})
 }
 
-func spendTx(hash string, amount, sourcePos uint64) *types.Tx {
+var mockTransaction = []*tx{}
+var mockBlocks = []*block{}
+
+func toHash(hash string) bc.Hash {
 	sourceID := bc.Hash{}
 	sourceID.UnmarshalText([]byte(hash))
-	return types.NewTx(types.TxData{
-		Inputs: []*types.TxInput{
-			types.NewSpendInput(nil, sourceID, *consensus.BTMAssetID, amount, sourcePos, []byte("00144431c4278632c6e35dd2870faa1a4b8e0a275cbc")),
-		},
-		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("00148c704747e94387fa0b8712b053ed2132d84820ac")),
-			types.NewTxOutput(*consensus.BTMAssetID, amount-100000000, []byte("00144431c4278632c6e35dd2870faa1a4b8e0a275cbc")),
-		},
-	})
-}
-
-var mockTransaction = []*tx{
-	&tx{
-		Tx: coinBaseTx(41250000000),
-	},
-	&tx{
-		Tx: spendTx("ca9b179e549406aa583869e124e39817414d4500a8ce5476e95b6018d182b966", 41250000000, 0),
-	},
-	&tx{
-		Tx: spendTx("ca9b179e549406aa583869e124e39817414d4500a8ce5476e95b6018d182b966", 41250000000, 0),
-	},
-	&tx{
-		Tx: spendTx("ca9b179e549406aa583869e124e39817414d4500a8ce5476e95b6018d182b966", 41250000000, 0),
-	},
-	&tx{
-		Tx: spendTx("ca9b179e549406aa583869e124e39817414d4500a8ce5476e95b6018d182b966", 41250000000, 0),
-	},
-}
-
-var chainTx1 = &tx{
-	Tx: spendTx(mockTransaction[1].getSourceID(1).String(), mockTransaction[1].getAmount(1), 1),
-}
-
-var chainTx2 = &tx{
-	Tx: spendTx(chainTx1.getSourceID(1).String(), chainTx1.getAmount(1), 1),
+	return sourceID
 }
 
 type block struct {
 	types.Block
 }
 
-var mockBlocks = []*block{
-	// coinbase tx
-	&block{Block: types.Block{
-		BlockHeader: types.BlockHeader{
-			Height:            100,
-			PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
-			Timestamp:         1522908275,
-			Nonce:             0,
-		},
-		Transactions: []*types.Tx{
-			coinBaseTx(41250000000),
-		},
-	}},
+func init() {
+	t := &tx{
+		Tx: types.NewTx(types.TxData{
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, toHash("ca9b179e549406aa583869e124e39817414d4500a8ce5476e95b6018d182b966"), *consensus.BTMAssetID, 41250000000, 0, []byte("00144431c4278632c6e35dd2870faa1a4b8e0a275cbc")),
+			},
+			Outputs: []*types.TxOutput{
+				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("00148c704747e94387fa0b8712b053ed2132d84820ac")),
+				types.NewTxOutput(*consensus.BTMAssetID, 41150000000, []byte("00144431c4278632c6e35dd2870faa1a4b8e0a275cbc")),
+			},
+		}),
+	}
 
-	// Chain trading 3
-	&block{Block: types.Block{
-		BlockHeader: types.BlockHeader{
-			Height:            101,
-			PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
-			Timestamp:         1522908275,
-			Nonce:             0,
-		},
-		Transactions: []*types.Tx{
-			mockTransaction[0].Tx,
-			mockTransaction[1].Tx,
-			chainTx1.Tx,
-			chainTx2.Tx,
-		},
-	}},
+	mockTransaction = append(mockTransaction, t)
+
+	t = &tx{
+		Tx: types.NewTx(types.TxData{
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, *mockTransaction[0].getSourceID(1), *consensus.BTMAssetID, 41150000000, 1, []byte("00144431c4278632c6e35dd2870faa1a4b8e0a275cbc")),
+			},
+			Outputs: []*types.TxOutput{
+				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("00148c704747e94387fa0b8712b053ed2132d84820ac")),
+				types.NewTxOutput(*consensus.BTMAssetID, 41050000000, []byte("00144431c4278632c6e35dd2870faa1a4b8e0a275cbc")),
+			},
+		}),
+	}
+	mockTransaction = append(mockTransaction, t)
+
+	t = &tx{
+		Tx: types.NewTx(types.TxData{
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, *mockTransaction[1].getSourceID(1), *consensus.BTMAssetID, 41050000000, 1, []byte("00144431c4278632c6e35dd2870faa1a4b8e0a275cbc")),
+			},
+			Outputs: []*types.TxOutput{
+				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("00148c704747e94387fa0b8712b053ed2132d84820ac")),
+				types.NewTxOutput(*consensus.BTMAssetID, 40950000000, []byte("00144431c4278632c6e35dd2870faa1a4b8e0a275cbc")),
+			},
+		}),
+	}
+	mockTransaction = append(mockTransaction, t)
+
+	mockBlocks = []*block{
+		// coinbase tx
+		&block{Block: types.Block{
+			BlockHeader: types.BlockHeader{
+				Height:            100,
+				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
+				Timestamp:         1522908275,
+				Nonce:             0,
+			},
+			Transactions: []*types.Tx{
+				coinBaseTx(41250000000, "arbitrary block0"),
+			},
+		}},
+
+		// Chain trading 3
+		&block{Block: types.Block{
+			BlockHeader: types.BlockHeader{
+				Height:            101,
+				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
+				Timestamp:         1522908275,
+				Nonce:             0,
+			},
+			Transactions: []*types.Tx{
+				coinBaseTx(41250000000, "arbitrary block1"),
+				mockTransaction[0].Tx,
+				mockTransaction[1].Tx,
+				mockTransaction[2].Tx,
+			},
+		}},
+	}
+
 }

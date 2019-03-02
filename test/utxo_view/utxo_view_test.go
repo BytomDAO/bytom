@@ -29,37 +29,37 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		{
 			desc:   "coinbase tx",
 			before: make(map[bc.Hash]*storage.UtxoEntry),
-			want:   map[bc.Hash]*storage.UtxoEntry{*mockTransaction[0].OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[0].Block.Height, false)},
+			want:   map[bc.Hash]*storage.UtxoEntry{*newTx(mockBlocks[0].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[0].Block.Height, false)},
 			attachBlock: []*bc.Block{
 				types.MapBlock(&mockBlocks[0].Block),
 			},
 			attachTxStatus: []*bc.TransactionStatus{
 				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: true},
+					&bc.TxVerifyResult{StatusFail: false},
 				}},
 			},
 		},
 		{
 			desc: "Chain trading 3",
 			before: map[bc.Hash]*storage.UtxoEntry{
-				newTx(mockBlocks[1].Transactions[1]).getSpentOutputID(): storage.NewUtxoEntry(false, mockBlocks[1].Height, false),
+				newTx(mockBlocks[1].Transactions[1]).getSpentOutputID(): storage.NewUtxoEntry(false, mockBlocks[1].Height-1, false),
 			},
 			want: map[bc.Hash]*storage.UtxoEntry{
-				*newTx(mockBlocks[1].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, 101, false),
-				*newTx(mockBlocks[1].Transactions[1]).OutputHash(0): storage.NewUtxoEntry(false, 101, false),
-				*newTx(mockBlocks[1].Transactions[2]).OutputHash(0): storage.NewUtxoEntry(false, 101, false),
-				*newTx(mockBlocks[1].Transactions[3]).OutputHash(0): storage.NewUtxoEntry(false, 101, false),
-				*newTx(mockBlocks[1].Transactions[3]).OutputHash(1): storage.NewUtxoEntry(false, 101, false),
+				*newTx(mockBlocks[1].Transactions[0]).OutputHash(0): storage.NewUtxoEntry(true, mockBlocks[1].Height, false),
+				*newTx(mockBlocks[1].Transactions[1]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[1].Height, false),
+				*newTx(mockBlocks[1].Transactions[2]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[1].Height, false),
+				*newTx(mockBlocks[1].Transactions[3]).OutputHash(0): storage.NewUtxoEntry(false, mockBlocks[1].Height, false),
+				*newTx(mockBlocks[1].Transactions[3]).OutputHash(1): storage.NewUtxoEntry(false, mockBlocks[1].Height, false),
 			},
 			attachBlock: []*bc.Block{
 				types.MapBlock(&mockBlocks[1].Block),
 			},
 			attachTxStatus: []*bc.TransactionStatus{
 				&bc.TransactionStatus{VerifyStatus: []*bc.TxVerifyResult{
-					&bc.TxVerifyResult{StatusFail: true},
-					&bc.TxVerifyResult{StatusFail: true},
-					&bc.TxVerifyResult{StatusFail: true},
-					&bc.TxVerifyResult{StatusFail: true},
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
+					&bc.TxVerifyResult{StatusFail: false},
 				}},
 			},
 		},
@@ -70,27 +70,29 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		defer os.RemoveAll("temp")
 		store := leveldb.NewStore(testDB)
 
-		want := map[string]*storage.UtxoEntry{}
-		result := make(map[string]*storage.UtxoEntry)
+		utxoViewpoint := state.NewUtxoViewpoint()
 		for k, v := range c.before {
-			utxoViewpoint := state.NewUtxoViewpoint()
 			utxoViewpoint.Entries[k] = v
-			store.SaveChainStatus(node, utxoViewpoint)
 		}
+		store.SaveChainStatus(node, utxoViewpoint)
 
+		utxoViewpoint = state.NewUtxoViewpoint()
 		for index, block := range c.detachBlock {
-			utxoViewpoint := state.NewUtxoViewpoint()
 			store.GetTransactionsUtxo(utxoViewpoint, block.Transactions)
 			utxoViewpoint.ApplyBlock(block, c.detachTxStatus[index])
-			store.SaveChainStatus(node, utxoViewpoint)
 		}
+		store.SaveChainStatus(node, utxoViewpoint)
 
+		utxoViewpoint = state.NewUtxoViewpoint()
 		for index, block := range c.attachBlock {
-			utxoViewpoint := state.NewUtxoViewpoint()
+
 			store.GetTransactionsUtxo(utxoViewpoint, block.Transactions)
 			utxoViewpoint.ApplyBlock(block, c.attachTxStatus[index])
-			store.SaveChainStatus(node, utxoViewpoint)
 		}
+		store.SaveChainStatus(node, utxoViewpoint)
+
+		want := map[string]*storage.UtxoEntry{}
+		result := make(map[string]*storage.UtxoEntry)
 
 		for k, v := range c.want {
 			want[string(calcUtxoKey(&k))] = v
@@ -113,5 +115,6 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			t.Error(result)
 		}
 		testDB.Close()
+		os.RemoveAll("temp")
 	}
 }
