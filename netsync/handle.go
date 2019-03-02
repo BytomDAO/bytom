@@ -340,7 +340,7 @@ func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage)
 		return
 	}
 
-	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && !isOrphan {
+	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && err != core.ErrDustTx && !isOrphan {
 		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
 	}
 }

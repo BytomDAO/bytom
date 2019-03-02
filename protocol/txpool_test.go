@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/bytom/consensus"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/event"
@@ -14,6 +16,7 @@ import (
 )
 
 var testTxs = []*types.Tx{
+	//tx0
 	types.NewTx(types.TxData{
 		SerializedSize: 100,
 		Inputs: []*types.TxInput{
@@ -23,6 +26,7 @@ var testTxs = []*types.Tx{
 			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
 		},
 	}),
+	//tx1
 	types.NewTx(types.TxData{
 		SerializedSize: 100,
 		Inputs: []*types.TxInput{
@@ -32,6 +36,7 @@ var testTxs = []*types.Tx{
 			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6b}),
 		},
 	}),
+	//tx2
 	types.NewTx(types.TxData{
 		SerializedSize: 150,
 		TimeRange:      0,
@@ -44,6 +49,7 @@ var testTxs = []*types.Tx{
 			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 4, []byte{0x61}),
 		},
 	}),
+	//tx3
 	types.NewTx(types.TxData{
 		SerializedSize: 100,
 		Inputs: []*types.TxInput{
@@ -54,6 +60,7 @@ var testTxs = []*types.Tx{
 			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x63}),
 		},
 	}),
+	//tx4
 	types.NewTx(types.TxData{
 		SerializedSize: 100,
 		Inputs: []*types.TxInput{
@@ -556,6 +563,91 @@ func TestRemoveOrphan(t *testing.T) {
 		}
 		if !testutil.DeepEqual(c.before, c.after) {
 			t.Errorf("case %d: got %v want %v", i, c.before, c.after)
+		}
+	}
+}
+
+type mockStore1 struct{}
+
+func (s *mockStore1) BlockExist(hash *bc.Hash) bool                                { return false }
+func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
+func (s *mockStore1) GetStoreStatus() *BlockStoreState                             { return nil }
+func (s *mockStore1) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) { return nil, nil }
+func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc.Tx) error {
+	for _, hash := range testTxs[2].SpentOutputIDs {
+		utxoView.Entries[hash] = &storage.UtxoEntry{IsCoinBase: false, Spent: false}
+	}
+	return nil
+}
+func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)                 { return nil, nil }
+func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
+func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
+func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error { return nil }
+
+func TestProcessTransaction(t *testing.T) {
+	txPool := &TxPool{
+		pool:            make(map[bc.Hash]*TxDesc),
+		utxo:            make(map[bc.Hash]*types.Tx),
+		orphans:         make(map[bc.Hash]*orphanTx),
+		orphansByPrev:   make(map[bc.Hash]map[bc.Hash]*orphanTx),
+		store:           &mockStore1{},
+		eventDispatcher: event.NewDispatcher(),
+	}
+	cases := []struct {
+		want  *TxPool
+		addTx *TxDesc
+	}{
+		//Dust tx
+		{
+			want: &TxPool{},
+			addTx: &TxDesc{
+				Tx:         testTxs[3],
+				StatusFail: false,
+			},
+		},
+		//normal tx
+		{
+			want: &TxPool{
+				pool: map[bc.Hash]*TxDesc{
+					testTxs[2].ID: {
+						Tx:         testTxs[2],
+						StatusFail: false,
+						Weight:     150,
+					},
+				},
+				utxo: map[bc.Hash]*types.Tx{
+					*testTxs[2].ResultIds[0]: testTxs[2],
+					*testTxs[2].ResultIds[1]: testTxs[2],
+				},
+			},
+			addTx: &TxDesc{
+				Tx:         testTxs[2],
+				StatusFail: false,
+			},
+		},
+	}
+
+	for i, c := range cases {
+		txPool.ProcessTransaction(c.addTx.Tx, c.addTx.StatusFail, 0, 0)
+		for _, txD := range txPool.pool {
+			txD.Added = time.Time{}
+		}
+		for _, txD := range txPool.orphans {
+			txD.Added = time.Time{}
+			txD.expiration = time.Time{}
+		}
+
+		if !testutil.DeepEqual(txPool.pool, c.want.pool) {
+			t.Errorf("case %d: test ProcessTransaction pool mismatch got %s want %s", i, spew.Sdump(txPool.pool), spew.Sdump(c.want.pool))
+		}
+		if !testutil.DeepEqual(txPool.utxo, c.want.utxo) {
+			t.Errorf("case %d: test ProcessTransaction utxo mismatch got %s want %s", i, spew.Sdump(txPool.utxo), spew.Sdump(c.want.utxo))
+		}
+		if !testutil.DeepEqual(txPool.orphans, c.want.orphans) {
+			t.Errorf("case %d: test ProcessTransaction orphans mismatch got %s want %s", i, spew.Sdump(txPool.orphans), spew.Sdump(c.want.orphans))
+		}
+		if !testutil.DeepEqual(txPool.orphansByPrev, c.want.orphansByPrev) {
+			t.Errorf("case %d: test ProcessTransaction orphansByPrev mismatch got %s want %s", i, spew.Sdump(txPool.orphansByPrev), spew.Sdump(c.want.orphansByPrev))
 		}
 	}
 }

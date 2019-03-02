@@ -659,6 +659,7 @@ func TestTxValidation(t *testing.T) {
 	}
 }
 
+// TestCoinbase test the coinbase transaction is valid (txtest#1016)
 func TestCoinbase(t *testing.T) {
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	retire, _ := vmutil.RetireProgram([]byte{})
@@ -851,6 +852,7 @@ func TestRuleAA(t *testing.T) {
 
 }
 
+// TestTimeRange test the checkTimeRange function (txtest#1004)
 func TestTimeRange(t *testing.T) {
 	cases := []struct {
 		timeRange uint64
@@ -903,7 +905,7 @@ func TestTimeRange(t *testing.T) {
 func TestStandardTx(t *testing.T) {
 	fixture := sample(t, nil)
 	tx := types.NewTx(*fixture.tx).Tx
-	
+
 	cases := []struct {
 		desc string
 		f    func()
@@ -942,6 +944,51 @@ func TestStandardTx(t *testing.T) {
 			c.f()
 		}
 		if err := checkStandardTx(tx, 0); err != c.err {
+			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
+		}
+	}
+}
+
+func TestValidateTxVersion(t *testing.T) {
+	cases := []struct {
+		desc  string
+		block *bc.Block
+		err   error
+	}{
+		{
+			desc: "tx version greater than 1 (txtest#1001)",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 1},
+				Transactions: []*bc.Tx{
+					&bc.Tx{TxHeader: &bc.TxHeader{Version: 2}},
+				},
+			},
+			err: ErrTxVersion,
+		},
+		{
+			desc: "tx version equals 0 (txtest#1002)",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 1},
+				Transactions: []*bc.Tx{
+					&bc.Tx{TxHeader: &bc.TxHeader{Version: 0}},
+				},
+			},
+			err: ErrTxVersion,
+		},
+		{
+			desc: "tx version equals max uint64 (txtest#1003)",
+			block: &bc.Block{
+				BlockHeader: &bc.BlockHeader{Version: 1},
+				Transactions: []*bc.Tx{
+					&bc.Tx{TxHeader: &bc.TxHeader{Version: math.MaxUint64}},
+				},
+			},
+			err: ErrTxVersion,
+		},
+	}
+
+	for i, c := range cases {
+		if _, err := ValidateTx(c.block.Transactions[0], c.block); rootErr(err) != c.err {
 			t.Errorf("case #%d (%s) got error %t, want %t", i, c.desc, err, c.err)
 		}
 	}
