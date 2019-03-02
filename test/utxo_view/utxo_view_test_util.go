@@ -145,7 +145,7 @@ func init() {
 	t = &tx{
 		Tx: types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
-				types.NewSpendInput(nil, toHash("ca9b179e549406aa583869e124e39817414d4500a8ce5476e95b6018d182b966"), *consensus.BTMAssetID, 41250000000, 0, []byte("00140b0c5059514c751a80c4e1c94f8ecfe16d80671b")),
+				types.NewSpendInput(nil, toHash("453936067da4be89a99bbd78aa8c7eb88cbe92ae0941e1013a58b8d6af65d344"), *consensus.BTMAssetID, 41250000000, 0, []byte("00140b0c5059514c751a80c4e1c94f8ecfe16d80671b")),
 			},
 			Outputs: []*types.TxOutput{
 				types.NewTxOutput(*consensus.BTMAssetID, 41150000000, []byte("0014b103d8f2dc10e7bbbe2557ff8b9876524dec0a7e")),

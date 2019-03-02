@@ -26,7 +26,6 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		attachTxStatus []*bc.TransactionStatus
 		detachTxStatus []*bc.TransactionStatus
 	}{
-
 		{
 			desc:   "coinbase tx",
 			before: make(map[bc.Hash]*storage.UtxoEntry),
