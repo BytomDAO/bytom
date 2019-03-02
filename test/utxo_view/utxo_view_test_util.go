@@ -28,8 +28,13 @@ func newTx(t *types.Tx) *tx {
 }
 
 func (t *tx) getSourceID(outIndex int) *bc.Hash {
-	Output := t.Tx.Entries[*t.Tx.OutputID(outIndex)].(*bc.Output)
-	return Output.Source.Ref
+	output := t.Tx.Entries[*t.Tx.OutputID(outIndex)].(*bc.Output)
+	return output.Source.Ref
+}
+
+func (t *tx) getAmount(outIndex int) uint64 {
+	output := t.Tx.Entries[*t.Tx.OutputID(outIndex)].(*bc.Output)
+	return output.Source.Value.Amount
 }
 
 func (t *tx) getSpentOutputID() bc.Hash {
@@ -38,12 +43,6 @@ func (t *tx) getSpentOutputID() bc.Hash {
 
 func (t *tx) OutputHash(outIndex int) *bc.Hash {
 	return t.Tx.ResultIds[outIndex]
-}
-
-func (t *tx) nextTx() *tx {
-	return &tx{
-		Tx: spendTx(t.getSourceID(1).String(), 41250000000, 1),
-	}
 }
 
 func blockNode(header *bc.BlockHeader) *state.BlockNode {
@@ -95,7 +94,7 @@ func spendTx(hash string, amount, sourcePos uint64) *types.Tx {
 		},
 		Outputs: []*types.TxOutput{
 			types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("00148c704747e94387fa0b8712b053ed2132d84820ac")),
-			types.NewTxOutput(*consensus.BTMAssetID, amount, []byte("00144431c4278632c6e35dd2870faa1a4b8e0a275cbc")),
+			types.NewTxOutput(*consensus.BTMAssetID, amount-100000000, []byte("00144431c4278632c6e35dd2870faa1a4b8e0a275cbc")),
 		},
 	})
 }
@@ -107,6 +106,23 @@ var mockTransaction = []*tx{
 	&tx{
 		Tx: spendTx("ca9b179e549406aa583869e124e39817414d4500a8ce5476e95b6018d182b966", 41250000000, 0),
 	},
+	&tx{
+		Tx: spendTx("ca9b179e549406aa583869e124e39817414d4500a8ce5476e95b6018d182b966", 41250000000, 0),
+	},
+	&tx{
+		Tx: spendTx("ca9b179e549406aa583869e124e39817414d4500a8ce5476e95b6018d182b966", 41250000000, 0),
+	},
+	&tx{
+		Tx: spendTx("ca9b179e549406aa583869e124e39817414d4500a8ce5476e95b6018d182b966", 41250000000, 0),
+	},
+}
+
+var chainTx1 = &tx{
+	Tx: spendTx(mockTransaction[1].getSourceID(1).String(), mockTransaction[1].getAmount(1), 1),
+}
+
+var chainTx2 = &tx{
+	Tx: spendTx(chainTx1.getSourceID(1).String(), chainTx1.getAmount(1), 1),
 }
 
 type block struct {
@@ -114,6 +130,7 @@ type block struct {
 }
 
 var mockBlocks = []*block{
+	// coinbase tx
 	&block{Block: types.Block{
 		BlockHeader: types.BlockHeader{
 			Height:            100,
@@ -125,6 +142,8 @@ var mockBlocks = []*block{
 			coinBaseTx(41250000000),
 		},
 	}},
+
+	// Chain trading 3
 	&block{Block: types.Block{
 		BlockHeader: types.BlockHeader{
 			Height:            101,
@@ -135,8 +154,8 @@ var mockBlocks = []*block{
 		Transactions: []*types.Tx{
 			mockTransaction[0].Tx,
 			mockTransaction[1].Tx,
-			mockTransaction[1].nextTx().Tx,
-			mockTransaction[1].nextTx().nextTx().Tx,
+			chainTx1.Tx,
+			chainTx2.Tx,
 		},
 	}},
 }
