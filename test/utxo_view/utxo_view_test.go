@@ -65,9 +65,9 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		},
 	}
 	node := blockNode(types.MapBlock(&mockBlocks[0].Block).BlockHeader)
-	for _, c := range cases {
+	defer os.RemoveAll("temp")
+	for index, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		defer os.RemoveAll("temp")
 		store := leveldb.NewStore(testDB)
 
 		utxoViewpoint := state.NewUtxoViewpoint()
@@ -81,11 +81,8 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			store.GetTransactionsUtxo(utxoViewpoint, block.Transactions)
 			utxoViewpoint.ApplyBlock(block, c.detachTxStatus[index])
 		}
-		store.SaveChainStatus(node, utxoViewpoint)
 
-		utxoViewpoint = state.NewUtxoViewpoint()
 		for index, block := range c.attachBlock {
-
 			store.GetTransactionsUtxo(utxoViewpoint, block.Transactions)
 			utxoViewpoint.ApplyBlock(block, c.attachTxStatus[index])
 		}
@@ -102,17 +99,16 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		defer iter.Release()
 
 		for iter.Next() {
-			utxoEntry := storage.UtxoEntry{}
-			if err := proto.Unmarshal(iter.Value(), &utxoEntry); err != nil {
+			utxoEntry := &storage.UtxoEntry{}
+			if err := proto.Unmarshal(iter.Value(), utxoEntry); err != nil {
 				t.Error(err)
 			}
 			key := string(iter.Key())
-			result[key] = &utxoEntry
+			result[key] = utxoEntry
 		}
 
 		if !testutil.DeepEqual(want, result) {
-			t.Error(want)
-			t.Error(result)
+			t.Errorf("case [%d] fail. want: %v, result: %v", index, want, result)
 		}
 		testDB.Close()
 		os.RemoveAll("temp")

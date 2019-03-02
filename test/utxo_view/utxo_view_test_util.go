@@ -110,7 +110,6 @@ func init() {
 			},
 		}),
 	}
-
 	mockTransaction = append(mockTransaction, t)
 
 	t = &tx{
