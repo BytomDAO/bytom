@@ -3,10 +3,12 @@ package p2p
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/tendermint/go-crypto"
 
 	cfg "github.com/bytom/config"
+	"github.com/bytom/consensus"
 	"github.com/bytom/version"
 )
 
@@ -30,6 +32,7 @@ func NewNodeInfo(config *cfg.Config, pubkey crypto.PubKeyEd25519, listenAddr str
 		Network:    config.ChainID,
 		ListenAddr: listenAddr,
 		Version:    version.Version,
+		Other:      []string{strconv.FormatUint(uint64(consensus.DefaultServices), 10)},
 	}
 }
 
