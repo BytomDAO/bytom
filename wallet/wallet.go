@@ -122,6 +122,7 @@ func (w *Wallet) loadWalletInfo() error {
 			return nil
 		}
 
+		log.WithFields(log.Fields{"module": logModule}).Warn("reset the wallet status due to core doesn't have wallet best block")
 		w.deleteAccountTxs()
 		w.deleteUtxos()
 		w.status = StatusInfo{}
