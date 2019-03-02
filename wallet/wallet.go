@@ -113,7 +113,18 @@ func (w *Wallet) memPoolTxQueryLoop() {
 //return initial wallet info and err
 func (w *Wallet) loadWalletInfo() error {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
-		return json.Unmarshal(rawWallet, &w.status)
+		if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+			return err
+		}
+
+		//handle the case than use replace the coreDB during status in fork chain
+		if w.chain.BlockExist(&w.status.BestHash) {
+			return nil
+		}
+
+		w.deleteAccountTxs()
+		w.deleteUtxos()
+		w.status = StatusInfo{}
 	}
 
 	block, err := w.chain.GetBlockByHeight(0)
@@ -253,6 +264,22 @@ func (w *Wallet) deleteAccountTxs() {
 		storeBatch.Delete(txIndexIter.Key())
 	}
 
+	storeBatch.Write()
+}
+
+func (w *Wallet) deleteUtxos() {
+	storeBatch := w.DB.NewBatch()
+	ruIter := w.DB.IteratorPrefix([]byte(account.UTXOPreFix))
+	defer ruIter.Release()
+	for ruIter.Next() {
+		storeBatch.Delete(ruIter.Key())
+	}
+
+	suIter := w.DB.IteratorPrefix([]byte(account.SUTXOPrefix))
+	defer suIter.Release()
+	for suIter.Next() {
+		storeBatch.Delete(suIter.Key())
+	}
 	storeBatch.Write()
 }
 
