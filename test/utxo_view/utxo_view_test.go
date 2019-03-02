@@ -74,19 +74,31 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		for k, v := range c.before {
 			utxoViewpoint.Entries[k] = v
 		}
-		store.SaveChainStatus(node, utxoViewpoint)
+		if err := store.SaveChainStatus(node, utxoViewpoint); err != nil {
+			t.Error(err)
+		}
 
 		utxoViewpoint = state.NewUtxoViewpoint()
 		for index, block := range c.detachBlock {
-			store.GetTransactionsUtxo(utxoViewpoint, block.Transactions)
-			utxoViewpoint.ApplyBlock(block, c.detachTxStatus[index])
+			if err := store.GetTransactionsUtxo(utxoViewpoint, block.Transactions); err != nil {
+				t.Error(err)
+			}
+			if err := utxoViewpoint.DetachBlock(block, c.detachTxStatus[index]); err != nil {
+				t.Error(err)
+			}
 		}
 
 		for index, block := range c.attachBlock {
-			store.GetTransactionsUtxo(utxoViewpoint, block.Transactions)
-			utxoViewpoint.ApplyBlock(block, c.attachTxStatus[index])
+			if err := store.GetTransactionsUtxo(utxoViewpoint, block.Transactions); err != nil {
+				t.Error(err)
+			}
+			if err := utxoViewpoint.ApplyBlock(block, c.attachTxStatus[index]); err != nil {
+				t.Error(err)
+			}
 		}
-		store.SaveChainStatus(node, utxoViewpoint)
+		if err := store.SaveChainStatus(node, utxoViewpoint); err != nil {
+			t.Error(err)
+		}
 
 		want := map[string]*storage.UtxoEntry{}
 		result := make(map[string]*storage.UtxoEntry)
