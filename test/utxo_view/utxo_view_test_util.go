@@ -37,8 +37,13 @@ func (t *tx) getAmount(outIndex int) uint64 {
 	return output.Source.Value.Amount
 }
 
-func (t *tx) getSpentOutputID() bc.Hash {
-	return t.Tx.SpentOutputIDs[0]
+func (t *tx) getSpentOutputID(index int) bc.Hash {
+	input, err := t.Tx.Spend(t.Tx.InputIDs[index])
+	if err != nil {
+		panic(err)
+	}
+
+	return *input.SpentOutputId
 }
 
 func (t *tx) OutputHash(outIndex int) *bc.Hash {
@@ -94,12 +99,21 @@ func toHash(hash string) bc.Hash {
 	return sourceID
 }
 
+func toAssetID(assetID string) bc.AssetID {
+	asset := bc.AssetID{}
+	if err := asset.UnmarshalText([]byte(assetID)); err != nil {
+		panic(err)
+	}
+	return asset
+}
+
 type block struct {
 	types.Block
 }
 
 func init() {
 	// 0
+	mockTransaction = []*tx{}
 	t := &tx{
 		Tx: types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
@@ -142,14 +156,18 @@ func init() {
 	mockTransaction = append(mockTransaction, t)
 
 	// 3: 00140b0c5059514c751a80c4e1c94f8ecfe16d80671b -> 0014b103d8f2dc10e7bbbe2557ff8b9876524dec0a7e
+	assetID := toAssetID("5c3b60753fe1f8321298d64ab3881b200fa1d7e56f1b2a2df587233c532c5eb6")
 	t = &tx{
 		Tx: types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
 				types.NewSpendInput(nil, toHash("453936067da4be89a99bbd78aa8c7eb88cbe92ae0941e1013a58b8d6af65d344"), *consensus.BTMAssetID, 41250000000, 0, []byte("00140b0c5059514c751a80c4e1c94f8ecfe16d80671b")),
+				types.NewSpendInput(nil, toHash("50d1c966b3a58f9092a696136a75ceb801ea7da2470784d80ebf3f17a76b8a98"), assetID, 800000000000, 0, []byte("00140b0c5059514c751a80c4e1c94f8ecfe16d80671b")),
 			},
 			Outputs: []*types.TxOutput{
 				types.NewTxOutput(*consensus.BTMAssetID, 41150000000, []byte("0014b103d8f2dc10e7bbbe2557ff8b9876524dec0a7e")),
 				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("00140b0c5059514c751a80c4e1c94f8ecfe16d80671b")),
+				types.NewTxOutput(assetID, 700000000000, []byte("0014b103d8f2dc10e7bbbe2557ff8b9876524dec0a7e")),
+				types.NewTxOutput(assetID, 100000000000, []byte("00140b0c5059514c751a80c4e1c94f8ecfe16d80671b")),
 			},
 		}),
 	}
@@ -160,10 +178,13 @@ func init() {
 		Tx: types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
 				types.NewSpendInput(nil, toHash("ca9b179e549406aa583869e124e39817514d4500a8ce5476e95b6018d182b966"), *consensus.BTMAssetID, 41250000000, 0, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
+				types.NewSpendInput(nil, toHash("d9a9b64e4f842060a40b15325d9aae61987776f7748e7e6a2887a474e84294ef"), assetID, 600000000000, 0, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
 			},
 			Outputs: []*types.TxOutput{
 				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("0014492d5b0f09f83bd9bff6a44514dcc9b11c091dce")),
 				types.NewTxOutput(*consensus.BTMAssetID, 41150000000, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
+				types.NewTxOutput(assetID, 600000000000, []byte("0014492d5b0f09f83bd9bff6a44514dcc9b11c091dce")),
+				types.NewTxOutput(assetID, 400000000000, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
 			},
 		}),
 	}
@@ -174,10 +195,13 @@ func init() {
 		Tx: types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
 				types.NewSpendInput(nil, toHash("ca9b179e549406aa583869e124e39817514d4500a8ce5476e95b6018d182b966"), *consensus.BTMAssetID, 41150000000, 1, []byte("0014b103d8f2dc10e7bbbe2557ff8b9876524dec0a7e")),
+				types.NewSpendInput(nil, toHash("466e6a9261d7b51f227d6c05b7cd3cc36487cc6f0cfb79c58794021e68d4c877"), assetID, 300000000000, 0, []byte("0014b103d8f2dc10e7bbbe2557ff8b9876524dec0a7e")),
 			},
 			Outputs: []*types.TxOutput{
 				types.NewTxOutput(*consensus.BTMAssetID, 41050000000, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
 				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("0014b103d8f2dc10e7bbbe2557ff8b9876524dec0a7e")),
+				types.NewTxOutput(assetID, 200000000000, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
+				types.NewTxOutput(assetID, 100000000000, []byte("0014b103d8f2dc10e7bbbe2557ff8b9876524dec0a7e")),
 			},
 		}),
 	}
@@ -188,10 +212,13 @@ func init() {
 		Tx: types.NewTx(types.TxData{
 			Inputs: []*types.TxInput{
 				types.NewSpendInput(nil, toHash("ca9b179e549406aa583869e124e39817514d4500a8ce5476e95b6018d182b966"), *consensus.BTMAssetID, 41050000000, 2, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
+				types.NewSpendInput(nil, toHash("e5757774fb46287ebda3479e19c8643d2fcdb5de3b1ac84d4020c1971bb3f531"), assetID, 100000000000, 0, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
 			},
 			Outputs: []*types.TxOutput{
 				types.NewTxOutput(*consensus.BTMAssetID, 40950000000, []byte("0014492d5b0f09f83bd9bff6a44514dcc9b11c091dce")),
 				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
+				types.NewTxOutput(assetID, 50000000000, []byte("0014492d5b0f09f83bd9bff6a44514dcc9b11c091dce")),
+				types.NewTxOutput(assetID, 50000000000, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
 			},
 		}),
 	}
