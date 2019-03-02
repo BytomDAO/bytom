@@ -280,6 +280,91 @@ func init() {
 	}
 	mockTransaction = append(mockTransaction, t)
 
+	// Chain trading
+	// 11: 0014b103d8f2dc10e7bbbe2557ff8b9876524dec0a7e -> 00142b248deeffe82f9cd94fab43849468e0dfe97806
+	t = &tx{
+		Tx: types.NewTx(types.TxData{
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, *mockTransaction[3].getSourceID(0), *consensus.BTMAssetID, 41150000000, 0, []byte("0014b103d8f2dc10e7bbbe2557ff8b9876524dec0a7e")),
+			},
+			Outputs: []*types.TxOutput{
+				types.NewTxOutput(*consensus.BTMAssetID, 41050000000, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
+				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("0014b103d8f2dc10e7bbbe2557ff8b9876524dec0a7e")),
+			},
+		}),
+	}
+	mockTransaction = append(mockTransaction, t)
+
+	//12: 00142b248deeffe82f9cd94fab43849468e0dfe97806 -> 0014492d5b0f09f83bd9bff6a44514dcc9b11c091dce
+	t = &tx{
+		Tx: types.NewTx(types.TxData{
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, *mockTransaction[11].getSourceID(0), *consensus.BTMAssetID, 41050000000, 0, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
+			},
+			Outputs: []*types.TxOutput{
+				types.NewTxOutput(*consensus.BTMAssetID, 40950000000, []byte("0014492d5b0f09f83bd9bff6a44514dcc9b11c091dce")),
+				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("00142b248deeffe82f9cd94fab43849468e0dfe97806")),
+			},
+		}),
+	}
+	mockTransaction = append(mockTransaction, t)
+
+	// 13: 0014492d5b0f09f83bd9bff6a44514dcc9b11c091dce -> 0014e3bb841fb722d1840a959d86e12a174c54a3a6e8
+	t = &tx{
+		Tx: types.NewTx(types.TxData{
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, *mockTransaction[12].getSourceID(0), *consensus.BTMAssetID, 40950000000, 0, []byte("0014492d5b0f09f83bd9bff6a44514dcc9b11c091dce")),
+			},
+			Outputs: []*types.TxOutput{
+				types.NewTxOutput(*consensus.BTMAssetID, 40850000000, []byte("0014e3bb841fb722d1840a959d86e12a174c54a3a6e8")),
+				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("0014492d5b0f09f83bd9bff6a44514dcc9b11c091dce")),
+			},
+		}),
+	}
+	mockTransaction = append(mockTransaction, t)
+
+	// 14: 0014e3bb841fb722d1840a959d86e12a174c54a3a6e8 -> 001449601d4cfb6e7a1b990778497b3c364f66bc17d2
+	t = &tx{
+		Tx: types.NewTx(types.TxData{
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, *mockTransaction[13].getSourceID(0), *consensus.BTMAssetID, 40850000000, 0, []byte("0014e3bb841fb722d1840a959d86e12a174c54a3a6e8")),
+			},
+			Outputs: []*types.TxOutput{
+				types.NewTxOutput(*consensus.BTMAssetID, 40750000000, []byte("001449601d4cfb6e7a1b990778497b3c364f66bc17d2")),
+				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("0014e3bb841fb722d1840a959d86e12a174c54a3a6e8")),
+			},
+		}),
+	}
+	mockTransaction = append(mockTransaction, t)
+
+	// 15: 001449601d4cfb6e7a1b990778497b3c364f66bc17d2 -> 0014bd3d70b1bcd62ece61c06a2fe097a4732e5f006b
+	t = &tx{
+		Tx: types.NewTx(types.TxData{
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, *mockTransaction[14].getSourceID(0), *consensus.BTMAssetID, 40750000000, 0, []byte("001449601d4cfb6e7a1b990778497b3c364f66bc17d2")),
+			},
+			Outputs: []*types.TxOutput{
+				types.NewTxOutput(*consensus.BTMAssetID, 40650000000, []byte("0014bd3d70b1bcd62ece61c06a2fe097a4732e5f006b")),
+				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("001449601d4cfb6e7a1b990778497b3c364f66bc17d2")),
+			},
+		}),
+	}
+	mockTransaction = append(mockTransaction, t)
+
+	// 16: 0014bd3d70b1bcd62ece61c06a2fe097a4732e5f006b -> 0014e809cb6f328db1e624821dec508cbe08fe1ed08d
+	t = &tx{
+		Tx: types.NewTx(types.TxData{
+			Inputs: []*types.TxInput{
+				types.NewSpendInput(nil, *mockTransaction[15].getSourceID(0), *consensus.BTMAssetID, 40650000000, 0, []byte("0014bd3d70b1bcd62ece61c06a2fe097a4732e5f006b")),
+			},
+			Outputs: []*types.TxOutput{
+				types.NewTxOutput(*consensus.BTMAssetID, 40550000000, []byte("0014e809cb6f328db1e624821dec508cbe08fe1ed08d")),
+				types.NewTxOutput(*consensus.BTMAssetID, 100000000, []byte("0014bd3d70b1bcd62ece61c06a2fe097a4732e5f006b")),
+			},
+		}),
+	}
+	mockTransaction = append(mockTransaction, t)
+
 	mockBlocks = []*block{
 		// coinbase tx
 		&block{Block: types.Block{
@@ -350,7 +435,7 @@ func init() {
 			},
 		}},
 
-		// detach block 5, attach block 6
+		// detach block 5, attach block 2
 		&block{Block: types.Block{
 			BlockHeader: types.BlockHeader{
 				Height:            104,
@@ -415,7 +500,7 @@ func init() {
 			},
 		}},
 
-		// detach block 5, attach block 6. Chain trading
+		// detach block 5, attach block 2. Chain trading
 		&block{Block: types.Block{
 			BlockHeader: types.BlockHeader{
 				Height:            105,
@@ -445,6 +530,48 @@ func init() {
 				mockTransaction[7].Tx,
 				mockTransaction[8].Tx,
 				mockTransaction[9].Tx,
+			},
+		}},
+
+		// detach block 2, attach block 1. Chain trading
+		&block{Block: types.Block{
+			BlockHeader: types.BlockHeader{
+				Height:            106,
+				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
+				Timestamp:         1522908275,
+				Nonce:             0,
+			},
+			Transactions: []*types.Tx{
+				coinBaseTx(41250000000, "arbitrary block12"),
+				mockTransaction[11].Tx,
+				mockTransaction[12].Tx,
+				mockTransaction[13].Tx,
+				mockTransaction[14].Tx,
+			},
+		}},
+		&block{Block: types.Block{
+			BlockHeader: types.BlockHeader{
+				Height:            107,
+				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
+				Timestamp:         1522908275,
+				Nonce:             0,
+			},
+			Transactions: []*types.Tx{
+				coinBaseTx(41250000000, "arbitrary block13"),
+				mockTransaction[15].Tx,
+				mockTransaction[16].Tx,
+			},
+		}},
+
+		&block{Block: types.Block{
+			BlockHeader: types.BlockHeader{
+				Height:            106,
+				PreviousBlockHash: testutil.MustDecodeHash("0ab29c0bd7bff3b3b7eb98802f8d5f8833884c86c0fb21559a65cc58dda99667"),
+				Timestamp:         1522908275,
+				Nonce:             0,
+			},
+			Transactions: []*types.Tx{
+				coinBaseTx(41250000000, "arbitrary block14"),
 			},
 		}},
 	}
