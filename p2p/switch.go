@@ -28,7 +28,7 @@ const (
 	defaultBanDuration = time.Hour * 1
 	logModule          = "p2p"
 
-	minNumOutboundPeers = 5
+	minNumOutboundPeers = 4
 )
 
 //pre-define errors for connecting fail
