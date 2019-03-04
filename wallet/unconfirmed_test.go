@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/event"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/testutil"
 )
@@ -57,7 +58,8 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	w := mockWallet(testDB, accountManager, reg, nil)
+	dispatcher := event.NewDispatcher()
+	w := mockWallet(testDB, accountManager, reg, nil, dispatcher)
 	utxos := []*account.UTXO{}
 	btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
 	utxos = append(utxos, btmUtxo)

@@ -33,7 +33,7 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 	for accountUtxoIter.Next() {
 		accountUtxo := &account.UTXO{}
 		if err := json.Unmarshal(accountUtxoIter.Value(), accountUtxo); err != nil {
-			log.WithField("err", err).Warn("GetAccountUtxos fail on unmarshal utxo")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warn("GetAccountUtxos fail on unmarshal utxo")
 			continue
 		}
 
@@ -48,7 +48,7 @@ func (w *Wallet) attachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 	for txIndex, tx := range b.Transactions {
 		statusFail, err := txStatus.GetStatus(txIndex)
 		if err != nil {
-			log.WithField("err", err).Error("attachUtxos fail on get tx status")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on get tx status")
 			continue
 		}
 
@@ -70,7 +70,7 @@ func (w *Wallet) attachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 		outputUtxos := txOutToUtxos(tx, statusFail, validHeight)
 		utxos := w.filterAccountUtxo(outputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
-			log.WithField("err", err).Error("attachUtxos fail on batchSaveUtxos")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on batchSaveUtxos")
 		}
 	}
 }
@@ -93,14 +93,14 @@ func (w *Wallet) detachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 
 		statusFail, err := txStatus.GetStatus(txIndex)
 		if err != nil {
-			log.WithField("err", err).Error("detachUtxos fail on get tx status")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("detachUtxos fail on get tx status")
 			continue
 		}
 
 		inputUtxos := txInToUtxos(tx, statusFail)
 		utxos := w.filterAccountUtxo(inputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
-			log.WithField("err", err).Error("detachUtxos fail on batchSaveUtxos")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("detachUtxos fail on batchSaveUtxos")
 			return
 		}
 	}
@@ -131,7 +131,7 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 
 		cp := &account.CtrlProgram{}
 		if err := json.Unmarshal(data, cp); err != nil {
-			log.WithField("err", err).Error("filterAccountUtxo fail on unmarshal control program")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("filterAccountUtxo fail on unmarshal control program")
 			continue
 		}
 
@@ -172,7 +172,7 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 
 		resOut, err := tx.Output(*sp.SpentOutputId)
 		if err != nil {
-			log.WithField("err", err).Error("txInToUtxos fail on get resOut")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("txInToUtxos fail on get resOut")
 			continue
 		}
 

@@ -527,7 +527,7 @@ func TestBinary(t *testing.T) {
 		n, err = new(int), new(error)
 		ReadBinary(instance, bytes.NewReader(data), len(data), n, err)
 		if *err != nil {
-			t.Fatalf("Failed to read instance with sufficient limit: %v", (*err).Error(), *n, len(data), reflect.TypeOf(instance))
+			t.Fatalf("Failed to read instance with sufficient limit: %v %d %d %s", (*err).Error(), *n, len(data), reflect.TypeOf(instance))
 		}
 	}
 

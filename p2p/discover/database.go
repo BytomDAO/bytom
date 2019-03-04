@@ -96,7 +96,7 @@ func newPersistentNodeDB(path string, version int, self NodeID) (*nodeDB, error)
 		// Version not found (i.e. empty cache), insert it
 		if err = db.Put(nodeDBVersionKey, currentVer, nil); err != nil {
 			if err := db.Close(); err != nil {
-				log.Warn(fmt.Sprintf("db close err %v", err))
+				log.WithFields(log.Fields{"module": logModule, "error": err}).Warn(fmt.Sprintf("db close err"))
 			}
 			return nil, err
 		}
@@ -105,7 +105,7 @@ func newPersistentNodeDB(path string, version int, self NodeID) (*nodeDB, error)
 		// Version present, flush if different
 		if !bytes.Equal(blob, currentVer) {
 			if err = db.Close(); err != nil {
-				log.Warn(fmt.Sprintf("db close err %v", err))
+				log.WithFields(log.Fields{"module": logModule, "error": err}).Warn(fmt.Sprintf("db close err"))
 			}
 			if err = os.RemoveAll(path); err != nil {
 				return nil, err
@@ -175,13 +175,13 @@ func (db *nodeDB) node(id NodeID) *Node {
 	key := makeKey(id, nodeDBDiscoverRoot)
 	rawData, err := db.lvl.Get(key, nil)
 	if err != nil {
-		log.Warn(fmt.Sprintf("get node rawdata err %v", err))
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Warn(fmt.Sprintf("get node rawdata err"))
 		return nil
 	}
 
 	wire.ReadBinary(node, bytes.NewReader(rawData), 0, &n, &err)
 	if err != nil {
-		log.Warn(fmt.Sprintf("key %x (%T) %v", key, node, err))
+		log.WithFields(log.Fields{"module": logModule, "key": key, "node": node, "error": err}).Warn("get node from db err")
 		return nil
 	}
 
@@ -238,7 +238,7 @@ func (db *nodeDB) expirer() {
 		select {
 		case <-tick.C:
 			if err := db.expireNodes(); err != nil {
-				log.Error(fmt.Sprintf("Failed to expire nodedb items: %v", err))
+				log.WithFields(log.Fields{"module": logModule, "error": err}).Error("Failed to expire nodedb items")
 			}
 		case <-db.quit:
 			return
@@ -325,7 +325,7 @@ seek:
 		// of hitting all existing nodes in very small databases.
 		ctr := id[0]
 		if _, err := rand.Read(id[:]); err != nil {
-			log.Warn("get rand date:", err)
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Warn("get rand date")
 		}
 		id[0] = ctr + id[0]%16
 		it.Seek(makeKey(id, nodeDBDiscoverRoot))
@@ -355,7 +355,7 @@ func (db *nodeDB) fetchTopicRegTickets(id NodeID) (issued, used uint32) {
 	key := makeKey(id, nodeDBTopicRegTickets)
 	blob, err := db.lvl.Get(key, nil)
 	if err != nil {
-		log.Warn("db get raw data:", err)
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Warn("db get raw data")
 	}
 
 	if len(blob) != 8 {
@@ -391,7 +391,7 @@ func nextNode(it iterator.Iterator) *Node {
 
 		wire.ReadBinary(node, bytes.NewReader(it.Value()), 0, &n, &err)
 		if err != nil {
-			log.Error("invalid node:", id, err)
+			log.WithFields(log.Fields{"module": logModule, "id": id, "error": err}).Error("invalid node")
 			continue
 		}
 
@@ -404,6 +404,6 @@ func nextNode(it iterator.Iterator) *Node {
 func (db *nodeDB) close() {
 	close(db.quit)
 	if err := db.lvl.Close(); err != nil {
-		log.Warn("db close err:", err)
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Warn("db close err")
 	}
 }

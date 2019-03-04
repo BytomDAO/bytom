@@ -18,6 +18,7 @@ import (
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/database/storage"
+	"github.com/bytom/event"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -139,7 +140,8 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 	}
 
 	store := leveldb.NewStore(testDB)
-	txPool := protocol.NewTxPool(store)
+	dispatcher := event.NewDispatcher()
+	txPool := protocol.NewTxPool(store, dispatcher)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		return nil, nil, nil, err
@@ -191,11 +193,6 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 }
 
 func processNewTxch(txPool *protocol.TxPool) {
-	newTxCh := txPool.GetMsgCh()
-	for tx := range newTxCh {
-		if tx == nil {
-		}
-	}
 }
 
 func SolveBlock(seed *bc.Hash, block *types.Block) error {

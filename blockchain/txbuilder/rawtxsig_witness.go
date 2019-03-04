@@ -40,7 +40,7 @@ func (sw *RawTxSigWitness) sign(ctx context.Context, tpl *Template, index uint32
 		}
 		sigBytes, err := signFn(ctx, keyID.XPub, path, tpl.Hash(index).Byte32(), auth)
 		if err != nil {
-			log.WithField("err", err).Warningf("computing signature %d", i)
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warningf("computing signature %d", i)
 			continue
 		}
 

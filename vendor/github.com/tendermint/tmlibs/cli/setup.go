@@ -8,9 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	data "github.com/tendermint/go-wire/data"
-	"github.com/tendermint/go-wire/data/base58"
 )
 
 const (
@@ -39,17 +36,6 @@ func PrepareBaseCmd(cmd *cobra.Command, envPrefix, defautRoot string) Executor {
 	cmd.PersistentFlags().Bool(TraceFlag, false, "print out full stack trace on errors")
 	cmd.PersistentPreRunE = concatCobraCmdFuncs(bindFlagsLoadViper, cmd.PersistentPreRunE)
 	return Executor{cmd, os.Exit}
-}
-
-// PrepareMainCmd is meant for client side libs that want some more flags
-//
-// This adds --encoding (hex, btc, base64) and --output (text, json) to
-// the command.  These only really make sense in interactive commands.
-func PrepareMainCmd(cmd *cobra.Command, envPrefix, defautRoot string) Executor {
-	cmd.PersistentFlags().StringP(EncodingFlag, "e", "hex", "Binary encoding (hex|b64|btc)")
-	cmd.PersistentFlags().StringP(OutputFlag, "o", "text", "Output format (text|json)")
-	cmd.PersistentPreRunE = concatCobraCmdFuncs(setEncoding, validateOutput, cmd.PersistentPreRunE)
-	return PrepareBaseCmd(cmd, envPrefix, defautRoot)
 }
 
 // initEnv sets to use ENV variables if set.
@@ -156,23 +142,6 @@ func bindFlagsLoadViper(cmd *cobra.Command, args []string) error {
 		// we ignore not found error, only parse error
 		// stderr, so if we redirect output to json file, this doesn't appear
 		fmt.Fprintf(os.Stderr, "%#v", err)
-	}
-	return nil
-}
-
-// setEncoding reads the encoding flag
-func setEncoding(cmd *cobra.Command, args []string) error {
-	// validate and set encoding
-	enc := viper.GetString("encoding")
-	switch enc {
-	case "hex":
-		data.Encoder = data.HexEncoder
-	case "b64":
-		data.Encoder = data.B64Encoder
-	case "btc":
-		data.Encoder = base58.BTCEncoder
-	default:
-		return errors.Errorf("Unsupported encoding: %s", enc)
 	}
 	return nil
 }

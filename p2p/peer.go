@@ -3,20 +3,21 @@ package p2p
 import (
 	"fmt"
 	"net"
+	"reflect"
 	"strconv"
 	"time"
 
+	"github.com/btcsuite/go-socks/socks"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	crypto "github.com/tendermint/go-crypto"
-	wire "github.com/tendermint/go-wire"
+	"github.com/tendermint/go-crypto"
+	"github.com/tendermint/go-wire"
 	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/tendermint/tmlibs/flowrate"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/p2p/connection"
-	"github.com/btcsuite/go-socks/socks"
 )
 
 // peerConn contains the raw connection and its config.
@@ -155,7 +156,7 @@ func (pc *peerConn) HandshakeTimeout(ourNodeInfo *NodeInfo, timeout time.Duratio
 		func() {
 			var n int
 			wire.ReadBinary(peerNodeInfo, pc.conn, maxNodeInfoSize, &n, &err2)
-			log.WithField("address", peerNodeInfo.ListenAddr).Info("Peer handshake")
+			log.WithFields(log.Fields{"module": logModule, "address": peerNodeInfo.ListenAddr}).Info("Peer handshake")
 		})
 	if err1 != nil {
 		return peerNodeInfo, errors.Wrap(err1, "Error during handshake/write")
@@ -228,6 +229,13 @@ func (p *Peer) TrySend(chID byte, msg interface{}) bool {
 	if !p.IsRunning() {
 		return false
 	}
+
+	log.WithFields(log.Fields{
+		"module": logModule,
+		"peer":   p.Addr(),
+		"msg":    msg,
+		"type":   reflect.TypeOf(msg),
+	}).Info("send message to peer")
 	return p.mconn.TrySend(chID, msg)
 }
 

@@ -118,7 +118,12 @@ func (m *BlockMessage) GetBlock() (*types.Block, error) {
 }
 
 func (m *BlockMessage) String() string {
-	return fmt.Sprintf("{block_size: %d}", len(m.RawBlock))
+	block, err := m.GetBlock()
+	if err != nil {
+		return "{err: wrong message}"
+	}
+	blockHash := block.Hash()
+	return fmt.Sprintf("{block_height: %d, block_hash: %s}", block.Height, blockHash.String())
 }
 
 //GetHeadersMessage is one of the bytom msg type
@@ -332,7 +337,11 @@ func (m *TransactionMessage) GetTransaction() (*types.Tx, error) {
 }
 
 func (m *TransactionMessage) String() string {
-	return fmt.Sprintf("{tx_size: %d}", len(m.RawTx))
+	tx, err := m.GetTransaction()
+	if err != nil {
+		return "{err: wrong message}"
+	}
+	return fmt.Sprintf("{tx_size: %d, tx_hash: %s}", len(m.RawTx), tx.ID.String())
 }
 
 //MineBlockMessage new mined block msg
@@ -359,7 +368,12 @@ func (m *MineBlockMessage) GetMineBlock() (*types.Block, error) {
 }
 
 func (m *MineBlockMessage) String() string {
-	return fmt.Sprintf("{block_size: %d}", len(m.RawBlock))
+	block, err := m.GetMineBlock()
+	if err != nil {
+		return "{err: wrong message}"
+	}
+	blockHash := block.Hash()
+	return fmt.Sprintf("{block_height: %d, block_hash: %s}", block.Height, blockHash.String())
 }
 
 //FilterLoadMessage tells the receiving peer to filter the transactions according to address.

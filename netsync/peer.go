@@ -3,6 +3,7 @@ package netsync
 import (
 	"encoding/hex"
 	"net"
+	"reflect"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -118,6 +119,7 @@ func (p *peer) addFilterAddress(address []byte) {
 		log.WithField("module", logModule).Warn("the size of filter address is greater than limit")
 		return
 	}
+
 	p.filterAdds.Add(hex.EncodeToString(address))
 }
 
@@ -385,6 +387,7 @@ func (ps *peerSet) broadcastMinedBlock(block *types.Block) error {
 			continue
 		}
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+			log.WithFields(log.Fields{"module": logModule, "peer": peer.Addr(), "type": reflect.TypeOf(msg), "message": msg.String()}).Warning("send message to peer error")
 			ps.removePeer(peer.ID())
 			continue
 		}
@@ -401,6 +404,7 @@ func (ps *peerSet) broadcastNewStatus(bestBlock, genesisBlock *types.Block) erro
 	msg := NewStatusResponseMessage(&bestBlock.BlockHeader, &genesisHash)
 	for _, peer := range peers {
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+			log.WithFields(log.Fields{"module": logModule, "peer": peer.Addr(), "type": reflect.TypeOf(msg), "message": msg.String()}).Warning("send message to peer error")
 			ps.removePeer(peer.ID())
 			continue
 		}
@@ -420,6 +424,12 @@ func (ps *peerSet) broadcastTx(tx *types.Tx) error {
 			continue
 		}
 		if ok := peer.TrySend(BlockchainChannel, struct{ BlockchainMessage }{msg}); !ok {
+			log.WithFields(log.Fields{
+				"module":  logModule,
+				"peer":    peer.Addr(),
+				"type":    reflect.TypeOf(msg),
+				"message": msg.String(),
+			}).Warning("send message to peer error")
 			ps.removePeer(peer.ID())
 			continue
 		}

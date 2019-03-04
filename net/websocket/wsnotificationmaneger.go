@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -15,7 +16,7 @@ import (
 // Notification types
 type notificationBlockConnected types.Block
 type notificationBlockDisconnected types.Block
-type notificationTxAcceptedByMempool types.Tx
+type notificationTxDescAcceptedByMempool protocol.TxDesc
 
 // Notification control requests
 type notificationRegisterClient WSClient
@@ -87,10 +88,12 @@ type WSNotificationManager struct {
 	maxNumConcurrentReqs int
 	status               statusInfo
 	chain                *protocol.Chain
+	eventDispatcher      *event.Dispatcher
+	txMsgSub             *event.Subscription
 }
 
 // NewWsNotificationManager returns a new notification manager ready for use. See WSNotificationManager for more details.
-func NewWsNotificationManager(maxNumWebsockets int, maxNumConcurrentReqs int, chain *protocol.Chain) *WSNotificationManager {
+func NewWsNotificationManager(maxNumWebsockets int, maxNumConcurrentReqs int, chain *protocol.Chain, dispatcher *event.Dispatcher) *WSNotificationManager {
 	// init status
 	var status statusInfo
 	header := chain.BestBlockHeader()
@@ -106,6 +109,7 @@ func NewWsNotificationManager(maxNumWebsockets int, maxNumConcurrentReqs int, ch
 		maxNumConcurrentReqs: maxNumConcurrentReqs,
 		status:               status,
 		chain:                chain,
+		eventDispatcher:      dispatcher,
 	}
 }
 
@@ -214,15 +218,36 @@ func (m *WSNotificationManager) NotifyBlockDisconnected(block *types.Block) {
 	}
 }
 
-// NotifyMempoolTx passes a transaction accepted by mempool to the
-// notification manager for transaction notification processing.  If
-// isNew is true, the tx is is a new transaction, rather than one
-// added to the mempool during a reorg.
-func (m *WSNotificationManager) NotifyMempoolTx(tx *types.Tx) {
-	select {
-	case m.queueNotification <- (*notificationTxAcceptedByMempool)(tx):
-	case <-m.quit:
+// memPoolTxQueryLoop constantly pass a transaction accepted by mempool to the
+// notification manager for transaction notification processing.
+func (m *WSNotificationManager) memPoolTxQueryLoop() {
+out:
+	for {
+		select {
+		case obj, ok := <-m.txMsgSub.Chan():
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Warning("tx pool tx msg subscription channel closed")
+				break out
+			}
+
+			ev, ok := obj.Data.(protocol.TxMsgEvent)
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
+				continue
+			}
+
+			if ev.TxMsg.MsgType == protocol.MsgNewTx {
+				select {
+				case m.queueNotification <- (*notificationTxDescAcceptedByMempool)(ev.TxMsg.TxDesc):
+				default:
+				}
+			}
+		case <-m.quit:
+			break out
+		}
 	}
+
+	m.wg.Done()
 }
 
 // notificationHandler reads notifications and control messages from the queue handler and processes one at a time.
@@ -252,10 +277,10 @@ out:
 					m.notifyBlockDisconnected(blockNotifications, block)
 				}
 
-			case *notificationTxAcceptedByMempool:
-				tx := (*types.Tx)(n)
+			case *notificationTxDescAcceptedByMempool:
+				txDesc := (*protocol.TxDesc)(n)
 				if len(txNotifications) != 0 {
-					m.notifyForNewTx(txNotifications, tx)
+					m.notifyForNewTx(txNotifications, txDesc)
 				}
 
 			case *notificationRegisterBlocks:
@@ -368,8 +393,8 @@ func (m *WSNotificationManager) UnregisterNewMempoolTxsUpdates(wsc *WSClient) {
 
 // notifyForNewTx notifies websocket clients that have registered for updates
 // when a new transaction is added to the memory pool.
-func (m *WSNotificationManager) notifyForNewTx(clients map[chan struct{}]*WSClient, tx *types.Tx) {
-	resp := NewWSResponse(NTNewTransaction.String(), tx, nil)
+func (m *WSNotificationManager) notifyForNewTx(clients map[chan struct{}]*WSClient, txDesc *protocol.TxDesc) {
+	resp := NewWSResponse(NTNewTransaction.String(), txDesc, nil)
 	marshalledJSON, err := json.Marshal(resp)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("Failed to marshal tx notification")
@@ -437,11 +462,19 @@ func (m *WSNotificationManager) blockWaiter() {
 }
 
 // Start starts the goroutines required for the manager to queue and process websocket client notifications.
-func (m *WSNotificationManager) Start() {
-	m.wg.Add(3)
+func (m *WSNotificationManager) Start() error {
+	var err error
+	m.txMsgSub, err = m.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
+	if err != nil {
+		return err
+	}
+
+	m.wg.Add(4)
 	go m.blockNotify()
 	go m.queueHandler()
 	go m.notificationHandler()
+	go m.memPoolTxQueryLoop()
+	return nil
 }
 
 // WaitForShutdown blocks until all notification manager goroutines have finished.

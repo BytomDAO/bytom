@@ -4,7 +4,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	crand "crypto/rand"
-	"encoding/hex"
 	"io"
 	"sync"
 
@@ -42,16 +41,6 @@ func CRandBytes(numBytes int) []byte {
 		PanicCrisis(err)
 	}
 	return b
-}
-
-// RandHex(24) gives 96 bits of randomness, strong enough for most purposes.
-func CRandHex(numDigits int) string {
-	return hex.EncodeToString(CRandBytes(numDigits / 2))
-}
-
-// Returns a crand.Reader mixed with user-supplied entropy
-func CReader() io.Reader {
-	return gRandInfo
 }
 
 //--------------------------------------------------------------------------------

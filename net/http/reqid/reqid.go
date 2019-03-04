@@ -28,6 +28,7 @@ const (
 	coreIDKey
 	// pathKey is the key for the request path being handled.
 	pathKey
+	logModule = "reqid"
 )
 
 // New generates a random request ID.
@@ -43,7 +44,7 @@ func New() string {
 	b := make([]byte, l)
 	_, err := rand.Read(b)
 	if err != nil {
-		log.WithField("error", err).Info("error making reqID")
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Info("error making reqID")
 	}
 	return hex.EncodeToString(b)
 }

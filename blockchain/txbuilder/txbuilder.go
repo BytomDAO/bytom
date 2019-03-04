@@ -17,6 +17,8 @@ import (
 	"github.com/bytom/protocol/vm"
 )
 
+const logModule = "txbuilder"
+
 // errors
 var (
 	//ErrBadRefData means invalid reference data
@@ -54,7 +56,7 @@ func Build(ctx context.Context, tx *types.TxData, actions []Action, maxTime time
 	for i, action := range actions {
 		err := action.Build(ctx, &builder)
 		if err != nil {
-			log.WithFields(log.Fields{"action index": i, "error": err}).Error("Loop tx's action")
+			log.WithFields(log.Fields{"module": logModule, "action index": i, "error": err}).Error("Loop tx's action")
 			errs = append(errs, errors.WithDetailf(err, "action index %v", i))
 		}
 	}

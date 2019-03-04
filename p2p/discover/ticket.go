@@ -104,7 +104,7 @@ func ticketToPong(t *ticket, pong *pong) {
 	pong.Expiration = uint64(t.issueTime / AbsTime(time.Second))
 	pong.TopicHash, _, err = wireHash(t.topics)
 	if err != nil {
-		log.Error("wireHash err:", err)
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("wireHash err")
 	}
 	pong.TicketSerial = t.serial
 	pong.WaitPeriods = make([]uint32, len(t.regTime))
@@ -168,7 +168,7 @@ func newTicketStore() *ticketStore {
 // addTopic starts tracking a topic. If register is true,
 // the local node will register the topic and tickets will be collected.
 func (s *ticketStore) addTopic(topic Topic, register bool) {
-	log.Debug("Adding discovery topic", "topic", topic, "register", register)
+	log.WithFields(log.Fields{"module": logModule, "topic": topic, "register": register}).Debug("Adding discovery topic")
 	if s.radius[topic] == nil {
 		s.radius[topic] = newTopicRadius(topic)
 	}
@@ -192,9 +192,9 @@ func (s *ticketStore) removeSearchTopic(t Topic) {
 
 // removeRegisterTopic deletes all tickets for the given topic.
 func (s *ticketStore) removeRegisterTopic(topic Topic) {
-	log.Debug("Removing discovery topic", "topic", topic)
+	log.WithFields(log.Fields{"module": logModule, "topic": topic}).Debug("Removing discovery topic")
 	if s.tickets[topic] == nil {
-		log.Warn("Removing non-existent discovery topic", "topic", topic)
+		log.WithFields(log.Fields{"module": logModule, "topic": topic}).Warn("Removing non-existent discovery topic")
 		return
 	}
 	for _, list := range s.tickets[topic].buckets {
@@ -239,13 +239,13 @@ func (s *ticketStore) nextRegisterLookup() (lookupInfo, time.Duration) {
 		// If the topic needs more tickets, return it
 		if s.tickets[topic].nextLookup < Now() {
 			next, delay := s.radius[topic].nextTarget(false), 100*time.Millisecond
-			log.Debug("Found discovery topic to register", "topic", topic, "target", next.target, "delay", delay)
+			log.WithFields(log.Fields{"module": logModule, "topic": topic, "target": next.target, "delay": delay}).Debug("Found discovery topic to register")
 			return next, delay
 		}
 	}
 	// No registration topics found or all exhausted, sleep
 	delay := 40 * time.Second
-	log.Debug("No topic found to register", "delay", delay)
+	log.WithFields(log.Fields{"module": logModule, "delay": delay}).Debug("No topic found to register")
 	return lookupInfo{}, delay
 }
 
@@ -264,7 +264,7 @@ func (s *ticketStore) nextSearchLookup(topic Topic) lookupInfo {
 func (s *ticketStore) ticketsInWindow(topic Topic) []ticketRef {
 	// Sanity check that the topic still exists before operating on it
 	if s.tickets[topic] == nil {
-		log.Warn("Listing non-existing discovery tickets", "topic", topic)
+		log.WithFields(log.Fields{"module": logModule, "topic": topic}).Warn("Listing non-existing discovery tickets")
 		return nil
 	}
 	// Gather all the tickers in the next time window
@@ -274,7 +274,7 @@ func (s *ticketStore) ticketsInWindow(topic Topic) []ticketRef {
 	for idx := timeBucket(0); idx < timeWindow; idx++ {
 		tickets = append(tickets, buckets[s.lastBucketFetched+idx]...)
 	}
-	log.Debug("Retrieved discovery registration tickets", "topic", topic, "from", s.lastBucketFetched, "tickets", len(tickets))
+	log.WithFields(log.Fields{"module": logModule, "topic": topic, "from": s.lastBucketFetched, "tickets": len(tickets)}).Debug("Retrieved discovery registration tickets")
 	return tickets
 }
 
@@ -315,7 +315,7 @@ func (s *ticketStore) addTicketRef(r ticketRef) {
 	topic := r.t.topics[r.idx]
 	tickets := s.tickets[topic]
 	if tickets == nil {
-		log.Warn("Adding ticket to non-existent topic", "topic", topic)
+		log.WithFields(log.Fields{"module": logModule, "topic": topic}).Warn("Adding ticket to non-existent topic")
 		return
 	}
 	bucket := timeBucket(r.t.regTime[r.idx] / AbsTime(ticketTimeBucketLen))
@@ -409,7 +409,7 @@ func (s *ticketStore) nextRegisterableTicket() (*ticketRef, time.Duration) {
 
 // removeTicket removes a ticket from the ticket store
 func (s *ticketStore) removeTicketRef(ref ticketRef) {
-	log.Debug("Removing discovery ticket reference", "node", ref.t.node.ID, "serial", ref.t.serial)
+	log.WithFields(log.Fields{"module": logModule, "node": ref.t.node.ID, "serial": ref.t.serial}).Debug("Removing discovery ticket reference")
 
 	// Make nextRegisterableTicket return the next available ticket.
 	s.nextTicketCached = nil
@@ -418,7 +418,7 @@ func (s *ticketStore) removeTicketRef(ref ticketRef) {
 	tickets := s.tickets[topic]
 
 	if tickets == nil {
-		log.Debug("Removing tickets from unknown topic", "topic", topic)
+		log.WithFields(log.Fields{"module": logModule, "topic": topic}).Debug("Removing tickets from unknown topic")
 		return
 	}
 	bucket := timeBucket(ref.t.regTime[ref.idx] / AbsTime(ticketTimeBucketLen))
@@ -514,7 +514,7 @@ func (s *ticketStore) adjustWithTicket(now AbsTime, targetHash common.Hash, t *t
 }
 
 func (s *ticketStore) addTicket(localTime AbsTime, pingHash []byte, ticket *ticket) {
-	log.Debug("Adding discovery ticket", "node", ticket.node.ID, "serial", ticket.serial)
+	log.WithFields(log.Fields{"module": logModule, "node": ticket.node.ID, "serial": ticket.serial}).Debug("Adding discovery ticket")
 
 	lastReq, ok := s.nodeLastReq[ticket.node]
 	if !(ok && bytes.Equal(pingHash, lastReq.pingHash)) {
@@ -558,9 +558,9 @@ func (s *ticketStore) addTicket(localTime AbsTime, pingHash []byte, ticket *tick
 
 func (s *ticketStore) getNodeTicket(node *Node) *ticket {
 	if s.nodes[node] == nil {
-		log.Debug("Retrieving node ticket", "node", node.ID, "serial", nil)
+		log.WithFields(log.Fields{"module": logModule, "node": node.ID, "serial": nil}).Debug("Retrieving node ticket")
 	} else {
-		log.Debug("Retrieving node ticket", "node", node.ID, "serial", s.nodes[node].serial)
+		log.WithFields(log.Fields{"module": logModule, "node": node.ID, "serial": s.nodes[node].serial}).Debug("Retrieving node ticket")
 	}
 	return s.nodes[node]
 }

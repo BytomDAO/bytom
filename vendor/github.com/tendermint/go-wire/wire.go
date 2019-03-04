@@ -1,7 +1,6 @@
 package wire
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -60,17 +59,6 @@ func ReadBinaryPtr(o interface{}, r io.Reader, lmt int, n *int, err *error) (res
 	return res
 }
 
-func ReadBinaryPtrLengthPrefixed(o interface{}, r io.Reader, lmt int, n *int, err *error) (res interface{}) {
-	length := ReadVarint(r, n, err)
-	nSave := *n
-	res = ReadBinaryPtr(o, r, lmt, n, err)
-	nRes := *n - nSave
-	if nRes != length && *err == nil {
-		*err = errors.New(cmn.Fmt("Error: binary ready wrong length prefix. Declared:%v vs actual:%v", length, nRes))
-	}
-	return res
-}
-
 // WriteBinary is the binary encoder. Its arguments are the subject to be
 // encoded, the writer that'll receive the encoded bytes, as well as a
 // receiver to store the bytes written and any error encountered.
@@ -78,14 +66,6 @@ func WriteBinary(o interface{}, w io.Writer, n *int, err *error) {
 	rv := reflect.ValueOf(o)
 	rt := reflect.TypeOf(o)
 	writeReflectBinary(rv, rt, Options{}, w, n, err)
-}
-
-func WriteBinaryLengthPrefixed(o interface{}, w io.Writer, n *int, err *error) {
-	var bufN int
-	var buf = new(bytes.Buffer)
-	WriteBinary(o, buf, &bufN, err)
-	WriteVarint(buf.Len(), w, n, err)
-	WriteTo(buf.Bytes(), w, n, err)
 }
 
 func ReadJSON(o interface{}, bytes []byte, err *error) interface{} {

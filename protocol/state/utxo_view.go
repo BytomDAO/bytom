@@ -117,12 +117,12 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 }
 
 func (view *UtxoViewpoint) DetachBlock(block *bc.Block, txStatus *bc.TransactionStatus) error {
-	for i, tx := range block.Transactions {
+	for i := len(block.Transactions) - 1; i >= 0; i-- {
 		statusFail, err := txStatus.GetStatus(i)
 		if err != nil {
 			return err
 		}
-		if err := view.DetachTransaction(tx, statusFail); err != nil {
+		if err := view.DetachTransaction(block.Transactions[i], statusFail); err != nil {
 			return err
 		}
 	}

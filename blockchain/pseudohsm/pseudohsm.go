@@ -20,6 +20,7 @@ import (
 // pre-define errors for supporting bytom errorFormatter
 var (
 	ErrDuplicateKeyAlias = errors.New("duplicate key alias")
+	ErrXPubFormat        = errors.New("xpub format error")
 	ErrLoadKey           = errors.New("key not found or wrong password ")
 	ErrDecrypt           = errors.New("could not decrypt key with given passphrase")
 	ErrMnemonicLength    = errors.New("mnemonic length error")

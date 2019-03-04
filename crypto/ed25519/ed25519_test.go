@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
-	"crypto"
 	"crypto/rand"
 	"encoding/hex"
 	"os"
@@ -59,34 +58,6 @@ func TestSignVerify(t *testing.T) {
 	wrongMessage := []byte("wrong message")
 	if Verify(public, wrongMessage, sig) {
 		t.Errorf("signature of different message accepted")
-	}
-}
-
-func TestCryptoSigner(t *testing.T) {
-	var zero zeroReader
-	public, private, _ := GenerateKey(zero)
-
-	signer := crypto.Signer(private)
-
-	publicInterface := signer.Public()
-	public2, ok := publicInterface.(PublicKey)
-	if !ok {
-		t.Fatalf("expected PublicKey from Public() but got %T", publicInterface)
-	}
-
-	if !bytes.Equal(public, public2) {
-		t.Errorf("public keys do not match: original:%x vs Public():%x", public, public2)
-	}
-
-	message := []byte("message")
-	var noHash crypto.Hash
-	signature, err := signer.Sign(zero, message, noHash)
-	if err != nil {
-		t.Fatalf("error from Sign(): %s", err)
-	}
-
-	if !Verify(public, message, signature) {
-		t.Errorf("Verify failed on signature from Sign()")
 	}
 }
 

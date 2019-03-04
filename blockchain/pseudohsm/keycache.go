@@ -169,7 +169,7 @@ func (kc *keyCache) find(xpub XPub) (XPub, error) {
 func (kc *keyCache) reload() {
 	keys, err := kc.scan()
 	if err != nil {
-		log.WithField("load keys error", err).Error("can't load keys")
+		log.WithFields(log.Fields{"module": logModule, "load keys error": err}).Error("can't load keys")
 	}
 	kc.all = keys
 	sort.Sort(kc.all)
@@ -179,7 +179,7 @@ func (kc *keyCache) reload() {
 	for _, k := range keys {
 		kc.byPubs[k.XPub] = append(kc.byPubs[k.XPub], k)
 	}
-	log.WithField("cache has keys:", len(kc.all)).Debug("reloaded keys")
+	log.WithFields(log.Fields{"module": logModule, "cache has keys:": len(kc.all)}).Debug("reloaded keys")
 }
 
 func (kc *keyCache) scan() ([]XPub, error) {
@@ -214,9 +214,10 @@ func (kc *keyCache) scan() ([]XPub, error) {
 		err = json.NewDecoder(buf).Decode(&keyJSON)
 		switch {
 		case err != nil:
-			log.WithField("decode json err", err).Errorf("can't decode key %s: %v", path, err)
+			log.WithFields(log.Fields{"module": logModule, "decode json err": err}).Errorf("can't decode key %s: %v", path, err)
+
 		case (keyJSON.Alias == ""):
-			log.WithField("can't decode key, key path:", path).Warn("missing or void alias")
+			log.WithFields(log.Fields{"module": logModule, "can't decode key, key path:": path}).Warn("missing or void alias")
 		default:
 			keys = append(keys, XPub{XPub: keyJSON.XPub, Alias: keyJSON.Alias, File: path})
 		}

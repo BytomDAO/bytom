@@ -5,6 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
 )
 
@@ -35,10 +36,23 @@ func (sm *SyncManager) syncTransactions(peerID string) {
 func (sm *SyncManager) txBroadcastLoop() {
 	for {
 		select {
-		case newTx := <-sm.newTxCh:
-			if err := sm.peers.broadcastTx(newTx); err != nil {
-				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast new tx.")
+		case obj, ok := <-sm.txMsgSub.Chan():
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Warning("mempool tx msg subscription channel closed")
 				return
+			}
+
+			ev, ok := obj.Data.(core.TxMsgEvent)
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
+				continue
+			}
+
+			if ev.TxMsg.MsgType == core.MsgNewTx {
+				if err := sm.peers.broadcastTx(ev.TxMsg.Tx); err != nil {
+					log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast new tx.")
+					continue
+				}
 			}
 		case <-sm.quitSync:
 			return

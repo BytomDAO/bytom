@@ -86,7 +86,7 @@ func (sw *SignatureWitness) sign(ctx context.Context, tpl *Template, index uint3
 		}
 		sigBytes, err := signFn(ctx, keyID.XPub, path, h, auth)
 		if err != nil {
-			log.WithField("err", err).Warningf("computing signature %d", i)
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warningf("computing signature %d", i)
 			continue
 		}
 

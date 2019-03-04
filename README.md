@@ -95,8 +95,7 @@ available flags for `bytomd node`:
       --auth.disable                Disable rpc access authenticate
       --chain_id string             Select network type
   -h, --help                        help for node
-      --mining.enable               Enable mining
-      --mining.recommit_interval    Set mining pool recomit interval in seconds (default 15)
+      --mining                      Enable mining
       --p2p.dial_timeout int        Set dial timeout (default 3)
       --p2p.handshake_timeout int   Set handshake timeout (default 30)
       --p2p.laddr string            Node listen address.

@@ -31,19 +31,20 @@ import (
 	"github.com/bytom/mining/tensority"
 	"github.com/bytom/net/websocket"
 	"github.com/bytom/netsync"
+	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	w "github.com/bytom/wallet"
 )
 
 const (
-	webHost           = "http://127.0.0.1"
-	maxNewBlockChSize = 1024
+	webHost   = "http://127.0.0.1"
+	logModule = "node"
 )
 
+// Node represent bytom node
 type Node struct {
 	cmn.BaseService
 
-	// config
 	config          *cfg.Config
 	eventDispatcher *event.Dispatcher
 	syncManager     *netsync.SyncManager
@@ -59,6 +60,7 @@ type Node struct {
 	miningEnable    bool
 }
 
+// NewNode create bytom node
 func NewNode(config *cfg.Config) *Node {
 	ctx := context.Background()
 	if err := lockDataDirectory(config); err != nil {
@@ -78,22 +80,23 @@ func NewNode(config *cfg.Config) *Node {
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
 
-	txPool := protocol.NewTxPool(store)
+	dispatcher := event.NewDispatcher()
+	txPool := protocol.NewTxPool(store, dispatcher)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create chain structure: %v", err))
 	}
 
-	var accounts *account.Manager = nil
-	var assets *asset.Registry = nil
-	var wallet *w.Wallet = nil
-	var txFeed *txfeed.Tracker = nil
+	var accounts *account.Manager
+	var assets *asset.Registry
+	var wallet *w.Wallet
+	var txFeed *txfeed.Tracker
 
 	txFeedDB := dbm.NewDB("txfeeds", config.DBBackend, config.DBDir())
 	txFeed = txfeed.NewTracker(txFeedDB, chain)
 
 	if err = txFeed.Prepare(ctx); err != nil {
-		log.WithField("error", err).Error("start txfeed")
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("start txfeed")
 		return nil
 	}
 
@@ -106,9 +109,9 @@ func NewNode(config *cfg.Config) *Node {
 		walletDB := dbm.NewDB("wallet", config.DBBackend, config.DBDir())
 		accounts = account.NewManager(walletDB, chain)
 		assets = asset.NewRegistry(walletDB, chain)
-		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain)
+		wallet, err = w.NewWallet(walletDB, accounts, assets, hsm, chain, dispatcher)
 		if err != nil {
-			log.WithField("error", err).Error("init NewWallet")
+			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}
 
 		// trigger rescan wallet
@@ -116,16 +119,13 @@ func NewNode(config *cfg.Config) *Node {
 			wallet.RescanBlocks()
 		}
 	}
-	dispatcher := event.NewDispatcher()
+
 	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher)
 	if err != nil {
-		cmn.Exit(cmn.Fmt("create sync manager failed: %v", err))
+		cmn.Exit(cmn.Fmt("Failed to create sync manager: %v", err))
 	}
 
-	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain)
-
-	// get transaction from txPool and send it to syncManager and wallet
-	go newPoolTxListener(txPool, syncManager, wallet, notificationMgr)
+	notificationMgr := websocket.NewWsNotificationManager(config.Websocket.MaxNumWebsockets, config.Websocket.MaxNumConcurrentReqs, chain, dispatcher)
 
 	// run the profile server
 	profileHost := config.ProfListenAddress
@@ -147,13 +147,13 @@ func NewNode(config *cfg.Config) *Node {
 		wallet:          wallet,
 		chain:           chain,
 		txfeed:          txFeed,
-		miningEnable:    config.Mining.Enable,
+		miningEnable:    config.Mining,
 
 		notificationMgr: notificationMgr,
 	}
 
 	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, dispatcher)
-	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, dispatcher, config.Mining.RecommitInterval)
+	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, dispatcher)
 
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
 
@@ -162,30 +162,6 @@ func NewNode(config *cfg.Config) *Node {
 	}
 
 	return node
-}
-
-// newPoolTxListener listener transaction from txPool, and send it to syncManager and wallet
-func newPoolTxListener(txPool *protocol.TxPool, syncManager *netsync.SyncManager, wallet *w.Wallet, notificationMgr *websocket.WSNotificationManager) {
-	txMsgCh := txPool.GetMsgCh()
-	syncManagerTxCh := syncManager.GetNewTxCh()
-
-	for {
-		msg := <-txMsgCh
-		switch msg.MsgType {
-		case protocol.MsgNewTx:
-			syncManagerTxCh <- msg.Tx
-			if wallet != nil {
-				wallet.AddUnconfirmedTx(msg.TxDesc)
-			}
-			notificationMgr.NotifyMempoolTx(msg.Tx)
-		case protocol.MsgRemoveTx:
-			if wallet != nil {
-				wallet.RemoveUnconfirmedTx(msg.TxDesc)
-			}
-		default:
-			log.Warn("got unknow message type from the txPool channel")
-		}
-	}
 }
 
 // Lock data directory after daemonization
@@ -214,7 +190,7 @@ func initLogFile(config *cfg.Config) {
 	if err == nil {
 		log.SetOutput(file)
 	} else {
-		log.WithField("err", err).Info("using default")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Info("using default")
 	}
 
 }
@@ -233,7 +209,7 @@ func launchWebBrowser(port string) {
 	}
 }
 
-func (n *Node) initAndstartApiServer() {
+func (n *Node) initAndstartAPIServer() {
 	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
@@ -251,10 +227,16 @@ func (n *Node) OnStart() error {
 		}
 	}
 	if !n.config.VaultMode {
-		n.syncManager.Start()
+		if err := n.syncManager.Start(); err != nil {
+			return err
+		}
 	}
-	n.initAndstartApiServer()
-	n.notificationMgr.Start()
+
+	n.initAndstartAPIServer()
+	if err := n.notificationMgr.Start(); err != nil {
+		return err
+	}
+
 	if !n.config.Web.Closed {
 		_, port, err := net.SplitHostPort(n.config.ApiAddress)
 		if err != nil {
@@ -286,8 +268,8 @@ func (n *Node) RunForever() {
 	})
 }
 
-func (n *Node) SyncManager() *netsync.SyncManager {
-	return n.syncManager
+func (n *Node) NodeInfo() *p2p.NodeInfo {
+	return n.syncManager.NodeInfo()
 }
 
 func (n *Node) MiningPool() *miningpool.MiningPool {

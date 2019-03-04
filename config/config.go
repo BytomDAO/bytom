@@ -1,12 +1,16 @@
 package config
 
 import (
+	"io"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime"
 
 	log "github.com/sirupsen/logrus"
+
+	"github.com/bytom/crypto/ed25519"
 )
 
 var (
@@ -23,7 +27,6 @@ type Config struct {
 	Auth      *RPCAuthConfig   `mapstructure:"auth"`
 	Web       *WebConfig       `mapstructure:"web"`
 	Simd      *SimdConfig      `mapstructure:"simd"`
-	Mining    *MiningConfig    `mapstructure:"mining"`
 	Websocket *WebsocketConfig `mapstructure:"ws"`
 }
 
@@ -36,7 +39,6 @@ func DefaultConfig() *Config {
 		Auth:       DefaultRPCAuthConfig(),
 		Web:        DefaultWebConfig(),
 		Simd:       DefaultSimdConfig(),
-		Mining:     DefaultMiningConfig(),
 		Websocket:  DefaultWebsocketConfig(),
 	}
 }
@@ -45,6 +47,37 @@ func DefaultConfig() *Config {
 func (cfg *Config) SetRoot(root string) *Config {
 	cfg.BaseConfig.RootDir = root
 	return cfg
+}
+
+// NodeKey retrieves the currently configured private key of the node, checking
+// first any manually set key, falling back to the one found in the configured
+// data folder. If no key can be found, a new one is generated.
+func (cfg *Config) NodeKey() (string, error) {
+	// Use any specifically configured key.
+	if cfg.P2P.PrivateKey != "" {
+		return cfg.P2P.PrivateKey, nil
+	}
+
+	keyFile := rootify(cfg.P2P.NodeKeyFile, cfg.BaseConfig.RootDir)
+	buf := make([]byte, ed25519.PrivateKeySize*2)
+	fd, err := os.Open(keyFile)
+	defer fd.Close()
+	if err == nil {
+		if _, err = io.ReadFull(fd, buf); err == nil {
+			return string(buf), nil
+		}
+	}
+
+	log.WithField("err", err).Warning("key file access failed")
+	_, privKey, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		return "", err
+	}
+
+	if err = ioutil.WriteFile(keyFile, []byte(privKey.String()), 0600); err != nil {
+		return "", err
+	}
+	return privKey.String(), nil
 }
 
 //-----------------------------------------------------------------------------
@@ -65,6 +98,8 @@ type BaseConfig struct {
 
 	// TCP or UNIX socket address for the profiling server to listen on
 	ProfListenAddress string `mapstructure:"prof_laddr"`
+
+	Mining bool `mapstructure:"mining"`
 
 	// Database backend: leveldb | memdb
 	DBBackend string `mapstructure:"db_backend"`
@@ -88,6 +123,7 @@ func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
 		Moniker:           "anonymous",
 		ProfListenAddress: "",
+		Mining:            false,
 		DBBackend:         "leveldb",
 		DBPath:            "data",
 		KeysPath:          "keystore",
@@ -106,6 +142,8 @@ func (b BaseConfig) KeysDir() string {
 type P2PConfig struct {
 	ListenAddress    string `mapstructure:"laddr"`
 	Seeds            string `mapstructure:"seeds"`
+	PrivateKey       string `mapstructure:"node_key"`
+	NodeKeyFile      string `mapstructure:"node_key_file"`
 	SkipUPNP         bool   `mapstructure:"skip_upnp"`
 	MaxNumPeers      int    `mapstructure:"max_num_peers"`
 	HandshakeTimeout int    `mapstructure:"handshake_timeout"`
@@ -119,6 +157,7 @@ type P2PConfig struct {
 func DefaultP2PConfig() *P2PConfig {
 	return &P2PConfig{
 		ListenAddress:    "tcp://0.0.0.0:46656",
+		NodeKeyFile:      "nodekey",
 		SkipUPNP:         false,
 		MaxNumPeers:      50,
 		HandshakeTimeout: 30,
@@ -146,11 +185,6 @@ type WebConfig struct {
 
 type SimdConfig struct {
 	Enable bool `mapstructure:"enable"`
-}
-
-type MiningConfig struct {
-	Enable           bool   `mapstructure:"enable"`
-	RecommitInterval uint64 `mapstructure:"recommit_interval"`
 }
 
 type WebsocketConfig struct {
@@ -181,18 +215,10 @@ func DefaultWalletConfig() *WalletConfig {
 	}
 }
 
-// Default configurable blockheader verification parameters.
+// Default configurable web parameters.
 func DefaultSimdConfig() *SimdConfig {
 	return &SimdConfig{
 		Enable: false,
-	}
-}
-
-// Default configurable mining parameters.
-func DefaultMiningConfig() *MiningConfig {
-	return &MiningConfig{
-		Enable:           false,
-		RecommitInterval: 15,
 	}
 }
 

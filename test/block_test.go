@@ -35,18 +35,8 @@ func TestBlockHeader(t *testing.T) {
 		valid      bool
 	}{
 		{
-			desc:       "block version is 0",
-			version:    func() uint64 { return 0 },
-			prevHeight: chain.BestBlockHeight,
-			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
-			prevHash:   chain.BestBlockHash,
-			bits:       func() uint64 { return chain.BestBlockHeader().Bits },
-			solve:      true,
-			valid:      false,
-		},
-		{
-			desc:       "block version grater than prevBlock.Version",
-			version:    func() uint64 { return chain.BestBlockHeader().Version + 10 },
+			desc:       "block version is 1",
+			version:    func() uint64 { return 1 },
 			prevHeight: chain.BestBlockHeight,
 			timestamp:  func() uint64 { return chain.BestBlockHeader().Timestamp + 1 },
 			prevHash:   chain.BestBlockHash,

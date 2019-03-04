@@ -16,7 +16,7 @@ func (a *API) createTxFeed(ctx context.Context, in struct {
 	Filter string `json:"filter"`
 }) Response {
 	if err := a.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
-		log.WithField("error", err).Error("Add TxFeed Failed")
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("Add TxFeed Failed")
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)
@@ -58,7 +58,7 @@ func (a *API) updateTxFeed(ctx context.Context, in struct {
 		return NewErrorResponse(err)
 	}
 	if err := a.txFeedTracker.Create(ctx, in.Alias, in.Filter); err != nil {
-		log.WithField("error", err).Error("Update TxFeed Failed")
+		log.WithFields(log.Fields{"module": logModule, "error": err}).Error("Update TxFeed Failed")
 		return NewErrorResponse(err)
 	}
 	return NewSuccessResponse(nil)

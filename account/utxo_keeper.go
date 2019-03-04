@@ -219,7 +219,7 @@ func (uk *utxoKeeper) findUtxos(accountID string, assetID *bc.AssetID, useUnconf
 	for utxoIter.Next() {
 		u := &UTXO{}
 		if err := json.Unmarshal(utxoIter.Value(), u); err != nil {
-			log.WithField("err", err).Error("utxoKeeper findUtxos fail on unmarshal utxo")
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("utxoKeeper findUtxos fail on unmarshal utxo")
 			continue
 		}
 		appendUtxo(u)

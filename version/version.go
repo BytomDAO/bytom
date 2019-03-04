@@ -42,11 +42,12 @@ const (
 	noUpdate uint16 = iota
 	hasUpdate
 	hasMUpdate
+	logModule = "version"
 )
 
 var (
 	// The full version string
-	Version = "1.0.7"
+	Version = "1.0.8"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
 	Status    *UpdateStatus
@@ -112,6 +113,7 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 	}
 	if s.versionStatus != noUpdate {
 		log.WithFields(log.Fields{
+			"module":          logModule,
 			"Current version": localVerStr,
 			"Newer version":   remoteVerStr,
 			"seed":            remoteAddr,

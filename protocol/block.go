@@ -120,7 +120,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		log.WithFields(log.Fields{"height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
+		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
 	}
 
 	for _, attachNode := range attachNodes {
@@ -141,7 +141,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		log.WithFields(log.Fields{"height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
+		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
 	return c.setState(node, utxoView)
@@ -180,11 +180,11 @@ func (c *Chain) saveSubBlock(block *types.Block) *types.Block {
 	for _, prevOrphan := range prevOrphans {
 		orphanBlock, ok := c.orphanManage.Get(prevOrphan)
 		if !ok {
-			log.WithFields(log.Fields{"hash": prevOrphan.String()}).Warning("saveSubBlock fail to get block from orphanManage")
+			log.WithFields(log.Fields{"module": logModule, "hash": prevOrphan.String()}).Warning("saveSubBlock fail to get block from orphanManage")
 			continue
 		}
 		if err := c.saveBlock(orphanBlock); err != nil {
-			log.WithFields(log.Fields{"hash": prevOrphan.String(), "height": orphanBlock.Height}).Warning("saveSubBlock fail to save block")
+			log.WithFields(log.Fields{"module": logModule, "hash": prevOrphan.String(), "height": orphanBlock.Height}).Warning("saveSubBlock fail to save block")
 			continue
 		}
 
@@ -224,7 +224,7 @@ func (c *Chain) blockProcesser() {
 func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	blockHash := block.Hash()
 	if c.BlockExist(&blockHash) {
-		log.WithFields(log.Fields{"hash": blockHash.String(), "height": block.Height}).Info("block has been processed")
+		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("block has been processed")
 		return c.orphanManage.BlockExist(&blockHash), nil
 	}
 
@@ -242,12 +242,12 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 	bestNode := c.index.GetNode(&bestBlockHash)
 
 	if bestNode.Parent == c.bestNode {
-		log.Debug("append block to the end of mainchain")
+		log.WithFields(log.Fields{"module": logModule}).Debug("append block to the end of mainchain")
 		return false, c.connectBlock(bestBlock)
 	}
 
 	if bestNode.Height > c.bestNode.Height && bestNode.WorkSum.Cmp(c.bestNode.WorkSum) >= 0 {
-		log.Debug("start to reorganize chain")
+		log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
 		return false, c.reorganizeChain(bestNode)
 	}
 	return false, nil

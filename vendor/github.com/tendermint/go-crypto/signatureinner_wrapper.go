@@ -39,10 +39,6 @@ func (h Signature) Unwrap() SignatureInner {
 	return hi
 }
 
-func (h Signature) Empty() bool {
-	return h.SignatureInner == nil
-}
-
 /*** below are bindings for each implementation ***/
 
 func init() {
@@ -50,13 +46,5 @@ func init() {
 }
 
 func (hi SignatureEd25519) Wrap() Signature {
-	return Signature{hi}
-}
-
-func init() {
-	SignatureMapper.RegisterImplementation(SignatureSecp256k1{}, "secp256k1", 0x2)
-}
-
-func (hi SignatureSecp256k1) Wrap() Signature {
 	return Signature{hi}
 }
