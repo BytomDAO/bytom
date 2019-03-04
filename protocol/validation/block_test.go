@@ -94,6 +94,16 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 			err:    ErrWrongCoinbaseTransaction,
 		},
 		{
+			txs: []*types.Tx{
+				types.NewTx(types.TxData{
+					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
+					Outputs: []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
+				}),
+			},
+			amount: 5000,
+			err:    nil,
+		},
+		{
 			txs:    []*types.Tx{},
 			amount: 5000,
 			err:    ErrWrongCoinbaseTransaction,
@@ -257,7 +267,7 @@ func TestValidateBlockHeader(t *testing.T) {
 	}
 }
 
-// TestValidateMerkleRoot check the cacaulated merkle root is equals to the merkle hash of block header (blocktest#1009)
+// TestValidateMerkleRoot test the ValidateBlock function
 func TestValidateMerkleRoot(t *testing.T) {
 	iniTtensority()
 
@@ -269,7 +279,7 @@ func TestValidateMerkleRoot(t *testing.T) {
 		err    error
 	}{
 		{
-			desc: "The calculated transaction merkel root hash is not equals to the hash of the block header",
+			desc: "The calculated transaction merkel root hash is not equals to the hash of the block header (blocktest#1009)",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -300,7 +310,7 @@ func TestValidateMerkleRoot(t *testing.T) {
 			err: errMismatchedMerkleRoot,
 		},
 		{
-			desc: "The calculated transaction status merkel root hash is not equals to the hash of the block header",
+			desc: "The calculated transaction status merkel root hash is not equals to the hash of the block header (blocktest#1009)",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -330,6 +340,42 @@ func TestValidateMerkleRoot(t *testing.T) {
 				Bits:      2305843009214532812,
 			},
 			err: errMismatchedMerkleRoot,
+		},
+		{
+			desc: "the coinbase amount is less than the real coinbase amount (txtest#1014)",
+			block: &bc.Block{
+				ID: bc.Hash{V0: 1},
+				BlockHeader: &bc.BlockHeader{
+					Version:               1,
+					Height:                1,
+					Timestamp:             1523352601,
+					PreviousBlockId:       &bc.Hash{V0: 0},
+					Bits:                  2305843009214532812,
+				},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						Version:        1,
+						SerializedSize: 1,
+						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
+						Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
+					}),
+					types.MapTx(&types.TxData{
+						Version:        1,
+						SerializedSize: 1,
+						Inputs:         []*types.TxInput{types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp)},
+						Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp)},
+					}),
+				},
+			},
+			parent: &state.BlockNode{
+				Version:   1,
+				Height:    0,
+				Timestamp: 1523352600,
+				Hash:      bc.Hash{V0: 0},
+				Seed:      &bc.Hash{V1: 1},
+				Bits:      2305843009214532812,
+			},
+			err: ErrWrongCoinbaseTransaction,
 		},
 	}
 
