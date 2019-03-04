@@ -94,16 +94,6 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 			err:    ErrWrongCoinbaseTransaction,
 		},
 		{
-			txs: []*types.Tx{
-				types.NewTx(types.TxData{
-					Inputs:  []*types.TxInput{types.NewCoinbaseInput(nil)},
-					Outputs: []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 5000, nil)},
-				}),
-			},
-			amount: 5000,
-			err:    nil,
-		},
-		{
 			txs:    []*types.Tx{},
 			amount: 5000,
 			err:    ErrWrongCoinbaseTransaction,
