@@ -28,7 +28,7 @@ func TestCheckBlockTime(t *testing.T) {
 			err:        nil,
 		},
 		{
-			desc: "timestamp less than past median time (blocktest#1005)",
+			desc:       "timestamp less than past median time (blocktest#1005)",
 			blockTime:  1510000094,
 			parentTime: []uint64{1520000000, 1510000099, 1510000098, 1510000097, 1510000096, 1510000095, 1510000094, 1510000093, 1510000092, 1510000091, 1510000090},
 			err:        errBadTimestamp,
@@ -167,7 +167,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errMismatchedBlock,
 		},
 		{
-			desc:  "check work proof fail (blocktest#1011)",
+			desc: "check work proof fail (blocktest#1011)",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 0},
 				BlockHeader: &bc.BlockHeader{
@@ -257,8 +257,8 @@ func TestValidateBlockHeader(t *testing.T) {
 	}
 }
 
-// TestValidateMerkleRoot check the cacaulated merkle root is equals to the merkle hash of block header (blocktest#1009)
-func TestValidateMerkleRoot(t *testing.T) {
+// TestValidateBlock test the ValidateBlock function
+func TestValidateBlock(t *testing.T) {
 	iniTtensority()
 
 	cp, _ := vmutil.DefaultCoinbaseProgram()
@@ -269,7 +269,7 @@ func TestValidateMerkleRoot(t *testing.T) {
 		err    error
 	}{
 		{
-			desc: "The calculated transaction merkel root hash is not equals to the hash of the block header",
+			desc: "The calculated transaction merkel root hash is not equals to the hash of the block header (blocktest#1009)",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -300,7 +300,7 @@ func TestValidateMerkleRoot(t *testing.T) {
 			err: errMismatchedMerkleRoot,
 		},
 		{
-			desc: "The calculated transaction status merkel root hash is not equals to the hash of the block header",
+			desc: "The calculated transaction status merkel root hash is not equals to the hash of the block header (blocktest#1009)",
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -330,6 +330,42 @@ func TestValidateMerkleRoot(t *testing.T) {
 				Bits:      2305843009214532812,
 			},
 			err: errMismatchedMerkleRoot,
+		},
+		{
+			desc: "the coinbase amount is less than the real coinbase amount (txtest#1014)",
+			block: &bc.Block{
+				ID: bc.Hash{V0: 1},
+				BlockHeader: &bc.BlockHeader{
+					Version:         1,
+					Height:          1,
+					Timestamp:       1523352601,
+					PreviousBlockId: &bc.Hash{V0: 0},
+					Bits:            2305843009214532812,
+				},
+				Transactions: []*bc.Tx{
+					types.MapTx(&types.TxData{
+						Version:        1,
+						SerializedSize: 1,
+						Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
+						Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 41250000000, cp)},
+					}),
+					types.MapTx(&types.TxData{
+						Version:        1,
+						SerializedSize: 1,
+						Inputs:         []*types.TxInput{types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp)},
+						Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp)},
+					}),
+				},
+			},
+			parent: &state.BlockNode{
+				Version:   1,
+				Height:    0,
+				Timestamp: 1523352600,
+				Hash:      bc.Hash{V0: 0},
+				Seed:      &bc.Hash{V1: 1},
+				Bits:      2305843009214532812,
+			},
+			err: ErrWrongCoinbaseTransaction,
 		},
 	}
 
@@ -392,7 +428,7 @@ func TestGasOverBlockLimit(t *testing.T) {
 	}
 }
 
-// TestSetTransactionStatus verify the transaction status is set correctly (blocktest#1010) 
+// TestSetTransactionStatus verify the transaction status is set correctly (blocktest#1010)
 func TestSetTransactionStatus(t *testing.T) {
 	iniTtensority()
 
@@ -408,12 +444,12 @@ func TestSetTransactionStatus(t *testing.T) {
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
 		BlockHeader: &bc.BlockHeader{
-			Version:          1,
-			Height:           1,
-			Timestamp:        1523352601,
-			PreviousBlockId:  &bc.Hash{V0: 0},
-			Bits:             2305843009214532812,
-			TransactionsRoot: &bc.Hash{V0: 3413931728524254295, V1: 300490676707850231, V2: 1886132055969225110, V3: 10216139531293906088},
+			Version:               1,
+			Height:                1,
+			Timestamp:             1523352601,
+			PreviousBlockId:       &bc.Hash{V0: 0},
+			Bits:                  2305843009214532812,
+			TransactionsRoot:      &bc.Hash{V0: 3413931728524254295, V1: 300490676707850231, V2: 1886132055969225110, V3: 10216139531293906088},
 			TransactionStatusHash: &bc.Hash{V0: 8682965660674182538, V1: 8424137560837623409, V2: 6979974817894224946, V3: 4673809519342015041},
 		},
 		Transactions: []*bc.Tx{

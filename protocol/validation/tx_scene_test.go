@@ -376,6 +376,38 @@ func TestValidateTx(t *testing.T) {
 			gasValid: false,
 			err:      vm.ErrFalseVMResult,
 		},
+		{
+			desc: "non btm stanard transaction",
+			txData: &types.TxData{
+				Version:        1,
+				SerializedSize: 508,
+				Inputs: []*types.TxInput{
+					types.NewSpendInput(
+						[][]byte{mustDecodeString("585f298f2396c3b1be616b6eb48b21c7ec2b25fa4daf7256e970e0a55658c04cbcb406ed41e6b184732187daf0627ea805b24098785c80979edf4d4fc2b8100c")},
+						bc.Hash{V0: 13727785470566991667, V1: 17422390991613608658, V2: 10016033157382430074, V3: 8274310611876171875},
+						bc.AssetID{V0: 986236576456443635, V1: 13806502593573493203, V2: 9657495453304566675, V3: 15226142438973879401},
+						1000,
+						1,
+						mustDecodeString("206dbca07ff0a6025612c835423daadd4460c3a2ed9a65622ba8025dfd3388238c7403ae7cac00c0")),
+					types.NewSpendInput(
+						[][]byte{
+							mustDecodeString("4ef8f5a377c166b9fb4efa221894f06194b6b7bc277e613ad75b442929a417bb278ee347586e8f06b20c9b759263c981f03d00253f49753fde88dc8b39ccb10e"),
+							mustDecodeString("1381d35e235813ad1e62f9a602c82abee90565639cc4573568206b55bcd2aed9"),
+						},
+						bc.Hash{V0: 5430419158397285610, V1: 15989125147582690097, V2: 3140150800656736345, V3: 4704385074037173738},
+						*consensus.BTMAssetID, 9800000000, 2, mustDecodeString("0014cb9f2391bafe2bc1159b2c4c8a0f17ba1b4dd94e")),
+				},
+				Outputs: []*types.TxOutput{
+					types.NewTxOutput(
+						bc.AssetID{V0: 986236576456443635, V1: 13806502593573493203, V2: 9657495453304566675, V3: 15226142438973879401},
+						1000,
+						mustDecodeString("001437e1aec83a4e6587ca9609e4e5aa728db7007449")),
+					types.NewTxOutput(*consensus.BTMAssetID, 9750000000, mustDecodeString("0014ec75fda5c727cb0d41137ab62afbf9070a405744")),
+				},
+			},
+			gasValid: true,
+			err:      nil,
+		},
 	}
 
 	for i, c := range cases {
