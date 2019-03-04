@@ -257,8 +257,8 @@ func TestValidateBlockHeader(t *testing.T) {
 	}
 }
 
-// TestValidateMerkleRoot test the ValidateBlock function
-func TestValidateMerkleRoot(t *testing.T) {
+// TestValidateBlock test the ValidateBlock function
+func TestValidateBlock(t *testing.T) {
 	iniTtensority()
 
 	cp, _ := vmutil.DefaultCoinbaseProgram()
