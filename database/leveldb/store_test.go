@@ -212,4 +212,14 @@ func TestSaveBlock(t *testing.T) {
 	if !testutil.DeepEqual(status, gotStatus) {
 		t.Errorf("got status:%v, expect status:%v", gotStatus, status)
 	}
+
+	data := store.db.Get(calcBlockHeaderKey(block.Height, &blockHash))
+	gotBlockHeader := types.BlockHeader{}
+	if err := gotBlockHeader.UnmarshalText(data); err != nil {
+		t.Fatal(err)
+	}
+
+	if !testutil.DeepEqual(block.BlockHeader, gotBlockHeader) {
+		t.Errorf("got block header:%v, expect block header:%v", gotBlockHeader, block.BlockHeader)
+	}
 }
