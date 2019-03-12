@@ -104,6 +104,44 @@ func TestLoadBlockIndexBestHeight(t *testing.T) {
 	}
 }
 
+func TestLoadBlockIndexEquals(t *testing.T) {
+	defer os.RemoveAll("temp")
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	store := NewStore(testDB)
+
+	block := config.GenesisBlock()
+	txStatus := bc.NewTransactionStatus()
+	expectBlockIndex := state.NewBlockIndex()
+	var parent *state.BlockNode
+
+	for block.Height <= 100 {
+		if err := store.SaveBlock(block, txStatus); err != nil {
+			t.Fatal(err)
+		}
+
+		if block.Height != 0 {
+			parent = expectBlockIndex.GetNode(&block.PreviousBlockHash)
+		}
+
+		node, err := state.NewBlockNode(&block.BlockHeader, parent)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expectBlockIndex.AddNode(node)
+		block.PreviousBlockHash = block.Hash()
+		block.Height++
+	}
+
+	index, err := store.LoadBlockIndex(100)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !testutil.DeepEqual(expectBlockIndex, index) {
+		t.Errorf("got block index:%v, expect block index:%v", index, expectBlockIndex)
+	}
+}
 func TestSaveChainStatus(t *testing.T) {
 	defer os.RemoveAll("temp")
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
