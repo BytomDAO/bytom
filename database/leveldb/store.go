@@ -63,20 +63,20 @@ func calcTxStatusKey(hash *bc.Hash) []byte {
 }
 
 // GetBlock return the block by given hash
-func GetBlock(db dbm.DB, hash *bc.Hash) *types.Block {
+func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
 	bytez := db.Get(calcBlockKey(hash))
 	if bytez == nil {
-		return nil
+		return nil, nil
 	}
 
 	block := &types.Block{}
-	block.UnmarshalText(bytez)
-	return block
+	err := block.UnmarshalText(bytez)
+	return block, err
 }
 
 // NewStore creates and returns a new Store object.
 func NewStore(db dbm.DB) *Store {
-	cache := newBlockCache(func(hash *bc.Hash) *types.Block {
+	cache := newBlockCache(func(hash *bc.Hash) (*types.Block, error) {
 		return GetBlock(db, hash)
 	})
 	return &Store{

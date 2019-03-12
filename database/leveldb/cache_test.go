@@ -21,8 +21,8 @@ func TestBlockCache(t *testing.T) {
 		blocks[block.Hash()] = block
 	}
 
-	cache := newBlockCache(func(hash *bc.Hash) *types.Block {
-		return blocks[*hash]
+	cache := newBlockCache(func(hash *bc.Hash) (*types.Block, error) {
+		return blocks[*hash], nil
 	})
 
 	for i := 0; i < maxCachedBlocks + 10; i++ {
