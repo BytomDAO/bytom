@@ -20,7 +20,7 @@ import (
 const (
 	maxKnownTxs         = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
 	maxKnownBlocks      = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
-	defaultBanThreshold = uint64(100)
+	defaultBanThreshold = uint32(100)
 )
 
 //BasePeer is the interface for connection level peer
@@ -83,7 +83,7 @@ func (p *peer) Height() uint64 {
 	return p.height
 }
 
-func (p *peer) addBanScore(persistent, transient uint64, reason string) bool {
+func (p *peer) addBanScore(persistent, transient uint32, reason string) bool {
 	score := p.banScore.Increase(persistent, transient)
 	if score > defaultBanThreshold {
 		log.WithFields(log.Fields{
@@ -330,7 +330,7 @@ func newPeerSet(basePeerSet BasePeerSet) *peerSet {
 	}
 }
 
-func (ps *peerSet) addBanScore(peerID string, persistent, transient uint64, reason string) {
+func (ps *peerSet) addBanScore(peerID string, persistent, transient uint32, reason string) {
 	ps.mtx.Lock()
 	peer := ps.peers[peerID]
 	ps.mtx.Unlock()
