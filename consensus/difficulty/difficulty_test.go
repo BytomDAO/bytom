@@ -263,7 +263,7 @@ func TestCalcNextRequiredDifficulty(t *testing.T) {
 				Timestamp: targetTimeSpan * 2,
 				Bits:      BigToCompact(big.NewInt(1000))},
 			&types.BlockHeader{
-				Height:    consensus.BlocksPerRetarget - 1,
+				Height:    consensus.BlocksPerRetarget,
 				Timestamp: targetTimeSpan},
 			BigToCompact(big.NewInt(1000)),
 		},
@@ -274,7 +274,7 @@ func TestCalcNextRequiredDifficulty(t *testing.T) {
 				Timestamp: targetTimeSpan * 2,
 				Bits:      BigToCompact(big.NewInt(1000))},
 			&types.BlockHeader{
-				Height:    consensus.BlocksPerRetarget - 1,
+				Height:    consensus.BlocksPerRetarget - 2,
 				Timestamp: targetTimeSpan},
 			BigToCompact(big.NewInt(1000)),
 		},
@@ -285,7 +285,7 @@ func TestCalcNextRequiredDifficulty(t *testing.T) {
 				Timestamp: targetTimeSpan * 2,
 				Bits:      BigToCompact(big.NewInt(1000))},
 			&types.BlockHeader{
-				Height:    consensus.BlocksPerRetarget - 1,
+				Height:    consensus.BlocksPerRetarget*2 - 1,
 				Timestamp: targetTimeSpan},
 			BigToCompact(big.NewInt(1000)),
 		},
@@ -296,7 +296,7 @@ func TestCalcNextRequiredDifficulty(t *testing.T) {
 				Timestamp: targetTimeSpan * 2,
 				Bits:      BigToCompact(big.NewInt(1000))},
 			&types.BlockHeader{
-				Height:    consensus.BlocksPerRetarget - 1,
+				Height:    consensus.BlocksPerRetarget/2 - 1,
 				Timestamp: targetTimeSpan},
 			BigToCompact(big.NewInt(1000)),
 		},
