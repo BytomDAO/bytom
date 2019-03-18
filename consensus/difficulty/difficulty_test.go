@@ -11,6 +11,29 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
+/* ================= edge test case =================
+lastBH.Height:
+	0
+	consensus.BlocksPerRetarget
+	consensus.BlocksPerRetarget + 1
+	consensus.BlocksPerRetarget - 1
+	consensus.BlocksPerRetarget * 2
+	consensus.BlocksPerRetarget / 2
+
+lastBH.Timestamp - compareBH.Timestamp:
+	0
+	-9223372036854775808
+	9223372036854775807
+	18446744073709551615
+	consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock
+	consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock * 2
+	consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock / 2
+
+lastBH.Bits:
+	0
+	18446744073709551615
+===================== ending ===================== */
+
 // A lower difficulty Int actually reflects a more difficult mining progress.
 func TestCalcNextRequiredDifficulty(t *testing.T) {
 	targetTimeSpan := uint64(consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock)
@@ -96,6 +119,184 @@ func TestCalcNextRequiredDifficulty(t *testing.T) {
 				Bits:      BigToCompact(big.NewInt(1000))},
 			&types.BlockHeader{
 				Height:    consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan},
+			BigToCompact(big.NewInt(1000)),
+		},
+		// lastBH.Height: 0, lastBH.Timestamp - compareBH.Timestamp: 0, lastBH.Bits: 0
+		{
+			&types.BlockHeader{
+				Height:    0,
+				Timestamp: 0,
+				Bits:      0},
+			&types.BlockHeader{
+				Height:    0,
+				Timestamp: 0},
+			0,
+		},
+		// lastBH.Height: 0, lastBH.Timestamp - compareBH.Timestamp: 0, lastBH.Bits: 18446744073709551615
+		{
+			&types.BlockHeader{
+				Height:    0,
+				Timestamp: 0,
+				Bits:      18446744073709551615},
+			&types.BlockHeader{
+				Height:    0,
+				Timestamp: 0},
+			18446744073709551615,
+		},
+		// lastBH.Height: 0, lastBH.Timestamp - compareBH.Timestamp: 0, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    0,
+				Timestamp: 0,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    0,
+				Timestamp: 0},
+			BigToCompact(big.NewInt(1000)),
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget, lastBH.Timestamp - compareBH.Timestamp: 0, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan},
+			0,
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget, lastBH.Timestamp - compareBH.Timestamp: -9223372036854775808, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan + 9223372036854775808},
+			540431955291560988,
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget, lastBH.Timestamp - compareBH.Timestamp: 9223372036854775807, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan + 9223372036854775807,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan},
+			504403158272597019,
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget, lastBH.Timestamp - compareBH.Timestamp: 18446744073709551615, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget,
+				Timestamp: 18446744073709551615,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: 0},
+			108086391056957440,
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget, lastBH.Timestamp - compareBH.Timestamp: 302400, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan * 2,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan},
+			BigToCompact(big.NewInt(1000)),
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget, lastBH.Timestamp - compareBH.Timestamp: 604800, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan * 3,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan},
+			144115188076367872,
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget, lastBH.Timestamp - compareBH.Timestamp: 151200, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan + 9223372036854775807,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan},
+			504403158272597019,
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget, lastBH.Timestamp - compareBH.Timestamp: 302400, lastBH.Bits: 0
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan * 2,
+				Bits:      0},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan},
+			0,
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget, lastBH.Timestamp - compareBH.Timestamp: 302400, lastBH.Bits: 18446744073709551615
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget,
+				Timestamp: targetTimeSpan * 2,
+				Bits:      18446744073709551615,
+			},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan,
+			},
+			252201579141136384,
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget + 1, lastBH.Timestamp - compareBH.Timestamp: 302400, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget + 1,
+				Timestamp: targetTimeSpan * 2,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan},
+			BigToCompact(big.NewInt(1000)),
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget - 1, lastBH.Timestamp - compareBH.Timestamp: 302400, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan * 2,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan},
+			BigToCompact(big.NewInt(1000)),
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget * 2, lastBH.Timestamp - compareBH.Timestamp: 302400, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget * 2,
+				Timestamp: targetTimeSpan * 2,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
+				Timestamp: targetTimeSpan},
+			BigToCompact(big.NewInt(1000)),
+		},
+		// lastBH.Height: consensus.BlocksPerRetarget / 2, lastBH.Timestamp - compareBH.Timestamp: 302400, lastBH.Bits: bigInt(1000)
+		{
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget / 2,
+				Timestamp: targetTimeSpan * 2,
+				Bits:      BigToCompact(big.NewInt(1000))},
+			&types.BlockHeader{
+				Height:    consensus.BlocksPerRetarget - 1,
 				Timestamp: targetTimeSpan},
 			BigToCompact(big.NewInt(1000)),
 		},
