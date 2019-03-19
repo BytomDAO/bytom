@@ -11,29 +11,6 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-/* ================= edge test case =================
-lastBH.Height:
-	0
-	consensus.BlocksPerRetarget
-	consensus.BlocksPerRetarget + 1
-	consensus.BlocksPerRetarget - 1
-	consensus.BlocksPerRetarget * 2
-	consensus.BlocksPerRetarget / 2
-
-lastBH.Timestamp - compareBH.Timestamp:
-	0
-	-9223372036854775808
-	9223372036854775807
-	18446744073709551615
-	consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock
-	consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock * 2
-	consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock / 2
-
-lastBH.Bits:
-	0
-	18446744073709551615
-===================== ending ===================== */
-
 // A lower difficulty Int actually reflects a more difficult mining progress.
 func TestCalcNextRequiredDifficulty(t *testing.T) {
 	targetTimeSpan := uint64(consensus.BlocksPerRetarget * consensus.TargetSecondsPerBlock)
