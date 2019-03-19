@@ -1,11 +1,11 @@
 package version
 
 import (
+	"fmt"
 	"testing"
 
 	"gopkg.in/fatih/set.v0"
 	gover "github.com/hashicorp/go-version"
-	"fmt"
 )
 
 func TestCompare(t *testing.T) {
