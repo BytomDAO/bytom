@@ -108,6 +108,7 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 		if s.versionStatus == noUpdate {
 			s.versionStatus = hasUpdate
 		}
+
 		maxVersion, err := gover.NewVersion(s.maxVerSeen)
 		if err != nil {
 			return err
