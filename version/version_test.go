@@ -1,6 +1,7 @@
 package version
 
 import (
+	"fmt"
 	"testing"
 
 	"gopkg.in/fatih/set.v0"
@@ -76,7 +77,7 @@ func TestCheckUpdate(t *testing.T) {
 	cases := []struct {
 		desc           string
 		localVer       string
-		remotePeers    map[string]string
+		remotePeers    []string
 		wantStatus     uint16
 		wantmaxVerSeen string
 		wantNotified   bool
@@ -84,7 +85,7 @@ func TestCheckUpdate(t *testing.T) {
 		{
 			desc:           "has large version number update",
 			localVer:       "1.0",
-			remotePeers:    map[string]string{"peer1": "1.0", "peer2": "2.0", "peer3": "1.0.3"},
+			remotePeers:    []string{"1.0", "2.0", "1.0.3"},
 			wantStatus:     hasMUpdate,
 			wantmaxVerSeen: "2.0",
 			wantNotified:   true,
@@ -92,7 +93,7 @@ func TestCheckUpdate(t *testing.T) {
 		{
 			desc:           "some remote version less than local version, but some remote verison larger than local version",
 			localVer:       "1.0",
-			remotePeers:    map[string]string{"peer1": "0.8", "peer2": "1.1", "peer3": "1.0.3", "peer4": "0.9"},
+			remotePeers:    []string{"0.8", "1.1", "1.0.3", "0.9"},
 			wantStatus:     hasUpdate,
 			wantmaxVerSeen: "1.1",
 			wantNotified:   true,
@@ -100,7 +101,7 @@ func TestCheckUpdate(t *testing.T) {
 		{
 			desc:           "has small version number update",
 			localVer:       "1.0",
-			remotePeers:    map[string]string{"peer1": "1.0", "peer2": "1.0.3", "peer3": "1.0.2"},
+			remotePeers:    []string{"1.0", "1.0.3", "1.0.2"},
 			wantStatus:     hasUpdate,
 			wantmaxVerSeen: "1.0.3",
 			wantNotified:   true,
@@ -108,7 +109,7 @@ func TestCheckUpdate(t *testing.T) {
 		{
 			desc:           "the remote equals to local version",
 			localVer:       "1.0",
-			remotePeers:    map[string]string{"peer1": "1.0", "peer2": "1.0", "peer3": "1.0"},
+			remotePeers:    []string{"1.0", "1.0", "1.0"},
 			wantStatus:     noUpdate,
 			wantmaxVerSeen: "1.0",
 			wantNotified:   false,
@@ -116,7 +117,7 @@ func TestCheckUpdate(t *testing.T) {
 		{
 			desc:           "the remote version less than local version",
 			localVer:       "1.0",
-			remotePeers:    map[string]string{"peer1": "0.8", "peer2": "0.8", "peer3": "0.8"},
+			remotePeers:    []string{"0.8", "0.8", "0.8"},
 			wantStatus:     noUpdate,
 			wantmaxVerSeen: "1.0",
 			wantNotified:   false,
@@ -130,7 +131,8 @@ func TestCheckUpdate(t *testing.T) {
 			seedSet:       set.New(),
 			versionStatus: noUpdate,
 		}
-		for peer, remoteVer := range c.remotePeers {
+		for i, remoteVer := range c.remotePeers {
+			peer := fmt.Sprintf("peer%d", i)
 			status.seedSet.Add(peer)
 			if err := status.CheckUpdate(c.localVer, remoteVer, peer); err != nil {
 				t.Fatal(err)
@@ -138,11 +140,11 @@ func TestCheckUpdate(t *testing.T) {
 		}
 
 		if status.versionStatus != c.wantStatus {
-			t.Errorf("got version status:%d, want version status:%d", status.versionStatus, c.wantStatus)
+			t.Errorf("#%d(%s) got version status:%d, want version status:%d", i, c.desc, status.versionStatus, c.wantStatus)
 		}
 
 		if status.notified != c.wantNotified {
-			t.Errorf("got notified:%t, want notified:%t", status.notified, c.wantNotified)
+			t.Errorf("#%d(%s) got notified:%t, want notified:%t", i, c.desc, status.notified, c.wantNotified)
 		}
 
 		if status.maxVerSeen != c.wantmaxVerSeen {

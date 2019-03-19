@@ -92,7 +92,7 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 	s.Lock()
 	defer s.Unlock()
 
-	if s.notified || !s.seedSet.Has(remoteAddr) {
+	if !s.seedSet.Has(remoteAddr) {
 		return nil
 	}
 
@@ -105,7 +105,10 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 		return err
 	}
 	if remoteVersion.GreaterThan(localVersion) {
-		s.versionStatus = hasUpdate
+		if s.versionStatus == noUpdate {
+			s.versionStatus = hasUpdate
+		}
+
 		maxVersion, err := gover.NewVersion(s.maxVerSeen)
 		if err != nil {
 			return err
