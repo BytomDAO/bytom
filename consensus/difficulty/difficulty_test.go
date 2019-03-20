@@ -508,3 +508,381 @@ func TestBigToCompact(t *testing.T) {
 		return
 	}
 }
+
+func TestCalcWorkWithIntStr(t *testing.T) {
+	cases := []struct {
+		strBits string
+		want    *big.Int
+	}{
+		// Exponent: 0, Sign: 0, Mantissa: 0
+		{
+			`00000000` + //Exponent
+				`0` + //Sign
+				`0000000000000000000000000000000000000000000000000000000`, //Mantissa
+			big.NewInt(0),
+		},
+		// Exponent: 0, Sign: 0, Mantissa: 1 (difficultyNum = 0 and difficultyNum.Sign() = 0)
+		{
+			`00000000` +
+				`0` +
+				`0000000000000000000000000000000000000000000000000000001`,
+			big.NewInt(0),
+		},
+		// Exponent: 0, Sign: 0, Mantissa: 65536 (difficultyNum = 0 and difficultyNum.Sign() = 0)
+		{
+			`00000000` +
+				`0` +
+				`0000000000000000000000000000000000000010000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 0, Sign: 0, Mantissa: 16777216 (difficultyNum = 1 and difficultyNum.Sign() = 1)
+		{
+			`00000000` +
+				`0` +
+				`0000000000000000000000000000001000000000000000000000000`,
+			new(big.Int).Div(oneLsh256, big.NewInt(2)),
+		},
+		// Exponent: 0, Sign: 0, Mantissa: 0x007fffffffffffff
+		{
+			`00000000` +
+				`0` +
+				`1111111111111111111111111111111111111111111111111111111`,
+			big.NewInt(0).Lsh(big.NewInt(0x020000), 208),
+		},
+		// Exponent: 0, Sign: 1, Mantissa: 0
+		{
+			`00000000` +
+				`1` +
+				`0000000000000000000000000000000000000000000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 0, Sign: 1, Mantissa: 1 (difficultyNum = 0 and difficultyNum.Sign() = 0)
+		{
+			`00000000` +
+				`1` +
+				`0000000000000000000000000000000000000000000000000000001`,
+			big.NewInt(0),
+		},
+		// Exponent: 0, Sign: 1, Mantissa: 65536 (difficultyNum = 0 and difficultyNum.Sign() = 0)
+		{
+			`00000000` +
+				`1` +
+				`0000000000000000000000000000000000000010000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 0, Sign: 0, Mantissa: 16777216 (difficultyNum = -1 and difficultyNum.Sign() = -1)
+		{
+			`00000000` +
+				`1` +
+				`0000000000000000000000000000001000000000000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 0, Sign: 1, Mantissa: 0x007fffffffffffff
+		{
+			`00000000` +
+				`1` +
+				`1111111111111111111111111111111111111111111111111111111`,
+			big.NewInt(0),
+		},
+		// Exponent: 3, Sign: 0, Mantissa: 0
+		{
+			`00000011` +
+				`0` +
+				`0000000000000000000000000000000000000000000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 3, Sign: 0, Mantissa: 1 (difficultyNum = 1 and difficultyNum.Sign() = 1)
+		{
+			`00000011` +
+				`0` +
+				`0000000000000000000000000000000000000000000000000000001`,
+			new(big.Int).Div(oneLsh256, big.NewInt(2)),
+		},
+		// Exponent: 3, Sign: 0, Mantissa: 65536 (difficultyNum = 65536 and difficultyNum.Sign() = 1)
+		{
+			`00000011` +
+				`0` +
+				`0000000000000000000000000000000000000010000000000000000`,
+			new(big.Int).Div(oneLsh256, big.NewInt(65537)),
+		},
+		// Exponent: 0, Sign: 0, Mantissa: 16777216 (difficultyNum = 16777216 and difficultyNum.Sign() = 1)
+		{
+			`00000011` +
+				`0` +
+				`0000000000000000000000000000001000000000000000000000000`,
+			new(big.Int).Div(oneLsh256, big.NewInt(16777217)),
+		},
+		// Exponent: 3, Sign: 0, Mantissa: 0x007fffffffffffff
+		{
+			`00000011` +
+				`0` +
+				`1111111111111111111111111111111111111111111111111111111`,
+			new(big.Int).Div(oneLsh256, big.NewInt(36028797018963968)),
+		},
+		// Exponent: 3, Sign: 1, Mantissa: 0
+		{
+			`00000011` +
+				`1` +
+				`0000000000000000000000000000000000000000000000000000000`,
+			big.NewInt(0),
+		},
+		//Exponent: 3, Sign: 1, Mantissa: 1 (difficultyNum = -1 and difficultyNum.Sign() = -1)
+		{
+			`00000011` +
+				`1` +
+				`0000000000000000000000000000000000000000000000000000001`,
+			big.NewInt(0),
+		},
+		// Exponent: 3, Sign: 1, Mantissa: 65536 (difficultyNum = -65536 and difficultyNum.Sign() = -1)
+		{
+			`00000011` +
+				`1` +
+				`0000000000000000000000000000000000000010000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 3, Sign: 1, Mantissa: 16777216 (difficultyNum = -16777216 and difficultyNum.Sign() = -1)
+		{
+			`00000011` +
+				`1` +
+				`0000000000000000000000000000001000000000000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 3, Sign: 1, Mantissa: 0x007fffffffffffff
+		{
+			`00000011` +
+				`1` +
+				`1111111111111111111111111111111111111111111111111111111`,
+			big.NewInt(0),
+		},
+		// Exponent: 7, Sign: 0, Mantissa: 0
+		{
+			`00000111` +
+				`0` +
+				`0000000000000000000000000000000000000000000000000000000`,
+			big.NewInt(0),
+		},
+		//Exponent: 7, Sign: 1, Mantissa: 1 (difficultyNum = 4294967296 and difficultyNum.Sign() = 1)
+		{
+			`00000111` +
+				`0` +
+				`0000000000000000000000000000000000000000000000000000001`,
+			new(big.Int).Div(oneLsh256, big.NewInt(4294967297)),
+		},
+		// Exponent: 7, Sign: 0, Mantissa: 65536 (difficultyNum = 4294967296 and difficultyNum.Sign() = 1)
+		{
+			`00000111` +
+				`0` +
+				`0000000000000000000000000000000000000010000000000000000`,
+			new(big.Int).Div(oneLsh256, big.NewInt(281474976710657)),
+		},
+		// Exponent: 7, Sign: 0, Mantissa: 16777216 (difficultyNum = 72057594037927936 and difficultyNum.Sign() = 1)
+		{
+			`00000111` +
+				`0` +
+				`0000000000000000000000000000001000000000000000000000000`,
+			new(big.Int).Div(oneLsh256, big.NewInt(72057594037927937)),
+		},
+		// Exponent: 7, Sign: 0, Mantissa: 0x007fffffffffffff
+		{
+			`00000111` +
+				`0` +
+				`1111111111111111111111111111111111111111111111111111111`,
+			new(big.Int).Div(oneLsh256, new(big.Int).Add(big.NewInt(0).Lsh(big.NewInt(36028797018963967), 32), bigOne)),
+		},
+		// Exponent: 7, Sign: 1, Mantissa: 0
+		{
+			`00000111` +
+				`1` +
+				`0000000000000000000000000000000000000000000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 7, Sign: 1, Mantissa: 1 (difficultyNum = -4294967296 and difficultyNum.Sign() = -1)
+		{
+			`00000111` +
+				`1` +
+				`0000000000000000000000000000000000000000000000000000001`,
+			big.NewInt(0),
+		},
+		// Exponent: 7, Sign: 1, Mantissa: 65536 (difficultyNum = -72057594037927936 and difficultyNum.Sign() = -1)
+		{
+			`00000111` +
+				`1` +
+				`0000000000000000000000000000000000000010000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 7, Sign: 1, Mantissa: 16777216 (difficultyNum = -154742504910672530067423232 and difficultyNum.Sign() = -1)
+		{
+			`00000111` +
+				`1` +
+				`0000000000000000000000000000001000000000000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 7, Sign: 1, Mantissa: 0x007fffffffffffff
+		{
+			`00000111` +
+				`1` +
+				`1111111111111111111111111111111111111111111111111111111`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 0, Mantissa: 1 (difficultyNum.Sign() = 1)
+		{
+			`11111111` +
+				`0` +
+				`0000000000000000000000000000000000000000000000000000001`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 0, Mantissa: 65536 (difficultyNum.Sign() = 1)
+		{
+			`11111111` +
+				`0` +
+				`0000000000000000000000000000000000000010000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 0, Mantissa: 16777216 (difficultyNum.Sign() = 1)
+		{
+			`11111111` +
+				`0` +
+				`0000000000000000000000000000001000000000000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 0, Mantissa: 0x007fffffffffffff
+		{
+			`11111111` +
+				`0` +
+				`1111111111111111111111111111111111111111111111111111111`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 1, Mantissa: 1
+		{
+			`11111111` +
+				`1` +
+				`0000000000000000000000000000000000000000000000000000001`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 1, Mantissa: 65536
+		{
+			`11111111` +
+				`1` +
+				`0000000000000000000000000000000000000010000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 1, Mantissa: 16777216
+		{
+			`11111111` +
+				`1` +
+				`0000000000000000000000000000001000000000000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 1, Mantissa: 0x007fffffffffffff
+		{
+			`11111111` +
+				`1` +
+				`1111111111111111111111111111111111111111111111111111111`,
+			big.NewInt(0),
+		},
+	}
+
+	for i, c := range cases {
+		bits, err := strconv.ParseUint(c.strBits, 2, 64)
+		if err != nil {
+			t.Errorf("convert string into uint error: %s\n", err)
+			return
+		}
+
+		if got := CalcWork(bits); got.Cmp(c.want) != 0 {
+			t.Errorf("CalcWork(%d) = %s, want %s\n", i, got, c.want)
+			return
+		}
+	}
+}
+
+func TestCalcWork(t *testing.T) {
+	testCases := []struct {
+		bits uint64
+		want *big.Int
+	}{
+		{
+			0,
+			big.NewInt(0),
+		},
+		{
+			1,
+			big.NewInt(0),
+		},
+		{
+			65535,
+			big.NewInt(0),
+		},
+		{
+			16777215,
+			big.NewInt(0),
+		},
+		{
+			16777216,
+			new(big.Int).Div(oneLsh256, big.NewInt(2)),
+		},
+		{
+			4294967295,
+			new(big.Int).Div(oneLsh256, big.NewInt(256)),
+		},
+		{
+			36028797018963967,
+			new(big.Int).Div(oneLsh256, big.NewInt(2147483648)),
+		},
+		{
+			36028797018963968,
+			big.NewInt(0),
+		},
+		{
+			216172782113783808,
+			big.NewInt(0),
+		},
+		{
+			216172782113783809,
+			new(big.Int).Div(oneLsh256, big.NewInt(2)),
+		},
+		{
+			216172782130561024,
+			new(big.Int).Div(oneLsh256, big.NewInt(16777217)),
+		},
+		{
+			252201579132747775,
+			new(big.Int).Div(oneLsh256, big.NewInt(36028797018963968)),
+		},
+		{
+			252201579132747776,
+			big.NewInt(0),
+		},
+		{
+			288230376151711744,
+			big.NewInt(0),
+		},
+		{
+			288230376151711745,
+			new(big.Int).Div(oneLsh256, big.NewInt(257)),
+		},
+		{
+			540431955284459519,
+			new(big.Int).Div(oneLsh256, new(big.Int).Add(big.NewInt(0).Lsh(big.NewInt(36028797018963967), 32), bigOne)),
+		},
+		{
+			540431955284459520,
+			big.NewInt(0),
+		},
+		{
+			9223372036854775807,
+			big.NewInt(0),
+		},
+		{
+			18446744073709551615,
+			big.NewInt(0),
+		},
+	}
+
+	for i, c := range testCases {
+		if got := CalcWork(c.bits); got.Cmp(c.want) != 0 {
+			t.Errorf("test case with uint64 for CalcWork(%d) = %s, want %s\n", i, got, c.want)
+			return
+		}
+	}
+}
