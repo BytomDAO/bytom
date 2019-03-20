@@ -509,7 +509,7 @@ func TestBigToCompact(t *testing.T) {
 	}
 }
 
-func TestCalcWork(t *testing.T) {
+func TestCalcWorkWithIntStr(t *testing.T) {
 	cases := []struct {
 		strBits string
 		want    *big.Int
@@ -661,7 +661,7 @@ func TestCalcWork(t *testing.T) {
 				`0000000000000000000000000000000000000000000000000000000`,
 			big.NewInt(0),
 		},
-		//Exponent: 3, Sign: 1, Mantissa: 1 (difficultyNum = 4294967296 and difficultyNum.Sign() = 1)
+		//Exponent: 7, Sign: 1, Mantissa: 1 (difficultyNum = 4294967296 and difficultyNum.Sign() = 1)
 		{
 			`00000111` +
 				`0` +
@@ -724,7 +724,56 @@ func TestCalcWork(t *testing.T) {
 				`1111111111111111111111111111111111111111111111111111111`,
 			big.NewInt(0),
 		},
-		// Exponent: 63, Sign: 1, Mantissa: 0x007fffffffffffff
+		// Exponent: 255, Sign: 0, Mantissa: 1 (difficultyNum.Sign() = 1)
+		{
+			`11111111` +
+				`0` +
+				`0000000000000000000000000000000000000000000000000000001`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 0, Mantissa: 65536 (difficultyNum.Sign() = 1)
+		{
+			`11111111` +
+				`0` +
+				`0000000000000000000000000000000000000010000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 0, Mantissa: 16777216 (difficultyNum.Sign() = 1)
+		{
+			`11111111` +
+				`0` +
+				`0000000000000000000000000000001000000000000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 0, Mantissa: 0x007fffffffffffff
+		{
+			`11111111` +
+				`0` +
+				`1111111111111111111111111111111111111111111111111111111`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 1, Mantissa: 1
+		{
+			`11111111` +
+				`1` +
+				`0000000000000000000000000000000000000000000000000000001`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 1, Mantissa: 65536
+		{
+			`11111111` +
+				`1` +
+				`0000000000000000000000000000000000000010000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 1, Mantissa: 16777216
+		{
+			`11111111` +
+				`1` +
+				`0000000000000000000000000000001000000000000000000000000`,
+			big.NewInt(0),
+		},
+		// Exponent: 255, Sign: 1, Mantissa: 0x007fffffffffffff
 		{
 			`11111111` +
 				`1` +
@@ -745,8 +794,9 @@ func TestCalcWork(t *testing.T) {
 			return
 		}
 	}
+}
 
-	// test cases with uint64
+func TestCalcWork(t *testing.T) {
 	testCases := []struct {
 		bits uint64
 		want *big.Int
@@ -772,10 +822,6 @@ func TestCalcWork(t *testing.T) {
 			new(big.Int).Div(oneLsh256, big.NewInt(2)),
 		},
 		{
-			2147483647,
-			new(big.Int).Div(oneLsh256, big.NewInt(128)),
-		},
-		{
 			4294967295,
 			new(big.Int).Div(oneLsh256, big.NewInt(256)),
 		},
@@ -785,6 +831,42 @@ func TestCalcWork(t *testing.T) {
 		},
 		{
 			36028797018963968,
+			big.NewInt(0),
+		},
+		{
+			216172782113783808,
+			big.NewInt(0),
+		},
+		{
+			216172782113783809,
+			new(big.Int).Div(oneLsh256, big.NewInt(2)),
+		},
+		{
+			216172782130561024,
+			new(big.Int).Div(oneLsh256, big.NewInt(16777217)),
+		},
+		{
+			252201579132747775,
+			new(big.Int).Div(oneLsh256, big.NewInt(36028797018963968)),
+		},
+		{
+			252201579132747776,
+			big.NewInt(0),
+		},
+		{
+			288230376151711744,
+			big.NewInt(0),
+		},
+		{
+			288230376151711745,
+			new(big.Int).Div(oneLsh256, big.NewInt(257)),
+		},
+		{
+			540431955284459519,
+			new(big.Int).Div(oneLsh256, new(big.Int).Add(big.NewInt(0).Lsh(big.NewInt(36028797018963967), 32), bigOne)),
+		},
+		{
+			540431955284459520,
 			big.NewInt(0),
 		},
 		{
