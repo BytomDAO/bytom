@@ -264,6 +264,7 @@ func TestAddInboundPeer(t *testing.T) {
 	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: testCfg}
 	rp.Start()
 	defer rp.Stop()
+
 	fmt.Println("rp listion addr:", rp.addr)
 	if err := s1.DialPeerWithAddress(rp.addr); err != nil {
 		t.Fatal(err)
