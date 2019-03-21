@@ -77,6 +77,22 @@ func TestGasStatus(t *testing.T) {
 		},
 		{
 			input: &GasState{
+				GasLeft:  consensus.DefaultGasCredit,
+				GasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &GasState{
+				GasLeft:  200000,
+				GasUsed:  0,
+				BTMValue: math.MaxInt64,
+			},
+			f: func(input *GasState) error {
+				return input.setGas(math.MaxInt64, 0)
+			},
+			err: nil,
+		},
+		{
+			input: &GasState{
 				GasLeft:  10000,
 				GasUsed:  0,
 				BTMValue: 0,
@@ -106,6 +122,22 @@ func TestGasStatus(t *testing.T) {
 				return input.updateUsage(9999)
 			},
 			err: nil,
+		},
+		{
+			input: &GasState{
+				GasLeft:  -10000,
+				GasUsed:  0,
+				BTMValue: 0,
+			},
+			output: &GasState{
+				GasLeft:  -10000,
+				GasUsed:  0,
+				BTMValue: 0,
+			},
+			f: func(input *GasState) error {
+				return input.updateUsage(math.MaxInt64)
+			},
+			err: ErrGasCalculate,
 		},
 		{
 			input: &GasState{
@@ -960,7 +992,7 @@ func TestValidateTxVersion(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{Version: 1},
 				Transactions: []*bc.Tx{
-					&bc.Tx{TxHeader: &bc.TxHeader{Version: 2}},
+					{TxHeader: &bc.TxHeader{Version: 2}},
 				},
 			},
 			err: ErrTxVersion,
@@ -970,7 +1002,7 @@ func TestValidateTxVersion(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{Version: 1},
 				Transactions: []*bc.Tx{
-					&bc.Tx{TxHeader: &bc.TxHeader{Version: 0}},
+					{TxHeader: &bc.TxHeader{Version: 0}},
 				},
 			},
 			err: ErrTxVersion,
@@ -980,7 +1012,7 @@ func TestValidateTxVersion(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{Version: 1},
 				Transactions: []*bc.Tx{
-					&bc.Tx{TxHeader: &bc.TxHeader{Version: math.MaxUint64}},
+					{TxHeader: &bc.TxHeader{Version: math.MaxUint64}},
 				},
 			},
 			err: ErrTxVersion,
@@ -1046,7 +1078,7 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		result.issuanceProg = bc.Program{VmVersion: 1, Code: prog}
 	}
 	if len(result.issuanceArgs) == 0 {
-		result.issuanceArgs = [][]byte{[]byte{2}, []byte{3}}
+		result.issuanceArgs = [][]byte{{2}, {3}}
 	}
 	if len(result.assetDef) == 0 {
 		result.assetDef = []byte{2}
@@ -1064,13 +1096,13 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		if err != nil {
 			tb.Fatal(err)
 		}
-		args1 := [][]byte{[]byte{4}, []byte{5}}
+		args1 := [][]byte{{4}, {5}}
 
 		cp2, err := vm.Assemble("ADD 13 NUMEQUAL")
 		if err != nil {
 			tb.Fatal(err)
 		}
-		args2 := [][]byte{[]byte{6}, []byte{7}}
+		args2 := [][]byte{{6}, {7}}
 
 		result.txInputs = []*types.TxInput{
 			types.NewIssuanceInput([]byte{3}, 10, result.issuanceProg.Code, result.issuanceArgs, result.assetDef),
