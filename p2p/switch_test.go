@@ -316,7 +316,6 @@ func TestStopPeer(t *testing.T) {
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
 		t.Fatal("TestStopPeer peer size error")
 	}
-
 	fmt.Println(spew.Sdump(s1.peers.lookup))
 
 	s1.StopPeerGracefully(s1.peers.list[0].Key)
