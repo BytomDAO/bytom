@@ -295,7 +295,8 @@ func TestStopPeer(t *testing.T) {
 	defer s1.Stop()
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
-	addr, err := NewNetAddressString("127.0.0.1:46656")
+	addr, err := NewNetAddressString(s1.nodeInfo.ListenAddr)
+	fmt.Println("sw listion addr:", addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,6 +308,7 @@ func TestStopPeer(t *testing.T) {
 	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: testCfg}
 	rp.Start()
 	defer rp.Stop()
+	fmt.Println("rp listion addr:", rp.addr)
 	if err := s1.DialPeerWithAddress(rp.addr); err != nil {
 		t.Fatal(err)
 	}
@@ -314,6 +316,8 @@ func TestStopPeer(t *testing.T) {
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
 		t.Fatal("TestStopPeer peer size error")
 	}
+
+	fmt.Println(spew.Sdump(s1.peers.lookup))
 
 	s1.StopPeerGracefully(s1.peers.list[0].Key)
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 1 {
