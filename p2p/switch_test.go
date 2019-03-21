@@ -1,12 +1,15 @@
 package p2p
 
 import (
+	"fmt"
 	"github.com/tendermint/go-crypto"
 	dbm "github.com/tendermint/tmlibs/db"
 	"io/ioutil"
 	"os"
 	"sync"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
@@ -250,6 +253,7 @@ func TestAddInboundPeer(t *testing.T) {
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
 	addr, err := NewNetAddressString(s1.nodeInfo.ListenAddr)
+	fmt.Println("sw listion addr:", addr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,10 +261,10 @@ func TestAddInboundPeer(t *testing.T) {
 	if err := inp.dial(addr); err != nil {
 		t.Fatal(err)
 	}
-
 	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: testCfg}
 	rp.Start()
 	defer rp.Stop()
+	fmt.Println("rp listion addr:", rp.addr)
 	if err := s1.DialPeerWithAddress(rp.addr); err != nil {
 		t.Fatal(err)
 	}
@@ -268,6 +272,7 @@ func TestAddInboundPeer(t *testing.T) {
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
 		t.Fatal("TestAddInboundPeer peer size error")
 	}
+	fmt.Println(spew.Sdump(s1.peers.lookup))
 	inp2 := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
 
 	if err := inp2.dial(addr); err == nil {
