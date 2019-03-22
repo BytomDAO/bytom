@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"fmt"
 	"net"
 )
 
@@ -10,7 +11,9 @@ func ExternalIPv4() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	for _, iface := range ifaces {
+		fmt.Println(iface.Addrs())
+	}
 	for _, iface := range ifaces {
 		if iface.Flags&net.FlagUp == 0 {
 			continue // interface down
