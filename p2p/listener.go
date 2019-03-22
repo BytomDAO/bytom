@@ -157,8 +157,14 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 	}
 
 	if extAddr == nil {
-		if address := GetIP(); address.Success == true {
-			extAddr = NewNetAddressIPPort(net.ParseIP(address.IP), uint16(lAddrPort))
+		//if address := GetIP(); address.Success == true {
+		//	extAddr = NewNetAddressIPPort(net.ParseIP(address.IP), uint16(lAddrPort))
+		//}
+		if ip, err := ExternalIPv4(); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("get ipv4 external address")
+		} else {
+			extAddr = NewNetAddressIPPort(net.ParseIP(ip), uint16(lAddrPort))
+			log.WithFields(log.Fields{"module": logModule, "addr": extAddr}).Info("get ipv4 external address success")
 		}
 	}
 	if extAddr == nil {
