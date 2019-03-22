@@ -136,7 +136,10 @@ func CalculateTxFee(tx *types.Tx) (fee uint64) {
 	totalOutputBTM := uint64(0)
 
 	for _, input := range tx.Inputs {
-		if input.InputType() != types.CoinbaseInputType && input.AssetID() == *consensus.BTMAssetID {
+		if input.InputType() == types.CoinbaseInputType {
+			return 0
+		}
+		if input.AssetID() == *consensus.BTMAssetID {
 			totalInputBTM += input.Amount()
 		}
 	}
