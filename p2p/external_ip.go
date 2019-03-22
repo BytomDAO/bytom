@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"fmt"
 	"net"
 )
 
@@ -11,20 +10,21 @@ func ExternalIPv4() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	for _, iface := range ifaces {
-		fmt.Println(iface.Addrs())
-	}
-	for _, iface := range ifaces {
+		// interface down
 		if iface.Flags&net.FlagUp == 0 {
-			continue // interface down
+			continue
 		}
+		// loopback interface
 		if iface.Flags&net.FlagLoopback != 0 {
-			continue // loopback interface
+			continue
 		}
 		addrs, err := iface.Addrs()
 		if err != nil {
 			return "", err
 		}
+
 		for _, addr := range addrs {
 			var ip net.IP
 			switch v := addr.(type) {

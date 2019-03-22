@@ -81,27 +81,6 @@ func getUPNPExternalAddress(externalPort, internalPort int) (*NetAddress, error)
 	return NewNetAddressIPPort(ext, uint16(externalPort)), nil
 }
 
-func getNaiveExternalAddress(port int, settleForLocal bool) *NetAddress {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		cmn.PanicCrisis(cmn.Fmt("Could not fetch interface addresses: %v", err))
-	}
-
-	for _, a := range addrs {
-		ipnet, ok := a.(*net.IPNet)
-		if !ok {
-			continue
-		}
-		if v4 := ipnet.IP.To4(); v4 == nil || (!settleForLocal && v4[0] == 127) {
-			continue
-		}
-		return NewNetAddressIPPort(ipnet.IP, uint16(port))
-	}
-
-	log.Info("Node may not be connected to internet. Settling for local address")
-	return getNaiveExternalAddress(port, true)
-}
-
 func splitHostPort(addr string) (host string, port int) {
 	host, portStr, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -156,10 +135,8 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Info("get UPNP external address")
 	}
 
+	// Get the IPv4 available
 	if extAddr == nil {
-		//if address := GetIP(); address.Success == true {
-		//	extAddr = NewNetAddressIPPort(net.ParseIP(address.IP), uint16(lAddrPort))
-		//}
 		if ip, err := ExternalIPv4(); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("get ipv4 external address")
 		} else {
@@ -167,9 +144,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 			log.WithFields(log.Fields{"module": logModule, "addr": extAddr}).Info("get ipv4 external address success")
 		}
 	}
-	if extAddr == nil {
-		extAddr = getNaiveExternalAddress(listenerPort, false)
-	}
+
 	if extAddr == nil {
 		cmn.PanicCrisis("could not determine external address!")
 	}
