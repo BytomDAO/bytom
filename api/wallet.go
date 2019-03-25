@@ -43,7 +43,6 @@ func (a *API) restoreWalletImage(ctx context.Context, image WalletImage) Respons
 	}
 
 	a.wallet.RescanBlocks()
-	a.recacheTxs()
 	return NewSuccessResponse(nil)
 }
 
