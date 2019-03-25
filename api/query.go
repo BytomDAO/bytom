@@ -224,6 +224,10 @@ func (a *API) listUnconfirmedTxs(ctx context.Context) Response {
 	})
 }
 
+func (a *API) recacheTxs() Response {
+	return NewSuccessResponse(nil)
+}
+
 // RawTx is the tx struct for getRawTransaction
 type RawTx struct {
 	ID        bc.Hash                  `json:"tx_id"`

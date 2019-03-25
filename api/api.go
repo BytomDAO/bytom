@@ -280,6 +280,7 @@ func (a *API) buildHandler() {
 	m.Handle("/submit-transactions", jsonHandler(a.submitTxs))
 	m.Handle("/estimate-transaction-gas", jsonHandler(a.estimateTxGas))
 
+	m.Handle("/recache-transactions", jsonHandler(a.recacheTxs))
 	m.Handle("/get-unconfirmed-transaction", jsonHandler(a.getUnconfirmedTx))
 	m.Handle("/list-unconfirmed-transactions", jsonHandler(a.listUnconfirmedTxs))
 	m.Handle("/decode-raw-transaction", jsonHandler(a.decodeRawTransaction))
