@@ -2,9 +2,9 @@ package testutil
 
 import (
 	"bytes"
+	"encoding/hex"
 	"io"
 	"testing"
-	"encoding/hex"
 
 	"github.com/bytom/protocol/bc"
 )
