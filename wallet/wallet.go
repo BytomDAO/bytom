@@ -211,20 +211,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
 func (w *Wallet) walletUpdater() {
-	genesisBlock, _ := w.chain.GetBlockByHeight(0)
-	genesisTxHash := genesisBlock.Transactions[0].ID.String()
-	accntTxKey := calcAccntTxIndexKey(genesisTxHash)
-	extTxKey := calcExtTxIndexKey(genesisTxHash)
-	w.rw.Lock()
-	accntTx := w.DB.Get(accntTxKey)
-	extTx := w.DB.Get(extTxKey)
-	w.rw.Unlock()
-
-	if accntTx == nil && extTx == nil {
-		log.Info("rescan due to TxIdx key version")
-		w.setRescanStatus()
-	}
-
+	w.checkTxIdxVersion()
 	for {
 		w.getRescanNotification()
 		for !w.chain.InMainChain(w.status.BestHash) {
@@ -250,6 +237,24 @@ func (w *Wallet) walletUpdater() {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("walletUpdater AttachBlock stop")
 			return
 		}
+	}
+}
+
+// checkTxIdxVersion checks whether there's need for rescaning due to txIdx key version
+func (w *Wallet) checkTxIdxVersion() {
+	w.rw.Lock()
+	defer w.rw.Unlock()
+
+	genesisBlock, _ := w.chain.GetBlockByHeight(0)
+	genesisTxHash := genesisBlock.Transactions[0].ID.String()
+	accntTxKey := calcAccntTxIndexKey(genesisTxHash)
+	extTxKey := calcExtTxIndexKey(genesisTxHash)
+	accntTx := w.DB.Get(accntTxKey)
+	extTx := w.DB.Get(extTxKey)
+
+	if accntTx == nil && extTx == nil {
+		log.Info("rescan due to TxIdx key version")
+		w.setRescanStatus()
 	}
 }
 
