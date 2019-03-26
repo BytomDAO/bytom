@@ -131,7 +131,9 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) ([]*query.AnnotatedTx, []*query.AnnotatedTx) {
 	accountTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
 	externalTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
+	isAccountTx := make([]bool, len(b.Transactions))
 
+	// find accountTxs
 transactionLoop:
 	for pos, tx := range b.Transactions {
 		statusFail, _ := txStatus.GetStatus(pos)
@@ -141,6 +143,7 @@ transactionLoop:
 
 			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
 				accountTxs = append(accountTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				isAccountTx[pos] = true
 				continue transactionLoop
 			}
 		}
@@ -152,8 +155,17 @@ transactionLoop:
 			}
 			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
 				accountTxs = append(accountTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				isAccountTx[pos] = true
 				continue transactionLoop
 			}
+		}
+	}
+
+	// find externalTxs
+	for pos, tx := range b.Transactions {
+		if !isAccountTx[pos] {
+			statusFail, _ := txStatus.GetStatus(pos)
+			externalTxs = append(externalTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 		}
 	}
 
