@@ -31,7 +31,7 @@ func formatKey(blockHeight uint64, position uint32) string {
 }
 
 // TODO:
-func decodeFormatKey(formatKey string) (blockHeight uint64, position uint32, err error) {
+func decodeFormatKey(formatKey string) (blockHeight uint64, position int, err error) {
 	return blockHeight, position, err
 }
 
@@ -183,10 +183,10 @@ transactionLoop:
 
 // GetTransactionByTxID get transaction by txID
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
-	errNotFound := fmt.Errorf("No account-related transaction(tx_id=%s) ", txID)
+	errAccntTxNotFound := fmt.Errorf("No account-related transaction(tx_id=%s) ", txID)
 	if annotatedTx, err := w.getAccntTxByTxID(txID); err == nil {
 		return annotatedTx, nil
-	} else if err != errNotFound {
+	} else if err != errAccntTxNotFound {
 		return nil, err
 	}
 
@@ -194,10 +194,10 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 }
 
 func (w *Wallet) getAccntTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	errNotFound := fmt.Errorf("No account-related transaction(tx_id=%s) ", txID)
+	errAccntTxNotFound := fmt.Errorf("No account-related transaction(tx_id=%s) ", txID)
 	formatKey := w.DB.Get(calcAccntTxIndexKey(txID))
 	if formatKey == nil {
-		return nil, errNotFound
+		return nil, errAccntTxNotFound
 	}
 
 	annotatedTx := &query.AnnotatedTx{}
@@ -205,8 +205,8 @@ func (w *Wallet) getAccntTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
-	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 
+	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 	return annotatedTx, nil
 }
 
@@ -217,11 +217,18 @@ func (w *Wallet) getExtTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	if err != nil {
 		return nil, err
 	}
-	/*tx := */ _ = block.Transactions[position]
 
-	// TODO: annotate tx
+	blockHash := block.Hash()
+	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	statusFail, _ := txStatus.GetStatus(position)
+	tx := block.Transactions[position]
+	annotatedTx := w.buildAnnotatedTransaction(tx, block, statusFail, position, true)
+	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+	return annotatedTx, nil
 }
 
 // GetTransactionsSummary get transactions summary
