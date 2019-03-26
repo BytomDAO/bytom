@@ -30,6 +30,11 @@ func formatKey(blockHeight uint64, position uint32) string {
 	return fmt.Sprintf("%016x%08x", blockHeight, position)
 }
 
+// TODO:
+func decodeFormatKey(formatKey string) (blockHeight uint64, position uint32, err error) {
+	return blockHeight, position, err
+}
+
 func calcAnnotatedKey(formatKey string) []byte {
 	return []byte(TxPrefix + formatKey)
 }
@@ -146,7 +151,7 @@ transactionLoop:
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 
 			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
-				accountTxs = append(accountTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				accountTxs = append(accountTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos, false))
 				isAccountTx[pos] = true
 				continue transactionLoop
 			}
@@ -158,7 +163,7 @@ transactionLoop:
 				continue
 			}
 			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
-				accountTxs = append(accountTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				accountTxs = append(accountTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos, false))
 				isAccountTx[pos] = true
 				continue transactionLoop
 			}
@@ -169,7 +174,7 @@ transactionLoop:
 	for pos, tx := range b.Transactions {
 		if !isAccountTx[pos] {
 			statusFail, _ := txStatus.GetStatus(pos)
-			externalTxs = append(externalTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+			externalTxs = append(externalTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos, true))
 		}
 	}
 
@@ -178,9 +183,21 @@ transactionLoop:
 
 // GetTransactionByTxID get transaction by txID
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
+	errNotFound := fmt.Errorf("No account-related transaction(tx_id=%s) ", txID)
+	if annotatedTx, err := w.getAccntTxByTxID(txID); err == nil {
+		return annotatedTx, nil
+	} else if err != errNotFound {
+		return nil, err
+	}
+
+	return w.getExtTxByTxID(txID)
+}
+
+func (w *Wallet) getAccntTxByTxID(txID string) (*query.AnnotatedTx, error) {
+	errNotFound := fmt.Errorf("No account-related transaction(tx_id=%s) ", txID)
 	formatKey := w.DB.Get(calcAccntTxIndexKey(txID))
 	if formatKey == nil {
-		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
+		return nil, errNotFound
 	}
 
 	annotatedTx := &query.AnnotatedTx{}
@@ -191,6 +208,20 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 
 	return annotatedTx, nil
+}
+
+func (w *Wallet) getExtTxByTxID(txID string) (*query.AnnotatedTx, error) {
+	formatKey := w.DB.Get(calcAccntTxIndexKey(txID))
+	blockHeight, position, err := decodeFormatKey(string(formatKey))
+	block, err := w.chain.GetBlockByHeight(blockHeight)
+	if err != nil {
+		return nil, err
+	}
+	/*tx := */ _ = block.Transactions[position]
+
+	// TODO: annotate tx
+
+	return nil, nil
 }
 
 // GetTransactionsSummary get transactions summary

@@ -146,9 +146,10 @@ func isValidJSON(b []byte) bool {
 	return err == nil
 }
 
-func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int) *query.AnnotatedTx {
+func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statusFail bool, indexInBlock int, isExternal bool) *query.AnnotatedTx {
 	tx := &query.AnnotatedTx{
 		ID:                     orig.ID,
+		IsExternal:             isExternal,
 		Timestamp:              b.Timestamp,
 		BlockID:                b.Hash(),
 		BlockHeight:            b.Height,
