@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
@@ -30,9 +31,20 @@ func formatKey(blockHeight uint64, position uint32) string {
 	return fmt.Sprintf("%016x%08x", blockHeight, position)
 }
 
-// TODO:
-func decodeFormatKey(formatKey string) (blockHeight uint64, position int, err error) {
-	return blockHeight, position, err
+func decodeFormatKey(formatKey string) (uint64, int, error) {
+	heightStr := formatKey[:16]
+	blockHeight, err := strconv.ParseUint(heightStr, 16, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	positionStr := formatKey[16:]
+	position, err := strconv.ParseInt(positionStr, 16, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return blockHeight, int(position), nil
 }
 
 func calcAnnotatedKey(formatKey string) []byte {
