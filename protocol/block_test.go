@@ -73,9 +73,14 @@ func TestEdgeCalcReorganizeNodes(t *testing.T) {
 			Parent: testNodes[i-1],
 		}
 		testNodes = append(testNodes, node)
-		node.Nonce = i
-		node.Hash =  bc.Hash{V1: uint64(i)}
-		testNewNodes = append(testNewNodes, node)
+
+		newNode := &state.BlockNode{
+			Height: i,
+			Nonce:  1,
+			Hash:   bc.Hash{V1: uint64(i)},
+			Parent: testNewNodes[i-1],
+		}
+		testNewNodes = append(testNewNodes, newNode)
 	}
 
 	cases := []struct {
@@ -105,18 +110,18 @@ func TestEdgeCalcReorganizeNodes(t *testing.T) {
 		{
 			mainChainNode:   testNewNodes[3],
 			newNode:         testNodes[2],
-			wantAttachNodes: []*state.BlockNode{},
-			wantDetachNodes: []*state.BlockNode{testNewNodes[3]},
+			wantAttachNodes: testNodes[1:3],
+			wantDetachNodes: []*state.BlockNode{testNewNodes[3], testNewNodes[2], testNewNodes[1]},
 		},
 		{
 			mainChainNode:   testNewNodes[2],
 			newNode:         testNodes[3],
-			wantAttachNodes: []*state.BlockNode{testNewNodes[3]},
-			wantDetachNodes: []*state.BlockNode{},
+			wantAttachNodes: testNodes[1:4],
+			wantDetachNodes: []*state.BlockNode{testNewNodes[2], testNewNodes[1]},
 		},
 	}
 
-	for _, c := range cases {
+	for i, c := range cases {
 		chain := &Chain{index: state.NewBlockIndex()}
 		chain.index.AddNode(initNode)
 		for i := uint64(1); i <= c.mainChainNode.Height; i++ {
@@ -127,11 +132,11 @@ func TestEdgeCalcReorganizeNodes(t *testing.T) {
 		getAttachNodes, getDetachNodes := chain.calcReorganizeNodes(c.newNode)
 
 		if !testutil.DeepEqual(c.wantAttachNodes, getAttachNodes) {
-			t.Errorf("attach nodes want %v but get %v", c.wantAttachNodes, getAttachNodes)
+			t.Errorf("test case %d, attach nodes want %v but get %v", i, c.wantAttachNodes, getAttachNodes)
 		}
 
 		if !testutil.DeepEqual(c.wantDetachNodes, getDetachNodes) {
-			t.Errorf("detach nodes want %v but get %v", c.wantDetachNodes, getDetachNodes)
+			t.Errorf("test case %d, detach nodes want %v but get %v", i, c.wantDetachNodes, getDetachNodes)
 		}
 	}
 }
