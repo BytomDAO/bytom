@@ -154,6 +154,8 @@ func (c *MConnection) OnStart() error {
 func (c *MConnection) OnStop() {
 	c.BaseService.OnStop()
 	c.flushTimer.Stop()
+	c.pingTimer.Stop()
+	c.chStatsTimer.Stop()
 	if c.quit != nil {
 		close(c.quit)
 	}
