@@ -119,6 +119,12 @@ func TestEdgeCalcReorganizeNodes(t *testing.T) {
 			wantAttachNodes: testNodes[1:4],
 			wantDetachNodes: []*state.BlockNode{testNewNodes[2], testNewNodes[1]},
 		},
+		{
+			mainChainNode:   testNodes[5],
+			newNode:         testNewNodes[3],
+			wantAttachNodes: testNewNodes[1:4],
+			wantDetachNodes: []*state.BlockNode{testNodes[5], testNodes[4], testNodes[3], testNodes[2], testNodes[1]},
+		},
 	}
 
 	for i, c := range cases {
