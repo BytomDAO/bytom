@@ -102,11 +102,11 @@ type TxSummary struct {
 
 // indexTransactions saves all annotated transactions to the database.
 func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
-	annotatedTxs, _ /*externalTxs*/ := w.filterAccountTxs(b, txStatus)
+	accntTxs, extTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
-	annotateTxsAccount(annotatedTxs, w.DB)
+	annotateTxsAccount(accntTxs, w.DB)
 
-	for _, tx := range annotatedTxs {
+	for _, tx := range accntTxs {
 		rawTx, err := json.Marshal(tx)
 		if err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("inserting annotated_txs to db")
@@ -119,13 +119,18 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 		// delete unconfirmed transaction
 		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
 	}
+
+	for _, tx := range extTxs {
+		batch.Set(calcExtTxIndexKey(tx.ID.String()), []byte(formatKey(b.Height, uint32(tx.Position))))
+	}
+
 	return nil
 }
 
 // filterAccountTxs related and build the fully annotated transactions.
-func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) ([]*query.AnnotatedTx, []*types.Tx) {
-	annotatedTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
-	externalTxs := make([]*types.Tx, 0, len(b.Transactions))
+func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) ([]*query.AnnotatedTx, []*query.AnnotatedTx) {
+	accountTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
+	externalTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
 
 transactionLoop:
 	for pos, tx := range b.Transactions {
@@ -135,7 +140,7 @@ transactionLoop:
 			sha3pool.Sum256(hash[:], v.ControlProgram)
 
 			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				accountTxs = append(accountTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
 		}
@@ -146,13 +151,13 @@ transactionLoop:
 				continue
 			}
 			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
+				accountTxs = append(accountTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 				continue transactionLoop
 			}
 		}
 	}
 
-	return annotatedTxs, externalTxs
+	return accountTxs, externalTxs
 }
 
 // GetTransactionByTxID get transaction by txID
