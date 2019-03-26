@@ -54,7 +54,7 @@ func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
 
 	for txIter.Next() {
 		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
-			batch.Delete(calcTxIndexKey(tmpTx.ID.String()))
+			batch.Delete(calcAccntTxIndexKey(tmpTx.ID.String()))
 		}
 		batch.Delete(txIter.Key())
 	}
@@ -102,7 +102,7 @@ type TxSummary struct {
 
 // indexTransactions saves all annotated transactions to the database.
 func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
-	annotatedTxs, externalTxs := w.filterAccountTxs(b, txStatus)
+	annotatedTxs, _ /*externalTxs*/ := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
@@ -114,7 +114,7 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 		}
 
 		batch.Set(calcAnnotatedKey(formatKey(b.Height, uint32(tx.Position))), rawTx)
-		batch.Set(calcTxIndexKey(tx.ID.String()), []byte(formatKey(b.Height, uint32(tx.Position))))
+		batch.Set(calcAccntTxIndexKey(tx.ID.String()), []byte(formatKey(b.Height, uint32(tx.Position))))
 
 		// delete unconfirmed transaction
 		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
@@ -157,7 +157,7 @@ transactionLoop:
 
 // GetTransactionByTxID get transaction by txID
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
-	formatKey := w.DB.Get(calcTxIndexKey(txID))
+	formatKey := w.DB.Get(calcAccntTxIndexKey(txID))
 	if formatKey == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
 	}

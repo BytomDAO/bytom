@@ -258,7 +258,7 @@ func (w *Wallet) deleteAccountTxs() {
 		storeBatch.Delete(txIter.Key())
 	}
 
-	txIndexIter := w.DB.IteratorPrefix([]byte(TxIndexPrefix))
+	txIndexIter := w.DB.IteratorPrefix([]byte(AccntTxIndexPrefix))
 	defer txIndexIter.Release()
 
 	for txIndexIter.Next() {
