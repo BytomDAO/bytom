@@ -210,6 +210,16 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 
 //WalletUpdate process every valid block and reverse every invalid block which need to rollback
 func (w *Wallet) walletUpdater() {
+	genesisBlock, _ := w.chain.GetBlockByHeight(0)
+	genesisTxHash := genesisBlock.Transactions[0].ID.String()
+	accntTxKey := calcAccntTxIndexKey(genesisTxHash)
+	extTxKey := calcExtTxIndexKey(genesisTxHash)
+	accntTx := w.DB.Get(accntTxKey)
+	extTx := w.DB.Get(extTxKey)
+	if accntTx == nil && extTx == nil {
+		w.setRescanStatus()
+	}
+
 	for {
 		w.getRescanNotification()
 		for !w.chain.InMainChain(w.status.BestHash) {
