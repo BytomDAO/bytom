@@ -20,8 +20,10 @@ import (
 const (
 	//TxPrefix is wallet database transactions prefix
 	TxPrefix = "TXS:"
-	//TxIndexPrefix is wallet database tx index prefix
-	TxIndexPrefix = "TID:"
+	//AccntTxIndexPrefix is wallet database tx index prefix for a tx belonging to local accounts
+	AccntTxIndexPrefix = "accntTID:"
+	//ExtTxIndexPrefix is wallet database tx index prefix for an external tx
+	ExtTxIndexPrefix = "extTID:"
 )
 
 func formatKey(blockHeight uint64, position uint32) string {
@@ -36,8 +38,12 @@ func calcDeleteKey(blockHeight uint64) []byte {
 	return []byte(fmt.Sprintf("%s%016x", TxPrefix, blockHeight))
 }
 
-func calcTxIndexKey(txID string) []byte {
-	return []byte(TxIndexPrefix + txID)
+func calcAccntTxIndexKey(txID string) []byte {
+	return []byte(AccntTxIndexPrefix + txID)
+}
+
+func calcExtTxIndexKey(txID string) []byte {
+	return []byte(ExtTxIndexPrefix + txID)
 }
 
 // deleteTransaction delete transactions when orphan block rollback
