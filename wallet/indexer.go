@@ -21,9 +21,9 @@ const (
 	//TxPrefix is wallet database transactions prefix
 	TxPrefix = "TXS:"
 	//AccntTxIndexPrefix is wallet database tx index prefix for a tx belonging to local accounts
-	AccntTxIndexPrefix = "accntTID:"
+	AccntTxIndexPrefix = "AccntTID:"
 	//ExtTxIndexPrefix is wallet database tx index prefix for an external tx
-	ExtTxIndexPrefix = "extTID:"
+	ExtTxIndexPrefix = "ExtTID:"
 )
 
 func formatKey(blockHeight uint64, position uint32) string {
