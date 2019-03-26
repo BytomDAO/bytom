@@ -59,7 +59,7 @@ func decayFactor(t int64) float64 {
 type DynamicBanScore struct {
 	lastUnix   int64
 	transient  float64
-	persistent uint64
+	persistent uint32
 	mtx        sync.Mutex
 }
 
@@ -76,7 +76,7 @@ func (s *DynamicBanScore) String() string {
 // scores.
 //
 // This function is safe for concurrent access.
-func (s *DynamicBanScore) Int() uint64 {
+func (s *DynamicBanScore) Int() uint32 {
 	s.mtx.Lock()
 	r := s.int(time.Now())
 	s.mtx.Unlock()
@@ -87,7 +87,7 @@ func (s *DynamicBanScore) Int() uint64 {
 // passed as parameters. The resulting score is returned.
 //
 // This function is safe for concurrent access.
-func (s *DynamicBanScore) Increase(persistent, transient uint64) uint64 {
+func (s *DynamicBanScore) Increase(persistent, transient uint32) uint32 {
 	s.mtx.Lock()
 	r := s.increase(persistent, transient, time.Now())
 	s.mtx.Unlock()
@@ -110,12 +110,12 @@ func (s *DynamicBanScore) Reset() {
 //
 // This function is not safe for concurrent access. It is intended to be used
 // internally and during testing.
-func (s *DynamicBanScore) int(t time.Time) uint64 {
+func (s *DynamicBanScore) int(t time.Time) uint32 {
 	dt := t.Unix() - s.lastUnix
 	if s.transient < 1 || dt < 0 || Lifetime < dt {
 		return s.persistent
 	}
-	return s.persistent + uint64(s.transient*decayFactor(dt))
+	return s.persistent + uint32(s.transient*decayFactor(dt))
 }
 
 // increase increases the persistent, the decaying or both scores by the values
@@ -124,7 +124,7 @@ func (s *DynamicBanScore) int(t time.Time) uint64 {
 // resulting score is returned.
 //
 // This function is not safe for concurrent access.
-func (s *DynamicBanScore) increase(persistent, transient uint64, t time.Time) uint64 {
+func (s *DynamicBanScore) increase(persistent, transient uint32, t time.Time) uint32 {
 	s.persistent += persistent
 	tu := t.Unix()
 	dt := tu - s.lastUnix
@@ -138,5 +138,5 @@ func (s *DynamicBanScore) increase(persistent, transient uint64, t time.Time) ui
 		s.transient += float64(transient)
 		s.lastUnix = tu
 	}
-	return s.persistent + uint64(s.transient)
+	return s.persistent + uint32(s.transient)
 }

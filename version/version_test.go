@@ -1,8 +1,10 @@
 package version
 
 import (
+	"fmt"
 	"testing"
 
+	"gopkg.in/fatih/set.v0"
 	gover "github.com/hashicorp/go-version"
 )
 
@@ -67,6 +69,86 @@ func TestCompatibleWith(t *testing.T) {
 		Version = c.a
 		if result, _ := CompatibleWith(c.b); c.result != result {
 			t.Errorf("case %d: got %t want %t", i, c.result, result)
+		}
+	}
+}
+
+func TestCheckUpdate(t *testing.T) {
+	cases := []struct {
+		desc           string
+		localVer       string
+		remotePeers    []string
+		wantStatus     uint16
+		wantmaxVerSeen string
+		wantNotified   bool
+	}{
+		{
+			desc:           "has large version number update",
+			localVer:       "1.0",
+			remotePeers:    []string{"1.0", "2.0", "1.0.3"},
+			wantStatus:     hasMUpdate,
+			wantmaxVerSeen: "2.0",
+			wantNotified:   true,
+		},
+		{
+			desc:           "some remote version less than local version, but some remote verison larger than local version",
+			localVer:       "1.0",
+			remotePeers:    []string{"0.8", "1.1", "1.0.3", "0.9"},
+			wantStatus:     hasUpdate,
+			wantmaxVerSeen: "1.1",
+			wantNotified:   true,
+		},
+		{
+			desc:           "has small version number update",
+			localVer:       "1.0",
+			remotePeers:    []string{"1.0", "1.0.3", "1.0.2"},
+			wantStatus:     hasUpdate,
+			wantmaxVerSeen: "1.0.3",
+			wantNotified:   true,
+		},
+		{
+			desc:           "the remote equals to local version",
+			localVer:       "1.0",
+			remotePeers:    []string{"1.0", "1.0", "1.0"},
+			wantStatus:     noUpdate,
+			wantmaxVerSeen: "1.0",
+			wantNotified:   false,
+		},
+		{
+			desc:           "the remote version less than local version",
+			localVer:       "1.0",
+			remotePeers:    []string{"0.8", "0.8", "0.8"},
+			wantStatus:     noUpdate,
+			wantmaxVerSeen: "1.0",
+			wantNotified:   false,
+		},
+	}
+
+	for i, c := range cases {
+		status := &UpdateStatus{
+			maxVerSeen:    c.localVer,
+			notified:      false,
+			seedSet:       set.New(),
+			versionStatus: noUpdate,
+		}
+		for i, remoteVer := range c.remotePeers {
+			peer := fmt.Sprintf("peer%d", i)
+			status.seedSet.Add(peer)
+			if err := status.CheckUpdate(c.localVer, remoteVer, peer); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		if status.versionStatus != c.wantStatus {
+			t.Errorf("#%d(%s) got version status:%d, want version status:%d", i, c.desc, status.versionStatus, c.wantStatus)
+		}
+
+		if status.notified != c.wantNotified {
+			t.Errorf("#%d(%s) got notified:%t, want notified:%t", i, c.desc, status.notified, c.wantNotified)
+		}
+
+		if status.maxVerSeen != c.wantmaxVerSeen {
+			t.Errorf("#%d(%s) got max version seen%s, want max version seen%s", i, c.desc, status.maxVerSeen, c.wantmaxVerSeen)
 		}
 	}
 }

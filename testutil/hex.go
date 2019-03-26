@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"bytes"
+	"encoding/hex"
 	"io"
 	"testing"
 
@@ -13,6 +14,14 @@ func MustDecodeHash(s string) (h bc.Hash) {
 		panic(err)
 	}
 	return h
+}
+
+func MustDecodeHexString(s string) []byte {
+	bytes, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	return bytes
 }
 
 func MustDecodeAsset(s string) (h bc.AssetID) {
