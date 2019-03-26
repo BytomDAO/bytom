@@ -46,17 +46,21 @@ func calcExtTxIndexKey(txID string) []byte {
 	return []byte(ExtTxIndexPrefix + txID)
 }
 
-// deleteTransaction delete transactions when orphan block rollback
-func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
-	tmpTx := query.AnnotatedTx{}
+// deleteAccountTransactions delete account-related transactions when orphan block rollback
+func (w *Wallet) deleteAccountTransactions(batch db.Batch, height uint64) {
 	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
 
 	for txIter.Next() {
-		if err := json.Unmarshal(txIter.Value(), &tmpTx); err == nil {
-			batch.Delete(calcAccntTxIndexKey(tmpTx.ID.String()))
-		}
 		batch.Delete(txIter.Key())
+	}
+}
+
+// deleteAccountTransactions delete account-related transactions when orphan block rollback
+func (w *Wallet) deleteTxIdx(batch db.Batch, txs []*types.Tx) {
+	for _, tx := range txs {
+		batch.Delete(calcAccntTxIndexKey(tx.ID.String()))
+		batch.Delete(calcExtTxIndexKey(tx.ID.String()))
 	}
 }
 

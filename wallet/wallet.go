@@ -195,7 +195,8 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 
 	storeBatch := w.DB.NewBatch()
 	w.detachUtxos(storeBatch, block, txStatus)
-	w.deleteTransactions(storeBatch, w.status.BestHeight)
+	w.deleteAccountTransactions(storeBatch, w.status.BestHeight)
+	w.deleteTxIdx(storeBatch, block.Transactions)
 
 	w.status.BestHeight = block.Height - 1
 	w.status.BestHash = block.PreviousBlockHash
@@ -214,8 +215,11 @@ func (w *Wallet) walletUpdater() {
 	genesisTxHash := genesisBlock.Transactions[0].ID.String()
 	accntTxKey := calcAccntTxIndexKey(genesisTxHash)
 	extTxKey := calcExtTxIndexKey(genesisTxHash)
+	w.rw.Lock()
 	accntTx := w.DB.Get(accntTxKey)
 	extTx := w.DB.Get(extTxKey)
+	w.rw.Unlock()
+
 	if accntTx == nil && extTx == nil {
 		w.setRescanStatus()
 	}
