@@ -300,6 +300,8 @@ func (tp *TxPool) checkOrphanUtxos(tx *types.Tx) ([]*bc.Hash, error) {
 
 func (tp *TxPool) orphanExpireWorker() {
 	ticker := time.NewTicker(orphanExpireScanInterval)
+	defer ticker.Stop()
+
 	for now := range ticker.C {
 		tp.ExpireOrphan(now)
 	}

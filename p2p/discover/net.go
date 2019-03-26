@@ -365,6 +365,8 @@ func (net *Network) loop() {
 		if nextRegisterTimer != nil {
 			nextRegisterTimer.Stop()
 		}
+		refreshTimer.Stop()
+		bucketRefreshTimer.Stop()
 	}()
 	resetNextTicket := func() {
 		ticket, timeout := net.ticketStore.nextFilteredTicket()
@@ -395,6 +397,7 @@ func (net *Network) loop() {
 	<-topicRegisterLookupTick.C
 
 	statsDump := time.NewTicker(10 * time.Second)
+	defer statsDump.Stop()
 
 loop:
 	for {

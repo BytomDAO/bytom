@@ -289,7 +289,9 @@ func (bk *blockKeeper) requireBlock(height uint64) (*types.Block, error) {
 		return nil, errPeerDropped
 	}
 
-	waitTicker := time.NewTimer(syncTimeout)
+	timeout := time.NewTimer(syncTimeout)
+	defer timeout.Stop()
+
 	for {
 		select {
 		case msg := <-bk.blockProcessCh:
@@ -300,7 +302,7 @@ func (bk *blockKeeper) requireBlock(height uint64) (*types.Block, error) {
 				continue
 			}
 			return msg.block, nil
-		case <-waitTicker.C:
+		case <-timeout.C:
 			return nil, errors.Wrap(errRequestTimeout, "requireBlock")
 		}
 	}
@@ -311,7 +313,9 @@ func (bk *blockKeeper) requireBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*
 		return nil, errPeerDropped
 	}
 
-	waitTicker := time.NewTimer(syncTimeout)
+	timeout := time.NewTimer(syncTimeout)
+	defer timeout.Stop()
+
 	for {
 		select {
 		case msg := <-bk.blocksProcessCh:
@@ -319,7 +323,7 @@ func (bk *blockKeeper) requireBlocks(locator []*bc.Hash, stopHash *bc.Hash) ([]*
 				continue
 			}
 			return msg.blocks, nil
-		case <-waitTicker.C:
+		case <-timeout.C:
 			return nil, errors.Wrap(errRequestTimeout, "requireBlocks")
 		}
 	}
@@ -330,7 +334,9 @@ func (bk *blockKeeper) requireHeaders(locator []*bc.Hash, stopHash *bc.Hash) ([]
 		return nil, errPeerDropped
 	}
 
-	waitTicker := time.NewTimer(syncTimeout)
+	timeout := time.NewTimer(syncTimeout)
+	defer timeout.Stop()
+
 	for {
 		select {
 		case msg := <-bk.headersProcessCh:
@@ -338,7 +344,7 @@ func (bk *blockKeeper) requireHeaders(locator []*bc.Hash, stopHash *bc.Hash) ([]
 				continue
 			}
 			return msg.headers, nil
-		case <-waitTicker.C:
+		case <-timeout.C:
 			return nil, errors.Wrap(errRequestTimeout, "requireHeaders")
 		}
 	}
@@ -393,6 +399,8 @@ func (bk *blockKeeper) syncWorker() {
 		return
 	}
 	syncTicker := time.NewTicker(syncCycle)
+	defer syncTicker.Stop()
+
 	for {
 		<-syncTicker.C
 		if update := bk.startSync(); !update {
