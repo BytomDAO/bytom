@@ -14,6 +14,7 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/sha3pool"
 	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -225,6 +226,10 @@ func (w *Wallet) getAccntTxByTxID(txID string) (*query.AnnotatedTx, error) {
 func (w *Wallet) getExtTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	formatKey := w.DB.Get(calcAccntTxIndexKey(txID))
 	blockHeight, position, err := decodeFormatKey(string(formatKey))
+	if err != nil {
+		return nil, errors.Wrap(err, "decodeFormatKey")
+	}
+
 	block, err := w.chain.GetBlockByHeight(blockHeight)
 	if err != nil {
 		return nil, err

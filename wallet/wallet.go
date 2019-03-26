@@ -242,15 +242,16 @@ func (w *Wallet) walletUpdater() {
 
 // checkTxIdxVersion checks whether there's need for rescaning due to txIdx key version
 func (w *Wallet) checkTxIdxVersion() {
-	w.rw.Lock()
-	defer w.rw.Unlock()
-
 	genesisBlock, _ := w.chain.GetBlockByHeight(0)
 	genesisTxHash := genesisBlock.Transactions[0].ID.String()
 	accntTxKey := calcAccntTxIndexKey(genesisTxHash)
 	extTxKey := calcExtTxIndexKey(genesisTxHash)
+
+	w.rw.Lock()
 	accntTx := w.DB.Get(accntTxKey)
 	extTx := w.DB.Get(extTxKey)
+	// do not defer unlock here, in case causing deadlock in w.setRescanStatus()'s w.AttachBlock(block)
+	w.rw.Unlock()
 
 	if accntTx == nil && extTx == nil {
 		log.Info("rescan due to TxIdx key version")
