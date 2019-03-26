@@ -221,6 +221,7 @@ func (w *Wallet) walletUpdater() {
 	w.rw.Unlock()
 
 	if accntTx == nil && extTx == nil {
+		log.Info("rescan due to TxIdx key version")
 		w.setRescanStatus()
 	}
 
