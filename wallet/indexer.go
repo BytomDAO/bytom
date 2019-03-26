@@ -102,7 +102,7 @@ type TxSummary struct {
 
 // indexTransactions saves all annotated transactions to the database.
 func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
-	annotatedTxs := w.filterAccountTxs(b, txStatus)
+	annotatedTxs, externalTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
 
@@ -123,8 +123,9 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 }
 
 // filterAccountTxs related and build the fully annotated transactions.
-func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) []*query.AnnotatedTx {
+func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) ([]*query.AnnotatedTx, []*types.Tx) {
 	annotatedTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
+	externalTxs := make([]*types.Tx, 0, len(b.Transactions))
 
 transactionLoop:
 	for pos, tx := range b.Transactions {
@@ -151,7 +152,7 @@ transactionLoop:
 		}
 	}
 
-	return annotatedTxs
+	return annotatedTxs, externalTxs
 }
 
 // GetTransactionByTxID get transaction by txID
