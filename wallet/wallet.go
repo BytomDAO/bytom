@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"sync"
 
+	gover "github.com/hashicorp/go-version"
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/db"
 
@@ -22,10 +23,15 @@ const (
 	logModule = "wallet"
 )
 
-var walletKey = []byte("walletInfo")
+var (
+	versionStr = "1.0.1"
+
+	walletKey = []byte("walletInfo")
+)
 
 //StatusInfo is base valid block info to handle orphan block rollback
 type StatusInfo struct {
+	Version    *gover.Version
 	WorkHeight uint64
 	WorkHash   bc.Hash
 	BestHeight uint64
@@ -113,19 +119,21 @@ func (w *Wallet) memPoolTxQueryLoop() {
 //return initial wallet info and err
 func (w *Wallet) loadWalletInfo() error {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
-		if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+		currentVersion, err := gover.NewVersion(versionStr)
+		if err != nil {
 			return err
 		}
 
-		//handle the case than use replace the coreDB during status in fork chain
-		if w.chain.BlockExist(&w.status.BestHash) {
+		if err := json.Unmarshal(rawWallet, &w.status); err == nil && w.chain.BlockExist(&w.status.BestHash) {
+			return nil
+		} else if err == nil && (&w.status).Version.Compare(currentVersion) == 0 {
 			return nil
 		}
 
-		log.WithFields(log.Fields{"module": logModule}).Warn("reset the wallet status due to core doesn't have wallet best block")
+		log.WithFields(log.Fields{"module": logModule}).Warn("reset the wallet status due to 1. core doesn't have wallet best block or 2. wallet version change")
 		w.deleteAccountTxs()
 		w.deleteUtxos()
-		w.status = StatusInfo{}
+		w.status = StatusInfo{Version: currentVersion}
 	}
 
 	block, err := w.chain.GetBlockByHeight(0)
