@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	versionStr = "1.0.1"
+	currentVersionStr = "1.0.1"
 
 	walletKey = []byte("walletInfo")
 )
@@ -119,7 +119,7 @@ func (w *Wallet) memPoolTxQueryLoop() {
 //return initial wallet info and err
 func (w *Wallet) loadWalletInfo() error {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
-		currentVersion, err := gover.NewVersion(versionStr)
+		currentVersion, err := gover.NewVersion(currentVersionStr)
 		if err != nil {
 			return err
 		}
@@ -203,7 +203,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 
 	storeBatch := w.DB.NewBatch()
 	w.detachUtxos(storeBatch, block, txStatus)
-	w.deleteAccountTransactions(storeBatch, w.status.BestHeight)
+	w.deleteTransactions(storeBatch, w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1
 	w.status.BestHash = block.PreviousBlockHash

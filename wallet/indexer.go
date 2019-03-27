@@ -51,7 +51,7 @@ func calcGlobalTxIndex(position int, blockHash bc.Hash) []byte {
 }
 
 // deleteTransaction delete transactions when orphan block rollback
-func (w *Wallet) deleteAccountTransactions(batch db.Batch, height uint64) {
+func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
 	tmpTx := query.AnnotatedTx{}
 	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
