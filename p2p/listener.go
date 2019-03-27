@@ -114,12 +114,12 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 		listener, err = net.Listen(protocol, lAddr)
 	}
 	if err != nil {
-		cmn.PanicCrisis(err)
+		log.Panic(err)
 	}
 
 	intAddr, err := NewNetAddressString(lAddr)
 	if err != nil {
-		cmn.PanicCrisis(err)
+		log.Panic(err)
 	}
 
 	// Actual listener local IP & port
@@ -139,7 +139,7 @@ func NewDefaultListener(protocol string, lAddr string, skipUPNP bool) (Listener,
 	if extAddr == nil {
 		if ip, err := ExternalIPv4(); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("get ipv4 external address")
-			cmn.PanicCrisis("get ipv4 external address fail!")
+			log.Panic("get ipv4 external address fail!")
 		} else {
 			extAddr = NewNetAddressIPPort(net.ParseIP(ip), uint16(lAddrPort))
 			log.WithFields(log.Fields{"module": logModule, "addr": extAddr}).Info("get ipv4 external address success")
@@ -189,7 +189,7 @@ func (l *DefaultListener) listenRoutine() {
 		// listener wasn't stopped,
 		// yet we encountered an error.
 		if err != nil {
-			cmn.PanicCrisis(err)
+			log.Panic(err)
 		}
 		l.connections <- conn
 	}
