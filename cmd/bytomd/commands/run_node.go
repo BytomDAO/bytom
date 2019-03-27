@@ -47,7 +47,7 @@ func init() {
 	runNodeCmd.Flags().String("p2p.proxy_username", config.P2P.ProxyUsername, "Username for proxy server")
 	runNodeCmd.Flags().String("p2p.proxy_password", config.P2P.ProxyPassword, "Password for proxy server")
 	runNodeCmd.Flags().String("p2p.keep_connect", config.P2P.KeepConnect, "Peers addresses try keeping connecting to, separated by ';' (for example \"1.1.1.1:46657;2.2.2.2:46658\")")
-	runNodeCmd.Flags().String("p2p.inbound_white_list", config.P2P.InboundWhiteList, "Inbound Peer white list, separated by ';' (for example \"1.1.1.1:46657;2.2.2.2:46658\")")
+	runNodeCmd.Flags().String("p2p.inbound_white_list", config.P2P.InboundWhiteList, "Inbound Peer host whitelist, separated by ';' (for example \"1.1.1.1;2.2.2.2\")")
 
 	// log flags
 	runNodeCmd.Flags().String("log_file", config.LogFile, "Log output file")
