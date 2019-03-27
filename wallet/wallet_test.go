@@ -36,16 +36,8 @@ func TestWalletVersion(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", "temp")
 	defer os.RemoveAll("temp")
 
-	store := leveldb.NewStore(testDB)
-	chain, err := protocol.NewChain(store, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	accountManager := account.NewManager(testDB, chain)
-	reg := asset.NewRegistry(testDB, chain)
 	dispatcher := event.NewDispatcher()
-	w := mockWallet(testDB, accountManager, reg, chain, dispatcher)
+	w := mockWallet(testDB, nil, nil, nil, dispatcher)
 
 	// legacy status test case
 	type legacyStatusInfo struct {
