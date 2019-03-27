@@ -99,6 +99,10 @@ func TestWalletVersion(t *testing.T) {
 		t.Fatal("fail to load wallet StatusInfo")
 	}
 
+	if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := w.checkWalletInfo(); err != errWalletVersionMismatch {
 		t.Fatal("fail to detect expired wallet version")
 	}
