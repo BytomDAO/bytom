@@ -22,6 +22,8 @@ const (
 	TxPrefix = "TXS:"
 	//TxIndexPrefix is wallet database tx index prefix
 	TxIndexPrefix = "TID:"
+	//TxIndexPrefix is wallet database global tx index prefix
+	GlobalTxIndexPrefix = "GTID:"
 )
 
 func formatKey(blockHeight uint64, position uint32) string {
@@ -38,6 +40,14 @@ func calcDeleteKey(blockHeight uint64) []byte {
 
 func calcTxIndexKey(txID string) []byte {
 	return []byte(TxIndexPrefix + txID)
+}
+
+func calcGlobalTxIndexKey(txID string) []byte {
+	return []byte(GlobalTxIndexPrefix + txID)
+}
+
+func calcGlobalTxIndex(blockHash *bc.Hash, position int) []byte {
+	return []byte(fmt.Sprintf("%064x%08x", blockHash.String(), position))
 }
 
 // deleteTransaction delete transactions when orphan block rollback
@@ -113,6 +123,12 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 		// delete unconfirmed transaction
 		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
 	}
+
+	for position, globalTx := range b.Transactions {
+		blockHash := b.BlockHeader.Hash()
+		batch.Set(calcGlobalTxIndexKey(globalTx.ID.String()), calcGlobalTxIndex(&blockHash, position))
+	}
+
 	return nil
 }
 

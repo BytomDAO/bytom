@@ -1,8 +1,10 @@
 package wallet
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
@@ -21,6 +24,68 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
+
+func TestWalletVersion(t *testing.T) {
+	// prepare wallet
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
+
+	dispatcher := event.NewDispatcher()
+	w := mockWallet(testDB, nil, nil, nil, dispatcher)
+
+	// legacy status test case
+	type legacyStatusInfo struct {
+		WorkHeight uint64
+		WorkHash   bc.Hash
+		BestHeight uint64
+		BestHash   bc.Hash
+	}
+	rawWallet, err := json.Marshal(legacyStatusInfo{})
+	if err != nil {
+		t.Fatal("Marshal legacyStatusInfo")
+	}
+
+	w.DB.Set(walletKey, rawWallet)
+	rawWallet = w.DB.Get(walletKey)
+	if rawWallet == nil {
+		t.Fatal("fail to load wallet StatusInfo")
+	}
+
+	if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := w.checkWalletInfo(); err != errWalletVersionMismatch {
+		t.Fatal("fail to detect legacy wallet version")
+	}
+
+	// lower wallet version test case
+	lowerVersion := StatusInfo{Version: currentVersion - 1}
+	rawWallet, err = json.Marshal(lowerVersion)
+	if err != nil {
+		t.Fatal("save wallet info")
+	}
+
+	w.DB.Set(walletKey, rawWallet)
+	rawWallet = w.DB.Get(walletKey)
+	if rawWallet == nil {
+		t.Fatal("fail to load wallet StatusInfo")
+	}
+
+	if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := w.checkWalletInfo(); err != errWalletVersionMismatch {
+		t.Fatal("fail to detect expired wallet version")
+	}
+}
 
 func TestWalletUpdate(t *testing.T) {
 	dirPath, err := ioutil.TempDir(".", "")
@@ -85,6 +150,7 @@ func TestWalletUpdate(t *testing.T) {
 	block := mockSingleBlock(tx)
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
+	txStatus.SetStatus(1, false)
 	store.SaveBlock(block, txStatus)
 
 	w := mockWallet(testDB, accountManager, reg, chain, dispatcher)
@@ -100,6 +166,19 @@ func TestWalletUpdate(t *testing.T) {
 	wants, err := w.GetTransactions("")
 	if len(wants) != 1 {
 		t.Fatal(err)
+	}
+
+	if wants[0].ID != tx.ID {
+		t.Fatal("account txID mismatch")
+	}
+
+	for position, tx := range block.Transactions {
+		get := w.DB.Get(calcGlobalTxIndexKey(tx.ID.String()))
+		bh := block.BlockHeader.Hash()
+		expect := calcGlobalTxIndex(&bh, position)
+		if !reflect.DeepEqual(get, expect) {
+			t.Fatalf("position#%d: compare retrieved globalTxIdx err", position)
+		}
 	}
 }
 
@@ -242,6 +321,6 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 			Height:  1,
 			Bits:    2305843009230471167,
 		},
-		Transactions: []*types.Tx{tx},
+		Transactions: []*types.Tx{config.GenesisTx(), tx},
 	}
 }
