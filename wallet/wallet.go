@@ -10,6 +10,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/errors"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -24,8 +25,10 @@ const (
 
 var (
 	currentVersion = uint(1)
+	walletKey      = []byte("walletInfo")
 
-	walletKey = []byte("walletInfo")
+	errBestBlockNotFoundInCore = errors.New("best block not found in core")
+	errWalletVersionMismatch   = errors.New("wallet version mismatch")
 )
 
 //StatusInfo is base valid block info to handle orphan block rollback
@@ -114,22 +117,33 @@ func (w *Wallet) memPoolTxQueryLoop() {
 	}
 }
 
-//GetWalletInfo return stored wallet info and nil,if error,
-//return initial wallet info and err
-func (w *Wallet) loadWalletInfo() error {
-	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
-		if err := json.Unmarshal(rawWallet, &w.status); err == nil && w.chain.BlockExist(&w.status.BestHash) {
-			return nil
-		} else if err == nil && (&w.status).Version != currentVersion {
-			return nil
-		}
-
-		log.WithFields(log.Fields{"module": logModule}).Warn("reset the wallet status due to 1. core doesn't have wallet best block or 2. wallet version change")
-		w.deleteAccountTxs()
-		w.deleteUtxos()
-		w.status = StatusInfo{Version: currentVersion}
+func (w *Wallet) checkWalletInfo(rawWallet []byte) error {
+	if err := json.Unmarshal(rawWallet, &w.status); (err != nil) || ((&w.status).Version != currentVersion) {
+		return errWalletVersionMismatch
+	} else if !w.chain.BlockExist(&w.status.BestHash) {
+		return errBestBlockNotFoundInCore
 	}
 
+	return nil
+}
+
+//loadWalletInfo return stored wallet info and nil,
+//if error, return initial wallet info and err
+func (w *Wallet) loadWalletInfo() error {
+	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
+		if err := w.checkWalletInfo(rawWallet); err == nil {
+			return nil
+		} else if err == errBestBlockNotFoundInCore {
+			log.WithFields(log.Fields{"module": logModule}).Warn("reset the wallet status due to that core doesn't have wallet best block")
+		} else {
+			log.WithFields(log.Fields{"module": logModule}).Warn("reset the wallet status due to wallet version change")
+		}
+
+		w.deleteAccountTxs()
+		w.deleteUtxos()
+	}
+
+	w.status.Version = currentVersion
 	block, err := w.chain.GetBlockByHeight(0)
 	if err != nil {
 		return err

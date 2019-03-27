@@ -17,12 +17,36 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
-	"github.com/bytom/errors"
+	// "github.com/bytom/errors"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
+
+func TestWalletVersion(t *testing.T) {
+	type legacyStatusInfo struct {
+		WorkHeight uint64
+		WorkHash   bc.Hash
+		BestHeight uint64
+		BestHash   bc.Hash
+	}
+
+	legacyStatus := legacyStatusInfo{}
+	lowerVersion := StatusInfo{Version: currentVersion - 1}
+
+	t.Log(legacyStatus)
+	t.Log(lowerVersion)
+
+	// err = w.loadWalletInfo()
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+
+	// if w.status.Version != currentVersion {
+	// 	t.Fatal("wallet version mismatch")
+	// }
+}
 
 func TestWalletUpdate(t *testing.T) {
 	dirPath, err := ioutil.TempDir(".", "")
@@ -106,7 +130,7 @@ func TestWalletUpdate(t *testing.T) {
 	}
 
 	if wants[0].ID != tx.ID {
-		t.Fatal(errors.New("account txID mismatch"))
+		t.Fatal("account txID mismatch")
 	}
 }
 
