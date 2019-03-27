@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -435,10 +436,35 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 }
 
 func (sw *Switch) ensureOutboundPeers() {
+	validTryConnectPeerAddrs := []string{}
+	tryConnectPeerAddrs := strings.Split(sw.Config.P2P.KeepConnect, ";")
+	for _, tryConnectPeerAddr := range tryConnectPeerAddrs {
+		ip, port, err := net.SplitHostPort(tryConnectPeerAddr)
+		if err != nil {
+			continue
+		}
+
+		if validIP := net.ParseIP(ip); validIP == nil {
+			continue
+		}
+
+		if _, err := strconv.ParseUint(port, 10, 16); err != nil {
+			continue
+		}
+
+		validTryConnectPeerAddrs = append(validTryConnectPeerAddrs, tryConnectPeerAddr)
+	}
+
+	var tryConnetNodes []*discover.Node
+	for _, addr := range validTryConnectPeerAddrs {
+		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(addr))) + "@" + addr
+		tryConnetNodes = append(tryConnetNodes, discover.MustParseNode(url))
+	}
+
 	numOutPeers, _, numDialing := sw.NumPeers()
-	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing))
-	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": numToDial}).Debug("ensure peers")
-	if numToDial <= 0 {
+	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing)) - len(tryConnetNodes)
+	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": numToDial + len(tryConnetNodes)}).Debug("ensure peers")
+	if numToDial+len(tryConnetNodes) <= 0 {
 		return
 	}
 
@@ -450,7 +476,8 @@ func (sw *Switch) ensureOutboundPeers() {
 	var wg sync.WaitGroup
 	nodes := make([]*discover.Node, numToDial)
 	n := sw.discv.ReadRandomNodes(nodes)
-	for i := 0; i < n; i++ {
+	nodes = append(nodes, tryConnetNodes...)
+	for i := 0; i < n+len(tryConnetNodes); i++ {
 		try := NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
 		if sw.NodeInfo().ListenAddr == try.String() {
 			continue
