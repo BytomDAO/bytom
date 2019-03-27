@@ -464,8 +464,13 @@ func (sw *Switch) ensureOutboundPeers() {
 	numOutPeers, _, numDialing := sw.NumPeers()
 	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing)) - len(tryConnetNodes)
 	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": numToDial + len(tryConnetNodes)}).Debug("ensure peers")
+	// too many peers connected and dailing
 	if numToDial+len(tryConnetNodes) <= 0 {
 		return
+	}
+	// still need to dail tryConnetNodes
+	if numToDial < 0 {
+		numToDial = 0
 	}
 
 	connectedPeers := make(map[string]struct{})
