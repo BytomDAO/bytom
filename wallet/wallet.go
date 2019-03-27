@@ -10,6 +10,7 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/errors"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -22,10 +23,17 @@ const (
 	logModule = "wallet"
 )
 
-var walletKey = []byte("walletInfo")
+var (
+	currentVersion = uint(1)
+	walletKey      = []byte("walletInfo")
+
+	errBestBlockNotFoundInCore = errors.New("best block not found in core")
+	errWalletVersionMismatch   = errors.New("wallet version mismatch")
+)
 
 //StatusInfo is base valid block info to handle orphan block rollback
 type StatusInfo struct {
+	Version    uint
 	WorkHeight uint64
 	WorkHash   bc.Hash
 	BestHeight uint64
@@ -109,25 +117,35 @@ func (w *Wallet) memPoolTxQueryLoop() {
 	}
 }
 
-//GetWalletInfo return stored wallet info and nil,if error,
-//return initial wallet info and err
+func (w *Wallet) checkWalletInfo() error {
+	if w.status.Version != currentVersion {
+		return errWalletVersionMismatch
+	} else if !w.chain.BlockExist(&w.status.BestHash) {
+		return errBestBlockNotFoundInCore
+	}
+
+	return nil
+}
+
+//loadWalletInfo return stored wallet info and nil,
+//if error, return initial wallet info and err
 func (w *Wallet) loadWalletInfo() error {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
 		if err := json.Unmarshal(rawWallet, &w.status); err != nil {
 			return err
 		}
 
-		//handle the case than use replace the coreDB during status in fork chain
-		if w.chain.BlockExist(&w.status.BestHash) {
+		err := w.checkWalletInfo()
+		if err == nil {
 			return nil
 		}
 
-		log.WithFields(log.Fields{"module": logModule}).Warn("reset the wallet status due to core doesn't have wallet best block")
+		log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
 		w.deleteAccountTxs()
 		w.deleteUtxos()
-		w.status = StatusInfo{}
 	}
 
+	w.status.Version = currentVersion
 	block, err := w.chain.GetBlockByHeight(0)
 	if err != nil {
 		return err

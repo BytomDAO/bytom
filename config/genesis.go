@@ -10,7 +10,7 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
-func genesisTx() *types.Tx {
+func GenesisTx() *types.Tx {
 	contract, err := hex.DecodeString("00148c9d063ff74ee6d9ffa88d83aeb038068366c4c4")
 	if err != nil {
 		log.Panicf("fail on decode genesis tx output control program")
@@ -29,7 +29,7 @@ func genesisTx() *types.Tx {
 }
 
 func mainNetGenesisBlock() *types.Block {
-	tx := genesisTx()
+	tx := GenesisTx()
 	txStatus := bc.NewTransactionStatus()
 	if err := txStatus.SetStatus(0, false); err != nil {
 		log.Panicf(err.Error())
@@ -62,7 +62,7 @@ func mainNetGenesisBlock() *types.Block {
 }
 
 func testNetGenesisBlock() *types.Block {
-	tx := genesisTx()
+	tx := GenesisTx()
 	txStatus := bc.NewTransactionStatus()
 	if err := txStatus.SetStatus(0, false); err != nil {
 		log.Panicf(err.Error())
@@ -95,7 +95,7 @@ func testNetGenesisBlock() *types.Block {
 }
 
 func soloNetGenesisBlock() *types.Block {
-	tx := genesisTx()
+	tx := GenesisTx()
 	txStatus := bc.NewTransactionStatus()
 	if err := txStatus.SetStatus(0, false); err != nil {
 		log.Panicf(err.Error())
