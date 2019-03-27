@@ -183,7 +183,8 @@ func TestWalletUpdate(t *testing.T) {
 
 	for position, tx := range block.Transactions {
 		get := w.DB.Get(calcGlobalTxIndexKey(tx.ID.String()))
-		expect := calcGlobalTxIndex(block.BlockHeader.Hash(), position)
+		bh := block.BlockHeader.Hash()
+		expect := calcGlobalTxIndex(&bh, position)
 		if !reflect.DeepEqual(get, expect) {
 			t.Fatalf("position#%d: compare retrieved globalTxIdx err", position)
 		}

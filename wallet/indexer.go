@@ -46,7 +46,7 @@ func calcGlobalTxIndexKey(txID string) []byte {
 	return []byte(GlobalTxIndexPrefix + txID)
 }
 
-func calcGlobalTxIndex(blockHash bc.Hash, position int) []byte {
+func calcGlobalTxIndex(blockHash *bc.Hash, position int) []byte {
 	return []byte(fmt.Sprintf("%064x%08x", blockHash.String(), position))
 }
 
@@ -126,7 +126,7 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 
 	for position, globalTx := range b.Transactions {
 		blockHash := b.BlockHeader.Hash()
-		batch.Set(calcGlobalTxIndexKey(globalTx.ID.String()), calcGlobalTxIndex(blockHash, position))
+		batch.Set(calcGlobalTxIndexKey(globalTx.ID.String()), calcGlobalTxIndex(&blockHash, position))
 	}
 
 	return nil
