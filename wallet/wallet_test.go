@@ -26,18 +26,6 @@ import (
 )
 
 func TestWalletVersion(t *testing.T) {
-	// t.Log(legacyStatus)
-	// t.Log(lowerVersion)
-
-	// err = w.loadWalletInfo()
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-
-	// if w.status.Version != currentVersion {
-	// 	t.Fatal("wallet version mismatch")
-	// }
-
 	// prepare wallet
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
