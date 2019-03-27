@@ -16,6 +16,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
+	"github.com/bytom/errors"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -100,6 +101,10 @@ func TestWalletUpdate(t *testing.T) {
 	wants, err := w.GetTransactions("")
 	if len(wants) != 1 {
 		t.Fatal(err)
+	}
+
+	if wants[0].ID != tx.ID {
+		t.Fatal(errors.New("account txID mismatch"))
 	}
 }
 
