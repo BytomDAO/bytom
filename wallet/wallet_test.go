@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -179,6 +180,14 @@ func TestWalletUpdate(t *testing.T) {
 
 	if wants[0].ID != tx.ID {
 		t.Fatal("account txID mismatch")
+	}
+
+	for position, tx := range block.Transactions {
+		get := w.DB.Get(calcGlobalTxIndexKey(tx.ID.String()))
+		expect := calcGlobalTxIndex(block.BlockHeader.Hash(), position)
+		if !reflect.DeepEqual(get, expect) {
+			t.Fatalf("position#%d: compare retrieved globalTxIdx err", position)
+		}
 	}
 }
 
