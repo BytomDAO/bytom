@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
+	"github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/database/leveldb"
@@ -86,6 +87,7 @@ func TestWalletUpdate(t *testing.T) {
 	block := mockSingleBlock(tx)
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
+	txStatus.SetStatus(1, false)
 	store.SaveBlock(block, txStatus)
 
 	w := mockWallet(testDB, accountManager, reg, chain, dispatcher)
@@ -247,6 +249,6 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 			Height:  1,
 			Bits:    2305843009230471167,
 		},
-		Transactions: []*types.Tx{tx},
+		Transactions: []*types.Tx{config.GenesisTx(), tx},
 	}
 }
