@@ -133,10 +133,8 @@ func (w *Wallet) loadWalletInfo() error {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
 		if err := w.checkWalletInfo(rawWallet); err == nil {
 			return nil
-		} else if err == errBestBlockNotFoundInCore {
-			log.WithFields(log.Fields{"module": logModule}).Warn("reset the wallet status due to that core doesn't have wallet best block")
 		} else {
-			log.WithFields(log.Fields{"module": logModule}).Warn("reset the wallet status due to wallet version change")
+			log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
 		}
 
 		w.deleteAccountTxs()
