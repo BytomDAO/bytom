@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -25,18 +26,8 @@ import (
 )
 
 func TestWalletVersion(t *testing.T) {
-	type legacyStatusInfo struct {
-		WorkHeight uint64
-		WorkHash   bc.Hash
-		BestHeight uint64
-		BestHash   bc.Hash
-	}
-
-	legacyStatus := legacyStatusInfo{}
-	lowerVersion := StatusInfo{Version: currentVersion - 1}
-
-	t.Log(legacyStatus)
-	t.Log(lowerVersion)
+	// t.Log(legacyStatus)
+	// t.Log(lowerVersion)
 
 	// err = w.loadWalletInfo()
 	// if err != nil {
@@ -46,6 +37,71 @@ func TestWalletVersion(t *testing.T) {
 	// if w.status.Version != currentVersion {
 	// 	t.Fatal("wallet version mismatch")
 	// }
+
+	// prepare wallet
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
+
+	store := leveldb.NewStore(testDB)
+	dispatcher := event.NewDispatcher()
+	txPool := protocol.NewTxPool(store, dispatcher)
+	chain, err := protocol.NewChain(store, txPool)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	accountManager := account.NewManager(testDB, chain)
+	reg := asset.NewRegistry(testDB, chain)
+	w := mockWallet(testDB, accountManager, reg, chain, dispatcher)
+
+	// legacy status test case
+	type legacyStatusInfo struct {
+		WorkHeight uint64
+		WorkHash   bc.Hash
+		BestHeight uint64
+		BestHash   bc.Hash
+	}
+	rawWallet, err := json.Marshal(legacyStatusInfo{})
+	if err != nil {
+		t.Fatal("Marshal legacyStatusInfo")
+	}
+
+	w.DB.Set(walletKey, rawWallet)
+	rawWallet = w.DB.Get(walletKey)
+	if rawWallet == nil {
+		t.Fatal("fail to load wallet StatusInfo")
+	}
+
+	if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := w.checkWalletInfo(); err != errWalletVersionMismatch {
+		t.Fatal("fail to detect legacy wallet version")
+	}
+
+	// lower wallet version test case
+	lowerVersion := StatusInfo{Version: currentVersion - 1}
+	rawWallet, err = json.Marshal(lowerVersion)
+	if err != nil {
+		t.Fatal("save wallet info")
+	}
+
+	w.DB.Set(walletKey, rawWallet)
+	rawWallet = w.DB.Get(walletKey)
+	if rawWallet == nil {
+		t.Fatal("fail to load wallet StatusInfo")
+	}
+
+	if err := w.checkWalletInfo(); err != errWalletVersionMismatch {
+		t.Fatal("fail to detect expired wallet version")
+	}
 }
 
 func TestWalletUpdate(t *testing.T) {

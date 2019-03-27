@@ -117,8 +117,8 @@ func (w *Wallet) memPoolTxQueryLoop() {
 	}
 }
 
-func (w *Wallet) checkWalletInfo(rawWallet []byte) error {
-	if err := json.Unmarshal(rawWallet, &w.status); (err != nil) || ((&w.status).Version != currentVersion) {
+func (w *Wallet) checkWalletInfo() error {
+	if w.status.Version != currentVersion {
 		return errWalletVersionMismatch
 	} else if !w.chain.BlockExist(&w.status.BestHash) {
 		return errBestBlockNotFoundInCore
@@ -131,12 +131,16 @@ func (w *Wallet) checkWalletInfo(rawWallet []byte) error {
 //if error, return initial wallet info and err
 func (w *Wallet) loadWalletInfo() error {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
-		if err := w.checkWalletInfo(rawWallet); err == nil {
-			return nil
-		} else {
-			log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
+		if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+			return err
 		}
 
+		err := w.checkWalletInfo()
+		if err == nil {
+			return nil
+		}
+
+		log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
 		w.deleteAccountTxs()
 		w.deleteUtxos()
 	}
