@@ -254,18 +254,6 @@ func (w *Wallet) GetTransactions(accountID string) ([]*query.AnnotatedTx, error)
 	return annotatedTxs, nil
 }
 
-func (w *Wallet) GetGlobalTxIdxes() []string {
-	txIdxIter := w.DB.IteratorPrefix([]byte(GlobalTxIndexPrefix))
-	defer txIdxIter.Release()
-
-	globalTxIdxes := []string{}
-	for txIdxIter.Next() {
-		globalTxIdxes = append(globalTxIdxes, string(txIdxIter.Value()))
-	}
-
-	return globalTxIdxes
-}
-
 // GetAccountBalances return all account balances
 func (w *Wallet) GetAccountBalances(accountID string, id string) ([]AccountBalance, error) {
 	return w.indexBalances(w.GetAccountUtxos(accountID, "", false, false))
