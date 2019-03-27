@@ -203,7 +203,7 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 
 	storeBatch := w.DB.NewBatch()
 	w.detachUtxos(storeBatch, block, txStatus)
-	w.deleteTransactions(storeBatch, w.status.BestHeight)
+	w.deleteAccountTransactions(storeBatch, w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1
 	w.status.BestHash = block.PreviousBlockHash
