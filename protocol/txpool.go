@@ -192,17 +192,31 @@ func (tp *TxPool) HaveTransaction(txHash *bc.Hash) bool {
 	return tp.IsTransactionInPool(txHash) || tp.IsTransactionInErrCache(txHash)
 }
 
-func isTransactionNoBtmInput(tx *types.Tx) bool {
+func isDustTransaction(tx *types.Tx) bool {
+	// check whether the input contains BTM asset
+	isDust := true
 	for _, input := range tx.TxData.Inputs {
 		if input.AssetID() == *consensus.BTMAssetID {
-			return false
+			isDust = false
+			break
 		}
 	}
-	return true
+
+	if isDust {
+		return true
+	}
+
+	// check whether the output amount is 0
+	for _, output := range tx.TxData.Outputs {
+		if output.Amount == uint64(0) {
+			return true
+		}
+	}
+	return false
 }
 
 func (tp *TxPool) IsDust(tx *types.Tx) bool {
-	return isTransactionNoBtmInput(tx)
+	return isDustTransaction(tx)
 }
 
 func (tp *TxPool) processTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {
