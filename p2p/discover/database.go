@@ -8,20 +8,16 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"os"
-	"sync"
-	"time"
-	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
-	//"github.com/syndtr/goleveldb/leveldb"
-	//"github.com/syndtr/goleveldb/leveldb/errors"
-	//"github.com/syndtr/goleveldb/leveldb/iterator"
-	//"github.com/syndtr/goleveldb/leveldb/opt"
-	//"github.com/syndtr/goleveldb/leveldb/storage"
-	//"github.com/syndtr/goleveldb/leveldb/util"
-	"github.com/tendermint/go-wire"
-	"github.com/bytom/crypto"
 	"path"
 	"strconv"
+	"sync"
+	"time"
+
+	log "github.com/sirupsen/logrus"
+	wire "github.com/tendermint/go-wire"
+	dbm "github.com/tendermint/tmlibs/db"
+
+	"github.com/bytom/crypto"
 )
 
 var (
@@ -32,7 +28,7 @@ var (
 
 // nodeDB stores all nodes we know about.
 type nodeDB struct {
-	lvl    dbm.DB   // Interface to the database itself
+	lvl    dbm.DB        // Interface to the database itself
 	self   NodeID        // Own node id to prevent adding it into the database
 	runner sync.Once     // Ensures we can start at most one expirer
 	quit   chan struct{} // Channel to signal the expiring thread to stop
