@@ -397,22 +397,14 @@ func (sw *Switch) filterConnByPeer(peer *Peer) error {
 }
 
 func (sw *Switch) listenerRoutine(l Listener) {
-	whileList := sw.Config.P2P.InboundWhiteList
-	whileListHosts := strings.Split(whileList, ";")
-	whileListHostMap := make(map[string]bool)
-	for _, host := range whileListHosts {
-		whileListHostMap[host] = true
-	}
-
 	for {
 		inConn, ok := <-l.Connections()
 		if !ok {
 			break
 		}
 
-		host, _, _ := net.SplitHostPort(inConn.RemoteAddr().String())
-		// disconnect if we alrady have MaxNumPeers and the inbound connection isn't in the whitelist
-		if _, ok := whileListHostMap[host]; (sw.peers.Size() >= sw.Config.P2P.MaxNumPeers) && (!ok) {
+		// disconnect if we alrady have MaxNumPeers
+		if sw.peers.Size() >= sw.Config.P2P.MaxNumPeers {
 			if err := inConn.Close(); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "remote peer:": inConn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
 			}
