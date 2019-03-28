@@ -1,4 +1,4 @@
-package discover
+package dht
 
 import (
 	"container/heap"

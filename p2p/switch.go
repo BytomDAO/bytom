@@ -15,13 +15,13 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
-	"github.com/bytom/p2p/discover"
+	"github.com/bytom/p2p/discover/dht"
 	"github.com/bytom/p2p/netutil"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/version"
-	dbm "github.com/bytom/database/leveldb"
 )
 
 const (
@@ -41,7 +41,7 @@ var (
 )
 
 type discv interface {
-	ReadRandomNodes(buf []*discover.Node) (n int)
+	ReadRandomNodes(buf []*dht.Node) (n int)
 }
 
 // Switch handles peer connections and exposes an API to receive incoming messages
@@ -72,7 +72,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	var err error
 	var l Listener
 	var listenAddr string
-	var discv *discover.Network
+	var discv *dht.Network
 
 	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 	config.P2P.PrivateKey, err = config.NodeKey()
@@ -91,7 +91,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	if !config.VaultMode {
 		// Create listener
 		l, listenAddr = GetListener(config.P2P)
-		discv, err = discover.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port)
+		discv, err = dht.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port)
 		if err != nil {
 			return nil, err
 		}
@@ -471,7 +471,7 @@ func (sw *Switch) ensureOutboundPeers() {
 	}
 
 	var wg sync.WaitGroup
-	nodes := make([]*discover.Node, numToDial)
+	nodes := make([]*dht.Node, numToDial)
 	n := sw.discv.ReadRandomNodes(nodes)
 	for i := 0; i < n; i++ {
 		try := NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)

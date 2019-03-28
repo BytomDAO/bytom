@@ -4,7 +4,7 @@
 // can be connected to. It uses a Kademlia-like protocol to maintain a
 // distributed database of the IDs and endpoints of all listening
 // nodes.
-package discover
+package dht
 
 import (
 	"crypto/rand"

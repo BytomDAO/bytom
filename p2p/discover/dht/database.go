@@ -1,7 +1,7 @@
 // Contains the node database, storing previously seen nodes and any collected
 // metadata about them for QoS purposes.
 
-package discover
+package dht
 
 import (
 	"bytes"

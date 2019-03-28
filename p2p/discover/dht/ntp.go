@@ -1,7 +1,7 @@
 // Contains the NTP time drift detection via the SNTP protocol:
 //   https://tools.ietf.org/html/rfc4330
 
-package discover
+package dht
 
 import (
 	"fmt"

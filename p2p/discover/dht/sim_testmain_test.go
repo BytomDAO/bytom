@@ -16,7 +16,7 @@
 
 // +build go1.4,nacl,faketime_simulation
 
-package discover
+package dht
 
 import (
 	"os"
