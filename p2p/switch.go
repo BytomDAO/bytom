@@ -425,21 +425,20 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-// totalToDial = keepDial + moreDial
-func (sw *Switch) ensureOutboundPeers() {
-	keepDials := discover.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
-	keepDialNodes := discover.StrsToNodes(keepDials)
+func (sw *Switch) ensureOutboundPeers(useKeepDial bool) {
+	var nodes []*discover.Node
 	numOutPeers, _, numDialing := sw.NumPeers()
-	totalToDial := (minNumOutboundPeers - (numOutPeers + numDialing))
-	moreDial := totalToDial - len(keepDialNodes)
-	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": totalToDial}).Debug("ensure peers")
-	// too many peers connected and dailing
-	if totalToDial <= 0 {
-		return
+	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing))
+	if useKeepDial {
+		keepDials := discover.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
+		nodes = discover.StrsToNodes(keepDials)
+		numToDial = len(nodes)
 	}
-	// still need to dail keepDialNodes
-	if moreDial < 0 {
-		moreDial = 0
+	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": numToDial}).Debug("ensure peers")
+
+	// too many peers connected and dailing
+	if numToDial <= 0 {
+		return
 	}
 
 	connectedPeers := make(map[string]struct{})
@@ -448,11 +447,11 @@ func (sw *Switch) ensureOutboundPeers() {
 	}
 
 	var wg sync.WaitGroup
-	nodes := make([]*discover.Node, moreDial)
-	n := sw.discv.ReadRandomNodes(nodes)
-	// some elements in nodes can be nil
-	nodes = append(keepDialNodes, nodes...)
-	for i := 0; i < len(keepDialNodes)+n; i++ {
+	if !useKeepDial {
+		nodes = make([]*discover.Node, numToDial)
+		numToDial = sw.discv.ReadRandomNodes(nodes)
+	}
+	for i := 0; i < numToDial; i++ {
 		try := NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
 		if sw.NodeInfo().ListenAddr == try.String() {
 			continue
@@ -471,7 +470,8 @@ func (sw *Switch) ensureOutboundPeers() {
 }
 
 func (sw *Switch) ensureOutboundPeersRoutine() {
-	sw.ensureOutboundPeers()
+	sw.ensureOutboundPeers(true)
+	sw.ensureOutboundPeers(false)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -479,7 +479,8 @@ func (sw *Switch) ensureOutboundPeersRoutine() {
 	for {
 		select {
 		case <-ticker.C:
-			sw.ensureOutboundPeers()
+			sw.ensureOutboundPeers(true)
+			sw.ensureOutboundPeers(false)
 		case <-sw.Quit:
 			return
 		}
