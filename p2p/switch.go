@@ -436,12 +436,12 @@ func (sw *Switch) ensureKeepConnectPeers() {
 	}
 
 	var wg sync.WaitGroup
-	trys, err := NewNetAddressStrings(keepDials)
-	if err != nil {
-		return
-	}
+	for _, keepDial := range keepDials {
+		try, err := NewNetAddressString(keepDial)
+		if err != nil {
+			continue
+		}
 
-	for _, try := range trys {
 		if sw.NodeInfo().ListenAddr == try.String() {
 			continue
 		}
