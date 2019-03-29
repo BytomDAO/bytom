@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"os"
 	"path"
-	"strconv"
 	"sync"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 
 	"github.com/bytom/crypto"
 	dbm "github.com/bytom/database/leveldb"
+	"github.com/bytom/errors"
 )
 
 var (
@@ -72,7 +72,7 @@ func newMemoryNodeDB(self NodeID) *nodeDB {
 func newPersistentNodeDB(filePath string, version int, self NodeID) (*nodeDB, error) {
 	dir, file := path.Split(filePath)
 	if file == "" {
-		file = strconv.FormatInt(time.Now().Unix(), 10)
+		return nil, errors.New("unspecified db file name")
 	}
 	db := dbm.NewDB(file, dbm.GoLevelDBBackendStr, dir)
 
