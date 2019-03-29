@@ -19,6 +19,7 @@ var (
 
 func init() {
 	testCfg = cfg.DefaultConfig()
+
 }
 
 /*
@@ -290,7 +291,7 @@ func TestStopPeer(t *testing.T) {
 	defer s1.Stop()
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
-	addr, err := NewNetAddressString("127.0.0.1:46656")
+	addr, err := NewNetAddressString(s1.nodeInfo.ListenAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
