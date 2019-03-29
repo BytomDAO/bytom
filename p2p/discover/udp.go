@@ -264,9 +264,9 @@ type udp struct {
 	net netWork
 }
 
-func CheckAndSplitAddresses(addressesStr string) ([]string, error) {
+func CheckAndSplitAddresses(addressesStr string) []string {
 	if addressesStr == "" {
-		return nil, nil
+		return nil
 	}
 
 	var addresses []string
@@ -274,20 +274,23 @@ func CheckAndSplitAddresses(addressesStr string) ([]string, error) {
 	for _, address := range splits {
 		ip, port, err := net.SplitHostPort(address)
 		if err != nil {
-			return nil, err
+			log.WithFields(log.Fields{"module": "discover", "err": err, "address": address}).Warn("net.SplitHostPort")
+			continue
 		}
 
 		if validIP := net.ParseIP(ip); validIP == nil {
-			return nil, errInvalidSeedIP
+			log.WithFields(log.Fields{"module": "discover", "err": errInvalidSeedIP, "ip": ip}).Warn("net.ParseIP")
+			continue
 		}
 
 		if _, err := strconv.ParseUint(port, 10, 16); err != nil {
-			return nil, errInvalidSeedPort
+			log.WithFields(log.Fields{"module": "discover", "err": errInvalidSeedPort, "port": port}).Warn("strconv parse port")
+			continue
 		}
 
 		addresses = append(addresses, address)
 	}
-	return addresses, nil
+	return addresses
 }
 
 func StrToNodes(addresses []string) []*Node {
@@ -320,11 +323,7 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Net
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on query dns seeds")
 	}
 
-	codedSeeds, err := CheckAndSplitAddresses(config.P2P.Seeds)
-	if err != nil {
-		return nil, err
-	}
-
+	codedSeeds := CheckAndSplitAddresses(config.P2P.Seeds)
 	seeds = append(seeds, codedSeeds...)
 	if len(seeds) == 0 {
 		return ntab, nil

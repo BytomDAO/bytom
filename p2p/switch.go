@@ -425,23 +425,21 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
+// totalToDial = keepDial + moreDial
 func (sw *Switch) ensureOutboundPeers() {
-	keepDials, err := discover.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
-	if err != nil {
-		return
-	}
-
-	tryConnetNodes := discover.StrToNodes(keepDials)
+	keepDials := discover.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
+	keepDialNodes := discover.StrToNodes(keepDials)
 	numOutPeers, _, numDialing := sw.NumPeers()
-	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing)) - len(tryConnetNodes)
-	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": numToDial + len(tryConnetNodes)}).Debug("ensure peers")
+	totalToDial := (minNumOutboundPeers - (numOutPeers + numDialing))
+	moreDial := totalToDial - len(keepDialNodes)
+	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": totalToDial}).Debug("ensure peers")
 	// too many peers connected and dailing
-	if numToDial+len(tryConnetNodes) <= 0 {
+	if totalToDial <= 0 {
 		return
 	}
-	// still need to dail tryConnetNodes
-	if numToDial < 0 {
-		numToDial = 0
+	// still need to dail keepDialNodes
+	if moreDial < 0 {
+		moreDial = 0
 	}
 
 	connectedPeers := make(map[string]struct{})
@@ -450,10 +448,11 @@ func (sw *Switch) ensureOutboundPeers() {
 	}
 
 	var wg sync.WaitGroup
-	nodes := make([]*discover.Node, numToDial)
+	nodes := make([]*discover.Node, moreDial)
 	n := sw.discv.ReadRandomNodes(nodes)
-	nodes = append(nodes, tryConnetNodes...)
-	for i := 0; i < n+len(tryConnetNodes); i++ {
+	// some elements in nodes can be nil
+	nodes = append(keepDialNodes, nodes...)
+	for i := 0; i < len(keepDialNodes)+n; i++ {
 		try := NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
 		if sw.NodeInfo().ListenAddr == try.String() {
 			continue
