@@ -7,10 +7,18 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strconv"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var lan4, lan6, special4, special6 Netlist
+
+var (
+	errInvalidIP   = errors.New("ip is invalid")
+	errInvalidPort = errors.New("port is invalid")
+)
 
 func init() {
 	// Lists from RFC 5735, RFC 5156,
@@ -303,4 +311,33 @@ func (s DistinctNetSet) String() string {
 	}
 	buf.WriteString("}")
 	return buf.String()
+}
+
+func CheckAndSplitAddresses(addressesStr string) []string {
+	if addressesStr == "" {
+		return nil
+	}
+
+	var addresses []string
+	splits := strings.Split(addressesStr, ",")
+	for _, address := range splits {
+		ip, port, err := net.SplitHostPort(address)
+		if err != nil {
+			log.WithFields(log.Fields{"module": "netutil", "err": err, "address": address}).Warn("net.SplitHostPort")
+			continue
+		}
+
+		if validIP := net.ParseIP(ip); validIP == nil {
+			log.WithFields(log.Fields{"module": "netutil", "err": errInvalidIP, "ip": ip}).Warn("net.ParseIP")
+			continue
+		}
+
+		if _, err := strconv.ParseUint(port, 10, 16); err != nil {
+			log.WithFields(log.Fields{"module": "netutil", "err": errInvalidPort, "port": port}).Warn("strconv parse port")
+			continue
+		}
+
+		addresses = append(addresses, address)
+	}
+	return addresses
 }

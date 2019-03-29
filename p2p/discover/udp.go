@@ -9,7 +9,6 @@ import (
 	"net"
 	"path"
 	"strconv"
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -38,8 +37,6 @@ var (
 	errTimeout          = errors.New("RPC timeout")
 	errClockWarp        = errors.New("reply deadline too far in the future")
 	errClosed           = errors.New("socket closed")
-	errInvalidSeedIP    = errors.New("seed ip is invalid")
-	errInvalidSeedPort  = errors.New("seed port is invalid")
 )
 
 // Timeouts
@@ -264,44 +261,6 @@ type udp struct {
 	net netWork
 }
 
-func CheckAndSplitAddresses(addressesStr string) []string {
-	if addressesStr == "" {
-		return nil
-	}
-
-	var addresses []string
-	splits := strings.Split(addressesStr, ",")
-	for _, address := range splits {
-		ip, port, err := net.SplitHostPort(address)
-		if err != nil {
-			log.WithFields(log.Fields{"module": "discover", "err": err, "address": address}).Warn("net.SplitHostPort")
-			continue
-		}
-
-		if validIP := net.ParseIP(ip); validIP == nil {
-			log.WithFields(log.Fields{"module": "discover", "err": errInvalidSeedIP, "ip": ip}).Warn("net.ParseIP")
-			continue
-		}
-
-		if _, err := strconv.ParseUint(port, 10, 16); err != nil {
-			log.WithFields(log.Fields{"module": "discover", "err": errInvalidSeedPort, "port": port}).Warn("strconv parse port")
-			continue
-		}
-
-		addresses = append(addresses, address)
-	}
-	return addresses
-}
-
-func StrsToNodes(addresses []string) []*Node {
-	var nodes []*Node
-	for _, address := range addresses {
-		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(address))) + "@" + address
-		nodes = append(nodes, MustParseNode(url))
-	}
-	return nodes
-}
-
 func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Network, error) {
 	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
 	if err != nil {
@@ -323,17 +282,19 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Net
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on query dns seeds")
 	}
 
-	codedSeeds := CheckAndSplitAddresses(config.P2P.Seeds)
+	codedSeeds := netutil.CheckAndSplitAddresses(config.P2P.Seeds)
 	seeds = append(seeds, codedSeeds...)
 	if len(seeds) == 0 {
 		return ntab, nil
 	}
 
+	var nodes []*Node
 	for _, seed := range seeds {
 		version.Status.AddSeed(seed)
+		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
+		nodes = append(nodes, MustParseNode(url))
 	}
 
-	nodes := StrsToNodes(seeds)
 	if err = ntab.SetFallbackNodes(nodes); err != nil {
 		return nil, err
 	}

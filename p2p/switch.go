@@ -19,6 +19,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
+	"github.com/bytom/p2p/netutil"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/version"
 )
@@ -425,18 +426,42 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (sw *Switch) ensureOutboundPeers(useKeepDial bool) {
-	var nodes []*discover.Node
+func (sw *Switch) ensureKeepConnectPeers() {
+	numOutPeers, _, numDialing := sw.NumPeers()
+	keepDials := netutil.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
+	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": len(keepDials)}).Debug("ensure KeepConnec peers")
+	connectedPeers := make(map[string]struct{})
+	for _, peer := range sw.Peers().List() {
+		connectedPeers[peer.remoteAddrHost()] = struct{}{}
+	}
+
+	var wg sync.WaitGroup
+	trys, err := NewNetAddressStrings(keepDials)
+	if err != nil {
+		return
+	}
+
+	for _, try := range trys {
+		if sw.NodeInfo().ListenAddr == try.String() {
+			continue
+		}
+		if dialling := sw.IsDialing(try); dialling {
+			continue
+		}
+		if _, ok := connectedPeers[try.IP.String()]; ok {
+			continue
+		}
+
+		wg.Add(1)
+		go sw.dialPeerWorker(try, &wg)
+	}
+	wg.Wait()
+}
+
+func (sw *Switch) ensureOutboundPeers() {
 	numOutPeers, _, numDialing := sw.NumPeers()
 	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing))
-	if useKeepDial {
-		keepDials := discover.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
-		nodes = discover.StrsToNodes(keepDials)
-		numToDial = len(nodes)
-	}
 	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": numToDial}).Debug("ensure peers")
-
-	// too many peers connected and dailing
 	if numToDial <= 0 {
 		return
 	}
@@ -447,11 +472,9 @@ func (sw *Switch) ensureOutboundPeers(useKeepDial bool) {
 	}
 
 	var wg sync.WaitGroup
-	if !useKeepDial {
-		nodes = make([]*discover.Node, numToDial)
-		numToDial = sw.discv.ReadRandomNodes(nodes)
-	}
-	for i := 0; i < numToDial; i++ {
+	nodes := make([]*discover.Node, numToDial)
+	n := sw.discv.ReadRandomNodes(nodes)
+	for i := 0; i < n; i++ {
 		try := NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
 		if sw.NodeInfo().ListenAddr == try.String() {
 			continue
@@ -470,8 +493,8 @@ func (sw *Switch) ensureOutboundPeers(useKeepDial bool) {
 }
 
 func (sw *Switch) ensureOutboundPeersRoutine() {
-	sw.ensureOutboundPeers(true)
-	sw.ensureOutboundPeers(false)
+	sw.ensureKeepConnectPeers()
+	sw.ensureOutboundPeers()
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -479,8 +502,8 @@ func (sw *Switch) ensureOutboundPeersRoutine() {
 	for {
 		select {
 		case <-ticker.C:
-			sw.ensureOutboundPeers(true)
-			sw.ensureOutboundPeers(false)
+			sw.ensureKeepConnectPeers()
+			sw.ensureOutboundPeers()
 		case <-sw.Quit:
 			return
 		}
