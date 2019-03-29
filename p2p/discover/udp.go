@@ -273,7 +273,7 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Net
 	}
 
 	realaddr := conn.LocalAddr().(*net.UDPAddr)
-	ntab, err := ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover.db"), nil)
+	ntab, err := ListenUDP(priv, conn, realaddr, path.Join(config.DBDir(), "discover"), nil)
 	if err != nil {
 		return nil, err
 	}

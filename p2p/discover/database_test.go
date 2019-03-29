@@ -65,9 +65,8 @@ func TestNodeDBInt64(t *testing.T) {
 	tests := nodeDBInt64Tests
 	for i := 0; i < len(tests); i++ {
 		// Insert the next value
-		if err := db.storeInt64(tests[i].key, tests[i].value); err != nil {
-			t.Errorf("test %d: failed to store value: %v", i, err)
-		}
+		db.storeInt64(tests[i].key, tests[i].value)
+
 		// Check all existing and non existing values
 		for j := 0; j < len(tests); j++ {
 			num := db.fetchInt64(tests[j].key)
@@ -98,9 +97,8 @@ func TestNodeDBFetchStore(t *testing.T) {
 	if stored := db.lastPing(node.ID); stored.Unix() != 0 {
 		t.Errorf("ping: non-existing object: %v", stored)
 	}
-	if err := db.updateLastPing(node.ID, inst); err != nil {
-		t.Errorf("ping: failed to update: %v", err)
-	}
+	db.updateLastPing(node.ID, inst)
+
 	if stored := db.lastPing(node.ID); stored.Unix() != inst.Unix() {
 		t.Errorf("ping: value mismatch: have %v, want %v", stored, inst)
 	}
@@ -108,9 +106,8 @@ func TestNodeDBFetchStore(t *testing.T) {
 	if stored := db.lastPong(node.ID); stored.Unix() != 0 {
 		t.Errorf("pong: non-existing object: %v", stored)
 	}
-	if err := db.updateLastPong(node.ID, inst); err != nil {
-		t.Errorf("pong: failed to update: %v", err)
-	}
+	db.updateLastPong(node.ID, inst)
+
 	if stored := db.lastPong(node.ID); stored.Unix() != inst.Unix() {
 		t.Errorf("pong: value mismatch: have %v, want %v", stored, inst)
 	}
@@ -118,9 +115,8 @@ func TestNodeDBFetchStore(t *testing.T) {
 	if stored := db.findFails(node.ID); stored != 0 {
 		t.Errorf("find-node fails: non-existing object: %v", stored)
 	}
-	if err := db.updateFindFails(node.ID, num); err != nil {
-		t.Errorf("find-node fails: failed to update: %v", err)
-	}
+	db.updateFindFails(node.ID, num)
+
 	if stored := db.findFails(node.ID); stored != num {
 		t.Errorf("find-node fails: value mismatch: have %v, want %v", stored, num)
 	}
@@ -204,9 +200,7 @@ func TestNodeDBSeedQuery(t *testing.T) {
 		if err := db.updateNode(seed.node); err != nil {
 			t.Fatalf("node %d: failed to insert: %v", i, err)
 		}
-		if err := db.updateLastPong(seed.node.ID, seed.pong); err != nil {
-			t.Fatalf("node %d: failed to insert lastPong: %v", i, err)
-		}
+		db.updateLastPong(seed.node.ID, seed.pong)
 	}
 
 	// Retrieve the entire batch and check for duplicates
@@ -243,9 +237,7 @@ func TestNodeDBPersistency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create persistent database: %v", err)
 	}
-	if err = db.storeInt64(testKey, testInt); err != nil {
-		t.Fatalf("failed to store value: %v.", err)
-	}
+	db.storeInt64(testKey, testInt)
 	db.close()
 
 	// Reopen the database and check the value
@@ -304,9 +296,7 @@ func TestNodeDBExpiration(t *testing.T) {
 		if err := db.updateNode(seed.node); err != nil {
 			t.Fatalf("node %d: failed to insert: %v", i, err)
 		}
-		if err := db.updateLastPong(seed.node.ID, seed.pong); err != nil {
-			t.Fatalf("node %d: failed to update pong: %v", i, err)
-		}
+		db.updateLastPong(seed.node.ID, seed.pong)
 	}
 	// Expire some of them, and check the rest
 	if err := db.expireNodes(); err != nil {
@@ -337,9 +327,7 @@ func TestNodeDBSelfExpiration(t *testing.T) {
 		if err := db.updateNode(seed.node); err != nil {
 			t.Fatalf("node %d: failed to insert: %v", i, err)
 		}
-		if err := db.updateLastPong(seed.node.ID, seed.pong); err != nil {
-			t.Fatalf("node %d: failed to update pong: %v", i, err)
-		}
+		db.updateLastPong(seed.node.ID, seed.pong)
 	}
 	// Expire the nodes and make sure self has been evacuated too
 	if err := db.expireNodes(); err != nil {
@@ -381,9 +369,7 @@ func TestTopicRegTicketsUpdate(t *testing.T) {
 	}
 
 	for _, v := range topicRegTicketsTests {
-		if err := db.updateTopicRegTickets(v.id, v.issued, v.used); err != nil {
-			t.Fatalf("failed to update topic reg ticktes: %v", err)
-		}
+		db.updateTopicRegTickets(v.id, v.issued, v.used)
 
 		issued, used := db.fetchTopicRegTickets(v.id)
 		if issued != v.issued {

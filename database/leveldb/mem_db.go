@@ -101,6 +101,16 @@ func (it *memDBIterator) Value() []byte {
 	return it.db.Get(it.Key())
 }
 
+func (it *memDBIterator) Seek(point []byte) bool {
+	for i, key := range it.keys {
+		if key >= string(point) {
+			it.last = i
+			return true
+		}
+	}
+	return false
+}
+
 func (it *memDBIterator) Release() {
 	it.db = nil
 	it.keys = nil

@@ -5,17 +5,16 @@ import (
 	"os"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
-	"github.com/bytom/database/leveldb"
+	"github.com/bytom/database"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 	"github.com/golang/protobuf/proto"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const utxoPrefix = "UT:"
@@ -23,7 +22,7 @@ const utxoPrefix = "UT:"
 type chainTestContext struct {
 	Chain *protocol.Chain
 	DB    dbm.DB
-	Store *leveldb.Store
+	Store *database.Store
 }
 
 func (ctx *chainTestContext) validateStatus(block *types.Block) error {

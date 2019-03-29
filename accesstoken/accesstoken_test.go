@@ -6,9 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/errors"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestCreate(t *testing.T) {

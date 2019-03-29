@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
@@ -22,6 +21,7 @@ import (
 	"github.com/bytom/p2p/netutil"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/version"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const (

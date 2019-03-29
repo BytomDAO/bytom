@@ -995,9 +995,7 @@ func init() {
 		name:     "unresponsive",
 		canQuery: true,
 		handle: func(net *Network, n *Node, ev nodeEvent, pkt *ingressPacket) (*nodeState, error) {
-			if err := net.db.deleteNode(n.ID); err != nil {
-				return known, err
-			}
+			net.db.deleteNode(n.ID)
 
 			switch ev {
 			case pingPacket:
@@ -1130,9 +1128,7 @@ func (net *Network) handleKnownPong(n *Node, pkt *ingressPacket) error {
 	}
 	n.pingEcho = nil
 	n.pingTopics = nil
-	if err = net.db.updateLastPong(n.ID, time.Now()); err != nil {
-		return err
-	}
+	net.db.updateLastPong(n.ID, time.Now())
 	return err
 }
 

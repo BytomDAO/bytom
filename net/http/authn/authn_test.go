@@ -6,10 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/accesstoken"
 	"github.com/bytom/errors"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestAuthenticate(t *testing.T) {

@@ -8,13 +8,12 @@ import (
 	"sort"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/account"
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/testutil"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestGetAccountUtxos(t *testing.T) {

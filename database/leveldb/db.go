@@ -29,6 +29,7 @@ type Iterator interface {
 
 	Key() []byte
 	Value() []byte
+	Seek([]byte) bool
 
 	Release()
 	Error() error
