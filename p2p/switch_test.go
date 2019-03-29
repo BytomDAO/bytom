@@ -131,8 +131,10 @@ func TestFiltersOutItself(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	cfg := testCfg
+	cfg.P2P.ListenAddress = "0.0.0.0:0"
 
-	s1 := MakeSwitch(testCfg, testDB, initSwitchFunc)
+	s1 := MakeSwitch(cfg, testDB, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 	// simulate s1 having a public key and creating a remote peer with the same key
@@ -144,10 +146,7 @@ func TestFiltersOutItself(t *testing.T) {
 	}
 
 	//S1 dialing itself ip address
-	addr, err := NewNetAddressString("0.0.0.0:46656")
-	if err != nil {
-		t.Fatal(err)
-	}
+	addr := NewNetAddress(s1.listeners[0].(*DefaultListener).NetListener().Addr())
 
 	if err := s1.DialPeerWithAddress(addr); errors.Root(err) != ErrConnectSelf {
 		t.Fatal(err)
@@ -162,7 +161,9 @@ func TestDialBannedPeer(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	s1 := MakeSwitch(testCfg, testDB, initSwitchFunc)
+	cfg := testCfg
+	cfg.P2P.ListenAddress = "0.0.0.0:0"
+	s1 := MakeSwitch(cfg, testDB, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: testCfg}
@@ -187,6 +188,9 @@ func TestDuplicateOutBoundPeer(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
+	cfg := testCfg
+	cfg.P2P.ListenAddress = "0.0.0.0:0"
+
 	s1 := MakeSwitch(testCfg, testDB, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
@@ -210,12 +214,15 @@ func TestDuplicateInBoundPeer(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	s1 := MakeSwitch(testCfg, testDB, initSwitchFunc)
+	cfg := testCfg
+	cfg.P2P.ListenAddress = "0.0.0.0:0"
+
+	s1 := MakeSwitch(cfg, testDB, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
-	addr, err := NewNetAddressString(s1.nodeInfo.ListenAddr)
+	addr := NewNetAddress(s1.listeners[0].(*DefaultListener).NetListener().Addr())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -245,12 +252,13 @@ func TestAddInboundPeer(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	cfg := *testCfg
 	cfg.P2P.MaxNumPeers = 2
+	cfg.P2P.ListenAddress = "0.0.0.0:0"
 	s1 := MakeSwitch(&cfg, testDB, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
-	addr, err := NewNetAddressString(s1.nodeInfo.ListenAddr)
+	addr := NewNetAddress(s1.listeners[0].(*DefaultListener).NetListener().Addr())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,12 +294,13 @@ func TestStopPeer(t *testing.T) {
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
 	cfg := *testCfg
 	cfg.P2P.MaxNumPeers = 2
+	cfg.P2P.ListenAddress = "0.0.0.0:0"
 	s1 := MakeSwitch(&cfg, testDB, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 
 	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
-	addr, err := NewNetAddressString(s1.nodeInfo.ListenAddr)
+	addr := NewNetAddress(s1.listeners[0].(*DefaultListener).NetListener().Addr())
 	if err != nil {
 		t.Fatal(err)
 	}
