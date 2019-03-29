@@ -71,6 +71,28 @@ var testTxs = []*types.Tx{
 			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 1, []byte{0x65}),
 		},
 	}),
+	//tx5
+	types.NewTx(types.TxData{
+		SerializedSize: 100,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 1, 1, []byte{0x51}),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(*consensus.BTMAssetID, 0, []byte{0x51}),
+		},
+	}),
+	//tx6
+	types.NewTx(types.TxData{
+		SerializedSize: 100,
+		Inputs: []*types.TxInput{
+			types.NewSpendInput(nil, bc.NewHash([32]byte{0x01}), *consensus.BTMAssetID, 3, 1, []byte{0x51}),
+			types.NewSpendInput(nil, testutil.MustDecodeHash("d84d0be0fd08e7341f2d127749bb0d0844d4560f53bd54861cee9981fd922cad"), bc.NewAssetID([32]byte{0xa1}), 3, 0, []byte{0x62}),
+		},
+		Outputs: []*types.TxOutput{
+			types.NewTxOutput(*consensus.BTMAssetID, 2, []byte{0x51}),
+			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 0, []byte{0x65}),
+		},
+	}),
 }
 
 type mockStore struct{}
@@ -602,6 +624,30 @@ func TestProcessTransaction(t *testing.T) {
 			want: &TxPool{},
 			addTx: &TxDesc{
 				Tx:         testTxs[3],
+				StatusFail: false,
+			},
+		},
+		//Dust tx
+		{
+			want: &TxPool{},
+			addTx: &TxDesc{
+				Tx:         testTxs[4],
+				StatusFail: false,
+			},
+		},
+		//Dust tx
+		{
+			want: &TxPool{},
+			addTx: &TxDesc{
+				Tx:         testTxs[5],
+				StatusFail: false,
+			},
+		},
+		//Dust tx
+		{
+			want: &TxPool{},
+			addTx: &TxDesc{
+				Tx:         testTxs[6],
 				StatusFail: false,
 			},
 		},
