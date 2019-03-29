@@ -64,7 +64,7 @@ var testTxs = []*types.Tx{
 	types.NewTx(types.TxData{
 		SerializedSize: 100,
 		Inputs: []*types.TxInput{
-			types.NewSpendInput(nil, testutil.MustDecodeHash("d84d0be0fd08e7341f2d127749bb0d0844d4560f53bd54861cee9981fd922cad"), bc.NewAssetID([32]byte{0xa1}), 3, 0, []byte{0x51}),
+			types.NewSpendInput(nil, testutil.MustDecodeHash("d84d0be0fd08e7341f2d127749bb0d0844d4560f53bd54861cee9981fd922cad"), bc.NewAssetID([32]byte{0xa1}), 3, 0, []byte{0x62}),
 		},
 		Outputs: []*types.TxOutput{
 			types.NewTxOutput(bc.NewAssetID([32]byte{0xa1}), 2, []byte{0x64}),
