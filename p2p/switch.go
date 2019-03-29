@@ -437,7 +437,7 @@ func (sw *Switch) ensureKeepConnectPeers() {
 	for _, keepDial := range keepDials {
 		try, err := NewNetAddressString(keepDial)
 		if err != nil {
-			log.WithFields(log.Fields{"module": "switch", "err": err, "address": keepDial}).Warn("parse address to NetAddress")
+			log.WithFields(log.Fields{"module": logModule, "err": err, "address": keepDial}).Warn("parse address to NetAddress")
 			continue
 		}
 
