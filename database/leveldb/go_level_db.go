@@ -26,7 +26,7 @@ type GoLevelDB struct {
 }
 
 func NewGoLevelDB(name string, dir string) (*GoLevelDB, error) {
-	dbPath := path.Join(dir, name)
+	dbPath := path.Join(dir, name+".db")
 	db, err := leveldb.OpenFile(dbPath, nil)
 	if err != nil {
 		return nil, err
