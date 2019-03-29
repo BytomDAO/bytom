@@ -429,7 +429,7 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 
 func (sw *Switch) ensureOutboundPeers() {
 	validTryConnectPeerAddrs := []string{}
-	tryConnectPeerAddrs := strings.Split(sw.Config.P2P.KeepConnect, ";")
+	tryConnectPeerAddrs := strings.Split(sw.Config.P2P.KeepDial, ";")
 	for _, tryConnectPeerAddr := range tryConnectPeerAddrs {
 		ip, port, err := net.SplitHostPort(tryConnectPeerAddr)
 		if err != nil {

@@ -151,7 +151,7 @@ type P2PConfig struct {
 	ProxyAddress     string `mapstructure:"proxy_address"`
 	ProxyUsername    string `mapstructure:"proxy_username"`
 	ProxyPassword    string `mapstructure:"proxy_password"`
-	KeepConnect      string `mapstructure:"keep_connect"`
+	KeepDial         string `mapstructure:"keep_dial"`
 }
 
 // Default configurable p2p parameters.
