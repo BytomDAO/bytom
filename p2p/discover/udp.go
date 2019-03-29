@@ -9,7 +9,6 @@ import (
 	"net"
 	"path"
 	"strconv"
-	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -38,8 +37,6 @@ var (
 	errTimeout          = errors.New("RPC timeout")
 	errClockWarp        = errors.New("reply deadline too far in the future")
 	errClosed           = errors.New("socket closed")
-	errInvalidSeedIP    = errors.New("seed ip is invalid")
-	errInvalidSeedPort  = errors.New("seed port is invalid")
 )
 
 // Timeouts
@@ -285,26 +282,8 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Net
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on query dns seeds")
 	}
 
-	if config.P2P.Seeds != "" {
-		codedSeeds := strings.Split(config.P2P.Seeds, ",")
-		for _, codedSeed := range codedSeeds {
-			ip, port, err := net.SplitHostPort(codedSeed)
-			if err != nil {
-				return nil, err
-			}
-
-			if validIP := net.ParseIP(ip); validIP == nil {
-				return nil, errInvalidSeedIP
-			}
-
-			if _, err := strconv.ParseUint(port, 10, 16); err != nil {
-				return nil, errInvalidSeedPort
-			}
-
-			seeds = append(seeds, codedSeed)
-		}
-	}
-
+	codedSeeds := netutil.CheckAndSplitAddresses(config.P2P.Seeds)
+	seeds = append(seeds, codedSeeds...)
 	if len(seeds) == 0 {
 		return ntab, nil
 	}

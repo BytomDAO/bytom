@@ -46,6 +46,7 @@ func init() {
 	runNodeCmd.Flags().String("p2p.proxy_address", config.P2P.ProxyAddress, "Connect via SOCKS5 proxy (eg. 127.0.0.1:1086)")
 	runNodeCmd.Flags().String("p2p.proxy_username", config.P2P.ProxyUsername, "Username for proxy server")
 	runNodeCmd.Flags().String("p2p.proxy_password", config.P2P.ProxyPassword, "Password for proxy server")
+	runNodeCmd.Flags().String("p2p.keep_dial", config.P2P.KeepDial, "Peers addresses try keeping connecting to, separated by ',' (for example \"1.1.1.1:46657;2.2.2.2:46658\")")
 
 	// log flags
 	runNodeCmd.Flags().String("log_file", config.LogFile, "Log output file")

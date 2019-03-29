@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"time"
 
-	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/btcsuite/go-socks/socks"
+	cmn "github.com/tendermint/tmlibs/common"
 )
 
 // NetAddress defines information about a peer on the network
