@@ -427,9 +427,7 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 }
 
 func (sw *Switch) ensureKeepConnectPeers() {
-	numOutPeers, _, numDialing := sw.NumPeers()
 	keepDials := netutil.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
-	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": len(keepDials)}).Debug("ensure KeepConnec peers")
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range sw.Peers().List() {
 		connectedPeers[peer.remoteAddrHost()] = struct{}{}
