@@ -1,7 +1,9 @@
 package state
 
 import (
+	"math"
 	"math/big"
+	"reflect"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -11,6 +13,77 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
+
+func TestNewBlockNode(t *testing.T) {
+	cases := []struct {
+		blockHeader   *types.BlockHeader
+		parentNode    *BlockNode
+		wantBlockNode *BlockNode
+	}{
+		{
+			blockHeader: &types.BlockHeader{
+				Height:    uint64(0),
+				Timestamp: 0,
+				Bits:      1000,
+			},
+			parentNode: &BlockNode{
+				WorkSum: &big.Int{},
+			},
+			wantBlockNode: &BlockNode{
+				Bits:    1000,
+				Seed:    consensus.InitialSeed,
+				WorkSum: new(big.Int).SetInt64(0),
+			},
+		},
+		{
+			blockHeader: &types.BlockHeader{
+				Height:    uint64(100),
+				Timestamp: 0,
+				Bits:      10000000000,
+			},
+			parentNode: &BlockNode{
+				WorkSum: new(big.Int).SetInt64(100),
+			},
+			wantBlockNode: &BlockNode{
+				Bits:    10000000000,
+				Seed:    consensus.InitialSeed,
+				Height:  uint64(100),
+				WorkSum: new(big.Int),
+			},
+		},
+		{
+			blockHeader: &types.BlockHeader{
+				Height:    uint64(100),
+				Timestamp: 0,
+				Bits:      10000000000,
+			},
+			parentNode: &BlockNode{
+				WorkSum: new(big.Int).SetInt64(math.MaxInt64),
+			},
+			wantBlockNode: &BlockNode{
+				Bits:    10000000000,
+				Seed:    consensus.InitialSeed,
+				Height:  uint64(100),
+				WorkSum: new(big.Int),
+			},
+		},
+	}
+
+	for i, c := range cases {
+		blockNode, err := NewBlockNode(c.blockHeader, c.parentNode)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		c.wantBlockNode.Hash = c.blockHeader.Hash()
+		c.wantBlockNode.Parent = c.parentNode
+		c.wantBlockNode.WorkSum = c.wantBlockNode.WorkSum.Add(c.parentNode.WorkSum, difficulty.CalcWork(c.blockHeader.Bits))
+
+		if !reflect.DeepEqual(blockNode, c.wantBlockNode) {
+			t.Fatal("NewBlockNode test error, index:", i, "want:", spew.Sdump(c.wantBlockNode), "got:", spew.Sdump(blockNode))
+		}
+	}
+}
 
 func TestCalcPastMedianTime(t *testing.T) {
 	cases := []struct {
