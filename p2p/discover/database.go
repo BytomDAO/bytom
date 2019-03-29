@@ -15,9 +15,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	wire "github.com/tendermint/go-wire"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/crypto"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 var (
@@ -302,7 +302,7 @@ seek:
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Warn("get rand date")
 		}
 		id[0] = ctr + id[0]%16
-		it = db.lvl.IteratorPrefix(makeKey(id, nodeDBDiscoverRoot))
+		it.Seek(makeKey(id, nodeDBDiscoverRoot))
 
 		n := nextNode(it)
 		if n == nil {
@@ -354,7 +354,7 @@ func nextNode(it dbm.Iterator) *Node {
 		node = new(Node)
 	)
 
-	for end := !it.Next(); !end; end = !it.Next() {
+	for end := false; !end; end = !it.Next() {
 		id, field := splitKey(it.Key())
 		if field != nodeDBDiscoverRoot {
 			continue

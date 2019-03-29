@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
@@ -15,6 +14,7 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const (
@@ -42,7 +42,7 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB              db.DB
+	DB              dbm.DB
 	rw              sync.RWMutex
 	status          StatusInfo
 	AccountMgr      *account.Manager
@@ -57,7 +57,7 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher) (*Wallet, error) {
+func NewWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher) (*Wallet, error) {
 	w := &Wallet{
 		DB:              walletDB,
 		AccountMgr:      account,
@@ -153,7 +153,7 @@ func (w *Wallet) loadWalletInfo() error {
 	return w.AttachBlock(block)
 }
 
-func (w *Wallet) commitWalletInfo(batch db.Batch) error {
+func (w *Wallet) commitWalletInfo(batch dbm.Batch) error {
 	rawWallet, err := json.Marshal(w.status)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("save wallet info")

@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
@@ -24,6 +22,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func BenchmarkChain_CoinBaseTx_NoAsset(b *testing.B) {

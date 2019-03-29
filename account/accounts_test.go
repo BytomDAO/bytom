@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519/chainkd"
@@ -17,6 +15,7 @@ import (
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/testutil"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestCreateAccountWithUppercase(t *testing.T) {

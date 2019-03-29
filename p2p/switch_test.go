@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"github.com/tendermint/go-crypto"
-	dbm "github.com/tendermint/tmlibs/db"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -11,6 +10,7 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	conn "github.com/bytom/p2p/connection"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 var (

@@ -7,13 +7,13 @@ import (
 	"github.com/bytom/testutil"
 
 	"github.com/golang/protobuf/proto"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/database/leveldb"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestAttachOrDetachBlocks(t *testing.T) {

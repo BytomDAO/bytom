@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
 	"github.com/bytom/consensus"
@@ -13,6 +12,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 // GetAccountUtxos return all account unspent outputs
@@ -44,7 +44,7 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 	return accountUtxos
 }
 
-func (w *Wallet) attachUtxos(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
 	for txIndex, tx := range b.Transactions {
 		statusFail, err := txStatus.GetStatus(txIndex)
 		if err != nil {
@@ -75,7 +75,7 @@ func (w *Wallet) attachUtxos(batch db.Batch, b *types.Block, txStatus *bc.Transa
 	}
 }
 
-func (w *Wallet) detachUtxos(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
 	for txIndex := len(b.Transactions) - 1; txIndex >= 0; txIndex-- {
 		tx := b.Transactions[txIndex]
 		for j := range tx.Outputs {
@@ -146,7 +146,7 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 	return result
 }
 
-func batchSaveUtxos(utxos []*account.UTXO, batch db.Batch) error {
+func batchSaveUtxos(utxos []*account.UTXO, batch dbm.Batch) error {
 	for _, utxo := range utxos {
 		data, err := json.Marshal(utxo)
 		if err != nil {

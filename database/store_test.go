@@ -4,8 +4,6 @@ import (
 	"os"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/config"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/protocol"
@@ -13,6 +11,7 @@ import (
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
 	"github.com/bytom/testutil"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestLoadBlockIndex(t *testing.T) {

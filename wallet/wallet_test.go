@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
@@ -23,6 +21,7 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestWalletVersion(t *testing.T) {
