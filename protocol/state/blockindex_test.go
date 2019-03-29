@@ -12,7 +12,13 @@ import (
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/testutil"
 )
+
+func stringToBigInt(s string, base int) *big.Int {
+	result, _ := new(big.Int).SetString(s, base)
+	return result
+}
 
 func TestNewBlockNode(t *testing.T) {
 	cases := []struct {
@@ -31,8 +37,12 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			wantBlockNode: &BlockNode{
 				Bits:    1000,
+				Hash:    testutil.MustDecodeHash("f1a5a6ddebad7285928a07ce1534104a8d1cd435fc80e90bb9f0034bbe5f8109"),
 				Seed:    consensus.InitialSeed,
 				WorkSum: new(big.Int).SetInt64(0),
+				Parent: &BlockNode{
+					WorkSum: &big.Int{},
+				},
 			},
 		},
 		{
@@ -46,9 +56,13 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			wantBlockNode: &BlockNode{
 				Bits:    10000000000,
+				Hash:    testutil.MustDecodeHash("b14067726f09d74da89aeb97ca1b15a8b95760b47a0d71549b0aa5ab8c5e724f"),
 				Seed:    consensus.InitialSeed,
 				Height:  uint64(100),
-				WorkSum: new(big.Int),
+				WorkSum: stringToBigInt("193956598387464313942329958138505708296934647681139973265423088790474254103", 10),
+				Parent: &BlockNode{
+					WorkSum: new(big.Int).SetInt64(100),
+				},
 			},
 		},
 		{
@@ -62,9 +76,13 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			wantBlockNode: &BlockNode{
 				Bits:    10000000000,
+				Hash:    testutil.MustDecodeHash("b14067726f09d74da89aeb97ca1b15a8b95760b47a0d71549b0aa5ab8c5e724f"),
 				Seed:    consensus.InitialSeed,
 				Height:  uint64(100),
-				WorkSum: new(big.Int),
+				WorkSum: stringToBigInt("193956598387464313942329958138505708296934647681139973274646460827329029810", 10),
+				Parent: &BlockNode{
+					WorkSum: new(big.Int).SetInt64(math.MaxInt64),
+				},
 			},
 		},
 	}
@@ -74,10 +92,6 @@ func TestNewBlockNode(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		c.wantBlockNode.Hash = c.blockHeader.Hash()
-		c.wantBlockNode.Parent = c.parentNode
-		c.wantBlockNode.WorkSum = c.wantBlockNode.WorkSum.Add(c.parentNode.WorkSum, difficulty.CalcWork(c.blockHeader.Bits))
 
 		if !reflect.DeepEqual(blockNode, c.wantBlockNode) {
 			t.Fatal("NewBlockNode test error, index:", i, "want:", spew.Sdump(c.wantBlockNode), "got:", spew.Sdump(blockNode))
