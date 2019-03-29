@@ -293,7 +293,7 @@ func CheckAndSplitAddresses(addressesStr string) []string {
 	return addresses
 }
 
-func StrToNodes(addresses []string) []*Node {
+func StrsToNodes(addresses []string) []*Node {
 	var nodes []*Node
 	for _, address := range addresses {
 		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(address))) + "@" + address
@@ -333,7 +333,7 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Net
 		version.Status.AddSeed(seed)
 	}
 
-	nodes := StrToNodes(seeds)
+	nodes := StrsToNodes(seeds)
 	if err = ntab.SetFallbackNodes(nodes); err != nil {
 		return nil, err
 	}

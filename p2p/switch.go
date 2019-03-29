@@ -428,7 +428,7 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 // totalToDial = keepDial + moreDial
 func (sw *Switch) ensureOutboundPeers() {
 	keepDials := discover.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
-	keepDialNodes := discover.StrToNodes(keepDials)
+	keepDialNodes := discover.StrsToNodes(keepDials)
 	numOutPeers, _, numDialing := sw.NumPeers()
 	totalToDial := (minNumOutboundPeers - (numOutPeers + numDialing))
 	moreDial := totalToDial - len(keepDialNodes)
