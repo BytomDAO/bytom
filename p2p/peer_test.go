@@ -101,7 +101,7 @@ func (rp *remotePeer) Addr() *NetAddress {
 
 func (rp *remotePeer) Start() {
 	if rp.listenAddr == "" {
-		rp.listenAddr = "127.0.0.1:0"
+		rp.listenAddr = "127.0.0.1:40000"
 	}
 
 	l, e := net.Listen("tcp", rp.listenAddr) // any available address
