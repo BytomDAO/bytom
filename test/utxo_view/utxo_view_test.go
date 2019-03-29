@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/bytom/database/leveldb"
+	"github.com/bytom/database"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -408,7 +408,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 	defer os.RemoveAll("temp")
 	for index, c := range cases {
 		testDB := dbm.NewDB("testdb", "leveldb", "temp")
-		store := leveldb.NewStore(testDB)
+		store := database.NewStore(testDB)
 
 		utxoViewpoint := state.NewUtxoViewpoint()
 		for k, v := range c.before {

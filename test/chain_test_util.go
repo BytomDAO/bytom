@@ -7,7 +7,7 @@ import (
 
 	"github.com/bytom/blockchain/txbuilder"
 	"github.com/bytom/consensus"
-	"github.com/bytom/database/leveldb"
+	"github.com/bytom/database"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
@@ -22,7 +22,7 @@ const utxoPrefix = "UT:"
 type chainTestContext struct {
 	Chain *protocol.Chain
 	DB    dbm.DB
-	Store *leveldb.Store
+	Store *database.Store
 }
 
 func (ctx *chainTestContext) validateStatus(block *types.Block) error {

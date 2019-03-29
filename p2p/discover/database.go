@@ -51,20 +51,20 @@ var (
 // database is constructed.
 func newNodeDB(path string, version int, self NodeID) (*nodeDB, error) {
 	if path == "" {
-		return newMemoryNodeDB(self)
+		return newMemoryNodeDB(self), nil
 	}
 	return newPersistentNodeDB(path, version, self)
 }
 
 // newMemoryNodeDB creates a new in-memory node database without a persistent
 // backend.
-func newMemoryNodeDB(self NodeID) (*nodeDB, error) {
+func newMemoryNodeDB(self NodeID) *nodeDB {
 	db := dbm.NewMemDB()
 	return &nodeDB{
 		lvl:  db,
 		self: self,
 		quit: make(chan struct{}),
-	}, nil
+	}
 }
 
 // newPersistentNodeDB creates/opens a leveldb backed persistent node database,
@@ -84,14 +84,12 @@ func newPersistentNodeDB(filePath string, version int, self NodeID) (*nodeDB, er
 	blob := db.Get(nodeDBVersionKey)
 	if blob == nil {
 		db.Set(nodeDBVersionKey, currentVer)
-	} else {
-		if !bytes.Equal(blob, currentVer) {
-			db.Close()
-			if err := os.RemoveAll(filePath + ".db"); err != nil {
-				return nil, err
-			}
-			return newPersistentNodeDB(filePath, version, self)
+	} else if !bytes.Equal(blob, currentVer) {
+		db.Close()
+		if err := os.RemoveAll(filePath); err != nil {
+			return nil, err
 		}
+		return newPersistentNodeDB(filePath, version, self)
 	}
 
 	return &nodeDB{

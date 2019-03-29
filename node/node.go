@@ -75,7 +75,7 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))
 	}
 	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
-	store := leveldb.NewStore(coreDB)
+	store := database.NewStore(coreDB)
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)

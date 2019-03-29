@@ -20,7 +20,7 @@ import (
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
 	"github.com/bytom/protocol/vm/vmutil"
-	"github.com/syndtr/goleveldb/leveldb"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 // TxGenerator used to generate new tx
@@ -292,7 +292,7 @@ func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, erro
 }
 
 // SignInstructionFor read CtrlProgram from db, construct SignInstruction for SpendInput
-func SignInstructionFor(input *types.SpendInput, db leveldb.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
+func SignInstructionFor(input *types.SpendInput, db dbm.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
 	cp := account.CtrlProgram{}
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], input.ControlProgram)
