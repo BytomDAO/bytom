@@ -264,6 +264,41 @@ type udp struct {
 	net netWork
 }
 
+func CheckAndSplitAddresses(addressesStr string) ([]string, error) {
+	if addressesStr == "" {
+		return nil, nil
+	}
+
+	var addresses []string
+	splits := strings.Split(addressesStr, ",")
+	for _, address := range splits {
+		ip, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, err
+		}
+
+		if validIP := net.ParseIP(ip); validIP == nil {
+			return nil, errInvalidSeedIP
+		}
+
+		if _, err := strconv.ParseUint(port, 10, 16); err != nil {
+			return nil, errInvalidSeedPort
+		}
+
+		addresses = append(addresses, address)
+	}
+	return addresses, nil
+}
+
+func StrToNodes(addresses []string) []*Node {
+	var nodes []*Node
+	for _, address := range addresses {
+		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(address))) + "@" + address
+		nodes = append(nodes, MustParseNode(url))
+	}
+	return nodes
+}
+
 func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Network, error) {
 	addr, err := net.ResolveUDPAddr("udp", net.JoinHostPort("0.0.0.0", strconv.FormatUint(uint64(port), 10)))
 	if err != nil {
@@ -285,37 +320,21 @@ func NewDiscover(config *cfg.Config, priv ed25519.PrivateKey, port uint16) (*Net
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on query dns seeds")
 	}
 
-	if config.P2P.Seeds != "" {
-		codedSeeds := strings.Split(config.P2P.Seeds, ",")
-		for _, codedSeed := range codedSeeds {
-			ip, port, err := net.SplitHostPort(codedSeed)
-			if err != nil {
-				return nil, err
-			}
-
-			if validIP := net.ParseIP(ip); validIP == nil {
-				return nil, errInvalidSeedIP
-			}
-
-			if _, err := strconv.ParseUint(port, 10, 16); err != nil {
-				return nil, errInvalidSeedPort
-			}
-
-			seeds = append(seeds, codedSeed)
-		}
+	codedSeeds, err := CheckAndSplitAddresses(config.P2P.Seeds)
+	if err != nil {
+		return nil, err
 	}
 
+	seeds = append(seeds, codedSeeds...)
 	if len(seeds) == 0 {
 		return ntab, nil
 	}
 
-	var nodes []*Node
 	for _, seed := range seeds {
 		version.Status.AddSeed(seed)
-		url := "enode://" + hex.EncodeToString(crypto.Sha256([]byte(seed))) + "@" + seed
-		nodes = append(nodes, MustParseNode(url))
 	}
 
+	nodes := StrToNodes(seeds)
 	if err = ntab.SetFallbackNodes(nodes); err != nil {
 		return nil, err
 	}
