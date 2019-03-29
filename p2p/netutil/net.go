@@ -16,6 +16,8 @@ import (
 var lan4, lan6, special4, special6 Netlist
 
 var (
+	logModule = "netutil"
+
 	errInvalidIP   = errors.New("ip is invalid")
 	errInvalidPort = errors.New("port is invalid")
 )
@@ -323,17 +325,17 @@ func CheckAndSplitAddresses(addressesStr string) []string {
 	for _, address := range splits {
 		ip, port, err := net.SplitHostPort(address)
 		if err != nil {
-			log.WithFields(log.Fields{"module": "netutil", "err": err, "address": address}).Warn("net.SplitHostPort")
+			log.WithFields(log.Fields{"module": logModule, "err": err, "address": address}).Warn("net.SplitHostPort")
 			continue
 		}
 
 		if validIP := net.ParseIP(ip); validIP == nil {
-			log.WithFields(log.Fields{"module": "netutil", "err": errInvalidIP, "ip": ip}).Warn("net.ParseIP")
+			log.WithFields(log.Fields{"module": logModule, "err": errInvalidIP, "ip": ip}).Warn("net.ParseIP")
 			continue
 		}
 
 		if _, err := strconv.ParseUint(port, 10, 16); err != nil {
-			log.WithFields(log.Fields{"module": "netutil", "err": errInvalidPort, "port": port}).Warn("strconv parse port")
+			log.WithFields(log.Fields{"module": logModule, "err": errInvalidPort, "port": port}).Warn("strconv parse port")
 			continue
 		}
 
