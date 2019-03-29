@@ -257,7 +257,10 @@ func TestAddInboundPeer(t *testing.T) {
 	s1.Start()
 	defer s1.Stop()
 
-	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
+	cfginp := *testCfg
+	privkey := crypto.GenPrivKeyEd25519()
+	cfginp.P2P.PrivateKey = privkey.String()
+	inp := &inboundPeer{PrivKey: privkey, config: &cfginp}
 	addr := NewNetAddress(s1.listeners[0].(*DefaultListener).NetListener().Addr())
 	if err != nil {
 		t.Fatal(err)
@@ -267,7 +270,11 @@ func TestAddInboundPeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: testCfg}
+	cfgrp := *testCfg
+	privkeyrp := crypto.GenPrivKeyEd25519()
+	cfginp.P2P.PrivateKey = privkeyrp.String()
+
+	rp := &remotePeer{PrivKey: privkeyrp, Config: &cfgrp}
 	rp.Start()
 	defer rp.Stop()
 	if err := s1.DialPeerWithAddress(rp.addr); err != nil {
@@ -277,7 +284,11 @@ func TestAddInboundPeer(t *testing.T) {
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
 		t.Fatal("TestAddInboundPeer peer size error")
 	}
-	inp2 := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
+	cfginp2 := *testCfg
+	privkeyinp2 := crypto.GenPrivKeyEd25519()
+	cfginp2.P2P.PrivateKey = privkeyinp2.String()
+
+	inp2 := &inboundPeer{PrivKey: privkeyinp2, config: &cfginp2}
 
 	if err := inp2.dial(addr); err == nil {
 		t.Fatal("TestAddInboundPeer MaxNumPeers limit error")
@@ -299,7 +310,10 @@ func TestStopPeer(t *testing.T) {
 	s1.Start()
 	defer s1.Stop()
 
-	inp := &inboundPeer{PrivKey: crypto.GenPrivKeyEd25519(), config: testCfg}
+	cfginp := *testCfg
+	privkeyinp := crypto.GenPrivKeyEd25519()
+	cfginp.P2P.PrivateKey = privkeyinp.String()
+	inp := &inboundPeer{PrivKey: privkeyinp, config: testCfg}
 	addr := NewNetAddress(s1.listeners[0].(*DefaultListener).NetListener().Addr())
 	if err != nil {
 		t.Fatal(err)
@@ -308,8 +322,11 @@ func TestStopPeer(t *testing.T) {
 	if err := inp.dial(addr); err != nil {
 		t.Fatal(err)
 	}
+	cfgrp := *testCfg
+	privkeyrp := crypto.GenPrivKeyEd25519()
+	cfginp.P2P.PrivateKey = privkeyrp.String()
 
-	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: testCfg}
+	rp := &remotePeer{PrivKey: privkeyrp, Config: &cfgrp}
 	rp.Start()
 	defer rp.Stop()
 	if err := s1.DialPeerWithAddress(rp.addr); err != nil {
