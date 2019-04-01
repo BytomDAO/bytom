@@ -12,6 +12,7 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	conn "github.com/bytom/p2p/connection"
+	"github.com/davecgh/go-spew/spew"
 )
 
 var (
@@ -377,16 +378,19 @@ func TestStopPeer(t *testing.T) {
 	}
 
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
+		t.Fatalf("want 2 got %s", spew.Sdump(s1.peers.list))
 		t.Fatal("TestStopPeer peer size error")
 	}
 
 	s1.StopPeerGracefully(s1.peers.list[0].Key)
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 1 {
+		t.Fatalf("want 1 got %s", spew.Sdump(s1.peers.list))
 		t.Fatal("TestStopPeer peer size error")
 	}
 
 	s1.StopPeerForError(s1.peers.list[0], "stop for test")
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 0 {
+		t.Fatalf("want 0 got %s", spew.Sdump(s1.peers.list))
 		t.Fatal("TestStopPeer peer size error")
 	}
 }
