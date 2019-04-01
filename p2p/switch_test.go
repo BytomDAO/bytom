@@ -315,7 +315,7 @@ func TestAddInboundPeer(t *testing.T) {
 	}
 
 	fmt.Println("=== want 2 got :", spew.Sdump(s1.peers.lookup))
-
+	time.Sleep(1 * time.Second)
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
 		t.Fatal("TestAddInboundPeer peer size error")
 	}
