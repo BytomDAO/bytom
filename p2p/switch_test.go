@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	"fmt"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	conn "github.com/bytom/p2p/connection"
@@ -131,10 +132,15 @@ func TestFiltersOutItself(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	cfg := testCfg
+	cfg := *testCfg
 	cfg.P2P.ListenAddress = "0.0.0.0:0"
 
-	s1 := MakeSwitch(cfg, testDB, initSwitchFunc)
+	privkeySW := crypto.GenPrivKeyEd25519()
+	cfg.P2P.PrivateKey = privkeySW.String()
+	fmt.Println("=== TestFiltersOutItself sw privkey:", privkeySW.String())
+	s1 := MakeSwitch(&cfg, testDB, privkeySW, initSwitchFunc)
+
+	//s1 := MakeSwitch(cfg, testDB, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 	// simulate s1 having a public key and creating a remote peer with the same key
@@ -161,9 +167,14 @@ func TestDialBannedPeer(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	cfg := testCfg
+	cfg := *testCfg
 	cfg.P2P.ListenAddress = "0.0.0.0:0"
-	s1 := MakeSwitch(cfg, testDB, initSwitchFunc)
+	privkeySW := crypto.GenPrivKeyEd25519()
+	cfg.P2P.PrivateKey = privkeySW.String()
+	fmt.Println("=== TestDialBannedPeer sw privkey:", privkeySW.String())
+	s1 := MakeSwitch(&cfg, testDB, privkeySW, initSwitchFunc)
+
+	//s1 := MakeSwitch(cfg, testDB, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: testCfg}
@@ -188,10 +199,14 @@ func TestDuplicateOutBoundPeer(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	cfg := testCfg
+	cfg := *testCfg
 	cfg.P2P.ListenAddress = "0.0.0.0:0"
+	privkeySW := crypto.GenPrivKeyEd25519()
+	cfg.P2P.PrivateKey = privkeySW.String()
+	fmt.Println("=== TestDuplicateOutBoundPeer sw privkey:", privkeySW.String())
+	s1 := MakeSwitch(&cfg, testDB, privkeySW, initSwitchFunc)
 
-	s1 := MakeSwitch(testCfg, testDB, initSwitchFunc)
+	//s1 := MakeSwitch(testCfg, testDB, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 	rp := &remotePeer{PrivKey: crypto.GenPrivKeyEd25519(), Config: testCfg}
@@ -214,10 +229,15 @@ func TestDuplicateInBoundPeer(t *testing.T) {
 	defer os.RemoveAll(dirPath)
 
 	testDB := dbm.NewDB("testdb", "leveldb", dirPath)
-	cfg := testCfg
+	cfg := *testCfg
 	cfg.P2P.ListenAddress = "0.0.0.0:0"
 
-	s1 := MakeSwitch(cfg, testDB, initSwitchFunc)
+	privkeySW := crypto.GenPrivKeyEd25519()
+	cfg.P2P.PrivateKey = privkeySW.String()
+	fmt.Println("=== TestDuplicateInBoundPeer sw privkey:", privkeySW.String())
+	s1 := MakeSwitch(&cfg, testDB, privkeySW, initSwitchFunc)
+
+	//s1 := MakeSwitch(cfg, testDB, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 
@@ -243,6 +263,8 @@ func TestDuplicateInBoundPeer(t *testing.T) {
 }
 
 func TestAddInboundPeer(t *testing.T) {
+	fmt.Println("=== TestAddInboundPeer start")
+	defer fmt.Println("=== TestAddInboundPeer stop")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -253,12 +275,18 @@ func TestAddInboundPeer(t *testing.T) {
 	cfg := *testCfg
 	cfg.P2P.MaxNumPeers = 2
 	cfg.P2P.ListenAddress = "0.0.0.0:0"
-	s1 := MakeSwitch(&cfg, testDB, initSwitchFunc)
+	privkeySW := crypto.GenPrivKeyEd25519()
+	cfg.P2P.PrivateKey = privkeySW.String()
+	fmt.Println("=== TestAddInboundPeer sw privkey:", privkeySW.String())
+	s1 := MakeSwitch(&cfg, testDB, privkeySW, initSwitchFunc)
 	s1.Start()
+	fmt.Println("=== TestAddInboundPeer sw listen addr:", s1.nodeInfo.ListenAddr, s1.listeners[0].(*DefaultListener).NetListener().Addr())
 	defer s1.Stop()
 
 	cfginp := *testCfg
 	privkey := crypto.GenPrivKeyEd25519()
+	fmt.Println("=== TestAddInboundPeer inpeer privkey:", privkey.String())
+
 	cfginp.P2P.PrivateKey = privkey.String()
 	inp := &inboundPeer{PrivKey: privkey, config: &cfginp}
 	addr := NewNetAddress(s1.listeners[0].(*DefaultListener).NetListener().Addr())
@@ -272,11 +300,14 @@ func TestAddInboundPeer(t *testing.T) {
 
 	cfgrp := *testCfg
 	privkeyrp := crypto.GenPrivKeyEd25519()
+	fmt.Println("=== TestAddInboundPeer remote peer privkey:", privkeyrp.String())
+
 	cfginp.P2P.PrivateKey = privkeyrp.String()
 
 	rp := &remotePeer{PrivKey: privkeyrp, Config: &cfgrp}
 	rp.Start()
 	defer rp.Stop()
+	fmt.Println("=== TestAddInboundPeer remote peer addr:", rp.addr)
 	if err := s1.DialPeerWithAddress(rp.addr); err != nil {
 		t.Fatal(err)
 	}
@@ -286,8 +317,8 @@ func TestAddInboundPeer(t *testing.T) {
 	}
 	cfginp2 := *testCfg
 	privkeyinp2 := crypto.GenPrivKeyEd25519()
+	fmt.Println("=== TestAddInboundPeer inpeer2 privkey:", privkeyinp2.String())
 	cfginp2.P2P.PrivateKey = privkeyinp2.String()
-
 	inp2 := &inboundPeer{PrivKey: privkeyinp2, config: &cfginp2}
 
 	if err := inp2.dial(addr); err == nil {
@@ -296,6 +327,8 @@ func TestAddInboundPeer(t *testing.T) {
 }
 
 func TestStopPeer(t *testing.T) {
+	t.Log("=== TestStopPeer start")
+	defer t.Log("=== TestStopPeer stop")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -306,7 +339,12 @@ func TestStopPeer(t *testing.T) {
 	cfg := *testCfg
 	cfg.P2P.MaxNumPeers = 2
 	cfg.P2P.ListenAddress = "0.0.0.0:0"
-	s1 := MakeSwitch(&cfg, testDB, initSwitchFunc)
+	privkeySW := crypto.GenPrivKeyEd25519()
+	cfg.P2P.PrivateKey = privkeySW.String()
+	fmt.Println("=== TestStopPeer sw privkey:", privkeySW.String())
+	s1 := MakeSwitch(&cfg, testDB, privkeySW, initSwitchFunc)
+
+	//s1 := MakeSwitch(&cfg, testDB, initSwitchFunc)
 	s1.Start()
 	defer s1.Stop()
 
