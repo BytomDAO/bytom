@@ -327,8 +327,8 @@ func TestAddInboundPeer(t *testing.T) {
 }
 
 func TestStopPeer(t *testing.T) {
-	t.Log("=== TestStopPeer start")
-	defer t.Log("=== TestStopPeer stop")
+	fmt.Println("=== TestStopPeer start")
+	defer fmt.Println("=== TestStopPeer stop")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
