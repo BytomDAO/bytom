@@ -11,7 +11,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
@@ -19,8 +18,10 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
+	"github.com/bytom/p2p/netutil"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/version"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const (
@@ -425,6 +426,37 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
+func (sw *Switch) ensureKeepConnectPeers() {
+	keepDials := netutil.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
+	connectedPeers := make(map[string]struct{})
+	for _, peer := range sw.Peers().List() {
+		connectedPeers[peer.remoteAddrHost()] = struct{}{}
+	}
+
+	var wg sync.WaitGroup
+	for _, keepDial := range keepDials {
+		try, err := NewNetAddressString(keepDial)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err, "address": keepDial}).Warn("parse address to NetAddress")
+			continue
+		}
+
+		if sw.NodeInfo().ListenAddr == try.String() {
+			continue
+		}
+		if dialling := sw.IsDialing(try); dialling {
+			continue
+		}
+		if _, ok := connectedPeers[try.IP.String()]; ok {
+			continue
+		}
+
+		wg.Add(1)
+		go sw.dialPeerWorker(try, &wg)
+	}
+	wg.Wait()
+}
+
 func (sw *Switch) ensureOutboundPeers() {
 	numOutPeers, _, numDialing := sw.NumPeers()
 	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing))
@@ -460,6 +492,7 @@ func (sw *Switch) ensureOutboundPeers() {
 }
 
 func (sw *Switch) ensureOutboundPeersRoutine() {
+	sw.ensureKeepConnectPeers()
 	sw.ensureOutboundPeers()
 
 	ticker := time.NewTicker(10 * time.Second)
@@ -468,6 +501,7 @@ func (sw *Switch) ensureOutboundPeersRoutine() {
 	for {
 		select {
 		case <-ticker.C:
+			sw.ensureKeepConnectPeers()
 			sw.ensureOutboundPeers()
 		case <-sw.Quit:
 			return

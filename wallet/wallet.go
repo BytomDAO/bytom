@@ -5,15 +5,16 @@ import (
 	"sync"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	"github.com/bytom/errors"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const (
@@ -22,10 +23,17 @@ const (
 	logModule = "wallet"
 )
 
-var walletKey = []byte("walletInfo")
+var (
+	currentVersion = uint(1)
+	walletKey      = []byte("walletInfo")
+
+	errBestBlockNotFoundInCore = errors.New("best block not found in core")
+	errWalletVersionMismatch   = errors.New("wallet version mismatch")
+)
 
 //StatusInfo is base valid block info to handle orphan block rollback
 type StatusInfo struct {
+	Version    uint
 	WorkHeight uint64
 	WorkHash   bc.Hash
 	BestHeight uint64
@@ -34,7 +42,7 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB              db.DB
+	DB              dbm.DB
 	rw              sync.RWMutex
 	status          StatusInfo
 	AccountMgr      *account.Manager
@@ -49,7 +57,7 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB db.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher) (*Wallet, error) {
+func NewWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher) (*Wallet, error) {
 	w := &Wallet{
 		DB:              walletDB,
 		AccountMgr:      account,
@@ -109,25 +117,35 @@ func (w *Wallet) memPoolTxQueryLoop() {
 	}
 }
 
-//GetWalletInfo return stored wallet info and nil,if error,
-//return initial wallet info and err
+func (w *Wallet) checkWalletInfo() error {
+	if w.status.Version != currentVersion {
+		return errWalletVersionMismatch
+	} else if !w.chain.BlockExist(&w.status.BestHash) {
+		return errBestBlockNotFoundInCore
+	}
+
+	return nil
+}
+
+//loadWalletInfo return stored wallet info and nil,
+//if error, return initial wallet info and err
 func (w *Wallet) loadWalletInfo() error {
 	if rawWallet := w.DB.Get(walletKey); rawWallet != nil {
 		if err := json.Unmarshal(rawWallet, &w.status); err != nil {
 			return err
 		}
 
-		//handle the case than use replace the coreDB during status in fork chain
-		if w.chain.BlockExist(&w.status.BestHash) {
+		err := w.checkWalletInfo()
+		if err == nil {
 			return nil
 		}
 
-		log.WithFields(log.Fields{"module": logModule}).Warn("reset the wallet status due to core doesn't have wallet best block")
+		log.WithFields(log.Fields{"module": logModule}).Warn(err.Error())
 		w.deleteAccountTxs()
 		w.deleteUtxos()
-		w.status = StatusInfo{}
 	}
 
+	w.status.Version = currentVersion
 	block, err := w.chain.GetBlockByHeight(0)
 	if err != nil {
 		return err
@@ -135,7 +153,7 @@ func (w *Wallet) loadWalletInfo() error {
 	return w.AttachBlock(block)
 }
 
-func (w *Wallet) commitWalletInfo(batch db.Batch) error {
+func (w *Wallet) commitWalletInfo(batch dbm.Batch) error {
 	rawWallet, err := json.Marshal(w.status)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("save wallet info")

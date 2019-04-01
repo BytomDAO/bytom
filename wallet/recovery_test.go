@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
@@ -21,6 +19,7 @@ import (
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 // MockBlock mock a block

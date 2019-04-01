@@ -147,6 +147,30 @@ func TestCryptoOps(t *testing.T) {
 			}},
 		},
 	}, {
+		op: OP_HASH160,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{{1}},
+		},
+		wantVM: &virtualMachine{
+			runLimit: 49916,
+			dataStack: [][]byte{{
+				242, 145, 186, 80, 21, 223, 52, 140, 128, 133, 63, 165, 187, 15, 121, 70, 245, 201, 225, 179,
+			}},
+		},
+	}, {
+		op: OP_HASH160,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{make([]byte, 65)},
+		},
+		wantVM: &virtualMachine{
+			runLimit: 49916,
+			dataStack: [][]byte{{
+				171, 60, 102, 205, 10, 63, 18, 180, 244, 250, 235, 84, 138, 85, 22, 7, 148, 250, 215, 6,
+			}},
+		},
+	}, {
 		op: OP_SM3,
 		startVM: &virtualMachine{
 			runLimit:  50000,

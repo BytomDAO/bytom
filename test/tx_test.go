@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
@@ -20,6 +19,7 @@ import (
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/validation"
 	"github.com/bytom/protocol/vm"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func init() {

@@ -6,12 +6,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	cfg "github.com/bytom/config"
 	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 //PanicOnAddPeerErr add peer error

@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
@@ -15,6 +14,7 @@ import (
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const (
@@ -22,6 +22,8 @@ const (
 	TxPrefix = "TXS:"
 	//TxIndexPrefix is wallet database tx index prefix
 	TxIndexPrefix = "TID:"
+	//TxIndexPrefix is wallet database global tx index prefix
+	GlobalTxIndexPrefix = "GTID:"
 )
 
 func formatKey(blockHeight uint64, position uint32) string {
@@ -40,8 +42,16 @@ func calcTxIndexKey(txID string) []byte {
 	return []byte(TxIndexPrefix + txID)
 }
 
+func calcGlobalTxIndexKey(txID string) []byte {
+	return []byte(GlobalTxIndexPrefix + txID)
+}
+
+func calcGlobalTxIndex(blockHash *bc.Hash, position int) []byte {
+	return []byte(fmt.Sprintf("%064x%08x", blockHash.String(), position))
+}
+
 // deleteTransaction delete transactions when orphan block rollback
-func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
+func (w *Wallet) deleteTransactions(batch dbm.Batch, height uint64) {
 	tmpTx := query.AnnotatedTx{}
 	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
@@ -57,7 +67,7 @@ func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
 // saveExternalAssetDefinition save external and local assets definition,
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
-func saveExternalAssetDefinition(b *types.Block, walletDB db.DB) {
+func saveExternalAssetDefinition(b *types.Block, walletDB dbm.DB) {
 	storeBatch := walletDB.NewBatch()
 	defer storeBatch.Write()
 
@@ -95,7 +105,7 @@ type TxSummary struct {
 }
 
 // indexTransactions saves all annotated transactions to the database.
-func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
+func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
@@ -113,6 +123,12 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 		// delete unconfirmed transaction
 		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
 	}
+
+	for position, globalTx := range b.Transactions {
+		blockHash := b.BlockHeader.Hash()
+		batch.Set(calcGlobalTxIndexKey(globalTx.ID.String()), calcGlobalTxIndex(&blockHash, position))
+	}
+
 	return nil
 }
 

@@ -4,11 +4,10 @@ import (
 	"os"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/account"
 	"github.com/bytom/mining"
 	"github.com/bytom/test"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 // Function NewBlockTemplate's benchmark - 0.05s

@@ -139,6 +139,10 @@ func (it *goLevelDBIterator) Value() []byte {
 	return v
 }
 
+func (it *goLevelDBIterator) Seek(point []byte) bool {
+	return it.source.Seek(point)
+}
+
 func (it *goLevelDBIterator) Error() error {
 	return it.source.Error()
 }

@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/golang/groupcache/lru"
-	dbm "github.com/tendermint/tmlibs/db"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/blockchain/signers"
@@ -20,6 +19,7 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm/vmutil"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 // DefaultNativeAsset native BTM asset

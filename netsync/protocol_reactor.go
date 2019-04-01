@@ -41,7 +41,7 @@ func NewProtocolReactor(sm *SyncManager, peers *peerSet) *ProtocolReactor {
 // GetChannels implements Reactor
 func (pr *ProtocolReactor) GetChannels() []*connection.ChannelDescriptor {
 	return []*connection.ChannelDescriptor{
-		&connection.ChannelDescriptor{
+		{
 			ID:                BlockchainChannel,
 			Priority:          5,
 			SendQueueCapacity: 100,
@@ -66,8 +66,10 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 		return errStatusRequest
 	}
 
-	checkTicker := time.NewTimer(handshakeCheckPerid)
-	timeoutTicker := time.NewTimer(handshakeTimeout)
+	checkTicker := time.NewTicker(handshakeCheckPerid)
+	defer checkTicker.Stop()
+	timeout := time.NewTimer(handshakeTimeout)
+	defer timeout.Stop()
 	for {
 		select {
 		case <-checkTicker.C:
@@ -76,7 +78,7 @@ func (pr *ProtocolReactor) AddPeer(peer *p2p.Peer) error {
 				return nil
 			}
 
-		case <-timeoutTicker.C:
+		case <-timeout.C:
 			return errProtocolHandshakeTimeout
 		}
 	}
