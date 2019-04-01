@@ -346,10 +346,13 @@ func TestStopPeer(t *testing.T) {
 
 	//s1 := MakeSwitch(&cfg, testDB, initSwitchFunc)
 	s1.Start()
+	fmt.Println("=== TestStopPeer sw listen addr:", s1.nodeInfo.ListenAddr, s1.listeners[0].(*DefaultListener).NetListener().Addr())
+
 	defer s1.Stop()
 
 	cfginp := *testCfg
 	privkeyinp := crypto.GenPrivKeyEd25519()
+	fmt.Println("=== TestStopPeer inpeer privkey:", privkeyinp.String())
 	cfginp.P2P.PrivateKey = privkeyinp.String()
 	inp := &inboundPeer{PrivKey: privkeyinp, config: testCfg}
 	addr := NewNetAddress(s1.listeners[0].(*DefaultListener).NetListener().Addr())
@@ -363,10 +366,12 @@ func TestStopPeer(t *testing.T) {
 	cfgrp := *testCfg
 	privkeyrp := crypto.GenPrivKeyEd25519()
 	cfginp.P2P.PrivateKey = privkeyrp.String()
+	fmt.Println("=== TestStopPeer remote peer privkey:", privkeyrp.String())
 
 	rp := &remotePeer{PrivKey: privkeyrp, Config: &cfgrp}
 	rp.Start()
 	defer rp.Stop()
+	fmt.Println("=== TestStopPeer remote peer addr:", rp.addr)
 	if err := s1.DialPeerWithAddress(rp.addr); err != nil {
 		t.Fatal(err)
 	}
