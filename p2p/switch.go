@@ -386,10 +386,12 @@ func (sw *Switch) filterConnByPeer(peer *Peer) error {
 	}
 
 	if sw.nodeInfo.getPubkey().Equals(peer.PubKey().Wrap()) {
+		fmt.Println("==== filterConnByPeer sw key", sw.nodeInfo.getPubkey().String(), " peer key:", peer.PubKey().String())
 		return ErrConnectSelf
 	}
 
 	if sw.peers.Has(peer.Key) {
+		fmt.Println("==== filterConnByPeer sw peers", sw.peers.list, " peer key:", peer.Key)
 		return ErrDuplicatePeer
 	}
 	return nil
