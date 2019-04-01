@@ -13,6 +13,7 @@ import (
 	"github.com/bytom/errors"
 	conn "github.com/bytom/p2p/connection"
 	"github.com/davecgh/go-spew/spew"
+	"time"
 )
 
 var (
@@ -378,7 +379,7 @@ func TestStopPeer(t *testing.T) {
 	if err := s1.DialPeerWithAddress(rp.addr); err != nil {
 		t.Fatal(err)
 	}
-
+	time.Sleep(1 * time.Second)
 	fmt.Println("=== want 2 got :", spew.Sdump(s1.peers.lookup))
 
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
