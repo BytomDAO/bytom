@@ -178,6 +178,7 @@ func (ip *inboundPeer) dial(addr *NetAddress) error {
 		fmt.Println("Failed to perform handshake:", err)
 		return err
 	}
-
+	time.Sleep(2 * time.Second)
+	pc.CloseConn()
 	return nil
 }

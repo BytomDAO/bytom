@@ -13,6 +13,8 @@ import (
 	"github.com/bytom/errors"
 	conn "github.com/bytom/p2p/connection"
 	"github.com/davecgh/go-spew/spew"
+	log "github.com/sirupsen/logrus"
+
 	"time"
 )
 
@@ -271,8 +273,8 @@ func TestAddInboundPeer(t *testing.T) {
 }
 
 func testAddInboundPeer(t *testing.T) {
-	fmt.Println("=== TestAddInboundPeer start")
-	defer fmt.Println("=== TestAddInboundPeer stop")
+	log.Info("=== TestAddInboundPeer start")
+	defer log.Info("=== TestAddInboundPeer stop")
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
 		t.Fatal(err)
@@ -285,15 +287,15 @@ func testAddInboundPeer(t *testing.T) {
 	cfg.P2P.ListenAddress = "0.0.0.0:0"
 	privkeySW := crypto.GenPrivKeyEd25519()
 	cfg.P2P.PrivateKey = privkeySW.String()
-	fmt.Println("=== TestAddInboundPeer sw privkey:", privkeySW.String(), "pubkey:", privkeySW.PubKey())
+	log.Info("=== TestAddInboundPeer sw privkey:", privkeySW.String(), "pubkey:", privkeySW.PubKey())
 	s1 := MakeSwitch(&cfg, testDB, privkeySW, initSwitchFunc)
 	s1.Start()
-	fmt.Println("=== TestAddInboundPeer sw listen addr:", s1.nodeInfo.ListenAddr, s1.listeners[0].(*DefaultListener).NetListener().Addr())
+	log.Info("=== TestAddInboundPeer sw listen addr:", s1.nodeInfo.ListenAddr, s1.listeners[0].(*DefaultListener).NetListener().Addr())
 	defer s1.Stop()
 
 	cfginp := *testCfg
 	privkey := crypto.GenPrivKeyEd25519()
-	fmt.Println("=== TestAddInboundPeer inpeer privkey:", privkey.String(), "pubkey:", privkey.PubKey())
+	log.Info("=== TestAddInboundPeer inpeer privkey:", privkey.String(), "pubkey:", privkey.PubKey())
 
 	cfginp.P2P.PrivateKey = privkey.String()
 	inp := &inboundPeer{PrivKey: privkey, config: &cfginp}
@@ -302,32 +304,30 @@ func testAddInboundPeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := inp.dial(addr); err != nil {
-		t.Fatal(err)
-	}
+	go inp.dial(addr)
 
 	cfgrp := *testCfg
 	privkeyrp := crypto.GenPrivKeyEd25519()
-	fmt.Println("=== TestAddInboundPeer remote peer privkey:", privkeyrp.String(), "pubkey:", privkeyrp.PubKey())
+	log.Info("=== TestAddInboundPeer remote peer privkey:", privkeyrp.String(), "pubkey:", privkeyrp.PubKey())
 
 	cfginp.P2P.PrivateKey = privkeyrp.String()
 
 	rp := &remotePeer{PrivKey: privkeyrp, Config: &cfgrp}
 	rp.Start()
 	defer rp.Stop()
-	fmt.Println("=== TestAddInboundPeer remote peer addr:", rp.addr)
+	log.Info("=== TestAddInboundPeer remote peer addr:", rp.addr)
 	if err := s1.DialPeerWithAddress(rp.addr); err != nil {
 		t.Fatal(err)
 	}
 
-	fmt.Println("=== want 2 got :", spew.Sdump(s1.peers.lookup))
+	log.Info("=== want 2 got :", spew.Sdump(s1.peers.lookup))
 	time.Sleep(1 * time.Second)
 	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
 		t.Fatal("TestAddInboundPeer peer size error")
 	}
 	cfginp2 := *testCfg
 	privkeyinp2 := crypto.GenPrivKeyEd25519()
-	fmt.Println("=== TestAddInboundPeer inpeer2 privkey:", privkeyinp2.String(), "pubkey:", privkeyinp2.PubKey())
+	log.Info("=== TestAddInboundPeer inpeer2 privkey:", privkeyinp2.String(), "pubkey:", privkeyinp2.PubKey())
 	cfginp2.P2P.PrivateKey = privkeyinp2.String()
 	inp2 := &inboundPeer{PrivKey: privkeyinp2, config: &cfginp2}
 
@@ -376,29 +376,7 @@ func testStopPeer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := inp.dial(addr); err != nil {
-		t.Fatal(err)
-	}
-
-	cfginp1 := *testCfg
-	privkeyinp1 := crypto.GenPrivKeyEd25519()
-	fmt.Println("=== TestStopPeer inpeer privkey:", privkeyinp1.String(), "pubkey:", privkeyinp1.PubKey())
-	cfginp1.P2P.PrivateKey = privkeyinp1.String()
-	inp1 := &inboundPeer{PrivKey: privkeyinp1, config: testCfg}
-
-	if err := inp1.dial(addr); err != nil {
-		t.Fatal(err)
-	}
-
-	cfginp2 := *testCfg
-	privkeyinp2 := crypto.GenPrivKeyEd25519()
-	fmt.Println("=== TestStopPeer inpeer privkey:", privkeyinp2.String(), "pubkey:", privkeyinp2.PubKey())
-	cfginp2.P2P.PrivateKey = privkeyinp2.String()
-	inp2 := &inboundPeer{PrivKey: privkeyinp2, config: testCfg}
-
-	if err := inp2.dial(addr); err != nil {
-		t.Fatal(err)
-	}
+	go inp.dial(addr)
 
 	cfgrp := *testCfg
 	privkeyrp := crypto.GenPrivKeyEd25519()
@@ -415,20 +393,20 @@ func testStopPeer(t *testing.T) {
 	time.Sleep(1 * time.Second)
 	fmt.Println("=== want 2 got :", spew.Sdump(s1.peers.lookup))
 
-	//if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
-	//	t.Fatalf("want 2 got %s", spew.Sdump(s1.peers.lookup))
-	//	t.Fatal("TestStopPeer peer size error")
-	//}
-	//
-	//s1.StopPeerGracefully(s1.peers.list[0].Key)
-	//if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 1 {
-	//	t.Fatalf("want 1 got %s", spew.Sdump(s1.peers.lookup))
-	//	t.Fatal("TestStopPeer peer size error")
-	//}
-	//
-	//s1.StopPeerForError(s1.peers.list[0], "stop for test")
-	//if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 0 {
-	//	t.Fatalf("want 0 got %s", spew.Sdump(s1.peers.list))
-	//	t.Fatal("TestStopPeer peer size error")
-	//}
+	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
+		t.Fatalf("want 2 got %s", spew.Sdump(s1.peers.lookup))
+		t.Fatal("TestStopPeer peer size error")
+	}
+
+	s1.StopPeerGracefully(s1.peers.list[0].Key)
+	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 1 {
+		t.Fatalf("want 1 got %s", spew.Sdump(s1.peers.lookup))
+		t.Fatal("TestStopPeer peer size error")
+	}
+
+	s1.StopPeerForError(s1.peers.list[0], "stop for test")
+	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 0 {
+		t.Fatalf("want 0 got %s", spew.Sdump(s1.peers.list))
+		t.Fatal("TestStopPeer peer size error")
+	}
 }

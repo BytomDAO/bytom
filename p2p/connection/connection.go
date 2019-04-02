@@ -264,6 +264,8 @@ func (c *MConnection) recvRoutine() {
 		var n int
 		var err error
 		pktType := wire.ReadByte(c.bufReader, &n, &err)
+		log.WithFields(log.Fields{"module": logModule, "conn": c, "type": pktType, "err": err}).Info("reading byte")
+
 		c.recvMonitor.Update(int(n))
 		if err != nil {
 			if c.IsRunning() {
@@ -338,6 +340,7 @@ func (c *MConnection) sendMsgPacket() bool {
 	if leastChannel == nil {
 		return true
 	}
+	log.WithFields(log.Fields{"module": logModule}).Info("write msgPacket")
 
 	n, err := leastChannel.writeMsgPacketTo(c.bufWriter)
 	if err != nil {
@@ -353,12 +356,14 @@ func (c *MConnection) sendMsgPacket() bool {
 // sendRoutine polls for packets to send from channels.
 func (c *MConnection) sendRoutine() {
 	defer c._recover()
+	log.WithFields(log.Fields{"module": logModule, "conn": c}).Info("sendRoutine")
 
 	for {
 		var n int
 		var err error
 		select {
 		case <-c.flushTimer.Ch:
+			log.WithFields(log.Fields{"module": logModule, "conn": c}).Info("flush timer")
 			c.flush()
 		case <-c.chStatsTimer.C:
 			for _, channel := range c.channels {
@@ -377,6 +382,7 @@ func (c *MConnection) sendRoutine() {
 		case <-c.quit:
 			return
 		case <-c.send:
+			log.WithFields(log.Fields{"module": logModule, "conn": c}).Info("send msg")
 			if eof := c.sendSomeMsgPackets(); !eof {
 				select {
 				case c.send <- struct{}{}:
@@ -401,6 +407,7 @@ func (c *MConnection) sendSomeMsgPackets() bool {
 	// Block until .sendMonitor says we can write.
 	// Once we're ready we send more than we asked for,
 	// but amortized it should even out.
+	fmt.Println("=== sendSomeMsgPackets")
 	c.sendMonitor.Limit(maxMsgPacketTotalSize, atomic.LoadInt64(&c.config.SendRate), true)
 	for i := 0; i < numBatchMsgPackets; i++ {
 		if c.sendMsgPacket() {
