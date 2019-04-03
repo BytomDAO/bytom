@@ -1,31 +1,68 @@
 package mdns
 
 import (
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-
+	"context"
 	log "github.com/sirupsen/logrus"
 	"github.com/zeroconf"
 )
 
-func RegisterService() {
-	server, err := zeroconf.Register("GoZeroconf", "_workstation._tcp", "local.", 42424, []string{"txtv=0", "lo=1", "la=2"}, nil)
+type mdnsProtocol struct {
+	entries chan *zeroconf.ServiceEntry
+	server  *zeroconf.Server
+	quite   chan struct{}
+}
+
+func NewMdnsProtocol() *mdnsProtocol {
+	return &mdnsProtocol{
+		entries: make(chan *zeroconf.ServiceEntry),
+		quite:   make(chan struct{}),
+	}
+}
+
+func (m *mdnsProtocol) getLanPeerLoop(event chan LanPeersEvent) {
+	for {
+		select {
+		case entry := <-m.entries:
+			event <- LanPeersEvent{IP: entry.AddrIPv4, Port: entry.Port}
+		case <-m.quite:
+			return
+		}
+	}
+}
+
+func (m *mdnsProtocol) registerService(port int) error {
+	var err error
+	if m.server, err = zeroconf.Register("bytomd", "lanDiscv", "local.", port, nil, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *mdnsProtocol) registerResolver(event chan LanPeersEvent) error {
+	go m.getLanPeerLoop(event)
+	// Discover all services on the network (e.g. _workstation._tcp)
+	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
-		panic(err)
-	}
-	defer server.Shutdown()
-
-	// Clean exit.
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
-	select {
-	case <-sig:
-		// Exit by user
-	case <-time.After(time.Second * 120):
-		// Exit by timeout
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("mdns resolver register error")
+		return err
 	}
 
-	log.Info("Shutting down.")
+	ctx := context.Background()
+	err = resolver.Browse(ctx, "lanDiscv", "local.", m.entries)
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("mdns resolver browse error")
+		return err
+	}
+	return nil
+}
+
+// 如何防止多次关闭chan
+func (m *mdnsProtocol) stopResolver() {
+	close(m.quite)
+}
+
+func (m *mdnsProtocol) stopService() {
+	if m.server != nil {
+		m.server.Shutdown()
+	}
 }
