@@ -8,7 +8,6 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/bytom/config"
-	"github.com/bytom/errors"
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover"
 	dbm "github.com/bytom/database/leveldb"
@@ -44,33 +43,6 @@ func CreateRoutableAddr() (addr string, netAddr *NetAddress) {
 		}
 	}
 	return
-}
-
-// MakeConnectedSwitches switches connected via arbitrary net.Conn; useful for testing
-// Returns n switches, connected according to the connect func.
-// If connect==Connect2Switches, the switches will be fully connected.
-// initSwitch defines how the ith switch should be initialized (ie. with what reactors).
-// NOTE: panics if any switch fails to start.
-func MakeConnectedSwitches(cfg []*cfg.Config, n int, testDB dbm.DB, initSwitch func(*Switch) *Switch, connect func([]*Switch, int, int)) []*Switch {
-	if len(cfg) != n {
-		panic(errors.New("cfg number error"))
-	}
-	switches := make([]*Switch, n)
-	for i := 0; i < n; i++ {
-		switches[i] = MakeSwitch(cfg[i], testDB, initSwitch)
-	}
-
-	if err := startSwitches(switches); err != nil {
-		panic(err)
-	}
-
-	for i := 0; i < n; i++ {
-		for j := i; j < n; j++ {
-			connect(switches, i, j)
-		}
-	}
-
-	return switches
 }
 
 // Connect2Switches will connect switches i and j via net.Pipe()
@@ -116,10 +88,8 @@ func (m *mockDiscv) ReadRandomNodes(buf []*discover.Node) (n int) {
 	return 0
 }
 
-func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, initSwitch func(*Switch) *Switch) *Switch {
+func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, privKey crypto.PrivKeyEd25519, initSwitch func(*Switch) *Switch) *Switch {
 	// new switch, add reactors
-	// TODO: let the config be passed in?
-	privKey := crypto.GenPrivKeyEd25519()
 	l, listenAddr := GetListener(cfg.P2P)
 	sw, err := newSwitch(cfg, new(mockDiscv), testdb, l, privKey, listenAddr)
 	if err != nil {
