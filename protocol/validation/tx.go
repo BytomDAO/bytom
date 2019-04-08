@@ -388,7 +388,7 @@ func checkValidDest(vs *validationState, vd *bc.ValueDestination) error {
 		return errors.Wrap(ErrMissingField, "missing ref on value destination")
 	}
 	if vd.Value == nil || vd.Value.AssetId == nil {
-		return errors.Wrap(ErrMissingField, "missing value on value source")
+		return errors.Wrap(ErrMissingField, "missing value on value destination")
 	}
 
 	e, ok := vs.tx.Entries[*vd.Ref]
