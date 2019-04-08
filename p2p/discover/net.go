@@ -576,14 +576,14 @@ loop:
 				if printTestImgLogs {
 					rad := r.radius / (maxRadius/1000000 + 1)
 					minrad := r.minRadius / (maxRadius/1000000 + 1)
-					log.WithFields(log.Fields{"module": logModule}).Debug("*R %d %v %016x %v\n", tm/1000000, topic, net.tab.self.sha[:8], rad)
-					log.WithFields(log.Fields{"module": logModule}).Debug("*MR %d %v %016x %v\n", tm/1000000, topic, net.tab.self.sha[:8], minrad)
+					log.WithFields(log.Fields{"module": logModule}).Debugf("*R %d %v %016x %v\n", tm/1000000, topic, net.tab.self.sha[:8], rad)
+					log.WithFields(log.Fields{"module": logModule}).Debugf("*MR %d %v %016x %v\n", tm/1000000, topic, net.tab.self.sha[:8], minrad)
 				}
 			}
 			for topic, t := range net.topictab.topics {
 				wp := t.wcl.nextWaitPeriod(tm)
 				if printTestImgLogs {
-					log.WithFields(log.Fields{"module": logModule}).Debug("*W %d %v %016x %d\n", tm/1000000, topic, net.tab.self.sha[:8], wp/1000000)
+					log.WithFields(log.Fields{"module": logModule}).Debugf("*W %d %v %016x %d\n", tm/1000000, topic, net.tab.self.sha[:8], wp/1000000)
 				}
 			}
 
