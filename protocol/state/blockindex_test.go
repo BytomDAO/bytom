@@ -1,14 +1,103 @@
 package state
 
 import (
+	"math"
 	"math/big"
+	"reflect"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/testutil"
 )
+
+func stringToBigInt(s string, base int) *big.Int {
+	result, _ := new(big.Int).SetString(s, base)
+	return result
+}
+
+func TestNewBlockNode(t *testing.T) {
+	cases := []struct {
+		blockHeader   *types.BlockHeader
+		parentNode    *BlockNode
+		wantBlockNode *BlockNode
+	}{
+		{
+			blockHeader: &types.BlockHeader{
+				Height:    uint64(0),
+				Timestamp: 0,
+				Bits:      1000,
+			},
+			parentNode: &BlockNode{
+				WorkSum: &big.Int{},
+			},
+			wantBlockNode: &BlockNode{
+				Bits:    1000,
+				Hash:    testutil.MustDecodeHash("f1a5a6ddebad7285928a07ce1534104a8d1cd435fc80e90bb9f0034bbe5f8109"),
+				Seed:    consensus.InitialSeed,
+				WorkSum: new(big.Int).SetInt64(0),
+				Parent: &BlockNode{
+					WorkSum: &big.Int{},
+				},
+			},
+		},
+		{
+			blockHeader: &types.BlockHeader{
+				Height:    uint64(100),
+				Timestamp: 0,
+				Bits:      10000000000,
+			},
+			parentNode: &BlockNode{
+				WorkSum: new(big.Int).SetInt64(100),
+			},
+			wantBlockNode: &BlockNode{
+				Bits:    10000000000,
+				Hash:    testutil.MustDecodeHash("b14067726f09d74da89aeb97ca1b15a8b95760b47a0d71549b0aa5ab8c5e724f"),
+				Seed:    consensus.InitialSeed,
+				Height:  uint64(100),
+				WorkSum: stringToBigInt("193956598387464313942329958138505708296934647681139973265423088790474254103", 10),
+				Parent: &BlockNode{
+					WorkSum: new(big.Int).SetInt64(100),
+				},
+			},
+		},
+		{
+			blockHeader: &types.BlockHeader{
+				Height:    uint64(100),
+				Timestamp: 0,
+				Bits:      10000000000,
+			},
+			parentNode: &BlockNode{
+				WorkSum: new(big.Int).SetInt64(math.MaxInt64),
+			},
+			wantBlockNode: &BlockNode{
+				Bits:    10000000000,
+				Hash:    testutil.MustDecodeHash("b14067726f09d74da89aeb97ca1b15a8b95760b47a0d71549b0aa5ab8c5e724f"),
+				Seed:    consensus.InitialSeed,
+				Height:  uint64(100),
+				WorkSum: stringToBigInt("193956598387464313942329958138505708296934647681139973274646460827329029810", 10),
+				Parent: &BlockNode{
+					WorkSum: new(big.Int).SetInt64(math.MaxInt64),
+				},
+			},
+		},
+	}
+
+	for i, c := range cases {
+		blockNode, err := NewBlockNode(c.blockHeader, c.parentNode)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(blockNode, c.wantBlockNode) {
+			t.Fatal("NewBlockNode test error, index:", i, "want:", spew.Sdump(c.wantBlockNode), "got:", spew.Sdump(blockNode))
+		}
+	}
+}
 
 func TestCalcPastMedianTime(t *testing.T) {
 	cases := []struct {
@@ -43,7 +132,7 @@ func TestCalcPastMedianTime(t *testing.T) {
 
 	for idx, c := range cases {
 		var parentNode *BlockNode
-		for i, _ := range c.Timestamps {
+		for i := range c.Timestamps {
 			blockHeader := &types.BlockHeader{
 				Height:    uint64(i),
 				Timestamp: c.Timestamps[i],
@@ -208,5 +297,66 @@ func TestSetMainChain(t *testing.T) {
 			t.Fatalf("old chain block %d, hash %v still in main chain", tailNode.Height, tailNode.Hash)
 		}
 		tailNode = tailNode.Parent
+	}
+}
+
+// MockBlockIndex will mock a empty BlockIndex
+func MockBlockIndex() *BlockIndex {
+	return &BlockIndex{
+		index:     make(map[bc.Hash]*BlockNode),
+		mainChain: make([]*BlockNode, 0, 2),
+	}
+}
+
+func TestSetMainChainExtendCap(t *testing.T) {
+	blockIndex := MockBlockIndex()
+	var lastNode *BlockNode
+
+	cases := []struct {
+		start   uint64
+		stop    uint64
+		wantLen int
+		wantCap int
+	}{
+		{
+			start:   0,
+			stop:    500,
+			wantLen: 500,
+			wantCap: 500 + approxNodesPerDay,
+		},
+		{
+			start:   500,
+			stop:    1000,
+			wantLen: 1000,
+			wantCap: 500 + approxNodesPerDay,
+		},
+		{
+			start:   1000,
+			stop:    2000,
+			wantLen: 2000,
+			wantCap: 2000 + approxNodesPerDay,
+		},
+	}
+
+	for num, c := range cases {
+		for i := c.start; i < c.stop; i++ {
+			node := &BlockNode{
+				Height: i,
+				Hash:   bc.Hash{V0: i},
+				Parent: lastNode,
+			}
+			blockIndex.AddNode(node)
+			lastNode = node
+		}
+		blockIndex.SetMainChain(lastNode)
+		if c.wantLen != len(blockIndex.mainChain) || c.wantCap != cap(blockIndex.mainChain) {
+			t.Fatalf("SetMainChain extended capacity error, index: %d, got len: %d, got cap: %d, want len: %d, want cap: %d", num, len(blockIndex.mainChain), cap(blockIndex.mainChain), c.wantLen, c.wantCap)
+		}
+	}
+
+	for i := 0; i < len(blockIndex.mainChain); i++ {
+		if blockIndex.mainChain[i] != blockIndex.index[blockIndex.mainChain[i].Hash] {
+			t.Fatal("SetMainChain extended capacity error, index:", i, "want:", spew.Sdump(blockIndex.mainChain[i]), "got:", spew.Sdump(blockIndex.index[blockIndex.mainChain[i].Hash]))
+		}
 	}
 }

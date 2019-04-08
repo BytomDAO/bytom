@@ -201,8 +201,17 @@ func isTransactionNoBtmInput(tx *types.Tx) bool {
 	return true
 }
 
+func isTransactionZeroOutput(tx *types.Tx) bool {
+	for _, output := range tx.TxData.Outputs {
+		if output.Amount == uint64(0) {
+			return true
+		}
+	}
+	return false
+}
+
 func (tp *TxPool) IsDust(tx *types.Tx) bool {
-	return isTransactionNoBtmInput(tx)
+	return isTransactionNoBtmInput(tx) || isTransactionZeroOutput(tx)
 }
 
 func (tp *TxPool) processTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {
@@ -300,6 +309,8 @@ func (tp *TxPool) checkOrphanUtxos(tx *types.Tx) ([]*bc.Hash, error) {
 
 func (tp *TxPool) orphanExpireWorker() {
 	ticker := time.NewTicker(orphanExpireScanInterval)
+	defer ticker.Stop()
+
 	for now := range ticker.C {
 		tp.ExpireOrphan(now)
 	}

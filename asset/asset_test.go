@@ -9,14 +9,13 @@ import (
 	"strings"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/database/leveldb"
+	"github.com/bytom/database"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/testutil"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestDefineAssetWithLowercase(t *testing.T) {
@@ -152,7 +151,7 @@ func TestListAssets(t *testing.T) {
 }
 
 func mockChain(testDB dbm.DB) (*protocol.Chain, error) {
-	store := leveldb.NewStore(testDB)
+	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 	chain, err := protocol.NewChain(store, txPool)

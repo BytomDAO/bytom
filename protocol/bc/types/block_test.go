@@ -10,6 +10,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/consensus"
+	"github.com/bytom/encoding/blockchain"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/testutil"
 )
@@ -129,6 +130,99 @@ func TestBlock(t *testing.T) {
 		}
 		if !testutil.DeepEqual(*test.block, blockFromJSON) {
 			t.Errorf("test %d: got:\n%s\nwant:\n%s", i, spew.Sdump(blockFromJSON), spew.Sdump(*test.block))
+		}
+	}
+}
+
+func TestReadFrom(t *testing.T) {
+	btmAssetID := testutil.MustDecodeAsset("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+
+	cases := []struct {
+		rawBlock  string
+		wantBlock Block
+	}{
+		{
+			rawBlock: "03018b5f3077f24528e94ecfc4491bb2e9ed6264a632a9a4b86b00c88093ca545d14a137d4f5e1e4054035a2d11158f47a5c5267630b2b6cf9e9a5f79a598085a2572a68defeb8013ad26978a65b4ee5b6f4914fe5c05000459a803ecf59132604e5d334d64249c5e50a17ebee908080808080200207010001010802060031323137310001013effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff809df3b49a010116001437e1aec83a4e6587ca9609e4e5aa728db700744900070100020160015e4b5cb973f5bef4eadde4c89b92ee73312b940e84164da0594149554cc8a2adeaffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80c480c1240201160014cb9f2391bafe2bc1159b2c4c8a0f17ba1b4dd94e6302405760b15cc09e543437c4e3aad05bf073e82ebdb214beccb5f4473653dfc0a9d5ae59fb149de19eb71c1c1399594757aeea4dd6327ca2790ef919bd20caa86104201381d35e235813ad1e62f9a602c82abee90565639cc4573568206b55bcd2aed90130000840142084606f20ca7b38dc897329a288ea31031724f5c55bcafec80468a546955023380af2faad1480d0dbc3f402b001467b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d0125ae2054a71277cc162eb3eb21b5bd9fe54402829a53b294deaed91692a2cd8a081f9c5151ad0140621c2c3554da50d2a492d9d78be7c6159359d8f5f0b93a054ce0133617a61d85c532aff449b97a3ec2804ca5fe12b4d54aa6e8c3215c33d04abee9c9abdfdb0302013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80c0d1e123011600144b61da45324299e40dacc255e2ea07dfce3a56d200013e7b38dc897329a288ea31031724f5c55bcafec80468a546955023380af2faad1480d0dbc3f4020116001437e1aec83a4e6587ca9609e4e5aa728db700744900",
+			wantBlock: Block{
+				BlockHeader: BlockHeader{
+					Version:           1,
+					Height:            12171,
+					PreviousBlockHash: testutil.MustDecodeHash("3077f24528e94ecfc4491bb2e9ed6264a632a9a4b86b00c88093ca545d14a137"),
+					Timestamp:         1553496788,
+					Nonce:             23,
+					Bits:              2305843009213970283,
+					BlockCommitment: BlockCommitment{
+						TransactionsMerkleRoot: testutil.MustDecodeHash("35a2d11158f47a5c5267630b2b6cf9e9a5f79a598085a2572a68defeb8013ad2"),
+						TransactionStatusHash:  testutil.MustDecodeHash("6978a65b4ee5b6f4914fe5c05000459a803ecf59132604e5d334d64249c5e50a"),
+					},
+				},
+				Transactions: []*Tx{
+					{
+						TxData: TxData{
+							Version:        1,
+							SerializedSize: 81,
+							TimeRange:      0,
+							Inputs: []*TxInput{
+								NewCoinbaseInput(testutil.MustDecodeHexString("003132313731")),
+							},
+							Outputs: []*TxOutput{
+								NewTxOutput(btmAssetID, 41450000000, testutil.MustDecodeHexString("001437e1aec83a4e6587ca9609e4e5aa728db7007449")),
+							},
+						},
+					},
+					{
+						TxData: TxData{
+							Version:        1,
+							SerializedSize: 560,
+							TimeRange:      0,
+							Inputs: []*TxInput{
+								NewSpendInput(
+									[][]byte{
+										testutil.MustDecodeHexString("5760b15cc09e543437c4e3aad05bf073e82ebdb214beccb5f4473653dfc0a9d5ae59fb149de19eb71c1c1399594757aeea4dd6327ca2790ef919bd20caa86104"),
+										testutil.MustDecodeHexString("1381d35e235813ad1e62f9a602c82abee90565639cc4573568206b55bcd2aed9"),
+									},
+									testutil.MustDecodeHash("4b5cb973f5bef4eadde4c89b92ee73312b940e84164da0594149554cc8a2adea"),
+									btmAssetID,
+									9800000000,
+									2,
+									testutil.MustDecodeHexString("0014cb9f2391bafe2bc1159b2c4c8a0f17ba1b4dd94e"),
+								),
+								NewIssuanceInput(
+									testutil.MustDecodeHexString("40142084606f20ca"),
+									100000000000,
+									testutil.MustDecodeHexString("ae2054a71277cc162eb3eb21b5bd9fe54402829a53b294deaed91692a2cd8a081f9c5151ad"),
+									[][]byte{testutil.MustDecodeHexString("621c2c3554da50d2a492d9d78be7c6159359d8f5f0b93a054ce0133617a61d85c532aff449b97a3ec2804ca5fe12b4d54aa6e8c3215c33d04abee9c9abdfdb03")},
+									testutil.MustDecodeHexString("7b0a202022646563696d616c73223a20382c0a2020226465736372697074696f6e223a207b7d2c0a2020226e616d65223a2022222c0a20202273796d626f6c223a2022220a7d"),
+								),
+							},
+							Outputs: []*TxOutput{
+								NewTxOutput(btmAssetID, 9600000000, testutil.MustDecodeHexString("00144b61da45324299e40dacc255e2ea07dfce3a56d2")),
+								NewTxOutput(testutil.MustDecodeAsset("7b38dc897329a288ea31031724f5c55bcafec80468a546955023380af2faad14"), 100000000000, testutil.MustDecodeHexString("001437e1aec83a4e6587ca9609e4e5aa728db7007449")),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, c := range cases {
+		blockBytes, err := hex.DecodeString(c.rawBlock)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		block := &Block{}
+		if err := block.readFrom(blockchain.NewReader(blockBytes)); err != nil {
+			t.Fatal(err)
+		}
+
+		for _, tx := range c.wantBlock.Transactions {
+			tx.Tx = MapTx(&tx.TxData)
+		}
+
+		if !testutil.DeepEqual(*block, c.wantBlock) {
+			t.Errorf("test block read from fail, got:%v, want:%v", *block, c.wantBlock)
 		}
 	}
 }

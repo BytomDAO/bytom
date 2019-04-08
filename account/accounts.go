@@ -10,7 +10,6 @@ import (
 
 	"github.com/golang/groupcache/lru"
 	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
@@ -24,6 +23,7 @@ import (
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm/vmutil"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const (

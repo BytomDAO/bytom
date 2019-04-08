@@ -10,6 +10,7 @@ import (
 	"net"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/crypto/nacl/secretbox"
 	"golang.org/x/crypto/ripemd160"
@@ -213,7 +214,7 @@ func genEphKeys() (ephPub, ephPriv *[32]byte) {
 	var err error
 	ephPub, ephPriv, err = box.GenerateKey(crand.Reader)
 	if err != nil {
-		cmn.PanicCrisis("Could not generate ephemeral keypairs")
+		log.Panic("Could not generate ephemeral keypairs")
 	}
 	return
 }

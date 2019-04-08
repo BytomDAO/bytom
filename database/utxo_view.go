@@ -1,13 +1,12 @@
-package leveldb
+package database
 
 import (
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/state"
 	"github.com/golang/protobuf/proto"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const utxoPreFix = "UT:"

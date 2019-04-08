@@ -5,8 +5,6 @@ import (
 	"os"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
@@ -17,6 +15,7 @@ import (
 	"github.com/bytom/event"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/testutil"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestWalletUnconfirmedTxs(t *testing.T) {

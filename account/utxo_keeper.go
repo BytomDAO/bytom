@@ -9,10 +9,10 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const desireUtxoCount = 5
@@ -184,10 +184,13 @@ func (uk *utxoKeeper) cancel(rid uint64) {
 
 func (uk *utxoKeeper) expireWorker() {
 	ticker := time.NewTicker(1000 * time.Millisecond)
+	defer ticker.Stop()
+
 	for now := range ticker.C {
 		uk.expireReservation(now)
 	}
 }
+
 func (uk *utxoKeeper) expireReservation(t time.Time) {
 	uk.mtx.Lock()
 	defer uk.mtx.Unlock()

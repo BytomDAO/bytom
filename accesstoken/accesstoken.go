@@ -10,10 +10,9 @@ import (
 	"strings"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/crypto/sha3pool"
 	"github.com/bytom/errors"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const tokenSize = 32

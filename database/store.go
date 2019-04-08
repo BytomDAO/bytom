@@ -1,4 +1,4 @@
-package leveldb
+package database
 
 import (
 	"encoding/binary"
@@ -8,7 +8,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/database/storage"
 	"github.com/bytom/errors"
@@ -16,6 +15,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const logModule = "leveldb"

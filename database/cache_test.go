@@ -1,4 +1,4 @@
-package leveldb
+package database
 
 import (
 	"testing"

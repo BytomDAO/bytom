@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/prometheus/util/flock"
 	log "github.com/sirupsen/logrus"
 	cmn "github.com/tendermint/tmlibs/common"
-	dbm "github.com/tendermint/tmlibs/db"
 	browser "github.com/toqueteos/webbrowser"
 
 	"github.com/bytom/accesstoken"
@@ -23,7 +22,6 @@ import (
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
-	"github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
 	"github.com/bytom/event"
 	"github.com/bytom/mining/cpuminer"
@@ -34,6 +32,8 @@ import (
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	w "github.com/bytom/wallet"
+	dbm "github.com/bytom/database/leveldb"
+	"github.com/bytom/database"
 )
 
 const (
@@ -75,7 +75,7 @@ func NewNode(config *cfg.Config) *Node {
 		cmn.Exit(cmn.Fmt("Param db_backend [%v] is invalid, use leveldb or memdb", config.DBBackend))
 	}
 	coreDB := dbm.NewDB("core", config.DBBackend, config.DBDir())
-	store := leveldb.NewStore(coreDB)
+	store := database.NewStore(coreDB)
 
 	tokenDB := dbm.NewDB("accesstoken", config.DBBackend, config.DBDir())
 	accessTokens := accesstoken.NewStore(tokenDB)
