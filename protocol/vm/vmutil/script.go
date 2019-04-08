@@ -1,6 +1,8 @@
 package vmutil
 
 import (
+	"math"
+
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/vm"
@@ -92,7 +94,7 @@ func P2SHProgram(scriptHash []byte) ([]byte, error) {
 	return builder.Build()
 }
 
-// P2SPMultiSigProgram generates the script for contorl transaction output
+// P2SPMultiSigProgram generates the script for control transaction output
 func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, error) {
 	builder := NewBuilder()
 	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
@@ -101,45 +103,70 @@ func P2SPMultiSigProgram(pubkeys []ed25519.PublicKey, nrequired int) ([]byte, er
 	return builder.Build()
 }
 
+// P2SPMultiSigProgramWithHeight generates the script with block height for control transaction output
+func P2SPMultiSigProgramWithHeight(pubkeys []ed25519.PublicKey, nrequired int, blockHeight int64) ([]byte, error) {
+	builder := NewBuilder()
+	if blockHeight > 0 {
+		builder.AddInt64(blockHeight)
+		builder.AddOp(vm.OP_BLOCKHEIGHT)
+		builder.AddOp(vm.OP_GREATERTHAN)
+		builder.AddOp(vm.OP_VERIFY)
+	}
+	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
+		return nil, err
+	}
+	return builder.Build()
+}
+
 // ParseP2SPMultiSigProgram is unknow for us yet
 func ParseP2SPMultiSigProgram(program []byte) ([]ed25519.PublicKey, int, error) {
-	pops, err := vm.ParseProgram(program)
+	insts, err := vm.ParseProgram(program)
 	if err != nil {
 		return nil, 0, err
 	}
-	if len(pops) < 11 {
+
+	if len(insts) < 5 {
 		return nil, 0, vm.ErrShortProgram
 	}
 
-	// Count all instructions backwards from the end in case there are
-	// extra instructions at the beginning of the program (like a
-	// <pushdata> DROP).
+	numPubkeys := 0
+	pubkeys := []ed25519.PublicKey{}
+	for i := len(insts) - 4; i > 0; i-- {
+		if i == len(insts)-4 && insts[i].Op == vm.OP_DATA_32 {
+			pubkeys = append(pubkeys, ed25519.PublicKey(insts[i].Data))
+			numPubkeys = 1
+			continue
+		}
 
-	npubkeys, err := vm.AsInt64(pops[len(pops)-6].Data)
-	if err != nil {
-		return nil, 0, err
+		if !(insts[i+1].Op == vm.OP_DATA_32 && insts[i].Op == vm.OP_DATA_32) {
+			break
+		}
+		pubkeys = append(pubkeys, ed25519.PublicKey(insts[i].Data))
+		numPubkeys++
 	}
-	if int(npubkeys) > len(pops)-10 {
+
+	if insts[len(insts)-1].Op != vm.OP_CHECKMULTISIG {
 		return nil, 0, vm.ErrShortProgram
 	}
-	nrequired, err := vm.AsInt64(pops[len(pops)-7].Data)
+	npubkeys, err := vm.AsInt64(insts[len(insts)-2].Data)
 	if err != nil {
 		return nil, 0, err
+	}
+	if int(npubkeys) != numPubkeys {
+		return nil, 0, vm.ErrShortProgram
+	}
+	nrequired, err := vm.AsInt64(insts[len(insts)-3].Data)
+	if err != nil {
+		return nil, 0, err
+	}
+	if nrequired > math.MaxInt32 {
+		return nil, 0, vm.ErrRange
 	}
 	err = checkMultiSigParams(nrequired, npubkeys)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	firstPubkeyIndex := len(pops) - 7 - int(npubkeys)
-
-	pubkeys := make([]ed25519.PublicKey, 0, npubkeys)
-	for i := firstPubkeyIndex; i < firstPubkeyIndex+int(npubkeys); i++ {
-		if len(pops[i].Data) != ed25519.PublicKeySize {
-			return nil, 0, err
-		}
-		pubkeys = append(pubkeys, ed25519.PublicKey(pops[i].Data))
-	}
 	return pubkeys, int(nrequired), nil
 }
 
