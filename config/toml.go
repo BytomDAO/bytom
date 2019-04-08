@@ -24,6 +24,7 @@ var defaultConfigTmpl = `# This is a TOML config file.
 fast_sync = true
 db_backend = "leveldb"
 api_addr = "0.0.0.0:9888"
+node_alias = ""
 `
 
 var mainNetConfigTmpl = `chain_id = "mainnet"
