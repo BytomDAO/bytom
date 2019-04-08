@@ -28,13 +28,17 @@ type NodeInfo struct {
 }
 
 func NewNodeInfo(config *cfg.Config, pubkey crypto.PubKeyEd25519, listenAddr string) *NodeInfo {
+	other := []string{strconv.FormatUint(uint64(consensus.DefaultServices), 10)}
+	if config.NodeAlias != "" {
+		other = append(other, config.NodeAlias)
+	}
 	return &NodeInfo{
 		PubKey:     pubkey,
 		Moniker:    config.Moniker,
 		Network:    config.ChainID,
 		ListenAddr: listenAddr,
 		Version:    version.Version,
-		Other:      []string{strconv.FormatUint(uint64(consensus.DefaultServices), 10), config.NodeAlias},
+		Other:      other,
 	}
 }
 
