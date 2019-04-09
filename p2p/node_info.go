@@ -22,17 +22,23 @@ type NodeInfo struct {
 	RemoteAddr string               `json:"remote_addr"`
 	ListenAddr string               `json:"listen_addr"`
 	Version    string               `json:"version"` // major.minor.revision
-	Other      []string             `json:"other"`   // other application specific data
+	// other application specific data
+	//field 0: node service flags. field 1: node alias.
+	Other []string `json:"other"`
 }
 
 func NewNodeInfo(config *cfg.Config, pubkey crypto.PubKeyEd25519, listenAddr string) *NodeInfo {
+	other := []string{strconv.FormatUint(uint64(consensus.DefaultServices), 10)}
+	if config.NodeAlias != "" {
+		other = append(other, config.NodeAlias)
+	}
 	return &NodeInfo{
 		PubKey:     pubkey,
 		Moniker:    config.Moniker,
 		Network:    config.ChainID,
 		ListenAddr: listenAddr,
 		Version:    version.Version,
-		Other:      []string{strconv.FormatUint(uint64(consensus.DefaultServices), 10)},
+		Other:      other,
 	}
 }
 
