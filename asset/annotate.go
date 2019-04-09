@@ -6,6 +6,7 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 func isValidJSON(b []byte) bool {
@@ -24,14 +25,15 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 		jsonDefinition = json.RawMessage(a.RawDefinitionByte)
 	}
 
-	aa := &query.AnnotatedAsset{
-		ID:              a.AssetID,
-		Definition:      &jsonDefinition,
-		IssuanceProgram: chainjson.HexBytes(a.IssuanceProgram),
+	annotatedAsset := &query.AnnotatedAsset{
+		ID:                a.AssetID,
+		Alias:             *a.Alias,
+		RawDefinitionByte: a.RawDefinitionByte,
+		Definition:        &jsonDefinition,
+		IssuanceProgram:   chainjson.HexBytes(a.IssuanceProgram),
 	}
-	if a.Alias != nil {
-		aa.Alias = *a.Alias
-	}
+
+	annotatedAsset.LimitHeight, _ = vmutil.GetIssuanceProgramRestrictHeight(a.IssuanceProgram)
 	if a.Signer != nil {
 		path := signers.GetBip0032Path(a.Signer, signers.AssetKeySpace)
 		var jsonPath []chainjson.HexBytes
@@ -40,13 +42,13 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 		}
 		for _, xpub := range a.Signer.XPubs {
 			derived := xpub.Derive(path)
-			aa.Keys = append(aa.Keys, &query.AssetKey{
+			annotatedAsset.Keys = append(annotatedAsset.Keys, &query.AssetKey{
 				RootXPub:            xpub,
 				AssetPubkey:         derived[:],
 				AssetDerivationPath: jsonPath,
 			})
 		}
-		aa.Quorum = a.Signer.Quorum
+		annotatedAsset.Quorum = a.Signer.Quorum
 	}
-	return aa, nil
+	return annotatedAsset, nil
 }

@@ -68,12 +68,15 @@ type AnnotatedAccount struct {
 
 //AnnotatedAsset means an annotated asset.
 type AnnotatedAsset struct {
-	ID              bc.AssetID         `json:"id"`
-	Alias           string             `json:"alias,omitempty"`
-	IssuanceProgram chainjson.HexBytes `json:"issuance_program"`
-	Keys            []*AssetKey        `json:"keys"`
-	Quorum          int                `json:"quorum"`
-	Definition      *json.RawMessage   `json:"definition"`
+	ID                bc.AssetID         `json:"id"`
+	Alias             string             `json:"alias"`
+	VMVersion         uint64             `json:"vm_version"`
+	IssuanceProgram   chainjson.HexBytes `json:"issue_program"`
+	Keys              []*AssetKey        `json:"keys"`
+	Quorum            int                `json:"quorum"`
+	RawDefinitionByte chainjson.HexBytes `json:"raw_definition_byte"`
+	Definition        *json.RawMessage   `json:"definition"`
+	LimitHeight       int64              `json:"limit_height"`
 }
 
 //AssetKey means an asset key.
