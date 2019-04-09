@@ -33,12 +33,7 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 		IssuanceProgram:   chainjson.HexBytes(a.IssuanceProgram),
 	}
 
-	var err error
-	annotatedAsset.LimitHeight, err = vmutil.GetIssuanceProgramRestrictHeight(a.IssuanceProgram)
-	if err != nil {
-		return nil, err
-	}
-
+	annotatedAsset.LimitHeight, _ = vmutil.GetIssuanceProgramRestrictHeight(a.IssuanceProgram)
 	if a.Signer != nil {
 		path := signers.GetBip0032Path(a.Signer, signers.AssetKeySpace)
 		var jsonPath []chainjson.HexBytes
