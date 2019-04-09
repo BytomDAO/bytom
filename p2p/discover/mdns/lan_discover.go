@@ -6,13 +6,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"fmt"
 	"github.com/bytom/event"
 	"sync/atomic"
 )
 
 const (
 	logModule            = "p2p/mdns"
-	registerServiceCycle = 60 * time.Minute
+	registerServiceCycle = 1 * time.Minute
 )
 
 type LanPeersEvent struct {
@@ -96,6 +97,7 @@ func (ld *LanDiscover) getLanPeerLoop() {
 	for {
 		select {
 		case entry := <-ld.entries:
+			fmt.Println("new entry", entry)
 			ld.eventDispatcher.Post(entry)
 		case <-ld.quite:
 			return
