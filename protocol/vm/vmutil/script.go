@@ -141,7 +141,7 @@ func GetIssuanceProgramRestrictHeight(program []byte) (int64, error) {
 		return 0, err
 	}
 
-	if insts[0].IsPushdata() && insts[1].Op == vm.OP_BLOCKHEIGHT && insts[2].Op == vm.OP_GREATERTHAN && insts[3].Op == vm.OP_VERIFY {
+	if len(insts) >= 4 && insts[0].IsPushdata() && insts[1].Op == vm.OP_BLOCKHEIGHT && insts[2].Op == vm.OP_GREATERTHAN && insts[3].Op == vm.OP_VERIFY {
 		return vm.AsInt64(insts[0].Data)
 	}
 	return 0, nil
