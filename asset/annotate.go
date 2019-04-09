@@ -6,7 +6,7 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/protocol/vm"
+	"github.com/bytom/protocol/vm/vmutil"
 )
 
 func isValidJSON(b []byte) bool {
@@ -33,19 +33,10 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 		IssuanceProgram:   chainjson.HexBytes(a.IssuanceProgram),
 	}
 
-	insts, err := vm.ParseProgram(a.IssuanceProgram)
+	var err error
+	annotatedAsset.LimitHeight, err = vmutil.GetIssuanceProgramRestrictHeight(a.IssuanceProgram)
 	if err != nil {
 		return nil, err
-	}
-
-	for i, inst := range insts {
-		if i-1 >= 0 && insts[i-1].IsPushdata() && inst.Op == vm.OP_BLOCKHEIGHT {
-			annotatedAsset.LimitHeight, err = vm.AsInt64(insts[i-1].Data)
-			if err != nil {
-				return nil, err
-			}
-			break
-		}
 	}
 
 	if a.Signer != nil {
