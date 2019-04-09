@@ -1,8 +1,6 @@
 package vmutil
 
 import (
-	"math"
-
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/vm"
@@ -111,63 +109,13 @@ func P2SPMultiSigProgramWithHeight(pubkeys []ed25519.PublicKey, nrequired int, b
 		builder.AddOp(vm.OP_BLOCKHEIGHT)
 		builder.AddOp(vm.OP_GREATERTHAN)
 		builder.AddOp(vm.OP_VERIFY)
+	} else if blockHeight < 0 {
+		return nil, errors.WithDetail(ErrBadValue, "negative blockHeight")
 	}
 	if err := builder.addP2SPMultiSig(pubkeys, nrequired); err != nil {
 		return nil, err
 	}
 	return builder.Build()
-}
-
-// ParseP2SPMultiSigProgram is unknow for us yet
-func ParseP2SPMultiSigProgram(program []byte) ([]ed25519.PublicKey, int, error) {
-	insts, err := vm.ParseProgram(program)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if len(insts) < 5 {
-		return nil, 0, vm.ErrShortProgram
-	}
-
-	numPubkeys := 0
-	pubkeys := []ed25519.PublicKey{}
-	for i := len(insts) - 4; i > 0; i-- {
-		if i == len(insts)-4 && insts[i].Op == vm.OP_DATA_32 {
-			pubkeys = append(pubkeys, ed25519.PublicKey(insts[i].Data))
-			numPubkeys = 1
-			continue
-		}
-
-		if !(insts[i+1].Op == vm.OP_DATA_32 && insts[i].Op == vm.OP_DATA_32) {
-			break
-		}
-		pubkeys = append(pubkeys, ed25519.PublicKey(insts[i].Data))
-		numPubkeys++
-	}
-
-	if insts[len(insts)-1].Op != vm.OP_CHECKMULTISIG {
-		return nil, 0, vm.ErrShortProgram
-	}
-	npubkeys, err := vm.AsInt64(insts[len(insts)-2].Data)
-	if err != nil {
-		return nil, 0, err
-	}
-	if int(npubkeys) != numPubkeys {
-		return nil, 0, vm.ErrShortProgram
-	}
-	nrequired, err := vm.AsInt64(insts[len(insts)-3].Data)
-	if err != nil {
-		return nil, 0, err
-	}
-	if nrequired > math.MaxInt32 {
-		return nil, 0, vm.ErrRange
-	}
-	err = checkMultiSigParams(nrequired, npubkeys)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return pubkeys, int(nrequired), nil
 }
 
 func checkMultiSigParams(nrequired, npubkeys int64) error {

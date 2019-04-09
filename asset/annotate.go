@@ -6,7 +6,6 @@ import (
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/protocol/vm/vmutil"
 )
 
 func isValidJSON(b []byte) bool {
@@ -48,17 +47,6 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 			})
 		}
 		aa.Quorum = a.Signer.Quorum
-	} else {
-		pubkeys, quorum, err := vmutil.ParseP2SPMultiSigProgram(a.IssuanceProgram)
-		if err == nil {
-			for _, pubkey := range pubkeys {
-				pubkey := pubkey
-				aa.Keys = append(aa.Keys, &query.AssetKey{
-					AssetPubkey: chainjson.HexBytes(pubkey[:]),
-				})
-			}
-			aa.Quorum = quorum
-		}
 	}
 	return aa, nil
 }
