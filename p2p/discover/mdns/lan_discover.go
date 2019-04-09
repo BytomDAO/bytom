@@ -97,7 +97,7 @@ func (ld *LanDiscover) getLanPeerLoop() {
 	for {
 		select {
 		case entry := <-ld.entries:
-			fmt.Println("new entry", entry)
+			fmt.Println("====new entry", entry)
 			ld.eventDispatcher.Post(entry)
 		case <-ld.quite:
 			return
