@@ -72,12 +72,13 @@ func (p *Peer) OnStop() {
 	p.mconn.Stop()
 }
 
-func newPeer(pc *peerConn, nodeInfo *NodeInfo, reactorsByCh map[byte]Reactor, chDescs []*connection.ChannelDescriptor, onPeerError func(*Peer, interface{})) *Peer {
+func newPeer(pc *peerConn, nodeInfo *NodeInfo, reactorsByCh map[byte]Reactor, chDescs []*connection.ChannelDescriptor, onPeerError func(*Peer, interface{}), isLAN bool) *Peer {
 	// Key and NodeInfo are set after Handshake
 	p := &Peer{
 		peerConn: pc,
 		NodeInfo: nodeInfo,
 		Key:      nodeInfo.PubKey.KeyString(),
+		isLAN:    isLAN,
 	}
 	p.mconn = createMConnection(pc.conn, p, reactorsByCh, chDescs, onPeerError, pc.config.MConfig)
 	p.BaseService = *cmn.NewBaseService(nil, "Peer", p)

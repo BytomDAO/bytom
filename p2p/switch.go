@@ -197,7 +197,7 @@ func (sw *Switch) AddBannedPeer(ip string) error {
 // it starts the peer and adds it to the switch.
 // NOTE: This performs a blocking handshake before the peer is added.
 // CONTRACT: If error is returned, peer is nil, and conn is immediately closed.
-func (sw *Switch) AddPeer(pc *peerConn) error {
+func (sw *Switch) AddPeer(pc *peerConn, isLAN bool) error {
 	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, sw.peerConfig.HandshakeTimeout)
 	if err != nil {
 		return err
@@ -210,7 +210,7 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 		return err
 	}
 
-	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)
+	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, isLAN)
 	if err := sw.filterConnByPeer(peer); err != nil {
 		return err
 	}
@@ -268,7 +268,7 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 		return err
 	}
 
-	if err = sw.AddPeer(pc); err != nil {
+	if err = sw.AddPeer(pc, addr.isLAN); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Error("DialPeer fail on switch AddPeer")
 		pc.CloseConn()
 		return err
@@ -355,7 +355,7 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 		return err
 	}
 
-	if err = sw.AddPeer(peerConn); err != nil {
+	if err = sw.AddPeer(peerConn, false); err != nil {
 		if err := conn.Close(); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "remote peer:": conn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
 		}
@@ -397,7 +397,7 @@ func (sw *Switch) connectLANPeers(lanPeer mdns.LANPeerEvent) {
 
 	var wg sync.WaitGroup
 	for i := 0; i < len(lanPeer.IP); i++ {
-		try := NewNetAddressIPPort(lanPeer.IP[i], uint16(lanPeer.Port))
+		try := NewLANNetAddressIPPort(lanPeer.IP[i], uint16(lanPeer.Port))
 		if sw.NodeInfo().ListenAddr == try.String() {
 			continue
 		}
