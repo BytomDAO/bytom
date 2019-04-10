@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/crypto/ed25519"
+	"github.com/bytom/crypto/ed25519"
 )
 
 // NewPrivateKey returns a PrivateKey by parsing the string s.

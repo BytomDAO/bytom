@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"strconv"
 
-	"golang.org/x/crypto/ed25519"
+	"github.com/bytom/crypto/ed25519"
 )
 
 const format = "Private-key-format: v1.3\n"

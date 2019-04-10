@@ -152,7 +152,6 @@ func (sw *Switch) OnStart() error {
 		go sw.listenerRoutine(listener)
 	}
 	go sw.ensureOutboundPeersRoutine()
-	//nil
 	if sw.lanDiscv != nil {
 		go sw.connectLANPeersRoutine()
 	}
