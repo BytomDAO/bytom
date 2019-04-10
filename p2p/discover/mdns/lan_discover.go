@@ -7,7 +7,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"fmt"
 	"github.com/bytom/event"
 )
 
@@ -123,7 +122,6 @@ func (ld *LANDiscover) getLANPeerLoop() {
 	for {
 		select {
 		case entry := <-ld.entries:
-			fmt.Println("===", entry)
 			if err := ld.eventDispatcher.Post(entry); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("event dispatch error")
 			}
