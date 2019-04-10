@@ -160,7 +160,9 @@ func (sw *Switch) OnStart() error {
 
 // OnStop implements BaseService. It stops all listeners, peers, and reactors.
 func (sw *Switch) OnStop() {
-	sw.lanDiscv.Stop()
+	if sw.lanDiscv != nil {
+		sw.lanDiscv.Stop()
+	}
 	for _, listener := range sw.listeners {
 		listener.Stop()
 	}

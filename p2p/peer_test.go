@@ -83,7 +83,7 @@ func createOutboundPeerAndPerformHandshake(
 		fmt.Println(err)
 		return nil, err
 	}
-	p := newPeer(pc, nodeInfo, reactorsByCh, chDescs, nil)
+	p := newPeer(pc, nodeInfo, reactorsByCh, chDescs, nil, false)
 	return p, nil
 }
 
@@ -93,6 +93,7 @@ type remotePeer struct {
 	addr       *NetAddress
 	quit       chan struct{}
 	listenAddr string
+	isLAN      bool
 }
 
 func (rp *remotePeer) Addr() *NetAddress {
