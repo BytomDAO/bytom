@@ -185,6 +185,11 @@ func (p *Peer) IsOutbound() bool {
 	return p.outbound
 }
 
+// IsLAN returns true if peer is LAN peer, false otherwise.
+func (p *Peer) IsLAN() bool {
+	return p.outbound
+}
+
 // PubKey returns peer's public key.
 func (p *Peer) PubKey() crypto.PubKeyEd25519 {
 	return p.conn.(*connection.SecretConnection).RemotePubKey()

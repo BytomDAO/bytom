@@ -15,7 +15,7 @@ const (
 	instanceName         = "bytomd"
 	serviceName          = "lanDiscover"
 	domainName           = "local"
-	registerServiceCycle = 1 * time.Minute
+	registerServiceCycle = 10 * time.Minute
 	registerServiceDelay = 0 * time.Second
 )
 
