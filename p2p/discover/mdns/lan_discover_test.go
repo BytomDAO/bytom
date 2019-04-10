@@ -9,25 +9,25 @@ import (
 	"time"
 )
 
-var wantEvents = []LanPeersEvent{
+var wantEvents = []LANPeerEvent{
 	{IP: []net.IP{net.IPv4(1, 2, 3, 4)}, Port: 1024},
 	{IP: []net.IP{net.IPv4(1, 2, 3, 4), net.IPv4(5, 6, 7, 8)}, Port: 1024},
 }
 
 type mockProtocol struct {
-	entries chan *LanPeersEvent
+	entries chan *LANPeerEvent
 }
 
 func newMockProtocol() *mockProtocol {
 	return &mockProtocol{
-		entries: make(chan *LanPeersEvent, 1024),
+		entries: make(chan *LANPeerEvent, 1024),
 	}
 }
-func (m *mockProtocol) registerService(port int) error {
+func (m *mockProtocol) registerService(instance string, service string, domain string, port int) error {
 	return nil
 }
 
-func (m *mockProtocol) registerResolver(event chan LanPeersEvent) error {
+func (m *mockProtocol) registerResolver(event chan LANPeerEvent, service string, domain string) error {
 	for _, peerEvent := range wantEvents {
 		event <- peerEvent
 	}
@@ -43,7 +43,7 @@ func (m *mockProtocol) stopResolver() {
 }
 
 func TestLanDiscover(t *testing.T) {
-	lanDiscv, err := NewLanDiscover(newMockProtocol(), 12345)
+	lanDiscv, err := NewLANDiscover(newMockProtocol(), 12345)
 	defer lanDiscv.Stop()
 	if err != nil {
 		t.Fatal("create lan discover err")
@@ -54,7 +54,7 @@ func TestLanDiscover(t *testing.T) {
 		t.Fatal("subscribe lan peer msg err")
 	}
 
-	var gotevents = []LanPeersEvent{}
+	var gotevents = []LANPeerEvent{}
 	timeout := time.After(1 * time.Second)
 	for {
 		select {
@@ -64,7 +64,7 @@ func TestLanDiscover(t *testing.T) {
 				return
 			}
 
-			ev, ok := obj.Data.(LanPeersEvent)
+			ev, ok := obj.Data.(LANPeerEvent)
 			if !ok {
 				t.Fatal("event type error")
 				continue

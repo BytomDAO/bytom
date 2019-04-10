@@ -32,7 +32,7 @@ const (
 	logModule          = "p2p"
 
 	minNumOutboundPeers = 4
-	maxNumLanPeers      = 5
+	maxNumLANPeers      = 5
 )
 
 //pre-define errors for connecting fail
@@ -82,7 +82,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	var l Listener
 	var listenAddr string
 	var discv *dht.Network
-	var lanDiscv *mdns.LanDiscover
+	var lanDiscv *mdns.LANDiscover
 
 	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 	config.P2P.PrivateKey, err = config.NodeKey()
@@ -106,7 +106,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 			return nil, err
 		}
 
-		if lanDiscv, err = mdns.NewLanDiscover(mdns.NewMdnsProtocol(), int(l.ExternalAddress().Port)); err != nil {
+		if lanDiscv, err = mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port)); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("create lan discover error")
 		}
 	}
@@ -154,7 +154,7 @@ func (sw *Switch) OnStart() error {
 	go sw.ensureOutboundPeersRoutine()
 	//nil
 	if sw.lanDiscv != nil {
-		go sw.connectLanPeersRoutine()
+		go sw.connectLANPeersRoutine()
 	}
 	return nil
 }
@@ -314,7 +314,7 @@ func (sw *Switch) NumPeers() (lan, outbound, inbound, dialing int) {
 		} else {
 			inbound++
 		}
-		if peer.isLan {
+		if peer.isLAN {
 			lan++
 		}
 	}
@@ -382,10 +382,10 @@ func (sw *Switch) checkBannedPeer(peer string) error {
 	return nil
 }
 
-func (sw *Switch) connectLanPeers(lanPeer mdns.LanPeersEvent) {
+func (sw *Switch) connectLANPeers(lanPeer mdns.LANPeerEvent) {
 	lanPeers, _, _, numDialing := sw.NumPeers()
-	numToDial := (maxNumLanPeers - (lanPeers + numDialing))
-	log.WithFields(log.Fields{"module": logModule, "numDialing": numDialing, "numToDial": numToDial}).Debug("connect lan peers")
+	numToDial := (maxNumLANPeers - (lanPeers + numDialing))
+	log.WithFields(log.Fields{"module": logModule, "numDialing": numDialing, "numToDial": numToDial}).Debug("connect LAN peers")
 	if numToDial <= 0 {
 		return
 	}
@@ -414,10 +414,10 @@ func (sw *Switch) connectLanPeers(lanPeer mdns.LanPeersEvent) {
 	wg.Wait()
 }
 
-func (sw *Switch) connectLanPeersRoutine() {
+func (sw *Switch) connectLANPeersRoutine() {
 	lanPeerEventSub, err := sw.lanDiscv.Subscribe()
 	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("subscribe Lan Peer Event error")
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("subscribe LAN Peer Event error")
 		return
 	}
 
@@ -425,15 +425,15 @@ func (sw *Switch) connectLanPeersRoutine() {
 		select {
 		case obj, ok := <-lanPeerEventSub.Chan():
 			if !ok {
-				log.WithFields(log.Fields{"module": logModule}).Warning("lan peer event subscription channel closed")
+				log.WithFields(log.Fields{"module": logModule}).Warning("LAN peer event subscription channel closed")
 				return
 			}
-			lanPeer, ok := obj.Data.(mdns.LanPeersEvent)
+			LANPeer, ok := obj.Data.(mdns.LANPeerEvent)
 			if !ok {
 				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
 				continue
 			}
-			sw.connectLanPeers(lanPeer)
+			sw.connectLANPeers(LANPeer)
 		case <-sw.Quit:
 			return
 		}
@@ -541,7 +541,7 @@ func (sw *Switch) ensureKeepConnectPeers() {
 func (sw *Switch) ensureOutboundPeers() {
 	lanPeers, numOutPeers, _, numDialing := sw.NumPeers()
 	numToDial := (minNumOutboundPeers + lanPeers - (numOutPeers + numDialing))
-	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "lanPeers": lanPeers, "numDialing": numDialing, "numToDial": numToDial}).Debug("ensure peers")
+	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "LANPeers": lanPeers, "numDialing": numDialing, "numToDial": numToDial}).Debug("ensure peers")
 	if numToDial <= 0 {
 		return
 	}

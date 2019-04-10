@@ -56,7 +56,7 @@ type Peer struct {
 	*peerConn
 	mconn *connection.MConnection // multiplex connection
 	Key   string
-	isLan bool
+	isLAN bool
 }
 
 // OnStart implements BaseService.

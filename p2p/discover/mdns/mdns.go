@@ -2,66 +2,66 @@ package mdns
 
 import (
 	"context"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/zeroconf"
 )
 
-type mdnsProtocol struct {
+// Protocol decoration ZeroConf,which is a pure Golang library
+// that employs Multicast DNS-SD.
+type Protocol struct {
 	entries chan *zeroconf.ServiceEntry
 	server  *zeroconf.Server
 	quite   chan struct{}
 }
 
-func NewMdnsProtocol() *mdnsProtocol {
-	return &mdnsProtocol{
+// NewProtocol create a specific Protocol.
+func NewProtocol() *Protocol {
+	return &Protocol{
 		entries: make(chan *zeroconf.ServiceEntry),
 		quite:   make(chan struct{}),
 	}
 }
 
-func (m *mdnsProtocol) getLanPeerLoop(event chan LanPeersEvent) {
+func (m *Protocol) getLanPeerLoop(event chan LANPeerEvent) {
 	for {
 		select {
 		case entry := <-m.entries:
-			event <- LanPeersEvent{IP: entry.AddrIPv4, Port: entry.Port}
+			event <- LANPeerEvent{IP: entry.AddrIPv4, Port: entry.Port}
 		case <-m.quite:
 			return
 		}
 	}
 }
 
-func (m *mdnsProtocol) registerService(port int) error {
+func (m *Protocol) registerService(instance string, service string, domain string, port int) error {
 	var err error
-	if m.server, err = zeroconf.Register("bytomd", "lanDiscv", "local.", port, nil, nil); err != nil {
-		return err
-	}
-	return nil
+	m.server, err = zeroconf.Register(instance, service, domain, port, nil, nil)
+	return err
 }
 
-func (m *mdnsProtocol) registerResolver(event chan LanPeersEvent) error {
+func (m *Protocol) registerResolver(event chan LANPeerEvent, service string, domain string) error {
 	go m.getLanPeerLoop(event)
-	// Discover all services on the network (e.g. _workstation._tcp)
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("mdns resolver register error")
 		return err
 	}
 
-	ctx := context.Background()
-	err = resolver.Browse(ctx, "lanDiscv", "local.", m.entries)
+	err = resolver.Browse(context.Background(), service, domain, m.entries)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("mdns resolver browse error")
 		return err
 	}
+
 	return nil
 }
 
-// 如何防止多次关闭chan
-func (m *mdnsProtocol) stopResolver() {
+func (m *Protocol) stopResolver() {
 	close(m.quite)
 }
 
-func (m *mdnsProtocol) stopService() {
+func (m *Protocol) stopService() {
 	if m.server != nil {
 		m.server.Shutdown()
 	}
