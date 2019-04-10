@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+	"bytes"
 
 	"github.com/bytom/crypto/ed25519"
 )
@@ -292,7 +293,7 @@ func (kl *klexer) Next() (lex, bool) {
 	var (
 		l lex
 
-		str strings.Builder
+		str bytes.Buffer
 
 		commt bool
 	)

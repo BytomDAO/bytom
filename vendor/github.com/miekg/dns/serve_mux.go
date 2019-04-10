@@ -1,7 +1,7 @@
 package dns
 
 import (
-	"strings"
+	"bytes"
 	"sync"
 )
 
@@ -40,7 +40,7 @@ func (mux *ServeMux) match(q string, t uint16) Handler {
 
 	// TODO(tmthrgd): Once https://go-review.googlesource.com/c/go/+/137575
 	// lands in a go release, replace the following with strings.ToLower.
-	var sb strings.Builder
+	var sb bytes.Buffer
 	for i := 0; i < len(q); i++ {
 		c := q[i]
 		if !(c >= 'A' && c <= 'Z') {

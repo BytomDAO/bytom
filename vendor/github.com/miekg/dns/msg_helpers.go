@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"net"
-	"strings"
+	"bytes"
 )
 
 // helper functions called from the generated zmsg.go
@@ -141,7 +141,7 @@ func truncateMsgFromRdlength(msg []byte, off int, rdlength uint16) (truncmsg []b
 	return msg[:lenrd], nil
 }
 
-var base32HexNoPadEncoding = base32.HexEncoding.WithPadding(base32.NoPadding)
+var base32HexNoPadEncoding = base32.HexEncoding
 
 func fromBase32(s []byte) (buf []byte, err error) {
 	for i, b := range s {
@@ -267,7 +267,7 @@ func unpackString(msg []byte, off int) (string, int, error) {
 	if off+l+1 > len(msg) {
 		return "", off, &Error{err: "overflow unpacking txt"}
 	}
-	var s strings.Builder
+	var s bytes.Buffer
 	s.Grow(l)
 	for _, b := range msg[off+1 : off+1+l] {
 		switch {

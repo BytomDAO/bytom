@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"strconv"
@@ -437,7 +438,7 @@ type TXT struct {
 func (rr *TXT) String() string { return rr.Hdr.String() + sprintTxt(rr.Txt) }
 
 func sprintName(s string) string {
-	var dst strings.Builder
+	var dst bytes.Buffer
 	dst.Grow(len(s))
 	for i := 0; i < len(s); {
 		if i+1 < len(s) && s[i] == '\\' && s[i+1] == '.' {
@@ -461,7 +462,7 @@ func sprintName(s string) string {
 }
 
 func sprintTxtOctet(s string) string {
-	var dst strings.Builder
+	var dst bytes.Buffer
 	dst.Grow(2 + len(s))
 	dst.WriteByte('"')
 	for i := 0; i < len(s); {
@@ -489,7 +490,7 @@ func sprintTxtOctet(s string) string {
 }
 
 func sprintTxt(txt []string) string {
-	var out strings.Builder
+	var out bytes.Buffer
 	for i, s := range txt {
 		out.Grow(3 + len(s))
 		if i > 0 {
@@ -510,7 +511,7 @@ func sprintTxt(txt []string) string {
 	return out.String()
 }
 
-func writeDomainNameByte(s *strings.Builder, b byte) {
+func writeDomainNameByte(s *bytes.Buffer, b byte) {
 	switch b {
 	case '.', ' ', '\'', '@', ';', '(', ')': // additional chars to escape
 		s.WriteByte('\\')
@@ -520,7 +521,7 @@ func writeDomainNameByte(s *strings.Builder, b byte) {
 	}
 }
 
-func writeTXTStringByte(s *strings.Builder, b byte) {
+func writeTXTStringByte(s *bytes.Buffer, b byte) {
 	switch {
 	case b == '"' || b == '\\':
 		s.WriteByte('\\')
