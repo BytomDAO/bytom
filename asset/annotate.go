@@ -5,6 +5,7 @@ import (
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
+	"github.com/bytom/consensus"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/vm/vmutil"
 )
@@ -34,6 +35,10 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 	}
 
 	annotatedAsset.LimitHeight, _ = vmutil.GetIssuanceProgramRestrictHeight(a.IssuanceProgram)
+	if annotatedAsset.ID == *consensus.BTMAssetID {
+		annotatedAsset.LimitHeight = 1
+	}
+
 	if a.Signer != nil {
 		path := signers.GetBip0032Path(a.Signer, signers.AssetKeySpace)
 		var jsonPath []chainjson.HexBytes
