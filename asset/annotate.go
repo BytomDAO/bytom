@@ -34,11 +34,13 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 
 	annotatedAsset.LimitHeight, _ = vmutil.GetIssuanceProgramRestrictHeight(a.IssuanceProgram)
 	if a.Signer != nil {
-		annotatedAsset.AnnotatedSigner.Type = a.Signer.Type
-		annotatedAsset.AnnotatedSigner.XPubs = a.Signer.XPubs
-		annotatedAsset.AnnotatedSigner.Quorum = a.Signer.Quorum
-		annotatedAsset.AnnotatedSigner.KeyIndex = a.Signer.KeyIndex
-		annotatedAsset.AnnotatedSigner.DeriveRule = a.Signer.DeriveRule
+		annotatedAsset.AnnotatedSigner = query.AnnotatedSigner{
+			Type:       a.Signer.Type,
+			XPubs:      a.Signer.XPubs,
+			Quorum:     a.Signer.Quorum,
+			KeyIndex:   a.Signer.KeyIndex,
+			DeriveRule: a.Signer.DeriveRule,
+		}
 	}
 	return annotatedAsset, nil
 }
