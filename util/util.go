@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	coreURL = env.String("BYTOM_URL", "http://localhost:9888")
+	coreURL = env.String("BYTOM_URL", "http://127.0.0.1:9888")
 )
 
 // Wraper rpc's client
