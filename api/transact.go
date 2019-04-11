@@ -231,23 +231,11 @@ type EstimateTxGasResp struct {
 
 // EstimateTxGas estimate consumed neu for transaction
 func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
-	// the gas consumed by storing transaction
-	data, err := template.Transaction.TxData.MarshalText()
-	if err != nil {
-		return nil, err
-	}
-	baseTxSize := int64(len(data))
-	witnessSize := estimateWitnessSize(template.SigningInstructions)
-	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+witnessSize, consensus.StorageGasRate)
-	if !ok {
-		return nil, errors.New("calculate txsize gas got a math error")
-	}
-
-	// the gas consumed by executing virtual machine
+	var baseP2WSHSize, totalWitnessSize int64
+	var baseP2WSHGas, totalP2WPKHGas, totalP2WSHGas int64
+	baseSize := int64(352) // inputSize(224) + outputSize(128)
+	baseP2WPKHSize := int64(196)
 	baseP2WPKHGas := int64(1409)
-	baseP2WSHGas := int64(0)
-	totalP2WPKHGas := int64(0)
-	totalP2WSHGas := int64(0)
 	for pos, inputID := range template.Transaction.Tx.InputIDs {
 		sp, err := template.Transaction.Spend(inputID)
 		if err != nil {
@@ -260,20 +248,32 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 		}
 
 		if segwit.IsP2WPKHScript(resOut.ControlProgram.Code) {
+			totalWitnessSize += baseP2WPKHSize
 			totalP2WPKHGas += baseP2WPKHGas
 		} else if segwit.IsP2WSHScript(resOut.ControlProgram.Code) {
-			baseP2WSHGas = estimateP2WSHGas(template.SigningInstructions[pos])
+			baseP2WSHSize, baseP2WSHGas = estimateP2WSH(template.SigningInstructions[pos])
+			totalWitnessSize += baseP2WSHSize
 			totalP2WSHGas += baseP2WSHGas
 		}
 	}
 
-	// the total gas for this transaction
+	data, err := template.Transaction.TxData.MarshalText()
+	if err != nil {
+		return nil, err
+	}
+	baseTxSize := int64(len(data))
+	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+totalWitnessSize, consensus.StorageGasRate)
+	if !ok {
+		return nil, errors.New("calculate transaction size gas got a math error")
+	}
+
+	// the total transaction gas is composed of storage and virtual machines
 	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
 	flexibleGas := totalGas
-	if totalP2WSHGas > 0 {
-		flexibleGas += baseP2WSHGas
-	} else if totalP2WPKHGas > 0 {
-		flexibleGas += baseP2WPKHGas
+	if totalP2WPKHGas > 0 {
+		flexibleGas += baseP2WPKHGas + (baseSize+baseP2WPKHSize)*consensus.StorageGasRate
+	} else if totalP2WSHGas > 0 {
+		flexibleGas += baseP2WSHGas + (baseSize+baseP2WSHSize)*consensus.StorageGasRate
 	}
 
 	return &EstimateTxGasResp{
@@ -284,8 +284,8 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	}, nil
 }
 
-// estimateP2WSHGas represents the gas consumed to execute the virtual machine for P2WSH program
-func estimateP2WSHGas(sigInst *txbuilder.SigningInstruction) int64 {
+// estimateP2WSH return the witness size and the gas consumed to execute the virtual machine for P2WSH program
+func estimateP2WSH(sigInst *txbuilder.SigningInstruction) (int64, int64) {
 	numPubkeys := int64(0)
 	numSigs := int64(0)
 	for _, witness := range sigInst.WitnessComponents {
@@ -299,27 +299,12 @@ func estimateP2WSHGas(sigInst *txbuilder.SigningInstruction) int64 {
 		}
 	}
 
-	result := 1131*numPubkeys + 72*numSigs + 659
+	witnessSize := 66*numPubkeys + 130*numSigs
+	gas := 1131*numPubkeys + 72*numSigs + 659
 	if numPubkeys == 1 && numSigs == 1 {
-		return result + 27
+		gas += 27
 	}
-	return result
-}
-
-// estimateSignSize calculate the signature size according to the length of keys.
-func estimateWitnessSize(signingInstructions []*txbuilder.SigningInstruction) int64 {
-	result := int64(0)
-	for _, sigInst := range signingInstructions {
-		for _, witness := range sigInst.WitnessComponents {
-			switch t := witness.(type) {
-			case *txbuilder.SignatureWitness:
-				result += 130*int64(t.Quorum) + 66*int64(len(t.Keys))
-			case *txbuilder.RawTxSigWitness:
-				result += 130*int64(t.Quorum) + 66*int64(len(t.Keys))
-			}
-		}
-	}
-	return result
+	return witnessSize, gas
 }
 
 // POST /estimate-transaction-gas
