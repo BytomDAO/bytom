@@ -23,7 +23,6 @@ import (
 var (
 	defaultTxTTL    = 30 * time.Minute
 	defaultBaseRate = float64(100000)
-	flexibleGas     = int64(1800)
 )
 
 func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
@@ -225,37 +224,33 @@ func (a *API) submitTxs(ctx context.Context, ins struct {
 
 // EstimateTxGasResp estimate transaction consumed gas
 type EstimateTxGasResp struct {
-	TotalNeu   int64 `json:"total_neu"`
-	StorageNeu int64 `json:"storage_neu"`
-	VMNeu      int64 `json:"vm_neu"`
+	TotalNeu    int64 `json:"total_neu"`
+	FlexibleNeu int64 `json:"flexible_neu"`
+	StorageNeu  int64 `json:"storage_neu"`
+	VMNeu       int64 `json:"vm_neu"`
 }
 
 // EstimateTxGas estimate consumed neu for transaction
 func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
-	// base tx size and not include sign
+	// the gas consumed by storing transaction
 	data, err := template.Transaction.TxData.MarshalText()
 	if err != nil {
 		return nil, err
 	}
 	baseTxSize := int64(len(data))
-
-	// extra tx size for sign witness parts
-	signSize := estimateSignSize(template.SigningInstructions)
-
-	// total gas for tx storage
-	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+signSize, consensus.StorageGasRate)
+	witnessSize := estimateWitnessSize(template.SigningInstructions)
+	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+witnessSize, consensus.StorageGasRate)
 	if !ok {
 		return nil, errors.New("calculate txsize gas got a math error")
 	}
 
-	// consume gas for run VM
+	// the gas consumed by executing virtual machine
+	baseP2WPKHGas := int64(1409)
+	baseP2WSHGas := int64(0)
 	totalP2WPKHGas := int64(0)
 	totalP2WSHGas := int64(0)
-	baseP2WPKHGas := int64(1419)
-	// flexible Gas is used for handle need extra utxo situation
-
-	for pos, inpID := range template.Transaction.Tx.InputIDs {
-		sp, err := template.Transaction.Spend(inpID)
+	for pos, inputID := range template.Transaction.Tx.InputIDs {
+		sp, err := template.Transaction.Spend(inputID)
 		if err != nil {
 			continue
 		}
@@ -268,63 +263,69 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 		if segwit.IsP2WPKHScript(resOut.ControlProgram.Code) {
 			totalP2WPKHGas += baseP2WPKHGas
 		} else if segwit.IsP2WSHScript(resOut.ControlProgram.Code) {
-			sigInst := template.SigningInstructions[pos]
-			totalP2WSHGas += estimateP2WSHGas(sigInst)
+			baseP2WSHGas = estimateP2WSHGas(template.SigningInstructions[pos])
+			totalP2WSHGas += baseP2WSHGas
 		}
 	}
 
-	// total estimate gas
-	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas + flexibleGas
+	// the total gas for this transaction
+	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
+	flexibleGas := totalGas
+	if totalP2WSHGas > 0 {
+		flexibleGas += baseP2WSHGas
+	} else if totalP2WPKHGas > 0 {
+		flexibleGas += baseP2WPKHGas
+	}
 
 	// rounding totalNeu with base rate 100000
 	totalNeu := float64(totalGas*consensus.VMGasRate) / defaultBaseRate
 	roundingNeu := math.Ceil(totalNeu)
 	estimateNeu := int64(roundingNeu) * int64(defaultBaseRate)
 
-	// TODO add priority
-
 	return &EstimateTxGasResp{
-		TotalNeu:   estimateNeu,
-		StorageNeu: totalTxSizeGas * consensus.VMGasRate,
-		VMNeu:      (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
+		TotalNeu:    estimateNeu,
+		FlexibleNeu: flexibleGas * consensus.VMGasRate,
+		StorageNeu:  totalTxSizeGas * consensus.VMGasRate,
+		VMNeu:       (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
 	}, nil
 }
 
-// estimate p2wsh gas.
-// OP_CHECKMULTISIG consume (984 * a - 72 * b - 63) gas,
-// where a represent the num of public keys, and b represent the num of quorum.
+// estimateP2WSHGas represents the gas consumed to execute the virtual machine for P2WSH program
 func estimateP2WSHGas(sigInst *txbuilder.SigningInstruction) int64 {
-	P2WSHGas := int64(0)
-	baseP2WSHGas := int64(738)
-
+	numPubkeys := int64(0)
+	numSigs := int64(0)
 	for _, witness := range sigInst.WitnessComponents {
 		switch t := witness.(type) {
 		case *txbuilder.SignatureWitness:
-			P2WSHGas += baseP2WSHGas + (984*int64(len(t.Keys)) - 72*int64(t.Quorum) - 63)
+			numPubkeys = int64(len(t.Keys))
+			numSigs = int64(t.Quorum)
 		case *txbuilder.RawTxSigWitness:
-			P2WSHGas += baseP2WSHGas + (984*int64(len(t.Keys)) - 72*int64(t.Quorum) - 63)
+			numPubkeys = int64(len(t.Keys))
+			numSigs = int64(t.Quorum)
 		}
 	}
-	return P2WSHGas
+
+	result := 1131*numPubkeys + 72*numSigs + 659
+	if numPubkeys == 1 && numSigs == 1 {
+		return result + 27
+	}
+	return result
 }
 
-// estimate signature part size.
-// if need multi-sign, calculate the size according to the length of keys.
-func estimateSignSize(signingInstructions []*txbuilder.SigningInstruction) int64 {
-	signSize := int64(0)
-	baseWitnessSize := int64(300)
-
+// estimateSignSize calculate the signature size according to the length of keys.
+func estimateWitnessSize(signingInstructions []*txbuilder.SigningInstruction) int64 {
+	result := int64(0)
 	for _, sigInst := range signingInstructions {
 		for _, witness := range sigInst.WitnessComponents {
 			switch t := witness.(type) {
 			case *txbuilder.SignatureWitness:
-				signSize += int64(t.Quorum) * baseWitnessSize
+				result += 65*int64(t.Quorum) + 33*int64(len(t.Keys))
 			case *txbuilder.RawTxSigWitness:
-				signSize += int64(t.Quorum) * baseWitnessSize
+				result += 65*int64(t.Quorum) + 33*int64(len(t.Keys))
 			}
 		}
 	}
-	return signSize
+	return result
 }
 
 // POST /estimate-transaction-gas
