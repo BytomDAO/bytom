@@ -319,9 +319,9 @@ func estimateWitnessSize(signingInstructions []*txbuilder.SigningInstruction) in
 		for _, witness := range sigInst.WitnessComponents {
 			switch t := witness.(type) {
 			case *txbuilder.SignatureWitness:
-				result += 65*int64(t.Quorum) + 33*int64(len(t.Keys))
+				result += 130*int64(t.Quorum) + 66*int64(len(t.Keys))
 			case *txbuilder.RawTxSigWitness:
-				result += 65*int64(t.Quorum) + 33*int64(len(t.Keys))
+				result += 130*int64(t.Quorum) + 66*int64(len(t.Keys))
 			}
 		}
 	}
