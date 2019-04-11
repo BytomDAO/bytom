@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"math"
 	"strings"
 	"time"
 
@@ -277,13 +276,8 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 		flexibleGas += baseP2WPKHGas
 	}
 
-	// rounding totalNeu with base rate 100000
-	totalNeu := float64(totalGas*consensus.VMGasRate) / defaultBaseRate
-	roundingNeu := math.Ceil(totalNeu)
-	estimateNeu := int64(roundingNeu) * int64(defaultBaseRate)
-
 	return &EstimateTxGasResp{
-		TotalNeu:    estimateNeu,
+		TotalNeu:    totalGas * consensus.VMGasRate,
 		FlexibleNeu: flexibleGas * consensus.VMGasRate,
 		StorageNeu:  totalTxSizeGas * consensus.VMGasRate,
 		VMNeu:       (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
