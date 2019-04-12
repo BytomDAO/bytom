@@ -3,8 +3,8 @@ package mdns
 import (
 	"context"
 
+	"github.com/grandcat/zeroconf"
 	log "github.com/sirupsen/logrus"
-	"github.com/zeroconf"
 )
 
 // Protocol decoration ZeroConf,which is a pure Golang library
