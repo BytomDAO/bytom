@@ -106,9 +106,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 			return nil, err
 		}
 
-		if lanDiscv, err = mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port)); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("create lan discover error")
-		}
+		lanDiscv = mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
 	}
 
 	return newSwitch(config, discv, lanDiscv, blacklistDB, l, privKey, listenAddr)
@@ -152,9 +150,8 @@ func (sw *Switch) OnStart() error {
 		go sw.listenerRoutine(listener)
 	}
 	go sw.ensureOutboundPeersRoutine()
-	if sw.lanDiscv != nil {
-		go sw.connectLANPeersRoutine()
-	}
+	go sw.connectLANPeersRoutine()
+
 	return nil
 }
 
@@ -416,6 +413,10 @@ func (sw *Switch) connectLANPeers(lanPeer mdns.LANPeerEvent) {
 }
 
 func (sw *Switch) connectLANPeersRoutine() {
+	if sw.lanDiscv == nil {
+		return
+	}
+
 	lanPeerEventSub, err := sw.lanDiscv.Subscribe()
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("subscribe LAN Peer Event error")

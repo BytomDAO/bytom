@@ -43,11 +43,8 @@ func (m *mockProtocol) stopResolver() {
 }
 
 func TestLanDiscover(t *testing.T) {
-	lanDiscv, err := NewLANDiscover(newMockProtocol(), 12345)
+	lanDiscv := NewLANDiscover(newMockProtocol(), 12345)
 	defer lanDiscv.Stop()
-	if err != nil {
-		t.Fatal("create lan discover err")
-	}
 
 	lanPeerMsgSub, err := lanDiscv.Subscribe()
 	if err != nil {

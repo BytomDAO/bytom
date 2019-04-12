@@ -16,7 +16,7 @@ const (
 	serviceName          = "lanDiscover"
 	domainName           = "local"
 	registerServiceCycle = 10 * time.Minute
-	registerServiceDelay = 0 * time.Second
+	registerServiceDelay = 2 * time.Second
 )
 
 // LANPeerEvent represent LAN peer ip and port.
@@ -47,7 +47,7 @@ type LANDiscover struct {
 }
 
 // NewLANDiscover create a new LAN node discover.
-func NewLANDiscover(protocol mDNSProtocol, port int) (*LANDiscover, error) {
+func NewLANDiscover(protocol mDNSProtocol, port int) *LANDiscover {
 	ld := &LANDiscover{
 		protocol:        protocol,
 		instance:        instanceName,
@@ -61,14 +61,14 @@ func NewLANDiscover(protocol mDNSProtocol, port int) (*LANDiscover, error) {
 	// register service
 	go ld.registerServiceRoutine()
 	go ld.getLANPeerLoop()
-	return ld, nil
+	return ld
 }
 
 // Stop stop LAN discover.
 func (ld *LANDiscover) Stop() {
 	close(ld.quite)
-	ld.protocol.stopService()
 	ld.protocol.stopResolver()
+	ld.protocol.stopService()
 	ld.eventDispatcher.Stop()
 }
 
