@@ -3,7 +3,6 @@ package txbuilder
 import (
 	"bytes"
 	"context"
-
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
@@ -48,8 +47,8 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 	if err != nil {
 		return err
 	}
-	tx.TxData.SerializedSize = uint64(len(data))
-	tx.Tx.SerializedSize = uint64(len(data))
+	tx.TxData.SerializedSize = uint64(len(data) / 2)
+	tx.Tx.SerializedSize = uint64(len(data) / 2)
 
 	isOrphan, err := c.ValidateTx(tx)
 	if errors.Root(err) == protocol.ErrBadTx {

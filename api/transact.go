@@ -245,12 +245,7 @@ func estimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 			totalP2WSHGas += baseP2WSHGas
 		}
 	}
-
-	data, err := template.Transaction.TxData.MarshalText()
-	if err != nil {
-		return nil, err
-	}
-	totalTxSizeGas := (int64(len(data)) + totalWitnessSize) * consensus.StorageGasRate
+	totalTxSizeGas := (int64(template.Transaction.TxData.SerializedSize) + totalWitnessSize) * consensus.StorageGasRate
 
 	// the total transaction gas is composed of storage and virtual machines
 	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
