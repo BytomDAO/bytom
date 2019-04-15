@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -50,26 +49,22 @@ func calcGlobalTxIndexKey(txID string) []byte {
 }
 
 func calcGlobalTxIndex(blockHash *bc.Hash, position int) []byte {
-	return []byte(fmt.Sprintf("%064x%08x", blockHash.String(), position))
+	b := blockHash.Byte32()
+	return append(b[:], []byte(fmt.Sprintf("%08x", position))...)
 }
 
 func parseGlobalTxIdx(globalTxIdx string) (*bc.Hash, int, error) {
-	hashBytes, err := hex.DecodeString(globalTxIdx[0:64])
+	hash := bc.Hash{}
+	if err := hash.UnmarshalText([]byte(globalTxIdx)[:32]); err != nil {
+		return nil, 0, errors.Wrap(err, "Unmarshal blockHash")
+	}
+
+	position, err := strconv.ParseInt(globalTxIdx[32:], 16, 32)
 	if err != nil {
-		return nil, 0, errors.New("Decode hashBytes")
+		return nil, 0, errors.Wrap(err, "Parse position")
 	}
 
-	hash := &bc.Hash{}
-	if err = hash.UnmarshalText(hashBytes); err != nil {
-		return nil, 0, errors.New("Unmarshal blockHash")
-	}
-
-	position, err := strconv.ParseInt(globalTxIdx[64:], 16, 32)
-	if err != nil {
-		return nil, 0, errors.New("Parse position")
-	}
-
-	return hash, int(position), nil
+	return &hash, int(position), nil
 }
 
 // deleteTransaction delete transactions when orphan block rollback
