@@ -286,23 +286,22 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 
 // estimateP2WSH return the witness size and the gas consumed to execute the virtual machine for P2WSH program
 func estimateP2WSH(sigInst *txbuilder.SigningInstruction) (int64, int64) {
-	numPubkeys := int64(0)
-	numSigs := int64(0)
+	var witnessSize, gas int64
 	for _, witness := range sigInst.WitnessComponents {
 		switch t := witness.(type) {
 		case *txbuilder.SignatureWitness:
-			numPubkeys = int64(len(t.Keys))
-			numSigs = int64(t.Quorum)
+			witnessSize += 66*int64(len(t.Keys)) + 130*int64(t.Quorum)
+			gas += 1131*int64(len(t.Keys)) + 72*int64(t.Quorum) + 659
+			if int64(len(t.Keys)) == 1 && int64(t.Quorum) == 1 {
+				gas += 27
+			}
 		case *txbuilder.RawTxSigWitness:
-			numPubkeys = int64(len(t.Keys))
-			numSigs = int64(t.Quorum)
+			witnessSize += 66*int64(len(t.Keys)) + 130*int64(t.Quorum)
+			gas += 1131*int64(len(t.Keys)) + 72*int64(t.Quorum) + 659
+			if int64(len(t.Keys)) == 1 && int64(t.Quorum) == 1 {
+				gas += 27
+			}
 		}
-	}
-
-	witnessSize := 66*numPubkeys + 130*numSigs
-	gas := 1131*numPubkeys + 72*numSigs + 659
-	if numPubkeys == 1 && numSigs == 1 {
-		gas += 27
 	}
 	return witnessSize, gas
 }
