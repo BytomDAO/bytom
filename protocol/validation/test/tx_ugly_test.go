@@ -2,9 +2,8 @@ package test
 
 import (
 	"encoding/hex"
+	"math"
 	"testing"
-
-	"go-ethereum/common/math"
 
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/signers"
