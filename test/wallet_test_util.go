@@ -12,11 +12,11 @@ import (
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
 	w "github.com/bytom/wallet"
-	dbm "github.com/bytom/database/leveldb"
 )
 
 type walletTestConfig struct {
@@ -153,7 +153,7 @@ func (ctx *walletTestContext) createAsset(accountAlias string, assetAlias string
 	if err != nil {
 		return nil, err
 	}
-	return ctx.Wallet.AssetReg.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
+	return ctx.Wallet.AssetReg.Define(acc.XPubs, len(acc.XPubs), nil, 0, assetAlias, nil)
 }
 
 func (ctx *walletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) (*types.Block, error) {

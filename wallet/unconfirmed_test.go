@@ -12,10 +12,10 @@ import (
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/testutil"
-	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestWalletUnconfirmedTxs(t *testing.T) {
@@ -52,7 +52,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, nil)
-	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, "TESTASSET", nil)
+	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, 0, "TESTASSET", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
