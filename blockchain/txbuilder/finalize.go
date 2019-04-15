@@ -3,6 +3,7 @@ package txbuilder
 import (
 	"bytes"
 	"context"
+
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
