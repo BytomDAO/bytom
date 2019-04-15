@@ -382,34 +382,16 @@ func (sw *Switch) checkBannedPeer(peer string) error {
 
 func (sw *Switch) connectLANPeers(lanPeer mdns.LANPeerEvent) {
 	lanPeers, _, _, numDialing := sw.NumPeers()
-	numToDial := (maxNumLANPeers - (lanPeers + numDialing))
+	numToDial := maxNumLANPeers - (lanPeers + numDialing)
 	log.WithFields(log.Fields{"module": logModule, "numDialing": numDialing, "numToDial": numToDial}).Debug("connect LAN peers")
 	if numToDial <= 0 {
 		return
 	}
-
-	connectedPeers := make(map[string]struct{})
-	for _, peer := range sw.Peers().List() {
-		connectedPeers[peer.remoteAddrHost()] = struct{}{}
-	}
-
-	var wg sync.WaitGroup
+	addresses := make([]*NetAddress, 0)
 	for i := 0; i < len(lanPeer.IP); i++ {
-		try := NewLANNetAddressIPPort(lanPeer.IP[i], uint16(lanPeer.Port))
-		if sw.NodeInfo().ListenAddr == try.String() {
-			continue
-		}
-		if dialling := sw.IsDialing(try); dialling {
-			continue
-		}
-		if _, ok := connectedPeers[try.IP.String()]; ok {
-			continue
-		}
-
-		wg.Add(1)
-		go sw.dialPeerWorker(try, &wg)
+		addresses = append(addresses, NewLANNetAddressIPPort(lanPeer.IP[i], uint16(lanPeer.Port)))
 	}
-	wg.Wait()
+	sw.dialPeers(addresses)
 }
 
 func (sw *Switch) connectLANPeersRoutine() {
@@ -509,69 +491,61 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (sw *Switch) ensureKeepConnectPeers() {
-	keepDials := netutil.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
+func (sw *Switch) dialPeers(addresses []*NetAddress) {
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range sw.Peers().List() {
 		connectedPeers[peer.remoteAddrHost()] = struct{}{}
 	}
 
 	var wg sync.WaitGroup
-	for _, keepDial := range keepDials {
-		try, err := NewNetAddressString(keepDial)
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err, "address": keepDial}).Warn("parse address to NetAddress")
+	for _, address := range addresses {
+		if sw.NodeInfo().ListenAddr == address.String() {
 			continue
 		}
-
-		if sw.NodeInfo().ListenAddr == try.String() {
+		if dialling := sw.IsDialing(address); dialling {
 			continue
 		}
-		if dialling := sw.IsDialing(try); dialling {
-			continue
-		}
-		if _, ok := connectedPeers[try.IP.String()]; ok {
+		if _, ok := connectedPeers[address.IP.String()]; ok {
 			continue
 		}
 
 		wg.Add(1)
-		go sw.dialPeerWorker(try, &wg)
+		go sw.dialPeerWorker(address, &wg)
 	}
 	wg.Wait()
 }
 
+func (sw *Switch) ensureKeepConnectPeers() {
+	keepDials := netutil.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
+	addresses := make([]*NetAddress, 0)
+	for _, keepDial := range keepDials {
+		address, err := NewNetAddressString(keepDial)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err, "address": keepDial}).Warn("parse address to NetAddress")
+			continue
+		}
+		addresses = append(addresses, address)
+	}
+
+	sw.dialPeers(addresses)
+}
+
 func (sw *Switch) ensureOutboundPeers() {
 	lanPeers, numOutPeers, _, numDialing := sw.NumPeers()
-	numToDial := (minNumOutboundPeers + lanPeers - (numOutPeers + numDialing))
+	numToDial := minNumOutboundPeers + lanPeers - (numOutPeers + numDialing)
 	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "LANPeers": lanPeers, "numDialing": numDialing, "numToDial": numToDial}).Debug("ensure peers")
 	if numToDial <= 0 {
 		return
 	}
 
-	connectedPeers := make(map[string]struct{})
-	for _, peer := range sw.Peers().List() {
-		connectedPeers[peer.remoteAddrHost()] = struct{}{}
-	}
-
-	var wg sync.WaitGroup
 	nodes := make([]*dht.Node, numToDial)
 	n := sw.discv.ReadRandomNodes(nodes)
+	addresses := make([]*NetAddress, 0)
 	for i := 0; i < n; i++ {
-		try := NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
-		if sw.NodeInfo().ListenAddr == try.String() {
-			continue
-		}
-		if dialling := sw.IsDialing(try); dialling {
-			continue
-		}
-		if _, ok := connectedPeers[try.IP.String()]; ok {
-			continue
-		}
-
-		wg.Add(1)
-		go sw.dialPeerWorker(try, &wg)
+		address := NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
+		addresses = append(addresses, address)
 	}
-	wg.Wait()
+	sw.dialPeers(addresses)
 }
 
 func (sw *Switch) ensureOutboundPeersRoutine() {

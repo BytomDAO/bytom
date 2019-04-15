@@ -12,9 +12,6 @@ import (
 
 const (
 	logModule            = "p2p/mdns"
-	instanceName         = "bytomd"
-	serviceName          = "lanDiscover"
-	domainName           = "local"
 	registerServiceCycle = 10 * time.Minute
 	registerServiceDelay = 2 * time.Second
 )
@@ -27,8 +24,8 @@ type LANPeerEvent struct {
 
 // mDNSProtocol mdns protocol interface.
 type mDNSProtocol interface {
-	registerService(instance string, service string, domain string, port int) error
-	registerResolver(event chan LANPeerEvent, service string, domain string) error
+	registerService(port int) error
+	registerResolver(event chan LANPeerEvent) error
 	stopService()
 	stopResolver()
 }
@@ -37,10 +34,7 @@ type mDNSProtocol interface {
 type LANDiscover struct {
 	protocol        mDNSProtocol
 	resolving       uint32
-	instance        string //instance name
-	service         string //service name
-	domain          string //domain name
-	servicePort     int    //service port
+	servicePort     int //service port
 	entries         chan LANPeerEvent
 	eventDispatcher *event.Dispatcher
 	quite           chan struct{}
@@ -50,9 +44,6 @@ type LANDiscover struct {
 func NewLANDiscover(protocol mDNSProtocol, port int) *LANDiscover {
 	ld := &LANDiscover{
 		protocol:        protocol,
-		instance:        instanceName,
-		service:         serviceName,
-		domain:          domainName,
 		servicePort:     port,
 		entries:         make(chan LANPeerEvent, 1024),
 		eventDispatcher: event.NewDispatcher(),
@@ -82,7 +73,7 @@ func (ld *LANDiscover) Subscribe() (*event.Subscription, error) {
 
 	//need to register the parser once.
 	if atomic.CompareAndSwapUint32(&ld.resolving, 0, 1) {
-		if err = ld.protocol.registerResolver(ld.entries, ld.service, ld.domain); err != nil {
+		if err = ld.protocol.registerResolver(ld.entries); err != nil {
 			return nil, err
 		}
 	}
@@ -94,8 +85,7 @@ func (ld *LANDiscover) Subscribe() (*event.Subscription, error) {
 // for the stability of node discovery.
 func (ld *LANDiscover) registerServiceRoutine() {
 	time.Sleep(registerServiceDelay)
-	err := ld.protocol.registerService(ld.instance, ld.service, ld.domain, ld.servicePort)
-	if err != nil {
+	if err := ld.protocol.registerService(ld.servicePort); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("mdns service register error")
 		return
 	}
@@ -106,7 +96,7 @@ func (ld *LANDiscover) registerServiceRoutine() {
 		select {
 		case <-ticker.C:
 			ld.protocol.stopService()
-			if err := ld.protocol.registerService(ld.instance, ld.service, ld.domain, ld.servicePort); err != nil {
+			if err := ld.protocol.registerService(ld.servicePort); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("mdns service register error")
 				return
 			}

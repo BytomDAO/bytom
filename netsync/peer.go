@@ -64,7 +64,6 @@ type peer struct {
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 	filterAdds  *set.Set // Set of addresses that the spv node cares about.
-	isLAN       bool
 }
 
 func newPeer(height uint64, hash *bc.Hash, basePeer BasePeer) *peer {
@@ -76,7 +75,6 @@ func newPeer(height uint64, hash *bc.Hash, basePeer BasePeer) *peer {
 		knownTxs:    set.New(),
 		knownBlocks: set.New(),
 		filterAdds:  set.New(),
-		isLAN:       basePeer.IsLAN(),
 	}
 }
 
@@ -370,7 +368,7 @@ func (ps *peerSet) bestPeer(flag consensus.ServiceFlag) *peer {
 		if !p.services.IsEnable(flag) {
 			continue
 		}
-		if bestPeer == nil || p.height > bestPeer.height || ((p.height == bestPeer.height) && p.isLAN) {
+		if bestPeer == nil || p.height > bestPeer.height || ((p.height == bestPeer.height) && p.IsLAN()) {
 			bestPeer = p
 		}
 	}

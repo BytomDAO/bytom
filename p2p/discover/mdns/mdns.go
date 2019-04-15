@@ -4,7 +4,12 @@ import (
 	"context"
 
 	"github.com/grandcat/zeroconf"
-	log "github.com/sirupsen/logrus"
+)
+
+const (
+	instanceName = "bytomd"
+	serviceName  = "lanDiscover"
+	domainName   = "local"
 )
 
 // Protocol decoration ZeroConf,which is a pure Golang library
@@ -34,27 +39,20 @@ func (m *Protocol) getLanPeerLoop(event chan LANPeerEvent) {
 	}
 }
 
-func (m *Protocol) registerService(instance string, service string, domain string, port int) error {
+func (m *Protocol) registerService(port int) error {
 	var err error
-	m.server, err = zeroconf.Register(instance, service, domain, port, nil, nil)
+	m.server, err = zeroconf.Register(instanceName, serviceName, domainName, port, nil, nil)
 	return err
 }
 
-func (m *Protocol) registerResolver(event chan LANPeerEvent, service string, domain string) error {
+func (m *Protocol) registerResolver(event chan LANPeerEvent) error {
 	go m.getLanPeerLoop(event)
 	resolver, err := zeroconf.NewResolver(nil)
 	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("mdns resolver register error")
 		return err
 	}
 
-	err = resolver.Browse(context.Background(), service, domain, m.entries)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("mdns resolver browse error")
-		return err
-	}
-
-	return nil
+	return resolver.Browse(context.Background(), serviceName, domainName, m.entries)
 }
 
 func (m *Protocol) stopResolver() {

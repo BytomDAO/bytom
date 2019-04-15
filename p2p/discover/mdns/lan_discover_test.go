@@ -23,11 +23,11 @@ func newMockProtocol() *mockProtocol {
 		entries: make(chan *LANPeerEvent, 1024),
 	}
 }
-func (m *mockProtocol) registerService(instance string, service string, domain string, port int) error {
+func (m *mockProtocol) registerService(port int) error {
 	return nil
 }
 
-func (m *mockProtocol) registerResolver(event chan LANPeerEvent, service string, domain string) error {
+func (m *mockProtocol) registerResolver(event chan LANPeerEvent) error {
 	for _, peerEvent := range wantEvents {
 		event <- peerEvent
 	}
