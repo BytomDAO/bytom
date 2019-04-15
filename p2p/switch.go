@@ -382,7 +382,7 @@ func (sw *Switch) checkBannedPeer(peer string) error {
 
 func (sw *Switch) connectLANPeers(lanPeer mdns.LANPeerEvent) {
 	lanPeers, _, _, numDialing := sw.NumPeers()
-	numToDial := maxNumLANPeers - (lanPeers + numDialing)
+	numToDial := maxNumLANPeers - lanPeers
 	log.WithFields(log.Fields{"module": logModule, "numDialing": numDialing, "numToDial": numToDial}).Debug("connect LAN peers")
 	if numToDial <= 0 {
 		return
