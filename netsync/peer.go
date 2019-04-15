@@ -368,7 +368,7 @@ func (ps *peerSet) bestPeer(flag consensus.ServiceFlag) *peer {
 		if !p.services.IsEnable(flag) {
 			continue
 		}
-		if bestPeer == nil || p.height > bestPeer.height || ((p.height == bestPeer.height) && p.IsLAN()) {
+		if bestPeer == nil || p.height > bestPeer.height || (p.height == bestPeer.height && p.IsLAN()) {
 			bestPeer = p
 		}
 	}

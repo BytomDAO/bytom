@@ -307,7 +307,7 @@ func (sw *Switch) Listeners() []Listener {
 func (sw *Switch) NumPeers() (lan, outbound, inbound, dialing int) {
 	peers := sw.peers.List()
 	for _, peer := range peers {
-		if peer.outbound {
+		if peer.outbound && !peer.isLAN {
 			outbound++
 		} else {
 			inbound++
@@ -532,7 +532,7 @@ func (sw *Switch) ensureKeepConnectPeers() {
 
 func (sw *Switch) ensureOutboundPeers() {
 	lanPeers, numOutPeers, _, numDialing := sw.NumPeers()
-	numToDial := minNumOutboundPeers + lanPeers - (numOutPeers + numDialing)
+	numToDial := minNumOutboundPeers - (numOutPeers + numDialing)
 	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "LANPeers": lanPeers, "numDialing": numDialing, "numToDial": numToDial}).Debug("ensure peers")
 	if numToDial <= 0 {
 		return

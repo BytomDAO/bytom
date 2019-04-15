@@ -93,7 +93,6 @@ type remotePeer struct {
 	addr       *NetAddress
 	quit       chan struct{}
 	listenAddr string
-	isLAN      bool
 }
 
 func (rp *remotePeer) Addr() *NetAddress {
