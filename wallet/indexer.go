@@ -50,6 +50,10 @@ func calcGlobalTxIndex(blockHash *bc.Hash, position int) []byte {
 	return []byte(fmt.Sprintf("%064x%08x", blockHash.String(), position))
 }
 
+func parseGlobalTxIdx(globalTxIdx string) (*bc.Hash, int, error) {
+	return nil, 0, nil
+}
+
 // deleteTransaction delete transactions when orphan block rollback
 func (w *Wallet) deleteTransactions(batch dbm.Batch, height uint64) {
 	tmpTx := query.AnnotatedTx{}
@@ -170,17 +174,27 @@ transactionLoop:
 
 // GetTransactionByTxID get transaction by txID
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
+	annotatedTx := &query.AnnotatedTx{}
+
 	formatKey := w.DB.Get(calcTxIndexKey(txID))
-	if formatKey == nil {
+	if formatKey != nil {
+		txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
+		if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
+			return nil, err
+		}
+		annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+		return annotatedTx, nil
+	}
+
+	globalTxIdx := w.DB.Get(calcGlobalTxIndexKey(txID))
+	if globalTxIdx == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
 	}
 
-	annotatedTx := &query.AnnotatedTx{}
-	txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
-	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
-		return nil, err
+	_, _, err := parseGlobalTxIdx(string(globalTxIdx))
+	// blockHash, position, err := parseGlobalTxIdx(string(globalTxIdx))
+	if err != nil {
 	}
-	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 
 	return annotatedTx, nil
 }
