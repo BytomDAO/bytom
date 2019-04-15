@@ -245,17 +245,17 @@ func estimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 			totalP2WSHGas += baseP2WSHGas
 		}
 	}
-	totalTxSizeGas := (int64(template.Transaction.TxData.SerializedSize) + totalWitnessSize) * consensus.StorageGasRate
 
-	// the total transaction gas is composed of storage and virtual machines
-	flexibleGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
-	totalGas := flexibleGas
+	totalTxSizeGas := (int64(template.Transaction.TxData.SerializedSize) + totalWitnessSize) * consensus.StorageGasRate
+	flexibleGas := int64(0)
 	if totalP2WPKHGas > 0 {
-		totalGas += baseP2WPKHGas + (baseSize+baseP2WPKHSize)*consensus.StorageGasRate
+		flexibleGas += baseP2WPKHGas + (baseSize+baseP2WPKHSize)*consensus.StorageGasRate
 	} else if totalP2WSHGas > 0 {
-		totalGas += baseP2WSHGas + (baseSize+baseP2WSHSize)*consensus.StorageGasRate
+		flexibleGas += baseP2WSHGas + (baseSize+baseP2WSHSize)*consensus.StorageGasRate
 	}
 
+	// the total transaction gas is composed of storage and virtual machines
+	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas + flexibleGas
 	return &EstimateTxGasResp{
 		TotalNeu:    totalGas * consensus.VMGasRate,
 		FlexibleNeu: flexibleGas * consensus.VMGasRate,
