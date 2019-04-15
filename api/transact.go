@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"math"
 	"strings"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/errors"
-	"github.com/bytom/math/checked"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -23,7 +21,6 @@ import (
 var (
 	defaultTxTTL    = 30 * time.Minute
 	defaultBaseRate = float64(100000)
-	flexibleGas     = int64(1800)
 )
 
 func (a *API) actionDecoder(action string) (func([]byte) (txbuilder.Action, error), bool) {
@@ -225,113 +222,75 @@ func (a *API) submitTxs(ctx context.Context, ins struct {
 
 // EstimateTxGasResp estimate transaction consumed gas
 type EstimateTxGasResp struct {
-	TotalNeu   int64 `json:"total_neu"`
-	StorageNeu int64 `json:"storage_neu"`
-	VMNeu      int64 `json:"vm_neu"`
+	TotalNeu    int64 `json:"total_neu"`
+	FlexibleNeu int64 `json:"flexible_neu"`
+	StorageNeu  int64 `json:"storage_neu"`
+	VMNeu       int64 `json:"vm_neu"`
 }
 
-// EstimateTxGas estimate consumed neu for transaction
-func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
-	// base tx size and not include sign
-	data, err := template.Transaction.TxData.MarshalText()
-	if err != nil {
-		return nil, err
-	}
-	baseTxSize := int64(len(data))
-
-	// extra tx size for sign witness parts
-	signSize := estimateSignSize(template.SigningInstructions)
-
-	// total gas for tx storage
-	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+signSize, consensus.StorageGasRate)
-	if !ok {
-		return nil, errors.New("calculate txsize gas got a math error")
-	}
-
-	// consume gas for run VM
-	totalP2WPKHGas := int64(0)
-	totalP2WSHGas := int64(0)
-	baseP2WPKHGas := int64(1419)
-	// flexible Gas is used for handle need extra utxo situation
-
-	for pos, inpID := range template.Transaction.Tx.InputIDs {
-		sp, err := template.Transaction.Spend(inpID)
-		if err != nil {
-			continue
-		}
-
-		resOut, err := template.Transaction.Output(*sp.SpentOutputId)
-		if err != nil {
-			continue
-		}
-
-		if segwit.IsP2WPKHScript(resOut.ControlProgram.Code) {
+// estimateTxGas estimate consumed neu for transaction
+func estimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
+	var baseP2WSHSize, totalWitnessSize, baseP2WSHGas, totalP2WPKHGas, totalP2WSHGas int64
+	baseSize := int64(352) // inputSize(224) + outputSize(128)
+	baseP2WPKHSize := int64(196)
+	baseP2WPKHGas := int64(1409)
+	for pos, input := range template.Transaction.TxData.Inputs {
+		controlProgram := input.ControlProgram()
+		if segwit.IsP2WPKHScript(controlProgram) {
+			totalWitnessSize += baseP2WPKHSize
 			totalP2WPKHGas += baseP2WPKHGas
-		} else if segwit.IsP2WSHScript(resOut.ControlProgram.Code) {
-			sigInst := template.SigningInstructions[pos]
-			totalP2WSHGas += estimateP2WSHGas(sigInst)
+		} else if segwit.IsP2WSHScript(controlProgram) {
+			baseP2WSHSize, baseP2WSHGas = estimateP2WSHGas(template.SigningInstructions[pos])
+			totalWitnessSize += baseP2WSHSize
+			totalP2WSHGas += baseP2WSHGas
 		}
 	}
 
-	// total estimate gas
+	totalTxSizeGas := (int64(template.Transaction.TxData.SerializedSize) + totalWitnessSize) * consensus.StorageGasRate
+	flexibleGas := int64(0)
+	if totalP2WPKHGas > 0 {
+		flexibleGas += baseP2WPKHGas + (baseSize+baseP2WPKHSize)*consensus.StorageGasRate
+	} else if totalP2WSHGas > 0 {
+		flexibleGas += baseP2WSHGas + (baseSize+baseP2WSHSize)*consensus.StorageGasRate
+	}
+
+	// the total transaction gas is composed of storage and virtual machines
 	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas + flexibleGas
-
-	// rounding totalNeu with base rate 100000
-	totalNeu := float64(totalGas*consensus.VMGasRate) / defaultBaseRate
-	roundingNeu := math.Ceil(totalNeu)
-	estimateNeu := int64(roundingNeu) * int64(defaultBaseRate)
-
-	// TODO add priority
-
 	return &EstimateTxGasResp{
-		TotalNeu:   estimateNeu,
-		StorageNeu: totalTxSizeGas * consensus.VMGasRate,
-		VMNeu:      (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
+		TotalNeu:    totalGas * consensus.VMGasRate,
+		FlexibleNeu: flexibleGas * consensus.VMGasRate,
+		StorageNeu:  totalTxSizeGas * consensus.VMGasRate,
+		VMNeu:       (totalP2WPKHGas + totalP2WSHGas) * consensus.VMGasRate,
 	}, nil
 }
 
-// estimate p2wsh gas.
-// OP_CHECKMULTISIG consume (984 * a - 72 * b - 63) gas,
-// where a represent the num of public keys, and b represent the num of quorum.
-func estimateP2WSHGas(sigInst *txbuilder.SigningInstruction) int64 {
-	P2WSHGas := int64(0)
-	baseP2WSHGas := int64(738)
-
+// estimateP2WSH return the witness size and the gas consumed to execute the virtual machine for P2WSH program
+func estimateP2WSHGas(sigInst *txbuilder.SigningInstruction) (int64, int64) {
+	var witnessSize, gas int64
 	for _, witness := range sigInst.WitnessComponents {
 		switch t := witness.(type) {
 		case *txbuilder.SignatureWitness:
-			P2WSHGas += baseP2WSHGas + (984*int64(len(t.Keys)) - 72*int64(t.Quorum) - 63)
+			witnessSize += 66*int64(len(t.Keys)) + 130*int64(t.Quorum)
+			gas += 1131*int64(len(t.Keys)) + 72*int64(t.Quorum) + 659
+			if int64(len(t.Keys)) == 1 && int64(t.Quorum) == 1 {
+				gas += 27
+			}
 		case *txbuilder.RawTxSigWitness:
-			P2WSHGas += baseP2WSHGas + (984*int64(len(t.Keys)) - 72*int64(t.Quorum) - 63)
-		}
-	}
-	return P2WSHGas
-}
-
-// estimate signature part size.
-// if need multi-sign, calculate the size according to the length of keys.
-func estimateSignSize(signingInstructions []*txbuilder.SigningInstruction) int64 {
-	signSize := int64(0)
-	baseWitnessSize := int64(300)
-
-	for _, sigInst := range signingInstructions {
-		for _, witness := range sigInst.WitnessComponents {
-			switch t := witness.(type) {
-			case *txbuilder.SignatureWitness:
-				signSize += int64(t.Quorum) * baseWitnessSize
-			case *txbuilder.RawTxSigWitness:
-				signSize += int64(t.Quorum) * baseWitnessSize
+			witnessSize += 66*int64(len(t.Keys)) + 130*int64(t.Quorum)
+			gas += 1131*int64(len(t.Keys)) + 72*int64(t.Quorum) + 659
+			if int64(len(t.Keys)) == 1 && int64(t.Quorum) == 1 {
+				gas += 27
 			}
 		}
 	}
-	return signSize
+	return witnessSize, gas
 }
 
 // POST /estimate-transaction-gas
 func (a *API) estimateTxGas(ctx context.Context, in struct {
 	TxTemplate txbuilder.Template `json:"transaction_template"`
 }) Response {
-	txGasResp, err := EstimateTxGas(in.TxTemplate)
+	txGasResp, err := estimateTxGas(in.TxTemplate)
 	if err != nil {
 		return NewErrorResponse(err)
 	}
