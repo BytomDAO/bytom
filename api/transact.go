@@ -13,7 +13,6 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/errors"
-	"github.com/bytom/math/checked"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -229,29 +228,19 @@ type EstimateTxGasResp struct {
 	VMNeu       int64 `json:"vm_neu"`
 }
 
-// EstimateTxGas estimate consumed neu for transaction
-func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
-	var baseP2WSHSize, totalWitnessSize int64
-	var baseP2WSHGas, totalP2WPKHGas, totalP2WSHGas int64
+// estimateTxGas estimate consumed neu for transaction
+func estimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
+	var baseP2WSHSize, totalWitnessSize, baseP2WSHGas, totalP2WPKHGas, totalP2WSHGas int64
 	baseSize := int64(352) // inputSize(224) + outputSize(128)
 	baseP2WPKHSize := int64(196)
 	baseP2WPKHGas := int64(1409)
-	for pos, inputID := range template.Transaction.Tx.InputIDs {
-		sp, err := template.Transaction.Spend(inputID)
-		if err != nil {
-			continue
-		}
-
-		resOut, err := template.Transaction.Output(*sp.SpentOutputId)
-		if err != nil {
-			continue
-		}
-
-		if segwit.IsP2WPKHScript(resOut.ControlProgram.Code) {
+	for pos, input := range template.Transaction.TxData.Inputs {
+		controlProgram := input.ControlProgram()
+		if segwit.IsP2WPKHScript(controlProgram) {
 			totalWitnessSize += baseP2WPKHSize
 			totalP2WPKHGas += baseP2WPKHGas
-		} else if segwit.IsP2WSHScript(resOut.ControlProgram.Code) {
-			baseP2WSHSize, baseP2WSHGas = estimateP2WSH(template.SigningInstructions[pos])
+		} else if segwit.IsP2WSHScript(controlProgram) {
+			baseP2WSHSize, baseP2WSHGas = estimateP2WSHGas(template.SigningInstructions[pos])
 			totalWitnessSize += baseP2WSHSize
 			totalP2WSHGas += baseP2WSHGas
 		}
@@ -261,11 +250,7 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	if err != nil {
 		return nil, err
 	}
-	baseTxSize := int64(len(data))
-	totalTxSizeGas, ok := checked.MulInt64(baseTxSize+totalWitnessSize, consensus.StorageGasRate)
-	if !ok {
-		return nil, errors.New("calculate transaction size gas got a math error")
-	}
+	totalTxSizeGas := (int64(len(data)) + totalWitnessSize) * consensus.StorageGasRate
 
 	// the total transaction gas is composed of storage and virtual machines
 	totalGas := totalTxSizeGas + totalP2WPKHGas + totalP2WSHGas
@@ -285,7 +270,7 @@ func EstimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 }
 
 // estimateP2WSH return the witness size and the gas consumed to execute the virtual machine for P2WSH program
-func estimateP2WSH(sigInst *txbuilder.SigningInstruction) (int64, int64) {
+func estimateP2WSHGas(sigInst *txbuilder.SigningInstruction) (int64, int64) {
 	var witnessSize, gas int64
 	for _, witness := range sigInst.WitnessComponents {
 		switch t := witness.(type) {
@@ -310,7 +295,7 @@ func estimateP2WSH(sigInst *txbuilder.SigningInstruction) (int64, int64) {
 func (a *API) estimateTxGas(ctx context.Context, in struct {
 	TxTemplate txbuilder.Template `json:"transaction_template"`
 }) Response {
-	txGasResp, err := EstimateTxGas(in.TxTemplate)
+	txGasResp, err := estimateTxGas(in.TxTemplate)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

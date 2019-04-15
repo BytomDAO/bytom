@@ -148,7 +148,7 @@ func TestEstimateTxGas(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		estimateTxGasResp, err := EstimateTxGas(template)
+		estimateTxGasResp, err := estimateTxGas(template)
 		if estimateTxGasResp.TotalNeu != c.wantTotalNeu {
 			t.Errorf(`got TotalNeu =%#v; want=%#v`, estimateTxGasResp.TotalNeu, c.wantTotalNeu)
 		}
