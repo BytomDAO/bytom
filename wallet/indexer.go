@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -50,16 +51,18 @@ func calcGlobalTxIndexKey(txID string) []byte {
 
 func calcGlobalTxIndex(blockHash *bc.Hash, position int) []byte {
 	b := blockHash.Byte32()
-	return append(b[:], []byte(fmt.Sprintf("%08x", position))...)
+	v := make([]byte, 64)
+	hex.Encode(v, b[:])
+	return append(v, []byte(fmt.Sprintf("%08x", position))...)
 }
 
-func parseGlobalTxIdx(globalTxIdx string) (*bc.Hash, int, error) {
+func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, int, error) {
 	hash := bc.Hash{}
-	if err := hash.UnmarshalText([]byte(globalTxIdx)[:32]); err != nil {
+	if err := hash.UnmarshalText(globalTxIdx[:64]); err != nil {
 		return nil, 0, errors.Wrap(err, "Unmarshal blockHash")
 	}
 
-	position, err := strconv.ParseInt(globalTxIdx[32:], 16, 32)
+	position, err := strconv.ParseInt(string(globalTxIdx[64:]), 16, 32)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "Parse position")
 	}
@@ -204,7 +207,7 @@ func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
 	}
 
-	_, _, err := parseGlobalTxIdx(string(globalTxIdx))
+	_, _, err := parseGlobalTxIdx(globalTxIdx)
 	// blockHash, position, err := parseGlobalTxIdx(string(globalTxIdx))
 	if err != nil {
 	}

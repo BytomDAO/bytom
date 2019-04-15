@@ -33,13 +33,8 @@ func TestEncodeDecodeGlobalTxIndex(t *testing.T) {
 		Position:  1,
 	}
 
-	t.Log(want.BlockHash.String())
-
 	globalTxIdx := calcGlobalTxIndex(&want.BlockHash, want.Position)
-	t.Log("globalTxIdx", globalTxIdx)
-	t.Log("globalTxIdx", string(globalTxIdx))
-
-	blockHashGot, positionGot, err := parseGlobalTxIdx(string(globalTxIdx))
+	blockHashGot, positionGot, err := parseGlobalTxIdx(globalTxIdx)
 	if err != nil {
 		t.Error(err)
 	}
