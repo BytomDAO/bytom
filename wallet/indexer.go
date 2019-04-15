@@ -1,9 +1,11 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/bytom/crypto/sha3pool"
 	dbm "github.com/bytom/database/leveldb"
 	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -51,7 +54,22 @@ func calcGlobalTxIndex(blockHash *bc.Hash, position int) []byte {
 }
 
 func parseGlobalTxIdx(globalTxIdx string) (*bc.Hash, int, error) {
-	return nil, 0, nil
+	hashBytes, err := hex.DecodeString(globalTxIdx[0:64])
+	if err != nil {
+		return nil, 0, errors.New("Decode hashBytes")
+	}
+
+	hash := &bc.Hash{}
+	if err = hash.UnmarshalText(hashBytes); err != nil {
+		return nil, 0, errors.New("Unmarshal blockHash")
+	}
+
+	position, err := strconv.ParseInt(globalTxIdx[64:], 16, 32)
+	if err != nil {
+		return nil, 0, errors.New("Parse position")
+	}
+
+	return hash, int(position), nil
 }
 
 // deleteTransaction delete transactions when orphan block rollback
