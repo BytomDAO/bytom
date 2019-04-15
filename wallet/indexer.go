@@ -11,10 +11,10 @@ import (
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/sha3pool"
+	dbm "github.com/bytom/database/leveldb"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	dbm "github.com/bytom/database/leveldb"
 )
 
 const (
@@ -122,6 +122,10 @@ func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc
 
 		// delete unconfirmed transaction
 		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
+	}
+
+	if !w.SaveGlobalTxIdxFlag {
+		return nil
 	}
 
 	for position, globalTx := range b.Transactions {

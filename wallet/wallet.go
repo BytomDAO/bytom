@@ -9,12 +9,12 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/errors"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	dbm "github.com/bytom/database/leveldb"
 )
 
 const (
@@ -42,16 +42,17 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB              dbm.DB
-	rw              sync.RWMutex
-	status          StatusInfo
-	AccountMgr      *account.Manager
-	AssetReg        *asset.Registry
-	Hsm             *pseudohsm.HSM
-	chain           *protocol.Chain
-	RecoveryMgr     *recoveryManager
-	eventDispatcher *event.Dispatcher
-	txMsgSub        *event.Subscription
+	DB                  dbm.DB
+	rw                  sync.RWMutex
+	status              StatusInfo
+	SaveGlobalTxIdxFlag bool
+	AccountMgr          *account.Manager
+	AssetReg            *asset.Registry
+	Hsm                 *pseudohsm.HSM
+	chain               *protocol.Chain
+	RecoveryMgr         *recoveryManager
+	eventDispatcher     *event.Dispatcher
+	txMsgSub            *event.Subscription
 
 	rescanCh chan struct{}
 }

@@ -22,6 +22,8 @@ import (
 	"github.com/bytom/blockchain/txfeed"
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
+	"github.com/bytom/database"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
 	"github.com/bytom/event"
 	"github.com/bytom/mining/cpuminer"
@@ -32,8 +34,6 @@ import (
 	"github.com/bytom/p2p"
 	"github.com/bytom/protocol"
 	w "github.com/bytom/wallet"
-	dbm "github.com/bytom/database/leveldb"
-	"github.com/bytom/database"
 )
 
 const (
@@ -114,6 +114,7 @@ func NewNode(config *cfg.Config) *Node {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}
 
+		wallet.SaveGlobalTxIdxFlag = config.Wallet.SaveGlobalTxIdx
 		// trigger rescan wallet
 		if config.Wallet.Rescan {
 			wallet.RescanBlocks()
