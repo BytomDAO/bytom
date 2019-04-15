@@ -29,6 +29,8 @@ const (
 	GlobalTxIndexPrefix = "GTID:"
 )
 
+var errAccntTxIDNotFound = errors.New("account TXID not found")
+
 func formatKey(blockHeight uint64, position uint32) string {
 	return fmt.Sprintf("%016x%08x", blockHeight, position)
 }
@@ -190,29 +192,59 @@ transactionLoop:
 
 // GetTransactionByTxID get transaction by txID
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
-	annotatedTx := &query.AnnotatedTx{}
-
-	formatKey := w.DB.Get(calcTxIndexKey(txID))
-	if formatKey != nil {
-		txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
-		if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
-			return nil, err
-		}
-		annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+	if annotatedTx, err := w.getAccountTxByTxID(txID); err == nil {
 		return annotatedTx, nil
+	} else if err != errAccntTxIDNotFound {
+		return nil, err
 	}
 
+	return w.getGlobalTxByTxID(txID)
+}
+
+func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
+	annotatedTx := &query.AnnotatedTx{}
+	formatKey := w.DB.Get(calcTxIndexKey(txID))
+	if formatKey == nil {
+		return nil, errAccntTxIDNotFound
+	}
+
+	txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
+	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
+		return nil, err
+	}
+
+	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+	return annotatedTx, nil
+}
+
+func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	globalTxIdx := w.DB.Get(calcGlobalTxIndexKey(txID))
 	if globalTxIdx == nil {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
 	}
 
-	_, _, err := parseGlobalTxIdx(globalTxIdx)
-	// blockHash, position, err := parseGlobalTxIdx(string(globalTxIdx))
+	blockHash, pos, err := parseGlobalTxIdx(globalTxIdx)
 	if err != nil {
+		return nil, err
 	}
 
-	return annotatedTx, nil
+	block, err := w.chain.GetBlockByHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	txStatus, err := w.chain.GetTransactionStatus(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	statusFail, err := txStatus.GetStatus(pos)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := block.Transactions[pos]
+	return w.buildAnnotatedTransaction(tx, block, statusFail, pos), nil
 }
 
 // GetTransactionsSummary get transactions summary
