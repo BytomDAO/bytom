@@ -8,11 +8,9 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
-	"github.com/bytom/protocol/vm/vmutil"
 )
 
 func TestValidateTx(t *testing.T) {
-	cp, _ := vmutil.DefaultCoinbaseProgram()
 	cases := []struct {
 		desc     string
 		txData   *types.TxData

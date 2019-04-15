@@ -463,7 +463,7 @@ func TestValidateUglyTx(t *testing.T) {
 			desc:     "no btm input",
 			txData: types.TxData{
 				Version: 1,
-				Inputs: []*types.TxInput{},
+				Inputs:  []*types.TxInput{},
 				Outputs: []*types.TxOutput{
 					types.NewTxOutput(*consensus.BTMAssetID, 10, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
@@ -663,10 +663,10 @@ func TestValidateUglyTx(t *testing.T) {
 		},
 		{
 			category: "overflow",
-			desc: 	  "output with over range amount but sum in equal",
+			desc:     "output with over range amount but sum in equal",
 			insts:    []*signingInst{singleSignInst, singleSignInst},
 			txData: types.TxData{
-				Version:        1,
+				Version: 1,
 				Inputs: []*types.TxInput{
 					types.NewSpendInput(nil,
 						bc.Hash{V0: 14760873410800997144, V1: 1698395500822741684, V2: 5965908492734661392, V3: 9445539829830863994},
@@ -875,8 +875,8 @@ func TestValidateUglyTx(t *testing.T) {
 		bcTx := types.MapTx(&c.txData)
 
 		gasStatus, err := validation.ValidateTx(bcTx, &bc.Block{
-			BlockHeader: &bc.BlockHeader{Height: 1},
-			Transactions:[]*bc.Tx{bcTx},
+			BlockHeader:  &bc.BlockHeader{Height: 1},
+			Transactions: []*bc.Tx{bcTx},
 		})
 		if !c.err && err != nil {
 			t.Errorf("case #%d (%s) expect no error, got error %s", i, c.desc, err)
@@ -887,7 +887,7 @@ func TestValidateUglyTx(t *testing.T) {
 		}
 
 		if c.gasValid != gasStatus.GasValid {
-			t.Errorf("	case #%d (%s) got GasValid %t, want %t", i, c.desc, gasStatus.GasValid, c.gasValid)
+			t.Errorf("case #%d (%s) got GasValid %t, want %t", i, c.desc, gasStatus.GasValid, c.gasValid)
 		}
 	}
 }
