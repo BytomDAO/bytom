@@ -8,9 +8,9 @@ import (
 	cmn "github.com/tendermint/tmlibs/common"
 
 	cfg "github.com/bytom/config"
-	"github.com/bytom/p2p/connection"
-	"github.com/bytom/p2p/discover"
 	dbm "github.com/bytom/database/leveldb"
+	"github.com/bytom/p2p/connection"
+	"github.com/bytom/p2p/discover/dht"
 )
 
 //PanicOnAddPeerErr add peer error
@@ -84,14 +84,14 @@ func startSwitches(switches []*Switch) error {
 type mockDiscv struct {
 }
 
-func (m *mockDiscv) ReadRandomNodes(buf []*discover.Node) (n int) {
+func (m *mockDiscv) ReadRandomNodes(buf []*dht.Node) (n int) {
 	return 0
 }
 
 func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, privKey crypto.PrivKeyEd25519, initSwitch func(*Switch) *Switch) *Switch {
 	// new switch, add reactors
 	l, listenAddr := GetListener(cfg.P2P)
-	sw, err := newSwitch(cfg, new(mockDiscv), testdb, l, privKey, listenAddr)
+	sw, err := newSwitch(cfg, new(mockDiscv), nil, testdb, l, privKey, listenAddr)
 	if err != nil {
 		log.Errorf("create switch error: %s", err)
 		return nil

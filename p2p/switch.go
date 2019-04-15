@@ -15,13 +15,15 @@ import (
 	cfg "github.com/bytom/config"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/errors"
+	"github.com/bytom/event"
 	"github.com/bytom/p2p/connection"
-	"github.com/bytom/p2p/discover"
+	"github.com/bytom/p2p/discover/dht"
+	"github.com/bytom/p2p/discover/mdns"
 	"github.com/bytom/p2p/netutil"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/version"
-	dbm "github.com/bytom/database/leveldb"
 )
 
 const (
@@ -30,6 +32,7 @@ const (
 	logModule          = "p2p"
 
 	minNumOutboundPeers = 4
+	maxNumLANPeers      = 5
 )
 
 //pre-define errors for connecting fail
@@ -41,7 +44,12 @@ var (
 )
 
 type discv interface {
-	ReadRandomNodes(buf []*discover.Node) (n int)
+	ReadRandomNodes(buf []*dht.Node) (n int)
+}
+
+type lanDiscv interface {
+	Subscribe() (*event.Subscription, error)
+	Stop()
 }
 
 // Switch handles peer connections and exposes an API to receive incoming messages
@@ -62,6 +70,7 @@ type Switch struct {
 	nodeInfo     *NodeInfo             // our node info
 	nodePrivKey  crypto.PrivKeyEd25519 // our node privkey
 	discv        discv
+	lanDiscv     lanDiscv
 	bannedPeer   map[string]time.Time
 	db           dbm.DB
 	mtx          sync.Mutex
@@ -72,7 +81,8 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	var err error
 	var l Listener
 	var listenAddr string
-	var discv *discover.Network
+	var discv *dht.Network
+	var lanDiscv *mdns.LANDiscover
 
 	blacklistDB := dbm.NewDB("trusthistory", config.DBBackend, config.DBDir())
 	config.P2P.PrivateKey, err = config.NodeKey()
@@ -91,17 +101,19 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 	if !config.VaultMode {
 		// Create listener
 		l, listenAddr = GetListener(config.P2P)
-		discv, err = discover.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port)
+		discv, err = dht.NewDiscover(config, ed25519.PrivateKey(bytes), l.ExternalAddress().Port)
 		if err != nil {
 			return nil, err
 		}
+
+		lanDiscv = mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
 	}
 
-	return newSwitch(config, discv, blacklistDB, l, privKey, listenAddr)
+	return newSwitch(config, discv, lanDiscv, blacklistDB, l, privKey, listenAddr)
 }
 
 // newSwitch creates a new Switch with the given config.
-func newSwitch(config *cfg.Config, discv discv, blacklistDB dbm.DB, l Listener, priv crypto.PrivKeyEd25519, listenAddr string) (*Switch, error) {
+func newSwitch(config *cfg.Config, discv discv, lanDiscv lanDiscv, blacklistDB dbm.DB, l Listener, priv crypto.PrivKeyEd25519, listenAddr string) (*Switch, error) {
 	sw := &Switch{
 		Config:       config,
 		peerConfig:   DefaultPeerConfig(config.P2P),
@@ -112,6 +124,7 @@ func newSwitch(config *cfg.Config, discv discv, blacklistDB dbm.DB, l Listener, 
 		dialing:      cmn.NewCMap(),
 		nodePrivKey:  priv,
 		discv:        discv,
+		lanDiscv:     lanDiscv,
 		db:           blacklistDB,
 		nodeInfo:     NewNodeInfo(config, priv.PubKey().Unwrap().(crypto.PubKeyEd25519), listenAddr),
 		bannedPeer:   make(map[string]time.Time),
@@ -137,11 +150,16 @@ func (sw *Switch) OnStart() error {
 		go sw.listenerRoutine(listener)
 	}
 	go sw.ensureOutboundPeersRoutine()
+	go sw.connectLANPeersRoutine()
+
 	return nil
 }
 
 // OnStop implements BaseService. It stops all listeners, peers, and reactors.
 func (sw *Switch) OnStop() {
+	if sw.lanDiscv != nil {
+		sw.lanDiscv.Stop()
+	}
 	for _, listener := range sw.listeners {
 		listener.Stop()
 	}
@@ -177,7 +195,7 @@ func (sw *Switch) AddBannedPeer(ip string) error {
 // it starts the peer and adds it to the switch.
 // NOTE: This performs a blocking handshake before the peer is added.
 // CONTRACT: If error is returned, peer is nil, and conn is immediately closed.
-func (sw *Switch) AddPeer(pc *peerConn) error {
+func (sw *Switch) AddPeer(pc *peerConn, isLAN bool) error {
 	peerNodeInfo, err := pc.HandshakeTimeout(sw.nodeInfo, sw.peerConfig.HandshakeTimeout)
 	if err != nil {
 		return err
@@ -190,7 +208,7 @@ func (sw *Switch) AddPeer(pc *peerConn) error {
 		return err
 	}
 
-	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError)
+	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, isLAN)
 	if err := sw.filterConnByPeer(peer); err != nil {
 		return err
 	}
@@ -248,7 +266,7 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 		return err
 	}
 
-	if err = sw.AddPeer(pc); err != nil {
+	if err = sw.AddPeer(pc, addr.isLAN); err != nil {
 		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Error("DialPeer fail on switch AddPeer")
 		pc.CloseConn()
 		return err
@@ -286,13 +304,16 @@ func (sw *Switch) Listeners() []Listener {
 }
 
 // NumPeers Returns the count of outbound/inbound and outbound-dialing peers.
-func (sw *Switch) NumPeers() (outbound, inbound, dialing int) {
+func (sw *Switch) NumPeers() (lan, outbound, inbound, dialing int) {
 	peers := sw.peers.List()
 	for _, peer := range peers {
-		if peer.outbound {
+		if peer.outbound && !peer.isLAN {
 			outbound++
 		} else {
 			inbound++
+		}
+		if peer.isLAN {
+			lan++
 		}
 	}
 	dialing = sw.dialing.Size()
@@ -332,7 +353,7 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 		return err
 	}
 
-	if err = sw.AddPeer(peerConn); err != nil {
+	if err = sw.AddPeer(peerConn, false); err != nil {
 		if err := conn.Close(); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "remote peer:": conn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
 		}
@@ -357,6 +378,50 @@ func (sw *Switch) checkBannedPeer(peer string) error {
 		}
 	}
 	return nil
+}
+
+func (sw *Switch) connectLANPeers(lanPeer mdns.LANPeerEvent) {
+	lanPeers, _, _, numDialing := sw.NumPeers()
+	numToDial := maxNumLANPeers - lanPeers
+	log.WithFields(log.Fields{"module": logModule, "numDialing": numDialing, "numToDial": numToDial}).Debug("connect LAN peers")
+	if numToDial <= 0 {
+		return
+	}
+	addresses := make([]*NetAddress, 0)
+	for i := 0; i < len(lanPeer.IP); i++ {
+		addresses = append(addresses, NewLANNetAddressIPPort(lanPeer.IP[i], uint16(lanPeer.Port)))
+	}
+	sw.dialPeers(addresses)
+}
+
+func (sw *Switch) connectLANPeersRoutine() {
+	if sw.lanDiscv == nil {
+		return
+	}
+
+	lanPeerEventSub, err := sw.lanDiscv.Subscribe()
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("subscribe LAN Peer Event error")
+		return
+	}
+
+	for {
+		select {
+		case obj, ok := <-lanPeerEventSub.Chan():
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Warning("LAN peer event subscription channel closed")
+				return
+			}
+			LANPeer, ok := obj.Data.(mdns.LANPeerEvent)
+			if !ok {
+				log.WithFields(log.Fields{"module": logModule}).Error("event type error")
+				continue
+			}
+			sw.connectLANPeers(LANPeer)
+		case <-sw.Quit:
+			return
+		}
+	}
 }
 
 func (sw *Switch) delBannedPeer(addr string) error {
@@ -426,69 +491,61 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func (sw *Switch) ensureKeepConnectPeers() {
-	keepDials := netutil.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
+func (sw *Switch) dialPeers(addresses []*NetAddress) {
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range sw.Peers().List() {
 		connectedPeers[peer.remoteAddrHost()] = struct{}{}
 	}
 
 	var wg sync.WaitGroup
-	for _, keepDial := range keepDials {
-		try, err := NewNetAddressString(keepDial)
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err, "address": keepDial}).Warn("parse address to NetAddress")
+	for _, address := range addresses {
+		if sw.NodeInfo().ListenAddr == address.String() {
 			continue
 		}
-
-		if sw.NodeInfo().ListenAddr == try.String() {
+		if dialling := sw.IsDialing(address); dialling {
 			continue
 		}
-		if dialling := sw.IsDialing(try); dialling {
-			continue
-		}
-		if _, ok := connectedPeers[try.IP.String()]; ok {
+		if _, ok := connectedPeers[address.IP.String()]; ok {
 			continue
 		}
 
 		wg.Add(1)
-		go sw.dialPeerWorker(try, &wg)
+		go sw.dialPeerWorker(address, &wg)
 	}
 	wg.Wait()
 }
 
+func (sw *Switch) ensureKeepConnectPeers() {
+	keepDials := netutil.CheckAndSplitAddresses(sw.Config.P2P.KeepDial)
+	addresses := make([]*NetAddress, 0)
+	for _, keepDial := range keepDials {
+		address, err := NewNetAddressString(keepDial)
+		if err != nil {
+			log.WithFields(log.Fields{"module": logModule, "err": err, "address": keepDial}).Warn("parse address to NetAddress")
+			continue
+		}
+		addresses = append(addresses, address)
+	}
+
+	sw.dialPeers(addresses)
+}
+
 func (sw *Switch) ensureOutboundPeers() {
-	numOutPeers, _, numDialing := sw.NumPeers()
-	numToDial := (minNumOutboundPeers - (numOutPeers + numDialing))
-	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "numDialing": numDialing, "numToDial": numToDial}).Debug("ensure peers")
+	lanPeers, numOutPeers, _, numDialing := sw.NumPeers()
+	numToDial := minNumOutboundPeers - (numOutPeers + numDialing)
+	log.WithFields(log.Fields{"module": logModule, "numOutPeers": numOutPeers, "LANPeers": lanPeers, "numDialing": numDialing, "numToDial": numToDial}).Debug("ensure peers")
 	if numToDial <= 0 {
 		return
 	}
 
-	connectedPeers := make(map[string]struct{})
-	for _, peer := range sw.Peers().List() {
-		connectedPeers[peer.remoteAddrHost()] = struct{}{}
-	}
-
-	var wg sync.WaitGroup
-	nodes := make([]*discover.Node, numToDial)
+	nodes := make([]*dht.Node, numToDial)
 	n := sw.discv.ReadRandomNodes(nodes)
+	addresses := make([]*NetAddress, 0)
 	for i := 0; i < n; i++ {
-		try := NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
-		if sw.NodeInfo().ListenAddr == try.String() {
-			continue
-		}
-		if dialling := sw.IsDialing(try); dialling {
-			continue
-		}
-		if _, ok := connectedPeers[try.IP.String()]; ok {
-			continue
-		}
-
-		wg.Add(1)
-		go sw.dialPeerWorker(try, &wg)
+		address := NewNetAddressIPPort(nodes[i].IP, nodes[i].TCP)
+		addresses = append(addresses, address)
 	}
-	wg.Wait()
+	sw.dialPeers(addresses)
 }
 
 func (sw *Switch) ensureOutboundPeersRoutine() {

@@ -248,7 +248,7 @@ func TestDuplicateInBoundPeer(t *testing.T) {
 	go inp1.dial(addr)
 
 	time.Sleep(1 * time.Second)
-	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 1 {
+	if _, outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 1 {
 		t.Fatal("TestDuplicateInBoundPeer peer size error want 1, got:", outbound, inbound, dialing, spew.Sdump(s1.peers.lookup))
 	}
 }
@@ -299,7 +299,7 @@ func TestAddInboundPeer(t *testing.T) {
 	go inp2.dial(addr)
 
 	time.Sleep(1 * time.Second)
-	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
+	if _, outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
 		t.Fatal("TestAddInboundPeer peer size error want 2 got:", spew.Sdump(s1.peers.lookup))
 	}
 }
@@ -342,17 +342,17 @@ func TestStopPeer(t *testing.T) {
 		t.Fatal(err)
 	}
 	time.Sleep(1 * time.Second)
-	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
+	if _, outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 2 {
 		t.Fatal("TestStopPeer peer size error want 2,got:", spew.Sdump(s1.peers.lookup))
 	}
 
 	s1.StopPeerGracefully(s1.peers.list[0].Key)
-	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 1 {
+	if _, outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 1 {
 		t.Fatal("TestStopPeer peer size error,want 1,got:", spew.Sdump(s1.peers.lookup))
 	}
 
 	s1.StopPeerForError(s1.peers.list[0], "stop for test")
-	if outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 0 {
+	if _, outbound, inbound, dialing := s1.NumPeers(); outbound+inbound+dialing != 0 {
 		t.Fatal("TestStopPeer peer size error,want 0, got:", spew.Sdump(s1.peers.lookup))
 	}
 }
