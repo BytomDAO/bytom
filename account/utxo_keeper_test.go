@@ -6,10 +6,9 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/testutil"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestAddUnconfirmedUtxo(t *testing.T) {

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	dbm "github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/errors"
@@ -15,6 +14,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm/vmutil"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 const (

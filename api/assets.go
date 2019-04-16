@@ -17,12 +17,14 @@ func (a *API) createAsset(ctx context.Context, ins struct {
 	RootXPubs       []chainkd.XPub         `json:"root_xpubs"`
 	Quorum          int                    `json:"quorum"`
 	Definition      map[string]interface{} `json:"definition"`
+	LimitHeight     int64                  `json:"limit_height"`
 	IssuanceProgram chainjson.HexBytes     `json:"issuance_program"`
 }) Response {
 	ass, err := a.wallet.AssetReg.Define(
 		ins.RootXPubs,
 		ins.Quorum,
 		ins.Definition,
+		ins.LimitHeight,
 		strings.ToUpper(strings.TrimSpace(ins.Alias)),
 		ins.IssuanceProgram,
 	)

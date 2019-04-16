@@ -7,12 +7,11 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestBlockHeader(t *testing.T) {

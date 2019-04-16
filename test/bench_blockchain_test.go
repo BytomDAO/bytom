@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
@@ -16,7 +14,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/database/leveldb"
+	"github.com/bytom/database"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/event"
 	"github.com/bytom/mining"
@@ -24,6 +22,7 @@ import (
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/state"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func BenchmarkChain_CoinBaseTx_NoAsset(b *testing.B) {
@@ -139,7 +138,7 @@ func GenerateChainData(dirPath string, testDB dbm.DB, txNumber, otherAssetNum in
 		return nil, nil, nil, err
 	}
 
-	store := leveldb.NewStore(testDB)
+	store := database.NewStore(testDB)
 	dispatcher := event.NewDispatcher()
 	txPool := protocol.NewTxPool(store, dispatcher)
 	chain, err := protocol.NewChain(store, txPool)
@@ -381,7 +380,7 @@ func CreateTxbyNum(txNumber, otherAssetNum int) ([]*types.Tx, error) {
 
 func SetUtxoView(db dbm.DB, view *state.UtxoViewpoint) error {
 	batch := db.NewBatch()
-	if err := leveldb.SaveUtxoView(batch, view); err != nil {
+	if err := database.SaveUtxoView(batch, view); err != nil {
 		return err
 	}
 	batch.Write()

@@ -44,6 +44,10 @@ func (p *P2PPeer) ID() string {
 	return p.id
 }
 
+func (p *P2PPeer) IsLAN() bool {
+	return false
+}
+
 func (p *P2PPeer) ServiceFlag() consensus.ServiceFlag {
 	return p.flag
 }

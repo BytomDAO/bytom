@@ -6,11 +6,10 @@ import (
 	"os"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/consensus"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 // case1:           |------c1(height=7)

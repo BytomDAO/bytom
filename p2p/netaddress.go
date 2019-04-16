@@ -11,16 +11,17 @@ import (
 	"strconv"
 	"time"
 
-	cmn "github.com/tendermint/tmlibs/common"
 	"github.com/btcsuite/go-socks/socks"
+	cmn "github.com/tendermint/tmlibs/common"
 )
 
 // NetAddress defines information about a peer on the network
 // including its IP address, and port.
 type NetAddress struct {
-	IP   net.IP
-	Port uint16
-	str  string
+	IP    net.IP
+	Port  uint16
+	str   string
+	isLAN bool
 }
 
 // NewNetAddress returns a new NetAddress using the provided TCP
@@ -95,6 +96,20 @@ func NewNetAddressIPPort(ip net.IP, port uint16) *NetAddress {
 			ip.String(),
 			strconv.FormatUint(uint64(port), 10),
 		),
+	}
+}
+
+// NewLANNetAddressIPPort returns a new LAN NetAddress using the provided IP
+// and port number.
+func NewLANNetAddressIPPort(ip net.IP, port uint16) *NetAddress {
+	return &NetAddress{
+		IP:   ip,
+		Port: port,
+		str: net.JoinHostPort(
+			ip.String(),
+			strconv.FormatUint(uint64(port), 10),
+		),
+		isLAN: true,
 	}
 }
 

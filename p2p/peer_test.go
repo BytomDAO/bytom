@@ -83,7 +83,7 @@ func createOutboundPeerAndPerformHandshake(
 		fmt.Println(err)
 		return nil, err
 	}
-	p := newPeer(pc, nodeInfo, reactorsByCh, chDescs, nil)
+	p := newPeer(pc, nodeInfo, reactorsByCh, chDescs, nil, false)
 	return p, nil
 }
 
@@ -160,11 +160,11 @@ type inboundPeer struct {
 	config  *cfg.Config
 }
 
-func (ip *inboundPeer) dial(addr *NetAddress) error {
+func (ip *inboundPeer) dial(addr *NetAddress) {
 	pc, err := newOutboundPeerConn(addr, ip.PrivKey, DefaultPeerConfig(ip.config.P2P))
 	if err != nil {
 		fmt.Println("newOutboundPeerConn:", err)
-		return err
+		return
 	}
 
 	_, err = pc.HandshakeTimeout(&NodeInfo{
@@ -176,8 +176,7 @@ func (ip *inboundPeer) dial(addr *NetAddress) error {
 	}, 5*time.Second)
 	if err != nil {
 		fmt.Println("Failed to perform handshake:", err)
-		return err
+		return
 	}
-
-	return nil
+	time.AfterFunc(10*time.Second, pc.CloseConn)
 }

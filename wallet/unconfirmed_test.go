@@ -5,8 +5,6 @@ import (
 	"os"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
@@ -14,6 +12,7 @@ import (
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/testutil"
@@ -53,13 +52,13 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	controlProg.KeyIndex = 1
 
 	reg := asset.NewRegistry(testDB, nil)
-	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, "TESTASSET", nil)
+	asset, err := reg.Define([]chainkd.XPub{xpub1.XPub}, 1, nil, 0, "TESTASSET", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	dispatcher := event.NewDispatcher()
-	w := mockWallet(testDB, accountManager, reg, nil, dispatcher)
+	w := mockWallet(testDB, accountManager, reg, nil, dispatcher, false)
 	utxos := []*account.UTXO{}
 	btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
 	utxos = append(utxos, btmUtxo)

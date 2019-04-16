@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/account"
+	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/blockchain/txbuilder"
@@ -52,13 +53,17 @@ func (a *API) listAccounts(ctx context.Context, filter struct {
 func (a *API) getAsset(ctx context.Context, filter struct {
 	ID string `json:"id"`
 }) Response {
-	asset, err := a.wallet.AssetReg.GetAsset(filter.ID)
+	ass, err := a.wallet.AssetReg.GetAsset(filter.ID)
 	if err != nil {
 		log.Errorf("getAsset: %v", err)
 		return NewErrorResponse(err)
 	}
 
-	return NewSuccessResponse(asset)
+	annotatedAsset, err := asset.Annotated(ass)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(annotatedAsset)
 }
 
 // POST /list-assets
@@ -71,7 +76,15 @@ func (a *API) listAssets(ctx context.Context, filter struct {
 		return NewErrorResponse(err)
 	}
 
-	return NewSuccessResponse(assets)
+	annotatedAssets := []*query.AnnotatedAsset{}
+	for _, ass := range assets {
+		annotatedAsset, err := asset.Annotated(ass)
+		if err != nil {
+			return NewErrorResponse(err)
+		}
+		annotatedAssets = append(annotatedAssets, annotatedAsset)
+	}
+	return NewSuccessResponse(annotatedAssets)
 }
 
 // POST /list-balances

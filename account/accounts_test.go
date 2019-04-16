@@ -7,16 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/database/leveldb"
+	"github.com/bytom/database"
 	"github.com/bytom/errors"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/testutil"
+	dbm "github.com/bytom/database/leveldb"
 )
 
 func TestCreateAccountWithUppercase(t *testing.T) {
@@ -215,7 +214,7 @@ func mockAccountManager(t *testing.T) *Manager {
 	testDB := dbm.NewDB("testdb", "memdb", dirPath)
 	dispatcher := event.NewDispatcher()
 
-	store := leveldb.NewStore(testDB)
+	store := database.NewStore(testDB)
 	txPool := protocol.NewTxPool(store, dispatcher)
 	chain, err := protocol.NewChain(store, txPool)
 	if err != nil {

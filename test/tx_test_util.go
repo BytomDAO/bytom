@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
@@ -17,6 +15,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -80,7 +79,7 @@ func (g *TxGenerator) createAsset(accountAlias string, assetAlias string) (*asse
 	if err != nil {
 		return nil, err
 	}
-	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
+	return g.Assets.Define(acc.XPubs, len(acc.XPubs), nil, 0, assetAlias, nil)
 }
 
 func (g *TxGenerator) mockUtxo(accountAlias, assetAlias string, amount uint64) (*account.UTXO, error) {
@@ -293,7 +292,7 @@ func CreateSpendInput(tx *types.Tx, outputIndex uint64) (*types.SpendInput, erro
 }
 
 // SignInstructionFor read CtrlProgram from db, construct SignInstruction for SpendInput
-func SignInstructionFor(input *types.SpendInput, db db.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
+func SignInstructionFor(input *types.SpendInput, db dbm.DB, signer *signers.Signer) (*txbuilder.SigningInstruction, error) {
 	cp := account.CtrlProgram{}
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], input.ControlProgram)

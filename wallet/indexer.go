@@ -1,18 +1,20 @@
 package wallet
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/tmlibs/db"
 
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/query"
 	"github.com/bytom/crypto/sha3pool"
+	dbm "github.com/bytom/database/leveldb"
 	chainjson "github.com/bytom/encoding/json"
+	"github.com/bytom/errors"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -22,7 +24,11 @@ const (
 	TxPrefix = "TXS:"
 	//TxIndexPrefix is wallet database tx index prefix
 	TxIndexPrefix = "TID:"
+	//TxIndexPrefix is wallet database global tx index prefix
+	GlobalTxIndexPrefix = "GTID:"
 )
+
+var errAccntTxIDNotFound = errors.New("account TXID not found")
 
 func formatKey(blockHeight uint64, position uint32) string {
 	return fmt.Sprintf("%016x%08x", blockHeight, position)
@@ -40,8 +46,27 @@ func calcTxIndexKey(txID string) []byte {
 	return []byte(TxIndexPrefix + txID)
 }
 
+func calcGlobalTxIndexKey(txID string) []byte {
+	return []byte(GlobalTxIndexPrefix + txID)
+}
+
+func calcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
+	txIdx := make([]byte, 40)
+	copy(txIdx[:32], blockHash.Bytes())
+	binary.BigEndian.PutUint64(txIdx[32:], position)
+	return txIdx
+}
+
+func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
+	var hashBytes [32]byte
+	copy(hashBytes[:], globalTxIdx[:32])
+	hash := bc.NewHash(hashBytes)
+	position := binary.BigEndian.Uint64(globalTxIdx[32:])
+	return &hash, position
+}
+
 // deleteTransaction delete transactions when orphan block rollback
-func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
+func (w *Wallet) deleteTransactions(batch dbm.Batch, height uint64) {
 	tmpTx := query.AnnotatedTx{}
 	txIter := w.DB.IteratorPrefix(calcDeleteKey(height))
 	defer txIter.Release()
@@ -57,7 +82,7 @@ func (w *Wallet) deleteTransactions(batch db.Batch, height uint64) {
 // saveExternalAssetDefinition save external and local assets definition,
 // when query ,query local first and if have no then query external
 // details see getAliasDefinition
-func saveExternalAssetDefinition(b *types.Block, walletDB db.DB) {
+func saveExternalAssetDefinition(b *types.Block, walletDB dbm.DB) {
 	storeBatch := walletDB.NewBatch()
 	defer storeBatch.Write()
 
@@ -95,7 +120,7 @@ type TxSummary struct {
 }
 
 // indexTransactions saves all annotated transactions to the database.
-func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
+func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) error {
 	annotatedTxs := w.filterAccountTxs(b, txStatus)
 	saveExternalAssetDefinition(b, w.DB)
 	annotateTxsAccount(annotatedTxs, w.DB)
@@ -113,6 +138,16 @@ func (w *Wallet) indexTransactions(batch db.Batch, b *types.Block, txStatus *bc.
 		// delete unconfirmed transaction
 		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
 	}
+
+	if !w.TxIndexFlag {
+		return nil
+	}
+
+	for position, globalTx := range b.Transactions {
+		blockHash := b.BlockHeader.Hash()
+		batch.Set(calcGlobalTxIndexKey(globalTx.ID.String()), calcGlobalTxIndex(&blockHash, uint64(position)))
+	}
+
 	return nil
 }
 
@@ -150,19 +185,55 @@ transactionLoop:
 
 // GetTransactionByTxID get transaction by txID
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
-	formatKey := w.DB.Get(calcTxIndexKey(txID))
-	if formatKey == nil {
-		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
+	if annotatedTx, err := w.getAccountTxByTxID(txID); err == nil {
+		return annotatedTx, nil
+	} else if !w.TxIndexFlag {
+		return nil, err
 	}
 
+	return w.getGlobalTxByTxID(txID)
+}
+
+func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	annotatedTx := &query.AnnotatedTx{}
+	formatKey := w.DB.Get(calcTxIndexKey(txID))
+	if formatKey == nil {
+		return nil, errAccntTxIDNotFound
+	}
+
 	txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
 	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
-	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 
+	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
 	return annotatedTx, nil
+}
+
+func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
+	globalTxIdx := w.DB.Get(calcGlobalTxIndexKey(txID))
+	if globalTxIdx == nil {
+		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
+	}
+
+	blockHash, pos := parseGlobalTxIdx(globalTxIdx)
+	block, err := w.chain.GetBlockByHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	txStatus, err := w.chain.GetTransactionStatus(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	statusFail, err := txStatus.GetStatus(int(pos))
+	if err != nil {
+		return nil, err
+	}
+
+	tx := block.Transactions[int(pos)]
+	return w.buildAnnotatedTransaction(tx, block, statusFail, int(pos)), nil
 }
 
 // GetTransactionsSummary get transactions summary

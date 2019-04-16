@@ -87,6 +87,9 @@ type BaseConfig struct {
 	// This should be set in viper so it can unmarshal into this struct
 	RootDir string `mapstructure:"home"`
 
+	//The alias of the node
+	NodeAlias string `mapstructure:"node_alias"`
+
 	//The ID of the network to json
 	ChainID string `mapstructure:"chain_id"`
 
@@ -127,6 +130,7 @@ func DefaultBaseConfig() BaseConfig {
 		DBBackend:         "leveldb",
 		DBPath:            "data",
 		KeysPath:          "keystore",
+		NodeAlias:         "",
 	}
 }
 
@@ -151,6 +155,7 @@ type P2PConfig struct {
 	ProxyAddress     string `mapstructure:"proxy_address"`
 	ProxyUsername    string `mapstructure:"proxy_username"`
 	ProxyPassword    string `mapstructure:"proxy_password"`
+	KeepDial         string `mapstructure:"keep_dial"`
 }
 
 // Default configurable p2p parameters.
@@ -172,6 +177,7 @@ func DefaultP2PConfig() *P2PConfig {
 type WalletConfig struct {
 	Disable  bool   `mapstructure:"disable"`
 	Rescan   bool   `mapstructure:"rescan"`
+	TxIndex  bool   `mapstructure:"txindex"`
 	MaxTxFee uint64 `mapstructure:"max_tx_fee"`
 }
 
@@ -211,6 +217,7 @@ func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
 		Disable:  false,
 		Rescan:   false,
+		TxIndex:  false,
 		MaxTxFee: uint64(1000000000),
 	}
 }

@@ -7,13 +7,12 @@ import (
 	"path"
 	"reflect"
 
-	dbm "github.com/tendermint/tmlibs/db"
-
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
 	"github.com/bytom/blockchain/signers"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
@@ -154,7 +153,7 @@ func (ctx *walletTestContext) createAsset(accountAlias string, assetAlias string
 	if err != nil {
 		return nil, err
 	}
-	return ctx.Wallet.AssetReg.Define(acc.XPubs, len(acc.XPubs), nil, assetAlias, nil)
+	return ctx.Wallet.AssetReg.Define(acc.XPubs, len(acc.XPubs), nil, 0, assetAlias, nil)
 }
 
 func (ctx *walletTestContext) newBlock(txs []*types.Tx, coinbaseAccount string) (*types.Block, error) {
@@ -261,7 +260,7 @@ func (cfg *walletTestConfig) Run() error {
 	accountManager := account.NewManager(walletDB, chain)
 	assets := asset.NewRegistry(walletDB, chain)
 	dispatcher := event.NewDispatcher()
-	wallet, err := w.NewWallet(walletDB, accountManager, assets, hsm, chain, dispatcher)
+	wallet, err := w.NewWallet(walletDB, accountManager, assets, hsm, chain, dispatcher, false)
 	if err != nil {
 		return err
 	}

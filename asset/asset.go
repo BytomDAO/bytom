@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/golang/groupcache/lru"
-	dbm "github.com/tendermint/tmlibs/db"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/bytom/blockchain/signers"
@@ -15,6 +14,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/crypto/ed25519"
 	"github.com/bytom/crypto/ed25519/chainkd"
+	dbm "github.com/bytom/database/leveldb"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
@@ -126,7 +126,7 @@ func (reg *Registry) getNextAssetIndex() uint64 {
 }
 
 // Define defines a new Asset.
-func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
+func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, limitHeight int64, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
 	var err error
 	var assetSigner *signers.Signer
 
@@ -159,7 +159,7 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 		path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
 		derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
-		issuanceProgram, vmver, err = multisigIssuanceProgram(derivedPKs, assetSigner.Quorum)
+		issuanceProgram, vmver, err = multisigIssuanceProgram(derivedPKs, assetSigner.Quorum, limitHeight)
 		if err != nil {
 			return nil, err
 		}
@@ -363,8 +363,8 @@ func serializeAssetDef(def map[string]interface{}) ([]byte, error) {
 	return json.MarshalIndent(def, "", "  ")
 }
 
-func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int) (program []byte, vmversion uint64, err error) {
-	issuanceProg, err := vmutil.P2SPMultiSigProgram(pubkeys, nrequired)
+func multisigIssuanceProgram(pubkeys []ed25519.PublicKey, nrequired int, blockHeight int64) (program []byte, vmversion uint64, err error) {
+	issuanceProg, err := vmutil.P2SPMultiSigProgramWithHeight(pubkeys, nrequired, blockHeight)
 	if err != nil {
 		return nil, 0, err
 	}
