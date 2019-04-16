@@ -146,7 +146,7 @@ func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc
 		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
 	}
 
-	if !w.SaveGlobalTxIdxFlag {
+	if !w.TxIndexFlag {
 		return nil
 	}
 

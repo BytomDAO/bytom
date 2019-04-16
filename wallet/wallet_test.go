@@ -177,7 +177,7 @@ func TestWalletUpdate(t *testing.T) {
 	store.SaveBlock(block, txStatus)
 
 	w := mockWallet(testDB, accountManager, reg, chain, dispatcher)
-	w.SaveGlobalTxIdxFlag = true
+	w.TxIndexFlag = true
 	err = w.AttachBlock(block)
 	if err != nil {
 		t.Fatal(err)

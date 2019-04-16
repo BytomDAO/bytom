@@ -42,17 +42,17 @@ type StatusInfo struct {
 
 //Wallet is related to storing account unspent outputs
 type Wallet struct {
-	DB                  dbm.DB
-	rw                  sync.RWMutex
-	status              StatusInfo
-	SaveGlobalTxIdxFlag bool
-	AccountMgr          *account.Manager
-	AssetReg            *asset.Registry
-	Hsm                 *pseudohsm.HSM
-	chain               *protocol.Chain
-	RecoveryMgr         *recoveryManager
-	eventDispatcher     *event.Dispatcher
-	txMsgSub            *event.Subscription
+	DB              dbm.DB
+	rw              sync.RWMutex
+	status          StatusInfo
+	TxIndexFlag     bool
+	AccountMgr      *account.Manager
+	AssetReg        *asset.Registry
+	Hsm             *pseudohsm.HSM
+	chain           *protocol.Chain
+	RecoveryMgr     *recoveryManager
+	eventDispatcher *event.Dispatcher
+	txMsgSub        *event.Subscription
 
 	rescanCh chan struct{}
 }

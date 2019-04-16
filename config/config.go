@@ -175,10 +175,10 @@ func DefaultP2PConfig() *P2PConfig {
 
 //-----------------------------------------------------------------------------
 type WalletConfig struct {
-	Disable         bool   `mapstructure:"disable"`
-	Rescan          bool   `mapstructure:"rescan"`
-	SaveGlobalTxIdx bool   `mapstructure:"save_global_tx_idx"`
-	MaxTxFee        uint64 `mapstructure:"max_tx_fee"`
+	Disable  bool   `mapstructure:"disable"`
+	Rescan   bool   `mapstructure:"rescan"`
+	TxIndex  bool   `mapstructure:"txindex"`
+	MaxTxFee uint64 `mapstructure:"max_tx_fee"`
 }
 
 type RPCAuthConfig struct {
@@ -215,10 +215,10 @@ func DefaultWebConfig() *WebConfig {
 // Default configurable wallet parameters.
 func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
-		Disable:         false,
-		Rescan:          false,
-		SaveGlobalTxIdx: false,
-		MaxTxFee:        uint64(1000000000),
+		Disable:  false,
+		Rescan:   false,
+		TxIndex:  false,
+		MaxTxFee: uint64(1000000000),
 	}
 }
 

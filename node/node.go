@@ -114,7 +114,7 @@ func NewNode(config *cfg.Config) *Node {
 			log.WithFields(log.Fields{"module": logModule, "error": err}).Error("init NewWallet")
 		}
 
-		wallet.SaveGlobalTxIdxFlag = config.Wallet.SaveGlobalTxIdx
+		wallet.TxIndexFlag = config.Wallet.TxIndex
 		// trigger rescan wallet
 		if config.Wallet.Rescan {
 			wallet.RescanBlocks()
