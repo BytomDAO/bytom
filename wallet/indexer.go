@@ -191,7 +191,7 @@ transactionLoop:
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 	if annotatedTx, err := w.getAccountTxByTxID(txID); err == nil {
 		return annotatedTx, nil
-	} else if err != errAccntTxIDNotFound {
+	} else if !w.TxIndexFlag {
 		return nil, err
 	}
 
