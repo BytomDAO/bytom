@@ -344,7 +344,7 @@ func (w *waitControlLoop) hasMinimumWaitPeriod() bool {
 }
 
 func noRegTimeout() time.Duration {
-	e := rand.ExpFloat64()
+	e := rand.New(rand.NewSource(time.Now().UnixNano())).ExpFloat64()
 	if e > 100 {
 		e = 100
 	}

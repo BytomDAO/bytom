@@ -2,6 +2,7 @@ package netsync
 
 import (
 	"math/rand"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -113,7 +114,7 @@ func (sm *SyncManager) txSyncLoop() {
 			return nil
 		}
 
-		n := rand.Intn(len(pending)) + 1
+		n := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(pending)) + 1
 		for _, s := range pending {
 			if n--; n == 0 {
 				return s

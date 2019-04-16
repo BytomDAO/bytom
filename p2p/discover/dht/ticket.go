@@ -539,7 +539,7 @@ func (s *ticketStore) addTicket(localTime AbsTime, pingHash []byte, ticket *tick
 
 	if _, ok := s.tickets[topic]; ok {
 		wait := ticket.regTime[topicIdx] - localTime
-		rnd := rand.ExpFloat64()
+		rnd := rand.New(rand.NewSource(time.Now().UnixNano())).ExpFloat64()
 		if rnd > 10 {
 			rnd = 10
 		}
@@ -752,7 +752,7 @@ func globalRandRead(b []byte) {
 	val := 0
 	for n := 0; n < len(b); n++ {
 		if pos == 0 {
-			val = rand.Int()
+			val = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 			pos = 7
 		}
 		b[n] = byte(val)

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bytom/common"
 	"github.com/bytom/crypto"
@@ -424,7 +425,7 @@ func hashAtDistance(a common.Hash, n int) (b common.Hash) {
 	}
 	b[pos] = a[pos]&^bit | ^a[pos]&bit // TODO: randomize end bits
 	for i := pos + 1; i < len(a); i++ {
-		b[i] = byte(rand.Intn(255))
+		b[i] = byte(rand.New(rand.NewSource(time.Now().UnixNano())).Intn(255))
 	}
 	return b
 }
