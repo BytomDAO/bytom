@@ -1,11 +1,11 @@
 package wallet
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strconv"
 
 	log "github.com/sirupsen/logrus"
 
@@ -51,25 +51,22 @@ func calcGlobalTxIndexKey(txID string) []byte {
 	return []byte(GlobalTxIndexPrefix + txID)
 }
 
-func calcGlobalTxIndex(blockHash *bc.Hash, position int) []byte {
-	b := blockHash.Byte32()
-	v := make([]byte, 64)
-	hex.Encode(v, b[:])
-	return append(v, []byte(fmt.Sprintf("%08x", position))...)
+func calcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
+	txIdx := make([]byte, 72)
+	bh := blockHash.Byte32()
+	hex.Encode(txIdx[:64], bh[:])
+	binary.BigEndian.PutUint64(txIdx[64:], position)
+	return txIdx
 }
 
-func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, int, error) {
+func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64, error) {
 	hash := bc.Hash{}
 	if err := hash.UnmarshalText(globalTxIdx[:64]); err != nil {
 		return nil, 0, errors.Wrap(err, "Unmarshal blockHash")
 	}
 
-	position, err := strconv.ParseInt(string(globalTxIdx[64:]), 16, 32)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "Parse position")
-	}
-
-	return &hash, int(position), nil
+	position := binary.BigEndian.Uint64(globalTxIdx[64:])
+	return &hash, position, nil
 }
 
 // deleteTransaction delete transactions when orphan block rollback
@@ -152,7 +149,7 @@ func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc
 
 	for position, globalTx := range b.Transactions {
 		blockHash := b.BlockHeader.Hash()
-		batch.Set(calcGlobalTxIndexKey(globalTx.ID.String()), calcGlobalTxIndex(&blockHash, position))
+		batch.Set(calcGlobalTxIndexKey(globalTx.ID.String()), calcGlobalTxIndex(&blockHash, uint64(position)))
 	}
 
 	return nil
@@ -238,13 +235,13 @@ func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
 		return nil, err
 	}
 
-	statusFail, err := txStatus.GetStatus(pos)
+	statusFail, err := txStatus.GetStatus(int(pos))
 	if err != nil {
 		return nil, err
 	}
 
-	tx := block.Transactions[pos]
-	return w.buildAnnotatedTransaction(tx, block, statusFail, pos), nil
+	tx := block.Transactions[int(pos)]
+	return w.buildAnnotatedTransaction(tx, block, statusFail, int(pos)), nil
 }
 
 // GetTransactionsSummary get transactions summary
