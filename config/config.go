@@ -177,6 +177,7 @@ func DefaultP2PConfig() *P2PConfig {
 type WalletConfig struct {
 	Disable  bool   `mapstructure:"disable"`
 	Rescan   bool   `mapstructure:"rescan"`
+	TxIndex  bool   `mapstructure:"txindex"`
 	MaxTxFee uint64 `mapstructure:"max_tx_fee"`
 }
 
@@ -216,6 +217,7 @@ func DefaultWalletConfig() *WalletConfig {
 	return &WalletConfig{
 		Disable:  false,
 		Rescan:   false,
+		TxIndex:  false,
 		MaxTxFee: uint64(1000000000),
 	}
 }

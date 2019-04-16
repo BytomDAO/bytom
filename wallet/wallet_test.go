@@ -24,6 +24,26 @@ import (
 	"github.com/bytom/protocol/bc/types"
 )
 
+func TestEncodeDecodeGlobalTxIndex(t *testing.T) {
+	want := &struct {
+		BlockHash bc.Hash
+		Position  uint64
+	}{
+		BlockHash: bc.NewHash([32]byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20}),
+		Position:  1,
+	}
+
+	globalTxIdx := calcGlobalTxIndex(&want.BlockHash, want.Position)
+	blockHashGot, positionGot := parseGlobalTxIdx(globalTxIdx)
+	if *blockHashGot != want.BlockHash {
+		t.Errorf("blockHash mismatch. Get: %v. Expect: %v", *blockHashGot, want.BlockHash)
+	}
+
+	if positionGot != want.Position {
+		t.Errorf("position mismatch. Get: %v. Expect: %v", positionGot, want.Position)
+	}
+}
+
 func TestWalletVersion(t *testing.T) {
 	// prepare wallet
 	dirPath, err := ioutil.TempDir(".", "")
@@ -36,7 +56,7 @@ func TestWalletVersion(t *testing.T) {
 	defer os.RemoveAll("temp")
 
 	dispatcher := event.NewDispatcher()
-	w := mockWallet(testDB, nil, nil, nil, dispatcher)
+	w := mockWallet(testDB, nil, nil, nil, dispatcher, false)
 
 	// legacy status test case
 	type legacyStatusInfo struct {
@@ -152,7 +172,7 @@ func TestWalletUpdate(t *testing.T) {
 	txStatus.SetStatus(1, false)
 	store.SaveBlock(block, txStatus)
 
-	w := mockWallet(testDB, accountManager, reg, chain, dispatcher)
+	w := mockWallet(testDB, accountManager, reg, chain, dispatcher, true)
 	err = w.AttachBlock(block)
 	if err != nil {
 		t.Fatal(err)
@@ -174,7 +194,7 @@ func TestWalletUpdate(t *testing.T) {
 	for position, tx := range block.Transactions {
 		get := w.DB.Get(calcGlobalTxIndexKey(tx.ID.String()))
 		bh := block.BlockHeader.Hash()
-		expect := calcGlobalTxIndex(&bh, position)
+		expect := calcGlobalTxIndex(&bh, uint64(position))
 		if !reflect.DeepEqual(get, expect) {
 			t.Fatalf("position#%d: compare retrieved globalTxIdx err", position)
 		}
@@ -243,7 +263,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	//block := mockSingleBlock(tx)
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
-	w, err := NewWallet(testDB, accountManager, reg, hsm, chain, dispatcher)
+	w, err := NewWallet(testDB, accountManager, reg, hsm, chain, dispatcher, false)
 	go w.memPoolTxQueryLoop()
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
 	time.Sleep(time.Millisecond * 10)
@@ -300,7 +320,7 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 	return tplBuilder.Build()
 }
 
-func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher) *Wallet {
+func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *Wallet {
 	wallet := &Wallet{
 		DB:              walletDB,
 		AccountMgr:      account,
@@ -308,6 +328,7 @@ func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry
 		chain:           chain,
 		RecoveryMgr:     newRecoveryManager(walletDB, account),
 		eventDispatcher: dispatcher,
+		TxIndexFlag:     txIndexFlag,
 	}
 	wallet.txMsgSub, _ = wallet.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
 	return wallet
