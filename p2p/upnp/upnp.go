@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -42,11 +43,10 @@ func Discover() (nat NAT, err error) {
 		return
 	}
 	socket := conn.(*net.UDPConn)
-	defer socket.Close()
+	defer socket.Close() // nolint: errcheck
 
-	err = socket.SetDeadline(time.Now().Add(3 * time.Second))
-	if err != nil {
-		return
+	if err := socket.SetDeadline(time.Now().Add(3 * time.Second)); err != nil {
+		return nil, err
 	}
 
 	st := "InternetGatewayDevice:1"
@@ -65,14 +65,18 @@ func Discover() (nat NAT, err error) {
 			return
 		}
 		var n int
-		n, _, err = socket.ReadFromUDP(answerBytes)
+		_, _, err = socket.ReadFromUDP(answerBytes)
+		if err != nil {
+			return
+		}
+
 		for {
 			n, _, err = socket.ReadFromUDP(answerBytes)
 			if err != nil {
 				break
 			}
 			answer := string(answerBytes[0:n])
-			if strings.Index(answer, st) < 0 {
+			if !strings.Contains(answer, st) {
 				continue
 			}
 			// HTTP header field names are case-insensitive.
@@ -103,7 +107,7 @@ func Discover() (nat NAT, err error) {
 			return
 		}
 	}
-	err = errors.New("UPnP port discovery failed.")
+	err = errors.New("UPnP port discovery failed")
 	return
 }
 
@@ -153,7 +157,7 @@ type Root struct {
 func getChildDevice(d *Device, deviceType string) *Device {
 	dl := d.DeviceList.Device
 	for i := 0; i < len(dl); i++ {
-		if strings.Index(dl[i].DeviceType, deviceType) >= 0 {
+		if strings.Contains(dl[i].DeviceType, deviceType) {
 			return &dl[i]
 		}
 	}
@@ -163,7 +167,7 @@ func getChildDevice(d *Device, deviceType string) *Device {
 func getChildService(d *Device, serviceType string) *UPNPService {
 	sl := d.ServiceList.Service
 	for i := 0; i < len(sl); i++ {
-		if strings.Index(sl[i].ServiceType, serviceType) >= 0 {
+		if strings.Contains(sl[i].ServiceType, serviceType) {
 			return &sl[i]
 		}
 	}
@@ -200,7 +204,8 @@ func getServiceURL(rootURL string) (url, urnDomain string, err error) {
 	if err != nil {
 		return
 	}
-	defer r.Body.Close()
+	defer r.Body.Close() // nolint: errcheck
+
 	if r.StatusCode >= 400 {
 		err = errors.New(string(r.StatusCode))
 		return
@@ -211,10 +216,11 @@ func getServiceURL(rootURL string) (url, urnDomain string, err error) {
 		return
 	}
 	a := &root.Device
-	if strings.Index(a.DeviceType, "InternetGatewayDevice:1") < 0 {
+	if !strings.Contains(a.DeviceType, "InternetGatewayDevice:1") {
 		err = errors.New("No InternetGatewayDevice")
 		return
 	}
+
 	b := getChildDevice(a, "WANDevice:1")
 	if b == nil {
 		err = errors.New("No WANDevice")
@@ -298,15 +304,23 @@ func (n *upnpNAT) getExternalIPAddress() (info statusInfo, err error) {
 	var response *http.Response
 	response, err = soapRequest(n.serviceURL, "GetExternalIPAddress", message, n.urnDomain)
 	if response != nil {
-		defer response.Body.Close()
+		defer response.Body.Close() // nolint: errcheck
 	}
 	if err != nil {
 		return
 	}
+
 	var envelope Envelope
 	data, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return
+	}
+
 	reader := bytes.NewReader(data)
-	xml.NewDecoder(reader).Decode(&envelope)
+	err = xml.NewDecoder(reader).Decode(&envelope)
+	if err != nil {
+		return
+	}
 
 	info = statusInfo{envelope.Soap.ExternalIP.IPAddress}
 
@@ -317,12 +331,18 @@ func (n *upnpNAT) getExternalIPAddress() (info statusInfo, err error) {
 	return
 }
 
+// GetExternalAddress returns an external IP. If GetExternalIPAddress action
+// fails or IP returned is invalid, GetExternalAddress returns an error.
 func (n *upnpNAT) GetExternalAddress() (addr net.IP, err error) {
 	info, err := n.getExternalIPAddress()
 	if err != nil {
 		return
 	}
 	addr = net.ParseIP(info.externalIpAddress)
+	if addr == nil {
+		err = fmt.Errorf("Failed to parse IP: %v", info.externalIpAddress)
+	}
+
 	return
 }
 
@@ -341,7 +361,7 @@ func (n *upnpNAT) AddPortMapping(protocol string, externalPort, internalPort int
 	var response *http.Response
 	response, err = soapRequest(n.serviceURL, "AddPortMapping", message, n.urnDomain)
 	if response != nil {
-		defer response.Body.Close()
+		defer response.Body.Close() // nolint: errcheck
 	}
 	if err != nil {
 		return
@@ -367,7 +387,7 @@ func (n *upnpNAT) DeletePortMapping(protocol string, externalPort, internalPort 
 	var response *http.Response
 	response, err = soapRequest(n.serviceURL, "DeletePortMapping", message, n.urnDomain)
 	if response != nil {
-		defer response.Body.Close()
+		defer response.Body.Close() // nolint: errcheck
 	}
 	if err != nil {
 		return
