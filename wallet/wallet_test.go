@@ -34,11 +34,7 @@ func TestEncodeDecodeGlobalTxIndex(t *testing.T) {
 	}
 
 	globalTxIdx := calcGlobalTxIndex(&want.BlockHash, want.Position)
-	blockHashGot, positionGot, err := parseGlobalTxIdx(globalTxIdx)
-	if err != nil {
-		t.Error(err)
-	}
-
+	blockHashGot, positionGot := parseGlobalTxIdx(globalTxIdx)
 	if *blockHashGot != want.BlockHash {
 		t.Errorf("blockHash mismatch. Get: %v. Expect: %v", *blockHashGot, want.BlockHash)
 	}

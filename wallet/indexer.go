@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -52,21 +51,18 @@ func calcGlobalTxIndexKey(txID string) []byte {
 }
 
 func calcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
-	txIdx := make([]byte, 72)
-	bh := blockHash.Byte32()
-	hex.Encode(txIdx[:64], bh[:])
-	binary.BigEndian.PutUint64(txIdx[64:], position)
+	txIdx := make([]byte, 40)
+	copy(txIdx[:32], blockHash.Bytes())
+	binary.BigEndian.PutUint64(txIdx[32:], position)
 	return txIdx
 }
 
-func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64, error) {
-	hash := bc.Hash{}
-	if err := hash.UnmarshalText(globalTxIdx[:64]); err != nil {
-		return nil, 0, errors.Wrap(err, "Unmarshal blockHash")
-	}
-
-	position := binary.BigEndian.Uint64(globalTxIdx[64:])
-	return &hash, position, nil
+func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
+	var hashBytes [32]byte
+	copy(hashBytes[:], globalTxIdx[:32])
+	hash := bc.NewHash(hashBytes)
+	position := binary.BigEndian.Uint64(globalTxIdx[32:])
+	return &hash, position
 }
 
 // deleteTransaction delete transactions when orphan block rollback
@@ -220,11 +216,7 @@ func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
 		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
 	}
 
-	blockHash, pos, err := parseGlobalTxIdx(globalTxIdx)
-	if err != nil {
-		return nil, err
-	}
-
+	blockHash, pos := parseGlobalTxIdx(globalTxIdx)
 	block, err := w.chain.GetBlockByHash(blockHash)
 	if err != nil {
 		return nil, err
