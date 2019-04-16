@@ -58,7 +58,7 @@ func TestWalletUnconfirmedTxs(t *testing.T) {
 	}
 
 	dispatcher := event.NewDispatcher()
-	w := mockWallet(testDB, accountManager, reg, nil, dispatcher)
+	w := mockWallet(testDB, accountManager, reg, nil, dispatcher, false)
 	utxos := []*account.UTXO{}
 	btmUtxo := mockUTXO(controlProg, consensus.BTMAssetID)
 	utxos = append(utxos, btmUtxo)

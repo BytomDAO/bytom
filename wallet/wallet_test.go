@@ -60,7 +60,7 @@ func TestWalletVersion(t *testing.T) {
 	defer os.RemoveAll("temp")
 
 	dispatcher := event.NewDispatcher()
-	w := mockWallet(testDB, nil, nil, nil, dispatcher)
+	w := mockWallet(testDB, nil, nil, nil, dispatcher, false)
 
 	// legacy status test case
 	type legacyStatusInfo struct {
@@ -176,8 +176,7 @@ func TestWalletUpdate(t *testing.T) {
 	txStatus.SetStatus(1, false)
 	store.SaveBlock(block, txStatus)
 
-	w := mockWallet(testDB, accountManager, reg, chain, dispatcher)
-	w.TxIndexFlag = true
+	w := mockWallet(testDB, accountManager, reg, chain, dispatcher, true)
 	err = w.AttachBlock(block)
 	if err != nil {
 		t.Fatal(err)
@@ -268,7 +267,7 @@ func TestMemPoolTxQueryLoop(t *testing.T) {
 	//block := mockSingleBlock(tx)
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
-	w, err := NewWallet(testDB, accountManager, reg, hsm, chain, dispatcher)
+	w, err := NewWallet(testDB, accountManager, reg, hsm, chain, dispatcher, false)
 	go w.memPoolTxQueryLoop()
 	w.eventDispatcher.Post(protocol.TxMsgEvent{TxMsg: &protocol.TxPoolMsg{TxDesc: &protocol.TxDesc{Tx: tx}, MsgType: protocol.MsgNewTx}})
 	time.Sleep(time.Millisecond * 10)
@@ -325,7 +324,7 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 	return tplBuilder.Build()
 }
 
-func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher) *Wallet {
+func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) *Wallet {
 	wallet := &Wallet{
 		DB:              walletDB,
 		AccountMgr:      account,
@@ -333,6 +332,7 @@ func mockWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry
 		chain:           chain,
 		RecoveryMgr:     newRecoveryManager(walletDB, account),
 		eventDispatcher: dispatcher,
+		TxIndexFlag:     txIndexFlag,
 	}
 	wallet.txMsgSub, _ = wallet.eventDispatcher.Subscribe(protocol.TxMsgEvent{})
 	return wallet
