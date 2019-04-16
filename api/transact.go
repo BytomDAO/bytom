@@ -10,13 +10,10 @@ import (
 
 	"github.com/bytom/account"
 	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/errors"
 	"github.com/bytom/net/http/reqid"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/vm/vmutil"
 )
 
 var (

@@ -99,15 +99,9 @@ func estimateIssueGas(sigInst *SigningInstruction) (int64, int64) {
 		case *SignatureWitness:
 			witnessSize += 65 * int64(t.Quorum)
 			gas += 1065*int64(len(t.Keys)) + 72*int64(t.Quorum) + 316
-			if int64(len(t.Keys)) == 1 && int64(t.Quorum) == 1 {
-				gas += 27
-			}
 		case *RawTxSigWitness:
 			witnessSize += 65 * int64(t.Quorum)
 			gas += 1065*int64(len(t.Keys)) + 72*int64(t.Quorum) + 316
-			if int64(len(t.Keys)) == 1 && int64(t.Quorum) == 1 {
-				gas += 27
-			}
 		}
 	}
 	return witnessSize, gas
