@@ -232,8 +232,8 @@ type EstimateTxGasResp struct {
 // estimateTxGas estimate consumed neu for transaction
 func estimateTxGas(template txbuilder.Template) (*EstimateTxGasResp, error) {
 	var baseP2WSHSize, totalWitnessSize, baseP2WSHGas, totalP2WPKHGas, totalP2WSHGas, totalIssueGas int64
-	baseSize := int64(352) // inputSize(224) + outputSize(128)
-	baseP2WPKHSize := int64(196)
+	baseSize := int64(176) // inputSize(112) + outputSize(64)
+	baseP2WPKHSize := int64(98)
 	baseP2WPKHGas := int64(1409)
 	for pos, input := range template.Transaction.TxData.Inputs {
 		switch input.InputType() {
@@ -289,13 +289,13 @@ func estimateP2WSHGas(sigInst *txbuilder.SigningInstruction) (int64, int64) {
 	for _, witness := range sigInst.WitnessComponents {
 		switch t := witness.(type) {
 		case *txbuilder.SignatureWitness:
-			witnessSize += 66*int64(len(t.Keys)) + 130*int64(t.Quorum)
+			witnessSize += 33*int64(len(t.Keys)) + 65*int64(t.Quorum)
 			gas += 1131*int64(len(t.Keys)) + 72*int64(t.Quorum) + 659
 			if int64(len(t.Keys)) == 1 && int64(t.Quorum) == 1 {
 				gas += 27
 			}
 		case *txbuilder.RawTxSigWitness:
-			witnessSize += 66*int64(len(t.Keys)) + 130*int64(t.Quorum)
+			witnessSize += 33*int64(len(t.Keys)) + 65*int64(t.Quorum)
 			gas += 1131*int64(len(t.Keys)) + 72*int64(t.Quorum) + 659
 			if int64(len(t.Keys)) == 1 && int64(t.Quorum) == 1 {
 				gas += 27
@@ -311,13 +311,13 @@ func estimateIssueGas(sigInst *txbuilder.SigningInstruction) (int64, int64) {
 	for _, witness := range sigInst.WitnessComponents {
 		switch t := witness.(type) {
 		case *txbuilder.SignatureWitness:
-			witnessSize += 130 * int64(t.Quorum)
+			witnessSize += 65 * int64(t.Quorum)
 			gas += 1065*int64(len(t.Keys)) + 72*int64(t.Quorum) + 316
 			if int64(len(t.Keys)) == 1 && int64(t.Quorum) == 1 {
 				gas += 27
 			}
 		case *txbuilder.RawTxSigWitness:
-			witnessSize += 130 * int64(t.Quorum)
+			witnessSize += 65 * int64(t.Quorum)
 			gas += 1065*int64(len(t.Keys)) + 72*int64(t.Quorum) + 316
 			if int64(len(t.Keys)) == 1 && int64(t.Quorum) == 1 {
 				gas += 27
