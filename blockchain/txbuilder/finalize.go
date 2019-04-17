@@ -39,10 +39,6 @@ func FinalizeTx(ctx context.Context, c *protocol.Chain, tx *types.Tx) error {
 		return err
 	}
 
-	if len(tx.GasInputIDs) == 0 {
-		return ErrNoGasInput
-	}
-
 	// This part is use for prevent tx size  is 0
 	data, err := tx.TxData.MarshalText()
 	if err != nil {
