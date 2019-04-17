@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/consensus"
 )
 
 const (
@@ -18,7 +19,6 @@ const (
 	defaultNumWorkers = 1
 	hashUpdateSecs    = 1
 	logModule         = "cpuminer"
-	blockTime         = time.Second * 5
 )
 
 // CPUMiner provides facilities for solving blocks (mining) using the CPU in
@@ -42,7 +42,7 @@ type CPUMiner struct {
 // target difficulty.
 func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
-	blockTimer := time.NewTimer(blockTime)
+	blockTimer := time.NewTimer(time.Second * time.Duration(consensus.TargetSecondsPerBlock))
 	for {
 		select {
 		case <-quit:
