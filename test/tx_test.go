@@ -163,14 +163,6 @@ func (t *ttTransaction) create(g *TxGenerator) (*types.Tx, error) {
 	return g.Sign(t.Passwords)
 }
 
-func TestTx(t *testing.T) {
-	walk(t, txTestDir, func(t *testing.T, name string, test *TxTestConfig) {
-		if err := test.Run(); err != nil {
-			t.Fatal(err)
-		}
-	})
-}
-
 func TestCoinbaseMature(t *testing.T) {
 	db := dbm.NewDB("test_coinbase_mature_db", "leveldb", "test_coinbase_mature_db")
 	defer os.RemoveAll("test_coinbase_mature_db")
