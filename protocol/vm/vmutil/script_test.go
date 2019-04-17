@@ -214,7 +214,7 @@ func TestGetIssuanceProgramRestrictHeight(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		gotHeight, _ := GetIssuanceProgramRestrictHeight(program)
+		gotHeight := GetIssuanceProgramRestrictHeight(program)
 		if gotHeight != test.wantHeight {
 			t.Errorf("TestGetIssuanceProgramRestrictHeight #%d failed: got %d want %d", i, gotHeight, test.wantHeight)
 		}

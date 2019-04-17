@@ -36,7 +36,7 @@ func EstimateTxGas(template Template) (*EstimateTxGasInfo, error) {
 
 		case types.IssuanceInputType:
 			issuanceProgram := input.IssuanceProgram()
-			if height, _ := vmutil.GetIssuanceProgramRestrictHeight(issuanceProgram); height > 0 {
+			if height := vmutil.GetIssuanceProgramRestrictHeight(issuanceProgram); height > 0 {
 				// the gas for issue program with checking block height
 				totalIssueGas += 5
 			}
