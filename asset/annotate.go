@@ -33,7 +33,12 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 		IssuanceProgram:   chainjson.HexBytes(a.IssuanceProgram),
 	}
 
-	annotatedAsset.LimitHeight, _ = vmutil.GetIssuanceProgramRestrictHeight(a.IssuanceProgram)
+	var err error
+	annotatedAsset.LimitHeight, err = vmutil.GetIssuanceProgramRestrictHeight(a.IssuanceProgram)
+	if err != nil {
+		return nil, err
+	}
+
 	if a.Signer != nil {
 		annotatedAsset.AnnotatedSigner = query.AnnotatedSigner{
 			Type:       a.Signer.Type,
