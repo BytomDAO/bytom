@@ -15,6 +15,7 @@ branches:
     only:
         - master
         - dev
+        - politic
 
 script:
     - make ci
