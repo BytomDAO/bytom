@@ -144,10 +144,9 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 		transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
 		if err != nil && filter.Unconfirmed {
 			transaction, err = a.wallet.GetUnconfirmedTxByTxID(filter.ID)
-			if err != nil {
-				return NewErrorResponse(err)
-			}
-		} else if err != nil {
+		}
+
+		if err != nil {
 			return NewErrorResponse(err)
 		}
 		transactions = []*query.AnnotatedTx{transaction}
