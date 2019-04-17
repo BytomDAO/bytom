@@ -4,8 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/bytom/consensus"
 	"github.com/bytom/database/storage"
 	"github.com/bytom/event"
@@ -605,95 +603,3 @@ func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)              
 func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)             { return nil, nil }
 func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error          { return nil }
 func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error { return nil }
-
-func TestProcessTransaction(t *testing.T) {
-	txPool := &TxPool{
-		pool:            make(map[bc.Hash]*TxDesc),
-		utxo:            make(map[bc.Hash]*types.Tx),
-		orphans:         make(map[bc.Hash]*orphanTx),
-		orphansByPrev:   make(map[bc.Hash]map[bc.Hash]*orphanTx),
-		store:           &mockStore1{},
-		eventDispatcher: event.NewDispatcher(),
-	}
-	cases := []struct {
-		want  *TxPool
-		addTx *TxDesc
-	}{
-		//Dust tx
-		{
-			want: &TxPool{},
-			addTx: &TxDesc{
-				Tx:         testTxs[3],
-				StatusFail: false,
-			},
-		},
-		//Dust tx
-		{
-			want: &TxPool{},
-			addTx: &TxDesc{
-				Tx:         testTxs[4],
-				StatusFail: false,
-			},
-		},
-		//Dust tx
-		{
-			want: &TxPool{},
-			addTx: &TxDesc{
-				Tx:         testTxs[5],
-				StatusFail: false,
-			},
-		},
-		//Dust tx
-		{
-			want: &TxPool{},
-			addTx: &TxDesc{
-				Tx:         testTxs[6],
-				StatusFail: false,
-			},
-		},
-		//normal tx
-		{
-			want: &TxPool{
-				pool: map[bc.Hash]*TxDesc{
-					testTxs[2].ID: {
-						Tx:         testTxs[2],
-						StatusFail: false,
-						Weight:     150,
-					},
-				},
-				utxo: map[bc.Hash]*types.Tx{
-					*testTxs[2].ResultIds[0]: testTxs[2],
-					*testTxs[2].ResultIds[1]: testTxs[2],
-				},
-			},
-			addTx: &TxDesc{
-				Tx:         testTxs[2],
-				StatusFail: false,
-			},
-		},
-	}
-
-	for i, c := range cases {
-		txPool.ProcessTransaction(c.addTx.Tx, c.addTx.StatusFail, 0, 0)
-		for _, txD := range txPool.pool {
-			txD.Added = time.Time{}
-		}
-		for _, txD := range txPool.orphans {
-			txD.Added = time.Time{}
-			txD.expiration = time.Time{}
-		}
-
-		if !testutil.DeepEqual(txPool.pool, c.want.pool) {
-			t.Errorf("case %d: test ProcessTransaction pool mismatch got %s want %s", i, spew.Sdump(txPool.pool), spew.Sdump(c.want.pool))
-		}
-		if !testutil.DeepEqual(txPool.utxo, c.want.utxo) {
-			t.Errorf("case %d: test ProcessTransaction utxo mismatch got %s want %s", i, spew.Sdump(txPool.utxo), spew.Sdump(c.want.utxo))
-		}
-		if !testutil.DeepEqual(txPool.orphans, c.want.orphans) {
-			t.Errorf("case %d: test ProcessTransaction orphans mismatch got %s want %s", i, spew.Sdump(txPool.orphans), spew.Sdump(c.want.orphans))
-		}
-		if !testutil.DeepEqual(txPool.orphansByPrev, c.want.orphansByPrev) {
-			t.Errorf("case %d: test ProcessTransaction orphansByPrev mismatch got %s want %s", i, spew.Sdump(txPool.orphansByPrev), spew.Sdump(c.want.orphansByPrev))
-		}
-	}
-}

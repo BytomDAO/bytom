@@ -211,7 +211,7 @@ func isTransactionZeroOutput(tx *types.Tx) bool {
 }
 
 func (tp *TxPool) IsDust(tx *types.Tx) bool {
-	return isTransactionNoBtmInput(tx) || isTransactionZeroOutput(tx)
+	return isTransactionZeroOutput(tx)
 }
 
 func (tp *TxPool) processTransaction(tx *types.Tx, statusFail bool, height, fee uint64) (bool, error) {

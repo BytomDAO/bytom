@@ -70,15 +70,6 @@ func (g *GasState) setGas(BTMValue int64, txSize int64) error {
 }
 
 func (g *GasState) setGasValid() error {
-	var ok bool
-	if g.GasLeft, ok = checked.SubInt64(g.GasLeft, g.StorageGas); !ok || g.GasLeft < 0 {
-		return errors.Wrap(ErrGasCalculate, "setGasValid calc gasLeft")
-	}
-
-	if g.GasUsed, ok = checked.AddInt64(g.GasUsed, g.StorageGas); !ok {
-		return errors.Wrap(ErrGasCalculate, "setGasValid calc gasUsed")
-	}
-
 	g.GasValid = true
 	return nil
 }
@@ -230,12 +221,9 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.WithDetailf(ErrMismatchedAssetID, "asset ID is %x, issuance wants %x", computedAssetID.Bytes(), e.Value.AssetId.Bytes())
 		}
 
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
+		_, err := vm.Verify(NewTxVMContext(vs, e, e.WitnessAssetDefinition.IssuanceProgram, e.WitnessArguments), consensus.MaxGasAmount)
 		if err != nil {
 			return errors.Wrap(err, "checking issuance program")
-		}
-		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
-			return err
 		}
 
 		destVS := *vs
@@ -253,12 +241,9 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 			return errors.Wrap(err, "getting spend prevout")
 		}
 
-		gasLeft, err := vm.Verify(NewTxVMContext(vs, e, spentOutput.ControlProgram, e.WitnessArguments), vs.gasStatus.GasLeft)
+		_, err = vm.Verify(NewTxVMContext(vs, e, spentOutput.ControlProgram, e.WitnessArguments), consensus.MaxGasAmount)
 		if err != nil {
 			return errors.Wrap(err, "checking control program")
-		}
-		if err = vs.gasStatus.updateUsage(gasLeft); err != nil {
-			return err
 		}
 
 		eq, err := spentOutput.Source.Value.Equal(e.WitnessDestination.Value)

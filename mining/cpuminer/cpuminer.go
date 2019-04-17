@@ -7,11 +7,11 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/account"
-	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/event"
 	"github.com/bytom/mining"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/consensus"
 )
 
 const (
@@ -42,12 +42,8 @@ type CPUMiner struct {
 // target difficulty.
 func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan struct{}) bool {
 	header := &block.BlockHeader
-	seed, err := m.chain.CalcNextSeed(&header.PreviousBlockHash)
-	if err != nil {
-		return false
-	}
-
-	for i := uint64(0); i <= maxNonce; i++ {
+	blockTimer := time.NewTimer(time.Second * time.Duration(consensus.TargetSecondsPerBlock))
+	for {
 		select {
 		case <-quit:
 			return false
@@ -55,13 +51,9 @@ func (m *CPUMiner) solveBlock(block *types.Block, ticker *time.Ticker, quit chan
 			if m.chain.BestBlockHeight() >= header.Height {
 				return false
 			}
-		default:
-		}
-
-		header.Nonce = i
-		headerHash := header.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, seed, header.Bits) {
+		case <-blockTimer.C:
 			return true
+		default:
 		}
 	}
 	return false
