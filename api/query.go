@@ -147,6 +147,8 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 			if err != nil {
 				return NewErrorResponse(err)
 			}
+		} else if err != nil {
+			return NewErrorResponse(err)
 		}
 		transactions = []*query.AnnotatedTx{transaction}
 	} else {
