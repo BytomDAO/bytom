@@ -24,7 +24,6 @@ import (
 	"github.com/bytom/p2p/netutil"
 	"github.com/bytom/p2p/trust"
 	"github.com/bytom/version"
-	"reflect"
 )
 
 const (
@@ -159,7 +158,7 @@ func (sw *Switch) OnStart() error {
 
 // OnStop implements BaseService. It stops all listeners, peers, and reactors.
 func (sw *Switch) OnStop() {
-	if !reflect.ValueOf(sw.lanDiscv).IsNil() {
+	if sw.Config.P2P.LANDiscover {
 		sw.lanDiscv.Stop()
 	}
 
@@ -398,7 +397,7 @@ func (sw *Switch) connectLANPeers(lanPeer mdns.LANPeerEvent) {
 }
 
 func (sw *Switch) connectLANPeersRoutine() {
-	if reflect.ValueOf(sw.lanDiscv).IsNil() {
+	if !sw.Config.P2P.LANDiscover {
 		return
 	}
 
