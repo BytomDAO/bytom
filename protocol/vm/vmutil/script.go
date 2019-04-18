@@ -150,15 +150,24 @@ func GetIssuanceProgramRestrictHeight(program []byte) (int64, error) {
 	return 0, nil
 }
 
-func GetRetireIndex(program []byte) (string, error) {
+func GetRetireIndex(program []byte) string {
 	insts, err := vm.ParseProgram(program)
 	if err != nil {
-		return "", err
+		return ""
 	}
 
 	if len(insts) == 3 && insts[0].Op == vm.OP_FAIL && insts[1].IsPushdata() && insts[2].IsPushdata() {
-		return string(insts[1].Data), nil
+		return string(insts[1].Data)
 	}
 
-	return "", nil
+	return ""
+}
+
+func GetRetireData(program []byte) []byte {
+	insts, err := vm.ParseProgram(program)
+	if err != nil {
+		return []byte{}
+	}
+
+	return insts[len(insts)-1].Data
 }

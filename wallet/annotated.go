@@ -258,7 +258,8 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"
-		if index, _ := vmutil.GetRetireIndex(out.ControlProgram); index != "" {
+		out.RetireData = vmutil.GetRetireData(out.ControlProgram)
+		if index := vmutil.GetRetireIndex(out.ControlProgram); index != "" {
 			out.Index = index
 		}
 	} else {
