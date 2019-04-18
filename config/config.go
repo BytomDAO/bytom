@@ -149,6 +149,7 @@ type P2PConfig struct {
 	PrivateKey       string `mapstructure:"node_key"`
 	NodeKeyFile      string `mapstructure:"node_key_file"`
 	SkipUPNP         bool   `mapstructure:"skip_upnp"`
+	LANDiscover      bool   `mapstructure:"lan_discoverable"`
 	MaxNumPeers      int    `mapstructure:"max_num_peers"`
 	HandshakeTimeout int    `mapstructure:"handshake_timeout"`
 	DialTimeout      int    `mapstructure:"dial_timeout"`
@@ -164,6 +165,7 @@ func DefaultP2PConfig() *P2PConfig {
 		ListenAddress:    "tcp://0.0.0.0:46656",
 		NodeKeyFile:      "nodekey",
 		SkipUPNP:         false,
+		LANDiscover:      true,
 		MaxNumPeers:      50,
 		HandshakeTimeout: 30,
 		DialTimeout:      3,

@@ -105,8 +105,9 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		lanDiscv = mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
+		if config.P2P.LANDiscover {
+			lanDiscv = mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
+		}
 	}
 
 	return newSwitch(config, discv, lanDiscv, blacklistDB, l, privKey, listenAddr)
@@ -157,9 +158,10 @@ func (sw *Switch) OnStart() error {
 
 // OnStop implements BaseService. It stops all listeners, peers, and reactors.
 func (sw *Switch) OnStop() {
-	if sw.lanDiscv != nil {
+	if sw.Config.P2P.LANDiscover {
 		sw.lanDiscv.Stop()
 	}
+
 	for _, listener := range sw.listeners {
 		listener.Stop()
 	}
@@ -395,7 +397,7 @@ func (sw *Switch) connectLANPeers(lanPeer mdns.LANPeerEvent) {
 }
 
 func (sw *Switch) connectLANPeersRoutine() {
-	if sw.lanDiscv == nil {
+	if !sw.Config.P2P.LANDiscover {
 		return
 	}
 
