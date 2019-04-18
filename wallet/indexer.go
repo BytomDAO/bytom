@@ -11,7 +11,6 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/query"
-	"github.com/bytom/crypto/sha3pool"
 	dbm "github.com/bytom/database/leveldb"
 	chainjson "github.com/bytom/encoding/json"
 	"github.com/bytom/errors"
@@ -155,29 +154,12 @@ func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc
 func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus) []*query.AnnotatedTx {
 	annotatedTxs := make([]*query.AnnotatedTx, 0, len(b.Transactions))
 
-transactionLoop:
 	for pos, tx := range b.Transactions {
+		if pos == 0 {
+			continue
+		}
 		statusFail, _ := txStatus.GetStatus(pos)
-		for _, v := range tx.Outputs {
-			var hash [32]byte
-			sha3pool.Sum256(hash[:], v.ControlProgram)
-
-			if bytes := w.DB.Get(account.ContractKey(hash)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
-				continue transactionLoop
-			}
-		}
-
-		for _, v := range tx.Inputs {
-			outid, err := v.SpentOutputID()
-			if err != nil {
-				continue
-			}
-			if bytes := w.DB.Get(account.StandardUTXOKey(outid)); bytes != nil {
-				annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
-				continue transactionLoop
-			}
-		}
+		annotatedTxs = append(annotatedTxs, w.buildAnnotatedTransaction(tx, b, statusFail, pos))
 	}
 
 	return annotatedTxs
