@@ -7,9 +7,6 @@ matrix:
   include:
     - go: 1.8.3
     - go: 1.9
-    - go: tip
-  allow_failures:
-    - go: tip
 
 branches:
     only:
