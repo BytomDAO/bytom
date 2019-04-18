@@ -11,6 +11,7 @@ import (
 	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/p2p/connection"
 	"github.com/bytom/p2p/discover/dht"
+	"github.com/bytom/p2p/discover/mdns"
 )
 
 //PanicOnAddPeerErr add peer error
@@ -91,7 +92,8 @@ func (m *mockDiscv) ReadRandomNodes(buf []*dht.Node) (n int) {
 func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, privKey crypto.PrivKeyEd25519, initSwitch func(*Switch) *Switch) *Switch {
 	// new switch, add reactors
 	l, listenAddr := GetListener(cfg.P2P)
-	sw, err := newSwitch(cfg, new(mockDiscv), nil, testdb, l, privKey, listenAddr)
+	var lanDiscv *mdns.LANDiscover
+	sw, err := newSwitch(cfg, new(mockDiscv), lanDiscv, testdb, l, privKey, listenAddr)
 	if err != nil {
 		log.Errorf("create switch error: %s", err)
 		return nil
