@@ -15,4 +15,4 @@ COPY --from=builder /go/src/github.com/bytom/cmd/bytomcli/bytomcli /usr/local/bi
 
 EXPOSE 1999 46656 46657 9888
 
-CMD ["sh", "-c", "bytomd init --chain_id solonet ; bytomd node  --auth.disable"]
+CMD ["sh", "-c", "bytomd init --chain_id solonet ; bytomd node  --auth.disable --wallet.txindex"]
