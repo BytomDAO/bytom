@@ -56,9 +56,12 @@ func P2WSHProgram(hash []byte) ([]byte, error) {
 }
 
 // RetireProgram generates the script for retire output
-func RetireProgram(comment []byte) ([]byte, error) {
+func RetireProgram(index string, comment []byte) ([]byte, error) {
 	builder := NewBuilder()
 	builder.AddOp(vm.OP_FAIL)
+	if index != "" {
+		builder.AddData([]byte(index))
+	}
 	if len(comment) != 0 {
 		builder.AddData(comment)
 	}
@@ -145,4 +148,17 @@ func GetIssuanceProgramRestrictHeight(program []byte) (int64, error) {
 		return vm.AsInt64(insts[0].Data)
 	}
 	return 0, nil
+}
+
+func GetRetireIndex(program []byte) (string, error) {
+	insts, err := vm.ParseProgram(program)
+	if err != nil {
+		return "", err
+	}
+
+	if len(insts) == 3 && insts[0].Op == vm.OP_FAIL && insts[1].IsPushdata() && insts[2].IsPushdata() {
+		return string(insts[1].Data), nil
+	}
+
+	return "", nil
 }

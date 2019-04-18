@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -47,21 +46,6 @@ func calcTxIndexKey(txID string) []byte {
 
 func calcGlobalTxIndexKey(txID string) []byte {
 	return []byte(GlobalTxIndexPrefix + txID)
-}
-
-func calcGlobalTxIndex(blockHash *bc.Hash, position uint64) []byte {
-	txIdx := make([]byte, 40)
-	copy(txIdx[:32], blockHash.Bytes())
-	binary.BigEndian.PutUint64(txIdx[32:], position)
-	return txIdx
-}
-
-func parseGlobalTxIdx(globalTxIdx []byte) (*bc.Hash, uint64) {
-	var hashBytes [32]byte
-	copy(hashBytes[:], globalTxIdx[:32])
-	hash := bc.NewHash(hashBytes)
-	position := binary.BigEndian.Uint64(globalTxIdx[32:])
-	return &hash, position
 }
 
 // deleteTransaction delete transactions when orphan block rollback
@@ -134,19 +118,15 @@ func (w *Wallet) indexTransactions(batch dbm.Batch, b *types.Block, txStatus *bc
 		batch.Set(calcAnnotatedKey(formatKey(b.Height, uint32(tx.Position))), rawTx)
 		batch.Set(calcTxIndexKey(tx.ID.String()), []byte(formatKey(b.Height, uint32(tx.Position))))
 
+		for _, out := range tx.Outputs {
+			if out.Index != "" {
+				batch.Set(calcGlobalTxIndexKey(out.Index), []byte(formatKey(b.Height, uint32(tx.Position))))
+			}
+		}
+
 		// delete unconfirmed transaction
 		batch.Delete(calcUnconfirmedTxKey(tx.ID.String()))
 	}
-
-	if !w.TxIndexFlag {
-		return nil
-	}
-
-	for position, globalTx := range b.Transactions {
-		blockHash := b.BlockHeader.Hash()
-		batch.Set(calcGlobalTxIndexKey(globalTx.ID.String()), calcGlobalTxIndex(&blockHash, uint64(position)))
-	}
-
 	return nil
 }
 
@@ -169,11 +149,9 @@ func (w *Wallet) filterAccountTxs(b *types.Block, txStatus *bc.TransactionStatus
 func (w *Wallet) GetTransactionByTxID(txID string) (*query.AnnotatedTx, error) {
 	if annotatedTx, err := w.getAccountTxByTxID(txID); err == nil {
 		return annotatedTx, nil
-	} else if !w.TxIndexFlag {
-		return nil, err
 	}
 
-	return w.getGlobalTxByTxID(txID)
+	return w.getGlobalTxByIndex(txID)
 }
 
 func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
@@ -192,30 +170,20 @@ func (w *Wallet) getAccountTxByTxID(txID string) (*query.AnnotatedTx, error) {
 	return annotatedTx, nil
 }
 
-func (w *Wallet) getGlobalTxByTxID(txID string) (*query.AnnotatedTx, error) {
-	globalTxIdx := w.DB.Get(calcGlobalTxIndexKey(txID))
-	if globalTxIdx == nil {
-		return nil, fmt.Errorf("No transaction(tx_id=%s) ", txID)
+func (w *Wallet) getGlobalTxByIndex(index string) (*query.AnnotatedTx, error) {
+	annotatedTx := &query.AnnotatedTx{}
+	formatKey := w.DB.Get(calcGlobalTxIndexKey(index))
+	if formatKey == nil {
+		return nil, errAccntTxIDNotFound
 	}
 
-	blockHash, pos := parseGlobalTxIdx(globalTxIdx)
-	block, err := w.chain.GetBlockByHash(blockHash)
-	if err != nil {
+	txInfo := w.DB.Get(calcAnnotatedKey(string(formatKey)))
+	if err := json.Unmarshal(txInfo, annotatedTx); err != nil {
 		return nil, err
 	}
 
-	txStatus, err := w.chain.GetTransactionStatus(blockHash)
-	if err != nil {
-		return nil, err
-	}
-
-	statusFail, err := txStatus.GetStatus(int(pos))
-	if err != nil {
-		return nil, err
-	}
-
-	tx := block.Transactions[int(pos)]
-	return w.buildAnnotatedTransaction(tx, block, statusFail, int(pos)), nil
+	annotateTxsAsset(w, []*query.AnnotatedTx{annotatedTx})
+	return annotatedTx, nil
 }
 
 // GetTransactionsSummary get transactions summary

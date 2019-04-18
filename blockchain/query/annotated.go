@@ -54,6 +54,7 @@ type AnnotatedOutput struct {
 	AccountAlias    string             `json:"account_alias,omitempty"`
 	ControlProgram  chainjson.HexBytes `json:"control_program"`
 	Address         string             `json:"address,omitempty"`
+	Index           string             `json:"index`
 }
 
 //AnnotatedAccount means an annotated account.
