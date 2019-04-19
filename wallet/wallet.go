@@ -148,6 +148,7 @@ func (w *Wallet) loadWalletInfo() error {
 	}
 
 	w.status.Version = currentVersion
+	w.status.WorkHash = bc.Hash{}
 	block, err := w.chain.GetBlockByHeight(0)
 	if err != nil {
 		return err

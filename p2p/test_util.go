@@ -91,6 +91,7 @@ func (m *mockDiscv) ReadRandomNodes(buf []*dht.Node) (n int) {
 func MakeSwitch(cfg *cfg.Config, testdb dbm.DB, privKey crypto.PrivKeyEd25519, initSwitch func(*Switch) *Switch) *Switch {
 	// new switch, add reactors
 	l, listenAddr := GetListener(cfg.P2P)
+	cfg.P2P.LANDiscover = false
 	sw, err := newSwitch(cfg, new(mockDiscv), nil, testdb, l, privKey, listenAddr)
 	if err != nil {
 		log.Errorf("create switch error: %s", err)
