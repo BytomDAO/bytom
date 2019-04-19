@@ -14,10 +14,10 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto/sha3pool"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm/vmutil"
-	dbm "github.com/bytom/database/leveldb"
 )
 
 // annotateTxs adds asset data to transactions
@@ -258,6 +258,10 @@ func (w *Wallet) BuildAnnotatedOutput(tx *types.Tx, idx int) *query.AnnotatedOut
 
 	if vmutil.IsUnspendable(out.ControlProgram) {
 		out.Type = "retire"
+		out.RetireData = vmutil.GetRetireData(out.ControlProgram)
+		if index := vmutil.GetRetireIndex(out.ControlProgram); index != "" {
+			out.Index = index
+		}
 	} else {
 		out.Type = "control"
 	}

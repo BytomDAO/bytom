@@ -112,6 +112,7 @@ func DecodeRetireAction(data []byte) (Action, error) {
 type retireAction struct {
 	bc.AssetAmount
 	Arbitrary json.HexBytes `json:"arbitrary"`
+	Index     string        `json:"index"`
 }
 
 func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
@@ -126,7 +127,7 @@ func (a *retireAction) Build(ctx context.Context, b *TemplateBuilder) error {
 		return MissingFieldsError(missing...)
 	}
 
-	program, err := vmutil.RetireProgram(a.Arbitrary)
+	program, err := vmutil.RetireProgram(a.Index, a.Arbitrary)
 	if err != nil {
 		return err
 	}
