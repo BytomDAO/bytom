@@ -201,6 +201,56 @@ func TestWalletUpdate(t *testing.T) {
 	}
 }
 
+func TestRescanWallet(t *testing.T) {
+	// prepare wallet & db
+	dirPath, err := ioutil.TempDir(".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dirPath)
+
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	defer os.RemoveAll("temp")
+
+	store := database.NewStore(testDB)
+	dispatcher := event.NewDispatcher()
+	txPool := protocol.NewTxPool(store, dispatcher)
+	chain, err := protocol.NewChain(store, txPool)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	statusInfo := StatusInfo{
+		Version:  currentVersion,
+		WorkHash: bc.Hash{V0: 0xff},
+	}
+	rawWallet, err := json.Marshal(statusInfo)
+	if err != nil {
+		t.Fatal("save wallet info")
+	}
+
+	w := mockWallet(testDB, nil, nil, chain, dispatcher, false)
+	w.DB.Set(walletKey, rawWallet)
+	rawWallet = w.DB.Get(walletKey)
+	if rawWallet == nil {
+		t.Fatal("fail to load wallet StatusInfo")
+	}
+
+	if err := json.Unmarshal(rawWallet, &w.status); err != nil {
+		t.Fatal(err)
+	}
+
+	// rescan wallet
+	if err := w.loadWalletInfo(); err != nil {
+		t.Fatal(err)
+	}
+
+	block := config.GenesisBlock()
+	if w.status.WorkHash != block.Hash() {
+		t.Fatal("reattach from genesis block")
+	}
+}
+
 func TestMemPoolTxQueryLoop(t *testing.T) {
 	dirPath, err := ioutil.TempDir(".", "")
 	if err != nil {
