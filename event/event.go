@@ -24,7 +24,7 @@ var (
 	ErrDuplicateSubscribe = errors.New("event: subscribe duplicate type")
 )
 
-type NewMinedBlockEvent struct{ Block *types.Block }
+type NewMinedBlockEvent struct{ Block types.Block }
 
 // TypeMuxEvent is a time-tagged notification pushed to subscribers.
 type TypeMuxEvent struct {

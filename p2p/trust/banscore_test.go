@@ -77,3 +77,16 @@ func TestReset(t *testing.T) {
 		t.Errorf("Failed to reset ban score.")
 	}
 }
+
+func TestString(t *testing.T) {
+	want := "persistent 100 + transient 0 at 0 = 100 as of now"
+	var bs DynamicBanScore
+	if bs.Int() != 0 {
+		t.Errorf("Initial state is not zero.")
+	}
+
+	bs.Increase(100, 0)
+	if bs.String() != want {
+		t.Fatal("DynamicBanScore String test error.")
+	}
+}

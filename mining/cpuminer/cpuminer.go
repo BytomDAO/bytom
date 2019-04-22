@@ -102,7 +102,7 @@ out:
 				}).Info("Miner processed block")
 
 				// Broadcast the block and announce chain insertion event
-				if err = m.eventDispatcher.Post(event.NewMinedBlockEvent{Block: block}); err != nil {
+				if err = m.eventDispatcher.Post(event.NewMinedBlockEvent{Block: *block}); err != nil {
 					log.WithFields(log.Fields{"module": logModule, "height": block.BlockHeader.Height, "error": err}).Errorf("Miner fail on post block")
 				}
 			} else {
