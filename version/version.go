@@ -47,7 +47,7 @@ const (
 
 var (
 	// The full version string
-	Version = "1.0.8"
+	Version = "1.0.9"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
 	Status    *UpdateStatus
@@ -113,7 +113,7 @@ func (s *UpdateStatus) CheckUpdate(localVerStr string, remoteVerStr string, remo
 		if err != nil {
 			return err
 		}
-		
+
 		if remoteVersion.GreaterThan(maxVersion) {
 			s.maxVerSeen = remoteVerStr
 		}
