@@ -480,7 +480,7 @@ func (sm *SyncManager) minedBroadcastLoop() {
 				continue
 			}
 
-			if err := sm.peers.broadcastMinedBlock(ev.Block); err != nil {
+			if err := sm.peers.broadcastMinedBlock(&ev.Block); err != nil {
 				log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on broadcast mine block")
 				continue
 			}
