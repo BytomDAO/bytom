@@ -56,6 +56,7 @@ type Peer struct {
 	*peerConn
 	mconn *connection.MConnection // multiplex connection
 	Key   string
+	isLAN bool
 }
 
 // OnStart implements BaseService.
@@ -71,12 +72,13 @@ func (p *Peer) OnStop() {
 	p.mconn.Stop()
 }
 
-func newPeer(pc *peerConn, nodeInfo *NodeInfo, reactorsByCh map[byte]Reactor, chDescs []*connection.ChannelDescriptor, onPeerError func(*Peer, interface{})) *Peer {
+func newPeer(pc *peerConn, nodeInfo *NodeInfo, reactorsByCh map[byte]Reactor, chDescs []*connection.ChannelDescriptor, onPeerError func(*Peer, interface{}), isLAN bool) *Peer {
 	// Key and NodeInfo are set after Handshake
 	p := &Peer{
 		peerConn: pc,
 		NodeInfo: nodeInfo,
 		Key:      nodeInfo.PubKey.KeyString(),
+		isLAN:    isLAN,
 	}
 	p.mconn = createMConnection(pc.conn, p, reactorsByCh, chDescs, onPeerError, pc.config.MConfig)
 	p.BaseService = *cmn.NewBaseService(nil, "Peer", p)
@@ -181,6 +183,11 @@ func (p *Peer) ID() string {
 // IsOutbound returns true if the connection is outbound, false otherwise.
 func (p *Peer) IsOutbound() bool {
 	return p.outbound
+}
+
+// IsLAN returns true if peer is LAN peer, false otherwise.
+func (p *Peer) IsLAN() bool {
+	return p.isLAN
 }
 
 // PubKey returns peer's public key.

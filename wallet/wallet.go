@@ -9,12 +9,12 @@ import (
 	"github.com/bytom/account"
 	"github.com/bytom/asset"
 	"github.com/bytom/blockchain/pseudohsm"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/errors"
 	"github.com/bytom/event"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	dbm "github.com/bytom/database/leveldb"
 )
 
 const (
@@ -45,6 +45,7 @@ type Wallet struct {
 	DB              dbm.DB
 	rw              sync.RWMutex
 	status          StatusInfo
+	TxIndexFlag     bool
 	AccountMgr      *account.Manager
 	AssetReg        *asset.Registry
 	Hsm             *pseudohsm.HSM
@@ -57,7 +58,7 @@ type Wallet struct {
 }
 
 //NewWallet return a new wallet instance
-func NewWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher) (*Wallet, error) {
+func NewWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry, hsm *pseudohsm.HSM, chain *protocol.Chain, dispatcher *event.Dispatcher, txIndexFlag bool) (*Wallet, error) {
 	w := &Wallet{
 		DB:              walletDB,
 		AccountMgr:      account,
@@ -67,6 +68,7 @@ func NewWallet(walletDB dbm.DB, account *account.Manager, asset *asset.Registry,
 		RecoveryMgr:     newRecoveryManager(walletDB, account),
 		eventDispatcher: dispatcher,
 		rescanCh:        make(chan struct{}, 1),
+		TxIndexFlag:     txIndexFlag,
 	}
 
 	if err := w.loadWalletInfo(); err != nil {
@@ -146,6 +148,7 @@ func (w *Wallet) loadWalletInfo() error {
 	}
 
 	w.status.Version = currentVersion
+	w.status.WorkHash = bc.Hash{}
 	block, err := w.chain.GetBlockByHeight(0)
 	if err != nil {
 		return err

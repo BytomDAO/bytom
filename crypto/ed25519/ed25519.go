@@ -26,6 +26,8 @@ const (
 	PrivateKeySize = 64
 	// SignatureSize is the size, in bytes, of signatures generated and verified by this package.
 	SignatureSize = 64
+	// SeedSize is the size, in bytes, of private key seeds. These are the private key representations used by RFC 8032.
+	SeedSize = 32
 )
 
 // PublicKey is the type of Ed25519 public keys.
@@ -39,6 +41,15 @@ func (priv PrivateKey) Public() PublicKey {
 	publicKey := make([]byte, PublicKeySize)
 	copy(publicKey, priv[32:])
 	return PublicKey(publicKey)
+}
+
+// Seed returns the private key seed corresponding to priv. It is provided for
+// interoperability with RFC 8032. RFC 8032's private keys correspond to seeds
+// in this package.
+func (priv PrivateKey) Seed() []byte {
+	seed := make([]byte, SeedSize)
+	copy(seed, priv[:32])
+	return seed
 }
 
 func (priv PrivateKey) String() string {
@@ -75,6 +86,34 @@ func GenerateKey(rand io.Reader) (publicKey PublicKey, privateKey PrivateKey, er
 	copy(publicKey, publicKeyBytes[:])
 
 	return publicKey, privateKey, nil
+}
+
+// NewKeyFromSeed calculates a private key from a seed. It will panic if
+// len(seed) is not SeedSize. This function is provided for interoperability
+// with RFC 8032. RFC 8032's private keys correspond to seeds in this
+// package.
+func NewKeyFromSeed(seed []byte) PrivateKey {
+	if l := len(seed); l != SeedSize {
+		panic("ed25519: bad seed length: " + strconv.Itoa(l))
+	}
+
+	digest := sha512.Sum512(seed)
+	digest[0] &= 248
+	digest[31] &= 127
+	digest[31] |= 64
+
+	var A edwards25519.ExtendedGroupElement
+	var hBytes [32]byte
+	copy(hBytes[:], digest[:])
+	edwards25519.GeScalarMultBase(&A, &hBytes)
+	var publicKeyBytes [32]byte
+	A.ToBytes(&publicKeyBytes)
+
+	privateKey := make([]byte, PrivateKeySize)
+	copy(privateKey, seed)
+	copy(privateKey[32:], publicKeyBytes[:])
+
+	return privateKey
 }
 
 // Sign signs the message with privateKey and returns a signature. It will

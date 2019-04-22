@@ -47,16 +47,16 @@ var (
 
 // pre-define errors for supporting bytom errorFormatter
 var (
-	ErrDuplicateAlias  = errors.New("duplicate account alias")
-	ErrDuplicateIndex  = errors.New("duplicate account with same xPubs and index")
-	ErrFindAccount     = errors.New("fail to find account")
-	ErrMarshalAccount  = errors.New("failed marshal account")
-	ErrInvalidAddress  = errors.New("invalid address")
-	ErrFindCtrlProgram = errors.New("fail to find account control program")
-	ErrDeriveRule      = errors.New("invalid key derive rule")
-	ErrContractIndex   = errors.New("exceed the maximum addresses per account")
-	ErrAccountIndex    = errors.New("exceed the maximum accounts per xpub")
-	ErrFindTransaction = errors.New("no transaction")
+	ErrDuplicateAlias  = errors.New("Duplicate account alias")
+	ErrDuplicateIndex  = errors.New("Duplicate account with same xPubs and index")
+	ErrFindAccount     = errors.New("Failed to find account")
+	ErrMarshalAccount  = errors.New("Failed to marshal account")
+	ErrInvalidAddress  = errors.New("Invalid address")
+	ErrFindCtrlProgram = errors.New("Failed to find account control program")
+	ErrDeriveRule      = errors.New("Invalid key derivation rule")
+	ErrContractIndex   = errors.New("Exceeded maximum addresses per account")
+	ErrAccountIndex    = errors.New("Exceeded maximum accounts per xpub")
+	ErrFindTransaction = errors.New("No transaction")
 )
 
 // ContractKey account control promgram store prefix

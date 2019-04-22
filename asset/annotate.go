@@ -27,12 +27,13 @@ func Annotated(a *Asset) (*query.AnnotatedAsset, error) {
 	annotatedAsset := &query.AnnotatedAsset{
 		ID:                a.AssetID,
 		Alias:             *a.Alias,
+		VMVersion:         a.VMVersion,
 		RawDefinitionByte: a.RawDefinitionByte,
 		Definition:        &jsonDefinition,
 		IssuanceProgram:   chainjson.HexBytes(a.IssuanceProgram),
 	}
 
-	annotatedAsset.LimitHeight, _ = vmutil.GetIssuanceProgramRestrictHeight(a.IssuanceProgram)
+	annotatedAsset.LimitHeight = vmutil.GetIssuanceProgramRestrictHeight(a.IssuanceProgram)
 	if a.Signer != nil {
 		annotatedAsset.AnnotatedSigner = query.AnnotatedSigner{
 			Type:       a.Signer.Type,

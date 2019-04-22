@@ -30,6 +30,7 @@ type BasePeer interface {
 	ServiceFlag() consensus.ServiceFlag
 	TrafficStatus() (*flowrate.Status, *flowrate.Status)
 	TrySend(byte, interface{}) bool
+	IsLAN() bool
 }
 
 //BasePeerSet is the intergace for connection level peer manager
@@ -367,7 +368,7 @@ func (ps *peerSet) bestPeer(flag consensus.ServiceFlag) *peer {
 		if !p.services.IsEnable(flag) {
 			continue
 		}
-		if bestPeer == nil || p.height > bestPeer.height {
+		if bestPeer == nil || p.height > bestPeer.height || (p.height == bestPeer.height && p.IsLAN()) {
 			bestPeer = p
 		}
 	}
