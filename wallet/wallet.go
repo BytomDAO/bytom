@@ -185,7 +185,8 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	}
 
 	if err := w.RecoveryMgr.FilterRecoveryTxs(block); err != nil {
-		return err
+		log.WithField("err", err).Error("filter recovery txs")
+		w.RecoveryMgr.finished()
 	}
 
 	storeBatch := w.DB.NewBatch()
