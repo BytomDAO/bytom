@@ -193,7 +193,7 @@ func loadStoreItems(db dbm.DB) ([]*storeItem, error) {
 	var items []*storeItem
 	for iter.Next() {
 		item := &storeItem{key: iter.Key()}
-		fun, err := getDeserailFun(iter.Key())
+		fun, err := getDeserialFun(iter.Key())
 		if err != nil {
 			return nil, err
 		}
