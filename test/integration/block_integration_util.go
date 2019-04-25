@@ -61,7 +61,7 @@ func getSerialFun(item interface{}) (serialFun, error) {
 	return nil, fmt.Errorf("can not found any serialization function for type:%s", typ.Name())
 }
 
-func getDeserailFun(key []byte) (deserialFun, error) {
+func getDeserialFun(key []byte) (deserialFun, error) {
 	funMap := map[string]deserialFun{
 		string(database.BlockStoreKey): func(data []byte) (interface{}, error) {
 			storeState := &protocol.BlockStoreState{}
