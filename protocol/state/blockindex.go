@@ -135,7 +135,7 @@ func NewBlockIndex() *BlockIndex {
 }
 
 func NewBlockIndexWithInitData(index map[bc.Hash]*BlockNode, mainChain []*BlockNode) *BlockIndex {
-	return &BlockIndex{index:index, mainChain:mainChain}
+	return &BlockIndex{index: index, mainChain: mainChain}
 }
 
 // AddNode will add node to the index map
@@ -143,13 +143,6 @@ func (bi *BlockIndex) AddNode(node *BlockNode) {
 	bi.Lock()
 	bi.index[node.Hash] = node
 	bi.Unlock()
-}
-
-// GetNode will search node from the index map
-func (bi *BlockIndex) GetNode(hash *bc.Hash) *BlockNode {
-	bi.RLock()
-	defer bi.RUnlock()
-	return bi.index[*hash]
 }
 
 func (bi *BlockIndex) BestNode() *BlockNode {
@@ -166,6 +159,20 @@ func (bi *BlockIndex) BlockExist(hash *bc.Hash) bool {
 	return ok
 }
 
+func (bi *BlockIndex) Equals(bi1 *BlockIndex) bool {
+	if bi1 == nil {
+		return false
+	}
+	return testutil.DeepEqual(bi.index, bi1.index) && testutil.DeepEqual(bi.mainChain, bi1.mainChain)
+}
+
+// GetNode will search node from the index map
+func (bi *BlockIndex) GetNode(hash *bc.Hash) *BlockNode {
+	bi.RLock()
+	defer bi.RUnlock()
+	return bi.index[*hash]
+}
+
 // TODO: THIS FUNCTION MIGHT BE DELETED
 func (bi *BlockIndex) InMainchain(hash bc.Hash) bool {
 	bi.RLock()
@@ -176,13 +183,6 @@ func (bi *BlockIndex) InMainchain(hash bc.Hash) bool {
 		return false
 	}
 	return bi.nodeByHeight(node.Height) == node
-}
-
-func (bi *BlockIndex) nodeByHeight(height uint64) *BlockNode {
-	if height >= uint64(len(bi.mainChain)) {
-		return nil
-	}
-	return bi.mainChain[height]
 }
 
 // NodeByHeight returns the block node at the specified height.
@@ -216,13 +216,9 @@ func (bi *BlockIndex) SetMainChain(node *BlockNode) {
 	}
 }
 
-func (bi *BlockIndex) Equals(bi1 *BlockIndex) bool {
-	if bi1 == nil {
-		return false
+func (bi *BlockIndex) nodeByHeight(height uint64) *BlockNode {
+	if height >= uint64(len(bi.mainChain)) {
+		return nil
 	}
-
-	if !testutil.DeepEqual(bi.index, bi1.index) {
-		return false
-	}
-	return testutil.DeepEqual(bi.mainChain, bi1.mainChain)
+	return bi.mainChain[height]
 }
