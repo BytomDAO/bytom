@@ -11,6 +11,7 @@ import (
 	"github.com/bytom/consensus/difficulty"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/testutil"
 )
 
 // approxNodesPerDay is an approximation of the number of new blocks there are
@@ -133,6 +134,10 @@ func NewBlockIndex() *BlockIndex {
 	}
 }
 
+func NewBlockIndexWithInitData(index map[bc.Hash]*BlockNode, mainChain []*BlockNode) *BlockIndex {
+	return &BlockIndex{index:index, mainChain:mainChain}
+}
+
 // AddNode will add node to the index map
 func (bi *BlockIndex) AddNode(node *BlockNode) {
 	bi.Lock()
@@ -209,4 +214,15 @@ func (bi *BlockIndex) SetMainChain(node *BlockNode) {
 		bi.mainChain[node.Height] = node
 		node = node.Parent
 	}
+}
+
+func (bi *BlockIndex) Equals(bi1 *BlockIndex) bool {
+	if bi1 == nil {
+		return false
+	}
+
+	if !testutil.DeepEqual(bi.index, bi1.index) {
+		return false
+	}
+	return testutil.DeepEqual(bi.mainChain, bi1.mainChain)
 }

@@ -21,14 +21,14 @@ import (
 const logModule = "leveldb"
 
 var (
-	blockStoreKey     = []byte("blockStore")
-	blockPrefix       = []byte("B:")
-	blockHeaderPrefix = []byte("BH:")
-	txStatusPrefix    = []byte("BTS:")
+	BlockStoreKey     = []byte("blockStore")
+	BlockPrefix       = []byte("B:")
+	BlockHeaderPrefix = []byte("BH:")
+	TxStatusPrefix    = []byte("BTS:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
-	bytes := db.Get(blockStoreKey)
+	bytes := db.Get(BlockStoreKey)
 	if bytes == nil {
 		return nil
 	}
@@ -47,24 +47,24 @@ type Store struct {
 	cache blockCache
 }
 
-func calcBlockKey(hash *bc.Hash) []byte {
-	return append(blockPrefix, hash.Bytes()...)
+func CalcBlockKey(hash *bc.Hash) []byte {
+	return append(BlockPrefix, hash.Bytes()...)
 }
 
-func calcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
+func CalcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
 	buf := [8]byte{}
 	binary.BigEndian.PutUint64(buf[:], height)
-	key := append(blockHeaderPrefix, buf[:]...)
+	key := append(BlockHeaderPrefix, buf[:]...)
 	return append(key, hash.Bytes()...)
 }
 
-func calcTxStatusKey(hash *bc.Hash) []byte {
-	return append(txStatusPrefix, hash.Bytes()...)
+func CalcTxStatusKey(hash *bc.Hash) []byte {
+	return append(TxStatusPrefix, hash.Bytes()...)
 }
 
 // GetBlock return the block by given hash
 func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
-	bytez := db.Get(calcBlockKey(hash))
+	bytez := db.Get(CalcBlockKey(hash))
 	if bytez == nil {
 		return nil, nil
 	}
@@ -108,7 +108,7 @@ func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) err
 
 // GetTransactionStatus will return the utxo that related to the block hash
 func (s *Store) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
-	data := s.db.Get(calcTxStatusKey(hash))
+	data := s.db.Get(CalcTxStatusKey(hash))
 	if data == nil {
 		return nil, errors.New("can't find the transaction status by given hash")
 	}
@@ -128,7 +128,7 @@ func (s *Store) GetStoreStatus() *protocol.BlockStoreState {
 func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error) {
 	startTime := time.Now()
 	blockIndex := state.NewBlockIndex()
-	bhIter := s.db.IteratorPrefix(blockHeaderPrefix)
+	bhIter := s.db.IteratorPrefix(BlockHeaderPrefix)
 	defer bhIter.Release()
 
 	var lastNode *state.BlockNode
@@ -188,9 +188,9 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 
 	blockHash := block.Hash()
 	batch := s.db.NewBatch()
-	batch.Set(calcBlockKey(&blockHash), binaryBlock)
-	batch.Set(calcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
-	batch.Set(calcTxStatusKey(&blockHash), binaryTxStatus)
+	batch.Set(CalcBlockKey(&blockHash), binaryBlock)
+	batch.Set(CalcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
+	batch.Set(CalcTxStatusKey(&blockHash), binaryTxStatus)
 	batch.Write()
 
 	log.WithFields(log.Fields{
@@ -214,7 +214,7 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 		return err
 	}
 
-	batch.Set(blockStoreKey, bytes)
+	batch.Set(BlockStoreKey, bytes)
 	batch.Write()
 	return nil
 }
