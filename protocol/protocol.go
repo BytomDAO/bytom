@@ -28,8 +28,12 @@ type Chain struct {
 
 // NewChain returns a new Chain using store as the underlying storage.
 func NewChain(store Store, txPool *TxPool) (*Chain, error) {
+	return NewChainWithOrphanManage(store, txPool, NewOrphanManage())
+}
+
+func NewChainWithOrphanManage(store Store, txPool *TxPool, manage *OrphanManage) (*Chain, error) {
 	c := &Chain{
-		orphanManage:   NewOrphanManage(),
+		orphanManage:   manage,
 		txPool:         txPool,
 		store:          store,
 		processBlockCh: make(chan *processBlockMsg, maxProcessBlockChSize),
@@ -122,6 +126,10 @@ func (c *Chain) CalcNextBits(preBlock *bc.Hash) (uint64, error) {
 		return 0, errors.New("can't find preblock in the blockindex")
 	}
 	return node.CalcNextBits(), nil
+}
+
+func (c *Chain) GetBlockIndex() *state.BlockIndex {
+	return c.index
 }
 
 // This function must be called with mu lock in above level

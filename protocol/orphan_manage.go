@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/testutil"
 )
 
 var (
@@ -39,14 +40,6 @@ func NewOrphanManage() *OrphanManage {
 	return o
 }
 
-// BlockExist check is the block in OrphanManage
-func (o *OrphanManage) BlockExist(hash *bc.Hash) bool {
-	o.mtx.RLock()
-	_, ok := o.orphan[*hash]
-	o.mtx.RUnlock()
-	return ok
-}
-
 // Add will add the block to OrphanManage
 func (o *OrphanManage) Add(block *types.Block) {
 	blockHash := block.Hash()
@@ -68,11 +61,26 @@ func (o *OrphanManage) Add(block *types.Block) {
 	log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
 }
 
+// BlockExist check is the block in OrphanManage
+func (o *OrphanManage) BlockExist(hash *bc.Hash) bool {
+	o.mtx.RLock()
+	_, ok := o.orphan[*hash]
+	o.mtx.RUnlock()
+	return ok
+}
+
 // Delete will delete the block from OrphanManage
 func (o *OrphanManage) Delete(hash *bc.Hash) {
 	o.mtx.Lock()
 	defer o.mtx.Unlock()
 	o.delete(hash)
+}
+
+func (o *OrphanManage) Equals(o1 *OrphanManage) bool {
+	if o1 == nil {
+		return false
+	}
+	return testutil.DeepEqual(o.orphan, o1.orphan) && testutil.DeepEqual(o.prevOrphans, o1.prevOrphans)
 }
 
 // Get return the orphan block by hash
