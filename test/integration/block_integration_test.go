@@ -29,7 +29,7 @@ func TestProcessBlock(t *testing.T) {
 			},
 			wantStore: storeItems{
 				{
-					key: []byte("blockStore"),
+					key: database.BlockStoreKey,
 					val: &protocol.BlockStoreState{Height: 0, Hash: &genesisBlockHash},
 				},
 				{
