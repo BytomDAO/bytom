@@ -8,7 +8,6 @@ import (
 
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/testutil"
 )
 
 var (
@@ -90,18 +89,6 @@ func (o *OrphanManage) GetPrevOrphans(hash *bc.Hash) ([]*bc.Hash, bool) {
 	prevOrphans, ok := o.prevOrphans[*hash]
 	o.mtx.RUnlock()
 	return prevOrphans, ok
-}
-
-func (o *OrphanManage) Equals(o1 *OrphanManage) bool {
-	if o1 == nil {
-		return false
-	}
-
-	if !testutil.DeepEqual(o.orphan, o1.orphan) {
-		return false
-	}
-
-	return testutil.DeepEqual(o.prevOrphans, o1.prevOrphans)
 }
 
 func (o *OrphanManage) delete(hash *bc.Hash) {

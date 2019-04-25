@@ -212,7 +212,7 @@ func TestSaveBlock(t *testing.T) {
 		t.Errorf("got status:%v, expect status:%v", gotStatus, status)
 	}
 
-	data := store.db.Get(CalcBlockHeaderKey(block.Height, &blockHash))
+	data := store.db.Get(calcBlockHeaderKey(block.Height, &blockHash))
 	gotBlockHeader := types.BlockHeader{}
 	if err := gotBlockHeader.UnmarshalText(data); err != nil {
 		t.Fatal(err)
