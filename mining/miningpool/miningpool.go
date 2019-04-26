@@ -94,6 +94,10 @@ func (m *MiningPool) GetWork() (*types.BlockHeader, error) {
 
 // SubmitWork will try to submit the result to the blockchain
 func (m *MiningPool) SubmitWork(bh *types.BlockHeader) error {
+	if bh == nil {
+		return errors.New("can't submit empty block")
+	}
+
 	reply := make(chan error, 1)
 	m.submitCh <- &submitBlockMsg{blockHeader: bh, reply: reply}
 	err := <-reply
