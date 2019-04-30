@@ -17,14 +17,25 @@ var (
 	numOrphanBlockLimit      = 256
 )
 
-type orphanBlock struct {
+type OrphanBlock struct {
 	*types.Block
 	expiration time.Time
 }
 
+func NewOrphanBlock(block *types.Block, expiration time.Time) *OrphanBlock {
+	return &OrphanBlock{
+		Block: block,
+		expiration: expiration,
+	}
+}
+
+func (o *OrphanBlock) Equals(o1 *OrphanBlock) bool {
+	return testutil.DeepEqual(o.Block, o1.Block)
+}
+
 // OrphanManage is use to handle all the orphan block
 type OrphanManage struct {
-	orphan      map[bc.Hash]*orphanBlock
+	orphan      map[bc.Hash]*OrphanBlock
 	prevOrphans map[bc.Hash][]*bc.Hash
 	mtx         sync.RWMutex
 }
@@ -32,12 +43,20 @@ type OrphanManage struct {
 // NewOrphanManage return a new orphan block
 func NewOrphanManage() *OrphanManage {
 	o := &OrphanManage{
-		orphan:      make(map[bc.Hash]*orphanBlock),
+		orphan:      make(map[bc.Hash]*OrphanBlock),
 		prevOrphans: make(map[bc.Hash][]*bc.Hash),
 	}
 
 	go o.orphanExpireWorker()
 	return o
+}
+
+// NewOrphanManageWithData return a new orphan manage with specify data
+func NewOrphanManageWithData(orphan map[bc.Hash]*OrphanBlock, prevOrphans map[bc.Hash][]*bc.Hash) *OrphanManage {
+	return &OrphanManage{
+		orphan:      orphan,
+		prevOrphans: prevOrphans,
+	}
 }
 
 // Add will add the block to OrphanManage
@@ -55,7 +74,7 @@ func (o *OrphanManage) Add(block *types.Block) {
 		return
 	}
 
-	o.orphan[blockHash] = &orphanBlock{block, time.Now().Add(orphanBlockTTL)}
+	o.orphan[blockHash] = &OrphanBlock{block, time.Now().Add(orphanBlockTTL)}
 	o.prevOrphans[block.PreviousBlockHash] = append(o.prevOrphans[block.PreviousBlockHash], &blockHash)
 
 	log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
@@ -80,7 +99,12 @@ func (o *OrphanManage) Equals(o1 *OrphanManage) bool {
 	if o1 == nil {
 		return false
 	}
-	return testutil.DeepEqual(o.orphan, o1.orphan) && testutil.DeepEqual(o.prevOrphans, o1.prevOrphans)
+	for hash, block := range o.orphan {
+		if block1, ok := o1.orphan[hash]; !ok || !block.Equals(block1) {
+			return false
+		}
+	}
+	return testutil.DeepEqual(o.prevOrphans, o1.prevOrphans)
 }
 
 // Get return the orphan block by hash

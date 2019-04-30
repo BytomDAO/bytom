@@ -9,6 +9,8 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	"sort"
+
 	"github.com/bytom/database"
 	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/database/storage"
@@ -76,6 +78,7 @@ func getDeserialFun(key []byte) (deserialFun, error) {
 		string(database.BlockPrefix): func(data []byte) (interface{}, error) {
 			block := &types.Block{}
 			err := block.UnmarshalText(data)
+			sortSpendOutputID(block)
 			return block, err
 		},
 		string(database.BlockHeaderPrefix): func(data []byte) (interface{}, error) {
@@ -112,6 +115,9 @@ func (s1 storeItems) equals(s2 storeItems) bool {
 
 	itemMap2 := make(map[string]interface{}, len(s2))
 	for _, item := range s2 {
+		if !testutil.DeepEqual(itemMap1[string(item.key)], item.val) {
+			fmt.Printf("%v, %v\n", itemMap1[string(item.key)], item.val)
+		}
 		itemMap2[string(item.key)] = item.val
 	}
 
@@ -228,3 +234,15 @@ func initStore(c *processBlockTestCase) (protocol.Store, dbm.DB, error) {
 	batch.Write()
 	return database.NewStore(testDB), testDB, nil
 }
+
+func sortSpendOutputID(block *types.Block) {
+	for _, tx := range block.Transactions {
+		sort.Sort(HashSlice(tx.SpentOutputIDs))
+	}
+}
+
+type HashSlice []bc.Hash
+
+func (p HashSlice) Len() int           { return len(p) }
+func (p HashSlice) Less(i, j int) bool { return p[i].String() < p[j].String() }
+func (p HashSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
