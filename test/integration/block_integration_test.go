@@ -21,7 +21,6 @@ var blockMap map[int][]*attachBlock
 type attachBlock struct {
 	block        *types.Block
 	verifyResult []*bc.TxVerifyResult
-	extraUTXO    storeItems
 }
 
 func init() {
