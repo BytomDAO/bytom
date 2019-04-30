@@ -209,6 +209,9 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 	if a.AssetId.IsZero() {
 		missing = append(missing, "asset_id")
 	}
+	if a.AssetAmount.Amount == 0 {
+		missing = append(missing, "amount")
+	}
 	if len(missing) > 0 {
 		return txbuilder.MissingFieldsError(missing...)
 	}
