@@ -6,10 +6,9 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sort"
 
 	"github.com/golang/protobuf/proto"
-
-	"sort"
 
 	"github.com/bytom/database"
 	dbm "github.com/bytom/database/leveldb"
