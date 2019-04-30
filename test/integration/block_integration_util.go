@@ -114,9 +114,6 @@ func (s1 storeItems) equals(s2 storeItems) bool {
 
 	itemMap2 := make(map[string]interface{}, len(s2))
 	for _, item := range s2 {
-		if !testutil.DeepEqual(itemMap1[string(item.key)], item.val) {
-			fmt.Printf("%v, %v\n", itemMap1[string(item.key)], item.val)
-		}
 		itemMap2[string(item.key)] = item.val
 	}
 
