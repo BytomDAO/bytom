@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sort"
 
 	"github.com/golang/protobuf/proto"
 
@@ -76,6 +77,7 @@ func getDeserialFun(key []byte) (deserialFun, error) {
 		string(database.BlockPrefix): func(data []byte) (interface{}, error) {
 			block := &types.Block{}
 			err := block.UnmarshalText(data)
+			sortSpendOutputID(block)
 			return block, err
 		},
 		string(database.BlockHeaderPrefix): func(data []byte) (interface{}, error) {
@@ -228,3 +230,15 @@ func initStore(c *processBlockTestCase) (protocol.Store, dbm.DB, error) {
 	batch.Write()
 	return database.NewStore(testDB), testDB, nil
 }
+
+func sortSpendOutputID(block *types.Block) {
+	for _, tx := range block.Transactions {
+		sort.Sort(HashSlice(tx.SpentOutputIDs))
+	}
+}
+
+type HashSlice []bc.Hash
+
+func (p HashSlice) Len() int           { return len(p) }
+func (p HashSlice) Less(i, j int) bool { return p[i].String() < p[j].String() }
+func (p HashSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
