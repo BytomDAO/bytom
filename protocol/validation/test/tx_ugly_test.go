@@ -77,7 +77,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 0, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 10000000001, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewTxOutput(*consensus.BTMAssetID, 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,

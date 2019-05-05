@@ -134,7 +134,7 @@ func NewBlockIndex() *BlockIndex {
 	}
 }
 
-func NewBlockIndexWithInitData(index map[bc.Hash]*BlockNode, mainChain []*BlockNode) *BlockIndex {
+func NewBlockIndexWithData(index map[bc.Hash]*BlockNode, mainChain []*BlockNode) *BlockIndex {
 	return &BlockIndex{index: index, mainChain: mainChain}
 }
 
