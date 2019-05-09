@@ -156,8 +156,13 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		} else {
 			// non-retirement
 			prog := &bc.Program{out.VMVersion, out.ControlProgram}
-			o := bc.NewOutput(src, prog, uint64(i))
-			resultID = addEntry(o)
+			if out.IsClaimOutput {
+				o := bc.NewClaimOutput(src, prog, uint64(i))
+				resultID = addEntry(o)
+			} else {
+				o := bc.NewOutput(src, prog, uint64(i))
+				resultID = addEntry(o)
+			}
 		}
 
 		dest := &bc.ValueDestination{

@@ -14,6 +14,7 @@ type TxOutput struct {
 	OutputCommitment
 	// Unconsumed suffixes of the commitment and witness extensible strings.
 	CommitmentSuffix []byte
+	IsClaimOutput    bool
 }
 
 // NewTxOutput create a new output struct

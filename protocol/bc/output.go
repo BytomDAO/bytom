@@ -22,3 +22,12 @@ func NewOutput(source *ValueSource, controlProgram *Program, ordinal uint64) *Ou
 		Ordinal:        ordinal,
 	}
 }
+
+// NewClaimOutput creates a new Output for a claim tx.
+func NewClaimOutput(source *ValueSource, controlProgram *Program, ordinal uint64) *Output {
+	return &Output{
+		Source:         source,
+		ControlProgram: controlProgram,
+		Ordinal:        ordinal,
+	}
+}
