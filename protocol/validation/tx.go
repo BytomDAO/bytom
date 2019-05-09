@@ -218,6 +218,7 @@ func checkValid(vs *validationState, e bc.Entry) (err error) {
 		}
 
 	case *bc.CrossChainOutput:
+		vs.gasStatus.GasLeft = consensus.DefaultGasCredit
 		vs2 := *vs
 		vs2.sourcePos = 0
 		if err = checkValidSrc(&vs2, e.Source); err != nil {
