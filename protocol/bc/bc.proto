@@ -94,6 +94,12 @@ message Output {
   uint64      ordinal         = 3;
 }
 
+message CrossChainOutput {
+  ValueSource source          = 1;
+  Program     control_program = 2;
+  uint64      ordinal         = 3;
+}
+
 message Retirement {
   ValueSource source   = 1;
   uint64      ordinal  = 2;
