@@ -22,6 +22,7 @@ It has these top-level messages:
 	Mux
 	Coinbase
 	Output
+	CrossChainOutput
 	Retirement
 	Issuance
 	Spend
@@ -514,6 +515,38 @@ func (m *Output) GetControlProgram() *Program {
 }
 
 func (m *Output) GetOrdinal() uint64 {
+	if m != nil {
+		return m.Ordinal
+	}
+	return 0
+}
+
+type CrossChainOutput struct {
+	Source         *ValueSource `protobuf:"bytes,1,opt,name=source" json:"source,omitempty"`
+	ControlProgram *Program     `protobuf:"bytes,2,opt,name=control_program,json=controlProgram" json:"control_program,omitempty"`
+	Ordinal        uint64       `protobuf:"varint,3,opt,name=ordinal" json:"ordinal,omitempty"`
+}
+
+func (m *CrossChainOutput) Reset()                    { *m = CrossChainOutput{} }
+func (m *CrossChainOutput) String() string            { return proto.CompactTextString(m) }
+func (*CrossChainOutput) ProtoMessage()               {}
+func (*CrossChainOutput) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+
+func (m *CrossChainOutput) GetSource() *ValueSource {
+	if m != nil {
+		return m.Source
+	}
+	return nil
+}
+
+func (m *CrossChainOutput) GetControlProgram() *Program {
+	if m != nil {
+		return m.ControlProgram
+	}
+	return nil
+}
+
+func (m *CrossChainOutput) GetOrdinal() uint64 {
 	if m != nil {
 		return m.Ordinal
 	}

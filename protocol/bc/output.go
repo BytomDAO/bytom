@@ -23,9 +23,15 @@ func NewOutput(source *ValueSource, controlProgram *Program, ordinal uint64) *Ou
 	}
 }
 
-// NewClaimOutput creates a new Output for a claim tx.
-func NewClaimOutput(source *ValueSource, controlProgram *Program, ordinal uint64) *Output {
-	return &Output{
+func (CrossChainOutput) typ() string { return "crosschainoutput1" }
+func (o *CrossChainOutput) writeForHash(w io.Writer) {
+	mustWriteForHash(w, o.Source)
+	mustWriteForHash(w, o.ControlProgram)
+}
+
+// NewClaimOutput creates a new CrossChainOutput for a claim tx.
+func NewCrossChainOutput(source *ValueSource, controlProgram *Program, ordinal uint64) *CrossChainOutput {
+	return &CrossChainOutput{
 		Source:         source,
 		ControlProgram: controlProgram,
 		Ordinal:        ordinal,
