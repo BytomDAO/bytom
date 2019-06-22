@@ -10,6 +10,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/event"
 	"github.com/bytom/p2p"
+	"github.com/bytom/p2p/security"
 	core "github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
@@ -44,7 +45,6 @@ type Chain interface {
 
 type Switch interface {
 	AddReactor(name string, reactor p2p.Reactor) p2p.Reactor
-	AddBannedPeer(string) error
 	StopPeerGracefully(string)
 	NodeInfo() *p2p.NodeInfo
 	Start() (bool, error)
@@ -52,6 +52,7 @@ type Switch interface {
 	IsListening() bool
 	DialPeerWithAddress(addr *p2p.NetAddress) error
 	Peers() *p2p.PeerSet
+	IsBanned(peerID string, level byte, reason string) bool
 }
 
 //SyncManager Sync Manager is responsible for the business layer information synchronization
@@ -336,12 +337,12 @@ func (sm *SyncManager) handleStatusResponseMsg(basePeer BasePeer, msg *StatusRes
 func (sm *SyncManager) handleTransactionMsg(peer *peer, msg *TransactionMessage) {
 	tx, err := msg.GetTransaction()
 	if err != nil {
-		sm.peers.addBanScore(peer.ID(), 0, 10, "fail on get tx from message")
+		sm.peers.ProcessIllegal(peer.ID(), security.LevelConnException, "fail on get txs from message")
 		return
 	}
 
 	if isOrphan, err := sm.chain.ValidateTx(tx); err != nil && err != core.ErrDustTx && !isOrphan {
-		sm.peers.addBanScore(peer.ID(), 10, 0, "fail on validate tx transaction")
+		sm.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, "fail on validate tx transaction")
 	}
 }
 

@@ -89,8 +89,11 @@ func NewPeerSet() *PeerSet {
 	return &PeerSet{}
 }
 
-func (ps *PeerSet) AddBannedPeer(string) error { return nil }
-func (ps *PeerSet) StopPeerGracefully(string)  {}
+func (ps *PeerSet) IsBanned(peerID string, level byte, reason string) bool {
+	return false
+}
+
+func (ps *PeerSet) StopPeerGracefully(string) {}
 
 type NetWork struct {
 	nodes map[*SyncManager]P2PPeer

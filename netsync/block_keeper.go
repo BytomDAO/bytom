@@ -9,6 +9,7 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
 	"github.com/bytom/mining/tensority"
+	"github.com/bytom/p2p/security"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
@@ -29,6 +30,7 @@ var (
 	errRequestTimeout = errors.New("request timeout")
 	errPeerDropped    = errors.New("Peer dropped")
 	errPeerMisbehave  = errors.New("peer is misbehave")
+	ErrPeerMisbehave  = errors.New("peer is misbehave")
 )
 
 type blockMsg struct {
@@ -367,7 +369,7 @@ func (bk *blockKeeper) startSync() bool {
 		bk.syncPeer = peer
 		if err := bk.fastBlockSync(checkPoint); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on fastBlockSync")
-			bk.peers.errorHandler(peer.ID(), err)
+			bk.peers.ErrorHandler(peer.ID(), security.LevelMsgIllegal, err)
 			return false
 		}
 		return true
@@ -384,7 +386,7 @@ func (bk *blockKeeper) startSync() bool {
 
 		if err := bk.regularBlockSync(targetHeight); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on regularBlockSync")
-			bk.peers.errorHandler(peer.ID(), err)
+			bk.peers.ErrorHandler(peer.ID(), security.LevelMsgIllegal, err)
 			return false
 		}
 		return true
