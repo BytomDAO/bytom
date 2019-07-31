@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
 	"path/filepath"
 
 	"github.com/prometheus/prometheus/util/flock"
@@ -26,6 +25,7 @@ import (
 	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/env"
 	"github.com/bytom/event"
+	bytomLog "github.com/bytom/log"
 	"github.com/bytom/mining/cpuminer"
 	"github.com/bytom/mining/miningpool"
 	"github.com/bytom/mining/tensority"
@@ -66,7 +66,11 @@ func NewNode(config *cfg.Config) *Node {
 	if err := lockDataDirectory(config); err != nil {
 		cmn.Exit("Error: " + err.Error())
 	}
-	initLogFile(config)
+
+	if err := bytomLog.InitLogFile(config); err != nil {
+		log.WithField("err", err).Fatalln("InitLogFile failed")
+	}
+
 	initActiveNetParams(config)
 	initCommonConfig(config)
 
@@ -179,20 +183,6 @@ func initActiveNetParams(config *cfg.Config) {
 	if !exist {
 		cmn.Exit(cmn.Fmt("chain_id[%v] don't exist", config.ChainID))
 	}
-}
-
-func initLogFile(config *cfg.Config) {
-	if config.LogFile == "" {
-		return
-	}
-	cmn.EnsureDir(filepath.Dir(config.LogFile), 0700)
-	file, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err == nil {
-		log.SetOutput(file)
-	} else {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Info("using default")
-	}
-
 }
 
 func initCommonConfig(config *cfg.Config) {
