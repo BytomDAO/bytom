@@ -34,7 +34,7 @@ func init() {
 	runNodeCmd.Flags().String("chain_id", config.ChainID, "Select network type")
 
 	// log level
-	runNodeCmd.Flags().String("log_level", config.LogLevel, "Select log level(debug, info, warn, error or fatal")
+	runNodeCmd.Flags().String("log_level", config.LogLevel, "Select log level(debug, info, warn, error or fatal)")
 
 	// p2p flags
 	runNodeCmd.Flags().String("p2p.laddr", config.P2P.ListenAddress, "Node listen address. (0.0.0.0:0 means any interface, any port)")
