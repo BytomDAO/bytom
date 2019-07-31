@@ -131,11 +131,16 @@ func DefaultBaseConfig() BaseConfig {
 		DBPath:            "data",
 		KeysPath:          "keystore",
 		NodeAlias:         "",
+		LogFile:           "log",
 	}
 }
 
 func (b BaseConfig) DBDir() string {
 	return rootify(b.DBPath, b.RootDir)
+}
+
+func (b BaseConfig) LogDir() string {
+	return rootify(b.LogFile, b.RootDir)
 }
 
 func (b BaseConfig) KeysDir() string {
