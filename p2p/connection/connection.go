@@ -36,7 +36,7 @@ const (
 	defaultRecvMessageCapacity = 22020096      // 21MB
 	defaultRecvRate            = int64(512000) // 500KB/s
 	defaultSendTimeout         = 10 * time.Second
-	logModule                  = "p2p/conn"
+	logModule                  = "p2pConn"
 )
 
 type receiveCbFunc func(chID byte, msgBytes []byte)
