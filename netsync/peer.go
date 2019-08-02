@@ -409,14 +409,6 @@ func (ps *peerSet) broadcastTx(tx *types.Tx) error {
 	return nil
 }
 
-func (ps *peerSet) ErrorHandler(peerID string, level byte, err error) {
-	if errors.Root(err) == ErrPeerMisbehave {
-		ps.ProcessIllegal(peerID, level, err.Error())
-	} else {
-		ps.removePeer(peerID)
-	}
-}
-
 // Peer retrieves the registered peer with the given id.
 func (ps *peerSet) getPeer(id string) *peer {
 	ps.mtx.RLock()

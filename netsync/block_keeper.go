@@ -369,7 +369,7 @@ func (bk *blockKeeper) startSync() bool {
 		bk.syncPeer = peer
 		if err := bk.fastBlockSync(checkPoint); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on fastBlockSync")
-			bk.peers.ErrorHandler(peer.ID(), security.LevelMsgIllegal, err)
+			bk.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, err.Error())
 			return false
 		}
 		return true
@@ -386,7 +386,7 @@ func (bk *blockKeeper) startSync() bool {
 
 		if err := bk.regularBlockSync(targetHeight); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on regularBlockSync")
-			bk.peers.ErrorHandler(peer.ID(), security.LevelMsgIllegal, err)
+			bk.peers.ProcessIllegal(peer.ID(), security.LevelMsgIllegal, err.Error())
 			return false
 		}
 		return true
