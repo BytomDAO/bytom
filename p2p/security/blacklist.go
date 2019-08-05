@@ -38,6 +38,13 @@ func (bl *Blacklist) AddPeer(ip string) error {
 	bl.mtx.Lock()
 	defer bl.mtx.Unlock()
 
+	// delete expired banned peers
+	for peer, banEnd := range bl.peers {
+		if time.Now().Before(banEnd) {
+			delete(bl.peers, peer)
+		}
+	}
+	// add banned peer
 	bl.peers[ip] = time.Now().Add(defaultBanDuration)
 	dataJSON, err := json.Marshal(bl.peers)
 	if err != nil {
