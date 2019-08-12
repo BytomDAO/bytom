@@ -59,6 +59,14 @@ func (info *NodeInfo) CompatibleWith(other *NodeInfo) error {
 	return nil
 }
 
+func (info NodeInfo) DoFilter(ip string, pubKey string) error {
+	if info.PubKey.String() == pubKey {
+		return ErrConnectSelf
+	}
+
+	return nil
+}
+
 func (info *NodeInfo) getPubkey() crypto.PubKeyEd25519 {
 	return info.PubKey
 }
