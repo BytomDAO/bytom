@@ -355,6 +355,8 @@ func (m *Manager) DeleteAccount(accountID string) (err error) {
 		return err
 	}
 
+	m.db.Delete(GetAccountIndexKey(account.XPubs))
+
 	m.cacheMu.Lock()
 	m.aliasCache.Remove(account.Alias)
 	m.cacheMu.Unlock()
