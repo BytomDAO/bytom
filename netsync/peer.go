@@ -25,6 +25,7 @@ const (
 type BasePeer interface {
 	Addr() net.Addr
 	ID() string
+	RemoteAddrHost() string
 	ServiceFlag() consensus.ServiceFlag
 	TrafficStatus() (*flowrate.Status, *flowrate.Status)
 	TrySend(byte, interface{}) bool
@@ -34,7 +35,7 @@ type BasePeer interface {
 //BasePeerSet is the intergace for connection level peer manager
 type BasePeerSet interface {
 	StopPeerGracefully(string)
-	IsBanned(peerID string, level byte, reason string) bool
+	IsBanned(ip string, level byte, reason string) bool
 }
 
 // PeerInfo indicate peer status snap
@@ -312,7 +313,7 @@ func (ps *peerSet) ProcessIllegal(peerID string, level byte, reason string) {
 	if peer == nil {
 		return
 	}
-	if banned := ps.IsBanned(peer.Addr().String(), level, reason); banned {
+	if banned := ps.IsBanned(peer.RemoteAddrHost(), level, reason); banned {
 		ps.removePeer(peerID)
 	}
 	return
