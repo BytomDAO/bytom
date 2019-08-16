@@ -197,7 +197,7 @@ func (sw *Switch) AddPeer(pc *peerConn, isLAN bool) error {
 	}
 
 	peer := newPeer(pc, peerNodeInfo, sw.reactorsByCh, sw.chDescs, sw.StopPeerForError, isLAN)
-	if err := sw.security.DoFilter(peer.remoteAddrHost(), peer.PubKey().String()); err != nil {
+	if err := sw.security.DoFilter(peer.RemoteAddrHost(), peer.PubKey().String()); err != nil {
 		return err
 	}
 
@@ -423,7 +423,7 @@ func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 func (sw *Switch) dialPeers(addresses []*NetAddress) {
 	connectedPeers := make(map[string]struct{})
 	for _, peer := range sw.Peers().List() {
-		connectedPeers[peer.remoteAddrHost()] = struct{}{}
+		connectedPeers[peer.RemoteAddrHost()] = struct{}{}
 	}
 
 	var wg sync.WaitGroup

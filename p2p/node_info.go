@@ -78,7 +78,7 @@ func (info *NodeInfo) listenHost() string {
 }
 
 //RemoteAddrHost peer external ip address
-func (info *NodeInfo) remoteAddrHost() string {
+func (info *NodeInfo) RemoteAddrHost() string {
 	host, _, _ := net.SplitHostPort(info.RemoteAddr)
 	return host
 }

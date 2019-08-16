@@ -48,6 +48,10 @@ func (p *P2PPeer) IsLAN() bool {
 	return false
 }
 
+func (p *P2PPeer) RemoteAddrHost() string {
+	return ""
+}
+
 func (p *P2PPeer) ServiceFlag() consensus.ServiceFlag {
 	return p.flag
 }
@@ -89,7 +93,7 @@ func NewPeerSet() *PeerSet {
 	return &PeerSet{}
 }
 
-func (ps *PeerSet) IsBanned(peerID string, level byte, reason string) bool {
+func (ps *PeerSet) IsBanned(ip string, level byte, reason string) bool {
 	return false
 }
 
