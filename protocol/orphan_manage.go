@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/testutil"
 )
 
 var (
@@ -16,14 +17,25 @@ var (
 	numOrphanBlockLimit      = 256
 )
 
-type orphanBlock struct {
+type OrphanBlock struct {
 	*types.Block
 	expiration time.Time
 }
 
+func NewOrphanBlock(block *types.Block, expiration time.Time) *OrphanBlock {
+	return &OrphanBlock{
+		Block:      block,
+		expiration: expiration,
+	}
+}
+
+func (o *OrphanBlock) Equals(o1 *OrphanBlock) bool {
+	return testutil.DeepEqual(o.Block, o1.Block)
+}
+
 // OrphanManage is use to handle all the orphan block
 type OrphanManage struct {
-	orphan      map[bc.Hash]*orphanBlock
+	orphan      map[bc.Hash]*OrphanBlock
 	prevOrphans map[bc.Hash][]*bc.Hash
 	mtx         sync.RWMutex
 }
@@ -31,7 +43,7 @@ type OrphanManage struct {
 // NewOrphanManage return a new orphan block
 func NewOrphanManage() *OrphanManage {
 	o := &OrphanManage{
-		orphan:      make(map[bc.Hash]*orphanBlock),
+		orphan:      make(map[bc.Hash]*OrphanBlock),
 		prevOrphans: make(map[bc.Hash][]*bc.Hash),
 	}
 
@@ -39,12 +51,12 @@ func NewOrphanManage() *OrphanManage {
 	return o
 }
 
-// BlockExist check is the block in OrphanManage
-func (o *OrphanManage) BlockExist(hash *bc.Hash) bool {
-	o.mtx.RLock()
-	_, ok := o.orphan[*hash]
-	o.mtx.RUnlock()
-	return ok
+// NewOrphanManageWithData return a new orphan manage with specify data
+func NewOrphanManageWithData(orphan map[bc.Hash]*OrphanBlock, prevOrphans map[bc.Hash][]*bc.Hash) *OrphanManage {
+	return &OrphanManage{
+		orphan:      orphan,
+		prevOrphans: prevOrphans,
+	}
 }
 
 // Add will add the block to OrphanManage
@@ -58,14 +70,22 @@ func (o *OrphanManage) Add(block *types.Block) {
 	}
 
 	if len(o.orphan) >= numOrphanBlockLimit {
+		o.deleteLRU()
 		log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("the number of orphan blocks exceeds the limit")
-		return
 	}
 
-	o.orphan[blockHash] = &orphanBlock{block, time.Now().Add(orphanBlockTTL)}
+	o.orphan[blockHash] = &OrphanBlock{block, time.Now().Add(orphanBlockTTL)}
 	o.prevOrphans[block.PreviousBlockHash] = append(o.prevOrphans[block.PreviousBlockHash], &blockHash)
 
 	log.WithFields(log.Fields{"module": logModule, "hash": blockHash.String(), "height": block.Height}).Info("add block to orphan")
+}
+
+// BlockExist check is the block in OrphanManage
+func (o *OrphanManage) BlockExist(hash *bc.Hash) bool {
+	o.mtx.RLock()
+	_, ok := o.orphan[*hash]
+	o.mtx.RUnlock()
+	return ok
 }
 
 // Delete will delete the block from OrphanManage
@@ -73,6 +93,18 @@ func (o *OrphanManage) Delete(hash *bc.Hash) {
 	o.mtx.Lock()
 	defer o.mtx.Unlock()
 	o.delete(hash)
+}
+
+func (o *OrphanManage) Equals(o1 *OrphanManage) bool {
+	if o1 == nil {
+		return false
+	}
+	for hash, block := range o.orphan {
+		if block1, ok := o1.orphan[hash]; !ok || !block.Equals(block1) {
+			return false
+		}
+	}
+	return testutil.DeepEqual(o.prevOrphans, o1.prevOrphans)
 }
 
 // Get return the orphan block by hash
@@ -105,10 +137,24 @@ func (o *OrphanManage) delete(hash *bc.Hash) {
 	}
 
 	for i, preOrphan := range prevOrphans {
-		if preOrphan == hash {
+		if *preOrphan == *hash {
 			o.prevOrphans[block.Block.PreviousBlockHash] = append(prevOrphans[:i], prevOrphans[i+1:]...)
 			return
 		}
+	}
+}
+
+func (o *OrphanManage) deleteLRU() {
+	var deleteBlock *OrphanBlock
+	for _, orphan := range o.orphan {
+		if deleteBlock == nil || orphan.expiration.Before(deleteBlock.expiration) {
+			deleteBlock = orphan
+		}
+	}
+
+	if deleteBlock != nil {
+		blockHash := deleteBlock.Block.Hash()
+		o.delete(&blockHash)
 	}
 }
 

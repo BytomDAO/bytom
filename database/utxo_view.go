@@ -9,10 +9,10 @@ import (
 	dbm "github.com/bytom/database/leveldb"
 )
 
-const utxoPreFix = "UT:"
+const UtxoPreFix = "UT:"
 
-func calcUtxoKey(hash *bc.Hash) []byte {
-	return []byte(utxoPreFix + hash.String())
+func CalcUtxoKey(hash *bc.Hash) []byte {
+	return []byte(UtxoPreFix + hash.String())
 }
 
 func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) error {
@@ -22,7 +22,7 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 				continue
 			}
 
-			data := db.Get(calcUtxoKey(&prevout))
+			data := db.Get(CalcUtxoKey(&prevout))
 			if data == nil {
 				continue
 			}
@@ -41,7 +41,7 @@ func getTransactionsUtxo(db dbm.DB, view *state.UtxoViewpoint, txs []*bc.Tx) err
 
 func getUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 	var utxo storage.UtxoEntry
-	data := db.Get(calcUtxoKey(hash))
+	data := db.Get(CalcUtxoKey(hash))
 	if data == nil {
 		return nil, errors.New("can't find utxo in db")
 	}
@@ -54,7 +54,7 @@ func getUtxo(db dbm.DB, hash *bc.Hash) (*storage.UtxoEntry, error) {
 func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 	for key, entry := range view.Entries {
 		if entry.Spent && !entry.IsCoinBase {
-			batch.Delete(calcUtxoKey(&key))
+			batch.Delete(CalcUtxoKey(&key))
 			continue
 		}
 
@@ -62,7 +62,7 @@ func saveUtxoView(batch dbm.Batch, view *state.UtxoViewpoint) error {
 		if err != nil {
 			return errors.Wrap(err, "marshaling utxo entry")
 		}
-		batch.Set(calcUtxoKey(&key), b)
+		batch.Set(CalcUtxoKey(&key), b)
 	}
 	return nil
 }

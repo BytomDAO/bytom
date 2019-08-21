@@ -4,6 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
 
+	"github.com/bytom/p2p/security"
 	"github.com/bytom/protocol/bc"
 )
 
@@ -39,10 +40,9 @@ func newBlockFetcher(chain Chain, peers *peerSet) *blockFetcher {
 
 func (f *blockFetcher) blockProcessor() {
 	for {
-		height := f.chain.BestBlockHeight()
 		for !f.queue.Empty() {
 			msg := f.queue.PopItem().(*blockMsg)
-			if msg.block.Height > height+1 {
+			if msg.block.Height > f.chain.BestBlockHeight()+1 {
 				f.queue.Push(msg, -float32(msg.block.Height))
 				break
 			}
@@ -80,7 +80,7 @@ func (f *blockFetcher) insert(msg *blockMsg) {
 			return
 		}
 
-		f.peers.addBanScore(msg.peerID, 20, 0, err.Error())
+		f.peers.ProcessIllegal(msg.peerID, security.LevelMsgIllegal, err.Error())
 		return
 	}
 

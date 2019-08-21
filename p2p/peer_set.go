@@ -50,6 +50,14 @@ func (ps *PeerSet) Add(peer *Peer) error {
 	return nil
 }
 
+func (ps *PeerSet) DoFilter(ip string, pubKey string) error {
+	if ps.Has(pubKey) {
+		return ErrDuplicatePeer
+	}
+
+	return nil
+}
+
 // Get looks up a peer by the provided peerKey.
 func (ps *PeerSet) Get(peerKey string) *Peer {
 	ps.mtx.Lock()

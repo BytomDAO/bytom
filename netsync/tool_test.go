@@ -48,6 +48,10 @@ func (p *P2PPeer) IsLAN() bool {
 	return false
 }
 
+func (p *P2PPeer) RemoteAddrHost() string {
+	return ""
+}
+
 func (p *P2PPeer) ServiceFlag() consensus.ServiceFlag {
 	return p.flag
 }
@@ -89,8 +93,11 @@ func NewPeerSet() *PeerSet {
 	return &PeerSet{}
 }
 
-func (ps *PeerSet) AddBannedPeer(string) error { return nil }
-func (ps *PeerSet) StopPeerGracefully(string)  {}
+func (ps *PeerSet) IsBanned(ip string, level byte, reason string) bool {
+	return false
+}
+
+func (ps *PeerSet) StopPeerGracefully(string) {}
 
 type NetWork struct {
 	nodes map[*SyncManager]P2PPeer

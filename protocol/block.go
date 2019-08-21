@@ -102,6 +102,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	attachNodes, detachNodes := c.calcReorganizeNodes(node)
 	utxoView := state.NewUtxoViewpoint()
 
+	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachNode := range detachNodes {
 		b, err := c.store.GetBlock(&detachNode.Hash)
 		if err != nil {
@@ -120,9 +121,13 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
+		for _, tx := range b.Transactions {
+			txsToRestore[tx.ID] = tx
+		}
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("detach from mainchain")
 	}
 
+	txsToRemove := map[bc.Hash]*types.Tx{}
 	for _, attachNode := range attachNodes {
 		b, err := c.store.GetBlock(&attachNode.Hash)
 		if err != nil {
@@ -141,10 +146,39 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
+		for _, tx := range b.Transactions {
+			if _, ok := txsToRestore[tx.ID]; !ok {
+				txsToRemove[tx.ID] = tx
+			} else {
+				delete(txsToRestore, tx.ID)
+			}
+		}
+
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
-	return c.setState(node, utxoView)
+	if err := c.setState(node, utxoView); err != nil {
+		return err
+	}
+
+	for txHash := range txsToRemove {
+		c.txPool.RemoveTransaction(&txHash)
+	}
+
+	for _, tx := range txsToRestore {
+		// the number of restored Tx should be very small or most of time ZERO
+		// Error returned from validation is ignored, tx could still be lost if validation fails.
+		// TODO: adjust tx timestamp so that it won't starve in pool.
+		if _, err := c.ValidateTx(tx); err != nil {
+			log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("restore tx fail")
+		}
+	}
+
+	if len(txsToRestore) > 0 {
+		log.WithFields(log.Fields{"module": logModule, "num": len(txsToRestore)}).Debug("restore txs back to pool")
+	}
+
+	return nil
 }
 
 // SaveBlock will validate and save block into storage
