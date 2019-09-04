@@ -14,10 +14,10 @@ import (
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/crypto/sha3pool"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 	"github.com/bytom/protocol/vm/vmutil"
-	dbm "github.com/bytom/database/leveldb"
 )
 
 // annotateTxs adds asset data to transactions
@@ -168,7 +168,6 @@ func (w *Wallet) buildAnnotatedTransaction(orig *types.Tx, b *types.Block, statu
 	return tx
 }
 
-// BuildAnnotatedInput build the annotated input.
 func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInput {
 	orig := tx.Inputs[i]
 	in := &query.AnnotatedInput{
@@ -177,6 +176,7 @@ func (w *Wallet) BuildAnnotatedInput(tx *types.Tx, i uint32) *query.AnnotatedInp
 	if orig.InputType() != types.CoinbaseInputType {
 		in.AssetID = orig.AssetID()
 		in.Amount = orig.Amount()
+		in.SignData = tx.SigHash(i)
 	}
 
 	id := tx.Tx.InputIDs[i]
