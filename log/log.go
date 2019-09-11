@@ -68,8 +68,11 @@ func (hook *BtmHook) ioWrite(entry *logrus.Entry) error {
 		return err
 	}
 
-	_, err = writer.Write(msg)
-	return err
+	if _, err = writer.Write(msg); err != nil {
+		return err
+	}
+
+	return writer.Close()
 }
 
 func clearLockFiles(logPath string) error {

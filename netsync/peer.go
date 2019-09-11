@@ -12,21 +12,20 @@ import (
 
 	"github.com/bytom/consensus"
 	"github.com/bytom/errors"
-	"github.com/bytom/p2p/trust"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/bc/types"
 )
 
 const (
-	maxKnownTxs         = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
-	maxKnownBlocks      = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
-	defaultBanThreshold = uint32(100)
+	maxKnownTxs    = 32768 // Maximum transactions hashes to keep in the known list (prevent DOS)
+	maxKnownBlocks = 1024  // Maximum block hashes to keep in the known list (prevent DOS)
 )
 
 //BasePeer is the interface for connection level peer
 type BasePeer interface {
 	Addr() net.Addr
 	ID() string
+	RemoteAddrHost() string
 	ServiceFlag() consensus.ServiceFlag
 	TrafficStatus() (*flowrate.Status, *flowrate.Status)
 	TrySend(byte, interface{}) bool
@@ -35,8 +34,8 @@ type BasePeer interface {
 
 //BasePeerSet is the intergace for connection level peer manager
 type BasePeerSet interface {
-	AddBannedPeer(string) error
 	StopPeerGracefully(string)
+	IsBanned(ip string, level byte, reason string) bool
 }
 
 // PeerInfo indicate peer status snap
@@ -60,7 +59,6 @@ type peer struct {
 	services    consensus.ServiceFlag
 	height      uint64
 	hash        *bc.Hash
-	banScore    trust.DynamicBanScore
 	knownTxs    *set.Set // Set of transaction hashes known to be known by this peer
 	knownBlocks *set.Set // Set of block hashes known to be known by this peer
 	filterAdds  *set.Set // Set of addresses that the spv node cares about.
@@ -82,30 +80,6 @@ func (p *peer) Height() uint64 {
 	p.mtx.RLock()
 	defer p.mtx.RUnlock()
 	return p.height
-}
-
-func (p *peer) addBanScore(persistent, transient uint32, reason string) bool {
-	score := p.banScore.Increase(persistent, transient)
-	if score > defaultBanThreshold {
-		log.WithFields(log.Fields{
-			"module":  logModule,
-			"address": p.Addr(),
-			"score":   score,
-			"reason":  reason,
-		}).Errorf("banning and disconnecting")
-		return true
-	}
-
-	warnThreshold := defaultBanThreshold >> 1
-	if score > warnThreshold {
-		log.WithFields(log.Fields{
-			"module":  logModule,
-			"address": p.Addr(),
-			"score":   score,
-			"reason":  reason,
-		}).Warning("ban score increasing")
-	}
-	return false
 }
 
 func (p *peer) addFilterAddress(address []byte) {
@@ -331,7 +305,7 @@ func newPeerSet(basePeerSet BasePeerSet) *peerSet {
 	}
 }
 
-func (ps *peerSet) addBanScore(peerID string, persistent, transient uint32, reason string) {
+func (ps *peerSet) ProcessIllegal(peerID string, level byte, reason string) {
 	ps.mtx.Lock()
 	peer := ps.peers[peerID]
 	ps.mtx.Unlock()
@@ -339,13 +313,10 @@ func (ps *peerSet) addBanScore(peerID string, persistent, transient uint32, reas
 	if peer == nil {
 		return
 	}
-	if ban := peer.addBanScore(persistent, transient, reason); !ban {
-		return
+	if banned := ps.IsBanned(peer.RemoteAddrHost(), level, reason); banned {
+		ps.removePeer(peerID)
 	}
-	if err := ps.AddBannedPeer(peer.Addr().String()); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on add ban peer")
-	}
-	ps.removePeer(peerID)
+	return
 }
 
 func (ps *peerSet) addPeer(peer BasePeer, height uint64, hash *bc.Hash) {
@@ -437,14 +408,6 @@ func (ps *peerSet) broadcastTx(tx *types.Tx) error {
 		peer.markTransaction(&tx.ID)
 	}
 	return nil
-}
-
-func (ps *peerSet) errorHandler(peerID string, err error) {
-	if errors.Root(err) == errPeerMisbehave {
-		ps.addBanScore(peerID, 20, 0, err.Error())
-	} else {
-		ps.removePeer(peerID)
-	}
 }
 
 // Peer retrieves the registered peer with the given id.
