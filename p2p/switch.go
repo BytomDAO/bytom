@@ -105,7 +105,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 			return nil, err
 		}
 		if config.P2P.LANDiscover {
-			lanDiscv = mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
+			lanDiscv = mdns.NewLANDiscover(mdns.NewProtocol(config.ChainID), int(l.ExternalAddress().Port))
 		}
 	}
 
