@@ -228,3 +228,14 @@ func (a *API) estimateTxGas(ctx context.Context, in struct {
 	}
 	return NewSuccessResponse(txGasResp)
 }
+
+// POST /estimate-chain-transaction-gas
+func (a *API) estimateChainTxGas(ctx context.Context, in struct {
+	TxTemplate txbuilder.Template `json:"transaction_template"`
+}) Response {
+	txGasResp, err := txbuilder.EstimateTxGas(in.TxTemplate)
+	if err != nil {
+		return NewErrorResponse(err)
+	}
+	return NewSuccessResponse(txGasResp)
+}
