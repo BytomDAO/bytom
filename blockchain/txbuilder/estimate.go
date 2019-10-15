@@ -15,6 +15,10 @@ type EstimateTxGasInfo struct {
 	VMNeu       int64 `json:"vm_neu"`
 }
 
+func EstimateChainTxGas(templates []Template) (*EstimateTxGasInfo, error) {
+	return nil, nil
+}
+
 // EstimateTxGas estimate consumed neu for transaction
 func EstimateTxGas(template Template) (*EstimateTxGasInfo, error) {
 	var baseP2WSHSize, totalWitnessSize, baseP2WSHGas, totalP2WPKHGas, totalP2WSHGas, totalIssueGas int64
