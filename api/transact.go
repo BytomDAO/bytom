@@ -226,6 +226,7 @@ func (a *API) estimateTxGas(ctx context.Context, in struct {
 	if err != nil {
 		return NewErrorResponse(err)
 	}
+
 	return NewSuccessResponse(txGasResp)
 }
 
@@ -237,5 +238,6 @@ func (a *API) estimateChainTxGas(ctx context.Context, in struct {
 	if err != nil {
 		return NewErrorResponse(err)
 	}
+
 	return NewSuccessResponse(txGasResp)
 }
