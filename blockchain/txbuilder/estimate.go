@@ -7,6 +7,19 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+const (
+	baseSize       = int64(176) // inputSize(112) + outputSize(64)
+	baseP2WPKHSize = int64(98)
+	baseP2WPKHGas  = int64(1409)
+)
+
+var (
+	//ChainTxUtxoNum maximum utxo quantity in a tx
+	ChainTxUtxoNum = 5
+	//ChainTxMergeGas chain tx gas
+	ChainTxMergeGas = uint64(10000000)
+)
+
 // EstimateTxGasInfo estimate transaction consumed gas
 type EstimateTxGasInfo struct {
 	TotalNeu        int64 `json:"total_neu"`
@@ -14,27 +27,6 @@ type EstimateTxGasInfo struct {
 	StorageNeu      int64 `json:"storage_neu"`
 	VMNeu           int64 `json:"vm_neu"`
 	ChainTxGrossNeu int64 `json:"chain_tx_gross_neu,omitempty"`
-}
-
-const (
-	baseSize       = int64(176) // inputSize(112) + outputSize(64)
-	baseP2WPKHSize = int64(98)
-	baseP2WPKHGas  = int64(1409)
-
-	//ChainTxUtxoNum maximum utxo quantity in a tx
-	ChainTxUtxoNum = 5
-	//ChainTxMergeGas chain tx gas
-	ChainTxMergeGas = uint64(10000000)
-)
-
-//calcMergeGas calculate the gas required that n utxos are merged into one
-func CalcMergeGas(num int) uint64 {
-	gas := uint64(0)
-	for num > 1 {
-		gas += ChainTxMergeGas
-		num -= ChainTxUtxoNum - 1
-	}
-	return gas
 }
 
 func EstimateChainTxGas(templates []Template) (*EstimateTxGasInfo, error) {
