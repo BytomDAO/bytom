@@ -14,7 +14,7 @@ import (
 )
 
 func TestReserveBtmUtxoChain(t *testing.T) {
-	chainTxUtxoNum = 3
+	txbuilder.ChainTxUtxoNum = 3
 	utxos := []*UTXO{}
 	m := mockAccountManager(t)
 	for i := uint64(1); i <= 20; i++ {
@@ -22,7 +22,7 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 			OutputID:  bc.Hash{V0: i},
 			AccountID: "TestAccountID",
 			AssetID:   *consensus.BTMAssetID,
-			Amount:    i * chainTxMergeGas,
+			Amount:    i * txbuilder.ChainTxMergeGas,
 		}
 		utxos = append(utxos, utxo)
 
@@ -40,24 +40,24 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 		err    bool
 	}{
 		{
-			amount: 1 * chainTxMergeGas,
+			amount: 1 * txbuilder.ChainTxMergeGas,
 			want:   []uint64{1},
 		},
 		{
-			amount: 888888 * chainTxMergeGas,
+			amount: 888888 * txbuilder.ChainTxMergeGas,
 			want:   []uint64{},
 			err:    true,
 		},
 		{
-			amount: 7 * chainTxMergeGas,
+			amount: 7 * txbuilder.ChainTxMergeGas,
 			want:   []uint64{4, 3, 1},
 		},
 		{
-			amount: 15 * chainTxMergeGas,
+			amount: 15 * txbuilder.ChainTxMergeGas,
 			want:   []uint64{5, 4, 3, 2, 1, 6},
 		},
 		{
-			amount: 163 * chainTxMergeGas,
+			amount: 163 * txbuilder.ChainTxMergeGas,
 			want:   []uint64{20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 2, 1, 3},
 		},
 	}
@@ -72,7 +72,7 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 
 		got := []uint64{}
 		for _, utxo := range utxos {
-			got = append(got, utxo.Amount/chainTxMergeGas)
+			got = append(got, utxo.Amount/txbuilder.ChainTxMergeGas)
 		}
 
 		if !testutil.DeepEqual(got, c.want) {
@@ -83,7 +83,7 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 }
 
 func TestBuildBtmTxChain(t *testing.T) {
-	chainTxUtxoNum = 3
+	txbuilder.ChainTxUtxoNum = 3
 	m := mockAccountManager(t)
 	cases := []struct {
 		inputUtxo  []uint64
@@ -95,7 +95,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 			inputUtxo:  []uint64{5},
 			wantInput:  [][]uint64{},
 			wantOutput: [][]uint64{},
-			wantUtxo:   5 * chainTxMergeGas,
+			wantUtxo:   5 * txbuilder.ChainTxMergeGas,
 		},
 		{
 			inputUtxo: []uint64{5, 4},
@@ -105,7 +105,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 			wantOutput: [][]uint64{
 				[]uint64{8},
 			},
-			wantUtxo: 8 * chainTxMergeGas,
+			wantUtxo: 8 * txbuilder.ChainTxMergeGas,
 		},
 		{
 			inputUtxo: []uint64{5, 4, 1, 1},
@@ -117,7 +117,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 				[]uint64{9},
 				[]uint64{9},
 			},
-			wantUtxo: 9 * chainTxMergeGas,
+			wantUtxo: 9 * txbuilder.ChainTxMergeGas,
 		},
 		{
 			inputUtxo: []uint64{22, 123, 53, 234, 23, 4, 2423, 24, 23, 43, 34, 234, 234, 24},
@@ -139,7 +139,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 				[]uint64{3038},
 				[]uint64{3491},
 			},
-			wantUtxo: 3491 * chainTxMergeGas,
+			wantUtxo: 3491 * txbuilder.ChainTxMergeGas,
 		},
 	}
 
@@ -157,7 +157,7 @@ func TestBuildBtmTxChain(t *testing.T) {
 		utxos := []*UTXO{}
 		for _, amount := range c.inputUtxo {
 			utxos = append(utxos, &UTXO{
-				Amount:         amount * chainTxMergeGas,
+				Amount:         amount * txbuilder.ChainTxMergeGas,
 				AssetID:        *consensus.BTMAssetID,
 				Address:        acp.Address,
 				ControlProgram: acp.ControlProgram,
@@ -172,12 +172,12 @@ func TestBuildBtmTxChain(t *testing.T) {
 		for i, tpl := range tpls {
 			gotInput := []uint64{}
 			for _, input := range tpl.Transaction.Inputs {
-				gotInput = append(gotInput, input.Amount()/chainTxMergeGas)
+				gotInput = append(gotInput, input.Amount()/txbuilder.ChainTxMergeGas)
 			}
 
 			gotOutput := []uint64{}
 			for _, output := range tpl.Transaction.Outputs {
-				gotOutput = append(gotOutput, output.Amount/chainTxMergeGas)
+				gotOutput = append(gotOutput, output.Amount/txbuilder.ChainTxMergeGas)
 			}
 
 			if !testutil.DeepEqual(c.wantInput[i], gotInput) {
@@ -540,7 +540,7 @@ func TestMergeSpendAction(t *testing.T) {
 }
 
 func TestCalcMergeGas(t *testing.T) {
-	chainTxUtxoNum = 10
+	txbuilder.ChainTxUtxoNum = 10
 	cases := []struct {
 		utxoNum int
 		gas     uint64
@@ -555,27 +555,27 @@ func TestCalcMergeGas(t *testing.T) {
 		},
 		{
 			utxoNum: 9,
-			gas:     chainTxMergeGas,
+			gas:     txbuilder.ChainTxMergeGas,
 		},
 		{
 			utxoNum: 10,
-			gas:     chainTxMergeGas,
+			gas:     txbuilder.ChainTxMergeGas,
 		},
 		{
 			utxoNum: 11,
-			gas:     chainTxMergeGas * 2,
+			gas:     txbuilder.ChainTxMergeGas * 2,
 		},
 		{
 			utxoNum: 20,
-			gas:     chainTxMergeGas * 3,
+			gas:     txbuilder.ChainTxMergeGas * 3,
 		},
 		{
 			utxoNum: 21,
-			gas:     chainTxMergeGas * 3,
+			gas:     txbuilder.ChainTxMergeGas * 3,
 		},
 		{
 			utxoNum: 74,
-			gas:     chainTxMergeGas * 9,
+			gas:     txbuilder.ChainTxMergeGas * 9,
 		},
 	}
 
