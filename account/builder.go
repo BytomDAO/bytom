@@ -56,7 +56,7 @@ func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 }
 
 //calcMergeGas calculate the gas required that n utxos are merged into one
-func calcMergeGas(num int) uint64 {
+func calcMergeGas(num uint64) uint64 {
 	gas := uint64(0)
 	for num > 1 {
 		gas += txbuilder.ChainTxMergeGas
@@ -68,7 +68,7 @@ func calcMergeGas(num int) uint64 {
 func (m *Manager) reserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accountID string, amount uint64, useUnconfirmed bool) ([]*UTXO, error) {
 	reservedAmount := uint64(0)
 	utxos := []*UTXO{}
-	for gasAmount := uint64(0); reservedAmount < gasAmount+amount; gasAmount = calcMergeGas(len(utxos)) {
+	for gasAmount := uint64(0); reservedAmount < gasAmount+amount; gasAmount = calcMergeGas(uint64(len(utxos))) {
 		reserveAmount := amount + gasAmount - reservedAmount
 		res, err := m.utxoKeeper.Reserve(accountID, consensus.BTMAssetID, reserveAmount, useUnconfirmed, builder.MaxTime())
 		if err != nil {
@@ -110,7 +110,7 @@ func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txb
 		}
 
 		buildAmount += input.Amount()
-		if builder.InputCount() != txbuilder.ChainTxUtxoNum && index != len(utxos)-1 {
+		if uint64(builder.InputCount()) != txbuilder.ChainTxUtxoNum && index != len(utxos)-1 {
 			continue
 		}
 

@@ -542,7 +542,7 @@ func TestMergeSpendAction(t *testing.T) {
 func TestCalcMergeGas(t *testing.T) {
 	txbuilder.ChainTxUtxoNum = 10
 	cases := []struct {
-		utxoNum int
+		utxoNum uint64
 		gas     uint64
 	}{
 		{
