@@ -15,13 +15,6 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
-var (
-	//chainTxUtxoNum maximum utxo quantity in a tx
-	chainTxUtxoNum = 5
-	//chainTxMergeGas chain tx gas
-	chainTxMergeGas = uint64(10000000)
-)
-
 //DecodeSpendAction unmarshal JSON-encoded data of spend action
 func (m *Manager) DecodeSpendAction(data []byte) (txbuilder.Action, error) {
 	a := &spendAction{accounts: m}
@@ -62,20 +55,10 @@ func MergeSpendAction(actions []txbuilder.Action) []txbuilder.Action {
 	return resultActions
 }
 
-//calcMergeGas calculate the gas required that n utxos are merged into one
-func calcMergeGas(num int) uint64 {
-	gas := uint64(0)
-	for num > 1 {
-		gas += chainTxMergeGas
-		num -= chainTxUtxoNum - 1
-	}
-	return gas
-}
-
 func (m *Manager) reserveBtmUtxoChain(builder *txbuilder.TemplateBuilder, accountID string, amount uint64, useUnconfirmed bool) ([]*UTXO, error) {
 	reservedAmount := uint64(0)
 	utxos := []*UTXO{}
-	for gasAmount := uint64(0); reservedAmount < gasAmount+amount; gasAmount = calcMergeGas(len(utxos)) {
+	for gasAmount := uint64(0); reservedAmount < gasAmount+amount; gasAmount = txbuilder.CalcMergeGas(len(utxos)) {
 		reserveAmount := amount + gasAmount - reservedAmount
 		res, err := m.utxoKeeper.Reserve(accountID, consensus.BTMAssetID, reserveAmount, useUnconfirmed, builder.MaxTime())
 		if err != nil {
@@ -117,11 +100,11 @@ func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txb
 		}
 
 		buildAmount += input.Amount()
-		if builder.InputCount() != chainTxUtxoNum && index != len(utxos)-1 {
+		if builder.InputCount() != txbuilder.ChainTxUtxoNum && index != len(utxos)-1 {
 			continue
 		}
 
-		outAmount := buildAmount - chainTxMergeGas
+		outAmount := buildAmount - txbuilder.ChainTxMergeGas
 		output := types.NewTxOutput(*consensus.BTMAssetID, outAmount, acp.ControlProgram)
 		if err := builder.AddOutput(output); err != nil {
 			return nil, nil, err

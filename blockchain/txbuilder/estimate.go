@@ -1,8 +1,6 @@
 package txbuilder
 
 import (
-	"fmt"
-
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/protocol/bc/types"
@@ -11,33 +9,45 @@ import (
 
 // EstimateTxGasInfo estimate transaction consumed gas
 type EstimateTxGasInfo struct {
-	TotalNeu    int64 `json:"total_neu"`
-	FlexibleNeu int64 `json:"flexible_neu"`
-	StorageNeu  int64 `json:"storage_neu"`
-	VMNeu       int64 `json:"vm_neu"`
+	TotalNeu        int64 `json:"total_neu"`
+	FlexibleNeu     int64 `json:"flexible_neu"`
+	StorageNeu      int64 `json:"storage_neu"`
+	VMNeu           int64 `json:"vm_neu"`
+	ChainTxGrossNeu int64 `json:"chain_tx_gross_neu,omitempty"`
 }
 
 const (
 	baseSize       = int64(176) // inputSize(112) + outputSize(64)
 	baseP2WPKHSize = int64(98)
 	baseP2WPKHGas  = int64(1409)
+
+	//ChainTxUtxoNum maximum utxo quantity in a tx
+	ChainTxUtxoNum = 5
+	//ChainTxMergeGas chain tx gas
+	ChainTxMergeGas = uint64(10000000)
 )
 
-func EstimateChainTxGas(templates []Template) (*EstimateTxGasInfo, error) {
-	chainResult := &EstimateTxGasInfo{}
-	for i, template := range templates {
-		result, err := EstimateTxGas(template)
-		if err != nil {
-			return nil, fmt.Errorf("estimate gas error for tx %d", i)
-		}
+//calcMergeGas calculate the gas required that n utxos are merged into one
+func CalcMergeGas(num int) uint64 {
+	gas := uint64(0)
+	for num > 1 {
+		gas += ChainTxMergeGas
+		num -= ChainTxUtxoNum - 1
+	}
+	return gas
+}
 
-		chainResult.TotalNeu += result.TotalNeu
-		chainResult.FlexibleNeu += result.FlexibleNeu
-		chainResult.StorageNeu += result.StorageNeu
-		chainResult.VMNeu += result.VMNeu
+func EstimateChainTxGas(templates []Template) (*EstimateTxGasInfo, error) {
+	estimated, err := EstimateTxGas(templates[len(templates)-1])
+	if err != nil {
+		return nil, err
 	}
 
-	return chainResult, nil
+	for i := 0; i < len(templates)-1; i++ {
+		mergeGas := CalcMergeGas(len(templates[i].Transaction.TxData.Inputs))
+		estimated.ChainTxGrossNeu += int64(mergeGas) * consensus.VMGasRate
+	}
+	return estimated, nil
 }
 
 // EstimateTxGas estimate consumed neu for transaction
