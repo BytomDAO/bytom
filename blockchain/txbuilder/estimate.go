@@ -43,9 +43,8 @@ func EstimateChainTxGas(templates []Template) (*EstimateTxGasInfo, error) {
 		return nil, err
 	}
 
-	for i := 0; i < len(templates)-1; i++ {
-		mergeGas := CalcMergeGas(len(templates[i].Transaction.TxData.Inputs))
-		estimated.ChainTxGrossNeu += int64(mergeGas) * consensus.VMGasRate
+	if len(templates) > 1 {
+		estimated.ChainTxGrossNeu = int64(ChainTxMergeGas) * int64(len(templates)-1)
 	}
 	return estimated, nil
 }
