@@ -15,7 +15,7 @@ const (
 
 var (
 	//ChainTxUtxoNum maximum utxo quantity in a tx
-	ChainTxUtxoNum = 5
+	ChainTxUtxoNum = uint64(5)
 	//ChainTxMergeGas chain tx gas
 	ChainTxMergeGas = uint64(10000000)
 )
