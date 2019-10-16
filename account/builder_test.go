@@ -14,7 +14,7 @@ import (
 )
 
 func TestReserveBtmUtxoChain(t *testing.T) {
-	txbuilder.ChainTxUtxoNum = uint64(3)
+	txbuilder.ChainTxUtxoNum = 3
 	utxos := []*UTXO{}
 	m := mockAccountManager(t)
 	for i := uint64(1); i <= 20; i++ {
@@ -83,7 +83,7 @@ func TestReserveBtmUtxoChain(t *testing.T) {
 }
 
 func TestBuildBtmTxChain(t *testing.T) {
-	txbuilder.ChainTxUtxoNum = uint64(3)
+	txbuilder.ChainTxUtxoNum = 3
 	m := mockAccountManager(t)
 	cases := []struct {
 		inputUtxo  []uint64
@@ -540,7 +540,7 @@ func TestMergeSpendAction(t *testing.T) {
 }
 
 func TestCalcMergeGas(t *testing.T) {
-	txbuilder.ChainTxUtxoNum = uint64(10)
+	txbuilder.ChainTxUtxoNum = 10
 	cases := []struct {
 		utxoNum int
 		gas     uint64
