@@ -1,6 +1,8 @@
 package txbuilder
 
 import (
+	"fmt"
+
 	"github.com/bytom/consensus"
 	"github.com/bytom/consensus/segwit"
 	"github.com/bytom/protocol/bc/types"
@@ -15,16 +17,32 @@ type EstimateTxGasInfo struct {
 	VMNeu       int64 `json:"vm_neu"`
 }
 
+const (
+	baseSize       = int64(176) // inputSize(112) + outputSize(64)
+	baseP2WPKHSize = int64(98)
+	baseP2WPKHGas  = int64(1409)
+)
+
 func EstimateChainTxGas(templates []Template) (*EstimateTxGasInfo, error) {
-	return nil, nil
+	chainResult := &EstimateTxGasInfo{}
+	for i, template := range templates {
+		result, err := EstimateTxGas(template)
+		if err != nil {
+			return nil, fmt.Errorf("estimate gas error for tx %d", i)
+		}
+
+		chainResult.TotalNeu += result.TotalNeu
+		chainResult.FlexibleNeu += result.FlexibleNeu
+		chainResult.StorageNeu += result.StorageNeu
+		chainResult.VMNeu += result.VMNeu
+	}
+
+	return chainResult, nil
 }
 
 // EstimateTxGas estimate consumed neu for transaction
 func EstimateTxGas(template Template) (*EstimateTxGasInfo, error) {
 	var baseP2WSHSize, totalWitnessSize, baseP2WSHGas, totalP2WPKHGas, totalP2WSHGas, totalIssueGas int64
-	baseSize := int64(176) // inputSize(112) + outputSize(64)
-	baseP2WPKHSize := int64(98)
-	baseP2WPKHGas := int64(1409)
 	for pos, input := range template.Transaction.TxData.Inputs {
 		switch input.InputType() {
 		case types.SpendInputType:
