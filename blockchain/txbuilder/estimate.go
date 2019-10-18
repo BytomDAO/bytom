@@ -26,7 +26,7 @@ type EstimateTxGasInfo struct {
 	FlexibleNeu int64 `json:"flexible_neu"`
 	StorageNeu  int64 `json:"storage_neu"`
 	VMNeu       int64 `json:"vm_neu"`
-	ChainTxNeu  int64 `json:"chain_tx_neu,omitempty"`
+	ChainTxNeu  int64 `json:"chain_tx_neu"`
 }
 
 func EstimateChainTxGas(templates []Template) (*EstimateTxGasInfo, error) {
