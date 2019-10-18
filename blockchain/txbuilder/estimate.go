@@ -22,11 +22,11 @@ var (
 
 // EstimateTxGasInfo estimate transaction consumed gas
 type EstimateTxGasInfo struct {
-	TotalNeu        int64 `json:"total_neu"`
-	FlexibleNeu     int64 `json:"flexible_neu"`
-	StorageNeu      int64 `json:"storage_neu"`
-	VMNeu           int64 `json:"vm_neu"`
-	ChainTxGrossNeu int64 `json:"chain_tx_gross_neu,omitempty"`
+	TotalNeu    int64 `json:"total_neu"`
+	FlexibleNeu int64 `json:"flexible_neu"`
+	StorageNeu  int64 `json:"storage_neu"`
+	VMNeu       int64 `json:"vm_neu"`
+	ChainTxNeu  int64 `json:"chain_tx_gross_neu,omitempty"`
 }
 
 func EstimateChainTxGas(templates []Template) (*EstimateTxGasInfo, error) {
@@ -36,7 +36,7 @@ func EstimateChainTxGas(templates []Template) (*EstimateTxGasInfo, error) {
 	}
 
 	if len(templates) > 1 {
-		estimated.ChainTxGrossNeu = int64(ChainTxMergeGas) * int64(len(templates)-1)
+		estimated.ChainTxNeu = int64(ChainTxMergeGas) * int64(len(templates)-1)
 	}
 	return estimated, nil
 }
