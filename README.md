@@ -92,23 +92,39 @@ $ ./bytomd node
 available flags for `bytomd node`:
 
 ```
-      --auth.disable                Disable rpc access authenticate
-      --chain_id string             Select network type
-  -h, --help                        help for node
-      --mining                      Enable mining
-      --p2p.dial_timeout int        Set dial timeout (default 3)
-      --p2p.handshake_timeout int   Set handshake timeout (default 30)
-      --p2p.laddr string            Node listen address.
-      --p2p.max_num_peers int       Set max num peers (default 50)
-      --p2p.pex                     Enable Peer-Exchange  (default true)
-      --p2p.seeds string            Comma delimited host:port seed nodes
-      --p2p.skip_upnp               Skip UPNP configuration
-      --prof_laddr string           Use http to profile bytomd programs
-      --vault_mode                  Run in the offline enviroment
-      --wallet.disable              Disable wallet
-      --wallet.rescan               Rescan wallet
-      --web.closed                  Launch web browser or not
-      --simd.enable                 Enable the _simd_ feature to speed up the _PoW_ verification (e.g., during mining and block verification)
+Flags:
+      --auth.disable                     Disable rpc access authenticate
+      --chain_id string                  Select network type
+  -h, --help                             help for node
+      --log_file string                  Log output file (default "log")
+      --log_level string                 Select log level(debug, info, warn, error or fatal)
+      --mining                           Enable mining
+      --p2p.dial_timeout int             Set dial timeout (default 3)
+      --p2p.handshake_timeout int        Set handshake timeout (default 30)
+      --p2p.keep_dial string             Peers addresses try keeping connecting to, separated by ',' (for example "1.1.1.1:46657;2.2.2.2:46658")
+      --p2p.laddr string                 Node listen address. (0.0.0.0:0 means any interface, any port) (default "tcp://0.0.0.0:46656")
+      --p2p.lan_discoverable             Whether the node can be discovered by nodes in the LAN (default true)
+      --p2p.max_num_peers int            Set max num peers (default 50)
+      --p2p.node_key string              Node key for p2p communication
+      --p2p.proxy_address string         Connect via SOCKS5 proxy (eg. 127.0.0.1:1086)
+      --p2p.proxy_password string        Password for proxy server
+      --p2p.proxy_username string        Username for proxy server
+      --p2p.seeds string                 Comma delimited host:port seed nodes
+      --p2p.skip_upnp                    Skip UPNP configuration
+      --prof_laddr string                Use http to profile bytomd programs
+      --simd.enable                      Enable SIMD mechan for tensority
+      --vault_mode                       Run in the offline enviroment
+      --wallet.disable                   Disable wallet
+      --wallet.rescan                    Rescan wallet
+      --wallet.txindex                   Save global tx index
+      --web.closed                       Lanch web browser or not
+      --ws.max_num_concurrent_reqs int   Max number of concurrent websocket requests that may be processed concurrently (default 20)
+      --ws.max_num_websockets int        Max number of websocket connections (default 25)
+
+Global Flags:
+      --home string   root directory for config and data
+  -r, --root string   DEPRECATED. Use --home (default "/Users/zcc/Library/Application Support/Bytom")
+      --trace         print out full stack trace on errors
 ```
 
 Given the `bytomd` node is running, the general workflow is as follows:

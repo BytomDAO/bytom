@@ -105,7 +105,7 @@ func NewSwitch(config *cfg.Config) (*Switch, error) {
 			return nil, err
 		}
 		if config.P2P.LANDiscover {
-			lanDiscv = mdns.NewLANDiscover(mdns.NewProtocol(), int(l.ExternalAddress().Port))
+			lanDiscv = mdns.NewLANDiscover(mdns.NewProtocol(config.ChainID), int(l.ExternalAddress().Port))
 		}
 	}
 
@@ -250,12 +250,12 @@ func (sw *Switch) DialPeerWithAddress(addr *NetAddress) error {
 
 	pc, err := newOutboundPeerConn(addr, sw.nodePrivKey, sw.peerConfig)
 	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Error("DialPeer fail on newOutboundPeerConn")
+		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Warn("DialPeer fail on newOutboundPeerConn")
 		return err
 	}
 
 	if err = sw.AddPeer(pc, addr.isLAN); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Error("DialPeer fail on switch AddPeer")
+		log.WithFields(log.Fields{"module": logModule, "address": addr, " err": err}).Warn("DialPeer fail on switch AddPeer")
 		pc.CloseConn()
 		return err
 	}
@@ -329,14 +329,14 @@ func (sw *Switch) addPeerWithConnection(conn net.Conn) error {
 	peerConn, err := newInboundPeerConn(conn, sw.nodePrivKey, sw.Config.P2P)
 	if err != nil {
 		if err := conn.Close(); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "remote peer:": conn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
+			log.WithFields(log.Fields{"module": logModule, "remote peer:": conn.RemoteAddr().String(), " err:": err}).Warn("closes connection err")
 		}
 		return err
 	}
 
 	if err = sw.AddPeer(peerConn, false); err != nil {
 		if err := conn.Close(); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "remote peer:": conn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
+			log.WithFields(log.Fields{"module": logModule, "remote peer:": conn.RemoteAddr().String(), " err:": err}).Warn("closes connection err")
 		}
 		return err
 	}
@@ -399,7 +399,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 		// disconnect if we alrady have MaxNumPeers
 		if sw.peers.Size() >= sw.Config.P2P.MaxNumPeers {
 			if err := inConn.Close(); err != nil {
-				log.WithFields(log.Fields{"module": logModule, "remote peer:": inConn.RemoteAddr().String(), " err:": err}).Error("closes connection err")
+				log.WithFields(log.Fields{"module": logModule, "remote peer:": inConn.RemoteAddr().String(), " err:": err}).Warn("closes connection err")
 			}
 			log.Info("Ignoring inbound connection: already have enough peers.")
 			continue
@@ -415,7 +415,7 @@ func (sw *Switch) listenerRoutine(l Listener) {
 
 func (sw *Switch) dialPeerWorker(a *NetAddress, wg *sync.WaitGroup) {
 	if err := sw.DialPeerWithAddress(a); err != nil {
-		log.WithFields(log.Fields{"module": logModule, "addr": a, "err": err}).Error("dialPeerWorker fail on dial peer")
+		log.WithFields(log.Fields{"module": logModule, "addr": a, "err": err}).Warn("dialPeerWorker fail on dial peer")
 	}
 	wg.Done()
 }

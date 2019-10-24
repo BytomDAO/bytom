@@ -7,20 +7,43 @@ import (
 	"github.com/bytom/protocol/vm/vmutil"
 )
 
+const (
+	baseSize       = int64(176) // inputSize(112) + outputSize(64)
+	baseP2WPKHSize = int64(98)
+	baseP2WPKHGas  = int64(1409)
+)
+
+var (
+	//ChainTxUtxoNum maximum utxo quantity in a tx
+	ChainTxUtxoNum = 5
+	//ChainTxMergeGas chain tx gas
+	ChainTxMergeGas = uint64(6000000)
+)
+
 // EstimateTxGasInfo estimate transaction consumed gas
 type EstimateTxGasInfo struct {
 	TotalNeu    int64 `json:"total_neu"`
 	FlexibleNeu int64 `json:"flexible_neu"`
 	StorageNeu  int64 `json:"storage_neu"`
 	VMNeu       int64 `json:"vm_neu"`
+	ChainTxNeu  int64 `json:"chain_tx_neu"`
+}
+
+func EstimateChainTxGas(templates []Template) (*EstimateTxGasInfo, error) {
+	estimated, err := EstimateTxGas(templates[len(templates)-1])
+	if err != nil {
+		return nil, err
+	}
+
+	if len(templates) > 1 {
+		estimated.ChainTxNeu = int64(ChainTxMergeGas) * int64(len(templates)-1)
+	}
+	return estimated, nil
 }
 
 // EstimateTxGas estimate consumed neu for transaction
 func EstimateTxGas(template Template) (*EstimateTxGasInfo, error) {
 	var baseP2WSHSize, totalWitnessSize, baseP2WSHGas, totalP2WPKHGas, totalP2WSHGas, totalIssueGas int64
-	baseSize := int64(176) // inputSize(112) + outputSize(64)
-	baseP2WPKHSize := int64(98)
-	baseP2WPKHGas := int64(1409)
 	for pos, input := range template.Transaction.TxData.Inputs {
 		switch input.InputType() {
 		case types.SpendInputType:
