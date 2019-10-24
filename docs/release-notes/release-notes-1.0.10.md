@@ -37,13 +37,13 @@ __Bytom Node__
 + [`PR #1789`](https://github.com/Bytom/bytom/pull/1789)
     - Add the handshake permision for Ed25519 node only.
 + [`PR #1791`](https://github.com/Bytom/bytom/pull/1791)
-    - add `/estimate-chain-tx-gas` API to estimate chained txs gas when building chained txs 
+    - add `/estimate-chain-tx-gas` API to estimate chain transactions gas when building chain transactions 
 + [`PR #1792`](https://github.com/Bytom/bytom/pull/1792) 
-    - fix `/estimate-chain-tx-gas` API response format inconsistency in case the (chained) tx to build contains only 1 tx
+    - fix `/estimate-chain-tx-gas` API response format inconsistency in case the (chain) transaction to build contains only ONE transaction
 
 __Bytom Dashboard__
 
-+ `PR #1798`
++ [`PR #1798`](https://github.com/Bytom/bytom/pull/1798) 
     - Update dashboard with estimate chain transactions fee function and a switcher for either the chain transactions or the normal transactions. This feature supports by offical BTM asset only.
 
 Credits
