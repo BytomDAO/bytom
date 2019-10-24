@@ -38,7 +38,7 @@ __Bytom Node__
     - Add the handshake permision for Ed25519 node only.
 + [`PR #1791`](https://github.com/Bytom/bytom/pull/1791)
     - add `/estimate-chain-tx-gas` API to estimate chained txs gas when building chained txs 
-+ [`PR #1792`](https://github.com/Bytom/bytom/pull/1792) p
++ [`PR #1792`](https://github.com/Bytom/bytom/pull/1792) 
     - fix `/estimate-chain-tx-gas` API response format inconsistency in case the (chained) tx to build contains only 1 tx
 
 __Bytom Dashboard__
