@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/bytom/errors"
+	"github.com/bytom/bytom/errors"
 )
 
 type virtualMachine struct {

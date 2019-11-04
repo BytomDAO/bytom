@@ -10,9 +10,9 @@ endif
 endif
 
 PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v '/mining/tensority')
-PACKAGES += 'github.com/bytom/mining/tensority/go_algorithm'
+PACKAGES += 'github.com/bytom/bytom/mining/tensority/go_algorithm'
 
-BUILD_FLAGS := -ldflags "-X github.com/bytom/version.GitCommit=`git rev-parse HEAD`"
+BUILD_FLAGS := -ldflags "-X github.com/bytom/bytom/version.GitCommit=`git rev-parse HEAD`"
 
 MINER_BINARY32 := miner-$(GOOS)_386
 MINER_BINARY64 := miner-$(GOOS)_amd64

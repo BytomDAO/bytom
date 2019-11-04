@@ -3,9 +3,9 @@ package test
 import (
 	"fmt"
 
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/types"
-	dbm "github.com/bytom/database/leveldb"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc/types"
+	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func declChain(name string, baseChain *protocol.Chain, baseHeight uint64, height uint64) (*protocol.Chain, error) {

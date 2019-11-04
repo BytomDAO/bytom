@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/errors"
+	"github.com/bytom/bytom/crypto/ed25519"
+	"github.com/bytom/bytom/errors"
 )
 
 // TestIsUnspendable ensures the IsUnspendable function returns the expected

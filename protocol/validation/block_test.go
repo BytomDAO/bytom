@@ -5,14 +5,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/mining/tensority"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/protocol/vm"
-	"github.com/bytom/protocol/vm/vmutil"
-	"github.com/bytom/testutil"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/mining/tensority"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
+	"github.com/bytom/bytom/protocol/vm"
+	"github.com/bytom/bytom/protocol/vm/vmutil"
+	"github.com/bytom/bytom/testutil"
 )
 
 func TestCheckBlockTime(t *testing.T) {

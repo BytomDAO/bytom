@@ -10,11 +10,11 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/tendermint/go-crypto"
 
-	cfg "github.com/bytom/config"
-	dbm "github.com/bytom/database/leveldb"
-	"github.com/bytom/errors"
-	conn "github.com/bytom/p2p/connection"
-	"github.com/bytom/p2p/security"
+	cfg "github.com/bytom/bytom/config"
+	dbm "github.com/bytom/bytom/database/leveldb"
+	"github.com/bytom/bytom/errors"
+	conn "github.com/bytom/bytom/p2p/connection"
+	"github.com/bytom/bytom/p2p/security"
 )
 
 var (

@@ -3,10 +3,10 @@ package api
 import (
 	"strings"
 
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/equity/compiler"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/vm"
+	chainjson "github.com/bytom/bytom/encoding/json"
+	"github.com/bytom/bytom/equity/compiler"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/vm"
 )
 
 // pre-define contract error types

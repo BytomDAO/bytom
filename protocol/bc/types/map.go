@@ -1,10 +1,10 @@
 package types
 
 import (
-	"github.com/bytom/consensus"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/vm"
-	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/vm"
+	"github.com/bytom/bytom/protocol/vm/vmutil"
 )
 
 // MapTx converts a types TxData object into its entries-based

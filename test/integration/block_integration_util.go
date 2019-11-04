@@ -10,15 +10,15 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/bytom/database"
-	dbm "github.com/bytom/database/leveldb"
-	"github.com/bytom/database/storage"
-	"github.com/bytom/event"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/testutil"
+	"github.com/bytom/bytom/database"
+	dbm "github.com/bytom/bytom/database/leveldb"
+	"github.com/bytom/bytom/database/storage"
+	"github.com/bytom/bytom/event"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
+	"github.com/bytom/bytom/testutil"
 )
 
 const (

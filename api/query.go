@@ -7,18 +7,18 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/account"
-	"github.com/bytom/asset"
-	"github.com/bytom/blockchain/query"
-	"github.com/bytom/blockchain/signers"
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/account"
+	"github.com/bytom/bytom/asset"
+	"github.com/bytom/bytom/blockchain/query"
+	"github.com/bytom/bytom/blockchain/signers"
+	"github.com/bytom/bytom/blockchain/txbuilder"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/ed25519"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	chainjson "github.com/bytom/bytom/encoding/json"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 // POST /list-accounts

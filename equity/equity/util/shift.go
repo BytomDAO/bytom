@@ -6,9 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"github.com/bytom/protocol/vm"
+	"github.com/bytom/bytom/protocol/vm"
 
-	"github.com/bytom/equity/compiler"
+	"github.com/bytom/bytom/equity/compiler"
 )
 
 const (

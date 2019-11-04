@@ -6,14 +6,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bytom/account"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/signers"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/validation"
-	"github.com/bytom/test"
-	dbm "github.com/bytom/database/leveldb"
+	"github.com/bytom/bytom/account"
+	"github.com/bytom/bytom/blockchain/pseudohsm"
+	"github.com/bytom/bytom/blockchain/signers"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/validation"
+	"github.com/bytom/bytom/test"
+	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestP2PKH(t *testing.T) {

@@ -3,7 +3,7 @@ package security
 import (
 	log "github.com/sirupsen/logrus"
 
-	cfg "github.com/bytom/config"
+	cfg "github.com/bytom/bytom/config"
 )
 
 const logModule = "p2pSecurity"

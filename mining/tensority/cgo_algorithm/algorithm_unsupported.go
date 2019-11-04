@@ -5,8 +5,8 @@ package cgo_algorithm
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/mining/tensority/go_algorithm"
-	"github.com/bytom/protocol/bc"
+	"github.com/bytom/bytom/mining/tensority/go_algorithm"
+	"github.com/bytom/bytom/protocol/bc"
 )
 
 func SimdAlgorithm(bh, seed *bc.Hash) *bc.Hash {

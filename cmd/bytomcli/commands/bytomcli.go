@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/bytom/util"
+	"github.com/bytom/bytom/util"
 )
 
 // bytomcli usage template

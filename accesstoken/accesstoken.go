@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/errors"
-	dbm "github.com/bytom/database/leveldb"
+	"github.com/bytom/bytom/crypto/sha3pool"
+	"github.com/bytom/bytom/errors"
+	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const tokenSize = 32

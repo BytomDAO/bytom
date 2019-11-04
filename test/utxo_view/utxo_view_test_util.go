@@ -3,12 +3,12 @@ package utxo_view
 import (
 	"encoding/hex"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/difficulty"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/testutil"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/consensus/difficulty"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
+	"github.com/bytom/bytom/testutil"
 )
 
 const utxoPreFix = "UT:"
