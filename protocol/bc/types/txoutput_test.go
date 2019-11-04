@@ -8,9 +8,9 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 
-	"github.com/bytom/encoding/blockchain"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/testutil"
+	"github.com/bytom/bytom/encoding/blockchain"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/testutil"
 )
 
 func TestSerializationTxOutput(t *testing.T) {

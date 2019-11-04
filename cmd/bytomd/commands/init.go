@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	cfg "github.com/bytom/config"
+	cfg "github.com/bytom/bytom/config"
 )
 
 var initFilesCmd = &cobra.Command{

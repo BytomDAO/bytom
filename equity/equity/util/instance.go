@@ -5,9 +5,9 @@ import (
 	"errors"
 	"strconv"
 
-	chainjson "github.com/bytom/encoding/json"
+	chainjson "github.com/bytom/bytom/encoding/json"
 
-	"github.com/bytom/equity/compiler"
+	"github.com/bytom/bytom/equity/compiler"
 )
 
 // InstantiateContract instantiate contract parameters

@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/bytom/encoding/blockchain"
-	"github.com/bytom/testutil"
+	"github.com/bytom/bytom/encoding/blockchain"
+	"github.com/bytom/bytom/testutil"
 )
 
 func TestReadWriteBlockCommitment(t *testing.T) {

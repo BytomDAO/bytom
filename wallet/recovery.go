@@ -8,14 +8,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bytom/account"
-	"github.com/bytom/blockchain/signers"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/crypto/sha3pool"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	dbm "github.com/bytom/database/leveldb"
+	"github.com/bytom/bytom/account"
+	"github.com/bytom/bytom/blockchain/signers"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/crypto/sha3pool"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
+	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const (

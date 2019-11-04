@@ -6,14 +6,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	cfg "github.com/bytom/config"
-	"github.com/bytom/consensus"
-	"github.com/bytom/event"
-	"github.com/bytom/p2p"
-	"github.com/bytom/p2p/security"
-	core "github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
+	cfg "github.com/bytom/bytom/config"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/event"
+	"github.com/bytom/bytom/p2p"
+	"github.com/bytom/bytom/p2p/security"
+	core "github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/tendermint/go-crypto"
 )
 

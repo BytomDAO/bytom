@@ -7,16 +7,16 @@ import (
 	"path"
 	"reflect"
 
-	"github.com/bytom/account"
-	"github.com/bytom/asset"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/signers"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	dbm "github.com/bytom/database/leveldb"
-	"github.com/bytom/event"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/types"
-	w "github.com/bytom/wallet"
+	"github.com/bytom/bytom/account"
+	"github.com/bytom/bytom/asset"
+	"github.com/bytom/bytom/blockchain/pseudohsm"
+	"github.com/bytom/bytom/blockchain/signers"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	dbm "github.com/bytom/bytom/database/leveldb"
+	"github.com/bytom/bytom/event"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc/types"
+	w "github.com/bytom/bytom/wallet"
 )
 
 type walletTestConfig struct {

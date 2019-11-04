@@ -4,14 +4,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bytom/config"
-	"github.com/bytom/database/storage"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/testutil"
-	dbm "github.com/bytom/database/leveldb"
+	"github.com/bytom/bytom/config"
+	"github.com/bytom/bytom/database/storage"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
+	"github.com/bytom/bytom/testutil"
+	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestLoadBlockIndex(t *testing.T) {

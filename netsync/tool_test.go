@@ -9,10 +9,10 @@ import (
 	wire "github.com/tendermint/go-wire"
 	"github.com/tendermint/tmlibs/flowrate"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/test/mock"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/test/mock"
 )
 
 type P2PPeer struct {

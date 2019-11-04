@@ -8,8 +8,8 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 
 	"encoding/hex"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/util"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/util"
 )
 
 func init() {

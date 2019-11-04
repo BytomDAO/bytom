@@ -3,9 +3,9 @@ package query
 import (
 	"encoding/json"
 
-	"github.com/bytom/crypto/ed25519/chainkd"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/protocol/bc"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	chainjson "github.com/bytom/bytom/encoding/json"
+	"github.com/bytom/bytom/protocol/bc"
 )
 
 //AnnotatedTx means an annotated transaction.
