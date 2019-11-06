@@ -40,18 +40,18 @@ $ go env GOROOT GOPATH
 - Get the source code
 
 ``` bash
-$ git clone https://github.com/Bytom/bytom.git $GOPATH/src/github.com/bytom
+$ git clone https://github.com/Bytom/bytom.git $GOPATH/src/github.com/bytom/bytom
 ```
 
 - Build source code
 
 ``` bash
-$ cd $GOPATH/src/github.com/bytom
+$ cd $GOPATH/src/github.com/bytom/bytom
 $ make bytomd    # build bytomd
 $ make bytomcli  # build bytomcli
 ```
 
-When successfully building the project, the `bytom` and `bytomcli` binary should be present in `cmd/bytomd` and `cmd/bytomcli` directory, respectively.
+When successfully building the project, the `bytomd` and `bytomcli` binary should be present in `cmd/bytomd` and `cmd/bytomcli` directory, respectively.
 
 ### Executables
 
