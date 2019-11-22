@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	cfg "github.com/bytom/config"
+	cfg "github.com/bytom/bytom/config"
 )
 
 var (

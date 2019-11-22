@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/vm"
-	dbm "github.com/bytom/database/leveldb"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/vm"
+	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestBlockHeader(t *testing.T) {

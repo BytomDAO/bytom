@@ -5,7 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bytom/encoding/base32"
+	"github.com/bytom/bytom/encoding/base32"
 )
 
 //1<seq_id ,increase by 1

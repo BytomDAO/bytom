@@ -9,13 +9,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/database"
-	dbm "github.com/bytom/database/leveldb"
-	"github.com/bytom/event"
-	"github.com/bytom/protocol"
-	"github.com/bytom/testutil"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/database"
+	dbm "github.com/bytom/bytom/database/leveldb"
+	"github.com/bytom/bytom/event"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/testutil"
 )
 
 func TestDefineAssetWithLowercase(t *testing.T) {

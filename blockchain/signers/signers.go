@@ -4,8 +4,8 @@ package signers
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/errors"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/errors"
 )
 
 type keySpace byte

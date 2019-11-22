@@ -10,9 +10,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
-	dbm "github.com/bytom/database/leveldb"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc"
+	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const desireUtxoCount = 5

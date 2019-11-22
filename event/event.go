@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 const (

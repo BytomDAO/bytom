@@ -7,10 +7,10 @@ import (
 	"github.com/tendermint/go-crypto"
 	cmn "github.com/tendermint/tmlibs/common"
 
-	cfg "github.com/bytom/config"
-	dbm "github.com/bytom/database/leveldb"
-	"github.com/bytom/p2p/connection"
-	"github.com/bytom/p2p/discover/dht"
+	cfg "github.com/bytom/bytom/config"
+	dbm "github.com/bytom/bytom/database/leveldb"
+	"github.com/bytom/bytom/p2p/connection"
+	"github.com/bytom/bytom/p2p/discover/dht"
 )
 
 //PanicOnAddPeerErr add peer error

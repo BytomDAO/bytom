@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/segwit"
-	"github.com/bytom/errors"
-	"github.com/bytom/math/checked"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/vm"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/consensus/segwit"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/math/checked"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/vm"
 )
 
 const ruleAA = 142500

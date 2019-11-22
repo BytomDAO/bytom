@@ -9,17 +9,17 @@ import (
 	"github.com/golang/groupcache/lru"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bytom/blockchain/signers"
-	"github.com/bytom/common"
-	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	dbm "github.com/bytom/database/leveldb"
-	chainjson "github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/bytom/bytom/blockchain/signers"
+	"github.com/bytom/bytom/common"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/ed25519"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	dbm "github.com/bytom/bytom/database/leveldb"
+	chainjson "github.com/bytom/bytom/encoding/json"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/vm/vmutil"
 )
 
 // DefaultNativeAsset native BTM asset
