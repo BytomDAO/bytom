@@ -33,6 +33,13 @@ func (a SortByTimestamp) Len() int           { return len(a) }
 func (a SortByTimestamp) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a SortByTimestamp) Less(i, j int) bool { return a[i].Timestamp > a[j].Timestamp }
 
+// SortByHeight implements sort.Interface for AnnotatedTx slices
+type SortByHeight []*query.AnnotatedTx
+
+func (a SortByHeight) Len() int           { return len(a) }
+func (a SortByHeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a SortByHeight) Less(i, j int) bool { return a[i].BlockHeight > a[j].BlockHeight }
+
 // AddUnconfirmedTx handle wallet status update when tx add into txpool
 func (w *Wallet) AddUnconfirmedTx(txD *protocol.TxDesc) {
 	if err := w.saveUnconfirmedTx(txD.Tx); err != nil {

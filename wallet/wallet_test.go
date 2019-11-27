@@ -161,7 +161,7 @@ func TestWalletUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wants, err := w.GetTransactions("")
+	wants, err := w.GetTransactions("", "", 100, false)
 	if len(wants) != 1 {
 		t.Fatal(err)
 	}

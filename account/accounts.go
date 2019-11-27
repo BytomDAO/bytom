@@ -19,11 +19,11 @@ import (
 	"github.com/bytom/crypto"
 	"github.com/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/crypto/sha3pool"
+	dbm "github.com/bytom/database/leveldb"
 	"github.com/bytom/errors"
 	"github.com/bytom/protocol"
 	"github.com/bytom/protocol/bc"
 	"github.com/bytom/protocol/vm/vmutil"
-	dbm "github.com/bytom/database/leveldb"
 )
 
 const (
@@ -57,6 +57,7 @@ var (
 	ErrContractIndex   = errors.New("Exceeded maximum addresses per account")
 	ErrAccountIndex    = errors.New("Exceeded maximum accounts per xpub")
 	ErrFindTransaction = errors.New("No transaction")
+	ErrAccountIDEmpty  = errors.New("account_id is empty")
 )
 
 // ContractKey account control promgram store prefix

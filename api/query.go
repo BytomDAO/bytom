@@ -129,48 +129,33 @@ func (a *API) getTransaction(ctx context.Context, txInfo struct {
 
 // POST /list-transactions
 func (a *API) listTransactions(ctx context.Context, filter struct {
-	ID          string `json:"id"`
-	AccountID   string `json:"account_id"`
-	Detail      bool   `json:"detail"`
-	Unconfirmed bool   `json:"unconfirmed"`
-	From        uint   `json:"from"`
-	Count       uint   `json:"count"`
+	AccountID    string `json:"account_id"`
+	AccountAlias string `json:"account_alias"`
+	StartTxID    string `json:"start_tx_id"`
+	Detail       bool   `json:"detail"`
+	Unconfirmed  bool   `json:"unconfirmed"`
+	Count        uint   `json:"count"`
 }) Response {
-	transactions := []*query.AnnotatedTx{}
-	var err error
-	var transaction *query.AnnotatedTx
-
-	if filter.ID != "" {
-		transaction, err = a.wallet.GetTransactionByTxID(filter.ID)
-		if err != nil && filter.Unconfirmed {
-			transaction, err = a.wallet.GetUnconfirmedTxByTxID(filter.ID)
-			if err != nil {
-				return NewErrorResponse(err)
-			}
-		}
-		transactions = []*query.AnnotatedTx{transaction}
-	} else {
-		transactions, err = a.wallet.GetTransactions(filter.AccountID)
+	accountID := filter.AccountID
+	if filter.AccountAlias != "" {
+		acc, err := a.wallet.AccountMgr.FindByAlias(filter.AccountAlias)
 		if err != nil {
 			return NewErrorResponse(err)
 		}
+		accountID = acc.ID
+	}
 
-		if filter.Unconfirmed {
-			unconfirmedTxs, err := a.wallet.GetUnconfirmedTxs(filter.AccountID)
-			if err != nil {
-				return NewErrorResponse(err)
-			}
-			transactions = append(unconfirmedTxs, transactions...)
-		}
+	transactions, err := a.wallet.GetTransactions(accountID, filter.StartTxID, filter.Count, filter.Unconfirmed)
+	if err != nil {
+		return NewErrorResponse(err)
 	}
 
 	if filter.Detail == false {
 		txSummary := a.wallet.GetTransactionsSummary(transactions)
-		start, end := getPageRange(len(txSummary), filter.From, filter.Count)
-		return NewSuccessResponse(txSummary[start:end])
+		return NewSuccessResponse(txSummary)
 	}
-	start, end := getPageRange(len(transactions), filter.From, filter.Count)
-	return NewSuccessResponse(transactions[start:end])
+
+	return NewSuccessResponse(transactions)
 }
 
 // POST /get-unconfirmed-transaction
