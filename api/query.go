@@ -145,10 +145,6 @@ func (a *API) listTransactions(ctx context.Context, filter struct {
 		accountID = acc.ID
 	}
 
-	if accountID == "" {
-		return NewErrorResponse(account.ErrAccountIDEmpty)
-	}
-
 	transactions, err := a.wallet.GetTransactions(accountID, filter.StartTxID, filter.Count, filter.Unconfirmed)
 	if err != nil {
 		return NewErrorResponse(err)
