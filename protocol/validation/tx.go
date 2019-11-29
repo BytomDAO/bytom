@@ -582,7 +582,5 @@ func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
 
 	close(closeCh)
 	wg.Wait()
-	close(workCh)
-	close(resultCh)
 	return results
 }
