@@ -91,18 +91,18 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 	blockGasSum := uint64(0)
 	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
 	b.TransactionStatus = bc.NewTransactionStatus()
-
-	for i, tx := range b.Transactions {
-		gasStatus, err := ValidateTx(tx, b)
-		if !gasStatus.GasValid {
-			return errors.Wrapf(err, "validate of transaction %d of %d", i, len(b.Transactions))
+	validateResults := ValidateTxs(b.Transactions, b)
+	for i, validateResult := range validateResults {
+		if !validateResult.gasStatus.GasValid {
+			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
 		}
 
-		if err := b.TransactionStatus.SetStatus(i, err != nil); err != nil {
+		if err := b.TransactionStatus.SetStatus(i, validateResult.err != nil); err != nil {
 			return err
 		}
-		coinbaseAmount += gasStatus.BTMValue
-		if blockGasSum += uint64(gasStatus.GasUsed); blockGasSum > consensus.MaxBlockGas {
+
+		coinbaseAmount += validateResult.gasStatus.BTMValue
+		if blockGasSum += uint64(validateResult.gasStatus.GasUsed); blockGasSum > consensus.MaxBlockGas {
 			return errOverBlockLimit
 		}
 	}

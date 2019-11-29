@@ -3,6 +3,8 @@ package validation
 import (
 	"fmt"
 	"math"
+	"runtime"
+	"sync"
 
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/consensus/segwit"
@@ -514,4 +516,73 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 		cache:     make(map[bc.Hash]error),
 	}
 	return vs.gasStatus, checkValid(vs, tx.TxHeader)
+}
+
+type validateTxWork struct {
+	i     int
+	tx    *bc.Tx
+	block *bc.Block
+}
+
+// ValidateTxResult is the result of async tx validate
+type ValidateTxResult struct {
+	i         int
+	gasStatus *GasState
+	err       error
+}
+
+// GetGasState return the gasStatus
+func (r *ValidateTxResult) GetGasState() *GasState {
+	return r.gasStatus
+}
+
+// GetError return the err
+func (r *ValidateTxResult) GetError() error {
+	return r.err
+}
+
+func validateTxWorker(workCh chan *validateTxWork, resultCh chan *ValidateTxResult, closeCh chan struct{}, wg *sync.WaitGroup) {
+	for {
+		select {
+		case work := <-workCh:
+			gasStatus, err := ValidateTx(work.tx, work.block)
+			resultCh <- &ValidateTxResult{i: work.i, gasStatus: gasStatus, err: err}
+		case <-closeCh:
+			wg.Done()
+			return
+		}
+	}
+}
+
+// ValidateTxs validates txs in async mode
+func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
+	txSize := len(txs)
+	validateWorkerNum := runtime.NumCPU()
+	//init the goroutine validate worker
+	var wg sync.WaitGroup
+	workCh := make(chan *validateTxWork, txSize)
+	resultCh := make(chan *ValidateTxResult, txSize)
+	closeCh := make(chan struct{})
+	for i := 0; i <= validateWorkerNum && i < txSize; i++ {
+		wg.Add(1)
+		go validateTxWorker(workCh, resultCh, closeCh, &wg)
+	}
+
+	//sent the works
+	for i, tx := range txs {
+		workCh <- &validateTxWork{i: i, tx: tx, block: block}
+	}
+
+	//collect validate results
+	results := make([]*ValidateTxResult, txSize)
+	for i := 0; i < txSize; i++ {
+		result := <-resultCh
+		results[result.i] = result
+	}
+
+	close(closeCh)
+	wg.Wait()
+	close(workCh)
+	close(resultCh)
+	return results
 }
