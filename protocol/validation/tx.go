@@ -541,17 +541,12 @@ func (r *ValidateTxResult) GetError() error {
 	return r.err
 }
 
-func validateTxWorker(workCh chan *validateTxWork, resultCh chan *ValidateTxResult, closeCh chan struct{}, wg *sync.WaitGroup) {
-	for {
-		select {
-		case work := <-workCh:
-			gasStatus, err := ValidateTx(work.tx, work.block)
-			resultCh <- &ValidateTxResult{i: work.i, gasStatus: gasStatus, err: err}
-		case <-closeCh:
-			wg.Done()
-			return
-		}
+func validateTxWorker(workCh chan *validateTxWork, resultCh chan *ValidateTxResult, wg *sync.WaitGroup) {
+	for work := range workCh {
+		gasStatus, err := ValidateTx(work.tx, work.block)
+		resultCh <- &ValidateTxResult{i: work.i, gasStatus: gasStatus, err: err}
 	}
+	wg.Done()
 }
 
 // ValidateTxs validates txs in async mode
@@ -562,16 +557,16 @@ func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
 	var wg sync.WaitGroup
 	workCh := make(chan *validateTxWork, txSize)
 	resultCh := make(chan *ValidateTxResult, txSize)
-	closeCh := make(chan struct{})
 	for i := 0; i <= validateWorkerNum && i < txSize; i++ {
 		wg.Add(1)
-		go validateTxWorker(workCh, resultCh, closeCh, &wg)
+		go validateTxWorker(workCh, resultCh, &wg)
 	}
 
 	//sent the works
 	for i, tx := range txs {
 		workCh <- &validateTxWork{i: i, tx: tx, block: block}
 	}
+	close(workCh)
 
 	//collect validate results
 	results := make([]*ValidateTxResult, txSize)
@@ -580,7 +575,6 @@ func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
 		results[result.i] = result
 	}
 
-	close(closeCh)
 	wg.Wait()
 	return results
 }
