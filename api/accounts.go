@@ -20,8 +20,9 @@ func (a *API) createAccount(ctx context.Context, ins struct {
 	RootXPubs []chainkd.XPub `json:"root_xpubs"`
 	Quorum    int            `json:"quorum"`
 	Alias     string         `json:"alias"`
+	Underived bool           `json:"underived"`
 }) Response {
-	acc, err := a.wallet.AccountMgr.Create(ins.RootXPubs, ins.Quorum, ins.Alias, signers.BIP0044)
+	acc, err := a.wallet.AccountMgr.Create(ins.RootXPubs, ins.Quorum, ins.Alias, ins.Underived, signers.BIP0044)
 	if err != nil {
 		return NewErrorResponse(err)
 	}

@@ -4,6 +4,7 @@ package signers
 import (
 	"bytes"
 	"encoding/binary"
+
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/errors"
 )
@@ -97,6 +98,11 @@ func getBip0044Path(accountIndex uint64, change bool, addrIndex uint64) [][]byte
 
 // Path returns the complete path for derived keys
 func Path(s *Signer, ks keySpace, change bool, addrIndex uint64) ([][]byte, error) {
+	// non derivative with key index is zero
+	if s.KeyIndex == 0 {
+		return nil, nil
+	}
+
 	switch s.DeriveRule {
 	case BIP0032:
 		return GetBip0032Path(s, ks, addrIndex), nil

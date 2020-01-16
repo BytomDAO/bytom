@@ -19,11 +19,11 @@ import (
 	"github.com/bytom/bytom/crypto"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/crypto/sha3pool"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const (
@@ -192,7 +192,7 @@ func (m *Manager) SaveAccount(account *Account) error {
 }
 
 // Create creates and save a new Account.
-func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveRule uint8) (*Account, error) {
+func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, underived bool, deriveRule uint8) (*Account, error) {
 	m.accountMu.Lock()
 	defer m.accountMu.Unlock()
 
@@ -200,10 +200,14 @@ func (m *Manager) Create(xpubs []chainkd.XPub, quorum int, alias string, deriveR
 		return nil, ErrDuplicateAlias
 	}
 
-	acctIndex := uint64(1)
-	if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
-		acctIndex = common.BytesToUnit64(rawIndexBytes) + 1
+	acctIndex := uint64(0)
+	if !underived {
+		acctIndex = uint64(1)
+		if rawIndexBytes := m.db.Get(GetAccountIndexKey(xpubs)); rawIndexBytes != nil {
+			acctIndex = common.BytesToUnit64(rawIndexBytes) + 1
+		}
 	}
+
 	account, err := CreateAccount(xpubs, quorum, alias, acctIndex, deriveRule)
 	if err != nil {
 		return nil, err

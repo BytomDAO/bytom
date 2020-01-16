@@ -19,6 +19,7 @@ func (a *API) createAsset(ctx context.Context, ins struct {
 	Definition      map[string]interface{} `json:"definition"`
 	LimitHeight     int64                  `json:"limit_height"`
 	IssuanceProgram chainjson.HexBytes     `json:"issuance_program"`
+	Underived       bool                   `json:"underived"`
 }) Response {
 	ass, err := a.wallet.AssetReg.Define(
 		ins.RootXPubs,
@@ -27,6 +28,7 @@ func (a *API) createAsset(ctx context.Context, ins struct {
 		ins.LimitHeight,
 		strings.ToUpper(strings.TrimSpace(ins.Alias)),
 		ins.IssuanceProgram,
+		ins.Underived,
 	)
 	if err != nil {
 		return NewErrorResponse(err)

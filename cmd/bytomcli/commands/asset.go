@@ -1,13 +1,13 @@
 package commands
 
 import (
+	"encoding/hex"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"encoding/hex"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/util"
 )
@@ -17,6 +17,7 @@ func init() {
 	createAssetCmd.PersistentFlags().StringVarP(&assetToken, "access", "a", "", "access token")
 	createAssetCmd.PersistentFlags().StringVarP(&assetDefiniton, "definition", "d", "", "definition for the asset")
 	createAssetCmd.PersistentFlags().StringVarP(&issuanceProgram, "issueprogram", "i", "", "issue program for the asset")
+	createAssetCmd.PersistentFlags().BoolVar(&underived, "underived", false, "create account with non derivative")
 
 	listAssetsCmd.PersistentFlags().StringVar(&assetID, "id", "", "ID of asset")
 }
@@ -34,8 +35,12 @@ var createAssetCmd = &cobra.Command{
 	Short: "Create an asset",
 	Args:  cobra.RangeArgs(1, 5),
 	Run: func(cmd *cobra.Command, args []string) {
-
-		var ins assetIns
+		ins := assetIns{
+			Quorum:      assetQuorum,
+			Alias:       args[0],
+			Underived:   underived,
+			AccessToken: assetToken,
+		}
 
 		for _, x := range args[1:] {
 			xpub := chainkd.XPub{}

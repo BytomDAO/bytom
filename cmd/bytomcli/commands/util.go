@@ -19,6 +19,7 @@ type accountIns struct {
 	Quorum      int            `json:"quorum"`
 	Alias       string         `json:"alias"`
 	AccessToken string         `json:"access_token"`
+	Underived   bool           `json:"underived"`
 }
 
 // assetIns is used for asset related request.
@@ -28,6 +29,7 @@ type assetIns struct {
 	Alias           string                 `json:"alias"`
 	Definition      map[string]interface{} `json:"definition"`
 	IssuanceProgram chainjson.HexBytes     `json:"issuance_program"`
+	Underived       bool                   `json:"underived"`
 	AccessToken     string                 `json:"access_token"`
 }
 

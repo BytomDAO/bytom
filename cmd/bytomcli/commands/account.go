@@ -14,6 +14,7 @@ import (
 func init() {
 	createAccountCmd.PersistentFlags().IntVarP(&accountQuorum, "quorom", "q", 1, "quorum must be greater than 0 and less than or equal to the number of signers")
 	createAccountCmd.PersistentFlags().StringVarP(&accountToken, "access", "a", "", "access token")
+	createAccountCmd.PersistentFlags().BoolVar(&underived, "underived", false, "create account with non derivative")
 
 	updateAccountAliasCmd.PersistentFlags().StringVar(&accountID, "id", "", "account ID")
 	updateAccountAliasCmd.PersistentFlags().StringVar(&accountAlias, "alias", "", "account alias")
@@ -48,6 +49,7 @@ var (
 	smartContract = false
 	from          = 0
 	count         = 0
+	underived     = false
 )
 
 var createAccountCmd = &cobra.Command{
@@ -55,7 +57,12 @@ var createAccountCmd = &cobra.Command{
 	Short: "Create an account",
 	Args:  cobra.MinimumNArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
-		ins := accountIns{}
+		ins := accountIns{
+			Quorum:      accountQuorum,
+			Alias:       args[0],
+			Underived:   underived,
+			AccessToken: accountToken,
+		}
 
 		for _, x := range args[1:] {
 			xpub := chainkd.XPub{}
@@ -65,10 +72,6 @@ var createAccountCmd = &cobra.Command{
 			}
 			ins.RootXPubs = append(ins.RootXPubs, xpub)
 		}
-
-		ins.Quorum = accountQuorum
-		ins.Alias = args[0]
-		ins.AccessToken = accountToken
 
 		data, exitCode := util.ClientCall("/create-account", &ins)
 		if exitCode != util.Success {

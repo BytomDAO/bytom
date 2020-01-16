@@ -17,7 +17,7 @@ const (
 	DefaultGasCredit = int64(30000)
 
 	//config parameter for coinbase reward
-	CoinbasePendingBlockNumber = uint64(100)
+	CoinbasePendingBlockNumber = uint64(1)
 	subsidyReductionInterval   = uint64(840000)
 	baseSubsidy                = uint64(41250000000)
 	InitialBlockSubsidy        = uint64(140700041250000000)

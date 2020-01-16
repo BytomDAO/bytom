@@ -126,7 +126,7 @@ func (reg *Registry) getNextAssetIndex() uint64 {
 }
 
 // Define defines a new Asset.
-func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, limitHeight int64, alias string, issuanceProgram chainjson.HexBytes) (*Asset, error) {
+func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[string]interface{}, limitHeight int64, alias string, issuanceProgram chainjson.HexBytes, underived bool) (*Asset, error) {
 	var err error
 	var assetSigner *signers.Signer
 
@@ -156,7 +156,10 @@ func (reg *Registry) Define(xpubs []chainkd.XPub, quorum int, definition map[str
 			return nil, err
 		}
 
-		path := signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
+		var path [][]byte
+		if !underived {
+			path = signers.GetBip0032Path(assetSigner, signers.AssetKeySpace)
+		}
 		derivedXPubs := chainkd.DeriveXPubs(assetSigner.XPubs, path)
 		derivedPKs := chainkd.XPubKeys(derivedXPubs)
 		issuanceProgram, vmver, err = multisigIssuanceProgram(derivedPKs, assetSigner.Quorum, limitHeight)
