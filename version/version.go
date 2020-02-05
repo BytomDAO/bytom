@@ -47,7 +47,7 @@ const (
 
 var (
 	// The full version string
-	Version = "1.0.10"
+	Version = "1.1.0"
 	// GitCommit is set with --ldflags "-X main.gitCommit=$(git rev-parse HEAD)"
 	GitCommit string
 	Status    *UpdateStatus

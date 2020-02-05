@@ -1,5 +1,5 @@
 language: go
-go_import_path: github.com/bytom
+go_import_path: github.com/bytom/bytom
 dist: trusty
 sudo: false
 

@@ -9,17 +9,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bytom/account"
-	"github.com/bytom/blockchain/pseudohsm"
-	"github.com/bytom/blockchain/signers"
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/common"
-	"github.com/bytom/consensus"
-	"github.com/bytom/crypto/ed25519/chainkd"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	dbm "github.com/bytom/database/leveldb"
+	"github.com/bytom/bytom/account"
+	"github.com/bytom/bytom/blockchain/pseudohsm"
+	"github.com/bytom/bytom/blockchain/signers"
+	"github.com/bytom/bytom/blockchain/txbuilder"
+	"github.com/bytom/bytom/common"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/crypto/ed25519/chainkd"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
+	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 // MockBlock mock a block

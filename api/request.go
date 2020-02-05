@@ -4,10 +4,10 @@ import (
 	"context"
 	"strings"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/encoding/json"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/encoding/json"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 // action error

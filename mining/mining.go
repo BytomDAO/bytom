@@ -7,16 +7,16 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/account"
-	"github.com/bytom/blockchain/txbuilder"
-	"github.com/bytom/consensus"
-	"github.com/bytom/errors"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/bc/types"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/protocol/validation"
-	"github.com/bytom/protocol/vm/vmutil"
+	"github.com/bytom/bytom/account"
+	"github.com/bytom/bytom/blockchain/txbuilder"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
+	"github.com/bytom/bytom/protocol/validation"
+	"github.com/bytom/bytom/protocol/vm/vmutil"
 )
 
 const logModule = "mining"

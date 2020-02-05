@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
-	"github.com/bytom/util"
+	"github.com/bytom/bytom/util"
 )
 
 var isMiningCmd = &cobra.Command{

@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bytom/equity/compiler"
+	"github.com/bytom/bytom/equity/compiler"
 )
 
 var (

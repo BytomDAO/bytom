@@ -3,13 +3,15 @@ package validation
 import (
 	"fmt"
 	"math"
+	"runtime"
+	"sync"
 
-	"github.com/bytom/consensus"
-	"github.com/bytom/consensus/segwit"
-	"github.com/bytom/errors"
-	"github.com/bytom/math/checked"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/vm"
+	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/consensus/segwit"
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/math/checked"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/vm"
 )
 
 const ruleAA = 142500
@@ -514,4 +516,65 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 		cache:     make(map[bc.Hash]error),
 	}
 	return vs.gasStatus, checkValid(vs, tx.TxHeader)
+}
+
+type validateTxWork struct {
+	i     int
+	tx    *bc.Tx
+	block *bc.Block
+}
+
+// ValidateTxResult is the result of async tx validate
+type ValidateTxResult struct {
+	i         int
+	gasStatus *GasState
+	err       error
+}
+
+// GetGasState return the gasStatus
+func (r *ValidateTxResult) GetGasState() *GasState {
+	return r.gasStatus
+}
+
+// GetError return the err
+func (r *ValidateTxResult) GetError() error {
+	return r.err
+}
+
+func validateTxWorker(workCh chan *validateTxWork, resultCh chan *ValidateTxResult, wg *sync.WaitGroup) {
+	for work := range workCh {
+		gasStatus, err := ValidateTx(work.tx, work.block)
+		resultCh <- &ValidateTxResult{i: work.i, gasStatus: gasStatus, err: err}
+	}
+	wg.Done()
+}
+
+// ValidateTxs validates txs in async mode
+func ValidateTxs(txs []*bc.Tx, block *bc.Block) []*ValidateTxResult {
+	txSize := len(txs)
+	validateWorkerNum := runtime.NumCPU()
+	//init the goroutine validate worker
+	var wg sync.WaitGroup
+	workCh := make(chan *validateTxWork, txSize)
+	resultCh := make(chan *ValidateTxResult, txSize)
+	for i := 0; i <= validateWorkerNum && i < txSize; i++ {
+		wg.Add(1)
+		go validateTxWorker(workCh, resultCh, &wg)
+	}
+
+	//sent the works
+	for i, tx := range txs {
+		workCh <- &validateTxWork{i: i, tx: tx, block: block}
+	}
+	close(workCh)
+
+	//collect validate results
+	results := make([]*ValidateTxResult, txSize)
+	for i := 0; i < txSize; i++ {
+		result := <-resultCh
+		results[result.i] = result
+	}
+
+	wg.Wait()
+	return results
 }

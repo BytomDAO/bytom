@@ -6,12 +6,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/account"
-	"github.com/bytom/consensus/difficulty"
-	"github.com/bytom/event"
-	"github.com/bytom/mining"
-	"github.com/bytom/protocol"
-	"github.com/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/account"
+	"github.com/bytom/bytom/consensus/difficulty"
+	"github.com/bytom/bytom/event"
+	"github.com/bytom/bytom/mining"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc/types"
 )
 
 const (

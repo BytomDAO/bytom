@@ -3,10 +3,10 @@ package protocol
 import (
 	"testing"
 
-	"github.com/bytom/config"
-	"github.com/bytom/protocol/bc"
-	"github.com/bytom/protocol/state"
-	"github.com/bytom/testutil"
+	"github.com/bytom/bytom/config"
+	"github.com/bytom/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/state"
+	"github.com/bytom/bytom/testutil"
 )
 
 func TestCalcReorganizeNodes(t *testing.T) {

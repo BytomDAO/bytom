@@ -6,10 +6,9 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/bytom/crypto"
-	"github.com/bytom/crypto/ed25519"
-	"github.com/bytom/crypto/sm3"
-	"github.com/bytom/math/checked"
+	"github.com/bytom/bytom/crypto"
+	"github.com/bytom/bytom/crypto/ed25519"
+	"github.com/bytom/bytom/math/checked"
 )
 
 func opSha256(vm *virtualMachine) error {
@@ -151,8 +150,4 @@ func opHash160(vm *virtualMachine) error {
 	}
 
 	return vm.push(crypto.Ripemd160(data), false)
-}
-
-func opSm3(vm *virtualMachine) error {
-	return doHash(vm, sm3.New)
 }
