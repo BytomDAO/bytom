@@ -29,6 +29,7 @@ type Handler struct {
 }
 
 func (h Handler) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	output, ok := h.Assets[r.URL.Path]
 	if !ok && r.URL.Path == "" && h.Index != "" {
 		output = h.Assets[h.Index]

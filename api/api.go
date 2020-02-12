@@ -356,6 +356,7 @@ func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore
 	authenticator := authn.NewAPI(accessTokens, authDisable)
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		defer req.Body.Close()
 		// TODO(tessr): check that this path exists; return early if this path isn't legit
 		req, err := authenticator.Authenticate(req)
 		if err != nil {
@@ -371,6 +372,7 @@ func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore
 // RedirectHandler redirect to dashboard handler
 func RedirectHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		defer req.Body.Close()
 		if req.URL.Path == "/" {
 			http.Redirect(w, req, "/dashboard/", http.StatusFound)
 			return
@@ -381,6 +383,7 @@ func RedirectHandler(next http.Handler) http.Handler {
 
 func walletHandler(m *http.ServeMux, walletEnable bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		defer req.Body.Close()
 		// when the wallet is not been opened and the url path is not been found, modify url path to error,
 		// and redirect handler to error
 		if _, pattern := m.Handler(req); pattern != req.URL.Path && !walletEnable {
