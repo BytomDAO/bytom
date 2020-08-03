@@ -12,7 +12,7 @@ import "C"
 import (
 	"unsafe"
 
-	"github.com/bytom/protocol/bc"
+	"github.com/bytom/bytom/protocol/bc"
 )
 
 func SimdAlgorithm(bh, seed *bc.Hash) *bc.Hash {
