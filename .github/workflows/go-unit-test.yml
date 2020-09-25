@@ -1,0 +1,28 @@
+name: go-unit-test
+on:
+#  push:
+#    tags:
+#      - v*
+#    branches:
+#      - master
+  pull_request:
+    tags:
+      - v*
+    branches:
+      - master
+      - dev
+jobs:
+  build:
+    strategy:
+      matrix:
+        go-version: [1.12.x, 1.13.x, 1.14.x]
+        os: [ubuntu-latest, macos-latest]
+    name: (${{ matrix.os }}, ${{ matrix.go-version }})
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go-version }}
+      - run: go test ./...
