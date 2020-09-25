@@ -25,4 +25,10 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: ${{ matrix.go-version }}
-      - run: make ci
+
+      - name: Run tests
+        shell: bash
+        run: |
+          export GO111MODULE=on
+          export GOPROXY=https://goproxy.cn
+          make test
