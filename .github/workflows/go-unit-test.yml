@@ -25,10 +25,10 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: ${{ matrix.go-version }}
-      - run: |
+      - run:
           echo "hello"
           echo ./...
-          echo $(shell go list ./... | grep -v '/vendor/')
+          echo $(go list ./... | grep -v '/vendor/')
           export GO111MODULE=auto && go test ./...
 
 #      - name: Run tests
