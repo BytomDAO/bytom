@@ -29,8 +29,8 @@ jobs:
       - name: Setup env
         shell: bash
         run: |
-          echo "::set-env name=GOPATH::/home/runner/work/bytom/go"
-          echo "::add-path::/home/runner/work/bytom/go/bin"
+          echo "::set-env name=GOPATH::/home/runner/work/go"
+          echo "::add-path::/home/runner/work/go/bin"
 
       - name: Unit test
         run: go test ./...
