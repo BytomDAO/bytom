@@ -25,7 +25,9 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: ${{ matrix.go-version }}
-      - run: export GO111MODULE=auto && go test ./...
+      - run: |
+          echo "hello"
+          export GO111MODULE=auto && go test ./...
 
 #      - name: Run tests
 #        shell: bash
