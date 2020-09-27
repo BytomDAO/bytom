@@ -27,6 +27,8 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - run: |
           echo "hello"
+          echo ./...
+          echo $(shell go list ./... | grep -v '/vendor/')
           export GO111MODULE=auto && go test ./...
 
 #      - name: Run tests
