@@ -20,15 +20,16 @@ jobs:
     name: (${{ matrix.os }}, ${{ matrix.go-version }})
     runs-on: ${{ matrix.os }}
     steps:
-#      - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
       - name: Setup go
         uses: actions/setup-go@v1
         with:
           go-version: ${{ matrix.go-version }}
+        run: go test ./...
 
-      - name: Run tests
-        shell: bash
-        run: |
-          export GO111MODULE=on
-          export GOPROXY=https://goproxy.cn
-          make test
+#      - name: Run tests
+#        shell: bash
+#        run: |
+#          export GO111MODULE=on
+#          export GOPROXY=https://goproxy.cn
+#          make test
