@@ -25,15 +25,16 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: ${{ matrix.go-version }}
-
-      - name: Setup env
-        shell: bash
-        run: |
-          echo "::set-env name=GOPATH::/home/runner/work/go"
-          echo "::add-path::/home/runner/work/go/bin"
-
-      - name: Unit test
         run: go test ./...
+
+#      - name: Setup env
+#        shell: bash
+#        run: |
+#          echo "::set-env name=GOPATH::/home/runner/work/go"
+#          echo "::add-path::/home/runner/work/go/bin"
+#
+#      - name: Unit test
+#        run: go test ./...
 
 #      echo $(go list ./... | grep -v '/vendor/') && export GOPATH=$HOME/go && go test ./...
 #          echo "hello"
