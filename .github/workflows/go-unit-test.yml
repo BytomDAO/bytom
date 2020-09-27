@@ -25,12 +25,11 @@ jobs:
         uses: actions/setup-go@v1
         with:
           go-version: ${{ matrix.go-version }}
-      - run:
-          export GOPATH=$HOME/go
+      - run: export GOPATH=$HOME/go && go test ./...
 #          echo "hello"
 #          echo ./...
 #          echo $(go list ./... | grep -v '/vendor/')
-          go test ./...
+
 
 #      - name: Run tests
 #        shell: bash
