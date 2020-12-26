@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"os/exec"
 	"path"
 
 	cmn "github.com/tendermint/tmlibs/common"
@@ -16,6 +18,16 @@ func EnsureRoot(rootDir string, network string) {
 	// Write default config file if missing.
 	if !cmn.FileExists(configFilePath) {
 		cmn.MustWriteFile(configFilePath, []byte(selectNetwork(network)), 0644)
+	}
+
+	cmn.EnsureDir(rootDir+"/key", 0700)
+	if err := os.Chdir(rootDir + "/key"); err != nil {
+		panic(err)
+	}
+
+	cmd := exec.Command("/bin/bash", "-c", `go run $GOROOT/src/crypto/tls/generate_cert.go --host="localhost"`)
+	if err := cmd.Run(); err != nil {
+		panic(err)
 	}
 }
 
@@ -45,14 +57,21 @@ laddr = "tcp://0.0.0.0:46658"
 seeds = ""
 `
 
+var httpsConfigTmpl = `
+[https]
+enable_tls = true
+cert_file = "key/cert.pem"
+key_file = "key/key.pem"
+`
+
 // Select network seeds to merge a new string.
 func selectNetwork(network string) string {
 	switch network {
 	case "mainnet":
-		return defaultConfigTmpl + mainNetConfigTmpl
+		return defaultConfigTmpl + mainNetConfigTmpl + httpsConfigTmpl
 	case "testnet":
-		return defaultConfigTmpl + testNetConfigTmpl
+		return defaultConfigTmpl + testNetConfigTmpl + httpsConfigTmpl
 	default:
-		return defaultConfigTmpl + soloNetConfigTmpl
+		return defaultConfigTmpl + soloNetConfigTmpl + httpsConfigTmpl
 	}
 }

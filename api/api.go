@@ -164,8 +164,16 @@ func (a *API) StartServer(address string) {
 	// it's blocking and we need to proceed to the rest of the core setup after
 	// we call it.
 	go func() {
-		if err := a.server.Serve(listener); err != nil {
-			log.WithFields(log.Fields{"module": logModule, "error": errors.Wrap(err, "Serve")}).Error("Rpc server")
+		if cfg.CommonConfig.Https.EnableTLS {
+			certFile := cfg.CommonConfig.RootDir + "/" + cfg.CommonConfig.Https.CertFile
+			keyFile := cfg.CommonConfig.RootDir + "/" + cfg.CommonConfig.Https.KeyFile
+			if err = a.server.ServeTLS(listener, certFile, keyFile); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "error": errors.Wrap(err, "ServeTLS")}).Error("Rpc server")
+			}
+		} else {
+			if err := a.server.Serve(listener); err != nil {
+				log.WithFields(log.Fields{"module": logModule, "error": errors.Wrap(err, "Serve")}).Error("Rpc server")
+			}
 		}
 	}()
 }

@@ -28,6 +28,7 @@ type Config struct {
 	Web       *WebConfig       `mapstructure:"web"`
 	Simd      *SimdConfig      `mapstructure:"simd"`
 	Websocket *WebsocketConfig `mapstructure:"ws"`
+	Https     *HttpsConfig     `mapstructure:"https"`
 }
 
 // Default configurable parameters.
@@ -205,6 +206,13 @@ type WebsocketConfig struct {
 	MaxNumConcurrentReqs int `mapstructure:"max_num_concurrent_reqs"`
 }
 
+// enable https
+type HttpsConfig struct {
+	EnableTLS bool   `mapstructure:"enable_tls"`
+	CertFile  string `mapstructure:"cert_file"`
+	KeyFile   string `mapstructure:"key_file"`
+}
+
 // Default configurable rpc's auth parameters.
 func DefaultRPCAuthConfig() *RPCAuthConfig {
 	return &RPCAuthConfig{
@@ -240,6 +248,14 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 	return &WebsocketConfig{
 		MaxNumWebsockets:     25,
 		MaxNumConcurrentReqs: 20,
+	}
+}
+
+func DefaultHttpsConfig() *HttpsConfig {
+	return &HttpsConfig{
+		EnableTLS: false,
+		CertFile:  "key/cert.pem",
+		KeyFile:   "key/key.pem",
 	}
 }
 
