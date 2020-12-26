@@ -33,6 +33,7 @@ var RootCmd = &cobra.Command{
 			config.RootDir = strings.Join(pathParts, "/")
 		}
 		config.SetRoot(config.RootDir)
+		config.API.Init()
 		return nil
 	},
 }

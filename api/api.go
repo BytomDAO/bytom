@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -132,6 +133,7 @@ func (a *API) initServer(config *cfg.Config) {
 
 	handler = AuthHandler(mux, a.accessTokens, config.Auth.Disable)
 	handler = RedirectHandler(handler)
+	handler = IPFilterHandler(handler, config.API.WhiteMap, config.API.BlackMap)
 
 	secureheader.DefaultConfig.PermitClearLoopback = true
 	secureheader.DefaultConfig.HTTPSRedirect = false
@@ -359,6 +361,34 @@ func webAssetsHandler(next http.Handler) http.Handler {
 	return mux
 }
 
+// IPFilterHandler ip filter: white_list、black_list
+func IPFilterHandler(handler http.Handler, white map[string]struct{}, black map[string]struct{}) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		ip := ClientIP(req)
+		if len(ip) == 0 {
+			log.WithFields(log.Fields{"module": logModule}).Error("ip is empty")
+			errorFormatter.Write(req.Context(), rw, errors.New("ip is empty"))
+			return
+		} else if ip == "::1" || ip == "0:0:0:0:0:0:0:1" {
+			ip = "127.0.0.1"
+		}
+
+		if len(white) > 0 {
+			if _, ok := white[ip]; !ok {
+				errorFormatter.Write(req.Context(), rw, errors.New("access denied"))
+				return
+			}
+		} else if len(black) > 0 {
+			if _, ok := black[ip]; ok {
+				errorFormatter.Write(req.Context(), rw, errors.New("access denied"))
+				return
+			}
+		}
+
+		handler.ServeHTTP(rw, req)
+	})
+}
+
 // AuthHandler access token auth Handler
 func AuthHandler(handler http.Handler, accessTokens *accesstoken.CredentialStore, authDisable bool) http.Handler {
 	authenticator := authn.NewAPI(accessTokens, authDisable)
@@ -405,4 +435,23 @@ func walletHandler(m *http.ServeMux, walletEnable bool) http.Handler {
 func walletRedirectHandler(w http.ResponseWriter, req *http.Request) {
 	h := http.RedirectHandler(req.URL.String(), http.StatusMovedPermanently)
 	h.ServeHTTP(w, req)
+}
+
+func ClientIP(r *http.Request) string {
+	xForwardedFor := r.Header.Get("X-Forwarded-For")
+	ip := strings.TrimSpace(strings.Split(xForwardedFor, ",")[0])
+	if ip != "" {
+		return ip
+	}
+
+	ip = strings.TrimSpace(r.Header.Get("X-Real-Ip"))
+	if ip != "" {
+		return ip
+	}
+
+	if ip, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr)); err == nil {
+		return ip
+	}
+
+	return ""
 }

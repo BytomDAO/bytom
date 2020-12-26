@@ -62,6 +62,8 @@ var apiConfigTmpl = `
 enable_tls = true
 cert_file = "key/cert.pem"
 key_file = "key/key.pem"
+white_list = []
+black_list = []
 `
 
 // Select network seeds to merge a new string.

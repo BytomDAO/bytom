@@ -209,9 +209,22 @@ type WebsocketConfig struct {
 
 // API enable https
 type APIConfig struct {
-	EnableTLS bool   `mapstructure:"enable_tls"`
-	CertFile  string `mapstructure:"cert_file"`
-	KeyFile   string `mapstructure:"key_file"`
+	EnableTLS bool     `mapstructure:"enable_tls"`
+	CertFile  string   `mapstructure:"cert_file"`
+	KeyFile   string   `mapstructure:"key_file"`
+	WhiteList []string `mapstructure:"white_list"`
+	BlackList []string `mapstructure:"black_list"`
+	WhiteMap  map[string]struct{}
+	BlackMap  map[string]struct{}
+}
+
+func (a *APIConfig) Init() {
+	for _, ip := range a.WhiteList {
+		a.WhiteMap[ip] = struct{}{}
+	}
+	for _, ip := range a.BlackList {
+		a.BlackMap[ip] = struct{}{}
+	}
 }
 
 // Default configurable rpc's auth parameters.
@@ -257,6 +270,10 @@ func DefaultAPIConfig() *APIConfig {
 		EnableTLS: false,
 		CertFile:  "key/cert.pem",
 		KeyFile:   "key/key.pem",
+		WhiteList: []string{},
+		BlackList: []string{},
+		WhiteMap:  map[string]struct{}{},
+		BlackMap:  map[string]struct{}{},
 	}
 }
 

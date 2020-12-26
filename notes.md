@@ -12,3 +12,12 @@ bytomd node --auth.disable
 
 curl -k https://localhost:9888/net-info
 ```
+
+```toml
+[api]
+enable_tls = true
+cert_file = "key/cert.pem"
+key_file = "key/key.pem"
+white_list = ["127.0.0.1"]
+black_list = ["::1"]
+```
