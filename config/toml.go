@@ -57,8 +57,8 @@ laddr = "tcp://0.0.0.0:46658"
 seeds = ""
 `
 
-var httpsConfigTmpl = `
-[https]
+var apiConfigTmpl = `
+[api]
 enable_tls = true
 cert_file = "key/cert.pem"
 key_file = "key/key.pem"
@@ -68,10 +68,10 @@ key_file = "key/key.pem"
 func selectNetwork(network string) string {
 	switch network {
 	case "mainnet":
-		return defaultConfigTmpl + mainNetConfigTmpl + httpsConfigTmpl
+		return defaultConfigTmpl + mainNetConfigTmpl + apiConfigTmpl
 	case "testnet":
-		return defaultConfigTmpl + testNetConfigTmpl + httpsConfigTmpl
+		return defaultConfigTmpl + testNetConfigTmpl + apiConfigTmpl
 	default:
-		return defaultConfigTmpl + soloNetConfigTmpl + httpsConfigTmpl
+		return defaultConfigTmpl + soloNetConfigTmpl + apiConfigTmpl
 	}
 }

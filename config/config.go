@@ -28,7 +28,7 @@ type Config struct {
 	Web       *WebConfig       `mapstructure:"web"`
 	Simd      *SimdConfig      `mapstructure:"simd"`
 	Websocket *WebsocketConfig `mapstructure:"ws"`
-	Https     *HttpsConfig     `mapstructure:"https"`
+	API       *APIConfig       `mapstructure:"api"`
 }
 
 // Default configurable parameters.
@@ -41,6 +41,7 @@ func DefaultConfig() *Config {
 		Web:        DefaultWebConfig(),
 		Simd:       DefaultSimdConfig(),
 		Websocket:  DefaultWebsocketConfig(),
+		API:        DefaultAPIConfig(),
 	}
 }
 
@@ -206,8 +207,8 @@ type WebsocketConfig struct {
 	MaxNumConcurrentReqs int `mapstructure:"max_num_concurrent_reqs"`
 }
 
-// enable https
-type HttpsConfig struct {
+// API enable https
+type APIConfig struct {
 	EnableTLS bool   `mapstructure:"enable_tls"`
 	CertFile  string `mapstructure:"cert_file"`
 	KeyFile   string `mapstructure:"key_file"`
@@ -251,8 +252,8 @@ func DefaultWebsocketConfig() *WebsocketConfig {
 	}
 }
 
-func DefaultHttpsConfig() *HttpsConfig {
-	return &HttpsConfig{
+func DefaultAPIConfig() *APIConfig {
+	return &APIConfig{
 		EnableTLS: false,
 		CertFile:  "key/cert.pem",
 		KeyFile:   "key/key.pem",
