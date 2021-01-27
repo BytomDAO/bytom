@@ -9,10 +9,10 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/consensus/segwit"
 	"github.com/bytom/bytom/crypto/sha3pool"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 // GetAccountUtxos return all account unspent outputs
@@ -116,9 +116,6 @@ func (w *Wallet) filterAccountUtxo(utxos []*account.UTXO) []*account.UTXO {
 	result := make([]*account.UTXO, 0, len(utxos))
 	for s := range outsByScript {
 		if !segwit.IsP2WScript([]byte(s)) {
-			for _, utxo := range outsByScript[s] {
-				result = append(result, utxo)
-			}
 			continue
 		}
 
