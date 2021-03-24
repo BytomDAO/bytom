@@ -5,8 +5,6 @@ import (
 	"math/big"
 )
 
-const intGobVersion byte = 1
-
 var trueBytes = []byte{1}
 
 func BoolBytes(b bool) (result []byte) {
@@ -25,7 +23,6 @@ func AsBool(bytes []byte) bool {
 	return false
 }
 
-// todo
 func Int64Bytes(n int64) []byte {
 	if n == 0 {
 		return []byte{}
@@ -57,12 +54,14 @@ func AsInt64(b []byte) (int64, error) {
 	return int64(res), nil
 }
 
+// BigIntBytes conv big int to bytes
 func BigIntBytes(n *big.Int) []byte {
 	// MarshalText return ([]byte,error) and error always equal nil
 	bytes, _ := n.MarshalText()
 	return bytes
 }
 
+// AsBigInt conv bytes to big int
 func AsBigInt(b []byte) (*big.Int, error) {
 	res := new(big.Int)
 	if err := res.UnmarshalText(b); err != nil {
