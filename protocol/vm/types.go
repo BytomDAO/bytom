@@ -40,34 +40,6 @@ func Int64Bytes(n int64) []byte {
 	return res
 }
 
-func BigIntBytes(n *big.Int) []byte {
-	res := n.Bytes()
-	b := intGobVersion << 1 // make space for sign bit
-	if n.Sign() < 0 {
-		b |= 1
-	}
-	res = append(res, b)
-	return res
-}
-
-func AsBigInt(b []byte) (*big.Int, error) {
-	if len(b) == 0 {
-		return new(big.Int).SetInt64(0), nil
-	}
-
-	buf := b[len(b)-1]
-	if buf>>1 != intGobVersion {
-		return nil, ErrBadValue
-	}
-	var res = new(big.Int)
-	res.SetBytes(b[0 : len(b)-1])
-	if buf&1 != 0 {
-		res.Neg(res)
-	}
-
-	return res, nil
-}
-
 func AsInt64(b []byte) (int64, error) {
 	if len(b) == 0 {
 		return 0, nil
@@ -85,13 +57,13 @@ func AsInt64(b []byte) (int64, error) {
 	return int64(res), nil
 }
 
-func BigIntBytes1(n *big.Int) []byte {
-	// MarshalText return ([]byte,error) and error always is nil
+func BigIntBytes(n *big.Int) []byte {
+	// MarshalText return ([]byte,error) and error always equal nil
 	bytes, _ := n.MarshalText()
 	return bytes
 }
 
-func AsBigInt1(b []byte) (*big.Int, error) {
+func AsBigInt(b []byte) (*big.Int, error) {
 	res := new(big.Int)
 	if err := res.UnmarshalText(b); err != nil {
 		return nil, ErrBadValue

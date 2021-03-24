@@ -95,22 +95,10 @@ func TestBigIntBytes(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		gotData := BigIntBytes1(c.num)
+		gotData := BigIntBytes(c.num)
 		if !bytes.Equal(gotData, c.data) {
 			t.Errorf("BigIntBytes(%d) = %x want %x", c.num, gotData, c.data)
 		}
-
-		gotNum, _ := AsBigInt1(c.data)
-		if gotNum.Cmp(c.num) != 0 {
-			t.Errorf("AsBigInt(%x) = %d want %d", c.data, gotNum, c.num)
-		}
-	}
-
-	data := []byte{1, 1, 1, 1, 1, 1, 1, 1, 1}
-	_, err := AsBigInt1(data)
-	want := ErrBadValue
-	if err != want {
-		t.Errorf("AsInt64(%x) = %v want %v", data, err, want)
 	}
 }
 
@@ -131,7 +119,7 @@ func TestAsBigInt(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		gotNum, err := AsBigInt1(c.data)
+		gotNum, err := AsBigInt(c.data)
 		if err != nil {
 			if err != c.wantErr {
 				t.Errorf("AsBigInt(%x) = %v want %v", c.data, gotNum, c.num)
