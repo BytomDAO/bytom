@@ -7,6 +7,7 @@ import (
 
 var trueBytes = []byte{1}
 
+// BoolBytes convert bool to bytes
 func BoolBytes(b bool) (result []byte) {
 	if b {
 		return trueBytes
@@ -14,6 +15,7 @@ func BoolBytes(b bool) (result []byte) {
 	return []byte{}
 }
 
+// AsBool convert bytes to bool
 func AsBool(bytes []byte) bool {
 	for _, b := range bytes {
 		if b != 0 {
@@ -23,6 +25,7 @@ func AsBool(bytes []byte) bool {
 	return false
 }
 
+// Int64Bytes convert int64 to bytes
 func Int64Bytes(n int64) []byte {
 	if n == 0 {
 		return []byte{}
@@ -37,6 +40,7 @@ func Int64Bytes(n int64) []byte {
 	return res
 }
 
+// AsInt64 convert bytes to int64
 func AsInt64(b []byte) (int64, error) {
 	if len(b) == 0 {
 		return 0, nil
