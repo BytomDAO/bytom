@@ -85,7 +85,7 @@ func TestBigIntBytes(t *testing.T) {
 		num  *big.Int
 		data []byte
 	}{
-		{new(big.Int).SetInt64(0), []byte{48}},
+		{new(big.Int).SetInt64(0), []byte{0x30}},
 		{new(big.Int).SetInt64(1), []byte{0x31}},
 		{new(big.Int).SetInt64(255), []byte{0x32, 0x35, 0x35}},
 		{new(big.Int).SetInt64(256), []byte{0x32, 0x35, 0x36}},
@@ -114,7 +114,7 @@ func TestAsBigInt(t *testing.T) {
 		data    []byte
 		wantErr error
 	}{
-		{new(big.Int).SetInt64(0), []byte{48}, nil},
+		{new(big.Int).SetInt64(0), []byte{0x30}, nil},
 		{new(big.Int).SetInt64(1), []byte{0x31}, nil},
 		{new(big.Int).SetInt64(255), []byte{0x32, 0x35, 0x35}, nil},
 		{new(big.Int).SetInt64(256), []byte{0x32, 0x35, 0x36}, nil},
