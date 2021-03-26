@@ -59,21 +59,22 @@ func AsInt64(b []byte) (int64, error) {
 	return int64(res), nil
 }
 
-// BigIntBytes conv big int to bytes
+// BigIntBytes conv big int to bytes, uint256 is version 1.1.1
 func BigIntBytes(n *uint256.Int) []byte {
-	return []byte(n.Hex())
+	b := n.Bytes32()
+	return b[:]
 }
 
 // AsBigInt conv bytes to big int
 func AsBigInt(b []byte) (*uint256.Int, error) {
-	if len(b) == 0 {
-		return uint256.NewInt(), nil
-	}
-
-	res, err := uint256.FromHex(string(b))
-	if err != nil {
+	if len(b) > 32 {
 		return nil, ErrBadValue
 	}
 
-	return res, nil
+	res := uint256.NewInt()
+	if len(b) == 0 {
+		return res, nil
+	}
+
+	return res.SetBytes(b), nil
 }
