@@ -2,7 +2,8 @@ package vm
 
 import (
 	"encoding/binary"
-	"math/big"
+
+	"github.com/holiman/uint256"
 )
 
 var trueBytes = []byte{1}
@@ -59,16 +60,18 @@ func AsInt64(b []byte) (int64, error) {
 }
 
 // BigIntBytes conv big int to bytes
-func BigIntBytes(n *big.Int) []byte {
-	// MarshalText return ([]byte,error) and error always equal nil
-	bytes, _ := n.MarshalText()
-	return bytes
+func BigIntBytes(n *uint256.Int) []byte {
+	return []byte(n.Hex())
 }
 
 // AsBigInt conv bytes to big int
-func AsBigInt(b []byte) (*big.Int, error) {
-	res := new(big.Int)
-	if err := res.UnmarshalText(b); err != nil {
+func AsBigInt(b []byte) (*uint256.Int, error) {
+	if len(b) == 0 {
+		return uint256.NewInt(), nil
+	}
+
+	res, err := uint256.FromHex(string(b))
+	if err != nil {
 		return nil, ErrBadValue
 	}
 
