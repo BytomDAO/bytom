@@ -1,9 +1,14 @@
 package vm
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+
+	"github.com/holiman/uint256"
+)
 
 var trueBytes = []byte{1}
 
+// BoolBytes convert bool to bytes
 func BoolBytes(b bool) (result []byte) {
 	if b {
 		return trueBytes
@@ -11,6 +16,7 @@ func BoolBytes(b bool) (result []byte) {
 	return []byte{}
 }
 
+// AsBool convert bytes to bool
 func AsBool(bytes []byte) bool {
 	for _, b := range bytes {
 		if b != 0 {
@@ -20,6 +26,7 @@ func AsBool(bytes []byte) bool {
 	return false
 }
 
+// Int64Bytes convert int64 to bytes
 func Int64Bytes(n int64) []byte {
 	if n == 0 {
 		return []byte{}
@@ -34,6 +41,7 @@ func Int64Bytes(n int64) []byte {
 	return res
 }
 
+// AsInt64 convert bytes to int64
 func AsInt64(b []byte) (int64, error) {
 	if len(b) == 0 {
 		return 0, nil
@@ -49,4 +57,19 @@ func AsInt64(b []byte) (int64, error) {
 	// converting uint64 to int64 is a safe operation that
 	// preserves all data
 	return int64(res), nil
+}
+
+// BigIntBytes conv big int to bytes, uint256 is version 1.1.1
+func BigIntBytes(n *uint256.Int) []byte {
+	b := n.Bytes32()
+	return b[:]
+}
+
+// AsBigInt conv bytes to big int
+func AsBigInt(b []byte) (*uint256.Int, error) {
+	if len(b) > 32 {
+		return nil, ErrBadValue
+	}
+
+	return uint256.NewInt().SetBytes(b), nil
 }
