@@ -68,7 +68,7 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 		return nil, err
 	}
 
-	b.TransactionStatusHash, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
+	_, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	return b, err
 }
 

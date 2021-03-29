@@ -2,7 +2,6 @@ package integration
 
 import (
 	"testing"
-
 	"time"
 
 	"github.com/bytom/bytom/config"
@@ -33,6 +32,7 @@ func init() {
 				verifyResult: []*bc.TxVerifyResult{{StatusFail: false}},
 			},
 		},
+		// 0 号的hash不会变
 		1: {
 			{
 				block: &types.Block{
@@ -40,9 +40,9 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431597,
-						Nonce:             5,
+						Nonce:             30,
 						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("ce4fe9431cd0225b3a811f8f8ec922f2b07a921bb12a8dddae9a85540072c770"),
+						PreviousBlockHash: testutil.MustDecodeHash("dcaafb317d6faee190410e0c9b99b8e2ac84e748188e54a48c6569890f83ff38"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -66,9 +66,9 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431697,
-						Nonce:             36,
+						Nonce:             40,
 						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("ce4fe9431cd0225b3a811f8f8ec922f2b07a921bb12a8dddae9a85540072c770"),
+						PreviousBlockHash: testutil.MustDecodeHash("dcaafb317d6faee190410e0c9b99b8e2ac84e748188e54a48c6569890f83ff38"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -88,16 +88,16 @@ func init() {
 			},
 		},
 		2: {
-			// only has coinbase transaction
+			// the below blocks's previous block is blockMap[1][0]
 			{
 				block: &types.Block{
 					BlockHeader: types.BlockHeader{
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						Nonce:             0,
+						Nonce:             13,
 						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("d4fa7eedbd390821c7e9ca0f3e7df1b63bed069469427a3f79465148da8dbf32"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -122,9 +122,9 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						Nonce:             12,
+						Nonce:             3,
 						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("d4fa7eedbd390821c7e9ca0f3e7df1b63bed069469427a3f79465148da8dbf32"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -167,9 +167,9 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             4,
+						Nonce:             12,
 						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("d4fa7eedbd390821c7e9ca0f3e7df1b63bed069469427a3f79465148da8dbf32"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -212,9 +212,9 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             17,
+						Nonce:             4,
 						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("d4fa7eedbd390821c7e9ca0f3e7df1b63bed069469427a3f79465148da8dbf32"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -267,7 +267,7 @@ func init() {
 						Timestamp:         1556431607,
 						Nonce:             4,
 						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("d4fa7eedbd390821c7e9ca0f3e7df1b63bed069469427a3f79465148da8dbf32"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -319,9 +319,9 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             4,
+						Nonce:             1,
 						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("d4fa7eedbd390821c7e9ca0f3e7df1b63bed069469427a3f79465148da8dbf32"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -374,9 +374,9 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						Nonce:             12,
+						Nonce:             1,
 						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("2eaf7f40b0a0d4a5025f3d5d9b8589d3db1634f7b55089ca59253a9c587266b2"),
+						PreviousBlockHash: testutil.MustDecodeHash("d4fa7eedbd390821c7e9ca0f3e7df1b63bed069469427a3f79465148da8dbf32"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -432,9 +432,9 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						Nonce:             0,
+						Nonce:             8,
 						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("09c6064f4f1e7325440c45df03e97f97dbfbb66033315a384308256038af6c30"),
+						PreviousBlockHash: testutil.MustDecodeHash("3aa0e94185cdcd14b5daa5aa92d57bec344a1485c625402faaf80b8926b3d4ec"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -459,9 +459,9 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						Nonce:             5,
+						Nonce:             9,
 						Bits:              2305843009214532812,
-						PreviousBlockHash: testutil.MustDecodeHash("33f56264283cc12e3b232068caa13c1fd052c21b231a94e8c0a40bac25629f88"),
+						PreviousBlockHash: testutil.MustDecodeHash("b5c4fbf7ac6eed49bd3d1a8f2db10bcfd608599a1956c6eb0798e24e9c521fb7"),
 					},
 					Transactions: []*types.Tx{
 						types.NewTx(types.TxData{
@@ -1229,17 +1229,11 @@ func mustPostProcessBlock() {
 
 func mustCalcMerkleRootHash(attachBlock *attachBlock) {
 	bcBlock := types.MapBlock(attachBlock.block)
-	txStatusHash, err := types.TxStatusMerkleRoot(attachBlock.verifyResult)
-	if err != nil {
-		panic("fail on calc genesis tx status merkle root")
-	}
-
 	merkleRoot, err := types.TxMerkleRoot(bcBlock.Transactions)
 	if err != nil {
 		panic("fail on calc genesis tx merkel root")
 	}
 
-	attachBlock.block.TransactionStatusHash = txStatusHash
 	attachBlock.block.TransactionsMerkleRoot = merkleRoot
 }
 

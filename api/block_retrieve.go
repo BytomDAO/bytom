@@ -84,7 +84,6 @@ func (a *API) getBlock(ins BlockReq) Response {
 		Bits:                   block.Bits,
 		Difficulty:             difficulty.CalcWork(block.Bits).String(),
 		TransactionsMerkleRoot: &block.TransactionsMerkleRoot,
-		TransactionStatusHash:  &block.TransactionStatusHash,
 		Transactions:           []*BlockTx{},
 	}
 
