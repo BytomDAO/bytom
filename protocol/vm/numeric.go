@@ -2,6 +2,9 @@ package vm
 
 import (
 	"math"
+	"math/big"
+
+	"github.com/holiman/uint256"
 
 	"github.com/bytom/bytom/math/checked"
 )
@@ -11,15 +14,23 @@ func op1Add(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	res, ok := checked.AddInt64(n, 1)
-	if !ok {
+
+	u256Num, ok := uint256.FromBig(new(big.Int).SetInt64(1))
+	if ok {
+		return ErrBadValue
+	}
+
+	res := uint256.NewInt()
+	if res.AddOverflow(n, u256Num) {
 		return ErrRange
 	}
-	return vm.pushInt64(res, true)
+
+	return vm.pushBigInt(res, true)
 }
 
 func op1Sub(vm *virtualMachine) error {

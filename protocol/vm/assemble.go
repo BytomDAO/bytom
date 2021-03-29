@@ -6,9 +6,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
+	"math/big"
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/holiman/uint256"
 
 	"github.com/bytom/bytom/errors"
 )
@@ -90,8 +93,12 @@ func Assemble(s string) (res []byte, err error) {
 				b++
 			}
 			res = append(res, PushdataBytes(bytes)...)
-		} else if num, err := strconv.ParseInt(token, 10, 64); err == nil {
-			res = append(res, PushdataInt64(num)...)
+		} else if bigIntNum, ok := new(big.Int).SetString(token, 10); ok {
+			if uint256Num, ok := uint256.FromBig(bigIntNum); !ok {
+				res = append(res, PushdataBytes(BigIntBytes(uint256Num))...)
+			}else{
+				return nil, errors.Wrap(ErrToken, token)
+			}
 		} else {
 			return nil, errors.Wrap(ErrToken, token)
 		}

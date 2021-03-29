@@ -6,6 +6,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/holiman/uint256"
+
 	"github.com/bytom/bytom/errors"
 )
 
@@ -158,6 +160,10 @@ func (vm *virtualMachine) pushInt64(n int64, deferred bool) error {
 	return vm.push(Int64Bytes(n), deferred)
 }
 
+func (vm *virtualMachine) pushBigInt(n *uint256.Int, deferred bool) error {
+	return vm.push(BigIntBytes(n), deferred)
+}
+
 func (vm *virtualMachine) pop(deferred bool) ([]byte, error) {
 	if len(vm.dataStack) == 0 {
 		return nil, ErrDataStackUnderflow
@@ -181,6 +187,16 @@ func (vm *virtualMachine) popInt64(deferred bool) (int64, error) {
 		return 0, err
 	}
 	n, err := AsInt64(bytes)
+	return n, err
+}
+
+func (vm *virtualMachine) popBigInt(deferred bool) (*uint256.Int, error) {
+	bytes, err := vm.pop(deferred)
+	if err != nil {
+		return nil, err
+	}
+
+	n, err := AsBigInt(bytes)
 	return n, err
 }
 
