@@ -27,7 +27,6 @@ func TestAssemble(t *testing.T) {
 
 	for _, c := range cases {
 		got, gotErr := Assemble(c.plain)
-
 		if errors.Root(gotErr) != c.wantErr {
 			t.Errorf("Compile(%s) err = %v want %v", c.plain, errors.Root(gotErr), c.wantErr)
 			continue

@@ -6,14 +6,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
-	"math/big"
 	"strconv"
 	"strings"
 	"unicode"
 
-	"github.com/holiman/uint256"
-
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/math/checked"
 )
 
 // Assemble converts a string like "2 3 ADD 5 NUMEQUAL" into 0x525393559c.
@@ -93,12 +91,8 @@ func Assemble(s string) (res []byte, err error) {
 				b++
 			}
 			res = append(res, PushdataBytes(bytes)...)
-		} else if bigIntNum, ok := new(big.Int).SetString(token, 10); ok {
-			if uint256Num, ok := uint256.FromBig(bigIntNum); !ok {
-				res = append(res, PushdataBytes(BigIntBytes(uint256Num))...)
-			}else{
-				return nil, errors.Wrap(ErrToken, token)
-			}
+		} else if num, ok := checked.NewUInt256(token); ok {
+			res = append(res, PushdataBytes(BigIntBytes(num))...)
 		} else {
 			return nil, errors.Wrap(ErrToken, token)
 		}

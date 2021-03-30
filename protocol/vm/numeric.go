@@ -2,7 +2,6 @@ package vm
 
 import (
 	"math"
-	"math/big"
 
 	"github.com/holiman/uint256"
 
@@ -20,13 +19,13 @@ func op1Add(vm *virtualMachine) error {
 		return err
 	}
 
-	u256Num, ok := uint256.FromBig(new(big.Int).SetInt64(1))
-	if ok {
+	num, ok := checked.NewUInt256("1")
+	if !ok {
 		return ErrBadValue
 	}
 
 	res := uint256.NewInt()
-	if res.AddOverflow(n, u256Num) {
+	if res.AddOverflow(n, num) {
 		return ErrRange
 	}
 
