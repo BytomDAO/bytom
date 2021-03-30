@@ -273,11 +273,15 @@ func LshiftUint32(a, b uint32) (result uint32, ok bool) {
 // NewUInt256 returns uint256
 // with an integer overflow check.
 func NewUInt256(a string) (num *uint256.Int, ok bool) {
-	if bigIntNum, ok := new(big.Int).SetString(a, 10); ok {
-		if uint256Num, ok := uint256.FromBig(bigIntNum); !ok {
-			return uint256Num, true
-		}
+	bigIntNum, ok := new(big.Int).SetString(a, 10)
+	if !ok {
+		return nil, false
 	}
 
-	return nil, false
+	uint256Num, ok := uint256.FromBig(bigIntNum)
+	if ok {
+		return nil, false
+	}
+	
+	return uint256Num, true
 }
