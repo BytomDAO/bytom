@@ -196,8 +196,7 @@ func (vm *virtualMachine) popBigInt(deferred bool) (*uint256.Int, error) {
 		return nil, err
 	}
 
-	n, err := AsBigInt(bytes)
-	return n, err
+	return AsBigInt(bytes)
 }
 
 func (vm *virtualMachine) top() ([]byte, error) {

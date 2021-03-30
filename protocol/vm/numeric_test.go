@@ -1,12 +1,12 @@
 package vm
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
 	"testing"
 
+	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/protocol/vm/mocks"
 	"github.com/bytom/bytom/testutil"
 )
@@ -494,7 +494,7 @@ func TestRangeErrs(t *testing.T) {
 		{"0 1ADD", false},
 		{fmt.Sprintf("%d 1ADD", int64(math.MinInt64)), false},
 		{fmt.Sprintf("%d 1ADD", int64(math.MaxInt64)-1), false},
-		{fmt.Sprintf("%s 1ADD", big.NewInt(0).SetBytes(hex2Bytes("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")).String()), true},
+		{fmt.Sprintf("%s 1ADD", big.NewInt(0).SetBytes(common.Hex2Bytes("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")).String()), true},
 		// {"0 1SUB", false},
 		// {fmt.Sprintf("%d 1SUB", int64(math.MaxInt64)), false},
 		// {fmt.Sprintf("%d 1SUB", int64(math.MinInt64)+1), false},
@@ -565,9 +565,4 @@ func TestRangeErrs(t *testing.T) {
 			}
 		}
 	}
-}
-
-func hex2Bytes(str string) []byte {
-	h, _ := hex.DecodeString(str)
-	return h
 }
