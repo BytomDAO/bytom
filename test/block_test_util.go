@@ -64,11 +64,6 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	b.Transactions[0] = coinbaseTx
 	txEntries[0] = coinbaseTx.Tx
 	b.TransactionsMerkleRoot, err = types.TxMerkleRoot(txEntries)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = types.TxStatusMerkleRoot(txStatus.VerifyStatus)
 	return b, err
 }
 

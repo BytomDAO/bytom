@@ -301,15 +301,6 @@ func ValidateTxMerkleTreeProof(hashes []*bc.Hash, flags []uint8, relatedHashes [
 	return validateMerkleTreeProof(hashes, flags, relatedNodes, merkleRoot)
 }
 
-// TxStatusMerkleRoot creates a merkle tree from a slice of bc.TxVerifyResult
-func TxStatusMerkleRoot(tvrs []*bc.TxVerifyResult) (root bc.Hash, err error) {
-	nodes := []merkleNode{}
-	for _, tvr := range tvrs {
-		nodes = append(nodes, tvr)
-	}
-	return merkleRoot(nodes)
-}
-
 // TxMerkleRoot creates a merkle tree from a slice of transactions
 // and returns the root hash of the tree.
 func TxMerkleRoot(transactions []*bc.Tx) (root bc.Hash, err error) {
