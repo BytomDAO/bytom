@@ -66,7 +66,6 @@ func (a *API) getBlock(ins BlockReq) Response {
 	}
 
 	blockHash := block.Hash()
-	txStatus, err := a.chain.GetTransactionStatus(&blockHash)
 	rawBlock, err := block.MarshalText()
 	if err != nil {
 		return NewErrorResponse(err)
@@ -86,7 +85,7 @@ func (a *API) getBlock(ins BlockReq) Response {
 		Transactions:           []*BlockTx{},
 	}
 
-	for i, orig := range block.Transactions {
+	for _, orig := range block.Transactions {
 		tx := &BlockTx{
 			ID:        orig.ID,
 			Version:   orig.Version,
@@ -94,10 +93,6 @@ func (a *API) getBlock(ins BlockReq) Response {
 			TimeRange: orig.TimeRange,
 			Inputs:    []*query.AnnotatedInput{},
 			Outputs:   []*query.AnnotatedOutput{},
-		}
-		tx.StatusFail, err = txStatus.GetStatus(i)
-		if err != nil {
-			return NewSuccessResponse(resp)
 		}
 
 		resOutID := orig.ResultIds[0]
