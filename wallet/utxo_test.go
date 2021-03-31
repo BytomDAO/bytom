@@ -490,7 +490,7 @@ func TestTxInToUtxos(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		if gotUtxos := txInToUtxos(c.tx, c.statusFail); !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
+		if gotUtxos := txInToUtxos(c.tx); !testutil.DeepEqual(gotUtxos, c.wantUtxos) {
 			for k, v := range gotUtxos {
 				data, _ := json.Marshal(v)
 				fmt.Println(k, string(data))

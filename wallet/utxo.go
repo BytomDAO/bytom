@@ -53,7 +53,7 @@ func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 		}
 
 		//hand update the transaction input utxos
-		inputUtxos := txInToUtxos(tx, statusFail)
+		inputUtxos := txInToUtxos(tx)
 		for _, inputUtxo := range inputUtxos {
 			if segwit.IsP2WScript(inputUtxo.ControlProgram) {
 				batch.Delete(account.StandardUTXOKey(inputUtxo.OutputID))
@@ -91,13 +91,7 @@ func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 			}
 		}
 
-		statusFail, err := txStatus.GetStatus(txIndex)
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("detachUtxos fail on get tx status")
-			continue
-		}
-
-		inputUtxos := txInToUtxos(tx, statusFail)
+		inputUtxos := txInToUtxos(tx)
 		utxos := w.filterAccountUtxo(inputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("detachUtxos fail on batchSaveUtxos")
@@ -159,7 +153,7 @@ func batchSaveUtxos(utxos []*account.UTXO, batch dbm.Batch) error {
 	return nil
 }
 
-func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
+func txInToUtxos(tx *types.Tx) []*account.UTXO {
 	utxos := []*account.UTXO{}
 	for _, inpID := range tx.Tx.InputIDs {
 		sp, err := tx.Spend(inpID)
