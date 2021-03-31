@@ -190,7 +190,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 	}
 
 	storeBatch := w.DB.NewBatch()
-	if err := w.indexTransactions(storeBatch, block, txStatus); err != nil {
+	if err := w.indexTransactions(storeBatch, block); err != nil {
 		return err
 	}
 
