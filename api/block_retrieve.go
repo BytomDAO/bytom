@@ -242,7 +242,6 @@ type MerkleBlockReq struct {
 type GetMerkleBlockResp struct {
 	BlockHeader  types.BlockHeader `json:"block_header"`
 	TxHashes     []*bc.Hash        `json:"tx_hashes"`
-	StatusHashes []*bc.Hash        `json:"status_hashes"`
 	Flags        []uint32          `json:"flags"`
 	MatchedTxIDs []*bc.Hash        `json:"matched_tx_ids"`
 }
@@ -266,18 +265,9 @@ func (a *API) getMerkleProof(ins MerkleBlockReq) Response {
 		flags[i] = uint32(flag)
 	}
 
-	blockHash := block.Hash()
-	statuses, err := a.chain.GetTransactionStatus(&blockHash)
-	if err != nil {
-		return NewErrorResponse(err)
-	}
-
-	statusHashes := types.GetStatusMerkleTreeProof(statuses.VerifyStatus, compactFlags)
-
 	resp := &GetMerkleBlockResp{
 		BlockHeader:  block.BlockHeader,
 		TxHashes:     hashes,
-		StatusHashes: statusHashes,
 		Flags:        flags,
 		MatchedTxIDs: matchedTxIDs,
 	}
