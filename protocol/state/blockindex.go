@@ -32,7 +32,6 @@ type BlockNode struct {
 	Nonce                  uint64
 	Bits                   uint64
 	TransactionsMerkleRoot bc.Hash
-	TransactionStatusHash  bc.Hash
 }
 
 func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) {
