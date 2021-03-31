@@ -37,7 +37,7 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			wantBlockNode: &BlockNode{
 				Bits:    1000,
-				Hash:    testutil.MustDecodeHash("f1a5a6ddebad7285928a07ce1534104a8d1cd435fc80e90bb9f0034bbe5f8109"),
+				Hash:    testutil.MustDecodeHash("c144fc8cb72f8f2ae39a403cb7693d0b1f3e8b5ac83369afc708a29a737b01c1"),
 				Seed:    consensus.InitialSeed,
 				WorkSum: new(big.Int).SetInt64(0),
 				Parent: &BlockNode{
@@ -56,7 +56,7 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			wantBlockNode: &BlockNode{
 				Bits:    10000000000,
-				Hash:    testutil.MustDecodeHash("b14067726f09d74da89aeb97ca1b15a8b95760b47a0d71549b0aa5ab8c5e724f"),
+				Hash:    testutil.MustDecodeHash("6b7ef2c572a1b88edadfafe06b2d1c218697d5b350895d73b00d1afc98a9fe0f"),
 				Seed:    consensus.InitialSeed,
 				Height:  uint64(100),
 				WorkSum: stringToBigInt("193956598387464313942329958138505708296934647681139973265423088790474254103", 10),
@@ -76,7 +76,7 @@ func TestNewBlockNode(t *testing.T) {
 			},
 			wantBlockNode: &BlockNode{
 				Bits:    10000000000,
-				Hash:    testutil.MustDecodeHash("b14067726f09d74da89aeb97ca1b15a8b95760b47a0d71549b0aa5ab8c5e724f"),
+				Hash:    testutil.MustDecodeHash("6b7ef2c572a1b88edadfafe06b2d1c218697d5b350895d73b00d1afc98a9fe0f"),
 				Seed:    consensus.InitialSeed,
 				Height:  uint64(100),
 				WorkSum: stringToBigInt("193956598387464313942329958138505708296934647681139973274646460827329029810", 10),

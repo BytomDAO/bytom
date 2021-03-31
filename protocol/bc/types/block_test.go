@@ -41,7 +41,7 @@ func TestBlock(t *testing.T) {
 				"00", // bits
 				"00", // num transactions
 			}, ""),
-			hash: testutil.MustDecodeHash("9609d2e45760f34cbc6c6d948c3fb9b6d7b61552d9d17fdd5b7d0cb5d2e67244"),
+			hash: testutil.MustDecodeHash("b49f31a684930887df56357edb3bb51c5fa07930bc4dd00ddf73a5a13c2e635e"),
 		},
 		{
 			block: &Block{
@@ -96,7 +96,7 @@ func TestBlock(t *testing.T) {
 				"07018e0502012a00056e6f6e6365a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f380f6173736574446566696e6974696f6e010f69737375616e636550726f6772616d020a617267756d656e7473310a617267756d656e74733201540152fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f03010c7370656e6450726f6772616d17020a617267756d656e7473330a617267756d656e747334010129a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf92c30f01047472756500",
 				"07010001010b020961726269747261727900020129ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f01047472756500012affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff92c30f010566616c736500",
 			}, ""),
-			hash: testutil.MustDecodeHash("c6c0efca14731ca4a2062ef70deaa972768145778d9a96f5e0ef679c83f25b85"),
+			hash: testutil.MustDecodeHash("83bf5d5908c5046ab6a0c47bab3c9d54dd0583c26c51fa0c85231ac83b799cd6"),
 		},
 	}
 

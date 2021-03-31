@@ -1,19 +1,18 @@
 package integration
 
-/*
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/bytom/bytom/event"
-	"github.com/bytom/bytom/protocol"
-	"github.com/bytom/bytom/protocol/state"
 	"os"
 	"testing"
 
 	"github.com/bytom/bytom/consensus/difficulty"
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/event"
+	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
+	"github.com/bytom/bytom/protocol/state"
 )
 
 func TestPoW(t *testing.T) {
@@ -134,4 +133,3 @@ func TestPrintBlockMap(t *testing.T) {
 		}
 	}
 }
-*/

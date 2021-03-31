@@ -304,13 +304,12 @@ func TestValidateBlock(t *testing.T) {
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
-					Version:               1,
-					Height:                1,
-					Timestamp:             1523352601,
-					PreviousBlockId:       &bc.Hash{V0: 0},
-					Bits:                  2305843009214532812,
-					TransactionsRoot:      &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},
-					TransactionStatusHash: &bc.Hash{V0: 1},
+					Version:          1,
+					Height:           1,
+					Timestamp:        1523352601,
+					PreviousBlockId:  &bc.Hash{V0: 0},
+					Bits:             2305843009214532812,
+					TransactionsRoot: &bc.Hash{V0: 6294987741126419124, V1: 12520373106916389157, V2: 5040806596198303681, V3: 1151748423853876189},
 				},
 				Transactions: []*bc.Tx{
 					types.MapTx(&types.TxData{
@@ -444,13 +443,12 @@ func TestSetTransactionStatus(t *testing.T) {
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
 		BlockHeader: &bc.BlockHeader{
-			Version:               1,
-			Height:                1,
-			Timestamp:             1523352601,
-			PreviousBlockId:       &bc.Hash{V0: 0},
-			Bits:                  2305843009214532812,
-			TransactionsRoot:      &bc.Hash{V0: 3413931728524254295, V1: 300490676707850231, V2: 1886132055969225110, V3: 10216139531293906088},
-			TransactionStatusHash: &bc.Hash{V0: 8682965660674182538, V1: 8424137560837623409, V2: 6979974817894224946, V3: 4673809519342015041},
+			Version:          1,
+			Height:           1,
+			Timestamp:        1523352601,
+			PreviousBlockId:  &bc.Hash{V0: 0},
+			Bits:             2305843009214532812,
+			TransactionsRoot: &bc.Hash{V0: 3413931728524254295, V1: 300490676707850231, V2: 1886132055969225110, V3: 10216139531293906088},
 		},
 		Transactions: []*bc.Tx{
 			types.MapTx(&types.TxData{

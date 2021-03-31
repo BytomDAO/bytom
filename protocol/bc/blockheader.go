@@ -12,7 +12,6 @@ func (bh *BlockHeader) writeForHash(w io.Writer) {
 	mustWriteForHash(w, bh.PreviousBlockId)
 	mustWriteForHash(w, bh.Timestamp)
 	mustWriteForHash(w, bh.TransactionsRoot)
-	mustWriteForHash(w, bh.TransactionStatusHash)
 	mustWriteForHash(w, bh.Bits)
 	mustWriteForHash(w, bh.Nonce)
 }
