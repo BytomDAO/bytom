@@ -173,10 +173,6 @@ func txInToUtxos(tx *types.Tx, statusFail bool) []*account.UTXO {
 			continue
 		}
 
-		if statusFail && *resOut.Source.Value.AssetId != *consensus.BTMAssetID {
-			continue
-		}
-
 		utxos = append(utxos, &account.UTXO{
 			OutputID:       *sp.SpentOutputId,
 			AssetID:        *resOut.Source.Value.AssetId,
