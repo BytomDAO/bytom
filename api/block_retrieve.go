@@ -55,7 +55,6 @@ type GetBlockResp struct {
 	Bits                   uint64     `json:"bits"`
 	Difficulty             string     `json:"difficulty"`
 	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
-	TransactionStatusHash  *bc.Hash   `json:"transaction_status_hash"`
 	Transactions           []*BlockTx `json:"transactions"`
 }
 
