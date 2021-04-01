@@ -147,16 +147,14 @@ func (p *peer) getPeerInfo() *PeerInfo {
 	}
 }
 
-func (p *peer) getRelatedTxAndStatus(txs []*types.Tx, txStatuses *bc.TransactionStatus) ([]*types.Tx, []*bc.TxVerifyResult) {
+func (p *peer) getRelatedTxs(txs []*types.Tx) []*types.Tx {
 	var relatedTxs []*types.Tx
-	var relatedStatuses []*bc.TxVerifyResult
-	for i, tx := range txs {
+	for _, tx := range txs {
 		if p.isRelatedTx(tx) {
 			relatedTxs = append(relatedTxs, tx)
-			relatedStatuses = append(relatedStatuses, txStatuses.VerifyStatus[i])
 		}
 	}
-	return relatedTxs, relatedStatuses
+	return relatedTxs
 }
 
 func (p *peer) isRelatedTx(tx *types.Tx) bool {
@@ -247,7 +245,7 @@ func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionSta
 		return false, err
 	}
 
-	relatedTxs, _ := p.getRelatedTxAndStatus(block.Transactions, txStatuses)
+	relatedTxs := p.getRelatedTxs(block.Transactions)
 
 	txHashes, txFlags := types.GetTxMerkleTreeProof(block.Transactions, relatedTxs)
 	if err := msg.setTxInfo(txHashes, txFlags, relatedTxs); err != nil {
