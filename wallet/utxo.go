@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"encoding/json"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/account"
@@ -46,12 +45,6 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 
 func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
 	for txIndex, tx := range b.Transactions {
-		statusFail, err := txStatus.GetStatus(txIndex)
-		if err != nil {
-			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on get tx status")
-			continue
-		}
-
 		//hand update the transaction input utxos
 		inputUtxos := txInToUtxos(tx)
 		for _, inputUtxo := range inputUtxos {
@@ -67,7 +60,7 @@ func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.Trans
 		if txIndex == 0 {
 			validHeight = b.Height + consensus.CoinbasePendingBlockNumber
 		}
-		outputUtxos := txOutToUtxos(tx, statusFail, validHeight)
+		outputUtxos := txOutToUtxos(tx, validHeight)
 		utxos := w.filterAccountUtxo(outputUtxos)
 		if err := batchSaveUtxos(utxos, batch); err != nil {
 			log.WithFields(log.Fields{"module": logModule, "err": err}).Error("attachUtxos fail on batchSaveUtxos")
@@ -179,7 +172,7 @@ func txInToUtxos(tx *types.Tx) []*account.UTXO {
 	return utxos
 }
 
-func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.UTXO {
+func txOutToUtxos(tx *types.Tx, vaildHeight uint64) []*account.UTXO {
 	utxos := []*account.UTXO{}
 	for i, out := range tx.Outputs {
 		bcOut, err := tx.Output(*tx.ResultIds[i])
@@ -187,11 +180,7 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 			continue
 		}
 
-		if statusFail && *out.AssetAmount.AssetId != *consensus.BTMAssetID {
-			continue
-		}
-
-		utxos = append(utxos, &account.UTXO{
+		utxo := &account.UTXO{
 			OutputID:       *tx.OutputID(i),
 			AssetID:        *out.AssetAmount.AssetId,
 			Amount:         out.Amount,
@@ -199,7 +188,8 @@ func txOutToUtxos(tx *types.Tx, statusFail bool, vaildHeight uint64) []*account.
 			SourceID:       *bcOut.Source.Ref,
 			SourcePos:      bcOut.Source.Position,
 			ValidHeight:    vaildHeight,
-		})
+		}
+		utxos = append(utxos, utxo)
 	}
 	return utxos
 }
