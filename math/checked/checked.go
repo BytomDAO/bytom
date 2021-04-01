@@ -278,10 +278,10 @@ func NewUInt256(a string) (num *uint256.Int, ok bool) {
 		return nil, false
 	}
 
-	uint256Num, ok := uint256.FromBig(bigIntNum)
-	if ok {
+	uint256Num, overflow := uint256.FromBig(bigIntNum)
+	if overflow {
 		return nil, false
 	}
-	
+
 	return uint256Num, true
 }
