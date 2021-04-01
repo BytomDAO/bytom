@@ -61,8 +61,7 @@ func AsInt64(b []byte) (int64, error) {
 
 // BigIntBytes conv big int to bytes, uint256 is version 1.1.1
 func BigIntBytes(n *uint256.Int) []byte {
-	b := n.Bytes32()
-	return b[:]
+	return n.Bytes()
 }
 
 // AsBigInt conv bytes to big int

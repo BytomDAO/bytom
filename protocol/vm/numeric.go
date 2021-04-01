@@ -19,13 +19,17 @@ func op1Add(vm *virtualMachine) error {
 		return err
 	}
 
+	if n.Sign() < 0 {
+		return ErrRange
+	}
+
 	num, ok := checked.NewUInt256("1")
 	if !ok {
 		return ErrBadValue
 	}
 
 	res := uint256.NewInt()
-	if res.AddOverflow(n, num) {
+	if res.Add(n, num); res.Sign() < 0 {
 		return ErrRange
 	}
 

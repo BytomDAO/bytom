@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/bytom/bytom/common"
-	"github.com/bytom/bytom/protocol/vm/mocks"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -22,11 +21,11 @@ func TestNumericOps(t *testing.T) {
 		op: OP_1ADD,
 		startVM: &virtualMachine{
 			runLimit:  50000,
-			dataStack: [][]byte{mocks.U256Num2},
+			dataStack: [][]byte{{0x02}},
 		},
 		wantVM: &virtualMachine{
 			runLimit:  49998,
-			dataStack: [][]byte{mocks.U256Num3},
+			dataStack: [][]byte{{0x03}},
 		},
 	}, {
 		op: OP_1SUB,
@@ -492,7 +491,7 @@ func TestRangeErrs(t *testing.T) {
 		expectRangeErr bool
 	}{
 		{"0 1ADD", false},
-		{fmt.Sprintf("%d 1ADD", int64(math.MinInt64)), false},
+		{fmt.Sprintf("%d 1ADD", int64(math.MinInt64)), true},
 		{fmt.Sprintf("%d 1ADD", int64(math.MaxInt64)-1), false},
 		{fmt.Sprintf("%s 1ADD", big.NewInt(0).SetBytes(common.Hex2Bytes("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")).String()), true},
 		// {"0 1SUB", false},
