@@ -21,11 +21,11 @@ func TestNumericOps(t *testing.T) {
 		op: OP_1ADD,
 		startVM: &virtualMachine{
 			runLimit:  50000,
-			dataStack: [][]byte{{0x02}},
+			dataStack: [][]byte{{2}},
 		},
 		wantVM: &virtualMachine{
 			runLimit:  49998,
-			dataStack: [][]byte{{0x03}},
+			dataStack: [][]byte{{3}},
 		},
 	}, {
 		op: OP_1SUB,
