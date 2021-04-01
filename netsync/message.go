@@ -425,8 +425,6 @@ type MerkleBlockMessage struct {
 	RawBlockHeader []byte
 	TxHashes       [][32]byte
 	RawTxDatas     [][]byte
-	StatusHashes   [][32]byte
-	RawTxStatuses  [][]byte
 	Flags          []byte
 }
 

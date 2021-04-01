@@ -3,7 +3,6 @@ package netsync
 import (
 	"container/list"
 	"encoding/hex"
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -593,21 +592,6 @@ func TestSendMerkleBlock(t *testing.T) {
 				}
 				if ok := types.ValidateTxMerkleTreeProof(txHashes, m.Flags, relatedTxIDs, targetBlock.TransactionsMerkleRoot); !ok {
 					completed <- errors.New("validate tx fail")
-				}
-
-				var statusHashes []*bc.Hash
-				for _, statusByte := range m.StatusHashes {
-					hash := bc.NewHash(statusByte)
-					statusHashes = append(statusHashes, &hash)
-				}
-				var relatedStatuses []*bc.TxVerifyResult
-				for _, statusByte := range m.RawTxStatuses {
-					status := &bc.TxVerifyResult{}
-					err := json.Unmarshal(statusByte, status)
-					if err != nil {
-						completed <- err
-					}
-					relatedStatuses = append(relatedStatuses, status)
 				}
 
 				completed <- nil
