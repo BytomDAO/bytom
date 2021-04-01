@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/bytom/crypto/sha3pool"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
@@ -68,7 +67,7 @@ func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block) {
 	}
 }
 
-func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) detachUtxos(batch dbm.Batch, b *types.Block) {
 	for txIndex := len(b.Transactions) - 1; txIndex >= 0; txIndex-- {
 		tx := b.Transactions[txIndex]
 		for j := range tx.Outputs {

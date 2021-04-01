@@ -203,14 +203,8 @@ func (w *Wallet) DetachBlock(block *types.Block) error {
 	w.rw.Lock()
 	defer w.rw.Unlock()
 
-	blockHash := block.Hash()
-	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
-	if err != nil {
-		return err
-	}
-
 	storeBatch := w.DB.NewBatch()
-	w.detachUtxos(storeBatch, block, txStatus)
+	w.detachUtxos(storeBatch, block)
 	w.deleteTransactions(storeBatch, w.status.BestHeight)
 
 	w.status.BestHeight = block.Height - 1
