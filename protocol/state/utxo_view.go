@@ -2,7 +2,6 @@ package state
 
 import (
 	"errors"
-
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol/bc"
@@ -82,12 +81,9 @@ func (view *UtxoViewpoint) CanSpend(hash *bc.Hash) bool {
 
 func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	for _, prevout := range tx.SpentOutputIDs {
-		spentOutput, err := tx.Output(prevout)
+		_, err := tx.Output(prevout)
 		if err != nil {
 			return err
-		}
-		if statusFail && *spentOutput.Source.Value.AssetId != *consensus.BTMAssetID {
-			continue
 		}
 
 		entry, ok := view.Entries[prevout]
@@ -102,12 +98,9 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	}
 
 	for _, id := range tx.TxHeader.ResultIds {
-		output, err := tx.Output(*id)
+		_, err := tx.Output(*id)
 		if err != nil {
 			// error due to it's a retirement, utxo doesn't care this output type so skip it
-			continue
-		}
-		if statusFail && *output.Source.Value.AssetId != *consensus.BTMAssetID {
 			continue
 		}
 
