@@ -265,14 +265,7 @@ func (sm *SyncManager) handleGetMerkleBlockMsg(peer *peer, msg *GetMerkleBlockMe
 		return
 	}
 
-	blockHash := block.Hash()
-	txStatus, err := sm.chain.GetTransactionStatus(&blockHash)
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "err": err}).Warning("fail on handleGetMerkleBlockMsg get transaction status")
-		return
-	}
-
-	ok, err := peer.sendMerkleBlock(block, txStatus)
+	ok, err := peer.sendMerkleBlock(block)
 	if err != nil {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Error("fail on handleGetMerkleBlockMsg sentMerkleBlock")
 		return

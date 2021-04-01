@@ -239,7 +239,7 @@ func (p *peer) sendHeaders(headers []*types.BlockHeader) (bool, error) {
 	return ok, nil
 }
 
-func (p *peer) sendMerkleBlock(block *types.Block, txStatuses *bc.TransactionStatus) (bool, error) {
+func (p *peer) sendMerkleBlock(block *types.Block) (bool, error) {
 	msg := NewMerkleBlockMessage()
 	if err := msg.setRawBlockHeader(block.BlockHeader); err != nil {
 		return false, err
