@@ -3,8 +3,6 @@ package vm
 import (
 	"math"
 
-	"github.com/holiman/uint256"
-
 	"github.com/bytom/bytom/math/checked"
 )
 
@@ -28,12 +26,11 @@ func op1Add(vm *virtualMachine) error {
 		return ErrBadValue
 	}
 
-	res := uint256.NewInt()
-	if res.Add(n, num); res.Sign() < 0 {
+	if num.Add(n, num); num.Sign() < 0 {
 		return ErrRange
 	}
 
-	return vm.pushBigInt(res, true)
+	return vm.pushBigInt(num, true)
 }
 
 func op1Sub(vm *virtualMachine) error {
