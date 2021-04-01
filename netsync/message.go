@@ -456,22 +456,6 @@ func (m *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, rel
 	return nil
 }
 
-func (m *MerkleBlockMessage) setStatusInfo(statusHashes []*bc.Hash, relatedStatuses []*bc.TxVerifyResult) error {
-	for _, statusHash := range statusHashes {
-		m.StatusHashes = append(m.StatusHashes, statusHash.Byte32())
-	}
-
-	for _, status := range relatedStatuses {
-		rawStatusData, err := json.Marshal(status)
-		if err != nil {
-			return err
-		}
-
-		m.RawTxStatuses = append(m.RawTxStatuses, rawStatusData)
-	}
-	return nil
-}
-
 func (m *MerkleBlockMessage) String() string {
 	return "{}"
 }
