@@ -215,139 +215,122 @@ func TestFilterAccountUtxo(t *testing.T) {
 		input      []*account.UTXO
 		wantUtxos  []*account.UTXO
 	}{
-		/*
-			{
-				dbPrograms: map[string]*account.CtrlProgram{},
-				input:      []*account.UTXO{},
-				wantUtxos:  []*account.UTXO{},
-			},
-		*/
-		/*
-			{
-				dbPrograms: map[string]*account.CtrlProgram{
-					"436f6e74726163743a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
-						AccountID: "testAccount",
-						Address:   "testAddress",
-						KeyIndex:  53,
-						Change:    true,
-					},
-				},
-				input: []*account.UTXO{
-					&account.UTXO{
-						ControlProgram: []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
-						AssetID:        bc.AssetID{V0: 1},
-						Amount:         3,
-					},
-					&account.UTXO{
-						ControlProgram: []byte{0x91},
-						AssetID:        bc.AssetID{V0: 1},
-						Amount:         4,
-					},
-				},
-				wantUtxos: []*account.UTXO{
-					&account.UTXO{
-						ControlProgram:      []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
-						AssetID:             bc.AssetID{V0: 1},
-						Amount:              3,
-						AccountID:           "testAccount",
-						Address:             "testAddress",
-						ControlProgramIndex: 53,
-						Change:              true,
-					},
-					&account.UTXO{
-						ControlProgram: []byte{0x91},
-						AssetID:        bc.AssetID{V0: 1},
-						Amount:         4,
-					},
+		{
+			dbPrograms: map[string]*account.CtrlProgram{},
+			input:      []*account.UTXO{},
+			wantUtxos:  []*account.UTXO{},
+		},
+		{
+			dbPrograms: map[string]*account.CtrlProgram{
+				"436f6e74726163743a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
+					AccountID: "testAccount",
+					Address:   "testAddress",
+					KeyIndex:  53,
+					Change:    true,
 				},
 			},
-		*/
-		/*
-			{
-				dbPrograms: map[string]*account.CtrlProgram{},
-				input: []*account.UTXO{
-					&account.UTXO{
-						ControlProgram: []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
-						AssetID:        bc.AssetID{V0: 1},
-						Amount:         3,
-					},
-					&account.UTXO{
-						ControlProgram: []byte{0x91},
-						AssetID:        bc.AssetID{V0: 1},
-						Amount:         3,
-					},
+			input: []*account.UTXO{
+				&account.UTXO{
+					ControlProgram: []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         3,
 				},
-				wantUtxos: []*account.UTXO{
-					&account.UTXO{
-						ControlProgram: []byte{0x91},
-						AssetID:        bc.AssetID{V0: 1},
-						Amount:         3,
-					},
+				&account.UTXO{
+					ControlProgram: []byte{0x91},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         4,
 				},
 			},
-			{
-				dbPrograms: map[string]*account.CtrlProgram{
-					"436f6e74726163743a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
-						AccountID: "testAccount",
-						Address:   "testAddress",
-						KeyIndex:  53,
-						Change:    true,
-					},
-					"436f6e74726163743adb4d86262c12ba70d50b3ca3ae102d5682436243bd1e8c79569603f75675036a": &account.CtrlProgram{
-						AccountID: "testAccount2",
-						Address:   "testAddress2",
-						KeyIndex:  72,
-						Change:    false,
-					},
-				},
-				input: []*account.UTXO{
-					&account.UTXO{
-						ControlProgram: []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
-						AssetID:        bc.AssetID{V0: 1},
-						Amount:         3,
-					},
-					&account.UTXO{
-						ControlProgram: []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
-						AssetID:        bc.AssetID{V0: 1},
-						Amount:         5,
-					},
-					&account.UTXO{
-						ControlProgram: []byte{0x00, 0x14, 0xc6, 0xbf, 0x22, 0x19, 0x64, 0x2a, 0xc5, 0x9e, 0x5b, 0xe4, 0xeb, 0xdf, 0x5b, 0x22, 0x49, 0x56, 0xa7, 0x98, 0xa4, 0xdf},
-						AssetID:        bc.AssetID{V0: 1},
-						Amount:         7,
-					},
-				},
-				wantUtxos: []*account.UTXO{
-					&account.UTXO{
-						ControlProgram:      []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
-						AssetID:             bc.AssetID{V0: 1},
-						Amount:              3,
-						AccountID:           "testAccount",
-						Address:             "testAddress",
-						ControlProgramIndex: 53,
-						Change:              true,
-					},
-					&account.UTXO{
-						ControlProgram:      []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
-						AssetID:             bc.AssetID{V0: 1},
-						Amount:              5,
-						AccountID:           "testAccount",
-						Address:             "testAddress",
-						ControlProgramIndex: 53,
-						Change:              true,
-					},
-					&account.UTXO{
-						ControlProgram:      []byte{0x00, 0x14, 0xc6, 0xbf, 0x22, 0x19, 0x64, 0x2a, 0xc5, 0x9e, 0x5b, 0xe4, 0xeb, 0xdf, 0x5b, 0x22, 0x49, 0x56, 0xa7, 0x98, 0xa4, 0xdf},
-						AssetID:             bc.AssetID{V0: 1},
-						Amount:              7,
-						AccountID:           "testAccount2",
-						Address:             "testAddress2",
-						ControlProgramIndex: 72,
-						Change:              false,
-					},
+			wantUtxos: []*account.UTXO{
+				&account.UTXO{
+					ControlProgram:      []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
+					AssetID:             bc.AssetID{V0: 1},
+					Amount:              3,
+					AccountID:           "testAccount",
+					Address:             "testAddress",
+					ControlProgramIndex: 53,
+					Change:              true,
 				},
 			},
-		*/
+		},
+		{
+			dbPrograms: map[string]*account.CtrlProgram{},
+			input: []*account.UTXO{
+				&account.UTXO{
+					ControlProgram: []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         3,
+				},
+				&account.UTXO{
+					ControlProgram: []byte{0x91},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         3,
+				},
+			},
+			wantUtxos: []*account.UTXO{},
+		},
+		{
+			dbPrograms: map[string]*account.CtrlProgram{
+				"436f6e74726163743a2a37a64a4e15a772ab43bf3f5956d0d1f353946496788e7f40d0ff1796286a6f": &account.CtrlProgram{
+					AccountID: "testAccount",
+					Address:   "testAddress",
+					KeyIndex:  53,
+					Change:    true,
+				},
+				"436f6e74726163743adb4d86262c12ba70d50b3ca3ae102d5682436243bd1e8c79569603f75675036a": &account.CtrlProgram{
+					AccountID: "testAccount2",
+					Address:   "testAddress2",
+					KeyIndex:  72,
+					Change:    false,
+				},
+			},
+			input: []*account.UTXO{
+				&account.UTXO{
+					ControlProgram: []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         3,
+				},
+				&account.UTXO{
+					ControlProgram: []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         5,
+				},
+				&account.UTXO{
+					ControlProgram: []byte{0x00, 0x14, 0xc6, 0xbf, 0x22, 0x19, 0x64, 0x2a, 0xc5, 0x9e, 0x5b, 0xe4, 0xeb, 0xdf, 0x5b, 0x22, 0x49, 0x56, 0xa7, 0x98, 0xa4, 0xdf},
+					AssetID:        bc.AssetID{V0: 1},
+					Amount:         7,
+				},
+			},
+			wantUtxos: []*account.UTXO{
+				&account.UTXO{
+					ControlProgram:      []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
+					AssetID:             bc.AssetID{V0: 1},
+					Amount:              3,
+					AccountID:           "testAccount",
+					Address:             "testAddress",
+					ControlProgramIndex: 53,
+					Change:              true,
+				},
+				&account.UTXO{
+					ControlProgram:      []byte{0x00, 0x14, 0x62, 0x50, 0x18, 0xb6, 0x85, 0x77, 0xba, 0x9b, 0x26, 0x19, 0xc8, 0x1d, 0x2e, 0x96, 0xba, 0x22, 0xbe, 0x77, 0x77, 0xd7},
+					AssetID:             bc.AssetID{V0: 1},
+					Amount:              5,
+					AccountID:           "testAccount",
+					Address:             "testAddress",
+					ControlProgramIndex: 53,
+					Change:              true,
+				},
+				&account.UTXO{
+					ControlProgram:      []byte{0x00, 0x14, 0xc6, 0xbf, 0x22, 0x19, 0x64, 0x2a, 0xc5, 0x9e, 0x5b, 0xe4, 0xeb, 0xdf, 0x5b, 0x22, 0x49, 0x56, 0xa7, 0x98, 0xa4, 0xdf},
+					AssetID:             bc.AssetID{V0: 1},
+					Amount:              7,
+					AccountID:           "testAccount2",
+					Address:             "testAddress2",
+					ControlProgramIndex: 72,
+					Change:              false,
+				},
+			},
+		},
 	}
 
 	w := &Wallet{DB: testDB}
@@ -362,10 +345,6 @@ func TestFilterAccountUtxo(t *testing.T) {
 				t.Error(err)
 			}
 			testDB.Set(key, data)
-		}
-
-		if i == 1 {
-			fmt.Println("debug")
 		}
 		gotUtxos := w.filterAccountUtxo(c.input)
 		sort.Slice(gotUtxos[:], func(i, j int) bool {
@@ -660,14 +639,3 @@ func TestTxOutToUtxos(t *testing.T) {
 	}
 }
 
-//func Hex(bytes []byte) string {
-//	var s string
-//	for i, b := range bytes {
-//		s += fmt.Sprintf("0x%x,", b)
-//		if i == len(bytes)-2 {
-//			s += fmt.Sprintf("0x%x", b)
-//			return s
-//		}
-//	}
-//	return s
-//}
