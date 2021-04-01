@@ -11,6 +11,7 @@ import (
 	"unicode"
 
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/math/checked"
 )
 
 // Assemble converts a string like "2 3 ADD 5 NUMEQUAL" into 0x525393559c.
@@ -90,8 +91,8 @@ func Assemble(s string) (res []byte, err error) {
 				b++
 			}
 			res = append(res, PushdataBytes(bytes)...)
-		} else if num, err := strconv.ParseInt(token, 10, 64); err == nil {
-			res = append(res, PushdataInt64(num)...)
+		} else if num, ok := checked.NewUInt256(token); ok {
+			res = append(res, PushdataBytes(BigIntBytes(num))...)
 		} else {
 			return nil, errors.Wrap(ErrToken, token)
 		}

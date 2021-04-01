@@ -3,8 +3,10 @@ package vm
 import (
 	"fmt"
 	"math"
+	"math/big"
 	"testing"
 
+	"github.com/bytom/bytom/common"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -489,53 +491,10 @@ func TestRangeErrs(t *testing.T) {
 		expectRangeErr bool
 	}{
 		{"0 1ADD", false},
-		{fmt.Sprintf("%d 1ADD", int64(math.MinInt64)), false},
+		{fmt.Sprintf("%d 1ADD", int64(math.MinInt64)), true},
 		{fmt.Sprintf("%d 1ADD", int64(math.MaxInt64)-1), false},
-		{fmt.Sprintf("%d 1ADD", int64(math.MaxInt64)), true},
-		{"0 1SUB", false},
-		{fmt.Sprintf("%d 1SUB", int64(math.MaxInt64)), false},
-		{fmt.Sprintf("%d 1SUB", int64(math.MinInt64)+1), false},
-		{fmt.Sprintf("%d 1SUB", int64(math.MinInt64)), true},
-		{"1 2MUL", false},
-		{fmt.Sprintf("%d 2MUL", int64(math.MaxInt64)/2-1), false},
-		{fmt.Sprintf("%d 2MUL", int64(math.MaxInt64)/2+1), true},
-		{fmt.Sprintf("%d 2MUL", int64(math.MinInt64)/2+1), false},
-		{fmt.Sprintf("%d 2MUL", int64(math.MinInt64)/2-1), true},
-		{"1 NEGATE", false},
-		{"-1 NEGATE", false},
-		{fmt.Sprintf("%d NEGATE", int64(math.MaxInt64)), false},
-		{fmt.Sprintf("%d NEGATE", int64(math.MinInt64)), true},
-		{"1 ABS", false},
-		{"-1 ABS", false},
-		{fmt.Sprintf("%d ABS", int64(math.MaxInt64)), false},
-		{fmt.Sprintf("%d ABS", int64(math.MinInt64)), true},
-		{"2 3 ADD", false},
-		{fmt.Sprintf("%d %d ADD", int64(math.MinInt64), int64(math.MaxInt64)), false},
-		{fmt.Sprintf("%d %d ADD", int64(math.MaxInt64)/2-1, int64(math.MaxInt64)/2-2), false},
-		{fmt.Sprintf("%d %d ADD", int64(math.MaxInt64)/2+1, int64(math.MaxInt64)/2+2), true},
-		{fmt.Sprintf("%d %d ADD", int64(math.MinInt64)/2+1, int64(math.MinInt64)/2+2), false},
-		{fmt.Sprintf("%d %d ADD", int64(math.MinInt64)/2-1, int64(math.MinInt64)/2-2), true},
-		{"2 3 SUB", false},
-		{fmt.Sprintf("1 %d SUB", int64(math.MaxInt64)), false},
-		{fmt.Sprintf("-1 %d SUB", int64(math.MinInt64)), false},
-		{fmt.Sprintf("1 %d SUB", int64(math.MinInt64)), true},
-		{fmt.Sprintf("-1 %d SUB", int64(math.MaxInt64)), false},
-		{fmt.Sprintf("-2 %d SUB", int64(math.MaxInt64)), true},
-		{"1 2 LSHIFT", false},
-		{"-1 2 LSHIFT", false},
-		{"-1 63 LSHIFT", false},
-		{"-1 64 LSHIFT", true},
-		{"0 64 LSHIFT", false},
-		{"1 62 LSHIFT", false},
-		{"1 63 LSHIFT", true},
-		{fmt.Sprintf("%d 0 LSHIFT", int64(math.MaxInt64)), false},
-		{fmt.Sprintf("%d 1 LSHIFT", int64(math.MaxInt64)), true},
-		{fmt.Sprintf("%d 1 LSHIFT", int64(math.MaxInt64)/2), false},
-		{fmt.Sprintf("%d 2 LSHIFT", int64(math.MaxInt64)/2), true},
-		{fmt.Sprintf("%d 0 LSHIFT", int64(math.MinInt64)), false},
-		{fmt.Sprintf("%d 1 LSHIFT", int64(math.MinInt64)), true},
-		{fmt.Sprintf("%d 1 LSHIFT", int64(math.MinInt64)/2), false},
-		{fmt.Sprintf("%d 2 LSHIFT", int64(math.MinInt64)/2), true},
+		{fmt.Sprintf("%s 1ADD", big.NewInt(0).SetBytes(common.Hex2Bytes("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")).String()), true},
+		{fmt.Sprintf("%s 1ADD", big.NewInt(0).SetBytes(common.Hex2Bytes("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")).String()), true},
 	}
 
 	for i, c := range cases {

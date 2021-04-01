@@ -9,6 +9,7 @@ import (
 	"testing/quick"
 
 	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol/vm/mocks"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -50,8 +51,8 @@ func doOKNotOK(t *testing.T, expectOK bool) {
 		{"XOR 0x05ff EQUAL", [][]byte{{0x03, 0xff}, {0x06}}},
 
 		// numeric and logical ops
-		{"1ADD 2 NUMEQUAL", [][]byte{Int64Bytes(1)}},
-		{"1ADD 0 NUMEQUAL", [][]byte{Int64Bytes(-1)}},
+		{"1ADD 2 NUMEQUAL", [][]byte{{0x01}}},
+		{"1ADD 0 NUMEQUAL", [][]byte{mocks.U256NumNegative1}},
 
 		{"1SUB 1 NUMEQUAL", [][]byte{Int64Bytes(2)}},
 		{"1SUB -1 NUMEQUAL", [][]byte{Int64Bytes(0)}},
