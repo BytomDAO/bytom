@@ -13,15 +13,15 @@ import (
 func TestCheckOutput(t *testing.T) {
 	tx := types.NewTx(types.TxData{
 		Inputs: []*types.TxInput{
-			types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendprog")),
+			types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendprog"), nil),
 			types.NewIssuanceInput(nil, 6, []byte("issueprog"), nil, nil),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("wrongprog")),
-			types.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("controlprog")),
-			types.NewTxOutput(bc.NewAssetID([32]byte{2}), 8, []byte("controlprog")),
-			types.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog")),
-			types.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog")),
+			types.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("wrongprog"), nil),
+			types.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("controlprog"), nil),
+			types.NewTxOutput(bc.NewAssetID([32]byte{2}), 8, []byte("controlprog"), nil),
+			types.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"), nil),
+			types.NewTxOutput(bc.NewAssetID([32]byte{2}), 7, []byte("controlprog"), nil),
 		},
 	})
 

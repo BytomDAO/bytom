@@ -360,9 +360,9 @@ func mockTxData(utxos []*account.UTXO, testAccount *account.Account) (*txbuilder
 
 		out := &types.TxOutput{}
 		if utxo.AssetID == *consensus.BTMAssetID {
-			out = types.NewTxOutput(utxo.AssetID, 100, utxo.ControlProgram)
+			out = types.NewTxOutput(utxo.AssetID, 100, utxo.ControlProgram, nil)
 		} else {
-			out = types.NewTxOutput(utxo.AssetID, utxo.Amount, utxo.ControlProgram)
+			out = types.NewTxOutput(utxo.AssetID, utxo.Amount, utxo.ControlProgram, nil)
 		}
 		tplBuilder.AddOutput(out)
 	}

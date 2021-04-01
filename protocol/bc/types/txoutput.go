@@ -17,7 +17,7 @@ type TxOutput struct {
 }
 
 // NewTxOutput create a new output struct
-func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOutput {
+func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte, stateData []byte) *TxOutput {
 	return &TxOutput{
 		AssetVersion: 1,
 		OutputCommitment: OutputCommitment{
@@ -27,6 +27,7 @@ func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOu
 			},
 			VMVersion:      1,
 			ControlProgram: controlProgram,
+			StateData:      stateData,
 		},
 	}
 }
@@ -77,7 +78,7 @@ func ComputeOutputID(sc *SpendCommitment) (h bc.Hash, err error) {
 		Value:    &sc.AssetAmount,
 		Position: sc.SourcePosition,
 	}
-	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, 0)
+	o := bc.NewOutput(src, &bc.Program{VmVersion: sc.VMVersion, Code: sc.ControlProgram}, &bc.StateData{StateData: sc.StateData}, 0)
 
 	h = bc.EntryID(o)
 	return h, nil

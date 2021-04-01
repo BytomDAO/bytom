@@ -14,6 +14,10 @@ message Program {
   bytes  code       = 2;
 }
 
+message StateData {
+  bytes  state_data       = 1;
+}
+
 // This message type duplicates Hash, above. One alternative is to
 // embed a Hash inside an AssetID. But it's useful for AssetID to be
 // plain old data (without pointers). Another alternative is use Hash
@@ -81,6 +85,7 @@ message Mux {
   Program                   program              = 2;
   repeated ValueDestination witness_destinations = 3; // outputs, retirements, and muxes
   repeated bytes            witness_arguments    = 4;
+  StateData                 state_data           = 5;
 }
 
 message Coinbase {
@@ -92,6 +97,7 @@ message Output {
   ValueSource source          = 1;
   Program     control_program = 2;
   uint64      ordinal         = 3;
+  StateData   state_data      = 4;
 }
 
 message Retirement {

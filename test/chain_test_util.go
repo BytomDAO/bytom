@@ -8,13 +8,13 @@ import (
 	"github.com/bytom/bytom/blockchain/txbuilder"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/database"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/vm"
 	"github.com/golang/protobuf/proto"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const utxoPrefix = "UT:"
@@ -208,7 +208,7 @@ func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx
 	}
 
 	for _, amount := range t.Outputs {
-		output := types.NewTxOutput(*consensus.BTMAssetID, amount, []byte{byte(vm.OP_TRUE)})
+		output := types.NewTxOutput(*consensus.BTMAssetID, amount, []byte{byte(vm.OP_TRUE)}, nil)
 		if err := builder.AddOutput(output); err != nil {
 			return nil, err
 		}

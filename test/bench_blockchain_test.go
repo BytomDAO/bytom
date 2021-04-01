@@ -15,6 +15,7 @@ import (
 	"github.com/bytom/bytom/consensus/difficulty"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/event"
 	"github.com/bytom/bytom/mining"
@@ -22,7 +23,6 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func BenchmarkChain_CoinBaseTx_NoAsset(b *testing.B) {
@@ -272,7 +272,7 @@ func AddTxInputFromUtxo(utxo *account.UTXO, singer *signers.Signer) (*types.TxIn
 }
 
 func AddTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *types.TxOutput {
-	out := types.NewTxOutput(assetID, amount, controlProgram)
+	out := types.NewTxOutput(assetID, amount, controlProgram, nil)
 	return out
 }
 

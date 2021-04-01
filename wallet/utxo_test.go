@@ -10,10 +10,10 @@ import (
 
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/consensus"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/testutil"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestGetAccountUtxos(t *testing.T) {
@@ -387,7 +387,7 @@ func TestTxInToUtxos(t *testing.T) {
 					types.NewCoinbaseInput([]byte{0x51}),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 41250000000, []byte{0x51}),
+					types.NewTxOutput(*consensus.BTMAssetID, 41250000000, []byte{0x51}), nil,
 				},
 			}),
 			statusFail: false,
@@ -399,7 +399,7 @@ func TestTxInToUtxos(t *testing.T) {
 					types.NewIssuanceInput([]byte{}, 4125, []byte{0x51}, [][]byte{}, []byte{}),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 4125, []byte{0x51}),
+					types.NewTxOutput(*consensus.BTMAssetID, 4125, []byte{0x51}, nil),
 				},
 			}),
 			statusFail: false,
@@ -408,14 +408,14 @@ func TestTxInToUtxos(t *testing.T) {
 		{
 			tx: types.NewTx(types.TxData{
 				Inputs: []*types.TxInput{
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 1, 1, []byte{0x51}),
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 2}, bc.AssetID{V0: 1}, 3, 2, []byte{0x52}),
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 3}, *consensus.BTMAssetID, 5, 3, []byte{0x53}),
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 4}, *consensus.BTMAssetID, 7, 4, []byte{0x54}),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 1, 1, []byte{0x51}, nil),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 2}, bc.AssetID{V0: 1}, 3, 2, []byte{0x52}, nil),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 3}, *consensus.BTMAssetID, 5, 3, []byte{0x53}, nil),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 4}, *consensus.BTMAssetID, 7, 4, []byte{0x54}, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(bc.AssetID{V0: 1}, 4, []byte{0x51}),
-					types.NewTxOutput(*consensus.BTMAssetID, 12, []byte{0x53}),
+					types.NewTxOutput(bc.AssetID{V0: 1}, 4, []byte{0x51}, nil),
+					types.NewTxOutput(*consensus.BTMAssetID, 12, []byte{0x53}, nil),
 				},
 			}),
 			statusFail: false,
@@ -457,14 +457,14 @@ func TestTxInToUtxos(t *testing.T) {
 		{
 			tx: types.NewTx(types.TxData{
 				Inputs: []*types.TxInput{
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 1, 1, []byte{0x51}),
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 2}, bc.AssetID{V0: 1}, 3, 2, []byte{0x52}),
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 3}, *consensus.BTMAssetID, 5, 3, []byte{0x53}),
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 4}, *consensus.BTMAssetID, 7, 4, []byte{0x54}),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 1, 1, []byte{0x51}, nil),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 2}, bc.AssetID{V0: 1}, 3, 2, []byte{0x52}, nil),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 3}, *consensus.BTMAssetID, 5, 3, []byte{0x53}, nil),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 4}, *consensus.BTMAssetID, 7, 4, []byte{0x54}, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(bc.AssetID{V0: 1}, 4, []byte{0x51}),
-					types.NewTxOutput(*consensus.BTMAssetID, 12, []byte{0x53}),
+					types.NewTxOutput(bc.AssetID{V0: 1}, 4, []byte{0x51}, nil),
+					types.NewTxOutput(*consensus.BTMAssetID, 12, []byte{0x53}, nil),
 				},
 			}),
 			statusFail: true,
@@ -517,7 +517,7 @@ func TestTxOutToUtxos(t *testing.T) {
 					types.NewCoinbaseInput([]byte{0x51}),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 41250000000, []byte{0x51}),
+					types.NewTxOutput(*consensus.BTMAssetID, 41250000000, []byte{0x51}, nil),
 				},
 			}),
 			statusFail:  false,
@@ -537,14 +537,14 @@ func TestTxOutToUtxos(t *testing.T) {
 		{
 			tx: types.NewTx(types.TxData{
 				Inputs: []*types.TxInput{
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 5, 1, []byte{0x51}),
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 2}, *consensus.BTMAssetID, 7, 1, []byte{0x51}),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 5, 1, []byte{0x51}, nil),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 2}, *consensus.BTMAssetID, 7, 1, []byte{0x51}, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(bc.AssetID{V0: 1}, 2, []byte{0x51}),
-					types.NewTxOutput(bc.AssetID{V0: 1}, 3, []byte{0x52}),
-					types.NewTxOutput(*consensus.BTMAssetID, 2, []byte{0x53}),
-					types.NewTxOutput(*consensus.BTMAssetID, 5, []byte{0x54}),
+					types.NewTxOutput(bc.AssetID{V0: 1}, 2, []byte{0x51}, nil),
+					types.NewTxOutput(bc.AssetID{V0: 1}, 3, []byte{0x52}, nil),
+					types.NewTxOutput(*consensus.BTMAssetID, 2, []byte{0x53}, nil),
+					types.NewTxOutput(*consensus.BTMAssetID, 5, []byte{0x54}, nil),
 				},
 			}),
 			statusFail:  false,
@@ -587,14 +587,14 @@ func TestTxOutToUtxos(t *testing.T) {
 		{
 			tx: types.NewTx(types.TxData{
 				Inputs: []*types.TxInput{
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 5, 1, []byte{0x51}),
-					types.NewSpendInput([][]byte{}, bc.Hash{V0: 2}, *consensus.BTMAssetID, 7, 1, []byte{0x51}),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 1}, bc.AssetID{V0: 1}, 5, 1, []byte{0x51}, nil),
+					types.NewSpendInput([][]byte{}, bc.Hash{V0: 2}, *consensus.BTMAssetID, 7, 1, []byte{0x51}, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(bc.AssetID{V0: 1}, 2, []byte{0x51}),
-					types.NewTxOutput(bc.AssetID{V0: 1}, 3, []byte{0x52}),
-					types.NewTxOutput(*consensus.BTMAssetID, 2, []byte{0x53}),
-					types.NewTxOutput(*consensus.BTMAssetID, 5, []byte{0x54}),
+					types.NewTxOutput(bc.AssetID{V0: 1}, 2, []byte{0x51}, nil),
+					types.NewTxOutput(bc.AssetID{V0: 1}, 3, []byte{0x52}, nil),
+					types.NewTxOutput(*consensus.BTMAssetID, 2, []byte{0x53}, nil),
+					types.NewTxOutput(*consensus.BTMAssetID, 5, []byte{0x54}, nil),
 				},
 			}),
 			statusFail:  true,

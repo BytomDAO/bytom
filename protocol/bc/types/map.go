@@ -94,12 +94,14 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		case *SpendInput:
 			// create entry for prevout
 			prog := &bc.Program{VmVersion: inp.VMVersion, Code: inp.ControlProgram}
+			data := &bc.StateData{StateData: inp.StateData}
+
 			src := &bc.ValueSource{
 				Ref:      &inp.SourceID,
 				Value:    &inp.AssetAmount,
 				Position: inp.SourcePosition,
 			}
-			prevout := bc.NewOutput(src, prog, 0) // ordinal doesn't matter for prevouts, only for result outputs
+			prevout := bc.NewOutput(src, prog, data, 0) // ordinal doesn't matter for prevouts, only for result outputs
 			prevoutID := addEntry(prevout)
 			// create entry for spend
 			spend := bc.NewSpend(&prevoutID, uint64(i))
@@ -124,7 +126,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		}
 	}
 
-	mux := bc.NewMux(muxSources, &bc.Program{VmVersion: 1, Code: []byte{byte(vm.OP_TRUE)}})
+	mux := bc.NewMux(muxSources, &bc.Program{VmVersion: 1, Code: []byte{byte(vm.OP_TRUE)}}, &bc.StateData{StateData: []byte{}})
 	muxID := addEntry(mux)
 
 	// connect the inputs to the mux
@@ -156,7 +158,8 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		} else {
 			// non-retirement
 			prog := &bc.Program{out.VMVersion, out.ControlProgram}
-			o := bc.NewOutput(src, prog, uint64(i))
+			data := &bc.StateData{StateData: out.StateData}
+			o := bc.NewOutput(src, prog, data, uint64(i))
 			resultID = addEntry(o)
 		}
 

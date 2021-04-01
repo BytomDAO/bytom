@@ -88,12 +88,13 @@ func TestMerkleRootRealTx(t *testing.T) {
 		"07010001016c016acf24f1471d67c25a01ac84482ecdd8550229180171cae22321f87fe43d4f6a13ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80b4c4c32101012200200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac66ef02044059c7a12d006fd34bf8b9b2cb2f99756e5c3c3fdca4c928b830c014819e933b01c92a99bfeb6add73a5087870a3de3465cfed2c99f736b5f77d5fbdc69d91ff0040b95d110d118b873a8232104a6613f0e8c6a791efa3a695c02108cebd5239c8a8471551a48f18ab8ea05d10900b485af5e95b74cd3c01044c1742e71854099c0b40a1b63dae273e3b5b757b7c61286088a934e7282e837d08d62e60d7f75eb739529cd8c6cfef2254d47a546bf8b789657ce0944fec2f7e130c8498e28cae2a9108a901ae20d441b6f375659325a04eede4fc3b74579bb08ccd05b41b99776501e22d6dca7320af6d98ca2c3cd10bf0affbfa6e86609b750523cfadb662ec963c164f05798a49209820b9f1553b03aaebe7e3f9e9222ed7db73b5079b18564042fd3b2cef74156a20271b52de5f554aa4a6f1358f1c2193617bfb3fed4546d13c4af773096a429f9420eeb4a78d8b5cb8283c221ca2d3fd96b8946b3cddee02b7ceffb8f605932588595355ad020149ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80a0d9e61d012200206e8060ef3daca62841802dd9660b24b7dca81c1662b2d68ba8884ecbcd3e1e2200013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80d293ad0301160014ed7d3c466dbc6cc1f3a9af21267ac162f11b30a200",
 		"070100020161015f4b5cb973f5bef4eadde4c89b92ee73312b940e84164da0594149554cc8a2adea0dafd0f0e42f06f3bf9a8cf5787519d3860650f27a2b3393d34e1fe06e89b469ddc3f8c2f40200011600141da7f908979e521bf2ba12d280b2c84fc1d024416302409524d0d817176eeb718ce45671d95831cdb138d27289aa8a920104e38a8cab8a7dc8cc3fb60d65aa337b719aed0f696fb12610bfe68add89169a47ac1241e0002033444e1b57524161af3899e50fdfe270a90a1ea97fe38e86019a1e252667fb2d0161015fed3181c99ca80db720231aee6948e1183bfe29c64208c1769afa7f938d3b2cf0ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff809cd2b0f4020101160014cfbccfac5018ad4b4bfbcb1fab834e3c8503746063024065beb1da2f0840188af0e3c0127b158f7a2a36f1612499694a731df1e3a9d1abe6694c42986b8700aa9856f59cb3692ee88d68b20d1278f05592fb253c58bd0520e5966eee4092eeefdd805b06f2ad368bb9392edec20998993ebe2a929052c1ce03013e0dafd0f0e42f06f3bf9a8cf5787519d3860650f27a2b3393d34e1fe06e89b469ddfbc8a2cf0201160014583c0323603dd397ba5414255adc80b076cf232b00013d0dafd0f0e42f06f3bf9a8cf5787519d3860650f27a2b3393d34e1fe06e89b46980c8afa02501160014fdb3e6abf7f430fdabb53484ca2469103b2af1b500013effffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80dafa80f4020116001408e75789f47d2a39622e5a940fa918260bf44c5400",
 		"07010001016d016b1f134a47da4f6df00822935e02a07514718ea99ce5ac4e07bd6c204e098eb525ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff808a858fa70200012200206205ec178dc1ac6ea05ea01bb0fcda6aa978173026fa75204a101bdad7bd6b4889010240d8d5bbf4969fba52df8fba06f75c5de0f51b2bd5f902bf234591f90e78bae20bfb5b7904cb83a1d6577c431f644d37722b432df9d64718b8300e3ab74a871a0046ae2068003e53d467b6d81beaf1e7bd9b60a5ffedc79b36ce14ecd1f30a2dcbcd0551200449030407a3a1fa0731f7f784a72c325b5ce4d534fc3cf8fb7140536ba928605152ad02014affffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80f699b2a302012200209a0b4b27fde7d29d3b465d20eb2e19f4bda3a873d19d11f4cba53958bde92ed000013dffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80b3ffc40301160014ed7d3c466dbc6cc1f3a9af21267ac162f11b30a200",
+		"00",
 	}
 	wantMerkleRoot := "0f07b8a453771c2dc628f3895ebb33fea82a8de42e11aa588bec26419af22065"
 
 	var txs []*bc.Tx
 	for _, rawTx := range rawTxs {
-		tx := Tx{}		
+		tx := Tx{}
 		if err := tx.UnmarshalText([]byte(rawTx)); err != nil {
 			t.Fatal(err)
 		}
@@ -120,7 +121,7 @@ func TestDuplicateLeaves(t *testing.T) {
 		txs[i] = NewTx(TxData{
 			Version: 1,
 			Inputs:  []*TxInput{NewIssuanceInput(now, i, trueProg, nil, nil)},
-			Outputs: []*TxOutput{NewTxOutput(assetID, i, trueProg)},
+			Outputs: []*TxOutput{NewTxOutput(assetID, i, trueProg, nil)},
 		}).Tx
 	}
 
@@ -152,7 +153,7 @@ func TestAllDuplicateLeaves(t *testing.T) {
 	tx := NewTx(TxData{
 		Version: 1,
 		Inputs:  []*TxInput{issuanceInp},
-		Outputs: []*TxOutput{NewTxOutput(assetID, 1, trueProg)},
+		Outputs: []*TxOutput{NewTxOutput(assetID, 1, trueProg, nil)},
 	}).Tx
 	tx1, tx2, tx3, tx4, tx5, tx6 := tx, tx, tx, tx, tx, tx
 
@@ -465,7 +466,7 @@ func mockTransactions(txCount int) ([]*Tx, []*bc.Tx) {
 		tx := NewTx(TxData{
 			Version: 1,
 			Inputs:  []*TxInput{issuanceInp},
-			Outputs: []*TxOutput{NewTxOutput(assetID, 1, trueProg)},
+			Outputs: []*TxOutput{NewTxOutput(assetID, 1, trueProg, nil)},
 		})
 		txs = append(txs, tx)
 		bcTxs = append(bcTxs, tx.Tx)
