@@ -43,7 +43,7 @@ func (w *Wallet) GetAccountUtxos(accountID string, id string, unconfirmed, isSma
 	return accountUtxos
 }
 
-func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block, txStatus *bc.TransactionStatus) {
+func (w *Wallet) attachUtxos(batch dbm.Batch, b *types.Block) {
 	for txIndex, tx := range b.Transactions {
 		//hand update the transaction input utxos
 		inputUtxos := txInToUtxos(tx)

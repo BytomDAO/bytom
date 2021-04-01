@@ -178,12 +178,6 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		return nil
 	}
 
-	blockHash := block.Hash()
-	txStatus, err := w.chain.GetTransactionStatus(&blockHash)
-	if err != nil {
-		return err
-	}
-
 	if err := w.RecoveryMgr.FilterRecoveryTxs(block); err != nil {
 		log.WithField("err", err).Error("filter recovery txs")
 		w.RecoveryMgr.finished()
@@ -194,7 +188,7 @@ func (w *Wallet) AttachBlock(block *types.Block) error {
 		return err
 	}
 
-	w.attachUtxos(storeBatch, block, txStatus)
+	w.attachUtxos(storeBatch, block)
 	w.status.WorkHeight = block.Height
 	w.status.WorkHash = block.Hash()
 	if w.status.WorkHeight >= w.status.BestHeight {
