@@ -41,7 +41,7 @@ func TestTransaction(t *testing.T) {
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(261),
+				SerializedSize: uint64(281),
 				TimeRange:      654,
 				Inputs: []*TxInput{
 					NewIssuanceInput([]byte("nonce"), 254354, []byte("issuanceProgram"), [][]byte{[]byte("arguments1"), []byte("arguments2")}, []byte("assetDefinition")),
@@ -75,9 +75,9 @@ func TestTransaction(t *testing.T) {
 				"0a",                             // input 0: second argument length
 				"617267756d656e747332",           // input 0: second argument data
 				"01",                             // input 1: asset version
-				"54",                             // input 1: input commitment length
+				"5e",                             // input 1: input commitment length
 				"01",                             // input 1: spend type flag
-				"52",                             // input 1: spend commitment length
+				"5c",                             // input 1: spend commitment length
 				"fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409", // input 1: source id
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // input 1: assetID
 				"92c30f",                   // input 1: amount
@@ -85,6 +85,8 @@ func TestTransaction(t *testing.T) {
 				"01",                       // input 1: vm version
 				"0c",                       // input 1: spend program length
 				"7370656e6450726f6772616d", // input 1: spend program
+				"09",                       // input 1: state data length
+				"737461746544617461",       // input 1: state data
 				"17",                       // input 1: witness length
 				"02",                       // input 1: argument array length
 				"0a",                       // input 1: first argument length
@@ -93,20 +95,22 @@ func TestTransaction(t *testing.T) {
 				"617267756d656e747334",     // input 1: second argument data
 				"01",                       // outputs count
 				"01",                       // output 0: asset version
-				"29",                       // output 0: serialization length
+				"33",                       // output 0: serialization length
 				"a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf", // output 0: assetID
-				"92c30f",   // output 0: amount
-				"01",       // output 0: version
-				"04",       // output 0: control program length
-				"74727565", // output 0: control program
-				"00",       // output 0: witness length
+				"92c30f",             // output 0: amount
+				"01",                 // output 0: version
+				"04",                 // output 0: control program length
+				"74727565",           // output 0: control program
+				"09",                 // output 0: state data length
+				"737461746544617461", // output 0: state data
+				"00",                 // output 0: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("a0ece5ca48dca27708394852599cb4d04af22c36538c03cb72663f3091406c17"),
+			hash: testutil.MustDecodeHash("f092239201b05245be05f2593a0b91d2b87f289bc56fecb95b4265d53b66941b"),
 		},
 		{
 			tx: NewTx(TxData{
 				Version:        1,
-				SerializedSize: uint64(108),
+				SerializedSize: uint64(128),
 				Inputs: []*TxInput{
 					NewCoinbaseInput([]byte("arbitrary")),
 				},
@@ -128,23 +132,27 @@ func TestTransaction(t *testing.T) {
 				"00",                 // input 0: witness length
 				"02",                 // outputs count
 				"01",                 // output 0: asset version
-				"29",                 // output 0: serialization length
+				"33",                 // output 0: serialization length
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 0: assetID
-				"92c30f",   // output 0: amount
-				"01",       // output 0: version
-				"04",       // output 0: control program length
-				"74727565", // output 0: control program
-				"00",       // output 0: witness length
-				"01",       // output 1: asset version
-				"2a",       // output 1: serialization length
+				"92c30f",             // output 0: amount
+				"01",                 // output 0: version
+				"04",                 // output 0: control program length
+				"74727565",           // output 0: control program
+				"09",                 // output 0: state data length
+				"737461746544617461", // output 0: state data
+				"00",                 // output 0: witness length
+				"01",                 // output 1: asset version
+				"34",                 // output 1: serialization length
 				"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // output 1: assetID
-				"92c30f",     // output 1: amount
-				"01",         // output 1: version
-				"05",         // output 1: control program length
-				"66616c7365", // output 1: control program
-				"00",         // output 1: witness length
+				"92c30f",             // output 1: amount
+				"01",                 // output 1: version
+				"05",                 // output 1: control program length
+				"66616c7365",         // output 1: control program
+				"09",                 // output 0: state data length
+				"737461746544617461", // output 0: state data
+				"00",                 // output 1: witness length
 			}, ""),
-			hash: testutil.MustDecodeHash("c2e2f388706fc06cca6aba5e85e0e85029f772872e1b6e6c32a70da22d0309dc"),
+			hash: testutil.MustDecodeHash("e56d98bf5c5087fbd522f51015ee71e8aac32643b65f9809be121281fdcc70d2"),
 		},
 	}
 	for i, test := range cases {

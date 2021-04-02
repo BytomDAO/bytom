@@ -387,7 +387,7 @@ func TestTxInToUtxos(t *testing.T) {
 					types.NewCoinbaseInput([]byte{0x51}),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 41250000000, []byte{0x51}), nil,
+					types.NewTxOutput(*consensus.BTMAssetID, 41250000000, []byte{0x51}, nil),
 				},
 			}),
 			statusFail: false,
