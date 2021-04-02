@@ -492,30 +492,41 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 	return nil
 }
 
-// ValidateTx validates a transaction.
+// ValidateTx validates a transaction.   修改为只返回error
 func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
-	gasStatus := &GasState{GasValid: false}
 	if block.Version == 1 && tx.Version != 1 {
-		return gasStatus, errors.WithDetailf(ErrTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
+		return &GasState{GasValid: false}, errors.WithDetailf(ErrTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
 	}
+
 	if tx.SerializedSize == 0 {
-		return gasStatus, ErrWrongTransactionSize
+		return &GasState{GasValid: false}, ErrWrongTransactionSize
 	}
 	if err := checkTimeRange(tx, block); err != nil {
-		return gasStatus, err
+		return &GasState{GasValid: false}, err
 	}
 	if err := checkStandardTx(tx, block.Height); err != nil {
-		return gasStatus, err
+		return &GasState{GasValid: false}, err
 	}
 
 	vs := &validationState{
 		block:     block,
 		tx:        tx,
 		entryID:   tx.ID,
-		gasStatus: gasStatus,
+		gasStatus: &GasState{GasValid: false},
 		cache:     make(map[bc.Hash]error),
 	}
-	return vs.gasStatus, checkValid(vs, tx.TxHeader)
+
+	//todo: temp modify
+	if err := checkValid(vs, tx.TxHeader); err != nil {
+		return &GasState{GasValid: false}, err
+	}
+
+	if !vs.gasStatus.GasValid {
+		return &GasState{GasValid: false}, errors.New("gas invalid")
+	}
+
+	return vs.gasStatus, nil
+	//todo: end
 }
 
 type validateTxWork struct {

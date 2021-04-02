@@ -44,7 +44,6 @@ func TestValidateUglyTx(t *testing.T) {
 		desc     string
 		insts    []*signingInst
 		txData   types.TxData
-		gasValid bool
 		err      bool
 	}{
 		{
@@ -63,7 +62,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
 		},
 		{
 			category: "fee insufficient",
@@ -81,7 +79,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
 		},
 		{
 			category: "fee insufficient",
@@ -99,7 +96,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
 		},
 		{
 			category: "fee insufficient",
@@ -117,7 +113,6 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: true,
 		},
 		{
 			category: "input output unbalance",
@@ -133,7 +128,7 @@ func TestValidateUglyTx(t *testing.T) {
 				Outputs: []*types.TxOutput{},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -158,7 +153,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -184,7 +179,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -210,7 +205,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -236,7 +231,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -262,7 +257,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -288,7 +283,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -309,7 +304,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -331,7 +326,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -353,7 +348,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -375,7 +370,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -397,7 +392,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -419,7 +414,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -437,7 +432,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -455,7 +450,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "input output unbalance",
@@ -468,7 +463,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "overflow",
@@ -489,7 +484,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "overflow",
@@ -514,7 +509,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "overflow",
@@ -549,7 +544,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "overflow",
@@ -578,7 +573,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "overflow",
@@ -596,7 +591,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "overflow",
@@ -614,7 +609,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "overflow",
@@ -636,7 +631,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "overflow",
@@ -658,7 +653,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "overflow",
@@ -678,7 +673,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "verify signature fail",
@@ -696,7 +691,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "verify signature fail",
@@ -714,7 +709,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: false,
+			
 		},
 		{
 			category: "verify signature fail",
@@ -736,7 +731,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: true,
+			
 		},
 		{
 			category: "verify signature fail",
@@ -758,7 +753,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: true,
+			
 		},
 		{
 			category: "verify signature fail",
@@ -785,7 +780,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: true,
+			
 		},
 		{
 			category: "verify signature fail",
@@ -812,7 +807,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: true,
+			
 		},
 		{
 			category: "double spend",
@@ -833,7 +828,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: true,
+			
 		},
 		{
 			category: "double spend",
@@ -860,7 +855,7 @@ func TestValidateUglyTx(t *testing.T) {
 				},
 			},
 			err:      true,
-			gasValid: true,
+			
 		},
 	}
 
@@ -873,7 +868,7 @@ func TestValidateUglyTx(t *testing.T) {
 		mockSignTx(tx, c.insts)
 		bcTx := types.MapTx(&c.txData)
 
-		gasStatus, err := validation.ValidateTx(bcTx, &bc.Block{
+		_, err := validation.ValidateTx(bcTx, &bc.Block{
 			BlockHeader:  &bc.BlockHeader{Height: 1},
 			Transactions: []*bc.Tx{bcTx},
 		})
@@ -883,10 +878,6 @@ func TestValidateUglyTx(t *testing.T) {
 
 		if c.err && err == nil {
 			t.Errorf("case #%d (%s) expect error, got no error", i, c.desc)
-		}
-
-		if c.gasValid != gasStatus.GasValid {
-			t.Errorf("case #%d (%s) got GasValid %t, want %t", i, c.desc, gasStatus.GasValid, c.gasValid)
 		}
 	}
 }

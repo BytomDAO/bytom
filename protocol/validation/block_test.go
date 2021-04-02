@@ -448,7 +448,7 @@ func TestSetTransactionStatus(t *testing.T) {
 			Timestamp:        1523352601,
 			PreviousBlockId:  &bc.Hash{V0: 0},
 			Bits:             2305843009214532812,
-			TransactionsRoot: &bc.Hash{V0: 3413931728524254295, V1: 300490676707850231, V2: 1886132055969225110, V3: 10216139531293906088},
+			TransactionsRoot: &bc.Hash{V0: 12926229728833800905, V1: 5580091428647683449, V2: 17950881632140267799, V3: 11358423410497756721},
 		},
 		Transactions: []*bc.Tx{
 			types.MapTx(&types.TxData{
@@ -462,7 +462,7 @@ func TestSetTransactionStatus(t *testing.T) {
 				SerializedSize: 1,
 				Inputs: []*types.TxInput{
 					types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
-					types.NewSpendInput([][]byte{}, *newHash(8), bc.AssetID{V0: 1}, 1000, 0, []byte{byte(vm.OP_FALSE)}),
+					types.NewSpendInput([][]byte{}, *newHash(8), bc.AssetID{V0: 1}, 1000, 0, []byte{byte(vm.OP_TRUE)}),
 				},
 				Outputs: []*types.TxOutput{
 					types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
@@ -486,7 +486,7 @@ func TestSetTransactionStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectTxStatuses := []bool{false, true, false}
+	expectTxStatuses := []bool{false, false, false}
 	txStatuses := block.GetTransactionStatus().VerifyStatus
 	if len(expectTxStatuses) != len(txStatuses) {
 		t.Error("the size of expect tx status is not equals to size of got tx status")

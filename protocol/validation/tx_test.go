@@ -858,8 +858,7 @@ func TestRuleAA(t *testing.T) {
 					Height: ruleAA - 1,
 				},
 			},
-			GasValid: true,
-			err:      ErrMismatchedPosition,
+			err: ErrMismatchedPosition,
 		},
 		{
 			block: &bc.Block{
@@ -867,21 +866,16 @@ func TestRuleAA(t *testing.T) {
 					Height: ruleAA,
 				},
 			},
-			GasValid: false,
-			err:      ErrEmptyInputIDs,
+			err: ErrEmptyInputIDs,
 		},
 	}
 
 	for i, c := range cases {
-		gasStatus, err := ValidateTx(tx.Tx, c.block)
+		_, err := ValidateTx(tx.Tx, c.block)
 		if rootErr(err) != c.err {
 			t.Errorf("#%d got error %s, want %s", i, err, c.err)
 		}
-		if c.GasValid != gasStatus.GasValid {
-			t.Errorf("#%d got GasValid %t, want %t", i, gasStatus.GasValid, c.GasValid)
-		}
 	}
-
 }
 
 // TestTimeRange test the checkTimeRange function (txtest#1004)
