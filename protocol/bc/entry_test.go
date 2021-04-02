@@ -6,7 +6,7 @@ import (
 )
 
 func BenchmarkEntryID(b *testing.B) {
-	m := NewMux([]*ValueSource{{Position: 1}}, &Program{Code: []byte{1}, VmVersion: 1}, &StateData{StateData: []byte{1}})
+	m := NewMux([]*ValueSource{{Position: 1}}, &Program{Code: []byte{1}, VmVersion: 1})
 
 	entries := []Entry{
 		NewIssuance(nil, &AssetAmount{}, 0),
@@ -46,7 +46,6 @@ func TestEntryID(t *testing.T) {
 					},
 				},
 				&Program{VmVersion: 1, Code: []byte{1, 2, 3, 4}},
-				&StateData{StateData: []byte{1, 2}},
 			),
 			expectEntryID: "1be3a2f6d7be260488a31f2fb62d823a10572a70a0fbb8d0e02ad421a39ec2d9",
 		},

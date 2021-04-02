@@ -14,10 +14,9 @@ func (m *Mux) writeForHash(w io.Writer) {
 }
 
 // NewMux creates a new Mux.
-func NewMux(sources []*ValueSource, program *Program, stateData *StateData) *Mux {
+func NewMux(sources []*ValueSource, program *Program) *Mux {
 	return &Mux{
-		Sources:   sources,
-		Program:   program,
-		StateData: stateData,
+		Sources: sources,
+		Program: program,
 	}
 }

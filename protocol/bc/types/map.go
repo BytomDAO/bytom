@@ -126,7 +126,7 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 		}
 	}
 
-	mux := bc.NewMux(muxSources, &bc.Program{VmVersion: 1, Code: []byte{byte(vm.OP_TRUE)}}, &bc.StateData{StateData: []byte{}})
+	mux := bc.NewMux(muxSources, &bc.Program{VmVersion: 1, Code: []byte{byte(vm.OP_TRUE)}})
 	muxID := addEntry(mux)
 
 	// connect the inputs to the mux
