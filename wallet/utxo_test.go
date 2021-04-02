@@ -10,10 +10,10 @@ import (
 
 	"github.com/bytom/bytom/account"
 	"github.com/bytom/bytom/consensus"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/testutil"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestGetAccountUtxos(t *testing.T) {
@@ -250,11 +250,6 @@ func TestFilterAccountUtxo(t *testing.T) {
 					ControlProgramIndex: 53,
 					Change:              true,
 				},
-				&account.UTXO{
-					ControlProgram: []byte{0x91},
-					AssetID:        bc.AssetID{V0: 1},
-					Amount:         4,
-				},
 			},
 		},
 		{
@@ -271,13 +266,7 @@ func TestFilterAccountUtxo(t *testing.T) {
 					Amount:         3,
 				},
 			},
-			wantUtxos: []*account.UTXO{
-				&account.UTXO{
-					ControlProgram: []byte{0x91},
-					AssetID:        bc.AssetID{V0: 1},
-					Amount:         3,
-				},
-			},
+			wantUtxos: []*account.UTXO{},
 		},
 		{
 			dbPrograms: map[string]*account.CtrlProgram{
