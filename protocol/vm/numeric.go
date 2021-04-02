@@ -385,28 +385,28 @@ func doNumCompare(vm *virtualMachine, op int) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
 	var res bool
 	switch op {
 	case cmpLess:
-		res = x < y
+		res = x.Cmp(y) < 0
 	case cmpLessEqual:
-		res = x <= y
+		res = x.Cmp(y) <= 0
 	case cmpGreater:
-		res = x > y
+		res = x.Cmp(y) > 0
 	case cmpGreaterEqual:
-		res = x >= y
+		res = x.Cmp(y) >= 0
 	case cmpEqual:
-		res = x == y
+		res = x.Cmp(y) == 0
 	case cmpNotEqual:
-		res = x != y
+		res = x.Cmp(y) != 0
 	}
 	return vm.pushBool(res, true)
 }
