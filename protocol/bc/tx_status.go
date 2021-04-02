@@ -30,15 +30,6 @@ func (ts *TransactionStatus) SetStatus(i int, gasOnly bool) error {
 	return nil
 }
 
-// GetStatus get the tx status of given index
-func (ts *TransactionStatus) GetStatus(i int) (bool, error) {
-	if i >= len(ts.VerifyStatus) {
-		return false, errors.New("GetStatus is out of range")
-	}
-
-	return ts.VerifyStatus[i].StatusFail, nil
-}
-
 // WriteTo will write TxVerifyResult struct to io.Writer
 func (tvr *TxVerifyResult) WriteTo(w io.Writer) (int64, error) {
 	bytes, err := json.Marshal(tvr)
