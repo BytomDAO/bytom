@@ -170,7 +170,7 @@ func TestWalletUpdate(t *testing.T) {
 	txStatus := bc.NewTransactionStatus()
 	txStatus.SetStatus(0, false)
 	txStatus.SetStatus(1, false)
-	store.SaveBlock(block, txStatus)
+	store.SaveBlock(block)
 
 	w := mockWallet(testDB, accountManager, reg, chain, dispatcher, true)
 	err = w.AttachBlock(block)

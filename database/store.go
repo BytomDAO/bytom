@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 
@@ -155,7 +154,7 @@ func (s *Store) LoadBlockIndex(stateBestHeight uint64) (*state.BlockIndex, error
 }
 
 // SaveBlock persists a new block in the protocol.
-func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
+func (s *Store) SaveBlock(block *types.Block) error {
 	startTime := time.Now()
 	binaryBlock, err := block.MarshalText()
 	if err != nil {
@@ -167,16 +166,10 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 		return errors.Wrap(err, "Marshal block header")
 	}
 
-	binaryTxStatus, err := proto.Marshal(ts)
-	if err != nil {
-		return errors.Wrap(err, "marshal block transaction status")
-	}
-
 	blockHash := block.Hash()
 	batch := s.db.NewBatch()
 	batch.Set(CalcBlockKey(&blockHash), binaryBlock)
 	batch.Set(CalcBlockHeaderKey(block.Height, &blockHash), binaryBlockHeader)
-	batch.Set(CalcTxStatusKey(&blockHash), binaryTxStatus)
 	batch.Write()
 
 	log.WithFields(log.Fields{

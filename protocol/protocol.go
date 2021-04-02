@@ -68,7 +68,7 @@ func (c *Chain) initChainStatus() error {
 		}
 	}
 
-	if err := c.store.SaveBlock(genesisBlock, txStatus); err != nil {
+	if err := c.store.SaveBlock(genesisBlock); err != nil {
 		return err
 	}
 
