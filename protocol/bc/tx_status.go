@@ -7,14 +7,6 @@ import (
 
 const transactionStatusVersion = 1
 
-// NewTransactionStatus create a empty TransactionStatus struct
-func NewTransactionStatus() *TransactionStatus {
-	return &TransactionStatus{
-		Version:      transactionStatusVersion,
-		VerifyStatus: []*TxVerifyResult{},
-	}
-}
-
 // WriteTo will write TxVerifyResult struct to io.Writer
 func (tvr *TxVerifyResult) WriteTo(w io.Writer) (int64, error) {
 	bytes, err := json.Marshal(tvr)

@@ -48,9 +48,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			// can't find prevout in tx entries
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						SpentOutputIDs: []bc.Hash{
@@ -70,9 +68,7 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						SpentOutputIDs: []bc.Hash{
@@ -88,9 +84,7 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						SpentOutputIDs: []bc.Hash{
@@ -109,9 +103,7 @@ func TestApplyBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -140,7 +132,6 @@ func TestApplyBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height:            101,
-					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
@@ -170,7 +161,6 @@ func TestApplyBlock(t *testing.T) {
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					Height:            0,
-					TransactionStatus: bc.NewTransactionStatus(),
 				},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
@@ -199,9 +189,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			// output will be store
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -225,9 +213,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			// non-btm asset spent input will be spent
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -258,9 +244,7 @@ func TestApplyBlock(t *testing.T) {
 		{
 			// apply gas only tx, non-btm asset spent output will not be store
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -308,9 +292,7 @@ func TestDetachBlock(t *testing.T) {
 	}{
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -333,9 +315,7 @@ func TestDetachBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -358,9 +338,7 @@ func TestDetachBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
@@ -382,9 +360,7 @@ func TestDetachBlock(t *testing.T) {
 		},
 		{
 			block: &bc.Block{
-				BlockHeader: &bc.BlockHeader{
-					TransactionStatus: bc.NewTransactionStatus(),
-				},
+				BlockHeader: &bc.BlockHeader{},
 				Transactions: []*bc.Tx{
 					&bc.Tx{
 						TxHeader: &bc.TxHeader{
