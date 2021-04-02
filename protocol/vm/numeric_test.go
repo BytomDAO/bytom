@@ -21,11 +21,11 @@ func TestNumericOps(t *testing.T) {
 		op: OP_1ADD,
 		startVM: &virtualMachine{
 			runLimit:  50000,
-			dataStack: [][]byte{{2}},
+			dataStack: [][]byte{{0x02}},
 		},
 		wantVM: &virtualMachine{
 			runLimit:  49998,
-			dataStack: [][]byte{{3}},
+			dataStack: [][]byte{{0x03}},
 		},
 	}, {
 		op: OP_1SUB,
@@ -520,5 +520,242 @@ func TestRangeErrs(t *testing.T) {
 				t.Errorf("case %d (%s): got unexpected error %s", i, c.prog, err)
 			}
 		}
+	}
+}
+
+func TestNumCompare(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+		op int
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "test 2 > 1 for cmpLess",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x01}},
+					runLimit:  50000,
+				},
+				op: cmpLess,
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "test 2 > 1 for cmpLessEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x01}},
+					runLimit:  50000,
+				},
+				op: cmpLessEqual,
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "test 2 > 1 for cmpGreater",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x01}},
+					runLimit:  50000,
+				},
+				op: cmpGreater,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+		{
+			name: "test 2 > 1 for cmpGreaterEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x01}},
+					runLimit:  50000,
+				},
+				op: cmpGreaterEqual,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+		{
+			name: "test 2 > 1 for cmpEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x01}},
+					runLimit:  50000,
+				},
+				op: cmpEqual,
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "test 2 > 1 for cmpNotEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x01}},
+					runLimit:  50000,
+				},
+				op: cmpNotEqual,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+		{
+			name: "test 2 == 2 for cmpLess",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x02}},
+					runLimit:  50000,
+				},
+				op: cmpLess,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+		{
+			name: "test 2 == 2 for cmpLessEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x02}},
+					runLimit:  50000,
+				},
+				op: cmpLessEqual,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+		{
+			name: "test 2 == 2 for cmpGreater",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x02}},
+					runLimit:  50000,
+				},
+				op: cmpGreater,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+		{
+			name: "test 2 == 2 for cmpGreaterEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x02}},
+					runLimit:  50000,
+				},
+				op: cmpGreaterEqual,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+		{
+			name: "test 2 == 2 for cmpEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x02}},
+					runLimit:  50000,
+				},
+				op: cmpEqual,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+		{
+			name: "test 2 == 2 for cmpNotEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x02}, {0x02}},
+					runLimit:  50000,
+				},
+				op: cmpNotEqual,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+		{
+			name: "test 1 < 2 for cmpLess",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x01}, {0x02}},
+					runLimit:  50000,
+				},
+				op:cmpLess,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+		{
+			name: "test 1 < 2 for cmpLessEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x01}, {0x02}},
+					runLimit:  50000,
+				},
+				op:cmpLessEqual,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+		{
+			name: "test 1 < 2 for cmpGreater",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x01}, {0x02}},
+					runLimit:  50000,
+				},
+				op: cmpGreater,
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "test 1 < 2 for cmpGreaterEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x01}, {0x02}},
+					runLimit:  50000,
+				},
+				op: cmpGreaterEqual,
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "test 1 < 2 for cmpEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x01}, {0x02}},
+					runLimit:  50000,
+				},
+				op: cmpEqual,
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "test 1 < 2 for cmpNotEqual",
+			args: args{
+				vm: &virtualMachine{
+					dataStack: [][]byte{{0x01}, {0x02}},
+					runLimit:  50000,
+				},
+				op: cmpNotEqual,
+			},
+			want:    [][]byte{{1}},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := doNumCompare(tt.args.vm, tt.args.op); (err != nil) != tt.wantErr {
+				t.Errorf("doNumCompare() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
