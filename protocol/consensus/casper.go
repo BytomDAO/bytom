@@ -42,7 +42,7 @@ type Verification struct {
 }
 
 // AuthVerification verify whether the Verification is legal.
-// the status of source checkpoint must justified, and if an individual validator ν must not publish two distinct Verification
+// the status of source checkpoint must justified, and an individual validator ν must not publish two distinct Verification
 // ⟨ν,s1,t1,h(s1),h(t1)⟩ and ⟨ν,s2,t2,h(s2),h(t2)⟩, such that either:
 // h(t1) = h(t2) OR h(s1) < h(s2) < h(t2) < h(t1)
 func (c *Casper) AuthVerification(v *Verification) error {
