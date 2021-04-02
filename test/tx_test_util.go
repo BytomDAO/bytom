@@ -359,7 +359,7 @@ func SignInstructionFor(input *types.SpendInput, db dbm.DB, signer *signers.Sign
 func CreateCoinbaseTx(controlProgram []byte, height, txsFee uint64) (*types.Tx, error) {
 	coinbaseValue := consensus.BlockSubsidy(height) + txsFee
 	builder := txbuilder.NewBuilder(time.Now())
-	if err := builder.AddInput(types.NewCoinbaseInput([]byte(string(height))), &txbuilder.SigningInstruction{}); err != nil {
+	if err := builder.AddInput(types.NewCoinbaseInput([]byte(fmt.Sprint(height))), &txbuilder.SigningInstruction{}); err != nil {
 		return nil, err
 	}
 	if err := builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, coinbaseValue, controlProgram)); err != nil {
