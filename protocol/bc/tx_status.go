@@ -2,7 +2,6 @@ package bc
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 )
 
@@ -14,20 +13,6 @@ func NewTransactionStatus() *TransactionStatus {
 		Version:      transactionStatusVersion,
 		VerifyStatus: []*TxVerifyResult{},
 	}
-}
-
-// SetStatus set the tx status of given index
-func (ts *TransactionStatus) SetStatus(i int, gasOnly bool) error {
-	if i > len(ts.VerifyStatus) {
-		return errors.New("setStatus should be set one by one")
-	}
-
-	if i == len(ts.VerifyStatus) {
-		ts.VerifyStatus = append(ts.VerifyStatus, &TxVerifyResult{StatusFail: gasOnly})
-	} else {
-		ts.VerifyStatus[i].StatusFail = gasOnly
-	}
-	return nil
 }
 
 // WriteTo will write TxVerifyResult struct to io.Writer
