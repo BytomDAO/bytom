@@ -8,32 +8,12 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 )
 
-// serflag variables for output types.
-const (
-	OrdinaryOutputType uint8 = iota
-	VoteOutputType
-)
-
 // TxOutput is the top level struct of tx output.
 type TxOutput struct {
 	AssetVersion uint64
-	TypedOutput
 	OutputCommitment
 	// Unconsumed suffixes of the commitment and witness extensible strings.
 	CommitmentSuffix []byte
-}
-
-// TypedOutput return the txoutput type.
-type TypedOutput interface {
-	OutputType() uint8
-}
-
-// OrdinaryTxOutput
-type OrdinaryTxOutput struct{}
-
-// OutputType implement the txout interface
-func (o *OrdinaryTxOutput) OutputType() uint8 {
-	return OrdinaryOutputType
 }
 
 // NewTxOutput create a new output struct
@@ -48,7 +28,6 @@ func NewTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *TxOu
 			VMVersion:      1,
 			ControlProgram: controlProgram,
 		},
-		TypedOutput: &OrdinaryTxOutput{},
 	}
 }
 
@@ -67,10 +46,6 @@ func (to *TxOutput) readFrom(r *blockchain.Reader) (err error) {
 }
 
 func (to *TxOutput) writeTo(w io.Writer) error {
-	if to.AssetVersion != 1 {
-		return nil
-	}
-
 	if _, err := blockchain.WriteVarint63(w, to.AssetVersion); err != nil {
 		return errors.Wrap(err, "writing asset version")
 	}
@@ -86,15 +61,6 @@ func (to *TxOutput) writeTo(w io.Writer) error {
 }
 
 func (to *TxOutput) writeCommitment(w io.Writer) error {
-	switch outputType := to.TypedOutput.(type) {
-	case *VoteOutput:
-		if _, err := w.Write([]byte{VoteOutputType}); err != nil {
-			return err
-		}
-		if _, err := blockchain.WriteVarstr31(w, outputType.Vote); err != nil {
-			return err
-		}
-	}
 	return to.OutputCommitment.writeExtensibleString(w, to.CommitmentSuffix, to.AssetVersion)
 }
 
