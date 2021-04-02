@@ -71,10 +71,6 @@ func createCoinbaseTx(accountManager *account.Manager, amount uint64, blockHeigh
 // NewBlockTemplate returns a new block template that is ready to be solved
 func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager *account.Manager) (b *types.Block, err error) {
 	view := state.NewUtxoViewpoint()
-	txStatus := bc.NewTransactionStatus()
-	if err := txStatus.SetStatus(0, false); err != nil {
-		return nil, err
-	}
 	txEntries := []*bc.Tx{nil}
 	gasUsed := uint64(0)
 	txFee := uint64(0)
@@ -105,8 +101,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 	sort.Sort(byTime(txs))
 	for _, txDesc := range txs {
 		tx := txDesc.Tx.Tx
-		gasOnlyTx := false
-
 		if err := c.GetTransactionsUtxo(view, []*bc.Tx{tx}); err != nil {
 			blkGenSkipTxForErr(txPool, &tx.ID, err)
 			continue
@@ -114,11 +108,8 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 
 		gasStatus, err := validation.ValidateTx(tx, bcBlock)
 		if err != nil {
-			if !gasStatus.GasValid {
-				blkGenSkipTxForErr(txPool, &tx.ID, err)
-				continue
-			}
-			gasOnlyTx = true
+			blkGenSkipTxForErr(txPool, &tx.ID, err)
+			continue
 		}
 
 		if gasUsed+uint64(gasStatus.GasUsed) > consensus.MaxBlockGas {
@@ -128,10 +119,6 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 		if err := view.ApplyTransaction(bcBlock, tx); err != nil {
 			blkGenSkipTxForErr(txPool, &tx.ID, err)
 			continue
-		}
-
-		if err := txStatus.SetStatus(len(b.Transactions), gasOnlyTx); err != nil {
-			return nil, err
 		}
 
 		b.Transactions = append(b.Transactions, txDesc.Tx)
