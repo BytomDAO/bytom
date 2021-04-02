@@ -69,11 +69,7 @@ func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, 
 		justifiedHeight = checkpoint.height
 	}
 
-	if len(node.children) == 0 {
-		return checkpoint.height, checkpoint.hash, justifiedHeight
-	}
-
-	bestHeight, bestHash, maxJustifiedHeight := uint64(0), "", justifiedHeight
+	bestHeight, bestHash, maxJustifiedHeight := checkpoint.height, checkpoint.hash, justifiedHeight
 	for _, child := range node.children {
 		if height, hash, justified := chainOfMaxJustifiedHeight(child, justifiedHeight); justified > maxJustifiedHeight {
 			maxJustifiedHeight = justified
