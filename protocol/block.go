@@ -75,10 +75,6 @@ func (c *Chain) calcReorganizeNodes(node *state.BlockNode) ([]*state.BlockNode, 
 
 func (c *Chain) connectBlock(block *types.Block) (err error) {
 	bcBlock := types.MapBlock(block)
-	if bcBlock.TransactionStatus, err = c.store.GetTransactionStatus(&bcBlock.ID); err != nil {
-		return err
-	}
-
 	utxoView := state.NewUtxoViewpoint()
 	if err := c.store.GetTransactionsUtxo(utxoView, bcBlock.Transactions); err != nil {
 		return err

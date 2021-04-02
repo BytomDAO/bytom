@@ -9,13 +9,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const logModule = "leveldb"
@@ -104,20 +104,6 @@ func (s *Store) GetBlock(hash *bc.Hash) (*types.Block, error) {
 // GetTransactionsUtxo will return all the utxo that related to the input txs
 func (s *Store) GetTransactionsUtxo(view *state.UtxoViewpoint, txs []*bc.Tx) error {
 	return getTransactionsUtxo(s.db, view, txs)
-}
-
-// GetTransactionStatus will return the utxo that related to the block hash
-func (s *Store) GetTransactionStatus(hash *bc.Hash) (*bc.TransactionStatus, error) {
-	data := s.db.Get(CalcTxStatusKey(hash))
-	if data == nil {
-		return nil, errors.New("can't find the transaction status by given hash")
-	}
-
-	ts := &bc.TransactionStatus{}
-	if err := proto.Unmarshal(data, ts); err != nil {
-		return nil, errors.Wrap(err, "unmarshaling transaction status")
-	}
-	return ts, nil
 }
 
 // GetStoreStatus return the BlockStoreStateJSON
