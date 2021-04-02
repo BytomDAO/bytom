@@ -415,7 +415,7 @@ func TestDetachBlock(t *testing.T) {
 
 	for i, c := range cases {
 		c.block.TransactionStatus.SetStatus(0, c.gasOnlyTx)
-		if err := c.inputView.DetachBlock(c.block, c.block.TransactionStatus); c.err != (err != nil) {
+		if err := c.inputView.DetachBlock(c.block); c.err != (err != nil) {
 			t.Errorf("case %d want err = %v, get err = %v", i, c.err, err)
 		}
 		if c.err {

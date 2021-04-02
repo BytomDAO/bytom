@@ -113,11 +113,8 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		if err := c.store.GetTransactionsUtxo(utxoView, detachBlock.Transactions); err != nil {
 			return err
 		}
-		txStatus, err := c.GetTransactionStatus(&detachBlock.ID)
-		if err != nil {
-			return err
-		}
-		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
+
+		if err := utxoView.DetachBlock(detachBlock); err != nil {
 			return err
 		}
 

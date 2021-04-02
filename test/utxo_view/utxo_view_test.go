@@ -1,11 +1,8 @@
 package utxo_view
 
 import (
-	"fmt"
 	"os"
 	"testing"
-
-	"github.com/bytom/bytom/testutil"
 
 	"github.com/golang/protobuf/proto"
 
@@ -15,6 +12,7 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
+	"github.com/bytom/bytom/testutil"
 )
 
 func TestAttachOrDetachBlocks(t *testing.T) {
@@ -292,9 +290,6 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 
 		utxoViewpoint0 := state.NewUtxoViewpoint()
 		for k, v := range c.before {
-			if "adea4cde1fb8d3837fb56011e7966be98734ff936346289932e8c9be4029c89a" == k.String() {
-				fmt.Println(v)
-			}
 			utxoViewpoint0.Entries[k] = v
 		}
 		if err := store.SaveChainStatus(node, utxoViewpoint0); err != nil {
@@ -302,13 +297,11 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		}
 
 		utxoViewpoint := state.NewUtxoViewpoint()
-		for index, block := range c.detachBlock {
-			// 将块中的tx，存到utxo中
+		for _, block := range c.detachBlock {
 			if err := store.GetTransactionsUtxo(utxoViewpoint, block.Transactions); err != nil {
 				t.Error(err)
 			}
-			// 将快中的utxo，取出来, 从leveldb 中取数据
-			if err := utxoViewpoint.DetachBlock(block, c.detachTxStatus[index]); err != nil {
+			if err := utxoViewpoint.DetachBlock(block); err != nil {
 				t.Error(err)
 			}
 		}

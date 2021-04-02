@@ -79,7 +79,7 @@ func (view *UtxoViewpoint) CanSpend(hash *bc.Hash) bool {
 	return entry != nil && !entry.Spent
 }
 
-func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
+func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx) error {
 	for _, prevout := range tx.SpentOutputIDs {
 		_, err := tx.Output(prevout)
 		if err != nil {
@@ -109,13 +109,9 @@ func (view *UtxoViewpoint) DetachTransaction(tx *bc.Tx, statusFail bool) error {
 	return nil
 }
 
-func (view *UtxoViewpoint) DetachBlock(block *bc.Block, txStatus *bc.TransactionStatus) error {
+func (view *UtxoViewpoint) DetachBlock(block *bc.Block) error {
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
-		statusFail, err := txStatus.GetStatus(i)
-		if err != nil {
-			return err
-		}
-		if err := view.DetachTransaction(block.Transactions[i], statusFail); err != nil {
+		if err := view.DetachTransaction(block.Transactions[i]); err != nil {
 			return err
 		}
 	}
