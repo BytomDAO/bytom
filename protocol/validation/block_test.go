@@ -10,7 +10,6 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
-	"github.com/bytom/bytom/protocol/vm"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
 	"github.com/bytom/bytom/testutil"
 )
@@ -424,78 +423,6 @@ func TestGasOverBlockLimit(t *testing.T) {
 
 	if err := ValidateBlock(block, parent); err != errOverBlockLimit {
 		t.Errorf("got error %s, want %s", err, errOverBlockLimit)
-	}
-}
-
-// TestSetTransactionStatus verify the transaction status is set correctly (blocktest#1010)
-func TestSetTransactionStatus(t *testing.T) {
-	iniTtensority()
-
-	cp, _ := vmutil.DefaultCoinbaseProgram()
-	parent := &state.BlockNode{
-		Version:   1,
-		Height:    0,
-		Timestamp: 1523352600,
-		Hash:      bc.Hash{V0: 0},
-		Seed:      &bc.Hash{V1: 1},
-		Bits:      2305843009214532812,
-	}
-	block := &bc.Block{
-		ID: bc.Hash{V0: 1},
-		BlockHeader: &bc.BlockHeader{
-			Version:          1,
-			Height:           1,
-			Timestamp:        1523352601,
-			PreviousBlockId:  &bc.Hash{V0: 0},
-			Bits:             2305843009214532812,
-			TransactionsRoot: &bc.Hash{V0: 12926229728833800905, V1: 5580091428647683449, V2: 17950881632140267799, V3: 11358423410497756721},
-		},
-		Transactions: []*bc.Tx{
-			types.MapTx(&types.TxData{
-				Version:        1,
-				SerializedSize: 1,
-				Inputs:         []*types.TxInput{types.NewCoinbaseInput(nil)},
-				Outputs:        []*types.TxOutput{types.NewTxOutput(*consensus.BTMAssetID, 41449998224, cp)},
-			}),
-			types.MapTx(&types.TxData{
-				Version:        1,
-				SerializedSize: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
-					types.NewSpendInput([][]byte{}, *newHash(8), bc.AssetID{V0: 1}, 1000, 0, []byte{byte(vm.OP_TRUE)}),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-					types.NewTxOutput(bc.AssetID{V0: 1}, 1000, cp),
-				},
-			}),
-			types.MapTx(&types.TxData{
-				Version:        1,
-				SerializedSize: 1,
-				Inputs: []*types.TxInput{
-					types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
-				},
-				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-				},
-			}),
-		},
-	}
-
-	if err := ValidateBlock(block, parent); err != nil {
-		t.Fatal(err)
-	}
-
-	expectTxStatuses := []bool{false, false, false}
-	txStatuses := block.GetTransactionStatus().VerifyStatus
-	if len(expectTxStatuses) != len(txStatuses) {
-		t.Error("the size of expect tx status is not equals to size of got tx status")
-	}
-
-	for i, status := range txStatuses {
-		if expectTxStatuses[i] != status.StatusFail {
-			t.Errorf("got tx status: %v, expect tx status: %v\n", status.StatusFail, expectTxStatuses[i])
-		}
 	}
 }
 
