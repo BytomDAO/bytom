@@ -306,11 +306,11 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 			}
 		}
 
-		for index, block := range c.attachBlock {
+		for _, block := range c.attachBlock {
 			if err := store.GetTransactionsUtxo(utxoViewpoint, block.Transactions); err != nil {
 				t.Error(err)
 			}
-			if err := utxoViewpoint.ApplyBlock(block, c.attachTxStatus[index]); err != nil {
+			if err := utxoViewpoint.ApplyBlock(block); err != nil {
 				t.Error(err)
 			}
 		}

@@ -223,7 +223,7 @@ func TestApplyBlock(t *testing.T) {
 			err: false,
 		},
 		{
-			// apply gas only tx, non-btm asset spent input will not be spent
+			// non-btm asset spent input will be spent
 			block: &bc.Block{
 				BlockHeader: &bc.BlockHeader{
 					TransactionStatus: bc.NewTransactionStatus(),
@@ -250,10 +250,9 @@ func TestApplyBlock(t *testing.T) {
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
 					bc.Hash{V1: 0}: storage.NewUtxoEntry(false, 0, true),
-					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, false),
+					bc.Hash{V1: 1}: storage.NewUtxoEntry(false, 0, true),
 				},
 			},
-			gasOnlyTx: true,
 			err:       false,
 		},
 		{
@@ -279,16 +278,15 @@ func TestApplyBlock(t *testing.T) {
 			fetchView: &UtxoViewpoint{
 				Entries: map[bc.Hash]*storage.UtxoEntry{
 					bc.Hash{V1: 0}: storage.NewUtxoEntry(true, 0, false),
+					bc.Hash{V1: 1}: storage.NewUtxoEntry(true, 0, false),
 				},
 			},
-			gasOnlyTx: true,
 			err:       false,
 		},
 	}
 
 	for i, c := range cases {
-		c.block.TransactionStatus.SetStatus(0, c.gasOnlyTx)
-		if err := c.inputView.ApplyBlock(c.block, c.block.TransactionStatus); c.err != (err != nil) {
+		if err := c.inputView.ApplyBlock(c.block); c.err != (err != nil) {
 			t.Errorf("case #%d want err = %v, get err = %v", i, c.err, err)
 		}
 		if c.err {
@@ -414,7 +412,6 @@ func TestDetachBlock(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		c.block.TransactionStatus.SetStatus(0, c.gasOnlyTx)
 		if err := c.inputView.DetachBlock(c.block); c.err != (err != nil) {
 			t.Errorf("case %d want err = %v, get err = %v", i, c.err, err)
 		}

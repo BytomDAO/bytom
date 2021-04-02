@@ -125,7 +125,7 @@ func NewBlockTemplate(c *protocol.Chain, txPool *protocol.TxPool, accountManager
 			break
 		}
 
-		if err := view.ApplyTransaction(bcBlock, tx, gasOnlyTx); err != nil {
+		if err := view.ApplyTransaction(bcBlock, tx); err != nil {
 			blkGenSkipTxForErr(txPool, &tx.ID, err)
 			continue
 		}
