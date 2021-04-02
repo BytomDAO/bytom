@@ -29,9 +29,6 @@ func (c *chain) CalcNextSeed(*bc.Hash) (*bc.Hash, error) {
 func (c *chain) GetHeaderByHeight(uint64) (*types.BlockHeader, error) {
 	return nil, nil
 }
-func (c *chain) GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error) {
-	return nil, nil
-}
 func (c *chain) InMainChain(bc.Hash) bool {
 	return true
 }
