@@ -20,7 +20,13 @@ type Casper struct {
 
 // Best chain return the chain containing the justified checkpoint of the largest height
 func (c *Casper) BestChain() (uint64, string) {
-	return 0, ""
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	// root is init justified
+	root := c.tree.checkpoint
+	bestHeight, bestHash, _ := chainOfMaxJustifiedHeight(c.tree, root.height)
+	return bestHeight, bestHash
 }
 
 // Validators return the validators by specified block hash
@@ -54,4 +60,20 @@ func (c *Casper) AuthVerification(v *Verification) error {
 // the tree of checkpoint will grow with the arrival of new blocks
 func (c *Casper) ProcessBlock(block *types.Block) error {
 	return nil
+}
+
+// justifiedHeight is the max justified height of checkpoint from node to root
+func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, string, uint64) {
+	checkpoint := node.checkpoint
+	if checkpoint.status == justified || checkpoint.status == finalized {
+		justifiedHeight = checkpoint.height
+	}
+
+	bestHeight, bestHash, maxJustifiedHeight := checkpoint.height, checkpoint.hash, justifiedHeight
+	for _, child := range node.children {
+		if height, hash, justified := chainOfMaxJustifiedHeight(child, justifiedHeight); justified > maxJustifiedHeight {
+			bestHeight, bestHash, maxJustifiedHeight = height, hash, justified
+		}
+	}
+	return bestHeight, bestHash, maxJustifiedHeight
 }
