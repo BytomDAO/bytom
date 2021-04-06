@@ -502,84 +502,84 @@ func TestPrintBlockMap(t *testing.T)  {
 
 func TestProcessBlock(t *testing.T) {
 	cases := []*processBlockTestCase{
-		//{
-		//	desc: "process a invalid block",
-		//	newBlock: &types.Block{
-		//		BlockHeader: types.BlockHeader{
-		//			Height:            1,
-		//			Version:           1,
-		//			//Bits:              2305843009214532812,
-		//			PreviousBlockHash: blockMap[0][0].block.Hash(),
-		//		},
-		//	},
-		//	wantStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
-		//	wantBlockIndex: state.NewBlockIndexWithData(
-		//		map[bc.Hash]*state.BlockNode{
-		//			blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-		//		},
-		//		[]*state.BlockNode{
-		//			mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
-		//		},
-		//	),
-		//	wantOrphanManage: protocol.NewOrphanManage(),
-		//	wantError:        true,
-		//},
-		//{
-		//	desc:      "process a orphan block normally",
-		//	newBlock:  blockMap[2][0].block,
-		//	wantStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
-		//	wantBlockIndex: state.NewBlockIndexWithData(
-		//		map[bc.Hash]*state.BlockNode{
-		//			blockMap[0][0].block.Hash(): mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
-		//		},
-		//		[]*state.BlockNode{
-		//			mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
-		//		},
-		//	),
-		//	wantOrphanManage: protocol.NewOrphanManageWithData(
-		//		map[bc.Hash]*protocol.OrphanBlock{blockMap[2][0].block.Hash(): {Block: blockMap[2][0].block}},
-		//		map[bc.Hash][]*bc.Hash{blockMap[2][0].block.PreviousBlockHash: {hashPtr(blockMap[2][0].block.Hash())}},
-		//	),
-		//	wantIsOrphan: true,
-		//	wantError:    false,
-		//},
-		//{
-		//	desc:      "attach a block normally",
-		//	newBlock:  blockMap[1][0].block,
-		//	wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}),
-		//	wantBlockIndex: state.NewBlockIndexWithData(
-		//		map[bc.Hash]*state.BlockNode{
-		//			blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-		//			blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-		//		},
-		//		[]*state.BlockNode{
-		//			mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
-		//			mustNewBlockNode(&blockMap[1][0].block.BlockHeader, mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil)),
-		//		},
-		//	),
-		//	wantOrphanManage: protocol.NewOrphanManage(),
-		//	wantIsOrphan:     false,
-		//	wantError:        false,
-		//},
-		//{
-		//	desc:      "init genesis block from db",
-		//	newBlock:  blockMap[1][0].block,
-		//	initStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
-		//	wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}),
-		//	wantBlockIndex: state.NewBlockIndexWithData(
-		//		map[bc.Hash]*state.BlockNode{
-		//			blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
-		//			blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
-		//		},
-		//		[]*state.BlockNode{
-		//			mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
-		//			mustNewBlockNode(&blockMap[1][0].block.BlockHeader, mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil)),
-		//		},
-		//	),
-		//	wantOrphanManage: protocol.NewOrphanManage(),
-		//	wantIsOrphan:     false,
-		//	wantError:        false,
-		//},
+		{
+			desc: "process a invalid block",
+			newBlock: &types.Block{
+				BlockHeader: types.BlockHeader{
+					Height:            1,
+					Version:           1,
+					//Bits:              2305843009214532812,
+					PreviousBlockHash: blockMap[0][0].block.Hash(),
+				},
+			},
+			wantStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
+			wantBlockIndex: state.NewBlockIndexWithData(
+				map[bc.Hash]*state.BlockNode{
+					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
+				},
+				[]*state.BlockNode{
+					mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
+				},
+			),
+			wantOrphanManage: protocol.NewOrphanManage(),
+			wantError:        true,
+		},
+		{
+			desc:      "process a orphan block normally",
+			newBlock:  blockMap[2][0].block,
+			wantStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
+			wantBlockIndex: state.NewBlockIndexWithData(
+				map[bc.Hash]*state.BlockNode{
+					blockMap[0][0].block.Hash(): mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
+				},
+				[]*state.BlockNode{
+					mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
+				},
+			),
+			wantOrphanManage: protocol.NewOrphanManageWithData(
+				map[bc.Hash]*protocol.OrphanBlock{blockMap[2][0].block.Hash(): {Block: blockMap[2][0].block}},
+				map[bc.Hash][]*bc.Hash{blockMap[2][0].block.PreviousBlockHash: {hashPtr(blockMap[2][0].block.Hash())}},
+			),
+			wantIsOrphan: true,
+			wantError:    false,
+		},
+		{
+			desc:      "attach a block normally",
+			newBlock:  blockMap[1][0].block,
+			wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}),
+			wantBlockIndex: state.NewBlockIndexWithData(
+				map[bc.Hash]*state.BlockNode{
+					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
+					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
+				},
+				[]*state.BlockNode{
+					mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
+					mustNewBlockNode(&blockMap[1][0].block.BlockHeader, mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil)),
+				},
+			),
+			wantOrphanManage: protocol.NewOrphanManage(),
+			wantIsOrphan:     false,
+			wantError:        false,
+		},
+		{
+			desc:      "init genesis block from db",
+			newBlock:  blockMap[1][0].block,
+			initStore: createStoreItems([]int{0}, []*attachBlock{blockMap[0][0]}),
+			wantStore: createStoreItems([]int{0, 1}, []*attachBlock{blockMap[0][0], blockMap[1][0]}),
+			wantBlockIndex: state.NewBlockIndexWithData(
+				map[bc.Hash]*state.BlockNode{
+					blockMap[0][0].block.Hash(): mustCreateBlockNode(&blockMap[0][0].block.BlockHeader),
+					blockMap[1][0].block.Hash(): mustCreateBlockNode(&blockMap[1][0].block.BlockHeader, &blockMap[0][0].block.BlockHeader),
+				},
+				[]*state.BlockNode{
+					mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil),
+					mustNewBlockNode(&blockMap[1][0].block.BlockHeader, mustNewBlockNode(&blockMap[0][0].block.BlockHeader, nil)),
+				},
+			),
+			wantOrphanManage: protocol.NewOrphanManage(),
+			wantIsOrphan:     false,
+			wantError:        false,
+		},
 		{
 			desc:      "attach a block to fork chain normally, not rollback",
 			newBlock:  blockMap[2][0].block,
