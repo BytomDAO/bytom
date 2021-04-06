@@ -18,11 +18,6 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	}
 
 	preBlockHeader := chain.BestBlockHeader()
-	//preBlockHash := preBlockHeader.Hash()
-	//nextBits, err := chain.CalcNextBits(&preBlockHash)
-	//if err != nil {
-	//	return nil, err
-	//}
 
 	b := &types.Block{
 		BlockHeader: types.BlockHeader{
@@ -31,7 +26,6 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 			PreviousBlockHash: preBlockHeader.Hash(),
 			Timestamp:         preBlockHeader.Timestamp + 1,
 			BlockCommitment:   types.BlockCommitment{},
-			//Bits:              nextBits,
 		},
 		Transactions: []*types.Tx{nil},
 	}
@@ -85,30 +79,7 @@ func ReplaceCoinbase(block *types.Block, coinbaseTx *types.Tx) (err error) {
 // AppendBlocks append empty blocks to chain, mainly used to mature the coinbase tx
 func AppendBlocks(chain *protocol.Chain, num uint64) error {
 	for i := uint64(0); i < num; i++ {
-		//block, err := NewBlock(chain, nil, []byte{byte(vm.OP_TRUE)})
-		//if err != nil {
-		//	return err
-		//}
-		//if err := SolveAndUpdate(chain, block); err != nil {
-		//	return err
-		//}
+
 	}
 	return nil
 }
-
-// SolveAndUpdate solve difficulty and update chain status
-//func SolveAndUpdate(chain *protocol.Chain, block *types.Block) error {
-//	seed, err := chain.CalcNextSeed(&block.PreviousBlockHash)
-//	if err != nil {
-//		return err
-//	}
-//	Solve(seed, block)
-//	_, err = chain.ProcessBlock(block)
-//	return err
-//}
-
-// Solve simulate solve difficulty by add result to cache
-//func Solve(seed *bc.Hash, block *types.Block) {
-//	hash := block.BlockHeader.Hash()
-//	tensority.AIHash.AddCache(&hash, seed, &bc.Hash{})
-//}

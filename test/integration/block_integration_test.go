@@ -40,8 +40,6 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431597,
-						//Nonce:             5,
-						//Bits:              2305843009214532812,
 						PreviousBlockHash: testutil.MustDecodeHash("cd7eaf7ea23d7099b2ff3968cf2f54850d7673c3e1519dc205e986421c7738a6"),
 					},
 					Transactions: []*types.Tx{
@@ -66,8 +64,6 @@ func init() {
 						Height:            1,
 						Version:           1,
 						Timestamp:         1556431697,
-						//Nonce:             36,
-						//Bits:              2305843009214532812,
 						PreviousBlockHash: testutil.MustDecodeHash("cd7eaf7ea23d7099b2ff3968cf2f54850d7673c3e1519dc205e986421c7738a6"),
 					},
 					Transactions: []*types.Tx{
@@ -96,8 +92,6 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						//Nonce:             0,
-						//Bits:              2305843009214532812,
 						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
@@ -124,8 +118,6 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431604,
-						//Nonce:             12,
-						//Bits:              2305843009214532812,
 						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
@@ -170,8 +162,6 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						//Nonce:             4,
-						//Bits:              2305843009214532812,
 						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
@@ -216,8 +206,6 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						//Nonce:             17,
-						//Bits:              2305843009214532812,
 						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
@@ -270,8 +258,6 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						//Nonce:             4,
-						//Bits:              2305843009214532812,
 						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
@@ -325,8 +311,6 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						//Nonce:             4,
-						//Bits:              2305843009214532812,
 						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
@@ -381,8 +365,6 @@ func init() {
 						Height:            2,
 						Version:           1,
 						Timestamp:         1556431607,
-						//Nonce:             12,
-						//Bits:              2305843009214532812,
 						PreviousBlockHash: testutil.MustDecodeHash("4691aff4f2f6d9bb0d19c85933b6c8101dfecf43b2b000714ad2066cac843fd7"),
 					},
 					Transactions: []*types.Tx{
@@ -439,8 +421,6 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						//Nonce:             0,
-						//Bits:              2305843009214532812,
 						PreviousBlockHash: testutil.MustDecodeHash("e8d37fd75137d6e634cacb1656f780fab967ae4c1c98fa26a215a878d48e5ab0"),
 					},
 					Transactions: []*types.Tx{
@@ -466,8 +446,6 @@ func init() {
 						Height:            3,
 						Version:           1,
 						Timestamp:         1556431640,
-						//Nonce:             5,
-						//Bits:              2305843009214532812,
 						PreviousBlockHash: testutil.MustDecodeHash("24f2c89193fc750d325145da1f0c574cceadef09751095220039c91836357d6e"),
 					},
 					Transactions: []*types.Tx{
@@ -508,7 +486,6 @@ func TestProcessBlock(t *testing.T) {
 				BlockHeader: types.BlockHeader{
 					Height:            1,
 					Version:           1,
-					//Bits:              2305843009214532812,
 					PreviousBlockHash: blockMap[0][0].block.Hash(),
 				},
 			},

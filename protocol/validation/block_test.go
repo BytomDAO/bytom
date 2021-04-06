@@ -135,18 +135,7 @@ func TestValidateBlockHeader(t *testing.T) {
 			},
 			err: errMisorderedBlockHeight,
 		},
-		//{
-		//	desc: "the difficulty of the block is not equals to the next difficulty of parent block (blocktest#1008)",
-		//	block: &bc.Block{BlockHeader: &bc.BlockHeader{
-		//		Version: 1,
-		//		Height:  20,
-		//	}},
-		//	parent: &state.BlockNode{
-		//		Version: 1,
-		//		Height:  19,
-		//	},
-		//	err: errBadBits,
-		//},
+
 		{
 			desc: "the prev block hash not equals to the hash of parent (blocktest#1004)",
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{
@@ -161,26 +150,6 @@ func TestValidateBlockHeader(t *testing.T) {
 			},
 			err: errMismatchedBlock,
 		},
-		//{
-		//	desc: "check work proof fail (blocktest#1011)",
-		//	block: &bc.Block{
-		//		ID: bc.Hash{V0: 0},
-		//		BlockHeader: &bc.BlockHeader{
-		//			Version:         1,
-		//			Height:          1,
-		//			Timestamp:       1523352601,
-		//			PreviousBlockId: &bc.Hash{V0: 0},
-		//		},
-		//	},
-		//	parent: &state.BlockNode{
-		//		Version:   1,
-		//		Height:    0,
-		//		Timestamp: 1523352600,
-		//		Hash:      bc.Hash{V0: 0},
-		//		Seed:      &bc.Hash{V1: 1},
-		//	},
-		//	err: errWorkProof,
-		//},
 		{
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
@@ -281,7 +250,6 @@ func TestValidateBlock(t *testing.T) {
 				Height:    0,
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
-				//Bits:      2305843009214532812,
 			},
 			err: errMismatchedMerkleRoot,
 		},
@@ -311,7 +279,6 @@ func TestValidateBlock(t *testing.T) {
 				Height:    0,
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
-				//Bits:      2305843009214532812,
 			},
 			err: errMismatchedMerkleRoot,
 		},
@@ -345,7 +312,6 @@ func TestValidateBlock(t *testing.T) {
 				Height:    0,
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
-				//Bits:      2305843009214532812,
 			},
 			err: ErrWrongCoinbaseTransaction,
 		},
@@ -368,7 +334,6 @@ func TestGasOverBlockLimit(t *testing.T) {
 		Height:    0,
 		Timestamp: 1523352600,
 		Hash:      bc.Hash{V0: 0},
-		//Bits:      2305843009214532812,
 	}
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
@@ -416,7 +381,6 @@ func TestSetTransactionStatus(t *testing.T) {
 		Height:    0,
 		Timestamp: 1523352600,
 		Hash:      bc.Hash{V0: 0},
-		//Bits:      2305843009214532812,
 	}
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
