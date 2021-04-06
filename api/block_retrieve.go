@@ -27,14 +27,13 @@ func (a *API) getBlockCount() Response {
 
 // BlockTx is the tx struct for getBlock func
 type BlockTx struct {
-	ID         bc.Hash                  `json:"id"`
-	Version    uint64                   `json:"version"`
-	Size       uint64                   `json:"size"`
-	TimeRange  uint64                   `json:"time_range"`
-	Inputs     []*query.AnnotatedInput  `json:"inputs"`
-	Outputs    []*query.AnnotatedOutput `json:"outputs"`
-	StatusFail bool                     `json:"status_fail"`
-	MuxID      bc.Hash                  `json:"mux_id"`
+	ID        bc.Hash                  `json:"id"`
+	Version   uint64                   `json:"version"`
+	Size      uint64                   `json:"size"`
+	TimeRange uint64                   `json:"time_range"`
+	Inputs    []*query.AnnotatedInput  `json:"inputs"`
+	Outputs   []*query.AnnotatedOutput `json:"outputs"`
+	MuxID bc.Hash `json:"mux_id"`
 }
 
 // BlockReq is used to handle getBlock req
