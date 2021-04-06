@@ -42,14 +42,14 @@ func TestNumericOps(t *testing.T) {
 		op: OP_1SUB,
 		startVM: &virtualMachine{
 			runLimit:  50000,
-			dataStack: [][]byte{{0x01,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 		},
 		wantVM: &virtualMachine{
-			runLimit:  49998,
+			runLimit:     49998,
 			deferredCost: -1,
-			dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+			dataStack:    [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
 		},
-	},{
+	}, {
 		op: OP_2MUL,
 		startVM: &virtualMachine{
 			runLimit:  50000,
@@ -783,7 +783,7 @@ func Test_op1Sub(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "test 1 - 1 = 1",
+			name: "Test 2 - 1 = 1",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
@@ -794,18 +794,18 @@ func Test_op1Sub(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test for [2]uint64 and result is [1]uint64",
+			name: "Test that two bytes number become one byte number after op sub",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x01,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
 				},
 			},
 			want:    [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
 			wantErr: false,
 		},
 		{
-			name: "test for 0-1 got error",
+			name: "Test for 0 - 1 got error",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
@@ -816,7 +816,7 @@ func Test_op1Sub(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "test for -1-1 got error",
+			name: "Test for -1 - 1 got error",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
