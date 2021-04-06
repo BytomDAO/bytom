@@ -507,9 +507,6 @@ func TestRangeErrs(t *testing.T) {
 		{fmt.Sprintf("%d 1ADD", int64(math.MaxInt64)-1), false},
 		{fmt.Sprintf("%s 1ADD", big.NewInt(0).SetBytes(common.Hex2Bytes("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")).String()), true},
 		{fmt.Sprintf("%s 1ADD", big.NewInt(0).SetBytes(common.Hex2Bytes("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")).String()), true},
-		{"0 1SUB", true},
-		{fmt.Sprintf("%d 1SUB", int64(math.MaxInt64)), false},
-		{fmt.Sprintf("%d 1SUB", int64(math.MinInt64)), true},
 	}
 
 	for i, c := range cases {
