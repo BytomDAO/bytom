@@ -93,10 +93,6 @@ func (v *Verification) EncodeMessage() ([]byte, error) {
 		return nil, err
 	}
 
-	if _, err := buff.WriteString(v.PubKey); err != nil {
-		return nil, err
-	}
-
 	return buff.Bytes(), nil
 }
 
@@ -234,9 +230,9 @@ func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
 		}
 
 		height := block.Height - 1
-		hash := block.PreviousBlockHash
+		blockHash = &block.PreviousBlockHash
 		if height%blocksOfEpoch == 0 {
-			return &hash, nil
+			return blockHash, nil
 		}
 	}
 }
