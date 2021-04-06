@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/bytom/bytom/common"
+	"github.com/bytom/bytom/protocol/vm/mocks"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -38,6 +39,17 @@ func TestNumericOps(t *testing.T) {
 			dataStack: [][]byte{{1}},
 		},
 	}, {
+		op: OP_1SUB,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{{0x01,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+		},
+		wantVM: &virtualMachine{
+			runLimit:  49998,
+			deferredCost: -1,
+			dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+		},
+	},{
 		op: OP_2MUL,
 		startVM: &virtualMachine{
 			runLimit:  50000,
@@ -758,6 +770,73 @@ func TestNumCompare(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := doNumCompare(tt.args.vm, tt.args.op); (err != nil) != tt.wantErr {
 				t.Errorf("doNumCompare() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_op1Sub(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "test 1 - 1 = 1",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}},
+				},
+			},
+			want:    [][]byte{{0x01}},
+			wantErr: false,
+		},
+		{
+			name: "test for [2]uint64 and result is [1]uint64",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x01,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+				},
+			},
+			want:    [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+			wantErr: false,
+		},
+		{
+			name: "test for 0-1 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{}},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "test for -1-1 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := op1Sub(tt.args.vm); (err != nil) != tt.wantErr {
+				t.Errorf("op1Sub() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
+				t.Errorf("op1Sub() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
 			}
 		})
 	}
