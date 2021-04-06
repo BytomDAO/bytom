@@ -17,10 +17,6 @@ func op1Add(vm *virtualMachine) error {
 		return err
 	}
 
-	if n.Sign() < 0 {
-		return ErrRange
-	}
-
 	num, ok := checked.NewUInt256("1")
 	if !ok {
 		return ErrBadValue
