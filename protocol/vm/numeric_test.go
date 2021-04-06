@@ -60,6 +60,27 @@ func TestNumericOps(t *testing.T) {
 			dataStack: [][]byte{{4}},
 		},
 	}, {
+		op: OP_2MUL,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{{0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+		},
+		wantVM: &virtualMachine{
+			runLimit:  49998,
+			dataStack: [][]byte{{0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe}},
+		},
+	}, {
+		op: OP_2MUL,
+		startVM: &virtualMachine{
+			runLimit:  50000,
+			dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+		},
+		wantVM: &virtualMachine{
+			runLimit:     49998,
+			deferredCost: 1,
+			dataStack:    [][]byte{{0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe}},
+		},
+	}, {
 		op: OP_2DIV,
 		startVM: &virtualMachine{
 			runLimit:  50000,
@@ -767,6 +788,75 @@ func TestNumCompare(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := doNumCompare(tt.args.vm, tt.args.op); (err != nil) != tt.wantErr {
 				t.Errorf("doNumCompare() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_op2Mul(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "test normal mul op",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{2}},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test normal mul op of big number",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test error of mul op negative",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test error of mul op out range",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.MaxU256},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test error of mul op out range which result is min number",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := op2Mul(tt.args.vm); (err != nil) != tt.wantErr {
+				t.Errorf("op2Mul() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

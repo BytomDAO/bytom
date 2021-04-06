@@ -57,15 +57,22 @@ func op2Mul(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	res, ok := checked.MulInt64(n, 2)
+
+	num, ok := checked.NewUInt256("2")
 	if !ok {
+		return ErrBadValue
+	}
+
+	if num.Mul(n, num); num.Sign() < 0 {
 		return ErrRange
 	}
-	return vm.pushInt64(res, true)
+
+	return vm.pushBigInt(num, true)
 }
 
 func op2Div(vm *virtualMachine) error {
