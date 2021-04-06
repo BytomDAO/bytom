@@ -25,7 +25,6 @@ func NewBlockHeader(version, height uint64, previousBlockID *Hash, timestamp uin
 		PreviousBlockId:   previousBlockID,
 		Timestamp:         timestamp,
 		TransactionsRoot:  transactionsRoot,
-		TransactionStatus: nil,
 		Bits:              bits,
 		Nonce:             nonce,
 	}
