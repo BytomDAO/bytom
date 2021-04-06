@@ -33,7 +33,7 @@ type BlockTx struct {
 	TimeRange uint64                   `json:"time_range"`
 	Inputs    []*query.AnnotatedInput  `json:"inputs"`
 	Outputs   []*query.AnnotatedOutput `json:"outputs"`
-	MuxID bc.Hash `json:"mux_id"`
+	MuxID     bc.Hash                  `json:"mux_id"`
 }
 
 // BlockReq is used to handle getBlock req
