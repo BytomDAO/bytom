@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"sync"
 
+	"github.com/bytom/bytom/crypto/sha3pool"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
@@ -93,7 +94,7 @@ func (v *Verification) EncodeMessage() ([]byte, error) {
 		return nil, err
 	}
 
-	return buff.Bytes(), nil
+	return sha3Hash(buff.Bytes())
 }
 
 // VerifySignature verify the signature of encode message of verification
@@ -149,11 +150,11 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return errPubKeyIsNotValidator
 	}
 
-	if err := c.verifySameHeightOfVerification(v); err != nil {
+	if err := c.verifySameHeight(v); err != nil {
 		return err
 	}
 
-	if err := c.verifySpanHeightOfVerification(v); err != nil {
+	if err := c.verifySpanHeight(v); err != nil {
 		return err
 	}
 
@@ -175,7 +176,7 @@ func (c *Casper) ProcessBlock(block *types.Block) error {
 }
 
 // a validator must not publish two distinct votes for the same target height
-func (c *Casper) verifySameHeightOfVerification(v *Verification) error {
+func (c *Casper) verifySameHeight(v *Verification) error {
 	nodes := c.tree.checkpointsOfHeight(v.TargetHeight)
 	for _, node := range nodes {
 		for _, supLink := range node.supLinks {
@@ -188,7 +189,7 @@ func (c *Casper) verifySameHeightOfVerification(v *Verification) error {
 }
 
 // a validator must not vote within the span of its other votes.
-func (c *Casper) verifySpanHeightOfVerification(v *Verification) error {
+func (c *Casper) verifySpanHeight(v *Verification) error {
 	if c.tree.findOnlyOne(func(c *checkpoint) bool {
 		if c.height <= v.TargetHeight {
 			return false
@@ -235,4 +236,20 @@ func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
 			return blockHash, nil
 		}
 	}
+}
+
+func sha3Hash(message []byte) ([]byte, error) {
+	sha3 := sha3pool.Get256()
+	defer sha3pool.Put256(sha3)
+
+	if _, err := sha3.Write(message); err != nil {
+		return nil, err
+	}
+
+	hash := &bc.Hash{}
+	if _, err := hash.ReadFrom(sha3); err != nil {
+		return nil, err
+	}
+
+	return hash.Bytes(), nil
 }
