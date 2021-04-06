@@ -1,8 +1,12 @@
 package consensus
 
 import (
+	"fmt"
 	"sync"
 
+	"github.com/bytom/bytom/errors"
+	"github.com/bytom/bytom/protocol"
+	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
@@ -14,8 +18,9 @@ type treeNode struct {
 // Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory,
 // it's design mainly refers to https://github.com/ethereum/research/blob/master/papers/casper-basics/casper_basics.pdf
 type Casper struct {
-	mu   sync.RWMutex
-	tree *treeNode
+	mu    sync.RWMutex
+	tree  *treeNode
+	store protocol.Store
 }
 
 // Best chain return the chain containing the justified checkpoint of the largest height
@@ -31,8 +36,15 @@ func (c *Casper) BestChain() (uint64, string) {
 
 // Validators return the validators by specified block hash
 // e.g. if the block num of epoch is 100, and the block height corresponding to the block hash is 130, then will return the voting results of height in 0~100
-func (c *Casper) Validators(blockHash string) []*Validator {
-	return nil
+func (c *Casper) Validators(blockHash *bc.Hash) ([]*Validator, error) {
+	checkpoint, err := c.prevCheckpoint(blockHash)
+	if err != nil {
+		return nil, err
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return checkpoint.validators(), nil
 }
 
 // Verification represent a verification message for the block
@@ -76,4 +88,39 @@ func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, 
 		}
 	}
 	return bestHeight, bestHash, maxJustifiedHeight
+}
+
+func (c *Casper) prevCheckpoint(blockHash *bc.Hash) (*checkpoint, error) {
+	for {
+		block, err := c.store.GetBlockHeader(blockHash)
+		if err != nil {
+			return nil, err
+		}
+
+		height := block.Height - 1
+		hash := block.PreviousBlockHash
+		if height%blocksOfEpoch != 0 {
+			return c.checkpointOfBlockHash(&hash)
+		}
+	}
+}
+
+func (c *Casper) checkpointOfBlockHash(blockHash *bc.Hash) (*checkpoint, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return findCheckpoint(c.tree, blockHash)
+}
+
+func findCheckpoint(node *treeNode, blockHash *bc.Hash) (*checkpoint, error) {
+	hash := blockHash.String()
+	if node.checkpoint.hash == hash {
+		return node.checkpoint, nil
+	}
+
+	for _, child := range node.children {
+		return findCheckpoint(child, blockHash)
+	}
+
+	return nil, errors.New(fmt.Sprintf("fail to find checkpoint of hash:%s", hash))
 }

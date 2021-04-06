@@ -26,7 +26,7 @@ type supLink struct {
 }
 
 func (s *supLink) confirmed() bool {
-	return len(s.pubKeys) > numOfValidators * 2 / 3
+	return len(s.pubKeys) > numOfValidators*2/3
 }
 
 type checkpoint struct {
