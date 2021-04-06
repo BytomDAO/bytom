@@ -9,13 +9,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 const logModule = "leveldb"
@@ -60,6 +60,11 @@ func CalcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
 
 func CalcTxStatusKey(hash *bc.Hash) []byte {
 	return append(TxStatusPrefix, hash.Bytes()...)
+}
+
+// GetBlockHeader return the BlockHeader by given hash
+func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	return nil, nil
 }
 
 // GetBlock return the block by given hash
