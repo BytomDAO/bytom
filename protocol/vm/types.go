@@ -70,5 +70,10 @@ func AsBigInt(b []byte) (*uint256.Int, error) {
 		return nil, ErrBadValue
 	}
 
-	return uint256.NewInt().SetBytes(b), nil
+	res := uint256.NewInt().SetBytes(b)
+	if res.Sign() < 0 {
+		return nil, ErrRange
+	}
+
+	return res, nil
 }
