@@ -26,9 +26,6 @@ import (
 	"github.com/bytom/bytom/env"
 	"github.com/bytom/bytom/event"
 	bytomLog "github.com/bytom/bytom/log"
-	"github.com/bytom/bytom/mining/cpuminer"
-	"github.com/bytom/bytom/mining/miningpool"
-	"github.com/bytom/bytom/mining/tensority"
 	"github.com/bytom/bytom/net/websocket"
 	"github.com/bytom/bytom/netsync"
 	"github.com/bytom/bytom/p2p"
@@ -55,9 +52,6 @@ type Node struct {
 	api             *api.API
 	chain           *protocol.Chain
 	txfeed          *txfeed.Tracker
-	cpuMiner        *cpuminer.CPUMiner
-	miningPool      *miningpool.MiningPool
-	miningEnable    bool
 }
 
 // NewNode create bytom node
@@ -151,19 +145,11 @@ func NewNode(config *cfg.Config) *Node {
 		wallet:          wallet,
 		chain:           chain,
 		txfeed:          txFeed,
-		miningEnable:    config.Mining,
 
 		notificationMgr: notificationMgr,
 	}
 
-	node.cpuMiner = cpuminer.NewCPUMiner(chain, accounts, txPool, dispatcher)
-	node.miningPool = miningpool.NewMiningPool(chain, accounts, txPool, dispatcher)
-
 	node.BaseService = *cmn.NewBaseService(nil, "Node", node)
-
-	if config.Simd.Enable {
-		tensority.UseSIMD = true
-	}
 
 	return node
 }
@@ -200,7 +186,7 @@ func launchWebBrowser(port string) {
 }
 
 func (n *Node) initAndstartAPIServer() {
-	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.cpuMiner, n.miningPool, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
+	n.api = api.NewAPI(n.syncManager, n.wallet, n.txfeed, n.chain, n.config, n.accessTokens, n.eventDispatcher, n.notificationMgr)
 
 	listenAddr := env.String("LISTEN", n.config.ApiAddress)
 	env.Parse()
@@ -208,14 +194,6 @@ func (n *Node) initAndstartAPIServer() {
 }
 
 func (n *Node) OnStart() error {
-	if n.miningEnable {
-		if _, err := n.wallet.AccountMgr.GetMiningAddress(); err != nil {
-			n.miningEnable = false
-			log.Error(err)
-		} else {
-			n.cpuMiner.Start()
-		}
-	}
 	if !n.config.VaultMode {
 		if err := n.syncManager.Start(); err != nil {
 			return err
@@ -242,9 +220,6 @@ func (n *Node) OnStop() {
 	n.notificationMgr.Shutdown()
 	n.notificationMgr.WaitForShutdown()
 	n.BaseService.OnStop()
-	if n.miningEnable {
-		n.cpuMiner.Stop()
-	}
 	if !n.config.VaultMode {
 		n.syncManager.Stop()
 	}
@@ -260,8 +235,4 @@ func (n *Node) RunForever() {
 
 func (n *Node) NodeInfo() *p2p.NodeInfo {
 	return n.syncManager.NodeInfo()
-}
-
-func (n *Node) MiningPool() *miningpool.MiningPool {
-	return n.miningPool
 }

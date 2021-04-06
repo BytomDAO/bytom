@@ -389,7 +389,7 @@ func mockSingleBlock(tx *types.Tx) *types.Block {
 		BlockHeader: types.BlockHeader{
 			Version: 1,
 			Height:  1,
-			Bits:    2305843009230471167,
+			//Bits:    2305843009230471167,
 		},
 		Transactions: []*types.Tx{config.GenesisTx(), tx},
 	}

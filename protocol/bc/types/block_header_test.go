@@ -10,7 +10,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 
 	"github.com/bytom/bytom/encoding/blockchain"
-	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/testutil"
 )
 
@@ -20,8 +19,8 @@ func TestBlockHeader(t *testing.T) {
 		Height:            432234,
 		PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 		Timestamp:         1522908275,
-		Nonce:             34342,
-		Bits:              2305843009222082559,
+		//Nonce:             34342,
+		//Bits:              2305843009222082559,
 		BlockCommitment: BlockCommitment{
 			TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 			TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
@@ -37,8 +36,8 @@ func TestBlockHeader(t *testing.T) {
 		"40",         // commitment extensible field length
 		"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 		"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
-		"a68c02",             // nonce
-		"ffffff838080808020", // bits
+		//"a68c02",             // nonce
+		//"ffffff838080808020", // bits
 	}, "")
 
 	gotHex := testutil.Serialize(t, blockHeader)
@@ -73,8 +72,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				Height:            10000,
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
-				Nonce:             9253507043297,
-				Bits:              2305843009214532812,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -89,8 +86,8 @@ func TestMarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
-				"e19f8080a88d02",     // nonce
-				"cc99b3808080808020", // bits
+				//"e19f8080a88d02",     // nonce
+				//"cc99b3808080808020", // bits
 			}, ""),
 		},
 		{
@@ -99,8 +96,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				Height:            9223372036854775808, // Height > MaxInt64(9223372036854775807)
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
-				Nonce:             9253507043297,
-				Bits:              2305843009222082559,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -114,8 +109,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				Height:            10000,
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         9223372036854775808, // Timestamp > MaxInt64(9223372036854775807)
-				Nonce:             9253507043297,
-				Bits:              2305843009222082559,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -123,58 +116,58 @@ func TestMarshalBlockHeader(t *testing.T) {
 			},
 			wantError: blockchain.ErrRange,
 		},
-		{
-			blockHeader: &BlockHeader{
-				Version:           1,
-				Height:            20000,
-				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
-				Timestamp:         1528945000,
-				Nonce:             9223372036854775808, // Nonce > MaxInt64(9223372036854775807)
-				Bits:              2305843009222082559,
-				BlockCommitment: BlockCommitment{
-					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
-					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
-				},
-			},
-			wantError: blockchain.ErrRange,
-		},
-		{
-			blockHeader: &BlockHeader{
-				Version:           1,
-				Height:            20000,
-				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
-				Timestamp:         1528945000,
-				Nonce:             9253507043297,
-				Bits:              9223372036854775808, // Bits > MaxInt64(9223372036854775807)
-				BlockCommitment: BlockCommitment{
-					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
-					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
-				},
-			},
-			wantError: blockchain.ErrRange,
-		},
-		{
-			blockHeader: &BlockHeader{
-				Version:           1,
-				Height:            9223372036854775807, // MaxInt64(9223372036854775807)
-				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
-				Timestamp:         1528945000,
-				Nonce:             9253507043297,
-				Bits:              2305843009214532812,
-			},
-			wantHex: strings.Join([]string{
-				"01",                 // serialization flags
-				"01",                 // version
-				"ffffffffffffffff7f", // block height
-				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
-				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
-				"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
-				"0000000000000000000000000000000000000000000000000000000000000000", // tx status hash
-				"e19f8080a88d02",     // nonce
-				"cc99b3808080808020", // bits
-			}, ""),
-		},
+		//{
+		//	blockHeader: &BlockHeader{
+		//		Version:           1,
+		//		Height:            20000,
+		//		PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
+		//		Timestamp:         1528945000,
+		//		//Nonce:             9223372036854775808, // Nonce > MaxInt64(9223372036854775807)
+		//		//Bits:              2305843009222082559,
+		//		BlockCommitment: BlockCommitment{
+		//			TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
+		//			TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
+		//		},
+		//	},
+		//	wantError: blockchain.ErrRange,
+		//},
+		//{
+		//	blockHeader: &BlockHeader{
+		//		Version:           1,
+		//		Height:            20000,
+		//		PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
+		//		Timestamp:         1528945000,
+		//		//Nonce:             9253507043297,
+		//		//Bits:              9223372036854775808, // Bits > MaxInt64(9223372036854775807)
+		//		BlockCommitment: BlockCommitment{
+		//			TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
+		//			TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
+		//		},
+		//	},
+		//	wantError: blockchain.ErrRange,
+		//},
+		//{
+		//	blockHeader: &BlockHeader{
+		//		Version:           1,
+		//		Height:            9223372036854775807, // MaxInt64(9223372036854775807)
+		//		PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
+		//		Timestamp:         1528945000,
+		//		//Nonce:             9253507043297,
+		//		//Bits:              2305843009214532812,
+		//	},
+		//	wantHex: strings.Join([]string{
+		//		"01",                 // serialization flags
+		//		"01",                 // version
+		//		"ffffffffffffffff7f", // block height
+		//		"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
+		//		"e8b287d905", // timestamp
+		//		"40",         // commitment extensible field length
+		//		"0000000000000000000000000000000000000000000000000000000000000000", // transactions merkle root
+		//		"0000000000000000000000000000000000000000000000000000000000000000", // tx status hash
+		//		//"e19f8080a88d02",     // nonce
+		//		//"cc99b3808080808020", // bits
+		//	}, ""),
+		//},
 	}
 
 	for i, test := range cases {
@@ -216,16 +209,14 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
-				"e19f8080a88d02",     // nonce
-				"cc99b3808080808020", // bits
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
 				Height:            10000,
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
-				Nonce:             9253507043297,
-				Bits:              2305843009214532812,
+				//Nonce:             9253507043297,
+				//Bits:              2305843009214532812,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -242,16 +233,12 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
-				"e19f8080a88d02",     // nonce
-				"cc99b3808080808020", // bits
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
 				Height:            10000,
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
-				Nonce:             9253507043297,
-				Bits:              2305843009214532812,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -268,8 +255,6 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
-				"e19f8080a88d02",     // nonce
-				"cc99b3808080808020", // bits
 			}, ""),
 			wantError: fmt.Errorf("unsupported serialization flags 0x02"),
 		},
@@ -283,12 +268,51 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
-				"e19f8080a88d02",     // nonce
-				"cc99b3808080808020", // bits
 			}, ""),
 			wantError: hex.ErrLength,
-		},
-		{
+		}, //----
+		//{ // below test cases should be modified
+		//	hexBlockHeader: strings.Join([]string{
+		//		"01",                 // serialization flags
+		//		"01",                 // version
+		//		"ffffffffffffffff7f", // block height
+		//		"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
+		//		"e8b287d905", // timestamp
+		//		"40",         // commitment extensible field length
+		//		"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
+		//		"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
+		//	}, ""),
+		//	wantError: errors.New("binary: varint overflows a 64-bit integer"),
+		//},
+		//{
+		//	hexBlockHeader: strings.Join([]string{
+		//		"01",                 // serialization flags
+		//		"01",                 // version
+		//		"ffffffffffffffff7f", // block height
+		//		"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
+		//		"e8b287d905", // timestamp
+		//		"40",         // commitment extensible field length
+		//		"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
+		//		"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
+		//		//"e19f8080a88d02",     // nonce
+		//		//"ffffffffffffffff80", // bits
+		//	}, ""),
+		//	wantError: fmt.Errorf("EOF"),
+		//},
+		//{
+		//	hexBlockHeader: strings.Join([]string{
+		//		"01",                 // serialization flags
+		//		"01",                 // version
+		//		"ffffffffffffffff7f", // block height
+		//		"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
+		//		"e8b287d905", // timestamp
+		//		"40",         // commitment extensible field length
+		//		"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
+		//		"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status ha sh
+		//	}, ""),
+		//	wantError: blockchain.ErrRange,
+		//},
+		{  // ---
 			hexBlockHeader: strings.Join([]string{
 				"01",                 // serialization flags
 				"01",                 // version
@@ -298,61 +322,16 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				"40",         // commitment extensible field length
 				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
 				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
-				"e19f8080a88d02",       // nonce
-				"ffffffffffffffffff20", // bits
-			}, ""),
-			wantError: errors.New("binary: varint overflows a 64-bit integer"),
-		},
-		{
-			hexBlockHeader: strings.Join([]string{
-				"01",                 // serialization flags
-				"01",                 // version
-				"ffffffffffffffff7f", // block height
-				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
-				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
-				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
-				"e19f8080a88d02",     // nonce
-				"ffffffffffffffff80", // bits
-			}, ""),
-			wantError: fmt.Errorf("EOF"),
-		},
-		{
-			hexBlockHeader: strings.Join([]string{
-				"01",                 // serialization flags
-				"01",                 // version
-				"ffffffffffffffff7f", // block height
-				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
-				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
-				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
-				"e19f8080a88d02",       // nonce
-				"ffffffffffffffffff01", // bits
-			}, ""),
-			wantError: blockchain.ErrRange,
-		},
-		{
-			hexBlockHeader: strings.Join([]string{
-				"01",                 // serialization flags
-				"01",                 // version
-				"ffffffffffffffff7f", // block height
-				"c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0", // prev block hash
-				"e8b287d905", // timestamp
-				"40",         // commitment extensible field length
-				"ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03", // transactions merkle root
-				"b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470", // tx status hash
-				"e19f8080a88d02",     // nonce
-				"cc99b3808080808020", // bits
+				//"e19f8080a88d02",     // nonce
+				//"cc99b3808080808020", // bits
 			}, ""),
 			wantBlockHeader: &BlockHeader{
 				Version:           1,
 				Height:            9223372036854775807, // MaxInt64(9223372036854775807)
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
-				Nonce:             9253507043297,
-				Bits:              2305843009214532812,
+				//Nonce:             9253507043297,
+				//Bits:              2305843009214532812,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),

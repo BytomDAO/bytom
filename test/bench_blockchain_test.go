@@ -12,12 +12,10 @@ import (
 	"github.com/bytom/bytom/blockchain/signers"
 	"github.com/bytom/bytom/blockchain/txbuilder"
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/consensus/difficulty"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/event"
-	"github.com/bytom/bytom/mining"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -158,35 +156,35 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		}
 	}
 
-	block, err := mining.NewBlockTemplate(chain, txPool, nil)
-	if err != nil {
-		return err
-	}
+	//block, err := mining.NewBlockTemplate(chain, txPool, nil)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//blockSize, err := block.MarshalText()
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//fmt.Println("blocksize:", uint64(len(blockSize)))
+	//fmt.Println("block tx count:", uint64(len(block.Transactions)))
+	//fmt.Println("coinbase txsize:", uint64(block.Transactions[0].SerializedSize))
+	//if len(block.Transactions) > 1 {
+	//	fmt.Println("txsize:", uint64(block.Transactions[1].SerializedSize))
+	//}
+	//
+	//seed, err := chain.CalcNextSeed(&block.PreviousBlockHash)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//if err := SolveBlock(seed, block); err != nil {
+	//	return err
+	//}
 
-	blockSize, err := block.MarshalText()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("blocksize:", uint64(len(blockSize)))
-	fmt.Println("block tx count:", uint64(len(block.Transactions)))
-	fmt.Println("coinbase txsize:", uint64(block.Transactions[0].SerializedSize))
-	if len(block.Transactions) > 1 {
-		fmt.Println("txsize:", uint64(block.Transactions[1].SerializedSize))
-	}
-
-	seed, err := chain.CalcNextSeed(&block.PreviousBlockHash)
-	if err != nil {
-		return err
-	}
-
-	if err := SolveBlock(seed, block); err != nil {
-		return err
-	}
-
-	if _, err := chain.ProcessBlock(block); err != nil {
-		return err
-	}
+	//if _, err := chain.ProcessBlock(block); err != nil {
+	//	return err
+	//}
 
 	return nil
 }
@@ -194,18 +192,18 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 func processNewTxch(txPool *protocol.TxPool) {
 }
 
-func SolveBlock(seed *bc.Hash, block *types.Block) error {
-	maxNonce := ^uint64(0) // 2^64 - 1
-	header := &block.BlockHeader
-	for i := uint64(0); i < maxNonce; i++ {
-		header.Nonce = i
-		headerHash := header.Hash()
-		if difficulty.CheckProofOfWork(&headerHash, seed, header.Bits) {
-			return nil
-		}
-	}
-	return nil
-}
+//func SolveBlock(seed *bc.Hash, block *types.Block) error {
+//	maxNonce := ^uint64(0) // 2^64 - 1
+//	header := &block.BlockHeader
+//	for i := uint64(0); i < maxNonce; i++ {
+//		header.Nonce = i
+//		headerHash := header.Hash()
+//		if difficulty.CheckProofOfWork(&headerHash, seed, header.Bits) {
+//			return nil
+//		}
+//	}
+//	return nil
+//}
 
 func MockSimpleUtxo(index uint64, assetID *bc.AssetID, amount uint64, ctrlProg *account.CtrlProgram) *account.UTXO {
 	if ctrlProg == nil {

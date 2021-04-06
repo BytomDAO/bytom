@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/config"
-	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -108,24 +107,6 @@ func (c *Chain) BestBlockHeader() *types.BlockHeader {
 // InMainChain checks wheather a block is in the main chain
 func (c *Chain) InMainChain(hash bc.Hash) bool {
 	return c.index.InMainchain(hash)
-}
-
-// CalcNextSeed return the seed for the given block
-func (c *Chain) CalcNextSeed(preBlock *bc.Hash) (*bc.Hash, error) {
-	node := c.index.GetNode(preBlock)
-	if node == nil {
-		return nil, errors.New("can't find preblock in the blockindex")
-	}
-	return node.CalcNextSeed(), nil
-}
-
-// CalcNextBits return the seed for the given block
-func (c *Chain) CalcNextBits(preBlock *bc.Hash) (uint64, error) {
-	node := c.index.GetNode(preBlock)
-	if node == nil {
-		return 0, errors.New("can't find preblock in the blockindex")
-	}
-	return node.CalcNextBits(), nil
 }
 
 func (c *Chain) GetBlockIndex() *state.BlockIndex {

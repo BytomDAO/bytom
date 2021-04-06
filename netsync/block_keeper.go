@@ -8,7 +8,6 @@ import (
 
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/mining/tensority"
 	"github.com/bytom/bytom/p2p/security"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -160,14 +159,7 @@ func (bk *blockKeeper) fastBlockSync(checkPoint *consensus.Checkpoint) error {
 				return errPeerMisbehave
 			}
 
-			seed, err := bk.chain.CalcNextSeed(&block.PreviousBlockHash)
-			if err != nil {
-				return errors.Wrap(err, "fail on fastBlockSync calculate seed")
-			}
-
-			tensority.AIHash.AddCache(&blockHash, seed, &bc.Hash{})
 			_, err = bk.chain.ProcessBlock(block)
-			tensority.AIHash.RemoveCache(&blockHash, seed)
 			if err != nil {
 				return errors.Wrap(err, "fail on fastBlockSync process block")
 			}

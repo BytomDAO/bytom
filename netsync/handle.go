@@ -32,7 +32,6 @@ var (
 type Chain interface {
 	BestBlockHeader() *types.BlockHeader
 	BestBlockHeight() uint64
-	CalcNextSeed(*bc.Hash) (*bc.Hash, error)
 	GetBlockByHash(*bc.Hash) (*types.Block, error)
 	GetBlockByHeight(uint64) (*types.Block, error)
 	GetHeaderByHash(*bc.Hash) (*types.BlockHeader, error)

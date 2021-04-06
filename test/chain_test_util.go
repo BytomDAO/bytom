@@ -249,10 +249,10 @@ func (cfg *chainTestConfig) Run() error {
 		if err != nil {
 			return err
 		}
-		err = SolveAndUpdate(ctx.Chain, block)
-		if err != nil && blk.Invalid {
-			continue
-		}
+		//err = SolveAndUpdate(ctx.Chain, block)
+		//if err != nil && blk.Invalid {
+		//	continue
+		//}
 		if err != nil {
 			return err
 		}

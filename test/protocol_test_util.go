@@ -23,13 +23,13 @@ func declChain(name string, baseChain *protocol.Chain, baseHeight uint64, height
 	}
 
 	for i := uint64(1); i <= baseHeight; i++ {
-		block, err := baseChain.GetBlockByHeight(i)
-		if err != nil {
-			return nil, err
-		}
-		if err := SolveAndUpdate(chain, block); err != nil {
-			return nil, err
-		}
+		//block, err := baseChain.GetBlockByHeight(i)
+		//if err != nil {
+		//	return nil, err
+		//}
+		//if err := SolveAndUpdate(chain, block); err != nil {
+		//	return nil, err
+		//}
 	}
 
 	err = AppendBlocks(chain, height-baseHeight)
