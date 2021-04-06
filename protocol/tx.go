@@ -33,14 +33,11 @@ func (c *Chain) ValidateTx(tx *types.Tx) (bool, error) {
 
 	bh := c.BestBlockHeader()
 	gasStatus, err := validation.ValidateTx(tx.Tx, types.MapBlock(&types.Block{BlockHeader: *bh}))
-	if !gasStatus.GasValid {
+	if err != nil {
+		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
 		c.txPool.AddErrCache(&tx.ID, err)
 		return false, err
 	}
 
-	if err != nil {
-		log.WithFields(log.Fields{"module": logModule, "tx_id": tx.Tx.ID.String(), "error": err}).Info("transaction status fail")
-	}
-
-	return c.txPool.ProcessTransaction(tx, err != nil, bh.Height, gasStatus.BTMValue)
+	return c.txPool.ProcessTransaction(tx, bh.Height, gasStatus.BTMValue)
 }
