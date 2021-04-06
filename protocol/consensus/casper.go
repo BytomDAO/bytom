@@ -79,7 +79,7 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		return err
 	}
 
-	if target.containsValidator(v.PubKey) {
+	if !target.containsValidator(v.PubKey) {
 		return errPubKeyIsNotValidator
 	}
 
