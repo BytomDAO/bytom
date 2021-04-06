@@ -87,3 +87,13 @@ func (c *checkpoint) validators() []*Validator {
 	}
 	return validators[:end]
 }
+
+
+func (c *checkpoint) isValidator(pubKey string) bool {
+	for _, v := range c.validators() {
+		if v.PubKey == pubKey {
+			return true
+		}
+	}
+	return false
+}
