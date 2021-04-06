@@ -17,10 +17,6 @@ func op1Add(vm *virtualMachine) error {
 		return err
 	}
 
-	if n.Sign() < 0 {
-		return ErrRange
-	}
-
 	num, ok := checked.NewUInt256("1")
 	if !ok {
 		return ErrBadValue
@@ -38,15 +34,22 @@ func op1Sub(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	res, ok := checked.SubInt64(n, 1)
+
+	num, ok := checked.NewUInt256("1")
 	if !ok {
+		return ErrBadValue
+	}
+
+	if num.Sub(n, num); num.Sign() < 0 {
 		return ErrRange
 	}
-	return vm.pushInt64(res, true)
+
+	return vm.pushBigInt(num, true)
 }
 
 func op2Mul(vm *virtualMachine) error {
@@ -58,10 +61,6 @@ func op2Mul(vm *virtualMachine) error {
 	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
-	}
-
-	if n.Sign() < 0 {
-		return ErrRange
 	}
 
 	num, ok := checked.NewUInt256("2")

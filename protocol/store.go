@@ -12,6 +12,7 @@ type Store interface {
 	BlockExist(*bc.Hash) bool
 
 	GetBlock(*bc.Hash) (*types.Block, error)
+	GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)
 	GetStoreStatus() *BlockStoreState
 	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error

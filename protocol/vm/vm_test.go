@@ -56,7 +56,7 @@ func doOKNotOK(t *testing.T, expectOK bool) {
 		{"1ADD 0 NUMEQUAL", [][]byte{mocks.U256NumNegative1}, true},
 
 		{"1SUB 1 NUMEQUAL", [][]byte{Int64Bytes(2)}, false},
-		{"1SUB -1 NUMEQUAL", [][]byte{Int64Bytes(0)}, false},
+		{"1SUB -1 NUMEQUAL", [][]byte{Int64Bytes(0)}, true},
 
 		{"2MUL 2 NUMEQUAL", [][]byte{Int64Bytes(1)}, false},
 		{"2MUL 0 NUMEQUAL", [][]byte{Int64Bytes(0)}, false},
