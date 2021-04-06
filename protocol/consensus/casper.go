@@ -42,6 +42,8 @@ func (c *Casper) Validators(blockHash *bc.Hash) ([]*Validator, error) {
 		return nil, err
 	}
 
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return checkpoint.validators(), nil
 }
 
@@ -98,19 +100,26 @@ func (c *Casper) prevCheckpoint(blockHash *bc.Hash) (*checkpoint, error) {
 		height := block.Height - 1
 		hash := block.PreviousBlockHash
 		if height%blocksOfEpoch != 0 {
-			return checkpointOfBlockHash(c.tree, &hash)
+			return c.checkpointOfBlockHash(&hash)
 		}
 	}
 }
 
-func checkpointOfBlockHash(node *treeNode, blockHash *bc.Hash) (*checkpoint, error) {
+func (c *Casper) checkpointOfBlockHash(blockHash *bc.Hash) (*checkpoint, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return findCheckpoint(c.tree, blockHash)
+}
+
+func findCheckpoint(node *treeNode, blockHash *bc.Hash) (*checkpoint, error) {
 	hash := blockHash.String()
 	if node.checkpoint.hash == hash {
 		return node.checkpoint, nil
 	}
 
 	for _, child := range node.children {
-		return checkpointOfBlockHash(child, blockHash)
+		return findCheckpoint(child, blockHash)
 	}
 
 	return nil, errors.New(fmt.Sprintf("fail to find checkpoint of hash:%s", hash))
