@@ -56,7 +56,6 @@ message BlockHeader {
   Hash              transactions_root       = 5;
   uint64            nonce                   = 6;
   uint64            bits                    = 7;
-  TransactionStatus transaction_status      = 8;
 }
 
 message TxHeader {
