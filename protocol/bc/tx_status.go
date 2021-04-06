@@ -5,8 +5,6 @@ import (
 	"io"
 )
 
-const transactionStatusVersion = 1
-
 // WriteTo will write TxVerifyResult struct to io.Writer
 func (tvr *TxVerifyResult) WriteTo(w io.Writer) (int64, error) {
 	bytes, err := json.Marshal(tvr)
