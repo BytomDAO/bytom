@@ -138,7 +138,9 @@ func (c *Casper) AuthVerification(v *Verification) error {
 
 	source, err := c.tree.checkpointByHash(v.SourceHash)
 	if err != nil {
-		// the case where the synchronization block is later than the arrival of the verification message is not handled
+		// the following two cases are not handled
+		// case1: the synchronization block is later than the arrival of the verification message
+		// case2: the tree node was was pruned
 		return err
 	}
 
@@ -164,6 +166,7 @@ func (c *Casper) AuthVerification(v *Verification) error {
 		target.status = justified
 		source.status = finalized
 		// must notify chain when rollback
+		// pruning the tree
 	}
 	return nil
 }
