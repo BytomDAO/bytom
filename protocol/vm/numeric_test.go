@@ -91,26 +91,6 @@ func TestNumericOps(t *testing.T) {
 			dataStack: [][]byte{{1}},
 		},
 	}, {
-		op: OP_2DIV,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{Int64Bytes(-2)},
-		},
-		wantVM: &virtualMachine{
-			runLimit:  49998,
-			dataStack: [][]byte{Int64Bytes(-1)},
-		},
-	}, {
-		op: OP_2DIV,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{Int64Bytes(-1)},
-		},
-		wantVM: &virtualMachine{
-			runLimit:  49998,
-			dataStack: [][]byte{Int64Bytes(-1)},
-		},
-	}, {
 		op: OP_NEGATE,
 		startVM: &virtualMachine{
 			runLimit:  50000,
@@ -933,7 +913,6 @@ func Test_op2Div(t *testing.T) {
 	type args struct {
 		vm *virtualMachine
 	}
-
 	tests := []struct {
 		name    string
 		args    args
@@ -988,9 +967,81 @@ func Test_op2Div(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := op2Div(tt.args.vm); err != nil {
-				if !tt.wantErr{
+				if !tt.wantErr {
 					t.Errorf("op2Div() error = %v, wantErr %v", err, tt.wantErr)
-				}else {
+				} else {
+					return
+				}
+			}
+			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
+				t.Errorf("op1Sub() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
+			}
+		})
+	}
+}
+
+func Test_opAdd(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "Test 2 + 2 = 4",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {0x02}},
+				},
+			},
+			want:    [][]byte{{0x04}},
+			wantErr: false,
+		},
+		{
+			name: "Test that one bytes number become two byte number",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, {0x01}},
+				},
+			},
+			want:    [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			wantErr: false,
+		},
+		{
+			name: "Test for 0 + -1 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{}, mocks.U256NumNegative1},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "Test for -1 + -1 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1, mocks.U256NumNegative1},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := opAdd(tt.args.vm); err != nil {
+				if !tt.wantErr {
+					t.Errorf("op1Sub() error = %v, wantErr %v", err, tt.wantErr)
+				} else {
 					return
 				}
 			}

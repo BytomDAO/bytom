@@ -158,19 +158,22 @@ func opAdd(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	res, ok := checked.AddInt64(x, y)
-	if !ok {
+
+	if x.Add(x, y); x.Sign() < 0 {
 		return ErrRange
 	}
-	return vm.pushInt64(res, true)
+
+	return vm.pushBigInt(x, true)
 }
 
 func opSub(vm *virtualMachine) error {
