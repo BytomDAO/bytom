@@ -239,6 +239,11 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 func (s *Store) SaveContract(program *bc.Program, txID *bc.Hash) error {
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], program.Code)
+	data := s.db.Get(CalcContractKey(hash))
+	if data != nil {
+		return nil
+	}
+
 	batch := s.db.NewBatch()
 	batch.Set(CalcContractKey(hash), program.Code)
 	batch.Set(CalcContractTxKey(hash), txID.Bytes())
