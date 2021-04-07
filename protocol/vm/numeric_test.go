@@ -951,7 +951,7 @@ func Test_opAdd(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Test that one bytes number become two byte number after op sub",
+			name: "Test that one bytes number become two byte number",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
