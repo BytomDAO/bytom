@@ -120,14 +120,14 @@ func (c *Casper) pruneTree(rootHash bc.Hash) error {
 // ProcessBlock used to receive a new block from upper layer, it provides idempotence
 // and parse the vote and mortgage from the transactions, then save to the checkpoint
 // the tree of checkpoint will grow with the arrival of new blocks
-func (c *Casper) ProcessBlock(block *types.Block) error {
+func (c *Casper) ProcessBlock(block *types.Block) (*state.Checkpoint, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	prevHash := block.PreviousBlockHash
 	node, err := c.tree.nodeByHash(prevHash)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	checkpoint := node.checkpoint
@@ -153,7 +153,7 @@ func (c *Casper) ProcessBlock(block *types.Block) error {
 	for _ := range block.Transactions {
 		// process the votes and mortgages
 	}
-	return nil
+	return checkpoint, nil
 }
 
 // a validator must not publish two distinct votes for the same target height
@@ -175,6 +175,7 @@ func (c *Casper) verifySameHeight(v *Verification) error {
 
 // a validator must not vote within the span of its other votes.
 func (c *Casper) verifySpanHeight(v *Verification) error {
+	// It is best to scan all checkpoints from leveldb
 	if c.tree.findOnlyOne(func(c *state.Checkpoint) bool {
 		if c.Height <= v.TargetHeight {
 			return false
