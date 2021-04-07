@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/bytom/bytom/errors"
@@ -10,10 +9,12 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 )
 
-type treeNode struct {
-	checkpoint *checkpoint
-	children   []*treeNode
-}
+var (
+	errVerifySignature          = errors.New("signature of verification message is invalid")
+	errPubKeyIsNotValidator     = errors.New("pub key is not in validators of target checkpoint")
+	errSameHeightInVerification = errors.New("validator publish two distinct votes for the same target height")
+	errSpanHeightInVerification = errors.New("validator publish vote within the span of its other votes")
+)
 
 // Casper is BFT based proof of stack consensus algorithm, it provides safety and liveness in theory,
 // it's design mainly refers to https://github.com/ethereum/research/blob/master/papers/casper-basics/casper_basics.pdf
@@ -37,26 +38,20 @@ func (c *Casper) BestChain() (uint64, string) {
 // Validators return the validators by specified block hash
 // e.g. if the block num of epoch is 100, and the block height corresponding to the block hash is 130, then will return the voting results of height in 0~100
 func (c *Casper) Validators(blockHash *bc.Hash) ([]*Validator, error) {
-	checkpoint, err := c.prevCheckpoint(blockHash)
+	hash, err := c.prevCheckpointHash(blockHash)
 	if err != nil {
 		return nil, err
 	}
 
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return checkpoint.validators(), nil
-}
 
-// Verification represent a verification message for the block
-// source hash and target hash point to the checkpoint, and the source checkpoint is the target checkpoint's parent(not be directly)
-// the vector <sourceHash, targetHash, sourceHeight, targetHeight, pubKey> as the message of signature
-type Verification struct {
-	SourceHash   string
-	TargetHash   string
-	SourceHeight uint64
-	TargetHeight uint64
-	Signature    string
-	PubKey       string
+	checkpoint, err := c.tree.checkpointByHash(hash.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return checkpoint.validators(), nil
 }
 
 // AuthVerification verify whether the Verification is legal.
@@ -64,6 +59,45 @@ type Verification struct {
 // ⟨ν,s1,t1,h(s1),h(t1)⟩ and ⟨ν,s2,t2,h(s2),h(t2)⟩, such that either:
 // h(t1) = h(t2) OR h(s1) < h(s2) < h(t2) < h(t1)
 func (c *Casper) AuthVerification(v *Verification) error {
+	if err := v.VerifySignature(); err != nil {
+		return err
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	source, err := c.tree.checkpointByHash(v.SourceHash)
+	if err != nil {
+		// the following two cases are not handled
+		// case1: the synchronization block is later than the arrival of the verification message
+		// case2: the tree node was was pruned
+		return err
+	}
+
+	target, err := c.tree.checkpointByHash(v.TargetHash)
+	if err != nil {
+		return err
+	}
+
+	if !target.containsValidator(v.PubKey) {
+		return errPubKeyIsNotValidator
+	}
+
+	if err := c.verifySameHeight(v); err != nil {
+		return err
+	}
+
+	if err := c.verifySpanHeight(v); err != nil {
+		return err
+	}
+
+	supLink := target.addSupLink(v.SourceHeight, v.SourceHash, v.PubKey)
+	if source.status == justified && supLink.confirmed() {
+		target.status = justified
+		source.status = finalized
+		// must notify chain when rollback
+		// pruning the tree
+	}
 	return nil
 }
 
@@ -71,6 +105,38 @@ func (c *Casper) AuthVerification(v *Verification) error {
 // and parse the vote and mortgage from the transactions, then save to the checkpoint
 // the tree of checkpoint will grow with the arrival of new blocks
 func (c *Casper) ProcessBlock(block *types.Block) error {
+	return nil
+}
+
+// a validator must not publish two distinct votes for the same target height
+func (c *Casper) verifySameHeight(v *Verification) error {
+	nodes := c.tree.checkpointsOfHeight(v.TargetHeight)
+	for _, node := range nodes {
+		for _, supLink := range node.supLinks {
+			if supLink.pubKeys[v.PubKey] {
+				return errSameHeightInVerification
+			}
+		}
+	}
+	return nil
+}
+
+// a validator must not vote within the span of its other votes.
+func (c *Casper) verifySpanHeight(v *Verification) error {
+	if c.tree.findOnlyOne(func(c *checkpoint) bool {
+		if c.height <= v.TargetHeight {
+			return false
+		}
+
+		for _, supLink := range c.supLinks {
+			if supLink.pubKeys[v.PubKey] && supLink.sourceHeight < v.SourceHeight {
+				return true
+			}
+		}
+		return false
+	}) != nil {
+		return errSpanHeightInVerification
+	}
 	return nil
 }
 
@@ -90,7 +156,7 @@ func chainOfMaxJustifiedHeight(node *treeNode, justifiedHeight uint64) (uint64, 
 	return bestHeight, bestHash, maxJustifiedHeight
 }
 
-func (c *Casper) prevCheckpoint(blockHash *bc.Hash) (*checkpoint, error) {
+func (c *Casper) prevCheckpointHash(blockHash *bc.Hash) (*bc.Hash, error) {
 	for {
 		block, err := c.store.GetBlockHeader(blockHash)
 		if err != nil {
@@ -98,29 +164,9 @@ func (c *Casper) prevCheckpoint(blockHash *bc.Hash) (*checkpoint, error) {
 		}
 
 		height := block.Height - 1
-		hash := block.PreviousBlockHash
-		if height%blocksOfEpoch != 0 {
-			return c.checkpointOfBlockHash(&hash)
+		blockHash = &block.PreviousBlockHash
+		if height%blocksOfEpoch == 0 {
+			return blockHash, nil
 		}
 	}
-}
-
-func (c *Casper) checkpointOfBlockHash(blockHash *bc.Hash) (*checkpoint, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return findCheckpoint(c.tree, blockHash)
-}
-
-func findCheckpoint(node *treeNode, blockHash *bc.Hash) (*checkpoint, error) {
-	hash := blockHash.String()
-	if node.checkpoint.hash == hash {
-		return node.checkpoint, nil
-	}
-
-	for _, child := range node.children {
-		return findCheckpoint(child, blockHash)
-	}
-
-	return nil, errors.New(fmt.Sprintf("fail to find checkpoint of hash:%s", hash))
 }
