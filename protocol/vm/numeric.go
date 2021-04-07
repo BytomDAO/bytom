@@ -80,11 +80,13 @@ func op2Div(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	return vm.pushInt64(n>>1, true)
+
+	return vm.pushBigInt(n.Rsh(n,1), true)
 }
 
 func opNegate(vm *virtualMachine) error {

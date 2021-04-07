@@ -928,3 +928,75 @@ func Test_op1Sub(t *testing.T) {
 		})
 	}
 }
+
+func Test_op2Div(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "Test 2 div 2 = 1",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}},
+				},
+			},
+			want:    [][]byte{{0x01}},
+			wantErr: false,
+		},
+		{
+			name: "Test that two bytes number become one byte number after op div",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+				},
+			},
+			want:    [][]byte{{0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			wantErr: false,
+		},
+		{
+			name: "Test for 0 div 2 got 0",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{}},
+				},
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "Test for -1 div 2 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := op2Div(tt.args.vm); err != nil {
+				if !tt.wantErr{
+					t.Errorf("op2Div() error = %v, wantErr %v", err, tt.wantErr)
+				}else {
+					return
+				}
+			}
+			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
+				t.Errorf("op1Sub() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
+			}
+		})
+	}
+}
