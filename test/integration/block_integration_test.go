@@ -1,7 +1,9 @@
 package integration
 
 import (
-	"encoding/hex"
+	"testing"
+	"time"
+
 	"github.com/bytom/bytom/config"
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/database"
@@ -11,8 +13,6 @@ import (
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/testutil"
-	"testing"
-	"time"
 )
 
 var blockMap map[int][]*attachBlock
@@ -468,14 +468,6 @@ func init() {
 	}
 
 	mustPostProcessBlock()
-}
-
-func TestPrintBlockMap(t *testing.T)  {
-	for number,blocks := range blockMap {
-		for _,block := range blocks {
-			t.Logf("Number: %d, Block Hash: %s", number, hex.EncodeToString(block.block.Hash().Bytes()))
-		}
-	}
 }
 
 func TestProcessBlock(t *testing.T) {

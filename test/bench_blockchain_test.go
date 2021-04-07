@@ -156,6 +156,7 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 			return err
 		}
 	}
+	// imitate block broadcast deplay
 	time.Sleep(time.Second)
 	block, err := mining.NewBlockTemplate(chain, txPool, nil)
 	if err != nil {
