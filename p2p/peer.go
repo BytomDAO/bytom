@@ -59,6 +59,10 @@ type Peer struct {
 	isLAN bool
 }
 
+func (p *Peer) Moniker() string {
+	return p.NodeInfo.Moniker
+}
+
 // OnStart implements BaseService.
 func (p *Peer) OnStart() error {
 	p.BaseService.OnStart()

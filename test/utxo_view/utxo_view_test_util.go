@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/consensus/difficulty"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
@@ -56,18 +55,15 @@ func blockNode(header *bc.BlockHeader) *state.BlockNode {
 		Height:            header.Height,
 		PreviousBlockHash: *header.PreviousBlockId,
 		Timestamp:         header.Timestamp,
-		Bits:              header.Bits,
 		Nonce:             header.Nonce,
 	}
 	return &state.BlockNode{
 		Parent:    nil,
 		Hash:      h.Hash(),
-		WorkSum:   difficulty.CalcWork(h.Bits),
 		Version:   h.Version,
 		Height:    h.Height,
 		Timestamp: h.Timestamp,
 		Nonce:     h.Nonce,
-		Bits:      h.Bits,
 	}
 }
 

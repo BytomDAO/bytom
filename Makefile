@@ -9,8 +9,8 @@ $(error "$$GOOS is not defined. If you are using Windows, try to re-make using '
 endif
 endif
 
-PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd' | grep -v '/mining/tensority')
-PACKAGES += 'github.com/bytom/bytom/mining/tensority/go_algorithm'
+PACKAGES    := $(shell go list ./... | grep -v '/vendor/' | grep -v '/crypto/ed25519/chainkd')
+
 
 BUILD_FLAGS := -ldflags "-X github.com/bytom/bytom/version.GitCommit=`git rev-parse HEAD`"
 

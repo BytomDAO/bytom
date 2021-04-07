@@ -21,7 +21,6 @@ func TestBlockHeader(t *testing.T) {
 		PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 		Timestamp:         1522908275,
 		Nonce:             34342,
-		Bits:              2305843009222082559,
 		BlockCommitment: BlockCommitment{
 			TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 			TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
@@ -74,7 +73,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
 				Nonce:             9253507043297,
-				Bits:              2305843009214532812,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -100,7 +98,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
 				Nonce:             9253507043297,
-				Bits:              2305843009222082559,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -115,7 +112,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         9223372036854775808, // Timestamp > MaxInt64(9223372036854775807)
 				Nonce:             9253507043297,
-				Bits:              2305843009222082559,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -130,7 +126,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
 				Nonce:             9223372036854775808, // Nonce > MaxInt64(9223372036854775807)
-				Bits:              2305843009222082559,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -145,7 +140,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
 				Nonce:             9253507043297,
-				Bits:              9223372036854775808, // Bits > MaxInt64(9223372036854775807)
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -160,7 +154,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
 				Nonce:             9253507043297,
-				Bits:              2305843009214532812,
 			},
 			wantHex: strings.Join([]string{
 				"01",                 // serialization flags
@@ -225,7 +218,6 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
 				Nonce:             9253507043297,
-				Bits:              2305843009214532812,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -251,7 +243,6 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
 				Nonce:             9253507043297,
-				Bits:              2305843009214532812,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
@@ -352,7 +343,6 @@ func TestUnmarshalBlockHeader(t *testing.T) {
 				PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 				Timestamp:         1528945000,
 				Nonce:             9253507043297,
-				Bits:              2305843009214532812,
 				BlockCommitment: BlockCommitment{
 					TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
 					TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),

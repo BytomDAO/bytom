@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/consensus/difficulty"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -22,7 +21,6 @@ var (
 	errMismatchedMerkleRoot  = errors.New("mismatched merkle root")
 	errMisorderedBlockHeight = errors.New("misordered block height")
 	errOverBlockLimit        = errors.New("block's gas is over the limit")
-	errWorkProof             = errors.New("invalid difficulty proof of work")
 	errVersionRegression     = errors.New("version regression")
 )
 
@@ -66,17 +64,12 @@ func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
 	if b.Height != parent.Height+1 {
 		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", parent.Height, b.Height)
 	}
-	if b.Bits != parent.CalcNextBits() {
-		return errBadBits
-	}
+
 	if parent.Hash != *b.PreviousBlockId {
 		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash.Bytes(), b.PreviousBlockId.Bytes())
 	}
 	if err := checkBlockTime(b, parent); err != nil {
 		return err
-	}
-	if !difficulty.CheckProofOfWork(&b.ID, parent.CalcNextSeed(), b.BlockHeader.Bits) {
-		return errWorkProof
 	}
 	return nil
 }
