@@ -987,8 +987,12 @@ func Test_op2Div(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := op2Div(tt.args.vm); (err != nil) != tt.wantErr {
-				t.Errorf("op2Div() error = %v, wantErr %v", err, tt.wantErr)
+			if err := op2Div(tt.args.vm); err != nil {
+				if !tt.wantErr{
+					t.Errorf("op2Div() error = %v, wantErr %v", err, tt.wantErr)
+				}else {
+					return
+				}
 			}
 			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
 				t.Errorf("op1Sub() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)

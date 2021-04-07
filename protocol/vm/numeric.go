@@ -86,16 +86,7 @@ func op2Div(vm *virtualMachine) error {
 		return err
 	}
 
-	num, ok := checked.NewUInt256("2")
-	if !ok {
-		return ErrBadValue
-	}
-
-	if num.Div(n, num); num.Sign() < 0 {
-		return ErrRange
-	}
-
-	return vm.pushBigInt(num, true)
+	return vm.pushBigInt(n.Rsh(n,1), true)
 }
 
 func opNegate(vm *virtualMachine) error {
