@@ -14,8 +14,8 @@ import (
 // source hash and target hash point to the checkpoint, and the source checkpoint is the target checkpoint's parent(not be directly)
 // the vector <sourceHash, targetHash, sourceHeight, targetHeight, pubKey> as the message of signature
 type Verification struct {
-	SourceHash   string
-	TargetHash   string
+	SourceHash   bc.Hash
+	TargetHash   bc.Hash
 	SourceHeight uint64
 	TargetHeight uint64
 	Signature    string
@@ -25,11 +25,11 @@ type Verification struct {
 // EncodeMessage encode the verification for the validators to sign or verify
 func (v *Verification) EncodeMessage() ([]byte, error) {
 	buff := new(bytes.Buffer)
-	if _, err := buff.WriteString(v.SourceHash); err != nil {
+	if _, err := v.SourceHash.WriteTo(buff); err != nil {
 		return nil, err
 	}
 
-	if _, err := buff.WriteString(v.TargetHash); err != nil {
+	if _, err := v.TargetHash.WriteTo(buff); err != nil {
 		return nil, err
 	}
 
