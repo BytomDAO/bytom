@@ -1,17 +1,20 @@
 package database
 
 import (
+	"bytes"
+	"encoding/hex"
+	"github.com/bytom/bytom/crypto/sha3pool"
 	"os"
 	"testing"
 
 	"github.com/bytom/bytom/config"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/testutil"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestLoadBlockIndex(t *testing.T) {
@@ -220,5 +223,97 @@ func TestSaveBlock(t *testing.T) {
 
 	if !testutil.DeepEqual(block.BlockHeader, gotBlockHeader) {
 		t.Errorf("got block header:%v, expect block header:%v", gotBlockHeader, block.BlockHeader)
+	}
+}
+
+func TestStore_SaveContract(t *testing.T) {
+	defer os.RemoveAll("temp")
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	store := NewStore(testDB)
+
+	code, err := hex.DecodeString("6a4c04626372704c01014c2820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	program := &bc.Program{VmVersion: 1, Code: code}
+	txID := &bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}
+	if err := store.SaveContract(program, txID); err != nil {
+		t.Fatal(err)
+	}
+
+	txID1 := &bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1}
+	if err := store.SaveContract(program, txID1); err != nil {
+		t.Fatal(err)
+	}
+
+	var hash [32]byte
+	sha3pool.Sum256(hash[:], program.Code)
+
+	codeData := store.db.Get(CalcContractKey(hash))
+	if codeData == nil {
+		t.Errorf("can't find the registered contract by contract hash %v", hash)
+	}
+
+	if !bytes.Equal(codeData, program.Code) {
+		t.Errorf("got program code: %v, expect program code: %v", codeData, program.Code)
+	}
+
+	txIDData := store.db.Get(CalcContractTxKey(hash))
+	if txIDData == nil {
+		t.Errorf("can't find the transaction id by contract hash %v", hash)
+	}
+
+	if !bytes.Equal(txIDData, txID.Bytes()) {
+		t.Errorf("got transaction id: %v, expect transaction id: %v", txIDData, txID.Bytes())
+	}
+}
+
+func TestStore_DeleteContract(t *testing.T) {
+	defer os.RemoveAll("temp")
+	testDB := dbm.NewDB("testdb", "leveldb", "temp")
+	store := NewStore(testDB)
+
+	code, err := hex.DecodeString("6a4c04626372704c01014c2820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	program := &bc.Program{VmVersion: 1, Code: code}
+	txID := &bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}
+	if err := store.SaveContract(program, txID); err != nil {
+		t.Fatal(err)
+	}
+
+	var hash [32]byte
+	sha3pool.Sum256(hash[:], program.Code)
+
+	txID1 := &bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1}
+	if err := store.DeleteContract(program, txID1); err != nil {
+		t.Fatal(err)
+	}
+
+	codeData := store.db.Get(CalcContractKey(hash))
+	if codeData == nil {
+		t.Errorf("can't find the registered contract by contract hash %v", hash)
+	}
+
+	txIDData := store.db.Get(CalcContractTxKey(hash))
+	if txIDData == nil {
+		t.Errorf("can't find the transaction id by contract hash %v", hash)
+	}
+
+	if err := store.DeleteContract(program, txID); err != nil {
+		t.Fatal(err)
+	}
+
+	codeData = store.db.Get(CalcContractKey(hash))
+	if codeData != nil {
+		t.Errorf("registered contract should be deleted")
+	}
+
+	txIDData = store.db.Get(CalcContractTxKey(hash))
+	if txIDData != nil {
+		t.Errorf("transaction id should be deleted")
 	}
 }
