@@ -3,6 +3,8 @@ package vm
 import (
 	"math"
 
+	"github.com/holiman/uint256"
+
 	"github.com/bytom/bytom/math/checked"
 )
 
@@ -126,11 +128,13 @@ func opNot(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	return vm.pushBool(n == 0, true)
+
+	return vm.pushBool(n.Cmp(uint256.NewInt()) == 0, true)
 }
 
 func op0NotEqual(vm *virtualMachine) error {
@@ -138,11 +142,13 @@ func op0NotEqual(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	return vm.pushBool(n != 0, true)
+
+	return vm.pushBool(n.Cmp(uint256.NewInt()) != 0, true)
 }
 
 func opAdd(vm *virtualMachine) error {
