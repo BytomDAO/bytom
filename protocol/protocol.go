@@ -85,6 +85,18 @@ func (c *Chain) initChainStatus() error {
 	return c.store.SaveChainStatus(node, utxoView)
 }
 
+// BestBlockHeight returns the last irreversible block header of the blockchain
+func (c *Chain) LastIrreversibleHeader() *types.BlockHeader {
+	// TODO: LastIrreversibleHeader
+	return nil
+}
+
+// ProcessBlockSignature process blockchain signature
+func (c *Chain) ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error {
+	// TODO: ProcessBlockSignature
+	return nil
+}
+
 // BestBlockHeight returns the current height of the blockchain.
 func (c *Chain) BestBlockHeight() uint64 {
 	c.cond.L.Lock()

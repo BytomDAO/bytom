@@ -280,7 +280,7 @@ func (c *Chain) processBlock(block *types.Block) (bool, error) {
 		return false, c.connectBlock(bestBlock)
 	}
 
-	if bestNode.Height > c.bestNode.Height && bestNode.WorkSum.Cmp(c.bestNode.WorkSum) >= 0 {
+	if bestNode.Height > c.bestNode.Height {
 		log.WithFields(log.Fields{"module": logModule}).Debug("start to reorganize chain")
 		return false, c.reorganizeChain(bestNode)
 	}
