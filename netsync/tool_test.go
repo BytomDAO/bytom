@@ -148,7 +148,6 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 			BlockHeader: types.BlockHeader{
 				Height:            indexBlock.Height + 1,
 				PreviousBlockHash: indexBlock.Hash(),
-				//Nonce:             uint64(rand.Uint32()),
 			},
 		}
 		blocks = append(blocks, block)

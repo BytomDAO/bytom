@@ -14,13 +14,14 @@ import (
 	"github.com/bytom/bytom/consensus"
 	"github.com/bytom/bytom/crypto/ed25519/chainkd"
 	"github.com/bytom/bytom/database"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/event"
+	"github.com/bytom/bytom/mining"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func BenchmarkChain_CoinBaseTx_NoAsset(b *testing.B) {
@@ -154,6 +155,24 @@ func InsertChain(chain *protocol.Chain, txPool *protocol.TxPool, txs []*types.Tx
 		if err := txbuilder.FinalizeTx(nil, chain, tx); err != nil {
 			return err
 		}
+	}
+	time.Sleep(time.Second)
+	block, err := mining.NewBlockTemplate(chain, txPool, nil)
+	if err != nil {
+		return err
+	}
+	blockSize, err := block.MarshalText()
+	if err != nil {
+		return err
+	}
+	fmt.Println("blocksize:", uint64(len(blockSize)))
+	fmt.Println("block tx count:", uint64(len(block.Transactions)))
+	fmt.Println("coinbase txsize:", uint64(block.Transactions[0].SerializedSize))
+	if len(block.Transactions) > 1 {
+		fmt.Println("txsize:", uint64(block.Transactions[1].SerializedSize))
+	}
+	if _, err := chain.ProcessBlock(block); err != nil {
+		return err
 	}
 
 	return nil
