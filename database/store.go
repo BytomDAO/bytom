@@ -223,3 +223,13 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 	batch.Write()
 	return nil
 }
+
+// GetCheckpoint return the checkpoint of specified block hash
+func (s *Store) GetCheckpoint(*bc.Hash) (*state.Checkpoint, error) {
+	return nil, nil
+}
+
+// GetCheckpointsByHeight return all checkpoints of specified block height
+func (s *Store) GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error) {
+	return nil, nil
+}
