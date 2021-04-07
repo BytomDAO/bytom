@@ -178,6 +178,7 @@ func (c *Chain) saveBlock(block *types.Block) error {
 	if err := validation.ValidateBlock(bcBlock, parent); err != nil {
 		return errors.Sub(ErrBadBlock, err)
 	}
+
 	if err := c.store.SaveBlock(block); err != nil {
 		return err
 	}

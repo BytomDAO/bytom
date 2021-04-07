@@ -57,10 +57,6 @@ func CalcBlockHeaderKey(height uint64, hash *bc.Hash) []byte {
 	return append(key, hash.Bytes()...)
 }
 
-func CalcTxStatusKey(hash *bc.Hash) []byte {
-	return append(TxStatusPrefix, hash.Bytes()...)
-}
-
 // GetBlock return the block by given hash
 func GetBlock(db dbm.DB, hash *bc.Hash) (*types.Block, error) {
 	bytez := db.Get(CalcBlockKey(hash))

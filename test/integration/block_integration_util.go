@@ -1,12 +1,13 @@
 package integration
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
-	"strings"
 	"sort"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
 
@@ -169,6 +170,32 @@ func (p *processBlockTestCase) Run() error {
 		}
 
 		if !storeItems(gotStoreItems).equals(p.wantStore) {
+			gots := make(map[string]bool)
+			for _, gotItem := range gotStoreItems {
+				gotItemKey := hex.EncodeToString(gotItem.key)
+				gots[gotItemKey] = true
+			}
+
+			wants := make(map[string]bool)
+			for _, wantItem := range p.wantStore {
+				wantItemKey := hex.EncodeToString(wantItem.key)
+				wants[wantItemKey] = true
+			}
+
+			fmt.Println("only in want:")
+			for wantItemKey, _ := range wants {
+				if !gots[wantItemKey] {
+					fmt.Println(wantItemKey)
+				}
+			}
+
+			fmt.Println("only in got:")
+			for wantItemKey, _ := range gots {
+				if !wants[wantItemKey] {
+					fmt.Println(wantItemKey)
+				}
+			}
+
 			return fmt.Errorf("#case(%s) want store:%v, got store:%v", p.desc, p.wantStore, gotStoreItems)
 		}
 	}
