@@ -952,7 +952,7 @@ func Test_op2Div(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Test that two bytes number become one byte number after op sub",
+			name: "Test that two bytes number become one byte number after op div",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
