@@ -3,6 +3,7 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
+	"github.com/bytom/bytom/consensus/segwit"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -93,6 +94,17 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 	}
 
 	for _, tx := range block.Transactions {
+		for _, output := range tx.Outputs {
+			if segwit.IsBCRPScript(output.ControlProgram) {
+				program := &bc.Program{VmVersion: output.VMVersion, Code: output.ControlProgram}
+				if err := c.store.SaveContract(program, &tx.ID); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	for _, tx := range block.Transactions {
 		c.txPool.RemoveTransaction(&tx.Tx.ID)
 	}
 	return nil
@@ -119,6 +131,17 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		}
 		if err := utxoView.DetachBlock(detachBlock, txStatus); err != nil {
 			return err
+		}
+
+		for _, tx := range b.Transactions {
+			for _, output := range tx.Outputs {
+				if segwit.IsBCRPScript(output.ControlProgram) {
+					program := &bc.Program{VmVersion: output.VMVersion, Code: output.ControlProgram}
+					if err := c.store.DeleteContract(program, &tx.ID); err != nil {
+						return err
+					}
+				}
+			}
 		}
 
 		for _, tx := range b.Transactions {

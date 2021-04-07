@@ -1,6 +1,7 @@
 package database
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"time"
@@ -9,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 
+	"github.com/bytom/bytom/crypto/sha3pool"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
@@ -25,6 +27,8 @@ var (
 	BlockPrefix       = []byte("B:")
 	BlockHeaderPrefix = []byte("BH:")
 	TxStatusPrefix    = []byte("BTS:")
+	ContractPrefix    = []byte("C:")
+	ContractTxPrefix  = []byte("CTX:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -65,6 +69,14 @@ func CalcTxStatusKey(hash *bc.Hash) []byte {
 // GetBlockHeader return the BlockHeader by given hash
 func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
 	return nil, nil
+}
+
+func CalcContractKey(hash [32]byte) []byte {
+	return append(ContractPrefix, hash[:]...)
+}
+
+func CalcContractTxKey(hash [32]byte) []byte {
+	return append(ContractTxPrefix, hash[:]...)
 }
 
 // GetBlock return the block by given hash
@@ -220,6 +232,35 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 	}
 
 	batch.Set(BlockStoreKey, bytes)
+	batch.Write()
+	return nil
+}
+
+func (s *Store) SaveContract(program *bc.Program, txID *bc.Hash) error {
+	var hash [32]byte
+	sha3pool.Sum256(hash[:], program.Code)
+	batch := s.db.NewBatch()
+	batch.Set(CalcContractKey(hash), program.Code)
+	batch.Set(CalcContractTxKey(hash), txID.Bytes())
+	batch.Write()
+	return nil
+}
+
+func (s *Store) DeleteContract(program *bc.Program, txID *bc.Hash) error {
+	var hash [32]byte
+	sha3pool.Sum256(hash[:], program.Code)
+	data := s.db.Get(CalcContractTxKey(hash))
+	if data == nil {
+		return errors.New("can't find the contract register transaction id")
+	}
+
+	if !bytes.Equal(data, txID.Bytes()) {
+		return nil
+	}
+
+	batch := s.db.NewBatch()
+	batch.Delete(CalcContractKey(hash))
+	batch.Delete(CalcContractTxKey(hash))
 	batch.Write()
 	return nil
 }
