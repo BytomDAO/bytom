@@ -64,9 +64,7 @@ func ValidateBlockHeader(b *bc.Block, parent *state.BlockNode) error {
 	if b.Height != parent.Height+1 {
 		return errors.WithDetailf(errMisorderedBlockHeight, "previous block height %d, current block height %d", parent.Height, b.Height)
 	}
-	if b.Bits != parent.CalcNextBits() {
-		return errBadBits
-	}
+
 	if parent.Hash != *b.PreviousBlockId {
 		return errors.WithDetailf(errMismatchedBlock, "previous block ID %x, current block wants %x", parent.Hash.Bytes(), b.PreviousBlockId.Bytes())
 	}

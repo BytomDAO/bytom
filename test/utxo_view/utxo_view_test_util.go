@@ -55,7 +55,6 @@ func blockNode(header *bc.BlockHeader) *state.BlockNode {
 		Height:            header.Height,
 		PreviousBlockHash: *header.PreviousBlockId,
 		Timestamp:         header.Timestamp,
-		Bits:              header.Bits,
 		Nonce:             header.Nonce,
 	}
 	return &state.BlockNode{

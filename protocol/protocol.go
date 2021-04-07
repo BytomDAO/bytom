@@ -131,15 +131,6 @@ func (c *Chain) CalcNextSeed(preBlock *bc.Hash) (*bc.Hash, error) {
 	return node.CalcNextSeed(), nil
 }
 
-// CalcNextBits return the seed for the given block
-func (c *Chain) CalcNextBits(preBlock *bc.Hash) (uint64, error) {
-	node := c.index.GetNode(preBlock)
-	if node == nil {
-		return 0, errors.New("can't find preblock in the blockindex")
-	}
-	return node.CalcNextBits(), nil
-}
-
 func (c *Chain) GetBlockIndex() *state.BlockIndex {
 	return c.index
 }

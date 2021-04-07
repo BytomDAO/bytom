@@ -86,17 +86,6 @@ func (node *BlockNode) CalcPastMedianTime() uint64 {
 	return timestamps[len(timestamps)/2]
 }
 
-// CalcNextBits calculate the bits for next block
-func (node *BlockNode) CalcNextBits() uint64 {
-	compareNode := node.Parent
-	for compareNode.Height%consensus.BlocksPerRetarget != 0 {
-		compareNode = compareNode.Parent
-	}
-	// TODO:
-	// return difficulty.CalcNextRequiredDifficulty(node.BlockHeader(), compareNode.BlockHeader())
-	return 0
-}
-
 // CalcNextSeed calculate the seed for next block
 func (node *BlockNode) CalcNextSeed() *bc.Hash {
 	if node.Height == 0 {

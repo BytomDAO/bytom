@@ -19,11 +19,6 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 	}
 
 	preBlockHeader := chain.BestBlockHeader()
-	preBlockHash := preBlockHeader.Hash()
-	nextBits, err := chain.CalcNextBits(&preBlockHash)
-	if err != nil {
-		return nil, err
-	}
 
 	b := &types.Block{
 		BlockHeader: types.BlockHeader{
@@ -32,7 +27,6 @@ func NewBlock(chain *protocol.Chain, txs []*types.Tx, controlProgram []byte) (*t
 			PreviousBlockHash: preBlockHeader.Hash(),
 			Timestamp:         preBlockHeader.Timestamp + 1,
 			BlockCommitment:   types.BlockCommitment{},
-			Bits:              nextBits,
 		},
 		Transactions: []*types.Tx{nil},
 	}
