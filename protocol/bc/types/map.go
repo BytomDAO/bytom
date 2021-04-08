@@ -175,7 +175,6 @@ func mapTx(tx *TxData) (headerID bc.Hash, hdr *bc.TxHeader, entryMap map[bc.Hash
 
 func mapBlockHeader(old *BlockHeader) (bc.Hash, *bc.BlockHeader) {
 	bh := bc.NewBlockHeader(old.Version, old.Height, &old.PreviousBlockHash, old.Timestamp, &old.TransactionsMerkleRoot, &old.TransactionStatusHash)
-
 	return bc.EntryID(bh), bh
 }
 
