@@ -250,22 +250,14 @@ func TestStore_SaveContract(t *testing.T) {
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], program.Code)
 
-	codeData := store.db.Get(CalcContractKey(hash))
-	if codeData == nil {
+	data := store.db.Get(CalcContractKey(hash))
+	if data == nil {
 		t.Errorf("can't find the registered contract by contract hash %v", hash)
 	}
 
-	if !bytes.Equal(codeData, program.Code) {
-		t.Errorf("got program code: %v, expect program code: %v", codeData, program.Code)
-	}
-
-	txIDData := store.db.Get(CalcContractTxKey(hash))
-	if txIDData == nil {
-		t.Errorf("can't find the transaction id by contract hash %v", hash)
-	}
-
-	if !bytes.Equal(txIDData, txID.Bytes()) {
-		t.Errorf("got transaction id: %v, expect transaction id: %v", txIDData, txID.Bytes())
+	expect := append(txID.Bytes(), program.Code...)
+	if !bytes.Equal(data, expect) {
+		t.Errorf("got registerd contract: %v, expect registerd contract: %v", data, expect)
 	}
 }
 
@@ -293,27 +285,17 @@ func TestStore_DeleteContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	codeData := store.db.Get(CalcContractKey(hash))
-	if codeData == nil {
+	data := store.db.Get(CalcContractKey(hash))
+	if data == nil {
 		t.Errorf("can't find the registered contract by contract hash %v", hash)
-	}
-
-	txIDData := store.db.Get(CalcContractTxKey(hash))
-	if txIDData == nil {
-		t.Errorf("can't find the transaction id by contract hash %v", hash)
 	}
 
 	if err := store.DeleteContract(program, txID); err != nil {
 		t.Fatal(err)
 	}
 
-	codeData = store.db.Get(CalcContractKey(hash))
-	if codeData != nil {
-		t.Errorf("registered contract should be deleted")
-	}
-
-	txIDData = store.db.Get(CalcContractTxKey(hash))
-	if txIDData != nil {
-		t.Errorf("transaction id should be deleted")
+	data = store.db.Get(CalcContractKey(hash))
+	if data != nil {
+		t.Errorf("The registered contract should be deleted")
 	}
 }

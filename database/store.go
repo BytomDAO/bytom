@@ -28,7 +28,6 @@ var (
 	BlockHeaderPrefix = []byte("BH:")
 	TxStatusPrefix    = []byte("BTS:")
 	ContractPrefix    = []byte("C:")
-	ContractTxPrefix  = []byte("CTX:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -73,10 +72,6 @@ func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
 
 func CalcContractKey(hash [32]byte) []byte {
 	return append(ContractPrefix, hash[:]...)
-}
-
-func CalcContractTxKey(hash [32]byte) []byte {
-	return append(ContractTxPrefix, hash[:]...)
 }
 
 // GetBlock return the block by given hash
@@ -245,8 +240,8 @@ func (s *Store) SaveContract(program *bc.Program, txID *bc.Hash) error {
 	}
 
 	batch := s.db.NewBatch()
-	batch.Set(CalcContractKey(hash), program.Code)
-	batch.Set(CalcContractTxKey(hash), txID.Bytes())
+	// key:"c:sha256(program.Code)" value:"txID+program.Code"
+	batch.Set(CalcContractKey(hash), append(txID.Bytes(), program.Code...))
 	batch.Write()
 	return nil
 }
@@ -254,18 +249,17 @@ func (s *Store) SaveContract(program *bc.Program, txID *bc.Hash) error {
 func (s *Store) DeleteContract(program *bc.Program, txID *bc.Hash) error {
 	var hash [32]byte
 	sha3pool.Sum256(hash[:], program.Code)
-	data := s.db.Get(CalcContractTxKey(hash))
+	data := s.db.Get(CalcContractKey(hash))
 	if data == nil {
-		return errors.New("can't find the contract register transaction id")
+		return errors.New("can't find the registered contract")
 	}
 
-	if !bytes.Equal(data, txID.Bytes()) {
+	if !bytes.Equal(data[:32], txID.Bytes()) {
 		return nil
 	}
 
 	batch := s.db.NewBatch()
 	batch.Delete(CalcContractKey(hash))
-	batch.Delete(CalcContractTxKey(hash))
 	batch.Write()
 	return nil
 }
