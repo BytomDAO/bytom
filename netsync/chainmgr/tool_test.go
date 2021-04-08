@@ -1,4 +1,4 @@
-package netsync
+package chainmgr
 
 import (
 	"errors"
@@ -6,10 +6,13 @@ import (
 	"net"
 	"time"
 
-	wire "github.com/tendermint/go-wire"
+	dbm "github.com/bytom/bytom/database/leveldb"
+	"github.com/tendermint/go-wire"
 	"github.com/tendermint/tmlibs/flowrate"
 
 	"github.com/bytom/bytom/consensus"
+	"github.com/bytom/bytom/event"
+	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/test/mock"
@@ -21,7 +24,7 @@ type P2PPeer struct {
 	flag consensus.ServiceFlag
 
 	srcPeer    *P2PPeer
-	remoteNode *SyncManager
+	remoteNode *Manager
 	msgCh      chan []byte
 	async      bool
 }
@@ -48,6 +51,10 @@ func (p *P2PPeer) IsLAN() bool {
 	return false
 }
 
+func (p *P2PPeer) Moniker() string {
+	return ""
+}
+
 func (p *P2PPeer) RemoteAddrHost() string {
 	return ""
 }
@@ -56,7 +63,7 @@ func (p *P2PPeer) ServiceFlag() consensus.ServiceFlag {
 	return p.flag
 }
 
-func (p *P2PPeer) SetConnection(srcPeer *P2PPeer, node *SyncManager) {
+func (p *P2PPeer) SetConnection(srcPeer *P2PPeer, node *Manager) {
 	p.srcPeer = srcPeer
 	p.remoteNode = node
 }
@@ -70,7 +77,7 @@ func (p *P2PPeer) TrySend(b byte, msg interface{}) bool {
 	if p.async {
 		p.msgCh <- msgBytes
 	} else {
-		msgType, msg, _ := DecodeMessage(msgBytes)
+		msgType, msg, _ := decodeMessage(msgBytes)
 		p.remoteNode.processMsg(p.srcPeer, msgType, msg)
 	}
 	return true
@@ -82,7 +89,8 @@ func (p *P2PPeer) setAsync(b bool) {
 
 func (p *P2PPeer) postMan() {
 	for msgBytes := range p.msgCh {
-		msgType, msg, _ := DecodeMessage(msgBytes)
+		msgType, msg, _ := decodeMessage(msgBytes)
+		time.Sleep(10 * time.Millisecond)
 		p.remoteNode.processMsg(p.srcPeer, msgType, msg)
 	}
 }
@@ -100,19 +108,19 @@ func (ps *PeerSet) IsBanned(ip string, level byte, reason string) bool {
 func (ps *PeerSet) StopPeerGracefully(string) {}
 
 type NetWork struct {
-	nodes map[*SyncManager]P2PPeer
+	nodes map[*Manager]P2PPeer
 }
 
 func NewNetWork() *NetWork {
-	return &NetWork{map[*SyncManager]P2PPeer{}}
+	return &NetWork{map[*Manager]P2PPeer{}}
 }
 
-func (nw *NetWork) Register(node *SyncManager, addr, id string, flag consensus.ServiceFlag) {
+func (nw *NetWork) Register(node *Manager, addr, id string, flag consensus.ServiceFlag) {
 	peer := NewP2PPeer(addr, id, flag)
 	nw.nodes[node] = *peer
 }
 
-func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) (*P2PPeer, *P2PPeer, error) {
+func (nw *NetWork) HandsShake(nodeA, nodeB *Manager) (*P2PPeer, *P2PPeer, error) {
 	B2A, ok := nw.nodes[nodeA]
 	if !ok {
 		return nil, nil, errors.New("can't find nodeA's p2p peer on network")
@@ -125,9 +133,10 @@ func (nw *NetWork) HandsShake(nodeA, nodeB *SyncManager) (*P2PPeer, *P2PPeer, er
 	A2B.SetConnection(&B2A, nodeB)
 	B2A.SetConnection(&A2B, nodeA)
 
-	nodeA.handleStatusRequestMsg(&A2B)
-	nodeB.handleStatusRequestMsg(&B2A)
-
+	nodeA.AddPeer(&A2B)
+	nodeB.AddPeer(&B2A)
+	nodeA.SendStatus(B2A.srcPeer)
+	nodeB.SendStatus(A2B.srcPeer)
 	A2B.setAsync(true)
 	B2A.setAsync(true)
 	return &B2A, &A2B, nil
@@ -137,7 +146,7 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 	blocks := []*types.Block{}
 	indexBlock := &types.Block{}
 	if startBlock == nil {
-		indexBlock = &types.Block{BlockHeader: types.BlockHeader{}}
+		indexBlock = &types.Block{BlockHeader: types.BlockHeader{Version: uint64(rand.Uint32())}}
 		blocks = append(blocks, indexBlock)
 	} else {
 		indexBlock = startBlock
@@ -148,6 +157,7 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 			BlockHeader: types.BlockHeader{
 				Height:            indexBlock.Height + 1,
 				PreviousBlockHash: indexBlock.Hash(),
+				Version:           uint64(rand.Uint32()),
 			},
 		}
 		blocks = append(blocks, block)
@@ -156,34 +166,60 @@ func mockBlocks(startBlock *types.Block, height uint64) []*types.Block {
 	return blocks
 }
 
-func mockSync(blocks []*types.Block) *SyncManager {
+func mockErrorBlocks(startBlock *types.Block, height uint64, errBlockHeight uint64) []*types.Block {
+	blocks := []*types.Block{}
+	indexBlock := &types.Block{}
+	if startBlock == nil {
+		indexBlock = &types.Block{BlockHeader: types.BlockHeader{Version: uint64(rand.Uint32())}}
+		blocks = append(blocks, indexBlock)
+	} else {
+		indexBlock = startBlock
+	}
+
+	for indexBlock.Height < height {
+		block := &types.Block{
+			BlockHeader: types.BlockHeader{
+				Height:            indexBlock.Height + 1,
+				PreviousBlockHash: indexBlock.Hash(),
+				Version:           uint64(rand.Uint32()),
+			},
+		}
+		if block.Height == errBlockHeight {
+			block.TransactionsMerkleRoot = bc.NewHash([32]byte{0x1})
+		}
+		blocks = append(blocks, block)
+		indexBlock = block
+	}
+	return blocks
+}
+
+func mockSync(blocks []*types.Block, mempool *mock.Mempool, fastSyncDB dbm.DB) *Manager {
 	chain := mock.NewChain()
-	peers := newPeerSet(NewPeerSet())
+	peers := peers.NewPeerSet(NewPeerSet())
 	chain.SetBestBlockHeader(&blocks[len(blocks)-1].BlockHeader)
 	for _, block := range blocks {
 		chain.SetBlockByHeight(block.Height, block)
 	}
 
-	genesis, _ := chain.GetHeaderByHeight(0)
-	return &SyncManager{
-		genesisHash: genesis.Hash(),
-		chain:       chain,
-		blockKeeper: newBlockKeeper(chain, peers),
-		peers:       peers,
+	return &Manager{
+		chain:           chain,
+		blockKeeper:     newBlockKeeper(chain, peers, fastSyncDB),
+		peers:           peers,
+		mempool:         mempool,
+		txSyncCh:        make(chan *txSyncMsg),
+		eventDispatcher: event.NewDispatcher(),
 	}
 }
 
 func mockTxs(txCount int) ([]*types.Tx, []*bc.Tx) {
 	var txs []*types.Tx
 	var bcTxs []*bc.Tx
-	for i := 0; i < txCount; i++ {
-		trueProg := mockControlProgram(60)
-		assetID := bc.ComputeAssetID(trueProg, 1, &bc.EmptyStringHash)
-		now := []byte(time.Now().String())
-		issuanceInp := types.NewIssuanceInput(now, 1, trueProg, nil, nil)
+	trueProg := mockControlProgram(60)
+	assetID := bc.AssetID{V0: 9999}
+	for i := uint64(0); i < uint64(txCount); i++ {
 		tx := types.NewTx(types.TxData{
 			Version: 1,
-			Inputs:  []*types.TxInput{issuanceInp},
+			Inputs:  []*types.TxInput{types.NewSpendInput(nil, bc.Hash{V0: i + 1}, assetID, i, i, trueProg)},
 			Outputs: []*types.TxOutput{types.NewTxOutput(assetID, 1, trueProg)},
 		})
 		txs = append(txs, tx)

@@ -12,10 +12,14 @@ type Store interface {
 	BlockExist(*bc.Hash) bool
 
 	GetBlock(*bc.Hash) (*types.Block, error)
+	GetBlockHeader(*bc.Hash) (*types.BlockHeader, error)
 	GetStoreStatus() *BlockStoreState
 	GetTransactionStatus(*bc.Hash) (*bc.TransactionStatus, error)
 	GetTransactionsUtxo(*state.UtxoViewpoint, []*bc.Tx) error
 	GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)
+
+	GetCheckpoint(*bc.Hash) (*state.Checkpoint, error)
+	GetCheckpointsByHeight(uint64) ([]*state.Checkpoint, error)
 
 	LoadBlockIndex(uint64) (*state.BlockIndex, error)
 	SaveBlock(*types.Block, *bc.TransactionStatus) error

@@ -21,7 +21,6 @@ var (
 	errMismatchedMerkleRoot  = errors.New("mismatched merkle root")
 	errMisorderedBlockHeight = errors.New("misordered block height")
 	errOverBlockLimit        = errors.New("block's gas is over the limit")
-	errWorkProof             = errors.New("invalid difficulty proof of work")
 	errVersionRegression     = errors.New("version regression")
 )
 

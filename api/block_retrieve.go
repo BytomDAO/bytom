@@ -41,12 +41,13 @@ type BlockReq struct {
 
 // GetBlockResp is the resp for getBlock api
 type GetBlockResp struct {
-	Hash                   *bc.Hash   `json:"hash"`
-	Size                   uint64     `json:"size"`
-	Version                uint64     `json:"version"`
-	Height                 uint64     `json:"height"`
-	PreviousBlockHash      *bc.Hash   `json:"previous_block_hash"`
-	Timestamp              uint64     `json:"timestamp"`
+	Hash              *bc.Hash `json:"hash"`
+	Size              uint64   `json:"size"`
+	Version           uint64   `json:"version"`
+	Height            uint64   `json:"height"`
+	PreviousBlockHash *bc.Hash `json:"previous_block_hash"`
+	Timestamp         uint64   `json:"timestamp"`
+
 	TransactionsMerkleRoot *bc.Hash   `json:"transaction_merkle_root"`
 	TransactionStatusHash  *bc.Hash   `json:"transaction_status_hash"`
 	Transactions           []*BlockTx `json:"transactions"`

@@ -3,6 +3,8 @@ package vm
 import (
 	"math"
 
+	"github.com/holiman/uint256"
+
 	"github.com/bytom/bytom/math/checked"
 )
 
@@ -15,10 +17,6 @@ func op1Add(vm *virtualMachine) error {
 	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
-	}
-
-	if n.Sign() < 0 {
-		return ErrRange
 	}
 
 	num, ok := checked.NewUInt256("1")
@@ -38,15 +36,22 @@ func op1Sub(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	res, ok := checked.SubInt64(n, 1)
+
+	num, ok := checked.NewUInt256("1")
 	if !ok {
+		return ErrBadValue
+	}
+
+	if num.Sub(n, num); num.Sign() < 0 {
 		return ErrRange
 	}
-	return vm.pushInt64(res, true)
+
+	return vm.pushBigInt(num, true)
 }
 
 func op2Mul(vm *virtualMachine) error {
@@ -54,15 +59,22 @@ func op2Mul(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	res, ok := checked.MulInt64(n, 2)
+
+	num, ok := checked.NewUInt256("2")
 	if !ok {
+		return ErrBadValue
+	}
+
+	if num.Mul(n, num); num.Sign() < 0 {
 		return ErrRange
 	}
-	return vm.pushInt64(res, true)
+
+	return vm.pushBigInt(num, true)
 }
 
 func op2Div(vm *virtualMachine) error {
@@ -70,11 +82,13 @@ func op2Div(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	return vm.pushInt64(n>>1, true)
+
+	return vm.pushBigInt(n.Rsh(n,1), true)
 }
 
 func opNegate(vm *virtualMachine) error {
@@ -116,11 +130,13 @@ func opNot(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	return vm.pushBool(n == 0, true)
+
+	return vm.pushBool(n.Cmp(uint256.NewInt()) == 0, true)
 }
 
 func op0NotEqual(vm *virtualMachine) error {
@@ -128,11 +144,13 @@ func op0NotEqual(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	n, err := vm.popInt64(true)
+
+	n, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	return vm.pushBool(n != 0, true)
+
+	return vm.pushBool(n.Cmp(uint256.NewInt()) != 0, true)
 }
 
 func opAdd(vm *virtualMachine) error {
@@ -140,19 +158,22 @@ func opAdd(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	res, ok := checked.AddInt64(x, y)
-	if !ok {
+
+	if x.Add(x, y); x.Sign() < 0 {
 		return ErrRange
 	}
-	return vm.pushInt64(res, true)
+
+	return vm.pushBigInt(x, true)
 }
 
 func opSub(vm *virtualMachine) error {
@@ -160,19 +181,22 @@ func opSub(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	res, ok := checked.SubInt64(x, y)
-	if !ok {
+
+	if x.Sub(x, y); x.Sign() < 0 {
 		return ErrRange
 	}
-	return vm.pushInt64(res, true)
+
+	return vm.pushBigInt(x, true)
 }
 
 func opMul(vm *virtualMachine) error {

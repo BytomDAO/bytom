@@ -26,9 +26,9 @@ import (
 	"github.com/bytom/bytom/env"
 	"github.com/bytom/bytom/event"
 	bytomLog "github.com/bytom/bytom/log"
+
 	"github.com/bytom/bytom/net/websocket"
 	"github.com/bytom/bytom/netsync"
-	"github.com/bytom/bytom/p2p"
 	"github.com/bytom/bytom/protocol"
 	w "github.com/bytom/bytom/wallet"
 )
@@ -118,7 +118,8 @@ func NewNode(config *cfg.Config) *Node {
 		}
 	}
 
-	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher)
+	fastSyncDB := dbm.NewDB("fastsync", config.DBBackend, config.DBDir())
+	syncManager, err := netsync.NewSyncManager(config, chain, txPool, dispatcher, fastSyncDB)
 	if err != nil {
 		cmn.Exit(cmn.Fmt("Failed to create sync manager: %v", err))
 	}
@@ -231,8 +232,4 @@ func (n *Node) RunForever() {
 	cmn.TrapSignal(func() {
 		n.Stop()
 	})
-}
-
-func (n *Node) NodeInfo() *p2p.NodeInfo {
-	return n.syncManager.NodeInfo()
 }

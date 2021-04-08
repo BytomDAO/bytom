@@ -5,6 +5,7 @@ import (
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/validation"
+	"github.com/bytom/bytom/protocol/vm"
 )
 
 // NewBlock create block according to the current status of chain
@@ -79,7 +80,18 @@ func ReplaceCoinbase(block *types.Block, coinbaseTx *types.Tx) (err error) {
 // AppendBlocks append empty blocks to chain, mainly used to mature the coinbase tx
 func AppendBlocks(chain *protocol.Chain, num uint64) error {
 	for i := uint64(0); i < num; i++ {
-
+		block, err := NewBlock(chain, nil, []byte{byte(vm.OP_TRUE)})
+		if err != nil {
+			return err
+		}
+		if _, err := chain.ProcessBlock(block); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+// Solve simulate solve difficulty by add result to cache
+func Solve(seed *bc.Hash, block *types.Block) {
+
 }

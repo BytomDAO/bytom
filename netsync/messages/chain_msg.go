@@ -1,10 +1,8 @@
-package netsync
+package messages
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/tendermint/go-wire"
@@ -23,9 +21,9 @@ const (
 	HeadersResponseByte = byte(0x13)
 	BlocksRequestByte   = byte(0x14)
 	BlocksResponseByte  = byte(0x15)
-	StatusRequestByte   = byte(0x20)
-	StatusResponseByte  = byte(0x21)
+	StatusByte          = byte(0x21)
 	NewTransactionByte  = byte(0x30)
+	NewTransactionsByte = byte(0x31)
 	NewMineBlockByte    = byte(0x40)
 	FilterLoadByte      = byte(0x50)
 	FilterAddByte       = byte(0x51)
@@ -33,7 +31,8 @@ const (
 	MerkleRequestByte   = byte(0x60)
 	MerkleResponseByte  = byte(0x61)
 
-	maxBlockchainResponseSize = 22020096 + 2
+	MaxBlockchainResponseSize = 22020096 + 2
+	TxsMsgMaxTxNum            = 1024
 )
 
 //BlockchainMessage is a generic message for this reactor.
@@ -49,9 +48,9 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&HeadersMessage{}, HeadersResponseByte},
 	wire.ConcreteType{&GetBlocksMessage{}, BlocksRequestByte},
 	wire.ConcreteType{&BlocksMessage{}, BlocksResponseByte},
-	wire.ConcreteType{&StatusRequestMessage{}, StatusRequestByte},
-	wire.ConcreteType{&StatusResponseMessage{}, StatusResponseByte},
+	wire.ConcreteType{&StatusMessage{}, StatusByte},
 	wire.ConcreteType{&TransactionMessage{}, NewTransactionByte},
+	wire.ConcreteType{&TransactionsMessage{}, NewTransactionsByte},
 	wire.ConcreteType{&MineBlockMessage{}, NewMineBlockByte},
 	wire.ConcreteType{&FilterLoadMessage{}, FilterLoadByte},
 	wire.ConcreteType{&FilterAddMessage{}, FilterAddByte},
@@ -59,18 +58,6 @@ var _ = wire.RegisterInterface(
 	wire.ConcreteType{&GetMerkleBlockMessage{}, MerkleRequestByte},
 	wire.ConcreteType{&MerkleBlockMessage{}, MerkleResponseByte},
 )
-
-//DecodeMessage decode msg
-func DecodeMessage(bz []byte) (msgType byte, msg BlockchainMessage, err error) {
-	msgType = bz[0]
-	n := int(0)
-	r := bytes.NewReader(bz)
-	msg = wire.ReadBinary(struct{ BlockchainMessage }{}, r, maxBlockchainResponseSize, &n, &err).(struct{ BlockchainMessage }).BlockchainMessage
-	if err != nil && n != len(bz) {
-		err = errors.New("DecodeMessage() had bytes left over")
-	}
-	return
-}
 
 //GetBlockMessage request blocks from remote peers by height/hash
 type GetBlockMessage struct {
@@ -130,12 +117,14 @@ func (m *BlockMessage) String() string {
 type GetHeadersMessage struct {
 	RawBlockLocator [][32]byte
 	RawStopHash     [32]byte
+	Skip            uint64
 }
 
 //NewGetHeadersMessage return a new GetHeadersMessage
-func NewGetHeadersMessage(blockLocator []*bc.Hash, stopHash *bc.Hash) *GetHeadersMessage {
+func NewGetHeadersMessage(blockLocator []*bc.Hash, stopHash *bc.Hash, skip uint64) *GetHeadersMessage {
 	msg := &GetHeadersMessage{
 		RawStopHash: stopHash.Byte32(),
+		Skip:        skip,
 	}
 	for _, hash := range blockLocator {
 		msg.RawBlockLocator = append(msg.RawBlockLocator, hash.Byte32())
@@ -154,13 +143,18 @@ func (m *GetHeadersMessage) GetBlockLocator() []*bc.Hash {
 }
 
 func (m *GetHeadersMessage) String() string {
-	return fmt.Sprintf("{stop_hash: %s}", hex.EncodeToString(m.RawStopHash[:]))
+	stopHash := bc.NewHash(m.RawStopHash)
+	return fmt.Sprintf("{skip:%d,stopHash:%s}", m.Skip, stopHash.String())
 }
 
 //GetStopHash return the stop hash of the msg
 func (m *GetHeadersMessage) GetStopHash() *bc.Hash {
 	hash := bc.NewHash(m.RawStopHash)
 	return &hash
+}
+
+func (m *GetHeadersMessage) GetSkip() uint64 {
+	return m.Skip
 }
 
 //HeadersMessage is one of the bytom msg type
@@ -274,43 +268,37 @@ func (m *BlocksMessage) String() string {
 	return fmt.Sprintf("{blocks_length: %d}", len(m.RawBlocks))
 }
 
-//StatusRequestMessage status request msg
-type StatusRequestMessage struct{}
-
-func (m *StatusRequestMessage) String() string {
-	return "{}"
-}
-
 //StatusResponseMessage get status response msg
-type StatusResponseMessage struct {
-	Height      uint64
-	RawHash     [32]byte
-	GenesisHash [32]byte
+type StatusMessage struct {
+	BestHeight         uint64
+	BestHash           [32]byte
+	IrreversibleHeight uint64
+	IrreversibleHash   [32]byte
 }
 
 //NewStatusResponseMessage construct get status response msg
-func NewStatusResponseMessage(blockHeader *types.BlockHeader, hash *bc.Hash) *StatusResponseMessage {
-	return &StatusResponseMessage{
-		Height:      blockHeader.Height,
-		RawHash:     blockHeader.Hash().Byte32(),
-		GenesisHash: hash.Byte32(),
+func NewStatusMessage(bestHeader, irreversibleHeader *types.BlockHeader) *StatusMessage {
+	return &StatusMessage{
+		BestHeight:         bestHeader.Height,
+		BestHash:           bestHeader.Hash().Byte32(),
+		IrreversibleHeight: irreversibleHeader.Height,
+		IrreversibleHash:   irreversibleHeader.Hash().Byte32(),
 	}
 }
 
 //GetHash get hash from msg
-func (m *StatusResponseMessage) GetHash() *bc.Hash {
-	hash := bc.NewHash(m.RawHash)
+func (m *StatusMessage) GetBestHash() *bc.Hash {
+	hash := bc.NewHash(m.BestHash)
 	return &hash
 }
 
-//GetGenesisHash get hash from msg
-func (m *StatusResponseMessage) GetGenesisHash() *bc.Hash {
-	hash := bc.NewHash(m.GenesisHash)
+func (m *StatusMessage) GetIrreversibleHash() *bc.Hash {
+	hash := bc.NewHash(m.IrreversibleHash)
 	return &hash
 }
 
-func (m *StatusResponseMessage) String() string {
-	return fmt.Sprintf("{height: %d, hash: %s}", m.Height, hex.EncodeToString(m.RawHash[:]))
+func (m *StatusMessage) String() string {
+	return fmt.Sprintf("{best hash: %s, irreversible hash: %s}", hex.EncodeToString(m.BestHash[:]), hex.EncodeToString(m.IrreversibleHash[:]))
 }
 
 //TransactionMessage notify new tx msg
@@ -342,6 +330,43 @@ func (m *TransactionMessage) String() string {
 		return "{err: wrong message}"
 	}
 	return fmt.Sprintf("{tx_size: %d, tx_hash: %s}", len(m.RawTx), tx.ID.String())
+}
+
+//TransactionsMessage notify new txs msg
+type TransactionsMessage struct {
+	RawTxs [][]byte
+}
+
+//NewTransactionsMessage construct notify new txs msg
+func NewTransactionsMessage(txs []*types.Tx) (*TransactionsMessage, error) {
+	rawTxs := make([][]byte, 0, len(txs))
+	for _, tx := range txs {
+		rawTx, err := tx.TxData.MarshalText()
+		if err != nil {
+			return nil, err
+		}
+
+		rawTxs = append(rawTxs, rawTx)
+	}
+	return &TransactionsMessage{RawTxs: rawTxs}, nil
+}
+
+//GetTransactions get txs from msg
+func (m *TransactionsMessage) GetTransactions() ([]*types.Tx, error) {
+	txs := make([]*types.Tx, 0, len(m.RawTxs))
+	for _, rawTx := range m.RawTxs {
+		tx := &types.Tx{}
+		if err := tx.UnmarshalText(rawTx); err != nil {
+			return nil, err
+		}
+
+		txs = append(txs, tx)
+	}
+	return txs, nil
+}
+
+func (m *TransactionsMessage) String() string {
+	return fmt.Sprintf("{tx_num: %d}", len(m.RawTxs))
 }
 
 //MineBlockMessage new mined block msg
@@ -430,7 +455,7 @@ type MerkleBlockMessage struct {
 	Flags          []byte
 }
 
-func (m *MerkleBlockMessage) setRawBlockHeader(bh types.BlockHeader) error {
+func (m *MerkleBlockMessage) SetRawBlockHeader(bh types.BlockHeader) error {
 	rawHeader, err := bh.MarshalText()
 	if err != nil {
 		return err
@@ -440,7 +465,7 @@ func (m *MerkleBlockMessage) setRawBlockHeader(bh types.BlockHeader) error {
 	return nil
 }
 
-func (m *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
+func (m *MerkleBlockMessage) SetTxInfo(txHashes []*bc.Hash, txFlags []uint8, relatedTxs []*types.Tx) error {
 	for _, txHash := range txHashes {
 		m.TxHashes = append(m.TxHashes, txHash.Byte32())
 	}
@@ -456,7 +481,7 @@ func (m *MerkleBlockMessage) setTxInfo(txHashes []*bc.Hash, txFlags []uint8, rel
 	return nil
 }
 
-func (m *MerkleBlockMessage) setStatusInfo(statusHashes []*bc.Hash, relatedStatuses []*bc.TxVerifyResult) error {
+func (m *MerkleBlockMessage) SetStatusInfo(statusHashes []*bc.Hash, relatedStatuses []*bc.TxVerifyResult) error {
 	for _, statusHash := range statusHashes {
 		m.StatusHashes = append(m.StatusHashes, statusHash.Byte32())
 	}

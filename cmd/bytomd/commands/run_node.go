@@ -2,7 +2,6 @@ package commands
 
 import (
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -78,7 +77,7 @@ func setLogLevel(level string) {
 }
 
 func runNode(cmd *cobra.Command, args []string) error {
-	startTime := time.Now()
+	// startTime := time.Now()
 	setLogLevel(config.LogLevel)
 
 	// Create & start node
@@ -87,13 +86,13 @@ func runNode(cmd *cobra.Command, args []string) error {
 		log.WithFields(log.Fields{"module": logModule, "err": err}).Fatal("failed to start node")
 	}
 
-	nodeInfo := n.NodeInfo()
-	log.WithFields(log.Fields{
-		"module":   logModule,
-		"version":  nodeInfo.Version,
-		"network":  nodeInfo.Network,
-		"duration": time.Since(startTime),
-	}).Info("start node complete")
+	// nodeInfo := n.NodeInfo()
+	// log.WithFields(log.Fields{
+	// 	"module":   logModule,
+	// 	"version":  nodeInfo,
+	// 	"network":  nodeInfo.Network,
+	// 	"duration": time.Since(startTime),
+	// }).Info("start node complete")
 
 	// Trap signal, run forever.
 	n.RunForever()

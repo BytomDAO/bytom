@@ -23,7 +23,7 @@ import (
 	"github.com/bytom/bytom/net/http/httpjson"
 	"github.com/bytom/bytom/net/http/static"
 	"github.com/bytom/bytom/net/websocket"
-	"github.com/bytom/bytom/netsync"
+	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/wallet"
@@ -171,21 +171,20 @@ type NetSync interface {
 	IsCaughtUp() bool
 	PeerCount() int
 	GetNetwork() string
-	BestPeer() *netsync.PeerInfo
+	BestPeer() *peers.PeerInfo
 	DialPeerWithAddress(addr *p2p.NetAddress) error
-	GetPeerInfos() []*netsync.PeerInfo
+	GetPeerInfos() []*peers.PeerInfo
 	StopPeer(peerID string) error
 }
 
 // NewAPI create and initialize the API
-func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker,  chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
+func NewAPI(sync NetSync, wallet *wallet.Wallet, txfeeds *txfeed.Tracker, chain *protocol.Chain, config *cfg.Config, token *accesstoken.CredentialStore, dispatcher *event.Dispatcher, notificationMgr *websocket.WSNotificationManager) *API {
 	api := &API{
-		sync:          sync,
-		wallet:        wallet,
-		chain:         chain,
-		accessTokens:  token,
-		txFeedTracker: txfeeds,
-
+		sync:            sync,
+		wallet:          wallet,
+		chain:           chain,
+		accessTokens:    token,
+		txFeedTracker:   txfeeds,
 		eventDispatcher: dispatcher,
 		notificationMgr: notificationMgr,
 	}

@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/bytom/bytom/errors"
-	"github.com/bytom/bytom/netsync"
+	"github.com/bytom/bytom/netsync/peers"
 	"github.com/bytom/bytom/p2p"
 	"github.com/bytom/bytom/version"
 )
@@ -51,7 +51,7 @@ func (a *API) GetNodeInfo() *NetInfo {
 }
 
 // return the currently connected peers with net address
-func (a *API) getPeerInfoByAddr(addr string) *netsync.PeerInfo {
+func (a *API) getPeerInfoByAddr(addr string) *peers.PeerInfo {
 	peerInfos := a.sync.GetPeerInfos()
 	for _, peerInfo := range peerInfos {
 		if peerInfo.RemoteAddr == addr {
@@ -67,7 +67,7 @@ func (a *API) disconnectPeerById(peerID string) error {
 }
 
 // connect peer b y net address
-func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*netsync.PeerInfo, error) {
+func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*peers.PeerInfo, error) {
 	netIp := net.ParseIP(ip)
 	if netIp == nil {
 		return nil, errors.New("invalid ip address")
@@ -89,7 +89,6 @@ func (a *API) connectPeerByIpAndPort(ip string, port uint16) (*netsync.PeerInfo,
 func (a *API) getNetInfo() Response {
 	return NewSuccessResponse(a.GetNodeInfo())
 }
-
 
 // return the peers of current node
 func (a *API) listPeers() Response {

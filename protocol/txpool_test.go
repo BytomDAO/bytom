@@ -97,6 +97,18 @@ var testTxs = []*types.Tx{
 
 type mockStore struct{}
 
+func (s *mockStore) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	panic("implement me")
+}
+
+func (s *mockStore) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error) {
+	panic("implement me")
+}
+
+func (s *mockStore) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) {
+	panic("implement me")
+}
+
 func (s *mockStore) BlockExist(hash *bc.Hash) bool                                { return false }
 func (s *mockStore) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }
 func (s *mockStore) GetStoreStatus() *BlockStoreState                             { return nil }
@@ -590,6 +602,18 @@ func TestRemoveOrphan(t *testing.T) {
 }
 
 type mockStore1 struct{}
+
+func (s *mockStore1) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
+	panic("implement me")
+}
+
+func (s *mockStore1) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error) {
+	panic("implement me")
+}
+
+func (s *mockStore1) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) {
+	panic("implement me")
+}
 
 func (s *mockStore1) BlockExist(hash *bc.Hash) bool                                { return false }
 func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error)                      { return nil, nil }

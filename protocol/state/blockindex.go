@@ -19,8 +19,8 @@ const approxNodesPerDay = 24 * 24
 // BlockNode represents a block within the block chain and is primarily used to
 // aid in selecting the best chain to be the main chain.
 type BlockNode struct {
-	Parent  *BlockNode // parent is the parent block for this node.
-	Hash    bc.Hash    // hash of the block.
+	Parent                 *BlockNode // parent is the parent block for this node.
+	Hash                   bc.Hash    // hash of the block.
 	Version                uint64
 	Height                 uint64
 	Timestamp              uint64
@@ -34,11 +34,11 @@ func NewBlockNode(bh *types.BlockHeader, parent *BlockNode) (*BlockNode, error) 
 	}
 
 	node := &BlockNode{
-		Parent:    parent,
-		Hash:      bh.Hash(),
-		Version:   bh.Version,
-		Height:    bh.Height,
-		Timestamp: bh.Timestamp,
+		Parent:                 parent,
+		Hash:                   bh.Hash(),
+		Version:                bh.Version,
+		Height:                 bh.Height,
+		Timestamp:              bh.Timestamp,
 		TransactionsMerkleRoot: bh.TransactionsMerkleRoot,
 		TransactionStatusHash:  bh.TransactionStatusHash,
 	}
