@@ -25,5 +25,4 @@ func BenchmarkNewBlockTpl(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		mining.NewBlockTemplate(chain, txPool, accountManager)
 	}
-
 }
