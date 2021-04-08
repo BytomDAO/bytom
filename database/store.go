@@ -1,7 +1,6 @@
 package database
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"time"
@@ -10,7 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/tmlibs/common"
 
-	"github.com/bytom/bytom/crypto/sha3pool"
 	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/errors"
@@ -27,7 +25,6 @@ var (
 	BlockPrefix       = []byte("B:")
 	BlockHeaderPrefix = []byte("BH:")
 	TxStatusPrefix    = []byte("BTS:")
-	ContractPrefix    = []byte("C:")
 )
 
 func loadBlockStoreStateJSON(db dbm.DB) *protocol.BlockStoreState {
@@ -68,10 +65,6 @@ func CalcTxStatusKey(hash *bc.Hash) []byte {
 // GetBlockHeader return the BlockHeader by given hash
 func (s *Store) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error) {
 	return nil, nil
-}
-
-func CalcContractKey(hash [32]byte) []byte {
-	return append(ContractPrefix, hash[:]...)
 }
 
 // GetBlock return the block by given hash
@@ -231,35 +224,28 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 	return nil
 }
 
-func (s *Store) SaveContract(program *bc.Program, txID *bc.Hash) error {
-	var hash [32]byte
-	sha3pool.Sum256(hash[:], program.Code)
-	data := s.db.Get(CalcContractKey(hash))
-	if data != nil {
-		return nil
+// SaveContract save register contract
+func (s *Store) SaveContract(view *state.ContractViewpoint) error {
+	batch := s.db.NewBatch()
+	if err := saveContractView(s.db, batch, view); err != nil {
+		return err
 	}
 
-	batch := s.db.NewBatch()
-	// key:"c:sha256(program.Code)" value:"txID+program.Code"
-	batch.Set(CalcContractKey(hash), append(txID.Bytes(), program.Code...))
 	batch.Write()
 	return nil
 }
 
-func (s *Store) DeleteContract(program *bc.Program, txID *bc.Hash) error {
-	var hash [32]byte
-	sha3pool.Sum256(hash[:], program.Code)
-	data := s.db.Get(CalcContractKey(hash))
-	if data == nil {
-		return errors.New("can't find the registered contract")
-	}
-
-	if !bytes.Equal(data[:32], txID.Bytes()) {
-		return nil
-	}
-
+// SetContract delete and save register contract
+func (s *Store) SetContract(detachView, attachView *state.ContractViewpoint) error {
 	batch := s.db.NewBatch()
-	batch.Delete(CalcContractKey(hash))
+	if err := deleteContractView(s.db, batch, detachView); err != nil {
+		return err
+	}
+
+	if err := saveContractView(s.db, batch, attachView); err != nil {
+		return err
+	}
+
 	batch.Write()
 	return nil
 }

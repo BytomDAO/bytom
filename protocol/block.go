@@ -3,7 +3,6 @@ package protocol
 import (
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bytom/bytom/consensus/segwit"
 	"github.com/bytom/bytom/errors"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
@@ -93,15 +92,13 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	for _, tx := range block.Transactions {
-		for _, output := range tx.Outputs {
-			if segwit.IsBCRPScript(output.ControlProgram) {
-				program := &bc.Program{VmVersion: output.VMVersion, Code: output.ControlProgram}
-				if err := c.store.SaveContract(program, &tx.ID); err != nil {
-					return err
-				}
-			}
-		}
+	contractView := state.NewContractViewpoint()
+	if err := contractView.ProcessBlock(block); err != nil {
+		return err
+	}
+
+	if err := c.store.SaveContract(contractView); err != nil {
+		return err
 	}
 
 	for _, tx := range block.Transactions {
@@ -113,6 +110,8 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	attachNodes, detachNodes := c.calcReorganizeNodes(node)
 	utxoView := state.NewUtxoViewpoint()
+	detachContractView := state.NewContractViewpoint()
+	attachContractView := state.NewContractViewpoint()
 
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachNode := range detachNodes {
@@ -133,15 +132,8 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		for _, tx := range b.Transactions {
-			for _, output := range tx.Outputs {
-				if segwit.IsBCRPScript(output.ControlProgram) {
-					program := &bc.Program{VmVersion: output.VMVersion, Code: output.ControlProgram}
-					if err := c.store.DeleteContract(program, &tx.ID); err != nil {
-						return err
-					}
-				}
-			}
+		if err := detachContractView.ProcessBlock(b); err != nil {
+			return err
 		}
 
 		for _, tx := range b.Transactions {
@@ -169,6 +161,10 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
+		if err := attachContractView.ProcessBlock(b); err != nil {
+			return err
+		}
+
 		for _, tx := range b.Transactions {
 			if _, ok := txsToRestore[tx.ID]; !ok {
 				txsToRemove[tx.ID] = tx
@@ -181,6 +177,10 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	}
 
 	if err := c.setState(node, utxoView); err != nil {
+		return err
+	}
+
+	if err := c.store.SetContract(detachContractView, attachContractView); err != nil {
 		return err
 	}
 

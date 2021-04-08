@@ -1,9 +1,6 @@
 package database
 
 import (
-	"bytes"
-	"encoding/hex"
-	"github.com/bytom/bytom/crypto/sha3pool"
 	"os"
 	"testing"
 
@@ -223,79 +220,5 @@ func TestSaveBlock(t *testing.T) {
 
 	if !testutil.DeepEqual(block.BlockHeader, gotBlockHeader) {
 		t.Errorf("got block header:%v, expect block header:%v", gotBlockHeader, block.BlockHeader)
-	}
-}
-
-func TestStore_SaveContract(t *testing.T) {
-	defer os.RemoveAll("temp")
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	store := NewStore(testDB)
-
-	code, err := hex.DecodeString("6a4c04626372704c01014c2820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	program := &bc.Program{VmVersion: 1, Code: code}
-	txID := &bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}
-	if err := store.SaveContract(program, txID); err != nil {
-		t.Fatal(err)
-	}
-
-	txID1 := &bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1}
-	if err := store.SaveContract(program, txID1); err != nil {
-		t.Fatal(err)
-	}
-
-	var hash [32]byte
-	sha3pool.Sum256(hash[:], program.Code)
-
-	data := store.db.Get(CalcContractKey(hash))
-	if data == nil {
-		t.Errorf("can't find the registered contract by contract hash %v", hash)
-	}
-
-	expect := append(txID.Bytes(), program.Code...)
-	if !bytes.Equal(data, expect) {
-		t.Errorf("got registerd contract: %v, expect registerd contract: %v", data, expect)
-	}
-}
-
-func TestStore_DeleteContract(t *testing.T) {
-	defer os.RemoveAll("temp")
-	testDB := dbm.NewDB("testdb", "leveldb", "temp")
-	store := NewStore(testDB)
-
-	code, err := hex.DecodeString("6a4c04626372704c01014c2820e9108d3ca8049800727f6a3505b3a2710dc579405dde03c250f16d9a7e1e6e787403ae7cac00c0")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	program := &bc.Program{VmVersion: 1, Code: code}
-	txID := &bc.Hash{V0: 0, V1: 1, V2: 2, V3: 3}
-	if err := store.SaveContract(program, txID); err != nil {
-		t.Fatal(err)
-	}
-
-	var hash [32]byte
-	sha3pool.Sum256(hash[:], program.Code)
-
-	txID1 := &bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1}
-	if err := store.DeleteContract(program, txID1); err != nil {
-		t.Fatal(err)
-	}
-
-	data := store.db.Get(CalcContractKey(hash))
-	if data == nil {
-		t.Errorf("can't find the registered contract by contract hash %v", hash)
-	}
-
-	if err := store.DeleteContract(program, txID); err != nil {
-		t.Fatal(err)
-	}
-
-	data = store.db.Get(CalcContractKey(hash))
-	if data != nil {
-		t.Errorf("The registered contract should be deleted")
 	}
 }
