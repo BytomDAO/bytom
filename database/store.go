@@ -224,7 +224,7 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 	return nil
 }
 
-// SaveContract save register contract
+// SaveContract save contract
 func (s *Store) SaveContract(view *state.ContractViewpoint) error {
 	batch := s.db.NewBatch()
 	if err := saveContractView(s.db, batch, view); err != nil {
@@ -235,7 +235,7 @@ func (s *Store) SaveContract(view *state.ContractViewpoint) error {
 	return nil
 }
 
-// SetContract delete and save register contract
+// SetContract delete and save contract
 func (s *Store) SetContract(detachView, attachView *state.ContractViewpoint) error {
 	batch := s.db.NewBatch()
 	if err := deleteContractView(s.db, batch, detachView); err != nil {

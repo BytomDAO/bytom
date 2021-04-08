@@ -18,7 +18,7 @@ func NewContractViewpoint() *ContractViewpoint {
 	}
 }
 
-// ProcessBlock process block registered contract to contract view
+// ProcessBlock process block contract to contract view
 func (view *ContractViewpoint) ProcessBlock(block *types.Block) error {
 	for _, tx := range block.Transactions {
 		for _, output := range tx.Outputs {
