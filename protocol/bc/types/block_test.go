@@ -52,7 +52,6 @@ func TestBlock(t *testing.T) {
 					PreviousBlockHash: testutil.MustDecodeHash("c34048bd60c4c13144fd34f408627d1be68f6cb4fdd34e879d6d791060ea73a0"),
 					Timestamp:         1522908275,
 					Nonce:             34342,
-					Bits:              2305843009222082559,
 					BlockCommitment: BlockCommitment{
 						TransactionStatusHash:  testutil.MustDecodeHash("b94301ea4e316bee00109f68d25beaca90aeff08e9bf439a37d91d7a3b5a1470"),
 						TransactionsMerkleRoot: testutil.MustDecodeHash("ad9ac003d08ff305181a345d64fe0b02311cc1a6ec04ab73f3318d90139bfe03"),
@@ -150,7 +149,6 @@ func TestReadFrom(t *testing.T) {
 					PreviousBlockHash: testutil.MustDecodeHash("3077f24528e94ecfc4491bb2e9ed6264a632a9a4b86b00c88093ca545d14a137"),
 					Timestamp:         1553496788,
 					Nonce:             23,
-					Bits:              2305843009213970283,
 					BlockCommitment: BlockCommitment{
 						TransactionsMerkleRoot: testutil.MustDecodeHash("35a2d11158f47a5c5267630b2b6cf9e9a5f79a598085a2572a68defeb8013ad2"),
 						TransactionStatusHash:  testutil.MustDecodeHash("6978a65b4ee5b6f4914fe5c05000459a803ecf59132604e5d334d64249c5e50a"),

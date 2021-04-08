@@ -85,6 +85,18 @@ func (c *Chain) initChainStatus() error {
 	return c.store.SaveChainStatus(node, utxoView)
 }
 
+// BestBlockHeight returns the last irreversible block header of the blockchain
+func (c *Chain) LastIrreversibleHeader() *types.BlockHeader {
+	// TODO: LastIrreversibleHeader
+	return nil
+}
+
+// ProcessBlockSignature process blockchain signature
+func (c *Chain) ProcessBlockSignature(signature, pubkey []byte, blockHash *bc.Hash) error {
+	// TODO: ProcessBlockSignature
+	return nil
+}
+
 // BestBlockHeight returns the current height of the blockchain.
 func (c *Chain) BestBlockHeight() uint64 {
 	c.cond.L.Lock()
@@ -117,15 +129,6 @@ func (c *Chain) CalcNextSeed(preBlock *bc.Hash) (*bc.Hash, error) {
 		return nil, errors.New("can't find preblock in the blockindex")
 	}
 	return node.CalcNextSeed(), nil
-}
-
-// CalcNextBits return the seed for the given block
-func (c *Chain) CalcNextBits(preBlock *bc.Hash) (uint64, error) {
-	node := c.index.GetNode(preBlock)
-	if node == nil {
-		return 0, errors.New("can't find preblock in the blockindex")
-	}
-	return node.CalcNextBits(), nil
 }
 
 func (c *Chain) GetBlockIndex() *state.BlockIndex {

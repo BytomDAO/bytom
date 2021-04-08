@@ -6,13 +6,11 @@ import (
 	"time"
 
 	"github.com/bytom/bytom/consensus"
-	"github.com/bytom/bytom/mining/tensority"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/protocol/vm"
 	"github.com/bytom/bytom/protocol/vm/vmutil"
-	"github.com/bytom/bytom/testutil"
 )
 
 func TestCheckBlockTime(t *testing.T) {
@@ -110,8 +108,6 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 }
 
 func TestValidateBlockHeader(t *testing.T) {
-	iniTtensority()
-
 	cases := []struct {
 		desc   string
 		block  *bc.Block
@@ -148,7 +144,6 @@ func TestValidateBlockHeader(t *testing.T) {
 			parent: &state.BlockNode{
 				Version: 1,
 				Height:  19,
-				Bits:    2305843009214532812,
 			},
 			err: errBadBits,
 		},
@@ -167,28 +162,6 @@ func TestValidateBlockHeader(t *testing.T) {
 			err: errMismatchedBlock,
 		},
 		{
-			desc: "check work proof fail (blocktest#1011)",
-			block: &bc.Block{
-				ID: bc.Hash{V0: 0},
-				BlockHeader: &bc.BlockHeader{
-					Version:         1,
-					Height:          1,
-					Timestamp:       1523352601,
-					PreviousBlockId: &bc.Hash{V0: 0},
-					Bits:            2305843009214532812,
-				},
-			},
-			parent: &state.BlockNode{
-				Version:   1,
-				Height:    0,
-				Timestamp: 1523352600,
-				Hash:      bc.Hash{V0: 0},
-				Seed:      &bc.Hash{V1: 1},
-				Bits:      2305843009214532812,
-			},
-			err: errWorkProof,
-		},
-		{
 			block: &bc.Block{
 				ID: bc.Hash{V0: 1},
 				BlockHeader: &bc.BlockHeader{
@@ -196,7 +169,6 @@ func TestValidateBlockHeader(t *testing.T) {
 					Height:          1,
 					Timestamp:       1523352601,
 					PreviousBlockId: &bc.Hash{V0: 0},
-					Bits:            2305843009214532812,
 				},
 			},
 			parent: &state.BlockNode{
@@ -205,7 +177,6 @@ func TestValidateBlockHeader(t *testing.T) {
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
 				Seed:      &bc.Hash{V1: 1},
-				Bits:      2305843009214532812,
 			},
 			err: nil,
 		},
@@ -259,8 +230,6 @@ func TestValidateBlockHeader(t *testing.T) {
 
 // TestValidateBlock test the ValidateBlock function
 func TestValidateBlock(t *testing.T) {
-	iniTtensority()
-
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	cases := []struct {
 		desc   string
@@ -295,7 +264,6 @@ func TestValidateBlock(t *testing.T) {
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
 				Seed:      &bc.Hash{V1: 1},
-				Bits:      2305843009214532812,
 			},
 			err: errMismatchedMerkleRoot,
 		},
@@ -327,7 +295,6 @@ func TestValidateBlock(t *testing.T) {
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
 				Seed:      &bc.Hash{V1: 1},
-				Bits:      2305843009214532812,
 			},
 			err: errMismatchedMerkleRoot,
 		},
@@ -340,7 +307,6 @@ func TestValidateBlock(t *testing.T) {
 					Height:          1,
 					Timestamp:       1523352601,
 					PreviousBlockId: &bc.Hash{V0: 0},
-					Bits:            2305843009214532812,
 				},
 				Transactions: []*bc.Tx{
 					types.MapTx(&types.TxData{
@@ -363,7 +329,6 @@ func TestValidateBlock(t *testing.T) {
 				Timestamp: 1523352600,
 				Hash:      bc.Hash{V0: 0},
 				Seed:      &bc.Hash{V1: 1},
-				Bits:      2305843009214532812,
 			},
 			err: ErrWrongCoinbaseTransaction,
 		},
@@ -379,8 +344,6 @@ func TestValidateBlock(t *testing.T) {
 
 // TestGasOverBlockLimit check if the gas of the block has the max limit (blocktest#1012)
 func TestGasOverBlockLimit(t *testing.T) {
-	iniTtensority()
-
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	parent := &state.BlockNode{
 		Version:   1,
@@ -388,7 +351,6 @@ func TestGasOverBlockLimit(t *testing.T) {
 		Timestamp: 1523352600,
 		Hash:      bc.Hash{V0: 0},
 		Seed:      &bc.Hash{V1: 1},
-		Bits:      2305843009214532812,
 	}
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
@@ -430,8 +392,6 @@ func TestGasOverBlockLimit(t *testing.T) {
 
 // TestSetTransactionStatus verify the transaction status is set correctly (blocktest#1010)
 func TestSetTransactionStatus(t *testing.T) {
-	iniTtensority()
-
 	cp, _ := vmutil.DefaultCoinbaseProgram()
 	parent := &state.BlockNode{
 		Version:   1,
@@ -439,7 +399,6 @@ func TestSetTransactionStatus(t *testing.T) {
 		Timestamp: 1523352600,
 		Hash:      bc.Hash{V0: 0},
 		Seed:      &bc.Hash{V1: 1},
-		Bits:      2305843009214532812,
 	}
 	block := &bc.Block{
 		ID: bc.Hash{V0: 1},
@@ -499,12 +458,4 @@ func TestSetTransactionStatus(t *testing.T) {
 			t.Errorf("got tx status: %v, expect tx status: %v\n", status.StatusFail, expectTxStatuses[i])
 		}
 	}
-}
-
-func iniTtensority() {
-	// add (hash, seed) --> (tensority hash) to the  tensority cache for avoid
-	// real matrix calculate cost.
-	tensority.AIHash.AddCache(&bc.Hash{V0: 0}, &bc.Hash{}, testutil.MaxHash)
-	tensority.AIHash.AddCache(&bc.Hash{V0: 1}, &bc.Hash{}, testutil.MinHash)
-	tensority.AIHash.AddCache(&bc.Hash{V0: 1}, consensus.InitialSeed, testutil.MinHash)
 }

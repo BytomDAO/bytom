@@ -91,26 +91,6 @@ func TestNumericOps(t *testing.T) {
 			dataStack: [][]byte{{1}},
 		},
 	}, {
-		op: OP_2DIV,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{Int64Bytes(-2)},
-		},
-		wantVM: &virtualMachine{
-			runLimit:  49998,
-			dataStack: [][]byte{Int64Bytes(-1)},
-		},
-	}, {
-		op: OP_2DIV,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{Int64Bytes(-1)},
-		},
-		wantVM: &virtualMachine{
-			runLimit:  49998,
-			dataStack: [][]byte{Int64Bytes(-1)},
-		},
-	}, {
 		op: OP_NEGATE,
 		startVM: &virtualMachine{
 			runLimit:  50000,
@@ -211,39 +191,6 @@ func TestNumericOps(t *testing.T) {
 		op: OP_DIV,
 		startVM: &virtualMachine{
 			runLimit:  50000,
-			dataStack: [][]byte{Int64Bytes(-2), {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49992,
-			deferredCost: -9,
-			dataStack:    [][]byte{Int64Bytes(-2)},
-		},
-	}, {
-		op: OP_DIV,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{Int64Bytes(-2), Int64Bytes(-1)},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49992,
-			deferredCost: -23,
-			dataStack:    [][]byte{{2}},
-		},
-	}, {
-		op: OP_DIV,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{Int64Bytes(-3), Int64Bytes(2)},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49992,
-			deferredCost: -9,
-			dataStack:    [][]byte{Int64Bytes(-1)},
-		},
-	}, {
-		op: OP_DIV,
-		startVM: &virtualMachine{
-			runLimit:  50000,
 			dataStack: [][]byte{{2}, {}},
 		},
 		wantErr: ErrDivZero,
@@ -257,17 +204,6 @@ func TestNumericOps(t *testing.T) {
 			runLimit:     49992,
 			deferredCost: -10,
 			dataStack:    [][]byte{{}},
-		},
-	}, {
-		op: OP_MOD,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{Int64Bytes(-12), {10}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49992,
-			deferredCost: -16,
-			dataStack:    [][]byte{{8}},
 		},
 	}, {
 		op: OP_MOD,
@@ -793,6 +729,96 @@ func TestNumCompare(t *testing.T) {
 	}
 }
 
+func TestOpMinMax(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+		f  func(vm *virtualMachine) error
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "min of (2, 3)",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {0x03}},
+				},
+				f: opMin,
+			},
+			want:    [][]byte{{0x02}},
+			wantErr: false,
+		},
+
+		{
+			name: "max of (2, 3)",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {0x03}},
+				},
+				f: opMax,
+			},
+			want:    [][]byte{{0x03}},
+			wantErr: false,
+		},
+		{
+			name: "max of (two byte number, one bytes number)",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, {0xff}},
+				},
+				f: opMax,
+			},
+			want:    [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+			wantErr: false,
+		},
+		{
+			name: "min of (0, -1) got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{}, mocks.U256NumNegative1},
+				},
+				f: opMin,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "max of (-1, -1) got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1, mocks.U256NumNegative1},
+				},
+				f: opMax,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.args.f(tt.args.vm); err != nil {
+				if !tt.wantErr {
+					t.Errorf("opAdd() error = %v, wantErr %v", err, tt.wantErr)
+				} else {
+					return
+				}
+			}
+			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
+				t.Errorf("opAdd() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
+			}
+		})
+	}
+}
+
 func Test_op2Mul(t *testing.T) {
 	type args struct {
 		vm *virtualMachine
@@ -857,6 +883,85 @@ func Test_op2Mul(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := op2Mul(tt.args.vm); (err != nil) != tt.wantErr {
 				t.Errorf("op2Mul() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_opMul(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "test normal mul op",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{2}, {2}},
+				},
+			},
+			want:    [][]byte{{4}},
+			wantErr: false,
+		},
+		{
+			name: "test normal mul op of big number",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, {0x02}},
+				},
+			},
+			want:    [][]byte{{0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe}},
+			wantErr: false,
+		},
+		{
+			name: "test error of mul op negative",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1, {0x02}},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test error of mul op out range",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.MaxU256},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test error of mul op out range which result is min number",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, {0x02}},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := opMul(tt.args.vm); err != nil {
+				if !tt.wantErr {
+					t.Errorf("opMul() error = %v, wantErr %v", err, tt.wantErr)
+				} else {
+					return
+				}
+			}
+			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
+				t.Errorf("opMul() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
 			}
 		})
 	}
@@ -929,11 +1034,77 @@ func Test_op1Sub(t *testing.T) {
 	}
 }
 
+func Test_opSub(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "Test 2 - 1 = 1",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {0x01}},
+				},
+			},
+			want:    [][]byte{{0x01}},
+			wantErr: false,
+		},
+		{
+			name: "Test that two bytes number become one byte number",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, {0x01}},
+				},
+			},
+			want:    [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+			wantErr: false,
+		},
+		{
+			name: "Test for 0 - 1 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{}, {0x01}},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "Test for -1 - 1 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1, {0x01}},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := opSub(tt.args.vm); (err != nil) != tt.wantErr {
+				t.Errorf("opSub() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
+				t.Errorf("opSub() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
+			}
+		})
+	}
+}
+
 func Test_op2Div(t *testing.T) {
 	type args struct {
 		vm *virtualMachine
 	}
-
 	tests := []struct {
 		name    string
 		args    args
@@ -988,14 +1159,283 @@ func Test_op2Div(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := op2Div(tt.args.vm); err != nil {
-				if !tt.wantErr{
+				if !tt.wantErr {
 					t.Errorf("op2Div() error = %v, wantErr %v", err, tt.wantErr)
-				}else {
+				} else {
 					return
 				}
 			}
 			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
-				t.Errorf("op1Sub() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
+				t.Errorf("op2Div() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
+			}
+		})
+	}
+}
+
+func Test_opDiv(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "Test 2 div 2 = 1",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {0x02}},
+				},
+			},
+			want:    [][]byte{{0x01}},
+			wantErr: false,
+		},
+		{
+			name: "Test 2 div 1 = 2",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {0x01}},
+				},
+			},
+			want:    [][]byte{{0x02}},
+			wantErr: false,
+		},
+		{
+			name: "Test that two bytes number become one byte number after op div",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, {0x02}},
+				},
+			},
+			want:    [][]byte{{0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			wantErr: false,
+		},
+		{
+			name: "Test for 0 div 2 got 0",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{}, {0x02}},
+				},
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "Test for -1 div 2 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1, {0x02}},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "Test for 1 div 0 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x01}, {}},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := opDiv(tt.args.vm); err != nil {
+				if !tt.wantErr {
+					t.Errorf("opDiv() error = %v, wantErr %v", err, tt.wantErr)
+				} else {
+					return
+				}
+			}
+			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
+				t.Errorf("opDiv() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
+			}
+		})
+	}
+}
+
+func Test_opAdd(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "Test 2 + 2 = 4",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {0x02}},
+				},
+			},
+			want:    [][]byte{{0x04}},
+			wantErr: false,
+		},
+		{
+			name: "Test that one bytes number become two byte number",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, {0x01}},
+				},
+			},
+			want:    [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
+			wantErr: false,
+		},
+		{
+			name: "Test for 0 + -1 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{}, mocks.U256NumNegative1},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "Test for -1 + -1 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1, mocks.U256NumNegative1},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := opAdd(tt.args.vm); err != nil {
+				if !tt.wantErr {
+					t.Errorf("opAdd() error = %v, wantErr %v", err, tt.wantErr)
+				} else {
+					return
+				}
+			}
+			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
+				t.Errorf("opAdd() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
+			}
+		})
+	}
+}
+
+func Test_opMod(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "Test 2 mod 2 = 0",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02},{0x02}},
+				},
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "Test 2 mod 1 = 0",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02},{0x01}},
+				},
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "Test 255 mod 4 = 3",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0xff},{0x04}},
+				},
+			},
+			want:    [][]byte{{0x03}},
+			wantErr: false,
+		},
+		{
+			name: "Test that two bytes number become one byte number",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},{0x03}},
+				},
+			},
+			want:    [][]byte{{0x01}},
+			wantErr: false,
+		},
+		{
+			name: "Test for 0 mod 2 got 0",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{},{0x02}},
+				},
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "Test for -1 div 2 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1,{0x02}},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "Test for 1 div 0 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x01},{}},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := opMod(tt.args.vm); err != nil {
+				if !tt.wantErr {
+					t.Errorf("opMod() error = %v, wantErr %v", err, tt.wantErr)
+				} else {
+					return
+				}
+			}
+			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
+				t.Errorf("opMod() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
 			}
 		})
 	}
