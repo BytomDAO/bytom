@@ -729,6 +729,96 @@ func TestNumCompare(t *testing.T) {
 	}
 }
 
+func TestOpMinMax(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+		f  func(vm *virtualMachine) error
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "min of (2, 3)",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {0x03}},
+				},
+				f: opMin,
+			},
+			want:    [][]byte{{0x02}},
+			wantErr: false,
+		},
+
+		{
+			name: "max of (2, 3)",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {0x03}},
+				},
+				f: opMax,
+			},
+			want:    [][]byte{{0x03}},
+			wantErr: false,
+		},
+		{
+			name: "max of (two byte number, one bytes number)",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, {0xff}},
+				},
+				f: opMax,
+			},
+			want:    [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+			wantErr: false,
+		},
+		{
+			name: "min of (0, -1) got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{}, mocks.U256NumNegative1},
+				},
+				f: opMin,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "max of (-1, -1) got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1, mocks.U256NumNegative1},
+				},
+				f: opMax,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.args.f(tt.args.vm); err != nil {
+				if !tt.wantErr {
+					t.Errorf("opAdd() error = %v, wantErr %v", err, tt.wantErr)
+				} else {
+					return
+				}
+			}
+			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
+				t.Errorf("opAdd() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
+			}
+		})
+	}
+}
+
 func Test_op2Mul(t *testing.T) {
 	type args struct {
 		vm *virtualMachine
@@ -827,7 +917,7 @@ func Test_opMul(t *testing.T) {
 					dataStack: [][]byte{{0x3f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, {0x02}},
 				},
 			},
-			want:[][]byte{{0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe}},
+			want:    [][]byte{{0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe}},
 			wantErr: false,
 		},
 		{
@@ -835,7 +925,7 @@ func Test_opMul(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{mocks.U256NumNegative1,{0x02}},
+					dataStack: [][]byte{mocks.U256NumNegative1, {0x02}},
 				},
 			},
 			wantErr: true,
@@ -855,7 +945,7 @@ func Test_opMul(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},{0x02}},
+					dataStack: [][]byte{{0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, {0x02}},
 				},
 			},
 			wantErr: true,
@@ -1097,7 +1187,7 @@ func Test_opDiv(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x02},{0x02}},
+					dataStack: [][]byte{{0x02}, {0x02}},
 				},
 			},
 			want:    [][]byte{{0x01}},
@@ -1108,7 +1198,7 @@ func Test_opDiv(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x02},{0x01}},
+					dataStack: [][]byte{{0x02}, {0x01}},
 				},
 			},
 			want:    [][]byte{{0x02}},
@@ -1119,7 +1209,7 @@ func Test_opDiv(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},{0x02}},
+					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, {0x02}},
 				},
 			},
 			want:    [][]byte{{0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}},
@@ -1130,7 +1220,7 @@ func Test_opDiv(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{},{0x02}},
+					dataStack: [][]byte{{}, {0x02}},
 				},
 			},
 			want:    [][]byte{{}},
@@ -1141,7 +1231,7 @@ func Test_opDiv(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{mocks.U256NumNegative1,{0x02}},
+					dataStack: [][]byte{mocks.U256NumNegative1, {0x02}},
 				},
 			},
 			want:    nil,
@@ -1152,7 +1242,7 @@ func Test_opDiv(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x01},{}},
+					dataStack: [][]byte{{0x01}, {}},
 				},
 			},
 			want:    nil,
