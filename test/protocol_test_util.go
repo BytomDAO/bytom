@@ -3,9 +3,9 @@ package test
 import (
 	"fmt"
 
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc/types"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func declChain(name string, baseChain *protocol.Chain, baseHeight uint64, height uint64) (*protocol.Chain, error) {
@@ -23,7 +23,13 @@ func declChain(name string, baseChain *protocol.Chain, baseHeight uint64, height
 	}
 
 	for i := uint64(1); i <= baseHeight; i++ {
-
+		block, err := baseChain.GetBlockByHeight(i)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := chain.ProcessBlock(block); err != nil {
+			return nil, err
+		}
 	}
 
 	err = AppendBlocks(chain, height-baseHeight)
