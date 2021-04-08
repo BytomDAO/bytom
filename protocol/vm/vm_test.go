@@ -67,10 +67,6 @@ func doOKNotOK(t *testing.T, expectOK bool) {
 		{"2DIV -1 NUMEQUAL", [][]byte{Int64Bytes(-1)}, true},
 		{"2DIV -1 NUMEQUAL", [][]byte{Int64Bytes(-2)}, true},
 
-		{"NEGATE -1 NUMEQUAL", [][]byte{Int64Bytes(1)}, false},
-		{"NEGATE 1 NUMEQUAL", [][]byte{Int64Bytes(-1)}, false},
-		{"NEGATE 0 NUMEQUAL", [][]byte{Int64Bytes(0)}, false},
-
 		{"ABS 1 NUMEQUAL", [][]byte{Int64Bytes(1)}, false},
 		{"ABS 1 NUMEQUAL", [][]byte{Int64Bytes(-1)}, false},
 		{"ABS 0 NUMEQUAL", [][]byte{Int64Bytes(0)}, false},
@@ -87,13 +83,7 @@ func doOKNotOK(t *testing.T, expectOK bool) {
 		{"DIV 2 NUMEQUAL", [][]byte{Int64Bytes(6), Int64Bytes(3)}, false},
 
 		{"MOD 0 NUMEQUAL", [][]byte{Int64Bytes(6), Int64Bytes(2)}, false},
-		{"MOD 0 NUMEQUAL", [][]byte{Int64Bytes(-6), Int64Bytes(2)}, false},
-		{"MOD 0 NUMEQUAL", [][]byte{Int64Bytes(6), Int64Bytes(-2)}, false},
-		{"MOD 0 NUMEQUAL", [][]byte{Int64Bytes(-6), Int64Bytes(-2)}, false},
 		{"MOD 2 NUMEQUAL", [][]byte{Int64Bytes(12), Int64Bytes(10)}, false},
-		{"MOD 8 NUMEQUAL", [][]byte{Int64Bytes(-12), Int64Bytes(10)}, false},
-		{"MOD -8 NUMEQUAL", [][]byte{Int64Bytes(12), Int64Bytes(-10)}, false},
-		{"MOD -2 NUMEQUAL", [][]byte{Int64Bytes(-12), Int64Bytes(-10)}, false},
 
 		{"LSHIFT 2 NUMEQUAL", [][]byte{Int64Bytes(1), Int64Bytes(1)}, false},
 		{"LSHIFT 4 NUMEQUAL", [][]byte{Int64Bytes(1), Int64Bytes(2)}, false},

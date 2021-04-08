@@ -250,30 +250,22 @@ func opMod(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if y == 0 {
+
+	if y.IsZero() {
 		return ErrDivZero
 	}
 
-	res, ok := checked.ModInt64(x, y)
-	if !ok {
-		return ErrRange
-	}
-
-	// Go's modulus operator produces the wrong result for mixed-sign
-	// operands
-	if res != 0 && (x >= 0) != (y >= 0) {
-		res += y
-	}
-
-	return vm.pushInt64(res, true)
+	return vm.pushBigInt(x.Mod(x, y), true)
 }
 
 func opLshift(vm *virtualMachine) error {
