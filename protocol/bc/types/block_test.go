@@ -8,12 +8,10 @@ import (
 	"testing"
 
 	"github.com/bytom/bytom/consensus"
-
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/bytom/bytom/encoding/blockchain"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/testutil"
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestBlock(t *testing.T) {
@@ -71,7 +69,6 @@ func TestBlock(t *testing.T) {
 					NewTx(TxData{
 						Version:        1,
 						SerializedSize: uint64(108),
-
 						Inputs: []*TxInput{
 							NewCoinbaseInput([]byte("arbitrary")),
 						},

@@ -90,8 +90,3 @@ func AppendBlocks(chain *protocol.Chain, num uint64) error {
 	}
 	return nil
 }
-
-// Solve simulate solve difficulty by add result to cache
-func Solve(seed *bc.Hash, block *types.Block) {
-
-}

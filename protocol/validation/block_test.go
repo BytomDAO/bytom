@@ -108,7 +108,6 @@ func TestCheckCoinbaseAmount(t *testing.T) {
 }
 
 func TestValidateBlockHeader(t *testing.T) {
-
 	cases := []struct {
 		desc   string
 		block  *bc.Block
@@ -135,7 +134,6 @@ func TestValidateBlockHeader(t *testing.T) {
 			},
 			err: errMisorderedBlockHeight,
 		},
-
 		{
 			desc: "the prev block hash not equals to the hash of parent (blocktest#1004)",
 			block: &bc.Block{BlockHeader: &bc.BlockHeader{

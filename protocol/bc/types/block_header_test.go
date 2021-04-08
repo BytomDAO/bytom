@@ -111,7 +111,6 @@ func TestMarshalBlockHeader(t *testing.T) {
 			},
 			wantError: blockchain.ErrRange,
 		},
-
 		{
 			blockHeader: &BlockHeader{
 				Version:           1,
