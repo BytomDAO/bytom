@@ -273,27 +273,30 @@ func opLshift(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
-	}
-	if y < 0 {
-		return ErrBadValue
-	}
-	x, err := vm.popInt64(true)
-	if err != nil {
-		return err
-	}
-	if x == 0 || y == 0 {
-		return vm.pushInt64(x, true)
 	}
 
-	res, ok := checked.LshiftInt64(x, y)
-	if !ok {
+	x, err := vm.popBigInt(true)
+	if err != nil {
+		return err
+	}
+
+	if x.IsZero() || y.IsZero() {
+		return vm.pushBigInt(x, true)
+	}
+
+	if !y.IsUint64(){
 		return ErrRange
 	}
 
-	return vm.pushInt64(res, true)
+	if x.Lsh(x, uint(y.Uint64())); x.Sign() < 0 {
+		return ErrRange
+	}
+
+	return vm.pushBigInt(x, true)
 }
 
 func opRshift(vm *virtualMachine) error {
@@ -301,18 +304,26 @@ func opRshift(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if y < 0 {
-		return ErrBadValue
+
+	if y.IsZero() {
+		return ErrDivZero
 	}
-	return vm.pushInt64(x>>uint64(y), true)
+
+	if !y.IsUint64(){
+		return ErrRange
+	}
+
+	return vm.pushBigInt(x.Rsh(x, uint(y.Uint64())), true)
 }
 
 func opBoolAnd(vm *virtualMachine) error {
