@@ -492,7 +492,7 @@ func checkTimeRange(tx *bc.Tx, block *bc.Block) error {
 	return nil
 }
 
-// ValidateTx validates a transaction.   修改为只返回error
+// ValidateTx validates a transaction.
 func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	if block.Version == 1 && tx.Version != 1 {
 		return &GasState{GasValid: false}, errors.WithDetailf(ErrTxVersion, "block version %d, transaction version %d", block.Version, tx.Version)
@@ -501,9 +501,11 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	if tx.SerializedSize == 0 {
 		return &GasState{GasValid: false}, ErrWrongTransactionSize
 	}
+
 	if err := checkTimeRange(tx, block); err != nil {
 		return &GasState{GasValid: false}, err
 	}
+
 	if err := checkStandardTx(tx, block.Height); err != nil {
 		return &GasState{GasValid: false}, err
 	}
@@ -520,7 +522,7 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 		return &GasState{GasValid: false}, err
 	}
 
-	if !vs.gasStatus.GasValid {
+	if !(vs.gasStatus.GasValid) {
 		return &GasState{GasValid: false}, errors.New("gas invalid")
 	}
 
