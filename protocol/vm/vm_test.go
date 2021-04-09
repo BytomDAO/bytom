@@ -87,8 +87,6 @@ func doOKNotOK(t *testing.T, expectOK bool) {
 
 		{"LSHIFT 2 NUMEQUAL", [][]byte{Int64Bytes(1), Int64Bytes(1)}, false},
 		{"LSHIFT 4 NUMEQUAL", [][]byte{Int64Bytes(1), Int64Bytes(2)}, false},
-		{"LSHIFT -2 NUMEQUAL", [][]byte{Int64Bytes(-1), Int64Bytes(1)}, false},
-		{"LSHIFT -4 NUMEQUAL", [][]byte{Int64Bytes(-1), Int64Bytes(2)}, false},
 
 		{"1 1 BOOLAND", nil, false},
 		{"1 0 BOOLAND NOT", nil, false},

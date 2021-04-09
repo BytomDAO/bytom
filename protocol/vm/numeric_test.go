@@ -224,17 +224,6 @@ func TestNumericOps(t *testing.T) {
 			dataStack:    [][]byte{{4}},
 		},
 	}, {
-		op: OP_LSHIFT,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{Int64Bytes(-2), {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49992,
-			deferredCost: -9,
-			dataStack:    [][]byte{Int64Bytes(-4)},
-		},
-	}, {
 		op: OP_RSHIFT,
 		startVM: &virtualMachine{
 			runLimit:  50000,
@@ -244,17 +233,6 @@ func TestNumericOps(t *testing.T) {
 			runLimit:     49992,
 			deferredCost: -9,
 			dataStack:    [][]byte{{1}},
-		},
-	}, {
-		op: OP_RSHIFT,
-		startVM: &virtualMachine{
-			runLimit:  50000,
-			dataStack: [][]byte{Int64Bytes(-2), {1}},
-		},
-		wantVM: &virtualMachine{
-			runLimit:     49992,
-			deferredCost: -9,
-			dataStack:    [][]byte{Int64Bytes(-1)},
 		},
 	}, {
 		op: OP_BOOLAND,
@@ -1436,6 +1414,106 @@ func Test_opMod(t *testing.T) {
 			}
 			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
 				t.Errorf("opMod() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
+			}
+		})
+	}
+}
+
+func TestOpShift(t *testing.T) {
+	type args struct {
+		vm *virtualMachine
+		f  func(vm *virtualMachine) error
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		want    [][]byte
+		wantErr bool
+	}{
+		{
+			name: "2 left shift 3",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {0x03}},
+				},
+				f: opLshift,
+			},
+			want:    [][]byte{{0x10}},
+			wantErr: false,
+		},
+		{
+			name: "2 right shift 3",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {0x03}},
+				},
+				f: opRshift,
+			},
+			want:    [][]byte{{}},
+			wantErr: false,
+		},
+		{
+			name: "two byte number right shift become one bytes number",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, {0x0f}},
+				},
+				f: opRshift,
+			},
+			want:    [][]byte{{0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+			wantErr: false,
+		},
+		{
+			name: "two byte number left shift become overflow",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, {0xff}},
+				},
+				f: opLshift,
+			},
+			wantErr: true,
+		},
+		{
+			name: "0 left shift -1 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{}, mocks.U256NumNegative1},
+				},
+				f: opLshift,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "-1 right shift -1 got error",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{mocks.U256NumNegative1, mocks.U256NumNegative1},
+				},
+				f: opRshift,
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.args.f(tt.args.vm); err != nil {
+				if !tt.wantErr {
+					t.Errorf("opAdd() error = %v, wantErr %v", err, tt.wantErr)
+				} else {
+					return
+				}
+			}
+			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
+				t.Errorf("opAdd() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
 			}
 		})
 	}
