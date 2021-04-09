@@ -82,7 +82,10 @@ func (c *Chain) initChainStatus() error {
 	if err != nil {
 		return err
 	}
-	return c.store.SaveChainStatus(node, utxoView)
+
+	detachContractView := state.NewContractViewpoint()
+	attachContractView := state.NewContractViewpoint()
+	return c.store.SaveChainStatus(node, utxoView, detachContractView, attachContractView)
 }
 
 // BestBlockHeight returns the last irreversible block header of the blockchain
@@ -136,8 +139,8 @@ func (c *Chain) GetBlockIndex() *state.BlockIndex {
 }
 
 // This function must be called with mu lock in above level
-func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint) error {
-	if err := c.store.SaveChainStatus(node, view); err != nil {
+func (c *Chain) setState(node *state.BlockNode, view *state.UtxoViewpoint, detachView, attachView *state.ContractViewpoint) error {
+	if err := c.store.SaveChainStatus(node, view, detachView, attachView); err != nil {
 		return err
 	}
 

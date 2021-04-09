@@ -208,9 +208,17 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, detachView, attachView *state.ContractViewpoint) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
+		return err
+	}
+
+	if err := deleteContractView(s.db, batch, detachView); err != nil {
+		return err
+	}
+
+	if err := saveContractView(s.db, batch, attachView); err != nil {
 		return err
 	}
 
@@ -220,32 +228,6 @@ func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint
 	}
 
 	batch.Set(BlockStoreKey, bytes)
-	batch.Write()
-	return nil
-}
-
-// SaveContract save contract
-func (s *Store) SaveContract(view *state.ContractViewpoint) error {
-	batch := s.db.NewBatch()
-	if err := saveContractView(s.db, batch, view); err != nil {
-		return err
-	}
-
-	batch.Write()
-	return nil
-}
-
-// SetContract delete and save contract
-func (s *Store) SetContract(detachView, attachView *state.ContractViewpoint) error {
-	batch := s.db.NewBatch()
-	if err := deleteContractView(s.db, batch, detachView); err != nil {
-		return err
-	}
-
-	if err := saveContractView(s.db, batch, attachView); err != nil {
-		return err
-	}
-
 	batch.Write()
 	return nil
 }

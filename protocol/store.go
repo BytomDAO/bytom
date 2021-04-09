@@ -23,10 +23,7 @@ type Store interface {
 
 	LoadBlockIndex(uint64) (*state.BlockIndex, error)
 	SaveBlock(*types.Block, *bc.TransactionStatus) error
-	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint) error
-	SaveContract(*state.ContractViewpoint) error
-
-	SetContract(*state.ContractViewpoint, *state.ContractViewpoint) error
+	SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint, *state.ContractViewpoint) error
 }
 
 // BlockStoreState represents the core's db status
