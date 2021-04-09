@@ -12,7 +12,6 @@ import (
 func mockConfig() *cfg.Config {
 	var config = cfg.DefaultConfig()
 	config.Wallet.Disable = false
-	config.Mining = true
 	config.ApiAddress = "127.0.0.1:9888"
 	return config
 }
