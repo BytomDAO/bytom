@@ -102,8 +102,6 @@ type BaseConfig struct {
 	// TCP or UNIX socket address for the profiling server to listen on
 	ProfListenAddress string `mapstructure:"prof_laddr"`
 
-	Mining bool `mapstructure:"mining"`
-
 	// Database backend: leveldb | memdb
 	DBBackend string `mapstructure:"db_backend"`
 
@@ -126,7 +124,6 @@ func DefaultBaseConfig() BaseConfig {
 	return BaseConfig{
 		Moniker:           "anonymous",
 		ProfListenAddress: "",
-		Mining:            false,
 		DBBackend:         "leveldb",
 		DBPath:            "data",
 		KeysPath:          "keystore",

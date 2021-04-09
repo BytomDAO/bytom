@@ -214,9 +214,6 @@ func (a *API) buildHandler() {
 		m.Handle("/validate-address", jsonHandler(a.validateAddress))
 		m.Handle("/list-pubkeys", jsonHandler(a.listPubKeys))
 
-		m.Handle("/get-mining-address", jsonHandler(a.getMiningAddress))
-		m.Handle("/set-mining-address", jsonHandler(a.setMiningAddress))
-
 		m.Handle("/create-asset", jsonHandler(a.createAsset))
 		m.Handle("/update-asset-alias", jsonHandler(a.updateAssetAlias))
 		m.Handle("/get-asset", jsonHandler(a.getAsset))
