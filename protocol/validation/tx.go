@@ -516,7 +516,6 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 		cache:     make(map[bc.Hash]error),
 	}
 
-	//todo: temp modify
 	if err := checkValid(vs, tx.TxHeader); err != nil {
 		return &GasState{GasValid: false}, err
 	}
@@ -526,7 +525,6 @@ func ValidateTx(tx *bc.Tx, block *bc.Block) (*GasState, error) {
 	}
 
 	return vs.gasStatus, nil
-	//todo: end
 }
 
 type validateTxWork struct {

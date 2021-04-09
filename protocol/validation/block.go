@@ -93,8 +93,8 @@ func ValidateBlock(b *bc.Block, parent *state.BlockNode) error {
 	coinbaseAmount := consensus.BlockSubsidy(b.BlockHeader.Height)
 	validateResults := ValidateTxs(b.Transactions, b)
 	for i, validateResult := range validateResults {
-		if !validateResult.gasStatus.GasValid {
-			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d", i, len(b.Transactions))
+		if validateResult.err != nil {
+			return errors.Wrapf(validateResult.err, "validate of transaction %d of %d, gas_valid:%v", i, len(b.Transactions), validateResult.gasStatus.GasValid)
 		}
 
 		coinbaseAmount += validateResult.gasStatus.BTMValue
