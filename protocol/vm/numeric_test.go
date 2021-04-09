@@ -786,9 +786,8 @@ func TestOpMinMax(t *testing.T) {
 			if err := tt.args.f(tt.args.vm); err != nil {
 				if !tt.wantErr {
 					t.Errorf("opAdd() error = %v, wantErr %v", err, tt.wantErr)
-				} else {
-					return
 				}
+				return
 			}
 			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
 				t.Errorf("opAdd() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
@@ -934,9 +933,8 @@ func Test_opMul(t *testing.T) {
 			if err := opMul(tt.args.vm); err != nil {
 				if !tt.wantErr {
 					t.Errorf("opMul() error = %v, wantErr %v", err, tt.wantErr)
-				} else {
-					return
 				}
+				return
 			}
 			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
 				t.Errorf("opMul() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
@@ -1139,9 +1137,8 @@ func Test_op2Div(t *testing.T) {
 			if err := op2Div(tt.args.vm); err != nil {
 				if !tt.wantErr {
 					t.Errorf("op2Div() error = %v, wantErr %v", err, tt.wantErr)
-				} else {
-					return
 				}
+				return
 			}
 			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
 				t.Errorf("op2Div() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
@@ -1232,9 +1229,8 @@ func Test_opDiv(t *testing.T) {
 			if err := opDiv(tt.args.vm); err != nil {
 				if !tt.wantErr {
 					t.Errorf("opDiv() error = %v, wantErr %v", err, tt.wantErr)
-				} else {
-					return
 				}
+				return
 			}
 			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
 				t.Errorf("opDiv() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
@@ -1304,9 +1300,8 @@ func Test_opAdd(t *testing.T) {
 			if err := opAdd(tt.args.vm); err != nil {
 				if !tt.wantErr {
 					t.Errorf("opAdd() error = %v, wantErr %v", err, tt.wantErr)
-				} else {
-					return
 				}
+				return
 			}
 			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
 				t.Errorf("opAdd() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
@@ -1330,7 +1325,7 @@ func Test_opMod(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x02},{0x02}},
+					dataStack: [][]byte{{0x02}, {0x02}},
 				},
 			},
 			want:    [][]byte{{}},
@@ -1341,7 +1336,7 @@ func Test_opMod(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x02},{0x01}},
+					dataStack: [][]byte{{0x02}, {0x01}},
 				},
 			},
 			want:    [][]byte{{}},
@@ -1352,7 +1347,7 @@ func Test_opMod(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0xff},{0x04}},
+					dataStack: [][]byte{{0xff}, {0x04}},
 				},
 			},
 			want:    [][]byte{{0x03}},
@@ -1363,7 +1358,7 @@ func Test_opMod(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},{0x03}},
+					dataStack: [][]byte{{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, {0x03}},
 				},
 			},
 			want:    [][]byte{{0x01}},
@@ -1374,7 +1369,7 @@ func Test_opMod(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{},{0x02}},
+					dataStack: [][]byte{{}, {0x02}},
 				},
 			},
 			want:    [][]byte{{}},
@@ -1385,7 +1380,7 @@ func Test_opMod(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{mocks.U256NumNegative1,{0x02}},
+					dataStack: [][]byte{mocks.U256NumNegative1, {0x02}},
 				},
 			},
 			want:    nil,
@@ -1396,7 +1391,7 @@ func Test_opMod(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0x01},{}},
+					dataStack: [][]byte{{0x01}, {}},
 				},
 			},
 			want:    nil,
@@ -1408,9 +1403,8 @@ func Test_opMod(t *testing.T) {
 			if err := opMod(tt.args.vm); err != nil {
 				if !tt.wantErr {
 					t.Errorf("opMod() error = %v, wantErr %v", err, tt.wantErr)
-				} else {
-					return
 				}
+				return
 			}
 			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
 				t.Errorf("opMod() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
@@ -1483,7 +1477,7 @@ func TestOpShift(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0xff}, {0xff,0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+					dataStack: [][]byte{{0xff}, {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
 				},
 				f: opLshift,
 			},
@@ -1494,7 +1488,7 @@ func TestOpShift(t *testing.T) {
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
-					dataStack: [][]byte{{0xff}, {0xff,0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+					dataStack: [][]byte{{0xff}, {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
 				},
 				f: opRshift,
 			},
@@ -1530,9 +1524,8 @@ func TestOpShift(t *testing.T) {
 			if err := tt.args.f(tt.args.vm); err != nil {
 				if !tt.wantErr {
 					t.Errorf("opAdd() error = %v, wantErr %v", err, tt.wantErr)
-				} else {
-					return
 				}
+				return
 			}
 			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
 				t.Errorf("opAdd() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
