@@ -745,7 +745,7 @@ func TestOpMinMax(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "max of (two byte number, one bytes number)",
+			name: "max of (two number, one number)",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
@@ -965,7 +965,7 @@ func Test_op1Sub(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Test that two bytes number become one byte number after op sub",
+			name: "Test that two number become one number after op sub",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
@@ -1032,7 +1032,7 @@ func Test_opSub(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Test that two bytes number become one byte number",
+			name: "Test that two number become one number",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
@@ -1099,7 +1099,7 @@ func Test_op2Div(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Test that two bytes number become one byte number after op div",
+			name: "Test that two number become one number after op div",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
@@ -1180,7 +1180,7 @@ func Test_opDiv(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Test that two bytes number become one byte number after op div",
+			name: "Test that two number become one number after op div",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
@@ -1262,7 +1262,7 @@ func Test_opAdd(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Test that one bytes number become two byte number",
+			name: "Test that one number become two number",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
@@ -1354,7 +1354,7 @@ func Test_opMod(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Test that two bytes number become one byte number",
+			name: "Test that two number become one number",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
@@ -1426,6 +1426,30 @@ func TestOpShift(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name: "2 left shift 0",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {}},
+				},
+				f: opLshift,
+			},
+			want:    [][]byte{{0x02}},
+			wantErr: false,
+		},
+		{
+			name: "2 right shift 0",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0x02}, {}},
+				},
+				f: opRshift,
+			},
+			want:    [][]byte{{0x02}},
+			wantErr: false,
+		},
+		{
 			name: "2 left shift 3",
 			args: args{
 				vm: &virtualMachine{
@@ -1450,7 +1474,7 @@ func TestOpShift(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "two byte number right shift become one bytes number",
+			name: "two number right shift become one number",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
@@ -1462,7 +1486,7 @@ func TestOpShift(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "two byte number left shift become overflow",
+			name: "two number left shift become overflow",
 			args: args{
 				vm: &virtualMachine{
 					runLimit:  50000,
@@ -1481,7 +1505,8 @@ func TestOpShift(t *testing.T) {
 				},
 				f: opLshift,
 			},
-			wantErr: true,
+			want:    [][]byte{{}},
+			wantErr: false,
 		},
 		{
 			name: "right shift not uint64",
@@ -1492,7 +1517,8 @@ func TestOpShift(t *testing.T) {
 				},
 				f: opRshift,
 			},
-			wantErr: true,
+			want:    [][]byte{{}},
+			wantErr: false,
 		},
 		{
 			name: "0 left shift -1 got error",
@@ -1523,12 +1549,12 @@ func TestOpShift(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := tt.args.f(tt.args.vm); err != nil {
 				if !tt.wantErr {
-					t.Errorf("opAdd() error = %v, wantErr %v", err, tt.wantErr)
+					t.Errorf("opShift() error = %v, wantErr %v", err, tt.wantErr)
 				}
 				return
 			}
 			if !testutil.DeepEqual(tt.args.vm.dataStack, tt.want) {
-				t.Errorf("opAdd() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
+				t.Errorf("opShift() error, got %v and wantErr %v", tt.args.vm.dataStack, tt.want)
 			}
 		})
 	}

@@ -284,18 +284,15 @@ func opLshift(vm *virtualMachine) error {
 		return err
 	}
 
-	if x.IsZero() || y.IsZero() {
-		return vm.pushBigInt(x, true)
+	if y.LtUint64(256) {
+		x.Lsh(x, uint(y.Uint64()))
+	} else {
+		x.Clear()
 	}
 
-	if !y.IsUint64(){
+	if x.Sign() < 0 {
 		return ErrRange
 	}
-
-	if x.Lsh(x, uint(y.Uint64())); x.Sign() < 0 {
-		return ErrRange
-	}
-
 	return vm.pushBigInt(x, true)
 }
 
@@ -315,15 +312,13 @@ func opRshift(vm *virtualMachine) error {
 		return err
 	}
 
-	if y.IsZero() {
-		return ErrDivZero
+	if y.LtUint64(256) {
+		x.Rsh(x, uint(y.Uint64()))
+	} else {
+		x.Clear()
 	}
 
-	if !y.IsUint64(){
-		return ErrRange
-	}
-
-	return vm.pushBigInt(x.Rsh(x, uint(y.Uint64())), true)
+	return vm.pushBigInt(x, true)
 }
 
 func opBoolAnd(vm *virtualMachine) error {
@@ -376,15 +371,18 @@ func opNumEqualVerify(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
-	y, err := vm.popInt64(true)
+
+	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	x, err := vm.popInt64(true)
+
+	x, err := vm.popBigInt(true)
 	if err != nil {
 		return err
 	}
-	if x == y {
+
+	if x.Eq(y) {
 		return nil
 	}
 	return ErrVerifyFailed
