@@ -273,6 +273,7 @@ func opLshift(vm *virtualMachine) error {
 	if err != nil {
 		return err
 	}
+
 	y, err := vm.popBigInt(true)
 	if err != nil {
 		return err
@@ -285,6 +286,10 @@ func opLshift(vm *virtualMachine) error {
 
 	if x.IsZero() || y.IsZero() {
 		return vm.pushBigInt(x, true)
+	}
+
+	if !y.IsUint64(){
+		return ErrRange
 	}
 
 	if x.Lsh(x, uint(y.Uint64())); x.Sign() < 0 {
@@ -312,6 +317,10 @@ func opRshift(vm *virtualMachine) error {
 
 	if y.IsZero() {
 		return ErrDivZero
+	}
+
+	if !y.IsUint64(){
+		return ErrRange
 	}
 
 	return vm.pushBigInt(x.Rsh(x, uint(y.Uint64())), true)

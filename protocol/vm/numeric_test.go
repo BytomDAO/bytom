@@ -1479,6 +1479,28 @@ func TestOpShift(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "left shift not uint64",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0xff}, {0xff,0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+				},
+				f: opLshift,
+			},
+			wantErr: true,
+		},
+		{
+			name: "right shift not uint64",
+			args: args{
+				vm: &virtualMachine{
+					runLimit:  50000,
+					dataStack: [][]byte{{0xff}, {0xff,0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+				},
+				f: opRshift,
+			},
+			wantErr: true,
+		},
+		{
 			name: "0 left shift -1 got error",
 			args: args{
 				vm: &virtualMachine{
