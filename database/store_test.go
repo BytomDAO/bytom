@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/bytom/bytom/config"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
 	"github.com/bytom/bytom/testutil"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestLoadBlockIndex(t *testing.T) {
@@ -154,7 +154,8 @@ func TestSaveChainStatus(t *testing.T) {
 		},
 	}
 
-	if err := store.SaveChainStatus(node, view); err != nil {
+	contractView := state.NewContractViewpoint()
+	if err := store.SaveChainStatus(node, view, contractView); err != nil {
 		t.Fatal(err)
 	}
 

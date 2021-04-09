@@ -9,11 +9,11 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/bytom/bytom/database"
+	dbm "github.com/bytom/bytom/database/leveldb"
 	"github.com/bytom/bytom/database/storage"
 	"github.com/bytom/bytom/protocol/bc"
 	"github.com/bytom/bytom/protocol/bc/types"
 	"github.com/bytom/bytom/protocol/state"
-	dbm "github.com/bytom/bytom/database/leveldb"
 )
 
 func TestAttachOrDetachBlocks(t *testing.T) {
@@ -414,7 +414,8 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 		for k, v := range c.before {
 			utxoViewpoint.Entries[k] = v
 		}
-		if err := store.SaveChainStatus(node, utxoViewpoint); err != nil {
+		contractView := state.NewContractViewpoint()
+		if err := store.SaveChainStatus(node, utxoViewpoint, contractView); err != nil {
 			t.Error(err)
 		}
 
@@ -436,7 +437,7 @@ func TestAttachOrDetachBlocks(t *testing.T) {
 				t.Error(err)
 			}
 		}
-		if err := store.SaveChainStatus(node, utxoViewpoint); err != nil {
+		if err := store.SaveChainStatus(node, utxoViewpoint, contractView); err != nil {
 			t.Error(err)
 		}
 

@@ -208,9 +208,17 @@ func (s *Store) SaveBlock(block *types.Block, ts *bc.TransactionStatus) error {
 }
 
 // SaveChainStatus save the core's newest status && delete old status
-func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint) error {
+func (s *Store) SaveChainStatus(node *state.BlockNode, view *state.UtxoViewpoint, contractView *state.ContractViewpoint) error {
 	batch := s.db.NewBatch()
 	if err := saveUtxoView(batch, view); err != nil {
+		return err
+	}
+
+	if err := deleteContractView(s.db, batch, contractView); err != nil {
+		return err
+	}
+
+	if err := saveContractView(s.db, batch, contractView); err != nil {
 		return err
 	}
 
