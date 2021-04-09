@@ -87,14 +87,13 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 		return err
 	}
 
-	detachContractView := state.NewContractViewpoint()
-	attachContractView := state.NewContractViewpoint()
-	if err := attachContractView.ProcessBlock(block); err != nil {
+	contractView := state.NewContractViewpoint()
+	if err := contractView.ApplyBlock(block); err != nil {
 		return err
 	}
 
 	node := c.index.GetNode(&bcBlock.ID)
-	if err := c.setState(node, utxoView, detachContractView, attachContractView); err != nil {
+	if err := c.setState(node, utxoView, contractView); err != nil {
 		return err
 	}
 
@@ -107,8 +106,7 @@ func (c *Chain) connectBlock(block *types.Block) (err error) {
 func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 	attachNodes, detachNodes := c.calcReorganizeNodes(node)
 	utxoView := state.NewUtxoViewpoint()
-	detachContractView := state.NewContractViewpoint()
-	attachContractView := state.NewContractViewpoint()
+	contractView := state.NewContractViewpoint()
 
 	txsToRestore := map[bc.Hash]*types.Tx{}
 	for _, detachNode := range detachNodes {
@@ -129,7 +127,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		if err := detachContractView.ProcessBlock(b); err != nil {
+		if err := contractView.DetachBlock(b); err != nil {
 			return err
 		}
 
@@ -158,7 +156,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 			return err
 		}
 
-		if err := attachContractView.ProcessBlock(b); err != nil {
+		if err := contractView.ApplyBlock(b); err != nil {
 			return err
 		}
 
@@ -173,7 +171,7 @@ func (c *Chain) reorganizeChain(node *state.BlockNode) error {
 		log.WithFields(log.Fields{"module": logModule, "height": node.Height, "hash": node.Hash.String()}).Debug("attach from mainchain")
 	}
 
-	if err := c.setState(node, utxoView, detachContractView, attachContractView); err != nil {
+	if err := c.setState(node, utxoView, contractView); err != nil {
 		return err
 	}
 

@@ -16,7 +16,7 @@ func CalcContractKey(hash [32]byte) []byte {
 }
 
 func saveContractView(db dbm.DB, batch dbm.Batch, view *state.ContractViewpoint) error {
-	for hash, value := range view.Entries {
+	for hash, value := range view.AttachEntries {
 		// contract exist, overwriting is forbidden
 		if db.Get(CalcContractKey(hash)) == nil {
 			// key:"c:sha256(program.Code)" value:"txID+program.Code"
@@ -27,7 +27,7 @@ func saveContractView(db dbm.DB, batch dbm.Batch, view *state.ContractViewpoint)
 }
 
 func deleteContractView(db dbm.DB, batch dbm.Batch, view *state.ContractViewpoint) error {
-	for hash, value := range view.Entries {
+	for hash, value := range view.DetachEntries {
 		// rollback is forbidden if contract register transaction id is different
 		if bytes.Equal(db.Get(CalcContractKey(hash)), value) {
 			batch.Delete(CalcContractKey(hash))

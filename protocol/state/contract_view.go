@@ -8,18 +8,20 @@ import (
 
 // ContractViewpoint represents a view into the set of registered contract
 type ContractViewpoint struct {
-	Entries map[[32]byte][]byte
+	AttachEntries map[[32]byte][]byte
+	DetachEntries map[[32]byte][]byte
 }
 
 // NewContractViewpoint returns a new empty contract view.
 func NewContractViewpoint() *ContractViewpoint {
 	return &ContractViewpoint{
-		Entries: make(map[[32]byte][]byte),
+		AttachEntries: make(map[[32]byte][]byte),
+		DetachEntries: make(map[[32]byte][]byte),
 	}
 }
 
-// ProcessBlock process block contract to contract view
-func (view *ContractViewpoint) ProcessBlock(block *types.Block) error {
+// ApplyBlock apply block contract to contract view
+func (view *ContractViewpoint) ApplyBlock(block *types.Block) error {
 	for _, tx := range block.Transactions {
 		for _, output := range tx.Outputs {
 			program := output.ControlProgram
@@ -28,7 +30,23 @@ func (view *ContractViewpoint) ProcessBlock(block *types.Block) error {
 			}
 			var hash [32]byte
 			sha3pool.Sum256(hash[:], program)
-			view.Entries[hash] = append(tx.ID.Bytes(), program...)
+			view.AttachEntries[hash] = append(tx.ID.Bytes(), program...)
+		}
+	}
+	return nil
+}
+
+// DetachBlock detach block contract to contract view
+func (view *ContractViewpoint) DetachBlock(block *types.Block) error {
+	for _, tx := range block.Transactions {
+		for _, output := range tx.Outputs {
+			program := output.ControlProgram
+			if !segwit.IsBCRPScript(program) {
+				continue
+			}
+			var hash [32]byte
+			sha3pool.Sum256(hash[:], program)
+			view.DetachEntries[hash] = append(tx.ID.Bytes(), program...)
 		}
 	}
 	return nil
