@@ -368,10 +368,3 @@ func TestGasOverBlockLimit(t *testing.T) {
 	}
 }
 
-func iniTtensority() {
-	// add (hash, seed) --> (tensority hash) to the  tensority cache for avoid
-	// real matrix calculate cost.
-	tensority.AIHash.AddCache(&bc.Hash{V0: 0}, &bc.Hash{}, testutil.MaxHash)
-	tensority.AIHash.AddCache(&bc.Hash{V0: 1}, &bc.Hash{}, testutil.MinHash)
-	tensority.AIHash.AddCache(&bc.Hash{V0: 1}, consensus.InitialSeed, testutil.MinHash)
-}
