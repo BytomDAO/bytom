@@ -3,7 +3,7 @@ module github.com/bytom/bytom
 go 1.16
 
 replace (
-	github.com/agl/ed25519 => ./lib/github.com/tendermint/ed25519
+    github.com/agl/ed25519 => ./lib/github.com/tendermint/ed25519
 	github.com/golang/protobuf => github.com/golang/protobuf v1.0.0
 	github.com/prometheus/prometheus/util/flock => ./lib/github.com/prometheus/prometheus/util/flock
 	github.com/tendermint/go-wire => github.com/tendermint/go-amino v0.6.2

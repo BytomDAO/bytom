@@ -66,8 +66,7 @@ func (p *Peer) Moniker() string {
 // OnStart implements BaseService.
 func (p *Peer) OnStart() error {
 	p.BaseService.OnStart()
-	_, err := p.mconn.Start()
-	return err
+	return p.mconn.Start()
 }
 
 // OnStop implements BaseService.
@@ -81,7 +80,7 @@ func newPeer(pc *peerConn, nodeInfo *NodeInfo, reactorsByCh map[byte]Reactor, ch
 	p := &Peer{
 		peerConn: pc,
 		NodeInfo: nodeInfo,
-		Key:      nodeInfo.PubKey.KeyString(),
+		Key:      nodeInfo.PubKey.String(),
 		isLAN:    isLAN,
 	}
 	p.mconn = createMConnection(pc.conn, p, reactorsByCh, chDescs, onPeerError, pc.config.MConfig)

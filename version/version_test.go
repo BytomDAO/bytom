@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"gopkg.in/fatih/set.v0"
 	gover "github.com/hashicorp/go-version"
+	"gopkg.in/fatih/set.v0"
 )
 
 func TestCompare(t *testing.T) {
@@ -128,7 +128,7 @@ func TestCheckUpdate(t *testing.T) {
 		status := &UpdateStatus{
 			maxVerSeen:    c.localVer,
 			notified:      false,
-			seedSet:       set.New(),
+			seedSet:       set.New(set.ThreadSafe).(*set.Set),
 			versionStatus: noUpdate,
 		}
 		for i, remoteVer := range c.remotePeers {
