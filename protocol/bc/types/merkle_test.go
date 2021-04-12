@@ -120,7 +120,7 @@ func TestDuplicateLeaves(t *testing.T) {
 		txs[i] = NewTx(TxData{
 			Version: 1,
 			Inputs:  []*TxInput{NewIssuanceInput(now, i, trueProg, nil, nil)},
-			Outputs: []*TxOutput{NewTxOutput(assetID, i, trueProg)},
+			Outputs: []*TxOutput{NewOriginalTxOutput(assetID, i, trueProg)},
 		}).Tx
 	}
 
@@ -152,7 +152,7 @@ func TestAllDuplicateLeaves(t *testing.T) {
 	tx := NewTx(TxData{
 		Version: 1,
 		Inputs:  []*TxInput{issuanceInp},
-		Outputs: []*TxOutput{NewTxOutput(assetID, 1, trueProg)},
+		Outputs: []*TxOutput{NewOriginalTxOutput(assetID, 1, trueProg)},
 	}).Tx
 	tx1, tx2, tx3, tx4, tx5, tx6 := tx, tx, tx, tx, tx, tx
 
@@ -465,7 +465,7 @@ func mockTransactions(txCount int) ([]*Tx, []*bc.Tx) {
 		tx := NewTx(TxData{
 			Version: 1,
 			Inputs:  []*TxInput{issuanceInp},
-			Outputs: []*TxOutput{NewTxOutput(assetID, 1, trueProg)},
+			Outputs: []*TxOutput{NewOriginalTxOutput(assetID, 1, trueProg)},
 		})
 		txs = append(txs, tx)
 		bcTxs = append(bcTxs, tx.Tx)

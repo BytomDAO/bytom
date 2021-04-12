@@ -99,7 +99,7 @@ func TestAddFilterAddresses(t *testing.T) {
 			types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram")),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram")),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram")),
 		},
 	})
 
@@ -121,7 +121,7 @@ func TestFilterClear(t *testing.T) {
 			types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram")),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram")),
+			types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram")),
 		},
 	})
 
@@ -144,7 +144,7 @@ func TestGetRelatedTxAndStatus(t *testing.T) {
 				types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram1")),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram1")),
+				types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram1")),
 			},
 		}),
 		types.NewTx(types.TxData{
@@ -152,7 +152,7 @@ func TestGetRelatedTxAndStatus(t *testing.T) {
 				types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram2")),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram2")),
+				types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram2")),
 			},
 		}),
 		types.NewTx(types.TxData{
@@ -160,7 +160,7 @@ func TestGetRelatedTxAndStatus(t *testing.T) {
 				types.NewSpendInput(nil, bc.Hash{}, bc.NewAssetID([32]byte{1}), 5, 1, []byte("spendProgram3")),
 			},
 			Outputs: []*types.TxOutput{
-				types.NewTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram3")),
+				types.NewOriginalTxOutput(bc.NewAssetID([32]byte{3}), 8, []byte("outProgram3")),
 			},
 		}),
 	}

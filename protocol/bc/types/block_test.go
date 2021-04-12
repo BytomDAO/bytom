@@ -67,7 +67,7 @@ func TestBlock(t *testing.T) {
 							NewSpendInput([][]byte{[]byte("arguments3"), []byte("arguments4")}, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 254354, 3, []byte("spendProgram")),
 						},
 						Outputs: []*TxOutput{
-							NewTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true")),
+							NewOriginalTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true")),
 						},
 					}),
 					NewTx(TxData{
@@ -77,8 +77,8 @@ func TestBlock(t *testing.T) {
 							NewCoinbaseInput([]byte("arbitrary")),
 						},
 						Outputs: []*TxOutput{
-							NewTxOutput(*consensus.BTMAssetID, 254354, []byte("true")),
-							NewTxOutput(*consensus.BTMAssetID, 254354, []byte("false")),
+							NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("true")),
+							NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("false")),
 						},
 					}),
 				},
@@ -164,7 +164,7 @@ func TestReadFrom(t *testing.T) {
 								NewCoinbaseInput(testutil.MustDecodeHexString("003132313731")),
 							},
 							Outputs: []*TxOutput{
-								NewTxOutput(btmAssetID, 41450000000, testutil.MustDecodeHexString("001437e1aec83a4e6587ca9609e4e5aa728db7007449")),
+								NewOriginalTxOutput(btmAssetID, 41450000000, testutil.MustDecodeHexString("001437e1aec83a4e6587ca9609e4e5aa728db7007449")),
 							},
 						},
 					},
@@ -194,8 +194,8 @@ func TestReadFrom(t *testing.T) {
 								),
 							},
 							Outputs: []*TxOutput{
-								NewTxOutput(btmAssetID, 9600000000, testutil.MustDecodeHexString("00144b61da45324299e40dacc255e2ea07dfce3a56d2")),
-								NewTxOutput(testutil.MustDecodeAsset("7b38dc897329a288ea31031724f5c55bcafec80468a546955023380af2faad14"), 100000000000, testutil.MustDecodeHexString("001437e1aec83a4e6587ca9609e4e5aa728db7007449")),
+								NewOriginalTxOutput(btmAssetID, 9600000000, testutil.MustDecodeHexString("00144b61da45324299e40dacc255e2ea07dfce3a56d2")),
+								NewOriginalTxOutput(testutil.MustDecodeAsset("7b38dc897329a288ea31031724f5c55bcafec80468a546955023380af2faad14"), 100000000000, testutil.MustDecodeHexString("001437e1aec83a4e6587ca9609e4e5aa728db7007449")),
 							},
 						},
 					},

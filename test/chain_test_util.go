@@ -208,7 +208,7 @@ func (t *ctTransaction) createTransaction(ctx *chainTestContext, txs []*types.Tx
 	}
 
 	for _, amount := range t.Outputs {
-		output := types.NewTxOutput(*consensus.BTMAssetID, amount, []byte{byte(vm.OP_TRUE)})
+		output := types.NewOriginalTxOutput(*consensus.BTMAssetID, amount, []byte{byte(vm.OP_TRUE)})
 		if err := builder.AddOutput(output); err != nil {
 			return nil, err
 		}

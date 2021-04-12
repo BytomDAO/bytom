@@ -58,7 +58,7 @@ func MockSimpleUtxo(index uint64, assetID *bc.AssetID, amount uint64, ctrlProg *
 }
 
 func AddTxOutput(assetID bc.AssetID, amount uint64, controlProgram []byte) *types.TxOutput {
-	out := types.NewTxOutput(assetID, amount, controlProgram)
+	out := types.NewOriginalTxOutput(assetID, amount, controlProgram)
 	return out
 }
 

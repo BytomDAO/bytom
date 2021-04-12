@@ -59,7 +59,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 0, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 10000000001, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000000001, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -77,7 +77,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 0, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -95,7 +95,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000001, 0, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -113,7 +113,7 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 0, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -154,7 +154,7 @@ func TestValidateUglyTx(t *testing.T) {
 					),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -179,8 +179,8 @@ func TestValidateUglyTx(t *testing.T) {
 					),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707e"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707e"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -205,8 +205,8 @@ func TestValidateUglyTx(t *testing.T) {
 					),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -231,8 +231,8 @@ func TestValidateUglyTx(t *testing.T) {
 					),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 5000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 5000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -257,8 +257,8 @@ func TestValidateUglyTx(t *testing.T) {
 					),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("6a")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("6a")),
 				},
 			},
 			err:      true,
@@ -283,8 +283,8 @@ func TestValidateUglyTx(t *testing.T) {
 					),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 5000000000, testutil.MustDecodeHexString("6a")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 5000000000, testutil.MustDecodeHexString("6a")),
 				},
 			},
 			err:      true,
@@ -305,7 +305,7 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 1, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -326,8 +326,8 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 1, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707e"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707e"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -348,8 +348,8 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 1, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -370,8 +370,8 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 1, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 5000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 5000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -392,8 +392,8 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 1, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("6a")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("6a")),
 				},
 			},
 			err:      true,
@@ -414,8 +414,8 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 1, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 5000000000, testutil.MustDecodeHexString("6a")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 5000000000, testutil.MustDecodeHexString("6a")),
 				},
 			},
 			err:      true,
@@ -433,7 +433,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 0, testutil.MustDecodeHexString("6a")),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -451,7 +451,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 0, 0, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 0, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 0, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -464,7 +464,7 @@ func TestValidateUglyTx(t *testing.T) {
 				Version: 1,
 				Inputs:  []*types.TxInput{},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 10, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 10, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -485,7 +485,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 1, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -509,8 +509,8 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 1, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 100, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 100, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -544,8 +544,8 @@ func TestValidateUglyTx(t *testing.T) {
 					),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -573,8 +573,8 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 100, 0, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 100, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 100, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -592,7 +592,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 0, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, math.MaxUint64, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, math.MaxUint64, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -610,7 +610,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 0, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, math.MaxUint64, testutil.MustDecodeHexString("6a")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, math.MaxUint64, testutil.MustDecodeHexString("6a")),
 				},
 			},
 			err:      true,
@@ -631,8 +631,8 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 1, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(*consensus.BTMAssetID, math.MaxUint64, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, math.MaxUint64, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -653,8 +653,8 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 1, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(*consensus.BTMAssetID, math.MaxUint64, testutil.MustDecodeHexString("6a")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, math.MaxUint64, testutil.MustDecodeHexString("6a")),
 				},
 			},
 			err:      true,
@@ -672,9 +672,9 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 100000000, 0, nil),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 18446744073609551616, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(*consensus.BTMAssetID, 18446744073609551616, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(*consensus.BTMAssetID, 290000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 18446744073609551616, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 18446744073609551616, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 290000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -692,7 +692,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 0, testutil.MustDecodeHexString("00140876db6ca8f4542a836f0edd42b87d095d081182")), // wrong control program
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -710,7 +710,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 0, testutil.MustDecodeHexString("00200824e931fb806bd77fdcd291aad3bd0a4493443a4120062bd659e64a3e0bac66")), // wrong control program
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -731,8 +731,8 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 1, testutil.MustDecodeHexString("00140876db6ca8f4542a836f0edd42b87d095d081182")), // wrong control program
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -753,8 +753,8 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 1, testutil.MustDecodeHexString("00140876db6ca8f4542a836f0edd42b87d095d081182")), // wrong control program
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -780,8 +780,8 @@ func TestValidateUglyTx(t *testing.T) {
 					),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("bf5f8da2334590ee095148ccdcf4d806b26a47a6d9e9e857ef6c2de79aee4f14"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("bf5f8da2334590ee095148ccdcf4d806b26a47a6d9e9e857ef6c2de79aee4f14"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -807,8 +807,8 @@ func TestValidateUglyTx(t *testing.T) {
 					),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("776f0a421e9176a03061d388aff4ab3b1bcd32e53a090d593a466706c69e3d3f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("776f0a421e9176a03061d388aff4ab3b1bcd32e53a090d593a466706c69e3d3f"), 10000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -829,7 +829,7 @@ func TestValidateUglyTx(t *testing.T) {
 						*consensus.BTMAssetID, 10000000000, 0, testutil.MustDecodeHexString("001420a1af4fc11399e6cd7253abf1bbd4d0af17daad")),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 19000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 19000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,
@@ -855,8 +855,8 @@ func TestValidateUglyTx(t *testing.T) {
 						testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 10000000000, 0, testutil.MustDecodeHexString("001420a1af4fc11399e6cd7253abf1bbd4d0af17daad")),
 				},
 				Outputs: []*types.TxOutput{
-					types.NewTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
-					types.NewTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(*consensus.BTMAssetID, 9000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
+					types.NewOriginalTxOutput(testutil.MustDecodeAsset("97575084e5161406a0977da729fbf51ad230e0ff0aec607a97e4336611c8707f"), 20000000000, testutil.MustDecodeHexString("00145931e1b7b65897f47845ac08fc136e0c0a4ff166")),
 				},
 			},
 			err:      true,

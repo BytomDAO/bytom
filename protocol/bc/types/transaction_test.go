@@ -48,7 +48,7 @@ func TestTransaction(t *testing.T) {
 					NewSpendInput([][]byte{[]byte("arguments3"), []byte("arguments4")}, testutil.MustDecodeHash("fad5195a0c8e3b590b86a3c0a95e7529565888508aecca96e9aeda633002f409"), *consensus.BTMAssetID, 254354, 3, []byte("spendProgram")),
 				},
 				Outputs: []*TxOutput{
-					NewTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true")),
+					NewOriginalTxOutput(testutil.MustDecodeAsset("a69849e11add96ac7053aad22ba2349a4abf5feb0475a0afcadff4e128be76cf"), 254354, []byte("true")),
 				},
 			}),
 			hex: strings.Join([]string{
@@ -111,8 +111,8 @@ func TestTransaction(t *testing.T) {
 					NewCoinbaseInput([]byte("arbitrary")),
 				},
 				Outputs: []*TxOutput{
-					NewTxOutput(*consensus.BTMAssetID, 254354, []byte("true")),
-					NewTxOutput(*consensus.BTMAssetID, 254354, []byte("false")),
+					NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("true")),
+					NewOriginalTxOutput(*consensus.BTMAssetID, 254354, []byte("false")),
 				},
 			}),
 			hex: strings.Join([]string{
@@ -277,7 +277,7 @@ func BenchmarkTxWriteToTrue200(b *testing.B) {
 	tx := &Tx{}
 	for i := 0; i < 200; i++ {
 		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil))
-		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil))
+		tx.Outputs = append(tx.Outputs, NewOriginalTxOutput(bc.AssetID{}, 0, nil))
 	}
 	for i := 0; i < b.N; i++ {
 		tx.writeTo(ioutil.Discard, 0)
@@ -288,7 +288,7 @@ func BenchmarkTxWriteToFalse200(b *testing.B) {
 	tx := &Tx{}
 	for i := 0; i < 200; i++ {
 		tx.Inputs = append(tx.Inputs, NewSpendInput(nil, bc.Hash{}, bc.AssetID{}, 0, 0, nil))
-		tx.Outputs = append(tx.Outputs, NewTxOutput(bc.AssetID{}, 0, nil))
+		tx.Outputs = append(tx.Outputs, NewOriginalTxOutput(bc.AssetID{}, 0, nil))
 	}
 	for i := 0; i < b.N; i++ {
 		tx.writeTo(ioutil.Discard, serRequired)
@@ -312,7 +312,7 @@ func BenchmarkTxInputWriteToFalse(b *testing.B) {
 }
 
 func BenchmarkTxOutputWriteToTrue(b *testing.B) {
-	output := NewTxOutput(bc.AssetID{}, 0, nil)
+	output := NewOriginalTxOutput(bc.AssetID{}, 0, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		output.writeTo(ew)
@@ -320,7 +320,7 @@ func BenchmarkTxOutputWriteToTrue(b *testing.B) {
 }
 
 func BenchmarkTxOutputWriteToFalse(b *testing.B) {
-	output := NewTxOutput(bc.AssetID{}, 0, nil)
+	output := NewOriginalTxOutput(bc.AssetID{}, 0, nil)
 	ew := errors.NewWriter(ioutil.Discard)
 	for i := 0; i < b.N; i++ {
 		output.writeTo(ew)

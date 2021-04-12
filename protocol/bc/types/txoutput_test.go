@@ -13,9 +13,9 @@ import (
 	"github.com/bytom/bytom/testutil"
 )
 
-func TestSerializationTxOutput(t *testing.T) {
+func TestSerializationOriginalTxOutput(t *testing.T) {
 	assetID := testutil.MustDecodeAsset("81756fdab39a17163b0ce582ee4ee256fb4d1e156c692b997d608a42ecb38d47")
-	txOutput := NewTxOutput(assetID, 254354, []byte("TestSerializationTxOutput"))
+	txOutput := NewOriginalTxOutput(assetID, 254354, []byte("TestSerializationTxOutput"))
 
 	wantHex := strings.Join([]string{
 		"01", // asset version

@@ -237,7 +237,7 @@ func TestOverflow(t *testing.T) {
 		}
 
 		for _, amount := range outputs {
-			txOutput := types.NewTxOutput(*consensus.BTMAssetID, amount, ctrlProgram)
+			txOutput := types.NewOriginalTxOutput(*consensus.BTMAssetID, amount, ctrlProgram)
 			txOutputs = append(txOutputs, txOutput)
 		}
 
@@ -323,7 +323,7 @@ func TestTxValidation(t *testing.T) {
 
 	addCoinbase := func(assetID *bc.AssetID, amount uint64, arbitrary []byte) {
 		coinbase := bc.NewCoinbase(arbitrary)
-		txOutput := types.NewTxOutput(*assetID, amount, []byte{byte(vm.OP_TRUE)})
+		txOutput := types.NewOriginalTxOutput(*assetID, amount, []byte{byte(vm.OP_TRUE)})
 		muxID := getMuxID(tx)
 		coinbase.SetDestination(muxID, &txOutput.AssetAmount, uint64(len(mux.Sources)))
 		coinbaseID := bc.EntryID(coinbase)
@@ -701,7 +701,7 @@ func TestCoinbase(t *testing.T) {
 			types.NewCoinbaseInput(nil),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
 		},
 	})
 
@@ -731,7 +731,7 @@ func TestCoinbase(t *testing.T) {
 							types.NewCoinbaseInput(nil),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
 						},
 					}),
 				},
@@ -752,8 +752,8 @@ func TestCoinbase(t *testing.T) {
 							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp),
 						},
 					}),
 				},
@@ -774,8 +774,8 @@ func TestCoinbase(t *testing.T) {
 							types.NewCoinbaseInput(nil),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp),
 						},
 					}),
 				},
@@ -795,8 +795,8 @@ func TestCoinbase(t *testing.T) {
 							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, cp),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp),
 						},
 					}),
 				},
@@ -816,8 +816,8 @@ func TestCoinbase(t *testing.T) {
 							types.NewSpendInput([][]byte{}, *newHash(8), *consensus.BTMAssetID, 100000000, 0, retire),
 						},
 						Outputs: []*types.TxOutput{
-							types.NewTxOutput(*consensus.BTMAssetID, 888, cp),
-							types.NewTxOutput(*consensus.BTMAssetID, 90000000, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 888, cp),
+							types.NewOriginalTxOutput(*consensus.BTMAssetID, 90000000, cp),
 						},
 					}),
 				},
@@ -922,7 +922,7 @@ func TestTimeRange(t *testing.T) {
 			mockGasTxInput(),
 		},
 		Outputs: []*types.TxOutput{
-			types.NewTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
+			types.NewOriginalTxOutput(*consensus.BTMAssetID, 1, []byte{0x6a}),
 		},
 	})
 
@@ -1124,8 +1124,8 @@ func sample(tb testing.TB, in *txFixture) *txFixture {
 		}
 
 		result.txOutputs = []*types.TxOutput{
-			types.NewTxOutput(result.assetID, 25, cp1),
-			types.NewTxOutput(result.assetID, 45, cp2),
+			types.NewOriginalTxOutput(result.assetID, 25, cp1),
+			types.NewOriginalTxOutput(result.assetID, 45, cp2),
 		}
 	}
 

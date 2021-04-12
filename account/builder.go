@@ -115,7 +115,7 @@ func (m *Manager) buildBtmTxChain(utxos []*UTXO, signer *signers.Signer) ([]*txb
 		}
 
 		outAmount := buildAmount - txbuilder.ChainTxMergeGas
-		output := types.NewTxOutput(*consensus.BTMAssetID, outAmount, acp.ControlProgram)
+		output := types.NewOriginalTxOutput(*consensus.BTMAssetID, outAmount, acp.ControlProgram)
 		if err := builder.AddOutput(output); err != nil {
 			return nil, nil, err
 		}
@@ -187,7 +187,7 @@ func SpendAccountChain(ctx context.Context, builder *txbuilder.TemplateBuilder, 
 	}
 
 	if utxo.Amount > act.Amount {
-		if err = builder.AddOutput(types.NewTxOutput(*consensus.BTMAssetID, utxo.Amount-act.Amount, utxo.ControlProgram)); err != nil {
+		if err = builder.AddOutput(types.NewOriginalTxOutput(*consensus.BTMAssetID, utxo.Amount-act.Amount, utxo.ControlProgram)); err != nil {
 			return nil, errors.Wrap(err, "adding change output")
 		}
 	}
@@ -240,7 +240,7 @@ func (a *spendAction) Build(ctx context.Context, b *txbuilder.TemplateBuilder) e
 
 		// Don't insert the control program until callbacks are executed.
 		a.accounts.insertControlProgramDelayed(b, acp)
-		if err = b.AddOutput(types.NewTxOutput(*a.AssetId, res.change, acp.ControlProgram)); err != nil {
+		if err = b.AddOutput(types.NewOriginalTxOutput(*a.AssetId, res.change, acp.ControlProgram)); err != nil {
 			return errors.Wrap(err, "adding change output")
 		}
 	}
