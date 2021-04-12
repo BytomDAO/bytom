@@ -599,6 +599,9 @@ func TestRemoveOrphan(t *testing.T) {
 
 type mockStore1 struct{}
 
+func (s *mockStore1) GetBlockHeader(hash *bc.Hash) (*types.BlockHeader, error)     { return nil, nil }
+func (s *mockStore1) GetCheckpoint(hash *bc.Hash) (*state.Checkpoint, error)       { return nil, nil }
+func (s *mockStore1) GetCheckpointsByHeight(u uint64) ([]*state.Checkpoint, error) { return nil, nil }
 func (s *mockStore1) BlockExist(hash *bc.Hash) bool           { return false }
 func (s *mockStore1) GetBlock(*bc.Hash) (*types.Block, error) { return nil, nil }
 func (s *mockStore1) GetStoreStatus() *BlockStoreState        { return nil }
@@ -610,7 +613,7 @@ func (s *mockStore1) GetTransactionsUtxo(utxoView *state.UtxoViewpoint, tx []*bc
 }
 func (s *mockStore1) GetUtxo(*bc.Hash) (*storage.UtxoEntry, error)        { return nil, nil }
 func (s *mockStore1) LoadBlockIndex(uint64) (*state.BlockIndex, error)    { return nil, nil }
-func (s *mockStore1) SaveBlock(*types.Block, *bc.TransactionStatus) error { return nil }
+func (s *mockStore1) SaveBlock(*types.Block) error { return nil }
 func (s *mockStore1) SaveChainStatus(*state.BlockNode, *state.UtxoViewpoint, *state.ContractViewpoint) error { return nil}
 
 func TestProcessTransaction(t *testing.T) {
