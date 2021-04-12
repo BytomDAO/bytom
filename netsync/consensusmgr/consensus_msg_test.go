@@ -98,7 +98,6 @@ var testBlock = &types.Block{
 		Timestamp: 1528945000,
 		BlockCommitment: types.BlockCommitment{
 			TransactionsMerkleRoot: bc.Hash{V0: uint64(0x11)},
-			TransactionStatusHash:  bc.Hash{V0: uint64(0x55)},
 		},
 	},
 }
