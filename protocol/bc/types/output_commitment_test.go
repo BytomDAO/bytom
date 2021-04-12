@@ -37,7 +37,7 @@ func TestReadWriteOutputCommitment(t *testing.T) {
 	for _, c := range cases {
 		buff := []byte{}
 		buffer := bytes.NewBuffer(buff)
-		if err := c.oc.writeExtensibleString(buffer, nil, 1); err != nil {
+		if err := c.oc.writeExtensibleString(buffer, 1); err != nil {
 			t.Fatal(err)
 		}
 
@@ -47,7 +47,7 @@ func TestReadWriteOutputCommitment(t *testing.T) {
 		}
 
 		oc := &OutputCommitment{}
-		_, err := oc.readFrom(blockchain.NewReader(buffer.Bytes()), 1)
+		_, err := oc.readExtensibleString(blockchain.NewReader(buffer.Bytes()), 1)
 		if err != nil {
 			t.Fatal(err)
 		}
