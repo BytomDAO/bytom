@@ -27,100 +27,109 @@ func init() {
 	sha3pool.Sum256(hash[:], program)
 	txID1 = &bc.Hash{V0: 1, V1: 1, V2: 1, V3: 1}
 	txID2 = &bc.Hash{V0: 2, V1: 2, V2: 2, V3: 2}
-	registerByTx(txID1)
+	registerContract()
+
 }
 
-func registerByTx(txID *bc.Hash) {
-	batch := testDB.NewBatch()
+// register contract by transaction 1
+func registerContract() {
 	contractView := state.NewContractViewpoint()
-	contractView.AttachEntries[hash] = append(txID.Bytes(), program...)
-	if err := saveContractView(testDB, batch, contractView); err != nil {
+	contractView.AttachEntries[hash] = append(txID1.Bytes(), program...)
+	if err := setContractView(contractView); err != nil {
 		panic(err)
 	}
-
-	batch.Write()
 }
 
-func rollbackByTx(txID *bc.Hash) {
+func setContractView(contractView *state.ContractViewpoint) error {
 	batch := testDB.NewBatch()
-	contractView := state.NewContractViewpoint()
-	contractView.DetachEntries[hash] = append(txID.Bytes(), program...)
 	if err := deleteContractView(testDB, batch, contractView); err != nil {
-		panic(err)
+		return err
+	}
+
+	if err := saveContractView(testDB, batch, contractView); err != nil {
+		return err
 	}
 
 	batch.Write()
+	return nil
+}
+
+func assertDBContractData(txID *bc.Hash, t *testing.T) {
+	data := testDB.Get(CalcContractKey(hash))
+	if data == nil {
+		t.Errorf("can't find the registered contract by contract hash %v", hash)
+	}
+
+	expect := append(txID.Bytes(), program...)
+	if !bytes.Equal(data, expect) {
+		t.Errorf("got contract data: %v, expect contract data: %v", data, expect)
+	}
+}
+
+func TestRollback(t *testing.T) {
+	defer os.RemoveAll("temp")
+
+	contractView := state.NewContractViewpoint()
+	// rollback
+	contractView.DetachEntries[hash] = append(txID1.Bytes(), program...)
+	if err := setContractView(contractView); err != nil {
+		t.Errorf("set contract view failed")
+	}
+
+	data := testDB.Get(CalcContractKey(hash))
+	if data != nil {
+		t.Errorf("registered contract should be deleted")
+	}
 }
 
 func TestRollbackAndRegisterAgain(t *testing.T) {
 	defer os.RemoveAll("temp")
 
-	// only rollback
-	rollbackByTx(txID1)
-	data := testDB.Get(CalcContractKey(hash))
-	if data != nil {
-		t.Errorf("registered contract should be deleted")
-	}
-
+	contractView := state.NewContractViewpoint()
+	// rollback
+	contractView.DetachEntries[hash] = append(txID1.Bytes(), program...)
 	// register again
-	registerByTx(txID1)
-	data = testDB.Get(CalcContractKey(hash))
-	if data == nil {
-		t.Errorf("can't find the registered contract by contract hash %v", hash)
+	contractView.AttachEntries[hash] = append(txID1.Bytes(), program...)
+	if err := setContractView(contractView); err != nil {
+		t.Errorf("set contract view failed")
 	}
 
-	expect := append(txID1.Bytes(), program...)
-	if !bytes.Equal(data, expect) {
-		t.Errorf("got contract data: %v, expect contract data: %v", data, expect)
-	}
+	assertDBContractData(txID1, t)
 }
 
 func TestRollbackAndRegisterByAnotherTx(t *testing.T) {
 	defer os.RemoveAll("temp")
 
-	rollbackByTx(txID1)
-	data := testDB.Get(CalcContractKey(hash))
-	if data != nil {
-		t.Errorf("registered contract should be deleted")
-	}
-
+	contractView := state.NewContractViewpoint()
+	// rollback
+	contractView.DetachEntries[hash] = append(txID1.Bytes(), program...)
 	// register by another transaction
-	registerByTx(txID2)
-	data = testDB.Get(CalcContractKey(hash))
-	if data == nil {
-		t.Errorf("can't find the registered contract by contract hash %v", hash)
+	contractView.AttachEntries[hash] = append(txID2.Bytes(), program...)
+	if err := setContractView(contractView); err != nil {
+		t.Errorf("set contract view failed")
 	}
 
-	expect := append(txID2.Bytes(), program...)
-	if !bytes.Equal(data, expect) {
-		t.Errorf("got contract data: %v, expect contract data: %v", data, expect)
-	}
+	assertDBContractData(txID2, t)
 }
 
 func TestRepeatRegisterAndRollback(t *testing.T) {
 	defer os.RemoveAll("temp")
 
 	// repeat register
-	registerByTx(txID2)
-	data := testDB.Get(CalcContractKey(hash))
-	if data == nil {
-		t.Errorf("can't find the registered contract by contract hash %v", hash)
+	contractView := state.NewContractViewpoint()
+	contractView.AttachEntries[hash] = append(txID2.Bytes(), program...)
+	if err := setContractView(contractView); err != nil {
+		t.Errorf("set contract view failed")
 	}
 
-	expect := append(txID1.Bytes(), program...)
-	if !bytes.Equal(data, expect) {
-		t.Errorf("got contract data: %v, expect contract data: %v", data, expect)
-	}
+	assertDBContractData(txID1, t)
 
 	// rollback by repeat register transaction
-	rollbackByTx(txID2)
-	data = testDB.Get(CalcContractKey(hash))
-	if data == nil {
-		t.Errorf("can't find the registered contract by contract hash %v", hash)
+	contractView = state.NewContractViewpoint()
+	contractView.DetachEntries[hash] = append(txID2.Bytes(), program...)
+	if err := setContractView(contractView); err != nil {
+		t.Errorf("set contract view failed")
 	}
 
-	expect = append(txID1.Bytes(), program...)
-	if !bytes.Equal(data, expect) {
-		t.Errorf("got contract data: %v, expect contract data: %v", data, expect)
-	}
+	assertDBContractData(txID1, t)
 }
